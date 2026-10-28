@@ -124,7 +124,7 @@ export function deleteNodesPermanently(input: DeleteNodesPermanentlyInput): stri
   const plan = preparePermanentDelete(input.nodeIds);
   const released = deletePermanentDeleteChunk(plan.nodeIds);
   if (released.length) collectTextBodyBlobCandidates(openDatabaseConnection().driver, released);
-  finishPermanentDelete(plan, input.nodeOrder);
+  finishPermanentDelete(plan);
   return [];
 }
 

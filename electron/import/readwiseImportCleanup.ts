@@ -1,5 +1,4 @@
 import { retireExternalDocument } from '../../lib/core/database/externalDocumentRetirement.js';
-import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import type {
   NativeReadwiseCleanupEntry,
   NativeReadwiseCleanupPreviewResult,
@@ -130,12 +129,6 @@ function buildCleanupPreview(previewedAt: string): NativeReadwiseCleanupPreviewR
   };
 }
 
-function readRemainingNodeOrder(deletedIds: Set<string>) {
-  const driver = openDatabaseConnection().driver;
-  const folderIds = new Set(driver.queryAll<{ id: string }>("SELECT id FROM nodes WHERE kind = 'folder'").map((row) => row.id));
-  return loadDerivedNodeOrder(driver).filter((id) => folderIds.has(id) && !deletedIds.has(id));
-}
-
 function collectDeleteNodeIds(entries: NativeReadwiseCleanupEntry[]) {
   const nodes = readNodeRows();
   return entries
@@ -175,14 +168,12 @@ export function runReadwiseImportCleanup(): NativeReadwiseCleanupRunResult {
   const externalRows = readReadwiseExternalRows();
   const deleteNodeIds = collectDeleteNodeIds(preview.entries);
   const detachedNodeIds = collectDetachedNodeIds(preview.entries);
-  const deletedIdSet = new Set(deleteNodeIds);
   clearReadwiseTracking({ deletedNodeIds: deleteNodeIds, detachedNodeIds });
   clearPersistedReadwiseBookGeneratedNodes(new Set(deleteNodeIds.filter(isReadwiseBookStructureNodeId)), cleanedAt);
   const externalDeletedCount = clearReadwiseExternalDocuments(externalRows, cleanedAt);
   if (deleteNodeIds.length > 0) {
     deleteNodesPermanently({
-      nodeIds: deleteNodeIds,
-      nodeOrder: readRemainingNodeOrder(deletedIdSet)
+      nodeIds: deleteNodeIds
     });
   }
   return {

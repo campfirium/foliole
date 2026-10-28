@@ -77,10 +77,8 @@ export function parseRestoreNodesArgs(args: Record<string, unknown>): NativeRest
 }
 
 export function parseDeleteNodesPermanentlyArgs(args: Record<string, unknown>): DeleteNodesPermanentlyInput {
-  return {
-    nodeIds: asStringArray(args.nodeIds, 'nodeIds'),
-    nodeOrder: asStringArray(args.nodeOrder, 'nodeOrder')
-  };
+  if ('nodeOrder' in args) throw new Error('invalid argument: nodeOrder');
+  return { nodeIds: asStringArray(args.nodeIds, 'nodeIds') };
 }
 
 export function parseMoveNodesArgs(args: Record<string, unknown>): MoveNodesInput {

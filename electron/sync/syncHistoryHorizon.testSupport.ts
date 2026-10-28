@@ -78,7 +78,7 @@ export function deletePermanently(databasePath: string, nodeId: string,
     db.exec("ATTACH DATABASE ':memory:' AS search");
     initializeWorkspaceSearchSidecar({ sqlite: db, driver });
     prepareImportedNodeDeletionVersions(driver, [nodeId], deletedAt);
-    deleteNodesPermanently(driver, { nodeIds: [nodeId], nodeOrder: [], deletedAt });
+    deleteNodesPermanently(driver, { nodeIds: [nodeId], deletedAt });
   });
 }
 

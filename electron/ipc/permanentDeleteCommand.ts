@@ -41,7 +41,7 @@ export async function handlePermanentDeleteNodeCommand(args: Record<string, unkn
       await retirePermanentMirrorPaths(result.mirrors);
       await yieldToEventLoop();
     }
-    await runDesktopDatabaseWrite('foreground', () => finishPermanentDelete(plan, parsed.nodeOrder));
+    await runDesktopDatabaseWrite('foreground', () => finishPermanentDelete(plan));
   } catch (error) {
     // The origin window reloads on its own failure path; other windows learn about removed chunks here.
     if (removed.length) notifyWorkspaceContentChanged(originWindow);
@@ -50,5 +50,5 @@ export async function handlePermanentDeleteNodeCommand(args: Record<string, unkn
     enqueueReleasedBodyCollection(released);
     if (removed.length) scheduleMirrorSync([...new Set([...removed, ...affectedArticleIds])]);
   }
-  return completeWorkspaceMutation({ nodeOrder: parsed.nodeOrder, removedNodeIds: parsed.nodeIds }, originWindow);
+  return completeWorkspaceMutation({ removedNodeIds: parsed.nodeIds }, originWindow);
 }

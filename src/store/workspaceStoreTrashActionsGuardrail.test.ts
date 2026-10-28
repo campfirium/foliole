@@ -82,9 +82,9 @@ describe('workspace trash runtime guardrail', () => {
   });
 
   it('deleteNodePermanently uses delete_nodes_permanently only and never save_workspace_state', async () => {
-    const invoke = createRuntimeInvoke((command, payload?: { nodeIds?: string[]; nodeOrder?: string[] }) =>
+    const invoke = createRuntimeInvoke((command, payload?: { nodeIds?: string[] }) =>
       command === 'delete_nodes_permanently'
-        ? { nodeOrder: payload?.nodeOrder ?? [], removedNodeIds: payload?.nodeIds ?? [] }
+        ? { removedNodeIds: payload?.nodeIds ?? [] }
         : null
     );
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);

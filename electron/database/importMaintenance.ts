@@ -1,5 +1,4 @@
 import { recordImportSourceDeletionSync } from '../../lib/core/database/importPipelineRecords.js';
-import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import type { NativeResetImportDataResult } from '../../lib/platform/nativeStorageContract.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -75,20 +74,11 @@ function listImportedNodeIds(rootNodeIds: string[]) {
   return orderedNodeIds;
 }
 
-function listRemainingRootNodeIds(deletedNodeIds: Set<string>) {
-  const driver = openDatabaseConnection().driver;
-  const folders = new Set(driver.queryAll<{ id: string }>(
-    "SELECT id FROM nodes WHERE kind = 'folder' AND deleted_at IS NULL"
-  ).map((row) => row.id));
-  return loadDerivedNodeOrder(driver).filter((id) => folders.has(id) && !deletedNodeIds.has(id));
-}
-
 export function resetImportData(): NativeResetImportDataResult {
   const connection = openDatabaseConnection();
   const rootNodeIds = listImportedRootNodeIds();
   const deletedNodeIds = listImportedNodeIds(rootNodeIds);
   const deletedNodeIdSet = new Set(deletedNodeIds);
-  const remainingRootNodeIds = listRemainingRootNodeIds(deletedNodeIdSet);
   const activeNodeRow = connection.sqlite
     .prepare('SELECT value FROM workspace_meta WHERE key = ?')
     .get(ACTIVE_NODE_META_KEY) as WorkspaceMetaRow | undefined;
@@ -131,8 +121,7 @@ export function resetImportData(): NativeResetImportDataResult {
 
   if (deletedNodeIds.length > 0) {
     deleteNodesPermanently({
-      nodeIds: deletedNodeIds,
-      nodeOrder: remainingRootNodeIds
+      nodeIds: deletedNodeIds
     });
   }
 

@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { HOME_NODE_ID, INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
-
 import {
   syncDeleteNodesPermanentlyToRuntime,
   syncNodeContentToRuntime,
@@ -18,8 +16,7 @@ vi.mock('./workspaceRuntimeSync', () => ({
   syncPdfImageExcerptNodeMutationToRuntime: vi.fn(),
   syncCreateNodeMutationToRuntime: vi.fn(async () => null),
   syncCreateNodeToRuntime: vi.fn(),
-  syncDeleteNodesPermanentlyToRuntime: vi.fn(async (payload: { nodeIds: string[]; nodeOrder: string[] }) => ({
-    nodeOrder: payload.nodeOrder,
+  syncDeleteNodesPermanentlyToRuntime: vi.fn(async (payload: { nodeIds: string[] }) => ({
     removedNodeIds: payload.nodeIds
   })),
   syncMoveNodesToRuntime: vi.fn(),
@@ -37,7 +34,7 @@ describe('createWorkspaceNodeActions permanent delete sync', () => {
     vi.clearAllMocks();
   });
 
-  it('syncs permanent delete command with next node order through runtime bridge', async () => {
+  it('syncs permanent delete with IDs alone through runtime bridge', async () => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const nodeId = (await actions.createRootNode('root 2'))!;
@@ -47,8 +44,7 @@ describe('createWorkspaceNodeActions permanent delete sync', () => {
 
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledTimes(1);
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
-      nodeIds: [nodeId],
-      nodeOrder: [INBOX_NODE_ID, HOME_NODE_ID, 'special-virtual-root', 'node-1']
+      nodeIds: [nodeId]
     });
   });
 
@@ -64,8 +60,7 @@ describe('createWorkspaceNodeActions permanent delete sync', () => {
 
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledTimes(1);
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
-      nodeIds: expect.arrayContaining([parentNodeId, childNodeId]),
-      nodeOrder: [HOME_NODE_ID, INBOX_NODE_ID, 'special-virtual-root', 'node-1']
+      nodeIds: expect.arrayContaining([parentNodeId, childNodeId])
     });
     expect(harness.getState().nodesById[parentNodeId]).toBeUndefined();
     expect(harness.getState().nodesById[childNodeId]).toBeUndefined();
@@ -82,8 +77,7 @@ describe('createWorkspaceNodeActions permanent delete sync', () => {
 
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledTimes(1);
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
-      nodeIds: expect.arrayContaining([firstNodeId, secondNodeId]),
-      nodeOrder: [INBOX_NODE_ID, HOME_NODE_ID, 'special-virtual-root', 'node-1']
+      nodeIds: expect.arrayContaining([firstNodeId, secondNodeId])
     });
   });
 

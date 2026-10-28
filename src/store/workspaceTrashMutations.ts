@@ -14,7 +14,6 @@ import {
 export interface DeleteNodeMutationResult {
   deletedAt: string;
   nodeIds: string[];
-  nodeOrder?: string[];
   parentNodesToSync: Node[];
   patch: Pick<
     WorkspaceState,
@@ -249,7 +248,6 @@ export function computeDeleteNodesPermanentlyMutation(
   return {
     deletedAt,
     nodeIds: [...deletedNodeIds],
-    nodeOrder: nextNodeOrder,
     parentNodesToSync: [...parentNodesToSync.values()],
     patch: buildDeleteNodePatch({
       state,

@@ -65,8 +65,7 @@ it('returns undefined when permanent delete runtime result is invalid', async ()
   mocks.runtimeInvoke?.mockResolvedValue(null);
 
   await expect(deleteWorkspaceNodesPermanently({
-    nodeIds: ['node-1'],
-    nodeOrder: []
+    nodeIds: ['node-1']
   })).resolves.toBeUndefined();
 });
 
@@ -83,7 +82,6 @@ it('returns undefined when permanent delete has no runtime bridge', async () => 
   mocks.runtimeInvoke = null;
 
   await expect(deleteWorkspaceNodesPermanently({
-    nodeIds: ['node-1'],
-    nodeOrder: ['node-2']
+    nodeIds: ['node-1']
   })).resolves.toBeUndefined();
 });

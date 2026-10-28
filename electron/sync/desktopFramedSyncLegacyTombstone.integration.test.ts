@@ -31,7 +31,7 @@ it('converges a proven legacy permanent deletion through a normal two-process HT
       const driver = createBetterSqlite3Driver(source);
       source.exec("ATTACH DATABASE ':memory:' AS search");
       initializeWorkspaceSearchSidecar({ sqlite: source, driver });
-      deleteNodesPermanently(driver, { nodeIds: [nodeId], nodeOrder: [], deletedAt });
+      deleteNodesPermanently(driver, { nodeIds: [nodeId], deletedAt });
       // Reproduce the proven historical state only in this independent fixture.
       source.prepare("UPDATE sync_object_state SET current_version_id = NULL WHERE object_type = 'node' AND object_id = ?")
         .run(nodeId);
@@ -78,8 +78,7 @@ it.each([false, true])('synchronizes a standalone historical tombstone with miss
     const versionId = edit(donor, 'Historical original body');
     donor.db.exec("ATTACH DATABASE ':memory:' AS search");
     initializeWorkspaceSearchSidecar({ sqlite: donor.db, driver: donor.driver });
-    deleteNodesPermanently(donor.driver, { nodeIds: ['topic'], nodeOrder: [],
-      deletedAt: '2026-07-24T02:12:44.137Z' });
+    deleteNodesPermanently(donor.driver, { nodeIds: ['topic'], deletedAt: '2026-07-24T02:12:44.137Z' });
     const record = (await loadRetainedSyncNodeVersionRecords(donor.port, [versionId])).get(versionId)!;
     expect(Boolean(record.parent_version_id)).toBe(missingParent);
     const source = new Database(fixture.leftSnapshot.databasePath);

@@ -28,7 +28,7 @@ it.each([false, true])('synchronizes production permanent deletion without posit
       initializeWorkspaceSearchSidecar({ sqlite: source, driver });
       // The desktop caller flushes the deleted snapshot before writing its permanent tombstone.
       prepareImportedNodeDeletionVersions(driver, [nodeId], deletedAt);
-      deleteNodesPermanently(driver, { nodeIds: [nodeId], nodeOrder: [], deletedAt });
+      deleteNodesPermanently(driver, { nodeIds: [nodeId], deletedAt });
     } finally { source.close(); }
     await fixture.left.invoke('round', input);
     await expect(fixture.left.invoke('round', input)).resolves.toMatchObject({ complete: true });

@@ -61,7 +61,7 @@ it('marks tracked keep imports as blocked when their topic is permanently delete
     '2026-03-06T00:00:00.000Z'
   );
 
-  deleteNodesPermanently({ nodeIds: ['node-root'], nodeOrder: [] });
+  deleteNodesPermanently({ nodeIds: ['node-root'] });
 
   expect(
     openDatabaseConnection().sqlite.prepare(
@@ -113,7 +113,7 @@ it('uses the existing soft delete time as the removed time when a trashed topic 
     '2026-03-06T00:00:00.000Z'
   );
 
-  deleteNodesPermanently({ nodeIds: ['node-root'], nodeOrder: [] });
+  deleteNodesPermanently({ nodeIds: ['node-root'] });
 
   expect(
     openDatabaseConnection().sqlite.prepare(
@@ -166,7 +166,7 @@ it('keeps manually deleted Readwise keep imports in Removed', () => {
     '2026-03-06T00:00:00.000Z'
   );
 
-  deleteNodesPermanently({ nodeIds: ['node-root'], nodeOrder: [] });
+  deleteNodesPermanently({ nodeIds: ['node-root'] });
 
   expect(
     openDatabaseConnection().sqlite.prepare(

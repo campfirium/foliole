@@ -44,7 +44,7 @@ it('records reading deletion and clears review facts and caches when permanently
   initializeWorkspaceSearchSidecar({ sqlite: peer.db, driver: peer.driver });
   const deletedAt = '2026-10-01T00:00:00.000Z';
   prepareImportedNodeDeletionVersions(peer.driver, ['topic'], deletedAt);
-  deleteNodesPermanently(peer.driver, { nodeIds: ['topic'], nodeOrder: [], deletedAt });
+  deleteNodesPermanently(peer.driver, { nodeIds: ['topic'], deletedAt });
 
   expect(peer.db.prepare(`SELECT object_type, deleted_at, sync_dirty FROM sync_object_state
     WHERE object_type IN ('node_reading', 'node_review') ORDER BY object_type`).all()).toEqual([
@@ -151,7 +151,7 @@ it('preserves learning through soft deletion and clears it through permanent del
   initializeWorkspaceSearchSidecar({ sqlite: source.db, driver: source.driver });
   const deletedAt = '2026-10-01T00:00:01Z';
   prepareImportedNodeDeletionVersions(source.driver, ['topic'], deletedAt);
-  deleteNodesPermanently(source.driver, { nodeIds: ['topic'], nodeOrder: [], deletedAt });
+  deleteNodesPermanently(source.driver, { nodeIds: ['topic'], deletedAt });
   await withLibraryRequestSnapshot(source, target, async replay => { await replay(); await replay(); });
   for (const peer of [source, target]) {
     const reopened = new Database(peer.file, { readonly: true, fileMustExist: true });

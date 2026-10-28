@@ -85,7 +85,7 @@ it('moves permanently deleted readwise book nodes to Removed without recreating 
   const nodeId = buildReadwiseBookPlaceholderNodeId('manual book');
   softDeleteNodes({ deletedAt: '2026-04-04T11:00:00.000Z', nodeIds: [nodeId] });
 
-  deleteNodesPermanently({ nodeIds: [nodeId], nodeOrder: [] });
+  deleteNodesPermanently({ nodeIds: [nodeId] });
   expect(listRemovedKeepImportItems()).toEqual([
     expect.objectContaining({
       last_node_id: nodeId,

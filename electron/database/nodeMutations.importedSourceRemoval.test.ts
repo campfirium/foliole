@@ -96,7 +96,7 @@ it('marks imported source removed even when another duplicate node still exists'
   seedTrackedSourceWithDuplicateNodes();
   seedImportRunsForDuplicateNodes();
 
-  deleteNodesPermanently({ nodeIds: ['node-old'], nodeOrder: [] });
+  deleteNodesPermanently({ nodeIds: ['node-old'] });
 
   expect(
     openDatabaseConnection().sqlite.prepare(

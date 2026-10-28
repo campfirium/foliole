@@ -63,17 +63,15 @@ describe('workspaceRuntimeSync persistence mutations', () => {
   });
 
   it('syncs permanent delete mutations through delete_nodes_permanently command', async () => {
-    const invoke = vi.fn().mockResolvedValue({ nodeOrder: ['node-1', 'node-2'], removedNodeIds: ['node-3'] });
+    const invoke = vi.fn().mockResolvedValue({ removedNodeIds: ['node-3'] });
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
     await expect(syncDeleteNodesPermanentlyToRuntime({
-      nodeIds: ['node-3'],
-      nodeOrder: ['node-1', 'node-2']
-    })).resolves.toEqual({ nodeOrder: ['node-1', 'node-2'], removedNodeIds: ['node-3'] });
+      nodeIds: ['node-3']
+    })).resolves.toEqual({ removedNodeIds: ['node-3'] });
 
     expect(invoke).toHaveBeenCalledWith('delete_nodes_permanently', {
-      nodeIds: ['node-3'],
-      nodeOrder: ['node-1', 'node-2']
+      nodeIds: ['node-3']
     });
     expectNoWorkspacePersist(invoke);
   });

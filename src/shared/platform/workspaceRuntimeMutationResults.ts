@@ -30,8 +30,7 @@ export function isDeleteNodesPermanentlyResult(value: unknown): value is Workspa
   return Boolean(
     value &&
       typeof value === 'object' &&
-      Array.isArray((value as WorkspaceDeleteNodesPermanentlyResult).removedNodeIds) &&
-      Array.isArray((value as WorkspaceDeleteNodesPermanentlyResult).nodeOrder)
+      Array.isArray((value as WorkspaceDeleteNodesPermanentlyResult).removedNodeIds)
   );
 }
 

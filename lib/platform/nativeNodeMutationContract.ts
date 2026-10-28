@@ -95,6 +95,5 @@ export interface NativeSoftDeleteNodesResult {
 }
 
 export interface NativeDeleteNodesPermanentlyResult {
-  nodeOrder: string[];
   removedNodeIds: string[];
 }

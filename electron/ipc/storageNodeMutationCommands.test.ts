@@ -231,11 +231,10 @@ it('handles restore and permanent delete node commands', async () => {
     handleInvokeRequest({
       command: 'delete_nodes_permanently',
       args: {
-        nodeIds: ['node-3'],
-        nodeOrder: ['node-1', 'node-2']
+        nodeIds: ['node-3']
       }
     })
-  ).resolves.toEqual({ nodeOrder: ['node-1', 'node-2'], removedNodeIds: ['node-3'] });
+  ).resolves.toEqual({ removedNodeIds: ['node-3'] });
   expect(deletePermanentDeleteChunk).toHaveBeenCalledWith(['node-3']);
-  expect(finishPermanentDelete).toHaveBeenCalledWith(expect.objectContaining({ nodeIds: ['node-3'] }), ['node-1', 'node-2']);
+  expect(finishPermanentDelete).toHaveBeenCalledWith(expect.objectContaining({ nodeIds: ['node-3'] }));
 });

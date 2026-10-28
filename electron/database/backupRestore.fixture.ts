@@ -57,8 +57,7 @@ export function mutateWorkspaceAfterBackup() {
   seedNode('node-root', '# mutated after backup', 0);
   seedNode('node-later', '# later node', 3);
   deleteNodesPermanently({
-    nodeIds: ['node-qa', 'node-trash'],
-    nodeOrder: ['node-root', 'node-later']
+    nodeIds: ['node-qa', 'node-trash']
   });
 }
 

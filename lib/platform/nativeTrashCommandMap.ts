@@ -31,7 +31,7 @@ export type NativeTrashCommandMap = {
     result: NativeRestoreNodesResult;
   };
   [NATIVE_COMMANDS.deleteNodesPermanently]: {
-    args: { nodeIds: string[]; nodeOrder: string[] };
+    args: { nodeIds: string[] };
     result: NativeDeleteNodesPermanentlyResult;
   };
 };

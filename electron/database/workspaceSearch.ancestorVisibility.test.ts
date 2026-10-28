@@ -101,7 +101,7 @@ it('ranks live matches before Trash and removes permanently deleted indexed cont
   insertNode({ id: 'trash', title: 'ranking marker', content: 'ranking marker', deletedAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z' });
   processSearchIndexInvalidations(openDatabaseConnection().driver);
   expect(searchWorkspace('ranking marker').map((result) => [result.id, result.isTrashed])).toEqual([['live', false], ['trash', true]]);
-  deleteNodesPermanently({ nodeIds: ['trash'], nodeOrder: ['live'] });
+  deleteNodesPermanently({ nodeIds: ['trash'] });
   expect(searchWorkspace('ranking marker').map((result) => result.id)).toEqual(['live']);
 });
 

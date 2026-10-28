@@ -1,4 +1,3 @@
-import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import type { NodeKind } from '../../lib/core/nodes/nodeKind.js';
 import type { NativeReadwiseBookImportResetResult } from '../../lib/platform/nativeReadwiseContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -88,12 +87,6 @@ function listDescendantNodeIds(rootNodeId: string) {
     .map((row) => row.id);
 }
 
-function listNodeOrderWithout(removedNodeIds: Set<string>) {
-  const driver = openDatabaseConnection().driver;
-  const folders = new Set(driver.queryAll<{ id: string }>("SELECT id FROM nodes WHERE kind = 'folder'").map((row) => row.id));
-  return loadDerivedNodeOrder(driver).filter((id) => folders.has(id) && !removedNodeIds.has(id));
-}
-
 function buildResetBook(book: ReadwiseBookInventoryItem, nodeId: string) {
   return {
     ...book,
@@ -134,8 +127,7 @@ function resetImportedTree(activeNode: ActiveNodeRow, book: ReadwiseBookInventor
   const descendantNodeIds = listDescendantNodeIds(activeNode.id).filter(id => !preservedIds.has(id));
   if (descendantNodeIds.length > 0) {
     deleteNodesPermanently({
-      nodeIds: descendantNodeIds,
-      nodeOrder: listNodeOrderWithout(new Set(descendantNodeIds))
+      nodeIds: descendantNodeIds
     });
   }
   const resetBook = buildResetBook(book, activeNode.id);

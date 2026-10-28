@@ -65,8 +65,7 @@ async function prepareDeletion(fixture: Awaited<ReturnType<typeof createDesktopF
     const driver = createBetterSqlite3Driver(source);
     source.exec("ATTACH DATABASE ':memory:' AS search");
     initializeWorkspaceSearchSidecar({ sqlite: source, driver });
-    deleteNodesPermanently(driver, { nodeIds: [nodeId], nodeOrder: [],
-      deletedAt: '2026-10-10T00:01:00.000Z' });
+    deleteNodesPermanently(driver, { nodeIds: [nodeId], deletedAt: '2026-10-10T00:01:00.000Z' });
   } finally { source.close(); }
   return previousOpenState;
 }

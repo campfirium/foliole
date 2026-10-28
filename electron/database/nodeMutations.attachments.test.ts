@@ -118,8 +118,7 @@ it('keeps shared inline images until the last body reference is permanently dele
   });
 
   deleteNodesPermanently({
-    nodeIds: ['node-a'],
-    nodeOrder: ['node-b']
+    nodeIds: ['node-a']
   });
 
   expect(readAttachmentCounts(IMAGE_ID)).toEqual({
@@ -130,8 +129,7 @@ it('keeps shared inline images until the last body reference is permanently dele
   await expect(fs.stat(filePath)).resolves.toBeDefined();
 
   deleteNodesPermanently({
-    nodeIds: ['node-b'],
-    nodeOrder: []
+    nodeIds: ['node-b']
   });
 
   expect(readAttachmentCounts(IMAGE_ID)).toEqual({
@@ -167,8 +165,7 @@ it('keeps shared pdf attachments until the last mounted node is permanently dele
     );
 
   deleteNodesPermanently({
-    nodeIds: ['node-pdf-a'],
-    nodeOrder: ['node-pdf-b']
+    nodeIds: ['node-pdf-a']
   });
 
   expect(readAttachmentCounts(PDF_ID)).toEqual({
@@ -179,8 +176,7 @@ it('keeps shared pdf attachments until the last mounted node is permanently dele
   await expect(fs.stat(filePath)).resolves.toBeDefined();
 
   deleteNodesPermanently({
-    nodeIds: ['node-pdf-b'],
-    nodeOrder: []
+    nodeIds: ['node-pdf-b']
   });
 
   expect(readAttachmentCounts(PDF_ID)).toEqual({

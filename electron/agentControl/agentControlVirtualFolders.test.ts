@@ -167,7 +167,7 @@ it('derives membership only from active Topics in the stored manual order', asyn
   insertNode({ id: 'material-c', title: 'Gone' });
   insertVirtualFolder(['material-a', 'material-c']);
   softDeleteNodes({ deletedAt: '2026-07-05T00:03:00.000Z', nodeIds: ['material-a'] });
-  deleteNodesPermanently({ nodeIds: ['material-c'], nodeOrder: [] });
+  deleteNodesPermanently({ nodeIds: ['material-c'] });
   const { endpoint, server } = await startServer();
   try {
     const response = await fetch(`${endpoint}/agent-control/v1/virtual-folders/read`, {

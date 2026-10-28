@@ -1,5 +1,5 @@
+import { projectStoredParentOrder } from './currentParentOrderStore.js';
 import type { DatabaseDriver } from './driver.js';
-import { rewriteExistingNodeOrder } from './nodeOrderMutations.js';
 import { recordNodeRelatedStateDeletion, retireUnversionedDeletedNodeState } from './nodeRelatedStateDeletion.js';
 import { writeNodeSyncTombstonesForPermanentDelete } from './nodeSyncTombstones.js';
 import { DELETE_NODE_SEARCH_PENDING_SQL } from './searchPendingState.js';
@@ -14,7 +14,6 @@ import { deleteWorkspaceSearchIndexForExistingSubtreeRootIds } from './workspace
 export interface DeleteNodesPermanentlyInput {
   deletedAt?: string;
   nodeIds: string[];
-  nodeOrder: string[];
 }
 
 export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNodesPermanentlyInput): string[] {
@@ -24,13 +23,10 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
   return [];
 }
 
-/**
- * Deletes the rows and returns the released text body hashes for the caller to collect.
- * Without `nodeOrder` the parent order is left for a later rewrite.
- */
+/** Deletes rows and returns released body hashes; membership triggers update the affected parent projections. */
 export function deleteNodesPermanentlyDeferringBodies(
   driver: DatabaseDriver,
-  input: Omit<DeleteNodesPermanentlyInput, 'nodeOrder'> & { nodeOrder?: string[] }
+  input: DeleteNodesPermanentlyInput
 ): string[] {
   const deleteReviewLogStatement = driver.prepare('DELETE FROM review_log WHERE node_id = ?');
   const deleteNodeReviewStatement = driver.prepare('DELETE FROM node_review WHERE node_id = ?');
@@ -43,6 +39,9 @@ export function deleteNodesPermanentlyDeferringBodies(
   const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
   return driver.transaction(() => {
     const now = input.deletedAt ?? new Date().toISOString();
+    const parents = driver.queryAll<{ parent_id: string }>(
+      `SELECT DISTINCT COALESCE(parent_id, 'parent-child-order:root') AS parent_id FROM nodes
+       WHERE id IN (SELECT value FROM json_each(?))`, [JSON.stringify(input.nodeIds)]);
     advanceWorkspaceSearchSourceRevision(driver);
     const hashes = writeNodeSyncTombstonesForPermanentDelete(driver, input.nodeIds, now);
     deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver, input.nodeIds);
@@ -60,7 +59,7 @@ export function deleteNodesPermanentlyDeferringBodies(
       deleteNodeStatement.run([nodeId]);
       driver.execute(DELETE_NODE_SEARCH_PENDING_SQL, [nodeId]);
     }
-    if (input.nodeOrder) rewriteExistingNodeOrder(driver, input.nodeOrder);
+    for (const { parent_id } of parents) projectStoredParentOrder(driver, parent_id, now);
     markWorkspaceSearchSourceRevisionQueued(driver);
     markWorkspaceSearchSourceIndexedIfSettled(driver);
     return hashes;

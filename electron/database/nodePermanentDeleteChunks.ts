@@ -1,5 +1,4 @@
 import { deleteNodesPermanentlyDeferringBodies } from '../../lib/core/database/nodeMutations.js';
-import { rewriteExistingNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
 import { assertFoliolePublishedDeleteAllowed } from '../foliolePublish/foliolePublishManagement.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -59,10 +58,9 @@ export function deletePermanentDeleteChunk(nodeIds: string[]): string[] {
   return deleteNodesPermanentlyDeferringBodies(connection.driver, { deletedAt, nodeIds });
 }
 
-export function finishPermanentDelete(plan: PermanentDeletePlan, nodeOrder: string[]) {
+export function finishPermanentDelete(plan: PermanentDeletePlan) {
   const { driver } = openDatabaseConnection();
   withTransaction(driver, () => {
-    rewriteExistingNodeOrder(driver, nodeOrder);
     return cleanupOrphanAttachments(driver, plan.attachmentCleanupPlan);
   });
 }

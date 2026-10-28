@@ -143,7 +143,7 @@ it('restores saved source states to active re-imported topics and supports reset
 
   seedTopic('node-old-deleted', 'Deleted Article');
   seedImportItem('node-old-deleted', 'Articles/Deleted.md', 'Deleted Article');
-  deleteNodesPermanently({ nodeIds: ['node-old-deleted'], nodeOrder: [] });
+  deleteNodesPermanently({ nodeIds: ['node-old-deleted'] });
 
   seedTopic('node-new-dismissed', 'Dismissed Article');
   seedImportItem('node-new-dismissed', 'Articles/Dismissed.md', 'Dismissed Article');

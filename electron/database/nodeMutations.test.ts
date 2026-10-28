@@ -61,7 +61,7 @@ it('blocks both Trash and permanent deletion before mutating a published Topic',
   expect(() => softDeleteNodes({
     nodeIds: ['node-root'], deletedAt: '2026-03-06T00:10:00.000Z'
   })).toThrow('Unpublish first.');
-  expect(() => deleteNodesPermanently({ nodeIds: ['node-root'], nodeOrder: [] })).toThrow('Unpublish first.');
+  expect(() => deleteNodesPermanently({ nodeIds: ['node-root'] })).toThrow('Unpublish first.');
   expect(getNodeRow('node-root')?.deleted_at).toBeNull();
 });
 
@@ -125,8 +125,7 @@ it('deletes subtree nodes and rewrites node_order while clearing review side tab
   expect(getNodeReadingRow('node-child')).toEqual({ node_id: 'node-child', state: 'dismissed' });
 
   deleteNodesPermanently({
-    nodeIds: ['node-root', 'node-child'],
-    nodeOrder: ['node-keep']
+    nodeIds: ['node-root', 'node-child']
   });
 
   expect(getNodeRow('node-root')).toBeUndefined();
@@ -145,8 +144,7 @@ it.each([false, true])('keeps a complete permanent-delete chain with editor base
   });
 
   deleteNodesPermanently({
-    nodeIds: ['node-root'],
-    nodeOrder: []
+    nodeIds: ['node-root']
   });
 
   const tombstone = connection.sqlite.prepare(
@@ -223,8 +221,7 @@ it('keeps surviving parent content unchanged when permanently deleting linked ch
   });
 
   const affectedParentNodeIds = deleteNodesPermanently({
-    nodeIds: ['node-child'],
-    nodeOrder: ['node-parent']
+    nodeIds: ['node-child']
   });
 
   expect(affectedParentNodeIds).toEqual([]);

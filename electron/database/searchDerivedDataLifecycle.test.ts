@@ -138,8 +138,7 @@ it('clears node and PDF search rows synchronously before permanently deleting no
   expect(indexedPdfCount(['child-delete'])).toEqual({ count: 1 });
 
   deleteNodesPermanently({
-    nodeIds: ['parent-delete', 'child-delete'],
-    nodeOrder: []
+    nodeIds: ['parent-delete', 'child-delete']
   });
 
   expect(indexedNodeCount(['parent-delete', 'child-delete'])).toEqual({ count: 0 });
@@ -160,8 +159,7 @@ it('removes stale search rows for soft-deleted and restored nodes when they are 
   expect(indexedPdfCount(['node-transient'])).toEqual({ count: 1 });
 
   deleteNodesPermanently({
-    nodeIds: ['node-transient'],
-    nodeOrder: []
+    nodeIds: ['node-transient']
   });
 
   expect(indexedNodeCount(['node-transient'])).toEqual({ count: 0 });

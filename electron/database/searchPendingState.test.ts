@@ -88,7 +88,7 @@ it('keeps the new state when the article changes while its previous state is bei
 it('clears obsolete article state together with its index on permanent deletion', () => {
   const driver = openDatabaseConnection().driver;
   enqueueWorkspaceSearchInvalidationForNodeIds(driver, ['special-inbox']);
-  deleteNodesPermanently({ nodeIds: ['special-inbox'], nodeOrder: [] });
+  deleteNodesPermanently({ nodeIds: ['special-inbox'] });
   expect(states()).toEqual([]);
   expect(driver.queryOne("SELECT node_id FROM search.node_search WHERE node_id = 'special-inbox'")).toBeUndefined();
 });

@@ -46,7 +46,7 @@ it('removes the nodes from Trash before the runtime finishes deleting them', asy
 
   expect(harness.getState().trashedNodeIds).not.toContain(nodeId);
   expect(harness.getState().nodesById[nodeId]).toBeUndefined();
-  finish({ nodeOrder: [], removedNodeIds: [nodeId] });
+  finish({ removedNodeIds: [nodeId] });
   await deletion;
   expect(harness.getState().nodesById[nodeId]).toBeUndefined();
   expect(showAppRuntimeNotice).not.toHaveBeenCalled();
@@ -64,7 +64,7 @@ it('keeps the nodes out of Trash when a refresh reloads them before the deletion
     trashedNodeDeletedAtById: beforeDelete.trashedNodeDeletedAtById,
     trashedNodeIds: beforeDelete.trashedNodeIds
   });
-  finish({ nodeOrder: [], removedNodeIds: [nodeId] });
+  finish({ removedNodeIds: [nodeId] });
   await deletion;
 
   expect(harness.getState().trashedNodeIds).not.toContain(nodeId);
@@ -106,7 +106,7 @@ it('reloads surviving nodes after a partial runtime deletion instead of leaving 
   expect(harness.getState().trashedNodeIds).toEqual([]);
   expect(harness.getState().nodesById[nodeId]).toBeUndefined();
   expect(harness.getState().nodesById[removedNodeId]).toBeUndefined();
-  finish({ nodeOrder: beforeDelete.nodeOrder.filter((id) => id !== removedNodeId), removedNodeIds: [removedNodeId] });
+  finish({ removedNodeIds: [removedNodeId] });
   await deletion;
   await vi.waitFor(() => expect(requestWorkspaceStateRefresh).toHaveBeenCalledWith('content-changed'));
 

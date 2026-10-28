@@ -30,7 +30,7 @@ function legacyTombstone() {
   peer.db.exec("ATTACH DATABASE ':memory:' AS search");
   initializeWorkspaceSearchSidecar({ sqlite: peer.db, driver: peer.driver });
   deleteNodesPermanently(peer.driver, {
-    nodeIds: ['topic'], nodeOrder: [], deletedAt: '2026-07-24T02:12:44.137Z'
+    nodeIds: ['topic'], deletedAt: '2026-07-24T02:12:44.137Z'
   });
   // Reproduce the observed historical state, rather than a modern delete writer.
   peer.db.prepare("UPDATE sync_object_state SET current_version_id = NULL WHERE object_type = 'node' AND object_id = 'topic'").run();

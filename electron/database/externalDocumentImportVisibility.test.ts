@@ -21,7 +21,6 @@ vi.mock('../import/managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
 
-import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { saveImportManagerSettings } from '../import/importManagerSettings.js';
 import { runKeepImportRule } from '../import/keepImportService.js';
 import { runImportForFilePath } from '../ipc/importTextFile.js';
@@ -50,10 +49,6 @@ afterEach(async () => {
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
-
-function readNodeOrder() {
-  return loadDerivedNodeOrder(openDatabaseConnection().driver);
-}
 
 async function importDocument(filePath: string) {
   const result = await runImportForFilePath(filePath);
@@ -96,7 +91,7 @@ it('hides a regular external document while its imported Topic is active', async
   });
   expect(searchExternalDocuments('visible body').map((entry) => entry.id)).not.toContain(filePath);
 
-  deleteNodesPermanently({ nodeIds: [nodeId], nodeOrder: readNodeOrder() });
+  deleteNodesPermanently({ nodeIds: [nodeId] });
 
   expect(loadExternalSearchBrowseEntries('folder-1').find((entry) => entry.absolute_path === filePath)).toMatchObject({
     absolute_path: filePath,
@@ -181,7 +176,7 @@ it('hides a Readwise external document while its imported Topic is active', asyn
   });
   expect(searchExternalDocuments('visible body').map((entry) => entry.id)).not.toContain(filePath);
 
-  deleteNodesPermanently({ nodeIds: [nodeId], nodeOrder: readNodeOrder() });
+  deleteNodesPermanently({ nodeIds: [nodeId] });
 
   expect(loadExternalSearchBrowseEntries('readwise-reader-import-articles').find((entry) => entry.absolute_path === filePath)).toMatchObject({
     absolute_path: filePath,

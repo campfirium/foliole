@@ -163,7 +163,7 @@ export async function syncRestoreNodesToRuntime(payload: NativeRestoreNodesArgs)
 }
 
 export async function syncDeleteNodesPermanentlyToRuntime(
-  payload: { nodeIds: string[]; nodeOrder: string[] }
+  payload: { nodeIds: string[] }
 ): Promise<WorkspaceDeleteNodesPermanentlyResult | undefined> {
   return deleteWorkspaceNodesPermanently(payload);
 }

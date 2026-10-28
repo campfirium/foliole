@@ -97,13 +97,13 @@ it('lets other writes run while a large trash is deleted and keeps the final sta
   const nodeIds = await seedTrashedFolder(24);
   const finished: string[] = [];
   const deletion = handleInvokeRequest({
-    command: 'delete_nodes_permanently', args: { nodeIds, nodeOrder: [] }
+    command: 'delete_nodes_permanently', args: { nodeIds }
   }).then((result) => { finished.push('delete'); return result; });
   const edit = handleInvokeRequest({
     command: 'create_topic', args: nodeArgs('kept-topic', null, 'topic', 'Deleted body 3')
   }).then(() => { finished.push('edit'); });
 
-  await expect(deletion).resolves.toEqual({ nodeOrder: [], removedNodeIds: nodeIds });
+  await expect(deletion).resolves.toEqual({ removedNodeIds: nodeIds });
   await edit;
   expect(finished).toEqual(['edit', 'delete']);
   const placeholders = nodeIds.map(() => '?').join(', ');
@@ -124,7 +124,7 @@ it('collects released bodies in the background worker without touching bodies st
   const sharedBody = upsertTextBodyBlob(driver, 'Shared body', NOW);
   const deletedIds = [...nodeIds, 'edited-topic'];
   softDeleteNodes({ nodeIds: deletedIds, deletedAt: NOW });
-  await handleInvokeRequest({ command: 'delete_nodes_permanently', args: { nodeIds: deletedIds, nodeOrder: ['kept-topic'] } });
+  await handleInvokeRequest({ command: 'delete_nodes_permanently', args: { nodeIds: deletedIds } });
   expect(releasedHashes).toContain(oldBody);
   expect(countRows('SELECT COUNT(*) AS count FROM content_blob_data WHERE hash = ?', [oldBody])).toBe(1);
 
@@ -134,4 +134,53 @@ it('collects released bodies in the background worker without touching bodies st
   expect(result.deletedHashes).not.toContain(sharedBody);
   expect(countRows('SELECT COUNT(*) AS count FROM content_blob_data WHERE hash = ?', [oldBody])).toBe(0);
   expect(countRows('SELECT COUNT(*) AS count FROM content_blob_data WHERE hash = ?', [sharedBody])).toBe(1);
+});
+
+
+it('deletes from IDs alone while preserving unrelated ordering and learning after reopen', async () => {
+  const nodeIds = await seedTrashedFolder(1);
+  for (const id of ['kept-folder', 'first', 'second']) {
+    await handleInvokeRequest({ command: 'create_topic', args: nodeArgs(id, id === 'kept-folder' ? null : 'kept-folder', 'topic', id) });
+  }
+  const { driver } = openDatabaseConnection();
+  const { rewriteParentChildOrder } = await import('../../lib/core/database/nodeOrderMutations.js');
+  rewriteParentChildOrder(driver, 'kept-folder', ['second', 'first']);
+  driver.execute("INSERT INTO node_reading (node_id, last_handled_at, next_at) VALUES ('first', 'handled', 'next')");
+  const orders = () => openDatabaseConnection().driver.queryAll(
+    "SELECT * FROM parent_child_order WHERE parent_id = 'kept-folder'");
+  const learning = () => openDatabaseConnection().driver.queryAll('SELECT * FROM node_reading');
+  const beforeOrder = orders();
+  const beforeLearning = learning();
+
+  await expect(handleInvokeRequest({ command: 'delete_nodes_permanently', args: { nodeIds } }))
+    .resolves.toEqual({ removedNodeIds: nodeIds });
+
+  closeDatabaseConnection();
+  expect(orders()).toEqual(beforeOrder);
+  expect(learning()).toEqual(beforeLearning);
+  expect(countRows('SELECT COUNT(*) AS count FROM nodes WHERE id = ?', [nodeIds[0]!])).toBe(0);
+  expect(countRows('SELECT COUNT(*) AS count FROM node_sync_tombstones WHERE node_id = ?', [nodeIds[0]!])).toBe(1);
+});
+
+it('retains sibling order, hidden slots and source order facts when one child is removed', async () => {
+  for (const id of ['parent', 'first', 'hidden', 'removed', 'last']) {
+    await handleInvokeRequest({ command: 'create_topic', args: nodeArgs(id, id === 'parent' ? null : 'parent', 'topic', id) });
+  }
+  const { driver } = openDatabaseConnection();
+  const { rewriteParentChildOrder } = await import('../../lib/core/database/nodeOrderMutations.js');
+  const { loadDerivedNodeOrder } = await import('../../lib/core/database/parentChildOrder.js');
+  rewriteParentChildOrder(driver, 'parent', ['last', 'hidden', 'removed', 'first']);
+  softDeleteNodes({ nodeIds: ['hidden', 'removed'], deletedAt: NOW });
+  loadDerivedNodeOrder(driver);
+  const sources = () => openDatabaseConnection().driver.queryAll('SELECT * FROM parent_order_sources ORDER BY parent_id, author_id');
+  const beforeSources = sources();
+
+  await handleInvokeRequest({ command: 'delete_nodes_permanently', args: { nodeIds: ['removed'] } });
+
+  closeDatabaseConnection();
+  const reopened = openDatabaseConnection().driver;
+  expect(loadDerivedNodeOrder(reopened).filter((id) => ['last', 'hidden', 'removed', 'first'].includes(id)))
+    .toEqual(['last', 'hidden', 'first']);
+  expect(reopened.queryOne("SELECT deleted_at FROM nodes WHERE id = 'hidden'")).toEqual({ deleted_at: NOW });
+  expect(sources()).toEqual(beforeSources);
 });

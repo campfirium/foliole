@@ -103,7 +103,7 @@ it('keeps inline image attachments held only by a restorable trashed node', asyn
   });
 
   softDeleteNodes({ nodeIds: ['node-trash'], deletedAt: '2026-04-18T08:05:00.000Z' });
-  deleteNodesPermanently({ nodeIds: ['node-delete'], nodeOrder: ['node-trash'] });
+  deleteNodesPermanently({ nodeIds: ['node-delete'] });
 
   expect(readCounts(SOFT_IMAGE_ID)).toEqual({ linkRows: 1, pdfRows: 0 });
   await expect(fs.stat(filePath)).resolves.toBeDefined();
@@ -114,7 +114,7 @@ it('keeps inline image attachments held only by a restorable trashed node', asyn
     ['node-trash']
   )).toEqual({ content: `Text\n\n${markdown}`, deleted_at: null });
 
-  deleteNodesPermanently({ nodeIds: ['node-trash'], nodeOrder: [] });
+  deleteNodesPermanently({ nodeIds: ['node-trash'] });
   expect(readCounts(SOFT_IMAGE_ID)).toEqual({ linkRows: 0, pdfRows: 0 });
   await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
@@ -134,13 +134,13 @@ it('keeps mounted pdf attachments held only by a restorable trashed node', async
     .run(SOFT_PDF_ID, 1, 'Page 1', 800, 1200);
 
   softDeleteNodes({ nodeIds: ['node-pdf-trash'], deletedAt: '2026-04-18T08:05:00.000Z' });
-  deleteNodesPermanently({ nodeIds: ['node-pdf-delete'], nodeOrder: ['node-pdf-trash'] });
+  deleteNodesPermanently({ nodeIds: ['node-pdf-delete'] });
 
   expect(readCounts(SOFT_PDF_ID)).toEqual({ linkRows: 1, pdfRows: 1 });
   await expect(fs.stat(filePath)).resolves.toBeDefined();
 
   restoreNodes({ nodeIds: ['node-pdf-trash'] });
-  deleteNodesPermanently({ nodeIds: ['node-pdf-trash'], nodeOrder: [] });
+  deleteNodesPermanently({ nodeIds: ['node-pdf-trash'] });
 
   expect(readCounts(SOFT_PDF_ID)).toEqual({ linkRows: 0, pdfRows: 0 });
   await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
@@ -191,7 +191,7 @@ it('keeps an inline attachment referenced by an owned active body without shared
   });
   openDatabaseConnection().driver.execute('DELETE FROM content_blob_data');
 
-  deleteNodesPermanently({ nodeIds: ['node-delete'], nodeOrder: ['node-keep'] });
+  deleteNodesPermanently({ nodeIds: ['node-delete'] });
 
   expect(readCounts(BLOB_SHARED_IMAGE_ID).linkRows).toBe(0);
   await expect(fs.stat(filePath)).resolves.toBeDefined();
@@ -209,7 +209,7 @@ it('deletes an unreferenced attachment without requiring unrelated retired body 
   )?.body_blob_hash ?? '';
   connection.driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [hash]);
 
-  deleteNodesPermanently({ nodeIds: ['node-delete'], nodeOrder: ['node-missing'] });
+  deleteNodesPermanently({ nodeIds: ['node-delete'] });
   expect(connection.driver.queryOne<{ id: string }>('SELECT id FROM nodes WHERE id = ?', ['node-delete']))
     .toBeUndefined();
   expect(connection.driver.queryOne('SELECT content FROM nodes WHERE id = ?', ['node-missing']))

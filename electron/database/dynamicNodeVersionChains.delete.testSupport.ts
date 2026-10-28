@@ -18,7 +18,7 @@ export function permanentlyDelete(peer: Peer) {
   peer.driver.execute(`UPDATE nodes SET deleted_at = ?, updated_at = ?, sync_dirty = 1 WHERE id = 'topic'`, [at, at]);
   const deletionId = flushNodeSyncVersionWithDriver(peer.driver, 'topic', peer.name, at)!;
   expect(deletionId).toBeTruthy();
-  deleteNodesPermanently(peer.driver, { nodeIds: ['topic'], nodeOrder: [], deletedAt: at });
+  deleteNodesPermanently(peer.driver, { nodeIds: ['topic'], deletedAt: at });
   return peer.db.prepare('SELECT * FROM node_sync_tombstones WHERE node_id = ?').get('topic') as {
     version_id: string; parent_version_id: string | null; snapshot_json: string;
   };

@@ -148,7 +148,7 @@ export async function softDeleteWorkspaceNodes(
 }
 
 export async function deleteWorkspaceNodesPermanently(
-  payload: { nodeIds: string[]; nodeOrder: string[] }
+  payload: { nodeIds: string[] }
 ): Promise<WorkspaceDeleteNodesPermanentlyResult | undefined> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {

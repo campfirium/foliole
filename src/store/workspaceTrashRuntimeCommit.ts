@@ -15,7 +15,7 @@ export interface TrashRuntimeHandlers {
   ) => Promise<WorkspaceSoftDeleteNodesResult | undefined> | WorkspaceSoftDeleteNodesResult | undefined;
   syncRestoreNodes: RestoreNodeRuntimeHandlers['syncRestoreNodes'];
   syncDeleteNodesPermanently: (
-    payload: { nodeIds: string[]; nodeOrder: string[] }
+    payload: { nodeIds: string[] }
   ) => Promise<WorkspaceDeleteNodesPermanentlyResult | undefined> | WorkspaceDeleteNodesPermanentlyResult | undefined;
 }
 
@@ -43,12 +43,11 @@ export async function commitPermanentDeleteMutation(
   runtimeHandlers: TrashRuntimeHandlers,
   mutation: DeleteNodeMutationResult | null
 ) {
-  if (!mutation || mutation.nodeIds.length === 0 || !mutation.nodeOrder) {
+  if (!mutation || mutation.nodeIds.length === 0) {
     return null;
   }
   const result = await runtimeHandlers.syncDeleteNodesPermanently({
-    nodeIds: mutation.nodeIds,
-    nodeOrder: mutation.nodeOrder
+    nodeIds: mutation.nodeIds
   });
   if (!result || result.removedNodeIds.length === 0) {
     return null;

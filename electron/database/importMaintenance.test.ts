@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -78,6 +79,7 @@ function seedKeepImportItem(nodeId: string | null) {
 
 function readImportMaintenanceCounts(firstNodeId: string | null, secondNodeId: string | null) {
   const connection = openDatabaseConnection();
+  loadDerivedNodeOrder(connection.driver);
   return {
     importRuns: connection.sqlite.prepare('SELECT COUNT(*) AS count FROM import_runs').get() as { count: number },
     importSources: connection.sqlite.prepare('SELECT COUNT(*) AS count FROM import_sources').get() as { count: number },

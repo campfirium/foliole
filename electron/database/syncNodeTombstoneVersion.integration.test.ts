@@ -25,7 +25,7 @@ async function deletedHistory(body: string) {
   const at = '2026-10-07T00:00:00.000Z';
   prepareImportedNodeDeletionVersions(source.driver, ['topic'], at);
   const version = source.db.prepare("SELECT current_version_id FROM nodes WHERE id = 'topic'").pluck().get() as string;
-  deleteNodesPermanently(source.driver, { nodeIds: ['topic'], nodeOrder: [], deletedAt: at });
+  deleteNodesPermanently(source.driver, { nodeIds: ['topic'], deletedAt: at });
   const records = await loadRetainedSyncNodeVersionRecords(source.port, [initial, version]);
   const tombstone = records.get(version)!;
   return { source, tombstone, records: [...records.values()] };

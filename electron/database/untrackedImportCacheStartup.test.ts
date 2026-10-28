@@ -15,7 +15,6 @@ vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
 }) }));
 
 import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/databaseSchemaVersion.js';
-import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { saveImportManagerSettings } from '../import/importManagerSettings.js';
 import { runKeepImportRule } from '../import/keepImportService.js';
 import { restoreRemovedSource } from '../import/removedSourceRestore.js';
@@ -25,6 +24,7 @@ import { listApplicationDatabaseBackups } from './backupRestore.js';
 import { resolveManagedBackupDirectory } from './backupSettings.js';
 import { materializeCompressedSqliteBackup } from './compressedSqliteBackup.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { waitForManagedSafetySnapshotSettlements } from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
 import { deleteNodesPermanently } from './nodeMutations.js';
@@ -38,6 +38,7 @@ afterEach(async () => {
 });
 async function previousLibrary() {
   const connection = await initializeDatabase();
+  restoreEmptyLegacyDailyFlowSchema(connection.sqlite);
   connection.sqlite.exec(`INSERT INTO keep_import_item_cache VALUES
     ('orphan', '/unavailable', 'Old title', 'Unique historical body', 'Preview', 1, 2, 'then', NULL);
     PRAGMA user_version = 126;`);
@@ -97,8 +98,8 @@ it('keeps Removed readable and restorable through production import after the ac
   await runKeepImportRule({ directoryPath: sourceDir, highlightPolicy: 'reference_only', ruleId: 'rule' });
   const db = openDatabaseConnection().sqlite;
   const nodeId = db.prepare("SELECT last_node_id FROM keep_import_items WHERE rule_id = 'rule'").pluck().get() as string;
-  const order = loadDerivedNodeOrder(openDatabaseConnection().driver).map((node_id) => ({ node_id }));
-  deleteNodesPermanently({ nodeIds: [nodeId], nodeOrder: order.map((row) => row.node_id) });
+  deleteNodesPermanently({ nodeIds: [nodeId] });
+  restoreEmptyLegacyDailyFlowSchema(db);
   db.exec("INSERT INTO keep_import_item_cache VALUES ('orphan', '/other', 'Old', 'Unique', NULL, 1, 2, 'then', NULL); PRAGMA user_version = 126");
   const before = (await loadRemovedSources()).entries;
   expect(before).toHaveLength(1);
