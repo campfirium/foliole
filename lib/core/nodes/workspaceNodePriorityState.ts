@@ -9,6 +9,8 @@ export interface PriorityIndexNode {
   priority?: number | null;
   createdAt?: string | null;
   deletedAt?: string | null;
+  kind?: string | null;
+  shelvedAt?: string | null;
 }
 
 export class WorkspaceNodePriorityState {
@@ -49,10 +51,12 @@ export class WorkspaceNodePriorityState {
       const previous = this.nodes.get(node.id);
       const changed = !previous || previous.parentNodeId !== node.parentNodeId
         || previous.createdAt !== (node.createdAt ?? null) || previous.deletedAt !== (node.deletedAt ?? null);
+      const eligibilityChanged = previous?.kind !== (node.kind ?? null)
+        || previous?.shelvedAt !== (node.shelvedAt ?? null);
       orderChanged ||= changed;
       if (!previous || previous.parentNodeId !== node.parentNodeId) pathRoots.add(node.id);
       if (previous && previous.parentNodeId === node.parentNodeId && previous.priority === (node.priority ?? null)) {
-        if (changed) this.store(node);
+        if (changed || eligibilityChanged) this.store(node);
         continue;
       }
       if (previous?.parentNodeId) this.unlink(previous.parentNodeId, node.id);
@@ -88,7 +92,8 @@ export class WorkspaceNodePriorityState {
 
   private store(node: PriorityIndexNode) {
     this.nodes.set(node.id, { id: node.id, parentNodeId: node.parentNodeId, priority: node.priority ?? null,
-      createdAt: node.createdAt ?? null, deletedAt: node.deletedAt ?? null });
+      createdAt: node.createdAt ?? null, deletedAt: node.deletedAt ?? null,
+      kind: node.kind ?? null, shelvedAt: node.shelvedAt ?? null });
     if (node.parentNodeId) {
       const siblings = this.children.get(node.parentNodeId) ?? new Set<string>();
       siblings.add(node.id);

@@ -6,6 +6,7 @@ import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 
 interface PriorityRow extends DbRow {
   id: string; parent_id: string | null; priority: number | null; created_at: string; deleted_at: string | null;
+  kind: string | null; shelved_at: string | null;
 }
 
 export class CompanionNodePriorityState {
@@ -77,8 +78,8 @@ export class CompanionNodePriorityState {
 }
 
 async function readNodes(db: DbPort, ids?: readonly string[]) {
-  const rows = await db.query<PriorityRow>(`SELECT id, parent_id, priority, created_at, deleted_at FROM nodes${ids
+  const rows = await db.query<PriorityRow>(`SELECT id, parent_id, priority, created_at, deleted_at, kind, shelved_at FROM nodes${ids
     ? ' WHERE id IN (SELECT value FROM json_each(?))' : ''}`, ids ? [JSON.stringify(ids)] : []);
   return rows.map(row => ({ id: row.id, parentNodeId: row.parent_id, priority: row.priority,
-    createdAt: row.created_at, deletedAt: row.deleted_at }));
+    createdAt: row.created_at, deletedAt: row.deleted_at, kind: row.kind, shelvedAt: row.shelved_at }));
 }

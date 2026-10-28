@@ -7,7 +7,7 @@ import { holdCompanionSyncAppliedRefresh } from '../../companionWorkspaceSnapsho
 import { openCompanionDailyFlow } from '../../runtime/companionDailyFlow';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap';
 
-it('uses the newly committed order after a real HTTP move while display notifications are held', async () => {
+it('uses committed order and eligibility after real HTTP changes while display notifications are held', async () => {
   const host = await createCompanionRequestFixture();
   let release = () => {};
   try {
@@ -33,5 +33,18 @@ it('uses the newly committed order after a real HTTP move while display notifica
       .toEqual([{ node_id: 'order-leaf' }]);
     expect(host.sqlite.prepare("SELECT parent_id, content FROM nodes WHERE id = 'order-leaf'").get())
       .toEqual({ parent_id: 'order-b', content: 'Complete body' });
+    await remote.seed({ nodeId: 'order-leaf', title: 'Leaf', content: 'Complete body', kind: 'folder', parentNodeId: 'order-b' });
+    await host.sync();
+    await owner.runWriter(async db => {
+      await db.run('DELETE FROM daily_flow_state');
+      await db.run('DELETE FROM daily_flow_entries');
+      await db.run('DELETE FROM daily_flow_operations');
+    });
+    const changed = await openCompanionDailyFlow({ now: new Date().toISOString(), mode: 'reading-only' });
+    expect(changed.session.currentNodeId).toBeNull();
+    expect(host.sqlite.prepare("SELECT node_id FROM daily_flow_entries WHERE node_id LIKE 'order-%'").all()).toEqual([]);
+    expect(host.sqlite.prepare("SELECT kind, content FROM nodes WHERE id='order-leaf'").get())
+      .toEqual({ kind: 'folder', content: 'Complete body' });
+    expect(await order()).toEqual(['order-a', 'order-b', 'order-leaf']);
   } finally { release(); await host.close(); }
 });

@@ -9,9 +9,9 @@ import type { DailyFlowLearningNode, DailyFlowLearningSnapshot } from './dailyFl
 interface LearningRow extends DbRow {
   id: string;
   parent_id?: string | null;
-  kind: string | null;
+  kind?: string | null;
   priority?: number | null;
-  shelved_at: string | null;
+  shelved_at?: string | null;
   created_at?: string;
   deleted_at?: string | null;
   anchor_link: string | null;
@@ -20,11 +20,10 @@ interface LearningRow extends DbRow {
 }
 
 type NodeMetadata = ReadonlyMap<string, Readonly<PriorityIndexNode>>;
-const ELIGIBILITY_COLUMNS = `n.kind, n.shelved_at,
-    CASE WHEN n.body_blob_hash IS NOT NULL OR LENGTH(TRIM(n.content)) > 0 THEN 1 ELSE 0 END AS has_content,
+const ELIGIBILITY_COLUMNS = `CASE WHEN n.body_blob_hash IS NOT NULL OR LENGTH(TRIM(n.content)) > 0 THEN 1 ELSE 0 END AS has_content,
     CASE WHEN n.reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal,
     CASE WHEN n.anchor_resolution_status LIKE 'unmapped_%' THEN NULL ELSE n.anchor_link END AS anchor_link`;
-const NODE_COLUMNS = `n.id, n.parent_id, n.priority, n.created_at, n.deleted_at, ${ELIGIBILITY_COLUMNS}`;
+const NODE_COLUMNS = `n.id, n.parent_id, n.priority, n.created_at, n.deleted_at, n.kind, n.shelved_at, ${ELIGIBILITY_COLUMNS}`;
 const PREPARED_NODE_COLUMNS = `n.id, ${ELIGIBILITY_COLUMNS}`;
 const PROFILE_COLUMNS = `    rd.interval_duration_ms AS reading_interval_duration_ms,
     rd.interval_growth_factor AS reading_interval_growth_factor,
@@ -73,12 +72,15 @@ function learningNode(row: LearningRow, profile?: ProfileRow, metadata?: NodeMet
   const cached = metadata?.get(row.id);
   const parentNodeId = cached ? cached.parentNodeId : row.parent_id;
   const createdAt = cached ? cached.createdAt : row.created_at;
-  if ((metadata && !cached) || parentNodeId === undefined || typeof createdAt !== 'string') {
+  if ((metadata && (!cached || cached.kind === undefined || cached.shelvedAt === undefined))
+    || parentNodeId === undefined || typeof createdAt !== 'string') {
     throw new Error('daily_flow_node_metadata_missing');
   }
+  const kind = cached ? cached.kind : row.kind;
+  const shelvedAt = (cached ? cached.shelvedAt : row.shelved_at) ?? null;
   const anchor = parseStoredAnchorLink(row.anchor_link);
-  return { id: row.id, parentNodeId, kind: isNodeKind(row.kind) ? row.kind : 'topic',
-    priority: (cached ? cached.priority : row.priority) ?? null, shelvedAt: row.shelved_at, createdAt,
+  return { id: row.id, parentNodeId, kind: isNodeKind(kind) ? kind : 'topic',
+    priority: (cached ? cached.priority : row.priority) ?? null, shelvedAt, createdAt,
     deletedAt: (cached ? cached.deletedAt : row.deleted_at) ?? null,
     hasContent: row.has_content === 1, hasReveal: row.has_reveal === 1,
     anchorLink: anchor ? { kind: anchor.kind } : null,

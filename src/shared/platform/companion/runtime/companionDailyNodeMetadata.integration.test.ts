@@ -3,11 +3,15 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 
 import { expect, it, vi } from 'vitest';
 
+import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
+import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
+import { applyCompanionLocalNodeVersions } from '../../companionSyncNodeVersions';
 import { refreshCompanionWorkspaceSnapshot } from '../companionWorkspaceSnapshotRefresh';
 import { createDisplayLibrary } from '../sync/workspace-state/companionDisplaySnapshotConcurrency.testSupport';
 
 import type { CapacitorCompanionDatabaseOwner } from './capacitorCompanionDatabaseOwner';
 import { openCompanionDailyFlow } from './companionDailyFlow';
+import { mutateCompanionWorkspace } from './companionWorkspaceMutations';
 
 const runtime = vi.hoisted(() => ({ owner: null as CapacitorCompanionDatabaseOwner | null }));
 vi.mock('./iosCompanionDatabaseBootstrap', () => ({ getIosCompanionDatabaseOwner: () => runtime.owner! }));
@@ -62,8 +66,34 @@ it.each(['android', 'ios'] as const)('%s reuses prepared node facts while retain
     expect(warm.rows).toHaveLength(127);
     expect(await facts()).toEqual(before);
     expect(warmRead.rows).toBe(coldRead.rows);
-    expect(warmRead.bytes).toBeLessThan(coldRead.bytes * 0.8);
-    mkdirSync('.tmp/artifacts/T441/node-metadata', { recursive: true });
-    writeFileSync(`.tmp/artifacts/T441/node-metadata/${platform}.json`, JSON.stringify({ coldRead, warmRead }));
+    expect(warmRead.bytes).toBeLessThan(coldRead.bytes * 0.35);
+    mkdirSync('.tmp/artifacts/T441/node-eligibility', { recursive: true });
+    writeFileSync(`.tmp/artifacts/T441/node-eligibility/${platform}.json`, JSON.stringify({ coldRead, warmRead }));
+  } finally { await library.close(); runtime.owner = null; }
+});
+
+it.each(['android', 'ios'] as const)('%s keeps ancestor shelving current through committed mutations and reopening', async platform => {
+  const library = createDisplayLibrary(platform);
+  runtime.owner = library.owner;
+  try {
+    await seed(library);
+    const records = await library.owner.read(async db => Promise.all(['node-0', 'node-1'].map(async id => {
+      const node = await loadCompanionWorkspaceNodeFromDb(db, id);
+      return toWorkspaceNativeNodeVersion(node!, 'fixture', `seed-${id}`);
+    })));
+    await applyCompanionLocalNodeVersions(records);
+    await refreshCompanionWorkspaceSnapshot();
+    await mutateCompanionWorkspace({ type: 'move', nodeId: 'node-1', parentNodeId: 'node-0' });
+    await mutateCompanionWorkspace({ type: 'shelve', nodeId: 'node-0' });
+    const warm = await generate(library);
+    expect(warm.rows).toHaveLength(125);
+    expect(warm.rows.map(row => row.node_id)).not.toContain('node-0');
+    expect(warm.rows.map(row => row.node_id)).not.toContain('node-1');
+    library.owner.clearNodePriorities();
+    expect(await generate(library)).toEqual(warm);
+    await mutateCompanionWorkspace({ type: 'unshelve', nodeId: 'node-0' });
+    const restored = await generate(library);
+    expect(restored.rows).toHaveLength(127);
+    expect(restored.rows.map(row => row.node_id)).toEqual(expect.arrayContaining(['node-0', 'node-1']));
   } finally { await library.close(); runtime.owner = null; }
 });
