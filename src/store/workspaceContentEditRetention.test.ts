@@ -76,3 +76,22 @@ it.each([false, true])('does not retain acknowledged body text in inactive direc
   expect(Object.values(inactive)).not.toContain(submitted);
   expect(Object.values(inactive)).not.toContain(merged);
 });
+
+it('does not reuse a finished save as the basis of an independent later edit', async () => {
+  const harness = createHarness();
+  const node = harness.getState().nodesById['node-1']!;
+  acknowledgeContentEdit({
+    edit: captureContentEdit(node), node, version: 0, set: harness.setState,
+    result: {
+      nodes: [createWorkspaceRuntimeNodeSnapshot(node, 0)],
+      contentEdit: { currentVersionId: 'ver_finished', submittedVersionId: 'ver_finished' }
+    }
+  });
+  await createUpdateNodeContentAction(harness.setState)('node-1', 'Independent editor input', {
+    baseVersionId: 'ver_base', publishLocal: false
+  });
+  await drainPendingNodeContentRuntimePersists();
+  expect(vi.mocked(syncNodeContentWithAnchorsMutationToRuntime).mock.calls[0]![0]).toMatchObject({
+    contentEdit: { baseVersionId: 'ver_base' }
+  });
+});

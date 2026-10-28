@@ -8,11 +8,18 @@ import type { WorkspaceState } from './workspaceStore';
 
 type Node = WorkspaceState['nodesById'][string];
 type WorkspaceSet = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState>)) => void;
-const createdVersions = new Map<string, string>();
-const confirmedBranches = new Map<string, { baseVersionIds: Set<string>; submittedVersionId: string; content: string }>();
+export type ContentEditAcknowledgement =
+  | { type: 'created'; nodeId: string; versionId: string }
+  | { type: 'saved'; nodeId: string; baseVersionId: string; submittedVersionId: string; currentVersionId: string };
+const listeners = new Set<(event: ContentEditAcknowledgement) => void>();
+
+export function subscribeContentEditAcknowledgements(listener: (event: ContentEditAcknowledgement) => void) {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
 
 export function captureContentEdit(node: Node, baseContent?: string): LocalContentEdit | undefined {
-  const baseVersionId = node.currentVersionId ?? createdVersions.get(node.id);
+  const baseVersionId = node.currentVersionId;
   if (!baseVersionId) return undefined;
   return {
     baseVersionId,
@@ -20,21 +27,6 @@ export function captureContentEdit(node: Node, baseContent?: string): LocalConte
     ...(node.pendingImageReferences?.length ? { newImageReferences: node.pendingImageReferences } : {}),
     versionId: createOpaqueVersionRef(crypto.randomUUID())
   };
-}
-
-export function continueContentEdit(nodeId: string, edit: LocalContentEdit | undefined) {
-  if (!edit) return;
-  const confirmed = confirmedBranches.get(nodeId);
-  if (confirmed?.baseVersionIds.has(edit.baseVersionId)) {
-    edit.baseVersionId = confirmed.submittedVersionId;
-    edit.baseContent = confirmed.content;
-  }
-}
-
-/** Local save transactions already retain submitted descendants of an editor's held base. */
-export function isAcknowledgedContentSuccessor(nodeId: string, baseVersionId: string, versionId: string) {
-  const confirmed = confirmedBranches.get(nodeId);
-  return confirmed?.submittedVersionId === versionId && confirmed.baseVersionIds.has(baseVersionId);
 }
 
 export function acknowledgeContentEdit(args: {
@@ -48,15 +40,8 @@ export function acknowledgeContentEdit(args: {
   if (!args.edit || !acknowledgement) return;
   const persisted = args.result?.nodes.find((node) => node.nodeId === args.node.id);
   if (!persisted) return;
-  const previous = confirmedBranches.get(args.node.id);
-  const baseVersionIds = previous?.submittedVersionId === args.edit.baseVersionId
-    ? previous.baseVersionIds : new Set<string>();
-  baseVersionIds.add(args.edit.baseVersionId);
-  confirmedBranches.set(args.node.id, {
-    baseVersionIds,
-    content: args.node.content,
-    submittedVersionId: acknowledgement.submittedVersionId
-  });
+  for (const listener of listeners) listener({ type: 'saved', nodeId: args.node.id,
+    baseVersionId: args.edit.baseVersionId, ...acknowledgement });
   args.set((state) => {
     const current = state.nodesById[args.node.id];
     if (!current) return {};
@@ -77,11 +62,6 @@ export function acknowledgeContentEdit(args: {
   });
 }
 
-export function rememberCreatedContentVersion(nodeId: string, versionId: string) {
-  createdVersions.set(nodeId, versionId);
-}
-
-export function resetContentEditAcknowledgementsForTests() {
-  confirmedBranches.clear();
-  createdVersions.clear();
+export function acknowledgeCreatedContentVersion(nodeId: string, versionId: string) {
+  for (const listener of listeners) listener({ type: 'created', nodeId, versionId });
 }

@@ -5,7 +5,7 @@ import {
   retainWorkspaceEditorBase
 } from '../../shared/platform/workspaceRuntimeDocumentRepository';
 import { hasWorkspaceRuntimeRepository } from '../../shared/platform/workspaceRuntimeRepository';
-import { isAcknowledgedContentSuccessor } from '../../store/workspaceContentEditAcknowledgements';
+import { subscribeContentEditAcknowledgements } from '../../store/workspaceContentEditAcknowledgements';
 import { drainPendingNodeContentRuntimePersist } from '../../store/workspaceStoreContentRuntimePersist';
 
 /** Keep a draft's original merge base readable while sync can move the node head. */
@@ -21,6 +21,12 @@ export function useWorkspaceEditorBaseHold(args: {
   const latestRetained = useRef<{ session: string; promise: Promise<void> } | null>(null);
   const key = args.nodeId && args.versionId ? `${args.nodeId}\u0000${args.versionId}` : null;
   const token = useMemo(() => key ? crypto.randomUUID() : null, [key]);
+  useEffect(() => subscribeContentEditAcknowledgements((event) => {
+    if (event.type !== 'saved' || event.nodeId !== args.nodeId
+      || event.currentVersionId !== event.submittedVersionId) return;
+    setReady((current) => current?.session === session && current.versionId === event.baseVersionId
+      ? { ...current, versionId: event.submittedVersionId } : current);
+  }), [args.nodeId, session]);
   useEffect(() => {
     if (!args.nodeId || !args.versionId || !hasWorkspaceRuntimeRepository()) return;
     const nodeId = args.nodeId;
@@ -45,7 +51,6 @@ export function useWorkspaceEditorBaseHold(args: {
       }).catch(() => undefined);
     };
   }, [args.nodeId, args.versionId, session, token]);
-  const heldSuccessor = ready?.session === session && args.nodeId && args.versionId
-    && isAcknowledgedContentSuccessor(args.nodeId, ready.versionId, args.versionId);
-  return !key || !hasWorkspaceRuntimeRepository() || ready?.token === token || Boolean(heldSuccessor);
+  return !key || !hasWorkspaceRuntimeRepository() || ready?.token === token
+    || (ready?.session === session && ready.versionId === args.versionId);
 }

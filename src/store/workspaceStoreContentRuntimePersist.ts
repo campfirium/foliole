@@ -2,7 +2,8 @@ import type { LocalContentEdit } from '../../lib/core/sync/localContentEdit';
 import type { RuntimeNodeContentMutationDiagnostics } from '../shared/platform/workspaceRuntimeRepository';
 
 import { createNodeContentPersistQueue } from './nodeContentPersistQueue';
-import { acknowledgeContentEdit, captureContentEdit, continueContentEdit, resetContentEditAcknowledgementsForTests } from './workspaceContentEditAcknowledgements';
+import { acknowledgeContentEdit, captureContentEdit, subscribeContentEditAcknowledgements } from './workspaceContentEditAcknowledgements';
+import { continuePendingContentEdit, readContentEditContinuation } from './workspaceContentEditContinuation';
 import { readEditorInputDiagnosticTime } from './workspaceEditorInputDiagnostics';
 import {
   createUpdateNodeContentMetrics,
@@ -31,7 +32,16 @@ type WorkspaceNode = WorkspaceState['nodesById'][string];
 const contentPersistQueue = createNodeContentPersistQueue({
   delayMs: 0,
   isBlocked: isNodeCreatePending,
-  persist: runNodeContentRuntimePersist
+  persist: runNodeContentRuntimePersist,
+  readContinuation: readContentEditContinuation,
+  continue: continuePendingContentEdit
+});
+
+subscribeContentEditAcknowledgements((event) => {
+  if (event.type !== 'created') return;
+  contentPersistQueue.updatePending(event.nodeId, (args) => {
+    if (!args.nextNodeForSync.currentVersionId) args.nextNodeForSync = { ...args.nextNodeForSync, currentVersionId: event.versionId };
+  });
 });
 
 export async function applyNodeContentRuntimePatch(args: {
@@ -101,6 +111,8 @@ export function applyNodeContentLocalPatch(args: {
 async function runNodeContentRuntimePersist(args: {
   baseContent?: string | undefined;
   edit?: LocalContentEdit | undefined;
+  inputBaseVersionId?: string | undefined;
+  submittedVersionId?: string | undefined;
   contentLength: number;
   diagnosticsEnabled: boolean;
   localState: UpdateNodeContentLocalState;
@@ -110,7 +122,7 @@ async function runNodeContentRuntimePersist(args: {
   version: number;
 }) {
   if (!args.edit) args.edit = captureContentEdit(args.nextNodeForSync, args.baseContent);
-  continueContentEdit(args.nextNodeForSync.id, args.edit);
+  args.inputBaseVersionId ??= args.edit?.baseVersionId;
   const runtimeMetrics = args.diagnosticsEnabled ? createUpdateNodeContentMetrics(true) : args.metrics;
   const runtimeResult = await applyNodeContentRuntimePatch({
     ...args.localState,
@@ -131,6 +143,7 @@ async function runNodeContentRuntimePersist(args: {
     });
   }
   if (runtimeAccepted) {
+    args.submittedVersionId = runtimeResult?.contentEdit?.submittedVersionId;
     acknowledgeContentEdit({ ...args, edit: args.edit, node: args.nextNodeForSync, result: runtimeResult });
     markNodeContentPersisted(args.nextNodeForSync.id, args.version);
   }
@@ -139,7 +152,8 @@ async function runNodeContentRuntimePersist(args: {
 
 export function scheduleNodeContentRuntimePersist(args: Parameters<typeof runNodeContentRuntimePersist>[0]) {
   syncWorkspaceNodeDocumentCacheFromNode(args.nextNodeForSync);
-  contentPersistQueue.schedule(args.nextNodeForSync.id, { ...args, edit: captureContentEdit(args.nextNodeForSync, args.baseContent) });
+  const edit = captureContentEdit(args.nextNodeForSync, args.baseContent);
+  contentPersistQueue.schedule(args.nextNodeForSync.id, { ...args, edit, inputBaseVersionId: edit?.baseVersionId });
 }
 
 export const deferNodeContentRuntimePersist = contentPersistQueue.defer;
@@ -166,5 +180,4 @@ export async function drainPendingNodeContentRuntimePersists() {
 
 export function resetPendingNodeContentRuntimePersistsForTests() {
   contentPersistQueue.reset();
-  resetContentEditAcknowledgementsForTests();
 }

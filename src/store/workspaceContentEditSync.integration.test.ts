@@ -3,7 +3,6 @@ import { promises as fs } from 'node:fs';
 
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
-import { z } from 'zod';
 
 import { readFixtureInventory, reconnectFixturePeer } from '../../electron/sync/desktopFramedSyncPublicationRecovery.testSupport';
 import { createDesktopFramedSyncTwoProcessFixture } from '../../electron/sync/desktopFramedSyncTwoProcess.testSupport';
@@ -12,8 +11,8 @@ import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framed
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { createWorkspaceRuntimeNodeSnapshot } from '../shared/platform/workspaceRuntimeNodeRepository';
 
-import { acknowledgeContentEdit, captureContentEdit, continueContentEdit,
-  resetContentEditAcknowledgementsForTests } from './workspaceContentEditAcknowledgements';
+import { acknowledgeContentEdit, captureContentEdit } from './workspaceContentEditAcknowledgements';
+import { createSaveQueue } from './workspaceContentEditSyncQueue.test-support';
 import { mergeHydratedNode } from './workspaceHydrateObjectMerge';
 import { markNodeContentEdited, resetNodeContentVersionGuardForTests } from './workspaceNodeContentVersionGuard';
 
@@ -24,7 +23,6 @@ const localBody = baseBody.replace('First', 'Local first');
 const timestamp = (second: number) => `2026-10-09T01:00:0${second}.000Z`;
 
 afterEach(() => {
-  resetContentEditAcknowledgementsForTests();
   resetNodeContentVersionGuardForTests();
 });
 
@@ -151,6 +149,20 @@ function assertIndependentEditorState(databasePath: string, baseId: string, inpu
   assertRetiredVersion(databasePath, inputId, localBody);
 }
 
+async function assertContinuedSave(fixture: Awaited<ReturnType<typeof createDesktopFramedSyncTwoProcessFixture>>,
+  parentVersionId: string, nextVersionId: string, continued: string) {
+  const databasePath = fixture.rightSnapshot.databasePath;
+  await fixture.right.invoke('release_edit', { nodeId, holdId: 'editor' });
+  expect(editorHolds(databasePath)).toEqual([]);
+  await fixture.right.invoke('collect_content');
+  const right = persisted(databasePath);
+  expect([...right.bodies]).toEqual(expect.arrayContaining([continued, remoteBody]));
+  expect(right.parents).toContainEqual({ version_id: nextVersionId, parent_version_id: parentVersionId, ordinal: 0 });
+  expect(persisted(fixture.leftSnapshot.databasePath).bodies).toEqual(right.bodies);
+  const restarted = await fixture.restartRight();
+  expect(persisted(restarted.snapshot.databasePath)).toEqual(right);
+}
+
 it('continues newer input from its acknowledged branch while independent edit holds survive synchronization', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let succeeded = false;
@@ -172,18 +184,20 @@ it('continues newer input from its acknowledged branch while independent edit ho
     await reconnectFixturePeer(fixture.right, fixture.leftSnapshot);
     expect(mergeHydratedNode(draft, rendererNode(persisted(databasePath).node.current_version_id,
       remoteBody, timestamp(2))).content).toBe(localBody);
-    const result = z.object({ submittedVersionId: z.string(), current: z.object({ version_id: z.string() }) })
-      .parse(await fixture.right.invoke('local_content_edit', { ...edit, nodeId,
-        content: localBody, hostName: 'desktop-b', updatedAt: timestamp(1) }));
+    const saveQueue = createSaveQueue(fixture, nodeId, localBody);
+    const { queue } = saveQueue;
+    queue.schedule(nodeId, { edit, content: localBody, inputBaseVersionId: baseId });
+    const saving = queue.drain(nodeId);
+    queue.defer(nodeId);
+    await expect(saving).resolves.toBe(true);
     markNodeContentEdited(nodeId);
+    const result = saveQueue.result();
     const saved = persisted(databasePath).node;
     acknowledgeContentEdit({ edit, node: draft, version, set: () => undefined, result: {
       contentEdit: { currentVersionId: result.current.version_id, submittedVersionId: result.submittedVersionId },
       nodes: [createWorkspaceRuntimeNodeSnapshot(rendererNode(saved.current_version_id, saved.content, timestamp(2)), 0)]
     } });
-    continueContentEdit(nodeId, next);
-    expect(next.baseVersionId).toBe(edit.versionId);
-    await fixture.right.invoke('retain_edit', { nodeId, holdId: 'editor', versionId: next.baseVersionId });
+    await fixture.right.invoke('retain_edit', { nodeId, holdId: 'editor', versionId: edit.versionId });
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
     await fixture.right.invoke('collect_content');
     assertIndependentEditorState(databasePath, baseId, edit.versionId);
@@ -191,18 +205,11 @@ it('continues newer input from its acknowledged branch while independent edit ho
     expect(editorHolds(databasePath)).toEqual([{ hold_id: 'editor', version_id: edit.versionId }]);
     assertRetiredVersion(databasePath, edit.versionId, localBody);
     const continued = localBody.replace('Last', 'Continued last');
-    await fixture.right.invoke('local_content_edit', { ...next, nodeId,
-      content: continued, hostName: 'desktop-b', updatedAt: timestamp(3) });
+    queue.schedule(nodeId, { edit: next, content: continued, inputBaseVersionId: baseId });
+    await expect(queue.drain(nodeId)).resolves.toBe(true);
+    expect(next.baseVersionId).toBe(edit.versionId);
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
-    await fixture.right.invoke('release_edit', { nodeId, holdId: 'editor' });
-    expect(editorHolds(databasePath)).toEqual([]);
-    await fixture.right.invoke('collect_content');
-    const right = persisted(databasePath);
-    expect([...right.bodies]).toEqual(expect.arrayContaining([continued, remoteBody]));
-    expect(right.parents).toContainEqual({ version_id: next.versionId, parent_version_id: edit.versionId, ordinal: 0 });
-    expect(persisted(fixture.leftSnapshot.databasePath).bodies).toEqual(right.bodies);
-    const restarted = await fixture.restartRight();
-    expect(persisted(restarted.snapshot.databasePath)).toEqual(right);
+    await assertContinuedSave(fixture, edit.versionId, next.versionId, continued);
     succeeded = true;
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);

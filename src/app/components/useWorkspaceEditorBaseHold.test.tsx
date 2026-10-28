@@ -1,10 +1,12 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import type { ContentEditAcknowledgement } from '../../store/workspaceContentEditAcknowledgements';
+
 import { useWorkspaceEditorBaseHold } from './useWorkspaceEditorBaseHold';
 
 const native = vi.hoisted(() => ({
-  retain: vi.fn(), release: vi.fn(), drain: vi.fn(), acknowledged: vi.fn()
+  retain: vi.fn(), release: vi.fn(), drain: vi.fn(), listeners: new Set<(event: ContentEditAcknowledgement) => void>()
 }));
 vi.mock('../../shared/platform/workspaceRuntimeRepository', () => ({
   hasWorkspaceRuntimeRepository: () => true
@@ -18,7 +20,10 @@ vi.mock('../../store/workspaceStoreContentRuntimePersist', () => ({
 }));
 
 vi.mock('../../store/workspaceContentEditAcknowledgements', () => ({
-  isAcknowledgedContentSuccessor: native.acknowledged
+  subscribeContentEditAcknowledgements: (listener: (event: ContentEditAcknowledgement) => void) => {
+    native.listeners.add(listener);
+    return () => { native.listeners.delete(listener); };
+  }
 }));
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
@@ -60,7 +65,6 @@ it('keeps accepting input after a locally saved version while retaining the prev
   let finish!: () => void;
   native.retain.mockResolvedValueOnce(undefined)
     .mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
-  native.acknowledged.mockReturnValue(true);
   native.drain.mockResolvedValue(true);
   native.release.mockResolvedValue(undefined);
   const view = renderHook(({ versionId }) => useWorkspaceEditorBaseHold({
@@ -68,6 +72,10 @@ it('keeps accepting input after a locally saved version while retaining the prev
   }), { initialProps: { versionId: 'base' } });
   await act(async () => undefined);
   const oldHold = native.retain.mock.calls[0]![2];
+  act(() => {
+    for (const listener of native.listeners) listener({ type: 'saved', nodeId: 'node',
+      baseVersionId: 'base', currentVersionId: 'saved', submittedVersionId: 'saved' });
+  });
   view.rerender({ versionId: 'saved' });
   expect(view.result.current).toBe(true);
   await act(async () => undefined);
@@ -78,7 +86,6 @@ it('keeps accepting input after a locally saved version while retaining the prev
 
 it('still waits for protection when an unrelated remote version arrives', async () => {
   native.retain.mockResolvedValueOnce(undefined).mockImplementationOnce(() => new Promise(() => undefined));
-  native.acknowledged.mockReturnValue(false);
   const view = renderHook(({ versionId }) => useWorkspaceEditorBaseHold({
     flushDraft: () => true, nodeId: 'node', versionId
   }), { initialProps: { versionId: 'base' } });

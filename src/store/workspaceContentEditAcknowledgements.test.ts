@@ -2,11 +2,7 @@ import { beforeEach, expect, it } from 'vitest';
 
 import { createWorkspaceRuntimeNodeSnapshot } from '../shared/platform/workspaceRuntimeNodeRepository';
 
-import {
-  acknowledgeContentEdit, captureContentEdit, continueContentEdit, isAcknowledgedContentSuccessor,
-  rememberCreatedContentVersion,
-  resetContentEditAcknowledgementsForTests
-} from './workspaceContentEditAcknowledgements';
+import { acknowledgeContentEdit, captureContentEdit } from './workspaceContentEditAcknowledgements';
 import { mergeHydratedNode } from './workspaceHydrateObjectMerge';
 import { markNodeContentEdited, markNodeContentPersisted, resetNodeContentVersionGuardForTests } from './workspaceNodeContentVersionGuard';
 import type { WorkspaceState } from './workspaceStore';
@@ -19,7 +15,6 @@ const node: WorkspaceState['nodesById'][string] = {
 };
 
 beforeEach(() => {
-  resetContentEditAcknowledgementsForTests();
   resetNodeContentVersionGuardForTests();
 });
 
@@ -56,7 +51,7 @@ it('replaces an old empty body status when a nonempty edit is confirmed', () => 
   expect(state.nodesById.topic).toMatchObject({ bodyStatus: 'ready', content: 'Confirmed body' });
 });
 
-it('does not overwrite newer input and continues its local branch rather than the merged projection', () => {
+it('does not overwrite newer input with the merged projection', () => {
   const version = markNodeContentEdited(node.id);
   markNodeContentEdited(node.id);
   let state: WorkspaceState = { ...createWorkspaceNodeActionsFixture(), nodesById: { topic: { ...node, content: 'Continued local' } } };
@@ -69,38 +64,5 @@ it('does not overwrite newer input and continues its local branch rather than th
     set: (update) => { state = { ...state, ...(typeof update === 'function' ? update(state) : update) }; }
   });
   expect(state.nodesById.topic).toMatchObject({ content: 'Continued local', currentVersionId: 'ver_local' });
-  const next = captureContentEdit(node)!;
-  continueContentEdit(node.id, next);
-  expect(next.baseVersionId).toBe('ver_local');
-});
-
-it('uses the creation acknowledgement for input captured before the node existed', () => {
-  const draft = { ...node, currentVersionId: null };
-  expect(captureContentEdit(draft)).toBeUndefined();
-  rememberCreatedContentVersion(node.id, 'ver_created');
-  expect(captureContentEdit(draft)?.baseVersionId).toBe('ver_created');
-});
-
-it('continues a draft captured before several local acknowledgements', () => {
-  const acknowledge = (baseVersionId: string, submittedVersionId: string) => {
-    const edit = { baseVersionId, versionId: submittedVersionId };
-    continueContentEdit(node.id, edit);
-    acknowledgeContentEdit({
-      edit, node, version: 1, set: () => undefined,
-      result: {
-        nodes: [createWorkspaceRuntimeNodeSnapshot(node, 0)],
-        contentEdit: { currentVersionId: submittedVersionId, submittedVersionId }
-      }
-    });
-  };
-  acknowledge('ver_base', 'ver_one');
-  acknowledge('ver_one', 'ver_two');
-  acknowledge('ver_one', 'ver_three');
-  const next = { baseVersionId: 'ver_one', versionId: 'ver_four' };
-  continueContentEdit(node.id, next);
-  expect(next.baseVersionId).toBe('ver_three');
-  expect(isAcknowledgedContentSuccessor(node.id, 'ver_base', 'ver_three')).toBe(true);
-  expect(isAcknowledgedContentSuccessor(node.id, 'ver_one', 'ver_remote')).toBe(false);
-  expect(isAcknowledgedContentSuccessor('other', 'ver_base', 'ver_three')).toBe(false);
-  expect(isAcknowledgedContentSuccessor(node.id, 'unheld', 'ver_three')).toBe(false);
+  expect(state.nodesById.topic!.currentVersionId).toBe('ver_local');
 });

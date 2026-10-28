@@ -5,7 +5,7 @@ import type {
   WorkspaceRuntimeNodeSnapshot
 } from '../shared/platform/workspaceRuntimeTypes';
 
-import { rememberCreatedContentVersion } from './workspaceContentEditAcknowledgements';
+import { acknowledgeCreatedContentVersion } from './workspaceContentEditAcknowledgements';
 import { shouldKeepLocalNodeContent } from './workspaceNodeContentVersionGuard';
 import type { WorkspaceState } from './workspaceStore';
 
@@ -164,7 +164,7 @@ export function createWorkspaceNodeCreateAckPatch(
   const createdNodeIds = new Set(requestedNodeIds.filter((nodeId) => acknowledgedNodeIds.has(nodeId)));
   for (const node of result.nodes) {
     if (createdNodeIds.has(node.nodeId) && node.currentVersionId) {
-      rememberCreatedContentVersion(node.nodeId, node.currentVersionId);
+      acknowledgeCreatedContentVersion(node.nodeId, node.currentVersionId);
     }
   }
   const runtimePatch = createWorkspaceNodeMutationPatch(state, {
