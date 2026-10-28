@@ -100,12 +100,10 @@ export function resolveExistingHighlightAtPoint(args: {
   const position = clickedPosition ?? fallbackPosition;
   if (position === null) return null;
   const parent = args.snapshot?.nodesById[args.nodeId];
-  const snapshot = args.snapshot && parent && args.editorRef.current ? {
-    ...args.snapshot,
-    nodesById: {
-      ...args.snapshot.nodesById,
-      [args.nodeId]: { ...parent, content: args.editorRef.current.getContent() }
-    }
-  } : args.snapshot;
-  return findCompanionExistingHighlightAtPosition({ parentNodeId: args.nodeId, position, snapshot });
+  return findCompanionExistingHighlightAtPosition({
+    parentNodeId: args.nodeId,
+    position,
+    snapshot: args.snapshot,
+    ...definedProps({ parentContent: parent && args.editorRef.current ? args.editorRef.current.getContent() : undefined })
+  });
 }

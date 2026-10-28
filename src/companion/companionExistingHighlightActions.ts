@@ -5,6 +5,7 @@ import {
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import { getTextAnchorLocators } from '../features/nodes/model/nodeTypes';
+import { companionArticleChildIds } from '../shared/platform/companion/reading/companionReadingDemand';
 import { findTextAnchorAtPosition } from '../shared/textAnchorTarget';
 
 import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
@@ -44,10 +45,9 @@ export function findCompanionExistingHighlightFromPayload(
   const locator = payload.entries[0]?.locator;
   const parent = snapshot.nodesById[payload.parentNodeId];
   if (!locator || !parent) return null;
-  const match = findTextAnchorAtPosition(payload.parentNodeId, {
-    ...snapshot.nodesById,
-    [parent.id]: { ...parent, content: parentContent }
-  }, Math.floor((locator.from + locator.to) / 2), snapshot.trashedNodeIds);
+  const match = findTextAnchorAtPosition(payload.parentNodeId, snapshot.nodesById,
+    Math.floor((locator.from + locator.to) / 2), snapshot.trashedNodeIds, parentContent,
+    companionArticleChildIds(snapshot.nodesById, payload.parentNodeId));
   if (!match || match.locator.from !== locator.from || match.locator.to !== locator.to ||
       match.originalText !== locator.originalText) return null;
   return match.kind === 'cloze'
@@ -56,12 +56,15 @@ export function findCompanionExistingHighlightFromPayload(
 }
 
 export function findCompanionExistingHighlightAtPosition(args: {
+  parentContent?: string;
   parentNodeId: string;
   position: number;
   snapshot: WorkspaceSnapshot | null;
 }): CompanionExistingHighlightTarget | null {
   if (!args.snapshot) return null;
-  const match = findTextAnchorAtPosition(args.parentNodeId, args.snapshot.nodesById, args.position, args.snapshot.trashedNodeIds);
+  const match = findTextAnchorAtPosition(args.parentNodeId, args.snapshot.nodesById,
+    args.position, args.snapshot.trashedNodeIds, args.parentContent,
+    companionArticleChildIds(args.snapshot.nodesById, args.parentNodeId));
   if (!match) return null;
   if (match.kind === 'cloze') return { kind: 'cloze', nodeId: match.nodeId, originalText: match.originalText };
   return toExistingHighlightTarget(args.snapshot.nodesById[match.nodeId]);
