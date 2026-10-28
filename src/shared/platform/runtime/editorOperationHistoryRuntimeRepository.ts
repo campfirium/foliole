@@ -2,7 +2,7 @@ import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
 import { getRuntimeInvoke } from '../runtimeInvoke';
 import { logRuntimeError } from '../runtimeLogging';
 
-let pendingPayload: string | null = null;
+let pendingPayload: (() => string) | null = null;
 let drainPromise: Promise<void> | null = null;
 
 export async function loadEditorOperationHistoryFromRuntime() {
@@ -25,9 +25,11 @@ async function drainPendingHistory() {
     return;
   }
   while (pendingPayload !== null) {
-    const payloadJson = pendingPayload;
+    let serializePayload: (() => string) | null = pendingPayload;
     pendingPayload = null;
     try {
+      const payloadJson = serializePayload();
+      serializePayload = null;
       await runtimeInvoke(NATIVE_COMMANDS.saveEditorOperationHistory, { payloadJson });
     } catch (error) {
       logRuntimeError('editor operation history save failed', {
@@ -37,8 +39,8 @@ async function drainPendingHistory() {
   }
 }
 
-export function scheduleEditorOperationHistorySave(payloadJson: string) {
-  pendingPayload = payloadJson;
+export function scheduleEditorOperationHistorySave(serializePayload: () => string) {
+  pendingPayload = serializePayload;
   if (drainPromise) return drainPromise;
   drainPromise = drainPendingHistory().finally(() => {
     drainPromise = null;

@@ -37,8 +37,8 @@ it('serializes history writes and leaves the newest payload last', async () => {
   });
   window.electronAPI = createMockElectronApi(invoke as NativeInvoke);
 
-  const first = scheduleEditorOperationHistorySave('{"version":1,"step":1}');
-  const second = scheduleEditorOperationHistorySave('{"version":1,"step":2}');
+  const first = scheduleEditorOperationHistorySave(() => '{"version":1,"step":1}');
+  const second = scheduleEditorOperationHistorySave(() => '{"version":1,"step":2}');
   await Promise.all([first, second]);
 
   expect(writes.at(-1)).toBe('{"version":1,"step":2}');
@@ -58,8 +58,8 @@ it('flushes a history update queued behind an in-flight write', async () => {
   });
   window.electronAPI = createMockElectronApi(invoke as NativeInvoke);
 
-  void scheduleEditorOperationHistorySave('{"version":1,"step":1}');
-  void scheduleEditorOperationHistorySave('{"version":1,"step":2}');
+  void scheduleEditorOperationHistorySave(() => '{"version":1,"step":1}');
+  void scheduleEditorOperationHistorySave(() => '{"version":1,"step":2}');
   const flush = flushEditorOperationHistorySave();
   await Promise.resolve();
   expect(writes).toEqual(['{"version":1,"step":1}']);
@@ -71,4 +71,32 @@ it('flushes a history update queued behind an in-flight write', async () => {
     '{"version":1,"step":1}',
     '{"version":1,"step":2}'
   ]);
+});
+
+it('does not convert history without a persistence consumer', async () => {
+  const serialize = vi.fn(() => '{"version":1}');
+  await scheduleEditorOperationHistorySave(serialize);
+  await flushEditorOperationHistorySave();
+  expect(serialize).not.toHaveBeenCalled();
+});
+
+it('continues with the newest queued history after a rejected write', async () => {
+  const blocked = Promise.withResolvers<void>();
+  const writes: string[] = [];
+  window.electronAPI = createMockElectronApi((async (_command: string, args: { payloadJson: string }) => {
+    writes.push(args.payloadJson);
+    if (writes.length === 1) {
+      await blocked.promise;
+      throw new Error('storage unavailable');
+    }
+    return null;
+  }) as NativeInvoke);
+  void scheduleEditorOperationHistorySave(() => '{"version":1,"step":1}');
+  const discarded = vi.fn(() => '{"version":1,"step":2}');
+  void scheduleEditorOperationHistorySave(discarded);
+  void scheduleEditorOperationHistorySave(() => '{"version":1,"step":3}');
+  blocked.resolve();
+  await flushEditorOperationHistorySave();
+  expect(discarded).not.toHaveBeenCalled();
+  expect(writes).toEqual(['{"version":1,"step":1}', '{"version":1,"step":3}']);
 });

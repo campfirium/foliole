@@ -197,7 +197,8 @@ registerPendingNodeSyncRendererBoundary(workspaceStore);
 
 workspaceStore.subscribe((state, previousState) => {
   if (state.editorOperationHistory === previousState.editorOperationHistory) return;
-  void scheduleEditorOperationHistorySave(serializeEditorOperationHistory(state.editorOperationHistory));
+  const history = state.editorOperationHistory;
+  void scheduleEditorOperationHistorySave(() => serializeEditorOperationHistory(history));
 });
 
 installDailyFlowExternalRefresh(workspaceStore);
