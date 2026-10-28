@@ -1,4 +1,5 @@
 import { createFsrsReviewScheduler } from './fsrsScheduler.js';
+import { isReviewTimestamp } from './reviewTimestamp.js';
 import { createReviewSchedulerParameters, getReviewSchedulerVersion, type ReviewSchedulerSettings } from './settings.js';
 import { createInitialSchedulerCard, mapGradeToRustRating, type SchedulerCard } from './types.js';
 
@@ -48,8 +49,6 @@ export function previewReviewAt(events: readonly ReviewEvent[], parameters: Revi
 }
 
 function reviewInstant(value: string) {
-  const absolute = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value) || /^\d{4}-\d{2}-\d{2}$/.test(value);
-  const instant = Date.parse(value);
-  if (!absolute || !Number.isFinite(instant)) throw new Error('invalid_review_timestamp');
-  return instant;
+  if (!isReviewTimestamp(value, true)) throw new Error('invalid_review_timestamp');
+  return Date.parse(value);
 }

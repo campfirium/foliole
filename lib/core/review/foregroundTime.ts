@@ -1,4 +1,5 @@
 import { reviewCalendarDayKey } from './reviewCalendarDates.js';
+import { resolveNextDayStart } from './reviewDayBoundary.js';
 
 export interface ForegroundTimeBucket { day: string; durationMs: number }
 export interface ForegroundClock { wallMs: number; monotonicMs: number }
@@ -60,9 +61,7 @@ export function splitForegroundTime(wallMs: number, durationMs: number, hour: nu
   while (cursor < end) {
     const date = new Date(cursor);
     const day = reviewCalendarDayKey(date, hour);
-    const [year, month, dayOfMonth] = day.split('-').map(Number);
-    // The calendar key shifts elapsed hours from local midnight, including DST changes.
-    const boundary = new Date(year!, month! - 1, dayOfMonth! + 1).getTime() + hour * 3_600_000;
+    const boundary = resolveNextDayStart(date, hour).getTime();
     const until = Math.min(end, boundary);
     result.push({ day, durationMs: until - cursor });
     cursor = until;

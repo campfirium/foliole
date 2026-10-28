@@ -1,6 +1,6 @@
 import { buildReviewQueuePlan, createReviewQueuePlanner, type ReviewQueuePlan, type ReviewQueuePlanInput } from '../review/queue/reviewQueuePlanner.js';
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
-import { resolveCurrentDayStart } from '../review/reviewDayBoundary.js';
+import { resolveCurrentDayStart, resolveNextDayStart } from '../review/reviewDayBoundary.js';
 
 import type { DailyFlowSettings, DailyFlowLearningSnapshot, DailyFlowOpenArgs } from './dailyFlowContract.js';
 import { containsFlowInstant } from './dailyFlowDayWindow.js';
@@ -30,8 +30,7 @@ export function fullDayCandidates(snapshot: DailyFlowLearningSnapshot, now: stri
 
 function flowDayEnd(now: string, settings: DailyFlowSettings) {
   if (settings.dayWindow && containsFlowInstant(settings.dayWindow, now)) return new Date(Date.parse(settings.dayWindow.end) - 1).toISOString();
-  const end = new Date(flowDay(now, settings));
-  end.setDate(end.getDate() + 1);
+  const end = resolveNextDayStart(new Date(now), settings.newDayStartsAtHour);
   return new Date(end.getTime() - 1).toISOString();
 }
 

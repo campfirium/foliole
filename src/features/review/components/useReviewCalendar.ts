@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { reviewCalendarDayKey, reviewCalendarMonths } from '../../../../lib/core/review/reviewCalendarDates';
-import { resolveCurrentDayStart } from '../../../../lib/core/review/reviewDayBoundary';
+import { resolveCurrentDayStart, resolveNextDayStart } from '../../../../lib/core/review/reviewDayBoundary';
 import type { NativeReviewCalendarHistory } from '../../../../lib/platform/nativeReviewCalendarContract';
 import { loadReviewCalendarHistoryFromRuntime } from '../../../shared/platform/runtime/reviewCalendarRuntimeRepository';
 import { selectReviewCalendarSchedule } from '../../../store/workspaceReviewCalendar';
@@ -34,8 +34,7 @@ export function useReviewCalendar() {
 
   useEffect(() => {
     const update = () => { setNow(new Date()); setRetry((v) => v + 1); };
-    const boundary = resolveCurrentDayStart(new Date(), hour);
-    boundary.setDate(boundary.getDate() + 1);
+    const boundary = resolveNextDayStart(new Date(), hour);
     const timer = window.setTimeout(update, Math.max(1, boundary.getTime() - Date.now()));
     window.addEventListener('focus', update);
     return () => { window.clearTimeout(timer); window.removeEventListener('focus', update); };

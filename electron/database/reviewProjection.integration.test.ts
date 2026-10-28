@@ -16,6 +16,24 @@ import { firstAt, secondAt, seedReviewPeer, score, reset, history, reviewState, 
 import { legacyReviewFact } from './reviewStateSyncRetirement.testSupport.js';
 import { textBranch } from './topicTextState.testSupport.js';
 
+it('rejects impossible local and received review dates without persisting facts or changing the card', async () => {
+  const f = await restoreFixture(); const a = f.peer('source'); const b = f.peer('target');
+  try {
+    await seedReviewPeer(a); await seedReviewPeer(b);
+    score(a, 'original', firstAt); await sendReviews(a, b);
+    const facts = reviewFacts(b), state = reviewState(b);
+    const malformed = '2027-02-30T12:00:00.000Z';
+    expect(() => score(b, 'invalid-local', malformed)).toThrow('invalid_review_timestamp');
+    const incoming = identityReviewRowSchema.parse({ ...facts[0] as object,
+      id: 'invalid-remote', op_id: 'invalid-remote', reviewed_at: malformed });
+    await expect(applyReviewLogRecordsWithDbPort(b.db, [incoming])).rejects.toThrow('invalid_review_timestamp');
+    b.reopen();
+    expect(reviewFacts(b)).toEqual(facts);
+    expect(reviewState(b)).toEqual(state);
+    expect(score(b, 'valid-leap-day', '2028-02-29T12:00:00+08:00')?.last_review).toBe('2028-02-29T04:00:00.000Z');
+  } finally { await f.close(); }
+});
+
 it.each(['relay', 'offline', 'late-history'])('converges all durable card fields through production requests: %s', async mode => {
   const f = await restoreFixture(); const a = f.peer('source'); const b = f.peer('target');
   try {

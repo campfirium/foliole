@@ -52,8 +52,8 @@ it('retains only saved time after an abrupt recording loss and does not recover 
   expect(saved[0]!.durationMs + reopened.counter.snapshot()[0]!.durationMs).toBe(70_000);
 });
 
-it('splits at the same shifted local calendar boundary even on a daylight-saving transition day', () => {
-  const boundary = new Date(2026, 2, 8).getTime() + 4 * 3_600_000;
+it('splits at the configured local clock hour even on a daylight-saving transition day', () => {
+  const boundary = new Date(2026, 2, 8, 4).getTime();
   const { counter, advance } = clock(boundary - 30_000);
   counter.setActive(true, 4); advance(60_000);
   expect(counter.checkpoint()).toEqual([{ day: '2026-03-07', durationMs: 30_000 }, { day: '2026-03-08', durationMs: 30_000 }]);

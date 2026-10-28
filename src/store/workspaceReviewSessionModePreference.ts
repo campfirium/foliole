@@ -1,4 +1,4 @@
-import { resolveCurrentDayStart } from '../../lib/core/review/reviewDayBoundary.js';
+import { resolveNextDayStart } from '../../lib/core/review/reviewDayBoundary.js';
 import {
   DEFAULT_REVIEW_SESSION_MODE,
   isReviewSessionMode,
@@ -37,8 +37,7 @@ export function createReviewSessionModePreference(
     return resolveReviewSessionModePreference(mode, null, now);
   }
   const settings = getCurrentReviewSchedulerSettings();
-  const nextDayStart = resolveCurrentDayStart(new Date(now), settings.newDayStartsAtHour);
-  nextDayStart.setDate(nextDayStart.getDate() + 1);
+  const nextDayStart = resolveNextDayStart(new Date(now), settings.newDayStartsAtHour);
   return {
     reviewSessionMode: mode,
     reviewSessionModeExpiresAt: nextDayStart.toISOString()

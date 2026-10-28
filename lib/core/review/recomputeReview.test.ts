@@ -54,6 +54,16 @@ it('rejects ambiguous local timestamps instead of interpreting the same fact dif
   }
 });
 
+it.each(['2026-02-30T12:00:00Z', '2025-02-29', '2026-04-31T12:00:00+08:00'])('rejects impossible event dates before replay: %s', reviewed_at => {
+  expect(() => recomputeReview([{ ...events[0]!, reviewed_at }], DEFAULT_REVIEW_SCHEDULER_SETTINGS))
+    .toThrow('invalid_review_timestamp');
+});
+
+it('retains valid date-only review facts as absolute UTC dates', () => {
+  expect(recomputeReview([{ ...events[0]!, reviewed_at: '2024-02-29' }], DEFAULT_REVIEW_SCHEDULER_SETTINGS))
+    .toEqual(recomputeReview([{ ...events[0]!, reviewed_at: '2024-02-29T00:00:00.000Z' }], DEFAULT_REVIEW_SCHEDULER_SETTINGS));
+});
+
 it('previews a backdated score at its event time without changing the full-history projection', () => {
   const now = '2026-10-26T08:00:00.000Z';
   const parameters = DEFAULT_REVIEW_SCHEDULER_SETTINGS;

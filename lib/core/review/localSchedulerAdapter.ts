@@ -1,3 +1,4 @@
+import { assertSchedulerGradeInput, assertSchedulerPreviewInput } from './contract.js';
 import { createFsrsReviewScheduler } from './fsrsScheduler.js';
 import {
   createReviewSchedulerParameters,
@@ -26,6 +27,7 @@ export function createLocalReviewSchedulerAdapter(options: LocalReviewSchedulerA
 
   return {
     grade: async (input): Promise<SchedulerGradeResult> => {
+      assertSchedulerGradeInput(input);
       return scheduler.grade({
         card: input.card,
         ...(input.desiredRetention === undefined ? {} : { desiredRetention: input.desiredRetention }),
@@ -35,6 +37,7 @@ export function createLocalReviewSchedulerAdapter(options: LocalReviewSchedulerA
       });
     },
     preview: async (input: SchedulerPreviewInput): Promise<SchedulerPreviewResult> => {
+      assertSchedulerPreviewInput(input);
       return scheduler.preview(input);
     }
   };

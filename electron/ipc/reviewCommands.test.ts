@@ -92,6 +92,17 @@ it('rejects malformed review preview args before previewing', async () => {
   expect(reviewPreview).not.toHaveBeenCalled();
 });
 
+it.each(['review_grade', 'review_preview'])('rejects impossible dates before native calculation: %s', async command => {
+  for (const field of ['now', 'due', 'last_review']) {
+    const invalid = '2026-02-30T12:00:00Z';
+    const args = field === 'now' ? reviewArgs({ now: invalid })
+      : reviewArgs({ card: { ...reviewArgs().request.card, [field]: invalid } });
+    await expect(handleInvokeRequest({ command, args })).rejects.toThrow(`request.${field === 'now' ? '' : 'card.'}${field}`);
+  }
+  expect(reviewGrade).not.toHaveBeenCalled();
+  expect(reviewPreview).not.toHaveBeenCalled();
+});
+
 it('rejects invalid scheduler card state at the IPC boundary', async () => {
   await expect(
     handleInvokeRequest({

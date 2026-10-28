@@ -1,5 +1,11 @@
 // @vitest-environment node
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import Database from 'better-sqlite3';
+import { build } from 'vite';
 import { afterEach, expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
@@ -20,6 +26,25 @@ import { initializeDatabaseSchema } from './migrations.js';
 import { SYNC_IDENTITY_INDEX_SCHEMA_STATEMENTS } from './syncIdentityIndexSchemaStatements.js';
 
 const connections: Database.Database[] = [];
+
+it.each(['America/New_York', 'Asia/Shanghai', 'UTC'])('keeps learning days and durable foreground buckets at local clock boundaries in %s', async (zone) => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'foliole-day-boundary-'));
+  try {
+    // A new process fixes the actual Date timezone even when Vitest runs in worker threads.
+    const built = await build({ configFile: false, logLevel: 'silent', build: { write: false, minify: false,
+      lib: { entry: 'electron/database/reviewDayBoundary.testSupport.ts', formats: ['cjs'] },
+      rolldownOptions: { platform: 'node',
+        external: (id, importer) => Boolean(importer && !id.startsWith('.') && !path.isAbsolute(id)) } } });
+    const output = Array.isArray(built) ? built[0] : built;
+    if (!output || !('output' in output)) throw new Error('Missing timezone scenario output');
+    const chunk = output.output[0]!;
+    if (chunk.type !== 'chunk') throw new Error('Missing timezone scenario bundle');
+    const bundle = chunk.code;
+    const result = execFileSync(process.execPath, ['-e', `${bundle}\nmodule.exports.verifyReviewDayBoundary(process.argv[1]).then(value => console.log(JSON.stringify(value)));`, root],
+      { cwd: process.cwd(), env: { ...process.env, TZ: zone }, encoding: 'utf8', timeout: 30_000 });
+    expect(JSON.parse(result)).toMatchObject({ zone, verified: true });
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
 const sourceA = '11111111-1111-4111-8111-111111111111';
 const sourceB = '22222222-2222-4222-8222-222222222222';
 function instance() {
@@ -123,6 +148,12 @@ it('upgrades desktop and companion storage while retaining existing reading data
       INSERT INTO nodes(id, title, created_at, updated_at) VALUES ('retained', 'Retained', '2026-10-01', '2026-10-01');
       INSERT INTO node_reading(node_id, last_handled_at, next_at, repetition_count, state) VALUES ('retained', '2026-10-01', '2026-10-04', 7, 'active')`);
     if (schema === DESKTOP_FRESH_SCHEMA_STATEMENTS) {
+      // These versions predate Flow; do not feed the current cycle schema into its later migration.
+      const triggers = db.prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'daily_flow_%'").all() as { name: string }[];
+      for (const { name } of triggers) db.exec(`DROP TRIGGER ${name}`);
+      for (const table of ['daily_flow_entries', 'daily_flow_state', 'daily_flow_operations', 'daily_flow_sync_facts', 'daily_flow_sync_projection']) {
+        db.exec(`DROP TABLE ${table}`);
+      }
       if (version >= 129) {
         for (const statement of SYNC_IDENTITY_INDEX_SCHEMA_STATEMENTS) db.exec(statement);
       }

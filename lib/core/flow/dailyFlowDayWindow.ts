@@ -1,4 +1,4 @@
-import { resolveCurrentDayStart } from '../review/reviewDayBoundary.js';
+import { resolveCurrentDayStart, resolveNextDayStart } from '../review/reviewDayBoundary.js';
 import type { DbPort } from '../sync/dbPort.js';
 
 import type { DailyFlowSettings } from './dailyFlowContract.js';
@@ -12,8 +12,7 @@ export function containsFlowInstant(window: DailyFlowDayWindow, now: string) {
 
 export function createDailyFlowDayWindow(now: string, hour: number): DailyFlowDayWindow {
   const start = resolveCurrentDayStart(new Date(now), hour);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
+  const end = resolveNextDayStart(new Date(now), hour);
   return { start: start.toISOString(), end: end.toISOString() };
 }
 

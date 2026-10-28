@@ -1,3 +1,4 @@
+import { isReviewTimestamp } from '../../lib/core/review/reviewTimestamp.js';
 import type {
   NativeReviewGradeArgs,
   NativeReviewPreviewArgs,
@@ -16,6 +17,12 @@ import {
 
 const REVIEW_RATINGS = ['Again', 'Hard', 'Good', 'Easy'] as const;
 
+function asReviewTimestamp(value: unknown, field: string) {
+  const timestamp = asTimestamp(value, field);
+  if (!isReviewTimestamp(timestamp)) throw new Error(`invalid argument: ${field}`);
+  return timestamp;
+}
+
 function asObject(value: unknown, field: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error(`invalid argument: ${field}`);
@@ -25,9 +32,10 @@ function asObject(value: unknown, field: string): Record<string, unknown> {
 
 function parseSchedulerCard(value: unknown, field: string): NativeSchedulerCard {
   const card = asObject(value, field);
+  const lastReview = asNullableString(card.last_review, `${field}.last_review`);
   return {
-    due: asTimestamp(card.due, `${field}.due`),
-    last_review: asNullableString(card.last_review, `${field}.last_review`),
+    due: asReviewTimestamp(card.due, `${field}.due`),
+    last_review: lastReview === null ? null : asReviewTimestamp(lastReview, `${field}.last_review`),
     state: asIntegerInRange(card.state, `${field}.state`, 0, 3) as NativeSchedulerCard['state'],
     stability: asFiniteNumber(card.stability, `${field}.stability`),
     difficulty: asFiniteNumber(card.difficulty, `${field}.difficulty`),
@@ -54,7 +62,7 @@ function parseReviewRequest(value: unknown, field: string) {
     ...(request.enableShortTerm === undefined
       ? {}
       : { enableShortTerm: asBoolean(request.enableShortTerm, `${field}.enableShortTerm`) }),
-    now: asTimestamp(request.now, `${field}.now`)
+    now: asReviewTimestamp(request.now, `${field}.now`)
   };
 }
 

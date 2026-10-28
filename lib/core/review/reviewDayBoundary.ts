@@ -1,7 +1,5 @@
 import type { SchedulerCard } from './types.js';
 
-const HOUR_IN_MS = 60 * 60 * 1000;
-
 export const DEFAULT_NEW_DAY_STARTS_AT_HOUR = 4;
 
 export function normalizeNewDayStartsAtHour(value: unknown) {
@@ -14,8 +12,16 @@ export function normalizeNewDayStartsAtHour(value: unknown) {
 
 export function resolveCurrentDayStart(date: Date, newDayStartsAtHour: number) {
   const hour = normalizeNewDayStartsAtHour(newDayStartsAtHour);
-  const shifted = new Date(date.getTime() - hour * HOUR_IN_MS);
-  return new Date(shifted.getFullYear(), shifted.getMonth(), shifted.getDate(), hour);
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour);
+  return date.getTime() < start.getTime()
+    ? new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1, hour)
+    : start;
+}
+
+export function resolveNextDayStart(date: Date, newDayStartsAtHour: number) {
+  const start = resolveCurrentDayStart(date, newDayStartsAtHour);
+  return new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1,
+    normalizeNewDayStartsAtHour(newDayStartsAtHour));
 }
 
 export function resolveScheduledDayStart(args: {
@@ -24,8 +30,8 @@ export function resolveScheduledDayStart(args: {
   newDayStartsAtHour: number;
 }) {
   const start = resolveCurrentDayStart(new Date(args.reviewedAt), args.newDayStartsAtHour);
-  start.setDate(start.getDate() + Math.max(0, Math.round(args.scheduledDays)));
-  return start;
+  return new Date(start.getFullYear(), start.getMonth(), start.getDate() + Math.max(0, Math.round(args.scheduledDays)),
+    normalizeNewDayStartsAtHour(args.newDayStartsAtHour));
 }
 
 export function normalizeScheduledCardDue(args: {

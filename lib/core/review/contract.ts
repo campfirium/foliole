@@ -1,3 +1,4 @@
+import { isReviewTimestamp } from './reviewTimestamp.js';
 import type {
   SchedulerCard,
   SchedulerGradeInput,
@@ -6,17 +7,8 @@ import type {
   SchedulerPreviewResult
 } from './types.js';
 
-const TIMESTAMP_TZ_PATTERN = /(Z|[+-]\d{2}:\d{2})$/;
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
-}
-
-function isIsoTimestamp(value: unknown): value is string {
-  if (typeof value !== 'string' || !TIMESTAMP_TZ_PATTERN.test(value)) {
-    return false;
-  }
-  return !Number.isNaN(Date.parse(value));
 }
 
 function assertNonNegativeInteger(value: unknown, field: string): asserts value is number {
@@ -38,7 +30,7 @@ function assertNonNegativeNumber(value: unknown, field: string): asserts value i
 }
 
 function assertTimestamp(value: unknown, field: string): asserts value is string {
-  if (!isIsoTimestamp(value)) {
+  if (!isReviewTimestamp(value)) {
     throw new Error(`Invalid scheduler field "${field}": expected RFC3339 timestamp`);
   }
 }
