@@ -54,49 +54,51 @@ async function collectPromptEditorSelection(desktopWindow: Page) {
 }
 
 async function clickHighlightsPanelItem(desktopWindow: Page, titleFragment: string) {
-  await desktopWindow.evaluate((targetText) => {
-    const button = Array.from(document.querySelectorAll('[aria-label="Document highlights"] button')).find((node) =>
-      (node.textContent ?? '').includes(targetText)
-    ) as HTMLButtonElement | undefined;
-    if (!button) {
-      throw new Error(`missing highlights panel item ${targetText}`);
-    }
-    button.click();
-  }, titleFragment);
+  await desktopWindow.getByRole('list', { name: /^(Document highlights|文档高亮)$/ })
+    .getByRole('button').filter({ hasText: titleFragment }).click();
 }
 
-async function createContextMenuHighlight(desktopWindow: Page, from: number, to: number) {
-  await desktopWindow.evaluate(([start, end]) => {
-    return globalThis.window?.__folioleDebug?.setEditorSelection?.('prompt-editor', start, end) ?? false;
-  }, [from, to]);
-  await desktopWindow.locator('.prompt-editor-host .cm-content').click({ button: 'right', position: { x: 120, y: 20 } });
-  await desktopWindow.getByRole('menuitem', { name: 'Highlight' }).click();
+async function createSelectionHighlight(desktopWindow: Page, from: number, to: number) {
+  await expect.poll(() => desktopWindow.evaluate(([start, end]) =>
+    globalThis.window?.__folioleDebug?.setEditorSelection?.('prompt-editor', start, end) ?? false,
+  [from, to])).toBe(true);
+  await desktopWindow.evaluate(() => {
+    window.getSelection()?.anchorNode?.parentElement?.scrollIntoView({ block: 'center' });
+  });
+  await desktopWindow.locator('.prompt-editor-host .cm-content').evaluate((element) => {
+    const rect = element.closest('.cm-scroller')!.getBoundingClientRect();
+    element.dispatchEvent(new MouseEvent('mouseup', {
+      bubbles: true, button: 0, clientX: rect.left + 120, clientY: rect.top + 20
+    }));
+  });
+  await desktopWindow.locator('[data-annotation-toolbar="true"]')
+    .getByRole('button', { name: /^(Highlight|高亮)$/ }).click();
 }
 
-test('jumps to a context-menu-created highlight from the highlights panel while staying in the parent document', async ({ desktopWindow }, testInfo) => {
+test('jumps to a selection-created highlight from the highlights panel while staying in the parent document', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
   await seedParentOnlyWorkspace(desktopWindow);
-  await createContextMenuHighlight(desktopWindow, 6, 10);
+  await createSelectionHighlight(desktopWindow, 6, 10);
 
-  await desktopWindow.getByRole('button', { name: 'Highlights panel' }).click();
+  await desktopWindow.getByRole('button', { name: /^(Highlights panel|高亮面板)$/ }).click();
   await clickHighlightsPanelItem(desktopWindow, 'Beta');
 
   await expect.poll(async () => collectPromptEditorSelection(desktopWindow), {
-    message: 'waiting for context-menu-created highlight panel jump to reveal the text range'
+    message: 'waiting for selection-created highlight panel jump to reveal the text range'
   }).toMatchObject({ selectedText: '', selection: { from: 6, to: 6 } });
 
-  await testInfo.attach('context-menu-highlight-panel-selection', {
+  await testInfo.attach('selection-highlight-panel-selection', {
     body: JSON.stringify(await collectPromptEditorSelection(desktopWindow), null, 2),
     contentType: 'application/json'
   });
 });
 
-test('jumps to a context-menu-created highlight from the highlights panel while staying in a child document', async ({ desktopWindow }, testInfo) => {
+test('jumps to a selection-created highlight from the highlights panel while staying in a child document', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
   await seedChildDocumentWorkspace(desktopWindow);
-  await createContextMenuHighlight(desktopWindow, 6, 10);
+  await createSelectionHighlight(desktopWindow, 6, 10);
 
-  await desktopWindow.getByRole('button', { name: 'Highlights panel' }).click();
+  await desktopWindow.getByRole('button', { name: /^(Highlights panel|高亮面板)$/ }).click();
   await clickHighlightsPanelItem(desktopWindow, 'Beta');
 
   await expect.poll(async () => collectPromptEditorSelection(desktopWindow), {
@@ -109,7 +111,7 @@ test('jumps to a context-menu-created highlight from the highlights panel while 
   });
 });
 
-test('scrolls to a deep context-menu-created highlight from the highlights panel while staying in a child document', async ({ desktopWindow }, testInfo) => {
+test('scrolls to a deep selection-created highlight from the highlights panel while staying in a child document', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
   await seedLongChildDocumentWorkspace(desktopWindow);
 
@@ -119,7 +121,7 @@ test('scrolls to a deep context-menu-created highlight from the highlights panel
   });
   expect(needlePosition).toBeGreaterThan(0);
 
-  await createContextMenuHighlight(desktopWindow, needlePosition, needlePosition + 'ChildDocumentJumpNeedle'.length);
+  await createSelectionHighlight(desktopWindow, needlePosition, needlePosition + 'ChildDocumentJumpNeedle'.length);
   await desktopWindow.evaluate(() => {
     const scroller = document.querySelector('.prompt-editor-host .cm-scroller') as HTMLElement | null;
     if (!scroller) {
@@ -131,7 +133,7 @@ test('scrolls to a deep context-menu-created highlight from the highlights panel
   });
   await desktopWindow.waitForTimeout(200);
 
-  await desktopWindow.getByRole('button', { name: 'Highlights panel' }).click();
+  await desktopWindow.getByRole('button', { name: /^(Highlights panel|高亮面板)$/ }).click();
   await clickHighlightsPanelItem(desktopWindow, 'ChildDocumentJumpNeedle');
 
   await expect.poll(async () => collectPromptEditorSelection(desktopWindow), {
