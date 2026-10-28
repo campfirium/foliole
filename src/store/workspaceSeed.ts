@@ -2,6 +2,7 @@ import { createInitialNewItemReviewProfile } from '../../lib/core/review/newItem
 import type { NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 import { ensureInboxNodeInSnapshot, HOME_NODE_ID } from '../features/nodes/model/specialNodes';
 
+import { prepareWorkspaceNodeChildrenIndex } from './workspaceNodeChildrenIndex';
 import type { WorkspaceLayoutState } from './workspaceStore';
 
 export function createDefaultReviewProfile(timestamp: string): NodeReviewProfile {
@@ -9,7 +10,7 @@ export function createDefaultReviewProfile(timestamp: string): NodeReviewProfile
 }
 
 export function createEmptyWorkspaceSnapshot(now: Date, defaultLayoutState: WorkspaceLayoutState) {
-  return ensureInboxNodeInSnapshot({
+  const snapshot = ensureInboxNodeInSnapshot({
     activeNodeId: null,
     browseRootNodeId: HOME_NODE_ID,
     layout: { ...defaultLayoutState },
@@ -20,4 +21,6 @@ export function createEmptyWorkspaceSnapshot(now: Date, defaultLayoutState: Work
     trashedNodeDeletedAtById: {},
     trashedNodeIds: []
   });
+  prepareWorkspaceNodeChildrenIndex(snapshot.nodesById);
+  return snapshot;
 }

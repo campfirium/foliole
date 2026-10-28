@@ -1,24 +1,26 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 
+import { prepareWorkspaceNodeChildrenIndex } from './workspaceNodeChildrenIndex';
+
 export function normalizeWidth(value: number) {
   return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
 }
 
 export function collectNodeSubtreeIds(nodeId: string, nodesById: Record<string, Node>) {
+  if (!nodeId || !nodesById[nodeId]) return [];
+  const index = prepareWorkspaceNodeChildrenIndex(nodesById);
   const ids: string[] = [];
   const queue = [nodeId];
 
-  while (queue.length > 0) {
-    const currentId = queue.shift();
+  for (let cursor = 0; cursor < queue.length; cursor++) {
+    const currentId = queue[cursor];
     if (!currentId || !nodesById[currentId]) {
       continue;
     }
 
     ids.push(currentId);
-    for (const candidate of Object.values(nodesById)) {
-      if (candidate.parentNodeId === currentId) {
-        queue.push(candidate.id);
-      }
+    for (const child of index.children.get(currentId) ?? []) {
+      queue.push(child.id);
     }
   }
 

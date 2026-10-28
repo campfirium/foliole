@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { HOME_NODE_ID, INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
-
 import {
   syncDeleteNodesPermanentlyToRuntime,
   syncNodeContentToRuntime,
@@ -237,8 +235,7 @@ describe('createWorkspaceNodeActions unresolved locator lifecycle sync', () => {
 
     expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
     expect(syncDeleteNodesPermanentlyToRuntime).toHaveBeenCalledWith({
-      nodeIds: ['node-highlight'],
-      nodeOrder: [HOME_NODE_ID, INBOX_NODE_ID, 'special-virtual-root', 'node-1']
+      nodeIds: ['node-highlight']
     });
     expectParentDocumentUntouched(harness);
     expect(harness.getState().nodesById['node-highlight']!).toBeUndefined();

@@ -4,6 +4,7 @@ import { readWorkspaceRecordPatch } from '../shared/workspaceRecordPatch';
 
 import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
 import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
+import { prepareWorkspaceNodeChildrenIndex } from './workspaceNodeChildrenIndex';
 import { enforceWorkspaceRendererBoundary } from './workspaceRendererBoundary';
 import {
   collectRendererBoundaryKeepNodeIds,
@@ -131,13 +132,10 @@ export function withWorkspaceRendererBoundary<T extends WorkspaceState | Partial
       ? normalizedState
       : { ...normalizedState, rendererBoundaryKeepNodeIds: nextRendererBoundaryKeepNodeIds };
 
-  if (!hasWorkspaceRuntimeRepository()) {
-    return nextState as T;
-  }
-
-  return enforceWorkspaceRendererBoundary(
-    nextState,
-    currentState,
-    collectRendererBoundaryKeepNodeIds(nextState, currentState)
-  ) as T;
+  const published = hasWorkspaceRuntimeRepository()
+    ? enforceWorkspaceRendererBoundary(nextState, currentState,
+      collectRendererBoundaryKeepNodeIds(nextState, currentState)) as T
+    : nextState as T;
+  prepareWorkspaceNodeChildrenIndex(published.nodesById ?? currentState.nodesById, currentState.nodesById);
+  return published;
 }

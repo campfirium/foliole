@@ -48,7 +48,7 @@ describe('workspace trash mutation commit boundary', () => {
     expect(harness.getState().trashedNodeIds).not.toContain(nodeId);
   });
 
-  it('removes a soft-deleted current review node only after runtime success', async () => {
+  it('commits trash membership while leaving durable session reconciliation to Flow', async () => {
     const { actions, harness } = createHarness();
     const nodeId = (await actions.createRootNode('root 2'))!;
     harness.setState((state) => ({
@@ -60,10 +60,11 @@ describe('workspace trash mutation commit boundary', () => {
     }));
     vi.mocked(syncSoftDeleteNodesToRuntime).mockImplementation(async (payload) => ({ deletedNodeIds: payload.nodeIds }));
 
+    const session = harness.getState().reviewSession;
     await actions.deleteNode(nodeId);
 
-    expect(harness.getState().reviewSession.currentNodeId).toBe('node-1');
-    expect(harness.getState().reviewSession.queueNodeIds).not.toContain(nodeId);
+    expect(harness.getState().trashedNodeIds).toContain(nodeId);
+    expect(harness.getState().reviewSession).toBe(session);
   });
 
   it('keeps restore patch gated by runtime success', async () => {
