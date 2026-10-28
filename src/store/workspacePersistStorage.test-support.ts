@@ -174,11 +174,11 @@ export function stageLegacyWorkspacePayload() {
   );
 }
 
-export function readWorkspaceNodesFromPayload(value: string | null) {
+export function readWorkspaceNodesFromPayload(value: { state: unknown } | null) {
   if (!value) {
     return null;
   }
-  return (JSON.parse(value) as {
+  return (value as {
     state: { nodesById: Record<string, { content: string; reveal: string | null }> };
   }).state.nodesById;
 }

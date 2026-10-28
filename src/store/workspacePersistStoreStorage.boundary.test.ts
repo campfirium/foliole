@@ -41,3 +41,26 @@ it('serializes the complete browser fallback payload', () => {
     '{"state":{"activeNodeId":"node-1"},"version":0}'
   );
 });
+
+it('passes prepared runtime values to persistence without JSON encoding or deep copying', async () => {
+  const collections = ['Research'];
+  const invoke = vi.fn(async (command: string) => command === 'load_workspace_list_snapshot'
+    ? {
+      activeNodeId: 'topic', nodeOrder: ['topic'], trashedNodeIds: [],
+      nodesById: { topic: {
+        id: 'topic', kind: 'topic', title: 'Topic', content: '', reveal: null,
+        hasContent: false, hasReveal: false, collections,
+        createdAt: '2026-10-28T00:00:00.000Z', updatedAt: '2026-10-28T00:00:00.000Z'
+      } }
+    } : null);
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke as never);
+  const stringify = vi.spyOn(JSON, 'stringify');
+  try {
+    const result = await workspacePersistStoreStorage.getItem('foliole-workspace-v1');
+    expect(stringify.mock.calls.filter(([value]) => value?.state?.nodesById)).toHaveLength(0);
+    expect(result?.version).toBe(0);
+    expect(result?.state.nodesById.topic?.collections).toBe(collections);
+  } finally {
+    stringify.mockRestore();
+  }
+});

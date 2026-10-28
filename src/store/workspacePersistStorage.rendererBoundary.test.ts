@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { appendReadingPositionTraceLog } from '../shared/platform/readingPositionTraceRuntimeRepository';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
-import { workspacePersistStorage } from './workspacePersistStorage';
+import { workspacePersistStoreStorage } from './workspacePersistStorage';
 import {
   createUpdatedChildAnchorRuntimeInvoke,
   expectReplayedUpdatedChildHighlight,
@@ -75,7 +75,7 @@ async function runKeepsOnlyActiveAndPendingDocumentsCase() {
   stagePendingNodeDocument();
   vi.mocked(getRuntimeInvoke).mockReturnValue(createRuntimeInvoke());
 
-  const state = readHydratedState(await workspacePersistStorage.getItem('foliole-workspace-v1'));
+  const state = readHydratedState(await workspacePersistStoreStorage.getItem('foliole-workspace-v1'));
 
   expect(state?.activeNodeId).toBe('node-2');
   expect(state?.nodesById['node-1']).toMatchObject({
@@ -97,7 +97,7 @@ async function runPendingHighlightRehydrateCase() {
   const invoke = createUpdatedChildAnchorRuntimeInvoke();
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  const state = readHydratedState(await workspacePersistStorage.getItem('foliole-workspace-v1'));
+  const state = readHydratedState(await workspacePersistStoreStorage.getItem('foliole-workspace-v1'));
 
   expect(state?.nodesById['node-highlight']).toMatchObject({
     title: 'Better',
@@ -120,7 +120,7 @@ async function runClozeRehydrateCase() {
   const invoke = createUpdatedChildAnchorRuntimeInvoke();
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  const state = readHydratedState(await workspacePersistStorage.getItem('foliole-workspace-v1'));
+  const state = readHydratedState(await workspacePersistStoreStorage.getItem('foliole-workspace-v1'));
 
   expect(state?.nodesById['node-cloze']).toMatchObject({
     title: 'Alpha [...] Gamma',

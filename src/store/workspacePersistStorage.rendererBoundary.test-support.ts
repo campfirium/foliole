@@ -96,8 +96,8 @@ function createUpdatedClozeChildNode() {
   };
 }
 
-export function readHydratedState(value: string | null) {
-  return value ? (JSON.parse(value) as { state: HydratedState }).state : null;
+export function readHydratedState(value: { state: unknown } | null) {
+  return value ? (value as { state: HydratedState }).state : null;
 }
 
 export function createUpdatedChildAnchorSnapshot() {

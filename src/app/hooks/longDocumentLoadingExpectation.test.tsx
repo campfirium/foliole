@@ -6,7 +6,7 @@ import { MouseGestureSettingsProvider } from '../../features/settings/context/Mo
 import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { resetWorkspaceNodeDocumentPrefetchForTest } from '../../store/workspaceNodeDocumentPrefetch';
-import { workspacePersistStorage } from '../../store/workspacePersistStorage';
+import { workspacePersistStoreStorage } from '../../store/workspacePersistStorage';
 import { readWorkspaceNodesFromPayload } from '../../store/workspacePersistStorage.test-support';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -181,7 +181,7 @@ it('allows first open of a long document to read the full body from local persis
   const invoke = createHydrateInvoke(longDocument);
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+  const value = await workspacePersistStoreStorage.getItem('foliole-workspace-v1');
   const nodesById = readWorkspaceNodesFromPayload(value);
 
   expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-1' });

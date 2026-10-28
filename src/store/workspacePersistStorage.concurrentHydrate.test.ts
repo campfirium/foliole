@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
-import { workspacePersistStorage } from './workspacePersistStorage';
+import { workspacePersistStoreStorage } from './workspacePersistStorage';
 
 vi.mock('../shared/platform/readingPositionTraceRuntimeRepository', () => ({
   appendReadingPositionTraceLog: vi.fn()
@@ -38,8 +38,8 @@ it('coalesces concurrent runtime workspace hydrate reads by storage key', async 
   });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  const firstRead = workspacePersistStorage.getItem('foliole-workspace-v1');
-  const secondRead = workspacePersistStorage.getItem('foliole-workspace-v1');
+  const firstRead = workspacePersistStoreStorage.getItem('foliole-workspace-v1');
+  const secondRead = workspacePersistStoreStorage.getItem('foliole-workspace-v1');
 
   await Promise.resolve();
   expect(invoke.mock.calls.filter(([command]) => command === 'load_workspace_list_snapshot')).toHaveLength(1);

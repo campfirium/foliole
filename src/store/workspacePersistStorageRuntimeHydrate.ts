@@ -1,3 +1,5 @@
+import type { StorageValue } from 'zustand/middleware';
+
 import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
@@ -27,12 +29,13 @@ import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBounda
 import {
   prepareWorkspaceRestoreHydrate
 } from './workspaceRestoreSession';
+import type { WorkspacePersistedState } from './workspaceStore';
 
-function toPersistedStatePayload(value: unknown): string | null {
+function toPersistedStatePayload(value: unknown): StorageValue<WorkspacePersistedState> | null {
   if (!value || typeof value !== 'object') {
     return null;
   }
-  return JSON.stringify({ state: value, version: 0 });
+  return { state: value as WorkspacePersistedState, version: 0 };
 }
 
 type RuntimeWorkspaceSnapshotLike = {

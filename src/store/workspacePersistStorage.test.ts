@@ -4,7 +4,7 @@ import { HOME_NODE_ID } from '../features/nodes/model/specialNodes';
 import { appendReadingPositionTraceLog } from '../shared/platform/readingPositionTraceRuntimeRepository';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
-import { workspacePersistStorage } from './workspacePersistStorage';
+import { workspacePersistStoreStorage } from './workspacePersistStorage';
 import {
   readWorkspaceNodesFromPayload,
   stageLegacyWorkspacePayload,
@@ -86,8 +86,8 @@ function createPendingDismissedNodeSync() {
   };
 }
 
-function readPersistedState(value: string | null) {
-  return value ? (JSON.parse(value) as { state: { nodeViewById?: Record<string, unknown>; nodesById?: Record<string, unknown>; activeNodeId?: string | null } }).state : null;
+function readPersistedState(value: { state: unknown } | null) {
+  return value ? (value as { state: { nodeViewById?: Record<string, unknown>; nodesById?: Record<string, unknown>; activeNodeId?: string | null } }).state : null;
 }
 
 function createRuntimeSnapshotWithoutReading() {
@@ -108,9 +108,9 @@ describe('workspacePersistStorage runtime merge', () => {
     const invoke = createSnapshotInvoke({ activeNodeId: 'node-2', nodeViewStateById: {} }, createRuntimeSnapshotWithoutReading());
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+    const value = await workspacePersistStoreStorage.getItem('foliole-workspace-v1');
 
-    expect(value).toContain('"state":"dismissed"');
+    expect(value?.state.nodesById['node-2']?.reading?.state).toBe('dismissed');
     expect(invoke).toHaveBeenCalledWith('update_node_content', expect.objectContaining({
       nodeId: 'node-2',
       reading: expect.objectContaining({ state: 'dismissed' })
@@ -130,11 +130,11 @@ describe('workspacePersistStorage runtime merge', () => {
     });
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+    const value = await workspacePersistStoreStorage.getItem('foliole-workspace-v1');
     const state = readPersistedState(value);
 
-    expect(value).toContain('"node-1":{"id":"node-1","content":"","hasContent":true');
-    expect(value).toContain('"node-2":{"id":"node-2","content":"Node 2 content"');
+    expect(value?.state.nodesById['node-1']).toMatchObject({ content: '', hasContent: true });
+    expect(value?.state.nodesById['node-2']?.content).toBe('Node 2 content');
     expect(state?.nodeViewById).toEqual({
       'node-2': {
         scrollTop: 18,
@@ -155,7 +155,7 @@ describe('workspacePersistStorage runtime fallback', () => {
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
     window.localStorage.setItem('foliole-workspace-v1', '{"state":{"activeNodeId":"node-3"}}');
 
-    const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+    const value = await workspacePersistStoreStorage.getItem('foliole-workspace-v1');
 
     expect(value).toBeNull();
     expect(window.localStorage.getItem('foliole-workspace-v1')).toBe('{"state":{"activeNodeId":"node-3"}}');
@@ -180,11 +180,11 @@ describe('workspacePersistStorage runtime fallback', () => {
     );
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+    const value = await workspacePersistStoreStorage.getItem('foliole-workspace-v1');
 
-    expect(value).toContain(`"activeNodeId":"${HOME_NODE_ID}"`);
-    expect(value).toContain(`"${HOME_NODE_ID}":{"id":"${HOME_NODE_ID}"`);
-    expect(value).toContain('"content":"Node 2 content"');
+    expect(value?.state.activeNodeId).toBe(HOME_NODE_ID);
+    expect(value?.state.nodesById[HOME_NODE_ID]?.id).toBe(HOME_NODE_ID);
+    expect(value?.state.nodesById['node-2']?.content).toBe('Node 2 content');
   });
 });
 
@@ -207,9 +207,9 @@ describe('workspacePersistStorage runtime logging', () => {
     });
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+    const value = await workspacePersistStoreStorage.getItem('foliole-workspace-v1');
 
-    expect(value).toContain('"activeNodeId":"node-2"');
+    expect(value?.state.activeNodeId).toBe('node-2');
     expect(warn).toHaveBeenCalledWith(
       '[persistence] reading progress load failed during workspace hydrate',
       expect.objectContaining({
@@ -227,17 +227,17 @@ describe('workspacePersistStorage web fallback', () => {
   it('saves and clears persisted payload through localStorage in web mode only', async () => {
     vi.mocked(getRuntimeInvoke).mockReturnValue(null);
 
-    await workspacePersistStorage.setItem('foliole-workspace-v1', '{"state":{"activeNodeId":"node-3"}}');
+    await workspacePersistStoreStorage.setItem('foliole-workspace-v1', { state: { activeNodeId: 'node-3' } } as never);
     expect(window.localStorage.getItem('foliole-workspace-v1')).toBe('{"state":{"activeNodeId":"node-3"}}');
 
-    await workspacePersistStorage.removeItem('foliole-workspace-v1');
+    await workspacePersistStoreStorage.removeItem('foliole-workspace-v1');
     expect(window.localStorage.getItem('foliole-workspace-v1')).toBeNull();
   });
 
   it('does not write workspace payload into localStorage in desktop mode', async () => {
     vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn());
 
-    await workspacePersistStorage.setItem('foliole-workspace-v1', '{"state":{"activeNodeId":"node-4"}}');
+    await workspacePersistStoreStorage.setItem('foliole-workspace-v1', { state: { activeNodeId: 'node-4' } } as never);
     expect(window.localStorage.getItem('foliole-workspace-v1')).toBeNull();
   });
 });
@@ -248,7 +248,7 @@ describe('workspacePersistStorage web fallback renderer boundary', () => {
     stagePendingNode1Sync();
     stageLegacyWorkspacePayload();
 
-    const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+    const value = await workspacePersistStoreStorage.getItem('foliole-workspace-v1');
     const nodesById = readWorkspaceNodesFromPayload(value);
 
     expect(nodesById?.['node-1']).toEqual({
@@ -272,6 +272,6 @@ describe('workspacePersistStorage web fallback renderer boundary', () => {
       hasReveal: true,
       reveal: 'Unexpected node 3 answer'
     });
-    expect(window.localStorage.getItem('foliole-workspace-v1')).toBe(value);
+    expect(JSON.parse(window.localStorage.getItem('foliole-workspace-v1')!)).toEqual(value);
   });
 });

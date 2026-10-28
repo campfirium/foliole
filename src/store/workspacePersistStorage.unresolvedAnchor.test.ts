@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { appendReadingPositionTraceLog } from '../shared/platform/readingPositionTraceRuntimeRepository';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
-import { workspacePersistStorage } from './workspacePersistStorage';
+import { workspacePersistStoreStorage } from './workspacePersistStorage';
 import { stagePendingUnresolvedAnchorChildNode } from './workspacePersistStorage.test-support';
 
 vi.mock('../shared/platform/readingPositionTraceRuntimeRepository', () => ({
@@ -93,9 +93,9 @@ function createChangedParentSnapshot() {
   return createRuntimeSnapshot();
 }
 
-function readHydratedState(value: string | null) {
+function readHydratedState(value: { state: unknown } | null) {
   return value
-    ? (JSON.parse(value) as {
+    ? (value as {
         state: {
           nodesById: Record<string, { anchorLink?: unknown; content: string; reveal: string | null; title?: string }>;
         };
@@ -120,7 +120,7 @@ describe('workspacePersistStorage unresolved text anchors pending replay', () =>
     const invoke = createRuntimeInvoke();
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    const state = readHydratedState(await workspacePersistStorage.getItem('foliole-workspace-v1'));
+    const state = readHydratedState(await workspacePersistStoreStorage.getItem('foliole-workspace-v1'));
 
     expect(state?.nodesById['node-highlight']).toMatchObject({
       title: 'Beta',
@@ -158,7 +158,7 @@ describe('workspacePersistStorage hydrated text anchors edited-word recovery', (
     const invoke = createHydrateInvoke(createChangedParentSnapshot(), 'Alpha Better Gamma');
     vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-    const state = readHydratedState(await workspacePersistStorage.getItem('foliole-workspace-v1'));
+    const state = readHydratedState(await workspacePersistStoreStorage.getItem('foliole-workspace-v1'));
 
     expect(state?.nodesById['node-highlight']).toMatchObject({
       title: 'Beta',

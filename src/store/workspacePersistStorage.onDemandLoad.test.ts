@@ -4,7 +4,7 @@ import { appendReadingPositionTraceLog } from '../shared/platform/readingPositio
 import { reportRuntimeBootStage } from '../shared/platform/runtimeBootTelemetry';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
-import { workspacePersistStorage } from './workspacePersistStorage';
+import { workspacePersistStoreStorage } from './workspacePersistStorage';
 import { readWorkspaceNodesFromPayload } from './workspacePersistStorage.test-support';
 
 vi.mock('../shared/platform/readingPositionTraceRuntimeRepository', () => ({
@@ -133,7 +133,7 @@ it('loads only the active node document from runtime hydrate', async () => {
   const invoke = createRuntimeInvoke();
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+  const value = await workspacePersistStoreStorage.getItem('foliole-workspace-v1');
   const nodesById = readWorkspaceNodesFromPayload(value);
   const loadDocumentCalls = invoke.mock.calls.filter(([command]) => command === 'load_node_document');
 
@@ -170,7 +170,7 @@ it('allows first open of a long document to load the full body from runtime hydr
   const invoke = createLongDocumentRuntimeInvoke(longDocument);
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
+  const value = await workspacePersistStoreStorage.getItem('foliole-workspace-v1');
   const nodesById = readWorkspaceNodesFromPayload(value);
 
   expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-2' });
@@ -184,8 +184,8 @@ it('keeps the initial workspace hydrate on the fixed route: lightweight list, se
   const invoke = createNearTermDirectionRuntimeInvoke(longDocument);
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  const value = await workspacePersistStorage.getItem('foliole-workspace-v1');
-  const parsed = JSON.parse(value ?? 'null') as {
+  const value = await workspacePersistStoreStorage.getItem('foliole-workspace-v1');
+  const parsed = value as {
     state: {
       activeNodeId: string | null;
       nodeViewById: Record<string, { scrollTop: number; selection: { from: number; to: number } }>;

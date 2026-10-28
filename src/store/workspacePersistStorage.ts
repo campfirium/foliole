@@ -1,4 +1,4 @@
-import type { PersistStorage, StateStorage } from 'zustand/middleware';
+import type { PersistStorage } from 'zustand/middleware';
 
 import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
 
@@ -11,7 +11,7 @@ import {
 import { getRuntimeWorkspaceState } from './workspacePersistStorageRuntimeHydrate';
 import type { WorkspacePersistedState } from './workspaceStore';
 
-const runtimeWorkspaceStatePromises = new Map<string, Promise<string | null>>();
+const runtimeWorkspaceStatePromises = new Map<string, ReturnType<typeof getRuntimeWorkspaceState>>();
 
 function getRuntimeWorkspaceStateOnce(name: string) {
   const existingPromise = runtimeWorkspaceStatePromises.get(name);
@@ -26,39 +26,24 @@ function getRuntimeWorkspaceStateOnce(name: string) {
   return promise;
 }
 
-export const workspacePersistStorage: StateStorage = {
+export const workspacePersistStoreStorage: PersistStorage<WorkspacePersistedState> = {
   async getItem(name) {
     if (hasWorkspaceRuntimeRepository()) {
       return getRuntimeWorkspaceStateOnce(name);
     }
-    return readFallbackWorkspaceState(name);
-  },
-  setItem(name, value) {
-    if (hasWorkspaceRuntimeRepository() || hasWorkspaceBrowserCommit()) {
-      return;
-    }
-    writeFallbackWorkspaceState(name, value);
-  },
-  removeItem(name) {
-    if (hasWorkspaceRuntimeRepository() || hasWorkspaceBrowserCommit()) {
-      return;
-    }
-    removeFallbackWorkspaceState(name);
-  }
-};
-
-export const workspacePersistStoreStorage: PersistStorage<WorkspacePersistedState> = {
-  async getItem(name) {
-    const value = await workspacePersistStorage.getItem(name);
+    const value = readFallbackWorkspaceState(name);
     return value ? JSON.parse(value) : null;
   },
   setItem(name, value) {
     if (hasWorkspaceRuntimeRepository() || hasWorkspaceBrowserCommit()) {
       return;
     }
-    return workspacePersistStorage.setItem(name, JSON.stringify(value));
+    writeFallbackWorkspaceState(name, JSON.stringify(value));
   },
   removeItem(name) {
-    return workspacePersistStorage.removeItem(name);
+    if (hasWorkspaceRuntimeRepository() || hasWorkspaceBrowserCommit()) {
+      return;
+    }
+    removeFallbackWorkspaceState(name);
   }
 };
