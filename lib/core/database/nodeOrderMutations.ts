@@ -6,12 +6,12 @@ import {
 } from './parentChildOrder.js';
 import { requireDatabaseHostName } from './syncHostIdentity.js';
 
-export function ensureNodeParentMembership(driver: DatabaseDriver, nodeId: string) {
-  ensureNodesParentMembership(driver, [nodeId]);
+export function ensureNodeParentMembership(driver: DatabaseDriver, nodeId: string, placement?: 'first') {
+  ensureNodesParentMembership(driver, [nodeId], placement);
 }
 
 /** Same result as placing each node in turn, but writes every touched parent order once. */
-export function ensureNodesParentMembership(driver: DatabaseDriver, nodeIds: string[]) {
+export function ensureNodesParentMembership(driver: DatabaseDriver, nodeIds: string[], placement?: 'first') {
   if (nodeIds.length === 0) return;
   const nodes = driver.queryAll<{ id: string; parent_id: string | null }>(
     'SELECT id, parent_id FROM nodes WHERE id IN (SELECT value FROM json_each(?))', [JSON.stringify(nodeIds)]);
@@ -20,7 +20,7 @@ export function ensureNodesParentMembership(driver: DatabaseDriver, nodeIds: str
   const changes = new Map<string, string[]>();
   for (const nodeId of nodeIds) {
     const targetParent = parentById.get(nodeId);
-    if (targetParent !== undefined) placeNodeInOrders(orders, changes, targetParent, nodeId);
+    if (targetParent !== undefined) placeNodeInOrders(orders, changes, targetParent, nodeId, placement);
   }
   if (changes.size === 0) return;
   const now = new Date().toISOString();
@@ -30,7 +30,7 @@ export function ensureNodesParentMembership(driver: DatabaseDriver, nodeIds: str
 }
 
 function placeNodeInOrders(
-  orders: Map<string, string[]>, changes: Map<string, string[]>, targetParent: string, nodeId: string
+  orders: Map<string, string[]>, changes: Map<string, string[]>, targetParent: string, nodeId: string, placement?: 'first'
 ) {
   for (const [parentId, childIds] of orders) {
     if (parentId !== targetParent && childIds.includes(nodeId)) {
@@ -41,7 +41,7 @@ function placeNodeInOrders(
   }
   const targetOrder = orders.get(targetParent) ?? [];
   if (targetOrder.includes(nodeId)) return;
-  const next = [...targetOrder, nodeId];
+  const next = placement === 'first' ? [nodeId, ...targetOrder] : [...targetOrder, nodeId];
   orders.set(targetParent, next);
   changes.set(targetParent, next);
 }

@@ -99,15 +99,12 @@ export function syncCreateNodeToRuntime(node: Node, position?: number) {
 
 export async function syncCreateNodeMutationToRuntime(
   node: Node,
-  nodeOrder: string[],
-  activeNodeId?: string | null,
-  position?: number
+  activeNodeId?: string | null
 ): Promise<WorkspaceNodeMutationPatchResult | null> {
   return saveCreatedWorkspaceNodeMutationSnapshot({
-    ...createNodeSnapshotArgs(node, position),
+    node,
     ...(node.pendingImageReferences?.length ? { newImageReferences: node.pendingImageReferences } : {}),
-    ...(activeNodeId !== undefined ? { activeNodeId } : {}),
-    nodeOrder
+    ...(activeNodeId !== undefined ? { activeNodeId } : {})
   });
 }
 

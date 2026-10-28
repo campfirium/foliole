@@ -146,7 +146,6 @@ export function parseNodeCreationMutationArgs(
       args.activeNodeId === null || args.activeNodeId === undefined
         ? null
         : asString(args.activeNodeId, 'activeNodeId'),
-    node: parseNodeCreationArgs(args, expectedKind),
-    nodeOrder: asStringArray(args.nodeOrder, 'nodeOrder')
+    node: parseNodeCreationArgs(args, expectedKind)
   };
 }

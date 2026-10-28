@@ -51,7 +51,7 @@ function resolveExcerptTitleState(parentNodeId: string, state: WorkspaceState) {
 
 export function createPdfImageExcerptAction(
   set: WorkspaceSet,
-  syncCreation: (args: { activeNodeId: string; attachmentId: string; bytesBase64: string; node: WorkspaceState['nodesById'][string]; nodeOrder: string[]; position: number }) => Promise<WorkspaceNodeMutationPatchResult | null>,
+  syncCreation: (args: { activeNodeId: string; attachmentId: string; bytesBase64: string; node: WorkspaceState['nodesById'][string] }) => Promise<WorkspaceNodeMutationPatchResult | null>,
   get?: () => WorkspaceState
 ): NonNullable<WorkspaceState['createPdfImageExcerpt']> {
   return async (parentNodeId, locator, imageRegions, attachmentId, bytesBase64, content) => {
@@ -85,14 +85,12 @@ export function createPdfImageExcerptAction(
     const handlers = {
       syncNodeContent: () => undefined,
       syncNodeOrder: () => undefined,
-      syncNodeCreation: async (createdNode: NonNullable<typeof node>, order: string[] = []) =>
+      syncNodeCreation: async (createdNode: NonNullable<typeof node>) =>
         syncCreation({
           activeNodeId: parentNodeId,
           attachmentId,
           bytesBase64,
-          node: createdNode,
-          nodeOrder: order,
-          position: order.indexOf(createdNode.id)
+          node: createdNode
         })
     };
     return applyCreatedNode({

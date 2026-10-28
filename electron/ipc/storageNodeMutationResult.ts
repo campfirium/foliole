@@ -41,7 +41,6 @@ export function completeCreatedNodeCreation(
   return buildNodeMutationPatchResult({
     activeNodeId: parsed.activeNodeId,
     createdNodeIds: [parsed.node.nodeId],
-    nodeOrder: parsed.nodeOrder,
     nodes: [{ ...parsed.node, ...(currentVersionId ? { currentVersionId } : {}) }],
     originWindow
   });

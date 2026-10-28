@@ -31,7 +31,7 @@ import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js'
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
-import { moveNodes, replaceNodeOrder, upsertNodeSnapshot, upsertNodeSnapshotWithOrder } from './nodeMutations.js';
+import { moveNodes, replaceNodeOrder, upsertNodeSnapshot } from './nodeMutations.js';
 import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
 
 let tempRoot = '';
@@ -156,12 +156,12 @@ it('leaves existing siblings clean when creating a new node', () => {
   upsertTestNode('node-2', 1);
   flushDirtyNodeSyncVersions('2026-04-21T10:01:00.000Z');
 
-  upsertNodeSnapshotWithOrder({
+  upsertNodeSnapshot({
     nodeId: 'node-3', parentNodeId: null, kind: 'folder', title: 'node-3',
     isTitleManual: true, content: '', reveal: null, anchorLink: null,
     imageRegions: null, position: 0,
     createdAt: '2026-04-21T10:02:00.000Z', updatedAt: '2026-04-21T10:02:00.000Z'
-  }, ['node-3', 'node-1', 'node-2']);
+  });
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryAll<{ id: string }>(

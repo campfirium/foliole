@@ -10,7 +10,7 @@ import { restoreNodesWithParents, softDeleteNodesWithParents } from '../database
 import {
   upsertVersionedNodeContentWithAnchors,
   upsertVersionedNodeSnapshot,
-  upsertVersionedNodeSnapshotWithOrder,
+  createVersionedNodeSnapshot,
 } from '../database/nodeVersionedMutations.js';
 import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
 import { splitTopic } from '../database/splitTopicMutation.js';
@@ -65,8 +65,8 @@ function handleCreateNodeCommand(args: Record<string, unknown>, kind: 'folder' |
   const parsed = parseNodeCreationMutationArgs(args, kind);
   const added = parseNewImageReferences(args.newImageReferences);
   const currentVersionId = added.length
-    ? upsertVersionedNodeSnapshotWithOrder(parsed.node, parsed.nodeOrder, { newImageReferences: added })
-    : upsertVersionedNodeSnapshotWithOrder(parsed.node, parsed.nodeOrder);
+    ? createVersionedNodeSnapshot(parsed.node, { newImageReferences: added })
+    : createVersionedNodeSnapshot(parsed.node);
   scheduleMirrorSync([parsed.node.nodeId]);
   return completeCreatedNodeCreation(parsed, originWindow, currentVersionId);
 }

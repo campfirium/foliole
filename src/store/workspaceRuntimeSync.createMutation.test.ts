@@ -45,7 +45,6 @@ it('clears pending node sync after a create mutation is confirmed', async () => 
   const invoke = vi.fn().mockResolvedValue({
     activeNodeId: 'node-1',
     createdNodeIds: ['node-1'],
-    nodeOrder: ['node-1'],
     nodes: [{
       nodeId: 'node-1',
       parentNodeId: null,
@@ -63,16 +62,17 @@ it('clears pending node sync after a create mutation is confirmed', async () => 
   });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  await syncCreateNodeMutationToRuntime(createNodeFixture(), ['node-1'], 'node-1', 0);
+  await syncCreateNodeMutationToRuntime(createNodeFixture(), 'node-1');
 
   expect(hasPendingNodeSync('node-1')).toBe(false);
+  expect(invoke).toHaveBeenCalledWith('create_topic', expect.not.objectContaining({ nodeOrder: expect.anything() }));
 });
 
 it('keeps failed create mutations in pending node sync for hydrate replay', async () => {
   const invoke = vi.fn().mockRejectedValue(new Error('create failed'));
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  await expect(syncCreateNodeMutationToRuntime(createNodeFixture(), ['node-1'], 'node-1', 0)).resolves.toBeNull();
+  await expect(syncCreateNodeMutationToRuntime(createNodeFixture(), 'node-1')).resolves.toBeNull();
 
   expect(hasPendingNodeSync('node-1')).toBe(true);
   expect(mergePendingNodeSyncIntoSnapshot({

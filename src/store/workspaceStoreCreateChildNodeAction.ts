@@ -40,7 +40,7 @@ async function persistChildNodeCreation(args: {
 }) {
   markNodeCreatePending(args.nodeId);
   const result = await args.onNodeCreated?.(
-    args.node, args.nodeOrder, args.nodeId, args.nodeOrder.indexOf(args.nodeId)
+    args.node, args.nodeId
   );
   const succeeded = didRuntimeConfirmNodeCreation(result ?? null, args.nodeId) || !hasWorkspaceNodeMutationRuntime();
   if (result && succeeded) args.set((state) => createWorkspaceNodeCreateAckPatch(state, result, [args.nodeId]));
@@ -63,9 +63,7 @@ export function createChildNodeAction(
   set: WorkspaceSet,
   onNodeCreated?: (
     node: NodeSnapshot,
-    nodeOrder?: string[],
-    activeNodeId?: string | null,
-    position?: number
+    activeNodeId?: string | null
   ) => Promise<WorkspaceNodeMutationPatchResult | null>,
   onNodeOrderChanged?: (nodeOrder: string[]) => void,
   get?: () => WorkspaceState

@@ -3,7 +3,6 @@ import type { WorkspaceMoveNodesPayload, WorkspaceMoveNodesResult } from '../sha
 
 import {
   syncCreateNodeMutationToRuntime,
-  syncCreateNodeToRuntime,
   syncDeleteNodesPermanentlyToRuntime,
   syncMoveNodesToRuntime,
   syncNodeContentMutationToRuntime,
@@ -21,9 +20,7 @@ type NodeSnapshot = WorkspaceState['nodesById'][string];
 export interface WorkspaceMutationRepository extends TrashRuntimeHandlers {
   syncNodeCreation: (
     node: NodeSnapshot,
-    nodeOrder?: string[],
-    activeNodeId?: string | null,
-    position?: number
+    activeNodeId?: string | null
   ) => ReturnType<typeof syncCreateNodeMutationToRuntime>;
   syncPdfImageExcerptCreation: typeof syncPdfImageExcerptNodeMutationToRuntime;
   syncNodeOrder: (nodeOrder: string[]) => void;
@@ -37,13 +34,7 @@ function createRuntimeWorkspaceMutationRepository(): WorkspaceMutationRepository
     syncMoveNodes: syncMoveNodesToRuntime,
     syncNodeMutation: (node, position) => syncNodeContentMutationToRuntime(node, position),
     syncNodeContent: syncNodeContentToRuntime,
-    syncNodeCreation: async (node, nodeOrder, activeNodeId, position) => {
-      if (!nodeOrder) {
-        syncCreateNodeToRuntime(node);
-        return null;
-      }
-      return syncCreateNodeMutationToRuntime(node, nodeOrder, activeNodeId, position);
-    },
+    syncNodeCreation: (node, activeNodeId) => syncCreateNodeMutationToRuntime(node, activeNodeId),
     syncPdfImageExcerptCreation: syncPdfImageExcerptNodeMutationToRuntime,
     syncNodeOrder: syncNodeOrderToRuntime,
     syncRestoreNodes: syncRestoreNodesToRuntime,

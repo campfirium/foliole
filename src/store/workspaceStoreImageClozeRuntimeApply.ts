@@ -25,9 +25,7 @@ interface RuntimeSyncHandlers {
   syncNodeContent: (node: WorkspaceNode) => void;
   syncNodeCreation: (
     node: WorkspaceNode,
-    nodeOrder?: string[],
-    activeNodeId?: string | null,
-    position?: number
+    activeNodeId?: string | null
   ) => Promise<WorkspaceNodeMutationPatchResult | null>;
 }
 
@@ -48,9 +46,7 @@ export async function applyCreatedImageClozeNodes(args: {
     markNodeCreatePending(node.id);
     const result = await args.handlers.syncNodeCreation(
       node,
-      args.nextNodeOrder,
-      node.id,
-      args.nextNodeOrder.indexOf(node.id)
+      node.id
     );
     const runtimeConfirmed = didRuntimeConfirmNodeCreation(result, node.id);
     if (runtimeConfirmed && result) {

@@ -4,10 +4,6 @@ import { getRuntimeInvoke } from './runtimeInvoke';
 import { logRuntimeError } from './runtimeLogging';
 import { resolvePendingNodeSync, stagePendingNodeSync } from './workspacePendingNodeSync';
 import {
-  capturePendingNodeOrderAck,
-  resolveCapturedPendingNodeOrder
-} from './workspaceRuntimeDurableRepository';
-import {
   isCreateNodeMutationPatchResult,
   isNodeMutationPatchResult
 } from './workspaceRuntimeMutationResults';
@@ -50,30 +46,25 @@ export async function saveCreatedWorkspaceNodeMutationSnapshot(args: {
   newImageReferences?: readonly import('../../../lib/core/sync/localContentEditResources').ContentImageReference[];
   activeNodeId?: string | null;
   node: WorkspaceRuntimeNode;
-  nodeOrder: string[];
-  position?: number;
 }): Promise<WorkspaceNodeMutationPatchResult | null> {
   const runtimeInvoke = getRuntimeInvoke();
   const command = resolveCreateWorkspaceNodeCommand(args.node.kind);
-  const payload = createWorkspaceRuntimeNodeSnapshot(args.node, args.position);
+  const payload = createWorkspaceRuntimeNodeSnapshot(args.node);
   if (!runtimeInvoke || !command) {
     stagePendingNodeSync(payload, { optimistic: true });
     return null;
   }
-  const pendingOrderAck = capturePendingNodeOrderAck();
   stagePendingNodeSync(payload, { optimistic: true });
   try {
     const result = await runtimeInvoke(command, {
       ...payload,
       ...(args.newImageReferences?.length ? { newImageReferences: args.newImageReferences } : {}),
-      activeNodeId: args.activeNodeId ?? null,
-      nodeOrder: args.nodeOrder
+      activeNodeId: args.activeNodeId ?? null
     });
     if (!isCreateNodeMutationPatchResult(result)) {
       return null;
     }
     resolvePendingNodeSync(payload.nodeId, payload.updatedAt);
-    resolveCapturedPendingNodeOrder(pendingOrderAck);
     return result;
   } catch (error) {
     logRuntimeError('runtime sync failed', {
@@ -92,13 +83,10 @@ export async function savePdfImageExcerptNodeMutation(args: {
   attachmentId: string;
   bytesBase64: string;
   node: WorkspaceRuntimeNode;
-  nodeOrder: string[];
-  position: number;
 }): Promise<WorkspaceNodeMutationPatchResult | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) return null;
-  const payload = createWorkspaceRuntimeNodeSnapshot(args.node, args.position);
-  const pendingOrderAck = capturePendingNodeOrderAck();
+  const payload = createWorkspaceRuntimeNodeSnapshot(args.node);
   stagePendingNodeSync(payload, { optimistic: true });
   try {
     const result = await runtimeInvoke(NATIVE_COMMANDS.createPdfImageExcerpt, {
@@ -106,14 +94,12 @@ export async function savePdfImageExcerptNodeMutation(args: {
       activeNodeId: args.activeNodeId,
       attachmentId: args.attachmentId,
       bytesBase64: args.bytesBase64,
-      nodeOrder: args.nodeOrder,
       originalName: typeof (payload.anchorLink?.locator as { page?: number } | undefined)?.page === 'number'
         ? `pdf-image-excerpt-page-${(payload.anchorLink?.locator as { page: number }).page}.png`
         : 'image-excerpt.png'
     });
     if (!isCreateNodeMutationPatchResult(result)) return null;
     resolvePendingNodeSync(payload.nodeId, payload.updatedAt);
-    resolveCapturedPendingNodeOrder(pendingOrderAck);
     return result;
   } catch (error) {
     logRuntimeError('runtime sync failed', {

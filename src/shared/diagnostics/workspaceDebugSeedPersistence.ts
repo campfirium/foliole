@@ -60,9 +60,7 @@ export async function persistSeedNodes(nodes: DebugNodeSeed[]) {
   for (const [index, node] of nodes.entries()) {
     const result = await saveCreatedWorkspaceNodeMutationSnapshot({
       activeNodeId: nodes[0]?.id ?? null,
-      node: createSeedRuntimeNode(node, index),
-      nodeOrder,
-      position: index
+      node: createSeedRuntimeNode(node, index)
     });
     if (result) {
       useWorkspaceStore.setState(state => createWorkspaceNodeCreateAckPatch(state, result, [node.id]));

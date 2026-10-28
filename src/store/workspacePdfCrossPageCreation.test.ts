@@ -19,8 +19,8 @@ it.each([true, false])('creates one cross-page excerpt and rolls it back if pers
   } };
   const create = createHighlightFromSelectionAction(harness.setState, {
     syncNodeContent: () => undefined, syncNodeOrder: () => undefined,
-    syncNodeCreation: async (node, nodeOrder) => saved ? {
-      createdNodeIds: [node.id], nodeOrder: nodeOrder ?? [], nodes: [{
+    syncNodeCreation: async (node) => saved ? {
+      createdNodeIds: [node.id], nodes: [{
         nodeId: node.id, parentNodeId: node.parentNodeId, kind: node.kind,
         title: node.title, isTitleManual: false, content: node.content, reveal: null,
         anchorLink: node.anchorLink ?? null, imageRegions: null, position: 0,

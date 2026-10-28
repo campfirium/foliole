@@ -2,7 +2,7 @@
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { upsertVersionedNodeSnapshotWithOrder } from '../database/nodeVersionedMutations.js';
+import { createVersionedNodeSnapshot } from '../database/nodeVersionedMutations.js';
 
 import { handleInvokeRequest } from './commands.js';
 
@@ -66,7 +66,7 @@ vi.mock('../database/nodeMutations.js', () => ({
 vi.mock('../database/nodeVersionedMutations.js', () => ({
   upsertVersionedNodeContentWithAnchors: vi.fn(),
   upsertVersionedNodeSnapshot: vi.fn(),
-  upsertVersionedNodeSnapshotWithOrder: vi.fn()
+  createVersionedNodeSnapshot: vi.fn()
 }));
 vi.mock('./storage.js', () => ({
   loadAppSettingsState: vi.fn().mockResolvedValue({ 'foliole-ui-font-preset': 'inter' }),
@@ -110,7 +110,6 @@ it.each([
         content: '',
         reveal: null,
         anchorLink: null,
-        nodeOrder: [nodeId],
         position: 0,
         createdAt: '2026-03-06T00:00:00.000Z',
         updatedAt: '2026-03-06T00:00:00.000Z'
@@ -119,11 +118,10 @@ it.each([
   ).resolves.toEqual({
     activeNodeId: null,
     createdNodeIds: [nodeId],
-    nodeOrder: [nodeId],
     nodes: [expect.objectContaining({ nodeId, title })]
   });
 
-  expect(upsertVersionedNodeSnapshotWithOrder).toHaveBeenCalledWith(
+  expect(createVersionedNodeSnapshot).toHaveBeenCalledWith(
     {
       nodeId,
       parentNodeId: null,
@@ -147,8 +145,7 @@ it.each([
       position: 0,
       createdAt: '2026-03-06T00:00:00.000Z',
       updatedAt: '2026-03-06T00:00:00.000Z'
-    },
-    [nodeId]
+    }
   );
 });
 
@@ -178,7 +175,6 @@ it('persists review payloads on create_item commands', async () => {
         reveal: 'Answer',
         anchorLink: null,
         review,
-        nodeOrder: ['node-create-item'],
         position: 0,
         createdAt: '2026-03-06T00:00:00.000Z',
         updatedAt: '2026-03-06T00:00:00.000Z'
@@ -187,11 +183,10 @@ it('persists review payloads on create_item commands', async () => {
   ).resolves.toEqual({
     activeNodeId: null,
     createdNodeIds: ['node-create-item'],
-    nodeOrder: ['node-create-item'],
     nodes: [expect.objectContaining({ nodeId: 'node-create-item', review })]
   });
 
-  expect(upsertVersionedNodeSnapshotWithOrder).toHaveBeenCalledWith(expect.objectContaining({ review }), ['node-create-item']);
+  expect(createVersionedNodeSnapshot).toHaveBeenCalledWith(expect.objectContaining({ review }));
 });
 
 it('rejects mismatched folder-topic-item creation payload kinds', async () => {

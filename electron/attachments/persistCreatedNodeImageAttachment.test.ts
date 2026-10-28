@@ -17,7 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { loadNodeResourceReferences } from '../database/nodeResources.js';
-import { upsertVersionedNodeSnapshotWithOrder } from '../database/nodeVersionedMutations.js';
+import { createVersionedNodeSnapshot } from '../database/nodeVersionedMutations.js';
 
 import { persistCreatedNodeImageAttachment } from './persistCreatedNodeImageAttachment.js';
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
@@ -49,7 +49,7 @@ it('atomically persists the node through the canonical owner and links the norma
   const hash = createHash('sha256').update(png).digest('hex');
   await persistCreatedNodeImageAttachment({
     bytes: png, expectedHash: hash, mimeType: 'image/png', nodeId: 'excerpt-1', originalName: 'excerpt.png',
-    persistNode: () => upsertVersionedNodeSnapshotWithOrder(nodeSnapshot('excerpt-1'), ['excerpt-1'])
+    persistNode: () => createVersionedNodeSnapshot(nodeSnapshot('excerpt-1'))
   });
   expect(loadNodeResourceReferences('excerpt-1')).toEqual([
     { storage_key: `${hash}.png`, original_name: 'excerpt.png', role: 'image' }

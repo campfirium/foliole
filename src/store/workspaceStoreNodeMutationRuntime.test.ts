@@ -86,9 +86,8 @@ it('keeps editor content in store when local publication is deferred', async () 
 
 it('keeps local creation side effects when runtime accepts the created root node', async () => {
   vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
-  vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(async (node, nodeOrder, activeNodeId) => ({
+  vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(async (node, activeNodeId) => ({
     createdNodeIds: [node.id],
-    nodeOrder,
     ...definedProps({ activeNodeId }),
     nodes: [{
       nodeId: node.id,
@@ -100,7 +99,7 @@ it('keeps local creation side effects when runtime accepts the created root node
       reveal: node.reveal,
       anchorLink: node.anchorLink ?? null,
       imageRegions: node.imageRegions ?? null,
-      position: nodeOrder.indexOf(node.id),
+      position: null,
       createdAt: node.createdAt,
       updatedAt: node.updatedAt
     }]
@@ -196,9 +195,8 @@ it('rolls back child creation when native persistence rejects the canonical muta
 
 it('caches selection highlight content before runtime creation confirmation', async () => {
   vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
-  vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(async (node, nodeOrder) => ({
+  vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(async (node) => ({
     createdNodeIds: [node.id],
-    nodeOrder,
     nodes: []
   }));
   const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
@@ -221,9 +219,8 @@ it('caches selection highlight content before runtime creation confirmation', as
 
 it('caches selection cloze prompt and reveal before runtime creation confirmation', async () => {
   vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
-  vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(async (node, nodeOrder) => ({
+  vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(async (node) => ({
     createdNodeIds: [node.id],
-    nodeOrder,
     nodes: []
   }));
   const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
@@ -247,9 +244,8 @@ it('caches selection cloze prompt and reveal before runtime creation confirmatio
 
 it('keeps manual virtual folder metadata when runtime accepts its creation', async () => {
   vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
-  vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(async (node, nodeOrder, activeNodeId) => ({
+  vi.mocked(syncCreateNodeMutationToRuntime).mockImplementationOnce(async (node, activeNodeId) => ({
     createdNodeIds: [node.id],
-    nodeOrder,
     ...definedProps({ activeNodeId }),
     nodes: [{
       nodeId: node.id,
@@ -262,7 +258,7 @@ it('keeps manual virtual folder metadata when runtime accepts its creation', asy
       reveal: node.reveal,
       anchorLink: node.anchorLink ?? null,
       imageRegions: node.imageRegions ?? null,
-      position: nodeOrder.indexOf(node.id),
+      position: null,
       createdAt: node.createdAt,
       updatedAt: node.updatedAt
     }]

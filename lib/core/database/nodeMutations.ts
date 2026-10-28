@@ -113,6 +113,7 @@ function runNodeTableUpsert(
 }
 
 export interface UpsertNodeSnapshotOptions {
+  parentMembership?: 'first';
   searchInvalidation?: NodeSearchInvalidationOptions;
 }
 
@@ -166,7 +167,7 @@ export function upsertNodeSnapshot(
     const bodyBlobHash = hashTextBody(input.content);
     runNodeTableUpsert(statements.upsertNode.run, input, bodyBlobHash);
     if (!previousTitle && input.kind === 'item') initializeCreatedReviewSchedule(driver, input.nodeId, input.review);
-    ensureNodeParentMembership(driver, input.nodeId);
+    ensureNodeParentMembership(driver, input.nodeId, options.parentMembership);
     writeNodeReadingSnapshotWithSync(driver, input, {
       deleteDeviceState: statements.deleteNodeReadingHostState.run,
       deleteReading: statements.deleteNodeReading.run,

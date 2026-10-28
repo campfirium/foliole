@@ -18,7 +18,7 @@ import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertVersionedNodeContentWithAnchors, upsertVersionedNodeSnapshot,
-  upsertVersionedNodeSnapshotWithOrder } from './nodeVersionedMutations.js';
+  createVersionedNodeSnapshot } from './nodeVersionedMutations.js';
 import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 
 const time = '2026-10-08T00:00:00.000Z';
@@ -41,7 +41,7 @@ it.each([false, true])('writes, versions and remaps an opened article without sh
   const original = 'Prefix Target sentence.\n' + '\ufeff中😀\0'.repeat(70_000);
   const parent = input('parent', original);
   const first = ordered
-    ? upsertVersionedNodeSnapshotWithOrder(parent, ['parent'])
+    ? createVersionedNodeSnapshot(parent)
     : upsertVersionedNodeSnapshot(parent);
   if (!first) throw new Error('initial_version_missing');
   await retainLocalEditBase(createBetterSqliteDbPort(openDatabaseConnection().sqlite), {

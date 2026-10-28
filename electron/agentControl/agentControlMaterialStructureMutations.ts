@@ -15,7 +15,7 @@ import {
   createInitialNewItemReviewProfile
 } from '../../lib/core/review/newItemReviewSlots.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { moveNodes, replaceNodeOrder, restoreNodes, upsertNodeSnapshotWithOrder } from '../database/nodeMutations.js';
+import { moveNodes, replaceNodeOrder, restoreNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
 import { AgentMaterialMutationError } from './agentControlMaterialMutations.js';
@@ -39,16 +39,15 @@ export function createAgentControlMaterial(input: CreateMaterialInput) {
   ensureParent(nodes, parentId, input.kind);
   const now = new Date().toISOString();
   const id = randomUUID();
-  const order = insertAtParentEnd(readActiveOrder(), nodes, [id], parentId);
   const itemState = input.kind === 'item' ? createItemState(nodes, now) : null;
-  upsertNodeSnapshotWithOrder({
+  upsertNodeSnapshot({
     anchorLink: null, content: input.content ?? '', createdAt: now, isTitleManual: input.kind !== 'item',
     kind: input.kind, nodeId: id, parentNodeId: parentId, position: null,
     reveal: input.kind === 'item' ? input.reveal : null,
     ...(itemState ? { review: itemState.review } : {}),
     title: input.kind === 'item' ? deriveNodeTitleFromContent(input.content) : input.title,
     updatedAt: now
-  }, order);
+  });
   return readMaterialOrThrow(id);
 }
 

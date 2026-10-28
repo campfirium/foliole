@@ -30,7 +30,7 @@ type WorkspaceSet = (
 
 interface RuntimeSyncHandlers {
   syncNodeContent: (node: WorkspaceNode) => void;
-  syncNodeCreation: (node: WorkspaceNode, nodeOrder: string[], activeNodeId?: string | null, position?: number) => Promise<import('../shared/platform/workspaceRuntimeTypes').WorkspaceNodeMutationPatchResult | null>;
+  syncNodeCreation: (node: WorkspaceNode, activeNodeId?: string | null) => Promise<import('../shared/platform/workspaceRuntimeTypes').WorkspaceNodeMutationPatchResult | null>;
   syncNodeOrder: (nodeOrder: string[]) => void;
 }
 
@@ -89,12 +89,11 @@ async function persistRootNodeCreation(args: {
   handlers: RuntimeSyncHandlers;
   historyEntryId: string | null;
   nodeId: string;
-  nodeOrder: string[];
   set: WorkspaceSet;
 }) {
   markNodeCreatePending(args.nodeId);
   const result = await args.handlers.syncNodeCreation(
-    args.createdNode, args.nodeOrder, args.nodeId, args.nodeOrder.indexOf(args.nodeId)
+    args.createdNode, args.nodeId
   );
   const succeeded = didRuntimeConfirmNodeCreation(result, args.nodeId) || !hasWorkspaceNodeMutationRuntime();
   if (result && succeeded) args.set((state) => createWorkspaceNodeCreateAckPatch(state, result, [args.nodeId]));
@@ -168,14 +167,12 @@ export function createRootNodeAction(
     });
     if (createdNode && nextNodeOrder) {
       const nodeForPersist = createdNode as WorkspaceNode;
-      const orderForPersist = [...nextNodeOrder] as string[];
       const succeeded = await persistRootNodeCreation({
         createdNode: nodeForPersist,
         ...(get ? { get } : {}),
         handlers,
         historyEntryId,
         nodeId,
-        nodeOrder: orderForPersist,
         set
       });
       if (!succeeded) return null;

@@ -33,9 +33,7 @@ interface RuntimeSyncHandlers {
   syncNodeContent: (node: WorkspaceNode) => void;
   syncNodeCreation: (
     node: WorkspaceNode,
-    nodeOrder?: string[],
-    activeNodeId?: string | null,
-    position?: number
+    activeNodeId?: string | null
   ) => Promise<WorkspaceNodeMutationPatchResult | null>;
 }
 
@@ -137,9 +135,7 @@ async function applyCreatedFormulaClozeNode(
   markNodeCreatePending(node.id);
   const result = await handlers.syncNodeCreation(
     node,
-    nextNodeOrder,
-    node.parentNodeId ?? node.id,
-    nextNodeOrder.indexOf(node.id)
+    node.parentNodeId ?? node.id
   );
   const runtimeConfirmed = didRuntimeConfirmNodeCreation(result, node.id);
   if (runtimeConfirmed && result) {

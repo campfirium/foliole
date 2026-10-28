@@ -14,7 +14,7 @@ it('carries prepared image names through the complete node creation bridge adapt
     createdAt: '2026-10-17T00:00:00.000Z', updatedAt: '2026-10-17T00:00:00.000Z', pendingImageReferences: [image] };
   const invoke = vi.fn().mockResolvedValue(null);
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
-  await syncCreateNodeMutationToRuntime(node, ['sample']);
+  await syncCreateNodeMutationToRuntime(node);
   expect(invoke).toHaveBeenCalledWith('create_topic', expect.objectContaining({
     nodeId: 'sample', content: node.content, newImageReferences: [image]
   }));

@@ -2,7 +2,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { persistCreatedNodeImageAttachment } from '../attachments/persistCreatedNodeImageAttachment.js';
-import { upsertVersionedNodeSnapshotWithOrder } from '../database/nodeVersionedMutations.js';
+import { createVersionedNodeSnapshot } from '../database/nodeVersionedMutations.js';
 
 import { handleStoragePdfImageExcerptCommand } from './storagePdfImageExcerptCommand.js';
 
@@ -12,7 +12,7 @@ vi.mock('../attachments/persistCreatedNodeImageAttachment.js', () => ({
     return args.expectedHash;
   })
 }));
-vi.mock('../database/nodeVersionedMutations.js', () => ({ upsertVersionedNodeSnapshotWithOrder: vi.fn() }));
+vi.mock('../database/nodeVersionedMutations.js', () => ({ createVersionedNodeSnapshot: vi.fn() }));
 vi.mock('../mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
 vi.mock('./workspaceContentChangedEvents.js', () => ({ notifyWorkspaceContentChanged: vi.fn() }));
 
@@ -22,7 +22,7 @@ it('creates a PDF image excerpt through the existing node persistence owner', as
   const attachmentId = 'a'.repeat(64);
   const result = await handleStoragePdfImageExcerptCommand('create_pdf_image_excerpt', {
     activeNodeId: 'pdf-1', attachmentId, bytesBase64: 'iVBORw0KGgo=',
-    nodeId: 'excerpt-1', nodeOrder: ['pdf-1', 'excerpt-1'], parentNodeId: 'pdf-1', kind: 'topic',
+    nodeId: 'excerpt-1', parentNodeId: 'pdf-1', kind: 'topic',
     title: 'Image excerpt · Page 1', isTitleManual: false,
     content: `![Image excerpt](asset://${attachmentId}.png)`, reveal: null,
     anchorLink: { id: 'anchor-1', kind: 'image-excerpt', locator: {
@@ -31,13 +31,12 @@ it('creates a PDF image excerpt through the existing node persistence owner', as
     position: 1, createdAt: '2026-08-29T00:00:00.000Z', updatedAt: '2026-08-29T00:00:00.000Z'
   }, null);
 
-  expect(result).toMatchObject({ createdNodeIds: ['excerpt-1'], nodeOrder: ['pdf-1', 'excerpt-1'] });
+  expect(result).toMatchObject({ createdNodeIds: ['excerpt-1'] });
   expect(persistCreatedNodeImageAttachment).toHaveBeenCalledWith(expect.objectContaining({
     expectedHash: attachmentId, nodeId: 'excerpt-1', persistNode: expect.any(Function)
   }));
-  expect(upsertVersionedNodeSnapshotWithOrder).toHaveBeenCalledWith(
-    expect.objectContaining({ nodeId: 'excerpt-1', anchorLink: expect.objectContaining({ kind: 'image-excerpt' }) }),
-    ['pdf-1', 'excerpt-1']
+  expect(createVersionedNodeSnapshot).toHaveBeenCalledWith(
+    expect.objectContaining({ nodeId: 'excerpt-1', anchorLink: expect.objectContaining({ kind: 'image-excerpt' }) })
   );
 });
 
@@ -50,7 +49,7 @@ it('accepts an occurrence locator and one local image region through the same at
   }];
   await handleStoragePdfImageExcerptCommand('create_pdf_image_excerpt', {
     activeNodeId: 'topic-1', attachmentId: cropAttachmentId, bytesBase64: 'iVBORw0KGgo=',
-    nodeId: 'excerpt-1', nodeOrder: ['topic-1', 'excerpt-1'], parentNodeId: 'topic-1', kind: 'topic',
+    nodeId: 'excerpt-1', parentNodeId: 'topic-1', kind: 'topic',
     title: 'Excerpt 1', isTitleManual: false,
     content: `![Image excerpt](asset://${cropAttachmentId}.png)\n※ Detail`, reveal: null,
     anchorLink: { id: 'anchor-1', kind: 'image-excerpt', locator: {
@@ -64,8 +63,7 @@ it('accepts an occurrence locator and one local image region through the same at
     expectedHash: cropAttachmentId,
     persistNode: expect.any(Function)
   }));
-  expect(upsertVersionedNodeSnapshotWithOrder).toHaveBeenCalledWith(
-    expect.objectContaining({ imageRegions }),
-    ['topic-1', 'excerpt-1']
+  expect(createVersionedNodeSnapshot).toHaveBeenCalledWith(
+    expect.objectContaining({ imageRegions })
   );
 });

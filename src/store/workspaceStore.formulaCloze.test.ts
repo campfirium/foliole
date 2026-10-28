@@ -11,9 +11,7 @@ const mutationRepository = vi.hoisted(() => ({
   syncNodeCreation: vi.fn<
     (
       node: Node,
-      nodeOrder?: string[],
-      activeNodeId?: string | null,
-      position?: number
+      activeNodeId?: string | null
     ) => Promise<WorkspaceNodeMutationPatchResult | null>
   >(async () => null)
 }));
@@ -106,9 +104,8 @@ it('creates a formula cloze child without storing formula regions as image attac
   });
   const createCall = mutationRepository.syncNodeCreation.mock.calls[0];
   expect(createCall?.[0]).toEqual(expect.objectContaining({ id: createdId }));
-  expect(createCall?.[1]).toEqual(expect.arrayContaining(['node-1', createdId]));
-  expect(createCall?.[2]).toBe('node-1');
-  expect(createCall?.[3]).toBe(createCall?.[1]?.indexOf(createdId as string));
+  expect(createCall).toHaveLength(2);
+  expect(createCall?.[1]).toBe('node-1');
   expect(useWorkspaceStore.getState().activeNodeId).toBe('node-1');
 });
 

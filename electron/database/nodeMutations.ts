@@ -55,25 +55,6 @@ export function upsertNodeSnapshot(input: UpsertNodeSnapshotInput, options: Upse
   }
 }
 
-export function upsertNodeSnapshotWithOrder(input: UpsertNodeSnapshotInput, nodeOrder: string[], options: UpsertNodeSnapshotOptions = {}): void {
-  const connection = openDatabaseConnection();
-  const hostName = loadOrCreateDesktopHostName(input.updatedAt);
-  withTransaction(connection.driver, () => {
-    upsertNodeSnapshotViaDriver(connection.driver, {
-      ...input,
-      hostName
-    }, options);
-    replaceNodeOrderViaDriver(connection.driver, nodeOrder);
-  });
-  if ('reading' in input) {
-    if (input.reading?.state === 'dismissed') {
-      recordNodeSourceDisposition(input.nodeId, 'dismissed', input.updatedAt);
-    } else {
-      clearNodeSourceDisposition(input.nodeId);
-    }
-  }
-}
-
 export function replaceNodeOrder(nodeIds: string[]): void {
   const connection = openDatabaseConnection();
   withTransaction(connection.driver, () => {

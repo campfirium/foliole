@@ -7,11 +7,10 @@ import type { WorkspaceState } from './workspaceStore';
 import { createWorkspaceNodeActionsFixture, createWorkspaceNodeActionsSetStateHarness } from './workspaceStoreNodeActions.test-support';
 import { createPdfImageExcerptAction } from './workspaceStorePdfImageExcerptActions';
 
-function confirmCreation(args: { activeNodeId: string; node: WorkspaceState['nodesById'][string]; nodeOrder: string[]; position: number }): WorkspaceNodeMutationPatchResult {
+function confirmCreation(args: { activeNodeId: string; node: WorkspaceState['nodesById'][string] }): WorkspaceNodeMutationPatchResult {
   return {
     activeNodeId: args.activeNodeId,
     createdNodeIds: [args.node.id],
-    nodeOrder: args.nodeOrder,
     nodes: [
       {
         nodeId: args.node.id,
@@ -24,7 +23,7 @@ function confirmCreation(args: { activeNodeId: string; node: WorkspaceState['nod
         reveal: null,
         anchorLink: args.node.anchorLink ?? null,
         imageRegions: args.node.imageRegions ?? null,
-        position: args.position,
+        position: null,
         createdAt: args.node.createdAt,
         updatedAt: args.node.updatedAt,
         priority: null,

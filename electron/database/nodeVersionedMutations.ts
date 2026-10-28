@@ -7,6 +7,7 @@ import type {
 } from '../../lib/core/database/nodeMutations.js';
 import { serializeNodeResourceReferences } from '../../lib/core/database/nodeResourceReferences.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
+import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
 import { collectArticleImageStorageKeys } from '../../lib/core/import/replaceArticleImageSource.js';
 import type { ContentImageReference } from '../../lib/core/sync/localContentEditResources.js';
 
@@ -14,8 +15,7 @@ import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import {
   updateNodeAnchorLinks,
-  upsertNodeSnapshot,
-  upsertNodeSnapshotWithOrder
+  upsertNodeSnapshot
 } from './nodeMutations.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { withTransaction } from './transaction.js';
@@ -36,11 +36,14 @@ export function upsertVersionedNodeSnapshot(
   });
 }
 
-export function upsertVersionedNodeSnapshotWithOrder(input: UpsertNodeSnapshotInput, nodeOrder: string[], options: UpsertNodeSnapshotOptions & { newImageReferences?: readonly ContentImageReference[] } = {}) {
+/** Creation registers only the new member in its parent's current sequence. */
+export function createVersionedNodeSnapshot(input: UpsertNodeSnapshotInput, options: {
+  newImageReferences?: readonly ContentImageReference[];
+} = {}) {
   const driver = openDatabaseConnection().driver;
   const hostName = loadOrCreateDesktopHostName(input.updatedAt);
   return withTransaction(driver, () => {
-    upsertNodeSnapshotWithOrder(input, nodeOrder, options);
+    upsertNodeSnapshot(input, input.parentNodeId === INBOX_NODE_ID ? { parentMembership: 'first' } : {});
     if (options.newImageReferences?.length) {
       const keys = new Set(collectArticleImageStorageKeys(input.content));
       driver.execute('UPDATE nodes SET resource_references = ? WHERE id = ?',

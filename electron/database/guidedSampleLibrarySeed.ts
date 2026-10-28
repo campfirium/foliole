@@ -4,7 +4,6 @@ import path from 'node:path';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import type { UpsertNodeSnapshotInput } from '../../lib/core/database/nodeMutations.js';
-import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import * as specialNodeIds from '../../lib/core/database/specialNodeIds.js';
 import {
   getGuidedSampleContent,
@@ -18,7 +17,7 @@ import { importImageAttachmentBytes } from '../attachments/importImageAttachment
 
 import { openDatabaseConnection } from './connection.js';
 import { clearGuidedSampleSeedState, markGuidedSampleSeeded, readGuidedSampleSeedState } from './guidedSampleSeedState.js';
-import { upsertVersionedNodeSnapshotWithOrder } from './nodeVersionedMutations.js';
+import { createVersionedNodeSnapshot } from './nodeVersionedMutations.js';
 
 const SPECIAL_NODE_IDS: string[] = Object.values(specialNodeIds);
 
@@ -78,7 +77,6 @@ function insertSampleTopics(
   images: ContentImageReference[][]
 ) {
   const startedAt = Date.now();
-  const rest = loadDerivedNodeOrder(driver).filter((nodeId) => nodeId !== specialNodeIds.INBOX_NODE_ID);
   const placed: string[] = [];
   topics.forEach((topic, index) => {
     // Distinct creation times keep the sample's sibling order stable wherever it syncs.
@@ -86,9 +84,8 @@ function insertSampleTopics(
     const snapshot = createTopicSnapshot(topic, placed[0] ?? specialNodeIds.INBOX_NODE_ID, timestamp);
     placed.push(snapshot.nodeId);
     const newImageReferences = images[index] ?? [];
-    upsertVersionedNodeSnapshotWithOrder(
+    createVersionedNodeSnapshot(
       snapshot,
-      [specialNodeIds.INBOX_NODE_ID, ...placed, ...rest],
       newImageReferences.length ? { newImageReferences } : {}
     );
   });

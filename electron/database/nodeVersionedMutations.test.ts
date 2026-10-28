@@ -22,7 +22,7 @@ import { initializeDatabase } from './migrate.js';
 import {
   upsertVersionedNodeContentWithAnchors,
   upsertVersionedNodeSnapshot,
-  upsertVersionedNodeSnapshotWithOrder
+  createVersionedNodeSnapshot
 } from './nodeVersionedMutations.js';
 
 let tempRoot = '';
@@ -55,7 +55,7 @@ function nodeInput(content: string, updatedAt: string) {
 }
 
 it('atomically creates a formal sync version and state during a normal node create', () => {
-  upsertVersionedNodeSnapshotWithOrder(nodeInput('Alpha baseline.', '2026-07-25T04:31:00.000Z'), ['node-1']);
+  createVersionedNodeSnapshot(nodeInput('Alpha baseline.', '2026-07-25T04:31:00.000Z'));
 
   const sqlite = openDatabaseConnection().sqlite;
   const node = sqlite.prepare(

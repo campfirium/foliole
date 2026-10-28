@@ -21,9 +21,7 @@ interface RuntimeSyncHandlers {
   syncNodeContent: (node: WorkspaceNode) => void;
   syncNodeCreation: (
     node: WorkspaceNode,
-    nodeOrder?: string[],
-    activeNodeId?: string | null,
-    position?: number
+    activeNodeId?: string | null
   ) => Promise<WorkspaceNodeMutationPatchResult | null>;
 }
 

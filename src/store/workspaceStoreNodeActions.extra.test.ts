@@ -221,9 +221,7 @@ describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {
           }
         }
       }),
-      expect.any(Array),
-      'node-1',
-      expect.any(Number)
+      'node-1'
     );
   });
 

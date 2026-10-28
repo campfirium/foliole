@@ -38,9 +38,7 @@ interface RuntimeSyncHandlers {
   syncNodeContent: (node: WorkspaceState['nodesById'][string]) => void;
   syncNodeCreation: (
     node: WorkspaceState['nodesById'][string],
-    nodeOrder?: string[],
-    activeNodeId?: string | null,
-    position?: number
+    activeNodeId?: string | null
   ) => Promise<WorkspaceNodeMutationPatchResult | null>;
   syncNodeOrder: (nodeOrder: string[]) => void;
 }
@@ -102,7 +100,7 @@ export async function applyCreatedNode(args: {
   }
   syncWorkspaceNodeDocumentCacheFromNode(node);
   markNodeCreatePending(nodeId);
-  const result = await handlers.syncNodeCreation(node, nodeOrder, activeNodeId, nodeOrder.indexOf(nodeId));
+  const result = await handlers.syncNodeCreation(node, activeNodeId);
   const runtimeConfirmed = didRuntimeConfirmNodeCreation(result, nodeId);
   if (runtimeConfirmed && result) {
     set((state) => createWorkspaceNodeCreateAckPatch(state, result, [nodeId]));

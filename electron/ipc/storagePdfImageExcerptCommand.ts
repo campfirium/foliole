@@ -1,7 +1,7 @@
 import { buildCanonicalAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { persistCreatedNodeImageAttachment } from '../attachments/persistCreatedNodeImageAttachment.js';
-import { upsertVersionedNodeSnapshotWithOrder } from '../database/nodeVersionedMutations.js';
+import { createVersionedNodeSnapshot } from '../database/nodeVersionedMutations.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
 import { parseNodeCreationMutationArgs } from './commandParsers.js';
@@ -42,7 +42,7 @@ export async function handleStoragePdfImageExcerptCommand(
     mimeType: 'image/png',
     nodeId: parsed.node.nodeId,
     originalName: typeof args.originalName === 'string' ? args.originalName : 'pdf-image-excerpt.png',
-    persistNode: () => upsertVersionedNodeSnapshotWithOrder(parsed.node, parsed.nodeOrder)
+    persistNode: () => createVersionedNodeSnapshot(parsed.node)
   });
   scheduleMirrorSync([parsed.node.nodeId]);
   return completeCreatedNodeCreation(parsed, originWindow);

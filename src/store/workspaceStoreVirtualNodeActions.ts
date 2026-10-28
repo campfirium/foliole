@@ -139,9 +139,7 @@ async function applyCreatedVirtualNode(args: {
   nodeId: string;
   onNodeCreated: ((
     node: NodeSnapshot,
-    nodeOrder?: string[],
-    activeNodeId?: string | null,
-    position?: number
+    activeNodeId?: string | null
   ) => Promise<WorkspaceNodeMutationPatchResult | null>) | undefined;
   onNodeOrderChanged: ((nodeOrder: string[]) => void) | undefined;
   get?: () => WorkspaceState;
@@ -152,12 +150,9 @@ async function applyCreatedVirtualNode(args: {
     return null;
   }
   markNodeCreatePending(args.nodeId);
-  const orderForSync = [...(args.nextNodeOrder ?? [])] as string[];
   const result = await args.onNodeCreated?.(
     args.createdNode,
-    orderForSync,
-    args.nodeId,
-    orderForSync.indexOf(args.nodeId)
+    args.nodeId
   );
   const succeeded = didRuntimeConfirmNodeCreation(result ?? null, args.nodeId) || !hasWorkspaceNodeMutationRuntime();
   if (result && succeeded) {
@@ -184,9 +179,7 @@ export function createVirtualNodeAction(
   set: WorkspaceSet,
   onNodeCreated?: (
     node: NodeSnapshot,
-    nodeOrder?: string[],
-    activeNodeId?: string | null,
-    position?: number
+    activeNodeId?: string | null
   ) => Promise<WorkspaceNodeMutationPatchResult | null>,
   onNodeOrderChanged?: (nodeOrder: string[]) => void,
   get?: () => WorkspaceState

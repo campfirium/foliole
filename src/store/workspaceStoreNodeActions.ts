@@ -83,10 +83,8 @@ function createRuntimeHandlers() {
       getWorkspaceMutationRepository().syncNodeContent(node, position),
     syncNodeCreation: async (
       node: WorkspaceState['nodesById'][string],
-      nodeOrder?: string[],
-      activeNodeId?: string | null,
-      position?: number
-    ) => getWorkspaceMutationRepository().syncNodeCreation(node, nodeOrder, activeNodeId, position),
+      activeNodeId?: string | null
+    ) => getWorkspaceMutationRepository().syncNodeCreation(node, activeNodeId),
     syncNodeOrder: (nodeOrder: string[]) => getWorkspaceMutationRepository().syncNodeOrder(nodeOrder)
   };
 }

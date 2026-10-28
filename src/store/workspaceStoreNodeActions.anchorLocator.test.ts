@@ -159,9 +159,7 @@ async function runCreateHighlightLocatorCase() {
         }
       }
     }),
-    expect.any(Array),
-    'node-1',
-    expect.any(Number)
+    'node-1'
   );
 }
 

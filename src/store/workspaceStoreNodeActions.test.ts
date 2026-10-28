@@ -118,9 +118,7 @@ describe('createWorkspaceNodeActions root creation sync', () => {
         content: '# Root node',
         title: 'Root node'
       }),
-      expect.any(Array),
-      createdNodeId,
-      expect.any(Number)
+      createdNodeId
     );
   });
 
@@ -143,9 +141,7 @@ describe('createWorkspaceNodeActions root creation sync', () => {
         id: secondNodeId,
         title: 'Untitled 1'
       }),
-      expect.any(Array),
-      secondNodeId,
-      expect.any(Number)
+      secondNodeId
     );
   });
 
@@ -220,9 +216,7 @@ describe('createWorkspaceNodeActions create sync', () => {
         parentNodeId: 'node-1',
         content: 'Child body'
       }),
-      expect.any(Array),
-      childNodeId,
-      expect.any(Number)
+      childNodeId
     );
   });
 
@@ -248,7 +242,7 @@ describe('createWorkspaceNodeActions create sync', () => {
       kind: 'item',
       reveal: '',
       review: expect.objectContaining({ due: new Date(2026, 4, 22, 4).toISOString() })
-    }), expect.any(Array), childNodeId, expect.any(Number));
+    }), childNodeId);
   });
 
 });

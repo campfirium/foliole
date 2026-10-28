@@ -32,7 +32,7 @@ vi.mock('../database/nodeMutations.js', () => ({
 vi.mock('../database/nodeVersionedMutations.js', () => ({
   upsertVersionedNodeContentWithAnchors: vi.fn((_parent, anchors) => anchors),
   upsertVersionedNodeSnapshot: vi.fn(),
-  upsertVersionedNodeSnapshotWithOrder: vi.fn()
+  createVersionedNodeSnapshot: vi.fn()
 }));
 vi.mock('../database/searchIndexInvalidationCoalescer.js', () => ({
   enqueueCoalescedWorkspaceSearchInvalidation: vi.fn()

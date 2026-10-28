@@ -100,7 +100,7 @@ export function isNodeMutationPatchResult(value: unknown): value is WorkspaceNod
 }
 
 export function isCreateNodeMutationPatchResult(value: unknown): value is WorkspaceNodeMutationPatchResult {
-  return isNodeMutationPatchResult(value) && Array.isArray(value.nodeOrder);
+  return isNodeMutationPatchResult(value) && Array.isArray(value.createdNodeIds);
 }
 
 export function logWorkspaceRuntimeMutationError(action: string, command: NativeCommandName, error: unknown) {

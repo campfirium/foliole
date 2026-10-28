@@ -50,6 +50,6 @@ describe('direct item creation', () => {
       kind: 'item',
       reveal: '',
       review: expect.objectContaining({ reps: 0, state: 0 })
-    }), expect.any(Array), itemNodeId, expect.any(Number));
+    }), itemNodeId);
   });
 });

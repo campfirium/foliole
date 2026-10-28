@@ -22,7 +22,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from './connection.js
 import { seedPendingGuidedSample } from './guidedSampleLibrarySeed.js';
 import { consumeGuidedSampleStartup } from './guidedSampleSeedState.js';
 import { initializeDatabase } from './migrate.js';
-import { upsertNodeSnapshotWithOrder } from './nodeMutations.js';
+import { upsertNodeSnapshot } from './nodeMutations.js';
 import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 
 const ASSET_DIRS = [path.resolve('public/guided-sample-assets')];
@@ -56,11 +56,11 @@ function readResourceReferences(nodeId: string) {
 
 function createUserTopic() {
   const timestamp = '2026-10-24T00:00:00.000Z';
-  upsertNodeSnapshotWithOrder({
+  upsertNodeSnapshot({
     anchorLink: null, content: '# My notes', createdAt: timestamp, isTitleManual: false, kind: 'topic',
     nodeId: 'user-topic', parentNodeId: INBOX_NODE_ID, position: null, reveal: null, title: 'My notes',
     updatedAt: timestamp
-  }, [INBOX_NODE_ID, 'user-topic', ...loadWorkspaceSnapshot()!.nodeOrder.filter((id) => id !== INBOX_NODE_ID)]);
+  });
 }
 
 it('writes the localized guided sample into a new library once and hands it to the first startup', async () => {

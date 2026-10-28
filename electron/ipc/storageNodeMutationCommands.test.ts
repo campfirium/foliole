@@ -4,7 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { moveNodes, replaceNodeOrder } from '../database/nodeMutations.js';
 import { deletePermanentDeleteChunk, finishPermanentDelete } from '../database/nodePermanentDeleteChunks.js';
 import { restoreNodesWithParents as restoreNodes, softDeleteNodesWithParents as softDeleteNodes } from '../database/nodeTrashTransitions.js';
-import { upsertVersionedNodeSnapshot, upsertVersionedNodeSnapshotWithOrder } from '../database/nodeVersionedMutations.js';
+import { upsertVersionedNodeSnapshot, createVersionedNodeSnapshot } from '../database/nodeVersionedMutations.js';
 import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
 import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js';
 
@@ -53,8 +53,7 @@ vi.mock('../database/nodeMutations.js', () => ({
   restoreNodes: vi.fn(),
   softDeleteNodes: vi.fn(),
   updateNodeAnchorLinks: vi.fn(),
-  upsertNodeSnapshot: vi.fn(),
-  upsertNodeSnapshotWithOrder: vi.fn()
+  upsertNodeSnapshot: vi.fn()
 }));
 vi.mock('../database/nodePermanentDeleteChunks.js', () => ({
   deletePermanentDeleteChunk: vi.fn(() => []),
@@ -65,7 +64,7 @@ vi.mock('../database/nodePermanentDeleteChunks.js', () => ({
 vi.mock('../database/releasedBodyCollectionTask.js', () => ({ enqueueReleasedBodyCollection: vi.fn() }));
 vi.mock('../database/nodeTrashTransitions.js', () => ({ restoreNodesWithParents: vi.fn(), softDeleteNodesWithParents: vi.fn() }));
 vi.mock('../database/nodeVersionedMutations.js', () => ({ upsertVersionedNodeContentWithAnchors: vi.fn(),
-  upsertVersionedNodeSnapshot: vi.fn(), upsertVersionedNodeSnapshotWithOrder: vi.fn() }));
+  upsertVersionedNodeSnapshot: vi.fn(), createVersionedNodeSnapshot: vi.fn() }));
 vi.mock('../database/searchIndexInvalidationCoalescer.js', () => ({
   enqueueCoalescedWorkspaceSearchInvalidation: vi.fn()
 }));
@@ -163,14 +162,13 @@ it('handles node reveal mutation command', async () => {
   expect(enqueueCoalescedWorkspaceSearchInvalidation).toHaveBeenCalledWith(['node-2']);
 });
 
-it('handles create node mutation command with accepted order patch', async () => {
+it('handles create node mutation command without an existing order snapshot', async () => {
   await expect(
     handleInvokeRequest({
       command: 'create_topic',
       args: {
         activeNodeId: 'node-new',
         nodeId: 'node-new',
-        nodeOrder: ['special-inbox', 'node-new'],
         parentNodeId: 'special-inbox',
         kind: 'topic',
         title: 'New node',
@@ -186,12 +184,10 @@ it('handles create node mutation command with accepted order patch', async () =>
   ).resolves.toEqual({
     activeNodeId: 'node-new',
     createdNodeIds: ['node-new'],
-    nodeOrder: ['special-inbox', 'node-new'],
     nodes: [expect.objectContaining({ nodeId: 'node-new', title: 'New node' })]
   });
-  expect(upsertVersionedNodeSnapshotWithOrder).toHaveBeenCalledWith(
-    expect.objectContaining({ nodeId: 'node-new' }),
-    ['special-inbox', 'node-new']
+  expect(createVersionedNodeSnapshot).toHaveBeenCalledWith(
+    expect.objectContaining({ nodeId: 'node-new' })
   );
 });
 
