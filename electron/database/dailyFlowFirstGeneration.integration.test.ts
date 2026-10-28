@@ -161,3 +161,17 @@ it('resumes a persisted later-today item at its due time without loading full-li
   expect(reopened.session.currentNodeId).toBe(id);
   expect(reopened.learning?.[id]?.reading?.nextAt).toBe(later);
 });
+
+it('does not let a copied reading priority override the current node priority model', async () => {
+  await startLibraries();
+  const peer = createPeer('desktop');
+  addTopics(peer, 0, 24);
+  peer.db.prepare(`INSERT INTO node_reading (node_id,last_handled_at,next_at,priority)
+    SELECT id, ?, ?, 0 FROM nodes`).run(now, now);
+  const first = await firstGeneration(peer);
+  const rows = await readCycleRows(peer.port);
+  peer.db.prepare('UPDATE node_reading SET priority=9').run();
+  const second = await firstGeneration(peer);
+  expect(await readCycleRows(peer.port)).toEqual(rows);
+  expect(second.result.session.currentNodeId).toBe(first.result.session.currentNodeId);
+});

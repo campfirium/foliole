@@ -26,18 +26,14 @@ export function resolveFsrsQueueNodeIds(args: {
   nodesById: Record<string, ReviewQueueNode | undefined>;
   now: string;
   pushQueueRules: UnifiedPushQueueRules;
-  resolvePriority: (
-    node: ReviewQueueNode,
-    nodesById: Record<string, ReviewQueueNode | undefined>,
-    defaultPriority: UnifiedPushQueueRules['defaultPriority']
-  ) => PushQueuePriority;
+  priorities: ReadonlyMap<string, PushQueuePriority>;
 }) {
   const random = createSeededRandom(`fsrs|${args.nodeOrder.join('|')}`);
   return assembleFsrsPushQueue(
     args.candidates.map((node) => ({
       id: node.id,
       pathNodeIds: resolveReviewQueueNodePathNodeIds(node, args.nodesById),
-      priority: args.resolvePriority(node, args.nodesById, args.pushQueueRules.defaultPriority),
+      priority: args.priorities.get(node.id)!,
       retrievability: resolveFsrsRetrievability(node, args.now)
     })),
     {

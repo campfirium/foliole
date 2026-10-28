@@ -25,6 +25,9 @@ test('continues the saved daily Flow cursor after reloading the desktop renderer
     })), { persist: true });
   });
   await page.getByRole('button', { name: /^Enter Flow$/ }).click();
+  await page.getByRole('button', { name: /^(Change session mode|Session mode:)/ }).click();
+  await page.getByRole('menuitem', { name: /Review first/ }).click();
+  await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId)).toMatch(/^daily-/);
   await page.getByRole('button', { name: /^(Show Answer|Reveal Answer)$/ }).click();
   await page.getByRole('button', { name: /^Good$/ }).click();
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().reviewedItemCount)).toBe(1);
