@@ -45,9 +45,10 @@ export async function respondRequestSyncDatabase<T>(host: RequestSyncDatabaseHos
     response = [{ payloadCase: 'round_receipt', payload: { roundId: result.requestId, result: 1, deferredFacts: [] } }];
   } else {
     const request = await decodeRequestSyncInventory(messages, { retainEntries: false });
-    await host.write(db => db.transaction(flushRequestSyncInventoryDigests));
+    const nodeIds = !request.bucketSummary && request.detailGlobalIds.length ? request.detailGlobalIds : undefined;
+    await host.write(db => db.transaction(tx => flushRequestSyncInventoryDigests(tx, nodeIds)));
     const entries = await host.readSnapshot(async db => {
-      const summaries = await readRequestSyncInventorySummaries(db);
+      const summaries = await readRequestSyncInventorySummaries(db, nodeIds);
       return request.detailGlobalIds.length ? expandRequestSyncNodeSummaries(db, summaries, request.detailGlobalIds) : summaries;
     }, input.signal);
     if (request.bucketSummary) {
