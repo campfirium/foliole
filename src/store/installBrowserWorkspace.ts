@@ -28,10 +28,11 @@ export function replaceBrowserWorkspace(store: Store, storage: Storage, incoming
     const raw = JSON.stringify({ version: BROWSER_WORKSPACE_VERSION,
       state: { ...partializeWorkspaceState(state), reviewSession: state.reviewSession, browserDailyFlow: state.browserDailyFlow,
         appActionHistory: state.appActionHistory } });
-    const currentHash = hashTextBody(storage.getItem(KEY) ?? '');
+    const currentRaw = storage.getItem(KEY) ?? '';
+    const currentHash = hashTextBody(currentRaw);
     if (currentHash !== expectedHash) throw new Error('browser_workspace_changed');
+    if (raw === currentRaw) return;
     const nextHash = hashTextBody(raw);
-    if (nextHash === currentHash) return;
     storage.setItem(KEY, raw);
     expectedHash = nextHash;
   };
