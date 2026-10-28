@@ -35,32 +35,33 @@ export function findExactLocatorHighlight(
   trashedNodeIds: string[]
 ): LocatorHighlightMatch | null {
   const trashedNodeIdSet = new Set(trashedNodeIds);
-  const matchingNode = Object.values(nodesById).find((node) => {
+  for (const nodeId in nodesById) {
+    if (!Object.hasOwn(nodesById, nodeId)) continue;
+    const node = nodesById[nodeId]!;
     if (
       node.parentNodeId !== activeNodeId ||
       trashedNodeIdSet.has(node.id) ||
       node.anchorLink?.kind !== 'highlight' ||
       !isTextAnchorLocator(node.anchorLink.locator)
     ) {
-      return false;
+      continue;
     }
     const nodeLocator = node.anchorLink.locator;
-    return (
+    if (
       nodeLocator.from === locator.from &&
       nodeLocator.to === locator.to &&
       nodeLocator.originalText === locator.originalText
-    );
-  });
-  if (!matchingNode || !matchingNode.anchorLink || !isTextAnchorLocator(matchingNode.anchorLink.locator)) {
-    return null;
+    ) {
+      return {
+        kind: 'highlight',
+        canAdjustRange: true,
+        locator: nodeLocator,
+        nodeId: node.id,
+        originalText: nodeLocator.originalText
+      };
+    }
   }
-  return {
-    kind: 'highlight',
-    canAdjustRange: true,
-    locator: matchingNode.anchorLink.locator,
-    nodeId: matchingNode.id,
-    originalText: matchingNode.anchorLink.locator.originalText
-  };
+  return null;
 }
 
 export { findTextAnchorAtPosition, type LocatorHighlightMatch } from '../../shared/textAnchorTarget';
