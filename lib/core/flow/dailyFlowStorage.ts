@@ -24,6 +24,11 @@ export async function writeCycleRows(db: DbPort, rows: CycleRow[]) {
   if (!rows.length) return;
   await db.run('DELETE FROM daily_flow_entries WHERE node_id IN (SELECT value FROM json_each(?))',
     [JSON.stringify(rows.map(row => row.node_id))]);
+  await insertCycleRows(db, rows);
+}
+
+export async function insertCycleRows(db: DbPort, rows: CycleRow[]) {
+  if (!rows.length) return;
   await db.run(`INSERT INTO daily_flow_entries (node_id, order_key, active, cohort, initial_task, handled)
     SELECT json_extract(value, '$.node_id'), json_extract(value, '$.order_key'), json_extract(value, '$.active'),
     json_extract(value, '$.cohort'), json_extract(value, '$.initial_task'), json_extract(value, '$.handled') FROM json_each(?)`, [JSON.stringify(rows)]);

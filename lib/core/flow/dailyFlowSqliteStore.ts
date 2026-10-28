@@ -2,22 +2,29 @@ import type { DbPort } from '../sync/dbPort.js';
 
 import { scopedDailyLearningSnapshot } from './dailyFlowGrade.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
-import { readCycleRows, readDailyFlow, saveCycleFlow, writeCycleRows } from './dailyFlowStorage.js';
+import { insertCycleRows, readCycleRows, readDailyFlow, saveCycleFlow, writeCycleRows } from './dailyFlowStorage.js';
 import type { DailyFlowOperation, DailyFlowStore } from './dailyFlowStore.js';
 
 export function createSqliteDailyFlowStore(db: DbPort, persistence: DailyFlowPersistence): DailyFlowStore {
+  let cleared = false;
   return {
     readState: () => readDailyFlow(db),
     readRows: ids => readCycleRows(db, ids),
     scanRows: (after, through, count) => db.query(`SELECT * FROM daily_flow_entries WHERE active=1
       AND order_key > ? AND order_key <= ? ORDER BY order_key LIMIT ?`, [after, through, count]),
-    writeRows: rows => writeCycleRows(db, rows),
+    writeRows(rows) {
+      const write = cleared ? insertCycleRows : writeCycleRows;
+      cleared = false;
+      return write(db, rows);
+    },
     async deleteRows(ids) {
       await db.run('DELETE FROM daily_flow_entries WHERE node_id IN (SELECT value FROM json_each(?))', [JSON.stringify(ids)]);
     },
     async resetCycle() {
       await db.run('DELETE FROM daily_flow_entries');
       await db.run('DELETE FROM daily_flow_operations');
+      // This store belongs to the caller's transaction; only its next batch is known empty.
+      cleared = true;
     },
     saveState: args => saveCycleFlow(db, args),
     async readOperation(id) {
