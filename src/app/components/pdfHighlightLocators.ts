@@ -1,6 +1,4 @@
-import { buildNodeTreeRows } from '../../features/nodes/model/nodeTree';
 import { getPdfAnchorLocators, type Node } from '../../features/nodes/model/nodeTypes';
-import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
 export interface PdfHighlightLocator {
   id: string;
@@ -23,23 +21,39 @@ function collectOrderedSubtreeNodeIds(
   nodeOrder: string[],
   nodesById: Record<string, Node>
 ) {
-  const visibleNodeOrder = nodeOrder.filter((nodeId) => Boolean(nodesById[nodeId]));
-  const rows = buildNodeTreeRows(visibleNodeOrder, toWorkspaceListNodesById(nodesById));
-  const rootIndex = rows.findIndex((row) => row.node.id === rootNodeId);
-  if (rootIndex < 0) {
-    return [];
+  const knownIds = new Set(nodeOrder.filter((nodeId) => Boolean(nodesById[nodeId])));
+  if (!knownIds.has(rootNodeId)) return [];
+
+  // The tree exposes nodes in a disconnected cycle as individual root rows.
+  const ancestorIds = new Set<string>();
+  let ancestorId: string | null = rootNodeId;
+  while (ancestorId && knownIds.has(ancestorId)) {
+    if (ancestorIds.has(ancestorId)) return [rootNodeId];
+    ancestorIds.add(ancestorId);
+    ancestorId = nodesById[ancestorId]?.parentNodeId ?? null;
   }
-  const rootDepth = rows[rootIndex]?.depth ?? 0;
-  const subtreeIds = [rootNodeId];
-  for (let index = rootIndex + 1; index < rows.length; index += 1) {
-    const row = rows[index];
-    if (!row) {
-      continue;
+
+  const childrenByParent = new Map<string, string[]>();
+  for (const nodeId of nodeOrder) {
+    const parentId = nodesById[nodeId]?.parentNodeId;
+    if (!parentId || !knownIds.has(parentId)) continue;
+    const siblings = childrenByParent.get(parentId);
+    if (siblings) siblings.push(nodeId);
+    else childrenByParent.set(parentId, [nodeId]);
+  }
+
+  const subtreeIds: string[] = [];
+  const visited = new Set<string>();
+  const pending = [rootNodeId];
+  while (pending.length > 0) {
+    const nodeId = pending.pop()!;
+    if (visited.has(nodeId)) continue;
+    visited.add(nodeId);
+    subtreeIds.push(nodeId);
+    const children = childrenByParent.get(nodeId) ?? [];
+    for (let index = children.length - 1; index >= 0; index -= 1) {
+      pending.push(children[index]!);
     }
-    if (row.depth <= rootDepth) {
-      break;
-    }
-    subtreeIds.push(row.node.id);
   }
   return subtreeIds;
 }
