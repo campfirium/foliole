@@ -66,7 +66,8 @@ it.each(['review-first', 'recommended'] as const)('keeps hidden Soon ordered and
   const open = async (stamp: string, mode: 'recommended' | 'review-first') =>
     (await openDailyFlow(peer.port, { now: stamp, mode }, settings(peer), persistence)).session;
   let session = await open(now, 'recommended');
-  const [first, second] = session.queueNodeIds;
+  const [first, second] = (await readCycleRows(peer.port)).filter(row => row.initial_task)
+    .map(row => row.node_id);
   session = await act(peer, session, 'soon');
   session = await act(peer, session, 'soon');
   node(peer, 'minute', 'item');

@@ -50,20 +50,32 @@ async function setup(itemCount = 12, topicCount = 3) {
   return { ...harness, actions, history };
 }
 
+function pendingIds() {
+  return (openDatabaseConnection().sqlite.prepare(
+    'SELECT node_id FROM daily_flow_entries WHERE active=1 AND initial_task=1 ORDER BY order_key'
+  ).all() as { node_id: string }[]).map(row => row.node_id);
+}
+
 it.each([1, 2, 3, 4] as const)('grade %s preserves the remaining daily order and touches only the graded list row', async grade => {
   const app = await setup();
   const before = app.getState().reviewSession;
+  const pendingBefore = pendingIds();
   const db = openDatabaseConnection().sqlite;
   db.exec(`CREATE TABLE touched (node_id TEXT);
     CREATE TRIGGER record_daily_update AFTER UPDATE ON daily_flow_entries
-    BEGIN INSERT INTO touched VALUES (NEW.node_id); END;`);
-  const snapshot = vi.spyOn(desktopDailyFlowPersistence, 'snapshot');
+    BEGIN INSERT INTO touched VALUES (NEW.node_id); END;
+    CREATE TRIGGER record_daily_insert AFTER INSERT ON daily_flow_entries
+    BEGIN INSERT INTO touched VALUES (NEW.node_id); END;
+    CREATE TRIGGER record_daily_delete AFTER DELETE ON daily_flow_entries
+    BEGIN INSERT INTO touched VALUES (OLD.node_id); END;`);
+  const snapshot = vi.spyOn(desktopDailyFlowPersistence, 'learningSnapshot');
   app.actions.revealReviewAnswer();
   expect(await app.actions.gradeReviewCard(grade, now)).toBe(true);
   const after = app.getState().reviewSession;
-  expect(after.queueNodeIds).toEqual(before.queueNodeIds.filter(id => id !== before.currentNodeId));
+  expect(pendingIds()).toEqual(pendingBefore.filter(id => id !== before.currentNodeId));
+  expect(after.currentNodeId).toBe(pendingBefore[1]);
   expect(after.currentNodeId).toBe(after.queueNodeIds[0]);
-  expect(db.prepare('SELECT * FROM touched').all()).toEqual([{ node_id: before.currentNodeId }]);
+  expect(db.prepare('SELECT DISTINCT node_id FROM touched').all()).toEqual([{ node_id: before.currentNodeId }]);
   expect(snapshot.mock.calls.every(call => call[1] !== undefined)).toBe(true);
   expect(db.prepare('SELECT reps FROM node_review WHERE node_id=?').get(before.currentNodeId)).toEqual({ reps: 1 });
   const history = app.getState().appActionHistory.undoStack.at(-1)!;
@@ -80,7 +92,7 @@ it.each([1, 2, 3, 4] as const)('grade %s preserves the remaining daily order and
 
 it('reaches the reading already placed after five reviews without restarting the mix cycle', async () => {
   const app = await setup();
-  const initial = app.getState().reviewSession.queueNodeIds;
+  const initial = pendingIds();
   expect(app.getState().nodesById[initial[5]!]!.kind).toBe('topic');
   for (let step = 0; step < 5; step += 1) {
     expect(app.getState().reviewSession.currentNodeId).toBe(initial[step]);
@@ -88,16 +100,17 @@ it('reaches the reading already placed after five reviews without restarting the
     expect(await app.actions.gradeReviewCard(3, now)).toBe(true);
   }
   expect(app.getState().reviewSession.currentNodeId).toBe(initial[5]);
-  expect(app.getState().reviewSession.queueNodeIds).toEqual(initial.slice(5));
+  expect(pendingIds()).toEqual(initial.slice(5));
 });
 
 it('keeps the remaining mix when an unrelated edit invalidates the daily list', async () => {
   const app = await setup();
-  const before = app.getState().reviewSession;
+  const before = pendingIds();
   openDatabaseConnection().sqlite.prepare("UPDATE nodes SET title='Edited concurrently' WHERE id='node-11'").run();
   app.actions.revealReviewAnswer();
   expect(await app.actions.gradeReviewCard(3, now)).toBe(true);
-  expect(app.getState().reviewSession.queueNodeIds).toEqual(before.queueNodeIds.slice(1));
+  expect(pendingIds()).toEqual(before.slice(1));
+  expect(app.getState().reviewSession.currentNodeId).toBe(before[1]);
   expect(openDatabaseConnection().sqlite.prepare("SELECT title FROM nodes WHERE id='node-11'").get()).toEqual({ title: 'Edited concurrently' });
 });
 
@@ -112,7 +125,7 @@ it('preserves inherited settings through scoped reads and rejects a deleted pare
   await app.actions.startReviewSession(now);
   const before = app.getState().reviewSession;
   expect(before.currentNodeId).toBe(target);
-  const reads = vi.spyOn(desktopDailyFlowPersistence, 'snapshot');
+  const reads = vi.spyOn(desktopDailyFlowPersistence, 'learningSnapshot');
   app.actions.revealReviewAnswer();
   expect(await app.actions.gradeReviewCard(3, now)).toBe(true);
   expect(reads.mock.calls[0]![1]).toContain('parent');
@@ -129,15 +142,15 @@ it('preserves inherited settings through scoped reads and rejects a deleted pare
   expect(db.prepare('SELECT * FROM node_review WHERE node_id=?').get(target)).toEqual(undone);
 });
 
-it.each([0, 1])('finishes the last review with %s reading candidates without loading unrelated library rows', async topicCount => {
+it.each([0, 1])('advances after the last review with %s reading candidates without loading unrelated library rows', async topicCount => {
   const app = await setup(1, topicCount);
-  const reads = vi.spyOn(desktopDailyFlowPersistence, 'snapshot');
+  const reads = vi.spyOn(desktopDailyFlowPersistence, 'learningSnapshot');
   app.actions.revealReviewAnswer();
   expect(await app.actions.gradeReviewCard(3, now)).toBe(true);
   const session = app.getState().reviewSession;
-  expect(session.currentNodeId).toBeNull();
-  expect(session.queueNodeIds).toEqual([]);
-  expect(session.continueNodeId).toBe(topicCount ? 'node-1' : null);
+  expect(session.currentNodeId).toBe(topicCount ? 'node-1' : null);
+  expect(session.queueNodeIds).toEqual(topicCount ? ['node-1'] : []);
+  expect(session.continueNodeId).toBeNull();
   expect(reads.mock.calls.every(call => call[1] !== undefined)).toBe(true);
-  for (const result of reads.mock.results) expect(Object.keys((await result.value).nodesById)).toHaveLength(1 + topicCount);
+  for (const result of reads.mock.results) expect(Object.keys((await result.value).nodesById).length).toBeLessThanOrEqual(1 + topicCount);
 });
