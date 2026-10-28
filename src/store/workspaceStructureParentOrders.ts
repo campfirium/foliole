@@ -2,16 +2,23 @@ import type { WorkspaceState } from './workspaceStore';
 import type { WorkspaceStructureParentOrder } from './workspaceStructureHistoryTypes';
 
 export function captureStructureParentOrders(state: WorkspaceState, parentIds: Array<string | null>) {
-  return [...new Set(parentIds)].map((parentNodeId) => ({
-    parentNodeId,
-    childIds: state.nodeOrder.filter((id) => state.nodesById[id]?.parentNodeId === parentNodeId)
-  }));
+  const orders = new Map<string | null, string[]>();
+  parentIds.forEach((id) => { if (!orders.has(id)) orders.set(id, []); });
+  if (orders.size > 0) {
+    for (const id of state.nodeOrder) {
+      const parentNodeId = state.nodesById[id]?.parentNodeId;
+      if (parentNodeId !== undefined) orders.get(parentNodeId)?.push(id);
+    }
+  }
+  return [...orders].map(([parentNodeId, childIds]) => ({ parentNodeId, childIds }));
 }
 
 export function structureParentOrdersMatch(state: WorkspaceState, expected: WorkspaceStructureParentOrder[]) {
+  const current = captureStructureParentOrders(state, expected.map(({ parentNodeId }) => parentNodeId));
+  const byParent = new Map(current.map(({ parentNodeId, childIds }) => [parentNodeId, childIds]));
   return expected.every(({ parentNodeId, childIds }) => {
-    const current = state.nodeOrder.filter((id) => state.nodesById[id]?.parentNodeId === parentNodeId);
-    return current.length === childIds.length && current.every((id, index) => id === childIds[index]);
+    const ids = byParent.get(parentNodeId)!;
+    return ids.length === childIds.length && ids.every((id, index) => id === childIds[index]);
   });
 }
 
