@@ -279,7 +279,7 @@
     "@vitejs/plugin-react": "6.1.2",
     "autoprefixer": "^10.6.1",
     "electron": "44.9.3",
-    "electron-builder": "26.17.0",
+    "electron-builder": "26.18.0",
     "eslint": "^9.39.5",
     "eslint-plugin-import": "^2.31.0",
     "globals": "^15.15.0",
