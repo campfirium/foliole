@@ -6,6 +6,10 @@ import { getRuntimeInvoke } from '../runtimeInvoke';
 
 import { getBrowserDailyFlowRuntime } from './dailyFlowBrowserRuntime';
 
+export function hasTargetedDailyFlowRuntime() {
+  return Boolean(getRuntimeInvoke() && !getBrowserDailyFlowRuntime());
+}
+
 export function hasDailyFlowRuntime() {
   return Boolean(getRuntimeInvoke() || getBrowserDailyFlowRuntime());
 }

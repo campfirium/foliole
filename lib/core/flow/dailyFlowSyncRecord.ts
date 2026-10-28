@@ -1,5 +1,6 @@
 import { computeSyncContentHash } from '../database/syncState.js';
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStatements.js';
+import { reviewHistoryOpId } from '../review/reviewEventIdentity.js';
 import type { DbPort } from '../sync/dbPort.js';
 
 import type { CycleRow } from './cycleFlowTypes.js';
@@ -29,9 +30,11 @@ export async function recordDailyFlowSync(db: DbPort, result: DailyFlowResult, s
     parentId: sameDay ? head.head_id : null, occurredAt,
     kind: sameDay ? command?.historyMode ?? 'advance' : 'create',
     nodeId: command?.grade?.nodeId ?? command?.readings?.[0]?.nodeId ?? command?.reviewHistory?.nodeId ?? null,
+    ...(command?.reviewHistory ? { reviewOpId: reviewHistoryOpId(command.reviewHistory.targetOpId, now, command.reviewHistory.mode), reviewTargetOpId: command.reviewHistory.targetOpId } : {}),
+    ...(command?.readings ? { readings: command.readings } : {}),
     action: command?.grade ? 'grade' : command?.readingAction ?? (command?.historyMode ? 'history' : 'navigate'),
     statsDelta: flowProgressDelta(result.sourceSession, result.session),
-    targetOpId: command?.reviewHistory?.targetOpId ?? null, mode: result.mode ?? (await readDailyFlow(db))?.mode ?? 'recommended',
+    targetOpId: command?.historyTargetOpId ?? command?.reviewHistory?.targetOpId ?? null, mode: result.mode ?? (await readDailyFlow(db))?.mode ?? 'recommended',
     settings: { newDayStartsAtHour: settings.newDayStartsAtHour, pushQueue: settings.pushQueue, dayWindow: settings.dayWindow },
     session, rows: sameDay ? after ?? result.session.cycle?.change?.after ?? [] : createdRows ?? await readCycleRows(db),
     removedNodeIds: before?.filter(row => !retained.has(row.node_id)).map(row => row.node_id) ?? [] });

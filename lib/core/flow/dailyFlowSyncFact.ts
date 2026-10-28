@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { cycleRowSchema } from './cycleFlowTypes.js';
+import { dailyFlowReadingSchema } from './dailyFlowContract.js';
 import { dailyFlowSessionSchema } from './dailyFlowSessionSchema.js';
 
 export const dailyFlowSyncFactSchema = z.object({
@@ -8,7 +9,10 @@ export const dailyFlowSyncFactSchema = z.object({
   occurredAt: z.string().datetime(),
   kind: z.enum(['create', 'advance', 'undo', 'redo']),
   targetOpId: z.string().nullable(),
+  reviewOpId: z.string().optional(),
+  reviewTargetOpId: z.string().optional(),
   nodeId: z.string().nullable().optional(),
+  readings: z.array(z.object({ nodeId: z.string(), before: dailyFlowReadingSchema.nullable(), after: dailyFlowReadingSchema.nullable() })).optional(),
   action: z.enum(['grade', 'read', 'later', 'dismiss', 'soon', 'navigate', 'history']).optional(),
   statsDelta: z.object({ readingElapsedMs: z.number(), reviewElapsedMs: z.number(),
     readTopicCount: z.number(), reviewedItemCount: z.number() }).optional(),

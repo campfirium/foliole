@@ -6,7 +6,7 @@ export function compareFlowFacts(a: DailyFlowSyncFact, b: DailyFlowSyncFact) {
   return a.occurredAt.localeCompare(b.occurredAt) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 }
 
-function connectedFacts(input: DailyFlowSyncFact[]) {
+export function connectedFlowFacts(input: DailyFlowSyncFact[]) {
   const connected = new Map(input.filter(fact => fact.kind === 'create').map(fact => [fact.id, fact]));
   for (const fact of input.sort(compareFlowFacts)) {
     const parent = fact.parentId ? connected.get(fact.parentId) : undefined;
@@ -51,6 +51,35 @@ export function flowProgressDelta(before: DailyFlowSession | undefined, after: D
     reviewedItemCount: (after.reviewedItemCount ?? 0) - (before?.reviewedItemCount ?? 0) };
 }
 
+/** History disables or reinstates one contribution; peer operations remain independent. */
+export function effectiveFlowActions(facts: DailyFlowSyncFact[]) {
+  const byId = new Map(facts.map(fact => [fact.id, fact]));
+  const history = new Map<string, DailyFlowSyncFact>();
+  const relatedByTarget = new Map<string, DailyFlowSyncFact[]>();
+  for (const fact of [...facts].sort(compareFlowFacts)) {
+    if ((fact.kind === 'undo' || fact.kind === 'redo') && fact.targetOpId && byId.has(fact.targetOpId)) {
+      history.set(fact.targetOpId, fact);
+      const related = relatedByTarget.get(fact.targetOpId) ?? [];
+      related.push(fact);
+      relatedByTarget.set(fact.targetOpId, related);
+    }
+  }
+  return facts.filter(fact => fact.kind !== 'create' && !((fact.kind === 'undo' || fact.kind === 'redo') &&
+    fact.targetOpId && byId.has(fact.targetOpId))).flatMap(fact => {
+    const replayed = (replay: DailyFlowSyncFact) => ({ ...fact, id: replay.id, targetOpId: fact.id,
+      occurredAt: replay.occurredAt, parentId: replay.parentId,
+      statsDelta: fact.statsDelta ?? flowProgressDelta(byId.get(fact.parentId ?? '')?.session, fact.session) });
+    if (fact.action === 'grade') {
+      const related = relatedByTarget.get(fact.id) ?? [];
+      const voids = new Set(related.filter(value => value.kind === 'undo').map(value => value.reviewTargetOpId ?? fact.id));
+      return [...(voids.has(fact.id) ? [] : [fact]), ...related.filter(value => value.kind === 'redo' &&
+        value.reviewOpId && !voids.has(value.reviewOpId)).map(replayed)];
+    }
+    const replay = history.get(fact.id);
+    return !replay ? [fact] : replay.kind === 'undo' ? [] : [replayed(replay)];
+  }).sort(compareFlowFacts);
+}
+
 function mergedSession(head: DailyFlowSyncFact, roots: DailyFlowSyncFact[], facts: DailyFlowSyncFact[],
   rows: CycleRow[], kinds: ReadonlyMap<string, string>) {
   const byId = new Map(facts.map(fact => [fact.id, fact]));
@@ -68,8 +97,15 @@ function mergedSession(head: DailyFlowSyncFact, roots: DailyFlowSyncFact[], fact
     }
   }
   const handled = rows.filter(row => row.handled);
-  const reviewedItemCount = handled.filter(row => types.get(row.node_id) === 'item').length;
-  const readTopicCount = handled.filter(row => types.get(row.node_id) === 'topic').length;
+  const legacy = facts.filter(fact => fact.kind === 'undo' || fact.kind === 'redo');
+  const legacyReading = legacy.reduce((count, fact) => count + (fact.statsDelta?.readTopicCount ?? 0), 0);
+  const legacyReview = legacy.reduce((count, fact) => count + (fact.statsDelta?.reviewedItemCount ?? 0), 0);
+  const baseline = new Set(roots.flatMap(root => root.rows.filter(row => row.handled).map(row => row.node_id)));
+  const fresh = handled.filter(row => !baseline.has(row.node_id));
+  const reviewedItemCount = Math.max(0, ...roots.map(root => root.session.reviewedItemCount ?? 0)) + legacyReview +
+    fresh.filter(row => types.get(row.node_id) === 'item').length;
+  const readTopicCount = Math.max(0, ...roots.map(root => root.session.readTopicCount ?? 0)) + legacyReading +
+    fresh.filter(row => types.get(row.node_id) === 'topic').length;
   const pending = rows.filter(row => row.active && row.initial_task);
   const cycle = { ...head.session.cycle!, remaining: pending.length,
     scanAfter: rows.find(row => row.node_id === head.session.currentNodeId)?.order_key ?? head.session.cycle!.scanAfter,
@@ -85,16 +121,18 @@ function mergedSession(head: DailyFlowSyncFact, roots: DailyFlowSyncFact[], fact
 }
 
 export function mergeDailyFlowFacts(input: DailyFlowSyncFact[], kinds: ReadonlyMap<string, string>) {
-  const facts = connectedFacts(input);
+  const facts = connectedFlowFacts(input);
   const actions = facts.filter(fact => fact.kind !== 'create');
   const head = actions.at(-1) ?? facts.at(-1);
   if (!head) return null;
   const byId = new Map(facts.map(fact => [fact.id, fact]));
   const path = pathTo(head, byId);
   const roots = facts.filter(fact => fact.kind === 'create');
-  const merged = path.length !== facts.length;
+  const merged = path.length !== facts.length || actions.some(fact =>
+    (fact.kind === 'undo' || fact.kind === 'redo') && fact.targetOpId && byId.has(fact.targetOpId));
+  const contributions = effectiveFlowActions(facts);
   const linear = new Map<string, CycleRow>();
   if (!merged) for (const fact of path) applyRows(linear, fact);
-  const rows = merged ? mergedRows(roots, facts, path) : [...linear.values()];
-  return { head, rows, merged, session: merged ? mergedSession(head, roots, facts, rows, kinds) : head.session };
+  const rows = merged ? mergedRows(roots, contributions, path) : [...linear.values()];
+  return { head, rows, merged, session: merged ? mergedSession(head, roots, contributions, rows, kinds) : head.session };
 }

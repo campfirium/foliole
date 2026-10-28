@@ -32,9 +32,9 @@ export async function readStoredLegacyCycleProjection(db: DailyFlowStore, settin
 
 export function sameLegacySession(left: DailyFlowSession, right: DailyFlowSession, grade = false) {
   const normalized = (session: DailyFlowSession) => Object.entries({ ...session, queueNodeIds: session.queueNodeIds ?? [],
-    soonNodeIds: session.soonNodeIds ?? [], hiddenSoonNodeIds: session.hiddenSoonNodeIds ?? [],
+    soonNodeIds: session.soonNodeIds ?? [], hiddenSoonNodeIds: session.hiddenSoonNodeIds ?? [], continueNodeId: session.continueNodeId ?? null,
     ...(grade ? { nextReviewDueAt: null } : {}) }).filter(([key, value]) =>
-    !['daily', 'cycle', 'flowFormat', 'queueHistory', 'isAnswerRevealed'].includes(key) && value !== undefined)
+    !['daily', 'cycle', 'flowFormat', 'queueHistory', 'isAnswerRevealed', 'dayWindow'].includes(key) && value !== undefined)
     .sort(([a], [b]) => a.localeCompare(b));
   return JSON.stringify(normalized(left)) === JSON.stringify(normalized(right));
 }
@@ -84,7 +84,7 @@ export async function installLegacyCycleTarget(db: DailyFlowStore, source: Daily
   meta.remaining = [...saved.values()].filter(row => row.active && row.initial_task).length;
   // The ordinary open/commit eligibility refresh supplies authoritative kind counts.
   meta.reviewRemaining = Math.min(meta.reviewRemaining, meta.remaining);
-  return { ...target, flowFormat: 'cycle-v1' as const, cycle: meta };
+  return { ...target, flowFormat: 'cycle-v1' as const, cycle: { ...meta, change: changes.change() } };
 }
 
 export function readLegacyCycleProjection(db: import('../sync/dbPort.js').DbPort, settings: DailyFlowSettings,

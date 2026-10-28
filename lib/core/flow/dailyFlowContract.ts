@@ -39,6 +39,7 @@ export const dailyFlowCommitSchema = z.object({ opId: z.string().min(1), now: z.
   nextSession: flowHistorySessionSchema.optional(),
   readingAction: z.enum(['read', 'later', 'dismiss', 'soon']).optional(),
   historyMode: z.enum(['undo', 'redo']).optional(),
+  historyTargetOpId: z.string().min(1).optional(),
   cycleReplay: cycleChangeSchema.optional(),
   readings: z.array(z.object({ nodeId: z.string().min(1), before: dailyFlowReadingSchema.nullable(), after: dailyFlowReadingSchema.nullable(),
     completedReviewDay: z.string().optional() }).strict()).optional(),
@@ -58,7 +59,8 @@ export const dailyFlowCommitSchema = z.object({ opId: z.string().min(1), now: z.
     !value.grade && !value.readingAction && (value.reviewHistory?.mode === value.historyMode || value.readings?.length)),
   'History replay requires its source, target and learning mutation').refine(value => Number(Boolean(value.grade)) + Number(Boolean(value.reviewHistory)) +
   Number(Boolean(value.readings?.length)) <= 1, 'Only one learning mutation per command').refine(value => !value.cycleReplay || Boolean(value.historyMode),
-  'Cycle changes are only accepted during history replay');
+  'Cycle changes are only accepted during history replay').refine(value => !value.historyTargetOpId || Boolean(value.historyMode),
+  'A history target requires history replay');
 export type DailyFlowCommitArgs = z.infer<typeof dailyFlowCommitSchema>;
 export type DailyFlowLearningReceipt = Pick<WorkspaceNodeSnapshot, 'reading' | 'review'>;
 export type DailyFlowResult = { mode?: DailyFlowOpenArgs['mode']; sourceSession?: DailyFlowSession; replayed?: boolean; mutationTimestamp?: string; learning?: Record<string, DailyFlowLearningReceipt> | undefined; session: DailyFlowSession; readings?: { nodeId: string; reading: NonNullable<ReviewQueueNode['reading']> | null }[]; card?: SchedulerCard | null };

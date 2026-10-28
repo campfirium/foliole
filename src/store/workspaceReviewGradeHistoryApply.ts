@@ -3,7 +3,7 @@ import type { DailyFlowLearningReceipt } from '../../lib/core/flow/dailyFlowCont
 import { reviewHistoryOpId } from '../../lib/core/review/reviewEventIdentity';
 import { toNodeReviewProfile } from '../features/review/model/reviewTypes';
 
-import { hasPersistentDailyFlow, saveDailyHistory } from './workspaceDailyFlowMutations';
+import { hasPersistentDailyFlow, hasTargetedDailyFlow, saveDailyHistory } from './workspaceDailyFlowMutations';
 import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult } from './workspaceHistoryApplyResult';
 import { applyWorkspaceHistoryContext } from './workspaceHistoryContext';
@@ -45,7 +45,7 @@ export async function applyWorkspaceReviewGradeHistory(args: {
   } catch { return { status: 'failed' }; }
   const applied = prepare();
   if (!applied) return { status: 'invalid' };
-  const nodesById = reviewResult ? { ...applied.nodesById, [args.entry.nodeId]: {
+  const nodesById = reviewResult && !hasTargetedDailyFlow(args.get().reviewSession) ? { ...applied.nodesById, [args.entry.nodeId]: {
     ...applied.nodesById[args.entry.nodeId]!, review: reviewResult.review } } : applied.nodesById;
   const context = reviewResult && args.mode === 'redo' ? { ...applied.context,
     reviewSession: { ...applied.context.reviewSession, nextReviewDueAt: resolveEarliestReviewDueAt(

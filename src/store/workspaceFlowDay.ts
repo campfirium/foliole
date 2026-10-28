@@ -5,7 +5,7 @@ import { getCurrentReviewSchedulerSettings } from '../features/settings/model/re
 
 export function hasFlowDayChanged(session: DailyFlowSession, now: string) {
   return Boolean(session.daily && session.daily.dayKey !== flowDay(now, {
-    ...getCurrentReviewSchedulerSettings(), scope: session.daily.scope
+    ...getCurrentReviewSchedulerSettings(), scope: session.daily.scope, ...(session.dayWindow ? { dayWindow: session.dayWindow } : {})
   }));
 }
 

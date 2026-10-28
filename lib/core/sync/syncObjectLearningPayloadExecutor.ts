@@ -1,3 +1,4 @@
+import { resolveFlowReadingHistoryPreference } from '../flow/dailyFlowReadingHistory.js';
 import { isReadingState } from '../review/readingState.js';
 
 import type { DbPort } from './dbPort.js';
@@ -58,6 +59,8 @@ async function shouldApplyNodeReading(
   incomingLastHandledAt: string,
   incomingRepetitionCount: number
 ) {
+  const preferred = await resolveFlowReadingHistoryPreference(port, record.object_id, asObject(record));
+  if (preferred !== undefined) return preferred;
   const existing = (await port.query<{
     content_hash: string | null;
     last_handled_at: string;

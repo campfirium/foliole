@@ -8,7 +8,7 @@ import {
   areRelatedReadingsValid,
   isSameReadingProfile
 } from './workspaceActionHistoryReading';
-import { hasPersistentDailyFlow, saveDailyHistory } from './workspaceDailyFlowMutations';
+import { hasPersistentDailyFlow, hasTargetedDailyFlow, saveDailyHistory } from './workspaceDailyFlowMutations';
 import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult } from './workspaceHistoryApplyResult';
 import {
@@ -30,13 +30,14 @@ function isApplicable(
 ) {
   const apply = resolveTopicReadingHistoryApply(entry, mode);
   const node = state.nodesById[entry.nodeId];
+  const targeted = hasTargetedDailyFlow(state.reviewSession) && entry.afterContext.reviewSession.flowFormat === 'cycle-v1';
   const sourceContext = mode === 'undo' ? entry.afterContext : entry.beforeContext;
   return Boolean(
     node &&
     !state.trashedNodeIds.includes(entry.nodeId) &&
-    isSameReadingProfile(node.reading, apply.expectedReading) &&
+    (targeted || (isSameReadingProfile(node.reading, apply.expectedReading) &&
     areRelatedReadingsValid(apply.relatedReadings, state.nodesById) &&
-    isSameWorkspaceReviewSession(state.reviewSession, sourceContext.reviewSession)
+    isSameWorkspaceReviewSession(state.reviewSession, sourceContext.reviewSession)))
   );
 }
 
@@ -47,6 +48,9 @@ function buildApplyNodes(
 ) {
   const apply = resolveTopicReadingHistoryApply(entry, mode);
   const node = state.nodesById[entry.nodeId]!;
+  if (hasTargetedDailyFlow(state.reviewSession) && entry.afterContext.reviewSession.flowFormat === 'cycle-v1') {
+    return { nextNodesById: state.nodesById, nodes: [node] };
+  }
   const nextNodesById = {
     ...state.nodesById,
     [entry.nodeId]: applyReadingSnapshot(node, apply.nextReading)

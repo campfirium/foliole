@@ -1,6 +1,7 @@
 import type { NodeReadingProfile, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 
 import { isSameReadingProfile } from './workspaceActionHistoryReading';
+import { hasTargetedDailyFlow } from './workspaceDailyFlowMutations';
 import { isSameWorkspaceReviewSession, type WorkspaceHistoryContext } from './workspaceHistoryContext';
 import { isSameReviewProfile, type WorkspaceReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
 import { resolveTopicReadingHistoryApply, type WorkspaceTopicDismissHistoryEntry } from './workspaceTopicDismissActionHistory';
@@ -22,16 +23,17 @@ export function resolveWorkspaceReviewHistoryTarget<N extends HistoryNode>(args:
     ? { ...args.reviewSession, nextReviewDueAt: null } : args.reviewSession;
   const expectedSession = entry.type === 'review.grade'
     ? { ...source.reviewSession, nextReviewDueAt: null } : source.reviewSession;
-  if (!isSameWorkspaceReviewSession(session, expectedSession)) return null;
+  const targeted = Boolean(hasTargetedDailyFlow(args.reviewSession) && expectedSession.flowFormat === 'cycle-v1');
+  if (!targeted && !isSameWorkspaceReviewSession(session, expectedSession)) return null;
   const node = args.nodesById[entry.nodeId];
   if (!node || args.trashedNodeIds.includes(entry.nodeId)) return null;
   const nodesById = { ...args.nodesById };
   const context = mode === 'undo' ? entry.beforeContext : entry.afterContext;
   if (entry.type === 'review.grade') {
     const expected = mode === 'undo' ? entry.afterReview : entry.beforeReview;
-    if (!isSameReviewProfile(node.review, expected)) return null;
+    if (!targeted && !isSameReviewProfile(node.review, expected)) return null;
     const review = mode === 'undo' ? entry.beforeReview : entry.afterReview;
-    nodesById[entry.nodeId] = { ...node, review: review ? { ...review } : null };
+    if (!targeted) nodesById[entry.nodeId] = { ...node, review: review ? { ...review } : null };
   } else {
     const target = resolveTopicReadingHistoryApply(entry, mode);
     const readings = [{ nodeId: entry.nodeId, ...target }, ...target.relatedReadings];

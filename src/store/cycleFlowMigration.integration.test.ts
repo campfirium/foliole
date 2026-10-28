@@ -15,6 +15,7 @@ import { readLegacyCycleProjection } from '../../lib/core/flow/cycleFlowLegacy.j
 import { dailyFlowHistoryCommand } from '../../lib/core/flow/dailyFlowHistory.js';
 import { commitDailyFlow, openDailyFlow } from '../../lib/core/flow/dailyFlowService.js';
 import { readDailyFlow } from '../../lib/core/flow/dailyFlowStorage.js';
+import { projectDailyFlowSync } from '../../lib/core/flow/dailyFlowSyncProjection.js';
 import { compactFlowHistoryEntryAsync, restoreFlowHistoryEntryAsync } from '../../lib/core/flow/flowHistoryEntryAsync.js';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/settings.js';
 import { companionDailyFlowPersistence } from '../shared/platform/companion/runtime/companionDailyFlow';
@@ -103,9 +104,17 @@ it('replays tagged old Soon deltas with their original guards and preserves comp
     session = (await commitDailyFlow(db, dailyFlowHistoryCommand({ session, entry: restored, mode: 'undo', now }),
       settings, companionDailyFlowPersistence)).session;
     expect(session.currentNodeId).toBe('a');
+    await db.transaction(tx => projectDailyFlowSync(tx));
+    session = (await openDailyFlow(db, { now, mode: 'reading-only' }, settings, companionDailyFlowPersistence)).session;
+    expect(session.currentNodeId).toBe('a');
+    expect(session.readTopicCount).toBe(0);
     session = (await commitDailyFlow(db, dailyFlowHistoryCommand({ session, entry: restored, mode: 'redo', now }),
       settings, companionDailyFlowPersistence)).session;
     expect(session.currentNodeId).toBe('b');
+    await db.transaction(tx => projectDailyFlowSync(tx));
+    session = (await openDailyFlow(db, { now, mode: 'reading-only' }, settings, companionDailyFlowPersistence)).session;
+    expect(session.currentNodeId).toBe('b');
+    expect(session.readTopicCount).toBe(1);
     expect(sqlite.prepare("SELECT active FROM daily_flow_entries WHERE node_id='waiting'").get()).toEqual({ active: 1 });
     expect(sqlite.prepare('SELECT * FROM node_reading').all()).toEqual([]);
     const root = mkdtempSync(path.join(os.tmpdir(), 'cycle-upgrade-'));

@@ -50,7 +50,7 @@ async function facts(page: Page, id: string) {
 }
 
 async function capture(page: Page, action: string) {
-  const output = path.resolve(`.tmp/artifacts/T441/history-native/${action}`);
+  const output = path.resolve(`.tmp/artifacts/T591/history-native/${action}`);
   fs.mkdirSync(output, { recursive: true });
   await page.screenshot({ path: path.join(output, 'after-redo.png') });
   const saved = await session(page);

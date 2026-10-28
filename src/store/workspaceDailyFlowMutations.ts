@@ -1,11 +1,15 @@
 import type { DailyFlowCommitArgs } from '../../lib/core/flow/dailyFlowContract';
 import { dailyFlowHistoryCommand } from '../../lib/core/flow/dailyFlowHistory';
 import type { Node } from '../features/nodes/model/nodeTypes';
-import { commitDailyFlowRuntime, hasDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
+import { commitDailyFlowRuntime, hasDailyFlowRuntime, hasTargetedDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
 
 import type { WorkspaceReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
 import type { ReviewSessionState } from './workspaceStoreTypes';
 import type { WorkspaceTopicDismissHistoryEntry } from './workspaceTopicDismissActionHistory';
+
+export function hasTargetedDailyFlow(session: ReviewSessionState) {
+  return Boolean(session.daily && hasTargetedDailyFlowRuntime());
+}
 
 export function hasPersistentDailyFlow(session: ReviewSessionState) {
   return Boolean(session.daily && hasDailyFlowRuntime());

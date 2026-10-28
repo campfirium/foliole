@@ -16,7 +16,7 @@ export function dailyFlowHistoryCommand(args: { session: DailyFlowSession; entry
   if (!session.daily) throw new Error('daily_flow_token_missing');
   const undo = mode === 'undo';
   const common = { opId: dailyFlowOperationId(session.daily, entry.id, mode), now, token: session.daily, historyMode: mode,
-    sourceSession: session, historySourceSession: (undo ? entry.afterContext : entry.beforeContext).reviewSession, nextSession: (undo ? entry.beforeContext : entry.afterContext).reviewSession,
+    historyTargetOpId: entry.id, sourceSession: session, historySourceSession: (undo ? entry.afterContext : entry.beforeContext).reviewSession, nextSession: (undo ? entry.beforeContext : entry.afterContext).reviewSession,
     ...(entry.afterContext.reviewSession.cycle?.change ? { cycleReplay: entry.afterContext.reviewSession.cycle.change } : {}) };
   if (entry.type === 'review.grade') return { ...common, reviewHistory: { nodeId: entry.nodeId,
     before: undo ? entry.afterReview : entry.beforeReview, after: undo ? entry.beforeReview : entry.afterReview,

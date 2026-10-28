@@ -10,6 +10,7 @@ import type { DailyFlowSession } from './dailyFlowSession.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
 import { projectDailyFlowSync } from './dailyFlowSyncProjection.js';
 import { recordDailyFlowSync } from './dailyFlowSyncRecord.js';
+import { commitTargetedFlowHistory } from './dailyFlowTargetHistory.js';
 import { transactionDailyFlowPersistence } from './dailyFlowTransactionFacts.js';
 
 export interface DailyFlowPersistence {
@@ -37,6 +38,8 @@ export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings:
   persistence: DailyFlowPersistence): Promise<DailyFlowResult> {
   return db.transaction(async tx => {
     const config = await dailyFlowSettingsForInstant(tx, settings, args.now, Boolean(args.historyMode));
+    const targeted = await commitTargetedFlowHistory(tx, args, config, persistence);
+    if (targeted) return targeted;
     const result = await commitCycleFlow(createSqliteDailyFlowStore(tx, transactionDailyFlowPersistence(persistence)), args, config);
     await recordDailyFlowSync(tx, result, config, args.now, args);
     return result;
