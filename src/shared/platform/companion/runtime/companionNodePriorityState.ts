@@ -6,7 +6,7 @@ import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 
 interface PriorityRow extends DbRow {
   id: string; parent_id: string | null; priority: number | null; created_at: string; deleted_at: string | null;
-  kind: string | null; shelved_at: string | null;
+  kind: string | null; shelved_at: string | null; has_content: number; has_reveal: number;
 }
 
 export class CompanionNodePriorityState {
@@ -78,8 +78,11 @@ export class CompanionNodePriorityState {
 }
 
 async function readNodes(db: DbPort, ids?: readonly string[]) {
-  const rows = await db.query<PriorityRow>(`SELECT id, parent_id, priority, created_at, deleted_at, kind, shelved_at FROM nodes${ids
+  const rows = await db.query<PriorityRow>(`SELECT id, parent_id, priority, created_at, deleted_at, kind, shelved_at,
+    CASE WHEN body_blob_hash IS NOT NULL OR LENGTH(TRIM(content)) > 0 THEN 1 ELSE 0 END AS has_content,
+    CASE WHEN reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal FROM nodes${ids
     ? ' WHERE id IN (SELECT value FROM json_each(?))' : ''}`, ids ? [JSON.stringify(ids)] : []);
   return rows.map(row => ({ id: row.id, parentNodeId: row.parent_id, priority: row.priority,
-    createdAt: row.created_at, deletedAt: row.deleted_at, kind: row.kind, shelvedAt: row.shelved_at }));
+    createdAt: row.created_at, deletedAt: row.deleted_at, kind: row.kind, shelvedAt: row.shelved_at,
+    hasContent: row.has_content === 1, hasReveal: row.has_reveal === 1 }));
 }

@@ -101,7 +101,7 @@ function createIndexObservations() {
 function recordIndexRead(sql: string, params: unknown[], values: unknown[], reads: ReturnType<typeof createIndexObservations>) {
   const rows = values.length;
   if (sql === ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceOrderedNodeIds.sql) reads.nodeOrderReads.push(rows);
-  if (sql.startsWith('SELECT id, parent_id, priority, created_at, deleted_at, kind, shelved_at FROM nodes')) reads.priorityReads.push({ params, rows });
+  if (sql.startsWith('SELECT id, parent_id, priority, created_at, deleted_at, kind, shelved_at,')) reads.priorityReads.push({ params, rows });
   if (sql.startsWith('SELECT n.id') && sql.endsWith('FROM nodes n')) {
     reads.flowNodeReads.push({ rows, bytes: Buffer.byteLength(JSON.stringify(values)) });
   }

@@ -66,9 +66,9 @@ it.each(['android', 'ios'] as const)('%s reuses prepared node facts while retain
     expect(warm.rows).toHaveLength(127);
     expect(await facts()).toEqual(before);
     expect(warmRead.rows).toBe(coldRead.rows);
-    expect(warmRead.bytes).toBeLessThan(coldRead.bytes * 0.35);
-    mkdirSync('.tmp/artifacts/T441/node-eligibility', { recursive: true });
-    writeFileSync(`.tmp/artifacts/T441/node-eligibility/${platform}.json`, JSON.stringify({ coldRead, warmRead }));
+    expect(warmRead.bytes).toBeLessThan(coldRead.bytes * 0.2);
+    mkdirSync('.tmp/artifacts/T441/node-content-flags', { recursive: true });
+    writeFileSync(`.tmp/artifacts/T441/node-content-flags/${platform}.json`, JSON.stringify({ coldRead, warmRead }));
   } finally { await library.close(); runtime.owner = null; }
 });
 

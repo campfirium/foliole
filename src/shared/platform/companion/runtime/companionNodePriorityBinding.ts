@@ -11,7 +11,11 @@ export function bindCompanionNodePriorities(owner: CapacitorCompanionDatabaseOwn
     await owner.read(async db => {
       const current = owner.nodePriorityRevision === revision;
       await owner.readNodePriorities(db, getCurrentReviewSchedulerSettings().pushQueue.defaultPriority,
-        current ? Object.values(snapshot.nodesById) : undefined);
+        current ? Object.values(snapshot.nodesById).map(node => ({
+          id: node.id, parentNodeId: node.parentNodeId, priority: node.priority ?? null,
+          createdAt: node.createdAt, deletedAt: node.deletedAt ?? null, kind: node.kind, shelvedAt: node.shelvedAt ?? null,
+          hasContent: node.bodyBlobHash != null || node.hasContent === true, hasReveal: node.hasReveal === true
+        })) : undefined);
       await owner.readNodeOrder(db, current ? orderedNodeIds : undefined);
     });
   });

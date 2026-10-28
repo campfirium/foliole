@@ -11,6 +11,8 @@ export interface PriorityIndexNode {
   deletedAt?: string | null;
   kind?: string | null;
   shelvedAt?: string | null;
+  hasContent?: boolean | null;
+  hasReveal?: boolean | null;
 }
 
 export class WorkspaceNodePriorityState {
@@ -52,7 +54,8 @@ export class WorkspaceNodePriorityState {
       const changed = !previous || previous.parentNodeId !== node.parentNodeId
         || previous.createdAt !== (node.createdAt ?? null) || previous.deletedAt !== (node.deletedAt ?? null);
       const eligibilityChanged = previous?.kind !== (node.kind ?? null)
-        || previous?.shelvedAt !== (node.shelvedAt ?? null);
+        || previous?.shelvedAt !== (node.shelvedAt ?? null)
+        || previous?.hasContent !== (node.hasContent ?? null) || previous?.hasReveal !== (node.hasReveal ?? null);
       orderChanged ||= changed;
       if (!previous || previous.parentNodeId !== node.parentNodeId) pathRoots.add(node.id);
       if (previous && previous.parentNodeId === node.parentNodeId && previous.priority === (node.priority ?? null)) {
@@ -93,7 +96,8 @@ export class WorkspaceNodePriorityState {
   private store(node: PriorityIndexNode) {
     this.nodes.set(node.id, { id: node.id, parentNodeId: node.parentNodeId, priority: node.priority ?? null,
       createdAt: node.createdAt ?? null, deletedAt: node.deletedAt ?? null,
-      kind: node.kind ?? null, shelvedAt: node.shelvedAt ?? null });
+      kind: node.kind ?? null, shelvedAt: node.shelvedAt ?? null,
+      hasContent: node.hasContent ?? null, hasReveal: node.hasReveal ?? null });
     if (node.parentNodeId) {
       const siblings = this.children.get(node.parentNodeId) ?? new Set<string>();
       siblings.add(node.id);

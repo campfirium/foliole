@@ -94,7 +94,8 @@ it('combines owned node metadata with fresh learning facts and rejects an incomp
   const full = await loadDailyFlowLearningSnapshot(peer.port, 'desktop');
   const metadata = new Map(Object.values(full.nodesById).map(node => [node.id, {
     id: node.id, parentNodeId: node.parentNodeId, priority: node.priority ?? null,
-    createdAt: node.createdAt, deletedAt: node.deletedAt ?? null, kind: node.kind, shelvedAt: node.shelvedAt ?? null
+    createdAt: node.createdAt, deletedAt: node.deletedAt ?? null, kind: node.kind, shelvedAt: node.shelvedAt ?? null,
+    hasContent: node.hasContent === true, hasReveal: node.hasReveal === true
   }]));
   const combined = await loadDailyFlowLearningSnapshot(peer.port, 'desktop', undefined, metadata);
   expect(combined).toEqual(full);
