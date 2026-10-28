@@ -7,13 +7,22 @@ import type { DailyFlowOperation, DailyFlowStore } from './dailyFlowStore.js';
 
 export function createSqliteDailyFlowStore(db: DbPort, persistence: DailyFlowPersistence): DailyFlowStore {
   let cleared = false;
+  let initializing = false;
   return {
-    readState: () => readDailyFlow(db),
+    async readState() {
+      const state = await readDailyFlow(db);
+      initializing = !state;
+      return state;
+    },
     readRows: ids => readCycleRows(db, ids),
     scanRows: (after, through, count) => db.query(`SELECT * FROM daily_flow_entries WHERE active=1
       AND order_key > ? AND order_key <= ? ORDER BY order_key LIMIT ?`, [after, through, count]),
-    writeRows(rows) {
-      const write = cleared ? insertCycleRows : writeCycleRows;
+    async writeRows(rows) {
+      const checkEmpty = initializing && rows.length > 0;
+      initializing = false;
+      // State absence alone does not prove emptiness; inspect rows under the same transaction owner.
+      const empty = cleared || (checkEmpty && !(await db.query('SELECT 1 FROM daily_flow_entries LIMIT 1')).length);
+      const write = empty ? insertCycleRows : writeCycleRows;
       cleared = false;
       return write(db, rows);
     },
