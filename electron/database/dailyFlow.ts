@@ -3,6 +3,7 @@ import { queryWorkspaceRows } from '../../lib/core/database/workspaceListSnapsho
 import { buildWorkspaceListNodesById } from '../../lib/core/database/workspaceListSnapshotNodes.js';
 import { definedProps } from '../../lib/core/definedProps.js';
 import { dailyFlowCommitSchema, dailyFlowOpenSchema } from '../../lib/core/flow/dailyFlowContract.js';
+import { dailyFlowSettingsForInstant } from '../../lib/core/flow/dailyFlowDayWindow.js';
 import { flowDay } from '../../lib/core/flow/dailyFlowPlanning.js';
 import { commitDailyFlow, openDailyFlow, type DailyFlowPersistence } from '../../lib/core/flow/dailyFlowService.js';
 import { dailyFlowSourceSettingsSchema, saveDailyFlowSourceSettings } from '../../lib/core/flow/dailyFlowSourceSettings.js';
@@ -48,8 +49,8 @@ function settings() {
 
 export async function openDesktopDailyFlow(args: unknown) {
   const input = dailyFlowOpenSchema.parse(args);
-  const config = settings();
   const { sqlite } = openDatabaseConnection();
+  const config = await dailyFlowSettingsForInstant(createBetterSqliteDbPort(sqlite), settings(), input.now);
   const state = sqlite.prepare('SELECT day_key, invalidated, settings_key FROM daily_flow_state WHERE id = 1').get() as
     { day_key: string; invalidated: number; settings_key: string } | undefined;
   if (!sqlite.inTransaction && (!state || state.invalidated || state.day_key !== flowDay(input.now, config)

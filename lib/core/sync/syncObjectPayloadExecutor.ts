@@ -1,4 +1,5 @@
 import { externalFolderVisibleSql } from '../database/externalFolderMembershipVisibility.js';
+import { applyDailyFlowSyncFact } from '../flow/dailyFlowSyncApply.js';
 
 import { hasCanonicalExternalResourceContentHash } from './canonicalExternalResourceContentHash.js';
 import { applyCurrentParentOrderRecord } from './currentParentOrderStore.js';
@@ -24,6 +25,8 @@ export async function applySyncObjectPayloadWithDbPort(
   options: SyncObjectPayloadApplyOptions = {}
 ) {
   switch (record.object_type) {
+    case 'daily_flow':
+      return applyDailyFlowSyncFact(port, record);
     case 'foreground_source':
       return applyForegroundSource(port, record);
     case 'topic_daily_count':

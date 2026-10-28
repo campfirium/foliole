@@ -3,6 +3,7 @@ import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 import { resolveCurrentDayStart } from '../review/reviewDayBoundary.js';
 
 import type { DailyFlowSettings, DailyFlowLearningSnapshot, DailyFlowOpenArgs } from './dailyFlowContract.js';
+import { containsFlowInstant } from './dailyFlowDayWindow.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { buildReviewSessionAfterGrade } from './flowGradeSession.js';
 import { calculateReviewStepElapsedMs } from './flowSessionProgress.js';
@@ -11,6 +12,7 @@ import { advanceReviewSession } from './flowSessionState.js';
 type FlowPlanningSnapshot = Pick<ReviewQueuePlanInput, 'nodeOrder' | 'nodesById' | 'trashedNodeIds' | 'nodePriorities' | 'nodePaths'>;
 
 export function flowDay(now: string, settings: DailyFlowSettings) {
+  if (settings.dayWindow && containsFlowInstant(settings.dayWindow, now)) return settings.dayWindow.start;
   return resolveCurrentDayStart(new Date(now), settings.newDayStartsAtHour).toISOString();
 }
 
@@ -27,6 +29,7 @@ export function fullDayCandidates(snapshot: DailyFlowLearningSnapshot, now: stri
 }
 
 function flowDayEnd(now: string, settings: DailyFlowSettings) {
+  if (settings.dayWindow && containsFlowInstant(settings.dayWindow, now)) return new Date(Date.parse(settings.dayWindow.end) - 1).toISOString();
   const end = new Date(flowDay(now, settings));
   end.setDate(end.getDate() + 1);
   return new Date(end.getTime() - 1).toISOString();

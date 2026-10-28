@@ -33,7 +33,8 @@ export interface DailyFlowStore {
 export function cycleStateToSave(args: CycleSaveArgs): CycleStored {
   if (!args.session.cycle) throw new Error('daily_flow_cycle_missing');
   const cycle = { ...args.session.cycle };
-  const session = { ...args.session, cycle, flowFormat: 'cycle-v1' as const };
+  const dayWindow = (JSON.parse(args.settingsKey) as { dayWindow?: { start: string; end: string } }).dayWindow ?? args.session.dayWindow;
+  const session = { ...args.session, ...(dayWindow ? { dayWindow } : {}), cycle, flowFormat: 'cycle-v1' as const };
   const scope = (JSON.parse(args.settingsKey) as { scope?: string }).scope ?? '';
   return { day_key: args.dayKey, revision: args.revision, settings_key: args.settingsKey, mode: args.mode,
     session_json: JSON.stringify({ ...session, daily: undefined }), invalidated: 0,

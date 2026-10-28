@@ -17,6 +17,7 @@ export type SyncObjectType =
   | 'node_review'
   | 'topic_daily_count'
   | 'foreground_source'
+  | 'daily_flow'
   | 'setting'
   | 'watched_folder'
   | 'view_state';

@@ -1,8 +1,10 @@
 import { PARENT_ORDER_PAYLOAD_SQL } from '../database/currentParentOrderSchema.js';
+import { DAILY_FLOW_SYNC_PAYLOAD_SQL } from '../flow/dailyFlowSyncFact.js';
 
 import { FOREGROUND_SOURCE_PAYLOAD_SQL } from './foregroundSource.js';
 
 export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
+  daily_flow: DAILY_FLOW_SYNC_PAYLOAD_SQL,
   foreground_source: FOREGROUND_SOURCE_PAYLOAD_SQL,
   topic_daily_count: `SELECT json_object('day_key', day_key, 'node_id', node_id)
     AS payload_json FROM topic_daily_count_entries WHERE id = ?`,

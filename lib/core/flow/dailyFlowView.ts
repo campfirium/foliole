@@ -3,6 +3,7 @@ import type { DbPort } from '../sync/dbPort.js';
 
 import { cycleReadyNodeIds } from './cycleFlowSelection.js';
 import type { DailyFlowSettings } from './dailyFlowContract.js';
+import { dailyFlowSettingsForInstant } from './dailyFlowDayWindow.js';
 import { flowDay } from './dailyFlowPlanning.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
@@ -11,7 +12,8 @@ import type { DailyFlowViewArgs, DailyFlowViewResult } from './dailyFlowViewCont
 
 export function readDailyFlowView(db: DbPort, args: DailyFlowViewArgs, settings: DailyFlowSettings,
   persistence: DailyFlowPersistence): Promise<DailyFlowViewResult> {
-  return db.transaction(tx => readStoredDailyFlowView(createSqliteDailyFlowStore(tx, persistence), args, settings));
+  return db.transaction(async tx => readStoredDailyFlowView(createSqliteDailyFlowStore(tx, persistence), args,
+    await dailyFlowSettingsForInstant(tx, settings, args.now)));
 }
 
 export async function readStoredDailyFlowView(store: DailyFlowStore, args: DailyFlowViewArgs, settings: DailyFlowSettings): Promise<DailyFlowViewResult> {

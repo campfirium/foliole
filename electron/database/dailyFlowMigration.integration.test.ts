@@ -4,6 +4,7 @@ import { expect, it } from 'vitest';
 
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
+import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/databaseSchemaVersion.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -11,7 +12,8 @@ import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 function dropDailyState(sqlite: Database.Database, version: number) {
   const triggers = sqlite.prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'daily_flow_%'").all() as { name: string }[];
   for (const trigger of triggers) sqlite.exec(`DROP TRIGGER ${trigger.name}`);
-  for (const name of ['daily_flow_state', 'daily_flow_entries', 'daily_flow_operations']) sqlite.exec(`DROP TABLE ${name}`);
+  for (const name of ['daily_flow_state', 'daily_flow_entries', 'daily_flow_operations',
+    'daily_flow_sync_facts', 'daily_flow_sync_projection']) sqlite.exec(`DROP TABLE ${name}`);
   sqlite.pragma(`user_version = ${version}`);
 }
 function seed(sqlite: Database.Database) {
@@ -35,7 +37,26 @@ it('upgrades desktop 174 transactionally and leaves original node facts untouche
     expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name='daily_flow_state'").get()).toBeUndefined();
     expect(sqlite.prepare("SELECT * FROM nodes WHERE id='original'").get()).toEqual(original);
     initializeDatabaseSchema(sqlite);
-    expect(sqlite.pragma('user_version', { simple: true })).toBe(176);
+    expect(sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+    expect(sqlite.prepare('SELECT * FROM daily_flow_sync_facts').all()).toEqual([]);
+    assertLazyAndPreserved(sqlite, original);
+  } finally { sqlite.close(); }
+});
+
+it('installs companion Flow synchronization atomically from version 104 without changing original facts', async () => {
+  const sqlite = new Database(':memory:');
+  try {
+    sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+    const original = seed(sqlite);
+    sqlite.exec('DROP TABLE daily_flow_sync_facts; DROP TABLE daily_flow_sync_projection; PRAGMA user_version=104');
+    const db = createBetterSqliteDbPort(sqlite);
+    await expect(db.transaction(tx => migrateCompanionDatabase(tx, 104, 105,
+      async () => { throw new Error('interrupted'); }))).rejects.toThrow('interrupted');
+    expect(sqlite.pragma('user_version', { simple: true })).toBe(104);
+    expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name='daily_flow_sync_facts'").get()).toBeUndefined();
+    await db.transaction(tx => migrateCompanionDatabase(tx, 104, 105));
+    expect(sqlite.pragma('user_version', { simple: true })).toBe(105);
+    expect(sqlite.prepare('SELECT * FROM daily_flow_sync_facts').all()).toEqual([]);
     assertLazyAndPreserved(sqlite, original);
   } finally { sqlite.close(); }
 });

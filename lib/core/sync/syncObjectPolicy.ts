@@ -27,6 +27,7 @@ export interface SyncObjectPolicy {
 }
 
 export const SYNC_OBJECT_POLICIES: readonly SyncObjectPolicy[] = [
+  policy('daily_flow', 'daily_flow', 'review', 'event', 'append_only_idempotent', ['daily_flow_sync_facts'], true),
   policy('node', 'node', 'structure', 'workspace', 'lww', ['nodes'], true),
   policy('parent_child_order', 'parent_child_order', 'structure', 'workspace', 'lww', ['parent_child_order'], true),
   policy('external_document', 'external_document', 'structure', 'workspace', 'lww', ['external_documents'], true),

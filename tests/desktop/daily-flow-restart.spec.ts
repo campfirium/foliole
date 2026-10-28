@@ -4,7 +4,7 @@ import path from 'node:path';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-const output = path.resolve('.tmp/artifacts/T441/daily-native');
+const output = path.resolve('.tmp/artifacts/T591/daily-native');
 
 test('continues the saved daily Flow cursor after reloading the desktop renderer', async ({ desktopWindow: page }) => {
   await expectWorkspaceShell(page);
@@ -33,6 +33,8 @@ test('continues the saved daily Flow cursor after reloading the desktop renderer
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().reviewedItemCount)).toBe(1);
   const saved = await page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession());
   expect(saved.daily).toBeDefined();
+  expect(saved.dayWindow?.start).toBe(saved.daily?.dayKey);
+  expect(saved.dayWindow?.end).toEqual(expect.any(String));
   expect(saved.currentNodeId).not.toBeNull();
   fs.mkdirSync(output, { recursive: true });
   await page.screenshot({ path: path.join(output, 'before-reload.png') });
@@ -46,6 +48,7 @@ test('continues the saved daily Flow cursor after reloading the desktop renderer
   const restored = await page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession());
   expect(restored.queueNodeIds).toEqual(saved.queueNodeIds);
   expect(restored.daily?.dayKey).toBe(saved.daily?.dayKey);
+  expect(restored.dayWindow).toEqual(saved.dayWindow);
   expect(restored.reviewedItemCount).toBe(1);
   await page.screenshot({ path: path.join(output, 'after-reload.png') });
   fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify({ saved, restored }, null, 2));

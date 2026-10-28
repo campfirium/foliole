@@ -3,6 +3,7 @@ import type { DbPort } from '../sync/dbPort.js';
 
 import { selectCycleSuccessor } from './cycleFlowSelection.js';
 import type { DailyFlowSettings } from './dailyFlowContract.js';
+import { dailyFlowSettingsForInstant } from './dailyFlowDayWindow.js';
 import { flowDay } from './dailyFlowPlanning.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
@@ -14,6 +15,7 @@ export type DailyFlowPredictionArgs = { now: string; token: NonNullable<DailyFlo
 // A readonly snapshot owns these facts; the copied cursor is never saved or used to advance Flow.
 export async function predictDailyFlowDocument(db: DbPort, args: DailyFlowPredictionArgs,
   settings: DailyFlowSettings, persistence: DailyFlowPersistence) {
+  settings = await dailyFlowSettingsForInstant(db, settings, args.now);
   const stored = await readDailyFlow(db);
   if (!stored || stored.invalidated || stored.settings_key !== JSON.stringify(settings)
     || args.token.scope !== (settings.scope ?? '') || stored.day_key !== args.token.dayKey

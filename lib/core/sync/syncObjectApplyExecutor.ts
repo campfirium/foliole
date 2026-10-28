@@ -2,6 +2,7 @@ import type { NativeSyncObjectRecord } from '../../platform/nativeSyncContract.j
 import { computeSyncContentHash } from '../database/syncState.js';
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStatements.js';
 import { hashTextBody } from '../database/textBodyHash.js';
+import { dailyFlowFactApplyStatus } from '../flow/dailyFlowSyncApply.js';
 
 import { hasCanonicalExternalResourceContentHash } from './canonicalExternalResourceContentHash.js';
 import { applyCurrentParentOrderRecord } from './currentParentOrderStore.js';
@@ -26,6 +27,7 @@ const STATE_OBJECT_TYPES = new Set<NativeSyncObjectRecord['object_type']>([
   'node_review',
   'topic_daily_count',
   'foreground_source',
+  'daily_flow',
   'node_text_alternative',
   'parent_child_order',
   'setting',
@@ -182,6 +184,7 @@ async function upsertAppliedSyncObjectState(port: DbPort, record: SyncObjectReco
 }
 
 async function getSyncObjectApplyStatus(port: DbPort, record: SyncObjectRecord): Promise<SyncObjectApplyStatus> {
+  if (record.object_type === 'daily_flow') return dailyFlowFactApplyStatus(port, record);
   const current = (await port.query<ExistingSyncObjectState>(
     'SELECT content_hash, deleted_at, updated_at FROM sync_object_state WHERE object_type = ? AND object_id = ?',
     [record.object_type, record.object_id]

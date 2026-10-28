@@ -14,7 +14,7 @@ export const FRAMED_SYNC_STATE_OBJECT_TYPES = [
   'external_document', 'external_folder', 'import_source', 'node_open_state', 'node_reading',
   'node_text_alternative', 'parent_child_order',
   'setting', 'view_state', 'watched_folder', 'topic_daily_count',
-  'foreground_source'
+  'foreground_source', 'daily_flow'
 ] as const;
 
 const sharedTypes = FRAMED_SYNC_STATE_OBJECT_TYPES.filter((type) =>

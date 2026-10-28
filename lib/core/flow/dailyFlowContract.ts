@@ -15,7 +15,7 @@ import { flowHistorySessionSchema } from './flowHistorySession.js';
 export type DailyFlowSnapshot = { nodeOrder: string[]; nodesById: Record<string, WorkspaceNodeSnapshot>; trashedNodeIds: string[] };
 export type DailyFlowLearningNode = Omit<ReviewQueueNode, 'content' | 'reveal'> & { hasContent: boolean; hasReveal: boolean };
 export type DailyFlowLearningSnapshot = { nodePaths?: WorkspaceNodePaths; nodePriorities?: ReadonlyMap<string, PushQueuePriority>; nodeOrder: string[]; nodesById: Record<string, ReviewQueueNode>; trashedNodeIds: string[] };
-export type DailyFlowSettings = Pick<ReviewSchedulerSettings, 'newDayStartsAtHour' | 'pushQueue'> & { scope?: string };
+export type DailyFlowSettings = Pick<ReviewSchedulerSettings, 'newDayStartsAtHour' | 'pushQueue'> & { scope?: string; dayWindow?: { start: string; end: string } };
 export const dailyFlowOpenSchema = z.object({ now: z.string().datetime(),
   mode: z.enum(['recommended', 'review-first', 'reading-only']),
   seed: dailyFlowSessionSchema.optional(), preferredNodeId: z.string().nullable().optional(),

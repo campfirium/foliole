@@ -3,6 +3,7 @@ import { retireAttachmentInventory } from './attachmentInventoryRetirementMigrat
 import { migrateCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateCycleFlow } from './cycleFlowMigration.js';
 import { migrateDailyFlow } from './dailyFlowSchema.js';
+import { migrateDailyFlowSync } from './dailyFlowSyncSchema.js';
 import { migrateExternalFolderDisplayPaths } from './externalFolderDisplayPathMigration.js';
 import { migrateForegroundSources, retireForegroundIdentityTriggers } from './foregroundSourceMigration.js';
 import { INVALIDATE_ALL_SYNC_DIGESTS, INVALIDATE_UNREADY_SYNC_DIGESTS, migrateFramedSyncDigests } from './framedSyncDigestSchema.js';
@@ -51,5 +52,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 173, migrate: retireReviewStateSync },
   { version: 174, migrate: migrateInitialReviewSchedule },
   { version: 175, migrate: migrateDailyFlow },
-  { version: 176, migrate: migrateCycleFlow }
+  { version: 176, migrate: migrateCycleFlow },
+  { version: 177, migrate: migrateDailyFlowSync }
 ];

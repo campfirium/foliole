@@ -45,13 +45,15 @@ export function isSameWorkspaceReviewSession(
 ) {
   const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
   keys.delete('daily');
+  keys.delete('dayWindow');
   keys.delete('cycle');
   keys.delete('flowFormat');
   keys.delete('queueNodeIds');
   keys.delete('soonNodeIds');
   keys.delete('queueHistory');
   keys.delete('hiddenSoonNodeIds');
-  return [...keys].every((key) => left[key as keyof typeof left] === right[key as keyof typeof right]) &&
+  const sameWindow = left.dayWindow?.start === right.dayWindow?.start && left.dayWindow?.end === right.dayWindow?.end;
+  return sameWindow && [...keys].every((key) => left[key as keyof typeof left] === right[key as keyof typeof right]) &&
     (left.flowFormat === 'cycle-v1' || right.flowFormat === 'cycle-v1'
       ? left.flowFormat === right.flowFormat && sameCycleProgress(left, right)
       : matchesFlowHistoryQueues(right, left)) &&

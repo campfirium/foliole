@@ -1,1 +1,1 @@
-export const DATABASE_SCHEMA_VERSION = 176;
+export const DATABASE_SCHEMA_VERSION = 177;

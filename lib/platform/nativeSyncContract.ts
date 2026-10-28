@@ -11,6 +11,7 @@ export type NativeSyncObjectType =
   | 'node_review'
   | 'topic_daily_count'
   | 'foreground_source'
+  | 'daily_flow'
   | 'node_text_alternative'
   | 'setting'
   | 'watched_folder'

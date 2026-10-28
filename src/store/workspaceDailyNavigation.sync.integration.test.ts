@@ -30,13 +30,18 @@ it.each(['desktop', 'mobile'] as const)('legacy compatibility: selects from late
   await act(remote, remoteSession.session, 'grade');
   await exchange(remote, local);
   expect((await readDailyFlow(local.port))!.invalidated).toBe(1);
+  await expect(commitDailyFlow(local.port, { opId: `stale-continue-${owner}`, now, token: source.daily!,
+    navigation: 'continue-reading', expectedContinueNodeId: 'reading' }, settings(local), persistence))
+    .rejects.toThrow('daily_flow_changed');
+  const synchronized = (await readDailyFlow(local.port))!.session;
+  source = await legacyContinuation(local.port, { ...synchronized, currentNodeId: 'reading' }, now);
   const saved = await commitDailyFlow(local.port, { opId: `continue-${owner}`, now, token: source.daily!,
     navigation: 'continue-reading', expectedContinueNodeId: 'reading' }, settings(local), persistence);
   expect(saved.session.currentNodeId).toBe('reading');
   expect(saved.session.queueNodeIds).not.toContain('waiting');
   expect(saved).not.toHaveProperty('nodes');
   expect(saved.learning).toEqual({ reading: { reading: (await snapshot(local)).nodesById.reading!.reading, review: null } });
-  expect(saved.session.reviewedItemCount).toBe(1);
+  expect(saved.session.reviewedItemCount).toBe(2);
   await assertDurable(local, saved.session);
   expect((await snapshot(local)).nodesById['remote-review']!.review).toEqual((await snapshot(remote)).nodesById['remote-review']!.review);
 });
@@ -60,6 +65,13 @@ it.each([['desktop', 'delete'], ['desktop', 'read'], ['mobile', 'delete'], ['mob
     await act(remote, session, 'read');
   }
   await exchange(remote, local);
+  if (action === 'read') {
+    await expect(commitDailyFlow(local.port, { opId: `old-${owner}`, now, token: source.daily!,
+      navigation: 'continue-reading', expectedContinueNodeId: target }, settings(local), persistence))
+      .rejects.toThrow('daily_flow_changed');
+    const synchronized = (await readDailyFlow(local.port))!.session;
+    source = await legacyContinuation(local.port, { ...synchronized, currentNodeId: target }, now);
+  }
   const saved = await commitDailyFlow(local.port, { opId: `stale-${owner}`, now, token: source.daily!,
     navigation: 'continue-reading', expectedContinueNodeId: target }, settings(local), persistence);
   expect(saved.session.currentNodeId).toBeNull();

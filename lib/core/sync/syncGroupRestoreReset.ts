@@ -4,6 +4,7 @@ import { clearRestoreWorkspaceSettings } from './syncGroupRestoreSettings.js';
 // An explicit overwrite replaces library data while keeping ordinary device preferences.
 // The caller commits this reset together with its durable clear-once progress marker.
 const CLEAR_TABLES = [
+  'daily_flow_sync_projection', 'daily_flow_sync_facts', 'daily_flow_operations', 'daily_flow_entries', 'daily_flow_state',
   'node_version_local_origins', 'node_version_local_holds',
   'node_version_device_revisions', 'node_version_local_source_revisions',
   'sync_push_ack', 'sync_change_log', 'node_text_alternatives', 'sync_node_child_owners',

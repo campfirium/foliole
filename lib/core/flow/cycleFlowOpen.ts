@@ -35,7 +35,7 @@ export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArg
   const session = { ...initial, currentNodeId: current, flowFormat: 'cycle-v1' as const, cycle };
   if (current) cycle.scanAfter = rows.find(row => row.node_id === current)!.order_key;
   else await chooseCycleCurrent(db, session, args.mode, args.now, settings);
-  return { session, snapshot };
+  return { session, snapshot, rows };
 }
 
 export async function reconcileCycle(db: DailyFlowStore, stored: CycleStored, now: string,
@@ -86,7 +86,7 @@ export async function chooseCycleCurrent(db: DailyFlowStore, session: DailyFlowS
   return selected;
 }
 
-export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpenArgs, settings: DailyFlowSettings, captureChanges = false) {
+export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpenArgs, settings: DailyFlowSettings, captureChanges = false, createdRows?: (rows: CycleRow[]) => void) {
   let stored = await db.readState();
   const dayKey = flowDay(args.now, settings);
   if (stored && stored.day_key !== dayKey) {
@@ -101,7 +101,11 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
     if (!ready.length) args = { ...args, mode: 'recommended' };
   }
   let session: DailyFlowSession;
-  if (!stored) session = (await initializeCycle(db, args, settings)).session;
+  if (!stored) {
+    const initial = await initializeCycle(db, args, settings);
+    session = initial.session;
+    createdRows?.(initial.rows);
+  }
   else {
     session = stored.invalidated || stored.settings_key !== JSON.stringify(settings)
       ? await reconcileCycle(db, stored, args.now, settings, captureChanges) : { ...stored.session, cycle: { ...stored.session.cycle! } };
@@ -136,6 +140,6 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
 }
 
 export function openCycleFlow(db: import('../sync/dbPort.js').DbPort, args: DailyFlowOpenArgs,
-  settings: DailyFlowSettings, persistence: import('./dailyFlowService.js').DailyFlowPersistence, captureChanges = false) {
-  return openStoredDailyFlow(createSqliteDailyFlowStore(db, persistence), args, settings, captureChanges);
+  settings: DailyFlowSettings, persistence: import('./dailyFlowService.js').DailyFlowPersistence, captureChanges = false, createdRows?: (rows: CycleRow[]) => void) {
+  return openStoredDailyFlow(createSqliteDailyFlowStore(db, persistence), args, settings, captureChanges, createdRows);
 }
