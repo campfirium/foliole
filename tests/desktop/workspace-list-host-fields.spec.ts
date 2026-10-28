@@ -1,7 +1,7 @@
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-test('desktop lists browse and reload without host import identities', async ({ desktopWindow: page }) => {
+test('desktop lists browse and reload without host identities or empty remote lifecycle', async ({ desktopWindow: page }) => {
   await expectWorkspaceShell(page);
   await page.evaluate(async () => {
     await window.__folioleWorkspaceDebug!.seedNodes([
@@ -23,16 +23,18 @@ test('desktop lists browse and reload without host import identities', async ({ 
     for (const node of Object.values(payload!.nodesById)) {
       expect(Object.keys(node)).not.toContain('importContentFingerprint');
       expect(Object.keys(node)).not.toContain('importSourceFingerprint');
+      expect(Object.keys(node)).not.toContain('readwiseRemoteLifecycle');
     }
     expect(payload!.nodesById['host-fields-second']).toMatchObject({ title: 'Second desktop topic', hasContent: true });
   }
   await page.evaluate(() => window.__folioleWorkspaceDebug!.openNode('host-fields-second'));
   await expect(page.locator('.prompt-editor-host')).toContainText('Second desktop body');
-  await page.screenshot({ path: '.tmp/artifacts/T581/browse.png' });
+  await page.screenshot({ path: '.tmp/artifacts/T583/browse.png' });
   await page.reload();
   await expectWorkspaceShell(page);
   await page.evaluate(() => window.__folioleWorkspaceDebug!.openNode('host-fields-first'));
   await expect(page.locator('.prompt-editor-host')).toContainText('First desktop body');
   const after = await readPayload();
   expect(after.full!.nodesById['host-fields-second']).toEqual(before.full!.nodesById['host-fields-second']);
+  expect(after.scoped!.nodesById['host-fields-second']).not.toHaveProperty('readwiseRemoteLifecycle');
 });

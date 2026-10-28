@@ -44,10 +44,12 @@ function prepared(body: string, minute: number) {
     filePath: '/tmp/note.md', importedAt: `2026-10-28T01:${String(minute).padStart(2, '0')}:00.000Z`, kind: 'markdown' });
 }
 
-function withoutFingerprints<T extends { importContentFingerprint?: string | null; importSourceFingerprint?: string | null }>(node: T) {
+function withoutHostFields<T extends { importContentFingerprint?: string | null; importSourceFingerprint?: string | null;
+  readwiseRemoteLifecycle?: unknown }>(node: T) {
   const copy = { ...node };
   delete copy.importContentFingerprint;
   delete copy.importSourceFingerprint;
+  delete copy.readwiseRemoteLifecycle;
   return copy;
 }
 
@@ -68,7 +70,7 @@ it.each(['full', 'scoped'] as const)('omits host import identities from the %s d
   expect(shared.nodesById[nodeId]).toMatchObject({ importContentFingerprint: imported.contentFingerprint,
     importSourceFingerprint: imported.sourceFingerprint });
   const desktop = readDesktop(nodeId)[mode]!;
-  expect(desktop.nodesById[nodeId]).toEqual(withoutFingerprints(shared.nodesById[nodeId]!));
+  expect(desktop.nodesById[nodeId]).toEqual(withoutHostFields(shared.nodesById[nodeId]!));
   expect(Object.keys(desktop.nodesById[nodeId]!)).not.toContain('importContentFingerprint');
   expect(Object.keys(desktop.nodesById[nodeId]!)).not.toContain('importSourceFingerprint');
   if ('nodeOrder' in shared) expect(desktop).toMatchObject({ nodeOrder: shared.nodeOrder });
