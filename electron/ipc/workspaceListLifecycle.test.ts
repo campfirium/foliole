@@ -68,6 +68,7 @@ it.each(['full', 'scoped'] as const)('omits empty lifecycle from the %s desktop 
     delete expected.importContentFingerprint;
     delete expected.importSourceFingerprint;
     delete expected.readwiseRemoteLifecycle;
+    delete expected.resourceReferences;
     expect(desktop.nodesById[id]).toEqual(expected);
     expect(desktop.nodesById[id]).not.toHaveProperty('readwiseRemoteLifecycle');
   }

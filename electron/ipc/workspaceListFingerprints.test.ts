@@ -45,11 +45,12 @@ function prepared(body: string, minute: number) {
 }
 
 function withoutHostFields<T extends { importContentFingerprint?: string | null; importSourceFingerprint?: string | null;
-  readwiseRemoteLifecycle?: unknown }>(node: T) {
+  readwiseRemoteLifecycle?: unknown; resourceReferences?: unknown }>(node: T) {
   const copy = { ...node };
   delete copy.importContentFingerprint;
   delete copy.importSourceFingerprint;
   delete copy.readwiseRemoteLifecycle;
+  delete copy.resourceReferences;
   return copy;
 }
 
