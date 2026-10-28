@@ -78,36 +78,6 @@ export async function applyNodeContentRuntimePatch(args: {
   return result;
 }
 
-export function applyNodeContentLocalPatch(args: {
-  diagnosticsEnabled: boolean;
-  localPatch: Partial<WorkspaceState> | null;
-  locatorUpdatedNodesForSync: WorkspaceNode[];
-  metrics: UpdateNodeContentMetrics;
-  nextNodeForSync: WorkspaceNode;
-  set: WorkspaceSet;
-}) {
-  let applied = false;
-  const runtimeSetStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
-  args.set((state) => {
-    const patchBuildStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
-    const acceptedPatch = args.localPatch;
-    if (args.diagnosticsEnabled) {
-      args.metrics.patchBuildMs += readEditorInputDiagnosticTime() - patchBuildStartedAt;
-    }
-    if (!acceptedPatch) return state;
-    applied = true;
-    return acceptedPatch;
-  });
-  args.metrics.runtimeSetMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - runtimeSetStartedAt : 0;
-  if (applied) {
-    const cacheSyncStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
-    syncWorkspaceNodeDocumentCacheFromNode(args.nextNodeForSync);
-    args.locatorUpdatedNodesForSync.forEach(syncWorkspaceNodeDocumentCacheFromNode);
-    args.metrics.runtimeCacheSyncMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - cacheSyncStartedAt : 0;
-  }
-  return applied;
-}
-
 async function runNodeContentRuntimePersist(args: {
   baseContent?: string | undefined;
   edit?: LocalContentEdit | undefined;
@@ -151,7 +121,10 @@ async function runNodeContentRuntimePersist(args: {
 }
 
 export function scheduleNodeContentRuntimePersist(args: Parameters<typeof runNodeContentRuntimePersist>[0]) {
+  const cacheStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
   syncWorkspaceNodeDocumentCacheFromNode(args.nextNodeForSync);
+  args.localState.locatorUpdatedNodesForSync.forEach(syncWorkspaceNodeDocumentCacheFromNode);
+  args.metrics.runtimeCacheSyncMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - cacheStartedAt : 0;
   const edit = captureContentEdit(args.nextNodeForSync, args.baseContent);
   contentPersistQueue.schedule(args.nextNodeForSync.id, { ...args, edit, inputBaseVersionId: edit?.baseVersionId });
 }

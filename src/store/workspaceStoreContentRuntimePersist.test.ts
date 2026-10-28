@@ -51,7 +51,6 @@ function schedulePersist(node: WorkspaceNode, version = markNodeContentEdited(no
     contentLength: node.content.length,
     diagnosticsEnabled: false,
     localState: {
-      localPatch: null,
       locatorUpdatedNodesForSync: [],
       nextNodeForSync: node,
       nodeOrderForSync: [node.id]

@@ -39,7 +39,6 @@ export type UpdateNodeContentMetrics = {
 };
 
 export type UpdateNodeContentLocalState = {
-  localPatch: Partial<WorkspaceState> | null;
   locatorUpdatedNodesForSync: WorkspaceNode[];
   nextNodeForSync: WorkspaceNode | null;
   nodeOrderForSync: string[];
@@ -113,7 +112,6 @@ export function createUpdateNodeContentMetrics(diagnosticsEnabled: boolean): Upd
 
 export function createUpdateNodeContentLocalState(): UpdateNodeContentLocalState {
   return {
-    localPatch: null,
     locatorUpdatedNodesForSync: [],
     nextNodeForSync: null,
     nodeOrderForSync: []

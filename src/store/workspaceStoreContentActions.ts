@@ -2,6 +2,7 @@ import { extractUniqueArticleTitleHeading } from '../features/nodes/model/articl
 import { resolveNodeDerivedTitle } from '../features/nodes/model/nodeDerivedTitle';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 import { canSaveNodeText } from '../shared/ui/nodeTextSaveBudget';
+import { patchWorkspaceRecord, recordWorkspaceRecordPatch } from '../shared/workspaceRecordPatch';
 
 import {
   isEditorInputDiagnosticEnabled,
@@ -17,10 +18,7 @@ import {
 import { markNodeContentEdited } from './workspaceNodeContentVersionGuard';
 import { isNodeDocumentLoaded } from './workspaceRendererBoundary';
 import type { WorkspaceState } from './workspaceStore';
-import {
-  applyNodeContentLocalPatch,
-  scheduleNodeContentRuntimePersist
-} from './workspaceStoreContentRuntimePersist';
+import { scheduleNodeContentRuntimePersist } from './workspaceStoreContentRuntimePersist';
 import { syncTextAnchorLocatorsForParentContent } from './workspaceTextAnchorLocatorSync';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
@@ -79,13 +77,10 @@ function prepareNodeContentLocalState(args: ContentUpdateOptions & {
   if (args.buildHeavyPatch) {
     const locatorSync = syncTextAnchorLocatorsForNextContentNode(args, nextNode, timestamp, node.content);
     args.localState.locatorUpdatedNodesForSync = locatorSync.updatedNodes;
-    args.localState.localPatch = { nodesById: locatorSync.nextNodesById };
+    return { nodesById: locatorSync.nextNodesById };
   }
   return {
-    nodesById: {
-      ...args.state.nodesById,
-      [args.nodeId]: nextNode
-    }
+    nodesById: patchWorkspaceRecord(args.state.nodesById, { [args.nodeId]: nextNode })
   };
 }
 
@@ -122,7 +117,7 @@ function syncTextAnchorLocatorsForNextContentNode(
   previousContent: string
 ) {
   const cloneStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
-  const nextNodesByIdForLocatorSync = { ...args.state.nodesById, [args.nodeId]: nextNode };
+  const nextNodesByIdForLocatorSync = patchWorkspaceRecord(args.state.nodesById, { [args.nodeId]: nextNode });
   args.metrics.cloneNodesByIdMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - cloneStartedAt : 0;
   const syncStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
   const locatorSync = syncTextAnchorLocatorsForParentContent({
@@ -137,6 +132,8 @@ function syncTextAnchorLocatorsForNextContentNode(
   if (locatorSync.diagnostics) {
     args.metrics.syncDiagnostics = locatorSync.diagnostics;
   }
+  recordWorkspaceRecordPatch(args.state.nodesById, locatorSync.nextNodesById,
+    [args.nodeId, ...locatorSync.updatedNodes.map(node => node.id)]);
   return locatorSync;
 }
 
@@ -184,16 +181,7 @@ async function updateNodeContent(
   const nextNodeForSync = localState.nextNodeForSync;
   const version = markNodeContentEdited(nodeId);
   const runtimePatchStartedAt = diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
-  const applied = !publishLocal
-    ? true
-    : applyNodeContentLocalPatch({
-      ...localState,
-      diagnosticsEnabled,
-      metrics,
-      nextNodeForSync,
-      set
-    });
-  metrics.runtimePatchMs = diagnosticsEnabled ? readEditorInputDiagnosticTime() - runtimePatchStartedAt : 0;
+  const applied = true;
   scheduleNodeContentRuntimePersist({
     baseContent: options.baseContent,
     contentLength: content.length,
@@ -204,6 +192,7 @@ async function updateNodeContent(
     set,
     version
   });
+  metrics.runtimePatchMs = diagnosticsEnabled ? readEditorInputDiagnosticTime() - runtimePatchStartedAt : 0;
   metrics.runtimeAwaitContinuationGapMs = diagnosticsEnabled
     ? metrics.runtimePatchMs - metrics.runtimeApplyTotalMs
     : 0;

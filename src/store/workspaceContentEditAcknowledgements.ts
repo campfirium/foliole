@@ -1,6 +1,7 @@
 import type { LocalContentEdit } from '../../lib/core/sync/localContentEdit';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
+import { patchWorkspaceRecord } from '../shared/workspaceRecordPatch';
 
 import { isLatestNodeContentVersion } from './workspaceNodeContentVersionGuard';
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
@@ -58,7 +59,7 @@ export function acknowledgeContentEdit(args: {
       updatedAt: persisted.updatedAt
     } : { ...current, currentVersionId: acknowledgement.submittedVersionId };
     syncWorkspaceNodeDocumentCacheFromNode(node);
-    return { nodesById: { ...state.nodesById, [node.id]: node } };
+    return { nodesById: patchWorkspaceRecord(state.nodesById, { [node.id]: node }) };
   });
 }
 
