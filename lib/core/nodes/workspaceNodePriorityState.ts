@@ -1,7 +1,10 @@
+import type { StoredAnchorLink } from '../database/anchorLinkCodec.js';
 import { normalizePushQueuePriority, type PushQueuePriority, type RegularPushQueuePriority } from '../review/unifiedPushQueueRules.js';
 
 import { updateWorkspaceNodePaths, type WorkspaceNodePaths } from './workspaceNodePaths.js';
 import { createWorkspaceNodePriorityIndex } from './workspaceNodePriorityIndex.js';
+
+export type WorkspaceNodeAnchorKinds = ReadonlyMap<string, StoredAnchorLink['kind'] | null>;
 
 export interface PriorityIndexNode {
   id: string;
@@ -13,6 +16,7 @@ export interface PriorityIndexNode {
   shelvedAt?: string | null;
   hasContent?: boolean | null;
   hasReveal?: boolean | null;
+  anchorKind?: StoredAnchorLink['kind'] | null;
 }
 
 export class WorkspaceNodePriorityState {
@@ -55,7 +59,8 @@ export class WorkspaceNodePriorityState {
         || previous.createdAt !== (node.createdAt ?? null) || previous.deletedAt !== (node.deletedAt ?? null);
       const eligibilityChanged = previous?.kind !== (node.kind ?? null)
         || previous?.shelvedAt !== (node.shelvedAt ?? null)
-        || previous?.hasContent !== (node.hasContent ?? null) || previous?.hasReveal !== (node.hasReveal ?? null);
+        || previous?.hasContent !== (node.hasContent ?? null) || previous?.hasReveal !== (node.hasReveal ?? null)
+        || previous?.anchorKind !== node.anchorKind;
       orderChanged ||= changed;
       if (!previous || previous.parentNodeId !== node.parentNodeId) pathRoots.add(node.id);
       if (previous && previous.parentNodeId === node.parentNodeId && previous.priority === (node.priority ?? null)) {
@@ -97,7 +102,8 @@ export class WorkspaceNodePriorityState {
     this.nodes.set(node.id, { id: node.id, parentNodeId: node.parentNodeId, priority: node.priority ?? null,
       createdAt: node.createdAt ?? null, deletedAt: node.deletedAt ?? null,
       kind: node.kind ?? null, shelvedAt: node.shelvedAt ?? null,
-      hasContent: node.hasContent ?? null, hasReveal: node.hasReveal ?? null });
+      hasContent: node.hasContent ?? null, hasReveal: node.hasReveal ?? null,
+      ...(node.anchorKind === undefined ? {} : { anchorKind: node.anchorKind }) });
     if (node.parentNodeId) {
       const siblings = this.children.get(node.parentNodeId) ?? new Set<string>();
       siblings.add(node.id);

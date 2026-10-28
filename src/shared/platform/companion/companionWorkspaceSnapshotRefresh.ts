@@ -2,6 +2,7 @@ import { canMergeWorkspaceContentProjection, mergeWorkspaceContentProjection } f
 import type { WorkspaceSnapshot } from '../../../../lib/core/database/workspaceSnapshot.js';
 import type { WorkspaceRefreshScope } from '../../../../lib/core/database/workspaceSnapshotRefresh.js';
 import { workspaceSnapshotValueEqual } from '../../../../lib/core/database/workspaceSnapshotValueEqual.js';
+import type { WorkspaceNodeAnchorKinds } from '../../../../lib/core/nodes/workspaceNodePriorityState.js';
 import type { DbPort } from '../../../../lib/core/sync/dbPort.js';
 
 import { mergeCompanionLearningSnapshot } from './companionLearningSnapshotRefresh.js';
@@ -19,13 +20,14 @@ async function readSnapshot(input: { current: WorkspaceSnapshot | null; scope: W
   const owner = getIosCompanionDatabaseOwner();
   const revision = owner.nodePriorityRevision;
   let orderedNodeIds: readonly string[] | undefined;
+  let anchorKinds: WorkspaceNodeAnchorKinds | undefined;
   const snapshot = await owner.readSnapshot(async db => {
     const scoped = input.current && input.scope.kind === 'nodes' && !input.scope.structure
       ? await readScoped(db, input.current, input.scope) : null;
-    const next = scoped ?? await loadIosCompanionWorkspaceSnapshot(db, ids => { orderedNodeIds = ids; });
+    const next = scoped ?? await loadIosCompanionWorkspaceSnapshot(db, (ids, kinds) => { orderedNodeIds = ids; anchorKinds = kinds; });
     return next && attachOpenCompanionVirtualFolderResults(db, next);
   });
-  if (snapshot) await prepareCompanionWorkspaceIndex(owner, snapshot, revision, orderedNodeIds);
+  if (snapshot) await prepareCompanionWorkspaceIndex(owner, snapshot, revision, orderedNodeIds, anchorKinds);
   return snapshot;
 }
 

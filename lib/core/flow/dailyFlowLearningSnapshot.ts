@@ -14,7 +14,7 @@ interface LearningRow extends DbRow {
   shelved_at?: string | null;
   created_at?: string;
   deleted_at?: string | null;
-  anchor_link: string | null;
+  anchor_link?: string | null;
   has_content?: number;
   has_reveal?: number;
 }
@@ -24,7 +24,7 @@ const CONTENT_COLUMNS = `CASE WHEN n.body_blob_hash IS NOT NULL OR LENGTH(TRIM(n
     CASE WHEN n.reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal`;
 const ANCHOR_COLUMN = `CASE WHEN n.anchor_resolution_status LIKE 'unmapped_%' THEN NULL ELSE n.anchor_link END AS anchor_link`;
 const NODE_COLUMNS = `n.id, n.parent_id, n.priority, n.created_at, n.deleted_at, n.kind, n.shelved_at, ${CONTENT_COLUMNS}, ${ANCHOR_COLUMN}`;
-const PREPARED_NODE_COLUMNS = `n.id, ${ANCHOR_COLUMN}`;
+const PREPARED_NODE_COLUMNS = 'n.id';
 const PROFILE_COLUMNS = `    rd.interval_duration_ms AS reading_interval_duration_ms,
     rd.interval_growth_factor AS reading_interval_growth_factor,
     rd.last_handled_at AS reading_last_handled_at, rd.next_at AS reading_next_at,
@@ -73,18 +73,18 @@ function learningNode(row: LearningRow, profile?: ProfileRow, metadata?: NodeMet
   const parentNodeId = cached ? cached.parentNodeId : row.parent_id;
   const createdAt = cached ? cached.createdAt : row.created_at;
   if ((metadata && (!cached || cached.kind === undefined || cached.shelvedAt === undefined
-    || typeof cached.hasContent !== 'boolean' || typeof cached.hasReveal !== 'boolean'))
+    || typeof cached.hasContent !== 'boolean' || typeof cached.hasReveal !== 'boolean' || cached.anchorKind === undefined))
     || parentNodeId === undefined || typeof createdAt !== 'string') {
     throw new Error('daily_flow_node_metadata_missing');
   }
   const kind = cached ? cached.kind : row.kind;
   const shelvedAt = (cached ? cached.shelvedAt : row.shelved_at) ?? null;
-  const anchor = parseStoredAnchorLink(row.anchor_link);
+  const anchorKind = cached ? cached.anchorKind : parseStoredAnchorLink(row.anchor_link ?? null)?.kind ?? null;
   return { id: row.id, parentNodeId, kind: isNodeKind(kind) ? kind : 'topic',
     priority: (cached ? cached.priority : row.priority) ?? null, shelvedAt, createdAt,
     deletedAt: (cached ? cached.deletedAt : row.deleted_at) ?? null,
     hasContent: cached ? cached.hasContent! : row.has_content === 1,
     hasReveal: cached ? cached.hasReveal! : row.has_reveal === 1,
-    anchorLink: anchor ? { kind: anchor.kind } : null,
+    anchorLink: anchorKind ? { kind: anchorKind } : null,
     reading: profile ? toReadingProfile(profile) : null, review: profile ? toReviewProfile(profile) : null };
 }

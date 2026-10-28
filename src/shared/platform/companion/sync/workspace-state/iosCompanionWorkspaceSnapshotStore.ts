@@ -2,6 +2,7 @@ import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../../../.
 import { ANDROID_COMPANION_WORKSPACE_READ_RULES } from '../../../../../../lib/core/database/androidCompanionWorkspaceReadDefinitions';
 import { NODE_RESOURCES_SQL } from '../../../../../../lib/core/database/nodeResourcesSql';
 import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from '../../../../../../lib/core/database/workspaceSnapshotContract';
+import type { WorkspaceNodeAnchorKinds } from '../../../../../../lib/core/nodes/workspaceNodePriorityState';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort';
 
 import { loadCompanionWorkspaceDisplayNodeRows } from './companionSnapshotNodeRows';
@@ -16,11 +17,11 @@ const RULES = ANDROID_COMPANION_WORKSPACE_READ_RULES.snapshot;
 const HOST_NAME_KEY = 'host_name';
 const ACTIVE_NODE_KEY = 'active_node_id';
 
-export async function loadIosCompanionWorkspaceSnapshot(connection: DbPort, onNodeOrder?: (ids: readonly string[]) => void) {
+export async function loadIosCompanionWorkspaceSnapshot(connection: DbPort, onNodeOrder?: (ids: readonly string[], anchorKinds: WorkspaceNodeAnchorKinds) => void) {
   return connection.transaction(db => loadSnapshot(db, onNodeOrder));
 }
 
-async function loadSnapshot(connection: DbPort, onNodeOrder?: (ids: readonly string[]) => void) {
+async function loadSnapshot(connection: DbPort, onNodeOrder?: (ids: readonly string[], anchorKinds: WorkspaceNodeAnchorKinds) => void) {
   const hostName = await loadMetaValue(connection, 'companion_meta', HOST_NAME_KEY);
   if (!hostName) throw new Error('Companion Host is unavailable.');
   const nodes = await loadCompanionWorkspaceDisplayNodeRows(connection, hostName);
@@ -30,7 +31,11 @@ async function loadSnapshot(connection: DbPort, onNodeOrder?: (ids: readonly str
   attachIosWorkspaceNodeAttachments(nodesById, await loadAttachments(connection), hostName);
   const orderedRows = await queryRows(connection, QUERIES.workspaceOrderedNodeIds.sql);
   const nodeOrder = orderedRows.flatMap((row) => typeof row.id === 'string' ? [row.id] : []);
-  onNodeOrder?.(nodeOrder);
+  if (onNodeOrder) {
+    const anchorKinds = new Map(nodes.map(row => [String(row.id),
+      row.learning_anchor_unmapped === 1 ? null : nodesById[String(row.id)]?.anchorLink?.kind ?? null]));
+    onNodeOrder(nodeOrder, anchorKinds);
+  }
   const activeNodeId = await loadMetaValue(connection, 'workspace_meta', ACTIVE_NODE_KEY);
   const persistedNodeViewById = buildIosPersistedNodeViews(
     await queryRows(connection, QUERIES.nodeViewStatesByHost.sql, [hostName])

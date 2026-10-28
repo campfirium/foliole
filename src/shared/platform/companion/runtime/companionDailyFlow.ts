@@ -67,7 +67,8 @@ export function openCompanionDailyFlow(args: DailyFlowOpenArgs) {
         const snapshot = await loadDailyFlowLearningSnapshot(tx, await iosCompanionHostName(tx), ids, metadata);
         if (ids) return snapshot;
         const index = await getIosCompanionDatabaseOwner()
-          .readNodeIndex(tx, settings.pushQueue.defaultPriority, Object.values(snapshot.nodesById));
+          .readNodeIndex(tx, settings.pushQueue.defaultPriority, metadata ? undefined : Object.values(snapshot.nodesById)
+            .map(node => ({ ...node, anchorKind: node.anchorLink?.kind ?? null })));
         const nodeOrder = await getIosCompanionDatabaseOwner().readNodeOrder(tx);
         return { ...snapshot, nodeOrder: [...nodeOrder], nodePriorities: index.priorities, nodePaths: index.paths };
       } };

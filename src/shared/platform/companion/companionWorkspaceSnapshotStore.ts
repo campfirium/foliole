@@ -1,5 +1,6 @@
 import type { WorkspaceSnapshot } from '../../../../lib/core/database/workspaceSnapshot.js';
 import { WorkspaceSnapshotRefresh, type WorkspaceRefreshScope } from '../../../../lib/core/database/workspaceSnapshotRefresh.js';
+import type { WorkspaceNodeAnchorKinds } from '../../../../lib/core/nodes/workspaceNodePriorityState.js';
 import type { DbPort } from '../../../../lib/core/sync/dbPort.js';
 
 import { subscribeCompanionReadingScope } from './reading/companionReadingScope.js';
@@ -57,7 +58,7 @@ export async function updateCommittedCompanionWorkspace(scope: WorkspaceRefreshS
 }
 
 type PreparedWorkspaceListener = (source: object, snapshot: WorkspaceSnapshot, revision: number,
-  orderedNodeIds?: readonly string[]) => Promise<void>;
+  orderedNodeIds?: readonly string[], anchorKinds?: WorkspaceNodeAnchorKinds) => Promise<void>;
 const preparedListeners = new Set<PreparedWorkspaceListener>();
 
 export function subscribePreparedCompanionWorkspace(listener: PreparedWorkspaceListener) {
@@ -66,6 +67,6 @@ export function subscribePreparedCompanionWorkspace(listener: PreparedWorkspaceL
 }
 
 export async function prepareCompanionWorkspaceIndex(source: object, snapshot: WorkspaceSnapshot, revision: number,
-  orderedNodeIds?: readonly string[]) {
-  for (const listener of preparedListeners) await listener(source, snapshot, revision, orderedNodeIds);
+  orderedNodeIds?: readonly string[], anchorKinds?: WorkspaceNodeAnchorKinds) {
+  for (const listener of preparedListeners) await listener(source, snapshot, revision, orderedNodeIds, anchorKinds);
 }

@@ -86,9 +86,11 @@ export const COMPANION_WORKSPACE_DISPLAY_NODE_QUERY = {
   ...COMPANION_SNAPSHOT_NODE_QUERY,
   sql: COMPANION_SNAPSHOT_NODE_QUERY.sql
     .replace('n.created_at, n.updated_at',
+      "CASE WHEN n.anchor_resolution_status LIKE 'unmapped_%' THEN 1 ELSE 0 END AS learning_anchor_unmapped, " +
       "json_extract(readwise_source.remote_import_state_json, '$.remoteLifecycle') AS readwise_remote_lifecycle, n.created_at, n.updated_at")
     .replace('LEFT JOIN node_reading rd', `${READWISE_SOURCE_JOIN_SQL} LEFT JOIN node_reading rd`),
   columns: COMPANION_SNAPSHOT_NODE_QUERY.columns.flatMap(column => column.key === 'created_at'
-    ? [{ key: 'readwise_remote_lifecycle', source: 'readwise_remote_lifecycle', type: 'nullableString' }, column]
+    ? [{ key: 'learning_anchor_unmapped', source: 'learning_anchor_unmapped', type: 'long' },
+      { key: 'readwise_remote_lifecycle', source: 'readwise_remote_lifecycle', type: 'nullableString' }, column]
     : [column])
 };

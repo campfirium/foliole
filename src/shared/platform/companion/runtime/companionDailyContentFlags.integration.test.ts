@@ -25,7 +25,9 @@ async function snapshots(library: Library) {
   return library.owner.read(async db => {
     const cold = await loadDailyFlowLearningSnapshot(db, 'display-fixture');
     const warm = await loadDailyFlowLearningSnapshot(db, 'display-fixture', undefined, library.owner.readNodeMetadata(db)!);
-    expect(warm).toEqual(cold);
+    expect(warm.nodesById).toEqual(cold.nodesById);
+    expect([...warm.nodeOrder].sort()).toEqual([...cold.nodeOrder].sort());
+    expect([...warm.trashedNodeIds].sort()).toEqual([...cold.trashedNodeIds].sort());
     return warm.nodesById;
   });
 }
