@@ -3,7 +3,7 @@ import { getCurrentReviewSchedulerSettings } from '../features/settings/model/re
 
 import type { ReviewQueueNode } from './reviewQueuePlanner';
 
-export { resolveReviewQueueNodePathNodeIds, resolveReviewQueueReadingDueAt } from '../../lib/core/review/queue/reviewQueuePlannerReadingPaths';
+export { resolveReviewQueueReadingDueAt } from '../../lib/core/review/queue/reviewQueuePlannerReadingPaths';
 
 export function resolveReviewQueueReadingAvailableAt(node: ReviewQueueNode,
   newDayStartsAtHour = getCurrentReviewSchedulerSettings().newDayStartsAtHour) {

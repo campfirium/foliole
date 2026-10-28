@@ -60,3 +60,26 @@ it('does not expose minute-based reviews or same-day reading before their exact 
   expect(buildReviewQueuePlan(args).fsrsQueueNodeIds).toEqual(['minute-item']);
   expect(buildReviewQueuePlan(args).readingQueueNodeIds).toEqual(['minute-topic']);
 });
+
+it('consumes shared UUID paths with the same complete reading, review and mixed orders', () => {
+  const nodes = [10, 5, 4, 3].flatMap((count, source) => Array.from({ length: count }, (_, i) => {
+    const node = i % 2 ? item(`${source}-${i}`) : topic(`${source}-${i}`);
+    return { ...node, priority: 5, parentNodeId: `folder-${source}` };
+  }));
+  const folders = [0, 1, 2, 3].map(source => ({ ...topic(`folder-${source}`), kind: 'folder' as const,
+    parentNodeId: `root-${source % 2}` }));
+  const all = [...nodes, ...folders];
+  const nodesById = Object.fromEntries(all.map(node => [node.id, node]));
+  const paths = new Map(all.map(node => {
+    const source = Number(node.id.replace('folder-', '').split('-')[0]);
+    const prefix = [`root-${source % 2}`, `folder-${source}`];
+    return [node.id, node.kind === 'folder' ? prefix : [...prefix, node.id]];
+  }));
+  for (const mode of ['reading-only', 'review-first', 'recommended'] as const) {
+    const args = { nodesById, nodeOrder: all.map(node => node.id), now, mode, trashedNodeIds: [],
+      newDayStartsAtHour: 4, readingDayStartsAtHour: 4, pushQueueRules: DEFAULT_UNIFIED_PUSH_QUEUE_RULES };
+    const actual = buildReviewQueuePlan({ ...args, nodePaths: paths });
+    expect(actual).toEqual(buildReviewQueuePlan(args));
+    expect([...actual.fsrsQueueNodeIds, ...actual.readingQueueNodeIds].sort()).toEqual(nodes.map(node => node.id).sort());
+  }
+});

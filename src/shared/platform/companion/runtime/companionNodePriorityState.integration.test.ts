@@ -29,6 +29,8 @@ it.each(['android', 'ios'] as const)('%s shares directory-prepared priorities wi
       }
     });
     await refreshCompanionWorkspaceSnapshot();
+    const paths = () => library.owner.read(async db => (await library.owner.readNodeIndex(db, 5)).paths);
+    expect((await paths()).get('leaf')).toEqual(['a', 'branch', 'leaf']);
     const values = () => library.owner.read(db => library.owner.readNodePriorities(db, 5));
     expect((await values()).get('leaf')).toBe(2);
     expect(library.priorityReads).toEqual([]);
@@ -39,12 +41,14 @@ it.each(['android', 'ios'] as const)('%s shares directory-prepared priorities wi
       await tx.run("UPDATE nodes SET parent_id='b' WHERE id='branch'");
     })), scope);
     expect((await values()).get('leaf')).toBe(8);
+    expect((await paths()).get('leaf')).toEqual(['b', 'branch', 'leaf']);
     expect(library.priorityReads).toEqual([{ params: [JSON.stringify(['branch'])], rows: 1 }]);
     await expect(runCompanionHighValueMutationTask(() => library.owner.runWriter(db => db.transaction(async tx => {
       await tx.run("UPDATE nodes SET priority=0 WHERE id='branch'");
       throw new Error('rollback');
     })), scope)).rejects.toThrow('rollback');
     expect((await values()).get('leaf')).toBe(8);
+    expect((await paths()).get('leaf')).toEqual(['b', 'branch', 'leaf']);
     expect(library.priorityReads).toHaveLength(1);
     await library.owner.runWriter(async db => {
       await db.transaction(tx => tx.run("UPDATE nodes SET priority=0 WHERE id='b'"));
@@ -57,11 +61,14 @@ it.each(['android', 'ios'] as const)('%s shares directory-prepared priorities wi
     expect(library.priorityReads).toHaveLength(reads);
     await openCompanionDailyFlow({ now, mode: 'recommended' });
     expect(library.priorityReads).toHaveLength(reads);
+    const previousPaths = await paths();
     library.owner.clearNodePriorities();
     await openCompanionDailyFlow({ now, mode: 'recommended' });
     expect(library.priorityReads).toHaveLength(reads);
     expect((await values()).get('leaf')).toBe(0);
     expect(library.priorityReads.at(-1)?.rows).toBeGreaterThan(1);
+    expect(await paths()).not.toBe(previousPaths);
+    expect((await paths()).get('leaf')).toEqual(['b', 'branch', 'leaf']);
   } finally { await library.close(); }
 });
 

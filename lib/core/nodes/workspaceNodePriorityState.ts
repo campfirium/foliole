@@ -1,5 +1,6 @@
 import { normalizePushQueuePriority, type PushQueuePriority, type RegularPushQueuePriority } from '../review/unifiedPushQueueRules.js';
 
+import { updateWorkspaceNodePaths, type WorkspaceNodePaths } from './workspaceNodePaths.js';
 import { createWorkspaceNodePriorityIndex } from './workspaceNodePriorityIndex.js';
 
 export interface PriorityIndexNode {
@@ -12,13 +13,16 @@ export class WorkspaceNodePriorityState {
   private readonly nodes = new Map<string, PriorityIndexNode>();
   private readonly children = new Map<string, Set<string>>();
   private readonly values = new Map<string, PushQueuePriority>();
+  private readonly pathValues = new Map<string, readonly string[]>();
 
   constructor(nodes: Iterable<PriorityIndexNode>, private defaultPriority: RegularPushQueuePriority) {
     for (const node of nodes) this.store(node);
     this.resolve(new Set(this.nodes.keys()));
+    updateWorkspaceNodePaths(this.nodes, this.pathValues, new Set(this.nodes.keys()));
   }
 
   get priorities(): ReadonlyMap<string, PushQueuePriority> { return this.values; }
+  get paths(): WorkspaceNodePaths { return this.pathValues; }
 
   setDefaultPriority(value: RegularPushQueuePriority) {
     if (value === this.defaultPriority) return;
@@ -28,7 +32,9 @@ export class WorkspaceNodePriorityState {
 
   update(nodes: Iterable<PriorityIndexNode>, removed: readonly string[] = []) {
     const roots = new Set<string>();
+    const pathRoots = new Set<string>();
     for (const id of removed) {
+      pathRoots.add(id);
       for (const child of this.children.get(id) ?? []) roots.add(child);
       const previous = this.nodes.get(id);
       if (previous?.parentNodeId) this.unlink(previous.parentNodeId, id);
@@ -37,6 +43,7 @@ export class WorkspaceNodePriorityState {
     }
     for (const node of nodes) {
       const previous = this.nodes.get(node.id);
+      if (!previous || previous.parentNodeId !== node.parentNodeId) pathRoots.add(node.id);
       if (previous && previous.parentNodeId === node.parentNodeId && previous.priority === (node.priority ?? null)) continue;
       if (previous?.parentNodeId) this.unlink(previous.parentNodeId, node.id);
       this.store(node);
@@ -51,6 +58,15 @@ export class WorkspaceNodePriorityState {
       }
     }
     this.resolve(roots);
+    const affected = [...pathRoots];
+    for (let cursor = 0; cursor < affected.length; cursor++) {
+      for (const child of this.children.get(affected[cursor]!) ?? []) {
+        if (pathRoots.has(child)) continue;
+        pathRoots.add(child);
+        affected.push(child);
+      }
+    }
+    updateWorkspaceNodePaths(this.nodes, this.pathValues, pathRoots);
   }
 
   private unlink(parent: string, id: string) {

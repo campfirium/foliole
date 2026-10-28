@@ -1,11 +1,11 @@
 import { default_w, forgetting_curve } from 'ts-fsrs';
 
+import type { WorkspaceNodePaths } from '../../nodes/workspaceNodePaths.js';
 import { assembleFsrsPushQueue } from '../unifiedPushQueueAssembler.js';
 import type { PushQueuePriority, UnifiedPushQueueRules } from '../unifiedPushQueueRules.js';
 
 import type { ReviewQueueNode } from './reviewQueuePlanner.js';
 import { createSeededRandom } from './reviewQueuePlannerHelpers.js';
-import { resolveReviewQueueNodePathNodeIds } from './reviewQueuePlannerReadingPaths.js';
 import { parseReviewQueueTimestamp } from './reviewQueuePlannerTime.js';
 
 function resolveFsrsRetrievability(node: ReviewQueueNode, now: string) {
@@ -23,16 +23,16 @@ export function resolveFsrsQueueNodeIds(args: {
   candidates: ReviewQueueNode[];
   disperseMaterial: boolean;
   nodeOrder: string[];
-  nodesById: Record<string, ReviewQueueNode | undefined>;
   now: string;
   pushQueueRules: UnifiedPushQueueRules;
   priorities: ReadonlyMap<string, PushQueuePriority>;
+  paths: WorkspaceNodePaths;
 }) {
   const random = createSeededRandom(`fsrs|${args.nodeOrder.join('|')}`);
   return assembleFsrsPushQueue(
     args.candidates.map((node) => ({
       id: node.id,
-      pathNodeIds: resolveReviewQueueNodePathNodeIds(node, args.nodesById),
+      pathNodeIds: args.paths.get(node.id)!,
       priority: args.priorities.get(node.id)!,
       retrievability: resolveFsrsRetrievability(node, args.now)
     })),

@@ -13,10 +13,14 @@ export class CompanionNodePriorityState {
   private fullRefresh = false;
 
   async read(db: DbPort, defaultPriority: RegularPushQueuePriority, initial?: Iterable<PriorityIndexNode>) {
+    return (await this.readIndex(db, defaultPriority, initial)).priorities;
+  }
+
+  async readIndex(db: DbPort, defaultPriority: RegularPushQueuePriority, initial?: Iterable<PriorityIndexNode>) {
     if (this.failure) throw this.failure;
     if (!this.state) this.state = new WorkspaceNodePriorityState(initial ?? await readNodes(db), defaultPriority);
     this.state.setDefaultPriority(defaultPriority);
-    return this.state.priorities;
+    return { priorities: this.state.priorities, paths: this.state.paths };
   }
 
   async refresh(db: DbPort, scope: WorkspaceRefreshScope) {

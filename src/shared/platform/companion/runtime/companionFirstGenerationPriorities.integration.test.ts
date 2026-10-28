@@ -94,6 +94,8 @@ it.each(['android', 'ios'] as const)('%s generates from committed moves and pres
   const original = await generate(library);
   await mutateCompanionWorkspace({ type: 'move', nodeId: 'branch', parentNodeId: 'regular' });
   const moved = await generate(library);
+  expect(await library.owner.read(async db => (await library.owner.readNodeIndex(db, 5)).paths.get('leaf')))
+    .toEqual(['regular', 'branch', 'leaf']);
   expect(moved[0]).toBe('zero');
   expect(moved).not.toEqual(original);
   library.owner.clearNodePriorities();
@@ -122,7 +124,12 @@ it.each(['android', 'ios'] as const)('%s does not reuse another library prioriti
   const previous = await generate(first);
   expect(new Set(previous.slice(0, 2))).toEqual(new Set(['leaf', 'zero']));
   const second = await openLibrary(platform, 9);
+  await mutateCompanionWorkspace({ type: 'move', nodeId: 'branch', parentNodeId: 'regular' });
   const next = await generate(second);
+  expect(await first.owner.read(async db => (await first.owner.readNodeIndex(db, 5)).paths.get('leaf')))
+    .toEqual(['absolute', 'branch', 'leaf']);
+  expect(await second.owner.read(async db => (await second.owner.readNodeIndex(db, 5)).paths.get('leaf')))
+    .toEqual(['regular', 'branch', 'leaf']);
   expect(next[0]).toBe('zero');
   expect(next).not.toEqual(previous);
   second.owner.clearNodePriorities();

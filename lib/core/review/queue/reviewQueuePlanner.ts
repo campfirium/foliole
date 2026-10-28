@@ -1,4 +1,5 @@
 import type { WorkspaceNodeSnapshot } from '../../database/workspaceSnapshotHelpers.js';
+import { createWorkspaceNodePaths, type WorkspaceNodePaths } from '../../nodes/workspaceNodePaths.js';
 import { createWorkspaceNodePriorityIndex } from '../../nodes/workspaceNodePriorityIndex.js';
 import type { ReviewItemNodeLike } from '../reviewItemKind.js';
 import { assembleReadingPushQueue } from '../unifiedPushQueueAssembler.js';
@@ -8,7 +9,7 @@ import { collectReviewQueueCandidates } from './reviewQueuePlannerCandidates.js'
 import { resolveFsrsQueueNodeIds } from './reviewQueuePlannerFsrs.js';
 import { createSeededRandom } from './reviewQueuePlannerHelpers.js';
 import { resolveModeQueueNodeIds } from './reviewQueuePlannerMode.js';
-import { resolveReviewQueueNodePathNodeIds, resolveReviewQueueReadingAvailableAt, resolveReviewQueueReadingDueAt } from './reviewQueuePlannerReadingPaths.js';
+import { resolveReviewQueueReadingAvailableAt, resolveReviewQueueReadingDueAt } from './reviewQueuePlannerReadingPaths.js';
 import type { ReviewSessionMode } from './reviewQueueTypes.js';
 
 export interface ReviewQueuePlan {
@@ -25,10 +26,10 @@ export type ReviewQueueNode = ReviewItemNodeLike & Pick<WorkspaceNodeSnapshot, '
 function resolveReadingQueueNodeIds(args: {
   candidates: ReviewQueueNode[];
   priorities: ReadonlyMap<string, PushQueuePriority>;
+  paths: WorkspaceNodePaths;
   readingDayStartsAtHour: number;
   disperseMaterial: boolean;
   nodeOrder: string[];
-  nodesById: Record<string, ReviewQueueNode | undefined>;
   now: string;
   pushQueueRules: UnifiedPushQueueRules;
 }) {
@@ -41,7 +42,7 @@ function resolveReadingQueueNodeIds(args: {
         id: node.id,
         intervalDurationMs: node.reading?.intervalDurationMs,
         nextAt,
-        pathNodeIds: resolveReviewQueueNodePathNodeIds(node, args.nodesById),
+        pathNodeIds: args.paths.get(node.id)!,
         priority: args.priorities.get(node.id)!,
       };
     }),
@@ -70,6 +71,7 @@ export interface ReviewQueuePlanInput {
   nodeOrder: string[];
   nodesById: Record<string, ReviewQueueNode | undefined>;
   nodePriorities?: ReadonlyMap<string, PushQueuePriority>;
+  nodePaths?: WorkspaceNodePaths;
   now: string;
   pushQueueRules: UnifiedPushQueueRules;
   trashedNodeIds: string[];
@@ -93,25 +95,25 @@ function collectCandidates(args: ReviewQueuePlanInput) {
 }
 
 function buildOrderedQueues(args: ReviewQueuePlanInput, { fsrsCandidates, readingCandidates }: Candidates,
-  priorities: ReadonlyMap<string, PushQueuePriority>) {
+  priorities: ReadonlyMap<string, PushQueuePriority>, paths: WorkspaceNodePaths) {
   const includeScheduled = args.includeScheduled ?? false;
   const pushQueueRules = args.pushQueueRules;
   const fsrsQueueNodeIds = resolveFsrsQueueNodeIds({
     candidates: fsrsCandidates,
+    paths,
     disperseMaterial: !includeScheduled,
     nodeOrder: args.nodeOrder,
-    nodesById: args.nodesById,
     now: args.now,
     pushQueueRules,
     priorities
   });
   const readingQueueNodeIds = resolveReadingQueueNodeIds({
     candidates: readingCandidates,
+    paths,
     priorities,
     readingDayStartsAtHour: args.readingDayStartsAtHour,
     disperseMaterial: !includeScheduled,
     nodeOrder: args.nodeOrder,
-    nodesById: args.nodesById,
     now: args.now,
     pushQueueRules
   });
@@ -148,12 +150,13 @@ function sameCandidates(left: Candidates, right: Candidates) {
 // Owns only one construction's immutable input; callers release it after producing the daily list.
 export function createReviewQueuePlanner(input: ReviewQueuePlanInput) {
   const priorities = input.nodePriorities ?? createWorkspaceNodePriorityIndex(input.nodesById, input.pushQueueRules.defaultPriority);
+  const paths = input.nodePaths ?? createWorkspaceNodePaths(Object.values(input.nodesById).filter((node): node is ReviewQueueNode => Boolean(node)));
   let previous: { candidates: Candidates; ordered: ReturnType<typeof buildOrderedQueues> } | undefined;
   return (options: Pick<ReviewQueuePlanInput, 'candidateNow' | 'mode' | 'limit'> = {}): ReviewQueuePlan => {
     const args = { ...input, ...options };
     const candidates = collectCandidates(args);
     const ordered = previous && sameCandidates(previous.candidates, candidates)
-      ? previous.ordered : buildOrderedQueues(args, candidates, priorities);
+      ? previous.ordered : buildOrderedQueues(args, candidates, priorities, paths);
     previous = { candidates, ordered };
     return assemblePlan(args, ordered);
   };
