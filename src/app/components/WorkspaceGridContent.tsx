@@ -5,6 +5,7 @@ import {
   projectWorkspaceListNodesById,
   type WorkspaceListNodesById
 } from '../../features/nodes/model/workspaceListNode';
+import { isEditorInputDiagnosticEnabled } from '../../store/workspaceEditorInputDiagnostics';
 
 import { useExternalSearchPreviewDocument } from './externalSearchPreviewState';
 import {
@@ -60,10 +61,12 @@ export function WorkspaceGridContent({
     editorSelection: props.document.editorNodeViewState?.selection ?? null,
     readingSelection: props.readingPosition.getReadingPositionSelection()
   });
-  finishDiagnostic({
-    hasExternalOutline: Boolean(externalPreviewController.outlineDocument),
-    listNodeCount: Object.keys(listNodesById).length
-  });
+  if (isEditorInputDiagnosticEnabled()) {
+    finishDiagnostic({
+      hasExternalOutline: Boolean(externalPreviewController.outlineDocument),
+      listNodeCount: Object.keys(listNodesById).length
+    });
+  }
   return (
     <WorkspaceLayoutGridFrame
       isImmersiveMode={props.layoutChrome.isImmersiveMode}
@@ -183,14 +186,15 @@ function useProjectedListNodesById(nodesById: WorkspaceLayoutProps['nodeList']['
   const previousListNodesByIdRef = useRef<WorkspaceListNodesById>({});
   return useMemo(() => {
     const previousProjection = previousListNodesByIdRef.current;
-    const nextProjection = measureWorkspaceDiagnostic(
+    const project = () => projectWorkspaceListNodesById(nodesById, previousProjection);
+    const nextProjection = isEditorInputDiagnosticEnabled() ? measureWorkspaceDiagnostic(
       'workspace-grid-list-projection',
       {
         nodeCount: Object.keys(nodesById).length,
         previousNodeCount: Object.keys(previousProjection).length
       },
-      () => projectWorkspaceListNodesById(nodesById, previousProjection)
-    );
+      project
+    ) : project();
     previousListNodesByIdRef.current = nextProjection;
     return nextProjection;
   }, [nodesById]);
