@@ -9,7 +9,7 @@ vi.mock('../database/connection.js', () => ({
   runWithDatabaseConnectionOwner: async (execute: () => unknown) => await execute()
 }));
 
-import { requestJson } from './desktopSyncGroupHttp.js';
+import { readDesktopWorkgroupResponse, requestJson } from './desktopSyncGroupHttp.js';
 import { lanPeerHttp } from './lanPeerHttp.js';
 import { isWorkgroupConnectionReset } from './workgroupConnectionReset.js';
 
@@ -39,16 +39,16 @@ function encodedJsonPeer(encoding: string, encode: (body: Buffer) => Buffer) {
   });
 }
 
-it('refuses a Brotli-encoded peer response on the join request path instead of decoding it', async () => {
+it('decodes a Brotli-encoded peer response on the join request path with the patched runtime', async () => {
   const origin = await encodedJsonPeer('br', brotliCompressSync);
   await expect(requestJson(`${origin}/sync-group/join-requests`, { body: '{}', method: 'POST' }))
-    .rejects.toThrow('lan_peer_response_encoding_rejected');
+    .resolves.toEqual({ accepted: true });
 });
 
-it('refuses gzip-encoded peer responses as well', async () => {
+it('decodes gzip-encoded peer responses with standard fetch', async () => {
   const origin = await encodedJsonPeer('gzip', gzipSync);
-  await expect(lanPeerHttp.fetch(`${origin}/companion/discovery`))
-    .rejects.toThrow('lan_peer_response_encoding_rejected');
+  const response = await lanPeerHttp.fetch(`${origin}/companion/discovery`);
+  await expect(response.json()).resolves.toEqual({ accepted: true });
 });
 
 it('delivers identity peer responses with the request body, headers and status intact', async () => {
@@ -90,4 +90,23 @@ it('stops a stalled response body when the request signal times out', async () =
     signal: AbortSignal.timeout(100)
   });
   await expect(response.text()).rejects.toBeTruthy();
+});
+
+it('cancels an in-flight peer request when its caller aborts', async () => {
+  const controller = new AbortController();
+  const origin = await startPeer(() => controller.abort(new Error('peer_request_cancelled')));
+  await expect(lanPeerHttp.fetch(`${origin}/companion/discovery`, { signal: controller.signal }))
+    .rejects.toThrow('peer_request_cancelled');
+});
+
+it('keeps the authenticated response size limit after fetching from a real peer', async () => {
+  const origin = await startPeer((_request, response) => {
+    response.writeHead(200, { 'content-type': 'application/vnd.foliole.workgroup-aead+json' });
+    response.end(Buffer.alloc(65));
+  });
+  const response = await lanPeerHttp.fetch(`${origin}/companion/resource-availability`);
+  await expect(readDesktopWorkgroupResponse({
+    contentType: 'application/json', groupId: 'group', maxEnvelopeBytes: 64,
+    method: 'GET', pathWithQuery: '/companion/resource-availability', response
+  })).rejects.toThrow('workgroup_aead_response_limit_exceeded');
 });
