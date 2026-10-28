@@ -32,9 +32,11 @@ import { textBranch } from '../database/topicTextState.testSupport.js';
 import { handleProductionCompanionFramedSyncPost } from './companionLanFramedSyncRoute.js';
 import { clearCompanionRequestNonceCache } from './companionRequestAuth.js';
 import { createDesktopFramedSyncFiles } from './desktopFramedSyncFiles.js';
+import { assertDesktopFlowIndexAfterSync, prepareDesktopFlowIndexForSync } from './desktopNodeIndexSync.testSupport.js';
 import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 import { exchangeDesktopRequestSyncInventory } from './desktopRequestSyncInventoryHttp.js';
 import { postDesktopRequestSyncObject } from './desktopRequestSyncObjectHttp.js';
+import { seedMembership } from './desktopRequestSyncObjectHttp.testSupport.js';
 import { pullDesktopRequestSyncObject } from './desktopRequestSyncPullHttp.js';
 import { clearDesktopSyncGroupMemberStateReadiness, markDesktopSyncGroupMemberStateReady } from './desktopSyncGroupMemberStateReadiness.js';
 
@@ -78,6 +80,7 @@ it.each([{ loseResponse: false, advance: false }, { loseResponse: true, advance:
         initiatorDeviceId: 'peer', initiatorLibraryEpoch: 'peer-epoch', responderDeviceId: 'local', responderLibraryEpoch: 'local-epoch' } });
     if (loseResponse) await expect(posting).rejects.toThrow('socket hang up');
     else await posting;
+    await assertDesktopFlowIndexAfterSync(['topic']);
     const databasePath = await assertCommitted();
     const remote = await withRequestSyncReadonlySnapshot(databasePath, db => readFramedSyncInventoryEntry(db, difference));
     expect(compareFramedSyncInventories({ local: [entry], remote: remote ? [remote] : [] })).toEqual([]);
@@ -105,17 +108,7 @@ async function seedTarget() {
   const state: SyncGroupMemberStatePayload = { contract_version: 3, group_id: 'group', sender_device_identity_key: 'peer',
     library_epoch: 'peer-epoch', proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null };
   markDesktopSyncGroupMemberStateReady('peer', 'normal', state);
-}
-
-function seedMembership(sqlite: Database.Database, device: 'peer' | 'local') {
-  sqlite.prepare("INSERT INTO sync_groups VALUES ('group', 'Group', ?, 'now', 'now')")
-      .run(Buffer.alloc(32, 7).toString('base64url'));
-  sqlite.prepare("INSERT INTO sync_group_local_state VALUES (1, 'group', ?, 'active', 'now')").run(device);
-  sqlite.prepare('UPDATE node_version_local_proof_state SET library_epoch = ?').run(`${device}-epoch`);
-  sqlite.exec(`INSERT INTO sync_group_devices (group_id, device_identity_key, device_anchor, canonical_library_path,
-        device_name, platform, state, joined_at, updated_at)
-      VALUES ('group', 'peer', 'peer-anchor', '/peer', 'Peer', 'mac', 'active', 'now', 'now'),
-        ('group', 'local', 'local-anchor', '/local', 'Local', 'mac', 'active', 'now', 'now')`);
+  await prepareDesktopFlowIndexForSync();
 }
 
 async function pullBack(host: RequestSyncDatabaseHost, endpointUrl: string, sourcePath: string) {
@@ -187,6 +180,7 @@ async function completeRound(host: RequestSyncDatabaseHost, endpointUrl: string)
       initiatorLibraryEpoch: 'peer-epoch', responderDeviceId: 'local', responderLibraryEpoch: 'local-epoch' } } as const;
   await host.write(db => applyConvergentSyncNodesWithDbPort(db, [textBranch('round-edit', 'Round edit')]));
   const peerState = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroupMemberState());
+  await prepareDesktopFlowIndexForSync();
   const result = await runRequestSyncDatabaseRound({
     exchangeInventory: () => exchangeDesktopRequestSyncInventory(host, exchange),
     transferObjects: differences => transferRequestSyncBatch(host, createDesktopRequestSyncExchange(exchange),
@@ -196,6 +190,7 @@ async function completeRound(host: RequestSyncDatabaseHost, endpointUrl: string)
   expect(result.complete).toBe(true);
   expect(result.pending).toBe(0);
   expect(result.transferred).toBeGreaterThan(0);
+  await assertDesktopFlowIndexAfterSync(['topic']);
   await isolateBrokenObject(host, exchange, peerState);
 }
 
@@ -223,6 +218,7 @@ async function isolateBrokenObject(host: RequestSyncDatabaseHost,
   });
   expect(result).toMatchObject({ complete: false, pending: 1 });
   expect(new Set(failures)).toEqual(new Set(['a-broken']));
+  await assertDesktopFlowIndexAfterSync(['healthy', 'topic']);
   const databasePath = await runWithDatabaseConnectionMaintenance(() => {
     const dbPath = openDatabaseConnection().dbPath;
     closeDatabaseConnection(); return dbPath;

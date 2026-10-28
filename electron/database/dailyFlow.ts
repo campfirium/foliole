@@ -1,10 +1,9 @@
-import { projectParentChildOrder, readParentChildOrders } from '../../lib/core/database/parentChildOrder.js';
 import { requireDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
 import { queryWorkspaceRows } from '../../lib/core/database/workspaceListSnapshot.js';
 import { buildWorkspaceListNodesById } from '../../lib/core/database/workspaceListSnapshotNodes.js';
 import { definedProps } from '../../lib/core/definedProps.js';
 import { dailyFlowCommitSchema, dailyFlowOpenSchema } from '../../lib/core/flow/dailyFlowContract.js';
-import { loadDailyFlowLearningSnapshot } from '../../lib/core/flow/dailyFlowLearningSnapshot.js';
+import { flowDay } from '../../lib/core/flow/dailyFlowPlanning.js';
 import { commitDailyFlow, openDailyFlow, type DailyFlowPersistence } from '../../lib/core/flow/dailyFlowService.js';
 import { dailyFlowSourceSettingsSchema, saveDailyFlowSourceSettings } from '../../lib/core/flow/dailyFlowSourceSettings.js';
 import { readDailyFlowView } from '../../lib/core/flow/dailyFlowView.js';
@@ -15,20 +14,15 @@ import { currentLibraryScope } from './attachmentResourceDescription.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { openDatabaseConnection } from './connection.js';
 import { scheduleDesktopFlowDocumentPreparation } from './dailyFlowDocumentPreparation.js';
+import { loadDesktopDailyFlowLearning } from './desktopDailyFlowLearning.js';
+import { prepareDesktopNodeIndex } from './desktopNodeIndex.js';
 import { saveNodeReadingState } from './nodeReadingState.js';
 import { saveNodeReviewState } from './nodeReviewState.js';
 import { applyReviewGrade } from './reviewMutations.js';
 import { loadWorkspaceListSnapshot } from './workspaceListSnapshot.js';
 
 export const desktopDailyFlowPersistence: DailyFlowPersistence = {
-  learningSnapshot: async (db, ids) => {
-    const driver = openDatabaseConnection().driver;
-    const snapshot = await loadDailyFlowLearningSnapshot(db, requireDatabaseHostName(driver), ids);
-    if (ids) return snapshot;
-    const members = Object.values(snapshot.nodesById).map(node => ({ id: node.id, parent_id: node.parentNodeId,
-      created_at: node.createdAt, deleted_at: node.deletedAt ?? null }));
-    return { ...snapshot, nodeOrder: projectParentChildOrder(members, readParentChildOrders(driver)) };
-  },
+  learningSnapshot: loadDesktopDailyFlowLearning,
   snapshot: async (_db, nodeIds) => {
     if (nodeIds) {
       const { nodesById, trashedNodeIds } = buildWorkspaceListNodesById(queryWorkspaceRows(openDatabaseConnection().driver, nodeIds));
@@ -53,8 +47,16 @@ function settings() {
 }
 
 export async function openDesktopDailyFlow(args: unknown) {
-  const result = await openDailyFlow(createBetterSqliteDbPort(openDatabaseConnection().sqlite),
-    dailyFlowOpenSchema.parse(args), settings(), desktopDailyFlowPersistence);
+  const input = dailyFlowOpenSchema.parse(args);
+  const config = settings();
+  const { sqlite } = openDatabaseConnection();
+  const state = sqlite.prepare('SELECT day_key, invalidated, settings_key FROM daily_flow_state WHERE id = 1').get() as
+    { day_key: string; invalidated: number; settings_key: string } | undefined;
+  if (!sqlite.inTransaction && (!state || state.invalidated || state.day_key !== flowDay(input.now, config)
+    || state.settings_key !== JSON.stringify(config) || (input.startup && input.mode !== 'recommended'))) {
+    prepareDesktopNodeIndex(sqlite, config.pushQueue.defaultPriority);
+  }
+  const result = await openDailyFlow(createBetterSqliteDbPort(sqlite), input, config, desktopDailyFlowPersistence);
   scheduleDesktopFlowDocumentPreparation(result.session, settings(), desktopDailyFlowPersistence);
   return result;
 }

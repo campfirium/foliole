@@ -11,6 +11,7 @@ import { ensureLibraryPathLayout } from '../ipc/libraryPaths.js';
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { migrateDatabaseFileNames, type DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';
 import { resolveSearchDatabasePath as resolveSearchDatabasePathFromDatabasePath } from './databaseFilePaths.js';
+import { releaseDesktopNodeIndex } from './desktopNodeIndex.js';
 import { bindFramedSyncPayloadBudget } from './framedSyncPayloadBudgetOwner.js';
 import { guardBetterSqliteDatabase } from './guardedBetterSqliteDatabase.js';
 import { closeRequestSyncReadonlyConnections } from './requestSyncReadonlySnapshot.js';
@@ -134,6 +135,7 @@ export function closeDatabaseConnection() {
   mainDatabaseCoordinator.assertCanClose();
   closeRequestSyncReadonlyConnections();
   cachedConnection?.framedSyncPayloadBudget.close();
+  if (cachedConnection) releaseDesktopNodeIndex(cachedConnection.sqlite);
   clearAttachmentLibraryPathSnapshot();
   for (const callback of connectionCleanupCallbacks) {
     callback();

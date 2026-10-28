@@ -130,7 +130,7 @@ function resolveCapturedWorkspaceVersion(rows: WorkspaceNodeRow[]) {
 
 export function loadWorkspaceListSnapshot(
   driver: DatabaseDriver,
-  options?: { includePdfOpenings?: boolean }
+  options?: { includePdfOpenings?: boolean; nodeOrder?: readonly string[]; onNodeOrder?: (ids: readonly string[]) => void }
 ) {
   const rows = queryWorkspaceRows(driver);
   if (rows.length === 0) {
@@ -140,7 +140,8 @@ export function loadWorkspaceListSnapshot(
   const pdfOpeningById = options?.includePdfOpenings === false
     ? new Map<string, string>()
     : buildPdfOpeningById(queryPdfOpeningRows(driver), nodesById);
-  const nodeOrder = buildNodeOrder(driver, rows, nodesById);
+  const nodeOrder = options?.nodeOrder ? options.nodeOrder.filter(id => Boolean(nodesById[id])) : buildNodeOrder(driver, rows, nodesById);
+  options?.onNodeOrder?.(nodeOrder);
   applyResolvedOpenings({ directOpeningById, nodeOrder, nodesById, pdfOpeningById });
   const activeNodeId = resolveActiveNodeId(driver, nodeOrder, nodesById);
 

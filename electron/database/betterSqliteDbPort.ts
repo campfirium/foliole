@@ -13,6 +13,8 @@ import {
 import { prepareCachedSqliteStatement as prepareStatement } from './sqliteStatementCache.js';
 
 type SqliteDatabase = BetterSqlite3.Database;
+const portConnections = new WeakMap<DbPort, SqliteDatabase>();
+export function ownsBetterSqliteDbPort(db: DbPort, sqlite: SqliteDatabase) { return portConnections.get(db) === sqlite; }
 export interface BetterSqliteDbPortOptions {
   name?: string;
   transactionMode?: 'deferred' | 'immediate';
@@ -35,6 +37,7 @@ export function createBetterSqliteDbPort(sqlite: SqliteDatabase, options: Better
       ));
     }
   };
+  portConnections.set(port, sqlite);
   const payloadBudget = readFramedSyncPayloadBudget(sqlite);
   if (payloadBudget) bindFramedSyncPayloadBudget(port, payloadBudget);
   return port;
@@ -88,6 +91,7 @@ async function runScopedTransaction<T>(
     }
   };
   const payloadBudget = readFramedSyncPayloadBudget(port);
+  portConnections.set(scopedPort, portConnections.get(port)!);
   if (payloadBudget) bindFramedSyncPayloadBudget(scopedPort, payloadBudget);
   try {
     return await execute(scopedPort);
