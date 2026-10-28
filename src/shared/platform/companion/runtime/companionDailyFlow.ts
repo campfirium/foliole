@@ -12,6 +12,7 @@ import type { DailyFlowViewArgs } from '../../../../../lib/core/flow/dailyFlowVi
 import { reviewHistoryOpId } from '../../../../../lib/core/review/reviewEventIdentity';
 import { getCurrentReviewSchedulerSettings } from '../../../../features/settings/model/reviewSchedulerSettings';
 import { toReadingPayload } from '../../companionSyncStateWriters';
+import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { loadCompanionSnapshotNodeRows } from '../sync/workspace-state/companionSnapshotNodeRows';
 import { buildIosWorkspaceNodes } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotRows';
 import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
@@ -58,7 +59,16 @@ export function companionDailyFlowSettings() {
 }
 
 export function openCompanionDailyFlow(args: DailyFlowOpenArgs) {
-  return writeIosCompanionDatabase(db => openDailyFlow(db, args, companionDailyFlowSettings(), companionDailyFlowPersistence));
+  return runCompanionSyncWriterTask(() => writeIosCompanionDatabase(async db => {
+    const settings = companionDailyFlowSettings();
+    const persistence: DailyFlowPersistence = { ...companionDailyFlowPersistence,
+      learningSnapshot: async (tx, ids) => {
+        const snapshot = await companionDailyFlowPersistence.learningSnapshot(tx, ids);
+        return ids ? snapshot : { ...snapshot, nodePriorities: await getIosCompanionDatabaseOwner()
+          .readNodePriorities(tx, settings.pushQueue.defaultPriority, Object.values(snapshot.nodesById)) };
+      } };
+    return openDailyFlow(db, args, settings, persistence);
+  }));
 }
 
 export function loadCompanionDailySession() {

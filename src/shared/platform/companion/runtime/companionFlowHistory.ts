@@ -93,7 +93,7 @@ export async function replayCompanionFlowHistory(key: string, mode: HistoryMode,
 }
 
 function flowHistoryRefreshScope(entry: CompanionWorkspaceHistoryEntry): WorkspaceRefreshScope {
-  if (entry.type === 'nodes.change') return { kind: 'full' };
+  if (entry.type === 'nodes.change') return { kind: 'nodes', nodeIds: entry.changes.map(change => change.nodeId), structure: true };
   if (entry.type === 'review.grade') return { kind: 'nodes', nodeIds: [], reviewNodeIds: [entry.nodeId] };
   const readings = [{ nodeId: entry.nodeId, beforeReading: entry.beforeReading, afterReading: entry.afterReading },
     ...(entry.relatedReadings ?? [])];

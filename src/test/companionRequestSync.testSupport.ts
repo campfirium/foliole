@@ -15,6 +15,7 @@ import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { framedSyncFileKey, type FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import type { NativeRequestSyncHttpRequest } from '../../lib/platform/nativeRequestSyncHttpContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
+import { bindCompanionNodePriorities } from '../shared/platform/companion/runtime/companionNodePriorityBinding.js';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.js';
 import { rememberCompanionRequestSyncPeerState } from '../shared/platform/companion/sync/framed/companionRequestSyncPeerState.js';
 import { closeCompanionSyncPeerRounds } from '../shared/platform/companion/sync/framed/companionSyncPeerRounds.js';
@@ -38,8 +39,14 @@ vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', async original
     return { remove: async () => { native.backgroundEnded.delete(listener); } };
   }
 } }));
-vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', () => {
+vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', async () => {
+  const { CompanionNodePriorityState } = await import('../shared/platform/companion/runtime/companionNodePriorityState.js');
+  const priorities = new CompanionNodePriorityState();
   const owner = {
+    get nodePriorityRevision() { return priorities.revision; },
+    readNodePriorities: priorities.read.bind(priorities),
+    refreshNodePriorities: (scope: Parameters<typeof priorities.refresh>[1], db = native.db!) => priorities.refresh(db, scope),
+    clearNodePriorities: () => priorities.clear(),
     databasePath: '/fixture',
     read: (task: (db: DbPort) => unknown) => task(native.db!),
     readSnapshot: (task: (db: DbPort) => unknown) => task(native.db!),
@@ -77,6 +84,8 @@ export async function createCompanionRequestFixture(script = compiledScript) {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(script, true, true);
   await fixture.left.synchronize(fixture.rightSnapshot.origin);
   let sqlite = open();
+  getIosCompanionDatabaseOwner().clearNodePriorities();
+  const unbindPriorities = bindCompanionNodePriorities(getIosCompanionDatabaseOwner());
   function open() {
     const database = new Database(fixture.leftSnapshot.databasePath);
     database.exec('CREATE TABLE IF NOT EXISTS companion_meta (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT)');
@@ -117,10 +126,13 @@ export async function createCompanionRequestFixture(script = compiledScript) {
       syncCompanionIdentityObjects(fixture.rightSnapshot.origin, { ...options, framedPeer: peer }),
     async restart() {
       closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner());
+      getIosCompanionDatabaseOwner().clearNodePriorities();
       sqlite.close(); await fixture.restartLeft(); sqlite = open();
     },
     async close() {
       closeCompanionSyncPeerRounds(getIosCompanionDatabaseOwner());
+      unbindPriorities();
+      getIosCompanionDatabaseOwner().clearNodePriorities();
       sqlite.close(); native.db = null; native.files = null;
       await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
       await fs.rm(fixture.root, { recursive: true, force: true });

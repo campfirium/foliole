@@ -7,11 +7,15 @@ import {
   type CompanionDatabaseBootstrapResult
 } from '../../../../../lib/core/database/companionDatabaseLifecycle';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/syncGroupSchemaStatements';
+import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/workspaceSnapshotRefresh';
+import type { PriorityIndexNode } from '../../../../../lib/core/nodes/workspaceNodePriorityState';
+import type { RegularPushQueuePriority } from '../../../../../lib/core/review/unifiedPushQueueRules';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { COMPANION_DATABASE_NAME } from '../../../../../lib/platform/nativeCompanionContract';
 import { createCapacitorSqliteDbPort } from '../../capacitorSqliteDbPort';
 
 import { loadCompanionForegroundOwner } from './companionForegroundTimeOwner';
+import { CompanionNodePriorityState } from './companionNodePriorityState';
 import { createOwnedCompanionConnection } from './companionOwnedConnection';
 import { CompanionRequestSyncSnapshots } from './companionRequestSyncSnapshot';
 
@@ -41,6 +45,7 @@ export class CapacitorCompanionDatabaseOwner {
   private operationTail: Promise<void> = Promise.resolve();
   private readonly backgroundReaders = new Set<AbortController>();
   private snapshots: CompanionRequestSyncSnapshots | null = null;
+  private readonly nodePriorities = new CompanionNodePriorityState();
 
   constructor(
     private readonly manager: CapacitorCompanionDatabaseManager,
@@ -119,6 +124,23 @@ export class CapacitorCompanionDatabaseOwner {
     return this.enqueue(() => task(this.requireDb()));
   }
 
+  readNodePriorities(db: DbPort, defaultPriority: RegularPushQueuePriority, initial?: Iterable<PriorityIndexNode>) {
+    if (db !== this.requireDb()) throw new Error('node_priority_index_requires_owned_connection');
+    return this.nodePriorities.read(db, defaultPriority, initial);
+  }
+
+  refreshNodePriorities(scope: WorkspaceRefreshScope, db?: DbPort) {
+    if (db) {
+      if (db !== this.requireDb()) throw new Error('node_priority_index_requires_owned_connection');
+      return this.nodePriorities.refresh(db, scope);
+    }
+    return this.enqueue(() => this.nodePriorities.refresh(this.requireDb(), scope));
+  }
+
+  get nodePriorityRevision() { return this.nodePriorities.revision; }
+
+  clearNodePriorities() { this.nodePriorities.clear(); }
+
   foregroundTimeOwnerId() {
     return this.enqueue(() => loadCompanionForegroundOwner({
       manager: this.manager, libraryPath: this.databasePath, platform: this.platform
@@ -139,6 +161,7 @@ export class CapacitorCompanionDatabaseOwner {
     this.journalMode = null;
     this.path = null;
     this.snapshots = null;
+    this.nodePriorities.clear();
   }
 
   // Keep the complete operation on the single connection, including asynchronous reads.

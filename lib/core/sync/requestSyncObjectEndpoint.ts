@@ -21,6 +21,7 @@ export interface RequestSyncDatabaseHost {
   enqueueSearchInvalidations?: boolean;
   objectOptions?(db: DbPort): Promise<ApplySyncObjectsWithDbPortOptions>;
   objectApplied?(object: { objectType: string; globalId: string; workspaceScope: WorkspaceRefreshScope }): void | Promise<void>;
+  refreshNodeIndex?(db: DbPort, scope: WorkspaceRefreshScope): Promise<void>;
   readSnapshot<T>(read: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T>;
   write<T>(write: (db: DbPort) => Promise<T>): Promise<T>;
 }
@@ -72,8 +73,12 @@ export async function applyReceivedRequestSyncObject(host: RequestSyncDatabaseHo
   input: Pick<Parameters<typeof receiveRequestSyncObject>[1], 'context' | 'author' | 'peerState' | 'signal' | 'objectOptions'>,
   header: RequestSyncObjectHeader, files: import('./requestSyncFiles.js').RequestSyncFiles) {
   input.signal?.throwIfAborted();
-  const result = await host.write(async db => applyRequestSyncObject(db, receivedObjectInput(host, input, header, files,
-    { ...await host.objectOptions?.(db), ...input.objectOptions })));
+  const result = await host.write(async db => {
+    const applied = await applyRequestSyncObject(db, receivedObjectInput(host, input, header, files,
+      { ...await host.objectOptions?.(db), ...input.objectOptions }));
+    await host.refreshNodeIndex?.(db, applied.workspaceScope);
+    return applied;
+  });
   await host.objectApplied?.({ ...header, workspaceScope: result.workspaceScope });
   return { ...result, requestId: header.requestId };
 }

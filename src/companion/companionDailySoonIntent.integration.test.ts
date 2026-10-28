@@ -35,10 +35,13 @@ async function entry() {
 it('keeps mobile Soon unplanned until its shared transaction returns the authoritative cursor and history', async () => {
   const draft = await entry();
   const source = draft.beforeContext.reviewSession;
+  const next = library.database.prepare("SELECT node_id FROM daily_flow_entries WHERE cohort='queue' AND node_id<>? ORDER BY order_key LIMIT 1")
+    .get(source.currentNodeId!) as { node_id: string };
+  expect(next).toBeDefined();
   expect(draft.afterContext.reviewSession).toEqual(source);
   const result = await commitCompanionFlowHistory({ key, mode: 'reading-only', entry: draft });
   if (typeof result !== 'object' || !('session' in result)) throw new Error('missing_daily_session');
-  expect(result.session.currentNodeId).toBe(source.queueNodeIds[1]);
+  expect(result.session.currentNodeId).toBe(next.node_id);
   expect(library.database.prepare('SELECT cohort, initial_task FROM daily_flow_entries WHERE node_id=?').get(source.currentNodeId!)).toEqual({ cohort: 'soon', initial_task: 0 });
   expect(library.database.prepare('SELECT * FROM node_reading').all()).toEqual([]);
   expect((await loadCompanionFlowHistory(key)).undoStack).toHaveLength(1);

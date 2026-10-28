@@ -5,7 +5,7 @@ import { workspaceSnapshotValueEqual } from '../../../../lib/core/database/works
 import type { DbPort } from '../../../../lib/core/sync/dbPort.js';
 
 import { mergeCompanionLearningSnapshot } from './companionLearningSnapshotRefresh.js';
-import { companionWorkspaceSnapshots, registerCompanionWorkspaceRefresh } from './companionWorkspaceSnapshotStore.js';
+import { companionWorkspaceSnapshots, prepareCompanionWorkspaceIndex, registerCompanionWorkspaceRefresh } from './companionWorkspaceSnapshotStore.js';
 import { attachOpenCompanionVirtualFolderResults } from './runtime/companionVirtualFolderResults.js';
 import { getIosCompanionDatabaseOwner } from './runtime/iosCompanionDatabaseBootstrap.js';
 import { loadCompanionContentProjection } from './sync/workspace-state/companionContentProjection.js';
@@ -16,12 +16,16 @@ import { loadIosCompanionWorkspaceSnapshot } from './sync/workspace-state/iosCom
 type NodeScope = Extract<WorkspaceRefreshScope, { kind: 'nodes' }>;
 
 async function readSnapshot(input: { current: WorkspaceSnapshot | null; scope: WorkspaceRefreshScope }) {
-  return getIosCompanionDatabaseOwner().readSnapshot(async db => {
+  const owner = getIosCompanionDatabaseOwner();
+  const revision = owner.nodePriorityRevision;
+  const snapshot = await owner.readSnapshot(async db => {
     const scoped = input.current && input.scope.kind === 'nodes' && !input.scope.structure
       ? await readScoped(db, input.current, input.scope) : null;
     const next = scoped ?? await loadIosCompanionWorkspaceSnapshot(db);
     return next && attachOpenCompanionVirtualFolderResults(db, next);
   });
+  if (snapshot) await prepareCompanionWorkspaceIndex(owner, snapshot, revision);
+  return snapshot;
 }
 
 /** Returns null when the committed scope cannot be proven against this baseline. */

@@ -25,5 +25,5 @@ export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow
     await commitCompanionNodeHistoryWithDb(db, records, mutation.title,
       command.type === 'restore' ? 'local_restore' : 'local_mutation', mutation.subtreeNodeIds, readings, sessions);
     return command.nodeId;
-  });
+  }, { kind: 'nodes', nodeIds: [command.nodeId], structure: true });
 }

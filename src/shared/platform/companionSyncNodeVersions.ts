@@ -7,6 +7,7 @@ import { COMPANION_DATABASE_NAME, COMPANION_DATABASE_VERSION } from '../../../li
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
 import { createCapacitorSqliteDbPort } from './capacitorSqliteDbPort';
+import { updateCommittedCompanionWorkspace } from './companion/companionWorkspaceSnapshotStore';
 import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
 import { runCompanionHighValueMutationTask } from './companion/sync/mutation/companionSyncMutationRevision';
 import { getCompanionRuntimeCapability, hasCompanionLocalDatabase } from './companionRuntimeCapabilities';
@@ -43,7 +44,11 @@ export async function applyCompanionSyncNodeVersions(
   manager?: CompanionSqliteConnectionManager
 ) {
   if (!isNativeCompanionNodeVersionWriteRuntime() || nodes.length === 0) return [];
-  return runCompanionSyncWriterTask(() => applyCompanionSyncNodeVersionsWithinWriterTask(nodes, manager));
+  return runCompanionSyncWriterTask(async () => {
+    const ids = await applyCompanionSyncNodeVersionsWithinWriterTask(nodes, manager);
+    await updateCommittedCompanionWorkspace({ kind: 'nodes', nodeIds: ids, structure: true });
+    return ids;
+  });
 }
 
 export async function applyCompanionLocalNodeVersions(
@@ -53,7 +58,7 @@ export async function applyCompanionLocalNodeVersions(
   if (!isNativeCompanionNodeVersionWriteRuntime() || nodes.length === 0) return [];
   return runCompanionHighValueMutationTask(() => (
     applyCompanionSyncNodeVersionsWithinWriterTask(nodes, manager, 'local_mutation')
-  ), { kind: 'full' });
+  ), ids => ({ kind: 'nodes', nodeIds: ids, structure: true }));
 }
 
 export async function applyCompanionSyncNodeVersionsWithinWriterTask(
@@ -88,7 +93,7 @@ export async function applyCompanionTrashRestoreNodeVersions(
       ));
     }
     return applyCompanionSyncNodeVersionsWithSharedCoreOnDevice(nodes, manager, 'local_restore');
-  }, { kind: 'full' });
+  }, ids => ({ kind: 'nodes', nodeIds: ids, structure: true }));
 }
 
 export async function applyCompanionSyncNodeVersionsWithSharedCore(

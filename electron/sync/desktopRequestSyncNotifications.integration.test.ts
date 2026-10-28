@@ -9,6 +9,7 @@ app: { getPath: () => '/tmp/foliole-notification-test-unused', isPackaged: false
 
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 import { nodeSyncSnapshotHashMetadata } from '../../lib/core/database/nodeSyncSnapshotMetadata.js';
+import { WorkspaceNodePriorityState } from '../../lib/core/nodes/workspaceNodePriorityState.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
@@ -27,8 +28,10 @@ it('notifies committed node and tombstone identities once across normal repeated
   const source = fixture.peer('source'); const target = fixture.peer('target');
   const events: import('../ipc/contracts.js').WorkspaceSyncAppliedEvent[] = [];
   let deleted = false;
+  const priorities = new WorkspaceNodePriorityState([], 5);
   osBoundary.send = (channel, payload) => {
     expect(channel).toBe('foliole:workspace-sync-applied');
+    expect(priorities.priorities.get('topic')).toBe(deleted ? undefined : 5);
     const persisted = new Database(target.file, { readonly: true });
     try {
       expect(persisted.prepare("SELECT content FROM nodes WHERE id = 'topic'").get())
@@ -38,7 +41,14 @@ it('notifies committed node and tombstone identities once across normal repeated
     } finally { persisted.close(); }
     events.push(payload as import('../ipc/contracts.js').WorkspaceSyncAppliedEvent);
   };
-  const targetHost = { ...createDesktopRequestSyncDatabaseHost(target.file), ...target.host };
+  const targetHost: RequestSyncDatabaseHost = { ...createDesktopRequestSyncDatabaseHost(target.file), ...target.host,
+    refreshNodeIndex: async db => {
+      expect(target.sqlite.inTransaction).toBe(false);
+      const rows = await db.query<{ id: string; parent_id: string | null; priority: number | null }>(
+        'SELECT id, parent_id, priority FROM nodes');
+      priorities.update(rows.map(row => ({ id: row.id, parentNodeId: row.parent_id, priority: row.priority })),
+        [...priorities.priorities.keys()].filter(id => !rows.some(row => row.id === id)));
+    } };
   try {
     const original = textBranch('original-version', 'Original body😀');
     await applySyncNodesWithDbPort(source.db, [original]);

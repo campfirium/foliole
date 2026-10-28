@@ -4,6 +4,7 @@ import type { WorkspaceNodeSnapshot } from '../database/workspaceSnapshotHelpers
 import type { ReviewQueueNode } from '../review/queue/reviewQueuePlanner.js';
 import type { ReviewSchedulerSettings } from '../review/settings.js';
 import type { SchedulerCard } from '../review/types.js';
+import type { PushQueuePriority } from '../review/unifiedPushQueueRules.js';
 
 import { cycleChangeSchema } from './cycleFlowTypes.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
@@ -12,7 +13,7 @@ import { flowHistorySessionSchema } from './flowHistorySession.js';
 
 export type DailyFlowSnapshot = { nodeOrder: string[]; nodesById: Record<string, WorkspaceNodeSnapshot>; trashedNodeIds: string[] };
 export type DailyFlowLearningNode = Omit<ReviewQueueNode, 'content' | 'reveal'> & { hasContent: boolean; hasReveal: boolean };
-export type DailyFlowLearningSnapshot = { nodeOrder: string[]; nodesById: Record<string, ReviewQueueNode>; trashedNodeIds: string[] };
+export type DailyFlowLearningSnapshot = { nodePriorities?: ReadonlyMap<string, PushQueuePriority>; nodeOrder: string[]; nodesById: Record<string, ReviewQueueNode>; trashedNodeIds: string[] };
 export type DailyFlowSettings = Pick<ReviewSchedulerSettings, 'newDayStartsAtHour' | 'pushQueue'> & { scope?: string };
 export const dailyFlowOpenSchema = z.object({ now: z.string().datetime(),
   mode: z.enum(['recommended', 'review-first', 'reading-only']),

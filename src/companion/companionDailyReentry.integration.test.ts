@@ -31,7 +31,11 @@ it('admits a due review on native mobile reentry while keeping the current and p
   library.database.exec("UPDATE nodes SET kind='topic', reveal=NULL WHERE id IN ('a','b')");
   library.database.prepare("UPDATE node_review SET due=?, scheduled_days=0 WHERE node_id='c'").run(due);
   let session = (await openCompanionDailyFlow({ now, mode: 'reading-only' })).session;
-  const [first, second] = session.queueNodeIds;
+  const pending = () => library.database.prepare("SELECT node_id FROM daily_flow_entries WHERE cohort='soon' AND active=1 ORDER BY order_key")
+    .all() as Array<{ node_id: string }>;
+  const first = session.currentNodeId!;
+  const second = (library.database.prepare("SELECT node_id FROM daily_flow_entries WHERE cohort='queue' AND node_id<>? ORDER BY order_key LIMIT 1")
+    .get(first) as { node_id: string }).node_id;
   for (let i = 0; i < 2; i += 1) {
     const snapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
     const result = await commitCompanionFlowHistory({ key: 'flow_history:reentry', mode: 'reading-only',
@@ -43,7 +47,8 @@ it('admits a due review on native mobile reentry while keeping the current and p
   session = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;
   expect(session.currentNodeId).toBe(first);
   session = (await openCompanionDailyFlow({ now: '2026-10-25T08:09:59.999Z', mode: 'recommended' })).session;
-  expect(session.queueNodeIds).toEqual([first, second]);
+  expect(session.queueNodeIds).toEqual([first]);
+  expect(pending().map(row => row.node_id)).toEqual([first, second]);
   expect(session.cycle?.clearedAt).toBeTruthy();
   session = (await openCompanionDailyFlow({ now: due, mode: 'recommended' })).session;
   expect(session.currentNodeId).toBe(first);
@@ -51,6 +56,7 @@ it('admits a due review on native mobile reentry while keeping the current and p
   expect(session.queueNodeIds.length).toBeLessThanOrEqual(2);
   expect(session.cycle?.clearedAt).toBeTruthy();
   expect(session.readTopicCount).toBe(2);
+  expect(pending().map(row => row.node_id)).toEqual([first, second]);
   await closeIosCompanionDatabase();
   const database = new Database(path.join(library.root, 'library.db'));
   await initializeIosCompanionDatabase({ booted_at: due, database_path: null, database_ready: false,

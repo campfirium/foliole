@@ -7,6 +7,7 @@ import Database from 'better-sqlite3';
 import { createFakeCapacitorConnection } from '../../../companionSyncNodeVersionsTestSupport';
 import { invalidateCompanionReadingScope } from '../../reading/companionReadingScope';
 import { CapacitorCompanionDatabaseOwner, type CapacitorCompanionDatabaseManager } from '../../runtime/capacitorCompanionDatabaseOwner';
+import { bindCompanionNodePriorities } from '../../runtime/companionNodePriorityBinding';
 
 function deferred() {
   let resolve!: () => void;
@@ -32,6 +33,7 @@ export function createDisplayLibrary(platform: 'android' | 'ios', existingFile?:
   let holdDisplay = false;
   const counts = { rows: 0, queries: 0, fullQueries: 0 };
   const projectionPlans: ProjectionPlan[] = [];
+  const priorityReads: { params: unknown[]; rows: number }[] = [];
   const connections = new Map<boolean, Database.Database>([[false, writer]]);
   const adapt = (database: Database.Database) => {
     const connection = createFakeCapacitorConnection(database);
@@ -42,6 +44,7 @@ export function createDisplayLibrary(platform: 'android' | 'ios', existingFile?:
           return { values: [] };
         }
         const result = await connection.query(sql, params);
+        recordPriorityRead(sql, params, result.values?.length ?? 0, priorityReads);
         const plan = readProjectionPlan(database, sql, params);
         if (plan) projectionPlans.push(plan);
         if (sql.includes('AS collection_source_content')) {
@@ -72,13 +75,23 @@ export function createDisplayLibrary(platform: 'android' | 'ios', existingFile?:
     retrieveConnection: async () => adapt(writer)
   } as unknown as CapacitorCompanionDatabaseManager;
   const owner = new CapacitorCompanionDatabaseOwner(manager, platform);
-  return { owner, file, reading, release, directoryRows: () => counts.rows,
+  const unbindPriorities = bindCompanionNodePriorities(owner);
+  return { owner, file, reading, release, priorityReads, directoryRows: () => counts.rows,
     projectionPlans: () => projectionPlans, directoryQueries: () => counts.queries,
     fullDirectoryQueries: () => counts.fullQueries, hold: () => { holdDisplay = true; },
-    async close() {
-      await owner.close();
-      for (const connection of connections.values()) if (connection.open) connection.close();
-      rmSync(root, { recursive: true, force: true });
-    }
+    close: () => closeDisplayLibrary(owner, connections, root, unbindPriorities)
   };
+}
+
+async function closeDisplayLibrary(owner: CapacitorCompanionDatabaseOwner,
+  connections: Map<boolean, Database.Database>, root: string, unbind: () => void) {
+  unbind();
+  await owner.close();
+  for (const connection of connections.values()) if (connection.open) connection.close();
+  rmSync(root, { recursive: true, force: true });
+}
+
+function recordPriorityRead(sql: string, params: unknown[], rows: number,
+  reads: { params: unknown[]; rows: number }[]) {
+  if (sql.startsWith('SELECT id, parent_id, priority FROM nodes')) reads.push({ params, rows });
 }

@@ -69,6 +69,7 @@ export interface ReviewQueuePlanInput {
   readingDayStartsAtHour: number;
   nodeOrder: string[];
   nodesById: Record<string, ReviewQueueNode | undefined>;
+  nodePriorities?: ReadonlyMap<string, PushQueuePriority>;
   now: string;
   pushQueueRules: UnifiedPushQueueRules;
   trashedNodeIds: string[];
@@ -146,7 +147,7 @@ function sameCandidates(left: Candidates, right: Candidates) {
 
 // Owns only one construction's immutable input; callers release it after producing the daily list.
 export function createReviewQueuePlanner(input: ReviewQueuePlanInput) {
-  const priorities = createWorkspaceNodePriorityIndex(input.nodesById, input.pushQueueRules.defaultPriority);
+  const priorities = input.nodePriorities ?? createWorkspaceNodePriorityIndex(input.nodesById, input.pushQueueRules.defaultPriority);
   let previous: { candidates: Candidates; ordered: ReturnType<typeof buildOrderedQueues> } | undefined;
   return (options: Pick<ReviewQueuePlanInput, 'candidateNow' | 'mode' | 'limit'> = {}): ReviewQueuePlan => {
     const args = { ...input, ...options };

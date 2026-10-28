@@ -8,7 +8,7 @@ import { buildReviewSessionAfterGrade } from './flowGradeSession.js';
 import { calculateReviewStepElapsedMs } from './flowSessionProgress.js';
 import { advanceReviewSession } from './flowSessionState.js';
 
-type FlowPlanningSnapshot = Pick<ReviewQueuePlanInput, 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>;
+type FlowPlanningSnapshot = Pick<ReviewQueuePlanInput, 'nodeOrder' | 'nodesById' | 'trashedNodeIds' | 'nodePriorities'>;
 
 export function flowDay(now: string, settings: DailyFlowSettings) {
   return resolveCurrentDayStart(new Date(now), settings.newDayStartsAtHour).toISOString();

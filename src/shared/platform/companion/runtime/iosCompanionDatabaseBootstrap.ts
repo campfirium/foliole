@@ -15,6 +15,7 @@ import {
 import { CompanionDatabaseManager } from './companionDatabaseManager';
 import { stopCompanionForegroundTime } from './companionForegroundTime';
 import { closeCompanionFramedPayloadBudget, configureCompanionFramedPayloadBudget } from './companionFramedPayloadBudget';
+import { bindCompanionNodePriorities } from './companionNodePriorityBinding';
 
 export type IosCompanionDatabaseManager = CapacitorCompanionDatabaseManager;
 
@@ -23,6 +24,7 @@ export interface IosCompanionDatabaseBootstrapOptions {
 }
 
 let activeOwner: CapacitorCompanionDatabaseOwner | null = null;
+let unsubscribeNodePriorities: (() => void) | null = null;
 let lifecycleTail: Promise<void> = Promise.resolve();
 
 export function getIosCompanionDatabaseOwner() {
@@ -36,6 +38,8 @@ export function closeIosCompanionDatabase() {
 
 async function closeActiveDatabase() {
   const owner = activeOwner;
+  unsubscribeNodePriorities?.();
+  unsubscribeNodePriorities = null;
   if (owner) await closeCompanionFramedPayloadBudget(owner);
   await stopCompanionForegroundTime();
   if (activeOwner === owner) activeOwner = null;
@@ -86,6 +90,7 @@ async function initializeDatabase(
   }
   activeOwner = owner;
   invalidateCompanionReadingScope();
+  unsubscribeNodePriorities = bindCompanionNodePriorities(owner);
   return {
     ...nativeState,
     database_path: result.databasePath,
