@@ -9,7 +9,7 @@ import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { changeCycleHash } from '../../lib/core/flow/cycleFlowFingerprint.js';
 import { EMPTY_CYCLE_HASH } from '../../lib/core/flow/cycleFlowTypes.js';
 import { loadDailyFlowLearningSnapshot } from '../../lib/core/flow/dailyFlowLearningSnapshot.js';
-import { prepareFlowSession } from '../../lib/core/flow/dailyFlowPlanning.js';
+import { fullDayCandidates, prepareDailyFlowPlans, prepareFlowSession } from '../../lib/core/flow/dailyFlowPlanning.js';
 import { openDailyFlow, type DailyFlowPersistence } from '../../lib/core/flow/dailyFlowService.js';
 import { readCycleRows, readDailyFlow } from '../../lib/core/flow/dailyFlowStorage.js';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/settings.js';
@@ -67,8 +67,22 @@ it('persists every eligible large-library task and scales below quadratic growth
   const protectedBefore = peer.db.prepare('SELECT COUNT(*) AS n, SUM(LENGTH(content)) AS chars FROM nodes').get();
   const large = await sampleFirstGeneration(peer);
   const session = large.last.result.session;
-  const planned = prepareFlowSession(await persistence.learningSnapshot(peer.port),
-    { now, mode: 'recommended' }, settings(peer));
+  const snapshot = await persistence.learningSnapshot(peer.port);
+  const planning = [];
+  for (let index = 0; index < 5; index++) {
+    const start = performance.now();
+    const initial = prepareFlowSession(snapshot, { now, mode: 'recommended' }, settings(peer));
+    const fullDay = fullDayCandidates(snapshot, now, settings(peer));
+    const separateMs = performance.now() - start;
+    const sharedStart = performance.now();
+    const shared = prepareDailyFlowPlans(snapshot, { now, mode: 'recommended' }, settings(peer));
+    const sharedSession = prepareFlowSession(snapshot, { now, mode: 'recommended' }, settings(peer), undefined, shared.initial);
+    const sharedMs = performance.now() - sharedStart;
+    expect(sharedSession).toEqual(initial);
+    expect(shared.fullDayNodeIds).toEqual(fullDay);
+    planning.push({ separateMs, sharedMs });
+  }
+  const planned = prepareFlowSession(snapshot, { now, mode: 'recommended' }, settings(peer));
   const rows = await readCycleRows(peer.port);
   expect(rows.map(row => row.node_id)).toEqual(planned.queueNodeIds);
   expect(rows).toHaveLength(40000);
@@ -89,8 +103,61 @@ it('persists every eligible large-library task and scales below quadratic growth
   expect(peer.db.prepare('SELECT COUNT(*) AS n, SUM(LENGTH(content)) AS chars FROM nodes').get()).toEqual(protectedBefore);
   fs.mkdirSync('.tmp/artifacts/T441/first-generation', { recursive: true });
   fs.writeFileSync('.tmp/artifacts/T441/first-generation/scaling.json', JSON.stringify({
-    small: small.samples, large: large.samples, growth: large.durationMs / small.durationMs }));
+    planning, small: small.samples, large: large.samples, growth: large.durationMs / small.durationMs }));
   // Eight times the data may grow at most sixteenfold: ample noise margin over linear work,
   // while rejecting the old repeated whole-queue scans without a machine-specific ms target.
   expect(large.durationMs / small.durationMs).toBeLessThan(16);
 }, 30000);
+
+it.each(['recommended', 'review-first', 'reading-only'] as const)(
+  'retains exact daily membership and order in %s mode when some items become ready later', async mode => {
+    await startLibraries();
+    const peer = createPeer('desktop');
+    addTopics(peer, 0, 4);
+    const ids = peer.db.prepare('SELECT id FROM nodes ORDER BY id').all() as { id: string }[];
+    const later = '2026-10-26T08:10:00.000Z';
+    const tomorrow = '2026-10-28T08:00:00.000Z';
+    peer.db.prepare('INSERT INTO node_reading (node_id,last_handled_at,next_at) VALUES (?,?,?)')
+      .run(ids[1]!.id, now, later);
+    peer.db.prepare('INSERT INTO node_reading (node_id,last_handled_at,next_at) VALUES (?,?,?)')
+      .run(ids[2]!.id, now, tomorrow);
+    peer.db.prepare("UPDATE nodes SET kind='item', reveal='Answer' WHERE id=?").run(ids[3]!.id);
+    peer.db.prepare('INSERT INTO node_review (node_id,due,scheduled_days) VALUES (?,?,0)')
+      .run(ids[3]!.id, later);
+    const snapshot = await persistence.learningSnapshot(peer.port);
+    const initial = prepareFlowSession(snapshot, { now, mode }, settings(peer));
+    const expected = [...new Set([...initial.queueNodeIds, ...fullDayCandidates(snapshot, now, settings(peer))])];
+    await openDailyFlow(peer.port, { now, mode }, settings(peer), persistence);
+    const rows = await readCycleRows(peer.port);
+    expect(rows.map(row => row.node_id)).toEqual(expected);
+    expect(new Set(expected)).toEqual(new Set([ids[0]!.id, ids[1]!.id, ids[3]!.id]));
+    expect(rows.filter(row => row.initial_task).map(row => row.node_id)).toEqual(initial.queueNodeIds);
+    let fullReads = 0;
+    const observed = { ...persistence, learningSnapshot: (db: Parameters<DailyFlowPersistence['learningSnapshot']>[0], nodeIds?: readonly string[]) => {
+      if (!nodeIds) fullReads++;
+      return persistence.learningSnapshot(db, nodeIds);
+    } };
+    await openDailyFlow(peer.port, { now: later, mode }, settings(peer), observed);
+    expect(fullReads).toBe(0);
+    expect(await readCycleRows(peer.port)).toEqual(rows);
+  }
+);
+
+it('resumes a persisted later-today item at its due time without loading full-library learning facts', async () => {
+  await startLibraries();
+  const peer = createPeer('desktop');
+  addTopics(peer, 0, 1);
+  const { id } = peer.db.prepare('SELECT id FROM nodes').get() as { id: string };
+  const later = '2026-10-26T08:10:00.000Z';
+  peer.db.prepare('INSERT INTO node_reading (node_id,last_handled_at,next_at) VALUES (?,?,?)').run(id, now, later);
+  const first = await openDailyFlow(peer.port, { now, mode: 'recommended' }, settings(peer), persistence);
+  expect(first.session.currentNodeId).toBeNull();
+  expect((await readCycleRows(peer.port)).map(row => row.node_id)).toEqual([id]);
+  const scopedOnly: DailyFlowPersistence = { ...persistence, learningSnapshot: (db, ids) => {
+    if (!ids) throw new Error('An existing daily list must not reload full-library facts.');
+    return persistence.learningSnapshot(db, ids);
+  } };
+  const reopened = await openDailyFlow(peer.port, { now: later, mode: 'recommended' }, settings(peer), scopedOnly);
+  expect(reopened.session.currentNodeId).toBe(id);
+  expect(reopened.learning?.[id]?.reading?.nextAt).toBe(later);
+});

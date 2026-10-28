@@ -1,14 +1,13 @@
 import type { WorkspaceNodeSnapshot } from '../../database/workspaceSnapshotHelpers.js';
-import { hasNodeContent } from '../../nodes/nodeContentFlags.js';
-import { isFsrsReviewItemNode, isReadingReviewItemNode, type ReviewItemNodeLike } from '../reviewItemKind.js';
+import type { ReviewItemNodeLike } from '../reviewItemKind.js';
 import { assembleReadingPushQueue } from '../unifiedPushQueueAssembler.js';
 import { normalizePushQueuePriority, resolveInheritedPushQueuePriority, type UnifiedPushQueueRules } from '../unifiedPushQueueRules.js';
 
+import { collectReviewQueueCandidates } from './reviewQueuePlannerCandidates.js';
 import { resolveFsrsQueueNodeIds } from './reviewQueuePlannerFsrs.js';
-import { createSeededRandom, hasDeletedAncestor, hasShelvedAncestor } from './reviewQueuePlannerHelpers.js';
+import { createSeededRandom } from './reviewQueuePlannerHelpers.js';
 import { resolveModeQueueNodeIds } from './reviewQueuePlannerMode.js';
 import { resolveReviewQueueNodePathNodeIds, resolveReviewQueueReadingAvailableAt, resolveReviewQueueReadingDueAt } from './reviewQueuePlannerReadingPaths.js';
-import { isReviewProfileDue, parseReviewQueueTimestamp } from './reviewQueuePlannerTime.js';
 import type { ReviewSessionMode } from './reviewQueueTypes.js';
 
 export interface ReviewQueuePlan {
@@ -21,62 +20,6 @@ export interface ReviewQueuePlan {
 }
 
 export type ReviewQueueNode = ReviewItemNodeLike & Pick<WorkspaceNodeSnapshot, 'createdAt' | 'deletedAt' | 'hasContent' | 'id' | 'parentNodeId' | 'priority' | 'shelvedAt'> & Partial<Pick<WorkspaceNodeSnapshot, 'content' | 'reading'>>;
-
-function isQueueableReadingNode(
-  node: ReviewQueueNode | undefined,
-  nodesById: Record<string, ReviewQueueNode | undefined>,
-  now: string,
-  readingDayStartsAtHour: number
-): node is ReviewQueueNode {
-  if (!node || !isReadingReviewItemNode(node) || !hasNodeContent(node)) {
-    return false;
-  }
-  if (hasDeletedAncestor(node, nodesById) || hasShelvedAncestor(node, nodesById)) {
-    return false;
-  }
-  if (node.reading && node.reading.state !== 'active') {
-    return false;
-  }
-  return parseReviewQueueTimestamp(resolveReviewQueueReadingAvailableAt(node, readingDayStartsAtHour)) <= parseReviewQueueTimestamp(now);
-}
-
-function isSchedulableReadingNode(
-  node: ReviewQueueNode | undefined,
-  nodesById: Record<string, ReviewQueueNode | undefined>
-): node is ReviewQueueNode {
-  if (!node || !isReadingReviewItemNode(node) || !hasNodeContent(node)) {
-    return false;
-  }
-  if (hasDeletedAncestor(node, nodesById) || hasShelvedAncestor(node, nodesById)) {
-    return false;
-  }
-  if (node.reading && node.reading.state !== 'active') {
-    return false;
-  }
-  return true;
-}
-
-function isDueFsrsNode(
-  node: ReviewQueueNode | undefined,
-  nodesById: Record<string, ReviewQueueNode | undefined>,
-  now: string,
-  newDayStartsAtHour: number
-): node is ReviewQueueNode {
-  if (!node || !isFsrsReviewItemNode(node)) {
-    return false;
-  }
-  if (hasDeletedAncestor(node, nodesById)) {
-    return false;
-  }
-  return isReviewProfileDue(node.review, now, newDayStartsAtHour);
-}
-
-function isSchedulableFsrsNode(
-  node: ReviewQueueNode | undefined,
-  nodesById: Record<string, ReviewQueueNode | undefined>
-): node is ReviewQueueNode {
-  return Boolean(node && isFsrsReviewItemNode(node) && !hasDeletedAncestor(node, nodesById));
-}
 
 function resolveNodePriority(node: ReviewQueueNode, nodesById: Record<string, ReviewQueueNode | undefined>, defaultPriority: UnifiedPushQueueRules['defaultPriority']) {
   const priorityChain: unknown[] = [];
@@ -134,35 +77,6 @@ function resolveReadingQueueNodeIds(args: {
   ).map((entry) => entry.id);
 }
 
-function collectReviewQueueCandidates(args: {
-  includeScheduled: boolean;
-  readingDayStartsAtHour: number;
-  newDayStartsAtHour: number;
-  nodeOrder: string[];
-  nodesById: Record<string, ReviewQueueNode | undefined>;
-  now: string;
-  trashedNodeIds: Set<string>;
-}) {
-  const fsrsCandidates: ReviewQueueNode[] = [];
-  const readingCandidates: ReviewQueueNode[] = [];
-  args.nodeOrder.forEach((nodeId) => {
-    if (args.trashedNodeIds.has(nodeId)) return;
-    const node = args.nodesById[nodeId];
-    const isReadingCandidate = args.includeScheduled
-      ? isSchedulableReadingNode(node, args.nodesById)
-      : isQueueableReadingNode(node, args.nodesById, args.now, args.readingDayStartsAtHour);
-    if (node && isReadingCandidate) {
-      readingCandidates.push(node);
-      return;
-    }
-    const isFsrsCandidate = args.includeScheduled
-      ? isSchedulableFsrsNode(node, args.nodesById)
-      : isDueFsrsNode(node, args.nodesById, args.now, args.newDayStartsAtHour);
-    if (node && isFsrsCandidate) fsrsCandidates.push(node);
-  });
-  return { fsrsCandidates, readingCandidates };
-}
-
 export interface ReviewQueuePlanInput {
   candidateNow?: string;
   includeScheduled?: boolean;
@@ -177,12 +91,13 @@ export interface ReviewQueuePlanInput {
   trashedNodeIds: string[];
 }
 
-function buildOrderedQueues(args: ReviewQueuePlanInput) {
+type Candidates = ReturnType<typeof collectReviewQueueCandidates>;
+
+function collectCandidates(args: ReviewQueuePlanInput) {
   const includeScheduled = args.includeScheduled ?? false;
   const newDayStartsAtHour = args.newDayStartsAtHour;
-  const pushQueueRules = args.pushQueueRules;
   const trashedNodeIds = new Set(args.trashedNodeIds);
-  const { fsrsCandidates, readingCandidates } = collectReviewQueueCandidates({
+  return collectReviewQueueCandidates({
     includeScheduled,
     readingDayStartsAtHour: args.readingDayStartsAtHour,
     newDayStartsAtHour,
@@ -191,7 +106,11 @@ function buildOrderedQueues(args: ReviewQueuePlanInput) {
     now: args.candidateNow ?? args.now,
     trashedNodeIds
   });
+}
 
+function buildOrderedQueues(args: ReviewQueuePlanInput, { fsrsCandidates, readingCandidates }: Candidates) {
+  const includeScheduled = args.includeScheduled ?? false;
+  const pushQueueRules = args.pushQueueRules;
   const fsrsQueueNodeIds = resolveFsrsQueueNodeIds({
     candidates: fsrsCandidates,
     disperseMaterial: !includeScheduled,
@@ -213,8 +132,8 @@ function buildOrderedQueues(args: ReviewQueuePlanInput) {
   return { fsrsQueueNodeIds, readingQueueNodeIds };
 }
 
-export function buildReviewQueuePlan(args: ReviewQueuePlanInput): ReviewQueuePlan {
-  const { fsrsQueueNodeIds, readingQueueNodeIds } = buildOrderedQueues(args);
+function assemblePlan(args: ReviewQueuePlanInput,
+  { fsrsQueueNodeIds, readingQueueNodeIds }: ReturnType<typeof buildOrderedQueues>): ReviewQueuePlan {
   const queueNodeIds = resolveModeQueueNodeIds({
     fsrsQueueNodeIds,
     ...(args.limit !== undefined ? { limit: args.limit } : {}),
@@ -231,4 +150,28 @@ export function buildReviewQueuePlan(args: ReviewQueuePlanInput): ReviewQueuePla
     readingCandidateCount: readingQueueNodeIds.length,
     readingQueueNodeIds
   };
+}
+
+function sameCandidates(left: Candidates, right: Candidates) {
+  return left.fsrsCandidates.length === right.fsrsCandidates.length
+    && left.readingCandidates.length === right.readingCandidates.length
+    && left.fsrsCandidates.every((node, index) => node === right.fsrsCandidates[index])
+    && left.readingCandidates.every((node, index) => node === right.readingCandidates[index]);
+}
+
+// Owns only one construction's immutable input; callers release it after producing the daily list.
+export function createReviewQueuePlanner(input: ReviewQueuePlanInput) {
+  let previous: { candidates: Candidates; ordered: ReturnType<typeof buildOrderedQueues> } | undefined;
+  return (options: Pick<ReviewQueuePlanInput, 'candidateNow' | 'mode' | 'limit'> = {}): ReviewQueuePlan => {
+    const args = { ...input, ...options };
+    const candidates = collectCandidates(args);
+    const ordered = previous && sameCandidates(previous.candidates, candidates)
+      ? previous.ordered : buildOrderedQueues(args, candidates);
+    previous = { candidates, ordered };
+    return assemblePlan(args, ordered);
+  };
+}
+
+export function buildReviewQueuePlan(args: ReviewQueuePlanInput): ReviewQueuePlan {
+  return createReviewQueuePlanner(args)();
 }

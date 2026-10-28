@@ -6,7 +6,7 @@ import { allocateCycleKey, changeCycleHash, cycleMeta, cycleStamp } from './cycl
 import { cycleWindow, selectCycleSuccessor } from './cycleFlowSelection.js';
 import { EMPTY_CYCLE_HASH, type CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowOpenArgs, DailyFlowSettings } from './dailyFlowContract.js';
-import { flowDay, flowPlan, fullDayCandidates, prepareFlowSession } from './dailyFlowPlanning.js';
+import { flowDay, flowPlan, fullDayCandidates, prepareDailyFlowPlans, prepareFlowSession } from './dailyFlowPlanning.js';
 import { readCurrentFlowLearning } from './dailyFlowReceipt.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
@@ -17,12 +17,13 @@ export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArg
   const snapshot = await db.learningSnapshot();
   const seed = args.seed?.sessionStartedAt && flowDay(args.seed.sessionStartedAt, settings) === flowDay(args.now, settings)
     ? args.seed : undefined;
-  const initial = prepareFlowSession(snapshot, args, settings, seed);
+  const plans = prepareDailyFlowPlans(snapshot, args, settings);
+  const initial = prepareFlowSession(snapshot, args, settings, seed, plans.initial);
   const queue = initial.queueNodeIds;
   const queued = new Set(queue);
   const pinned = initial.currentNodeId && !queue.includes(initial.currentNodeId) ? [initial.currentNodeId] : [];
   const soon = [...new Set([...(initial.hiddenSoonNodeIds ?? []), ...(initial.soonNodeIds ?? [])])];
-  const ids = [...new Set([...queue, ...pinned, ...soon, ...fullDayCandidates(snapshot, args.now, settings)])];
+  const ids = [...new Set([...queue, ...pinned, ...soon, ...plans.fullDayNodeIds])];
   const pendingSoon = new Set(soon);
   const rows: CycleRow[] = ids.map((node_id, index) => ({ node_id, order_key: index + 1, active: 1,
     handled: 0, cohort: queued.has(node_id) ? 'queue' : pendingSoon.has(node_id) ? 'soon' : 'none', initial_task: queued.has(node_id) ? 1 : 0 }));

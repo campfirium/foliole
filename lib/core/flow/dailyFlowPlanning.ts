@@ -1,4 +1,4 @@
-import { buildReviewQueuePlan, type ReviewQueuePlanInput } from '../review/queue/reviewQueuePlanner.js';
+import { buildReviewQueuePlan, createReviewQueuePlanner, type ReviewQueuePlan, type ReviewQueuePlanInput } from '../review/queue/reviewQueuePlanner.js';
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 import { resolveCurrentDayStart } from '../review/reviewDayBoundary.js';
 
@@ -22,15 +22,32 @@ export function flowPlan(snapshot: FlowPlanningSnapshot, mode: ReviewSessionMode
 }
 
 export function fullDayCandidates(snapshot: DailyFlowLearningSnapshot, now: string, settings: DailyFlowSettings) {
+  const plan = flowPlan(snapshot, 'recommended', now, settings, false, flowDayEnd(now, settings));
+  return planCandidateIds(plan);
+}
+
+function flowDayEnd(now: string, settings: DailyFlowSettings) {
   const end = new Date(flowDay(now, settings));
   end.setDate(end.getDate() + 1);
-  const plan = flowPlan(snapshot, 'recommended', now, settings, false, new Date(end.getTime() - 1).toISOString());
+  return new Date(end.getTime() - 1).toISOString();
+}
+
+function planCandidateIds(plan: ReviewQueuePlan) {
   return [...new Set([...plan.queueNodeIds, ...plan.fsrsQueueNodeIds, ...plan.readingQueueNodeIds])];
 }
 
+export function prepareDailyFlowPlans(snapshot: FlowPlanningSnapshot, args: DailyFlowOpenArgs, settings: DailyFlowSettings) {
+  const plan = createReviewQueuePlanner({ ...snapshot, mode: args.mode, now: args.now,
+    newDayStartsAtHour: settings.newDayStartsAtHour, readingDayStartsAtHour: settings.newDayStartsAtHour,
+    pushQueueRules: settings.pushQueue });
+  const initial = plan();
+  const fullDay = plan({ mode: 'recommended', candidateNow: flowDayEnd(args.now, settings) });
+  return { initial, fullDayNodeIds: planCandidateIds(fullDay) };
+}
+
 export function prepareFlowSession(snapshot: FlowPlanningSnapshot, args: DailyFlowOpenArgs,
-  settings: DailyFlowSettings, seed?: DailyFlowSession): DailyFlowSession {
-  const planned = flowPlan(snapshot, args.mode, args.now, settings);
+  settings: DailyFlowSettings, seed?: DailyFlowSession,
+  planned = flowPlan(snapshot, args.mode, args.now, settings)): DailyFlowSession {
   const allowed = args.mode === 'review-first' ? planned.fsrsQueueNodeIds : args.mode === 'reading-only' ? planned.readingQueueNodeIds : [...planned.fsrsQueueNodeIds, ...planned.readingQueueNodeIds];
   const tasks = args.mode === 'review-first' ? planned.fsrsQueueNodeIds : args.mode === 'reading-only' ? planned.readingQueueNodeIds : planned.queueNodeIds;
   const ready = new Set(allowed);
