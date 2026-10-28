@@ -2,6 +2,7 @@ import { controlledFlowSqliteTests } from './native-sqlite-flow-tests.mjs';
 
 export const controlledSyncSqliteTests = [
   ...controlledFlowSqliteTests,
+  'src/companion/companionTrashSubtree.sync.integration.test.ts',
   'src/store/workspaceEntireTopicDismiss.sync.integration.test.ts',
   'src/shared/platform/companion/sync/workspace-state/companionSnapshotNodeRows.boundaries.test.ts',
   'electron/database/desktopSqlRecording.export.test.ts',

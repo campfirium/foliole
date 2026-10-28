@@ -5,6 +5,7 @@ import {
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import { prepareWorkspaceNodeChildrenIndex } from '../features/nodes/model/workspaceNodeChildrenIndex';
 import { runCompanionHistoryMutation } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion } from '../shared/platform/companion/runtime/companionNodeHistory';
 import { loadCompanionWorkspaceNodes } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
@@ -30,16 +31,19 @@ interface RestoreCompanionTrashNodeArgs {
 }
 
 function collectNodeSubtreeIds(nodeId: string, nodesById: Record<string, WorkspaceNodeSnapshot>) {
+  const index = prepareWorkspaceNodeChildrenIndex(nodesById);
   const result: string[] = [];
-  const visit = (currentNodeId: string) => {
+  const pending = [nodeId];
+  while (pending.length) {
+    const currentNodeId = pending.pop()!;
     result.push(currentNodeId);
-    for (const child of Object.values(nodesById)) {
-      if (child.parentNodeId === currentNodeId) {
-        visit(child.id);
-      }
+    const children = index.children.get(currentNodeId) ?? [];
+    for (let cursor = children.length - 1; cursor >= 0; cursor--) {
+      const child = children[cursor]!;
+      // Snapshot normalization excludes aliases whose record key differs from their ID.
+      if (child.key === child.id) pending.push(child.id);
     }
-  };
-  visit(nodeId);
+  }
   return result;
 }
 
@@ -73,33 +77,34 @@ function toRestoreCandidate(node: WorkspaceNodeSnapshot): RestoreNodeCandidate {
   };
 }
 
+async function loadRestoreSources(snapshot: WorkspaceSnapshot, nodeIds: string[]) {
+  if (!isAvailableNativeCompanionRuntime()) {
+    return nodeIds.map(nodeId => snapshot.nodesById[nodeId])
+      .filter((node): node is WorkspaceNodeSnapshot => Boolean(node));
+  }
+  const nodes = await loadCompanionWorkspaceNodes(nodeIds);
+  if (nodes.length !== nodeIds.length) throw new Error('Trash restore source is unavailable.');
+  if (nodes.some(node => node.currentVersionId !== snapshot.nodesById[node.id]?.currentVersionId)) {
+    throw new Error('local_restore_not_applied');
+  }
+  return nodes;
+}
+
 export async function restoreCompanionTrashNode(args: RestoreCompanionTrashNodeArgs) {
-  const snapshot = args.snapshot ? normalizeWorkspaceSnapshot(args.snapshot) : null;
+  const source = args.snapshot;
+  const snapshot = source ? normalizeWorkspaceSnapshot(source) : null;
   const node = snapshot?.nodesById[args.nodeId];
-  if (!snapshot || !node || !isCanonicalTrashedNodeId(snapshot, args.nodeId)) {
+  if (!source || !snapshot || !node || !isCanonicalTrashedNodeId(snapshot, args.nodeId)) {
     return null;
   }
   const restoredAt = args.now ?? new Date().toISOString();
-  const subtreeIds = collectNodeSubtreeIds(args.nodeId, snapshot.nodesById)
+  const subtreeIds = collectNodeSubtreeIds(args.nodeId, source.nodesById)
     .filter((nodeId) => isCanonicalTrashedNodeId(snapshot, nodeId));
   const restoreResult = resolveRestoreNodeCandidates(
     subtreeIds,
     Object.values(snapshot.nodesById).map(toRestoreCandidate)
   );
-  let restorableNodes = restoreResult.restoredNodeIds
-    .map((nodeId) => snapshot.nodesById[nodeId])
-    .filter((node): node is NonNullable<typeof node> => Boolean(node));
-  if (isAvailableNativeCompanionRuntime()) {
-    restorableNodes = await loadCompanionWorkspaceNodes(restoreResult.restoredNodeIds);
-    if (restorableNodes.length !== restoreResult.restoredNodeIds.length) {
-      throw new Error('Trash restore source is unavailable.');
-    }
-    if (restorableNodes.some((current) => (
-      current.currentVersionId !== snapshot.nodesById[current.id]?.currentVersionId
-    ))) {
-      throw new Error('local_restore_not_applied');
-    }
-  }
+  const restorableNodes = await loadRestoreSources(snapshot, restoreResult.restoredNodeIds);
   const restored = await Promise.all(
     restorableNodes.map((node) => buildRestoredNodeVersion(
       node, args.deviceId, restoredAt, node.id === args.nodeId ? args.versionId : undefined
