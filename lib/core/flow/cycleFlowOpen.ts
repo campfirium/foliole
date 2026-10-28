@@ -18,16 +18,19 @@ export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArg
   const seed = args.seed?.sessionStartedAt && flowDay(args.seed.sessionStartedAt, settings) === flowDay(args.now, settings)
     ? args.seed : undefined;
   const plans = prepareDailyFlowPlans(snapshot, args, settings);
+  args = { ...args, mode: plans.mode };
   const initial = prepareFlowSession(snapshot, args, settings, seed, plans.initial);
   const queue = initial.queueNodeIds;
   const queued = new Set(queue);
   const pinned = initial.currentNodeId && !queue.includes(initial.currentNodeId) ? [initial.currentNodeId] : [];
   const soon = [...new Set([...(initial.hiddenSoonNodeIds ?? []), ...(initial.soonNodeIds ?? [])])];
-  const ids = [...new Set([...queue, ...pinned, ...soon, ...plans.fullDayNodeIds])];
+  const ids = [...new Set(seed ? [...queue, ...pinned, ...soon, ...plans.fullDayNodeIds]
+    : [...(initial.currentNodeId ? [initial.currentNodeId] : []), ...plans.fullDayNodeIds])];
   const pendingSoon = new Set(soon);
   const rows: CycleRow[] = ids.map((node_id, index) => ({ node_id, order_key: index + 1, active: 1,
     handled: 0, cohort: queued.has(node_id) ? 'queue' : pendingSoon.has(node_id) ? 'soon' : 'none', initial_task: queued.has(node_id) ? 1 : 0 }));
-  const cycle = { clearKey: queue.length, clearedAt: null, scanAfter: 0, lapLimit: rows.length, tailKey: rows.length,
+  const clearKey = rows.reduce((last, row) => row.initial_task ? row.order_key : last, 0);
+  const cycle = { clearKey, clearedAt: null, scanAfter: 0, lapLimit: rows.length, tailKey: rows.length,
     remaining: queue.length,
     reviewRemaining: queue.filter(id => isFsrsReviewItemNode(snapshot.nodesById[id])).length };
   await db.writeRows(rows);
@@ -35,7 +38,7 @@ export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArg
   const session = { ...initial, currentNodeId: current, flowFormat: 'cycle-v1' as const, cycle };
   if (current) cycle.scanAfter = rows.find(row => row.node_id === current)!.order_key;
   else await chooseCycleCurrent(db, session, args.mode, args.now, settings);
-  return { session, snapshot, rows };
+  return { session, snapshot, rows, mode: plans.mode };
 }
 
 export async function reconcileCycle(db: DailyFlowStore, stored: CycleStored, now: string,
@@ -94,7 +97,7 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
     stored = null;
     args = { ...args, seed: undefined, preferredNodeId: undefined };
   }
-  if (args.startup && args.mode !== 'recommended') {
+  if (stored && args.startup && args.mode !== 'recommended') {
     const snapshot = await db.learningSnapshot();
     const plan = flowPlan(snapshot, args.mode, args.now, settings);
     const ready = args.mode === 'review-first' ? plan.fsrsQueueNodeIds : plan.readingQueueNodeIds;
@@ -104,6 +107,7 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
   if (!stored) {
     const initial = await initializeCycle(db, args, settings);
     session = initial.session;
+    args = { ...args, mode: initial.mode };
     createdRows?.(initial.rows);
   }
   else {

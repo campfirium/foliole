@@ -3,84 +3,41 @@ import path from 'node:path';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-const SCREENSHOT_PATH = path.resolve('.tmp/artifacts/queue-clear-summary-hidden.png');
-const DUE_REVIEW = {
-  difficulty: 0,
-  due: '2026-04-08T00:00:00.000Z',
-  elapsedDays: 0,
-  lapses: 0,
-  lastReviewAt: null,
-  reps: 0,
-  scheduledDays: 0,
-  stability: 0,
-  state: 0
-} as const;
+const SCREENSHOT_PATH = path.resolve('.tmp/artifacts/T587/queue-clear-summary-hidden.png');
 
-async function seedQueueClearWorkspace(desktopWindow: import('@playwright/test').Page) {
-  await desktopWindow.evaluate(async (dueReview) => {
-    await globalThis.window.__folioleWorkspaceDebug?.seedNodes([
-      {
-        content: 'Reading body',
-        id: 'queue-clear-reading-topic',
-        kind: 'topic',
-        title: 'Queue Clear Reading Topic'
-      },
-      {
-        content: 'Question body',
-        id: 'queue-clear-review-item',
-        kind: 'item',
-        reveal: 'Answer body',
-        review: dueReview,
-        title: 'Queue Clear Review Item'
-      }
-    ]);
-  }, DUE_REVIEW);
-  await desktopWindow.waitForFunction(() =>
-    globalThis.window.__folioleWorkspaceDebug?.listNodes().some((node) => node.id === 'queue-clear-reading-topic')
-  );
-}
-
-test('Queue clear summary omits next-review timing before continuing reading', async ({ desktopWindow }) => {
-  await expectWorkspaceShell(desktopWindow);
-  await seedQueueClearWorkspace(desktopWindow);
-
-  await desktopWindow.waitForFunction(() => {
-    const enterFlow = Array.from(document.querySelectorAll('button')).find((button) =>
-      /^(Enter Flow|进入 Flow)$/.test(button.getAttribute('aria-label') ?? '')
-    );
-    enterFlow?.click();
-    return Boolean(enterFlow);
+test('Queue clear summary omits next-review timing while reading stays available', async ({ desktopWindow: page }) => {
+  await expectWorkspaceShell(page);
+  await page.evaluate(async () => {
+    window.localStorage.setItem('foliole-app-language', 'en');
+    const snapshot = await window.electronAPI.invoke('load_workspace_snapshot', {});
+    for (const node of Object.values(snapshot.nodesById)) {
+      if (node.kind === 'topic' || node.kind === 'item') await window.__folioleWorkspaceDebug!.deleteNode(node.id);
+    }
+    await window.__folioleWorkspaceDebug!.seedNodes([
+      { id: 'queue-clear-review-item', kind: 'item', title: 'Queue Clear Review Item',
+        content: 'Question body', reveal: 'Answer body',
+        review: { due: '2026-04-08T00:00:00.000Z', elapsedDays: 0, lapses: 0, lastReviewAt: null,
+          reps: 0, scheduledDays: 0, stability: 0, difficulty: 0, state: 0 } },
+      { id: 'queue-clear-reading-topic', kind: 'topic', title: 'Queue Clear Reading Topic', content: 'Reading body' }
+    ], { persist: true });
   });
-  const debugState = await desktopWindow.evaluate(() => ({
-    activeNodeId: globalThis.window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null,
-    activeNode: globalThis.window.__folioleWorkspaceDebug?.getNode?.(
-      globalThis.window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? ''
-    ) ?? null,
-    buttons: Array.from(document.querySelectorAll('button')).map((button) =>
-      button.getAttribute('aria-label') || button.textContent?.trim() || ''
-    ),
-    reviewSession: globalThis.window.__folioleWorkspaceDebug?.getReviewSession?.() ?? null
-  }));
-  expect(debugState).toMatchObject({
-    activeNodeId: 'queue-clear-review-item',
-    activeNode: {
-      kind: 'item',
-      review: { due: DUE_REVIEW.due, state: DUE_REVIEW.state }
-    },
-    reviewSession: { currentNodeId: 'queue-clear-review-item' }
-  });
-  await desktopWindow.evaluate(() => {
-    globalThis.window.__folioleWorkspaceDebug?.completeReviewSessionForDebug?.({
-      completedAt: '2026-04-08T00:05:00.000Z',
-      continueNodeId: 'queue-clear-reading-topic',
-      sessionStartedAt: '2026-04-08T00:00:00.000Z'
-    });
-  });
-
-  await expect(desktopWindow.getByRole('heading', { name: 'Queue clear' })).toBeVisible();
-  await expect(desktopWindow.getByText(/Reviewed|已复习/)).toBeVisible();
-  await expect(desktopWindow.getByText('Next review')).toHaveCount(0);
-  await expect(desktopWindow.getByText('下次复习')).toHaveCount(0);
-  await expect(desktopWindow.getByRole('button', { name: /^(Continue reading|继续阅读)$/ })).toBeVisible();
-  await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId))
+    .toBe('queue-clear-review-item');
+  await page.getByRole('button', { name: /^(Show Answer|Reveal Answer)$/ }).click();
+  await page.getByRole('button', { name: 'Good', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId))
+    .toBe('queue-clear-reading-topic');
+  expect(await page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().cycle?.clearedAt)).toBeTruthy();
+  await page.getByRole('button', { name: 'Queue clear', exact: true }).click();
+  const summary = page.getByRole('menu');
+  await expect(summary.getByText('Reviewed', { exact: true })).toBeVisible();
+  await expect(summary.getByText('Next review', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Continue reading', exact: true })).toHaveCount(0);
+  await page.screenshot({ path: SCREENSHOT_PATH });
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Read', exact: true })).toBeEnabled();
+  await expect(page.getByText('Reading body', { exact: true })).toBeVisible();
 });

@@ -150,11 +150,16 @@ function sameCandidates(left: Candidates, right: Candidates) {
     && left.readingCandidates.every((node, index) => node === right.readingCandidates[index]);
 }
 
-// Owns only one construction's immutable input; callers release it after producing the daily list.
-export function createReviewQueuePlanner(input: ReviewQueuePlanInput) {
+function createPlanningContext(input: ReviewQueuePlanInput) {
   const priorities = input.nodePriorities ?? createWorkspaceNodePriorityIndex(input.nodesById, input.pushQueueRules.defaultPriority);
   const paths = input.nodePaths ?? createWorkspaceNodePaths(Object.values(input.nodesById).filter((node): node is ReviewQueueNode => Boolean(node)));
   const time = createReviewQueueTimeInput(input.readingDayStartsAtHour, input.newDayStartsAtHour, input.dayWindow);
+  return { priorities, paths, time };
+}
+
+// Owns only one construction's immutable input; callers release it after producing the daily list.
+export function createReviewQueuePlanner(input: ReviewQueuePlanInput) {
+  const { priorities, paths, time } = createPlanningContext(input);
   let previous: { candidates: Candidates; ordered: ReturnType<typeof buildOrderedQueues> } | undefined;
   return (options: Pick<ReviewQueuePlanInput, 'candidateNow' | 'mode' | 'limit'> = {}): ReviewQueuePlan => {
     const args = { ...input, ...options };
@@ -168,4 +173,21 @@ export function createReviewQueuePlanner(input: ReviewQueuePlanInput) {
 
 export function buildReviewQueuePlan(args: ReviewQueuePlanInput): ReviewQueuePlan {
   return createReviewQueuePlanner(args)();
+}
+
+// Day end controls membership; current eligibility projects the already ordered kind queues.
+export function buildReviewQueueDayPlan(input: ReviewQueuePlanInput, dayEnd: string) {
+  const { priorities, paths, time } = createPlanningContext(input);
+  const candidates = collectCandidates({ ...input, candidateNow: dayEnd }, time);
+  const ordered = buildOrderedQueues(input, candidates, priorities, paths, time);
+  const nowMs = time.timestamp(input.now);
+  const ready = new Set([
+    ...candidates.fsrsCandidates.filter(node => time.reviewDueAt(node, input.now) <= nowMs),
+    ...candidates.readingCandidates.filter(node => time.timestamp(time.readingAvailableAt(node)) <= nowMs)
+  ].map(node => node.id));
+  const current = {
+    fsrsQueueNodeIds: ordered.fsrsQueueNodeIds.filter(id => ready.has(id)),
+    readingQueueNodeIds: ordered.readingQueueNodeIds.filter(id => ready.has(id))
+  };
+  return { initial: assemblePlan(input, current), fullDay: assemblePlan({ ...input, mode: 'recommended' }, ordered) };
 }

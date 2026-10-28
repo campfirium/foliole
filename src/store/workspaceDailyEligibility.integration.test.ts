@@ -91,7 +91,9 @@ it('reconciles a changed mix once without restarting completed progress or repea
   expect(local.queueNodeIds).not.toContain(completed);
   expect(local.currentNodeId).toBe(before.currentNodeId);
   expect(local.reviewedItemCount).toBe(before.reviewedItemCount);
-  expect((mobile.db.prepare('SELECT settings_key FROM daily_flow_state').get() as { settings_key: string }).settings_key).toBe(JSON.stringify(changed));
+  const storedSettings = JSON.parse((mobile.db.prepare('SELECT settings_key FROM daily_flow_state').get() as { settings_key: string }).settings_key);
+  expect(storedSettings).toMatchObject(changed);
+  expect(storedSettings.dayWindow).toEqual(local.dayWindow);
   reads.mockClear();
   expect(await open(mobile, now, changed)).toEqual(local);
   expect(reads.mock.calls.every(call => call[1] !== undefined)).toBe(true);

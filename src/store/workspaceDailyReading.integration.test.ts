@@ -70,8 +70,7 @@ it.each(['read', 'later', 'dismiss'] as const)('%s keeps the remaining order and
   const reads = vi.spyOn(desktopDailyFlowPersistence, 'snapshot');
   const invoke = { read: app.actions.readReviewTopic, later: app.actions.postponeReviewTopic, dismiss: app.actions.dismissReviewTopic };
   expect(await invoke[action](now)).toBe(true);
-  expect(app.getState().reviewSession.currentNodeId).toBe(before.queueNodeIds[1]);
-  expect(app.getState().reviewSession.queueNodeIds).toHaveLength(2);
+  expect(app.getState().reviewSession.currentNodeId).toBe((rowsBefore[0] as { node_id: string }).node_id);
   expect(reads.mock.calls.every(call => call[1] !== undefined && call[1].length <= 32)).toBe(true);
   expect(untouched()).toEqual(rowsBefore);
 });
@@ -169,7 +168,8 @@ it.each(['read', 'later', 'dismiss'] as const)('%s rejects changed target facts 
 
 it.each(['read', 'read-release', 'later', 'dismiss'] as const)('%s preserves sequential release, related facts and history', async action => {
   const app = await setup(0, 2);
-  const [first, second] = app.getState().reviewSession.queueNodeIds as [string, string];
+  const [first, second] = (openDatabaseConnection().sqlite.prepare('SELECT node_id FROM daily_flow_entries ORDER BY order_key')
+    .all() as { node_id: string }[]).map(row => row.node_id) as [string, string];
   const folder = { ...createQaNode('source', now), kind: 'folder' as const, reading: null, review: null,
     reveal: null, sequentialReadingEnabled: true, manualChildOrder: [first, second] };
   upsertNodeSnapshot({ nodeId: folder.id, title: folder.title, kind: 'folder', parentNodeId: null,
@@ -224,8 +224,12 @@ it('keeps a same-day minute item in its cycle position ahead of a topic moved So
   expect(await app.actions.revisitReviewTopicSoon(now)).toBe(true);
   expect(await app.actions.readReviewTopic(due)).toBe(true);
   expect(app.getState().reviewSession.currentNodeId).toBe('node-0');
-  expect(app.getState().reviewSession.queueNodeIds).toEqual(['node-0', topics[0]]);
+  expect(db.prepare('SELECT node_id,cohort FROM daily_flow_entries WHERE node_id=?').get(topics[0]))
+    .toEqual({ node_id: topics[0], cohort: 'soon' });
   closeDatabaseConnection();
   initializeDatabase();
   expect((await openDesktopDailyFlow({ now: due, mode: 'recommended' })).session.currentNodeId).toBe('node-0');
+  app.actions.revealReviewAnswer();
+  expect(await app.actions.gradeReviewCard(3, due)).toBe(true);
+  expect(app.getState().reviewSession.currentNodeId).toBe(topics[0]);
 });

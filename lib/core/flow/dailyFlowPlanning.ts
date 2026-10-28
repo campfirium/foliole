@@ -1,4 +1,5 @@
-import { buildReviewQueuePlan, createReviewQueuePlanner, type ReviewQueuePlan, type ReviewQueuePlanInput } from '../review/queue/reviewQueuePlanner.js';
+import { buildReviewQueueDayPlan, buildReviewQueuePlan, type ReviewQueuePlan, type ReviewQueuePlanInput } from '../review/queue/reviewQueuePlanner.js';
+import { resolveModeQueueNodeIds } from '../review/queue/reviewQueuePlannerMode.js';
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 import { resolveCurrentDayStart, resolveNextDayStart } from '../review/reviewDayBoundary.js';
 
@@ -40,13 +41,19 @@ function planCandidateIds(plan: ReviewQueuePlan) {
 }
 
 export function prepareDailyFlowPlans(snapshot: FlowPlanningSnapshot, args: DailyFlowOpenArgs, settings: DailyFlowSettings) {
-  const plan = createReviewQueuePlanner({ ...snapshot, mode: args.mode, now: args.now,
+  const plans = buildReviewQueueDayPlan({ ...snapshot, mode: args.mode, now: args.now,
     ...(settings.dayWindow ? { dayWindow: settings.dayWindow } : {}),
     newDayStartsAtHour: settings.newDayStartsAtHour, readingDayStartsAtHour: settings.newDayStartsAtHour,
-    pushQueueRules: settings.pushQueue });
-  const initial = plan();
-  const fullDay = plan({ mode: 'recommended', candidateNow: flowDayEnd(args.now, settings) });
-  return { initial, fullDayNodeIds: planCandidateIds(fullDay) };
+    pushQueueRules: settings.pushQueue }, flowDayEnd(args.now, settings));
+  const { initial } = plans;
+  const unavailable = args.mode === 'review-first' ? !initial.fsrsQueueNodeIds.length
+    : args.mode === 'reading-only' && !initial.readingQueueNodeIds.length;
+  const mode = args.startup && unavailable ? 'recommended' : args.mode;
+  if (mode !== args.mode) {
+    initial.queueNodeIds = resolveModeQueueNodeIds({ ...initial, mode, pushQueueRules: settings.pushQueue });
+    initial.overflowCount = initial.fsrsCandidateCount + initial.readingCandidateCount - initial.queueNodeIds.length;
+  }
+  return { mode, initial, fullDayNodeIds: planCandidateIds(plans.fullDay) };
 }
 
 export function prepareFlowSession(snapshot: FlowPlanningSnapshot, args: DailyFlowOpenArgs,

@@ -1,4 +1,5 @@
 export const controlledFlowSqliteTests = [
+  'electron/database/dailyFlowSinglePass.integration.test.ts',
   'src/store/workspaceFlowLearningFacts.integration.test.ts',
   'src/store/workspaceCycleFairness.integration.test.ts',
   'src/store/cycleFlowMigration.integration.test.ts',
@@ -15,6 +16,7 @@ export const controlledFlowSqliteTests = [
   'src/companion/companionDailySoon.integration.test.ts',
   'src/companion/companionDailySoonIntent.integration.test.ts',
   'src/store/workspaceDailyEligibility.integration.test.ts',
+  'src/store/workspaceDailySinglePassClear.integration.test.ts',
   'src/store/workspaceDailyExceptions.sync.integration.test.ts',
   'src/store/workspaceDailyFlow.integration.test.ts',
   'src/store/workspaceDailyFlow.sync.integration.test.ts',
