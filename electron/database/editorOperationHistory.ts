@@ -29,3 +29,10 @@ export function saveEditorOperationHistory(payloadJson: string) {
        updated_at = excluded.updated_at`
   ).run(payloadJson, new Date().toISOString());
 }
+
+/** Undo belongs to the current renderer session; old payloads are retired. */
+export function clearRetiredEditorOperationHistory() {
+  openDatabaseConnection().sqlite.prepare(
+    'DELETE FROM editor_operation_history'
+  ).run();
+}

@@ -1,8 +1,6 @@
-import { digestEditorContent } from '../features/editor/model/editorContentDigest';
 import {
   getEditorOperationTopEntry,
   isPendingEditorAnnotationEntry,
-  moveEditorOperationEntry,
   pushEditorOperationEntry,
   removeEditorOperationEntry,
   type EditorAnnotationOperationEntry,
@@ -16,6 +14,7 @@ import {
 } from './workspaceEditorAnnotationCreationSettlement';
 import { startEditorAnnotationHistoryMutation } from './workspaceEditorAnnotationHistoryMutation';
 import { createEditorAnnotationDeleteEntry } from './workspaceEditorAnnotationOperationEntry';
+import { applyWorkspaceTextHistory } from './workspaceEditorTextHistory';
 import {
   hasWorkspaceNodeMutationRuntime,
   syncNodeContentToRuntime,
@@ -35,31 +34,6 @@ interface QueuedEditorOperation {
 }
 
 const EDITOR_OPERATION_QUEUE_LIMIT = 50;
-
-function expectedTextContent(entry: Extract<EditorOperationHistoryEntry, { type: 'text.edit' }>, mode: 'redo' | 'undo') {
-  return mode === 'undo' ? entry.afterDigest : entry.beforeDigest;
-}
-
-function applyTextEntry(args: {
-  context?: EditorOperationApplyContext;
-  entry: Extract<EditorOperationHistoryEntry, { type: 'text.edit' }>;
-  mode: 'redo' | 'undo';
-  nodeId: string;
-  set: WorkspaceSet;
-}) {
-  const currentContent = args.context?.getCurrentContent?.() ?? args.context?.currentContent;
-  if (!args.context || args.context.nodeId !== args.nodeId ||
-    digestEditorContent(currentContent ?? '') !== expectedTextContent(args.entry, args.mode)) {
-    return false;
-  }
-  if (!args.context.applyText(args.entry, args.mode)) {
-    return false;
-  }
-  args.set((state) => ({
-    editorOperationHistory: moveEditorOperationEntry(state.editorOperationHistory, args.nodeId, args.mode)
-  }));
-  return true;
-}
 
 function hasBlockingAnnotation(get: WorkspaceGet, nodeId: string) {
   return (['undo', 'redo'] as const).some((mode) => isPendingEditorAnnotationEntry(
@@ -81,8 +55,18 @@ function resolveOperationTarget(
   return parentEntry && parentEntry.type !== 'text.edit' && parentNodeId ? parentNodeId : requestedNodeId;
 }
 
+function createQueueScopeGuard(get: WorkspaceGet, queuedByNodeId: Map<string, QueuedEditorOperation[]>) {
+  let libraryScope: WorkspaceState['libraryScope'];
+  return () => {
+    if (get().libraryScope === libraryScope) return;
+    queuedByNodeId.clear();
+    libraryScope = get().libraryScope;
+  };
+}
+
 function createOperationRunner(set: WorkspaceSet, get: WorkspaceGet) {
   const queuedByNodeId = new Map<string, QueuedEditorOperation[]>();
+  const checkScope = createQueueScopeGuard(get, queuedByNodeId);
   const clearQueued = (nodeId: string) => queuedByNodeId.delete(nodeId);
   const enqueue = (nodeId: string, command: QueuedEditorOperation) => {
     const queued = queuedByNodeId.get(nodeId) ?? [];
@@ -97,6 +81,7 @@ function createOperationRunner(set: WorkspaceSet, get: WorkspaceGet) {
     queueWhenBlocked?: boolean
   ) => ApplyOutcome;
   const drain = (nodeId: string) => {
+    checkScope();
     const queued = queuedByNodeId.get(nodeId);
     if (!queued || queued.length === 0) return clearQueued(nodeId);
     const next = queued[0]!;
@@ -112,6 +97,7 @@ function createOperationRunner(set: WorkspaceSet, get: WorkspaceGet) {
     queueMicrotask(() => drain(nodeId));
   };
   applyForNode = (nodeId, mode, context, queueWhenBlocked = true) => {
+    checkScope();
     if (hasBlockingAnnotation(get, nodeId)) {
       if (!queueWhenBlocked) return 'blocked';
       return enqueue(nodeId, { ...(context ? { context } : {}), mode }) ? 'pending' : 'failed';
@@ -119,7 +105,7 @@ function createOperationRunner(set: WorkspaceSet, get: WorkspaceGet) {
     const entry = getEditorOperationTopEntry(get().editorOperationHistory, nodeId, mode);
     if (!entry) return 'noop';
     if (entry.type === 'text.edit') {
-      return applyTextEntry({ entry, mode, nodeId, set, ...(context ? { context } : {}) })
+      return applyWorkspaceTextHistory({ entry, mode, nodeId, set, ...(context ? { context } : {}) })
         ? 'applied'
         : 'failed';
     }

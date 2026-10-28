@@ -219,3 +219,23 @@ it('keeps queued undo and redo while an earlier annotation creation is still pen
     ]
   });
 });
+
+it('ignores an annotation undo acknowledgement after the library owner changes', async () => {
+  const { harness, historyActions } = createHarness();
+  const createdId = await createHighlight(harness, 'old-owner');
+  const pending = deferredResult<{ deletedNodeIds: string[] }>();
+  vi.mocked(hasWorkspaceNodeMutationRuntime).mockReturnValue(true);
+  vi.mocked(syncSoftDeleteNodesToRuntime).mockImplementationOnce(() => pending.promise);
+  harness.setState({ libraryScope: 'old-library' });
+  expect(historyActions.undoEditorOperation()).toBe(true);
+  expect(historyActions.redoEditorOperation()).toBe(true);
+  harness.setState({ libraryScope: 'new-library', editorOperationHistory: {
+    invalidations: [], recentNodeIds: [], sessionsByNodeId: {}
+  } });
+  const before = harness.getState();
+  pending.resolve({ deletedNodeIds: [createdId!] });
+  await pending.promise;
+  await new Promise(resolve => setTimeout(resolve, 0));
+  expect(harness.getState()).toBe(before);
+  expect(syncRestoreNodesToRuntime).not.toHaveBeenCalled();
+});

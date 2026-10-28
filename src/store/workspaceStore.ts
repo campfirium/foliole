@@ -2,9 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import { createEmptyEditorOperationHistory } from '../features/editor/model/editorOperationHistory';
-import { serializeEditorOperationHistory } from '../features/editor/model/editorOperationHistoryPersistence';
 import { DEFAULT_REVIEW_SESSION_MODE } from '../features/review/model/reviewSessionMode';
-import { scheduleEditorOperationHistorySave } from '../shared/platform/runtime/editorOperationHistoryRuntimeRepository';
 
 import { createEmptyWorkspaceActionHistory, createWorkspaceActionHistoryActions } from './workspaceActionHistory';
 import { prepareBrowserWorkspacePublish } from './workspaceBrowserCommit';
@@ -194,12 +192,6 @@ workspaceStore.setState = ((partial, replace) =>
   }) as typeof workspaceStore.setState;
 
 registerPendingNodeSyncRendererBoundary(workspaceStore);
-
-workspaceStore.subscribe((state, previousState) => {
-  if (state.editorOperationHistory === previousState.editorOperationHistory) return;
-  const history = state.editorOperationHistory;
-  void scheduleEditorOperationHistorySave(() => serializeEditorOperationHistory(history));
-});
 
 installDailyFlowExternalRefresh(workspaceStore);
 

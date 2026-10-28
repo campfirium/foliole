@@ -13,6 +13,7 @@ import type { RegularPushQueuePriority } from '../../../../../lib/core/review/un
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { COMPANION_DATABASE_NAME } from '../../../../../lib/platform/nativeCompanionContract';
 import { createCapacitorSqliteDbPort } from '../../capacitorSqliteDbPort';
+import { clearRetiredCompanionEditHistory, createCompanionEditHistorySession } from '../editing/companionEditHistorySession';
 
 import { loadCompanionForegroundOwner } from './companionForegroundTimeOwner';
 import { CompanionNodePriorityState } from './companionNodePriorityState';
@@ -61,12 +62,13 @@ export class CapacitorCompanionDatabaseOwner {
     const existed = Boolean((await this.manager.isDatabase(COMPANION_DATABASE_NAME)).result);
     if (!existed && request.allowCreate === false) throw new Error('Companion database creation is blocked.');
     const connection = await this.openConnection();
-    const db = createCapacitorSqliteDbPort(connection, this.platform);
+    const db = createCompanionEditHistorySession(createCapacitorSqliteDbPort(connection, this.platform));
     try {
       await db.query('PRAGMA busy_timeout = 5000');
       const result = await bootstrapCompanionDatabase(db, { expectedJournalMode: 'wal', ...request, allowCreate: !existed });
       // In-memory editor drafts cannot survive a fresh renderer/database owner session.
       await db.run("DELETE FROM node_version_local_holds WHERE hold_id LIKE 'companion:%'");
+      await clearRetiredCompanionEditHistory(db);
       if (this.platform === 'android') {
         for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) await db.run(statement);
       }

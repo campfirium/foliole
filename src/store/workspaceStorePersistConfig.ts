@@ -1,6 +1,7 @@
 import type { PersistOptions } from 'zustand/middleware';
 
 import { resolveWorkspaceSnapshotActiveNodeId } from '../../lib/core/database/workspaceSnapshotContract';
+import { createEmptyEditorOperationHistory } from '../features/editor/model/editorOperationHistory';
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
 
@@ -63,6 +64,14 @@ export function partializeWorkspaceState(state: WorkspaceState): WorkspacePersis
   };
 }
 
+function createWorkspaceSessionHistories(current: WorkspaceState, persisted: Partial<WorkspacePersistedState>) {
+  const sameLibrary = persisted.libraryScope === undefined || current.libraryScope === persisted.libraryScope;
+  return {
+    appActionHistory: createEmptyWorkspaceActionHistory(),
+    editorOperationHistory: sameLibrary ? current.editorOperationHistory : createEmptyEditorOperationHistory()
+  };
+}
+
 export function createWorkspaceStorePersistConfig(
   onHydrated: (error?: unknown) => void,
   now: () => Date = () => new Date()
@@ -82,8 +91,8 @@ export function createWorkspaceStorePersistConfig(
       const nextState = {
         ...current,
         ...persisted,
-        appActionHistory: createEmptyWorkspaceActionHistory(),
         ...mergeHydratedWorkspaceMembership(current, persisted),
+        ...createWorkspaceSessionHistories(current, persisted),
         isHydrated: current.isHydrated,
         layout: {
           ...current.layout,

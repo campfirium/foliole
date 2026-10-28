@@ -4,7 +4,6 @@ import { afterEach, expect, it, vi } from 'vitest';
 import type { NativeInvoke } from '../../lib/platform/nativeContract';
 import { createEmptyEditorOperationHistory } from '../features/editor/model/editorOperationHistory';
 import { createTextHistoryEntry } from '../features/editor/model/editorOperationHistory.testSupport';
-import { serializeEditorOperationHistory } from '../features/editor/model/editorOperationHistoryPersistence';
 import { flushEditorOperationHistorySave } from '../shared/platform/runtime/editorOperationHistoryRuntimeRepository';
 
 import { useWorkspaceStore } from './workspaceStore';
@@ -30,41 +29,24 @@ function createHistory(sessionCount: number) {
   return history;
 }
 
-it.each([1, 6, 12])('converts only history snapshots actually written with %i retained sessions', async (size) => {
-  delete window.electronAPI;
-  await flushEditorOperationHistorySave();
-  const history = createHistory(size);
-  useWorkspaceStore.setState({ editorOperationHistory: history });
-  await flushEditorOperationHistorySave();
-  const writes: string[] = [];
-  const blocked = Promise.withResolvers<void>();
+it.each([1, 6, 12])('keeps %i document histories in memory without encoding or writing them', async (size) => {
+  const invoke = vi.fn(async () => null);
   window.electronAPI = {
-    invoke: (async (command: string, args?: { payloadJson?: string }) => {
-      if (command !== 'save_editor_operation_history') return null;
-      writes.push(args!.payloadJson!);
-      if (writes.length === 1) await blocked.promise;
-      return null;
-    }) as NativeInvoke,
+    invoke: invoke as NativeInvoke,
     onManagedInboxUpdated: () => () => undefined,
     onNativeMenuCommand: () => () => undefined,
     onWindowResized: () => () => undefined
   };
+  const history = createHistory(size);
   const conversions = vi.spyOn(ChangeSet.prototype, 'toJSON');
-  try {
-    useWorkspaceStore.setState({ editorOperationHistory: { ...history } });
-    for (let index = 1; index <= 3; index += 1) {
-      useWorkspaceStore.setState({ editorOperationHistory: {
-        ...history, invalidations: [{ nodeId: `discarded-${index}`, reason: `reason-${index}` }]
-      } });
-    }
-    expect(writes).toHaveLength(1);
-    expect(conversions).toHaveBeenCalledTimes(size * 200);
-  } finally {
-    blocked.resolve();
-    await flushEditorOperationHistorySave();
+  useWorkspaceStore.setState({ editorOperationHistory: history });
+  for (let index = 1; index <= 3; index += 1) {
+    useWorkspaceStore.setState({ editorOperationHistory: {
+      ...history, invalidations: [{ nodeId: `changed-${index}`, reason: 'external-content-change' }]
+    } });
   }
-  expect(conversions).toHaveBeenCalledTimes(size * 400);
-  conversions.mockRestore();
-  expect(writes).toHaveLength(2);
-  expect(writes.at(-1)).toBe(serializeEditorOperationHistory(useWorkspaceStore.getState().editorOperationHistory));
+  await flushEditorOperationHistorySave();
+  expect(conversions).not.toHaveBeenCalled();
+  expect(invoke).not.toHaveBeenCalled();
+  expect(useWorkspaceStore.getState().editorOperationHistory.recentNodeIds).toHaveLength(size);
 });

@@ -12,7 +12,9 @@ import { getEditorOperationTopEntry, moveEditorOperationEntry, replaceEditorOper
   type EditorAnnotationOperationEntry, type EditorTextEditOperationEntry } from '../../../../features/editor/model/editorOperationHistory';
 import { applyCompanionSyncNodeVersionsWithDbPort } from '../../companionSyncNodeVersions';
 import { createCompanionUuid } from '../../companionUuid';
+import { getCompanionReadingScope } from '../reading/companionReadingScope';
 import { writeIosCompanionDatabase } from '../runtime/iosCompanionActiveDatabase';
+import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 import { iosCompanionHostName } from '../runtime/iosCompanionMutationState';
 import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
 
@@ -23,18 +25,25 @@ import { readCompanionEditHistoryFromDb, writeCompanionEditHistory } from './com
 type Mode = 'undo' | 'redo';
 
 export function applyCompanionEditHistory(documentId: string, mode: Mode) {
-  return runCompanionHighValueMutationTask(() => writeIosCompanionDatabase(db => db.transaction(async tx => {
-    const history = await readCompanionEditHistoryFromDb(tx);
-    const entry = getEditorOperationTopEntry(history, documentId, mode);
-    if (!entry) return false;
-    const document = await loadCompanionWorkspaceNodeFromDb(tx, documentId);
-    if (!document || document.deletedAt) throw new Error('editor_history_unavailable');
-    let updated = history;
-    const result = entry.type === 'text.edit' ? await replayText(tx, entry, mode) : null;
-    if (entry.type !== 'text.edit') updated = replaceEditorOperationEntry(history, documentId, mode, await replayAnnotations(tx, entry, mode));
-    await writeCompanionEditHistory(tx, history, moveEditorOperationEntry(updated, documentId, mode));
-    return result ?? { nodeId: documentId, versionId: document.currentVersionId ?? '' };
-  })), { kind: 'full' });
+  const owner = getIosCompanionDatabaseOwner();
+  const scope = getCompanionReadingScope();
+  return runCompanionHighValueMutationTask(() => {
+    if (getIosCompanionDatabaseOwner() !== owner || getCompanionReadingScope() !== scope) {
+      throw new Error('editor_history_context_changed');
+    }
+    return writeIosCompanionDatabase(db => db.transaction(async tx => {
+      const history = await readCompanionEditHistoryFromDb(tx);
+      const entry = getEditorOperationTopEntry(history, documentId, mode);
+      if (!entry) return false;
+      const document = await loadCompanionWorkspaceNodeFromDb(tx, documentId);
+      if (!document || document.deletedAt) throw new Error('editor_history_unavailable');
+      let updated = history;
+      const result = entry.type === 'text.edit' ? await replayText(tx, entry, mode) : null;
+      if (entry.type !== 'text.edit') updated = replaceEditorOperationEntry(history, documentId, mode, await replayAnnotations(tx, entry, mode));
+      await writeCompanionEditHistory(tx, history, moveEditorOperationEntry(updated, documentId, mode));
+      return result ?? { nodeId: documentId, versionId: document.currentVersionId ?? '' };
+    }));
+  }, { kind: 'full' });
 }
 
 async function replayText(db: DbPort, entry: EditorTextEditOperationEntry, mode: Mode) {

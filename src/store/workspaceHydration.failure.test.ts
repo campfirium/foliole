@@ -31,7 +31,7 @@ it('rejects failed reads through real Zustand hydration and allows a clean retry
     ? { activeNodeId: null, nodesById: {}, nodeOrder: [], trashedNodeIds: [] } : null);
   await expect(ensureWorkspaceHydrated()).resolves.toBeUndefined();
   expect(useWorkspaceStore.getState()).toMatchObject({ isHydrated: true, workspaceHydrationError: null });
-  expect(runtime.history).toHaveBeenCalledOnce();
+  expect(runtime.history).not.toHaveBeenCalled();
 });
 
 it('preserves the existing no-snapshot result when the runtime succeeds', async () => {

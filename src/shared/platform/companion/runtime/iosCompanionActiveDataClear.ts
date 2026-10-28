@@ -1,5 +1,7 @@
 import { ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS } from '../../../../../lib/core/database/androidCompanionAppDataClearMutationDefinitions';
 import { ANDROID_COMPANION_MUTATION_DEFINITIONS } from '../../../../../lib/core/database/androidCompanionMutationDefinitions';
+import { createEmptyEditorOperationHistory } from '../../../../features/editor/model/editorOperationHistory';
+import { stageCompanionSessionHistory } from '../editing/companionEditHistorySession';
 import { invalidateCompanionReadingScope } from '../reading/companionReadingScope';
 import { loadIosCompanionWorkspaceSyncState } from '../sync/workspace-state/iosCompanionWorkspaceSyncStateStore';
 
@@ -16,6 +18,7 @@ export async function clearIosCompanionActiveData() {
       await tx.run(ANDROID_COMPANION_MUTATION_DEFINITIONS[mutation.statementName]);
     }
     await tx.run(ANDROID_COMPANION_MUTATION_DEFINITIONS.companionMetaDeleteExceptDeviceId);
+    stageCompanionSessionHistory(tx, createEmptyEditorOperationHistory());
   }));
   return loadIosCompanionWorkspaceSyncState();
 }

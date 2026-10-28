@@ -29,7 +29,7 @@ beforeEach(async () => {
   const record = await toWorkspaceNativeNodeVersion(node, 'remote', 'base');
   await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
 });
-afterEach(async () => { await library.close(); });
+afterEach(async () => { vi.restoreAllMocks(); await library.close(); });
 
 async function edit(content: string) {
   const source = await readCompanionContentSource('topic');
@@ -58,7 +58,7 @@ it('restores persisted content through undo/redo and discards redo after a new e
 it('keeps content and history unchanged when the undo write fails', async () => {
   await edit('Saved');
   const before = await loadCompanionEditHistory();
-  library.database.exec("CREATE TRIGGER reject_history BEFORE INSERT ON companion_meta WHEN NEW.key = 'editor_operation_history' BEGIN SELECT RAISE(ABORT, 'disk full'); END");
+  vi.spyOn(library.connection, 'commitTransaction').mockRejectedValueOnce(new Error('disk full'));
   await expect(applyCompanionEditHistory('topic', 'undo')).rejects.toThrow();
   expect(stored()).toEqual({ content: 'Saved' });
   expect(await loadCompanionEditHistory()).toEqual(before);

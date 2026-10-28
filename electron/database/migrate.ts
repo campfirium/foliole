@@ -22,6 +22,7 @@ import {
 } from './connection.js';
 import type { DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';
 import { runDesktopLibraryDataUpgrade } from './desktopLibraryUpgradeHooks.js';
+import { clearRetiredEditorOperationHistory } from './editorOperationHistory.js';
 import { clearOpenedExternalSearchCache } from './externalSearchCacheMaintenance.js';
 import { migrateDesktopHostProfile } from './hostProfile.js';
 import {
@@ -100,6 +101,7 @@ function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConn
   if (pendingSnapshot) {
     settleManagedMigrationSnapshot(pendingSnapshot.snapshot, pendingSnapshot.protection);
   }
+  clearRetiredEditorOperationHistory();
   clearOpenedExternalSearchCache();
   reportStage?.('database_schema_init_complete');
   return initializedConnection;
@@ -191,6 +193,7 @@ function initializeDatabaseInternal(reportStage?: DatabaseInitStageReporter, opt
     enableDatabaseWriteAheadLog(connection);
     reportStage?.('database_recovery_schema_init_start');
     const initializedConnection = initializeSchemaWorkspaceAndSearch(connection, resolveDesktopHostName(), options.deferSearchIndex);
+    clearRetiredEditorOperationHistory();
     clearOpenedExternalSearchCache();
     reportStage?.('database_recovery_schema_init_complete');
     return initializedConnection;
@@ -229,6 +232,7 @@ function rebuildLegacyDevelopmentDatabase(databasePath: string, reportStage?: Da
   });
   reportStage?.('database_legacy_rebuild_open_connection_complete', { dbPath: connection.dbPath });
   const initializedConnection = initializeSchemaWorkspaceAndSearch(connection, resolveDesktopHostName(), deferSearchIndex);
+  clearRetiredEditorOperationHistory();
   clearOpenedExternalSearchCache();
   reportStage?.('database_legacy_rebuild_schema_init_complete');
   return initializedConnection;

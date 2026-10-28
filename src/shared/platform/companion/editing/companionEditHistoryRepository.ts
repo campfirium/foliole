@@ -3,11 +3,11 @@ import { ChangeSet, Text } from '@codemirror/state';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { releaseLocalEditBase, retainLocalEditBase } from '../../../../../lib/core/sync/nodeVersionLocalEditHold';
 import { digestEditorContent } from '../../../../features/editor/model/editorContentDigest';
-import { createEmptyEditorOperationHistory, type EditorOperationHistoryState, type EditorTextEditOperationEntry } from '../../../../features/editor/model/editorOperationHistory';
-import { deserializeEditorOperationHistory, serializeEditorOperationHistory } from '../../../../features/editor/model/editorOperationHistoryPersistence';
+import type { EditorOperationHistoryState, EditorTextEditOperationEntry } from '../../../../features/editor/model/editorOperationHistory';
 import { readIosCompanionDatabase } from '../runtime/iosCompanionActiveDatabase';
 
-const HISTORY_KEY = 'editor_operation_history';
+import { readCompanionSessionHistory, stageCompanionSessionHistory } from './companionEditHistorySession';
+
 const holdKey = (documentId: string, version: string, body: boolean) =>
   `${body ? 'editor_history_body' : 'editor_history'}:${documentId}:${version}`;
 
@@ -16,8 +16,7 @@ export function retainCompanionEditHistoryBase(db: DbPort, documentId: string, n
 }
 
 export async function readCompanionEditHistoryFromDb(db: DbPort) {
-  const [row] = await db.query<{ value: string }>('SELECT value FROM companion_meta WHERE key = ?', [HISTORY_KEY]);
-  return row ? deserializeEditorOperationHistory(row.value) : createEmptyEditorOperationHistory();
+  return readCompanionSessionHistory(db);
 }
 
 export function loadCompanionEditHistory() {
@@ -52,8 +51,7 @@ export async function writeCompanionEditHistory(db: DbPort,
   for (const [holdId, { nodeId }] of previous) {
     if (!next.has(holdId)) await releaseLocalEditBase(db, holdId, nodeId);
   }
-  await db.run('INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)',
-    [HISTORY_KEY, serializeEditorOperationHistory(after), new Date().toISOString()]);
+  stageCompanionSessionHistory(db, after);
 }
 
 export function syntheticTextHistory(documentId: string, before: string, after: string): EditorTextEditOperationEntry {

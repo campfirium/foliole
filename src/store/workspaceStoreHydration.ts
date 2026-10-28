@@ -1,6 +1,3 @@
-import { deserializeEditorOperationHistory } from '../features/editor/model/editorOperationHistoryPersistence';
-import { loadEditorOperationHistoryFromRuntime } from '../shared/platform/runtime/editorOperationHistoryRuntimeRepository';
-
 import { reportWorkspaceHydrateBootStage } from './workspaceHydrateBootTelemetry';
 import { useWorkspaceStore } from './workspaceStore';
 
@@ -27,10 +24,6 @@ export function ensureWorkspaceHydrated() {
       const state = useWorkspaceStore.getState();
       if (!state.isHydrated) {
         throw new Error(state.workspaceHydrationError ?? 'Could not load the workspace.');
-      }
-      const payload = await loadEditorOperationHistoryFromRuntime();
-      if (payload !== null) {
-        useWorkspaceStore.setState({ editorOperationHistory: deserializeEditorOperationHistory(payload) });
       }
       reportWorkspaceHydrateBootStage('resolved');
     })

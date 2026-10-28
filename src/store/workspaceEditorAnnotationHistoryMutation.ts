@@ -171,7 +171,14 @@ export function startEditorAnnotationHistoryMutation(args: {
   onSettled?: (succeeded: boolean) => void;
   set: WorkspaceSet;
 }) {
-  args.set((state) => ({
+  const libraryScope = args.get().libraryScope;
+  const set: WorkspaceSet = patch => {
+    if (args.get().libraryScope === libraryScope) args.set(patch);
+  };
+  const onSettled = (succeeded: boolean) => {
+    if (args.get().libraryScope === libraryScope) args.onSettled?.(succeeded);
+  };
+  set((state) => ({
     editorOperationHistory: replaceEditorOperationEntry(state.editorOperationHistory, args.entry.nodeId, args.mode, {
       ...args.entry,
       applyingMode: args.mode
@@ -180,17 +187,17 @@ export function startEditorAnnotationHistoryMutation(args: {
   const shouldDelete = (args.entry.type === 'annotation.create') === (args.mode === 'undo');
   if (shouldDelete) {
     void commitDelete(args.entry, args.get())
-      .then((result) => finishDelete(args.set, args.entry, args.mode, result, args.onSettled))
+      .then((result) => finishDelete(set, args.entry, args.mode, result, onSettled))
       .catch(() => {
-        finishFailure(args.set, args.entry, args.mode);
-        args.onSettled?.(false);
+        finishFailure(set, args.entry, args.mode);
+        onSettled(false);
       });
   } else {
     void commitRestore(args.entry)
-      .then((result) => finishRestore(args.set, args.entry, args.mode, result, args.onSettled))
+      .then((result) => finishRestore(set, args.entry, args.mode, result, onSettled))
       .catch(() => {
-        finishFailure(args.set, args.entry, args.mode);
-        args.onSettled?.(false);
+        finishFailure(set, args.entry, args.mode);
+        onSettled(false);
       });
   }
   return true;

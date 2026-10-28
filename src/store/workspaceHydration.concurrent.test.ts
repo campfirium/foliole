@@ -43,7 +43,7 @@ it('joins repeated startup callers into one hydration of the singleton store', a
   await Promise.all([first, second]);
   expect(runtime.invoke.mock.calls.filter(([command]) => command === 'load_workspace_list_snapshot')).toHaveLength(1);
   expect(merge).toHaveBeenCalledTimes(1);
-  expect(runtime.history).toHaveBeenCalledTimes(1);
+  expect(runtime.history).not.toHaveBeenCalled();
   expect(useWorkspaceStore.getState().isHydrated).toBe(true);
 });
 

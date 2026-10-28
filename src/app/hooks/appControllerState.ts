@@ -5,7 +5,6 @@ import { VIRTUAL_PUBLISHED_NODE_ID } from '../../features/nodes/model/specialNod
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { definedProps } from '../../shared/lib/definedProps';
 import { getDemoRuntimeNowIso, subscribeDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
-import { flushEditorOperationHistorySave } from '../../shared/platform/runtime/editorOperationHistoryRuntimeRepository';
 import { subscribeOpenFoliolePublishedTopics } from '../../shared/platform/runtime/foliolePublishedNavigation';
 
 import {
@@ -134,7 +133,6 @@ function useEditorDraftCloseFlushRegistration(
     }
     const flushEditorBeforeClose = async () => {
       const draftFlushed = await flushPendingEditorDraftImmediately();
-      await flushEditorOperationHistorySave();
       return draftFlushed;
     };
     window.__folioleFlushPendingEditorDraftBeforeClose = flushEditorBeforeClose;
