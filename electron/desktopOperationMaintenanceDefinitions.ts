@@ -86,11 +86,11 @@ export const DESKTOP_MAINTENANCE_OPERATION_DEFINITIONS: Record<
     label: 'Automatic backup maintenance',
     priority: 'startup',
     recovery: 'An interrupted temporary copy is removed and the same cadence remains due.',
-    resources: databaseWrite,
+    resources: databaseWrite.filter((claim) => claim.resource !== 'main-database-write'),
     source: 'automatic-backup',
     trigger: 'App-ready and configured cadence due.',
     verification: 'Due/no-op cadence, protected backup retention, and interrupted-copy cleanup.',
-    workload: 'One due database backup followed by bounded retention cleanup.'
+    workload: 'One coordinated SQLite snapshot, then file verification, compression, and bounded retention cleanup.'
   },
   'database-integrity': {
     ...base,

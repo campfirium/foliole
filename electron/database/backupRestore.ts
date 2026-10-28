@@ -32,6 +32,7 @@ import {
 } from './connection.js';
 import { restoreDatabaseBackupInMaintenance } from './databaseBackupRestoration.js';
 import { beginApplicationDatabaseRestore } from './databaseRestoreSettlement.js';
+import { runDesktopDatabaseWrite } from './desktopDatabaseWriteQueue.js';
 import { copyExtraBackup, disabledExtraBackupResult, type ExtraBackupCopyResult } from './extraBackupCopies.js';
 import { waitForManagedSafetySnapshotSettlements } from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
@@ -87,7 +88,7 @@ async function createAutomaticBackup(
     destinationPath,
     latestOrdinary,
     sourcePath: await runWithDatabaseConnectionOwner(() => openDatabaseConnection().dbPath),
-    createSnapshot: (candidatePath) => runWithDatabaseConnectionOwner(() => {
+    createSnapshot: (candidatePath) => runDesktopDatabaseWrite('startup', () => {
       const connection = openDatabaseConnection();
       return backupSqliteDatabase({
         destinationPath: candidatePath,

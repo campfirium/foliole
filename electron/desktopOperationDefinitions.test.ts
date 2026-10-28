@@ -30,13 +30,13 @@ it('keeps every registered operation executable and auditable from one definitio
   expect(table).toContain('| managed-inbox-import |');
 
   const mainDatabaseOperations = definitions.filter((definition) => [
-    'legacy-body-collection', 'automatic-backup', 'image-address-migration', 'keep-import', 'managed-inbox-import',
+    'legacy-body-collection', 'image-address-migration', 'keep-import', 'managed-inbox-import',
     'pdf-indexing', 'readwise-api-import', 'released-body-collection'
   ].includes(definition.name));
   for (const definition of mainDatabaseOperations) {
     expect(definition.resources).toContainEqual({ resource: 'main-database-write' });
   }
-  for (const definition of definitions.filter((entry) => /^(search-index|mirror)-/.test(entry.name))) {
+  for (const definition of definitions.filter((entry) => entry.name === 'automatic-backup' || /^(search-index|mirror)-/.test(entry.name))) {
     expect(definition.resources).not.toContainEqual({ resource: 'main-database-write' });
   }
 });
