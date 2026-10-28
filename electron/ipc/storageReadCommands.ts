@@ -19,6 +19,7 @@ import { loadSyncNodeConflicts } from '../database/syncConflictReads.js';
 import { loadSyncIndex } from '../database/syncIndex.js';
 import { loadSyncNodes } from '../database/syncNodes.js';
 import { loadSyncObjects } from '../database/syncObjects.js';
+import { projectWorkspaceListRendererNode } from '../database/workspaceListRendererNodes.js';
 import { loadWorkspaceListSnapshot } from '../database/workspaceListSnapshot.js';
 import { loadWorkspaceNodeDocument } from '../database/workspaceNodeDocument.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
@@ -81,8 +82,8 @@ export function handleWorkspaceReadCommand(command: string, args: Record<string,
       ...(args.ancestorNodeIds === undefined ? {} : { ancestorNodeIds: asStringArray(args.ancestorNodeIds, 'ancestorNodeIds') })
     });
     const libraryScope = currentLibraryScope();
-    for (const node of Object.values(projection.nodesById)) {
-      if (node.attachments) node.attachments = node.attachments.map(attachment => ({ ...attachment, libraryScope }));
+    for (const [id, node] of Object.entries(projection.nodesById)) {
+      projection.nodesById[id] = projectWorkspaceListRendererNode(node, libraryScope);
     }
     return projection;
   }
