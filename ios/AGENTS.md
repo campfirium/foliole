@@ -2,29 +2,29 @@
 
 ## Scope
 
-- 本文件适用于 `ios/**`、`scripts/ios/**` 及 iPhone / iPad 原生宿主集成任务。
-- iOS 宿主基于 Capacitor 8、Swift Package Manager 与 Xcode 26；除根 `AGENTS.md` 外，必须同时遵守本文件。
+- Applies to `ios/**`, `scripts/ios/**`, and iPhone/iPad native host integration.
+- The iOS host uses Capacitor 8, Swift Package Manager, and Xcode 26. Follow this file alongside root `AGENTS.md`.
 
 ## iOS Host Rules
 
-- iOS 与 Android 同属 companion 原生宿主层；共享业务逻辑继续优先留在 TypeScript 共享层与 `src/companion/**`。
-- `ios/` 只承载 Capacitor iOS 原生工程、Xcode 工程、Info.plist、资源、权限与平台插件集成。
-- iOS 可按共享 capability / bridge contract 接入 companion 产品能力，包括 Sync Group；业务语义、永久状态模型与前端实现仍必须留在共享层，`ios/` 只实现可验证的原生宿主接缝，禁止共享状态副本或第二套业务实现。
-- 当前已建立的原生能力包含 `FolioleCompanionBootstrap`、Keychain 配对与本地网络请求、既有格式同步包的校验下载与本地 apply；bootstrap 必须通过 Capacitor SQLite 初始化共享 schema、持久化稳定的 iOS 设备身份并仅在数据库可读写后报告 ready，配对密钥必须只存 Keychain，工作区状态必须从共享 SQLite 真相加载，sync-pack transfer 必须在返回 cache DB 前完成同源 envelope / 目标身份 / SQLite 预检，apply 必须复用共享 `DbPort` 语义并将游标持久化到 `companion_meta`。新增 Sync Group 等能力必须先登记共享 runtime capability 与 bridge contract；方法缺失或宿主失败时显式拒绝，不得隐式回退为 Web、空对象或乐观默认状态。
-- 不得把 iOS 宿主目录当作第二套业务实现目录；禁止把共享业务逻辑写进 Swift / Objective-C 宿主层。
-- 若某能力同时影响 Android 与 iOS，优先先抽到共享 bridge / contract，再分别接入宿主。
-- iOS 权限、生命周期、文件访问、分享、后台行为与插件接缝改动，必须先核对 Capacitor 官方文档与 Apple 官方文档。
-- iOS Bundle ID 固定为 `com.campfirium.foliole.ios`；`capacitor.config.ts` 继续保留 Android 现有身份，禁止用 iOS 接入改写 Android Application ID。
+- iOS and Android are companion native hosts; keep shared business logic in the TypeScript shared layer and `src/companion/**`.
+- `ios/` contains only the Capacitor iOS native project, Xcode project, Info.plist, resources, permissions, and platform plugin integration.
+- iOS may consume companion capabilities, including Sync Group, through shared capability/bridge contracts. Business semantics, durable state models, and frontend implementation stay shared. `ios/` implements verifiable native host seams only, without shared-state copies or a second business implementation.
+- Existing native capabilities include `FolioleCompanionBootstrap`, Keychain pairing and local network requests, validated downloads of the existing sync-pack format, and local apply. Bootstrap must initialize the shared schema through Capacitor SQLite, persist a stable iOS device identity, and report ready only after the database is readable/writable. Pairing keys belong only in Keychain. Load workspace state from shared SQLite truth. Sync-pack transfer must validate same-origin envelopes, target identity, and SQLite before returning the cache DB; apply must reuse shared `DbPort` semantics and persist cursors in `companion_meta`. Register shared runtime capabilities and bridge contracts before adding capabilities such as Sync Group. Reject missing methods or host failures explicitly; never silently fall back to Web, empty objects, or optimistic defaults.
+- Do not use the iOS host directory as a second business implementation; shared business logic must not enter Swift/Objective-C host code.
+- Extract shared bridge/contracts before connecting capabilities that affect both Android and iOS.
+- Check official Capacitor and Apple documentation before changing iOS permissions, lifecycle, file access, sharing, background behavior, or plugin seams.
+- Keep the iOS Bundle ID `com.campfirium.foliole.ios`. Preserve the existing Android identity in `capacitor.config.ts`; iOS integration must not rewrite Android Application ID.
 
 ## Validation
 
-- iOS 公开最小流程：`npm run android:web:build`、`npx cap sync ios`、`node -e "import('./scripts/ios/ios-local-storage.mjs').then(({ prepareIosAcceptanceCache }) => prepareIosAcceptanceCache(process.cwd()))"`、`xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath .cache/ios-acceptance-build/DerivedData CODE_SIGNING_ALLOWED=NO build`。通用编译不得把 DerivedData 写入 `.tmp/artifacts/<task-entry>`。
-- 不需要真实 iOS runtime 的改动先使用登记的显式文件检查；`quality:ios*` 与 `ios:sync:preflight` 均为 hosted-only。
-- 隔离 Simulator 验收必须保留 Xcode 的本地签名并在安装前验证签名；`CODE_SIGNING_ALLOWED=NO` 只用于不运行 App 的通用编译检查，不得复用其产物验收 Keychain 或可见运行态，否则会产生缺少 entitlement 的假红灯。
-- 需要人工打开工程时使用 `npx cap open ios`；需要模拟器或真机可见验收时使用 `npx cap run ios --target <device-id>`。
-- 界面实时调试使用 `node scripts/ios/ios-simulator-live.mjs`：在专用模拟器 `Foliole Live Reload` 上构建并安装 `com.campfirium.foliole.ios.dev`，从当前工作区实时加载，Ctrl-C 结束后恢复 iOS 工程配置；它不是 Simulator 验收入口，不替代签名隔离验收。正式构建不得带 `FOLIOLE_DEV_LIVE_RELOAD`。
-- 宿主或插件变更先完成 companion build 与 `npx cap sync ios`，再执行无签名原生构建；用户可见行为进入 iOS runtime 后完成适用的 Simulator 场景。
-- 非 iOS 日常质量入口不默认执行 iOS preflight；`sync:sql-surface:scan` 只有在扫描范围出现 `iosRuntime` capability 标记时，才把 iOS runtime 缺口升级为硬失败。
-- 一旦仓库引入新的 iOS 宿主脚本或 npm 入口，本文件必须同步补上对应公开命令、最小验证顺序与预览 / 验收规则。
-- 本地 journey readiness 先以 `node scripts/journey-readiness-cli.mjs --output .tmp/artifacts/journey-readiness/dry-run/receipt.json` 攻击共享 fail-closed 合同；窄验证与候选提交完成后，使用 `node scripts/with-resource-gate.mjs exclusive -- node scripts/macos/journey-readiness-local-qualification.mjs` 执行唯一正式 Mac / 签名 Simulator qualification。该入口内部依次完成 companion build、`npx cap sync ios`、干净候选冻结、独占 Simulator 创建 / 签名校验 / 安装、receipt enforcement 与精确删除；`FOLIOLE_JOURNEY_READINESS_SCENARIO=device-identity` 只在同一入口和 exclusive gate 内追加登记的设备锚点单场景，并在场景后重新核对冻结候选；禁止把生成的本地 `ready` 外推到真机或其他宿主。
-- iOS runtime contract 的 Swift/SwiftPM module cache、scratch build cache，以及验收共用的 DerivedData / SourcePackages / ModuleCache 路由到根 `.cache/`；单次应用副本与证据继续进入 `.tmp/artifacts/`。写入或命中缓存时只准备并刷新所用目录；全仓清理按根规则显式执行。
+- Public minimal iOS workflow: `npm run android:web:build`, `npx cap sync ios`, `node -e "import('./scripts/ios/ios-local-storage.mjs').then(({ prepareIosAcceptanceCache }) => prepareIosAcceptanceCache(process.cwd()))"`, then `xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath .cache/ios-acceptance-build/DerivedData CODE_SIGNING_ALLOWED=NO build`. Generic compilation must not write DerivedData to `.tmp/artifacts/<task-entry>`.
+- For changes not requiring a real iOS runtime, start with registered explicit file checks. `quality:ios*` and `ios:sync:preflight` are hosted-only.
+- Isolated Simulator acceptance must retain Xcode local signing and verify signatures before installation. `CODE_SIGNING_ALLOWED=NO` is only for generic compilation without running the App; do not reuse its output to accept Keychain or visible runtime behavior, as missing entitlements produce false failures.
+- Use `npx cap open ios` when the project must be opened manually; use `npx cap run ios --target <device-id>` when visible Simulator or device acceptance is required.
+- Production builds must not include `FOLIOLE_DEV_LIVE_RELOAD`.
+- For host/plugin changes, complete companion build and `npx cap sync ios` before the unsigned native build. Run applicable Simulator scenarios when user-visible behavior enters the iOS runtime.
+- Non-iOS daily quality entry points do not run iOS preflight by default. `sync:sql-surface:scan` escalates iOS runtime gaps to hard failures only when the scanned scope contains an `iosRuntime` capability marker.
+- When adding iOS host scripts or npm entry points, update this file with their public commands, minimum verification order, and preview/acceptance rules.
+- First challenge the shared fail-closed journey readiness contract with `node scripts/journey-readiness-cli.mjs --output .tmp/artifacts/journey-readiness/dry-run/receipt.json`. After narrow verification and committing the candidate, use `node scripts/with-resource-gate.mjs exclusive -- node scripts/macos/journey-readiness-local-qualification.mjs` for the sole formal Mac/signed Simulator qualification. It performs companion build, `npx cap sync ios`, clean candidate freezing, exclusive Simulator creation/signature checks/installation, receipt enforcement, and exact cleanup. `FOLIOLE_JOURNEY_READINESS_SCENARIO=device-identity` adds only the registered device-anchor scenario through the same entry and exclusive gate, followed by another frozen-candidate check. Do not extrapolate local `ready` to physical devices or other hosts.
+- Route iOS runtime contract Swift/SwiftPM module caches, scratch build caches, and shared acceptance DerivedData/SourcePackages/ModuleCache to root `.cache/`. Put per-run app copies and evidence in `.tmp/artifacts/`. Prepare and refresh only the directories used when writing or hitting a cache; repository-wide cleanup follows the explicit root workflow.

@@ -2,40 +2,40 @@
 
 ## Scope
 
-- 本文件适用于：`android/**`、`scripts/android/**`、`capacitor.config.ts`、Android 宿主同步、模拟器、部署、日志与 Capacitor Android 集成任务。
-- 进入上述范围工作时，除根 `AGENTS.md` 外，必须同时遵守本文件。
+- Applies to `android/**`, `scripts/android/**`, `capacitor.config.ts`, Android host sync, emulators, deployment, logs, and Capacitor Android integration.
+- Follow this file alongside root `AGENTS.md` when working in these scopes.
 
 ## Android Host Rules
 
-- Android 是正式宿主，不是临时试验目录；相关规则必须按宿主标准执行。
-- Android 宿主优先通过 `Capacitor` 承载 companion Web 产物；禁止把共享业务逻辑直接写进 `android/**`。
-- `android/` 只承载原生宿主工程、Gradle、Manifest、资源、平台权限与平台插件集成。
-- Android Java / Capacitor 插件属于平台 adapter，只实现权限、生命周期、文件、SQLite 执行、bridge 落地与宿主 API 接入；不得承载上层流程或业务决策。
-- Android 宿主只消费 `dist/companion` 构建产物；禁止把 Android 原生目录当作第二套业务前端目录。
-- 若某能力既影响 Android 又可能影响未来 iPhone，优先先落到共享 bridge / contract 或 `src/companion/**`，再由 Android 宿主接入。
-- 除原生权限、生命周期、intent、插件接缝与设备集成这类宿主特有能力外，Android 相关需求默认都应先复用或抽取 `src/shared/**` / `src/features/**` / 共享 contract；不得因为入口发生在 Android 就把节点列表、跳转逻辑、浏览语义、状态切换等非原生专属能力落到 Android / companion 私有实现。
-- Android 首轮交付优先验证存储、生命周期、同步入口与真实数据复习闭环；不得先扩展桌面级 UI 宽度或复杂编辑表面。
-- Android 权限、生命周期、文件访问、分享、intent、插件接缝改动，必须先核对 Capacitor 官方文档与 Android 官方文档。
+- Android is a production host, not a temporary experiment directory; apply host-level standards.
+- Use `Capacitor` to host companion Web artifacts. Do not put shared business logic directly in `android/**`.
+- `android/` contains only the native host project, Gradle, Manifest, resources, platform permissions, and platform plugin integration.
+- Android Java / Capacitor plugins are platform adapters for permissions, lifecycle, files, SQLite execution, bridge implementation, and host APIs; they must not contain higher-level workflows or business decisions.
+- The Android host consumes only `dist/companion` build artifacts. Do not turn native directories into a second business frontend.
+- For capabilities affecting Android and potentially iPhone, define the shared bridge/contract or `src/companion/**` capability before connecting the Android host.
+- Except for host-specific permissions, lifecycle, intents, plugin seams, and device integration, Android requirements must first reuse or extract `src/shared/**`, `src/features/**`, or shared contracts. An Android entry point does not justify private Android/companion implementations of node lists, navigation logic, browsing semantics, state transitions, or other non-native capabilities.
+- For the initial Android delivery, prioritize storage, lifecycle, sync entry points, and review using real data; do not first expand desktop-scale UI breadth or complex editing surfaces.
+- Check official Capacitor and Android documentation before changing Android permissions, lifecycle, file access, sharing, intents, or plugin seams.
 
 ## Legacy E-Reader Compatibility
 
-- 低版本 Android 兼容目标限定为电子墨水屏 / 阅读器基础可用，不等同于支持所有旧手机或追求现代移动端完整视觉一致性。
-- Android 9 / WebView 74 这类旧阅读器环境必须优先保证启动、同步、目录、浏览、阅读、搜索与基础设置可用；白屏、崩溃、布局坍塌、核心点击目标不可用属于必须修复。
-- 旧阅读器兼容允许静态视觉降级；不得为低版本 Android 追求动效、复杂过渡、玻璃 / 模糊、动态色彩、精细阴影或高刷新视觉效果。
-- 兼容修复优先落在 companion 构建链、WebView runtime polyfill、Android 原生 API 版本边界或共享平台 adapter；禁止为旧 Android 复制一套业务 UI 或业务流程。
-- 面向旧 WebView 的 CSS / JS 兼容处理必须尽量保持单 APK、单 companion 代码路径；只有用户明确要求或发布策略明确分包时，才为旧 Android 单独打包。
-- 若 Android 9 兼容与现代桌面 / 移动视觉效果冲突，优先保留现代主路径，同时为阅读器提供不破坏核心阅读与同步路径的降级。
+- Older Android compatibility targets basic usability on e-ink devices/readers, not every old phone or complete visual parity with modern mobile devices.
+- In older reader environments such as Android 9 / WebView 74, prioritize startup, sync, directories, browsing, reading, search, and basic settings. Blank screens, crashes, collapsed layouts, and unusable core click targets must be fixed.
+- Static visual degradation is acceptable on old readers. Do not pursue animation, complex transitions, glass/blur effects, dynamic colors, fine shadows, or high-refresh visuals for older Android.
+- Put compatibility fixes in the companion build chain, WebView runtime polyfills, Android native API version boundaries, or shared platform adapters. Do not duplicate business UI or workflows for older Android.
+- Keep old-WebView CSS/JS compatibility within one APK and one companion code path wherever possible. Separate legacy Android packages require an explicit user request or release policy.
+- When Android 9 compatibility conflicts with modern desktop/mobile visuals, preserve the modern primary path and provide reader degradation that keeps core reading and sync intact.
 
 ## Implementation Rules
 
-- 不得把 React 业务状态、review 语义、同步语义或数据模型复制到 `android/**`；共享逻辑应继续留在 TypeScript 共享层。
-- 新增 Android 能力时，先判断是否应通过 Capacitor 插件 / bridge 暴露；禁止直接让 feature 层感知 Android API。
-- `capacitor.config.ts` 的 `webDir` 必须继续指向 `dist/companion`；若需要调整，必须连同 companion 构建与宿主同步链路一起说明。
-- Android 原生壳新增配置、权限或插件接入时，必须同步检查 `scripts/android/**` 现有工作流是否需要更新。
-- 除非用户明确要求，不得把 Android 特有实现回写成全仓默认路径。
-- Android / companion 侧凡会写入移动端 SQLite 的同步、复习、资源落库、cursor、配对或 workspace sync metadata 路径，必须经共享的 companion sync writer queue 串行化；已处在同一个 writer task 内部的内部 cursor 保存不得再次嵌套排队，避免自锁。
+- Do not duplicate React business state, review semantics, sync semantics, or data models in `android/**`; keep shared logic in the TypeScript shared layer.
+- Before adding an Android capability, determine whether it should be exposed through a Capacitor plugin/bridge. Feature code must not directly depend on Android APIs.
+- Keep `capacitor.config.ts` `webDir` pointing to `dist/companion`. Explain any required change together with its impact on the companion build and host sync path.
+- When adding native shell configuration, permissions, or plugins, check whether existing `scripts/android/**` workflows need updates.
+- Do not make Android-specific implementations the repository-wide default unless explicitly requested.
+- Serialize Android/companion paths writing mobile SQLite sync, review, resources, cursors, pairing, or workspace sync metadata through the shared companion sync writer queue. Internal cursor saves already inside the same writer task must not enqueue again and deadlock.
 
 ## Validation
 
-- `npm run android:web:dev` 是 companion 浏览器预览入口：开发服务器以本机 SQLite 副本提供数据，并注入只在开发时存在的预览宿主；只用于界面调试，不具备真机、Capacitor 宿主或验收语义，预览代码不得进入正式构建。
-- hosted Linux 的 `android:sync`、`android:host:lint`、`android:host:test` 只服务 GitHub T6 原生宿主质量检查，不是 Windows 或 A5 设备入口。
+- `npm run android:web:dev` is the companion browser preview entry. Its development server serves a local SQLite copy and injects a development-only preview host. It is for UI debugging, not device, Capacitor host, or acceptance evidence; preview code must not enter production builds.
+- Hosted Linux `android:sync`, `android:host:lint`, and `android:host:test` serve native host quality checks.
