@@ -52,6 +52,9 @@ export function useCompanionTopicEditAutosave(args: UseCompanionTopicEditAutosav
     if (!args.canEdit) void session?.flush().catch(() => undefined);
   }, [args.canEdit, session]);
 
+  const historySource = useCallback<NonNullable<CompanionContentSaveHandler['historySource']>>(
+    (nodeId, field) => session?.getHistorySource(nodeId, field) ?? null, [session]);
+
   const handleChange = useCallback((value: string, meta?: EditorContentChangeMeta) => {
     if (!args.canEdit) return;
     editRound?.capture();
@@ -63,12 +66,12 @@ export function useCompanionTopicEditAutosave(args: UseCompanionTopicEditAutosav
     session?.changeReveal(value, meta?.newImageReferences, meta?.origin === 'history' ? undefined : meta?.textTransactions);
   }, [args.canEdit, editRound, session]);
   const flushPendingSave = useCallback(async () => { await session?.flush(); }, [session]);
-  const markBufferedInput = useCallback(() => { if (args.canEdit) session?.markBufferedInput(); }, [args.canEdit, session]);
-  const markRevealBufferedInput = useCallback(() => { if (args.canEdit) session?.markBufferedInput('reveal'); }, [args.canEdit, session]);
+  const markBufferedInput = useCallback((meta?: EditorContentChangeMeta) => { if (args.canEdit) session?.markBufferedInput('content', meta?.textTransactions); }, [args.canEdit, session]);
+  const markRevealBufferedInput = useCallback((meta?: EditorContentChangeMeta) => { if (args.canEdit) session?.markBufferedInput('reveal', meta?.textTransactions); }, [args.canEdit, session]);
   const refreshAfterHistory = useCallback(async (nodeId: string, versionId: string) => {
     if (session?.nodeId === nodeId) await session.refresh(versionId);
   }, [session]);
-  return { editRound, refreshAfterHistory, handleRevealChange, markRevealBufferedInput, reveal: session?.reveal ?? null,
+  return { historySource: args.onSaveContent?.historySource ? historySource : undefined, editRound, refreshAfterHistory, handleRevealChange, markRevealBufferedInput, reveal: session?.reveal ?? null,
     error: session?.error ?? null, flushPendingSave, handleChange, markBufferedInput,
     ready: session?.ready ?? false,
     value: session?.value ?? args.initialContent };

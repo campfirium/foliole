@@ -50,6 +50,7 @@ const {
 }));
 
 vi.mock('@codemirror/commands', () => ({
+  history: vi.fn(() => []),
   defaultKeymap: ['default-keymap'],
   redo: vi.fn(),
   toggleComment: vi.fn(),

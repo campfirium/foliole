@@ -51,7 +51,7 @@ function createHarness() {
 
 function createTextContext(harness: ReturnType<typeof createHarness>['harness']) {
   return {
-    applyText: (entry: ReturnType<typeof createTextHistoryEntry>, mode: 'redo' | 'undo') => {
+    applyText: (entry: import('../features/editor/model/editorOperationHistory').EditorTextEditOperationEntry, mode: 'redo' | 'undo') => {
       const content = applyTextHistoryEntry(harness.getState().nodesById[entry.nodeId]!.content, entry, mode);
       void harness.getState().updateNodeContent(entry.nodeId, content);
       return true;

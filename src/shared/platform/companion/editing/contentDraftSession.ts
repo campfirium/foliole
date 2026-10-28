@@ -38,10 +38,13 @@ export class ContentDraftSession {
 
   get dirty() { return this.bufferedInput.size > 0 || this.sequence > this.acknowledged || Boolean(this.refreshSaved); }
   get attached() { return this.listeners.size > 0; }
+  getHistorySource(nodeId: string | null, field: 'content' | 'reveal') { return this.history.source(this.save, nodeId, field); }
 
-  markBufferedInput(field: 'content' | 'reveal' = 'content') {
+  markBufferedInput(field: 'content' | 'reveal' = 'content', entries?: Parameters<ContentDraftHistory['buffer']>[1]) {
     if (!this.ready) return;
     this.bufferedInput.add(field);
+    this.history.admitField(field);
+    this.history.buffer(field, entries);
     this.clearTimer();
   }
 
@@ -113,6 +116,7 @@ export class ContentDraftSession {
     }
     this.bufferedInput.delete('content');
     if (value === this.value) {
+      this.history.discard('content');
       if (this.dirty) this.scheduleSave();
       return;
     }
@@ -128,6 +132,7 @@ export class ContentDraftSession {
     this.bufferedInput.delete('reveal');
     for (const reference of references) this.imageReferences.set(reference.storage_key, reference);
     if (reveal === this.reveal) {
+      this.history.discard('reveal');
       if (this.dirty) this.scheduleSave();
       return;
     }

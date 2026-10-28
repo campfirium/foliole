@@ -1,19 +1,15 @@
-import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyCodeMirrorTextHistory, collectCodeMirrorTextHistoryEntries } from '../adapters/codeMirrorTextHistory';
+import { nativeHistoryTestView } from '../adapters/nativeTextHistory.testSupport';
 
 import {
   createEmptyEditorOperationHistory,
   getEditorOperationSession,
   getEditorOperationTopEntry,
-  moveEditorOperationEntry,
   pushEditorOperationEntry,
-  type EditorOperationHistoryState
 } from './editorOperationHistory';
 import { createAnnotationHistoryEntry, createTextHistoryEntry } from './editorOperationHistory.testSupport';
-import { deserializeEditorOperationHistory, serializeEditorOperationHistory } from './editorOperationHistoryPersistence';
 
 let view: EditorView | null = null;
 
@@ -24,37 +20,11 @@ afterEach(() => {
 });
 
 function createEditor() {
-  let history = createEmptyEditorOperationHistory();
-  view = new EditorView({
-    parent: document.body,
-    state: EditorState.create({
-      doc: 'A',
-      extensions: [EditorView.updateListener.of((update) => {
-        for (const entry of collectCodeMirrorTextHistoryEntries(update, 'node-1')) {
-          history = pushEditorOperationEntry(history, entry);
-        }
-      })]
-    })
-  });
-  return {
-    getHistory: () => history,
-    setHistory: (next: EditorOperationHistoryState) => { history = next; },
-    view
-  };
+  const editor = nativeHistoryTestView('A');
+  view = editor.view;
+  return editor;
 }
-
-function replayTop(editor: ReturnType<typeof createEditor>, mode: 'redo' | 'undo') {
-  const entry = getEditorOperationTopEntry(editor.getHistory(), 'node-1', mode);
-  if (entry?.type !== 'text.edit') return false;
-  const replay = mode === 'undo'
-    ? { changes: entry.inverseChanges, expectedDigest: entry.afterDigest,
-        expectedNextDigest: entry.beforeDigest, selection: entry.beforeSelection }
-    : { changes: entry.forwardChanges, expectedDigest: entry.beforeDigest,
-        expectedNextDigest: entry.afterDigest, selection: entry.afterSelection };
-  const applied = applyCodeMirrorTextHistory({ ...replay, userEvent: mode, view: editor.view });
-  if (applied) editor.setHistory(moveEditorOperationEntry(editor.getHistory(), 'node-1', mode));
-  return applied;
-}
+function replayTop(editor: ReturnType<typeof createEditor>, mode: 'redo' | 'undo') { return editor.replay(mode); }
 
 describe('editor history after external content replacement', () => {
   it('keeps a temporarily mismatched entry recoverable without changing the document', () => {
@@ -78,7 +48,7 @@ describe('editor history after external content replacement', () => {
     expect(editor.view.state.doc.toString()).toBe('AB');
   });
 
-  it('abandons disconnected text after a genuine edit and survives history reload', () => {
+  it('abandons disconnected text after a genuine edit while preserving annotations and other targets', () => {
     const editor = createEditor();
     editor.view.dispatch({ changes: { from: 1, insert: 'B' }, userEvent: 'input.type' });
     const oldEntry = getEditorOperationTopEntry(editor.getHistory(), 'node-1', 'undo');
@@ -93,9 +63,8 @@ describe('editor history after external content replacement', () => {
     expect(current.undoStack.filter((entry) => entry.type === 'text.edit')).toHaveLength(1);
     expect(current.undoStack).toContainEqual(expect.objectContaining({ type: 'annotation.create' }));
     expect(current.undoStack).not.toContain(oldEntry);
-    expect(getEditorOperationSession(editor.getHistory(), 'node-2').undoStack).toEqual([other]);
+    expect(getEditorOperationSession(editor.getHistory(), 'node-2').undoStack).toEqual([expect.objectContaining({ type: 'text.edit', nodeId: other.nodeId })]);
 
-    editor.setHistory(deserializeEditorOperationHistory(serializeEditorOperationHistory(editor.getHistory())));
     expect(replayTop(editor, 'undo')).toBe(true);
     expect(editor.view.state.doc.toString()).toBe('AX');
     expect(replayTop(editor, 'redo')).toBe(true);
@@ -110,7 +79,9 @@ describe('editor history after external content replacement', () => {
     history = pushEditorOperationEntry(history, abandoned);
     history = pushEditorOperationEntry(history, replacement);
 
-    expect(getEditorOperationSession(history, 'node-1').undoStack).toEqual([first, replacement]);
+    expect(getEditorOperationSession(history, 'node-1').undoStack).toHaveLength(2);
+    let top = getEditorOperationTopEntry(history, 'node-1', 'undo');
+    expect(top?.type === 'text.edit' && top.nativeState?.doc.toString()).toBe('ABX');
   });
 
   it('does not group adjacent-looking edits across different document bases', () => {
@@ -120,6 +91,8 @@ describe('editor history after external content replacement', () => {
       pushEditorOperationEntry(createEmptyEditorOperationHistory(), first), forked
     );
 
-    expect(getEditorOperationSession(history, 'node-1').undoStack).toEqual([forked]);
+    expect(getEditorOperationSession(history, 'node-1').undoStack).toHaveLength(1);
+    const top = getEditorOperationTopEntry(history, 'node-1', 'undo');
+    expect(top?.type === 'text.edit' && top.nativeState?.doc.toString()).toBe('AXB');
   });
 });

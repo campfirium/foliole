@@ -14,7 +14,7 @@ export interface EditorContentChangeMeta {
   contentLength?: number;
   nodeId: string | null;
   origin?: 'history' | 'user';
-  textTransactions?: readonly import('../model/editorOperationHistory').EditorTextEditOperationEntry[];
+  textTransactions?: readonly import('../model/editorOperationHistory').EditorTextHistoryInput[];
 }
 
 export interface EditorBodyOverflow {
@@ -56,7 +56,13 @@ export interface EditorReplaceRangeOptions {
 
 export type { EditorDiffDecorations } from './lineDiffDecorations';
 
+export type EditorTextHistorySource = (nodeId: string | null) => {
+  state: import('@codemirror/state').EditorState | null;
+  boundary: object | null;
+} | null;
+
 export interface EditorAdapter {
+  bindTextHistorySource?(source: EditorTextHistorySource): void;
   onBodyOverflow?(listener: (request: EditorBodyOverflow) => void): () => void;
   destroy(): void;
   focus(): void;
@@ -68,7 +74,7 @@ export interface EditorAdapter {
   getPositionClientRect?(position: number): DOMRect | null;
   getPositionViewportTop?(position: number): number | null;
   isPositionNearViewportRatio?(position: number, ratio: number, toleranceRatio?: number): boolean;
-  applyTextHistory?(entry: import('../model/editorOperationHistory').EditorTextEditOperationEntry, mode: 'redo' | 'undo'): boolean;
+  applyTextHistory?(entry: import('../model/editorOperationHistory').EditorTextEditOperationEntry, mode: 'redo' | 'undo'): boolean | import('../model/editorOperationHistory').EditorTextHistoryReplayResult;
   getViewportRect?(): DOMRect | null;
   revealPosition(position: number): void;
   revealSelectionCentered?(selection: EditorSelection, options?: EditorRevealOptions): void;

@@ -1,7 +1,7 @@
 import type { DailyFlowView } from '../../../lib/core/flow/dailyFlowViewContract';
 import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
 import type {
-  EditorOperationHistoryEntry,
+  EditorOperationHistoryInput,
   EditorOperationHistoryState
 } from '../../features/editor/model/editorOperationHistory';
 import type { Node, NodeAnchorLink, NodeImageRegionGroup } from '../../features/nodes/model/nodeTypes';
@@ -125,7 +125,7 @@ export interface BuildControllerLayoutPropsArgs {
     setRightSidebarWidth: (width: number) => void;
     startReviewSession: WorkspaceState['startReviewSession'];
     trashedNodeIds: string[];
-    pushEditorOperationEntry: (entry: EditorOperationHistoryEntry) => void;
+    pushEditorOperationEntry: (entry: EditorOperationHistoryInput) => void;
     undoEditorOperation: WorkspaceState['undoEditorOperation'];
     redoEditorOperation: WorkspaceState['redoEditorOperation'];
     updateNodeContent: WorkspaceState['updateNodeContent'];

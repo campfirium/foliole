@@ -1,4 +1,3 @@
-import { Text } from '@codemirror/state';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { preloadTranslationCatalog, translate } from '../../../shared/localization/translations';
@@ -7,12 +6,14 @@ import {
   createEmptyEditorOperationHistory,
   getEditorOperationRedoTitle,
   getEditorOperationSession,
+  getEditorOperationTopEntry,
   getEditorOperationUndoTitle,
   invalidateEditorOperationSession,
   moveEditorOperationEntry,
   pushEditorOperationEntry
 } from './editorOperationHistory';
 import { createAnnotationHistoryEntry, createTextHistoryEntry } from './editorOperationHistory.testSupport';
+import { runNativeTextHistory } from './nativeTextHistory';
 
 const t = translate.bind(null, 'en');
 
@@ -30,9 +31,9 @@ describe('editorOperationHistory topic sessions', () => {
     history = moveEditorOperationEntry(history, 'node-a', 'undo');
     expect(getEditorOperationSession(history, 'node-a')).toMatchObject({
       redoStack: [annotation],
-      undoStack: [text]
+      undoStack: [expect.objectContaining({ type: 'text.edit', nodeId: text.nodeId })]
     });
-    expect(getEditorOperationSession(history, 'node-b').undoStack).toEqual([other]);
+    expect(getEditorOperationSession(history, 'node-b').undoStack).toEqual([expect.objectContaining({ type: 'text.edit', nodeId: other.nodeId })]);
   });
 
   it('clears redo only for the topic receiving a new operation', () => {
@@ -79,13 +80,13 @@ describe('editorOperationHistory text grouping', () => {
     const second = createTextHistoryEntry({ beforeContent: 'AB', afterContent: 'ABC', timestamp: 1300 });
     let history = pushEditorOperationEntry(createEmptyEditorOperationHistory(), first);
     history = pushEditorOperationEntry(history, second);
-    const grouped = getEditorOperationSession(history, 'node-1').undoStack[0];
+    const grouped = getEditorOperationTopEntry(history, 'node-1', 'undo');
 
     expect(getEditorOperationSession(history, 'node-1').undoStack).toHaveLength(1);
     expect(grouped?.type).toBe('text.edit');
     if (grouped?.type === 'text.edit') {
-      expect(grouped.forwardChanges.apply(Text.of(['A'])).toString()).toBe('ABC');
-      expect(grouped.inverseChanges.apply(Text.of(['ABC'])).toString()).toBe('A');
+      expect(grouped.nativeState!.doc.toString()).toBe('ABC');
+      expect(runNativeTextHistory(grouped.nativeState!, 'undo', grouped.nativeGroup)!.newDoc.toString()).toBe('A');
     }
   });
 

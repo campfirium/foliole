@@ -1,41 +1,29 @@
-import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { afterEach, expect, it } from 'vitest';
 
-import type { EditorTextEditOperationEntry } from '../model/editorOperationHistory';
+import type { EditorTextHistoryInput } from '../model/editorOperationHistory';
+import { nativeTextHistoryGroups } from '../model/nativeTextHistoryGroups';
 
 import { markdownFormattingKeymap } from './codeMirrorMarkdownFormatting';
-import { applyCodeMirrorTextHistory, collectCodeMirrorTextHistoryEntries } from './codeMirrorTextHistory';
 import { markdownInputAssist } from './markdownInputAssist';
+import { nativeHistoryTestView } from './nativeTextHistory.testSupport';
 
 const views: EditorView[] = [];
 
+const runtimes = new Map<EditorView, ReturnType<typeof nativeHistoryTestView>>();
 function editor(content: string) {
-  const entries: EditorTextEditOperationEntry[] = [];
-  const view = new EditorView({
-    parent: document.body,
-    state: EditorState.create({
-      doc: content,
-      selection: { anchor: content.length },
-      extensions: [markdownInputAssist, EditorView.updateListener.of((update) => {
-        entries.push(...collectCodeMirrorTextHistoryEntries(update, 'topic'));
-      })]
-    })
-  });
-  views.push(view);
-  return { view, entries, text: () => view.state.doc.toString() };
+  const runtime = nativeHistoryTestView(content, markdownInputAssist, 'topic');
+  views.push(runtime.view);
+  runtimes.set(runtime.view, runtime);
+  return runtime;
 }
 
-function replay(view: EditorView, entry: EditorTextEditOperationEntry, mode: 'undo' | 'redo') {
-  const undo = mode === 'undo';
-  expect(applyCodeMirrorTextHistory({
-    changes: undo ? entry.inverseChanges : entry.forwardChanges,
-    expectedDigest: undo ? entry.afterDigest : entry.beforeDigest,
-    expectedNextDigest: undo ? entry.beforeDigest : entry.afterDigest,
-    selection: undo ? entry.beforeSelection : entry.afterSelection,
-    userEvent: mode,
-    view
-  })).toBe(true);
+function replay(view: EditorView, entry: EditorTextHistoryInput, mode: 'undo' | 'redo') {
+  const runtime = runtimes.get(view)!;
+  const top = runtime.top(mode);
+  expect(top?.type === 'text.edit' ? top.nativeGroup : null)
+    .toBe(entry.nativeState!.field(nativeTextHistoryGroups).undo.at(-1));
+  expect(runtime.replay(mode)).toBe(true);
 }
 
 function input(view: EditorView, text: string) {

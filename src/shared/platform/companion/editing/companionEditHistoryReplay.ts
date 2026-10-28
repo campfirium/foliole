@@ -1,4 +1,4 @@
-import { Text } from '@codemirror/state';
+import { Transaction } from '@codemirror/state';
 
 import { parseStoredAnchorLink } from '../../../../../lib/core/database/anchorLinkCodec';
 import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
@@ -7,9 +7,10 @@ import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { contentImageReferences } from '../../../../../lib/core/sync/localContentEditResources';
 import { createOpaqueVersionRef } from '../../../../../lib/core/sync/opaqueSyncRefs';
 import { loadRetainedSyncNodeVersionFact } from '../../../../../lib/core/sync/syncNodeGraph';
-import { digestEditorContent } from '../../../../features/editor/model/editorContentDigest';
+import { nativeTextDocumentEquals, editorHistorySelection } from '../../../../features/editor/model/editorNativeOperationHistory';
 import { getEditorOperationTopEntry, moveEditorOperationEntry, replaceEditorOperationEntry,
   type EditorAnnotationOperationEntry, type EditorTextEditOperationEntry } from '../../../../features/editor/model/editorOperationHistory';
+import { runNativeTextHistory } from '../../../../features/editor/model/nativeTextHistory';
 import { applyCompanionSyncNodeVersionsWithDbPort } from '../../companionSyncNodeVersions';
 import { createCompanionUuid } from '../../companionUuid';
 import { getCompanionReadingScope } from '../reading/companionReadingScope';
@@ -40,8 +41,8 @@ export function applyCompanionEditHistory(documentId: string, mode: Mode) {
       let updated = history;
       const result = entry.type === 'text.edit' ? await replayText(tx, entry, mode) : null;
       if (entry.type !== 'text.edit') updated = replaceEditorOperationEntry(history, documentId, mode, await replayAnnotations(tx, entry, mode));
-      await writeCompanionEditHistory(tx, history, moveEditorOperationEntry(updated, documentId, mode));
-      return result ?? { nodeId: documentId, versionId: document.currentVersionId ?? '' };
+      await writeCompanionEditHistory(tx, history, moveEditorOperationEntry(updated, documentId, mode, result?.nativeState));
+      return result ? { nodeId: result.nodeId, versionId: result.versionId } : { nodeId: documentId, versionId: document.currentVersionId ?? '' };
     }));
   }, { kind: 'full' });
 }
@@ -52,19 +53,23 @@ async function replayText(db: DbPort, entry: EditorTextEditOperationEntry, mode:
   const current = await loadCompanionWorkspaceNodeFromDb(db, target.nodeId);
   if (!current?.currentVersionId || current.deletedAt) throw new Error('editor_history_unavailable');
   const text = current[target.field] ?? '';
-  if (digestEditorContent(text) !== (mode === 'undo' ? entry.afterDigest : entry.beforeDigest)) {
+  if (!entry.nativeState || !nativeTextDocumentEquals(entry.nativeState.doc, text)) {
     throw new Error('editor_history_content_changed');
   }
   const version = await loadRetainedSyncNodeVersionFact(db, mode === 'undo' ? target.beforeVersionId : target.afterVersionId);
   if (!version) throw new Error('editor_history_version_unavailable');
-  const next = (mode === 'undo' ? entry.inverseChanges : entry.forwardChanges).apply(Text.of(text.split('\n'))).toString();
+  const replay = runNativeTextHistory(entry.nativeState, mode, entry.nativeGroup);
+  if (!replay) throw new Error('editor_history_native_group_unavailable');
+  const next = replay.newDoc.toString();
   const saved = await saveCompanionContentEditWithDb(db, { nodeId: current.id, baseContent: current.content,
     baseVersionId: current.currentVersionId, versionId: createOpaqueVersionRef(createCompanionUuid()),
     content: target.field === 'content' ? next : current.content,
     ...(target.field === 'reveal' ? { reveal: next === '' && version.snapshot.reveal === null ? null : next } : {}),
     newImageReferences: contentImageReferences(version),
     updatedAt: new Date().toISOString() }, false);
-  return { nodeId: current.id, versionId: saved.currentVersionId };
+  const nativeState = mode === 'redo' ? replay.state.update({ selection: editorHistorySelection(entry.afterSelection),
+    annotations: Transaction.addToHistory.of(false) }).state : replay.state;
+  return { nativeState, nodeId: current.id, versionId: saved.currentVersionId };
 }
 
 async function replayAnnotations(db: DbPort, entry: EditorAnnotationOperationEntry, mode: Mode) {
@@ -80,7 +85,7 @@ async function replayAnnotations(db: DbPort, entry: EditorAnnotationOperationEnt
     const liveVersionId = entry.type === 'annotation.create' ? annotation.afterVersionId : annotation.beforeVersionId;
     const original = liveVersionId ? await loadRetainedSyncNodeVersionFact(db, liveVersionId) : null;
     if (!original) throw new Error('editor_history_annotation_version_unavailable');
-    if (digestEditorContent(current.content) !== digestEditorContent(original.body_text ?? '')) {
+    if (current.content !== (original.body_text ?? '')) {
       throw new Error('editor_history_annotation_content_changed');
     }
     if (current.reveal !== (original.snapshot.reveal ?? null)) throw new Error('editor_history_annotation_answer_changed');

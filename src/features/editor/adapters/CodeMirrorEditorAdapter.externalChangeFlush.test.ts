@@ -1,7 +1,7 @@
 import { EditorView } from '@codemirror/view';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { digestEditorContent } from '../model/editorContentDigest';
+import { createEmptyEditorOperationHistory, getEditorOperationTopEntry, pushEditorOperationEntry, type EditorTextHistoryInput } from '../model/editorOperationHistory';
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
@@ -86,14 +86,16 @@ it('discards the delayed user buffer and publishes history replay immediately', 
   adapter.setNodeId('node-A');
   view.dispatch({ changes: { from: 11, insert: ' draft' }, userEvent: 'input.type' });
   const meta = onDocumentInput.mock.calls[0]?.[0] as {
-    textTransactions?: Parameters<NonNullable<typeof adapter.applyTextHistory>>[0][];
+    textTransactions?: EditorTextHistoryInput[];
   };
-  const entry = meta.textTransactions?.[0];
+  const input = meta.textTransactions?.[0];
+  const entry = getEditorOperationTopEntry(pushEditorOperationEntry(createEmptyEditorOperationHistory(), input!), 'node-A', 'undo');
+  if (entry?.type !== 'text.edit') throw new Error('Missing native text entry');
   const buffer = (adapter as unknown as { externalChangeBuffer: { discardPending: () => void } }).externalChangeBuffer;
   const discardPending = vi.spyOn(buffer, 'discardPending');
   expect(entry).toBeTruthy();
 
-  expect(adapter.applyTextHistory(entry!, 'undo')).toBe(true);
+  expect(adapter.applyTextHistory(entry, 'undo')).toBeTruthy();
   expect(onChange).toHaveBeenCalledTimes(1);
   expect(onChange).toHaveBeenCalledWith('old content', { nodeId: 'node-A', origin: 'history' });
   expect(discardPending).toHaveBeenCalledOnce();
@@ -106,9 +108,11 @@ it('preserves the delayed user buffer when history evidence no longer matches', 
   adapter.setNodeId('node-A');
   view.dispatch({ changes: { from: 11, insert: ' draft' }, userEvent: 'input.type' });
   const meta = onDocumentInput.mock.calls[0]?.[0] as {
-    textTransactions?: Parameters<NonNullable<typeof adapter.applyTextHistory>>[0][];
+    textTransactions?: EditorTextHistoryInput[];
   };
-  const entry = meta.textTransactions?.[0];
+  const input = meta.textTransactions?.[0];
+  const entry = getEditorOperationTopEntry(pushEditorOperationEntry(createEmptyEditorOperationHistory(), input!), 'node-A', 'undo');
+  if (entry?.type !== 'text.edit') throw new Error('Missing native text entry');
   const buffer = (adapter as unknown as { externalChangeBuffer: { discardPending: () => void } }).externalChangeBuffer;
   const discardPending = vi.spyOn(buffer, 'discardPending');
   expect(entry).toBeTruthy();
@@ -132,17 +136,19 @@ it('captures an explicitly marked range replacement for undo and redo', () => {
   });
 
   const meta = onDocumentInput.mock.calls[0]?.[0] as {
-    textTransactions?: Parameters<NonNullable<typeof adapter.applyTextHistory>>[0][];
+    textTransactions?: EditorTextHistoryInput[];
   };
-  const entry = meta.textTransactions?.[0];
-  expect(entry).toMatchObject({
-    afterDigest: digestEditorContent('clean content'),
-    beforeDigest: digestEditorContent('old content'),
-    userEvent: 'input.format-cleanup'
-  });
-  expect(adapter.applyTextHistory(entry!, 'undo')).toBe(true);
+  const input = meta.textTransactions?.[0];
+  const entry = getEditorOperationTopEntry(pushEditorOperationEntry(createEmptyEditorOperationHistory(), input!), 'node-A', 'undo');
+  if (entry?.type !== 'text.edit') throw new Error('Missing native text entry');
+  expect(input!.beforeDoc.toString()).toBe('old content');
+  expect(entry.nativeState!.doc.toString()).toBe('clean content');
+  expect(entry.userEvent).toBe('input.format-cleanup');
+  const undone = adapter.applyTextHistory(entry, 'undo');
+  expect(undone).toBeTruthy();
+  if (!undone) throw new Error('Native undo failed');
   expect(adapter.getContent()).toBe('old content');
-  expect(adapter.applyTextHistory(entry!, 'redo')).toBe(true);
+  expect(adapter.applyTextHistory({ ...entry, nativeState: undone.nativeState }, 'redo')).toBeTruthy();
   expect(adapter.getContent()).toBe('clean content');
   adapter.destroy();
 });

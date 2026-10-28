@@ -13,7 +13,7 @@ import type { RegularPushQueuePriority } from '../../../../../lib/core/review/un
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { COMPANION_DATABASE_NAME } from '../../../../../lib/platform/nativeCompanionContract';
 import { createCapacitorSqliteDbPort } from '../../capacitorSqliteDbPort';
-import { clearRetiredCompanionEditHistory, createCompanionEditHistorySession } from '../editing/companionEditHistorySession';
+import { clearRetiredCompanionEditHistory, createCompanionEditHistorySession, readConfirmedCompanionEditHistory } from '../editing/companionEditHistorySession';
 
 import { loadCompanionForegroundOwner } from './companionForegroundTimeOwner';
 import { CompanionNodePriorityState } from './companionNodePriorityState';
@@ -86,6 +86,8 @@ export class CapacitorCompanionDatabaseOwner {
       throw error;
     }
   }
+
+  getEditingHistory() { return readConfirmedCompanionEditHistory(this.requireDb()); }
 
   read<T>(task: (db: DbPort) => Promise<T>) {
     return this.enqueue(() => task(this.requireDb()));

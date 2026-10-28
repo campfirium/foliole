@@ -26,7 +26,7 @@ export function CompanionArticleDocument(props: {
   nodeViewState?: EditorViewState;
   onBlurCapture?: () => void;
   onChange?: (content: string, meta?: EditorContentChangeMeta) => void;
-  onDocumentInput?: () => void;
+  onDocumentInput?: (meta?: import('../features/editor/adapters/EditorAdapter').EditorContentChangeMeta) => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler;
   readingRestoreCommandId?: string | null;

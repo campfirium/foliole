@@ -1,12 +1,10 @@
-import { Compartment, EditorState } from '@codemirror/state';
+import { Compartment } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import type { EditorTextEditOperationEntry } from '../model/editorOperationHistory';
-
-import { applyCodeMirrorTextHistory, collectCodeMirrorTextHistoryEntries } from './codeMirrorTextHistory';
 import { handleClipboardImagePaste } from './htmlPaste';
 import { activeNodeIdFacet } from './liveMarkdownState';
+import { nativeHistoryTestView } from './nativeTextHistory.testSupport';
 
 const { importImage, notice } = vi.hoisted(() => ({ importImage: vi.fn(), notice: vi.fn() }));
 vi.mock('../../../shared/platform/attachmentImports', () => ({ importClipboardImageAttachment: importImage }));
@@ -18,20 +16,11 @@ const RESULT = { status: 'imported', storage_key: `${'a'.repeat(64)}.png`, origi
 const views: EditorView[] = [];
 
 function createEditor() {
-  const entries: EditorTextEditOperationEntry[] = [];
   const topic = new Compartment();
-  const view = new EditorView({
-    parent: document.body,
-    state: EditorState.create({
-      doc: ORIGINAL,
-      selection: { anchor: 7, head: 16 },
-      extensions: [topic.of(activeNodeIdFacet.of('topic-a')), EditorView.updateListener.of((update) => {
-        entries.push(...collectCodeMirrorTextHistoryEntries(update, 'topic-a'));
-      })]
-    })
-  });
-  views.push(view);
-  return { view, entries, topic, text: () => view.state.doc.toString() };
+  const runtime = nativeHistoryTestView(ORIGINAL, topic.of(activeNodeIdFacet.of('topic-a')), 'topic-a');
+  runtime.view.dispatch({ selection: { anchor: 7, head: 16 } });
+  views.push(runtime.view);
+  return { ...runtime, topic };
 }
 
 function paste(view: EditorView, count = 1) {
@@ -72,17 +61,10 @@ it('keeps the document intact while importing and commits one reversible paste',
   pending.resolve(RESULT);
   await vi.waitFor(() => expect(editor.text()).toBe(`Before ${IMAGE} after`));
   expect(editor.entries).toHaveLength(1);
-  const entry = editor.entries[0]!;
-  expect(applyCodeMirrorTextHistory({
-    changes: entry.inverseChanges, expectedDigest: entry.afterDigest, expectedNextDigest: entry.beforeDigest,
-    selection: entry.beforeSelection, userEvent: 'undo', view: editor.view
-  })).toBe(true);
+  expect(editor.replay('undo')).toBe(true);
   expect(editor.text()).toBe(ORIGINAL);
   expect(editor.view.state.selection.main).toMatchObject({ from: 7, to: 16 });
-  expect(applyCodeMirrorTextHistory({
-    changes: entry.forwardChanges, expectedDigest: entry.beforeDigest, expectedNextDigest: entry.afterDigest,
-    selection: entry.afterSelection, userEvent: 'redo', view: editor.view
-  })).toBe(true);
+  expect(editor.replay('redo')).toBe(true);
   expect(editor.text()).toBe(`Before ${IMAGE} after`);
 });
 

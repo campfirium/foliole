@@ -9,13 +9,14 @@ import type {
 } from './codeMirrorEditorAdapterSupport';
 import { createCodeMirrorEditorControllers } from './codeMirrorEditorControllers';
 import { applyCodeMirrorLocalizedImageChanges } from './codeMirrorLocalizedImageChanges';
-import { collectCodeMirrorTextHistoryEntries } from './codeMirrorTextHistory';
+import type { CodeMirrorTextHistoryController } from './codeMirrorTextHistory';
 import { createCodeMirrorEditorView } from './createCodeMirrorEditorView';
 import type { EditorBodyOverflow, EditorContentChangeMeta, EditorTextAnchorDecoration } from './EditorAdapter';
 import type { EditorExternalChangeBuffer } from './editorExternalChangeBuffer';
 import { editorImageReferences } from './editorImageReferences';
 
 interface CodeMirrorEditorAdapterRuntimeArgs {
+  textHistory: CodeMirrorTextHistoryController;
   hasBodyOverflowListener: () => boolean;
   onBodyOverflow: (request: EditorBodyOverflow) => void;
   diffDecorationsCompartment: Compartment;
@@ -47,10 +48,10 @@ function createEditorControllers(args: CodeMirrorEditorAdapterRuntimeArgs) {
   const controllers = createCodeMirrorEditorControllers({
     applyLocalizedContent: (localized, contentSnapshot, changes, retainDisplay) => {
       if (changes?.length) {
-        applyCodeMirrorLocalizedImageChanges({
+        args.textHistory.runExternal(args.getView(), () => applyCodeMirrorLocalizedImageChanges({
           changes, contentSnapshot, nodeId: args.getNodeId(), retainDisplay, view: args.getView(),
           setApplyingExternalContent: args.setApplyingExternalContent
-        });
+        }));
         controllers.remoteImageLocalization.schedule();
       } else args.onSetContent(localized);
       args.options.onDocumentInput?.({
@@ -71,6 +72,7 @@ function createEditorControllers(args: CodeMirrorEditorAdapterRuntimeArgs) {
         return;
       }
       onChange(content, { nodeId, ...(newImageReferences?.length ? { newImageReferences } : {}) });
+      args.textHistory.settle(args.getView());
       controllers.remoteImageLocalization.schedule();
     }
   });
@@ -85,6 +87,7 @@ function createEditorViewRuntime(
   externalChangeBuffer: EditorExternalChangeBuffer
 ) {
   return createCodeMirrorEditorView({
+    textHistoryExtension: args.textHistory.extension(args.options),
     bodyBudgetExtension: createBodyBudgetExtension((transaction) => {
       const nodeId = args.getNodeId();
       if (!nodeId) return;
@@ -110,7 +113,7 @@ function createEditorViewRuntime(
         onChange(content ?? args.getContent(), { nodeId, origin: 'history' });
         return;
       }
-      const textTransactions = collectCodeMirrorTextHistoryEntries(update, nodeId);
+      const textTransactions = args.textHistory.collect(update, nodeId);
       const inputMeta = {
         ...meta,
         nodeId,

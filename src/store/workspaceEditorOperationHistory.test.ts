@@ -1,8 +1,7 @@
-import { Text } from '@codemirror/state';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getEditorOperationSession } from '../features/editor/model/editorOperationHistory';
-import { createTextHistoryEntry } from '../features/editor/model/editorOperationHistory.testSupport';
+import { applyTextHistoryEntry, createTextHistoryEntry } from '../features/editor/model/editorOperationHistory.testSupport';
 
 import { createWorkspaceEditorOperationHistoryActions } from './workspaceEditorOperationHistory';
 import { hasWorkspaceNodeMutationRuntime, syncCreateNodeMutationToRuntime } from './workspaceRuntimeSync';
@@ -49,9 +48,8 @@ function pushTextEdit(historyActions: ReturnType<typeof createWorkspaceEditorOpe
 
 function createTextContext(harness: ReturnType<typeof createHarness>['harness']) {
   return {
-    applyText: (entry: ReturnType<typeof createTextHistoryEntry>, mode: 'redo' | 'undo') => {
-      const current = Text.of(harness.getState().nodesById[entry.nodeId]!.content.split('\n'));
-      const content = (mode === 'undo' ? entry.inverseChanges : entry.forwardChanges).apply(current).toString();
+    applyText: (entry: import('../features/editor/model/editorOperationHistory').EditorTextEditOperationEntry, mode: 'redo' | 'undo') => {
+      const content = applyTextHistoryEntry(harness.getState().nodesById[entry.nodeId]!.content, entry, mode);
       void harness.getState().updateNodeContent(entry.nodeId, content, { publishLocal: false });
       return true;
     },

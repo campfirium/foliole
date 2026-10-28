@@ -1,7 +1,9 @@
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { getEditorTextHistorySource } from '../../features/editor/model/editorNativeOperationHistory';
 import { getEditorOperationSession } from '../../features/editor/model/editorOperationHistory';
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { EditorOperationApplyContext } from '../../store/workspaceStoreTypes';
 
 import { isVirtualEditorNode } from './appControllerLayoutContext';
@@ -48,6 +50,7 @@ export function createEditorChangeHandler(args: BuildControllerLayoutPropsArgs) 
 export function createEditorReadyHandler(args: BuildControllerLayoutPropsArgs) {
   return (adapter: EditorAdapter | null) => {
     args.runtime.editorRef.current = adapter;
+    adapter?.bindTextHistorySource?.(nodeId => getEditorTextHistorySource(useWorkspaceStore.getState().editorOperationHistory, nodeId));
   };
 }
 

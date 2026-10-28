@@ -1,11 +1,12 @@
 import { ChangeSet, Text } from '@codemirror/state';
 
-import { digestEditorContent } from './editorContentDigest';
 import type {
   EditorAnnotationOperationEntry,
   EditorOperationSelectionSnapshot,
-  EditorTextEditOperationEntry
+  EditorTextEditOperationEntry,
+  EditorTextHistoryInput
 } from './editorOperationHistory';
+import { runNativeTextHistory } from './nativeTextHistory';
 
 function createChanges(beforeContent: string, afterContent: string) {
   let prefix = 0;
@@ -34,19 +35,17 @@ export function createTextHistoryEntry(args: {
   selection?: EditorOperationSelectionSnapshot;
   timestamp?: number;
   userEvent?: string;
-}): EditorTextEditOperationEntry {
+}): EditorTextHistoryInput {
   const forwardChanges = createChanges(args.beforeContent, args.afterContent);
   return {
-    afterDigest: digestEditorContent(args.afterContent),
     afterSelection: cursor(args.afterContent.length),
-    beforeDigest: digestEditorContent(args.beforeContent),
     beforeSelection: args.selection ?? cursor(args.beforeContent.length),
-    forwardChanges,
-    inverseChanges: forwardChanges.invert(Text.of(args.beforeContent.split('\n'))),
+    changes: forwardChanges,
+    beforeDoc: Text.of(args.beforeContent.split('\n')),
     nodeId: args.nodeId ?? 'node-1',
     timestamp: args.timestamp ?? 1000,
     title: 'Edit Text',
-    type: 'text.edit',
+    type: 'text.input',
     userEvent: args.userEvent ?? 'input.type'
   };
 }
@@ -56,8 +55,10 @@ export function applyTextHistoryEntry(
   entry: EditorTextEditOperationEntry,
   mode: 'redo' | 'undo'
 ) {
-  const document = Text.of(content.split('\n'));
-  return (mode === 'undo' ? entry.inverseChanges : entry.forwardChanges).apply(document).toString();
+  if (!entry.nativeState || entry.nativeState.doc.toString() !== content) throw new Error('History content mismatch');
+  const result = runNativeTextHistory(entry.nativeState, mode, entry.nativeGroup);
+  if (!result) throw new Error('Native history unavailable');
+  return result.newDoc.toString();
 }
 
 export function createAnnotationHistoryEntry(

@@ -71,7 +71,6 @@ export const allowedRegexInventory = [
     line: "const match = /^#([0-9a-fA-F]{6})$/.exec(value?.trim() ?? '');",
     owner: 'color setting validation'
   },
-  { path: 'src/features/editor/model/editorTextOperationGrouping.ts', line: 'JOINABLE_USER_EVENT.test(next.userEvent) &&', owner: 'editor text history', reason: 'Groups adjacent typing and delete events without parsing Markdown.' },
   { path: 'src/features/editor/model/formatCleanup.ts', line: 'const matcher = new RegExp(`^(?:${pattern.source})`, pattern.flags);', owner: 'format cleanup', reason: 'Compiles the user-configured local exclusion rule.' },
   { path: 'src/features/editor/model/formatCleanup.ts', line: 'function escapeRegExp(value: string) {', owner: 'format cleanup', reason: 'Escapes literal user-configured cleanup text before compilation.' },
   { path: 'src/features/editor/model/formatCleanup.ts', line: "if (settings.collapseBlankLines) result = result.replace(/\\n[ \\t]*\\n(?:[ \\t]*\\n)+/g, '\\n\\n');", owner: 'format cleanup', reason: 'Applies the explicit blank-line cleanup setting outside protected ranges.' },

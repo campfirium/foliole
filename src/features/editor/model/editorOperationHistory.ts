@@ -1,14 +1,17 @@
+import type { EditorState } from '@codemirror/state';
+
 import type { Translate } from '../../../shared/localization/LocalizationProvider';
 
+import { isolateDocumentTextHistory, prepareNativeEditorTextEntry, retainNativeTextEntries, retainNativeTextStates, replaceNativeTextState } from './editorNativeOperationHistory';
 import type {
   EditorAnnotationOperationEntry,
   EditorOperationHistoryEntry,
   EditorOperationHistoryInvalidation,
   EditorOperationHistorySession,
   EditorOperationHistoryState,
-  EditorTextEditOperationEntry
+  EditorOperationHistoryInput
 } from './editorOperationHistoryTypes';
-import { canGroupEditorTextOperations, mergeEditorTextOperations } from './editorTextOperationGrouping';
+import { isolateNativeTextHistory, runNativeTextHistory } from './nativeTextHistory';
 
 export type * from './editorOperationHistoryTypes';
 
@@ -17,7 +20,7 @@ const DEFAULT_SESSION_LIMIT = 12;
 const INVALIDATION_LIMIT = 20;
 
 export function createEmptyEditorOperationHistory(): EditorOperationHistoryState {
-  return { invalidations: [], recentNodeIds: [], sessionsByNodeId: {} };
+  return { invalidations: [], nativeTextStates: {}, recentNodeIds: [], sessionsByNodeId: {} };
 }
 
 export function getEditorOperationSession(
@@ -34,13 +37,16 @@ export function getEditorOperationTopEntry(
 ) {
   const session = getEditorOperationSession(history, nodeId);
   const stack = mode === 'undo' ? session.undoStack : session.redoStack;
-  return stack.at(-1) ?? null;
+  const entry = stack.at(-1);
+  if (!entry) return null;
+  const nativeState = entry.type === 'text.edit' ? history.nativeTextStates[entry.nativeTargetKey] : undefined;
+  return nativeState ? { ...entry, nativeState } : entry;
 }
 
 function touchSession(history: EditorOperationHistoryState, nodeId: string, session: EditorOperationHistorySession) {
   const recentNodeIds = [nodeId, ...history.recentNodeIds.filter((id) => id !== nodeId)].slice(0, DEFAULT_SESSION_LIMIT);
   const keepNodeIds = new Set(recentNodeIds);
-  return {
+  const next = {
     ...history,
     recentNodeIds,
     sessionsByNodeId: Object.fromEntries([
@@ -48,51 +54,33 @@ function touchSession(history: EditorOperationHistoryState, nodeId: string, sess
       [nodeId, session]
     ])
   };
+  return { ...next, nativeTextStates: retainNativeTextStates(next) };
 }
 
 function trim(stack: EditorOperationHistoryEntry[], limit = DEFAULT_OPERATION_LIMIT) {
   return stack.slice(Math.max(0, stack.length - limit));
 }
 
-function retainApplicableTextHistory(stack: EditorOperationHistoryEntry[], current: EditorTextEditOperationEntry) {
-  const sameTarget = (item: EditorOperationHistoryEntry) => item.type === 'text.edit' &&
-    item.target?.nodeId === current.target?.nodeId && item.target?.field === current.target?.field;
-  const currentDigest = current.beforeDigest;
-  const matchingIndex = stack.findLastIndex((item) =>
-    item.type === 'text.edit' && sameTarget(item) && item.afterDigest === currentDigest
-  );
-  let expectedDigest = currentDigest;
-  let continuous = matchingIndex >= 0;
-  const retained = stack.map((item) => !sameTarget(item));
-  for (let index = matchingIndex; index >= 0; index -= 1) {
-    const item = stack[index]!;
-    if (item.type !== 'text.edit' || !sameTarget(item)) continue;
-    if (!continuous || item.afterDigest !== expectedDigest) {
-      continuous = false;
-      continue;
-    }
-    expectedDigest = item.beforeDigest;
-    retained[index] = true;
-  }
-  return stack.filter((_item, index) => retained[index]);
-}
-
 export function pushEditorOperationEntry(
   history: EditorOperationHistoryState,
-  entry: EditorOperationHistoryEntry,
+  input: EditorOperationHistoryInput,
   limit = DEFAULT_OPERATION_LIMIT
 ): EditorOperationHistoryState {
-  const session = getEditorOperationSession(history, entry.nodeId);
-  const undoStack = entry.type === 'text.edit'
-    ? retainApplicableTextHistory(session.undoStack, entry)
-    : session.undoStack;
+  const session = getEditorOperationSession(history, input.nodeId);
+  if (input.type !== 'text.input') {
+    return touchSession({ ...history, nativeTextStates: isolateDocumentTextHistory(history, input.nodeId) },
+      input.nodeId, { ...session, externalTextBoundary: {}, textBoundary: {}, redoStack: [], undoStack: trim([...session.undoStack, input], limit) });
+  }
+  const { continuous, entry, groups, key, state } = prepareNativeEditorTextEntry(history, input);
+  const undoStack = continuous ? session.undoStack : retainNativeTextEntries(session.undoStack, key, groups.undo);
   const previous = undoStack.at(-1);
-  const nextUndoStack = previous?.type === 'text.edit' && entry.type === 'text.edit' &&
-    previous.afterDigest === entry.beforeDigest &&
-    canGroupEditorTextOperations(previous, entry)
-    ? [...undoStack.slice(0, -1), mergeEditorTextOperations(previous, entry)]
-    : [...undoStack, entry];
-  return touchSession(history, entry.nodeId, { redoStack: [], undoStack: trim(nextUndoStack, limit) });
+  const merged = previous?.type === 'text.edit' && previous.nativeTargetKey === key && previous.nativeGroup === entry.nativeGroup;
+  const nextEntry = merged && previous.target && entry.target
+    ? { ...entry, target: { ...entry.target, beforeVersionId: previous.target.beforeVersionId } } : entry;
+  return touchSession({ ...history, nativeTextStates: replaceNativeTextState(history, key, state) }, input.nodeId, {
+    ...session, ...(!input.nativeState ? { externalTextBoundary: {} } : {}), ...(groups.applicationBoundary ? { textBoundary: groups.applicationBoundary } : {}),
+    redoStack: [], undoStack: trim([...undoStack.slice(0, merged ? -1 : undoStack.length), nextEntry], limit)
+  });
 }
 
 export function replaceEditorOperationEntry(
@@ -148,15 +136,26 @@ export function removeEditorOperationEntryFromStack(
 export function moveEditorOperationEntry(
   history: EditorOperationHistoryState,
   nodeId: string,
-  mode: 'redo' | 'undo'
+  mode: 'redo' | 'undo',
+  nativeState?: EditorState
 ) {
   const session = getEditorOperationSession(history, nodeId);
   const source = mode === 'undo' ? session.undoStack : session.redoStack;
   const entry = source.at(-1);
   if (!entry) return history;
+  if (entry.type === 'text.edit') {
+    const current = history.nativeTextStates[entry.nativeTargetKey];
+    const nextState = nativeState ?? (current && runNativeTextHistory(current, mode, entry.nativeGroup)?.state);
+    if (!nextState) return history;
+    history = { ...history, nativeTextStates: replaceNativeTextState(history, entry.nativeTargetKey, isolateNativeTextHistory(nextState)) };
+  }
+  if (entry.type !== 'text.edit') {
+    history = { ...history, nativeTextStates: isolateDocumentTextHistory(history, nodeId) };
+  }
+  const boundary = { externalTextBoundary: {}, textBoundary: {} };
   const next = mode === 'undo'
-    ? { redoStack: trim([...session.redoStack, entry]), undoStack: source.slice(0, -1) }
-    : { redoStack: source.slice(0, -1), undoStack: trim([...session.undoStack, entry]) };
+    ? { ...session, ...boundary, redoStack: trim([...session.redoStack, entry]), undoStack: source.slice(0, -1) }
+    : { ...session, ...boundary, redoStack: source.slice(0, -1), undoStack: trim([...session.undoStack, entry]) };
   return touchSession(history, nodeId, next);
 }
 
@@ -178,12 +177,13 @@ export function invalidateEditorOperationSession(
 ) {
   const sessionsByNodeId = { ...history.sessionsByNodeId };
   delete sessionsByNodeId[invalidation.nodeId];
-  return {
+  const next = {
     ...history,
     invalidations: [...history.invalidations, invalidation].slice(-INVALIDATION_LIMIT),
     recentNodeIds: history.recentNodeIds.filter((id) => id !== invalidation.nodeId),
     sessionsByNodeId
   };
+  return { ...next, nativeTextStates: retainNativeTextStates(next) };
 }
 
 export function isPendingEditorAnnotationEntry(

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import type { EditorAdapter, EditorContentChangeMeta } from '../../features/editor/adapters/EditorAdapter';
+import { getEditorTextHistorySource } from '../../features/editor/model/editorNativeOperationHistory';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { EditorOperationApplyContext } from '../../store/workspaceStoreTypes';
 import { registerUndoRouterContentContext } from '../hooks/undoRouter';
@@ -14,6 +15,7 @@ export function useAnswerEditorHistory(answerDocumentId: string | null) {
     unregisterRef.current = null;
     adapterRef.current = adapter;
     if (!adapter || !answerDocumentId) return;
+    adapter.bindTextHistorySource?.(nodeId => getEditorTextHistorySource(useWorkspaceStore.getState().editorOperationHistory, nodeId));
     const context: EditorOperationApplyContext = {
       applyText: (entry, mode) => adapterRef.current?.applyTextHistory?.(entry, mode) ?? false,
       currentContent: adapter.getContent(),

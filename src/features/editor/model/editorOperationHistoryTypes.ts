@@ -1,4 +1,4 @@
-import type { ChangeSet } from '@codemirror/state';
+import type { ChangeSet, EditorState, Text } from '@codemirror/state';
 
 export interface EditorOperationSelectionSnapshot {
   mainIndex: number;
@@ -16,24 +16,44 @@ export interface EditorAnnotationOperationSnapshot {
   parentNodeId: string;
 }
 
-export interface EditorTextEditOperationEntry {
-  target?: {
-    nodeId: string;
-    field: 'content' | 'reveal';
-    beforeVersionId: string;
-    afterVersionId: string;
-  };
-  afterDigest: string;
-  afterSelection: EditorOperationSelectionSnapshot;
-  beforeDigest: string;
-  beforeSelection: EditorOperationSelectionSnapshot;
-  forwardChanges: ChangeSet;
-  inverseChanges: ChangeSet;
+export interface EditorTextOperationTarget {
   nodeId: string;
+  field: 'content' | 'reveal';
+  beforeVersionId: string;
+  afterVersionId: string;
+}
+
+export interface EditorTextHistoryInput {
+  type: 'text.input';
+  inputOrder?: number;
+  nodeId: string;
+  target?: EditorTextOperationTarget;
+  beforeDoc: Text;
+  changes?: ChangeSet;
+  beforeSelection: EditorOperationSelectionSnapshot;
+  afterSelection: EditorOperationSelectionSnapshot;
+  nativeState?: EditorState;
+  nativeBefore?: import('./nativeTextHistoryGroups').NativeTextHistoryGroups;
   timestamp: number;
   title: 'Edit Text';
-  type: 'text.edit';
   userEvent: string;
+}
+
+export interface EditorTextEditOperationEntry {
+  type: 'text.edit';
+  nodeId: string;
+  target?: EditorTextOperationTarget;
+  nativeTargetKey: string;
+  nativeGroup: object;
+  afterSelection: EditorOperationSelectionSnapshot;
+  nativeState?: EditorState;
+  timestamp: number;
+  title: 'Edit Text';
+  userEvent: string;
+}
+
+export interface EditorTextHistoryReplayResult {
+  nativeState: EditorState;
 }
 
 export interface EditorAnnotationOperationState {
@@ -62,6 +82,8 @@ export type EditorAnnotationOperationEntry =
 export type EditorOperationHistoryEntry = EditorAnnotationOperationEntry | EditorTextEditOperationEntry;
 
 export interface EditorOperationHistorySession {
+  textBoundary?: object;
+  externalTextBoundary?: object;
   redoStack: EditorOperationHistoryEntry[];
   undoStack: EditorOperationHistoryEntry[];
 }
@@ -71,7 +93,10 @@ export interface EditorOperationHistoryInvalidation {
   reason: string;
 }
 
+export type EditorOperationHistoryInput = EditorAnnotationOperationEntry | EditorTextHistoryInput;
+
 export interface EditorOperationHistoryState {
+  nativeTextStates: Record<string, EditorState>;
   invalidations: EditorOperationHistoryInvalidation[];
   recentNodeIds: string[];
   sessionsByNodeId: Record<string, EditorOperationHistorySession | undefined>;

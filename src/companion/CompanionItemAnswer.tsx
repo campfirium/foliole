@@ -13,7 +13,7 @@ type Props = {
   style: CSSProperties;
   onChange(value: string, meta?: EditorContentChangeMeta): void;
   onEditorReady(editor: EditorAdapter | null): void;
-  onDocumentInput(): void;
+  onDocumentInput(meta?: EditorContentChangeMeta): void;
   onBlur(): void;
   onMissingResource(id: string): Promise<void>;
 };

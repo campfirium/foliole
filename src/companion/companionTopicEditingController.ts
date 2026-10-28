@@ -1,6 +1,7 @@
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs';
 import type { CompanionContentEdit, CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
 import { readCompanionContentSource, releaseCompanionContentBase, retainCompanionContentBase, saveCompanionContentEdit } from '../shared/platform/companion/editing/companionContentEditing';
+import { companionTextHistorySource } from '../shared/platform/companion/editing/companionEditHistoryRepository';
 import { ContentSavedRefreshError } from '../shared/platform/companion/editing/contentSavedRefreshError';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
@@ -49,6 +50,8 @@ export function createCompanionTopicContentSaveHandler(workspaceSync: CompanionW
       content, currentVersionId, submittedVersionId: currentVersionId };
   }, {
     readSource,
+    historySource: (nodeId: string | null, field: 'content' | 'reveal') =>
+      scope === getCompanionReadingScope() && isAvailableNativeCompanionRuntime() ? companionTextHistorySource(nodeId, field) : null,
     retainHold: async (nodeId: string, versionId: string, holdId: string) => {
       requireCurrentScope();
       if (isAvailableNativeCompanionRuntime()) await retainCompanionContentBase(nodeId, versionId, holdId);

@@ -16,6 +16,7 @@ import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import type { SyncGroupJoinDeviceFacts } from '../../lib/platform/syncGroupJoinContract.js';
 import { devicePathFlavorFromCanonicalLibraryPath } from '../../lib/platform/syncGroupUnifiedContract.js';
+import { createCompanionEditHistorySession, readConfirmedCompanionEditHistory } from '../shared/platform/companion/editing/companionEditHistorySession.js';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.js';
 import { closeCompanionSyncPeerRounds } from '../shared/platform/companion/sync/framed/companionSyncPeerRounds.js';
 import { loadCurrentCredential } from '../shared/platform/companion/sync/syncGroupProviderCredentialStore.js';
@@ -38,7 +39,8 @@ vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', async original
 vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', () => {
   const owner = { databasePath: '/fixture', read: (task: (db: DbPort) => unknown) => task(mobile.db!),
     readSnapshot: (task: (db: DbPort) => unknown) => task(mobile.db!),
-    runWriter: (task: (db: DbPort) => unknown) => task(mobile.db!) };
+    runWriter: (task: (db: DbPort) => unknown) => task(mobile.db!),
+    getEditingHistory: () => readConfirmedCompanionEditHistory(mobile.db!) };
   return { getIosCompanionDatabaseOwner: () => owner };
 });
 vi.mock('../shared/platform/companion/runtime/companionFramedPayloadBudget.js', () => ({
@@ -119,7 +121,7 @@ export async function createJoiningMobile() {
     const db = new Database(local.database);
     db.exec('CREATE TABLE IF NOT EXISTS companion_meta (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT)');
     db.prepare("INSERT OR REPLACE INTO companion_meta VALUES ('host_name', 'Mobile', 'now')").run();
-    mobile.db = createBetterSqliteDbPort(db);
+    mobile.db = createCompanionEditHistorySession(createBetterSqliteDbPort(db));
     return db;
   }
   mobile.facts = { canonical_library_path: local.device.canonical_library_path,

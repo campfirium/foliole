@@ -9,7 +9,6 @@ import { CodeMirrorDeferredFocus } from './codeMirrorDeferredFocus';
 import {
   applyCodeMirrorTextAnchorDecorationsWithPreview,
   replaceCodeMirrorRange,
-  setCodeMirrorContent,
   setCodeMirrorDiffDecorations,
   setCodeMirrorReadOnly,
   setCodeMirrorSearchDecorations,
@@ -96,9 +95,11 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.textHistory = new CodeMirrorTextHistoryController({
       discardPending: () => this.externalChangeBuffer.discardPending(),
       getNodeId: () => this.nodeId,
-      isApplyingExternalContent: () => this.isApplyingExternalContent
+      isApplyingExternalContent: () => this.isApplyingExternalContent,
+      setApplyingExternalContent: value => { this.isApplyingExternalContent = value; }
     });
     const runtime = createCodeMirrorEditorAdapterRuntime({
+      textHistory: this.textHistory,
       hasBodyOverflowListener: () => this.bodyOverflow.hasListeners(),
       onBodyOverflow: (request) => this.bodyOverflow.emit(request),
       diffDecorationsCompartment: this.diffDecorationsCompartment,
@@ -139,6 +140,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   focus() { this.deferredFocus.request(); }
   flushContentChanges() { this.externalChangeBuffer.flushNow(); }
   getContent() { return this.view.state.doc.toString(); }
+  bindTextHistorySource(source: import('./EditorAdapter').EditorTextHistorySource) { this.textHistory.bind(source, this.view); }
   applyTextHistory(entry: EditorTextEditOperationEntry, mode: 'redo' | 'undo') {
     return this.textHistory.apply(entry, mode, this.view);
   }
@@ -156,12 +158,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   setParagraphMarker(selection: EditorSelection | null) { applyParagraphMarkerState({ compartment: this.paragraphMarkerCompartment, selection, view: this.view }); }
   revealPosition(position: number) { revealEditorPosition(this.view, this.clampPosition(position)); }
   setContent(content: string) {
-    setCodeMirrorContent({
-      content,
-      getContent: () => this.getContent(),
-      setApplyingExternalContent: (value) => { this.isApplyingExternalContent = value; },
-      view: this.view
-    });
+    this.textHistory.setContent(content, this.view);
     this.remoteImageLocalization.schedule();
   }
   setHideTitleHeading(hideTitleHeading: boolean) {
@@ -177,6 +174,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.externalChangeBuffer.flushNow();
     if (nodeId !== this.nodeId) {
       this.nodeId = nodeId;
+      this.textHistory.nodeChanged(this.view);
       this.reconfigureLiveMarkdown();
     }
     this.remoteImageLocalization.schedule();

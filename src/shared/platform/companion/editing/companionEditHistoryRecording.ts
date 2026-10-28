@@ -1,9 +1,9 @@
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { NativeWorkspaceReviewProfile } from '../../../../../lib/platform/nativeStorageContract';
-import { digestEditorContent } from '../../../../features/editor/model/editorContentDigest';
+import { nativeTextDocumentEquals, nativeTextInputDocuments } from '../../../../features/editor/model/editorNativeOperationHistory';
 import { getEditorOperationSession, invalidateEditorOperationSession, pushEditorOperationEntry,
-  type EditorOperationHistoryState, type EditorTextEditOperationEntry } from '../../../../features/editor/model/editorOperationHistory';
+  type EditorOperationHistoryState, type EditorTextHistoryInput } from '../../../../features/editor/model/editorOperationHistory';
 
 import type { CompanionContentEdit } from './companionContentEditContract';
 import { readCompanionEditHistoryFromDb, syntheticTextHistory, writeCompanionEditHistory } from './companionEditHistoryRepository';
@@ -37,13 +37,13 @@ export async function recordCompanionAnnotationHistory(db: DbPort, args: {
 
 function pushTextHistory(history: EditorOperationHistoryState, documentId: string,
   before: WorkspaceNodeSnapshot, after: WorkspaceNodeSnapshot, field: 'content' | 'reveal',
-  entries: readonly EditorTextEditOperationEntry[] = []) {
+  entries: readonly EditorTextHistoryInput[] = []) {
   const oldText = before[field] ?? '';
   const newText = after[field] ?? '';
   if (oldText === newText) return history;
   if (!before.currentVersionId || !after.currentVersionId) throw new Error('editor_history_version_unavailable');
-  const candidates = entries.length && entries[0]?.beforeDigest === digestEditorContent(oldText) &&
-    entries.at(-1)?.afterDigest === digestEditorContent(newText)
+  const candidates = entries.length && nativeTextDocumentEquals(entries[0]!.beforeDoc, oldText) &&
+    nativeTextDocumentEquals(nativeTextInputDocuments(entries.at(-1)!).after, newText)
     ? entries : [syntheticTextHistory(documentId, oldText, newText)];
   let next = history;
   for (const entry of candidates) next = pushEditorOperationEntry(next, { ...entry, nodeId: documentId,
@@ -52,13 +52,16 @@ function pushTextHistory(history: EditorOperationHistoryState, documentId: strin
 }
 
 function contentTransactions(args: { edit: CompanionContentEdit; before: WorkspaceNodeSnapshot; after: WorkspaceNodeSnapshot }) {
-  const transactions = args.edit.historyTransactions ?? [];
+  const resolved = (args.edit.historyTransactions ?? []).flatMap(change =>
+    ('entries' in change ? change.entries : change.readEntries()).map(entry => ({ field: change.field, entry })));
+  if (resolved.every(({ entry }) => entry.inputOrder !== undefined)) resolved.sort((a, b) => a.entry.inputOrder! - b.entry.inputOrder!);
+  const transactions = resolved.map(({ field, entry }) => ({ field, entries: [entry] }));
   const fields = (['content', 'reveal'] as const).filter(field => args.before[field] !== args.after[field]);
   const recorded = new Set(fields.filter(field => {
     const entries = transactions.filter(change => change.field === field).flatMap(change => [...change.entries]);
-    return entries.length && entries[0]?.beforeDigest === digestEditorContent(args.before[field] ?? '') &&
-      entries.at(-1)?.afterDigest === digestEditorContent(args.after[field] ?? '') &&
-      entries.every((entry, index) => !index || entry.beforeDigest === entries[index - 1]?.afterDigest);
+    return entries.length && nativeTextDocumentEquals(entries[0]!.beforeDoc, args.before[field] ?? '') &&
+      nativeTextDocumentEquals(nativeTextInputDocuments(entries.at(-1)!).after, args.after[field] ?? '') &&
+      entries.every((entry, index) => !index || entry.beforeDoc.eq(nativeTextInputDocuments(entries[index - 1]!).after));
   }));
   return [
     ...transactions.filter(change => recorded.has(change.field)),

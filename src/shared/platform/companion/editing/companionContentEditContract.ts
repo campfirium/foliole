@@ -24,6 +24,7 @@ export interface CompanionContentAcknowledgement {
 }
 
 export interface CompanionContentSaveHandler {
+  historySource?: (editorNodeId: string | null, field: 'content' | 'reveal') => ReturnType<import('../../../../features/editor/adapters/EditorAdapter').EditorTextHistorySource>;
   (nodeId: string, content: string, edit?: CompanionContentEdit): Promise<CompanionContentAcknowledgement>;
   readSource(nodeId: string, holdId?: string): Promise<CompanionContentSource>;
   retainHold?(nodeId: string, versionId: string, holdId: string): Promise<void>;

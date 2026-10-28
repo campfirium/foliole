@@ -2,29 +2,23 @@ import { ChangeSet } from '@codemirror/state';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvoke } from '../../lib/platform/nativeContract';
-import { createEmptyEditorOperationHistory } from '../features/editor/model/editorOperationHistory';
+import { createEmptyEditorOperationHistory, pushEditorOperationEntry } from '../features/editor/model/editorOperationHistory';
 import { createTextHistoryEntry } from '../features/editor/model/editorOperationHistory.testSupport';
-import { flushEditorOperationHistorySave } from '../shared/platform/runtime/editorOperationHistoryRuntimeRepository';
 
 import { useWorkspaceStore } from './workspaceStore';
 
 afterEach(async () => {
-  await flushEditorOperationHistorySave();
   delete window.electronAPI;
   vi.restoreAllMocks();
 });
 
 function createHistory(sessionCount: number) {
-  const history = createEmptyEditorOperationHistory();
-  for (let index = 0; index < sessionCount; index += 1) {
-    const nodeId = `topic-${index}`;
-    history.recentNodeIds.push(nodeId);
-    history.sessionsByNodeId[nodeId] = {
-      redoStack: [],
-      undoStack: Array.from({ length: 100 }, () => createTextHistoryEntry({
-        afterContent: 'AB', beforeContent: 'A', nodeId
-      }))
-    };
+  let history = createEmptyEditorOperationHistory();
+  for (let index = 0; index < sessionCount; index++) {
+    for (let step = 0; step < 100; step++) history = pushEditorOperationEntry(history, createTextHistoryEntry({
+      afterContent: String(step + 1), beforeContent: String(step), nodeId: `topic-${index}`,
+      timestamp: 1000 + step * 1000, userEvent: 'input.paste'
+    }));
   }
   return history;
 }
@@ -45,7 +39,6 @@ it.each([1, 6, 12])('keeps %i document histories in memory without encoding or w
       ...history, invalidations: [{ nodeId: `changed-${index}`, reason: 'external-content-change' }]
     } });
   }
-  await flushEditorOperationHistorySave();
   expect(conversions).not.toHaveBeenCalled();
   expect(invoke).not.toHaveBeenCalled();
   expect(useWorkspaceStore.getState().editorOperationHistory.recentNodeIds).toHaveLength(size);

@@ -7,6 +7,7 @@ interface HistoryCandidate {
 }
 
 const candidates = new WeakMap<DbPort, () => HistoryCandidate>();
+const confirmedCandidates = new WeakMap<DbPort, HistoryCandidate>();
 
 /** One database owner's editing history, published only after its outer commit. */
 export function createCompanionEditHistorySession(db: DbPort): DbPort {
@@ -34,6 +35,7 @@ export function createCompanionEditHistorySession(db: DbPort): DbPort {
     }
   };
   candidates.set(port, () => active ?? confirmed);
+  confirmedCandidates.set(port, confirmed);
   return port;
 }
 
@@ -59,4 +61,10 @@ export async function clearRetiredCompanionEditHistory(db: DbPort) {
     await tx.run(`DELETE FROM node_version_local_holds
       WHERE instr(hold_id, 'editor_history:') = 1 OR instr(hold_id, 'editor_history_body:') = 1`);
   });
+}
+
+export function readConfirmedCompanionEditHistory(db: DbPort) {
+  const candidate = confirmedCandidates.get(db);
+  if (!candidate) throw new Error('editor_history_requires_database_owner');
+  return candidate.history;
 }

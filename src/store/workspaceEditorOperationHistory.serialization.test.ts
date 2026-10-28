@@ -60,7 +60,7 @@ async function createHighlight(harness: ReturnType<typeof createHarness>['harnes
 
 function createTextContext(harness: ReturnType<typeof createHarness>['harness']) {
   return {
-    applyText: (entry: ReturnType<typeof createTextHistoryEntry>, mode: 'redo' | 'undo') => {
+    applyText: (entry: import('../features/editor/model/editorOperationHistory').EditorTextEditOperationEntry, mode: 'redo' | 'undo') => {
       const content = applyTextHistoryEntry(harness.getState().nodesById[entry.nodeId]!.content, entry, mode);
       void harness.getState().updateNodeContent(entry.nodeId, content, { publishLocal: false });
       return true;
@@ -230,7 +230,7 @@ it('ignores an annotation undo acknowledgement after the library owner changes',
   expect(historyActions.undoEditorOperation()).toBe(true);
   expect(historyActions.redoEditorOperation()).toBe(true);
   harness.setState({ libraryScope: 'new-library', editorOperationHistory: {
-    invalidations: [], recentNodeIds: [], sessionsByNodeId: {}
+    invalidations: [], nativeTextStates: {}, recentNodeIds: [], sessionsByNodeId: {}
   } });
   const before = harness.getState();
   pending.resolve({ deletedNodeIds: [createdId!] });

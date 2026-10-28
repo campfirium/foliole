@@ -10,11 +10,17 @@ export function useCompanionEditorDraftFlush(
   canEdit: boolean,
   onReady?: (editor: EditorAdapter | null) => void
 ) {
+  const historySource = useRef(state.historySource);
+  historySource.current = state.historySource;
   const editor = useRef<EditorAdapter | null>(null);
   const answerEditor = useRef<EditorAdapter | null>(null);
-  const onAnswerEditorReady = useCallback((value: EditorAdapter | null) => { answerEditor.current = value; }, []);
+  const onAnswerEditorReady = useCallback((value: EditorAdapter | null) => {
+    answerEditor.current = value;
+    value?.bindTextHistorySource?.(nodeId => historySource.current?.(nodeId, 'reveal') ?? null);
+  }, []);
   const onEditorReady = useCallback((value: EditorAdapter | null) => {
     editor.current = value;
+    value?.bindTextHistorySource?.(nodeId => historySource.current?.(nodeId, 'content') ?? null);
     onReady?.(value);
   }, [onReady]);
   const flushPendingSave = useCallback(async () => {

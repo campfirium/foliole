@@ -4,7 +4,7 @@ import {
   pushEditorOperationEntry,
   removeEditorOperationEntry,
   type EditorAnnotationOperationEntry,
-  type EditorOperationHistoryEntry
+  type EditorOperationHistoryInput
 } from '../features/editor/model/editorOperationHistory';
 
 import {
@@ -189,7 +189,7 @@ export function createWorkspaceEditorOperationHistoryActions(set: WorkspaceSet, 
       nodeIds,
       (nodeId, succeeded) => runner.settle(nodeId, succeeded)
     ),
-    pushEditorOperationEntry: (entry: EditorOperationHistoryEntry) => set((state) => ({
+    pushEditorOperationEntry: (entry: EditorOperationHistoryInput) => set((state) => ({
       editorOperationHistory: pushEditorOperationEntry(state.editorOperationHistory, entry)
     })),
     redoEditorOperation: (context?: EditorOperationApplyContext) => {

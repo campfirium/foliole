@@ -1,7 +1,7 @@
 import type { NodeOpenState } from '../../lib/core/database/nodeOpenState';
 import type { DailyFlowSession as ReviewSessionState } from '../../lib/core/flow/dailyFlowSession';
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
-import type { EditorOperationHistoryEntry, EditorOperationHistoryState, EditorTextEditOperationEntry } from '../features/editor/model/editorOperationHistory';
+import type { EditorOperationHistoryInput, EditorOperationHistoryState, EditorTextEditOperationEntry, EditorTextHistoryReplayResult } from '../features/editor/model/editorOperationHistory';
 import type { FormulaClozeCreatePayload, FormulaClozeSourcePayload } from '../features/formula-cloze/model/formulaCloze';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../features/image-cloze/model/imageCloze';
 import type { NodeDismissTargets } from '../features/nodes/model/nodeDismissTargets';
@@ -68,7 +68,7 @@ export interface WorkspaceState {
   dismissNodes: (targets: NodeDismissTargets, now?: string) => boolean;
   undoWorkspaceAction: (now?: string) => boolean | Promise<boolean>;
   redoWorkspaceAction: (now?: string) => boolean | Promise<boolean>;
-  pushEditorOperationEntry: (entry: EditorOperationHistoryEntry) => void;
+  pushEditorOperationEntry: (entry: EditorOperationHistoryInput) => void;
   deleteEditorAnnotationNodes: (nodeIds: string[]) => void;
   undoEditorOperation: (context?: EditorOperationApplyContext) => boolean;
   redoEditorOperation: (context?: EditorOperationApplyContext) => boolean;
@@ -105,7 +105,7 @@ export interface WorkspaceState {
 }
 
 export interface EditorOperationApplyContext {
-  applyText: (entry: EditorTextEditOperationEntry, mode: 'redo' | 'undo') => boolean;
+  applyText: (entry: EditorTextEditOperationEntry, mode: 'redo' | 'undo') => boolean | EditorTextHistoryReplayResult;
   currentContent: string;
   getCurrentContent?: () => string;
   nodeId: string;

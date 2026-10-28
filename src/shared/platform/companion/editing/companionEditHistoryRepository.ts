@@ -2,9 +2,10 @@ import { ChangeSet, Text } from '@codemirror/state';
 
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { releaseLocalEditBase, retainLocalEditBase } from '../../../../../lib/core/sync/nodeVersionLocalEditHold';
-import { digestEditorContent } from '../../../../features/editor/model/editorContentDigest';
-import type { EditorOperationHistoryState, EditorTextEditOperationEntry } from '../../../../features/editor/model/editorOperationHistory';
+import { getEditorTextHistorySource } from '../../../../features/editor/model/editorNativeOperationHistory';
+import type { EditorOperationHistoryState, EditorTextHistoryInput } from '../../../../features/editor/model/editorOperationHistory';
 import { readIosCompanionDatabase } from '../runtime/iosCompanionActiveDatabase';
+import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import { readCompanionSessionHistory, stageCompanionSessionHistory } from './companionEditHistorySession';
 
@@ -54,11 +55,17 @@ export async function writeCompanionEditHistory(db: DbPort,
   stageCompanionSessionHistory(db, after);
 }
 
-export function syntheticTextHistory(documentId: string, before: string, after: string): EditorTextEditOperationEntry {
+export function syntheticTextHistory(documentId: string, before: string, after: string): EditorTextHistoryInput {
   const changes = ChangeSet.of({ from: 0, to: before.length, insert: after }, before.length);
   const selection = { mainIndex: 0, ranges: [{ anchor: 0, head: 0 }] };
-  return { nodeId: documentId, type: 'text.edit', title: 'Edit Text', timestamp: Date.now(), userEvent: 'input.replace',
-    beforeDigest: digestEditorContent(before), afterDigest: digestEditorContent(after),
-    beforeSelection: selection, afterSelection: selection, forwardChanges: changes,
-    inverseChanges: changes.invert(Text.of(before.split('\n'))) };
+  return { nodeId: documentId, type: 'text.input', title: 'Edit Text', timestamp: Date.now(), userEvent: 'input.replace',
+    beforeSelection: selection, afterSelection: selection, changes, beforeDoc: Text.of(before.split('\n')) };
+}
+
+export function companionTextHistorySource(editorNodeId: string | null, field: 'content' | 'reveal') {
+  if (!editorNodeId) return null;
+  const nodeId = field === 'reveal' ? editorNodeId.slice(0, -'::answer'.length) : editorNodeId;
+  const history = getIosCompanionDatabaseOwner().getEditingHistory();
+  const source = getEditorTextHistorySource(history, nodeId, { nodeId, field })!;
+  return { ...source, boundary: history.sessionsByNodeId[nodeId]?.externalTextBoundary ?? null };
 }

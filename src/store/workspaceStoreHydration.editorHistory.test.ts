@@ -1,35 +1,29 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-const runtime = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn() }));
-vi.mock('../shared/platform/runtime/editorOperationHistoryRuntimeRepository', () => ({
-  loadEditorOperationHistoryFromRuntime: runtime.load,
-  scheduleEditorOperationHistorySave: runtime.save
-}));
+const runtime = vi.hoisted(() => ({ invoke: vi.fn() }));
+vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => runtime.invoke }));
+
 
 import { createEmptyEditorOperationHistory, getEditorOperationSession, pushEditorOperationEntry } from '../features/editor/model/editorOperationHistory';
 import { createTextHistoryEntry } from '../features/editor/model/editorOperationHistory.testSupport';
-import { serializeEditorOperationHistory } from '../features/editor/model/editorOperationHistoryPersistence';
 
 import { useWorkspaceStore } from './workspaceStore';
 import { ensureWorkspaceHydrated } from './workspaceStoreHydration';
 import { createWorkspaceStorePersistConfig } from './workspaceStorePersistConfig';
 
 beforeEach(() => {
-  runtime.load.mockReset();
-  runtime.save.mockReset();
+  runtime.invoke.mockReset().mockResolvedValue(null);
   useWorkspaceStore.setState({ editorOperationHistory: createEmptyEditorOperationHistory(),
     isHydrated: false, workspaceHydrationError: null });
 });
 
 it('starts with empty undo and redo even when the previous run saved editing history', async () => {
-  const history = pushEditorOperationEntry(createEmptyEditorOperationHistory(), createTextHistoryEntry({
-    afterContent: 'AB', beforeContent: 'A', nodeId: 'node-1'
-  }));
-  runtime.load.mockResolvedValue(serializeEditorOperationHistory(history));
+  runtime.invoke.mockImplementation(async command => command === 'load_editor_operation_history'
+    ? '{"version":1,"history":{"sessionsByNodeId":{"node-1":{"undoStack":[{}],"redoStack":[]}}}}' : null);
   await ensureWorkspaceHydrated();
   expect(getEditorOperationSession(useWorkspaceStore.getState().editorOperationHistory, 'node-1'))
     .toEqual({ undoStack: [], redoStack: [] });
-  expect(runtime.load).not.toHaveBeenCalled();
+  expect(runtime.invoke.mock.calls.some(([command]) => command === 'load_editor_operation_history')).toBe(false);
 });
 
 it('keeps current-session editing history when selecting another document', () => {
@@ -41,7 +35,7 @@ it('keeps current-session editing history when selecting another document', () =
   const history = useWorkspaceStore.getState().editorOperationHistory;
   expect(getEditorOperationSession(history, 'a').undoStack).toHaveLength(1);
   expect(getEditorOperationSession(history, 'b').undoStack).toHaveLength(1);
-  expect(runtime.save).not.toHaveBeenCalled();
+  expect(runtime.invoke.mock.calls.some(([command]) => command === 'save_editor_operation_history')).toBe(false);
 });
 
 it('preserves history on refresh and clears it on a different library snapshot', () => {

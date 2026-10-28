@@ -18,7 +18,7 @@ vi.mock('@capacitor/core', async original => {
 let host: Awaited<ReturnType<typeof createJoiningMobile>> | undefined;
 afterEach(async () => { await closeCompanionDesktopSession(); await host?.close(); host = undefined; vi.unstubAllGlobals(); });
 
-it('syncs undo and redo to an independent peer after reopening the mobile database', async () => {
+it('syncs same-session undo and redo to an independent peer and clears only local undo on restart', async () => {
   vi.stubGlobal('crypto', webcrypto);
   vi.stubGlobal('Uint8Array', Object.getPrototypeOf(Buffer.prototype).constructor);
   host = await createJoiningMobile();
@@ -37,13 +37,17 @@ it('syncs undo and redo to an independent peer after reopening the mobile databa
   try {
     await syncJoinedMobile(host);
     expect(read(peer)).toEqual({ content: input.content });
-    host.reopen();
-    expect(await loadCompanionEditHistory()).toEqual(history);
     await applyCompanionEditHistory('undo-http', 'undo');
     await syncJoinedMobile(host);
     expect(read(host.sqlite)).toEqual({ content: source.content });
     expect(read(peer)).toEqual({ content: source.content });
     await applyCompanionEditHistory('undo-http', 'redo');
+    await syncJoinedMobile(host);
+    expect(read(host.sqlite)).toEqual({ content: input.content });
+    expect(read(peer)).toEqual({ content: input.content });
+    host.reopen();
+    expect((await loadCompanionEditHistory()).sessionsByNodeId).toEqual({});
+    expect(await applyCompanionEditHistory('undo-http', 'undo')).toBe(false);
     await syncJoinedMobile(host);
     expect(read(host.sqlite)).toEqual({ content: input.content });
     expect(read(peer)).toEqual({ content: input.content });
