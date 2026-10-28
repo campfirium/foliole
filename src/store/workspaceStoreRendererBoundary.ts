@@ -1,10 +1,10 @@
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
+import { prepareWorkspaceNodeChildrenIndex } from '../features/nodes/model/workspaceNodeChildrenIndex';
 import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
 import { readWorkspaceRecordPatch } from '../shared/workspaceRecordPatch';
 
 import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
 import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
-import { prepareWorkspaceNodeChildrenIndex } from './workspaceNodeChildrenIndex';
 import { enforceWorkspaceRendererBoundary } from './workspaceRendererBoundary';
 import {
   collectRendererBoundaryKeepNodeIds,

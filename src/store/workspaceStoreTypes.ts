@@ -4,6 +4,7 @@ import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import type { EditorOperationHistoryEntry, EditorOperationHistoryState, EditorTextEditOperationEntry } from '../features/editor/model/editorOperationHistory';
 import type { FormulaClozeCreatePayload, FormulaClozeSourcePayload } from '../features/formula-cloze/model/formulaCloze';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../features/image-cloze/model/imageCloze';
+import type { NodeDismissTargets } from '../features/nodes/model/nodeDismissTargets';
 import type { Node, NodeAnchorLink, NodeImageRegionGroup, PdfAnchorLocator, TextAnchorLocator } from '../features/nodes/model/nodeTypes';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
@@ -64,7 +65,7 @@ export interface WorkspaceState {
   shelveNode: (nodeId: string, now?: string) => boolean;
   unshelveNode: (nodeId: string, now?: string) => boolean;
   dismissNode: (nodeId: string, now?: string) => boolean;
-  dismissNodes: (nodeIds: string[], now?: string) => boolean;
+  dismissNodes: (targets: NodeDismissTargets, now?: string) => boolean;
   undoWorkspaceAction: (now?: string) => boolean | Promise<boolean>;
   redoWorkspaceAction: (now?: string) => boolean | Promise<boolean>;
   pushEditorOperationEntry: (entry: EditorOperationHistoryEntry) => void;

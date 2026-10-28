@@ -7,10 +7,10 @@ import { closeLibraries, createPeer, joinPeers, startLibraries, type Peer } from
 import { syncRequestLibrary } from '../../electron/database/syncRequestLibrary.testSupport';
 import { deleteNodesPermanently, restoreNodes, softDeleteNodes, upsertNodeSnapshot } from '../../lib/core/database/nodeMutations';
 import { loadWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { prepareWorkspaceNodeChildrenIndex as prepare } from '../features/nodes/model/workspaceNodeChildrenIndex';
 
 import { createEmptyWorkspaceActionHistory } from './workspaceActionHistory';
 import { collectNodeSubtreeIds } from './workspaceHelpers';
-import { prepareWorkspaceNodeChildrenIndex as prepare } from './workspaceNodeChildrenIndex';
 import { createInitialWorkspaceState, useWorkspaceStore, type WorkspaceState } from './workspaceStore';
 import { createDeleteNodesPermanentlyAction } from './workspaceStorePermanentDeleteAction';
 import { withWorkspaceRendererBoundary } from './workspaceStoreRendererBoundary';

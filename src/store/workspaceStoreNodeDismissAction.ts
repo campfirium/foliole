@@ -1,3 +1,4 @@
+import { collectTopicDismissIds } from '../features/nodes/model/nodeDismissTargets';
 import { hasNodeContent, type Node } from '../features/nodes/model/nodeTypes';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
@@ -197,11 +198,13 @@ function buildDismissNodesMutation(args: {
 }
 
 export function createDismissNodesAction(set: WorkspaceSet, get?: WorkspaceGet): WorkspaceState['dismissNodes'] {
-  return (nodeIds, now = new Date().toISOString()) => {
+  return (targets, now = new Date().toISOString()) => {
     let mutation: ReturnType<typeof buildDismissNodesMutation> = null;
     acceptWorkspaceHistoryCommand(set, 'preserve', (state) => {
       if (get && (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
           state.appActionHistory.pendingCreate)) return state;
+      const nodeIds = Array.isArray(targets) ? targets
+        : collectTopicDismissIds(targets.topicRootId, state.nodesById);
       mutation = buildDismissNodesMutation({ nodeIds, now, state, withHistory: Boolean(get) });
       if (!mutation) return state;
       return {

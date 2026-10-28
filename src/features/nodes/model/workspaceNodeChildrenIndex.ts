@@ -1,7 +1,7 @@
-import { getWorkspaceRecordPatch, readWorkspaceRecordPatch } from '../shared/workspaceRecordPatch';
+import { getWorkspaceRecordPatch, readWorkspaceRecordPatch } from '../../../shared/workspaceRecordPatch';
 
 type StructureNode = { id: string; parentNodeId: string | null };
-type Nodes = Record<string, StructureNode>;
+type Nodes = Record<string, StructureNode | undefined>;
 interface Member { key: string; id: string; parent: string | null; position: number; }
 export interface WorkspaceNodeChildrenIndex {
   readonly members: ReadonlyMap<string, Member>;
@@ -29,6 +29,7 @@ function buildIndex(nodes: Nodes): WorkspaceNodeChildrenIndex {
   const members = new Map<string, Member>();
   const children = new Map<string | null, Member[]>();
   for (const [key, node] of Object.entries(nodes)) {
+    if (!node) continue;
     const member = { key, id: node.id, parent: node.parentNodeId, position: members.size };
     members.set(key, member);
     const siblings = children.get(member.parent) ?? [];
@@ -49,6 +50,7 @@ function scanChanges(nodes: Nodes, previous: WorkspaceNodeChildrenIndex) {
   let reordered = false;
   let newStringKey = false;
   for (const key of keys) {
+    if (!nodes[key]) continue;
     const member = previous.members.get(key);
     if (!matches(member, nodes[key])) changed.push(key);
     if (!integerKey(key) && member) {
@@ -57,7 +59,7 @@ function scanChanges(nodes: Nodes, previous: WorkspaceNodeChildrenIndex) {
     } else if (!integerKey(key)) newStringKey = true;
   }
   for (const key of previous.members.keys()) {
-    if (!Object.hasOwn(nodes, key)) changed.push(key);
+    if (!nodes[key]) changed.push(key);
   }
   return { changed, reordered };
 }
@@ -105,7 +107,8 @@ export function prepareWorkspaceNodeChildrenIndex(nodes: Nodes, previousNodes?: 
   if (!previous) index = buildIndex(nodes);
   else {
     const hinted = readWorkspaceRecordPatch(nodes, source!);
-    const changes = hinted ? { changed: hinted, reordered: false } : scanChanges(nodes, previous);
+    const revived = hinted?.some(key => nodes[key] && Object.hasOwn(source!, key) && !source![key]);
+    const changes = hinted && !revived ? { changed: hinted, reordered: false } : scanChanges(nodes, previous);
     index = changes.reordered ? buildIndex(nodes) : updateIndex(nodes, previous, changes.changed);
   }
   indexes.set(nodes, index);

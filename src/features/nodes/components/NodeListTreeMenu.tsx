@@ -1,6 +1,7 @@
 import { resolveSystemEntryId } from '../../../shared/localization/systemEntryNames';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../../shared/platform/readwiseTopicMerge';
 import { showAppRuntimeNotice } from '../../../shared/ui/AppRuntimeNotice';
+import type { NodeDismissTargets } from '../model/nodeDismissTargets';
 import { canNodeBeMoved } from '../model/nodeMovementRules';
 import { isHomeNode, isProtectedRootNode, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
@@ -24,7 +25,7 @@ interface NodeListTreeMenuProps {
   deleteNodes: (nodeIds: string[]) => void;
   deleteNodesPermanently: (nodeIds: string[]) => void;
   dismissNode: (nodeId: string, now?: string) => boolean;
-  dismissNodes: (nodeIds: string[], now?: string) => boolean;
+  dismissNodes: (targets: NodeDismissTargets, now?: string) => boolean;
   isVirtualViewOpen: boolean;
   nodesById: WorkspaceListNodesById;
   onAddToVirtualFolder?: (nodeIds: string[]) => void;
@@ -122,7 +123,6 @@ function buildNodeListActionHandlers(
   return {
     onDismissEntireTopic: createDismissEntireTopicAction(
       menuState.primaryTargetId,
-      props.nodesById,
       props.dismissNodes,
       props.contextMenu.closeContextMenu
     ),

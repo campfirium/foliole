@@ -1,7 +1,8 @@
 import { afterEach, expect, it } from 'vitest';
 
+import { prepareWorkspaceNodeChildrenIndex as prepare } from '../features/nodes/model/workspaceNodeChildrenIndex';
+
 import { collectNodeSubtreeIds } from './workspaceHelpers';
-import { prepareWorkspaceNodeChildrenIndex as prepare } from './workspaceNodeChildrenIndex';
 import { useWorkspaceStore } from './workspaceStore';
 import { createWorkspaceStorePersistConfig } from './workspaceStorePersistConfig';
 

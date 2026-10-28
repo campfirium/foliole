@@ -1,8 +1,8 @@
 import { createInitialNewItemReviewProfile } from '../../lib/core/review/newItemReviewSlots';
 import type { NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 import { ensureInboxNodeInSnapshot, HOME_NODE_ID } from '../features/nodes/model/specialNodes';
+import { prepareWorkspaceNodeChildrenIndex } from '../features/nodes/model/workspaceNodeChildrenIndex';
 
-import { prepareWorkspaceNodeChildrenIndex } from './workspaceNodeChildrenIndex';
 import type { WorkspaceLayoutState } from './workspaceStore';
 
 export function createDefaultReviewProfile(timestamp: string): NodeReviewProfile {

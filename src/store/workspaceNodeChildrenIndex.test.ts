@@ -1,10 +1,10 @@
 import { expect, it } from 'vitest';
 
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { prepareWorkspaceNodeChildrenIndex as prepare } from '../features/nodes/model/workspaceNodeChildrenIndex';
 import { patchWorkspaceRecord, recordWorkspaceRecordPatch } from '../shared/workspaceRecordPatch';
 
 import { collectNodeSubtreeIds } from './workspaceHelpers';
-import { prepareWorkspaceNodeChildrenIndex as prepare } from './workspaceNodeChildrenIndex';
 
 const node = (id: string, parentNodeId: string | null = null) => ({ id, parentNodeId, title: id }) as Node;
 const fixture = () => ({ root: node('root'), a: node('a', 'root'), b: node('b', 'root'),

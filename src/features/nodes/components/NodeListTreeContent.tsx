@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 
 import type { ReviewSessionState } from '../../../store/workspaceStore';
 import { getCurrentReviewSchedulerSettings } from '../../settings/model/reviewSchedulerSettings';
+import type { NodeDismissTargets } from '../model/nodeDismissTargets';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
@@ -30,7 +31,7 @@ interface NodeListTreeContentProps {
   deleteNodesPermanently: (nodeIds: string[]) => void;
   deleteStatusLabel: string | null;
   dismissNode: (nodeId: string, now?: string) => boolean;
-  dismissNodes: (nodeIds: string[], now?: string) => boolean;
+  dismissNodes: (targets: NodeDismissTargets, now?: string) => boolean;
   highlightedNodeId: string | null;
   isTrashViewOpen: boolean;
   isVirtualViewOpen: boolean;

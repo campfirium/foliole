@@ -1,7 +1,7 @@
 import { requestAppConfirmation } from '../../../shared/ui';
+import type { NodeDismissTargets } from '../model/nodeDismissTargets';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
-import { collectDismissEntireTopicTargets } from './nodeListContextMenuReview';
 
 function confirmReturnNodeReset(targetCount: number) {
   return requestAppConfirmation({
@@ -33,8 +33,7 @@ export function createReturnNodeAction(
 
 export function createDismissEntireTopicAction(
   rootNodeId: string | null,
-  nodesById: WorkspaceListNodesById,
-  dismissNodes: (nodeIds: string[], now?: string) => boolean,
+  dismissNodes: (targets: NodeDismissTargets, now?: string) => boolean,
   closeContextMenu: () => void
 ) {
   return () => {
@@ -43,7 +42,7 @@ export function createDismissEntireTopicAction(
       return;
     }
     const now = new Date().toISOString();
-    dismissNodes(collectDismissEntireTopicTargets(rootNodeId, nodesById), now);
+    dismissNodes({ topicRootId: rootNodeId }, now);
     closeContextMenu();
   };
 }

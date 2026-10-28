@@ -1,5 +1,7 @@
+import { collectTopicDismissIds } from '../model/nodeDismissTargets';
 import {
   getWorkspaceListReviewItemKind,
+  getWorkspaceListStructureSource,
   isFsrsWorkspaceListNode,
   type WorkspaceListNode,
   type WorkspaceListNodesById
@@ -41,30 +43,10 @@ function canUnshelveTopic(node: WorkspaceListNode | undefined, nodesById: Worksp
   return Boolean(isNativeEntryTopic(node, nodesById) && node?.shelvedAt);
 }
 
-function collectDescendantIds(rootNodeId: string, nodesById: WorkspaceListNodesById) {
-  const descendants: string[] = [];
-  const pending = [rootNodeId];
-  while (pending.length > 0) {
-    const currentId = pending.shift();
-    if (!currentId) {
-      continue;
-    }
-    for (const node of Object.values(nodesById)) {
-      if (node?.parentNodeId === currentId) {
-        descendants.push(node.id);
-        pending.push(node.id);
-      }
-    }
-  }
-  return descendants;
-}
-
 export function collectDismissEntireTopicTargets(rootNodeId: string, nodesById: WorkspaceListNodesById) {
-  const rootNode = nodesById[rootNodeId];
-  if (rootNode?.kind !== 'topic') {
-    return [];
-  }
-  return [rootNodeId, ...collectDescendantIds(rootNodeId, nodesById)].filter((nodeId) => canDismissNode(nodesById[nodeId]));
+  if (nodesById[rootNodeId]?.kind !== 'topic') return [];
+  return collectTopicDismissIds(rootNodeId, getWorkspaceListStructureSource(nodesById))
+    .filter(nodeId => canDismissNode(nodesById[nodeId]));
 }
 
 export function canRelearnNode(node: WorkspaceListNode | undefined) {

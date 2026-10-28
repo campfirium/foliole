@@ -55,23 +55,8 @@ it('dismisses only the current menu target', () => {
 it('dismisses an entire topic through one batch action', () => {
   const closeContextMenu = vi.fn();
   const dismissNodes = vi.fn().mockReturnValue(true);
-  const reading = {
-    intervalDurationMs: 0,
-    intervalGrowthFactor: 1,
-    lastHandledAt: NOW,
-    nextAt: NOW,
-    priority: 0,
-    readingPosition: 0,
-    repetitionCount: 0,
-    state: 'active' as const
-  };
-  const nodesById: WorkspaceListNodesById = {
-    child: listNode({ hasContent: true, id: 'child', parentNodeId: 'parent', reading }),
-    parent: listNode({ hasContent: true, id: 'parent', reading })
-  };
+  createDismissEntireTopicAction('parent', dismissNodes, closeContextMenu)();
 
-  createDismissEntireTopicAction('parent', nodesById, dismissNodes, closeContextMenu)();
-
-  expect(dismissNodes).toHaveBeenCalledWith(['parent', 'child'], expect.any(String));
+  expect(dismissNodes).toHaveBeenCalledExactlyOnceWith({ topicRootId: 'parent' }, expect.any(String));
   expect(closeContextMenu).toHaveBeenCalledOnce();
 });

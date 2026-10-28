@@ -92,6 +92,11 @@ export function toWorkspaceListNodesById(
   );
 }
 
+export function getWorkspaceListStructureSource(nodes: WorkspaceListNodesById):
+  Record<string, { id: string; parentNodeId: string | null; kind?: string } | undefined> {
+  return projectionSources.get(nodes) ?? nodes;
+}
+
 function isWorkspaceListProjectionReusable(
   projectedNode: WorkspaceListNode | undefined,
   sourceNode: Node | undefined

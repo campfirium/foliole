@@ -1,6 +1,5 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
-
-import { prepareWorkspaceNodeChildrenIndex } from './workspaceNodeChildrenIndex';
+import { prepareWorkspaceNodeChildrenIndex } from '../features/nodes/model/workspaceNodeChildrenIndex';
 
 export function normalizeWidth(value: number) {
   return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
