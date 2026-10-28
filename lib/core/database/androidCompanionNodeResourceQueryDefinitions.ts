@@ -8,7 +8,7 @@ import { COMPANION_WORKSPACE_DISPLAY_NODE_QUERY } from './companionSnapshotNodeQ
 import { COMPANION_TOPIC_SEARCH_QUERY } from './companionTopicSearchDefinitions.js';
 import { NODE_RESOURCES_SQL } from './nodeResourcesSql.js';
 import { ROOT_CHILD_ORDER_ID } from './parentChildOrder.js';
-import { SNAPSHOT_VISIBLE_NODES_CTE_SQL, VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
+import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   nodeAttachments: {
@@ -107,17 +107,17 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   workspaceOrderedNodeIds: {
     resultKey: 'nodes',
     sql:
-      `${SNAPSHOT_VISIBLE_NODES_CTE_SQL} ` +
-      `, sibling_positions AS (
+      `WITH RECURSIVE sibling_positions AS (
         SELECT p.parent_id, j.value AS child_id, MIN(CAST(j.key AS INTEGER)) AS ordinal
         FROM parent_child_order p, json_each(p.child_ids_json) j
         GROUP BY p.parent_id, j.value
       ), ranked AS (
         SELECT n.id, n.parent_id,
           printf('%010d', COALESCE(j.ordinal, 999999999)) || ':' || n.created_at || ':' || n.id AS segment
-        FROM nodes n JOIN visible_nodes visible ON visible.id = n.id
+        FROM nodes n INDEXED BY idx_nodes_parent_id
         LEFT JOIN sibling_positions j ON j.parent_id = COALESCE(n.parent_id, '${ROOT_CHILD_ORDER_ID}')
           AND j.child_id = n.id
+        WHERE n.deleted_at IS NULL
       ), ordered(id, path) AS (
         SELECT id, segment FROM ranked WHERE parent_id IS NULL
         UNION ALL

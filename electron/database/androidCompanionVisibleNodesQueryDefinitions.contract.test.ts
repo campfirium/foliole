@@ -33,7 +33,6 @@ function expectVisibleNodes(sql: string) {
 it('keeps Android companion node consumers scoped to visible node ancestry', () => {
   expectVisibleNodes(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.topicSearch.sql);
   expectVisibleNodes(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.readableArticleFirstNode.sql);
-  expectVisibleNodes(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceOrderedNodeIds.sql);
   expectVisibleNodes(ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceSnapshotNodes.sql);
 });
 

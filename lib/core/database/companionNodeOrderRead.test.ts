@@ -55,3 +55,24 @@ it('reads each parent order once instead of once per sibling in a wide directory
   expect(readOrder()).toEqual(['root', ...[...children].reverse()]);
   expect(orderReads).toBeLessThanOrEqual(2);
 });
+
+
+it('excludes missing parents and cycles while retaining literal sibling order and live roots', () => {
+  node('root', null); node('other-root', null);
+  node('a', 'root'); node('b', 'root'); node('unlisted', 'root'); node('leaf', 'a');
+  // Deliberately malformed parent links exercise the read boundary, not normal writes.
+  db.pragma('foreign_keys = OFF');
+  node('orphan', 'absent'); node('orphan-child', 'orphan');
+  node('cycle-a', 'cycle-b'); node('cycle-b', 'cycle-a'); node('self', 'self');
+  db.pragma('foreign_keys = ON');
+  node('deleted', 'root', true); node('hidden', 'deleted'); node('hidden-leaf', 'hidden');
+  node('deleted-root', null, true); node('hidden-root-child', 'deleted-root');
+  order('parent-child-order:root', ['other-root', 'root', 'other-root', 'absent']);
+  order('root', ['b', 'missing', 'a', 'b', 'deleted', 'other-root']);
+  order('a', ['leaf']);
+  expect(readOrder()).toEqual(['other-root', 'root', 'b', 'a', 'leaf', 'unlisted']);
+  db.prepare("UPDATE nodes SET deleted_at = NULL WHERE id = 'deleted'").run();
+  expect(readOrder()).toEqual(['other-root', 'root', 'b', 'a', 'leaf', 'deleted', 'hidden', 'hidden-leaf', 'unlisted']);
+  db.prepare("UPDATE nodes SET parent_id = 'other-root' WHERE id = 'a'").run();
+  expect(readOrder()).toEqual(['other-root', 'a', 'leaf', 'root', 'b', 'deleted', 'hidden', 'hidden-leaf', 'unlisted']);
+});
