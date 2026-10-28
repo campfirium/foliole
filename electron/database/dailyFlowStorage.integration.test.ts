@@ -60,3 +60,35 @@ it('persists a large cycle, changes only affected rows and reads a bounded recei
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+it('atomically replaces reordered rows and restores the full list when a batch violates uniqueness', async () => {
+  const sqlite = new Database(':memory:');
+  try {
+    sqlite.exec(DAILY_FLOW_CURRENT_SCHEMA.slice(0, 4).join(';'));
+    const db = createBetterSqliteDbPort(sqlite);
+    const initial: CycleRow[] = [
+      { node_id: '资料-😀-"quoted"', order_key: 1, active: 1, cohort: 'queue', initial_task: 1, handled: 0 },
+      { node_id: 'second', order_key: 2, active: 1, cohort: 'soon', initial_task: 0, handled: 1 },
+      { node_id: 'untouched', order_key: 3, active: 0, cohort: 'none', initial_task: 0, handled: 0 }
+    ];
+    await db.transaction(tx => writeCycleRows(tx, initial));
+    await db.transaction(tx => writeCycleRows(tx, []));
+    expect(await readCycleRows(db)).toEqual(initial);
+    const swapped: CycleRow[] = [
+      { ...initial[0]!, order_key: 2, active: 0, cohort: 'none', initial_task: 0, handled: 1 },
+      { ...initial[1]!, order_key: 1, active: 1, cohort: 'queue', initial_task: 1, handled: 0 }
+    ];
+    await db.transaction(tx => writeCycleRows(tx, swapped));
+    const expected = [swapped[1]!, swapped[0]!, initial[2]!];
+    expect(await readCycleRows(db)).toEqual(expected);
+    // The first statement deletes rows; a rejected insert must restore those rows too.
+    await expect(db.transaction(tx => writeCycleRows(tx,
+      [{ ...swapped[0]!, order_key: 3 }, swapped[1]!]))).rejects.toThrow();
+    expect(await readCycleRows(db)).toEqual(expected);
+    await expect(db.transaction(tx => writeCycleRows(tx,
+      [swapped[0]!, { ...swapped[0]!, order_key: 4 }]))).rejects.toThrow();
+    expect(await readCycleRows(db)).toEqual(expected);
+    await db.transaction(tx => writeCycleRows(tx, initial.slice(0, 2)));
+    expect(await readCycleRows(db)).toEqual(initial);
+  } finally { sqlite.close(); }
+});
