@@ -25,6 +25,7 @@ export class WorkspaceNodePriorityState {
 
   get priorities(): ReadonlyMap<string, PushQueuePriority> { return this.values; }
   get paths(): WorkspaceNodePaths { return this.pathValues; }
+  get metadata(): ReadonlyMap<string, Readonly<PriorityIndexNode>> { return this.nodes; }
 
   setDefaultPriority(value: RegularPushQueuePriority) {
     if (value === this.defaultPriority) return;

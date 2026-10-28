@@ -134,6 +134,11 @@ export class CapacitorCompanionDatabaseOwner {
     return this.nodePriorities.readIndex(db, defaultPriority, initial);
   }
 
+  readNodeMetadata(db: DbPort) {
+    if (db !== this.requireDb()) throw new Error('node_metadata_index_requires_owned_connection');
+    return this.nodePriorities.readMetadata();
+  }
+
   readNodeOrder(db: DbPort, initial?: readonly string[]) {
     if (db !== this.requireDb()) throw new Error('node_order_index_requires_owned_connection');
     return this.nodePriorities.readOrder(db, initial);

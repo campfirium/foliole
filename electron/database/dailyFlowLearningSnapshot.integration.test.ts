@@ -86,3 +86,24 @@ it('reads node eligibility and learning facts from one SQLite snapshot during a 
       .toMatchObject({ priority: 9, reading: { repetitionCount: 8 } });
   } finally { writer.close(); }
 });
+
+it('combines owned node metadata with fresh learning facts and rejects an incomplete metadata view', async () => {
+  const peer = await library();
+  peer.db.prepare("UPDATE nodes SET priority=0 WHERE id='topic-0'").run();
+  peer.db.prepare("UPDATE nodes SET parent_id='topic-2' WHERE id='topic-3'").run();
+  const full = await loadDailyFlowLearningSnapshot(peer.port, 'desktop');
+  const metadata = new Map(Object.values(full.nodesById).map(node => [node.id, {
+    id: node.id, parentNodeId: node.parentNodeId, priority: node.priority ?? null,
+    createdAt: node.createdAt, deletedAt: node.deletedAt ?? null
+  }]));
+  const combined = await loadDailyFlowLearningSnapshot(peer.port, 'desktop', undefined, metadata);
+  expect(combined).toEqual(full);
+  expect(combined.nodesById['topic-0']).toMatchObject({ priority: 0,
+    reading: { readingPosition: 42, repetitionCount: 3 }, review: { stability: 12.5, reps: 5 } });
+  const scoped = await loadDailyFlowLearningSnapshot(peer.port, 'desktop', ['topic-0'], new Map());
+  expect(scoped.nodesById['topic-0']).toEqual(full.nodesById['topic-0']);
+  metadata.delete('topic-3');
+  await expect(loadDailyFlowLearningSnapshot(peer.port, 'desktop', undefined, metadata))
+    .rejects.toThrow('daily_flow_node_metadata_missing');
+  expect((await loadDailyFlowLearningSnapshot(peer.port, 'desktop')).nodesById).toEqual(full.nodesById);
+});

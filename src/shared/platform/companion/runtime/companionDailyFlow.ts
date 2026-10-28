@@ -63,7 +63,8 @@ export function openCompanionDailyFlow(args: DailyFlowOpenArgs) {
     const settings = companionDailyFlowSettings();
     const persistence: DailyFlowPersistence = { ...companionDailyFlowPersistence,
       learningSnapshot: async (tx, ids) => {
-        const snapshot = await loadDailyFlowLearningSnapshot(tx, await iosCompanionHostName(tx), ids);
+        const metadata = ids ? undefined : getIosCompanionDatabaseOwner().readNodeMetadata(tx) ?? undefined;
+        const snapshot = await loadDailyFlowLearningSnapshot(tx, await iosCompanionHostName(tx), ids, metadata);
         if (ids) return snapshot;
         const index = await getIosCompanionDatabaseOwner()
           .readNodeIndex(tx, settings.pushQueue.defaultPriority, Object.values(snapshot.nodesById));

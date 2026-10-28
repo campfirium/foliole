@@ -1,28 +1,31 @@
 import { parseStoredAnchorLink } from '../database/anchorLinkCodec.js';
 import { toReadingProfile, toReviewProfile, type WorkspaceLearningProfileRow } from '../database/workspaceLearningProfiles.js';
 import { isNodeKind } from '../nodes/nodeKind.js';
+import type { PriorityIndexNode } from '../nodes/workspaceNodePriorityState.js';
 import type { DbPort, DbRow } from '../sync/dbPort.js';
 
 import type { DailyFlowLearningNode, DailyFlowLearningSnapshot } from './dailyFlowContract.js';
 
 interface LearningRow extends DbRow {
   id: string;
-  parent_id: string | null;
+  parent_id?: string | null;
   kind: string | null;
-  priority: number | null;
+  priority?: number | null;
   shelved_at: string | null;
-  created_at: string;
-  deleted_at: string | null;
+  created_at?: string;
+  deleted_at?: string | null;
   anchor_link: string | null;
   has_content: number;
   has_reveal: number;
 }
 
-const NODE_COLUMNS = `n.id, n.parent_id, n.kind, n.priority, n.shelved_at,
-    n.created_at, n.deleted_at,
+type NodeMetadata = ReadonlyMap<string, Readonly<PriorityIndexNode>>;
+const ELIGIBILITY_COLUMNS = `n.kind, n.shelved_at,
     CASE WHEN n.body_blob_hash IS NOT NULL OR LENGTH(TRIM(n.content)) > 0 THEN 1 ELSE 0 END AS has_content,
     CASE WHEN n.reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal,
     CASE WHEN n.anchor_resolution_status LIKE 'unmapped_%' THEN NULL ELSE n.anchor_link END AS anchor_link`;
+const NODE_COLUMNS = `n.id, n.parent_id, n.priority, n.created_at, n.deleted_at, ${ELIGIBILITY_COLUMNS}`;
+const PREPARED_NODE_COLUMNS = `n.id, ${ELIGIBILITY_COLUMNS}`;
 const PROFILE_COLUMNS = `    rd.interval_duration_ms AS reading_interval_duration_ms,
     rd.interval_growth_factor AS reading_interval_growth_factor,
     rd.last_handled_at AS reading_last_handled_at, rd.next_at AS reading_next_at,
@@ -40,15 +43,16 @@ const PROFILE_JOINS = `    FROM nodes n
 type ProfileRow = DbRow & WorkspaceLearningProfileRow & { id: string };
 
 // This projection owns learning eligibility and concurrency facts, never workspace display data.
+// Prepared metadata belongs to the same serialized database operation as this read.
 export async function loadDailyFlowLearningSnapshot(db: DbPort, hostName: string,
-  nodeIds?: readonly string[]): Promise<DailyFlowLearningSnapshot> {
+  nodeIds?: readonly string[], metadata?: NodeMetadata): Promise<DailyFlowLearningSnapshot> {
   if (nodeIds) {
     const rows = await db.query<LearningRow & ProfileRow>(`SELECT ${NODE_COLUMNS}, ${PROFILE_COLUMNS}
       ${PROFILE_JOINS} WHERE n.id IN (SELECT value FROM json_each(?))`, [hostName, JSON.stringify(nodeIds)]);
     return buildSnapshot(rows, new Map(rows.map(row => [row.id, row])), [...nodeIds]);
   }
   return db.transaction(async tx => {
-    const rows = await tx.query<LearningRow>(`SELECT ${NODE_COLUMNS} FROM nodes n`);
+    const rows = await tx.query<LearningRow>(`SELECT ${metadata ? PREPARED_NODE_COLUMNS : NODE_COLUMNS} FROM nodes n`);
     const profiles = await tx.query<ProfileRow>(`WITH learned AS (
       SELECT node_id FROM node_reading UNION SELECT node_id FROM node_review
     ) SELECT n.id, ${PROFILE_COLUMNS}
@@ -56,19 +60,26 @@ export async function loadDailyFlowLearningSnapshot(db: DbPort, hostName: string
       LEFT JOIN node_reading rd ON rd.node_id = n.id
       LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ?
       LEFT JOIN node_review nr ON nr.node_id = n.id`, [hostName]);
-    return buildSnapshot(rows, new Map(profiles.map(row => [row.id, row])), rows.map(row => row.id));
+    return buildSnapshot(rows, new Map(profiles.map(row => [row.id, row])), rows.map(row => row.id), metadata);
   });
 }
 
-function buildSnapshot(rows: LearningRow[], profiles: Map<string, ProfileRow>, nodeOrder: string[]): DailyFlowLearningSnapshot {
-  return { nodeOrder, nodesById: Object.fromEntries(rows.map(row => [row.id, learningNode(row, profiles.get(row.id))])),
-    trashedNodeIds: rows.filter(row => row.deleted_at).map(row => row.id) };
+function buildSnapshot(rows: LearningRow[], profiles: Map<string, ProfileRow>, nodeOrder: string[], metadata?: NodeMetadata): DailyFlowLearningSnapshot {
+  const nodesById = Object.fromEntries(rows.map(row => [row.id, learningNode(row, profiles.get(row.id), metadata)]));
+  return { nodeOrder, nodesById, trashedNodeIds: rows.filter(row => nodesById[row.id]?.deletedAt).map(row => row.id) };
 }
 
-function learningNode(row: LearningRow, profile?: ProfileRow): DailyFlowLearningNode {
+function learningNode(row: LearningRow, profile?: ProfileRow, metadata?: NodeMetadata): DailyFlowLearningNode {
+  const cached = metadata?.get(row.id);
+  const parentNodeId = cached ? cached.parentNodeId : row.parent_id;
+  const createdAt = cached ? cached.createdAt : row.created_at;
+  if ((metadata && !cached) || parentNodeId === undefined || typeof createdAt !== 'string') {
+    throw new Error('daily_flow_node_metadata_missing');
+  }
   const anchor = parseStoredAnchorLink(row.anchor_link);
-  return { id: row.id, parentNodeId: row.parent_id, kind: isNodeKind(row.kind) ? row.kind : 'topic',
-    priority: row.priority, shelvedAt: row.shelved_at, createdAt: row.created_at, deletedAt: row.deleted_at,
+  return { id: row.id, parentNodeId, kind: isNodeKind(row.kind) ? row.kind : 'topic',
+    priority: (cached ? cached.priority : row.priority) ?? null, shelvedAt: row.shelved_at, createdAt,
+    deletedAt: (cached ? cached.deletedAt : row.deleted_at) ?? null,
     hasContent: row.has_content === 1, hasReveal: row.has_reveal === 1,
     anchorLink: anchor ? { kind: anchor.kind } : null,
     reading: profile ? toReadingProfile(profile) : null, review: profile ? toReviewProfile(profile) : null };

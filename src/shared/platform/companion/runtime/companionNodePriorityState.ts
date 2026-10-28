@@ -27,6 +27,11 @@ export class CompanionNodePriorityState {
     return { priorities: this.state.priorities, paths: this.state.paths };
   }
 
+  readMetadata() {
+    if (this.failure) throw this.failure;
+    return this.state?.metadata ?? null;
+  }
+
   async readOrder(db: DbPort, initial?: readonly string[]): Promise<readonly string[]> {
     if (this.failure) throw this.failure;
     if (initial) this.nodeOrder = [...initial];

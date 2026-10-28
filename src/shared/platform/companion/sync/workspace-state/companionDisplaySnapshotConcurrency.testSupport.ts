@@ -34,8 +34,8 @@ export function createDisplayLibrary(platform: 'android' | 'ios', existingFile?:
   let holdDisplay = false;
   const counts = { rows: 0, queries: 0, fullQueries: 0 };
   const projectionPlans: ProjectionPlan[] = [];
-  const nodeOrderReads: number[] = [];
-  const priorityReads: { params: unknown[]; rows: number }[] = [];
+  const observations = createIndexObservations();
+  const { nodeOrderReads, priorityReads, flowNodeReads } = observations;
   const connections = new Map<boolean, Database.Database>([[false, writer]]);
   const adapt = (database: Database.Database) => {
     const connection = createFakeCapacitorConnection(database);
@@ -46,7 +46,7 @@ export function createDisplayLibrary(platform: 'android' | 'ios', existingFile?:
           return { values: [] };
         }
         const result = await connection.query(sql, params);
-        recordIndexRead(sql, params, result.values?.length ?? 0, priorityReads, nodeOrderReads);
+        recordIndexRead(sql, params, result.values ?? [], observations);
         const plan = readProjectionPlan(database, sql, params);
         if (plan) projectionPlans.push(plan);
         if (sql.includes('AS collection_source_content')) {
@@ -78,7 +78,7 @@ export function createDisplayLibrary(platform: 'android' | 'ios', existingFile?:
   } as unknown as CapacitorCompanionDatabaseManager;
   const owner = new CapacitorCompanionDatabaseOwner(manager, platform);
   const unbindPriorities = bindCompanionNodePriorities(owner);
-  return { owner, file, reading, release, priorityReads, nodeOrderReads, directoryRows: () => counts.rows,
+  return { owner, file, reading, release, priorityReads, nodeOrderReads, flowNodeReads, directoryRows: () => counts.rows,
     projectionPlans: () => projectionPlans, directoryQueries: () => counts.queries,
     fullDirectoryQueries: () => counts.fullQueries, hold: () => { holdDisplay = true; },
     close: () => closeDisplayLibrary(owner, connections, root, unbindPriorities)
@@ -93,8 +93,16 @@ async function closeDisplayLibrary(owner: CapacitorCompanionDatabaseOwner,
   rmSync(root, { recursive: true, force: true });
 }
 
-function recordIndexRead(sql: string, params: unknown[], rows: number,
-  reads: { params: unknown[]; rows: number }[], orderReads: number[]) {
-  if (sql === ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceOrderedNodeIds.sql) orderReads.push(rows);
-  if (sql.startsWith('SELECT id, parent_id, priority, created_at, deleted_at FROM nodes')) reads.push({ params, rows });
+function createIndexObservations() {
+  return { nodeOrderReads: [] as number[], priorityReads: [] as { params: unknown[]; rows: number }[],
+    flowNodeReads: [] as { rows: number; bytes: number }[] };
+}
+
+function recordIndexRead(sql: string, params: unknown[], values: unknown[], reads: ReturnType<typeof createIndexObservations>) {
+  const rows = values.length;
+  if (sql === ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceOrderedNodeIds.sql) reads.nodeOrderReads.push(rows);
+  if (sql.startsWith('SELECT id, parent_id, priority, created_at, deleted_at FROM nodes')) reads.priorityReads.push({ params, rows });
+  if (sql.startsWith('SELECT n.id') && sql.endsWith('FROM nodes n')) {
+    reads.flowNodeReads.push({ rows, bytes: Buffer.byteLength(JSON.stringify(values)) });
+  }
 }
