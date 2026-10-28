@@ -6,15 +6,15 @@ import type { PushQueuePriority, UnifiedPushQueueRules } from '../unifiedPushQue
 
 import type { ReviewQueueNode } from './reviewQueuePlanner.js';
 import { createSeededRandom } from './reviewQueuePlannerHelpers.js';
-import { parseReviewQueueTimestamp } from './reviewQueuePlannerTime.js';
+import type { ReviewQueueTimeInput } from './reviewQueueTimeInput.js';
 
-function resolveFsrsRetrievability(node: ReviewQueueNode, now: string) {
+function resolveFsrsRetrievability(node: ReviewQueueNode, now: string, time: ReviewQueueTimeInput) {
   if (!node.review) return 0;
   const card = node.review;
   if (!card.lastReviewAt || card.stability <= 0) {
     return 0;
   }
-  const elapsedDays = Math.max((parseReviewQueueTimestamp(now) - parseReviewQueueTimestamp(card.lastReviewAt)) / (24 * 60 * 60 * 1000), 0);
+  const elapsedDays = Math.max((time.timestamp(now) - time.timestamp(card.lastReviewAt)) / (24 * 60 * 60 * 1000), 0);
   const retrievability = forgetting_curve(default_w, elapsedDays, card.stability);
   return Number.isFinite(retrievability) ? retrievability : 0;
 }
@@ -24,6 +24,7 @@ export function resolveFsrsQueueNodeIds(args: {
   disperseMaterial: boolean;
   nodeOrder: string[];
   now: string;
+  time: ReviewQueueTimeInput;
   pushQueueRules: UnifiedPushQueueRules;
   priorities: ReadonlyMap<string, PushQueuePriority>;
   paths: WorkspaceNodePaths;
@@ -34,7 +35,7 @@ export function resolveFsrsQueueNodeIds(args: {
       id: node.id,
       pathNodeIds: args.paths.get(node.id)!,
       priority: args.priorities.get(node.id)!,
-      retrievability: resolveFsrsRetrievability(node, args.now)
+      retrievability: resolveFsrsRetrievability(node, args.now, args.time)
     })),
     {
       ...(args.disperseMaterial ? { materialDispersion: {} } : {}),

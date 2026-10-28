@@ -66,7 +66,7 @@ export function compareFsrsForgettingDescending<T extends Pick<FsrsPushQueueEntr
 
 function bucketPriorityQueueEntries<T extends { priority: PushQueuePriority }>(
   entries: readonly T[],
-  compareEntries: (left: T, right: T) => number
+  compareEntries?: (left: T, right: T) => number
 ) {
   const absolute: T[] = [];
   const regular = createRegularPriorityBuckets<T>();
@@ -81,7 +81,7 @@ function bucketPriorityQueueEntries<T extends { priority: PushQueuePriority }>(
   });
 
   REGULAR_PUSH_QUEUE_PRIORITIES.forEach((priority) => {
-    regular[priority].sort(compareEntries);
+    if (compareEntries) regular[priority].sort(compareEntries);
   });
 
   return { absolute, regular };
@@ -91,8 +91,8 @@ function bucketFsrsPushQueueEntries<T extends FsrsPushQueueEntry>(entries: reado
   return bucketPriorityQueueEntries(entries, compareFsrsForgettingDescending);
 }
 
-function bucketReadingPushQueueEntries<T extends ReadingPushQueueEntry>(entries: readonly T[]) {
-  return bucketPriorityQueueEntries(entries, compareReadingNextAtAscending);
+function bucketReadingPushQueueEntries<T extends ReadingPushQueueEntry>(entries: readonly T[], disperse: boolean) {
+  return bucketPriorityQueueEntries(entries, disperse ? undefined : compareReadingNextAtAscending);
 }
 
 export function selectRouletteBucketPriority<T>(
@@ -158,7 +158,7 @@ export function assembleReadingPushQueue<T extends ReadingPushQueueEntry>(
   entries: readonly T[],
   options: ReadingPushQueueOptions = {}
 ) {
-  const buckets = bucketReadingPushQueueEntries(entries);
+  const buckets = bucketReadingPushQueueEntries(entries, Boolean(options.materialDispersion));
   if (options.materialDispersion) {
     REGULAR_PUSH_QUEUE_PRIORITIES.forEach((priority) => {
       buckets.regular[priority] = disperseReadingMaterial(buckets.regular[priority], options.materialDispersion!);

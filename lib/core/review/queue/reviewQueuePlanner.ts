@@ -9,7 +9,8 @@ import { collectReviewQueueCandidates } from './reviewQueuePlannerCandidates.js'
 import { resolveFsrsQueueNodeIds } from './reviewQueuePlannerFsrs.js';
 import { createSeededRandom } from './reviewQueuePlannerHelpers.js';
 import { resolveModeQueueNodeIds } from './reviewQueuePlannerMode.js';
-import { resolveReviewQueueReadingAvailableAt, resolveReviewQueueReadingDueAt } from './reviewQueuePlannerReadingPaths.js';
+import { resolveReviewQueueReadingDueAt } from './reviewQueuePlannerReadingPaths.js';
+import { createReviewQueueTimeInput, type ReviewQueueTimeInput } from './reviewQueueTimeInput.js';
 import type { ReviewSessionMode } from './reviewQueueTypes.js';
 
 export interface ReviewQueuePlan {
@@ -27,7 +28,7 @@ function resolveReadingQueueNodeIds(args: {
   candidates: ReviewQueueNode[];
   priorities: ReadonlyMap<string, PushQueuePriority>;
   paths: WorkspaceNodePaths;
-  readingDayStartsAtHour: number;
+  time: ReviewQueueTimeInput;
   disperseMaterial: boolean;
   nodeOrder: string[];
   now: string;
@@ -38,7 +39,7 @@ function resolveReadingQueueNodeIds(args: {
     args.candidates.map((node) => {
       const nextAt = resolveReviewQueueReadingDueAt(node);
       return {
-        dueAt: resolveReviewQueueReadingAvailableAt(node, args.readingDayStartsAtHour),
+        dueAt: args.time.readingAvailableAt(node),
         id: node.id,
         intervalDurationMs: node.reading?.intervalDurationMs,
         nextAt,
@@ -51,6 +52,7 @@ function resolveReadingQueueNodeIds(args: {
         ? {
             materialDispersion: {
               now: args.now,
+              timestamp: args.time.timestamp,
               readingInitialIntervalMs: args.pushQueueRules.readingInitialIntervalMs
             }
           }
@@ -79,14 +81,12 @@ export interface ReviewQueuePlanInput {
 
 type Candidates = ReturnType<typeof collectReviewQueueCandidates>;
 
-function collectCandidates(args: ReviewQueuePlanInput) {
+function collectCandidates(args: ReviewQueuePlanInput, time: ReviewQueueTimeInput) {
   const includeScheduled = args.includeScheduled ?? false;
-  const newDayStartsAtHour = args.newDayStartsAtHour;
   const trashedNodeIds = new Set(args.trashedNodeIds);
   return collectReviewQueueCandidates({
     includeScheduled,
-    readingDayStartsAtHour: args.readingDayStartsAtHour,
-    newDayStartsAtHour,
+    time,
     nodeOrder: args.nodeOrder,
     nodesById: args.nodesById,
     now: args.candidateNow ?? args.now,
@@ -95,7 +95,7 @@ function collectCandidates(args: ReviewQueuePlanInput) {
 }
 
 function buildOrderedQueues(args: ReviewQueuePlanInput, { fsrsCandidates, readingCandidates }: Candidates,
-  priorities: ReadonlyMap<string, PushQueuePriority>, paths: WorkspaceNodePaths) {
+  priorities: ReadonlyMap<string, PushQueuePriority>, paths: WorkspaceNodePaths, time: ReviewQueueTimeInput) {
   const includeScheduled = args.includeScheduled ?? false;
   const pushQueueRules = args.pushQueueRules;
   const fsrsQueueNodeIds = resolveFsrsQueueNodeIds({
@@ -104,6 +104,7 @@ function buildOrderedQueues(args: ReviewQueuePlanInput, { fsrsCandidates, readin
     disperseMaterial: !includeScheduled,
     nodeOrder: args.nodeOrder,
     now: args.now,
+    time,
     pushQueueRules,
     priorities
   });
@@ -111,7 +112,7 @@ function buildOrderedQueues(args: ReviewQueuePlanInput, { fsrsCandidates, readin
     candidates: readingCandidates,
     paths,
     priorities,
-    readingDayStartsAtHour: args.readingDayStartsAtHour,
+    time,
     disperseMaterial: !includeScheduled,
     nodeOrder: args.nodeOrder,
     now: args.now,
@@ -151,12 +152,13 @@ function sameCandidates(left: Candidates, right: Candidates) {
 export function createReviewQueuePlanner(input: ReviewQueuePlanInput) {
   const priorities = input.nodePriorities ?? createWorkspaceNodePriorityIndex(input.nodesById, input.pushQueueRules.defaultPriority);
   const paths = input.nodePaths ?? createWorkspaceNodePaths(Object.values(input.nodesById).filter((node): node is ReviewQueueNode => Boolean(node)));
+  const time = createReviewQueueTimeInput(input.readingDayStartsAtHour, input.newDayStartsAtHour);
   let previous: { candidates: Candidates; ordered: ReturnType<typeof buildOrderedQueues> } | undefined;
   return (options: Pick<ReviewQueuePlanInput, 'candidateNow' | 'mode' | 'limit'> = {}): ReviewQueuePlan => {
     const args = { ...input, ...options };
-    const candidates = collectCandidates(args);
+    const candidates = collectCandidates(args, time);
     const ordered = previous && sameCandidates(previous.candidates, candidates)
-      ? previous.ordered : buildOrderedQueues(args, candidates, priorities, paths);
+      ? previous.ordered : buildOrderedQueues(args, candidates, priorities, paths, time);
     previous = { candidates, ordered };
     return assemblePlan(args, ordered);
   };

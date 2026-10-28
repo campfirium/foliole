@@ -3,6 +3,7 @@ import { DEFAULT_UNIFIED_PUSH_QUEUE_RULES } from './unifiedPushQueueRules.js';
 
 export interface ReadingMaterialDispersionEntry {
   dueAt?: string;
+  nextAt?: string;
   id?: string;
   intervalDurationMs?: number | null | undefined;
   pathNodeIds?: readonly string[];
@@ -11,6 +12,7 @@ export interface ReadingMaterialDispersionEntry {
 export interface ReadingMaterialDispersionOptions {
   readingInitialIntervalMs?: number;
   now: string;
+  timestamp?: (value: string) => number;
 }
 
 export type OrderedMaterialDispersionEntry = Pick<ReadingMaterialDispersionEntry, 'id' | 'pathNodeIds'>;
@@ -43,32 +45,38 @@ function resolveEffectiveIntervalMs(entry: ReadingMaterialDispersionEntry, initi
   return isPositiveFiniteNumber(interval) && interval >= initialIntervalMs ? interval : initialIntervalMs;
 }
 
-function resolveRelativeOverdue(entry: ReadingMaterialDispersionEntry, nowMs: number, initialIntervalMs: number) {
-  if (!entry.dueAt) return 0;
-  const overdueMs = Math.max(0, nowMs - parseTimestamp(entry.dueAt));
-  return overdueMs / resolveEffectiveIntervalMs(entry, initialIntervalMs);
-}
-
-function compareMaterialPressure<T extends ReadingMaterialDispersionEntry>(nowMs: number, initialIntervalMs: number) {
-  return (left: T, right: T) => {
-    const overdue = resolveRelativeOverdue(right, nowMs, initialIntervalMs) - resolveRelativeOverdue(left, nowMs, initialIntervalMs);
+function preparePressureOrder<T extends ReadingMaterialDispersionEntry>(entries: readonly T[],
+  options: ReadingMaterialDispersionOptions) {
+  const timestamp = options.timestamp ?? parseTimestamp;
+  const nowMs = timestamp(options.now);
+  const initial = options.readingInitialIntervalMs ?? DEFAULT_UNIFIED_PUSH_QUEUE_RULES.readingInitialIntervalMs;
+  if (entries.length < 2) return [...entries];
+  const prepared = entries.map(entry => {
+    const dueAt = entry.dueAt ? timestamp(entry.dueAt) : null;
+    return { entry, dueAt, pressure: dueAt === null ? 0
+      : Math.max(0, nowMs - dueAt) / resolveEffectiveIntervalMs(entry, initial),
+    nextAt: entry.nextAt === undefined ? null : timestamp(entry.nextAt) };
+  });
+  prepared.sort((left, right) => {
+    const overdue = right.pressure - left.pressure;
     if (overdue !== 0) return overdue;
-    const dueAt = parseTimestamp(left.dueAt ?? '') - parseTimestamp(right.dueAt ?? '');
+    const dueAt = (left.dueAt ?? timestamp('')) - (right.dueAt ?? timestamp(''));
     if (dueAt !== 0) return dueAt;
-    const path = comparePathNodeIds(left.pathNodeIds, right.pathNodeIds);
+    const path = comparePathNodeIds(left.entry.pathNodeIds, right.entry.pathNodeIds);
     if (path !== 0) return path;
-    return (left.id ?? '').localeCompare(right.id ?? '');
-  };
+    const id = (left.entry.id ?? '').localeCompare(right.entry.id ?? '');
+    if (id !== 0) return id;
+    // Preserve the effective stable order of the former nextAt pre-sort.
+    return left.nextAt === null || right.nextAt === null ? 0 : left.nextAt - right.nextAt;
+  });
+  return prepared.map(value => value.entry);
 }
 
 export function disperseReadingMaterial<T extends ReadingMaterialDispersionEntry>(
   entries: readonly T[],
   options: ReadingMaterialDispersionOptions
 ) {
-  const initialIntervalMs = options.readingInitialIntervalMs ?? DEFAULT_UNIFIED_PUSH_QUEUE_RULES.readingInitialIntervalMs;
-  const nowMs = parseTimestamp(options.now);
-  const pressureOrdered = [...entries].sort(compareMaterialPressure(nowMs, initialIntervalMs));
-  return interleaveMaterialHierarchy(pressureOrdered);
+  return interleaveMaterialHierarchy(preparePressureOrder(entries, options));
 }
 
 export function disperseOrderedMaterial<T extends OrderedMaterialDispersionEntry>(

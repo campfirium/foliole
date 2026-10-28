@@ -73,3 +73,12 @@ it('interleaves ordered sources while preserving each source order', () => {
 
   expect(queue.map((item) => item.id)).toEqual(['a-1', 'b-1', 'a-2', 'c-1']);
 });
+
+it('preserves nextAt and encounter order only after all final pressure keys tie', () => {
+  const same = { id: 'same', pathNodeIds: ['source', 'same'] };
+  const late = { ...entry('same', same), nextAt: '2026-03-20T09:00:00.000Z', label: 'late' };
+  const early = { ...entry('same', same), nextAt: '2026-03-19T09:00:00.000Z', label: 'early' };
+  const twin = { ...early, label: 'twin' };
+  expect(disperseReadingMaterial([late, early, twin], { now: '2026-03-21T09:00:00.000Z' })
+    .map(value => value.label)).toEqual(['early', 'twin', 'late']);
+});

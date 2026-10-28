@@ -3,14 +3,13 @@ import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../reviewItemKind
 
 import type { ReviewQueueNode } from './reviewQueuePlanner.js';
 import { hasDeletedAncestor, hasShelvedAncestor } from './reviewQueuePlannerHelpers.js';
-import { resolveReviewQueueReadingAvailableAt } from './reviewQueuePlannerReadingPaths.js';
-import { isReviewProfileDue, parseReviewQueueTimestamp } from './reviewQueuePlannerTime.js';
+import type { ReviewQueueTimeInput } from './reviewQueueTimeInput.js';
 
 function isQueueableReadingNode(
   node: ReviewQueueNode | undefined,
   nodesById: Record<string, ReviewQueueNode | undefined>,
   now: string,
-  readingDayStartsAtHour: number
+  time: ReviewQueueTimeInput
 ): node is ReviewQueueNode {
   if (!node || !isReadingReviewItemNode(node) || !hasNodeContent(node)) {
     return false;
@@ -21,7 +20,7 @@ function isQueueableReadingNode(
   if (node.reading && node.reading.state !== 'active') {
     return false;
   }
-  return parseReviewQueueTimestamp(resolveReviewQueueReadingAvailableAt(node, readingDayStartsAtHour)) <= parseReviewQueueTimestamp(now);
+  return time.timestamp(time.readingAvailableAt(node)) <= time.timestamp(now);
 }
 
 function isSchedulableReadingNode(
@@ -44,7 +43,7 @@ function isDueFsrsNode(
   node: ReviewQueueNode | undefined,
   nodesById: Record<string, ReviewQueueNode | undefined>,
   now: string,
-  newDayStartsAtHour: number
+  time: ReviewQueueTimeInput
 ): node is ReviewQueueNode {
   if (!node || !isFsrsReviewItemNode(node)) {
     return false;
@@ -52,7 +51,7 @@ function isDueFsrsNode(
   if (hasDeletedAncestor(node, nodesById)) {
     return false;
   }
-  return isReviewProfileDue(node.review, now, newDayStartsAtHour);
+  return time.reviewDueAt(node, now) <= time.timestamp(now);
 }
 
 function isSchedulableFsrsNode(
@@ -64,8 +63,7 @@ function isSchedulableFsrsNode(
 
 export function collectReviewQueueCandidates(args: {
   includeScheduled: boolean;
-  readingDayStartsAtHour: number;
-  newDayStartsAtHour: number;
+  time: ReviewQueueTimeInput;
   nodeOrder: string[];
   nodesById: Record<string, ReviewQueueNode | undefined>;
   now: string;
@@ -78,14 +76,14 @@ export function collectReviewQueueCandidates(args: {
     const node = args.nodesById[nodeId];
     const isReadingCandidate = args.includeScheduled
       ? isSchedulableReadingNode(node, args.nodesById)
-      : isQueueableReadingNode(node, args.nodesById, args.now, args.readingDayStartsAtHour);
+      : isQueueableReadingNode(node, args.nodesById, args.now, args.time);
     if (node && isReadingCandidate) {
       readingCandidates.push(node);
       return;
     }
     const isFsrsCandidate = args.includeScheduled
       ? isSchedulableFsrsNode(node, args.nodesById)
-      : isDueFsrsNode(node, args.nodesById, args.now, args.newDayStartsAtHour);
+      : isDueFsrsNode(node, args.nodesById, args.now, args.time);
     if (node && isFsrsCandidate) fsrsCandidates.push(node);
   });
   return { fsrsCandidates, readingCandidates };
