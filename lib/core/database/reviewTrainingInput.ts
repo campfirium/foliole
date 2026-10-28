@@ -62,14 +62,16 @@ function createPlan(nodes: ReviewTrainingNode[], models: ReviewTrainingModel[], 
 export function readReviewTrainingInput(driver: DatabaseDriver, folderId: string | null,
   libraryScope: string): ReviewTrainingInput {
   if (folderId === null) throw new Error('review_training_folder_invalid');
-  const group = readReviewTrainingPlan(driver, libraryScope).folders.find(folder => folder.folderId === folderId);
-  if (!group) throw new Error('review_training_threshold_not_reached');
   const nodes = driver.queryAll<ReviewTrainingNode & Record<string, unknown>>(REVIEW_TRAINING_NODES_SQL);
+  const models = readReviewModels(driver);
+  const group = createPlan(nodes, models, driver.queryAll<CountRow>(COUNTS_SQL), libraryScope)
+    .folders.find(folder => folder.folderId === folderId);
+  if (!group) throw new Error('review_training_threshold_not_reached');
   const folder = nodes.find(node => node.id === folderId);
   if (!folder || folder.kind !== 'folder' || isSpecialRootNode(folderId)) {
     throw new Error('review_training_folder_invalid');
   }
-  return createInput(group, nodes, readReviewModels(driver),
+  return createInput(group, nodes, models,
     driver.queryAll<ReviewTrainingInput['events'][number] & Record<string, unknown>>(eventsSql(), [folderId]),
     driver.queryAll<SettingNode>(SETTINGS_SQL), libraryScope);
 }
@@ -102,11 +104,11 @@ export async function readReviewTrainingPlanWithDb(db: DbPort, libraryScope: str
 
 export async function readReviewTrainingInputWithDb(db: DbPort, folderId: string | null, libraryScope: string) {
   if (folderId === null) throw new Error('review_training_folder_invalid');
-  const plan = await readReviewTrainingPlanWithDb(db, libraryScope);
-  const group = plan.folders.find(folder => folder.folderId === folderId);
-  if (!group) throw new Error('review_training_threshold_not_reached');
   const nodes = await db.query<ReviewTrainingNode & Record<string, unknown>>(REVIEW_TRAINING_NODES_SQL);
   const models = parseReviewModels(await db.query<{ key: string; value_json: string }>(REVIEW_MODELS_SQL));
+  const plan = createPlan(nodes, models, await db.query<CountRow>(COUNTS_SQL), libraryScope);
+  const group = plan.folders.find(folder => folder.folderId === folderId);
+  if (!group) throw new Error('review_training_threshold_not_reached');
   const events = await db.query<ReviewTrainingInput['events'][number] & Record<string, unknown>>(
     eventsSql(), [folderId]);
   return createInput(group, nodes, models, events, await db.query<SettingNode>(SETTINGS_SQL), libraryScope);
