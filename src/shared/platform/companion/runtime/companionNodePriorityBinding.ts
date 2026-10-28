@@ -11,7 +11,7 @@ export function bindCompanionNodePriorities(owner: CapacitorCompanionDatabaseOwn
     await owner.read(async db => {
       const current = owner.nodePriorityRevision === revision;
       await owner.readNodePriorities(db, getCurrentReviewSchedulerSettings().pushQueue.defaultPriority,
-        current && anchorKinds ? Object.values(snapshot.nodesById).map(node => {
+        current && anchorKinds && !owner.readNodeMetadata(db) ? Object.values(snapshot.nodesById).map(node => {
           const anchorKind = anchorKinds.get(node.id);
           if (anchorKind === undefined) throw new Error('workspace_node_anchor_metadata_missing');
           return {
