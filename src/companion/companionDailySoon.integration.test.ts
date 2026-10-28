@@ -5,7 +5,7 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
+import { openCompanionDailyFlow, readCompanionDailyFlowView } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { commitCompanionFlowHistory, loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { closeIosCompanionDatabase, initializeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
@@ -60,12 +60,17 @@ async function soon(stamp = now) {
   if (typeof result !== 'object' || !('session' in result)) throw new Error('missing_daily_session');
   session = result.session;
 }
+async function currentList() {
+  const view = await readCompanionDailyFlowView({ now, mode: 'reading-only', includeEntries: true });
+  if (view.status !== 'ready') throw new Error('daily_view_not_ready');
+  return view.nodeIds!;
+}
 const later = '2026-10-25T08:02:00.000Z';
 
 it.each(['read', 'later', 'dismiss'] as const)('keeps frozen traversal after %s and restores mobile history', async action => {
   await topics();
-  const [first, second] = session.queueNodeIds;
-  expect(session.queueNodeIds).toHaveLength(2);
+  const [first, second] = await currentList();
+  expect(await currentList()).toHaveLength(2);
   await soon();
   await soon();
   expect(session.currentNodeId).toBe(first);
@@ -88,7 +93,7 @@ it.each(['read', 'later', 'dismiss'] as const)('keeps frozen traversal after %s 
 
 it('keeps repeat Soon unique and does not rewrite unrelated persistent rows', async () => {
   await topics();
-  const [first, second] = session.queueNodeIds;
+  const [first, second] = await currentList();
   const remaining = library.database.prepare('SELECT * FROM daily_flow_entries WHERE node_id <> ?').all(first);
   await soon();
   expect(library.database.prepare('SELECT * FROM daily_flow_entries WHERE node_id <> ?').all(first)).toEqual(remaining);
@@ -168,11 +173,12 @@ it('keeps mixed minute and day reviews due at their own time while Soon waits af
 it('keeps ordinary Soon reads limited to the current and next topic while preserving durable progress', async () => {
   await topics();
   const before = structuredClone(session);
+  const expectedNext = (await currentList())[1];
   const { companionDailyFlowPersistence } = await import('../shared/platform/companion/runtime/companionDailyFlow');
   const reads = vi.spyOn(companionDailyFlowPersistence, 'snapshot');
   try {
     await soon();
-    expect(session.currentNodeId).toBe(before.queueNodeIds[1]);
+    expect(session.currentNodeId).toBe(expectedNext);
     expectSoon(before.currentNodeId!);
     expect(session.readTopicCount).toBe(1);
     expect(reads.mock.calls.every(call => call[1] !== undefined && call[1].length <= 32)).toBe(true);
@@ -224,7 +230,7 @@ it('restores ordered Soon after review-only grading, restart and mobile undo red
   await seed();
   library.database.exec("UPDATE nodes SET kind='topic', reveal=NULL WHERE id IN ('a','b')");
   await open();
-  const [first, second] = session.queueNodeIds;
+  const [first, second] = await currentList();
   await soon();
   await soon();
   session = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;

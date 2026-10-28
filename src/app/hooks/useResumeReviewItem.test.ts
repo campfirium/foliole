@@ -29,7 +29,7 @@ it('navigates the committed current even when the renderer has no candidate list
   const app = setup('service-current');
   await act(async () => { await app.result.current(); });
   expect(app.resumeReviewSession).toHaveBeenCalledWith('2026-03-10T12:00:00.000Z',
-    expect.objectContaining({ preferredNodeId: 'stale-request' }));
+    expect.objectContaining({ preferredNodeId: 'stale-current' }));
   expect(app.handleSelectNode).toHaveBeenCalledWith('service-current', null, 'target-context');
   expect(app.controller.runtime.flushPendingEditorDraft).toHaveBeenCalledOnce();
 });

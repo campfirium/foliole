@@ -14,7 +14,7 @@ import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
-import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
+import type { ReviewFlowWindow } from '../../store/dailyFlowPresentation';
 import type { NodeViewState, ReadReviewTopicOptions } from '../../store/workspaceStore';
 import type { SelectionCommandPayload } from '../contextCommands';
 import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
@@ -22,7 +22,6 @@ import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
 import type { ReadingPositionSyncState } from '../hooks/useAppRuntime';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
-import type { ReviewQueueVisibility } from './reviewQueueVisibility';
 
 export interface WorkspaceEditorContextMenu {
   canRunCommands?: boolean;
@@ -89,7 +88,6 @@ export interface WorkspaceLayoutFieldTypes {
   reviewFlowWindow: ReviewFlowWindow;
   reviewPanelQueueNodeIds: string[];
   reviewQueueNodeIds: string[];
-  reviewQueueVisibility: ReviewQueueVisibility | null;
   reviewQueueCount: number;
   reviewCompletedCount: number;
   reviewStatus: 'idle' | 'awaiting-answer' | 'answer-revealed' | 'completed';

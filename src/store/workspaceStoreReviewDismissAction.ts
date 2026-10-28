@@ -4,11 +4,9 @@ import { prepareWorkspaceFlowDay } from './workspaceFlowDayAction';
 import { buildReadingReviewDomainPatch } from './workspaceReadingReviewDomain';
 import {
   persistAndApplyReadingReviewPatch,
-  persistReadingReviewNodes,
   type ReadingReviewPendingNodeIds
 } from './workspaceReadingReviewHistoryCommit';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
-import { buildNextDismissReviewSession } from './workspaceReviewDismissSession';
 import {
   runtimeWorkspaceReviewPersistence,
   type WorkspaceReviewPersistenceAdapter
@@ -42,8 +40,8 @@ function buildDismissReviewPatch(args: {
     state: args.state
   });
   if (!result) return null;
-  const { nextNodeId, nextReviewSession } = args.snapshot.reviewSession.daily
-    ? { nextNodeId: args.currentNodeId, nextReviewSession: args.snapshot.reviewSession } : buildNextDismissReviewSession({ ...args, nextNodesById: result.nextNodesById });
+  const nextNodeId = args.currentNodeId;
+  const nextReviewSession = args.snapshot.reviewSession;
   const activeContext = buildReviewActiveNodeContext(
     args.state,
     nextNodeId ?? nextReviewSession.continueNodeId ?? null
@@ -107,29 +105,5 @@ export function createDismissReviewTopicActionWithPending(
       set
     });
     return Boolean(committed);
-  };
-}
-
-export function createLegacyDismissReviewTopicAction(set: WorkspaceSet, get: WorkspaceGet) {
-  return (now = new Date().toISOString()) => {
-    const snapshot = get();
-    const currentNodeId = snapshot.reviewSession.currentNodeId;
-    if (!currentNodeId || snapshot.activeNodeId !== currentNodeId) return false;
-    const currentNode = snapshot.nodesById[currentNodeId];
-    if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
-    let nextNodesForSync: WorkspaceState['nodesById'][string][] = [];
-    set((state) => {
-      const result = buildDismissReviewPatch({
-        currentNodeId,
-        now,
-        snapshot,
-        state
-      });
-      if (!result) return state;
-      nextNodesForSync = result.nextNodesForSync;
-      return result.patch;
-    });
-    void persistReadingReviewNodes(nextNodesForSync);
-    return true;
   };
 }

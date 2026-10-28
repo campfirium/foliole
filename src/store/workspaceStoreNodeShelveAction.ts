@@ -1,4 +1,3 @@
-import { prepareFlowSession } from '../../lib/core/flow/dailyFlowPlanning';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
@@ -12,8 +11,6 @@ import {
 } from './workspaceHistoryContext';
 import { getWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
 import { finishNodeShelveHistoryPersistence } from './workspaceNodeShelveHistoryCommit';
-import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
-import { completeReviewSession } from './workspaceReviewReading';
 import { buildSequentialReadingMaintenancePatch } from './workspaceSequentialReadingMaintenance';
 import { createTopicShelveHistoryEntry, type WorkspaceTopicShelveHistoryEntry } from './workspaceShelveActionHistory';
 import type { WorkspaceState } from './workspaceStore';
@@ -29,77 +26,6 @@ function isShelvableTopic(node: Node | undefined, state: WorkspaceState): node i
       !node.anchorLink &&
       !state.trashedNodeIds.includes(node.id)
   );
-}
-
-function hasShelvedAncestor(nodeId: string, nodesById: WorkspaceState['nodesById']) {
-  const visitedNodeIds = new Set<string>();
-  let currentNode: Node | undefined = nodesById[nodeId];
-  while (currentNode && !visitedNodeIds.has(currentNode.id)) {
-    if (currentNode.shelvedAt) {
-      return true;
-    }
-    visitedNodeIds.add(currentNode.id);
-    currentNode = currentNode.parentNodeId ? nodesById[currentNode.parentNodeId] : undefined;
-  }
-  return false;
-}
-
-function areNodeIdsEqual(left: string[], right: string[]) {
-  return left.length === right.length && left.every((nodeId, index) => nodeId === right[index]);
-}
-
-function buildDailyShelveRefresh(state: WorkspaceState, nodesById: WorkspaceState['nodesById'], now: string) {
-  const session = prepareFlowSession({ nodeOrder: state.nodeOrder, nodesById, trashedNodeIds: state.trashedNodeIds },
-    { now, mode: state.reviewSessionMode }, getCurrentReviewSchedulerSettings(), state.reviewSession);
-  const sameCurrent = session.currentNodeId === state.reviewSession.currentNodeId;
-  return { activeNodeId: sameCurrent ? state.activeNodeId : session.currentNodeId,
-    reviewSession: { ...session, isAnswerRevealed: sameCurrent && state.reviewSession.isAnswerRevealed } };
-}
-
-function buildReviewSessionRefreshPatch(args: {
-  mode: 'shelve' | 'unshelve';
-  nextNodesById: WorkspaceState['nodesById'];
-  now: string;
-  state: WorkspaceState;
-}) {
-  const currentNodeId = args.state.reviewSession.currentNodeId;
-  if (!currentNodeId) {
-    return null;
-  }
-  if (args.state.reviewSession.daily) return buildDailyShelveRefresh(args.state, args.nextNodesById, args.now);
-  const currentNodeWasShelved = args.mode === 'shelve' && hasShelvedAncestor(currentNodeId, args.nextNodesById);
-  const nextQueue = buildCurrentReviewSessionQueueOutput(args.state, args.now, {
-    nodesById: args.nextNodesById,
-    releaseCurrentPin: currentNodeWasShelved
-  });
-  if (!nextQueue.currentNodeId) {
-    return {
-      activeNodeId: args.state.activeNodeId,
-      reviewSession: completeReviewSession(args.state.reviewSession, {
-        completedAt: args.now,
-        continueNodeId: nextQueue.extensionNodeIds[0] ?? null
-      })
-    };
-  }
-  const nextReviewSession = {
-    ...args.state.reviewSession,
-    completedAt: null,
-    currentNodeId: nextQueue.currentNodeId,
-    isAnswerRevealed: currentNodeWasShelved ? false : args.state.reviewSession.isAnswerRevealed,
-    queueNodeIds: nextQueue.taskNodeIds,
-    totalNodeCount: Math.max(args.state.reviewSession.totalNodeCount, nextQueue.taskNodeIds.length)
-  };
-  if (
-    !currentNodeWasShelved &&
-    nextReviewSession.currentNodeId === args.state.reviewSession.currentNodeId &&
-    areNodeIdsEqual(nextReviewSession.queueNodeIds, args.state.reviewSession.queueNodeIds)
-  ) {
-    return null;
-  }
-  return {
-    activeNodeId: currentNodeWasShelved ? nextQueue.currentNodeId : args.state.activeNodeId,
-    reviewSession: nextReviewSession
-  };
 }
 
 function buildNodeShelveMutation(args: {
@@ -130,17 +56,10 @@ function buildNodeShelveMutation(args: {
       .map((change) => finalNodesById[change.nodeId])
       .filter((changedNode): changedNode is Node => Boolean(changedNode))
   ];
-  const reviewSessionPatch = buildReviewSessionRefreshPatch({
-    mode: args.mode,
-    nextNodesById: finalNodesById,
-    now: args.now,
-    state: args.state
-  });
   return {
     changes: sequentialPatch?.changes ?? [],
     nextNodesForSync,
     patch: {
-      ...(reviewSessionPatch ?? {}),
       nodesById: finalNodesById
     }
   };
@@ -170,7 +89,7 @@ function createSetNodeShelvedAtAction(
           return beforeNode ? [[affectedNodeId, beforeNode]] : [];
         }));
         historyEntry = createTopicShelveHistoryEntry({
-          afterContext: captureWorkspaceHistoryContext(state, mutation.patch),
+          afterContext: captureWorkspaceHistoryContext(state),
           afterShelvedAt: mutation.patch.nodesById[nodeId]?.shelvedAt ?? null,
           beforeContext: captureWorkspaceHistoryContext(state),
           beforeShelvedAt: state.nodesById[nodeId]?.shelvedAt ?? null,

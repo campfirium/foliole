@@ -2,7 +2,7 @@ import { isFsrsReviewItemNode } from '../review/reviewItemKind.js';
 
 import { cycleChanges } from './cycleFlowChanges.js';
 import { allocateCycleKey, cycleStamp } from './cycleFlowFingerprint.js';
-import { chooseCycleCurrent } from './cycleFlowOpen.js';
+import { chooseCycleCurrent, isCycleCurrentReady } from './cycleFlowOpen.js';
 import type { DailyFlowCommitArgs, DailyFlowSettings, DailyFlowLearningSnapshot } from './dailyFlowContract.js';
 import { fullDayCandidates } from './dailyFlowPlanning.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
@@ -40,7 +40,9 @@ export async function advanceCycleFlow(db: DailyFlowStore, source: DailyFlowSess
     readTopicCount: (source.readTopicCount ?? 0) + (initial && args.readingAction ? 1 : 0),
     reviewedItemCount: (source.reviewedItemCount ?? 0) + (initial && args.grade ? 1 : 0),
     ...(args.grade ? { nextReviewDueAt: resolveEarliestReviewDueAt(source.nextReviewDueAt, snapshot.nodesById[current]?.review?.due) } : {}) };
-  await chooseCycleCurrent(db, session, mode, args.now, settings);
+  const preserveCurrent = args.readings?.length && !args.readingAction && !args.grade &&
+    (!source.currentNodeId || await isCycleCurrentReady(db, session, mode, args.now, settings));
+  if (!preserveCurrent) await chooseCycleCurrent(db, session, mode, args.now, settings);
   cycle.stamp = cycleStamp(cycle, session);
   cycle.change = changes.change();
   return session;

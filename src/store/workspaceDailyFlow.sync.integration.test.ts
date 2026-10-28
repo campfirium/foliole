@@ -22,7 +22,6 @@ import { readCompanionReviewTopic, postponeCompanionReviewTopic, dismissCompanio
 import { companionDailyFlowPersistence } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadIosCompanionWorkspaceSnapshot } from '../shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
-import { advanceFlowSession } from './workspaceFlowSession';
 import { createTopicDismissHistoryEntry } from './workspaceTopicDismissActionHistory';
 
 let desktop: Peer;
@@ -113,10 +112,8 @@ it('removes a waiting Soon after a remote deletion and persists both independent
   edit(desktop, 'Reading body', 'Reading', null, 'topic');
   await sync(desktop, mobile);
   const initial = await openDailyFlow(mobile.port, { now, mode: 'reading-only' }, settings(mobile), persistence(mobile));
-  const snapshot = (await loadIosCompanionWorkspaceSnapshot(mobile.port))!;
-  const nextSession = advanceFlowSession({ action: 'soon', snapshot, session: initial.session, mode: 'reading-only', now });
   await commitDailyFlow(mobile.port, { opId: 'soon-local', now, token: initial.session.daily!,
-    sourceSession: initial.session, nextSession, readings: [{ nodeId: 'topic', before: null, after: null }] },
+    sourceSession: initial.session, readingAction: 'soon', readings: [{ nodeId: 'topic', before: null, after: null }] },
   settings(mobile), persistence(mobile));
   const deletedAt = '2026-10-03T00:01:00.000Z';
   softDeleteNodes(desktop.driver, { nodeIds: ['topic'], deletedAt });

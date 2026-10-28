@@ -29,7 +29,7 @@ vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => asy
 } }));
 
 import { closeDatabaseConnection, openDatabaseConnection } from '../../electron/database/connection';
-import { openDesktopDailyFlow } from '../../electron/database/dailyFlow';
+import { openDesktopDailyFlow, readDesktopDailyFlowView } from '../../electron/database/dailyFlow';
 import { initializeDatabase } from '../../electron/database/migrate';
 import { upsertNodeSnapshot } from '../../electron/database/nodeMutations';
 import { createLocalReviewSchedulerAdapter } from '../features/review/model/localReviewSchedulerAdapter';
@@ -64,13 +64,18 @@ function setup(kind: 'item' | 'topic' | 'mixed' = 'item', futureTopic = false) {
   return { ...harness, actions, history };
 }
 
+async function currentList() {
+  const view = await readDesktopDailyFlowView({ now, mode: 'reading-only', includeEntries: true });
+  if (view.status !== 'ready') throw new Error('daily_view_not_ready');
+  return view.nodeIds!;
+}
 const later = '2026-10-26T08:02:00.000Z';
 it.each(['read', 'later', 'dismiss'] as const)('keeps the frozen traversal and history after %s', async action => {
   const app = setup('topic', true);
   app.setState({ reviewSessionMode: 'reading-only', reviewSessionModeExpiresAt: '2026-10-27T00:00:00.000Z' });
   await app.actions.startReviewSession(now);
-  const [first, second] = app.getState().reviewSession.queueNodeIds;
-  expect(app.getState().reviewSession.queueNodeIds).toHaveLength(2);
+  const [first, second] = await currentList();
+  expect(await currentList()).toHaveLength(2);
   expect(await app.actions.revisitReviewTopicSoon(now)).toBe(true);
   expect(await app.actions.revisitReviewTopicSoon(now)).toBe(true);
   expect(app.getState().reviewSession.currentNodeId).toBe(first);
@@ -97,7 +102,7 @@ it('keeps Soon out of the original Queue across a refresh and database restart',
   const app = setup('topic', true);
   app.setState({ reviewSessionMode: 'reading-only', reviewSessionModeExpiresAt: '2026-10-27T00:00:00.000Z' });
   await app.actions.startReviewSession(now);
-  const [first, second] = app.getState().reviewSession.queueNodeIds;
+  const [first, second] = await currentList();
   await app.actions.revisitReviewTopicSoon(now);
   const restored = await openDesktopDailyFlow({ now: later, mode: 'reading-only', refresh: true });
   expect(restored.session.currentNodeId).toBe(second);
@@ -225,7 +230,7 @@ it('does not defer a topic that became a review item before the native Soon tran
 it('sends a Soon intent and lets the shared transaction determine the next session', async () => {
   const app = setup('topic');
   await app.actions.startReviewSession(now);
-  const [first, second] = app.getState().reviewSession.queueNodeIds;
+  const [first, second] = await currentList();
   expect(await app.actions.revisitReviewTopicSoon(now)).toBe(true);
   expect(soonPayload?.readingAction).toBe('soon');
   expect(soonPayload).not.toHaveProperty('nextSession');
@@ -238,3 +243,18 @@ function expectSoon(id: string) {
   expect(openDatabaseConnection().driver.queryAll('SELECT active, cohort, initial_task FROM daily_flow_entries WHERE node_id=?', [id]))
     .toEqual([{ active: 1, cohort: 'soon', initial_task: 0 }]);
 }
+
+it.each([true, false])('changes only the schedule and retains another current for target-is-current=%s', async current => {
+  const app = setup('topic');
+  await app.actions.startReviewSession(now);
+  const before = app.getState().reviewSession;
+  const ids = await currentList();
+  const target = current ? before.currentNodeId! : ids.find(id => id !== before.currentNodeId)!;
+  expect(await app.actions.setReviewTopicDelay(target, 4, now)).toBe(true);
+  const after = app.getState().reviewSession;
+  expect(after.readTopicCount).toBe(0);
+  expect(after.readingElapsedMs).toBe(0);
+  expect(app.getState().nodesById[target]!.reading!.nextAt).toBe('2026-11-23T08:00:00.000Z');
+  expect(after.currentNodeId).toBe(current ? ids.find(id => id !== target) : before.currentNodeId);
+  expect(app.getState().activeNodeId).toBe(after.currentNodeId);
+});

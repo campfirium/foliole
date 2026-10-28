@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
-import { resolveCompanionReviewSession } from './companionReviewSession';
+import { resolveCompanionReviewSession } from './companionDailyFlow.testSupport';
 
 type SnapshotNode = WorkspaceSnapshot['nodesById'][string];
 

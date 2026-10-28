@@ -1,8 +1,10 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { installBrowserDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowBrowserRuntime';
 import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
 
-import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
+import { installWorkspaceBrowserCommit } from './workspaceBrowserCommit';
+import { browserFlow } from './workspaceBrowserFlow.testSupport';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import {
   createReadingNode,
@@ -15,6 +17,8 @@ import {
 vi.mock('../shared/platform/runtime/nodeReadingStateRuntimeRepository', () => ({
   saveNodeReadingStateToRuntime: vi.fn(async () => true)
 }));
+
+afterEach(() => { installWorkspaceBrowserCommit(null); installBrowserDailyFlowRuntime(null); });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -41,17 +45,13 @@ it('postpones a topic outside the active review queue', async () => {
 
 it('postpones a topic by changing only next due time in week steps', async () => {
   const now = '2026-03-03T00:00:00.000Z';
-  const harness = createSetStateHarness(
-    createWorkspaceFixture([createReadingNode('reading-1', '2026-03-02T00:00:00.000Z'), createReadingNode('reading-2', now)])
-  );
-  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, {
-    grade: createSchedulerGradeMock(),
-    preview: previewStub
-  });
-  actions.startReviewSession(now);
+  const store = browserFlow([createReadingNode('reading-1', '2026-03-02T00:00:00.000Z'), createReadingNode('reading-2', now)]);
+  const harness = { getState: store.getState };
+  const actions = store.getState();
+  await actions.startReviewSession(now);
   const firstNodeId = harness.getState().reviewSession.currentNodeId!;
   const beforeReading = harness.getState().nodesById[firstNodeId]?.reading;
-  const history = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
+  const history = store.getState();
 
   await expect(actions.setReviewTopicDelay(firstNodeId, 4, now)).resolves.toBe(true);
 
@@ -68,7 +68,7 @@ it('postpones a topic by changing only next due time in week steps', async () =>
     nodeId: firstNodeId,
     title: 'Postpone Topic'
   });
-  expect(history.undoWorkspaceAction()).toBe(true);
+  expect(await history.undoWorkspaceAction()).toBe(true);
   await vi.waitFor(() => expect(harness.getState().nodesById[firstNodeId]?.reading).toEqual(beforeReading));
 });
 

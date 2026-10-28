@@ -1,4 +1,4 @@
-import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
+import type { ReviewFlowWindow } from '../../store/dailyFlowPresentation';
 
 export function areStringArraysEqual(previous: readonly string[], next: readonly string[]) {
   return previous.length === next.length && previous.every((value, index) => value === next[index]);

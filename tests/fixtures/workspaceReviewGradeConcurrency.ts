@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 
 import { closeDatabaseConnection, openDatabaseConnection } from '../../electron/database/connection.js';
+import { openDesktopDailyFlow, commitDesktopDailyFlow } from '../../electron/database/dailyFlow.js';
 import { loadOrCreateDesktopHostName } from '../../electron/database/hostProfile.js';
 import { initializeDatabase } from '../../electron/database/migrate.js';
 import { upsertNodeSnapshot } from '../../electron/database/nodeMutations.js';
@@ -8,6 +9,7 @@ import { applyReviewGrade } from '../../electron/database/reviewMutations.js';
 import { loadWorkspaceSnapshot } from '../../electron/database/workspaceSnapshot.js';
 import { reviewGrade, reviewPreview } from '../../electron/ipc/review.js';
 import { saveNodeReviewStateWithSync } from '../../lib/core/database/nodeReviewSyncState.js';
+import { dailyFlowCommitSchema } from '../../lib/core/flow/dailyFlowContract';
 import { mapGradeToRustRating } from '../../lib/core/review/types.js';
 import type { Node } from '../../src/features/nodes/model/nodeTypes';
 import type { ReviewSchedulerAdapter } from '../../src/features/review/model/reviewTypes';
@@ -34,7 +36,7 @@ function deferred() {
   return { promise, resolve };
 }
 
-export function prepare() {
+export async function prepare() {
   const nodes = [createQaNode('first', now), createQaNode('other', now)];
   nodes.forEach(saveNode);
   const harness = createSetStateHarness(createWorkspaceFixture(nodes));
@@ -47,15 +49,16 @@ export function prepare() {
     await computed.promise;
     return reviewGrade({ request: { ...input, rating: mapGradeToRustRating(input.grade) } });
   } };
-  const persistReviewGrade = vi.fn<WorkspaceReviewPersistenceAdapter['persistReviewGrade']>(async input => {
-    const card = applyReviewGrade({ ...input, nodeId: input.currentNodeId });
-    saving.resolve();
-    await saved.promise;
-    return { card };
-  });
-  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, scheduler,
-    { persistReviewGrade, persistReadingNodes: async () => false });
-  actions.startReviewSession(now);
+  const persistReviewGrade = vi.fn<WorkspaceReviewPersistenceAdapter['persistReviewGrade']>(async () => false);
+  currentCommit = async payload => {
+    const args = dailyFlowCommitSchema.parse(payload);
+    if (args.grade) await persistReviewGrade({ ...args.grade, currentNodeId: args.grade.nodeId, opId: args.opId });
+    const result = await commitDesktopDailyFlow(args);
+    if (args.grade) { saving.resolve(); await saved.promise; }
+    return result;
+  };
+  const actions = createWorkspaceReviewActions(harness.setState, harness.getState, scheduler);
+  await actions.startReviewSession(now);
   actions.revealReviewAnswer();
   return { ...harness, actions, scheduler, persistReviewGrade, computing: computing.promise, saving: saving.promise,
     releaseCompute: computed.resolve, releaseSave: saved.resolve };
@@ -80,7 +83,7 @@ export function externalGrade(nodeId: string) {
   return snapshot().nodesById[nodeId]!.review!;
 }
 
-export function history(harness: ReturnType<typeof prepare>) {
+export function history(harness: Awaited<ReturnType<typeof prepare>>) {
   installWorkspaceHistoryPersistence({ persistNodeSnapshots: async () => false,
     persistReadingSnapshots: async () => false, persistShelveSnapshots: async () => false,
     persistReviewSnapshot: async (nodeId, review, updatedAt, mutation) => ({
@@ -91,4 +94,12 @@ export function history(harness: ReturnType<typeof prepare>) {
   const actions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
   harness.setState(actions);
   return actions;
+}
+
+let currentCommit: (payload: unknown) => ReturnType<typeof commitDesktopDailyFlow>;
+export async function invokeGradeRuntime(command: string, payload: unknown) {
+  if (command === 'open_daily_flow') return openDesktopDailyFlow(payload);
+  if (command === 'commit_daily_flow') return currentCommit(payload);
+  if (command === 'save_node_open_state') return null;
+  throw new Error(`Unexpected grade command: ${command}`);
 }

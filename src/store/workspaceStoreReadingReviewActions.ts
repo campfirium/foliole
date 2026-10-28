@@ -14,13 +14,8 @@ import {
   runtimeWorkspaceReviewPersistence,
   type WorkspaceReviewPersistenceAdapter
 } from './workspaceReviewPersistence';
-import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
 import type { WorkspaceState } from './workspaceStore';
 import { persistNodeOpened } from './workspaceStoreNodeOpenState';
-import {
-  advanceOrCompleteAfterReadingAction,
-  isExistingQueueTopic
-} from './workspaceStoreReadingReviewSessionFlow';
 import { createReadingReviewHistoryEntry } from './workspaceStoreReviewActionHelpers';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
@@ -118,16 +113,7 @@ function buildReadOrPostponeReadingReviewPatch(args: {
 }): ReadingReviewPatchResult | null {
   const result = buildReadingReviewDomainPatch(args);
   if (!result) return null;
-  const reviewSession = args.snapshot.reviewSession.daily
-    ? args.snapshot.reviewSession : advanceOrCompleteAfterReadingAction({
-    currentNodeId: args.currentNodeId,
-    nextNodesById: result.nextNodesById,
-    now: args.now,
-    progressDelta: isExistingQueueTopic(args.snapshot.reviewSession, args.currentNodeId) ? 1 : 0,
-    readingElapsedMsDelta: calculateReviewStepElapsedMs(args.snapshot.reviewSession, args.now),
-    snapshot: args.snapshot,
-    state: args.state
-  });
+  const reviewSession = args.snapshot.reviewSession;
   const activeContext = buildReviewActiveNodeContext(
     args.state,
     reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? null

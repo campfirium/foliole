@@ -3,11 +3,12 @@ import { dailyFlowOperationId } from '../../lib/core/flow/dailyFlowRetry';
 import { reviewCalendarDayKey } from '../../lib/core/review/reviewCalendarDates';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
-import { advanceFlowSession, type FlowAction } from '../store/workspaceFlowSession';
 import { cloneWorkspaceReviewSession } from '../store/workspaceHistoryContext';
 import { createReviewGradeHistoryEntry } from '../store/workspaceReviewGradeActionHistory';
 import type { ReviewSessionState } from '../store/workspaceStoreTypes';
 import { createTopicDismissHistoryEntry, type WorkspaceTopicReadingActionTitle } from '../store/workspaceTopicDismissActionHistory';
+
+export type FlowAction = 'read' | 'later' | 'dismiss' | 'soon' | 'grade';
 
 export interface CompanionFlowHistoryContext {
   key: string;
@@ -20,8 +21,8 @@ export function createCompanionFlowHistoryEntry(args: {
   after: WorkspaceSnapshot; history: CompanionFlowHistoryContext; relatedNodeIds?: string[];
 }) {
   const beforeSession = cloneWorkspaceReviewSession(args.history.session);
-  const afterSession = beforeSession.daily ? beforeSession : advanceFlowSession({ action: args.action, snapshot: args.after,
-    session: beforeSession, mode: args.history.mode, now: args.now });
+  if (!beforeSession.daily) throw new Error('daily_flow_not_open');
+  const afterSession = beforeSession;
   const context = (session: ReviewSessionState) => ({ activeNodeId: session.currentNodeId,
     browseRootNodeId: '', reviewSession: session });
   const common = { id: beforeSession.daily ? dailyFlowOperationId(beforeSession.daily, args.nodeId, `${args.action}:${args.grade ?? ''}`) : crypto.randomUUID(), mutationTimestamp: args.now, nodeId: args.nodeId,

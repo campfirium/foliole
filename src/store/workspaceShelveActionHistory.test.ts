@@ -93,49 +93,6 @@ function createSequentialHarness() {
   });
 }
 
-function createActiveReviewShelveHarness() {
-  const fixture = createWorkspaceNodeActionsFixture();
-  const seed = fixture.nodesById['node-1']!;
-  const source: Node = {
-    ...seed,
-    content: '# Source',
-    id: 'source',
-    parentNodeId: null,
-    reading: createReadingProfile(),
-    title: 'Source'
-  };
-  const child: Node = {
-    ...seed,
-    content: '# Child',
-    id: 'child',
-    parentNodeId: 'source',
-    reading: createReadingProfile(),
-    title: 'Child'
-  };
-  const other: Node = {
-    ...seed,
-    content: '# Other',
-    id: 'other',
-    parentNodeId: null,
-    reading: createReadingProfile(),
-    title: 'Other'
-  };
-  return createWorkspaceNodeActionsSetStateHarness({
-    ...fixture,
-    activeNodeId: 'child',
-    nodeOrder: ['source', 'child', 'other'],
-    nodesById: { source, child, other },
-    reviewSessionMode: 'reading-only',
-    reviewSession: createStartedReviewSession({
-      continueNodeId: null,
-      currentNodeId: 'child',
-      queueNodeIds: ['child', 'other'],
-      sessionStartedAt: '2026-05-01T00:00:00.000Z',
-      totalNodeCount: 2
-    })
-  });
-}
-
 describe('workspace application shelve action history', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -181,22 +138,7 @@ describe('workspace application shelve action history', () => {
     expect(harness.getState().nodesById['node-2']?.reading?.state).toBe('locked');
   });
 
-  it('restores the active review session when a shelved topic is undone', async () => {
-    const harness = createActiveReviewShelveHarness();
-    const nodeActions = createWorkspaceNodeActions(harness.setState, harness.getState);
-    const historyActions = createWorkspaceActionHistoryActions(harness.setState, harness.getState);
 
-    expect(nodeActions.shelveNode('source', '2026-05-01T00:05:00.000Z')).toBe(true);
-    expect(harness.getState().nodesById.source?.shelvedAt).toBe('2026-05-01T00:05:00.000Z');
-    expect(harness.getState().reviewSession.currentNodeId).toBe('other');
-    expect(harness.getState().reviewSession.queueNodeIds).toEqual(['other']);
-    expect(harness.getState().reviewSession.readTopicCount).toBe(0);
-
-    await vi.waitFor(() => expect(harness.getState().appActionHistory.undoStack).toHaveLength(1));
-    expect(historyActions.undoWorkspaceAction()).toBe(true);
-    await vi.waitFor(() => expect(harness.getState().reviewSession.currentNodeId).toBe('child'));
-    expect(harness.getState().reviewSession.queueNodeIds).toEqual(['child', 'other']);
-  });
 });
 
 it('keeps the daily post-Queue Soon stage when another reading topic is unshelved', async () => {

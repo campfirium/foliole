@@ -10,10 +10,8 @@ import { reviewHistoryOpId } from '../../../../../lib/core/review/reviewEventIde
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { NativeSyncReviewLogDraft } from '../../../../../lib/platform/nativeSyncContract';
 import type { ReviewSessionMode } from '../../../../features/review/model/reviewSessionMode';
-import { toSchedulerCard } from '../../../../features/review/model/reviewTypes';
 import { isSameReadingProfile } from '../../../../store/workspaceActionHistoryReading';
 import { getWorkspaceHistoryTopEntry, moveWorkspaceHistoryCursor } from '../../../../store/workspaceActionHistoryState';
-import { advanceFlowSession } from '../../../../store/workspaceFlowSession';
 import { createWorkspaceHistoryMutationTimestamp } from '../../../../store/workspaceHistoryTimestamp';
 import { resolveWorkspaceReviewHistoryTarget, type FlowHistoryEntry, type HistoryMode } from '../../../../store/workspaceReviewHistoryTarget';
 import { resolveEarliestReviewDueAt } from '../../../../store/workspaceReviewSessionProgress';
@@ -21,11 +19,10 @@ import type { ReviewSessionState } from '../../../../store/workspaceStoreTypes';
 import { toReadingPayload, toReviewPayload } from '../../companionSyncStateWriters';
 import { getCompanionReadingScope } from '../reading/companionReadingScope';
 import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
-import { loadIosCompanionWorkspaceSnapshot } from '../sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 import { companionDailyFlowPersistence, companionDailyFlowSettings } from './companionDailyFlow';
 import { commitCompanionDailyHistory, replayCompanionDailyHistory, saveReplayedCompanionDailySession } from './companionDailyFlowHistory';
-import { appendCompanionFlowHistory, readCompanionFlowHistory, writeCompanionFlowHistory, type CompanionWorkspaceHistoryEntry } from './companionFlowHistoryStore';
+import { readCompanionFlowHistory, writeCompanionFlowHistory, type CompanionWorkspaceHistoryEntry } from './companionFlowHistoryStore';
 import { clearCompanionHistoryLearning } from './companionHistoryLearning';
 import { readCompanionHistoryReplayReceipt } from './companionHistoryReplayReceipt';
 import { replayCompanionNodeHistoryWithDb } from './companionNodeHistory';
@@ -45,20 +42,7 @@ export function commitCompanionFlowHistory(args: {
 }) {
   return runCompanionHistoryMutation(async db => {
     if (args.entry.beforeContext.reviewSession.daily) return commitCompanionDailyHistory(db, args);
-    await writeEntry(db, args.entry, 'redo', args.entry.beforeContext.reviewSession,
-      args.reviewLog ? { ...args.reviewLog, opId: args.entry.id } : undefined, args.completedReviewDay);
-    let entry = await withCurrentReview(db, args.entry, 'redo');
-    if (entry.type === 'review.grade') {
-      const snapshot = await loadIosCompanionWorkspaceSnapshot(db);
-      if (!snapshot) throw new Error('workspace_unavailable');
-      const reviewSession = advanceFlowSession({ action: 'grade', snapshot, mode: args.mode,
-        session: entry.beforeContext.reviewSession, now: entry.mutationTimestamp });
-      entry = { ...entry, afterContext: { ...entry.afterContext,
-        activeNodeId: reviewSession.currentNodeId, reviewSession } };
-    }
-    await appendCompanionFlowHistory(db, args.key, entry);
-    return entry.type === 'review.grade' ? { card: entry.afterReview
-      ? toSchedulerCard(entry.afterReview, entry.mutationTimestamp) : null } : true;
+    throw new Error('daily_flow_not_open');
   }, flowHistoryRefreshScope(args.entry)).then(result => {
     if (args.entry.beforeContext.reviewSession.daily) settleDailyFlowRetry(args.entry.id);
     return result;

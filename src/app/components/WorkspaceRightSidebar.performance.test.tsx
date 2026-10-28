@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
-import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
+import type { ReviewFlowWindow } from '../../store/dailyFlowPresentation';
 
 const reviewQueuePanelRender = vi.hoisted(() => vi.fn());
 

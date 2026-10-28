@@ -1,7 +1,10 @@
-import { beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes';
+import { installBrowserDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowBrowserRuntime';
 
+import { installBrowserWorkspace } from './installBrowserWorkspace';
+import { installWorkspaceBrowserCommit } from './workspaceBrowserCommit';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
 const now = '2026-05-27T08:00:00.000Z';
@@ -37,7 +40,8 @@ function node(args: Partial<Node> & Pick<Node, 'id' | 'parentNodeId'>): Node {
   };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  installWorkspaceBrowserCommit(null); installBrowserDailyFlowRuntime(null); localStorage.clear();
   useWorkspaceStore.setState({
     ...createInitialWorkspaceState(new Date(now)),
     activeNodeId: 'drucker',
@@ -57,10 +61,13 @@ beforeEach(() => {
     },
     reviewSessionMode: 'reading-only'
   });
+  installBrowserWorkspace(useWorkspaceStore, localStorage, useWorkspaceStore.getState());
+  await useWorkspaceStore.getState().resumeReviewSession(now, { preferredNodeId: useWorkspaceStore.getState().reviewSession.currentNodeId });
 });
+afterEach(() => { installWorkspaceBrowserCommit(null); installBrowserDailyFlowRuntime(null); });
 
-it('refreshes the active Flow queue immediately after enabling sequential reading', () => {
-  expect(useWorkspaceStore.getState().setNodeSequentialReading('books', true, now)).toBe(true);
+it('refreshes the active Flow queue immediately after enabling sequential reading', async () => {
+  expect(await useWorkspaceStore.getState().setNodeSequentialReading('books', true, now)).toBe(true);
   const state = useWorkspaceStore.getState();
 
   expect(state.nodesById.books?.sequentialReadingEnabled).toBe(true);
@@ -72,10 +79,10 @@ it('refreshes the active Flow queue immediately after enabling sequential readin
   expect(state.reviewSession.isAnswerRevealed).toBe(false);
 });
 
-it('falls back to the reading queue when refreshing a recommended Flow with no due cards', () => {
+it('falls back to the reading queue when refreshing a recommended Flow with no due cards', async () => {
   useWorkspaceStore.setState({ reviewSessionMode: 'recommended' });
 
-  expect(useWorkspaceStore.getState().setNodeSequentialReading('books', true, now)).toBe(true);
+  expect(await useWorkspaceStore.getState().setNodeSequentialReading('books', true, now)).toBe(true);
   const state = useWorkspaceStore.getState();
 
   expect(state.nodesById.debugging?.reading?.state).toBe('active');

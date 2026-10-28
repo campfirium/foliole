@@ -4,9 +4,9 @@ import { getCompanionReadingScope } from '../shared/platform/companion/reading/c
 import { openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { hasFlowDayChanged } from '../store/workspaceFlowDay';
-import type { FlowAction } from '../store/workspaceFlowSession';
 import { cloneWorkspaceReviewSession } from '../store/workspaceHistoryContext';
 
+import type { FlowAction } from './companionFlowHistoryEntry';
 import type { CompanionFlowHistoryContext } from './companionFlowHistoryEntry';
 import type { FlowOwner } from './useCompanionFlowSession';
 

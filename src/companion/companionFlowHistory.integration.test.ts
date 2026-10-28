@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import type { NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 import { invalidateCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
+import { openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { commitCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
@@ -14,8 +15,6 @@ import { createFakeCapacitorDatabaseManager } from '../shared/platform/companion
 import { saveCompanionSyncNodeReviewRecord } from '../shared/platform/companionSyncObjects';
 import { runCompanionSyncWriterTask } from '../shared/platform/companionSyncWriterQueue';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
-import { advanceFlowSession, resumeFlowSession } from '../store/workspaceFlowSession';
-import { createStartedReviewSession } from '../store/workspaceReviewReading';
 import type { ReviewSessionState } from '../store/workspaceStoreTypes';
 
 import { seedCompanionReviewHistory } from './companionFlowHistory.testSupport';
@@ -38,7 +37,7 @@ beforeEach(async () => {
   library = await createSearchLibrary(0);
   await seedCompanionReviewHistory(profile, now);
   profile = (await snapshot()).nodesById.a!.review!;
-  session = resumeFlowSession(await snapshot(), 'review-first', 'a', now);
+  session = (await openCompanionDailyFlow({ now, mode: 'review-first', preferredNodeId: 'a' })).session;
 });
 afterEach(async () => { await library.close(); });
 
@@ -46,7 +45,7 @@ async function grade(value: 1 | 2 | 3 | 4 = 3, stamp = now) {
   session = { ...session, isAnswerRevealed: true };
   const result = await persistFlowMutation({ action: 'grade', grade: value, nodeId: session.currentNodeId!,
     snapshot: await snapshot(), now: stamp, history: { key, mode: 'review-first', session } });
-  session = advanceFlowSession({ action: 'grade', snapshot: result.snapshot, session, mode: 'review-first', now: stamp });
+  session = result.session!;
 }
 async function replay(mode: 'undo' | 'redo') {
   session = (await replayCompanionFlowHistory(key, mode, session)) ?? session;
@@ -160,7 +159,7 @@ it('allows undo after revealing the next answer and restores completion through 
 it('restores the ungraded state of a new card without losing its redo', async () => {
   library.database.prepare("DELETE FROM node_review WHERE node_id='a'").run();
   library.database.prepare("DELETE FROM review_log WHERE node_id='a'").run();
-  session = resumeFlowSession(await snapshot(), 'review-first', 'a', now);
+  session = (await openCompanionDailyFlow({ now, mode: 'review-first', preferredNodeId: 'a' })).session;
   await grade();
   expect((await snapshot()).nodesById.a?.review?.reps).toBe(1);
   await replay('undo');
@@ -190,8 +189,7 @@ it('retains history and restored review state after closing and reopening the da
 it.each(['read', 'later', 'dismiss', 'soon'] as const)('restores the reading state and Flow position for %s', async action => {
   library.database.prepare("UPDATE nodes SET kind='topic', reveal=NULL WHERE id='a'").run();
   const before = await snapshot();
-  session = createStartedReviewSession({ currentNodeId: 'a', continueNodeId: null,
-    queueNodeIds: ['a', 'b', 'c'], sessionStartedAt: now, totalNodeCount: 3 });
+  session = (await openCompanionDailyFlow({ now, mode: 'recommended', preferredNodeId: 'a', refresh: true })).session;
   let after = before;
   const history = { key, mode: 'recommended' as const, session };
   if (action === 'soon') {
@@ -200,7 +198,7 @@ it.each(['read', 'later', 'dismiss', 'soon'] as const)('restores the reading sta
   } else {
     after = (await persistFlowMutation({ action, nodeId: 'a', now, snapshot: before, history })).snapshot;
   }
-  session = advanceFlowSession({ action, snapshot: after, session, mode: 'recommended', now });
+  session = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;
   await replay('undo');
   expect(session.currentNodeId).toBe('a');
   expect((await snapshot()).nodesById.a?.reading).toEqual(before.nodesById.a?.reading);

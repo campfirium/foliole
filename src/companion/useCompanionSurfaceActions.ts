@@ -6,8 +6,8 @@ import { getCompanionReadingScope } from '../shared/platform/companion/reading/c
 import { applyCompanionFlowReceipt } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { commitCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { isSameFlowActionTarget } from '../store/workspaceFlowDay';
-import type { FlowAction } from '../store/workspaceFlowSession';
 
+import type { FlowAction } from './companionFlowHistoryEntry';
 import { createCompanionFlowHistoryEntry } from './companionFlowHistoryEntry';
 import { confirmFlowMutation, isCompanionGradeDue, persistFlowMutation, type FlowMutation } from './companionFlowMutation';
 import type { CompanionReadingActivity } from './companionReadingActivity';

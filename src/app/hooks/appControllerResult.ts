@@ -29,7 +29,7 @@ export function buildAppControllerResult(args: {
     moveToNodeState: args.auxiliaryState.moveToNodeState,
     layoutProps: args.layoutProps,
     onStartNextDemoPreviewDayFlow: async () => {
-      if (!await args.ws.startReviewSession(getDemoRuntimeNowIso(), { includeScheduledFallback: true }))
+      if (!await args.ws.startReviewSession(getDemoRuntimeNowIso()))
         return false;
       args.layoutProps.nodeList.onOpenNotesView();
       args.controller.study.startStudyMode({ force: true });

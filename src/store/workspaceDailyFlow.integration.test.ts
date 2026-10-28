@@ -71,6 +71,20 @@ function setup(kind: 'item' | 'topic' = 'item') {
   return { ...harness, actions, history };
 }
 
+it('keeps a browsed document when a background refresh retains the saved Flow current', async () => {
+  const app = setup('topic');
+  await app.actions.startReviewSession(now);
+  const before = app.getState().reviewSession;
+  const browsed = before.currentNodeId === 'first' ? 'second' : 'first';
+  app.setState({ activeNodeId: browsed });
+  await openWorkspaceDailyFlow(app.setState, app.getState, { now, mode: 'recommended',
+    preferredNodeId: before.currentNodeId, seed: before, refresh: true }, undefined, true);
+  expect(app.getState().reviewSession.daily!.revision).toBeGreaterThan(before.daily!.revision);
+  expect(app.getState().reviewSession.currentNodeId).toBe(before.currentNodeId);
+  expect(app.getState().activeNodeId).toBe(browsed);
+  expect(app.getState().reviewSession.readTopicCount).toBe(0);
+});
+
 it('keeps the daily cursor and grade atomic, retries a lost native receipt once, and clears only desktop undo on restart', async () => {
   const app = setup();
   expect(await app.actions.startReviewSession(now)).toBe(true);

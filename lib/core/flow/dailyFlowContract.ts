@@ -15,7 +15,7 @@ export type DailyFlowLearningNode = Omit<ReviewQueueNode, 'content' | 'reveal'> 
 export type DailyFlowLearningSnapshot = { nodeOrder: string[]; nodesById: Record<string, ReviewQueueNode>; trashedNodeIds: string[] };
 export type DailyFlowSettings = Pick<ReviewSchedulerSettings, 'newDayStartsAtHour' | 'pushQueue'> & { scope?: string };
 export const dailyFlowOpenSchema = z.object({ now: z.string().datetime(),
-  mode: z.enum(['recommended', 'review-first', 'reading-only']), includeScheduledFallback: z.boolean().optional(),
+  mode: z.enum(['recommended', 'review-first', 'reading-only']),
   seed: dailyFlowSessionSchema.optional(), preferredNodeId: z.string().nullable().optional(),
   prepareOnly: z.boolean().optional(), startup: z.boolean().optional(), refresh: z.boolean().optional() }).strict();
 export type DailyFlowOpenArgs = z.infer<typeof dailyFlowOpenSchema>;

@@ -51,7 +51,7 @@ export const READING_POSITION_KEYS = defineLayoutKeys<WorkspaceLayoutReadingPosi
 export const REVIEW_KEYS = defineLayoutKeys<WorkspaceLayoutReviewProps>()([
   'canStartStudyMode', 'reviewPreview', 'isStudyMode', 'isAnswerRevealed', 'isCurrentReviewItemGradable',
   'isReviewEditing', 'reviewCurrentNodeId', 'reviewFlowWindow', 'reviewPanelQueueNodeIds', 'reviewQueueNodeIds',
-  'reviewQueueVisibility', 'reviewQueueCount', 'reviewCompletedCount', 'reviewStatus', 'reviewSummary',
+  'reviewQueueCount', 'reviewCompletedCount', 'reviewStatus', 'reviewSummary',
   'reviewSessionMode', 'reviewSessionModeAvailability', 'onStartStudyMode', 'onToggleReviewSession', 'onRevealAnswer', 'onGradeReview',
   'onReadReviewTopic', 'onPostponeReviewTopic', 'onOpenPostponeTopicPanel', 'onDismissReviewTopic',
   'onRevisitReviewTopicSoon', 'onContinueReading', 'onResumeReviewItem', 'onExitReviewMode', 'onExitFlowHere',

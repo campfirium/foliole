@@ -20,7 +20,7 @@ export function saveDailyReading(session: ReviewSessionState, entry: WorkspaceTo
   return commitDailyFlowRuntime({ opId: entry.id, now, token: session.daily!, sourceSession: session,
     ...(entry.title === 'Soon Topic' ? { readingAction: 'soon' as const } : {}), readings: changes,
     ...(entry.title === 'Read Topic' ? { readingAction: 'read' as const }
-      : (entry.title === 'Later Topic' || entry.title === 'Postpone Topic') ? { readingAction: 'later' as const }
+      : entry.title === 'Later Topic' ? { readingAction: 'later' as const }
       : entry.title === 'Dismiss Topic' ? { readingAction: 'dismiss' as const } : {}) }, nodes);
 }
 

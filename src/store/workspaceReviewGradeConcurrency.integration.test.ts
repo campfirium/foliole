@@ -14,6 +14,11 @@ vi.mock('../../electron/ipc/paths.js', () => ({
     app_config_dir: path.join(tempRoot, 'config'), app_log_dir: path.join(tempRoot, 'logs') })
 }));
 
+vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => async (command: string, payload: unknown) => {
+  const { invokeGradeRuntime } = await import('../../tests/fixtures/workspaceReviewGradeConcurrency');
+  return invokeGradeRuntime(command, payload);
+} }));
+
 import { closeDatabaseConnection } from '../../electron/database/connection.js';
 import { initializeDatabase } from '../../electron/database/migrate.js';
 import * as reviewCalculation from '../../lib/core/review/recomputeReview.js';
@@ -24,7 +29,6 @@ import { toNodeReviewProfile, toSchedulerCard } from '../features/review/model/r
 import { getCurrentReviewSchedulerSettings, hydrateCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import { resetWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
-import * as queue from './workspaceReviewLiveQueue';
 import { createQaNode } from './workspaceStoreReviewActions.test-support';
 
 const originalSettings = getCurrentReviewSchedulerSettings();
@@ -42,7 +46,7 @@ afterEach(async () => {
 });
 
 it.each(['compute', 'receipt'] as const)('retains concurrent edits and additions during grade %s', async phase => {
-  const harness = prepare();
+  const harness = await prepare();
   const before = harness.getState();
   const currentId = before.reviewSession.currentNodeId!;
   const otherId = currentId === 'first' ? 'other' : 'first';
@@ -78,7 +82,7 @@ it.each(['compute', 'receipt'] as const)('retains concurrent edits and additions
 });
 
 it.each(['compute', 'receipt'] as const)('rejects a newer target review during grade %s', async phase => {
-  const harness = prepare();
+  const harness = await prepare();
   const before = harness.getState();
   const currentId = before.reviewSession.currentNodeId!;
   const pending = harness.actions.gradeReviewCard(3, now);
@@ -100,7 +104,7 @@ it.each(['compute', 'receipt'] as const)('rejects a newer target review during g
 });
 
 it('does not advance on a SQLite failure and commits a successful retry only once', async () => {
-  const harness = prepare();
+  const harness = await prepare();
   const before = harness.getState();
   const currentId = before.reviewSession.currentNodeId!;
   connection().sqlite.exec(`CREATE TEMP TRIGGER reject_grade BEFORE INSERT ON review_log
@@ -120,7 +124,7 @@ it('does not advance on a SQLite failure and commits a successful retry only onc
 });
 
 it('preserves concurrent content through grade undo, redo and reopen', async () => {
-  const harness = prepare();
+  const harness = await prepare();
   const historyActions = history(harness);
   const before = harness.getState();
   const currentId = before.reviewSession.currentNodeId!;
@@ -143,10 +147,9 @@ it('preserves concurrent content through grade undo, redo and reopen', async () 
 });
 
 it('commits and replays a grade before a future reset while retaining the authoritative null projection', async () => {
-  const harness = prepare();
+  const harness = await prepare();
   const historyActions = history(harness);
   const currentId = harness.getState().reviewSession.currentNodeId!;
-  const plan = vi.spyOn(queue, 'buildCurrentReviewSessionQueueOutput');
   connection().sqlite.prepare(`INSERT INTO review_log
     (id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at, kind)
     VALUES ('future-reset', 'future-reset', 'offline', ?, 0, '', '2099-10-25T08:00:00.000Z', 'reset')`).run(currentId);
@@ -154,7 +157,6 @@ it('commits and replays a grade before a future reset while retaining the author
   harness.releaseSave();
   await expect(harness.actions.gradeReviewCard(3, now)).resolves.toBe(true);
   expect(harness.getState().nodesById[currentId]!.review).toBeNull();
-  expect(plan).toHaveBeenCalledTimes(1);
   expect(harness.getState().appActionHistory.undoStack.at(-1)).toMatchObject({ afterReview: null });
   expect(reopen().nodesById[currentId]!.review).toBeNull();
   expect(historyActions.undoWorkspaceAction()).toBe(true);
@@ -167,25 +169,22 @@ it('commits and replays a grade before a future reset while retaining the author
 
 const gradeCases = ([1, 2, 3, 4] as const).flatMap(grade =>
   [true, false].map(sameReceipt => ({ grade, sameReceipt })));
-it.each(gradeCases)('calculates only grade $grade and plans once with equal receipt=$sameReceipt', async ({ grade, sameReceipt }) => {
+it.each(gradeCases)('calculates only grade $grade and stores its receipt with equal receipt=$sameReceipt', async ({ grade, sameReceipt }) => {
   const hour = new Date(now).getHours();
   hydrateCurrentReviewSchedulerSettings({ ...originalSettings,
     newDayStartsAtHour: sameReceipt ? hour : (hour + 1) % 24 });
-  const harness = prepare();
+  const harness = await prepare();
   const before = harness.getState();
   const nodeId = before.reviewSession.currentNodeId!;
   const preview = await harness.scheduler.preview({ nodeId,
     card: toSchedulerCard(before.nodesById[nodeId]!.review ?? null, now), now });
   const calculate = vi.spyOn(reviewCalculation, 'previewReviewAt');
-  const plan = vi.spyOn(queue, 'buildCurrentReviewSessionQueueOutput');
   const pending = harness.actions.gradeReviewCard(grade, now);
   harness.releaseCompute();
   await harness.saving;
   expect(calculate).toHaveBeenCalledTimes(1);
-  expect(plan).not.toHaveBeenCalled();
   harness.releaseSave();
   await expect(pending).resolves.toBe(true);
-  expect(plan).toHaveBeenCalledTimes(1);
   expect(harness.persistReviewGrade.mock.calls[0]![0].cardAfter).toEqual(normalizeScheduledCardDue({
     card: preview[mapGradeToRustRating(grade)].card, reviewedAt: now,
     newDayStartsAtHour: getCurrentReviewSchedulerSettings().newDayStartsAtHour
@@ -202,15 +201,13 @@ it.each(gradeCases)('calculates only grade $grade and plans once with equal rece
 });
 
 it('does not plan a queue for a failed save and settles an undo requested while saving', async () => {
-  const harness = prepare();
+  const harness = await prepare();
   const historyActions = history(harness);
-  const plan = vi.spyOn(queue, 'buildCurrentReviewSessionQueueOutput');
   connection().sqlite.exec(`CREATE TEMP TRIGGER reject_grade BEFORE INSERT ON review_log
     BEGIN SELECT RAISE(ABORT, 'grade_save_failure'); END`);
   harness.releaseCompute();
   harness.releaseSave();
   await expect(harness.actions.gradeReviewCard(3, now)).resolves.toBe(false);
-  expect(plan).not.toHaveBeenCalled();
   connection().sqlite.exec('DROP TRIGGER reject_grade');
   const retry = harness.actions.gradeReviewCard(3, now);
   await harness.saving;

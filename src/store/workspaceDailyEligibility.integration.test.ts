@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { closeLibraries } from '../../electron/database/syncLibrary.testSupport';
 import { softDeleteNodes } from '../../lib/core/database/nodeMutations';
 import { openDailyFlow } from '../../lib/core/flow/dailyFlowService';
-import { act, assertDurable, exchange, node, now, open, persistence, publish, settings, setupPeers, snapshot } from '../test/dailyFlowExceptions.testSupport';
+import { act, assertDurable, exchange, node, now, open, persistence, publish, readView, settings, setupPeers, snapshot } from '../test/dailyFlowExceptions.testSupport';
 
 afterEach(async () => { vi.restoreAllMocks(); await closeLibraries(); });
 
@@ -29,7 +29,7 @@ it.each((['grade', 'read'] as const).flatMap(action => (['parent', 'self'] as co
   expect(local.queueNodeIds).not.toContain('minute');
   const reads = vi.spyOn(persistence, 'learningSnapshot');
   for (let i = 0; i < 2; i += 1) {
-    const next = local.queueNodeIds[1];
+    const next = (await readView(mobile, minuteDue, action === 'read' ? 'reading-only' : 'recommended'))[1];
     reads.mockClear();
     local = await act(mobile, local, action, minuteDue);
     expect(local.currentNodeId).toBe(next);

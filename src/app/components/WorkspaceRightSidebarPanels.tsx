@@ -2,7 +2,7 @@ import { Suspense, type RefObject } from 'react';
 
 import type { NativeAssistantWorkspaceContext } from '../../../lib/platform/nativeAssistantContract';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
+import type { ReviewFlowWindow } from '../../store/dailyFlowPresentation';
 
 import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
 import type { WorkspaceLayoutDocumentProps } from './workspaceLayoutPropGroups';

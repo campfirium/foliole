@@ -57,3 +57,18 @@ it('switches the published URL and seeded Demo content without a refresh', async
   });
   replaceState.mockRestore();
 });
+
+it('preserves edited content and learning facts when locale synchronization runs', async () => {
+  const id = getDemoTopicNodeId(DEMO_TOPIC);
+  useWorkspaceStore.setState(state => ({ nodesById: { ...state.nodesById, [id]: {
+    ...state.nodesById[id]!, title: 'My edited title', content: 'My edited document', openingText: 'My edited opening',
+    reading: { ...state.nodesById[id]!.reading!, repetitionCount: 7 } } } }));
+  const before = useWorkspaceStore.getState();
+  render(<LocalizationProvider initialLanguagePreference="en"><DemoUrlSyncBridge /><LanguageSwitchHarness /></LocalizationProvider>);
+  fireEvent.click(screen.getByRole('button', { name: 'Switch' }));
+  await waitFor(() => expect(window.location.pathname).toBe('/zh-hans/demo/'));
+  const after = useWorkspaceStore.getState();
+  expect(after.nodesById[id]).toEqual(before.nodesById[id]);
+  expect(after.reviewSession).toEqual(before.reviewSession);
+  expect(after.appActionHistory).toEqual(before.appActionHistory);
+});

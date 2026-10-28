@@ -1,7 +1,7 @@
 import { memo } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
+import type { ReviewFlowWindow } from '../../store/dailyFlowPresentation';
 
 import {
   areFlowDayBucketsEqual,

@@ -110,12 +110,9 @@ export interface EditorOperationApplyContext {
   nodeId: string;
 }
 
-export interface ReviewSessionStartOptions {
-  includeScheduledFallback?: boolean;
-}
+export type ReviewSessionStartOptions = Record<string, never>;
 
 export interface ReviewSessionResumeOptions {
-  includeScheduledFallback?: boolean;
   preferredNodeId?: string | null;
 }
 

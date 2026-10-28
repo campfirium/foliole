@@ -1,5 +1,6 @@
 import { createAwaitedWorkspaceHistoryActions } from './workspaceActionHistory';
 import { createBrowserWorkspaceCandidate, type BrowserWorkspaceCandidate } from './workspaceBrowserCandidate';
+import { browserLocalWorkspaceReviewPersistence } from './workspaceReviewPersistence';
 import { createSetFolderManualChildOrderAction } from './workspaceStoreManualChildOrderActions';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
 import { createSetNodeSequentialReadingAction } from './workspaceStoreSequentialReadingActions';
@@ -19,7 +20,7 @@ export async function browserWorkspaceTransaction<T>(store: Store, nodes: Record
 
 function candidateActions(candidate: BrowserWorkspaceCandidate) {
   return {
-    ...createWorkspaceReviewActions(candidate.set, candidate.get),
+    ...createWorkspaceReviewActions(candidate.set, candidate.get, undefined, browserLocalWorkspaceReviewPersistence),
     ...createAwaitedWorkspaceHistoryActions(candidate.set, candidate.get),
     setFolderManualChildOrder: createSetFolderManualChildOrderAction(candidate.set, candidate.get),
     setNodeSequentialReading: createSetNodeSequentialReadingAction(candidate.set, candidate.get)

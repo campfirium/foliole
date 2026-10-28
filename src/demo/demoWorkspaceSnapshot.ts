@@ -126,7 +126,7 @@ function createDemoReviewItemNode(item: DemoPackReviewItem, parentNodeId: string
   };
 }
 
-function renderDemoTopicMarkdown(topic: DemoTopic) {
+export function renderDemoTopicMarkdown(topic: DemoTopic) {
   return [
     `# ${topic.title}`,
     ...topic.blocks.map((block) => {

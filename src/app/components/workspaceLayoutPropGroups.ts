@@ -94,7 +94,6 @@ export type WorkspaceLayoutReviewProps = Pick<WorkspaceLayoutFieldTypes,
   | 'reviewFlowWindow'
   | 'reviewPanelQueueNodeIds'
   | 'reviewQueueNodeIds'
-  | 'reviewQueueVisibility'
   | 'reviewQueueCount'
   | 'reviewCompletedCount'
   | 'reviewStatus'

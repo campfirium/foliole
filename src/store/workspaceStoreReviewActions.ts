@@ -9,16 +9,15 @@ import {
 
 import { resolveReviewQueueReadingAvailableAt } from './reviewQueuePlannerReadingPaths';
 import { isReviewProfileDue } from './reviewQueuePlannerTime';
+import { openWorkspaceDailyFlow } from './workspaceDailyFlowSessionActions';
 import { prepareWorkspaceFlowDay } from './workspaceFlowDayAction';
 import type { ReadingReviewPendingNodeIds } from './workspaceReadingReviewHistoryCommit';
-import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import { commitWorkspaceReviewGrade } from './workspaceReviewGradeHistoryCommit';
-import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import {
   runtimeWorkspaceReviewPersistence,
   type WorkspaceReviewPersistenceAdapter
 } from './workspaceReviewPersistence';
-import { advanceReviewSession, completeReviewSession, createEmptyReviewSession } from './workspaceReviewReading';
+import { createEmptyReviewSession } from './workspaceReviewReading';
 import type { ReviewSessionStartOptions, WorkspaceState } from './workspaceStore';
 import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 import {
@@ -70,22 +69,6 @@ function isActionableSessionNode(node: WorkspaceState['nodesById'][string] | und
   return false;
 }
 
-function skipStaleReviewCard(args: {
-  currentNodeId: string;
-  now: string;
-  set: WorkspaceSet;
-  snapshot: WorkspaceState;
-}) {
-  const nextQueue = buildCurrentReviewSessionQueueOutput(args.snapshot, args.now, { releaseCurrentPin: true });
-  const nextNodeId = nextQueue.currentNodeId;
-  args.set({
-    ...buildReviewActiveNodeContext(args.snapshot, nextNodeId),
-    reviewSession: nextNodeId
-      ? advanceReviewSession(args.snapshot.reviewSession, { handledAt: args.now, nextNodeId, queueNodeIds: nextQueue.taskNodeIds })
-      : completeReviewSession(args.snapshot.reviewSession, { completedAt: args.now, continueNodeId: nextQueue.extensionNodeIds[0] ?? null })
-  });
-}
-
 function createGradeReviewCardAction(
   set: WorkspaceSet,
   get: WorkspaceGet,
@@ -101,7 +84,7 @@ function createGradeReviewCardAction(
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isFsrsReviewItemNode(currentNode)) return false;
     if (!isActionableSessionNode(currentNode, now)) {
-      skipStaleReviewCard({ currentNodeId, now, set, snapshot });
+      await openWorkspaceDailyFlow(set, get, { now, mode: snapshot.reviewSessionMode, seed: snapshot.reviewSession, refresh: true });
       return true;
     }
     const result = await gradeSharedFsrsReviewNode({

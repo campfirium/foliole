@@ -2,8 +2,6 @@ import { getCurrentReviewSchedulerSettings } from '../features/settings/model/re
 import { hasDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
 
 import { saveWorkspaceFlowSourceSettings } from './workspaceDailyFlowSourceSettingsActions';
-import { buildLiveReviewQueueOutput } from './workspaceReviewLiveQueue';
-import { resolveReviewSessionProgress } from './workspaceReviewSessionProgress';
 import { syncNodeContentToRuntime } from './workspaceRuntimeSync';
 import { buildSequentialReadingSourcePatch } from './workspaceSequentialReading';
 import type { WorkspaceState } from './workspaceStore';
@@ -12,38 +10,6 @@ type WorkspaceSet = (
   partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
 
-function buildSequentialReadingReviewSessionPatch(state: WorkspaceState, nodesById: WorkspaceState['nodesById'], now: string) {
-  if (!state.reviewSession.currentNodeId) {
-    return null;
-  }
-  const recommendedQueue = buildLiveReviewQueueOutput({ ...state, nodesById }, now);
-  const queue = recommendedQueue.currentNodeId || state.reviewSessionMode !== 'recommended'
-    ? recommendedQueue
-    : buildLiveReviewQueueOutput({ ...state, nodesById }, now, { mode: 'reading-only' });
-  const currentNodeId = queue.currentNodeId;
-  if (!currentNodeId) {
-    return null;
-  }
-  if (
-    currentNodeId === state.reviewSession.currentNodeId &&
-    queue.taskNodeIds.length === state.reviewSession.queueNodeIds.length &&
-    queue.taskNodeIds.every((nodeId, index) => nodeId === state.reviewSession.queueNodeIds[index])
-  ) {
-    return null;
-  }
-  const completedCount = resolveReviewSessionProgress(state.reviewSession).reviewCompletedCount;
-  return {
-    activeNodeId: currentNodeId,
-    reviewSession: {
-      ...state.reviewSession,
-      currentItemStartedAt: now,
-      currentNodeId,
-      isAnswerRevealed: false,
-      queueNodeIds: queue.taskNodeIds,
-      totalNodeCount: completedCount + queue.taskNodeIds.length
-    }
-  };
-}
 
 export function createSetNodeSequentialReadingAction(
   set: WorkspaceSet, get?: () => WorkspaceState
@@ -77,7 +43,6 @@ export function createSetNodeSequentialReadingAction(
       updated = true;
       return {
         nodesById: patch.nodesById,
-        ...(buildSequentialReadingReviewSessionPatch(state, patch.nodesById, now) ?? {})
       };
     });
     nextNodesForSync.forEach((node) => syncNodeContentToRuntime(node));

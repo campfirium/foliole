@@ -1,6 +1,4 @@
-import { normalizeWorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshotContract';
 import type { ReviewSessionMode } from '../../../../features/review/model/reviewSessionMode';
-import { reconcileFlowSession } from '../../../../store/workspaceFlowSession';
 import { buildWorkspaceMetadataMutation, type WorkspaceMetadataCommand } from '../../../../store/workspaceNodeMetadataMutation';
 import { maintainWorkspaceSnapshotSequentialReading } from '../../../../store/workspaceSnapshotSequentialReading';
 import type { ReviewSessionState } from '../../../../store/workspaceStoreTypes';
@@ -22,8 +20,7 @@ export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow
     const readings = command.type === 'rename' ? [] : maintainWorkspaceSnapshotSequentialReading({ before: nodes, after,
       changedNodeIds: [command.nodeId], nodeOrder: [...new Set([...snapshot.nodeOrder, command.nodeId])], now });
     for (const change of readings) if (after[change.nodeId]) after[change.nodeId] = { ...after[change.nodeId]!, reading: change.afterReading };
-    const sessions = flow ? { beforeSession: flow.session, afterSession: reconcileFlowSession(
-      normalizeWorkspaceSnapshot({ ...snapshot, nodesById: after }), flow.session, flow.mode, now) } : undefined;
+    const sessions = flow ? { beforeSession: flow.session, afterSession: flow.session } : undefined;
     const records = await Promise.all(mutation.nodes.map(node => createCompanionMetadataVersion(db, node, host)));
     await commitCompanionNodeHistoryWithDb(db, records, mutation.title,
       command.type === 'restore' ? 'local_restore' : 'local_mutation', mutation.subtreeNodeIds, readings, sessions);

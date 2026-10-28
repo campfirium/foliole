@@ -6,10 +6,10 @@ import { applyCompanionFlowReceipt } from '../shared/platform/companion/runtime/
 import { commitCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { patchWorkspaceRecord } from '../shared/workspaceRecordPatch';
 import { isReviewProfileDue } from '../store/reviewQueuePlannerTime';
-import type { FlowAction } from '../store/workspaceFlowSession';
 import { isWorkspacePartialPersistenceError } from '../store/workspacePersistenceFailure';
 import type { ReviewSessionState } from '../store/workspaceStoreTypes';
 
+import type { FlowAction } from './companionFlowHistoryEntry';
 import { createCompanionFlowHistoryEntry, completedFlowReviewDay, type CompanionFlowHistoryContext } from './companionFlowHistoryEntry';
 import { dismissCompanionReviewTopic, postponeCompanionReviewTopic, readCompanionReviewTopic } from './companionReadingReview';
 import { gradeCompanionReviewCard } from './companionReviewSession';

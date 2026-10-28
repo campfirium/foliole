@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { prepareFlowSession } from '../../../../lib/core/flow/dailyFlowPlanning';
 import { GUIDED_SAMPLE_MARKER } from '../../../../lib/core/guidedSample/guidedSampleContent';
-import { buildLiveReviewQueueOutput } from '../../../store/workspaceReviewLiveQueue';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../../store/workspaceStore';
 import { INBOX_NODE_ID } from '../../nodes/model/specialNodes';
+import { getCurrentReviewSchedulerSettings } from '../../settings/model/reviewSchedulerSettings';
 
 import { ensureGuidedSampleTopicTree, findGuidedSampleRootNodeId } from './guidedSampleWorkspace';
 
@@ -57,10 +58,8 @@ describe('ensureGuidedSampleTopicTree', () => {
       result.rootNodeId,
       ...directChildIds(result.rootNodeId ?? '')
     ]);
-    expect(buildLiveReviewQueueOutput(
-      { ...state, reviewSessionMode: 'reading-only' },
-      '2099-05-31T00:00:00.000Z'
-    ).taskNodeIds).toEqual(result.queueNodeIds);
+    expect(prepareFlowSession(state, { mode: 'reading-only', now: '2099-05-31T00:00:00.000Z', prepareOnly: true },
+      getCurrentReviewSchedulerSettings()).queueNodeIds).toEqual(result.queueNodeIds);
     expect(state.nodesById[result.queueNodeIds[4] ?? '']?.title).toBe('检测：强化记忆');
     expect(state.nodesById[result.queueNodeIds[5] ?? '']?.title).toBe('改写：澄清理解');
   });

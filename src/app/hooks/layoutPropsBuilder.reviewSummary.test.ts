@@ -42,7 +42,6 @@ it('does not derive review queue state from default scheduler settings before se
     upcomingNodeIds: []
   });
   expect(props.review.reviewQueueNodeIds).toEqual([]);
-  expect(props.review.reviewQueueVisibility).toBeNull();
   expect(props.review.reviewQueueCount).toBe(0);
 
   props.review.onStartStudyMode();
@@ -93,7 +92,7 @@ it('changes review session mode with the controller clock', () => {
   expect(setReviewSessionMode).toHaveBeenCalledWith('reading-only', nowIso);
 });
 
-it('continues queue-clear reading through the current Flow checkpoint', () => {
+it('continues queue-clear reading through the current Flow checkpoint', async () => {
   const nowIso = '2026-06-21T12:00:00.000Z';
   const onOpenNotesView = vi.fn();
   const onSelectNode = vi.fn();
@@ -128,10 +127,10 @@ it('continues queue-clear reading through the current Flow checkpoint', () => {
     startReviewSession: vi.fn(() => false)
   } as unknown as BuildLayoutPropsArgs);
 
-  props.review.onContinueReading();
+  await props.review.onContinueReading();
 
   expect(onOpenNotesView).toHaveBeenCalledTimes(1);
-  expect(onSelectNode).toHaveBeenCalledWith('reading-1');
+  expect(onSelectNode).not.toHaveBeenCalled();
   expect(continueReviewSessionReading).toHaveBeenCalledWith(nowIso);
   expect(exitReviewSession).not.toHaveBeenCalled();
 });

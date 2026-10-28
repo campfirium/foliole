@@ -3,7 +3,7 @@ import { expect, it } from 'vitest';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 
-import { dismissCompanionReviewTopic } from './companionReadingReviewSessionActions';
+import { dismissCompanionReviewTopic } from './companionReadingReview';
 
 function reading(state: 'active' | 'dismissed' | 'done' | 'locked' = 'active') {
   return {

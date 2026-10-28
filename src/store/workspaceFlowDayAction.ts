@@ -8,7 +8,8 @@ type Set = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Parti
 
 export async function prepareWorkspaceFlowDay(set: Set, get: () => WorkspaceState, now: string) {
   const before = get();
-  if (!hasDailyFlowRuntime() || !hasFlowDayChanged(before.reviewSession, now)) return true;
+  if (!hasDailyFlowRuntime()) return false;
+  if (before.reviewSession.daily && !hasFlowDayChanged(before.reviewSession, now)) return true;
   const target = before.reviewSession.currentNodeId;
   const node = target ? before.nodesById[target] : undefined;
   const opened = await openWorkspaceDailyFlow(set, get, { now, mode: before.reviewSessionMode }, undefined, true);

@@ -1,58 +1,8 @@
-import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
-import { createEmptyReviewSession, isReviewSessionCompleted } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
 
-function isVisibleQueuedNode(state: WorkspaceState, nodeId: string) {
-  return isCanonicalVisibleNodeId({
-    nodeOrder: state.nodeOrder,
-    nodesById: state.nodesById,
-    trashedNodeDeletedAtById: state.trashedNodeDeletedAtById,
-    trashedNodeIds: state.trashedNodeIds
-  }, nodeId);
-}
-
-export function reconcileReviewSession(
-  state: WorkspaceState,
-  nextActiveNodeId: string | null = state.activeNodeId
-): WorkspaceState['reviewSession'] {
-  void nextActiveNodeId;
-  const queuedNodeIds = state.reviewSession.queueNodeIds.filter((nodeId) =>
-    isVisibleQueuedNode(state, nodeId)
-  );
-  if (queuedNodeIds.length === 0 && !state.reviewSession.daily) {
-    if (isReviewSessionCompleted(state.reviewSession)) {
-      return state.reviewSession;
-    }
-    return createEmptyReviewSession();
-  }
-
-  if (state.reviewSession.daily) {
-    const soonNodeIds = (state.reviewSession.soonNodeIds ?? []).filter(id => isVisibleQueuedNode(state, id));
-    const currentNodeId = state.reviewSession.currentNodeId && isVisibleQueuedNode(state, state.reviewSession.currentNodeId)
-      ? state.reviewSession.currentNodeId : queuedNodeIds[0] ?? soonNodeIds.shift() ?? null;
-    return { ...state.reviewSession, currentNodeId, queueNodeIds: queuedNodeIds, soonNodeIds,
-      isAnswerRevealed: currentNodeId === state.reviewSession.currentNodeId && state.reviewSession.isAnswerRevealed };
-  }
-  const removedQueueCount = state.reviewSession.queueNodeIds.length - queuedNodeIds.length;
-  const nextTotalNodeCount = Math.max(
-    queuedNodeIds.length,
-    state.reviewSession.totalNodeCount - removedQueueCount
-  );
-  const nextCurrentNodeId = queuedNodeIds[0] ?? null;
-  if (!nextCurrentNodeId) {
-    return createEmptyReviewSession();
-  }
-
-  const canKeepAnswerRevealed =
-    nextCurrentNodeId === state.reviewSession.currentNodeId &&
-    nextCurrentNodeId === state.reviewSession.queueNodeIds[0];
-
-  return {
-    ...state.reviewSession,
-    completedAt: null,
-    currentNodeId: nextCurrentNodeId,
-    isAnswerRevealed: canKeepAnswerRevealed ? state.reviewSession.isAnswerRevealed : false,
-    queueNodeIds: queuedNodeIds,
-    totalNodeCount: nextTotalNodeCount
-  };
+// Membership edits invalidate durable Flow; the service alone selects its successor.
+// Legacy persisted sessions remain intact until the service validates their restoration facts.
+export function reconcileReviewSession(state: WorkspaceState, _nextActiveNodeId: string | null = state.activeNodeId) {
+  void _nextActiveNodeId;
+  return state.reviewSession;
 }

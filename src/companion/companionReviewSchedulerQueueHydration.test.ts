@@ -7,7 +7,8 @@ import {
   hydrateCurrentReviewSchedulerSettings
 } from '../features/settings/model/reviewSchedulerSettings';
 
-import { gradeCompanionReviewCard, resolveCompanionReviewSession } from './companionReviewSession';
+import { resolveCompanionReviewSession } from './companionDailyFlow.testSupport';
+import { gradeCompanionReviewCard } from './companionReviewSession';
 
 const schedulerGrade = vi.fn();
 

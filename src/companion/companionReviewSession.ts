@@ -1,6 +1,5 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
-import { getReviewItemKind, isFsrsReviewItemNode, isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
+import { getReviewItemKind, isFsrsReviewItemNode } from '../features/review/model/reviewItemKind';
 import { createReviewSchedulerAdapter } from '../features/review/model/reviewSchedulerFactory';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import { gradeSharedFsrsReviewNode } from '../features/review/model/sharedReviewGradeService';
@@ -8,10 +7,8 @@ import { getCurrentReviewSchedulerSettings, getReviewSchedulerVersion } from '..
 import { getStoredAppLocale } from '../shared/localization/appLanguage';
 import { translate } from '../shared/localization/translations';
 import {
-  selectCanonicalReviewQueueSource,
   selectCanonicalVisibleNodeIds
 } from '../shared/workspaceCanonicalSelectors';
-import { buildReviewQueuePlan } from '../store/reviewQueuePlanner';
 
 export interface CompanionReviewCard {
   content: string;
@@ -113,40 +110,6 @@ export function resolveScheduledReviewSummary(snapshot: Pick<WorkspaceSnapshot,
     nextReadingDueAt,
     scheduledFsrsCount,
     scheduledReadingCount
-  };
-}
-
-function resolveCompanionQueueNodeIds(plan: ReturnType<typeof buildReviewQueuePlan>) {
-  return [...new Set([...plan.queueNodeIds, ...plan.readingQueueNodeIds])];
-}
-
-export function resolveCompanionReviewSession(
-  snapshot: WorkspaceSnapshot | null,
-  now = new Date().toISOString()
-): CompanionReviewSession {
-  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
-  if (!normalizedSnapshot) {
-    return emptyCompanionReviewSession();
-  }
-
-  const plan = buildReviewQueuePlan({
-    ...selectCanonicalReviewQueueSource(normalizedSnapshot),
-    now,
-  });
-  const queueNodeIds = resolveCompanionQueueNodeIds(plan).filter((nodeId) => {
-    const node = normalizedSnapshot.nodesById[nodeId];
-    return isFsrsReviewItemNode(node) || isReadingReviewItemNode(node);
-  });
-  const scheduledSummary = resolveScheduledReviewSummary(normalizedSnapshot);
-
-  return {
-    currentCard: buildCurrentCard(normalizedSnapshot, queueNodeIds),
-    nextFsrsDueAt: scheduledSummary.nextFsrsDueAt,
-    nextReadingDueAt: scheduledSummary.nextReadingDueAt,
-    queueNodeIds,
-    scheduledFsrsCount: scheduledSummary.scheduledFsrsCount,
-    scheduledReadingCount: scheduledSummary.scheduledReadingCount,
-    totalCount: queueNodeIds.length
   };
 }
 

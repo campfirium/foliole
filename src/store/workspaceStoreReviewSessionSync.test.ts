@@ -1,244 +1,48 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-vi.mock('../shared/platform/runtimeInvoke', () => ({
-  getRuntimeInvoke: vi.fn(() => null)
-}));
+import { installBrowserDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowBrowserRuntime';
 
-import {
-  installWorkspaceHistoryPersistence,
-  resetWorkspaceHistoryPersistence
-} from './workspaceHistoryPersistence';
-import {
-  createBrowserLocalWorkspaceMutationRepository,
-  installWorkspaceMutationRepository,
-  resetWorkspaceMutationRepository
-} from './workspaceMutationRepository';
-import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
+import { installWorkspaceBrowserCommit } from './workspaceBrowserCommit';
+import { browserFlow, flowNode, flowNow as now } from './workspaceBrowserFlow.testSupport';
+import { createBrowserLocalWorkspaceMutationRepository } from './workspaceMutationRepository';
+import { createWorkspaceTrashActions } from './workspaceStoreTrashActions';
 
-function resetWorkspaceStore() {
-  useWorkspaceStore.setState(createInitialWorkspaceState(new Date('2026-02-25T00:00:00.000Z')));
-}
+beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(now)); });
+afterEach(() => { installWorkspaceBrowserCommit(null); installBrowserDailyFlowRuntime(null); vi.useRealTimers(); });
 
-function createReadingNode(id: string) {
-  const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
-  return {
-    ...seedNode,
-    id,
-    title: id,
-    content: `${id}-content`,
-    kind: 'topic' as const,
-    parentNodeId: null,
-    reveal: null,
-    review: null
-  };
-}
-
-function createFsrsNode(id: string) {
-  const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
-  return {
-    ...seedNode,
-    id,
-    title: id,
-    content: `${id}-prompt`,
-    kind: 'topic' as const,
-    parentNodeId: null,
-    reveal: `${id}-answer`,
-    review: {
-      due: '2026-02-25T00:00:00.000Z',
-      lastReviewAt: null,
-      state: 0 as const,
-      stability: 0,
-      difficulty: 0,
-      elapsedDays: 0,
-      scheduledDays: 0,
-      reps: 0,
-      lapses: 0
-    }
-  };
-}
-
-beforeEach(() => {
-  localStorage.clear();
-  installWorkspaceHistoryPersistence({
-    persistNodeSnapshots: async () => true,
-    persistReadingSnapshots: async () => true,
-    persistReviewSnapshot: async () => true,
-    persistShelveSnapshots: async () => true
-  });
-  installWorkspaceMutationRepository(createBrowserLocalWorkspaceMutationRepository());
-  resetWorkspaceStore();
+it.each(['setActiveNode', 'openNode'] as const)('retains the service current while %s browses another queued topic', async action => {
+  const store = browserFlow([flowNode('a'), flowNode('b')]);
+  await store.getState().resumeReviewSession(now, { preferredNodeId: 'a' });
+  const before = store.getState().reviewSession;
+  store.getState()[action]('b');
+  expect(store.getState().activeNodeId).toBe('b');
+  expect(store.getState().reviewSession).toEqual(before);
 });
 
-afterEach(() => {
-  resetWorkspaceHistoryPersistence();
-  resetWorkspaceMutationRepository();
+it('lets the service replace a deleted current even when the renderer trash projection is stale', async () => {
+  const store = browserFlow([flowNode('a'), flowNode('b')]);
+  await store.getState().resumeReviewSession(now, { preferredNodeId: 'a' });
+  store.setState(state => ({ nodesById: { ...state.nodesById, a: { ...state.nodesById.a!, deletedAt: now } } }));
+  await vi.waitFor(() => expect(store.getState().reviewSession.currentNodeId).toBe('b'));
+  expect(store.getState().activeNodeId).toBe('b');
+  expect(store.getState().trashedNodeIds).toEqual([]);
+  expect(store.getState().browserDailyFlow!.state!.session.currentNodeId).toBe('b');
 });
 
-it('keeps the current review item when setActiveNode selects another queued topic', () => {
-  useWorkspaceStore.setState({
-    activeNodeId: 'reading-1',
-    nodeOrder: ['reading-1', 'fsrs-1'],
-    nodesById: {
-      'reading-1': createReadingNode('reading-1'),
-      'fsrs-1': createFsrsNode('fsrs-1')
-    },
-    reviewSession: {
-      currentNodeId: 'reading-1',
-      isAnswerRevealed: true,
-      queueNodeIds: ['reading-1', 'fsrs-1'],
-      totalNodeCount: 2
-    }
-  });
-
-  useWorkspaceStore.getState().setActiveNode('fsrs-1');
-
-  const state = useWorkspaceStore.getState();
-  expect(state.activeNodeId).toBe('fsrs-1');
-  expect(state.reviewSession.currentNodeId).toBe('reading-1');
-  expect(state.reviewSession.queueNodeIds).toEqual(['reading-1', 'fsrs-1']);
-  expect(state.reviewSession.isAnswerRevealed).toBe(true);
-});
-
-it('normalizes a hydrated review session to the next queued item', () => {
-  useWorkspaceStore.setState({
-    activeNodeId: 'reading-1',
-    nodeOrder: ['reading-1', 'fsrs-1'],
-    nodesById: {
-      'reading-1': createReadingNode('reading-1'),
-      'fsrs-1': createFsrsNode('fsrs-1')
-    },
-    reviewSession: {
-      currentNodeId: 'fsrs-1',
-      isAnswerRevealed: true,
-      queueNodeIds: ['reading-1', 'fsrs-1'],
-      totalNodeCount: 2
-    }
-  });
-
-  useWorkspaceStore.getState().setActiveNode('fsrs-1');
-
-  const state = useWorkspaceStore.getState();
-  expect(state.reviewSession.currentNodeId).toBe('reading-1');
-  expect(state.reviewSession.queueNodeIds).toEqual(['reading-1', 'fsrs-1']);
-  expect(state.reviewSession.isAnswerRevealed).toBe(false);
-});
-
-it('keeps the current review item when openNode selects another queued topic', () => {
-  useWorkspaceStore.setState({
-    activeNodeId: 'reading-1',
-    nodeOrder: ['reading-1', 'fsrs-1'],
-    nodesById: {
-      'reading-1': createReadingNode('reading-1'),
-      'fsrs-1': createFsrsNode('fsrs-1')
-    },
-    reviewSession: {
-      currentNodeId: 'reading-1',
-      isAnswerRevealed: true,
-      queueNodeIds: ['reading-1', 'fsrs-1'],
-      totalNodeCount: 2
-    }
-  });
-
-  useWorkspaceStore.getState().openNode('fsrs-1');
-
-  const state = useWorkspaceStore.getState();
-  expect(state.activeNodeId).toBe('fsrs-1');
-  expect(state.reviewSession.currentNodeId).toBe('reading-1');
-  expect(state.reviewSession.queueNodeIds).toEqual(['reading-1', 'fsrs-1']);
-  expect(state.reviewSession.isAnswerRevealed).toBe(true);
-});
-
-it('advances review session when the current queued node is deleted', async () => {
-  useWorkspaceStore.setState({
-    activeNodeId: 'fsrs-1',
-    nodeOrder: ['fsrs-1', 'reading-1'],
-    nodesById: {
-      'fsrs-1': createFsrsNode('fsrs-1'),
-      'reading-1': createReadingNode('reading-1')
-    },
-    reviewSession: {
-      currentNodeId: 'fsrs-1',
-      isAnswerRevealed: true,
-      queueNodeIds: ['fsrs-1', 'reading-1'],
-      totalNodeCount: 2
-    }
-  });
-
-  await useWorkspaceStore.getState().deleteNode('fsrs-1');
-
-  const state = useWorkspaceStore.getState();
-  expect(state.trashedNodeIds).toContain('fsrs-1');
-  expect(state.activeNodeId).toBe('reading-1');
-  expect(state.reviewSession.currentNodeId).toBe('reading-1');
-  expect(state.reviewSession.queueNodeIds).toEqual(['reading-1']);
-  expect(state.reviewSession.totalNodeCount).toBe(1);
-  expect(state.reviewSession.isAnswerRevealed).toBe(false);
-});
-
-it('removes deleted queued nodes even when trash projection is stale', () => {
-  useWorkspaceStore.setState({
-    activeNodeId: 'reading-1',
-    nodeOrder: ['fsrs-1', 'reading-1'],
-    nodesById: {
-      'fsrs-1': {
-        ...createFsrsNode('fsrs-1'),
-        deletedAt: '2026-05-24T00:00:00.000Z'
-      },
-      'reading-1': createReadingNode('reading-1')
-    },
-    reviewSession: {
-      currentNodeId: 'fsrs-1',
-      isAnswerRevealed: true,
-      queueNodeIds: ['fsrs-1', 'reading-1'],
-      totalNodeCount: 2
-    },
-    trashedNodeIds: []
-  });
-
-  useWorkspaceStore.getState().setActiveNode('reading-1');
-
-  const state = useWorkspaceStore.getState();
-  expect(state.reviewSession.currentNodeId).toBe('reading-1');
-  expect(state.reviewSession.queueNodeIds).toEqual(['reading-1']);
-  expect(state.reviewSession.isAnswerRevealed).toBe(false);
-});
-
-it('opens the next review node instead of the parent folder when deleting a nested current review node', async () => {
-  useWorkspaceStore.setState({
-    activeNodeId: 'fsrs-1',
-    nodeOrder: ['folder-1', 'fsrs-1', 'reading-1'],
-    nodesById: {
-      'folder-1': {
-        ...createReadingNode('folder-1'),
-        content: '',
-        kind: 'folder',
-        parentNodeId: null,
-        review: null
-      },
-      'fsrs-1': {
-        ...createFsrsNode('fsrs-1'),
-        parentNodeId: 'folder-1'
-      },
-      'reading-1': {
-        ...createReadingNode('reading-1'),
-        parentNodeId: 'folder-1'
-      }
-    },
-    reviewSession: {
-      currentNodeId: 'fsrs-1',
-      isAnswerRevealed: true,
-      queueNodeIds: ['fsrs-1', 'reading-1'],
-      totalNodeCount: 2
-    }
-  });
-
-  await useWorkspaceStore.getState().deleteNode('fsrs-1');
-
-  const state = useWorkspaceStore.getState();
-  expect(state.trashedNodeIds).toContain('fsrs-1');
-  expect(state.activeNodeId).toBe('reading-1');
-  expect(state.reviewSession.currentNodeId).toBe('reading-1');
-  expect(state.reviewSession.queueNodeIds).toEqual(['reading-1']);
-  expect(state.reviewSession.totalNodeCount).toBe(1);
-  expect(state.reviewSession.isAnswerRevealed).toBe(false);
+it.each([false, true])('deletes the current through the browser receipt and opens its successor with nested=%s', async nested => {
+  const parentNodeId = nested ? 'folder' : null;
+  const store = browserFlow([flowNode('folder', false, { kind: 'folder', content: '' }),
+    flowNode('a', true, { parentNodeId }), flowNode('b', false, { parentNodeId })]);
+  await store.getState().resumeReviewSession(now, { preferredNodeId: 'a' });
+  store.getState().revealReviewAnswer();
+  const actions = createWorkspaceTrashActions(store.setState, createBrowserLocalWorkspaceMutationRepository(), store.getState);
+  await actions.deleteNode('a');
+  await vi.waitFor(() => expect(store.getState().reviewSession.currentNodeId).toBe('b'));
+  expect(store.getState().activeNodeId).toBe('b');
+  expect(store.getState().trashedNodeIds).toContain('a');
+  expect(store.getState().reviewSession.isAnswerRevealed).toBe(false);
+  const saved = JSON.parse(localStorage.getItem('foliole-workspace-v1')!).state;
+  expect(saved.reviewSession.currentNodeId).toBe('b');
+  expect(saved.trashedNodeIds).toContain('a');
+  expect(saved.trashedNodeDeletedAtById.a).toBe(now);
 });

@@ -55,7 +55,7 @@ it('does not learn a future preferred target until the simulated day advances', 
   expect(store.getState().reviewSession.currentNodeId).toBe('today');
   await store.getState().dismissReviewTopic(now);
   const futureFact = store.getState().nodesById.tomorrow!.reading;
-  expect(await store.getState().resumeReviewSession(now, { preferredNodeId: 'tomorrow', includeScheduledFallback: true })).toBe(false);
+  expect(await store.getState().resumeReviewSession(now, { preferredNodeId: 'tomorrow' })).toBe(false);
   expect(store.getState().reviewSession.currentNodeId).toBeNull();
   expect(store.getState().nodesById.tomorrow!.reading).toEqual(futureFact);
   continueToNextDemoPreviewDay();
@@ -81,8 +81,20 @@ it('does not seed a brand-new daily list with a scheduled fallback target', asyn
   store.setState(state => ({ nodesById: { ...state.nodesById,
     today: { ...state.nodesById.today!, reading: { ...state.nodesById.tomorrow!.reading!, state: 'done' } } } }));
   expect(store.getState().browserDailyFlow?.state).toBeNull();
-  expect(await store.getState().resumeReviewSession(now, { preferredNodeId: 'tomorrow', includeScheduledFallback: true })).toBe(false);
+  expect(await store.getState().resumeReviewSession(now, { preferredNodeId: 'tomorrow' })).toBe(false);
   expect(store.getState().reviewSession.currentNodeId).toBeNull();
   expect(store.getState().reviewSession.sessionStartedAt).toBeNull();
   expect(store.getState().nodesById.tomorrow!.reading?.repetitionCount).toBe(1);
+});
+
+it('returns every exclusive future entry without placing it into today', async () => {
+  const nodes = [topic('today', 0), ...Array.from({ length: 25 }, (_, index) => topic(`future-${index}`, index + 1))];
+  store.setState({ nodeOrder: nodes.map(node => node.id), nodesById: Object.fromEntries(nodes.map(node => [node.id, node])) });
+  const runtime = getBrowserDailyFlowRuntime()!;
+  const future = await runtime.future({ now, mode: 'recommended', includeEntries: true }, store.getState().nodesById);
+  expect(future.dayBuckets!.flatMap(bucket => bucket.nodeIds)).toHaveLength(25);
+  expect(future.dayBuckets![24]).toEqual({ dayOffset: 25, nodeIds: ['future-24'] });
+  await store.getState().startReviewSession(now);
+  expect(store.getState().reviewSession.currentNodeId).toBe('today');
+  expect(store.getState().reviewSession.totalNodeCount).toBe(1);
 });

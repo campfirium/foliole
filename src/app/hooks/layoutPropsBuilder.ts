@@ -1,6 +1,5 @@
 import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import { definedProps } from '../../shared/lib/definedProps';
-import { hasDailyFlowRuntime } from '../../shared/platform/runtime/dailyFlowRuntimeRepository';
 import { getDemoRuntimeNowIso } from '../../shared/platform/runtime/demoRuntime';
 import {
   isEditorInputDiagnosticEnabled,
@@ -8,13 +7,9 @@ import {
   readEditorInputDiagnosticTime
 } from '../../store/workspaceEditorInputDiagnostics';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
-import { buildReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
-import { buildLiveReviewQueueOutput } from '../../store/workspaceReviewLiveQueue';
 import { isReviewSessionCompleted } from '../../store/workspaceReviewReading';
-import { canContinueReadingInFlowWindow } from '../../store/workspaceReviewReadingContinuation';
 import { resolveReviewSessionProgress } from '../../store/workspaceReviewSessionProgress';
 import type { WorkspaceState } from '../../store/workspaceStore';
-import { buildReviewQueueVisibility } from '../components/reviewQueueVisibility';
 import { groupWorkspaceLayoutProps } from '../components/workspaceLayoutGroupedProps';
 import type { WorkspaceLayoutProps } from '../components/workspaceLayoutGroupedProps';
 import type { WorkspaceLayoutFlatProps, WorkspaceLayoutReviewProps } from '../components/workspaceLayoutPropGroups';
@@ -128,45 +123,8 @@ function getReviewSessionSummary(
 
 function createContinueReadingAction(args: BuildLayoutPropsArgs) {
   return async () => {
-    if (args.reviewSession.daily) {
-      if (await args.continueReviewSessionReading(args.nowIso)) args.onOpenNotesView();
-      return;
-    }
-    const continueNodeId = args.reviewSession.continueNodeId;
-    const targetNodeId =
-      continueNodeId && args.nodesById[continueNodeId] && !args.trashedNodeIds.includes(continueNodeId)
-        ? continueNodeId
-        : args.activeNodeId;
-    args.onOpenNotesView();
-    if (targetNodeId && args.nodesById[targetNodeId] && !args.trashedNodeIds.includes(targetNodeId)) {
-      args.nav.onSelectNode(targetNodeId);
-      if (await args.continueReviewSessionReading(args.nowIso)) {
-        return;
-      }
-    }
-    args.exitReviewSession();
+    if (await args.continueReviewSessionReading(args.nowIso)) args.onOpenNotesView();
   };
-}
-
-function buildReviewReadyDerivedState(args: BuildLayoutPropsArgs, isReviewReady: boolean) {
-  if (!isReviewReady || hasDailyFlowRuntime()) {
-    return {
-      reviewFlowWindow: isReviewReady && hasDailyFlowRuntime() ? { ...EMPTY_REVIEW_FLOW_WINDOW, queriedAt: args.nowIso } : EMPTY_REVIEW_FLOW_WINDOW,
-      reviewPanelQueueNodeIds: [],
-      reviewQueueVisibility: null
-    };
-  }
-  const reviewPanelQueueNodeIds = measureLayoutPropsStep(args, 'review_panel_queue', () => buildLiveReviewQueueOutput(args, args.nowIso, {
-    pinnedNodeId: args.reviewSession.currentNodeId
-  }).visibleNodeIds);
-  const reviewFlowWindow = measureLayoutPropsStep(args, 'review_flow_window', () => buildReviewFlowWindow(args, args.nowIso, args.reviewSession.queueNodeIds));
-  const reviewQueueVisibility = measureLayoutPropsStep(args, 'review_queue_visibility', () => buildReviewQueueVisibility({
-    currentNodeId: args.reviewSession.currentNodeId,
-    nodesById: args.nodesById,
-    queueNodeIds: reviewPanelQueueNodeIds,
-    reviewSchedulerSettings: args.reviewSettings.reviewSchedulerSettings
-  }));
-  return { reviewFlowWindow, reviewPanelQueueNodeIds, reviewQueueVisibility };
 }
 
 export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutProps {
@@ -179,11 +137,12 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
   const { reviewCompletedCount, reviewQueueCount, reviewStatus, reviewSummary } = measureLayoutPropsStep(args, 'review_summary', () =>
     getReviewSessionSummary(args.reviewSession, args.nodesById)
   );
-  const { reviewFlowWindow, reviewPanelQueueNodeIds, reviewQueueVisibility } = buildReviewReadyDerivedState(args, isReviewReady);
+  const reviewFlowWindow = isReviewReady ? { ...EMPTY_REVIEW_FLOW_WINDOW, queriedAt: args.nowIso } : EMPTY_REVIEW_FLOW_WINDOW;
+  const reviewPanelQueueNodeIds: string[] = [];
   const editorContent = args.editorNodeId ? args.nodesById[args.editorNodeId]?.content ?? '' : args.documentNode?.content ?? '';
   const reviewSummaryWithContinuation = {
     ...reviewSummary,
-    canContinueReading: hasDailyFlowRuntime() ? args.dailyFlowView?.canContinueReading ?? false : canContinueReadingInFlowWindow(reviewSummary, reviewFlowWindow)
+    canContinueReading: args.dailyFlowView?.canContinueReading ?? false
   };
 
   const flatProps: WorkspaceLayoutFlatProps = {
@@ -191,7 +150,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
     editorAdapterRef: args.editorAdapterRef, editorContent, isImmersiveMode: args.isImmersiveMode, isEditorReadOnly: args.isViewingTrashNode ? true : previewNodeId ? !previewNode || !isNodeDocumentLoaded(previewNode) : false, isPriorityQuickSetActive: args.isPriorityQuickSetActive, editorNodeId: args.editorNodeId, ...definedProps({ editorNodeViewState: args.editorNodeViewState }),
     onNodePriorityChange: args.onNodePriorityChange, onNodeDesiredRetentionChange: args.onNodeDesiredRetentionChange, onNodeShortTermChange: args.onNodeShortTermChange, onEnterPriorityQuickSet: args.onEnterPriorityQuickSet, priorityQuickSetShortcutLabel: args.priorityQuickSetShortcutLabel,
     canStartStudyMode: isReviewReady && args.canStartStudyMode, reviewPreview: args.reviewPreview, isStudyMode: args.isStudyMode, isImportManagementOpen: args.isImportManagementOpen, isSettingsOpen: args.isSettingsOpen, requestedSettingsCategory: args.requestedSettingsCategory, requestedSettingsDialog: args.requestedSettingsDialog, requestedSettingsRowId: args.requestedSettingsRowId, isReviewEditing: args.isReviewEditing,
-    isAnswerRevealed: args.reviewSession.isAnswerRevealed, isCurrentReviewItemGradable, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewFlowWindow, reviewPanelQueueNodeIds, reviewQueueNodeIds: isReviewReady ? args.reviewSession.queueNodeIds : [], reviewQueueVisibility, reviewQueueCount: isReviewReady ? reviewQueueCount : 0, reviewCompletedCount, reviewStatus, reviewSummary: reviewSummaryWithContinuation, reviewSessionMode: args.reviewSessionMode, ...definedProps({ reviewSessionModeAvailability: args.dailyFlowView?.modeAvailability }), isResizingList: args.isResizingList, isResizingRightSidebar: args.isResizingRightSidebar, isTrashViewOpen: args.isTrashViewOpen, isVirtualViewOpen: args.isVirtualViewOpen, isExternalViewOpen: args.isExternalViewOpen, activeVirtualNodeId: args.activeVirtualNodeId, isViewingTrashNode: args.isViewingTrashNode,
+    isAnswerRevealed: args.reviewSession.isAnswerRevealed, isCurrentReviewItemGradable, reviewCurrentNodeId: args.reviewSession.currentNodeId, reviewFlowWindow, reviewPanelQueueNodeIds, reviewQueueNodeIds: isReviewReady ? args.reviewSession.queueNodeIds : [], reviewQueueCount: isReviewReady ? reviewQueueCount : 0, reviewCompletedCount, reviewStatus, reviewSummary: reviewSummaryWithContinuation, reviewSessionMode: args.reviewSessionMode, ...definedProps({ reviewSessionModeAvailability: args.dailyFlowView?.modeAvailability }), isResizingList: args.isResizingList, isResizingRightSidebar: args.isResizingRightSidebar, isTrashViewOpen: args.isTrashViewOpen, isVirtualViewOpen: args.isVirtualViewOpen, isExternalViewOpen: args.isExternalViewOpen, activeVirtualNodeId: args.activeVirtualNodeId, isViewingTrashNode: args.isViewingTrashNode,
     isListCollapsed: args.isListCollapsed, isRightSidebarCollapsed: args.isRightSidebarCollapsed, showAnswerSection: args.showAnswerSection, listWidth: args.listWidth, rightSidebarWidth: args.rightSidebarWidth, nodeOrder: args.nodeOrder, trashedNodeIds: args.trashedNodeIds, nodesById: args.nodesById, externalFolders: args.externalFolders, externalEntriesByFolderId: args.externalEntriesByFolderId, externalSelection: args.externalSelection, nodeViewById: args.nodeViewById, onAnswerChange: args.onAnswerChange, onEditorChange: args.onEditorChange, onEditorUndo: args.onEditorUndo, onEditorRedo: args.onEditorRedo, onFinalizeNodeTitle: args.onFinalizeNodeTitle, onRegisterEditorDraftFlush: args.onRegisterEditorDraftFlush, onNodeContentChange: args.onNodeContentChange, setNodeViewState: args.setNodeViewState,
     onEditorReady: args.onEditorReady, onEditorContextMenu: args.editorCtx.onEditorContextMenu, onResetLayout: args.onResetLayout, onSelectBreadcrumbNode: args.nav.onSelectBreadcrumbNode, onSelectNode: args.nav.onSelectNode, onSelectNodeInVirtualView: args.nav.onSelectNodeInVirtualView, shouldSuppressNavigationSelectionRestore: args.nav.shouldSuppressNavigationSelectionRestore,
     onRevealAnchorInDocument: args.onRevealAnchorInDocument,

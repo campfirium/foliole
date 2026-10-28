@@ -4,9 +4,9 @@ import { expect, it, vi } from 'vitest';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { inspectorListInsetClassName, inspectorListInsetPaddingClassName } from '../../shared/ui';
-import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
+import type { ReviewFlowWindow } from '../../store/dailyFlowPresentation';
 
-import { WorkspaceRightSidebarReviewQueuePanel } from './WorkspaceRightSidebarReviewQueuePanel';
+import { FlowQueuePanel as WorkspaceRightSidebarReviewQueuePanel } from './WorkspaceRightSidebarReviewQueuePanel';
 
 function createFlowWindow(overrides: Partial<ReviewFlowWindow>): ReviewFlowWindow {
   return {

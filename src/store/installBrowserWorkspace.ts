@@ -35,6 +35,7 @@ export function replaceBrowserWorkspace(store: Store, storage: Storage, incoming
     storage.setItem(KEY, raw);
     expectedHash = nextHash;
   };
+  installBrowserDailyFlowRuntime(null);
   installWorkspaceBrowserCommit({ save });
   store.setState({ ...incoming, browserDailyFlow: captureBrowserReviewBases(incoming.browserDailyFlow ?? emptyBrowserDailyFlow(), incoming.nodesById), libraryScope: 'browser-workspace', isHydrated: true, workspaceHydrationError: null });
   installBrowserDailyFlowRuntime(createBrowserDailyFlowRuntime({

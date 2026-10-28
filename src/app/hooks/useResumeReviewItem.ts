@@ -19,7 +19,7 @@ export function useResumeReviewItem(args: {
       return;
     }
     const resumeOptions = {
-      preferredNodeId: args.ws.activeNodeId
+      preferredNodeId: args.ws.reviewSession.currentNodeId ?? args.ws.activeNodeId
     };
     const nodeId = await args.ws.resumeReviewSession(args.nowIso, resumeOptions);
     if (!nodeId) {
@@ -32,5 +32,5 @@ export function useResumeReviewItem(args: {
     args.controller.externalView.closeExternalView();
     args.controller.virtualView.closeVirtualView();
     args.controller.nav.handleSelectNode(nodeId, null, 'target-context');
-  }, [args.controller, args.nowIso, args.reviewSettings.isReviewSchedulerSettingsReady, args.ws.activeNodeId, args.ws.resumeReviewSession]);
+  }, [args.controller, args.nowIso, args.reviewSettings.isReviewSchedulerSettingsReady, args.ws.activeNodeId, args.ws.reviewSession.currentNodeId, args.ws.resumeReviewSession]);
 }

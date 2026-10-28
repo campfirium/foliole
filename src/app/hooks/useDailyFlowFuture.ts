@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import type { DailyFlowFutureView } from '../../../lib/core/flow/dailyFlowFuture';
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
+import { getCurrentReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { getBrowserDailyFlowRuntime } from '../../shared/platform/runtime/dailyFlowBrowserRuntime';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -11,7 +12,8 @@ export function useDailyFlowFuture(now: string, enabled: boolean, includeEntries
   const order = useWorkspaceStore(state => state.nodeOrder);
   const trashed = useWorkspaceStore(state => state.trashedNodeIds);
   const currentMode = useWorkspaceStore(state => state.reviewSessionMode);
-  const request = useMemo(() => ({}), [scope, nodes, order, trashed, mode, currentMode, now, enabled, includeEntries]);
+  const settings = getCurrentReviewSchedulerSettings();
+  const request = useMemo(() => ({}), [scope, nodes, order, trashed, mode, currentMode, now, enabled, includeEntries, settings]);
   const [result, setResult] = useState<{ request: object; view?: DailyFlowFutureView; error?: string } | null>(null);
   useEffect(() => {
     const runtime = getBrowserDailyFlowRuntime();

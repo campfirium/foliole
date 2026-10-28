@@ -15,6 +15,7 @@ import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { isSameWorkspaceReviewSession } from './workspaceHistoryContext';
 import type { ReadingReviewPendingNodeIds } from './workspaceReadingReviewHistoryCommit';
+import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import {
   runtimeWorkspaceReviewPersistence,
   type WorkspaceReviewPersistenceAdapter
@@ -22,7 +23,6 @@ import {
 import { resolveReadingPriorityChain } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
 import { persistNodeOpened } from './workspaceStoreNodeOpenState';
-import { advanceOrCompleteAfterReadingAction } from './workspaceStoreReadingReviewSessionFlow';
 import { createReadingReviewHistoryEntry } from './workspaceStoreReviewActionHelpers';
 import type { WorkspaceTopicDismissHistoryEntry } from './workspaceTopicDismissActionHistory';
 
@@ -67,27 +67,6 @@ function buildInitialReadingProfile(args: {
   return { ...schedule, readingPosition: 0, state: 'active' };
 }
 
-function buildReviewSessionAfterDelay(args: {
-  nodeId: string;
-  nextNodesById: WorkspaceState['nodesById'];
-  now: string;
-  snapshot: WorkspaceState;
-  state: WorkspaceState;
-}) {
-  if (args.snapshot.reviewSession.currentNodeId !== args.nodeId) {
-    return args.state.reviewSession;
-  }
-  return advanceOrCompleteAfterReadingAction({
-    currentNodeId: args.nodeId,
-    nextNodesById: args.nextNodesById,
-    now: args.now,
-    progressDelta: 0,
-    readingElapsedMsDelta: 0,
-    snapshot: args.snapshot,
-    state: args.state
-  });
-}
-
 function buildTopicDelayPatch(args: {
   level: number;
   nodeId: string;
@@ -102,7 +81,7 @@ function buildTopicDelayPatch(args: {
   const nextReading = { ...baseReading, nextAt, state: 'active' as const };
   const nextNode = { ...node, reading: nextReading };
   const nextNodesById = { ...args.state.nodesById, [args.nodeId]: nextNode };
-  const reviewSession = buildReviewSessionAfterDelay({ ...args, nextNodesById });
+  const reviewSession = args.state.reviewSession;
   const afterActiveNodeId = reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? args.state.activeNodeId;
   return {
     historyEntry: createReadingReviewHistoryEntry({
@@ -189,6 +168,9 @@ async function persistTopicDelay(snapshot: WorkspaceState, result: TopicDelayPat
   if (!hasPersistentDailyFlow(snapshot.reviewSession)) return persistence.persistReadingNodes([result.nextNode], now);
   const saved = await saveDailyReading(snapshot.reviewSession, result.historyEntry, now, result.patch.reviewSession!, undefined, snapshot.nodesById);
   result.patch.nodesById = mergeDailyFlowReceiptNodes(result.patch.nodesById ?? snapshot.nodesById, snapshot.nodesById, saved.nodes, saved.learning);
+  const active = buildReviewActiveNodeContext(snapshot, saved.session.currentNodeId ?? saved.session.continueNodeId ?? null);
+  Object.assign(result.patch, active);
+  Object.assign(result.historyEntry.afterContext, active);
   result.patch.reviewSession = saved.session;
   result.historyEntry.afterContext.reviewSession = saved.session;
   return true;

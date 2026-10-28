@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { getCurrentReviewSchedulerSettings, getReviewSchedulerVersion } from '../features/settings/model/reviewSchedulerSettings';
 
-import { resolveCompanionFsrsReviewSession } from './companionFsrsReviewSession';
-import { postponeCompanionReviewTopic } from './companionReadingReviewSessionActions';
+import { resolveCompanionReviewSession } from './companionDailyFlow.testSupport';
+import { resolveCompanionFsrsReviewSession } from './companionDailyFlow.testSupport';
+import { postponeCompanionReviewTopic } from './companionReadingReview';
 import {
   gradeCompanionReviewCard,
-  resolveCompanionReviewSession
 } from './companionReviewSession';
 
 const schedulerGrade = vi.fn();

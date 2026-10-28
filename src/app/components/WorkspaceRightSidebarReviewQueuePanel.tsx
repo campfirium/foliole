@@ -1,13 +1,12 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
-import { hasDailyFlowRuntime } from '../../shared/platform/runtime/dailyFlowRuntimeRepository';
 import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import {
   inspectorListHeadingClassName,
   inspectorListInsetPaddingClassName,
   inspectorListMetaClassName
 } from '../../shared/ui';
-import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
+import type { ReviewFlowWindow } from '../../store/dailyFlowPresentation';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useDailyFlowFuture } from '../hooks/useDailyFlowFuture';
 import { useDailyFlowView } from '../hooks/useDailyFlowView';
@@ -106,7 +105,7 @@ function renderStandardSections(args: WorkspaceRightSidebarReviewQueuePanelProps
 }
 
 export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {
-  return hasDailyFlowRuntime() ? <DailyFlowQueuePanel {...props} /> : <FlowQueuePanel {...props} />;
+  return <DailyFlowQueuePanel {...props} />;
 }
 
 function DailyFlowQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {
@@ -130,7 +129,7 @@ function DailyFlowQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) 
     flowWindow={{ queueNodeIds: nodeIds, readyNodeIds: [], upcomingNodeIds: dayBuckets.flatMap(bucket => bucket.nodeIds), dayBuckets, dayOffsetByNodeId }} />;
 }
 
-function FlowQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {
+export function FlowQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {
   const t = useTranslation();
   const demoState = useDemoRuntimeState();
   const { isDemo } = demoState;

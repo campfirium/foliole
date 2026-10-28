@@ -31,7 +31,7 @@ function learningSourcesChanged(current: WorkspaceState, next: WorkspaceState) {
   if (JSON.stringify(next.nodeOrder) !== JSON.stringify(current.nodeOrder) ||
     JSON.stringify(next.trashedNodeIds) !== JSON.stringify(current.trashedNodeIds)) return true;
   if (next.nodesById === current.nodesById) return false;
-  const fields = ['kind', 'parentNodeId', 'priority', 'shelvedAt', 'review', 'reading',
+  const fields = ['kind', 'parentNodeId', 'priority', 'deletedAt', 'shelvedAt', 'review', 'reading',
     'manualChildOrder', 'sequentialReadingEnabled'] as const;
   return [...new Set([...Object.keys(current.nodesById), ...Object.keys(next.nodesById)])].some(id => {
     const before = current.nodesById[id];

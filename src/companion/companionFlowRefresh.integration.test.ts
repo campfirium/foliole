@@ -4,15 +4,13 @@ import { useMemo, useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-import { restoreFlowHistorySession } from '../../lib/core/flow/flowHistorySession';
 import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
-import { predictCompanionFlowDocument } from '../shared/platform/companion/runtime/companionDailyFlow';
+import { openCompanionDailyFlow, predictCompanionFlowDocument } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { commitCompanionFlowHistory, loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
-import { createStartedReviewSession } from '../store/workspaceReviewReading';
 
 import { createCompanionFlowHistoryEntry } from './companionFlowHistoryEntry';
 import { persistFlowMutation } from './companionFlowMutation';
@@ -52,19 +50,17 @@ function observeSnapshotRows() {
   return () => count;
 }
 
-function historyContext() {
-  return { key, mode: 'recommended' as const, session: createStartedReviewSession({
-    currentNodeId: '000000', continueNodeId: null, queueNodeIds: ['000000', '000001'],
-    sessionStartedAt: now, totalNodeCount: 256
-  }) };
+async function historyContext(preferredNodeId = '000000') {
+  return { key, mode: 'recommended' as const, session:
+    (await openCompanionDailyFlow({ now, mode: 'recommended', preferredNodeId })).session };
 }
 
 it('keeps consecutive Soon history durable without materializing unrelated nodes', async () => {
   const initial = (await refreshCompanionWorkspaceAfterMutation())!;
+  await historyContext();
   const rows = observeSnapshotRows();
   for (const nodeId of ['000000', '000001']) {
-    const history = historyContext();
-    history.session.currentNodeId = nodeId;
+    const history = await historyContext(nodeId);
     await commitCompanionFlowHistory({ key, mode: history.mode, entry: createCompanionFlowHistoryEntry({
       action: 'soon', nodeId, now, before: initial, after: initial, history
     }) });
@@ -78,14 +74,12 @@ it('keeps consecutive Soon history durable without materializing unrelated nodes
 
 it.each(['read', 'later', 'dismiss'] as const)('refreshes %s and its undo/redo without reading unrelated nodes', async action => {
   const initial = (await refreshCompanionWorkspaceAfterMutation())!;
-  const history = historyContext();
+  const history = await historyContext();
   const rows = observeSnapshotRows();
-  await persistFlowMutation({ action, nodeId: '000000', now, snapshot: initial, history });
+  const result = await persistFlowMutation({ action, nodeId: '000000', now, snapshot: initial, history });
   const saved = (await refreshCompanionWorkspaceAfterMutation())!;
   expect(saved.nodesById['000000']?.reading).not.toEqual(initial.nodesById['000000']?.reading);
-  const entry = (await loadCompanionFlowHistory(key)).undoStack.at(-1)!;
-  if (entry.type === 'nodes.change') throw new Error('Expected a reading history entry.');
-  const restoredSession = await replayCompanionFlowHistory(key, 'undo', restoreFlowHistorySession(entry.afterContext.reviewSession, history.session));
+  const restoredSession = await replayCompanionFlowHistory(key, 'undo', result.session!);
   const undone = (await refreshCompanionWorkspaceAfterMutation())!;
   expect(undone.nodesById['000000']?.reading).toEqual(initial.nodesById['000000']?.reading);
   await replayCompanionFlowHistory(key, 'redo', restoredSession!);

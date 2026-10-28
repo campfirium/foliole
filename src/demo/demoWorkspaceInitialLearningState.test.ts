@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 
-import { buildReviewFlowWindow } from '../store/workspaceReviewFlowWindow';
+import { prepareFlowSession } from '../../lib/core/flow/dailyFlowPlanning';
+import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import { canonicalGuidePath, DEMO_TOPICS, getDemoTopicNodeId } from './demoContent';
 import { createDemoWorkspaceSnapshot } from './demoWorkspaceSnapshot';
@@ -12,19 +13,10 @@ it('builds the first-run Demo flow without learned or future-day state', () => {
 
   const snapshot = createDemoWorkspaceSnapshot(canonicalGuidePath(topic.slug), new Date(now));
   const topicNodeId = getDemoTopicNodeId(topic);
-  const flowWindow = buildReviewFlowWindow({
-    ...snapshot,
-    reviewSessionMode: 'recommended'
-  }, now, snapshot.reviewSession.queueNodeIds);
-  const flowNodeIds = [
-    ...flowWindow.queueNodeIds,
-    ...flowWindow.readyNodeIds,
-    ...flowWindow.dayBuckets.flatMap((bucket) => bucket.nodeIds)
-  ];
-
-  expect(flowNodeIds).toContain(topicNodeId);
-  expect(flowWindow.dayBuckets.filter((bucket) => bucket.dayOffset > 0)).toEqual([]);
-  expect(Object.values(flowWindow.dayOffsetByNodeId).every((dayOffset) => dayOffset === 0)).toBe(true);
+  const session = prepareFlowSession(snapshot, { now, mode: 'recommended', prepareOnly: true }, getCurrentReviewSchedulerSettings());
+  expect(session.queueNodeIds).toContain(topicNodeId);
+  expect(session.sessionStartedAt).toBeNull();
+  expect(session.readTopicCount).toBe(0);
   expect(snapshot.nodesById[topicNodeId]?.reading).toMatchObject({
     repetitionCount: 0,
     state: 'active'

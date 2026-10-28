@@ -2,13 +2,15 @@ import { act, renderHook } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { installDemoRuntimeController, type DemoRuntimeController, type DemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
-import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
+import type { ReviewFlowWindow } from '../../store/dailyFlowPresentation';
 import type { WorkspaceLayoutProps } from '../components/workspaceLayoutGroupedProps';
 
 import {
   bindReviewQueueEmptyDialogToLayoutProps,
   useReviewQueueEmptyDialogState
 } from './useReviewQueueEmptyDialogState';
+
+vi.mock('./useDailyFlowFuture', () => ({ useDailyFlowFuture: () => ({ view: { hasFuture: true } }) }));
 
 function createFlowWindow(overrides: Partial<ReviewFlowWindow>): ReviewFlowWindow {
   return {
@@ -49,7 +51,7 @@ it('reopens the Demo day-clear dialog when the empty Flow action is clicked agai
     dayOffsetByNodeId: { 'day-2-topic': 1 },
     upcomingNodeIds: ['day-2-topic']
   });
-  const { result } = renderHook(() => useReviewQueueEmptyDialogState(flowWindow));
+  const { result } = renderHook(() => useReviewQueueEmptyDialogState(flowWindow, { currentDayAvailable: false }));
 
   act(() => result.current.close());
   expect(result.current.content).toBeNull();
@@ -59,7 +61,7 @@ it('reopens the Demo day-clear dialog when the empty Flow action is clicked agai
   expect(result.current.content).toEqual({ day: 1, kind: 'demo-day-clear' });
 });
 
-it('opens the Demo day-clear dialog before starting a scheduled fallback session', () => {
+it('opens the Demo day-clear dialog before starting an empty current day', () => {
   installDemoState({ isDemo: true, previewDay: 0 });
   const flowWindow = createFlowWindow({
     dayBuckets: [{ dayOffset: 1, nodeIds: ['day-2-topic'] }],
@@ -67,7 +69,7 @@ it('opens the Demo day-clear dialog before starting a scheduled fallback session
     upcomingNodeIds: ['day-2-topic']
   });
   const startReviewSession = vi.fn(() => true);
-  const { result } = renderHook(() => useReviewQueueEmptyDialogState(flowWindow));
+  const { result } = renderHook(() => useReviewQueueEmptyDialogState(flowWindow, { currentDayAvailable: false }));
   const layoutProps = {
     review: {
       onStartStudyMode: startReviewSession,
@@ -96,7 +98,7 @@ it('does not open Demo day-clear while the current Flow surface is still active'
     upcomingNodeIds: ['day-2-topic']
   });
   const { result } = renderHook(() =>
-    useReviewQueueEmptyDialogState(flowWindow, { allowDemoDayClear: false })
+    useReviewQueueEmptyDialogState(flowWindow, { currentDayAvailable: false, allowDemoDayClear: false })
   );
 
   expect(result.current.content).toBeNull();
@@ -115,7 +117,7 @@ it('opens Demo day-clear for a completed Flow even while study mode is active', 
     upcomingNodeIds: ['day-2-topic']
   });
   const { result } = renderHook(() =>
-    useReviewQueueEmptyDialogState(flowWindow, { allowDemoDayClear: false })
+    useReviewQueueEmptyDialogState(flowWindow, { currentDayAvailable: false, allowDemoDayClear: false })
   );
 
   act(() => result.current.openClear());
@@ -132,7 +134,7 @@ it('does not reopen the same Demo day-clear after the completed Flow dialog is c
   });
   let allowDemoDayClear = false;
   const { result, rerender } = renderHook(() =>
-    useReviewQueueEmptyDialogState(flowWindow, { allowDemoDayClear })
+    useReviewQueueEmptyDialogState(flowWindow, { currentDayAvailable: false, allowDemoDayClear })
   );
 
   act(() => result.current.openClear());
@@ -151,7 +153,7 @@ it('does not auto open Demo day-clear on refresh but keeps explicit start availa
     upcomingNodeIds: ['day-2-topic']
   });
 
-  const { result } = renderHook(() => useReviewQueueEmptyDialogState(flowWindow));
+  const { result } = renderHook(() => useReviewQueueEmptyDialogState(flowWindow, { currentDayAvailable: false }));
 
   expect(result.current.content).toBeNull();
 
@@ -163,7 +165,7 @@ it('does not auto open Demo day-clear on refresh but keeps explicit start availa
 it('keeps the normal all-clear dialog outside Demo day-clear state', () => {
   installDemoState({ isDemo: false, previewDay: 0 });
   const flowWindow = createFlowWindow({});
-  const { result } = renderHook(() => useReviewQueueEmptyDialogState(flowWindow));
+  const { result } = renderHook(() => useReviewQueueEmptyDialogState(flowWindow, { currentDayAvailable: false }));
 
   act(() => result.current.openEmpty());
 

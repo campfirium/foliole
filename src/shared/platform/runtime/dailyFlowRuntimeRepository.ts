@@ -10,7 +10,7 @@ export function hasDailyFlowRuntime() {
   return Boolean(getRuntimeInvoke() || getBrowserDailyFlowRuntime());
 }
 
-export function openDailyFlowRuntime(args: DailyFlowOpenArgs, knownNodes: Record<string, unknown>) {
+export async function openDailyFlowRuntime(args: DailyFlowOpenArgs, knownNodes: Record<string, unknown>) {
   const browser = getBrowserDailyFlowRuntime();
   if (browser) return browser.open(args, knownNodes);
   const invoke = getRuntimeInvoke();

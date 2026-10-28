@@ -5,13 +5,10 @@ import { createWorkspaceActionHistoryEntryId } from './workspaceActionHistoryEnt
 import { captureWorkspaceHistoryContext } from './workspaceHistoryContext';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import { createReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
-import { buildReviewSessionAfterGrade } from './workspaceReviewGradeSession';
-import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import {
   runtimeWorkspaceReviewPersistence,
   type WorkspaceReviewPersistenceAdapter
 } from './workspaceReviewPersistence';
-import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
 import type { SequentialReadingChange } from './workspaceSequentialReading';
 import type { WorkspaceState } from './workspaceStore';
 import {
@@ -48,26 +45,10 @@ export function buildGradedReviewState(args: {
       ...args.nodePatch
     }
   };
-  const nextQueue = args.persistedSession ? { currentNodeId: args.persistedSession.currentNodeId,
-    taskNodeIds: args.persistedSession.queueNodeIds, extensionNodeIds: [args.persistedSession.continueNodeId].filter((id): id is string => Boolean(id)) }
-    : buildCurrentReviewSessionQueueOutput(state, args.now, {
-    nodesById: nextNodesById,
-    releaseCurrentPin: true
-  });
-  const nextNodeId = nextQueue.currentNodeId;
-  const reviewElapsedMsDelta = calculateReviewStepElapsedMs(args.snapshot.reviewSession, args.now);
-  const reviewedItemDelta = nextQueue.taskNodeIds.includes(args.currentNodeId) ? 0 : 1;
-  const continueNodeId = nextQueue.extensionNodeIds[0] ?? null;
-  const nextReviewSession = args.persistedSession ?? buildReviewSessionAfterGrade({
-    continueNodeId,
-    nextDueAt: args.nodePatch.review?.due ?? null,
-    nextNodeId,
-    now: args.now,
-    queueNodeIds: nextQueue.taskNodeIds,
-    reviewElapsedMsDelta,
-    reviewSession: args.snapshot.reviewSession,
-    reviewedItemDelta
-  });
+  const nextReviewSession = args.persistedSession;
+  if (!nextReviewSession) return null;
+  const nextNodeId = nextReviewSession.currentNodeId;
+  const continueNodeId = nextReviewSession.continueNodeId ?? null;
   const activeContext = buildReviewActiveNodeContext(state, nextNodeId ?? continueNodeId);
   return {
     historyEntry: createReviewGradeHistoryEntry({

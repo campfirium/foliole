@@ -1,7 +1,7 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { AppTooltip, AppTooltipContent, AppTooltipTrigger } from '../../shared/ui';
-import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
+import type { ReviewFlowWindow } from '../../store/dailyFlowPresentation';
 
 import { getDemoDisplayDayHeading, getDemoNodeDisplayDay } from './workspaceRightSidebarReviewQueueDays';
 import { buildDisplayQueueNodeIds, FlowSection } from './WorkspaceRightSidebarReviewQueueSections';

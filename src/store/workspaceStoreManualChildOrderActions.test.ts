@@ -1,7 +1,10 @@
-import { beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes';
+import { installBrowserDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowBrowserRuntime';
 
+import { installBrowserWorkspace } from './installBrowserWorkspace';
+import { installWorkspaceBrowserCommit } from './workspaceBrowserCommit';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
 const now = '2026-05-25T08:00:00.000Z';
@@ -53,7 +56,8 @@ function folder(manualChildOrder: string[]): Node {
   };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  installWorkspaceBrowserCommit(null); installBrowserDailyFlowRuntime(null); localStorage.clear();
   useWorkspaceStore.setState({
     ...createInitialWorkspaceState(new Date(now)),
     activeNodeId: 'topic-a',
@@ -74,10 +78,13 @@ beforeEach(() => {
     },
     reviewSessionMode: 'reading-only'
   });
+  installBrowserWorkspace(useWorkspaceStore, localStorage, useWorkspaceStore.getState());
+  await useWorkspaceStore.getState().resumeReviewSession(now, { preferredNodeId: useWorkspaceStore.getState().reviewSession.currentNodeId });
 });
+afterEach(() => { installWorkspaceBrowserCommit(null); installBrowserDailyFlowRuntime(null); });
 
-it('releases the first non-dismissed topic and refreshes the current queue after sequential folder manual ordering changes', () => {
-  useWorkspaceStore.getState().setFolderManualChildOrder?.('folder', ['topic-c', 'topic-b', 'topic-a'], now);
+it('releases the first non-dismissed topic and refreshes the current queue after sequential folder manual ordering changes', async () => {
+  await useWorkspaceStore.getState().setFolderManualChildOrder?.('folder', ['topic-c', 'topic-b', 'topic-a'], now);
   const state = useWorkspaceStore.getState();
 
   expect(state.nodesById['topic-c']?.reading?.state).toBe('dismissed');
@@ -89,7 +96,7 @@ it('releases the first non-dismissed topic and refreshes the current queue after
   expect(state.reviewSession.isAnswerRevealed).toBe(false);
 });
 
-it('updates only the folder order when sequential reading is disabled', () => {
+it('updates only the folder order when sequential reading is disabled', async () => {
   useWorkspaceStore.setState((state) => ({
     nodesById: {
       ...state.nodesById,
@@ -106,7 +113,7 @@ it('updates only the folder order when sequential reading is disabled', () => {
     }
   }));
 
-  useWorkspaceStore.getState().setFolderManualChildOrder?.('folder', ['topic-b', 'topic-a'], '2026-05-25T09:00:00.000Z');
+  await useWorkspaceStore.getState().setFolderManualChildOrder?.('folder', ['topic-b', 'topic-a'], '2026-05-25T09:00:00.000Z');
   const state = useWorkspaceStore.getState();
 
   expect(state.nodesById.folder?.manualChildOrder).toEqual(['topic-b', 'topic-a']);

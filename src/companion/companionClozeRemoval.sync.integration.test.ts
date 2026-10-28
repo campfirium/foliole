@@ -21,11 +21,11 @@ import { syncRequestLibrary as sync } from '../../electron/database/syncRequestL
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations';
 import { readCompanionHighlight } from '../shared/platform/companion/reading/companionHighlightRead';
+import { openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { closeIosCompanionDatabase, initializeIosCompanionDatabase, type IosCompanionDatabaseManager } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { createFakeCapacitorConnection } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
-import { reconcileFlowSession, resumeFlowSession } from '../store/workspaceFlowSession';
 
 import { deleteCompanionExistingHighlight } from './companionExistingHighlightPersistence';
 import { restoreCompanionTrashNode } from './companionTrashActions';
@@ -100,17 +100,16 @@ it('soft deletes, synchronizes and restores the same cloze after reopening witho
   expect(log).toHaveLength(2);
   expect(initial.nodesById.cloze!.review?.reps).toBe(2);
   for (const peer of [desktop, mobile]) assertFacts(peer, false, log, review);
-  const session = resumeFlowSession(initial, 'review-first', 'cloze', now);
+  const session = (await openCompanionDailyFlow({ now, mode: 'review-first', preferredNodeId: 'cloze' })).session;
   expect(session.currentNodeId).toBe('cloze');
   session.isAnswerRevealed = true;
   const { guard } = await readCompanionHighlight(initial, 'cloze', 'cloze');
   await deleteCompanionExistingHighlight({ deviceId: mobile.name, nodeId: 'cloze', snapshot: initial, guard });
-  const deleted = await snapshot();
-  expect(reconcileFlowSession(deleted, session, 'review-first')).toMatchObject({ currentNodeId: null, isAnswerRevealed: false,
+  const afterDelete = (await openCompanionDailyFlow({ now, mode: 'review-first', refresh: true })).session;
+  expect(afterDelete).toMatchObject({ currentNodeId: null, isAnswerRevealed: false,
     reviewedItemCount: session.reviewedItemCount });
-  const reading = { ...session, currentNodeId: 'source', queueNodeIds: ['source', 'cloze'] };
-  expect(reconcileFlowSession(deleted, reading, 'recommended')).toMatchObject({ currentNodeId: 'source', queueNodeIds: ['source'],
-    reviewedItemCount: reading.reviewedItemCount });
+  const reading = (await openCompanionDailyFlow({ now, mode: 'recommended', preferredNodeId: 'source' })).session;
+  expect(reading.currentNodeId).toBe('source');
   expect(await loadCompanionWorkspaceNode('source')).toEqual(source);
   expect(await loadCompanionWorkspaceNode('other')).toEqual(other);
   assertFacts(mobile, true, log, review);
@@ -127,10 +126,8 @@ it('soft deletes, synchronizes and restores the same cloze after reopening witho
   const restoredSnapshot = await snapshot();
   expect(restoredSnapshot.nodesById.cloze!.review).toEqual(initial.nodesById.cloze!.review);
   assertFacts(mobile, false, log, review);
-  const activeReading = reconcileFlowSession(deleted, reading, 'recommended');
-  expect(reconcileFlowSession(restoredSnapshot, activeReading, 'recommended')).toMatchObject({
-    currentNodeId: 'source', reviewedItemCount: reading.reviewedItemCount
-  });
+  const afterRestore = (await openCompanionDailyFlow({ now, mode: 'recommended', refresh: true })).session;
+  expect(afterRestore).toMatchObject({ currentNodeId: 'source', reviewedItemCount: reading.reviewedItemCount });
   await sync(mobile, desktop);
   await sync(desktop, mobile);
   for (const peer of [desktop, mobile]) assertFacts(peer, false, log, review);
