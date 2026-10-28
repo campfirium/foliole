@@ -171,7 +171,7 @@ it('removes, restores and permanently deletes nested clozes without disturbing a
   body = await fs.readFile(mirror('manual'), 'utf8');
   once(body, ['Second answer.', 'Deep answer.']);
   softDeleteNodes({ nodeIds: ['third'], deletedAt: '2030-10-06T00:01:00.000Z' });
-  deleteNodesPermanently({ nodeIds: ['third'], nodeOrder: [] });
+  deleteNodesPermanently({ nodeIds: ['third'] });
   await syncFrom('second');
   body = await fs.readFile(mirror('manual'), 'utf8');
   expect(body).toContain('Second answer.');

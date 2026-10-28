@@ -31,7 +31,7 @@ import { exportCurrentArticleMirror } from './exportCurrentArticleMirror.js';
 import { loadMirrorArticleRecords } from './mirrorOutputStorage.js';
 import { rebuildAllMirrorOutput } from './mirrorOutputSync.js';
 import { flushMirrorSync } from './mirrorSyncScheduler.js';
-import { resetMirrorTestWorkspace } from './mirrorTestDatabase.js';
+import { createMirrorTestMoveInput, resetMirrorTestWorkspace } from './mirrorTestDatabase.js';
 
 let root = '';
 let outputPath = '';
@@ -74,10 +74,7 @@ function seedMove() {
   save('unrelated', 'Unrelated body.');
 }
 function move(parentNodeId: string) {
-  return handleNodeMutationCommand('move_nodes', {
-    nodes: [{ nodeId: 'manual', parentNodeId, updatedAt: '2030-10-06T00:01:00.000Z' }],
-    nodeOrder: loadWorkspaceSnapshot({ includeBody: false })!.nodeOrder
-  });
+  return handleNodeMutationCommand('move_nodes', { ...createMirrorTestMoveInput('manual', parentNodeId) });
 }
 
 it('refreshes every independent saved input in a moved manual Topic subtree', async () => {
@@ -123,8 +120,7 @@ it('keeps moved inputs safe across Trash, restore and permanent deletion', async
   await flushMirrorSync();
   await expect(fs.readFile(mirror('child'), 'utf8')).resolves.toContain('Child annotation.');
   const previous = mirror('child');
-  await handleNodeMutationCommand('delete_nodes_permanently', { nodeIds,
-    nodeOrder: loadWorkspaceSnapshot({ includeBody: false })!.nodeOrder.filter((id) => !nodeIds.includes(id)) });
+  await handleNodeMutationCommand('delete_nodes_permanently', { nodeIds });
   await flushMirrorSync();
   await expect(fs.access(previous)).rejects.toMatchObject({ code: 'ENOENT' });
   expect((await fs.stat(mirror('unrelated'))).mtimeMs).toBe(before);

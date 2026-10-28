@@ -45,6 +45,7 @@ test('exports case-only articles and nested folders without overwriting and keep
     const result = await desktopWindow.evaluate(() => window.electronAPI!.invoke('rebuild_mirror_output'));
     expect(result).toMatchObject({ failed_article_count: 0, pending_article_count: 0 });
     const files = await desktopApp.evaluate(async (_, cwd) => {
+      await new Promise<void>((resolve) => setImmediate(resolve));
       const moduleApi = process.getBuiltinModule('module')!;
       const pathApi = process.getBuiltinModule('path')!;
       const fsApi = process.getBuiltinModule('fs')!;
@@ -74,6 +75,7 @@ test('exports case-only articles and nested folders without overwriting and keep
 
 async function repairSelectedAlias(desktopApp: ElectronApplication) {
   return desktopApp.evaluate(async (_, cwd) => {
+    await new Promise<void>((resolve) => setImmediate(resolve));
     const moduleApi = process.getBuiltinModule('module')!;
     const pathApi = process.getBuiltinModule('path')!;
     const fsApi = process.getBuiltinModule('fs')!;

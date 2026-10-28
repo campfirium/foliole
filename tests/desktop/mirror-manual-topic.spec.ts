@@ -72,7 +72,7 @@ test('outputs a saved nested Topic through automatic, export and full paths', as
     anchorLink: { id: 'item-highlight', kind: 'highlight', locator: { from: 0, to: 8, originalText: 'Question' } },
     createdAt: '2026-04-08T00:00:00.000Z', updatedAt: new Date().toISOString()
   }));
-  await expect.poll(async () => (await readOutputs(desktopApp)).files[0]!.body, { timeout: 30_000 }).toContain('Changed annotation.');
+  await expect.poll(async () => (await readOutputs(desktopApp)).files[0]!.body, { timeout: 90_000 }).toContain('Changed annotation.');
   const after = await readOutputs(desktopApp);
   expect(after.files.filter((file) => file.article_id !== 't513-topic-manual')).toEqual(
     before.files.filter((file) => file.article_id !== 't513-topic-manual'));

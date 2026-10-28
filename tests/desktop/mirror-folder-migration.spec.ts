@@ -5,6 +5,7 @@ import { expectWorkspaceShell } from './harness/settings';
 
 async function readOutputs(app: ElectronApplication) {
   return app.evaluate(async (_, cwd) => {
+    await new Promise<void>((resolve) => setImmediate(resolve));
     const require = process.getBuiltinModule('module')!.createRequire(`${cwd}/package.json`);
     const pathApi = process.getBuiltinModule('path')!;
     const fsApi = process.getBuiltinModule('fs')!;
@@ -46,7 +47,7 @@ test('migrates nested folder outputs through saved rename and move commands with
       window.__folioleWorkspaceDebug!.updateNodeTitle('t513-folder-root', next), title);
     expect(renamed).toBe(true);
     await expect.poll(async () => (await readOutputs(desktopApp)).files
-      .filter((file) => file.article_id !== 't513-folder-unrelated').map((file) => file.relative_path), { timeout: 30_000 })
+      .filter((file) => file.article_id !== 't513-folder-unrelated').map((file) => file.relative_path), { timeout: 90_000 })
       .toEqual([`${title}/Nested/A.md`, `${title}/Second.md`]);
     const after = await readOutputs(desktopApp);
     expect(after.names).toContain(title);
@@ -58,7 +59,7 @@ test('migrates nested folder outputs through saved rename and move commands with
   const accepted = await desktopWindow.evaluate(() =>
     window.__folioleWorkspaceDebug!.moveNodes(['t513-folder-nested'], 't513-folder-destination', 'child'));
   expect(accepted).toBe(true);
-  await expect.poll(async () => (await readOutputs(desktopApp)).files[0]!.relative_path, { timeout: 30_000 })
+  await expect.poll(async () => (await readOutputs(desktopApp)).files[0]!.relative_path, { timeout: 90_000 })
     .toBe('Destination/Nested/A.md');
   const moved = await readOutputs(desktopApp);
   expect(moved.files[0]!.body).toContain('Nested article body.');

@@ -74,7 +74,7 @@ it.each(['missing', 'older-source', 'deleted-child'] as const)(
     if (mode === 'older-source') save('owner', 'Alpha Current SQLite body with an older source date.');
     if (mode === 'deleted-child') {
       softDeleteNodes({ nodeIds: ['derived'], deletedAt: new Date().toISOString() });
-      deleteNodesPermanently({ nodeIds: ['derived'], nodeOrder: [] });
+      deleteNodesPermanently({ nodeIds: ['derived'] });
       expect(loadWorkspaceNodeDocument('owner')).toEqual(ownerBefore);
     }
     // Reopen persisted SQLite without consuming the discarded session's notifications.

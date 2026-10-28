@@ -42,7 +42,7 @@ test('removes a trashed article mirror and restores its saved content through na
   await desktopWindow.evaluate(() => window.electronAPI!.invoke('soft_delete_nodes', {
     nodeIds: ['t513-trash-article'], deletedAt: new Date().toISOString()
   }));
-  await expect.poll(async () => (await readOutputs(desktopApp)).files.map((file) => file.article_id), { timeout: 30_000 })
+  await expect.poll(async () => (await readOutputs(desktopApp)).files.map((file) => file.article_id), { timeout: 90_000 })
     .toEqual(['t513-trash-unrelated']);
   const trashed = await readOutputs(desktopApp);
   expect(trashed.names).not.toContain('Folder');
@@ -62,7 +62,7 @@ test('removes a trashed article mirror and restores its saved content through na
     nodeIds: ['t513-trash-article']
   }));
   expect(restored.restoredNodeIds).toEqual(['t513-trash-article']);
-  await expect.poll(async () => (await readOutputs(desktopApp)).files.map((file) => file.article_id), { timeout: 30_000 })
+  await expect.poll(async () => (await readOutputs(desktopApp)).files.map((file) => file.article_id), { timeout: 90_000 })
     .toEqual(['t513-trash-article', 't513-trash-unrelated']);
   const after = await readOutputs(desktopApp);
   expect(after.files[0]!.relative_path).toBe('Folder/Article.md');

@@ -70,7 +70,7 @@ afterEach(async () => {
 
 async function remove(ids = ['article']) {
   softDeleteNodesWithParents({ nodeIds: ids, deletedAt: '2030-10-06T00:01:00.000Z' });
-  return handlePermanentDeleteNodeCommand({ nodeIds: ids, nodeOrder: [] }, null);
+  return handlePermanentDeleteNodeCommand({ nodeIds: ids }, null);
 }
 
 it('retires the captured mirror before any debounce while preserving unrelated stale files', async () => {
@@ -99,7 +99,7 @@ it('retires only committed chunks when a later database deletion fails', async (
   softDeleteNodesWithParents({ nodeIds: ids, deletedAt: '2030-10-06T00:01:00.000Z' });
   openDatabaseConnection().sqlite.exec(`CREATE TRIGGER reject_delete BEFORE DELETE ON nodes
     WHEN OLD.id = 'part-0' BEGIN SELECT RAISE(ABORT, 'injected chunk failure'); END`);
-  await expect(handlePermanentDeleteNodeCommand({ nodeIds: ids, nodeOrder: [] }, null))
+  await expect(handlePermanentDeleteNodeCommand({ nodeIds: ids }, null))
     .rejects.toThrow('injected chunk failure');
   for (const id of ids) {
     const exists = Boolean(openDatabaseConnection().driver.queryOne('SELECT id FROM nodes WHERE id = ?', [id]));

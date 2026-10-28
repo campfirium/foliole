@@ -166,7 +166,7 @@ it('removes, restores and permanently deletes PDF facts while a same-title owner
   await syncFrom('cloze');
   once(await fs.readFile(mirror(owner), 'utf8'), ['PDF lifecycle fact.', 'Saved PDF answer.']);
   softDeleteNodes({ nodeIds: ['cloze'], deletedAt: '2030-10-06T00:01:00.000Z' });
-  deleteNodesPermanently({ nodeIds: ['cloze'], nodeOrder: [] });
+  deleteNodesPermanently({ nodeIds: ['cloze'] });
   await syncFrom(owner);
   expect(await fs.readFile(mirror(owner), 'utf8')).not.toContain('PDF lifecycle fact.');
   expect(await fs.readFile(file, 'utf8')).toBe(before.body);

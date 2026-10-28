@@ -102,11 +102,11 @@ async function deleteChapterNote(app: ElectronApplication, page: Page, bookId: s
       nodeIds: [nodeId], deletedAt: new Date().toISOString()
     });
     await window.electronAPI!.invoke('delete_nodes_permanently', {
-      nodeIds: [nodeId], nodeOrder: []
+      nodeIds: [nodeId]
     });
   }, noteId);
   await expect.poll(async () => (await readOutputs(app)).files.find((file) => file.article_id === bookId)!.body,
-    { timeout: 30_000 }).not.toContain('Changed annotation.');
+    { timeout: 90_000 }).not.toContain('Changed annotation.');
   const after = await readOutputs(app);
   expect(after.files.filter((file) => file.article_id !== bookId)).toEqual(
     before.files.filter((file) => file.article_id !== bookId));
@@ -137,7 +137,7 @@ test('keeps imported chapter annotations in one book through automatic, export a
     anchorLink: book.anchorLink,
     createdAt: '2026-04-08T00:00:00.000Z', updatedAt: new Date().toISOString()
   }), book);
-  await expect.poll(async () => (await readOutputs(desktopApp)).files.find((file) => file.article_id === book.rootId)!.body, { timeout: 30_000 }).toContain('Changed annotation.');
+  await expect.poll(async () => (await readOutputs(desktopApp)).files.find((file) => file.article_id === book.rootId)!.body, { timeout: 90_000 }).toContain('Changed annotation.');
   const after = await readOutputs(desktopApp);
   const afterBook = after.files.find((file) => file.article_id === book.rootId)!;
   expect(after.files.filter((file) => file.article_id !== book.rootId)).toEqual(

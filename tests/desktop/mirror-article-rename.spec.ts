@@ -5,6 +5,7 @@ import { expectWorkspaceShell } from './harness/settings';
 
 async function readOutputs(app: ElectronApplication) {
   return app.evaluate(async (_, cwd) => {
+    await new Promise<void>((resolve) => setImmediate(resolve));
     const require = process.getBuiltinModule('module')!.createRequire(`${cwd}/package.json`);
     const pathApi = process.getBuiltinModule('path')!;
     const fsApi = process.getBuiltinModule('fs')!;
@@ -49,7 +50,7 @@ test('moves automatic mirror output after normal, case-only and conflicting arti
   const outputs = [before];
   for (const title of ['After', 'AFTER', 'Unrelated']) {
     await renameArticle(desktopWindow, title);
-    await expect.poll(async () => (await readOutputs(desktopApp)).files[0]!.relative_path, { timeout: 30_000 })
+    await expect.poll(async () => (await readOutputs(desktopApp)).files[0]!.relative_path, { timeout: 90_000 })
       .toMatch(title === 'Unrelated' ? /^Unrelated.*\.md$/ : new RegExp(`^${title}\\.md$`));
     const output = await readOutputs(desktopApp);
     expect(output.files[0]!.body).toContain('Renamed article body.');

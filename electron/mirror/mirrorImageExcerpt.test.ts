@@ -180,7 +180,7 @@ it('removes, restores and permanently deletes the crop expression without touchi
   await syncFrom('excerpt');
   once(await fs.readFile(mirror(owner), 'utf8'), ['Diagram lifecycle note.']);
   softDeleteNodes({ nodeIds: ['excerpt'], deletedAt: '2030-10-06T00:01:00.000Z' });
-  deleteNodesPermanently({ nodeIds: ['excerpt'], nodeOrder: [] });
+  deleteNodesPermanently({ nodeIds: ['excerpt'] });
   await syncFrom(owner);
   expect(await fs.readFile(mirror(owner), 'utf8')).not.toContain('Diagram lifecycle note.');
   expect(await fs.readFile(file, 'utf8')).toBe(before.body);

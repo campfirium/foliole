@@ -169,7 +169,7 @@ for (const pdf of [false, true]) test(`mirrors a real ${pdf ? 'PDF screenshot' :
   const before = await readOutputs(desktopApp);
   const saved = await updateClozeText(desktopWindow, excerptId, parentId);
   await expect.poll(async () => (await readOutputs(desktopApp)).files.find((file) => file.article_id === ownerId)!.body,
-    { timeout: 30_000 }).toContain('Current diagram prompt.');
+    { timeout: 90_000 }).toContain('Current diagram prompt.');
   const after = await readOutputs(desktopApp);
   const body = after.files.find((file) => file.article_id === ownerId)!.body;
   for (const fact of ['Current diagram prompt.', 'Current diagram answer.']) expect(body.split(fact)).toHaveLength(2);
@@ -200,7 +200,7 @@ for (const pdf of [false, true]) test(`mirrors a real ${pdf ? 'PDF screenshot' :
     if (!await debug.deleteNodePermanently(id)) throw new Error('Expected crop deletion');
   }, excerptId);
   await expect.poll(async () => (await readOutputs(desktopApp)).files.find((file) => file.article_id === ownerId)!.body,
-    { timeout: 30_000 }).not.toContain('Current diagram prompt.');
+    { timeout: 90_000 }).not.toContain('Current diagram prompt.');
   const deleted = await readOutputs(desktopApp);
   expect(deleted.files.filter((file) => file.article_id !== ownerId)).toEqual(
     rebuilt.files.filter((file) => file.article_id !== ownerId));

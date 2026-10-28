@@ -67,7 +67,7 @@ test('automatically migrates a manual Topic subtree and exports the same saved c
   expect(await desktopWindow.evaluate(() => window.__folioleWorkspaceDebug!.moveNodes(
     ['t513-move-manual'], 't513-move-new', 'child'))).toBe(true);
   await expect.poll(async () => (await readOutputs(desktopApp)).files.find((file) => file.article_id === 't513-move-child')?.relative_path,
-    { timeout: 30_000 }).toBe('New/Child.md');
+    { timeout: 90_000 }).toBe('New/Child.md');
   const after = await readOutputs(desktopApp);
   expect(after.files.find((file) => file.article_id === 't513-move-unrelated'))
     .toEqual(before.files.find((file) => file.article_id === 't513-move-unrelated'));

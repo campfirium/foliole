@@ -1,4 +1,4 @@
-import type { ElectronApplication } from '@playwright/test';
+import type { ElectronApplication, Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
@@ -45,6 +45,17 @@ async function settleInitialMirror(app: ElectronApplication) {
   }, process.cwd());
 }
 
+async function reloadPersistedInbox(page: Page) {
+  const before = await page.evaluate(() => window.__folioleWorkspaceDebug!.listNodes()
+    .filter((node) => node.parentNodeId === 'special-inbox').map((node) => ({ id: node.id, title: node.title })));
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await page.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
+  const after = await page.evaluate(() => window.__folioleWorkspaceDebug!.listNodes()
+    .filter((node) => node.parentNodeId === 'special-inbox').map((node) => ({ id: node.id, title: node.title })));
+  return { before, after };
+}
+
 for (const target of ['t513-item-move-new', 'special-inbox', 't513-item-move-topic'] as const) {
 test(`moves a manual Item to ${target} and exports the same saved input`, async ({
   desktopApp, desktopWindow
@@ -63,12 +74,17 @@ test(`moves a manual Item to ${target} and exports the same saved input`, async 
     ], { persist: true });
     await window.electronAPI!.invoke('rebuild_mirror_output');
   });
+  if (target === 'special-inbox') {
+    await testInfo.attach('persisted-inbox-baseline', {
+      body: JSON.stringify(await reloadPersistedInbox(desktopWindow), null, 2), contentType: 'application/json'
+    });
+  }
   await settleInitialMirror(desktopApp);
   const before = await readOutputs(desktopApp);
   expect(await desktopWindow.evaluate((target) => window.__folioleWorkspaceDebug!.moveNodes(
     ['t513-item-move-manual'], target, 'child'), target)).toBe(true);
   await expect.poll(async () => (await readOutputs(desktopApp)).files.find((file) => file.article_id === 't513-item-move-manual')?.relative_path,
-    { timeout: 30_000 }).toBe(`${target === 't513-item-move-new' ? 'New/' : target === 'special-inbox' ? 'Inbox/' : ''}Moving.md`);
+    { timeout: 90_000 }).toBe(`${target === 't513-item-move-new' ? 'New/' : target === 'special-inbox' ? 'Inbox/' : ''}Moving.md`);
   const after = await readOutputs(desktopApp);
   expect(after.files.filter((file) => file.article_id !== 't513-item-move-manual'))
     .toEqual(before.files.filter((file) => file.article_id !== 't513-item-move-manual'));

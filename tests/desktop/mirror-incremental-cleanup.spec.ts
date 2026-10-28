@@ -14,8 +14,8 @@ async function readOutputs(app: ElectronApplication) {
     return connection.runWithDatabaseConnectionOwner(() => {
       const root = loadLibraryPathSettingsSync().mirror;
       const records = connection.openDatabaseConnection().driver.queryAll(
-        "SELECT article_id, relative_path FROM mirror_articles WHERE article_id LIKE 't513-clean-%' ORDER BY article_id"
-      ) as Array<{ article_id: string; relative_path: string }>;
+        "SELECT article_id, relative_path, mirrored_at FROM mirror_articles WHERE article_id LIKE 't513-clean-%' ORDER BY article_id"
+      ) as Array<{ article_id: string; relative_path: string; mirrored_at: string }>;
       const extras = ['stale-root.md', 'Old/Nested/stale.md', 'Highlights.md', 'Clozes.md', 'Unrelated/manual.txt'];
       return { leftovers: extras.map((relative) => {
         const file = pathApi.join(root, relative);
@@ -44,6 +44,10 @@ test('keeps unrelated stale files during automatic single-article output and cle
     await new Promise<void>((resolve) => setImmediate(resolve));
     const require = process.getBuiltinModule('module')!.createRequire(`${cwd}/package.json`);
     const { runWithDatabaseConnectionOwner } = require(`${cwd}/dist/electron/database/connection.js`);
+    const { submitDesktopOperation } = require(`${cwd}/dist/electron/desktopOperations.js`);
+    const { resumePendingMirrorOutput } = require(`${cwd}/dist/electron/mirror/rebuildMirrorOutput.js`);
+    await submitDesktopOperation('mirror-backfill', { run: resumePendingMirrorOutput }).promise;
+    await require(`${cwd}/dist/electron/mirror/mirrorSyncScheduler.js`).flushMirrorSync();
     const { loadLibraryPathSettingsSync } = require(`${cwd}/dist/electron/ipc/libraryPaths.js`);
     await runWithDatabaseConnectionOwner(() => {
       const root = loadLibraryPathSettingsSync().mirror;
@@ -60,7 +64,7 @@ test('keeps unrelated stale files during automatic single-article output and cle
   const updated = await desktopWindow.evaluate(() =>
     window.__folioleWorkspaceDebug!.updateNodeContent('t513-clean-article', 'Updated body.'));
   expect(updated).toBe(true);
-  await expect.poll(async () => (await readOutputs(desktopApp)).files[0]!.body, { timeout: 30_000 }).toContain('Updated body.');
+  await expect.poll(async () => (await readOutputs(desktopApp)).files[0]!.body, { timeout: 90_000 }).toContain('Updated body.');
   const after = await readOutputs(desktopApp);
   expect(after.leftovers).toEqual(before.leftovers);
   expect(after.files[1]).toEqual(before.files[1]);

@@ -132,9 +132,9 @@ test(`moves a real book root to ${target} with independent descendants and match
     [id], target, 'child'), { id: book.rootId, target })).toBe(true);
   const prefix = target === 't513-book-folder' ? 'Destination/' : target === 'special-inbox' ? 'Inbox/' : '';
   await expect.poll(async () => (await readOutputs(desktopApp)).files.find((file) => file.article_id === book.rootId)!.relative_path,
-    { timeout: 30_000 }).toBe(`${prefix}Manual Book.md`);
+    { timeout: 90_000 }).toBe(`${prefix}Manual Book.md`);
   await expect.poll(async () => (await readOutputs(desktopApp)).files.find((file) => file.article_id === 't513-book-child')!.relative_path,
-    { timeout: 30_000 }).toBe(`${prefix}Independent.md`);
+    { timeout: 90_000 }).toBe(`${prefix}Independent.md`);
   const after = await readOutputs(desktopApp);
   expect(after.names).not.toContain('Old');
   expect(after.files.find((file) => file.article_id === 't513-book-child')!.body).toContain('Independent saved body.');

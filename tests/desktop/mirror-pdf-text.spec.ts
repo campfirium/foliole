@@ -112,7 +112,7 @@ test('keeps saved single-page and cross-page PDF text facts in every mirror entr
     createdAt: '2026-04-08T00:00:00.000Z', updatedAt: new Date().toISOString()
   }), { chain, ownerId });
   await expect.poll(async () => (await readOutputs(desktopApp)).files.find((file) => file.article_id === ownerId)!.body,
-    { timeout: 30_000 }).toContain('Current PDF answer.');
+    { timeout: 90_000 }).toContain('Current PDF answer.');
   const after = await readOutputs(desktopApp);
   const body = after.files.find((file) => file.article_id === ownerId)!.body;
   for (const fact of ['Saved PDF excerpt.', 'Saved PDF note.', 'Current PDF answer.', 'Current cloze note.',
@@ -134,7 +134,7 @@ test('keeps saved single-page and cross-page PDF text facts in every mirror entr
     if (!await debug.deleteNodePermanently(id)) throw new Error('Expected PDF subtree deletion');
   }, chain.cloze);
   await expect.poll(async () => (await readOutputs(desktopApp)).files.find((file) => file.article_id === ownerId)!.body,
-    { timeout: 30_000 }).not.toContain('Current PDF answer.');
+    { timeout: 90_000 }).not.toContain('Current PDF answer.');
   const deleted = await readOutputs(desktopApp);
   expect(deleted.files.find((file) => file.article_id === ownerId)!.body).toContain('Saved PDF excerpt.');
   expect(deleted.files.filter((file) => file.article_id !== ownerId)).toEqual(

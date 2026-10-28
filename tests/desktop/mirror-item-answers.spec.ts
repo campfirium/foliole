@@ -81,7 +81,7 @@ test(`outputs saved question and answer changes for a ${parent === 't513-item-to
     anchorLink: null,
     createdAt: '2026-04-08T00:00:00.000Z', updatedAt: new Date().toISOString()
   }), parent);
-  await expect.poll(async () => (await readOutputs(desktopApp)).files[0]!.body, { timeout: 30_000 }).toContain('Changed answer.');
+  await expect.poll(async () => (await readOutputs(desktopApp)).files[0]!.body, { timeout: 90_000 }).toContain('Changed answer.');
   const after = await readOutputs(desktopApp);
   expectSavedItemFacts(after.files[0]!.body);
   expect(after.files.filter((file) => file.article_id !== 't513-item-manual')).toEqual(

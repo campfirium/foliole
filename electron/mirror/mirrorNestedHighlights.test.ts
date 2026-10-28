@@ -187,7 +187,7 @@ it('removes permanently deleted deep excerpts from the surviving owner without c
   const file = mirror('collision');
   const before = { body: await fs.readFile(file, 'utf8'), mtime: (await fs.stat(file)).mtimeMs };
   softDeleteNodes({ nodeIds: ['third'], deletedAt: '2030-10-06T00:01:00.000Z' });
-  deleteNodesPermanently({ nodeIds: ['third'], nodeOrder: [] });
+  deleteNodesPermanently({ nodeIds: ['third'] });
   await syncFrom('second');
   const body = await fs.readFile(mirror('manual'), 'utf8');
   expect(body).toContain('Second note.');

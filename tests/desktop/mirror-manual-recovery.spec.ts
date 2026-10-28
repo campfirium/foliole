@@ -125,7 +125,7 @@ test('manual rebuild recovers current SQLite facts after an isolated force quit 
     await save(first.firstWindow, 'missing', 'Saved before any mirror exists.');
     await first.firstWindow.evaluate(async (nodeId) => {
       await window.electronAPI!.invoke('soft_delete_nodes', { nodeIds: [nodeId], deletedAt: new Date().toISOString() });
-      await window.electronAPI!.invoke('delete_nodes_permanently', { nodeIds: [nodeId], nodeOrder: [] });
+      await window.electronAPI!.invoke('delete_nodes_permanently', { nodeIds: [nodeId] });
     }, child);
     expect(await document(first.firstWindow, 'deleted')).toEqual(unchangedOwner);
     const savedOlder = await document(first.firstWindow, 'older');

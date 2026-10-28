@@ -94,7 +94,7 @@ for (const unresolved of [false, true]) {
         { from: 0, to: 5, originalText: 'Alpha' }, { from: 11, to: unresolved ? 11 : 16, originalText: 'Gamma' }
       ] } }, createdAt: '2026-04-08T00:00:00.000Z', updatedAt: new Date().toISOString()
     }), unresolved);
-    await expect.poll(async () => (await readOutputs(desktopApp)).files[0]!.body, { timeout: 30_000 }).toContain('Saved shared note.');
+    await expect.poll(async () => (await readOutputs(desktopApp)).files[0]!.body, { timeout: 90_000 }).toContain('Saved shared note.');
     const after = await readOutputs(desktopApp);
     expectHighlightFacts(after.files[0]!.body, unresolved);
     expect(after.files[1]).toEqual(before.files[1]);

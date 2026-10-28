@@ -57,7 +57,7 @@ test('permanently deletes a mirror before the Trash debounce without pruning unr
       nodeIds: ['t513-permanent-article'], deletedAt: new Date().toISOString()
     });
     await window.electronAPI!.invoke('delete_nodes_permanently', {
-      nodeIds: ['t513-permanent-article'], nodeOrder: []
+      nodeIds: ['t513-permanent-article']
     });
   });
   const after = await readOutputs(desktopApp);

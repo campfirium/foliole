@@ -34,7 +34,7 @@ import { exportCurrentArticleMirror } from './exportCurrentArticleMirror.js';
 import { loadMirrorArticleRecords } from './mirrorOutputStorage.js';
 import { rebuildAllMirrorOutput, syncIncrementalMirrorOutput } from './mirrorOutputSync.js';
 import { flushMirrorSync } from './mirrorSyncScheduler.js';
-import { resetMirrorTestWorkspace } from './mirrorTestDatabase.js';
+import { createMirrorTestMoveInput, resetMirrorTestWorkspace } from './mirrorTestDatabase.js';
 
 let root = '';
 let outputPath = '';
@@ -88,10 +88,7 @@ async function seedBook() {
   save('manual-item', 'Independent question.', 'manual-topic');
 }
 function move(parentNodeId: string) {
-  return handleNodeMutationCommand('move_nodes', {
-    nodes: [{ nodeId: bookId, parentNodeId, updatedAt: '2030-10-06T00:01:00.000Z' }],
-    nodeOrder: loadWorkspaceSnapshot({ includeBody: false })!.nodeOrder
-  });
+  return handleNodeMutationCommand('move_nodes', { ...createMirrorTestMoveInput(bookId, parentNodeId) });
 }
 function movedIds() { return [bookId, 'manual-topic', 'manual-item']; }
 
@@ -179,8 +176,7 @@ it('retains moved book content through Trash and restore and clears its files on
   handleNodeMutationCommand('restore_nodes', { nodeIds });
   await flushMirrorSync();
   await expect(fs.readFile(mirror(bookId), 'utf8')).resolves.toContain('Chapter annotation.');
-  await handleNodeMutationCommand('delete_nodes_permanently', { nodeIds,
-    nodeOrder: loadWorkspaceSnapshot({ includeBody: false })!.nodeOrder.filter((id) => !nodeIds.includes(id)) });
+  await handleNodeMutationCommand('delete_nodes_permanently', { nodeIds });
   await flushMirrorSync();
   for (const file of previous) await expect(fs.access(file)).rejects.toMatchObject({ code: 'ENOENT' });
   expect((await fs.stat(mirror('unrelated'))).mtimeMs).toBe(before);

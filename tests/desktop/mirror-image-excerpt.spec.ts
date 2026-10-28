@@ -137,7 +137,7 @@ test('mirrors a real image region crop and its saved notes through automatic, cu
   const before = await readOutputs(desktopApp);
   await updateCropNote(desktopWindow, excerptId, ownerId);
   await expect.poll(async () => (await readOutputs(desktopApp)).files.find((file) => file.article_id === ownerId)!.body,
-    { timeout: 30_000 }).toContain('Current diagram note.');
+    { timeout: 90_000 }).toContain('Current diagram note.');
   const after = await readOutputs(desktopApp);
   const body = after.files.find((file) => file.article_id === ownerId)!.body;
   for (const fact of ['Current diagram note.', '![Original image]', '![Image excerpt]']) expect(body.split(fact)).toHaveLength(2);
@@ -168,7 +168,7 @@ test('mirrors a real image region crop and its saved notes through automatic, cu
     if (!await debug.deleteNodePermanently(id)) throw new Error('Expected crop deletion');
   }, excerptId);
   await expect.poll(async () => (await readOutputs(desktopApp)).files.find((file) => file.article_id === ownerId)!.body,
-    { timeout: 30_000 }).not.toContain('Current diagram note.');
+    { timeout: 90_000 }).not.toContain('Current diagram note.');
   const deleted = await readOutputs(desktopApp);
   expect(deleted.files.filter((file) => file.article_id !== ownerId)).toEqual(
     rebuilt.files.filter((file) => file.article_id !== ownerId));

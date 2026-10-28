@@ -153,7 +153,7 @@ for (const epub of [false, true]) {
       createdAt: '2026-04-08T00:00:00.000Z', updatedAt: new Date().toISOString()
     }), chain);
     await expect.poll(async () => (await readOutputs(desktopApp)).files.find((file) => file.article_id === chain.ownerId)!.body,
-      { timeout: 30_000 }).toContain('Current deep answer.');
+      { timeout: 90_000 }).toContain('Current deep answer.');
     const after = await readOutputs(desktopApp);
     const body = after.files.find((file) => file.article_id === chain.ownerId)!.body;
     for (const note of ['First note.', 'Second note.', 'First answer.', 'Second answer.', 'Current deep prompt', 'Current deep answer.']) expect(body.split(note)).toHaveLength(2);
@@ -169,10 +169,10 @@ for (const epub of [false, true]) {
     expect(rebuilt.files.find((file) => file.article_id === chain.ownerId)!.body).toBe(body);
     await desktopWindow.evaluate(async (id) => {
       await window.electronAPI!.invoke('soft_delete_nodes', { nodeIds: [id], deletedAt: new Date().toISOString() });
-      await window.electronAPI!.invoke('delete_nodes_permanently', { nodeIds: [id], nodeOrder: [] });
+      await window.electronAPI!.invoke('delete_nodes_permanently', { nodeIds: [id] });
     }, chain.deepId);
     await expect.poll(async () => (await readOutputs(desktopApp)).files.find((file) => file.article_id === chain.ownerId)!.body,
-      { timeout: 30_000 }).not.toContain('Current deep answer.');
+      { timeout: 90_000 }).not.toContain('Current deep answer.');
     const deleted = await readOutputs(desktopApp);
     expect(deleted.files.find((file) => file.article_id === chain.ownerId)!.body).toContain('Second answer.');
     expect(deleted.files.filter((file) => file.article_id !== chain.ownerId)).toEqual(

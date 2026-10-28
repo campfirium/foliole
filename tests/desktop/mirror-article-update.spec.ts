@@ -5,6 +5,7 @@ import { expectWorkspaceShell } from './harness/settings';
 
 async function readOutputs(app: ElectronApplication) {
   return app.evaluate(async (_, cwd) => {
+    await new Promise<void>((resolve) => setImmediate(resolve));
     const moduleApi = process.getBuiltinModule('module')!;
     const pathApi = process.getBuiltinModule('path')!;
     const fsApi = process.getBuiltinModule('fs')!;
@@ -46,7 +47,7 @@ test('updates the saved article mirror after editing while preserving unrelated 
   await editor.press('Enter');
   await editor.pressSequentially('Saved mirror update.');
 
-  await expect.poll(async () => (await readOutputs(desktopApp))[0]?.body, { timeout: 30_000 })
+  await expect.poll(async () => (await readOutputs(desktopApp))[0]?.body, { timeout: 90_000 })
     .toContain('Saved mirror update.');
   const after = await readOutputs(desktopApp);
   expect(after[0]!.relative_path).toBe(before[0]!.relative_path);

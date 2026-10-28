@@ -20,6 +20,7 @@ async function configureExportDialog(app: ElectronApplication) {
 
 async function readFiles(app: ElectronApplication, outputPath: string) {
   return app.evaluate(async (_, args) => {
+    await new Promise<void>((resolve) => setImmediate(resolve));
     const moduleApi = process.getBuiltinModule('module')!;
     const pathApi = process.getBuiltinModule('path')!;
     const fsApi = process.getBuiltinModule('fs')!;
@@ -32,6 +33,10 @@ async function readFiles(app: ElectronApplication, outputPath: string) {
         "SELECT article_id, relative_path FROM mirror_articles WHERE article_id IN ('t513-export', 't513-unrelated') ORDER BY article_id"
       ) as Array<{ article_id: string; relative_path: string }>;
       return {
+        independent: connection.openDatabaseConnection().driver.queryAll(
+          "SELECT article_id, relative_path FROM mirror_articles WHERE article_id IN ('t513-note', 't513-nested-note') ORDER BY article_id"
+        ).map((record: { article_id: string; relative_path: string }) => ({ ...record,
+          body: fsApi.readFileSync(pathApi.join(paths.mirror, record.relative_path), 'utf8') })),
         exported: fsApi.existsSync(args.outputPath) ? fsApi.readFileSync(args.outputPath, 'utf8') : null,
         files: records.map((record) => {
           const file = pathApi.join(paths.mirror, record.relative_path);
@@ -93,7 +98,12 @@ test('exports the saved current article through the palette with the same conten
     const after = await readFiles(desktopApp, outputPath);
     expect(after.exported).toBe(after.files[0]!.body);
     expect(after.exported).toContain('author: Ada');
-    expect(after.exported).toContain('Nested note.');
+    expect(after.exported).not.toContain('Nested note.');
+    expect(after.exported).not.toContain('First note.');
+    expect(after.independent).toEqual(before.independent);
+    expect(after.independent.map((file) => file.body)).toEqual([
+      expect.stringContaining('Nested note.'), expect.stringContaining('First note.')
+    ]);
     expect(after.exported).toContain(after.assetPath);
     expect(after.files[1]).toEqual(before.files[1]);
     await testInfo.attach('current-article-export', { body: JSON.stringify({ before, after }, null, 2), contentType: 'application/json' });
