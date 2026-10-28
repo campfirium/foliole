@@ -42,15 +42,22 @@ export function resolveWholeImageExistingExcerpt(input: {
 }) {
   const regionId = input.target.dataset.regionId;
   if (!regionId) return null;
-  const matches = Object.values(input.nodesById).filter((node) =>
-    node.parentNodeId === input.activeNodeId &&
-    !input.trashedNodeIds.includes(node.id) &&
-    node.anchorLink?.kind === 'highlight' &&
-    isTextAnchorLocator(node.anchorLink.locator) &&
-    node.imageRegions?.some((group) => group.regions.some((region) =>
-      region.id === regionId && region.x <= 0.001 && region.y <= 0.001 &&
-      region.width >= 0.999 && region.height >= 0.999
-    ))
-  );
-  return matches.length === 1 ? resolveExistingExcerptNode(matches[0]!, { canAdjustRange: false }) : null;
+  let match: Node | null = null;
+  for (const nodeId in input.nodesById) {
+    if (!Object.hasOwn(input.nodesById, nodeId)) continue;
+    const node = input.nodesById[nodeId]!;
+    if (!(
+      node.parentNodeId === input.activeNodeId &&
+      !input.trashedNodeIds.includes(node.id) &&
+      node.anchorLink?.kind === 'highlight' &&
+      isTextAnchorLocator(node.anchorLink.locator) &&
+      node.imageRegions?.some((group) => group.regions.some((region) =>
+        region.id === regionId && region.x <= 0.001 && region.y <= 0.001 &&
+        region.width >= 0.999 && region.height >= 0.999
+      ))
+    )) continue;
+    if (match) return null;
+    match = node;
+  }
+  return match ? resolveExistingExcerptNode(match, { canAdjustRange: false }) : null;
 }
