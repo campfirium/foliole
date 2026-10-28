@@ -3,7 +3,6 @@ import { useCallback, useMemo, useRef } from 'react';
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { HOME_NODE_ID, INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
-import { buildVirtualNodeResultIndex } from '../../features/nodes/model/virtualNodeDetail';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useLocalization } from '../../shared/localization/LocalizationProvider';
@@ -15,6 +14,7 @@ import { PanelScaleSurface } from '../../shared/ui';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { TrashResultListPanel } from './TrashResultListPanel';
+import { useVirtualNodeResultIndex } from './useVirtualNodeResultIndex';
 import { WorkspaceCollectionSurface } from './WorkspaceCollectionSurface';
 import { renderExternalContentColumn } from './workspaceDualListExternalContent';
 import { WorkspaceDualListFolderColumn } from './WorkspaceDualListFolderColumn';
@@ -151,10 +151,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
   });
   const topicRootId = dualListState.activeFolderColumnId ?? dualListState.activeFolderId ?? null;
   const topicCallbacks = useWorkspaceTopicTreeCallbacks(props);
-  const virtualResultIndex = useMemo(
-    () => buildVirtualNodeResultIndex(props),
-    [props.nodeOrder, props.nodesById, props.trashedNodeIds]
-  );
+  const virtualResultIndex = useVirtualNodeResultIndex(props);
 
   if (!topicRootId && !props.isVirtualViewOpen && !props.isExternalViewOpen) {
     return renderSingleListFallback(props);
