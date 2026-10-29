@@ -29,7 +29,7 @@ it('undoes only the selected rating after an offline peer rates the same item la
     await assertDurable(peer, final);
   }
   expect(result.card?.reps).toBe(1);
-  expect(await readCycleRows(a.port)).toEqual(await readCycleRows(b.port));
+  for (const peer of [a, b]) expect((await readCycleRows(peer.port, ['a']))[0]).toMatchObject({ handled: 1, initial_task: 0 });
 });
 
 it('undoes one Soon contribution after synchronization without removing another pending Soon', async () => {

@@ -1,3 +1,4 @@
+import { hasDeletedAncestor, hasShelvedAncestor } from '../review/queue/reviewQueuePlannerHelpers.js';
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 import { isFsrsReviewItemNode } from '../review/reviewItemKind.js';
 
@@ -78,6 +79,14 @@ export async function isCycleCurrentReady(db: Pick<DailyFlowStore, 'readRows' | 
     : [...plan.fsrsQueueNodeIds, ...plan.readingQueueNodeIds]).includes(id);
 }
 
+async function canKeepDisplayedCurrent(db: DailyFlowStore, session: DailyFlowSession) {
+  const id = session.currentNodeId;
+  if (!id) return false;
+  const snapshot = await db.scopedLearningSnapshot([id]);
+  const node = snapshot.nodesById[id];
+  return Boolean(node && !snapshot.trashedNodeIds.includes(id) && !hasDeletedAncestor(node, snapshot.nodesById) && !hasShelvedAncestor(node, snapshot.nodesById));
+}
+
 export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSnapshot'>, session: DailyFlowSession, mode: ReviewSessionMode,
   now: string, settings: DailyFlowSettings) {
   const selected = await selectCycleSuccessor(db, session.cycle!, { mode, now, settings });
@@ -121,7 +130,8 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
           cycle: { ...session.cycle!, scanAfter: row!.order_key } };
       }
     }
-    if (!await isCycleCurrentReady(db, session, args.mode, args.now, settings)) {
+    const keepCurrent = args.preserveCurrent && await canKeepDisplayedCurrent(db, session);
+    if (!keepCurrent && !await isCycleCurrentReady(db, session, args.mode, args.now, settings)) {
       await chooseCycleCurrent(db, session, args.mode, args.now, settings);
     } else if (stored.invalidated && session.currentNodeId) {
       const [current] = await db.readRows([session.currentNodeId]);

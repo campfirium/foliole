@@ -3,7 +3,6 @@ import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
-import type { CycleRow } from '../../lib/core/flow/cycleFlowTypes.js';
 import type { DailyFlowCommitArgs, DailyFlowResult } from '../../lib/core/flow/dailyFlowContract.js';
 import { joinDailyFlowRows, type DailyFlowFactRow } from '../../lib/core/flow/dailyFlowFactRowCodec.js';
 import { recordDailyFlowSync } from '../../lib/core/flow/dailyFlowSyncRecord.js';
@@ -39,35 +38,32 @@ function readFact(peer: Peer, objectId = id) {
   const reader = new Database(peer.file, { readonly: true });
   try {
     return reader.prepare(`SELECT f.payload_json, s.content_hash FROM daily_flow_sync_facts f
-      JOIN sync_object_state s ON s.object_type='daily_flow' AND s.object_id=f.id WHERE f.id=?`)
+      LEFT JOIN sync_object_state s ON s.object_type='daily_flow' AND s.object_id=f.id WHERE f.id=?`)
       .get(objectId) as { payload_json: string; content_hash: string };
   } finally { reader.close(); }
 }
 
-function expectCompatible(peer: Peer, objectId: string, expected: object) {
+function expectCompatible(peer: Peer, objectId: string, expected: { kind: string; [key: string]: unknown }) {
   const text = JSON.stringify(expected);
   const stored = readFact(peer, objectId);
   const rows = peer.db.prepare('SELECT * FROM daily_flow_fact_rows WHERE fact_id=? ORDER BY slot,ordinal').all(objectId) as DailyFlowFactRow[];
   expect(joinDailyFlowRows(stored.payload_json, rows)).toEqual(expected);
-  expect(stored.content_hash).toBe(computeSyncContentHash('daily_flow', JSON.parse(text)));
+  if (expected.kind === 'create') expect(stored.content_hash).toBeNull();
+  else expect(stored.content_hash).toBe(computeSyncContentHash('daily_flow', JSON.parse(text)));
   expect(JSON.parse(stored.payload_json).rows).toEqual([]);
 }
 
 afterEach(() => { vi.restoreAllMocks(); closeLibraries(); });
 
-it.each([0, 14241])('persists a %s-row fact as relational rows with the original logical value and hash', async count => {
+it.each([0, 14241])('keeps a %s-member local create header without publishing or duplicating list rows', async count => {
   await startLibraries();
   const peer = createPeer('desktop');
   vi.spyOn(crypto, 'randomUUID').mockReturnValue(id);
   const value = result(count);
-  const rows: CycleRow[] = Array.from({ length: count }, (_, index) => ({
-    node_id: index ? `node-${index}` : value.session.currentNodeId!, order_key: index + 1,
-    active: 1, cohort: 'queue', handled: 0, initial_task: 1
-  }));
-  await peer.port.transaction(tx => recordDailyFlowSync(tx, value, settings, now, undefined, rows));
+  await peer.port.transaction(tx => recordDailyFlowSync(tx, value, settings, now));
   const expected = { id, rootId: id, parentId: null, occurredAt: now, kind: 'create', targetOpId: null,
     nodeId: null, action: 'navigate', statsDelta: delta, mode: 'recommended', settings,
-    session: expectedSession(value), rows, removedNodeIds: [] };
+    session: expectedSession(value), rows: [], removedNodeIds: [] };
   expectCompatible(peer, id, expected);
   const stored = readFact(peer);
   await peer.port.transaction(tx => recordDailyFlowSync(tx, value, settings, now));
@@ -81,7 +77,7 @@ it('preserves advance, undo and redo JSON and hashes without changing the parent
   const peer = createPeer('desktop');
   vi.spyOn(crypto, 'randomUUID').mockReturnValue(id);
   const value = result(1);
-  await peer.port.transaction(tx => recordDailyFlowSync(tx, value, settings, now, undefined, []));
+  await peer.port.transaction(tx => recordDailyFlowSync(tx, value, settings, now));
   let parentId = id;
   for (const [index, kind] of (['advance', 'undo', 'redo'] as const).entries()) {
     const stamp = new Date(Date.parse(now) + index + 1).toISOString();

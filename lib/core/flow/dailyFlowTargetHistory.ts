@@ -6,13 +6,12 @@ import { sameLearningProfile } from './cycleFlowLearning.js';
 import { openCycleFlow } from './cycleFlowOpen.js';
 import { dailyFlowCommitSchema, type DailyFlowCommitArgs, type DailyFlowSettings, type DailyFlowResult } from './dailyFlowContract.js';
 import { readDailyFlowFact } from './dailyFlowFactStorage.js';
+import { applyLocalDailyFlowOperations, readLocalDailyFlowFacts } from './dailyFlowLocalApplication.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
-import { readDailyFlow } from './dailyFlowStorage.js';
+import { readDailyFlow, saveCycleFlow } from './dailyFlowStorage.js';
 import type { DailyFlowSyncFact } from './dailyFlowSyncFact.js';
-import { readRelatedDailyFlowFacts } from './dailyFlowSyncFacts.js';
 import { effectiveFlowActions } from './dailyFlowSyncMerge.js';
-import { projectDailyFlowSync } from './dailyFlowSyncProjection.js';
 import { recordDailyFlowSync } from './dailyFlowSyncRecord.js';
 
 async function persistTargetLearning(db: DbPort, args: DailyFlowCommitArgs, facts: DailyFlowSyncFact[],
@@ -73,12 +72,14 @@ export async function commitTargetedFlowHistory(db: DbPort, args: DailyFlowCommi
     return historyReceipt(db, persistence, args, { session: stored.session, replayed: true,
       ...(previous.card_json === null ? {} : { card: JSON.parse(previous.card_json) }) });
   }
-  const facts = await readRelatedDailyFlowFacts(db);
+  const facts = await readLocalDailyFlowFacts(db, stored.session.dayWindow!.start, stored.session.dayWindow!.end);
   if (!facts.some(fact => fact.id === target.id)) throw new Error('flow_history_changed');
   const changed = await persistTargetLearning(db, args, facts, target, persistence);
   const desired = { ...stored.session, currentNodeId: args.historyMode === 'undo' ? nodeId : target.session.currentNodeId, isAnswerRevealed: false };
+  await saveCycleFlow(db, { dayKey: stored.day_key, mode: stored.mode, settingsKey: stored.settings_key,
+    now: args.now, revision: stored.revision + 1, session: desired });
   await recordDailyFlowSync(db, { session: desired, sourceSession: stored.session }, settings, args.now, args);
-  await projectDailyFlowSync(db);
+  await applyLocalDailyFlowOperations(db, args.now);
   const historyNow = new Date(Math.min(Date.parse(args.now), Date.parse(settings.dayWindow!.end) - 1)).toISOString();
   const result = await openCycleFlow(db, { now: historyNow, mode: stored.mode as NonNullable<DailyFlowResult['mode']> }, settings, persistence);
   await store.saveOperation(args.opId, { input_hash: hash, revision: result.session.daily!.revision,

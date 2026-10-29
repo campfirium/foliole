@@ -57,11 +57,14 @@ it('undoes and redoes mobile progress after a real peer grades the same item and
     try { expect(reader.prepare('SELECT reps FROM node_review WHERE node_id=?').get(id)).toEqual({ reps: 4 }); }
     finally { reader.close(); }
   }
-  expect(await readCycleRows(peers.mobile.port)).toEqual(await readCycleRows(peers.desktop.port));
+  await open(peers.desktop, '2026-10-26T08:03:00.000Z');
+  for (const peer of [peers.mobile, peers.desktop]) {
+    expect((await readCycleRows(peer.port)).find(row => row.node_id === id)).toMatchObject({ handled: 1 });
+  }
   expect((await readDailyFlow(peers.mobile.port))!.session.reviewedItemCount).toBe(1);
   expect((await readDailyFlow(peers.desktop.port))!.session.reviewedItemCount).toBe(1);
-  expect((await readDailyFlow(peers.mobile.port))!.session.currentNodeId)
-    .toBe((await readDailyFlow(peers.desktop.port))!.session.currentNodeId);
+  expect(peers.mobile.db.prepare('SELECT root_id FROM daily_flow_sync_projection').get())
+    .not.toEqual(peers.desktop.db.prepare('SELECT root_id FROM daily_flow_sync_projection').get());
 });
 
 

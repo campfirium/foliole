@@ -25,6 +25,6 @@ export async function commitDailyFlowNavigation(db: DailyFlowStore, stored: Cycl
   const saved = await db.saveState({ dayKey: stored.day_key, mode: stored.mode,
     settingsKey: JSON.stringify(settings), now: args.now, revision: stored.revision + 1, session: window });
   await db.saveOperation(args.opId, { input_hash: hash, revision: saved.daily!.revision,
-    card_json: null, source_session_json: null });
-  return { session: saved, mutationTimestamp: args.now, learning: currentFlowLearning(snapshot, saved.currentNodeId) };
+    card_json: null, source_session_json: JSON.stringify(source) });
+  return { sourceSession: source, session: saved, mutationTimestamp: args.now, learning: currentFlowLearning(snapshot, saved.currentNodeId) };
 }

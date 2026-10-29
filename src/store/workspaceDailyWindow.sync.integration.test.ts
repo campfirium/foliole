@@ -8,7 +8,7 @@ import { act, exchange, node, open, readView, settings, setupPeers } from '../te
 
 afterEach(closeLibraries);
 
-it('uses the creator interval for a timed reading task instead of rounding it into the receiver local day', async () => {
+it('evaluates timed reading against each local day interval', async () => {
   const [a, b] = await setupPeers();
   node(a, 'waiting', 'topic');
   saveNodeReadingStateWithSync(a.driver, { nodeId: 'waiting', hostName: a.name,
@@ -19,13 +19,13 @@ it('uses the creator interval for a timed reading task instead of rounding it in
   const before = await open(a, '2026-10-26T21:00:00.000Z', { ...settings(a), dayWindow });
   expect(before.currentNodeId).toBeNull();
   await exchange(a, b);
-  expect((await open(b, '2026-10-26T21:00:00.000Z')).currentNodeId).toBeNull();
+  expect((await open(b, '2026-10-26T21:00:00.000Z')).currentNodeId).toBe('waiting');
   expect((await open(a, '2026-10-27T07:00:00.000Z')).currentNodeId).toBe('waiting');
   expect((await open(b, '2026-10-27T07:00:00.000Z')).currentNodeId).toBe('waiting');
   expect(await readView(a, '2026-10-27T07:00:00.000Z')).toEqual(await readView(b, '2026-10-27T07:00:00.000Z'));
 });
 
-it('uses the creator boundary for a day-scheduled review and grades it through the production path', async () => {
+it('retains local review day boundaries while sharing the subsequent rating', async () => {
   const [a, b] = await setupPeers();
   node(a, 'scheduled', 'item');
   score({ sqlite: a.db, id: a.name }, 'earlier-review', '2026-10-22T15:00:00.000Z', 3, 'scheduled');
@@ -38,8 +38,9 @@ it('uses the creator boundary for a day-scheduled review and grades it through t
   expect(before.currentNodeId).toBe('scheduled');
   await exchange(a, b);
   const received = await open(b, at);
-  expect(received.currentNodeId).toBe('scheduled');
-  await act(b, received, 'grade', at);
+  expect(received.currentNodeId).toBeNull();
+  expect(received.dayWindow).not.toEqual(before.dayWindow);
+  await act(a, before, 'grade', at);
   await exchange(b, a);
   expect(a.db.prepare('SELECT COUNT(*) AS total FROM review_log').get()).toEqual({ total: 2 });
 });

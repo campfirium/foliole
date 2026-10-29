@@ -23,49 +23,43 @@ async function seed(shortTerm?: boolean) {
 
 async function expectConverged(a: Peer, b: Peer, stamp: string, reviewed: number) {
   const left = await open(a, stamp); const right = await open(b, stamp);
-  expect(await readCycleRows(a.port)).toEqual(await readCycleRows(b.port));
-  expect(await readView(a, stamp)).toEqual(await readView(b, stamp));
-  expect(left.currentNodeId).toBe(right.currentNodeId);
   expect(left.reviewedItemCount).toBe(reviewed);
   expect(right.reviewedItemCount).toBe(reviewed);
   expect(left.cycle!.remaining).toBe(right.cycle!.remaining);
   const facts = (peer: Peer) => peer.db.prepare('SELECT op_id, grade, kind, reviewed_at FROM review_log ORDER BY op_id').all();
   expect(facts(a)).toEqual(facts(b));
-  const rows = await readCycleRows(a.port);
   for (const peer of [a, b]) {
+    const local = peer === a ? left : right;
+    const rows = await readCycleRows(peer.port);
     const reader = new Database(peer.file, { readonly: true });
     try {
       expect(reader.prepare('SELECT * FROM daily_flow_entries ORDER BY order_key').all()).toEqual(rows);
       const saved = reader.prepare('SELECT session_json FROM daily_flow_state').get() as { session_json: string };
-      expect(JSON.parse(saved.session_json)).toMatchObject({ currentNodeId: left.currentNodeId, reviewedItemCount: reviewed });
+      expect(JSON.parse(saved.session_json)).toMatchObject({ currentNodeId: local.currentNodeId, reviewedItemCount: reviewed });
       expect(reader.prepare('SELECT op_id, grade, kind, reviewed_at FROM review_log ORDER BY op_id').all()).toEqual(facts(a));
     } finally { reader.close(); }
   }
   await exchange(b, a);
   expect((await open(a, stamp)).currentNodeId).toBe(left.currentNodeId);
-  expect((await open(b, stamp)).currentNodeId).toBe(left.currentNodeId);
-  expect(await readCycleRows(a.port)).toEqual(await readCycleRows(b.port));
+  expect((await open(b, stamp)).currentNodeId).toBe(right.currentNodeId);
 }
 
-it('chooses the most recently advanced independent list and merges different completed items', async () => {
+it('keeps independent lists while merging different completed items', async () => {
   const [a, b] = await seed();
   const first = await select(a, 'a');
   await select(b, 'c');
   const second = await select(b, 'b');
   await act(a, first, 'grade', '2026-10-26T08:01:00.000Z');
-  const latest = await act(b, second, 'grade', '2026-10-26T08:02:00.000Z');
-  const root = b.db.prepare('SELECT root_id FROM daily_flow_sync_projection').get();
-  const expected = (await readView(b, '2026-10-26T08:02:00.000Z')).filter(id => id !== 'a' && id !== 'b');
+  await act(b, second, 'grade', '2026-10-26T08:02:00.000Z');
+  const root = a.db.prepare('SELECT root_id FROM daily_flow_sync_projection').get();
   await exchange(a, b);
   expect(a.db.prepare('SELECT root_id FROM daily_flow_sync_projection').get()).toEqual(root);
   await expectConverged(a, b, '2026-10-26T08:02:00.000Z', 2);
   expect(await readView(a, '2026-10-26T08:02:00.000Z')).not.toContain('a');
   expect(await readView(a, '2026-10-26T08:02:00.000Z')).not.toContain('b');
-  expect((await readDailyFlow(a.port))!.session.currentNodeId).toBe(latest.currentNodeId);
-  expect(await readView(a, '2026-10-26T08:02:00.000Z')).toEqual(expected);
 });
 
-it('merges two offline branches of the same list without dropping either rating', async () => {
+it('merges operations from two offline local lists without dropping either rating', async () => {
   const [a, b] = await seed();
   await open(a); await exchange(a, b);
   const first = await select(a, 'a'); const second = await select(b, 'b');
@@ -89,44 +83,41 @@ it('preserves two genuine ratings of the same item while counting that daily ite
 it('does not let opening or refreshing an unadvanced list replace a real progress position', async () => {
   const [a, b] = await seed();
   await select(a, 'a');
-  const latest = await act(b, await select(b, 'b'), 'grade', '2026-10-26T08:02:00.000Z');
-  const winner = b.db.prepare('SELECT root_id FROM daily_flow_sync_projection').get();
+  await act(b, await select(b, 'b'), 'grade', '2026-10-26T08:02:00.000Z');
+  const root = a.db.prepare('SELECT root_id FROM daily_flow_sync_projection').get();
   await openDailyFlow(a.port, { now: '2026-10-26T08:03:00.000Z', mode: 'recommended', refresh: true }, settings(a), persistence);
   await exchange(a, b);
-  expect(a.db.prepare('SELECT root_id FROM daily_flow_sync_projection').get()).toEqual(winner);
-  expect((await open(a, '2026-10-26T08:03:00.000Z')).currentNodeId).toBe(latest.currentNodeId);
+  expect(a.db.prepare('SELECT root_id FROM daily_flow_sync_projection').get()).toEqual(root);
   await expectConverged(a, b, '2026-10-26T08:03:00.000Z', 1);
 });
 
-it('uses operation identity to break equal offline timestamps and preserves the same winner in both sync directions', async () => {
+it('retains equal-timestamp operations and local identities in both sync directions', async () => {
   const [a, b] = await seed();
   await act(a, await select(a, 'a'), 'grade', '2026-10-26T08:01:00.000Z');
   await act(b, await select(b, 'b'), 'grade', '2026-10-26T08:01:00.000Z');
   const heads = [a, b].map(peer => peer.db.prepare('SELECT root_id, head_id FROM daily_flow_sync_projection').get() as { root_id: string; head_id: string });
-  const winner = heads.sort((left, right) => left.head_id < right.head_id ? -1 : 1).at(-1)!;
   await exchange(b, a);
-  expect(a.db.prepare('SELECT root_id FROM daily_flow_sync_projection').get()).toEqual({ root_id: winner.root_id });
+  expect(a.db.prepare('SELECT root_id FROM daily_flow_sync_projection').get()).toEqual({ root_id: heads[0]!.root_id });
   await expectConverged(a, b, '2026-10-26T08:01:00.000Z', 2);
 });
 
-it('retains both pending Soon items after offline forks and keeps the last real continuation', async () => {
+it('retains both pending Soon items after offline forks without replacing either local continuation', async () => {
   const [a, b] = await setupPeers();
   for (const id of ['a', 'b', 'c', 'd']) node(a, id, 'topic');
   await exchange(a, b);
-  await act(a, await select(a, 'a'), 'soon', '2026-10-26T08:01:00.000Z');
+  const local = await act(a, await select(a, 'a'), 'soon', '2026-10-26T08:01:00.000Z');
   const latest = await act(b, await select(b, 'b'), 'soon', '2026-10-26T08:02:00.000Z');
   await exchange(a, b);
   const left = await open(a, '2026-10-26T08:02:00.000Z');
   const right = await open(b, '2026-10-26T08:02:00.000Z');
-  expect(left.currentNodeId).toBe(latest.currentNodeId);
+  expect(left.currentNodeId).toBe(local.currentNodeId);
   expect(right.currentNodeId).toBe(latest.currentNodeId);
   expect(left.readTopicCount).toBe(2);
   expect(right.readTopicCount).toBe(2);
-  expect(await readCycleRows(a.port)).toEqual(await readCycleRows(b.port));
   const rows = await readCycleRows(a.port);
   for (const id of ['a', 'b']) expect(rows.find(row => row.node_id === id))
     .toMatchObject({ active: 1, initial_task: 0, handled: 1, cohort: 'soon' });
-  expect(await readView(a, '2026-10-26T08:02:00.000Z')).toEqual(await readView(b, '2026-10-26T08:02:00.000Z'));
+  for (const peer of [a, b]) for (const id of ['a', 'b']) expect((await readCycleRows(peer.port, [id]))[0]).toMatchObject({ handled: 1, cohort: 'soon' });
 });
 
 it('allows a handled Again item to become ready again without reviving its original daily task', async () => {
@@ -166,21 +157,21 @@ it('orders a new operation after already synchronized progress even when its dev
   await act(b, continuing, 'grade', '2026-10-26T08:01:00.000Z');
   const latest = b.db.prepare('SELECT head_id FROM daily_flow_sync_projection').get();
   await exchange(a, b);
-  expect(a.db.prepare('SELECT head_id FROM daily_flow_sync_projection').get()).toEqual(latest);
+  expect(a.db.prepare('SELECT head_id FROM daily_flow_sync_projection').get()).not.toEqual(latest);
   expect(b.db.prepare('SELECT head_id FROM daily_flow_sync_projection').get()).toEqual(latest);
   await expectConverged(a, b, '2026-10-26T08:02:00.000Z', 3);
 });
 
-it('merges independently created, still active day intervals and retains the advancing winner interval', async () => {
+it('merges independently created, still active day intervals and retains each local interval', async () => {
   const [a, b] = await seed();
   const alternate = { start: '2026-10-26T06:30:00.000Z', end: '2026-10-27T06:30:00.000Z' };
   const first = (await openDailyFlow(a.port, { now, mode: 'recommended', preferredNodeId: 'a' },
     { ...settings(a), dayWindow: alternate }, persistence)).session;
   await act(a, first, 'grade', '2026-10-26T08:01:00.000Z');
-  const latest = await act(b, await select(b, 'b'), 'grade', '2026-10-26T08:02:00.000Z');
+  await act(b, await select(b, 'b'), 'grade', '2026-10-26T08:02:00.000Z');
   await exchange(a, b);
   await expectConverged(a, b, '2026-10-26T08:02:00.000Z', 2);
-  expect((await readDailyFlow(a.port))!.session.dayWindow).toEqual(latest.dayWindow);
+  expect((await readDailyFlow(a.port))!.session.dayWindow).toEqual(alternate);
 });
 
 it('does not bring an expired list completion count into the next daily list', async () => {
@@ -205,7 +196,8 @@ it('recovers a failed merged projection without losing either locally committed 
   const saved = (await readDailyFlow(b.port))!.session_json;
   b.db.exec(`CREATE TRIGGER reject_merge BEFORE INSERT ON daily_flow_entries
     BEGIN SELECT RAISE(ABORT, 'disk full'); END`);
-  await expect(exchange(a, b)).rejects.toThrow('disk full');
+  await exchange(a, b);
+  await expect(open(b, '2026-10-26T08:02:00.000Z')).rejects.toThrow('disk full');
   expect(await readCycleRows(b.port)).toEqual(rows);
   expect((await readDailyFlow(b.port))!.session_json).toBe(saved);
   expect(a.db.prepare("SELECT COUNT(*) AS total FROM review_log WHERE node_id='a'").get()).toEqual({ total: 1 });

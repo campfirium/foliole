@@ -56,7 +56,7 @@ export function useCompanionFlowSession(args: {
     if (!args.active || !current.hydrated || !current.session.daily) return;
     const source = current.session;
     const generation = current.generation;
-    trackCompanionFlowRefresh(current, openCompanionDailyFlow({ now: new Date().toISOString(), mode }).then(saved => {
+    trackCompanionFlowRefresh(current, openCompanionDailyFlow({ now: new Date().toISOString(), mode, preserveCurrent: true }).then(saved => {
       if (owner.current !== current || !latest.current.active || current.generation !== generation || (saved.session.daily?.revision === source.daily?.revision && saved.session.daily?.dayKey === source.daily?.dayKey && saved.session.daily?.scope === source.daily?.scope)) return;
       current.session = { ...saved.session, isAnswerRevealed:
         saved.session.currentNodeId === source.currentNodeId && current.session.isAnswerRevealed };

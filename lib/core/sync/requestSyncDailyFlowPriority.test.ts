@@ -5,11 +5,11 @@ import { runRequestSyncDatabaseRound } from './requestSyncDatabaseRound.js';
 
 const node = (globalId: string): FramedSyncInventoryEntry => ({ globalId, objectType: 'node',
   frontierFactIds: ['version'], requiredRelationIds: [], reviewFactIds: [], resourceHashes: [], sharedStateHash: new Uint8Array(32).fill(1) });
-const flow = (): FramedSyncInventoryEntry => ({ ...node('list'), objectType: 'daily_flow',
-  frontierFactIds: [], stateFactIds: ['daily_flow:hash'], dailyFlowRootId: 'list', dailyFlowCurrent: true,
-  dailyFlowComplete: true, dailyFlowNodeIds: ['needed'] });
+const flow = (): FramedSyncInventoryEntry => ({ ...node('operation'), objectType: 'daily_flow',
+  frontierFactIds: [], stateFactIds: ['daily_flow:hash'], dailyFlowRootId: 'private-root', dailyFlowCurrent: false,
+  dailyFlowComplete: false, dailyFlowNodeIds: ['needed'] });
 
-it('installs the list after its required nodes and before unrelated work in either direction', async () => {
+it('receives operation context before its learning state and unrelated work in either direction', async () => {
   const local = [node('unrelated-local')];
   const remote = [flow(), node('needed'), node('unrelated-remote')];
   const order: string[] = [];
@@ -17,18 +17,17 @@ it('installs the list after its required nodes and before unrelated work in eith
     exchangeInventory: async () => ({ local: [...local].sort(compare), remote: [...remote].sort(compare) }),
     transferObjects: async differences => differences.map(difference => {
       order.push(difference.globalId);
-      if (difference.globalId === 'list') expect(local.some(entry => entry.globalId === 'needed')).toBe(true);
-      if (difference.globalId.startsWith('unrelated')) expect(local.some(entry => entry.globalId === 'list')).toBe(true);
+      if (difference.globalId.startsWith('unrelated')) expect(local.some(entry => entry.globalId === 'operation')).toBe(true);
       (difference.direction === 'remote_to_local' ? local : remote).push(difference.sourceSnapshot);
       return { globalId: difference.globalId, objectType: difference.objectType, requestId: new Uint8Array(16), error: '' };
     }),
     reportObjectError: () => { throw new Error('unexpected_error'); }
   });
   expect(result.complete).toBe(true);
-  expect(order.slice(0, 2)).toEqual(['needed', 'list']);
+  expect(order.slice(0, 2)).toEqual(['operation', 'needed']);
 });
 
-it('prioritizes missing learning data for an already complete list without sending the list again', async () => {
+it('prioritizes missing learning data for an already received operation without resending it', async () => {
   const root = flow();
   const local = [root];
   const remote = [root, node('needed'), node('a-unrelated')];

@@ -2,12 +2,11 @@ import type { FramedSyncInventoryDifference, FramedSyncInventoryEntry } from './
 
 type Inventories = { local: readonly FramedSyncInventoryEntry[]; remote: readonly FramedSyncInventoryEntry[] };
 
-/** Keep the current list's existing atomic node objects ahead of unrelated database work. */
+/** Deliver learning operations and their existing node facts ahead of unrelated work. */
 export function dailyFlowPriorityDifferences(inventories: Inventories, differences: readonly FramedSyncInventoryDifference[]) {
-  const current = [...inventories.local, ...inventories.remote].filter(entry => entry.dailyFlowCurrent);
-  const roots = new Set(current.map(entry => entry.dailyFlowRootId));
-  const needed = new Set(current.flatMap(entry => entry.dailyFlowNodeIds ?? []));
-  const flows = differences.filter(item => item.objectType === 'daily_flow' && roots.has(item.sourceSnapshot.dailyFlowRootId));
+  const flows = differences.filter(item => item.objectType === 'daily_flow');
+  const needed = new Set([...inventories.local, ...inventories.remote]
+    .filter(entry => entry.objectType === 'daily_flow').flatMap(entry => entry.dailyFlowNodeIds ?? []));
   const selected = new Set(flows);
   for (const flow of flows) for (const id of flow.sourceSnapshot.dailyFlowNodeIds ?? []) needed.add(id);
   return differences.filter(item => item.objectType === 'node' ? needed.has(item.globalId) : selected.has(item))
@@ -15,5 +14,5 @@ export function dailyFlowPriorityDifferences(inventories: Inventories, differenc
 }
 
 function rank(item: FramedSyncInventoryDifference) {
-  return item.objectType === 'node' ? 0 : item.sourceSnapshot.dailyFlowCurrent ? 2 : 1;
+  return item.objectType === 'daily_flow' ? 0 : 1;
 }

@@ -52,16 +52,12 @@ export async function readFramedSyncObjectStateInventory(
           'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'))
       ELSE NULL END AS body_blob_hash
     , CASE WHEN object_type='daily_flow' THEN (SELECT root_id FROM daily_flow_sync_facts WHERE id=object_id) END AS daily_flow_root_id
-    , CASE WHEN object_type='daily_flow' THEN (SELECT complete FROM daily_flow_lists WHERE list_id=object_id) END AS daily_flow_complete
-    , CASE WHEN object_type='daily_flow' AND EXISTS(SELECT 1 FROM daily_flow_sync_projection WHERE root_id=object_id)
-      THEN 1 ELSE 0 END AS daily_flow_current
-    , CASE WHEN object_type='daily_flow' THEN EXISTS(SELECT 1 FROM daily_flow_sync_facts f WHERE f.id=object_id
-      AND (NOT EXISTS(SELECT 1 FROM daily_flow_lists l WHERE l.list_id=f.root_id AND l.complete=1)
-        OR (f.parent_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM daily_flow_sync_facts p WHERE p.id=f.parent_id))))
-      ELSE 0 END AS daily_flow_unready
+    , 0 AS daily_flow_complete, 0 AS daily_flow_current, 0 AS daily_flow_unready
     , CASE WHEN object_type='daily_flow' THEN (SELECT json_extract(payload_json,'$.nodeId')
       FROM daily_flow_sync_facts WHERE id=object_id) END AS daily_flow_node_id
     FROM sync_object_state WHERE object_type IN (${types})
+      AND (object_type != 'daily_flow' OR EXISTS(SELECT 1 FROM daily_flow_sync_facts f
+        WHERE f.id=object_id AND f.kind!='create'))
       AND (object_type != 'setting' OR object_id LIKE '${sharedSettingPrefix}%')
       AND (object_type NOT IN (${NODE_CHILD_STATE_TYPES_SQL})
         OR (object_type = 'parent_child_order' AND object_id = '${ROOT_CHILD_ORDER_ID}')
@@ -81,7 +77,7 @@ export async function readFramedSyncObjectStateInventory(
     const rows = await port.query<StateRow>(sql, key ? [key.objectType, key.globalId] :
       [afterType, afterType, afterId, STATE_INVENTORY_READ_BATCH]);
     for (const row of rows) if (isFramedSyncSharedStateObject(row.object_type, row.object_id)) entries.push(stateEntry(row));
-    if (key || rows.length < STATE_INVENTORY_READ_BATCH) return withDailyFlowDependencies(port, entries);
+    if (key || rows.length < STATE_INVENTORY_READ_BATCH) return entries;
     afterType = rows[rows.length - 1]!.object_type;
     afterId = rows[rows.length - 1]!.object_id;
   }
@@ -103,11 +99,4 @@ function stateEntry(row: StateRow): FramedSyncInventoryEntry {
 
 export function framedSyncObjectStateFactId(type: string, hash: string) {
   return `${type}:${hash}`;
-}
-
-async function withDailyFlowDependencies(port: DbPort, entries: FramedSyncInventoryEntry[]) {
-  if (!entries.some(entry => entry.dailyFlowCurrent)) return entries;
-  const rows = await port.query<{ node_id: string }>('SELECT node_id FROM daily_flow_entries ORDER BY node_id');
-  const ids = rows.map(row => row.node_id);
-  return entries.map(entry => entry.dailyFlowCurrent ? { ...entry, dailyFlowNodeIds: ids } : entry);
 }

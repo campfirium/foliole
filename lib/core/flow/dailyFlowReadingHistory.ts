@@ -1,8 +1,8 @@
 import type { DbPort } from '../sync/dbPort.js';
 
 import type { DailyFlowSyncFact } from './dailyFlowSyncFact.js';
-import { readRelatedDailyFlowFacts } from './dailyFlowSyncFacts.js';
-import { connectedFlowFacts, effectiveFlowActions } from './dailyFlowSyncMerge.js';
+import { readDailyFlowSyncFact } from './dailyFlowSyncFact.js';
+import { effectiveFlowActions } from './dailyFlowSyncMerge.js';
 
 type Reading = NonNullable<DailyFlowSyncFact['readings']>[number]['after'];
 function profile(reading: Reading) {
@@ -19,9 +19,10 @@ const profileKeys = { interval_duration_ms: true, interval_growth_factor: true, 
 
 /** A known targeted reversal outranks the canceled reading's old monotonic counters. */
 export async function resolveFlowReadingHistoryPreference(db: DbPort, id: string, incoming: Record<string, unknown> | null) {
-  const [projection] = await db.query<{ merged: number }>('SELECT merged FROM daily_flow_sync_projection WHERE id=1');
-  if (!projection?.merged) return undefined;
-  const facts = connectedFlowFacts(await readRelatedDailyFlowFacts(db));
+  const headers = await db.query<{ payload_json: string }>(`SELECT payload_json FROM daily_flow_sync_facts
+    WHERE kind!='create' AND EXISTS(SELECT 1 FROM json_each(payload_json,'$.readings')
+      WHERE json_extract(value,'$.nodeId')=?) ORDER BY occurred_at,id`, [id]);
+  const facts = headers.map(row => readDailyFlowSyncFact(row.payload_json));
   const originals = facts.filter(fact => fact.kind === 'advance' && fact.readings?.some(value => value.nodeId === id));
   const ids = new Set(originals.map(fact => fact.id));
   if (!facts.some(fact => (fact.kind === 'undo' || fact.kind === 'redo') && fact.targetOpId && ids.has(fact.targetOpId))) return undefined;

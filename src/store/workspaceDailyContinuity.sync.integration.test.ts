@@ -4,36 +4,32 @@ import { afterEach, expect, it } from 'vitest';
 
 import { closeLibraries } from '../../electron/database/syncLibrary.testSupport';
 import { createDailyFlowDayWindow } from '../../lib/core/flow/dailyFlowDayWindow';
-import { commitDailyFlow } from '../../lib/core/flow/dailyFlowService';
 import { readCycleRows, readDailyFlow } from '../../lib/core/flow/dailyFlowStorage';
 import { clearWorkgroupSyncDataForRestore } from '../../lib/core/sync/syncGroupRestoreReset';
-import { act, exchange, node, now, open, persistence, setupPeers, settings } from '../test/dailyFlowExceptions.testSupport';
+import { act, exchange, node, now, open, setupPeers, settings } from '../test/dailyFlowExceptions.testSupport';
+import { historyEntry, replayHistory } from '../test/dailyFlowHistorySync.testSupport';
 
 afterEach(closeLibraries);
 
-it('receives an existing daily list with its Soon order and progress before creating a local list', async () => {
+it('receives learning operations without creating a list, then starts its own durable list', async () => {
   const [source, receiver] = await setupPeers();
-  node(source, 'reading-one', 'topic');
-  node(source, 'reading-two', 'topic');
+  node(source, 'reading-one', 'topic'); node(source, 'reading-two', 'topic');
   await exchange(source, receiver);
   const initial = await open(source);
   const advanced = await act(source, initial, 'soon');
-  expect(advanced.currentNodeId).not.toBe(initial.currentNodeId);
-  expect(await readDailyFlow(receiver.port)).toBeNull();
-
   await exchange(source, receiver);
-  const received = await readDailyFlow(receiver.port);
-  expect(received).not.toBeNull();
-  expect(received!.session.currentNodeId).toBe(advanced.currentNodeId);
-  expect(received!.session.cycle).toEqual(advanced.cycle);
-  expect(await readCycleRows(receiver.port)).toEqual(await readCycleRows(source.port));
+  expect(await readDailyFlow(receiver.port)).toBeNull();
+  expect(await readCycleRows(receiver.port)).toEqual([]);
   const reopened = await open(receiver);
-  expect(reopened.currentNodeId).toBe(advanced.currentNodeId);
+  expect(reopened.currentNodeId).not.toBe(initial.currentNodeId);
+  expect(reopened.readTopicCount).toBe(1);
   expect(reopened.daily!.scope).not.toBe(advanced.daily!.scope);
-  expect(await readCycleRows(receiver.port)).toEqual(await readCycleRows(source.port));
+  expect(receiver.db.prepare('SELECT root_id FROM daily_flow_sync_projection').get())
+    .not.toEqual(source.db.prepare('SELECT root_id FROM daily_flow_sync_projection').get());
+  expect(await open(receiver)).toEqual(reopened);
 });
 
-it('keeps the received list and operation facts unchanged on repeated synchronization and independent reread', async () => {
+it('keeps local state and received operation facts unchanged on repeated synchronization and independent reread', async () => {
   const [source, receiver] = await setupPeers();
   node(source, 'reading', 'topic');
   await exchange(source, receiver);
@@ -68,12 +64,12 @@ it('rolls back the list and learning mutation when recording the synchronized op
   expect(peer.db.prepare('SELECT * FROM daily_flow_operations').all()).toEqual([]);
 });
 
-it('does not acknowledge a received list whose projection fails and can receive it again after recovery', async () => {
+it('does not acknowledge an operation whose storage fails and receives it after recovery', async () => {
   const [source, receiver] = await setupPeers();
   node(source, 'reading', 'topic');
   await exchange(source, receiver);
-  await open(source);
-  receiver.db.exec(`CREATE TRIGGER reject_received_flow BEFORE INSERT ON daily_flow_state
+  await act(source, await open(source), 'soon');
+  receiver.db.exec(`CREATE TRIGGER reject_received_flow BEFORE INSERT ON daily_flow_sync_facts
     BEGIN SELECT RAISE(ABORT, 'disk full'); END`);
   await expect(exchange(source, receiver)).rejects.toThrow('disk full');
   expect(await readDailyFlow(receiver.port)).toBeNull();
@@ -81,25 +77,23 @@ it('does not acknowledge a received list whose projection fails and can receive 
   expect(receiver.db.prepare("SELECT * FROM sync_object_state WHERE object_type='daily_flow'").all()).toEqual([]);
   receiver.db.exec('DROP TRIGGER reject_received_flow');
   await exchange(source, receiver);
-  expect((await readDailyFlow(receiver.port))!.session.currentNodeId).toBe('reading');
-  expect(await readCycleRows(receiver.port)).toEqual(await readCycleRows(source.port));
+  expect(await readDailyFlow(receiver.port)).toBeNull();
+  expect((await open(receiver)).readTopicCount).toBe(1);
 });
 
-it('receives a linear Soon undo as restored rows as well as restored progress', async () => {
+it('receives targeted Soon undo and restores its own rows and progress', async () => {
   const [source, receiver] = await setupPeers();
   node(source, 'reading-one', 'topic'); node(source, 'reading-two', 'topic');
   await exchange(source, receiver);
-  const initial = await open(source);
-  const advanced = await act(source, initial, 'soon');
+  await open(receiver);
+  const rows = await readCycleRows(receiver.port);
+  const entry = await historyEntry(source, 'reading-one', 'soon', now);
   await exchange(source, receiver);
-  const undone = await commitDailyFlow(source.port, { opId: 'undo-soon', now,
-    token: advanced.daily!, sourceSession: advanced, historySourceSession: advanced,
-    nextSession: initial, historyMode: 'undo', cycleReplay: advanced.cycle!.change!,
-    readings: [{ nodeId: initial.currentNodeId!, before: null, after: null }] }, settings(source), persistence);
+  expect((await open(receiver)).readTopicCount).toBe(1);
+  await replayHistory(source, await open(source), entry, 'undo', now);
   await exchange(source, receiver);
-  expect((await readDailyFlow(receiver.port))!.session.currentNodeId).toBe(initial.currentNodeId);
-  expect(await readCycleRows(receiver.port)).toEqual(await readCycleRows(source.port));
-  expect((await readDailyFlow(receiver.port))!.session.cycle).toEqual(undone.session.cycle);
+  expect((await open(receiver)).readTopicCount).toBe(0);
+  expect(await readCycleRows(receiver.port)).toEqual(rows);
 });
 
 it('removes the old list and its shared facts during an explicit library overwrite', async () => {
@@ -117,7 +111,7 @@ it('removes the old list and its shared facts during an explicit library overwri
   expect((await open(receiver)).currentNodeId).toBeNull();
 });
 
-it('retains the source interval instead of the receiving host day and starts a new list at expiry', async () => {
+it('uses its own day interval and starts a new list at local expiry', async () => {
   const [source, receiver] = await setupPeers();
   node(source, 'reading-one', 'topic'); node(source, 'reading-two', 'topic');
   await exchange(source, receiver);
@@ -128,15 +122,15 @@ it('retains the source interval instead of the receiving host day and starts a n
   expect(advanced.dayWindow).toEqual(sourceWindow);
   await exchange(source, receiver);
   const received = await open(receiver);
-  expect(received.dayWindow).toEqual(sourceWindow);
-  expect(received.daily!.dayKey).toBe(advanced.daily!.dayKey);
+  expect(received.dayWindow).toEqual(createDailyFlowDayWindow(now, settings(receiver).newDayStartsAtHour));
+  expect(received.daily!.dayKey).not.toBe(advanced.daily!.dayKey);
   expect(received.currentNodeId).toBe(advanced.currentNodeId);
   const tomorrow = await open(receiver, sourceWindow.end);
   expect(tomorrow.daily!.dayKey).not.toBe(advanced.daily!.dayKey);
   expect(tomorrow.dayWindow).toEqual(createDailyFlowDayWindow(sourceWindow.end, settings(receiver).newDayStartsAtHour));
 });
 
-it('keeps the received interval when the receiver clock is just behind the creator day start', async () => {
+it('does not inherit another device interval when its clock is just behind that start', async () => {
   const [source, receiver] = await setupPeers();
   node(source, 'reading', 'topic');
   await exchange(source, receiver);
@@ -144,8 +138,8 @@ it('keeps the received interval when the receiver clock is just behind the creat
   const created = await open(source, '2026-10-26T08:01:00.000Z', { ...settings(source), dayWindow });
   await exchange(source, receiver);
   const received = await open(receiver, '2026-10-26T07:59:30.000Z');
-  expect(received.dayWindow).toEqual(dayWindow);
-  expect(received.daily!.dayKey).toBe(created.daily!.dayKey);
+  expect(received.dayWindow).toEqual(createDailyFlowDayWindow('2026-10-26T07:59:30.000Z', settings(receiver).newDayStartsAtHour));
+  expect(received.daily!.dayKey).not.toBe(created.daily!.dayKey);
   expect(received.currentNodeId).toBe(created.currentNodeId);
   expect(receiver.db.prepare("SELECT COUNT(*) AS total FROM daily_flow_sync_facts WHERE kind='create'").get()).toEqual({ total: 1 });
 });

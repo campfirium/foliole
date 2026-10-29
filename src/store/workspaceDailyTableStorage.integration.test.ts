@@ -28,18 +28,19 @@ async function library(count: number) {
   return { file, created: await createLargeFlow(file) };
 }
 
-it('stores a complete 14241-member list as relational rows while keeping the operation header small', async () => {
+it('stores 14241 members only in the live local table without duplicating its create record', async () => {
   const { file, created } = await library(14_241);
   const db = new Database(file);
   try {
     const header = db.prepare('SELECT payload_json FROM daily_flow_sync_facts WHERE id=?').pluck().get(created.id) as string;
     expect(Buffer.byteLength(header)).toBeLessThan(5_000);
     expect(JSON.parse(header).rows).toEqual([]);
-    expect(db.prepare("SELECT count(*) FROM daily_flow_fact_rows WHERE fact_id=? AND slot='rows'").pluck().get(created.id)).toBe(14_241);
+    expect(db.prepare("SELECT count(*) FROM daily_flow_fact_rows WHERE fact_id=? AND slot='rows'").pluck().get(created.id)).toBe(0);
+    expect(db.prepare('SELECT count(*) FROM daily_flow_entries').pluck().get()).toBe(14_241);
     expect(db.prepare('SELECT complete,row_count FROM daily_flow_lists WHERE list_id=?').get(created.id))
-      .toEqual({ complete: 1, row_count: 14_241 });
+      .toEqual({ complete: 1, row_count: 0 });
     expect(await readDailyFlowFact(createBetterSqliteDbPort(db), created.id)).toEqual(created.fact);
-    expect(db.prepare('SELECT fact_id FROM daily_flow_projection_facts').all()).toEqual([{ fact_id: created.id }]);
+    expect(db.prepare('SELECT fact_id FROM daily_flow_projection_facts').all()).toEqual([]);
   } finally { db.close(); }
   const reopened = new Database(file, { readonly: true });
   try { expect(await readDailyFlowFact(createBetterSqliteDbPort(reopened), created.id)).toEqual(created.fact); }
@@ -50,7 +51,7 @@ it.each(['desktop', 'companion'])('converts old %s data losslessly and rolls bac
   const { file, created } = await library(14_241);
   const db = new Database(file);
   const fact = structuredClone(created.fact);
-  fact.rows.reverse();
+  fact.rows = db.prepare('SELECT * FROM daily_flow_entries ORDER BY order_key DESC').all() as typeof fact.rows;
   fact.removedNodeIds = ['second', 'first'];
   const meta = fact.session.cycle!;
   fact.session.cycle!.change = { source: { ...meta }, target: { ...meta },
@@ -82,7 +83,7 @@ it.each(['desktop', 'companion'])('converts old %s data losslessly and rolls bac
   } finally { db.close(); }
 });
 
-it('keeps an orphan operation without claiming that its missing root was completely received', async () => {
+it('publishes a standalone operation without requiring its private root', async () => {
   const { file, created } = await library(3);
   const db = new Database(file);
   try {
@@ -101,7 +102,7 @@ it('keeps an orphan operation without claiming that its missing root was complet
     expect(await readDailyFlowFact(createBetterSqliteDbPort(db), fact.id)).toEqual(fact);
     expect(db.prepare('SELECT count(*) FROM daily_flow_projection_facts').pluck().get()).toBe(0);
     const inventory = await readFramedSyncObjectStateInventory(createBetterSqliteDbPort(db));
-    expect(inventory.find(entry => entry.globalId === fact.id)?.unready).toBe(true);
+    expect(inventory.find(entry => entry.globalId === fact.id)?.unready).toBeUndefined();
     expect(db.prepare('SELECT complete FROM daily_flow_lists WHERE list_id=?').get(fact.rootId)).toBeUndefined();
   } finally { db.close(); }
 });

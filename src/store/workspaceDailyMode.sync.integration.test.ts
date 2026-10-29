@@ -35,11 +35,6 @@ it.each(['delete', 'shelve', 'read'] as const)('retires hidden Soon after remote
   }
   if (change !== 'read') publish(desktop, first);
   await exchange(desktop, mobile);
-  // A pre-sync operation must not overwrite the new fact while reconciling its list.
-  if (change === 'read') {
-    await expect(act(mobile, local, 'grade', due)).rejects.toThrow('daily_flow_changed');
-    local = (await openDailyFlow(mobile.port, { now: due, mode: 'review-first' }, settings(mobile), persistence)).session;
-  }
   local = await act(mobile, local, 'grade', due);
   expect(local.currentNodeId).toBeNull();
   await assertDurable(mobile, local);
@@ -76,7 +71,7 @@ it('rejects a stale review-only grade while retaining valid Soon after a synchro
   await act(desktop, remote, 'grade', due);
   await exchange(desktop, mobile);
   const facts = mobile.db.prepare('SELECT * FROM review_log ORDER BY op_id').all();
-  await expect(act(mobile, local, 'grade', due)).rejects.toThrow('daily_flow_changed');
+  await expect(act(mobile, local, 'grade', due)).rejects.toThrow('daily_flow_learning_changed');
   expect(mobile.db.prepare('SELECT * FROM review_log ORDER BY op_id').all()).toEqual(facts);
   local = await open(mobile, due);
   expect(local.currentNodeId).toBe(first);

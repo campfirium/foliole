@@ -5,7 +5,6 @@ import type { SyncObjectRecord } from '../sync/syncObjectRecord.js';
 import { dailyFlowFactHash } from './dailyFlowFactHash.js';
 import { readDailyFlowFact, storeDailyFlowFact } from './dailyFlowFactStorage.js';
 import { readDailyFlowSyncFact } from './dailyFlowSyncFact.js';
-import { projectDailyFlowSync } from './dailyFlowSyncProjection.js';
 
 function decode(record: SyncObjectRecord) {
   if (record.deleted_at || !record.payload_json) throw new Error('daily_flow_sync_fact_invalid');
@@ -14,6 +13,7 @@ function decode(record: SyncObjectRecord) {
     computeSyncContentHash('daily_flow', JSON.parse(record.payload_json)) !== record.content_hash) {
     throw new Error('daily_flow_sync_fact_identity_invalid');
   }
+  if (fact.kind === 'create') throw new Error('daily_flow_local_list_not_transferable');
   return fact;
 }
 
@@ -30,5 +30,5 @@ export async function dailyFlowFactApplyStatus(db: DbPort, record: SyncObjectRec
 export async function applyDailyFlowSyncFact(db: DbPort, record: SyncObjectRecord) {
   const fact = decode(record);
   await storeDailyFlowFact(db, fact);
-  await projectDailyFlowSync(db, fact);
+  await db.run('UPDATE daily_flow_state SET invalidated=1 WHERE id=1');
 }

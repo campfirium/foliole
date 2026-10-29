@@ -64,7 +64,7 @@ export function createCompanionFlowControls(args: {
       if (!hasCurrentFlowTarget(current, owner, token) || !active()) return null;
       token = capture();
     }
-    if (!hasFlowDayChanged(current.session, now)) return token;
+    if (!hasFlowDayChanged(current.session, now) && !isAvailableNativeCompanionRuntime()) return token;
     const saved = await openCompanionDailyFlow({ now, mode });
     if (!matches(token) || !active()) return null;
     current.session = { ...saved.session, isAnswerRevealed:

@@ -44,7 +44,8 @@ export async function commitCycleFlow(db: DailyFlowStore, args: DailyFlowCommitA
   const snapshot = await db.scopedLearningSnapshot(ids);
   assertCycleLearningFacts(snapshot, args);
   if (args.readingAction && (base.currentNodeId !== args.readings?.[0]?.nodeId ||
-    !isReadingReviewItemNode(snapshot.nodesById[base.currentNodeId ?? '']))) throw new Error('daily_flow_learning_changed');
+    !isReadingReviewItemNode(snapshot.nodesById[base.currentNodeId ?? '']) ||
+    !await isCycleCurrentReady(db, base, mode, args.now, settings))) throw new Error('daily_flow_learning_changed');
   if (args.grade && (base.currentNodeId !== args.grade.nodeId ||
     !flowPlan(snapshot, 'review-first', args.now, settings).fsrsQueueNodeIds.includes(args.grade.nodeId))) {
     throw new Error('daily_flow_learning_changed');

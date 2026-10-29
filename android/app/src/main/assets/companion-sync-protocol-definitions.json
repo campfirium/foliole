@@ -7,7 +7,6 @@
       "canonical-attachment-storage-key-v1",
       "complete-member-data-plane",
       "current-parent-order-sources-v1",
-      "daily-flow-table-v1",
       "device-sync-groups-v1",
       "dynamic-node-version-chains-v1",
       "external-device-library-lifecycle-v1",
@@ -16,6 +15,7 @@
       "global-object-identity-v2",
       "group-key-routing-v1",
       "lan-sync-v1",
+      "local-daily-flow-actions-v1",
       "node-owned-resource-references-v1",
       "node-tombstone-pack-v1",
       "opaque-sync-refs-v1",
@@ -34,9 +34,9 @@
       "workgroup-aead-v1",
       "workgroup-restore-v1"
     ],
-    "max_supported_version": 32,
-    "min_supported_version": 32,
-    "version": 32
+    "max_supported_version": 33,
+    "min_supported_version": 33,
+    "version": 33
   },
   "pushAck": {
     "clientOpIdKeys": [

@@ -19,7 +19,7 @@ export type DailyFlowSettings = Pick<ReviewSchedulerSettings, 'newDayStartsAtHou
 export const dailyFlowOpenSchema = z.object({ now: z.string().datetime(),
   mode: z.enum(['recommended', 'review-first', 'reading-only']),
   seed: dailyFlowSessionSchema.optional(), preferredNodeId: z.string().nullable().optional(),
-  prepareOnly: z.boolean().optional(), startup: z.boolean().optional(), refresh: z.boolean().optional() }).strict();
+  preserveCurrent: z.boolean().optional(), prepareOnly: z.boolean().optional(), startup: z.boolean().optional(), refresh: z.boolean().optional() }).strict();
 export type DailyFlowOpenArgs = z.infer<typeof dailyFlowOpenSchema>;
 export const dailyFlowReadingSchema = z.object({ intervalDurationMs: z.number(), intervalGrowthFactor: z.number(), lastHandledAt: z.string(),
   nextAt: z.string(), priority: z.number(), readingPosition: z.number(), repetitionCount: z.number(),

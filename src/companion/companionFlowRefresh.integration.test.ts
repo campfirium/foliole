@@ -3,6 +3,7 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { useMemo, useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { closeLibraries } from '../../electron/database/syncLibrary.testSupport';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
@@ -11,6 +12,8 @@ import { openCompanionDailyFlow, predictCompanionFlowDocument } from '../shared/
 import { commitCompanionFlowHistory, loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
+import { connectCompanionPeer } from '../test/companionDailySync.testSupport';
+import { act as peerAction, node, open } from '../test/dailyFlowExceptions.testSupport';
 
 import { createCompanionFlowHistoryEntry } from './companionFlowHistoryEntry';
 import { persistFlowMutation } from './companionFlowMutation';
@@ -20,6 +23,8 @@ import { createFloatingBar, createWorkspaceSync } from './useCompanionArticleSur
 import { useCompanionFlowSession } from './useCompanionFlowSession';
 import { useCompanionReadableArticleLoader } from './useCompanionReadableArticleLoader';
 import { useCompanionSurfaceActions } from './useCompanionSurfaceActions';
+
+vi.hoisted(() => { vi.stubGlobal('Uint8Array', Object.getPrototypeOf(Buffer.prototype).constructor); });
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
@@ -103,7 +108,7 @@ function useReadingSurface(initial: WorkspaceSnapshot, publish: Parameters<typeo
   const actions = useCompanionSurfaceActions({ flow, snapshot, activity, active: true,
     workspaceSync: workspace, floatingBar: createFloatingBar() });
   const article = useCompanionReadableArticleLoader(snapshot, publish);
-  return { flow, actions, snapshot, article };
+  return { flow, actions, snapshot, article, refresh: snapshotActions.refreshAfterMutation };
 }
 
 it.each(['read', 'later', 'dismiss'] as const)('advances the real %s surface with local facts and the prepared next body', async action => {
@@ -166,4 +171,32 @@ it.each(['read', 'later', 'dismiss'] as const)('retries only the saved %s surfac
   expect((await loadCompanionFlowHistory(historyKey)).undoStack).toHaveLength(1);
   expect(library.database.prepare('SELECT * FROM node_reading WHERE node_id = ?').get(source)).toEqual(facts);
   ui.unmount();
+});
+
+
+it('keeps the real mobile article after peer Read and validates before applying the next tap', async () => {
+  await library.close();
+  library = await createSearchLibrary(0);
+  const peers = await connectCompanionPeer(library);
+  try {
+    node(peers.desktop, 'a', 'topic'); node(peers.desktop, 'b', 'topic');
+    await peers.exchange();
+    const initial = (await refreshCompanionWorkspaceAfterMutation())!;
+    const ui = renderHook(() => useReadingSurface(initial, vi.fn()));
+    await waitFor(() => expect(ui.result.current.flow.ready).toBe(true));
+    const source = ui.result.current.flow.view.currentCard!.nodeId;
+    const remote = await open(peers.desktop, new Date().toISOString());
+    expect(remote.currentNodeId).toBe(source);
+    await peerAction(peers.desktop, remote, 'read', new Date().toISOString());
+    await act(async () => { await peers.exchange(); await ui.result.current.refresh(); });
+    await waitFor(() => expect(ui.result.current.snapshot.nodesById[source]?.reading).not.toBeNull());
+    expect(ui.result.current.flow.view.currentCard?.nodeId).toBe(source);
+    const readings = library.database.prepare('SELECT * FROM node_reading ORDER BY node_id').all();
+    await act(async () => { await ui.result.current.actions.handleReadReviewTopic(); });
+    expect(ui.result.current.flow.view.currentCard?.nodeId).not.toBe(source);
+    expect(ui.result.current.actions.readingError).toBeNull();
+    expect(library.database.prepare('SELECT * FROM node_reading ORDER BY node_id').all()).toEqual(readings);
+    expect((await loadCompanionFlowHistory(ui.result.current.flow.historyKey)).undoStack).toHaveLength(0);
+    ui.unmount();
+  } finally { vi.unstubAllGlobals(); await closeLibraries(); }
 });

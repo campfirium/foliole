@@ -669,6 +669,15 @@
         }
       ],
       "beforeVersion": 107
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to install local learning operation state.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 108
     }
   ],
   "planKeys": {

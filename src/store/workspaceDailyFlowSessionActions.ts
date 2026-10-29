@@ -65,7 +65,7 @@ export function installDailyFlowExternalRefresh(store: { getState(): WorkspaceSt
     const prior = previous.reviewSession.daily;
     if (!prior || token.scope !== prior.scope || token.dayKey !== prior.dayKey || token.revision !== prior.revision) return;
     void openWorkspaceDailyFlow(store.setState, store.getState, { now: getDemoRuntimeNowIso(),
-      mode: state.reviewSessionMode, seed: state.reviewSession, preferredNodeId: state.reviewSession.currentNodeId }, undefined, true);
+      preserveCurrent: !hasWorkspaceBrowserCommit(), mode: state.reviewSessionMode, seed: state.reviewSession, preferredNodeId: state.reviewSession.currentNodeId }, undefined, true);
   });
 }
 
