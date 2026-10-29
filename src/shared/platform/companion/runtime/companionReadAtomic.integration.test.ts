@@ -31,6 +31,7 @@ it('saves a newly admitted Read in one main transaction without preparing the jo
   expect(prepare).not.toHaveBeenCalled();
   expect(query.mock.calls.filter(([sql]) => sql === 'SELECT * FROM daily_flow_state WHERE id = 1')).toHaveLength(1);
   expect(query.mock.calls.filter(([sql]) => sql.includes("key = 'host_name'"))).toHaveLength(1);
+  expect(query.mock.calls.filter(([sql]) => sql.includes('WITH RECURSIVE selected(id, parent_id)'))).toHaveLength(1);
   expect(query.mock.calls.filter(([sql]) => sql.includes('order_key > ?'))).toHaveLength(0);
   expect(batch.mock.calls.some(([set]) => set.some(value => value.statement.includes('INSERT INTO node_reading')))).toBe(true);
   expect(library.database.prepare('SELECT repetition_count FROM node_reading WHERE node_id=?').get(session.currentNodeId))

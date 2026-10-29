@@ -1,7 +1,7 @@
 import type { DbPort } from '../sync/dbPort.js';
 
 import type { CycleRow } from './cycleFlowTypes.js';
-import { scopedDailyLearningSnapshot } from './dailyFlowGrade.js';
+import { createScopedDailyLearningReader } from './dailyFlowGrade.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import { insertCycleRows, readCycleRows, readDailyFlow, saveCycleFlow, writeCycleRows } from './dailyFlowStorage.js';
 import type { DailyFlowOperation, DailyFlowStore } from './dailyFlowStore.js';
@@ -52,7 +52,7 @@ export function createSqliteDailyFlowStore(db: DbPort, persistence: DailyFlowPer
         [id, value.input_hash, value.revision, value.card_json, value.source_session_json]);
     },
     learningSnapshot: ids => persistence.learningSnapshot(db, ids),
-    scopedLearningSnapshot: ids => scopedDailyLearningSnapshot(db, persistence, [...ids]),
+    scopedLearningSnapshot: createScopedDailyLearningReader(db, persistence),
     snapshot: ids => persistence.snapshot(db, ids),
     grade: (args, opId) => persistence.grade(db, args, opId),
     reading: (value, now) => persistence.reading(db, value, now),

@@ -19,6 +19,23 @@ export async function scopedDailyLearningSnapshot(db: DbPort, persistence: Daily
   return persistence.learningSnapshot(db, await dailyFactNodeIds(db, ids));
 }
 
+/** Reuse ancestor identities only within the caller-owned store/transaction. */
+export function createScopedDailyLearningReader(db: DbPort, persistence: DailyFlowPersistence) {
+  const scopes = new Map<string, Promise<string[]>>();
+  return async (input: readonly (string | null | undefined)[]) => {
+    const ids = [...new Set(input.filter((id): id is string => Boolean(id)))].sort();
+    const key = JSON.stringify(ids);
+    let scope = scopes.get(key);
+    if (!scope) {
+      scope = dailyFactNodeIds(db, ids);
+      scopes.set(key, scope);
+    }
+    const selected = await scope;
+    if (scopes.size > 128) scopes.clear();
+    return persistence.learningSnapshot(db, selected);
+  };
+}
+
 async function dailyFactNodeIds(db: DbPort, ids: (string | null | undefined)[]) {
   const ancestors = await db.query<{ id: string }>(`WITH RECURSIVE selected(id, parent_id) AS (
     SELECT id, parent_id FROM nodes WHERE id IN (SELECT value FROM json_each(?))
