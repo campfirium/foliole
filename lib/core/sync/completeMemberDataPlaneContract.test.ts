@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   COMPLETE_MEMBER_DATA_PLANE_CAPABILITY,
   CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+  evaluateSyncProtocolCompatibility,
   PREPARED_COMPLETE_MEMBER_PROTOCOL_DESCRIPTOR
 } from '../../platform/syncProtocolContract.js';
 
@@ -42,15 +43,14 @@ describe('prepared complete member data plane contract', () => {
     expect(COMPLETE_MEMBER_DATA_PLANE_CONTRACT.lifecycle).toEqual(['delete', 'restore']);
   });
 
-  it('keeps the complete member capability in the production v28 descriptor', () => {
-    expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version).toBe(31);
+  it('keeps the complete member capability in the current production descriptor', () => {
     expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities).toContain(COMPLETE_MEMBER_DATA_PLANE_CAPABILITY);
-    expect(PREPARED_COMPLETE_MEMBER_PROTOCOL_DESCRIPTOR).toMatchObject({
-      version: 31,
-      min_supported_version: 31,
-      max_supported_version: 31
-    });
+    expect(PREPARED_COMPLETE_MEMBER_PROTOCOL_DESCRIPTOR).toEqual(CURRENT_SYNC_PROTOCOL_DESCRIPTOR);
     expect(PREPARED_COMPLETE_MEMBER_PROTOCOL_DESCRIPTOR.capabilities)
       .toContain(COMPLETE_MEMBER_DATA_PLANE_CAPABILITY);
+    expect(evaluateSyncProtocolCompatibility({ ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+      capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.filter(value => value !== COMPLETE_MEMBER_DATA_PLANE_CAPABILITY)
+    })).toMatchObject({ status: 'incompatible', reason: 'required_capability_missing',
+      missing_capabilities: [COMPLETE_MEMBER_DATA_PLANE_CAPABILITY] });
   });
 });
