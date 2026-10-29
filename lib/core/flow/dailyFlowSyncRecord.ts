@@ -39,10 +39,11 @@ export async function recordDailyFlowSync(db: DbPort, result: DailyFlowResult, s
     session, rows: sameDay ? after ?? result.session.cycle?.change?.after ?? [] : createdRows ?? await readCycleRows(db),
     removedNodeIds: before?.filter(row => !retained.has(row.node_id)).map(row => row.node_id) ?? [] });
   // The ordinary Sync object hash protects transport content; it is not a per-row Flow fingerprint.
-  const hash = computeSyncContentHash('daily_flow', JSON.parse(JSON.stringify(fact)));
+  const payloadJson = JSON.stringify(fact);
+  const hash = computeSyncContentHash('daily_flow', JSON.parse(payloadJson));
   await db.run(`INSERT INTO daily_flow_sync_facts
     (id, root_id, occurred_at, day_start, payload_json, day_end, parent_id, kind) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, fact.rootId, occurredAt, fact.settings.dayWindow.start, JSON.stringify(fact),
+    [id, fact.rootId, occurredAt, fact.settings.dayWindow.start, payloadJson,
       fact.settings.dayWindow.end, fact.parentId, fact.kind]);
   await db.run(`INSERT INTO sync_object_state
     (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty, deleted_at)
