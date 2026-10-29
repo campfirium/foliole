@@ -62,6 +62,7 @@ const platformCoreTests = platformRootTests.filter(
 );
 const nativeStoreTests = [
   'src/store/workspaceActionHistoryDomains.test.ts',
+  'src/store/workspaceStoreDurableMutationGuardrail.test.ts',
   'src/store/workspaceContentEditSync.integration.test.ts',
   'src/store/workspaceDailyFlow.sync.integration.test.ts',
   'src/store/workspaceSequentialReadingBatchMove.integration.test.ts'

@@ -1,4 +1,5 @@
 export const controlledFlowSqliteTests = [
+  'src/store/workspaceStoreDurableMutationGuardrail.test.ts',
   'src/store/workspaceActionHistoryDomains.test.ts',
   'electron/database/dailyFlowSinglePass.integration.test.ts',
   'src/store/workspaceFlowLearningFacts.integration.test.ts',
