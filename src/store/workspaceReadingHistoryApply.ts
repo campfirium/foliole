@@ -90,6 +90,10 @@ export async function applyWorkspaceReadingHistory(args: {
     return { status: isWorkspacePartialPersistenceError(error) ? 'invalid' : 'failed' };
   }
   const latest = args.get();
+  const affectedIds = [args.entry.nodeId, ...(args.entry.relatedReadings ?? []).map(value => value.nodeId)];
+  if (affectedIds.some(nodeId => !isSameReadingProfile(beforeNodes[nodeId]?.reading, latest.nodesById[nodeId]?.reading))) {
+    return { status: 'invalid' };
+  }
   if (!isApplicable(latest, args.entry, args.mode)) return { status: 'invalid' };
   const applied = buildApplyNodes(latest, args.entry, args.mode);
   const context = args.mode === 'undo' ? args.entry.beforeContext : args.entry.afterContext;

@@ -61,6 +61,7 @@ const platformCoreTests = platformRootTests.filter(
   (target) => !platformCompanionTests.includes(target)
 );
 const nativeStoreTests = [
+  'src/store/workspaceActionHistoryDomains.test.ts',
   'src/store/workspaceContentEditSync.integration.test.ts',
   'src/store/workspaceDailyFlow.sync.integration.test.ts',
   'src/store/workspaceSequentialReadingBatchMove.integration.test.ts'
