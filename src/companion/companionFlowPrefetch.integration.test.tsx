@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { openCompanionDailyFlow, predictCompanionFlowDocument } from '../shared/platform/companion/runtime/companionDailyFlow';
@@ -17,7 +17,7 @@ vi.mock('@capacitor/core', async () => {
 vi.mock('../shared/platform/appLifecycle', () => ({ subscribeNativeAppForeground: async () => () => {} }));
 
 let library: Awaited<ReturnType<typeof createSearchLibrary>>;
-afterEach(async () => { await library?.close(); vi.restoreAllMocks(); });
+afterEach(async () => { cleanup(); await library?.close(); vi.restoreAllMocks(); });
 
 it('opens Flow, prepares only the next body, and opens that body without revealing the answer or rereading SQLite', async () => {
   library = await createSearchLibrary(0);
@@ -25,7 +25,7 @@ it('opens Flow, prepares only the next body, and opens that body without reveali
   await seedCompanionReviewHistory({ due: '2026-10-01T00:00:00.000Z', lastReviewAt: '2026-09-28T00:00:00.000Z',
     state: 2, stability: 3, difficulty: 4, elapsedDays: 3, scheduledDays: 3, reps: 2, lapses: 0 }, now);
   const source = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
-  const reads = vi.spyOn(library.connection, 'query');
+  const reads = vi.spyOn(library.readonlyQueries, 'query');
   const publish = vi.fn();
   const hook = renderHook(() => ({
     flow: useCompanionFlowSession({ snapshot: source, ready: true, active: true, onlyReview: false,
@@ -39,7 +39,7 @@ it('opens Flow, prepares only the next body, and opens that body without reveali
   expect(next).toBeTruthy();
   await waitFor(() => expect(reads.mock.calls.filter(([sql]) => sql.includes('SELECT article.*'))
     .map(([, values]) => values?.[0])).toEqual([next]));
-  await getIosCompanionDatabaseOwner().read(async () => null);
+  await getIosCompanionDatabaseOwner().readInteractiveSnapshot(async () => null);
   expect(publish).not.toHaveBeenCalled();
   expect(hook.result.current.flow.isAnswerRevealed).toBe(false);
   reads.mockClear();
@@ -55,7 +55,7 @@ it('keeps the current Flow stable across an unrelated render without revisiting 
   await seedCompanionReviewHistory({ due: '2026-10-01T00:00:00.000Z', lastReviewAt: '2026-09-28T00:00:00.000Z',
     state: 2, stability: 3, difficulty: 4, elapsedDays: 3, scheduledDays: 3, reps: 2, lapses: 0 }, new Date().toISOString());
   const source = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
-  const reads = vi.spyOn(library.connection, 'query');
+  const reads = vi.spyOn(library.readonlyQueries, 'query');
   const hook = renderHook(({ snapshot }) => useCompanionFlowSession({ snapshot, ready: true, active: true,
     onlyReview: false, libraryScope: source.libraryScope ?? 'test' }), { initialProps: { snapshot: source } });
   await waitFor(() => expect(hook.result.current.ready).toBe(true));
@@ -63,7 +63,7 @@ it('keeps the current Flow stable across an unrelated render without revisiting 
   const next = (await predictCompanionFlowDocument({ token: session.daily!,
     currentNodeId: session.currentNodeId!, now: new Date().toISOString() }, new AbortController().signal))!;
   await waitFor(() => expect(reads.mock.calls.some(([sql, values]) => sql.includes('SELECT article.*') && values?.[0] === next)).toBe(true));
-  await getIosCompanionDatabaseOwner().read(async () => null);
+  await getIosCompanionDatabaseOwner().readInteractiveSnapshot(async () => null);
   const before = structuredClone(hook.result.current.view);
   const node = source.nodesById[next]!;
   const kind = node.kind;

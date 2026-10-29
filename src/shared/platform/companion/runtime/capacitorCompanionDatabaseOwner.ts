@@ -102,8 +102,8 @@ export class CapacitorCompanionDatabaseOwner {
     this.requireDb();
     if (this.pendingCloses) throw new Error('Companion database owner is closing.');
     // Foreground bodies read committed WAL state without joining the writer queue.
-    // The existing readonly owner still serializes snapshots and owns their lifetime.
-    return this.snapshots!.read(task, signal);
+    // Borrow an active sync snapshot with an independent read lifetime when possible.
+    return this.snapshots!.readInteractive(task, signal);
   }
 
   private async enqueueSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {

@@ -1,3 +1,4 @@
+import { controlledCompanionReadingSqliteTests } from './native-sqlite-companion-reading-tests.mjs';
 import { controlledFlowSqliteTests } from './native-sqlite-flow-tests.mjs';
 
 export const controlledSyncSqliteTests = [
@@ -10,6 +11,7 @@ export const controlledSyncSqliteTests = [
   'electron/attachments/attachmentReferenceSync.integration.test.ts',
   'src/shared/platform/companion/runtime/companionAttachmentObservation.integration.test.ts',
   ...controlledFlowSqliteTests,
+  ...controlledCompanionReadingSqliteTests,
   'src/companion/companionTrashSubtree.sync.integration.test.ts',
   'src/store/workspaceEntireTopicDismiss.sync.integration.test.ts',
   'src/shared/platform/companion/sync/workspace-state/companionSnapshotNodeRows.boundaries.test.ts',
@@ -19,7 +21,6 @@ export const controlledSyncSqliteTests = [
   'src/shared/platform/companion/editing/companionContentVisibility.integration.test.ts',
   'src/shared/platform/companion/runtime/companionNodeTextAlternativeScope.integration.test.ts',
   'src/shared/platform/companionSqlRecording.integration.test.ts',
-  'src/shared/platform/companion/reading/companionArticlePreparation.integration.test.ts',
   'src/companion/companionFlowPrefetch.integration.test.tsx',
   'src/companion/companionHistoryDelta.integration.test.ts',
   'src/companion/companionHistoryUpgrade.integration.test.ts',
@@ -137,7 +138,6 @@ export const controlledSyncSqliteTests = [
   'electron/sync/desktopRequestSyncObjectHttp.integration.test.ts',
   'electron/sync/desktopRequestSyncOverwrite.integration.test.ts',
   'electron/sync/desktopRequestSyncScale.integration.test.ts',
-  'src/shared/platform/companion/runtime/companionRequestSyncSnapshot.sqlite.test.ts',
   'src/companion/requestSnapshotProbe.test.ts',
   'lib/core/sync/syncGroupRestoreEvents.test.ts',
   'lib/core/sync/nodeOwnedArticleResourceNeeds.test.ts',
