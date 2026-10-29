@@ -97,7 +97,9 @@ it('continues after a missing first attachment and fills only that attachment on
   await withAttachments([missing!.key, good!.key], async ({ local, remoteDir, failures, transfer }) => {
     await fs.writeFile(path.join(remoteDir, good!.key), good!.bytes);
     expect(await local.host.needs()).toEqual([missing!.key, good!.key]);
-    expect(await transfer()).toEqual({ pending: 1, transferred: 1 });
+    const firstRound = await transfer();
+    expect(failures.filter(failure => failure.key === good!.key)).toEqual([]);
+    expect(firstRound).toEqual({ pending: 1, transferred: 1 });
     expect(failures).toHaveLength(1);
     expect(failures[0]!.key).toBe(missing!.key);
     expect(await fs.readFile(path.join(local.assetsDir, good!.key))).toEqual(good!.bytes);

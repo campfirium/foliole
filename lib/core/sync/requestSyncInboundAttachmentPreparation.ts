@@ -19,15 +19,21 @@ export async function withInboundAttachmentPreparation<T>(host: RequestSyncDatab
       void owned.cancel(input.lifecycle.reason);
     }, { once: true });
   }
+  let preparationFinished = false;
   try {
     input.signal.throwIfAborted();
-    if (input.mode === 'attachments' || input.mode === 'round_finish') await preparation.finish();
+    if (input.mode === 'attachments' || input.mode === 'round_finish') {
+      await preparation.finish();
+      preparationFinished = true;
+    }
     const result = await execute(preparation.bind(host, input.signal));
     if (input.single) await preparation.finish();
     input.signal.throwIfAborted();
     return result;
   } catch (error) {
-    await preparation.cancel(error);
+    if (input.mode !== 'attachments' || !preparationFinished || input.signal.aborted || input.lifecycle.aborted) {
+      await preparation.cancel(error);
+    }
     throw error;
   }
 }
