@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { closeLibraries, type Peer } from '../../electron/database/syncLibrary.testSupport';
 import { readWorkspaceNodeLearning } from '../../lib/core/database/workspaceNodeLearning';
 import { commitDailyFlow, openDailyFlow } from '../../lib/core/flow/dailyFlowService';
+import { resolveTopicPostponeDelayNextAt } from '../../lib/core/review/topicPostponeDelay';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { node, now, persistence, settings, setupPeers, snapshot } from '../test/dailyFlowExceptions.testSupport';
 
@@ -69,5 +70,29 @@ it.each(['read', 'grade'] as const)('does not invent initial facts when the %s d
   rejectRead = true; release();
   expect(await (action === 'grade' ? app.actions.gradeReviewCard(3, now) : app.actions.readReviewTopic(now))).toBe(false);
   expect(peer.db.prepare('SELECT * FROM node_reading').all()).toEqual([]);
+  expect(app.getState().appActionHistory.undoStack).toEqual([]);
+});
+
+it('postpones from current database facts without a resident reading profile', async () => {
+  const app = await prepare();
+  const id = app.getState().reviewSession.currentNodeId!;
+  const before = { intervalDurationMs: 777000, intervalGrowthFactor: 1.7, lastHandledAt: now, nextAt: now,
+    priority: 3, readingPosition: 27, repetitionCount: 9, state: 'active' as const };
+  await persistence.reading(peer.port, { nodeId: id, before: null, after: before }, now);
+  release();
+  expect(await app.actions.setReviewTopicDelay(id, 4, now)).toBe(true);
+  expect((await snapshot(peer)).nodesById[id]?.reading).toEqual({ ...before,
+    nextAt: resolveTopicPostponeDelayNextAt({ level: 4, now, reading: before }) });
+});
+
+it('rejects a postpone preview whose database reading changed before submission', async () => {
+  const app = await prepare();
+  const id = app.getState().reviewSession.currentNodeId!;
+  const changed = { intervalDurationMs: 777000, intervalGrowthFactor: 1.7, lastHandledAt: now, nextAt: now,
+    priority: 3, readingPosition: 27, repetitionCount: 9, state: 'active' as const };
+  await persistence.reading(peer.port, { nodeId: id, before: null, after: changed }, now);
+  release();
+  expect(await app.actions.setReviewTopicDelay(id, 0, now, null)).toBe(false);
+  expect((await snapshot(peer)).nodesById[id]?.reading).toEqual(changed);
   expect(app.getState().appActionHistory.undoStack).toEqual([]);
 });

@@ -159,6 +159,8 @@ async function persistPreparedReading(get: WorkspaceGet, result: ReadingReviewPa
         result.historyEntry.afterContext.reviewSession = saved.session;
         return true;
       } else {
+        if (result.historyEntry.title === 'Postpone Topic') return persistence.persistReadingNodes(
+          result.nextNodesForSync, result.historyEntry.mutationTimestamp);
         return result.completedReviewDay
           ? await persistence.persistReadingNodes(result.nextNodesForSync, undefined, result.completedReviewDay)
           : await persistReadingReviewNodes(result.nextNodesForSync, persistence);

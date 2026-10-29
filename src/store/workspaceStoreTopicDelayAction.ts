@@ -2,38 +2,18 @@ import { resolveTopicPostponeDelayNextAt } from '../../lib/core/review/topicPost
 import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes';
 import { buildReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
+import { readWorkspaceOperationLearning } from '../shared/platform/runtime/workspaceOperationLearning';
 
-import {
-  beginWorkspaceAction,
-  createEmptyWorkspaceActionHistory,
-  failWorkspaceAction,
-  settleWorkspaceAction
-} from './workspaceActionHistory';
 import { isSameReadingProfile } from './workspaceActionHistoryReading';
-import { hasPersistentDailyFlow, saveDailyReading } from './workspaceDailyFlowMutations';
-import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
-import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
-import { isSameWorkspaceReviewSession } from './workspaceHistoryContext';
-import type { ReadingReviewPendingNodeIds } from './workspaceReadingReviewHistoryCommit';
-import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
-import {
-  runtimeWorkspaceReviewPersistence,
-  type WorkspaceReviewPersistenceAdapter
-} from './workspaceReviewPersistence';
+import { persistAndApplyReadingReviewPatch, type ReadingReviewPatchResult, type ReadingReviewPendingNodeIds } from './workspaceReadingReviewHistoryCommit';
+import { runtimeWorkspaceReviewPersistence, type WorkspaceReviewPersistenceAdapter } from './workspaceReviewPersistence';
 import { resolveReadingPriorityChain } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
 import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 import { createReadingReviewHistoryEntry } from './workspaceStoreReviewActionHelpers';
-import type { WorkspaceTopicDismissHistoryEntry } from './workspaceTopicDismissActionHistory';
 
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 type WorkspaceGet = () => WorkspaceState;
-
-interface TopicDelayPatchResult {
-  historyEntry: WorkspaceTopicDismissHistoryEntry;
-  nextNode: Node;
-  patch: Partial<WorkspaceState>;
-}
 
 function parseTime(value: string) {
   const parsed = Date.parse(value);
@@ -73,7 +53,7 @@ function buildTopicDelayPatch(args: {
   now: string;
   snapshot: WorkspaceState;
   state: WorkspaceState;
-}): TopicDelayPatchResult | null {
+}): ReadingReviewPatchResult | null {
   const node = args.state.nodesById[args.nodeId];
   if (args.state.trashedNodeIds.includes(args.nodeId) || !canDelayTopic(node)) return null;
   const baseReading = node.reading ?? buildInitialReadingProfile({ node, nodeId: args.nodeId, now: args.now, state: args.state });
@@ -95,7 +75,7 @@ function buildTopicDelayPatch(args: {
       state: args.state,
       title: 'Postpone Topic'
     }),
-    nextNode,
+    nextNodesForSync: [nextNode],
     patch: {
       activeNodeId: afterActiveNodeId,
       nodesById: nextNodesById,
@@ -110,68 +90,17 @@ export function createSetReviewTopicDelayActionWithPending(
   pendingNodeIds: ReadingReviewPendingNodeIds,
   persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence
 ): WorkspaceState['setReviewTopicDelay'] {
-  return async (nodeId, level, now = new Date().toISOString()) => {
+  return async (nodeId, level, now = new Date().toISOString(), expectedReading) => {
     const snapshot = get();
-    const node = snapshot.nodesById[nodeId];
-    if (!canDelayTopic(node) || pendingNodeIds.has(nodeId)) return false;
-    pendingNodeIds.add(nodeId);
-    try {
-      const result = buildTopicDelayPatch({ level, nodeId, now, snapshot, state: get() });
-      if (!result) return false;
-      let began = false;
-      acceptWorkspaceHistoryCommand(set, 'preserve', (state) => {
-        if (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
-            state.appActionHistory.pendingCreate) return state;
-        began = true;
-        return { appActionHistory: beginWorkspaceAction(state.appActionHistory, result.historyEntry) };
-      });
-      if (!began) return false;
-      let persisted = false;
-      try {
-        persisted = await persistTopicDelay(snapshot, result, now, persistence);
-      } catch {
-        persisted = false;
-      }
-      if (!persisted) {
-        set((state) => ({
-          appActionHistory: failWorkspaceAction(state.appActionHistory, result.historyEntry.id)
-        }));
-        return false;
-      }
-      let applied = false;
-      let undoRequested = false;
-      set((state) => {
-        const currentNode = state.nodesById[nodeId];
-        const applicable = canDelayTopic(currentNode) &&
-          state.appActionHistory.pendingAction?.entry.id === result.historyEntry.id &&
-          isSameReadingProfile(currentNode.reading, result.historyEntry.beforeReading) &&
-          isSameWorkspaceReviewSession(state.reviewSession, result.historyEntry.beforeContext.reviewSession);
-        if (!applicable) return { appActionHistory: createEmptyWorkspaceActionHistory() };
-        const settled = settleWorkspaceAction(state.appActionHistory, result.historyEntry.id);
-        applied = true;
-        undoRequested = settled.undoRequested;
-        return { ...result.patch, appActionHistory: settled.history };
-      });
-      if (!applied) return false;
-      if (undoRequested) get().undoWorkspaceAction(result.historyEntry.id);
-      const nextActiveNodeId = result.patch.reviewSession?.currentNodeId ?? result.patch.reviewSession?.continueNodeId;
-      if (nextActiveNodeId) void persistNodeOpened(set, nextActiveNodeId, now);
-      return true;
-    } finally {
-      pendingNodeIds.delete(nodeId);
-    }
+    if (!canDelayTopic(snapshot.nodesById[nodeId]) || pendingNodeIds.has(nodeId)) return false;
+    const committed = await persistAndApplyReadingReviewPatch({ currentNodeId: nodeId, get, set, pendingNodeIds, persistence,
+      buildPatch: async state => {
+        const nodesById = await readWorkspaceOperationLearning(state.nodesById, [nodeId],
+          state.libraryScope ?? state.reviewSession.daily?.scope);
+        if (!nodesById || (expectedReading !== undefined && !isSameReadingProfile(nodesById[nodeId]?.reading, expectedReading))) return null;
+        return buildTopicDelayPatch({ level, nodeId, now, snapshot, state: { ...state, nodesById } });
+      } });
+    if (committed && committed.nextActiveNodeId) void persistNodeOpened(set, committed.nextActiveNodeId, now);
+    return Boolean(committed);
   };
-}
-
-async function persistTopicDelay(snapshot: WorkspaceState, result: TopicDelayPatchResult, now: string,
-  persistence: WorkspaceReviewPersistenceAdapter) {
-  if (!hasPersistentDailyFlow(snapshot.reviewSession)) return persistence.persistReadingNodes([result.nextNode], now);
-  const saved = await saveDailyReading(snapshot.reviewSession, result.historyEntry, now, result.patch.reviewSession!, undefined, snapshot.nodesById);
-  result.patch.nodesById = mergeDailyFlowReceiptNodes(result.patch.nodesById ?? snapshot.nodesById, snapshot.nodesById, saved.nodes, saved.learning);
-  const active = buildReviewActiveNodeContext(snapshot, saved.session.currentNodeId ?? saved.session.continueNodeId ?? null);
-  Object.assign(result.patch, active);
-  Object.assign(result.historyEntry.afterContext, active);
-  result.patch.reviewSession = saved.session;
-  result.historyEntry.afterContext.reviewSession = saved.session;
-  return true;
 }
