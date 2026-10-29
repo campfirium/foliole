@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
@@ -75,7 +75,9 @@ it.each([false, true])('reuses prepared body digests while preserving stored-bod
 
 it.each([false, true])('rolls back partial blob writes and retries after reopening an isolated database, companion=%s', async (companion) => {
   const source = await legacyHost();
-  const directory = mkdtempSync(path.resolve('.tmp/artifacts/T615/reopen-'));
+  const artifactRoot = path.resolve('.tmp/artifacts/topic-text-migration');
+  mkdirSync(artifactRoot, { recursive: true });
+  const directory = mkdtempSync(path.join(artifactRoot, 'reopen-'));
   const filename = path.join(directory, 'migration.db');
   await source.sqlite.backup(filename);
   let sqlite = new Database(filename);
