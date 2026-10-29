@@ -166,18 +166,21 @@ it('records an intentional A to B to A edit as a fresh selection and inherits it
 });
 
 
-it('reuses the submitted body digest while preparing a complete local edit', async () => {
+it('reuses the body digest and hashes only the final complete local edit snapshot', async () => {
   const a = device(); await a.receive([textBranch('base', 'Base')]);
   const content = `Changed 文😀\r\n![image](asset://${image.storage_key})`;
   const bodyHash = vi.spyOn(bodyHashing, 'hashTextBody');
+  const snapshotHash = vi.spyOn(snapshotHashing, 'hashText');
   const input = { nodeId: 'topic', baseVersionId: 'base', versionId: 'measured', content,
     title: 'Topic', hideTitleHeading: false, hostName: 'a', updatedAt: now,
     newImageReferences: [{ ...image, source_url: 'https://example.com/original.png' }] };
   let measuredBodyCalls = 0;
+  let measuredSnapshots: string[] = [];
   let prepared: Parameters<NonNullable<Parameters<typeof applyLocalContentEdit>[2]>>[0] | undefined;
   try {
     await expect(applyLocalContentEdit(a.db, input, record => {
       prepared = record;
+      measuredSnapshots = snapshotHash.mock.calls.map(([value]) => value).filter(value => value.includes('"content":'));
       measuredBodyCalls = bodyHash.mock.calls.filter(([value]) => value === content).length;
       throw new Error('preparation_measured');
     })).rejects.toThrow('preparation_measured');
@@ -186,8 +189,45 @@ it('reuses the submitted body digest while preparing a complete local edit', asy
     expect(JSON.parse(prepared!.snapshot.image_sources!)[image.storage_key]).toBe('https://example.com/original.png');
     expect(prepared?.content_hash).toBe(snapshotHashing.hashText(JSON.stringify(prepared!.snapshot)));
     expect(measuredBodyCalls).toBe(1);
+    expect(measuredSnapshots).toEqual([JSON.stringify(prepared!.snapshot)]);
   } finally { vi.restoreAllMocks(); }
   expect((await a.current()).version_id).toBe('base');
   await applyLocalContentEdit(a.db, input);
   expect((await a.current()).body_text).toBe(content);
+});
+
+
+it('acknowledges no-op and saved retries without building unused snapshot hashes', async () => {
+  const a = device(); await a.receive([textBranch('base', 'Base')]);
+  const input = { nodeId: 'topic', baseVersionId: 'base', versionId: 'edit', content: 'Changed',
+    title: 'Topic', hideTitleHeading: false, hostName: 'a', updatedAt: now };
+  const snapshotHash = vi.spyOn(snapshotHashing, 'hashText');
+  try {
+    expect((await applyLocalContentEdit(a.db, { ...input, content: 'Base' })).submittedVersionId).toBe('base');
+    expect(snapshotHash.mock.calls.filter(([value]) => value.includes('"content":'))).toEqual([]);
+    await retainLocalEditBase(a.db, { holdId: 'editor', nodeId: 'topic', versionId: 'base' });
+    await applyLocalContentEdit(a.db, input);
+    const saved = a.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
+    snapshotHash.mockClear();
+    expect((await applyLocalContentEdit(a.db, input)).submittedVersionId).toBe('edit');
+    expect(a.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(saved);
+    expect(snapshotHash.mock.calls.filter(([value]) => value.includes('"content":'))).toEqual([]);
+  } finally { vi.restoreAllMocks(); }
+});
+
+
+it.each([
+  { hostName: 'other' }, { title: 'Other' }, { hideTitleHeading: true },
+  { reveal: 'Other answer' }, { updatedAt: '2026-10-18T10:00:00.000Z' }, { content: 'Other body' }
+])('rejects changed retry inputs without rewriting version facts: %j', async changed => {
+  const a = device(); const base = textBranch('base', 'Base'); base.snapshot.reveal = 'Answer';
+  await a.receive([base]);
+  await retainLocalEditBase(a.db, { holdId: 'editor', nodeId: 'topic', versionId: 'base' });
+  const input = { nodeId: 'topic', baseVersionId: 'base', versionId: 'edit', content: 'Changed',
+    title: 'Topic', hideTitleHeading: false, hostName: 'a', updatedAt: now };
+  await applyLocalContentEdit(a.db, input);
+  expect((await applyLocalContentEdit(a.db, input)).current.snapshot.reveal).toBe('Answer');
+  const saved = a.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
+  await expect(applyLocalContentEdit(a.db, { ...input, ...changed })).rejects.toThrow('content_edit_version_mismatch');
+  expect(a.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(saved);
 });
