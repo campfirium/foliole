@@ -7,6 +7,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let appData = '';
+let fixtureRoot = '';
 const parsing = vi.hoisted(() => ({ calls: 0, beforePublish: undefined as undefined | (() => void) }));
 vi.mock('./attachmentReferenceWorkerClient.js', async importOriginal => {
   const actual = await importOriginal<typeof import('./attachmentReferenceWorkerClient.js')>();
@@ -45,8 +46,8 @@ import { withAttachmentFileLease } from './attachmentFileLease.js';
 import { runDesktopAttachmentMaintenance } from './attachmentMaintenanceService.js';
 import { moveAttachmentToTrash } from './attachmentTrashFiles.js';
 
-beforeEach(() => { parsing.beforePublish = undefined; appData = fs.mkdtempSync(path.join(os.tmpdir(), 'attachment-maintenance-')); initializeDatabase(); });
-afterEach(() => { closeDatabaseConnection(); fs.rmSync(appData, { recursive: true, force: true }); });
+beforeEach(() => { parsing.beforePublish = undefined; fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'attachment-maintenance-')); appData = fixtureRoot; initializeDatabase(); });
+afterEach(() => { closeDatabaseConnection(); fs.rmSync(fixtureRoot, { recursive: true, force: true }); });
 
 function file(text: string) {
   const { assetsDir } = resolveRuntimeDataPaths();
@@ -166,10 +167,8 @@ it('rejects a late batch when its library has been replaced', async () => {
   node('old-library', 'Old library content');
   parsing.beforePublish = () => {
     parsing.beforePublish = undefined;
-    const databasePath = openDatabaseConnection().dbPath;
     closeDatabaseConnection();
-    fs.copyFileSync(databasePath, `${databasePath}.restored`);
-    fs.renameSync(`${databasePath}.restored`, databasePath);
+    appData = path.join(fixtureRoot, 'replacement-library');
     initializeDatabase();
   };
   await expect(runDesktopAttachmentMaintenance({ action: 'observe' })).rejects.toThrow('attachment_scan_database_replaced');
