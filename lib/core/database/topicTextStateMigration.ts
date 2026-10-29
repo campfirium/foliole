@@ -4,7 +4,7 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 import type { DbPort, DbParams } from '../sync/dbPort.js';
 import { buildRemoteNodeVersionUpsert } from '../sync/syncNodeApplyStatements.js';
 import { buildResolutionRecord } from '../sync/syncNodeResolution.js';
-import { normalizeTextAlternatives, TEXT_ALTERNATIVE_LIFETIME_MS } from '../sync/topicTextState.js';
+import { normalizeTextAlternativesForHash, TEXT_ALTERNATIVE_LIFETIME_MS } from '../sync/topicTextState.js';
 
 import { migrateFramedSyncInventory, migrateCompanionFramedSyncInventory } from './framedSyncInventoryMigration.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
@@ -25,9 +25,16 @@ function migrationStatements(nodeValue: unknown, alternativesValue: unknown[], n
   const snapshot: NativeSyncNodeRecord['snapshot'] = JSON.parse(node.snapshot_json);
   const body = node.body_text ?? snapshot.content;
   if (typeof body !== 'string') throw new Error('text_alternative_migration_main_unavailable');
-  const alternatives = alternativesValue.map((value) => alternativeSchema.parse(value));
+  const mainHash = hashTextBody(body);
+  const hashesByText = new Map<string, string>([[body, mainHash]]);
+  const alternatives = alternativesValue.map((value) => {
+    const entry = alternativeSchema.parse(value);
+    const hash = hashesByText.get(entry.body_text) ?? hashTextBody(entry.body_text);
+    hashesByText.set(entry.body_text, hash);
+    return { ...entry, hash };
+  });
   const entries = alternatives.map((entry) => {
-    const hash = hashTextBody(entry.body_text);
+    const hash = entry.hash;
     return { id: `alternative#${hashTextBody(`${node.id}\n${hash}`).slice(0, 24)}`,
       body_blob_hash: hash, source_host_name: entry.source_host_name, created_at: entry.created_at,
       expires_at: new Date(Date.parse(entry.updated_at) + TEXT_ALTERNATIVE_LIFETIME_MS).toISOString() };
@@ -37,20 +44,19 @@ function migrationStatements(nodeValue: unknown, alternativesValue: unknown[], n
     parent_version_id: null, snapshot, updated_at: snapshot.updated_at,
     version_created_at: node.created_at, version_id: node.version_id };
   const record = buildResolutionRecord([current], current, body, { ...snapshot,
-    text_alternatives: normalizeTextAlternatives(entries, body, now),
+    text_alternatives: normalizeTextAlternativesForHash(entries, mainHash, now),
     text_selection: { version_id: node.version_id, created_at: node.created_at } });
   const hashes = new Set(record.snapshot.text_alternatives?.map((entry) => entry.body_blob_hash));
-  record.alternative_bodies = alternatives.filter((entry) => hashes.has(hashTextBody(entry.body_text)))
-    .map((entry) => ({ hash: hashTextBody(entry.body_text), text: entry.body_text }));
-  const mainHash = hashTextBody(body);
-  return bodyStatements([{ body_text: body }, ...alternatives.filter((entry) => hashes.has(hashTextBody(entry.body_text)))], now)
+  const retained = alternatives.filter((entry) => hashes.has(entry.hash));
+  record.alternative_bodies = retained.map((entry) => ({ hash: entry.hash, text: entry.body_text }));
+  return bodyStatements([{ body_text: body, hash: mainHash }, ...retained], now)
     .concat([{ sql: 'UPDATE node_sync_versions SET snapshot_json = ? WHERE version_id = ?',
-      params: [JSON.stringify({ ...snapshot, body_blob_hash: mainHash }), node.version_id] }], versionStatements(record));
+      params: [JSON.stringify({ ...snapshot, body_blob_hash: mainHash }), node.version_id] }], versionStatements(record, hashesByText));
 }
 
-function bodyStatements(entries: Array<{ body_text: string }>, now: string): Statement[] {
+function bodyStatements(entries: Array<{ body_text: string; hash: string }>, now: string): Statement[] {
   return entries.flatMap((entry) => {
-    const hash = hashTextBody(entry.body_text);
+    const hash = entry.hash;
     const data = new TextEncoder().encode(entry.body_text);
     return [{ sql: `INSERT OR IGNORE INTO content_blobs
       (hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes,
@@ -62,8 +68,8 @@ function bodyStatements(entries: Array<{ body_text: string }>, now: string): Sta
   });
 }
 
-function versionStatements(record: NativeSyncNodeRecord): Statement[] {
-  const version = buildRemoteNodeVersionUpsert(record)!;
+function versionStatements(record: NativeSyncNodeRecord, preparedBodyHashes: ReadonlyMap<string, string>): Statement[] {
+  const version = buildRemoteNodeVersionUpsert(record, preparedBodyHashes)!;
   return [version, { sql: 'INSERT INTO node_sync_version_parents VALUES (?, ?, 0)',
     params: [record.version_id!, record.parent_version_id!] },
   { sql: 'UPDATE nodes SET current_version_id = ?, updated_at = ?, sync_dirty = 0 WHERE id = ?',

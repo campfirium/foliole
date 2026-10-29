@@ -139,7 +139,8 @@ function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: strin
   return buildRemoteNodeMetadataParams(record, bodyBlobHash, syncDirty, record.body_text ?? record.snapshot.content ?? '');
 }
 
-export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): SyncNodeStatement | null {
+export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord,
+  preparedBodyHashes?: ReadonlyMap<string, string>): SyncNodeStatement | null {
   assertSyncNodeTextWithinBudget(record.snapshot);
   if (!record.version_id || !record.host_name || !record.version_created_at) {
     return null;
@@ -155,9 +156,19 @@ export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): Sync
       record.body_text === null && record.snapshot.content === null
         ? null : record.body_text ?? record.snapshot.content ?? '',
       serializeTopicTextSnapshot({ ...record, snapshot: { ...record.snapshot, content: null,
-        body_blob_hash: record.snapshot.body_blob_hash ??
-          (record.body_text !== null ? hashTextBody(record.body_text ?? record.snapshot.content ?? '') : null) } })
+        body_blob_hash: versionBodyHash(record, preparedBodyHashes) } }, preparedBodyHashes)
     ],
     sql: UPSERT_REMOTE_NODE_VERSION_SQL
   };
+}
+
+
+function versionBodyHash(record: NativeSyncNodeRecord, preparedBodyHashes?: ReadonlyMap<string, string>) {
+  if (record.snapshot.body_blob_hash != null) return record.snapshot.body_blob_hash;
+  if (record.body_text === null) return null;
+  const body = record.body_text ?? record.snapshot.content ?? '';
+  if (!preparedBodyHashes) return hashTextBody(body);
+  const hash = preparedBodyHashes.get(body);
+  if (hash === undefined) throw new Error('text_body_hash_unprepared');
+  return hash;
 }

@@ -9,11 +9,14 @@ import { textAlternativesSchema, type TopicTextAlternative, type TopicTextBody }
 
 const bodiesSchema = z.array(z.object({ hash: z.string().regex(/^[a-f0-9]{64}$/u), text: z.string() })).max(3);
 
-export function validateTopicTextBodies(entries: readonly TopicTextAlternative[], bodies: readonly TopicTextBody[]) {
+/** Prepared hashes belong to the exact immutable strings in the current preparation call. */
+export function validateTopicTextBodies(entries: readonly TopicTextAlternative[], bodies: readonly TopicTextBody[],
+  preparedBodyHashes?: ReadonlyMap<string, string>) {
   return entries.map((entry) => {
     const body = bodies.find((value) => value.hash === entry.body_blob_hash);
     if (!body) throw new Error(`text_alternative_body_unavailable:${entry.id}`);
-    if (hashTextBody(body.text) !== entry.body_blob_hash) throw new Error('text_alternative_body_hash_mismatch');
+    const hash = preparedBodyHashes ? preparedBodyHashes.get(body.text) : hashTextBody(body.text);
+    if (hash !== entry.body_blob_hash) throw new Error('text_alternative_body_hash_mismatch');
     return body;
   });
 }
@@ -39,11 +42,11 @@ export function readTombstoneTextSnapshot(snapshotJson: string) {
   return { snapshot, bodies: [] as TopicTextBody[] };
 }
 
-export function serializeTopicTextSnapshot(record: NativeSyncNodeRecord) {
+export function serializeTopicTextSnapshot(record: NativeSyncNodeRecord, preparedBodyHashes?: ReadonlyMap<string, string>) {
   const snapshot = { ...record.snapshot };
   if (record.body_text === null) return JSON.stringify(snapshot);
   const entries = textAlternativesSchema.parse(snapshot.text_alternatives ?? []);
-  const bodies = validateTopicTextBodies(entries, record.alternative_bodies ?? []);
+  const bodies = validateTopicTextBodies(entries, record.alternative_bodies ?? [], preparedBodyHashes);
   return JSON.stringify(bodies.length ? { ...snapshot, text_alternative_bodies: bodies } : snapshot);
 }
 
