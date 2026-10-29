@@ -1,4 +1,5 @@
 // @vitest-environment node
+import type { BrowserWindow } from 'electron';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mutations = vi.hoisted(() => ({ promote: vi.fn(), dismiss: vi.fn(), notify: vi.fn() }));
@@ -21,6 +22,15 @@ it.each(['promote', 'dismiss'] as const)('requires both string identifiers for %
   }
   expect(mutations[action]).not.toHaveBeenCalled();
   expect(mutations.notify).not.toHaveBeenCalled();
+});
+
+it('notifies the originating window after adopting a body committed outside the renderer', async () => {
+  const origin = {} as BrowserWindow;
+  mutations.promote.mockResolvedValue({ status: 'promoted', node_id: 'topic' });
+  await handleStorageCommand('promote_node_text_alternative', {
+    node_id: 'topic', alternative_id: 'alt'
+  }, origin);
+  expect(mutations.notify).toHaveBeenCalledExactlyOnceWith();
 });
 
 it.each([['promote', 'promoted'], ['dismiss', 'dismissed']] as const)('routes %s with its owner and only notifies committed changes', async (action, status) => {

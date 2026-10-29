@@ -221,7 +221,7 @@ async function handleTextAlternativeMutation(
 ) {
   if (command === NATIVE_COMMANDS.promoteNodeTextAlternative) {
     const result = await promoteNodeTextAlternative(asString(args.node_id, 'node_id'), asString(args.alternative_id, 'alternative_id'));
-    if (result.status === 'promoted') notifyWorkspaceContentChanged(window);
+    if (result.status === 'promoted') notifyWorkspaceContentChanged();
     return result;
   }
   if (command === NATIVE_COMMANDS.dismissNodeTextAlternative) {
