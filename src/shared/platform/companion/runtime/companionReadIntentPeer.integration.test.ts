@@ -6,7 +6,7 @@ import { expect, it, vi } from 'vitest';
 import { flushNodeSyncVersionWithDriver } from '../../../../../electron/database/nodeSyncVersionFromDriver';
 import { closeLibraries } from '../../../../../electron/database/syncLibrary.testSupport';
 import { softDeleteNodes } from '../../../../../lib/core/database/nodeMutations';
-import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
+import { canonicalizeLibraryPath, createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
 import { hydrateCurrentReviewSchedulerSettings } from '../../../../features/settings/model/reviewSchedulerSettings';
 import { exchangeBodySyncOverHttp } from '../../../../test/bodySyncHttp.testSupport';
 import { connectCompanionPeer } from '../../../../test/companionDailySync.testSupport';
@@ -36,8 +36,9 @@ it.each([
     const expected = createSyncGroupDeviceIdentity({ device_anchor: mobile.anchor, group_id: 'group',
       library_path: file, path_flavor: flavor });
     expect(mobile.id).toBe(expected.identity_key);
-    expect(mobile.db.prepare('SELECT canonical_library_path FROM sync_group_devices WHERE device_identity_key=?')
-      .get(mobile.id)).toEqual({ canonical_library_path: expected.canonical_library_path });
+    const stored = mobile.db.prepare('SELECT canonical_library_path FROM sync_group_devices WHERE device_identity_key=?')
+      .get(mobile.id) as { canonical_library_path: string };
+    expect(canonicalizeLibraryPath(stored.canonical_library_path, flavor)).toBe(expected.canonical_library_path);
   } finally { await library.close(); await closeLibraries(); }
 });
 
