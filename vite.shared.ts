@@ -13,6 +13,7 @@ const WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = 'virtual:workspace-change-timestamp
 const RESOLVED_WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID = `\0${WORKSPACE_CHANGE_TIMESTAMP_MODULE_ID}`;
 const WORKSPACE_TIMESTAMP_ROOTS = ['src', 'electron'];
 const WORKSPACE_TIMESTAMP_INCLUDE_EXTENSIONS = new Set(['.css', '.js', '.jsx', '.mjs', '.mts', '.scss', '.ts', '.tsx']);
+const GENERATED_WORKSPACE_DIRECTORIES = new Set(['.tmp', '.lab', '.cache']);
 const RUNTIME_RENDERER_INDEX_WATCH_IGNORE = '**/.tmp/electron-user-data*/runtime-renderer-index.html';
 export const DESKTOP_RENDERER_WARMUP_FILES = [
   './src/main.tsx',
@@ -185,7 +186,12 @@ export function createSharedViteConfig(projectRoot: string, options: SharedViteC
       port: resolveDevPort(),
       strictPort: true,
       watch: {
-        ignored: [RUNTIME_RENDERER_INDEX_WATCH_IGNORE]
+        ignored: [
+          RUNTIME_RENDERER_INDEX_WATCH_IGNORE,
+          (filePath: string) => GENERATED_WORKSPACE_DIRECTORIES.has(
+            path.relative(projectRoot, filePath).split(path.sep)[0] ?? ''
+          )
+        ]
       },
       ...(options.warmupClientFiles ? { warmup: { clientFiles: options.warmupClientFiles } } : {})
     },
