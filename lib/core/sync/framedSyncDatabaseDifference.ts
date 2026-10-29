@@ -1,4 +1,4 @@
-import { compareFramedSyncInventories, iterateFramedSyncInventoryDifferences, type FramedSyncInventoryDifference } from './framedSyncInventory.js';
+import { compareFramedSyncInventories, iterateFramedSyncInventoryDifferences, type FramedSyncInventoryDifference, type FramedSyncInventoryObserver } from './framedSyncInventory.js';
 
 /** Complete database facts independently of file availability in the resource phase. */
 export function compareFramedSyncDatabaseInventories(
@@ -12,8 +12,8 @@ export function hasFramedSyncDatabaseDifference(inventories: Parameters<typeof c
   return false;
 }
 
-export function* iterateFramedSyncDatabaseDifferences(inventories: Parameters<typeof compareFramedSyncInventories>[0]): Generator<FramedSyncInventoryDifference> {
-  for (const difference of iterateFramedSyncInventoryDifferences(inventories)) {
+export function* iterateFramedSyncDatabaseDifferences(inventories: Parameters<typeof compareFramedSyncInventories>[0], observe?: FramedSyncInventoryObserver): Generator<FramedSyncInventoryDifference> {
+  for (const difference of iterateFramedSyncInventoryDifferences(inventories, observe)) {
     const need = { ...difference.need, resourceHashes: [] };
     if (need.sharedState || need.frontierFactIds.length || need.requiredRelationIds.length ||
         need.reviewFactIds.length || need.stateFactIds?.length) yield { ...difference, need };

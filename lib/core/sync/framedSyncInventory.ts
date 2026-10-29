@@ -1,6 +1,7 @@
 import { bytesToHex } from '@noble/hashes/utils.js';
 
 import { assertFramedSyncDigest } from './framedSyncContract.js';
+import { sameFramedSyncInventoryEntry } from './framedSyncInventoryEntryEquality.js';
 import { changedNodeVersionIds, missingNodeRelationIds, needsNodeCurrentReference } from './framedSyncNodeInventoryState.js';
 import { compareSyncFactText } from './syncFactKeyOrder.js';
 
@@ -82,10 +83,13 @@ function assertEntry(entry: FramedSyncInventoryEntry) {
   if (new Set(hashes).size !== hashes.length) throw new Error('resource_hash_duplicate');
 }
 
-function assertInventory(entries: readonly FramedSyncInventoryEntry[]) {
+export type FramedSyncInventoryObserver = (entry: FramedSyncInventoryEntry, side: keyof Inventories, index: number) => void;
+
+function assertInventory(entries: readonly FramedSyncInventoryEntry[], observe?: (entry: FramedSyncInventoryEntry, index: number) => void) {
   let previous: FramedSyncInventoryEntry | undefined;
-  for (const entry of entries) {
+  for (const [index, entry] of entries.entries()) {
     assertEntry(entry);
+    observe?.(entry, index);
     if (previous && compareKey(previous, entry) >= 0) {
       throw new Error('framed_sync_inventory_order_invalid');
     }
@@ -170,9 +174,9 @@ export function compareFramedSyncInventories(args: Inventories): FramedSyncInven
   return Array.from(iterateFramedSyncInventoryDifferences(args));
 }
 
-export function* iterateFramedSyncInventoryDifferences(args: Inventories): Generator<FramedSyncInventoryDifference> {
-  assertInventory(args.local);
-  assertInventory(args.remote);
+export function* iterateFramedSyncInventoryDifferences(args: Inventories, observe?: FramedSyncInventoryObserver): Generator<FramedSyncInventoryDifference> {
+  assertInventory(args.local, (entry, index) => observe?.(entry, 'local', index));
+  assertInventory(args.remote, (entry, index) => observe?.(entry, 'remote', index));
   let localIndex = 0;
   let remoteIndex = 0;
   while (localIndex < args.local.length || remoteIndex < args.remote.length) {
@@ -203,31 +207,6 @@ function inventoryMap(entries: readonly FramedSyncInventoryEntry[]) {
   return result;
 }
 
-function sameStrings(left: readonly string[], right: readonly string[]) {
-  if (left.length !== right.length) return false;
-  const values = new Set(right);
-  return left.every((value) => values.has(value));
-}
-
-function sameHashes(left: readonly Uint8Array[], right: readonly Uint8Array[]) {
-  if (left.length !== right.length) return false;
-  const values = new Set(right.map(bytesKey));
-  return left.every((value) => values.has(bytesKey(value)));
-}
-
-function sameEntry(left: FramedSyncInventoryEntry, right: FramedSyncInventoryEntry) {
-  return compareKey(left, right) === 0 && sameBytes(left.sharedStateHash, right.sharedStateHash) &&
-    sameStrings(left.dailyFlowNodeIds ?? [], right.dailyFlowNodeIds ?? []) &&
-    left.dailyFlowComplete === right.dailyFlowComplete && left.dailyFlowCurrent === right.dailyFlowCurrent &&
-    left.currentVersionId === right.currentVersionId && Boolean(left.unready) === Boolean(right.unready) &&
-    sameStrings(left.versionStates ?? [], right.versionStates ?? []) &&
-    sameStrings(left.frontierFactIds, right.frontierFactIds) &&
-    sameStrings(left.requiredRelationIds, right.requiredRelationIds) &&
-    sameStrings(left.reviewFactIds, right.reviewFactIds) &&
-    sameStrings(left.stateFactIds ?? [], right.stateFactIds ?? []) &&
-    sameHashes(left.resourceHashes, right.resourceHashes);
-}
-
 export function revalidateFramedSyncInventorySource(args: {
   currentSource: readonly FramedSyncInventoryEntry[];
   direction: FramedSyncInventoryDifference['direction'];
@@ -239,7 +218,7 @@ export function revalidateFramedSyncInventorySource(args: {
   for (const difference of args.differences) {
     if (difference.direction !== args.direction) continue;
     const current = currentSource.get(difference.objectType)?.get(difference.globalId);
-    if (current && sameEntry(current, difference.sourceSnapshot)) {
+    if (current && sameFramedSyncInventoryEntry(current, difference.sourceSnapshot)) {
       readyDifferences.push(difference);
     } else {
       const key = JSON.stringify([difference.objectType, difference.globalId]);

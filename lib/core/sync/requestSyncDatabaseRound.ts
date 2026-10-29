@@ -1,10 +1,10 @@
-import { compareFramedSyncDatabaseInventories, unreadyFramedSyncDatabaseObjectCount } from './framedSyncDatabaseDifference.js';
 import type { FramedSyncInventoryDifference, FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { createFramedSyncInventoryDependencyLookup } from './framedSyncInventoryDependencyLookup.js';
 import { deliverFramedSyncDifferencesInDependencyOrder, readFramedSyncMissingDependency } from './framedSyncInventoryRoundDelivery.js';
 import { REQUEST_SYNC_BATCH_OBJECTS, type RequestSyncObjectResult } from './requestSyncBatchContract.js';
 import { hasConfirmedRequestSyncCommit } from './requestSyncCommittedProgress.js';
 import { dailyFlowPriorityDifferences } from './requestSyncDailyFlowPriority.js';
+import { analyzeRequestSyncInventories, type RequestSyncInventoryAnalysis } from './requestSyncInventoryAnalysis.js';
 
 export type RequestSyncInventories = {
   local: readonly FramedSyncInventoryEntry[];
@@ -30,8 +30,9 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
   // Watch from before each inventory read: an edit committed after the read is missing from it and must still yield.
   let localChanged = port.watchLocalChanges?.();
   let inventories = await port.exchangeInventory();
+  let analysis = analyzeRequestSyncInventories(inventories);
   let transferred = 0;
-  const initialPending = pendingObjects(inventories);
+  const initialPending = analysis.pending;
   let sourceChanged = Boolean(inventories.inventoryDeferred);
   let committed = false;
   const result = (pending: number) => ({ complete: pending === 0, pending, transferred,
@@ -41,44 +42,47 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
   let prioritize = true;
   for (let pass = 0; pass < REQUEST_SYNC_MAX_PASSES; pass++) {
     signal?.throwIfAborted();
-    const all = compareFramedSyncDatabaseInventories(inventories);
+    const all = analysis.differences;
     const priority = prioritize ? dailyFlowPriorityDifferences(inventories, all) : [];
     const differences = priority.length ? priority : all;
     if (!differences.length && !inventories.inventoryDeferred) {
-      const pending = pendingObjects(inventories);
-      return result(pending);
+      return result(analysis.pending);
     }
     const round = await deliverRequestSyncDatabaseDifferences(port, inventories, differences, signal, localChanged);
     transferred += round.delivered.length;
     yielded = round.yielded;
     localChanged = port.watchLocalChanges?.();
     const next = await port.exchangeInventory();
+    const nextAnalysis = analyzeRequestSyncInventories(next, inventories);
     sourceChanged ||= round.sourceChanged || Boolean(next.inventoryDeferred);
     committed ||= hasConfirmedRequestSyncCommit(inventories, next, round.delivered);
-    if (JSON.stringify(next.local) === JSON.stringify(inventories.local) &&
-        JSON.stringify(next.remote) === JSON.stringify(inventories.remote) &&
+    if (nextAnalysis.stateUnchanged &&
         !next.inventoryDeferred && !inventories.inventoryDeferred) {
       if (priority.length && priority.length < all.length) {
-        prioritize = false; inventories = next; continue;
+        prioritize = false;
+        inventories = next;
+        analysis = nextAnalysis;
+        continue;
       }
-      const pending = Math.max(pendingObjects(next), round.deferred.length);
+      const pending = Math.max(nextAnalysis.pending, round.deferred.length);
       return result(pending);
     }
     prioritize = true;
     inventories = next;
+    analysis = nextAnalysis;
   }
-  const sent = yielded ? await sendLocalChanges(port, inventories, signal) : null;
+  const sent = yielded ? await sendLocalChanges(port, inventories, analysis, signal) : null;
   if (sent) {
     transferred += sent.delivered.length;
-    return result(Math.max(pendingObjects(inventories) - sent.delivered.length, sent.deferred.length));
+    return result(Math.max(analysis.pending - sent.delivered.length, sent.deferred.length));
   }
-  const pending = pendingObjects(inventories);
-  return result(pending);
+  return result(analysis.pending);
 }
 
 /** The last pass stopped pulling for a local edit; send it now rather than in the next scheduled round. */
-async function sendLocalChanges(port: RequestSyncDatabaseRoundPort, inventories: RequestSyncInventories, signal?: AbortSignal) {
-  const outgoing = compareFramedSyncDatabaseInventories(inventories)
+async function sendLocalChanges(port: RequestSyncDatabaseRoundPort, inventories: RequestSyncInventories,
+  analysis: RequestSyncInventoryAnalysis, signal?: AbortSignal) {
+  const outgoing = analysis.differences
     .filter(difference => difference.direction === 'local_to_remote');
   return outgoing.length ? deliverRequestSyncDatabaseDifferences(port, inventories, outgoing, signal, () => false) : null;
 }
@@ -161,9 +165,4 @@ function pullBatchSizer(yielding: boolean) {
 
 function key(difference: FramedSyncInventoryDifference) {
   return `${difference.direction}\0${difference.objectType}\0${difference.globalId}`;
-}
-
-function pendingObjects(inventories: RequestSyncInventories) {
-  return (inventories.inventoryDeferred ?? 0) + Math.max(compareFramedSyncDatabaseInventories(inventories).length,
-    unreadyFramedSyncDatabaseObjectCount(inventories));
 }
