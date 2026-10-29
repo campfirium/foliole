@@ -95,6 +95,7 @@ enum FolioleFramedSyncPayloadValidator {
             try stringList(entry.reviewFactIds, "reviewFactIds")
             try stringList(entry.stateFactIds, "stateFactIds")
             try stringList(entry.versionStates, "versionStates")
+            try stringList(entry.dailyFlowNodeIds, "dailyFlowNodeIds")
             try digestList(entry.resourceHashes, "resource_hash", FolioleFramedSyncLimits.maxBlobsPerTransfer)
             keys.append("\(entry.objectType)\0\(entry.globalID)")
         }

@@ -108,8 +108,8 @@
       "payload_case": "inventory_begin"
     },
     {
-      "base64": "IocBChAAESIzRFVmd4iZqrvM3e7/EAEacQoEbm9kZRIGbm9kZS0xGiAiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIJdmVyc2lvbi03KghwYXJlbnQtMTIIcmV2aWV3LTE6IDMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz",
-      "byte_length": 138,
+      "base64": "ItMBChAAESIzRFVmd4iZqrvM3e7/EAEacQoEbm9kZRIGbm9kZS0xGiAiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIJdmVyc2lvbi03KghwYXJlbnQtMTIIcmV2aWV3LTE6IDMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzGkoKCmRhaWx5X2Zsb3cSBmxpc3QtYRogIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiJgAWoGbGlzdC1hcAF6Bm5vZGUtMQ==",
+      "byte_length": 214,
       "name": "inventory-chunk",
       "payload_case": "inventory_chunk"
     },
@@ -229,5 +229,5 @@
     }
   ],
   "protocol_version": 28,
-  "schema_sha256": "338ae595680a65c764dc8558e3ef78d58a2c844ac4128c620cbceb1b7f773f16"
+  "schema_sha256": "52b3a87fed6efd7545b0e446654269dda6f74cfcf451d6e5828ffa816c4bbd8d"
 }

@@ -1,13 +1,13 @@
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 
-const FIELDS = ['frontierFactIds', 'requiredRelationIds', 'reviewFactIds', 'resourceHashes', 'stateFactIds', 'versionStates'] as const;
+const FIELDS = ['frontierFactIds', 'requiredRelationIds', 'reviewFactIds', 'resourceHashes', 'stateFactIds', 'versionStates', 'dailyFlowNodeIds'] as const;
 const encoder = new TextEncoder();
 const PART_BYTES = 384 * 1024;
 
 /** Lists are divided into bounded pieces; a single object's metadata has no session-size ceiling. */
 export function* requestSyncInventoryParts(entry: FramedSyncInventoryEntry): Generator<FramedSyncInventoryEntry> {
   const empty = () => ({ ...entry, frontierFactIds: [] as string[], requiredRelationIds: [] as string[],
-    reviewFactIds: [] as string[], resourceHashes: [] as Uint8Array[], stateFactIds: [] as string[], versionStates: [] as string[] });
+    reviewFactIds: [] as string[], resourceHashes: [] as Uint8Array[], stateFactIds: [] as string[], versionStates: [] as string[], dailyFlowNodeIds: [] as string[] });
   let part = empty();
   let size = 0;
   let items = 0;

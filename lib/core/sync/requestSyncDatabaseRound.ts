@@ -4,6 +4,7 @@ import { createFramedSyncInventoryDependencyLookup } from './framedSyncInventory
 import { deliverFramedSyncDifferencesInDependencyOrder, readFramedSyncMissingDependency } from './framedSyncInventoryRoundDelivery.js';
 import { REQUEST_SYNC_BATCH_OBJECTS, type RequestSyncObjectResult } from './requestSyncBatchContract.js';
 import { hasConfirmedRequestSyncCommit } from './requestSyncCommittedProgress.js';
+import { dailyFlowPriorityDifferences } from './requestSyncDailyFlowPriority.js';
 
 export type RequestSyncInventories = {
   local: readonly FramedSyncInventoryEntry[];
@@ -37,9 +38,12 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
     madeProgress: pending < initialPending,
     ...(pending > 0 && pending >= initialPending && sourceChanged && committed ? { dynamicBacklog: true as const } : {}) });
   let yielded = false;
+  let prioritize = true;
   for (let pass = 0; pass < REQUEST_SYNC_MAX_PASSES; pass++) {
     signal?.throwIfAborted();
-    const differences = compareFramedSyncDatabaseInventories(inventories);
+    const all = compareFramedSyncDatabaseInventories(inventories);
+    const priority = prioritize ? dailyFlowPriorityDifferences(inventories, all) : [];
+    const differences = priority.length ? priority : all;
     if (!differences.length && !inventories.inventoryDeferred) {
       const pending = pendingObjects(inventories);
       return result(pending);
@@ -54,9 +58,13 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
     if (JSON.stringify(next.local) === JSON.stringify(inventories.local) &&
         JSON.stringify(next.remote) === JSON.stringify(inventories.remote) &&
         !next.inventoryDeferred && !inventories.inventoryDeferred) {
+      if (priority.length && priority.length < all.length) {
+        prioritize = false; inventories = next; continue;
+      }
       const pending = Math.max(pendingObjects(next), round.deferred.length);
       return result(pending);
     }
+    prioritize = true;
     inventories = next;
   }
   const sent = yielded ? await sendLocalChanges(port, inventories, signal) : null;

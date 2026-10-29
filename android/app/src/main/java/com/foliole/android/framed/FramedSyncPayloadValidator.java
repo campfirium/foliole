@@ -159,6 +159,7 @@ final class FramedSyncPayloadValidator {
             stringList(entry.getReviewFactIdsList(), "reviewFactIds");
             stringList(entry.getStateFactIdsList(), "stateFactIds");
             stringList(entry.getVersionStatesList(), "versionStates");
+            stringList(entry.getDailyFlowNodeIdsList(), "dailyFlowNodeIds");
             digestList(entry.getResourceHashesList(), "resource_hash", FramedSyncContract.MAX_BLOBS_PER_TRANSFER);
             keys.add(entry.getObjectType() + "\0" + entry.getGlobalId());
         }

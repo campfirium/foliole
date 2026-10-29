@@ -286,6 +286,12 @@
                       "id": 14,
                       "protoName": "daily_flow_current"
                     },
+                    "dailyFlowNodeIds": {
+                      "rule": "repeated",
+                      "type": "string",
+                      "id": 15,
+                      "protoName": "daily_flow_node_ids"
+                    },
                     "currentVersionId": {
                       "type": "string",
                       "id": 10,

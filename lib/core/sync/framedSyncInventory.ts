@@ -19,6 +19,7 @@ export type FramedSyncInventoryEntry = Readonly<{
   dailyFlowComplete?: boolean;
   dailyFlowRootId?: string;
   dailyFlowCurrent?: boolean;
+  dailyFlowNodeIds?: readonly string[];
 }>;
 
 export type FramedSyncInventoryNeed = Readonly<{
@@ -131,6 +132,7 @@ function cloneEntry(entry: FramedSyncInventoryEntry): FramedSyncInventoryEntry {
   return {
     ...entry,
     frontierFactIds: [...entry.frontierFactIds],
+    ...(entry.dailyFlowNodeIds ? { dailyFlowNodeIds: [...entry.dailyFlowNodeIds] } : {}),
     globalId: entry.globalId,
     objectType: entry.objectType,
     requiredRelationIds: [...entry.requiredRelationIds],
@@ -215,6 +217,7 @@ function sameHashes(left: readonly Uint8Array[], right: readonly Uint8Array[]) {
 
 function sameEntry(left: FramedSyncInventoryEntry, right: FramedSyncInventoryEntry) {
   return compareKey(left, right) === 0 && sameBytes(left.sharedStateHash, right.sharedStateHash) &&
+    sameStrings(left.dailyFlowNodeIds ?? [], right.dailyFlowNodeIds ?? []) &&
     left.dailyFlowComplete === right.dailyFlowComplete && left.dailyFlowCurrent === right.dailyFlowCurrent &&
     left.currentVersionId === right.currentVersionId && Boolean(left.unready) === Boolean(right.unready) &&
     sameStrings(left.versionStates ?? [], right.versionStates ?? []) &&

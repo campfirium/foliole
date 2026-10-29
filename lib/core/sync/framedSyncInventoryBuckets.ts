@@ -29,7 +29,7 @@ export function summarizeInventoryBuckets(entries: readonly FramedSyncInventoryE
     const resources = entry.objectType === 'external_document'
       ? entry.resourceHashes.map(hash => [...hash]).sort((a, b) => compareSyncFactText(JSON.stringify(a), JSON.stringify(b))) : [];
     buckets[bucket]!.update(encoder.encode(JSON.stringify([key, [...entry.sharedStateHash], facts, resources,
-      ...(entry.dailyFlowRootId ? [entry.dailyFlowRootId, entry.dailyFlowComplete, entry.dailyFlowCurrent] : [])])));
+      ...(entry.dailyFlowRootId ? [entry.dailyFlowRootId, entry.dailyFlowComplete, entry.dailyFlowCurrent, [...entry.dailyFlowNodeIds ?? []].sort(compareSyncFactText)] : [])])));
   }
   const hashes = new Uint8Array(INVENTORY_BUCKET_COUNT * 32);
   buckets.forEach((hash, index) => hashes.set(hash.digest(), index * 32));

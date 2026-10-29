@@ -82,3 +82,13 @@ it('rejects altered bucket summaries against the ending root hash', async () => 
   hashes[0] = 1;
   await expect(decodeRequestSyncInventory(decode(messages))).rejects.toThrow('inventory_exchange_incomplete');
 });
+
+it('carries every required node identity for a 14241-member list through bounded inventory parts', async () => {
+  const dailyFlowNodeIds = Array.from({ length: 14_241 }, (_, index) => `node-${index}`);
+  const current = { ...entry([]), objectType: 'daily_flow', globalId: 'list', dailyFlowRootId: 'list',
+    dailyFlowCurrent: true, dailyFlowComplete: true, dailyFlowNodeIds };
+  const messages = [...iterateRequestSyncInventory({ entries: [current], roundId: new Uint8Array(16) })];
+  expect(messages.length).toBeGreaterThan(3);
+  const result = await decodeRequestSyncInventory(decode(messages));
+  expect(result.entries[0]).toMatchObject({ dailyFlowRootId: 'list', dailyFlowCurrent: true, dailyFlowComplete: true, dailyFlowNodeIds });
+});

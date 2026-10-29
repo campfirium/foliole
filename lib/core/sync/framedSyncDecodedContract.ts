@@ -170,7 +170,7 @@ function validateInventoryEntries(value: unknown) {
     const entry = row(item); text(entry.objectType, 'object_type'); text(entry.globalId, 'global_id');
     digest(entry.sharedStateHash, 'shared_state_hash');
     for (const key of [
-      'frontierFactIds', 'requiredRelationIds', 'reviewFactIds', 'stateFactIds', 'versionStates'
+      'frontierFactIds', 'requiredRelationIds', 'reviewFactIds', 'stateFactIds', 'versionStates', 'dailyFlowNodeIds'
     ]) {
       unique(list(entry[key] ?? [], FRAMED_SYNC_LIMITS.maxInventoryFactIdsPerEntry)
         .map((id) => text(id, key)), key);

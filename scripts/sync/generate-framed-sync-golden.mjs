@@ -136,7 +136,8 @@ function messageCases() {
       frontierFactIds: ['version-7'], globalId: 'node-1', objectType: 'node',
       requiredRelationIds: ['parent-1'], resourceHashes: [blobHash], reviewFactIds: ['review-1'],
       sharedStateHash: contentId
-    }], roundId } }),
+    }, { objectType: 'daily_flow', globalId: 'list-a', sharedStateHash: contentId, dailyFlowRootId: 'list-a',
+      dailyFlowCurrent: true, dailyFlowComplete: true, dailyFlowNodeIds: ['node-1'] }], roundId } }),
     encodeCase('inventory-end', { inventoryEnd: { inventoryHash: contentId, roundId } }),
     encodeCase('difference-request', { differenceRequest: {
       blobHashes: [blobHash], facts: [identity], roundId,

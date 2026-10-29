@@ -77,6 +77,7 @@ message InventoryEntry {
   bool daily_flow_complete = 12;
   string daily_flow_root_id = 13;
   bool daily_flow_current = 14;
+  repeated string daily_flow_node_ids = 15;
   string current_version_id = 10;
   bool unready = 11;
 }
