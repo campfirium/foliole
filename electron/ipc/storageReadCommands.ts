@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { loadWorkspaceListProjection } from '../../lib/core/database/workspaceListProjection.js';
+import { readWorkspaceNodeLearning } from '../../lib/core/database/workspaceNodeLearning.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { foregroundTimeHistoryArgsSchema } from '../../lib/platform/nativeForegroundTimeContract.js';
 import { currentLibraryScope } from '../database/attachmentResourceDescription.js';
@@ -46,11 +47,17 @@ function readCalendar(args: Record<string, unknown>) {
     now: z.string().datetime().parse(args.now) });
 }
 
+function readNodeLearning(args: Record<string, unknown>) {
+  if (asString(args.libraryScope, 'libraryScope') !== currentLibraryScope()) throw new Error('workspace_learning_library_changed');
+  return readWorkspaceNodeLearning(openDatabaseConnection().driver, asStringArray(args.nodeIds, 'nodeIds'));
+}
+
 export function handleWorkspaceReadCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadForegroundTimeHistory) {
     return loadForegroundTimeHistory(foregroundTimeHistoryArgsSchema.parse(args));
   }
   if (command === NATIVE_COMMANDS.loadReviewCalendarHistory) return readCalendar(args);
+  if (command === NATIVE_COMMANDS.loadNodeLearning) return readNodeLearning(args);
   if (command === NATIVE_COMMANDS.loadWorkspaceSnapshot) {
     return loadWorkspaceSnapshot();
   }

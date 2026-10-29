@@ -4,8 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { hashTextBody } from '../../lib/core/database/textBodyHash';
 import { applyCompanionSyncObjects } from '../shared/platform/companionSyncObjects';
 import { toReadingPayload } from '../shared/platform/companionSyncStateWriters';
-
-import { ARTICLE_NOW, nativeArticleFixture } from './useCompanionArticleSurfaceNative.testSupport';
+import { ARTICLE_NOW, nativeArticleFixture } from '../test/useCompanionArticleSurfaceNative.testSupport';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');

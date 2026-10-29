@@ -96,6 +96,10 @@ export type NativeCommandMap = NativeDailyFlowCommandMap & NativeReviewTrainingC
     args: NativeReviewPreviewArgs;
     result: NativeReviewPreviewResult;
   };
+  [NATIVE_COMMANDS.loadNodeLearning]: {
+    args: { nodeIds: string[]; libraryScope: string };
+    result: import('../core/database/workspaceNodeLearning.js').WorkspaceNodeLearning[];
+  };
   [NATIVE_COMMANDS.loadWorkspaceListProjection]: {
     args: { nodeIds: string[]; ancestorNodeIds?: string[]; structure: boolean; libraryScope: string };
     result: WorkspaceListProjection;

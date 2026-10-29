@@ -7,6 +7,8 @@ import { afterEach, beforeEach, expect, vi } from 'vitest';
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview';
+import { useDailyFlowSurface } from '../companion/companionFlowDay.testSupport';
+import { createCompanionArticleSnapshot } from '../companion/useCompanionArticleSurfaceTestSupport';
 import { hydrateCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { registerCompanionSyncAppliedRefresh } from '../shared/platform/companion/companionWorkspaceSnapshotStore';
@@ -17,8 +19,6 @@ import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime
 import { applyCompanionSyncNodeVersions } from '../shared/platform/companionSyncNodeVersions';
 import { runCompanionSyncWriterTask } from '../shared/platform/companionSyncWriterQueue';
 
-import { useDailyFlowSurface } from './companionFlowDay.testSupport';
-import { createCompanionArticleSnapshot } from './useCompanionArticleSurfaceTestSupport';
 
 export const ARTICLE_NOW = '2026-04-25T09:00:00.000Z';
 export type ArticleNode = WorkspaceSnapshot['nodesById'][string];

@@ -210,6 +210,7 @@ export const NATIVE_COMMANDS = {
   saveReviewSchedulerSettings: 'save_review_scheduler_settings',
   loadReadingProgress: 'load_reading_progress',
   loadReviewCalendarHistory: 'load_review_calendar_history',
+  loadNodeLearning: 'load_node_learning',
   loadForegroundTimeHistory: 'load_foreground_time_history',
   saveReadingProgress: 'save_reading_progress',
   saveNodeOpenState: 'save_node_open_state',

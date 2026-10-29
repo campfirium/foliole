@@ -84,10 +84,11 @@ function resolveKind(node: Node) {
 
 export function resolveSchedulingPanelData(args: {
   activeNodeId: string;
+  node?: Node;
   nodesById: Record<string, Node>;
   reviewSchedulerSettings: ReviewSchedulerSettings;
 }): SchedulingPanelData | null {
-  const node = args.nodesById[args.activeNodeId];
+  const node = args.node ?? args.nodesById[args.activeNodeId];
   if (!node) return null;
   const now = Date.now();
   const priority = resolveNodePrioritySetting(

@@ -7,8 +7,8 @@ import { toNodeReviewProfile } from '../features/review/model/reviewTypes';
 import { getCurrentReviewSchedulerSettings, getReviewSchedulerVersion } from '../features/settings/model/reviewSchedulerSettings';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { applyCompanionSyncReviewLog } from '../shared/platform/companionSyncObjects';
+import { ARTICLE_NOW, nativeArticleFixture } from '../test/useCompanionArticleSurfaceNative.testSupport';
 
-import { ARTICLE_NOW, nativeArticleFixture } from './useCompanionArticleSurfaceNative.testSupport';
 import { createCompanionArticleSnapshot } from './useCompanionArticleSurfaceTestSupport';
 
 vi.mock('@capacitor/core', async () => {

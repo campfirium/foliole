@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { getCompanionReadIntents } from '../shared/platform/companion/runtime/companionReadIntents';
 import { saveCompanionSyncNodeReadingRecord } from '../shared/platform/companionSyncObjects';
+import { nativeArticleFixture } from '../test/useCompanionArticleSurfaceNative.testSupport';
 
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
-import { nativeArticleFixture } from './useCompanionArticleSurfaceNative.testSupport';
 import { createCompanionArticleSnapshot, createFloatingBar, createUnpairedWorkspaceSync,
   createWorkspaceSync } from './useCompanionArticleSurfaceTestSupport';
 

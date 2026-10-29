@@ -4,6 +4,7 @@ import type { Node, NodeReadingProfile } from '../../features/nodes/model/nodeTy
 import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
 import { cn } from '../../shared/lib/utils';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
+import { useWorkspaceNodeLearning } from '../../shared/platform/runtime/useWorkspaceNodeLearning';
 import {
   inspectorDefinitionListClassName,
   inspectorDefinitionTermClassName,
@@ -14,6 +15,7 @@ import {
   inspectorListTopDividerClassName,
   inspectorListTitleClassName
 } from '../../shared/ui';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import {
   formatDateTime,
@@ -163,12 +165,16 @@ function DevPanelContent({ data, t }: { data: SchedulingPanelData; t: Scheduling
 
 export function WorkspaceRightSidebarDevPanel(props: WorkspaceRightSidebarDevPanelProps) {
   const t = useTranslation();
+  const libraryScope = useWorkspaceStore(state => state.libraryScope);
+  const node = useWorkspaceNodeLearning(props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined, libraryScope);
   const { reviewSchedulerSettings } = useReviewSchedulerSettings();
   if (!props.activeNodeId) {
     return <EmptyDevPanelState t={t} />;
   }
 
+  if (!node) return null;
   const data = resolveSchedulingPanelData({
+    node,
     activeNodeId: props.activeNodeId,
     nodesById: props.nodesById,
     reviewSchedulerSettings
