@@ -1,6 +1,11 @@
 import { controlledFlowSqliteTests } from './native-sqlite-flow-tests.mjs';
 
 export const controlledSyncSqliteTests = [
+  'lib/core/attachments/attachmentReferenceCache.integration.test.ts',
+  'lib/core/database/attachmentReferenceCacheMigration.integration.test.ts',
+  'electron/attachments/attachmentReferenceWorker.integration.test.ts',
+  'electron/attachments/attachmentReferenceSync.integration.test.ts',
+  'src/shared/platform/companion/runtime/companionAttachmentObservation.integration.test.ts',
   ...controlledFlowSqliteTests,
   'src/companion/companionTrashSubtree.sync.integration.test.ts',
   'src/store/workspaceEntireTopicDismiss.sync.integration.test.ts',

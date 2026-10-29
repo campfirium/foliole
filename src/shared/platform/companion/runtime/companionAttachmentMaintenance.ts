@@ -1,4 +1,5 @@
 import { maintainAttachments } from '../../../../../lib/core/attachments/attachmentMaintenance';
+import { requeueMissingObservedAttachments } from '../../../../../lib/core/attachments/attachmentReferenceCache';
 import { attachmentDatabaseRevision } from '../../../../../lib/core/attachments/attachmentReferenceSnapshot';
 import { recordFramedSyncResourceAvailability } from '../../../../../lib/core/database/framedSyncResourceAvailability.js';
 import { requeueMissingAttachmentArticles } from '../../../../../lib/core/sync/attachmentDemandQueue.js';
@@ -8,6 +9,7 @@ import type { AttachmentMaintenanceRequest, AttachmentObservationState } from '.
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 
 import type { CapacitorCompanionDatabaseOwner } from './capacitorCompanionDatabaseOwner';
+import { readCompanionObservationReferences } from './companionAttachmentObservation';
 import { readCompanionAttachmentReferences } from './companionAttachmentReferenceSnapshot';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
@@ -36,15 +38,18 @@ function maintain(owner: CapacitorCompanionDatabaseOwner, request: AttachmentMai
     };
     const now = new Date();
     const day = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
-    return maintainAttachments({
-      generation: async () => {
+    const generation = async () => {
+        if (getIosCompanionDatabaseOwner() !== owner) throw new Error('attachment_scan_database_replaced');
         const result = await files({ operation: 'generation', databasePath: owner.databasePath });
         if (!result.generation) throw new Error('attachment_database_generation_missing');
         return result.generation;
-      },
+    };
+    return maintainAttachments({
+      generation,
       references: async () => {
-        const snapshot = await readCompanionAttachmentReferences(owner, signal);
-        expectedRevision = snapshot.revision;
+        const snapshot = await (request.action === 'observe'
+          ? readCompanionObservationReferences(owner, generation, signal) : readCompanionAttachmentReferences(owner, signal));
+        expectedRevision = snapshot?.revision;
         return snapshot;
       },
       inventory: async (trash) => {
@@ -71,7 +76,7 @@ function maintain(owner: CapacitorCompanionDatabaseOwner, request: AttachmentMai
         } finally { activeDb = undefined; }
       })),
       move: (storageKey, trash) => updateAvailability('move', storageKey, trash),
-      requestMissing: (storageKeys) => write(db => requeueMissingAttachmentArticles(db, storageKeys)),
+      requestMissing: (storageKeys) => write(db => (request.action === 'observe' ? requeueMissingObservedAttachments : requeueMissingAttachmentArticles)(db, storageKeys)),
       removeTrash: (storageKey) => updateAvailability('remove-trash', storageKey)
     }, request, day, signal);
 }

@@ -1,11 +1,25 @@
 // @vitest-environment node
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
 import type { AttachmentObservationState } from '../../../../../lib/platform/attachmentMaintenanceContract';
 import { createDisplayLibrary } from '../sync/workspace-state/companionDisplaySnapshotConcurrency.testSupport';
 
 import type { CapacitorCompanionDatabaseOwner } from './capacitorCompanionDatabaseOwner';
 import { runCompanionAttachmentMaintenance } from './companionAttachmentMaintenance';
+import { installCompanionAttachmentTestWorker } from './companionAttachmentWorker.testSupport';
+
+let worker: ReturnType<typeof installCompanionAttachmentTestWorker>;
+beforeEach(() => { worker = installCompanionAttachmentTestWorker(); });
+afterEach(() => worker.close());
+const parsing = vi.hoisted(() => ({ calls: 0 }));
+vi.mock('../../../../../lib/core/import/replaceArticleImageSource', async importOriginal => {
+  const actual = await importOriginal<typeof import('../../../../../lib/core/import/replaceArticleImageSource')>();
+  return { ...actual, collectArticleImageStorageKeys(content: string) {
+    parsing.calls++;
+    return actual.collectArticleImageStorageKeys(content);
+  } };
+});
 
 const runtime = vi.hoisted(() => ({ owner: null as CapacitorCompanionDatabaseOwner | null,
   files: vi.fn() }));
@@ -86,11 +100,33 @@ it('queues the live article again when a referenced file is missing from the inv
     await library.owner.open({ expectedHostName: 'fixture', now: '2026-10-19T00:00:00.000Z' });
     await library.owner.runWriter(async db => {
       await db.run(`INSERT INTO nodes (id,title,content,created_at,updated_at) VALUES ('live','Live','![image](asset://${key})','now','now')`);
+      await db.run("UPDATE nodes SET body_blob_hash=? WHERE id='live'", [hashTextBody(`![image](asset://${key})`)]);
       await db.run('DELETE FROM attachment_parse_queue');
     });
     await runCompanionAttachmentMaintenance({ action: 'observe' });
     expect(await library.owner.read(db => db.query('SELECT article_id FROM attachment_parse_queue'))).toEqual([{ article_id: 'live' }]);
     expect(await library.owner.read(db => db.query('SELECT available FROM framed_sync_resource_availability WHERE hash = ?',
       [key.slice(0, 64)]))).toEqual([{ available: 0 }]);
+  } finally { await library.close(); }
+});
+
+it('reuses unchanged current bodies without parsing them on the UI thread', async () => {
+  const library = createDisplayLibrary('ios');
+  runtime.owner = library.owner;
+  runtime.files.mockImplementation(async ({ operation }) => {
+    if (operation === 'generation') return { generation: 'fixture' };
+    if (operation === 'inventory') return { files: [] };
+    return {};
+  });
+  try {
+    await library.owner.open({ expectedHostName: 'fixture', now: '2026-10-19T00:00:00Z' });
+    await library.owner.runWriter(db => db.run(`INSERT INTO nodes(id,title,content,body_blob_hash,created_at,updated_at)
+      VALUES ('unchanged','Unchanged','Article body',?,'now','now')`, [hashTextBody('Article body')]));
+    await runCompanionAttachmentMaintenance({ action: 'observe' });
+    parsing.calls = 0;
+    worker.monitor.parsed = 0;
+    expect(await runCompanionAttachmentMaintenance({ action: 'observe' })).toMatchObject({ observationComplete: true });
+    expect(parsing.calls).toBe(0);
+    expect(worker.monitor.parsed).toBe(0);
   } finally { await library.close(); }
 });

@@ -42,3 +42,17 @@ it('retries incomplete observations after idle and marks only complete results a
   expect(runAttachmentMaintenance).toHaveBeenCalledTimes(2);
   hook.unmount();
 });
+
+it('retries an internally cancelled reader without marking the day complete', async () => {
+  vi.useFakeTimers();
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  vi.mocked(runAttachmentMaintenance).mockRejectedValueOnce(new Error('attachment_scan_foreground_write'))
+    .mockResolvedValue({ observationComplete: true } as never);
+  const hook = renderHook(() => useAttachmentObservation(true));
+  try {
+    await act(() => vi.advanceTimersByTimeAsync(60000));
+    await act(() => vi.advanceTimersByTimeAsync(60000));
+    expect(runAttachmentMaintenance).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(runAttachmentMaintenance).mock.calls[0]?.[1]?.aborted).toBe(false);
+  } finally { hook.unmount(); warning.mockRestore(); }
+});
