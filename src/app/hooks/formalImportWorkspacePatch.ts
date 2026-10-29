@@ -51,6 +51,9 @@ export function applyImportWorkspacePatch(importId: string | null | undefined, p
   if (!importId || !patch) {
     return false;
   }
+  if (appliedImportPatchIds.has(importId)) {
+    return true;
+  }
   useWorkspaceStore.setState((state) => {
     const workspacePatch = createWorkspaceNodeMutationPatch(state, patch);
     const nextState = { ...state, ...workspacePatch };

@@ -58,3 +58,28 @@ it('refreshes a patchless import completion only once across repeated delivery',
   expect(refreshWorkspaceState).toHaveBeenCalledTimes(1);
   expect(refreshOverview).toHaveBeenCalledTimes(2);
 });
+
+it('does not refresh for cancellation or an import failure and releases the importing state', async () => {
+  const refreshOverview = vi.fn();
+  expect(await runImportFlow(() => Promise.resolve(null), shouldRehydrateWorkspace, refreshOverview)).toBe(false);
+  expect(useFormalImportState.getState().isImporting).toBe(false);
+  expect(await runImportFlow(() => Promise.reject(new Error('Import rejected')), shouldRehydrateWorkspace, refreshOverview)).toBe(false);
+  expect(useFormalImportState.getState()).toMatchObject({
+    isImporting: false, status: { failures: 'Import rejected' }
+  });
+  expect(refreshWorkspaceState).not.toHaveBeenCalled();
+  expect(refreshOverview).not.toHaveBeenCalled();
+});
+
+it('retries a failed completion refresh before publishing successful status', async () => {
+  const result = createResult();
+  const overview = vi.fn().mockResolvedValue(undefined);
+  const applyStatus = vi.fn();
+  refreshWorkspaceState.mockRejectedValueOnce(new Error('Load failed'));
+  expect(await runImportFlow(() => Promise.resolve(result), shouldRehydrateWorkspace, overview, applyStatus)).toBe(false);
+  expect(applyStatus).not.toHaveBeenCalled();
+  expect(await runImportFlow(() => Promise.resolve(result), shouldRehydrateWorkspace, overview, applyStatus)).toBe(true);
+  expect(refreshWorkspaceState).toHaveBeenCalledTimes(2);
+  expect(applyStatus).toHaveBeenCalledOnce();
+  expect(overview).toHaveBeenCalledOnce();
+});

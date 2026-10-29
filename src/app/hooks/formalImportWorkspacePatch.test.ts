@@ -1,6 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { useWorkspaceStore } from '../../store/workspaceStore';
+
 import {
+  applyImportWorkspacePatch,
   refreshImportWorkspaceOnce,
   resetAppliedImportWorkspacePatches
 } from './formalImportWorkspacePatch';
@@ -15,6 +18,27 @@ function createDeferred() {
 
 beforeEach(() => {
   resetAppliedImportWorkspacePatches();
+});
+
+it('applies different completion IDs and allows the same ID after a library reset', () => {
+  const patch = { nodes: [], nodeOrder: ['imported'] };
+  expect(applyImportWorkspacePatch('import-1', patch)).toBe(true);
+  useWorkspaceStore.setState({ nodeOrder: ['later'] });
+  const laterOrder = useWorkspaceStore.getState().nodeOrder;
+  expect(applyImportWorkspacePatch('import-1', patch)).toBe(true);
+  expect(useWorkspaceStore.getState().nodeOrder).toBe(laterOrder);
+  expect(applyImportWorkspacePatch('import-2', patch)).toBe(true);
+  expect(useWorkspaceStore.getState().nodeOrder).toContain('imported');
+  useWorkspaceStore.setState({ nodeOrder: ['new-library'] });
+  resetAppliedImportWorkspacePatches();
+  expect(applyImportWorkspacePatch('import-1', patch)).toBe(true);
+  expect(useWorkspaceStore.getState().nodeOrder).toContain('imported');
+});
+
+it('does not mark an absent patch as applied', () => {
+  expect(applyImportWorkspacePatch('import-1', null)).toBe(false);
+  expect(applyImportWorkspacePatch('import-1', { nodes: [], nodeOrder: ['imported'] })).toBe(true);
+  expect(useWorkspaceStore.getState().nodeOrder).toContain('imported');
 });
 
 it('shares one authoritative refresh between concurrent paths for the same import completion', async () => {
