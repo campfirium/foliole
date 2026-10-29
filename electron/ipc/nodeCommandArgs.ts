@@ -72,8 +72,24 @@ export function parseSoftDeleteNodesArgs(args: Record<string, unknown>): NativeS
 export function parseRestoreNodesArgs(args: Record<string, unknown>): NativeRestoreNodesArgs {
   return {
     nodeIds: asStringArray(args.nodeIds, 'nodeIds'),
+    ...(args.parentOrders !== undefined ? { parentOrders: parseRestoreParentOrders(args.parentOrders) } : {}),
     ...(args.parentUpdates !== undefined ? { parentUpdates: parseParentUpdates(args.parentUpdates) } : {})
   };
+}
+
+function parseRestoreParentOrders(value: unknown): NonNullable<NativeRestoreNodesArgs['parentOrders']> {
+  if (!Array.isArray(value)) throw new Error('invalid argument: parentOrders');
+  const orders = value.map(entry => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new Error('invalid argument: parentOrders');
+    const parentNodeId = asNullableString(entry.parentNodeId, 'parentNodeId');
+    const childIds = asStringArray(entry.childIds, 'childIds');
+    if (parentNodeId === '' || new Set(childIds).size !== childIds.length) throw new Error('invalid argument: parentOrders');
+    const manualChildIds = entry.manualChildIds === undefined ? undefined : asStringArray(entry.manualChildIds, 'manualChildIds');
+    if (manualChildIds && new Set(manualChildIds).size !== manualChildIds.length) throw new Error('invalid argument: manualChildIds');
+    return { parentNodeId, childIds, ...(manualChildIds ? { manualChildIds } : {}) };
+  });
+  if (new Set(orders.map(order => order.parentNodeId)).size !== orders.length) throw new Error('invalid argument: parentOrders');
+  return orders;
 }
 
 export function parseDeleteNodesPermanentlyArgs(args: Record<string, unknown>): DeleteNodesPermanentlyInput {

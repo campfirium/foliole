@@ -84,6 +84,7 @@ export type { NativeMoveNodesArgs, NativeMoveNodesResult, NativeMoveNodePatch } 
 export interface NativeRestoreNodesResult {
   restoredNodeIds: string[];
   nodeOrder?: string[];
+  manualParentOrders?: Array<{ parentNodeId: string; childIds: string[]; updatedAt: string }>;
   skippedConflicts: Array<{
     liveNodeId: string;
     trashNodeId: string;

@@ -14,7 +14,11 @@ export function isRestoreNodesResult(value: unknown): value is WorkspaceRestoreN
     value &&
       typeof value === 'object' &&
       Array.isArray((value as WorkspaceRestoreNodesResult).restoredNodeIds) &&
-      Array.isArray((value as WorkspaceRestoreNodesResult).skippedConflicts)
+      Array.isArray((value as WorkspaceRestoreNodesResult).skippedConflicts) &&
+      (!('nodeOrder' in value) || isStringArray((value as WorkspaceRestoreNodesResult).nodeOrder)) &&
+      (!('manualParentOrders' in value) || (Array.isArray((value as WorkspaceRestoreNodesResult).manualParentOrders) &&
+        (value as WorkspaceRestoreNodesResult).manualParentOrders!.every(order => isObjectRecord(order) &&
+          typeof order.parentNodeId === 'string' && isStringArray(order.childIds) && typeof order.updatedAt === 'string')))
   );
 }
 

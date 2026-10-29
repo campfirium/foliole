@@ -1,3 +1,5 @@
+import type { DeletedChildParentOrder } from '../core/nodes/restoreDeletedChildOrder.js';
+
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type {
   NativeDeleteNodesPermanentlyResult,
@@ -15,6 +17,7 @@ export interface NativeTrashParentUpdate {
 export interface NativeRestoreNodesArgs {
   nodeIds: string[];
   parentUpdates?: NativeTrashParentUpdate[];
+  parentOrders?: DeletedChildParentOrder[];
 }
 
 export interface NativeSoftDeleteNodesArgs extends NativeRestoreNodesArgs {

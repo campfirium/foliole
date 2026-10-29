@@ -1,4 +1,5 @@
 export const controlledVersionSqliteTests = [
+  'src/store/workspaceDeleteHistoryOrder.integration.test.ts',
   'electron/database/textBodyBlobCompanionCollection.integration.test.ts',
   'electron/database/companionNodeVersionLossless.test.ts',
   'electron/database/dynamicNodeVersionChains.integration.test.ts',

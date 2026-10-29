@@ -18,6 +18,24 @@ function expectNoWorkspacePersist(invoke: ReturnType<typeof vi.fn>) {
   expect(invokedCommands).not.toContain('save_workspace_state');
 }
 
+it.each([{ manualParentOrders: null }, { manualParentOrders: {} },
+  { manualParentOrders: [{ parentNodeId: 'p', childIds: 'invalid', updatedAt: 'now' }] },
+  { manualParentOrders: [{ parentNodeId: null, childIds: [], updatedAt: 'now' }] }])(
+  'rejects malformed restored manual orders: %j', ({ manualParentOrders }) => {
+    vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue({
+      restoredNodeIds: ['node-1'], skippedConflicts: [], manualParentOrders
+    }));
+    return expect(syncRestoreNodesToRuntime({ nodeIds: ['node-1'] })).resolves.toBeUndefined();
+  }
+);
+
+it('preserves confirmed parent manual orders in a restore receipt', async () => {
+  const result = { restoredNodeIds: ['node-1'], skippedConflicts: [],
+    manualParentOrders: [{ parentNodeId: 'p', childIds: ['a', 'node-1'], updatedAt: '2026-10-29T00:00:00.000Z' }] };
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue(result));
+  await expect(syncRestoreNodesToRuntime({ nodeIds: ['node-1'] })).resolves.toEqual(result);
+});
+
 describe('workspaceRuntimeSync persistence mutations', () => {
   it('syncs soft delete mutations through soft_delete_nodes command', async () => {
     const invoke = vi.fn().mockResolvedValue({ deletedNodeIds: ['node-1', 'node-2'] });
