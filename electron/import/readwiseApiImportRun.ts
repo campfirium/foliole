@@ -1,32 +1,16 @@
 import { normalizeImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import type { NativeReadwiseImportRunResult } from '../../lib/platform/nativeImportContract.js';
 import type { NativeReadwiseApiRunTrigger } from '../../lib/platform/nativeReadwiseApiImportContract.js';
-import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
-import {
-  loadReadwiseApiCompletedThrough,
-  loadReadwiseApiImportSource
-} from '../database/readwiseApiImportState.js';
-import { readReadwiseApiSourceDisposition } from '../database/readwiseApiSourceDispositions.js';
-import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
-import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
+import { currentLibraryScope } from '../database/attachmentResourceDescription.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
-import { notifyReadwiseReaderImportProgress } from '../ipc/readwiseReaderImportProgressEvents.js';
+import { notifyWorkspaceContentChanged } from '../ipc/workspaceContentChangedEvents.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
 import { ensureReadwiseApiCandidateIndex } from './readwiseApiCandidateFetch.js';
-import { runReadwiseApiCandidatePipeline } from './readwiseApiCandidatePipeline.js';
 import { buildReadwiseApiCandidatePreview } from './readwiseApiCandidatePreview.js';
-import { isReadwiseApiCandidateBlockedByCutover } from './readwiseApiCandidateSkip.js';
-import type { ReadwiseApiCandidate } from './readwiseApiCandidateTypes.js';
+import { assertEligible, requireConnectionRef, runReadwiseApiImportNow } from './readwiseApiImportExecution.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
-import { createCancelledReadwiseApiImportResult } from './readwiseApiImportResults.js';
-import {
-  beginReadwiseApiTrackedRun,
-  completeReadwiseApiTrackedRun,
-  failReadwiseApiTrackedRun,
-  updateReadwiseApiTrackedRunProgress,
-  updateReadwiseApiTrackedRunStage
-} from './readwiseApiScheduleState.js';
 import { assertReadwiseApiScopeAllowed } from './readwiseApiScopeGate.js';
 import { recoverReadwiseCutoverFailures } from './readwiseCutoverRecovery.js';
 import type { ReadwiseImportProgressWindow } from './readwiseReaderRunAccumulator.js';
@@ -74,20 +58,38 @@ async function startImport(input: Parameters<typeof runReadwiseApiImport>[0], si
     loadReadwiseSourceCutover()?.status === 'migration-in-progress'
   ));
   if (migrating) return runMigration(input);
-  const connectionRef = await runWithDatabaseConnectionOwner(requireConnectionRef);
-  await recoverReadwiseCutoverFailures({ connectionRef,
-    dependencies: input?.dependencies ?? {}, assertEligible: () => assertEligible(signal, connectionRef) });
-  return runNow(input, signal);
+  await recoverPendingChanges(input, signal);
+  return runReadwiseApiImportNow(input, signal);
 }
 
-async function runMigration(input: Parameters<typeof runReadwiseApiImport>[0]) {
+async function recoverPendingChanges(input: Parameters<typeof runReadwiseApiImport>[0], signal: AbortSignal) {
+  const { connectionRef, libraryScope } = await runWithDatabaseConnectionOwner(() => ({
+    connectionRef: requireConnectionRef(), libraryScope: currentLibraryScope()
+  }));
+  let recovered = false;
+  try {
+    await recoverReadwiseCutoverFailures({ connectionRef,
+      dependencies: input?.dependencies ?? {}, assertEligible: () => assertEligible(signal, connectionRef),
+      onCommitted: () => { recovered = true; } });
+  } finally {
+    // Recovery is a separate committed batch with an intentionally complete refresh.
+    if (recovered) notifyWorkspaceContentChanged(null, { workspaceScope: { kind: 'full' }, libraryScope });
+  }
+}
+
+async function runMigration(input: Parameters<typeof runReadwiseApiImport>[0]): Promise<NativeReadwiseImportRunResult> {
+  const libraryScope = await runWithDatabaseConnectionOwner(currentLibraryScope);
   const result = await runReadwiseSourceCutover({
     ...(input?.dependencies ? { dependencies: input.dependencies } : {}),
     ...(input?.window ? { window: input.window } : {})
+  }).catch(error => {
+    notifyWorkspaceContentChanged(null, { workspaceScope: { kind: 'full' }, libraryScope });
+    throw error;
   });
   const progress = await previewReadwiseSourceCutover();
   const total = progress.total_count ?? 0;
   return {
+    workspace_scope: { kind: 'full' }, library_scope: libraryScope,
     annotation_count: 0,
     committed_count: progress.completed_count,
     completed_at: new Date().toISOString(),
@@ -109,117 +111,4 @@ export function cancelReadwiseApiImport() {
 
 export function isReadwiseApiImportActive() {
   return activeApiImport !== null;
-}
-
-async function runNow(
-  input: Parameters<typeof runReadwiseApiImport>[0], signal: AbortSignal
-): Promise<NativeReadwiseImportRunResult> {
-  const { connectionRef, settings } = await beginApiImport(input);
-  try {
-    await runWithDatabaseConnectionOwner(() => updateReadwiseApiTrackedRunStage('fetching'));
-    const result = await runReadwiseApiCandidatePipeline({
-      assertEligible: () => assertEligible(signal, connectionRef),
-      connectionRef,
-      dependencies: {
-        ...input?.dependencies,
-        signal,
-        onPage: (page) => publishProgress(input?.window, 0, 0, 'fetching', page.recordCount)
-      },
-      onCandidateCount: updateReadwiseApiTrackedRunProgress,
-      onIndexProgress: (processed) => {
-        updateReadwiseApiTrackedRunProgress(processed, null);
-        publishProgress(input?.window, 0, 0, 'fetching', processed);
-      },
-      onProgress: (processed, total) => {
-        updateReadwiseApiTrackedRunStage('writing');
-        updateReadwiseApiTrackedRunProgress(processed, total);
-        publishProgress(input?.window, processed, total, 'writing');
-      },
-      settings,
-      shouldSkipCandidate: (candidate) => shouldSkipApiDocument(connectionRef, candidate)
-    });
-    await runWithDatabaseConnectionOwner(() => {
-      updateReadwiseApiTrackedRunStage('completion');
-      assertEligible(signal, connectionRef);
-    });
-    const output: NativeReadwiseImportRunResult = {
-      annotation_count: result.annotationCount,
-      committed_count: result.committedCount,
-      completed_at: new Date().toISOString(),
-      entry_count: result.totalCount,
-      failed_count: result.failedCount,
-      imported_count: result.committedCount,
-      remaining_count: result.remainingCount,
-      source_count: result.totalCount,
-      skipped_count: result.skippedCount,
-      status: result.remainingCount > 0 ? 'failed' : 'completed'
-    };
-    await runWithDatabaseConnectionOwner(() => completeReadwiseApiTrackedRun(connectionRef, output));
-    publishProgress(input?.window, result.completedCount, result.totalCount, 'source_completed');
-    return output;
-  } catch (error) {
-    if (signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
-      const result = createCancelledReadwiseApiImportResult();
-      await runWithDatabaseConnectionOwner(() => completeReadwiseApiTrackedRun(connectionRef, result));
-      publishProgress(input?.window, 0, 0, 'source_completed', undefined, 'cancelled');
-      return result;
-    }
-    await runWithDatabaseConnectionOwner(() => failReadwiseApiTrackedRun(connectionRef, error));
-    publishProgress(input?.window, 0, 0, 'source_completed', undefined, 'failed');
-    throw error;
-  }
-}
-
-function beginApiImport(input: Parameters<typeof runReadwiseApiImport>[0]) {
-  return runWithDatabaseConnectionOwner(() => {
-    assertReadwiseApiScopeAllowed('api');
-    const settings = input?.settings ? normalizeImportManagerSettings(input.settings) : loadImportManagerSettings();
-    const connectionRef = requireConnectionRef();
-    const kind = loadReadwiseApiCompletedThrough(connectionRef) ? 'routine' : 'initial';
-    beginReadwiseApiTrackedRun(connectionRef, input?.trigger ?? 'manual', kind);
-    return { connectionRef, settings };
-  });
-}
-
-function shouldSkipApiDocument(connectionRef: string, candidate: ReadwiseApiCandidate) {
-  const documentId = candidate.documentId;
-  if (readReadwiseApiSourceDisposition(openDatabaseConnection().driver, connectionRef, documentId)) return true;
-  const cutover = loadReadwiseSourceCutover();
-  const cutoverStatus = cutover?.version === 2
-    ? cutover.documents.find((item) => item.remoteId === documentId)?.status
-    : null;
-  if (isReadwiseApiCandidateBlockedByCutover(candidate, cutoverStatus)) return true;
-  const existing = loadReadwiseApiImportSource(connectionRef, documentId);
-  if (!existing) return false;
-  const known = new Set(existing.annotations.map((item) => item.remoteId));
-  return [...candidate.highlightIds, ...(candidate.noteIds ?? [])].every((id) => known.has(id));
-}
-
-function requireConnectionRef() {
-  if (!canCurrentHostRunReadwise('api')) throw new Error('readwise_api_import_not_ready');
-  const source = loadReadwiseRemoteSource();
-  if (!source) throw new Error('readwise_api_source_missing');
-  return source.connectionRef;
-}
-
-function assertEligible(signal: AbortSignal, connectionRef: string) {
-  if (signal.aborted) throw new DOMException('Readwise import cancelled', 'AbortError');
-  if (!canCurrentHostRunReadwise('api')) throw new Error('readwise_execution_eligibility_lost');
-  if (loadReadwiseRemoteSource()?.connectionRef !== connectionRef) {
-    throw new Error('readwise_execution_connection_changed');
-  }
-}
-
-function publishProgress(
-  window: ReadwiseImportProgressWindow | null | undefined,
-  processedCount: number,
-  totalCount: number,
-  phase: 'fetching' | 'source_completed' | 'writing',
-  sourceProcessedCount?: number,
-  terminalStatus?: 'cancelled' | 'completed' | 'failed'
-) {
-  notifyReadwiseReaderImportProgress({
-    phase, processedCount, ...(sourceProcessedCount === undefined ? {} : { sourceProcessedCount }),
-    status: phase === 'source_completed' ? terminalStatus ?? 'completed' : 'running', totalCount
-  }, window);
 }

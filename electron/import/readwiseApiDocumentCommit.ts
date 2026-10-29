@@ -51,9 +51,11 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
     if (shouldSkipHandledDocument(input)) return { skipped: true as const };
     return { skipped: false as const, ...guardPostCutoverDocument(input.connectionRef, input.document) };
   });
-  if (before.skipped) return { annotationCount: 0, documentId: input.document.id, status: 'skipped' as const };
+  if (before.skipped) return { annotationCount: 0, documentId: input.document.id, status: 'skipped' as const,
+    workspaceScope: { kind: 'nodes' as const, nodeIds: [] } };
   const { existingBefore, guardedDocument } = before;
-  if (!guardedDocument) return { annotationCount: 0, documentId: input.document.id, status: 'skipped' as const };
+  if (!guardedDocument) return { annotationCount: 0, documentId: input.document.id, status: 'skipped' as const,
+    workspaceScope: { kind: 'nodes' as const, nodeIds: [] } };
   input = { ...input, document: guardedDocument };
   const originalFileCategory = originalFileCategoryFor(input.document.category);
   const previousOriginalFile = input.reimportDeleted && existingBefore?.nodeDeleted

@@ -1,3 +1,4 @@
+import type { WorkspaceRefreshScope } from '../../lib/core/database/workspaceSnapshotRefresh.js';
 import type { ReadwiseImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { stableReadwiseAnnotationNodeId, type PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
@@ -21,6 +22,7 @@ import type { PreparedReadwiseApiEpubImages } from './readwiseApiEpubImages.js';
 import { prepareReadwiseApiMaterializationState } from './readwiseApiMaterializationState.js';
 
 export interface ReadwiseApiMaterializationResult {
+  workspaceScope?: WorkspaceRefreshScope;
   annotationCount: number;
   documentId: string;
   status: 'blocked' | 'degraded' | 'external_pending' | 'imported' | 'skipped';
@@ -91,7 +93,8 @@ export function materializeReadwiseApiDocument(input: ReadwiseApiMaterialization
       sourceUpdatedAt: input.document.updatedAt,
       version: READWISE_API_IMPORT_STATE_VERSION
     }, importedAt);
-    return result(input.document.id, 'degraded');
+    return { ...result(input.document.id, 'degraded'),
+      workspaceScope: record.nodeId ? { kind: 'nodes' as const, nodeIds: [record.nodeId], structure: true } : { kind: 'nodes' as const, nodeIds: [] } };
   }
   const materialized = materializeAvailableDocument(input, existing, importedAt);
   if (materialized.status === 'imported') {
@@ -124,7 +127,7 @@ function materializeAvailableDocument(
   const { annotationStates, epubResult, newAnnotations } = prepareReadwiseApiMaterializationState(
     input, existing, importedAt, null
   );
-  if (epubResult) return epubResult;
+  if (epubResult) return { ...epubResult, workspaceScope: { kind: 'full' } };
   const prepared = prepareReadwiseApiImportRecord(input, existing, importedAt);
   const materialized = newAnnotations.map((annotation) => ({
     content: annotation.content,
@@ -169,7 +172,9 @@ function materializeAvailableDocument(
     sourceUpdatedAt: input.document.updatedAt,
     version: READWISE_API_IMPORT_STATE_VERSION
   }, importedAt);
-  return { annotationCount: newAnnotations.length, documentId: input.document.id, status: 'imported' };
+  return { annotationCount: newAnnotations.length, documentId: input.document.id, status: 'imported',
+    workspaceScope: input.document.category === 'pdf' || input.resetImportedStructure
+      ? { kind: 'full' } : { kind: 'nodes', nodeIds: [record.nodeId], structure: true } };
 }
 
 export function prepareReadwiseApiImportRecord(
@@ -220,5 +225,6 @@ function remoteLocator(documentId: string) {
 }
 
 function result(documentId: string, status: ReadwiseApiMaterializationResult['status']) {
-  return { annotationCount: 0, documentId, status };
+  return { annotationCount: 0, documentId, status,
+    workspaceScope: { kind: 'nodes' as const, nodeIds: [] } };
 }

@@ -23,6 +23,7 @@ export async function recoverReadwiseCutoverFailures(input: {
   assertEligible: () => void;
   connectionRef: string;
   dependencies: ReadwiseApiFetchDependencies;
+  onCommitted?: () => void;
 }) {
   const facts = await runWithDatabaseConnectionOwner(() => loadJsonSetting(KEY) as FailedCutoverFacts | null);
   if (!facts || facts.connectionRef !== input.connectionRef) return;
@@ -40,6 +41,7 @@ export async function recoverReadwiseCutoverFailures(input: {
           settings: { ...loadImportManagerSettings(), readwiseReaderConfig: facts.work.config },
           onStage: (next) => { stage = next; }
         });
+        input.onCommitted?.();
       } catch (error) {
         // The failed item transaction rolled back; its existing content and binding remain intact.
         recordReadwiseSourceCutoverFailure({ binding: cutoverItemBinding(item), document,

@@ -1,3 +1,4 @@
+import type { WorkspaceRefreshScope } from '../../lib/core/database/workspaceSnapshotRefresh.js';
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -36,6 +37,7 @@ export type ReadwiseApiCandidatePipelineInput = {
   connectionRef: string;
   dependencies: ReadwiseApiFetchDependencies;
   afterCommit?: ReadwiseApiCandidateAfterCommit;
+  onWorkspaceChange?: (scope: WorkspaceRefreshScope) => void;
   beforeCommit?: (document: PreparedReadwiseApiDocument) => Promise<{
     document?: PreparedReadwiseApiDocument;
     forceEpubStructure?: boolean;
@@ -78,7 +80,12 @@ export async function runReadwiseApiCandidatePipeline(input: ReadwiseApiCandidat
     reportReadwiseApiCandidateProgress(input.onCandidateCount, candidates, stats.completedCount)
   ));
   const consumer = createCandidateConsumer(input, total, stats);
-  await produceReadwiseApiCandidateFacts(input, candidates, consumer, stats, total);
+  try {
+    await produceReadwiseApiCandidateFacts(input, candidates, consumer, stats, total);
+  } catch (error) {
+    await consumer.wait();
+    throw error;
+  }
   const incomplete = await prepareDeferredReadwiseApiCandidates(input, consumer, stats, total);
   if (incomplete) return incomplete;
   await consumer.wait();
@@ -151,6 +158,7 @@ async function consumeCandidate(
       ...(commitOptions?.replaceExistingBody === undefined
         ? {} : { replaceExistingBody: commitOptions.replaceExistingBody })
     });
+    input.onWorkspaceChange?.(result.workspaceScope ?? { kind: 'full' });
     await input.afterCommit?.(commitOptions?.document ?? document, result);
     await runWithDatabaseConnectionOwner(() => {
       stats.annotationCount += result.annotationCount;
@@ -160,16 +168,8 @@ async function consumeCandidate(
       input.onProgress?.(stats.completedCount, total);
     });
   } catch (error) {
-    console.error('[readwise-candidate] candidate failed', { documentId, error });
-    await runWithDatabaseConnectionOwner(() => setReadwiseApiCandidateStatus(
-      input.connectionRef,
-      documentId,
-      input.dependencies.signal?.aborted ? 'ready' : 'failed',
-      input.dependencies.signal?.aborted ? undefined : {
-        failedAt: new Date().toISOString(), reason: readwiseApiCandidateFailureReason(error), stage: 'writing'
-      }
-    ));
-    if (input.failFastCandidate?.(documentId)) throw error;
+    input.onWorkspaceChange?.({ kind: 'full' });
+    await recordCandidateFailure(input, documentId, error);
   }
 }
 
@@ -182,4 +182,17 @@ function loadCandidateForCommit(input: ReadwiseApiCandidatePipelineInput, docume
       document: loadPreparedReadwiseApiCandidate(input.connectionRef, documentId)
     };
   });
+}
+
+async function recordCandidateFailure(input: ReadwiseApiCandidatePipelineInput, documentId: string, error: unknown) {
+  console.error('[readwise-candidate] candidate failed', { documentId, error });
+  await runWithDatabaseConnectionOwner(() => setReadwiseApiCandidateStatus(
+    input.connectionRef,
+    documentId,
+    input.dependencies.signal?.aborted ? 'ready' : 'failed',
+    input.dependencies.signal?.aborted ? undefined : {
+      failedAt: new Date().toISOString(), reason: readwiseApiCandidateFailureReason(error), stage: 'writing'
+    }
+  ));
+  if (input.failFastCandidate?.(documentId)) throw error;
 }

@@ -80,6 +80,8 @@ export interface NativeReadwiseSyncPreviewResult extends NativeReadwiseApiPrevie
 }
 
 export interface NativeReadwiseImportRunResult extends NativeReadwiseApiRunFields {
+  workspace_scope?: import('../core/database/workspaceSnapshotRefresh.js').WorkspaceRefreshScope;
+  library_scope?: string;
   completed_at: string;
   entry_count?: number;
   failed_count: number;

@@ -1,4 +1,4 @@
-import { WorkspaceSnapshotRefresh, type WorkspaceRefreshScope } from '../../lib/core/database/workspaceSnapshotRefresh';
+import { WorkspaceSnapshotRefresh, workspaceRefreshScopeHasChanges, type WorkspaceRefreshScope } from '../../lib/core/database/workspaceSnapshotRefresh';
 import { logRuntimeError } from '../shared/platform/runtimeLogging';
 
 import {
@@ -81,6 +81,7 @@ export async function refreshWorkspaceState(source: WorkspaceRefreshSource = 'co
 
 export function requestWorkspaceSyncRefresh(scope: WorkspaceRefreshScope, libraryScope: string,
   source: WorkspaceRefreshSource = 'sync-applied') {
+  if (!workspaceRefreshScopeHasChanges(scope)) return;
   if (refreshLibraryScope !== libraryScope) {
     if (refreshLibraryScope !== undefined) refreshes.reset(null);
     refreshLibraryScope = libraryScope;

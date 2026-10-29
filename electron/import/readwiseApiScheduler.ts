@@ -1,3 +1,4 @@
+import { workspaceRefreshScopeHasChanges } from '../../lib/core/database/workspaceSnapshotRefresh.js';
 import type { ReadwiseSyncFrequency } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { NativeReadwiseApiScheduleStatus } from '../../lib/platform/nativeReadwiseApiImportContract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -44,7 +45,7 @@ interface SchedulerDependencies {
   loadSourceMode: typeof loadReadwiseSourceModeState;
   loadSource: typeof loadReadwiseRemoteSource;
   now: () => number;
-  notifyChanged: () => void;
+  notifyChanged: typeof notifyWorkspaceContentChanged;
   queueRun: typeof queueReadwiseApiTrackedRun;
   recoverRun: typeof recoverInterruptedReadwiseApiRun;
   runImport: typeof runReadwiseApiImport;
@@ -105,7 +106,7 @@ export function createReadwiseApiScheduler(dependencies: SchedulerDependencies) 
       timer = null;
       if (scheduledGeneration !== generation || !sameEligibility(eligibility, resolveEligibility(dependencies))) return;
       void dependencies.runImport({ trigger }).then((result) => {
-        if ((result.imported_count ?? result.committed_count ?? 0) > 0) dependencies.notifyChanged();
+        notifyImportedWorkspace(dependencies, result);
       }).catch(() => undefined).finally(() => {
         if (scheduledGeneration === generation) refresh(false);
       });
@@ -117,6 +118,15 @@ export function createReadwiseApiScheduler(dependencies: SchedulerDependencies) 
   }
 
   return { loadStatus, refresh, stop };
+}
+
+function notifyImportedWorkspace(dependencies: SchedulerDependencies,
+  result: Awaited<ReturnType<typeof runReadwiseApiImport>>) {
+  if ((result.imported_count ?? result.committed_count ?? 0) > 0
+    || (result.workspace_scope && workspaceRefreshScopeHasChanges(result.workspace_scope))) {
+    dependencies.notifyChanged(null, { workspaceScope: result.workspace_scope ?? { kind: 'full' },
+      ...(result.library_scope ? { libraryScope: result.library_scope } : {}) });
+  }
 }
 
 function recoverStartupRun(dependencies: SchedulerDependencies) {

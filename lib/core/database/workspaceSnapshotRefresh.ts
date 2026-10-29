@@ -45,9 +45,15 @@ function copyNodeScope(scopes: readonly NodeScope[]): NodeScope {
   return scope;
 }
 
-function combineScopes(entries: readonly PendingRefresh[]): WorkspaceRefreshScope {
-  if (entries.some(entry => entry.scope.kind === 'full')) return { kind: 'full' };
-  return copyNodeScope(entries.map(entry => entry.scope as NodeScope));
+export function mergeWorkspaceRefreshScopes(scopes: readonly WorkspaceRefreshScope[]): WorkspaceRefreshScope {
+  if (scopes.some(scope => scope.kind === 'full')) return { kind: 'full' };
+  return copyNodeScope(scopes as readonly NodeScope[]);
+}
+
+export function workspaceRefreshScopeHasChanges(scope: WorkspaceRefreshScope) {
+  return scope.kind === 'full' || Boolean(scope.nodeIds.length || scope.reviewNodeIds?.length
+    || scope.readingNodeIds?.length || scope.viewStateNodeIds?.length || scope.openStateNodeIds?.length
+    || scope.structure || scope.activeNode);
 }
 
 /** Owns published snapshots, not database writes or uncommitted editor drafts. */
@@ -109,7 +115,7 @@ export class WorkspaceSnapshotRefresh<T> {
     while (this.pending.length) {
       const session = this.session;
       const revision = this.revision;
-      const scope = combineScopes(this.pending);
+      const scope = mergeWorkspaceRefreshScopes(this.pending.map(entry => entry.scope));
       let next: T;
       try {
         next = await read({ current: this.snapshot, scope });
