@@ -14,7 +14,7 @@ import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionFact } from './syncNodeGraph.js';
 import { hashText } from './syncNodeResolution.js';
 import { mergedTopicTextBodies } from './topicTextBodies.js';
-import { normalizeTextAlternatives } from './topicTextState.js';
+import { normalizeTextAlternativesForHash } from './topicTextState.js';
 
 export interface LocalContentEdit {
   reveal?: string | null;
@@ -55,16 +55,17 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
     }
     const added = parseNewImageReferences(input.newImageReferences);
     const imageInputHash = contentEditImageInputHash(added);
+    const bodyHash = input.content === base.body_text ? base.snapshot.body_blob_hash : hashTextBody(input.content);
+    const sameBody = input.content === base.body_text || bodyHash === base.snapshot.body_blob_hash;
     if (stored) {
       await assertLocalContentEditReceipt(tx, input.versionId, imageInputHash);
-      if (!matchesEdit(stored, createEditRecord(base, input, stored.snapshot.resource_references))) throw new Error('content_edit_version_mismatch');
+      if (!matchesEdit(stored, createEditRecord(base, input, sameBody, bodyHash, stored.snapshot.resource_references))) throw new Error('content_edit_version_mismatch');
       if (current.version_id === input.versionId || current.ancestor_version_ids.includes(input.versionId)) {
         return { current, submittedVersionId: input.versionId };
       }
     }
-    const sameBody = input.content === base.body_text || hashTextBody(input.content) === base.snapshot.body_blob_hash;
     if (!stored && sameBody && (input.reveal === undefined || input.reveal === base.snapshot.reveal) && added.length === 0) return { current, submittedVersionId: base.version_id! };
-    const record = createEditRecord(base, input, stored?.snapshot.resource_references ?? localContentEditResources(base, current, input.content, added, input.reveal));
+    const record = createEditRecord(base, input, sameBody, bodyHash, stored?.snapshot.resource_references ?? localContentEditResources(base, current, input.content, added, input.reveal));
     record.snapshot.image_sources = stored?.snapshot.image_sources ?? localContentEditImageSources(current, input.content + '\n' + (record.snapshot.reveal ?? ''), added);
     record.content_hash = hashText(JSON.stringify(record.snapshot));
     record.alternative_bodies = mergedTopicTextBodies(record.snapshot.text_alternatives ?? [], [base, current]);
@@ -82,7 +83,7 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
 
 function createEditRecord(base: NativeSyncNodeRecord, input: LocalContentEdit & {
   content: string; hideTitleHeading: boolean; hostName: string; title: string; updatedAt: string;
-}, resources?: string): NativeSyncNodeRecord {
+}, sameBody: boolean, bodyHash: string | null | undefined, resources?: string): NativeSyncNodeRecord {
   const reveal = input.reveal === undefined ? base.snapshot.reveal : input.reveal;
   const snapshot = {
     ...base.snapshot,
@@ -94,10 +95,10 @@ function createEditRecord(base: NativeSyncNodeRecord, input: LocalContentEdit & 
     hide_title_heading: input.hideTitleHeading,
     title: input.title,
     updated_at: input.updatedAt,
-    text_selection: input.content === base.body_text || hashTextBody(input.content) === base.snapshot.body_blob_hash
+    text_selection: sameBody
       ? base.snapshot.text_selection ?? { version_id: base.version_id!, created_at: base.version_created_at! }
       : { version_id: input.versionId, created_at: input.updatedAt },
-    text_alternatives: normalizeTextAlternatives(base.snapshot.text_alternatives ?? [], input.content, input.updatedAt)
+    text_alternatives: normalizeTextAlternativesForHash(base.snapshot.text_alternatives ?? [], bodyHash ?? hashTextBody(input.content), input.updatedAt)
   };
   delete snapshot.body_deleted;
   return {

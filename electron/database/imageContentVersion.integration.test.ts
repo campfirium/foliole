@@ -1,8 +1,10 @@
 // @vitest-environment node
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
+import * as bodyHashing from '../../lib/core/database/textBodyHash.js';
 import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
 import { retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
+import * as snapshotHashing from '../../lib/core/sync/syncNodeResolution.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
@@ -161,4 +163,31 @@ it('records an intentional A to B to A edit as a fresh selection and inherits it
   a.sqlite.prepare("UPDATE nodes SET resource_references = ?, sync_dirty = 1 WHERE id = 'topic'").run(JSON.stringify([image]));
   flushNodeSyncVersionWithDriver(createBetterSqlite3Driver(a.sqlite), 'topic', 'a', now);
   expect((await a.current()).snapshot.text_selection).toEqual(restored.snapshot.text_selection);
+});
+
+
+it('reuses the submitted body digest while preparing a complete local edit', async () => {
+  const a = device(); await a.receive([textBranch('base', 'Base')]);
+  const content = `Changed 文😀\r\n![image](asset://${image.storage_key})`;
+  const bodyHash = vi.spyOn(bodyHashing, 'hashTextBody');
+  const input = { nodeId: 'topic', baseVersionId: 'base', versionId: 'measured', content,
+    title: 'Topic', hideTitleHeading: false, hostName: 'a', updatedAt: now,
+    newImageReferences: [{ ...image, source_url: 'https://example.com/original.png' }] };
+  let measuredBodyCalls = 0;
+  let prepared: Parameters<NonNullable<Parameters<typeof applyLocalContentEdit>[2]>>[0] | undefined;
+  try {
+    await expect(applyLocalContentEdit(a.db, input, record => {
+      prepared = record;
+      measuredBodyCalls = bodyHash.mock.calls.filter(([value]) => value === content).length;
+      throw new Error('preparation_measured');
+    })).rejects.toThrow('preparation_measured');
+    expect(prepared?.body_text).toBe(content);
+    expect(prepared?.snapshot.text_selection?.version_id).toBe('measured');
+    expect(JSON.parse(prepared!.snapshot.image_sources!)[image.storage_key]).toBe('https://example.com/original.png');
+    expect(prepared?.content_hash).toBe(snapshotHashing.hashText(JSON.stringify(prepared!.snapshot)));
+    expect(measuredBodyCalls).toBe(1);
+  } finally { vi.restoreAllMocks(); }
+  expect((await a.current()).version_id).toBe('base');
+  await applyLocalContentEdit(a.db, input);
+  expect((await a.current()).body_text).toBe(content);
 });
