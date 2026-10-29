@@ -5,6 +5,7 @@ import type { DbPort } from './dbPort.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from './framedSyncContract.js';
 import { decodeFramedSyncPreamble } from './framedSyncFraming.js';
 import type { FramedSyncInventoryDifference, FramedSyncInventoryNeed } from './framedSyncInventory.js';
+import { trackCommittedAttachmentArticles } from './requestSyncAttachmentPreparation.js';
 import { withRequestSyncFiles, type RequestSyncFilePort } from './requestSyncFiles.js';
 import { applyRequestSyncObject, type RequestSyncObjectInput } from './requestSyncObjectApply.js';
 import { assertRequestSyncObjectSource, requestSyncObjectMessages, type RequestSyncObjectHeader } from './requestSyncObjectMessages.js';
@@ -20,6 +21,7 @@ export interface RequestSyncDatabaseHost {
   files: RequestSyncFilePort;
   enqueueSearchInvalidations?: boolean;
   objectOptions?(db: DbPort): Promise<ApplySyncObjectsWithDbPortOptions>;
+  attachmentArticlesCommitted?(ids: readonly string[]): void;
   objectApplied?(object: { objectType: string; globalId: string; workspaceScope: WorkspaceRefreshScope }): void | Promise<void>;
   refreshNodeIndex?(db: DbPort, scope: WorkspaceRefreshScope): Promise<void>;
   readSnapshot<T>(read: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T>;
@@ -73,12 +75,15 @@ export async function applyReceivedRequestSyncObject(host: RequestSyncDatabaseHo
   input: Pick<Parameters<typeof receiveRequestSyncObject>[1], 'context' | 'author' | 'peerState' | 'signal' | 'objectOptions'>,
   header: RequestSyncObjectHeader, files: import('./requestSyncFiles.js').RequestSyncFiles) {
   input.signal?.throwIfAborted();
-  const result = await host.write(async db => {
-    const applied = await applyRequestSyncObject(db, receivedObjectInput(host, input, header, files,
-      { ...await host.objectOptions?.(db), ...input.objectOptions }));
-    await host.refreshNodeIndex?.(db, applied.workspaceScope);
-    return applied;
-  });
+  const committed = await host.write(db => trackCommittedAttachmentArticles(db, host,
+    header.objectType === 'node' ? [header.globalId] : [], async () => {
+      const applied = await applyRequestSyncObject(db, receivedObjectInput(host, input, header, files,
+        { ...await host.objectOptions?.(db), ...input.objectOptions }));
+      await host.refreshNodeIndex?.(db, applied.workspaceScope);
+      return applied;
+    }));
+  host.attachmentArticlesCommitted?.(committed.changed);
+  const result = committed.result;
   await host.objectApplied?.({ ...header, workspaceScope: result.workspaceScope });
   return { ...result, requestId: header.requestId };
 }

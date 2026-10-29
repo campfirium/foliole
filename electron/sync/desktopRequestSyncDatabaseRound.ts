@@ -1,5 +1,6 @@
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { readFramedSyncOverwriteInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { withRequestSyncAttachmentPreparation } from '../../lib/core/sync/requestSyncAttachmentPreparation.js';
 import { transferRequestSyncBatch } from '../../lib/core/sync/requestSyncBatchExchange.js';
 import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
 import { runRequestSyncOverwriteRound } from '../../lib/core/sync/requestSyncOverwriteRound.js';
@@ -32,7 +33,12 @@ export async function runDesktopRequestSyncDatabaseRound(input: {
     if (!key) throw new Error('sync_group_workgroup_key_missing');
     return { databasePath: openDatabaseConnection().dbPath, groupSecret: key.group_key };
   });
-  const host = createDesktopRequestSyncDatabaseHost(runtime.databasePath);
+  return withRequestSyncAttachmentPreparation(createDesktopRequestSyncDatabaseHost(runtime.databasePath), input.signal,
+    host => runPreparedRound(host, runtime, input));
+}
+
+async function runPreparedRound(host: import('../../lib/core/sync/requestSyncObjectEndpoint.js').RequestSyncDatabaseHost,
+  runtime: { databasePath: string; groupSecret: string }, input: Parameters<typeof runDesktopRequestSyncDatabaseRound>[0]) {
   const adoption = await host.readSnapshot(loadSyncGroupLocalAdoption);
   if (adoption && (adoption.groupId !== input.peer.group_id || adoption.providerDeviceId !== input.peer.peer_device_id)) {
     throw new Error('sync_group_local_adoption_source_mismatch');

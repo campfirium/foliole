@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
-import type { DbPort, DbParams, DbRow } from '../../lib/core/sync/dbPort.js';
+import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { readRequestSyncAttachmentNeedsSlice as slice } from '../../lib/core/sync/requestSyncAttachmentNeeds.js';
 
 import { demandFixture, imageBody, imageKey, observeDemandQueries } from './attachmentDemandQueue.testSupport.js';
@@ -71,32 +71,27 @@ it('updates mount and body demand independently and waits for PDF text', async (
   } finally { f.sqlite.close(); }
 });
 
-it('retains new edits queued during the protected parsing transaction', async () => {
+it('releases the read snapshot before parsing and retains edits made before the write executes', async () => {
   const f = demandFixture();
   try {
     f.insert('article');
-    let beginEdit = () => {};
-    const editReady = new Promise<void>(resolve => { beginEdit = resolve; });
-    let editCommitted = false;
-    const editing = editReady.then(async () => {
-      await f.port.run('UPDATE nodes SET content = ?', [imageBody(imageKey(2))]);
-      editCommitted = true;
-    });
-    let requested = false;
-    const host = { ...f.host, write: <T>(write: (db: DbPort) => Promise<T>) => f.host.write(db => write({ ...db,
-      transaction: execute => db.transaction(tx => execute({ ...tx, async query<R extends DbRow>(sql: string, params?: DbParams) {
-        const rows = await tx.query<R>(sql, params);
-        if (sql.includes('JOIN nodes') && !requested) {
-          requested = true;
-          beginEdit();
-          await Promise.resolve();
-          expect(editCommitted).toBe(false);
-        }
-        return rows;
-      } }))
-    })) };
-    await slice(host, missing, () => false);
-    await editing;
+    let snapshotReleased = false;
+    let writes = 0;
+    const host = { ...f.host,
+      readSnapshot: async <T>(read: (db: DbPort) => Promise<T>) => {
+        const value = await f.host.readSnapshot(read);
+        snapshotReleased = true;
+        return value;
+      },
+      write: async <T>(write: (db: DbPort) => Promise<T>) => {
+        expect(snapshotReleased).toBe(true);
+        if (++writes === 1) await f.port.run('UPDATE nodes SET content = ?', [imageBody(imageKey(2))]);
+        return f.host.write(write);
+      }
+    };
+    const { parseChangedAttachmentArticles } = await import('../../lib/core/sync/attachmentDemandQueue.js');
+    await parseChangedAttachmentArticles(host, () => false);
+    expect(f.pending()).toEqual([]);
     expect(f.queued()).toEqual(['article']);
     expect((await read(f)).keys).toEqual([imageKey(2)]);
   } finally { f.sqlite.close(); }

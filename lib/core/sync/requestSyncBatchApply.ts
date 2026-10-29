@@ -1,6 +1,7 @@
 import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrderStore.js';
 import type { DbPort } from './dbPort.js';
 import { joinWorkspaceScopes } from './framedSyncWorkspaceScope.js';
+import { trackCommittedAttachmentArticles } from './requestSyncAttachmentPreparation.js';
 import type { RequestSyncObjectResult } from './requestSyncBatchContract.js';
 import { recordRequestSyncInbound, type RequestSyncBatchScope } from './requestSyncBatchScope.js';
 import type { RequestSyncFiles } from './requestSyncFiles.js';
@@ -25,10 +26,15 @@ export async function applyReceivedRequestSyncBatch(host: RequestSyncDatabaseHos
   staged: readonly StagedRequestSyncObject[]): Promise<RequestSyncObjectResult[]> {
   if (staged.length < 2) return replayObjects(host, input, staged);
   let applied;
+  let changed: string[] = [];
   let indexRefreshFailed = false;
   try {
     applied = await host.write(async db => {
-      const results = await db.transaction(tx => applyStagedObjects(tx, host, input, staged));
+      const tracked = await db.transaction(tx => trackCommittedAttachmentArticles(tx, host,
+        staged.filter(value => value.header.objectType === 'node').map(value => value.header.globalId),
+        () => applyStagedObjects(tx, host, input, staged)));
+      const results = tracked.result;
+      changed = tracked.changed;
       try {
         await host.refreshNodeIndex?.(db, results.map(result => result.workspaceScope).reduce(joinWorkspaceScopes));
       } catch (error) {
@@ -42,6 +48,7 @@ export async function applyReceivedRequestSyncBatch(host: RequestSyncDatabaseHos
     if (indexRefreshFailed) throw error;
     return replayObjects(host, input, staged);
   }
+  host.attachmentArticlesCommitted?.(changed);
   for (const [index, { header }] of staged.entries()) {
     await host.objectApplied?.({ ...header, workspaceScope: applied[index]!.workspaceScope });
   }

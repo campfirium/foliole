@@ -15,6 +15,13 @@ import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 
 export function createDesktopRequestSyncDatabaseHost(databasePath: string, sourceSession?: string,
   onInboundCommitted?: () => void, timing?: RequestDatabaseTiming): RequestSyncDatabaseHost {
+  let owner: ReturnType<typeof openDatabaseConnection> | undefined;
+  const checkOwner = (connection: ReturnType<typeof openDatabaseConnection>) => {
+    if (connection.dbPath !== databasePath || (owner && owner !== connection)) {
+      throw new Error('request_sync_library_changed');
+    }
+    owner ??= connection;
+  };
   const files = createDesktopRequestSyncFiles(databasePath);
   return {
     objectOptions: async db => {
@@ -34,19 +41,20 @@ export function createDesktopRequestSyncDatabaseHost(databasePath: string, sourc
       signal?.throwIfAborted();
       if (resolveDatabasePath() !== databasePath) throw new Error('request_sync_library_changed');
       const preparedAt = performance.now();
-      try { await prepareDesktopSyncRead(databasePath); }
+      try { await prepareDesktopSyncRead(databasePath, checkOwner); }
       finally { timing?.('read_prepare', performance.now() - preparedAt); }
       const snapshotAt = performance.now();
       try { return await withRequestSyncReadonlySnapshot(databasePath, read, signal); }
       finally { timing?.('read_snapshot', performance.now() - snapshotAt); }
     },
-    write: write => withPreparedDesktopSyncConnection(databasePath, write, timing)
+    write: write => withPreparedDesktopSyncConnection(databasePath, write, timing, checkOwner)
   };
 }
 
-function prepareDesktopSyncRead(databasePath: string) {
+function prepareDesktopSyncRead(databasePath: string, checkOwner: (connection: ReturnType<typeof openDatabaseConnection>) => void) {
   return runWithDatabaseConnectionOwner(() => {
     const connection = openDatabaseConnection();
+    checkOwner(connection);
     if (connection.dbPath !== databasePath) throw new Error('request_sync_library_changed');
     // BEGIN IMMEDIATE also locks the attached search database, even when no rows need preparing.
     if (!hasPendingNodeSyncVersions(connection.driver)) return;
@@ -55,13 +63,14 @@ function prepareDesktopSyncRead(databasePath: string) {
 }
 
 function withPreparedDesktopSyncConnection<T>(databasePath: string, execute: (db: DbPort) => Promise<T>,
-  timing?: RequestDatabaseTiming) {
+  timing?: RequestDatabaseTiming, checkOwner?: (connection: ReturnType<typeof openDatabaseConnection>) => void) {
   const queuedAt = performance.now();
   return runWithDatabaseConnectionOwner(async () => {
     const acquiredAt = performance.now();
     timing?.('write_owner_wait', acquiredAt - queuedAt);
     try {
       const connection = openDatabaseConnection();
+      checkOwner?.(connection);
       if (connection.dbPath !== databasePath) throw new Error('request_sync_library_changed');
       // Reserve only databases actually written; the attached search index has its own worker.
       const db = createBetterSqliteDbPort(connection.sqlite, {

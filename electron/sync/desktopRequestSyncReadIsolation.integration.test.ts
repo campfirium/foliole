@@ -19,7 +19,7 @@ import { iterateRequestSyncInventory, decodeRequestSyncInventory } from '../../l
 import { prepareRequestSyncWire, readRequestSyncWire } from '../../lib/core/sync/requestSyncWire.js';
 import { beginSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionMaintenance, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 
@@ -168,4 +168,56 @@ it('keeps unpublished versions pending while library adoption blocks publication
     json_extract(v.snapshot_json, '$.priority') AS priority FROM nodes n
     JOIN node_sync_versions v ON v.version_id = n.current_version_id WHERE n.id = ?`, ['special-inbox']));
   expect(rows).toEqual([{ sync_dirty: 1, priority: null }]);
+});
+
+it('rejects a queued preparation write after closing and reopening the same library path', async () => {
+  const { parseChangedAttachmentArticles } = await import('../../lib/core/sync/attachmentDemandPreparation.js');
+  const connection = openDatabaseConnection();
+  const host = createDesktopRequestSyncDatabaseHost(connection.dbPath);
+  const article = 'special-inbox';
+  await host.write(db => db.run('UPDATE nodes SET content = ? WHERE id = ?',
+    [`![image](asset://${'a'.repeat(64)}.png)`, article]));
+  let closed = false;
+  const prepared = { ...host, write: async <T>(write: (db: import('../../lib/core/sync/dbPort.js').DbPort) => Promise<T>) => {
+    if (!closed) {
+      closed = true;
+      await runWithDatabaseConnectionMaintenance(() => {
+        closeDatabaseConnection();
+        expect(openDatabaseConnection().dbPath).toBe(connection.dbPath);
+      });
+    }
+    return host.write(write);
+  } };
+  await expect(parseChangedAttachmentArticles(prepared, () => false, [article])).rejects.toThrow('request_sync_library_changed');
+  const current = createDesktopRequestSyncDatabaseHost(connection.dbPath);
+  expect(await current.readSnapshot(db => db.query('SELECT article_id FROM attachment_parse_queue WHERE article_id = ?', [article])))
+    .toEqual([{ article_id: article }]);
+  expect(await current.readSnapshot(db => db.query('SELECT * FROM attachment_pending WHERE article_id = ?', [article]))).toEqual([]);
+});
+
+it('revalidates a preparation only after its queued writer actually acquires ownership', async () => {
+  const { parseChangedAttachmentArticles } = await import('../../lib/core/sync/attachmentDemandPreparation.js');
+  const connection = openDatabaseConnection();
+  const host = createDesktopRequestSyncDatabaseHost(connection.dbPath);
+  await host.write(db => db.run('UPDATE nodes SET content = ? WHERE id = ?',
+    [`![old](asset://${'a'.repeat(64)}.png)`, 'special-inbox']));
+  const prepared = { ...host, write: async <T>(write: (db: import('../../lib/core/sync/dbPort.js').DbPort) => Promise<T>) => {
+    let release!: () => void;
+    let entered!: () => void;
+    const blocked = new Promise<void>(resolve => { release = resolve; });
+    const acquired = new Promise<void>(resolve => { entered = resolve; });
+    const editing = runWithDatabaseConnectionOwner(async () => {
+      entered(); await blocked;
+      connection.driver.execute('UPDATE nodes SET content = ? WHERE id = ?',
+        [`![new](asset://${'b'.repeat(64)}.png)`, 'special-inbox']);
+    });
+    await acquired;
+    const queued = host.write(write);
+    release(); await editing;
+    return queued;
+  } };
+  await parseChangedAttachmentArticles(prepared, () => false, ['special-inbox']);
+  expect(await host.readSnapshot(db => db.query("SELECT * FROM attachment_pending WHERE article_id = 'special-inbox'"))).toEqual([]);
+  expect(await host.readSnapshot(db => db.query("SELECT article_id FROM attachment_parse_queue WHERE article_id = 'special-inbox'")))
+    .toEqual([{ article_id: 'special-inbox' }]);
 });

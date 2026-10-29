@@ -18,11 +18,11 @@ it('bounds incremental reference and file batches, avoids unchanged availability
     if (typeof sql === 'string' && sql.startsWith('INSERT INTO framed_sync_resource_availability')) availabilityWrites++;
   } });
   sqlite.exec(`CREATE TABLE nodes (id TEXT PRIMARY KEY, deleted_at TEXT, body_blob_hash TEXT,
-    resource_references TEXT, content TEXT);
+    resource_references TEXT, content TEXT, current_version_id TEXT);
     CREATE TABLE framed_sync_resource_availability (hash TEXT PRIMARY KEY, available INTEGER)`);
   for (const sql of ATTACHMENT_DEMAND_SCHEMA) sqlite.exec(sql);
   const keys = Array.from({ length: 260 }, (_, i) => `${i.toString(16).padStart(64, '0')}.png`);
-  const insert = sqlite.prepare('INSERT INTO nodes VALUES (?, NULL, NULL, ?, ?)');
+  const insert = sqlite.prepare('INSERT INTO nodes(id, deleted_at, body_blob_hash, resource_references, content) VALUES (?, NULL, NULL, ?, ?)');
   keys.forEach((key, i) => insert.run(String(i).padStart(4, '0'), '[]', `![image](asset://${key})`));
   const port = createBetterSqliteDbPort(sqlite);
   let inSnapshot = false;

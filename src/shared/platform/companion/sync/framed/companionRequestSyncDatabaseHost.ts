@@ -2,6 +2,7 @@ import type { RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/re
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue.js';
 import { registerCompanionSyncAppliedRefresh, updateCommittedCompanionWorkspace } from '../../companionWorkspaceSnapshotStore.js';
 import { getCompanionReadingScope } from '../../reading/companionReadingScope.js';
+import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 import { iosCompanionHostName } from '../../runtime/iosCompanionMutationState.js';
 
@@ -14,9 +15,11 @@ export async function currentCompanionRequestSyncDatabaseHost(
   const owner = getIosCompanionDatabaseOwner();
   const session = getCompanionReadingScope();
   const databasePath = owner.databasePath;
+  const generation = companionFramedFileOwner(owner).generation_id;
   const files = await currentCompanionFramedSyncFiles();
   const checkLibrary = () => {
-    if (owner.databasePath !== databasePath) throw new Error('request_sync_library_changed');
+    if (owner !== getIosCompanionDatabaseOwner() || owner.databasePath !== databasePath ||
+        generation !== companionFramedFileOwner(owner).generation_id) throw new Error('request_sync_library_changed');
   };
   return {
     enqueueSearchInvalidations: false,

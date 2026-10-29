@@ -4,6 +4,7 @@ import { inventoryBucket, summarizeInventoryBuckets } from './framedSyncInventor
 import { expandRequestSyncNodeSummaries, flushRequestSyncInventoryDigests, readRequestSyncInventorySummaries } from './framedSyncInventoryDigest.js';
 import { readFramedSyncInventoryEntry } from './framedSyncInventoryRead.js';
 import { framedSyncInventorySummary } from './framedSyncInventorySummary.js';
+import { withRequestSyncAttachmentPreparation } from './requestSyncAttachmentPreparation.js';
 import { respondRequestSyncBatch } from './requestSyncBatchResponse.js';
 import { readRequestSyncDifference } from './requestSyncDifferenceWire.js';
 import { decodeRequestSyncInventory, iterateRequestSyncInventory } from './requestSyncInventoryWire.js';
@@ -22,6 +23,12 @@ export type RequestSyncDatabaseResponseInput = {
 };
 
 export async function respondRequestSyncDatabase<T>(host: RequestSyncDatabaseHost, input: RequestSyncDatabaseResponseInput,
+  consume: (stream: FramedSyncStreamBody) => Promise<T>): Promise<T> {
+  return withRequestSyncAttachmentPreparation(host, input.signal,
+    prepared => respondPrepared(prepared, input, consume));
+}
+
+async function respondPrepared<T>(host: RequestSyncDatabaseHost, input: RequestSyncDatabaseResponseInput,
   consume: (stream: FramedSyncStreamBody) => Promise<T>): Promise<T> {
   if (input.mode === 'pulls' || input.mode === 'objects') return respondRequestSyncBatch(host, input, consume);
   const messages = (async function* () {

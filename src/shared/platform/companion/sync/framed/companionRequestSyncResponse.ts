@@ -3,6 +3,7 @@ import type { FramedSyncStreamBody } from '../../../../../../lib/core/sync/frame
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { respondRequestSyncAttachments } from '../../../../../../lib/core/sync/requestSyncAttachmentResponse.js';
 import { respondRequestSyncDatabase } from '../../../../../../lib/core/sync/requestSyncDatabaseResponse.js';
+import { withInboundAttachmentPreparation } from '../../../../../../lib/core/sync/requestSyncInboundAttachmentPreparation.js';
 import { parseRequestSyncPeerRound, respondRequestSyncRoundControl, touchRequestSyncStream } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
@@ -24,20 +25,7 @@ export function respondCompanionRequestSync(payload: Record<string, unknown>, ac
 }
 
 async function respond(payload: Record<string, unknown>, parentSignal: AbortSignal, acknowledge?: (result: Response) => Promise<void>) {
-  const owner = companionFramedFileOwner(getIosCompanionDatabaseOwner());
-  if (payload.library_key !== owner.library_key || payload.generation_id !== owner.generation_id) {
-    throw new Error('request_sync_library_changed');
-  }
-  const directory = text(payload, 'directory');
-  if (!/^requests\/[a-f0-9-]{36}$/u.test(directory)) throw new Error('request_sync_http_request_invalid');
-  const mode = payload.mode;
-  if (mode !== 'inventory' && mode !== 'pull' && mode !== 'object' && mode !== 'pulls' && mode !== 'objects' &&
-      mode !== 'attachments' && mode !== 'round_finish') {
-    throw new Error('request_sync_mode_invalid');
-  }
-  const context = { groupId: text(payload, 'group_id'), protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
-    initiatorDeviceId: text(payload, 'initiator_device_id'), initiatorLibraryEpoch: text(payload, 'initiator_library_epoch'),
-    responderDeviceId: text(payload, 'responder_device_id'), responderLibraryEpoch: text(payload, 'responder_library_epoch') } as const;
+  const { directory, mode, context } = readInboundRequest(payload);
   const peerState = requireCompanionRequestSyncPeerState(context.groupId, context.initiatorDeviceId, context.initiatorLibraryEpoch);
   const credential = await loadCurrentCredential({ group_id: context.groupId });
   if (credential.device_id !== context.responderDeviceId) throw new Error('request_sync_peer_context_mismatch');
@@ -62,15 +50,19 @@ async function respond(payload: Record<string, unknown>, parentSignal: AbortSign
       await acknowledge?.(receipt);
       return receipt;
     };
-    if (mode === 'round_finish') return await consume(
-      await respondRequestSyncRoundControl({ context, groupKey, stream, signal, roundId: round.id }));
-    if (mode === 'attachments') return await respondRequestSyncAttachments(await currentCompanionAttachmentHost(host),
-      { context, groupKey, stream, signal, onProgress: () => lease.touch() }, consume);
-    return await respondRequestSyncDatabase(host, { context, groupKey, mode, stream, signal,
-      ...(mode === 'objects' ? { batch: { peerState } } : {}),
-      ...(mode === 'object' ? { object: { peerState, expectedObject: {
-        globalId: text(payload, 'global_id'), objectType: text(payload, 'object_type') } } } : {}) },
-    consume);
+    const receivedStream = stream;
+    return await withInboundAttachmentPreparation(host, { lifecycle: lease.signal, signal, mode,
+      single: round.mode === 'single' }, async prepared => {
+      if (mode === 'round_finish') return await consume(
+        await respondRequestSyncRoundControl({ context, groupKey, stream: receivedStream, signal, roundId: round.id }));
+      if (mode === 'attachments') return await respondRequestSyncAttachments(await currentCompanionAttachmentHost(prepared),
+        { context, groupKey, stream: receivedStream, signal, onProgress: () => lease.touch() }, consume);
+      return await respondRequestSyncDatabase(prepared, { context, groupKey, mode, stream: receivedStream, signal,
+        ...(mode === 'objects' ? { batch: { peerState } } : {}),
+        ...(mode === 'object' ? { object: { peerState, expectedObject: {
+          globalId: text(payload, 'global_id'), objectType: text(payload, 'object_type') } } } : {}) },
+      consume);
+    });
   } catch (error) {
     if (round.mode === 'start' || round.mode === 'single') rounds.finishInbound(context.initiatorDeviceId, round.id);
     await host?.files.remove(directory);
@@ -81,6 +73,24 @@ async function respond(payload: Record<string, unknown>, parentSignal: AbortSign
     if (signal.aborted) rounds.finishInbound(context.initiatorDeviceId, round.id);
     await stream?.frames[Symbol.asyncIterator]().return?.();
   }
+}
+
+function readInboundRequest(payload: Record<string, unknown>) {
+  const owner = companionFramedFileOwner(getIosCompanionDatabaseOwner());
+  if (payload.library_key !== owner.library_key || payload.generation_id !== owner.generation_id) {
+    throw new Error('request_sync_library_changed');
+  }
+  const directory = text(payload, 'directory');
+  if (!/^requests\/[a-f0-9-]{36}$/u.test(directory)) throw new Error('request_sync_http_request_invalid');
+  const mode = payload.mode;
+  if (mode !== 'inventory' && mode !== 'pull' && mode !== 'object' && mode !== 'pulls' && mode !== 'objects' &&
+      mode !== 'attachments' && mode !== 'round_finish') {
+    throw new Error('request_sync_mode_invalid');
+  }
+  const context = { groupId: text(payload, 'group_id'), protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+    initiatorDeviceId: text(payload, 'initiator_device_id'), initiatorLibraryEpoch: text(payload, 'initiator_library_epoch'),
+    responderDeviceId: text(payload, 'responder_device_id'), responderLibraryEpoch: text(payload, 'responder_library_epoch') } as const;
+  return { directory, mode, context } as const;
 }
 
 function text(payload: Record<string, unknown>, key: string) {

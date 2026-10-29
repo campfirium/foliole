@@ -1,9 +1,11 @@
 import { watchSyncPriorityRequests } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { readFramedSyncOverwriteInventory } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
+import { withRequestSyncAttachmentPreparation } from '../../../../../../lib/core/sync/requestSyncAttachmentPreparation.js';
 import { transferRequestSyncBatch } from '../../../../../../lib/core/sync/requestSyncBatchExchange.js';
 import { exchangeRequestSyncInventory } from '../../../../../../lib/core/sync/requestSyncDatabaseExchange.js';
 import { runRequestSyncDatabaseRound, type RequestSyncDatabaseRoundPort } from '../../../../../../lib/core/sync/requestSyncDatabaseRound.js';
+import type { RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { runRequestSyncOverwriteRound } from '../../../../../../lib/core/sync/requestSyncOverwriteRound.js';
 import type { RequestSyncPeerRound } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
@@ -41,7 +43,11 @@ export function runCompanionRequestSyncDatabaseRound(input: RoundInput) {
 }
 
 async function runRound(input: RoundInput) {
-  const host = await currentCompanionRequestSyncDatabaseHost();
+  return withRequestSyncAttachmentPreparation(await currentCompanionRequestSyncDatabaseHost(), input.signal,
+    host => runPreparedRound(host, input));
+}
+
+async function runPreparedRound(host: RequestSyncDatabaseHost, input: RoundInput) {
   const credential = await loadCurrentCredential({ group_id: input.groupId });
   const adoption = await host.readSnapshot(loadSyncGroupLocalAdoption, input.signal);
   const peerDeviceId = input.peerState.sender_device_identity_key;

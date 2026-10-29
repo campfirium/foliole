@@ -1,5 +1,6 @@
 import type http from 'node:http';
 
+import { withInboundAttachmentPreparation } from '../../lib/core/sync/requestSyncInboundAttachmentPreparation.js';
 import { parseRequestSyncPeerRound, touchRequestSyncStream } from '../../lib/core/sync/requestSyncPeerRound.js';
 import type { SyncPeerRoundLease } from '../../lib/core/sync/syncPeerRoundOwnership.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -61,11 +62,11 @@ export async function handleProductionCompanionFramedSyncPost(args: {
         if (ownershipError) throw ownershipError;
         if (!lease) throw new Error('sync_round_identity_missing');
         const host = createDesktopRequestSyncDatabaseHost(runtime.databasePath, runtime.sessionId, () => relayInboundCommit(runtime.auth), timing);
-        const reply = await respondDesktopRequestSyncHttp(host, {
+        const reply = await respondInbound(host, {
           context, consumePull, stream: { ...stream, frames: touchRequestSyncStream(stream.frames, lease) },
           url, groupKey: runtime.groupKey, signal: AbortSignal.any([controller.signal, lease.signal]),
           onProgress: () => lease?.touch()
-        });
+        }, lease, round.mode === 'single');
         return reply ? { ...reply, frames: touchRequestSyncStream(reply.frames, lease) } : undefined;
 
     },
@@ -81,6 +82,13 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     }
   }
   return true;
+}
+
+function respondInbound(host: ReturnType<typeof createDesktopRequestSyncDatabaseHost>,
+  input: Parameters<typeof respondDesktopRequestSyncHttp>[1], lease: SyncPeerRoundLease, single: boolean) {
+  return withInboundAttachmentPreparation(host, { lifecycle: lease.signal, signal: input.signal,
+    mode: input.url.searchParams.get('request') ?? '', single },
+  prepared => respondDesktopRequestSyncHttp(prepared, input));
 }
 
 function relayInboundCommit(auth: { ok: true; device_id: string } | { ok: false }) {
