@@ -132,7 +132,7 @@ export async function saveCompanionSyncNodeViewState(args: {
   }
   return runCompanionSyncMutationTask(
     () => saveIosNodeViewState({ node_id: args.nodeId, scroll_top: args.scrollTop }),
-    { kind: 'nodes', nodeIds: [args.nodeId] }
+    { kind: 'nodes', nodeIds: [], viewStateNodeIds: [args.nodeId] }
   );
 }
 

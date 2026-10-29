@@ -4,6 +4,7 @@ import type { WorkspaceRefreshScope } from '../../../../../../lib/core/database/
 import { workspaceSnapshotValueEqual } from '../../../../../../lib/core/database/workspaceSnapshotValueEqual';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort';
 import { isCanonicalVisibleNodeId } from '../../../../workspaceCanonicalSelectors';
+import { mergeCompanionNodeViews } from '../../companionNodeViewProjection';
 
 type NodeScope = Extract<WorkspaceRefreshScope, { kind: 'nodes' }>;
 
@@ -16,6 +17,7 @@ export async function mergeCompanionLocalState(
   db: DbPort, snapshot: WorkspaceSnapshot, scope: NodeScope
 ): Promise<WorkspaceSnapshot | null> {
   let next: WorkspaceSnapshot | null = snapshot;
+  if (scope.viewStateNodeIds?.length) next = await mergeCompanionNodeViews(db, next, [...scope.viewStateNodeIds]);
   if (scope.openStateNodeIds?.length) next = await mergeOpenStates(db, next, scope.openStateNodeIds);
   if (next && scope.activeNode) next = await mergeActiveNode(db, next);
   return next;

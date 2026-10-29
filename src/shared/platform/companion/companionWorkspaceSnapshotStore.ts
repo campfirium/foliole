@@ -16,7 +16,7 @@ subscribeCompanionReadingScope(() => {
 
 export function registerCompanionWorkspaceRefresh(scope: WorkspaceRefreshScope) {
   if (scope.kind === 'full' || scope.nodeIds.length || scope.reviewNodeIds?.length || scope.readingNodeIds?.length ||
-    scope.openStateNodeIds?.length || scope.activeNode || scope.structure) companionWorkspaceSnapshots.register(scope);
+    scope.viewStateNodeIds?.length || scope.openStateNodeIds?.length || scope.activeNode || scope.structure) companionWorkspaceSnapshots.register(scope);
 }
 
 /**

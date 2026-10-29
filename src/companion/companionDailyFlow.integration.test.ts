@@ -75,7 +75,7 @@ it('opens empty libraries and creates a fresh learning-day list without losing o
   await seed();
   await open();
   const before = session.daily!.dayKey;
-  const ids = library.database.prepare('SELECT node_id FROM daily_flow_entries ORDER BY order_key').all();
+  const ids = library.database.prepare('SELECT node_id FROM node_review ORDER BY node_id').all();
   await open('2026-10-26T08:00:00.000Z');
   expect(session.daily!.dayKey).not.toBe(before);
   expect(new Set(library.database.prepare('SELECT node_id FROM daily_flow_entries ORDER BY order_key').all()

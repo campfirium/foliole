@@ -1,6 +1,6 @@
 /**
  * `nodeIds` are content projections. The local-state lists name committed
- * reading, review, open-record or active-node writes that can be read narrowly.
+ * reading, review, view-state, open-record or active-node writes that can be read narrowly.
  */
 export type WorkspaceRefreshScope =
   | { kind: 'full' }
@@ -9,6 +9,7 @@ export type WorkspaceRefreshScope =
     nodeIds: readonly string[];
     reviewNodeIds?: readonly string[];
     readingNodeIds?: readonly string[];
+    viewStateNodeIds?: readonly string[];
     openStateNodeIds?: readonly string[];
     activeNode?: boolean;
     structure?: boolean;
@@ -33,9 +34,11 @@ function copyNodeScope(scopes: readonly NodeScope[]): NodeScope {
   const scope: NodeScope = { kind: 'nodes', nodeIds: unionIds(scopes, item => item.nodeIds) };
   const reviewNodeIds = unionIds(scopes, item => item.reviewNodeIds);
   const readingNodeIds = unionIds(scopes, item => item.readingNodeIds);
+  const viewStateNodeIds = unionIds(scopes, item => item.viewStateNodeIds);
   const openStateNodeIds = unionIds(scopes, item => item.openStateNodeIds);
   if (reviewNodeIds.length) scope.reviewNodeIds = reviewNodeIds;
   if (readingNodeIds.length) scope.readingNodeIds = readingNodeIds;
+  if (viewStateNodeIds.length) scope.viewStateNodeIds = viewStateNodeIds;
   if (openStateNodeIds.length) scope.openStateNodeIds = openStateNodeIds;
   if (scopes.some(item => item.activeNode)) scope.activeNode = true;
   if (scopes.some(item => item.structure)) scope.structure = true;

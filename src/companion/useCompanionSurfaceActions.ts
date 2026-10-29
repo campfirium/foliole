@@ -86,7 +86,7 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
 
 async function prepareSurfaceAction(args: CompanionSurfaceActionArgs, token: Token,
   action: FlowAction, active: () => boolean) {
-  await args.activity.flush();
+  await args.activity.flush(undefined, { position: action !== 'read' });
   if (!active() || !args.flow.matches(token)) return null;
   let snapshot = await args.workspaceSync.refreshAfterMutation();
   if (!snapshot || !active() || !args.flow.matches(token) || !token.nodeId) return null;

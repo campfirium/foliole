@@ -63,7 +63,7 @@ export function useCompanionFlowSession(args: {
       if (!sameCycleProgress(saved.session, source)) current.generation += 1;
       render();
     }).catch(error => { current.error = String(error); render(); }));
-  }, [args.snapshot]);
+  }, [args.snapshot?.nodesById]);
   const session = current.session;
   const { scheduled, hasTopics } = useFlowCatalogSummary(args.snapshot, Boolean(session.currentNodeId));
   const view = useMemo(() => flowView(args.snapshot, current, scheduled),

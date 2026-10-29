@@ -10,6 +10,7 @@ import { loadCompanionDailySession, predictCompanionFlowDocument } from '../shar
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
+import { saveCompanionSyncNodeViewState } from '../shared/platform/companionSyncStateWriters';
 
 import { persistFlowMutation } from './companionFlowMutation';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
@@ -45,6 +46,25 @@ function useNativeSurface(initial: WorkspaceSnapshot) {
     refreshAfterMutation: vi.fn(actions.refreshAfterMutation), openReadableArticle: loader.openReadableArticle };
   return { surface: useCompanionArticleSurface(workspace, createFloatingBar()), snapshot, workspace };
 }
+
+it('keeps the reading session untouched when only its scroll position changes', async () => {
+  const initial = (await refreshCompanionWorkspaceAfterMutation())!;
+  const ui = renderHook(() => useNativeSurface(initial));
+  await waitFor(() => expect(ui.result.current.surface.readableArticle?.content).toContain('prefix alpha'));
+  await getIosCompanionDatabaseOwner().read(async () => null);
+  const before = ui.result.current.surface.readableArticle!.nodeId;
+  const queries = vi.spyOn(library.connection, 'query');
+  await act(async () => {
+    await saveCompanionSyncNodeViewState({ nodeId: before, scrollTop: 340 });
+    await ui.result.current.workspace.refreshAfterMutation();
+  });
+  await getIosCompanionDatabaseOwner().read(async () => null);
+  expect(ui.result.current.snapshot.persistedNodeViewById?.[before]?.scrollTop).toBe(340);
+  expect(ui.result.current.surface.readableArticle?.nodeId).toBe(before);
+  expect(queries.mock.calls.filter(([sql]) => sql.includes('FROM daily_flow_state') ||
+    sql.includes('FROM daily_flow_sync_facts'))).toEqual([]);
+  expect(library.database.prepare('SELECT COUNT(*) AS n FROM daily_flow_operations').get()).toEqual({ n: 0 });
+});
 
 it.each(['read', 'grade'] as const)('commits %s once when incoming content changes the cycle before its display receipt arrives', async action => {
   if (action === 'grade') library.database.exec("UPDATE nodes SET kind='item', reveal='Answer' WHERE id='000000'");

@@ -1,17 +1,16 @@
 import { canMergeWorkspaceContentProjection, mergeWorkspaceContentProjection } from '../../../../lib/core/database/workspaceContentProjection.js';
 import type { WorkspaceSnapshot } from '../../../../lib/core/database/workspaceSnapshot.js';
 import type { WorkspaceRefreshScope } from '../../../../lib/core/database/workspaceSnapshotRefresh.js';
-import { workspaceSnapshotValueEqual } from '../../../../lib/core/database/workspaceSnapshotValueEqual.js';
 import type { WorkspaceNodeAnchorKinds } from '../../../../lib/core/nodes/workspaceNodePriorityState.js';
 import type { DbPort } from '../../../../lib/core/sync/dbPort.js';
 
 import { mergeCompanionLearningSnapshot } from './companionLearningSnapshotRefresh.js';
+import { mergeCompanionNodeViews } from './companionNodeViewProjection.js';
 import { companionWorkspaceSnapshots, prepareCompanionWorkspaceIndex, registerCompanionWorkspaceRefresh } from './companionWorkspaceSnapshotStore.js';
 import { attachOpenCompanionVirtualFolderResults } from './runtime/companionVirtualFolderResults.js';
 import { getIosCompanionDatabaseOwner } from './runtime/iosCompanionDatabaseBootstrap.js';
 import { loadCompanionContentProjection } from './sync/workspace-state/companionContentProjection.js';
 import { mergeCompanionLocalState } from './sync/workspace-state/companionLocalStateProjection.js';
-import { buildIosPersistedNodeViews } from './sync/workspace-state/iosCompanionWorkspaceSnapshotRows.js';
 import { loadIosCompanionWorkspaceSnapshot } from './sync/workspace-state/iosCompanionWorkspaceSnapshotStore.js';
 
 type NodeScope = Extract<WorkspaceRefreshScope, { kind: 'nodes' }>;
@@ -51,27 +50,9 @@ async function readScoped(db: DbPort, current: WorkspaceSnapshot, scope: NodeSco
       .filter(node => roots.has(node.id) || (node.parentNodeId !== null && roots.has(node.parentNodeId)))
       .map(node => node.id);
     if (!canMergeWorkspaceContentProjection(current, nodes, expected, reviewed, reading)) return null;
-    next = await mergeProjectedNodeViews(db, mergeWorkspaceContentProjection(current, nodes), Object.keys(nodes));
+    next = await mergeCompanionNodeViews(db, mergeWorkspaceContentProjection(current, nodes), Object.keys(nodes));
   }
   return mergeCompanionLocalState(db, next, scope);
-}
-
-async function mergeProjectedNodeViews(db: DbPort, snapshot: WorkspaceSnapshot, nodeIds: string[]) {
-  if (!nodeIds.length) return snapshot;
-  // Scroll/selection state cannot change visibility, ordering or the active node.
-  // Read it in the same snapshot so a scroll save does not widen a body refresh.
-  const rows = await db.query(`SELECT node_id, scroll_top, selection_from, selection_to, source, updated_at
-    FROM node_view_state WHERE host_name = (SELECT value FROM companion_meta WHERE key = 'host_name')
-      AND node_id IN (SELECT value FROM json_each(?))`, [JSON.stringify(nodeIds)]);
-  const projected = buildIosPersistedNodeViews(rows);
-  if (nodeIds.every(id => workspaceSnapshotValueEqual(snapshot.persistedNodeViewById?.[id], projected[id]))) return snapshot;
-  const views = { ...snapshot.persistedNodeViewById };
-  for (const id of nodeIds) delete views[id];
-  Object.assign(views, projected);
-  const next = { ...snapshot };
-  if (Object.keys(views).length) next.persistedNodeViewById = views;
-  else delete next.persistedNodeViewById;
-  return next;
 }
 
 export async function refreshCompanionWorkspaceSnapshot(scope?: WorkspaceRefreshScope) {

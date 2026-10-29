@@ -5,6 +5,7 @@ import type { WorkspaceSnapshot } from '../../../../../../lib/core/database/work
 import {
   saveCompanionSyncActiveViewState,
   saveCompanionSyncNodeOpenState,
+  saveCompanionSyncNodeViewState,
   saveCompanionSyncNodeReadingRecord,
   saveCompanionSyncSettingRecord,
   saveCompanionSyncNodeReviewRecord
@@ -53,6 +54,35 @@ it('publishes a local grade without rereading the whole directory', async () => 
     expect(library.fullDirectoryQueries(), 'grade must not trigger a full directory read').toBe(reads);
     expect(displayed?.nodesById.a?.review).toEqual((await readComplete())?.nodesById.a?.review);
     expect(displayed?.nodesById.a?.review?.due).toBe(review.due);
+  } finally { await library.close(); }
+});
+
+it('publishes a saved scroll without reading document projections or priority facts', async () => {
+  const { library, baseline } = await openLibrary();
+  try {
+    const projections = library.directoryQueries();
+    const priorities = library.priorityReads.length;
+    await saveCompanionSyncNodeViewState({ nodeId: 'a', scrollTop: 240 });
+    const displayed = await refreshCompanionWorkspaceAfterMutation();
+    expect(displayed?.persistedNodeViewById?.a?.scrollTop).toBe(240);
+    expect(displayed?.nodesById).toBe(baseline?.nodesById);
+    expect(library.directoryQueries()).toBe(projections);
+    expect(library.priorityReads.length).toBe(priorities);
+    expect(displayed?.persistedNodeViewById).toEqual((await readComplete())?.persistedNodeViewById);
+  } finally { await library.close(); }
+});
+
+it('retains every position alongside learning in a combined refresh', async () => {
+  const { library } = await openLibrary();
+  try {
+    await saveCompanionSyncNodeViewState({ nodeId: 'a', scrollTop: 120 });
+    await saveCompanionSyncNodeViewState({ nodeId: 'b', scrollTop: 360 });
+    await saveCompanionSyncNodeReviewRecord({ nodeId: 'b', review });
+    const displayed = await refreshCompanionWorkspaceAfterMutation();
+    expect(displayed?.persistedNodeViewById?.a?.scrollTop).toBe(120);
+    expect(displayed?.persistedNodeViewById?.b?.scrollTop).toBe(360);
+    expect(displayed?.nodesById.b?.review).toEqual(review);
+    expect(displayed).toEqual(await readComplete());
   } finally { await library.close(); }
 });
 

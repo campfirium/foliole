@@ -74,11 +74,35 @@ it.each(['leave', 'library'] as const)('cancels a reading action waiting for con
   expect(library.database.prepare('SELECT * FROM node_reading').all()).toEqual([]);
 });
 
+it('submits Read without requesting a pending position flush', async () => {
+  const ui = await setup();
+  const position = deferred<void>();
+  let requested = false;
+  ui.result.current.surface.readingActivity.flushPosition = () => {
+    requested = true;
+    return position.promise;
+  };
+  let action!: Promise<void>;
+  act(() => { action = ui.result.current.surface.handleReadReviewTopic(); });
+  try {
+    await waitFor(() => expect(operationCount()).toEqual({ n: 1 }));
+    expect(requested).toBe(false);
+    expect(library.database.prepare('SELECT repetition_count FROM node_reading').get())
+      .toEqual({ repetition_count: 1 });
+  } finally {
+    await act(async () => { position.resolve(); await action; });
+  }
+});
+
 it('does not replay a saved reading action or advance the resumed session when its old refresh completes', async () => {
   const ui = await setup();
   const refresh = deferred<NonNullable<typeof ui.result.current.snapshot>>();
   const workspace = ui.result.current.workspace;
-  workspace.refreshAfterMutation.mockResolvedValueOnce(workspace.state.workspace_snapshot).mockImplementationOnce(() => refresh.promise);
+  workspace.refreshAfterMutation.mockImplementation(async () => {
+    const snapshot = await refreshCompanionWorkspaceAfterMutation();
+    const count = library.database.prepare('SELECT COUNT(*) FROM daily_flow_operations').pluck().get();
+    return count === 1 ? refresh.promise : snapshot;
+  });
   let action!: Promise<void>;
   act(() => { action = ui.result.current.surface.handleReadReviewTopic(); });
   await waitFor(() => expect(operationCount()).toEqual({ n: 1 }));
