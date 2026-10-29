@@ -78,6 +78,7 @@ vi.mock('./importManagerSettings.js', () => ({
 }));
 
 vi.mock('../database/connection.js', () => ({
+  registerDatabaseConnectionCleanup: vi.fn(),
   openDatabaseConnection: vi.fn(() => ({
     sqlite: { prepare: vi.fn(() => ({ run: vi.fn() })) }
   }))
