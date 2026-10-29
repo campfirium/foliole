@@ -4,13 +4,17 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionNodeResourceQueryDefinitions';
+import { loadCompanionWorkspaceNodeFromDb } from '../../lib/core/database/companionWorkspaceNodeRead';
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor';
 import { companionDailyFlowPersistence, openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
-import { closeIosCompanionDatabase, initializeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
+import { closeIosCompanionDatabase, getIosCompanionDatabaseOwner, initializeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
+import { createDisplayLibrary } from '../shared/platform/companion/sync/workspace-state/companionDisplaySnapshotConcurrency.testSupport';
+import { applyCompanionSyncNodeVersions } from '../shared/platform/companionSyncNodeVersions';
 import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 import type { ReviewSessionState } from '../store/workspaceStoreTypes';
@@ -26,10 +30,11 @@ const now = '2026-10-26T08:00:00.000Z';
 const key = 'flow_history:daily-grade';
 let library: Awaited<ReturnType<typeof createSearchLibrary>>;
 let session: ReviewSessionState;
+let baseRecords: Awaited<ReturnType<typeof toWorkspaceNativeNodeVersion>>[];
 const snapshot = async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
 beforeEach(async () => {
   library = await createSearchLibrary(0);
-  const records = await Promise.all(Array.from({ length: 15 }, (_, i) => toWorkspaceNativeNodeVersion({
+  const records = baseRecords = await Promise.all(Array.from({ length: 15 }, (_, i) => toWorkspaceNativeNodeVersion({
     id: `node-${i}`, title: `Node ${i}`, content: `Content ${i}`, kind: i < 12 ? 'item' : 'topic',
     parentNodeId: null, reveal: i < 12 ? `Answer ${i}` : null, anchorLink: null,
     isTitleManual: true, hideTitleHeading: false, reading: null, review: null,
@@ -99,6 +104,93 @@ it('preserves the next reading while grading five successive items', async () =>
   session = (await persistFlowMutation({ action: 'read', nodeId: session.currentNodeId!, now,
     snapshot: await snapshot(), history: { key, mode: 'recommended', session } })).session!;
   expect(session.currentNodeId).toBe(initial[6]);
+});
+
+it.each([[false, false], [false, true], [true, true]])('keeps grade node reads bounded (cold=%s, invalidated=%s)', async (cold, invalidated) => {
+  const target = session.currentNodeId!;
+  const before = await snapshot();
+  if (cold) getIosCompanionDatabaseOwner().clearNodePriorities();
+  if (invalidated) library.database.prepare('UPDATE daily_flow_state SET invalidated=1').run();
+  const reads: number[] = [];
+  let orders = 0;
+  const query = library.connection.query.bind(library.connection);
+  vi.spyOn(library.connection, 'query').mockImplementation(async (...args) => {
+    const result = await query(...args);
+    if (args[0] === ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS.workspaceOrderedNodeIds.sql) orders++;
+    if (args[0].startsWith('SELECT n.id') && args[0].endsWith('FROM nodes n')) reads.push(result.values?.length ?? 0);
+    return result;
+  });
+  session.isAnswerRevealed = true;
+  session = (await persistFlowMutation({ action: 'grade', grade: 3, nodeId: target, now,
+    snapshot: before, history: { key, mode: 'recommended', session } })).session!;
+  expect((await snapshot()).nodesById[target]!.review?.reps).toBe(1);
+  expect(session.currentNodeId).not.toBe(target);
+  expect(reads).toHaveLength(cold ? 1 : 0);
+  expect(orders).toBe(cold ? 1 : 0);
+  expect(library.database.prepare("SELECT COUNT(*) AS n FROM review_log WHERE kind='review'").get()).toEqual({ n: 1 });
+});
+
+it.each(['grade', 'read', 'reject', 'ineligible'] as const)('keeps committed peer membership and eligibility current during %s', async action => {
+  const peer = createDisplayLibrary('ios');
+  try {
+    await peer.owner.open({ expectedHostName: 'display-fixture', now });
+    await peer.owner.runWriter(db => applySyncNodesWithDbPort(db, baseRecords, { enqueueSearchInvalidations: false }));
+    if (action === 'read') session = (await openCompanionDailyFlow({ now, mode: 'reading-only' })).session;
+    const target = session.currentNodeId!;
+    const before = await snapshot();
+    const removed = action === 'reject' || action === 'ineligible' ? target : action === 'read' ? 'node-14' : 'node-11';
+    const records = await peer.owner.read(async db => {
+      const old = (await loadCompanionWorkspaceNodeFromDb(db, removed))!;
+      const stamp = '2026-10-26T08:00:01.000Z';
+      return Promise.all([
+        toWorkspaceNativeNodeVersion({ ...old, ...(action === 'ineligible' ? { kind: 'folder' as const } : { deletedAt: stamp }), updatedAt: stamp }, 'peer', 'deleted'),
+        toWorkspaceNativeNodeVersion({ ...old, id: 'new-topic', kind: 'topic', content: 'New body', reveal: null,
+          currentVersionId: null, review: null, reading: null, updatedAt: stamp, priority: 1 }, 'peer', 'new-topic')
+      ]);
+    });
+    await peer.owner.runWriter(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }));
+    await applyCompanionSyncNodeVersions(records);
+    expect(library.database.prepare('SELECT invalidated FROM daily_flow_state').get()).toEqual({ invalidated: 1 });
+    const act = () => persistFlowMutation({ action: action === 'read' ? 'read' : 'grade', grade: 3,
+      nodeId: target, now, snapshot: before, history: { key, mode: action === 'read' ? 'reading-only' : 'recommended', session } });
+    if (action === 'reject' || action === 'ineligible') {
+      await expect(act()).rejects.toThrow('daily_flow_learning_changed');
+      expect(library.database.prepare('SELECT COUNT(*) AS n FROM review_log').get()).toEqual({ n: 0 });
+      expect(library.database.prepare('SELECT invalidated FROM daily_flow_state').get()).toEqual({ invalidated: 1 });
+    } else {
+      session = (await act()).session!;
+      const rows = library.database.prepare('SELECT node_id FROM daily_flow_entries WHERE active=1').all() as { node_id: string }[];
+      expect(rows.map(row => row.node_id)).toContain('new-topic');
+      expect(rows.map(row => row.node_id)).not.toContain(removed);
+      expect(session.currentNodeId).not.toBe(target);
+      if (action === 'grade') expect((await snapshot()).nodesById[target]!.review?.reps).toBe(1);
+      else expect((await snapshot()).nodesById[target]!.reading?.repetitionCount).toBe(1);
+    }
+    for (const file of [peer.file, path.join(library.root, 'library.db')]) {
+      const reader = new Database(file, { readonly: true });
+      try {
+        expect(reader.prepare('SELECT deleted_at, kind FROM nodes WHERE id=?').get(removed)).toMatchObject(action === 'ineligible'
+          ? { deleted_at: null, kind: 'folder' } : { deleted_at: '2026-10-26T08:00:01.000Z' });
+        expect(reader.prepare("SELECT priority FROM nodes WHERE id='new-topic'").get()).toEqual({ priority: 1 });
+      } finally { reader.close(); }
+    }
+  } finally { await peer.close(); }
+});
+
+it('rolls back an invalidated grade when appending its durable history fails', async () => {
+  library.database.prepare('UPDATE daily_flow_state SET invalidated=1').run();
+  const state = library.database.prepare('SELECT * FROM daily_flow_state').all();
+  const rows = library.database.prepare('SELECT * FROM daily_flow_entries ORDER BY order_key').all();
+  library.database.exec(`CREATE TRIGGER reject_history BEFORE INSERT ON companion_meta
+    WHEN NEW.key='flow_history:daily-grade' BEGIN SELECT RAISE(ABORT, 'history rejected'); END`);
+  await expect(grade(3)).rejects.toThrow('history rejected');
+  expect(library.database.prepare('SELECT * FROM daily_flow_state').all()).toEqual(state);
+  expect(library.database.prepare('SELECT * FROM daily_flow_entries ORDER BY order_key').all()).toEqual(rows);
+  expect(library.database.prepare('SELECT COUNT(*) AS n FROM review_log').get()).toEqual({ n: 0 });
+  expect(library.database.prepare('SELECT COUNT(*) AS n FROM node_review').get()).toEqual({ n: 0 });
+  library.database.exec('DROP TRIGGER reject_history');
+  await grade(3);
+  expect(library.database.prepare("SELECT COUNT(*) AS n FROM review_log WHERE kind='review'").get()).toEqual({ n: 1 });
 });
 
 it('keeps minute grades waiting, admits them when due, and respects a runtime short-term setting change', async () => {

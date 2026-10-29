@@ -12,11 +12,13 @@ import { toNodeReviewProfile, toSchedulerCard } from '../../../../features/revie
 import type { FlowHistoryEntry } from '../../../../store/workspaceReviewHistoryTarget';
 import type { ReviewSessionState } from '../../../../store/workspaceStoreTypes';
 
-import { companionDailyFlowPersistence, companionDailyFlowSettings } from './companionDailyFlow';
+import { companionDailyFlowPersistence, companionDailyFlowSettings, ownedCompanionDailyFlowPersistence } from './companionDailyFlow';
 import { appendCompanionFlowHistory } from './companionFlowHistoryStore';
 
 export async function commitCompanionDailyHistory(db: DbPort, args: { key: string; entry: FlowHistoryEntry;
   reviewLog?: NativeSyncReviewLogDraft; completedReviewDay?: string }) {
+  const settings = companionDailyFlowSettings();
+  const persistence = ownedCompanionDailyFlowPersistence(settings);
   const entry = args.entry;
   const token = entry.beforeContext.reviewSession.daily;
   if (!token) throw new Error('daily_flow_token_missing');
@@ -25,7 +27,7 @@ export async function commitCompanionDailyHistory(db: DbPort, args: { key: strin
     ? await commitDailyFlow(db, await retainDailyFlowRetryAsync({ ...common, grade: { nodeId: entry.nodeId, before: entry.beforeReview,
       grade: args.reviewLog!.grade as 1 | 2 | 3 | 4, reviewedAt: args.reviewLog!.reviewedAt,
       schedulerVersion: args.reviewLog!.schedulerVersion, cardBefore: toSchedulerCard(entry.beforeReview, entry.mutationTimestamp),
-      cardAfter: toSchedulerCard(entry.afterReview, entry.mutationTimestamp) } }), companionDailyFlowSettings(), companionDailyFlowPersistence)
+      cardAfter: toSchedulerCard(entry.afterReview, entry.mutationTimestamp) } }), settings, persistence)
     : await commitDailyFlow(db, await retainDailyFlowRetryAsync({ ...common, ...(entry.title === 'Soon Topic' ? { readingAction: 'soon' as const } : {}),
       ...(entry.title === 'Read Topic' ? { readingAction: 'read' as const }
       : entry.title === 'Later Topic' ? { readingAction: 'later' as const }
@@ -34,7 +36,7 @@ export async function commitCompanionDailyHistory(db: DbPort, args: { key: strin
       ...(args.completedReviewDay === undefined ? {} : { completedReviewDay: args.completedReviewDay }) },
     ...(entry.relatedReadings ?? []).map(value => ({ nodeId: value.nodeId,
       before: value.beforeReading ?? null, after: value.afterReading ?? null }))] }),
-    companionDailyFlowSettings(), companionDailyFlowPersistence);
+    settings, persistence);
   const saved = { ...entry, ...(result.sourceSession ? { beforeContext: { ...entry.beforeContext, reviewSession: result.sourceSession } } : {}), afterContext: { ...entry.afterContext,
     activeNodeId: result.session.currentNodeId, reviewSession: result.session },
   ...(entry.type === 'review.grade' ? { afterReview: result.card ? toNodeReviewProfile(result.card) : null } : {}) };

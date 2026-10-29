@@ -2,7 +2,7 @@ import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../../../.
 import { recordReviewHistoryWithDb } from '../../../../../lib/core/database/reviewLogRecord';
 import { recomputeNodeReviewWithDb } from '../../../../../lib/core/database/reviewProjection';
 import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
-import type { DailyFlowOpenArgs } from '../../../../../lib/core/flow/dailyFlowContract';
+import type { DailyFlowOpenArgs, DailyFlowSettings } from '../../../../../lib/core/flow/dailyFlowContract';
 import { loadDailyFlowLearningFromNodeIndex, loadDailyFlowLearningSnapshot } from '../../../../../lib/core/flow/dailyFlowLearningSnapshot';
 import { predictDailyFlowDocument, type DailyFlowPredictionArgs } from '../../../../../lib/core/flow/dailyFlowPrediction';
 import { openDailyFlow, type DailyFlowPersistence } from '../../../../../lib/core/flow/dailyFlowService';
@@ -58,23 +58,26 @@ export function companionDailyFlowSettings() {
   return { scope: hashTextBody(getIosCompanionDatabaseOwner().databasePath), newDayStartsAtHour: value.newDayStartsAtHour, pushQueue: value.pushQueue };
 }
 
+export function ownedCompanionDailyFlowPersistence(settings: DailyFlowSettings): DailyFlowPersistence {
+  return { ...companionDailyFlowPersistence,
+    learningSnapshot: async (tx, ids) => {
+      const metadata = ids ? undefined : getIosCompanionDatabaseOwner().readNodeMetadata(tx) ?? undefined;
+      const hostName = await iosCompanionHostName(tx);
+      const snapshot = metadata ? await loadDailyFlowLearningFromNodeIndex(tx, hostName, metadata)
+        : await loadDailyFlowLearningSnapshot(tx, hostName, ids);
+      if (ids) return snapshot;
+      const index = await getIosCompanionDatabaseOwner()
+        .readNodeIndex(tx, settings.pushQueue.defaultPriority, metadata ? undefined : Object.values(snapshot.nodesById)
+          .map(node => ({ ...node, anchorKind: node.anchorLink?.kind ?? null })));
+      const nodeOrder = await getIosCompanionDatabaseOwner().readNodeOrder(tx);
+      return { ...snapshot, nodeOrder: [...nodeOrder], nodePriorities: index.priorities, nodePaths: index.paths };
+    } };
+}
+
 export function openCompanionDailyFlow(args: DailyFlowOpenArgs) {
   return runCompanionSyncWriterTask(() => writeIosCompanionDatabase(async db => {
     const settings = companionDailyFlowSettings();
-    const persistence: DailyFlowPersistence = { ...companionDailyFlowPersistence,
-      learningSnapshot: async (tx, ids) => {
-        const metadata = ids ? undefined : getIosCompanionDatabaseOwner().readNodeMetadata(tx) ?? undefined;
-        const hostName = await iosCompanionHostName(tx);
-        const snapshot = metadata ? await loadDailyFlowLearningFromNodeIndex(tx, hostName, metadata)
-          : await loadDailyFlowLearningSnapshot(tx, hostName, ids);
-        if (ids) return snapshot;
-        const index = await getIosCompanionDatabaseOwner()
-          .readNodeIndex(tx, settings.pushQueue.defaultPriority, metadata ? undefined : Object.values(snapshot.nodesById)
-            .map(node => ({ ...node, anchorKind: node.anchorLink?.kind ?? null })));
-        const nodeOrder = await getIosCompanionDatabaseOwner().readNodeOrder(tx);
-        return { ...snapshot, nodeOrder: [...nodeOrder], nodePriorities: index.priorities, nodePaths: index.paths };
-      } };
-    return openDailyFlow(db, args, settings, persistence);
+    return openDailyFlow(db, args, settings, ownedCompanionDailyFlowPersistence(settings));
   }));
 }
 
