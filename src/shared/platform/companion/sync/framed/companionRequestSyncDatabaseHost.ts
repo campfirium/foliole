@@ -1,7 +1,9 @@
+import { readDailyFlow } from '../../../../../../lib/core/flow/dailyFlowStorage.js';
 import type { RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue.js';
 import { registerCompanionSyncAppliedRefresh, updateCommittedCompanionWorkspace } from '../../companionWorkspaceSnapshotStore.js';
 import { getCompanionReadingScope } from '../../reading/companionReadingScope.js';
+import { refreshCompanionDailyFlowAfterSync } from '../../runtime/companionDailyFlow.js';
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 import { iosCompanionHostName } from '../../runtime/iosCompanionMutationState.js';
@@ -21,7 +23,12 @@ export async function currentCompanionRequestSyncDatabaseHost(
     if (owner !== getIosCompanionDatabaseOwner() || owner.databasePath !== databasePath ||
         generation !== companionFramedFileOwner(owner).generation_id) throw new Error('request_sync_library_changed');
   };
-  return {
+  const host: RequestSyncDatabaseHost = {
+    databaseRoundCompleted: async () => {
+      const current = await host.write(async db => await refreshCompanionDailyFlowAfterSync(db)
+        ? (await readDailyFlow(db))?.session.currentNodeId : undefined);
+      if (current) registerCompanionSyncAppliedRefresh({ kind: 'nodes', nodeIds: [current] });
+    },
     enqueueSearchInvalidations: false,
     refreshNodeIndex: async (db, scope) => {
       if (session === getCompanionReadingScope()) await updateCommittedCompanionWorkspace(scope, db);
@@ -42,4 +49,5 @@ export async function currentCompanionRequestSyncDatabaseHost(
       return write(db);
     }))
   };
+  return host;
 }

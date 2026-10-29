@@ -1,6 +1,8 @@
 import type { CycleState } from './cycleFlowTypes.js';
 
 export interface DailyFlowSession {
+  candidateMembershipHash?: string;
+  rebuildSourceRevision?: number;
   dayWindow?: { start: string; end: string };
   flowFormat?: 'legacy-queue-v1' | 'cycle-v1';
   cycle?: CycleState;

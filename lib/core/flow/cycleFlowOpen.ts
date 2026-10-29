@@ -3,12 +3,13 @@ import { hasDeletedAncestor, hasShelvedAncestor } from '../review/queue/reviewQu
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../review/reviewItemKind.js';
 
+import { buildCycle } from './cycleFlowBuild.js';
 import { cycleChanges } from './cycleFlowChanges.js';
 import { cycleWindow, selectCycleSuccessor } from './cycleFlowSelection.js';
 import { allocateCycleKey, cycleMeta, sameCycleProgress } from './cycleFlowState.js';
 import type { CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowOpenArgs, DailyFlowSettings } from './dailyFlowContract.js';
-import { flowDay, flowPlan, fullDayCandidates, prepareDailyFlowPlans, prepareFlowSession } from './dailyFlowPlanning.js';
+import { flowDay, flowPlan, fullDayCandidates } from './dailyFlowPlanning.js';
 import { readCurrentFlowLearning } from './dailyFlowReceipt.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
@@ -17,30 +18,13 @@ import type { CycleStored } from './dailyFlowStore.js';
 
 export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArgs, settings: DailyFlowSettings) {
   const snapshot = await db.learningSnapshot();
-  const seed = args.seed?.sessionStartedAt && flowDay(args.seed.sessionStartedAt, settings) === flowDay(args.now, settings)
-    ? args.seed : undefined;
-  const plans = prepareDailyFlowPlans(snapshot, args, settings);
-  args = { ...args, mode: plans.mode };
-  const initial = prepareFlowSession(snapshot, args, settings, seed, plans.initial);
-  const queue = initial.queueNodeIds;
-  const queued = new Set(queue);
-  const pinned = initial.currentNodeId && !queue.includes(initial.currentNodeId) ? [initial.currentNodeId] : [];
-  const soon = [...new Set([...(initial.hiddenSoonNodeIds ?? []), ...(initial.soonNodeIds ?? [])])];
-  const ids = [...new Set(seed ? [...queue, ...pinned, ...soon, ...plans.fullDayNodeIds]
-    : [...(initial.currentNodeId ? [initial.currentNodeId] : []), ...plans.fullDayNodeIds])];
-  const pendingSoon = new Set(soon);
-  const rows: CycleRow[] = ids.map((node_id, index) => ({ node_id, order_key: index + 1, active: 1,
-    handled: 0, cohort: queued.has(node_id) ? 'queue' : pendingSoon.has(node_id) ? 'soon' : 'none', initial_task: queued.has(node_id) ? 1 : 0 }));
-  const clearKey = rows.reduce((last, row) => row.initial_task ? row.order_key : last, 0);
-  const cycle = { clearKey, clearedAt: null, scanAfter: 0, lapLimit: rows.length, tailKey: rows.length,
-    remaining: queue.length,
-    reviewRemaining: queue.filter(id => isFsrsReviewItemNode(snapshot.nodesById[id])).length };
+  const { session, rows, mode } = buildCycle(snapshot, args, settings);
+  const cycle = session.cycle!;
   await db.writeRows(rows);
-  const current = initial.currentNodeId;
-  const session = { ...initial, currentNodeId: current, flowFormat: 'cycle-v1' as const, cycle };
+  const current = session.currentNodeId;
   if (current) cycle.scanAfter = rows.find(row => row.node_id === current)!.order_key;
-  else await chooseCycleCurrent(db, session, args.mode, args.now, settings);
-  return { session, snapshot, rows, mode: plans.mode };
+  else await chooseCycleCurrent(db, session, mode, args.now, settings);
+  return { session, snapshot, rows, mode };
 }
 
 export async function reconcileCycle(db: Pick<DailyFlowStore, 'learningSnapshot' | 'readRows' | 'writeRows'>, stored: CycleStored, now: string,

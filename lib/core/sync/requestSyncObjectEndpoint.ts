@@ -19,6 +19,7 @@ import type { ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecuto
 
 export interface RequestSyncDatabaseHost {
   files: RequestSyncFilePort;
+  databaseRoundCompleted?(): Promise<void>;
   enqueueSearchInvalidations?: boolean;
   objectOptions?(db: DbPort): Promise<ApplySyncObjectsWithDbPortOptions>;
   attachmentArticlesCommitted?(ids: readonly string[]): void;

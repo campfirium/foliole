@@ -12,6 +12,7 @@ import { sameCycleProgress } from './cycleFlowState.js';
 import { dailyFlowCommitSchema, type DailyFlowCommitArgs, type DailyFlowSettings } from './dailyFlowContract.js';
 import { commitDailyFlowNavigation } from './dailyFlowNavigation.js';
 import { flowDay, flowPlan } from './dailyFlowPlanning.js';
+import { acceptsRebuiltFlowSource } from './dailyFlowRebuildSource.js';
 import { currentFlowLearning, readCurrentFlowLearning } from './dailyFlowReceipt.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import type { DailyFlowStore } from './dailyFlowStore.js';
@@ -28,7 +29,7 @@ export async function commitCycleFlow(db: DailyFlowStore, args: DailyFlowCommitA
   if (replayed) return replayed;
   if (!stored || stored.day_key !== args.token.dayKey ||
     (stored.revision !== args.token.revision && (!args.sourceSession?.cycle ||
-      !sameCycleProgress(args.sourceSession, stored.session))) ||
+      !sameCycleProgress(args.sourceSession, stored.session) && !acceptsRebuiltFlowSource(stored, args))) ||
     (!args.historyMode && stored.day_key !== flowDay(args.now, settings))) throw new Error('daily_flow_changed');
   if (args.navigation) return commitDailyFlowNavigation(db, stored, args, settings, hash);
   const mode = stored.mode as ReviewSessionMode;
@@ -59,6 +60,7 @@ export async function commitCycleFlow(db: DailyFlowStore, args: DailyFlowCommitA
   if (args.reviewHistory?.mode === 'redo') session = { ...session,
     nextReviewDueAt: resolveEarliestReviewDueAt(args.sourceSession?.nextReviewDueAt, result.card?.due) };
   session = cycleWindow(session);
+  delete session.rebuildSourceRevision;
   const saved = await db.saveState({ dayKey: stored.day_key, mode, settingsKey: JSON.stringify(settings),
     now: args.now, revision: stored.revision + 1, session });
   await db.saveOperation(args.opId, { input_hash: hash, revision: saved.daily!.revision,

@@ -4,10 +4,11 @@ import path from 'node:path';
 import type { Page } from '@playwright/test';
 
 import { runPaletteHistoryCommand } from './harness/contextualWorkspaceHistory';
-import { expect, test } from './harness/fixtures';
+import { resetDailyFlowGeneration } from './harness/dailyFlowGeneration';
+import { expect, test, type DesktopSession } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-async function prepare(page: Page, kind: 'item' | 'topic') {
+async function prepare(page: Page, kind: 'item' | 'topic', app: DesktopSession['electronApp']) {
   await expectWorkspaceShell(page);
   await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
   await page.reload();
@@ -30,6 +31,7 @@ async function prepare(page: Page, kind: 'item' | 'topic') {
   await page.evaluate(async ids => {
     for (const id of ids) await window.__folioleWorkspaceDebug!.deleteNode(id);
   }, retiredIds);
+  await resetDailyFlowGeneration(app);
   await page.reload();
   await expectWorkspaceShell(page);
   await page.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated());
@@ -65,8 +67,8 @@ async function capture(page: Page, action: string) {
 }
 
 for (const action of ['Grade', 'Soon', 'Read', 'Later', 'Dismiss'] as const) {
-test(`${action} restores the current item, facts and daily cursor through undo, redo and renderer reload`, async ({ desktopWindow: page }) => {
-  await prepare(page, action === 'Grade' ? 'item' : 'topic');
+test(`${action} restores the current item, facts and daily cursor through undo, redo and renderer reload`, async ({ desktopApp, desktopWindow: page }) => {
+  await prepare(page, action === 'Grade' ? 'item' : 'topic', desktopApp);
   const initial = await session(page);
   const id = initial.currentNodeId!;
   const before = await facts(page, id);
@@ -89,8 +91,8 @@ test(`${action} restores the current item, facts and daily cursor through undo, 
 });
 }
 
-test('replays a Soon and Read chain while preserving the waiting topic', async ({ desktopWindow: page }) => {
-  await prepare(page, 'topic');
+test('replays a Soon and Read chain while preserving the waiting topic', async ({ desktopApp, desktopWindow: page }) => {
+  await prepare(page, 'topic', desktopApp);
   const initial = await session(page);
   await page.getByRole('button', { name: 'Soon', exact: true }).click();
   await expect.poll(async () => (await session(page)).currentNodeId).not.toBe(initial.currentNodeId);

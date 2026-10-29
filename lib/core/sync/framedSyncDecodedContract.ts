@@ -154,6 +154,7 @@ function validateRemainingPayload(payloadCase: ProtocolPayloadCase, payload: Rec
     text(payload.receiverDeviceId, 'receiver_device_id'); text(payload.receiverLibraryEpoch, 'receiver_library_epoch');
   } else if (payloadCase === 'round_receipt') {
     fixedBytes(payload.roundId, 16, 'round_id'); enumValue(payload.result, 2, 'round_result');
+    if (payload.databaseConfirmed !== undefined && typeof payload.databaseConfirmed !== 'boolean') throw new Error('protocol_database_confirmed_invalid');
     validateIdentityList(payload.deferredFacts);
   } else if (payloadCase === 'transfer_termination') {
     digest(payload.transferId, 'transfer_id'); text(payload.memberId, 'member_id');

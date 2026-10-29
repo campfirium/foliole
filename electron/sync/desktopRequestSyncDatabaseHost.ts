@@ -1,9 +1,11 @@
+import { readDailyFlow } from '../../lib/core/flow/dailyFlowStorage.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { syncGroupLocalPublicationBlockReason } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { libraryScopeForDatabasePath } from '../database/attachmentResourceDescription.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, resolveDatabasePath, runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { refreshDesktopDailyFlowAfterSync } from '../database/dailyFlow.js';
 import { materializeDesktopSettingRecord, readDesktopHostName } from '../database/desktopSettingMaterializer.js';
 import { flushDirtyNodeSyncVersions, hasPendingNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { withRequestSyncReadonlySnapshot } from '../database/requestSyncReadonlySnapshot.js';
@@ -23,7 +25,14 @@ export function createDesktopRequestSyncDatabaseHost(databasePath: string, sourc
     owner ??= connection;
   };
   const files = createDesktopRequestSyncFiles(databasePath);
-  return {
+  const host: RequestSyncDatabaseHost = {
+    databaseRoundCompleted: async () => {
+      const current = await host.write(async db => await refreshDesktopDailyFlowAfterSync(db)
+        ? (await readDailyFlow(db))?.session.currentNodeId : undefined);
+      if (current) notifyWorkspaceSyncApplied({ workspaceScope: { kind: 'nodes', nodeIds: [current] },
+        libraryScope: libraryScopeForDatabasePath(databasePath), appliedNodeIds: [],
+        appliedObjectIds: ['local-daily-flow'], appliedReviewOpIds: [] }, sourceSession);
+    },
     objectOptions: async db => {
       const hostName = await readDesktopHostName(db);
       return { ...(hostName ? { hostName } : {}), onPayloadAppliedInTransaction: materializeDesktopSettingRecord };
@@ -49,6 +58,7 @@ export function createDesktopRequestSyncDatabaseHost(databasePath: string, sourc
     },
     write: write => withPreparedDesktopSyncConnection(databasePath, write, timing, checkOwner)
   };
+  return host;
 }
 
 function prepareDesktopSyncRead(databasePath: string, checkOwner: (connection: ReturnType<typeof openDatabaseConnection>) => void) {

@@ -3,7 +3,8 @@ import path from 'node:path';
 
 import type { Page } from '@playwright/test';
 
-import { expect, test } from './harness/fixtures';
+import { resetDailyFlowGeneration } from './harness/dailyFlowGeneration';
+import { expect, test, type DesktopSession } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
 const session = (page: Page) => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession());
@@ -16,7 +17,7 @@ async function mode(page: Page, name: RegExp) {
   await expect.poll(async () => (await session(page)).daily!.revision).toBeGreaterThan(before);
 }
 
-async function prepare(page: Page) {
+async function prepare(page: Page, app: DesktopSession['electronApp']) {
   await expectWorkspaceShell(page);
   await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
   await page.reload();
@@ -44,13 +45,14 @@ async function prepare(page: Page) {
       }
     }
   });
+  await resetDailyFlowGeneration(app);
   await page.reload();
   await expectWorkspaceShell(page);
   await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
 }
 
-test('keeps ordered reading Soon through review-only grading and renderer restart', async ({ desktopWindow: page }) => {
-  await prepare(page);
+test('keeps ordered reading Soon through review-only grading and renderer restart', async ({ desktopApp, desktopWindow: page }) => {
+  await prepare(page, desktopApp);
   await mode(page, /Reading only/);
   await expect.poll(async () => (await session(page)).currentNodeId).toMatch(/^mode-[ab]$/);
   const initial = await session(page);

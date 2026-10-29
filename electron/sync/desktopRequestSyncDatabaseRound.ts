@@ -66,7 +66,14 @@ async function runPreparedRound(host: import('../../lib/core/sync/requestSyncObj
       error
     })
   };
-  if (!overwriteId) return runRequestSyncDatabaseRound(port, input.signal);
+  if (!overwriteId) {
+    const result = await runRequestSyncDatabaseRound(port, input.signal);
+    if (result.complete) {
+      if (input.peerRound) input.peerRound.databaseConfirmed = true;
+      await host.databaseRoundCompleted?.();
+    }
+    return result;
+  }
   const progress = { groupId: context.groupId, overwriteId, providerDeviceId: context.responderDeviceId,
     providerLibraryEpoch: context.responderLibraryEpoch, receiverDeviceId: context.initiatorDeviceId,
     receiverLibraryEpoch: context.initiatorLibraryEpoch };

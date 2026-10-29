@@ -176,9 +176,15 @@ export function buildReviewQueuePlan(args: ReviewQueuePlanInput): ReviewQueuePla
 }
 
 // Day end controls membership; current eligibility projects the already ordered kind queues.
-export function buildReviewQueueDayPlan(input: ReviewQueuePlanInput, dayEnd: string) {
-  const { priorities, paths, time } = createPlanningContext(input);
-  const candidates = collectCandidates({ ...input, candidateNow: dayEnd }, time);
+export function prepareReviewQueueDayCandidates(input: ReviewQueuePlanInput, dayEnd: string) {
+  const time = createReviewQueueTimeInput(input.readingDayStartsAtHour, input.newDayStartsAtHour, input.dayWindow);
+  return { time, candidates: collectCandidates({ ...input, candidateNow: dayEnd }, time) };
+}
+
+export function buildReviewQueueDayPlan(input: ReviewQueuePlanInput, dayEnd: string,
+  prepared = prepareReviewQueueDayCandidates(input, dayEnd)) {
+  const { priorities, paths } = createPlanningContext(input);
+  const { time, candidates } = prepared;
   const ordered = buildOrderedQueues(input, candidates, priorities, paths, time);
   const nowMs = time.timestamp(input.now);
   const ready = new Set([

@@ -8,6 +8,7 @@ import type { SyncPeerRoundLease } from './syncPeerRoundOwnership.js';
 export type RequestSyncPeerRound = {
   id: string; lease: SyncPeerRoundLease; admitted: boolean; sessionId?: string;
   onUnconfirmedFinish?(): Promise<void>;
+  databaseConfirmed?: boolean;
 };
 const roundIdSchema = z.string().uuid();
 const modeSchema = z.enum(['start', 'continue', 'finish', 'single']);
@@ -39,27 +40,30 @@ export async function withRequestSyncPeerRound<T>(exchange: RequestSyncExchange,
   finally {
     if (round.admitted && !exchange.signal?.aborted) {
       // Preserve committed data while retiring any session that may still hold the remote round.
-      await roundControl(exchange, round.id).catch(() => round.onUnconfirmedFinish?.());
+      const confirmed = round.databaseConfirmed === true;
+      round.databaseConfirmed = false;
+      await roundControl(exchange, round.id, confirmed).catch(() => round.onUnconfirmedFinish?.());
     }
   }
 }
 
-async function roundControl(exchange: RequestSyncExchange, id: string) {
+async function roundControl(exchange: RequestSyncExchange, id: string, confirmed: boolean) {
   const roundId = roundBytes(id);
   await withControlRequest(exchange, '/companion/framed-sync?request=round_finish',
-    [{ payloadCase: 'round_receipt', payload: { roundId, result: 1, deferredFacts: [] } }], async response => {
+    [{ payloadCase: 'round_receipt', payload: { roundId, result: 1, deferredFacts: [], databaseConfirmed: confirmed } }], async response => {
       await validateRoundControl({ ...exchange, stream: response }, roundId);
     });
 }
 
 export async function respondRequestSyncRoundControl(input: {
   context: RequestSyncAuthenticatedContext; groupKey: Uint8Array; stream: FramedSyncStreamBody;
-  signal?: AbortSignal; roundId: string;
+  signal?: AbortSignal; roundId: string; onCompleted?: (() => Promise<void>) | undefined;
 }) {
   const roundId = roundBytes(input.roundId);
-  await validateRoundControl(input, roundId);
+  const confirmed = await validateRoundControl(input, roundId);
+  if (confirmed) await input.onCompleted?.();
   return prepareRequestSyncWire({ ...input, messages: async function* () {
-    yield { payloadCase: 'round_receipt', payload: { roundId, result: 1, deferredFacts: [] } };
+    yield { payloadCase: 'round_receipt', payload: { roundId, result: 1, deferredFacts: [], databaseConfirmed: confirmed } };
   } });
 }
 
@@ -68,15 +72,18 @@ async function validateRoundControl(input: {
   signal?: AbortSignal;
 }, id: Uint8Array) {
   let received = false;
+  let confirmed = false;
   for await (const { message } of readRequestSyncWire({ ...input, ...input.stream })) {
     const roundId = message.payload.roundId;
-    if (received || message.payloadCase !== 'round_receipt' || message.payload.result !== 1 ||
+    if (received || message.payloadCase !== 'round_receipt' || (message.payload.result !== 1 && message.payload.result !== 2) ||
       !(roundId instanceof Uint8Array) || roundId.length !== id.length || roundId.some((byte, index) => byte !== id[index])) {
       throw new Error('sync_round_control_invalid');
     }
     received = true;
+    confirmed = message.payload.databaseConfirmed === true || message.payload.result === 2;
   }
   if (!received) throw new Error('sync_round_control_missing');
+  return confirmed;
 }
 
 function roundBytes(id: string) {

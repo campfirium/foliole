@@ -54,7 +54,7 @@ async function respond(payload: Record<string, unknown>, parentSignal: AbortSign
     return await withInboundAttachmentPreparation(host, { lifecycle: lease.signal, signal, mode,
       single: round.mode === 'single' }, async prepared => {
       if (mode === 'round_finish') return await consume(
-        await respondRequestSyncRoundControl({ context, groupKey, stream: receivedStream, signal, roundId: round.id }));
+        await respondRequestSyncRoundControl({ context, groupKey, stream: receivedStream, signal, roundId: round.id, onCompleted: prepared.databaseRoundCompleted }));
       if (mode === 'attachments') return await respondRequestSyncAttachments(await currentCompanionAttachmentHost(prepared),
         { context, groupKey, stream: receivedStream, signal, onProgress: () => lease.touch() }, consume);
       return await respondRequestSyncDatabase(prepared, { context, groupKey, mode, stream: receivedStream, signal,

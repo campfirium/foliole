@@ -5,11 +5,13 @@ import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
 import type { DailyFlowOpenArgs, DailyFlowSettings } from '../../../../../lib/core/flow/dailyFlowContract';
 import { loadDailyFlowLearningFromNodeIndex, loadDailyFlowLearningSnapshot } from '../../../../../lib/core/flow/dailyFlowLearningSnapshot';
 import { predictDailyFlowDocument, type DailyFlowPredictionArgs } from '../../../../../lib/core/flow/dailyFlowPrediction';
+import { refreshDailyFlowAfterSync } from '../../../../../lib/core/flow/dailyFlowRefresh.js';
 import { openDailyFlow, type DailyFlowPersistence } from '../../../../../lib/core/flow/dailyFlowService';
 import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import { readDailyFlowView } from '../../../../../lib/core/flow/dailyFlowView';
 import type { DailyFlowViewArgs } from '../../../../../lib/core/flow/dailyFlowViewContract';
 import { reviewHistoryOpId } from '../../../../../lib/core/review/reviewEventIdentity';
+import type { DbPort } from '../../../../../lib/core/sync/dbPort.js';
 import { getCurrentReviewSchedulerSettings } from '../../../../features/settings/model/reviewSchedulerSettings';
 import { toReadingPayload } from '../../companionSyncStateWriters';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
@@ -94,4 +96,9 @@ export function predictCompanionFlowDocument(args: DailyFlowPredictionArgs, sign
 
 export function readCompanionDailyFlowView(args: DailyFlowViewArgs) {
   return readIosCompanionDatabase(db => readDailyFlowView(db, args, companionDailyFlowSettings(), companionDailyFlowPersistence));
+}
+
+export function refreshCompanionDailyFlowAfterSync(db: DbPort) {
+  const settings = companionDailyFlowSettings();
+  return refreshDailyFlowAfterSync(db, new Date().toISOString(), settings, ownedCompanionDailyFlowPersistence(settings));
 }

@@ -76,6 +76,7 @@ export async function commitTargetedFlowHistory(db: DbPort, args: DailyFlowCommi
   if (!facts.some(fact => fact.id === target.id)) throw new Error('flow_history_changed');
   const changed = await persistTargetLearning(db, args, facts, target, persistence);
   const desired = { ...stored.session, currentNodeId: args.historyMode === 'undo' ? nodeId : target.session.currentNodeId, isAnswerRevealed: false };
+  delete desired.rebuildSourceRevision;
   await saveCycleFlow(db, { dayKey: stored.day_key, mode: stored.mode, settingsKey: stored.settings_key,
     now: args.now, revision: stored.revision + 1, session: desired });
   await recordDailyFlowSync(db, { session: desired, sourceSession: stored.session }, settings, args.now, args);

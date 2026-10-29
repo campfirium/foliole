@@ -24,7 +24,7 @@ export async function recordDailyFlowSync(db: DbPort, result: DailyFlowResult, s
     `SELECT MAX(occurred_at) AS occurred_at FROM daily_flow_sync_facts
       WHERE kind!='create' AND day_start<? AND day_end>?`, [settings.dayWindow!.end, settings.dayWindow!.start]);
   const occurredAt = new Date(Math.max(Date.parse(now), latest?.occurred_at ? Date.parse(latest.occurred_at) + 1 : 0)).toISOString();
-  const session = { ...result.session, daily: undefined };
+  const session = { ...result.session, daily: undefined, candidateMembershipHash: undefined, rebuildSourceRevision: undefined };
   const history = command?.cycleReplay;
   const after = command?.historyMode === 'undo' ? history?.before : history?.after;
   const before = command?.historyMode === 'undo' ? history?.after : history?.before;

@@ -809,6 +809,11 @@
                       "type": "FactIdentity",
                       "id": 3,
                       "protoName": "deferred_facts"
+                    },
+                    "databaseConfirmed": {
+                      "type": "bool",
+                      "id": 4,
+                      "protoName": "database_confirmed"
                     }
                   }
                 },
@@ -1007,160 +1012,6 @@
                       "type": "DailyFlowTableEnd",
                       "id": 26,
                       "protoName": "daily_flow_table_end"
-                    }
-                  }
-                },
-                "RequestObjectHeader": {
-                  "fields": {
-                    "requestId": {
-                      "type": "bytes",
-                      "id": 1,
-                      "protoName": "request_id"
-                    },
-                    "objectType": {
-                      "type": "string",
-                      "id": 2,
-                      "protoName": "object_type"
-                    },
-                    "globalId": {
-                      "type": "string",
-                      "id": 3,
-                      "protoName": "global_id"
-                    },
-                    "sourceStateHash": {
-                      "type": "bytes",
-                      "id": 4,
-                      "protoName": "source_state_hash"
-                    },
-                    "currentVersionId": {
-                      "type": "string",
-                      "id": 5,
-                      "protoName": "current_version_id"
-                    }
-                  }
-                },
-                "RequestObjectEnd": {
-                  "fields": {
-                    "requestId": {
-                      "type": "bytes",
-                      "id": 1,
-                      "protoName": "request_id"
-                    },
-                    "streamHash": {
-                      "type": "bytes",
-                      "id": 2,
-                      "protoName": "stream_hash"
-                    },
-                    "factCount": {
-                      "type": "uint64",
-                      "id": 3,
-                      "protoName": "fact_count"
-                    },
-                    "bodyCount": {
-                      "type": "uint64",
-                      "id": 4,
-                      "protoName": "body_count"
-                    }
-                  }
-                },
-                "RequestObjectResult": {
-                  "fields": {
-                    "requestId": {
-                      "type": "bytes",
-                      "id": 1,
-                      "protoName": "request_id"
-                    },
-                    "objectType": {
-                      "type": "string",
-                      "id": 2,
-                      "protoName": "object_type"
-                    },
-                    "globalId": {
-                      "type": "string",
-                      "id": 3,
-                      "protoName": "global_id"
-                    },
-                    "error": {
-                      "type": "string",
-                      "id": 4
-                    }
-                  }
-                },
-                "RequestBatchEnd": {
-                  "fields": {
-                    "requestId": {
-                      "type": "bytes",
-                      "id": 1,
-                      "protoName": "request_id"
-                    },
-                    "objectCount": {
-                      "type": "uint32",
-                      "id": 2,
-                      "protoName": "object_count"
-                    }
-                  }
-                },
-                "RequestAttachment": {
-                  "fields": {
-                    "requestId": {
-                      "type": "bytes",
-                      "id": 1,
-                      "protoName": "request_id"
-                    },
-                    "operation": {
-                      "type": "string",
-                      "id": 2
-                    },
-                    "storageKey": {
-                      "type": "string",
-                      "id": 3,
-                      "protoName": "storage_key"
-                    },
-                    "byteLength": {
-                      "type": "uint64",
-                      "id": 4,
-                      "protoName": "byte_length"
-                    },
-                    "offset": {
-                      "type": "uint64",
-                      "id": 5
-                    },
-                    "data": {
-                      "type": "bytes",
-                      "id": 6
-                    },
-                    "storageKeys": {
-                      "rule": "repeated",
-                      "type": "string",
-                      "id": 7,
-                      "protoName": "storage_keys"
-                    },
-                    "state": {
-                      "type": "string",
-                      "id": 8
-                    },
-                    "pending": {
-                      "type": "bool",
-                      "id": 9
-                    },
-                    "maxBlocks": {
-                      "type": "uint32",
-                      "id": 10,
-                      "protoName": "max_blocks"
-                    },
-                    "derive": {
-                      "type": "string",
-                      "id": 11
-                    },
-                    "extractorVersion": {
-                      "type": "uint32",
-                      "id": 12,
-                      "protoName": "extractor_version"
-                    },
-                    "parsingPending": {
-                      "type": "bool",
-                      "id": 13,
-                      "protoName": "parsing_pending"
                     }
                   }
                 },
@@ -1418,6 +1269,160 @@
                       "type": "bytes",
                       "id": 3,
                       "protoName": "table_hash"
+                    }
+                  }
+                },
+                "RequestObjectHeader": {
+                  "fields": {
+                    "requestId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "request_id"
+                    },
+                    "objectType": {
+                      "type": "string",
+                      "id": 2,
+                      "protoName": "object_type"
+                    },
+                    "globalId": {
+                      "type": "string",
+                      "id": 3,
+                      "protoName": "global_id"
+                    },
+                    "sourceStateHash": {
+                      "type": "bytes",
+                      "id": 4,
+                      "protoName": "source_state_hash"
+                    },
+                    "currentVersionId": {
+                      "type": "string",
+                      "id": 5,
+                      "protoName": "current_version_id"
+                    }
+                  }
+                },
+                "RequestObjectEnd": {
+                  "fields": {
+                    "requestId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "request_id"
+                    },
+                    "streamHash": {
+                      "type": "bytes",
+                      "id": 2,
+                      "protoName": "stream_hash"
+                    },
+                    "factCount": {
+                      "type": "uint64",
+                      "id": 3,
+                      "protoName": "fact_count"
+                    },
+                    "bodyCount": {
+                      "type": "uint64",
+                      "id": 4,
+                      "protoName": "body_count"
+                    }
+                  }
+                },
+                "RequestObjectResult": {
+                  "fields": {
+                    "requestId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "request_id"
+                    },
+                    "objectType": {
+                      "type": "string",
+                      "id": 2,
+                      "protoName": "object_type"
+                    },
+                    "globalId": {
+                      "type": "string",
+                      "id": 3,
+                      "protoName": "global_id"
+                    },
+                    "error": {
+                      "type": "string",
+                      "id": 4
+                    }
+                  }
+                },
+                "RequestBatchEnd": {
+                  "fields": {
+                    "requestId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "request_id"
+                    },
+                    "objectCount": {
+                      "type": "uint32",
+                      "id": 2,
+                      "protoName": "object_count"
+                    }
+                  }
+                },
+                "RequestAttachment": {
+                  "fields": {
+                    "requestId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "request_id"
+                    },
+                    "operation": {
+                      "type": "string",
+                      "id": 2
+                    },
+                    "storageKey": {
+                      "type": "string",
+                      "id": 3,
+                      "protoName": "storage_key"
+                    },
+                    "byteLength": {
+                      "type": "uint64",
+                      "id": 4,
+                      "protoName": "byte_length"
+                    },
+                    "offset": {
+                      "type": "uint64",
+                      "id": 5
+                    },
+                    "data": {
+                      "type": "bytes",
+                      "id": 6
+                    },
+                    "storageKeys": {
+                      "rule": "repeated",
+                      "type": "string",
+                      "id": 7,
+                      "protoName": "storage_keys"
+                    },
+                    "state": {
+                      "type": "string",
+                      "id": 8
+                    },
+                    "pending": {
+                      "type": "bool",
+                      "id": 9
+                    },
+                    "maxBlocks": {
+                      "type": "uint32",
+                      "id": 10,
+                      "protoName": "max_blocks"
+                    },
+                    "derive": {
+                      "type": "string",
+                      "id": 11
+                    },
+                    "extractorVersion": {
+                      "type": "uint32",
+                      "id": 12,
+                      "protoName": "extractor_version"
+                    },
+                    "parsingPending": {
+                      "type": "bool",
+                      "id": 13,
+                      "protoName": "parsing_pending"
                     }
                   }
                 }

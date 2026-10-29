@@ -1,4 +1,4 @@
-import { buildReviewQueueDayPlan, buildReviewQueuePlan, type ReviewQueuePlan, type ReviewQueuePlanInput } from '../review/queue/reviewQueuePlanner.js';
+import { prepareReviewQueueDayCandidates, buildReviewQueueDayPlan, buildReviewQueuePlan, type ReviewQueuePlan, type ReviewQueuePlanInput } from '../review/queue/reviewQueuePlanner.js';
 import { resolveModeQueueNodeIds } from '../review/queue/reviewQueuePlannerMode.js';
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 import { resolveCurrentDayStart, resolveNextDayStart } from '../review/reviewDayBoundary.js';
@@ -40,11 +40,18 @@ function planCandidateIds(plan: ReviewQueuePlan) {
   return [...new Set([...plan.queueNodeIds, ...plan.fsrsQueueNodeIds, ...plan.readingQueueNodeIds])];
 }
 
-export function prepareDailyFlowPlans(snapshot: FlowPlanningSnapshot, args: DailyFlowOpenArgs, settings: DailyFlowSettings) {
+export function prepareDailyFlowCandidates(snapshot: FlowPlanningSnapshot, now: string, settings: DailyFlowSettings) {
+  return prepareReviewQueueDayCandidates({ ...snapshot, now, newDayStartsAtHour: settings.newDayStartsAtHour,
+    readingDayStartsAtHour: settings.newDayStartsAtHour, pushQueueRules: settings.pushQueue,
+    ...(settings.dayWindow ? { dayWindow: settings.dayWindow } : {}) }, flowDayEnd(now, settings));
+}
+
+export function prepareDailyFlowPlans(snapshot: FlowPlanningSnapshot, args: DailyFlowOpenArgs, settings: DailyFlowSettings,
+  prepared = prepareDailyFlowCandidates(snapshot, args.now, settings)) {
   const plans = buildReviewQueueDayPlan({ ...snapshot, mode: args.mode, now: args.now,
     ...(settings.dayWindow ? { dayWindow: settings.dayWindow } : {}),
     newDayStartsAtHour: settings.newDayStartsAtHour, readingDayStartsAtHour: settings.newDayStartsAtHour,
-    pushQueueRules: settings.pushQueue }, flowDayEnd(args.now, settings));
+    pushQueueRules: settings.pushQueue }, flowDayEnd(args.now, settings), prepared);
   const { initial } = plans;
   const unavailable = args.mode === 'review-first' ? !initial.fsrsQueueNodeIds.length
     : args.mode === 'reading-only' && !initial.readingQueueNodeIds.length;

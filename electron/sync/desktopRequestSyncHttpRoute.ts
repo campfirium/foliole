@@ -24,7 +24,7 @@ export async function respondDesktopRequestSyncHttp(host: RequestSyncDatabaseHos
   input.signal.throwIfAborted();
   switch (input.url.searchParams.get('request')) {
     case 'round_finish': return respondRequestSyncRoundControl({ ...input,
-      roundId: input.url.searchParams.get('peer_round_id') ?? '' });
+      onCompleted: host.databaseRoundCompleted, roundId: input.url.searchParams.get('peer_round_id') ?? '' });
     case 'attachments': return respondRequestSyncAttachments<FramedSyncStreamBody | void>(await createDesktopRequestSyncAttachmentHost(host), input, prepareDesktopRequestSyncBody);
     case 'inventory': return respondDesktopRequestSyncInventory(host, input);
     case 'pull': return respondDesktopRequestSyncPull(host, input);
