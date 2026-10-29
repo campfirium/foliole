@@ -14,7 +14,10 @@ import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { DocumentPanelHeader, type DocumentPanelHeaderProps } from './DocumentPanelHeader';
 import { WorkspaceRightSidebarDevPanel } from './WorkspaceRightSidebarDevPanel';
 
-vi.mock('../../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
+vi.mock('../../shared/platform/runtimeInvoke', () => ({
+  getRuntimeInvoke: vi.fn(),
+  isRuntimeInvokeAvailable: () => false
+}));
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   useAppearanceSettings: () => ({ editorDisplayMode: 'preview', toggleEditorDisplayMode: vi.fn() })
 }));
