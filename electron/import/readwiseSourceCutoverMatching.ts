@@ -29,9 +29,10 @@ export function matchReadwiseSourceCutover(input: {
   matchByIdentity(artifacts, readersById, preparedById, matches, failures);
   matchUniqueNumericDocumentId(artifacts, input.preparedDocuments, matches, failures);
   matchUniqueUrl(artifacts, input.preparedDocuments, matches, failures);
+  const matchedArtifacts = new Set(matches.values());
   return {
     artifactFor: (documentId: string) => matches.get(documentId) ?? null,
-    failures: artifacts.filter((item) => ![...matches.values()].includes(item)).map((item) => ({
+    failures: artifacts.filter((item) => !matchedArtifacts.has(item)).map((item) => ({
       nodeId: item.latestNodeId,
       reason: failures.get(item.latestNodeId) ?? 'unmatched'
     } satisfies ReadwiseLegacyMatchFailure)),
