@@ -7,8 +7,8 @@ import { createDisplayLibrary } from '../sync/workspace-state/companionDisplaySn
 import { readCompanionObservationReferences } from './companionAttachmentObservation';
 import { installCompanionAttachmentTestWorker } from './companionAttachmentWorker.testSupport';
 
-let worker: ReturnType<typeof installCompanionAttachmentTestWorker>;
-beforeEach(() => { worker = installCompanionAttachmentTestWorker(); });
+let worker: Awaited<ReturnType<typeof installCompanionAttachmentTestWorker>>;
+beforeEach(async () => { worker = await installCompanionAttachmentTestWorker(); });
 afterEach(() => worker.close());
 const image = `${'a'.repeat(64)}.png`;
 const pdf = `${'b'.repeat(64)}.pdf`;

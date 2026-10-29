@@ -6,8 +6,8 @@ import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
 import { createCompanionAttachmentParser } from './companionAttachmentParser';
 import { installCompanionAttachmentTestWorker } from './companionAttachmentWorker.testSupport';
 
-let worker: ReturnType<typeof installCompanionAttachmentTestWorker>;
-beforeEach(() => { worker = installCompanionAttachmentTestWorker(); });
+let worker: Awaited<ReturnType<typeof installCompanionAttachmentTestWorker>>;
+beforeEach(async () => { worker = await installCompanionAttachmentTestWorker(); });
 afterEach(() => worker.close());
 
 it('reuses a worker for bounded requests, reports parser errors, and terminates pending work on abort', async () => {

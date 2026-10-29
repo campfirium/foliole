@@ -1,12 +1,21 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { Worker as NodeWorker } from 'node:worker_threads';
 
+import { build } from 'vite';
 import { vi } from 'vitest';
 
+async function buildParser() {
+  const result = await build({ configFile: false, logLevel: 'silent', build: { write: false, minify: false,
+    lib: { entry: 'lib/core/attachments/attachmentReferenceParser.worker.ts', formats: ['iife'], name: 'AttachmentParser' } } });
+  const output = Array.isArray(result) ? result[0] : result;
+  if (!output || !('output' in output) || output.output[0]?.type !== 'chunk') throw new Error('Missing parser worker bundle');
+  return output.output[0].code;
+}
+
+let parserBundle: Promise<string> | undefined;
+
 /** Executes the production parser entry on a real thread; companion bundling is separately tested in Chromium. */
-export function installCompanionAttachmentTestWorker() {
+export async function installCompanionAttachmentTestWorker() {
+  const bundle = await (parserBundle ??= buildParser());
   const monitor = { parsed: 0, batches: 0, beforeResult: undefined as undefined | (() => Promise<void> | void) };
   const workers: NodeWorker[] = [];
   class BrowserWorker {
@@ -14,12 +23,10 @@ export function installCompanionAttachmentTestWorker() {
     onerror?: (event: { message: string }) => void;
     private readonly worker: NodeWorker;
     constructor() {
-      const asset = path.resolve('dist/lib/core/attachments/attachmentReferenceParser.worker.js');
-      if (!fs.existsSync(asset)) throw new Error('Run npm run electron:compile before companion worker tests');
       const script = `const { parentPort } = require('node:worker_threads');
         globalThis.self = { postMessage: data => parentPort.postMessage(data) };
-        import(${JSON.stringify(pathToFileURL(asset).href)}).then(() =>
-          parentPort.on('message', data => self.onmessage({ data })));`;
+        ${bundle}
+        parentPort.on('message', data => self.onmessage({ data }));`;
       this.worker = new NodeWorker(script, { eval: true });
       workers.push(this.worker);
       this.worker.on('message', data => {

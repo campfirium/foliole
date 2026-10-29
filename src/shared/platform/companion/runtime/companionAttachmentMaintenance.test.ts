@@ -9,8 +9,8 @@ import type { CapacitorCompanionDatabaseOwner } from './capacitorCompanionDataba
 import { runCompanionAttachmentMaintenance } from './companionAttachmentMaintenance';
 import { installCompanionAttachmentTestWorker } from './companionAttachmentWorker.testSupport';
 
-let worker: ReturnType<typeof installCompanionAttachmentTestWorker>;
-beforeEach(() => { worker = installCompanionAttachmentTestWorker(); });
+let worker: Awaited<ReturnType<typeof installCompanionAttachmentTestWorker>>;
+beforeEach(async () => { worker = await installCompanionAttachmentTestWorker(); });
 afterEach(() => worker.close());
 const parsing = vi.hoisted(() => ({ calls: 0 }));
 vi.mock('../../../../../lib/core/import/replaceArticleImageSource', async importOriginal => {
