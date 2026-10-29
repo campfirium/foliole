@@ -1,19 +1,16 @@
+import { controlledRuntimeSqliteTests } from './native-sqlite-runtime-tests.mjs';
 import { controlledVersionSqliteTests } from './native-sqlite-version-tests.mjs';
 import { controlledSyncSqliteTests } from './native-sqlite-sync-tests.mjs';
 
 const controlledElectronSqliteTests = [
+  ...controlledRuntimeSqliteTests,
   ...controlledVersionSqliteTests,
   'src/app/hooks/ambientWorkspaceRefresh.integration.test.tsx',
   'src/app/hooks/readwiseBackgroundRefresh.integration.test.tsx',
   'src/app/hooks/readwiseRelayRefresh.integration.test.tsx',
   'src/app/hooks/ambientWorkspaceStructure.integration.test.tsx',
-  'src/store/workspaceStructureMoveHistory.integration.test.ts',
-  'src/store/workspaceMoveLocal.integration.test.ts',
-  'electron/database/dailyFlowFirstGeneration.integration.test.ts',
-  'src/companion/companionDailyEntry.integration.test.tsx',
   'src/shared/platform/companion/companionWorkspaceSnapshotStore.integration.test.ts',
   'electron/database/workspaceTestDatabaseLifecycle.test.ts',
-  'src/store/workspaceStoreNodeRelearn.integration.test.ts',
   'electron/database/reviewEventHistory.integration.test.ts',
   'electron/database/reviewProjection.integration.test.ts',
   'electron/database/nodeRetention.integration.test.ts',
@@ -78,7 +75,6 @@ const controlledElectronSqliteTests = [
   'src/shared/platform/companion/runtime/foregroundTimeSync.integration.test.ts',
   'src/companion/companionOnlyReviewRefresh.integration.test.tsx',
   'src/companion/companionClozeRemoval.sync.integration.test.ts',
-  'src/store/workspaceFlowSession.sync.integration.test.ts',
   'src/companion/CompanionSearchDeparture.integration.test.tsx',
   'src/companion/companionReviewContinuity.integration.test.tsx',
   'src/companion/companionQueueClear.integration.test.tsx',
