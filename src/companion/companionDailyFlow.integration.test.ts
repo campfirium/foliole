@@ -31,9 +31,9 @@ const snapshot = async () => (await loadCompanionWorkspaceSyncState()).workspace
 beforeEach(async () => { library = await createSearchLibrary(0); session = createEmptyReviewSession(); });
 afterEach(async () => { await library.close(); });
 
-async function seed() {
+async function seed(kind: 'item' | 'topic' = 'item') {
   await seedCompanionReviewHistory({ due: '2026-10-01T00:00:00.000Z', lastReviewAt: '2026-09-28T00:00:00.000Z',
-    state: 2, stability: 3, difficulty: 4, elapsedDays: 3, scheduledDays: 3, reps: 2, lapses: 0 }, now);
+    state: 2, stability: 3, difficulty: 4, elapsedDays: 3, scheduledDays: 3, reps: 2, lapses: 0 }, now, ['a', 'b', 'c'], kind);
 }
 async function open(stamp = now) {
   session = (await openCompanionDailyFlow({ now: stamp, mode: 'review-first' })).session;
@@ -75,10 +75,12 @@ it('opens empty libraries and creates a fresh learning-day list without losing o
   await seed();
   await open();
   const before = session.daily!.dayKey;
-  const ids = session.queueNodeIds;
+  const ids = library.database.prepare('SELECT node_id FROM daily_flow_entries ORDER BY order_key').all();
   await open('2026-10-26T08:00:00.000Z');
   expect(session.daily!.dayKey).not.toBe(before);
-  expect(new Set(session.queueNodeIds)).toEqual(new Set(ids));
+  expect(new Set(library.database.prepare('SELECT node_id FROM daily_flow_entries ORDER BY order_key').all()
+    .map(row => (row as { node_id: string }).node_id))).toEqual(new Set(ids.map(row => (row as { node_id: string }).node_id)));
+  expect(session.cycle?.remaining).toBe(3);
   expect(library.database.prepare('SELECT COUNT(*) AS n FROM daily_flow_state').get()).toEqual({ n: 1 });
 });
 
@@ -134,8 +136,7 @@ it('restores the committed grade and daily cursor through undo, redo and databas
 });
 
 it.each(['read', 'later', 'dismiss', 'soon'] as const)('persists %s, undo and redo in the same daily list', async action => {
-  await seed();
-  library.database.exec("UPDATE nodes SET kind='topic', reveal=NULL");
+  await seed('topic');
   session = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;
   const before = structuredClone(session);
   const initial = await snapshot();

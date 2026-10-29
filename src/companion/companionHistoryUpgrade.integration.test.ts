@@ -51,6 +51,10 @@ async function legacyHistory(kind: 'reading' | 'grade' = 'reading') {
   app.db.exec('ALTER TABLE daily_flow_operations DROP COLUMN source_session_json');
   app.db.prepare('UPDATE daily_flow_state SET session_json=?, invalidated=0').run(JSON.stringify(middle));
   app.db.prepare('UPDATE companion_meta SET value=? WHERE key=?').run(JSON.stringify(history), historyKey);
+  // Version 102 predates synchronized Flow facts and their relational tables.
+  app.db.exec("DELETE FROM sync_object_state WHERE object_type='daily_flow'");
+  for (const table of ['daily_flow_projection_facts', 'daily_flow_lists', 'daily_flow_fact_rows',
+    'daily_flow_sync_projection', 'daily_flow_sync_facts']) app.db.exec(`DROP TABLE ${table}`);
   app.db.pragma('user_version=102');
   app.session = middle;
   return history;

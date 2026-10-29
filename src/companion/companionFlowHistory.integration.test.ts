@@ -4,6 +4,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
 import type { NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 import { invalidateCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
@@ -11,6 +12,7 @@ import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/
 import { commitCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { closeIosCompanionDatabase, initializeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
+import { applyCompanionSyncNodeVersions } from '../shared/platform/companionSyncNodeVersions';
 import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 import { saveCompanionSyncNodeReviewRecord } from '../shared/platform/companionSyncObjects';
 import { runCompanionSyncWriterTask } from '../shared/platform/companionSyncWriterQueue';
@@ -20,6 +22,7 @@ import type { ReviewSessionState } from '../store/workspaceStoreTypes';
 import { seedCompanionReviewHistory } from './companionFlowHistory.testSupport';
 import { createCompanionFlowHistoryEntry } from './companionFlowHistoryEntry';
 import { persistFlowMutation } from './companionFlowMutation';
+import { gradeCompanionReviewCard } from './companionReviewSession';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
@@ -118,14 +121,21 @@ it('does not advance history if restoring the review state fails', async () => {
   expect((await snapshot()).nodesById.a?.review).toEqual(graded);
 });
 
-it('refuses to overwrite a newer review and retains the history cursor', async () => {
+it('retains a later independent grade while undoing only the selected operation', async () => {
   await grade();
-  const newer = { ...profile, reps: 10, lastReviewAt: '2026-10-26T00:00:00.000Z' };
-  await saveCompanionSyncNodeReviewRecord({ nodeId: 'a', review: newer });
-  const history = await loadCompanionFlowHistory(key);
-  await expect(replay('undo')).rejects.toThrow('flow_history_changed');
-  expect((await snapshot()).nodesById.a?.review).toEqual(newer);
-  expect(await loadCompanionFlowHistory(key)).toEqual(history);
+  const entry = (await loadCompanionFlowHistory(key)).undoStack.at(-1)!;
+  const later = '2026-10-25T08:02:00.000Z';
+  const graded = await gradeCompanionReviewCard({ snapshot: await snapshot(), nodeId: 'a', grade: 2, now: later });
+  if (!graded) throw new Error('missing_peer_grade');
+  await saveCompanionSyncNodeReviewRecord({ nodeId: 'a', review: graded.snapshot.nodesById.a!.review!,
+    reviewLog: { ...graded.reviewLog, opId: 'peer-later' } });
+  const independent = library.database.prepare("SELECT * FROM review_log WHERE op_id='peer-later'").get();
+  await replay('undo');
+  expect((await snapshot()).nodesById.a?.review?.reps).toBe(profile.reps + 1);
+  expect(library.database.prepare("SELECT * FROM review_log WHERE op_id='peer-later'").get()).toEqual(independent);
+  expect(library.database.prepare('SELECT voids_op_id FROM review_log WHERE kind=\'void\'').all())
+    .toEqual([{ voids_op_id: entry.id }]);
+  expect((await loadCompanionFlowHistory(key)).redoStack.at(-1)?.id).toBe(entry.id);
 });
 
 it('cancels queued undo when the library lifetime changes before the write starts', async () => {
@@ -187,7 +197,9 @@ it('retains history and restored review state after closing and reopening the da
 });
 
 it.each(['read', 'later', 'dismiss', 'soon'] as const)('restores the reading state and Flow position for %s', async action => {
-  library.database.prepare("UPDATE nodes SET kind='topic', reveal=NULL WHERE id='a'").run();
+  const current = (await snapshot()).nodesById.a!;
+  await applyCompanionSyncNodeVersions([await toWorkspaceNativeNodeVersion({ ...current,
+    kind: 'topic', reveal: null, updatedAt: now }, 'remote')]);
   const before = await snapshot();
   session = (await openCompanionDailyFlow({ now, mode: 'recommended', preferredNodeId: 'a', refresh: true })).session;
   let after = before;

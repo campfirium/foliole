@@ -5,11 +5,13 @@ import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceN
 import { restoreFlowHistorySession } from '../../lib/core/flow/flowHistorySession';
 import { saveLocalCurrentParentOrderWithDbPort } from '../../lib/core/sync/currentParentOrderStore';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor';
+import { openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { mutateCompanionWorkspace } from '../shared/platform/companion/runtime/companionWorkspaceMutations';
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
+import { applyCompanionSyncNodeVersions } from '../shared/platform/companionSyncNodeVersions';
 import { saveCompanionSyncNodeReadingRecord } from '../shared/platform/companionSyncObjects';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 import { createEmptyReviewSession } from '../store/workspaceReviewReading';
@@ -33,7 +35,7 @@ beforeEach(async () => {
   await mutateCompanionWorkspace({ type: 'create', nodeId: 'folder', kind: 'folder', parentNodeId: null, title: 'Folder' });
   await mutateCompanionWorkspace({ type: 'create', nodeId: 'destination', kind: 'folder', parentNodeId: null, title: 'Destination' });
 });
-afterEach(async () => { await library.close(); });
+afterEach(async () => { vi.useRealTimers(); await library.close(); });
 
 it('reverses and replays create, rename, move, delete and restore in order without losing content', async () => {
   await mutateCompanionWorkspace({ type: 'create', nodeId: 'topic', kind: 'topic', parentNodeId: 'folder', title: 'Original' });
@@ -132,11 +134,13 @@ it('preserves bodies, resource links and raw version metadata through rename and
 });
 
 it('places Flow operations and structural operations in the same chronological stack', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(now);
   const before = await snapshot();
   const node = before.nodesById.folder!;
-  const record = await toWorkspaceNativeNodeVersion({ ...node, currentVersionId: null, id: 'reading', kind: 'topic', parentNodeId: 'folder', content: 'Read me' }, 'remote');
-  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
-  const session = { ...createEmptyReviewSession(), currentNodeId: 'reading', queueNodeIds: ['reading'], totalNodeCount: 1 };
+  const record = await toWorkspaceNativeNodeVersion({ ...node, currentVersionId: null, id: 'reading', kind: 'topic', parentNodeId: 'folder', content: 'Read me', createdAt: now, updatedAt: now }, 'remote');
+  await applyCompanionSyncNodeVersions([record]);
+  const session = (await openCompanionDailyFlow({ now, mode: 'recommended', preferredNodeId: 'reading' })).session;
   await persistFlowMutation({ action: 'read', nodeId: 'reading', snapshot: await snapshot(), now,
     history: { key, mode: 'recommended', session } });
   await mutateCompanionWorkspace({ type: 'rename', nodeId: 'folder', title: 'After reading' });

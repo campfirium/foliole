@@ -18,8 +18,7 @@ export async function createHistoryDeltaFixture(topics = true, extraNodeIds: str
   let connection = library.connection;
   const snapshot = async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
   await seedCompanionReviewHistory({ due: '2026-10-01T00:00:00.000Z', lastReviewAt: '2026-09-28T00:00:00.000Z',
-    state: 2, stability: 3, difficulty: 4, elapsedDays: 3, scheduledDays: 3, reps: 2, lapses: 0 }, historyNow, ['a', 'b', 'c', ...extraNodeIds]);
-  if (topics) db.exec("UPDATE nodes SET kind='topic', reveal=NULL");
+    state: 2, stability: 3, difficulty: 4, elapsedDays: 3, scheduledDays: 3, reps: 2, lapses: 0 }, historyNow, ['a', 'b', 'c', ...extraNodeIds], topics ? 'topic' : 'item');
   const fixture = { library, snapshot, mode: (topics ? 'recommended' : 'review-first') as ReviewSessionMode,
     session: createEmptyReviewSession(), get db() { return db; }, get connection() { return connection; },
     history: () => loadCompanionFlowHistory(historyKey),

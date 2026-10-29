@@ -76,7 +76,7 @@ export async function replayCompanionFlowHistory(key: string, mode: HistoryMode,
     let daily: ReviewSessionState | undefined;
     const current = { ...projection, isAnswerRevealed: source.reviewSession.isAnswerRevealed };
     if (session.daily) {
-      await prepareEntry(db, entry, mode, current);
+      // The shared daily owner validates operation identity and live facts after peer synchronization.
       const saved = await replayCompanionDailyHistory(db, { entry, session, mode, now: mutationTimestamp });
       daily = saved.session;
       mutationTimestamp = saved.mutationTimestamp ?? mutationTimestamp;
