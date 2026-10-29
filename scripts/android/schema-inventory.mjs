@@ -26,6 +26,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '../..');
 
 const DESKTOP_SCHEMA_FILES = {
+  ATTACHMENT_REFERENCE_CACHE_SCHEMA: 'lib/core/database/attachmentReferenceCacheSchema.ts',
+  DAILY_FLOW_SYNC_SCHEMA: 'lib/core/database/dailyFlowSyncSchema.ts',
+  DAILY_FLOW_SYNC_MERGE_INDEXES: 'lib/core/database/dailyFlowSyncMergeMigration.ts',
   FRAMED_SYNC_DIGEST_TABLES: 'lib/core/database/framedSyncDigestSchema.ts',
   FRAMED_SYNC_DIGEST_SCHEMA: 'lib/core/database/framedSyncDigestSchema.ts',
   CORE_INDEX_SCHEMA_STATEMENTS: 'lib/core/database/coreIndexSchemaStatements.ts',

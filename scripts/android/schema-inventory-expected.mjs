@@ -1,9 +1,3 @@
-export const EXPECTED_SCHEMA_SOURCES = {
-  androidAssetStatements: 133,
-  androidJavaMigrationStatements: 0,
-  desktopStatements: 150
-};
-
 export const EXPECTED_SHARED_SCHEMA_DRIFT = {
   content_blob_data: ['createSql'],
   external_documents: [

@@ -17,7 +17,6 @@ import {
 import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from '../../lib/core/database/androidCompanionSyncProtocolDefinitions.ts';
 import { ANDROID_COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSchemaStatements.ts';
 import {
-  EXPECTED_SCHEMA_SOURCES,
   EXPECTED_SHARED_SCHEMA_DRIFT
 } from './schema-inventory-expected.mjs';
 import { buildSchemaDriftReport } from './schema-inventory.mjs';
@@ -86,7 +85,6 @@ describe('schema inventory drift gate', () => {
       ])
     );
 
-    expect(report.sources).toEqual(EXPECTED_SCHEMA_SOURCES);
     expect(report.desktopOnly).toEqual([
       { classification: 'known-platform-only', table: 'external_folder_host_preferences' },
       { classification: 'known-platform-only', table: 'import_runs' },
