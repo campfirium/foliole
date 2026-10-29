@@ -1,4 +1,6 @@
 import { sameLearningProfile } from '../../lib/core/flow/cycleFlowLearning';
+import type { DailyFlowSourceSettingsArgs } from '../../lib/core/flow/dailyFlowSourceSettings';
+import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { saveDailyFlowSourceSettingsRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
 import { logRuntimeError } from '../shared/platform/runtimeLogging';
 
@@ -11,21 +13,19 @@ const sourcePreferences = (node: WorkspaceState['nodesById'][string]) => ({
 });
 
 export async function saveWorkspaceFlowSourceSettings(set: Set, get: () => WorkspaceState, before: WorkspaceState,
-  sourceNodeId: string, nodesById: WorkspaceState['nodesById'], changedIds: string[], now: string) {
-  const readings = changedIds.filter(id => !sameLearningProfile(before.nodesById[id]?.reading, nodesById[id]?.reading))
-    .map(nodeId => ({ nodeId, before: before.nodesById[nodeId]?.reading ?? null, after: nodesById[nodeId]?.reading ?? null }));
+  sourceNodeId: string, after: DailyFlowSourceSettingsArgs['after'], readings: DailyFlowSourceSettingsArgs['readings'], now: string) {
   const source = before.nodesById[sourceNodeId]!;
-  const after = sourcePreferences(nodesById[sourceNodeId]!);
   try {
     const scope = before.libraryScope ?? before.reviewSession.daily?.scope;
     if (!scope) throw new Error('daily_flow_library_missing');
-    if (!await saveDailyFlowSourceSettingsRuntime({ scope, sourceNodeId, now, before: sourcePreferences(source), after, readings }, before.nodesById)) return false;
+    const result = await saveDailyFlowSourceSettingsRuntime({ scope, sourceNodeId, now, before: sourcePreferences(source), after, readings,
+      defaultPriority: getCurrentReviewSchedulerSettings().pushQueue.defaultPriority }, before.nodesById);
     if (get().libraryScope !== before.libraryScope) return false;
     set(state => {
       const merged = { ...state.nodesById };
-      for (const value of readings) {
+      for (const value of result.readings) {
         const node = merged[value.nodeId];
-        if (node && sameLearningProfile(node.reading, value.before)) merged[value.nodeId] = { ...node, reading: value.after };
+        if (node && sameLearningProfile(node.reading, before.nodesById[value.nodeId]?.reading)) merged[value.nodeId] = { ...node, reading: value.reading };
       }
       const current = merged[sourceNodeId];
       if (current && JSON.stringify(sourcePreferences(current)) === JSON.stringify(sourcePreferences(source))) {

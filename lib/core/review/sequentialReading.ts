@@ -1,16 +1,14 @@
-import { hasNodeContent } from '../nodes/nodeContentFlags.js';
-
-import { isReadingReviewItemNode } from './reviewItemKind.js';
 import {
   isUnavailableSequentialTopic,
   unavailableFolderTopicOccupiesSlot
 } from './sequentialReadingSlotOccupancy.js';
-import { collectFolderSequentialTopicIds } from './sequentialReadingSourceOrder.js';
+import { collectSequentialDerivedTopicIds } from './sequentialReadingSourceOrder.js';
 import {
   isSequentialReadingSourceFolder,
   isSequentialReadingSourceNode,
   isSequentialReadingSourceTopic
 } from './sequentialReadingSources.js';
+import { planSequentialReadingSourceStates } from './sequentialReadingSourceStates.js';
 import type { SequentialReadingNode as Node, SequentialReadingProfile as NodeReadingProfile, SequentialReadingNodes, SequentialReadingArgs, SequentialReadingPatch, SequentialReadingChange } from './sequentialReadingTypes.js';
 
 
@@ -19,48 +17,6 @@ const cloneReadingProfile = (reading: NodeReadingProfile | null | undefined) => 
 export { isSequentialReadingSourceFolder, isSequentialReadingSourceTopic };
 
 export type { SequentialReadingChange } from './sequentialReadingTypes.js';
-
-function isDescendantOfSource(
-  nodeId: string,
-  sourceNodeId: string,
-  nodesById: SequentialReadingNodes
-) {
-  const visited = new Set<string>();
-  let current = nodesById[nodeId];
-  while (current?.parentNodeId && !visited.has(current.parentNodeId)) {
-    if (current.parentNodeId === sourceNodeId) {
-      return true;
-    }
-    visited.add(current.parentNodeId);
-    current = nodesById[current.parentNodeId];
-  }
-  return false;
-}
-
-function collectSequentialDerivedTopicIds(args: {
-  nodeOrder: string[];
-  nodesById: SequentialReadingNodes;
-  sourceNodeId: string;
-}) {
-  const sourceNode = args.nodesById[args.sourceNodeId];
-  if (isSequentialReadingSourceFolder(sourceNode)) {
-    return collectFolderSequentialTopicIds({
-      nodesById: args.nodesById,
-      sourceNodeId: args.sourceNodeId
-    });
-  }
-  return args.nodeOrder.filter((nodeId) => {
-    const node = args.nodesById[nodeId];
-    return Boolean(
-      node &&
-        nodeId !== args.sourceNodeId &&
-        node.kind === 'topic' &&
-        hasNodeContent(node) &&
-        isReadingReviewItemNode(node) &&
-        isDescendantOfSource(nodeId, args.sourceNodeId, args.nodesById)
-    );
-  });
-}
 
 function createReadingWithState(args: {
   defaultPriority: SequentialReadingArgs['defaultPriority'];
@@ -122,25 +78,11 @@ export function buildSequentialReadingSourcePatch<T extends Node>(args: Sequenti
     updatedAt: args.now
   };
   nextNodesById[args.sourceNodeId] = nextSource;
-  const derivedNodeIds = collectSequentialDerivedTopicIds(args);
-  let released = false;
-  for (const nodeId of derivedNodeIds) {
-    const node = nextNodesById[nodeId];
-    if (isUnavailableSequentialTopic(node)) {
-      released ||= args.enabled && unavailableFolderTopicOccupiesSlot({ ...args, nodeId, sourceNode });
-      continue;
-    }
-    const state = args.enabled ? (released ? 'locked' : 'active') : 'active';
-    released ||= args.enabled;
-    applyReadingState({
-      changes,
-      defaultPriority: args.defaultPriority,
-      nextNodesById,
-      nodeId,
-      now: args.now,
-      state
-    });
-  }
+  const plan = planSequentialReadingSourceStates(args)!;
+  for (const change of plan.changes) applyReadingState({
+    changes, defaultPriority: args.defaultPriority, nextNodesById,
+    nodeId: change.nodeId, now: args.now, state: change.after
+  });
   return { changes, nodesById: nextNodesById, sourceNodeId: args.sourceNodeId };
 }
 

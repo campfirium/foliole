@@ -1,3 +1,4 @@
+import { planSequentialReadingSourceStates } from '../../lib/core/review/sequentialReadingSourceStates';
 import { normalizeManualChildOrder, updateFolderManualChildOrder } from '../features/nodes/model/manualChildOrder';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { hasDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
@@ -45,9 +46,15 @@ export function createSetFolderManualChildOrderAction(set: WorkspaceSet, get?: (
   return (folderNodeId: string, manualChildOrder: string[], now = new Date().toISOString()) => {
     if (get && hasDailyFlowRuntime()) {
       const before = get();
-      const patch = buildManualOrderSourcePatch(before, folderNodeId, manualChildOrder, now);
-      return patch ? saveWorkspaceFlowSourceSettings(set, get, before, folderNodeId, patch.nodesById,
-        [...patch.syncNodeIds], now) : false;
+      const folder = before.nodesById[folderNodeId];
+      if (!folder || folder.kind !== 'folder') return false;
+      const after = updateFolderManualChildOrder(folder, normalizeManualChildOrder(manualChildOrder), now);
+      if (after === folder) return false;
+      const plan = after.sequentialReadingEnabled ? planSequentialReadingSourceStates({ enabled: true,
+        nodeOrder: before.nodeOrder, nodesById: { ...before.nodesById, [folderNodeId]: after }, sourceNodeId: folderNodeId }) : null;
+      return saveWorkspaceFlowSourceSettings(set, get, before, folderNodeId, {
+        manualChildOrder: after.manualChildOrder ?? null, sequentialReadingEnabled: after.sequentialReadingEnabled ?? null
+      }, plan?.changes ?? [], now);
     }
     let nextNodesForSync: WorkspaceState['nodesById'][string][] = [];
     set((state) => {

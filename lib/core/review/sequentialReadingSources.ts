@@ -1,6 +1,6 @@
 import { HOME_NODE_ID, INBOX_NODE_ID, TRASH_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../database/specialNodeIds.js';
 
-import type { SequentialReadingNode as Node, SequentialReadingNodes } from './sequentialReadingTypes.js';
+import type { SequentialReadingStateNode as Node, SequentialReadingStateNodes as SequentialReadingNodes } from './sequentialReadingState.js';
 
 function isProtectedRootNode(node: Node) {
   return ['home', 'inbox', 'trash', 'virtual-root'].includes(node.specialKind ?? '') ||

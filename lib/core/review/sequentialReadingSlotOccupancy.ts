@@ -2,7 +2,7 @@ import { hasNodeContent } from '../nodes/nodeContentFlags.js';
 
 import { isReadingReviewItemNode } from './reviewItemKind.js';
 import { isSequentialReadingSourceFolder } from './sequentialReadingSources.js';
-import type { SequentialReadingNodes } from './sequentialReadingTypes.js';
+import { sequentialReadingState, type SequentialReadingStateNodes as SequentialReadingNodes } from './sequentialReadingState.js';
 
 
 function hasShelvedSelfOrAncestor(
@@ -49,7 +49,7 @@ function hasReadingSlotCapacity(
   if (!node || node.kind !== 'topic') {
     return false;
   }
-  const readingState = node.reading?.state;
+  const readingState = sequentialReadingState(node);
   return (
     hasNodeContent(node) &&
     isReadingReviewItemNode(node) &&
@@ -75,8 +75,8 @@ export function isUnavailableSequentialTopic(
 ) {
   if (!node) return true;
   if (node.shelvedAt) return true;
-  const reading = node.reading;
-  return reading?.state === 'dismissed' || reading?.state === 'done';
+  const state = sequentialReadingState(node);
+  return state === 'dismissed' || state === 'done';
 }
 
 export function unavailableFolderTopicOccupiesSlot(args: {

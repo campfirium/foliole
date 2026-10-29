@@ -94,12 +94,10 @@ it('rolls back source preferences and all reading changes when persistence fails
   const before = await snapshot(peer);
   const cursor = await readDailyFlow(peer.port);
   let writes = 0;
-  const args: DailyFlowSourceSettingsArgs = { scope: settings(peer).scope!, sourceNodeId: 'folder', now,
+  const args: DailyFlowSourceSettingsArgs = { scope: settings(peer).scope!, sourceNodeId: 'folder', now, defaultPriority: 5,
     before: { manualChildOrder: ['a', 'b'], sequentialReadingEnabled: null },
     after: { manualChildOrder: ['a', 'b'], sequentialReadingEnabled: true },
-    readings: ['a', 'b'].map(nodeId => ({ nodeId, before: null, after: { intervalDurationMs: 0,
-      intervalGrowthFactor: 1, lastHandledAt: now, nextAt: now, priority: 5,
-      readingPosition: 0, repetitionCount: 0, state: nodeId === 'a' ? 'active' : 'locked' } })) };
+    readings: ['a', 'b'].map(nodeId => ({ nodeId, before: null, after: nodeId === 'a' ? 'active' : 'locked' })) };
   await expect(saveDailyFlowSourceSettings(peer.port, args, { ...persistence, reading: async (...values) => {
     await persistence.reading(...values);
     if (++writes === 2) throw new Error('save_failed');
@@ -112,9 +110,45 @@ it('rolls back source preferences and all reading changes when persistence fails
 it('rejects a different library scope before changing any source or learning state', async () => {
   await setup();
   const before = await snapshot(peer);
-  await expect(saveDailyFlowSourceSettings(peer.port, { scope: 'other-library', sourceNodeId: 'folder', now,
+  await expect(saveDailyFlowSourceSettings(peer.port, { scope: 'other-library', sourceNodeId: 'folder', now, defaultPriority: 5,
     before: { manualChildOrder: ['a', 'b'], sequentialReadingEnabled: null },
     after: { manualChildOrder: ['b', 'a'], sequentialReadingEnabled: true }, readings: [] },
   persistence, peer.name, settings(peer).scope!)).rejects.toThrow('daily_flow_library_changed');
   expect(await snapshot(peer)).toEqual(before);
+});
+
+it('sets sequential state from lightweight workspace status while preserving current database learning values', async () => {
+  const app = await setup();
+  const reading = { intervalDurationMs: 777000, intervalGrowthFactor: 1.7, lastHandledAt: now, nextAt: now,
+    priority: 3, readingPosition: 0, repetitionCount: 9, state: 'active' as const };
+  await persistence.reading(peer.port, { nodeId: 'a', before: null, after: reading }, now);
+  app.setState(state => ({ nodesById: { ...state.nodesById, a: Object.assign({ ...state.nodesById.a!, reading: null }, {
+    learningSummary: { reading: { state: 'active', repetitionCount: 3 }, review: null }
+  }) } }));
+  expect(await app.sequential('folder', true, now)).toBe(true);
+  expect((await snapshot(peer)).nodesById.a?.reading).toEqual(reading);
+  expect((await snapshot(peer)).nodesById.b?.reading?.state).toBe('locked');
+});
+
+it('preserves database intervals changed after the source setting was displayed', async () => {
+  const app = await setup();
+  const reading = { intervalDurationMs: 777000, intervalGrowthFactor: 1.7, lastHandledAt: now, nextAt: now,
+    priority: 3, readingPosition: 0, repetitionCount: 9, state: 'locked' as const };
+  await persistence.reading(peer.port, { nodeId: 'a', before: null, after: reading }, now);
+  app.setState(state => ({ nodesById: { ...state.nodesById, a: { ...state.nodesById.a!, reading: { ...reading, intervalDurationMs: 1 } } } }));
+  expect(await app.sequential('folder', true, now)).toBe(true);
+  expect((await snapshot(peer)).nodesById.a?.reading).toEqual({ ...reading, state: 'active' });
+});
+
+it('makes a newly released source topic available when it was locked before the daily list opened', async () => {
+  const app = await setup();
+  await app.sequential('folder', true, now);
+  await peer.port.run('DELETE FROM daily_flow_entries');
+  await peer.port.run('DELETE FROM daily_flow_state');
+  const opened = await openDailyFlow(peer.port, { now, mode: 'reading-only' }, settings(peer), persistence);
+  app.setState({ reviewSession: opened.session });
+  expect((await readCycleRows(peer.port)).some(row => row.node_id === 'b')).toBe(false);
+  expect(await app.order('folder', ['b', 'a'], now)).toBe(true);
+  expect(app.getState().reviewSession.currentNodeId).toBe('b');
+  await assertDurable(peer, app.getState().reviewSession);
 });

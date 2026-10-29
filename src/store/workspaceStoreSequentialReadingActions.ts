@@ -1,3 +1,4 @@
+import { planSequentialReadingSourceStates } from '../../lib/core/review/sequentialReadingSourceStates';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { hasDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
 
@@ -17,10 +18,11 @@ export function createSetNodeSequentialReadingAction(
   return (nodeId, enabled, now = new Date().toISOString()) => {
     if (get && hasDailyFlowRuntime()) {
       const before = get();
-      const patch = buildSequentialReadingSourcePatch({ defaultPriority: getCurrentReviewSchedulerSettings().pushQueue.defaultPriority,
-        enabled, nodeOrder: before.nodeOrder, nodesById: before.nodesById, now, sourceNodeId: nodeId });
-      return patch ? saveWorkspaceFlowSourceSettings(set, get, before, nodeId, patch.nodesById,
-        [patch.sourceNodeId, ...patch.changes.map(change => change.nodeId)], now) : false;
+      const plan = planSequentialReadingSourceStates({ enabled, nodeOrder: before.nodeOrder,
+        nodesById: before.nodesById, sourceNodeId: nodeId });
+      return plan ? saveWorkspaceFlowSourceSettings(set, get, before, nodeId, {
+        manualChildOrder: before.nodesById[nodeId]!.manualChildOrder ?? null, sequentialReadingEnabled: enabled
+      }, plan.changes, now) : false;
     }
     let nextNodesForSync: WorkspaceState['nodesById'][string][] = [];
     let updated = false;

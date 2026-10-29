@@ -1,12 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { resetDailyFlowGeneration } from './harness/dailyFlowGeneration';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-const output = path.resolve('.tmp/artifacts/T536/source-settings-native');
+const output = path.resolve('.tmp/artifacts/T632/source-settings-native');
 
-test('saves sequential reading before replacing a locked Flow current and keeps it after reload', async ({ desktopWindow: page }) => {
+test('saves sequential reading before replacing a locked Flow current and keeps it after reload', async ({ desktopWindow: page, desktopApp }) => {
   await expectWorkspaceShell(page);
   await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
   await page.reload();
@@ -33,8 +34,12 @@ test('saves sequential reading before replacing a locked Flow current and keeps 
       (node.kind === 'topic' || node.kind === 'item') && !isolated.trashedNodeIds.includes(node.id)).map(node => node.id).sort();
     if (JSON.stringify(live) !== JSON.stringify(['settings-a', 'settings-b'])) throw new Error(`Unexpected learning fixture: ${live}`);
   });
+  await resetDailyFlowGeneration(desktopApp);
   await page.evaluate(() => window.electronAPI.invoke('open_daily_flow', { now: new Date().toISOString(),
-    mode: 'reading-only', preferredNodeId: 'settings-b' }));
+    mode: 'reading-only', preferredNodeId: 'settings-b', prepareOnly: true }));
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await page.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated());
   await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId)).toBe('settings-b');
   const before = await page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession());
