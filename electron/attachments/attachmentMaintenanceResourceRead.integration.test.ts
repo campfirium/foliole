@@ -7,6 +7,16 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let appData = '';
+vi.mock('node:worker_threads', async importOriginal => {
+  const actual = await importOriginal<typeof import('node:worker_threads')>();
+  return { ...actual, Worker: class extends actual.Worker {
+    constructor(url: URL, options: import('node:worker_threads').WorkerOptions) {
+      super(url.pathname.endsWith('/attachmentReferenceWorker.js')
+        ? path.resolve('dist/electron/attachments/attachmentReferenceWorker.js') : url, options);
+    }
+  } };
+});
+
 const moveGate = vi.hoisted(() => ({ moved: null as null | (() => void) }));
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
   app_data_dir: appData, app_cache_dir: path.join(appData, 'cache'),

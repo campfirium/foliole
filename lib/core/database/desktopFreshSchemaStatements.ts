@@ -1,6 +1,7 @@
 import { PDF_TEXT_ARTIFACT_SCHEMA } from '../sync/pdfTextArtifact.js';
 
 import { ATTACHMENT_DEMAND_SCHEMA } from './attachmentDemandSchema.js';
+import { ATTACHMENT_REFERENCE_CACHE_SCHEMA } from './attachmentReferenceCacheSchema.js';
 import { CURRENT_PARENT_ORDER_SCHEMA } from './currentParentOrderSchema.js';
 import { DAILY_FLOW_CURRENT_SCHEMA } from './dailyFlowSchema.js';
 import { DAILY_FLOW_SYNC_MERGE_INDEXES } from './dailyFlowSyncMergeMigration.js';
@@ -37,6 +38,7 @@ import { SYNC_SCHEMA_STATEMENTS } from './syncSchemaStatements.js';
 
 export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...DESKTOP_CORE_SCHEMA_STATEMENTS,
+  ...ATTACHMENT_REFERENCE_CACHE_SCHEMA,
   ...DAILY_FLOW_CURRENT_SCHEMA,
   ...DAILY_FLOW_SYNC_SCHEMA,
   ...DAILY_FLOW_TABLE_SCHEMA,

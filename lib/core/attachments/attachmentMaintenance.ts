@@ -4,7 +4,7 @@ import type {
 
 export interface AttachmentMaintenancePort {
   generation(): Promise<string>;
-  references(): Promise<{ revision: string; storageKeys: string[] }>;
+  references(): Promise<{ revision: string; storageKeys: string[] } | null>;
   inventory(trash: boolean): Promise<AttachmentFileEntry[]>;
   readState(): Promise<AttachmentObservationState | null>;
   writeState(state: AttachmentObservationState): Promise<void>;
@@ -37,7 +37,8 @@ export async function maintainAttachments(
     for (const file of await port.inventory(true)) { signal?.throwIfAborted(); await port.removeTrash(file.storageKey); }
   }
   if (request.action === 'observe' || request.action === 'clean') {
-    await observeAndClean(port, state, request.action, day, signal);
+    const complete = await observeAndClean(port, state, request.action, day, signal);
+    return { ...await status(port, state), observationComplete: complete };
   }
   return status(port, state);
 }
@@ -63,6 +64,7 @@ async function observeAndClean(port: AttachmentMaintenancePort, state: Attachmen
   action: 'observe' | 'clean', day: string, signal?: AbortSignal) {
   signal?.throwIfAborted();
   const snapshot = await port.references();
+  if (snapshot === null) return false;
   const files = await port.inventory(false);
   const references = new Set(snapshot.storageKeys);
   const present = new Set(files.map((file) => file.storageKey));
@@ -91,6 +93,7 @@ async function observeAndClean(port: AttachmentMaintenancePort, state: Attachmen
       await port.writeState(state);
     }
   }
+  return true;
 }
 
 async function status(port: AttachmentMaintenancePort, state: AttachmentObservationState): Promise<AttachmentMaintenanceStatus> {

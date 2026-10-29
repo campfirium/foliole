@@ -103,7 +103,7 @@ describe('iosCompanionDatabaseBootstrap version contract', () => {
     expect(COMPANION_DATABASE_VERSION).toBe(
       // Later inventory migrations run through the shared executor only.
       Math.max(101, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
-        ...ANDROID_COMPANION_MIGRATION_PLAN.map((migration) => migration.beforeVersion))
+        ...ANDROID_COMPANION_MIGRATION_PLAN.map((migration) => migration.beforeVersion + 1))
     );
   });
 });
@@ -126,8 +126,9 @@ describe('iosCompanionDatabaseBootstrap', () => {
       library_key: result.database_path, generation_id: expect.any(String)
     });
     expect(connection.query).toHaveBeenCalledWith('PRAGMA busy_timeout = 5000', []);
-    expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
-    expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
+    expect(connection.beginTransaction).toHaveBeenCalled();
+    expect(connection.commitTransaction.mock.calls.length).toBe(connection.beginTransaction.mock.calls.length);
+    expect(connection.rollbackTransaction).not.toHaveBeenCalled();
     expect(connection.run).toHaveBeenCalledWith(
       expect.stringContaining('INSERT OR REPLACE INTO companion_meta'),
       ['device_id', 'iPhone', '2026-07-19T08:00:00Z'],
@@ -141,7 +142,8 @@ describe('iosCompanionDatabaseBootstrap', () => {
 
     expect(result.device_id).toBe('ios-device');
     expect(connection.run).not.toHaveBeenCalledWith(expect.stringContaining('INSERT INTO companion_meta'), expect.anything(), false);
-    expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
+    expect(connection.commitTransaction.mock.calls.length).toBe(connection.beginTransaction.mock.calls.length);
+    expect(connection.rollbackTransaction).not.toHaveBeenCalled();
   });
 });
 
@@ -186,7 +188,9 @@ describe('iosCompanionDatabaseBootstrap host profile migration', () => {
 
     await expect(initializeIosCompanionDatabase(nativeState(), manager))
       .resolves.toMatchObject({ device_id: 'different-device', host_name: 'iPhone' });
-    expect(connection.beginTransaction).toHaveBeenCalledOnce();
+    expect(connection.beginTransaction).toHaveBeenCalled();
+    expect(connection.commitTransaction.mock.calls.length).toBe(connection.beginTransaction.mock.calls.length);
+    expect(connection.rollbackTransaction).not.toHaveBeenCalled();
     expect(connection.run).not.toHaveBeenCalledWith(
       expect.stringContaining('DELETE FROM sync_group_local_state'), expect.anything(), false
     );

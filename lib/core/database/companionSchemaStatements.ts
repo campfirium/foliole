@@ -6,6 +6,7 @@ import { ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS } from './androidCompanionHost
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from './androidCompanionResourceSchemaStatements.js';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from './androidCompanionSyncSchemaStatements.js';
 import { ATTACHMENT_DEMAND_SCHEMA } from './attachmentDemandSchema.js';
+import { ATTACHMENT_REFERENCE_CACHE_SCHEMA } from './attachmentReferenceCacheSchema.js';
 import { CURRENT_PARENT_ORDER_SCHEMA } from './currentParentOrderSchema.js';
 import { DAILY_FLOW_CURRENT_SCHEMA } from './dailyFlowSchema.js';
 import { DAILY_FLOW_SYNC_MERGE_INDEXES } from './dailyFlowSyncMergeMigration.js';
@@ -27,6 +28,7 @@ import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
 export const COMPANION_SCHEMA_STATEMENTS = [
   ...ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS,
   ...ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS,
+  ...ATTACHMENT_REFERENCE_CACHE_SCHEMA,
   ...DAILY_FLOW_CURRENT_SCHEMA,
   ...DAILY_FLOW_SYNC_SCHEMA,
   ...DAILY_FLOW_TABLE_SCHEMA,

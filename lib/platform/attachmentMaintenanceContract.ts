@@ -13,6 +13,7 @@ export interface AttachmentMaintenanceStatus extends AttachmentMaintenanceSettin
   eligibleBytes: number;
   trashBytes: number;
   lastObservationDay: string | null;
+  observationComplete?: boolean;
   trash: AttachmentFileEntry[];
 }
 

@@ -17,14 +17,19 @@ export function useAttachmentObservation(ready: boolean) {
         if (running) return;
         const controller = new AbortController();
         running = controller;
+        let incomplete = false;
         void runAttachmentMaintenance({ action: 'observe' }, controller.signal)
-          .then(() => { if (!controller.signal.aborted) completedDay = new Date().toDateString(); })
+          .then(result => {
+            incomplete = result?.observationComplete === false;
+            if (!controller.signal.aborted && !incomplete) completedDay = new Date().toDateString();
+          })
           .catch((error: unknown) => {
+            incomplete = true;
             if (!controller.signal.aborted) console.warn('[attachments] idle observation incomplete', error);
           })
           .finally(() => {
             running = undefined;
-            if (controller.signal.aborted && !disposed) schedule();
+            if ((controller.signal.aborted || incomplete) && !disposed) schedule();
           });
       }, 60_000);
     };

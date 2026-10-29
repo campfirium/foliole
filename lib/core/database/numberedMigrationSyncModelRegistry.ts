@@ -1,5 +1,6 @@
 import { migrateAttachmentDemands } from './attachmentDemandSchema.js';
 import { retireAttachmentInventory } from './attachmentInventoryRetirementMigration.js';
+import { migrateAttachmentReferenceCache } from './attachmentReferenceCacheSchema.js';
 import { migrateCurrentParentOrders } from './currentParentOrderMigration.js';
 import { migrateCycleFlow } from './cycleFlowMigration.js';
 import { migrateDailyFlow } from './dailyFlowSchema.js';
@@ -57,5 +58,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 176, migrate: migrateCycleFlow },
   { version: 177, migrate: migrateDailyFlowSync },
   { version: 178, migrate: migrateDailyFlowSyncMerge },
-  { version: 179, migrate: migrateDailyFlowTables }
+  { version: 179, migrate: migrateDailyFlowTables },
+  { version: 180, migrate: migrateAttachmentReferenceCache }
 ];

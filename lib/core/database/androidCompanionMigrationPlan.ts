@@ -181,6 +181,7 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(104, 'installSchema', 'Failed to upgrade the daily Flow cycle.'),
   step(105, 'installSchema', 'Failed to install daily Flow sync facts.'),
   step(106, 'installSchema', 'Failed to install daily Flow merge metadata.'),
+  step(107, 'installSchema', 'Failed to install local attachment reference results.'),
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {

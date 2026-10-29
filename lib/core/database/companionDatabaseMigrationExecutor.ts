@@ -10,6 +10,7 @@ import {
 import { migrateCompanionAttachmentDemands } from './attachmentDemandSchema.js';
 import { retireCompanionAttachmentInventory } from './attachmentInventoryRetirementMigration.js';
 import { retireCompanionAttachmentManifest } from './attachmentManifestRetirementMigration.js';
+import { migrateCompanionAttachmentReferenceCache } from './attachmentReferenceCacheSchema.js';
 import { retireCompanionAttachmentRegistry } from './companionAttachmentRegistryRetirement.js';
 import { migrateCompanionAuthorHostSnapshots } from './companionAuthorHostSnapshotsMigration.js';
 import {
@@ -160,6 +161,7 @@ async function migrateCompanionLatestVersions(db: DbPort, currentVersion: number
   if (currentVersion < 105 && targetVersion >= 105) await migrateCompanionDailyFlowSync(db);
   if (currentVersion < 106 && targetVersion >= 106) await migrateCompanionDailyFlowSyncMerge(db);
   if (currentVersion < 107 && targetVersion >= 107) await migrateCompanionDailyFlowTables(db);
+  if (currentVersion < 108 && targetVersion >= 108) await migrateCompanionAttachmentReferenceCache(db);
 }
 
 async function migrateCompanionWatchedDisplayPath(db: DbPort) {

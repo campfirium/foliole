@@ -660,6 +660,15 @@
         }
       ],
       "beforeVersion": 106
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to install local attachment reference results.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 107
     }
   ],
   "planKeys": {

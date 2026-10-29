@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 
 import { maintainAttachments } from '../../lib/core/attachments/attachmentMaintenance.js';
+import { requeueMissingObservedAttachments } from '../../lib/core/attachments/attachmentReferenceCache.js';
 import { attachmentDatabaseRevision, readAttachmentReferenceSnapshot } from '../../lib/core/attachments/attachmentReferenceSnapshot.js';
 import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import { requeueMissingAttachmentArticles } from '../../lib/core/sync/attachmentDemandQueue.js';
@@ -10,6 +11,7 @@ import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../datab
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
 import { attachmentDatabaseGeneration, readAttachmentObservationState, writeAttachmentObservationState } from './attachmentMaintenanceState.js';
+import { readDesktopObservationReferences } from './attachmentObservationReferences.js';
 import { attachmentFileAvailable, attachmentTrashDirectory, inventoryAttachmentDirectory, moveAttachmentToTrash,
   removeTrashedAttachment, restoreAttachmentFromTrash } from './attachmentTrashFiles.js';
 
@@ -21,7 +23,7 @@ export function runDesktopAttachmentMaintenance(request: AttachmentMaintenanceRe
   return maintainAttachments({
     generation: () => runWithDatabaseConnectionOwner(() =>
       attachmentDatabaseGeneration(currentDatabasePath())),
-    references: () => runWithDatabaseConnectionOwner(() => {
+    references: () => request.action === 'observe' ? readDesktopObservationReferences(signal) : runWithDatabaseConnectionOwner(() => {
       const connection = openDatabaseConnection();
       return readAttachmentReferenceSnapshot(
         createBetterSqliteDbPort(connection.sqlite, { name: 'attachment-maintenance-snapshot' }), signal);
@@ -49,7 +51,7 @@ export function runDesktopAttachmentMaintenance(request: AttachmentMaintenanceRe
     // An absent folder means unmounted or relocated storage, not files to download again.
     requestMissing: async (keys) => {
       if (!fs.existsSync(assetsDir)) return;
-      await runWithDatabaseConnectionOwner(() => requeueMissingAttachmentArticles(
+      await runWithDatabaseConnectionOwner(() => (request.action === 'observe' ? requeueMissingObservedAttachments : requeueMissingAttachmentArticles)(
         createBetterSqliteDbPort(openDatabaseConnection().sqlite), keys));
     },
     removeTrash: async (key) => {

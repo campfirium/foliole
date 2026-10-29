@@ -110,3 +110,13 @@ it('rechecks the database immediately before moving a previously eligible file',
   await expect(maintainAttachments(f.port, { action: 'clean' }, 'day-1')).rejects.toThrow('changed');
   expect(f.values.files).toEqual(['a.png']);
 });
+
+it('keeps incomplete incremental scans from advancing observations or starting automatic cleanup', async () => {
+  const f = fixture();
+  await maintainAttachments(f.port, { action: 'configure', settings: { automatic: true, observationThreshold: 1 } }, 'day-1');
+  f.port.references = async () => null;
+  expect(await maintainAttachments(f.port, { action: 'observe' }, 'day-1')).toMatchObject({ observationComplete: false });
+  expect(f.state()).toMatchObject({ counts: {}, lastObservationDay: null });
+  expect(f.values.files).toEqual(['a.png']);
+  expect(f.values.trash).toEqual([]);
+});

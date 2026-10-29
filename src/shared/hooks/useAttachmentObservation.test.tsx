@@ -28,3 +28,17 @@ it('cancels idle maintenance on interaction and starts a fresh attempt after ano
   hook.unmount();
   expect(signals[1]?.aborted).toBe(true);
 });
+
+it('retries incomplete observations after idle and marks only complete results as done for today', async () => {
+  vi.useFakeTimers();
+  vi.mocked(runAttachmentMaintenance).mockResolvedValueOnce({ observationComplete: false } as never)
+    .mockResolvedValue({ observationComplete: true } as never);
+  const hook = renderHook(() => useAttachmentObservation(true));
+  await act(() => vi.advanceTimersByTimeAsync(60000));
+  expect(runAttachmentMaintenance).toHaveBeenCalledTimes(1);
+  await act(() => vi.advanceTimersByTimeAsync(60000));
+  expect(runAttachmentMaintenance).toHaveBeenCalledTimes(2);
+  await act(() => vi.advanceTimersByTimeAsync(60000));
+  expect(runAttachmentMaintenance).toHaveBeenCalledTimes(2);
+  hook.unmount();
+});

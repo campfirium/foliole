@@ -7,6 +7,32 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let appData = '';
+const parsing = vi.hoisted(() => ({ calls: 0, beforePublish: undefined as undefined | (() => void) }));
+vi.mock('./attachmentReferenceWorkerClient.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('./attachmentReferenceWorkerClient.js')>();
+  return { ...actual, runAttachmentReferenceWorker: (databasePath, publish, signal) =>
+    actual.runAttachmentReferenceWorker(databasePath, async rows => {
+      parsing.beforePublish?.();
+      await publish(rows);
+    }, signal) } as typeof actual;
+});
+vi.mock('../../lib/core/import/replaceArticleImageSource.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('../../lib/core/import/replaceArticleImageSource.js')>();
+  return { ...actual, collectArticleImageStorageKeys(content: string) {
+    parsing.calls++;
+    return actual.collectArticleImageStorageKeys(content);
+  } };
+});
+vi.mock('node:worker_threads', async importOriginal => {
+  const actual = await importOriginal<typeof import('node:worker_threads')>();
+  return { ...actual, Worker: class extends actual.Worker {
+    constructor(url: URL, options: import('node:worker_threads').WorkerOptions) {
+      // Vitest loads host sources; execute the same worker from the normal Electron compilation.
+      super(url.pathname.endsWith('/attachmentReferenceWorker.js')
+        ? path.resolve('dist/electron/attachments/attachmentReferenceWorker.js') : url, options);
+    }
+  } };
+});
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({ app_data_dir: appData,
   app_cache_dir: path.join(appData, 'cache'), app_config_dir: path.join(appData, 'config'), app_log_dir: path.join(appData, 'logs') }) }));
 
@@ -19,7 +45,7 @@ import { withAttachmentFileLease } from './attachmentFileLease.js';
 import { runDesktopAttachmentMaintenance } from './attachmentMaintenanceService.js';
 import { moveAttachmentToTrash } from './attachmentTrashFiles.js';
 
-beforeEach(() => { appData = fs.mkdtempSync(path.join(os.tmpdir(), 'attachment-maintenance-')); initializeDatabase(); });
+beforeEach(() => { parsing.beforePublish = undefined; appData = fs.mkdtempSync(path.join(os.tmpdir(), 'attachment-maintenance-')); initializeDatabase(); });
 afterEach(() => { closeDatabaseConnection(); fs.rmSync(appData, { recursive: true, force: true }); });
 
 function file(text: string) {
@@ -111,4 +137,42 @@ it('ignores retired transfer artifacts while retaining owned bodies and active a
   expect((await runDesktopAttachmentMaintenance({ action: 'clean' })).trash.map(entry => entry.storageKey)).toEqual([orphan]);
   expect(fs.readFileSync(path.join(assetsDir, owned), 'utf8')).toBe('owned');
   expect(openDatabaseConnection().sqlite.prepare('SELECT * FROM node_sync_versions').all()).toEqual(originals);
+});
+
+
+it('reuses unchanged observation inputs without parsing their bodies again on the main thread', async () => {
+  const key = file('image used by unchanged article');
+  node('unchanged', `![image](asset://${key})`);
+  await runDesktopAttachmentMaintenance({ action: 'observe' });
+  parsing.calls = 0;
+  const result = await runDesktopAttachmentMaintenance({ action: 'observe' });
+  expect(result).toMatchObject({ eligibleBytes: 0, trashBytes: 0 });
+  expect(parsing.calls, 'unchanged observations must not reparse article bodies on the main thread').toBe(0);
+});
+
+it('retains the last complete day when foreground edits overtake a worker batch and repairs only pending inputs', async () => {
+  const key = file('edited while scanning');
+  node('edited', `![image](asset://${key})`);
+  parsing.beforePublish = () => {
+    parsing.beforePublish = undefined;
+    openDatabaseConnection().sqlite.prepare("UPDATE nodes SET content='',body_blob_hash=NULL WHERE id='edited'").run();
+  };
+  expect(await runDesktopAttachmentMaintenance({ action: 'observe' })).toMatchObject({ observationComplete: false, lastObservationDay: null });
+  expect(openDatabaseConnection().sqlite.prepare("SELECT count(*) FROM attachment_reference_cache WHERE node_id='edited'").pluck().get()).toBe(0);
+  expect(await runDesktopAttachmentMaintenance({ action: 'observe' })).toMatchObject({ observationComplete: true });
+});
+
+it('rejects a late batch when its library has been replaced', async () => {
+  node('old-library', 'Old library content');
+  parsing.beforePublish = () => {
+    parsing.beforePublish = undefined;
+    const databasePath = openDatabaseConnection().dbPath;
+    closeDatabaseConnection();
+    fs.copyFileSync(databasePath, `${databasePath}.restored`);
+    fs.renameSync(`${databasePath}.restored`, databasePath);
+    initializeDatabase();
+  };
+  await expect(runDesktopAttachmentMaintenance({ action: 'observe' })).rejects.toThrow('attachment_scan_database_replaced');
+  expect(openDatabaseConnection().sqlite.prepare('SELECT count(*) FROM attachment_reference_cache').pluck().get()).toBe(0);
+  expect(await runDesktopAttachmentMaintenance({ action: 'status' })).toMatchObject({ lastObservationDay: null });
 });
