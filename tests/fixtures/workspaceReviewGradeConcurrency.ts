@@ -9,6 +9,7 @@ import { applyReviewGrade } from '../../electron/database/reviewMutations.js';
 import { loadWorkspaceSnapshot } from '../../electron/database/workspaceSnapshot.js';
 import { reviewGrade, reviewPreview } from '../../electron/ipc/review.js';
 import { saveNodeReviewStateWithSync } from '../../lib/core/database/nodeReviewSyncState.js';
+import { readWorkspaceNodeLearning } from '../../lib/core/database/workspaceNodeLearning.js';
 import { dailyFlowCommitSchema } from '../../lib/core/flow/dailyFlowContract';
 import { mapGradeToRustRating } from '../../lib/core/review/types.js';
 import type { Node } from '../../src/features/nodes/model/nodeTypes';
@@ -98,6 +99,7 @@ export function history(harness: Awaited<ReturnType<typeof prepare>>) {
 
 let currentCommit: (payload: unknown) => ReturnType<typeof commitDesktopDailyFlow>;
 export async function invokeGradeRuntime(command: string, payload: unknown) {
+  if (command === 'load_node_learning') return readWorkspaceNodeLearning(connection().driver, (payload as { nodeIds: string[] }).nodeIds);
   if (command === 'open_daily_flow') return openDesktopDailyFlow(payload);
   if (command === 'commit_daily_flow') return currentCommit(payload);
   if (command === 'save_node_open_state') return null;

@@ -35,34 +35,39 @@ beforeEach(async () => {
 });
 afterEach(closeLibraries);
 
-async function prepare() {
-  node(peer, 'a', 'topic'); node(peer, 'b', 'topic');
-  const { session } = await openDailyFlow(peer.port, { now, mode: 'reading-only' }, settings(peer), persistence);
+async function prepare(kind: 'topic' | 'item' = 'topic') {
+  node(peer, 'a', kind); node(peer, 'b', kind);
+  const mode = kind === 'item' ? 'review-first' as const : 'reading-only' as const;
+  const { session } = await openDailyFlow(peer.port, { now, mode }, settings(peer), persistence);
   const facts = await snapshot(peer);
   const app = createSetStateHarness({ ...createWorkspaceFixture(Object.values(facts.nodesById) as Node[]),
-    libraryScope: settings(peer).scope!, activeNodeId: session.currentNodeId, reviewSession: session, reviewSessionMode: 'reading-only' });
+    libraryScope: settings(peer).scope!, activeNodeId: session.currentNodeId, reviewSession: session, reviewSessionMode: mode });
   return { ...app, actions: createWorkspaceReviewActions(app.setState, app.getState) };
 }
 
-it.each(['library', 'target'] as const)('discards the prepared operation when its %s changes during the database read', async change => {
-  const app = await prepare();
+it.each([['read', 'library'], ['read', 'target'], ['grade', 'library'], ['grade', 'target']] as const)(
+  'discards the prepared %s when its %s changes during the database read', async (action, change) => {
+  const app = await prepare(action === 'grade' ? 'item' : 'topic');
+  if (action === 'grade') app.actions.revealReviewAnswer();
   const id = app.getState().reviewSession.currentNodeId!;
-  const pending = app.actions.readReviewTopic(now);
+  const pending = action === 'grade' ? app.actions.gradeReviewCard(3, now) : app.actions.readReviewTopic(now);
   await reading;
   if (change === 'library') app.setState({ libraryScope: 'other-library' });
   else app.setState(state => ({ nodesById: { ...state.nodesById, [id]: { ...state.nodesById[id]!,
     reading: { intervalDurationMs: 60000, intervalGrowthFactor: 1, lastHandledAt: now, nextAt: now,
-      priority: 5, readingPosition: 0, repetitionCount: 3, state: 'active' } } } }));
+      priority: 5, readingPosition: 0, repetitionCount: 3, state: 'active' },
+    ...(action === 'grade' ? { review: { ...state.nodesById[id]!.review!, reps: 9 } } : {}) } } }));
   release();
   expect(await pending).toBe(false);
   expect((await snapshot(peer)).nodesById[id]?.reading).toBeNull();
   expect(app.getState().appActionHistory.undoStack).toEqual([]);
 });
 
-it('does not invent an initial reading when the database read fails', async () => {
-  const app = await prepare();
+it.each(['read', 'grade'] as const)('does not invent initial facts when the %s database read fails', async action => {
+  const app = await prepare(action === 'grade' ? 'item' : 'topic');
+  if (action === 'grade') app.actions.revealReviewAnswer();
   rejectRead = true; release();
-  expect(await app.actions.readReviewTopic(now)).toBe(false);
+  expect(await (action === 'grade' ? app.actions.gradeReviewCard(3, now) : app.actions.readReviewTopic(now))).toBe(false);
   expect(peer.db.prepare('SELECT * FROM node_reading').all()).toEqual([]);
   expect(app.getState().appActionHistory.undoStack).toEqual([]);
 });

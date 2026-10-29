@@ -27,6 +27,8 @@ export function retainDailyFlowRetry(args: DailyFlowCommitArgs) {
   return args;
 }
 
+export function readPendingDailyFlowRetry(opId: string) { return pending.get(opId); }
+
 export function settleDailyFlowRetry(opId: string) {
   pending.delete(opId);
 }

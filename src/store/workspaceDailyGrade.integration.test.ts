@@ -12,6 +12,10 @@ vi.mock('../../electron/deviceAnchorStore.js', () => ({
 vi.mock('../../electron/ipc/paths.js', () => ({ resolveAppPaths: () => ({ app_data_dir: root,
   app_cache_dir: path.join(root, 'cache'), app_config_dir: path.join(root, 'config'), app_log_dir: path.join(root, 'logs') }) }));
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => async (command: string, args: unknown) => {
+  if (command === 'load_node_learning') {
+    const { readWorkspaceNodeLearning } = await import('../../lib/core/database/workspaceNodeLearning');
+    return readWorkspaceNodeLearning(openDatabaseConnection().driver, (args as { nodeIds: string[] }).nodeIds);
+  }
   if (command === 'open_daily_flow') return openDesktopDailyFlow(args);
   if (command === 'commit_daily_flow') return commitDesktopDailyFlow(args);
   if (command === 'save_node_open_state') return null;
@@ -153,4 +157,21 @@ it.each([0, 1])('advances after the last review with %s reading candidates witho
   expect(session.continueNodeId).toBeNull();
   expect(reads.mock.calls.every(call => call[1] !== undefined)).toBe(true);
   for (const result of reads.mock.results) expect(Object.keys((await result.value).nodesById).length).toBeLessThanOrEqual(1 + topicCount);
+});
+
+it('grades from durable facts with only lightweight card status in the workspace and restores those facts on undo', async () => {
+  const app = await setup(2, 0);
+  const id = app.getState().reviewSession.currentNodeId!;
+  const { readWorkspaceNodeLearning } = await import('../../lib/core/database/workspaceNodeLearning');
+  const before = readWorkspaceNodeLearning(openDatabaseConnection().driver, [id])[0]!.review;
+  app.setState(state => ({ nodesById: { ...state.nodesById, [id]: Object.assign({ ...state.nodesById[id]!, review: null }, {
+    learningSummary: { reading: null, review: { lastReviewAt: before?.lastReviewAt ?? null } }
+  }) } }));
+  app.actions.revealReviewAnswer();
+  expect(await app.actions.gradeReviewCard(3, now)).toBe(true);
+  expect(readWorkspaceNodeLearning(openDatabaseConnection().driver, [id])[0]!.review?.reps).toBe(1);
+  const entry = app.getState().appActionHistory.undoStack.at(-1)!;
+  expect(app.history.undoWorkspaceAction(entry.id)).toBe(true);
+  await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
+  expect(readWorkspaceNodeLearning(openDatabaseConnection().driver, [id])[0]!.review).toEqual(before);
 });

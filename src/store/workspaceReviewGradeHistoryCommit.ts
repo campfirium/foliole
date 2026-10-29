@@ -29,22 +29,22 @@ type WorkspaceSet = (
   partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
 
-function beginReviewGradeHistory(set: WorkspaceSet, entry: WorkspaceReviewGradeHistoryEntry) {
+function beginReviewGradeHistory(set: WorkspaceSet, entry: WorkspaceReviewGradeHistoryEntry, before: WorkspaceState) {
   let began = false;
   acceptWorkspaceHistoryCommand(set, 'preserve', (state) => {
     if (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
         state.appActionHistory.pendingCreate) return state;
-    if (!isReviewGradeApplicable(state, entry)) return state;
+    if (state.libraryScope !== before.libraryScope || !isReviewGradeApplicable(state, entry, before.nodesById)) return state;
     began = true;
     return { appActionHistory: beginWorkspaceAction(state.appActionHistory, entry) };
   });
   return began;
 }
 
-function isReviewGradeApplicable(state: WorkspaceState, entry: WorkspaceReviewGradeHistoryEntry) {
+function isReviewGradeApplicable(state: WorkspaceState, entry: WorkspaceReviewGradeHistoryEntry, beforeNodes: WorkspaceState['nodesById']) {
   const node = state.nodesById[entry.nodeId];
   return Boolean(node && !state.trashedNodeIds.includes(entry.nodeId) &&
-    isSameReviewProfile(node.review ?? null, entry.beforeReview) &&
+    isSameReviewProfile(node.review ?? null, beforeNodes[entry.nodeId]?.review ?? null) &&
     isSameWorkspaceReviewSession(state.reviewSession, entry.beforeContext.reviewSession));
 }
 
@@ -55,7 +55,7 @@ function settleReviewGradeHistory(set: WorkspaceSet, gradedState: NonNullable<Re
   const entry = gradedState.historyEntry;
   set((state) => {
     const applicable = state.appActionHistory.pendingAction?.entry.id === entry.id &&
-      isReviewGradeApplicable(state, entry);
+      isReviewGradeApplicable(state, entry, beforeNodes);
     if (!applicable) return { appActionHistory: createEmptyWorkspaceActionHistory() };
     const settled = settleWorkspaceAction({ ...state.appActionHistory,
       pendingAction: { ...state.appActionHistory.pendingAction!, entry }
@@ -78,17 +78,19 @@ export async function commitWorkspaceReviewGrade(args: {
   now: string;
   persistence: WorkspaceReviewPersistenceAdapter;
   result: SharedReviewGradeResult;
+  rendererBefore?: WorkspaceState;
   set: WorkspaceSet;
   snapshot: WorkspaceState;
 }) {
   const entry = createPendingGradeEntry(args);
-  if (!beginReviewGradeHistory(args.set, entry)) return false;
+  if (!beginReviewGradeHistory(args.set, entry, args.rendererBefore ?? args.snapshot)) return false;
   let review: WorkspaceReviewGradeHistoryEntry['afterReview'] = args.result.nodePatch.review;
   let persisted = false;
   let persistedSession: WorkspaceState['reviewSession'] | undefined;
   let persistedSource: WorkspaceState['reviewSession'] | undefined;
   let receiptLearning: Record<string, DailyFlowLearningReceipt> | undefined;
   let receiptNodes: Record<string, WorkspaceNodeSnapshot> | undefined;
+  let mutationTimestamp = args.now;
   try {
     const result = hasPersistentDailyFlow(args.snapshot.reviewSession)
       ? await saveDailyGrade(args.snapshot.reviewSession, entry, { nodeId: args.currentNodeId,
@@ -104,6 +106,7 @@ export async function commitWorkspaceReviewGrade(args: {
       cardAfter: args.result.cardAfter
     }, args.persistence);
     persisted = Boolean(result);
+    if (result && typeof result !== 'boolean' && 'mutationTimestamp' in result && result.mutationTimestamp) mutationTimestamp = result.mutationTimestamp;
     if (result && typeof result !== 'boolean' && 'session' in result) { persistedSession = result.session; receiptNodes = result.nodes; receiptLearning = result.learning; persistedSource = result.sourceSession; }
     if (result && typeof result !== 'boolean') review = result.card ? toNodeReviewProfile(result.card) : null;
   } catch (error) {
@@ -120,8 +123,9 @@ export async function commitWorkspaceReviewGrade(args: {
     nodePatch: { review }, now: args.now, ...(persistedSession ? { persistedSession } : {}) });
   if (!computed) return false;
   const gradedState = { ...computed, historyEntry: { ...computed.historyEntry, id: entry.id,
+    mutationTimestamp,
     ...(persistedSource ? { beforeContext: { ...computed.historyEntry.beforeContext, reviewSession: persistedSource } } : {}) } };
-  const { applied, undoRequested } = settleReviewGradeHistory(args.set, gradedState, args.snapshot.nodesById, receiptNodes, receiptLearning);
+  const { applied, undoRequested } = settleReviewGradeHistory(args.set, gradedState, (args.rendererBefore ?? args.snapshot).nodesById, receiptNodes, receiptLearning);
   if (!applied) return false;
   if (undoRequested) args.get().undoWorkspaceAction(gradedState.historyEntry.id);
   return true;

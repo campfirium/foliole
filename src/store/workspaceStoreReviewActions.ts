@@ -12,7 +12,9 @@ import { isReviewProfileDue } from './reviewQueuePlannerTime';
 import { openWorkspaceDailyFlow } from './workspaceDailyFlowSessionActions';
 import { prepareWorkspaceFlowDay } from './workspaceFlowDayAction';
 import type { ReadingReviewPendingNodeIds } from './workspaceReadingReviewHistoryCommit';
+import { isSameReviewProfile } from './workspaceReviewGradeActionHistory';
 import { commitWorkspaceReviewGrade } from './workspaceReviewGradeHistoryCommit';
+import { readWorkspaceGradeLearning } from './workspaceReviewGradeLearning';
 import {
   runtimeWorkspaceReviewPersistence,
   type WorkspaceReviewPersistenceAdapter
@@ -77,10 +79,12 @@ function createGradeReviewCardAction(
 ): WorkspaceReviewActions['gradeReviewCard'] {
   return async (grade: ReviewGrade, now = new Date().toISOString()) => {
     if (!await prepareWorkspaceFlowDay(set, get, now)) return false;
-    const snapshot = get();
-    const currentNodeId = snapshot.reviewSession.currentNodeId;
-    if (!currentNodeId || !snapshot.reviewSession.isAnswerRevealed) return false;
-    if (snapshot.activeNodeId !== currentNodeId) return false;
+    const rendererBefore = get();
+    const currentNodeId = rendererBefore.reviewSession.currentNodeId;
+    if (!currentNodeId || !rendererBefore.reviewSession.isAnswerRevealed || rendererBefore.activeNodeId !== currentNodeId) return false;
+    const snapshot = await readWorkspaceGradeLearning(rendererBefore, currentNodeId, grade);
+    if (!snapshot || get().libraryScope !== rendererBefore.libraryScope || get().reviewSession !== rendererBefore.reviewSession ||
+      !isSameReviewProfile(get().nodesById[currentNodeId]?.review, rendererBefore.nodesById[currentNodeId]?.review)) return false;
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isFsrsReviewItemNode(currentNode)) return false;
     if (!isActionableSessionNode(currentNode, now)) {
@@ -103,6 +107,7 @@ function createGradeReviewCardAction(
       grade,
       now,
       persistence,
+      rendererBefore,
       result,
       set,
       snapshot
