@@ -70,7 +70,7 @@ async function canKeepDisplayedCurrent(db: DailyFlowStore, session: DailyFlowSes
 }
 
 export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSnapshot' | 'writeRows'>, session: DailyFlowSession, mode: ReviewSessionMode,
-  now: string, settings: DailyFlowSettings) {
+  now: string, settings: DailyFlowSettings, changes?: ReturnType<typeof cycleChanges>) {
   const skipped = new Map<string, CycleRow>();
   const meta = session.cycle!;
   const selected = await selectCycleSuccessor(db, meta, { mode, now, settings,
@@ -79,7 +79,9 @@ export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | '
       const unavailable = !node || snapshot.trashedNodeIds.includes(row.node_id) || hasDeletedAncestor(node, snapshot.nodesById)
         || (isReadingReviewItemNode(node) && (!hasNodeContent(node) || hasShelvedAncestor(node, snapshot.nodesById)));
       if (!unavailable || !row.initial_task || skipped.has(row.node_id)) return;
-      skipped.set(row.node_id, { ...row, initial_task: 0 });
+      const next = { ...row, initial_task: 0 as const };
+      skipped.set(row.node_id, next);
+      changes?.set(row, next);
       meta.remaining = Math.max(0, meta.remaining - 1);
       meta.reviewRemaining = Math.min(meta.remaining, Math.max(0,
         meta.reviewRemaining - (isFsrsReviewItemNode(node) ? 1 : 0)));
@@ -115,7 +117,9 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
     createdRows?.(initial.rows);
   }
   else {
-    session = stored.invalidated || stored.settings_key !== JSON.stringify(settings)
+    const reconcile = stored.invalidated || stored.settings_key !== JSON.stringify(settings);
+    const changes = captureChanges && !reconcile ? cycleChanges(stored.session.cycle!) : undefined;
+    session = reconcile
       ? await reconcileCycle(db, stored, args.now, settings, captureChanges) : { ...stored.session, cycle: { ...stored.session.cycle! } };
     if (args.preferredNodeId && args.preferredNodeId !== session.currentNodeId) {
       const preferred = { ...session, currentNodeId: args.preferredNodeId };
@@ -127,11 +131,12 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
     }
     const keepCurrent = args.preserveCurrent && await canKeepDisplayedCurrent(db, session);
     if (!keepCurrent && !await isCycleCurrentReady(db, session, args.mode, args.now, settings)) {
-      await chooseCycleCurrent(db, session, args.mode, args.now, settings);
+      await chooseCycleCurrent(db, session, args.mode, args.now, settings, changes);
     } else if (stored.invalidated && session.currentNodeId) {
       const [current] = await db.readRows([session.currentNodeId]);
       if (current) session.cycle!.scanAfter = current.order_key;
     }
+    if (changes) session.cycle!.change = changes.change();
   }
   if (args.prepareOnly && !session.sessionStartedAt) {
     session = { ...session, sessionStartedAt: null, currentItemStartedAt: null, completedAt: null };
@@ -145,7 +150,7 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
   const unchanged = stored && !stored.invalidated && stored.mode === args.mode && stored.settings_key === JSON.stringify(settings)
     && sameCycleProgress(session, stored.session)
     && JSON.stringify(session.queueNodeIds) === JSON.stringify(stored.session.queueNodeIds);
-  if (stored && unchanged && !args.refresh && !args.preferredNodeId) return { mode: args.mode, session: stored.session, learning: await readCurrentFlowLearning(db, stored.session.currentNodeId) };
+  if (stored && unchanged && !captureChanges && !args.refresh && !args.preferredNodeId) return { mode: args.mode, session: stored.session, learning: await readCurrentFlowLearning(db, stored.session.currentNodeId) };
   const saved = await db.saveState({ dayKey, mode: args.mode, settingsKey: JSON.stringify(settings), now: args.now,
     revision: (stored?.revision ?? 0) + 1, session });
   return { mode: args.mode, session: saved, learning: await readCurrentFlowLearning(db, saved.currentNodeId) };

@@ -8,6 +8,7 @@ import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceN
 import { restoreFlowHistorySession } from '../../lib/core/flow/flowHistorySession';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor';
 import { invalidateCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
+import { openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
@@ -32,7 +33,7 @@ beforeEach(async () => {
   library = await createSearchLibrary(0);
   await mutateCompanionWorkspace({ type: 'create', nodeId: 'folder', kind: 'folder', parentNodeId: null, title: 'Folder' });
 });
-afterEach(async () => { await library.close(); });
+afterEach(async () => { await library.close(); vi.useRealTimers(); });
 
 it('retains structural history and redo after closing and reopening the database', async () => {
   await mutateCompanionWorkspace({ type: 'rename', nodeId: 'folder', title: 'Renamed' });
@@ -70,21 +71,25 @@ it('does not execute a queued mutation in another library lifetime', async () =>
   expect((await snapshot()).nodesById.folder?.title).toBe('Folder');
 });
 
-it('restores the current Flow card together with a deleted card', async () => {
+it.each(['a', 'b'])('restores the current Flow card together with deleted card %s', async deletedId => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(now));
   const records = await Promise.all(['a', 'b'].map(id => toWorkspaceNativeNodeVersion({
     id, kind: 'item', parentNodeId: 'folder', title: id, content: 'Question', reveal: 'Answer', anchorLink: null,
     reading: null, review: null, isTitleManual: true, hideTitleHeading: false, createdAt: now, updatedAt: now
   }, 'remote')));
   await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }));
-  const session = { ...createEmptyReviewSession(), currentNodeId: 'a', queueNodeIds: ['a', 'b'], totalNodeCount: 2 };
-  await mutateCompanionWorkspace({ type: 'delete', nodeId: 'a' }, { session, mode: 'review-first' });
+  const { session } = await openCompanionDailyFlow({ now, mode: 'review-first', preferredNodeId: 'a' });
+  expect(session.currentNodeId).toBe('a');
+  await mutateCompanionWorkspace({ type: 'delete', nodeId: deletedId }, { session, mode: 'review-first' });
   const entry = (await loadCompanionFlowHistory(key)).undoStack.at(-1)!;
   if (entry.type !== 'nodes.change') throw new Error('Missing structural history');
-  expect(entry.afterSession?.currentNodeId).toBe('b');
+  const nextId = deletedId === 'a' ? 'b' : 'a';
+  expect(entry.afterSession?.currentNodeId).toBe(nextId);
   const restored = await replayCompanionFlowHistory(key, 'undo', restoreFlowHistorySession(entry.afterSession!, session));
   expect(restored?.currentNodeId).toBe('a');
-  expect((await snapshot()).trashedNodeIds).not.toContain('a');
-  expect((await replayCompanionFlowHistory(key, 'redo', restored!))?.currentNodeId).toBe('b');
+  expect((await snapshot()).trashedNodeIds).not.toContain(deletedId);
+  expect((await replayCompanionFlowHistory(key, 'redo', restored!))?.currentNodeId).toBe(nextId);
 });
 
 it('refuses metadata edits without a synced base instead of replacing an unloaded body', async () => {
