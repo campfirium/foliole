@@ -42,7 +42,7 @@ it('prepares a first sidebar without learning time, reads without writes, and st
   expect(advanced.readingElapsedMs).toBe(1000);
 });
 
-it('shows every successor once including the new tail beyond the old lap without moving the cursor', async () => {
+it('shows every saved successor once beyond the old lap without admitting unrelated material', async () => {
   for (const id of ['a', 'b', 'c']) node(peer, id, 'topic');
   let session = (await openDailyFlow(peer.port, { now, mode: 'reading-only' }, config(), persistence)).session;
   session = await act(peer, session, 'soon');
@@ -53,11 +53,11 @@ it('shows every successor once including the new tail beyond the old lap without
   const displayed = await view(true, now, 'reading-only');
   expect(displayed.status).toBe('ready');
   if (displayed.status !== 'ready') throw new Error('missing view');
-  expect(displayed.nodeIds).toHaveLength(4);
-  expect(displayed.nodeIds).toContain('new-tail');
+  expect(displayed.nodeIds).toHaveLength(3);
+  expect(displayed.nodeIds).not.toContain('new-tail');
   expect(await durable()).toEqual(before);
   const observed: string[] = [];
-  for (let step = 0; step < 8 && observed.length < 4; step++) {
+  for (let step = 0; step < 8 && observed.length < 3; step++) {
     if (!observed.includes(session.currentNodeId!)) observed.push(session.currentNodeId!);
     session = await act(peer, session, 'soon');
   }

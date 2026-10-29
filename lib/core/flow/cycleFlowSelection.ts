@@ -1,6 +1,6 @@
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
 
-import type { CycleMeta } from './cycleFlowTypes.js';
+import type { CycleMeta, CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowLearningSnapshot, DailyFlowSettings } from './dailyFlowContract.js';
 import { flowPlan } from './dailyFlowPlanning.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
@@ -16,7 +16,7 @@ export function cycleReadyNodeIds(snapshot: DailyFlowLearningSnapshot, mode: Rev
 }
 
 async function scanRange(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSnapshot'>, meta: CycleMeta, args: { mode: ReviewSessionMode; now: string;
-  settings: DailyFlowSettings; excluded?: string }) {
+  settings: DailyFlowSettings; excluded?: string; onSkipped?: (row: CycleRow, snapshot: DailyFlowLearningSnapshot) => void }) {
   while (meta.scanAfter < meta.lapLimit) {
     const rows = await db.scanRows(meta.scanAfter, meta.lapLimit, BATCH_SIZE);
     const ids = rows.map(row => row.node_id);
@@ -26,6 +26,7 @@ async function scanRange(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSn
       crossClear(meta, row.order_key, args.now);
       meta.scanAfter = row.order_key;
       if (row.node_id !== args.excluded && ready.has(row.node_id)) return row;
+      if (!ready.has(row.node_id)) args.onSkipped?.(row, snapshot!);
     }
     if (!rows.length || rows.length < BATCH_SIZE) {
       crossClear(meta, meta.lapLimit + 1, args.now);

@@ -17,7 +17,7 @@ import { retireLegacySyncState } from './legacySyncRetirement.js';
 import { migrateMissingCurrentVersionInventory } from './missingCurrentVersionInventoryMigration.js';
 import { migrateNodeChildInventory } from './nodeChildInventoryMigration.js';
 import { migrateNodeHistoryState } from './nodeHistoryStateMigration.js';
-import { migrateParentOrderInvalidation } from './nodeInvalidationMigration.js';
+import { migrateMaterialFlowInvalidation, migrateParentOrderInvalidation } from './nodeInvalidationMigration.js';
 import { retireNodePositions } from './nodePositionRetirementMigration.js';
 import { addColumnIfMissing } from './numberedMigrationHelpers.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
@@ -63,5 +63,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 179, migrate: migrateDailyFlowTables },
   { version: 180, migrate: migrateAttachmentReferenceCache },
   { version: 181, migrate: migrateDailyFlowLocalApplications },
-  { version: 182, migrate: migrateParentOrderInvalidation }
+  { version: 182, migrate: migrateParentOrderInvalidation },
+  { version: 183, migrate: migrateMaterialFlowInvalidation }
 ];

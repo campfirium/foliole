@@ -3,6 +3,7 @@ import { afterEach, expect, it } from 'vitest';
 
 import { closeLibraries } from '../../electron/database/syncLibrary.testSupport';
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor';
+import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/databaseSchemaVersion';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations';
 import { readCycleRows, readDailyFlow } from '../../lib/core/flow/dailyFlowStorage';
 import { act, node, open, setupPeers } from '../test/dailyFlowExceptions.testSupport';
@@ -26,7 +27,7 @@ it.each(['desktop', 'companion'] as const)('upgrades %s atomically without rebui
     (object_type,object_id,state_seq,content_hash,last_modified_by_host_name,updated_at,sync_dirty)
     VALUES('daily_flow',?,999,?,'local',?,1)`).run(root, 'c'.repeat(64), stamp);
   const oldVersion = host === 'desktop' ? 180 : 108;
-  const nextVersion = host === 'desktop' ? 181 : 109;
+  const nextVersion = host === 'desktop' ? DATABASE_SCHEMA_VERSION : 109;
   peer.db.exec(`DROP TABLE daily_flow_local_operation_rows; DROP TABLE daily_flow_local_operation_state;
     DROP INDEX daily_flow_action_time; PRAGMA user_version=${oldVersion}`);
   const migrate = async (fail = false) => {

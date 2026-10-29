@@ -39,13 +39,16 @@ it('keeps current, Soon and completed facts across remote creation, deletion and
   expect((await readCycleRows(mobile.port, [soon]))[0]).toMatchObject({ active: 1, cohort: 'soon' });
   expect(local.queueNodeIds).not.toContain(completed);
   local = await act(mobile, local, 'read', due);
+  expect(local.currentNodeId).toBe(removed);
+  local = await act(mobile, local, 'read', due);
   expect(local.currentNodeId).toBe(soon);
   local = await act(mobile, local, 'read', due);
-  expect(new Set(await readView(mobile, due, 'reading-only'))).toEqual(new Set([removed, 'new-topic']));
+  expect(await readView(mobile, due, 'reading-only')).toEqual([]);
   await assertDurable(mobile, local);
   await exchange(mobile, desktop);
   const remote = await open(desktop, due, settings(desktop), 'reading-only');
-  expect(new Set(await readView(desktop, due, 'reading-only'))).toEqual(new Set([removed, 'new-topic']));
+  // This peer creates its own first list after the new material already exists.
+  expect(await readView(desktop, due, 'reading-only')).toEqual(['new-topic']);
   await assertDurable(desktop, remote);
   expect((await snapshot(desktop)).nodesById[completed]!.reading).toEqual((await snapshot(mobile)).nodesById[completed]!.reading);
 });
@@ -113,8 +116,10 @@ it.each(['grade', 'soon'] as const)('saves the displayed successor on the first 
   softDeleteNodes(peer.driver, { nodeIds: [removed], deletedAt: due });
   const displayed = { ...source, currentNodeId: next, queueNodeIds: source.queueNodeIds.filter(id => id !== removed) };
   const saved = await act(peer, displayed, action, due);
-  expect((await readCycleRows(peer.port, [removed]))[0]?.active).toBe(0);
+  expect((await readCycleRows(peer.port, [removed]))[0]?.active).toBe(1);
+  expect(await readView(peer, due)).not.toContain(removed);
   expect((saved.readTopicCount ?? 0) + (saved.reviewedItemCount ?? 0)).toBe(1);
+  expect(saved.currentNodeId).not.toBe(removed);
   expect(saved.cycle?.remaining).toBe(0);
   await assertDurable(peer, saved);
 });

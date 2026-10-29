@@ -16,13 +16,12 @@ it.each(['empty', 'review', 'reading'] as const)('admits newly due minute review
   peer.db.exec("UPDATE nodes SET enable_short_term=1 WHERE id='minute'");
   const open = async (stamp: string) => (await openDailyFlow(peer.port,
     { now: stamp, mode: 'recommended' }, settings(peer), persistence)).session;
+  if (current !== 'empty') node(peer, 'current', current === 'review' ? 'item' : 'topic');
+  peer.db.exec("UPDATE nodes SET priority=0 WHERE id='minute'");
   let session = await open(now);
+  expect(session.currentNodeId).toBe('minute');
   session = await act(peer, session, 'grade');
-  if (current !== 'empty') {
-    node(peer, 'current', current === 'review' ? 'item' : 'topic');
-    session = await open(now);
-    expect(session.currentNodeId).toBe('current');
-  }
+  if (current !== 'empty') expect(session.currentNodeId).toBe('current');
   const initial = structuredClone(session);
   const reads = vi.spyOn(persistence, 'snapshot');
   session = await open(beforeDue);
@@ -63,16 +62,17 @@ it.each(['reading-only', 'recommended'] as const)('refreshes due reading in %s w
 it.each(['review-first', 'recommended'] as const)('keeps hidden Soon ordered and reaches a due minute review after reentry in %s', async mode => {
   const [peer] = await setupPeers();
   for (const id of ['a', 'b']) node(peer, id, 'topic');
-  const open = async (stamp: string, mode: 'recommended' | 'review-first') =>
+  node(peer, 'minute', 'item');
+  node(peer, 'current', 'item');
+  peer.db.exec("UPDATE nodes SET enable_short_term=1 WHERE id='minute'");
+
+  const open = async (stamp: string, mode: 'recommended' | 'review-first' | 'reading-only') =>
     (await openDailyFlow(peer.port, { now: stamp, mode }, settings(peer), persistence)).session;
-  let session = await open(now, 'recommended');
+  let session = await open(now, 'reading-only');
   const [first, second] = (await readCycleRows(peer.port)).filter(row => row.initial_task)
     .map(row => row.node_id);
   session = await act(peer, session, 'soon');
   session = await act(peer, session, 'soon');
-  node(peer, 'minute', 'item');
-  node(peer, 'current', 'item');
-  peer.db.exec("UPDATE nodes SET enable_short_term=1 WHERE id='minute'");
   session = (await openDailyFlow(peer.port, { now, mode: 'review-first', preferredNodeId: 'minute' }, settings(peer), persistence)).session;
   session = await act(peer, session, 'grade');
   expect(session.currentNodeId).toBe('current');

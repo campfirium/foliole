@@ -56,7 +56,7 @@ it('reads parent visibility and learning profiles without opening display tables
   expect(deleted.trashedNodeIds).toContain('folder');
 });
 
-it('initializes and reconciles the daily list without reading a full workspace display snapshot', async () => {
+it('initializes and refreshes the saved daily sequence without admitting unrelated material or reading a full display snapshot', async () => {
   for (const id of ['a', 'b']) node(peer, id, 'topic');
   const displayReads: (readonly string[] | undefined)[] = [];
   const learningOnly = { ...persistence, snapshot: async (db: Parameters<typeof persistence.snapshot>[0], ids?: readonly string[]) => {
@@ -68,7 +68,7 @@ it('initializes and reconciles the daily list without reading a full workspace d
   node(peer, 'arrival', 'topic');
   const refreshed = await openDailyFlow(peer.port, { now, mode: 'reading-only', refresh: true }, settings(peer), learningOnly);
   expect(refreshed.session.currentNodeId).toBe(initial.session.currentNodeId);
-  expect(peer.db.prepare("SELECT active FROM daily_flow_entries WHERE node_id='arrival'").get()).toEqual({ active: 1 });
+  expect(peer.db.prepare("SELECT active FROM daily_flow_entries WHERE node_id='arrival'").get()).toBeUndefined();
   expect(displayReads.every(ids => ids !== undefined)).toBe(true);
   await assertDurable(peer, refreshed.session);
 });

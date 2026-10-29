@@ -52,7 +52,7 @@ import { retireCompanionLegacySyncState } from './legacySyncRetirement.js';
 import { migrateCompanionMissingCurrentVersionInventory } from './missingCurrentVersionInventoryMigration.js';
 import { migrateCompanionNodeChildInventory } from './nodeChildInventoryMigration.js';
 import { migrateCompanionNodeHistoryState } from './nodeHistoryStateMigration.js';
-import { migrateCompanionParentOrderInvalidation } from './nodeInvalidationMigration.js';
+import { migrateCompanionMaterialFlowInvalidation, migrateCompanionParentOrderInvalidation } from './nodeInvalidationMigration.js';
 import { retireCompanionNodePositions } from './nodePositionRetirementMigration.js';
 import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
 import { migrateCompanionPdfTextArtifacts } from './pdfTextArtifactMigration.js';
@@ -166,6 +166,7 @@ async function migrateCompanionLatestVersions(db: DbPort, currentVersion: number
   if (currentVersion < 108 && targetVersion >= 108) await migrateCompanionAttachmentReferenceCache(db);
   if (currentVersion < 109 && targetVersion >= 109) await migrateCompanionDailyFlowLocalApplications(db);
   if (currentVersion < 110 && targetVersion >= 110) await migrateCompanionParentOrderInvalidation(db);
+  if (currentVersion < 111 && targetVersion >= 111) await migrateCompanionMaterialFlowInvalidation(db);
 }
 
 async function migrateCompanionWatchedDisplayPath(db: DbPort) {

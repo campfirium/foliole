@@ -6,7 +6,7 @@ import { expectWorkspaceShell } from './harness/settings';
 
 const output = path.resolve('.tmp/artifacts/T591/daily-native');
 
-test('continues the saved daily Flow cursor after reloading the desktop renderer', async ({ desktopWindow: page }) => {
+test('continues the saved daily Flow cursor after reloading the desktop renderer', async ({ desktopApp, desktopWindow: page }) => {
   await expectWorkspaceShell(page);
   await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
   await page.reload();
@@ -24,7 +24,19 @@ test('continues the saved daily Flow cursor after reloading the desktop renderer
         stability: 0, difficulty: 0, elapsedDays: 0, scheduledDays: 0, reps: 0, lapses: 0 }
     })), { persist: true });
   });
+  // Build the isolated fixture's first list after seeding, rather than relying on material invalidation.
+  await desktopApp.evaluate(() => {
+    const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
+    const connection = require(`${process.cwd()}/dist/electron/database/connection.js`);
+    connection.runWithDatabaseConnectionOwner(() => connection.openDatabaseConnection().driver.transaction((driver: { execute(sql: string): void }) => {
+      for (const table of ['daily_flow_entries', 'daily_flow_state', 'daily_flow_operations']) driver.execute(`DELETE FROM ${table}`);
+    }));
+  });
+  await page.reload();
+  await expectWorkspaceShell(page);
   await page.getByRole('button', { name: /^Enter Flow$/ }).click();
+  const reveal = page.getByRole('button', { name: /^(Show Answer|Reveal Answer)$/ });
+  if (await reveal.isVisible()) await reveal.click();
   await page.getByRole('button', { name: /^(Change session mode|Session mode:)/ }).click();
   await page.getByRole('menuitem', { name: /Review first/ }).click();
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId)).toMatch(/^daily-/);

@@ -3,6 +3,20 @@ import type { DbPort } from '../sync/dbPort.js';
 
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 
+const learningColumns = {
+  node_review: ['node_id', 'due', 'last_review_at', 'state', 'stability', 'difficulty',
+    'elapsed_days', 'scheduled_days', 'reps', 'lapses'],
+  node_reading: ['node_id', 'interval_duration_ms', 'interval_growth_factor', 'last_handled_at',
+    'next_at', 'priority', 'repetition_count', 'state']
+} as const;
+
+// Material writes never invalidate an already generated local sequence.
+export const DAILY_FLOW_LEARNING_TRIGGERS = Object.entries(learningColumns).flatMap(([table, columns]) =>
+  ['INSERT', 'UPDATE', 'DELETE'].map(event =>
+    `CREATE TRIGGER IF NOT EXISTS daily_flow_${table}_${event.toLowerCase()} AFTER ${event} ON ${table}
+      ${event === 'UPDATE' ? `WHEN ${columns.map(column => `OLD.${column} IS NOT NEW.${column}`).join(' OR ')}` : ''}
+      BEGIN UPDATE daily_flow_state SET invalidated = 1 WHERE id = 1; END`));
+
 export const DAILY_FLOW_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS daily_flow_state (
     id INTEGER PRIMARY KEY CHECK(id = 1), day_key TEXT NOT NULL, revision INTEGER NOT NULL,
@@ -16,9 +30,7 @@ export const DAILY_FLOW_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS daily_flow_operations (
     op_id TEXT PRIMARY KEY, input_hash TEXT NOT NULL, revision INTEGER NOT NULL, card_json TEXT
   )`,
-  ...['nodes', 'node_review', 'node_reading'].flatMap(table => ['INSERT', 'UPDATE', 'DELETE'].map(event =>
-    `CREATE TRIGGER IF NOT EXISTS daily_flow_${table}_${event.toLowerCase()} AFTER ${event} ON ${table}
-      BEGIN UPDATE daily_flow_state SET invalidated = 1 WHERE id = 1; END`))
+  ...DAILY_FLOW_LEARNING_TRIGGERS
 ] as const;
 
 export const DAILY_FLOW_CURRENT_SCHEMA = [DAILY_FLOW_SCHEMA[0], CYCLE_ENTRY_SCHEMA.replace('CREATE TABLE ', 'CREATE TABLE IF NOT EXISTS '),

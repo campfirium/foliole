@@ -1,6 +1,7 @@
+import { hasNodeContent } from '../nodes/nodeContentFlags.js';
 import { hasDeletedAncestor, hasShelvedAncestor } from '../review/queue/reviewQueuePlannerHelpers.js';
 import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
-import { isFsrsReviewItemNode } from '../review/reviewItemKind.js';
+import { isFsrsReviewItemNode, isReadingReviewItemNode } from '../review/reviewItemKind.js';
 
 import { cycleChanges } from './cycleFlowChanges.js';
 import { cycleWindow, selectCycleSuccessor } from './cycleFlowSelection.js';
@@ -49,14 +50,11 @@ export async function reconcileCycle(db: Pick<DailyFlowStore, 'learningSnapshot'
   const rows = await db.readRows();
   const meta = { ...stored.session.cycle! };
   const changes = cycleChanges(meta);
-  const known = new Map(rows.map(row => [row.node_id, row]));
   for (const row of rows) {
     if (row.active && !eligible.has(row.node_id)) changes.set(row, { ...row, active: 0, initial_task: 0 });
     else if (!row.active && eligible.has(row.node_id)) changes.set(row, { ...row, active: 1, initial_task: 0,
       cohort: 'none', order_key: allocateCycleKey(meta) });
   }
-  for (const id of eligible) if (!known.has(id)) changes.set(undefined,
-    { node_id: id, order_key: allocateCycleKey(meta), active: 1, initial_task: 0, handled: 0, cohort: 'none' });
   await db.writeRows(changes.rows());
   const final = new Map([...rows, ...changes.rows()].map(row => [row.node_id, row]));
   const remaining = [...final.values()].filter(row => row.active && row.initial_task);
@@ -87,9 +85,22 @@ async function canKeepDisplayedCurrent(db: DailyFlowStore, session: DailyFlowSes
   return Boolean(node && !snapshot.trashedNodeIds.includes(id) && !hasDeletedAncestor(node, snapshot.nodesById) && !hasShelvedAncestor(node, snapshot.nodesById));
 }
 
-export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSnapshot'>, session: DailyFlowSession, mode: ReviewSessionMode,
+export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSnapshot' | 'writeRows'>, session: DailyFlowSession, mode: ReviewSessionMode,
   now: string, settings: DailyFlowSettings) {
-  const selected = await selectCycleSuccessor(db, session.cycle!, { mode, now, settings });
+  const skipped = new Map<string, CycleRow>();
+  const meta = session.cycle!;
+  const selected = await selectCycleSuccessor(db, meta, { mode, now, settings,
+    onSkipped: (row, snapshot) => {
+      const node = snapshot.nodesById[row.node_id];
+      const unavailable = !node || snapshot.trashedNodeIds.includes(row.node_id) || hasDeletedAncestor(node, snapshot.nodesById)
+        || (isReadingReviewItemNode(node) && (!hasNodeContent(node) || hasShelvedAncestor(node, snapshot.nodesById)));
+      if (!unavailable || !row.initial_task || skipped.has(row.node_id)) return;
+      skipped.set(row.node_id, { ...row, initial_task: 0 });
+      meta.remaining = Math.max(0, meta.remaining - 1);
+      meta.reviewRemaining = Math.min(meta.remaining, Math.max(0,
+        meta.reviewRemaining - (isFsrsReviewItemNode(node) ? 1 : 0)));
+    } });
+  await db.writeRows([...skipped.values()]);
   session.currentNodeId = selected?.node_id ?? null;
   session.isAnswerRevealed = false;
   session.currentItemStartedAt = now;

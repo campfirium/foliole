@@ -92,7 +92,7 @@ it('accepts an unchanged refreshed cursor and checks current learning facts befo
   await assertDurable(peer, moved);
 });
 
-it('undoes a local row change while retaining an unrelated arrival in the daily list', async () => {
+it('undoes a local row change without admitting unrelated material into the daily list', async () => {
   node(peer, 'a', 'topic'); node(peer, 'b', 'topic');
   const first = await open(peer);
   const rows = await readCycleRows(peer.port);
@@ -102,12 +102,12 @@ it('undoes a local row change while retaining an unrelated arrival in the daily 
   node(peer, 'arrival', 'topic');
   const reconciled = await open(peer);
   const [arrival] = await readCycleRows(peer.port, ['arrival']);
-  expect(arrival).toBeDefined();
+  expect(arrival).toBeUndefined();
   expect(reconciled.currentNodeId).toBe(moved.session.currentNodeId);
   const restored = await commitDailyFlow(peer.port, { opId: 'undo', now, token: reconciled.daily!,
     sourceSession: reconciled, historySourceSession: moved.session, nextSession: first,
     historyMode: 'undo', cycleReplay: moved.session.cycle!.change, readings }, settings(peer), persistence);
-  expect(await readCycleRows(peer.port, ['arrival'])).toEqual([arrival]);
+  expect(await readCycleRows(peer.port, ['arrival'])).toEqual([]);
   expect(await readCycleRows(peer.port, ['a', 'b'])).toEqual(rows);
   expect(restored.session.currentNodeId).toBe(first.currentNodeId);
   expect(restored.session.cycle?.tailKey).toBe(reconciled.cycle?.tailKey);

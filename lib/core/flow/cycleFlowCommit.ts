@@ -35,7 +35,8 @@ export async function commitCycleFlow(db: DailyFlowStore, args: DailyFlowCommitA
   const invalidated = stored.invalidated || stored.settings_key !== JSON.stringify(settings);
   const base = invalidated
     ? await reconcileCycle(db, stored, args.now, settings) : stored.session;
-  if (invalidated && !args.historyMode && !await isCycleCurrentReady(db, base, mode, args.now, settings)) {
+  const actionNode = args.grade?.nodeId ?? args.readings?.[0]?.nodeId;
+  if (!args.historyMode && (invalidated || (actionNode && actionNode !== base.currentNodeId)) && !await isCycleCurrentReady(db, base, mode, args.now, settings)) {
     await chooseCycleCurrent(db, base, mode, args.now, settings);
   }
   const sourceSession = { ...base, isAnswerRevealed: args.sourceSession?.isAnswerRevealed ?? base.isAnswerRevealed,

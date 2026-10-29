@@ -72,7 +72,7 @@ it('refreshes changed material after an old merge without replaying roots or rew
   const before = await readCycleRows(a.port);
   a.db.prepare('UPDATE daily_flow_sync_projection SET merged=1').run();
   a.db.prepare("UPDATE nodes SET title='Updated title' WHERE id='b'").run();
-  expect((await readDailyFlow(a.port))!.invalidated).toBe(1);
+  expect((await readDailyFlow(a.port))!.invalidated).toBe(0);
   const queries: string[] = [];
   const observe = (db: typeof a.port): typeof a.port => ({ ...db,
     query: async (sql, params) => { queries.push(sql); return db.query(sql, params); },

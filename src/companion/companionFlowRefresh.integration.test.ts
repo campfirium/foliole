@@ -3,7 +3,9 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { useMemo, useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { flushNodeSyncVersionWithDriver } from '../../electron/database/nodeSyncVersionFromDriver';
 import { closeLibraries } from '../../electron/database/syncLibrary.testSupport';
+import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
@@ -12,6 +14,8 @@ import { openCompanionDailyFlow, predictCompanionFlowDocument } from '../shared/
 import { commitCompanionFlowHistory, loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
+import { currentCompanionRequestSyncDatabaseHost } from '../shared/platform/companion/sync/framed/companionRequestSyncDatabaseHost';
+import { exchangeBodySyncOverHttp } from '../test/bodySyncHttp.testSupport';
 import { connectCompanionPeer } from '../test/companionDailySync.testSupport';
 import { act as peerAction, node, open } from '../test/dailyFlowExceptions.testSupport';
 
@@ -197,6 +201,42 @@ it('keeps the real mobile article after peer Read and validates before applying 
     expect(ui.result.current.actions.readingError).toBeNull();
     expect(library.database.prepare('SELECT * FROM node_reading ORDER BY node_id').all()).toEqual(readings);
     expect((await loadCompanionFlowHistory(ui.result.current.flow.historyKey)).undoStack).toHaveLength(0);
+    ui.unmount();
+  } finally { vi.unstubAllGlobals(); await closeLibraries(); }
+});
+
+
+it('keeps the real article and sequence after HTTP body sync without blocking Read on full preparation', async () => {
+  vi.stubGlobal('Uint8Array', Object.getPrototypeOf(Buffer.prototype).constructor);
+  await library.close(); library = await createSearchLibrary(0);
+  const peers = await connectCompanionPeer(library);
+  try {
+    for (const id of ['a', 'b', 'c']) node(peers.desktop, id, 'topic');
+    await peers.exchange();
+    const initial = (await refreshCompanionWorkspaceAfterMutation())!;
+    const publish = vi.fn();
+    const ui = renderHook(() => useReadingSurface(initial, publish));
+    await waitFor(() => expect(ui.result.current.flow.ready).toBe(true));
+    const session = ui.result.current.flow.capture().session;
+    const source = session.currentNodeId!;
+    const before = library.database.prepare('SELECT * FROM daily_flow_entries ORDER BY order_key').all();
+    const queries = vi.spyOn(library.connection, 'query');
+    upsertNodeSnapshot(peers.desktop.driver, { nodeId: source, kind: 'topic', title: source,
+      content: 'Changed through real HTTP', parentNodeId: null, position: null,
+      isTitleManual: true, anchorLink: null, reveal: null, createdAt: now, updatedAt: new Date().toISOString() });
+    flushNodeSyncVersionWithDriver(peers.desktop.driver, source, peers.desktop.name, new Date().toISOString());
+    const host = await currentCompanionRequestSyncDatabaseHost();
+    await act(async () => { await exchangeBodySyncOverHttp(peers.desktop, peers.mobile, host); await ui.result.current.refresh(); });
+    await waitFor(() => expect(ui.result.current.snapshot.nodesById[source]?.updatedAt).not.toBe(initial.nodesById[source]?.updatedAt));
+    expect(ui.result.current.flow.view.currentCard?.nodeId).toBe(source);
+    expect(library.database.prepare('SELECT * FROM daily_flow_entries ORDER BY order_key').all()).toEqual(before);
+    expect(library.database.prepare('SELECT content FROM nodes WHERE id=?').pluck().get(source)).toBe('Changed through real HTTP');
+    await act(async () => { await ui.result.current.article.openReadableArticle(source); });
+    expect(publish).toHaveBeenLastCalledWith(expect.objectContaining({ nodeId: source, content: 'Changed through real HTTP' }));
+    await act(async () => { await ui.result.current.actions.handleReadReviewTopic(); });
+    expect(ui.result.current.actions.readingError).toBeNull();
+    expect(ui.result.current.flow.view.currentCard?.nodeId).not.toBe(source);
+    expect(queries.mock.calls.filter(([sql]) => /SELECT \* FROM daily_flow_entries ORDER BY|SELECT .* FROM nodes n$|SELECT id, title, created_at AS createdAt FROM nodes/.test(sql))).toEqual([]);
     ui.unmount();
   } finally { vi.unstubAllGlobals(); await closeLibraries(); }
 });
