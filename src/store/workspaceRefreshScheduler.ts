@@ -79,13 +79,14 @@ export async function refreshWorkspaceState(source: WorkspaceRefreshSource = 'co
   await refreshRegisteredWorkspaceState(source);
 }
 
-export function requestWorkspaceSyncRefresh(scope: WorkspaceRefreshScope, libraryScope: string) {
+export function requestWorkspaceSyncRefresh(scope: WorkspaceRefreshScope, libraryScope: string,
+  source: WorkspaceRefreshSource = 'sync-applied') {
   if (refreshLibraryScope !== libraryScope) {
     refreshLibraryScope = libraryScope;
     refreshes.reset(null);
   }
   refreshes.register(scope);
-  scheduleWorkspaceRefresh('sync-applied');
+  scheduleWorkspaceRefresh(source);
 }
 
 export function requestWorkspaceStateRefresh(source: WorkspaceRefreshSource) {

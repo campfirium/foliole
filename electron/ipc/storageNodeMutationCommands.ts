@@ -51,6 +51,7 @@ function buildNodeContentWithAnchorsResult(args: {
 }) {
   const startedAt = readNowMs();
   const result = buildNodeMutationPatchResult({
+    workspaceScope: { kind: 'nodes', nodeIds: [args.parent.nodeId, ...args.affectedAnchors.map(node => node.nodeId)] },
     anchorUpdates: args.affectedAnchors,
     nodes: [args.parent],
     originWindow: args.originWindow,

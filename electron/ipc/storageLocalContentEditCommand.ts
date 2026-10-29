@@ -3,6 +3,7 @@ import { parseStoredImageRegions } from '../../lib/core/database/imageRegionCode
 import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
 import { parseNewImageReferences } from '../../lib/core/sync/localContentEditResources.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
+import { currentLibraryScope } from '../database/attachmentResourceDescription.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
@@ -15,6 +16,7 @@ import { readObjectArg } from './storageCommandSupport.js';
 import { buildNodeMutationPatchResult, type OriginWindow } from './storageNodeMutationResult.js';
 
 export async function handleLocalContentEditCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
+  const libraryScope = currentLibraryScope();
   const parent = parseNodeSnapshotArgs(readObjectArg(args.parent, 'parent'));
   const edit = readObjectArg(args.edit, 'edit');
   const affectedAnchors = parseNodeAnchorLocatorUpdateArray(args.affectedAnchors, 'affectedAnchors');
@@ -53,6 +55,7 @@ export async function handleLocalContentEditCommand(args: Record<string, unknown
   scheduleMirrorSync(updatedNodeIds);
   return {
     ...(buildNodeMutationPatchResult({
+      libraryScope, workspaceScope: { kind: 'nodes', nodeIds: updatedNodeIds },
       anchorUpdates,
       nodes: [{
         ...parent,

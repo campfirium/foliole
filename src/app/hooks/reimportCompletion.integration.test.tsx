@@ -109,7 +109,7 @@ it.each([false, true])('rebuilds once with delayed origin delivery=%s and reload
   await act(async () => { await vi.advanceTimersByTimeAsync(1500); });
   expect(invoke.mock.calls.filter(([name]) => name === 'load_workspace_list_snapshot')).toHaveLength(1);
   expect(auxiliary).toHaveBeenCalledOnce();
-  expect(other.webContents.send).toHaveBeenCalledWith('foliole:workspace-content-changed', { scope: 'workspace' });
+  expect(other.webContents.send).toHaveBeenCalledWith('foliole:workspace-content-changed', expect.objectContaining({ scope: 'workspace', workspaceScope: { kind: 'full' } }));
   expect(useWorkspaceStore.getState().activeNodeId).toBe(nodeId);
   expect(useWorkspaceStore.getState().nodesById[nodeId]?.content).toBe('# Watched\n\nFresh body\n');
   hook.unmount();

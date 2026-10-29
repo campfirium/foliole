@@ -36,6 +36,8 @@ const {
   runReadwiseReaderImport: vi.fn()
 }));
 
+vi.mock('../database/attachmentResourceDescription.js', () => ({ currentLibraryScope: () => 'library' }));
+
 vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => mockWindow),
@@ -202,7 +204,7 @@ it('routes readwise book manual actions through the native invoke handler', asyn
   expect(loadReadwiseBookEpub).toHaveBeenCalledWith('node-book-1', mockWindow);
   expect(resetReadwiseBookImport).toHaveBeenCalledWith('node-book-1');
   expect(mockWindow.webContents.send).toHaveBeenCalledWith('foliole:workspace-content-changed', {
-    scope: 'workspace'
+    scope: 'workspace', libraryScope: 'library', workspaceScope: { kind: 'full' }
   });
 });
 
@@ -249,6 +251,6 @@ it('routes Readwise cleanup and notifies workspace content changes only after cl
 
   expect(runReadwiseImportCleanup).toHaveBeenCalledTimes(1);
   expect(mockWindow.webContents.send).toHaveBeenCalledWith('foliole:workspace-content-changed', {
-    scope: 'workspace'
+    scope: 'workspace', libraryScope: 'library', workspaceScope: { kind: 'full' }
   });
 });

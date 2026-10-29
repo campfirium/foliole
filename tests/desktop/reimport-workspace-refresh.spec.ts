@@ -62,7 +62,7 @@ test('updates the current workspace after reimport while retaining the content n
   await expect(editor).toContainText('Updated source paragraph.');
   expect(await desktopWindow.evaluate(() =>
     (window as unknown as { reimportNotifications: unknown[] }).reimportNotifications
-  )).toContainEqual({ scope: 'workspace', refreshWorkspace: false });
+  )).toContainEqual(expect.objectContaining({ scope: 'workspace', refreshWorkspace: false, workspaceScope: { kind: 'full' } }));
   expect(await fs.readFile(topic.file, 'utf8')).toBe(content);
   const screenshot = path.resolve('.tmp/artifacts/T623/reimport-reading.png');
   await fs.mkdir(path.dirname(screenshot), { recursive: true });

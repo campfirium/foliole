@@ -54,6 +54,8 @@ export interface WorkspaceSyncAppliedEvent {
 }
 
 export interface WorkspaceContentChangedEvent {
+  workspaceScope?: WorkspaceRefreshScope;
+  libraryScope?: string;
   scope: 'workspace';
   refreshWorkspace?: false;
 }

@@ -56,6 +56,8 @@ export interface ReadwiseReaderImportProgressPayload {
 }
 
 export interface WorkspaceContentChangedPayload {
+  workspaceScope?: WorkspaceRefreshScope;
+  libraryScope?: string;
   scope: 'workspace';
   refreshWorkspace?: false;
 }

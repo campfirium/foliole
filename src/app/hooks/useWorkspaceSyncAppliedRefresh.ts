@@ -7,6 +7,7 @@ import {
   onWorkspaceSyncApplied
 } from '../../shared/platform/runtimeShellEvents';
 import { requestWorkspaceStateRefresh, requestWorkspaceSyncRefresh } from '../../store/workspaceRefreshScheduler';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 type WorkspaceSyncAppliedPayload = Parameters<Parameters<typeof onWorkspaceSyncApplied>[0]>[0];
 
@@ -62,7 +63,11 @@ export function useWorkspaceContentChangedRefresh() {
     let unlisten: (() => void) | null = null;
     void onWorkspaceContentChanged((payload) => {
       if (!disposed && payload.refreshWorkspace !== false) {
-        requestWorkspaceStateRefresh('content-changed');
+        if (payload.libraryScope && useWorkspaceStore.getState().libraryScope
+            && payload.libraryScope !== useWorkspaceStore.getState().libraryScope) return;
+        if (payload.workspaceScope && payload.libraryScope) {
+          requestWorkspaceSyncRefresh(payload.workspaceScope, payload.libraryScope, 'content-changed');
+        } else requestWorkspaceStateRefresh('content-changed');
       }
     }).then((nextUnlisten) => {
       if (disposed) {

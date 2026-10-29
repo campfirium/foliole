@@ -1,5 +1,6 @@
 import type { BrowserWindow } from 'electron';
 
+import type { WorkspaceRefreshScope } from '../../lib/core/database/workspaceSnapshotRefresh.js';
 import type { NativeNodeSnapshotArgs } from '../../lib/platform/nativeStorageContract.js';
 
 import type { parseNodeAnchorLocatorUpdateArray, parseNodeCreationMutationArgs } from './commandParsers.js';
@@ -7,12 +8,15 @@ import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.j
 
 export type OriginWindow = BrowserWindow | null;
 
-export function completeWorkspaceMutation(result: unknown = null, originWindow: OriginWindow = null) {
-  notifyWorkspaceContentChanged(originWindow);
+export function completeWorkspaceMutation(result: unknown = null, originWindow: OriginWindow = null,
+  workspaceScope: WorkspaceRefreshScope = { kind: 'full' }, libraryScope?: string) {
+  notifyWorkspaceContentChanged(originWindow, { workspaceScope, ...(libraryScope ? { libraryScope } : {}) });
   return result;
 }
 
 export function buildNodeMutationPatchResult(args: {
+  workspaceScope?: WorkspaceRefreshScope;
+  libraryScope?: string;
   activeNodeId?: string | null;
   anchorUpdates?: ReturnType<typeof parseNodeAnchorLocatorUpdateArray>;
   createdNodeIds?: string[];
@@ -30,7 +34,7 @@ export function buildNodeMutationPatchResult(args: {
     ...(args.nodeOrder ? { nodeOrder: args.nodeOrder } : {}),
     nodes: args.nodes,
     ...(args.updatedNodeIds ? { updatedNodeIds: args.updatedNodeIds } : {})
-  }, args.originWindow);
+  }, args.originWindow, args.workspaceScope, args.libraryScope);
 }
 
 export function completeCreatedNodeCreation(
