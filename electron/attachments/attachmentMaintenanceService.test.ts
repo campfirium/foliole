@@ -8,7 +8,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let appData = '';
 let fixtureRoot = '';
-const parsing = vi.hoisted(() => ({ calls: 0, beforePublish: undefined as undefined | (() => void) }));
+const parsing = vi.hoisted(() => ({ calls: 0, inventories: [] as boolean[], beforePublish: undefined as undefined | (() => void) }));
 vi.mock('./attachmentReferenceWorkerClient.js', async importOriginal => {
   const actual = await importOriginal<typeof import('./attachmentReferenceWorkerClient.js')>();
   return { ...actual, runAttachmentReferenceWorker: (databasePath, publish, signal) =>
@@ -22,6 +22,13 @@ vi.mock('../../lib/core/import/replaceArticleImageSource.js', async importOrigin
   return { ...actual, collectArticleImageStorageKeys(content: string) {
     parsing.calls++;
     return actual.collectArticleImageStorageKeys(content);
+  } };
+});
+vi.mock('./attachmentTrashFiles.js', async importOriginal => {
+  const actual = await importOriginal<typeof import('./attachmentTrashFiles.js')>();
+  return { ...actual, inventoryAttachmentDirectory(directory: string) {
+    parsing.inventories.push(directory.endsWith('.trash'));
+    return actual.inventoryAttachmentDirectory(directory);
   } };
 });
 vi.mock('node:worker_threads', async importOriginal => {
@@ -69,7 +76,8 @@ it('observes recoverable trash bodies and preserves local settings across reopen
   softDeleteNodes({ nodeIds: ['recoverable'], deletedAt: '2026-09-20T01:00:00Z' });
   await runDesktopAttachmentMaintenance({ action: 'configure', settings: { automatic: false, observationThreshold: 1 } });
   const observed = await runDesktopAttachmentMaintenance({ action: 'observe' });
-  expect(observed.eligibleBytes).toBe(6);
+  expect(observed).toEqual({ observationComplete: true });
+  expect(await runDesktopAttachmentMaintenance({ action: 'status' })).toMatchObject({ eligibleBytes: 6 });
   closeDatabaseConnection();
   initializeDatabase();
   expect(await runDesktopAttachmentMaintenance({ action: 'status' })).toMatchObject({ observationThreshold: 1, eligibleBytes: 6 });
@@ -97,10 +105,12 @@ it('observes owned body references after retired shared caches are removed', asy
   node('unreadable', 'Original body');
   openDatabaseConnection().sqlite.prepare('DELETE FROM content_blob_data').run();
   const observed = await runDesktopAttachmentMaintenance({ action: 'observe' });
-  expect(observed.lastObservationDay).not.toBeNull();
+  expect(observed).toEqual({ observationComplete: true });
+  const status = await runDesktopAttachmentMaintenance({ action: 'status' });
+  expect(status.lastObservationDay).not.toBeNull();
   expect(openDatabaseConnection().sqlite.prepare("SELECT content FROM nodes WHERE id = 'unreadable'").pluck().get())
     .toBe('Original body');
-  expect(await runDesktopAttachmentMaintenance({ action: 'status' })).toMatchObject({ lastObservationDay: observed.lastObservationDay });
+  expect(await runDesktopAttachmentMaintenance({ action: 'status' })).toMatchObject({ lastObservationDay: status.lastObservationDay });
 });
 
 it('keeps recoverable files available through trash and removes availability only after physical retirement', async () => {
@@ -130,7 +140,8 @@ it('ignores retired transfer artifacts while retaining owned bodies and active a
   fs.writeFileSync(path.join(obsolete, 'record.json'), 'retired transport metadata');
   const originals = openDatabaseConnection().sqlite.prepare('SELECT * FROM node_sync_versions').all();
   await runDesktopAttachmentMaintenance({ action: 'configure', settings: { automatic: false, observationThreshold: 1 } });
-  expect(await runDesktopAttachmentMaintenance({ action: 'observe' })).toMatchObject({ eligibleBytes: 6 });
+  await runDesktopAttachmentMaintenance({ action: 'observe' });
+  expect(await runDesktopAttachmentMaintenance({ action: 'status' })).toMatchObject({ eligibleBytes: 6 });
   await withAttachmentFileLease(path.join(assetsDir, orphan), async () => {
     await expect(runDesktopAttachmentMaintenance({ action: 'clean' })).rejects.toThrow('attachment_send_busy');
     expect(fs.readFileSync(path.join(assetsDir, orphan), 'utf8')).toBe('orphan');
@@ -146,8 +157,8 @@ it('reuses unchanged observation inputs without parsing their bodies again on th
   node('unchanged', `![image](asset://${key})`);
   await runDesktopAttachmentMaintenance({ action: 'observe' });
   parsing.calls = 0;
-  const result = await runDesktopAttachmentMaintenance({ action: 'observe' });
-  expect(result).toMatchObject({ eligibleBytes: 0, trashBytes: 0 });
+  expect(await runDesktopAttachmentMaintenance({ action: 'observe' })).toEqual({ observationComplete: true });
+  expect(await runDesktopAttachmentMaintenance({ action: 'status' })).toMatchObject({ eligibleBytes: 0, trashBytes: 0 });
   expect(parsing.calls, 'unchanged observations must not reparse article bodies on the main thread').toBe(0);
 });
 
@@ -158,7 +169,10 @@ it('retains the last complete day when foreground edits overtake a worker batch 
     parsing.beforePublish = undefined;
     openDatabaseConnection().sqlite.prepare("UPDATE nodes SET content='',body_blob_hash=NULL WHERE id='edited'").run();
   };
-  expect(await runDesktopAttachmentMaintenance({ action: 'observe' })).toMatchObject({ observationComplete: false, lastObservationDay: null });
+  parsing.inventories = [];
+  expect(await runDesktopAttachmentMaintenance({ action: 'observe' })).toEqual({ observationComplete: false });
+  expect(parsing.inventories).toEqual([]);
+  expect(await runDesktopAttachmentMaintenance({ action: 'status' })).toMatchObject({ lastObservationDay: null });
   expect(openDatabaseConnection().sqlite.prepare("SELECT count(*) FROM attachment_reference_cache WHERE node_id='edited'").pluck().get()).toBe(0);
   expect(await runDesktopAttachmentMaintenance({ action: 'observe' })).toMatchObject({ observationComplete: true });
 });
@@ -174,4 +188,17 @@ it('rejects a late batch when its library has been replaced', async () => {
   await expect(runDesktopAttachmentMaintenance({ action: 'observe' })).rejects.toThrow('attachment_scan_database_replaced');
   expect(openDatabaseConnection().sqlite.prepare('SELECT count(*) FROM attachment_reference_cache').pluck().get()).toBe(0);
   expect(await runDesktopAttachmentMaintenance({ action: 'status' })).toMatchObject({ lastObservationDay: null });
+});
+
+
+it.each([false, true])('only inventories active files during background observation, automatic=%s', async automatic => {
+  const key = file('unreferenced bytes');
+  await runDesktopAttachmentMaintenance({ action: 'configure', settings: { automatic, observationThreshold: 1 } });
+  parsing.inventories = [];
+  expect(await runDesktopAttachmentMaintenance({ action: 'observe' })).toEqual({ observationComplete: true });
+  expect(parsing.inventories).toEqual([false]);
+  const status = await runDesktopAttachmentMaintenance({ action: 'status' });
+  expect(status).toMatchObject({ usedBytes: 18, eligibleBytes: automatic ? 0 : 18,
+    trashBytes: automatic ? 18 : 0, trash: automatic ? [{ storageKey: key, sizeBytes: 18 }] : [] });
+  expect(status.lastObservationDay).not.toBeNull();
 });

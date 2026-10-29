@@ -1,5 +1,6 @@
 import type {
-  AttachmentFileEntry, AttachmentMaintenanceRequest, AttachmentMaintenanceStatus, AttachmentObservationState
+  AttachmentFileEntry, AttachmentMaintenanceRequest, AttachmentMaintenanceStatus, AttachmentObservationState,
+  AttachmentMaintenanceResult, AttachmentObservationRequest, AttachmentObservationResult, AttachmentStatusRequest
 } from '../../platform/attachmentMaintenanceContract.js';
 
 export interface AttachmentMaintenancePort {
@@ -14,9 +15,18 @@ export interface AttachmentMaintenancePort {
   removeTrash(storageKey: string): Promise<void>;
 }
 
+export function maintainAttachments(port: AttachmentMaintenancePort, request: AttachmentObservationRequest,
+  day: string, signal?: AbortSignal): Promise<AttachmentObservationResult>;
+// eslint-disable-next-line no-redeclare -- Action-specific TypeScript overloads share one implementation.
+export function maintainAttachments(port: AttachmentMaintenancePort, request: AttachmentStatusRequest,
+  day: string, signal?: AbortSignal): Promise<AttachmentMaintenanceStatus>;
+// eslint-disable-next-line no-redeclare -- Action-specific TypeScript overloads share one implementation.
+export function maintainAttachments(port: AttachmentMaintenancePort, request: AttachmentMaintenanceRequest,
+  day: string, signal?: AbortSignal): Promise<AttachmentMaintenanceResult>;
+// eslint-disable-next-line no-redeclare -- Action-specific TypeScript overloads share one implementation.
 export async function maintainAttachments(
   port: AttachmentMaintenancePort, request: AttachmentMaintenanceRequest, day: string, signal?: AbortSignal
-): Promise<AttachmentMaintenanceStatus> {
+): Promise<AttachmentMaintenanceResult> {
   const generation = await port.generation();
   const stored = await port.readState();
   validateObservationState(stored);
@@ -36,8 +46,11 @@ export async function maintainAttachments(
   if (request.action === 'empty-trash') {
     for (const file of await port.inventory(true)) { signal?.throwIfAborted(); await port.removeTrash(file.storageKey); }
   }
-  if (request.action === 'observe' || request.action === 'clean') {
-    const complete = await observeAndClean(port, state, request.action, day, signal);
+  if (request.action === 'observe') {
+    return { observationComplete: await observeAndClean(port, state, 'observe', day, signal) };
+  }
+  if (request.action === 'clean') {
+    const complete = await observeAndClean(port, state, 'clean', day, signal);
     return { ...await status(port, state), observationComplete: complete };
   }
   return status(port, state);

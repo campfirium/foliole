@@ -5,7 +5,8 @@ import { requeueMissingObservedAttachments } from '../../lib/core/attachments/at
 import { attachmentDatabaseRevision, readAttachmentReferenceSnapshot } from '../../lib/core/attachments/attachmentReferenceSnapshot.js';
 import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import { requeueMissingAttachmentArticles } from '../../lib/core/sync/attachmentDemandQueue.js';
-import type { AttachmentMaintenanceRequest } from '../../lib/platform/attachmentMaintenanceContract.js';
+import type { AttachmentMaintenanceResult, AttachmentMaintenanceStatus, AttachmentObservationRequest,
+  AttachmentObservationResult, AttachmentStatusRequest, AttachmentMaintenanceRequest } from '../../lib/platform/attachmentMaintenanceContract.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
@@ -15,6 +16,12 @@ import { readDesktopObservationReferences } from './attachmentObservationReferen
 import { attachmentFileAvailable, attachmentTrashDirectory, inventoryAttachmentDirectory, moveAttachmentToTrash,
   removeTrashedAttachment, restoreAttachmentFromTrash } from './attachmentTrashFiles.js';
 
+export function runDesktopAttachmentMaintenance(request: AttachmentObservationRequest, signal?: AbortSignal): Promise<AttachmentObservationResult>;
+// eslint-disable-next-line no-redeclare -- Action-specific TypeScript overloads share one implementation.
+export function runDesktopAttachmentMaintenance(request: AttachmentStatusRequest, signal?: AbortSignal): Promise<AttachmentMaintenanceStatus>;
+// eslint-disable-next-line no-redeclare -- Action-specific TypeScript overloads share one implementation.
+export function runDesktopAttachmentMaintenance(request: AttachmentMaintenanceRequest, signal?: AbortSignal): Promise<AttachmentMaintenanceResult>;
+// eslint-disable-next-line no-redeclare -- Action-specific TypeScript overloads share one implementation.
 export function runDesktopAttachmentMaintenance(request: AttachmentMaintenanceRequest, signal?: AbortSignal) {
   const { assetsDir } = resolveRuntimeDataPaths();
   const now = new Date();

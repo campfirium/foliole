@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import type { AttachmentMaintenanceRequest, AttachmentMaintenanceStatus } from '../../../../../lib/platform/attachmentMaintenanceContract';
+import type { AttachmentStatusRequest, AttachmentMaintenanceStatus } from '../../../../../lib/platform/attachmentMaintenanceContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { runAttachmentMaintenance } from '../../../../shared/platform/attachments/attachmentMaintenance';
 import { AppButton, AppInput, AppSwitch, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
@@ -20,7 +20,7 @@ function useAttachmentStorageSettings() {
     return () => { active = false; };
   }, []);
 
-  async function run(request: AttachmentMaintenanceRequest) {
+  async function run(request: AttachmentStatusRequest) {
     setBusy(true); setError(false);
     try { setStatus(await runAttachmentMaintenance(request)); }
     catch { setError(true); }

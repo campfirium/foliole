@@ -95,7 +95,8 @@ it('requires thirty complete observations by default and rejects corrupt persist
   for (let day = 1; day <= 29; day++) await maintainAttachments(f.port, { action: 'observe' }, `day-${day}`);
   expect((await maintainAttachments(f.port, { action: 'clean' }, 'day-29')).eligibleBytes).toBe(0);
   expect(f.values.files).toEqual(['a.png']);
-  expect((await maintainAttachments(f.port, { action: 'observe' }, 'day-30')).eligibleBytes).toBe(10);
+  await maintainAttachments(f.port, { action: 'observe' }, 'day-30');
+  expect((await maintainAttachments(f.port, { action: 'status' }, 'day-30')).eligibleBytes).toBe(10);
   await f.port.writeState({ ...f.state()!, observationThreshold: 0 });
   await expect(maintainAttachments(f.port, { action: 'clean' }, 'day-30')).rejects.toThrow('state_invalid');
   expect(f.values.files).toEqual(['a.png']);

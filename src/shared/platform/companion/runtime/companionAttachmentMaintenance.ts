@@ -5,7 +5,8 @@ import { recordFramedSyncResourceAvailability } from '../../../../../lib/core/da
 import { requeueMissingAttachmentArticles } from '../../../../../lib/core/sync/attachmentDemandQueue.js';
 import { attachmentSourceVerification } from '../../../../../lib/core/sync/attachmentSourceVerification.js';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
-import type { AttachmentMaintenanceRequest, AttachmentObservationState } from '../../../../../lib/platform/attachmentMaintenanceContract';
+import type { AttachmentMaintenanceResult, AttachmentMaintenanceStatus, AttachmentObservationRequest,
+  AttachmentObservationResult, AttachmentStatusRequest, AttachmentMaintenanceRequest, AttachmentObservationState } from '../../../../../lib/platform/attachmentMaintenanceContract';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 
 import type { CapacitorCompanionDatabaseOwner } from './capacitorCompanionDatabaseOwner';
@@ -15,6 +16,12 @@ import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
 const maintenanceTails = new WeakMap<object, Promise<unknown>>();
 
+export function runCompanionAttachmentMaintenance(request: AttachmentObservationRequest, signal?: AbortSignal): Promise<AttachmentObservationResult>;
+// eslint-disable-next-line no-redeclare -- Action-specific TypeScript overloads share one implementation.
+export function runCompanionAttachmentMaintenance(request: AttachmentStatusRequest, signal?: AbortSignal): Promise<AttachmentMaintenanceStatus>;
+// eslint-disable-next-line no-redeclare -- Action-specific TypeScript overloads share one implementation.
+export function runCompanionAttachmentMaintenance(request: AttachmentMaintenanceRequest, signal?: AbortSignal): Promise<AttachmentMaintenanceResult>;
+// eslint-disable-next-line no-redeclare -- Action-specific TypeScript overloads share one implementation.
 export function runCompanionAttachmentMaintenance(request: AttachmentMaintenanceRequest, signal?: AbortSignal) {
   const owner = getIosCompanionDatabaseOwner();
   const run = (maintenanceTails.get(owner) ?? Promise.resolve()).then(() => maintain(owner, request, signal));

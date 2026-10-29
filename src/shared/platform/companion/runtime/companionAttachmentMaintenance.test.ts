@@ -80,8 +80,13 @@ it('allows its own availability updates while cleaning multiple eligible files',
   });
   try {
     await library.owner.open({ expectedHostName: 'fixture', now: '2026-10-19T00:00:00.000Z' });
-    await runCompanionAttachmentMaintenance({ action: 'observe' });
+    runtime.files.mockClear();
+    expect(await runCompanionAttachmentMaintenance({ action: 'observe' })).toEqual({ observationComplete: true });
+    expect(runtime.files.mock.calls.filter(([args]) => args.operation === 'inventory').map(([args]) => args.trash))
+      .toEqual([false]);
     expect(moved).toEqual(keys);
+    expect(await runCompanionAttachmentMaintenance({ action: 'status' })).toMatchObject({
+      usedBytes: 20, eligibleBytes: 0, trashBytes: 20, trash: keys.map(storageKey => ({ storageKey, sizeBytes: 10 })) });
     expect(state.counts).toEqual({});
   } finally { await library.close(); }
 });

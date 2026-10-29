@@ -18,9 +18,15 @@ export interface AttachmentMaintenanceStatus extends AttachmentMaintenanceSettin
 }
 
 export type AttachmentMaintenanceRequest =
-  | { action: 'status' | 'observe' | 'clean' | 'empty-trash' }
+  | AttachmentObservationRequest
+  | { action: 'status' | 'clean' | 'empty-trash' }
   | { action: 'configure'; settings: AttachmentMaintenanceSettings }
   | { action: 'restore'; storageKeys: string[] };
+
+export type AttachmentObservationRequest = { action: 'observe' };
+export type AttachmentStatusRequest = Exclude<AttachmentMaintenanceRequest, AttachmentObservationRequest>;
+export interface AttachmentObservationResult { observationComplete: boolean }
+export type AttachmentMaintenanceResult = AttachmentMaintenanceStatus | AttachmentObservationResult;
 
 export interface AttachmentObservationState extends AttachmentMaintenanceSettings {
   databaseGeneration: string;
