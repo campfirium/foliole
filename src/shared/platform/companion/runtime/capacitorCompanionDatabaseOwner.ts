@@ -174,7 +174,7 @@ export class CapacitorCompanionDatabaseOwner {
   readIntentJournal() {
     return this.enqueue(async () => {
       this.readIntents ??= await openCompanionReadIntentStorage({ db: this.requireDb(),
-        manager: this.manager, platform: this.platform });
+        manager: this.manager, createPort: connection => createCapacitorSqliteDbPort(connection, this.platform) });
       return this.readIntents.journal;
     });
   }
