@@ -38,7 +38,11 @@ export async function createDesktopFramedSyncTwoProcessFixture(compiledScript?: 
     process.platform === 'win32' ? 'junction' : 'dir'
   );
   const script = path.join(root, 'desktop-framed-sync-fixture.mjs');
-  if (compiledScript) await fs.copyFile(compiledScript, script);
+  if (compiledScript) {
+    await fs.copyFile(compiledScript, script);
+    await buildFixtureEntry(path.join(root, 'attachmentReferenceWorker.js'),
+      'electron/attachments/attachmentReferenceWorker.ts');
+  }
   else await buildDesktopFramedSyncFixture(script);
   const memberId = (name: 'desktop-a' | 'desktop-b' | 'desktop-c') => requestMembership ? requestSyncFixtureIdentity(name).identity_key : name;
   let left = startFixtureProcess({ fileStorage, deviceId: memberId('desktop-a'), root: path.join(root, 'a'), script });
@@ -76,6 +80,12 @@ export async function createDesktopFramedSyncTwoProcessFixture(compiledScript?: 
 }
 
 export async function buildDesktopFramedSyncFixture(outputPath: string, activationDns = false) {
+  await buildFixtureEntry(outputPath, 'electron/sync/desktopFramedSyncTwoProcess.fixture.ts', activationDns);
+  await buildFixtureEntry(path.join(path.dirname(outputPath), 'attachmentReferenceWorker.js'),
+    'electron/attachments/attachmentReferenceWorker.ts');
+}
+
+async function buildFixtureEntry(outputPath: string, input: string, activationDns = false) {
   await build({
     build: {
       emptyOutDir: false,
@@ -84,7 +94,7 @@ export async function buildDesktopFramedSyncFixture(outputPath: string, activati
       rolldownOptions: {
         external: (id) => !(activationDns && id === '@foliole/desktop-dnssd') &&
           id !== 'electron' && !id.startsWith('.') && !path.isAbsolute(id),
-        input: 'electron/sync/desktopFramedSyncTwoProcess.fixture.ts',
+        input,
         output: {
           banner: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);",
           codeSplitting: false,
