@@ -8,8 +8,8 @@ import { openWorkspaceDailyFlow } from './workspaceDailyFlowSessionActions';
 import type { WorkspaceState } from './workspaceStoreTypes';
 
 type Set = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState>)) => void;
-const sourcePreferences = (node: WorkspaceState['nodesById'][string]) => ({
-  manualChildOrder: node.manualChildOrder ?? null, sequentialReadingEnabled: node.sequentialReadingEnabled ?? null
+export const sourcePreferences = (node: WorkspaceState['nodesById'][string]) => ({
+  shelvedAt: node.shelvedAt ?? null, manualChildOrder: node.manualChildOrder ?? null, sequentialReadingEnabled: node.sequentialReadingEnabled ?? null
 });
 
 export async function saveWorkspaceFlowSourceSettings(set: Set, get: () => WorkspaceState, before: WorkspaceState,
@@ -29,7 +29,7 @@ export async function saveWorkspaceFlowSourceSettings(set: Set, get: () => Works
       }
       const current = merged[sourceNodeId];
       if (current && JSON.stringify(sourcePreferences(current)) === JSON.stringify(sourcePreferences(source))) {
-        merged[sourceNodeId] = { ...current, ...after, updatedAt: now };
+        merged[sourceNodeId] = { ...current, ...after, updatedAt: result.updatedAt };
       }
       return { nodesById: merged };
     });

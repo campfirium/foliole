@@ -95,8 +95,8 @@ it('rolls back source preferences and all reading changes when persistence fails
   const cursor = await readDailyFlow(peer.port);
   let writes = 0;
   const args: DailyFlowSourceSettingsArgs = { scope: settings(peer).scope!, sourceNodeId: 'folder', now, defaultPriority: 5,
-    before: { manualChildOrder: ['a', 'b'], sequentialReadingEnabled: null },
-    after: { manualChildOrder: ['a', 'b'], sequentialReadingEnabled: true },
+    before: { shelvedAt: null, manualChildOrder: ['a', 'b'], sequentialReadingEnabled: null },
+    after: { shelvedAt: null, manualChildOrder: ['a', 'b'], sequentialReadingEnabled: true },
     readings: ['a', 'b'].map(nodeId => ({ nodeId, before: null, after: nodeId === 'a' ? 'active' : 'locked' })) };
   await expect(saveDailyFlowSourceSettings(peer.port, args, { ...persistence, reading: async (...values) => {
     await persistence.reading(...values);
@@ -111,8 +111,8 @@ it('rejects a different library scope before changing any source or learning sta
   await setup();
   const before = await snapshot(peer);
   await expect(saveDailyFlowSourceSettings(peer.port, { scope: 'other-library', sourceNodeId: 'folder', now, defaultPriority: 5,
-    before: { manualChildOrder: ['a', 'b'], sequentialReadingEnabled: null },
-    after: { manualChildOrder: ['b', 'a'], sequentialReadingEnabled: true }, readings: [] },
+    before: { shelvedAt: null, manualChildOrder: ['a', 'b'], sequentialReadingEnabled: null },
+    after: { shelvedAt: null, manualChildOrder: ['b', 'a'], sequentialReadingEnabled: true }, readings: [] },
   persistence, peer.name, settings(peer).scope!)).rejects.toThrow('daily_flow_library_changed');
   expect(await snapshot(peer)).toEqual(before);
 });

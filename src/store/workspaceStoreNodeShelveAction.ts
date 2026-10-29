@@ -1,5 +1,6 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
+import { hasTargetedDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
 
 import {
   beginWorkspaceAction
@@ -10,6 +11,7 @@ import {
   captureWorkspaceHistoryContext
 } from './workspaceHistoryContext';
 import { getWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
+import { beginDatabaseShelveAction } from './workspaceNodeShelveDatabaseAction';
 import { finishNodeShelveHistoryPersistence } from './workspaceNodeShelveHistoryCommit';
 import { buildSequentialReadingMaintenancePatch } from './workspaceSequentialReadingMaintenance';
 import { createTopicShelveHistoryEntry, type WorkspaceTopicShelveHistoryEntry } from './workspaceShelveActionHistory';
@@ -18,7 +20,7 @@ import type { WorkspaceState } from './workspaceStore';
 type WorkspaceSet = (partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)) => void;
 type WorkspaceGet = () => WorkspaceState;
 
-function isShelvableTopic(node: Node | undefined, state: WorkspaceState): node is Node {
+export function isShelvableTopic(node: Node | undefined, state: WorkspaceState): node is Node {
   return Boolean(
     node &&
       node.kind === 'topic' &&
@@ -28,7 +30,7 @@ function isShelvableTopic(node: Node | undefined, state: WorkspaceState): node i
   );
 }
 
-function buildNodeShelveMutation(args: {
+export function buildNodeShelveMutation(args: {
   mode: 'shelve' | 'unshelve';
   nodeId: string;
   now: string;
@@ -71,6 +73,8 @@ function createSetNodeShelvedAtAction(
   get?: WorkspaceGet
 ): WorkspaceState['shelveNode'] | WorkspaceState['unshelveNode'] {
   return (nodeId, now = new Date().toISOString()) => {
+    if (get && hasTargetedDailyFlowRuntime()) return beginDatabaseShelveAction({ set, get, mode, nodeId, now,
+      eligible: isShelvableTopic, buildMutation: buildNodeShelveMutation });
     let changed = false;
     let nextNodesForSync: Node[] = [];
     let historyEntry: WorkspaceTopicShelveHistoryEntry | null = null;

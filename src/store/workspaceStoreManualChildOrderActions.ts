@@ -53,7 +53,7 @@ export function createSetFolderManualChildOrderAction(set: WorkspaceSet, get?: (
       const plan = after.sequentialReadingEnabled ? planSequentialReadingSourceStates({ enabled: true,
         nodeOrder: before.nodeOrder, nodesById: { ...before.nodesById, [folderNodeId]: after }, sourceNodeId: folderNodeId }) : null;
       return saveWorkspaceFlowSourceSettings(set, get, before, folderNodeId, {
-        manualChildOrder: after.manualChildOrder ?? null, sequentialReadingEnabled: after.sequentialReadingEnabled ?? null
+        shelvedAt: after.shelvedAt ?? null, manualChildOrder: after.manualChildOrder ?? null, sequentialReadingEnabled: after.sequentialReadingEnabled ?? null
       }, plan?.changes ?? [], now);
     }
     let nextNodesForSync: WorkspaceState['nodesById'][string][] = [];

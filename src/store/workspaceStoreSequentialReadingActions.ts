@@ -21,7 +21,7 @@ export function createSetNodeSequentialReadingAction(
       const plan = planSequentialReadingSourceStates({ enabled, nodeOrder: before.nodeOrder,
         nodesById: before.nodesById, sourceNodeId: nodeId });
       return plan ? saveWorkspaceFlowSourceSettings(set, get, before, nodeId, {
-        manualChildOrder: before.nodesById[nodeId]!.manualChildOrder ?? null, sequentialReadingEnabled: enabled
+        shelvedAt: before.nodesById[nodeId]!.shelvedAt ?? null, manualChildOrder: before.nodesById[nodeId]!.manualChildOrder ?? null, sequentialReadingEnabled: enabled
       }, plan.changes, now) : false;
     }
     let nextNodesForSync: WorkspaceState['nodesById'][string][] = [];

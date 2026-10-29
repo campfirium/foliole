@@ -4,6 +4,7 @@ import {
   applyRelatedReadingSnapshots,
   areRelatedReadingsValid
 } from './workspaceActionHistoryReading';
+import { sourcePreferences } from './workspaceDailyFlowSourceSettingsActions';
 import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult } from './workspaceHistoryApplyResult';
 import {
   applyWorkspaceHistoryContext,
@@ -12,6 +13,7 @@ import {
 import { getWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
 import { isWorkspacePartialPersistenceError } from './workspacePersistenceFailure';
 import type { WorkspaceTopicShelveHistoryEntry } from './workspaceShelveActionHistory';
+import { saveDatabaseShelveCommand } from './workspaceShelveDatabaseCommand';
 import type { WorkspaceState } from './workspaceStore';
 
 function resolveApply(entry: WorkspaceTopicShelveHistoryEntry, mode: 'redo' | 'undo') {
@@ -30,7 +32,8 @@ function isApplicable(state: WorkspaceState, entry: WorkspaceTopicShelveHistoryE
   const apply = resolveApply(entry, mode);
   const node = state.nodesById[entry.nodeId];
   const sourceContext = mode === 'undo' ? entry.afterContext : entry.beforeContext;
-  return Boolean(node &&
+  return Boolean(node && (!entry.databaseMutation ||
+    (state.libraryScope ?? state.reviewSession.daily?.scope) === entry.databaseMutation.scope) &&
     !state.trashedNodeIds.includes(entry.nodeId) &&
     (node.shelvedAt ?? null) === apply.expectedShelvedAt &&
     areRelatedReadingsValid(apply.relatedReadings, state.nodesById) &&
@@ -66,8 +69,11 @@ export async function applyWorkspaceShelveHistory(args: {
   if (!isApplicable(args.get(), args.entry, args.mode)) return { status: 'invalid' };
   const prepared = buildApplyNodes(args.get(), args.entry, args.mode, args.mutationTimestamp);
   try {
-    const persisted = await getWorkspaceHistoryPersistence()
-      .persistShelveSnapshots(prepared.nodes, args.mutationTimestamp);
+    const persisted = args.entry.databaseMutation
+      ? await saveDatabaseShelveCommand(args.entry, args.mode, args.mutationTimestamp,
+        sourcePreferences(args.get().nodesById[args.entry.nodeId]!), args.get().nodesById)
+      : await getWorkspaceHistoryPersistence().persistShelveSnapshots(prepared.nodes, args.mutationTimestamp);
+    if (persisted && typeof persisted !== 'boolean') args.mutationTimestamp = persisted.updatedAt;
     if (!persisted) return { status: 'failed' };
   } catch (error) {
     return { status: isWorkspacePartialPersistenceError(error) ? 'invalid' : 'failed' };

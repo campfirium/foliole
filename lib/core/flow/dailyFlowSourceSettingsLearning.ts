@@ -2,6 +2,7 @@ import type { DailyFlowLearningSnapshot } from './dailyFlowContract.js';
 import type { DailyFlowSourceSettingsArgs } from './dailyFlowSourceSettings.js';
 
 export function sourceSettingsReadingChanges(snapshot: DailyFlowLearningSnapshot, args: DailyFlowSourceSettingsArgs) {
+  if (args.guardedReadings) return args.guardedReadings;
   return args.readings.map(value => {
     const node = snapshot.nodesById[value.nodeId]!;
     const before = node.reading ?? null;
@@ -13,7 +14,7 @@ export function sourceSettingsReadingChanges(snapshot: DailyFlowLearningSnapshot
   });
 }
 
-export function sourceSettingsReadingReceipt(snapshot: DailyFlowLearningSnapshot, args: DailyFlowSourceSettingsArgs) {
-  return { readings: args.readings.map(value => ({ nodeId: value.nodeId,
+export function sourceSettingsReadingReceipt(snapshot: DailyFlowLearningSnapshot, args: DailyFlowSourceSettingsArgs, updatedAt: string) {
+  return { updatedAt, readings: (args.guardedReadings ?? args.readings).map(value => ({ nodeId: value.nodeId,
     reading: snapshot.nodesById[value.nodeId]?.reading ?? null })) };
 }

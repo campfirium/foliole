@@ -10,18 +10,19 @@ export async function saveBrowserFlowSourceSettings(candidate: BrowserWorkspaceC
   const source = candidate.get().nodesById[args.sourceNodeId];
   if (!source) throw new Error('daily_flow_source_changed');
   const store = createBrowserDailyFlowStore(candidate.storageGet, candidate.storageSet);
-  const snapshot = await store.scopedLearningSnapshot([args.sourceNodeId, ...args.readings.map(value => value.nodeId)]);
-  const actual = { manualChildOrder: source.manualChildOrder ?? null, sequentialReadingEnabled: source.sequentialReadingEnabled ?? null };
-  if (dailyFlowSourceSettingsAlreadySaved(snapshot, actual, args, scope)) return sourceSettingsReadingReceipt(snapshot, args);
+  const snapshot = await store.scopedLearningSnapshot([args.sourceNodeId, ...(args.guardedReadings ?? args.readings).map(value => value.nodeId)]);
+  const actual = { shelvedAt: source.shelvedAt ?? null, manualChildOrder: source.manualChildOrder ?? null, sequentialReadingEnabled: source.sequentialReadingEnabled ?? null };
+  if (dailyFlowSourceSettingsAlreadySaved(snapshot, actual, args, scope)) return sourceSettingsReadingReceipt(snapshot, args, source.updatedAt);
   candidate.set(state => ({ nodesById: { ...state.nodesById,
     [source.id]: { ...source, ...args.after, updatedAt: args.now } } }));
   const changes = sourceSettingsReadingChanges(snapshot, args);
   for (const value of changes) await store.reading(value, args.now);
   const flow = candidate.get().browserDailyFlow;
   if (flow?.state) {
-    const released = sourceSettingsReleasedRows(flow.state, flow.rows, args.readings);
+    const released = sourceSettingsReleasedRows(flow.state, flow.rows, changes.map(value => ({ nodeId: value.nodeId, after: value.after?.state ?? null })),
+      args.before.shelvedAt && !args.after.shelvedAt && source.kind === 'topic' ? source.id : undefined);
     candidate.set({ browserDailyFlow: { ...flow, rows: [...flow.rows, ...(released?.rows ?? [])],
       state: { ...flow.state, session: released?.session ?? flow.state.session, invalidated: 1 } } });
   }
-  return { readings: changes.map(value => ({ nodeId: value.nodeId, reading: value.after })) };
+  return { updatedAt: args.now, readings: changes.map(value => ({ nodeId: value.nodeId, reading: value.after })) };
 }

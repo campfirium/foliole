@@ -1,3 +1,4 @@
+import type { DailyFlowSourceSettingsArgs } from '../../lib/core/flow/dailyFlowSourceSettings';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
 import { cloneRelatedReadings } from './workspaceActionHistoryReading';
@@ -12,6 +13,7 @@ export interface WorkspaceTopicShelveHistoryEntry {
   afterShelvedAt: string | null;
   beforeContext: WorkspaceHistoryContext;
   beforeShelvedAt: string | null;
+  databaseMutation?: { scope: string; before: DailyFlowSourceSettingsArgs['before']; defaultPriority: number };
   id: string;
   mutationTimestamp: string;
   nodeId: string;
