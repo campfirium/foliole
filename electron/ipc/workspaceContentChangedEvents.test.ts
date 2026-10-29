@@ -47,3 +47,19 @@ it('can preserve ambient workspace notification without requesting high-value sy
 
   expect(requestDesktopHighValueSync).not.toHaveBeenCalled();
 });
+
+it('keeps origin consumers notified while the caller refreshes its own workspace', () => {
+  const origin = createWindow();
+  const other = createWindow();
+  getAllWindows.mockReturnValue([origin, other]);
+
+  notifyWorkspaceContentChanged(null, { refreshingWindow: origin as never });
+
+  expect(origin.webContents.send).toHaveBeenCalledWith('foliole:workspace-content-changed', {
+    scope: 'workspace', refreshWorkspace: false
+  });
+  expect(other.webContents.send).toHaveBeenCalledWith('foliole:workspace-content-changed', {
+    scope: 'workspace'
+  });
+  expect(requestDesktopHighValueSync).toHaveBeenCalledOnce();
+});

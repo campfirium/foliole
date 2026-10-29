@@ -60,8 +60,8 @@ export function useWorkspaceContentChangedRefresh() {
   useEffect(() => {
     let disposed = false;
     let unlisten: (() => void) | null = null;
-    void onWorkspaceContentChanged(() => {
-      if (!disposed) {
+    void onWorkspaceContentChanged((payload) => {
+      if (!disposed && payload.refreshWorkspace !== false) {
         requestWorkspaceStateRefresh('content-changed');
       }
     }).then((nextUnlisten) => {

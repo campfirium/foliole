@@ -4,7 +4,6 @@ import type { useAppearanceSettings } from '../../features/settings/context/Appe
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 import { exportCurrentArticleMirror } from '../../shared/platform/articleMirrorExport';
-import { devReimportSelectedTopic } from '../../shared/platform/devReimportSelectedTopic';
 import { selectLocalFileToOpen } from '../../shared/platform/localFileRuntimeRepository';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../shared/platform/readwiseTopicMerge';
 import { openFolioleReleaseLink } from '../../shared/platform/releaseLinks';
@@ -14,7 +13,6 @@ import {
 } from '../../shared/platform/updateCheck';
 import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
-import { openWorkspaceNodeWithPreparedDocument } from '../../store/workspaceNodePreparation';
 import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
@@ -29,6 +27,7 @@ import { createPaletteDocumentActions } from './appPaletteDocumentActions';
 import { createPaletteDocumentScrollActions } from './appPaletteDocumentScrollActions';
 import { createPaletteHistoryActions } from './appPaletteHistoryActions';
 import { createPaletteImportActions } from './appPaletteImportActions';
+import { createReimportSelectedTopicCommand } from './appPaletteReimportCommand';
 import { createSelectionAnnotationPaletteActions } from './appPaletteSelectionActions';
 import { createSplitTopicCommand } from './appPaletteSplitTopicCommand';
 import { createPaletteSurfaceActions } from './appPaletteSurfaceActions';
@@ -67,27 +66,6 @@ function createMergeHighlightsIntoTopicCommand(args: {
     if (result.status === 'merged') {
       await refreshWorkspaceState('merge-highlights');
     }
-    return true;
-  };
-}
-
-function createReimportSelectedTopicCommand(args: {
-  runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
-  ws: ReturnType<typeof useWorkspaceSelectors>;
-}) {
-  return async () => {
-    const nodeId = args.ws.activeNodeId;
-    if (!nodeId || args.runtime.isViewingTrashNode) {
-      return false;
-    }
-    await args.runtime.flushPendingEditorDraftImmediately();
-    const result = await devReimportSelectedTopic({ nodeId });
-    if (result.status !== 'reimported') {
-      showAppRuntimeNotice(result.detail);
-      return false;
-    }
-    await refreshWorkspaceState('reimport-selected-topic');
-    await openWorkspaceNodeWithPreparedDocument(result.nodeId ?? nodeId, { forceLoad: true });
     return true;
   };
 }

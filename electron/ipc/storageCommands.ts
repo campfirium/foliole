@@ -194,7 +194,7 @@ async function handleImportMutationCommand(
   if (command === NATIVE_COMMANDS.devReimportCurrentTopicSource) {
     const result = await reimportCurrentTopicSource(asString(args.node_id, 'node_id'));
     if (result.status === 'reimported' && result.node_id) {
-      notifyWorkspaceContentChanged();
+      notifyWorkspaceContentChanged(null, { refreshingWindow: window ?? null });
     }
     return result;
   }

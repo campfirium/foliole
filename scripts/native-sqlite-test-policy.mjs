@@ -34,6 +34,7 @@ const controlledElectronSqliteTests = [
   'lib/core/attachments/attachmentReferenceSnapshot.test.ts',
   'src/app/hooks/editorAutomaticSave.integration.test.tsx',
   'src/app/hooks/formalImportCompletion.integration.test.ts',
+  'src/app/hooks/reimportCompletion.integration.test.tsx',
   'src/companion/companionAutomaticSave.integration.test.tsx',
   'src/companion/companionEditorHttp.integration.test.tsx',
   'electron/database/betterSqlite3Driver.statements.test.ts',

@@ -55,6 +55,7 @@ export interface WorkspaceSyncAppliedEvent {
 
 export interface WorkspaceContentChangedEvent {
   scope: 'workspace';
+  refreshWorkspace?: false;
 }
 
 export interface SearchIndexRebuildStatusEvent {

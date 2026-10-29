@@ -213,7 +213,8 @@ function subscribe(channel, handler) {
     }
     if (channel === IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL) {
       handler({
-        scope: payload?.scope === 'workspace' ? 'workspace' : ''
+        scope: payload?.scope === 'workspace' ? 'workspace' : '',
+        ...(payload?.refreshWorkspace === false ? { refreshWorkspace: false } : {})
       });
       return;
     }

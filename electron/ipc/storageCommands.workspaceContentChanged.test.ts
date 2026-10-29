@@ -123,6 +123,7 @@ it('notifies workspace content changes when reset import data deletes nodes', as
 });
 
 it('notifies workspace content changes after current source reimport', async () => {
+  const origin = {} as never;
   reimportCurrentTopicSource.mockResolvedValue({
     detail: null,
     node_id: 'node-1',
@@ -130,10 +131,17 @@ it('notifies workspace content changes after current source reimport', async () 
     status: 'reimported'
   });
 
-  await expect(handleStorageCommand('dev_reimport_current_topic_source', { node_id: 'node-1' })).resolves.toMatchObject({
+  await expect(handleStorageCommand('dev_reimport_current_topic_source', { node_id: 'node-1' }, origin)).resolves.toMatchObject({
     status: 'reimported'
   });
 
   expect(reimportCurrentTopicSource).toHaveBeenCalledWith('node-1');
   expect(notifyWorkspaceContentChanged).toHaveBeenCalledTimes(1);
+  expect(notifyWorkspaceContentChanged).toHaveBeenCalledWith(null, { refreshingWindow: origin });
+});
+
+it.each(['failed', 'unavailable'])('does not announce successful reimport on %s', async status => {
+  reimportCurrentTopicSource.mockResolvedValue({ status, node_id: null, detail: 'Not imported.' });
+  await handleStorageCommand('dev_reimport_current_topic_source', { node_id: 'node-1' });
+  expect(notifyWorkspaceContentChanged).not.toHaveBeenCalled();
 });

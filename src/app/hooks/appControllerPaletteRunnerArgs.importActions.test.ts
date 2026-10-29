@@ -11,6 +11,9 @@ vi.mock('../components/importActivityRequests', () => ({
 }));
 
 vi.mock('../../shared/platform/articleMirrorExport', () => ({ exportCurrentArticleMirror }));
+vi.mock('../../shared/platform/devReimportSelectedTopic', () => ({ devReimportSelectedTopic: vi.fn() }));
+
+import { devReimportSelectedTopic } from '../../shared/platform/devReimportSelectedTopic';
 
 import { createPaletteRunnerArgs } from './appControllerPaletteRunnerArgs';
 
@@ -93,4 +96,42 @@ it('does not export when saving editor content fails', async () => {
   const actions = createPaletteRunnerArgs(createRunnerArgs({ runtime, ws: { activeNodeId: 'article', nodeOrder: [], nodesById: {} } }));
   await expect(actions.exportCurrentArticle()).resolves.toBe(false);
   expect(exportCurrentArticleMirror).not.toHaveBeenCalled();
+});
+
+it('does not replace the selected topic when saving its draft fails', async () => {
+  vi.mocked(devReimportSelectedTopic).mockReset().mockResolvedValue({ status: 'failed', detail: 'Source unavailable.' });
+  const runtime = { isViewingTrashNode: false, flushPendingEditorDraftImmediately: vi.fn(async () => false) };
+  const actions = createPaletteRunnerArgs(createRunnerArgs({ runtime, ws: { activeNodeId: 'article', nodeOrder: [], nodesById: {} } }));
+
+  await expect(actions.reimportSelectedTopic()).resolves.toBe(false);
+  expect(devReimportSelectedTopic).not.toHaveBeenCalled();
+});
+
+it.each([{ activeNodeId: null, trash: false }, { activeNodeId: 'article', trash: true }])(
+  'does not reimport an unavailable selection %s', async ({ activeNodeId, trash }) => {
+    vi.mocked(devReimportSelectedTopic).mockClear();
+    const flush = vi.fn(async () => true);
+    const actions = createPaletteRunnerArgs(createRunnerArgs({
+      runtime: { isViewingTrashNode: trash, flushPendingEditorDraftImmediately: flush },
+      ws: { activeNodeId, nodeOrder: [], nodesById: {} }
+    }));
+    await expect(actions.reimportSelectedTopic()).resolves.toBe(false);
+    expect(flush).not.toHaveBeenCalled();
+    expect(devReimportSelectedTopic).not.toHaveBeenCalled();
+  }
+);
+
+it('waits for draft saving before reporting an unavailable source', async () => {
+  vi.mocked(devReimportSelectedTopic).mockReset().mockResolvedValue({ status: 'unavailable', detail: 'No source.' });
+  let finish!: (saved: boolean) => void;
+  const saving = new Promise<boolean>(resolve => { finish = resolve; });
+  const actions = createPaletteRunnerArgs(createRunnerArgs({
+    runtime: { isViewingTrashNode: false, flushPendingEditorDraftImmediately: () => saving },
+    ws: { activeNodeId: 'article', nodeOrder: [], nodesById: {} }
+  }));
+  const running = actions.reimportSelectedTopic();
+  expect(devReimportSelectedTopic).not.toHaveBeenCalled();
+  finish(true);
+  await expect(running).resolves.toBe(false);
+  expect(devReimportSelectedTopic).toHaveBeenCalledWith({ nodeId: 'article' });
 });

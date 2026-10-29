@@ -13,7 +13,7 @@ const WORKSPACE_CONTENT_CHANGED_PAYLOAD: WorkspaceContentChangedEvent = {
 
 export function notifyWorkspaceContentChanged(
   excludedWindow: ElectronBrowserWindow | null = null,
-  options: { requestSync?: boolean } = {}
+  options: { requestSync?: boolean; refreshingWindow?: ElectronBrowserWindow | null } = {}
 ) {
   if (options.requestSync !== false) void requestDesktopHighValueSync();
   const windows = typeof BrowserWindow?.getAllWindows === 'function' ? BrowserWindow.getAllWindows() : [];
@@ -23,7 +23,9 @@ export function notifyWorkspaceContentChanged(
     }
     window.webContents.send(
       IPC_WORKSPACE_CONTENT_CHANGED_EVENT_CHANNEL,
-      WORKSPACE_CONTENT_CHANGED_PAYLOAD
+      window === options.refreshingWindow
+        ? { ...WORKSPACE_CONTENT_CHANGED_PAYLOAD, refreshWorkspace: false }
+        : WORKSPACE_CONTENT_CHANGED_PAYLOAD
     );
   }
 }

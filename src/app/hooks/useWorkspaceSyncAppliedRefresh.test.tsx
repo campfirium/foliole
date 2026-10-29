@@ -102,9 +102,9 @@ it('does not reload the workspace for a settings-only sync event', async () => {
 });
 
 it('rehydrates the desktop workspace when runtime content changes', async () => {
-  let handler: (() => void) | null = null;
+  let handler: ((payload: { scope: 'workspace' }) => void) | null = null;
   const unlisten = vi.fn();
-  onWorkspaceContentChanged.mockImplementation(async (nextHandler: () => void) => {
+  onWorkspaceContentChanged.mockImplementation(async (nextHandler: (payload: { scope: 'workspace' }) => void) => {
     handler = nextHandler;
     return unlisten;
   });
@@ -114,7 +114,7 @@ it('rehydrates the desktop workspace when runtime content changes', async () => 
   await waitFor(() => expect(onWorkspaceContentChanged).toHaveBeenCalledTimes(1));
   vi.useFakeTimers();
   await act(async () => {
-    handler?.();
+    handler?.({ scope: 'workspace' });
   });
   expect(rehydrate).not.toHaveBeenCalled();
   await act(async () => {
@@ -126,15 +126,31 @@ it('rehydrates the desktop workspace when runtime content changes', async () => 
   expect(unlisten).toHaveBeenCalledTimes(1);
 });
 
+it('leaves caller-owned workspace refreshes to the command without suppressing later ambient changes', async () => {
+  let handler: ((payload: { scope: 'workspace'; refreshWorkspace?: false }) => void) | undefined;
+  onWorkspaceContentChanged.mockImplementation(async callback => { handler = callback; return vi.fn(); });
+  const rehydrate = vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue();
+  const view = renderHook(() => useWorkspaceContentChangedRefresh());
+  await waitFor(() => expect(handler).toBeDefined());
+  vi.useFakeTimers();
+  act(() => handler!({ scope: 'workspace', refreshWorkspace: false }));
+  await act(async () => vi.advanceTimersByTime(1200));
+  expect(rehydrate).not.toHaveBeenCalled();
+  act(() => handler!({ scope: 'workspace' }));
+  await act(async () => vi.advanceTimersByTime(1200));
+  expect(rehydrate).toHaveBeenCalledOnce();
+  view.unmount();
+});
+
 it('queues sync and content refreshes through one rehydrate scheduler', async () => {
   let syncHandler: ((payload: WorkspaceSyncAppliedPayload) => void) | null = null;
-  let contentHandler: (() => void) | null = null;
+  let contentHandler: ((payload: { scope: 'workspace' }) => void) | null = null;
   let resolveFirstRehydrate: (() => void) | null = null;
   onWorkspaceSyncApplied.mockImplementation(async (nextHandler: (payload: WorkspaceSyncAppliedPayload) => void) => {
     syncHandler = nextHandler;
     return vi.fn();
   });
-  onWorkspaceContentChanged.mockImplementation(async (nextHandler: () => void) => {
+  onWorkspaceContentChanged.mockImplementation(async (nextHandler: (payload: { scope: 'workspace' }) => void) => {
     contentHandler = nextHandler;
     return vi.fn();
   });
@@ -153,8 +169,8 @@ it('queues sync and content refreshes through one rehydrate scheduler', async ()
   vi.useFakeTimers();
   act(() => {
     syncHandler?.(nodeApplied);
-    contentHandler?.();
-    contentHandler?.();
+    contentHandler?.({ scope: 'workspace' });
+    contentHandler?.({ scope: 'workspace' });
     syncHandler?.(nodeApplied);
   });
   act(() => {
@@ -166,8 +182,8 @@ it('queues sync and content refreshes through one rehydrate scheduler', async ()
   });
   expect(rehydrate).toHaveBeenCalledTimes(1);
   act(() => {
-    contentHandler?.();
-    contentHandler?.();
+    contentHandler?.({ scope: 'workspace' });
+    contentHandler?.({ scope: 'workspace' });
     resolveFirstRehydrate?.();
   });
   await flushPromises();
