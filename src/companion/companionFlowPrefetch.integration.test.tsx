@@ -42,6 +42,9 @@ it('opens Flow, prepares only the next body, and opens that body without reveali
   await getIosCompanionDatabaseOwner().readInteractiveSnapshot(async () => null);
   expect(publish).not.toHaveBeenCalled();
   expect(hook.result.current.flow.isAnswerRevealed).toBe(false);
+  // A receipt changes acknowledgement metadata while keeping this current/next pair.
+  act(() => hook.result.current.flow.workspaceHistoryControls.restoreFlowHistorySession({ ...session,
+    daily: { ...session.daily!, revision: session.daily!.revision + 1 } }));
   reads.mockClear();
   await act(async () => { await hook.result.current.article.openReadableArticle(next); });
   expect(publish).toHaveBeenLastCalledWith(expect.objectContaining({ nodeId: next, content: next }));

@@ -61,12 +61,14 @@ export class CompanionReadDisplayPreparation {
     this.prepared = null;
     const next = result.session;
     if (!input.session.cycle || !next.cycle) throw new Error('daily_flow_display_changed');
+    const cycle = { ...input.session.cycle, scanAfter: next.cycle.scanAfter,
+      lapLimit: next.cycle.lapLimit, clearedAt: next.cycle.clearedAt };
+    delete cycle.change;
     // A local receipt may advance counters/token while retaining this exact display cursor.
     // Keep those acknowledgements and consume only the prepared navigation state.
     return { ...result, session: { ...input.session, currentNodeId: next.currentNodeId,
       queueNodeIds: next.queueNodeIds, soonNodeIds: next.soonNodeIds ?? [], hiddenSoonNodeIds: next.hiddenSoonNodeIds ?? [],
-      cycle: { ...input.session.cycle,
-        scanAfter: next.cycle.scanAfter, lapLimit: next.cycle.lapLimit, clearedAt: next.cycle.clearedAt },
+      cycle,
       currentItemStartedAt: input.now, isAnswerRevealed: false, continueNodeId: null,
       completedAt: next.currentNodeId ? null : input.now } };
   }

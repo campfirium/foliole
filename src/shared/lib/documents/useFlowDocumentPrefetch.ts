@@ -11,6 +11,7 @@ export function useFlowDocumentPrefetch(session: Window,
   predict: (args: DailyFlowPredictionArgs, signal: AbortSignal) => Promise<string | null>,
   prepare: (next: string | null, current: string | null) => void) {
   const running = useRef<AbortController | null>(null);
+  const preparedSource = useRef<string | null>(null);
   const cancel = useCallback(() => running.current?.abort(), []);
   const latestPrepare = useRef(prepare);
   latestPrepare.current = prepare;
@@ -20,7 +21,11 @@ export function useFlowDocumentPrefetch(session: Window,
   useEffect(() => {
     const controller = new AbortController();
     running.current = controller;
-    prepare(null, currentNodeId);
+    const source = JSON.stringify([flowFormat, currentNodeId, daily?.scope, daily?.dayKey]);
+    if (preparedSource.current !== source) {
+      preparedSource.current = source;
+      prepare(null, currentNodeId);
+    }
     if (flowFormat !== 'cycle-v1') {
       prepare(legacyNext, currentNodeId);
       return () => { controller.abort(); };
