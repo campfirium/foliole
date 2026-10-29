@@ -1,6 +1,10 @@
+import { mkdirSync } from 'node:fs';
+import path from 'node:path';
+
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
+import { loadNodeDocument } from './harness/localDataFileAcceptance';
 import { expectWorkspaceShell } from './harness/settings';
 
 async function seedTextAnchorWorkspace(desktopWindow: Page) {
@@ -74,6 +78,7 @@ test('renders text highlights and multi-range clozes in the parent document and 
   expect(state.clozeTexts.some((text) => text.includes('Alpha'))).toBe(true);
   expect(state.clozeTexts.some((text) => text.includes('Gamma'))).toBe(true);
   expect(state.activeNodeId).toBe('playwright-text-anchor-parent');
+
 });
 
 test('keeps breadcrumb return stable for a multi-range cloze child', async ({ desktopWindow }, testInfo) => {
@@ -137,4 +142,16 @@ test('keeps text anchors visible after the parent content shifts forward', async
   expect(state.clozeTexts.some((text) => text.includes('Alpha'))).toBe(true);
   expect(state.clozeTexts.some((text) => text.includes('Gamma'))).toBe(true);
   expect(state.activeNodeId).toBe('playwright-text-anchor-parent');
+  await expect.poll(async () => (await loadNodeDocument(desktopWindow, 'playwright-text-anchor-parent'))?.content)
+    .toBe('Start Alpha Beta Gamma Delta');
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  await desktopWindow.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated?.());
+  await desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.openNode?.('playwright-text-anchor-parent'));
+  await expect(desktopWindow.locator('.prompt-editor-host .cm-md-highlight')).toContainText('Beta');
+  await expect.poll(async () => (await collectTextAnchorState(desktopWindow)).clozeTexts)
+    .toEqual(expect.arrayContaining(['Alpha', 'Gamma']));
+  const artifactRoot = path.resolve('.tmp/artifacts/T608');
+  mkdirSync(artifactRoot, { recursive: true });
+  await desktopWindow.screenshot({ path: path.join(artifactRoot, 'text-anchor-reopened.png') });
 });

@@ -10,6 +10,7 @@ import {
   type Node,
   type TextAnchorLocator
 } from '../features/nodes/model/nodeTypes';
+import { prepareWorkspaceNodeChildrenIndex } from '../features/nodes/model/workspaceNodeChildrenIndex';
 
 import {
   readEditorInputDiagnosticTime
@@ -114,9 +115,11 @@ function buildNextTextAnchorNode(args: {
 function readTextAnchorLocatorSyncNodes(args: {
   diagnostics: TextAnchorLocatorSyncDiagnosticStats | null;
   nodesById: Record<string, Node>;
+  parentNodeId: string;
 }) {
   const objectValuesStartedAt = args.diagnostics ? readEditorInputDiagnosticTime() : 0;
-  const nodes = Object.values(args.nodesById);
+  const index = prepareWorkspaceNodeChildrenIndex(args.nodesById);
+  const nodes = (index.children.get(args.parentNodeId) ?? []).map(member => args.nodesById[member.key]!);
   if (args.diagnostics) {
     args.diagnostics.objectValuesMs = readEditorInputDiagnosticTime() - objectValuesStartedAt;
     args.diagnostics.scannedNodes = nodes.length;
@@ -174,7 +177,7 @@ export function syncTextAnchorLocatorsForParentContent(args: {
     originalNodesById: args.nodesById,
     updatedNodes: []
   };
-  readTextAnchorLocatorSyncNodes({ diagnostics, nodesById: args.nodesById }).forEach((node) => {
+  readTextAnchorLocatorSyncNodes({ diagnostics, nodesById: args.nodesById, parentNodeId: args.parentNodeId }).forEach((node) => {
     syncTextAnchorLocatorNode({
       diagnostics,
       ...(args.excludedNodeIds ? { excludedNodeIds: args.excludedNodeIds } : {}),
