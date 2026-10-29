@@ -11,7 +11,9 @@ export const CURRENT_PARENT_ORDER_SCHEMA = [
     INSERT INTO parent_order_projection_pending VALUES (COALESCE(NEW.parent_id, 'parent-child-order:root')) ON CONFLICT(parent_id) DO NOTHING;
   END`,
   `CREATE TRIGGER IF NOT EXISTS trg_parent_order_node_update
-    AFTER UPDATE OF parent_id, title, deleted_at ON nodes BEGIN
+    AFTER UPDATE OF parent_id, title, deleted_at ON nodes
+    WHEN OLD.parent_id IS NOT NEW.parent_id OR OLD.title IS NOT NEW.title
+      OR OLD.deleted_at IS NOT NEW.deleted_at BEGIN
     INSERT INTO parent_order_projection_pending VALUES (COALESCE(OLD.parent_id, 'parent-child-order:root')) ON CONFLICT(parent_id) DO NOTHING;
     INSERT INTO parent_order_projection_pending VALUES (COALESCE(NEW.parent_id, 'parent-child-order:root')) ON CONFLICT(parent_id) DO NOTHING;
   END`,
