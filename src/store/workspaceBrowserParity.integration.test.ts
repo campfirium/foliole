@@ -5,6 +5,7 @@ import { closeLibraries } from '../../electron/database/syncLibrary.testSupport'
 import { commitCycleFlow } from '../../lib/core/flow/cycleFlowCommit';
 import { openStoredDailyFlow } from '../../lib/core/flow/cycleFlowOpen';
 import type { DailyFlowCommitArgs, DailyFlowResult } from '../../lib/core/flow/dailyFlowContract';
+import { createDailyFlowDayWindow } from '../../lib/core/flow/dailyFlowDayWindow';
 import { commitDailyFlow, openDailyFlow } from '../../lib/core/flow/dailyFlowService';
 import { readDailyFlowView, readStoredDailyFlowView } from '../../lib/core/flow/dailyFlowView';
 import { readCompanionReviewTopic } from '../companion/companionReadingReview';
@@ -23,7 +24,8 @@ it('uses the same order, Soon fairness, learning facts and next target on SQLite
   let state: BrowserFlowWorkspace = { ...snapshot, nodesById: Object.fromEntries(Object.entries(snapshot.nodesById)
     .map(([id, node]) => [id, { ...node, anchorLink: null }])), browserDailyFlow: emptyBrowserDailyFlow() };
   const browser = createBrowserDailyFlowStore(() => state, patch => { state = { ...state, ...patch }; });
-  const config = settings(peer);
+  const base = settings(peer);
+  const config = { ...base, dayWindow: createDailyFlowDayWindow(now, base.newDayStartsAtHour) };
   let native = await openDailyFlow(peer.port, { now, mode: 'recommended' }, config, persistence);
   let local: DailyFlowResult = await openStoredDailyFlow(browser, { now, mode: 'recommended' }, config);
   expect(local.session).toEqual(native.session);
