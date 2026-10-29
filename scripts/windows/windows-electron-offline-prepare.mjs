@@ -4,6 +4,7 @@ import process from 'node:process';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
+import { importWindowsElectronHeaders } from './windows-electron-headers.mjs';
 
 export function verifyOfflineElectronArchive(archive, expected) {
   const actual = createHash('sha256').update(fs.readFileSync(archive)).digest('hex');
@@ -32,8 +33,10 @@ async function prepareOfflineElectron(root) {
   const definitions = path.join(dist, 'electron.d.ts');
   if (fs.existsSync(definitions)) fs.renameSync(definitions, path.join(electronRoot, 'electron.d.ts'));
   fs.writeFileSync(path.join(electronRoot, 'path.txt'), 'electron.exe');
+  const headers = process.argv.includes('--native-headers')
+    ? importWindowsElectronHeaders({ repoRoot: process.cwd(), version }) : null;
   fs.mkdirSync(root, { recursive: true });
-  const report = { version, archive, sha256, cacheFile, binary: path.join(dist, 'electron.exe'), offline: true };
+  const report = { version, archive, sha256, cacheFile, headers, binary: path.join(dist, 'electron.exe'), offline: true };
   fs.writeFileSync(path.join(root, 'electron-offline.json'), JSON.stringify(report, null, 2));
   process.stdout.write(`${JSON.stringify(report)}\n`);
 }

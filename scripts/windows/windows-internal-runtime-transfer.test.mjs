@@ -28,7 +28,7 @@ function fixture() {
   const options = { repoRoot, host: 'zephu@192.168.0.11', env: transport.env, fsApi: transport.fsApi,
     executeGit: vi.fn().mockResolvedValue(JSON.stringify({ packages: {
       'node_modules/electron': { version: '44.9.0' }
-    } })), executeScp: vi.fn(), download: vi.fn().mockResolvedValue(cached), transferNpm: vi.fn() };
+    } })), executeScp: vi.fn(), download: vi.fn().mockResolvedValue(cached), transferNpm: vi.fn(), transferHeaders: vi.fn() };
   return { options, cached, filename, transport };
 }
 
@@ -53,6 +53,16 @@ it('ships the npm offline bundle of the same candidate so Windows can install wi
   expect(options.transferNpm).toHaveBeenCalledWith(expect.objectContaining({
     executeScp: options.executeScp, host: 'zephu@192.168.0.11', repoRoot: options.repoRoot
   }));
+});
+
+it('prepares native headers on Mac for the same Electron version before Windows executes', async () => {
+  const { options } = fixture();
+  await prepareWindowsInternalRuntime(options);
+  expect(options.transferHeaders).toHaveBeenCalledWith(expect.objectContaining({
+    version: '44.9.0', host: options.host, repoRoot: options.repoRoot, executeScp: options.executeScp
+  }));
+  options.transferHeaders.mockRejectedValue(new Error('headers checksum mismatch'));
+  await expect(prepareWindowsInternalRuntime(options)).rejects.toThrow('headers checksum mismatch');
 });
 
 it('rejects corrupt archives and candidate version mismatches before transferring anything', async () => {

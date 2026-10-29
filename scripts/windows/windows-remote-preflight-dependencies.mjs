@@ -34,7 +34,7 @@ export function windowsPreflightDependencyCommands(paths) {
     { args: [paths.systemNpmCli, 'ci', '--offline', '--ignore-scripts'], stage: 'dependencies',
       timeoutMs: 45 * 60_000 },
     { args: [path.join(paths.repoRoot, 'scripts', 'windows', 'windows-electron-offline-prepare.mjs'),
-      WINDOWS_PREFLIGHT_RUNTIME_ROOT], stage: 'dependencies-electron', timeoutMs: 20 * 60_000 },
+      WINDOWS_PREFLIGHT_RUNTIME_ROOT, '--native-headers'], stage: 'dependencies-electron', timeoutMs: 20 * 60_000 },
     { args: [paths.systemNpmCli, 'exec', '--offline', '--', 'electron-rebuild', '-f',
       '--build-from-source', '-w', 'better-sqlite3,@foliole/desktop-dnssd'],
     before: assertCachedElectronHeaders, stage: 'dependencies-native', timeoutMs: 20 * 60_000 }

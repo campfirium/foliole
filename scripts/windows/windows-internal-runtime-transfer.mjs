@@ -5,9 +5,11 @@ import { createRequire } from 'node:module';
 import { verifyOfflineElectronArchive } from './windows-electron-offline-prepare.mjs';
 import { transferWindowsNpmBundle } from './windows-npm-offline-bundle.mjs';
 import { windowsDevTransportIdentity } from './windows-dev-remote-spec.mjs';
+import { transferWindowsElectronHeaders } from './windows-electron-headers.mjs';
 
 export async function prepareWindowsInternalRuntime({ repoRoot, revision, executeGit,
-  executeScp, host, env, download, fsApi = fs, transferNpm = transferWindowsNpmBundle }) {
+  executeScp, host, env, download, fsApi = fs, transferNpm = transferWindowsNpmBundle,
+  transferHeaders = transferWindowsElectronHeaders }) {
   const source = revision ?? 'refs/heads/dev';
   const lock = JSON.parse(await executeGit(['show', `${source}:package-lock.json`],
     { cwd: repoRoot }));
@@ -37,5 +39,7 @@ export async function prepareWindowsInternalRuntime({ repoRoot, revision, execut
   // tarball of the same candidate travels with the Electron archive.
   await transferNpm({ env, executeScp, fsApi, home: os.homedir(), host, repoRoot, revision: source,
     transport: windowsDevTransportIdentity });
+  await transferHeaders({ env, executeScp, host, repoRoot, version,
+    transport: options => windowsDevTransportIdentity({ ...options, fsApi }) });
   return { archive, version };
 }

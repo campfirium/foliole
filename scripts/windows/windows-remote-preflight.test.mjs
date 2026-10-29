@@ -120,6 +120,7 @@ it('installs locked dependencies once and reuses them while the lock is unchange
   expect(args[0].slice(4).map((file) => path.basename(file))).toEqual(['one.tgz', 'two.tgz']);
   expect(args[1]).toEqual(['npm-cli.js', 'ci', '--offline', '--ignore-scripts']);
   expect(args[2][0]).toMatch(/windows-electron-offline-prepare\.mjs$/u);
+  expect(args[2]).toContain('--native-headers');
   expect(args[3]).toEqual(expect.arrayContaining(['exec', '--offline', 'electron-rebuild', '--build-from-source']));
   expect(fixture.commands.flat().some((arg) => String(arg).endsWith('install.js'))).toBe(false);
 });
