@@ -9,6 +9,26 @@ import { computeDeleteNodesMutation } from './workspaceTrashMutations';
 
 afterEach(() => resetWorkspaceMutationRepository());
 
+it.each(['content', 'imageRegions', 'updatedAt'] as const)('still rejects a changed parent %s after narrowing the snapshot', async field => {
+  installWorkspaceMutationRepository(createBrowserLocalWorkspaceMutationRepository());
+  const state = createWorkspaceNodeActionsFixture();
+  const original = state.nodesById['node-1']!;
+  const imageRegions = [{ attachmentId: 'image', regions: [{ id: 'region', x: 0, y: 0, width: 0.5, height: 0.5 }] }];
+  state.nodesById['node-1'] = { ...original, imageRegions };
+  state.nodesById.child = { ...original, id: 'child', kind: 'item', parentNodeId: original.id,
+    anchorLink: { id: 'region', kind: 'cloze', locator: { attachmentId: 'image', x: 0, y: 0, width: 0.5, height: 0.5 } } };
+  state.nodeOrder = [...state.nodeOrder, 'child'];
+  const mutation = computeDeleteNodesMutation(state, ['child'])!;
+  const after = { ...state, ...mutation.patch };
+  const entry = createWorkspaceDeleteHistoryEntry({ beforeState: state, afterState: after, mutation, kind: 'item', rootNodeId: 'child' });
+  const changes = { content: '# Changed', imageRegions, updatedAt: '2031-01-01T00:00:00.000Z' };
+  const latest = { ...after, nodesById: { ...after.nodesById,
+    'node-1': { ...after.nodesById['node-1']!, [field]: changes[field] } } };
+  expect(await applyWorkspaceDeleteHistory({ entry, get: () => latest, mode: 'undo',
+    mutationTimestamp: '2032-01-01T00:00:00.000Z' })).toEqual({ status: 'invalid' });
+  expect(latest.trashedNodeIds).toContain('child');
+});
+
 it('restores only parent image facts while retaining its latest reading and resource facts', async () => {
   const repository = createBrowserLocalWorkspaceMutationRepository();
   let release!: () => void;
@@ -42,6 +62,16 @@ it('restores only parent image facts while retaining its latest reading and reso
   if (result.status !== 'applied') throw new Error('restore failed');
   expect(result.patch.nodesById?.['node-1']).toMatchObject({ reading, imageRegions,
     imageSources: latest.nodesById['node-1']!.imageSources, content: original.content });
+  if (result.entry.type !== 'workspace.delete') throw new Error('delete history missing');
+  expect(result.entry.beforeParentNodesById['node-1']).not.toHaveProperty('reading');
+  expect(result.entry.beforeParentNodesById['node-1']).not.toHaveProperty('imageSources');
+  latest = { ...latest, ...result.patch };
+  const redone = await applyWorkspaceDeleteHistory({ entry: result.entry, get: () => latest, mode: 'redo',
+    mutationTimestamp: '2026-10-29T02:00:00.000Z' });
+  expect(redone.status).toBe('applied');
+  if (redone.status !== 'applied' || redone.entry.type !== 'workspace.delete') throw new Error('delete redo failed');
+  expect(redone.entry.afterParentNodesById['node-1']).not.toHaveProperty('reading');
+  expect(redone.entry.afterParentNodesById['node-1']).not.toHaveProperty('imageSources');
 });
 
 it('keeps a later manual-order edit when an older restore receipt arrives', async () => {

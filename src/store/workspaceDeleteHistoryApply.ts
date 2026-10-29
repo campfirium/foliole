@@ -1,7 +1,8 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 
-import type { WorkspaceDeleteHistoryEntry } from './workspaceDeleteHistoryEntry';
+import { captureWorkspaceDeleteParentSnapshot, type WorkspaceDeleteHistoryEntry,
+  type WorkspaceDeleteParentSnapshot } from './workspaceDeleteHistoryEntry';
 import { restoreDeleteHistoryOrder, restoreDeleteManualOrders } from './workspaceDeleteHistoryOrder';
 import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult } from './workspaceHistoryApplyResult';
 import { applyWorkspaceHistoryContext } from './workspaceHistoryContext';
@@ -13,7 +14,7 @@ function isExactIdSet(left: string[], right: string[]) {
   return left.length === right.length && left.every((value) => right.includes(value));
 }
 
-function areParentSnapshotsApplicable(state: WorkspaceState, snapshots: Record<string, Node>) {
+function areParentSnapshotsApplicable(state: WorkspaceState, snapshots: Record<string, WorkspaceDeleteParentSnapshot>) {
   return Object.entries(snapshots).every(([nodeId, snapshot]) => {
     const node = state.nodesById[nodeId];
     return node?.content === snapshot.content &&
@@ -34,7 +35,7 @@ function isApplicable(state: WorkspaceState, entry: WorkspaceDeleteHistoryEntry,
     areParentSnapshotsApplicable(state, parents);
 }
 
-function withMutationTimestamp(nodes: Record<string, Node>, state: WorkspaceState, updatedAt: string) {
+function withMutationTimestamp(nodes: Record<string, WorkspaceDeleteParentSnapshot>, state: WorkspaceState, updatedAt: string) {
   return Object.fromEntries(Object.entries(nodes).map(([nodeId, node]) => {
     const parent = { ...state.nodesById[nodeId]!, updatedAt };
     if (node.imageRegions === undefined) delete parent.imageRegions;
@@ -94,11 +95,13 @@ function buildAppliedEntry(
   parentNodesById: Record<string, Node>
 ) {
   const updatedEntry = { ...entry, mutationTimestamp };
-  if (mode === 'undo') return { ...updatedEntry, beforeParentNodesById: parentNodesById };
+  const snapshots = Object.fromEntries(Object.entries(parentNodesById).map(([id, node]) =>
+    [id, captureWorkspaceDeleteParentSnapshot(node)]));
+  if (mode === 'undo') return { ...updatedEntry, beforeParentNodesById: snapshots };
   return {
     ...updatedEntry,
     afterDeletedAtById: Object.fromEntries(entry.nodeIds.map((nodeId) => [nodeId, mutationTimestamp])),
-    afterParentNodesById: parentNodesById
+    afterParentNodesById: snapshots
   };
 }
 

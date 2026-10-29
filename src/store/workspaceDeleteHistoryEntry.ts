@@ -10,15 +10,26 @@ import type { WorkspaceState } from './workspaceStore';
 import { captureStructureParentOrders } from './workspaceStructureParentOrders';
 import type { DeleteNodeMutationResult } from './workspaceTrashMutations';
 
+export type WorkspaceDeleteParentSnapshot = Pick<Node, 'content' | 'imageRegions' | 'manualChildOrder' | 'updatedAt'>;
+
+export function captureWorkspaceDeleteParentSnapshot(node: Node): WorkspaceDeleteParentSnapshot {
+  return {
+    content: node.content,
+    updatedAt: node.updatedAt,
+    ...(node.imageRegions === undefined ? {} : { imageRegions: node.imageRegions }),
+    ...(node.manualChildOrder === undefined ? {} : { manualChildOrder: node.manualChildOrder })
+  };
+}
+
 export interface WorkspaceDeleteHistoryEntry {
   afterContext: WorkspaceHistoryContext;
   afterDeletedAtById: Record<string, string | undefined>;
   afterNavigation: WorkspaceNavigationState;
-  afterParentNodesById: Record<string, Node>;
+  afterParentNodesById: Record<string, WorkspaceDeleteParentSnapshot>;
   beforeContext: WorkspaceHistoryContext;
   beforeDeletedAtById: Record<string, string | undefined>;
   beforeNavigation: WorkspaceNavigationState;
-  beforeParentNodesById: Record<string, Node>;
+  beforeParentNodesById: Record<string, WorkspaceDeleteParentSnapshot>;
   id: string;
   kind: NodeKind;
   mutationTimestamp: string;
@@ -35,7 +46,8 @@ function captureDeletedAt(state: WorkspaceState, nodeIds: string[]) {
 }
 
 function captureParentNodes(state: WorkspaceState, parentNodes: Node[]) {
-  return Object.fromEntries(parentNodes.flatMap(({ id }) => state.nodesById[id] ? [[id, state.nodesById[id]!]] : []));
+  return Object.fromEntries(parentNodes.flatMap(({ id }) => state.nodesById[id]
+    ? [[id, captureWorkspaceDeleteParentSnapshot(state.nodesById[id]!)]] : []));
 }
 
 function cloneNavigation(navigation: WorkspaceNavigationState) {
