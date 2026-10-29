@@ -18,6 +18,7 @@ import { clearRetiredCompanionEditHistory, createCompanionEditHistorySession, re
 import { loadCompanionForegroundOwner } from './companionForegroundTimeOwner';
 import { CompanionNodePriorityState } from './companionNodePriorityState';
 import { createOwnedCompanionConnection } from './companionOwnedConnection';
+import { openCompanionReadIntentStorage } from './companionReadIntentStorage';
 import { CompanionRequestSyncSnapshots } from './companionRequestSyncSnapshot';
 
 export interface CapacitorCompanionDatabaseManager {
@@ -47,6 +48,7 @@ export class CapacitorCompanionDatabaseOwner {
   private pendingCloses = 0;
   private readonly backgroundReaders = new Set<AbortController>();
   private snapshots: CompanionRequestSyncSnapshots | null = null;
+  private readIntents: Awaited<ReturnType<typeof openCompanionReadIntentStorage>> | null = null;
   private readonly nodePriorities = new CompanionNodePriorityState();
 
   constructor(
@@ -169,6 +171,14 @@ export class CapacitorCompanionDatabaseOwner {
 
   clearNodePriorities() { this.nodePriorities.clear(); }
 
+  readIntentJournal() {
+    return this.enqueue(async () => {
+      this.readIntents ??= await openCompanionReadIntentStorage({ db: this.requireDb(),
+        manager: this.manager, platform: this.platform });
+      return this.readIntents.journal;
+    });
+  }
+
   foregroundTimeOwnerId() {
     return this.enqueue(() => loadCompanionForegroundOwner({
       manager: this.manager, libraryPath: this.databasePath, platform: this.platform
@@ -183,6 +193,8 @@ export class CapacitorCompanionDatabaseOwner {
   private async closeDatabase() {
     if (!this.connection || !this.db || !this.journalMode) return;
     await this.snapshots?.close();
+    await this.readIntents?.close();
+    this.readIntents = null;
     await checkpointCompanionDatabase(this.db, this.journalMode);
     await this.manager.closeConnection(COMPANION_DATABASE_NAME, false);
     this.connection = null;

@@ -13,6 +13,7 @@ import { confirmFlowMutation, isCompanionGradeDue, persistFlowMutation, type Flo
 import type { CompanionReadingActivity } from './companionReadingActivity';
 import { useCompanionFlowHistoryReplay } from './useCompanionFlowHistoryReplay';
 import type { useCompanionFlowSession } from './useCompanionFlowSession';
+import { useCompanionReadAdmission } from './useCompanionReadAdmission';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 import type { useFloatingBarVisibility } from './useFloatingBarVisibility';
 
@@ -36,6 +37,8 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
   const latest = useRef(args);
   latest.current = args;
 
+  const admitRead = useCompanionReadAdmission(args, latest, setReadingError);
+
   async function submit(action: FlowAction, grade?: ReviewGrade) {
     if (locked.current || !args.active || historyReplay.refreshPending) return;
     let token = args.flow.capture();
@@ -46,6 +49,8 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
     setReadingError(null);
     setReviewError(null);
     try {
+      if (action === 'read' && await admitRead(token)) return;
+      await args.flow.readIntents?.drain();
       if (pending.current) { await finishPending(args, pending, setReadingError); return; }
       const prepared = await prepareSurfaceAction(args, token, action, () => latest.current.active);
       if (!prepared) return;

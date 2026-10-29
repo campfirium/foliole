@@ -9,10 +9,11 @@ export function buildNextReadingReviewState(args: {
   currentNodeId: string;
   currentNode: Node;
   growthFactorExponent?: number;
+  pushQueue?: ReturnType<typeof getCurrentReviewSchedulerSettings>['pushQueue'];
   now: string;
   snapshot: Pick<WorkspaceState, 'nodesById'>;
 }) {
-  const pushQueueSettings = getCurrentReviewSchedulerSettings().pushQueue;
+  const pushQueueSettings = args.pushQueue ?? getCurrentReviewSchedulerSettings().pushQueue;
   const initialIntervalMs = pushQueueSettings.readingInitialIntervalMs;
   return advanceReadingScheduleCoreFields({
     ...(args.growthFactorExponent !== undefined ? { growthFactorExponent: args.growthFactorExponent } : {}),

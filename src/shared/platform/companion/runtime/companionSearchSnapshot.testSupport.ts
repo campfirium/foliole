@@ -17,6 +17,7 @@ export async function createSearchLibrary(count = 125, bodySize = 4096) {
   // Snapshot reads open their own readonly connection; closing it must not close the writer.
   // The writer keeps this exact connection object so tests can observe its queries.
   let reader: Database.Database | null = null;
+  const journals = new Map<string, Database.Database>();
   const readonlyQueries = {
     query: (sql: string, values?: unknown[]) => {
       if (!reader) throw new Error('Readonly test connection is closed.');
@@ -26,6 +27,11 @@ export async function createSearchLibrary(count = 125, bodySize = 4096) {
   const manager = {
     isConnection: async () => ({ result: false }), isDatabase: async () => ({ result: false }),
     createConnection: async (_name: string, _encrypted: boolean, _mode: string, _version: number, readonly: boolean) => {
+      if (_name.startsWith('foliole-read-intents-')) {
+        const journal = new Database(path.join(root, _name + '.db'));
+        journals.set(_name, journal);
+        return createFakeCapacitorConnection(journal);
+      }
       if (!readonly) return connection;
       reader = new Database(file, { readonly: true });
       return { ...createFakeCapacitorConnection(reader), query: (sql: string, values?: unknown[]) =>
@@ -33,6 +39,7 @@ export async function createSearchLibrary(count = 125, bodySize = 4096) {
     },
     retrieveConnection: async () => connection,
     closeConnection: async (_name: string, readonly: boolean) => {
+      if (journals.has(_name)) { journals.get(_name)!.close(); journals.delete(_name); return; }
       if (readonly) { reader?.close(); reader = null; } else database.close();
     }
   } as unknown as IosCompanionDatabaseManager;
@@ -67,8 +74,8 @@ export async function reopenSearchLibrary(root: string, now: string) {
   const nativeConnection = connection as unknown as Awaited<ReturnType<typeof manager.createConnection>>;
   const create = manager.createConnection.bind(manager);
   const retrieve = manager.retrieveConnection.bind(manager);
-  manager.createConnection = async (...args) => args[4] ? create(...args) : nativeConnection;
-  manager.retrieveConnection = async (...args) => args[1] ? retrieve(...args) : nativeConnection;
+  manager.createConnection = async (...args) => args[0] !== 'foliole-companion' || args[4] ? create(...args) : nativeConnection;
+  manager.retrieveConnection = async (...args) => args[0] !== 'foliole-companion' || args[1] ? retrieve(...args) : nativeConnection;
   await initializeIosCompanionDatabase({ booted_at: now, database_path: null, database_ready: false,
     host_name: 'Search', runtime_kind: 'android-capacitor' }, manager);
   return { db, connection };

@@ -2,8 +2,6 @@ import { COMPANION_DATABASE_NAME, COMPANION_DATABASE_VERSION } from '../../../..
 
 import type { CapacitorCompanionDatabaseManager } from './capacitorCompanionDatabaseOwner';
 
-const DUPLICATE_CONNECTION = `Connection ${COMPANION_DATABASE_NAME} already exists`;
-
 /**
  * The plugin wrapper only tracks connections of the current document, while native
  * connections live until the app process ends. The database owner is the sole holder of
@@ -12,21 +10,23 @@ const DUPLICATE_CONNECTION = `Connection ${COMPANION_DATABASE_NAME} already exis
  */
 export async function createOwnedCompanionConnection(
   manager: CapacitorCompanionDatabaseManager,
-  readonly: boolean
+  readonly: boolean,
+  database = COMPANION_DATABASE_NAME,
+  version = COMPANION_DATABASE_VERSION
 ): ReturnType<CapacitorCompanionDatabaseManager['createConnection']> {
   const create = () => manager.createConnection(
-    COMPANION_DATABASE_NAME, false, 'no-encryption', COMPANION_DATABASE_VERSION, readonly
+    database, false, 'no-encryption', version, readonly
   );
   try {
     return await create();
   } catch (error) {
-    if (!isDuplicateConnection(error)) throw error;
-    if ((await manager.isConnection(COMPANION_DATABASE_NAME, readonly)).result) throw error;
-    await manager.closeConnection(COMPANION_DATABASE_NAME, readonly);
+    if (!isDuplicateConnection(error, database)) throw error;
+    if ((await manager.isConnection(database, readonly)).result) throw error;
+    await manager.closeConnection(database, readonly);
     return create();
   }
 }
 
-function isDuplicateConnection(error: unknown) {
-  return (error instanceof Error ? error.message : String(error)).includes(DUPLICATE_CONNECTION);
+function isDuplicateConnection(error: unknown, database: string) {
+  return (error instanceof Error ? error.message : String(error)).includes(`Connection ${database} already exists`);
 }

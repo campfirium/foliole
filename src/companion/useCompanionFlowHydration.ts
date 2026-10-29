@@ -6,6 +6,7 @@ import { openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../s
 import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { loadCompanionFlowResume } from '../shared/platform/companion/runtime/companionFlowResume';
+import { getCompanionReadIntents } from '../shared/platform/companion/runtime/companionReadIntents';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { getWorkspaceHistoryTopEntry } from '../store/workspaceActionHistoryState';
 import { cloneWorkspaceReviewSession } from '../store/workspaceHistoryContext';
@@ -25,10 +26,14 @@ export function useFlowHydration(
     if (!args.ready || !args.snapshot || !args.active || current.hydrated) return;
     let cancelled = false;
     if (!isAvailableNativeCompanionRuntime()) { current.error = 'Flow storage is unavailable.'; render(); return; }
-    void Promise.all([loadCompanionFlowResume(args.libraryScope, args.onlyReview),
-      loadCompanionFlowHistory(companionFlowHistoryKey(args.libraryScope)),
-      loadCompanionDailySession()
-    ]).then(async ([preferred, history, daily]) => {
+    void getCompanionReadIntents().then(async engine => {
+      current.readIntents = engine;
+      await engine.drain().catch(error => { current.error = String(error); });
+      return Promise.all([loadCompanionFlowResume(args.libraryScope, args.onlyReview),
+        loadCompanionFlowHistory(companionFlowHistoryKey(args.libraryScope)),
+        loadCompanionDailySession()
+      ]);
+    }).then(async ([preferred, history, daily]) => {
       if (cancelled || owner.current !== current || !latest.current.snapshot) return;
       current.session = daily ?? history?.resumeSession ?? createEmptyReviewSession();
       const top = history && (getWorkspaceHistoryTopEntry(history, 'undo') ?? getWorkspaceHistoryTopEntry(history, 'redo'));

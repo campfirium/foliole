@@ -12,6 +12,7 @@ import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativ
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { openCompanionDailyFlow, predictCompanionFlowDocument } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { commitCompanionFlowHistory, loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
+import { getCompanionReadIntents } from '../shared/platform/companion/runtime/companionReadIntents';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { currentCompanionRequestSyncDatabaseHost } from '../shared/platform/companion/sync/framed/companionRequestSyncDatabaseHost';
@@ -119,6 +120,7 @@ it.each(['read', 'later', 'dismiss'] as const)('advances the real %s surface wit
   const initial = (await refreshCompanionWorkspaceAfterMutation())!;
   const publish = vi.fn();
   const queries = vi.spyOn(library.connection, 'query');
+  const bodyQueries = vi.spyOn(library.readonlyQueries, 'query');
   const ui = renderHook(() => useReadingSurface(initial, publish));
   await waitFor(() => expect(ui.result.current.flow.ready).toBe(true));
   const source = ui.result.current.flow.view.currentCard!.nodeId;
@@ -126,22 +128,25 @@ it.each(['read', 'later', 'dismiss'] as const)('advances the real %s surface wit
   const next = (await predictCompanionFlowDocument({ token: session.daily!, currentNodeId: session.currentNodeId!,
     now: new Date().toISOString() }, new AbortController().signal))!;
   const body = library.database.prepare('SELECT content FROM nodes WHERE id = ?').get(next) as { content: string };
-  await waitFor(() => expect(queries.mock.calls.some(([sql, params]) =>
+  await waitFor(() => expect(bodyQueries.mock.calls.some(([sql, params]) =>
     sql.includes('SELECT article.*') && params?.[0] === next)).toBe(true));
-  await getIosCompanionDatabaseOwner().read(async () => null);
+  await getIosCompanionDatabaseOwner().readInteractiveSnapshot(async () => null);
   queries.mockClear();
+  bodyQueries.mockClear();
   const rows = observeSnapshotRows();
   const submit = action === 'read' ? 'handleReadReviewTopic'
     : action === 'later' ? 'handlePostponeReviewTopic' : 'handleDismissReviewTopic';
   await act(async () => { await ui.result.current.actions[submit](); });
   expect(ui.result.current.actions.readingError).toBeNull();
   expect(ui.result.current.flow.view.currentCard?.nodeId).toBe(next);
+  await act(async () => { await (await getCompanionReadIntents()).drain(); });
+  await waitFor(() => expect(ui.result.current.snapshot.nodesById[source]?.reading).not.toEqual(initial.nodesById[source]?.reading));
   expect(ui.result.current.snapshot.nodesById[source]?.reading).not.toEqual(initial.nodesById[source]?.reading);
   expect(ui.result.current.snapshot.nodesById['000255']).toEqual(initial.nodesById['000255']);
   expect((await loadCompanionFlowHistory(ui.result.current.flow.historyKey)).undoStack).toHaveLength(1);
   await act(async () => { await ui.result.current.article.openReadableArticle(next); });
   expect(publish).toHaveBeenLastCalledWith(expect.objectContaining({ nodeId: next, content: body.content }));
-  expect(queries.mock.calls.filter(([sql, params]) => sql.includes('SELECT article.*') && params?.[0] === next)).toHaveLength(0);
+  expect(bodyQueries.mock.calls.filter(([sql, params]) => sql.includes('SELECT article.*') && params?.[0] === next)).toHaveLength(0);
   expect(rows()).toBeLessThan(100);
   await act(async () => { await ui.result.current.actions.handleFlowHistory('undo'); });
   expect(ui.result.current.flow.view.currentCard?.nodeId).toBe(source);
@@ -164,8 +169,8 @@ it.each(['read', 'later', 'dismiss'] as const)('retries only the saved %s surfac
   const submit = action === 'read' ? 'handleReadReviewTopic'
     : action === 'later' ? 'handlePostponeReviewTopic' : 'handleDismissReviewTopic';
   await act(async () => { await ui.result.current.actions[submit](); });
-  expect(ui.result.current.actions.readingError).toBe('local refresh failed');
-  expect(ui.result.current.flow.view.currentCard?.nodeId).toBe(source);
+  await waitFor(() => expect(ui.result.current.actions.readingError).toBe('local refresh failed'));
+  expect(ui.result.current.flow.view.currentCard?.nodeId).toBe(action === 'read' ? next : source);
   const historyKey = ui.result.current.flow.historyKey;
   expect((await loadCompanionFlowHistory(historyKey)).undoStack).toHaveLength(1);
   const facts = library.database.prepare('SELECT * FROM node_reading WHERE node_id = ?').get(source);
@@ -198,7 +203,8 @@ it('keeps the real mobile article after peer Read and validates before applying 
     const readings = library.database.prepare('SELECT * FROM node_reading ORDER BY node_id').all();
     await act(async () => { await ui.result.current.actions.handleReadReviewTopic(); });
     expect(ui.result.current.flow.view.currentCard?.nodeId).not.toBe(source);
-    expect(ui.result.current.actions.readingError).toBeNull();
+    await act(async () => { await (await getCompanionReadIntents()).drain().catch(() => undefined); });
+    expect(ui.result.current.actions.readingError).toBe('The clicked topic changed before it could be saved.');
     expect(library.database.prepare('SELECT * FROM node_reading ORDER BY node_id').all()).toEqual(readings);
     expect((await loadCompanionFlowHistory(ui.result.current.flow.historyKey)).undoStack).toHaveLength(0);
     ui.unmount();

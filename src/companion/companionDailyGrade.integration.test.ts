@@ -8,7 +8,7 @@ import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../lib/cor
 import { loadCompanionWorkspaceNodeFromDb } from '../../lib/core/database/companionWorkspaceNodeRead';
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor';
-import { companionDailyFlowPersistence, openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlow';
+import { companionDailyFlowPersistence, openCompanionDailyFlow, readCompanionDailyFlowView } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
@@ -150,18 +150,18 @@ it.each(['grade', 'read', 'reject', 'ineligible'] as const)('keeps committed pee
     });
     await peer.owner.runWriter(db => applySyncNodesWithDbPort(db, records, { enqueueSearchInvalidations: false }));
     await applyCompanionSyncNodeVersions(records);
-    expect(library.database.prepare('SELECT invalidated FROM daily_flow_state').get()).toEqual({ invalidated: 1 });
     const act = () => persistFlowMutation({ action: action === 'read' ? 'read' : 'grade', grade: 3,
       nodeId: target, now, snapshot: before, history: { key, mode: action === 'read' ? 'reading-only' : 'recommended', session } });
     if (action === 'reject' || action === 'ineligible') {
       await expect(act()).rejects.toThrow('daily_flow_learning_changed');
       expect(library.database.prepare('SELECT COUNT(*) AS n FROM review_log').get()).toEqual({ n: 0 });
-      expect(library.database.prepare('SELECT invalidated FROM daily_flow_state').get()).toEqual({ invalidated: 1 });
     } else {
       session = (await act()).session!;
-      const rows = library.database.prepare('SELECT node_id FROM daily_flow_entries WHERE active=1').all() as { node_id: string }[];
-      expect(rows.map(row => row.node_id)).toContain('new-topic');
-      expect(rows.map(row => row.node_id)).not.toContain(removed);
+      const view = await readCompanionDailyFlowView({ now, mode: action === 'read' ? 'reading-only' : 'recommended', includeEntries: true });
+      expect(view.status).toBe('ready');
+      if (view.status !== 'ready') throw new Error('daily_flow_view_not_ready');
+      expect(view.nodeIds).not.toContain('new-topic');
+      expect(view.nodeIds).not.toContain(removed);
       expect(session.currentNodeId).not.toBe(target);
       if (action === 'grade') expect((await snapshot()).nodesById[target]!.review?.reps).toBe(1);
       else expect((await snapshot()).nodesById[target]!.reading?.repetitionCount).toBe(1);

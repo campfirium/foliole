@@ -7,6 +7,7 @@ import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../sha
 import { openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { saveCompanionFlowResume } from '../shared/platform/companion/runtime/companionFlowResume';
+import type { CompanionReadIntents } from '../shared/platform/companion/runtime/companionReadIntents';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import { isCanonicalVisibleNodeId } from '../shared/workspaceCanonicalSelectors';
 import { createEmptyReviewSession } from '../store/workspaceReviewReading';
@@ -20,7 +21,7 @@ import { useCompanionFlowReadView } from './useCompanionFlowReadView';
 
 export type FlowOwner = { identity: string; scope: object; session: ReturnType<typeof createEmptyReviewSession>;
   reconciledSession?: ReturnType<typeof createEmptyReviewSession>;
-  refresh?: Promise<void>;
+  refresh?: Promise<void>; readIntents?: CompanionReadIntents; readEpoch?: number;
   generation: number; epoch: number; hydrated: boolean; error: string | null; kind: string | null;
   snapshot: WorkspaceSnapshot | null };
 
@@ -53,17 +54,18 @@ export function useCompanionFlowSession(args: {
     });
   }, [identity, current.hydrated, current.session.currentNodeId]);
   useEffect(() => {
-    if (!args.active || !current.hydrated || !current.session.daily) return;
+    if (!args.active || !current.hydrated || !current.session.daily || current.readIntents?.pending) return;
     const source = current.session;
     const generation = current.generation;
     trackCompanionFlowRefresh(current, openCompanionDailyFlow({ now: new Date().toISOString(), mode, preserveCurrent: true }).then(saved => {
-      if (owner.current !== current || !latest.current.active || current.generation !== generation || (saved.session.daily?.revision === source.daily?.revision && saved.session.daily?.dayKey === source.daily?.dayKey && saved.session.daily?.scope === source.daily?.scope)) return;
+      if (owner.current !== current || !latest.current.active || current.readIntents?.pending || current.generation !== generation || (saved.session.daily?.revision === source.daily?.revision && saved.session.daily?.dayKey === source.daily?.dayKey && saved.session.daily?.scope === source.daily?.scope)) return;
       current.session = { ...saved.session, isAnswerRevealed:
         saved.session.currentNodeId === source.currentNodeId && current.session.isAnswerRevealed };
       if (!sameCycleProgress(saved.session, source)) current.generation += 1;
       render();
     }).catch(error => { current.error = String(error); render(); }));
   }, [args.snapshot?.nodesById]);
+  useReadIntentReceipts(current, owner, mode, render);
   const session = current.session;
   const { scheduled, hasTopics } = useFlowCatalogSummary(args.snapshot, Boolean(session.currentNodeId));
   const view = useMemo(() => flowView(args.snapshot, current, scheduled),
@@ -76,6 +78,7 @@ export function useCompanionFlowSession(args: {
   const controls = createCompanionFlowControls({ current, owner, scope, mode, historyKey, render });
   function continueReading() { cancelDocumentPreparation(); if (owner.current === current) void continueCompanionDailyFlow(latest.current, current, owner, mode, render).catch(error => { current.error = String(error); render(); }); }
   return { view, ...controls, historyKey, cancelDocumentPreparation, continueReading, canContinueReading, hasTopics,
+    readIntents: current.readIntents,
     summary: { ...(session.cycle ? { queueCleared: Boolean(session.cycle.clearedAt) } : {}), completedAt: session.completedAt ?? null, sessionStartedAt: session.sessionStartedAt ?? null,
       readTopicCount: session.readTopicCount ?? 0, readingElapsedMs: session.readingElapsedMs ?? 0,
       reviewedItemCount: session.reviewedItemCount ?? 0, reviewElapsedMs: session.reviewElapsedMs ?? 0 },
@@ -152,4 +155,23 @@ function reconcileCurrentFlow(snapshot: WorkspaceSnapshot | null, current: FlowO
     }
     current.kind = kind;
   }
+}
+
+function useReadIntentReceipts(current: FlowOwner, owner: { current: FlowOwner },
+  mode: 'recommended' | 'review-first', render: () => void) {
+  useEffect(() => current.readIntents?.subscribe(() => {
+    current.error = current.readIntents!.error;
+    const result = current.readIntents!.result;
+    if (owner.current !== current) return;
+    const displayed = current.session.daily;
+    const received = result?.session.daily;
+    const sameDay = received?.scope === displayed?.scope && received?.dayKey === displayed?.dayKey;
+    const currentReceipt = sameDay && received && received.revision >= (displayed?.revision ?? 0);
+    const correction = current.readIntents!.corrected && current.readEpoch === current.epoch;
+    if (!current.readIntents!.pending && result?.mode === mode &&
+      (correction || (currentReceipt && result.session.currentNodeId === current.session.currentNodeId))) {
+      current.session = { ...result.session, isAnswerRevealed: current.session.isAnswerRevealed };
+    }
+    render();
+  }), [current.readIntents]);
 }

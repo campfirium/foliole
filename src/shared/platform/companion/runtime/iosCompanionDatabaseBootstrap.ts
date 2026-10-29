@@ -16,6 +16,7 @@ import { CompanionDatabaseManager } from './companionDatabaseManager';
 import { stopCompanionForegroundTime } from './companionForegroundTime';
 import { closeCompanionFramedPayloadBudget, configureCompanionFramedPayloadBudget } from './companionFramedPayloadBudget';
 import { bindCompanionNodePriorities } from './companionNodePriorityBinding';
+import { closeCompanionReadIntents } from './companionReadIntents';
 
 export type IosCompanionDatabaseManager = CapacitorCompanionDatabaseManager;
 
@@ -40,6 +41,7 @@ async function closeActiveDatabase() {
   const owner = activeOwner;
   unsubscribeNodePriorities?.();
   unsubscribeNodePriorities = null;
+  if (owner) await closeCompanionReadIntents(owner);
   if (owner) await closeCompanionFramedPayloadBudget(owner);
   await stopCompanionForegroundTime();
   if (activeOwner === owner) activeOwner = null;

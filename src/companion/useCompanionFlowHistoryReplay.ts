@@ -27,6 +27,7 @@ export function useCompanionFlowHistoryReplay(args: CompanionSurfaceActionArgs,
     setError(null);
     try {
       if (!pending.current) {
+        await args.flow.readIntents?.drain();
         await args.activity.flush();
         if (!latest.current.active || !args.flow.matches(token)) { request.current = null; return; }
         request.current ??= { id: crypto.randomUUID(), mode, token };

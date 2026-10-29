@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import Database from 'better-sqlite3';
 
 import { COMPANION_CURRENT_SCHEMA_REPAIRS } from '../../../lib/core/database/companionCurrentSchemaRepairs';
@@ -69,16 +71,24 @@ export function createFakeCapacitorDatabaseManager(
   writer: Database.Database, existed: boolean, onWriterClose: () => void
 ): CapacitorCompanionDatabaseManager {
   const connections = new Map<boolean, Database.Database>([[false, writer]]);
+  const journals = new Map<string, Database.Database>();
   const adapt = (database: Database.Database) => ({
     ...createFakeCapacitorConnection(database), getUrl: async () => ({ url: writer.name })
   });
   return {
     closeConnection: async (_name: string, readonly: boolean) => {
+      if (journals.has(_name)) { journals.get(_name)!.close(); journals.delete(_name); return; }
       connections.get(readonly)?.close();
       connections.delete(readonly);
       if (!readonly) onWriterClose();
     },
     createConnection: async (_name: string, _encrypted: boolean, _mode: string, _version: number, readonly: boolean) => {
+      if (_name.startsWith('foliole-read-intents-')) {
+        const file = writer.name && writer.name !== ':memory:' ? path.join(path.dirname(writer.name), _name + '.db') : ':memory:';
+        const journal = new Database(file);
+        journals.set(_name, journal);
+        return adapt(journal);
+      }
       const database = readonly ? new Database(writer.name, { readonly: true }) : writer;
       connections.set(readonly, database);
       return adapt(database);
