@@ -13,7 +13,7 @@ import { isReadwiseExternalFolderId } from '../database/readwiseManagedExternalD
 import { clearPersistedReadwiseBookGeneratedNodes } from './readwiseBooksInventoryState.js';
 import { hasReadwiseCleanupAdditions } from './readwiseCleanupAdditions.js';
 import {
-  collectReadwiseCleanupSubtree,
+  createReadwiseCleanupSubtreeCollector,
   isReadwiseBookStructureNodeId,
   type ReadwiseCleanupCandidate,
   reduceReadwiseCleanupRootCandidates
@@ -104,8 +104,9 @@ function buildCleanupPreview(previewedAt: string): NativeReadwiseCleanupPreviewR
     [...readKeepImportCleanupCandidates(keepRows), ...readReadwiseBookCleanupCandidates()],
     nodes
   );
+  const collectSubtree = rootCandidates.length ? createReadwiseCleanupSubtreeCollector(nodes) : () => [];
   const entries = rootCandidates.map((candidate) => {
-    const subtree = collectReadwiseCleanupSubtree(candidate.nodeId, nodes);
+    const subtree = collectSubtree(candidate.nodeId);
     const root = subtree[0];
     const action = resolveCleanupAction(candidate, subtree);
     return {
@@ -131,19 +132,21 @@ function buildCleanupPreview(previewedAt: string): NativeReadwiseCleanupPreviewR
 
 function collectDeleteNodeIds(entries: NativeReadwiseCleanupEntry[]) {
   const nodes = readNodeRows();
-  return entries
-    .filter((entry) => entry.action === 'delete')
-    .flatMap((entry) => collectReadwiseCleanupSubtree(entry.node_id, nodes).map((node) => node.id));
+  const selected = entries.filter((entry) => entry.action === 'delete');
+  if (!selected.length) return [];
+  const collectSubtree = createReadwiseCleanupSubtreeCollector(nodes);
+  return selected.flatMap((entry) => collectSubtree(entry.node_id).map((node) => node.id));
 }
 
 function collectDetachedNodeIds(entries: NativeReadwiseCleanupEntry[]) {
   const nodes = readNodeRows();
   const activeNodeIds = new Set(nodes.map((node) => node.id));
-  return entries
-    .filter((entry) => entry.action === 'keep' && activeNodeIds.has(entry.node_id))
-    .flatMap((entry) => [
+  const selected = entries.filter((entry) => entry.action === 'keep' && activeNodeIds.has(entry.node_id));
+  if (!selected.length) return [];
+  const collectSubtree = createReadwiseCleanupSubtreeCollector(nodes);
+  return selected.flatMap((entry) => [
       entry.node_id,
-      ...collectReadwiseCleanupSubtree(entry.node_id, nodes).map((node) => node.id)
+      ...collectSubtree(entry.node_id).map((node) => node.id)
     ]);
 }
 

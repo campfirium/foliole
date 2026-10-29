@@ -25,23 +25,26 @@ export function isReadwiseImportedStructureNodeId(nodeId: string) {
   return isEpubGeneratedNodeId(nodeId) || isReadwiseBookStructureNodeId(nodeId);
 }
 
-export function collectReadwiseCleanupSubtree<T extends ReadwiseCleanupNodeRow>(rootId: string, rows: T[]) {
+export function createReadwiseCleanupSubtreeCollector<T extends ReadwiseCleanupNodeRow>(rows: T[]) {
   const byId = new Map(rows.map((row) => [row.id, row]));
   const byParent = new Map<string | null, T[]>();
-  rows.forEach((row) => {
-    byParent.set(row.parent_id, [...(byParent.get(row.parent_id) ?? []), row]);
-  });
-  const collected: T[] = [];
-  const visit = (nodeId: string) => {
-    const row = byId.get(nodeId);
-    if (!row) {
-      return;
-    }
-    collected.push(row);
-    (byParent.get(nodeId) ?? []).forEach((child) => visit(child.id));
+  for (const row of rows) {
+    const parentId = row.parent_id;
+    const siblings = byParent.get(parentId);
+    if (siblings) siblings.push(row);
+    else byParent.set(parentId, [row]);
+  }
+  return (rootId: string) => {
+    const collected: T[] = [];
+    const visit = (nodeId: string) => {
+      const row = byId.get(nodeId);
+      if (!row) return;
+      collected.push(row);
+      (byParent.get(nodeId) ?? []).forEach((child) => visit(child.id));
+    };
+    visit(rootId);
+    return collected;
   };
-  visit(rootId);
-  return collected;
 }
 
 export function reduceReadwiseCleanupRootCandidates<T extends ReadwiseCleanupCandidate>(
