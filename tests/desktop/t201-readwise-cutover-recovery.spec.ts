@@ -10,6 +10,7 @@ import {
   createT178ApiAcceptanceSession,
   type T178AcceptanceSession
 } from './harness/t178ApiAcceptanceSession';
+import { expectT201StartupRequest, readT201RecoveryState } from './harness/t201ReadwiseRecoveryState';
 
 const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance/t201');
 
@@ -25,7 +26,9 @@ async function seedRestoredLibrary(app: ElectronApplication, pendingCutover = fa
     const identity = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseRemoteIdentity.js'));
     const secret = require(pathApi.join(process.cwd(), 'dist/electron/import/readwiseApiSecret.js'));
     const reset = require(pathApi.join(process.cwd(), 'dist/electron/import/readwiseSourceCutoverReset.js'));
-    connection.runWithDatabaseConnectionOwner(() => {
+    return connection.runWithDatabaseConnectionOwner(() => {
+      require(pathApi.join(process.cwd(), 'dist/electron/import/readwiseApiScheduler.js'))
+        .stopReadwiseApiScheduler();
       host.activateReadwiseOnThisHost();
       const assignment = host.loadReadwiseHostAssignment();
       const secretRef = 'readwise-api-00000000-0000-4000-8000-000000000201.bin';
@@ -42,6 +45,8 @@ async function seedRestoredLibrary(app: ElectronApplication, pendingCutover = fa
         (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
         VALUES ('legacy-topic',NULL,'topic','Unique restored title',0,'User-edited body',
           '2026-09-15T00:00:00.000Z','2026-09-16T00:00:00.000Z')`);
+      driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,content,created_at,updated_at)
+        VALUES ('local-highlight','legacy-topic','highlight','','Local annotation','old','old')`);
       driver.execute(`INSERT INTO desktop_sources
         (source_ref,source_type,config_ref,host_name,host_platform,root_path,path_flavor,
          type_settings_json,created_at,updated_at) VALUES
@@ -50,10 +55,10 @@ async function seedRestoredLibrary(app: ElectronApplication, pendingCutover = fa
       [assignment.current_host_name, JSON.stringify({ kind: 'articles' })]);
       driver.execute(`INSERT INTO import_sources
         (source_fingerprint,provider,source_kind,source_name,source_locator,first_imported_at,
-         last_imported_at,last_content_fingerprint,latest_node_id,source_ref,source_location)
+         last_imported_at,last_content_fingerprint,latest_node_id,source_ref,source_location,remote_document_id)
         VALUES ('t201-source','desktop_text_file','markdown','Unique restored title.md','missing',
           '2026-09-15T00:00:00.000Z','2026-09-16T00:00:00.000Z','hash','legacy-topic',
-          'readwise:t201','Unique restored title.md')`);
+          'readwise:t201','Unique restored title.md','remote-document')`);
       if (source) {
         reset.restartIncompleteReadwiseSourceCutover({
           connectionRef: source.connectionRef,
@@ -63,17 +68,6 @@ async function seedRestoredLibrary(app: ElectronApplication, pendingCutover = fa
       }
     });
   }, pendingCutover);
-}
-
-async function installFailedTransport(app: ElectronApplication) {
-  await app.evaluate(() => {
-    const runtime = globalThis as typeof globalThis & { __t201FailedRequest?: boolean };
-    runtime.__t201FailedRequest = false;
-    runtime.fetch = async () => {
-      runtime.__t201FailedRequest = true;
-      return new Response(null, { status: 400 });
-    };
-  });
 }
 
 async function installRecoveringTransport(app: ElectronApplication) {
@@ -93,7 +87,7 @@ async function installRecoveringTransport(app: ElectronApplication) {
         }
         return Response.json({ count: 2, nextPageCursor: 'next', results: [{
           category: 'article', html_content: '<p>Remote replacement body</p>',
-          id: 'remote-document', title: 'Unique restored title'
+          id: 'remote-document', title: 'Renamed remote document'
         }] });
       }
       if (url.pathname === '/api/v2/export/') {
@@ -142,13 +136,14 @@ test('shows a retryable import failure and recovers without replacing the legacy
     await mkdir(ARTIFACT_DIR, { recursive: true });
     session = await createT178ApiAcceptanceSession(stateRoot);
     await seedRestoredLibrary(session.electronApp, true);
-    await installFailedTransport(session.electronApp);
+    await session.close();
+    session = await createT178ApiAcceptanceSession(
+      stateRoot, path.resolve('tests/desktop/harness/t201ReadwiseStartupMain.mjs')
+    );
     await setRendererOnline(session);
     await session.firstWindow.reload();
     await expectWorkspaceShell(session.firstWindow);
-    await expect.poll(() => session!.electronApp.evaluate(() => Boolean(
-      (globalThis as typeof globalThis & { __t201FailedRequest?: boolean }).__t201FailedRequest
-    ))).toBe(true);
+    await expectT201StartupRequest(session.electronApp);
     await openSettingsFromNativeMenu(session.electronApp);
     await expect(getSettingsDialog(session.firstWindow)).toBeVisible();
     const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
@@ -165,7 +160,7 @@ test('shows a retryable import failure and recovers without replacing the legacy
     await expect(settings.getByRole('status').filter({
       hasText: /^(Syncing · Downloading|正在同步 · 下载中)/
     })).toBeVisible();
-    await expect(settings.getByRole('status')).toContainText('50%');
+    await expect(settings.getByRole('status')).toHaveText(/^(Syncing · Downloading|正在同步 · 下载中) · 1$/);
     await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'downloading.png') });
     await releaseImport(session.electronApp);
 
@@ -173,20 +168,20 @@ test('shows a retryable import failure and recovers without replacing the legacy
       const preview = await window.electronAPI.invoke('preview_readwise_source_cutover');
       return preview.status;
     }), { timeout: 30_000 }).toBe('already_completed');
-    const persisted = await session.electronApp.evaluate(() => {
-      const moduleApi = process.getBuiltinModule('module')!;
-      const pathApi = process.getBuiltinModule('path')!;
-      const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
-      const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
-      return connection.runWithDatabaseConnectionOwner(() => connection.openDatabaseConnection().driver.queryOne(
-        `SELECT n.id,n.content,i.remote_document_id FROM nodes n JOIN import_sources i
-         ON i.latest_node_id=n.id WHERE n.id='legacy-topic'`
-      ));
-    });
-    expect(persisted).toEqual({
-      content: 'User-edited body', id: 'legacy-topic', remote_document_id: 'remote-document'
-    });
+    const persisted = await readT201RecoveryState(session.electronApp);
+    expect(persisted.nodes).toEqual([
+      { content: 'User-edited body', id: 'legacy-topic', parent_id: null },
+      { content: 'Local annotation', id: 'local-highlight', parent_id: 'legacy-topic' }
+    ]);
+    expect(persisted.identities).toEqual([
+      { latest_node_id: 'legacy-topic', remote_document_id: 'remote-document' }
+    ]);
     await settings.screenshot({ path: path.join(ARTIFACT_DIR, 'completed.png') });
+    await session.close();
+    session = await createT178ApiAcceptanceSession(
+      stateRoot, path.resolve('tests/desktop/harness/t201ReadwiseStartupMain.mjs')
+    );
+    expect(await readT201RecoveryState(session.electronApp)).toEqual(persisted);
   } finally {
     await session?.close().catch(() => undefined);
     await rm(stateRoot, { force: true, recursive: true });

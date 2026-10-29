@@ -2,7 +2,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
-import type { ElectronApplication } from '@playwright/test';
+import { expect, type ElectronApplication } from '@playwright/test';
 
 import {
   acquireMacosHiddenCredentialSessionLock,
@@ -15,7 +15,22 @@ import type { DesktopSession } from './fixtures';
 
 export type T178AcceptanceSession = Pick<DesktopSession, 'close' | 'electronApp' | 'firstWindow'>;
 
-async function launchMacosSession(executablePath: string, stateRoot: string): Promise<T178AcceptanceSession> {
+async function waitForStartupServices(app: ElectronApplication) {
+  await expect.poll(() => app.evaluate(async () => {
+    const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
+    const boot = require(`${process.cwd()}/dist/electron/ipc/boot.js`);
+    const fs = process.getBuiltinModule('fs/promises')!;
+    const events = await fs.readFile(boot.resolveBootArtifactPaths().eventLogPath, 'utf8').catch(() => '');
+    return events.split('\n').filter(Boolean).some((line: string) => {
+      const event = JSON.parse(line);
+      return event.pid === process.pid && event.stage === 'startup_followup_tasks_started';
+    });
+  })).toBe(true);
+}
+
+async function launchMacosSession(
+  executablePath: string, stateRoot: string, mainPath: string
+): Promise<T178AcceptanceSession> {
   const runtime = prepareMacosHiddenElectronRuntime({ appRoot: process.cwd(), env: process.env });
   const credential = resolveMacosHiddenCredentialSession(process.cwd(), runtime.runtimeFingerprint, stateRoot);
   const release = acquireMacosHiddenCredentialSessionLock(credential);
@@ -28,7 +43,7 @@ async function launchMacosSession(executablePath: string, stateRoot: string): Pr
       FOLIOLE_DISABLE_HARDWARE_ACCELERATION: '1', FOLIOLE_DISABLE_IN_APP_RELAUNCH: '1',
       FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1', FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot,
       FOLIOLE_HIDDEN_CREDENTIAL_APP_NAME: credential.appName,
-      FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH: path.resolve('dist/electron/main.js'),
+      FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH: mainPath,
       FOLIOLE_LIBRARY_HOME: path.join(stateRoot, 'library'),
       FOLIOLE_SESSION_DATA_PATH: credential.userDataPath, FOLIOLE_SKIP_STARTUP_WINDOW_STATE: '1',
       FOLIOLE_USER_DATA_PATH: credential.userDataPath, FOLIOLE_WORKDIR: stateRoot
@@ -38,6 +53,8 @@ async function launchMacosSession(executablePath: string, stateRoot: string): Pr
   const firstWindow = await electronApp.firstWindow({ timeout: 30_000 });
   await firstWindow.waitForURL(rendererUrl, { timeout: 30_000 });
   await firstWindow.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true);
+  // Await the same process's startup services before tests mutate its initially empty library.
+  await waitForStartupServices(electronApp);
   return {
     close: async () => {
       try { await electronApp.close(); } finally { release(); runtime.cleanup(); }
@@ -47,7 +64,9 @@ async function launchMacosSession(executablePath: string, stateRoot: string): Pr
   };
 }
 
-export async function createT178ApiAcceptanceSession(stateRoot: string) {
+export async function createT178ApiAcceptanceSession(
+  stateRoot: string, mainPath = path.resolve('dist/electron/main.js')
+) {
   if (process.platform !== 'darwin') {
     return launchDesktopSession({ env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot } }) as
       Promise<T178AcceptanceSession>;
@@ -55,7 +74,7 @@ export async function createT178ApiAcceptanceSession(stateRoot: string) {
   const runtime = prepareMacosHiddenElectronRuntime({ appRoot: process.cwd(), env: process.env });
   const executablePath = runtime.executablePath;
   runtime.cleanup();
-  return launchMacosSession(executablePath, stateRoot);
+  return launchMacosSession(executablePath, stateRoot, mainPath);
 }
 
 export async function seedCompletedReadwiseApiMode(
