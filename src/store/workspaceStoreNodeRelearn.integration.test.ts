@@ -202,5 +202,9 @@ it.each([false, true])('consumes durable grading, next due and repeated undo/red
   expect(harness.getState().nodesById['node-1']?.review).toEqual(toNodeReviewProfile(readStoredReviewCard(source.driver, 'node-1')!));
   expect(history.undoWorkspaceAction()).toBe(true);
   await vi.waitFor(() => expect(harness.getState().nodesById['node-1']?.review?.reps ?? 0).toBe(initialReps));
-  if (fresh) expect(await actions.gradeReviewCard(3, at)).toBe(true);
+  await vi.waitFor(() => expect(harness.getState().appActionHistory.applying).toBeNull());
+  if (fresh) {
+    actions.revealReviewAnswer();
+    expect(await actions.gradeReviewCard(3, at)).toBe(true);
+  }
 });
