@@ -12,7 +12,7 @@ import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDat
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { removeCurrentInventoryFixtureTriggers } from './historicalMigration.test-support.js';
+import { removeCurrentInventoryFixtureTriggers, restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 it.each([false, true])('migrates canonical v4 attachments or atomically rejects the original fixture: %s', async (canonical) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-v4-upgrade-'));
@@ -62,6 +62,7 @@ it('upgrades the previous mobile schema and preserves attachment relationships a
     const port = createBetterSqliteDbPort(database, { name: 'ios-upgrade-attachment' });
     const request = { allowCreate: true, expectedHostName: 'ios-upgrade-device', now: '2026-09-20T00:00:00.000Z' };
     await bootstrapCompanionDatabase(port, request);
+    restoreEmptyLegacyDailyFlowSchema(database);
     removeCurrentInventoryFixtureTriggers(database);
     database.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
     database.exec(`INSERT INTO node_order (node_id, position)

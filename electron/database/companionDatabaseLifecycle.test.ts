@@ -18,6 +18,7 @@ import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionCo
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { installLegacySyncGroupSchema } from './companionSyncGroupLegacyTestSchema.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 const roots: string[] = [];
 
@@ -34,6 +35,7 @@ function fixture(version = COMPANION_DATABASE_VERSION) {
   const sqlite = new Database(databasePath);
   sqlite.transaction(() => {
     sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+    if (version < 104) restoreEmptyLegacyDailyFlowSchema(sqlite);
     if (version < 82) for (const sql of [...FRAMED_SYNC_STAGING_SCHEMA, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
       ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) sqlite.exec(sql);
     if (version < 40) sqlite.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');

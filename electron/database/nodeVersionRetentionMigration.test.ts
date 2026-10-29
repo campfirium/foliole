@@ -17,6 +17,7 @@ import { isRetiredSyncSchema } from '../../lib/core/database/retiredSyncSchema.j
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 const TABLES = ['node_version_confirmation_state', 'node_version_local_origins', 'node_version_device_bases', 'node_version_device_revisions',
   'node_version_outbound_holds', 'node_version_outbound_payload_holds', 'node_version_local_holds',
@@ -67,6 +68,7 @@ it('adds retention state and a stable library epoch without touching desktop ver
   const sqlite = new Database(':memory:');
   try {
     initializeDatabaseSchema(sqlite);
+    restoreEmptyLegacyDailyFlowSchema(sqlite);
     sqlite.exec(`INSERT INTO nodes (id, kind, title, current_version_id, created_at, updated_at)
       VALUES ('node', 'topic', 'Node', 'original', 'now', 'now');
       INSERT INTO node_sync_versions
@@ -98,6 +100,7 @@ it('adds retention state and a stable library epoch to an existing companion lib
   const sqlite = new Database(':memory:');
   try {
     for (const statement of COMPANION_SCHEMA_STATEMENTS) sqlite.exec(statement);
+    restoreEmptyLegacyDailyFlowSchema(sqlite);
     dropRetentionTables(sqlite);
     sqlite.pragma('user_version = 40');
 

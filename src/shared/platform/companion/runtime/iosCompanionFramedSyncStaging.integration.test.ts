@@ -11,10 +11,12 @@ vi.mock('../../companionWorkspaceRuntimeRepository', async () => {
     maintainAttachmentFiles: vi.fn(async () => ({ files: [] })) } };
 });
 
+import { restoreEmptyLegacyDailyFlowSchema } from '../../../../../electron/database/historicalMigration.test-support.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/companionSchemaStatements';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../../../../lib/core/database/framedSyncStagingSchema';
 import { encodeFramedSyncManifest } from '../../../../../lib/core/database/framedSyncStagingSerialization';
 import { RETIRED_SYNC_TABLES } from '../../../../../lib/core/database/retiredSyncSchema';
+import { hashTextBody } from '../../../../../lib/core/database/textBodyHash.js';
 import { projectFramedSyncReview } from '../../../../../lib/core/sync/framedSyncRelationReviewFact';
 import { COMPANION_DATABASE_VERSION } from '../../../../../lib/platform/nativeCompanionContract';
 import { createFakeCapacitorConnection } from '../../companionSyncNodeVersionsTestSupport';
@@ -42,11 +44,12 @@ describe('iOS active companion sync schema retirement', () => {
     const fixture = databaseFixture(false);
     await initializeIosCompanionDatabase(nativeState(), fixture.manager);
     fixture.sqlite.prepare(`INSERT INTO nodes
-      (id, parent_id, kind, title, is_title_manual, hide_title_heading, content, sync_dirty,
-       created_at, updated_at, deleted_at) VALUES ('kept-node', NULL, 'topic', 'Kept', 1, 0, 'Body', 0, ?, ?, NULL)`)
-      .run('2026-10-05T00:00:00Z', '2026-10-05T00:00:00Z');
+      (id, parent_id, kind, title, is_title_manual, hide_title_heading, content, body_blob_hash, sync_dirty,
+       created_at, updated_at, deleted_at) VALUES ('kept-node', NULL, 'topic', 'Kept', 1, 0, 'Body', ?, 0, ?, ?, NULL)`)
+      .run(hashTextBody('Body'), '2026-10-05T00:00:00Z', '2026-10-05T00:00:00Z');
     const before = fixture.sqlite.prepare('SELECT * FROM nodes ORDER BY id').all();
     installUnbackedPublication(fixture.sqlite);
+    restoreEmptyLegacyDailyFlowSchema(fixture.sqlite);
     fixture.sqlite.pragma('user_version = 81');
     expect(fixture.sqlite.prepare('SELECT COUNT(*) FROM review_log').pluck().get()).toBe(0);
 
@@ -76,6 +79,7 @@ describe('iOS active companion sync schema retirement', () => {
     const fixture = databaseFixture(true);
     fixture.sqlite.transaction(() => {
       fixture.sqlite.exec(COMPANION_SCHEMA_STATEMENTS.filter((sql) => !sql.includes('framed_sync_')).join(';\n'));
+      restoreEmptyLegacyDailyFlowSchema(fixture.sqlite);
 
       fixture.sqlite.prepare('INSERT INTO companion_meta VALUES (?, ?, ?)')
         .run('device_id', 'ios-device', '2026-10-05T00:00:00Z');

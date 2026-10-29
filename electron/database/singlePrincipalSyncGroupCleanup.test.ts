@@ -11,7 +11,7 @@ import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/databas
 import { isRetiredAttachmentSchema } from '../../lib/core/database/retiredAttachmentSchema.js';
 import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from '../../lib/core/database/syncDeliverySchemaStatements.js';
 
-import { removeCurrentInventoryFixtureTriggers } from './historicalMigration.test-support.js';
+import { removeCurrentInventoryFixtureTriggers, restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 it('starts normally while discarding retired desktop Sync Group state', () => {
   const sqlite = retiredDesktopSyncGroupFixture();
@@ -50,6 +50,7 @@ it('rolls back desktop cleanup and schema version on a failed startup', () => {
 function retiredDesktopSyncGroupFixture() {
   const sqlite = new Database(':memory:');
   initializeDatabaseSchema(sqlite);
+  restoreEmptyLegacyDailyFlowSchema(sqlite);
   removeCurrentInventoryFixtureTriggers(sqlite);
   for (const sql of [...FRAMED_SYNC_STAGING_SCHEMA, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
     ...SYNC_DELIVERY_SCHEMA_STATEMENTS]) sqlite.exec(sql);

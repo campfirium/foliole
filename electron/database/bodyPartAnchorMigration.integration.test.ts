@@ -12,6 +12,7 @@ import { TEXT_BODY_MAX_BYTES } from '../../lib/core/nodes/textBodyBudget.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 const opened: Database.Database[] = [];
 afterEach(() => opened.splice(0).forEach(db => db.close()));
@@ -26,6 +27,7 @@ function fixture(companion: boolean, ranges: Array<{ from: number; to: number }>
   opened.push(sqlite);
   if (companion) sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
   else initializeDatabaseSchema(sqlite);
+  restoreEmptyLegacyDailyFlowSchema(sqlite);
   const anchor = JSON.stringify({ id: 'original-anchor', kind: 'highlight', locator: ranges.length > 1 ?
     { ranges: ranges.map(range => ({ ...range, originalText: BODY.slice(range.from, range.to) })) } :
     { ...ranges[0], originalText: BODY.slice(ranges[0]!.from, ranges[0]!.to) } });

@@ -7,6 +7,7 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { runLegacyBodyCollectionBatch } from './legacyBodyCollectionBatch.js';
 import { migrateLegacyBodyConsistency } from './legacyBodyConsistencyMigration.js';
 import { BODY_COLLECTION_ID, BODY_REPAIR_ID } from './legacyBodyMigrationState.js';
@@ -26,6 +27,7 @@ function restoreVersion123(peer: ReturnType<typeof createPeer>) {
   restorePreCurrentParentOrderFixture(peer.db);
   // Migrations 106/120 installed these tables before migration 126 read their receipts.
   for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) peer.db.exec(statement);
+  restoreEmptyLegacyDailyFlowSchema(peer.db);
   peer.db.pragma('user_version = 123');
 }
 function upgrade(peer: ReturnType<typeof createPeer>) {

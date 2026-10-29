@@ -10,6 +10,7 @@ import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionCo
 import { demandFixture, imageBody, imageKey } from '../sync/attachmentDemandQueue.testSupport.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 it.each(['desktop', 'companion'])('seeds existing live articles once at upgrade and clears obsolete demand on reset: %s', async platform => {
   const sqlite = new Database(':memory:');
@@ -19,6 +20,7 @@ it.each(['desktop', 'companion'])('seeds existing live articles once at upgrade 
   try {
     if (platform === 'desktop') initializeDatabaseSchema(sqlite);
     else await db.transaction(tx => createCompanionDatabase(tx, COMPANION_DATABASE_VERSION));
+    restoreEmptyLegacyDailyFlowSchema(sqlite);
     sqlite.prepare(`INSERT INTO nodes(id, kind, title, content, created_at, updated_at) VALUES ('old', 'topic', '', ?, 'now', 'now')`)
       .run(imageBody(imageKey(1)));
     sqlite.exec(`DROP TRIGGER attachment_demand_insert; DROP TRIGGER attachment_demand_update; DROP TRIGGER attachment_demand_delete;

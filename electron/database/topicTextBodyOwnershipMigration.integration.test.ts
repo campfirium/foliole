@@ -6,6 +6,7 @@ import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js'
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { textBranch, textDevice, wholeBodies } from './topicTextState.testSupport.js';
 
 const devices: ReturnType<typeof textDevice>[] = [];
@@ -13,6 +14,7 @@ afterEach(() => devices.splice(0).forEach((device) => device.sqlite.close()));
 
 async function legacyHost() {
   const host = textDevice();
+  restoreEmptyLegacyDailyFlowSchema(host.sqlite);
   devices.push(host);
   const base = textBranch('base', 'Base');
   await host.receive([base, textBranch('main', 'Main complete text', base)]);

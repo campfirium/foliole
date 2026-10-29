@@ -24,6 +24,7 @@ import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.j
 
 import { restoreApplicationDatabaseBackup } from './backupRestore.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
 import { flushNodeSyncVersion } from './nodeSyncVersions.js';
@@ -32,6 +33,7 @@ let tempRoot = '';
 
 it('restores v127 legacy storage and duplicate previews through the normal backup upgrade', async () => {
   const db = openDatabaseConnection().sqlite;
+  restoreEmptyLegacyDailyFlowSchema(db);
   const full = '# Recovery\n\n' + 'Complete cached source body. '.repeat(30);
   db.exec(`CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);
     CREATE TABLE virtual_folders (id TEXT PRIMARY KEY, description TEXT);
@@ -83,6 +85,7 @@ it.each(['canonical', 'bare-hash', 'jpeg'].flatMap((legacyName) => [true, false]
   const connection = openDatabaseConnection();
   const assetsDir = path.join(mockedAppDataDir, 'Foliole', 'Assets');
 
+  restoreEmptyLegacyDailyFlowSchema(connection.sqlite);
   removeLaterInventoryTriggers();
   connection.sqlite.exec(`CREATE TABLE attachment_blobs (attachment_id TEXT PRIMARY KEY,
     content_hash TEXT, storage_key TEXT, size_bytes INTEGER, mime_type TEXT, availability TEXT, created_at TEXT);
@@ -207,6 +210,7 @@ it('rolls back when the required canonical attachment contains different bytes',
   seedCurrentTopic();
   const bytes = Buffer.from('original attachment');
   const hash = createHash('sha256').update(bytes).digest('hex');
+  restoreEmptyLegacyDailyFlowSchema(connection.sqlite);
   removeLaterInventoryTriggers();
   connection.sqlite.exec(`CREATE TABLE attachment_blobs (attachment_id TEXT PRIMARY KEY,
     content_hash TEXT, storage_key TEXT, size_bytes INTEGER, mime_type TEXT, availability TEXT, created_at TEXT);

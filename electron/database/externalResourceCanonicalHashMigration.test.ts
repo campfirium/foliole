@@ -11,10 +11,13 @@ import {
 } from '../../lib/core/sync/canonicalExternalResourcePayload.js';
 import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTombstone.js';
 
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
+
 it('publishes legacy external resource hashes once without changing business clocks', () => {
   const sqlite = new Database(':memory:');
   try {
     initializeDatabaseSchema(sqlite);
+    restoreEmptyLegacyDailyFlowSchema(sqlite);
     seedResources(sqlite);
     sqlite.pragma('user_version = 136');
     initializeDatabaseSchema(sqlite);

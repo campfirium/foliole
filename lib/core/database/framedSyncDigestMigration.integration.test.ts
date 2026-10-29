@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from '../../../electron/database/historicalMigration.test-support.js';
 import { branch } from '../../../electron/sync/syncPackStoredVersionDependencies.testSupport.js';
 import { flushRequestSyncInventoryDigests, readRequestSyncInventorySummaries } from '../sync/framedSyncInventoryDigest.js';
 import { applySyncNodesWithDbPort } from '../sync/syncNodeApplyExecutor.js';
@@ -16,6 +17,7 @@ it.each(['desktop', 'companion'])('invalidates old %s digests atomically and pre
   try {
     if (host === 'desktop') initializeDatabaseSchema(sqlite);
     else await createCompanionDatabase(db, 90);
+    restoreEmptyLegacyDailyFlowSchema(sqlite);
     await applySyncNodesWithDbPort(db, [branch('current', 'Retained')], { enqueueSearchInvalidations: false });
     sqlite.exec(`UPDATE node_sync_versions SET body_text = NULL, snapshot_json = json_set(snapshot_json, '$.content', NULL);
       INSERT OR REPLACE INTO framed_sync_node_digest VALUES ('node-1', '${'0'.repeat(64)}', 1);

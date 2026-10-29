@@ -9,6 +9,7 @@ import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSc
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 let sqlite: Database.Database;
 const roots: string[] = [];
@@ -23,6 +24,7 @@ function legacyFixture() {
   roots.push(root);
   sqlite = new Database(path.join(root, 'companion.db'));
   sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+  restoreEmptyLegacyDailyFlowSchema(sqlite);
   sqlite.exec(`
     ALTER TABLE node_reading_host_state RENAME TO node_reading_device_state;
     ALTER TABLE node_reading_device_state RENAME COLUMN host_name TO device_id;

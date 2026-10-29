@@ -10,6 +10,7 @@ import { expect, it } from 'vitest';
 import { z } from 'zod';
 
 import { parseSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
+import { restoreEmptyLegacyDailyFlowSchema } from '../database/historicalMigration.test-support.js';
 import { restorePreCurrentParentOrderFixture } from '../database/numberedMigrationTestSupport.js';
 import { seedRetiredExternalDocuments } from '../database/retiredExternalDocuments.testSupport.js';
 
@@ -39,6 +40,7 @@ it('resumes a blocked use-group adoption after provider migration without anothe
     await provider!.send('joinProviderEnable');
     await sync(provider!, peers[2]!);
     await applicant!.send('leave');
+    withDatabase(peers[1]!.database, restoreEmptyLegacyDailyFlowSchema);
     withDatabase(peers[1]!.database, (db) => seedRetiredExternalDocuments(db));
     const request = z.object({ join_request: z.object({ request_id: z.string() }) }).parse(
       await applicant!.send('joinRequest', { origin: peers[1]!.origin, mode: 'use-group' })

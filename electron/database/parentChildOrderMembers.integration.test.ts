@@ -8,6 +8,7 @@ import { PARENT_CHILD_ORDER_MEMBER_SCHEMA } from '../../lib/core/database/parent
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 const T = '2026-10-16T00:00:00.000Z';
 
@@ -22,7 +23,10 @@ function storeOrder(sqlite: Database.Database, parentId: string, childIdsJson: s
 }
 
 function schemaObjects(sqlite: Database.Database) {
-  return sqlite.prepare("SELECT type, name, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY name").all();
+  const names = PARENT_CHILD_ORDER_MEMBER_SCHEMA.map(sql =>
+    /^CREATE (TABLE|INDEX|TRIGGER) IF NOT EXISTS (\w+)/u.exec(sql)![2]);
+  return sqlite.prepare(`SELECT type, name, sql FROM sqlite_master
+    WHERE name IN (SELECT value FROM json_each(?)) ORDER BY name`).all(JSON.stringify(names));
 }
 
 it('an upgraded library indexes every stored order like a new one and keeps the index current', () => {
@@ -31,6 +35,7 @@ it('an upgraded library indexes every stored order like a new one and keeps the 
   try {
     initializeDatabaseSchema(created);
     initializeDatabaseSchema(upgraded);
+    restoreEmptyLegacyDailyFlowSchema(upgraded);
     for (const sql of [...PARENT_CHILD_ORDER_MEMBER_SCHEMA].reverse()) {
       const [, type, name] = /^CREATE (TABLE|INDEX|TRIGGER) IF NOT EXISTS (\w+)/u.exec(sql)!;
       upgraded.exec(`DROP ${type} ${name}`);

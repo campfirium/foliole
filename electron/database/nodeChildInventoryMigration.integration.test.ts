@@ -14,6 +14,7 @@ import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNode
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { textBranch } from './topicTextState.testSupport.js';
 
 it.each([false, true])('upgrades child inventory atomically, preserving business rows, companion=%s', async companion => {
@@ -28,6 +29,7 @@ it.each([false, true])('upgrades child inventory atomically, preserving business
   };
   try {
     await upgrade();
+    restoreEmptyLegacyDailyFlowSchema(sqlite);
     await applyConvergentSyncNodesWithDbPort(db, [textBranch('base', 'Original')]);
     await applySyncObjectInTransaction(db, { object_type: 'import_source', object_id: 'source',
       content_hash: 'c'.repeat(64), deleted_at: null, updated_at: '2026-10-16',

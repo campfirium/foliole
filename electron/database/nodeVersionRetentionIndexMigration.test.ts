@@ -9,6 +9,7 @@ import { requestSyncBodyReferences } from '../../lib/core/sync/requestSyncBodyRe
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 function assertIndexes(db: Database.Database) {
   const names = db.prepare<[], { name: string }>("SELECT name FROM sqlite_master WHERE type = 'index'")
@@ -51,6 +52,7 @@ it.each(['desktop', 'companion68', 'companion69'])('preserves original facts and
     const edges = db.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all();
     const retained = await requestSyncBodyReferences(port, 'article', 'head');
     for (let attempt = 0; attempt < 2; attempt++) {
+      restoreEmptyLegacyDailyFlowSchema(db);
       if (host === 'desktop') {
         db.pragma('user_version = 134');
         initializeDatabaseSchema(db);

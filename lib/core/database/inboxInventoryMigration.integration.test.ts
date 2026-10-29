@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from '../../../electron/database/historicalMigration.test-support.js';
 import { branch } from '../../../electron/sync/syncPackStoredVersionDependencies.testSupport.js';
 import { readFramedSyncInventory } from '../sync/framedSyncInventoryRead.js';
 import { applySyncNodesWithDbPort } from '../sync/syncNodeApplyExecutor.js';
@@ -18,6 +19,7 @@ it.each(['desktop', 'companion'])('republishes existing %s Inbox without changin
   try {
     if (host === 'desktop') initializeDatabaseSchema(sqlite);
     else await createCompanionDatabase(db, 93);
+    restoreEmptyLegacyDailyFlowSchema(sqlite);
     const record = branch('inbox-history', '');
     record.object_id = 'special-inbox';
     Object.assign(record.snapshot, { id: 'special-inbox', kind: 'folder', title: 'Inbox' });

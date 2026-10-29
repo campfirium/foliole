@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from '../../../electron/database/historicalMigration.test-support.js';
 
 import { createCompanionDatabase, migrateCompanionDatabase } from './companionDatabaseMigrationExecutor.js';
 import { initializeDatabaseSchema } from './migrations.js';
@@ -14,6 +15,7 @@ it.each(['desktop', 'companion'])('repairs deployed %s foreground triggers witho
   try {
     if (host === 'desktop') initializeDatabaseSchema(sqlite);
     else await createCompanionDatabase(db, 88);
+    restoreEmptyLegacyDailyFlowSchema(sqlite);
     sqlite.exec("INSERT INTO foreground_daily_time VALUES ('source:2026-10-16', 'source', '2026-10-16', 100)");
     for (const sql of SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS.filter(sql => sql.includes('ON foreground_daily_time'))) sqlite.exec(sql);
     sqlite.pragma(`user_version = ${host === 'desktop' ? 159 : 88}`);

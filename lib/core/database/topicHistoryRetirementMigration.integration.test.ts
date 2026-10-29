@@ -2,6 +2,7 @@
 import { afterEach, expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from '../../../electron/database/historicalMigration.test-support.js';
 import { textBranch, textDevice } from '../../../electron/database/topicTextState.testSupport.js';
 import { applyConvergentSyncNodesWithDbPort } from '../sync/syncNodeConvergence.js';
 import { loadRetainedSyncNodeVersionFact } from '../sync/syncNodeGraph.js';
@@ -14,6 +15,7 @@ const devices: ReturnType<typeof textDevice>[] = [];
 afterEach(() => devices.splice(0).forEach(device => device.sqlite.close()));
 async function legacy() {
   const host = textDevice();
+  restoreEmptyLegacyDailyFlowSchema(host.sqlite);
   devices.push(host);
   const base = textBranch('base', 'Original');
   const middle = textBranch('middle', 'Intermediate', base);

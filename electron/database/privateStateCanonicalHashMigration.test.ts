@@ -11,12 +11,15 @@ import {
 } from '../../lib/core/sync/canonicalPrivateStatePayload.js';
 import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTombstone.js';
 
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
+
 const updatedAt = '2026-10-05T01:00:00.000Z';
 
 it('publishes legacy private-state hashes once without changing business clocks', () => {
   const sqlite = new Database(':memory:');
   try {
     initializeDatabaseSchema(sqlite);
+    restoreEmptyLegacyDailyFlowSchema(sqlite);
     sqlite.prepare(
       `INSERT INTO setting_records
        (scope, platform, form_factor, host_name, key, value_json, content_hash, updated_at, deleted_at)

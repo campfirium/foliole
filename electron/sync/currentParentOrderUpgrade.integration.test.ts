@@ -7,6 +7,7 @@ import { expect, it } from 'vitest';
 import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/databaseSchemaVersion.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from '../database/historicalMigration.test-support.js';
 
 import { freezeLegacyOrderPublication } from './currentParentOrderUpgrade.testSupport.js';
 import { reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
@@ -25,6 +26,8 @@ it('retires a mixed legacy publication and delivers its original business facts 
     await fixture.left.seed({ nodeId: 'original', content: 'Frozen original body', title: 'Original' });
     const original = business(fixture.leftSnapshot.databasePath);
     await fixture.left.close();
+    const legacy = new Database(fixture.leftSnapshot.databasePath);
+    try { restoreEmptyLegacyDailyFlowSchema(legacy); } finally { legacy.close(); }
     await freezeLegacyOrderPublication(fixture.leftSnapshot.databasePath);
     await fixture.restartLeft();
     expect(business(fixture.leftSnapshot.databasePath)).toEqual(original);

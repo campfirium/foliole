@@ -5,6 +5,7 @@ import { afterEach, expect, it } from 'vitest';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 const databases: Database.Database[] = [];
@@ -12,6 +13,7 @@ function fixture() {
   const db = new Database(':memory:');
   databases.push(db);
   initializeDatabaseSchema(db);
+  restoreEmptyLegacyDailyFlowSchema(db);
   db.exec(`CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);
     CREATE TABLE virtual_folders (id TEXT PRIMARY KEY, title TEXT, description TEXT,
       created_at TEXT, updated_at TEXT, deleted_at TEXT);

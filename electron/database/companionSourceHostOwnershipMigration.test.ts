@@ -10,6 +10,7 @@ import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDat
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 function seedLegacySourceSchema(sqlite: Database.Database) {
   sqlite.exec(`DROP TABLE watched_folder_bindings;
@@ -66,6 +67,7 @@ it('migrates Source ownership to Host without changing roots or source reference
   const root = fs.mkdtempSync(path.resolve('.tmp/artifacts/t135-source-host-'));
   const sqlite = new Database(path.join(root, 'companion.db'));
   sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+  restoreEmptyLegacyDailyFlowSchema(sqlite);
   sqlite.prepare('INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)')
     .run('device_id', 'fixture-device', 'u');
   sqlite.pragma('user_version = 31');

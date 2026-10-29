@@ -15,6 +15,7 @@ import { loadRetainedSyncNodeVersionFact } from '../../lib/core/sync/syncNodeGra
 import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHistory.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
@@ -163,6 +164,7 @@ it.each([false, true])('keeps the historical ownership migration on the full upg
   const identities = () => host.sqlite.prepare(
     'SELECT version_id, object_id, content_hash, parent_version_id FROM node_sync_versions ORDER BY version_id').all();
   const before = identities();
+  restoreEmptyLegacyDailyFlowSchema(host.sqlite);
   host.sqlite.pragma(`user_version = ${companion ? 78 : 149}`);
   if (companion) await host.db.transaction(tx => migrateCompanionDatabase(tx, 78, COMPANION_DATABASE_VERSION));
   else initializeDatabaseSchema(host.sqlite);

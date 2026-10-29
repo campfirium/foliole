@@ -10,12 +10,14 @@ import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSc
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 it('upgrades v37 watched sources without exposing old paths or guessing same-name owners', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-companion-watched-'));
   const sqlite = new Database(path.join(root, 'fixture.db'));
   try {
     sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+    restoreEmptyLegacyDailyFlowSchema(sqlite);
     sqlite.exec(`ALTER TABLE watched_folder_bindings DROP COLUMN owner_device_identity_key;
       INSERT INTO companion_meta (key, value, updated_at) VALUES ('device_id', 'phone', 'now');
       INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at)

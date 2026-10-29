@@ -12,6 +12,7 @@ import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from '../../lib/core/database/sy
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 const now = '2026-09-30T00:00:00.000Z';
 const request = { allowCreate: false, expectedHostName: 'Mobile', now };
@@ -55,6 +56,7 @@ it('rolls back a failed upgrade and leaves the prior library ready for a clean r
 function previousLibrary(databasePath: string) {
   const db = new Database(databasePath);
   db.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+  restoreEmptyLegacyDailyFlowSchema(db);
   db.exec(SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS[3]);
   db.exec(`PRAGMA user_version = 54;
     INSERT INTO attachment_receive_checkpoints VALUES ('historical-hash', '/partial', 100, 50);

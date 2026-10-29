@@ -9,6 +9,7 @@ import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPaylo
 import { loadRetainedSyncNodeVersionFact } from '../../lib/core/sync/syncNodeGraph.js';
 import { mutateTopicText } from '../../lib/core/sync/topicTextMutation.js';
 
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
 const devices: ReturnType<typeof textDevice>[] = [];
@@ -17,6 +18,7 @@ afterEach(() => { devices.splice(0).forEach((value) => value.sqlite.close()); })
 
 async function legacyDevice() {
   const host = device(); await host.receive([textBranch('base', 'Main body')]);
+  restoreEmptyLegacyDailyFlowSchema(host.sqlite);
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) host.sqlite.exec(sql);
   const now = new Date().toISOString();
   await host.db.run(`INSERT INTO node_text_alternatives VALUES

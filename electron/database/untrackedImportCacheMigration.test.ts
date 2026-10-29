@@ -6,6 +6,7 @@ import { afterEach, expect, it } from 'vitest';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import type { SqliteDatabase } from './connection.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
 
 const BetterSqlite3 = createRequire(import.meta.url)('better-sqlite3') as typeof import('better-sqlite3');
@@ -14,6 +15,7 @@ function fixture() {
   const db = new BetterSqlite3(':memory:');
   databases.push(db);
   initializeDatabaseSchema(db);
+  restoreEmptyLegacyDailyFlowSchema(db);
   db.pragma('user_version = 126');
   return db;
 }

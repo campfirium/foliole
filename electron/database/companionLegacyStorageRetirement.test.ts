@@ -11,6 +11,7 @@ import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSc
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 const databases: Database.Database[] = [];
 const roots: string[] = [];
@@ -24,6 +25,7 @@ function database() {
 function fixture() {
   const db = database();
   db.exec(COMPANION_SCHEMA_STATEMENTS.join(';'));
+  restoreEmptyLegacyDailyFlowSchema(db);
   db.exec(`INSERT INTO companion_meta VALUES ('device_id','fixture','then');
     INSERT INTO companion_meta VALUES ('host_name','fixture','then');
     CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);

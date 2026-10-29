@@ -4,6 +4,7 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from '../../../electron/database/historicalMigration.test-support.js';
 import { branch } from '../../../electron/sync/syncPackStoredVersionDependencies.testSupport.js';
 import { flushRequestSyncInventoryDigests } from '../sync/framedSyncInventoryDigest.js';
 import { readFramedSyncInventoryEntry } from '../sync/framedSyncInventoryRead.js';
@@ -23,6 +24,7 @@ it.each(['desktop', 'companion'])('rebuilds %s node digests cached before histor
   try {
     if (host === 'desktop') initializeDatabaseSchema(sqlite);
     else await createCompanionDatabase(db, previous);
+    restoreEmptyLegacyDailyFlowSchema(sqlite);
     const root = branch('root', 'Original');
     await applySyncNodesWithDbPort(db, [root, branch('head', 'Current', root)], { enqueueSearchInvalidations: false });
     await db.transaction(tx => flushRequestSyncInventoryDigests(tx));

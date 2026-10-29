@@ -9,7 +9,7 @@ import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from '../../lib/core/database/sy
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
+import { installHistoricalDesktopSchema, restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 it.each(['desktop', 'companion'] as const)('retires historical attachment checkpoints from %s libraries without changing nodes', async (host) => {
   const sqlite = new Database(':memory:');
@@ -17,6 +17,7 @@ it.each(['desktop', 'companion'] as const)('retires historical attachment checkp
     if (host === 'desktop') installHistoricalDesktopSchema(sqlite, 118);
     else {
       sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+      restoreEmptyLegacyDailyFlowSchema(sqlite);
       sqlite.exec(SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS[3]);
       sqlite.pragma('user_version = 54');
     }

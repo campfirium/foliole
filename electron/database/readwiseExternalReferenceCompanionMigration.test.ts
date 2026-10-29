@@ -10,6 +10,7 @@ import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDat
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 const databases: Database.Database[] = [];
 const roots: string[] = [];
@@ -26,6 +27,7 @@ function fixture() {
   const database = new Database(path.join(root, 'fixture.db'));
   databases.push(database);
   database.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+  restoreEmptyLegacyDailyFlowSchema(database);
   database.prepare('INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)')
     .run('device_id', 'fixture-device', '2026-09-07T00:00:00.000Z');
   database.exec('ALTER TABLE external_documents DROP COLUMN reference_json');

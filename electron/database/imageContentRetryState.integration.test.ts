@@ -9,6 +9,7 @@ import { localContentEditResources } from '../../lib/core/sync/localContentEditR
 import { retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
 const devices: ReturnType<typeof textDevice>[] = [];
@@ -83,6 +84,7 @@ it.each(['desktop', 'companion'] as const)('adds local retry storage without cha
   host.sqlite.exec(`DROP TABLE node_version_local_origins;
     CREATE TABLE node_version_local_origins (version_id TEXT PRIMARY KEY REFERENCES node_sync_versions(version_id) ON DELETE CASCADE);
     INSERT INTO node_version_local_origins VALUES ('base');`);
+  restoreEmptyLegacyDailyFlowSchema(host.sqlite);
   host.sqlite.pragma(`user_version = ${platform === 'desktop' ? 162 : 91}`);
   if (platform === 'desktop') initializeDatabaseSchema(host.sqlite);
   else await migrateCompanionDatabase(host.db, 91, COMPANION_DATABASE_VERSION);
@@ -99,6 +101,7 @@ it.each(['desktop', 'companion'] as const)('acknowledges an empty-image retry sa
   const host = device(); const peer = device(); const base = textBranch('base', 'Original');
   await host.receive([base]); await peer.receive([base]);
   host.sqlite.exec(`ALTER TABLE node_version_local_origins DROP COLUMN content_edit_image_input_hash`);
+  restoreEmptyLegacyDailyFlowSchema(host.sqlite);
   host.sqlite.pragma(`user_version = ${platform === 'desktop' ? 162 : 91}`);
   const saved = textBranch('old-edit', 'Saved before upgrade', base, now);
   await applyEditorSyncNodeRecord(host.db, saved);

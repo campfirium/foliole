@@ -9,9 +9,10 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { removeCurrentInventoryFixtureTriggers } from './historicalMigration.test-support.js';
+import { removeCurrentInventoryFixtureTriggers, restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 function oldChain(db: Database.Database, group: boolean) {
+  restoreEmptyLegacyDailyFlowSchema(db);
   removeCurrentInventoryFixtureTriggers(db);
   for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) db.exec(statement);
   db.exec(`INSERT INTO nodes (id, kind, title, content, current_version_id, sync_dirty, created_at, updated_at)

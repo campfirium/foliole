@@ -14,6 +14,7 @@ import { canonicalContentId, canonicalTransferIdSync, type CanonicalFact } from 
 import { bindParentOrderWriterWithDbPort } from '../../lib/core/sync/parentOrderWriter.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
 
 const databases: Database.Database[] = [];
 afterEach(() => { for (const db of databases.splice(0)) db.close(); });
@@ -24,6 +25,7 @@ function fixture() {
   const db = new Database(':memory:');
   databases.push(db);
   initializeDatabaseSchema(db);
+  restoreEmptyLegacyDailyFlowSchema(db);
   for (const sql of FRAMED_SYNC_INVENTORY_TRIGGERS) {
     db.exec(`DROP TRIGGER IF EXISTS ${/^CREATE TRIGGER IF NOT EXISTS (\w+)/u.exec(sql)![1]}`);
   }
