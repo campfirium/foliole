@@ -25,12 +25,11 @@ import {
 import {
   clickNativeHistoryCommand,
   createStructureTopic,
+  exerciseStructureMoveHistory,
   pressWorkspaceHistory,
+  readPersistedStructureOrder,
   readStructureHistory,
-  readStructureOrder,
-  runPaletteHistoryCommand,
-  seedStructureWorkspace,
-  STRUCTURE_TARGET_ID
+  seedStructureWorkspace
 } from './harness/contextualWorkspaceHistory';
 import { expect, test } from './harness/fixtures';
 import { loadNodeDocument } from './harness/localDataFileAcceptance';
@@ -181,9 +180,10 @@ test('undoes and redoes a PDF highlight through the current content owner', asyn
 
 test('keeps create, rename, move, and delete in one exact workspace history', async ({ desktopApp, desktopWindow }) => {
   await expectWorkspaceShell(desktopWindow);
-  await seedStructureWorkspace(desktopWindow);
+  const targetId = await seedStructureWorkspace(desktopWindow);
 
   const createdId = await createStructureTopic(desktopWindow);
+  expect((await loadNodeDocument(desktopWindow, createdId))?.content).toBe('# Created structure topic');
   await expect.poll(() => readStructureHistory(desktopWindow)).toMatchObject({
     undoStack: [{ type: 'structure.create' }]
   });
@@ -205,18 +205,11 @@ test('keeps create, rename, move, and delete in one exact workspace history', as
     content: '# Renamed Structure Topic', title: 'Renamed Structure Topic'
   });
 
-  const beforeMoveOrder = await readStructureOrder(desktopWindow);
-  expect(await desktopWindow.evaluate(([nodeId, targetId]) =>
-    window.__folioleWorkspaceDebug?.moveNodes?.([nodeId!], targetId!, 'before') ?? false,
-  [createdId, STRUCTURE_TARGET_ID])).toBe(true);
-  await expect.poll(() => readStructureOrder(desktopWindow)).not.toEqual(beforeMoveOrder);
-  await runPaletteHistoryCommand(desktopWindow, 'Undo Move Topic');
-  await expect.poll(() => readStructureOrder(desktopWindow)).toEqual(beforeMoveOrder);
-  await runPaletteHistoryCommand(desktopWindow, 'Redo Move Topic');
-  await expect.poll(() => readStructureOrder(desktopWindow)).not.toEqual(beforeMoveOrder);
-
+  expect((await loadNodeDocument(desktopWindow, createdId))?.content).toBe('# Renamed Structure Topic');
+  const movedPersistedOrder = await exerciseStructureMoveHistory(desktopWindow, createdId, targetId);
   await desktopWindow.evaluate(async (nodeId) => window.__folioleWorkspaceDebug?.deleteNode?.(nodeId), createdId);
   await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ trashed: true });
+  expect(await readPersistedStructureOrder(desktopWindow)).not.toContain(createdId);
   const undoMoveToTrash = desktopWindow.getByRole('button', { name: 'Restore last deleted item' });
   await expect(undoMoveToTrash).toBeVisible();
   await expect(desktopWindow.getByRole('status')).toHaveClass(/sr-only/);
@@ -229,6 +222,7 @@ test('keeps create, rename, move, and delete in one exact workspace history', as
   await undoMoveToTrash.click();
   await expect.poll(() => collectNode(desktopWindow, createdId)).toMatchObject({ trashed: false });
   await expect(undoMoveToTrash).toBeHidden();
+  expect(await readPersistedStructureOrder(desktopWindow)).toEqual(movedPersistedOrder);
 
   await desktopWindow.screenshot({
     path: path.join(EVIDENCE_ROOT, `${process.platform}-workspace-structure-history-hidden-native.png`)

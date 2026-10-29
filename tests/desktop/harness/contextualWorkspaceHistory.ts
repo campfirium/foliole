@@ -3,28 +3,29 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { focusWorkspace, redoShortcut, undoShortcut } from './contextualContentHistory';
 import { expect } from './fixtures';
 
-export const STRUCTURE_TARGET_ID = 'playwright-structure-target';
-
 export async function seedStructureWorkspace(page: Page) {
-  await page.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
-  await page.evaluate(async (targetId) => window.__folioleWorkspaceDebug?.seedNodes?.([
-    {
-      content: '# Structure base', id: 'playwright-structure-base', kind: 'topic',
-      parentNodeId: 'special-inbox', title: 'Structure Base'
-    },
-    {
-      content: '# Structure target', id: targetId, kind: 'topic',
-      parentNodeId: 'special-inbox', title: 'Structure Target'
-    },
-    {
-      content: '# Review control',
-      id: 'playwright-review-control',
-      kind: 'topic',
-      parentNodeId: 'special-inbox',
-      reading: { nextAt: '2026-08-13T00:00:00.000Z', state: 'queued' },
-      title: 'Review Control'
-    }
-  ]), STRUCTURE_TARGET_ID);
+  await page.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug?.isHydrated?.()));
+  const targetId = await page.evaluate(async () => {
+    localStorage.setItem('foliole-app-language', 'en');
+    const debug = window.__folioleWorkspaceDebug!;
+    const target = await debug.createRootNode('# Structure target', 'topic');
+    await debug.createRootNode('# Structure base', 'topic');
+    return target;
+  });
+  expect(targetId).toBeTruthy();
+  // Reopen the persisted workspace so setup creates are outside the history under test.
+  await page.reload();
+  await page.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug?.isHydrated?.()));
+  return targetId!;
+}
+
+export async function readPersistedStructureOrder(page: Page) {
+  return page.evaluate(async () => {
+    const snapshot = await window.electronAPI.invoke('load_workspace_snapshot', {});
+    if (!snapshot) throw new Error('workspace_snapshot_missing');
+    return snapshot.nodeOrder.filter((id) => snapshot.nodesById[id]?.parentNodeId === 'special-inbox' &&
+      !snapshot.trashedNodeIds.includes(id));
+  });
 }
 
 export async function createStructureTopic(page: Page) {
@@ -71,5 +72,36 @@ export async function readStructureHistory(page: Page) {
 }
 
 export async function readStructureOrder(page: Page) {
-  return page.evaluate(() => window.__folioleWorkspaceDebug?.getWorkspaceStructureState?.().nodeOrder ?? []);
+  return page.evaluate(() => {
+    const debug = window.__folioleWorkspaceDebug!;
+    const children: Record<string, string[]> = {};
+    for (const id of debug.getWorkspaceStructureState().nodeOrder) {
+      const node = debug.getNode(id);
+      if (!node) throw new Error(`structure_node_missing: ${id}`);
+      const parent = node.parentNodeId ?? '<root>';
+      (children[parent] ??= []).push(id);
+    }
+    return children;
+  });
+}
+
+export async function exerciseStructureMoveHistory(desktopWindow: Page, createdId: string, targetId: string) {
+  const beforeMoveOrder = await readStructureOrder(desktopWindow);
+  const beforePersistedOrder = await readPersistedStructureOrder(desktopWindow);
+  expect(beforeMoveOrder['special-inbox']).toEqual(beforePersistedOrder);
+  expect(await desktopWindow.evaluate(([nodeId, targetId]) =>
+    window.__folioleWorkspaceDebug?.moveNodes?.([nodeId!], targetId!, 'before') ?? false,
+  [createdId, targetId])).toBe(true);
+  await expect.poll(() => readStructureOrder(desktopWindow)).not.toEqual(beforeMoveOrder);
+  const movedPersistedOrder = await readPersistedStructureOrder(desktopWindow);
+  expect(movedPersistedOrder).not.toEqual(beforePersistedOrder);
+  expect(movedPersistedOrder.indexOf(createdId)).toBe(movedPersistedOrder.indexOf(targetId) - 1);
+  await runPaletteHistoryCommand(desktopWindow, 'Undo Move Topic');
+  await expect.poll(() => readStructureOrder(desktopWindow)).toEqual(beforeMoveOrder);
+  expect(await readPersistedStructureOrder(desktopWindow)).toEqual(beforePersistedOrder);
+  await runPaletteHistoryCommand(desktopWindow, 'Redo Move Topic');
+  await expect.poll(() => readStructureOrder(desktopWindow)).not.toEqual(beforeMoveOrder);
+
+  expect(await readPersistedStructureOrder(desktopWindow)).toEqual(movedPersistedOrder);
+  return movedPersistedOrder;
 }
