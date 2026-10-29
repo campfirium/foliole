@@ -135,7 +135,7 @@ function toPendingWorkspaceNode(
     anchorLink: pendingNode.anchorLink,
     imageRegions: pendingNode.imageRegions ?? null,
     imageSources: pendingNode.imageSources ?? null,
-    reading: pendingNode.reading ?? null,
+    reading: pendingNode.reading === undefined ? currentNode?.reading ?? null : pendingNode.reading,
     review: pendingNode.review ?? currentNode?.review ?? null,
     createdAt: pendingNode.createdAt,
     ...(currentNode?.deletedAt !== undefined ? { deletedAt: currentNode.deletedAt } : {}),

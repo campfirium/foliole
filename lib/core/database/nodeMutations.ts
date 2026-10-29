@@ -168,7 +168,7 @@ export function upsertNodeSnapshot(
     runNodeTableUpsert(statements.upsertNode.run, input, bodyBlobHash);
     if (!previousTitle && input.kind === 'item') initializeCreatedReviewSchedule(driver, input.nodeId, input.review);
     ensureNodeParentMembership(driver, input.nodeId, options.parentMembership);
-    writeNodeReadingSnapshotWithSync(driver, input, {
+    if (input.reading !== undefined) writeNodeReadingSnapshotWithSync(driver, input, {
       deleteDeviceState: statements.deleteNodeReadingHostState.run,
       deleteReading: statements.deleteNodeReading.run,
       upsertDeviceState: statements.upsertNodeReadingHostState.run,

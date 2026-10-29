@@ -49,8 +49,8 @@ export function createWorkspaceRuntimeNodeSnapshot(
     anchorLink: node.anchorLink ?? null,
     imageRegions: node.imageRegions ?? null,
     imageSources: node.imageSources ?? null,
-    reading: node.reading ?? null,
-    review: node.review ?? null,
+    ...(node.reading !== undefined ? { reading: node.reading } : {}),
+    ...(node.review !== undefined ? { review: node.review } : {}),
     position: typeof position === 'number' && position >= 0 ? position : null,
     createdAt: node.createdAt,
     updatedAt: node.updatedAt

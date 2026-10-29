@@ -116,8 +116,8 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
     reveal: asNullableString(args.reveal, 'reveal'),
     anchorLink: asAnchorLink(args.anchorLink, 'anchorLink'),
     imageRegions: asImageRegions(args.imageRegions, 'imageRegions'),
-    reading: asReadingProfile(args.reading, 'reading'),
-    review: asReviewProfile(args.review, 'review'),
+    ...(args.reading !== undefined ? { reading: asReadingProfile(args.reading, 'reading') } : {}),
+    ...(args.review !== undefined ? { review: asReviewProfile(args.review, 'review') } : {}),
     position: asNullableInteger(args.position, 'position'),
     createdAt: asString(args.createdAt, 'createdAt'),
     updatedAt: asString(args.updatedAt, 'updatedAt')
