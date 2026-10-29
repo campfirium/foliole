@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { spawn } from 'node:child_process';
-import { writeFile } from 'node:fs/promises';
+import { symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { build } from 'vite';
@@ -33,7 +33,7 @@ async function ready() {
   return { session, engine };
 }
 
-it('recovers a durably accepted click from a SIGKILLed process and commits it exactly once', async () => {
+it.each([false, true])('recovers a durably accepted click from a SIGKILLed process and commits it exactly once (quoted source path=%s)', async quotedSourcePath => {
   const { session, engine } = await ready();
   const intent = { id: crypto.randomUUID(), libraryId: engine.journal.libraryId, nodeId: session.currentNodeId!,
     now, dayKey: session.daily!.dayKey, mode: 'recommended', historyKey: 'kill-history', predecessor: null,
@@ -41,11 +41,13 @@ it('recovers a durably accepted click from a SIGKILLed process and commits it ex
   const journalFile = path.join(library.root, `foliole-read-intents-${intent.libraryId}.db`);
   const bundle = path.join(library.root, 'accept.cjs');
   const entry = path.join(library.root, 'accept.ts');
+  const sourceRoot = quotedSourcePath ? path.join(library.root, "source's-files") : process.cwd();
+  if (quotedSourcePath) await symlink(process.cwd(), sourceRoot, 'junction');
   await writeFile(entry, `
       import Database from 'better-sqlite3';
-      import { ReadIntentJournal } from '${process.cwd()}/lib/core/flow/readIntentJournal.ts';
-      import { createCapacitorSqliteDbPort } from '${process.cwd()}/src/shared/platform/capacitorSqliteDbPort.ts';
-      import { createFakeCapacitorConnection } from '${process.cwd()}/src/shared/platform/companionSyncNodeVersionsTestSupport.ts';
+      import { ReadIntentJournal } from ${JSON.stringify(path.join(sourceRoot, 'lib/core/flow/readIntentJournal.ts'))};
+      import { createCapacitorSqliteDbPort } from ${JSON.stringify(path.join(sourceRoot, 'src/shared/platform/capacitorSqliteDbPort.ts'))};
+      import { createFakeCapacitorConnection } from ${JSON.stringify(path.join(sourceRoot, 'src/shared/platform/companionSyncNodeVersionsTestSupport.ts'))};
       const database = new Database(${JSON.stringify(journalFile)});
       const journal = new ReadIntentJournal(createCapacitorSqliteDbPort(createFakeCapacitorConnection(database), 'android'), ${JSON.stringify(intent.libraryId)});
       (async () => { await journal.initialize(); await journal.accept(${JSON.stringify(intent)});
