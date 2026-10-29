@@ -34,7 +34,7 @@ export function readCompanionArticle(
   isCurrent: () => boolean
 ) {
   const scope = getCompanionReadingScope();
-  return getIosCompanionDatabaseOwner().read(async (db) => {
+  return getIosCompanionDatabaseOwner().readInteractiveSnapshot(async (db) => {
     if (scope !== getCompanionReadingScope() || !isCurrent()) return null;
     const document = await loadCompanionNodeDocument(db, nodeId);
     if (!document) return null;

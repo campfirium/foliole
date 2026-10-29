@@ -44,6 +44,7 @@ export class CapacitorCompanionDatabaseOwner {
   private journalMode: CompanionDatabaseBootstrapResult['journalMode'] | null = null;
   private path: string | null = null;
   private operationTail: Promise<void> = Promise.resolve();
+  private pendingCloses = 0;
   private readonly backgroundReaders = new Set<AbortController>();
   private snapshots: CompanionRequestSyncSnapshots | null = null;
   private readonly nodePriorities = new CompanionNodePriorityState();
@@ -95,6 +96,14 @@ export class CapacitorCompanionDatabaseOwner {
 
   readSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
     return this.enqueueSnapshot(task, signal);
+  }
+
+  async readInteractiveSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
+    this.requireDb();
+    if (this.pendingCloses) throw new Error('Companion database owner is closing.');
+    // Foreground bodies read committed WAL state without joining the writer queue.
+    // The existing readonly owner still serializes snapshots and owns their lifetime.
+    return this.snapshots!.read(task, signal);
   }
 
   private async enqueueSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
@@ -167,7 +176,8 @@ export class CapacitorCompanionDatabaseOwner {
   }
 
   close() {
-    return this.enqueue(() => this.closeDatabase());
+    this.pendingCloses += 1;
+    return this.enqueue(() => this.closeDatabase()).finally(() => { this.pendingCloses -= 1; });
   }
 
   private async closeDatabase() {

@@ -17,12 +17,19 @@ export async function createSearchLibrary(count = 125, bodySize = 4096) {
   // Snapshot reads open their own readonly connection; closing it must not close the writer.
   // The writer keeps this exact connection object so tests can observe its queries.
   let reader: Database.Database | null = null;
+  const readonlyQueries = {
+    query: (sql: string, values?: unknown[]) => {
+      if (!reader) throw new Error('Readonly test connection is closed.');
+      return createFakeCapacitorConnection(reader).query(sql, values);
+    }
+  };
   const manager = {
     isConnection: async () => ({ result: false }), isDatabase: async () => ({ result: false }),
     createConnection: async (_name: string, _encrypted: boolean, _mode: string, _version: number, readonly: boolean) => {
       if (!readonly) return connection;
       reader = new Database(file, { readonly: true });
-      return { ...createFakeCapacitorConnection(reader), getUrl: async () => ({ url: file }) };
+      return { ...createFakeCapacitorConnection(reader), query: (sql: string, values?: unknown[]) =>
+        readonlyQueries.query(sql, values), getUrl: async () => ({ url: file }) };
     },
     retrieveConnection: async () => connection,
     closeConnection: async (_name: string, readonly: boolean) => {
@@ -46,7 +53,7 @@ export async function createSearchLibrary(count = 125, bodySize = 4096) {
       external.run(id, `${id}.md`, `${id}.md`, id, body, id);
     }
   })();
-  return { database, connection, base, root, async close() {
+  return { database, connection, readonlyQueries, base, root, async close() {
     await closeIosCompanionDatabase();
     rmSync(root, { recursive: true, force: true });
   } };

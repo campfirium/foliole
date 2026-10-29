@@ -5,7 +5,7 @@ import { createStoredSyncState } from '../../companionWorkspaceSync.testSupport'
 
 const mocks = vi.hoisted(() => ({ query: vi.fn(), read: vi.fn() }));
 vi.mock('../runtime/iosCompanionDatabaseBootstrap', () => ({
-  getIosCompanionDatabaseOwner: () => ({ read: mocks.read })
+  getIosCompanionDatabaseOwner: () => ({ readInteractiveSnapshot: mocks.read })
 }));
 
 import { readCompanionArticle } from './companionArticleRead';

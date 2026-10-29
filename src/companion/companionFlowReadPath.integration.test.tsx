@@ -136,6 +136,7 @@ it('commits a daily Read without materializing an unused whole-workspace project
 it('uses the daily successor and its prepared body through automatic Read display', async () => {
   const initial = (await refreshCompanionWorkspaceAfterMutation())!;
   const queries = vi.spyOn(library.connection, 'query');
+  const bodyQueries = vi.spyOn(library.readonlyQueries, 'query');
   const ui = renderHook(() => useNativeSurface(initial));
   await waitFor(() => expect(ui.result.current.surface.readableArticle?.content).toContain('prefix alpha'));
   const before = ui.result.current.surface.readableArticle!.nodeId;
@@ -143,9 +144,10 @@ it('uses the daily successor and its prepared body through automatic Read displa
   const next = await predictCompanionFlowDocument({ token: state.daily!, currentNodeId: before,
     now: new Date().toISOString() }, new AbortController().signal);
   expect(next).toBeTruthy();
-  await waitFor(() => expect(queries.mock.calls.some(([sql, args]) => sql.includes('SELECT article.*') && args?.[0] === next)).toBe(true));
-  await getIosCompanionDatabaseOwner().read(async () => null);
+  await waitFor(() => expect(bodyQueries.mock.calls.some(([sql, args]) => sql.includes('SELECT article.*') && args?.[0] === next)).toBe(true));
+  await getIosCompanionDatabaseOwner().readInteractiveSnapshot(async () => null);
   queries.mockClear();
+  bodyQueries.mockClear();
   let learningVisits = 0;
   const unrelated = initial.nodesById['000255']!;
   const reading = unrelated.reading;
@@ -157,7 +159,7 @@ it('uses the daily successor and its prepared body through automatic Read displa
   expect(ui.result.current.surface.readableArticle?.content).toContain('prefix alpha');
   expect(ui.result.current.surface.isSubmittingReadingAction).toBe(false);
   expect(ui.result.current.snapshot.nodesById[before]?.reading?.repetitionCount).toBe(1);
-  expect(queries.mock.calls.filter(([sql, args]) => sql.includes('SELECT article.*') && args?.[0] === next)).toHaveLength(0);
+  expect(bodyQueries.mock.calls.filter(([sql, args]) => sql.includes('SELECT article.*') && args?.[0] === next)).toHaveLength(0);
   expect(queries.mock.calls.filter(([sql]) => sql.includes('FROM node_sync_conflicts'))).toHaveLength(0);
   expect(queries.mock.calls.filter(([sql]) => sql.includes('INTO workspace_meta') && sql.includes('active_node_id'))).toHaveLength(0);
   expect(learningVisits).toBe(0);

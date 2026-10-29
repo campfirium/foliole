@@ -19,12 +19,12 @@ beforeEach(async () => { library = await createSearchLibrary(3, 64); });
 afterEach(async () => { await library.close(); vi.restoreAllMocks(); });
 
 async function prepared(source: Awaited<ReturnType<typeof snapshot>>, id = '000001') {
-  const reads = vi.spyOn(library.connection, 'query');
+  const reads = vi.spyOn(library.readonlyQueries, 'query');
   prepareCompanionFlowArticle(source, id, '000000');
   await vi.waitFor(() => expect(reads.mock.calls.some(([sql, values]) =>
     sql.includes('SELECT article.*') && values?.[0] === id)).toBe(true));
-  // The owner barrier waits for the complete production read, including annotations and retention.
-  await getIosCompanionDatabaseOwner().read(async () => null);
+  // The readonly barrier waits for the complete body read, including annotations and retention.
+  await getIosCompanionDatabaseOwner().readInteractiveSnapshot(async () => null);
   return reads;
 }
 
@@ -44,8 +44,8 @@ it('loads a cache miss normally and merges simultaneous demands with a running p
   expect((await loadPreparedCompanionArticle(source, '000000', () => true))?.nodeId).toBe('000000');
   let release!: () => void;
   const gate = new Promise<void>(done => { release = done; });
-  const blocker = getIosCompanionDatabaseOwner().read(() => gate);
-  const reads = vi.spyOn(library.connection, 'query');
+  const blocker = getIosCompanionDatabaseOwner().readInteractiveSnapshot(() => gate);
+  const reads = vi.spyOn(library.readonlyQueries, 'query');
   prepareCompanionFlowArticle(source, '000001', '000000');
   await new Promise(done => setTimeout(done, 30));
   const one = loadPreparedCompanionArticle(source, '000001', () => true);
@@ -98,8 +98,8 @@ it('does not start speculative reads while the required current body is waiting'
   const source = await snapshot();
   let release!: () => void;
   const gate = new Promise<void>(done => { release = done; });
-  const blocker = getIosCompanionDatabaseOwner().read(() => gate);
-  const reads = vi.spyOn(library.connection, 'query');
+  const blocker = getIosCompanionDatabaseOwner().readInteractiveSnapshot(() => gate);
+  const reads = vi.spyOn(library.readonlyQueries, 'query');
   const current = loadPreparedCompanionArticle(source, '000000', () => true);
   prepareCompanionFlowArticle(source, '000001', '000000');
   await new Promise(done => setTimeout(done, 30));
@@ -127,13 +127,13 @@ it('retires an in-flight prefetch when its node leaves the list', async () => {
   const source = await snapshot();
   let release!: () => void;
   const gate = new Promise<void>(done => { release = done; });
-  const blocker = getIosCompanionDatabaseOwner().read(() => gate);
+  const blocker = getIosCompanionDatabaseOwner().readInteractiveSnapshot(() => gate);
   prepareCompanionFlowArticle(source, '000001', '000000');
   await new Promise(done => setTimeout(done, 30));
   prepareCompanionFlowArticle(source, null, '000000');
   release(); await blocker;
-  await getIosCompanionDatabaseOwner().read(async () => null);
-  const reads = vi.spyOn(library.connection, 'query');
+  await getIosCompanionDatabaseOwner().readInteractiveSnapshot(async () => null);
+  const reads = vi.spyOn(library.readonlyQueries, 'query');
   expect((await loadPreparedCompanionArticle(source, '000001', () => true))?.content).toContain('prefix alpha');
   expect(reads.mock.calls.filter(([sql]) => sql.includes('SELECT article.*'))).toHaveLength(1);
 });
@@ -147,4 +147,75 @@ it('prepares text independently of a missing PDF file without downloading or dec
   const article = await loadPreparedCompanionArticle(source, '000001', () => true);
   expect(article?.content).toContain('prefix alpha');
   expect(article?.pdfAttachmentId).toBe('a'.repeat(64));
+});
+
+it('loads consecutive demanded bodies while a learning writer is still uncommitted', async () => {
+  const source = await snapshot();
+  const owner = getIosCompanionDatabaseOwner();
+  let release!: () => void;
+  let entered!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  let committed = false;
+  const write = owner.runWriter(db => db.transaction(async () => {
+    await db.run('UPDATE nodes SET content=? WHERE id=?', ['Uncommitted replacement', '000001']);
+    entered();
+    await gate;
+  })).then(() => { committed = true; });
+  await started;
+  const results: Array<{ nodeId: string | undefined; content: string | undefined }> = [];
+  const reading = (async () => {
+    for (const id of ['000001', '000002']) {
+      const article = await loadPreparedCompanionArticle(source, id, () => true);
+      results.push({ nodeId: article?.nodeId, content: article?.content });
+    }
+  })();
+  try {
+    await vi.waitFor(() => expect(results.map(article => article.nodeId)).toEqual(['000001', '000002']));
+    for (const article of results) expect(article.content).toContain('prefix alpha');
+    expect(committed).toBe(false);
+  } finally {
+    release();
+    await Promise.all([write, reading]);
+  }
+});
+
+it('keeps the document and annotation catalog in one committed snapshot during concurrent writes', async () => {
+  const source = await snapshot();
+  const owner = getIosCompanionDatabaseOwner();
+  let entered!: () => void;
+  let release!: () => void;
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const query = library.readonlyQueries.query.bind(library.readonlyQueries);
+  vi.spyOn(library.readonlyQueries, 'query').mockImplementation(async (sql, values) => {
+    const result = await query(sql, values);
+    if (sql.includes('SELECT article.*')) { entered(); await gate; }
+    return result;
+  });
+  const reading = loadPreparedCompanionArticle(source, '000001', () => true);
+  try {
+    await started;
+    await owner.runWriter(db => db.run(`INSERT INTO nodes
+      (id, parent_id, title, content, anchor_link, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ['new-note', '000001', 'Note', 'prefix', JSON.stringify({ id: 'anchor', kind: 'highlight',
+      locator: { from: 0, to: 6, originalText: 'prefix' } }), 'now', 'now']));
+  } finally { release(); }
+  expect((await reading)?.content).toContain('prefix alpha');
+  await expect(loadPreparedCompanionArticle(source, '000001', () => true)).rejects.toThrow('article changed');
+});
+
+it('rejects foreground admission as soon as database closing is requested behind a writer', async () => {
+  const owner = getIosCompanionDatabaseOwner();
+  let release!: () => void;
+  let entered!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  const writer = owner.runWriter(async () => { entered(); await gate; });
+  await started;
+  const closing = owner.close();
+  try {
+    await expect(owner.readInteractiveSnapshot(async () => true)).rejects.toThrow('is closing');
+  } finally { release(); await Promise.all([writer, closing]); }
+  await expect(owner.readInteractiveSnapshot(async () => true)).rejects.toThrow('not open');
 });
