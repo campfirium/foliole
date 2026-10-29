@@ -1,6 +1,9 @@
 export const controlledFlowSqliteTests = [
   'src/store/workspaceStoreDurableMutationGuardrail.test.ts',
   'src/store/workspaceActionHistoryDomains.test.ts',
+  'src/companion/useCompanionArticleSurface.test.tsx',
+  'src/companion/useCompanionArticleSurface.fsrsSync.test.tsx',
+  'src/companion/useCompanionArticleSurface.refresh.test.tsx',
   'electron/database/dailyFlowSinglePass.integration.test.ts',
   'src/store/workspaceFlowLearningFacts.integration.test.ts',
   'src/store/workspaceCycleFairness.integration.test.ts',

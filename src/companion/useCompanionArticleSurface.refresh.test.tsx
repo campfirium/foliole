@@ -1,179 +1,55 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { hashTextBody } from '../../lib/core/database/textBodyHash';
+import { applyCompanionSyncObjects } from '../shared/platform/companionSyncObjects';
+import { toReadingPayload } from '../shared/platform/companionSyncStateWriters';
 
-import { useCompanionArticleSurface } from './useCompanionArticleSurface';
+import { ARTICLE_NOW, nativeArticleFixture } from './useCompanionArticleSurfaceNative.testSupport';
 
-vi.mock('../shared/platform/companionSyncObjects', () => ({
-  saveCompanionSyncActiveViewState: vi.fn(),
-  saveCompanionSyncNodeReadingRecord: vi.fn(),
-  saveCompanionSyncNodeReviewRecord: vi.fn(),
-  saveCompanionSyncNodeViewState: vi.fn()
-}));
+vi.mock('@capacitor/core', async () => {
+  const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: createCompanionNativeSyncStub };
+});
 
-function createPairingState() {
-  return {
-    device_id: 'android-test-device',
-    device_kind: 'android-capacitor',
-    device_name: 'Android companion',
-    is_paired: true,
-    paired_at: '2026-04-25T09:00:00.000Z',
-  };
-}
-
-function createSnapshot(overrides: Partial<WorkspaceSnapshot['nodesById'][string]> = {}): WorkspaceSnapshot {
-  return {
-    activeNodeId: 'article-1',
-    nodeOrder: ['article-1'],
-    nodesById: {
-      'article-1': {
-        anchorLink: null,
-        content: '# First article\n\nBody',
-        createdAt: '2026-04-25T08:00:00.000Z',
-        hideTitleHeading: false,
-        id: 'article-1',
-        isTitleManual: false,
-        kind: 'topic',
-        parentNodeId: null,
-        reading: {
-          intervalDurationMs: 60000,
-          intervalGrowthFactor: 1.5,
-          lastHandledAt: '2026-04-25T08:00:00.000Z',
-          nextAt: '2026-04-25T08:00:00.000Z',
-          priority: 1,
-          readingPosition: 0,
-          repetitionCount: 1,
-          state: 'active'
-        },
-        reveal: null,
-        review: null,
-        title: 'First article',
-        updatedAt: '2026-04-25T08:00:00.000Z',
-        ...overrides
-      }
-    },
-    trashedNodeIds: [],
-    untitledSequenceByParent: {}
-  };
-}
-
-function createBootstrapState() {
-  return {
-    booted_at: '2026-04-25T09:00:00.000Z',
-    database_path: 'foliole-companionSQLite.db',
-    database_ready: true,
-    device_id: 'android-test-device',
-    runtime_kind: 'android-capacitor' as const
-  };
-}
-
-function createWorkspaceSync(snapshot: WorkspaceSnapshot) {
-  return {
-    bootstrapState: createBootstrapState(),
-    checkDesktop: vi.fn(),
-    clearError: vi.fn(),
-    cancelJoin: vi.fn(),
-    completeJoin: vi.fn(),
-    completeSyncGroupJoin: vi.fn(),
-    discoverSyncGroups: vi.fn(),
-    completePairing: vi.fn(),
-    cancelPairing: vi.fn(),
-    disconnectPairing: vi.fn(),
-    desktopDiscoveries: [],
-    desktopDiscovery: null,
-    error: null,
-    isWorkspaceSyncStateReady: true,
-    manualSyncAction: null,
-    pendingJoinRequest: null,
-    openReadableArticle: vi.fn(),
-    openVirtualFolder: vi.fn(),
-    syncGroupDiscoveries: [],
-    syncGroupJoined: true,
-    joinStatus: 'idle' as const,
-    pairingState: createPairingState(),
-    pairingStatus: 'idle' as const,
-    pendingPairRequest: null,
-    pullFromDesktop: vi.fn(),
-    readableArticle: null,
-    refreshAfterMutation: vi.fn(),
-    refreshFromDevice: vi.fn(),
-    leaveSyncGroup: vi.fn(),
-    refreshPairingState: vi.fn(async () => createPairingState()),
-    removeRememberedTarget: vi.fn(),
-    requestPairing: vi.fn(),
-    requestJoin: vi.fn(),
-    requestSyncGroupJoin: vi.fn(),
-    saveEndpoint: vi.fn(),
-    saveSyncOnboardingStatus: vi.fn(),
-    state: {
-      endpoint_url: 'http://10.0.2.2:38641',
-      last_synced_at: '2026-04-25T09:00:00.000Z',
-      remembered_targets: ['http://10.0.2.2:38641'],
-      sync_events: [],
-      sync_onboarding_status: 'completed' as const,
-      workspace_snapshot: snapshot
-    },
-    syncConflictCount: 0,
-    syncParticipation: {
-      hydrated: true,
-      lifecycle_active: true, participating: true, sync_enabled: true, sync_paused: false
-    },
-    syncProgress: null,
-    status: 'idle' as const
-  };
-}
-
-function createFloatingBar() {
-  return {
-    handleContainerScroll: vi.fn(),
-    handleTouchEnd: vi.fn(),
-    handleTouchMove: vi.fn(),
-    handleTouchStart: vi.fn(),
-    isVisible: true,
-    revealBar: vi.fn()
-  };
-}
+const fixture = nativeArticleFixture();
 
 describe('useCompanionArticleSurface remote refresh', () => {
-  it('refreshes the selected readable article when synced node content changes', () => {
-    const initialSync = createWorkspaceSync(createSnapshot());
-    const { result, rerender } = renderHook(
-      ({ workspaceSync }) => useCompanionArticleSurface(workspaceSync, createFloatingBar()),
-      { initialProps: { workspaceSync: initialSync } }
-    );
-
+  it('refreshes the selected readable article when synced node content changes', async () => {
+    const ui = await fixture.open();
     act(() => {
-      result.current.handleSelectRecentArticle('article-1');
+      ui.result.current.surface.handleTabAction('recent');
+      ui.result.current.surface.handleSelectRecentArticle('article-1');
     });
-    rerender({
-      workspaceSync: createWorkspaceSync(createSnapshot({
-        content: '# First article\n\nUpdated remote body',
-        updatedAt: '2026-04-25T09:10:00.000Z'
-      }))
+    await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).toBe('article-1'));
+    const node = ui.result.current.snapshot.nodesById['article-1']!;
+    await act(async () => {
+      await fixture.apply([{ ...node, content: '# First article\n\nUpdated remote body', updatedAt: ARTICLE_NOW }]);
+      await ui.result.current.workspace.refreshAfterMutation();
     });
-
-    expect(result.current.readableArticle?.content).toContain('Updated remote body');
-    expect(result.current.recentArticles[0]?.preview).toContain('Updated remote body');
+    await waitFor(() => expect(ui.result.current.surface.readableArticle?.content).toContain('Updated remote body'));
+    expect(ui.result.current.surface.recentArticles.find(article => article.nodeId === 'article-1')?.preview)
+      .toContain('Updated remote body');
+    expect(fixture.library.database.prepare("SELECT content FROM nodes WHERE id='article-1'").get())
+      .toEqual({ content: '# First article\n\nUpdated remote body' });
   });
 
   it('keeps visible current reading material when its remote schedule changes', async () => {
-    const dueSnapshot = createSnapshot();
-    const { result, rerender } = renderHook(
-      ({ workspaceSync }) => useCompanionArticleSurface(workspaceSync, createFloatingBar()),
-      { initialProps: { workspaceSync: createWorkspaceSync(dueSnapshot) } }
-    );
-
-    await waitFor(() => expect(result.current.reviewSession.currentCard?.nodeId).toBe('article-1'));
-    rerender({
-      workspaceSync: createWorkspaceSync(createSnapshot({
-        reading: {
-          ...dueSnapshot.nodesById['article-1']!.reading!,
-          nextAt: '2099-01-01T00:00:00.000Z'
-        }
-      }))
+    const ui = await fixture.open();
+    const target = ui.result.current.surface.readableArticle!.nodeId;
+    const node = ui.result.current.snapshot.nodesById[target]!;
+    const content = ui.result.current.surface.readableArticle!.content;
+    await act(async () => {
+      const payload = JSON.stringify(toReadingPayload({
+        intervalDurationMs: 60000, intervalGrowthFactor: 1.5, lastHandledAt: ARTICLE_NOW,
+        nextAt: '2099-01-01T00:00:00.000Z', priority: 1, readingPosition: 0, repetitionCount: 1, state: 'active'
+      }));
+      await applyCompanionSyncObjects([{ object_id: node.id, object_type: 'node_reading',
+        content_hash: hashTextBody(payload), deleted_at: null, payload_json: payload, updated_at: ARTICLE_NOW }]);
+      await ui.result.current.workspace.refreshAfterMutation(undefined, target);
     });
-
-    expect(result.current.reviewSession.currentCard?.nodeId).toBe('article-1');
+    await waitFor(() => expect(ui.result.current.snapshot.nodesById[target]?.reading?.nextAt).toBe('2099-01-01T00:00:00.000Z'));
+    expect(ui.result.current.surface.reviewSession.currentCard?.nodeId).toBe(target);
+    expect(ui.result.current.surface.readableArticle).toMatchObject({ nodeId: target, content });
   });
 });

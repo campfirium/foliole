@@ -1,254 +1,171 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+import { getCompanionReadIntents } from '../shared/platform/companion/runtime/companionReadIntents';
+import { saveCompanionSyncNodeReadingRecord } from '../shared/platform/companionSyncObjects';
 
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
-import {
-  createCompanionArticleSnapshot,
-  createFloatingBar,
-  createUnpairedWorkspaceSync,
-  createWorkspaceSync
-} from './useCompanionArticleSurfaceTestSupport';
+import { nativeArticleFixture } from './useCompanionArticleSurfaceNative.testSupport';
+import { createCompanionArticleSnapshot, createFloatingBar, createUnpairedWorkspaceSync,
+  createWorkspaceSync } from './useCompanionArticleSurfaceTestSupport';
 
-const syncObjectMock = vi.hoisted(() => ({
-  saveCompanionSyncActiveViewState: vi.fn(async () => ({ content_hash: 'hash-active', object_id: 'active' })),
-  saveCompanionSyncNodeOpenState: vi.fn(async ({ lastOpenedAt }: { lastOpenedAt: string }) => ({
-    content_hash: 'hash-open', last_opened_at: lastOpenedAt, object_id: 'article-2'
-  })),
-  saveCompanionSyncNodeReadingRecord: vi.fn(async () => ({ content_hash: 'hash-reading', object_id: 'article-1' })),
-  saveCompanionSyncNodeReviewRecord: vi.fn(async () => ({ content_hash: 'hash-review', object_id: 'item-1' })),
-  saveCompanionSyncNodeViewState: vi.fn(async () => ({ content_hash: 'hash-view', object_id: 'view' }))
-}));
-vi.mock('../shared/platform/companionSyncObjects', () => syncObjectMock);
+vi.mock('@capacitor/core', async () => {
+  const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: createCompanionNativeSyncStub };
+});
 
-afterEach(() => vi.useRealTimers());
-
+const fixture = nativeArticleFixture();
 const readingActions = [
   ['read', 'handleReadReviewTopic'],
   ['later', 'handlePostponeReviewTopic'],
   ['dismiss', 'handleDismissReviewTopic']
 ] as const;
-type ReadingActionMethod = typeof readingActions[number][1];
-type CompanionArticleSurface = ReturnType<typeof useCompanionArticleSurface>;
 
-function createReadingArticleSnapshot() {
-  const snapshot = createCompanionArticleSnapshot();
-  snapshot.nodesById['article-1'] = {
-    ...snapshot.nodesById['article-1']!,
-    reading: {
-      intervalDurationMs: 60000,
-      intervalGrowthFactor: 1.5,
-      lastHandledAt: '2026-04-22T07:00:00.000Z',
-      nextAt: '2026-04-22T08:00:00.000Z',
-      priority: 1,
-      readingPosition: 0,
-      repetitionCount: 1,
-      state: 'active'
-    }
-  };
-  return snapshot;
-}
-
-async function invokeReadingAction(surface: CompanionArticleSurface, method: ReadingActionMethod) {
-  await surface[method]();
-}
-
-async function expectReadingReviewActionPersists(method: ReadingActionMethod) {
-  const snapshot = createReadingArticleSnapshot();
-  const workspaceSync = createWorkspaceSync(snapshot);
-  const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
-  await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
-
-  await act(async () => {
-    await invokeReadingAction(result.current, method);
+async function openReading() {
+  const ui = await fixture.open(createCompanionArticleSnapshot(), async () => {
+    await saveCompanionSyncNodeReadingRecord({ nodeId: 'article-1', reading: {
+      intervalDurationMs: 60000, intervalGrowthFactor: 1.5, lastHandledAt: '2026-04-22T07:00:00.000Z',
+      nextAt: '2026-04-22T08:00:00.000Z', priority: 1, readingPosition: 0, repetitionCount: 1, state: 'active'
+    } });
   });
-
-  expect(workspaceSync.refreshAfterMutation).toHaveBeenCalledWith(expect.any(Object));
-  expect(syncObjectMock.saveCompanionSyncNodeReadingRecord).toHaveBeenCalledWith(expect.objectContaining({
-    nodeId: 'article-1'
-  }));
-  expect(syncObjectMock.saveCompanionSyncNodeReadingRecord.mock.invocationCallOrder[0]!)
-    .toBeLessThan(workspaceSync.refreshAfterMutation.mock.invocationCallOrder[1]!);
+  expect(ui.result.current.surface.readableArticle?.nodeId).toBe('article-1');
+  return ui;
 }
-
-  beforeEach(() => {
-    vi.useRealTimers();
-    syncObjectMock.saveCompanionSyncActiveViewState.mockClear();
-    syncObjectMock.saveCompanionSyncNodeOpenState.mockClear();
-    syncObjectMock.saveCompanionSyncNodeReadingRecord.mockClear();
-    syncObjectMock.saveCompanionSyncNodeReadingRecord.mockResolvedValue({ content_hash: 'hash-reading', object_id: 'article-1' });
-    syncObjectMock.saveCompanionSyncNodeReviewRecord.mockClear();
-    syncObjectMock.saveCompanionSyncNodeViewState.mockClear();
-  });
-
-describe('useCompanionArticleSurface', () => {
-
-  it('opens the connection page first when the phone has no desktop content yet', () => {
-    const { result } = renderHook(() => useCompanionArticleSurface(createUnpairedWorkspaceSync(), createFloatingBar()));
-
-    expect(result.current.activeAction).toBe('more');
-  });
-
-});
 
 describe('useCompanionArticleSurface browsing', () => {
-  it('opens recent article selections in ordinary browse mode', () => {
-    const { result } = renderHook(() => useCompanionArticleSurface(createWorkspaceSync(), createFloatingBar()));
+  it('opens the connection page first when the phone has no desktop content yet', () => {
+    const ui = renderHook(() => useCompanionArticleSurface(createUnpairedWorkspaceSync(), createFloatingBar()));
+    expect(ui.result.current.activeAction).toBe('more');
+  });
 
+  it('opens recent article selections in ordinary browse mode', async () => {
+    const ui = await fixture.open();
     act(() => {
-      result.current.handleTabAction('recent');
-      result.current.handleSelectRecentArticle('article-2');
+      ui.result.current.surface.handleTabAction('recent');
+      ui.result.current.surface.handleSelectRecentArticle('article-2');
     });
-
-    expect(result.current.activeAction).toBe('recent');
-    expect(result.current.readableArticle?.nodeId).toBe('article-2');
-    expect(result.current.selectedBrowseNodeId).toBe('article-2');
-    expect(syncObjectMock.saveCompanionSyncActiveViewState).toHaveBeenCalledWith('article-2');
+    await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).toBe('article-2'));
+    expect(ui.result.current.surface.activeAction).toBe('recent');
+    expect(ui.result.current.surface.selectedBrowseNodeId).toBe('article-2');
+    await waitFor(() => expect(fixture.library.database.prepare("SELECT value FROM workspace_meta WHERE key='active_node_id'").get())
+      .toEqual({ value: 'article-2' }));
   });
 
   it('marks opened browse topics as last opened in the local snapshot', async () => {
-    const workspaceSync = createWorkspaceSync();
-    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
-  await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
-
-    act(() => {
-      result.current.handleSelectRecentArticle('article-2');
-    });
-
-    await waitFor(() => expect(syncObjectMock.saveCompanionSyncNodeOpenState).toHaveBeenCalledWith(
-      expect.objectContaining({ nodeId: 'article-2' })
-    ));
-    // The committed open record is read through its registered scope, not a supplied projection.
-    await waitFor(() => expect(workspaceSync.refreshAfterMutation.mock.invocationCallOrder.some(order =>
-      order > syncObjectMock.saveCompanionSyncNodeOpenState.mock.invocationCallOrder[0]!)).toBe(true));
-    expect(workspaceSync.refreshAfterMutation).not.toHaveBeenCalledWith(
+    const ui = await fixture.open();
+    act(() => ui.result.current.surface.handleSelectRecentArticle('article-2'));
+    await waitFor(() => expect(ui.result.current.snapshot.nodeOpenStateById?.['article-2']?.lastOpenedAt).toBeTruthy());
+    expect(fixture.library.database.prepare("SELECT last_opened_at FROM node_open_state WHERE node_id='article-2'").get())
+      .toEqual({ last_opened_at: ui.result.current.snapshot.nodeOpenStateById!['article-2']!.lastOpenedAt });
+    expect(ui.result.current.workspace.refreshAfterMutation).not.toHaveBeenCalledWith(
       expect.objectContaining({ nodeOpenStateById: expect.anything() }));
   });
 
   it('reads complete local content without starting an extra sync', async () => {
     const snapshot = createCompanionArticleSnapshot();
     const body = 'Complete local body\n中文 original text';
-    snapshot.nodesById['article-2'] = {
-      ...snapshot.nodesById['article-2']!,
-      bodyBlobHash: 'b'.repeat(64),
-      bodyStatus: 'ready',
-      content: body
-    };
-    const workspaceSync = createWorkspaceSync(snapshot);
-    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
-    await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
+    snapshot.nodesById['article-2']!.content = body;
+    const ui = await fixture.open(snapshot);
     act(() => {
-      result.current.handleTabAction('recent');
-      result.current.handleSelectRecentArticle('article-2');
+      ui.result.current.surface.handleTabAction('recent');
+      ui.result.current.surface.handleSelectRecentArticle('article-2');
     });
-    await waitFor(() => expect(result.current.readableArticle).toMatchObject({
+    await waitFor(() => expect(ui.result.current.surface.readableArticle).toMatchObject({
       nodeId: 'article-2', content: body, bodyStatus: 'ready'
     }));
-    expect(workspaceSync.openReadableArticle).toHaveBeenCalledWith('article-2');
-    expect(workspaceSync.pullFromDesktop).not.toHaveBeenCalled();
+    expect(ui.result.current.workspace.pullFromDesktop).not.toHaveBeenCalled();
   });
 
 });
 
 describe('useCompanionArticleSurface browse state', () => {
   it('keeps the current readable article available when snapshot recent rows are empty', () => {
-    const { result } = renderHook(() => useCompanionArticleSurface(createWorkspaceSync(null), createFloatingBar()));
-
-    expect(result.current.recentArticles).toEqual([{
-      nodeId: 'article-1',
-      preview: null,
-      title: 'First article',
-      updatedAt: ''
+    const ui = renderHook(() => useCompanionArticleSurface(createWorkspaceSync(null), createFloatingBar()));
+    expect(ui.result.current.recentArticles).toEqual([{
+      nodeId: 'article-1', preview: null, title: 'First article', updatedAt: ''
     }]);
   });
 
   it('persists companion scroll view state after scroll settles', async () => {
-    vi.useFakeTimers();
-    const { result } = renderHook(() => useCompanionArticleSurface(createWorkspaceSync(), createFloatingBar()));
-
-    act(() => {
-      result.current.handleSelectRecentArticle('article-2');
-    });
-    act(() => {
-      result.current.handleViewScroll(128);
-      vi.advanceTimersByTime(800);
-    });
-
-    expect(syncObjectMock.saveCompanionSyncNodeViewState).toHaveBeenCalledWith({
-      nodeId: 'article-2',
-      scrollTop: 128
-    });
+    const ui = await fixture.open();
+    act(() => ui.result.current.surface.handleSelectRecentArticle('article-2'));
+    await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).toBe('article-2'));
+    act(() => ui.result.current.surface.handleViewScroll(128));
+    await waitFor(() => expect(fixture.library.database.prepare("SELECT scroll_top FROM node_view_state WHERE node_id='article-2'").get())
+      .toMatchObject({ scroll_top: 128 }), { timeout: 3000 });
   });
 
-  it('opens topic containers as browse surfaces while keeping leaf topics readable', () => {
+  it('opens topic containers as browse surfaces while keeping leaf topics readable', async () => {
     const snapshot = createCompanionArticleSnapshot();
-    snapshot.nodesById['article-3'] = {
-      ...snapshot.nodesById['article-2']!,
-      content: '# Child\n\nNested body',
-      id: 'article-3',
-      parentNodeId: 'article-2',
-      title: 'Nested child'
-    };
+    snapshot.nodesById['article-3'] = { ...snapshot.nodesById['article-2']!, id: 'article-3',
+      parentNodeId: 'article-2', title: 'Nested child', content: '# Child\n\nNested body' };
     snapshot.nodeOrder.push('article-3');
-    const { result } = renderHook(() => useCompanionArticleSurface(createWorkspaceSync(snapshot), createFloatingBar()));
-
-    act(() => result.current.handleSelectBrowseNode('article-2'));
-    expect(result.current.browsedFolder?.nodeId).toBe('article-2');
-    expect(result.current.browsedFolder?.items.map((item) => item.nodeId)).toEqual(['article-3']);
-
-    act(() => result.current.handleSelectBrowseNode('article-1'));
-    expect(result.current.browsedFolder).toBeNull();
-    expect(result.current.readableArticle?.nodeId).toBe('article-1');
-  });
-  it('opens folder breadcrumbs as folder browse surfaces', () => {
-    const { result } = renderHook(() => useCompanionArticleSurface(createWorkspaceSync(), createFloatingBar()));
-
-    act(() => {
-      result.current.handleSelectBrowseNode('folder-1');
-    });
-
-    expect(result.current.activeAction).toBe('review');
-    expect(result.current.isFlowBrowsing).toBe(true);
-    expect(result.current.browsedFolder?.nodeId).toBe('folder-1');
-    expect(result.current.readableArticle).toBeNull();
+    const ui = await fixture.open(snapshot);
+    act(() => ui.result.current.surface.handleSelectBrowseNode('article-2'));
+    await waitFor(() => expect(ui.result.current.surface.browsedFolder?.nodeId).toBe('article-2'));
+    expect(ui.result.current.surface.browsedFolder?.items.map(item => item.nodeId)).toEqual(['article-3']);
+    act(() => ui.result.current.surface.handleSelectBrowseNode('article-1'));
+    await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).toBe('article-1'));
+    expect(ui.result.current.surface.browsedFolder).toBeNull();
   });
 
+  it('opens folder breadcrumbs as folder browse surfaces', async () => {
+    const ui = await fixture.open();
+    act(() => ui.result.current.surface.handleSelectBrowseNode('folder-1'));
+    expect(ui.result.current.surface.activeAction).toBe('review');
+    expect(ui.result.current.surface.isFlowBrowsing).toBe(true);
+    expect(ui.result.current.surface.browsedFolder?.nodeId).toBe('folder-1');
+    expect(ui.result.current.surface.readableArticle).toBeNull();
+  });
 });
 
 describe('useCompanionArticleSurface reading review persistence', () => {
-  it.each(readingActions)('persists %s review actions as single-node companion updates', async (_label, method) => {
-    await expectReadingReviewActionPersists(method);
+  it.each(readingActions)('persists %s with one durable learning operation', async (action, method) => {
+    const ui = await openReading();
+    const target = ui.result.current.surface.readableArticle!.nodeId;
+    const before = ui.result.current.snapshot.nodesById[target]!.reading!;
+    await act(async () => { await ui.result.current.surface[method](); });
+    await fixture.settle();
+    await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).not.toBe(target));
+    const reading = fixture.library.database.prepare('SELECT * FROM node_reading WHERE node_id=?').get(target);
+    expect(reading).toBeTruthy();
+    if (action === 'read') expect(reading).toMatchObject({ repetition_count: before.repetitionCount + 1 });
+    if (action === 'later') expect(ui.result.current.snapshot.nodesById[target]?.reading?.nextAt).not.toBe(before.nextAt);
+    if (action === 'dismiss') expect(reading).toMatchObject({ state: 'dismissed' });
+    expect(ui.result.current.snapshot.nodesById[target]?.reading).not.toBeNull();
+    expect(fixture.library.database.prepare('SELECT COUNT(*) AS n FROM daily_flow_operations').get()).toEqual({ n: 1 });
+    expect(await fixture.historyCount(ui.result.current.surface.flowHistoryKey)).toBe(1);
   });
 
-  it.each(readingActions)('does not replace the snapshot when %s persistence fails', async (_label, method) => {
-    syncObjectMock.saveCompanionSyncNodeReadingRecord.mockResolvedValueOnce(null as never);
-    const snapshot = createReadingArticleSnapshot();
-    const workspaceSync = createWorkspaceSync(snapshot);
-    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
-  await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
-
-    await act(async () => {
-      await invokeReadingAction(result.current, method);
-    });
-
-    expect(workspaceSync.refreshAfterMutation).not.toHaveBeenCalledWith(expect.any(Object));
-    expect(result.current.readingError).toBe('Could not save the reading action.');
+  it.each(readingActions)('does not advance or replace saved facts when %s admission fails', async (action, method) => {
+    const ui = await openReading();
+    const before = ui.result.current.snapshot;
+    const facts = fixture.library.database.prepare('SELECT * FROM node_reading ORDER BY node_id').all();
+    const target = ui.result.current.surface.readableArticle!.nodeId;
+    await fixture.rejectAdmission(action);
+    await act(async () => { await ui.result.current.surface[method](); });
+    expect(ui.result.current.surface.readingError).toContain('admission unavailable');
+    expect(ui.result.current.surface.readableArticle?.nodeId).toBe(target);
+    expect(ui.result.current.snapshot).toEqual(before);
+    expect(fixture.library.database.prepare('SELECT * FROM node_reading ORDER BY node_id').all()).toEqual(facts);
+    expect(fixture.library.database.prepare('SELECT COUNT(*) AS n FROM daily_flow_operations').get()).toEqual({ n: 0 });
+    expect(await fixture.historyCount(ui.result.current.surface.flowHistoryKey)).toBe(0);
+    if (action === 'read') expect(await (await getCompanionReadIntents()).journal.rows(false)).toEqual([]);
   });
 
-  it.each(readingActions)('ignores duplicate %s actions while persistence is in flight', async (_label, method) => {
-    const snapshot = createReadingArticleSnapshot();
-    const workspaceSync = createWorkspaceSync(snapshot);
-    const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
-  await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
-    syncObjectMock.saveCompanionSyncNodeReadingRecord.mockClear();
-
+  it.each(readingActions)('ignores concurrent duplicate %s submissions', async (action, method) => {
+    const ui = await openReading();
+    const target = ui.result.current.surface.readableArticle!.nodeId;
     await act(async () => {
-      const first = invokeReadingAction(result.current, method);
-      const second = invokeReadingAction(result.current, method);
+      const first = ui.result.current.surface[method]();
+      const second = ui.result.current.surface[method]();
       await Promise.all([first, second]);
     });
-
-    expect(syncObjectMock.saveCompanionSyncNodeReadingRecord).toHaveBeenCalledTimes(1);
-    expect(workspaceSync.refreshAfterMutation).toHaveBeenCalledTimes(2);
+    await fixture.settle();
+    expect(fixture.library.database.prepare('SELECT node_id FROM node_reading').all()).toEqual([{ node_id: target }]);
+    expect(fixture.library.database.prepare('SELECT COUNT(*) AS n FROM daily_flow_operations').get()).toEqual({ n: 1 });
+    expect(await fixture.historyCount(ui.result.current.surface.flowHistoryKey)).toBe(1);
+    if (action === 'read') expect(ui.result.current.snapshot.nodesById[target]?.reading?.repetitionCount).toBe(2);
+    if (action === 'read') expect(await (await getCompanionReadIntents()).journal.rows(false)).toHaveLength(1);
   });
-
 });
