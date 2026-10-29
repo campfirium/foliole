@@ -132,3 +132,23 @@ it('keeps the original topic and performs no learning when durable admission fai
   expect(ui.result.current.surface.readableArticle?.nodeId).not.toBe(a);
   expect(library.database.prepare('SELECT repetition_count FROM node_reading WHERE node_id=?').get(a)).toEqual({ repetition_count: 1 });
 });
+
+it('retries next-topic preparation after admission without accepting or learning the same topic twice', async () => {
+  const initial = (await refreshCompanionWorkspaceAfterMutation())!;
+  const ui = renderHook(() => useDailyFlowSurface(initial));
+  await waitFor(() => expect(ui.result.current.surface.readableArticle?.content).toBeTruthy());
+  const engine = await getCompanionReadIntents();
+  const { getIosCompanionDatabaseOwner } = await import('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap');
+  const owner = getIosCompanionDatabaseOwner();
+  await owner.readInteractiveSnapshot(async () => null);
+  const a = ui.result.current.surface.readableArticle!.nodeId;
+  vi.spyOn(owner, 'readInteractiveSnapshot').mockRejectedValueOnce(new Error('next_topic_read_failure'));
+  await act(async () => { await ui.result.current.surface.handleReadReviewTopic(); });
+  expect(ui.result.current.surface.readableArticle?.nodeId).toBe(a);
+  expect((await engine.journal.rows(false))).toHaveLength(1);
+  await act(async () => { await ui.result.current.surface.handleReadReviewTopic(); });
+  await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).not.toBe(a));
+  expect((await engine.journal.rows(false))).toHaveLength(1);
+  expect(library.database.prepare('SELECT repetition_count FROM node_reading WHERE node_id=?').get(a)).toEqual({ repetition_count: 1 });
+  expect(library.database.prepare('SELECT count(*) AS n FROM daily_flow_operations').get()).toEqual({ n: 1 });
+});

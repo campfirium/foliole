@@ -41,6 +41,7 @@ export class CompanionReadIntents {
   private rows: ReadIntentRow[] = [];
   private failure: string | null = null;
   private correction = false;
+  private displayRecovery: (() => Promise<DailyFlowResult>) | null = null;
   private receipt: DailyFlowResult | null = null;
   private applied: { nodeId: string; revision: number }[] = [];
   private predecessor: string | null = null;
@@ -79,16 +80,26 @@ export class CompanionReadIntents {
       predecessor: this.predecessor, settings: structuredClone({ ...companionDailyFlowSettings(), ...(session.dayWindow ? { dayWindow: session.dayWindow } : {}) }) };
     // Calculate only a display projection; admission is the sole durable foreground write.
     const excluded = [...this.rows.map(row => row.intent.nodeId), intent.nodeId];
-    const projected = this.owner.readInteractiveSnapshot(db => advanceDailyFlowDisplay(db,
-      { session, now, mode, excluded, applied: this.applied, knownSnapshot: companionWorkspaceSnapshots.getSnapshot() }, intent.settings, companionDailyFlowPersistence));
-    const projection = await projected;
-    this.applied = this.applied.filter(value => value.revision > projection.observedRevision);
+    const project = async () => {
+      const projection = await this.owner.readInteractiveSnapshot(db => advanceDailyFlowDisplay(db,
+        { session, now, mode, excluded, applied: this.applied, knownSnapshot: companionWorkspaceSnapshots.getSnapshot() }, intent.settings, companionDailyFlowPersistence));
+      this.applied = this.applied.filter(value => value.revision > projection.observedRevision);
+      return projection.session;
+    };
+    const projected = project();
+    void projected.catch(() => undefined);
     await this.journal.accept(intent);
     this.predecessor = intent.id;
     this.rows.push({ ordinal: 0, intent, command: null, entry: null, state: 'pending', error: null });
     this.publish();
     this.start();
-    return { id: intent.id, session: projection.session };
+    try { return { id: intent.id, session: await projected }; }
+    catch (error) {
+      this.displayRecovery = async () => ({ session: await project(), mode });
+      this.failure = 'The Read was accepted, but the next topic could not be loaded. Retry to continue.';
+      this.publish();
+      throw new Error(this.failure, { cause: error });
+    }
   }
 
   async close() {
@@ -97,7 +108,12 @@ export class CompanionReadIntents {
     await this.drain().catch(() => undefined);
   }
 
-  retry() {
+  async retry() {
+    if (this.displayRecovery) {
+      this.receipt = await this.displayRecovery();
+      this.displayRecovery = null;
+      this.correction = true;
+    }
     this.failure = null;
     this.publish();
     this.start();
