@@ -2,6 +2,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { closeLibraries, type Peer } from '../../electron/database/syncLibrary.testSupport';
+import { readWorkspaceNodeLearning } from '../../lib/core/database/workspaceNodeLearning';
 import type { DailyFlowCommitArgs, DailyFlowOpenArgs } from '../../lib/core/flow/dailyFlowContract';
 import { commitDailyFlow, openDailyFlow } from '../../lib/core/flow/dailyFlowService';
 import { createLocalReviewSchedulerAdapter } from '../features/review/model/localReviewSchedulerAdapter';
@@ -15,6 +16,9 @@ import { createQaNode, createSetStateHarness, createWorkspaceFixture } from './w
 let owner: Peer;
 let heldReceipt: Promise<void> | null = null;
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => async (command: string, args: unknown) => {
+  if (command === 'load_node_learning') {
+    return readWorkspaceNodeLearning(owner.driver, (args as { nodeIds: string[] }).nodeIds);
+  }
   if (command === 'open_daily_flow') return openDailyFlow(owner.port, args as DailyFlowOpenArgs, settings(owner), persistence);
   if (command === 'commit_daily_flow') {
     const held = heldReceipt; heldReceipt = null;
