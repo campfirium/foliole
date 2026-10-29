@@ -1,9 +1,12 @@
 // @vitest-environment node
+import path from 'node:path';
+
 import { expect, it, vi } from 'vitest';
 
 import { flushNodeSyncVersionWithDriver } from '../../../../../electron/database/nodeSyncVersionFromDriver';
 import { closeLibraries } from '../../../../../electron/database/syncLibrary.testSupport';
 import { softDeleteNodes } from '../../../../../lib/core/database/nodeMutations';
+import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
 import { hydrateCurrentReviewSchedulerSettings } from '../../../../features/settings/model/reviewSchedulerSettings';
 import { exchangeBodySyncOverHttp } from '../../../../test/bodySyncHttp.testSupport';
 import { connectCompanionPeer } from '../../../../test/companionDailySync.testSupport';
@@ -20,6 +23,22 @@ import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('./companionNativeSync.testSupport');
   return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: createCompanionNativeSyncStub };
+});
+
+it.each([
+  { root: path.resolve('.tmp/artifacts/companion-peer'), file: path.resolve('.tmp/artifacts/companion-peer/library.db'),
+    flavor: process.platform === 'win32' ? 'windows' as const : 'posix' as const },
+  { root: String.raw`C:\fixtures\companion-peer`, file: String.raw`C:\fixtures\companion-peer\library.db`, flavor: 'windows' as const }
+])('preserves the peer identity path flavor for $flavor library paths', async ({ root, file, flavor }) => {
+  const library = await createSearchLibrary(0);
+  try {
+    const { mobile } = await connectCompanionPeer({ ...library, root });
+    const expected = createSyncGroupDeviceIdentity({ device_anchor: mobile.anchor, group_id: 'group',
+      library_path: file, path_flavor: flavor });
+    expect(mobile.id).toBe(expected.identity_key);
+    expect(mobile.db.prepare('SELECT canonical_library_path FROM sync_group_devices WHERE device_identity_key=?')
+      .get(mobile.id)).toEqual({ canonical_library_path: expected.canonical_library_path });
+  } finally { await library.close(); await closeLibraries(); }
 });
 
 it.each([false, true])('keeps accepted A/B targets after peer Read/deletion without duplicate learning (admitted command=%s)', async admittedCommand => {
