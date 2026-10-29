@@ -1,4 +1,4 @@
-import { history, isolateHistory, redoDepth, undoDepth } from '@codemirror/commands';
+import { history, invertedEffects, isolateHistory, redoDepth, undoDepth } from '@codemirror/commands';
 import { EditorState, StateEffect, StateField, Transaction } from '@codemirror/state';
 
 export interface NativeTextHistoryGroups {
@@ -9,11 +9,12 @@ export interface NativeTextHistoryGroups {
 }
 
 export const nativeTextHistoryBoundary = StateEffect.define<boolean>();
+export const nativeAnswerPresenceChange = StateEffect.define<{ before: boolean; after: boolean }>();
 const applicationBoundaryEffect = StateEffect.define<object | null>();
 const joinedTransactions = new WeakSet<Transaction>();
 
 export function isHistoricalTextInput(tr: Transaction) {
-  return tr.docChanged && Boolean(tr.annotation(Transaction.userEvent)) &&
+  return (tr.docChanged || tr.effects.some(effect => effect.is(nativeAnswerPresenceChange))) && Boolean(tr.annotation(Transaction.userEvent)) &&
     tr.annotation(Transaction.addToHistory) !== false && !tr.isUserEvent('undo') && !tr.isUserEvent('redo');
 }
 
@@ -55,6 +56,8 @@ export const nativeTextHistoryGroups = StateField.define<NativeTextHistoryGroups
 });
 
 export const nativeTextHistoryExtensions = [
+  invertedEffects.of(tr => tr.effects.flatMap(effect => effect.is(nativeAnswerPresenceChange)
+    ? [nativeAnswerPresenceChange.of({ before: effect.value.after, after: effect.value.before })] : [])),
   history({ minDepth: 500, joinToEvent: (tr, adjacent) => {
     if (adjacent) joinedTransactions.add(tr);
     return adjacent;
@@ -65,7 +68,8 @@ export const nativeTextHistoryExtensions = [
 /** Keep the original transaction opaque so its changes, effects and annotations survive. */
 export function nativeTextHistoryInputFilter(getApplicationBoundary: () => object | null = () => null) {
   return EditorState.transactionFilter.of(tr => {
-    if (!tr.docChanged || tr.isUserEvent('undo') || tr.isUserEvent('redo')) return tr;
+    if ((!tr.docChanged && !tr.effects.some(effect => effect.is(nativeAnswerPresenceChange))) ||
+        tr.isUserEvent('undo') || tr.isUserEvent('redo')) return tr;
     if (!tr.annotation(Transaction.userEvent)) return [{ annotations: Transaction.addToHistory.of(false) }, tr];
     if (!isHistoricalTextInput(tr)) return tr;
     const isolation = tr.annotation(isolateHistory);

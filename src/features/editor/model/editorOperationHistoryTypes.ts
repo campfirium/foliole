@@ -30,6 +30,7 @@ export interface EditorTextHistoryInput {
   target?: EditorTextOperationTarget;
   beforeDoc: Text;
   changes?: ChangeSet;
+  answerPresenceChange?: { before: boolean; after: boolean };
   beforeSelection: EditorOperationSelectionSnapshot;
   afterSelection: EditorOperationSelectionSnapshot;
   nativeState?: EditorState;

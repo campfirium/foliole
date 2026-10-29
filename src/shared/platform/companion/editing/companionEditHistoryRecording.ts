@@ -58,6 +58,7 @@ function contentTransactions(args: { edit: CompanionContentEdit; before: Workspa
   const transactions = resolved.map(({ field, entry }) => ({ field, entries: [entry] }));
   const fields = (['content', 'reveal'] as const).filter(field => args.before[field] !== args.after[field]);
   const recorded = new Set(fields.filter(field => {
+    if ((args.before[field] ?? '') === (args.after[field] ?? '')) return false;
     const entries = transactions.filter(change => change.field === field).flatMap(change => [...change.entries]);
     return entries.length && nativeTextDocumentEquals(entries[0]!.beforeDoc, args.before[field] ?? '') &&
       nativeTextDocumentEquals(nativeTextInputDocuments(entries.at(-1)!).after, args.after[field] ?? '') &&
@@ -66,7 +67,9 @@ function contentTransactions(args: { edit: CompanionContentEdit; before: Workspa
   return [
     ...transactions.filter(change => recorded.has(change.field)),
     ...fields.filter(field => !recorded.has(field)).map(field => ({ field,
-      entries: [syntheticTextHistory(args.after.id, args.before[field] ?? '', args.after[field] ?? '')] }))
+      entries: [{ ...syntheticTextHistory(args.after.id, args.before[field] ?? '', args.after[field] ?? ''),
+        ...(field === 'reveal' && (args.before.reveal ?? '') === (args.after.reveal ?? '')
+          ? { answerPresenceChange: { before: args.before.reveal !== null, after: args.after.reveal !== null } } : {}) }] }))
   ];
 }
 

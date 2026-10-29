@@ -2,7 +2,7 @@ import { EditorSelection, EditorState, Text, Transaction } from '@codemirror/sta
 
 import type { EditorOperationHistoryEntry, EditorOperationHistoryState, EditorTextEditOperationEntry, EditorTextHistoryInput } from './editorOperationHistoryTypes';
 import { findNativeTextHistory, isolateNativeTextHistory } from './nativeTextHistory';
-import { nativeTextHistoryExtensions, nativeTextHistoryGroups, nativeTextHistoryInputFilter } from './nativeTextHistoryGroups';
+import { nativeAnswerPresenceChange, nativeTextHistoryExtensions, nativeTextHistoryGroups, nativeTextHistoryInputFilter } from './nativeTextHistoryGroups';
 
 export function editorTextTargetKey(nodeId: string, target?: { nodeId: string; field: 'content' | 'reveal' }) {
   return `${nodeId}\0${target?.nodeId ?? nodeId}\0${target?.field ?? 'content'}`;
@@ -23,6 +23,7 @@ function recordProgrammaticInput(previous: EditorState | undefined, input: Edito
   if (!state.selection.eq(before)) state = state.update({ selection: before, userEvent: 'select',
     annotations: Transaction.time.of(input.timestamp) }).state;
   return state.update({ changes: input.changes, selection: editorHistorySelection(input.afterSelection), userEvent: input.userEvent,
+    effects: input.answerPresenceChange ? nativeAnswerPresenceChange.of(input.answerPresenceChange) : [],
     annotations: Transaction.time.of(input.timestamp) }).state;
 }
 
