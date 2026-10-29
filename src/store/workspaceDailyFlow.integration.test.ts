@@ -17,6 +17,10 @@ vi.mock('../../electron/ipc/paths.js', () => ({ resolveAppPaths: () => ({ app_da
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => async (command: string, args: unknown) => {
   bridgeCommands.push(command);
   const { openDesktopDailyFlow, commitDesktopDailyFlow } = await import('../../electron/database/dailyFlow');
+  if (command === 'load_node_learning') {
+    const { readWorkspaceNodeLearning } = await import('../../lib/core/database/workspaceNodeLearning');
+    return readWorkspaceNodeLearning(openDatabaseConnection().driver, (args as { nodeIds: string[] }).nodeIds);
+  }
   if (command === 'open_daily_flow') return openDesktopDailyFlow(args);
   if (command === 'commit_daily_flow') {
     const result = await commitDesktopDailyFlow(args);

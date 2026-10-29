@@ -7,12 +7,19 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let root = '';
 let loseReceipt = false;
+let afterLearningRead: (() => void) | undefined;
 vi.mock('../../electron/deviceAnchorStore.js', () => ({
   loadDesktopLibraryWriterBinding: (libraryPath: string) => ({ deviceAnchor: 'daily-reading', libraryPath })
 }));
 vi.mock('../../electron/ipc/paths.js', () => ({ resolveAppPaths: () => ({ app_data_dir: root,
   app_cache_dir: path.join(root, 'cache'), app_config_dir: path.join(root, 'config'), app_log_dir: path.join(root, 'logs') }) }));
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => async (command: string, args: unknown) => {
+  if (command === 'load_node_learning') {
+    const { readWorkspaceNodeLearning } = await import('../../lib/core/database/workspaceNodeLearning');
+    const result = readWorkspaceNodeLearning(openDatabaseConnection().driver, (args as { nodeIds: string[] }).nodeIds);
+    const after = afterLearningRead; afterLearningRead = undefined; after?.();
+    return result;
+  }
   if (command === 'open_daily_flow') return openDesktopDailyFlow(args);
   if (command === 'commit_daily_flow') {
     const result = await commitDesktopDailyFlow(args);
@@ -41,7 +48,7 @@ const now = '2026-10-26T08:00:00.000Z';
 beforeEach(async () => {
   root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-daily-reading-'));
   initializeDatabase();
-  loseReceipt = false;
+  loseReceipt = false; afterLearningRead = undefined;
   hydrateCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
 });
 afterEach(async () => { vi.restoreAllMocks(); closeDatabaseConnection(); await fs.rm(root, { recursive: true, force: true }); });
@@ -134,14 +141,14 @@ it.each(['read', 'later'] as const)('%s keeps the configured short reading inter
   expect(app.getState().reviewSession.currentNodeId).toBe(target);
 });
 
-it.each(['read', 'later', 'dismiss'] as const)('%s rejects changed target facts and corrects a deleted successor', async action => {
+it.each(['read', 'later', 'dismiss'] as const)('%s rejects facts changed after its database read and corrects a deleted successor', async action => {
   const app = await setup(0, 3);
   const before = app.getState().reviewSession;
   const target = before.currentNodeId!;
   const invoke = { read: app.actions.readReviewTopic, later: app.actions.postponeReviewTopic, dismiss: app.actions.dismissReviewTopic }[action];
   const changed = { intervalDurationMs: 60000, intervalGrowthFactor: 2, lastHandledAt: now, nextAt: now,
     priority: 10, readingPosition: 0, repetitionCount: 9, state: 'active' as const };
-  saveNodeReadingState({ nodeId: target, reading: changed, updatedAt: now });
+  afterLearningRead = () => saveNodeReadingState({ nodeId: target, reading: changed, updatedAt: now });
   expect(await invoke(now)).toBe(false);
   expect(loadWorkspaceSnapshot()!.nodesById[target]!.reading).toEqual(changed);
   expect(app.getState().appActionHistory.undoStack).toEqual([]);
@@ -232,4 +239,20 @@ it('keeps a same-day minute item in its cycle position ahead of a topic moved So
   app.actions.revealReviewAnswer();
   expect(await app.actions.gradeReviewCard(3, due)).toBe(true);
   expect(app.getState().reviewSession.currentNodeId).toBe(topics[0]);
+});
+
+it.each(['read', 'later', 'dismiss'] as const)('%s reads the durable target when the workspace has only lightweight status', async action => {
+  const app = await setup(0, 3);
+  const target = app.getState().reviewSession.currentNodeId!;
+  const reading = { intervalDurationMs: 60000, intervalGrowthFactor: 1.3, lastHandledAt: '2026-10-25T00:00:00.000Z',
+    nextAt: now, priority: 5, readingPosition: 0, repetitionCount: 7, state: 'active' as const };
+  saveNodeReadingState({ nodeId: target, reading, updatedAt: now });
+  app.setState(state => ({ nodesById: { ...state.nodesById, [target]: Object.assign({ ...state.nodesById[target]!, reading: null }, {
+    learningSummary: { reading: { state: 'active', repetitionCount: 7 }, review: null }
+  }) } }));
+  const invoke = { read: app.actions.readReviewTopic, later: app.actions.postponeReviewTopic, dismiss: app.actions.dismissReviewTopic }[action];
+  expect(await invoke(now)).toBe(true);
+  const saved = loadWorkspaceSnapshot()!.nodesById[target]!.reading!;
+  expect(saved.repetitionCount).toBe(action === 'dismiss' ? 7 : 8);
+  expect(saved.state).toBe(action === 'dismiss' ? 'dismissed' : 'active');
 });

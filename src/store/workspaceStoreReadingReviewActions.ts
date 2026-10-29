@@ -3,6 +3,7 @@ import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import { prepareWorkspaceFlowDay } from './workspaceFlowDayAction';
+import { readWorkspaceReadingActionLearning } from './workspaceReadingActionLearning';
 import { buildReadingReviewDomainPatch } from './workspaceReadingReviewDomain';
 import {
   persistAndApplyReadingReviewPatch,
@@ -102,7 +103,7 @@ export function createReadReviewTopicActionWithPending(
 
 export { createRevisitReviewTopicSoonAction } from './workspaceDailySoonAction';
 
-function buildReadOrPostponeReadingReviewPatch(args: {
+async function buildReadOrPostponeReadingReviewPatch(args: {
   action: 'read' | 'later';
   currentNodeId: string;
   now: string;
@@ -110,8 +111,11 @@ function buildReadOrPostponeReadingReviewPatch(args: {
   snapshot: WorkspaceState;
   state: WorkspaceState;
   title: 'Read Topic' | 'Later Topic';
-}): ReadingReviewPatchResult | null {
-  const result = buildReadingReviewDomainPatch(args);
+}): Promise<ReadingReviewPatchResult | null> {
+  const nodesById = await readWorkspaceReadingActionLearning(args.state, args.currentNodeId, args.action, args.releaseSequentialReading);
+  if (!nodesById) return null;
+  const result = buildReadingReviewDomainPatch({ ...args,
+    state: { ...args.state, nodesById }, snapshot: { ...args.snapshot, nodesById } });
   if (!result) return null;
   const reviewSession = args.snapshot.reviewSession;
   const activeContext = buildReviewActiveNodeContext(

@@ -8,7 +8,7 @@ import {
   failWorkspaceAction,
   settleWorkspaceAction
 } from './workspaceActionHistory';
-import { applyReadingSnapshot, applyRelatedReadingSnapshots, areRelatedReadingsValid, isSameReadingProfile } from './workspaceActionHistoryReading';
+import { applyReadingSnapshot, applyRelatedReadingSnapshots, isSameReadingProfile } from './workspaceActionHistoryReading';
 import { hasPersistentDailyFlow, saveDailyReading } from './workspaceDailyFlowMutations';
 import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { recoverWorkspaceDailyFlow } from './workspaceDailyFlowSessionActions';
@@ -55,8 +55,7 @@ function applyCommittedReadingPatch(state: WorkspaceState, result: ReadingReview
   const affectedIds = [entry.nodeId, ...apply.relatedReadings.map(({ nodeId }) => nodeId)];
   const applicable = node && state.appActionHistory.pendingAction?.entry.id === entry.id &&
     !affectedIds.some(id => state.trashedNodeIds.includes(id)) &&
-    isSameReadingProfile(node.reading, entry.beforeReading) &&
-    areRelatedReadingsValid(apply.relatedReadings, state.nodesById) &&
+    affectedIds.every(id => state.nodesById[id] && isSameReadingProfile(state.nodesById[id]?.reading, result.beforeNodes?.[id]?.reading)) &&
     isSameWorkspaceReviewSession(state.reviewSession, beforeReviewSession);
   if (!applicable) return null;
   const nodesById = { ...mergeDailyFlowReceiptNodes(state.nodesById, result.beforeNodes ?? state.nodesById, result.receiptNodes, result.receiptLearning), [entry.nodeId]: applyReadingSnapshot(node, entry.afterReading) };
@@ -83,7 +82,7 @@ function settleCommittedReadingPatch(set: WorkspaceSet, result: ReadingReviewPat
 }
 
 export async function persistAndApplyReadingReviewPatch(args: {
-  buildPatch: (state: WorkspaceState) => ReadingReviewPatchResult | null;
+  buildPatch: (state: WorkspaceState) => ReadingReviewPatchResult | null | Promise<ReadingReviewPatchResult | null>;
   currentNodeId: string;
   get: WorkspaceGet;
   pendingNodeIds: ReadingReviewPendingNodeIds;
@@ -92,14 +91,17 @@ export async function persistAndApplyReadingReviewPatch(args: {
 }) {
   args.pendingNodeIds.add(args.currentNodeId);
   try {
-    const result = args.buildPatch(args.get());
-    if (!result) return false;
-    result.beforeNodes = args.get().nodesById;
-    const beforeReviewSession = args.get().reviewSession;
+    const before = args.get();
+    const result = await args.buildPatch(before);
+    if (!result || args.get().libraryScope !== before.libraryScope || args.get().reviewSession !== before.reviewSession) return false;
+    result.beforeNodes = before.nodesById;
+    const beforeReviewSession = before.reviewSession;
     let began = false;
     acceptWorkspaceHistoryCommand(args.set, 'preserve', (state) => {
+      const ids = [result.historyEntry.nodeId, ...(result.historyEntry.relatedReadings ?? []).map(value => value.nodeId)];
       if (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
-          state.appActionHistory.pendingCreate) return state;
+          state.appActionHistory.pendingCreate || ids.some(id => !state.nodesById[id] || state.trashedNodeIds.includes(id) ||
+            !isSameReadingProfile(state.nodesById[id]?.reading, before.nodesById[id]?.reading))) return state;
       began = true;
       return { appActionHistory: beginWorkspaceAction(state.appActionHistory, result.historyEntry) };
     });
@@ -136,6 +138,12 @@ async function persistPreparedReading(get: WorkspaceGet, result: ReadingReviewPa
       if (hasPersistentDailyFlow(get().reviewSession)) {
         const saved = await saveDailyReading(get().reviewSession, result.historyEntry,
           result.historyEntry.mutationTimestamp, result.patch.reviewSession!, result.completedReviewDay, get().nodesById);
+        for (const value of saved.appliedReadings ?? []) {
+          if (value.nodeId === result.historyEntry.nodeId) result.historyEntry.beforeReading = value.before;
+          const related = result.historyEntry.relatedReadings?.find(item => item.nodeId === value.nodeId);
+          if (related) related.beforeReading = value.before;
+        }
+        if (saved.mutationTimestamp) result.historyEntry.mutationTimestamp = saved.mutationTimestamp;
         for (const value of saved.readings ?? []) {
           if (value.nodeId === result.historyEntry.nodeId) result.historyEntry.afterReading = value.reading;
           const related = result.historyEntry.relatedReadings?.find(item => item.nodeId === value.nodeId);

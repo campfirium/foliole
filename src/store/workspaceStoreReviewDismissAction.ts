@@ -1,6 +1,7 @@
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 
 import { prepareWorkspaceFlowDay } from './workspaceFlowDayAction';
+import { readWorkspaceReadingActionLearning } from './workspaceReadingActionLearning';
 import { buildReadingReviewDomainPatch } from './workspaceReadingReviewDomain';
 import {
   persistAndApplyReadingReviewPatch,
@@ -26,18 +27,20 @@ interface DismissReviewPatchResult {
   patch: Partial<WorkspaceState>;
 }
 
-function buildDismissReviewPatch(args: {
+async function buildDismissReviewPatch(args: {
   currentNodeId: string;
   now: string;
   snapshot: WorkspaceState;
   state: WorkspaceState;
-}): DismissReviewPatchResult | null {
+}): Promise<DismissReviewPatchResult | null> {
+  const nodesById = await readWorkspaceReadingActionLearning(args.state, args.currentNodeId, 'dismiss');
+  if (!nodesById) return null;
   const result = buildReadingReviewDomainPatch({
     action: 'dismiss',
     currentNodeId: args.currentNodeId,
     now: args.now,
-    snapshot: args.snapshot,
-    state: args.state
+    snapshot: { ...args.snapshot, nodesById },
+    state: { ...args.state, nodesById }
   });
   if (!result) return null;
   const nextNodeId = args.currentNodeId;
@@ -89,15 +92,8 @@ export function createDismissReviewTopicActionWithPending(
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isReadingReviewItemNode(currentNode)) return false;
     if (pendingNodeIds.has(currentNodeId)) return false;
-    const result = buildDismissReviewPatch({
-      currentNodeId,
-      now,
-      snapshot,
-      state: get()
-    });
-    if (!result) return false;
     const committed = await persistAndApplyReadingReviewPatch({
-      buildPatch: () => result,
+      buildPatch: state => buildDismissReviewPatch({ currentNodeId, now, snapshot, state }),
       currentNodeId,
       get,
       pendingNodeIds,

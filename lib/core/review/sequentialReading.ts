@@ -1,12 +1,6 @@
+import { planSequentialReadingAdvanceStates } from './sequentialReadingAdvanceStates.js';
 import {
-  isUnavailableSequentialTopic,
-  unavailableFolderTopicOccupiesSlot
-} from './sequentialReadingSlotOccupancy.js';
-import { collectSequentialDerivedTopicIds } from './sequentialReadingSourceOrder.js';
-import {
-  isSequentialReadingSourceFolder,
-  isSequentialReadingSourceNode,
-  isSequentialReadingSourceTopic
+  isSequentialReadingSourceNode
 } from './sequentialReadingSources.js';
 import { planSequentialReadingSourceStates } from './sequentialReadingSourceStates.js';
 import type { SequentialReadingNode as Node, SequentialReadingProfile as NodeReadingProfile, SequentialReadingNodes, SequentialReadingArgs, SequentialReadingPatch, SequentialReadingChange } from './sequentialReadingTypes.js';
@@ -14,7 +8,7 @@ import type { SequentialReadingNode as Node, SequentialReadingProfile as NodeRea
 
 const cloneReadingProfile = (reading: NodeReadingProfile | null | undefined) => reading ? { ...reading } : null;
 
-export { isSequentialReadingSourceFolder, isSequentialReadingSourceTopic };
+export { isSequentialReadingSourceFolder, isSequentialReadingSourceTopic, findEnabledSequentialReadingSourceId } from './sequentialReadingSources.js';
 
 export type { SequentialReadingChange } from './sequentialReadingTypes.js';
 
@@ -86,65 +80,18 @@ export function buildSequentialReadingSourcePatch<T extends Node>(args: Sequenti
   return { changes, nodesById: nextNodesById, sourceNodeId: args.sourceNodeId };
 }
 
-export function findEnabledSequentialReadingSourceId(
-  nodeId: string,
-  nodesById: SequentialReadingNodes
-) {
-  let current = nodesById[nodeId];
-  const visited = new Set<string>();
-  while (current?.parentNodeId && !visited.has(current.parentNodeId)) {
-    const parent = nodesById[current.parentNodeId];
-    if (!parent) {
-      break;
-    }
-    if (isSequentialReadingSourceNode(parent, nodesById) && parent.sequentialReadingEnabled === true) {
-      return parent.id;
-    }
-    visited.add(current.parentNodeId);
-    current = parent;
-  }
-  return null;
-}
-
 function buildSequentialReadingAdvancePatch<T extends Node>(args: SequentialReadingArgs<T> & {
   handledNodeId: string;
 }) {
-  const sourceNodeId = findEnabledSequentialReadingSourceId(args.handledNodeId, args.nodesById);
-  if (!sourceNodeId) {
-    return null;
-  }
+  const plan = planSequentialReadingAdvanceStates(args);
+  if (!plan?.changes.length) return null;
   const nextNodesById = { ...args.nodesById };
   const changes: SequentialReadingChange[] = [];
-  const derivedNodeIds = collectSequentialDerivedTopicIds({ ...args, sourceNodeId });
-  const sourceNode = nextNodesById[sourceNodeId];
-  let released = false;
-  let passedHandledNode = false;
-  for (const nodeId of derivedNodeIds) {
-    const node = nextNodesById[nodeId];
-    if (nodeId === args.handledNodeId) {
-      released ||= isUnavailableSequentialTopic(node) && unavailableFolderTopicOccupiesSlot({ ...args, nodeId, sourceNode });
-      passedHandledNode = true;
-      continue;
-    }
-    if (!passedHandledNode) {
-      continue;
-    }
-    if (isUnavailableSequentialTopic(node)) {
-      released ||= unavailableFolderTopicOccupiesSlot({ ...args, nodeId, sourceNode });
-      continue;
-    }
-    const state = released ? 'locked' : 'active';
-    released = true;
-    applyReadingState({
-      changes,
-      defaultPriority: args.defaultPriority,
-      nextNodesById,
-      nodeId,
-      now: args.now,
-      state
-    });
-  }
-  return changes.length === 0 ? null : { changes, nodesById: nextNodesById, sourceNodeId };
+  for (const change of plan.changes) applyReadingState({
+    changes, defaultPriority: args.defaultPriority, nextNodesById,
+    nodeId: change.nodeId, now: args.now, state: change.after
+  });
+  return { changes, nodesById: nextNodesById, sourceNodeId: plan.sourceNodeId };
 }
 
 export function buildSequentialReadingDismissPatch<T extends Node>(args: SequentialReadingArgs<T> & {

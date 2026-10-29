@@ -15,6 +15,10 @@ vi.mock('../../electron/ipc/paths.js', () => ({
 }));
 
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => async (command: string, args: unknown) => {
+  if (command === 'load_node_learning') {
+    const { readWorkspaceNodeLearning } = await import('../../lib/core/database/workspaceNodeLearning');
+    return readWorkspaceNodeLearning(openDatabaseConnection().driver, (args as { nodeIds: string[] }).nodeIds);
+  }
   if (command === 'open_daily_flow') return openDesktopDailyFlow(args);
   if (command === 'commit_daily_flow') return commitReceipt(args);
   if (command === 'save_node_open_state') return null;

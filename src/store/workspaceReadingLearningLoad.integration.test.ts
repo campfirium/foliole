@@ -1,0 +1,68 @@
+// @vitest-environment node
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
+import { closeLibraries, type Peer } from '../../electron/database/syncLibrary.testSupport';
+import { readWorkspaceNodeLearning } from '../../lib/core/database/workspaceNodeLearning';
+import { commitDailyFlow, openDailyFlow } from '../../lib/core/flow/dailyFlowService';
+import type { Node } from '../features/nodes/model/nodeTypes';
+import { node, now, persistence, settings, setupPeers, snapshot } from '../test/dailyFlowExceptions.testSupport';
+
+import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
+import { createSetStateHarness, createWorkspaceFixture } from './workspaceStoreReviewActions.test-support';
+
+let peer: Peer;
+let release: () => void;
+let requested: () => void;
+let rejectRead = false;
+let gate: Promise<void>;
+let reading: Promise<void>;
+vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => async (command: string, args: unknown) => {
+  if (command === 'load_node_learning') {
+    const facts = readWorkspaceNodeLearning(peer.driver, (args as { nodeIds: string[] }).nodeIds);
+    requested(); await gate;
+    if (rejectRead) throw new Error('database_unavailable');
+    return facts;
+  }
+  if (command === 'open_daily_flow') return openDailyFlow(peer.port, args as never, settings(peer), persistence);
+  if (command === 'commit_daily_flow') return commitDailyFlow(peer.port, args as never, settings(peer), persistence);
+  if (command === 'save_node_open_state') return null;
+  throw new Error(`Unexpected reading command: ${command}`);
+} }));
+beforeEach(async () => {
+  [peer] = await setupPeers(); rejectRead = false;
+  gate = new Promise(resolve => { release = resolve; });
+  reading = new Promise(resolve => { requested = resolve; });
+});
+afterEach(closeLibraries);
+
+async function prepare() {
+  node(peer, 'a', 'topic'); node(peer, 'b', 'topic');
+  const { session } = await openDailyFlow(peer.port, { now, mode: 'reading-only' }, settings(peer), persistence);
+  const facts = await snapshot(peer);
+  const app = createSetStateHarness({ ...createWorkspaceFixture(Object.values(facts.nodesById) as Node[]),
+    libraryScope: settings(peer).scope!, activeNodeId: session.currentNodeId, reviewSession: session, reviewSessionMode: 'reading-only' });
+  return { ...app, actions: createWorkspaceReviewActions(app.setState, app.getState) };
+}
+
+it.each(['library', 'target'] as const)('discards the prepared operation when its %s changes during the database read', async change => {
+  const app = await prepare();
+  const id = app.getState().reviewSession.currentNodeId!;
+  const pending = app.actions.readReviewTopic(now);
+  await reading;
+  if (change === 'library') app.setState({ libraryScope: 'other-library' });
+  else app.setState(state => ({ nodesById: { ...state.nodesById, [id]: { ...state.nodesById[id]!,
+    reading: { intervalDurationMs: 60000, intervalGrowthFactor: 1, lastHandledAt: now, nextAt: now,
+      priority: 5, readingPosition: 0, repetitionCount: 3, state: 'active' } } } }));
+  release();
+  expect(await pending).toBe(false);
+  expect((await snapshot(peer)).nodesById[id]?.reading).toBeNull();
+  expect(app.getState().appActionHistory.undoStack).toEqual([]);
+});
+
+it('does not invent an initial reading when the database read fails', async () => {
+  const app = await prepare();
+  rejectRead = true; release();
+  expect(await app.actions.readReviewTopic(now)).toBe(false);
+  expect(peer.db.prepare('SELECT * FROM node_reading').all()).toEqual([]);
+  expect(app.getState().appActionHistory.undoStack).toEqual([]);
+});

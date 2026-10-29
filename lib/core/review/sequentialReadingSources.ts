@@ -33,3 +33,23 @@ export function isSequentialReadingSourceNode(
 ) {
   return isSequentialReadingSourceFolder(node) || isSequentialReadingSourceTopic(node, nodesById);
 }
+
+export function findEnabledSequentialReadingSourceId(
+  nodeId: string,
+  nodesById: SequentialReadingNodes
+) {
+  let current = nodesById[nodeId];
+  const visited = new Set<string>();
+  while (current?.parentNodeId && !visited.has(current.parentNodeId)) {
+    const parent = nodesById[current.parentNodeId];
+    if (!parent) {
+      break;
+    }
+    if (isSequentialReadingSourceNode(parent, nodesById) && parent.sequentialReadingEnabled === true) {
+      return parent.id;
+    }
+    visited.add(current.parentNodeId);
+    current = parent;
+  }
+  return null;
+}

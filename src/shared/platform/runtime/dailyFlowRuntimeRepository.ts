@@ -25,13 +25,14 @@ export async function openDailyFlowRuntime(args: DailyFlowOpenArgs, knownNodes: 
 
 export function commitDailyFlowRuntime(args: DailyFlowCommitArgs, knownNodes: Record<string, unknown>) {
   const browser = getBrowserDailyFlowRuntime();
-  if (browser) return browser.commit(args, knownNodes);
+  if (browser) return browser.commit(args, knownNodes).then(result => ({ ...result, appliedReadings: args.readings }));
   const invoke = getRuntimeInvoke();
   if (!invoke) throw new Error('Daily Flow storage is unavailable.');
-  return invoke(NATIVE_COMMANDS.commitDailyFlow, retainDailyFlowRetry(args)).then(async result => {
+  const retained = retainDailyFlowRetry(args);
+  return invoke(NATIVE_COMMANDS.commitDailyFlow, retained).then(async result => {
     const display = await loadDailyFlowDisplayNodes(result, knownNodes, args.token.scope);
     settleDailyFlowRetry(args.opId);
-    return { ...result, nodes: display };
+    return { ...result, appliedReadings: retained.readings, nodes: display };
   });
 }
 
