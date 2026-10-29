@@ -108,3 +108,13 @@ it('refuses cleanup when another file appears inside the owned run root', () => 
   expect(() => closeMacosA5Run(context)).toThrow(/non-empty/u);
   expect(fs.existsSync(path.join(context.runRoot, 'owner.json'))).toBe(true);
 });
+
+it('binds the explicit test identity to the existing Mac DEV library across a frozen build', () => {
+  const context = createMacosA5ExecutionContext({
+    action: 'sync-existing', appIdentity: 'test', repoRoot: temporaryRepo(),
+    runId: '77777777-7777-7777-7777-777777777777'
+  });
+  expect(context.desktopDevLibrary).toBe('/Users/roamer/Documents/Foliole Dev');
+  expect(withMacosA5BuildRoot(context, '/capsule/source', '/capsule', 'c'.repeat(64)).desktopDevLibrary)
+    .toBe('/Users/roamer/Documents/Foliole Dev');
+});

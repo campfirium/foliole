@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
-import { MACOS_DAILY_DEBUG_ROOT } from '../macos/macos-electron-dev-paths.mjs';
+import { MACOS_DAILY_DEBUG_ROOT, MACOS_DEV_LIBRARY_HOME } from '../macos/macos-electron-dev-paths.mjs';
 
 const RUN_ID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/u;
 const RUN_OWNER_FILE = 'owner.json';
@@ -30,7 +30,7 @@ function resolveSourceRepoRoot(repoRoot, fsApi) {
 }
 
 export function createMacosA5ExecutionContext({
-  acceptedRevision = null, acceptedTree = null, action, formalSourceClass = null,
+  acceptedRevision = null, acceptedTree = null, action, appIdentity = 'daily', formalSourceClass = null,
   fsApi = fs, repoRoot, requiresHiddenDesktopRuntime = false, runId = randomUUID()
 }) {
   if (!RUN_ID_PATTERN.test(runId)) throw new Error('Invalid macOS A5 run identity.');
@@ -45,7 +45,7 @@ export function createMacosA5ExecutionContext({
     artifactsRoot: resolveArtifactsRoot(sourceRepoRoot, fsApi),
     buildRoot: sourceRepoRoot,
     controllerStateRoot,
-    desktopDevLibrary: path.join(controllerStateRoot, 'desktop-library'),
+    desktopDevLibrary: appIdentity === 'test' ? MACOS_DEV_LIBRARY_HOME : path.join(controllerStateRoot, 'desktop-library'),
     desktopRuntimeRoot: path.join(sourceRepoRoot, MACOS_DAILY_DEBUG_ROOT),
     leaseRoot: path.join(controllerStateRoot, 'leases'),
     runId,

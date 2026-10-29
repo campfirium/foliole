@@ -28,7 +28,7 @@ function runEvidenceReplacement(options) {
   }
 }
 
-export function openMacosA5Lifecycle({ action, actionContract, formal, repoRoot, revision }) {
+export function openMacosA5Lifecycle({ action, actionContract, appIdentity = 'daily', formal, repoRoot, revision }) {
   const taskId = formalEvidenceRetentionTaskId(actionContract, { formal });
   const sharedCacheRoot = path.join(path.resolve(repoRoot), '.cache');
   if (actionContract.requiresHiddenDesktopRuntime) {
@@ -37,7 +37,7 @@ export function openMacosA5Lifecycle({ action, actionContract, formal, repoRoot,
   const candidate = formal && actionContract.formalSourceClass === 'frozen-build'
     ? beginFormalA5Candidate(repoRoot, undefined, revision) : null;
   const context = createMacosA5ExecutionContext({
-    acceptedRevision: candidate?.revision, acceptedTree: candidate?.tree, action,
+    acceptedRevision: candidate?.revision, acceptedTree: candidate?.tree, action, appIdentity,
     formalSourceClass: formal ? actionContract.formalSourceClass : null, repoRoot,
     requiresHiddenDesktopRuntime: formal && actionContract.requiresHiddenDesktopRuntime
   });

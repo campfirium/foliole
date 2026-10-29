@@ -155,14 +155,15 @@ export async function runMacosA5Action(
 ) {
   const actionContract = assertRegisteredMacosA5Action(action);
   // One CLI run owns one application identity; child runners inherit it through the environment.
-  const identityEnv = macosA5IdentityEnv(process.env, resolveMacosA5Identity(action, identity));
+  const appIdentity = resolveMacosA5Identity(action, identity);
+  const identityEnv = macosA5IdentityEnv(process.env, appIdentity);
   for (const key of Object.keys(process.env)) if (!(key in identityEnv)) delete process.env[key];
   Object.assign(process.env, identityEnv);
   if (formal) assertFormalMacosA5Action(actionContract);
   if (revision && (!formal || actionContract.formalSourceClass !== 'frozen-build')) {
     throw new Error('--revision is only supported for formal build actions.');
   }
-  const lifecycle = openMacosA5Lifecycle({ action, actionContract, formal, repoRoot, revision });
+  const lifecycle = openMacosA5Lifecycle({ action, actionContract, appIdentity, formal, repoRoot, revision });
   let { context } = lifecycle;
   const { receipt, sharedCacheRoot, taskId } = lifecycle;
   let lease;
