@@ -41,7 +41,7 @@ export async function initializeCycle(db: DailyFlowStore, args: DailyFlowOpenArg
   return { session, snapshot, rows, mode: plans.mode };
 }
 
-export async function reconcileCycle(db: DailyFlowStore, stored: CycleStored, now: string,
+export async function reconcileCycle(db: Pick<DailyFlowStore, 'learningSnapshot' | 'readRows' | 'writeRows'>, stored: CycleStored, now: string,
   settings: DailyFlowSettings, captureChanges = false) {
   const snapshot = await db.learningSnapshot();
   const eligible = new Set(fullDayCandidates(snapshot, now, settings));
@@ -66,7 +66,7 @@ export async function reconcileCycle(db: DailyFlowStore, stored: CycleStored, no
   return { ...stored.session, cycle: meta };
 }
 
-export async function isCycleCurrentReady(db: DailyFlowStore, session: DailyFlowSession, mode: ReviewSessionMode,
+export async function isCycleCurrentReady(db: Pick<DailyFlowStore, 'readRows' | 'scopedLearningSnapshot'>, session: DailyFlowSession, mode: ReviewSessionMode,
   now: string, settings: DailyFlowSettings) {
   const id = session.currentNodeId;
   if (!id) return false;
@@ -78,7 +78,7 @@ export async function isCycleCurrentReady(db: DailyFlowStore, session: DailyFlow
     : [...plan.fsrsQueueNodeIds, ...plan.readingQueueNodeIds]).includes(id);
 }
 
-export async function chooseCycleCurrent(db: DailyFlowStore, session: DailyFlowSession, mode: ReviewSessionMode,
+export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSnapshot'>, session: DailyFlowSession, mode: ReviewSessionMode,
   now: string, settings: DailyFlowSettings) {
   const selected = await selectCycleSuccessor(db, session.cycle!, { mode, now, settings });
   session.currentNodeId = selected?.node_id ?? null;

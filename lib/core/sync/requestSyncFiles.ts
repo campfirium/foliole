@@ -3,6 +3,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 
 import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
 
+import { DailyFlowTableFiles } from './dailyFlowTableFiles.js';
 import type { CanonicalBlob, CanonicalFact } from './framedSyncCanonicalManifest.js';
 import { FRAMED_SYNC_FRAME_TYPES, FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import { FramedSyncFactFragmentDecoder } from './framedSyncFactFrameReader.js';
@@ -16,6 +17,9 @@ export const REQUEST_SYNC_MEMORY_BYTES = 4 * 1024 * 1024;
 
 /** Request-local plaintext facts and bodies. No publication, attempt, receipt or encrypted frame is stored. */
 export class RequestSyncFiles {
+  readonly dailyFlow = new DailyFlowTableFiles(
+    (key, bytes) => this.write(`${this.directory}/${key}`, bytes),
+    key => this.read(`${this.directory}/${key}`));
   private readonly facts: Array<{ first: number; end: number; kind: number }> = [];
   private readonly memory = new Map<string, Uint8Array>();
   private memoryBytes = 0;

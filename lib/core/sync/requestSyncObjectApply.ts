@@ -4,6 +4,8 @@ import type { SyncGroupMemberStatePayload } from '../../platform/syncGroupMember
 import { NODE_CHILD_STATE_TYPES } from '../database/nodeChildStateSql.js';
 import { ROOT_CHILD_ORDER_ID } from '../database/parentChildOrder.js';
 
+import { applyDailyFlowTable } from './dailyFlowTableApply.js';
+import type { DailyFlowTableFiles } from './dailyFlowTableFiles.js';
 import type { DbPort } from './dbPort.js';
 import type { FramedSyncContext } from './framedSyncContract.js';
 import { applyFramedFactSources, type FramedFactSource } from './framedSyncFactApply.js';
@@ -17,6 +19,8 @@ import type { DeferredVisibilityPruning } from './syncNodeVisibilityPruning.js';
 import type { ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
 
 export interface RequestSyncObjectInput {
+  dailyFlow?: DailyFlowTableFiles;
+  sourceStateHash?: Uint8Array;
   context: FramedSyncContext;
   globalId: string;
   objectType: string;
@@ -61,6 +65,12 @@ export function applyRequestSyncObject(db: DbPort, input: RequestSyncObjectInput
   return db.transaction(async tx => {
     input.signal?.throwIfAborted();
     if (!input.batch) await openRequestSyncInbound(tx, input.context, value => assertPeer(tx, input, value));
+    if (input.dailyFlow) {
+      if (input.objectType !== 'daily_flow') throw new Error('daily_flow_table_object_invalid');
+      const result = await applyDailyFlowTable(tx, input.dailyFlow, input.globalId, input.objectOptions?.hostName ?? '', input.sourceStateHash);
+      if (!input.batch) await recordRequestSyncInbound(tx, input.context, input.requestId);
+      return { ...result, sharedStateHash: input.batch ? undefined : await readAppliedStateHash(tx, input) };
+    }
     let collectBodies = await changesCurrentVersion(tx, input);
     const source = receivedObjectFacts(input, () => { collectBodies = true; });
     const result = await applyFramedFactSources(tx, [source], { loadBody: input.loadBody,

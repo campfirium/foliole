@@ -72,15 +72,16 @@ final class FramedSyncContractSource {
 
     static String proto() throws IOException {
         return read("lib/core/sync/proto/foliole/sync/v22/framed_sync.proto")
-            + read("lib/core/sync/proto/foliole/sync/v22/request_sync.proto");
+            + read("lib/core/sync/proto/foliole/sync/v22/request_sync.proto")
+            + read("lib/core/sync/proto/foliole/sync/v22/daily_flow_table.proto");
     }
 
     static String corpus() throws IOException {
-        return read("lib/core/sync/fixtures/framed-sync-v27-golden.json");
+        return read("lib/core/sync/fixtures/framed-sync-v28-golden.json");
     }
 
     static String maliciousCorpus() throws IOException {
-        return read("lib/core/sync/fixtures/framed-sync-v27-malicious.json");
+        return read("lib/core/sync/fixtures/framed-sync-v28-malicious.json");
     }
 
     static List<MessageVector> messages() throws IOException {

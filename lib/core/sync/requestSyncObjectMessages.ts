@@ -37,6 +37,9 @@ export async function* requestSyncObjectMessages(header: RequestSyncObjectHeader
     return message;
   };
   yield account({ payloadCase: 'request_object_header', payload: header });
+  if (files.dailyFlow.complete) {
+    for await (const message of files.dailyFlow.messages()) yield account(message);
+  }
   for await (const record of files.readFactRecords()) {
     const { fact } = record;
     if (fact.objectType !== header.objectType || fact.globalId !== header.globalId) {

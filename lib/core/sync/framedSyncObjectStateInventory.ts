@@ -34,6 +34,10 @@ interface StateRow extends DbRow {
   object_id: string;
   object_type: string;
   body_blob_hash: string | null;
+  daily_flow_root_id: string | null;
+  daily_flow_complete: number | null;
+  daily_flow_current: number;
+  daily_flow_unready: number;
 }
 
 export async function readFramedSyncObjectStateInventory(
@@ -46,6 +50,14 @@ export async function readFramedSyncObjectStateInventory(
         AND (CAST(content AS BLOB) <> X'' OR body_blob_hash =
           'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'))
       ELSE NULL END AS body_blob_hash
+    , CASE WHEN object_type='daily_flow' THEN (SELECT root_id FROM daily_flow_sync_facts WHERE id=object_id) END AS daily_flow_root_id
+    , CASE WHEN object_type='daily_flow' THEN (SELECT complete FROM daily_flow_lists WHERE list_id=object_id) END AS daily_flow_complete
+    , CASE WHEN object_type='daily_flow' AND EXISTS(SELECT 1 FROM daily_flow_sync_projection WHERE root_id=object_id)
+      THEN 1 ELSE 0 END AS daily_flow_current
+    , CASE WHEN object_type='daily_flow' THEN EXISTS(SELECT 1 FROM daily_flow_sync_facts f WHERE f.id=object_id
+      AND (NOT EXISTS(SELECT 1 FROM daily_flow_lists l WHERE l.list_id=f.root_id AND l.complete=1)
+        OR (f.parent_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM daily_flow_sync_facts p WHERE p.id=f.parent_id))))
+      ELSE 0 END AS daily_flow_unready
     FROM sync_object_state WHERE object_type IN (${types})
       AND (object_type != 'setting' OR object_id LIKE '${sharedSettingPrefix}%')
       AND (object_type NOT IN (${NODE_CHILD_STATE_TYPES_SQL})
@@ -77,6 +89,9 @@ function stateEntry(row: StateRow): FramedSyncInventoryEntry {
     throw new Error('framed_sync_inventory_state_hash_invalid');
   }
   return { frontierFactIds: [], globalId: row.object_id, objectType: row.object_type,
+    ...(row.daily_flow_root_id ? { dailyFlowRootId: row.daily_flow_root_id,
+      dailyFlowComplete: row.daily_flow_complete === 1, dailyFlowCurrent: row.daily_flow_current === 1,
+      ...(row.daily_flow_unready === 1 ? { unready: true } : {}) } : {}),
     requiredRelationIds: [], resourceHashes: row.body_blob_hash ? [hexToBytes(row.body_blob_hash)] : [], reviewFactIds: [],
     sharedStateHash: hexToBytes(row.content_hash),
     stateFactIds: [framedSyncObjectStateFactId(row.object_type, row.content_hash)] };

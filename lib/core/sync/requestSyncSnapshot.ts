@@ -1,3 +1,4 @@
+import { writeDailyFlowTableSnapshot } from './dailyFlowTableSnapshot.js';
 import type { DbPort } from './dbPort.js';
 import { loadFramedExternalDocumentBody } from './framedSyncExternalDocumentBody.js';
 import { revalidateFramedSyncInventorySource, requiredFramedSyncNodeVersionIds,
@@ -45,6 +46,12 @@ export async function writeRequestSyncSnapshot(db: DbPort, difference: FramedSyn
   await assertSyncGroupLocalPublicationAllowed(db);
   const entry = await readFramedSyncInventoryEntry(db, difference);
   if (!entry) throw new Error('framed_sync_source_changed');
+  if (difference.objectType === 'daily_flow') {
+    if (revalidateFramedSyncInventorySource({ currentSource: [entry], differences: [difference],
+      direction: 'local_to_remote' }).deferredObjects.length) throw new Error('framed_sync_source_changed');
+    await writeDailyFlowTableSnapshot(db, difference, files);
+    return entry;
+  }
   if (difference.objectType === 'node') {
     const selected = await selectRequestSyncNodeSource(db, entry, difference);
     await writeNodes(db, { ...difference, sourceSnapshot: selected }, files);

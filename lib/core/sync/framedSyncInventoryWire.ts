@@ -56,7 +56,9 @@ export function entryToWire(entry: FramedSyncInventoryEntry) {
     objectType: entry.objectType, requiredRelationIds: entry.requiredRelationIds,
     resourceHashes: entry.resourceHashes, reviewFactIds: entry.reviewFactIds,
     sharedStateHash: entry.sharedStateHash, stateFactIds: entry.stateFactIds ?? [],
-    versionStates: entry.versionStates ?? [], currentVersionId: entry.currentVersionId ?? '', unready: entry.unready ?? false
+    versionStates: entry.versionStates ?? [], currentVersionId: entry.currentVersionId ?? '', unready: entry.unready ?? false,
+    dailyFlowRootId: entry.dailyFlowRootId ?? '', dailyFlowComplete: entry.dailyFlowComplete ?? false,
+    dailyFlowCurrent: entry.dailyFlowCurrent ?? false
   };
 }
 
@@ -73,6 +75,8 @@ export function entriesFromWire(value: unknown): readonly FramedSyncInventoryEnt
       resourceHashes: list(entry.resourceHashes).map((hash) => bytes(hash, 'resource_hash').slice()),
       reviewFactIds: strings('reviewFactIds'),
       sharedStateHash: bytes(entry.sharedStateHash, 'shared_state_hash').slice(),
+      ...(entry.dailyFlowRootId ? { dailyFlowRootId: text(entry.dailyFlowRootId, 'daily_flow_root_id'),
+        dailyFlowComplete: entry.dailyFlowComplete === true, dailyFlowCurrent: entry.dailyFlowCurrent === true } : {}),
       ...(entry.currentVersionId || entry.unready || (Array.isArray(entry.versionStates) && entry.versionStates.length) ? {
         currentVersionId: String(entry.currentVersionId ?? ''), unready: entry.unready === true,
         versionStates: list(entry.versionStates).map(value => text(value, 'version_state'))

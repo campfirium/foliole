@@ -15,7 +15,7 @@ export function cycleReadyNodeIds(snapshot: DailyFlowLearningSnapshot, mode: Rev
     ? plan.readingQueueNodeIds : [...plan.fsrsQueueNodeIds, ...plan.readingQueueNodeIds];
 }
 
-async function scanRange(db: DailyFlowStore, meta: CycleMeta, args: { mode: ReviewSessionMode; now: string;
+async function scanRange(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSnapshot'>, meta: CycleMeta, args: { mode: ReviewSessionMode; now: string;
   settings: DailyFlowSettings; excluded?: string }) {
   while (meta.scanAfter < meta.lapLimit) {
     const rows = await db.scanRows(meta.scanAfter, meta.lapLimit, BATCH_SIZE);
@@ -40,7 +40,7 @@ function crossClear(meta: CycleMeta, position: number, now: string) {
   if (!meta.clearedAt && position > meta.clearKey) meta.clearedAt = now;
 }
 
-export async function selectCycleSuccessor(db: DailyFlowStore, meta: CycleMeta,
+export async function selectCycleSuccessor(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSnapshot'>, meta: CycleMeta,
   args: Parameters<typeof scanRange>[2]) {
   const currentLap = await scanRange(db, meta, args);
   if (currentLap) return currentLap;

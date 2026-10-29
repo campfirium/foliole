@@ -4,6 +4,8 @@ import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 export function framedSyncInventorySummary(entries: readonly FramedSyncInventoryEntry[]) {
   return entries.map(entry => entry.objectType === 'node' ? {
     globalId: entry.globalId, objectType: entry.objectType, sharedStateHash: entry.sharedStateHash,
+    ...(entry.dailyFlowRootId ? { dailyFlowRootId: entry.dailyFlowRootId,
+      dailyFlowComplete: entry.dailyFlowComplete, dailyFlowCurrent: entry.dailyFlowCurrent } : {}),
     unready: entry.unready, frontierFactIds: [], requiredRelationIds: [],
     reviewFactIds: [], stateFactIds: [], resourceHashes: []
   } : entry);

@@ -78,7 +78,7 @@ describe('framed sync production protobuf codec exact boundaries', () => {
   it('retains an independent decoded protobuf container depth limit', () => {
     expect(() => encodeValidatedProtocolMessage('handshake', {
       capabilities: [], deviceId: 'device', groupId: 'group', libraryEpoch: 'epoch',
-      protocolVersion: 27, sessionId: roundId(), unexpected: containerAtDepth(145)
+      protocolVersion: 28, sessionId: roundId(), unexpected: containerAtDepth(145)
     })).toThrow('protocol_depth_limit_exceeded');
   });
 

@@ -46,6 +46,11 @@ function restorePreviousLookups(sqlite: Database.Database, companion: boolean) {
   sqlite.exec(`CREATE INDEX idx_sync_topic_daily_owner ON sync_object_state(substr(object_id, 12))
     WHERE object_type = 'topic_daily_count'`);
   for (const sql of PREVIOUS_TRIGGERS) sqlite.exec(sql);
+  // No Flow data exists in this inventory fixture; restore its pre-cycle table shape before replaying migrations.
+  sqlite.exec(`DROP TABLE daily_flow_entries;
+    CREATE TABLE daily_flow_entries(node_id TEXT PRIMARY KEY, initial_position INTEGER NOT NULL,
+      queue_position INTEGER, soon_position INTEGER);
+    ALTER TABLE daily_flow_operations DROP COLUMN source_session_json`);
   sqlite.pragma(`user_version = ${companion ? 95 : 167}`);
 }
 

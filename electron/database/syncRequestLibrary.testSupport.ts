@@ -37,6 +37,7 @@ export async function syncRequestLibrary(source: Peer, target: Peer, onApplied?:
         peerState: { contract_version: 3, group_id: 'group', sender_device_identity_key: source.id,
           ...sender, devices: [], removals: [], restore: null, source_proof_revisions: {} },
         globalId: difference.globalId, objectType: difference.objectType,
+        ...(request.dailyFlow.complete ? { dailyFlow: request.dailyFlow } : {}),
         requestId: new Uint8Array(16), facts: async function* () { yield* request.readFacts(); },
         loadBody: (_db, blob) => request.loadBody(blob), enqueueSearchInvalidations: false
       });

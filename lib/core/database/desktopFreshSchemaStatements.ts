@@ -5,6 +5,7 @@ import { CURRENT_PARENT_ORDER_SCHEMA } from './currentParentOrderSchema.js';
 import { DAILY_FLOW_CURRENT_SCHEMA } from './dailyFlowSchema.js';
 import { DAILY_FLOW_SYNC_MERGE_INDEXES } from './dailyFlowSyncMergeMigration.js';
 import { DAILY_FLOW_SYNC_SCHEMA } from './dailyFlowSyncSchema.js';
+import { DAILY_FLOW_TABLE_SCHEMA } from './dailyFlowTableSchema.js';
 import { DATA_MIGRATION_STATE_SCHEMA_STATEMENTS } from './dataMigrationState.js';
 import { DESKTOP_CORE_SCHEMA_STATEMENTS } from './desktopCoreSchemaStatements.js';
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from './desktopResourceSchemaStatements.js';
@@ -38,6 +39,7 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...DESKTOP_CORE_SCHEMA_STATEMENTS,
   ...DAILY_FLOW_CURRENT_SCHEMA,
   ...DAILY_FLOW_SYNC_SCHEMA,
+  ...DAILY_FLOW_TABLE_SCHEMA,
   ...DAILY_FLOW_SYNC_MERGE_INDEXES,
   ...NODE_VERSION_RETENTION_INDEX_SCHEMA,
   ...REVIEW_DAILY_COUNT_SCHEMA,

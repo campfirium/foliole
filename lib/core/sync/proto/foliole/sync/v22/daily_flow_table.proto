@@ -1,0 +1,68 @@
+syntax = "proto3";
+package foliole.sync.v22;
+option java_package = "com.foliole.sync.v22";
+option java_multiple_files = true;
+message DailyFlowTableBegin {
+  string list_id = 1;
+  string purpose = 2;
+  string snapshot_id = 3;
+  string requested_fact_id = 4;
+  string head_id = 5;
+  string session_json = 6;
+  string mode = 7;
+  uint64 member_count = 8;
+  uint32 fact_count = 9;
+}
+message DailyFlowFactHeader {
+  string fact_id = 1;
+  string payload_json = 2;
+  bytes content_hash = 3;
+}
+message DailyFlowStoredRow {
+  string fact_id = 1;
+  string slot = 2;
+  uint32 ordinal = 3;
+  string node_id = 4;
+  uint64 order_key = 5;
+  uint32 active = 6;
+  string cohort = 7;
+  uint32 handled = 8;
+  uint32 initial_task = 9;
+}
+message DailyFlowMember {
+  string node_id = 1;
+  uint64 order_key = 2;
+  uint32 active = 3;
+  string cohort = 4;
+  uint32 handled = 5;
+  uint32 initial_task = 6;
+  string slot = 7;
+  uint32 ordinal = 8;
+}
+message DailyFlowDependency {
+  string node_id = 1;
+  string version_id = 2;
+  string reading_hash = 3;
+  string reading_updated_at = 4;
+  string review_fact_id = 5;
+  string reading_last_handled_at = 6;
+  uint64 reading_repetition_count = 7;
+}
+message DailyFlowTableRecord {
+  oneof record {
+    DailyFlowFactHeader fact = 1;
+    DailyFlowStoredRow row = 2;
+    DailyFlowMember member = 3;
+    string applied_fact_id = 4;
+    DailyFlowDependency dependency = 5;
+  }
+}
+message DailyFlowTableBatch {
+  uint32 batch_index = 1;
+  repeated DailyFlowTableRecord records = 2;
+}
+message DailyFlowTableEnd {
+  uint64 record_count = 1;
+  uint32 batch_count = 2;
+  bytes table_hash = 3;
+}

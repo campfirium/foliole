@@ -3,6 +3,7 @@ package foliole.sync.v22;
 option java_package = "com.foliole.sync.v22";
 option java_multiple_files = true;
 import "request_sync.proto";
+import "daily_flow_table.proto";
 enum FactKind {
   FACT_KIND_UNSPECIFIED = 0;
   FACT_KIND_OBJECT_STATE = 1;
@@ -73,6 +74,9 @@ message InventoryEntry {
   repeated bytes resource_hashes = 7;
   repeated string state_fact_ids = 8;
   repeated string version_states = 9;
+  bool daily_flow_complete = 12;
+  string daily_flow_root_id = 13;
+  bool daily_flow_current = 14;
   string current_version_id = 10;
   bool unready = 11;
 }
@@ -256,5 +260,8 @@ message ProtocolMessage {
     RequestObjectResult request_object_result = 21;
     RequestBatchEnd request_batch_end = 22;
     RequestAttachment request_attachment = 23;
+    DailyFlowTableBegin daily_flow_table_begin = 24;
+    DailyFlowTableBatch daily_flow_table_batch = 25;
+    DailyFlowTableEnd daily_flow_table_end = 26;
   }
 }

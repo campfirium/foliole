@@ -1,5 +1,6 @@
 import protobuf from 'protobufjs';
 
+import { dailyFlowTableBeginSchema, dailyFlowTableBatchSchema, dailyFlowTableEndSchema } from './dailyFlowTableContract.js';
 import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import { assertDecodedProtocolPayload } from './framedSyncDecodedContract.js';
 import { factProtocolByteLength, streamFactProtocolEncoding } from './framedSyncFactEncoding.js';
@@ -7,12 +8,15 @@ import {
   assertDecodedPayloadType,
   type ProtocolPayloadCase
 } from './framedSyncReceiver.js';
-import schema from './generated/framed-sync-v27-schema.json' with { type: 'json' };
+import schema from './generated/framed-sync-v28-schema.json' with { type: 'json' };
 
 const root = protobuf.Root.fromJSON(schema as protobuf.INamespace);
 const protocolMessage = root.lookupType('foliole.sync.v22.ProtocolMessage');
 
 const PAYLOAD_PROPERTIES = Object.freeze({
+  daily_flow_table_begin: 'dailyFlowTableBegin',
+  daily_flow_table_batch: 'dailyFlowTableBatch',
+  daily_flow_table_end: 'dailyFlowTableEnd',
   blob_chunk: 'blobChunk',
   blob_offer: 'blobOffer',
   difference_request: 'differenceRequest',
@@ -121,6 +125,9 @@ export function validatedFactProtocolByteLength(payload: unknown) {
 }
 
 function protocolValue(payloadCase: ProtocolPayloadCase, payload: unknown) {
+  if (payloadCase === 'daily_flow_table_begin') payload = dailyFlowTableBeginSchema.parse(payload);
+  if (payloadCase === 'daily_flow_table_batch') payload = dailyFlowTableBatchSchema.parse(payload);
+  if (payloadCase === 'daily_flow_table_end') payload = dailyFlowTableEndSchema.parse(payload);
   validated(payloadCase, payload);
   const value = { [PAYLOAD_PROPERTIES[payloadCase]]: payload };
   const error = protocolMessage.verify(value);

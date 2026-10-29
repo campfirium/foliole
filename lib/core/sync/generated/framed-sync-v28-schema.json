@@ -271,6 +271,21 @@
                       "id": 9,
                       "protoName": "version_states"
                     },
+                    "dailyFlowComplete": {
+                      "type": "bool",
+                      "id": 12,
+                      "protoName": "daily_flow_complete"
+                    },
+                    "dailyFlowRootId": {
+                      "type": "string",
+                      "id": 13,
+                      "protoName": "daily_flow_root_id"
+                    },
+                    "dailyFlowCurrent": {
+                      "type": "bool",
+                      "id": 14,
+                      "protoName": "daily_flow_current"
+                    },
                     "currentVersionId": {
                       "type": "string",
                       "id": 10,
@@ -852,7 +867,10 @@
                         "requestObjectEnd",
                         "requestObjectResult",
                         "requestBatchEnd",
-                        "requestAttachment"
+                        "requestAttachment",
+                        "dailyFlowTableBegin",
+                        "dailyFlowTableBatch",
+                        "dailyFlowTableEnd"
                       ]
                     }
                   },
@@ -968,6 +986,21 @@
                       "type": "RequestAttachment",
                       "id": 23,
                       "protoName": "request_attachment"
+                    },
+                    "dailyFlowTableBegin": {
+                      "type": "DailyFlowTableBegin",
+                      "id": 24,
+                      "protoName": "daily_flow_table_begin"
+                    },
+                    "dailyFlowTableBatch": {
+                      "type": "DailyFlowTableBatch",
+                      "id": 25,
+                      "protoName": "daily_flow_table_batch"
+                    },
+                    "dailyFlowTableEnd": {
+                      "type": "DailyFlowTableEnd",
+                      "id": 26,
+                      "protoName": "daily_flow_table_end"
                     }
                   }
                 },
@@ -1122,6 +1155,263 @@
                       "type": "bool",
                       "id": 13,
                       "protoName": "parsing_pending"
+                    }
+                  }
+                },
+                "DailyFlowTableBegin": {
+                  "fields": {
+                    "listId": {
+                      "type": "string",
+                      "id": 1,
+                      "protoName": "list_id"
+                    },
+                    "purpose": {
+                      "type": "string",
+                      "id": 2
+                    },
+                    "snapshotId": {
+                      "type": "string",
+                      "id": 3,
+                      "protoName": "snapshot_id"
+                    },
+                    "requestedFactId": {
+                      "type": "string",
+                      "id": 4,
+                      "protoName": "requested_fact_id"
+                    },
+                    "headId": {
+                      "type": "string",
+                      "id": 5,
+                      "protoName": "head_id"
+                    },
+                    "sessionJson": {
+                      "type": "string",
+                      "id": 6,
+                      "protoName": "session_json"
+                    },
+                    "mode": {
+                      "type": "string",
+                      "id": 7
+                    },
+                    "memberCount": {
+                      "type": "uint64",
+                      "id": 8,
+                      "protoName": "member_count"
+                    },
+                    "factCount": {
+                      "type": "uint32",
+                      "id": 9,
+                      "protoName": "fact_count"
+                    }
+                  }
+                },
+                "DailyFlowFactHeader": {
+                  "fields": {
+                    "factId": {
+                      "type": "string",
+                      "id": 1,
+                      "protoName": "fact_id"
+                    },
+                    "payloadJson": {
+                      "type": "string",
+                      "id": 2,
+                      "protoName": "payload_json"
+                    },
+                    "contentHash": {
+                      "type": "bytes",
+                      "id": 3,
+                      "protoName": "content_hash"
+                    }
+                  }
+                },
+                "DailyFlowStoredRow": {
+                  "fields": {
+                    "factId": {
+                      "type": "string",
+                      "id": 1,
+                      "protoName": "fact_id"
+                    },
+                    "slot": {
+                      "type": "string",
+                      "id": 2
+                    },
+                    "ordinal": {
+                      "type": "uint32",
+                      "id": 3
+                    },
+                    "nodeId": {
+                      "type": "string",
+                      "id": 4,
+                      "protoName": "node_id"
+                    },
+                    "orderKey": {
+                      "type": "uint64",
+                      "id": 5,
+                      "protoName": "order_key"
+                    },
+                    "active": {
+                      "type": "uint32",
+                      "id": 6
+                    },
+                    "cohort": {
+                      "type": "string",
+                      "id": 7
+                    },
+                    "handled": {
+                      "type": "uint32",
+                      "id": 8
+                    },
+                    "initialTask": {
+                      "type": "uint32",
+                      "id": 9,
+                      "protoName": "initial_task"
+                    }
+                  }
+                },
+                "DailyFlowMember": {
+                  "fields": {
+                    "nodeId": {
+                      "type": "string",
+                      "id": 1,
+                      "protoName": "node_id"
+                    },
+                    "orderKey": {
+                      "type": "uint64",
+                      "id": 2,
+                      "protoName": "order_key"
+                    },
+                    "active": {
+                      "type": "uint32",
+                      "id": 3
+                    },
+                    "cohort": {
+                      "type": "string",
+                      "id": 4
+                    },
+                    "handled": {
+                      "type": "uint32",
+                      "id": 5
+                    },
+                    "initialTask": {
+                      "type": "uint32",
+                      "id": 6,
+                      "protoName": "initial_task"
+                    },
+                    "slot": {
+                      "type": "string",
+                      "id": 7
+                    },
+                    "ordinal": {
+                      "type": "uint32",
+                      "id": 8
+                    }
+                  }
+                },
+                "DailyFlowDependency": {
+                  "fields": {
+                    "nodeId": {
+                      "type": "string",
+                      "id": 1,
+                      "protoName": "node_id"
+                    },
+                    "versionId": {
+                      "type": "string",
+                      "id": 2,
+                      "protoName": "version_id"
+                    },
+                    "readingHash": {
+                      "type": "string",
+                      "id": 3,
+                      "protoName": "reading_hash"
+                    },
+                    "readingUpdatedAt": {
+                      "type": "string",
+                      "id": 4,
+                      "protoName": "reading_updated_at"
+                    },
+                    "reviewFactId": {
+                      "type": "string",
+                      "id": 5,
+                      "protoName": "review_fact_id"
+                    },
+                    "readingLastHandledAt": {
+                      "type": "string",
+                      "id": 6,
+                      "protoName": "reading_last_handled_at"
+                    },
+                    "readingRepetitionCount": {
+                      "type": "uint64",
+                      "id": 7,
+                      "protoName": "reading_repetition_count"
+                    }
+                  }
+                },
+                "DailyFlowTableRecord": {
+                  "oneofs": {
+                    "record": {
+                      "oneof": [
+                        "fact",
+                        "row",
+                        "member",
+                        "appliedFactId",
+                        "dependency"
+                      ]
+                    }
+                  },
+                  "fields": {
+                    "fact": {
+                      "type": "DailyFlowFactHeader",
+                      "id": 1
+                    },
+                    "row": {
+                      "type": "DailyFlowStoredRow",
+                      "id": 2
+                    },
+                    "member": {
+                      "type": "DailyFlowMember",
+                      "id": 3
+                    },
+                    "appliedFactId": {
+                      "type": "string",
+                      "id": 4,
+                      "protoName": "applied_fact_id"
+                    },
+                    "dependency": {
+                      "type": "DailyFlowDependency",
+                      "id": 5
+                    }
+                  }
+                },
+                "DailyFlowTableBatch": {
+                  "fields": {
+                    "batchIndex": {
+                      "type": "uint32",
+                      "id": 1,
+                      "protoName": "batch_index"
+                    },
+                    "records": {
+                      "rule": "repeated",
+                      "type": "DailyFlowTableRecord",
+                      "id": 2
+                    }
+                  }
+                },
+                "DailyFlowTableEnd": {
+                  "fields": {
+                    "recordCount": {
+                      "type": "uint64",
+                      "id": 1,
+                      "protoName": "record_count"
+                    },
+                    "batchCount": {
+                      "type": "uint32",
+                      "id": 2,
+                      "protoName": "batch_count"
+                    },
+                    "tableHash": {
+                      "type": "bytes",
+                      "id": 3,
+                      "protoName": "table_hash"
                     }
                   }
                 }

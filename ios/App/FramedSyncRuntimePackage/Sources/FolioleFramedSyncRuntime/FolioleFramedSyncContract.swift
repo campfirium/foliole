@@ -1,7 +1,7 @@
 import Foundation
 
 public enum FolioleFramedSyncLimits {
-    public static let protocolVersion: UInt32 = 27
+    public static let protocolVersion: UInt32 = 28
     static let digestBytes = 32
     static let identifierBytes = 16
     static let blobChunkBytes = 512 * 1024
@@ -70,6 +70,9 @@ public enum FolioleFramedSyncPayload: Sendable {
     case requestObjectResult(Foliole_Sync_V22_RequestObjectResult)
     case requestBatchEnd(Foliole_Sync_V22_RequestBatchEnd)
     case requestAttachment(Foliole_Sync_V22_RequestAttachment)
+    case dailyFlowTableBegin(Foliole_Sync_V22_DailyFlowTableBegin)
+    case dailyFlowTableBatch(Foliole_Sync_V22_DailyFlowTableBatch)
+    case dailyFlowTableEnd(Foliole_Sync_V22_DailyFlowTableEnd)
     case protocolError(Foliole_Sync_V22_ProtocolError)
 
     public var corpusName: String {
@@ -96,6 +99,9 @@ public enum FolioleFramedSyncPayload: Sendable {
         case .requestObjectResult: "request_object_result"
         case .requestBatchEnd: "request_batch_end"
         case .requestAttachment: "request_attachment"
+        case .dailyFlowTableBegin: "daily_flow_table_begin"
+        case .dailyFlowTableBatch: "daily_flow_table_batch"
+        case .dailyFlowTableEnd: "daily_flow_table_end"
         case .protocolError: "error"
         }
     }

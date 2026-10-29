@@ -15,8 +15,10 @@ struct FolioleFramedSyncGenerator: BuildToolPlugin {
         let protoc = try context.tool(named: "protoc").path
         let generator = try context.tool(named: "protoc-gen-swift").path
         let requestProto = proto.path.removingLastComponent().appending("request_sync.proto")
+        let tableProto = proto.path.removingLastComponent().appending("daily_flow_table.proto")
         let output = context.pluginWorkDirectory.appending("framed_sync.pb.swift")
         let requestOutput = context.pluginWorkDirectory.appending("request_sync.pb.swift")
+        let tableOutput = context.pluginWorkDirectory.appending("daily_flow_table.pb.swift")
         return [.buildCommand(
             displayName: "Generate framed sync Swift types",
             executable: protoc,
@@ -25,10 +27,10 @@ struct FolioleFramedSyncGenerator: BuildToolPlugin {
                 "--swift_out=\(context.pluginWorkDirectory.string)",
                 "--swift_opt=Visibility=Public",
                 "-I", proto.path.removingLastComponent().string,
-                proto.path.string, requestProto.string
+                proto.path.string, requestProto.string, tableProto.string
             ],
-            inputFiles: [proto.path, requestProto, generator],
-            outputFiles: [output, requestOutput]
+            inputFiles: [proto.path, requestProto, tableProto, generator],
+            outputFiles: [output, requestOutput, tableOutput]
         )]
     }
 }

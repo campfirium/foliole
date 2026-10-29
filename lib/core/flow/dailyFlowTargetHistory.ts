@@ -5,10 +5,11 @@ import type { DbPort } from '../sync/dbPort.js';
 import { sameLearningProfile } from './cycleFlowLearning.js';
 import { openCycleFlow } from './cycleFlowOpen.js';
 import { dailyFlowCommitSchema, type DailyFlowCommitArgs, type DailyFlowSettings, type DailyFlowResult } from './dailyFlowContract.js';
+import { readDailyFlowFact } from './dailyFlowFactStorage.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
 import { readDailyFlow } from './dailyFlowStorage.js';
-import { readDailyFlowSyncFact, type DailyFlowSyncFact } from './dailyFlowSyncFact.js';
+import type { DailyFlowSyncFact } from './dailyFlowSyncFact.js';
 import { readRelatedDailyFlowFacts } from './dailyFlowSyncFacts.js';
 import { effectiveFlowActions } from './dailyFlowSyncMerge.js';
 import { projectDailyFlowSync } from './dailyFlowSyncProjection.js';
@@ -53,9 +54,8 @@ export async function commitTargetedFlowHistory(db: DbPort, args: DailyFlowCommi
   settings: DailyFlowSettings, persistence: DailyFlowPersistence): Promise<DailyFlowResult | null> {
   if (!args.historyTargetOpId || !args.historyMode) return null;
   dailyFlowCommitSchema.parse(args);
-  const [row] = await db.query<{ payload_json: string }>('SELECT payload_json FROM daily_flow_sync_facts WHERE id=?', [args.historyTargetOpId]);
-  if (!row) return null; // Pre-synchronization history retains its existing strict replay contract.
-  const target = readDailyFlowSyncFact(row.payload_json);
+  const target = await readDailyFlowFact(db, args.historyTargetOpId);
+  if (!target) return null; // Pre-synchronization history retains its existing strict replay contract.
   const stored = await readDailyFlow(db);
   if (args.token.scope !== (settings.scope ?? '')) throw new Error('daily_flow_library_changed');
   if (!stored || stored.day_key !== args.token.dayKey || target.kind !== 'advance' ||

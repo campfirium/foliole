@@ -45,13 +45,14 @@ struct MaliciousMessage: Decodable {
 
 enum FramedSyncFixture {
     static let protoRelativePath = "lib/core/sync/proto/foliole/sync/v22/framed_sync.proto"
-    static let corpusRelativePath = "lib/core/sync/fixtures/framed-sync-v27-golden.json"
-    static let maliciousRelativePath = "lib/core/sync/fixtures/framed-sync-v27-malicious.json"
+    static let corpusRelativePath = "lib/core/sync/fixtures/framed-sync-v28-golden.json"
+    static let maliciousRelativePath = "lib/core/sync/fixtures/framed-sync-v28-malicious.json"
 
     static func load() throws -> (corpus: FramedSyncCorpus, proto: Data, root: URL) {
         let root = try repositoryRoot()
         let proto = try Data(contentsOf: root.appendingPathComponent(protoRelativePath))
             + Data(contentsOf: root.appendingPathComponent("lib/core/sync/proto/foliole/sync/v22/request_sync.proto"))
+            + Data(contentsOf: root.appendingPathComponent("lib/core/sync/proto/foliole/sync/v22/daily_flow_table.proto"))
         let corpusData = try Data(contentsOf: root.appendingPathComponent(corpusRelativePath))
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase

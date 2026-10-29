@@ -15,6 +15,7 @@ import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { framedSyncFileKey, type FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import type { NativeRequestSyncHttpRequest } from '../../lib/platform/nativeRequestSyncHttpContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
+import { createCompanionEditHistorySession } from '../shared/platform/companion/editing/companionEditHistorySession.js';
 import { bindCompanionNodePriorities } from '../shared/platform/companion/runtime/companionNodePriorityBinding.js';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.js';
 import { rememberCompanionRequestSyncPeerState } from '../shared/platform/companion/sync/framed/companionRequestSyncPeerState.js';
@@ -93,7 +94,7 @@ export async function createCompanionRequestFixture(script = compiledScript) {
     const database = new Database(fixture.leftSnapshot.databasePath);
     database.exec('CREATE TABLE IF NOT EXISTS companion_meta (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT)');
     database.prepare("INSERT OR REPLACE INTO companion_meta VALUES ('host_name', 'Mobile', 'now')").run();
-    native.db = createBetterSqliteDbPort(database);
+    native.db = createCompanionEditHistorySession(createBetterSqliteDbPort(database));
     return database;
   }
   const fileRoot = path.join(fixture.root, 'mobile-files');

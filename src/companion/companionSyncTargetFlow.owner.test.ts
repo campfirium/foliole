@@ -62,11 +62,11 @@ it('carries the negotiated peer protocol and authenticated epoch into stream syn
     }
   }, {
     deviceId: 'desktop-1', endpointUrl: 'http://desktop:38641', groupId: 'group-1',
-    protocolVersion: 27
+    protocolVersion: 28
   }, runStreamSync);
 
   expect(runStreamSync).toHaveBeenCalledWith(expect.objectContaining({ framedPeer: {
-    deviceId: 'desktop-1', libraryEpoch: 'desktop-epoch', protocolVersion: 27
+    deviceId: 'desktop-1', libraryEpoch: 'desktop-epoch', protocolVersion: 28
   } }));
 });
 

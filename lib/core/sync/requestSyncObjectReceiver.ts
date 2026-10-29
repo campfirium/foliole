@@ -75,7 +75,7 @@ export async function receiveRequestSyncObjectMessages(messages: AsyncIterable<R
     if (!header) {
       header = readHeader(message);
     } else if (message.payloadCase === 'request_object_end') {
-      if (fragment || !bodies.complete ||
+      if (fragment || !bodies.complete || (files.dailyFlow.begin && !files.dailyFlow.complete) ||
           !same(bytes(message.payload.requestId, 'request_id'), header.requestId) ||
           !same(bytes(message.payload.streamHash, 'stream_hash'), digest.digest()) ||
           unsigned(message.payload.factCount, 'fact_count') !== BigInt(facts.size) ||
@@ -84,7 +84,13 @@ export async function receiveRequestSyncObjectMessages(messages: AsyncIterable<R
       }
       ended = true;
       continue;
-    } else if (message.payloadCase === 'blob_chunk' && !fragment) await bodies.accept(message);
+    } else if (message.payloadCase.startsWith('daily_flow_table_')) {
+      if (header.objectType !== 'daily_flow' || fragment || facts.size || bodies.known.size) {
+        throw new Error('daily_flow_table_object_invalid');
+      }
+      await files.dailyFlow.accept(message);
+    } else if (files.dailyFlow.begin) throw new Error('daily_flow_table_object_invalid');
+    else if (message.payloadCase === 'blob_chunk' && !fragment) await bodies.accept(message);
     else {
       if (!bodies.complete) throw new Error('request_sync_body_incomplete');
       if (message.payloadCase === 'fact_fragment') fragment ??= new FramedSyncFactFragmentDecoder();
@@ -107,7 +113,7 @@ export async function receiveRequestSyncObjectMessages(messages: AsyncIterable<R
     digest.update(encoded);
     sequence++;
   }
-  if (!header || !ended) throw new Error('request_sync_object_incomplete');
+  if (!header || !ended || (header.objectType === 'daily_flow' && !files.dailyFlow.complete)) throw new Error('request_sync_object_incomplete');
   return header;
 }
 

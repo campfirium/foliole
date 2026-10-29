@@ -7,11 +7,12 @@
       "canonical-attachment-storage-key-v1",
       "complete-member-data-plane",
       "current-parent-order-sources-v1",
+      "daily-flow-table-v1",
       "device-sync-groups-v1",
       "dynamic-node-version-chains-v1",
       "external-device-library-lifecycle-v1",
       "external-library-reported-path-v1",
-      "framed-sync-v27",
+      "framed-sync-v28",
       "global-object-identity-v2",
       "group-key-routing-v1",
       "lan-sync-v1",
@@ -33,9 +34,9 @@
       "workgroup-aead-v1",
       "workgroup-restore-v1"
     ],
-    "max_supported_version": 31,
-    "min_supported_version": 31,
-    "version": 31
+    "max_supported_version": 32,
+    "min_supported_version": 32,
+    "version": 32
   },
   "pushAck": {
     "clientOpIdKeys": [
@@ -293,6 +294,20 @@
       "view_state"
     ],
     "policies": [
+      {
+        "category": "review",
+        "conflict": "append_only_idempotent",
+        "scope": "event",
+        "key": "daily_flow",
+        "objectType": "daily_flow",
+        "pushIssue": "review_required",
+        "storage": [
+          "daily_flow_sync_facts"
+        ],
+        "userVisible": true,
+        "ownership": "workspace",
+        "recovery": "saved"
+      },
       {
         "category": "structure",
         "conflict": "lww",
@@ -578,6 +593,7 @@
       }
     ],
     "reviewRequiredPushIssueObjectTypes": [
+      "daily_flow",
       "external_document",
       "external_folder",
       "foreground_source",

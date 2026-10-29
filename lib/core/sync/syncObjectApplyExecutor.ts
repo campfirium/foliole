@@ -170,7 +170,7 @@ async function restoreMissingExternalBody(port: DbPort, record: SyncObjectRecord
     [content, record.object_id, hash]);
 }
 
-async function upsertAppliedSyncObjectState(port: DbPort, record: SyncObjectRecord) {
+export async function upsertAppliedSyncObjectState(port: DbPort, record: SyncObjectRecord) {
   await port.run(
     `INSERT INTO sync_object_state (` +
     `object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty, deleted_at` +

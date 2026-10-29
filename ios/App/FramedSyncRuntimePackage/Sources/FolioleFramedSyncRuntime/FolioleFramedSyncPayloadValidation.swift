@@ -8,6 +8,12 @@ enum FolioleFramedSyncPayloadValidator {
             throw FolioleFramedSyncValidationError("protocol_payload_case_invalid")
         }
         switch payload {
+        case .dailyFlowTableBegin(let value):
+            try FolioleDailyFlowTableValidation.begin(value); return .dailyFlowTableBegin(value)
+        case .dailyFlowTableBatch(let value):
+            try FolioleDailyFlowTableValidation.batch(value); return .dailyFlowTableBatch(value)
+        case .dailyFlowTableEnd(let value):
+            try FolioleDailyFlowTableValidation.end(value); return .dailyFlowTableEnd(value)
         case .requestAttachment(let value):
             try FolioleAttachmentRequestValidation.validate(value)
             return .requestAttachment(value)

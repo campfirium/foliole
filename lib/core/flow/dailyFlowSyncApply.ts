@@ -2,6 +2,8 @@ import { computeSyncContentHash } from '../database/syncState.js';
 import type { DbPort } from '../sync/dbPort.js';
 import type { SyncObjectRecord } from '../sync/syncObjectRecord.js';
 
+import { dailyFlowFactHash } from './dailyFlowFactHash.js';
+import { readDailyFlowFact, storeDailyFlowFact } from './dailyFlowFactStorage.js';
 import { readDailyFlowSyncFact } from './dailyFlowSyncFact.js';
 import { projectDailyFlowSync } from './dailyFlowSyncProjection.js';
 
@@ -17,10 +19,9 @@ function decode(record: SyncObjectRecord) {
 
 export async function dailyFlowFactApplyStatus(db: DbPort, record: SyncObjectRecord) {
   const incoming = decode(record);
-  const [existing] = await db.query<{ payload_json: string }>(
-    'SELECT payload_json FROM daily_flow_sync_facts WHERE id = ?', [incoming.id]);
+  const existing = await readDailyFlowFact(db, incoming.id);
   if (!existing) return 'apply' as const;
-  if (computeSyncContentHash('daily_flow', JSON.parse(existing.payload_json)) !== record.content_hash) {
+  if (dailyFlowFactHash(existing) !== record.content_hash) {
     throw new Error('daily_flow_sync_operation_mismatch');
   }
   return 'already_applied' as const;
@@ -28,9 +29,6 @@ export async function dailyFlowFactApplyStatus(db: DbPort, record: SyncObjectRec
 
 export async function applyDailyFlowSyncFact(db: DbPort, record: SyncObjectRecord) {
   const fact = decode(record);
-  await db.run(`INSERT INTO daily_flow_sync_facts
-    (id, root_id, occurred_at, day_start, payload_json, day_end, parent_id, kind) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [fact.id, fact.rootId, fact.occurredAt, fact.settings.dayWindow.start, JSON.stringify(fact),
-      fact.settings.dayWindow.end, fact.parentId, fact.kind]);
+  await storeDailyFlowFact(db, fact);
   await projectDailyFlowSync(db, fact);
 }

@@ -642,6 +642,24 @@
         }
       ],
       "beforeVersion": 104
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to install daily Flow sync facts.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 105
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to install daily Flow merge metadata.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 106
     }
   ],
   "planKeys": {

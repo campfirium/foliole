@@ -26,6 +26,9 @@ public final class FramedSyncPayload {
         REQUEST_OBJECT_RESULT,
         REQUEST_BATCH_END,
         REQUEST_ATTACHMENT,
+        DAILY_FLOW_TABLE_BEGIN,
+        DAILY_FLOW_TABLE_BATCH,
+        DAILY_FLOW_TABLE_END,
         ERROR
     }
 

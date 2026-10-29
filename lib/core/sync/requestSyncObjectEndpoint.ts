@@ -88,9 +88,10 @@ export function receivedObjectInput(host: RequestSyncDatabaseHost,
   header: RequestSyncObjectHeader, files: import('./requestSyncFiles.js').RequestSyncFiles,
   objectOptions: ApplySyncObjectsWithDbPortOptions, visibilityPruning?: DeferredVisibilityPruning): RequestSyncObjectInput {
   return {
+    ...(files.dailyFlow.complete ? { dailyFlow: files.dailyFlow } : {}),
     context: objectContext(input.context, input.author), globalId: header.globalId, objectType: header.objectType,
     ...(header.currentVersionId ? { currentVersionId: header.currentVersionId } : {}),
-    requestId: header.requestId, peerState: input.peerState,
+    sourceStateHash: header.sourceStateHash, requestId: header.requestId, peerState: input.peerState,
     facts: async function* (_db, kinds) { yield* files.readFacts(kinds); }, loadBody: (_db, blob) => files.loadBody(blob),
     enqueueSearchInvalidations: host.enqueueSearchInvalidations ?? true,
     ...(input.signal ? { signal: input.signal } : {}),

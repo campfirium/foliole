@@ -16,6 +16,9 @@ export type FramedSyncInventoryEntry = Readonly<{
   currentVersionId?: string | undefined;
   versionStates?: readonly string[] | undefined;
   unready?: boolean | undefined;
+  dailyFlowComplete?: boolean;
+  dailyFlowRootId?: string;
+  dailyFlowCurrent?: boolean;
 }>;
 
 export type FramedSyncInventoryNeed = Readonly<{
@@ -148,7 +151,12 @@ function differenceFrom(
     return { direction, globalId: source.globalId, objectType: source.objectType, sourceSnapshot: cloneEntry(source),
       need: { frontierFactIds: [], requiredRelationIds: [], reviewFactIds: [], stateFactIds: [], sharedState: false, resourceHashes: resources } };
   }
+  if (source.objectType === 'daily_flow' && source.dailyFlowRootId === source.globalId && !source.dailyFlowComplete) return null;
   const need = needFrom(source, destination);
+  if (source.dailyFlowComplete && !destination?.dailyFlowComplete) {
+    need.sharedState = true;
+    need.stateFactIds = [...source.stateFactIds ?? []];
+  }
   if (!hasNeed(need)) return null;
   return {
     direction, globalId: source.globalId, need,
@@ -207,6 +215,7 @@ function sameHashes(left: readonly Uint8Array[], right: readonly Uint8Array[]) {
 
 function sameEntry(left: FramedSyncInventoryEntry, right: FramedSyncInventoryEntry) {
   return compareKey(left, right) === 0 && sameBytes(left.sharedStateHash, right.sharedStateHash) &&
+    left.dailyFlowComplete === right.dailyFlowComplete && left.dailyFlowCurrent === right.dailyFlowCurrent &&
     left.currentVersionId === right.currentVersionId && Boolean(left.unready) === Boolean(right.unready) &&
     sameStrings(left.versionStates ?? [], right.versionStates ?? []) &&
     sameStrings(left.frontierFactIds, right.frontierFactIds) &&

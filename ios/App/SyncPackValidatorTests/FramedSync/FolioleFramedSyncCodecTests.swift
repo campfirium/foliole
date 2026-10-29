@@ -58,7 +58,7 @@ final class FolioleFramedSyncCodecTests: XCTestCase {
 
     func testGoldenCorpusDecodesToValidatedCasesAndReencodesExactly() throws {
         let corpus = try FramedSyncFixture.load().corpus
-        XCTAssertEqual(corpus.messages.count, 23)
+        XCTAssertEqual(corpus.messages.count, 26)
         for golden in corpus.messages {
             let data = try XCTUnwrap(Data(base64Encoded: golden.base64), golden.name)
             let frameType = try frameType(for: golden.payloadCase)
@@ -74,7 +74,7 @@ final class FolioleFramedSyncCodecTests: XCTestCase {
     func testMaliciousCorpusFailsSemanticValidation() throws {
         let corpus = try FramedSyncFixture.loadMalicious()
         XCTAssertEqual(corpus.corpusVersion, 1)
-        XCTAssertEqual(corpus.protocolVersion, 27)
+        XCTAssertEqual(corpus.protocolVersion, 28)
         XCTAssertEqual(corpus.messages.count, 12)
         for malicious in corpus.messages {
             let data = try XCTUnwrap(Data(base64Encoded: malicious.base64), malicious.name)
@@ -186,7 +186,7 @@ final class FolioleFramedSyncCodecTests: XCTestCase {
              "inventory_end", "difference_request", "transfer_proposal", "blob_offer",
              "missing_blob_set", "round_receipt", "transfer_termination", "error",
              "request_object_header", "request_object_end", "request_object_result",
-             "request_batch_end", "request_attachment":
+             "request_batch_end", "request_attachment", "daily_flow_table_begin", "daily_flow_table_batch", "daily_flow_table_end":
             .sessionControl
         default: throw FolioleFramedSyncValidationError("protocol_payload_case_invalid")
         }

@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import type { CycleRow } from '../../lib/core/flow/cycleFlowTypes.js';
 import type { DailyFlowCommitArgs, DailyFlowResult } from '../../lib/core/flow/dailyFlowContract.js';
+import { joinDailyFlowRows, type DailyFlowFactRow } from '../../lib/core/flow/dailyFlowFactRowCodec.js';
 import { recordDailyFlowSync } from '../../lib/core/flow/dailyFlowSyncRecord.js';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/settings.js';
 
@@ -45,13 +46,16 @@ function readFact(peer: Peer, objectId = id) {
 
 function expectCompatible(peer: Peer, objectId: string, expected: object) {
   const text = JSON.stringify(expected);
-  expect(readFact(peer, objectId)).toEqual({ payload_json: text,
-    content_hash: computeSyncContentHash('daily_flow', JSON.parse(text)) });
+  const stored = readFact(peer, objectId);
+  const rows = peer.db.prepare('SELECT * FROM daily_flow_fact_rows WHERE fact_id=? ORDER BY slot,ordinal').all(objectId) as DailyFlowFactRow[];
+  expect(joinDailyFlowRows(stored.payload_json, rows)).toEqual(expected);
+  expect(stored.content_hash).toBe(computeSyncContentHash('daily_flow', JSON.parse(text)));
+  expect(JSON.parse(stored.payload_json).rows).toEqual([]);
 }
 
 afterEach(() => { vi.restoreAllMocks(); closeLibraries(); });
 
-it.each([0, 14241])('serializes a %s-row fact once and persists the exact historical JSON and hash', async count => {
+it.each([0, 14241])('persists a %s-row fact as relational rows with the original logical value and hash', async count => {
   await startLibraries();
   const peer = createPeer('desktop');
   vi.spyOn(crypto, 'randomUUID').mockReturnValue(id);
@@ -60,16 +64,11 @@ it.each([0, 14241])('serializes a %s-row fact once and persists the exact histor
     node_id: index ? `node-${index}` : value.session.currentNodeId!, order_key: index + 1,
     active: 1, cohort: 'queue', handled: 0, initial_task: 1
   }));
-  const stringify = vi.spyOn(JSON, 'stringify');
   await peer.port.transaction(tx => recordDailyFlowSync(tx, value, settings, now, undefined, rows));
-  const completeTraversals = stringify.mock.calls.filter(([input]) => input && typeof input === 'object'
-    && 'rootId' in input && 'rows' in input).length;
-  stringify.mockRestore();
   const expected = { id, rootId: id, parentId: null, occurredAt: now, kind: 'create', targetOpId: null,
     nodeId: null, action: 'navigate', statsDelta: delta, mode: 'recommended', settings,
     session: expectedSession(value), rows, removedNodeIds: [] };
   expectCompatible(peer, id, expected);
-  expect(completeTraversals).toBe(1);
   const stored = readFact(peer);
   await peer.port.transaction(tx => recordDailyFlowSync(tx, value, settings, now));
   await peer.port.transaction(tx => recordDailyFlowSync(tx, { ...value, replayed: true }, settings, now));

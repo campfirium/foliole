@@ -10,6 +10,7 @@ import { CURRENT_PARENT_ORDER_SCHEMA } from './currentParentOrderSchema.js';
 import { DAILY_FLOW_CURRENT_SCHEMA } from './dailyFlowSchema.js';
 import { DAILY_FLOW_SYNC_MERGE_INDEXES } from './dailyFlowSyncMergeMigration.js';
 import { DAILY_FLOW_SYNC_SCHEMA } from './dailyFlowSyncSchema.js';
+import { DAILY_FLOW_TABLE_SCHEMA } from './dailyFlowTableSchema.js';
 import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
 import { FRAMED_SYNC_DIGEST_SCHEMA } from './framedSyncDigestSchema.js';
 import { FRAMED_SYNC_INVENTORY_TABLES } from './framedSyncInventorySchema.js';
@@ -28,6 +29,7 @@ export const COMPANION_SCHEMA_STATEMENTS = [
   ...ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS,
   ...DAILY_FLOW_CURRENT_SCHEMA,
   ...DAILY_FLOW_SYNC_SCHEMA,
+  ...DAILY_FLOW_TABLE_SCHEMA,
   ...DAILY_FLOW_SYNC_MERGE_INDEXES,
   ...NODE_VERSION_RETENTION_INDEX_SCHEMA,
   ...REVIEW_DAILY_COUNT_SCHEMA,

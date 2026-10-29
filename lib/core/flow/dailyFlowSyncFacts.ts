@@ -1,6 +1,6 @@
 import type { DbPort } from '../sync/dbPort.js';
 
-import { readDailyFlowSyncFact } from './dailyFlowSyncFact.js';
+import { readDailyFlowFact } from './dailyFlowFactStorage.js';
 
 /** Only intervals alive when the latest list was created can be forks of that day's work. */
 export async function readRelatedDailyFlowFacts(db: DbPort) {
@@ -10,7 +10,13 @@ export async function readRelatedDailyFlowFacts(db: DbPort) {
   if (!anchor) return [];
   const instant = new Date(Math.max(Date.parse(anchor.day_start),
     Math.min(Date.parse(anchor.occurred_at), Date.parse(anchor.day_end) - 1))).toISOString();
-  const records = await db.query<{ payload_json: string }>(
-    'SELECT payload_json FROM daily_flow_sync_facts WHERE day_start <= ? AND day_end > ? ORDER BY occurred_at, id', [instant, instant]);
-  return records.map(row => readDailyFlowSyncFact(row.payload_json));
+  const records = await db.query<{ id: string }>(
+    'SELECT id FROM daily_flow_sync_facts WHERE day_start <= ? AND day_end > ? ORDER BY occurred_at, id', [instant, instant]);
+  const facts = [];
+  for (const row of records) {
+    const fact = await readDailyFlowFact(db, row.id);
+    if (!fact) throw new Error('daily_flow_fact_missing');
+    facts.push(fact);
+  }
+  return facts;
 }

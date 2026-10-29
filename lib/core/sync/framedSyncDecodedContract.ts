@@ -1,5 +1,6 @@
 import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
 
+import { dailyFlowTableBeginSchema, dailyFlowTableBatchSchema, dailyFlowTableEndSchema } from './dailyFlowTableContract.js';
 import {
   assertAttemptId,
   assertFramedSyncDigest,
@@ -84,6 +85,9 @@ export function assertDecodedProtocolPayload(payloadCase: ProtocolPayloadCase, v
 }
 
 function validateRequestPayload(payloadCase: ProtocolPayloadCase, payload: Record<string, unknown>) {
+  if (payloadCase === 'daily_flow_table_begin') { dailyFlowTableBeginSchema.parse(payload); return true; }
+  if (payloadCase === 'daily_flow_table_batch') { dailyFlowTableBatchSchema.parse(payload); return true; }
+  if (payloadCase === 'daily_flow_table_end') { dailyFlowTableEndSchema.parse(payload); return true; }
   if (payloadCase === 'request_attachment') { attachmentRequestSchema.parse(payload); return true; }
   if (payloadCase === 'request_batch_end') {
     fixedBytes(payload.requestId, 16, 'request_id');

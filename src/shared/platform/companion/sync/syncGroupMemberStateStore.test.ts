@@ -113,7 +113,7 @@ it.each(['missing', 'legacy'] as const)('rejects %s protocol before any companio
   const incoming = { ...state, sender_device_identity_key: provider.identity_key };
   if (kind === 'missing') delete incoming.protocol;
   else incoming.protocol = { ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-    capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.filter(value => value !== 'framed-sync-v27') };
+    capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.filter(value => value !== 'framed-sync-v28') };
   const writer = vi.spyOn(database.driver, 'run');
   await expect(applyCompanionSyncGroupMemberState(incoming, provider.identity_key))
     .rejects.toThrow('sync_group_peer_incompatible');

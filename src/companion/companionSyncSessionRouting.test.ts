@@ -12,9 +12,9 @@ vi.mock('../shared/platform/companion/network/companionDesktopSession.js', () =>
 }));
 
 const desktop = { deviceId: 'mac', endpointUrl: 'http://mac:38641', platform: 'darwin',
-  groupId: 'group', protocolVersion: 27 };
+  groupId: 'group', protocolVersion: 28 };
 const phone = { deviceId: 'phone', endpointUrl: 'http://phone:38641', platform: 'ios-capacitor',
-  groupId: 'group', protocolVersion: 27 };
+  groupId: 'group', protocolVersion: 28 };
 const args = () => ({ cancelled: () => false, setError: vi.fn(), setState: vi.fn(),
   setSyncProgress: vi.fn(), setStatus: vi.fn(), state: createSyncState() });
 

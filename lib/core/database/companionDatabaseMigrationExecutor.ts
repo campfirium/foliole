@@ -35,6 +35,7 @@ import { migrateCompanionCycleFlow } from './cycleFlowMigration.js';
 import { migrateCompanionDailyFlow } from './dailyFlowSchema.js';
 import { migrateCompanionDailyFlowSyncMerge } from './dailyFlowSyncMergeMigration.js';
 import { migrateCompanionDailyFlowSync } from './dailyFlowSyncSchema.js';
+import { migrateCompanionDailyFlowTables } from './dailyFlowTableMigration.js';
 import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { migrateCompanionForegroundSources, retireCompanionForegroundIdentityTriggers } from './foregroundSourceMigration.js';
 import { INVALIDATE_ALL_SYNC_DIGESTS, INVALIDATE_UNREADY_SYNC_DIGESTS, migrateCompanionFramedSyncDigests } from './framedSyncDigestSchema.js';
@@ -158,6 +159,7 @@ async function migrateCompanionLatestVersions(db: DbPort, currentVersion: number
   if (currentVersion < 104 && targetVersion >= 104) await migrateCompanionCycleFlow(db);
   if (currentVersion < 105 && targetVersion >= 105) await migrateCompanionDailyFlowSync(db);
   if (currentVersion < 106 && targetVersion >= 106) await migrateCompanionDailyFlowSyncMerge(db);
+  if (currentVersion < 107 && targetVersion >= 107) await migrateCompanionDailyFlowTables(db);
 }
 
 async function migrateCompanionWatchedDisplayPath(db: DbPort) {

@@ -1,11 +1,12 @@
 import type { DbPort } from '../sync/dbPort.js';
 
 import type { CycleRow } from './cycleFlowTypes.js';
+import { appendDailyFlowProjectionFact, replaceDailyFlowProjectionFacts } from './dailyFlowProjectionFacts.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { insertCycleRows, readDailyFlow, saveCycleFlow, writeCycleRows } from './dailyFlowStorage.js';
 import { type DailyFlowSyncFact } from './dailyFlowSyncFact.js';
 import { readRelatedDailyFlowFacts } from './dailyFlowSyncFacts.js';
-import { mergeDailyFlowFacts } from './dailyFlowSyncMerge.js';
+import { connectedFlowFacts, mergeDailyFlowFacts } from './dailyFlowSyncMerge.js';
 
 type ProjectionHead = { root_id: string; head_id: string; merged: number };
 
@@ -29,6 +30,7 @@ async function applyLinearSuccessor(db: DbPort, fact: DailyFlowSyncFact, head: P
   await db.run('DELETE FROM daily_flow_entries WHERE node_id IN (SELECT value FROM json_each(?))', [JSON.stringify(fact.removedNodeIds)]);
   await writeCycleRows(db, fact.rows);
   await writeProjection(db, fact, fact.session, false);
+  await appendDailyFlowProjectionFact(db, fact.id);
   return true;
 }
 
@@ -45,4 +47,5 @@ export async function projectDailyFlowSync(db: DbPort, incoming?: DailyFlowSyncF
   await db.run('DELETE FROM daily_flow_entries');
   await insertCycleRows(db, result.rows as CycleRow[]);
   await writeProjection(db, result.head, result.session, result.merged);
+  await replaceDailyFlowProjectionFacts(db, connectedFlowFacts(facts).map(fact => fact.id));
 }

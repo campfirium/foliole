@@ -10,9 +10,9 @@ import protobuf from 'protobufjs';
 import { maliciousCorpusDocument } from './framed-sync-malicious-corpus.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const MALICIOUS_OUTPUT = path.join(ROOT, 'lib/core/sync/fixtures/framed-sync-v27-malicious.json');
-const OUTPUT = path.join(ROOT, 'lib/core/sync/fixtures/framed-sync-v27-golden.json');
-const SCHEMA_OUTPUT = path.join(ROOT, 'lib/core/sync/generated/framed-sync-v27-schema.json');
+const MALICIOUS_OUTPUT = path.join(ROOT, 'lib/core/sync/fixtures/framed-sync-v28-malicious.json');
+const OUTPUT = path.join(ROOT, 'lib/core/sync/fixtures/framed-sync-v28-golden.json');
+const SCHEMA_OUTPUT = path.join(ROOT, 'lib/core/sync/generated/framed-sync-v28-schema.json');
 const PROTO_PATH = path.join(ROOT, 'lib/core/sync/proto/foliole/sync/v22/framed_sync.proto');
 const protobufRoot = await protobuf.load(PROTO_PATH);
 const protocolMessage = protobufRoot.lookupType('foliole.sync.v22.ProtocolMessage');
@@ -41,10 +41,10 @@ function transferCryptoVector() {
   const transferId = Uint8Array.from({ length: 32 }, (_, index) => 0x20 + index);
   const noncePrefix = Uint8Array.from([1, 2, 3, 4]);
   const sequence = 0n;
-  const info = Buffer.concat([Buffer.from('Foliole framed sync v27 transfer'), Buffer.of(0), transferId]);
+  const info = Buffer.concat([Buffer.from('Foliole framed sync v28 transfer'), Buffer.of(0), transferId]);
   const key = Buffer.from(hkdfSync('sha256', groupKey, attemptId, info, 32));
   const preamble = Buffer.alloc(96);
-  preamble.write('FOLSYNC2'); preamble.writeUInt16BE(96, 8); preamble.writeUInt16BE(27, 10);
+  preamble.write('FOLSYNC2'); preamble.writeUInt16BE(96, 8); preamble.writeUInt16BE(28, 10);
   preamble[12] = 2; preamble[13] = 0; transferId.forEach((byte, index) => { preamble[16 + index] = byte; });
   attemptId.forEach((byte, index) => { preamble[48 + index] = byte; });
   noncePrefix.forEach((byte, index) => { preamble[64 + index] = byte; }); preamble.writeBigUInt64BE(0n, 68);
@@ -73,16 +73,16 @@ function sessionCryptoVector() {
     const bytes = Buffer.from(value); const result = Buffer.alloc(4 + bytes.length);
     result.writeUInt32BE(bytes.length); bytes.copy(result, 4); return result;
   };
-  const version = Buffer.alloc(2); version.writeUInt16BE(27);
+  const version = Buffer.alloc(2); version.writeUInt16BE(28);
   const contextId = createHash('sha256').update(Buffer.concat([
     Buffer.from('foliole-framed-sync-session-context-v1'), Buffer.of(0), version,
     ...['group-a', 'device-a', 'epoch-a', 'device-b', 'epoch-b'].map(lengthText), sessionId
   ])).digest();
-  const info = Buffer.concat([Buffer.from('Foliole framed sync v27 session'), Buffer.of(0), contextId]);
+  const info = Buffer.concat([Buffer.from('Foliole framed sync v28 session'), Buffer.of(0), contextId]);
   const key = Buffer.from(hkdfSync('sha256', groupKey, sessionId, info, 32));
   const noncePrefix = Buffer.from([5, 6, 7, 8]);
   const preamble = Buffer.alloc(96); preamble.write('FOLSYNC2');
-  preamble.writeUInt16BE(96, 8); preamble.writeUInt16BE(27, 10); preamble[12] = 1;
+  preamble.writeUInt16BE(96, 8); preamble.writeUInt16BE(28, 10); preamble[12] = 1;
   contextId.copy(preamble, 16); sessionId.copy(preamble, 48); noncePrefix.copy(preamble, 64);
   const plaintext = Buffer.from('session-vector');
   const header = Buffer.alloc(16); header.writeUInt32BE(plaintext.length + 16); header.writeUInt16BE(1, 12);
@@ -113,12 +113,24 @@ function messageCases() {
   const identity = { factId: 'version-7', globalId: 'node-1', kind: 2, objectType: 'node' };
   const blob = { byteLength: 524_289, required: true, role: 1, sha256: blobHash };
   return [
+    encodeCase('daily-flow-table-begin', { dailyFlowTableBegin: { listId: 'list-a', purpose: 'current_table',
+      snapshotId: 'snapshot-a', requestedFactId: 'list-a', headId: 'list-a', sessionJson: '{}', mode: 'recommended',
+      memberCount: 1, factCount: 1 } }),
+    encodeCase('daily-flow-table-batch', { dailyFlowTableBatch: { batchIndex: 0, records: [
+      { fact: { factId: 'list-a', payloadJson: '{}', contentHash: contentId } },
+      { row: { factId: 'list-a', slot: 'rows', ordinal: 0, nodeId: 'node-a', orderKey: 1,
+        active: 1, cohort: 'queue', handled: 0, initialTask: 1 } },
+      { member: { nodeId: 'node-a', orderKey: 1, active: 1, cohort: 'queue', handled: 0, initialTask: 1,
+        slot: 'current', ordinal: 0 } }, { appliedFactId: 'list-a' },
+      { dependency: { nodeId: 'node-a', versionId: 'version-a', reviewFactId: 'review-a' } }
+    ] } }),
+    encodeCase('daily-flow-table-end', { dailyFlowTableEnd: { recordCount: 5, batchCount: 1, tableHash: contentId } }),
     encodeCase('handshake', { handshake: { capabilities: [{ name: 'framed-sync', version: 1 }],
-      deviceId: 'device-a', groupId: 'group-a', libraryEpoch: 'epoch-a', protocolVersion: 27,
+      deviceId: 'device-a', groupId: 'group-a', libraryEpoch: 'epoch-a', protocolVersion: 28,
       sessionId: roundId } }),
     encodeCase('handshake-acceptance', { handshakeAcceptance: { capabilities: [
       { name: 'framed-sync', version: 1 }
-    ], protocolVersion: 27, sessionId: roundId } }),
+    ], protocolVersion: 28, sessionId: roundId } }),
     encodeCase('inventory-begin', { inventoryBegin: { entryCount: 1, roundId } }),
     encodeCase('inventory-chunk', { inventoryChunk: { chunkIndex: 1, entries: [{
       frontierFactIds: ['version-7'], globalId: 'node-1', objectType: 'node',
@@ -139,7 +151,7 @@ function messageCases() {
     encodeCase('missing-blob-set', { missingBlobSet: { missingHashes: [blobHash], transferId } }),
     encodeCase('transfer-header', { transferHeader: { attemptId: roundId, manifest: {
       blobs: [blob], contentId, facts: [{ identity, requiredBlobHashes: [blobHash],
-        sharedStateHash: contentId }], groupId: 'group-a', protocolVersion: 27
+        sharedStateHash: contentId }], groupId: 'group-a', protocolVersion: 28
     }, transferId } }),
     encodeCase('fact', { fact: { blobs: [blob], body: { fields: [{ name: 'title', value: {
       stringValue: 'Article'
@@ -204,7 +216,8 @@ function blobContractVector() {
 
 async function schemaDigest() {
   return createHash('sha256').update(await readFile(PROTO_PATH))
-    .update(await readFile(path.join(path.dirname(PROTO_PATH), 'request_sync.proto'))).digest('hex');
+    .update(await readFile(path.join(path.dirname(PROTO_PATH), 'request_sync.proto')))
+    .update(await readFile(path.join(path.dirname(PROTO_PATH), 'daily_flow_table.proto'))).digest('hex');
 }
 
 async function document() {
@@ -224,7 +237,7 @@ async function document() {
       malformedFrameHeader('nonzero-frame-flags', 16, 3, 1)
     ],
     messages: messageCases(),
-    protocol_version: 27,
+    protocol_version: 28,
     schema_sha256: await schemaDigest()
   }, null, 2)}\n`;
 }

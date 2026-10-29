@@ -12,6 +12,15 @@ final class FramedSyncPayloadValidator {
 
     static FramedSyncPayload validate(ProtocolMessage message) throws FramedSyncValidationException {
         switch (message.getPayloadCase()) {
+            case DAILY_FLOW_TABLE_BEGIN:
+                DailyFlowTableValidation.validate(message);
+                return payload(FramedSyncPayload.Case.DAILY_FLOW_TABLE_BEGIN, message.getDailyFlowTableBegin());
+            case DAILY_FLOW_TABLE_BATCH:
+                DailyFlowTableValidation.validate(message);
+                return payload(FramedSyncPayload.Case.DAILY_FLOW_TABLE_BATCH, message.getDailyFlowTableBatch());
+            case DAILY_FLOW_TABLE_END:
+                DailyFlowTableValidation.validate(message);
+                return payload(FramedSyncPayload.Case.DAILY_FLOW_TABLE_END, message.getDailyFlowTableEnd());
             case HANDSHAKE:
                 handshake(message.getHandshake());
                 return payload(FramedSyncPayload.Case.HANDSHAKE, message.getHandshake());

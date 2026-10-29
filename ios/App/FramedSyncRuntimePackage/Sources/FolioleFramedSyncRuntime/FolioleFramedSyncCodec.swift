@@ -87,7 +87,8 @@ private extension FolioleFramedSyncPayload {
         case .handshake, .handshakeAcceptance, .inventoryBegin, .inventoryChunk,
              .inventoryEnd, .differenceRequest, .transferProposal, .blobOffer,
              .missingBlobSet, .roundReceipt, .transferTermination, .protocolError,
-             .requestObjectHeader, .requestObjectEnd, .requestObjectResult, .requestBatchEnd, .requestAttachment:
+             .requestObjectHeader, .requestObjectEnd, .requestObjectResult, .requestBatchEnd, .requestAttachment,
+             .dailyFlowTableBegin, .dailyFlowTableBatch, .dailyFlowTableEnd:
             .sessionControl
         case .transferHeader: .transferHeader
         case .fact, .factFragment: .fact
