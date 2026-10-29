@@ -2,23 +2,15 @@ import type { DailyFlowSettings } from '../../../../../lib/core/flow/dailyFlowCo
 import { flowDay } from '../../../../../lib/core/flow/dailyFlowPlanning';
 import type { DailyFlowSession } from '../../../../../lib/core/flow/dailyFlowSession';
 import type { ReadIntent } from '../../../../../lib/core/flow/readIntentJournal';
-import { companionWorkspaceSnapshots, subscribeCommittedCompanionWorkspace } from '../companionWorkspaceSnapshotStore';
+import { subscribeCommittedCompanionWorkspace } from '../companionWorkspaceSnapshotStore';
 import { subscribeCompanionReadingScope } from '../reading/companionReadingScope';
 
 type Input = { session: DailyFlowSession; now: string; mode: ReadIntent['mode'] };
 type Projection = { observedRevision: number; session: DailyFlowSession };
-function catalog() {
-  const snapshot = companionWorkspaceSnapshots.getSnapshot();
-  return [snapshot?.nodesById, snapshot?.nodeOrder, snapshot?.trashedNodeIds];
-}
-function sameCatalog(before: ReturnType<typeof catalog>, after: ReturnType<typeof catalog>) {
-  return before.every((value, index) => value === after[index]);
-}
-
 // One successor of the visible cursor. It is disposable display state, never a saved queue.
 export class CompanionReadDisplayPreparation {
   private generation = 0;
-  private prepared: { key: string; catalog: ReturnType<typeof catalog>; controller: AbortController; value: Promise<Projection> } | null = null;
+  private prepared: { key: string; controller: AbortController; lifetime: { settled: boolean; demanded: boolean }; value: Promise<Projection> } | null = null;
   private readonly unsubscribe: (() => void)[];
 
   constructor(private readonly settings: () => DailyFlowSettings,
@@ -36,24 +28,24 @@ export class CompanionReadDisplayPreparation {
 
   private key(input: Input, settings: DailyFlowSettings) {
     return JSON.stringify([this.generation, input.mode, flowDay(input.now, settings), settings,
-      input.session.daily, input.session.cycle, input.session.currentNodeId]);
+      input.session.daily?.scope, input.session.daily?.dayKey, input.session.currentNodeId,
+      input.session.cycle?.scanAfter, input.session.cycle?.lapLimit]);
   }
 
   prepare(input: Input, signal?: AbortSignal) {
     const settings = this.settings();
     const key = this.key(input, settings);
-    const current = catalog();
-    if (this.prepared?.key === key && !this.prepared.controller.signal.aborted && sameCatalog(this.prepared.catalog, current)) return this.prepared.value;
+    if (this.prepared?.key === key && !this.prepared.controller.signal.aborted) return this.prepared.value;
     const controller = new AbortController();
-    let settled = false;
-    const cancel = () => { if (!settled) controller.abort(signal?.reason); };
+    const lifetime = { settled: false, demanded: false };
+    const cancel = () => { if (!lifetime.settled && !lifetime.demanded) controller.abort(signal?.reason); };
     if (signal?.aborted) cancel();
     else signal?.addEventListener('abort', cancel, { once: true });
     const value = this.project(input, settings, controller.signal).finally(() => {
-      settled = true;
+      lifetime.settled = true;
       signal?.removeEventListener('abort', cancel);
     });
-    const prepared = { key, catalog: current, controller, value };
+    const prepared = { key, controller, lifetime, value };
     this.prepared = prepared;
     void value.catch(() => { if (this.prepared === prepared) this.prepared = null; });
     return value;
@@ -61,12 +53,21 @@ export class CompanionReadDisplayPreparation {
 
   async consume(input: Input): Promise<Projection> {
     const generation = this.generation;
-    const before = catalog();
-    const result = await this.prepare(input);
+    const value = this.prepare(input);
+    if (this.prepared?.value === value) this.prepared.lifetime.demanded = true;
+    const result = await value;
     // A real change during preparation/admission must not install an obsolete successor.
-    if (generation !== this.generation || !sameCatalog(before, catalog())) return this.consume(input);
+    if (generation !== this.generation) return this.consume(input);
     this.prepared = null;
-    return { ...result, session: { ...result.session, currentItemStartedAt: input.now,
-      completedAt: result.session.currentNodeId ? null : input.now } };
+    const next = result.session;
+    if (!input.session.cycle || !next.cycle) throw new Error('daily_flow_display_changed');
+    // A local receipt may advance counters/token while retaining this exact display cursor.
+    // Keep those acknowledgements and consume only the prepared navigation state.
+    return { ...result, session: { ...input.session, currentNodeId: next.currentNodeId,
+      queueNodeIds: next.queueNodeIds, soonNodeIds: next.soonNodeIds ?? [], hiddenSoonNodeIds: next.hiddenSoonNodeIds ?? [],
+      cycle: { ...input.session.cycle,
+        scanAfter: next.cycle.scanAfter, lapLimit: next.cycle.lapLimit, clearedAt: next.cycle.clearedAt },
+      currentItemStartedAt: input.now, isAnswerRevealed: false, continueNodeId: null,
+      completedAt: next.currentNodeId ? null : input.now } };
   }
 }

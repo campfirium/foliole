@@ -70,3 +70,40 @@ it('shows B and C with usable Read actions while the complete A learning transac
     expect(JSON.parse(history).undoStack.map((entry: { nodeId: string }) => entry.nodeId)).toEqual([a,b]);
   } finally { release(); }
 });
+
+it('joins an unfinished successor preparation on Read instead of cancelling and selecting it again', async () => {
+  const initial = (await refreshCompanionWorkspaceAfterMutation())!;
+  const owner = getIosCompanionDatabaseOwner();
+  const read = owner.readInteractiveSnapshot.bind(owner);
+  let entered = false;
+  let cancelled = false;
+  let release!: () => void;
+  const waiting = new Promise<void>(resolve => { release = resolve; });
+  vi.spyOn(owner, 'readInteractiveSnapshot').mockImplementation((task, signal) => read(db => task({ ...db,
+    async query(sql, params) {
+      if (sql.includes('order_key > ?') && !entered) {
+        entered = true;
+        signal?.addEventListener('abort', () => { cancelled = true; release(); }, { once: true });
+        await waiting;
+      }
+      return db.query(sql, params);
+    }
+  }), signal));
+  const ui = renderHook(() => useDailyFlowSurface(initial));
+  try {
+    await waitFor(() => expect(ui.result.current.surface.readableArticle?.content).toBeTruthy());
+    await waitFor(() => expect(entered).toBe(true));
+    const a = ui.result.current.surface.readableArticle!.nodeId;
+    let action!: Promise<void>;
+    act(() => { action = ui.result.current.surface.handleReadReviewTopic(); });
+    const { getCompanionReadIntents } = await import('../shared/platform/companion/runtime/companionReadIntents');
+    const engine = await getCompanionReadIntents();
+    await waitFor(async () => expect(await engine.journal.rows(false)).toHaveLength(1));
+    expect(cancelled).toBe(false);
+    await act(async () => { release(); await action; await engine.drain(); });
+    await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).not.toBe(a));
+    expect(ui.result.current.surface.readableArticle?.content).toContain('prefix alpha');
+    expect(ui.result.current.surface.readingError).toBeNull();
+    expect(library.database.prepare('SELECT count FROM topic_daily_counts').get()).toEqual({ count: 1 });
+  } finally { release(); }
+});

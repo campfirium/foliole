@@ -202,3 +202,28 @@ it('retains a prepared command across process replacement without retaining a ro
   expect(await getIosCompanionDatabaseOwner().read(db => db.query('SELECT repetition_count FROM node_reading WHERE node_id=?', [session.currentNodeId!])))
     .toEqual([{ repetition_count: 1 }]);
 });
+
+it('retains B successor through the complete A receipt and catalog refresh without selecting it again', async () => {
+  const { engine, session } = await ready();
+  const owner = getIosCompanionDatabaseOwner();
+  let release!: () => void;
+  const waiting = new Promise<void>(resolve => { release = resolve; });
+  const held = owner.runWriter(async () => { await waiting; });
+  try {
+    const b = (await engine.accept({ session, now, mode: 'recommended', historyKey: 'receipt-preparation' })).session;
+    const prepared = await engine.displayPreparation.prepare({ session: b, now, mode: 'recommended' });
+    expect(prepared.session.currentNodeId).toBe('000002');
+    release(); await held; await engine.drain();
+    const { refreshCompanionWorkspaceAfterMutation } = await import('../companionWorkspaceRepository');
+    await refreshCompanionWorkspaceAfterMutation();
+    const committed = (await loadCompanionDailySession())!;
+    expect(committed.currentNodeId).toBe(b.currentNodeId);
+    const reads = vi.spyOn(owner, 'readInteractiveSnapshot').mockRejectedValue(new Error('repeated_receipt_selection'));
+    const c = await engine.accept({ session: committed, now, mode: 'recommended', historyKey: 'receipt-preparation' });
+    expect(c.session.currentNodeId).toBe('000002');
+    expect(reads).not.toHaveBeenCalled();
+    reads.mockRestore();
+    await engine.drain();
+    expect(library.database.prepare('SELECT count FROM topic_daily_counts').get()).toEqual({ count: 2 });
+  } finally { release(); await held; }
+});

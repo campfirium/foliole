@@ -43,7 +43,7 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
     if (locked.current || !args.active || historyReplay.refreshPending) return;
     let token = args.flow.capture();
     if (!pending.current && !canSubmitFlowAction(args, token, action)) return;
-    args.flow.cancelDocumentPreparation();
+    if (action !== 'read') args.flow.cancelDocumentPreparation();
     locked.current = true;
     setBusy(true);
     setReadingError(null);
