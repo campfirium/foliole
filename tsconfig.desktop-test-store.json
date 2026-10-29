@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "lib": ["ES2022", "ES2023.Array", "DOM", "DOM.Iterable"] },
+  "include": [
+    "src/store/**/*.test.ts",
+    "src/**/*.d.ts",
+    "src/test/setup.ts",
+    "src/app/hooks/useEditorDraftSync.ts",
+    "src/app/hooks/useReadingProgressSyncEffects.ts"
+  ]
+}

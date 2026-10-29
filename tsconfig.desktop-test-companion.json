@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "lib": ["ES2022", "ES2023.Array", "DOM", "DOM.Iterable"] },
+  "include": ["src/companion/**/*.test.ts", "src/companion/**/*.test.tsx", "src/**/*.d.ts", "src/test/setup.ts"]
+}
