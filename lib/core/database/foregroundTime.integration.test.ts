@@ -1,7 +1,6 @@
 // @vitest-environment node
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
-import os from 'node:os';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
@@ -28,7 +27,9 @@ import { SYNC_IDENTITY_INDEX_SCHEMA_STATEMENTS } from './syncIdentityIndexSchema
 const connections: Database.Database[] = [];
 
 it.each(['America/New_York', 'Asia/Shanghai', 'UTC'])('keeps learning days and durable foreground buckets at local clock boundaries in %s', async (zone) => {
-  const root = mkdtempSync(path.join(os.tmpdir(), 'foliole-day-boundary-'));
+  const artifacts = path.resolve('.tmp/artifacts');
+  mkdirSync(artifacts, { recursive: true });
+  const root = mkdtempSync(path.join(artifacts, 'foliole-day-boundary-'));
   try {
     // A new process fixes the actual Date timezone even when Vitest runs in worker threads.
     const built = await build({ configFile: false, logLevel: 'silent', build: { write: false, minify: false,
@@ -40,7 +41,9 @@ it.each(['America/New_York', 'Asia/Shanghai', 'UTC'])('keeps learning days and d
     const chunk = output.output[0]!;
     if (chunk.type !== 'chunk') throw new Error('Missing timezone scenario bundle');
     const bundle = chunk.code;
-    const result = execFileSync(process.execPath, ['-e', `${bundle}\nmodule.exports.verifyReviewDayBoundary(process.argv[1]).then(value => console.log(JSON.stringify(value)));`, root],
+    const entry = path.join(root, 'scenario.cjs');
+    writeFileSync(entry, `module.paths.unshift(${JSON.stringify(path.resolve('node_modules'))});\n${bundle}\nmodule.exports.verifyReviewDayBoundary(process.argv[2]).then(value => console.log(JSON.stringify(value)));`);
+    const result = execFileSync(process.execPath, [entry, root],
       { cwd: process.cwd(), env: { ...process.env, TZ: zone }, encoding: 'utf8', timeout: 30_000 });
     expect(JSON.parse(result)).toMatchObject({ zone, verified: true });
   } finally { rmSync(root, { recursive: true, force: true }); }
