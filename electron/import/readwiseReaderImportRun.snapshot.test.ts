@@ -5,6 +5,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const countPresentKeepImportItems = vi.hoisted(() => vi.fn(() => 1097));
 const requestKeepImportRuleRun = vi.hoisted(() => vi.fn());
 
+vi.mock('../database/attachmentResourceDescription.js', () => ({ currentLibraryScope: () => 'test-library' }));
+
 vi.mock('../database/keepImportItems.js', () => ({
   countPresentKeepImportItems
 }));

@@ -42,6 +42,8 @@ function createProgressWindow(destroyed = false) {
   };
 }
 
+vi.mock('../database/attachmentResourceDescription.js', () => ({ currentLibraryScope: () => 'test-library' }));
+
 vi.mock('./keepImportService.js', () => ({
   requestKeepImportRuleRun,
   runKeepImportRule: vi.fn()
@@ -86,8 +88,10 @@ it('coalesces overlapping Readwise sync requests into one import pass', async ()
     })
   );
 
-  const first = runReadwiseReaderImport({ settings: createSettings(), window });
-  const second = runReadwiseReaderImport({ settings: createSettings(), window });
+  const firstCompletion = vi.fn();
+  const coalescedCompletion = vi.fn();
+  const first = runReadwiseReaderImport({ settings: createSettings(), window, onRelayCompleted: firstCompletion });
+  const second = runReadwiseReaderImport({ settings: createSettings(), window, onRelayCompleted: coalescedCompletion });
 
   expect(requestKeepImportRuleRun).toHaveBeenCalledTimes(1);
   releaseImport();
@@ -95,6 +99,9 @@ it('coalesces overlapping Readwise sync requests into one import pass', async ()
     expect.objectContaining({ imported_count: 1 }),
     expect.objectContaining({ imported_count: 1 })
   ]);
+  expect(firstCompletion).toHaveBeenCalledTimes(1);
+  expect(coalescedCompletion).not.toHaveBeenCalled();
+  expect(firstCompletion).toHaveBeenCalledWith(expect.objectContaining({ workspace_scope: { kind: 'full' } }));
   expect(window.webContents.send).toHaveBeenCalledTimes(3);
   expect(window.webContents.send).toHaveBeenNthCalledWith(
     1,

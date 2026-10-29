@@ -39,6 +39,7 @@ export async function runReadwiseBooksSource(
   throwIfKeepImportAborted(options?.signal);
   const synced = await syncReadwiseBookPolicyProjection(source, result.inventory, policy);
   return {
+    workspaceScope: synced.workspaceScope,
     entryCount: synced.inventory.books.length,
     importedCount: result.sourceChanged
       ? countChangedBooks(synced.inventory, result.previousInventory)

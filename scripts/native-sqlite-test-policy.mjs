@@ -5,6 +5,7 @@ const controlledElectronSqliteTests = [
   ...controlledVersionSqliteTests,
   'src/app/hooks/ambientWorkspaceRefresh.integration.test.tsx',
   'src/app/hooks/readwiseBackgroundRefresh.integration.test.tsx',
+  'src/app/hooks/readwiseRelayRefresh.integration.test.tsx',
   'src/app/hooks/ambientWorkspaceStructure.integration.test.tsx',
   'src/store/workspaceStructureMoveHistory.integration.test.ts',
   'src/store/workspaceMoveLocal.integration.test.ts',

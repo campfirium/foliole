@@ -79,15 +79,26 @@ export async function refreshWorkspaceState(source: WorkspaceRefreshSource = 'co
   await refreshRegisteredWorkspaceState(source);
 }
 
-export function requestWorkspaceSyncRefresh(scope: WorkspaceRefreshScope, libraryScope: string,
-  source: WorkspaceRefreshSource = 'sync-applied') {
-  if (!workspaceRefreshScopeHasChanges(scope)) return;
+function registerWorkspaceScope(scope: WorkspaceRefreshScope, libraryScope: string) {
+  if (!workspaceRefreshScopeHasChanges(scope)) return false;
   if (refreshLibraryScope !== libraryScope) {
     if (refreshLibraryScope !== undefined) refreshes.reset(null);
     refreshLibraryScope = libraryScope;
   }
   refreshes.register(scope);
-  scheduleWorkspaceRefresh(source);
+  return true;
+}
+
+export async function refreshWorkspaceStateWithScope(scope: WorkspaceRefreshScope, libraryScope: string,
+  source: WorkspaceRefreshSource) {
+  const currentLibraryScope = useWorkspaceStore.getState().libraryScope;
+  if (currentLibraryScope && currentLibraryScope !== libraryScope) return;
+  if (registerWorkspaceScope(scope, libraryScope)) await refreshRegisteredWorkspaceState(source);
+}
+
+export function requestWorkspaceSyncRefresh(scope: WorkspaceRefreshScope, libraryScope: string,
+  source: WorkspaceRefreshSource = 'sync-applied') {
+  if (registerWorkspaceScope(scope, libraryScope)) scheduleWorkspaceRefresh(source);
 }
 
 export function requestWorkspaceStateRefresh(source: WorkspaceRefreshSource) {

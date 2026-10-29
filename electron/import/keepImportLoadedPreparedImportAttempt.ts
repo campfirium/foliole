@@ -1,3 +1,4 @@
+import type { WorkspaceRefreshScope } from '../../lib/core/database/workspaceSnapshotRefresh.js';
 import type { PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
@@ -192,6 +193,13 @@ export async function runLoadedPreparedImportAttempt(input: {
     ...(input.signal ? { signal: input.signal } : {}),
     sourceName: input.source.sourceName
   });
+  return finishLoadedImport(input, indexedRecord);
+}
+
+async function finishLoadedImport(
+  input: Parameters<typeof runLoadedPreparedImportAttempt>[0],
+  indexedRecord: Awaited<ReturnType<typeof runPreparedImportWithIndexProgress>>
+) {
   assertReadwiseOwner(input.config);
   const importStatus = resolveKeepImportResultStatus(indexedRecord);
   persistKeepImportState(input.config, input.source, input.sourceSignature, indexedRecord, importStatus, input.hasSourceUpdate);
@@ -202,6 +210,9 @@ export async function runLoadedPreparedImportAttempt(input: {
     detail: cleanupDetail ?? resolveKeepImportResultDetail(indexedRecord, importStatus),
     failureReason: indexedRecord.failureReason,
     importId: indexedRecord.importId,
-    importStatus
+    importStatus,
+    ...(input.config.sourceType === 'readwise' ? { workspaceScope: indexedRecord.nodeId
+      ? { kind: 'nodes', nodeIds: [indexedRecord.nodeId], structure: true } satisfies WorkspaceRefreshScope
+      : { kind: 'nodes', nodeIds: [] } satisfies WorkspaceRefreshScope } : {})
   };
 }

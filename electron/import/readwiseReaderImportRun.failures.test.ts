@@ -4,6 +4,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const requestKeepImportRuleRun = vi.hoisted(() => vi.fn());
 
+vi.mock('../database/attachmentResourceDescription.js', () => ({ currentLibraryScope: () => 'test-library' }));
+
 vi.mock('./keepImportService.js', () => ({
   requestKeepImportRuleRun,
   runKeepImportRule: vi.fn()

@@ -1,3 +1,4 @@
+import { mergeWorkspaceRefreshScopes, type WorkspaceRefreshScope } from '../../lib/core/database/workspaceSnapshotRefresh.js';
 import type { ReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type {
@@ -15,6 +16,8 @@ export type ReadwiseImportProgressWindow = {
 };
 
 export interface ReadwiseRunAccumulator {
+  workspaceScopes: WorkspaceRefreshScope[];
+  libraryScope: string;
   entryCount: number;
   failedCount: number;
   failedSources: NativeReadwiseImportRunFailedSource[];
@@ -29,6 +32,7 @@ export interface ReadwiseRunAccumulator {
 }
 
 export function createRunAccumulator(input: {
+  libraryScope: string;
   readwiseConfig: ReadwiseReaderConfig;
   readwiseAutoImportPolicy: ReadwiseAutoImportPolicy;
   signal?: AbortSignal;
@@ -36,6 +40,8 @@ export function createRunAccumulator(input: {
   window?: ReadwiseImportProgressWindow | null;
 }): ReadwiseRunAccumulator {
   return {
+    workspaceScopes: [],
+    libraryScope: input.libraryScope,
     entryCount: 0,
     failedCount: 0,
     failedSources: [],
@@ -71,6 +77,8 @@ export function toReadwiseImportRunResult(
   status: NativeReadwiseImportRunResult['status']
 ): NativeReadwiseImportRunResult {
   return {
+    workspace_scope: mergeWorkspaceRefreshScopes(accumulator.workspaceScopes),
+    library_scope: accumulator.libraryScope,
     completed_at: new Date().toISOString(),
     entry_count: accumulator.entryCount,
     failed_count: accumulator.failedCount,

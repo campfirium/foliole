@@ -124,6 +124,7 @@ async function runImportAttempt(
   }
   notifyKeepImportUpdated(result.importId, options.notifyUpdate);
   return {
+    ...('workspaceScope' in result ? { workspaceScope: result.workspaceScope } : {}),
     action: 'import_attempted',
     detail: result.detail,
     failureReason: result.failureReason,
@@ -211,6 +212,7 @@ async function runReadwiseDestination(
   }
   const result = await runReadwiseExternalDocumentImport(config, source);
   return {
+    workspaceScope: { kind: 'nodes', nodeIds: [] },
     action: 'import_attempted',
     detail: result.detail,
     failureReason: result.failureReason,

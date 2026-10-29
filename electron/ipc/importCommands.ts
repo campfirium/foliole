@@ -131,7 +131,8 @@ async function handleReadwiseImportCommand(
     return previewReadwiseReaderImport(args.settings);
   }
   if (request.command === NATIVE_COMMANDS.runReadwiseReaderImport) {
-    return runReadwiseImportCommand({ ...args, window: resolveTargetWindow(context) });
+    const origin = resolveTargetWindow(context);
+    return runReadwiseImportCommand({ ...args, window: origin }, origin);
   }
   if (request.command === NATIVE_COMMANDS.cancelReadwiseReaderImport) {
     return cancelReadwiseReaderImport();

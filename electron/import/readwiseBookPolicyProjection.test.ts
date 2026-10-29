@@ -88,7 +88,9 @@ it('routes highlighted Books through External and adopts the selected document o
     epubWithHighlights: 'external' as const
   };
   saveSettings(paths, policy);
-  await runReadwiseReaderImport();
+  await expect(runReadwiseReaderImport()).resolves.toMatchObject({
+    workspace_scope: { kind: 'nodes', nodeIds: [] }
+  });
   const documentId = 'readwise-reader-import-books:Book.md';
   expect(openDatabaseConnection().driver.queryOne<{ is_present: number }>(
     'SELECT is_present FROM external_documents WHERE document_id = ?', [documentId]
@@ -128,4 +130,16 @@ it('routes a Book without normalized highlights to Off without creating a Topic'
   expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
     "SELECT COUNT(*) count FROM external_documents WHERE folder_id = 'readwise-reader-import-books' AND is_present = 1"
   )).toEqual({ count: 0 });
+});
+
+it('reports full only when a Book placeholder actually changes', async () => {
+  const paths = await seedBook();
+  saveSettings(paths, createDefaultReadwiseAutoImportPolicy());
+  await expect(runReadwiseReaderImport()).resolves.toMatchObject({ workspace_scope: { kind: 'full' } });
+  const before = activeBookNodes();
+  expect(before).toHaveLength(1);
+  await expect(runReadwiseReaderImport()).resolves.toMatchObject({
+    workspace_scope: { kind: 'nodes', nodeIds: [] }
+  });
+  expect(activeBookNodes()).toEqual(before);
 });

@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import type { WorkspaceRefreshScope } from '../../lib/core/database/workspaceSnapshotRefresh.js';
 import type { ImportManagerSourceDraft, ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
 import {
   createDefaultReadwiseAutoImportPolicy,
@@ -150,10 +151,10 @@ async function projectBook(input: {
     }
   }
   if (book.generatedNodeId) {
-    if (book.importStatus === 'pending') refreshReadwiseBookPlaceholderNode(book);
+    const workspaceChanged = book.importStatus === 'pending' && refreshReadwiseBookPlaceholderNode(book);
     persist({ book, inventory, nodeId: book.generatedNodeId, ruleId: source.id, sourcePath,
       status: 'imported', updatedAt });
-    return { book, created: false, inventoryChanged: false };
+    return { book, created: false, inventoryChanged: false, workspaceChanged };
   }
   hideReadwiseExternalDocument('books', sourcePath, updatedAt);
   const next = upsertPlaceholder(book, updatedAt);
@@ -177,7 +178,9 @@ export async function syncReadwiseBookPolicyProjection(
     ? { ...inventory, books, scannedAt: updatedAt }
     : inventory;
   if (createdCount > 0 || inventoryChanged) savePersistedReadwiseBooksInventory(updatedInventory);
-  return { createdCount, inventory: updatedInventory };
+  const workspaceScope: WorkspaceRefreshScope = projected.some(item => item.created || item.workspaceChanged)
+    ? { kind: 'full' } : { kind: 'nodes', nodeIds: [] };
+  return { createdCount, inventory: updatedInventory, workspaceScope };
 }
 
 export async function adoptReadwiseInventoryBook(

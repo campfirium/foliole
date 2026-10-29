@@ -7,15 +7,15 @@ import type { ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
 export function refreshReadwiseBookPlaceholderNode(book: ReadwiseBookInventoryItem) {
   const placeholderNodeId = buildReadwiseBookPlaceholderNodeId(book.bookKey);
   if (book.generatedNodeId !== placeholderNodeId) {
-    return;
+    return false;
   }
   const connection = openDatabaseConnection();
-  connection.driver.transaction(() => {
-    applyParentContentChange({
+  return connection.driver.transaction(() => {
+    return applyParentContentChange({
       driver: connection.driver,
       nextContent: buildReadwiseBookPlaceholderContent(book),
       nodeId: placeholderNodeId,
       updatedAt: new Date().toISOString()
-    });
+    }).written;
   });
 }
