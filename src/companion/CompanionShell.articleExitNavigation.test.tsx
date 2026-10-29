@@ -73,6 +73,7 @@ function createSurface(overrides?: Record<string, unknown>) {
     readingActivity: new CompanionReadingActivity('topic-1', () => {}),
     browsedFolder: null,
     effectiveReviewSession: reviewSession,
+    flowSummary: { queueCleared: false },
     handleDismissReviewTopic: vi.fn(),
     handleExitBrowseArticle: vi.fn(),
     handleExitDirectoryArticle: vi.fn(),

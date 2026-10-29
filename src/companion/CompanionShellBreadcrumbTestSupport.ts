@@ -107,6 +107,7 @@ export function createItemReviewSurface() {
     activeAction: 'review',
     browsedFolder: null,
     effectiveReviewSession,
+    flowSummary: { queueCleared: false },
     handleDismissReviewTopic: vi.fn(),
     handleGradeReview: vi.fn(),
     handlePostponeReviewTopic: vi.fn(),

@@ -106,6 +106,7 @@ function createSurface(activeAction: 'recent' | 'review' | 'search') {
     readingError: null,
     reviewError: null,
     effectiveReviewSession: reviewSession,
+    flowSummary: { queueCleared: false },
     onlyReviewSession: { ...reviewSession, currentCard: null, scheduledReadingCount: 0 },
     reviewSession,
     selectedBrowseNodeId: null

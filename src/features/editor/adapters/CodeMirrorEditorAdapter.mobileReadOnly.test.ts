@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const { mockContentAttributesOf, mockEditorAttributesOf, mockReadOnlyOf } = vi.hoisted(() => ({
-  mockContentAttributesOf: vi.fn((value) => ({ contentAttributes: value })),
-  mockEditorAttributesOf: vi.fn((value) => ({ editorAttributes: value })),
-  mockReadOnlyOf: vi.fn((value) => ({ readOnly: value }))
+  mockContentAttributesOf: vi.fn(),
+  mockEditorAttributesOf: vi.fn(),
+  mockReadOnlyOf: vi.fn()
 }));
 
-vi.mock('@codemirror/commands', () => ({
+vi.mock('@codemirror/commands', async importOriginal => ({
+  ...await importOriginal<typeof import('@codemirror/commands')>(),
   defaultKeymap: [],
   toggleComment: vi.fn()
 }));
@@ -20,47 +21,21 @@ vi.mock('@codemirror/lang-markdown', () => ({
   }
 }));
 
-vi.mock('@codemirror/state', () => ({
-  EditorState: {
-    allowMultipleSelections: { of: vi.fn(() => 'multiple-selections') },
-    readOnly: { of: mockReadOnlyOf },
-    transactionFilter: { of: vi.fn((value) => value) }
-  },
-  Prec: {
-    highest: vi.fn((value) => value)
-  },
-  RangeSetBuilder: vi.fn().mockImplementation(() => ({
-    add: vi.fn(),
-    finish: vi.fn(() => [])
-  })),
-  StateEffect: {
-    define: vi.fn(() => ({ of: vi.fn((value) => value) }))
-  },
-  StateField: {
-    define: vi.fn((value) => value)
-  }
-}));
+vi.mock('@codemirror/state', async importOriginal => {
+  const actual = await importOriginal<typeof import('@codemirror/state')>();
+  mockReadOnlyOf.mockImplementation(actual.EditorState.readOnly.of.bind(actual.EditorState.readOnly));
+  vi.spyOn(actual.EditorState.readOnly, 'of').mockImplementation(mockReadOnlyOf);
+  return actual;
+});
 
-vi.mock('@codemirror/view', () => ({
-  ViewPlugin: { fromClass: vi.fn(() => 'pending-image-pastes') },
-  Decoration: {
-    mark: vi.fn((value) => value),
-    none: 'none',
-    set: vi.fn((value) => value)
-  },
-  EditorView: {
-    contentAttributes: { of: mockContentAttributesOf },
-    editorAttributes: { of: mockEditorAttributesOf },
-    decorations: { of: vi.fn((value) => value) },
-    domEventHandlers: vi.fn((value) => value),
-    editable: { of: vi.fn((value) => ({ editable: value })) },
-    lineWrapping: 'line-wrapping',
-    updateListener: { of: vi.fn((value) => value) }
-  },
-  highlightActiveLine: vi.fn(() => 'active-line'),
-  keymap: { of: vi.fn((value) => value) },
-  WidgetType: class {}
-}));
+vi.mock('@codemirror/view', async importOriginal => {
+  const actual = await importOriginal<typeof import('@codemirror/view')>();
+  mockContentAttributesOf.mockImplementation(actual.EditorView.contentAttributes.of.bind(actual.EditorView.contentAttributes));
+  mockEditorAttributesOf.mockImplementation(actual.EditorView.editorAttributes.of.bind(actual.EditorView.editorAttributes));
+  vi.spyOn(actual.EditorView.contentAttributes, 'of').mockImplementation(mockContentAttributesOf);
+  vi.spyOn(actual.EditorView.editorAttributes, 'of').mockImplementation(mockEditorAttributesOf);
+  return actual;
+});
 
 vi.mock('./liveMarkdown', () => ({
   createLiveMarkdownExtensions: vi.fn(() => [])
