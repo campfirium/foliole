@@ -2,6 +2,7 @@ import { resolveFlowReadingHistoryPreference } from '../flow/dailyFlowReadingHis
 import { isReadingState } from '../review/readingState.js';
 
 import type { DbPort } from './dbPort.js';
+import type { DbStatement } from './dbStatements.js';
 import { asObject, integer, numberOrNull, text } from './syncObjectPayloadValues.js';
 import type { SyncObjectRecord } from './syncObjectRecord.js';
 
@@ -36,21 +37,26 @@ export async function writeNodeReadingObject(
     await port.run('DELETE FROM node_reading_host_state WHERE node_id = ?', [record.object_id]);
     return;
   }
+  const statement = nodeReadingStatement(record);
+  await port.run(statement.sql, statement.params);
+  await applyReadingPosition(port, record, asObject(record), options.hostName);
+}
+
+export function nodeReadingStatement(record: SyncObjectRecord): DbStatement {
   const payload = asObject(record);
   const state = text(payload.state);
   if (!isReadingState(state)) throw new Error('invalid node_reading state');
   const incomingLastHandledAt = text(payload.last_handled_at) ?? record.updated_at;
   const incomingRepetitionCount = integer(payload.repetition_count);
-  await port.run(
+  return { sql:
     `INSERT INTO node_reading (node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state) ` +
     `VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(node_id) DO UPDATE SET interval_duration_ms = excluded.interval_duration_ms, ` +
     `interval_growth_factor = excluded.interval_growth_factor, last_handled_at = excluded.last_handled_at, next_at = excluded.next_at, ` +
     `priority = excluded.priority, repetition_count = excluded.repetition_count, state = excluded.state`,
-    [record.object_id, integer(payload.interval_duration_ms), numberOrNull(payload.interval_growth_factor) ?? 1,
+    params: [record.object_id, integer(payload.interval_duration_ms), numberOrNull(payload.interval_growth_factor) ?? 1,
       incomingLastHandledAt, text(payload.next_at) ?? record.updated_at,
       numberOrNull(payload.priority) ?? 0, incomingRepetitionCount, state]
-  );
-  await applyReadingPosition(port, record, payload, options.hostName);
+  };
 }
 
 async function shouldApplyNodeReading(

@@ -3,6 +3,7 @@ import { SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/
 
 import { sqlRecording } from '../../../lib/core/diagnostics/sqlRecording.js';
 import { DbPortError, type DbErrorCode, type DbParams, type DbPort, type DbRow, type DbRunResult, type DbValue } from '../../../lib/core/sync/dbPort.js';
+import type { DbBatchPort } from '../../../lib/core/sync/dbStatements.js';
 
 import { exposeCompanionSqlRecording } from './diagnostics/companionSqlRecording.js';
 
@@ -65,7 +66,20 @@ export function createCapacitorSqliteDbPort(
 ): DbPort {
   exposeCompanionSqlRecording();
   let transactionDepth = 0;
-  const port: DbPort = {
+  const port: DbBatchPort = {
+    async batch(statements) {
+      if (!transactionDepth) throw new DbPortError('Batch requires an outer transaction');
+      if (!statements.length) return;
+      const set = statements.map(({ sql, params = [] }) => ({
+        statement: platform === 'android' ? withoutPluginDeleteScan(sql) : sql,
+        values: platform === 'ios' && params.some(value => value instanceof Uint8Array)
+          ? [params.map(value => value instanceof Uint8Array ? Array.from(value) : normalizeValue(value, platform))]
+          : normalizeParams(params, platform)
+      }));
+      try { await sqlRecording.measureAsync(statements.map(value => value.sql).join(';\n'), 'run', platform,
+        () => connection.executeSet(set, false)); }
+      catch (error) { throw normalizeSqliteError(error); }
+    },
     async run(sql, params = []) {
       try {
         const result = await sqlRecording.measureAsync(sql, 'run', platform,

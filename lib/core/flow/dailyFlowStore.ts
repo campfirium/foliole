@@ -12,7 +12,11 @@ export type DailyFlowOperation = { input_hash: string; revision: number; card_js
   source_session_json: string | null };
 
 // One caller-owned transaction supplies only the operations used by the daily service.
+export type PreparedFlowNavigation = { source: DailyFlowSession; next: DailyFlowSession; snapshot?: DailyFlowLearningSnapshot; valid(): boolean };
+
 export interface DailyFlowStore {
+  readingPreservesPosition?: boolean;
+  preparedNavigation?: PreparedFlowNavigation | undefined;
   readState(): Promise<CycleStored | null>;
   readRows(ids?: readonly string[]): Promise<CycleRow[]>;
   scanRows(after: number, through: number, count: number): Promise<CycleRow[]>;

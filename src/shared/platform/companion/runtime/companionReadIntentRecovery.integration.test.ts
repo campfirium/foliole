@@ -187,7 +187,10 @@ it('retains a prepared command across process replacement without retaining a ro
   vi.spyOn(engine.journal, 'prepare').mockImplementationOnce(async (...args) => {
     await prepare(...args); throw new Error('stop_after_prepared_command');
   });
-  await engine.accept({ session, now, mode: 'recommended', historyKey: 'prepared-crash-history' });
+  await engine.journal.accept({ id: crypto.randomUUID(), libraryId: engine.journal.libraryId,
+    nodeId: session.currentNodeId!, dayKey: session.daily!.dayKey, now, mode: 'recommended',
+    historyKey: 'prepared-crash-history', predecessor: null, settings: companionDailyFlowSettings() });
+  await engine.restore();
   await expect(engine.drain()).rejects.toThrow('stop_after_prepared_command');
   const before = (await engine.journal.rows())[0]!;
   expect(before.command?.token.revision).toBe((await loadCompanionDailySession())?.daily?.revision);

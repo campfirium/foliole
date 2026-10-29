@@ -1,5 +1,6 @@
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../../../../../lib/core/database/syncStateSequenceSchemaStatements.js';
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort.js';
+import type { DbStatement } from '../../../../../lib/core/sync/dbStatements.js';
 
 export async function iosCompanionDeviceId(db: DbPort) {
   const row = (await db.query<DbRow>("SELECT value FROM companion_meta WHERE key = 'device_id' LIMIT 1"))[0];
@@ -22,26 +23,26 @@ export async function markIosCompanionMutation(args: {
   skipUnchanged?: boolean;
   updatedAt: string;
 }) {
-  const existing = (await args.db.query<DbRow>(
-    'SELECT content_hash, base_content_hash, sync_dirty FROM sync_object_state WHERE object_type = ? AND object_id = ? LIMIT 1',
-    [args.objectType, args.objectId]
-  ))[0];
-  const contentHash = typeof existing?.content_hash === 'string' ? existing.content_hash : null;
-  if (args.skipUnchanged && contentHash === args.contentHash) return;
-  const baseContentHash = typeof existing?.base_content_hash === 'string' ? existing.base_content_hash : null;
-  const base = Number(existing?.sync_dirty) === 1 ? baseContentHash ?? contentHash : contentHash;
-  await args.db.run(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, current_version_id, content_hash, base_content_hash,
-       last_modified_by_host_name, updated_at, deleted_at, sync_dirty
-     ) VALUES (?, ?, ${NEXT_SYNC_STATE_SEQ_SQL}, NULL, ?, ?, ?, ?, NULL, 1)
-     ON CONFLICT(object_type, object_id) DO UPDATE SET
-       state_seq = excluded.state_seq, current_version_id = excluded.current_version_id,
-       content_hash = excluded.content_hash, base_content_hash = excluded.base_content_hash,
-       last_modified_by_host_name = excluded.last_modified_by_host_name,
-       updated_at = excluded.updated_at, deleted_at = excluded.deleted_at, sync_dirty = 1`,
-    [args.objectType, args.objectId, args.contentHash, base, args.hostName, args.updatedAt]
-  );
+  const statement = companionMutationStatement(args);
+  await args.db.run(statement.sql, statement.params);
+}
+
+export function companionMutationStatement(args: {
+  contentHash: string; hostName: string; objectId: string; objectType: string; skipUnchanged?: boolean; updatedAt: string;
+}): DbStatement {
+  return { sql: `INSERT INTO sync_object_state (
+    object_type, object_id, state_seq, current_version_id, content_hash, base_content_hash,
+    last_modified_by_host_name, updated_at, deleted_at, sync_dirty)
+    VALUES (?, ?, ${NEXT_SYNC_STATE_SEQ_SQL}, NULL, ?, NULL, ?, ?, NULL, 1)
+    ON CONFLICT(object_type, object_id) DO UPDATE SET
+      state_seq=excluded.state_seq, current_version_id=NULL,
+      base_content_hash=CASE WHEN sync_object_state.sync_dirty=1
+        THEN COALESCE(sync_object_state.base_content_hash,sync_object_state.content_hash)
+        ELSE sync_object_state.content_hash END,
+      content_hash=excluded.content_hash, last_modified_by_host_name=excluded.last_modified_by_host_name,
+      updated_at=excluded.updated_at, deleted_at=NULL, sync_dirty=1
+    ${args.skipUnchanged ? 'WHERE sync_object_state.content_hash IS NOT excluded.content_hash' : ''}`,
+    params: [args.objectType, args.objectId, args.contentHash, args.hostName, args.updatedAt] };
 }
 
 export async function iosCompanionContentHash(payload: unknown) {

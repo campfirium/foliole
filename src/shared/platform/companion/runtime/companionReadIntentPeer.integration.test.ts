@@ -12,15 +12,17 @@ import { currentCompanionRequestSyncDatabaseHost } from '../sync/framed/companio
 
 import { companionDailyFlowSettings, loadCompanionDailySession, openCompanionDailyFlow } from './companionDailyFlow';
 import { loadCompanionFlowHistory } from './companionFlowHistory';
+import { prepareAdmittedRead } from './companionReadAdmissionCommand';
 import { getCompanionReadIntents } from './companionReadIntents';
 import { createSearchLibrary } from './companionSearchSnapshot.testSupport';
+import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('./companionNativeSync.testSupport');
   return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: createCompanionNativeSyncStub };
 });
 
-it('keeps accepted A/B targets after peer Read/deletion and converges both persisted libraries without duplicate learning', async () => {
+it.each([false, true])('keeps accepted A/B targets after peer Read/deletion without duplicate learning (admitted command=%s)', async admittedCommand => {
   hydrateCurrentReviewSchedulerSettings({ newDayStartsAtHour: 4 });
   const library = await createSearchLibrary(0);
   const peers = await connectCompanionPeer(library);
@@ -29,13 +31,17 @@ it('keeps accepted A/B targets after peer Read/deletion and converges both persi
     await exchangeBodySyncOverHttp(peers.desktop, peers.mobile, await currentCompanionRequestSyncDatabaseHost());
     const session = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;
     const engine = await getCompanionReadIntents();
-    expect((await engine.displayPreparation.prepare({ session, now, mode: 'recommended' })).session.currentNodeId).toBe('b');
+    const preparedDisplay = await engine.displayPreparation.prepare({ session, now, mode: 'recommended' });
+    expect(preparedDisplay.session.currentNodeId).toBe('b');
     let predecessor: string | null = null;
     for (const nodeId of ['a', 'b']) {
       const id = crypto.randomUUID();
-      await engine.journal.accept({ id, libraryId: engine.journal.libraryId, nodeId, now,
-        dayKey: session.daily!.dayKey, mode: 'recommended', historyKey: 'peer-history', predecessor,
-        settings: companionDailyFlowSettings() });
+      const intent = { id, libraryId: engine.journal.libraryId, nodeId, now,
+        dayKey: session.daily!.dayKey, mode: 'recommended' as const, historyKey: 'peer-history', predecessor,
+        admittedCommand, settings: companionDailyFlowSettings() };
+      const prepared = admittedCommand ? await prepareAdmittedRead(getIosCompanionDatabaseOwner(), intent,
+        nodeId === 'a' ? session : preparedDisplay.session, preparedDisplay.snapshot) : undefined;
+      await engine.journal.accept(intent, prepared);
       predecessor = id;
     }
     const peer = await open(peers.desktop, now);

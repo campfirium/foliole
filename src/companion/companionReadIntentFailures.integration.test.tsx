@@ -28,13 +28,16 @@ it('blocks B after A fails, retries the identical command, and never repeats A o
   const ui = renderHook(() => useDailyFlowSurface(initial));
   await waitFor(() => expect(ui.result.current.surface.readableArticle?.content).toBeTruthy());
   const engine = await getCompanionReadIntents();
-  const run = library.connection.run;
+  const executeSet = library.connection.executeSet;
   let release!: () => void;
   const waiting = new Promise<void>(resolve => { release = resolve; });
   let entered = false;
-  vi.spyOn(library.connection, 'run').mockImplementation(async (...args) => {
-    if (args[0].includes('INSERT INTO node_reading') && !entered) { entered = true; await waiting; throw new Error('disk_test_failure'); }
-    return run(...args);
+  vi.spyOn(library.connection, 'executeSet').mockImplementation(async (...args) => {
+    if (args[0].some(value => value.statement.includes('INSERT INTO node_reading')) && !entered) {
+      entered = true; await executeSet(args[0].slice(0, 1), false);
+      await waiting; throw new Error('disk_test_failure');
+    }
+    return executeSet(...args);
   });
   try {
     await act(async () => { await ui.result.current.surface.handleReadReviewTopic(); });
@@ -46,7 +49,7 @@ it('blocks B after A fails, retries the identical command, and never repeats A o
     const failed = await engine.journal.rows();
     expect(failed.map(row => row.intent.nodeId)).toEqual(['000000', '000001']);
     expect(failed[0]?.command?.opId).toBe(failed[0]?.intent.id);
-    expect(failed[1]?.command).toBeNull();
+    expect(failed[1]?.command?.readings?.[0]?.nodeId).toBe(failed[1]?.intent.nodeId);
     expect(library.database.prepare('SELECT count(*) AS n FROM node_reading').get()).toEqual({ n: 0 });
     await act(async () => { await engine.retry(); });
     const completed = await engine.journal.rows(false);
@@ -90,13 +93,13 @@ it('queues Undo behind the accepted Reads and undoes B rather than an earlier co
   const ui = renderHook(() => useDailyFlowSurface(initial));
   await waitFor(() => expect(ui.result.current.surface.readableArticle?.content).toBeTruthy());
   const engine = await getCompanionReadIntents();
-  const run = library.connection.run;
+  const executeSet = library.connection.executeSet;
   let release!: () => void;
   const waiting = new Promise<void>(resolve => { release = resolve; });
   let entered = false;
-  vi.spyOn(library.connection, 'run').mockImplementation(async (...args) => {
-    if (args[0].includes('INSERT INTO node_reading') && !entered) { entered = true; await waiting; }
-    return run(...args);
+  vi.spyOn(library.connection, 'executeSet').mockImplementation(async (...args) => {
+    if (args[0].some(value => value.statement.includes('INSERT INTO node_reading')) && !entered) { entered = true; await waiting; }
+    return executeSet(...args);
   });
   try {
     await act(async () => { await ui.result.current.surface.handleReadReviewTopic(); });

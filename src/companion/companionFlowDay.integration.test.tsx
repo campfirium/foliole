@@ -126,5 +126,9 @@ it.each(['leave', 'library', 'mode'] as const)('cancels the old click when %s ch
   } else if (change === 'mode') {
     await waitFor(() => expect(ui.result.current.surface.flowReady).toBe(true));
     expect(ui.result.current.surface.reviewSession.currentCard).toBeNull();
-  } else await waitFor(() => expect(ui.result.current.surface.flowReady).toBe(true));
+  } else {
+    expect(ui.result.current.surface.flowReady).toBe(false);
+    await act(async () => { await ui.result.current.workspace.refreshAfterMutation(); });
+    await waitFor(() => expect(ui.result.current.surface.flowReady).toBe(true));
+  }
 });

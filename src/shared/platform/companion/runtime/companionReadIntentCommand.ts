@@ -1,7 +1,8 @@
-import type { DailyFlowCommitArgs } from '../../../../../lib/core/flow/dailyFlowContract';
+import type { DailyFlowCommitArgs, DailyFlowLearningSnapshot } from '../../../../../lib/core/flow/dailyFlowContract';
 import { readDailyFlowFact } from '../../../../../lib/core/flow/dailyFlowFactStorage';
 import { flowDay } from '../../../../../lib/core/flow/dailyFlowPlanning';
 import { openDailyFlow } from '../../../../../lib/core/flow/dailyFlowService';
+import type { DailyFlowSession } from '../../../../../lib/core/flow/dailyFlowSession';
 import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import type { ReadIntent, ReadIntentRow } from '../../../../../lib/core/flow/readIntentJournal';
 import { reviewCalendarDayKey } from '../../../../../lib/core/review/reviewCalendarDates';
@@ -29,13 +30,16 @@ export async function prepareReadIntentCommand(db: DbPort, intent: ReadIntent) {
   const opened = await openDailyFlow(db, { now: intent.now, mode: intent.mode }, intent.settings, companionDailyFlowPersistence);
   if (opened.session.currentNodeId !== intent.nodeId) return null;
   const snapshot = await readTargetAndAncestors(db, intent.nodeId);
+  return buildReadIntentCommand(intent, opened.session, snapshot);
+}
+
+export function buildReadIntentCommand(intent: ReadIntent, session: DailyFlowSession, snapshot: DailyFlowLearningSnapshot) {
   const currentNode = snapshot.nodesById[intent.nodeId];
   if (!currentNode) return null;
   const before = currentNode.reading ?? null;
   const after = buildNextReadingProfile(buildNextReadingReviewState({
     currentNode: currentNode as Node, currentNodeId: intent.nodeId, now: intent.now, snapshot: snapshot as unknown as { nodesById: Record<string, Node> }, pushQueue: intent.settings.pushQueue
   }), before);
-  const session = opened.session;
   const command: DailyFlowCommitArgs = { opId: intent.id, now: intent.now, token: session.daily!,
     sourceSession: session, readingAction: 'read', readings: [{ nodeId: intent.nodeId,
       before, after, completedReviewDay: reviewCalendarDayKey(new Date(intent.now), intent.settings.newDayStartsAtHour) }] };

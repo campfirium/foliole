@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { flushNodeSyncVersionWithDriver } from '../../electron/database/nodeSyncVersionFromDriver';
@@ -8,7 +8,6 @@ import { closeLibraries } from '../../electron/database/syncLibrary.testSupport'
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort';
-import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { openCompanionDailyFlow, predictCompanionFlowDocument } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { commitCompanionFlowHistory, loadCompanionFlowHistory, replayCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
@@ -28,6 +27,7 @@ import { createFloatingBar, createWorkspaceSync } from './useCompanionArticleSur
 import { useCompanionFlowSession } from './useCompanionFlowSession';
 import { useCompanionReadableArticleLoader } from './useCompanionReadableArticleLoader';
 import { useCompanionSurfaceActions } from './useCompanionSurfaceActions';
+import { useCompanionWorkspaceState } from './useCompanionWorkspaceState';
 
 vi.hoisted(() => { vi.stubGlobal('Uint8Array', Object.getPrototypeOf(Buffer.prototype).constructor); });
 
@@ -100,7 +100,7 @@ it.each(['read', 'later', 'dismiss'] as const)('refreshes %s and its undo/redo w
 });
 
 function useReadingSurface(initial: WorkspaceSnapshot, publish: Parameters<typeof useCompanionReadableArticleLoader>[1]) {
-  const [state, setState] = useState<NativeCompanionWorkspaceSyncState>(createWorkspaceSync(initial).state);
+  const [state, setState] = useCompanionWorkspaceState(createWorkspaceSync(initial).state);
   const snapshot = state.workspace_snapshot!;
   const flow = useCompanionFlowSession({ snapshot, ready: true, active: true, onlyReview: false,
     libraryScope: initial.libraryScope ?? 'surface-refresh' });
@@ -156,7 +156,7 @@ it.each(['read', 'later', 'dismiss'] as const)('advances the real %s surface wit
   ui.unmount();
 });
 
-it.each(['read', 'later', 'dismiss'] as const)('retries only the saved %s surface result after a local refresh failure', async action => {
+it.each(['later', 'dismiss'] as const)('retries only the saved %s surface result after a local refresh failure', async action => {
   const initial = (await refreshCompanionWorkspaceAfterMutation())!;
   const ui = renderHook(() => useReadingSurface(initial, vi.fn()));
   await waitFor(() => expect(ui.result.current.flow.ready).toBe(true));
@@ -166,11 +166,11 @@ it.each(['read', 'later', 'dismiss'] as const)('retries only the saved %s surfac
     now: new Date().toISOString() }, new AbortController().signal))!;
   const owner = getIosCompanionDatabaseOwner();
   vi.spyOn(owner, 'readSnapshot').mockRejectedValueOnce(new Error('local refresh failed'));
-  const submit = action === 'read' ? 'handleReadReviewTopic'
-    : action === 'later' ? 'handlePostponeReviewTopic' : 'handleDismissReviewTopic';
+  const submit = action === 'later' ? 'handlePostponeReviewTopic' : 'handleDismissReviewTopic';
   await act(async () => { await ui.result.current.actions[submit](); });
   await waitFor(() => expect(ui.result.current.actions.readingError).toBe('local refresh failed'));
-  expect(ui.result.current.flow.view.currentCard?.nodeId).toBe(action === 'read' ? next : source);
+  // The native store has already published the committed receipt before the refresh fails.
+  expect(ui.result.current.flow.view.currentCard?.nodeId).toBe(next);
   const historyKey = ui.result.current.flow.historyKey;
   expect((await loadCompanionFlowHistory(historyKey)).undoStack).toHaveLength(1);
   const facts = library.database.prepare('SELECT * FROM node_reading WHERE node_id = ?').get(source);

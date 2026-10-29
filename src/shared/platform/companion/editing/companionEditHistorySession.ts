@@ -1,4 +1,5 @@
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
+import { supportsDbBatch, type DbBatchPort } from '../../../../../lib/core/sync/dbStatements';
 import { createEmptyEditorOperationHistory, type EditorOperationHistoryState } from '../../../../features/editor/model/editorOperationHistory';
 
 interface HistoryCandidate {
@@ -33,6 +34,11 @@ export function createCompanionEditHistorySession(db: DbPort): DbPort {
         transactionDb = null;
       }
     }
+  };
+  if (supportsDbBatch(db)) (port as DbBatchPort).batch = statements => {
+    const target = transactionDb ?? db;
+    if (!supportsDbBatch(target)) throw new Error('database_batch_unavailable');
+    return target.batch(statements);
   };
   candidates.set(port, () => active ?? confirmed);
   confirmedCandidates.set(port, confirmed);

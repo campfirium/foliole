@@ -10,6 +10,7 @@ export function transactionDailyFlowPersistence(persistence: DailyFlowPersistenc
   const trashed = new Set<string>();
   const clear = () => { facts.clear(); trashed.clear(); };
   return {
+    ...(persistence.readingPreservesPosition ? { readingPreservesPosition: true } : {}),
     snapshot: persistence.snapshot.bind(persistence),
     async learningSnapshot(db, ids) {
       if (!ids) {
@@ -38,8 +39,14 @@ export function transactionDailyFlowPersistence(persistence: DailyFlowPersistenc
       return persistence.grade(...args);
     },
     async reading(...args) {
-      clear();
-      return persistence.reading(...args);
+      const result = await persistence.reading(...args);
+      const value = args[1];
+      const known = facts.get(value.nodeId);
+      if (known) facts.set(value.nodeId, { ...known, reading: value.after ? { ...value.after,
+        readingPosition: persistence.readingPreservesPosition
+          ? known.reading?.readingPosition ?? value.after.readingPosition : value.after.readingPosition } : null });
+      else facts.delete(value.nodeId);
+      return result;
     },
     async reviewHistory(...args) {
       clear();

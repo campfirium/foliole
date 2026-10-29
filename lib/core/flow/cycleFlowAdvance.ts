@@ -42,7 +42,33 @@ export async function advanceCycleFlow(db: DailyFlowStore, source: DailyFlowSess
     ...(args.grade ? { nextReviewDueAt: resolveEarliestReviewDueAt(source.nextReviewDueAt, snapshot.nodesById[current]?.review?.due) } : {}) };
   const preserveCurrent = args.readings?.length && !args.readingAction && !args.grade &&
     (!source.currentNodeId || await isCycleCurrentReady(db, session, mode, args.now, settings));
-  if (!preserveCurrent) await chooseCycleCurrent(db, session, mode, args.now, settings);
+  if (!preserveCurrent && !applyPreparedNavigation(db, source, session, eligible, args.now)) {
+    await chooseCycleCurrent(db, session, mode, args.now, settings);
+  }
   cycle.change = changes.change();
   return session;
+}
+
+function applyPreparedNavigation(db: DailyFlowStore, source: DailyFlowSession, session: DailyFlowSession,
+  eligible: Set<string>, now: string) {
+  const prepared = db.preparedNavigation;
+  const navigation = prepared?.valid() && prepared.source.currentNodeId === source.currentNodeId &&
+    prepared.source.daily?.dayKey === source.daily?.dayKey &&
+    prepared.source.candidateMembershipHash === source.candidateMembershipHash &&
+    prepared.source.cycle?.scanAfter === source.cycle?.scanAfter &&
+    prepared.source.cycle?.lapLimit === source.cycle?.lapLimit &&
+    (prepared.next.currentNodeId || !eligible.has(source.currentNodeId!)) ? prepared.next : null;
+  if (navigation?.cycle) {
+    session.currentNodeId = navigation.currentNodeId;
+    session.currentItemStartedAt = now;
+    session.isAnswerRevealed = false;
+    session.continueNodeId = null;
+    session.cycle!.scanAfter = navigation.cycle.scanAfter;
+    session.cycle!.lapLimit = navigation.cycle.lapLimit;
+    session.cycle!.clearedAt = navigation.cycle.clearedAt;
+    session.completedAt = navigation.currentNodeId ? null : session.cycle!.clearedAt;
+    return true;
+  }
+  db.preparedNavigation = undefined;
+  return false;
 }

@@ -3,6 +3,7 @@ import type { DbPort } from '../sync/dbPort.js';
 
 import type { DailyFlowSettings } from './dailyFlowContract.js';
 import { readDailyFlow } from './dailyFlowStorage.js';
+import type { CycleStored } from './dailyFlowStore.js';
 
 export interface DailyFlowDayWindow { start: string; end: string }
 
@@ -18,8 +19,8 @@ export function createDailyFlowDayWindow(now: string, hour: number): DailyFlowDa
 }
 
 /** The creator fixes the interval; a receiving host does not reinterpret its timezone. */
-export async function dailyFlowSettingsForInstant(db: DbPort, settings: DailyFlowSettings, now: string, history = false) {
-  const stored = await readDailyFlow(db);
+export async function dailyFlowSettingsForInstant(db: DbPort, settings: DailyFlowSettings, now: string, history = false, current?: CycleStored | null) {
+  const stored = current === undefined ? await readDailyFlow(db) : current;
   const window = stored?.session.dayWindow ?? settings.dayWindow;
   return { ...settings, dayWindow: window && (history || isFlowWindowUnexpired(window, now)) ? window
     : createDailyFlowDayWindow(now, settings.newDayStartsAtHour) };

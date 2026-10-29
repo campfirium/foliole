@@ -4,7 +4,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { sameCycleProgress } from '../../lib/core/flow/cycleFlowState';
 import { getReviewItemKind } from '../features/review/model/reviewItemKind';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
-import { openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
+import { isCompanionReadReceiptSnapshot, openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { saveCompanionFlowResume } from '../shared/platform/companion/runtime/companionFlowResume';
 import type { CompanionReadIntents } from '../shared/platform/companion/runtime/companionReadIntents';
@@ -54,7 +54,8 @@ export function useCompanionFlowSession(args: {
     });
   }, [identity, current.hydrated, current.session.currentNodeId]);
   useEffect(() => {
-    if (!args.active || !current.hydrated || !current.session.daily || current.readIntents?.pending) return;
+    if (!args.active || !current.hydrated || !current.session.daily || current.readIntents?.pending ||
+      isCompanionReadReceiptSnapshot(args.snapshot?.nodesById)) return;
     const source = current.session;
     const generation = current.generation;
     trackCompanionFlowRefresh(current, openCompanionDailyFlow({ now: new Date().toISOString(), mode, preserveCurrent: true }).then(saved => {

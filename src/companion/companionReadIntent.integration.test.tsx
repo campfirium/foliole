@@ -38,10 +38,10 @@ it('shows B and C with usable Read actions while the complete A learning transac
   let release!: () => void;
   const blocked = new Promise<void>(resolve => { release = resolve; });
   let entered = false;
-  const run = library.connection.run;
-  vi.spyOn(library.connection, 'run').mockImplementation(async (...args) => {
-    if (args[0].includes('INSERT INTO node_reading') && !entered) { entered = true; await blocked; }
-    return run(...args);
+  const executeSet = library.connection.executeSet;
+  vi.spyOn(library.connection, 'executeSet').mockImplementation(async (...args) => {
+    if (args[0].some(value => value.statement.includes('INSERT INTO node_reading')) && !entered) { entered = true; await blocked; }
+    return executeSet(...args);
   });
   try {
     act(() => { void ui.result.current.surface.handleReadReviewTopic(); });

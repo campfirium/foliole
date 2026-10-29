@@ -1,4 +1,5 @@
 import type { DbPort } from '../sync/dbPort.js';
+import { writeDbStatements, type DbStatement } from '../sync/dbStatements.js';
 
 import { joinDailyFlowRows, separateDailyFlowRows, type DailyFlowFactRow } from './dailyFlowFactRowCodec.js';
 import type { DailyFlowSyncFact } from './dailyFlowSyncFact.js';
@@ -16,14 +17,20 @@ export async function insertDailyFlowFactRows(db: DbPort, rows: readonly DailyFl
 }
 
 export async function storeDailyFlowFact(db: DbPort, fact: DailyFlowSyncFact) {
+  await writeDbStatements(db, dailyFlowFactStatements(fact));
+}
+
+export function dailyFlowFactStatements(fact: DailyFlowSyncFact): DbStatement[] {
   const { header, rows } = separateDailyFlowRows(fact);
-  await db.run(`INSERT INTO daily_flow_sync_facts
+  const statements: DbStatement[] = [{ sql: `INSERT INTO daily_flow_sync_facts
     (id, root_id, occurred_at, day_start, payload_json, day_end, parent_id, kind) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  [fact.id, fact.rootId, fact.occurredAt, fact.settings.dayWindow.start, JSON.stringify(header),
-    fact.settings.dayWindow.end, fact.parentId, fact.kind]);
-  await insertDailyFlowFactRows(db, rows);
-  if (fact.kind === 'create') await db.run(`INSERT INTO daily_flow_lists (list_id, row_count, complete)
-    VALUES (?, ?, 1)`, [fact.id, fact.rows.length]);
+    params: [fact.id, fact.rootId, fact.occurredAt, fact.settings.dayWindow.start, JSON.stringify(header),
+      fact.settings.dayWindow.end, fact.parentId, fact.kind] }];
+  for (let offset = 0; offset < rows.length; offset += 256) statements.push({
+    sql: INSERT_DAILY_FLOW_FACT_ROWS, params: [JSON.stringify(rows.slice(offset, offset + 256))] });
+  if (fact.kind === 'create') statements.push({ sql: `INSERT INTO daily_flow_lists (list_id, row_count, complete)
+    VALUES (?, ?, 1)`, params: [fact.id, fact.rows.length] });
+  return statements;
 }
 
 export async function readDailyFlowFact(db: DbPort, id: string): Promise<DailyFlowSyncFact | null> {

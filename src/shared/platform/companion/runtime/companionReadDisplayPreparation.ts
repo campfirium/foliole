@@ -1,4 +1,4 @@
-import type { DailyFlowSettings } from '../../../../../lib/core/flow/dailyFlowContract';
+import type { DailyFlowSettings, DailyFlowLearningSnapshot } from '../../../../../lib/core/flow/dailyFlowContract';
 import { flowDay } from '../../../../../lib/core/flow/dailyFlowPlanning';
 import type { DailyFlowSession } from '../../../../../lib/core/flow/dailyFlowSession';
 import type { ReadIntent } from '../../../../../lib/core/flow/readIntentJournal';
@@ -6,11 +6,11 @@ import { subscribeCommittedCompanionWorkspace } from '../companionWorkspaceSnaps
 import { subscribeCompanionReadingScope } from '../reading/companionReadingScope';
 
 type Input = { session: DailyFlowSession; now: string; mode: ReadIntent['mode'] };
-type Projection = { observedRevision: number; session: DailyFlowSession };
+type Projection = { snapshot?: DailyFlowLearningSnapshot; observedRevision: number; session: DailyFlowSession };
 // One successor of the visible cursor. It is disposable display state, never a saved queue.
 export class CompanionReadDisplayPreparation {
   private generation = 0;
-  private prepared: { key: string; controller: AbortController; lifetime: { settled: boolean; demanded: boolean }; value: Promise<Projection> } | null = null;
+  private prepared: { key: string; controller: AbortController; lifetime: { settled: boolean; demanded: boolean }; value: Promise<Projection>; snapshot?: DailyFlowLearningSnapshot } | null = null;
   private readonly unsubscribe: (() => void)[];
 
   constructor(private readonly settings: () => DailyFlowSettings,
@@ -41,7 +41,10 @@ export class CompanionReadDisplayPreparation {
     const cancel = () => { if (!lifetime.settled && !lifetime.demanded) controller.abort(signal?.reason); };
     if (signal?.aborted) cancel();
     else signal?.addEventListener('abort', cancel, { once: true });
-    const value = this.project(input, settings, controller.signal).finally(() => {
+    const value = this.project(input, settings, controller.signal).then(result => {
+      if (this.prepared?.value === value && result.snapshot) this.prepared.snapshot = result.snapshot;
+      return result;
+    }).finally(() => {
       lifetime.settled = true;
       signal?.removeEventListener('abort', cancel);
     });
@@ -49,6 +52,17 @@ export class CompanionReadDisplayPreparation {
     this.prepared = prepared;
     void value.catch(() => { if (this.prepared === prepared) this.prepared = null; });
     return value;
+  }
+
+  snapshot(input: Input) {
+    return this.prepared?.key === this.key(input, this.settings()) ? this.prepared.snapshot : undefined;
+  }
+
+  claim(input: Input) {
+    let generation = this.generation;
+    const value = this.consume(input).then(result => { generation = this.generation; return result; });
+    void value.catch(() => undefined);
+    return { value, valid: () => generation === this.generation };
   }
 
   async consume(input: Input): Promise<Projection> {

@@ -6,6 +6,7 @@ import { readLocalFlowRows, rememberLocalFlowRows } from './dailyFlowLocalApplic
 import { groupActions, localFlowTotals, type ActionGroups } from './dailyFlowOperationContributions.js';
 import { readDailyFlowProjectionFacts, replaceDailyFlowProjectionFacts } from './dailyFlowProjectionFacts.js';
 import { readCycleRows, readDailyFlow, saveCycleFlow, writeCycleRows } from './dailyFlowStorage.js';
+import type { CycleStored } from './dailyFlowStore.js';
 import { readDailyFlowSyncFact, type DailyFlowSyncFact } from './dailyFlowSyncFact.js';
 
 export async function readLocalDailyFlowFacts(db: DbPort, start: string, end: string) {
@@ -28,10 +29,18 @@ function changedMembers(before: ActionGroups, after: ActionGroups) {
 }
 
 /** Apply shared learning effects to this device's rows; foreign positions and cursors are never installed. */
-export async function applyLocalDailyFlowOperations(db: DbPort, now: string) {
-  const stored = await readDailyFlow(db);
+export async function applyLocalDailyFlowOperations(db: DbPort, now: string, currentState?: CycleStored | null) {
+  const stored = currentState === undefined ? await readDailyFlow(db) : currentState;
   if (!stored?.session.dayWindow) return false;
-  const facts = await readLocalDailyFlowFacts(db, stored.session.dayWindow.start, stored.session.dayWindow.end);
+  const { start, end } = stored.session.dayWindow;
+  const pending = await db.query(`SELECT 1 WHERE EXISTS (
+    SELECT 1 FROM daily_flow_sync_facts f LEFT JOIN daily_flow_projection_facts p ON p.fact_id=f.id
+    WHERE f.kind!='create' AND f.day_start<? AND f.day_end>? AND p.fact_id IS NULL
+  ) OR EXISTS (SELECT 1 FROM daily_flow_projection_facts p WHERE NOT EXISTS (
+    SELECT 1 FROM daily_flow_sync_facts f WHERE f.id=p.fact_id AND f.kind!='create' AND f.day_start<? AND f.day_end>?
+  ))`, [end, start, end, start]);
+  if (!pending.length) return false;
+  const facts = await readLocalDailyFlowFacts(db, start, end);
   const applied = new Set(await readDailyFlowProjectionFacts(db));
   const ids = facts.map(fact => fact.id);
   const known = new Set(ids);

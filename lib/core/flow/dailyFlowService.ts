@@ -9,11 +9,13 @@ import { applyLocalDailyFlowOperations } from './dailyFlowLocalApplication.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
 import { readDailyFlow, saveCycleFlow } from './dailyFlowStorage.js';
+import type { CycleStored, PreparedFlowNavigation } from './dailyFlowStore.js';
 import { recordDailyFlowSync } from './dailyFlowSyncRecord.js';
 import { commitTargetedFlowHistory } from './dailyFlowTargetHistory.js';
 import { transactionDailyFlowPersistence } from './dailyFlowTransactionFacts.js';
 
 export interface DailyFlowPersistence {
+  readingPreservesPosition?: boolean;
   learningSnapshot(db: DbPort, nodeIds?: readonly string[]): Promise<DailyFlowLearningSnapshot>;
   snapshot(db: DbPort, nodeIds?: readonly string[]): Promise<DailyFlowSnapshot>;
   grade(db: DbPort, args: NonNullable<DailyFlowCommitArgs['grade']>, opId: string): Promise<SchedulerCard | null>;
@@ -43,13 +45,18 @@ export function openDailyFlow(db: DbPort, args: DailyFlowOpenArgs, settings: Dai
 }
 
 export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings: DailyFlowSettings,
-  persistence: DailyFlowPersistence): Promise<DailyFlowResult> {
+  persistence: DailyFlowPersistence, preparedNavigation?: PreparedFlowNavigation, current?: CycleStored): Promise<DailyFlowResult> {
   return db.transaction(async tx => {
-    const config = await dailyFlowSettingsForInstant(tx, settings, args.now, Boolean(args.historyMode));
-    await applyLocalDailyFlowOperations(tx, args.now);
+    const stored = current ?? await readDailyFlow(tx);
+    const config = await dailyFlowSettingsForInstant(tx, settings, args.now, Boolean(args.historyMode), stored);
+    const changed = await applyLocalDailyFlowOperations(tx, args.now, stored);
     const targeted = await commitTargetedFlowHistory(tx, args, config, persistence);
     if (targeted) return targeted;
-    const result = await commitCycleFlow(createSqliteDailyFlowStore(tx, transactionDailyFlowPersistence(persistence)), args, config);
+    const store = createSqliteDailyFlowStore(tx, transactionDailyFlowPersistence(persistence));
+    store.preparedNavigation = !changed && stored && !stored.invalidated && stored.settings_key === JSON.stringify(config)
+      ? preparedNavigation : undefined;
+    if (!changed) store.readState = async () => stored;
+    const result = await commitCycleFlow(store, args, config);
     await recordDailyFlowSync(tx, result, config, args.now, args);
     return result;
   });

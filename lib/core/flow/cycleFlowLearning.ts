@@ -11,14 +11,14 @@ export function sameLearningProfile(left: unknown, right: unknown) {
   return Object.keys(a).length === Object.keys(b).length && Object.keys(a).every(key => a[key] === b[key]);
 }
 
-export function assertCycleLearningFacts(snapshot: DailyFlowLearningSnapshot, args: DailyFlowCommitArgs) {
+export function assertCycleLearningFacts(snapshot: DailyFlowLearningSnapshot, args: DailyFlowCommitArgs, readingPreservesPosition = false) {
   const changes = args.grade ? [{ nodeId: args.grade.nodeId, before: args.grade.before, field: 'review' as const }]
     : args.reviewHistory ? [{ nodeId: args.reviewHistory.nodeId, before: args.reviewHistory.before, field: 'review' as const }]
     : (args.readings ?? []).map(value => ({ ...value, field: 'reading' as const }));
   for (const value of changes) {
     const node = snapshot.nodesById[value.nodeId];
     if (!node || snapshot.trashedNodeIds.includes(value.nodeId) || hasDeletedAncestor(node, snapshot.nodesById)
-      || !sameLearningProfile(node[value.field], value.before)) throw new Error('daily_flow_learning_changed');
+      || !(readingPreservesPosition && args.readingAction === 'read' ? sameReadingLearning(node.reading, value.before) : sameLearningProfile(node[value.field], value.before))) throw new Error('daily_flow_learning_changed');
   }
 }
 
@@ -31,4 +31,14 @@ export async function persistCycleLearning(db: DailyFlowStore, args: DailyFlowCo
     learningChanged = true;
   }
   return { learningChanged };
+}
+
+function sameReadingLearning(left: unknown, right: unknown) {
+  const learning = (value: unknown) => {
+    if (!value) return value;
+    const { readingPosition: ignored, ...facts } = value as Record<string, unknown>;
+    void ignored;
+    return facts;
+  };
+  return sameLearningProfile(learning(left), learning(right));
 }

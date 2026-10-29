@@ -44,7 +44,7 @@ export async function commitCycleFlow(db: DailyFlowStore, args: DailyFlowCommitA
     cycle: { ...base.cycle! } };
   delete sourceSession.cycle.change;
   const snapshot = await db.scopedLearningSnapshot(ids);
-  assertCycleLearningFacts(snapshot, args);
+  assertCycleLearningFacts(snapshot, args, db.readingPreservesPosition);
   if (args.readingAction && (base.currentNodeId !== args.readings?.[0]?.nodeId ||
     !isReadingReviewItemNode(snapshot.nodesById[base.currentNodeId ?? '']) ||
     !await isCycleCurrentReady(db, base, mode, args.now, settings))) throw new Error('daily_flow_learning_changed');
@@ -65,8 +65,11 @@ export async function commitCycleFlow(db: DailyFlowStore, args: DailyFlowCommitA
     now: args.now, revision: stored.revision + 1, session });
   await db.saveOperation(args.opId, { input_hash: hash, revision: saved.daily!.revision,
     card_json: result.card === undefined ? null : JSON.stringify(result.card), source_session_json: JSON.stringify(sourceSession) });
-  return { sourceSession, mutationTimestamp: args.now, session: saved, ...result,
-    learning: await readCurrentFlowLearning(db, saved.currentNodeId),
+  return { mode, sourceSession, mutationTimestamp: args.now, session: saved, ...result,
+    learning: db.preparedNavigation?.valid() && db.preparedNavigation.snapshot &&
+      (!saved.currentNodeId || db.preparedNavigation.snapshot.nodesById[saved.currentNodeId])
+      ? currentFlowLearning(db.preparedNavigation.snapshot, saved.currentNodeId)
+      : await readCurrentFlowLearning(db, saved.currentNodeId),
     ...(args.readings && args.readingAction !== 'soon' ? { readings: args.readings.map(value => ({ nodeId: value.nodeId,
       reading: updated.nodesById[value.nodeId]?.reading ?? null })) } : {}) };
 }

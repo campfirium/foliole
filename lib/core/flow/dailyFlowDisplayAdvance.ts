@@ -32,7 +32,9 @@ export async function advanceDailyFlowDisplay(db: DbPort, args: {
     excluded.push(next.node_id);
     next = await selectCycleSuccessor(store, cycle, { mode: args.mode, now: args.now, settings, excluded });
   }
-  return { observedRevision: stored.revision, session: cycleWindow({ ...source, cycle, currentNodeId: next?.node_id ?? null,
+  const snapshot = args.knownSnapshot?.nodesById[source.currentNodeId ?? ''] ? args.knownSnapshot
+    : await store.scopedLearningSnapshot([source.currentNodeId, next?.node_id]);
+  return { snapshot, observedRevision: stored.revision, session: cycleWindow({ ...source, cycle, currentNodeId: next?.node_id ?? null,
     currentItemStartedAt: args.now, isAnswerRevealed: false,
     completedAt: next ? null : args.now, continueNodeId: null }) };
 }

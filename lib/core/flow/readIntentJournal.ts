@@ -7,7 +7,7 @@ import { dailyFlowCommitSchema, type DailyFlowCommitArgs, type DailyFlowSettings
 export const readIntentSchema = z.object({
   id: z.string().uuid(), libraryId: z.string().uuid(), nodeId: z.string().min(1), now: z.string().datetime(),
   dayKey: z.string(), mode: z.enum(['recommended', 'review-first', 'reading-only']),
-  historyKey: z.string(), predecessor: z.string().uuid().nullable(),
+  historyKey: z.string(), admittedCommand: z.boolean().optional(), predecessor: z.string().uuid().nullable(),
   settings: z.object({ scope: z.string(), newDayStartsAtHour: z.number().int().min(0).max(23),
     pushQueue: z.object({ defaultPriority: z.number().int().min(1).max(9), priorityRatio: z.number().positive(),
       queueMixRatio: z.object({ reading: z.number().nonnegative(), fsrs: z.number().nonnegative() }),
@@ -38,12 +38,12 @@ export class ReadIntentJournal {
     return result;
   }
 
-  accept(intent: ReadIntent) {
+  accept(intent: ReadIntent, prepared?: { command: DailyFlowCommitArgs; entry: string }) {
     readIntentSchema.parse(intent);
     if (intent.libraryId !== this.libraryId) throw new Error('read_intent_library_changed');
     return this.serial(async () => {
-      await this.db.run(`INSERT INTO read_intents(id,library_id,intent_json) VALUES(?,?,?)`,
-        [intent.id, this.libraryId, JSON.stringify(intent)]);
+      await this.db.run(`INSERT INTO read_intents(id,library_id,intent_json,command_json,entry_json) VALUES(?,?,?,?,?)`,
+        [intent.id, this.libraryId, JSON.stringify(intent), prepared ? JSON.stringify(prepared.command) : null, prepared?.entry ?? null]);
     });
   }
 

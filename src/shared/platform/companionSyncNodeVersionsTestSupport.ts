@@ -32,10 +32,11 @@ export function createFakeCapacitorConnection(database: Database.Database) {
       const row = database.prepare('SELECT changes() AS count').get() as { count: number };
       return { changes: { changes: row.count } };
     },
-    executeSet: async (set: { statement: string; values: unknown[][] }[]) => {
+    executeSet: async (set: { statement: string; values: unknown[] }[], _transaction?: boolean) => {
+      void _transaction;
       let changes = 0;
       let lastId = 0;
-      for (const entry of set) for (const values of entry.values) {
+      for (const entry of set) for (const values of Array.isArray(entry.values[0]) ? entry.values as unknown[][] : [entry.values]) {
         const prepared = prepareStatement(database, entry.statement, values.map((value) =>
           Array.isArray(value) ? Uint8Array.from(value) : value));
         const info = prepared.statement.run(...prepared.params);
