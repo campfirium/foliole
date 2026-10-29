@@ -1,41 +1,32 @@
-import { act, cleanup, renderHook } from '@testing-library/react';
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { createReadingNode, createReadingProfile } from '../../../store/reviewQueuePlanner.test-support';
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 
+const mocks = vi.hoisted(() => ({ load: vi.fn() }));
 vi.mock('../../../shared/platform/runtime/reviewCalendarRuntimeRepository', () => ({
-  loadReviewCalendarHistoryFromRuntime: vi.fn(async () => ({ days: [], topicCoverageFrom: '2026-10-02' }))
+  loadReviewCalendarHistoryFromRuntime: mocks.load
 }));
 
 import { useReviewCalendar } from './useReviewCalendar';
 
-afterEach(() => { cleanup(); vi.useRealTimers(); });
+afterEach(cleanup);
 
-it('updates an open calendar from the real workspace store when due dates, Trash and restore change', async () => {
-  vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date(2026, 9, 2, 12));
+it('keeps a calendar snapshot through workspace changes and reads new database counts on reopen', async () => {
   const original = useWorkspaceStore.getState();
-  const due = new Date(2026, 9, 3, 12).toISOString();
-  const topic = createReadingNode('calendar-topic', due);
+  const day = new Date().toISOString().slice(0, 10);
+  mocks.load.mockResolvedValue({ days: [], topicCoverageFrom: '2026-01-01',
+    scheduledDays: [{ day, items: 2, topics: 3 }] });
   try {
-    useWorkspaceStore.setState({ nodesById: { [topic.id]: topic }, nodeOrder: [topic.id], trashedNodeIds: [] });
-    const { result, unmount } = renderHook(useReviewCalendar);
-    await act(async () => {});
-    expect(result.current.counts('2026-10-03').topics).toBe(0);
-    act(() => useWorkspaceStore.setState({ nodesById: {
-      [topic.id]: { ...topic, reading: createReadingProfile(due) }
-    } }));
-    expect(result.current.counts('2026-10-03').topics).toBe(1);
-    act(() => useWorkspaceStore.setState({ trashedNodeIds: [topic.id] }));
-    expect(result.current.counts('2026-10-03').topics).toBe(0);
-    act(() => useWorkspaceStore.setState({ trashedNodeIds: [] }));
-    expect(result.current.counts('2026-10-03').topics).toBe(1);
-    act(() => useWorkspaceStore.setState({ nodesById: {
-      [topic.id]: { ...topic, reading: createReadingProfile(new Date(2026, 9, 4, 12).toISOString()) }
-    } }));
-    expect(result.current.counts('2026-10-03').topics).toBe(0);
-    expect(result.current.counts('2026-10-04').topics).toBe(1);
-    unmount();
+    useWorkspaceStore.setState({ libraryScope: 'calendar-library', nodesById: {}, nodeOrder: [], trashedNodeIds: [] });
+    const hook = renderHook(useReviewCalendar);
+    await waitFor(() => expect(hook.result.current.counts(day).topics).toBe(3));
+    act(() => useWorkspaceStore.setState({ nodesById: {}, trashedNodeIds: ['other'] }));
+    expect(mocks.load).toHaveBeenCalledTimes(1);
+    hook.unmount();
+    mocks.load.mockResolvedValue({ days: [], topicCoverageFrom: '2026-01-01', scheduledDays: [{ day, items: 2, topics: 5 }] });
+    const reopened = renderHook(useReviewCalendar);
+    await waitFor(() => expect(reopened.result.current.counts(day).topics).toBe(5));
+    expect(mocks.load).toHaveBeenCalledTimes(2);
   } finally { cleanup(); useWorkspaceStore.setState(original); }
 });

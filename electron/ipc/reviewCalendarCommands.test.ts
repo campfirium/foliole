@@ -5,6 +5,7 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 
 const mocks = vi.hoisted(() => ({ history: vi.fn(), reading: vi.fn() }));
 vi.mock('../database/reviewCalendar.js', () => ({ loadReviewCalendarHistory: mocks.history }));
+vi.mock('../database/attachmentResourceDescription.js', () => ({ currentLibraryScope: () => 'library-a' }));
 vi.mock('../database/nodeReadingState.js', () => ({ saveNodeReadingState: mocks.reading }));
 vi.mock('../sync/desktopMemberSyncCadence.js', () => ({ requestDesktopHighValueSync: vi.fn() }));
 
@@ -13,11 +14,15 @@ import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from './sto
 beforeEach(() => vi.clearAllMocks());
 
 it('passes one typed calendar range through the native read contract', () => {
-  const input = { from: '2026-05-01T04:00:00.000Z', to: '2027-05-01T04:00:00.000Z' };
+  const input = { from: '2026-05-01T04:00:00.000Z', to: '2027-05-01T04:00:00.000Z', now: '2026-10-02T08:00:00.000Z', libraryScope: 'library-a' };
   const result = { days: [], topicCoverageFrom: '2026-10-02' };
   mocks.history.mockReturnValue(result);
   expect(handleWorkspaceReadCommand(NATIVE_COMMANDS.loadReviewCalendarHistory, input)).toEqual(result);
-  expect(mocks.history).toHaveBeenCalledWith(input);
+  const { libraryScope: ignored, ...query } = input;
+  void ignored;
+  expect(mocks.history).toHaveBeenCalledWith(query);
+  expect(() => handleWorkspaceReadCommand(NATIVE_COMMANDS.loadReviewCalendarHistory, { ...input, libraryScope: 'library-b' })).toThrow('calendar_library_changed');
+  expect(() => handleWorkspaceReadCommand(NATIVE_COMMANDS.loadReviewCalendarHistory, { ...input, now: 'invalid' })).toThrow();
   expect(() => handleWorkspaceReadCommand(NATIVE_COMMANDS.loadReviewCalendarHistory, { ...input, from: 42 })).toThrow();
   expect(() => handleWorkspaceReadCommand(NATIVE_COMMANDS.loadReviewCalendarHistory, { ...input, to: null })).toThrow();
   expect(mocks.history).toHaveBeenCalledTimes(1);

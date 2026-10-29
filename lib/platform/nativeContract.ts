@@ -26,7 +26,7 @@ import type { NativeSaveNodeReviewStateArgs } from './nativeNodeReviewStateContr
 import type { NativePdfDocumentSearchCommandMap } from './nativePdfDocumentSearchContract.js';
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type { NativeRemoteImageCommandMap } from './nativeRemoteImageCommandMap.js';
-import type { NativeReviewCalendarHistory, NativeReviewCalendarHistoryArgs } from './nativeReviewCalendarContract.js';
+import type { NativeReviewCalendar, NativeReviewCalendarArgs } from './nativeReviewCalendarContract.js';
 import type { NativeReviewTrainingCommandMap } from './nativeReviewTrainingContract.js';
 import type { NativeSearchIndexCommandMap } from './nativeSearchIndexCommandMap.js';
 import type { NativeSplitTopicPreferencesCommandMap } from './nativeSplitTopicPreferencesContract.js';
@@ -185,8 +185,8 @@ export type NativeCommandMap = NativeDailyFlowCommandMap & NativeReviewTrainingC
     result: ForegroundTimeHistory;
   };
   [NATIVE_COMMANDS.loadReviewCalendarHistory]: {
-    args: NativeReviewCalendarHistoryArgs;
-    result: NativeReviewCalendarHistory;
+    args: NativeReviewCalendarArgs;
+    result: NativeReviewCalendar;
   };
   [NATIVE_COMMANDS.saveNodeReviewState]: {
     args: NativeSaveNodeReviewStateArgs;

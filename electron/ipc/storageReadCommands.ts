@@ -40,15 +40,17 @@ function completeHighValueWrite<T>(result: T) {
   return result;
 }
 
+function readCalendar(args: Record<string, unknown>) {
+  if (asString(args.libraryScope, 'libraryScope') !== currentLibraryScope()) throw new Error('calendar_library_changed');
+  return loadReviewCalendarHistory({ from: asTimestamp(args.from, 'from'), to: asTimestamp(args.to, 'to'),
+    now: z.string().datetime().parse(args.now) });
+}
+
 export function handleWorkspaceReadCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadForegroundTimeHistory) {
     return loadForegroundTimeHistory(foregroundTimeHistoryArgsSchema.parse(args));
   }
-  if (command === NATIVE_COMMANDS.loadReviewCalendarHistory) {
-    return loadReviewCalendarHistory({
-      from: asTimestamp(args.from, 'from'), to: asTimestamp(args.to, 'to')
-    });
-  }
+  if (command === NATIVE_COMMANDS.loadReviewCalendarHistory) return readCalendar(args);
   if (command === NATIVE_COMMANDS.loadWorkspaceSnapshot) {
     return loadWorkspaceSnapshot();
   }
