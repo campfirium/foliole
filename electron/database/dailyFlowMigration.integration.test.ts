@@ -6,6 +6,7 @@ import { migrateCompanionDatabase } from '../../lib/core/database/companionDatab
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/databaseSchemaVersion.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
@@ -30,16 +31,25 @@ it('upgrades desktop 174 transactionally and leaves original node facts untouche
   const sqlite = new Database(':memory:');
   try {
     initializeDatabaseSchema(sqlite);
-    const original = seed(sqlite);
+    seed(sqlite);
+    sqlite.prepare(`INSERT INTO node_sync_versions
+      (version_id,object_id,host_name,created_at,content_hash,body_text,snapshot_json)
+      VALUES ('original-version','original','fixture','2026-01-01',?,?,?)`)
+      .run(hashTextBody('Original body'), 'Original body', JSON.stringify({ content: 'Original body', body_blob_hash: null }));
+    sqlite.prepare("UPDATE nodes SET current_version_id='original-version' WHERE id='original'").run();
+    const original = sqlite.prepare("SELECT * FROM nodes WHERE id='original'").get() as Record<string, unknown>;
+    const versions = sqlite.prepare('SELECT * FROM node_sync_versions').all();
     dropDailyState(sqlite, 174);
     expect(() => initializeDatabaseSchema(sqlite, { beforeVersionCommit: () => { throw new Error('interrupted'); } })).toThrow('interrupted');
     expect(sqlite.pragma('user_version', { simple: true })).toBe(174);
     expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name='daily_flow_state'").get()).toBeUndefined();
     expect(sqlite.prepare("SELECT * FROM nodes WHERE id='original'").get()).toEqual(original);
+    expect(sqlite.prepare('SELECT * FROM node_sync_versions').all()).toEqual(versions);
     initializeDatabaseSchema(sqlite);
     expect(sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
     expect(sqlite.prepare('SELECT * FROM daily_flow_sync_facts').all()).toEqual([]);
-    assertLazyAndPreserved(sqlite, original);
+    assertLazyAndPreserved(sqlite, { ...original, body_blob_hash: hashTextBody('Original body') });
+    expect(sqlite.prepare('SELECT * FROM node_sync_versions').all()).toEqual(versions);
   } finally { sqlite.close(); }
 });
 
