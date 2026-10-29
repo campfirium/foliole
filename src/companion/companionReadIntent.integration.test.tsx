@@ -24,11 +24,17 @@ beforeEach(async () => {
 afterEach(async () => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); await library.close(); });
 
 it('shows B and C with usable Read actions while the complete A learning transaction is blocked', async () => {
+  const bodyQueries = vi.spyOn(library.readonlyQueries, 'query');
   const initial = (await refreshCompanionWorkspaceAfterMutation())!;
   const ui = renderHook(() => useDailyFlowSurface(initial));
   await waitFor(() => expect({ ready: ui.result.current.surface.flowReady, error: ui.result.current.surface.flowError }).toEqual({ ready: true, error: null }));
   await waitFor(() => expect(ui.result.current.surface.readableArticle?.content).toContain('prefix alpha'));
   const a = ui.result.current.surface.readableArticle!.nodeId;
+  await waitFor(() => expect(bodyQueries.mock.calls.some(([sql, args]) =>
+    sql.includes('SELECT article.*') && args?.[0] === '000001')).toBe(true));
+  await getIosCompanionDatabaseOwner().readInteractiveSnapshot(async () => null);
+  const foreground = vi.spyOn(getIosCompanionDatabaseOwner(), 'readInteractiveSnapshot')
+    .mockRejectedValue(new Error('unexpected_click_time_read'));
   let release!: () => void;
   const blocked = new Promise<void>(resolve => { release = resolve; });
   let entered = false;
@@ -41,6 +47,7 @@ it('shows B and C with usable Read actions while the complete A learning transac
     act(() => { void ui.result.current.surface.handleReadReviewTopic(); });
     await waitFor(() => expect(entered).toBe(true));
     await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).not.toBe(a));
+    foreground.mockRestore();
     const b = ui.result.current.surface.readableArticle!.nodeId;
     expect(b).not.toBe(a);
     expect(ui.result.current.surface.readableArticle?.content).toContain('prefix alpha');

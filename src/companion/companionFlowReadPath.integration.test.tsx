@@ -148,6 +148,10 @@ it('uses the daily successor and its prepared body through automatic Read displa
   await getIosCompanionDatabaseOwner().readInteractiveSnapshot(async () => null);
   queries.mockClear();
   bodyQueries.mockClear();
+  // A prepared Read must still navigate when all fresh foreground reads are unavailable.
+  // The writer uses its real connection and remains fully enabled.
+  const foreground = vi.spyOn(getIosCompanionDatabaseOwner(), 'readInteractiveSnapshot')
+    .mockRejectedValue(new Error('unexpected_click_time_read'));
   let learningVisits = 0;
   const unrelated = initial.nodesById['000255']!;
   const reading = unrelated.reading;
@@ -156,6 +160,7 @@ it('uses the daily successor and its prepared body through automatic Read displa
   act(() => { void ui.result.current.surface.handleReadReviewTopic(); });
   await waitFor(() => expect(ui.result.current.surface.readableArticle?.nodeId).toBe(next));
   await getIosCompanionDatabaseOwner().read(async () => null);
+  foreground.mockRestore();
   expect(ui.result.current.surface.readableArticle?.content).toContain('prefix alpha');
   expect(ui.result.current.surface.isSubmittingReadingAction).toBe(false);
   expect(ui.result.current.snapshot.nodesById[before]?.reading?.repetitionCount).toBe(1);

@@ -9,6 +9,7 @@ import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyn
 import type { CapacitorCompanionDatabaseOwner } from './capacitorCompanionDatabaseOwner';
 import { companionDailyFlowPersistence, companionDailyFlowSettings } from './companionDailyFlow';
 import { applyCompanionFlowReceipt } from './companionDailyFlowDisplay';
+import { CompanionReadDisplayPreparation } from './companionReadDisplayPreparation';
 import { applyReadIntent } from './companionReadIntentApply';
 import { correctReadIntent } from './companionReadIntentCommand';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
@@ -45,8 +46,17 @@ export class CompanionReadIntents {
   private receipt: DailyFlowResult | null = null;
   private applied: { nodeId: string; revision: number }[] = [];
   private predecessor: string | null = null;
+  private applyingNodeId: string | null = null;
   private revision = 0;
-  constructor(private readonly owner: CapacitorCompanionDatabaseOwner, readonly journal: ReadIntentJournal) {}
+  readonly displayPreparation: CompanionReadDisplayPreparation;
+  constructor(private readonly owner: CapacitorCompanionDatabaseOwner, readonly journal: ReadIntentJournal) {
+    this.displayPreparation = new CompanionReadDisplayPreparation(companionDailyFlowSettings,
+      (args, settings, signal) => owner.readInteractiveSnapshot(db => advanceDailyFlowDisplay(db,
+        { ...args, excluded: [...this.rows.map(row => row.intent.nodeId), args.session.currentNodeId!],
+          applied: this.applied, knownSnapshot: companionWorkspaceSnapshots.getSnapshot() },
+        { ...settings, ...(args.session.dayWindow ? { dayWindow: args.session.dayWindow } : {}) }, companionDailyFlowPersistence), signal),
+      id => this.applyingNodeId === id);
+  }
 
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   get version() { return this.revision; }
@@ -78,22 +88,17 @@ export class CompanionReadIntents {
     const intent: ReadIntent = { id: createCompanionUuid(), libraryId: this.journal.libraryId,
       nodeId: session.currentNodeId, dayKey: session.daily.dayKey, now, mode, historyKey,
       predecessor: this.predecessor, settings: structuredClone({ ...companionDailyFlowSettings(), ...(session.dayWindow ? { dayWindow: session.dayWindow } : {}) }) };
-    // Calculate only a display projection; admission is the sole durable foreground write.
-    const excluded = [...this.rows.map(row => row.intent.nodeId), intent.nodeId];
     const project = async () => {
-      const projection = await this.owner.readInteractiveSnapshot(db => advanceDailyFlowDisplay(db,
-        { session, now, mode, excluded, applied: this.applied, knownSnapshot: companionWorkspaceSnapshots.getSnapshot() }, intent.settings, companionDailyFlowPersistence));
+      const projection = await this.displayPreparation.consume({ session, now, mode });
       this.applied = this.applied.filter(value => value.revision > projection.observedRevision);
       return projection.session;
     };
-    const projected = project();
-    void projected.catch(() => undefined);
     await this.journal.accept(intent);
     this.predecessor = intent.id;
     this.rows.push({ ordinal: 0, intent, command: null, entry: null, state: 'pending', error: null });
     this.publish();
     this.start();
-    try { return { id: intent.id, session: await projected }; }
+    try { return { id: intent.id, session: await project() }; }
     catch (error) {
       this.displayRecovery = async () => ({ session: await project(), mode });
       this.failure = 'The Read was accepted, but the next topic could not be loaded. Retry to continue.';
@@ -104,6 +109,7 @@ export class CompanionReadIntents {
 
   async close() {
     this.closed = true;
+    this.displayPreparation.close();
     await this.admitting;
     await this.drain().catch(() => undefined);
   }
@@ -138,9 +144,11 @@ export class CompanionReadIntents {
       const row = this.rows[0]!;
       let acknowledged = false;
       try {
-        const outcome = await runCompanionHighValueMutationTask(() => this.owner.runWriter(db =>
-          applyReadIntent(db, this.journal, row.intent.id)),
-        { kind: 'nodes', nodeIds: [], readingNodeIds: [row.intent.nodeId] });
+        const outcome = await runCompanionHighValueMutationTask(() => {
+          this.applyingNodeId = row.intent.nodeId;
+          return this.owner.runWriter(db => applyReadIntent(db, this.journal, row.intent.id));
+        }, { kind: 'nodes', nodeIds: [], readingNodeIds: [row.intent.nodeId] })
+          .finally(() => { this.applyingNodeId = null; });
         await this.journal.settle(row.intent.id, outcome.state,
           outcome.state === 'superseded' ? 'The clicked topic changed before it could be saved.' : null);
         acknowledged = true;

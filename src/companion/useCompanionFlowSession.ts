@@ -71,7 +71,7 @@ export function useCompanionFlowSession(args: {
   const view = useMemo(() => flowView(args.snapshot, current, scheduled),
     [args.snapshot, current.hydrated, session, scheduled]);
   const cancelDocumentPreparation = useCompanionFlowDocumentPrefetch(args.active && args.ready && current.hydrated ? args.snapshot : null,
-    session);
+    session, current.readIntents, mode);
   const dailyView = useCompanionFlowReadView(args.active, current.hydrated, current.session, mode, args.libraryScope);
   const canContinueReading = dailyView?.view?.canContinueReading ?? false;
   const historyKey = companionFlowHistoryKey(args.libraryScope);

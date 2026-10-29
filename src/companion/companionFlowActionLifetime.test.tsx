@@ -6,6 +6,7 @@ import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecu
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { invalidateCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { loadCompanionDailySession } from '../shared/platform/companion/runtime/companionDailyFlow';
+import { getCompanionReadIntents } from '../shared/platform/companion/runtime/companionReadIntents';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { runCompanionSyncWriterTask } from '../shared/platform/companionSyncWriterQueue';
@@ -130,7 +131,9 @@ it('waits for annotation confirmation and blocks reading while content editing i
   let action!: Promise<void>;
   act(() => { action = ui.result.current.surface.handleReadReviewTopic(); });
   expect(operationCount()).toEqual({ n: 0 });
-  await act(async () => { annotation.resolve(); await pending; await action; });
+  expect(await (await getCompanionReadIntents()).journal.rows()).toHaveLength(0);
+  await act(async () => { annotation.resolve(); await pending; await action;
+    await (await getCompanionReadIntents()).drain(); });
   expect(operationCount()).toEqual({ n: 1 });
   expect(library.database.prepare('SELECT COUNT(*) AS n FROM node_reading').get()).toEqual({ n: 1 });
 });

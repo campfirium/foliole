@@ -142,6 +142,7 @@ it('retries next-topic preparation after admission without accepting or learning
   const owner = getIosCompanionDatabaseOwner();
   await owner.readInteractiveSnapshot(async () => null);
   const a = ui.result.current.surface.readableArticle!.nodeId;
+  engine.displayPreparation.invalidate();
   vi.spyOn(owner, 'readInteractiveSnapshot').mockRejectedValueOnce(new Error('next_topic_read_failure'));
   await act(async () => { await ui.result.current.surface.handleReadReviewTopic(); });
   expect(ui.result.current.surface.readableArticle?.nodeId).toBe(a);

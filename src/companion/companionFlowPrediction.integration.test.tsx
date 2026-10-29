@@ -58,9 +58,9 @@ it.each(['pending', 'failed'] as const)('displays a committed body and accepts a
   const b = ui.result.current.flow.view.currentCard!.nodeId;
   expect(b).not.toBe(a);
   const owner = getIosCompanionDatabaseOwner();
-  const original = owner.readBackgroundSnapshot.bind(owner);
+  const original = owner.readInteractiveSnapshot.bind(owner);
   let entered = false;
-  vi.spyOn(owner, 'readBackgroundSnapshot').mockImplementation(<T,>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal) =>
+  vi.spyOn(owner, 'readInteractiveSnapshot').mockImplementation(<T,>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal) =>
     original(db => task({ ...db, async query(sql, params) {
       if (sql.includes('order_key > ?')) {
         entered = true;

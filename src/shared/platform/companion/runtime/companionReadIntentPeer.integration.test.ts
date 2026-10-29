@@ -29,6 +29,7 @@ it('keeps accepted A/B targets after peer Read/deletion and converges both persi
     await exchangeBodySyncOverHttp(peers.desktop, peers.mobile, await currentCompanionRequestSyncDatabaseHost());
     const session = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;
     const engine = await getCompanionReadIntents();
+    expect((await engine.displayPreparation.prepare({ session, now, mode: 'recommended' })).session.currentNodeId).toBe('b');
     let predecessor: string | null = null;
     for (const nodeId of ['a', 'b']) {
       const id = crypto.randomUUID();
@@ -46,6 +47,7 @@ it('keeps accepted A/B targets after peer Read/deletion and converges both persi
     expect(flushNodeSyncVersionWithDriver(peers.desktop.driver, 'b', peers.desktop.name, deletedAt)).toBeTruthy();
     await exchangeBodySyncOverHttp(peers.desktop, peers.mobile, await currentCompanionRequestSyncDatabaseHost());
     expect(library.database.prepare('SELECT deleted_at FROM nodes WHERE id=?').get('b')).toEqual({ deleted_at: deletedAt });
+    expect((await engine.displayPreparation.prepare({ session, now, mode: 'recommended' })).session.currentNodeId).toBe('c');
     await engine.restore();
     await expect(engine.drain()).rejects.toThrow('changed');
     expect((await engine.journal.rows(false)).map(row => [row.intent.nodeId, row.state]))

@@ -105,7 +105,13 @@ it('refills the display beyond two selector batches without waiting for the firs
   try {
     for (let index = 0; index < 66; index += 1) {
       targets.push(display.currentNodeId!);
-      display = (await engine.accept({ session: display, now, mode: 'recommended', historyKey: 'window-history' })).session;
+      await engine.displayPreparation.prepare({ session: display, now, mode: 'recommended' });
+      const reads = vi.spyOn(getIosCompanionDatabaseOwner(), 'readInteractiveSnapshot')
+        .mockRejectedValue(new Error('unexpected_click_time_selection'));
+      try {
+        display = (await engine.accept({ session: display, now, mode: 'recommended', historyKey: 'window-history' })).session;
+        expect(reads).not.toHaveBeenCalled();
+      } finally { reads.mockRestore(); }
     }
     expect(new Set(targets).size).toBe(66);
     expect(display.currentNodeId).toBe('000066');
