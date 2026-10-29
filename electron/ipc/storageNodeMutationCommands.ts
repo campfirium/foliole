@@ -76,7 +76,8 @@ function handleSoftDeleteNodeCommand(args: Record<string, unknown>, originWindow
   const parsed = parseSoftDeleteNodesArgs(args);
   softDeleteNodesWithParents(parsed);
   scheduleMirrorSync([...parsed.nodeIds, ...(parsed.parentUpdates ?? []).map((parent) => parent.nodeId)]);
-  return completeWorkspaceMutation({ deletedNodeIds: parsed.nodeIds }, originWindow);
+  return completeWorkspaceMutation({ deletedNodeIds: parsed.nodeIds }, originWindow, { kind: 'nodes',
+    nodeIds: [...parsed.nodeIds, ...parsed.parentUpdates?.map(parent => parent.nodeId) ?? []], structure: true });
 }
 
 function handleSplitTopicCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
@@ -182,7 +183,9 @@ export function handleNodeMutationCommand(command: string, args: Record<string, 
   if (command === NATIVE_COMMANDS.moveNodes) {
     const { result, articleIds } = moveNodesWithMirrorInputs(parseMoveNodesArgs(args));
     scheduleMirrorSync([], articleIds);
-    return completeWorkspaceMutation(result, originWindow);
+    return completeWorkspaceMutation(result, originWindow, { kind: 'nodes',
+      nodeIds: [...result.movedNodeIds, ...result.readings.map(node => node.nodeId),
+        ...result.parentOrders.flatMap(order => order.parentNodeId ? [order.parentNodeId] : [])], structure: true });
   }
   if (command === NATIVE_COMMANDS.softDeleteNodes) {
     return handleSoftDeleteNodeCommand(args, originWindow);
@@ -191,7 +194,8 @@ export function handleNodeMutationCommand(command: string, args: Record<string, 
     const parsed = parseRestoreNodesArgs(args);
     const result = restoreNodesWithParents(parsed);
     scheduleMirrorSync([...result.restoredNodeIds, ...(parsed.parentUpdates ?? []).map((parent) => parent.nodeId)]);
-    return completeWorkspaceMutation(result, originWindow);
+    return completeWorkspaceMutation(result, originWindow, { kind: 'nodes',
+      nodeIds: [...parsed.nodeIds, ...parsed.parentUpdates?.map(parent => parent.nodeId) ?? []], structure: true });
   }
   if (command === NATIVE_COMMANDS.deleteNodesPermanently) {
     return handlePermanentDeleteNodeCommand(args, originWindow);

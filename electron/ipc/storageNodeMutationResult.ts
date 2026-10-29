@@ -34,7 +34,9 @@ export function buildNodeMutationPatchResult(args: {
     ...(args.nodeOrder ? { nodeOrder: args.nodeOrder } : {}),
     nodes: args.nodes,
     ...(args.updatedNodeIds ? { updatedNodeIds: args.updatedNodeIds } : {})
-  }, args.originWindow, args.workspaceScope, args.libraryScope);
+  }, args.originWindow, args.workspaceScope ?? { kind: 'nodes',
+    nodeIds: [...new Set([...args.nodes.map(node => node.nodeId), ...args.updatedNodeIds ?? [],
+      ...args.anchorUpdates?.map(node => node.nodeId) ?? []])], structure: true }, args.libraryScope);
 }
 
 export function completeCreatedNodeCreation(

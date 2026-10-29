@@ -13,8 +13,11 @@ import { registerMoveCommandCoverage } from './storageNodeMove.test-support.js';
 
 vi.mock('../database/connection.js', async (importOriginal) => ({
   ...await importOriginal<typeof import('../database/connection.js')>(),
+  openDatabaseConnection: vi.fn(() => ({ driver: { queryAll: vi.fn(() => []) } })),
   runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
 }));
+
+vi.mock('../database/attachmentResourceDescription.js', () => ({ currentLibraryScope: () => 'library' }));
 
 const mockWindow = { close: vi.fn(), isMaximized: vi.fn(() => false), maximize: vi.fn(), minimize: vi.fn(), unmaximize: vi.fn() };
 

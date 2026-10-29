@@ -6,7 +6,7 @@ import { stagePendingNodeSync } from '../shared/platform/workspacePendingNodeSyn
 import { createWorkspaceRuntimeNodeSnapshot } from '../shared/platform/workspaceRuntimeRepository';
 
 import { markNodeContentEdited, resetNodeContentVersionGuardForTests } from './workspaceNodeContentVersionGuard';
-import { requestWorkspaceSyncRefresh } from './workspaceRefreshScheduler';
+import { requestWorkspaceStateRefresh, requestWorkspaceSyncRefresh } from './workspaceRefreshScheduler';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 import { refreshWorkspaceSyncProjection } from './workspaceSyncProjectionRefresh';
 
@@ -33,6 +33,17 @@ beforeEach(() => {
 });
 
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+
+it('keeps a queued full refresh when the first ambient node scope names the current library', async () => {
+  const invoke = vi.fn().mockResolvedValue(projection('2026-10-01T00:00:00Z'));
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+  const full = vi.spyOn(useWorkspaceStore.persist, 'rehydrate').mockResolvedValue(undefined);
+  requestWorkspaceStateRefresh('sync-applied');
+  requestWorkspaceSyncRefresh({ kind: 'nodes', nodeIds: ['topic'] }, 'library', 'content-changed');
+  await vi.advanceTimersByTimeAsync(1200);
+  expect(full).toHaveBeenCalledOnce();
+  expect(invoke.mock.calls.filter(([command]) => command === 'load_workspace_list_projection')).toHaveLength(0);
+});
 
 it('loads the affected active body without a list hydrate and keeps current navigation', async () => {
   const invoke = vi.fn().mockImplementation(async (command: string) => {

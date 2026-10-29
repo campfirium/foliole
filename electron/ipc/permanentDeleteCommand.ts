@@ -1,3 +1,5 @@
+import { currentLibraryScope } from '../database/attachmentResourceDescription.js';
+import { openDatabaseConnection } from '../database/connection.js';
 import { runDesktopDatabaseWrite } from '../database/desktopDatabaseWriteQueue.js';
 import {
   deletePermanentDeleteChunk,
@@ -24,7 +26,11 @@ function yieldToEventLoop() {
 /** Deletes in short write tasks; a failure leaves the remaining nodes in the trash. */
 export async function handlePermanentDeleteNodeCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
   const parsed = parseDeleteNodesPermanentlyArgs(args);
-  const plan = await runDesktopDatabaseWrite('foreground', () => preparePermanentDelete(parsed.nodeIds));
+  const { plan, libraryScope, parents } = await runDesktopDatabaseWrite('foreground', () => ({
+    plan: preparePermanentDelete(parsed.nodeIds), libraryScope: currentLibraryScope(),
+    parents: openDatabaseConnection().driver.queryAll<{ parent_id: string }>(
+      'SELECT DISTINCT parent_id FROM nodes WHERE id IN (SELECT value FROM json_each(?)) AND parent_id IS NOT NULL',
+      [JSON.stringify(parsed.nodeIds)]).map(row => row.parent_id) }));
   const released: string[] = [];
   const removed: string[] = [];
   const affectedArticleIds = new Set<string>();
@@ -44,11 +50,13 @@ export async function handlePermanentDeleteNodeCommand(args: Record<string, unkn
     await runDesktopDatabaseWrite('foreground', () => finishPermanentDelete(plan));
   } catch (error) {
     // The origin window reloads on its own failure path; other windows learn about removed chunks here.
-    if (removed.length) notifyWorkspaceContentChanged(originWindow);
+    if (removed.length) notifyWorkspaceContentChanged(originWindow, { libraryScope,
+      workspaceScope: { kind: 'nodes', nodeIds: [...removed, ...parents], structure: true } });
     throw error;
   } finally {
     enqueueReleasedBodyCollection(released);
     if (removed.length) scheduleMirrorSync([...new Set([...removed, ...affectedArticleIds])]);
   }
-  return completeWorkspaceMutation({ removedNodeIds: parsed.nodeIds }, originWindow);
+  return completeWorkspaceMutation({ removedNodeIds: parsed.nodeIds }, originWindow,
+    { kind: 'nodes', nodeIds: [...removed, ...parents], structure: true }, libraryScope);
 }

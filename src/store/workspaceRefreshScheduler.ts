@@ -82,8 +82,8 @@ export async function refreshWorkspaceState(source: WorkspaceRefreshSource = 'co
 export function requestWorkspaceSyncRefresh(scope: WorkspaceRefreshScope, libraryScope: string,
   source: WorkspaceRefreshSource = 'sync-applied') {
   if (refreshLibraryScope !== libraryScope) {
+    if (refreshLibraryScope !== undefined) refreshes.reset(null);
     refreshLibraryScope = libraryScope;
-    refreshes.reset(null);
   }
   refreshes.register(scope);
   scheduleWorkspaceRefresh(source);
