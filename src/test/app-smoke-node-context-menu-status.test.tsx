@@ -123,7 +123,7 @@ it('dismisses an entire topic from the node menu without deleting it', () => {
   expect(useWorkspaceStore.getState().nodesById['node-child']).toBeDefined();
 });
 
-it('toggles sequential reading from source topic menus without confirmation and applies the release rule', () => {
+it('toggles sequential reading from source topic menus without confirmation and applies the release rule', async () => {
   const firstTopic = createNode({
     id: 'node-first',
     kind: 'topic',
@@ -158,13 +158,13 @@ it('toggles sequential reading from source topic menus without confirmation and 
   fireEvent.click(screen.getByRole('menuitem', { name: 'Enable Sequential Reading' }));
 
   expect(screen.queryByRole('dialog', { name: /Relearn/i })).toBeNull();
-  expect(useWorkspaceStore.getState().nodesById['node-source']?.sequentialReadingEnabled).toBe(true);
+  await waitFor(() => expect(useWorkspaceStore.getState().nodesById['node-source']?.sequentialReadingEnabled).toBe(true));
   expect(useWorkspaceStore.getState().nodesById['node-first']?.reading?.state).toBe('active');
   expect(useWorkspaceStore.getState().nodesById['node-second']?.reading?.state).toBe('locked');
 
   openNodeMenu('Source topic');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Disable Sequential Reading' }));
-  expect(useWorkspaceStore.getState().nodesById['node-second']?.reading?.state).toBe('active');
+  await waitFor(() => expect(useWorkspaceStore.getState().nodesById['node-second']?.reading?.state).toBe('active'));
 });
 
 it('hides sequential reading actions from non-source menus', () => {

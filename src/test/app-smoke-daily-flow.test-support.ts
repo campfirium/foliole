@@ -1,9 +1,10 @@
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import { dailyFlowCommitSchema, dailyFlowOpenSchema, type DailyFlowSnapshot } from '../../lib/core/flow/dailyFlowContract';
 import { advanceDailyGrade } from '../../lib/core/flow/dailyFlowGrade';
-import { flowDay, prepareFlowSession } from '../../lib/core/flow/dailyFlowPlanning';
+import { flowDay, flowPlan, prepareFlowSession } from '../../lib/core/flow/dailyFlowPlanning';
 import { advanceDailyReading } from '../../lib/core/flow/dailyFlowReading';
 import type { DailyFlowSession } from '../../lib/core/flow/dailyFlowSession';
+import { dailyFlowViewSchema, type DailyFlowView } from '../../lib/core/flow/dailyFlowViewContract';
 import { restoreFlowHistorySession } from '../../lib/core/flow/flowHistorySession';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { toNodeReviewProfile } from '../features/review/model/reviewTypes';
@@ -13,6 +14,18 @@ function toSmokeSnapshot(node: Node): WorkspaceNodeSnapshot {
   return { ...node, isTitleManual: node.isTitleManual ?? false,
     hideTitleHeading: node.hideTitleHeading ?? false, anchorLink: node.anchorLink ?? null,
     reading: node.reading ?? null };
+}
+
+function smokeView(payload: unknown, state: DailyFlowSnapshot, session: DailyFlowSession | undefined, revision: number): DailyFlowView {
+  const args = dailyFlowViewSchema.parse(payload);
+  const settings = getCurrentReviewSchedulerSettings();
+  const plan = flowPlan(state, args.mode, args.now, settings);
+  return { status: 'ready', scope: 'smoke', dayKey: flowDay(args.now, settings), revision,
+    now: args.now, mode: args.mode, currentNodeId: session?.currentNodeId ?? null,
+    nodeIds: args.includeEntries ? plan.queueNodeIds : null, complete: args.includeEntries,
+    modeAvailability: { recommended: plan.fsrsQueueNodeIds.length + plan.readingQueueNodeIds.length > 0,
+      'review-first': plan.fsrsQueueNodeIds.length > 0, 'reading-only': plan.readingQueueNodeIds.length > 0 },
+    canContinueReading: Boolean(session?.continueNodeId) };
 }
 
 export function createSmokeDailyFlow() {
@@ -70,5 +83,5 @@ export function createSmokeDailyFlow() {
       ...(args.readings ? { readings: args.readings.map(value => ({ nodeId: value.nodeId, reading: value.after })) } : {}) };
   }
 
-  return { open, commit };
+  return { open, commit, view: async (payload: unknown) => smokeView(payload, await snapshot(), session, revision) };
 }

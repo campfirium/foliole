@@ -66,6 +66,7 @@ it('keeps folder navigation available while the review status bar is open', { me
     },
     reviewSession: {
       currentNodeId: 'qa-1',
+      sessionStartedAt: DUE,
       isAnswerRevealed: false,
       queueNodeIds: ['qa-1'],
       totalNodeCount: 1

@@ -127,6 +127,7 @@ export function resetAppSmokeState() {
     ...initial,
     activeNodeId: 'node-1',
     isHydrated: true,
+    libraryScope: 'smoke',
     nodeOrder: [...initial.nodeOrder, 'node-1'],
     nodesById: {
       ...initial.nodesById,

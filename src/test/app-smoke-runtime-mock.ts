@@ -51,6 +51,8 @@ export function createSmokeRuntimeInvoke() {
   return vi.fn(async (command: string, payload?: Record<string, unknown>) => {
     if (command === 'open_daily_flow') return dailyFlow.open(payload);
     if (command === 'commit_daily_flow') return dailyFlow.commit(payload);
+    if (command === 'read_daily_flow_view') return dailyFlow.view(payload);
+    if (command === 'save_daily_flow_source_settings') return true;
     if (command === 'apply_review_grade') return applySmokeReview(reviews, payload);
     if (command === 'create_folder' || command === 'create_topic' || command === 'create_item') {
       return createNodeMutationResult(command, payload);
