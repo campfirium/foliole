@@ -62,7 +62,7 @@ const platformCoreTests = platformRootTests.filter(
 );
 const nativeStoreTests = [
   'src/store/workspaceContentEditSync.integration.test.ts',
-  'src/store/workspaceFlowSession.sync.integration.test.ts',
+  'src/store/workspaceDailyFlow.sync.integration.test.ts',
   'src/store/workspaceSequentialReadingBatchMove.integration.test.ts'
 ];
 
