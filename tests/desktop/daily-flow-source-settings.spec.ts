@@ -45,7 +45,7 @@ test('saves sequential reading before replacing a locked Flow current and keeps 
   const before = await page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession());
   await page.locator('[data-node-id="settings-source"]').first().click({ button: 'right' });
   await page.getByRole('menuitem', { name: 'Enable Sequential Reading', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getNode('settings-b')?.reading?.state)).toBe('locked');
+  await expect.poll(() => page.evaluate(async () => (await window.electronAPI.invoke('load_workspace_snapshot', {})).nodesById['settings-b']?.reading?.state)).toBe('locked');
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId)).toBe('settings-a');
   const after = await page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession());
   expect(after.readTopicCount).toBe(before.readTopicCount);

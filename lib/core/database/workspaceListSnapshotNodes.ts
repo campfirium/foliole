@@ -3,7 +3,7 @@ import { readTopicCollections } from '../nodes/topicCollectionsFrontmatter.js';
 
 import type { DatabaseRow } from './driver.js';
 import { isWorkspaceBodyStatus } from './workspaceBodyStatus.js';
-import { buildWorkspaceSnapshotNode, type WorkspaceNodeSnapshot } from './workspaceSnapshotHelpers.js';
+import { buildWorkspaceSnapshotMetadata, type WorkspaceNodeSnapshot } from './workspaceSnapshotHelpers.js';
 
 export interface WorkspaceNodeRow extends DatabaseRow {
   id: string;
@@ -35,26 +35,15 @@ export interface WorkspaceNodeRow extends DatabaseRow {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
-  reading_interval_duration_ms: number | null;
-  reading_interval_growth_factor: number | null;
-  reading_last_handled_at: string | null;
-  reading_next_at: string | null;
-  reading_priority: number | null;
-  reading_position: number | null;
   reading_repetition_count: number | null;
-  reading_state: string | null;
-  review_due: string | null;
+  reading_state: import('../review/readingState.js').ReadingState | null;
+  review_node_id: string | null;
   review_last_review_at: string | null;
-  review_state: number | null;
-  review_stability: number | null;
-  review_difficulty: number | null;
-  review_elapsed_days: number | null;
-  review_scheduled_days: number | null;
-  review_reps: number | null;
-  review_lapses: number | null;
 }
 
-export interface WorkspaceListNodeSnapshot extends WorkspaceNodeSnapshot {
+export interface WorkspaceListNodeSnapshot extends Omit<WorkspaceNodeSnapshot, 'reading' | 'review'> {
+  reading?: WorkspaceNodeSnapshot['reading'];
+  review?: WorkspaceNodeSnapshot['review'];
   collections: string[];
   hasContent: boolean;
   hasReveal: boolean;
@@ -68,7 +57,7 @@ export function buildWorkspaceListNodesById(rows: WorkspaceNodeRow[]) {
   for (const row of rows) {
     const directOpening = typeof row.opening_text === 'string' && row.opening_text.trim() ? row.opening_text : null;
     directOpeningById.set(row.id, directOpening);
-    const node = buildWorkspaceSnapshotNode({
+    const node = buildWorkspaceSnapshotMetadata({
       ...row,
       content: '',
       reveal: null
@@ -77,6 +66,10 @@ export function buildWorkspaceListNodesById(rows: WorkspaceNodeRow[]) {
     delete listNode.imageSources;
     nodesById[row.id] = {
       ...listNode,
+      learningSummary: {
+        reading: row.reading_state ? { state: row.reading_state, repetitionCount: row.reading_repetition_count ?? 0 } : null,
+        review: row.review_node_id ? { lastReviewAt: row.review_last_review_at } : null
+      },
       authorText: readNodeAuthorText(row.collection_source_content ?? ''),
       collections: readCollections(row.collection_source_content),
       ...(isWorkspaceBodyStatus(row.body_status) ? { bodyStatus: row.body_status } : {}),

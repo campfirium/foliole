@@ -8,12 +8,13 @@ import {
   failWorkspaceAction,
   settleWorkspaceAction
 } from './workspaceActionHistory';
-import { applyReadingSnapshot, applyRelatedReadingSnapshots, isSameReadingProfile } from './workspaceActionHistoryReading';
+import { applyReadingSnapshot, applyRelatedReadingSnapshots} from './workspaceActionHistoryReading';
 import { hasPersistentDailyFlow, saveDailyReading } from './workspaceDailyFlowMutations';
 import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { recoverWorkspaceDailyFlow } from './workspaceDailyFlowSessionActions';
 import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { isSameWorkspaceReviewSession } from './workspaceHistoryContext';
+import { isSameNodeReading } from './workspaceNodeLearningComparison';
 import { isWorkspacePartialPersistenceError } from './workspacePersistenceFailure';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import {
@@ -55,7 +56,7 @@ function applyCommittedReadingPatch(state: WorkspaceState, result: ReadingReview
   const affectedIds = [entry.nodeId, ...apply.relatedReadings.map(({ nodeId }) => nodeId)];
   const applicable = node && state.appActionHistory.pendingAction?.entry.id === entry.id &&
     !affectedIds.some(id => state.trashedNodeIds.includes(id)) &&
-    affectedIds.every(id => state.nodesById[id] && isSameReadingProfile(state.nodesById[id]?.reading, result.beforeNodes?.[id]?.reading)) &&
+    affectedIds.every(id => state.nodesById[id] && isSameNodeReading(state.nodesById[id], result.beforeNodes?.[id])) &&
     isSameWorkspaceReviewSession(state.reviewSession, beforeReviewSession);
   if (!applicable) return null;
   const nodesById = { ...mergeDailyFlowReceiptNodes(state.nodesById, result.beforeNodes ?? state.nodesById, result.receiptNodes, result.receiptLearning), [entry.nodeId]: applyReadingSnapshot(node, entry.afterReading) };
@@ -101,7 +102,7 @@ export async function persistAndApplyReadingReviewPatch(args: {
       const ids = [result.historyEntry.nodeId, ...(result.historyEntry.relatedReadings ?? []).map(value => value.nodeId)];
       if (state.appActionHistory.applying || state.appActionHistory.pendingAction ||
           state.appActionHistory.pendingCreate || ids.some(id => !state.nodesById[id] || state.trashedNodeIds.includes(id) ||
-            !isSameReadingProfile(state.nodesById[id]?.reading, before.nodesById[id]?.reading))) return state;
+            !isSameNodeReading(state.nodesById[id], before.nodesById[id]))) return state;
       began = true;
       return { appActionHistory: beginWorkspaceAction(state.appActionHistory, result.historyEntry) };
     });

@@ -4,8 +4,8 @@ import type { PushQueuePriority } from './unifiedPushQueueRules.js';
 
 export type SequentialReadingProfile = NonNullable<WorkspaceNodeSnapshot['reading']>;
 export type SequentialReadingNode = Pick<WorkspaceNodeSnapshot,
-  'id' | 'parentNodeId' | 'kind' | 'title' | 'content' | 'review' | 'createdAt' | 'updatedAt'> &
-  Partial<Pick<WorkspaceNodeSnapshot, 'reading' | 'priority' | 'shelvedAt' | 'manualChildOrder' |
+  'id' | 'parentNodeId' | 'kind' | 'title' | 'content' | 'createdAt' | 'updatedAt'> &
+  Partial<Pick<WorkspaceNodeSnapshot, 'reading' | 'review' | 'priority' | 'shelvedAt' | 'manualChildOrder' |
     'sequentialReadingEnabled' | 'hasContent' | 'hasReveal' | 'reveal'>> & {
       specialKind?: string;
       anchorLink?: { kind: 'highlight' | 'cloze' | 'image-excerpt' } | null;

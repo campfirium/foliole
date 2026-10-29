@@ -3,6 +3,7 @@ export { getPdfAnchorLocators } from '../../../../lib/core/anchors/pdfAnchorLoca
 export type { PdfAnchorLocator, PdfSelectionLocator } from '../../../../lib/core/anchors/pdfAnchorLocator';
 import type { NodeResourceReference } from '../../../../lib/core/database/nodeResourceReferences';
 import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
+import type { NodeLearningSummary } from '../../../../lib/core/nodes/nodeLearningSummary';
 import type { VirtualNodeFilter } from '../../../../lib/core/nodes/virtualNodeFilter';
 import type { ReadingState } from '../../../../lib/core/review/readingState';
 
@@ -136,7 +137,8 @@ export interface Node {
   pendingImageReferences?: readonly import('../../../../lib/core/sync/localContentEditResources').ContentImageReference[];
   reveal: string | null;
   reading?: NodeReadingProfile | null;
-  review: NodeReviewProfile | null;
+  learningSummary?: NodeLearningSummary;
+  review?: NodeReviewProfile | null;
   createdAt: string;
   deletedAt?: string | null;
   updatedAt: string;

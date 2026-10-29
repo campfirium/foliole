@@ -3,8 +3,10 @@ import type { DailyFlowLearningReceipt } from '../../lib/core/flow/dailyFlowCont
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { recordWorkspaceRecordPatch } from '../shared/workspaceRecordPatch';
 
-import { isSameReadingProfile } from './workspaceActionHistoryReading';
-import { isSameReviewProfile } from './workspaceReviewGradeActionHistory';
+import { isSameNodeReading, isSameNodeReview } from './workspaceNodeLearningComparison';
+
+
+
 
 type ReceiptNode = Node | WorkspaceNodeSnapshot;
 
@@ -25,8 +27,8 @@ export function mergeDailyFlowReceiptNodes<T extends ReceiptNode>(current: Recor
     if (!node) continue;
     const expected = before[id];
     if (!expected) continue;
-    const reviewChanged = isSameReviewProfile(node.review, expected.review) && !isSameReviewProfile(node.review, value.review);
-    const readingChanged = isSameReadingProfile(node.reading, expected.reading) && !isSameReadingProfile(node.reading, value.reading);
+    const reviewChanged = isSameNodeReview(node, expected) && !isSameNodeReview(node, value);
+    const readingChanged = isSameNodeReading(node, expected) && !isSameNodeReading(node, value);
     if (!reviewChanged && !readingChanged) continue;
     if (nodes === current) nodes = { ...current };
     nodes[id] = { ...node,

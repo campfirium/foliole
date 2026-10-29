@@ -1,7 +1,6 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 import { projectParentChildOrder, readOrderMembers, readParentChildOrders } from './parentChildOrder.js';
-import { requireDatabaseHostName } from './syncHostIdentity.js';
 import { WORKSPACE_BODY_STATUS_SQL } from './workspaceBodyStatus.js';
 import {
   buildWorkspaceListNodesById,
@@ -27,7 +26,6 @@ interface WorkspaceMetaRow extends DatabaseRow {
 const ACTIVE_NODE_META_KEY = 'active_node_id';
 
 export function queryWorkspaceRows(driver: DatabaseDriver, nodeIds?: readonly string[]) {
-  const hostName = requireDatabaseHostName(driver);
   return driver.queryAll<WorkspaceNodeRow>(
     `SELECT
        n.id,
@@ -59,30 +57,16 @@ export function queryWorkspaceRows(driver: DatabaseDriver, nodeIds?: readonly st
        n.created_at,
        n.updated_at,
        n.deleted_at,
-       rd.interval_duration_ms AS reading_interval_duration_ms,
-       rd.interval_growth_factor AS reading_interval_growth_factor,
-       rd.last_handled_at AS reading_last_handled_at,
-       rd.next_at AS reading_next_at,
-       rd.priority AS reading_priority,
-       rds.reading_position AS reading_position,
        rd.repetition_count AS reading_repetition_count,
        rd.state AS reading_state,
-       nr.due AS review_due,
-       nr.last_review_at AS review_last_review_at,
-       nr.state AS review_state,
-       nr.stability AS review_stability,
-       nr.difficulty AS review_difficulty,
-       nr.elapsed_days AS review_elapsed_days,
-       nr.scheduled_days AS review_scheduled_days,
-       nr.reps AS review_reps,
-       nr.lapses AS review_lapses
+       nr.node_id AS review_node_id,
+       nr.last_review_at AS review_last_review_at
      FROM nodes n
      LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash
      LEFT JOIN node_reading rd ON rd.node_id = n.id
-     LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ?
      LEFT JOIN node_review nr ON nr.node_id = n.id
      ${nodeIds ? 'WHERE n.id IN (SELECT value FROM json_each(?))' : ''}`
-    , nodeIds ? [hostName, JSON.stringify(nodeIds)] : [hostName]
+    , nodeIds ? [JSON.stringify(nodeIds)] : []
   );
 }
 

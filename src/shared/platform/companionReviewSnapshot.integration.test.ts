@@ -16,6 +16,7 @@ vi.mock('@capacitor/core', async () => {
 import { createBetterSqlite3Driver } from '../../../electron/database/betterSqlite3Driver';
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../../lib/core/database/desktopResourceSchemaStatements';
 import { loadWorkspaceListSnapshot } from '../../../lib/core/database/workspaceListSnapshot';
+import { readWorkspaceNodeLearning } from '../../../lib/core/database/workspaceNodeLearning';
 import { createLocalReviewSchedulerAdapter } from '../../../lib/core/review/localSchedulerAdapter';
 import { recomputeReview, type ReviewEvent } from '../../../lib/core/review/recomputeReview';
 import { normalizeScheduledCardDue } from '../../../lib/core/review/reviewDayBoundary';
@@ -75,7 +76,11 @@ function desktopSnapshot() {
   database!.exec(DESKTOP_RESOURCE_SCHEMA_STATEMENTS.find((sql) => sql.includes('CREATE TABLE IF NOT EXISTS settings'))!);
   database!.prepare("INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES ('host_name', ?, '2026-05-01')")
     .run('"Android mutation fixture"');
-  return loadWorkspaceListSnapshot(createBetterSqlite3Driver(database!), { includePdfOpenings: false })!;
+  const driver = createBetterSqlite3Driver(database!);
+  const snapshot = loadWorkspaceListSnapshot(driver, { includePdfOpenings: false })!;
+  const facts = readWorkspaceNodeLearning(driver, Object.keys(snapshot.nodesById));
+  return { ...snapshot, nodesById: Object.fromEntries(facts.map(value => [value.nodeId,
+    { ...snapshot.nodesById[value.nodeId]!, reading: value.reading, review: value.review }])) };
 }
 
 it('preserves every persisted FSRS field through mobile load and reopen', async () => {

@@ -34,6 +34,7 @@ for (const action of ['Read', 'Later', 'Dismiss'] as const) {
     await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId)).not.toBe(before.id);
     const after = await page.evaluate(async id => (await window.electronAPI.invoke('load_workspace_snapshot', {})).nodesById[id]?.reading, before.id);
     expect(after?.repetitionCount).toBe(action === 'Dismiss' ? 7 : 8);
+    expect(await page.evaluate(id => window.__folioleWorkspaceDebug!.getNode(id)?.reading, before.id)).toBeNull();
     await runPaletteHistoryCommand(page, `Undo ${action} Topic`);
     await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId)).toBe(before.id);
     expect(await page.evaluate(async id => (await window.electronAPI.invoke('load_workspace_snapshot', {})).nodesById[id]?.reading, before.id)).toEqual(before.reading);
@@ -41,6 +42,7 @@ for (const action of ['Read', 'Later', 'Dismiss'] as const) {
     await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId)).not.toBe(before.id);
     await page.reload(); await expectWorkspaceShell(page);
     expect(await page.evaluate(async id => (await window.electronAPI.invoke('load_workspace_snapshot', {})).nodesById[id]?.reading, before.id)).toEqual(after);
+    expect(await page.evaluate(id => window.__folioleWorkspaceDebug!.getNode(id)?.reading, before.id)).toBeNull();
     await page.screenshot({ path: path.resolve(`.tmp/artifacts/T632/reading-${action.toLowerCase()}-database.png`) });
   });
 }

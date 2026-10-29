@@ -1,3 +1,4 @@
+import { nodeReadingSummary } from '../../lib/core/nodes/nodeLearningSummary';
 import { resolveTopicPostponeDelayNextAt } from '../../lib/core/review/topicPostponeDelay';
 import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes';
 import { buildReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
@@ -21,7 +22,7 @@ function parseTime(value: string) {
 }
 
 function canDelayTopic(node: Node | undefined): node is Node {
-  return Boolean(node && node.kind === 'topic' && node.reading?.state !== 'dismissed');
+  return Boolean(node && node.kind === 'topic' && nodeReadingSummary(node)?.state !== 'dismissed');
 }
 
 function buildInitialReadingProfile(args: {

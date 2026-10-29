@@ -18,7 +18,7 @@ export function createBrowserDailyFlowStore(get: () => BrowserFlowWorkspace,
     return { nodeOrder, nodesById: Object.fromEntries(nodeOrder.flatMap(id => {
       const node = state.nodesById[id];
       return node ? [[id, { ...node, isTitleManual: Boolean(node.isTitleManual), hideTitleHeading: Boolean(node.hideTitleHeading),
-        anchorLink: node.anchorLink ?? null, reading: node.reading ?? null }]] : [];
+        anchorLink: node.anchorLink ?? null, reading: node.reading ?? null, review: node.review ?? null }]] : [];
     })), trashedNodeIds: state.trashedNodeIds.filter(id => nodeOrder.includes(id)) };
   };
   return {

@@ -12,7 +12,7 @@ export type {
   SchedulerPreviewResult
 } from '../../../../lib/core/review/index.js';
 
-export function toSchedulerCard(profile: NodeReviewProfile | null, now: string): SchedulerCard {
+export function toSchedulerCard(profile: NodeReviewProfile | null | undefined, now: string): SchedulerCard {
   if (!profile) {
     return createInitialSchedulerCard(now);
   }

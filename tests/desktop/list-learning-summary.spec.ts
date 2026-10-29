@@ -2,9 +2,11 @@ import path from 'node:path';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
+import { waitForStartupGuidedSample } from './harness/startupGuidedSample';
 
 test('keeps list learning icons and dismiss menus correct through persistence and reload', async ({ desktopWindow: page }, testInfo) => {
   await expectWorkspaceShell(page);
+  await waitForStartupGuidedSample(page);
   await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
   await page.reload();
   await expectWorkspaceShell(page);

@@ -103,7 +103,7 @@ beforeEach(async context => {
   transport.invoke.mockImplementation((command: string, args: Record<string, unknown> = {}) =>
     runWithDatabaseConnectionOwner(() => command === 'open_daily_flow' || command === 'commit_daily_flow'
       ? handleDailyFlowCommand(command, args) : command === 'update_node_content'
-      ? handleNodeMutationCommand(command, args) : command === 'load_node_document'
+      ? handleNodeMutationCommand(command, args) : command === 'load_node_document' || command === 'load_node_learning'
         ? handleWorkspaceReadCommand(command, args) : handleReadingAndReviewCommand(command, args)));
 });
 afterEach(async () => {

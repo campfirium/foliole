@@ -17,7 +17,8 @@ import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { recoverWorkspaceDailyFlow } from './workspaceDailyFlowSessionActions';
 import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { captureWorkspaceHistoryContext, isSameWorkspaceReviewSession } from './workspaceHistoryContext';
-import { createReviewGradeHistoryEntry, isSameReviewProfile, type WorkspaceReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
+import { isSameNodeReview } from './workspaceNodeLearningComparison';
+import { createReviewGradeHistoryEntry, type WorkspaceReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
 import type { WorkspaceReviewPersistenceAdapter } from './workspaceReviewPersistence';
 import type { WorkspaceState } from './workspaceStore';
 import {
@@ -44,7 +45,7 @@ function beginReviewGradeHistory(set: WorkspaceSet, entry: WorkspaceReviewGradeH
 function isReviewGradeApplicable(state: WorkspaceState, entry: WorkspaceReviewGradeHistoryEntry, beforeNodes: WorkspaceState['nodesById']) {
   const node = state.nodesById[entry.nodeId];
   return Boolean(node && !state.trashedNodeIds.includes(entry.nodeId) &&
-    isSameReviewProfile(node.review ?? null, beforeNodes[entry.nodeId]?.review ?? null) &&
+    isSameNodeReview(node, beforeNodes[entry.nodeId]) &&
     isSameWorkspaceReviewSession(state.reviewSession, entry.beforeContext.reviewSession));
 }
 

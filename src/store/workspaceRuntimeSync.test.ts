@@ -74,7 +74,8 @@ function createRuntimeSnapshotNodeFixture(): NativeWorkspaceNodeSnapshot {
     hideTitleHeading: true,
     anchorLink: node.anchorLink ?? null,
     imageRegions: node.imageRegions ?? null,
-    reading: null
+    reading: null,
+    review: node.review ?? null
   };
 }
 

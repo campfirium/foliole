@@ -1,5 +1,6 @@
 import type { WorkspaceListProjection } from '../../lib/core/database/workspaceListProjection';
 import { resolveWorkspaceSnapshotActiveNodeId } from '../../lib/core/database/workspaceSnapshotContract';
+import { projectNodeLearningSummary, sameNodeReadingSummary, sameNodeReviewSummary } from '../../lib/core/nodes/nodeLearningSummary';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { readPendingNodeOrder, readPendingRelearnNodes } from '../shared/platform/workspacePendingDurableMutations';
 
@@ -38,9 +39,15 @@ export function mergeWorkspaceSyncProjection(
       && previous?.currentVersionId !== node.currentVersionId && !pending.has(id) && !hasUnconfirmedNodeContent(id);
     const guarded = mergeHydratedNode(previous, node);
     const merged = committedVersionChanged
-      ? { ...node, reading: guarded.reading ?? null, review: guarded.review ?? null }
+      ? { ...node, ...(node.learningSummary ? {} : { reading: guarded.reading ?? null, review: guarded.review ?? null }) }
       : pending.has(id) && previous ? previous : guarded;
+    const localSummary = previous ? projectNodeLearningSummary(previous).learningSummary : undefined;
+    const learningSummary = node.learningSummary ? {
+      reading: sameNodeReadingSummary(previous, baseline.nodesById[id]) ? node.learningSummary.reading : localSummary?.reading ?? null,
+      review: sameNodeReviewSummary(previous, baseline.nodesById[id]) ? node.learningSummary.review : localSummary?.review ?? null
+    } : undefined;
     nodesById[id] = { ...merged,
+      ...(learningSummary ? { learningSummary } : {}),
       ...(node.reading === null && previous?.reading === baseline.nodesById[id]?.reading ? { reading: null } : {}),
       ...(node.review === null && previous?.review === baseline.nodesById[id]?.review ? { review: null } : {}) };
   }

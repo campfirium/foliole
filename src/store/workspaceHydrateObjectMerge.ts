@@ -81,11 +81,19 @@ export function mergeHydratedNode(current: Node | undefined, next: Node) {
   }
   const baseNode = hasUnconfirmedNodeContent(current.id) || isNewerTimestamp(current.updatedAt, next.updatedAt)
     ? current : next;
-  return mergeDeletedAt({
+  const merged = mergeDeletedAt({
     ...baseNode,
-    reading: chooseReadingProfile(current.reading, next.reading),
-    review: chooseReviewProfile(current.review, next.review)
+    ...(next.learningSummary ? { learningSummary: next.learningSummary } : {}),
+    ...(next.learningSummary ? {} : {
+      reading: chooseReadingProfile(current.reading, next.reading),
+      review: chooseReviewProfile(current.review, next.review)
+    })
   }, chooseDeletedAt(current, next));
+  if (next.learningSummary) {
+    delete merged.reading;
+    delete merged.review;
+  }
+  return merged;
 }
 
 export function mergeHydratedNodesById(current: Record<string, Node>, next: Record<string, Node>) {

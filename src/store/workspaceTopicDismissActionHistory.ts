@@ -19,6 +19,7 @@ export interface WorkspaceTopicDismissHistoryEntry {
   id: string;
   mutationTimestamp: string;
   nodeId: string;
+  standalone?: boolean;
   relatedReadings?: Array<{
     afterReading: NodeReadingProfile | null;
     beforeReading: NodeReadingProfile | null;

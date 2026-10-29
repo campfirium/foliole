@@ -1,6 +1,7 @@
 import { parseManualChildOrder } from '../nodes/manualChildOrder.js';
 import { readNodeAuthorText } from '../nodes/nodeAuthorFrontmatter.js';
 import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
+import type { NodeLearningSummary } from '../nodes/nodeLearningSummary.js';
 import { parseVirtualNodeFilter, type VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import { normalizeReadwiseRemoteLifecycle, type ReadwiseRemoteLifecycleState } from '../readwise/readwiseRemoteLifecycle.js';
 import { type ReadingState } from '../review/readingState.js';
@@ -69,6 +70,7 @@ export interface WorkspaceNodeSnapshot {
   importSourceFingerprint?: string | null;
   reading: WorkspaceReadingProfile | null;
   readwiseRemoteLifecycle?: ReadwiseRemoteLifecycleState | null;
+  learningSummary?: NodeLearningSummary;
   review: WorkspaceReviewProfile | null;
   createdAt: string;
   deletedAt?: string | null;
@@ -141,8 +143,13 @@ function parseNodeKind(value: string | null): NodeKind {
 }
 
 export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): WorkspaceNodeSnapshot {
+  return { ...buildWorkspaceSnapshotMetadata(row), reading: toReadingProfile(row), review: toReviewProfile(row) };
+}
+
+export function buildWorkspaceSnapshotMetadata(row: Omit<WorkspaceNodeRowShape,
+  `reading_${string}` | `review_${string}`>): Omit<WorkspaceNodeSnapshot, 'reading' | 'review'> {
   const imageRegions = parseStoredImageRegions(row.image_regions);
-  const node: WorkspaceNodeSnapshot = {
+  const node: Omit<WorkspaceNodeSnapshot, 'reading' | 'review'> = {
     authorText: readNodeAuthorText(row.content),
     id: row.id,
     imageSources: parseImageSources(row.image_sources),
@@ -161,9 +168,7 @@ export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): Workspac
     virtualFilter: parseVirtualNodeFilter(row.virtual_filter),
     reveal: row.reveal,
     anchorLink: parseStoredAnchorLink(row.anchor_link),
-    reading: toReadingProfile(row),
     readwiseRemoteLifecycle: normalizeLifecycle(row.readwise_remote_lifecycle),
-    review: toReviewProfile(row),
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };

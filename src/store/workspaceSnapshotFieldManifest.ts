@@ -27,6 +27,7 @@ export const WORKSPACE_NODE_BOUNDARY_PRESERVED_FIELDS = [
   'virtualFilter',
   'reading',
   'review',
+  'learningSummary',
   'createdAt',
   'deletedAt',
   'updatedAt'

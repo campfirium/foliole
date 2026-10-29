@@ -8,5 +8,5 @@ export type SequentialReadingStateNode = Omit<SequentialReadingNode, 'reading'> 
 export type SequentialReadingStateNodes = Record<string, SequentialReadingStateNode>;
 
 export function sequentialReadingState(node: SequentialReadingStateNode | undefined): ReadingState | null {
-  return node?.reading?.state ?? node?.learningSummary?.reading?.state ?? null;
+  return node?.reading !== undefined ? node.reading?.state ?? null : node?.learningSummary?.reading?.state ?? null;
 }

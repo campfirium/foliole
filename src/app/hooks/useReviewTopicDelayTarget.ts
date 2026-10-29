@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { nodeReadingSummary } from '../../../lib/core/nodes/nodeLearningSummary';
 import { useWorkspaceNodeLearning } from '../../shared/platform/runtime/useWorkspaceNodeLearning';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -23,7 +24,7 @@ export function useReviewTopicDelayTarget(ws: Pick<WorkspaceState, 'activeNodeId
   const open = useCallback((nodeId?: string | null) => {
     const id = nodeId ?? ws.activeNodeId;
     const node = id ? ws.nodesById[id] : null;
-    if (!id || !node || node.kind !== 'topic' || node.reading?.state === 'dismissed' || ws.trashedNodeIds.includes(id)) {
+    if (!id || !node || node.kind !== 'topic' || nodeReadingSummary(node)?.state === 'dismissed' || ws.trashedNodeIds.includes(id)) {
       showAppRuntimeNotice('Postpone is available for topics that have not been dismissed.');
       return false;
     }

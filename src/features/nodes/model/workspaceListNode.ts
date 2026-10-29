@@ -1,5 +1,6 @@
 import { projectImageOnlyMarkdownLabel } from '../../../../lib/core/import/markdownImageLabel';
 import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
+import { nodeReadingSummary, nodeReviewSummary } from '../../../../lib/core/nodes/nodeLearningSummary';
 import { readWorkspaceRecordPatch } from '../../../shared/workspaceRecordPatch';
 
 import { UNTITLED_NODE_TITLE } from './deriveNodeTitle';
@@ -73,8 +74,8 @@ export function toWorkspaceListNode(node: Node): WorkspaceListNode {
     kind: node.kind,
     parentNodeId: node.parentNodeId,
     priority: node.priority ?? null,
-    reading: projectWorkspaceListReading(node.reading),
-    review: projectWorkspaceListReview(node.review),
+    reading: projectWorkspaceListReading(nodeReadingSummary(node)),
+    review: projectWorkspaceListReview(nodeReviewSummary(node)),
     ...(node.specialKind ? { specialKind: node.specialKind } : {}),
     title: resolveWorkspaceListNodeTitle(node),
     updatedAt: node.updatedAt
@@ -119,8 +120,8 @@ function isWorkspaceListProjectionReusable(
     projectedNode.kind === sourceNode.kind &&
     projectedNode.parentNodeId === sourceNode.parentNodeId &&
     projectedNode.priority === (sourceNode.priority ?? null) &&
-    isWorkspaceListReadingEqual(projectedNode.reading, sourceNode.reading) &&
-    isWorkspaceListReviewEqual(projectedNode.review, sourceNode.review) &&
+    isWorkspaceListReadingEqual(projectedNode.reading, nodeReadingSummary(sourceNode)) &&
+    isWorkspaceListReviewEqual(projectedNode.review, nodeReviewSummary(sourceNode)) &&
     projectedNode.specialKind === sourceNode.specialKind &&
     projectedNode.title === resolveWorkspaceListNodeTitle(sourceNode) &&
     projectedNode.updatedAt === sourceNode.updatedAt

@@ -1,10 +1,11 @@
-import { sameLearningProfile } from '../../lib/core/flow/cycleFlowLearning';
+
 import type { DailyFlowSourceSettingsArgs } from '../../lib/core/flow/dailyFlowSourceSettings';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { saveDailyFlowSourceSettingsRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
 import { logRuntimeError } from '../shared/platform/runtimeLogging';
 
 import { openWorkspaceDailyFlow } from './workspaceDailyFlowSessionActions';
+import { isSameNodeReading } from './workspaceNodeLearningComparison';
 import type { WorkspaceState } from './workspaceStoreTypes';
 
 type Set = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState>)) => void;
@@ -25,7 +26,7 @@ export async function saveWorkspaceFlowSourceSettings(set: Set, get: () => Works
       const merged = { ...state.nodesById };
       for (const value of result.readings) {
         const node = merged[value.nodeId];
-        if (node && sameLearningProfile(node.reading, before.nodesById[value.nodeId]?.reading)) merged[value.nodeId] = { ...node, reading: value.reading };
+        if (node && isSameNodeReading(node, before.nodesById[value.nodeId])) merged[value.nodeId] = { ...node, reading: value.reading };
       }
       const current = merged[sourceNodeId];
       if (current && JSON.stringify(sourcePreferences(current)) === JSON.stringify(sourcePreferences(source))) {

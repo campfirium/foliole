@@ -11,6 +11,7 @@ import { initializeDatabase } from '../../electron/database/migrate';
 import { upsertNodeSnapshot } from '../../electron/database/nodeMutations';
 import { loadWorkspaceSnapshot } from '../../electron/database/workspaceSnapshot';
 import { saveReviewSchedulerSettings } from '../../electron/reviewSchedulerSettings';
+import { readWorkspaceNodeLearning } from '../../lib/core/database/workspaceNodeLearning';
 import { createLocalReviewSchedulerAdapter } from '../features/review/model/localReviewSchedulerAdapter';
 import { hydrateCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
@@ -30,6 +31,7 @@ vi.mock('../../electron/ipc/paths.js', () => ({ resolveAppPaths: () => ({ app_da
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => async (command: string, args: unknown) => {
   dailyFlowTest.bridgeCommands.push(command);
   const { openDesktopDailyFlow, commitDesktopDailyFlow } = await import('../../electron/database/dailyFlow');
+  if (command === 'load_node_learning') return readWorkspaceNodeLearning(openDatabaseConnection().driver, (args as { nodeIds: string[] }).nodeIds);
   if (command === 'open_daily_flow') { const result = await openDesktopDailyFlow(args); await dailyFlowTest.afterOpen?.(); return result; }
   if (command === 'commit_daily_flow') {
     const result = await commitDesktopDailyFlow(args);
@@ -63,7 +65,7 @@ function setup(kind: 'item' | 'topic' = 'item') {
   const nodes = ['first', 'second'].map(id => ({ ...createQaNode(id, now), kind,
     ...(kind === 'topic' ? { review: null, reveal: null } : {}) }));
   for (const node of nodes) upsertNodeSnapshot({ nodeId: node.id, title: node.title, kind: node.kind,
-    parentNodeId: null, content: node.content, reveal: node.reveal, review: node.review,
+    parentNodeId: null, content: node.content, reveal: node.reveal, review: node.review ?? null,
     isTitleManual: true, anchorLink: null, position: 0, createdAt: node.createdAt, updatedAt: node.updatedAt });
   const harness = createSetStateHarness(createWorkspaceFixture(nodes));
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, createLocalReviewSchedulerAdapter());
@@ -91,7 +93,7 @@ it.each(['soon', 'read', 'later', 'dismiss', 1, 2, 3, 4] as const)(
       : action === 'later' ? await app.actions.postponeReviewTopic(boundary)
       : await app.actions.dismissReviewTopic(boundary);
     expect(result).toBe(true);
-    expect(dailyFlowTest.bridgeCommands.slice(0, 2)).toEqual(['open_daily_flow', 'commit_daily_flow']);
+    expect(dailyFlowTest.bridgeCommands.filter(command => command === 'open_daily_flow' || command === 'commit_daily_flow').slice(0, 2)).toEqual(['open_daily_flow', 'commit_daily_flow']);
     expect(count('daily_flow_operations')).toBe(1);
     expect(count('review_log')).toBe(typeof action === 'number' ? 1 : 0);
     expect(app.getState().appActionHistory.undoStack).toHaveLength(1);

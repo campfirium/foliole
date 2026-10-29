@@ -66,7 +66,7 @@ function setup(kind: 'item' | 'topic' = 'item') {
   const nodes = ['first', 'second'].map(id => ({ ...createQaNode(id, now), kind,
     ...(kind === 'topic' ? { review: null, reveal: null } : {}) }));
   for (const node of nodes) upsertNodeSnapshot({ nodeId: node.id, title: node.title, kind: node.kind,
-    parentNodeId: null, content: node.content, reveal: node.reveal, review: node.review,
+    parentNodeId: null, content: node.content, reveal: node.reveal, review: node.review ?? null,
     isTitleManual: true, anchorLink: null, position: 0, createdAt: node.createdAt, updatedAt: node.updatedAt });
   const harness = createSetStateHarness(createWorkspaceFixture(nodes));
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, createLocalReviewSchedulerAdapter());

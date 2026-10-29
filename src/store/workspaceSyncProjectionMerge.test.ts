@@ -79,3 +79,21 @@ it('keeps a deleted article out of opening presentation during a nonstructural r
   expect(next.nodeOrder).toEqual([]);
   expect(next.trashedNodeIds).toEqual(['archived']);
 });
+
+it('does not replace locally committed list learning with a projection captured before that commit', () => {
+  const baselineNode: Node = { ...node('topic'), learningSummary: {
+    reading: { state: 'active', repetitionCount: 9 }, review: { lastReviewAt: '2026-10-28' } } };
+  delete baselineNode.reading;
+  delete baselineNode.review;
+  const baseline: WorkspaceState = { ...useWorkspaceStore.getState(), ...createInitialWorkspaceState(),
+    nodesById: { topic: baselineNode }, nodeOrder: ['topic'], activeNodeId: 'topic' };
+  const latestNode: Node = { ...baselineNode, learningSummary: {
+    reading: { state: 'active', repetitionCount: 10 }, review: { lastReviewAt: '2026-10-30' } } };
+  const incoming = projection([{ ...baselineNode, title: 'Remote title', updatedAt: '2027-01-01T00:00:00Z' }]);
+  delete incoming.nodesById.topic!.reading;
+  delete incoming.nodesById.topic!.review;
+  incoming.nodesById.topic!.learningSummary = { reading: { state: 'active', repetitionCount: 8 }, review: null };
+  const result = mergeWorkspaceSyncProjection({ ...baseline, nodesById: { topic: latestNode } }, incoming, baseline);
+  expect(result.nodesById.topic?.title).toBe('Remote title');
+  expect(result.nodesById.topic?.learningSummary).toEqual(latestNode.learningSummary);
+});

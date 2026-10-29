@@ -1,3 +1,4 @@
+
 // @vitest-environment node
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
@@ -16,6 +17,7 @@ vi.mock('../../electron/ipc/paths.js', () => ({ resolveAppPaths: () => ({ app_da
   app_cache_dir: path.join(tempRoot, 'cache'), app_config_dir: path.join(tempRoot, 'config'), app_log_dir: path.join(tempRoot, 'logs') }) }));
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => async (command: string, args: unknown) => {
   const { openDesktopDailyFlow, commitDesktopDailyFlow } = await import('../../electron/database/dailyFlow');
+  if (command === 'load_node_learning') return readWorkspaceNodeLearning(openDatabaseConnection().driver, (args as { nodeIds: string[] }).nodeIds);
   if (command === 'open_daily_flow') return openDesktopDailyFlow(args);
   if (command === 'commit_daily_flow') {
     soonPayload = args as Record<string, unknown>;
@@ -32,6 +34,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../../electron/
 import { openDesktopDailyFlow, readDesktopDailyFlowView } from '../../electron/database/dailyFlow';
 import { initializeDatabase } from '../../electron/database/migrate';
 import { upsertNodeSnapshot } from '../../electron/database/nodeMutations';
+import { readWorkspaceNodeLearning } from '../../lib/core/database/workspaceNodeLearning';
 import { createLocalReviewSchedulerAdapter } from '../features/review/model/localReviewSchedulerAdapter';
 
 import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
@@ -55,7 +58,7 @@ function setup(kind: 'item' | 'topic' | 'mixed' = 'item', futureTopic = false) {
     kind: kind === 'mixed' ? id === 'first' ? 'topic' as const : 'item' as const : kind,
     ...(kind === 'topic' || (kind === 'mixed' && id === 'first') ? { review: null, reveal: null } : {}) }));
   for (const node of nodes) upsertNodeSnapshot({ nodeId: node.id, title: node.title, kind: node.kind,
-    parentNodeId: null, content: node.content, reveal: node.reveal, review: node.review,
+    parentNodeId: null, content: node.content, reveal: node.reveal, review: node.review ?? null,
     isTitleManual: true, anchorLink: null, position: 0, createdAt: node.createdAt, updatedAt: node.updatedAt });
   const harness = createSetStateHarness(createWorkspaceFixture(nodes));
   const actions = createWorkspaceReviewActions(harness.setState, harness.getState, createLocalReviewSchedulerAdapter());

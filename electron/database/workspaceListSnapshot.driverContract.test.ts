@@ -94,10 +94,10 @@ const expectedWorkspaceListSnapshot = {
       virtualFilter: null,
       reveal: null,
       anchorLink: null,
-      reading: null,
+      learningSummary: { reading: null, review: null },
       readwiseRemoteLifecycle: null,
       resourceReferences: [],
-      review: null,
+
       shelvedAt: null,
       createdAt: '2026-03-14T00:00:00.000Z',
       updatedAt: '2026-03-14T00:00:00.000Z'
@@ -144,7 +144,7 @@ it('projects collection names without retaining long-lived content bodies', () =
   expect(workspaceListSql).not.toContain('n.image_sources');
   expect(workspaceListSql).not.toContain('content_blob_data');
   expect(workspaceListSql).toContain('LEFT JOIN content_blobs cb');
-  expect(workspaceListSql).toContain('node_reading_host_state');
+
   expect(workspaceListSql).not.toContain('CAST(cbd.data AS TEXT)');
   expect(workspaceListSql).not.toContain('n.reveal,');
   expect(workspaceListSql).not.toMatch(/\n\s+n\.content,/);

@@ -3,6 +3,7 @@ import { hasNodeContent, type Node } from '../features/nodes/model/nodeTypes';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
+import { hasTargetedDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowRuntimeRepository';
 
 import {
   beginWorkspaceAction,
@@ -14,12 +15,12 @@ import { createWorkspaceActionHistoryEntryId } from './workspaceActionHistoryEnt
 import {
   applyReadingSnapshot,
   applyRelatedReadingSnapshots,
-  areRelatedReadingsValid,
-  isSameReadingProfile
-} from './workspaceActionHistoryReading';
+  areRelatedReadingsValid} from './workspaceActionHistoryReading';
+import { prepareWorkspaceDismissLearning } from './workspaceDismissOperationLearning';
 import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { captureWorkspaceHistoryContext, isSameWorkspaceReviewSession } from './workspaceHistoryContext';
 import { getWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
+import { isSameNodeReading } from './workspaceNodeLearningComparison';
 import { isWorkspacePartialPersistenceError } from './workspacePersistenceFailure';
 import { buildDismissedReadingProfile } from './workspaceReviewReading';
 import { buildSequentialReadingDismissPatch } from './workspaceSequentialReading';
@@ -41,7 +42,7 @@ function isDismissEntryApplicable(state: WorkspaceState, entry: WorkspaceTopicDi
   const apply = resolveTopicReadingHistoryApply(entry, 'undo');
   const node = state.nodesById[entry.nodeId];
   return Boolean(node &&
-    isSameReadingProfile(node.reading, apply.expectedReading) &&
+    isSameNodeReading(node, { reading: apply.expectedReading }) &&
     areRelatedReadingsValid(apply.relatedReadings, state.nodesById) &&
     isSameWorkspaceReviewSession(state.reviewSession, entry.afterContext.reviewSession));
 }
@@ -197,7 +198,7 @@ function buildDismissNodesMutation(args: {
   return { entry, nodes, nodesById: mutation.nodesById };
 }
 
-export function createDismissNodesAction(set: WorkspaceSet, get?: WorkspaceGet): WorkspaceState['dismissNodes'] {
+function createPreparedDismissNodesAction(set: WorkspaceSet, get?: WorkspaceGet, facts?: WorkspaceState['nodesById']): WorkspaceState['dismissNodes'] {
   return (targets, now = new Date().toISOString()) => {
     let mutation: ReturnType<typeof buildDismissNodesMutation> = null;
     acceptWorkspaceHistoryCommand(set, 'preserve', (state) => {
@@ -205,8 +206,9 @@ export function createDismissNodesAction(set: WorkspaceSet, get?: WorkspaceGet):
           state.appActionHistory.pendingCreate)) return state;
       const nodeIds = Array.isArray(targets) ? targets
         : collectTopicDismissIds(targets.topicRootId, state.nodesById);
-      mutation = buildDismissNodesMutation({ nodeIds, now, state, withHistory: Boolean(get) });
+      mutation = buildDismissNodesMutation({ nodeIds, now, state: facts ? { ...state, nodesById: facts } : state, withHistory: Boolean(get) });
       if (!mutation) return state;
+      if (facts && mutation.entry) mutation.entry.standalone = true;
       return {
         ...(mutation.entry
           ? { appActionHistory: beginWorkspaceAction(state.appActionHistory, mutation.entry) }
@@ -218,6 +220,18 @@ export function createDismissNodesAction(set: WorkspaceSet, get?: WorkspaceGet):
     if (result?.entry && get) finishDismissPersistence({ entry: result.entry, get, nodes: result.nodes, now, set });
     else if (result) void persistDismissedReadingNodes(result.nodes, now);
     return Boolean(result);
+  };
+}
+
+export function createDismissNodesAction(set: WorkspaceSet, get?: WorkspaceGet): WorkspaceState['dismissNodes'] {
+  return (targets, now = new Date().toISOString()) => {
+    if (!get || !hasTargetedDailyFlowRuntime()) return createPreparedDismissNodesAction(set, get)(targets, now);
+    const before = get();
+    if (before.appActionHistory.applying || before.appActionHistory.pendingAction || before.appActionHistory.pendingCreate) return false;
+    const ids = Array.isArray(targets) ? targets : collectTopicDismissIds(targets.topicRootId, before.nodesById);
+    if (!ids.some(id => before.nodesById[id] && !before.trashedNodeIds.includes(id))) return false;
+    void prepareWorkspaceDismissLearning(before, ids, get, facts => createPreparedDismissNodesAction(set, get, facts)(ids, now));
+    return true;
   };
 }
 

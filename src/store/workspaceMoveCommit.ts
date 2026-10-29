@@ -2,6 +2,7 @@ import { moveOrderChildren, retainFixedRootSlots } from '../../lib/core/nodes/st
 import type { NativeMoveNodesArgs, NativeMoveNodesResult } from '../../lib/platform/nativeMoveContract';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
+import { isSameNodeReading } from './workspaceNodeLearningComparison';
 import type { WorkspaceState } from './workspaceStore';
 import { restoreStructureParentOrders } from './workspaceStructureParentOrders';
 
@@ -45,7 +46,7 @@ export function mergeMoveResult(
   });
   result.readings.forEach(({ nodeId, reading }) => {
     const current = nodesById[nodeId];
-    if (current && current.reading === before.nodesById[nodeId]?.reading) nodesById[nodeId] = { ...current, reading };
+    if (current && isSameNodeReading(current, before.nodesById[nodeId])) nodesById[nodeId] = { ...current, reading };
   });
   const orders = result.parentOrders.map((order) => order.parentNodeId === null ? { ...order,
     childIds: retainFixedRootSlots(latest.nodeOrder.filter((id) => nodesById[id]?.parentNodeId === null), order.childIds) } : order);

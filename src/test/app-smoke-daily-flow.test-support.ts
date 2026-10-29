@@ -13,7 +13,7 @@ import { getCurrentReviewSchedulerSettings } from '../features/settings/model/re
 function toSmokeSnapshot(node: Node): WorkspaceNodeSnapshot {
   return { ...node, isTitleManual: node.isTitleManual ?? false,
     hideTitleHeading: node.hideTitleHeading ?? false, anchorLink: node.anchorLink ?? null,
-    reading: node.reading ?? null };
+    reading: node.reading ?? null, review: node.review ?? null };
 }
 
 function smokeView(payload: unknown, state: DailyFlowSnapshot, session: DailyFlowSession | undefined, revision: number): DailyFlowView {

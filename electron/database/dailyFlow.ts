@@ -1,6 +1,7 @@
 import { requireDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
 import { queryWorkspaceRows } from '../../lib/core/database/workspaceListSnapshot.js';
 import { buildWorkspaceListNodesById } from '../../lib/core/database/workspaceListSnapshotNodes.js';
+import { readWorkspaceNodeLearning } from '../../lib/core/database/workspaceNodeLearning.js';
 import { definedProps } from '../../lib/core/definedProps.js';
 import { dailyFlowCommitSchema, dailyFlowOpenSchema } from '../../lib/core/flow/dailyFlowContract.js';
 import { dailyFlowSettingsForInstant } from '../../lib/core/flow/dailyFlowDayWindow.js';
@@ -27,13 +28,17 @@ import { loadWorkspaceListSnapshot } from './workspaceListSnapshot.js';
 export const desktopDailyFlowPersistence: DailyFlowPersistence = {
   learningSnapshot: loadDesktopDailyFlowLearning,
   snapshot: async (_db, nodeIds) => {
+    const driver = openDatabaseConnection().driver;
+    const withLearning = (nodes: ReturnType<typeof buildWorkspaceListNodesById>['nodesById']) => {
+      const facts = readWorkspaceNodeLearning(driver, Object.keys(nodes));
+      return Object.fromEntries(facts.map(value => [value.nodeId, definedProps({ ...nodes[value.nodeId]!, reading: value.reading, review: value.review })]));
+    };
     if (nodeIds) {
       const { nodesById, trashedNodeIds } = buildWorkspaceListNodesById(queryWorkspaceRows(openDatabaseConnection().driver, nodeIds));
-      return { nodeOrder: [...nodeIds], nodesById: Object.fromEntries(Object.entries(nodesById).map(([id, node]) => [id, definedProps({ ...node })])), trashedNodeIds };
+      return { nodeOrder: [...nodeIds], nodesById: withLearning(nodesById), trashedNodeIds };
     }
     const snapshot = loadWorkspaceListSnapshot({ includePdfOpenings: false });
-    return { ...snapshot, nodesById: Object.fromEntries(Object.entries(snapshot.nodesById)
-      .map(([id, node]) => [id, definedProps(node)])) };
+    return { ...snapshot, nodesById: withLearning(snapshot.nodesById) };
   },
   grade: async (_db, value, opId) => applyReviewGrade({ ...value, opId }),
   reading: async (_db, value, now) => {

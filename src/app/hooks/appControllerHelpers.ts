@@ -1,7 +1,9 @@
-import type { NodeReviewProfile } from '../../features/nodes/model/nodeTypes';
+import type { Node } from '../../features/nodes/model/nodeTypes';
 import { toWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import type { CommandPaletteItem } from '../../shared/commands/types';
+import { useWorkspaceNodeLearning } from '../../shared/platform/runtime/useWorkspaceNodeLearning';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { WorkspaceSearchResult } from '../components/workspaceSearch';
 
 import type { useWorkspaceSelectors } from './appControllerState';
@@ -56,7 +58,7 @@ export function buildGoToNodeState(
 }
 
 type WorkspaceSelectors = {
-  nodesById: Record<string, { enableShortTerm?: boolean | null; parentNodeId: string | null; review: NodeReviewProfile | null } | undefined>;
+  nodesById: Record<string, Node | undefined>;
   reviewSession: {
     currentNodeId: string | null;
     isAnswerRevealed: boolean;
@@ -69,15 +71,17 @@ export function useCurrentReviewPreview(
   previewSeed: string,
   isReviewSchedulerSettingsReady: boolean
 ) {
+  const libraryScope = useWorkspaceStore(state => state.libraryScope);
+  const source = isStudyMode && ws.reviewSession.isAnswerRevealed && ws.reviewSession.currentNodeId
+    ? ws.nodesById[ws.reviewSession.currentNodeId] : undefined;
+  const learningNode = useWorkspaceNodeLearning(source, libraryScope, undefined, previewSeed);
   return useReviewPreview({
     currentNodeId: ws.reviewSession.currentNodeId,
     nodesById: ws.nodesById,
     isAnswerRevealed: ws.reviewSession.isAnswerRevealed,
-    isReviewSchedulerSettingsReady,
+    isReviewSchedulerSettingsReady: isReviewSchedulerSettingsReady && Boolean(learningNode),
     isStudyMode,
     previewSeed,
-    reviewProfile: ws.reviewSession.currentNodeId
-      ? (ws.nodesById[ws.reviewSession.currentNodeId]?.review ?? null)
-      : null
+    reviewProfile: learningNode?.review ?? null
   });
 }

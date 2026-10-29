@@ -1,3 +1,4 @@
+import { nodeReadingSummary, nodeReviewSummary } from '../../../lib/core/nodes/nodeLearningSummary';
 import {
   getDismissedFadeTextOpacity,
   shouldFadeDismissedRowText
@@ -26,8 +27,8 @@ export function resolveWorkspaceTopicTreeRowModel(
   const nodeIconState = resolveNodeTreeRowIconState({
     isDismissed: isInactiveReadingTopic,
     hasEnteredSchedule: isReviewCard
-      ? node?.review?.lastReviewAt !== null && node?.review?.lastReviewAt !== undefined
-      : (node?.reading?.repetitionCount ?? 0) > 0
+      ? nodeReviewSummary(node)?.lastReviewAt !== null && nodeReviewSummary(node)?.lastReviewAt !== undefined
+      : (nodeReadingSummary(node)?.repetitionCount ?? 0) > 0
   });
   const nodeIconKind = resolveNodeTreeRowIconKind({
     hasChildren: row.hasChildren,

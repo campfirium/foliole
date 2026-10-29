@@ -12,6 +12,7 @@ import type { Node } from '../features/nodes/model/nodeTypes';
 import { node, now, persistence, settings, setupPeers, snapshot } from '../test/dailyFlowExceptions.testSupport';
 
 import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
+import { createDismissNodesAction } from './workspaceStoreNodeDismissAction';
 import { createShelveNodeAction, createUnshelveNodeAction } from './workspaceStoreNodeShelveAction';
 import { createSetStateHarness, createWorkspaceFixture } from './workspaceStoreReviewActions.test-support';
 
@@ -101,6 +102,9 @@ it('shelves a lightweight topic without rewriting its body or resetting the rele
   expect(app.history.redoWorkspaceAction()).toBe(true);
   await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
   expect((await snapshot(peer)).nodesById.b?.reading).toEqual(app.reading);
+  expect(app.history.undoWorkspaceAction()).toBe(true);
+  await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
+  expect((await snapshot(peer)).nodesById.a?.reading).toEqual(app.reading);
 });
 
 it('retains the original in-flight shelve timestamp and facts after losing a committed receipt', async () => {
@@ -115,6 +119,9 @@ it('retains the original in-flight shelve timestamp and facts after losing a com
   expect(app.getState().appActionHistory.undoStack.at(-1)?.id).toBe(pendingId);
   expect(app.getState().nodesById.a?.shelvedAt).toBe(now);
   expect((await snapshot(peer)).nodesById.b?.reading).toEqual(app.reading);
+  expect(app.history.undoWorkspaceAction()).toBe(true);
+  await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
+  expect((await snapshot(peer)).nodesById.a?.reading).toEqual(app.reading);
 });
 
 it('rolls back a partial transaction and retries the same pending shelve after storage recovers', async () => {
@@ -196,4 +203,18 @@ it('restores exactly the generated reading when shelve history creates and remov
   expect(app.history.redoWorkspaceAction()).toBe(true);
   await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
   expect((await snapshot(peer)).nodesById.b?.reading).toEqual(created);
+});
+
+
+it('dismisses selected topics from database facts without resetting the released sequential slot', async () => {
+  const app = await prepare();
+  const dismiss = createDismissNodesAction(app.setState, app.getState);
+  expect(dismiss(['a'], now)).toBe(true);
+  await vi.waitFor(async () => expect((await snapshot(peer)).nodesById.a?.reading?.state).toBe('dismissed'));
+  await vi.waitFor(() => expect(app.getState().appActionHistory.pendingAction).toBeNull());
+  expect((await snapshot(peer)).nodesById.a?.reading?.repetitionCount).toBe(9);
+  expect((await snapshot(peer)).nodesById.b?.reading).toEqual(app.reading);
+  expect(app.history.undoWorkspaceAction()).toBe(true);
+  await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());
+  expect((await snapshot(peer)).nodesById.a?.reading).toEqual(app.reading);
 });

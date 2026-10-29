@@ -1,4 +1,5 @@
 import type { NodeKind } from '../core/nodes/nodeKind.js';
+import type { NodeLearningSummary } from '../core/nodes/nodeLearningSummary.js';
 import type { VirtualNodeFilter } from '../core/nodes/virtualNodeFilter.js';
 import type { UnifiedPushQueueRules } from '../core/review/unifiedPushQueueRules.js';
 
@@ -60,10 +61,16 @@ export interface NativeWorkspaceNodeSnapshot {
   importContentFingerprint?: string | null;
   importSourceFingerprint?: string | null;
   reading: NativeWorkspaceReadingProfile | null;
+  learningSummary?: NodeLearningSummary;
   review: NativeWorkspaceReviewProfile | null;
   createdAt: string;
   deletedAt?: string | null;
   updatedAt: string;
+}
+
+export interface NativeWorkspaceListNodeSnapshot extends Omit<NativeWorkspaceNodeSnapshot, 'reading' | 'review'> {
+  reading?: NativeWorkspaceReadingProfile | null;
+  review?: NativeWorkspaceReviewProfile | null;
 }
 
 export interface NativeWorkspaceSnapshot {
@@ -71,7 +78,7 @@ export interface NativeWorkspaceSnapshot {
   libraryScope?: string;
   nodeOpenStateById?: Record<string, NativeNodeOpenStateResult>;
   nodeOrder: string[];
-  nodesById: Record<string, NativeWorkspaceNodeSnapshot>;
+  nodesById: Record<string, NativeWorkspaceListNodeSnapshot>;
   trashedNodeDeletedAtById?: Record<string, string>;
   trashedNodeIds: string[];
 }

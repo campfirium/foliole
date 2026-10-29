@@ -1,3 +1,4 @@
+import { sameNodeReadingSummary } from '../../lib/core/nodes/nodeLearningSummary';
 import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes';
 
 export interface RelatedHistoryReadingApply {
@@ -54,7 +55,9 @@ export function areRelatedReadingsValid(
 ) {
   return readings.every((reading) => {
     const relatedNode = nodesById[reading.nodeId];
-    return relatedNode && isSameReadingProfile(relatedNode.reading, reading.expectedReading);
+    return relatedNode && (relatedNode.reading !== undefined
+      ? isSameReadingProfile(relatedNode.reading, reading.expectedReading)
+      : sameNodeReadingSummary(relatedNode, { reading: reading.expectedReading }));
   });
 }
 

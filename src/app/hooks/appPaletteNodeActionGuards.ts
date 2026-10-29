@@ -1,3 +1,5 @@
+import { nodeReadingSummary } from '../../../lib/core/nodes/nodeLearningSummary';
+
 import type { useWorkspaceSelectors } from './appControllerState';
 
 type NodeActionGuardArgs = {
@@ -16,5 +18,5 @@ function getActiveTopic(args: NodeActionGuardArgs) {
 
 export function canDelayReviewTopic(args: NodeActionGuardArgs) {
   const activeNode = getActiveTopic(args);
-  return Boolean(activeNode && activeNode.reading?.state !== 'dismissed');
+  return Boolean(activeNode && nodeReadingSummary(activeNode)?.state !== 'dismissed');
 }

@@ -1,4 +1,5 @@
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
+import { readWorkspaceOperationLearning } from '../shared/platform/runtime/workspaceOperationLearning';
 
 import { prepareWorkspaceFlowDay } from './workspaceFlowDayAction';
 import { persistAndApplyReadingReviewPatch } from './workspaceReadingReviewHistoryCommit';
@@ -18,8 +19,9 @@ export function createRevisitReviewTopicSoonAction(set: Set, get: () => Workspac
     if (!currentNodeId || snapshot.activeNodeId !== currentNodeId || pendingNodeIds.has(currentNodeId) ||
       !isReadingReviewItemNode(snapshot.nodesById[currentNodeId])) return false;
     const result = await persistAndApplyReadingReviewPatch({ currentNodeId, get, set, pendingNodeIds,
-      persistence: runtimeWorkspaceReviewPersistence, buildPatch: state => {
-        const node = state.nodesById[currentNodeId];
+      persistence: runtimeWorkspaceReviewPersistence, buildPatch: async state => {
+        const nodesById = await readWorkspaceOperationLearning(state.nodesById, [currentNodeId], state.libraryScope ?? state.reviewSession.daily?.scope);
+        const node = nodesById?.[currentNodeId];
         if (!node) return null;
         const reviewSession = snapshot.reviewSession;
         const active = buildReviewActiveNodeContext(state, reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? null);

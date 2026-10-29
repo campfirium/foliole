@@ -34,8 +34,9 @@ function nodeFromSnapshot(snapshot: WorkspaceRuntimeNodeSnapshot, current?: Node
     reveal: snapshot.reveal,
     anchorLink: snapshot.anchorLink as NodeAnchorLink | null,
     imageRegions: snapshot.imageRegions as Node['imageRegions'] ?? null,
-    reading: snapshot.reading ?? null,
-    review: snapshot.review ?? null,
+    ...(current?.learningSummary ? { learningSummary: current.learningSummary } : {}),
+    ...(snapshot.reading !== undefined ? { reading: snapshot.reading } : {}),
+    ...(snapshot.review !== undefined ? { review: snapshot.review } : {}),
     createdAt: snapshot.createdAt,
     updatedAt: snapshot.updatedAt
   };

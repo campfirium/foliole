@@ -1,9 +1,10 @@
 import type { NodeReadingProfile, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 
-import { isSameReadingProfile } from './workspaceActionHistoryReading';
+
 import { hasTargetedDailyFlow } from './workspaceDailyFlowMutations';
 import { isSameWorkspaceReviewSession, type WorkspaceHistoryContext } from './workspaceHistoryContext';
-import { isSameReviewProfile, type WorkspaceReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
+import { isSameNodeReading, isSameNodeReview } from './workspaceNodeLearningComparison';
+import { type WorkspaceReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
 import { resolveTopicReadingHistoryApply, type WorkspaceTopicDismissHistoryEntry } from './workspaceTopicDismissActionHistory';
 
 export type FlowHistoryEntry = WorkspaceReviewGradeHistoryEntry | WorkspaceTopicDismissHistoryEntry;
@@ -31,7 +32,7 @@ export function resolveWorkspaceReviewHistoryTarget<N extends HistoryNode>(args:
   const context = mode === 'undo' ? entry.beforeContext : entry.afterContext;
   if (entry.type === 'review.grade') {
     const expected = mode === 'undo' ? entry.afterReview : entry.beforeReview;
-    if (!targeted && !isSameReviewProfile(node.review, expected)) return null;
+    if (!targeted && !isSameNodeReview(node, { review: expected })) return null;
     const review = mode === 'undo' ? entry.beforeReview : entry.afterReview;
     if (!targeted) nodesById[entry.nodeId] = { ...node, review: review ? { ...review } : null };
   } else {
@@ -40,7 +41,7 @@ export function resolveWorkspaceReviewHistoryTarget<N extends HistoryNode>(args:
     for (const reading of readings) {
       const current = nodesById[reading.nodeId];
       if (!current || args.trashedNodeIds.includes(reading.nodeId) ||
-        !isSameReadingProfile(current.reading, reading.expectedReading)) return null;
+        !isSameNodeReading(current, { reading: reading.expectedReading })) return null;
       nodesById[reading.nodeId] = { ...current, reading: reading.nextReading ? { ...reading.nextReading } : null };
     }
   }

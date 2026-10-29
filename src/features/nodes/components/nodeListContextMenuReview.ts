@@ -1,3 +1,4 @@
+import { nodeReadingSummary } from '../../../../lib/core/nodes/nodeLearningSummary';
 import { collectTopicDismissIds } from '../model/nodeDismissTargets';
 import {
   getWorkspaceListReviewItemKind,
@@ -18,11 +19,11 @@ export function canDismissNode(node: WorkspaceListNode | undefined) {
   if (getWorkspaceListReviewItemKind(node) !== 'reading') {
     return false;
   }
-  return node.reading?.state !== 'dismissed';
+  return nodeReadingSummary(node)?.state !== 'dismissed';
 }
 
 export function canPostponeTopic(node: WorkspaceListNode | undefined) {
-  return Boolean(node?.kind === 'topic' && node.reading?.state !== 'dismissed');
+  return Boolean(node?.kind === 'topic' && nodeReadingSummary(node)?.state !== 'dismissed');
 }
 
 function isNativeEntryTopic(node: WorkspaceListNode | undefined, nodesById: WorkspaceListNodesById) {

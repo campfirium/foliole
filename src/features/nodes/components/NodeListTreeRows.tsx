@@ -1,5 +1,6 @@
 import { useMemo, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 
+import { nodeReadingSummary, nodeReviewSummary } from '../../../../lib/core/nodes/nodeLearningSummary';
 import { useLocalization } from '../../../shared/localization/LocalizationProvider';
 import { resolveNodeDisplayTitle, resolveSystemEntryDisplayName } from '../../../shared/localization/systemEntryNames';
 import { VirtualListSurface, type VirtualListRenderMeta } from '../../../shared/ui';
@@ -147,8 +148,8 @@ function resolveNodeListRowModel(props: NodeListRowsProps, row: NodeTreeRow) {
   const nodeIconState = resolveNodeTreeRowIconState({
     isDismissed: isInactiveReadingTopic,
     hasEnteredSchedule: isReviewCard
-      ? node?.review?.lastReviewAt !== null && node?.review?.lastReviewAt !== undefined
-      : (node?.reading?.repetitionCount ?? 0) > 0
+      ? nodeReviewSummary(node)?.lastReviewAt !== null && nodeReviewSummary(node)?.lastReviewAt !== undefined
+      : (nodeReadingSummary(node)?.repetitionCount ?? 0) > 0
   });
   const nodeIconKind = resolveNodeTreeRowIconKind({
     hasChildren: props.isTrashViewOpen ? false : row.hasChildren,

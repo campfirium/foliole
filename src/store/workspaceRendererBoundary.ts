@@ -1,4 +1,5 @@
 import { readNodeAuthorText } from '../../lib/core/nodes/nodeAuthorFrontmatter';
+import { projectNodeLearningSummary } from '../../lib/core/nodes/nodeLearningSummary';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import {
   readWorkspaceRecordPatch,
@@ -38,7 +39,8 @@ function shouldKeepNodeDocument(
   return nodeId === activeNodeId || keepNodeIds.has(nodeId);
 }
 
-export function toRendererBoundaryNode(node: Node, keepDocument: boolean): Node {
+export function toRendererBoundaryNode(source: Node, keepDocument: boolean): Node {
+  const node = projectNodeLearningSummary(source);
   const nextHasContent = resolveNodeContentState(node);
   const nextHasReveal = resolveNodeRevealState(node);
   const authorText = isNodeDocumentLoaded(node) ? readNodeAuthorText(node.content) : node.authorText ?? null;
@@ -82,7 +84,7 @@ export function trimWorkspaceNodesForRendererBoundary(
 }
 
 function isBoundaryProjectionReusable(currentNode: Node | undefined, sourceNode: Node, keepDocument: boolean) {
-  if (!currentNode) {
+  if (!currentNode || currentNode.reading !== undefined || currentNode.review !== undefined) {
     return false;
   }
 

@@ -1,4 +1,4 @@
-import type { NativeWorkspaceNodeSnapshot } from '../../../lib/platform/nativeStorageContract';
+import type { NativeWorkspaceListNodeSnapshot } from '../../../lib/platform/nativeStorageContract';
 
 import type {
   WorkspaceRuntimeNodeSnapshot,
@@ -64,7 +64,7 @@ function writePendingSnapshot(snapshot: PendingNodeSyncSnapshot) {
 function resolveRuntimeDeletedAt(
   snapshot: WorkspaceRuntimeSnapshot,
   nodeId: string,
-  currentNode: NativeWorkspaceNodeSnapshot | undefined
+  currentNode: NativeWorkspaceListNodeSnapshot | undefined
 ) {
   return currentNode?.deletedAt ?? snapshot.trashedNodeDeletedAtById?.[nodeId] ?? null;
 }
@@ -72,7 +72,7 @@ function resolveRuntimeDeletedAt(
 function isRuntimeNodeTrashed(
   snapshot: WorkspaceRuntimeSnapshot,
   nodeId: string,
-  currentNode: NativeWorkspaceNodeSnapshot | undefined
+  currentNode: NativeWorkspaceListNodeSnapshot | undefined
 ) {
   return Boolean(
     currentNode?.deletedAt ||
@@ -110,9 +110,9 @@ export function decidePendingNodeSyncReplay(
 }
 
 function toPendingWorkspaceNode(
-  currentNode: NativeWorkspaceNodeSnapshot | undefined,
+  currentNode: NativeWorkspaceListNodeSnapshot | undefined,
   pendingNode: WorkspaceRuntimeNodeSnapshot
-): NativeWorkspaceNodeSnapshot {
+): NativeWorkspaceListNodeSnapshot {
   return {
     id: pendingNode.nodeId,
     parentNodeId: pendingNode.parentNodeId,
@@ -135,8 +135,11 @@ function toPendingWorkspaceNode(
     anchorLink: pendingNode.anchorLink,
     imageRegions: pendingNode.imageRegions ?? null,
     imageSources: pendingNode.imageSources ?? null,
-    reading: pendingNode.reading === undefined ? currentNode?.reading ?? null : pendingNode.reading,
-    review: pendingNode.review ?? currentNode?.review ?? null,
+    ...(currentNode?.learningSummary ? { learningSummary: currentNode.learningSummary } : {}),
+    ...(pendingNode.reading !== undefined ? { reading: pendingNode.reading }
+      : currentNode?.reading !== undefined ? { reading: currentNode.reading } : {}),
+    ...(pendingNode.review !== undefined ? { review: pendingNode.review }
+      : currentNode?.review !== undefined ? { review: currentNode.review } : {}),
     createdAt: pendingNode.createdAt,
     ...(currentNode?.deletedAt !== undefined ? { deletedAt: currentNode.deletedAt } : {}),
     updatedAt: pendingNode.updatedAt

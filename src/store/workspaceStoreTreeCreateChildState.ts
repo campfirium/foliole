@@ -43,7 +43,7 @@ function createCreatedChildNode(args: {
     anchorLink: null,
     hasReveal: args.kind === 'item',
     reveal: args.kind === 'item' ? '' : null,
-    review: args.review,
+    review: args.review ?? null,
     createdAt: args.timestamp,
     updatedAt: args.timestamp
   };

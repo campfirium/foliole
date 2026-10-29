@@ -4,10 +4,10 @@ import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 
 import { beginWorkspaceAction, createEmptyWorkspaceActionHistory, failWorkspaceAction, settleWorkspaceAction } from './workspaceActionHistory';
 import { createWorkspaceActionHistoryEntryId } from './workspaceActionHistoryEntry';
-import { isSameReadingProfile } from './workspaceActionHistoryReading';
 import { sourcePreferences } from './workspaceDailyFlowSourceSettingsActions';
 import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { captureWorkspaceHistoryContext, isSameWorkspaceReviewSession } from './workspaceHistoryContext';
+import { isSameNodeReading } from './workspaceNodeLearningComparison';
 import { readWorkspaceShelveLearning, workspaceShelveLearningNodeIds } from './workspaceNodeShelveLearning';
 import { createTopicShelveHistoryEntry, type WorkspaceTopicShelveHistoryEntry } from './workspaceShelveActionHistory';
 import { saveDatabaseShelveCommand } from './workspaceShelveDatabaseCommand';
@@ -53,12 +53,12 @@ async function prepareDatabaseShelve(args: Args, entry: WorkspaceTopicShelveHist
   }
   const nodesById = { ...latest.nodesById };
   if (workspaceShelveLearningNodeIds(latest, args.nodeId).some(id => !prepared.nodeIds.includes(id)) ||
-    prepared.nodeIds.some(id => !isSameReadingProfile(latest.nodesById[id]?.reading, before.nodesById[id]?.reading))) {
+    prepared.nodeIds.some(id => !isSameNodeReading(latest.nodesById[id], before.nodesById[id]))) {
     args.set(state => ({ appActionHistory: failWorkspaceAction(state.appActionHistory, entry.id) }));
     return;
   }
   for (const id of prepared.nodeIds) if (nodesById[id]) nodesById[id] = { ...nodesById[id]!,
-    reading: prepared.nodesById[id]!.reading ?? null, review: prepared.nodesById[id]!.review };
+    reading: prepared.nodesById[id]!.reading ?? null, review: prepared.nodesById[id]!.review ?? null };
   const mutation = args.buildMutation({ ...args, state: { ...latest, nodesById } });
   if (!mutation || mutation.changes.some(value => !prepared.nodeIds.includes(value.nodeId))) {
     args.set(state => ({ appActionHistory: failWorkspaceAction(state.appActionHistory, entry.id) }));
@@ -79,7 +79,7 @@ async function persistDatabaseShelve(args: Args, entry: WorkspaceTopicShelveHist
       if (libraryScope(state) !== entry.databaseMutation!.scope || state.appActionHistory.pendingAction?.entry.id !== entry.id) return {};
       const nodesById = { ...state.nodesById };
       for (const value of saved.readings) if (nodesById[value.nodeId] &&
-        isSameReadingProfile(nodesById[value.nodeId]?.reading, before.nodesById[value.nodeId]?.reading)) {
+        isSameNodeReading(nodesById[value.nodeId], before.nodesById[value.nodeId])) {
         nodesById[value.nodeId] = { ...nodesById[value.nodeId]!, reading: value.reading };
       }
       const node = nodesById[entry.nodeId];
