@@ -24,6 +24,7 @@ export const controlledSyncSqliteTests = [
   'src/shared/platform/companion/sync/framed/reviewProjection.integration.test.ts',
   'lib/core/database/topicHistoryRetirementMigration.integration.test.ts',
   'lib/core/sync/framedSyncInventoryDigest.integration.test.ts',
+  'lib/core/sync/framedSyncInventoryDigest.paging.integration.test.ts',
   'lib/core/sync/requestSyncBucketScale.integration.test.ts',
   'lib/core/sync/requestSyncNodeMetadata.integration.test.ts',
   'lib/core/sync/topicHistoryProtection.integration.test.ts',
