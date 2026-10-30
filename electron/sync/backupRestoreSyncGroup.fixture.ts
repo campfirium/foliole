@@ -37,6 +37,7 @@ import { createWorkspaceSyncHttpServer, stopLanWorkspaceSyncServer } from './lan
 import { preserveWithConcurrentTransaction } from './preserveDesktopGroupRestore.fixture.js';
 import { runReadwiseTakeoverFixture } from './readwiseTakeover.fixture.js';
 import { runResourceConcurrencyFixture } from './resourceAvailabilityConcurrency.fixture.js';
+import { runSessionSwitchFixture } from './sessionSwitchSync.fixture.js';
 import { runWatchedSettingsFixture } from './watchedSettingsSync.fixture.js';
 
 let server: ReturnType<typeof createWorkspaceSyncHttpServer> | null = null;
@@ -174,6 +175,7 @@ async function run(action: string, args: Record<string, unknown>) {
   if (['pauseMember', 'departTo', 'memberState', 'removeMember', 'memberExchange', 'reopenMemberState'].includes(action)) {
     return runRemovalFixture(action, args);
   }
+  if (action.startsWith('session')) return runSessionSwitchFixture(action, args);
   if (action === 'init') return initializeGroup(args);
   if (action === 'holdSyncRound') return holdSyncRound(args);
   if (action === 'startContendedSync') return startContendedSync(args);
