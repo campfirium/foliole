@@ -147,6 +147,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
       resultStatus: 'success', schemaVersion: 4, sharedRoot,
       windowsEvidenceRoot };
     assertAutomaticCoverage(receipt.runs);
+    assertManualCoverage({ windows: receipt.runs.windows });
     assertManualCoverage(receipt.runs);
     const receiptPath = path.join(evidenceRoot, 'receipt.json');
     fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');

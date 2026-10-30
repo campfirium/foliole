@@ -146,6 +146,10 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
       invoke: command => invokeWindowsSyncGroupCommand(session.page, command)
     });
     report(options.reportProgress, 'automatic-converged');
+    manualBeforeRestart = await runAvailableManualSync({
+      loadSyncRole: () => loadDesktopSyncRole(session.app),
+      invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args)
+    });
     const conflictNodeId = await conflictSeed(session.page);
     await invokeWindowsSyncGroupCommand(session.page, 'pause_companion_sync');
     await forkDesktopSyncConflict({ label: 'windows', nodeId: conflictNodeId,
@@ -161,10 +165,6 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
       waitForState: args => waitForDesktopProductState(session.page, args)
     }, conflictNodeId);
     if (automaticResult) await waitForAutomaticSync(session, automaticResult.run_id);
-    manualBeforeRestart = await runAvailableManualSync({
-      loadSyncRole: () => loadDesktopSyncRole(session.app),
-      invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args)
-    });
     factsBeforeRestart = await loadDesktopJourneyFacts({
       invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args)
     });
@@ -182,6 +182,10 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     const restartedAutomatic = automaticResult
       ? await waitForAutomaticSync(session, automaticResult.run_id, { startedAfter: restartStartedAt })
       : completedAutomatic(await loadSyncTriggerResult(session.app), undefined, restartStartedAt);
+    report(options.reportProgress, 'restarted');
+    await waitForWindowsSyncGroupProviderRelease({
+      action: 'single-principal-sync-group', repoRoot: options.paths.repoRoot
+    });
     manualAfterRestart = await runAvailableManualSync({
       loadSyncRole: () => loadDesktopSyncRole(session.app),
       invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args)
@@ -190,10 +194,6 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
       invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args)
     });
     assertSameJourneyFacts(factsBeforeRestart, persistedJourneyFacts);
-    report(options.reportProgress, 'restarted');
-    await waitForWindowsSyncGroupProviderRelease({
-      action: 'single-principal-sync-group', repoRoot: options.paths.repoRoot
-    });
     automaticResult = { afterRestart: restartedAutomatic, beforeRestart: automaticResult };
   } finally { await closeWindowsSyncGroupSession(session); }
   const manifestPath = path.join(options.evidenceRoot,

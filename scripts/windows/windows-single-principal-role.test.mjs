@@ -22,7 +22,7 @@ vi.mock('./windows-sync-group-recovery-action.mjs', () => ({
     if (command === 'load_node_document') return { nodeId: args.nodeId,
       content: host.opens > 1 && host.fault === 'body' && args.nodeId === 'C1' ? 'lost body' : `body-${args.nodeId}` };
     if (command === 'sync_companion_now') {
-      if (host.owner === 'macos') throw new Error('sync_group_peer_unavailable');
+      host.events.push('manual');
       host.manualRuns.unshift({ kind: 'run_finished', trigger_reason: 'manual', result: 'completed', status: 'completed',
         run_id: `manual-${host.manualRuns.length}`, started_at: 'start', occurred_at: 'finish' });
       return { sync_group: group() };
@@ -93,11 +93,12 @@ it.each(['macos', 'windows'])('finishes with %s owning automatic sync and keeps 
   const receipt = JSON.parse(fs.readFileSync(path.join(host.root, 'single-principal-sync-group-receipt.json')));
   expect(receipt.runs.automaticBeforeRestart).toEqual(owner === 'windows' ? run('automatic', 'before') : null);
   expect(receipt.runs.automaticAfterRestart).toEqual(owner === 'windows' ? run('automatic', 'after') : null);
-  expect(host.events.slice(-3)).toEqual(['restarted', 'release', 'close']);
-  expect(receipt.runs.manualBeforeRestart).toEqual(owner === 'windows'
-    ? { ...run('manual', 'manual-0'), error: null, started_at: 'start', finished_at: 'finish' } : null);
-  expect(receipt.runs.manualAfterRestart).toEqual(owner === 'windows'
-    ? { ...run('manual', 'manual-1'), error: null, started_at: 'start', finished_at: 'finish' } : null);
+  expect(host.events.indexOf('manual')).toBeLessThan(host.events.indexOf('conflict-fork-ready'));
+  expect(host.events.slice(-4)).toEqual(['restarted', 'release', 'manual', 'close']);
+  expect(receipt.runs.manualBeforeRestart).toEqual({ ...run('manual', 'manual-0'),
+    error: null, started_at: 'start', finished_at: 'finish' });
+  expect(receipt.runs.manualAfterRestart).toEqual({ ...run('manual', 'manual-1'),
+    error: null, started_at: 'start', finished_at: 'finish' });
 });
 
 it.each(['missing', 'failed', 'automatic'])('rejects an initial activity without completed initial proof: %s', async kind => {

@@ -136,7 +136,7 @@ it('accepts Mac-owned automatic rounds and keeps Windows available through the M
   const finish = host.provider.finish;
   host.provider.finish = async () => {
     const result = await finish();
-    result.receipt.runs = { automaticBeforeRestart: null, automaticAfterRestart: null };
+    result.receipt.runs = { ...result.receipt.runs, automaticBeforeRestart: null, automaticAfterRestart: null };
     return result;
   };
   const result = await runMacosWindowsSinglePrincipalSyncGroup({ repoRoot: root });
@@ -152,7 +152,7 @@ it('rejects converged facts without any completed automatic round', async () => 
   const finish = host.provider.finish;
   host.provider.finish = async () => {
     const result = await finish();
-    result.receipt.runs = { automaticBeforeRestart: null, automaticAfterRestart: null };
+    result.receipt.runs = { ...result.receipt.runs, automaticBeforeRestart: null, automaticAfterRestart: null };
     return result;
   };
   await expect(runMacosWindowsSinglePrincipalSyncGroup({ repoRoot: root }))
@@ -188,13 +188,9 @@ it('does not count a public no-peer result as manual completion on the root', as
   expect(result.receipt.runs.macos.manualAfterRestart).toBeNull();
 });
 
-it.each(['manualBeforeRestart', 'manualAfterRestart'])('rejects missing completed manual evidence for %s', async phase => {
+it.each(['manualBeforeRestart', 'manualAfterRestart'])('requires Windows manual completion for %s even when Mac completes', async phase => {
   root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-no-manual-'));
   currentHosts();
-  const invoke = host.session.invoke;
-  host.session.invoke = (command, args) => command === 'sync_companion_now'
-    ? Promise.reject(new Error('sync_group_peer_unavailable')) : invoke(command, args);
-  host.session.loadSyncRole = async () => ({ hasUpstream: false, hasDownstream: false });
   const finish = host.provider.finish;
   host.provider.finish = async () => {
     const result = await finish();
@@ -233,12 +229,10 @@ it('waits for resumed automatic completion before attempting manual sync after c
   let reads = 0;
   host.session.loadSyncTriggerResult = async () => automatic(++reads === 1 ? 'before' : `resumed-${reads}`);
   host.session.loadSyncRole = async () => ({ hasUpstream: reads > 1, hasDownstream: false });
-  const finish = host.provider.finish;
-  host.provider.finish = async () => {
-    const result = await finish();
-    result.receipt.runs.manualBeforeRestart = null;
-    result.receipt.runs.manualAfterRestart = null;
-    return result;
+  const invoke = host.session.invoke;
+  host.session.invoke = (command, args) => {
+    if (command === 'sync_companion_now' && reads <= 1) throw new Error('Connection not recovered');
+    return invoke(command, args);
   };
   const result = await runMacosWindowsSinglePrincipalSyncGroup({ repoRoot: root });
   expect(result.receipt.runs.macos.manualBeforeRestart.status).toBe('completed');
