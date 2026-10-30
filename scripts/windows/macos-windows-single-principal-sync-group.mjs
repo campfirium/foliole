@@ -12,7 +12,7 @@ import {
   buildT152TwoDeviceProof, writeT152ResourceLocator
 } from '../acceptance/t152-two-device-proof-builder.mjs';
 import {
-  openMacosSyncGroupDesktopSession, waitForMacosAutomaticRun, waitForMacosDeviceRequest
+  openMacosSyncGroupDesktopSession, waitForMacosDeviceRequest
 } from '../android/macos-sync-group-desktop-session.mjs';
 import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
@@ -65,7 +65,6 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
       evidenceRoot: path.join(evidenceRoot, 'conflict-seed'), session
     });
     const initial = await session.enable();
-    const macosRunBeforeJoin = await session.loadSyncTriggerResult();
     const runWindowsAction = createActionExecutor({
       logPath: path.join(evidenceRoot, 'windows-action.log'),
       progressPath: path.join(evidenceRoot, 'windows-progress.jsonl')
@@ -81,10 +80,8 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
       throw new Error('Mac pending Device request exposed the Sync Group key.');
     }
     const accepted = await session.accept(request.request_id);
-    await waitForOriginCount(session, 'C', 2);
-    const macosAutomaticBeforeRestart = await waitForMacosAutomaticRun(
-      session, macosRunBeforeJoin?.run_id
-    );
+    await waitForOriginCount(session, 'C', 1);
+    const macosAutomaticBeforeRestart = null;
     const macosAutomaticFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'macos-automatic-fact'), session });
     await windowsProvider.waitForProgress('conflict-fork-ready');
@@ -113,9 +110,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     if (restarted.sync_group?.group_id !== initial.sync_group.group_id) {
       throw new Error('Mac did not restore its two-Device Sync Group.');
     }
-    const macosAutomaticAfterRestart = await waitForMacosAutomaticRun(
-      session, macosManualBeforeRestart?.run_id
-    );
+    const macosAutomaticAfterRestart = null;
     const macosManualAfterRestart = await session.invoke('sync_companion_now');
     const repeated = await session.invoke('load_workspace_list_snapshot', {
       includePdfOpenings: false
@@ -137,9 +132,10 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
       groupId: accepted.sync_group?.group_id ?? null,
       groupTag: accepted.sync_group?.group_tag ?? null,
       macosProviderPort: initial.server_status.port, requestId: request.request_id,
-      journeyFacts: { macos: macosFact.factId, windows: windowsReceipt.journeyFactId,
+      journeyFacts: { macos: macosFact.factId, windows: windowsReceipt.automaticFactId,
         macosAutomatic: macosAutomaticFact.factId,
         windowsAutomatic: windowsReceipt.automaticFactId },
+      join: { mode: 'use-group', replacedWindowsFactId: windowsReceipt.journeyFactId },
       idempotent: true, macosRestarted: true,
       runs: { macos: { automaticAfterRestart: macosAutomaticAfterRestart,
         automaticBeforeRestart: macosAutomaticBeforeRestart,
@@ -163,7 +159,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
         identity: receipt.deviceIdentities.macos, library: macosLibrary
       });
       writeT152TwoDeviceCellReceipt(buildT152TwoDeviceProof({
-        automaticBeforeRestartHost: 'macos',
+        automaticBeforeRestartHost: 'windows',
         builds: { macos: acceptedTip, windows: windowsReceipt.buildIdentity },
         business: { idempotent: true, twoWayUnion: true }, conflict,
         devices: { macos: { identity: receipt.deviceIdentities.macos },

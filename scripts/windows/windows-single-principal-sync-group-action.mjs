@@ -15,6 +15,7 @@ import {
 } from './windows-single-principal-sync-group-contract.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { forkDesktopSyncConflict } from '../desktop/sync-group-conflict-action.mjs';
+import { waitForSyncGroupAutomaticRun } from '../desktop/sync-group-controller-read.mjs';
 import {
   waitForDesktopProductEvent, waitForDesktopProductState
 } from '../acceptance/desktop-product-event.mjs';
@@ -46,15 +47,9 @@ async function loadSyncTriggerResult(app) {
   });
 }
 
-async function waitForAutomaticSync(session, previousRunId, timeoutMs = 2 * 60_000) {
-  let result = await loadSyncTriggerResult(session.app);
-  if (result?.run_id !== previousRunId && result?.reason === 'automatic'
-      && result?.status === 'completed') return result;
-  await waitForDesktopProductEvent(session.page, 'onWorkspaceSyncApplied', { timeoutMs });
-  result = await loadSyncTriggerResult(session.app);
-  if (result?.run_id !== previousRunId && result?.reason === 'automatic'
-      && result?.status === 'completed') return result;
-  throw new Error(`Windows automatic sync did not complete: ${JSON.stringify(result)}`);
+export async function waitForAutomaticSync(session, previousRunId, timeoutMs = 2 * 60_000) {
+  return waitForSyncGroupAutomaticRun(() => loadSyncTriggerResult(session.app),
+    previousRunId, { timeoutMs });
 }
 
 async function discoverExpectedGroup(page, identity, timeoutMs = 2 * 60_000) {
@@ -126,6 +121,11 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     initialResult = await loadSyncTriggerResult(session.app);
     if (initialResult?.reason !== 'initial' || initialResult?.status !== 'completed') {
       throw new Error(`Windows initial sync did not complete: ${JSON.stringify(initialResult)}`);
+    }
+    const joinedSnapshot = await invokeWindowsSyncGroupCommand(session.page,
+      'load_workspace_list_snapshot', { includePdfOpenings: false });
+    if (joinedSnapshot.nodesById?.[localFact.factId]) {
+      throw new Error('Windows retained its replaced pre-join fact after Use Group.');
     }
     const beforeAutomatic = initialResult;
     automaticFact = await createDesktopSyncGroupJourneyFact({

@@ -17,7 +17,7 @@ it('uses isolated Mac and Windows Device contracts without legacy pairing or pro
   expect(source).toContain("windowsProvider.waitForProgress('restarted')");
   expect(source).toContain("windowsProvider.release('consumer_complete')");
   expect(source).toContain("device: 'A'");
-  expect(source).toContain("waitForOriginCount(session, 'C', 2)");
+  expect(source).toContain("waitForOriginCount(session, 'C', 1)");
   expect(source).toContain("session.invoke('sync_companion_now')");
   expect(source.indexOf("windowsProvider.release('consumer_complete')"))
     .toBeLessThan(source.indexOf("session.invoke('sync_companion_now')"));
