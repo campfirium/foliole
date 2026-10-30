@@ -35,15 +35,18 @@ async function waitForJourneyOriginCount(page, origin, count, timeoutMs = 2 * 60
     }, eventName: 'onWorkspaceSyncApplied', timeoutMs });
 }
 
-async function loadSyncTriggerResult(app) {
+export async function loadSyncTriggerResult(app) {
   return app.evaluate(({ app: electronApp }) => {
     const pathApi = process.getBuiltinModule('node:path');
     const moduleApi = process.getBuiltinModule('node:module');
     if (!pathApi || !moduleApi) throw new Error('Node built-ins unavailable.');
     const loadModule = moduleApi.createRequire(pathApi.join(electronApp.getAppPath(), 'main.js'));
-    return loadModule(pathApi.join(
+    const { runWithDatabaseConnectionOwner } = loadModule(pathApi.join(
+      electronApp.getAppPath(), 'database', 'connection.js'
+    ));
+    return runWithDatabaseConnectionOwner(() => loadModule(pathApi.join(
       electronApp.getAppPath(), 'sync', 'desktopSyncCoordinator.js'
-    )).loadDesktopSyncTriggerResult();
+    )).loadDesktopSyncTriggerResult());
   });
 }
 

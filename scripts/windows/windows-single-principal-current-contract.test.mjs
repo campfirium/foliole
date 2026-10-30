@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import process from 'node:process';
 
 import { afterEach, expect, it, vi } from 'vitest';
 
@@ -27,7 +28,7 @@ vi.mock('../desktop/sync-group-conflict-action.mjs', () => ({
 vi.mock('./macos-joins-windows-sync-group.mjs', () => ({ runMacosJoinsWindowsSyncGroup: vi.fn() }));
 
 import { runMacosWindowsSinglePrincipalSyncGroup } from './macos-windows-single-principal-sync-group.mjs';
-import { waitForAutomaticSync } from './windows-single-principal-sync-group-action.mjs';
+import { loadSyncTriggerResult, waitForAutomaticSync } from './windows-single-principal-sync-group-action.mjs';
 
 let root;
 afterEach(() => { if (root) fs.rmSync(root, { recursive: true, force: true }); vi.restoreAllMocks(); });
@@ -78,4 +79,25 @@ it('observes an outgoing-only automatic completion without requiring an incoming
   const page = { evaluate: vi.fn(async () => { throw new Error('No incoming apply event for outgoing-only sync'); }) };
   await expect(waitForAutomaticSync({ app, page }, 'old', 2000)).resolves.toMatchObject({ run_id: 'new' });
   expect(page.evaluate).not.toHaveBeenCalled();
+});
+
+it('reads the completion receipt through the native database owner during synchronization', async () => {
+  let owned = false;
+  const receipt = { run_id: 'finished', reason: 'automatic', status: 'completed' };
+  const modules = {
+    '/runtime/database/connection.js': { runWithDatabaseConnectionOwner: async action => {
+      owned = true;
+      try { return await action(); } finally { owned = false; }
+    } },
+    '/runtime/sync/desktopSyncCoordinator.js': { loadDesktopSyncTriggerResult: () => {
+      if (!owned) throw new TypeError('This database connection is busy executing a query');
+      return receipt;
+    } }
+  };
+  const getBuiltin = process.getBuiltinModule.bind(process);
+  vi.spyOn(process, 'getBuiltinModule').mockImplementation(name => name === 'node:module'
+    ? { createRequire: () => file => modules[file.split(path.sep).join('/')] } : getBuiltin(name));
+  const app = { evaluate: action => action({ app: { getAppPath: () => '/runtime' } }) };
+  await expect(loadSyncTriggerResult(app)).resolves.toEqual(receipt);
+  expect(owned).toBe(false);
 });
