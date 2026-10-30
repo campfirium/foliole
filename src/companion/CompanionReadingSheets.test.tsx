@@ -118,13 +118,13 @@ describe('ReadingFontSheet', () => {
     );
 
     expect(screen.queryByText('Reading font controls are not available on Android yet.')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Large' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText('17px')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Large' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Increase Size' }));
 
     expect(onChange).toHaveBeenCalledWith({
       ...DEFAULT_READING_TYPOGRAPHY_SETTINGS,
-      fontSize: 'large'
+      fontSize: 18
     });
   });
 });
@@ -149,4 +149,18 @@ it('windows a dense highlight list and keeps row actions bound to the highlight 
     clientWidth.mockRestore();
     view.unmount(); height.mockRestore(); width.mockRestore(); rect.mockRestore();
   }
+});
+
+
+it('disables adjustments at the supported reading limits', () => {
+  const onChange = vi.fn();
+  const view = render(<ReadingFontSheet open onOpenChange={vi.fn()} onChange={onChange}
+    settings={{ ...DEFAULT_READING_TYPOGRAPHY_SETTINGS, fontSize: 14, lineHeight: 1.3 }} />);
+  expect(screen.getByRole('button', { name: 'Decrease Size' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Decrease Line height' })).toBeDisabled();
+  view.rerender(<ReadingFontSheet open onOpenChange={vi.fn()} onChange={onChange}
+    settings={{ ...DEFAULT_READING_TYPOGRAPHY_SETTINGS, fontSize: 80, lineHeight: 2 }} />);
+  expect(screen.getByRole('button', { name: 'Increase Size' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Increase Line height' })).toBeDisabled();
+  expect(onChange).not.toHaveBeenCalled();
 });

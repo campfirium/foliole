@@ -30,8 +30,8 @@ describe('companion reading typography settings', () => {
     expect(loadReadingTypographySettings()).toEqual({
       contrast: 'high',
       fontFamily: 'serif',
-      fontSize: 'large',
-      lineHeight: 'relaxed'
+      fontSize: 19,
+      lineHeight: 1.78
     });
   });
 
@@ -59,4 +59,27 @@ describe('companion reading typography settings', () => {
 
     expect(saveReadingTypographySettings(DEFAULT_READING_TYPOGRAPHY_SETTINGS, storage)).toBe(false);
   });
+});
+
+
+it('stores intermediate numeric values without rounding them to presets', () => {
+  const settings = { ...DEFAULT_READING_TYPOGRAPHY_SETTINGS, fontSize: 18, lineHeight: 1.67 };
+  expect(saveReadingTypographySettings(settings)).toBe(true);
+  expect(loadReadingTypographySettings()).toEqual(settings);
+  window.localStorage.clear();
+});
+
+it('bounds numeric inputs and rejects non-finite values', () => {
+  expect(normalizeReadingTypographySettings({ fontSize: 100, lineHeight: 3 }))
+    .toMatchObject({ fontSize: 80, lineHeight: 2 });
+  expect(normalizeReadingTypographySettings({ fontSize: 1, lineHeight: 0 }))
+    .toMatchObject({ fontSize: 14, lineHeight: 1.3 });
+  expect(normalizeReadingTypographySettings({ fontSize: NaN, lineHeight: Infinity }))
+    .toEqual(DEFAULT_READING_TYPOGRAPHY_SETTINGS);
+});
+
+
+it('does not interpret object prototype names as stored sizes', () => {
+  expect(normalizeReadingTypographySettings({ fontSize: 'constructor', lineHeight: 'toString' }))
+    .toEqual(DEFAULT_READING_TYPOGRAPHY_SETTINGS);
 });

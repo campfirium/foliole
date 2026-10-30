@@ -1,5 +1,7 @@
 export const EN_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS = {
   'companion.reading.font.saveError': 'Could not save reading settings. Your previous settings are still in use.',
+  'companion.reading.font.decrease': 'Decrease {setting}',
+  'companion.reading.font.increase': 'Increase {setting}',
   'companion.reading.font.size': 'Size',
   'companion.reading.font.size.small': 'Small',
   'companion.reading.font.size.default': 'Default',

@@ -1,19 +1,20 @@
 import { CompanionReadingCustomFonts } from './CompanionReadingCustomFonts';
+import { CompanionReadingNumberControl } from './CompanionReadingNumberControl';
 import { CompanionReadingSystemFonts } from './CompanionReadingSystemFonts';
 import type {
   CompanionReadingTypographySettings,
   CompanionReadingFontFamily,
-  CompanionReadingFontSize,
-  CompanionReadingLineHeight,
   CompanionReadingContrast
+} from './companionReadingTypographySettings';
+import {
+  readingFontSize, readingLineHeight, READING_FONT_SIZE_MIN, READING_FONT_SIZE_MAX,
+  READING_LINE_HEIGHT_MIN, READING_LINE_HEIGHT_MAX, READING_LINE_HEIGHT_STEP
 } from './companionReadingTypographySettings';
 
 import { useTranslation } from '@/shared/localization/LocalizationProvider';
 
 type TypographySettingKey = keyof CompanionReadingTypographySettings;
 
-const FONT_SIZE_OPTIONS: readonly CompanionReadingFontSize[] = ['small', 'default', 'large', 'xlarge'];
-const LINE_HEIGHT_OPTIONS: readonly CompanionReadingLineHeight[] = ['compact', 'default', 'relaxed'];
 const FONT_FAMILY_OPTIONS: readonly CompanionReadingFontFamily[] = ['sans', 'serif'];
 const CONTRAST_OPTIONS: readonly CompanionReadingContrast[] = ['default', 'high'];
 
@@ -59,21 +60,17 @@ export function CompanionReadingTypographyControls(props: {
   const t = useTranslation();
   return (
     <div className="border-t border-companion-divider">
-      <ReadingTypographyOptionGroup
+      <CompanionReadingNumberControl
         label={t('companion.reading.font.size')}
-        onChange={props.onChange}
-        options={FONT_SIZE_OPTIONS}
-        settingKey="fontSize"
-        settings={props.settings}
-        valueLabel={(value) => t(`companion.reading.font.size.${value}`)}
+        onChange={(fontSize) => props.onChange({ ...props.settings, fontSize })}
+        value={readingFontSize(props.settings.fontSize)}
+        min={READING_FONT_SIZE_MIN} max={READING_FONT_SIZE_MAX} step={1} unit="px"
       />
-      <ReadingTypographyOptionGroup
+      <CompanionReadingNumberControl
         label={t('companion.reading.font.lineHeight')}
-        onChange={props.onChange}
-        options={LINE_HEIGHT_OPTIONS}
-        settingKey="lineHeight"
-        settings={props.settings}
-        valueLabel={(value) => t(`companion.reading.font.lineHeight.${value}`)}
+        onChange={(lineHeight) => props.onChange({ ...props.settings, lineHeight })}
+        value={readingLineHeight(props.settings.lineHeight)}
+        min={READING_LINE_HEIGHT_MIN} max={READING_LINE_HEIGHT_MAX} step={READING_LINE_HEIGHT_STEP}
       />
       <ReadingTypographyOptionGroup
         label={t('companion.reading.font.family')}

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
@@ -25,26 +25,38 @@ function choose(name: string) {
 
 afterEach(() => window.localStorage.clear());
 
-it('restores settings selected through the reading surface after leaving and remounting', () => {
+it('finely adjusts the rendered text and restores exact values after remounting', async () => {
   const view = mountArticle();
   openAppearance();
-  for (const name of ['Extra large', 'Serif', 'Relaxed', 'High']) choose(name);
+  expect(screen.getByText('17px')).toBeInTheDocument();
+  expect(screen.getByText('1.62')).toBeInTheDocument();
+  for (const name of ['Increase Size', 'Increase Line height', 'Serif', 'High']) choose(name);
   expect(loadReadingTypographySettings()).toEqual({
-    fontSize: 'xlarge', fontFamily: 'serif', lineHeight: 'relaxed', contrast: 'high'
+    fontSize: 18, fontFamily: 'serif', lineHeight: 1.67, contrast: 'high'
   });
+  const document = view.container.querySelector('[data-reading-font-size]') as HTMLElement;
+  expect(document.style.getPropertyValue('--content-panel-font-size')).toBe('18px');
+  expect(document.style.getPropertyValue('--content-panel-line-height')).toBe('1.67');
   view.unmount();
-  const reopened = mountArticle();
+  mountArticle();
   openAppearance();
-  for (const name of ['Extra large', 'Serif', 'Relaxed', 'High']) {
+  expect(screen.getByText('18px')).toBeInTheDocument();
+  expect(screen.getByText('1.67')).toBeInTheDocument();
+  for (const name of ['Serif', 'High']) {
     expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
   }
-  expect(reopened.container.querySelector('[data-reading-font-size]')).toHaveAttribute('data-reading-font-size', 'xlarge');
+  choose('Decrease Size');
+  choose('Decrease Line height');
+  expect(loadReadingTypographySettings()).toMatchObject({ fontSize: 17, lineHeight: 1.62 });
+  await act(async () => undefined);
 });
 
-it('retains confirmed settings and reports quota failure, then allows retry', () => {
+it('retains confirmed settings on quota failure and allows retry', async () => {
+  window.localStorage.setItem('foliole-companion-reading-typography-settings',
+    JSON.stringify({ fontSize: 17, lineHeight: 1.3, fontFamily: 'sans', contrast: 'default' }));
   const view = mountArticle();
   openAppearance();
-  choose('Small');
+  choose('Decrease Size');
   const confirmed = loadReadingTypographySettings();
   const storage = window.localStorage;
   let used = 0;
@@ -53,19 +65,19 @@ it('retains confirmed settings and reports quota failure, then allows retry', ()
     used += key.length + storage.getItem(key)!.length;
   }
   storage.setItem('quota', 'x'.repeat(5_000_000 - used - 'quota'.length));
-  choose('Extra large');
-  expect(screen.getByRole('button', { name: 'Small' })).toHaveAttribute('aria-pressed', 'true');
+  choose('Increase Line height');
+  expect(screen.getByText('16px')).toBeInTheDocument();
   expect(screen.getByRole('alert')).toHaveTextContent('Could not save reading settings. Your previous settings are still in use.');
   expect(loadReadingTypographySettings()).toEqual(confirmed);
-  expect(view.container.querySelector('[data-reading-font-size]')).toHaveAttribute('data-reading-font-size', 'small');
   view.unmount();
   mountArticle();
   openAppearance();
-  expect(screen.getByRole('button', { name: 'Small' })).toHaveAttribute('aria-pressed', 'true');
-  choose('Extra large');
+  expect(screen.getByText('16px')).toBeInTheDocument();
+  choose('Increase Line height');
   expect(screen.getByRole('alert')).toBeInTheDocument();
   storage.removeItem('quota');
-  choose('Extra large');
+  choose('Increase Line height');
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  expect(loadReadingTypographySettings().fontSize).toBe('xlarge');
+  expect(loadReadingTypographySettings().lineHeight).toBe(1.35);
+  await act(async () => undefined);
 });

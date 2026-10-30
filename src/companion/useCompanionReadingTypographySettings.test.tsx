@@ -22,16 +22,16 @@ describe('useCompanionReadingTypographySettings', () => {
       result.current.updateSettings({
         contrast: 'high',
         fontFamily: 'serif',
-        fontSize: 'xlarge',
-        lineHeight: 'relaxed'
+        fontSize: 22,
+        lineHeight: 1.73
       });
     });
 
     expect(JSON.parse(window.localStorage.getItem('foliole-companion-reading-typography-settings') ?? '{}')).toEqual({
       contrast: 'high',
       fontFamily: 'serif',
-      fontSize: 'xlarge',
-      lineHeight: 'relaxed'
+      fontSize: 22,
+      lineHeight: 1.73
     });
     expect(syncObjectsMock.saveCompanionSyncSettingRecord).not.toHaveBeenCalled();
   });
