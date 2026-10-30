@@ -34,7 +34,7 @@ function getTopBarBackHandler(model: CompanionShellModel) {
 }
 
 function renderCompanionMainContent(model: CompanionShellModel) {
-  const bottomInsetClassName = model.isReviewTaskActive
+  const bottomInsetClassName = model.surface.activeAction === 'review' && !model.surface.isFlowBrowsing
     ? companionReviewBottomInsetClassName
     : companionMainBottomInsetClassName;
   if (!model.workspaceSync.isWorkspaceSyncStateReady) {

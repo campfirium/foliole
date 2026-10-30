@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
@@ -26,7 +26,9 @@ it('shows the actual Flow results and always offers an exit from the completion 
   expect(screen.getByText('Read')).toBeInTheDocument();
   expect(screen.getByText('2')).toBeInTheDocument();
   expect(screen.getByText('7 min')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Exit Flow' }));
+  const footer = screen.getByRole('contentinfo');
+  const actions = within(footer).getByRole('group', { name: 'Companion review toolbar' });
+  fireEvent.click(within(actions).getByRole('button', { name: 'Exit Flow' }));
   expect(exit).toHaveBeenCalledOnce();
 });
 
