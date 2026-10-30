@@ -115,7 +115,7 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
   const node = props.workspaceSync.state.workspace_snapshot?.nodesById[nodeId];
   const answer = props.flow
     ? props.surface.isAnswerRevealed ? props.surface.effectiveReviewSession.currentCard?.reveal ?? null : null
-    : node?.kind === 'item' ? node.reveal : null;
+    : node?.kind === 'item' ? props.surface.readableArticle.reveal ?? null : null;
   const exitFlowHere = props.surface.isFlowBrowsing
     ? () => props.surface.handleExitFlowHere(nodeId) : null;
 

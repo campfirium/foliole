@@ -3,6 +3,7 @@ import type { ComponentProps } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../shared/localization/testLocalization';
+import { resolveLoadedCompanionArticle } from '../shared/platform/companionReadableArticle';
 
 import { createBreadcrumbSnapshot, createItemReviewSurface } from './CompanionShellBreadcrumbTestSupport';
 import { CompanionShellReadableArticle } from './CompanionShellReadableArticle';
@@ -16,12 +17,18 @@ type Props = ComponentProps<typeof CompanionShellReadableArticle>;
 function createProps(flow: boolean, browsing = false): Props {
   const snapshot = createBreadcrumbSnapshot();
   const node = snapshot.nodesById['item-1']!;
+  const article = resolveLoadedCompanionArticle(snapshot, {
+    id: node.id, content: node.content, reveal: node.reveal, title: node.title,
+    body_blob_hash: null, content_status: 'ready', pdf_attachment_id: null
+  });
+  node.content = '';
+  node.reveal = null;
   const base = createItemReviewSurface();
   const surface = {
     ...base,
     isFlowBrowsing: browsing,
     selectedBrowseNodeId: browsing ? node.id : null,
-    readableArticle: { content: node.content, nodeId: node.id, title: node.title, textAnchorDecorations: [] },
+    readableArticle: article,
     effectiveReviewSession: {
       ...base.effectiveReviewSession,
       currentCard: { ...base.effectiveReviewSession.currentCard, nodeId: node.id,
