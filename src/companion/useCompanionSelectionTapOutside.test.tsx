@@ -102,27 +102,65 @@ it.each(['a', '.cm-md-highlight'])('leaves %s targets to their existing action',
   expect(nativeSelection.removeAllRanges).not.toHaveBeenCalled();
 });
 
-it('collapses a real read-only editor selection after an outside pointer tap', () => {
+it.each([true, false])('preserves editor ownership of selection when readOnly=%s', (readOnly) => {
   const article = document.createElement('section');
   article.dataset.companionReadableDocument = 'true';
   const host = document.createElement('div');
   const outside = document.createElement('span');
   article.append(host, outside);
   document.body.append(article);
-  const editor = new CodeMirrorEditorAdapter(host, { initialContent: 'Selected text and unselected text', readOnly: true });
+  const editor = new CodeMirrorEditorAdapter(host, { initialContent: 'Selected text and unselected text', readOnly });
   // jsdom has no layout coordinates; report a position after the selected text.
   vi.spyOn(editor, 'getDocumentPositionAtClientPoint').mockReturnValue(8);
   editor.setSelection({ from: 0, to: 8 });
   const { result, unmount } = renderHook(() => useCompanionSelectionAnnotationToolbar({
-    canCreateAnnotation: true, nodeId: 'node-1', snapshot: null
+    canCreateAnnotation: readOnly, nodeId: 'node-1', snapshot: null
   }));
   act(() => {
     result.current.handleEditorReady(editor);
     touch(outside, 'pointerdown', 140, 20);
   });
   act(() => touch(outside, 'pointerup', 140, 20));
-  expect(editor.getSelection()).toEqual({ from: 8, to: 8 });
+  expect(editor.getSelection()).toEqual(readOnly ? { from: 8, to: 8 } : { from: 0, to: 8 });
   expect(editor.getContent()).toBe('Selected text and unselected text');
   unmount();
   editor.destroy();
+});
+
+it('leaves editable text selection and native context menus to the editor', () => {
+  const { article, editor, nativeSelection, outside } = selectedArticle();
+  const { result } = renderHook(() => useCompanionSelectionAnnotationToolbar({
+    canCreateAnnotation: false, nodeId: 'node-1', snapshot: null
+  }));
+  act(() => {
+    result.current.handleEditorReady(editor as never);
+    touch(outside, 'pointerdown', 140, 20);
+  });
+  act(() => touch(outside, 'pointerup', 140, 20));
+  const contextMenu = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+  article.dispatchEvent(contextMenu);
+  expect(contextMenu.defaultPrevented).toBe(false);
+  expect(nativeSelection.removeAllRanges).not.toHaveBeenCalled();
+  expect(editor.setSelection).not.toHaveBeenCalled();
+  expect(result.current.selectionToolbar).toBeNull();
+});
+
+it('stops a reading gesture when editing starts and restores reading gestures on exit', () => {
+  const { editor, nativeSelection, outside } = selectedArticle();
+  const { result, rerender } = renderHook(({ reading }) => useCompanionSelectionAnnotationToolbar({
+    canCreateAnnotation: reading, nodeId: 'node-1', snapshot: null
+  }), { initialProps: { reading: true } });
+  act(() => {
+    result.current.handleEditorReady(editor as never);
+    touch(outside, 'pointerdown', 140, 20);
+  });
+  rerender({ reading: false });
+  act(() => touch(outside, 'pointerup', 140, 20));
+  expect(nativeSelection.removeAllRanges).not.toHaveBeenCalled();
+  expect(editor.setSelection).not.toHaveBeenCalled();
+  rerender({ reading: true });
+  act(() => touch(outside, 'pointerdown', 140, 20));
+  act(() => touch(outside, 'pointerup', 140, 20));
+  expect(nativeSelection.removeAllRanges).toHaveBeenCalledOnce();
+  expect(editor.setSelection).toHaveBeenCalledWith({ from: 8, to: 8 });
 });

@@ -198,6 +198,7 @@ export function useCompanionSelectionAnnotationToolbar(props: {
   });
 
   useCompanionSelectionAnnotationDocumentEvents({
+    enabled: props.canCreateAnnotation,
     clearSelectionAndCloseToolbar,
     closeSelectionToolbar,
     editorRef,

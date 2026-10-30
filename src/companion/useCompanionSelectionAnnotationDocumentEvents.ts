@@ -74,16 +74,23 @@ function clearFinishedOutsideTap(
   return true;
 }
 
-export function useCompanionSelectionAnnotationDocumentEvents(args: {
+interface SelectionAnnotationDocumentEventsArgs {
+  enabled: boolean;
   clearSelectionAndCloseToolbar: () => void;
   closeSelectionToolbar: () => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
   lastFallbackRef: MutableRefObject<CompanionSelectionClientPoint | null>;
   lastSelectionInteractionAtRef: MutableRefObject<number>;
   scheduleSelectionToolbarOpen: (fallback?: CompanionSelectionClientPoint, allowExistingHighlight?: boolean) => void;
-}) {
+}
+
+export function useCompanionSelectionAnnotationDocumentEvents(args: SelectionAnnotationDocumentEventsArgs) {
   const tapRef = useRef<SelectionAtTap | null>(null);
   useEffect(() => {
+    if (!args.enabled) {
+      tapRef.current = null;
+      return;
+    }
     const rememberSelectionInteraction = (event: MouseEvent | PointerEvent | TouchEvent) => {
       if (event.type === 'pointerdown') tapRef.current = readSelectionAtTap(args.editorRef.current, event as PointerEvent);
       if (event.type === 'touchmove') tapRef.current = null;

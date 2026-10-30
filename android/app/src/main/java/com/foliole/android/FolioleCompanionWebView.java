@@ -27,6 +27,8 @@ public class FolioleCompanionWebView extends CapacitorWebView {
     }
 
     private ActionMode.Callback createSelectionActionModeCallback(ActionMode.Callback callback) {
+        // Editable fields keep WebView's clipboard actions and floating-menu positioning.
+        if (onCheckIsTextEditor()) return callback;
         return new ActionMode.Callback() {
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
