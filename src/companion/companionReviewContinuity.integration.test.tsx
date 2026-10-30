@@ -183,7 +183,7 @@ it.each([false, true])('reconciles a deleted current card on foreground and clea
   expect(ui.result.current.isAnswerRevealed).toBe(false);
 });
 
-it('skips a remotely handled card before grading and reaches an empty Only Review session', async () => {
+it('keeps the displayed remotely handled card until grading revalidates it without another review', async () => {
   const ui = renderSurface(await loadCompanionWorkspaceSyncState(), true);
   await expectCurrentBody(ui);
   act(() => ui.result.current.handleRevealAnswer());
@@ -196,7 +196,7 @@ it('skips a remotely handled card before grading and reaches an empty Only Revie
     { node_id: 'one', due: '2099-01-01T00:00:00.000Z' }, { node_id: 'two', due: '2099-01-01T00:00:00.000Z' }
   ]);
   await foreground();
-  expect(ui.result.current.onlyReviewSession.currentCard).toBeNull();
+  expect(ui.result.current.onlyReviewSession.currentCard?.nodeId).toBe('one');
   await act(() => ui.result.current.handleGradeReview(3));
   await waitFor(() => expect(ui.result.current.onlyReviewSession.currentCard).toBeNull());
   expect(ui.result.current.readableArticle).toBeNull();
