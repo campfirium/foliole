@@ -30,21 +30,21 @@ public class FlowGestureHarness {
         region.set(true, 48, 160, 400);
         switch (args[0]) {
             case "selection":
-                check(reserved(2, 800), "Flow edge was never reserved");
+                check(reserved(2, 266), "Flow edge was never reserved");
                 // Chromium clears its View's exclusion list when selection handles disappear.
                 web.setSystemGestureExclusionRects(List.of(new Rect(0, 0, 0, 0)));
-                check(reserved(2, 800) && reserved(798, 800),
+                check(reserved(2, 266) && reserved(798, 266),
                     "WebView clearing selection erased Flow edge ownership");
-                check(!reserved(2, 100), "System back outside the central band was excluded");
-                check(!reserved(150, 800), "The reserved edge exceeded the agreed width");
+                check(!reserved(2, 800), "System back outside the upper band was excluded");
+                check(!reserved(150, 266), "The reserved edge exceeded the agreed width");
                 break;
             case "layout":
                 // Window insets and rotation move and resize the WebView after registration.
                 host.layout(20, 30, 820, 1630);
                 web.layout(30, 70, 430, 870);
                 web.setSystemGestureExclusionRects(List.of());
-                check(reserved(32, 470) && reserved(428, 470), "Flow edges did not follow layout");
-                check(!reserved(32, 800), "The old central band survived the resize");
+                check(reserved(32, 203) && reserved(428, 203), "Flow edges did not follow layout");
+                check(!reserved(32, 800), "The old upper band survived the resize");
                 break;
             case "late-layout":
                 region.set(false, 48, 160, 400);
@@ -52,7 +52,7 @@ public class FlowGestureHarness {
                 region.set(true, 48, 160, 400);
                 web.layout(0, 0, 800, 1600);
                 web.setSystemGestureExclusionRects(List.of());
-                check(reserved(2, 800), "Registration before first layout lost the Flow edge");
+                check(reserved(2, 266), "Registration before first layout lost the Flow edge");
                 break;
             case "disable":
             case "destroy":
@@ -60,7 +60,7 @@ public class FlowGestureHarness {
                 web.setSystemGestureExclusionRects(List.of(handle));
                 if (args[0].equals("disable")) region.set(false, 48, 160, 400);
                 else region.dispose();
-                check(!reserved(2, 800), "Flow edge was not released");
+                check(!reserved(2, 266), "Flow edge was not released");
                 check(contains(web, 210, 320), "Releasing Flow erased WebView selection ownership");
                 web.layout(0, 0, 800, 1800);
                 check(!reserved(2, 900), "A layout callback reserved the edge after exit");

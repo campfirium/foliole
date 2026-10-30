@@ -155,6 +155,7 @@ function ImmersiveArticleChrome(props: {
       {...definedProps({ editHistory: articleProps.editHistory })}
       navigation={articleProps.navigation}
       actionsAtTop={articleProps.flow === true}
+      isReviewItem={articleProps.isReviewItem === true}
       actionsOpen={model.reading.isActionsSheetOpen}
       canEditContent={Boolean(articleProps.onSaveArticleContent)}
       editor={model.toolbar.editorRef.current}

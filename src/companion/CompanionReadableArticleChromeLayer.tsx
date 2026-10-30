@@ -38,6 +38,7 @@ interface ImmersiveChromeLayerProps {
   actionsOpen: boolean;
   canEditContent?: boolean;
   actionsAtTop?: boolean;
+  isReviewItem?: boolean;
   navigation?: CompanionReadingNavigationControls | undefined;
   editor: EditorAdapter | null;
   isChromeVisible: boolean;
@@ -67,6 +68,7 @@ interface ImmersiveChromeLayerProps {
 function ReadingChromeControls(props: {
   canEditContent?: boolean;
   actionsAtTop?: boolean;
+  isReviewItem?: boolean;
   navigation?: CompanionReadingNavigationControls | undefined;
   isChromeVisible: boolean;
   isContentEditing: boolean;
@@ -82,6 +84,7 @@ function ReadingChromeControls(props: {
     <ReadingChrome
       navigation={props.navigation}
       actionsAtTop={props.actionsAtTop === true}
+      isReviewItem={props.isReviewItem === true}
       canEditContent={props.canEditContent === true}
       isContentEditing={props.isContentEditing}
       visible={props.isChromeVisible}
@@ -181,6 +184,7 @@ export function ImmersiveChromeLayer(props: ImmersiveChromeLayerProps) {
         {...definedProps({ canEditContent: props.canEditContent })}
         navigation={props.navigation}
         actionsAtTop={props.actionsAtTop === true}
+        isReviewItem={props.isReviewItem === true}
         isChromeVisible={props.isChromeVisible}
         isContentEditing={props.isContentEditing}
         onExit={props.onExit}

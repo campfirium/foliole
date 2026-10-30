@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useEffect, useMemo, useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -12,8 +12,11 @@ import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWor
 
 import { CompanionFlowHistorySurface, CompanionFlowOrEditHistoryActions } from './CompanionFlowHistorySurface';
 import { CompanionReadingActivity } from './companionReadingActivity';
+import { ReadingChrome } from './CompanionReadingChrome';
+import { handleCompanionAndroidBack } from './useCompanionAndroidBack';
 import { createFloatingBar, createWorkspaceSync } from './useCompanionArticleSurfaceTestSupport';
 import { useCompanionFlowSession } from './useCompanionFlowSession';
+import { useCompanionReadableAndroidBack } from './useCompanionReadableAndroidBack';
 import { useCompanionSurfaceActions } from './useCompanionSurfaceActions';
 
 vi.mock('@capacitor/core', async () => {
@@ -26,12 +29,16 @@ let library: Awaited<ReturnType<typeof createSearchLibrary>>;
 let initial: WorkspaceSnapshot;
 let failRefresh = 0;
 let historyKey = '';
+let readingMounted = false;
+const exitReading = vi.fn();
 const stored = async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
 let before: unknown;
 let baselineFacts: unknown[];
 const facts = () => library.database.prepare('SELECT * FROM review_log ORDER BY op_id').all();
 beforeEach(async () => {
   failRefresh = 0;
+  readingMounted = false;
+  exitReading.mockClear();
   library = await createSearchLibrary(0);
   const insert = library.database.prepare("INSERT INTO nodes (id,title,kind,content,reveal,created_at,updated_at) VALUES (?,?,'item',?,'Answer','2026-01-01','2026-01-01')");
   for (const id of ['a', 'b']) {
@@ -46,6 +53,11 @@ beforeEach(async () => {
 });
 afterEach(async () => { cleanup(); await library.close(); });
 
+function ReadingBackTarget() {
+  useCompanionReadableAndroidBack({ editing: false, selectionOpen: false, closeSelection() {},
+    exit: exitReading, finishEditing: async () => {} });
+  return null;
+}
 function Reader() {
   const [value, setValue] = useState(initial);
   const flow = useCompanionFlowSession({ snapshot: value, ready: true, active: true, libraryScope: 'ui-test' });
@@ -62,6 +74,8 @@ function Reader() {
   historyKey = flow.historyKey;
   return <CompanionFlowHistorySurface active={flow.ready} busy={actions.isSubmittingGrade}
     historyKey={historyKey} refreshPending={actions.historyRefreshPending} onApply={mode => void actions.handleFlowHistory(mode)}>
+    {readingMounted ? <ReadingBackTarget /> : null}
+    <ReadingChrome isReviewItem actionsAtTop title="Item" onExit={() => {}} onOpenActions={() => {}} onOpenOutline={() => {}} />
     <output data-testid="current-card">{nodeId || 'done'}</output>
     <button onClick={flow.reveal}>Reveal answer</button>
     <button onClick={() => void actions.handleGradeReview(3)}>Grade good</button>
@@ -127,6 +141,40 @@ it('hydrates the restored Flow position and redo availability after remount', as
   initial = await stored();
   await act(async () => { openReader(); });
   await waitFor(() => expect(screen.getByTestId('current-card')).toHaveTextContent('a'));
+  await waitFor(() => expect(screen.getByTestId('flow-edge-redo')).not.toBeDisabled());
+  swipe('redo');
+  await waitFor(() => expect(screen.getByTestId('current-card')).toHaveTextContent('b'));
+});
+
+it('restores real item state from the visible toolbar without an outline or opening the menu', async () => {
+  openReader();
+  await waitFor(() => expect(screen.getByTestId('current-card')).toHaveTextContent('a'));
+  const top = within(screen.getByTestId('companion-reading-exit').closest('.companion-reading-top-chrome') as HTMLElement);
+  expect(top.queryByRole('button', { name: 'Outline' })).not.toBeInTheDocument();
+  expect(top.getByRole('button', { name: 'Undo' })).toBeDisabled();
+  await grade();
+  await waitFor(() => expect(top.getByRole('button', { name: 'Undo' })).not.toBeDisabled());
+  fireEvent.click(top.getByRole('button', { name: 'Undo' }));
+  await waitFor(() => expect(screen.getByTestId('current-card')).toHaveTextContent('a'));
+  expect((await stored()).nodesById.a?.review).toEqual(before);
+  await waitFor(() => expect(top.getByRole('button', { name: 'Redo' })).not.toBeDisabled());
+  fireEvent.click(top.getByRole('button', { name: 'Redo' }));
+  await waitFor(() => expect(screen.getByTestId('current-card')).toHaveTextContent('b'));
+  expect((await stored()).nodesById.a?.review?.reps).toBe(3);
+});
+
+it.each([true, false])('turns system Back into a persisted Flow undo with reading mounted=%s', async mounted => {
+  readingMounted = mounted;
+  const ui = openReader();
+  await waitFor(() => expect(screen.getByTestId('current-card')).toHaveTextContent('a'));
+  await grade();
+  act(() => handleCompanionAndroidBack({ surface: { activeAction: 'review' } } as never));
+  await waitFor(() => expect(screen.getByTestId('current-card')).toHaveTextContent('a'));
+  expect((await stored()).nodesById.a?.review).toEqual(before);
+  expect(exitReading).not.toHaveBeenCalled();
+  ui.unmount();
+  initial = await stored();
+  openReader();
   await waitFor(() => expect(screen.getByTestId('flow-edge-redo')).not.toBeDisabled());
   swipe('redo');
   await waitFor(() => expect(screen.getByTestId('current-card')).toHaveTextContent('b'));

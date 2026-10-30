@@ -1,9 +1,10 @@
-import { ArrowDown, ArrowUp, ChevronLeft, EllipsisVertical, ListTree, Pen, RefreshCw, X, type LucideIcon } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronLeft, EllipsisVertical, ListTree, Pen, RefreshCw, Redo2, Undo2, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { companionFlexRowGap2ClassName, companionMobileChromeHitRailClassName } from './companionCssCompatibility';
+import { useCompanionFlowHistoryControls } from './CompanionFlowHistoryContext';
 import type { CompanionReadingNavigationControls } from './useCompanionReadingNavigation';
 import { useCompanionTouchClick } from './useCompanionTouchClick';
 
@@ -84,6 +85,7 @@ function ReadingTopChrome(props: {
   onOpenAlternative?: () => void;
   onOpenOutline(): void;
   review: boolean;
+  isReviewItem: boolean;
   title: string;
 }) {
   const t = useTranslation();
@@ -93,8 +95,8 @@ function ReadingTopChrome(props: {
         {props.controlsVisible ? (
           <>
             <div className="flex items-center">
-              <ReadingChromeButton icon={props.review ? X : ChevronLeft} label={t(props.review ? 'companion.review.exit' : 'companion.reading.exit')} onClick={props.onExit} testId="companion-reading-exit" />
-              <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />
+              <ReadingChromeButton icon={ChevronLeft} label={t(props.review ? 'companion.review.exit' : 'companion.reading.exit')} onClick={props.onExit} testId="companion-reading-exit" />
+              {props.isReviewItem ? <ItemFlowHistoryButtons /> : <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />}
             </div>
             {!props.review ? <span className="pointer-events-none absolute left-1/2 w-[calc(100%-12.25rem)] max-w-[52vw] -translate-x-1/2 truncate text-center text-sm font-medium text-foreground sm:max-w-sm">
               {props.title}
@@ -121,6 +123,7 @@ function ReadingTopChrome(props: {
 export function ReadingChrome(props: {
   navigation?: CompanionReadingNavigationControls | undefined;
   actionsAtTop?: boolean;
+  isReviewItem?: boolean;
   canEditContent?: boolean;
   isContentEditing?: boolean;
   onCancelContentEditing?: () => void;
@@ -144,6 +147,7 @@ export function ReadingChrome(props: {
         onExit={props.onExit}
         onOpenOutline={props.onOpenOutline}
         review={props.actionsAtTop === true}
+        isReviewItem={props.isReviewItem === true}
         title={props.title}
         {...(props.onOpenAlternative ? { onOpenAlternative: props.onOpenAlternative } : {})}
       />
@@ -175,4 +179,16 @@ function ReadingNavigationControls({ navigation }: { navigation: CompanionReadin
     <ReadingChromeButton icon={ArrowDown} label={t('companion.reading.nextTopic')}
       disabled={navigation.disabled || !navigation.next} onClick={navigation.next} />
   </div>;
+}
+
+function ItemFlowHistoryButtons() {
+  const controls = useCompanionFlowHistoryControls();
+  const t = useTranslation();
+  if (!controls) return null;
+  return <>
+    {(['undo', 'redo'] as const).map(mode => <ReadingChromeButton key={mode}
+      icon={mode === 'undo' ? Undo2 : Redo2} label={t(mode === 'undo' ? 'desktop.command.undo' : 'desktop.command.redo')}
+      disabled={controls.busy || controls.refreshPending || !(mode === 'undo' ? controls.canUndo : controls.canRedo)}
+      onClick={() => controls.apply(mode)} />)}
+  </>;
 }

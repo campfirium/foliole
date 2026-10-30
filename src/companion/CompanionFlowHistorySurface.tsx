@@ -1,5 +1,5 @@
 import { Redo2, Undo2 } from 'lucide-react';
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { loadCompanionFlowHistoryAvailability } from '../shared/platform/companion/runtime/companionFlowHistory';
@@ -7,14 +7,14 @@ import { subscribeCompanionSyncMutationRevision } from '../shared/platform/compa
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 import type { HistoryMode } from '../store/workspaceReviewHistoryTarget';
 
+import { COMPANION_ANDROID_FLOW_BACK_EVENT } from './companionAndroidBackEvent';
 import { CompanionEditHistoryActions, type CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
+import { applyCompanionFlowAndroidBack } from './companionFlowAndroidBack';
 import { CompanionFlowEdgeGestures } from './CompanionFlowEdgeGestures';
+import { CompanionFlowHistoryContext as FlowHistoryContext } from './CompanionFlowHistoryContext';
 import { CompanionFlowModeContext, type CompanionFlowModeControls } from './CompanionFlowModeControl';
 import { CompanionReadingPageNavigation } from './CompanionReadingPageNavigation';
 import { CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
-
-type Controls = { refreshPending: boolean; busy: boolean; canUndo: boolean; canRedo: boolean; apply(mode: HistoryMode): void };
-const FlowHistoryContext = createContext<Controls | null>(null);
 
 export function CompanionFlowHistorySurface(props: {
   modeControls?: CompanionFlowModeControls; children: ReactNode; active: boolean; busy: boolean; historyKey: string; refreshPending?: boolean; onApply(mode: HistoryMode): void;
@@ -34,6 +34,13 @@ export function CompanionFlowHistorySurface(props: {
     return () => { active = false; unsubscribe(); };
   }, [props.active, props.historyKey]);
   const controls = props.active ? { ...availability, busy: props.busy, refreshPending: props.refreshPending === true, apply: props.onApply } : null;
+  useEffect(() => {
+    const back = (event: Event) => {
+      if (applyCompanionFlowAndroidBack(controls)) event.preventDefault();
+    };
+    document.addEventListener(COMPANION_ANDROID_FLOW_BACK_EVENT, back);
+    return () => document.removeEventListener(COMPANION_ANDROID_FLOW_BACK_EVENT, back);
+  }, [controls]);
   return <CompanionReadingPageNavigation><FlowHistoryContext.Provider value={controls}>
     <CompanionFlowModeContext.Provider value={props.active ? props.modeControls ?? null : null}>
       {props.children}

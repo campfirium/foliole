@@ -60,7 +60,9 @@ final class FolioleFlowGestureRegion {
             int edge = Math.min(webView.getWidth() / 2, Math.round((float) width * scale));
             int band = Math.min(webView.getHeight(), Math.min(Math.round((float) height * scale),
                 Math.round(200 * density)));
-            int top = offsetY + (webView.getHeight() - band) / 2;
+            // Keep the band within the upper third, below the reading toolbar.
+            int bandTop = Math.max(Math.round(44 * scale), (webView.getHeight() / 3 - band) / 2);
+            int top = offsetY + Math.max(0, Math.min(webView.getHeight() - band, bandTop));
             addClipped(regions, new Rect(left, top, left + edge, top + band));
             int right = left + webView.getWidth();
             addClipped(regions, new Rect(right - edge, top, right, top + band));

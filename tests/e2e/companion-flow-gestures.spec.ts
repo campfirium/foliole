@@ -25,13 +25,13 @@ for (const inset of [5, 36]) {
     await expect(page.locator('output')).toHaveText('second');
     const cdp = await context.newCDPSession(page);
     await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true });
-    await swipe(cdp, inset, inset + 80, 180);
-    await expect(page.locator('output')).toHaveText('second');
-    await swipe(cdp, 60, 140, 406);
-    await expect(page.locator('output')).toHaveText('second');
     await swipe(cdp, inset, inset + 80, 406);
+    await expect(page.locator('output')).toHaveText('second');
+    await swipe(cdp, 60, 140, 135);
+    await expect(page.locator('output')).toHaveText('second');
+    await swipe(cdp, inset, inset + 80, 135);
     await expect(page.locator('output')).toHaveText('first');
-    await swipe(cdp, 375 - inset, 295 - inset, 406);
+    await swipe(cdp, 375 - inset, 295 - inset, 135);
     await expect(page.locator('output')).toHaveText('second');
   });
 }

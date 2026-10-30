@@ -1,4 +1,5 @@
 export const COMPANION_ANDROID_BACK_EVENT = 'companion-android-back';
+export const COMPANION_ANDROID_FLOW_BACK_EVENT = 'companion-android-flow-back';
 export const COMPANION_ANDROID_CAPTURE_BACK_EVENT = 'companion-android-capture-back';
 
 export function dispatchCompanionAndroidBack(type = COMPANION_ANDROID_BACK_EVENT): boolean {

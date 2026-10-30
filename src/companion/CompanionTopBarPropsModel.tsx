@@ -1,4 +1,4 @@
-import { Library, X } from 'lucide-react';
+import { ChevronLeft, Library } from 'lucide-react';
 
 import type {
   FolderListSortDirection,
@@ -128,6 +128,6 @@ function resolveReviewTopBar(t: Translate, onExitReview: () => void) {
   return {
     title: 'Flow',
     density: 'compact' as const,
-    leftAction: { icon: X, label: t('companion.review.exit'), onClick: onExitReview }
+    leftAction: { icon: ChevronLeft, label: t('companion.review.exit'), onClick: onExitReview }
   };
 }

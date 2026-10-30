@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import { exitAndroidApp, subscribeAndroidBack } from '../shared/platform/companion/runtime/androidBack';
 
-import { COMPANION_ANDROID_CAPTURE_BACK_EVENT, dispatchCompanionAndroidBack } from './companionAndroidBackEvent';
+import { COMPANION_ANDROID_CAPTURE_BACK_EVENT, COMPANION_ANDROID_FLOW_BACK_EVENT, dispatchCompanionAndroidBack } from './companionAndroidBackEvent';
 import type { CompanionShellModel } from './CompanionShell';
 
 function closeTopDialog(): boolean {
@@ -22,6 +22,7 @@ export function handleCompanionAndroidBack(model: CompanionShellModel): void {
   }
   if (closeTopDialog()) return;
   if (dispatchCompanionAndroidBack()) return;
+  if (dispatchCompanionAndroidBack(COMPANION_ANDROID_FLOW_BACK_EVENT)) return;
   if (model.searchExternalDocument) return model.handleExitSearchExternalDocument();
   if (model.searchPdfResult) return model.handleExitSearchPdf();
   if (model.isSearchArticleOpen) return model.handleExitSearchArticle();
