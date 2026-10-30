@@ -76,7 +76,6 @@ describe('item image layout', () => {
 
     expect(body.hasAnswerSection).toBe(true);
     expect(body.fitBlockImagesToViewport).toBe(hasImages);
-    expect(body.answerSectionMode).toBe(hasImages ? 'balanced' : 'fixed');
     expect(getDocumentPanelView({ ...props, showAnswerSection: false }, 'preview', 860).bodyProps.fitBlockImagesToViewport).toBe(false);
     node.kind = 'topic';
     expect(getDocumentPanelView(props, 'preview', 860).bodyProps.fitBlockImagesToViewport).toBe(false);
@@ -89,13 +88,12 @@ describe('item image layout', () => {
 
     expect(layout().fitBlockImagesToViewport).toBe(false);
     node.content = '![Prompt](./prompt.png)';
-    expect(layout().answerSectionMode).toBe('balanced');
+    expect(layout().fitBlockImagesToViewport).toBe(true);
     node.reveal = '![Answer](./answer.png)';
     node.content = 'Prompt';
     expect(layout().fitBlockImagesToViewport).toBe(true);
     node.reveal = 'Answer';
     expect(layout().fitBlockImagesToViewport).toBe(false);
-    expect(layout().answerSectionMode).toBe('fixed');
   });
 
 });

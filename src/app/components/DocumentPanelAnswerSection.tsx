@@ -2,14 +2,12 @@ import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor'
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import { getImageClozeAnswerEditorNodeId } from '../../features/image-cloze/model/imageClozePresentation';
 import { definedProps } from '../../shared/lib/definedProps';
-import { cn } from '../../shared/lib/utils';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 import { useAnswerEditorHistory } from './useAnswerEditorHistory';
 
 interface DocumentPanelAnswerSectionProps {
   answerEditorDebugId?: string;
-  answerSectionMode?: 'balanced' | 'fixed';
   editorAppearanceKey: string;
   editorNodeId: string | null;
   fitBlockImagesToViewport?: boolean;
@@ -32,10 +30,7 @@ export function DocumentPanelAnswerSection(props: DocumentPanelAnswerSectionProp
   return (
     <section
       aria-label={t('desktop.document.answerSection')}
-      className={cn(
-        'relative flex min-h-0 overflow-hidden',
-        props.answerSectionMode === 'balanced' ? 'flex-1' : 'flex-[0_0_calc(30dvh+60px)]'
-      )}
+      className="relative flex min-h-0 flex-1 overflow-hidden"
       data-undo-history-document-id={answerNodeId ?? undefined}
     >
       <MarkdownEditor

@@ -8,6 +8,7 @@ import type { EditorNodeLinkPreviewRequest } from '../../features/editor/model/n
 import { definedProps } from '../../shared/lib/definedProps';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import { AppEmptyState } from '../../shared/ui';
+import { AppEditorSplitLayout } from '../../shared/ui/AppEditorSplitLayout';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentOutlineLayer } from './DocumentOutlineLayer';
@@ -22,7 +23,6 @@ export interface BlockImageMetrics {
 
 export interface DocumentPanelBodyLayoutProps {
   answerEditorDebugId?: string;
-  answerSectionMode?: 'balanced' | 'fixed';
   documentMaxWidth: number;
   editorAppearanceKey: string;
   editorContent: string;
@@ -172,15 +172,6 @@ function renderDocumentOutline(props: DocumentPanelBodyLayoutProps) {
   );
 }
 
-function DocumentSectionDivider(props: Pick<DocumentPanelBodyLayoutProps, 'documentMaxWidth'>) {
-  void props.documentMaxWidth;
-  return (
-    <div aria-hidden="true" className="relative h-3 shrink-0">
-      <div className="pointer-events-none absolute left-1/2 top-1/2 h-px -translate-x-1/2 -translate-y-1/2 bg-[var(--role-content-line)] [width:min(100%,var(--document-max-width))]" />
-    </div>
-  );
-}
-
 export function renderDocumentPanelBodyLayout(props: DocumentPanelBodyLayoutProps) {
   return measureWorkspaceDiagnostic(
     'document-panel-body-layout',
@@ -188,15 +179,13 @@ export function renderDocumentPanelBodyLayout(props: DocumentPanelBodyLayoutProp
     () => (
       <div className="relative flex h-full min-h-0 w-full">
         {renderDocumentOutline(props)}
-        <div className="document-panel-editor-stack flex h-full min-h-0 w-full flex-1 flex-col">
-          {renderDocumentBodyContent(props)}
-          {props.hasAnswerSection && !props.emptyState ? (
-            <>
-              <DocumentSectionDivider documentMaxWidth={props.documentMaxWidth} />
-              <DocumentPanelAnswerSection {...props} />
-            </>
-          ) : null}
-        </div>
+        <AppEditorSplitLayout
+          className="document-panel-editor-stack"
+          question={renderDocumentBodyContent(props)}
+          answer={props.hasAnswerSection && !props.emptyState ? <DocumentPanelAnswerSection {...props} /> : null}
+          questionVersion={`${props.editorAppearanceKey}:${props.editorNodeId}:${props.editorContentPaddingTop}:${props.editorHideTitleHeading}:${props.editorContent}`}
+          answerVersion={props.reveal}
+        />
       </div>
     )
   );

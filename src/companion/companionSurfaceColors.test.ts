@@ -10,7 +10,7 @@ function surfaceColors(mode: 'light' | 'dark') {
     css.walkRules(rule => {
       if (rule.selector !== ':root'
         && !(mode === 'dark' && rule.selector === ":root[data-resolved-base-color='dark']")) return;
-      rule.walkDecls(declaration => values.set(declaration.prop, declaration.value));
+      rule.walkDecls(declaration => { values.set(declaration.prop, declaration.value); });
     });
   }
   function resolve(value: string): string {

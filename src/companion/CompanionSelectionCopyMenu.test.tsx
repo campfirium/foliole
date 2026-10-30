@@ -18,7 +18,7 @@ function renderToolbar(kind: 'selection' | 'highlight' | 'cloze', text = '  Beta
     onAddExistingHighlightNote={vi.fn()} onApply={onApply} onClose={onClose}
     onDeleteExistingHighlight={onDeleteExistingHighlight}
     state={{ left: 12, top: 12, noteLeft: 12, noteTop: 52,
-      payload: { parentNodeId: 'topic', anchorId: 'anchor', selectionText: 'Selection text', entries: [] },
+      payload: { parentNodeId: 'topic', anchorId: 'anchor', selectionText: 'Selection text', clozeContent: 'Selection text', entries: [] },
       ...(kind === 'selection' ? {} : { existingHighlight: { kind, nodeId: 'annotation', originalText: text, note: 'Do not copy this comment' } })
     }} />);
   return { onClose, onApply, onDeleteExistingHighlight };

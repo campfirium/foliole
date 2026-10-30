@@ -113,7 +113,6 @@ function getDocumentPanelState(
   const shouldUseReaderEndCushion = !emptyState && !hasAnswerSection && editorDisplayMode === 'preview';
 
   return {
-    answerSectionMode: shouldFitItemImages ? 'balanced' : 'fixed',
     documentStatus: startupState.documentStatus,
     editorContentPaddingBottom: shouldUseReaderEndCushion ? READER_END_CUSHION_PADDING : undefined,
     loadingLabel: startupState.loadingLabel,
@@ -160,7 +159,6 @@ function getDocumentPanelBodyProps(
   const editorHideTitleHeading = props.activeNodeId ? Boolean(props.nodesById[props.activeNodeId]?.hideTitleHeading) : false;
   const editorNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : undefined;
   return {
-    answerSectionMode: panelState.answerSectionMode,
     documentMaxWidth,
     editorAppearanceKey: props.editorAppearanceKey,
     editorContent: props.editorContent,

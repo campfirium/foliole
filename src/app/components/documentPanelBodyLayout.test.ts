@@ -92,6 +92,16 @@ describe('renderDocumentPanelBodyLayout', () => {
     editorLifecycle.unmountedNodeIds.length = 0;
   });
 
+  it('preserves the question editor when revealing and hiding an answer', () => {
+    const view = render(renderDocumentPanelBodyLayout(createLayoutProps()));
+    const question = view.getByTestId('editor-node-1');
+    view.rerender(renderDocumentPanelBodyLayout(createLayoutProps({ hasAnswerSection: true, reveal: 'Answer' })));
+    expect(view.getByTestId('editor-node-1')).toBe(question);
+    view.rerender(renderDocumentPanelBodyLayout(createLayoutProps()));
+    expect(view.getByTestId('editor-node-1')).toBe(question);
+    expect(editorLifecycle.unmountedNodeIds).not.toContain('node-1');
+  });
+
   it('recreates the prompt editor when switching to another node', () => {
     const view = render(renderDocumentPanelBodyLayout(createLayoutProps()));
 

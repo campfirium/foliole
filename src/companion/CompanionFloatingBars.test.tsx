@@ -45,7 +45,7 @@ describe('CompanionBottomTabBar', () => {
         onSecondaryDestination={vi.fn()} visible />
     </LocalizationProvider>);
     for (const name of ['Directory', 'Browse', 'Flow', 'Search', 'Settings']) {
-      expect(screen.getByRole('button', { name, exact: true })).toHaveTextContent(name);
+      expect(screen.getByRole('button', { name })).toHaveTextContent(name);
     }
     expect(screen.getByRole('heading')).toHaveTextContent(locale === 'zh-Hans' ? '设置' : '設定');
   });

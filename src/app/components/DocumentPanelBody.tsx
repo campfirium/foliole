@@ -22,7 +22,6 @@ import { useDocumentPanelBodyMetrics } from './useDocumentPanelBodyMetrics';
 
 interface DocumentPanelBodyProps {
   answerEditorDebugId?: string;
-  answerSectionMode?: 'balanced' | 'fixed';
   documentMaxWidth: number;
   editorAppearanceKey: string;
   editorContent: string;
@@ -79,7 +78,6 @@ interface DocumentPanelBodyProps {
 
 export function DocumentPanelBody({
   answerEditorDebugId = 'answer-editor',
-  answerSectionMode = 'fixed',
   promptEditorDebugId = 'prompt-editor',
   showDocumentOutline = true,
   ...props
@@ -107,7 +105,6 @@ export function DocumentPanelBody({
   const bodyProps: DocumentPanelBodyProps = definedProps({
     ...props,
     answerEditorDebugId,
-    answerSectionMode,
     onAnswerImageLoadStateChange: handleAnswerImageLoadStateChange,
     onAnswerImageMetricsChange: setAnswerImageMetrics,
     onPromptImageLoadStateChange: handlePromptImageLoadStateChange,
