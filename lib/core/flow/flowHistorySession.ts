@@ -16,8 +16,18 @@ export type FlowHistorySession = DailyFlowSession & { queueHistory?: z.infer<typ
 
 function fingerprint(ids: string[]) { return hashTextBody(JSON.stringify(ids)); }
 
+function changedPositions(ids: string[], retained: Set<string>) {
+  const result: Array<{ id: string; index: number }> = [];
+  for (let index = 0; index < ids.length; index += 1) {
+    const id = ids[index]!;
+    if (!retained.has(id)) result.push({ id, index });
+  }
+  return result;
+}
+
 function change(before: string[], after: string[], digest = fingerprint): z.infer<typeof sequenceChange> {
-  const target = new Map(after.map((id, index) => [id, index]));
+  const target = new Map<string, number>();
+  for (let index = 0; index < after.length; index += 1) target.set(after[index]!, index);
   const retained = new Set<string>();
   let last = -1;
   // Retain the common subsequence; removed or repositioned IDs alone carry positions.
@@ -25,8 +35,8 @@ function change(before: string[], after: string[], digest = fingerprint): z.infe
     const index = target.get(id);
     if (index !== undefined && index > last) { retained.add(id); last = index; }
   }
-  const changed = (ids: string[]) => ids.flatMap((id, index) => retained.has(id) ? [] : [{ id, index }]);
-  return { removed: changed(before), added: changed(after), before: digest(before), after: digest(after) };
+  return { removed: changedPositions(before, retained), added: changedPositions(after, retained),
+    before: digest(before), after: digest(after) };
 }
 
 export function compactFlowHistorySessions(before: FlowHistorySession, after: FlowHistorySession, digest = fingerprint) {

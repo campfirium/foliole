@@ -1,11 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-const runtime = vi.hoisted(() => ({ invoke: vi.fn(), history: vi.fn() }));
+const runtime = vi.hoisted(() => ({ invoke: vi.fn() }));
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => runtime.invoke }));
-vi.mock('../shared/platform/runtime/editorOperationHistoryRuntimeRepository', () => ({
-  loadEditorOperationHistoryFromRuntime: runtime.history,
-  scheduleEditorOperationHistorySave: vi.fn()
-}));
+
 
 import { refreshWorkspaceState } from './workspaceRefreshScheduler';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
@@ -18,7 +15,6 @@ let resolveSnapshot: (value: unknown) => void;
 beforeEach(() => {
   window.localStorage.clear();
   runtime.invoke.mockReset();
-  runtime.history.mockReset().mockResolvedValue(null);
   merge.mockClear();
   useWorkspaceStore.persist.setOptions({ merge });
   useWorkspaceStore.setState(createInitialWorkspaceState());
@@ -43,7 +39,7 @@ it('joins repeated startup callers into one hydration of the singleton store', a
   await Promise.all([first, second]);
   expect(runtime.invoke.mock.calls.filter(([command]) => command === 'load_workspace_list_snapshot')).toHaveLength(1);
   expect(merge).toHaveBeenCalledTimes(1);
-  expect(runtime.history).not.toHaveBeenCalled();
+  expect(runtime.invoke.mock.calls.some(([command]) => command === 'load_editor_operation_history')).toBe(false);
   expect(useWorkspaceStore.getState().isHydrated).toBe(true);
 });
 

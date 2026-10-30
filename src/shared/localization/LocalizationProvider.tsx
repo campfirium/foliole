@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import {
   getStoredAppLanguagePreference,
@@ -10,6 +10,7 @@ import {
   type AppLocale
 } from './appLanguage';
 import { getCustomCopyOverride, useCustomCopyOverridesSnapshot } from './customCopyOverrides';
+import { LocalizationContext, type LocalizationContextValue } from './localizationContext';
 import { useSystemEntryDisplayNamesSnapshot } from './systemEntryDisplayNamesStore';
 import {
   hasTranslationCatalog,
@@ -19,17 +20,7 @@ import {
   type TranslationParams
 } from './translations';
 
-interface LocalizationContextValue {
-  languagePreference: AppLanguagePreference;
-  locale: AppLocale;
-  setLocale: (locale: AppLocale) => void;
-  setLanguagePreference: (preference: AppLanguagePreference) => void;
-  t: (key: TranslationKey, params?: TranslationParams) => string;
-}
-
 export type Translate = LocalizationContextValue['t'];
-
-const LocalizationContext = createContext<LocalizationContextValue | null>(null);
 
 interface LocalizationProviderProps {
   children: ReactNode;

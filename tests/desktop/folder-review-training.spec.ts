@@ -67,6 +67,19 @@ function readTrainedGrade(app: ElectronApplication) {
   });
 }
 
+test('explains automatic optimization and shows empty training history without controls', async ({ desktopWindow: page }) => {
+  await expectWorkspaceShell(page);
+  await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
+  await page.reload();
+  await expectWorkspaceShell(page);
+  const settings = await openSettingsCategory(page, 'Review');
+  await expect(settings.getByRole('heading', { name: 'Automatic review optimization' })).toBeVisible();
+  await expect(settings.getByText('Recent training', { exact: true })).toBeVisible();
+  await expect(settings.getByText('None yet', { exact: true })).toBeVisible();
+  await expect(settings.getByRole('button', { name: 'Optimize now', exact: true })).toHaveCount(0);
+  await page.screenshot({ path: path.resolve('.tmp/artifacts/T505/review-settings-native-final.png') });
+});
+
 test('automatically trains folder history, reports it without controls, and uses parameters on the next grade', async ({ desktopApp, desktopWindow: page }) => {
   await expectWorkspaceShell(page);
   await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
@@ -76,7 +89,7 @@ test('automatically trains folder history, reports it without controls, and uses
   await seedTrainingWorkspace(page, desktopApp);
   const before = await readTrainingState(desktopApp);
   const settings = await openSettingsCategory(page, 'Review');
-  await expect(settings.getByText(/^Recent training: Training folder/)).toBeVisible({ timeout: 60000 });
+  await expect(settings.getByText('Training folder ·', { exact: true })).toBeVisible({ timeout: 60000 });
   await expect(settings.getByRole('button', { name: 'Optimize now', exact: true })).toHaveCount(0);
   await page.screenshot({ path: path.resolve('.tmp/artifacts/T508/folder-review-idle-training.png') });
   const optimized = await readTrainingState(desktopApp);
