@@ -28,11 +28,9 @@ it.each(['soon', 'read'] as const)('reads unchanged learning facts once while pe
       reads.push([...(ids ?? [])]);
       return persistence.learningSnapshot(db, ids);
     } });
-  expect(reads.filter(ids => ids.length === 1 && ids[0] === id)).toHaveLength(action === 'soon' ? 1 : 2);
-  if (action === 'soon') {
-    const ids = reads.flat();
-    expect(ids).toHaveLength(new Set(ids).size);
-  }
+  expect(reads.filter(ids => ids.includes(id))).toHaveLength(1);
+  const ids = reads.flat();
+  expect(ids).toHaveLength(new Set(ids).size);
   const persisted = await snapshot(peer);
   expect(persisted.nodesById[id]!.reading).toEqual(after);
   if (action === 'read') expect(result.readings).toEqual([{ nodeId: id, reading: after ?? null }]);
