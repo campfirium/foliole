@@ -29,3 +29,22 @@ export async function waitForDesktopRoute(app, groupId, peerDeviceId, {
   }
   throw new Error(`Timed out waiting for desktop OS DNS-SD route: ${peerIds.join(',')}`);
 }
+
+export function loadDesktopSyncRole(app) {
+  return app.evaluate(({ app: electronApp }) => {
+    const moduleApi = process.getBuiltinModule('node:module');
+    const pathApi = process.getBuiltinModule('node:path');
+    if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
+    const mainPath = process.env.FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH
+      || pathApi.join(electronApp.getAppPath(), 'main.js');
+    const loadModule = moduleApi.createRequire(mainPath);
+    const base = pathApi.dirname(mainPath);
+    const { runWithDatabaseConnectionOwner } = loadModule(pathApi.join(base, 'database', 'connection.js'));
+    return runWithDatabaseConnectionOwner(() => ({
+      hasUpstream: loadModule(pathApi.join(base, 'sync', 'desktopSyncGroupTransport.js'))
+        .loadDesktopSyncUpstreamPeers().length > 0,
+      hasDownstream: loadModule(pathApi.join(base, 'sync', 'desktopSyncChangeSessions.js'))
+        .desktopSyncChangeSessions().hasSessions()
+    }));
+  });
+}

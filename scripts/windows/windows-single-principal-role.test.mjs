@@ -19,13 +19,19 @@ vi.mock('./windows-sync-group-recovery-action.mjs', () => ({
   invokeWindowsSyncGroupCommand: async (_page, command) => {
     if (command === 'complete_sync_group_join' || command === 'load_sync_group_overview') return { sync_group: group() };
     if (command === 'load_workspace_list_snapshot') return snapshot();
-    if (command === 'sync_companion_now') return run('manual', 'manual');
+    if (command === 'sync_companion_now') {
+      if (host.owner === 'macos') throw new Error('sync_group_peer_unavailable');
+      return run('manual', 'manual');
+    }
     if (command === 'load_desktop_sync_diagnostics') return { activity: [{
       kind: 'run_finished', trigger_reason: 'initial', result: 'completed', status: 'completed',
       run_id: 'joined', occurred_at: '2026-10-30T02:03:00Z', started_at: '2026-10-30T02:02:59Z'
     }] };
     return {};
   }
+}));
+vi.mock('../desktop/desktop-dnssd-route-observation.mjs', () => ({
+  loadDesktopSyncRole: async () => ({ hasUpstream: host.owner === 'windows', hasDownstream: false })
 }));
 vi.mock('./windows-sync-group-session-close.mjs', () => ({
   closeWindowsSyncGroupSession: async () => { host.events.push('close'); }
@@ -73,6 +79,8 @@ it.each(['macos', 'windows'])('finishes with %s owning automatic sync and keeps 
   expect(receipt.runs.automaticBeforeRestart).toEqual(owner === 'windows' ? run('automatic', 'before') : null);
   expect(receipt.runs.automaticAfterRestart).toEqual(owner === 'windows' ? run('automatic', 'after') : null);
   expect(host.events.slice(-3)).toEqual(['restarted', 'release', 'close']);
+  expect(receipt.runs.manualBeforeRestart).toEqual(owner === 'windows' ? run('manual', 'manual') : null);
+  expect(receipt.runs.manualAfterRestart).toEqual(owner === 'windows' ? run('manual', 'manual') : null);
 });
 
 it.each(['missing', 'failed', 'automatic'])('rejects an initial activity without completed initial proof: %s', async kind => {

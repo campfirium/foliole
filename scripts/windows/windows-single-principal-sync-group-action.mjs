@@ -11,10 +11,11 @@ import {
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
 import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
 import {
-  assertJoinedWindowsGroup, completedAutomatic, completedInitialRun, loadDesktopPeerConflict
+  assertJoinedWindowsGroup, completedAutomatic, completedInitialRun, loadDesktopPeerConflict, runAvailableManualSync
 } from './windows-single-principal-sync-group-contract.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { forkDesktopSyncConflict } from '../desktop/sync-group-conflict-action.mjs';
+import { loadDesktopSyncRole } from '../desktop/desktop-dnssd-route-observation.mjs';
 import { waitForSyncGroupAutomaticRun } from '../desktop/sync-group-controller-read.mjs';
 import {
   waitForDesktopProductState
@@ -152,7 +153,10 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     conflictProof = await loadDesktopPeerConflict({
       waitForState: args => waitForDesktopProductState(session.page, args)
     }, conflictNodeId);
-    manualBeforeRestart = await invokeWindowsSyncGroupCommand(session.page, 'sync_companion_now');
+    manualBeforeRestart = await runAvailableManualSync({
+      loadSyncRole: () => loadDesktopSyncRole(session.app),
+      invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args)
+    });
   } finally { await closeWindowsSyncGroupSession(session); }
   session = await openWindowsSyncGroupSession(options.paths, options.evidenceRoot);
   let restartedGroup;
@@ -165,7 +169,10 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     const restartedAutomatic = automaticResult
       ? await waitForAutomaticSync(session, automaticResult.run_id)
       : completedAutomatic(await loadSyncTriggerResult(session.app));
-    manualAfterRestart = await invokeWindowsSyncGroupCommand(session.page, 'sync_companion_now');
+    manualAfterRestart = await runAvailableManualSync({
+      loadSyncRole: () => loadDesktopSyncRole(session.app),
+      invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args)
+    });
     const afterRepeat = await waitForJourneyOrigins(session.page, ['A', 'C']);
     if (Object.keys(afterRepeat.nodesById).length !== Object.keys(beforeRepeat.nodesById).length) {
       throw new Error('Repeated Windows sync was not idempotent.');

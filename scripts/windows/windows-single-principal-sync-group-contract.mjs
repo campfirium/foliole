@@ -40,3 +40,17 @@ export function completedInitialRun(activity = []) {
   return { error: null, reason: 'initial', status: 'completed', run_id: event.run_id,
     started_at: event.started_at, finished_at: event.occurred_at };
 }
+
+export async function runAvailableManualSync(session) {
+  const role = await session.loadSyncRole();
+  if (!role.hasUpstream && !role.hasDownstream) return null;
+  return session.invoke('sync_companion_now');
+}
+
+export function assertManualCoverage(runs) {
+  for (const phase of ['manualBeforeRestart', 'manualAfterRestart']) {
+    if (!Object.values(runs).some(value => value?.[phase]?.status === 'completed')) {
+      throw new Error('Both desktops lack a completed manual action: ' + phase);
+    }
+  }
+}

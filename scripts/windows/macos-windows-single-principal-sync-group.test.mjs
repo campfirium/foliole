@@ -18,9 +18,9 @@ it('uses isolated Mac and Windows Device contracts without legacy pairing or pro
   expect(source).toContain("windowsProvider.release('consumer_complete')");
   expect(source).toContain("device: 'A'");
   expect(source).toContain("waitForOriginCount(session, 'C', 1)");
-  expect(source).toContain("session.invoke('sync_companion_now')");
+  expect(source).toContain('runAvailableManualSync(session)');
   expect(source.indexOf("windowsProvider.release('consumer_complete')"))
-    .toBeLessThan(source.indexOf("session.invoke('sync_companion_now')"));
+    .toBeLessThan(source.indexOf('runAvailableManualSync(session)'));
   expect(source).toContain("waitForProgress('conflict-fork-ready')");
   expect(source).not.toMatch(/pm.*clear|load_companion_pairing_overview|paired_authorizations/u);
   expect(source).not.toMatch(/bonjour-service|new Bonjour|\/companion\/discovery|endpointUrl/u);

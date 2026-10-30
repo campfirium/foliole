@@ -21,7 +21,7 @@ import {
 } from '../desktop/sync-group-conflict-action.mjs';
 import { createActionExecutor } from '../sync-group/multi-device-sync-action-executor.mjs';
 import { startWindowsSyncGroupProvider } from '../sync-group/multi-device-sync-windows-provider.mjs';
-import { assertAutomaticCoverage, completedAutomatic, loadDesktopPeerConflict } from './windows-single-principal-sync-group-contract.mjs';
+import { assertAutomaticCoverage, assertManualCoverage, completedAutomatic, loadDesktopPeerConflict, runAvailableManualSync } from './windows-single-principal-sync-group-contract.mjs';
 import { runMacosJoinsWindowsSyncGroup } from './macos-joins-windows-sync-group.mjs';
 
 const execute = promisify(execFile);
@@ -91,7 +91,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     await session.invoke('resume_companion_sync');
     await windowsProvider.release('consumer_complete');
     const conflict = await loadDesktopPeerConflict(session, conflictSeed.nodeId);
-    const macosManualBeforeRestart = await session.invoke('sync_companion_now');
+    const macosManualBeforeRestart = await runAvailableManualSync(session);
     await windowsProvider.waitForProgress('restarted');
     const automaticSnapshot = await session.invoke('load_workspace_list_snapshot', {
       includePdfOpenings: false
@@ -109,7 +109,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     }
     const macosAutomaticAfterRestart = macosAutomaticBeforeRestart
       ? await waitForMacosAutomaticRun(session, beforeMacosRestart?.run_id) : null;
-    const macosManualAfterRestart = await session.invoke('sync_companion_now');
+    const macosManualAfterRestart = await runAvailableManualSync(session);
     const repeated = await session.invoke('load_workspace_list_snapshot', {
       includePdfOpenings: false
     });
@@ -147,6 +147,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
       resultStatus: 'success', schemaVersion: 4, sharedRoot,
       windowsEvidenceRoot };
     assertAutomaticCoverage(receipt.runs);
+    assertManualCoverage(receipt.runs);
     const receiptPath = path.join(evidenceRoot, 'receipt.json');
     fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
     if (process.env.FOLIOLE_T152_CELL_ID) {

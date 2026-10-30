@@ -46,6 +46,7 @@ function currentHosts() {
   host.session = {
     enable: async () => ({ sync_group: group, server_status: { port: 38643 } }),
     accept: async () => ({ sync_group: group }), load: async () => ({ sync_group: group }),
+    loadSyncRole: async () => ({ hasUpstream: true, hasDownstream: false }),
     loadSyncTriggerResult: async () => null, close: vi.fn(async () => {}),
     invoke: async command => command === 'load_workspace_list_snapshot' ? snapshot
       : { run_id: 'manual', reason: 'manual', status: 'completed' },
@@ -67,7 +68,9 @@ function currentHosts() {
       resultStatus: 'success', localDevicePersisted: true,
       automaticFactId: 'C1', journeyFactId: 'retired-C', localDeviceIdentityKey: 'windows',
       runs: { automaticBeforeRestart: { run_id: 'win-before', reason: 'automatic', status: 'completed' },
-        automaticAfterRestart: { run_id: 'win-after', reason: 'automatic', status: 'completed' } }
+        automaticAfterRestart: { run_id: 'win-after', reason: 'automatic', status: 'completed' },
+        manualBeforeRestart: { run_id: 'win-manual-before', reason: 'manual', status: 'completed' },
+        manualAfterRestart: { run_id: 'win-manual-after', reason: 'manual', status: 'completed' } }
     } })
   };
 }
@@ -158,4 +161,31 @@ it.each(['manual', 'stale'])('rejects %s evidence in place of a new post-restart
   };
   await expect(runMacosWindowsSinglePrincipalSyncGroup({ repoRoot: root }))
     .rejects.toThrow('automaticAfterRestart');
+});
+
+it('does not issue an unavailable manual action on the root while the other peer proves manual completion', async () => {
+  root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-root-manual-'));
+  currentHosts();
+  host.session.loadSyncRole = async () => ({ hasUpstream: false, hasDownstream: false });
+  const invoke = host.session.invoke;
+  host.session.invoke = async command => {
+    if (command === 'sync_companion_now') throw new Error('sync_group_peer_unavailable');
+    return invoke(command);
+  };
+  const result = await runMacosWindowsSinglePrincipalSyncGroup({ repoRoot: root });
+  expect(result.receipt.runs.macos.manualBeforeRestart).toBeNull();
+  expect(result.receipt.runs.macos.manualAfterRestart).toBeNull();
+});
+
+it.each(['manualBeforeRestart', 'manualAfterRestart'])('rejects missing completed manual evidence for %s', async phase => {
+  root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-no-manual-'));
+  currentHosts();
+  host.session.loadSyncRole = async () => ({ hasUpstream: false, hasDownstream: false });
+  const finish = host.provider.finish;
+  host.provider.finish = async () => {
+    const result = await finish();
+    result.receipt.runs[phase] = null;
+    return result;
+  };
+  await expect(runMacosWindowsSinglePrincipalSyncGroup({ repoRoot: root })).rejects.toThrow(phase);
 });

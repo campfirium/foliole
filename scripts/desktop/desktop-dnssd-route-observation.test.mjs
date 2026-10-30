@@ -25,3 +25,29 @@ it('waits for the expected peer without inventing an endpoint fallback', async (
     wait: vi.fn(async () => undefined)
   })).resolves.toEqual({ peerDeviceId: 'device-b', routePresent: true });
 });
+
+it.each([[0, false], [1, false], [0, true]])('reads live upstream and downstream session availability under the database owner: %s %s', async (upstreams, downstream) => {
+  const { loadDesktopSyncRole } = await import('./desktop-dnssd-route-observation.mjs');
+  const process = await import('node:process');
+  const path = await import('node:path');
+  let owned = false;
+  const modules = {
+    'connection.js': { runWithDatabaseConnectionOwner: async action => {
+      owned = true;
+      try { return await action(); } finally { owned = false; }
+    } },
+    'desktopSyncGroupTransport.js': { loadDesktopSyncUpstreamPeers: () => {
+      if (!owned) throw new Error('Outside database owner');
+      return Array.from({ length: upstreams }, () => ({}));
+    } },
+    'desktopSyncChangeSessions.js': { desktopSyncChangeSessions: () => ({ hasSessions: () => downstream }) }
+  };
+  const builtin = process.default.getBuiltinModule.bind(process.default);
+  vi.spyOn(process.default, 'getBuiltinModule').mockImplementation(name => name === 'node:module'
+    ? { createRequire: () => file => modules[path.basename(file)] } : builtin(name));
+  try {
+    const app = { evaluate: callback => callback({ app: { getAppPath: () => '/runtime' } }) };
+    await expect(loadDesktopSyncRole(app)).resolves.toEqual({ hasUpstream: upstreams > 0, hasDownstream: downstream });
+    expect(owned).toBe(false);
+  } finally { vi.restoreAllMocks(); }
+});

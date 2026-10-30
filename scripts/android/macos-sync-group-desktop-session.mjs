@@ -11,7 +11,7 @@ import {
 } from '../desktop/macos-hidden-electron-credential-session.mjs';
 import { prepareMacosHiddenElectronRuntime } from '../desktop/macos-hidden-electron-runtime.mjs';
 import { resolveFrozenRendererUrl } from './macos-pair-sync-desktop-session.mjs';
-import { loadDesktopRoutePeerIds } from '../desktop/desktop-dnssd-route-observation.mjs';
+import { loadDesktopRoutePeerIds, loadDesktopSyncRole } from '../desktop/desktop-dnssd-route-observation.mjs';
 import {
   loadDesktopDnsSdIdentityPreflight, validateDesktopDnsSdIdentity
 } from '../desktop/desktop-dnssd-identity-preflight.mjs';
@@ -136,6 +136,7 @@ export async function openMacosSyncGroupDesktopSession({
       load: actions.load,
       loadDnsSdIdentityPreflight: (groupId) => loadDesktopDnsSdIdentityPreflight(app, groupId),
       loadRoutePeerIds: (groupId) => loadDesktopRoutePeerIds(app, groupId),
+      loadSyncRole: () => loadDesktopSyncRole(app),
       loadSyncTriggerResult: () => readMacosSyncTriggerResult(() => loadSyncTriggerResult(app)),
       processId: app.process().pid,
       page,
