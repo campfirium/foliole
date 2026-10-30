@@ -7,6 +7,7 @@ import { cn } from '@/shared/lib/utils';
 interface ReviewActionBarProps {
   ariaLabel?: string;
   className?: string;
+  layout?: 'centered' | 'full-width';
   mode?: 'study' | 'edit';
   primary: ReactNode;
   progress?: ReactNode;
@@ -20,6 +21,7 @@ interface ReviewActionBarProps {
 export function ReviewActionBar({
   ariaLabel,
   className,
+  layout = 'centered',
   mode,
   primary,
   progress,
@@ -57,6 +59,11 @@ export function ReviewActionBar({
       {progress}
       {surface === 'overlay' ? (
         <div className="flex items-center justify-center">{primary}</div>
+      ) : layout === 'full-width' ? (
+        <div className="flex w-full flex-col gap-2">
+          <div className="flex w-full items-center justify-center [&>div]:w-full">{primary}</div>
+          {secondary ? <div className="text-ui-base text-muted-foreground">{secondary}</div> : null}
+        </div>
       ) : (
         <div className="mx-auto grid w-full max-w-[var(--document-max-width)] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 pl-[var(--document-content-inline-start-padding,var(--document-content-inline-padding))] pr-[var(--document-content-inline-end-padding,var(--document-content-inline-padding))]">
           <div className="min-w-0 truncate text-ui-base font-medium text-muted-foreground">{secondary}</div>

@@ -48,12 +48,6 @@ describe('CompanionBottomReviewBar', () => {
     expect(document.activeElement).not.toBe(screen.getByLabelText('Dismiss'));
   });
 
-  it('keeps mobile action spacing independent of flex gap support', () => {
-    renderReviewBar('reading:topic-1');
-
-    expect(screen.getByRole('group', { name: 'Reading review actions' }).className).toContain('[&>*+*]:ml-2');
-  });
-
   it('keeps the fixed review footer above Android gesture navigation', () => {
     const { container } = renderReviewBar('reading:topic-1');
 

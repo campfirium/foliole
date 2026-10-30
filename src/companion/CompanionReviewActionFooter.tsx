@@ -13,10 +13,10 @@ export function CompanionReviewActionFooter(props: {
 }) {
   const t = useTranslation();
   return (
-    <footer className={`fixed inset-x-0 bottom-0 z-workspace-overlay border-t border-companion-divider bg-companion-content ${companionMobileRailClassName} pt-3 pb-6 supports-[padding-bottom:calc(0px)]:[padding-bottom:calc(1.5rem+env(safe-area-inset-bottom))]`}>
+    <footer className={`companion-review-footer fixed inset-x-0 bottom-0 z-workspace-overlay border-t border-companion-divider bg-companion-base ${companionMobileRailClassName} pt-3 pb-6 supports-[padding-bottom:calc(0px)]:[padding-bottom:calc(1.5rem+env(safe-area-inset-bottom))]`}>
       <div className="mx-auto w-full max-w-[760px]">
         <ReviewActionBar ariaLabel={t('companion.review.toolbar')}
-          className="h-auto border-0 bg-transparent px-0" key={props.reviewCardKey}
+          className="h-auto border-0 bg-transparent px-0" key={props.reviewCardKey} layout="full-width"
           mode="study" primary={props.primary} reviewInputMode="hotkeys"
           reviewItemKind={props.reviewItemKind ?? 'fsrs'} secondary={props.statusLabel ?? null} />
       </div>

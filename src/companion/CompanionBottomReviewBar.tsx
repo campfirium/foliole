@@ -1,10 +1,9 @@
 import { FsrsRevealAction, ReadingReviewActions, ReviewGradeActions } from '../shared/ui';
 
-import { companionFlexRowGap2ClassName } from './companionCssCompatibility';
 import type { BottomBarGrade } from './CompanionFloatingBars';
 import { CompanionReviewActionFooter } from './CompanionReviewActionFooter';
 
-const actionGroupClassName = `w-full ${companionFlexRowGap2ClassName}`;
+const actionGroupClassName = 'companion-review-actions w-full';
 
 export function CompanionBottomReviewBar(props: {
   hasAnswer: boolean;
@@ -36,7 +35,7 @@ export function CompanionBottomReviewBar(props: {
           <ReadingReviewActions
             isSubmitting={Boolean(props.disabled)}
             {...(props.onSoonReviewTopic ? { onRevisitReviewTopicSoon: props.onSoonReviewTopic } : {})}
-            actionButtonClassName="min-w-0 flex-1 border-border px-2"
+            actionButtonClassName="min-w-0 flex-1 px-2"
             groupClassName={actionGroupClassName}
             onReadReviewTopic={props.onReadReviewTopic}
             onPostponeReviewTopic={props.onPostponeReviewTopic}

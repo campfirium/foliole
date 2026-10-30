@@ -2,6 +2,8 @@
 :root {
   --companion-page-content-gap: 8px;
   --companion-reading-top-fade-height: 12px;
+  --companion-review-button-min-height: 44px;
+  --companion-review-action-gap: 12px;
   --companion-divider: #e8e9eb;
   --companion-list-title: #202226;
   --companion-list-body: #7b8087;
@@ -108,6 +110,14 @@ html, body, #root, #root * { scrollbar-width: none; }
 }
 
 .companion-review-surface > .companion-reading-top-chrome::after { display: none; }
+
+.companion-review-footer {
+  --app-control-border-color: rgb(var(--role-ink-rgb) / 0.22);
+}
+.companion-review-footer button { min-height: var(--companion-review-button-min-height); }
+.companion-review-footer [role='group'] { justify-content: center; }
+.companion-review-actions { gap: 0; border: 0; }
+.companion-review-actions > * + * { margin-left: var(--companion-review-action-gap); }
 
 .companion-flow-complete {
   width: 100%;
