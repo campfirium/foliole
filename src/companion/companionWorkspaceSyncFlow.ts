@@ -100,7 +100,11 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     ...(args.signal ? { signal: args.signal } : {}),
     waitForInbound: () => args.triggerReason === 'manual' || args.isManualRequested?.() === true,
     onProgress: args.setSyncProgress,
-    onStructureSynced: facts => { receivedChanges ||= facts.workspaceChanged; },
+    onStructureSynced: facts => {
+      receivedChanges ||= facts.workspaceChanged;
+      releaseAppliedRefresh();
+      if (facts.workspaceChanged) refresh();
+    },
     onDatabaseConfirmed: async confirmedAt => {
       if (args.cancelled()) throw new Error('sync_session_cancelled');
       args.setState(current => ({ ...current, last_synced_at: confirmedAt }));

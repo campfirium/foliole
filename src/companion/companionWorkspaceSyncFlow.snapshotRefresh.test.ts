@@ -33,11 +33,10 @@ it('does not reload the tree for received foreground time alone', async () => {
   expect(view.current().workspace_snapshot?.activeNodeId).toBe('original');
 });
 
-it('releases the run before a slow display refresh and preserves current metadata', async () => {
+it('does not hold up sync for a slow display refresh and preserves current metadata', async () => {
   const view = createView();
   let resolve!: (state: ReturnType<typeof createSyncState>) => void;
   syncPlatformMock.loadCompanionWorkspaceDisplayState.mockImplementation(() => {
-    expect(loadActiveCompanionSyncRun()).toBeNull();
     return new Promise(done => { resolve = done; });
   });
   receiveChanges();
