@@ -8,8 +8,20 @@ public class FolioleCompanionBootstrapPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "FolioleCompanionBootstrap"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "loadBootstrap", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "writeClipboardText", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readClipboardText", returnType: CAPPluginReturnPromise)
     ]
+
+    @objc func writeClipboardText(_ call: CAPPluginCall) {
+        guard let text = call.getString("text") else {
+            call.reject("Clipboard text is required.")
+            return
+        }
+        DispatchQueue.main.async {
+            UIPasteboard.general.string = text
+            call.resolve()
+        }
+    }
 
     @objc func readClipboardText(_ call: CAPPluginCall) {
         DispatchQueue.main.async {

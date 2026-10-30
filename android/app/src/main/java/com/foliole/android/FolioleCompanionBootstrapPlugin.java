@@ -27,6 +27,29 @@ public class FolioleCompanionBootstrapPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void writeClipboardText(PluginCall call) {
+        String text = call.getString("text");
+        if (text == null) {
+            call.reject("Clipboard text is required.");
+            return;
+        }
+        getActivity().runOnUiThread(() -> {
+            try {
+                android.content.ClipboardManager clipboard = (android.content.ClipboardManager)
+                    getContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+                if (clipboard == null) {
+                    call.reject("Text clipboard is unavailable.");
+                    return;
+                }
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("", text));
+                call.resolve();
+            } catch (Exception exception) {
+                call.reject("Could not copy text.", exception);
+            }
+        });
+    }
+
+    @PluginMethod
     public void readClipboardText(PluginCall call) {
         getActivity().runOnUiThread(() -> {
             try {

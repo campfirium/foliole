@@ -1,5 +1,5 @@
 import { CornerDownRight, Highlighter, MessageSquare, MoreHorizontal, RectangleEllipsis, X } from 'lucide-react';
-import { useRef, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 
 import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -7,6 +7,7 @@ import { appFloatingSurfaceClassName, AppButton, appInputFocusVisibleClassName }
 
 import { suppressCompanionPressClick } from './companionPressClickSuppression';
 import type { CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
+import { CompanionSelectionCopyMenu } from './CompanionSelectionCopyMenu';
 
 function ToolbarButton(props: {
   children: JSX.Element;
@@ -100,14 +101,28 @@ export function CompanionSelectionToolbarActions(props: {
   isExistingHighlight: boolean;
   isCloze?: boolean;
   disabled?: boolean | undefined;
+  getCopyText?: () => string;
+  onCopied?: () => void;
   onAddNote: () => void;
   onApply: (kind: CompanionSelectionAnnotationKind) => void;
   onDeleteExistingHighlight: () => void;
   onOpenExistingHighlight?: (() => void) | undefined;
 }) {
   const t = useTranslation();
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [copyMenu, setCopyMenu] = useState<{ left: number; top: number; text: string } | null>(null);
+  function toggleCopyMenu() {
+    if (copyMenu) { setCopyMenu(null); return; }
+    const rect = toolbarRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setCopyMenu({
+      left: Math.max(8, Math.min(rect.right - 188, window.innerWidth - 196)),
+      top: rect.bottom + 100 < window.innerHeight ? rect.bottom + 4 : Math.max(8, rect.top - 100),
+      text: props.getCopyText?.() ?? ''
+    });
+  }
   return (
-    <div className={cn(appFloatingSurfaceClassName('popover'), 'flex items-center gap-1 rounded-md px-1.5 py-1')} role="toolbar">
+    <div ref={toolbarRef} className={cn(appFloatingSurfaceClassName('popover'), 'flex items-center gap-1 rounded-md px-1.5 py-1')} role="toolbar">
       {props.isExistingHighlight ? (
         <ToolbarButton disabled={props.disabled} label={t(props.isCloze ? 'companion.selection.deleteCloze' : 'companion.selection.closeHighlight')} onClick={props.onDeleteExistingHighlight}>
           <X aria-hidden="true" size={19} strokeWidth={2} />
@@ -117,7 +132,7 @@ export function CompanionSelectionToolbarActions(props: {
           <Highlighter aria-hidden="true" size={19} strokeWidth={2} />
         </ToolbarButton>
       )}
-      {props.isCloze ? null : <ToolbarButton disabled={props.disabled} label={t('companion.selection.addComment')} onClick={props.onAddNote} testId="companion-selection-note">
+      {props.isCloze ? null : <ToolbarButton disabled={props.disabled} label={t('companion.selection.addComment')} onClick={() => { setCopyMenu(null); props.onAddNote(); }} testId="companion-selection-note">
         <MessageSquare aria-hidden="true" size={19} strokeWidth={2} />
       </ToolbarButton>}
       {props.isExistingHighlight ? null : (
@@ -128,9 +143,10 @@ export function CompanionSelectionToolbarActions(props: {
       {props.isExistingHighlight && props.onOpenExistingHighlight ? <ToolbarButton disabled={props.disabled} label={t('desktop.highlightToolbar.open')} onClick={props.onOpenExistingHighlight}>
         <CornerDownRight aria-hidden="true" size={19} strokeWidth={2} />
       </ToolbarButton> : null}
-      {props.isCloze ? null : <ToolbarButton disabled={props.disabled} label={t('companion.selection.more')} onClick={() => undefined}>
+      <ToolbarButton disabled={props.disabled} label={t('companion.selection.more')} onClick={toggleCopyMenu}>
         <MoreHorizontal aria-hidden="true" size={19} strokeWidth={2} />
-      </ToolbarButton>}
+      </ToolbarButton>
+      {copyMenu ? <CompanionSelectionCopyMenu {...copyMenu} onCopied={() => { setCopyMenu(null); props.onCopied?.(); }} /> : null}
     </div>
   );
 }

@@ -65,7 +65,8 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
       onContextMenu={(event) => event.preventDefault()} onPointerDown={(event) => event.stopPropagation()}
       style={{ left: state.left, top: state.top }}>
       <CompanionSelectionToolbarActions isExistingHighlight={isExistingHighlight} isCloze={state.existingHighlight?.kind === 'cloze'} disabled={disabled}
-        onAddNote={() => setIsNoteOpen(true)} onApply={creation.apply} onDeleteExistingHighlight={deleteExistingHighlight}
+        getCopyText={() => state.existingHighlight?.originalText ?? resolveApplyPayload(props)?.selectionText ?? ''}
+        onCopied={props.onClose} onAddNote={() => setIsNoteOpen(true)} onApply={creation.apply} onDeleteExistingHighlight={deleteExistingHighlight}
         onOpenExistingHighlight={props.onOpenExistingHighlight ? () => {
           if (!state.existingHighlight || disabled) return;
           props.onOpenExistingHighlight?.(state.existingHighlight.nodeId);

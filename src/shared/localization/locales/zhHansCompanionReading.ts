@@ -56,6 +56,8 @@ export const ZH_HANS_COMPANION_READING_TRANSLATIONS: Partial<Record<TranslationK
   'companion.reading.alternative.setAsBody': '设为正文',
   'companion.reading.alternative.setting': '正在设置...',
   'companion.reading.alternative.error': '暂时无法更新这份正文，请重试。',
+  'companion.selection.copyText': '复制文本',
+  'companion.selection.copyError': '无法复制文本，请重试。',
   'companion.selection.loading': '正在读取批注…',
   'companion.selection.loadError': '暂时无法读取这条批注。',
   'companion.selection.changesSavedRefreshError': '更改已保存，页面未能刷新。',
