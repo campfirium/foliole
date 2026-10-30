@@ -80,7 +80,6 @@ function resolveNodeMutationProps(workspaceSync: WorkspaceSync, activity: Surfac
 }
 
 function FlowFooter({ surface }: { surface: Surface }) {
-  const t = useTranslation();
   return (
     <CompanionBottomReviewBar
       hasAnswer={Boolean(surface.effectiveReviewSession.currentCard?.hasAnswer)}
@@ -95,7 +94,7 @@ function FlowFooter({ surface }: { surface: Surface }) {
       onGrade={surface.handleGradeReview}
       onRevealAnswer={surface.handleRevealAnswer}
       reviewCardKey={surface.effectiveReviewSession.currentCard?.nodeId ?? null}
-      statusLabel={surface.readingError ?? surface.reviewError ?? surface.flowError ?? (surface.flowSummary.queueCleared ? t('desktop.reviewActions.queueClear') : null)}
+      statusLabel={surface.readingError ?? surface.reviewError ?? surface.flowError}
       visible={!surface.readingActivity.editing}
     />
   );

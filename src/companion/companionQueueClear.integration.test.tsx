@@ -85,7 +85,7 @@ function Flow({ initial, only = false }: { initial: NativeCompanionWorkspaceSync
   if (card) return <>
     <p>{card.title}</p>
     <div>{surface.readableArticle?.content}</div>
-    <CompanionReviewActionFooter statusLabel={surface.flowSummary.queueCleared ? 'Queue clear' : null} primary={<>
+    <CompanionReviewActionFooter statusLabel={surface.readingError ?? surface.reviewError ?? surface.flowError} primary={<>
     <button onClick={surface.handleRevealAnswer}>Reveal</button>
     <button onClick={() => void surface.handleGradeReview(3)}>Grade</button>
     <button onClick={() => void surface.handleReadReviewTopic()}>Read</button>
@@ -96,7 +96,7 @@ function Flow({ initial, only = false }: { initial: NativeCompanionWorkspaceSync
     {...{ hasTopics: surface.flowHasTopics, onExit: () => surface.handleTabAction('recent') }} />;
 }
 
-it('keeps Queue clear visible while automatically continuing the remaining topic without changing its schedule', async () => {
+it('automatically continues the remaining topic without a footer completion status or schedule change', async () => {
   await seed('item');
   await seed('topic');
   const initial = await loadCompanionWorkspaceSyncState();
@@ -104,7 +104,8 @@ it('keeps Queue clear visible while automatically continuing the remaining topic
   await screen.findByText('item');
   fireEvent.click(screen.getByRole('button', { name: 'Reveal' }));
   fireEvent.click(screen.getByRole('button', { name: 'Grade' }));
-  await screen.findByText('Queue clear');
+  await screen.findByText('topic');
+  expect(screen.queryByText('Queue clear')).not.toBeInTheDocument();
   expect(screen.queryByText(/synced review state/i)).not.toBeInTheDocument();
   const completed = await loadCompanionDailySession();
   expect(completed?.currentNodeId).toBe('topic');
@@ -156,7 +157,8 @@ it('retains the reading until the next action selects the newly due minute item'
   await screen.findByText('item');
   fireEvent.click(screen.getByRole('button', { name: 'Reveal' }));
   fireEvent.click(screen.getByRole('button', { name: 'Grade' }));
-  await screen.findByText('Queue clear');
+  await screen.findByText('topic');
+  expect(screen.queryByText('Queue clear')).not.toBeInTheDocument();
   const completed = await loadCompanionDailySession();
   expect(completed).toMatchObject({ currentNodeId: 'topic', continueNodeId: null });
   const waiting = await openCompanionDailyFlow({ now: '2026-10-25T08:05:00.000Z', mode: 'recommended' });
