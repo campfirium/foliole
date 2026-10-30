@@ -12,6 +12,8 @@ it('creates and forks one business object only through product commands', async 
         isTitleManual: false, kind: 'topic', nodeId: 'node', parentNodeId: 'special-inbox',
         position: 0, title: 'Seed', updatedAt: '2026-08-29T00:00:00.000Z' }
     } };
+    if (command === 'load_node_document') return { nodeId: args.nodeId, content: 'Note target beta.',
+      updatedAt: '2026-08-29T00:00:00.000Z' };
     if (command === 'create_topic') return { createdNodeIds: [args.nodeId] };
     if (command === 'update_node_content') return { updatedNodeIds: [args.nodeId] };
     return [];
@@ -97,4 +99,20 @@ it('rejects loss of either fork or an alternative from another node', async () =
       invoke: async () => preview && { alternative_id: 'other', alternatives: [{ id: 'other' }], ...preview }
     } })).rejects.toThrow();
   }
+});
+
+it('preserves the hydrated body when the workspace list contains metadata only', async () => {
+  const invoke = vi.fn(async (command, args) => {
+    if (command === 'load_workspace_list_snapshot') return { nodesById: {
+      node: { nodeId: 'node', title: 'Seed', content: '', updatedAt: '2026-08-29T00:00:00.000Z' }
+    } };
+    if (command === 'load_node_document') return { nodeId: 'node', content: 'Original seed body',
+      currentVersionId: 'base', updatedAt: '2026-08-29T00:00:00.000Z' };
+    if (command === 'update_node_content') return { updatedNodeIds: [args.nodeId] };
+    throw new Error('Unexpected command');
+  });
+  await forkDesktopSyncConflict({ label: 'windows', nodeId: 'node', session: { invoke } });
+  expect(invoke).toHaveBeenCalledWith('update_node_content', expect.objectContaining({
+    nodeId: 'node', content: expect.stringMatching(/^Original seed body\n\nDesktop fork windows /u)
+  }));
 });

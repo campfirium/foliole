@@ -52,8 +52,13 @@ export async function forkDesktopSyncConflict({ label, nodeId, session }) {
   const snapshot = await session.invoke('load_workspace_list_snapshot', {
     includePdfOpenings: false
   });
-  const node = snapshot?.nodesById?.[nodeId];
-  if (!node) throw new Error('Desktop conflict seed is not visible through the product workspace.');
+  const metadata = snapshot?.nodesById?.[nodeId];
+  if (!metadata) throw new Error('Desktop conflict seed is not visible through the product workspace.');
+  const document = await session.invoke('load_node_document', { nodeId });
+  if (document?.nodeId !== nodeId || typeof document.content !== 'string') {
+    throw new Error('Desktop conflict seed document is unavailable.');
+  }
+  const node = { ...metadata, ...document };
   const updatedAt = new Date(Math.max(Date.now(), Date.parse(node.updatedAt ?? '') + 1)).toISOString();
   const result = await session.invoke('update_node_content', { ...node,
     content: `${node.content}\n\nDesktop fork ${label} ${updatedAt}`,
