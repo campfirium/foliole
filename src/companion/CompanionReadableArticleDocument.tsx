@@ -7,6 +7,7 @@ import { CompanionArticleBodyStatusFallback } from './CompanionArticleBodyStatus
 import { CompanionArticleDocument } from './CompanionArticleDocument';
 import { CompanionItemAnswer } from './CompanionItemAnswer';
 import { CompanionItemEditLayout } from './CompanionItemEditLayout';
+import { CompanionItemReviewLayout } from './CompanionItemReviewLayout';
 import {
   CompanionPdfTextVersionToolbar,
   useCompanionPdfReadingEntry
@@ -180,6 +181,8 @@ export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
       {pdfAttachmentId ? (
         <CompanionPdfTextVersionToolbar onOpenPdf={pdfReading.onOpenPdf} />
       ) : null}
+      <CompanionItemReviewLayout active={props.layout === 'review' && props.isReviewItem === true && !canEdit && props.answer != null}
+        version={`${props.readableArticle.nodeId}:${props.readableArticle.content}:${props.answer}`}>
       <CompanionItemEditLayout active={canEditAnswer} style={typographyStyle(props.readingTypographySettings)} question={
         <ReadableArticleTextDocument
         canEdit={canEdit}
@@ -200,7 +203,7 @@ export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
         editing={canEditAnswer} nodeId={props.readableArticle.nodeId}
         style={typographyStyle(props.readingTypographySettings)} onMissingResource={syncMissingAttachmentResource}
         onChange={editorState.handleRevealChange} onEditorReady={onAnswerEditorReady}
-        onDocumentInput={editorState.markRevealBufferedInput} onBlur={() => void editorState.flushPendingSave().catch(() => undefined)} />} />
+        onDocumentInput={editorState.markRevealBufferedInput} onBlur={() => void editorState.flushPendingSave().catch(() => undefined)} />} /></CompanionItemReviewLayout>
       {editorState.error ? <p className="mt-3 px-1 text-sm text-error">{editorState.error}</p> : null}
     </>
   );

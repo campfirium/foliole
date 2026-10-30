@@ -1,0 +1,21 @@
+.companion-item-review-layout { display: contents; }
+
+.companion-item-review-layout[data-active='true'] {
+  display: grid;
+  grid-template-rows: auto auto;
+}
+
+.companion-item-review-layout[data-active='true'] .companion-item-edit-question,
+.companion-item-review-layout[data-active='true'] .companion-item-edit-answer {
+  display: block;
+  min-height: 0;
+}
+
+.companion-item-review-layout[data-active='true'] .markdown-editor-host {
+  height: auto;
+  min-height: 0;
+}
+
+.companion-item-review-layout[data-active='true'] [data-companion-article-document] > div {
+  height: auto;
+}
