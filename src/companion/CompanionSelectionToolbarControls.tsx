@@ -5,6 +5,7 @@ import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { appFloatingSurfaceClassName, AppButton, appInputFocusVisibleClassName } from '../shared/ui';
 
+import { suppressCompanionPressClick } from './companionPressClickSuppression';
 import type { CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
 
 function ToolbarButton(props: {
@@ -21,9 +22,10 @@ function ToolbarButton(props: {
   function runAction() {
     if (!props.disabled) props.onClick();
   }
-  function runPressAction() {
+  function runPressAction(ownerDocument: Document) {
     if (wasRecentlyHandled()) return;
     lastPressActionAtRef.current = Date.now();
+    suppressCompanionPressClick(ownerDocument);
     runAction();
   }
   return (
@@ -40,17 +42,17 @@ function ToolbarButton(props: {
       onPointerDown={(event) => {
         event.preventDefault();
         event.stopPropagation();
-        if (event.button !== 2) runPressAction();
+        if (event.button !== 2) runPressAction(event.currentTarget.ownerDocument);
       }}
       onPointerUp={(event) => {
         event.preventDefault();
         event.stopPropagation();
-        runPressAction();
+        runPressAction(event.currentTarget.ownerDocument);
       }}
       onTouchEnd={(event) => {
         event.preventDefault();
         event.stopPropagation();
-        runPressAction();
+        runPressAction(event.currentTarget.ownerDocument);
       }}
       title={props.label}
       type="button"

@@ -1,5 +1,7 @@
 import { useRef, type MouseEvent, type PointerEvent } from 'react';
 
+import { suppressCompanionPressClick } from './companionPressClickSuppression';
+
 type TouchTap = { pointerId: number; startedAt: number; x: number; y: number };
 
 export function useCompanionTouchClick(onActivate: () => void, options: {
@@ -31,6 +33,7 @@ export function useCompanionTouchClick(onActivate: () => void, options: {
       Math.hypot(event.clientX - started.x, event.clientY - started.y) > 8 ||
       (options.preserveSelection && window.getSelection()?.isCollapsed === false)) return;
     compatibilityClickTarget.current = event.currentTarget;
+    suppressCompanionPressClick(event.currentTarget.ownerDocument);
     onActivate();
   }
 
