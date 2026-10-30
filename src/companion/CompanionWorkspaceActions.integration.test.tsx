@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -43,7 +43,7 @@ function Harness() {
 async function createFolder(title = 'Created folder') {
   fireEvent.click(screen.getByRole('button', { name: 'Create Folder' }));
   fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: title } });
-  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  fireEvent.click(within(screen.getByRole('textbox', { name: 'Name' }).closest('form')!).getByRole('button', { name: 'Done' }));
 }
 
 it('creates and renames a folder from the real menu, then undoes and redoes both writes', async () => {
@@ -53,7 +53,7 @@ it('creates and renames a folder from the real menu, then undoes and redoes both
   fireEvent.click(screen.getByRole('button', { name: 'Created folder' }));
   fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
   fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Renamed folder' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  fireEvent.click(within(screen.getByRole('textbox', { name: 'Name' }).closest('form')!).getByRole('button', { name: 'Done' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Renamed folder' })).toBeInTheDocument());
   fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Created folder' })).toBeInTheDocument());

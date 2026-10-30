@@ -154,7 +154,7 @@ function expectCaptureSheet() {
 function expectBrowseMenuSheet() {
   expect(screen.getByRole('dialog', { name: 'Browse menu' })).toBeInTheDocument();
   expect(screen.getByText('Sort')).toBeInTheDocument();
-  expect(screen.getByText('Theme')).toBeInTheDocument();
+  expect(screen.getByText('Appearance')).toBeInTheDocument();
 }
 
 describe('CompanionShell secondary surfaces', () => {

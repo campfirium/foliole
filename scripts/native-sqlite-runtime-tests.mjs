@@ -1,4 +1,6 @@
 export const controlledRuntimeSqliteTests = [
+  'src/companion/companionWorkspaceSyncFlow.progressive.integration.test.ts',
+  'src/shared/platform/companionTestReviewReset.integration.test.ts',
   'electron/database/automaticBackupForeground.integration.test.ts',
   'electron/database/bodySyncParentOrder.integration.test.ts',
   'electron/database/dailyFlowEmptyGeneration.integration.test.ts',

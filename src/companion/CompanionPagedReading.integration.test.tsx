@@ -119,7 +119,7 @@ it('leaves links, highlights, selections and long presses alone', () => {
   expect(selection.isCollapsed).toBe(false);
   tap(body, 355);
   expect(surface.scrollTop).toBe(0);
-  expect(selection.isCollapsed).toBe(true);
+  expect(selection.isCollapsed).toBe(false);
   selection.removeAllRanges();
   selection.addRange(range);
   pointer(body, 'pointerdown', 185, 500);

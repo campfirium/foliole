@@ -127,7 +127,7 @@ it('keeps an open menu attached when scrolling mounts other closed menus', async
   await waitFor(() => expect(screen.getByRole('button', { name: 'topic-100', hidden: true })).toBeInTheDocument());
   expect(target).toBeInTheDocument();
   expect(screen.getByRole('dialog')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 });
 

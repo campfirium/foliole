@@ -217,7 +217,7 @@ describe('CompanionShell review surfaces', () => {
     expect(screen.getByRole('button', { name: /Sync content and view sync status/ })).toBeInTheDocument();
     expect(screen.queryByText('Device')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Storage/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Customize Topic reading with saved styles/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Appearance/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Diagnostics/ })).toBeInTheDocument();
     expect(screen.queryByText('Connected')).not.toBeInTheDocument();
 

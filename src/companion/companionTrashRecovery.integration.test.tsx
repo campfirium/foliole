@@ -123,7 +123,7 @@ it('recovers a saved restore after refresh failure without another version', asy
   await waitFor(() => expect((database!.prepare("SELECT deleted_at FROM nodes WHERE id='topic'").get() as {deleted_at: string | null}).deleted_at).toBeNull());
   await screen.findByRole('status');
   const versions = database!.prepare('SELECT * FROM node_sync_versions').all();
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel' })); fireEvent.click(screen.getByRole('button', { name: 'Reopen' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Done' })); fireEvent.click(screen.getByRole('button', { name: 'Reopen' }));
   fireEvent.click(screen.queryByRole('button', { name: 'Refresh' }) ?? screen.getByRole('button', { name: 'Restore from Trash' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(database!.prepare('SELECT * FROM node_sync_versions').all()).toEqual(versions);
@@ -157,7 +157,7 @@ it('shares pending restores and leaves a reopened sheet open on late completion'
   expect(button).toBeDisabled();
   await waitFor(() => expect(database!.prepare("SELECT deleted_at FROM nodes WHERE id='topic'").get()).toEqual({ deleted_at: null }));
   const versions = database!.prepare('SELECT * FROM node_sync_versions').all();
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
   fireEvent.click(screen.getByRole('button', { name: 'Reopen' }));
   await act(async () => { finish(); await gate; });
   expect(screen.getByRole('dialog')).toBeInTheDocument();

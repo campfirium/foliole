@@ -4,6 +4,7 @@ import { NODE_TEXT_MAX_BYTES } from '../../lib/core/nodes/nodeTextBudget';
 import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
+import { createWorkspaceNodeActionsFixture } from './workspaceStoreNodeActions.test-support';
 
 vi.mock('../shared/ui/AppRuntimeNotice', () => ({ showAppRuntimeNotice: vi.fn() }));
 const large = '雪'.repeat(Math.floor(NODE_TEXT_MAX_BYTES / 3) + 1);
@@ -11,7 +12,7 @@ beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
   const initial = createInitialWorkspaceState(new Date('2026-10-09'));
-  const seed = initial.nodesById['node-1']!;
+  const seed = createWorkspaceNodeActionsFixture().nodesById['node-1']!;
   useWorkspaceStore.setState({ ...initial, nodeOrder: ['source', 'annotation', 'item'], nodesById: {
     ...initial.nodesById,
     source: { ...seed, id: 'source', content: 'original', title: 'Original', parentNodeId: null, bodyStatus: 'ready' },
