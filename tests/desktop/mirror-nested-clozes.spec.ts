@@ -95,15 +95,18 @@ async function createChain(page: Page, epub: boolean) {
       { source: 'Gamma', prompt: 'Initial deep prompt [...]', answer: 'Initial deep answer.' }
     ];
     for (const [index, stage] of stages.entries()) {
-      const content = debug.getNode(parentId)!.content;
+      const content = index === 0 ? debug.getNode(parentId)!.content : stages[index - 1]!.prompt;
       const from = content.indexOf(stage.source);
       if (from < 0) throw new Error('Expected selection source');
-      const id = await debug.createTextClozeChild({ parentNodeId: parentId,
-        prompt: stage.prompt, answer: stage.answer, anchorId: 'reused-per-parent',
+      // Seed the legacy hierarchy directly; new Item selections now create siblings.
+      const id = `legacy-nested-cloze-${index}`;
+      await window.electronAPI!.invoke('create_item', { nodeId: id, parentNodeId: parentId,
+        content: stage.prompt, reveal: stage.answer, kind: 'item', title: `Legacy cloze ${index}`,
+        isTitleManual: true, hideTitleHeading: false, position: index,
+        createdAt: '2026-04-08T00:00:00.000Z', updatedAt: new Date().toISOString(),
         anchorLink: { id: 'reused-per-parent', kind: 'cloze',
           locator: { from: epub && index === 1 ? 0 : from, to: epub && index === 1 ? 0 : from + stage.source.length,
             originalText: stage.source } } });
-      if (!id) throw new Error('Expected saved derived cloze');
       ids.push(id);
       parentId = id;
     }
@@ -131,7 +134,7 @@ async function exportFromPalette(app: ElectronApplication, page: Page, ownerId: 
 }
 
 for (const epub of [false, true]) {
-  test(`keeps three saved derived cloze generations through every output path, epub=${epub}`, async ({
+  test(`keeps three legacy cloze generations through every output path, epub=${epub}`, async ({
     desktopApp, desktopWindow
   }, testInfo) => {
     await desktopWindow.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));

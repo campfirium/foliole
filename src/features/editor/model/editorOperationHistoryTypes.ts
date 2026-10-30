@@ -13,7 +13,7 @@ export interface EditorAnnotationOperationSnapshot {
   kind: 'cloze' | 'highlight' | 'image-excerpt' | 'note';
   nodeId: string;
   orderIndex?: number;
-  parentNodeId: string;
+  parentNodeId: string | null;
 }
 
 export interface EditorTextOperationTarget {

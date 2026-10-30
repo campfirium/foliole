@@ -3,6 +3,7 @@ import {
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
+import { prepareSelectionDerivedNode } from '../shared/selectionDerivedNode';
 import { canSaveNodeText } from '../shared/ui/nodeTextSaveBudget';
 
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
@@ -136,18 +137,17 @@ export function createHighlightFromSelectionAction(
       if (!parentNode) {
         return state;
       }
+      const draft = prepareSelectionDerivedNode(parentNode, { content: normalizedContent,
+        ...(anchorLink ? { anchorLink } : {}), ...(imageRegions ? { imageRegions } : {}) });
       const untitledState = resolveCreatedNodeTitleState(
-        deriveNodeTitleFromContent(normalizedContent),
-        parentNodeId,
+        deriveNodeTitleFromContent(draft.content),
+        draft.parentNodeId,
         state
       );
       createdNode = createHighlightNodeRecord({
         ...(anchorId !== undefined ? { anchorId } : {}),
-        ...(anchorLink !== undefined ? { anchorLink } : {}),
-        content: normalizedContent,
-        ...(imageRegions !== undefined ? { imageRegions } : {}),
+        ...draft,
         nodeId: childNodeId,
-        parentNodeId,
         timestamp,
         title: untitledState.title
       });
@@ -195,13 +195,15 @@ export function createQAFromSelectionAction(
       if (!parentNode) {
         return state;
       }
+      const draft = prepareSelectionDerivedNode(parentNode, { content: normalizedPrompt, reveal: normalizedAnswer,
+        ...(anchorLink ? { anchorLink } : {}) });
       const created = createQANodeFromSelectionRecord({
         ...(anchorId !== undefined ? { anchorId } : {}),
-        ...(anchorLink !== undefined ? { anchorLink } : {}),
-        answerContent: normalizedAnswer,
+        ...(draft.anchorLink !== undefined ? { anchorLink: draft.anchorLink } : {}),
+        answerContent: draft.reveal ?? normalizedAnswer,
         nodeId: childNodeId,
-        parentNodeId,
-        promptContent: normalizedPrompt,
+        parentNodeId: draft.parentNodeId,
+        promptContent: draft.content,
         state,
         timestamp
       });

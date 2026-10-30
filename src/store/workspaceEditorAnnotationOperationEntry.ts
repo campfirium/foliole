@@ -9,7 +9,7 @@ import type { WorkspaceState } from './workspaceStore';
 type WorkspaceNode = Node;
 
 function getAnnotationKind(node: WorkspaceNode): EditorAnnotationOperationSnapshot['kind'] {
-  if (node.anchorLink?.kind === 'cloze') return 'cloze';
+  if (node.kind === 'item') return 'cloze';
   return node.anchorLink?.kind === 'image-excerpt' ? 'image-excerpt' : 'highlight';
 }
 
@@ -44,7 +44,7 @@ export function createEditorAnnotationCreateEntry(
       kind: getAnnotationKind(node),
       nodeId: node.id,
       orderIndex: nodeOrder.indexOf(node.id),
-      parentNodeId
+      parentNodeId: node.parentNodeId
     }))
     .filter((snapshot) => Boolean(snapshot));
   if (annotations.length === 0) {

@@ -39,8 +39,7 @@ async function prepareAnnotation(kind: 'highlight' | 'cloze') {
   const saved = await persistCompanionSelectionAnnotation({ deviceId: 'fixture', kind,
     snapshot: await library.snapshot(), payload: {
       parentNodeId: 'article', anchorId: 'read-anchor', selectionText: 'Read here', clozeContent: '# Article\n\n[...]',
-      entries: [{ anchorId: 'read-anchor', selectionText: 'Read here', clozeContent: '# Article\n\n[...]',
-        range: { from: 11, to: 20 }, locator: { from: 11, to: 20, originalText: 'Read here' } }]
+      entries: [{ locator: { from: 11, to: 20, originalText: 'Read here' } }]
     } });
   highlightId = saved!.nodeId;
   snapshot = await library.snapshot();

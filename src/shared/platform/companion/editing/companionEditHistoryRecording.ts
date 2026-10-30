@@ -26,9 +26,9 @@ export async function recordCompanionAnnotationHistory(db: DbPort, args: {
       nodeId: args.documentId, canonical: 'confirmed',
       ...(args.before ? { type: 'annotation.delete', title: 'Delete Annotation' } as const
         : { type: 'annotation.create', title: 'Create Annotation' } as const),
-      annotations: [{ nodeId: annotation.id, parentNodeId: args.documentId,
+      annotations: [{ nodeId: annotation.id, parentNodeId: annotation.parentNodeId,
         review: args.before?.review ?? annotation.review,
-        kind: annotation.anchorLink?.kind === 'cloze' ? 'cloze' : 'highlight',
+        kind: annotation.kind === 'item' ? 'cloze' : 'highlight',
         ...(args.before?.currentVersionId ? { beforeVersionId: args.before.currentVersionId } : {}),
         ...(annotation.currentVersionId ? { afterVersionId: annotation.currentVersionId } : {}) }]
     });

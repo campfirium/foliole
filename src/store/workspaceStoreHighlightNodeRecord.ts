@@ -17,11 +17,11 @@ function resolveHighlightAnchorLink(anchorId?: string, anchorLink?: NodeAnchorLi
 
 export function createHighlightNodeRecord(args: {
   anchorId?: string;
-  anchorLink?: NodeAnchorLink;
+  anchorLink?: NodeAnchorLink | null;
   content: string;
   imageRegions?: NodeImageRegionGroup[] | null;
   nodeId: string;
-  parentNodeId: string;
+  parentNodeId: string | null;
   timestamp: string;
   title: string;
 }): WorkspaceNode {
@@ -32,7 +32,7 @@ export function createHighlightNodeRecord(args: {
     title: args.title,
     hasContent: args.content.length > 0,
     content: args.content,
-    anchorLink: resolveHighlightAnchorLink(args.anchorId, args.anchorLink),
+    anchorLink: resolveHighlightAnchorLink(args.anchorId, args.anchorLink ?? undefined),
     imageRegions: normalizeImageRegions(args.imageRegions),
     hasReveal: false,
     reveal: null,
