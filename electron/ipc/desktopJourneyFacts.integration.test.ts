@@ -37,7 +37,7 @@ it('reads acceptance facts through the actual workspace command parser and SQLit
     createdAt: '2026-10-30T00:00:00.000Z', updatedAt: '2026-10-30T00:00:00.000Z'
   });
   const session = { invoke: async (command: string, args: Record<string, unknown>) =>
-    runWithDatabaseConnectionOwner(() => handleWorkspaceReadCommand(command, args)) };
+    runWithDatabaseConnectionOwner<unknown>(() => handleWorkspaceReadCommand(command, args)) };
   const actual = await loadDesktopJourneyFacts(session);
   expect(actual).toEqual(expected);
   expect(() => assertSameJourneyFacts(expected, actual)).not.toThrow();
