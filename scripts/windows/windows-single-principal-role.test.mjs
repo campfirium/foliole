@@ -6,6 +6,7 @@ const host = vi.hoisted(() => ({ root: '', owner: 'macos', opens: 0, facts: 0,
   result: null, events: [] }));
 vi.mock('./windows-multi-device-sync-readiness.mjs', () => ({ provisionWindowsAcceptanceRoot: () => {} }));
 vi.mock('./windows-sync-group-recovery-action.mjs', () => ({
+  waitForJoinedGroup: async () => ({ sync_group: group() }),
   windowsSyncGroupClientPaths: () => ({ libraryHome: path.join(host.root, 'client/library'),
     userData: path.join(host.root, 'client/user-data') }),
   openWindowsSyncGroupSession: async () => {
@@ -48,7 +49,7 @@ vi.mock('../desktop/sync-group-controller-read.mjs', () => ({
   }
 }));
 vi.mock('../acceptance/desktop-product-event.mjs', () => ({
-  waitForDesktopProductEvent: async () => {},
+  waitForDesktopProductEvent: async () => { throw new Error('Accepted join has no discovery-change event'); },
   waitForDesktopProductState: async (_page, args) => args.condition.kind === 'candidate-identity'
     ? { join_candidates: [{ group_id: group().group_id, group_tag: 'a'.repeat(32), endpoint_url: 'http://mac.test' }] }
     : args.condition.kind === 'sync-conflict-count' ? Promise.reject(new Error('Legacy conflict table is empty'))

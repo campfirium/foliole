@@ -6,7 +6,7 @@ import path from 'node:path';
 import { provisionWindowsAcceptanceRoot } from './windows-multi-device-sync-readiness.mjs';
 import {
   invokeWindowsSyncGroupCommand, openWindowsSyncGroupSession,
-  windowsSyncGroupClientPaths
+  windowsSyncGroupClientPaths, waitForJoinedGroup
 } from './windows-sync-group-recovery-action.mjs';
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
 import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
@@ -17,7 +17,7 @@ import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey
 import { forkDesktopSyncConflict } from '../desktop/sync-group-conflict-action.mjs';
 import { waitForSyncGroupAutomaticRun } from '../desktop/sync-group-controller-read.mjs';
 import {
-  waitForDesktopProductEvent, waitForDesktopProductState
+  waitForDesktopProductState
 } from '../acceptance/desktop-product-event.mjs';
 
 async function waitForJourneyOrigins(page, origins, timeoutMs = 2 * 60_000) {
@@ -68,7 +68,7 @@ async function discoverExpectedGroup(page, identity, timeoutMs = 2 * 60_000) {
 }
 
 async function completeAcceptedJoin(page, groupId, timeoutMs = 10 * 60_000) {
-  await waitForDesktopProductEvent(page, 'onSyncGroupDiscoveryChanged', { timeoutMs });
+  await waitForJoinedGroup(page, groupId, timeoutMs);
   const overview = await invokeWindowsSyncGroupCommand(page, 'complete_sync_group_join');
   return assertJoinedWindowsGroup(overview, groupId);
 }
