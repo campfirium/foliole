@@ -3,6 +3,8 @@ export const EN_COMPANION_CAPTURE_TRANSLATIONS = {
   'companion.capture.text': 'Capture text',
   'companion.capture.placeholder': 'Type a new topic',
   'companion.capture.paste': 'Paste from Clipboard',
+  'companion.capture.error.clipboardEmpty': 'No text found on the clipboard.',
+  'companion.capture.error.clipboardFailed': 'Could not read the clipboard. Allow clipboard access and try again.',
   'companion.capture.upload': 'Upload File',
   'companion.capture.close': 'Close',
   'companion.capture.refresh': 'Refresh',

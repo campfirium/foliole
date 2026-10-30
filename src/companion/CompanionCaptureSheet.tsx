@@ -17,15 +17,17 @@ import {
 import { COMPANION_ANDROID_CAPTURE_BACK_EVENT } from './companionAndroidBackEvent';
 import type { CompanionCaptureTextSaveError, CompanionCaptureTextSaveResult } from './companionCaptureTextController';
 import { companionMobileRailClassName } from './companionCssCompatibility';
+import { useCompanionCaptureClipboard } from './useCompanionCaptureClipboard';
 import { useCompanionCaptureDraft } from './useCompanionCaptureDraft';
 
-function CaptureActionRow(props: { icon: LucideIcon; label: string }) {
+function CaptureActionRow(props: { icon: LucideIcon; label: string; disabled?: boolean; busy?: boolean; onClick?(): void }) {
   const Icon = props.icon;
   return (
     <button
-      aria-disabled="true"
+      aria-busy={props.busy || undefined}
       className="flex w-full items-center gap-3 border-b border-companion-divider px-1 py-4 text-left text-foreground disabled:text-companion-text-tertiary"
-      disabled
+      disabled={props.disabled ?? !props.onClick}
+      onClick={props.onClick}
       type="button"
     >
       <Icon className="h-5 w-5" />
@@ -105,6 +107,9 @@ export function CompanionCaptureSheet(props: {
 }) {
   const t = useTranslation();
   const state = useCompanionCaptureDraft(props);
+  const clipboard = useCompanionCaptureClipboard({
+    ...props, draft: state.draft, disabled: state.isSaving || state.isSaved, onChange: state.handleDraftChange
+  });
   const inputRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (!props.open) return;
@@ -130,11 +135,12 @@ export function CompanionCaptureSheet(props: {
         }} className={`companion-sheet bottom-0 left-0 top-auto w-full translate-x-0 translate-y-0 [transform:translate(0,0)] rounded-b-none rounded-t-xl border-x-0 border-b-0 ${companionMobileRailClassName} pt-3 pb-6 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),24px)]`}>
           <div aria-hidden="true" className="mx-auto mb-3 h-1 w-9 rounded-full bg-companion-divider-strong" />
           <div className="mx-auto w-full max-w-[760px]">
-            <CaptureSheetHeader canSave={canSave} isSaving={isSaving} isSaved={isSaved} onCancel={() => handleOpenChange(false)} onSave={handleSave} />
+            <CaptureSheetHeader canSave={canSave && !clipboard.isPasting} isSaving={isSaving} isSaved={isSaved} onCancel={() => handleOpenChange(false)} onSave={handleSave} />
             <CaptureTextBox draft={draft} inputRef={inputRef} readOnly={isSaving || isSaved} onChange={handleDraftChange} />
             {errorLabel ? <p className="mt-3 text-sm text-destructive" role="alert">{errorLabel}</p> : null}
             <div className="mt-5 border-t border-companion-divider">
-              <CaptureActionRow icon={Clipboard} label={t('companion.capture.paste')} />
+              <CaptureActionRow icon={Clipboard} label={t('companion.capture.paste')} disabled={isSaving || isSaved || clipboard.isPasting} busy={clipboard.isPasting} onClick={clipboard.paste} />
+              {clipboard.error ? <p className="mt-3 text-sm text-destructive" role="alert">{t(clipboard.error === 'empty' ? 'companion.capture.error.clipboardEmpty' : 'companion.capture.error.clipboardFailed')}</p> : null}
             </div>
           </div>
         </AppDialogContent>

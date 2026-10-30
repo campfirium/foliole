@@ -7,8 +7,24 @@ public class FolioleCompanionBootstrapPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "FolioleCompanionBootstrapPlugin"
     public let jsName = "FolioleCompanionBootstrap"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "loadBootstrap", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "loadBootstrap", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "readClipboardText", returnType: CAPPluginReturnPromise)
     ]
+
+    @objc func readClipboardText(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            let pasteboard = UIPasteboard.general
+            guard pasteboard.hasStrings else {
+                call.resolve(["text": ""])
+                return
+            }
+            guard let text = pasteboard.string else {
+                call.reject("Could not read the clipboard. Allow paste access and try again.")
+                return
+            }
+            call.resolve(["text": text])
+        }
+    }
 
     @objc func loadBootstrap(_ call: CAPPluginCall) {
         call.resolve([

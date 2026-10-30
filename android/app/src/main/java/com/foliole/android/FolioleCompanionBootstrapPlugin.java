@@ -11,6 +11,27 @@ import java.time.Instant;
 public class FolioleCompanionBootstrapPlugin extends Plugin {
 
     @PluginMethod
+    public void readClipboardText(PluginCall call) {
+        getActivity().runOnUiThread(() -> {
+            try {
+                android.content.ClipboardManager clipboard = (android.content.ClipboardManager)
+                    getContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+                if (clipboard == null) {
+                    call.reject("Text clipboard is unavailable.");
+                    return;
+                }
+                android.content.ClipData clip = clipboard.getPrimaryClip();
+                CharSequence text = clip == null || clip.getItemCount() == 0 ? null : clip.getItemAt(0).getText();
+                com.getcapacitor.JSObject result = new com.getcapacitor.JSObject();
+                result.put("text", text == null ? "" : text.toString());
+                call.resolve(result);
+            } catch (Exception exception) {
+                call.reject("Could not read the clipboard.", exception);
+            }
+        });
+    }
+
+    @PluginMethod
     public void setFlowGestureRegion(PluginCall call) {
         Boolean enabled = call.getBoolean("enabled");
         Double width = call.getDouble("edgeWidth");
