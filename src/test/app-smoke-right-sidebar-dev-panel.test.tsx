@@ -1,16 +1,29 @@
 import { render, screen } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import './app-smoke.shared';
 
 import { App } from '../app/App';
+import type { Node } from '../features/nodes/model/nodeTypes';
 import { APP_SETTINGS_STORAGE_KEYS } from '../shared/config/appSettings';
+import { getRuntimeInvoke, isRuntimeInvokeAvailable } from '../shared/platform/runtimeInvoke';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
-import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
+import { createNode, createSmokeRuntimeInvoke, FIXED_TIMESTAMP } from './app-smoke.shared';
 
 const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 const RELEASE_GATE_WAIT_OPTIONS = { timeout: RELEASE_GATE_TEST_TIMEOUT_MS };
+
+function withRuntimeLearning(node: Node) {
+  vi.mocked(isRuntimeInvokeAvailable).mockReturnValue(true);
+  const invoke = createSmokeRuntimeInvoke();
+  const implementation = invoke.getMockImplementation()!;
+  invoke.mockImplementation((command, payload) => command === 'load_node_learning'
+    ? Promise.resolve([{ nodeId: node.id, reading: node.reading ?? null, review: node.review ?? null }])
+    : implementation(command, payload));
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+  return node;
+}
 
 it('renders topic scheduling from reading cadence instead of FSRS fields', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   useWorkspaceStore.setState((state) => ({
@@ -18,7 +31,7 @@ it('renders topic scheduling from reading cadence instead of FSRS fields', { met
     activeNodeId: 'topic-dev',
     nodeOrder: ['topic-dev'],
     nodesById: {
-      'topic-dev': createNode({
+      'topic-dev': withRuntimeLearning(createNode({
         id: 'topic-dev',
         title: 'Ignored title',
         content: '# Prompt',
@@ -34,7 +47,7 @@ it('renders topic scheduling from reading cadence instead of FSRS fields', { met
           repetitionCount: 3,
           state: 'active'
         }
-      })
+      }))
     }
   }));
 
@@ -51,7 +64,7 @@ it('renders topic scheduling from reading cadence instead of FSRS fields', { met
   expect(screen.getByText('Initial interval')).toBeInTheDocument();
   expect(screen.getByText('Current interval')).toBeInTheDocument();
   expect(screen.getByText('Reading growth factor')).toBeInTheDocument();
-  expect(screen.getByText('3')).toBeInTheDocument();
+  expect(await screen.findByText('3')).toBeInTheDocument();
   expect(screen.queryByText('Memory')).not.toBeInTheDocument();
   expect(screen.queryByText('Retention')).not.toBeInTheDocument();
   expect(screen.queryByText(/Default/)).not.toBeInTheDocument();
@@ -64,7 +77,7 @@ it('renders item scheduling from FSRS review data', async () => {
     activeNodeId: 'item-dev',
     nodeOrder: ['item-dev'],
     nodesById: {
-      'item-dev': createNode({
+      'item-dev': withRuntimeLearning(createNode({
         id: 'item-dev',
         title: 'Review prompt',
         content: '# Prompt',
@@ -83,7 +96,7 @@ it('renders item scheduling from FSRS review data', async () => {
           reps: 5,
           lapses: 1
         }
-      })
+      }))
     }
   }));
 
@@ -98,7 +111,7 @@ it('renders item scheduling from FSRS review data', async () => {
   expect(screen.getByRole('heading', { name: 'History' })).toBeInTheDocument();
   expect(screen.getByText('88.0%')).toBeInTheDocument();
   expect(screen.getAllByText('P2')).toHaveLength(2);
-  expect(screen.getByText('7.50 d')).toBeInTheDocument();
+  expect(await screen.findByText('7.50 d')).toBeInTheDocument();
   expect(screen.getByText('Review count')).toBeInTheDocument();
   expect(screen.getAllByText('5')).toHaveLength(2);
   expect(screen.getByText('Lapses')).toBeInTheDocument();
