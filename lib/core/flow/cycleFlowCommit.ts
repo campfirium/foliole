@@ -85,6 +85,7 @@ async function replayOperation(db: DailyFlowStore, stored: Awaited<ReturnType<Da
       ? await db.learningSnapshot([stored.session.currentNodeId, ...readings.map(value => value.nodeId)].filter((id): id is string => Boolean(id)))
       : stored.session.currentNodeId ? await db.learningSnapshot([stored.session.currentNodeId]) : null;
     return { ...(previous.source_session_json ? { sourceSession: JSON.parse(previous.source_session_json) as DailyFlowSession } : {}), session: stored.session, replayed: true, mutationTimestamp: args.now,
+      ...(!args.navigation ? { mode: stored.mode as ReviewSessionMode } : {}),
       learning: snapshot ? currentFlowLearning(snapshot, stored.session.currentNodeId) : undefined,
       ...(readings ? { readings: readings.map(value => ({ nodeId: value.nodeId,
         reading: snapshot?.nodesById[value.nodeId]?.reading ?? null })) } : {}),
