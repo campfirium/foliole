@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ChevronLeft, EllipsisVertical, ListTree, Pencil, RefreshCw, X, type LucideIcon } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronLeft, EllipsisVertical, ListTree, Pen, RefreshCw, X, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -83,6 +83,7 @@ function ReadingTopChrome(props: {
   onExit(): void;
   onOpenAlternative?: () => void;
   onOpenOutline(): void;
+  review: boolean;
   title: string;
 }) {
   const t = useTranslation();
@@ -92,10 +93,10 @@ function ReadingTopChrome(props: {
         {props.controlsVisible ? (
           <>
             <div className="flex items-center">
-              <ReadingChromeButton icon={props.actions ? X : ChevronLeft} label={t(props.actions ? 'companion.review.exit' : 'companion.reading.exit')} onClick={props.onExit} testId="companion-reading-exit" />
+              <ReadingChromeButton icon={props.review ? X : ChevronLeft} label={t(props.review ? 'companion.review.exit' : 'companion.reading.exit')} onClick={props.onExit} testId="companion-reading-exit" />
               <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />
             </div>
-            {!props.actions ? <span className="pointer-events-none absolute left-1/2 w-[calc(100%-12.25rem)] max-w-[52vw] -translate-x-1/2 truncate text-center text-sm font-medium text-foreground sm:max-w-sm">
+            {!props.review ? <span className="pointer-events-none absolute left-1/2 w-[calc(100%-12.25rem)] max-w-[52vw] -translate-x-1/2 truncate text-center text-sm font-medium text-foreground sm:max-w-sm">
               {props.title}
             </span> : null}
             <div className="ml-auto flex items-center">
@@ -138,10 +139,11 @@ export function ReadingChrome(props: {
   return (
     <>
       <ReadingTopChrome
-        actions={props.actionsAtTop ? <ReadingActionsControls {...props} /> : null}
+        actions={<ReadingActionsControls {...props} />}
         controlsVisible={controlsVisible}
         onExit={props.onExit}
         onOpenOutline={props.onOpenOutline}
+        review={props.actionsAtTop === true}
         title={props.title}
         {...(props.onOpenAlternative ? { onOpenAlternative: props.onOpenAlternative } : {})}
       />
@@ -149,7 +151,6 @@ export function ReadingChrome(props: {
         <div className={`mx-auto flex max-w-[760px] items-center justify-end ${companionFlexRowGap2ClassName}`}>
           {controlsVisible ? <>
             {props.navigation ? <ReadingNavigationControls navigation={props.navigation} /> : null}
-            <ReadingActionsControls {...props} />
           </> : <ChromeSpacer />}
         </div>
       </div> : null}
@@ -160,7 +161,7 @@ export function ReadingChrome(props: {
 function ReadingActionsControls(props: { canEditContent?: boolean; onToggleContentEditing?: () => void; onOpenActions(): void }) {
   const t = useTranslation();
   return <>
-    {props.canEditContent ? <ReadingChromeButton icon={Pencil} label={t('companion.reading.editContent')}
+    {props.canEditContent ? <ReadingChromeButton icon={Pen} label={t('companion.reading.editContent')}
       onClick={props.onToggleContentEditing} testId="companion-reading-edit" /> : null}
     <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />
   </>;
@@ -168,7 +169,7 @@ function ReadingActionsControls(props: { canEditContent?: boolean; onToggleConte
 
 function ReadingNavigationControls({ navigation }: { navigation: CompanionReadingNavigationControls }) {
   const t = useTranslation();
-  return <div className="mr-auto flex items-center">
+  return <div className="flex w-full items-center justify-between">
     <ReadingChromeButton icon={ArrowUp} label={t('companion.reading.previousTopic')}
       disabled={navigation.disabled || !navigation.previous} onClick={navigation.previous} />
     <ReadingChromeButton icon={ArrowDown} label={t('companion.reading.nextTopic')}

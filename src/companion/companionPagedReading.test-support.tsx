@@ -27,7 +27,7 @@ export function openReadingMode() {
 export function chooseMode(name: 'Paged scroll' | 'Continuous scroll') {
   openReadingMode();
   fireEvent.click(screen.getByRole('button', { name }));
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  fireEvent.keyDown(screen.getByRole('dialog', { name: 'Appearance' }), { key: 'Escape' });
 }
 
 export function pointer(target: HTMLElement, type: string, x: number, y = 300, id = 1) {

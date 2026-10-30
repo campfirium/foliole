@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ReadingChrome } from './CompanionReadingChrome';
@@ -15,6 +15,21 @@ function renderChrome() {
 }
 
 describe('ReadingChrome', () => {
+  it.each([false, true])('keeps edit and more in the top toolbar for review=%s', (actionsAtTop) => {
+    const edit = vi.fn();
+    const more = vi.fn();
+    render(<ReadingChrome actionsAtTop={actionsAtTop} canEditContent title="Topic"
+      onExit={vi.fn()} onOpenOutline={vi.fn()} onOpenActions={more} onToggleContentEditing={edit} />);
+    const exit = screen.getByRole('button', { name: 'Exit' });
+    const top = within(exit.closest('.companion-reading-top-chrome') as HTMLElement);
+    fireEvent.click(top.getByRole('button', { name: 'Edit content' }), { detail: 1 });
+    fireEvent.click(top.getByRole('button', { name: 'More reading actions' }), { detail: 1 });
+    expect(edit).toHaveBeenCalledTimes(1);
+    expect(more).toHaveBeenCalledTimes(1);
+    expect(top.getByRole('button', { name: 'Exit' })).toBeVisible();
+    if (!actionsAtTop) expect(top.getByText('Topic')).toBeVisible();
+  });
+
   it('groups reading navigation and centers the title in the toolbar', () => {
     renderChrome();
 
@@ -26,10 +41,6 @@ describe('ReadingChrome', () => {
     expect(navigation?.className).not.toContain('gap-');
     expect(screen.getByText('Long reading title').className).toContain('left-1/2');
     expect(screen.getByText('Long reading title').className).toContain('text-center');
-
-    const bottomRow = screen.getByRole('button', { name: 'More reading actions' }).parentElement;
-    expect(bottomRow?.className).toContain('gap-2');
-    expect(bottomRow?.className).toContain('[&>*+*]:ml-2');
   });
 
   it('keeps secondary reading actions out of the narrow top chrome', () => {
@@ -54,9 +65,6 @@ describe('ReadingChrome', () => {
     expect(screen.getByRole('button', { name: 'Exit' }).className).not.toContain('ring-companion-divider');
     expect(screen.getByText('Long reading title').className).toContain('text-center');
     expect(screen.getByText('Long reading title').closest('div')?.parentElement?.className).toContain('px-2.5');
-    expect(screen.getByRole('button', { name: 'More reading actions' }).parentElement?.className).toContain('justify-end');
-    expect(screen.getByRole('button', { name: 'More reading actions' }).parentElement?.parentElement?.className).toContain('bottom-0');
-    expect(screen.getByRole('button', { name: 'More reading actions' }).parentElement?.parentElement?.className).not.toContain('border-t');
   });
 });
 
