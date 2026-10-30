@@ -21,7 +21,7 @@ import {
 } from '../desktop/sync-group-conflict-action.mjs';
 import { createActionExecutor } from '../sync-group/multi-device-sync-action-executor.mjs';
 import { startWindowsSyncGroupProvider } from '../sync-group/multi-device-sync-windows-provider.mjs';
-import { assertAutomaticCoverage, assertManualCoverage, completedAutomatic, loadDesktopPeerConflict, runAvailableManualSync } from './windows-single-principal-sync-group-contract.mjs';
+import { assertAutomaticCoverage, assertManualCoverage, readCompletedAutomatic, loadDesktopPeerConflict, runAvailableManualSync } from './windows-single-principal-sync-group-contract.mjs';
 import { runMacosJoinsWindowsSyncGroup } from './macos-joins-windows-sync-group.mjs';
 
 const execute = promisify(execFile);
@@ -85,7 +85,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     const macosAutomaticFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'macos-automatic-fact'), session });
     await windowsProvider.waitForProgress('conflict-fork-ready');
-    const macosAutomaticBeforeRestart = completedAutomatic(await session.loadSyncTriggerResult());
+    const macosAutomaticBeforeRestart = await readCompletedAutomatic(session);
     await session.invoke('pause_companion_sync');
     await forkDesktopSyncConflict({ label: 'macos', nodeId: conflictSeed.nodeId, session });
     await session.invoke('resume_companion_sync');

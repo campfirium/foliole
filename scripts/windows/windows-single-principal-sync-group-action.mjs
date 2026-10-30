@@ -11,7 +11,7 @@ import {
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
 import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
 import {
-  assertJoinedWindowsGroup, completedAutomatic, completedInitialRun, loadDesktopPeerConflict, runAvailableManualSync
+  assertJoinedWindowsGroup, completedAutomatic, completedInitialRun, readCompletedAutomatic, loadDesktopPeerConflict, runAvailableManualSync
 } from './windows-single-principal-sync-group-contract.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { forkDesktopSyncConflict } from '../desktop/sync-group-conflict-action.mjs';
@@ -137,7 +137,10 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     });
     await waitForJourneyOrigins(session.page, ['A', 'C']);
     await waitForJourneyOriginCount(session.page, 'A', 2);
-    automaticResult = completedAutomatic(await loadSyncTriggerResult(session.app));
+    automaticResult = await readCompletedAutomatic({
+      loadSyncTriggerResult: () => loadSyncTriggerResult(session.app),
+      invoke: command => invokeWindowsSyncGroupCommand(session.page, command)
+    });
     report(options.reportProgress, 'automatic-converged');
     const conflictNodeId = await conflictSeed(session.page);
     await invokeWindowsSyncGroupCommand(session.page, 'pause_companion_sync');

@@ -189,3 +189,26 @@ it.each(['manualBeforeRestart', 'manualAfterRestart'])('rejects missing complete
   };
   await expect(runMacosWindowsSinglePrincipalSyncGroup({ repoRoot: root })).rejects.toThrow(phase);
 });
+
+it('retains a completed automatic round when a later skipped attempt replaces the last result', async () => {
+  root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-overwritten-automatic-'));
+  currentHosts();
+  host.session.loadSyncTriggerResult = vi.fn().mockResolvedValueOnce({
+    reason: 'automatic', status: 'skipped', run_id: 'skipped'
+  }).mockResolvedValueOnce(automatic('before-close')).mockResolvedValue(automatic('after'));
+  const invoke = host.session.invoke;
+  host.session.invoke = async command => command === 'load_desktop_sync_diagnostics'
+    ? { activity: [{ kind: 'run_finished', trigger_reason: 'automatic', status: 'completed',
+      result: 'completed', run_id: 'saved-before', started_at: '2026-10-30T03:15:21Z',
+      occurred_at: '2026-10-30T03:15:22Z' }] } : invoke(command);
+  const finish = host.provider.finish;
+  host.provider.finish = async () => {
+    const result = await finish();
+    result.receipt.runs.automaticBeforeRestart = null;
+    result.receipt.runs.automaticAfterRestart = null;
+    return result;
+  };
+  const result = await runMacosWindowsSinglePrincipalSyncGroup({ repoRoot: root });
+  expect(result.receipt.runs.macos.automaticBeforeRestart.run_id).toBe('saved-before');
+  expect(result.receipt.runs.macos.automaticAfterRestart.run_id).toBe('after');
+});

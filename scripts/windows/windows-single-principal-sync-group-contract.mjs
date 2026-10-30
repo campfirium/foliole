@@ -13,6 +13,17 @@ export function completedAutomatic(result, previousRunId) {
     && result.run_id !== previousRunId ? result : null;
 }
 
+export async function readCompletedAutomatic(session) {
+  const latest = completedAutomatic(await session.loadSyncTriggerResult());
+  if (latest) return latest;
+  const diagnostics = await session.invoke('load_desktop_sync_diagnostics');
+  const event = diagnostics?.activity?.find(value => value.kind === 'run_finished'
+    && value.trigger_reason === 'automatic' && value.status === 'completed'
+    && value.result === 'completed' && value.run_id && value.started_at && value.occurred_at);
+  return event ? { error: null, reason: 'automatic', status: 'completed', run_id: event.run_id,
+    started_at: event.started_at, finished_at: event.occurred_at } : null;
+}
+
 export function assertAutomaticCoverage(runs) {
   for (const phase of ['automaticBeforeRestart', 'automaticAfterRestart']) {
     if (!Object.values(runs).some(value => completedAutomatic(value?.[phase],
