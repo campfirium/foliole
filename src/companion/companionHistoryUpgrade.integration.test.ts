@@ -54,7 +54,8 @@ async function legacyHistory(kind: 'reading' | 'grade' = 'reading') {
   // Version 102 predates synchronized Flow facts and their relational tables.
   app.db.exec("DELETE FROM sync_object_state WHERE object_type='daily_flow'");
   for (const table of ['daily_flow_projection_facts', 'daily_flow_lists', 'daily_flow_fact_rows',
-    'daily_flow_sync_projection', 'daily_flow_sync_facts']) app.db.exec(`DROP TABLE ${table}`);
+    'daily_flow_sync_projection', 'daily_flow_sync_facts', 'daily_flow_local_operation_rows',
+    'daily_flow_local_operation_state']) app.db.exec(`DROP TABLE ${table}`);
   app.db.pragma('user_version=102');
   app.session = middle;
   return history;
@@ -88,6 +89,8 @@ it.each(['reading', 'grade'] as const)('upgrades existing valid %s undo and redo
   const after = structuredClone(app.session);
   await app.reopen();
   await app.open();
+  expect(app.session.readTopicCount).toBe(after.readTopicCount);
+  expect(app.session.reviewedItemCount).toBe(after.reviewedItemCount);
   await app.replay('undo');
   expect(app.session.currentNodeId).toBe(cursor.currentNodeId);
   await app.replay('redo');
