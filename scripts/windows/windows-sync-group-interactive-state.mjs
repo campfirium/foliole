@@ -76,7 +76,7 @@ export function validateSyncGroupInteractiveProgress(progress, action) {
     return { factId: progress.factId, milestone: progress.milestone };
   }
   if (action === 'single-principal-sync-group'
-      && ['requested', 'automatic-converged', 'restarted'].includes(progress?.milestone)
+      && ['requested', 'automatic-converged', 'conflict-fork-ready', 'restarted'].includes(progress?.milestone)
       && progress.factId === 'single-principal-sync-group') {
     return { factId: progress.factId, milestone: progress.milestone };
   }

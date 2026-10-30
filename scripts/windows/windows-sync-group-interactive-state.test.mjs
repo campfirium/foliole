@@ -6,7 +6,8 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import {
-  readJson, syncGroupInteractivePaths, writeJsonAtomic, writeSyncGroupInteractiveFatal
+  readJson, syncGroupInteractivePaths, validateSyncGroupInteractiveProgress,
+  writeJsonAtomic, writeSyncGroupInteractiveFatal
 } from './windows-sync-group-interactive-state.mjs';
 
 it('publishes a terminal result when the interactive worker fails outside its action catch', () => {
@@ -23,4 +24,13 @@ it('publishes a terminal result when the interactive worker fails outside its ac
   });
   expect(readJson(paths.status)).toEqual(readJson(paths.result));
   fs.rmSync(root, { force: true, recursive: true });
+});
+
+it('accepts the joiner conflict checkpoint without permitting unknown milestones or other identities', () => {
+  const progress = { factId: 'single-principal-sync-group', milestone: 'conflict-fork-ready' };
+  expect(validateSyncGroupInteractiveProgress(progress, 'single-principal-sync-group')).toEqual(progress);
+  expect(() => validateSyncGroupInteractiveProgress({ ...progress, milestone: 'unknown' },
+    'single-principal-sync-group')).toThrow('invalid Sync Group interactive progress');
+  expect(() => validateSyncGroupInteractiveProgress({ ...progress, factId: 'another-fact' },
+    'single-principal-sync-group')).toThrow('invalid Sync Group interactive progress');
 });
