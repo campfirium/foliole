@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import process from 'node:process';
 import { Buffer } from 'node:buffer';
 import { afterEach, expect, it, vi } from 'vitest';
 
@@ -16,8 +17,9 @@ function write(file, text) {
   fs.writeFileSync(file, text);
 }
 
-function fixture() {
-  const repoRoot = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-headers-'));
+function fixture(driveStyle = false) {
+  const prefix = driveStyle && process.platform !== 'win32' ? 'windows-headers-D:' : 'windows-headers-';
+  const repoRoot = fs.mkdtempSync(path.resolve('.tmp/artifacts', prefix));
   roots.push(repoRoot);
   const version = '45.1.0';
   const source = path.join(repoRoot, 'source');
@@ -69,6 +71,17 @@ it('rejects corrupted transfers before replacing any existing header cache', asy
   options.executeScp.mockClear();
   await expect(transferWindowsElectronHeaders(options)).rejects.toThrow('checksum mismatch');
   expect(options.executeScp).not.toHaveBeenCalled();
+});
+
+it('imports a drive-style checkout without treating the archive as a remote device', async () => {
+  const { options, home } = fixture(true);
+  await transferWindowsElectronHeaders(options);
+  const run = (command, args, settings) => args[1].includes(':')
+    ? { status: 2, stderr: 'Archive name selects a remote device' }
+    : spawnSync(command, args, settings);
+  const root = importWindowsElectronHeaders({ ...options, home, run });
+  expect(fs.readFileSync(path.join(root, 'include/node/node.h'), 'utf8')).toBe('verified node.h');
+  expect(fs.readFileSync(path.join(root, 'x64/node.lib'), 'utf8')).toBe('verified Windows x64 library');
 });
 
 it('refuses missing offline resources without downloading or rebuilding', () => {

@@ -62,8 +62,8 @@ export function importWindowsElectronHeaders({ repoRoot, version, home = os.home
   fs.rmSync(staging, { recursive: true, force: true });
   fs.mkdirSync(staging, { recursive: true });
   try {
-    const extracted = run('tar', ['-xzf', files[1].file, '--strip-components=1', '-C', staging],
-      { encoding: 'utf8', windowsHide: true });
+    const extracted = run('tar', ['-xzf', path.basename(files[1].file), '--strip-components=1', '-C', staging],
+      { cwd: path.dirname(files[1].file), encoding: 'utf8', windowsHide: true });
     if (extracted.status !== 0) throw new Error(`Electron headers extraction failed: ${extracted.stderr}`);
     for (const file of ['common.gypi', 'config.gypi', 'node.h']) {
       if (!fs.existsSync(path.join(staging, 'include', 'node', file))) {
