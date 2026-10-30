@@ -11,14 +11,15 @@ import { selectCanonicalReviewQueueSource } from '../shared/workspaceCanonicalSe
 import { patchWorkspaceRecord } from '../shared/workspaceRecordPatch';
 import { createTestWorkspaceState } from '../test/workspaceStateTestSupport';
 
+import { toRendererBoundaryNode } from './workspaceRendererBoundary';
 import { withWorkspaceRendererBoundary } from './workspaceStoreRendererBoundary';
 
 function createNode(id: string, specialKindRead: () => void): Node {
-  const node: Node = {
+  const node = toRendererBoundaryNode({
     content: '', createdAt: '2026-09-22T00:00:00.000Z', hasContent: true,
     hasReveal: false, id, kind: 'topic', parentNodeId: null, reading: null,
     reveal: null, review: null, title: id, updatedAt: '2026-09-22T00:00:00.000Z'
-  };
+  }, false);
   Object.defineProperty(node, 'specialKind', {
     configurable: true,
     get: specialKindRead
