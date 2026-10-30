@@ -48,7 +48,8 @@ final class FolioleCompanionCaptureNavigation {
         long deadline = System.nanoTime() + timeoutMs * 1_000_000L;
         while (System.nanoTime() < deadline) {
             if (hasTestId(instrumentation, webView, BROWSE_READY)) return BROWSE_READY;
-            if (hasTestId(instrumentation, webView, "companion-review-action-read")) {
+            if (hasTestId(instrumentation, webView, "companion-article-document")
+                || hasTestId(instrumentation, webView, "companion-review-action-read")) {
                 instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
             }
             if (hasTestId(instrumentation, webView, READING_EXIT)) return READING_EXIT;
