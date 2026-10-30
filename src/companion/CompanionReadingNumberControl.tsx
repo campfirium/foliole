@@ -13,7 +13,9 @@ export function CompanionReadingNumberControl(props: {
 }) {
   const t = useTranslation();
   const change = (direction: number) => props.onChange(
-    Number(Math.min(props.max, Math.max(props.min, props.value + direction * props.step)).toFixed(2))
+    Number(Math.min(props.max, Math.max(props.min, (direction > 0
+      ? Math.floor(props.value / props.step + 1e-8) + 1
+      : Math.ceil(props.value / props.step - 1e-8) - 1) * props.step)).toFixed(2))
   );
   const buttonClass = 'flex min-h-11 min-w-11 items-center justify-center rounded-md text-foreground '
     + 'active:bg-companion-subtle/80 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 '

@@ -118,13 +118,13 @@ describe('ReadingFontSheet', () => {
     );
 
     expect(screen.queryByText('Reading font controls are not available on Android yet.')).not.toBeInTheDocument();
-    expect(screen.getByText('17px')).toBeInTheDocument();
+    expect(screen.getByText('16px')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Increase Size' }));
 
     expect(onChange).toHaveBeenCalledWith({
       ...DEFAULT_READING_TYPOGRAPHY_SETTINGS,
-      fontSize: 18
+      fontSize: 17
     });
   });
 });

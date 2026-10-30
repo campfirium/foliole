@@ -28,26 +28,26 @@ afterEach(() => window.localStorage.clear());
 it('finely adjusts the rendered text and restores exact values after remounting', async () => {
   const view = mountArticle();
   openAppearance();
-  expect(screen.getByText('17px')).toBeInTheDocument();
-  expect(screen.getByText('1.62')).toBeInTheDocument();
+  expect(screen.getByText('16px')).toBeInTheDocument();
+  expect(screen.getByText('1.6')).toBeInTheDocument();
   for (const name of ['Increase Size', 'Increase Line height', 'Serif', 'High']) choose(name);
   expect(loadReadingTypographySettings()).toEqual({
-    fontSize: 18, fontFamily: 'serif', lineHeight: 1.67, contrast: 'high'
+    fontSize: 17, fontFamily: 'serif', lineHeight: 1.7, contrast: 'high'
   });
   const document = view.container.querySelector('[data-reading-font-size]') as HTMLElement;
-  expect(document.style.getPropertyValue('--content-panel-font-size')).toBe('18px');
-  expect(document.style.getPropertyValue('--content-panel-line-height')).toBe('1.67');
+  expect(document.style.getPropertyValue('--content-panel-font-size')).toBe('17px');
+  expect(document.style.getPropertyValue('--content-panel-line-height')).toBe('1.7');
   view.unmount();
   mountArticle();
   openAppearance();
-  expect(screen.getByText('18px')).toBeInTheDocument();
-  expect(screen.getByText('1.67')).toBeInTheDocument();
+  expect(screen.getByText('17px')).toBeInTheDocument();
+  expect(screen.getByText('1.7')).toBeInTheDocument();
   for (const name of ['Serif', 'High']) {
     expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
   }
   choose('Decrease Size');
   choose('Decrease Line height');
-  expect(loadReadingTypographySettings()).toMatchObject({ fontSize: 17, lineHeight: 1.62 });
+  expect(loadReadingTypographySettings()).toMatchObject({ fontSize: 16, lineHeight: 1.6 });
   await act(async () => undefined);
 });
 
@@ -65,7 +65,7 @@ it('retains confirmed settings on quota failure and allows retry', async () => {
     used += key.length + storage.getItem(key)!.length;
   }
   storage.setItem('quota', 'x'.repeat(5_000_000 - used - 'quota'.length));
-  choose('Increase Line height');
+  choose('Serif');
   expect(screen.getByText('16px')).toBeInTheDocument();
   expect(screen.getByRole('alert')).toHaveTextContent('Could not save reading settings. Your previous settings are still in use.');
   expect(loadReadingTypographySettings()).toEqual(confirmed);
@@ -73,11 +73,26 @@ it('retains confirmed settings on quota failure and allows retry', async () => {
   mountArticle();
   openAppearance();
   expect(screen.getByText('16px')).toBeInTheDocument();
-  choose('Increase Line height');
+  choose('Serif');
   expect(screen.getByRole('alert')).toBeInTheDocument();
   storage.removeItem('quota');
-  choose('Increase Line height');
+  choose('Serif');
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  expect(loadReadingTypographySettings().lineHeight).toBe(1.35);
+  expect(loadReadingTypographySettings().fontFamily).toBe('serif');
+  await act(async () => undefined);
+});
+
+
+it('aligns an existing fractional line height to tenths when adjusted', async () => {
+  window.localStorage.setItem('foliole-companion-reading-typography-settings',
+    JSON.stringify({ fontSize: 19, lineHeight: 1.67, fontFamily: 'sans', contrast: 'default' }));
+  mountArticle();
+  openAppearance();
+  choose('Increase Line height');
+  expect(screen.getByText('1.7')).toBeInTheDocument();
+  expect(loadReadingTypographySettings().lineHeight).toBe(1.7);
+  choose('Decrease Line height');
+  expect(screen.getByText('1.6')).toBeInTheDocument();
+  expect(loadReadingTypographySettings().lineHeight).toBe(1.6);
   await act(async () => undefined);
 });
