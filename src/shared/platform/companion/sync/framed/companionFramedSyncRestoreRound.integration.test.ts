@@ -23,12 +23,24 @@ const native = vi.hoisted(() => ({ db: null as DbPort | null, files: null as Fra
 vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
   postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign
 } }));
-vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({ getIosCompanionDatabaseOwner: () => ({
-  databasePath: '/fixture',
-  read: (task: (db: DbPort) => unknown) => task(native.db!),
-  readSnapshot: (task: (db: DbPort) => unknown) => task(native.db!),
-  runWriter: (task: (db: DbPort) => unknown) => task(native.db!)
-}) }));
+vi.mock('../../runtime/iosCompanionDatabaseBootstrap', async () => {
+  const { CompanionNodePriorityState } = await import('../../runtime/companionNodePriorityState');
+  const priorities = new CompanionNodePriorityState();
+  const owner = {
+    databasePath: '/fixture',
+    get nodePriorityRevision() { return priorities.revision; },
+    readNodePriorities: priorities.read.bind(priorities),
+    readNodeIndex: priorities.readIndex.bind(priorities),
+    readNodeOrder: priorities.readOrder.bind(priorities),
+    readNodeMetadata: priorities.readMetadata.bind(priorities),
+    refreshNodePriorities: (scope: Parameters<typeof priorities.refresh>[1], db = native.db!) => priorities.refresh(db, scope),
+    clearNodePriorities: () => priorities.clear(),
+    read: (task: (db: DbPort) => unknown) => task(native.db!),
+    readSnapshot: (task: (db: DbPort) => unknown) => task(native.db!),
+    runWriter: (task: (db: DbPort) => unknown) => task(native.db!)
+  };
+  return { getIosCompanionDatabaseOwner: () => owner };
+});
 vi.mock('../../runtime/companionFramedPayloadBudget.js', () => ({ companionFramedFileOwner: () => ({
   library_key: '/fixture', generation_id: 'generation'
 }) }));
