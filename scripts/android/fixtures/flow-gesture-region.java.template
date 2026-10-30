@@ -1,0 +1,74 @@
+package com.foliole.android;
+
+import android.graphics.Rect;
+import android.view.View;
+import java.util.List;
+
+public class FlowGestureHarness {
+    static View host = new View();
+    static View web = new View();
+    static FolioleFlowGestureRegion region = new FolioleFlowGestureRegion(host, web, 2);
+
+    static boolean reserved(int x, int y) {
+        return contains(host, x, y) || contains(web, x, y);
+    }
+
+    static boolean contains(View view, int x, int y) {
+        for (Rect rect : view.getSystemGestureExclusionRects()) {
+            if (rect.contains(x - view.x, y - view.y)) return true;
+        }
+        return false;
+    }
+
+    static void check(boolean value, String message) {
+        if (!value) throw new AssertionError(message);
+    }
+
+    public static void main(String[] args) {
+        host.layout(0, 0, 800, 1600);
+        web.layout(0, 0, 800, 1600);
+        region.set(true, 48, 160, 400);
+        switch (args[0]) {
+            case "selection":
+                check(reserved(2, 800), "Flow edge was never reserved");
+                // Chromium clears its View's exclusion list when selection handles disappear.
+                web.setSystemGestureExclusionRects(List.of(new Rect(0, 0, 0, 0)));
+                check(reserved(2, 800) && reserved(798, 800),
+                    "WebView clearing selection erased Flow edge ownership");
+                check(!reserved(2, 100), "System back outside the central band was excluded");
+                check(!reserved(150, 800), "The reserved edge exceeded the agreed width");
+                break;
+            case "layout":
+                // Window insets and rotation move and resize the WebView after registration.
+                host.layout(20, 30, 820, 1630);
+                web.layout(30, 70, 430, 870);
+                web.setSystemGestureExclusionRects(List.of());
+                check(reserved(32, 470) && reserved(428, 470), "Flow edges did not follow layout");
+                check(!reserved(32, 800), "The old central band survived the resize");
+                break;
+            case "late-layout":
+                region.set(false, 48, 160, 400);
+                web.layout(0, 0, 0, 0);
+                region.set(true, 48, 160, 400);
+                web.layout(0, 0, 800, 1600);
+                web.setSystemGestureExclusionRects(List.of());
+                check(reserved(2, 800), "Registration before first layout lost the Flow edge");
+                break;
+            case "disable":
+            case "destroy":
+                Rect handle = new Rect(200, 300, 220, 340);
+                web.setSystemGestureExclusionRects(List.of(handle));
+                if (args[0].equals("disable")) region.set(false, 48, 160, 400);
+                else region.dispose();
+                check(!reserved(2, 800), "Flow edge was not released");
+                check(contains(web, 210, 320), "Releasing Flow erased WebView selection ownership");
+                web.layout(0, 0, 800, 1800);
+                check(!reserved(2, 900), "A layout callback reserved the edge after exit");
+                check(host.listeners.isEmpty() && web.listeners.isEmpty(), "Layout listeners leaked");
+                break;
+            default:
+                throw new AssertionError("Unknown scenario");
+        }
+        System.out.println("passed");
+    }
+}

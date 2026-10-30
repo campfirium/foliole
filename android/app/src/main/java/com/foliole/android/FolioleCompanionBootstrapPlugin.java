@@ -9,6 +9,7 @@ import java.time.Instant;
 
 @CapacitorPlugin(name = "FolioleCompanionBootstrap")
 public class FolioleCompanionBootstrapPlugin extends Plugin {
+    private FolioleFlowGestureRegion flowGestureRegion;
 
     @PluginMethod
     public void setAppearance(PluginCall call) {
@@ -83,22 +84,19 @@ public class FolioleCompanionBootstrapPlugin extends Plugin {
             return;
         }
         getActivity().runOnUiThread(() -> {
-            android.webkit.WebView view = getBridge().getWebView();
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                java.util.List<android.graphics.Rect> regions = new java.util.ArrayList<>();
-                if (enabled) {
-                    float scale = view.getWidth() / viewportWidth.floatValue();
-                    int edge = Math.min(view.getWidth() / 2, Math.round(width.floatValue() * scale));
-                    int band = Math.min(view.getHeight(), Math.min(Math.round(height.floatValue() * scale),
-                        Math.round(200 * getContext().getResources().getDisplayMetrics().density)));
-                    int top = (view.getHeight() - band) / 2;
-                    regions.add(new android.graphics.Rect(0, top, edge, top + band));
-                    regions.add(new android.graphics.Rect(view.getWidth() - edge, top, view.getWidth(), top + band));
-                }
-                view.setSystemGestureExclusionRects(regions);
+            if (flowGestureRegion == null) {
+                flowGestureRegion = new FolioleFlowGestureRegion(
+                    getActivity().findViewById(android.R.id.content), getBridge().getWebView(),
+                    getContext().getResources().getDisplayMetrics().density);
             }
+            flowGestureRegion.set(enabled, width, height, viewportWidth);
             call.resolve();
         });
+    }
+
+    @Override protected void handleOnDestroy() {
+        if (flowGestureRegion != null) getActivity().runOnUiThread(flowGestureRegion::dispose);
+        super.handleOnDestroy();
     }
 
     @PluginMethod

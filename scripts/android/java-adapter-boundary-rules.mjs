@@ -92,6 +92,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncParticipationStore.java',
       'FolioleCompanionWorkgroupHttp.java',
       'FolioleCompanionWebView.java',
+      'FolioleFlowGestureRegion.java',
       'FolioleRemoteImageFiles.java',
       'FolioleAttachmentMaintenanceFiles.java',
       'FolioleAttachmentBlockFiles.java',
