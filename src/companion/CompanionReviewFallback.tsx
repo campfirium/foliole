@@ -9,19 +9,18 @@ export function CompanionReviewFallback(props: {
   error: string | null;
   hasSnapshot: boolean;
   hasTopics: boolean;
-  canContinueReading: boolean;
-  onContinueReading(): void;
+  onExit(): void;
 }) {
   const t = useTranslation();
   if (props.error) return <AppErrorState description={props.error} title={t('companion.review.refreshError')} />;
   const queueClear = props.hasSnapshot && props.hasTopics && (props.summary.queueCleared ?? true);
   if (queueClear) return (
     <StudySessionCompleteSummary {...props.summary} layout="companion" createdItemCount={0} createdTopicCount={0}
-      reviewSessionMode="recommended" action={props.canContinueReading ? (
-        <AppButton onClick={props.onContinueReading} size="md" variant="subtle">
-          {t('desktop.reviewActions.continueReading')}
+      reviewSessionMode="recommended" action={(
+        <AppButton onClick={props.onExit} size="md">
+          {t('companion.review.exitFlow')}
         </AppButton>
-      ) : null} />
+      )} />
   );
   return (
     <section className="companion-page-start px-1 pb-6 text-sm leading-6 text-companion-text-secondary">

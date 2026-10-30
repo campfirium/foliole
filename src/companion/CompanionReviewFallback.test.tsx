@@ -15,10 +15,10 @@ const summary = {
   reviewElapsedMs: 8 * 60_000
 };
 
-it('shows the actual Flow results and continues reading from the completion surface', () => {
-  const continueReading = vi.fn();
+it('shows the actual Flow results and always offers an exit from the completion surface', () => {
+  const exit = vi.fn();
   renderWithLocalization(<CompanionReviewFallback summary={summary} error={null} hasSnapshot hasTopics
-    canContinueReading onContinueReading={continueReading} />);
+    onExit={exit} />);
 
   expect(screen.getByText('Reviewed')).toBeInTheDocument();
   expect(screen.getByText('12')).toBeInTheDocument();
@@ -26,26 +26,27 @@ it('shows the actual Flow results and continues reading from the completion surf
   expect(screen.getByText('Read')).toBeInTheDocument();
   expect(screen.getByText('2')).toBeInTheDocument();
   expect(screen.getByText('7 min')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Continue reading' }));
-  expect(continueReading).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole('button', { name: 'Exit Flow' }));
+  expect(exit).toHaveBeenCalledOnce();
 });
 
 it('reports zero activity honestly when Flow was opened with an already clear queue', () => {
   renderWithLocalization(<CompanionReviewFallback summary={{ ...summary, readTopicCount: 0,
     reviewedItemCount: 0, readingElapsedMs: 0, reviewElapsedMs: 0 }} error={null} hasSnapshot hasTopics
-    canContinueReading={false} onContinueReading={vi.fn()} />);
+    onExit={vi.fn()} />);
 
   expect(screen.getAllByText('0')).toHaveLength(2);
   expect(screen.queryByText('Just now')).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Continue reading' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Exit Flow' })).toBeInTheDocument();
 });
 
 it('uses consistent Chinese labels for completed reading and review results', async () => {
   renderWithLocalization(<LocalizationProvider initialLanguagePreference="zh-Hans">
     <CompanionReviewFallback summary={summary} error={null} hasSnapshot hasTopics
-      canContinueReading onContinueReading={vi.fn()} />
+      onExit={vi.fn()} />
   </LocalizationProvider>);
 
   expect(await screen.findByText('已复习')).toBeInTheDocument();
   expect(await screen.findByText('已阅读')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '退出 Flow' })).toBeInTheDocument();
 });

@@ -140,6 +140,7 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.tabs.shortcut.syncConnection': 'Sync Connection',
   'companion.review.learn': 'Learn',
   'companion.review.onlyReview': 'Only Review',
+  'companion.review.exitFlow': 'Exit Flow',
   'companion.review.exit': 'Exit',
   'companion.review.toolbar': 'Companion review toolbar',
   'companion.reading.textVersion': 'Text version',

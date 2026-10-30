@@ -201,14 +201,15 @@ const fsrsReviewCard = {
 describe('CompanionShell review surfaces', () => {
   const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 
-  it('shows Queue clear and continues Flow instead of falling back to reading content', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
+  it('shows Queue clear and exits Flow without continuing reading', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
     const surface = reviewSurface(null);
     const refresh = await renderShellWithSurface(surface);
 
     expect(screen.getByText('Queue clear')).toBeInTheDocument();
     expect(screen.queryByTestId('companion-bottom-tab-bar')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Continue reading' }));
-    expect(surface.handleContinueReading).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Exit Flow' }));
+    expect(surface.handleTabAction).toHaveBeenCalledWith('recent');
+    expect(surface.handleContinueReading).not.toHaveBeenCalled();
     expect(screen.queryByText(/Synced review state/)).not.toBeInTheDocument();
     expect(screen.queryByText('Readable article')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('companion-top-bar-left-action'));

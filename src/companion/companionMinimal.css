@@ -121,15 +121,30 @@ html, body, #root, #root * { scrollbar-width: none; }
 
 .companion-flow-complete {
   width: 100%;
-  max-width: 520px;
-  margin: 0 auto;
-  padding-top: 18vh;
-  padding-bottom: 24px;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 0;
 }
+.companion-flow-complete > div { max-width: 20rem; }
 .companion-flow-complete h2 {
+  text-align: center;
   margin: 0;
   color: var(--role-content-text);
   font-size: 24px;
   font-weight: 500;
   line-height: 1.25;
 }
+
+.companion-flow-complete .study-session-summary-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 16px;
+}
+.companion-flow-complete .study-session-summary-time { grid-column: 2; }
+.companion-flow-complete-action {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+}
+.companion-flow-complete-action button { min-height: var(--companion-review-button-min-height); }

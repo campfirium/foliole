@@ -79,6 +79,7 @@ function Flow({ initial, only = false }: { initial: NativeCompanionWorkspaceSync
   const loaders = useCompanionWorkspaceLoaders({ state, setState, setReadableArticle, setError });
   const surface = useCompanionArticleSurface({ ...createWorkspaceSync(state.workspace_snapshot), ...actions, ...loaders, state },
     createFloatingBar(), undefined, { isOnlyReviewOpen: only });
+  if (surface.activeAction === 'recent') return <p>Browsing</p>;
   const card = surface.reviewSession.currentCard;
   if (!surface.flowReady) return <p>Loading</p>;
   if (card) return <>
@@ -93,8 +94,7 @@ function Flow({ initial, only = false }: { initial: NativeCompanionWorkspaceSync
   </>;
   if (only) return <CompanionOnlyReviewContent hasSnapshot isAnswerRevealed={false} reviewSession={surface.onlyReviewSession} />;
   return <CompanionReviewFallback hasSnapshot summary={surface.flowSummary} error={error ?? surface.flowError}
-    {...{ hasTopics: surface.flowHasTopics, canContinueReading: surface.canContinueReading,
-      onContinueReading: surface.handleContinueReading }} />;
+    {...{ hasTopics: surface.flowHasTopics, onExit: () => surface.handleTabAction('recent') }} />;
 }
 
 it('keeps Queue clear visible while automatically continuing the remaining topic without changing its schedule', async () => {
@@ -137,6 +137,12 @@ it('shows Queue clear for a library whose items are scheduled later without offe
   await screen.findByText('Queue clear');
   expect(screen.queryByRole('button', { name: 'Continue reading' })).not.toBeInTheDocument();
   expect(screen.queryByText(/sync|snapshot/i)).not.toBeInTheDocument();
+  const beforeExit = await loadCompanionDailySession();
+  const learningBeforeExit = database.prepare('SELECT * FROM node_review').all();
+  fireEvent.click(screen.getByRole('button', { name: 'Exit Flow' }));
+  await screen.findByText('Browsing');
+  expect(await loadCompanionDailySession()).toEqual(beforeExit);
+  expect(database.prepare('SELECT * FROM node_review').all()).toEqual(learningBeforeExit);
 });
 
 it('retains the reading until the next action selects the newly due minute item', async () => {
@@ -187,8 +193,8 @@ it('keeps Only Review clear of reading topics after its last grade', async () =>
 
 it('shows refresh failures separately from Queue clear', () => {
   render(<CompanionReviewFallback summary={{ completedAt: null, sessionStartedAt: null,
-    readTopicCount: 0, readingElapsedMs: 0, reviewedItemCount: 0, reviewElapsedMs: 0 }} hasSnapshot hasTopics canContinueReading={false}
-    onContinueReading={() => {}} error="Could not refresh the saved action." />);
+    readTopicCount: 0, readingElapsedMs: 0, reviewedItemCount: 0, reviewElapsedMs: 0 }} hasSnapshot hasTopics
+    onExit={() => {}} error="Could not refresh the saved action." />);
   expect(screen.getByRole('alert')).toHaveTextContent('Could not refresh the saved action.');
   expect(screen.queryByText('Queue clear')).not.toBeInTheDocument();
 });

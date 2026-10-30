@@ -139,6 +139,7 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.tabs.shortcut.syncConnection': '同步连接',
   'companion.review.learn': '学习',
   'companion.review.onlyReview': '仅复习',
+  'companion.review.exitFlow': '退出 Flow',
   'companion.review.exit': '退出',
   'companion.review.toolbar': '移动端复习工具栏',
   'companion.reading.textVersion': '文本版本',

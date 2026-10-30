@@ -52,13 +52,13 @@ function SummaryRow({
 }) {
   const t = useTranslation();
   return (
-    <div className="grid min-h-12 grid-cols-[minmax(6rem,1fr)_auto_auto] items-baseline gap-x-5">
+    <div className="study-session-summary-row grid min-h-12 grid-cols-[minmax(6rem,1fr)_auto_auto] items-baseline gap-x-5">
       <div className="text-sm font-normal text-muted-foreground">{label}</div>
       <div className="text-right">
         <span className="text-[26px] font-medium leading-none text-foreground/90">{count}</span>
         <span className="ml-2 text-sm text-muted-foreground">{formatUnit(count, unit, t)}</span>
       </div>
-      <div className="min-w-20 text-right text-sm font-normal text-muted-foreground">
+      <div className="study-session-summary-time min-w-20 text-right text-sm font-normal text-muted-foreground">
         {elapsedMs === undefined ? null : formatElapsedMs(elapsedMs, t)}
       </div>
     </div>
@@ -107,7 +107,7 @@ export function StudySessionCompleteSummary({
             </div>
           ) : null}
         </div>
-        {action ? <div className="mt-8 border-t border-[var(--role-content-line)] pt-6">{action}</div> : null}
+        {action ? <div className={layout === 'companion' ? 'companion-flow-complete-action' : 'mt-8 border-t border-[var(--role-content-line)] pt-6'}>{action}</div> : null}
       </div>
     </div>
   );
