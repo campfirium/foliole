@@ -62,6 +62,8 @@
     "dist/scripts/agent-control/foliole-agent-routes.mjs",
     "dist/scripts/agent-control/foliole-agent-runtime-paths.mjs",
     "dist/src/shared/config/**/*",
+    "dist/src/shared/lib/documents/documentPreparation.js",
+    "dist/src/shared/lib/documents/documentRetentionCache.js",
     "package.json",
     "!dist/electron/**/*.test.js",
     "!dist/electron/**/*.test.helpers.js",
