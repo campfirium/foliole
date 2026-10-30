@@ -91,7 +91,7 @@ async function exchangeAttachmentPass(host: RequestSyncAttachmentHost, exchange:
     stage.name === 'pull' ? local.keys.length > 0 : stage.name === 'push' ? remoteNeeds.size > 0
       : Boolean(local.pdfTextKeys?.length)), () => result.blocks + pendingKeys.size);
   if (!pendingScan && !pendingKeys.size && !text.pending) retryFirstRounds.delete(roundKey);
-  return { ...result, pending: pendingScan ? null : pendingKeys.size + text.pending, verifying: verificationPending(),
+  return { ...result, pending: pendingScan ? null : pendingKeys.size + text.pending, verifying: parsingPending || verificationPending(),
     yielded: parsingPending || verificationPending() || (result.blocks > 0 && (pendingScan || (pendingKeys.size > 0 && shouldYield()))) };
 }
 

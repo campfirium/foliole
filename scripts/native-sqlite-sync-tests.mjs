@@ -47,6 +47,7 @@ export const controlledSyncSqliteTests = [
   'src/shared/platform/companion/sync/framed/companionAttachmentFinalization.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionAttachmentSegments.integration.test.ts',
   'electron/sync/desktopAttachmentThroughput.integration.test.ts',
+  'electron/sync/desktopAttachmentParsingProgress.integration.test.ts',
   'electron/sync/requestSyncMissingHistoricalBody.integration.test.ts',
   'electron/sync/requestSyncUnreadyOverwrite.integration.test.ts',
   'lib/core/database/foregroundSourceMigration.integration.test.ts',
