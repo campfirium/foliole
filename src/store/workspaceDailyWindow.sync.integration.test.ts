@@ -19,7 +19,9 @@ it('evaluates timed reading against each local day interval', async () => {
   const before = await open(a, '2026-10-26T21:00:00.000Z', { ...settings(a), dayWindow });
   expect(before.currentNodeId).toBeNull();
   await exchange(a, b);
-  expect((await open(b, '2026-10-26T21:00:00.000Z')).currentNodeId).toBe('waiting');
+  const receivingSettings = { ...settings(b), dayWindow: {
+    start: '2026-10-26T20:00:00.000Z', end: '2026-10-27T20:00:00.000Z' } };
+  expect((await open(b, '2026-10-26T21:00:00.000Z', receivingSettings)).currentNodeId).toBe('waiting');
   expect((await open(a, '2026-10-27T07:00:00.000Z')).currentNodeId).toBe('waiting');
   expect((await open(b, '2026-10-27T07:00:00.000Z')).currentNodeId).toBe('waiting');
   expect(await readView(a, '2026-10-27T07:00:00.000Z')).toEqual(await readView(b, '2026-10-27T07:00:00.000Z'));

@@ -12,6 +12,7 @@ import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSc
 import { migrateCycleFlow } from '../../lib/core/database/cycleFlowMigration.js';
 import { DAILY_FLOW_SCHEMA } from '../../lib/core/database/dailyFlowSchema.js';
 import { readLegacyCycleProjection } from '../../lib/core/flow/cycleFlowLegacy.js';
+import { createDailyFlowDayWindow } from '../../lib/core/flow/dailyFlowDayWindow.js';
 import { dailyFlowHistoryCommand } from '../../lib/core/flow/dailyFlowHistory.js';
 import { commitDailyFlow, openDailyFlow } from '../../lib/core/flow/dailyFlowService.js';
 import { readDailyFlow } from '../../lib/core/flow/dailyFlowStorage.js';
@@ -37,7 +38,7 @@ function fixture() {
     totalNodeCount: 2, isAnswerRevealed: false, sessionStartedAt: now, currentItemStartedAt: now,
     readTopicCount: 0, reviewedItemCount: 0, readingElapsedMs: 0, reviewElapsedMs: 0, completedAt: null };
   const after = { ...before, currentNodeId: 'b', queueNodeIds: ['b'], soonNodeIds: ['a'], readTopicCount: 1 };
-  sqlite.prepare('INSERT INTO daily_flow_state VALUES (1,?,7,?,?,?,0,?)').run('2026-10-25T20:00:00.000Z',
+  sqlite.prepare('INSERT INTO daily_flow_state VALUES (1,?,7,?,?,?,0,?)').run(createDailyFlowDayWindow(now, settings.newDayStartsAtHour).start,
     JSON.stringify(settings), 'reading-only', JSON.stringify(after), now);
   for (const [index, id] of ['a', 'b', 'waiting'].entries()) sqlite.prepare(
     'INSERT INTO daily_flow_entries VALUES (?,?,?,?)').run(id, index, id === 'b' ? 0 : null, id === 'a' ? 0 : null);
