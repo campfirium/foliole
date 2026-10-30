@@ -12,13 +12,24 @@ extension FoliolePhysicalSyncGroupUITests {
         tapButton(named: "Edit content", in: app, timeout: 30)
         let editor = app.textViews["Topic body"]
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public topic editor is unavailable on Fri.")
-        editor.tap()
+        let originalBody = editor.value as? String ?? ""
+        editor.typeKey(.downArrow, modifierFlags: .command)
         prepareLatinKeyboard(in: app)
         typeOnSoftwareKeyboard("\n\n\(text)", in: app)
         let submittedBody = editor.value as? String ?? ""
         XCTAssertTrue(submittedBody.contains(existingText), "Editing must preserve the existing text.")
         XCTAssertTrue(submittedBody.contains(text), "Editing must receive the complete new text.")
-        tapButton(named: "Done", in: app, timeout: 30)
+        XCTAssertEqual(submittedBody, originalBody + "\n\n" + text,
+                       "Appending must preserve the complete original body and add text at its end.")
+        let keyboardDone = app.toolbars["Toolbar"].buttons["Done"]
+        XCTAssertTrue(keyboardDone.waitForExistence(timeout: 15), "The topic keyboard cannot be dismissed.")
+        keyboardDone.tap()
+        let done = app.webViews.firstMatch.buttons.matching(
+            NSPredicate(format: "label IN %@", ["Done", "完成"])
+        ).firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 30), "The topic editing Done action is unavailable.")
+        done.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        waitForDisappearance(editor, timeout: 30, message: "Done must leave topic editing mode.")
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", text))
             .firstMatch.waitForExistence(timeout: 30), "Fri did not visibly save the requested edit.")
         revealReadingChrome(in: app, matching: text)
