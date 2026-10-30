@@ -92,7 +92,7 @@ async function runPreparedRound(host: RequestSyncDatabaseHost, input: RoundInput
     reportObjectError: input.reportObjectError,
     watchLocalChanges: watchSyncPriorityRequests
   };
-  if (!overwriteId) return completeDatabaseRound(host, port, input.signal, { received, sent, workspaceChanged, peerRound: input.peerRound });
+  if (!overwriteId) return completeDatabaseRound(host, port, input.signal, { received, sent, workspaceChanged: () => workspaceChanged, peerRound: input.peerRound });
   let result = await withCompanionForegroundTimeMaintenance(async () => {
     await host.write(db => prepareSyncGroupOverwrite(db, progress));
     return runRequestSyncOverwriteRound(host, progress, port, input.signal);
@@ -107,11 +107,11 @@ async function runPreparedRound(host: RequestSyncDatabaseHost, input: RoundInput
 }
 
 async function completeDatabaseRound(host: RequestSyncDatabaseHost, port: RequestSyncDatabaseRoundPort, signal: AbortSignal | undefined,
-  scope: { received: Set<string>; sent: Set<string>; workspaceChanged: boolean; peerRound: RequestSyncPeerRound | undefined }) {
+  scope: { received: Set<string>; sent: Set<string>; workspaceChanged(): boolean; peerRound: RequestSyncPeerRound | undefined }) {
   const result = await runRequestSyncDatabaseRound(port, signal);
   if (result.complete) {
     if (scope.peerRound) scope.peerRound.databaseConfirmed = true;
     await host.databaseRoundCompleted?.();
   }
-  return { ...result, received: [...scope.received], sent: [...scope.sent], workspaceChanged: scope.workspaceChanged };
+  return { ...result, received: [...scope.received], sent: [...scope.sent], workspaceChanged: scope.workspaceChanged() };
 }
