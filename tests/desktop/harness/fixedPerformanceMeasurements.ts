@@ -13,6 +13,7 @@ export const fixedBody = (index: number) => `Benchmark article ${index}\n${'Stab
 
 export async function seed(session: DesktopSession, size: number) {
   const databases = await session.electronApp.evaluate(async () => {
+    await new Promise<void>((resolve) => setImmediate(resolve));
     const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
     const connection = require(`${process.cwd()}/dist/electron/database/connection.js`);
     return connection.runWithDatabaseConnectionOwner(() => connection.openDatabaseConnection().sqlite.pragma('database_list'));
@@ -43,6 +44,7 @@ export async function resources(session: DesktopSession) {
       renderer: await cdp.send('Performance.getMetrics'),
       processes: await session.electronApp.evaluate(({ app }) => app.getAppMetrics()),
       database: await session.electronApp.evaluate(async () => {
+        await new Promise<void>((resolve) => setImmediate(resolve));
         const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
         const connection = require(`${process.cwd()}/dist/electron/database/connection.js`);
         return connection.runWithDatabaseConnectionOwner(() => {

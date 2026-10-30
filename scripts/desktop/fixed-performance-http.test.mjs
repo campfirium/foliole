@@ -6,7 +6,7 @@ import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { setInterval, clearInterval } from 'node:timers';
 
-import { expect, test } from 'vitest';
+import { afterAll, expect, test } from 'vitest';
 
 import { parseBenchmarkOptions } from './fixed-performance-summary.mjs';
 
@@ -79,16 +79,20 @@ async function round(size, sample, evidence) {
   }
 }
 
-for (const size of options.sizes) test(`fixed loopback HTTP sync at ${size} articles`, { meta: { calibratedMs: Math.max(240_000, size * 200) } }, async () => {
+for (const size of options.sizes) {
   const evidence = { size, repeats: options.repeats, boundary: 'production desktop receive; loopback HTTP; synthetic text only',
     samples: [], completed: false };
-  try {
-    for (let sample = 0; sample < options.repeats; sample++) {
-      const result = { sample, correct: false };
-      evidence.samples.push(result);
-      await round(size, sample, result);
-    }
-    evidence.completed = true;
-  } catch (error) { evidence.failure = String(error); throw error; }
-  finally { await writeFile(path.join(output, `http-${size}.json`), JSON.stringify(evidence, null, 2)); }
-});
+  afterAll(async () => {
+    evidence.completed = evidence.samples.length === options.repeats && evidence.samples.every((sample) => sample.correct);
+    await writeFile(path.join(output, `http-${size}.json`), JSON.stringify(evidence, null, 2));
+  });
+  for (let sample = 0; sample < options.repeats; sample++) {
+    test(`fixed loopback HTTP sync at ${size} articles, sample ${sample + 1} of ${options.repeats}`,
+      { meta: { calibratedMs: Math.max(80_000, size * 200 / options.repeats) } }, async () => {
+        const result = { sample, correct: false };
+        evidence.samples.push(result);
+        try { await round(size, sample, result); }
+        catch (error) { evidence.failure = String(error); throw error; }
+      });
+  }
+}
