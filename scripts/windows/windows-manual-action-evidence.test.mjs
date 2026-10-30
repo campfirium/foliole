@@ -21,3 +21,33 @@ it('rejects a successful overview response without any new completed synchroniza
     command === 'load_desktop_sync_diagnostics' ? { activity: [] } : { sync_group: { group_id: 'group' } } };
   await expect(runAvailableManualSync(session)).rejects.toThrow('No new completed run');
 });
+
+it('lets the public manual action recover routes despite an empty transient role snapshot', async () => {
+  let invoked = false;
+  const session = { loadSyncRole: async () => ({ hasUpstream: false, hasDownstream: false }),
+    invoke: async command => {
+      if (command === 'sync_companion_now') { invoked = true; return { sync_group: {} }; }
+      return { activity: invoked ? [{ kind: 'run_finished', trigger_reason: 'manual',
+        status: 'completed', result: 'completed', run_id: 'recovered', started_at: 'start', occurred_at: 'finish' }] : [] };
+    } };
+  await expect(runAvailableManualSync(session)).resolves.toMatchObject({ run_id: 'recovered', status: 'completed' });
+  expect(invoked).toBe(true);
+});
+
+it('records no completion only after the public action reports no peer', async () => {
+  let invoked = false;
+  const session = { loadSyncRole: async () => ({ hasUpstream: true }), invoke: async command => {
+    if (command === 'load_desktop_sync_diagnostics') return { activity: [] };
+    invoked = true;
+    throw new Error('sync_group_peer_unavailable');
+  } };
+  await expect(runAvailableManualSync(session)).resolves.toBeNull();
+  expect(invoked).toBe(true);
+});
+
+it('propagates actual synchronization errors', async () => {
+  await expect(runAvailableManualSync({ loadSyncRole: async () => ({ hasUpstream: true }), invoke: async command => {
+    if (command === 'load_desktop_sync_diagnostics') return { activity: [] };
+    throw new Error('sync_pack_corrupt');
+  } })).rejects.toThrow('sync_pack_corrupt');
+});

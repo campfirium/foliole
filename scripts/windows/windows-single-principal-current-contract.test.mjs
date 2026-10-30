@@ -170,7 +170,7 @@ it.each(['manual', 'stale'])('rejects %s evidence in place of a new post-restart
     .rejects.toThrow('automaticAfterRestart');
 });
 
-it('does not issue an unavailable manual action on the root while the other peer proves manual completion', async () => {
+it('does not count a public no-peer result as manual completion on the root', async () => {
   root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-root-manual-'));
   currentHosts();
   host.session.loadSyncRole = async () => ({ hasUpstream: false, hasDownstream: false });
@@ -187,6 +187,9 @@ it('does not issue an unavailable manual action on the root while the other peer
 it.each(['manualBeforeRestart', 'manualAfterRestart'])('rejects missing completed manual evidence for %s', async phase => {
   root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-no-manual-'));
   currentHosts();
+  const invoke = host.session.invoke;
+  host.session.invoke = command => command === 'sync_companion_now'
+    ? Promise.reject(new Error('sync_group_peer_unavailable')) : invoke(command);
   host.session.loadSyncRole = async () => ({ hasUpstream: false, hasDownstream: false });
   const finish = host.provider.finish;
   host.provider.finish = async () => {

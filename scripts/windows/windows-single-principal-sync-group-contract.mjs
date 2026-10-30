@@ -53,13 +53,15 @@ export function completedInitialRun(activity = []) {
 }
 
 export async function runAvailableManualSync(session) {
-  const role = await session.loadSyncRole();
-  if (!role.hasUpstream && !role.hasDownstream) return null;
   const before = await session.invoke('load_desktop_sync_diagnostics');
   const previous = new Set((before?.activity ?? []).filter(value =>
     value.kind === 'run_finished' && value.status === 'completed' && value.result === 'completed')
     .map(value => value.run_id));
-  await session.invoke('sync_companion_now');
+  try { await session.invoke('sync_companion_now'); }
+  catch (error) {
+    if (/\bsync_group_peer_unavailable\b/u.test(String(error?.message))) return null;
+    throw error;
+  }
   const after = await session.invoke('load_desktop_sync_diagnostics');
   const event = after?.activity?.find(value => value.kind === 'run_finished'
     && ['manual', 'automatic'].includes(value.trigger_reason) && value.status === 'completed'
