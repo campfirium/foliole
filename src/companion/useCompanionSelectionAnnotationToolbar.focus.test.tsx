@@ -136,3 +136,19 @@ it('keeps the native DOM selection across a render when the read-only adapter ha
   expect(result.current.selectionToolbar?.payload?.selectionText).toBe('Welcome');
   content.remove();
 });
+
+it.each(['highlight', 'cloze'] as const)('keeps %s actions open when the native selection collapses', kind => {
+  const { result } = renderHook(() =>
+    useCompanionSelectionAnnotationToolbar({ nodeId: 'node-1', canCreateAnnotation: true, snapshot: null }));
+  act(() => {
+    result.current.handleEditorReady(createEditorAdapter([]) as never);
+    document.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 80, clientY: 120 }));
+    result.current.setSelectionToolbar({ left: 10, top: 20, noteLeft: 10, noteTop: 60, payload: null,
+      existingHighlight: { kind, nodeId: 'annotation', originalText: 'Welcome' } });
+  });
+  act(() => {
+    document.dispatchEvent(new Event('selectionchange'));
+    vi.advanceTimersByTime(240);
+  });
+  expect(result.current.selectionToolbar?.existingHighlight).toMatchObject({ kind, nodeId: 'annotation' });
+});

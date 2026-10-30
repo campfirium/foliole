@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type Dispatch, type MouseEvent as ReactMouseEvent, type MutableRefObject, type SetStateAction } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
@@ -25,7 +25,7 @@ function useCompanionSelectionAnnotationOpenHandler(args: {
   lastSelectionInteractionAtRef: MutableRefObject<number>;
   nodeId: string;
   scheduleSelectionToolbarOpen: (fallback?: CompanionSelectionClientPoint, allowExistingHighlight?: boolean) => void;
-  setSelectionToolbar: (state: CompanionSelectionAnnotationToolbarState | null) => void;
+  setSelectionToolbar: Dispatch<SetStateAction<CompanionSelectionAnnotationToolbarState | null>>;
   snapshot: WorkspaceSnapshot | null;
 }) {
   return useCallback((event: ReactMouseEvent<HTMLElement>) => {
@@ -60,7 +60,7 @@ function useCompanionSelectionAnnotationScheduler(args: {
   editorRef: MutableRefObject<EditorAdapter | null>;
   lastPayloadRef: MutableRefObject<CompanionSelectionAnnotationToolbarState['payload']>;
   nodeId: string;
-  setSelectionToolbar: (state: CompanionSelectionAnnotationToolbarState | null) => void;
+  setSelectionToolbar: Dispatch<SetStateAction<CompanionSelectionAnnotationToolbarState | null>>;
   snapshot: WorkspaceSnapshot | null;
 }) {
   const frameRef = useRef<number | null>(null);
@@ -97,7 +97,7 @@ function useCompanionSelectionAnnotationScheduler(args: {
           args.setSelectionToolbar(resolveSelectionToolbarState({ content: adapter.getContent(), fallback, payload, snapshot: args.snapshot }));
           return;
         }
-        args.setSelectionToolbar(null);
+        args.setSelectionToolbar((current) => current?.existingHighlight ? current : null);
       });
     }, toolbarDom.SELECTION_SETTLE_DELAY_MS);
   }, [args, clearScheduledOpen]);
@@ -126,7 +126,7 @@ function useClearSelectionAndCloseToolbar(args: {
   editorRef: MutableRefObject<EditorAdapter | null>;
   lastPayloadRef: MutableRefObject<CompanionSelectionAnnotationToolbarState['payload']>;
   scheduler: ReturnType<typeof useCompanionSelectionAnnotationScheduler>;
-  setSelectionToolbar: (state: CompanionSelectionAnnotationToolbarState | null) => void;
+  setSelectionToolbar: Dispatch<SetStateAction<CompanionSelectionAnnotationToolbarState | null>>;
 }) {
   const { editorRef, lastPayloadRef, scheduler, setSelectionToolbar } = args;
   return useCallback(() => {
@@ -146,8 +146,12 @@ function useOwnedSelectionToolbar(nodeId: string) {
   const [ownedToolbar, setOwnedToolbar] = useState<{ nodeId: string; state: CompanionSelectionAnnotationToolbarState | null } | null>(null);
   const activeNode = useRef(nodeId);
   activeNode.current = nodeId;
-  const setSelectionToolbar = useCallback((state: CompanionSelectionAnnotationToolbarState | null) => {
-    if (activeNode.current === nodeId) setOwnedToolbar({ nodeId, state });
+  const setSelectionToolbar = useCallback((next: SetStateAction<CompanionSelectionAnnotationToolbarState | null>) => {
+    if (activeNode.current !== nodeId) return;
+    setOwnedToolbar((owned) => {
+      const current = owned?.nodeId === nodeId ? owned.state : null;
+      return { nodeId, state: typeof next === 'function' ? next(current) : next };
+    });
   }, [nodeId]);
   const selectionToolbar = ownedToolbar?.nodeId === nodeId ? ownedToolbar.state : null;
   return [selectionToolbar, setSelectionToolbar] as const;
