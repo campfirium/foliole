@@ -3,6 +3,7 @@ import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
 
+import { nodeReadingSummary, nodeReviewSummary } from '../../lib/core/nodes/nodeLearningSummary';
 import { App } from '../app/App';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { buildReviewQueuePlan } from '../store/reviewQueuePlanner';
@@ -128,9 +129,9 @@ it('relearns reading nodes from the node context menu', async () => {
   fireEvent.click(await screen.findByRole('menuitem', { name: 'Relearn' }));
   fireEvent.click(within(await screen.findByRole('dialog', { name: 'Relearn this topic?' })).getByRole('button', { name: 'Relearn' }));
 
-  await waitFor(() => expect(useWorkspaceStore.getState().nodesById['node-2']?.reading).toBeNull());
+  await waitFor(() => expect(nodeReadingSummary(useWorkspaceStore.getState().nodesById['node-2'])).toBeNull());
   const workspace = useWorkspaceStore.getState();
-  expect(workspace.nodesById['node-2']?.reading).toBeNull();
+  expect(nodeReadingSummary(workspace.nodesById['node-2'])).toBeNull();
   expect(
     buildReviewQueuePlan({
       nodeOrder: workspace.nodeOrder,
@@ -173,9 +174,9 @@ it('relearns review cards from the node context menu after confirmation', async 
   fireEvent.click(await screen.findByRole('menuitem', { name: 'Relearn' }));
   fireEvent.click(within(await screen.findByRole('dialog', { name: 'Relearn this topic?' })).getByRole('button', { name: 'Relearn' }));
 
-  await waitFor(() => expect(useWorkspaceStore.getState().nodesById['node-2']?.review).toBeNull());
+  await waitFor(() => expect(nodeReviewSummary(useWorkspaceStore.getState().nodesById['node-2'])).toBeNull());
   const workspace = useWorkspaceStore.getState();
-  expect(workspace.nodesById['node-2']?.review).toBeNull();
+  expect(nodeReviewSummary(workspace.nodesById['node-2'])).toBeNull();
   expect(
     buildReviewQueuePlan({
       nodeOrder: workspace.nodeOrder,

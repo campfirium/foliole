@@ -3,6 +3,7 @@ import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
 
+import { nodeReviewSummary } from '../../lib/core/nodes/nodeLearningSummary';
 import { App } from '../app/App';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
@@ -68,9 +69,9 @@ it('creates a direct item with an editable answer from the folder context menu',
     expect(activeNode).toMatchObject({
       kind: 'item',
       hasReveal: true,
-      reveal: '',
-      review: expect.objectContaining({ reps: 0, state: 0 })
+      reveal: ''
     });
+    expect(nodeReviewSummary(activeNode)?.lastReviewAt ?? null).toBeNull();
   });
   expect(screen.getByTestId('answer-editor-value')).toBeInTheDocument();
 });
