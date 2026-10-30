@@ -1,4 +1,5 @@
 import { Route } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { useTranslation } from '../localization/LocalizationProvider';
@@ -9,6 +10,7 @@ import { AppButton } from './Button';
 import { ReviewActionFeedback } from './ReviewActionFeedback';
 import { REVIEW_GRADE_ACTION_HELP } from './reviewActionHelp';
 import { overlayDividerClass, type ReviewActionSurface } from './reviewActionLayout';
+import type { RenderReviewActionButton } from './reviewActionPresentation';
 import { formatReviewGradePreviewDue, ReviewGradePreviewTooltip } from './ReviewGradePreviewTooltip';
 import { renderOverlayDividedActions, ReviewOverlayActionButton } from './ReviewOverlayActionButton';
 import { ToolbarActionGroup } from './ToolbarActionGroup';
@@ -29,11 +31,14 @@ function ReviewGradeButton(props: {
   disabled: boolean;
   dueLabel?: string | undefined;
   grade: ReviewGrade;
+  icon?: ReactNode;
   label: string;
   surface: ReviewActionSurface;
+  renderButton?: RenderReviewActionButton | undefined;
   submitGrade: (grade: ReviewGrade) => Promise<void>;
   testId?: string;
 }) {
+  if (props.renderButton && props.surface === 'panel') return props.renderButton({ label: props.label, icon: props.icon, disabled: props.disabled, onClick: () => void props.submitGrade(props.grade), testId: props.testId, title: props.dueLabel });
   if (props.surface === 'overlay') {
     return (
       <ReviewOverlayActionButton
@@ -57,7 +62,8 @@ function ReviewGradeButton(props: {
       title={props.dueLabel}
       variant={props.buttonVariant}
     >
-      {props.label}
+      {props.icon}
+      <span>{props.label}</span>
     </AppButton>
   );
 }
@@ -67,6 +73,8 @@ interface ReviewGradeActionsProps {
   buttonVariant?: 'ghost' | 'default';
   errorMessage: string | null;
   groupClassName?: string;
+  icons?: Partial<Record<ReviewGrade, ReactNode>>;
+  renderButton?: RenderReviewActionButton;
   isSubmitting: boolean;
   onRetry?: () => void;
   previewDueByGrade?: Partial<Record<ReviewGrade, string | undefined>>;
@@ -80,9 +88,11 @@ function createReviewGradeActionNode(args: {
   buttonVariant: 'ghost' | 'default';
   dueLabel?: string | undefined;
   gradeButton: (typeof reviewGradeButtons)[number];
+  icon?: ReactNode;
   isSubmitting: boolean;
   showActionHelp: boolean;
   surface: ReviewActionSurface;
+  renderButton?: RenderReviewActionButton | undefined;
   submitGrade: (grade: ReviewGrade) => Promise<void>;
   t: ReturnType<typeof useTranslation>;
 }) {
@@ -94,6 +104,8 @@ function createReviewGradeActionNode(args: {
         disabled={args.isSubmitting}
         dueLabel={args.dueLabel}
         grade={args.gradeButton.grade}
+        icon={args.icon}
+        renderButton={args.renderButton}
         label={args.t(args.gradeButton.labelKey)}
         surface={args.surface}
         submitGrade={args.submitGrade}
@@ -113,6 +125,8 @@ export function ReviewGradeActions({
   buttonVariant = 'default',
   errorMessage,
   groupClassName,
+  icons,
+  renderButton,
   isSubmitting,
   onRetry,
   previewDueByGrade,
@@ -136,6 +150,8 @@ export function ReviewGradeActions({
               buttonVariant,
               dueLabel: getDueLabel(gradeButton.grade),
               gradeButton,
+              icon: icons?.[gradeButton.grade],
+              renderButton,
               isSubmitting,
               showActionHelp,
               surface,
@@ -152,16 +168,19 @@ export function ReviewGradeActions({
 }
 
 export function FsrsRevealAction({
+  renderButton,
   disabled = false,
   onRevealAnswer,
   surface = 'panel'
 }: {
   disabled?: boolean;
   onRevealAnswer: () => void;
+  renderButton?: RenderReviewActionButton;
   surface?: ReviewActionSurface;
 }) {
   const t = useTranslation();
   const label = t('desktop.reviewActions.showAnswer');
+  if (renderButton && surface === 'panel') return renderButton({ label, disabled, onClick: onRevealAnswer, testId: 'companion-review-action-reveal' });
 
   if (surface === 'overlay') {
     return <ReviewOverlayActionButton data-testid="companion-review-action-reveal" disabled={disabled} label={label} onClick={onRevealAnswer} />;

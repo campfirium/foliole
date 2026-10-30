@@ -3,7 +3,7 @@
   --companion-page-content-gap: 8px;
   --companion-reading-top-fade-height: 12px;
   --companion-review-button-min-height: 44px;
-  --companion-review-action-gap: 12px;
+  --companion-review-action-gap: 4px;
   --companion-divider: #e8e9eb;
   --companion-list-title: #202226;
   --companion-list-body: #7b8087;
@@ -149,4 +149,18 @@ html, body, #root, #root * { scrollbar-width: none; }
 
 @media (max-height: 640px) {
   .companion-flow-complete { padding-bottom: 96px; }
+}
+
+/* Shared navigation/action geometry; the content remains compact inside each touch cell. */
+.companion-bottom-action {
+  height: 48px;
+  min-height: 48px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+}
+.companion-review-actions .companion-bottom-action:active {
+  color: var(--companion-accent);
+  transform: scale(0.97);
 }

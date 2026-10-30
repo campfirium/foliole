@@ -7,6 +7,7 @@ import { AppButton } from './Button';
 import { ReviewActionFeedback } from './ReviewActionFeedback';
 import { READING_REVIEW_ACTION_HELP } from './reviewActionHelp';
 import { overlayDividerClass, type ReviewActionSurface } from './reviewActionLayout';
+import type { RenderReviewActionButton } from './reviewActionPresentation';
 import { renderOverlayDividedActions, ReviewOverlayActionButton } from './ReviewOverlayActionButton';
 import { ToolbarActionGroup } from './ToolbarActionGroup';
 
@@ -18,11 +19,14 @@ function ReadingReviewButton(props: {
   className: string;
   disabled: boolean;
   isAdvanceReady?: boolean;
+  icon?: ReactNode;
+  renderButton?: RenderReviewActionButton | undefined;
   label: string;
   onClick: () => void;
   surface: ReviewActionSurface;
   testId: string;
 }) {
+  if (props.renderButton && props.surface === 'panel') return props.renderButton({ label: props.label, icon: props.icon, disabled: props.disabled, onClick: props.onClick, testId: props.testId });
   if (props.surface === 'overlay') {
     return (
       <ReviewOverlayActionButton
@@ -46,7 +50,8 @@ function ReadingReviewButton(props: {
       size="md"
       variant="default"
     >
-      {props.label}
+      {props.icon}
+      <span>{props.label}</span>
     </AppButton>
   );
 }
@@ -55,6 +60,8 @@ type ReadingReviewActionsProps = {
   actionButtonClassName?: string;
   errorMessage?: string | null;
   groupClassName?: string;
+  renderButton?: RenderReviewActionButton;
+  icons?: Partial<Record<'soon' | 'later' | 'read' | 'dismiss', ReactNode>>;
   isSubmitting?: boolean;
   onReadReviewTopic: () => void;
   onPostponeReviewTopic: () => void;
@@ -69,6 +76,8 @@ type ReadingReviewActionsProps = {
 type ResolvedReadingReviewActionsProps = Required<
   Pick<ReadingReviewActionsProps, 'onDismissReviewTopic' | 'onPostponeReviewTopic' | 'onReadReviewTopic' | 'showActionHelp' | 'surface'>
 > & {
+  icons: ReadingReviewActionsProps['icons'];
+  renderButton: ReadingReviewActionsProps['renderButton'];
   buttonClassName: string;
   isSubmitting: boolean;
   onRevisitReviewTopicSoon?: () => void;
@@ -88,7 +97,7 @@ function createReadingReviewActionItems(props: ResolvedReadingReviewActionsProps
       ? {
           key: 'soon',
           node: wrapWithHelpCard(
-            <ReadingReviewButton className={props.buttonClassName} disabled={props.isSubmitting} label={t('desktop.reviewActions.reading.soon')} onClick={props.onRevisitReviewTopicSoon} surface={props.surface} testId="companion-review-action-soon" />,
+            <ReadingReviewButton renderButton={props.renderButton} className={props.buttonClassName} disabled={props.isSubmitting} icon={props.icons?.soon} label={t('desktop.reviewActions.reading.soon')} onClick={props.onRevisitReviewTopicSoon} surface={props.surface} testId="companion-review-action-soon" />,
             READING_REVIEW_ACTION_HELP.soon
           )
         }
@@ -96,21 +105,21 @@ function createReadingReviewActionItems(props: ResolvedReadingReviewActionsProps
     {
       key: 'later',
       node: wrapWithHelpCard(
-        <ReadingReviewButton className={props.buttonClassName} disabled={props.isSubmitting} label={t('desktop.reviewActions.reading.later')} onClick={props.onPostponeReviewTopic} surface={props.surface} testId="companion-review-action-later" />,
+        <ReadingReviewButton renderButton={props.renderButton} className={props.buttonClassName} disabled={props.isSubmitting} icon={props.icons?.later} label={t('desktop.reviewActions.reading.later')} onClick={props.onPostponeReviewTopic} surface={props.surface} testId="companion-review-action-later" />,
         READING_REVIEW_ACTION_HELP.later
       )
     },
     {
       key: 'read',
       node: wrapWithHelpCard(
-        <ReadingReviewButton className={props.buttonClassName} disabled={props.isSubmitting} isAdvanceReady={props.readActionAdvanceReady} label={t('desktop.reviewActions.reading.read')} onClick={props.onReadReviewTopic} surface={props.surface} testId="companion-review-action-read" />,
+        <ReadingReviewButton renderButton={props.renderButton} className={props.buttonClassName} disabled={props.isSubmitting} isAdvanceReady={props.readActionAdvanceReady} icon={props.icons?.read} label={t('desktop.reviewActions.reading.read')} onClick={props.onReadReviewTopic} surface={props.surface} testId="companion-review-action-read" />,
         READING_REVIEW_ACTION_HELP.read
       )
     },
     {
       key: 'dismiss',
       node: wrapWithHelpCard(
-        <ReadingReviewButton className={props.buttonClassName} disabled={props.isSubmitting} label={t('desktop.reviewActions.reading.dismiss')} onClick={props.onDismissReviewTopic} surface={props.surface} testId="companion-review-action-dismiss" />,
+        <ReadingReviewButton renderButton={props.renderButton} className={props.buttonClassName} disabled={props.isSubmitting} icon={props.icons?.dismiss} label={t('desktop.reviewActions.reading.dismiss')} onClick={props.onDismissReviewTopic} surface={props.surface} testId="companion-review-action-dismiss" />,
         READING_REVIEW_ACTION_HELP.dismiss
       )
     }
@@ -124,6 +133,8 @@ export function ReadingReviewActions(props: ReadingReviewActionsProps) {
   const readingActions = createReadingReviewActionItems({
     buttonClassName: props.actionButtonClassName ?? 'min-w-20 border-border px-4',
     isSubmitting: props.isSubmitting ?? false,
+    icons: props.icons,
+    renderButton: props.renderButton,
     onDismissReviewTopic: props.onDismissReviewTopic,
     onPostponeReviewTopic: props.onPostponeReviewTopic,
     onReadReviewTopic: props.onReadReviewTopic,

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { ReviewActionBar } from '../shared/ui';
 
-import { companionMobileRailClassName } from './companionCssCompatibility';
+import { CompanionBottomBar } from './CompanionBottomBar';
 
 export function CompanionReviewActionFooter(props: {
   primary: ReactNode;
@@ -13,13 +13,14 @@ export function CompanionReviewActionFooter(props: {
 }) {
   const t = useTranslation();
   return (
-    <footer className={`companion-review-footer fixed inset-x-0 bottom-0 z-workspace-overlay border-t border-companion-divider bg-companion-base ${companionMobileRailClassName} pt-3 pb-6 supports-[padding-bottom:calc(0px)]:[padding-bottom:calc(1.5rem+env(safe-area-inset-bottom))]`}>
-      <div className="mx-auto w-full max-w-[760px]">
+    <CompanionBottomBar className="companion-review-footer">
+      <div className="h-full w-full">
         <ReviewActionBar ariaLabel={t('companion.review.toolbar')}
-          className="h-auto border-0 bg-transparent px-0" key={props.reviewCardKey} layout="full-width"
+          className="h-full border-0 bg-transparent px-0" key={props.reviewCardKey} layout="full-width"
           mode="study" primary={props.primary} reviewInputMode="hotkeys"
-          reviewItemKind={props.reviewItemKind ?? 'fsrs'} secondary={props.statusLabel ?? null} />
+          reviewItemKind={props.reviewItemKind ?? 'fsrs'} secondary={null} />
       </div>
-    </footer>
+      {props.statusLabel ? <div role="status" className="absolute inset-x-0 bottom-full border-b border-companion-divider bg-companion-base px-4 py-2 text-xs text-companion-text-secondary">{props.statusLabel}</div> : null}
+    </CompanionBottomBar>
   );
 }

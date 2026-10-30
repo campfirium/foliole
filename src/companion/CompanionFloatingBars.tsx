@@ -2,10 +2,8 @@ import type { LucideIcon } from 'lucide-react';
 
 import { translate } from '../shared/localization/translations';
 
-import {
-  companionFlexColumnGapHalfClassName,
-  companionFlexRowGap1ClassName
-} from './companionCssCompatibility';
+import { CompanionBottomAction } from './CompanionBottomAction';
+import { CompanionBottomBar } from './CompanionBottomBar';
 import {
   resolveCompanionTabs,
   type CompanionResolvedTab,
@@ -26,25 +24,10 @@ function TabButton(props: {
 }) {
   const Icon = props.icon;
   return (
-    <button
-      aria-current={props.active ? 'page' : undefined}
-      aria-label={props.label}
-      className={`flex min-w-0 flex-1 flex-col items-center justify-center ${companionFlexColumnGapHalfClassName} rounded-lg text-xs font-medium transition-colors [height:3rem] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-companion-accent active:scale-[0.97] ${
-        props.active ? 'text-companion-accent' : 'text-companion-text-secondary'
-      }`}
-      onClick={props.onClick}
-      data-testid={props.testId}
-      type="button"
-    >
-      <span
-        className={`inline-flex items-center justify-center rounded-full transition-colors [height:1.5rem] [width:3rem] ${
-          ''
-        }`}
-      >
-        <Icon className={`h-5 w-5 ${props.active ? 'text-companion-accent' : ''}`} strokeWidth={1.75} />
-      </span>
-      <span className="max-w-full truncate">{props.label}</span>
-    </button>
+    <CompanionBottomAction
+      {...props}
+      icon={<Icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.75} />}
+    />
   );
 }
 
@@ -61,14 +44,9 @@ export function CompanionBottomTabBar(props: {
   }
 
   return (
-    <footer
-      className="fixed inset-x-0 bottom-0 z-surface-overlay border-t border-companion-divider bg-companion-content px-4 pt-2 pb-2 [left:0] [right:0] [bottom:0] [height:4rem] [padding-top:0.5rem] [padding-bottom:0.5rem] [padding-left:1rem] [padding-right:1rem]"
-      data-testid="companion-bottom-tab-bar"
-    >
-      <div className={`mx-auto flex h-full w-full max-w-[760px] items-center ${companionFlexRowGap1ClassName}`}>
-        {renderTabButtons(resolveCompanionTabs(props.config), props)}
-      </div>
-    </footer>
+    <CompanionBottomBar testId="companion-bottom-tab-bar">
+      {renderTabButtons(resolveCompanionTabs(props.config), props)}
+    </CompanionBottomBar>
   );
 }
 
