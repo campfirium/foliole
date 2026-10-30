@@ -2,7 +2,7 @@ import { getPrCheckSignal } from './github-monitor-gh.mjs';
 
 export function buildPrHandoffData(config, pr, checks) {
   const number = String(pr.number);
-  const dependabotHandoff = (config.autoImplementAuthors ?? []).includes(pr.author?.login);
+  const dependabotHandoff = pr.author?.login === 'app/dependabot';
   const checkSignal = dependabotHandoff
     ? { eventSuffix: 'local', label: 'Dependabot update proposal' }
     : getPrCheckSignal(config, checks);

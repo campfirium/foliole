@@ -1,8 +1,8 @@
-import { buildIssueHandoffData, buildPrHandoffData } from './github-desktop-handoff-title.mjs';
+import { buildIssueHandoffData } from './github-desktop-handoff-title.mjs';
 import { buildActionsHandoffIdentity } from './github-actions-handoff-policy.mjs';
-import { dependabotPrCanEmit } from './github-dependabot-pr-eligibility.mjs';
+import { listPrEvents } from './github-desktop-handoff-pr-events.mjs';
 import { listDependabotAlertEvents } from './github-dependabot-alert-events.mjs';
-import { listPrChecks, recordMonitorError, runGh } from './github-monitor-gh.mjs';
+import { recordMonitorError, runGh } from './github-monitor-gh.mjs';
 
 function actionRunEvent(config, workflowSelector, run, renderTemplate, identity) {
   const data = {
@@ -78,17 +78,6 @@ function recordObservedRun(config, workflowState, run, includeExisting) {
   return observed;
 }
 
-function prEvent(config, pr, checks, renderTemplate) {
-  const data = buildPrHandoffData(config, pr, checks);
-  return {
-    dedupeKey: config.dedupeKeyPattern.replace('{eventId}', data.eventId),
-    prompt: renderTemplate(config.template, data),
-    reconcileOpen: true,
-    ...data,
-    title: data.handoffTitle,
-    ttlSeconds: config.defaultTtlSeconds
-  };
-}
 function issueEvent(config, issue, renderTemplate) {
   const data = buildIssueHandoffData(config, issue);
   return {
@@ -141,45 +130,6 @@ function listActionEvents(config, state, includeExisting, errors, renderTemplate
   return events;
 }
 
-function listPrEvents(config, state, includeExisting, errors, renderTemplate) {
-  if (!config?.enabled) return [];
-  let prs;
-  try {
-    prs = runGh([
-      'pr',
-      'list',
-      '--repo',
-      config.repository,
-      '--state',
-      'open',
-      '--json',
-      'number,title,headRefName,headRefOid,baseRefName,isDraft,author,url,updatedAt',
-      '--limit',
-      '50'
-    ]);
-  } catch (error) {
-    recordMonitorError(errors, 'github-pr', 'list', error);
-    return [];
-  }
-  const events = [];
-  for (const pr of prs) {
-    if (pr.isDraft && !config.includeDrafts) continue;
-    if (!dependabotPrCanEmit({ config, errors, pr, recordError: recordMonitorError, runGh })) continue;
-    let checks;
-    try {
-      checks = listPrChecks(config, pr);
-    } catch (error) {
-      recordMonitorError(errors, 'github-pr-checks', `#${pr.number}`, error);
-      continue;
-    }
-    const event = prEvent(config, pr, checks, renderTemplate);
-    if (!event.failingChecks) continue;
-    events.push(event);
-  }
-  state.prsInitialized = true;
-  return events;
-}
-
 function listIssueEvents(config, state, includeExisting, errors, renderTemplate) {
   if (!config?.enabled) return [];
   const initialized = Boolean(state.issuesInitialized);
@@ -217,7 +167,7 @@ export function listGithubMonitorEvents(configs, state, includeExisting, errors,
   return [
     ...listDependabotAlertEvents(configs.dependabotAlerts, state, errors, renderTemplate),
     ...listActionEvents(configs.actions, state, includeExisting, errors, renderTemplate),
-    ...listPrEvents(configs.prs, state, includeExisting, errors, renderTemplate),
+    ...listPrEvents(configs.prs, state, errors, renderTemplate),
     ...listIssueEvents(configs.issues, state, includeExisting, errors, renderTemplate)
   ];
 }
