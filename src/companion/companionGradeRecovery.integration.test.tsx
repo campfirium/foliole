@@ -103,9 +103,16 @@ it('retries only the read after a saved grade, preserving its log and schedule t
   const ui = renderSurface(await loadCompanionWorkspaceSyncState());
   await waitFor(() => expect(ui.result.current.session.currentCard).not.toBeNull());
   expect(ui.result.current.session.currentCard?.nodeId).toBe('card');
-  const refresh = vi.spyOn(workspaceRepository, 'refreshCompanionWorkspaceAfterMutation');
-  refresh.mockResolvedValueOnce(ui.result.current.state.workspace_snapshot);
-  refresh.mockRejectedValueOnce(new Error('Read unavailable'));
+  const originalRefresh = workspaceRepository.refreshCompanionWorkspaceAfterMutation;
+  let refreshError: string | null = 'Read unavailable';
+  vi.spyOn(workspaceRepository, 'refreshCompanionWorkspaceAfterMutation').mockImplementation((...args) => {
+    if (refreshError && storedGrade().logs.length > 0) {
+      const error = refreshError;
+      refreshError = null;
+      return Promise.reject(new Error(error));
+    }
+    return originalRefresh(...args);
+  });
   act(() => ui.result.current.reveal());
   await act(() => ui.result.current.handleGradeReview(3));
   expect(ui.result.current.reviewError).toBeTruthy();
@@ -114,7 +121,7 @@ it('retries only the read after a saved grade, preserving its log and schedule t
   expect(saved.logs).toHaveLength(1);
   const stored = await loadCompanionWorkspaceSyncState();
   expect(stored.workspace_snapshot?.nodesById.card?.review?.due).not.toBe('2026-05-01T00:00:00.000Z');
-  refresh.mockRejectedValueOnce(new Error('Read still unavailable'));
+  refreshError = 'Read still unavailable';
   act(() => ui.result.current.reveal());
   await act(() => ui.result.current.handleGradeReview(1));
   expect(ui.result.current.reviewError).toBeTruthy();
