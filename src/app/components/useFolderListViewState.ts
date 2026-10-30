@@ -7,6 +7,7 @@ import {
   type FolderListSortDirection,
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
+import { placeFoldersFirst } from '../../features/nodes/model/foldersFirst';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
   WORKSPACE_LIST_OPENING_FALLBACK,
@@ -20,6 +21,7 @@ type UseFolderListViewStateArgs = {
   controlledSortKey: FolderListSortKey | undefined;
   defaultSortKey: FolderListSortKey;
   filterSearchResults?: boolean | undefined;
+  foldersFirst?: boolean;
   listedNodes: Node[];
   listRebuildKey: string;
   manualChildOrder?: readonly string[] | null;
@@ -169,7 +171,9 @@ export function useFolderListViewState(args: UseFolderListViewStateArgs) {
   const searchQuery = resolveControlledValue(args.controlledSearchQuery, uncontrolledSearchQuery);
   const sortKey = resolveControlledValue(args.controlledSortKey, uncontrolledSortKey);
   const sortDirection = resolveEffectiveSortDirection(sortKey, args.controlledSortDirection, uncontrolledSortDirection);
-  const childNodes = useSortedFolderListNodes(args.listedNodes, args.nodeOpenStateById, sortKey, sortDirection, `${args.listRebuildKey}\u0000${sortRefreshVersion}`, args.manualChildOrder);
+  const sortedNodes = useSortedFolderListNodes(args.listedNodes, args.nodeOpenStateById, sortKey, sortDirection, `${args.listRebuildKey}\u0000${sortRefreshVersion}`, args.manualChildOrder);
+  const childNodes = useMemo(() => args.foldersFirst && sortKey !== 'manual'
+    ? placeFoldersFirst(sortedNodes) : sortedNodes, [args.foldersFirst, sortKey, sortedNodes]);
   const shouldFilterSearchResults = args.filterSearchResults !== false;
   const filteredNodes = useMemo(
     () => shouldFilterSearchResults ? filterFolderListNodes(childNodes, searchQuery) : childNodes,

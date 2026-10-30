@@ -3,6 +3,7 @@ import type {
   FolderListSortDirection,
   FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
+import { placeFoldersFirst } from '../../features/nodes/model/foldersFirst';
 
 import { resolveCompanionUntitledLabel } from './companionReadableArticle';
 
@@ -77,4 +78,16 @@ export function sortCompanionBrowseNodes(
   return [...nodes].sort((left, right) =>
     compareCompanionBrowseNodes(snapshot, left, right, sortKey, directionMultiplier)
   );
+}
+
+export function sortCompanionDirectoryNodes(
+  snapshot: WorkspaceSnapshot,
+  nodes: CompanionBrowseNode[],
+  sortKey: FolderListSortKey,
+  sortDirection: FolderListSortDirection
+) {
+  const sorted = sortCompanionBrowseNodes(snapshot, nodes, sortKey, sortDirection);
+  if (sortKey === 'manual') return sorted;
+  if (sortKey === 'name' && sortDirection === 'desc') sorted.reverse();
+  return placeFoldersFirst(sorted);
 }

@@ -16,7 +16,7 @@ import {
   selectCanonicalVisibleNodeIds
 } from '../workspaceCanonicalSelectors';
 
-import { sortCompanionBrowseNodes } from './companionBrowseOrdering';
+import { sortCompanionBrowseNodes, sortCompanionDirectoryNodes } from './companionBrowseOrdering';
 import { resolveCompanionArticleTitle, resolveCompanionUntitledLabel } from './companionReadableArticle';
 import { isCompanionArticleNode } from './companionReadableArticleTitleSlot';
 
@@ -133,7 +133,7 @@ function resolveCompanionDirectFolderView(
     ));
   if (isTopicContainerNode(folderNode) && childNodes.length === 0) return null;
   return {
-    items: sortCompanionBrowseNodes(snapshot, childNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry),
+    items: sortCompanionDirectoryNodes(snapshot, childNodes, sortKey, sortDirection).map(buildCompanionFolderListEntry),
     nodeId: folderNode.id,
     title: folderNode.title.trim() || resolveCompanionUntitledLabel()
   };

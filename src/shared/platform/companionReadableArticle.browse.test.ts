@@ -117,9 +117,9 @@ describe('companionReadableArticle directory browse helpers', () => {
 
     expect(result).toMatchObject({
       items: [
+        { kind: 'folder', nodeId: 'folder-2', preview: null, title: 'Nested folder' },
         { kind: 'topic', nodeId: 'node-3', preview: null, title: 'Empty note' },
-        { kind: 'topic', nodeId: 'node-1', preview: 'Older body', title: 'Older' },
-        { kind: 'folder', nodeId: 'folder-2', preview: null, title: 'Nested folder' }
+        { kind: 'topic', nodeId: 'node-1', preview: 'Older body', title: 'Older' }
       ],
       nodeId: 'folder-1',
       title: 'Reading folder'
