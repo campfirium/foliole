@@ -5,12 +5,13 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
-const native = vi.hoisted(() => ({ root: '', post: vi.fn(), sign: vi.fn(), cancel: vi.fn() }));
+const native = vi.hoisted(() => ({ root: '', post: vi.fn(), sign: vi.fn(), cancel: vi.fn(), access: vi.fn() }));
 vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] }, app: {
   getPath: (name: string) => `${native.root}/host/${name}`, isPackaged: false
 } }));
 vi.mock('../../../companionWorkspaceRuntimeRepository.js', () => ({ FolioleCompanionSync: {
-  postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign, cancelRequestSyncHttp: native.cancel
+  postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign, cancelRequestSyncHttp: native.cancel,
+  accessFramedSyncFile: native.access
 } }));
 vi.mock('../../runtime/companionFramedPayloadBudget.js', () => ({
   companionFramedFileOwner: () => ({ library_key: 'test', generation_id: 'test' })
@@ -20,14 +21,14 @@ vi.mock('../../runtime/iosCompanionDatabaseBootstrap.js', () => ({ getIosCompani
 import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner, runWithDatabaseConnectionMaintenance } from '../../../../../../electron/database/connection.js';
 import { pipelineFixture } from '../../../../../../electron/sync/attachmentPreparedPipeline.testSupport.js';
 import { clearCompanionRequestNonceCache } from '../../../../../../electron/sync/companionRequestAuth.js';
-import { isDesktopAttachmentPresent } from '../../../../../../electron/sync/desktopAttachmentBlockSource.js';
 import { clearDesktopSyncGroupMemberStateReadiness } from '../../../../../../electron/sync/desktopSyncGroupMemberStateReadiness.js';
 import * as hashing from '../../../../../../electron/sync/resourceFileHash.js';
+import { attachmentSourceVerification } from '../../../../../../lib/core/sync/attachmentSourceVerification.js';
 import { requestAttachmentWorkYield } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
 import { exchangeRequestSyncAttachments } from '../../../../../../lib/core/sync/requestSyncAttachmentExchange.js';
-import { readRequestSyncAttachmentNeedsSlice } from '../../../../../../lib/core/sync/requestSyncAttachmentNeeds.js';
 
-import { importCompanionPdfTextArtifact } from './companionPdfTextArtifact.js';
+import { createCompanionAttachmentHost } from './companionAttachmentBlockFiles.js';
+import { companionAttachmentNativeFiles } from './companionAttachmentNativeFiles.testSupport.js';
 import { createCompanionRequestSyncExchange } from './companionRequestSyncExchange.js';
 
 type Fixture = Awaited<ReturnType<typeof pipelineFixture>>;
@@ -199,15 +200,26 @@ it('imports PDF text beyond the boundary through the same authenticated files an
       sqlite.prepare('INSERT INTO pdf_page_text(attachment_id, page, text) VALUES (?, 1, ?)').run(item.key.slice(0, 64), pages[index]);
     }
   });
-  const host = { ...f.host,
-    needsSlice: (shouldYield: () => boolean, excluded?: readonly string[]) => readRequestSyncAttachmentNeedsSlice(
-      f.local.database, keys => Promise.all(keys.map(key => isDesktopAttachmentPresent(f.local.assetsDir, key))), shouldYield, true, excluded),
-    importPdfText: (pdf: string, artifact: string) => importCompanionPdfTextArtifact(f.local.database, f.local.host, pdf, artifact)
-  };
+  native.access.mockImplementation(companionAttachmentNativeFiles(f.local.assetsDir));
+  const host = await createCompanionAttachmentHost(f.local.database,
+    { library_key: f.directory.root, generation_id: 'pdf-text' });
   const failures: unknown[] = [];
   try {
+    const verify = attachmentSourceVerification.verify.bind(attachmentSourceVerification);
+    let deferred = false;
+    vi.spyOn(attachmentSourceVerification, 'verify').mockImplementation(async (identity, file, shouldYield, digest) => {
+      if (deferred || file.resource.byteLength < 17 * 1024 * 1024 || !file.resource.storageKey.endsWith('.pdftext')) {
+        return verify(identity, file, shouldYield, digest);
+      }
+      deferred = true;
+      let read = false;
+      return verify(identity, { ...file, async read(offset, length) {
+        const bytes = await file.read(offset, length); read = true; return bytes;
+      } }, () => read, digest);
+    });
     expect(await exchangeRequestSyncAttachments(host, f.exchange, (_key, error) => failures.push(error), () => false))
       .toMatchObject({ transferred: 134, pending: 0 });
+    expect(deferred).toBe(true);
     expect(failures).toEqual([]);
     await f.reopenReceiver();
     expect(f.local.sqlite.prepare('SELECT text FROM pdf_page_text ORDER BY text').pluck().all())
