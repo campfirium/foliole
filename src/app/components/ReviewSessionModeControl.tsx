@@ -1,4 +1,4 @@
-import { BookOpenText, Check, ListChecks, ListFilter, Route } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useState, type SVGProps } from 'react';
 
 import type {
@@ -13,24 +13,7 @@ import {
   AppDropdownMenuTrigger
 } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
-
-const SESSION_MODES: Array<{
-  id: ReviewSessionMode;
-  Icon: typeof ListFilter;
-}> = [
-  {
-    id: 'recommended',
-    Icon: Route
-  },
-  {
-    id: 'review-first',
-    Icon: ListChecks
-  },
-  {
-    id: 'reading-only',
-    Icon: BookOpenText
-  }
-];
+import { reviewSessionModeOptions as SESSION_MODES } from '../../shared/ui/reviewSessionModeOptions';
 
 type ReviewSessionTranslate = ReturnType<typeof useTranslation>;
 
