@@ -13,7 +13,7 @@ extension FoliolePhysicalSyncGroupUITests {
         openBrowse(in: app)
         waitForVisibleTopicText(prefix: prefix, text: text, in: app)
         revealReadingChrome(in: app, matching: text)
-        tapButton(named: "Edit topic", in: app, timeout: 30)
+        tapButton(named: "Edit content", in: app, timeout: 30)
         let editor = app.textViews["Topic body"]
         XCTAssertTrue(editor.waitForExistence(timeout: 30))
         XCTAssertEqual(editor.value as? String, submittedBody,

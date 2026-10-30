@@ -9,7 +9,7 @@ extension FoliolePhysicalSyncGroupUITests {
         XCTAssertEqual(topics.count, 1, "Fri must edit exactly one matching topic.")
         topics.firstMatch.tap()
         revealReadingChrome(in: app, matching: existingText)
-        tapButton(named: "Edit topic", in: app, timeout: 30)
+        tapButton(named: "Edit content", in: app, timeout: 30)
         let editor = app.textViews["Topic body"]
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public topic editor is unavailable on Fri.")
         editor.tap()
