@@ -22,6 +22,7 @@ import { registerStartupWatchdog } from './startupWatchdog';
 import { renderInitialLibrarySetup } from './surfaces/initialLibrarySetup/renderInitialLibrarySetup';
 
 const ROOT_ID = 'root';
+let stopStartupLoading: (() => void) | undefined;
 const STARTUP_RESOURCE_SAMPLE_LIMIT = 16;
 type EditorInputDiagnosticsPanelGlobal = typeof globalThis & {
   __FOLIOLE_EDITOR_INPUT_DIAG_PANEL?: boolean;
@@ -49,6 +50,7 @@ function renderEditorInputDiagnosticsPanel() {
 }
 
 function renderStartupError(message: string) {
+  stopStartupLoading?.();
   const rootElement = document.getElementById(ROOT_ID);
   if (!rootElement) {
     logRuntimeError('startup root missing', {
@@ -183,6 +185,7 @@ async function mountApp() {
       <StartupErrorBoundary
         moduleLabel="Desktop renderer"
         onError={(error, info) => {
+          stopStartupLoading?.();
           reportRuntimeBootStage('renderer_error_boundary', {
             componentStack: info.componentStack,
             message: error.message
@@ -217,8 +220,8 @@ async function reportDesktopBridgeReady() {
 
 installDesktopDebugProbe();
 installRendererErrorDiagnostics();
-if (isRuntimeInvokeAvailable()) watchStartupDatabaseUpgrade(loadDatabaseUpgradeStatus);
 if (!renderStartupViewIfRequested()) {
+  if (isRuntimeInvokeAvailable()) stopStartupLoading = watchStartupDatabaseUpgrade(loadDatabaseUpgradeStatus);
   bootstrapApp({
     mountApp,
     renderStartupError,

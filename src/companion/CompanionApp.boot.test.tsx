@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const useCompanionBootstrap = vi.fn();
@@ -107,6 +107,7 @@ function mockCompanionWorkspaceSync(runtimeKind: 'android-capacitor' | 'ios-capa
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
 });
 
 beforeEach(() => {
@@ -123,9 +124,44 @@ describe('CompanionApp bootstrap progress', () => {
     useCompanionBootstrap.mockReturnValue({ status: 'booting' });
     const { CompanionApp } = await import('./CompanionApp');
 
-    render(<CompanionApp />);
+    vi.useFakeTimers();
+    const { container, unmount } = render(<CompanionApp />);
+    expect(container.textContent).toBe('');
+    expect(container.querySelector('.animate-spin')).toBeNull();
+    await act(() => vi.advanceTimersByTimeAsync(300));
+    expect(container.textContent).toBe('');
+    expect(container.querySelector('.animate-spin')).not.toBeNull();
+    await act(() => vi.advanceTimersByTimeAsync(1700));
+    expect(screen.getByText('Starting Foliole')).toBeInTheDocument();
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
 
-    expect(screen.getByText('Starting companion runtime')).toBeInTheDocument();
+  it.each([100, 2500])('opens the app immediately when bootstrap finishes at %dms', async (duration) => {
+    useCompanionBootstrap.mockReturnValue({ status: 'booting' });
+    const { CompanionApp } = await import('./CompanionApp');
+    vi.useFakeTimers();
+    const { container, rerender } = render(<CompanionApp />);
+    await act(() => vi.advanceTimersByTimeAsync(duration));
+    useCompanionBootstrap.mockReturnValue({ status: 'ready', state: useCompanionWorkspaceSync().bootstrapState });
+    rerender(<CompanionApp />);
+    expect(container.querySelector('[data-startup-loading-phase]')).toBeNull();
+    expect(screen.getByTestId('companion-bottom-tab-bar')).toBeInTheDocument();
+  });
+
+  it('replaces the spinner immediately if startup fails', async () => {
+    useCompanionBootstrap.mockReturnValue({ status: 'booting' });
+    const { CompanionApp } = await import('./CompanionApp');
+    vi.useFakeTimers();
+    const { container, rerender } = render(<CompanionApp />);
+    await act(() => vi.advanceTimersByTimeAsync(800));
+    useCompanionBootstrap.mockReturnValue({ status: 'failed', message: 'Library unavailable' });
+    rerender(<CompanionApp />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Library unavailable');
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(container.querySelector('[data-startup-loading-phase]')).toBeNull();
+    await act(() => vi.advanceTimersByTimeAsync(2500));
+    expect(screen.queryByText('Starting Foliole')).not.toBeInTheDocument();
   });
 
   it('shows a failure state when bootstrap rejects', async () => {

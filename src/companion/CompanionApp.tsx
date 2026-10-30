@@ -6,8 +6,8 @@ import { LocalizationProvider, useTranslation } from '../shared/localization/Loc
 import { useSystemEntryDisplayNamesSnapshot } from '../shared/localization/systemEntryDisplayNamesStore';
 import { useCompanionForegroundTime } from '../shared/platform/companion/runtime/useCompanionForegroundTime';
 import { AppConfirmationProvider } from '../shared/ui/AppConfirmationProvider';
+import { StartupLoadingSurface } from '../shared/ui/StartupLoadingSurface';
 import {
-  createStartupBootSurfaceModel,
   createStartupErrorSurfaceModel,
   StartupSurface
 } from '../shared/ui/StartupSurface';
@@ -31,16 +31,10 @@ function CompanionAppContent() {
     if (bootstrap.status === 'ready')
       void hydrateCompanionSystemEntryDisplayNames().catch(() => undefined);
   }, [bootstrap.status]);
-  const bootModel = {
-    ...createStartupBootSurfaceModel(),
-    eyebrow: t('companion.app.starting.eyebrow'),
-    message: t('companion.app.starting.message'),
-    title: t('companion.app.starting.title')
-  };
 
   const content = (() => {
     if (bootstrap.status === 'booting') {
-      return <StartupSurface model={bootModel} />;
+      return <StartupLoadingSurface title={t('shared.startup.bootTitle')} />;
     }
 
     if (bootstrap.status === 'failed') {

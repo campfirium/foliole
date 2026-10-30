@@ -1,3 +1,4 @@
+import { act } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import type { NativeDatabaseUpgradeStatus } from '../../../lib/platform/nativeDatabaseUpgradeContract';
@@ -24,16 +25,16 @@ it('covers startup while an older library is upgraded and removes itself when th
   const loadStatus = vi.fn(async () => statuses.shift() ?? { state: 'ready' as const });
   watchStartupDatabaseUpgrade(loadStatus);
 
-  await vi.advanceTimersByTimeAsync(0);
+  await act(() => vi.advanceTimersByTimeAsync(0));
   expect(progressBar()).toBeNull();
-  await vi.advanceTimersByTimeAsync(500);
-  expect(document.querySelector('[role="status"]')?.textContent).toContain('Updating your library');
-  expect(progressBar()?.getAttribute('aria-valuenow')).toBe('0');
-  await vi.advanceTimersByTimeAsync(500);
-  expect(progressBar()?.getAttribute('aria-valuenow')).toBe('75');
-  await vi.advanceTimersByTimeAsync(500);
+  await act(() => vi.advanceTimersByTimeAsync(500));
+  expect(document.body.textContent).not.toContain('Updating your library');
   expect(progressBar()).toBeNull();
-  await vi.advanceTimersByTimeAsync(2000);
+  await act(() => vi.advanceTimersByTimeAsync(500));
+  expect(progressBar()).toBeNull();
+  await act(() => vi.advanceTimersByTimeAsync(500));
+  expect(progressBar()).toBeNull();
+  await act(() => vi.advanceTimersByTimeAsync(2000));
   expect(loadStatus).toHaveBeenCalledTimes(4);
 });
 
@@ -42,4 +43,46 @@ it('stays out of the way when the desktop host cannot report upgrade status', as
   watchStartupDatabaseUpgrade(loadStatus);
   await vi.waitFor(() => expect(loadStatus).toHaveBeenCalledTimes(1));
   expect(progressBar()).toBeNull();
+});
+
+it('keeps brief upgrades free of text and reveals details only after two seconds', async () => {
+  vi.useFakeTimers();
+  const loadStatus = vi.fn(async (): Promise<NativeDatabaseUpgradeStatus> => ({ state: 'upgrading', completed: 1, total: 4 }));
+  watchStartupDatabaseUpgrade(loadStatus);
+  await act(() => vi.advanceTimersByTimeAsync(0));
+  expect(document.body.textContent).not.toContain('Updating your library');
+  expect(progressBar()).toBeNull();
+  await act(() => vi.advanceTimersByTimeAsync(1999));
+  expect(document.body.textContent).not.toContain('Updating your library');
+  await act(() => vi.advanceTimersByTimeAsync(1));
+  expect(document.body.textContent).toContain('Updating your library');
+  expect(progressBar()?.getAttribute('aria-valuenow')).toBe('25');
+  loadStatus.mockResolvedValue({ state: 'ready' });
+  await act(() => vi.advanceTimersByTimeAsync(500));
+  expect(progressBar()).toBeNull();
+});
+
+it('times starting and upgrading as one wait and cleans up when disposed', async () => {
+  vi.useFakeTimers();
+  const loadStatus = vi.fn(async (): Promise<NativeDatabaseUpgradeStatus> => ({ state: 'starting' }));
+  const dispose = watchStartupDatabaseUpgrade(loadStatus);
+  await act(() => vi.advanceTimersByTimeAsync(1999));
+  expect(document.body.textContent).toBe('');
+  loadStatus.mockResolvedValue({ state: 'upgrading', completed: 2, total: 4 });
+  await act(() => vi.advanceTimersByTimeAsync(1));
+  expect(document.body.textContent).toContain('Updating your library');
+  expect(progressBar()?.getAttribute('aria-valuenow')).toBe('50');
+  act(dispose);
+  expect(document.querySelector('[data-startup-upgrade]')).toBeNull();
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+it('does not show a late status response after disposal', async () => {
+  vi.useFakeTimers();
+  let resolve!: (status: NativeDatabaseUpgradeStatus) => void;
+  const dispose = watchStartupDatabaseUpgrade(() => new Promise((done) => { resolve = done; }));
+  dispose();
+  await act(async () => resolve({ state: 'upgrading', completed: 1, total: 3 }));
+  expect(document.querySelector('[data-startup-upgrade]')).toBeNull();
+  expect(vi.getTimerCount()).toBe(0);
 });
