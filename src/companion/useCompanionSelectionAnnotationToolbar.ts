@@ -201,7 +201,7 @@ export function useCompanionSelectionAnnotationToolbar(props: {
     lastSelectionInteractionAtRef: scheduler.lastSelectionInteractionAtRef,
     scheduleSelectionToolbarOpen: scheduler.scheduleSelectionToolbarOpen
   });
-  useEffect(() => scheduler.clearScheduledOpen, [scheduler]);
+  useEffect(() => scheduler.clearScheduledOpen, [scheduler.clearScheduledOpen, props.nodeId, props.canCreateAnnotation]);
 
   return {
     closeSelectionToolbar,
