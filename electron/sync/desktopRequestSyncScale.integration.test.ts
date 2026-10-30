@@ -8,10 +8,16 @@ import { z } from 'zod';
 
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
+type ScaleRequests = { source?: unknown; target?: unknown };
+type FailurePeer = { diagnostics(): string };
+type FailureFixture = { left: FailurePeer; right: FailurePeer; root: string;
+  leftSnapshot: { origin: string }; rightSnapshot: { origin: string } };
+
 it('measures an empty receiver pulling a 3800-node and 24000-state library over production HTTP', { meta: { calibratedMs: 20 * 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const output = path.resolve('.tmp/artifacts/t343-request-scale.json');
   let passed = false;
+  const requests: ScaleRequests = {};
   try {
     const workload = await fixture.left.invoke('seed_request_scale');
     const [{ snapshot: source }, { snapshot: target }] = await Promise.all([
@@ -23,7 +29,8 @@ it('measures an empty receiver pulling a 3800-node and 24000-state library over 
         deviceId: source.deviceId, libraryEpoch: `${source.deviceId}-epoch`
       } } });
     const elapsedMs = performance.now() - started;
-    const requests = { source: await fixture.left.invoke('request_counts'), target: await fixture.right.invoke('request_counts') };
+    requests.source = await fixture.left.invoke('request_counts');
+    requests.target = await fixture.right.invoke('request_counts');
     const requestCount = Object.values(z.record(z.string(), z.number().int().nonnegative()).parse(requests.source)).reduce<number>((total, count) => total + Number(count), 0)
       + Object.values(z.record(z.string(), z.number().int().nonnegative()).parse(requests.target)).reduce<number>((total, count) => total + Number(count), 0);
     await fixture.right.close();
@@ -40,13 +47,39 @@ it('measures an empty receiver pulling a 3800-node and 24000-state library over 
     } finally { db.close(); }
     passed = true;
   } catch (error) {
-    const requests = { source: await fixture.left.invoke('request_counts'), target: await fixture.right.invoke('request_counts') };
-    await fs.mkdir(path.dirname(output), { recursive: true });
-    await fs.writeFile(output, JSON.stringify({ error: String(error), requests, diagnostics: { source: fixture.left.diagnostics(), target: fixture.right.diagnostics() }, origins: [fixture.leftSnapshot.origin, fixture.rightSnapshot.origin], root: fixture.root }, null, 2));
-    throw error;
+    await saveScaleFailure(output, error, fixture, requests);
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     if (passed) await fs.rm(fixture.root, { recursive: true, force: true });
     else console.info('Request scale fixture:', fixture.root);
   }
+});
+
+async function saveScaleFailure(output: string, error: unknown, fixture: FailureFixture, requests: ScaleRequests) {
+  try {
+    await fs.mkdir(path.dirname(output), { recursive: true });
+    await fs.writeFile(output, JSON.stringify({ error: String(error), requests,
+      diagnostics: { source: fixture.left.diagnostics(), target: fixture.right.diagnostics() },
+      origins: [fixture.leftSnapshot.origin, fixture.rightSnapshot.origin], root: fixture.root }, null, 2));
+  } catch (reportError) {
+    console.error('Could not write request scale failure evidence:', reportError);
+  }
+  throw error;
+}
+
+it('preserves the original failure and captured counts after the receiver has closed', async () => {
+  const root = await fs.mkdtemp(path.resolve('.tmp/artifacts/T637-scale-failure-'));
+  const original = new Error('original_scale_assertion');
+  const requests = { source: { pulls: 60 }, target: {} };
+  let invocations = 0;
+  const peer = { async invoke() { invocations++; throw new Error('fixture_unavailable'); }, diagnostics: () => 'closed receiver' };
+  const output = path.join(root, 'failure.json');
+  const fixture = { left: peer, right: peer, root,
+    leftSnapshot: { origin: 'http://localhost:1' }, rightSnapshot: { origin: 'http://localhost:2' } };
+  try {
+    await expect(saveScaleFailure(output, original, fixture, requests)).rejects.toBe(original);
+    expect(invocations).toBe(0);
+    expect(JSON.parse(await fs.readFile(output, 'utf8'))).toMatchObject({ error: String(original), requests, root });
+    await expect(saveScaleFailure(path.join(output, 'blocked'), original, fixture, requests)).rejects.toBe(original);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
 });
