@@ -1,5 +1,6 @@
 import { dailyFlowOperationId, retainDailyFlowRetry, settleDailyFlowRetry } from '../../lib/core/flow/dailyFlowRetry';
 import { commitDailyFlow } from '../../lib/core/flow/dailyFlowService';
+import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { companionDailyFlowPersistence, companionDailyFlowSettings } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { applyCompanionFlowReceipt, openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
@@ -20,8 +21,8 @@ export async function saveCompanionDailyNavigation(source: ReviewSessionState, n
 }
 
 export async function continueCompanionDailyFlow(args: Parameters<typeof useCompanionFlowSession>[0],
-  current: FlowOwner, owner: { current: FlowOwner }, mode: 'review-first' | 'recommended', render: () => void) {
-  if (owner.current !== current || !args.active || args.onlyReview || !args.snapshot || !current.hydrated ||
+  current: FlowOwner, owner: { current: FlowOwner }, mode: ReviewSessionMode, render: () => void) {
+  if (owner.current !== current || !args.active || !args.snapshot || !current.hydrated ||
     current.scope !== getCompanionReadingScope() || (current.session.reviewedItemCount ?? 0) <= 0 || current.session.currentNodeId || !current.session.continueNodeId) return;
   const source = current.session;
   const matches = () => owner.current === current && current.session === source && current.scope === getCompanionReadingScope();

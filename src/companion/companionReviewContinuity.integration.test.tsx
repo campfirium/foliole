@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import Database from 'better-sqlite3';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const lifecycle = vi.hoisted(() => ({ listeners: new Map<string, Set<(state: { isActive: boolean }) => void>>() }));
@@ -92,7 +92,7 @@ afterEach(async () => {
   rmSync(root, { recursive: true, force: true });
 });
 
-function renderSurface(initial: NativeCompanionWorkspaceSyncState, onlyReview: boolean) {
+function renderSurface(initial: NativeCompanionWorkspaceSyncState, reviewFirst: boolean) {
   return renderHook(({ only }) => {
     const [state, setState] = useState(initial);
     const [, setReadableArticle] = useState<CompanionReadableArticle | null>(null);
@@ -102,9 +102,10 @@ function renderSurface(initial: NativeCompanionWorkspaceSyncState, onlyReview: b
     const loaders = useCompanionWorkspaceLoaders({ state, setState, setReadableArticle, setError });
     const surface = useCompanionArticleSurface({
       ...createWorkspaceSync(state.workspace_snapshot), ...actions, ...loaders, state
-    }, createFloatingBar(), undefined, { isOnlyReviewOpen: only });
+    }, createFloatingBar(), undefined);
+    useEffect(() => { surface.setFlowSessionMode(only ? 'review-first' : 'recommended'); }, [only]);
     return { ...surface, state, error, refresh: actions.refreshFromDevice };
-  }, { initialProps: { only: onlyReview } });
+  }, { initialProps: { only: reviewFirst } });
 }
 
 async function expectCurrentBody(ui: ReturnType<typeof renderSurface>) {
@@ -165,7 +166,7 @@ it.each([false, true])('rebuilds the same eligible queue from durable state afte
       JOIN nodes n ON n.id=e.node_id WHERE e.active=1 AND n.kind='item'`).all() as { node_id: string }[];
     expect(new Set(rows.map(row => row.node_id))).toEqual(new Set(plan.fsrsQueueNodeIds));
     expect((await dailyFlowRuntime.loadCompanionDailySession())?.currentNodeId)
-      .toBe(reopened.result.current.onlyReviewSession.currentCard?.nodeId);
+      .toBe(reopened.result.current.effectiveReviewSession.currentCard?.nodeId);
   }
 });
 
@@ -196,9 +197,9 @@ it('keeps the displayed remotely handled card until grading revalidates it witho
     { node_id: 'one', due: '2099-01-01T00:00:00.000Z' }, { node_id: 'two', due: '2099-01-01T00:00:00.000Z' }
   ]);
   await foreground();
-  expect(ui.result.current.onlyReviewSession.currentCard?.nodeId).toBe('one');
+  expect(ui.result.current.effectiveReviewSession.currentCard?.nodeId).toBe('one');
   await act(() => ui.result.current.handleGradeReview(3));
-  await waitFor(() => expect(ui.result.current.onlyReviewSession.currentCard).toBeNull());
+  await waitFor(() => expect(ui.result.current.effectiveReviewSession.currentCard).toBeNull());
   expect(ui.result.current.readableArticle).toBeNull();
   expect(ui.result.current.isAnswerRevealed).toBe(false);
   expect(ui.result.current.reviewSession.queueNodeIds).toEqual([]);
@@ -235,7 +236,7 @@ it('defers reading with Soon without writing a reading completion and restores a
   const resumeId = ui.result.current.effectiveReviewSession.currentCard?.nodeId;
   await waitFor(async () => {
     const { loadCompanionFlowResume } = await import('../shared/platform/companion/runtime/companionFlowResume');
-    expect(await loadCompanionFlowResume(ui.result.current.state.workspace_snapshot!.libraryScope!, false)).toBe(resumeId);
+    expect(await loadCompanionFlowResume(ui.result.current.state.workspace_snapshot!.libraryScope!)).toBe(resumeId);
   });
   ui.unmount();
   await closeIosCompanionDatabase();
@@ -244,7 +245,7 @@ it('defers reading with Soon without writing a reading completion and restores a
   expect(await expectCurrentBody(reopened)).toBe(resumeId);
 });
 
-it('ignores a delayed reading refresh after switching to Only Review', async () => {
+it('ignores a delayed reading refresh after switching to Review first', async () => {
   database!.exec("UPDATE node_review SET due = '2099-01-01T00:00:00.000Z'");
   const ui = renderSurface(await loadCompanionWorkspaceSyncState(), false);
   expect(await expectCurrentBody(ui)).toBe('reading');

@@ -85,8 +85,7 @@ function renderSurface(initial: NativeCompanionWorkspaceSyncState) {
       setSyncConflictCount: () => {}, setSyncProgress: () => {}
     });
     const snapshot = state.workspace_snapshot;
-    const flow = useCompanionFlowSession({ snapshot, ready: true, active: true, onlyReview: false,
-      libraryScope: snapshot?.libraryScope ?? 'test' });
+    const flow = useCompanionFlowSession({ snapshot, ready: true, active: true,       libraryScope: snapshot?.libraryScope ?? 'test' });
     const activity = useMemo(() => new CompanionReadingActivity(flow.view.currentCard?.nodeId ?? null, () => {}),
       [flow.view.currentCard?.nodeId]);
     const session = flow.view;

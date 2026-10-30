@@ -45,7 +45,7 @@ async function prepareAnnotation(kind: 'highlight' | 'cloze') {
   snapshot = await library.snapshot();
   // jsdom has no layout; only supply the hit-test position for the real editor.
   vi.spyOn(EditorView.prototype, 'posAtCoords').mockReturnValue(13);
-  await saveCompanionFlowResume(snapshot.libraryScope!, false, 'article');
+  await saveCompanionFlowResume(snapshot.libraryScope!, 'article');
 }
 afterEach(async () => { cleanup(); vi.restoreAllMocks(); await library.close(); });
 

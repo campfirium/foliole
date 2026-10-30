@@ -20,7 +20,6 @@ describe('CompanionTabsConfig', () => {
   it('keeps secondary destinations in a registry outside the tab bar', () => {
     expect(COMPANION_SECONDARY_DESTINATIONS.map((destination) => destination.id)).toEqual([
       'directory',
-      'onlyReview',
       'sync',
       'tabs',
       'syncActivity',

@@ -121,7 +121,7 @@ it('legacy compatibility: recovers the latest mobile view after a lost receipt i
   const current = { identity: 'navigation', scope, session: source, generation: 0, epoch: 0,
     hydrated: true, error: null, kind: null, snapshot: before };
   const owner = { current };
-  const args = { snapshot: before, ready: true, active: true, onlyReview: false, libraryScope: library.root };
+  const args = { snapshot: before, ready: true, active: true, libraryScope: library.root };
   const commit = library.connection.commitTransaction.bind(library.connection);
   vi.spyOn(library.connection, 'commitTransaction').mockImplementationOnce(async () => {
     await commit(); throw new Error('commit_receipt_lost');
@@ -143,7 +143,7 @@ it('legacy compatibility: merges mobile navigation receipts while retaining conc
   const current = { identity: 'navigation', scope, session: source, generation: 0, epoch: 0,
     hydrated: true, error: null, kind: null, snapshot: before };
   const owner = { current };
-  const args = { snapshot: before, ready: true, active: true, onlyReview: false, libraryScope: library.root };
+  const args = { snapshot: before, ready: true, active: true, libraryScope: library.root };
   const commit = library.connection.commitTransaction.bind(library.connection);
   vi.spyOn(library.connection, 'commitTransaction').mockImplementationOnce(async () => {
     await commit();

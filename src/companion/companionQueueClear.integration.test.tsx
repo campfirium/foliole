@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import Database from 'better-sqlite3';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', async () => {
@@ -25,7 +25,6 @@ import { applyCompanionLocalNodeVersions, saveCompanionSyncNodeReviewRecord } fr
 import { runCompanionSyncWriterTask } from '../shared/platform/companionSyncWriterQueue';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
-import { CompanionOnlyReviewContent } from './CompanionOnlyReviewContent';
 import { CompanionReviewActionFooter } from './CompanionReviewActionFooter';
 import { CompanionReviewFallback } from './CompanionReviewFallback';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
@@ -78,7 +77,8 @@ function Flow({ initial, only = false }: { initial: NativeCompanionWorkspaceSync
     setStatus: () => {}, setSyncConflictCount: () => {}, setSyncProgress: () => {} });
   const loaders = useCompanionWorkspaceLoaders({ state, setState, setReadableArticle, setError });
   const surface = useCompanionArticleSurface({ ...createWorkspaceSync(state.workspace_snapshot), ...actions, ...loaders, state },
-    createFloatingBar(), undefined, { isOnlyReviewOpen: only });
+    createFloatingBar(), undefined);
+  useEffect(() => { surface.setFlowSessionMode(only ? 'review-first' : 'recommended'); }, [only]);
   if (surface.activeAction === 'recent') return <p>Browsing</p>;
   const card = surface.reviewSession.currentCard;
   if (!surface.flowReady) return <p>Loading</p>;
@@ -92,7 +92,6 @@ function Flow({ initial, only = false }: { initial: NativeCompanionWorkspaceSync
     <button onClick={() => void surface.handleSoonReviewTopic()}>Soon</button>
     </>} />
   </>;
-  if (only) return <CompanionOnlyReviewContent hasSnapshot isAnswerRevealed={false} reviewSession={surface.onlyReviewSession} />;
   return <CompanionReviewFallback hasSnapshot summary={surface.flowSummary} error={error ?? surface.flowError}
     {...{ hasTopics: surface.flowHasTopics, onExit: () => surface.handleTabAction('recent') }} />;
 }
@@ -119,7 +118,7 @@ it('keeps Queue clear visible while automatically continuing the remaining topic
   expect(database.prepare('SELECT * FROM node_reading').all()).toEqual(before);
   expect(database.prepare('SELECT * FROM node_review').all()).toEqual(reviewBefore);
   expect(database.prepare('SELECT node_id FROM review_log').all()).toEqual([{ node_id: 'item' }]);
-  await waitFor(async () => expect(await loadCompanionFlowResume(initial.workspace_snapshot!.libraryScope!, false)).toBe('topic'));
+  await waitFor(async () => expect(await loadCompanionFlowResume(initial.workspace_snapshot!.libraryScope!)).toBe('topic'));
   view.unmount();
   await closeIosCompanionDatabase();
   await openLibrary();
@@ -179,7 +178,7 @@ it('keeps an empty library distinct from Queue clear', async () => {
   expect(screen.queryByText('Queue clear')).not.toBeInTheDocument();
 });
 
-it('keeps Only Review clear of reading topics after its last grade', async () => {
+it('keeps Review first clear of reading topics after its last grade', async () => {
   await seed('item');
   await seed('topic');
   render(<Flow initial={await loadCompanionWorkspaceSyncState()} only />);

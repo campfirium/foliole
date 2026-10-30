@@ -15,11 +15,9 @@ const SECONDARY_DESTINATION_IDS = COMPANION_SECONDARY_DESTINATIONS.map((destinat
 function resolveActiveSecondaryDestination(args: {
   activeAction: CompanionTabAction;
   isBrowseDirectoryOpen: boolean;
-  isOnlyReviewOpen: boolean;
   settingsPage: CompanionSettingsPage;
 }): CompanionSecondaryDestinationId | null {
   if (args.activeAction === 'recent' && args.isBrowseDirectoryOpen) return 'directory';
-  if (args.activeAction === 'review' && args.isOnlyReviewOpen) return 'onlyReview';
   if (args.activeAction === 'more' && args.settingsPage !== 'list') {
     return parseLiteralUnion(args.settingsPage, SECONDARY_DESTINATION_IDS);
   }
@@ -29,10 +27,8 @@ function resolveActiveSecondaryDestination(args: {
 function useCompanionSecondaryDestinations(args: {
   activeAction: CompanionTabAction;
   isBrowseDirectoryOpen: boolean;
-  isOnlyReviewOpen: boolean;
   settingsPage: CompanionSettingsPage;
   setIsBrowseDirectoryOpen(open: boolean): void;
-  setIsOnlyReviewOpen(open: boolean): void;
   setSettingsPage(page: CompanionSettingsPage): void;
   surface: ReturnType<typeof useCompanionArticleSurface>;
 }) {
@@ -40,11 +36,6 @@ function useCompanionSecondaryDestinations(args: {
     if (destinationId === 'directory') {
       args.surface.handleTabAction('recent');
       args.setIsBrowseDirectoryOpen(true);
-      return;
-    }
-    if (destinationId === 'onlyReview') {
-      args.surface.handleTabAction('review');
-      args.setIsOnlyReviewOpen(true);
       return;
     }
     args.surface.handleTabAction('more');
@@ -60,7 +51,6 @@ function handlePrimaryNavigationAction(args: {
   isBrowseDirectoryOpen: boolean;
   setBrowseSortKey: ReturnType<typeof useCompanionBrowseSortState>['setBrowseSortKey'];
   setIsBrowseDirectoryOpen(open: boolean): void;
-  setIsOnlyReviewOpen(open: boolean): void;
   setSettingsPage(page: CompanionSettingsPage): void;
   surface: ReturnType<typeof useCompanionArticleSurface>;
 }) {
@@ -70,7 +60,6 @@ function handlePrimaryNavigationAction(args: {
   }
   args.surface.handleTabAction(args.action);
   if (args.action === 'recent') args.setIsBrowseDirectoryOpen(false);
-  if (args.action === 'review') args.setIsOnlyReviewOpen(false);
   if (args.action === 'more') args.setSettingsPage('list');
 }
 
@@ -80,12 +69,10 @@ export function useCompanionShellActions(args: {
   directoryState: ReturnType<typeof useCompanionDirectorySelectionState>;
   externalDirectory: CompanionExternalDirectory;
   isBrowseDirectoryOpen: boolean;
-  isOnlyReviewOpen: boolean;
   setBrowseSortDirection: ReturnType<typeof useCompanionBrowseSortState>['setBrowseSortDirection'];
   setBrowseSortKey: ReturnType<typeof useCompanionBrowseSortState>['setBrowseSortKey'];
   setIsBrowseDirectoryOpen(open: boolean): void;
   setIsCaptureSheetOpen(open: boolean): void;
-  setIsOnlyReviewOpen(open: boolean): void;
   setSettingsPage(page: CompanionSettingsPage): void;
   settingsPage: CompanionSettingsPage;
   surface: ReturnType<typeof useCompanionArticleSurface>;
@@ -98,12 +85,10 @@ export function useCompanionShellActions(args: {
     directorySelection: args.directoryState.directorySelection,
     externalDirectory: args.externalDirectory,
     isBrowseDirectoryOpen: args.isBrowseDirectoryOpen,
-    isOnlyReviewOpen: args.isOnlyReviewOpen,
     setBrowseSortDirection: args.setBrowseSortDirection,
     setBrowseSortKey: args.setBrowseSortKey,
     setIsBrowseDirectoryOpen: args.setIsBrowseDirectoryOpen,
     setIsCaptureSheetOpen: args.setIsCaptureSheetOpen,
-    setIsOnlyReviewOpen: args.setIsOnlyReviewOpen,
     setSettingsPage: args.setSettingsPage,
     settingsPage: args.settingsPage,
     surface: args.surface,
@@ -112,10 +97,8 @@ export function useCompanionShellActions(args: {
   const secondaryDestinations = useCompanionSecondaryDestinations({
     activeAction: args.surface.activeAction,
     isBrowseDirectoryOpen: args.isBrowseDirectoryOpen,
-    isOnlyReviewOpen: args.isOnlyReviewOpen,
     settingsPage: args.settingsPage,
     setIsBrowseDirectoryOpen: args.setIsBrowseDirectoryOpen,
-    setIsOnlyReviewOpen: args.setIsOnlyReviewOpen,
     setSettingsPage: args.setSettingsPage,
     surface: args.surface
   });
@@ -126,7 +109,6 @@ export function useCompanionShellActions(args: {
       isBrowseDirectoryOpen: args.isBrowseDirectoryOpen,
       setBrowseSortKey: args.setBrowseSortKey,
       setIsBrowseDirectoryOpen: args.setIsBrowseDirectoryOpen,
-      setIsOnlyReviewOpen: args.setIsOnlyReviewOpen,
       setSettingsPage: args.setSettingsPage,
       surface: args.surface
     }),

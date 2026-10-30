@@ -14,7 +14,6 @@ function buildTopBarProps(settingsPage = 'list') {
     { activeAction: 'more' } as never,
     settingsPage as never,
     false,
-    false,
     { kind: 'root' } as never,
     'dateLastOpened',
     'desc',
@@ -22,11 +21,9 @@ function buildTopBarProps(settingsPage = 'list') {
     vi.fn(),
     vi.fn(),
     vi.fn(),
-    vi.fn(),
     undefined,
     false,
     undefined,
-    vi.fn(),
     vi.fn(),
     vi.fn(),
     vi.fn(),
@@ -53,7 +50,6 @@ describe('CompanionTopBarPropsModel', () => {
       { activeAction: 'review' } as never,
       'list' as never,
       false,
-      false,
       { kind: 'root' } as never,
       'dateLastOpened',
       'desc',
@@ -61,11 +57,9 @@ describe('CompanionTopBarPropsModel', () => {
       vi.fn(),
       vi.fn(),
       vi.fn(),
-      vi.fn(),
       undefined,
       false,
       undefined,
-      vi.fn(),
       vi.fn(),
       vi.fn(),
       vi.fn(),
@@ -79,9 +73,9 @@ describe('CompanionTopBarPropsModel', () => {
     const surface = { activeAction: 'recent', browsedFolder: { title: 'Inbox' } } as never;
     const args = [
       (key: string, params?: never) => translate('en', key as never, params), surface,
-      'list', false, false, { kind: 'root' }, 'dateLastOpened', 'desc',
-      vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), undefined,
-      false, undefined, vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn()
+      'list', false, { kind: 'root' }, 'dateLastOpened', 'desc',
+      vi.fn(), vi.fn(), vi.fn(), vi.fn(), undefined,
+      false, undefined, vi.fn(), vi.fn(), vi.fn(), vi.fn()
     ] as Parameters<typeof resolveCompanionTopBarProps>;
 
     expect(resolveCompanionTopBarProps(...args)).toMatchObject({ title: 'Inbox' });

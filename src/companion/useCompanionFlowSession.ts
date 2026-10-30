@@ -3,6 +3,7 @@ import { useEffect, useMemo, useReducer, useRef, useSyncExternalStore } from 're
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { sameCycleProgress } from '../../lib/core/flow/cycleFlowState';
 import { getReviewItemKind } from '../features/review/model/reviewItemKind';
+import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { isCompanionReadReceiptSnapshot, openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
@@ -14,6 +15,7 @@ import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 
 import { continueCompanionDailyFlow } from './companionDailyNavigation';
 import { createCompanionFlowControls, trackCompanionFlowRefresh } from './companionFlowControls';
+import { useCompanionNavigationField } from './CompanionNavigationProvider';
 import { buildCurrentCard, emptyCompanionReviewSession, resolveScheduledReviewSummary } from './companionReviewSession';
 import { useCompanionFlowDocumentPrefetch } from './useCompanionFlowDocumentPrefetch';
 import { useFlowHydration } from './useCompanionFlowHydration';
@@ -26,11 +28,12 @@ export type FlowOwner = { identity: string; scope: object; session: ReturnType<t
   snapshot: WorkspaceSnapshot | null };
 
 export function useCompanionFlowSession(args: {
-  snapshot: WorkspaceSnapshot | null; ready: boolean; active: boolean; onlyReview: boolean; libraryScope: string;
+  snapshot: WorkspaceSnapshot | null; ready: boolean; active: boolean; libraryScope: string;
 }) {
   const [, render] = useReducer((value: number) => value + 1, 0);
   const scope = useSyncExternalStore(subscribeCompanionReadingScope, getCompanionReadingScope);
-  const identity = JSON.stringify([args.libraryScope, args.onlyReview]);
+  const [mode, setMode] = useCompanionNavigationField('flowSessionMode', 'recommended');
+  const identity = JSON.stringify([args.libraryScope, mode]);
   const owner = useRef<FlowOwner>({ identity, scope, session: createEmptyReviewSession(), generation: 0, epoch: 0,
     hydrated: false, error: null as string | null, kind: null as string | null,
     snapshot: null as WorkspaceSnapshot | null });
@@ -41,13 +44,12 @@ export function useCompanionFlowSession(args: {
   const current = owner.current;
   const latest = useRef(args);
   latest.current = args;
-  const mode = args.onlyReview ? 'review-first' : 'recommended';
   reconcileCurrentFlow(args.snapshot, current);
   useFlowHydration(args, current, owner, latest, identity, scope, mode, render);
   useFlowReentry(args, current, owner, latest, mode, render);
   useEffect(() => {
     if (!current.hydrated) return;
-    void saveCompanionFlowResume(args.libraryScope, args.onlyReview, current.session.currentNodeId).catch((error: unknown) => {
+    void saveCompanionFlowResume(args.libraryScope, current.session.currentNodeId).catch((error: unknown) => {
       if (owner.current !== current) return;
       current.error = error instanceof Error ? error.message : 'Could not save the Flow position.';
       render();
@@ -78,7 +80,7 @@ export function useCompanionFlowSession(args: {
   const historyKey = companionFlowHistoryKey(args.libraryScope);
   const controls = createCompanionFlowControls({ current, owner, scope, mode, historyKey, render });
   function continueReading() { cancelDocumentPreparation(); if (owner.current === current) void continueCompanionDailyFlow(latest.current, current, owner, mode, render).catch(error => { current.error = String(error); render(); }); }
-  return { view, ...controls, historyKey, cancelDocumentPreparation, continueReading, canContinueReading, hasTopics,
+  return { view, mode, setMode, ...controls, historyKey, cancelDocumentPreparation, continueReading, canContinueReading, hasTopics,
     readIntents: current.readIntents,
     summary: { ...(session.cycle ? { queueCleared: Boolean(session.cycle.clearedAt) } : {}), completedAt: session.completedAt ?? null, sessionStartedAt: session.sessionStartedAt ?? null,
       readTopicCount: session.readTopicCount ?? 0, readingElapsedMs: session.readingElapsedMs ?? 0,
@@ -109,7 +111,7 @@ function useFlowCatalog(snapshot: WorkspaceSnapshot | null) {
 
 function useFlowReentry(args: Parameters<typeof useCompanionFlowSession>[0],
   current: FlowOwner, owner: { current: FlowOwner }, latest: { current: Parameters<typeof useCompanionFlowSession>[0] },
-  mode: 'review-first' | 'recommended', render: () => void) {
+  mode: ReviewSessionMode, render: () => void) {
   const wasActive = useRef(args.active);
   useEffect(() => {
     if (args.active && !wasActive.current && current.hydrated && args.snapshot) {
@@ -159,7 +161,7 @@ function reconcileCurrentFlow(snapshot: WorkspaceSnapshot | null, current: FlowO
 }
 
 function useReadIntentReceipts(current: FlowOwner, owner: { current: FlowOwner },
-  mode: 'recommended' | 'review-first', render: () => void) {
+  mode: ReviewSessionMode, render: () => void) {
   useEffect(() => current.readIntents?.subscribe(() => {
     current.error = current.readIntents!.error;
     const result = current.readIntents!.result;

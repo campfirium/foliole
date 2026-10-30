@@ -128,7 +128,7 @@ it('restores the existing Flow card and position without resubmitting it', async
     intervalDurationMs: 1000, intervalGrowthFactor: 1, lastHandledAt: '2026-01-01T00:00:00Z',
     nextAt: '2026-01-01T00:00:00Z', priority: 5, readingPosition: 0, repetitionCount: 0, state: 'active'
   } });
-  await saveCompanionFlowResume(snapshot.libraryScope!, false, 'article');
+  await saveCompanionFlowResume(snapshot.libraryScope!, 'article');
   const first = renderResumeSurface(await library.snapshot());
   await waitFor(() => expect(first.result.current?.surface.effectiveReviewSession.currentCard?.nodeId).toBe('article'));
   act(() => first.result.current.surface.handleViewScroll(320));

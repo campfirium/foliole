@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { score } from '../../electron/database/reviewProjection.testSupport';
@@ -48,7 +48,8 @@ afterEach(async () => { cleanup(); await library.close(); });
 
 function Reader() {
   const [value, setValue] = useState(initial);
-  const flow = useCompanionFlowSession({ snapshot: value, ready: true, active: true, onlyReview: true, libraryScope: 'ui-test' });
+  const flow = useCompanionFlowSession({ snapshot: value, ready: true, active: true, libraryScope: 'ui-test' });
+  useEffect(() => { flow.setMode('review-first'); }, []);
   const nodeId = flow.view.currentCard?.nodeId ?? '';
   const activity = useMemo(() => new CompanionReadingActivity(nodeId, () => {}), [nodeId]);
   const workspace = createWorkspaceSync(value);

@@ -62,7 +62,6 @@ function renderCompanionMainContent(model: CompanionShellModel) {
         onChangeBrowseSortDirection: model.setBrowseSortDirection,
         onChangeBrowseSortKey: model.setBrowseSortKey,
         isBrowseDirectoryOpen: model.isBrowseDirectoryOpen,
-        isOnlyReviewOpen: model.isOnlyReviewOpen,
         isSearchArticleOpen: model.isSearchArticleOpen,
         onExitSearchArticle: model.handleExitSearchArticle,
         onExitSearchExternalDocument: model.handleExitSearchExternalDocument,
@@ -110,6 +109,7 @@ function FlowHistorySurface(props: { children: React.ReactNode; model: Companion
       flowActive={model.surface.activeAction === 'review' && !model.surface.isFlowBrowsing}
       applyFlow={model.surface.handleFlowHistory}>
       <CompanionFlowHistorySurface
+      modeControls={{ mode: model.surface.flowSessionMode, onChange: model.surface.setFlowSessionMode, disabled: model.isBottomBarDisabled }}
       active={model.surface.activeAction === 'review' && !model.surface.isFlowBrowsing &&
         !model.surface.readingActivity.editing && model.surface.flowReady}
       busy={model.isBottomBarDisabled} refreshPending={model.surface.historyRefreshPending} historyKey={model.surface.flowHistoryKey}
@@ -127,7 +127,7 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
       {import.meta.env.DEV && window.__FOLIOLE_COMPANION_PREVIEW_HOST__ !== undefined ? (
         <CompanionPreviewLifecycle activity={model.surface.readingActivity}
           destination={JSON.stringify([model.surface.activeAction, model.settingsPage, model.activeSecondaryDestinationId,
-            model.directorySelection, model.isBrowseDirectoryOpen, model.isOnlyReviewOpen,
+            model.directorySelection, model.isBrowseDirectoryOpen,
             model.searchExternalDocument?.document_id, model.searchPdfResult?.attachment_id, model.isSearchArticleOpen])}
           ready={model.workspaceSync.isWorkspaceSyncStateReady
             && (model.surface.activeAction !== 'review' || model.surface.flowReady)} />

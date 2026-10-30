@@ -108,7 +108,6 @@ function renderSurfaceElement(surface: unknown, workspaceSync: unknown = createW
     directorySelection: { kind: 'root' },
     hasSnapshot: true,
     isBrowseDirectoryOpen: false,
-    isOnlyReviewOpen: false,
     isSearchArticleOpen: false,
     onExitSearchExternalDocument: vi.fn(),
     onExitSearchPdf: vi.fn(),

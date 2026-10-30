@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 import { restoreFlowHistoryEntry } from '../../lib/core/flow/flowHistoryEntry';
+import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { loadCompanionDailySession } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
@@ -20,7 +21,7 @@ export function useFlowHydration(
   current: FlowOwner,
   owner: { current: FlowOwner },
   latest: { current: Parameters<typeof useCompanionFlowSession>[0] },
-  identity: string, scope: object, mode: 'review-first' | 'recommended', render: () => void
+  identity: string, scope: object, mode: ReviewSessionMode, render: () => void
 ) {
   useEffect(() => {
     if (!args.ready || !args.snapshot || !args.active || current.hydrated) return;
@@ -29,7 +30,7 @@ export function useFlowHydration(
     void getCompanionReadIntents().then(async engine => {
       current.readIntents = engine;
       await engine.drain().catch(error => { current.error = String(error); });
-      return Promise.all([loadCompanionFlowResume(args.libraryScope, args.onlyReview),
+      return Promise.all([loadCompanionFlowResume(args.libraryScope),
         loadCompanionFlowHistory(companionFlowHistoryKey(args.libraryScope)),
         loadCompanionDailySession()
       ]);

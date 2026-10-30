@@ -8,7 +8,6 @@ import {
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 import * as DirectoryArticle from './CompanionDirectoryReadableArticleModel';
 import { CompanionFolderArticleList } from './CompanionFolderArticleList';
-import { CompanionOnlyReviewContent } from './CompanionOnlyReviewContent';
 import { ReadableArticleOrFallback } from './CompanionReadableArticleFallback';
 import { resolveCompanionReadingNeighbors } from './companionReadingNeighbors';
 import { RecentArticleList } from './CompanionRecentArticleList';
@@ -33,7 +32,6 @@ type CompanionShellContentProps = CompanionShellSearchRouteProps & {
   browseSortKey?: FolderListSortKey;
   hasSnapshot: boolean;
   isBrowseDirectoryOpen: boolean;
-  isOnlyReviewOpen: boolean;
   onBackToSettingsList: () => void;
   onBackDirectorySelection: () => void;
   onChangeBrowseSortDirection?: (sortDirection: FolderListSortDirection) => void;
@@ -168,11 +166,9 @@ export function renderCompanionShellContent(props: CompanionShellContentProps) {
     if (props.surface.flowReady === false) return <CompanionWorkspaceSyncLoading />;
     if (props.surface.effectiveReviewSession.currentCard) {
       return <CompanionShellReadableArticle surface={props.surface} workspaceSync={props.workspaceSync}
-        onExit={() => props.isOnlyReviewOpen ? props.onBackDirectorySelection() : props.surface.handleTabAction('recent')} flow />;
+        onExit={() => props.surface.handleTabAction('recent')} flow />;
     }
-    if (props.isOnlyReviewOpen) return <CompanionOnlyReviewContent hasSnapshot={props.hasSnapshot}
-      isAnswerRevealed={props.surface.isAnswerRevealed} reviewSession={props.surface.onlyReviewSession} />;
-    return <CompanionReviewFallback error={props.surface.flowError ?? props.workspaceError} hasSnapshot={props.hasSnapshot}
+    return <CompanionReviewFallback mode={props.surface.flowSessionMode} error={props.surface.flowError ?? props.workspaceError} hasSnapshot={props.hasSnapshot}
       hasTopics={props.surface.flowHasTopics}
       summary={props.surface.flowSummary}
       onExit={() => props.surface.handleTabAction('recent')} />;

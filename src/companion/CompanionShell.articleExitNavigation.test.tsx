@@ -88,7 +88,6 @@ function createSurface(overrides?: Record<string, unknown>) {
     isAnswerRevealed: false,
     isSubmittingGrade: false,
     isSubmittingReadingAction: false,
-    onlyReviewSession: reviewSession,
     readableArticle: null,
     readingError: null,
     recentArticles: [],

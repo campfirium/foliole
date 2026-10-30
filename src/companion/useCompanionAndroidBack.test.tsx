@@ -28,7 +28,6 @@ function model(action: 'recent' | 'review' | 'more' | 'search') {
     handleNavigationAction,
     isBrowseDirectoryOpen: false,
     isCaptureSheetOpen: false,
-    isOnlyReviewOpen: false,
     isSearchArticleOpen: false,
     searchExternalDocument: null,
     searchPdfResult: null,
@@ -67,14 +66,11 @@ describe('Android system Back navigation', () => {
     expect(host.exitApp).not.toHaveBeenCalled();
   });
 
-  it('returns Only Review to Flow and keeps system Back inside Flow', async () => {
+  it('keeps system Back inside Flow without opening another review page', async () => {
     const state = model('review');
-    state.isOnlyReviewOpen = true;
     await pressBack(state);
-    expect(state.handleNavigationAction).toHaveBeenCalledWith('review');
-    state.isOnlyReviewOpen = false;
-    act(() => host.listener?.());
-    expect(state.handleNavigationAction).not.toHaveBeenCalledWith('recent');
+    expect(state.handleNavigationAction).not.toHaveBeenCalled();
+    expect(state.surface.handleTabAction).not.toHaveBeenCalled();
     expect(host.exitApp).not.toHaveBeenCalled();
   });
 

@@ -38,7 +38,6 @@ const FIXED_NAVIGATION_KEYS = {
   ],
   shortcuts: [
     'companion.tabs.shortcut.directory',
-    'companion.tabs.shortcut.onlyReview',
     'companion.tabs.shortcut.sync',
     'companion.tabs.shortcut.tabs',
     'companion.tabs.shortcut.syncActivity',

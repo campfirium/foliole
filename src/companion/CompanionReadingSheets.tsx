@@ -9,6 +9,7 @@ import { CompanionBottomSheet as ReadingBottomSheet } from './CompanionBottomShe
 import { CompanionColorModeControl } from './CompanionColorModeControl';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { CompanionFlowOrEditHistoryActions } from './CompanionFlowHistorySurface';
+import { CompanionFlowModeControl } from './CompanionFlowModeControl';
 import type { CompanionHighlightPanelItem } from './companionHighlightPanelModel';
 import { CompanionReadingModeControl } from './CompanionReadingModeControl';
 import { CompanionReadingTypographyControls } from './CompanionReadingTypographyControls';
@@ -78,6 +79,7 @@ export function ReadingActionsSheet(props: {
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.actions')}>
       <div className="border-t border-companion-divider">
         <CompanionFlowOrEditHistoryActions open={props.open} {...(props.editHistory ? { editHistory: props.editHistory } : {})} />
+        <CompanionFlowModeControl onSelect={() => props.onOpenChange(false)} />
         <ReadingExitFlowHereAction onClose={() => props.onOpenChange(false)} />
         <CompanionWorkspaceCurrentNodeAction onSelect={() => props.onOpenChange(false)} />
         <ReadingActionRow

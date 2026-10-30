@@ -67,7 +67,7 @@ it('takes the first native current from saved facts instead of seeding it with a
     await db.run('DELETE FROM daily_flow_operations');
   });
   const app = renderHook(() => useCompanionFlowSession({ snapshot, ready: true, active: true,
-    onlyReview: false, libraryScope: 'entry-fixture' }));
+    libraryScope: 'entry-fixture' }));
   await waitFor(() => expect(app.result.current.ready).toBe(true));
   expect(app.result.current.capture().nodeId).toBe(expectedId);
   expect(app.result.current.summary.readTopicCount).toBe(0);

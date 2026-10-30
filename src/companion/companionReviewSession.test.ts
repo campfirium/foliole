@@ -231,12 +231,12 @@ describe('companion reading review session actions', () => {
     const snapshot = createSnapshot();
     snapshot.nodesById['topic-1'] = createDueReadingTopic();
 
-    const onlyReview = resolveCompanionFsrsReviewSession(snapshot, REVIEWED_AT);
+    const reviewFirst = resolveCompanionFsrsReviewSession(snapshot, REVIEWED_AT);
     const mixed = resolveCompanionReviewSession(snapshot, REVIEWED_AT);
 
-    expect([...onlyReview.queueNodeIds].sort()).toEqual(['item-1', 'item-2']);
-    expect(onlyReview.currentCard?.itemKind).toBe('fsrs');
-    expect(onlyReview.scheduledReadingCount).toBe(1);
+    expect([...reviewFirst.queueNodeIds].sort()).toEqual(['item-1', 'item-2']);
+    expect(reviewFirst.currentCard?.itemKind).toBe('fsrs');
+    expect(reviewFirst.scheduledReadingCount).toBe(1);
     expect(mixed.queueNodeIds).toContain('topic-1');
   });
 

@@ -28,8 +28,7 @@ it('opens Flow, prepares only the next body, and opens that body without reveali
   const reads = vi.spyOn(library.readonlyQueries, 'query');
   const publish = vi.fn();
   const hook = renderHook(() => ({
-    flow: useCompanionFlowSession({ snapshot: source, ready: true, active: true, onlyReview: false,
-      libraryScope: source.libraryScope ?? 'test' }),
+    flow: useCompanionFlowSession({ snapshot: source, ready: true, active: true, libraryScope: source.libraryScope ?? 'test' }),
     article: useCompanionReadableArticleLoader(source, publish)
   }));
   await waitFor(() => expect(hook.result.current.flow.ready).toBe(true));
@@ -60,7 +59,7 @@ it('keeps the current Flow stable across an unrelated render without revisiting 
   const source = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
   const reads = vi.spyOn(library.readonlyQueries, 'query');
   const hook = renderHook(({ snapshot }) => useCompanionFlowSession({ snapshot, ready: true, active: true,
-    onlyReview: false, libraryScope: source.libraryScope ?? 'test' }), { initialProps: { snapshot: source } });
+    libraryScope: source.libraryScope ?? 'test' }), { initialProps: { snapshot: source } });
   await waitFor(() => expect(hook.result.current.ready).toBe(true));
   const session = hook.result.current.capture().session;
   const next = (await predictCompanionFlowDocument({ token: session.daily!,

@@ -132,13 +132,11 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.tabs.search': '搜索',
   'companion.tabs.settings': '设置',
   'companion.tabs.shortcut.directory': '目录',
-  'companion.tabs.shortcut.onlyReview': '仅复习',
   'companion.tabs.shortcut.sync': '同步',
   'companion.tabs.shortcut.tabs': '标签页',
   'companion.tabs.shortcut.syncActivity': '同步活动',
   'companion.tabs.shortcut.syncConnection': '同步连接',
   'companion.review.learn': '学习',
-  'companion.review.onlyReview': '仅复习',
   'companion.review.exitFlow': '退出 Flow',
   'companion.review.exit': '退出',
   'companion.review.toolbar': '移动端复习工具栏',
@@ -193,9 +191,4 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.sync.diagnostic.failed': '同步诊断失败',
   'companion.sync.diagnostic.running.description': '正在收集这台设备和桌面端的同步状态。',
   'companion.sync.diagnostic.running.title': '正在运行同步诊断',
-  'companion.onlyReview.noTopicsTitle': '还没有同步主题',
-  'companion.onlyReview.noScheduledTitle': '这台设备上没有检测项',
-  'companion.onlyReview.noScheduledDescription': '仅复习只显示到期的检测项，不包含阅读主题。',
-  'companion.onlyReview.noDueTitle': '现在没有到期检测项',
-  'companion.onlyReview.noDueDescription': '下一个检测项：{date}'
 };

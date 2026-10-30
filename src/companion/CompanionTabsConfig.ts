@@ -2,7 +2,6 @@ import {
   Activity,
   Library,
   List,
-  ListFilter,
   PanelBottom,
   RefreshCw,
   Route,
@@ -18,7 +17,6 @@ export type CompanionTabAction = 'review' | 'recent' | 'search' | 'more';
 export type CompanionPrimaryTabId = 'browse' | 'learn' | 'search' | 'settings';
 export type CompanionSecondaryDestinationId =
   | 'directory'
-  | 'onlyReview'
   | 'sync'
   | 'tabs'
   | 'syncActivity'
@@ -66,7 +64,6 @@ const PRIMARY_ACTION_BY_TAB_ID: Record<CompanionPrimaryTabId, CompanionTabAction
 
 export const COMPANION_SECONDARY_DESTINATIONS: CompanionSecondaryDestination[] = [
   { icon: Library, id: 'directory', labelKey: 'companion.tabs.shortcut.directory', parentTab: 'browse' },
-  { icon: ListFilter, id: 'onlyReview', labelKey: 'companion.tabs.shortcut.onlyReview', parentTab: 'learn' },
   { icon: RefreshCw, id: 'sync', labelKey: 'companion.tabs.shortcut.sync', parentTab: 'settings' },
   { icon: PanelBottom, id: 'tabs', labelKey: 'companion.tabs.shortcut.tabs', parentTab: 'settings' },
   { icon: Activity, id: 'syncActivity', labelKey: 'companion.tabs.shortcut.syncActivity', parentTab: 'settings' },

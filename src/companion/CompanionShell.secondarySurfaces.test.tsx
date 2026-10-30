@@ -78,15 +78,6 @@ function createSurface(activeAction: 'recent' | 'review' | 'search') {
     scheduledReadingCount: activeAction === 'review' ? 1 : 0,
     totalCount: activeAction === 'review' ? 1 : 0
   };
-  const onlyReviewSession = {
-    currentCard: null,
-    nextFsrsDueAt: null,
-    nextReadingDueAt: reviewSession.nextReadingDueAt,
-    queueNodeIds: [],
-    scheduledFsrsCount: 0,
-    scheduledReadingCount: reviewSession.scheduledReadingCount,
-    totalCount: 0
-  };
   return {
     activeAction,
     browsedFolder: null,
@@ -108,7 +99,6 @@ function createSurface(activeAction: 'recent' | 'review' | 'search') {
     readingActivity: new CompanionReadingActivity('topic-1', vi.fn()),
     reviewError: null,
     effectiveReviewSession: reviewSession,
-    onlyReviewSession,
     reviewSession,
     selectedBrowseNodeId: null as string | null
   };
@@ -117,10 +107,7 @@ function createSurface(activeAction: 'recent' | 'review' | 'search') {
 async function renderShellWithSurface(surface: ReturnType<typeof createSurface>) {
   mockFloatingBar();
   mockWorkspaceSync();
-  useCompanionArticleSurface.mockImplementation((_workspace, _bar, _sort, options) => ({
-    ...surface,
-    effectiveReviewSession: options?.isOnlyReviewOpen ? surface.onlyReviewSession : surface.effectiveReviewSession
-  }));
+  useCompanionArticleSurface.mockReturnValue(surface);
   const { CompanionShell } = await import('./CompanionShell');
   render(
     <CompanionShell
@@ -189,20 +176,6 @@ describe('CompanionShell secondary surfaces', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     fireEvent.click(screen.getByRole('button', { name: 'More' }));
     expectBrowseMenuSheet();
-  });
-
-  it('opens Only Review as an FSRS-only empty state without mixed cards', { meta: { calibratedMs: 15000 } }, async () => {
-    const surface = createSurface('review');
-    surface.effectiveReviewSession = { ...surface.reviewSession, currentCard: null };
-    await renderShellWithSurface(surface);
-
-    const topOnlyReviewButton = screen.getAllByRole('button', { name: 'Only Review' }).at(0);
-    if (!topOnlyReviewButton) throw new Error('missing top Only Review button');
-    fireEvent.click(topOnlyReviewButton);
-
-    expect(screen.getByText('No topics synced yet')).toBeInTheDocument();
-    expect(screen.getByText('Connect to desktop to bring review work onto this device.')).toBeInTheDocument();
-    expect(screen.queryByTestId('companion-review-card')).not.toBeInTheDocument();
   });
 
   it('shows Search as an independent input surface', async () => {

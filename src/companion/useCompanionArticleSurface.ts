@@ -129,10 +129,10 @@ function useCompanionActiveAction(workspaceSync: CompanionWorkspaceSyncApi) {
 }
 
 function useCompanionSurfaceFlow(workspaceSync: CompanionWorkspaceSyncApi,
-  activeAction: CompanionTabAction, onlyReview: boolean) {
+  activeAction: CompanionTabAction) {
   return useCompanionFlowSession({
     snapshot: workspaceSync.state.workspace_snapshot, ready: workspaceSync.isWorkspaceSyncStateReady,
-    active: activeAction === 'review', onlyReview,
+    active: activeAction === 'review',
     libraryScope: workspaceSync.state.workspace_snapshot?.libraryScope ?? workspaceSync.bootstrapState.database_path ?? 'preview'
   });
 }
@@ -140,11 +140,10 @@ function useCompanionSurfaceFlow(workspaceSync: CompanionWorkspaceSyncApi,
 export function useCompanionArticleSurface(
   workspaceSync: CompanionWorkspaceSyncApi,
   floatingBar: FloatingBarVisibilityApi,
-  browseSort?: CompanionBrowseSortState,
-  options: { isOnlyReviewOpen?: boolean } = {}
+  browseSort?: CompanionBrowseSortState
 ) {
   const { activeAction, setUserActiveAction } = useCompanionActiveAction(workspaceSync);
-  const flow = useCompanionSurfaceFlow(workspaceSync, activeAction, options.isOnlyReviewOpen === true);
+  const flow = useCompanionSurfaceFlow(workspaceSync, activeAction);
   const browseState = useCompanionBrowseState(workspaceSync, browseSort, { activeAction,
     flowNodeId: flow.view.currentCard?.nodeId ?? null });
   const { currentArticle, readingActivity, articleAction, isFlowBrowsing } = useCompanionDemandArticle(
@@ -181,9 +180,10 @@ export function useCompanionArticleSurface(
     readableArticle: currentArticle,
     recentArticles: browseState.recentArticles,
     effectiveReviewSession,
-    onlyReviewSession: effectiveReviewSession,
     reviewSession: effectiveReviewSession,
     readingActivity,
+    flowSessionMode: flow.mode,
+    setFlowSessionMode: flow.setMode,
     flowSummary: flow.summary,
     flowError: flow.error,
     flowReady: flow.ready,

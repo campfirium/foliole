@@ -1,4 +1,4 @@
-import { Library, ListFilter, X } from 'lucide-react';
+import { Library, X } from 'lucide-react';
 
 import type {
   FolderListSortDirection,
@@ -20,7 +20,6 @@ export function resolveCompanionTopBarProps(
   surface: Surface,
   settingsPage: CompanionSettingsPage,
   isBrowseDirectoryOpen: boolean,
-  isOnlyReviewOpen: boolean,
   directorySelection: CompanionDirectorySelection,
   browseSortKey: FolderListSortKey,
   browseSortDirection: FolderListSortDirection,
@@ -28,11 +27,9 @@ export function resolveCompanionTopBarProps(
   onChangeBrowseSortDirection: (sortDirection: FolderListSortDirection) => void,
   onOpenBrowseDirectory: () => void,
   onOpenAddSheet: () => void,
-  onOpenOnlyReview: () => void,
   onSyncBrowse: (() => void) | undefined,
   syncDisabled: boolean,
   syncStatus: string | undefined,
-  onCloseOnlyReview: () => void,
   onExitReview: () => void,
   onBackToSettingsList: () => void,
   onBackToSyncSettings: () => void,
@@ -60,7 +57,7 @@ export function resolveCompanionTopBarProps(
     });
   }
   if (surface.activeAction === 'search') return { title: t('companion.tabs.search') };
-  return resolveReviewTopBar(t, isOnlyReviewOpen, onCloseOnlyReview, onExitReview, onOpenOnlyReview);
+  return resolveReviewTopBar(t, onExitReview);
 }
 
 function resolveSettingsTopBar(
@@ -123,20 +120,10 @@ function resolveBrowseTopBar(args: {
   };
 }
 
-function resolveReviewTopBar(
-  t: Translate,
-  isOnlyReviewOpen: boolean,
-  onCloseOnlyReview: () => void,
-  onExitReview: () => void,
-  onOpenOnlyReview: () => void
-) {
-  if (isOnlyReviewOpen) {
-    return { backLabel: t('companion.review.learn'), onBack: onCloseOnlyReview, title: t('companion.review.onlyReview') };
-  }
+function resolveReviewTopBar(t: Translate, onExitReview: () => void) {
   return {
     title: 'Flow',
     density: 'compact' as const,
-    leftAction: { icon: X, label: t('companion.review.exit'), onClick: onExitReview },
-    rightAction: { icon: ListFilter, label: t('companion.review.onlyReview'), onClick: onOpenOnlyReview }
+    leftAction: { icon: X, label: t('companion.review.exit'), onClick: onExitReview }
   };
 }

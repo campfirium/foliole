@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { createElement, type ComponentProps } from 'react';
 
 import type {
   FolderListSortDirection,
@@ -9,6 +10,8 @@ import type { CompanionExternalDirectory } from '../shared/platform/companionExt
 
 import type { CompanionDirectorySelection } from './CompanionDirectoryContent';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
+import { CompanionFlowModeMenu } from './CompanionFlowModeControl';
+import { CompanionTopBar } from './CompanionTopBar';
 import { resolveCompanionTopBarProps } from './CompanionTopBarPropsModel';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
@@ -36,13 +39,11 @@ export function useCompanionTopBarProps(args: {
   browseSortKey: FolderListSortKey;
   externalDirectory: CompanionExternalDirectory;
   isBrowseDirectoryOpen: boolean;
-  isOnlyReviewOpen: boolean;
   resetDirectorySelection(selection?: CompanionDirectorySelection): void;
   setBrowseSortDirection(sortDirection: FolderListSortDirection): void;
   setBrowseSortKey(sortKey: FolderListSortKey): void;
   setIsBrowseDirectoryOpen(open: boolean): void;
   setIsCaptureSheetOpen(open: boolean): void;
-  setIsOnlyReviewOpen(open: boolean): void;
   setSettingsPage(page: CompanionSettingsPage): void;
   settingsPage: CompanionSettingsPage;
   surface: ReturnType<typeof useCompanionArticleSurface>;
@@ -64,12 +65,11 @@ export function useCompanionTopBarProps(args: {
     leftAction: { icon: X, label: t('companion.review.exit'), onClick: () => args.surface.handleTabAction('recent') }
   };
 
-  return resolveCompanionTopBarProps(
+  const resolved = resolveCompanionTopBarProps(
     t,
     args.surface,
     args.settingsPage,
     args.isBrowseDirectoryOpen,
-    args.isOnlyReviewOpen,
     args.directorySelection,
     args.browseSortKey,
     args.browseSortDirection,
@@ -80,14 +80,24 @@ export function useCompanionTopBarProps(args: {
       args.setIsBrowseDirectoryOpen(true);
     },
     () => args.setIsCaptureSheetOpen(true),
-    () => args.setIsOnlyReviewOpen(true),
     browseSync.onSync,
     browseSync.syncDisabled,
     browseSync.syncStatus,
-    () => args.setIsOnlyReviewOpen(false),
     () => args.surface.handleTabAction('recent'),
     () => args.setSettingsPage('list'),
     () => args.setSettingsPage('sync'),
     backDirectorySelection
   );
+  return withEmptyFlowMenu(resolved, args.surface);
+}
+
+function withEmptyFlowMenu(resolved: Omit<ComponentProps<typeof CompanionTopBar>, 'visible'>,
+  surface: ReturnType<typeof useCompanionArticleSurface>) {
+  if (surface.activeAction === 'review' && !surface.effectiveReviewSession.currentCard) {
+    return { ...resolved, rightSlot: createElement(CompanionFlowModeMenu, {
+        mode: surface.flowSessionMode, onChange: surface.setFlowSessionMode,
+        disabled: !surface.flowReady
+      }) };
+  }
+  return resolved;
 }

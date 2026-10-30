@@ -133,13 +133,11 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.tabs.search': 'Search',
   'companion.tabs.settings': 'Settings',
   'companion.tabs.shortcut.directory': 'Directory',
-  'companion.tabs.shortcut.onlyReview': 'Only Review',
   'companion.tabs.shortcut.sync': 'Sync',
   'companion.tabs.shortcut.tabs': 'Tabs',
   'companion.tabs.shortcut.syncActivity': 'Sync Activity',
   'companion.tabs.shortcut.syncConnection': 'Sync Connection',
   'companion.review.learn': 'Learn',
-  'companion.review.onlyReview': 'Only Review',
   'companion.review.exitFlow': 'Exit Flow',
   'companion.review.exit': 'Exit',
   'companion.review.toolbar': 'Companion review toolbar',
@@ -194,9 +192,4 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.sync.diagnostic.failed': 'Sync diagnostic failed',
   'companion.sync.diagnostic.running.description': 'Collecting sync state from this device and desktop.',
   'companion.sync.diagnostic.running.title': 'Running sync diagnostic',
-  'companion.onlyReview.noTopicsTitle': 'No topics synced yet',
-  'companion.onlyReview.noScheduledTitle': 'No review items on this device',
-  'companion.onlyReview.noScheduledDescription': 'Only Review shows due review items, not reading topics.',
-  'companion.onlyReview.noDueTitle': 'No review items are due right now',
-  'companion.onlyReview.noDueDescription': 'Next review item: {date}'
 } as const;

@@ -102,8 +102,7 @@ it.each(['read', 'later', 'dismiss'] as const)('refreshes %s and its undo/redo w
 function useReadingSurface(initial: WorkspaceSnapshot, publish: Parameters<typeof useCompanionReadableArticleLoader>[1]) {
   const [state, setState] = useCompanionWorkspaceState(createWorkspaceSync(initial).state);
   const snapshot = state.workspace_snapshot!;
-  const flow = useCompanionFlowSession({ snapshot, ready: true, active: true, onlyReview: false,
-    libraryScope: initial.libraryScope ?? 'surface-refresh' });
+  const flow = useCompanionFlowSession({ snapshot, ready: true, active: true,     libraryScope: initial.libraryScope ?? 'surface-refresh' });
   const nodeId = flow.view.currentCard?.nodeId ?? null;
   const activity = useMemo(() => new CompanionReadingActivity(nodeId, () => {}), [nodeId]);
   const workspace = createWorkspaceSync(snapshot);

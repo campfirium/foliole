@@ -10,7 +10,7 @@ import { createFloatingBar, createWorkspaceSync } from './useCompanionArticleSur
 import { useCompanionReadableArticleLoader } from './useCompanionReadableArticleLoader';
 import { useCompanionWorkspaceState } from './useCompanionWorkspaceState';
 
-export function useDailyFlowSurface(initial: WorkspaceSnapshot, onlyReview = false) {
+export function useDailyFlowSurface(initial: WorkspaceSnapshot) {
   const [state, setState] = useCompanionWorkspaceState(createWorkspaceSync(initial).state);
   const [readableArticle, publish] = useState<CompanionReadableArticle | null>(null);
   const snapshot = state.workspace_snapshot!;
@@ -19,5 +19,5 @@ export function useDailyFlowSurface(initial: WorkspaceSnapshot, onlyReview = fal
     setSyncConflictCount: () => {}, setSyncProgress: () => {}, setStatus: () => {} });
   const workspace = { ...createWorkspaceSync(snapshot), state, readableArticle,
     refreshAfterMutation: vi.fn(actions.refreshAfterMutation), openReadableArticle: loader.openReadableArticle };
-  return { surface: useCompanionArticleSurface(workspace, createFloatingBar(), undefined, { isOnlyReviewOpen: onlyReview }), snapshot, workspace };
+  return { surface: useCompanionArticleSurface(workspace, createFloatingBar()), snapshot, workspace };
 }

@@ -34,7 +34,7 @@ afterEach(async () => { cleanup(); vi.restoreAllMocks(); await library.close(); 
 function useSurface(initial: WorkspaceSnapshot, publish: Parameters<typeof useCompanionReadableArticleLoader>[1]) {
   const [state, setState] = useState<NativeCompanionWorkspaceSyncState>(createWorkspaceSync(initial).state);
   const snapshot = state.workspace_snapshot!;
-  const flow = useCompanionFlowSession({ snapshot, ready: true, active: true, onlyReview: false, libraryScope: initial.libraryScope ?? 'prediction' });
+  const flow = useCompanionFlowSession({ snapshot, ready: true, active: true, libraryScope: initial.libraryScope ?? 'prediction' });
   const nodeId = flow.view.currentCard?.nodeId ?? null;
   const activity = useMemo(() => new CompanionReadingActivity(nodeId, () => {}), [nodeId]);
   const workspace = createWorkspaceSync(snapshot);

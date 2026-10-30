@@ -1,4 +1,5 @@
 import { StudySessionCompleteSummary } from '../features/review/components/StudySessionCompleteSummary';
+import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppButton, AppEmptyState, AppErrorState } from '../shared/ui';
 
@@ -6,6 +7,7 @@ import type { useCompanionFlowSession } from './useCompanionFlowSession';
 
 export function CompanionReviewFallback(props: {
   summary: ReturnType<typeof useCompanionFlowSession>['summary'];
+  mode?: ReviewSessionMode;
   error: string | null;
   hasSnapshot: boolean;
   hasTopics: boolean;
@@ -16,7 +18,7 @@ export function CompanionReviewFallback(props: {
   const queueClear = props.hasSnapshot && props.hasTopics && (props.summary.queueCleared ?? true);
   if (queueClear) return (
     <StudySessionCompleteSummary {...props.summary} layout="companion" createdItemCount={0} createdTopicCount={0}
-      reviewSessionMode="recommended" action={(
+      reviewSessionMode={props.mode ?? 'recommended'} action={(
         <AppButton onClick={props.onExit} size="md">
           {t('companion.review.exitFlow')}
         </AppButton>

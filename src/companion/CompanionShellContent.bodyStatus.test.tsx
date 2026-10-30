@@ -32,7 +32,6 @@ function renderSurface(bodyStatus: 'empty' | 'failed' | 'missing', title: string
     directorySelection: directory ? { kind: 'internal', nodeId: 'folder' } : { kind: 'root' },
     hasSnapshot: true,
     isBrowseDirectoryOpen: directory,
-    isOnlyReviewOpen: false,
     isSearchArticleOpen: false,
     onBackDirectorySelection: vi.fn(),
     onBackToSettingsList: vi.fn(),

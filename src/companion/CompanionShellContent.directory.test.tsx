@@ -16,7 +16,7 @@ function createSurface() {
 }
 
 function createTopBarProps(args: {
-  directorySelection: Parameters<typeof resolveCompanionTopBarProps>[5];
+  directorySelection: Parameters<typeof resolveCompanionTopBarProps>[4];
   onBackDirectorySelection?: () => void;
 }) {
   return resolveCompanionTopBarProps(
@@ -24,7 +24,6 @@ function createTopBarProps(args: {
     createSurface(),
     'list',
     true,
-    false,
     args.directorySelection,
     'dateLastOpened',
     'desc',
@@ -33,10 +32,8 @@ function createTopBarProps(args: {
     vi.fn(),
     vi.fn(),
     vi.fn(),
-    vi.fn(),
     false,
     undefined,
-    vi.fn(),
     vi.fn(),
     vi.fn(),
     vi.fn(),

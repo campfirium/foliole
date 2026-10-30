@@ -28,7 +28,7 @@ beforeEach(async () => {
   library.database.prepare('INSERT INTO nodes (id, parent_id, title, kind, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .run('other', 'folder', 'Other article', 'topic', 'Browse this article', now, now);
   const snapshot = await library.snapshot();
-  await saveCompanionFlowResume(snapshot.libraryScope!, false, 'item');
+  await saveCompanionFlowResume(snapshot.libraryScope!, 'item');
 });
 afterEach(async () => { cleanup(); await library.close(); });
 

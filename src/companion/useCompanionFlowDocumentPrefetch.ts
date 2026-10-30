@@ -3,13 +3,14 @@ import { useCallback, useRef } from 'react';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { DailyFlowPredictionArgs } from '../../lib/core/flow/dailyFlowPrediction';
 import type { DailyFlowSession } from '../../lib/core/flow/dailyFlowSession';
+import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
 import { useFlowDocumentPrefetch } from '../shared/lib/documents/useFlowDocumentPrefetch';
 import { prepareCompanionFlowArticle } from '../shared/platform/companion/reading/companionArticlePreparation';
 import { predictCompanionFlowDocument } from '../shared/platform/companion/runtime/companionDailyFlow';
 import type { CompanionReadIntents } from '../shared/platform/companion/runtime/companionReadIntents';
 
 export function useCompanionFlowDocumentPrefetch(snapshot: WorkspaceSnapshot | null, session: DailyFlowSession,
-  engine: CompanionReadIntents | undefined, mode: 'recommended' | 'review-first') {
+  engine: CompanionReadIntents | undefined, mode: ReviewSessionMode) {
   const latestSnapshot = useRef(snapshot);
   latestSnapshot.current = snapshot;
   const prepare = useCallback((next: string | null, current: string | null) => {

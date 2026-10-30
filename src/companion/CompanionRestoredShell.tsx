@@ -56,13 +56,11 @@ function useCompanionShellScrollHandler(
 function useResetCompanionSubsurfaces(args: {
   activeAction: CompanionTabAction;
   setIsBrowseDirectoryOpen(open: boolean): void;
-  setIsOnlyReviewOpen(open: boolean): void;
 }) {
-  const { activeAction, setIsBrowseDirectoryOpen, setIsOnlyReviewOpen } = args;
+  const { activeAction, setIsBrowseDirectoryOpen } = args;
   useEffect(() => {
     if (activeAction !== 'recent') setIsBrowseDirectoryOpen(false);
-    if (activeAction !== 'review') setIsOnlyReviewOpen(false);
-  }, [activeAction, setIsBrowseDirectoryOpen, setIsOnlyReviewOpen]);
+  }, [activeAction, setIsBrowseDirectoryOpen]);
 }
 
 function useCompanionReviewChrome(args: {
@@ -89,7 +87,6 @@ function buildCompanionShellModel(args: {
   handleContainerScroll: ReturnType<typeof useCompanionShellScrollHandler>;
   capture: ReturnType<typeof useCompanionCaptureController>;
   isBrowseDirectoryOpen: boolean;
-  isOnlyReviewOpen: boolean;
   reviewChrome: ReturnType<typeof useCompanionReviewChrome>;
   searchArticle: ReturnType<typeof useCompanionSearchNavigation>;
   setSettingsPage: ReturnType<typeof useCompanionSyncSettingsPage>['setSettingsPage'];
@@ -117,7 +114,6 @@ function buildCompanionShellModel(args: {
     handleSecondaryDestination: args.actions.secondaryDestinations.handleSecondaryDestination,
     isBottomBarDisabled: args.reviewChrome.isBottomBarDisabled,
     isBrowseDirectoryOpen: args.isBrowseDirectoryOpen,
-    isOnlyReviewOpen: args.isOnlyReviewOpen,
     isSearchArticleOpen: args.searchArticle.isTopicOpen,
     isNavigationVisible: args.workspaceSync.isWorkspaceSyncStateReady && args.reviewChrome.isNavigationVisible,
     isReviewTaskActive: args.reviewChrome.isReviewTaskActive,
@@ -140,8 +136,7 @@ function useCompanionShellModel(workspaceSync: ReturnType<typeof useCompanionWor
   const floatingBar = useFloatingBarVisibility('companion-bottom-tabs');
   const browseSort = useCompanionBrowseSortState();
   const [isBrowseDirectoryOpen, setIsBrowseDirectoryOpen] = useCompanionNavigationField('isBrowseDirectoryOpen', false);
-  const [isOnlyReviewOpen, setIsOnlyReviewOpen] = useCompanionNavigationField('isOnlyReviewOpen', false);
-  const surface = useSortedArticleSurface(workspaceSync, floatingBar, browseSort, isOnlyReviewOpen);
+  const surface = useSortedArticleSurface(workspaceSync, floatingBar, browseSort);
   const companionTabs = useCompanionTabsConfig();
   const { setSettingsPage, settingsPage } = useCompanionSyncSettingsPage({
     activeAction: surface.activeAction,
@@ -161,18 +156,16 @@ function useCompanionShellModel(workspaceSync: ReturnType<typeof useCompanionWor
     directoryState,
     externalDirectory,
     isBrowseDirectoryOpen,
-    isOnlyReviewOpen,
     setBrowseSortDirection: browseSort.setBrowseSortDirection,
     setBrowseSortKey: browseSort.setBrowseSortKey,
     setIsBrowseDirectoryOpen,
     setIsCaptureSheetOpen: capture.setIsCaptureSheetOpen,
-    setIsOnlyReviewOpen,
     setSettingsPage,
     settingsPage,
     surface,
     workspaceSync
   });
-  useResetCompanionSubsurfaces({ activeAction: surface.activeAction, setIsBrowseDirectoryOpen, setIsOnlyReviewOpen });
+  useResetCompanionSubsurfaces({ activeAction: surface.activeAction, setIsBrowseDirectoryOpen });
 
   const model = buildCompanionShellModel({
     actions,
@@ -183,7 +176,6 @@ function useCompanionShellModel(workspaceSync: ReturnType<typeof useCompanionWor
     handleContainerScroll,
     capture,
     isBrowseDirectoryOpen,
-    isOnlyReviewOpen,
     reviewChrome,
     searchArticle,
     setSettingsPage,

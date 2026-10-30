@@ -74,8 +74,7 @@ it.each([false, true].flatMap(pendingRefresh => (['soon', 'read', 'later', 'dism
 
 async function openSurface() {
   const initial = (await refreshCompanionWorkspaceAfterMutation())!;
-  const ui = renderHook(({ onlyReview }) => useDailyFlowSurface(initial, onlyReview),
-    { initialProps: { onlyReview: false } });
+  const ui = renderHook(() => useDailyFlowSurface(initial));
   await waitFor(() => expect(ui.result.current.surface.flowReady).toBe(true));
   await waitFor(() => expect(ui.result.current.surface.readableArticle?.content).toContain('prefix alpha'));
   await act(async () => { await ui.result.current.workspace.refreshAfterMutation(); });
@@ -115,7 +114,7 @@ it.each(['leave', 'library', 'mode'] as const)('cancels the old click when %s ch
   await opened;
   if (change === 'leave') act(() => ui.result.current.surface.handleTabAction('recent'));
   else if (change === 'library') act(() => invalidateCompanionReadingScope());
-  else ui.rerender({ onlyReview: true });
+  else act(() => ui.result.current.surface.setFlowSessionMode('review-first'));
   await act(async () => { release(); await action; });
   expect(library.database.prepare('SELECT COUNT(*) AS n FROM daily_flow_operations').get()).toEqual({ n: 0 });
   expect(library.database.prepare('SELECT COUNT(*) AS n FROM node_reading').get()).toEqual({ n: 0 });

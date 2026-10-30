@@ -75,11 +75,10 @@ export function renderResumeSurface(snapshot: WorkspaceSnapshot, ready = true) {
     const directory = useCompanionDirectorySelectionState(directoryOpen);
     const settings = useCompanionSyncSettingsPage({ activeAction: surface.activeAction, syncOnboardingStatus: 'completed' });
     const search = useCompanionSearchNavigation(surface);
-    const [onlyReviewOpen, setOnlyReviewOpen] = useCompanionNavigationField('isOnlyReviewOpen', false);
     const actions = useCompanionShellActions({ ...sort, ...settings, directoryState: directory,
       externalDirectory: { entries: [], folders: [] }, isBrowseDirectoryOpen: directoryOpen,
-      isOnlyReviewOpen: onlyReviewOpen, setIsBrowseDirectoryOpen: setDirectoryOpen,
-      setIsOnlyReviewOpen: setOnlyReviewOpen, setIsCaptureSheetOpen: () => {}, surface, workspaceSync });
+      setIsBrowseDirectoryOpen: setDirectoryOpen,
+      setIsCaptureSheetOpen: () => {}, surface, workspaceSync });
     return { surface, directory, directoryOpen, setDirectoryOpen, settings, search, sort, actions };
   }, { wrapper });
 }

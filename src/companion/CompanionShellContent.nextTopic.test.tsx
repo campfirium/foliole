@@ -17,7 +17,6 @@ function renderReadingRoute(isBrowseDirectoryOpen: boolean, flow = false) {
     directorySelection: { kind: 'internal', nodeId: 'folder' },
     hasSnapshot: true,
     isBrowseDirectoryOpen,
-    isOnlyReviewOpen: false,
     isSearchArticleOpen: false,
     onBackDirectorySelection: vi.fn(),
     onBackToSettingsList: vi.fn(),

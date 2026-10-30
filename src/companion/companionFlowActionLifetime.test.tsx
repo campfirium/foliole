@@ -45,7 +45,7 @@ async function setup() {
 it('resumes the unfinished reading topic after restoring a cloze outside Flow', async () => {
   const initial = (await refreshCompanionWorkspaceAfterMutation())!;
   const ui = renderHook(({ active, value }) => useCompanionFlowSession({
-    snapshot: value, active, ready: true, onlyReview: false, libraryScope: 'restore-flow'
+    snapshot: value, active, ready: true, libraryScope: 'restore-flow'
   }), { initialProps: { active: true, value: initial } });
   await waitFor(() => expect(ui.result.current.ready).toBe(true));
   const current = ui.result.current.view.currentCard!.nodeId;

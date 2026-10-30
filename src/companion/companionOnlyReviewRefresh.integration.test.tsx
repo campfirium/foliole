@@ -35,7 +35,7 @@ let root = '';
 let database: Database.Database | null = null;
 
 beforeEach(async () => {
-  root = mkdtempSync(path.join(os.tmpdir(), 'only-review-refresh-'));
+  root = mkdtempSync(path.join(os.tmpdir(), 'review-first-refresh-'));
   const file = path.join(root, 'companion.db');
   const existed = existsSync(file);
   const sqlite = new Database(file);
@@ -43,7 +43,7 @@ beforeEach(async () => {
   const manager = createFakeCapacitorDatabaseManager(sqlite, existed, () => { database = null; });
   await initializeIosCompanionDatabase({
     booted_at: past, database_path: null, database_ready: false,
-    host_name: 'Only Review refresh fixture', runtime_kind: 'android-capacitor'
+    host_name: 'Review first refresh fixture', runtime_kind: 'android-capacitor'
   }, manager);
 });
 
@@ -89,9 +89,10 @@ it('adds newly due FSRS items after confirmed database convergence without repla
   await setDue('second', future);
   const initial = await snapshot();
   const ui = renderHook(({ value }) => useCompanionFlowSession({
-    snapshot: value, ready: true, active: true, onlyReview: true,
+    snapshot: value, ready: true, active: true,
     libraryScope: value.libraryScope ?? 'refresh-test'
   }), { initialProps: { value: initial } });
+  act(() => ui.result.current.setMode('review-first'));
   await waitFor(() => expect(ui.result.current.ready).toBe(true));
   expect(ui.result.current.view.queueNodeIds).toEqual([]);
   expect(ui.result.current.view.currentCard).toBeNull();

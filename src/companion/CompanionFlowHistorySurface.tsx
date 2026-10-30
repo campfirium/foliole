@@ -9,6 +9,7 @@ import type { HistoryMode } from '../store/workspaceReviewHistoryTarget';
 
 import { CompanionEditHistoryActions, type CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { CompanionFlowEdgeGestures } from './CompanionFlowEdgeGestures';
+import { CompanionFlowModeContext, type CompanionFlowModeControls } from './CompanionFlowModeControl';
 import { CompanionReadingPageNavigation } from './CompanionReadingPageNavigation';
 import { CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
 
@@ -16,7 +17,7 @@ type Controls = { refreshPending: boolean; busy: boolean; canUndo: boolean; canR
 const FlowHistoryContext = createContext<Controls | null>(null);
 
 export function CompanionFlowHistorySurface(props: {
-  children: ReactNode; active: boolean; busy: boolean; historyKey: string; refreshPending?: boolean; onApply(mode: HistoryMode): void;
+  modeControls?: CompanionFlowModeControls; children: ReactNode; active: boolean; busy: boolean; historyKey: string; refreshPending?: boolean; onApply(mode: HistoryMode): void;
 }) {
   const [availability, setAvailability] = useState({ canUndo: false, canRedo: false });
   useEffect(() => {
@@ -34,7 +35,9 @@ export function CompanionFlowHistorySurface(props: {
   }, [props.active, props.historyKey]);
   const controls = props.active ? { ...availability, busy: props.busy, refreshPending: props.refreshPending === true, apply: props.onApply } : null;
   return <CompanionReadingPageNavigation><FlowHistoryContext.Provider value={controls}>
-    {props.children}
+    <CompanionFlowModeContext.Provider value={props.active ? props.modeControls ?? null : null}>
+      {props.children}
+    </CompanionFlowModeContext.Provider>
     <CompanionFlowEdgeGestures enabled={props.active && !props.busy && !props.refreshPending}
       {...availability} onApply={props.onApply} />
   </FlowHistoryContext.Provider></CompanionReadingPageNavigation>;
