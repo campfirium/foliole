@@ -5,7 +5,6 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { readDailyFlow } from '../../lib/core/flow/dailyFlowStorage';
-import type { DbPort } from '../../lib/core/sync/dbPort';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
@@ -53,26 +52,24 @@ it.each(['pending', 'failed'] as const)('displays a committed body and accepts a
   const ui = renderHook(() => useSurface(initial, publish));
   await waitFor(() => expect(ui.result.current.flow.ready).toBe(true));
   const a = ui.result.current.flow.view.currentCard!.nodeId;
+  const preparation = ui.result.current.flow.readIntents!.displayPreparation;
+  const prepare = preparation.prepare.bind(preparation);
+  let preparing: string | null = null;
+  vi.spyOn(preparation, 'prepare').mockImplementation((input, signal) => {
+    if (!signal) return prepare(input);
+    preparing = input.session.currentNodeId;
+    if (failure === 'failed') return Promise.reject(new Error('future qualification failed'));
+    return new Promise((_resolve, reject) => {
+      if (signal.aborted) reject(signal.reason);
+      else signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+    });
+  });
   await act(async () => { await ui.result.current.actions.handleSoonReviewTopic(); });
   expect(ui.result.current.actions.readingError).toBeNull();
   const b = ui.result.current.flow.view.currentCard!.nodeId;
   expect(b).not.toBe(a);
   const owner = getIosCompanionDatabaseOwner();
-  const original = owner.readInteractiveSnapshot.bind(owner);
-  let entered = false;
-  vi.spyOn(owner, 'readInteractiveSnapshot').mockImplementation(<T,>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal) =>
-    original(db => task({ ...db, async query(sql, params) {
-      if (sql.includes('order_key > ?')) {
-        entered = true;
-        if (failure === 'failed') throw new Error('future qualification failed');
-        await new Promise<void>((_resolve, reject) => {
-          if (signal?.aborted) reject(signal.reason);
-          else signal?.addEventListener('abort', () => reject(signal.reason), { once: true });
-        });
-      }
-      return db.query(sql, params);
-    } }), signal));
-  await waitFor(() => expect(entered).toBe(true));
+  await waitFor(() => expect(preparing).toBe(b));
   expect(ui.result.current.actions.isSubmittingReadingAction).toBe(false);
   await act(async () => { await ui.result.current.article.openReadableArticle(b); });
   expect(publish).toHaveBeenLastCalledWith(expect.objectContaining({ nodeId: b, content: expect.stringContaining('prefix alpha') }));
