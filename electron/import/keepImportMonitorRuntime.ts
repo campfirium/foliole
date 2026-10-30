@@ -1,4 +1,6 @@
-import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { syncGroupLocalPublicationBlockReason } from '../../lib/core/sync/syncGroupLocalAdoption.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
 import { resolveExecutableWatchedBinding } from '../database/watchedFolderBindings.js';
 
@@ -42,13 +44,35 @@ function createDefaultKeepImportMonitorDeps(): KeepImportMonitorDeps {
 }
 
 const keepImportMonitor = createKeepImportMonitor(createDefaultKeepImportMonitorDeps());
+let requested = false;
+let suspended = false;
+
+function reconcileKeepImportMonitor(start: boolean) {
+  return runWithDatabaseConnectionOwner(async () => {
+    if (!requested) return;
+    const blocked = await syncGroupLocalPublicationBlockReason(
+      createBetterSqliteDbPort(openDatabaseConnection().sqlite)
+    );
+    if (!requested) return;
+    if (blocked) {
+      keepImportMonitor.stop();
+      suspended = true;
+      return;
+    }
+    if (start || suspended) {
+      suspended = false;
+      await keepImportMonitor.start();
+    } else await keepImportMonitor.refreshFromSettings();
+  });
+}
 
 export async function startKeepImportMonitor() {
-  await runWithDatabaseConnectionOwner(() => keepImportMonitor.start());
+  requested = true;
+  await reconcileKeepImportMonitor(true);
 }
 
 export async function refreshKeepImportMonitorFromSettings() {
-  await runWithDatabaseConnectionOwner(() => keepImportMonitor.refreshFromSettings());
+  await reconcileKeepImportMonitor(false);
 }
 
 export function isKeepImportMonitorSnapshotFresh(ruleId: string) {
@@ -56,5 +80,7 @@ export function isKeepImportMonitorSnapshotFresh(ruleId: string) {
 }
 
 export function stopKeepImportMonitor() {
+  requested = false;
+  suspended = false;
   keepImportMonitor.stop();
 }

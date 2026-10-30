@@ -10,7 +10,12 @@ const state = vi.hoisted(() => ({
   run: vi.fn(async () => undefined)
 }));
 
+vi.mock('../../lib/core/sync/syncGroupLocalAdoption.js', () => ({
+  syncGroupLocalPublicationBlockReason: async () => null
+}));
+vi.mock('../database/betterSqliteDbPort.js', () => ({ createBetterSqliteDbPort: () => ({}) }));
 vi.mock('../database/connection.js', () => ({
+  openDatabaseConnection: () => ({ sqlite: {} }),
   async runWithDatabaseConnectionOwner<T>(execute: () => Promise<T> | T) {
     if (state.busy) await new Promise<void>((resolve) => { state.release = resolve; });
     return execute();

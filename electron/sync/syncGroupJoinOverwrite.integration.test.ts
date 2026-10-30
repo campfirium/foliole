@@ -167,3 +167,23 @@ async function assertOfflineCatchup(script: string, groupId: string, peer: Await
   expect(caughtUp.library.nodesById['local-note']?.content).toBe('Local chosen data');
   expect(caughtUp.restore!.event.restore_id).toBe(restoreId);
 }
+
+it('joins with running import monitors and resumes settings reads after receiving the group data', { meta: { calibratedMs: 90000 } }, async () => {
+  const { peers } = await setup(false);
+  const [joining, provider] = workers;
+  await joining!.send('seed', { id: 'old-local', content: 'Discarded local body' });
+  await provider!.send('seed', { id: 'provider-body', content: 'Received group body' });
+  await joining!.send('leave');
+  await joining!.send('startImportMonitor');
+  await provider!.send('startImportMonitor');
+  await provider!.send('joinProviderEnable');
+  const request = await joining!.send('joinRequest', { origin: peers[1]!.origin, mode: 'use-group' }) as unknown as {
+    join_request: { request_id: string }
+  };
+  await provider!.send('joinAccept', { requestId: request.join_request.request_id });
+  await joining!.send('joinComplete');
+  await joining!.send('refreshImportMonitor');
+  const received = await joining!.send('snapshot');
+  expect(received.library.nodesById['old-local']).toBeUndefined();
+  expect(received.library.nodesById['provider-body']?.content).toBe('Received group body');
+});

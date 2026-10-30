@@ -18,6 +18,7 @@ import { loadDesktopSyncGroupRestoreState } from '../database/syncGroupRestoreSt
 import { createDesktopSyncGroup, loadDesktopSyncGroup, registerSyncGroupDevice, leaveDesktopSyncGroupDevice } from '../database/syncGroupStore.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import { loadDesktopDeviceIdentity } from '../deviceAnchorStore.js';
+import { startKeepImportMonitor, refreshKeepImportMonitorFromSettings, stopKeepImportMonitor } from '../import/keepImportMonitorRuntime.js';
 import { handleSyncGroupCommand } from '../ipc/syncGroupCommands.js';
 
 import { windowEvents } from './backupRestoreSyncGroup.electron.fixture.js';
@@ -82,6 +83,14 @@ function snapshot() {
     restore: loadDesktopSyncGroup() ? loadDesktopSyncGroupRestoreState(driver, loadDesktopSyncGroup()!.group_id) : null };
 }
 async function runJoinFixture(action: string, args: Record<string, unknown>) {
+  if (action === 'startImportMonitor') {
+    await startKeepImportMonitor();
+    return null;
+  }
+  if (action === 'refreshImportMonitor') {
+    await refreshKeepImportMonitorFromSettings();
+    return null;
+  }
   if (action === 'initLocal') {
     initializeDatabase();
     const driver = openDatabaseConnection().driver;
@@ -158,7 +167,8 @@ async function runRemovalFixture(action: string, args: Record<string, unknown>) 
 
 async function run(action: string, args: Record<string, unknown>) {
   if (['initLocal', 'pendingRestore', 'joinRequest', 'joinAccept', 'joinReject', 'joinComplete',
-    'joinProviderEnable', 'joinOverview', 'joinInterrupt', 'joinBusy'].includes(action)) {
+    'joinProviderEnable', 'joinOverview', 'joinInterrupt', 'joinBusy',
+    'startImportMonitor', 'refreshImportMonitor'].includes(action)) {
     return runJoinFixture(action, args);
   }
   if (['pauseMember', 'departTo', 'memberState', 'removeMember', 'memberExchange', 'reopenMemberState'].includes(action)) {
@@ -206,6 +216,7 @@ async function run(action: string, args: Record<string, unknown>) {
   if (action === 'syncActivity') return runWithDatabaseConnectionOwner(loadDesktopSyncActivity);
   if (action === 'reopen') return reopenAfterSyncStops().then(snapshot);
   if (action === 'close') {
+    stopKeepImportMonitor();
     await stopLanWorkspaceSyncServer();
     await new Promise<void>((resolve) => server?.close(() => resolve()) ?? resolve());
     closeDatabaseConnection();
