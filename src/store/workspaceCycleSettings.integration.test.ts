@@ -5,6 +5,7 @@ import { closeLibraries, type Peer } from '../../electron/database/syncLibrary.t
 import { openDailyFlow } from '../../lib/core/flow/dailyFlowService';
 import { saveDailyFlowSourceSettings, type DailyFlowSourceSettingsArgs } from '../../lib/core/flow/dailyFlowSourceSettings';
 import { readCycleRows, readDailyFlow } from '../../lib/core/flow/dailyFlowStorage';
+import { projectNodeLearningSummary } from '../../lib/core/nodes/nodeLearningSummary';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { act, assertDurable, node, now, persistence, settings, setupPeers, snapshot } from '../test/dailyFlowExceptions.testSupport';
 
@@ -122,9 +123,8 @@ it('sets sequential state from lightweight workspace status while preserving cur
   const reading = { intervalDurationMs: 777000, intervalGrowthFactor: 1.7, lastHandledAt: now, nextAt: now,
     priority: 3, readingPosition: 0, repetitionCount: 9, state: 'active' as const };
   await persistence.reading(peer.port, { nodeId: 'a', before: null, after: reading }, now);
-  app.setState(state => ({ nodesById: { ...state.nodesById, a: Object.assign({ ...state.nodesById.a!, reading: null }, {
-    learningSummary: { reading: { state: 'active', repetitionCount: 3 }, review: null }
-  }) } }));
+  app.setState(state => ({ nodesById: { ...state.nodesById,
+    a: projectNodeLearningSummary({ ...state.nodesById.a!, reading: { ...reading, repetitionCount: 3 } }) } }));
   expect(await app.sequential('folder', true, now)).toBe(true);
   expect((await snapshot(peer)).nodesById.a?.reading).toEqual(reading);
   expect((await snapshot(peer)).nodesById.b?.reading?.state).toBe('locked');

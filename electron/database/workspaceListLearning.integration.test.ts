@@ -12,13 +12,18 @@ vi.mock('../deviceAnchorStore.js', () => ({
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({ app_data_dir: root,
   app_cache_dir: path.join(root, 'cache'), app_config_dir: path.join(root, 'config'), app_log_dir: path.join(root, 'logs') }) }));
 vi.mock('../../src/shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => async (command: string, args: unknown) => {
+  if (command === 'load_node_learning') {
+    return readWorkspaceNodeLearning(openDatabaseConnection().driver, (args as { nodeIds: string[] }).nodeIds);
+  }
   if (command === 'open_daily_flow') return openDesktopDailyFlow(args);
   if (command === 'commit_daily_flow') return commitDesktopDailyFlow(args);
   if (command === 'save_node_open_state') return null;
   throw new Error(`Unexpected command: ${command}`);
 } }));
 
-import { closeDatabaseConnection } from './connection.js';
+import { readWorkspaceNodeLearning } from '../../lib/core/database/workspaceNodeLearning.js';
+
+import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { commitDesktopDailyFlow, openDesktopDailyFlow } from './dailyFlow.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';

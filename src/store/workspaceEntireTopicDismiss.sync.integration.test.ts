@@ -8,6 +8,7 @@ import { syncRequestLibrary } from '../../electron/database/syncRequestLibrary.t
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations';
 import { saveNodeReadingStateWithSync } from '../../lib/core/database/nodeReadingSyncState';
 import { loadWorkspaceListSnapshot } from '../../lib/core/database/workspaceListSnapshot';
+import { readWorkspaceNodeLearning } from '../../lib/core/database/workspaceNodeLearning';
 import { createDismissEntireTopicAction } from '../features/nodes/components/nodeListMenuActions';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
@@ -68,12 +69,16 @@ it('persists one menu subtree operation, undo and redo through runtime reading w
   await sync();
   const snapshot = loadWorkspaceListSnapshot(local.driver)!;
   const app = createWorkspaceNodeActionsSetStateHarness({ ...createWorkspaceNodeActionsFixture(),
-    ...snapshot, nodesById: snapshot.nodesById as Record<string, Node>, isHydrated: true });
+    ...snapshot, nodesById: snapshot.nodesById as Record<string, Node>, isHydrated: true, libraryScope: local.file });
   const writes: string[] = [];
   // Substitute only transport/host selection; retain production renderer persistence and core driver writes.
   vi.stubGlobal('window', { electronAPI: { invoke: async (command: string, input: {
-    nodeId: string; reading: NonNullable<Node['reading']> | null; updatedAt: string;
+    nodeId: string; nodeIds: string[]; libraryScope: string; reading: NonNullable<Node['reading']> | null; updatedAt: string;
   }) => {
+    if (command === 'load_node_learning') {
+      expect(input.libraryScope).toBe(local.file);
+      return readWorkspaceNodeLearning(local.driver, input.nodeIds);
+    }
     if (command !== 'save_node_reading_state') throw new Error(`unexpected_command:${command}`);
     writes.push(input.nodeId);
     saveNodeReadingStateWithSync(local.driver, { ...input, hostName: local.name });
