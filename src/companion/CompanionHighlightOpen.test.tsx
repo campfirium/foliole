@@ -20,8 +20,8 @@ function renderToolbar(options: { selection?: boolean; cloze?: boolean; load?: (
   return { onOpen, onClose, onDelete, onNote };
 }
 
-it('opens the corresponding highlight once for a touch gesture and closes its toolbar', () => {
-  const { onOpen, onClose, onDelete, onNote } = renderToolbar();
+it.each([false, true])('opens the corresponding highlight or cloze once for a touch gesture, cloze=%s', (cloze) => {
+  const { onOpen, onClose, onDelete, onNote } = renderToolbar({ cloze });
   const button = screen.getByRole('button', { name: 'Open' });
   fireEvent.pointerDown(button);
   fireEvent.pointerUp(button);
@@ -39,8 +39,8 @@ it('supports keyboard-generated clicks', () => {
   expect(onOpen).toHaveBeenCalledExactlyOnceWith('highlight-1');
 });
 
-it.each([{ selection: true }, { cloze: true }])('does not offer opening outside an existing highlight: %s', (options) => {
-  renderToolbar(options);
+it('does not offer opening for a new selection', () => {
+  renderToolbar({ selection: true });
   expect(screen.queryByRole('button', { name: 'Open' })).toBeNull();
 });
 

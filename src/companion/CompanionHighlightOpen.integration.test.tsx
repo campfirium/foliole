@@ -32,7 +32,11 @@ let highlightId: string;
 let snapshot: WorkspaceSnapshot;
 beforeEach(async () => {
   library = await createResumeLibrary();
-  const saved = await persistCompanionSelectionAnnotation({ deviceId: 'fixture', kind: 'highlight',
+  snapshot = await library.snapshot();
+});
+
+async function prepareAnnotation(kind: 'highlight' | 'cloze') {
+  const saved = await persistCompanionSelectionAnnotation({ deviceId: 'fixture', kind,
     snapshot: await library.snapshot(), payload: {
       parentNodeId: 'article', anchorId: 'read-anchor', selectionText: 'Read here', clozeContent: '# Article\n\n[...]',
       entries: [{ anchorId: 'read-anchor', selectionText: 'Read here', clozeContent: '# Article\n\n[...]',
@@ -43,7 +47,7 @@ beforeEach(async () => {
   // jsdom has no layout; only supply the hit-test position for the real editor.
   vi.spyOn(EditorView.prototype, 'posAtCoords').mockReturnValue(13);
   await saveCompanionFlowResume(snapshot.libraryScope!, false, 'article');
-});
+}
 afterEach(async () => { cleanup(); vi.restoreAllMocks(); await library.close(); });
 
 function Reader({ browse }: { browse: boolean }) {
@@ -59,7 +63,11 @@ function Reader({ browse }: { browse: boolean }) {
   </>;
 }
 
-it.each([false, true])('opens the real highlighted topic from Flow/browse=%s without grading it', async (browse) => {
+it.each([
+  { browse: false, kind: 'highlight' as const }, { browse: true, kind: 'highlight' as const },
+  { browse: false, kind: 'cloze' as const }, { browse: true, kind: 'cloze' as const }
+])('opens the real annotation from $kind / browse=$browse without grading it', async ({ browse, kind }) => {
+  await prepareAnnotation(kind);
   const facts = () => ({
     reading: library.database.prepare('SELECT * FROM node_reading ORDER BY node_id').all(),
     review: library.database.prepare('SELECT * FROM node_review ORDER BY node_id').all()
@@ -73,7 +81,7 @@ it.each([false, true])('opens the real highlighted topic from Flow/browse=%s wit
   if (browse) fireEvent.click(screen.getByRole('button', { name: 'Browse source' }));
   const before = facts();
   const highlightedText = await waitFor(() => {
-    const element = document.querySelector<HTMLElement>('.cm-md-highlight');
+    const element = document.querySelector<HTMLElement>(kind === 'cloze' ? '.cm-md-cloze' : '.cm-md-highlight');
     expect(element).not.toBeNull();
     return element!;
   });
@@ -82,12 +90,12 @@ it.each([false, true])('opens the real highlighted topic from Flow/browse=%s wit
   fireEvent.click(highlightedText);
   const open = await screen.findByRole('button', { name: 'Open' });
   await waitFor(() => expect(open).toBeEnabled());
-  expect(screen.getByRole('button', { name: 'Add Comment' })).toBeEnabled();
-  expect(screen.getByRole('button', { name: 'Close Highlight' })).toBeEnabled();
+  if (kind === 'highlight') expect(screen.getByRole('button', { name: 'Add Comment' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: kind === 'cloze' ? 'Delete cloze' : 'Close Highlight' })).toBeEnabled();
   fireEvent.click(open);
   await waitFor(() => expect(screen.getByTestId('opened-topic')).toHaveTextContent(highlightId));
   expect(screen.queryByRole('toolbar')).toBeNull();
-  expect(document.querySelector('.cm-content')).toHaveTextContent('Read here');
+  expect(document.querySelector('.cm-content')).toHaveTextContent(kind === 'cloze' ? '[...]' : 'Read here');
   expect(facts()).toEqual(before);
   fireEvent.click(document.querySelector('.cm-line')!, { detail: 1 });
   fireEvent.click(screen.getByRole('button', { name: 'Exit' }));

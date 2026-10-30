@@ -123,7 +123,7 @@ export function CompanionSelectionToolbarActions(props: {
           <RectangleEllipsis aria-hidden="true" size={19} strokeWidth={2} />
         </ToolbarButton>
       )}
-      {props.isExistingHighlight && !props.isCloze && props.onOpenExistingHighlight ? <ToolbarButton disabled={props.disabled} label={t('desktop.highlightToolbar.open')} onClick={props.onOpenExistingHighlight}>
+      {props.isExistingHighlight && props.onOpenExistingHighlight ? <ToolbarButton disabled={props.disabled} label={t('desktop.highlightToolbar.open')} onClick={props.onOpenExistingHighlight}>
         <CornerDownRight aria-hidden="true" size={19} strokeWidth={2} />
       </ToolbarButton> : null}
       {props.isCloze ? null : <ToolbarButton disabled={props.disabled} label={t('companion.selection.more')} onClick={() => undefined}>
