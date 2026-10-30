@@ -3,6 +3,7 @@ import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import { openCycleFlow } from '../../../../../lib/core/flow/cycleFlowOpen';
+import { dailyFlowSettingsForInstant } from '../../../../../lib/core/flow/dailyFlowDayWindow';
 import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { collectNodeVersionPayloads } from '../../../../../lib/core/sync/nodeVersionPayloadCollector';
@@ -27,7 +28,8 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
   const daily = sessions.beforeSession?.cycle ? await readDailyFlow(db) : null;
   const now = records[0]!.snapshot.updated_at;
   const flowArgs = { now, mode: daily?.mode as 'recommended' | 'review-first' | 'reading-only' };
-  const flowBefore = daily ? (await openCycleFlow(db, flowArgs, companionDailyFlowSettings(), companionDailyFlowPersistence)).session : null;
+  const settings = await dailyFlowSettingsForInstant(db, companionDailyFlowSettings(), now, false, daily);
+  const flowBefore = daily ? (await openCycleFlow(db, flowArgs, settings, companionDailyFlowPersistence)).session : null;
   const before = await Promise.all(records.map(record => loadCompanionWorkspaceNodeFromDb(db, record.object_id)));
   if (records.some((record, i) => (before[i]?.currentVersionId ?? null) !== (record.parent_version_id ?? null))) {
     throw new Error('workspace_history_source_changed');
@@ -44,7 +46,7 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
   const after = await Promise.all(records.map(record => loadCompanionWorkspaceNodeFromDb(db, record.object_id)));
   await writeCompanionHistoryReadings(db, relatedReadings, 'redo');
   if (flowBefore) sessions = { beforeSession: flowBefore, afterSession:
-    (await openCycleFlow(db, flowArgs, companionDailyFlowSettings(), companionDailyFlowPersistence, true)).session };
+    (await openCycleFlow(db, flowArgs, settings, companionDailyFlowPersistence, true)).session };
   const entry: WorkspaceNodeMetadataHistoryEntry = {
     type: 'nodes.change', ...sessions, relatedReadings, orders: await completeCompanionHistoryOrders(db, orders), id: createCompanionUuid(), title, rootNodeId: records[0]!.object_id, subtreeNodeIds,
     changes: after.map((node, i) => {
