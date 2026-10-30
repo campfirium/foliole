@@ -9,6 +9,11 @@ const EVENT_KEYS = new Set([
   'device_identity_key', 'error', 'occurred_at', 'result', 'run_id', 'started_at', 'status',
   'trigger_reason'
 ]);
+const PROJECTED_EVENT_KEYS = new Set([...EVENT_KEYS, 'message', 'summary']);
+const PROJECTION_KEYS = new Set([
+  'acceptance_document', 'build_identity', 'conflict_versions', 'container_identity',
+  'events', 'inventory', 'overwrite_pending', 'state_inventory_rows'
+]);
 const VERSION_KEYS = new Set([
   'content_hash', 'forks', 'is_current', 'object_id', 'parents', 'version_id'
 ]);
@@ -34,15 +39,14 @@ function loadProjection(root, buildIdentity, applicationId) {
     if (value?.build_identity !== buildIdentity
         || value.container_identity !== applicationId
         || !Array.isArray(value.events)) continue;
-    if (Object.keys(value).sort().join(',') !==
-        'build_identity,conflict_versions,container_identity,events') {
+    if (!Object.keys(value).every((key) => PROJECTION_KEYS.has(key))) {
       throw new Error('Fri acceptance projection exposed unsupported fields.');
     }
     if (!Array.isArray(value.conflict_versions)) {
       throw new Error('Fri acceptance conflict version projection is missing.');
     }
     for (const event of value.events) {
-      if (!Object.keys(event).every((key) => EVENT_KEYS.has(key))) {
+      if (!Object.keys(event).every((key) => PROJECTED_EVENT_KEYS.has(key))) {
         throw new Error('Fri sync event projection exposed unsupported fields.');
       }
     }
@@ -52,7 +56,10 @@ function loadProjection(root, buildIdentity, applicationId) {
         throw new Error('Fri conflict version projection exposed unsupported fields.');
       }
     }
-    return { file, value };
+    return { file, value: { build_identity: value.build_identity,
+      container_identity: value.container_identity, conflict_versions: value.conflict_versions,
+      events: value.events.map((event) => Object.fromEntries(
+        Object.entries(event).filter(([key]) => EVENT_KEYS.has(key)))) } };
   }
   throw new Error('Fri acceptance sync event projection attachment is missing.');
 }
@@ -71,7 +78,7 @@ export function resolveFriEvidenceRoot(result, fallbackRoot) {
 export function persistFriProjection(projection, evidenceRoot) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const file = path.join(evidenceRoot, 'projection.json');
-  fs.copyFileSync(projection.file, file);
+  fs.writeFileSync(file, `${JSON.stringify(projection.value, null, 2)}\n`);
   return { file, value: projection.value };
 }
 
