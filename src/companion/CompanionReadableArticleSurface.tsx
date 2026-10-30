@@ -21,6 +21,7 @@ import { useCompanionArticleScrollPosition } from './useCompanionArticleScrollPo
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionContentEditingActions } from './useCompanionContentEditingActions';
 import { useCompanionNodeTextAlternative } from './useCompanionNodeTextAlternative';
+import { useCompanionPagedScroll } from './useCompanionPagedScroll';
 import { createPendingAnnotationActions, useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
 import { useCompanionReadableAndroidBack } from './useCompanionReadableAndroidBack';
 import type { CompanionReadingNavigationControls } from './useCompanionReadingNavigation';
@@ -187,10 +188,12 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
     nodeId: props.readableArticle.nodeId, external: props.snapshot === null,
     scrollTop: props.readableArticle.persistedNodeViewState?.scrollTop ?? 0, onScrollTopChange: props.onScrollTopChange
   });
+  const pagedStyle = useCompanionPagedScroll(scrollPosition.surfaceRef, model.reading.isContentEditing);
   const { createSelectionAnnotation, deleteExistingHighlight } = createPendingAnnotationActions(props, pendingReadableArticle);
   return (
     <section
       className={model.surfaceClassName}
+      style={pagedStyle}
       onClick={model.reading.handleSurfaceClick}
       onPointerDown={model.handleSurfacePointerDown}
       onPointerMove={model.handleSurfacePointerMove}

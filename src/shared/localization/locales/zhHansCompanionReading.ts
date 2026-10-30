@@ -1,6 +1,10 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_READING_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.reading.mode': '阅读模式',
+  'companion.reading.mode.continuous': '连续滚动',
+  'companion.reading.mode.paged': '分页滚动',
+  'companion.reading.mode.pagedHint': '点左侧翻上一页，点右侧翻下一页，点中间显示或隐藏工具栏；上下滑动也可翻页。',
   'companion.workspace.manage': '管理',
   'companion.workspace.delete': '移到回收站',
   'companion.workspace.deleteDescription': '将此对象及其子项移到回收站。',

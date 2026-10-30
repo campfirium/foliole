@@ -1,13 +1,14 @@
 import type { Dispatch, SetStateAction } from 'react';
 
-import { isCompanionArticleInteractiveTarget } from './companionSelectionToolbarDom';
+import { handleCompanionPagedTap, isPagedReadingInteraction } from './companionPagedReading';
 import { useCompanionTouchClick } from './useCompanionTouchClick';
 
 export function useImmersiveReadingSurfaceTap(editing: boolean, setVisible: Dispatch<SetStateAction<boolean>>) {
-  const handlers = useCompanionTouchClick(() => setVisible((visible) => !visible), {
+  const handlers = useCompanionTouchClick((event) => {
+    if (!handleCompanionPagedTap(event)) setVisible((visible) => !visible);
+  }, {
     disabled: editing,
-    ignoreTarget: target => isCompanionArticleInteractiveTarget(target) ||
-      (target instanceof Element && Boolean(target.closest('.cm-md-highlight, .cm-md-highlight-overlap, .cm-md-cloze, .cm-md-anchor-overlap'))),
+    ignoreTarget: isPagedReadingInteraction,
     preserveSelection: true
   });
   return {

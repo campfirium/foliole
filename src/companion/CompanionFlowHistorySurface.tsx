@@ -9,6 +9,7 @@ import type { HistoryMode } from '../store/workspaceReviewHistoryTarget';
 
 import { CompanionEditHistoryActions, type CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { CompanionFlowEdgeGestures } from './CompanionFlowEdgeGestures';
+import { CompanionReadingPageNavigation } from './CompanionReadingPageNavigation';
 import { CompanionWorkspaceHistoryActions } from './CompanionWorkspaceActions';
 
 type Controls = { refreshPending: boolean; busy: boolean; canUndo: boolean; canRedo: boolean; apply(mode: HistoryMode): void };
@@ -32,11 +33,11 @@ export function CompanionFlowHistorySurface(props: {
     return () => { active = false; unsubscribe(); };
   }, [props.active, props.historyKey]);
   const controls = props.active ? { ...availability, busy: props.busy, refreshPending: props.refreshPending === true, apply: props.onApply } : null;
-  return <FlowHistoryContext.Provider value={controls}>
+  return <CompanionReadingPageNavigation><FlowHistoryContext.Provider value={controls}>
     {props.children}
     <CompanionFlowEdgeGestures enabled={props.active && !props.busy && !props.refreshPending}
       {...availability} onApply={props.onApply} />
-  </FlowHistoryContext.Provider>;
+  </FlowHistoryContext.Provider></CompanionReadingPageNavigation>;
 }
 
 export function CompanionFlowOrEditHistoryActions(props: { open: boolean; editHistory?: CompanionEditHistoryActionsProps }) {

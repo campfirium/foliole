@@ -4,17 +4,19 @@ import { suppressCompanionPressClick } from './companionPressClickSuppression';
 
 type TouchTap = { pointerId: number; startedAt: number; x: number; y: number };
 
-export function useCompanionTouchClick(onActivate: () => void, options: {
+export function useCompanionTouchClick(onActivate: (event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement>) => void, options: {
   disabled?: boolean;
   ignoreTarget?: (target: EventTarget) => boolean;
   preserveSelection?: boolean;
 } = {}) {
+  const selectionAtPress = useRef(false);
   const touch = useRef<TouchTap | null>(null);
   const compatibilityClickTarget = useRef<EventTarget | null>(null);
 
   const ignored = (target: EventTarget) => options.disabled || options.ignoreTarget?.(target);
 
   function onPointerDown(event: PointerEvent<HTMLElement>) {
+    selectionAtPress.current = Boolean(options.preserveSelection && window.getSelection()?.isCollapsed === false);
     compatibilityClickTarget.current = event.pointerType === 'touch' ? event.currentTarget : null;
     touch.current = event.pointerType === 'touch' && event.isPrimary && !ignored(event.target)
       ? { pointerId: event.pointerId, startedAt: Date.now(), x: event.clientX, y: event.clientY }
@@ -29,12 +31,12 @@ export function useCompanionTouchClick(onActivate: () => void, options: {
   function onPointerUp(event: PointerEvent<HTMLElement>) {
     const started = touch.current;
     touch.current = null;
-    if (!started || ignored(event.target) || started.pointerId !== event.pointerId || Date.now() - started.startedAt >= 500 ||
+    if (!started || selectionAtPress.current || ignored(event.target) || started.pointerId !== event.pointerId || Date.now() - started.startedAt >= 500 ||
       Math.hypot(event.clientX - started.x, event.clientY - started.y) > 8 ||
       (options.preserveSelection && window.getSelection()?.isCollapsed === false)) return;
     compatibilityClickTarget.current = event.currentTarget;
     suppressCompanionPressClick(event.currentTarget.ownerDocument);
-    onActivate();
+    onActivate(event);
   }
 
   function onPointerCancel() { touch.current = null; }
@@ -43,8 +45,8 @@ export function useCompanionTouchClick(onActivate: () => void, options: {
     const handledTouchTarget = compatibilityClickTarget.current;
     compatibilityClickTarget.current = null;
     if (event.detail > 0 && handledTouchTarget === event.currentTarget) return;
-    if (ignored(event.target) || (options.preserveSelection && window.getSelection()?.isCollapsed === false)) return;
-    onActivate();
+    if (selectionAtPress.current || ignored(event.target) || (options.preserveSelection && window.getSelection()?.isCollapsed === false)) return;
+    onActivate(event);
   }
 
   return { onClick, onPointerDown, onPointerMove,

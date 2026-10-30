@@ -10,6 +10,7 @@ import { CompanionColorModeControl } from './CompanionColorModeControl';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { CompanionFlowOrEditHistoryActions } from './CompanionFlowHistorySurface';
 import type { CompanionHighlightPanelItem } from './companionHighlightPanelModel';
+import { CompanionReadingModeControl } from './CompanionReadingModeControl';
 import { CompanionReadingTypographyControls } from './CompanionReadingTypographyControls';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 import { CompanionWorkspaceCurrentNodeAction } from './CompanionWorkspaceActions';
@@ -169,6 +170,7 @@ export function ReadingFontSheet(props: {
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.font')}>
       <CompanionColorModeControl />
+      <CompanionReadingModeControl />
       {props.saveError ? (
         <p className="py-3 text-sm text-error" role="alert">{t('companion.reading.font.saveError')}</p>
       ) : null}

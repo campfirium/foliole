@@ -1,4 +1,8 @@
 export const EN_COMPANION_READING_TRANSLATIONS = {
+  'companion.reading.mode': 'Reading mode',
+  'companion.reading.mode.continuous': 'Continuous scroll',
+  'companion.reading.mode.paged': 'Paged scroll',
+  'companion.reading.mode.pagedHint': 'Tap the left edge for the previous page, the right edge for the next, and the center for toolbars. Swipe up or down to turn pages.',
   'companion.workspace.manage': 'Manage',
   'companion.workspace.delete': 'Move to Trash',
   'companion.workspace.deleteDescription': 'This moves the selected object and its children to Trash.',
