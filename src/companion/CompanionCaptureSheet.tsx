@@ -1,5 +1,5 @@
 import { FileUp, Clipboard, type LucideIcon } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 
 import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -67,6 +67,7 @@ function CaptureSheetHeader(props: {
 
 function CaptureTextBox(props: {
   draft: string;
+  inputRef: RefObject<HTMLTextAreaElement>;
   readOnly: boolean;
   onChange(value: string): void;
 }) {
@@ -74,6 +75,7 @@ function CaptureTextBox(props: {
   return (
     <div className="rounded-md border border-companion-divider px-4 py-4">
       <textarea
+        ref={props.inputRef}
         aria-label={t('companion.capture.text')}
         className={cn(
           'min-h-24 w-full resize-none bg-transparent text-base leading-6 text-foreground placeholder:text-companion-text-tertiary',
@@ -103,6 +105,7 @@ export function CompanionCaptureSheet(props: {
 }) {
   const t = useTranslation();
   const state = useCompanionCaptureDraft(props);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (!props.open) return;
     const handleBack = (event: Event) => {
@@ -121,11 +124,14 @@ export function CompanionCaptureSheet(props: {
     <AppDialog onOpenChange={handleOpenChange} open={props.open}>
       <AppDialogPortal>
         <AppDialogOverlay className="companion-sheet-overlay" />
-        <AppDialogContent className={`companion-sheet bottom-0 left-0 top-auto w-full translate-x-0 translate-y-0 [transform:translate(0,0)] rounded-b-none rounded-t-xl border-x-0 border-b-0 ${companionMobileRailClassName} pt-3 pb-6 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),24px)]`}>
+        <AppDialogContent onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          inputRef.current?.focus({ preventScroll: true });
+        }} className={`companion-sheet bottom-0 left-0 top-auto w-full translate-x-0 translate-y-0 [transform:translate(0,0)] rounded-b-none rounded-t-xl border-x-0 border-b-0 ${companionMobileRailClassName} pt-3 pb-6 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),24px)]`}>
           <div aria-hidden="true" className="mx-auto mb-3 h-1 w-9 rounded-full bg-companion-divider-strong" />
           <div className="mx-auto w-full max-w-[760px]">
             <CaptureSheetHeader canSave={canSave} isSaving={isSaving} isSaved={isSaved} onCancel={() => handleOpenChange(false)} onSave={handleSave} />
-            <CaptureTextBox draft={draft} readOnly={isSaving || isSaved} onChange={handleDraftChange} />
+            <CaptureTextBox draft={draft} inputRef={inputRef} readOnly={isSaving || isSaved} onChange={handleDraftChange} />
             {errorLabel ? <p className="mt-3 text-sm text-destructive" role="alert">{errorLabel}</p> : null}
             <div className="mt-5 border-t border-companion-divider">
               <CaptureActionRow icon={Clipboard} label={t('companion.capture.paste')} />
