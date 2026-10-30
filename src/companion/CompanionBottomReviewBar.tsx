@@ -1,15 +1,12 @@
-import { Eye } from 'lucide-react';
-
 import { FsrsRevealAction, ReadingReviewActions, ReviewGradeActions } from '../shared/ui';
 import type { ReviewActionButtonPresentation } from '../shared/ui/reviewActionPresentation';
 
-import { CompanionBottomAction } from './CompanionBottomAction';
 import type { BottomBarGrade } from './CompanionFloatingBars';
 import { CompanionReviewActionFooter } from './CompanionReviewActionFooter';
-import { companionGradeIcons, companionReadingIcons } from './CompanionReviewActionIcons';
+import { CompanionReviewTouchButton } from './CompanionReviewTouchButton';
 
 function renderCompanionAction(props: ReviewActionButtonPresentation) {
-  return <CompanionBottomAction {...props} icon={props.icon ?? <Eye aria-hidden="true" size={20} strokeWidth={1.75} />} />;
+  return <CompanionReviewTouchButton {...props} />;
 }
 
 const actionGroupClassName = 'companion-review-actions w-full';
@@ -42,7 +39,6 @@ export function CompanionBottomReviewBar(props: {
       primary={
         props.itemKind === 'reading' ? (
           <ReadingReviewActions
-            icons={companionReadingIcons}
             renderButton={renderCompanionAction}
             isSubmitting={Boolean(props.disabled)}
             {...(props.onSoonReviewTopic ? { onRevisitReviewTopicSoon: props.onSoonReviewTopic } : {})}
@@ -57,7 +53,6 @@ export function CompanionBottomReviewBar(props: {
         ) : (
           <ReviewGradeActions
             buttonClassName="companion-bottom-action min-w-0 flex-1 px-0"
-            icons={companionGradeIcons}
             renderButton={renderCompanionAction}
             buttonVariant="default"
             errorMessage={null}

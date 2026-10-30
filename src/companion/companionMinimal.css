@@ -151,7 +151,7 @@ html, body, #root, #root * { scrollbar-width: none; }
   .companion-flow-complete { padding-bottom: 96px; }
 }
 
-/* Shared navigation/action geometry; the content remains compact inside each touch cell. */
+/* Bottom navigation geometry. */
 .companion-bottom-action {
   height: 48px;
   min-height: 48px;
@@ -160,7 +160,37 @@ html, body, #root, #root * { scrollbar-width: none; }
   line-height: 16px;
   font-weight: 500;
 }
-.companion-review-actions .companion-bottom-action:active {
-  color: var(--companion-accent);
-  transform: scale(0.97);
+/* The visible button stays compact while its transparent touch cell is larger. */
+.companion-review-footer .companion-review-touch-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  min-height: 52px;
+  padding: 8px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--role-content-text);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
+}
+.companion-review-button-face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 6px;
+  border: 1px solid var(--app-control-border-color);
+  border-radius: 8px;
+  pointer-events: none;
+}
+.companion-review-touch-button:active .companion-review-button-face {
+  background: var(--app-control-bg-hover-color);
+  border-color: var(--app-control-border-hover-color);
+}
+.companion-review-touch-button:focus-visible .companion-review-button-face {
+  outline: 2px solid var(--companion-accent);
+  outline-offset: 2px;
 }

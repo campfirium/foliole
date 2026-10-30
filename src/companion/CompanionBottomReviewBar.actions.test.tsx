@@ -22,13 +22,14 @@ function createProps() {
 }
 
 describe('Companion Flow actions', () => {
-  it('keeps each icon-and-label grade accessible and submits its corresponding grade', () => {
+  it('keeps each text grade accessible and submits its corresponding grade', () => {
     const props = createProps();
     renderWithLocalization(<CompanionBottomReviewBar {...props} />);
 
     ['Again', 'Hard', 'Good', 'Easy'].forEach((label, index) => {
       const action = screen.getByRole('button', { name: label });
-      expect(action.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+      expect(action).toHaveTextContent(label);
+      expect(action.querySelector('svg')).toBeNull();
       fireEvent.click(action);
       expect(props.onGrade).toHaveBeenNthCalledWith(index + 1, index + 1);
     });
@@ -54,7 +55,8 @@ describe('Companion Flow actions', () => {
       props.onReadReviewTopic, props.onDismissReviewTopic];
     ['Soon', 'Later', 'Read', 'Dismiss'].forEach((label, index) => {
       const action = screen.getByRole('button', { name: label });
-      expect(action.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+      expect(action).toHaveTextContent(label);
+      expect(action.querySelector('svg')).toBeNull();
       fireEvent.click(action);
       expect(handlers[index]).toHaveBeenCalledOnce();
     });
