@@ -19,12 +19,13 @@ export function CompanionFlowModeControl(props: { onSelect(): void }) {
   const t = useTranslation();
   if (!controls) return null;
   return <div role="group" aria-label={t('desktop.reviewSession.mode.change')} className="flex border-b border-companion-divider py-3">
-    {reviewSessionModeOptions.map(({ id, labelKey }) => (
+    {reviewSessionModeOptions.map(({ id, Icon, labelKey }) => (
       <button key={id} type="button" aria-pressed={controls.mode === id} disabled={controls.disabled}
-        className={`min-h-11 min-w-0 flex-1 rounded-md border px-1 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-companion-accent disabled:opacity-50 ${controls.mode === id
-          ? 'border-companion-accent bg-companion-accent-soft text-companion-accent'
-          : 'border-transparent text-foreground active:bg-companion-subtle/80'}`}
+        className={`inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1 rounded-md px-1 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-companion-accent disabled:opacity-50 ${controls.mode === id
+          ? 'font-medium text-companion-accent'
+          : 'text-foreground active:bg-companion-subtle/80'}`}
         onClick={() => { controls.onChange(id); props.onSelect(); }}>
+        <Icon aria-hidden="true" className={`h-4 w-4 shrink-0 ${controls.mode === id ? '' : 'text-companion-text-secondary'}`} strokeWidth={1.75} />
         <span>{t(labelKey)}</span>
       </button>
     ))}
