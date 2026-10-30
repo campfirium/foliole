@@ -37,7 +37,8 @@ function createTopBarProps(args: {
     vi.fn(),
     vi.fn(),
     vi.fn(),
-    args.onBackDirectorySelection ?? vi.fn()
+    args.onBackDirectorySelection ?? vi.fn(),
+    vi.fn()
   );
 }
 

@@ -86,7 +86,11 @@ export function useCompanionTopBarProps(args: {
     () => args.surface.handleTabAction('recent'),
     () => args.setSettingsPage('list'),
     () => args.setSettingsPage('sync'),
-    backDirectorySelection
+    backDirectorySelection,
+    () => {
+      args.surface.handleTabAction('more');
+      args.setSettingsPage('appearance');
+    }
   );
   return withEmptyFlowMenu(resolved, args.surface);
 }

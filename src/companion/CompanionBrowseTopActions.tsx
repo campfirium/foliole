@@ -68,6 +68,7 @@ function BrowseMenuHeader(props: {
 
 function BrowseMainMenu(props: {
   activeSortLabel: string;
+  onOpenAppearance(): void;
   onOpenSort(): void;
   onSync?: () => void;
   syncDisabled?: boolean;
@@ -87,7 +88,7 @@ function BrowseMainMenu(props: {
         })}
       />
       <MenuRow label={t('companion.browse.sort')} onSelect={props.onOpenSort} status={props.activeSortLabel} trailingIcon={ChevronRight} />
-      <MenuRow disabled label={t('companion.browse.theme')} status={t('companion.browse.themeUnavailable')} />
+      <MenuRow label={t('companion.settings.appearance.title')} onSelect={props.onOpenAppearance} trailingIcon={ChevronRight} />
     </>
   );
 }
@@ -127,6 +128,7 @@ function BrowseSortMenu(props: {
 function CompanionBrowseMenuSheet(props: {
   onChangeSortDirection(sortDirection: FolderListSortDirection): void;
   onChangeSortKey(sortKey: FolderListSortKey): void;
+  onOpenAppearance(): void;
   onOpenChange(open: boolean): void;
   onSync?: () => void;
   open: boolean;
@@ -156,6 +158,10 @@ function CompanionBrowseMenuSheet(props: {
         {view === 'menu' ? (
           <BrowseMainMenu
             activeSortLabel={activeSortLabel}
+            onOpenAppearance={() => {
+              handleOpenChange(false);
+              props.onOpenAppearance();
+            }}
             onOpenSort={() => setView('sort')}
             {...definedProps({
               onSync: props.onSync,
@@ -179,6 +185,7 @@ function CompanionBrowseMenuSheet(props: {
 export function CompanionBrowseTopActions(props: {
   onChangeSortDirection(sortDirection: FolderListSortDirection): void;
   onChangeSortKey(sortKey: FolderListSortKey): void;
+  onOpenAppearance(): void;
   onOpenCapture(): void;
   onSync?: () => void;
   sortDirection: FolderListSortDirection;
@@ -203,6 +210,7 @@ export function CompanionBrowseTopActions(props: {
       <CompanionBrowseMenuSheet
         onChangeSortDirection={props.onChangeSortDirection}
         onChangeSortKey={props.onChangeSortKey}
+        onOpenAppearance={props.onOpenAppearance}
         onOpenChange={setIsMenuOpen}
         open={isMenuOpen}
         sortDirection={props.sortDirection}

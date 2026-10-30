@@ -21,6 +21,7 @@ it('opens sort choices from the browse menu sort row', () => {
       onChangeSortDirection={vi.fn()}
       onChangeSortKey={vi.fn()}
       onOpenCapture={vi.fn()}
+      onOpenAppearance={vi.fn()}
       sortDirection="desc"
       sortKey="dateLastOpened"
     />
@@ -49,6 +50,7 @@ it('runs sync from the browse menu', () => {
       onChangeSortDirection={vi.fn()}
       onChangeSortKey={vi.fn()}
       onOpenCapture={vi.fn()}
+      onOpenAppearance={vi.fn()}
       onSync={onSync}
       sortDirection="desc"
       sortKey="dateLastOpened"
@@ -68,6 +70,7 @@ it('hides capture when that interaction surface is not accepted', () => {
       onChangeSortDirection={vi.fn()}
       onChangeSortKey={vi.fn()}
       onOpenCapture={vi.fn()}
+      onOpenAppearance={vi.fn()}
       sortDirection="desc"
       sortKey="dateLastOpened"
     />
@@ -75,4 +78,17 @@ it('hides capture when that interaction surface is not accepted', () => {
 
   expect(screen.queryByRole('button', { name: 'Capture' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument();
+});
+
+it('opens Appearance and closes the browse menu', () => {
+  const onOpenAppearance = vi.fn();
+  render(<CompanionBrowseTopActions
+    onChangeSortDirection={vi.fn()} onChangeSortKey={vi.fn()}
+    onOpenCapture={vi.fn()} onOpenAppearance={onOpenAppearance}
+    sortDirection="desc" sortKey="dateLastOpened"
+  />);
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  expect(onOpenAppearance).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });

@@ -33,7 +33,8 @@ export function resolveCompanionTopBarProps(
   onExitReview: () => void,
   onBackToSettingsList: () => void,
   onBackToSyncSettings: () => void,
-  onBackDirectorySelection: () => void
+  onBackDirectorySelection: () => void,
+  onOpenAppearance: () => void
 ) {
   if (surface.activeAction === 'more') {
     return resolveSettingsTopBar(t, settingsPage, onBackToSettingsList, onBackToSyncSettings);
@@ -49,6 +50,7 @@ export function resolveCompanionTopBarProps(
       onChangeBrowseSortDirection,
       onChangeBrowseSortKey,
       onOpenAddSheet,
+      onOpenAppearance,
       onOpenBrowseDirectory,
       onSyncBrowse,
       syncDisabled,
@@ -88,6 +90,7 @@ function resolveBrowseTopBar(args: {
   onChangeBrowseSortDirection: (sortDirection: FolderListSortDirection) => void;
   onChangeBrowseSortKey: (sortKey: FolderListSortKey) => void;
   onOpenAddSheet: () => void;
+  onOpenAppearance: () => void;
   onOpenBrowseDirectory: () => void;
   onSyncBrowse: (() => void) | undefined;
   syncDisabled: boolean;
@@ -99,6 +102,7 @@ function resolveBrowseTopBar(args: {
       onChangeSortDirection={args.onChangeBrowseSortDirection}
       onChangeSortKey={args.onChangeBrowseSortKey}
       onOpenCapture={args.onOpenAddSheet}
+      onOpenAppearance={args.onOpenAppearance}
       sortDirection={args.browseSortDirection}
       sortKey={args.browseSortKey}
       {...definedProps({
