@@ -1,4 +1,4 @@
-import { FileUp, Clipboard, type LucideIcon } from 'lucide-react';
+import { Clipboard, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, type RefObject } from 'react';
 
 import { cn } from '../shared/lib/utils';
@@ -135,7 +135,6 @@ export function CompanionCaptureSheet(props: {
             {errorLabel ? <p className="mt-3 text-sm text-destructive" role="alert">{errorLabel}</p> : null}
             <div className="mt-5 border-t border-companion-divider">
               <CaptureActionRow icon={Clipboard} label={t('companion.capture.paste')} />
-              <CaptureActionRow icon={FileUp} label={t('companion.capture.upload')} />
             </div>
           </div>
         </AppDialogContent>

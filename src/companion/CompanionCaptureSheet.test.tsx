@@ -91,3 +91,12 @@ it('offers text capture without advertising unavailable voice input', () => {
     expect(button).toHaveAccessibleName();
   }
 });
+
+it('hides file upload while keeping text capture available', () => {
+  renderWithLocalization(
+    <CompanionCaptureSheet draftScope="test" onOpenChange={vi.fn()} onSave={vi.fn()} open />
+  );
+
+  expect(screen.queryByRole('button', { name: 'Upload File' })).not.toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: 'Capture text' })).toBeEnabled();
+});
