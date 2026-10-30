@@ -9,9 +9,9 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
-import { loadCompanionDailySession, predictCompanionFlowDocument } from '../shared/platform/companion/runtime/companionDailyFlow';
+import { loadCompanionDailySession, predictCompanionFlowDocument, refreshCompanionDailyFlowAfterSync } from '../shared/platform/companion/runtime/companionDailyFlow';
 import {
-  closeIosCompanionDatabase, initializeIosCompanionDatabase
+  closeIosCompanionDatabase, getIosCompanionDatabaseOwner, initializeIosCompanionDatabase
 } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 import { applyCompanionLocalNodeVersions, saveCompanionSyncNodeReadingRecord, saveCompanionSyncNodeReviewRecord } from '../shared/platform/companionSyncObjects';
@@ -77,7 +77,7 @@ async function snapshot() {
   return (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
 }
 
-it('adds newly due FSRS items to an open Only Review session without replacing its current item', async () => {
+it('adds newly due FSRS items after confirmed database convergence without replacing the displayed item', async () => {
   await seed('reading', 'topic');
   await seed('first', 'item');
   await seed('second', 'item');
@@ -101,6 +101,9 @@ it('adds newly due FSRS items to an open Only Review session without replacing i
   expect(buildReviewQueuePlan({ ...selectCanonicalReviewQueueSource(firstRefresh),
     mode: 'review-first', now: new Date().toISOString() }).queueNodeIds).toEqual(['first']);
   act(() => ui.rerender({ value: firstRefresh }));
+  expect(ui.result.current.view.queueNodeIds).toEqual([]);
+  expect(await getIosCompanionDatabaseOwner().runWriter(refreshCompanionDailyFlowAfterSync)).toBe(true);
+  act(() => ui.rerender({ value: { ...firstRefresh, nodesById: { ...firstRefresh.nodesById } } }));
   await waitFor(() => expect(ui.result.current.view.queueNodeIds).toEqual(['first']));
   expect(ui.result.current.view.currentCard?.nodeId).toBe('first');
   act(() => ui.result.current.reveal());
@@ -110,6 +113,8 @@ it('adds newly due FSRS items to an open Only Review session without replacing i
   expect(buildReviewQueuePlan({ ...selectCanonicalReviewQueueSource(secondRefresh),
     mode: 'review-first', now: new Date().toISOString() }).queueNodeIds).toEqual(['first', 'second']);
   act(() => ui.rerender({ value: secondRefresh }));
+  expect(await getIosCompanionDatabaseOwner().runWriter(refreshCompanionDailyFlowAfterSync)).toBe(true);
+  act(() => ui.rerender({ value: { ...secondRefresh, nodesById: { ...secondRefresh.nodesById } } }));
   await waitFor(async () => {
     const session = (await loadCompanionDailySession())!;
     expect(await predictCompanionFlowDocument({ token: session.daily!, currentNodeId: 'first',
