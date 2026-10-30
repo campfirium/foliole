@@ -29,11 +29,11 @@ export function CompanionSyncInlineStatus(props: {
       type="button"
     >
       {isSyncing ? (
-        <AppSpinner decorative />
+        <AppSpinner decorative size="sm" />
       ) : (
         <AlertCircle
           aria-hidden="true"
-          className="h-5 w-5 text-error"
+          className="h-4 w-4 text-error"
           strokeWidth={1.8}
         />
       )}

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../shared/localization/testLocalization';
@@ -23,6 +23,27 @@ beforeEach(() => {
 });
 
 describe('CompanionSyncInlineStatus visibility', () => {
+  it('keeps both sync indicators at inline size while preserving the settings touch target', async () => {
+    const { CompanionSyncInlineStatus } = await import('./CompanionSyncInlineStatus');
+    const onOpenSyncSettings = vi.fn();
+    const { rerender } = renderWithLocalization(
+      <CompanionSyncInlineStatus onOpenSyncSettings={onOpenSyncSettings}
+        workspaceSync={createWorkspaceSync({ status: 'syncing' }) as never} />
+    );
+    const progress = screen.getByRole('button', { name: 'Sync in progress' });
+    expect(progress).toHaveClass('h-10', 'w-10');
+    expect(progress.querySelector('[aria-hidden="true"]')).toHaveClass('h-4', 'w-4');
+    fireEvent.click(progress);
+
+    rerender(<CompanionSyncInlineStatus onOpenSyncSettings={onOpenSyncSettings}
+      workspaceSync={createWorkspaceSync({ error: 'Sync failed.' }) as never} />);
+    const attention = screen.getByRole('button', { name: 'Sync needs attention' });
+    expect(attention).toHaveClass('h-10', 'w-10');
+    expect(attention.querySelector('[aria-hidden="true"]')).toHaveClass('h-4', 'w-4');
+    fireEvent.click(attention);
+    expect(onOpenSyncSettings).toHaveBeenCalledTimes(2);
+  });
+
   it('stays hidden while idle even when a sync endpoint is remembered', async () => {
     const { CompanionSyncInlineStatus } = await import('./CompanionSyncInlineStatus');
 
