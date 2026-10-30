@@ -1,3 +1,4 @@
+import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview';
 import { extractUniqueArticleTitleHeading } from '../features/nodes/model/articleTitleHeading';
 import { resolveNodeDerivedTitle } from '../features/nodes/model/nodeDerivedTitle';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
@@ -91,13 +92,15 @@ function prepareNextContentNode(
   args: { deriveTitle?: boolean | undefined; diagnosticsEnabled: boolean; metrics: UpdateNodeContentMetrics; preserveTitle?: boolean }
 ) {
   const nextNodeStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
+  const title = args.preserveTitle ? node.title : resolveContentTitle(node, content, args.deriveTitle);
   const nextNode: WorkspaceNode = {
     ...node,
     bodyStatus: content.trim().length > 0 ? 'ready' : 'empty',
     content,
     hasContent: content.trim().length > 0,
     hideTitleHeading: false,
-    title: args.preserveTitle ? node.title : resolveContentTitle(node, content, args.deriveTitle),
+    title,
+    openingText: resolveNodeOpeningText(content, title),
     updatedAt: timestamp
   };
   args.metrics.nextNodeMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - nextNodeStartedAt : 0;

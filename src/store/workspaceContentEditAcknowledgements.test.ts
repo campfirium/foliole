@@ -32,7 +32,7 @@ it('keeps pending input through hydration, then displays the confirmed merge', (
     set: (update) => { state = { ...state, ...(typeof update === 'function' ? update(state) : update) }; }
   });
   markNodeContentPersisted(node.id, version);
-  expect(state.nodesById.topic).toMatchObject({ content: 'Merged', currentVersionId: 'ver_merge' });
+  expect(state.nodesById.topic).toMatchObject({ content: 'Merged', openingText: 'Merged', currentVersionId: 'ver_merge' });
   expect(mergeHydratedNode(state.nodesById.topic, { ...remote, content: 'Later', updatedAt: '2026-09-20T00:03:00Z' }).content).toBe('Later');
 });
 
@@ -48,7 +48,7 @@ it('replaces an old empty body status when a nonempty edit is confirmed', () => 
     },
     set: (update) => { state = { ...state, ...(typeof update === 'function' ? update(state) : update) }; }
   });
-  expect(state.nodesById.topic).toMatchObject({ bodyStatus: 'ready', content: 'Confirmed body' });
+  expect(state.nodesById.topic).toMatchObject({ bodyStatus: 'ready', content: 'Confirmed body', openingText: 'Confirmed body' });
 });
 
 it('does not overwrite newer input with the merged projection', () => {

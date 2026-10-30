@@ -18,7 +18,7 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => ({
 
 const original = 'Unique original editor basis';
 const submitted = 'Unique submitted editor body';
-const merged = 'Unique merged persisted body';
+const merged = 'Unique merged persisted body. '.repeat(20);
 
 function createHarness() {
   const fixture = createWorkspaceNodeActionsFixture();
@@ -73,6 +73,8 @@ it.each([false, true])('does not retain acknowledged body text in inactive direc
   const current = harness.getState().nodesById[node.id]!;
   expect(current.content).toBe(newerInput ? 'Newer unsaved input' : merged);
   const inactive = trimWorkspaceNodesForRendererBoundary(null, { [node.id]: current })[node.id]!;
+  expect(inactive.content).toBe('');
+  expect(inactive.openingText?.length ?? 0).toBeLessThanOrEqual(201);
   expect(Object.values(inactive)).not.toContain(submitted);
   expect(Object.values(inactive)).not.toContain(merged);
 });

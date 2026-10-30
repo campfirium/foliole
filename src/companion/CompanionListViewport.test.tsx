@@ -84,6 +84,19 @@ it('keeps the visible identity across insertions and falls back to its surviving
   expect(scroll.scrollTop).toBe(5137);
 });
 
+it.each([20, 1000])('keeps the list at its beginning when a topic is prepended to %i rows', async count => {
+  mockLayout();
+  const entries = items.slice(0, count);
+  const view = render(<Harness entries={entries} />);
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 70)); });
+  const scroll = screen.getByTestId('scroll');
+  expect(scroll.scrollTop).toBe(0);
+  view.rerender(<Harness entries={['new-topic', ...entries]} />);
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 70)); });
+  expect(scroll.scrollTop).toBe(0);
+  expect(screen.getByRole('button', { name: 'new-topic' })).toBeInTheDocument();
+});
+
 it('retains only the focused row outside the window and releases it after blur', async () => {
   mockLayout();
   render(<Harness />);

@@ -52,6 +52,8 @@ export function CompanionListViewport<T>(props: {
     read: () => viewport.positions.get(identity),
     write: (anchor) => {
       viewport.positions.delete(identity);
+      // At the beginning, reveal new first rows instead of following the old first row down.
+      if (viewport.scrollRef.current?.scrollTop === 0) return;
       viewport.positions.set(identity, anchor);
       if (viewport.positions.size > 20) viewport.positions.delete(viewport.positions.keys().next().value!);
     }

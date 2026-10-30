@@ -20,4 +20,15 @@ describe('nodeOpeningPreview', () => {
 
     expect(resolveNodeOpeningText(content, 'Title')).toBeNull();
   });
+
+  it('keeps a short prose body when its automatic title contains the whole body', () => {
+    expect(resolveNodeOpeningText('A quick note.', 'A quick note.')).toBe('A quick note.');
+    expect(resolveNodeOpeningText('一小段正文', '一小段正文')).toBe('一小段正文');
+  });
+
+  it('still removes a title heading and repeated title when there is a separate body', () => {
+    expect(resolveNodeOpeningText('# Title', 'Title')).toBeNull();
+    expect(resolveNodeOpeningText('Title\n\nThe actual body.', 'Title')).toBe('The actual body.');
+    expect(resolveNodeOpeningText('cover', 'cover')).toBeNull();
+  });
 });

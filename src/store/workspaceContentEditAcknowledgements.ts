@@ -1,3 +1,4 @@
+import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview';
 import type { LocalContentEdit } from '../../lib/core/sync/localContentEdit';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
@@ -56,6 +57,7 @@ export function acknowledgeContentEdit(args: {
       hasContent: persisted.content.trim().length > 0,
       hideTitleHeading: persisted.hideTitleHeading ?? false,
       title: persisted.title,
+      openingText: resolveNodeOpeningText(persisted.content, persisted.title),
       updatedAt: persisted.updatedAt
     } : { ...current, currentVersionId: acknowledgement.submittedVersionId };
     syncWorkspaceNodeDocumentCacheFromNode(node);

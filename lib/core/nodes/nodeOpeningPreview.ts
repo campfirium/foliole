@@ -137,7 +137,8 @@ export function extractNodeOpeningPreview(content: string, title: string) {
   const opening =
     openingStartIndex >= 0
       ? strippedParagraphs.slice(openingStartIndex).join(' ').trim()
-      : NODE_OPENING_PREVIEW_FALLBACK;
+      // An automatic title may be the entire prose body. Keep that body as its opening.
+      : paragraphs.filter((paragraph) => !isIgnoredOpeningValue(paragraph)).join(' ') || NODE_OPENING_PREVIEW_FALLBACK;
 
   return truncatePreview(opening);
 }

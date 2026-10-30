@@ -1,5 +1,6 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
@@ -42,6 +43,7 @@ interface CaptureTextDraft {
 }
 
 function createCaptureNode(content: string, timestamp: string, nodeId?: string): WorkspaceNodeSnapshot {
+  const title = deriveNodeTitleFromContent(content);
   return {
     anchorLink: null,
     content,
@@ -50,12 +52,12 @@ function createCaptureNode(content: string, timestamp: string, nodeId?: string):
     id: nodeId ?? `node-${createCompanionUuid()}`,
     isTitleManual: false,
     kind: 'topic',
-    openingText: null,
+    openingText: resolveNodeOpeningText(content, title),
     parentNodeId: INBOX_NODE_ID,
     reading: null,
     reveal: null,
     review: null,
-    title: deriveNodeTitleFromContent(content),
+    title,
     updatedAt: timestamp
   };
 }

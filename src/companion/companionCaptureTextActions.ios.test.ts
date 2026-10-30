@@ -26,9 +26,9 @@ it('persists an iOS quick capture and synchronizes its whole body through reques
     await host.sync();
     await host.sync();
     await host.restart();
-    const query = 'SELECT title, content, parent_id, current_version_id FROM nodes WHERE id = ?';
+    const query = 'SELECT title, content, opening_text, parent_id, current_version_id FROM nodes WHERE id = ?';
     const expected = { title: 'iPhone note', content: 'iPhone note\nsecond line',
-      parent_id: INBOX_NODE_ID, current_version_id: expect.any(String) };
+      opening_text: 'second line', parent_id: INBOX_NODE_ID, current_version_id: expect.any(String) };
     expect(host.sqlite.prepare(query).get(result.nodeId)).toEqual(expected);
     expect(desktop.prepare(query).get(result.nodeId)).toEqual(host.sqlite.prepare(query).get(result.nodeId));
     expect(desktop.prepare('SELECT COUNT(*) AS count FROM node_sync_versions WHERE object_id = ?').get(result.nodeId))
