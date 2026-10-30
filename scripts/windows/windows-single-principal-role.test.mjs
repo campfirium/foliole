@@ -10,7 +10,8 @@ vi.mock('./windows-sync-group-recovery-action.mjs', () => ({
     userData: path.join(host.root, 'client/user-data') }),
   openWindowsSyncGroupSession: async () => {
     host.opens += 1;
-    host.result = host.opens === 1 ? run('initial', 'joined')
+    host.result = host.opens === 1
+      ? host.owner === 'windows' ? run('automatic', 'already-automatic') : run('initial', 'joined')
       : host.owner === 'windows' ? run('automatic', 'after') : run('manual', 'manual');
     return { app: { evaluate: async () => host.result }, page: {} };
   },
@@ -18,6 +19,10 @@ vi.mock('./windows-sync-group-recovery-action.mjs', () => ({
     if (command === 'complete_sync_group_join' || command === 'load_sync_group_overview') return { sync_group: group() };
     if (command === 'load_workspace_list_snapshot') return snapshot();
     if (command === 'sync_companion_now') return run('manual', 'manual');
+    if (command === 'load_desktop_sync_diagnostics') return { activity: [{
+      kind: 'run_finished', trigger_reason: 'initial', result: 'completed', status: 'completed',
+      run_id: 'joined', occurred_at: '2026-10-30T02:03:00Z', started_at: '2026-10-30T02:02:59Z'
+    }] };
     return {};
   }
 }));
@@ -67,4 +72,12 @@ it.each(['macos', 'windows'])('finishes with %s owning automatic sync and keeps 
   expect(receipt.runs.automaticBeforeRestart).toEqual(owner === 'windows' ? run('automatic', 'before') : null);
   expect(receipt.runs.automaticAfterRestart).toEqual(owner === 'windows' ? run('automatic', 'after') : null);
   expect(host.events.slice(-3)).toEqual(['restarted', 'release', 'close']);
+});
+
+it.each(['missing', 'failed', 'automatic'])('rejects an initial activity without completed initial proof: %s', async kind => {
+  const { completedInitialRun } = await import('./windows-single-principal-sync-group-contract.mjs');
+  const activity = kind === 'missing' ? [] : [{ kind: 'run_finished', run_id: 'run',
+    started_at: 'start', occurred_at: 'finish', status: kind === 'failed' ? 'failed' : 'completed',
+    result: kind === 'failed' ? 'failed' : 'completed', trigger_reason: kind === 'automatic' ? 'automatic' : 'initial' }];
+  expect(() => completedInitialRun(activity)).toThrow('initial sync did not complete');
 });

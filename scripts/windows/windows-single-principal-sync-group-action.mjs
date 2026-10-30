@@ -11,7 +11,7 @@ import {
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
 import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
 import {
-  assertJoinedWindowsGroup, completedAutomatic, loadDesktopPeerConflict
+  assertJoinedWindowsGroup, completedAutomatic, completedInitialRun, loadDesktopPeerConflict
 } from './windows-single-principal-sync-group-contract.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { forkDesktopSyncConflict } from '../desktop/sync-group-conflict-action.mjs';
@@ -123,10 +123,8 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     console.log(`[windows-dev-action] requested group=${candidate.group_id}`);
     report(options.reportProgress, 'requested');
     firstGroup = await completeAcceptedJoin(session.page, candidate.group_id);
-    initialResult = await loadSyncTriggerResult(session.app);
-    if (initialResult?.reason !== 'initial' || initialResult?.status !== 'completed') {
-      throw new Error(`Windows initial sync did not complete: ${JSON.stringify(initialResult)}`);
-    }
+    const diagnostics = await invokeWindowsSyncGroupCommand(session.page, 'load_desktop_sync_diagnostics');
+    initialResult = completedInitialRun(diagnostics?.activity);
     const joinedSnapshot = await invokeWindowsSyncGroupCommand(session.page,
       'load_workspace_list_snapshot', { includePdfOpenings: false });
     if (joinedSnapshot.nodesById?.[localFact.factId]) {

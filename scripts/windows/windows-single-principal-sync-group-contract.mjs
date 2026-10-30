@@ -31,3 +31,12 @@ export async function loadDesktopPeerConflict(session, nodeId) {
   return { conflictCount: preview.alternatives.length, nodeId, resolution: 'body-alternatives',
     silentOverwrite: false, visible: true };
 }
+
+export function completedInitialRun(activity = []) {
+  const event = activity.find(value => value.kind === 'run_finished'
+    && value.trigger_reason === 'initial' && value.status === 'completed'
+    && value.result === 'completed' && value.run_id && value.occurred_at && value.started_at);
+  if (!event) throw new Error('Windows initial sync did not complete in the persisted activity.');
+  return { error: null, reason: 'initial', status: 'completed', run_id: event.run_id,
+    started_at: event.started_at, finished_at: event.occurred_at };
+}
