@@ -18,8 +18,18 @@ import { restoreCompanionTrashNode } from './companionTrashActions';
 vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: () => 'ios', isNativePlatform: () => true }, registerPlugin: vi.fn(() => ({}))
 }));
-vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', () => {
+vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', async () => {
+  const { CompanionNodePriorityState } = await import('../shared/platform/companion/runtime/companionNodePriorityState');
+  const priorities = new CompanionNodePriorityState();
   const owner = {
+    databasePath: '/fixture',
+    get nodePriorityRevision() { return priorities.revision; },
+    readNodePriorities: priorities.read.bind(priorities),
+    readNodeIndex: priorities.readIndex.bind(priorities),
+    readNodeOrder: priorities.readOrder.bind(priorities),
+    readNodeMetadata: priorities.readMetadata.bind(priorities),
+    refreshNodePriorities: (scope: Parameters<typeof priorities.refresh>[1], db = native.db!) => priorities.refresh(db, scope),
+    clearNodePriorities: () => priorities.clear(),
     read: (task: (db: DbPort) => unknown) => task(native.db!),
     readSnapshot: (task: (db: DbPort) => unknown) => task(native.db!),
     runWriter: (task: (db: DbPort) => unknown) => task(native.db!)
