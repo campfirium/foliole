@@ -180,7 +180,7 @@ export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
       {pdfAttachmentId ? (
         <CompanionPdfTextVersionToolbar onOpenPdf={pdfReading.onOpenPdf} />
       ) : null}
-      <CompanionItemEditLayout active={canEditAnswer} question={
+      <CompanionItemEditLayout active={canEditAnswer} style={typographyStyle(props.readingTypographySettings)} question={
         <ReadableArticleTextDocument
         canEdit={canEdit}
         isReviewItem={props.isReviewItem === true}

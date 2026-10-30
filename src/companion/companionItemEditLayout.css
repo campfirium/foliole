@@ -24,14 +24,24 @@
   flex: 1;
   height: 100%;
   min-height: 0;
-  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-content: start;
 }
 .companion-item-edit-layout[data-active='true'] > div {
   display: block;
   min-height: 0;
   overflow: hidden;
 }
-.companion-item-edit-layout[data-active='true'] > .companion-item-edit-answer {
+.companion-item-edit-layout > .companion-item-edit-divider { display: none; }
+.companion-item-edit-layout[data-active='true'] > .companion-item-edit-divider {
+  display: block;
+  --companion-item-edit-line-height: calc(var(--content-panel-font-size, 17px) * var(--content-panel-line-height, 1.75));
+  padding-top: var(--companion-item-edit-line-height);
+  padding-bottom: calc(var(--companion-item-edit-line-height) / 2);
+}
+.companion-item-edit-layout[data-active='true'] > .companion-item-edit-divider::after {
+  content: '';
+  display: block;
   border-top: 1px solid var(--companion-divider);
 }
 .companion-item-edit-layout[data-active='true'] > div > *,
