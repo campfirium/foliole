@@ -1,4 +1,4 @@
-import { ChevronRight, FolderOpen } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
@@ -17,7 +17,6 @@ import {
   resolveDirectoryRowMeta,
   resolveDirectoryRowSubtitle
 } from './CompanionDirectoryVisualModel';
-import { CompanionEmptyStateIcon } from './CompanionEmptyStateIcon';
 import { CompanionListViewport } from './CompanionListViewport';
 import { RecentArticleRow } from './CompanionRecentArticleList';
 import { CompanionTopicListMenu } from './CompanionTopicListMenu';
@@ -95,7 +94,6 @@ export function CompanionDirectoryList(props: {
         <AppEmptyState
           className="min-h-0 items-start text-left text-companion-text-secondary"
           description={t('companion.directory.emptyDescription')}
-          icon={<CompanionEmptyStateIcon Icon={FolderOpen} />}
           title={props.emptyLabel}
         />
       </div>

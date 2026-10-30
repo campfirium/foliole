@@ -11,6 +11,21 @@ afterEach(() => {
   setSystemEntryDisplayNames({ customDisplayNameById: {}, version: 1 });
 });
 
+it('shows an empty folder as a text-only status', () => {
+  render(<CompanionDirectoryList
+    directory={{} as never}
+    emptyLabel="This folder is empty"
+    onSelectItem={vi.fn()}
+    sections={[{ id: 'current', items: [] }]}
+    snapshot={null}
+  />);
+
+  const status = screen.getByRole('status');
+  expect(status).toHaveTextContent('This folder is empty');
+  expect(status).toHaveTextContent('Add a topic or folder from desktop to see it here.');
+  expect(status.querySelector('svg, img, [role="img"]')).toBeNull();
+});
+
 it('uses the shared custom Home name instead of a fixed Workspace section', () => {
   setSystemEntryDisplayNames({ customDisplayNameById: { home: '我的 Home' }, version: 1 });
   render(

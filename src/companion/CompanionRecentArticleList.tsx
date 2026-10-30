@@ -1,11 +1,9 @@
-import { BookOpen } from 'lucide-react';
 import { useLayoutEffect, useRef, useState } from 'react';
 
 import { useLocalization, useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionRecentArticle } from '../shared/platform/companionReadableArticle';
 import { AppEmptyState } from '../shared/ui';
 
-import { CompanionEmptyStateIcon } from './CompanionEmptyStateIcon';
 import { CompanionListViewport } from './CompanionListViewport';
 import { CompanionTopicListMenu } from './CompanionTopicListMenu';
 
@@ -121,7 +119,6 @@ export function RecentArticleList(props: {
         <AppEmptyState
           className="min-h-0 items-start text-left text-companion-text-secondary"
           description={t('companion.recent.empty.description')}
-          icon={<CompanionEmptyStateIcon Icon={BookOpen} />}
           title={t('companion.recent.empty.title')}
         />
       </section>

@@ -67,5 +67,6 @@ describe('RecentArticleList', () => {
     render(<RecentArticleList currentArticleId={null} onSelectArticle={vi.fn()} recentArticles={[]} />);
     expect(screen.getByText('No recent topics are available on this device yet.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sync now' })).not.toBeInTheDocument();
+    expect(screen.getByRole('status').querySelector('svg, img, [role="img"]')).toBeNull();
   });
 });
