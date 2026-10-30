@@ -8,6 +8,7 @@ import { saveReadingProgress } from '../../../electron/database/readingProgress.
 import { handleStorageCommand } from '../../../electron/ipc/storageCommands.js';
 import { readMoveParentOrder } from '../../../lib/core/database/nodeMoveStructure.js';
 import { loadWorkspaceListSnapshot } from '../../../lib/core/database/workspaceListSnapshot.js';
+import { nodeReadingSummary, nodeReviewSummary } from '../../../lib/core/nodes/nodeLearningSummary.js';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { invoke, origin } from '../../test/ambientWorkspaceRefresh.testSupport';
 
@@ -36,8 +37,10 @@ function expectStructure() {
   expect(Object.keys(current.nodesById).filter(id => id !== 'special-home').sort()).toEqual(Object.keys(expected.nodesById).sort());
   expect(current.trashedNodeIds).toEqual(expected.trashedNodeIds);
   for (const [id, node] of Object.entries(expected.nodesById)) {
-    expect(current.nodesById[id]).toMatchObject({ parentNodeId: node.parentNodeId,
-      reading: node.reading, review: node.review, title: node.title });
+    const actual = current.nodesById[id];
+    expect(actual).toMatchObject({ parentNodeId: node.parentNodeId, title: node.title });
+    expect(nodeReadingSummary(actual)).toEqual(node.learningSummary!.reading);
+    expect(nodeReviewSummary(actual)).toEqual(node.learningSummary!.review);
   }
 }
 

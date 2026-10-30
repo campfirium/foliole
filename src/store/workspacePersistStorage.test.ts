@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { nodeReadingSummary } from '../../lib/core/nodes/nodeLearningSummary';
 import { HOME_NODE_ID } from '../features/nodes/model/specialNodes';
 import { appendReadingPositionTraceLog } from '../shared/platform/readingPositionTraceRuntimeRepository';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
@@ -110,7 +111,7 @@ describe('workspacePersistStorage runtime merge', () => {
 
     const value = await workspacePersistStoreStorage.getItem('foliole-workspace-v1');
 
-    expect(value?.state.nodesById['node-2']?.reading?.state).toBe('dismissed');
+    expect(nodeReadingSummary(value?.state.nodesById['node-2'])?.state).toBe('dismissed');
     expect(invoke).toHaveBeenCalledWith('update_node_content', expect.objectContaining({
       nodeId: 'node-2',
       reading: expect.objectContaining({ state: 'dismissed' })

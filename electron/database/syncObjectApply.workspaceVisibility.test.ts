@@ -127,10 +127,13 @@ it('applies Android reading while ignoring review snapshots and keeping view sta
     readingPosition: 0,
     state: 'locked'
   });
-  expect(loadWorkspaceListSnapshot()?.nodesById['node-1']?.reading).toMatchObject({
-    readingPosition: 0,
-    state: 'locked'
+  const listNode = loadWorkspaceListSnapshot()?.nodesById['node-1'];
+  expect(listNode?.learningSummary).toEqual({
+    reading: { state: 'locked', repetitionCount: 0 },
+    review: null
   });
+  expect(listNode).not.toHaveProperty('reading');
+  expect(listNode).not.toHaveProperty('review');
   expect(workspaceSnapshot?.nodesById['node-1']?.review).toBeNull();
 
   expect(loadReadingProgress()).toEqual({
