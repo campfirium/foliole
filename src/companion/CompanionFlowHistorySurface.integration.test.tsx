@@ -77,7 +77,7 @@ async function grade() {
 }
 function swipe(mode: 'undo' | 'redo') {
   const element = screen.getByTestId(`flow-edge-${mode}`);
-  for (const [type, clientX] of [['pointerdown', mode === 'undo' ? 390 : 2], ['pointerup', mode === 'undo' ? 310 : 82]] as const) {
+  for (const [type, clientX] of [['pointerdown', mode === 'undo' ? 2 : 390], ['pointerup', mode === 'undo' ? 82 : 310]] as const) {
     const event = new Event(type, { bubbles: true, cancelable: true });
     Object.assign(event, { clientX, clientY: 400, pointerId: 1, pointerType: 'touch', isPrimary: true });
     fireEvent(element, event);

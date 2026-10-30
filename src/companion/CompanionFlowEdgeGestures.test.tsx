@@ -26,12 +26,12 @@ function pointer(element: HTMLElement, type: string, x: number, y = 400,
   fireEvent(element, event);
 }
 
-it('maps a leftward inward swipe to undo and a rightward inward swipe to redo', () => {
+it('maps the left edge inward swipe to undo and the right edge inward swipe to redo', () => {
   const { apply } = setup();
   const undo = screen.getByRole('button', { name: 'Undo' });
   const redo = screen.getByRole('button', { name: 'Redo' });
-  pointer(undo, 'pointerdown', 390); pointer(undo, 'pointerup', 310);
-  pointer(redo, 'pointerdown', 2); pointer(redo, 'pointerup', 82);
+  pointer(undo, 'pointerdown', 2); pointer(undo, 'pointerup', 82);
+  pointer(redo, 'pointerdown', 390); pointer(redo, 'pointerup', 310);
   expect(apply.mock.calls).toEqual([['undo'], ['redo']]);
 });
 
@@ -39,11 +39,11 @@ it.each(['tap', 'short', 'outward', 'vertical', 'cancel', 'secondary', 'mouse'] 
   'does not turn %s input into a history command', kind => {
     const { apply } = setup();
     const undo = screen.getByRole('button', { name: 'Undo' });
-    pointer(undo, 'pointerdown', 390, 400, kind === 'secondary' ? { isPrimary: false }
+    pointer(undo, 'pointerdown', 2, 400, kind === 'secondary' ? { isPrimary: false }
       : kind === 'mouse' ? { pointerType: 'mouse' } : {});
-    if (kind === 'vertical') pointer(undo, 'pointermove', 380, 470);
-    if (kind === 'cancel') pointer(undo, 'pointercancel', 380);
-    const x = kind === 'tap' ? 390 : kind === 'short' ? 370 : kind === 'outward' ? 470 : 310;
+    if (kind === 'vertical') pointer(undo, 'pointermove', 12, 470);
+    if (kind === 'cancel') pointer(undo, 'pointercancel', 12);
+    const x = kind === 'tap' ? 2 : kind === 'short' ? 22 : kind === 'outward' ? -78 : 82;
     pointer(undo, 'pointerup', x);
     expect(apply).not.toHaveBeenCalled();
   });
@@ -54,7 +54,7 @@ it('leaves an existing text selection untouched', () => {
   const range = document.createRange(); range.selectNodeContents(text);
   window.getSelection()!.addRange(range);
   const undo = screen.getByRole('button', { name: 'Undo' });
-  pointer(undo, 'pointerdown', 390); pointer(undo, 'pointerup', 310);
+  pointer(undo, 'pointerdown', 2); pointer(undo, 'pointerup', 82);
   expect(apply).not.toHaveBeenCalled();
   expect(window.getSelection()?.toString()).toBe('Selected text');
   text.remove();
@@ -63,7 +63,7 @@ it('leaves an existing text selection untouched', () => {
 it('does not execute an unavailable history direction', () => {
   const { apply } = setup(true, false, true);
   const undo = screen.getByRole('button', { name: 'Undo' });
-  pointer(undo, 'pointerdown', 390); pointer(undo, 'pointerup', 310);
+  pointer(undo, 'pointerdown', 2); pointer(undo, 'pointerup', 82);
   expect(apply).not.toHaveBeenCalled();
 });
 

@@ -24,10 +24,10 @@ test('Flow edges receive inward touch gestures above the reading surface', async
   await expect(page.locator('output')).toHaveText('second');
   const cdp = await context.newCDPSession(page);
   await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true });
-  await swipe(cdp, 370, 290, 180);
+  await swipe(cdp, 5, 85, 180);
   await expect(page.locator('output')).toHaveText('second');
-  await swipe(cdp, 370, 290, 406);
-  await expect(page.locator('output')).toHaveText('first');
   await swipe(cdp, 5, 85, 406);
+  await expect(page.locator('output')).toHaveText('first');
+  await swipe(cdp, 370, 290, 406);
   await expect(page.locator('output')).toHaveText('second');
 });
