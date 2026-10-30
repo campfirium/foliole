@@ -10,6 +10,7 @@ import {
   openGoldenTopic,
   openGuidedSample,
   readCurrentFlowTopic,
+  readGoldenReading,
   relaunchGoldenJourney,
   scrollGoldenTopic,
   searchGoldenTopic
@@ -73,7 +74,7 @@ async function verifySecondSession(session: DesktopSession, checkpoint: JourneyC
     expect(restored.viewState?.scrollTop).toBeGreaterThan(0);
     expect(await page.evaluate((id) => window.__folioleWorkspaceDebug?.getNode?.(id)?.content, topicId))
       .toBe(GOLDEN_CONTENT);
-    expect(await page.evaluate((id) => window.__folioleWorkspaceDebug?.getNode?.(id)?.reading, reviewedNodeId))
+    expect(await readGoldenReading(page, reviewedNodeId))
       .toEqual(reviewedReading);
     await expectDarkAppearance(page);
     await openGuidedSample(page);

@@ -23,7 +23,6 @@ export const GOLDEN_CONTENT = [
 ].join('\n');
 
 const GUIDED_TITLE = /^(Reading: Break the Whole into Pieces|阅读：化整为零)$/;
-const GUIDED_TEXT = /(If the bottom action bar is not visible, click Enter Flow in the bottom-left corner\.|如果没有看到底部动作条，请点击左下角的“进入 Flow”按钮。)/;
 const WELCOME_TITLE = /^(Welcome to Foliole|欢迎使用 Foliole)$/;
 const WORKSPACE_NAME = /^(Foliole workspace|Foliole 工作区)$/;
 
@@ -88,7 +87,13 @@ export async function openGuidedSample(page: Page) {
   }
   await guided.click();
   const workspace = page.getByRole('main', { name: WORKSPACE_NAME });
-  await expect(workspace).toContainText(GUIDED_TEXT);
+  const expectedContent = await page.evaluate(async () => {
+    const id = window.__folioleWorkspaceDebug!.getActiveNodeId()!;
+    return (await window.electronAPI!.invoke('load_node_document', { nodeId: id }))!.content;
+  });
+  expect(expectedContent.length).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(() => window.__folioleDebug?.getEditorContent?.('prompt-editor')))
+    .toBe(expectedContent);
   await expect(workspace).not.toContainText(GOLDEN_NEEDLE);
 }
 
@@ -147,20 +152,25 @@ export async function readCurrentFlowTopic(page: Page) {
   await expect.poll(async () => await read.isVisible() || await enterFlow.isVisible()).toBe(true);
   if (await enterFlow.isVisible().catch(() => false)) await enterFlow.click();
   await expect(read).toBeVisible();
-  const before = await page.evaluate(() => {
-    const id = window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null;
-    return { id, reading: id ? window.__folioleWorkspaceDebug?.getNode?.(id)?.reading ?? null : null };
-  });
-  expect(before.id).toBeTruthy();
+  const nodeId = await page.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null);
+  expect(nodeId).toBeTruthy();
+  const before = await readGoldenReading(page, nodeId!);
   await read.click();
-  await expect.poll(() => page.evaluate((id) => (
-    window.__folioleWorkspaceDebug?.getNode?.(id)?.reading ?? null
-  ), before.id)).not.toEqual(before.reading);
-  const reading = await page.evaluate((id) => (
-    window.__folioleWorkspaceDebug?.getNode?.(id)?.reading ?? null
-  ), before.id);
+  await expect.poll(() => readGoldenReading(page, nodeId!)).not.toEqual(before);
+  const reading = await readGoldenReading(page, nodeId!);
   expect(reading).toMatchObject({ nextAt: expect.any(String), state: expect.any(String) });
-  return { nodeId: before.id!, reading: reading as ReadingState };
+  return { nodeId: nodeId!, reading: reading as ReadingState };
+}
+
+export async function readGoldenReading(page: Page, nodeId: string) {
+  return page.evaluate(async (id) => {
+    const snapshot = await window.electronAPI!.invoke('load_workspace_list_snapshot', { includePdfOpenings: false });
+    if (!snapshot.libraryScope) throw new Error('golden_library_scope_missing');
+    const learning = await window.electronAPI!.invoke('load_node_learning', {
+      nodeIds: [id], libraryScope: snapshot.libraryScope
+    });
+    return learning.find((node) => node.nodeId === id)?.reading ?? null;
+  }, nodeId);
 }
 
 export async function exitFlowIfNeeded(page: Page) {
@@ -193,17 +203,18 @@ export async function expectDarkAppearance(page: Page) {
 }
 
 export async function collectGoldenState(page: Page, nodeId: string) {
-  return page.evaluate((id) => {
+  const reading = await readGoldenReading(page, nodeId);
+  return page.evaluate(({ id, reading }) => {
     const api = window.__folioleWorkspaceDebug;
     const scroller = document.querySelector('.prompt-editor-host .cm-scroller') as HTMLElement | null;
     return {
       activeNodeId: api?.getActiveNodeId?.() ?? null,
-      reading: api?.getNode?.(id)?.reading ?? null,
+      reading,
       resolvedBaseColor: document.documentElement.dataset.resolvedBaseColor ?? null,
       scrollTop: scroller?.scrollTop ?? null,
       viewState: api?.getNodeViewState?.(id) ?? null
     };
-  }, nodeId);
+  }, { id: nodeId, reading });
 }
 
 export async function relaunchGoldenJourney(session: DesktopSession) {
