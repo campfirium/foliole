@@ -9,6 +9,10 @@ function renderCompanionAction(props: ReviewActionButtonPresentation) {
   return <CompanionReviewTouchButton {...props} />;
 }
 
+function renderRevealAction(props: ReviewActionButtonPresentation) {
+  return <CompanionReviewTouchButton {...props} compact />;
+}
+
 const actionGroupClassName = 'companion-review-actions w-full';
 
 export function CompanionBottomReviewBar(props: {
@@ -49,7 +53,7 @@ export function CompanionBottomReviewBar(props: {
             onDismissReviewTopic={props.onDismissReviewTopic}
           />
         ) : !canGradeFsrs ? (
-          <FsrsRevealAction renderButton={renderCompanionAction} disabled={!props.hasAnswer || Boolean(props.disabled)} onRevealAnswer={props.onRevealAnswer} />
+          <FsrsRevealAction renderButton={renderRevealAction} disabled={!props.hasAnswer || Boolean(props.disabled)} onRevealAnswer={props.onRevealAnswer} />
         ) : (
           <ReviewGradeActions
             buttonClassName="companion-bottom-action min-w-0 flex-1 px-0"

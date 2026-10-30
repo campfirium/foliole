@@ -194,3 +194,13 @@ html, body, #root, #root * { scrollbar-width: none; }
   outline: 2px solid var(--companion-accent);
   outline-offset: 2px;
 }
+
+.companion-review-footer .companion-review-touch-button-compact {
+  flex: 0 0 auto;
+  margin: 0 auto;
+  padding: 8px;
+}
+.companion-review-touch-button-compact .companion-review-button-face {
+  width: auto;
+  padding: 0 20px;
+}
