@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { closeDatabaseConnection, runWithDatabaseConnectionMaintenance, runWithDatabaseConnectionOwner } from '../../electron/database/connection.js';
 import { flushNodeSyncVersionWithDriver } from '../../electron/database/nodeSyncVersionFromDriver.js';
+import { flushCoalescedWorkspaceSearchInvalidations } from '../../electron/database/searchIndexInvalidationCoalescer.js';
 import { closeLibraries, createPeer, joinPeers, startLibraries, type Peer } from '../../electron/database/syncLibrary.testSupport.js';
 import { syncRequestLibrary } from '../../electron/database/syncRequestLibrary.testSupport.js';
 import { observeWorkspaceTestDatabaseLifecycle } from '../../electron/database/workspaceTestDatabaseLifecycle.testSupport.js';
@@ -107,8 +108,7 @@ beforeEach(async context => {
         ? handleWorkspaceReadCommand(command, args) : handleReadingAndReviewCommand(command, args)));
 });
 afterEach(async () => {
-  await waitForWorkspaceRuntimeWrites();
-  await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
+  await closeFixtureRuntime();
   delete window.electronAPI;
   snapshotConnections();
   try {
@@ -118,6 +118,12 @@ afterEach(async () => {
   }
   vi.unstubAllEnvs();
 });
+
+async function closeFixtureRuntime() {
+  await waitForWorkspaceRuntimeWrites();
+  await flushCoalescedWorkspaceSearchInvalidations();
+  await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
+}
 
 async function settleWrites() {
   await vi.waitFor(() => expect(transport.invoke).toHaveBeenCalled());
@@ -166,6 +172,21 @@ it.each(['reset', 'unshelve'])('rolls back the whole shelved item mutation on %s
   expect(persistedRelearn(source)).toMatchObject({ node: { shelved_at: null }, review: null,
     logs: expect.arrayContaining([expect.objectContaining({ kind: 'reset' })]) });
   expect(persistedRelearn(source).logs).toHaveLength(2);
+});
+
+it('leaves no deferred search invalidation able to reopen the closed fixture database', async () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  try {
+    const state = seedRelearn(source, 'topic', true);
+    expect(state.relearn('node-1', at)).toBe(true);
+    await settleWrites();
+    await closeFixtureRuntime();
+    const prepare = vi.spyOn(Database.prototype, 'prepare').mockClear();
+    await flushCoalescedWorkspaceSearchInvalidations();
+    expect(prepare).not.toHaveBeenCalled();
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 it.each([false, true])('keeps item state when recovery intent cannot be staged with shelved=%s', shelved => {
