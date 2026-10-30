@@ -125,9 +125,9 @@ html, body, #root, #root * { scrollbar-width: none; }
   flex: 1;
   align-items: center;
   justify-content: center;
-  padding: 32px 0;
+  padding: 32px 0 192px;
 }
-.companion-flow-complete > div { max-width: 20rem; }
+.companion-flow-complete > div { max-width: 15rem; }
 .companion-flow-complete h2 {
   text-align: center;
   margin: 0;
@@ -140,7 +140,13 @@ html, body, #root, #root * { scrollbar-width: none; }
 .companion-flow-complete .study-session-summary-row {
   grid-template-columns: minmax(0, 1fr) auto;
   column-gap: 16px;
+  row-gap: 12px;
 }
 .companion-flow-complete .study-session-summary-time { grid-column: 2; }
+.companion-flow-complete .study-session-summary-time:empty { display: none; }
 .companion-flow-complete .study-session-summary-results { margin-top: 48px; }
 .companion-flow-complete .study-session-summary-results > * + * { margin-top: 24px; }
+
+@media (max-height: 640px) {
+  .companion-flow-complete { padding-bottom: 96px; }
+}
