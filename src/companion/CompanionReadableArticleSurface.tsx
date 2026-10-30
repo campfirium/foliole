@@ -121,7 +121,7 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
   }
   const toolbarEvents = createArticleToolbarEvents(toolbar, reading);
   const chromeReservedSpacing = 'pt-14 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+3.5rem)] pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)]';
-  const surfaceClassName = props.flow ? companionReviewSurfaceClassName : `${companionReadingSurfaceClassName} ${chromeReservedSpacing}`;
+  const surfaceClassName = props.flow ? companionReviewSurfaceClassName : `${companionReadingSurfaceClassName} flex flex-col ${chromeReservedSpacing}`;
   const cloze = findCompanionClozeTarget(snapshot, props.readableArticle.nodeId);
   const openClozeRemoval = cloze && props.onDeleteExistingHighlight && !reading.isContentEditing ? () => {
     reading.setIsActionsSheetOpen(false);

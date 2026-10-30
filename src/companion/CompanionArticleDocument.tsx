@@ -35,7 +35,7 @@ export function CompanionArticleDocument(props: {
   scrollContainer?: 'editor' | 'outer';
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
 }) {
-  const sectionClassName = props.layout === 'review'
+  const sectionClassName = props.layout === 'review' || (props.scrollContainer === 'outer' && !props.onChange)
     ? 'pt-1 min-h-0'
     : `pt-1 ${companionArticleMinHeightClassName}`;
   return (
