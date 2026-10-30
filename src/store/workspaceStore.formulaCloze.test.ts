@@ -128,3 +128,13 @@ it('rejects a formula cloze without a reusable DOM selection', async () => {
   expect(createdId).toBeNull();
   expect(useWorkspaceStore.getState().nodeOrder).toEqual(previousNodeOrder);
 });
+
+it('refuses formula cloze creation inside an Item without writing', async () => {
+  const node = useWorkspaceStore.getState().nodesById['node-1']!;
+  useWorkspaceStore.setState({ nodesById: { 'node-1': { ...node, kind: 'item', reveal: 'Answer' } } });
+  const before = useWorkspaceStore.getState().nodesById;
+  expect(await useWorkspaceStore.getState().createFormulaClozeNode('node-1', createPayload(),
+    { promptContent: '$E=mc^2$', revealContent: '$E=mc^2$' })).toBeNull();
+  expect(useWorkspaceStore.getState().nodesById).toEqual(before);
+  expect(mutationRepository.syncNodeCreation).not.toHaveBeenCalled();
+});

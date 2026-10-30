@@ -1,4 +1,5 @@
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligibility';
 import { FlowExitHereContext } from '../shared/ui/FlowExitHereContext';
 
 import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
@@ -63,7 +64,8 @@ function resolveNodeMutationProps(workspaceSync: WorkspaceSync, activity: Surfac
       onDeleteExistingHighlight: (...args: Parameters<ReturnType<typeof createCompanionExistingHighlightDeleteHandler>>) =>
         activity.flush('delete').then(() => activity.run('delete', () => createCompanionExistingHighlightDeleteHandler(workspaceSync)(...args)))
     } : {}),
-    ...(supportsCompanionNodeMutationSurface('selection-annotation') ? {
+    ...(supportsCompanionNodeMutationSurface('selection-annotation') &&
+      canCreateSelectionAnnotation(workspaceSync.state.workspace_snapshot?.nodesById[nodeId]) ? {
       onCreateSelectionAnnotation: (...args: Parameters<ReturnType<typeof createCompanionSelectionAnnotationHandler>>) =>
         activity.run('selection', () => createCompanionSelectionAnnotationHandler(workspaceSync)(...args))
     } : {}),

@@ -26,7 +26,7 @@ import { persistCompanionSelectionAnnotation } from './companionSelectionAnnotat
 let root = '';
 let database: Database.Database | null = null;
 const time = '2026-10-30T00:00:00Z';
-const topic: WorkspaceNodeSnapshot = { id: 'topic', kind: 'topic', title: 'Topic', content: 'Original parent text',
+const topic: WorkspaceNodeSnapshot = { id: 'topic', kind: 'topic', title: 'Topic', content: 'Original Alpha Beta Gamma end',
   parentNodeId: null, reveal: null, anchorLink: null, reading: null, review: null, createdAt: time, updatedAt: time,
   isTitleManual: true, hideTitleHeading: false };
 const item: WorkspaceNodeSnapshot = { ...topic, id: 'item', kind: 'item', parentNodeId: 'topic',
@@ -60,52 +60,38 @@ afterEach(async () => {
   rmSync(root, { recursive: true, force: true });
 });
 
-it.each(['highlight', 'cloze', 'note'] as const)('persists a sibling %s from an edited Item and hydrates it after reopening', async (kind) => {
+it.each(['highlight', 'cloze', 'note'] as const)('refuses %s inside an Item without changing persisted facts', async kind => {
   const payload = getSelectionCommandPayloadForContentRanges('item', item.content, [{ from: 16, to: 21 }])!;
-  const result = await persistCompanionSelectionAnnotation({ deviceId: 'device', kind, payload,
-    note: 'Reader note', snapshot: (await loadCompanionWorkspaceSyncState()).workspace_snapshot });
-  expect(result).toBeTruthy();
-  const saved = await loadCompanionWorkspaceNode(result!.nodeId);
-  expect(saved).toMatchObject({ parentNodeId: 'topic', anchorLink: null,
-    content: kind === 'cloze' ? 'Rewritten Beta [...]' : kind === 'note' ? 'Gamma\n※ Reader note' : 'Gamma',
-    reveal: kind === 'cloze' ? 'Gamma' : null, kind: kind === 'cloze' ? 'item' : 'topic' });
+  const before = database!.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
+  const review = database!.prepare('SELECT * FROM node_review').all();
+  expect(await persistCompanionSelectionAnnotation({ deviceId: 'device', kind, payload,
+    note: 'Reader note', snapshot: (await loadCompanionWorkspaceSyncState()).workspace_snapshot })).toBeNull();
+  expect(database!.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(before);
+  expect(database!.prepare('SELECT * FROM node_review').all()).toEqual(review);
+  expect(await applyCompanionEditHistory('item', 'undo')).toBe(false);
+  await closeIosCompanionDatabase();
+  await openLibrary();
   expect(await loadCompanionWorkspaceNode('item')).toMatchObject(item);
   expect(await loadCompanionWorkspaceNode('topic')).toMatchObject(topic);
-  await applyCompanionEditHistory('item', 'undo');
+});
+
+it.each(['highlight', 'cloze', 'note'] as const)('keeps Topic %s creation anchored, undoable and durable', async kind => {
+  const payload = getSelectionCommandPayloadForContentRanges('topic', topic.content, [{ from: 0, to: 8 }])!;
+  const result = await persistCompanionSelectionAnnotation({ deviceId: 'device', kind, payload, note: 'Reader note',
+    snapshot: (await loadCompanionWorkspaceSyncState()).workspace_snapshot });
+  expect(result).toBeTruthy();
+  const saved = await loadCompanionWorkspaceNode(result!.nodeId);
+  expect(saved).toMatchObject({ parentNodeId: 'topic',
+    content: kind === 'cloze' ? '[...] Alpha Beta Gamma end' : kind === 'note' ? 'Original\n※ Reader note' : 'Original',
+    reveal: kind === 'cloze' ? 'Original' : null,
+    anchorLink: { id: payload.anchorId, kind: kind === 'cloze' ? 'cloze' : 'highlight',
+      locator: { from: 0, to: 8, originalText: 'Original' } } });
+  await applyCompanionEditHistory('topic', 'undo');
   expect((await loadCompanionWorkspaceNode(result!.nodeId))?.deletedAt).toBeTruthy();
-  await applyCompanionEditHistory('item', 'redo');
-  expect(await loadCompanionWorkspaceNode(result!.nodeId)).toMatchObject({ parentNodeId: 'topic', content: saved!.content });
+  await applyCompanionEditHistory('topic', 'redo');
   expect((await loadCompanionWorkspaceNode(result!.nodeId))?.deletedAt).toBeFalsy();
   const restored = await loadCompanionWorkspaceNode(result!.nodeId);
   await closeIosCompanionDatabase();
   await openLibrary();
   expect(await loadCompanionWorkspaceNode(result!.nodeId)).toEqual(restored);
-});
-
-it('restores the selected old blank instead of copying its placeholder', async () => {
-  const payload = getSelectionCommandPayloadForContentRanges('item', item.content, [{ from: 10, to: 15 }])!;
-  const result = await persistCompanionSelectionAnnotation({ deviceId: 'device', kind: 'highlight', payload,
-    snapshot: (await loadCompanionWorkspaceSyncState()).workspace_snapshot });
-  expect(await loadCompanionWorkspaceNode(result!.nodeId)).toMatchObject({ parentNodeId: 'topic', content: 'Beta', anchorLink: null });
-});
-
-it('keeps Topic derivation anchored to the Topic', async () => {
-  const payload = getSelectionCommandPayloadForContentRanges('topic', topic.content, [{ from: 0, to: 8 }])!;
-  const result = await persistCompanionSelectionAnnotation({ deviceId: 'device', kind: 'highlight', payload,
-    snapshot: (await loadCompanionWorkspaceSyncState()).workspace_snapshot });
-  expect(await loadCompanionWorkspaceNode(result!.nodeId)).toMatchObject({ parentNodeId: 'topic', content: 'Original',
-    anchorLink: { id: payload.anchorId, kind: 'highlight', locator: { from: 0, to: 8, originalText: 'Original' } } });
-});
-
-it('creates a root sibling and can undo and redo it from its source Item', async () => {
-  await seed({ ...item, id: 'root-item', parentNodeId: null });
-  const payload = getSelectionCommandPayloadForContentRanges('root-item', item.content, [{ from: 16, to: 21 }])!;
-  const result = await persistCompanionSelectionAnnotation({ deviceId: 'device', kind: 'cloze', payload,
-    snapshot: (await loadCompanionWorkspaceSyncState()).workspace_snapshot });
-  expect(await loadCompanionWorkspaceNode(result!.nodeId)).toMatchObject({ parentNodeId: null, content: 'Rewritten Beta [...]' });
-  await applyCompanionEditHistory('root-item', 'undo');
-  expect((await loadCompanionWorkspaceNode(result!.nodeId))?.deletedAt).toBeTruthy();
-  await applyCompanionEditHistory('root-item', 'redo');
-  expect((await loadCompanionWorkspaceNode(result!.nodeId))?.deletedAt).toBeFalsy();
-  expect((await loadCompanionWorkspaceNode(result!.nodeId))?.parentNodeId).toBeNull();
 });

@@ -6,6 +6,7 @@ import type { FormulaClozeCreatePayload, FormulaClozeSourcePayload } from '../..
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../../features/image-cloze/model/imageCloze';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { definedProps } from '../../shared/lib/definedProps';
+import { canCreateSelectionAnnotation } from '../../shared/selectionAnnotationEligibility';
 import { getSelectionCommandPayload, type SelectionCommandPayload } from '../contextCommands';
 
 import { createPayloadSelectionRunner } from './editorPayloadSelectionRunner';
@@ -124,8 +125,10 @@ export function useEditorContextCommands(args: UseEditorContextCommandsParams) {
   const runSelectionCommandFromPayloadHandler = createPayloadSelectionRunner(closeContextMenu, editorRef);
   const selectionHandlers = createSelectionHandlers({
     createChildNode: args.createChildNode,
-    createHighlightNodeFromSelection: args.createHighlightNodeFromSelection,
-    createQANodeFromSelection: args.createQANodeFromSelection,
+    createHighlightNodeFromSelection: (nodeId, ...selection) => canCreateSelectionAnnotation(args.nodesById[nodeId])
+      ? args.createHighlightNodeFromSelection(nodeId, ...selection) : null,
+    createQANodeFromSelection: (nodeId, ...selection) => canCreateSelectionAnnotation(args.nodesById[nodeId])
+      ? args.createQANodeFromSelection(nodeId, ...selection) : null,
     flushPendingEditorDraft: args.flushPendingEditorDraft,
     onExitImmersiveMode: args.onExitImmersiveMode,
     onSelectNode: args.onSelectNode,

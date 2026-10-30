@@ -2,6 +2,7 @@ import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { canCreateSelectionAnnotation } from '../../shared/selectionAnnotationEligibility';
 
 import type { createSelectionHandlers } from './editorSelectionCommandActions';
 import { createOpenSelectionNotePanel } from './editorSelectionNotePanelCommand';
@@ -46,11 +47,11 @@ export function createSelectionAnnotationHandlers(args: {
   });
 
   return {
-    handleOpenSelectionNote: createOpenSelectionNotePanel({
+    handleOpenSelectionNote: () => canCreateSelectionAnnotation(args.activeNodeId ? args.nodesById[args.activeNodeId] : null) && createOpenSelectionNotePanel({
       activeNodeId: args.activeNodeId,
       editorRef: args.editorRef,
       setContextMenu: args.setContextMenu
-    }),
+    })(),
     handleToggleSelectionHighlightFromPayload,
     handleAddNoteToSelectionHighlightFromPayload
   };

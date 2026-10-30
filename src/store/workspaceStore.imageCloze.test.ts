@@ -275,3 +275,12 @@ it('deletes a legacy child with matching region shape even when the child id dif
     }
   ]);
 });
+
+it('refuses image cloze creation inside an Item without altering image regions', async () => {
+  const node = useWorkspaceStore.getState().nodesById['node-1']!;
+  useWorkspaceStore.setState({ nodesById: { 'node-1': { ...node, kind: 'item', reveal: 'Answer' } } });
+  const before = useWorkspaceStore.getState().nodesById;
+  expect(await createImageClozeNodes()).toEqual([]);
+  expect(useWorkspaceStore.getState().nodesById).toEqual(before);
+  expect(runtimeInvoke.mock.calls.filter(([command]) => command === 'create_item')).toHaveLength(0);
+});

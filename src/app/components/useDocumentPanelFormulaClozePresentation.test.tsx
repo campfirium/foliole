@@ -29,3 +29,12 @@ it('keeps the parent presentation registered across unrelated updates and remove
   expect(notifications).toEqual(['parent']);
   expect(states).toEqual([null]);
 });
+
+it('disables formula region creation while displaying an Item', () => {
+  const item = { ...parent, kind: 'item' as const, reveal: 'Answer' };
+  const { unmount } = renderHook(() => useDocumentPanelFormulaClozePresentation({
+    activeNode: item, editorNodeId: item.id, nodesById: { [item.id]: item }, trashedNodeIds: []
+  }));
+  expect(getFormulaClozeEditorPresentation(item.id)).toMatchObject({ canCreate: false });
+  unmount();
+});

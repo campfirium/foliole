@@ -128,3 +128,18 @@ it('opens the add-note panel from the live editor selection', () => {
     payload: expect.objectContaining({ selectionText: 'Alpha' })
   });
 });
+
+it('does not create annotations or open an annotation panel while reading an Item', () => {
+  const node = { id: 'node-1', kind: 'item', content: 'Alpha Beta', title: 'Item', reveal: 'Answer' };
+  const createHighlightNodeFromSelection = vi.fn();
+  const createQANodeFromSelection = vi.fn();
+  const { result } = renderHook(() => useEditorContextCommands(buildHookArgs({
+    activeNode: node, nodesById: { 'node-1': node }, createHighlightNodeFromSelection, createQANodeFromSelection
+  })));
+  act(() => result.current.handleCreateHighlight());
+  act(() => result.current.handleCreateCloze());
+  act(() => result.current.handleOpenSelectionNote());
+  expect(createHighlightNodeFromSelection).not.toHaveBeenCalled();
+  expect(createQANodeFromSelection).not.toHaveBeenCalled();
+  expect(result.current.contextMenu).toBeNull();
+});

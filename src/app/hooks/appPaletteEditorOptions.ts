@@ -1,3 +1,4 @@
+import { canCreateSelectionAnnotation } from '../../shared/selectionAnnotationEligibility';
 import { canOpenDocumentComparisonView } from '../components/documentComparisonView';
 
 import type { useWorkspaceSelectors } from './appControllerState';
@@ -52,7 +53,7 @@ export function buildEditorPaletteOptions(args: EditorPaletteSource) {
   const canUseCurrentTopic = hasCurrentTopic(args);
   const activeNode = args.activeNodeId ? args.ws.nodesById[args.activeNodeId] : undefined;
   return {
-    canAnnotateSelection: canAnnotateSelection(args),
+    canAnnotateSelection: canAnnotateSelection(args) && canCreateSelectionAnnotation(activeNode),
     canExportCurrentArticle: canExportCurrentArticle(args),
     canFindInCurrentTopic: canUseCurrentTopic,
     canOpenComparisonView: canOpenDocumentComparisonView({

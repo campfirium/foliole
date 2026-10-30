@@ -6,9 +6,7 @@ import {
   deriveNodeTitleForCloze,
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
-import type { NodeAnchorLink } from '../features/nodes/model/nodeTypes';
 import { recordCompanionAnnotationHistory } from '../shared/platform/companion/editing/companionEditHistoryRecording';
-import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import { saveIosReviewWithDb } from '../shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites';
 import { runCompanionOptionalHighValueMutationTask } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
@@ -28,7 +26,7 @@ import {
   createSelectionHighlightContent,
   type SelectionAnnotationPayload
 } from '../shared/selectionAnnotationActions';
-import { prepareSelectionDerivedNode } from '../shared/selectionDerivedNode';
+import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligibility';
 import { createNewItemReviewProfiles } from '../store/newItemReviewSlots';
 
 import {
@@ -54,8 +52,7 @@ interface AnnotationDraft {
 function createNode(args: {
   content: string;
   kind: 'item' | 'topic';
-  parentNodeId: string | null;
-  anchorLink: NodeAnchorLink | null;
+  parentNodeId: string;
   payload: SelectionAnnotationPayload;
   review: NativeWorkspaceReviewProfile | null;
   reveal: string | null;
@@ -63,7 +60,7 @@ function createNode(args: {
   title: string;
 }): WorkspaceNodeSnapshot {
   return {
-    anchorLink: args.anchorLink,
+    anchorLink: createSelectionAnnotationAnchorLink(args.payload, args.kind === 'item' ? 'cloze' : 'highlight') ?? null,
     content: args.content,
     createdAt: args.timestamp,
     hideTitleHeading: false,
@@ -82,8 +79,8 @@ function createNode(args: {
 }
 
 async function buildAnnotationDraft(args: PersistSelectionAnnotationArgs): Promise<AnnotationDraft | null> {
-  let parentNode = args.snapshot?.nodesById[args.payload.parentNodeId];
-  if (!args.snapshot || !parentNode || args.snapshot.trashedNodeIds.includes(parentNode.id)) {
+  const parentNode = args.snapshot?.nodesById[args.payload.parentNodeId];
+  if (!args.snapshot || !parentNode || !canCreateSelectionAnnotation(parentNode) || args.snapshot.trashedNodeIds.includes(parentNode.id)) {
     return null;
   }
   const timestamp = new Date().toISOString();
@@ -96,25 +93,17 @@ async function buildAnnotationDraft(args: PersistSelectionAnnotationArgs): Promi
   if (!content || (args.kind === 'cloze' && !cloze.answer)) {
     return null;
   }
-  if (parentNode.kind === 'item' && isAvailableNativeCompanionRuntime()) {
-    parentNode = await loadCompanionWorkspaceNode(parentNode.id) ?? undefined;
-    if (!parentNode || parentNode.deletedAt) return null;
-  }
-  const draft = prepareSelectionDerivedNode(parentNode, { content,
-    reveal: args.kind === 'cloze' ? cloze.answer : null,
-    anchorLink: createSelectionAnnotationAnchorLink(args.payload, args.kind === 'cloze' ? 'cloze' : 'highlight') ?? null });
   const node = createNode({
-    content: draft.content,
+    content,
     kind: args.kind === 'cloze' ? 'item' : 'topic',
-    parentNodeId: draft.parentNodeId,
-    anchorLink: draft.anchorLink ?? null,
-    payload: parentNode.kind === 'item' ? { ...args.payload, imageRegions: null } : args.payload,
+    parentNodeId: parentNode.id,
+    payload: args.payload,
     review: args.kind === 'cloze'
       ? createNewItemReviewProfiles({ batchSize: 1, nodesById: args.snapshot.nodesById, now: timestamp })[0]!
       : null,
-    reveal: draft.reveal ?? null,
+    reveal: args.kind === 'cloze' ? cloze.answer : null,
     timestamp,
-    title: args.kind === 'cloze' ? deriveNodeTitleForCloze(draft.content, draft.reveal ?? '') : deriveNodeTitleFromContent(draft.content)
+    title: args.kind === 'cloze' ? deriveNodeTitleForCloze(content, cloze.answer) : deriveNodeTitleFromContent(content)
   });
   const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId);
   const versionedNode = { ...node, currentVersionId: nodeVersion.version_id };

@@ -12,6 +12,7 @@ import {
   unregisterImageClozeEditorPresentation
 } from '../../features/image-cloze/model/imageClozePresentation';
 import { isTextAnchorLocator, type Node } from '../../features/nodes/model/nodeTypes';
+import { canCreateSelectionAnnotation } from '../../shared/selectionAnnotationEligibility';
 
 import { useDocumentPanelImageInputs } from './useDocumentPanelImageInputs';
 import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
@@ -98,6 +99,7 @@ export function useDocumentPanelImageClozePresentation(args: {
     args.editorNodeId ? args.activeNode : undefined, args.nodesById, args.trashedNodeIds
   );
   const { editorNodeId, onOpenNode } = args;
+  const canCreate = canCreateSelectionAnnotation(args.activeNode);
   const parentRegions = useMemo(() => {
     if (!source || getImageClozeLocator(source.anchorLink)) return [];
     return [
@@ -122,9 +124,9 @@ export function useDocumentPanelImageClozePresentation(args: {
       if (locator) {
         return registerFocusedImageClozePresentation(editorNodeId, answerNodeId, source, locator);
       }
-      if (parentRegions.length === 0) return undefined;
+      if (parentRegions.length === 0 && canCreate) return undefined;
       registerImageClozeEditorPresentation(editorNodeId, {
-        canCreate: true,
+        canCreate,
         focusRegionId: null,
         hiddenRegionIds: [],
         onOpenNode,
@@ -133,5 +135,5 @@ export function useDocumentPanelImageClozePresentation(args: {
       });
       return () => unregisterImageClozeEditorPresentation(editorNodeId);
     });
-  }, [source, editorNodeId, selectedNodesById, onOpenNode, parentRegions]);
+  }, [source, editorNodeId, selectedNodesById, onOpenNode, parentRegions, canCreate]);
 }

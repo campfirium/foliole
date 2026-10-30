@@ -1,4 +1,5 @@
 import { definedProps } from '../../shared/lib/definedProps';
+import { canCreateSelectionAnnotation } from '../../shared/selectionAnnotationEligibility';
 
 import type { EditorContextMenuState } from './useEditorContextCommandHelpers';
 import type { UseEditorContextCommandsParams } from './useEditorContextCommands';
@@ -10,14 +11,15 @@ export function useEditorContextCommandSurfaces(
   args: UseEditorContextCommandsParams,
   setContextMenu: (value: EditorContextMenuState | null) => void
 ) {
-  const createFormulaClozeNode = args.createFormulaClozeNode ?? (async () => null);
-  const createImageClozeNodes = args.createImageClozeNodes ?? (async () => []);
+  const canAnnotate = canCreateSelectionAnnotation(args.activeNodeId ? args.nodesById[args.activeNodeId] : null);
+  const createFormulaClozeNode = canAnnotate ? args.createFormulaClozeNode ?? (async () => null) : async () => null;
+  const createImageClozeNodes = canAnnotate ? args.createImageClozeNodes ?? (async () => []) : async () => [];
   useSelectionAnnotationToolbar({
     activeNodeId: args.activeNodeId,
     editorRef: args.editorRef,
     isTrashViewOpen: args.isTrashViewOpen,
     nodesById: args.nodesById,
-    selectionToolbarEnabled: args.selectionToolbarEnabled ?? true,
+    selectionToolbarEnabled: canAnnotate && (args.selectionToolbarEnabled ?? true),
     setContextMenu,
     trashedNodeIds: args.trashedNodeIds
   });

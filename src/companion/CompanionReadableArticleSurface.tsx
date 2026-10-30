@@ -3,6 +3,7 @@ import { useEffect, type PointerEvent as ReactPointerEvent, type TouchEvent as R
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
 import type { CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
+import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligibility';
 
 import { companionReadingSurfaceClassName, companionReviewSurfaceClassName } from './companionCssCompatibility';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
@@ -90,7 +91,8 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
   const reading = useImmersiveReadableArticleState(resolveCompanionSearchSelection(props.readableArticle.content, props.searchMatch));
   const snapshot = props.snapshot;
   const toolbar = useCompanionSelectionAnnotationToolbar({
-    canCreateAnnotation: Boolean(props.onCreateSelectionAnnotation) && !reading.isContentEditing,
+    canCreateAnnotation: Boolean(props.onCreateSelectionAnnotation) &&
+      canCreateSelectionAnnotation(snapshot?.nodesById[props.readableArticle.nodeId]) && !reading.isContentEditing,
     nodeId: props.readableArticle.nodeId,
     snapshot
   });

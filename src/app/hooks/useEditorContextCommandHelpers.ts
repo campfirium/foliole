@@ -3,6 +3,7 @@ import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { copyAttachmentImageToClipboard, exportAttachmentImage } from '../../shared/platform/attachmentImageActions';
+import { canCreateSelectionAnnotation } from '../../shared/selectionAnnotationEligibility';
 import type { WorkspaceEditorContextMenu } from '../components/WorkspaceLayout';
 import {
   getSelectionCommandPayload,
@@ -76,7 +77,7 @@ export function createHandleEditorContextMenu(args: {
       args.setContextMenu({
         ...imageContextMenu,
         canRunCommands: Boolean(fallbackPayload),
-        payload: fallbackPayload
+        payload: canCreateSelectionAnnotation(args.activeNode) ? fallbackPayload : null
       });
       return;
     }

@@ -12,6 +12,7 @@ import {
   unregisterFormulaClozeEditorPresentation
 } from '../../features/formula-cloze/model/formulaClozePresentation';
 import type { Node } from '../../features/nodes/model/nodeTypes';
+import { canCreateSelectionAnnotation } from '../../shared/selectionAnnotationEligibility';
 
 import { useDocumentPanelMarkerChildren } from './useDocumentPanelMarkerChildren';
 import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
@@ -19,7 +20,7 @@ import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic'
 function registerParentFormulaPresentation(editorNodeId: string, activeNode: Node, nodesById: Record<string, Node>, trashedNodeIds: string[]) {
   const regions = deriveFormulaClozeRegionsFromChildren({ nodeId: activeNode.id, nodesById, trashedNodeIds });
   registerFormulaClozeEditorPresentation(editorNodeId, {
-    canCreate: true,
+    canCreate: canCreateSelectionAnnotation(activeNode),
     hiddenRegionIds: [],
     outlinedRegionIds: regions.map((region) => region.id),
     regions

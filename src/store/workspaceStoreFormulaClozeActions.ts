@@ -6,6 +6,7 @@ import {
 } from '../features/formula-cloze/model/formulaCloze';
 import { deriveNodeTitleForCloze } from '../features/nodes/model/deriveNodeTitle';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
+import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligibility';
 import { canSaveNodeText } from '../shared/ui/nodeTextSaveBudget';
 
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
@@ -167,7 +168,7 @@ export function createFormulaClozeNodeAction(
 
     set((state) => {
       const parentNode = state.nodesById[parentNodeId];
-      if (!parentNode) {
+      if (!canCreateSelectionAnnotation(parentNode)) {
         return state;
       }
       const nextNode = createFormulaClozeNode({

@@ -168,3 +168,14 @@ it('rolls back the optimistic excerpt through the existing settlement owner when
   expect(nodeId).toBeNull();
   expect(Object.values(harness.getState().nodesById).some((node) => node.anchorLink?.kind === 'image-excerpt')).toBe(false);
 });
+
+it('refuses region excerpts inside an Item without writing', async () => {
+  const fixture = createWorkspaceNodeActionsFixture();
+  fixture.nodesById['node-1'] = { ...fixture.nodesById['node-1']!, kind: 'item', reveal: 'Answer' };
+  const harness = createWorkspaceNodeActionsSetStateHarness(fixture);
+  const syncCreation = vi.fn();
+  const create = createPdfImageExcerptAction(harness.setState, syncCreation, harness.getState);
+  expect(await create('node-1', { from: 0, to: 4, originalText: 'Text' }, null, 'attachment', 'bytes')).toBeNull();
+  expect(harness.getState().nodesById).toEqual(fixture.nodesById);
+  expect(syncCreation).not.toHaveBeenCalled();
+});

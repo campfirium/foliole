@@ -3,6 +3,7 @@ import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter
 import { isTextAnchorLocator } from '../../features/nodes/model/nodeTypes';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { RuntimeNodeSourceUpdatePreview } from '../../shared/platform/nodeSourceUpdateRuntimePayloads';
+import { canCreateSelectionAnnotation } from '../../shared/selectionAnnotationEligibility';
 
 import type { DocumentComparisonMode } from './documentComparisonView';
 import { DocumentPanelContextMenu } from './DocumentPanelContextMenu';
@@ -97,11 +98,11 @@ export function DocumentPanelSectionOverlays(args: DocumentPanelSectionOverlaysP
         highlight={adjustableHighlight}
         onCommit={props.onAdjustExistingHighlightRange}
       />
-      <ImageExcerptAnnotationCreation
+      {canCreateSelectionAnnotation(props.activeNodeId ? props.nodesById[props.activeNodeId] : null) ? <ImageExcerptAnnotationCreation
         activeNodeId={props.activeNodeId}
         editor={editorAdapter}
         editorNodeId={props.editorNodeId}
-      />
+      /> : null}
       <DocumentPanelContextMenu
         contextMenu={props.contextMenu}
         onCloseContextMenu={props.onCloseContextMenu}

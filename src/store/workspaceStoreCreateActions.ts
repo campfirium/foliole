@@ -3,7 +3,7 @@ import {
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
-import { prepareSelectionDerivedNode } from '../shared/selectionDerivedNode';
+import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligibility';
 import { canSaveNodeText } from '../shared/ui/nodeTextSaveBudget';
 
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
@@ -134,20 +134,21 @@ export function createHighlightFromSelectionAction(
 
     set((state) => {
       const parentNode = state.nodesById[parentNodeId];
-      if (!parentNode) {
+      if (!canCreateSelectionAnnotation(parentNode)) {
         return state;
       }
-      const draft = prepareSelectionDerivedNode(parentNode, { content: normalizedContent,
-        ...(anchorLink ? { anchorLink } : {}), ...(imageRegions ? { imageRegions } : {}) });
       const untitledState = resolveCreatedNodeTitleState(
-        deriveNodeTitleFromContent(draft.content),
-        draft.parentNodeId,
+        deriveNodeTitleFromContent(normalizedContent),
+        parentNodeId,
         state
       );
       createdNode = createHighlightNodeRecord({
         ...(anchorId !== undefined ? { anchorId } : {}),
-        ...draft,
+        ...(anchorLink !== undefined ? { anchorLink } : {}),
+        content: normalizedContent,
+        ...(imageRegions !== undefined ? { imageRegions } : {}),
         nodeId: childNodeId,
+        parentNodeId,
         timestamp,
         title: untitledState.title
       });
@@ -192,18 +193,16 @@ export function createQAFromSelectionAction(
 
     set((state) => {
       const parentNode = state.nodesById[parentNodeId];
-      if (!parentNode) {
+      if (!canCreateSelectionAnnotation(parentNode)) {
         return state;
       }
-      const draft = prepareSelectionDerivedNode(parentNode, { content: normalizedPrompt, reveal: normalizedAnswer,
-        ...(anchorLink ? { anchorLink } : {}) });
       const created = createQANodeFromSelectionRecord({
         ...(anchorId !== undefined ? { anchorId } : {}),
-        ...(draft.anchorLink !== undefined ? { anchorLink: draft.anchorLink } : {}),
-        answerContent: draft.reveal ?? normalizedAnswer,
+        ...(anchorLink !== undefined ? { anchorLink } : {}),
+        answerContent: normalizedAnswer,
         nodeId: childNodeId,
-        parentNodeId: draft.parentNodeId,
-        promptContent: draft.content,
+        parentNodeId,
+        promptContent: normalizedPrompt,
         state,
         timestamp
       });

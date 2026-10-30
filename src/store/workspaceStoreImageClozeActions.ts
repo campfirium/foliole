@@ -2,6 +2,7 @@ import { pushEditorOperationEntry } from '../features/editor/model/editorOperati
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../features/image-cloze/model/imageCloze';
 import { deriveNodeTitleForCloze } from '../features/nodes/model/deriveNodeTitle';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
+import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligibility';
 import { canSaveNodeText } from '../shared/ui/nodeTextSaveBudget';
 
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
@@ -132,7 +133,7 @@ function buildImageClozeStateUpdate(args: {
   timestamp: string;
 }) {
   const parentNode = args.state.nodesById[args.parentNodeId];
-  if (!parentNode) {
+  if (!parentNode || !canCreateSelectionAnnotation(parentNode)) {
     return args.state;
   }
   const batch = createImageClozeNodeBatch({

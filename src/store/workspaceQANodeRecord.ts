@@ -18,10 +18,10 @@ function resolveClozeAnchorLink(anchorId?: string, anchorLink?: NodeAnchorLink):
 
 export function createQANodeFromSelectionRecord(args: {
   anchorId?: string;
-  anchorLink?: NodeAnchorLink | null;
+  anchorLink?: NodeAnchorLink;
   answerContent: string;
   nodeId: string;
-  parentNodeId: string | null;
+  parentNodeId: string;
   promptContent: string;
   state: WorkspaceState;
   timestamp: string;
@@ -44,7 +44,7 @@ export function createQANodeFromSelectionRecord(args: {
       title: untitledState.title,
       hasContent: args.promptContent.length > 0,
       content: args.promptContent,
-      anchorLink: resolveClozeAnchorLink(args.anchorId, args.anchorLink ?? undefined),
+      anchorLink: resolveClozeAnchorLink(args.anchorId, args.anchorLink),
       hasReveal: true,
       reveal: args.answerContent,
       review: reviewProfiles[0] ?? null,

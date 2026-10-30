@@ -1,6 +1,7 @@
 import { buildCanonicalAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl';
 import type { NodeImageRegionGroup, PdfAnchorLocator, TextAnchorLocator } from '../features/nodes/model/nodeTypes';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
+import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligibility';
 import { canSaveNodeText } from '../shared/ui/nodeTextSaveBudget';
 
 import type { WorkspaceState } from './workspaceStore';
@@ -60,7 +61,7 @@ export function createPdfImageExcerptAction(
     let node: WorkspaceState['nodesById'][string] | null = null;
     let nodeOrder: string[] | null = null;
     set((state) => {
-      if (!state.nodesById[parentNodeId]) return state;
+      if (!canCreateSelectionAnnotation(state.nodesById[parentNodeId])) return state;
       const titleState = resolveExcerptTitleState(parentNodeId, state);
       node = createExcerptNode({
         attachmentId,
