@@ -128,6 +128,7 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
       onAttachmentResourceSynced={() => continueCompanionAttachmentResourceSync(props.workspaceSync)}
       onExit={props.flow || props.surface.isFlowBrowsing ? () => props.surface.handleTabAction('recent') : props.onExit}
       onBack={props.flow ? props.surface.handleResumeFlow : props.onExit}
+      onOpenExistingHighlight={props.surface.handleSelectBrowseNode}
       onScrollTopChange={props.surface.handleViewScroll}
       readableArticle={props.surface.readableArticle}
       snapshot={props.workspaceSync.state.workspace_snapshot}

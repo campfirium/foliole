@@ -25,6 +25,7 @@ interface CompanionSelectionAnnotationToolbarProps {
   onAddExistingHighlightNote: (nodeId: string, originalText: string, note: string, guard?: CompanionHighlightReadGuard) => Promise<void> | void;
   onApply: (kind: CompanionSelectionAnnotationKind, payload: SelectionCommandPayload, note?: string) => Promise<void> | void;
   onClose: () => void;
+  onOpenExistingHighlight?: ((nodeId: string) => void) | undefined;
   onDeleteExistingHighlight: (nodeId: string, guard?: CompanionHighlightReadGuard) => Promise<void> | void;
   loadExistingHighlight?: ((nodeId: string) => Promise<CompanionHighlightRead>) | undefined;
   resolveSelectionPayload?: () => SelectionCommandPayload | null;
@@ -64,7 +65,12 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
       onContextMenu={(event) => event.preventDefault()} onPointerDown={(event) => event.stopPropagation()}
       style={{ left: state.left, top: state.top }}>
       <CompanionSelectionToolbarActions isExistingHighlight={isExistingHighlight} isCloze={state.existingHighlight?.kind === 'cloze'} disabled={disabled}
-        onAddNote={() => setIsNoteOpen(true)} onApply={creation.apply} onDeleteExistingHighlight={deleteExistingHighlight} />
+        onAddNote={() => setIsNoteOpen(true)} onApply={creation.apply} onDeleteExistingHighlight={deleteExistingHighlight}
+        onOpenExistingHighlight={props.onOpenExistingHighlight ? () => {
+          if (!state.existingHighlight || disabled) return;
+          props.onOpenExistingHighlight?.(state.existingHighlight.nodeId);
+          props.onClose();
+        } : undefined} />
       {!isNoteOpen && !isExistingHighlight && creation.error ? <div className={`${appFloatingSurfaceClassName('popover')} mt-2 w-64 rounded-md p-2 text-sm`}>
         <CreationStatus creation={creation} />
       </div> : null}

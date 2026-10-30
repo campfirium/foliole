@@ -13,6 +13,7 @@ import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
 export function SelectionAnnotationToolbarLayer(props: {
   onAddExistingHighlightNote?: (nodeId: string, originalText: string, note: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
   onClose(): void;
+  onOpenExistingHighlight?: ((nodeId: string) => void) | undefined;
   onCreateSelectionAnnotation?: (
     kind: CompanionSelectionAnnotationKind,
     payload: SelectionCommandPayload,
@@ -33,6 +34,7 @@ export function SelectionAnnotationToolbarLayer(props: {
         await props.onCreateSelectionAnnotation?.(kind, payload, note);
       }}
       onClose={props.onClose}
+      onOpenExistingHighlight={props.onOpenExistingHighlight}
       onDeleteExistingHighlight={async (nodeId, guard) => {
         const result = await props.onDeleteExistingHighlight?.(nodeId, guard);
         if (!result) throw new Error('companion_highlight_node_unavailable');

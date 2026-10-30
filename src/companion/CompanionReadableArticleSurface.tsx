@@ -50,6 +50,7 @@ interface ImmersiveReadableArticleProps {
   ) => Promise<string | null> | string | null;
   onAddExistingHighlightNote?: (nodeId: string, originalText: string, note: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
   onDeleteExistingHighlight?: (nodeId: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
+  onOpenExistingHighlight?: ((nodeId: string) => void) | undefined;
   onBack?: () => void;
   onExit(): void;
   onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
@@ -217,6 +218,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       <>{props.footer}</>
       <SelectionAnnotationToolbarLayer
         key={props.readableArticle.nodeId}
+        onOpenExistingHighlight={props.onOpenExistingHighlight}
         snapshot={props.snapshot}
         onClose={model.toolbar.clearSelectionAndCloseToolbar}
         resolveSelectionPayload={model.toolbar.resolveSelectionPayload}

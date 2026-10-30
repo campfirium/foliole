@@ -1,4 +1,4 @@
-import { Highlighter, MessageSquare, MoreHorizontal, RectangleEllipsis, X } from 'lucide-react';
+import { CornerDownRight, Highlighter, MessageSquare, MoreHorizontal, RectangleEllipsis, X } from 'lucide-react';
 import { useRef, type ReactNode } from 'react';
 
 import { cn } from '../shared/lib/utils';
@@ -101,6 +101,7 @@ export function CompanionSelectionToolbarActions(props: {
   onAddNote: () => void;
   onApply: (kind: CompanionSelectionAnnotationKind) => void;
   onDeleteExistingHighlight: () => void;
+  onOpenExistingHighlight?: (() => void) | undefined;
 }) {
   const t = useTranslation();
   return (
@@ -122,6 +123,9 @@ export function CompanionSelectionToolbarActions(props: {
           <RectangleEllipsis aria-hidden="true" size={19} strokeWidth={2} />
         </ToolbarButton>
       )}
+      {props.isExistingHighlight && !props.isCloze && props.onOpenExistingHighlight ? <ToolbarButton disabled={props.disabled} label={t('desktop.highlightToolbar.open')} onClick={props.onOpenExistingHighlight}>
+        <CornerDownRight aria-hidden="true" size={19} strokeWidth={2} />
+      </ToolbarButton> : null}
       {props.isCloze ? null : <ToolbarButton disabled={props.disabled} label={t('companion.selection.more')} onClick={() => undefined}>
         <MoreHorizontal aria-hidden="true" size={19} strokeWidth={2} />
       </ToolbarButton>}
