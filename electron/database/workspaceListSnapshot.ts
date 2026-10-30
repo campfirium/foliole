@@ -12,11 +12,14 @@ export function loadWorkspaceListSnapshot(options?: { includePdfOpenings?: boole
   const publish = !sqlite.inTransaction;
   if (publish && hasDesktopNodeIndex(sqlite)) prepareDesktopNodeIndex(sqlite, priority);
   let rawOrder: readonly string[] = [];
-  const version = sqlite.pragma('data_version', { simple: true }) as number;
+  let version = 0;
+  let usedIndex = false;
   const value = sqlite.transaction(() => {
     // Pin the main-database snapshot before considering a prepared order.
     sqlite.prepare('SELECT 1 FROM nodes LIMIT 1').get();
     const index = readDesktopNodeIndex(sqlite);
+    usedIndex = Boolean(index);
+    if (publish && !index) version = sqlite.pragma('data_version', { simple: true }) as number;
     return loadWorkspaceListSnapshotViaDriver(driver, { ...options, onNodeOrder: ids => { rawOrder = ids; },
       ...(index ? { nodeOrder: index.nodeOrder } : {}) });
   })();
@@ -24,7 +27,7 @@ export function loadWorkspaceListSnapshot(options?: { includePdfOpenings?: boole
     activeNodeId: null, capturedWorkspaceVersion: new Date().toISOString(), nodeOrder: [], nodesById: {},
     trashedNodeDeletedAtById: {}, trashedNodeIds: [], untitledSequenceByParent: {}
   };
-  if (publish) prepareDesktopNodeIndex(sqlite, priority, { version, order: rawOrder,
+  if (publish && !usedIndex) prepareDesktopNodeIndex(sqlite, priority, { version, order: rawOrder,
     nodes: Object.values(snapshot.nodesById).map(node => ({ ...node, anchorKind: node.anchorLink?.kind ?? null })) });
   const libraryScope = currentLibraryScope();
   return {

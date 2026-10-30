@@ -5,6 +5,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { readMoveParentOrder } from '../../lib/core/database/nodeMoveStructure.js';
 import { parentOrderId, writeParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
 import { openDailyFlow } from '../../lib/core/flow/dailyFlowService.js';
@@ -142,6 +143,30 @@ it('never merges an independent old snapshot with current owned node metadata', 
       expect(readDesktopNodeIndex(sqlite)!.metadata.get('b')?.priority).toBe(0);
     });
   } finally { reader.close(); }
+});
+
+it('keeps a pinned list consistent and refreshes its metadata after an external commit', () => {
+  loadWorkspaceListSnapshot();
+  const { sqlite, driver, dbPath } = openDatabaseConnection();
+  const writer = new Database(dbPath);
+  const query = driver.queryAll.bind(driver);
+  let committed = false;
+  const spy = vi.spyOn(driver, 'queryAll').mockImplementation(<Row extends DatabaseRow>(...args: Parameters<typeof query>) => {
+    const rows = query<Row>(...args);
+    if (!committed && args[0].includes('FROM nodes n')) {
+      writer.prepare("UPDATE nodes SET priority=0,title='External b' WHERE id='b'").run();
+      committed = true;
+    }
+    return rows;
+  });
+  try {
+    expect(loadWorkspaceListSnapshot().nodesById.b?.title).toBe('Title b');
+    expect(committed).toBe(true);
+    const prepared = readDesktopNodeIndex(sqlite);
+    expect(prepared === null || prepared.metadata.get('b')?.priority === 0).toBe(true);
+    expect(loadWorkspaceListSnapshot().nodesById.b?.title).toBe('External b');
+    expect(readDesktopNodeIndex(sqlite)!.metadata.get('b')?.priority).toBe(0);
+  } finally { spy.mockRestore(); writer.close(); }
 });
 
 it('invalidates metadata after a different connection commits without borrowing its uncommitted facts', async () => {
