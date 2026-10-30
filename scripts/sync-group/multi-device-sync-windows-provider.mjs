@@ -160,7 +160,7 @@ export function startWindowsSyncGroupProvider({
     }, timeoutMs: spec.timeoutMs ?? 15 * 60_000
   }).then((value) => ({ value }), (error) => ({ error }));
   let releaseCount = 0;
-  const releaseLimit = action === 'two-device-sync-provider' ? 2 : 1;
+  const releaseLimit = ['two-device-sync-provider', 'single-principal-sync-group'].includes(action) ? 2 : 1;
   const release = async (status) => {
     if (releaseCount >= releaseLimit) {
       throw controllerFailure('Windows C provider release limit exceeded.',
