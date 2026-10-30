@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 const host = vi.hoisted(() => ({ root: '', owner: 'macos', opens: 0, facts: 0,
-  result: null, events: [] }));
+  result: null, events: [], manualRuns: [] }));
 vi.mock('./windows-multi-device-sync-readiness.mjs', () => ({ provisionWindowsAcceptanceRoot: () => {} }));
 vi.mock('./windows-sync-group-recovery-action.mjs', () => ({
   waitForJoinedGroup: async () => ({ sync_group: group() }),
@@ -21,9 +21,11 @@ vi.mock('./windows-sync-group-recovery-action.mjs', () => ({
     if (command === 'load_workspace_list_snapshot') return snapshot();
     if (command === 'sync_companion_now') {
       if (host.owner === 'macos') throw new Error('sync_group_peer_unavailable');
-      return run('manual', 'manual');
+      host.manualRuns.unshift({ kind: 'run_finished', trigger_reason: 'manual', result: 'completed', status: 'completed',
+        run_id: `manual-${host.manualRuns.length}`, started_at: 'start', occurred_at: 'finish' });
+      return { sync_group: group() };
     }
-    if (command === 'load_desktop_sync_diagnostics') return { activity: [{
+    if (command === 'load_desktop_sync_diagnostics') return { activity: [...host.manualRuns, {
       kind: 'run_finished', trigger_reason: 'initial', result: 'completed', status: 'completed',
       run_id: 'joined', occurred_at: '2026-10-30T02:03:00Z', started_at: '2026-10-30T02:02:59Z'
     }] };
@@ -56,12 +58,15 @@ vi.mock('../desktop/sync-group-controller-read.mjs', () => ({
 }));
 vi.mock('../acceptance/desktop-product-event.mjs', () => ({
   waitForDesktopProductEvent: async () => { throw new Error('Accepted join has no discovery-change event'); },
-  waitForDesktopProductState: async (_page, args) => args.condition.kind === 'candidate-identity'
+  waitForDesktopProductState: async (_page, args) => {
+    if (args.condition.kind === 'body-alternative-preview' && host.owner === 'windows') host.result = run('automatic', 'resumed');
+    return args.condition.kind === 'candidate-identity'
     ? { join_candidates: [{ group_id: group().group_id, group_tag: 'a'.repeat(32), endpoint_url: 'http://mac.test' }] }
     : args.condition.kind === 'sync-conflict-count' ? Promise.reject(new Error('Legacy conflict table is empty'))
       : args.condition.kind === 'body-alternative-preview' ? { source_node_id: 'conflict', alternatives: [{}],
         current_content: 'Cloze target alpha Note target beta Desktop fork macos',
-        updated_content: 'Cloze target alpha Note target beta Desktop fork windows' } : snapshot()
+        updated_content: 'Cloze target alpha Note target beta Desktop fork windows' } : snapshot();
+  }
 }));
 import { runWindowsSinglePrincipalSyncGroup } from './windows-single-principal-sync-group-action.mjs';
 function run(reason, run_id) { return { reason, run_id, status: 'completed' }; }
@@ -71,7 +76,7 @@ function snapshot() { return { nodesById: { A1: {}, A2: {}, C1: {}, conflict: { 
 afterEach(() => { if (host.root) fs.rmSync(host.root, { recursive: true, force: true }); });
 it.each(['macos', 'windows'])('finishes with %s owning automatic sync and keeps the restarted peer alive until released', async owner => {
   host.root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-role-'));
-  Object.assign(host, { owner, opens: 0, facts: 0, result: null, events: [] });
+  Object.assign(host, { owner, opens: 0, facts: 0, result: null, events: [], manualRuns: [] });
   await runWindowsSinglePrincipalSyncGroup({ paths: {}, evidenceRoot: host.root,
     expectedGroupId: group().group_id, expectedGroupTag: 'a'.repeat(32),
     reportProgress: value => host.events.push(value.milestone) });
@@ -79,8 +84,10 @@ it.each(['macos', 'windows'])('finishes with %s owning automatic sync and keeps 
   expect(receipt.runs.automaticBeforeRestart).toEqual(owner === 'windows' ? run('automatic', 'before') : null);
   expect(receipt.runs.automaticAfterRestart).toEqual(owner === 'windows' ? run('automatic', 'after') : null);
   expect(host.events.slice(-3)).toEqual(['restarted', 'release', 'close']);
-  expect(receipt.runs.manualBeforeRestart).toEqual(owner === 'windows' ? run('manual', 'manual') : null);
-  expect(receipt.runs.manualAfterRestart).toEqual(owner === 'windows' ? run('manual', 'manual') : null);
+  expect(receipt.runs.manualBeforeRestart).toEqual(owner === 'windows'
+    ? { ...run('manual', 'manual-0'), error: null, started_at: 'start', finished_at: 'finish' } : null);
+  expect(receipt.runs.manualAfterRestart).toEqual(owner === 'windows'
+    ? { ...run('manual', 'manual-1'), error: null, started_at: 'start', finished_at: 'finish' } : null);
 });
 
 it.each(['missing', 'failed', 'automatic'])('rejects an initial activity without completed initial proof: %s', async kind => {

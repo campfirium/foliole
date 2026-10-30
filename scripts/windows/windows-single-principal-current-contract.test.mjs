@@ -43,13 +43,20 @@ function currentHosts() {
   host.created = 0;
   const group = { group_id: 'group-test', local_device_identity_key: 'mac', devices: ['mac', 'windows'] };
   const snapshot = { nodesById: { A1: {}, A2: {}, C1: {} } };
+  const activity = [];
   host.session = {
     enable: async () => ({ sync_group: group, server_status: { port: 38643 } }),
     accept: async () => ({ sync_group: group }), load: async () => ({ sync_group: group }),
     loadSyncRole: async () => ({ hasUpstream: true, hasDownstream: false }),
     loadSyncTriggerResult: async () => null, close: vi.fn(async () => {}),
-    invoke: async command => command === 'load_workspace_list_snapshot' ? snapshot
-      : { run_id: 'manual', reason: 'manual', status: 'completed' },
+    invoke: async command => {
+      if (command === 'load_workspace_list_snapshot') return snapshot;
+      if (command === 'load_desktop_sync_diagnostics') return { activity: [...activity] };
+      if (command === 'sync_companion_now') activity.unshift({ kind: 'run_finished',
+        trigger_reason: 'manual', status: 'completed', result: 'completed',
+        run_id: `manual-${activity.length}`, started_at: 'start', occurred_at: 'finish' });
+      return { sync_group: group };
+    },
     waitForState: vi.fn(async args => {
       if (args.condition.kind === 'sync-conflict-count') throw new Error('Legacy conflict table is empty');
       if (args.condition.kind === 'body-alternative-preview') return { alternatives: [{}], source_node_id: 'conflict',
@@ -198,7 +205,7 @@ it('retains a completed automatic round when a later skipped attempt replaces th
   }).mockResolvedValueOnce(automatic('resumed')).mockResolvedValueOnce(automatic('before-close')).mockResolvedValue(automatic('after'));
   const invoke = host.session.invoke;
   host.session.invoke = async command => command === 'load_desktop_sync_diagnostics'
-    ? { activity: [{ kind: 'run_finished', trigger_reason: 'automatic', status: 'completed',
+    ? { activity: [...(await invoke(command)).activity, { kind: 'run_finished', trigger_reason: 'automatic', status: 'completed',
       result: 'completed', run_id: 'saved-before', started_at: '2026-10-30T03:15:21Z',
       occurred_at: '2026-10-30T03:15:22Z' }] } : invoke(command);
   const finish = host.provider.finish;
