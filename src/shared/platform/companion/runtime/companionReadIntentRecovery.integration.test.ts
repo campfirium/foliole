@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { spawn } from 'node:child_process';
-import { symlink, writeFile } from 'node:fs/promises';
+import { symlink, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { build } from 'vite';
@@ -58,7 +58,7 @@ it.each([false, true])('recovers a durably accepted click from a SIGKILLed proce
       output: { format: 'cjs', entryFileNames: 'accept.cjs' } } } });
   const child = spawn(process.execPath, [bundle], { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', NODE_PATH: path.join(process.cwd(), 'node_modules') } });
   const exited = new Promise<void>((resolve, reject) => {
-    child.once('error', reject); child.once('exit', (_code, signal) => signal === 'SIGKILL' ? resolve() : reject(new Error('child exited before kill')));
+    child.once('error', reject); child.once('close', (_code, signal) => signal === 'SIGKILL' ? resolve() : reject(new Error('child exited before kill')));
   });
   try {
     await new Promise<void>((resolve, reject) => {
@@ -78,7 +78,10 @@ it.each([false, true])('recovers a durably accepted click from a SIGKILLed proce
     expect(await owner.read(db => db.query('SELECT count FROM topic_daily_counts'))).toEqual([{ count: 1 }]);
     await recovered.restore(); await recovered.drain();
     expect(await owner.read(db => db.query('SELECT count(*) AS n FROM daily_flow_operations'))).toEqual([{ n: 1 }]);
-  } finally { child.kill('SIGKILL'); await exited.catch(() => undefined); }
+  } finally {
+    child.kill('SIGKILL'); await exited.catch(() => undefined);
+    if (quotedSourcePath) await unlink(sourceRoot);
+  }
 });
 
 it('drains accepted operations before closing and gives a replacement library a different identity', async () => {
