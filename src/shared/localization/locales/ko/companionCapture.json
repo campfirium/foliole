@@ -1,7 +1,7 @@
 {
   "companion.capture.title": "캡처",
   "companion.capture.text": "텍스트 캡처",
-  "companion.capture.placeholder": "새 주제를 입력하거나 말하세요.",
+  "companion.capture.placeholder": "새 주제를 입력하세요.",
   "companion.capture.paste": "클립보드에서 붙여넣기",
   "companion.capture.upload": "파일 업로드",
   "companion.capture.close": "닫기",

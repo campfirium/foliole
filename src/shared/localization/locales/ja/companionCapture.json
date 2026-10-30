@@ -1,7 +1,7 @@
 {
   "companion.capture.title": "キャプチャ",
   "companion.capture.text": "テキストをキャプチャします",
-  "companion.capture.placeholder": "新しいトピックを入力するか話します",
+  "companion.capture.placeholder": "新しいトピックを入力",
   "companion.capture.paste": "クリップボードから貼り付け",
   "companion.capture.upload": "ファイルをアップロード",
   "companion.capture.close": "閉じる",

@@ -1,4 +1,4 @@
-import { FileUp, Mic, Clipboard, type LucideIcon } from 'lucide-react';
+import { FileUp, Clipboard, type LucideIcon } from 'lucide-react';
 import { useEffect } from 'react';
 
 import { cn } from '../shared/lib/utils';
@@ -73,14 +73,6 @@ function CaptureTextBox(props: {
   const t = useTranslation();
   return (
     <div className="rounded-md border border-companion-divider px-4 py-4">
-      <button
-        aria-disabled="true"
-        className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-companion bg-companion-subtle text-companion-text-secondary"
-        disabled
-        type="button"
-      >
-        <Mic className="h-5 w-5" />
-      </button>
       <textarea
         aria-label={t('companion.capture.text')}
         className={cn(

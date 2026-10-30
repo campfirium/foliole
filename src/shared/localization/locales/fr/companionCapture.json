@@ -1,7 +1,7 @@
 {
   "companion.capture.title": "Capturer",
   "companion.capture.text": "Capturer du texte",
-  "companion.capture.placeholder": "Tapez ou parlez d'un nouveau sujet",
+  "companion.capture.placeholder": "Saisissez un nouveau sujet",
   "companion.capture.paste": "Coller depuis le Presse-papiers",
   "companion.capture.upload": "Télécharger le fichier",
   "companion.capture.close": "Fermer",

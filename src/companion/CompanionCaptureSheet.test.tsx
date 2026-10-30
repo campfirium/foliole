@@ -79,3 +79,15 @@ describe('CompanionCaptureSheet', () => {
     expect(screen.getByLabelText('Capture text')).toHaveValue('Unfinished note');
   });
 });
+
+it('offers text capture without advertising unavailable voice input', () => {
+  window.localStorage.clear();
+  renderWithLocalization(
+    <CompanionCaptureSheet draftScope="test" onOpenChange={vi.fn()} onSave={vi.fn()} open />
+  );
+
+  expect(screen.getByRole('textbox').getAttribute('placeholder')).not.toMatch(/speak|voice|dictat/i);
+  for (const button of screen.getAllByRole('button')) {
+    expect(button).toHaveAccessibleName();
+  }
+});

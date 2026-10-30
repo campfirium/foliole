@@ -3,7 +3,7 @@ import type { TranslationKey } from '../translations';
 export const ZH_HANS_COMPANION_CAPTURE_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'companion.capture.title': '捕获',
   'companion.capture.text': '捕获文本',
-  'companion.capture.placeholder': '输入或朗读一个新主题',
+  'companion.capture.placeholder': '输入一个新主题',
   'companion.capture.paste': '从剪贴板粘贴',
   'companion.capture.upload': '上传文件',
   'companion.capture.close': '关闭',

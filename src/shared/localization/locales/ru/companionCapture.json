@@ -1,7 +1,7 @@
 {
   "companion.capture.title": "Захват",
   "companion.capture.text": "Захват текста",
-  "companion.capture.placeholder": "Введите или произнесите новую тему",
+  "companion.capture.placeholder": "Введите новую тему",
   "companion.capture.paste": "Вставить из буфера обмена",
   "companion.capture.upload": "Загрузить файл",
   "companion.capture.close": "Закрыть",
