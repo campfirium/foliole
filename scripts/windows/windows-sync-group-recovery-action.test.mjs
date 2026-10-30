@@ -12,7 +12,7 @@ it('completes an approved pending join through the product command', async () =>
     commands.push(command);
     if (command === 'load_sync_group_overview') return { join_request: { status: 'pending' } };
     attempts += 1;
-    if (attempts === 1) throw new Error('sync_group_join_request_pending');
+    if (attempts === 1) throw new Error('sync_group_join_not_accepted');
     return joined;
   } };
   await expect(waitForJoinedGroup(page, 'group-1', 1_000, async () => {})).resolves.toBe(joined);

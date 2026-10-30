@@ -27,7 +27,7 @@ export function createWindowsJoinedGroupWaiter(invoke) {
           const completed = await invoke(page, 'complete_sync_group_join');
           if (joinedGroup(completed, expectedGroupId)) return completed;
         } catch (error) {
-          if (!String(error).includes('sync_group_join_request_pending')) throw error;
+          if (!String(error).includes('sync_group_join_not_accepted')) throw error;
         }
       }
       await pause(1_000);
