@@ -1,6 +1,5 @@
 // @vitest-environment node
 
-import { once } from 'node:events';
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -37,6 +36,11 @@ function generatedWatchedPaths(server, root) {
   });
 }
 
+async function waitForSourceWatch(server, root) {
+  await expect.poll(() => server.watcher.getWatched()[path.join(root, 'src')])
+    .toContain('entry.ts');
+}
+
 it.each([true, false])('ignores generated backlinks (present at startup: %s) while refreshing source', async (backlinksAtStartup) => {
   const root = await createFixture(backlinksAtStartup);
   const shared = createSharedViteConfig(root);
@@ -45,10 +49,16 @@ it.each([true, false])('ignores generated backlinks (present at startup: %s) whi
     root,
     logLevel: 'silent',
     appType: 'custom',
+    plugins: [{
+      name: 'complete-source-watch-before-server-returns',
+      async configureServer(server) {
+        await waitForSourceWatch(server, root);
+      }
+    }],
     server: { ...shared.server, middlewareMode: true }
   });
   try {
-    await once(server.watcher, 'ready');
+    await waitForSourceWatch(server, root);
     expect(generatedWatchedPaths(server, root)).toEqual([]);
     if (!backlinksAtStartup) await addBacklinks(root);
     expect((await server.transformRequest('/src/entry.ts')).code).toContain('before');
