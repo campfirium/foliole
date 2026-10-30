@@ -69,9 +69,9 @@ it('does not execute an unavailable history direction', () => {
 
 it('reserves only the active central band and releases it on exit', () => {
   const ui = setup();
-  expect(setCompanionFlowGestureRegion).toHaveBeenCalledWith({ enabled: true, edgeWidth: 24, bandHeight: 160, viewportWidth: window.innerWidth });
+  expect(setCompanionFlowGestureRegion).toHaveBeenCalledWith({ enabled: true, edgeWidth: 48, bandHeight: 160, viewportWidth: window.innerWidth });
   ui.unmount();
-  expect(setCompanionFlowGestureRegion).toHaveBeenLastCalledWith({ enabled: false, edgeWidth: 24, bandHeight: 160, viewportWidth: window.innerWidth });
+  expect(setCompanionFlowGestureRegion).toHaveBeenLastCalledWith({ enabled: false, edgeWidth: 48, bandHeight: 160, viewportWidth: window.innerWidth });
 });
 
 it('applies each busy transition once and still releases the region when leaving Flow', () => {
@@ -88,7 +88,7 @@ it('applies each busy transition once and still releases the region when leaving
   fireEvent(window, new Event('resize'));
   expect(vi.mocked(setCompanionFlowGestureRegion).mock.calls.map(([region]) => region.enabled)).toEqual([false, true, true]);
   ui.unmount();
-  expect(setCompanionFlowGestureRegion).toHaveBeenLastCalledWith({ enabled: false, edgeWidth: 24,
+  expect(setCompanionFlowGestureRegion).toHaveBeenLastCalledWith({ enabled: false, edgeWidth: 48,
     bandHeight: 160, viewportWidth: window.innerWidth });
   vi.mocked(setCompanionFlowGestureRegion).mockClear();
   fireEvent(window, new Event('resize'));
