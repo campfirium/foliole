@@ -220,7 +220,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
           syncEndpointUrl: props.syncEndpointUrl
         })}
       />
-      <>{props.footer}</>
+      <>{model.reading.isContentEditing ? null : props.footer}</>
       <SelectionAnnotationToolbarLayer
         key={props.readableArticle.nodeId}
         onOpenExistingHighlight={props.onOpenExistingHighlight}
