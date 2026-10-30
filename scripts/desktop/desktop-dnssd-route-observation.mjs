@@ -1,6 +1,6 @@
 import { setTimeout as delay } from 'node:timers/promises';
 
-/* global process */
+/* global process, setImmediate */
 
 export function loadDesktopRoutePeerIds(app, groupId) {
   return app.evaluate(({ app: electronApp }, expectedGroupId) => {
@@ -31,7 +31,9 @@ export async function waitForDesktopRoute(app, groupId, peerDeviceId, {
 }
 
 export function loadDesktopSyncRole(app) {
-  return app.evaluate(({ app: electronApp }) => {
+  return app.evaluate(async ({ app: electronApp }) => {
+    // Defer diagnostic reads out of the inspector's native evaluation stack.
+    await new Promise(resolve => setImmediate(resolve));
     const moduleApi = process.getBuiltinModule('node:module');
     const pathApi = process.getBuiltinModule('node:path');
     if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');

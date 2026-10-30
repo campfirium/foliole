@@ -51,3 +51,29 @@ it.each([[0, false], [1, false], [0, true]])('reads live upstream and downstream
     expect(owned).toBe(false);
   } finally { vi.restoreAllMocks(); }
 });
+
+it('defers the native database read until the inspector evaluation stack has returned', async () => {
+  const { loadDesktopSyncRole } = await import('./desktop-dnssd-route-observation.mjs');
+  const process = await import('node:process');
+  const path = await import('node:path');
+  let evaluating = true;
+  const modules = {
+    'connection.js': { runWithDatabaseConnectionOwner: async action => action() },
+    'desktopSyncGroupTransport.js': { loadDesktopSyncUpstreamPeers: () => {
+      if (evaluating) throw new TypeError('This database connection is busy executing a query');
+      return [{}];
+    } },
+    'desktopSyncChangeSessions.js': { desktopSyncChangeSessions: () => ({ hasSessions: () => false }) }
+  };
+  const builtin = process.default.getBuiltinModule.bind(process.default);
+  vi.spyOn(process.default, 'getBuiltinModule').mockImplementation(name => name === 'node:module'
+    ? { createRequire: () => file => modules[path.basename(file)] } : builtin(name));
+  try {
+    const app = { evaluate: callback => {
+      const result = callback({ app: { getAppPath: () => '/runtime' } });
+      evaluating = false;
+      return result;
+    } };
+    await expect(loadDesktopSyncRole(app)).resolves.toEqual({ hasUpstream: true, hasDownstream: false });
+  } finally { vi.restoreAllMocks(); }
+});
