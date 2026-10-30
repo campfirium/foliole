@@ -47,8 +47,7 @@ async function exchangeAttachmentPass(host: RequestSyncAttachmentHost, exchange:
     parsingPending ||= message.parsingPending;
   });
   const roundKey = JSON.stringify(exchange.context);
-  const retryFirst = retryFirstRounds.has(roundKey);
-  if (retryFirst) retryFirstRounds.delete(roundKey); else retryFirstRounds.add(roundKey);
+  const retryFirst = takeRetryFirstRound(roundKey);
   remoteNeeds = new Set(prioritizeRetryPairs([...remoteNeeds], retryFirst));
   const demand = await host.needsSlice(shouldYield);
   const local = { ...demand, keys: prioritizeRetryPairs(demand.keys, retryFirst),
@@ -91,8 +90,15 @@ async function exchangeAttachmentPass(host: RequestSyncAttachmentHost, exchange:
     stage.name === 'pull' ? local.keys.length > 0 : stage.name === 'push' ? remoteNeeds.size > 0
       : Boolean(local.pdfTextKeys?.length)), () => result.blocks + pendingKeys.size);
   if (!pendingScan && !pendingKeys.size && !text.pending) retryFirstRounds.delete(roundKey);
-  return { ...result, pending: pendingScan ? null : pendingKeys.size + text.pending, verifying: parsingPending || verificationPending(),
-    yielded: parsingPending || verificationPending() || (result.blocks > 0 && (pendingScan || (pendingKeys.size > 0 && shouldYield()))) };
+  return { ...result, pending: pendingScan ? null : pendingKeys.size + text.pending,
+    verifying: parsingPending || verificationPending() || text.verificationPending,
+    yielded: parsingPending || verificationPending() || text.verificationPending || (result.blocks > 0 && (pendingScan || (pendingKeys.size > 0 && shouldYield()))) };
+}
+
+function takeRetryFirstRound(roundKey: string) {
+  const retryFirst = retryFirstRounds.has(roundKey);
+  if (retryFirst) retryFirstRounds.delete(roundKey); else retryFirstRounds.add(roundKey);
+  return retryFirst;
 }
 
 function createAttachmentProgress(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
@@ -122,7 +128,7 @@ function createAttachmentProgress(host: RequestSyncAttachmentHost, exchange: Req
 function createAttachmentTextProgress(host: RequestSyncAttachmentHost, exchange: RequestSyncExchange,
   shouldYield: () => boolean, report: (key: string, error: unknown) => void,
   result: ReturnType<typeof createAttachmentProgress>['result']) {
-  const progress = { pending: 0, async run(keys: string[], receiver = host) {
+  const progress = { pending: 0, verificationPending: false, async run(keys: string[], receiver = host) {
     const textExchange = { ...exchange };
     // Continuation text shares the serial send slot with the two already queued preparations.
     if (receiver !== host) delete textExchange.prepareAttachment;
@@ -134,6 +140,7 @@ function createAttachmentTextProgress(host: RequestSyncAttachmentHost, exchange:
     result.blocks += text.blocks;
     result.transferred += text.transferred;
     progress.pending += text.pending;
+    progress.verificationPending ||= text.verificationPending;
   } };
   return progress;
 }

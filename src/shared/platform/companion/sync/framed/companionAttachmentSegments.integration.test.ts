@@ -23,12 +23,12 @@ import { pipelineFixture } from '../../../../../../electron/sync/attachmentPrepa
 import { clearCompanionRequestNonceCache } from '../../../../../../electron/sync/companionRequestAuth.js';
 import { clearDesktopSyncGroupMemberStateReadiness } from '../../../../../../electron/sync/desktopSyncGroupMemberStateReadiness.js';
 import * as hashing from '../../../../../../electron/sync/resourceFileHash.js';
-import { attachmentSourceVerification } from '../../../../../../lib/core/sync/attachmentSourceVerification.js';
 import { requestAttachmentWorkYield } from '../../../../../../lib/core/sync/attachmentWorkBudget.js';
 import { exchangeRequestSyncAttachments } from '../../../../../../lib/core/sync/requestSyncAttachmentExchange.js';
 
 import { createCompanionAttachmentHost } from './companionAttachmentBlockFiles.js';
 import { companionAttachmentNativeFiles } from './companionAttachmentNativeFiles.testSupport.js';
+import { deferPdfTextVerification } from './companionPdfTextVerification.testSupport.js';
 import { createCompanionRequestSyncExchange } from './companionRequestSyncExchange.js';
 
 type Fixture = Awaited<ReturnType<typeof pipelineFixture>>;
@@ -186,9 +186,9 @@ it.each([
   } finally { await cleanup(f); }
 });
 
-it('imports PDF text beyond the boundary through the same authenticated files and persists every page', async () => {
+it.each([3, 65])('imports PDF text across the boundary and persists every page after %i verification yields', async deferrals => {
   const f = await segmentedFixture();
-  const pages = f.items.map((item, index) => index === 64 ? 'x'.repeat(17 * 1024 * 1024) : item.key);
+  const pages = f.items.map((item, index) => index === 64 ? 'x'.repeat(deferrals > 64 ? 32 * 1024 : 17 * 1024 * 1024) : item.key);
   native.post.mockImplementation(request => {
     if (request.attachment_receive) expect(f.signed.length - f.posted.length - 1).toBeLessThanOrEqual(2);
     return f.post(request);
@@ -205,21 +205,16 @@ it('imports PDF text beyond the boundary through the same authenticated files an
     { library_key: f.directory.root, generation_id: 'pdf-text' });
   const failures: unknown[] = [];
   try {
-    const verify = attachmentSourceVerification.verify.bind(attachmentSourceVerification);
-    let deferred = false;
-    vi.spyOn(attachmentSourceVerification, 'verify').mockImplementation(async (identity, file, shouldYield, digest) => {
-      if (deferred || file.resource.byteLength < 17 * 1024 * 1024 || !file.resource.storageKey.endsWith('.pdftext')) {
-        return verify(identity, file, shouldYield, digest);
-      }
-      deferred = true;
-      let read = false;
-      return verify(identity, { ...file, async read(offset, length) {
-        const bytes = await file.read(offset, length); read = true; return bytes;
-      } }, () => read, digest);
-    });
-    expect(await exchangeRequestSyncAttachments(host, f.exchange, (_key, error) => failures.push(error), () => false))
-      .toMatchObject({ transferred: 134, pending: 0 });
-    expect(deferred).toBe(true);
+    const deferred = deferPdfTextVerification(deferrals);
+    const run = () => exchangeRequestSyncAttachments(host, f.exchange, (_key, error) => failures.push(error), () => false);
+    const result = await run();
+    if (deferrals > 64) {
+      expect(result).toMatchObject({ transferred: 133, pending: 1, yielded: true });
+      expect(f.local.sqlite.prepare('SELECT count(*) FROM attachment_pending').pluck().get()).toBe(1);
+      expect(f.local.sqlite.prepare('SELECT count(*) FROM pdf_text_artifact').pluck().get()).toBe(66);
+      expect(await run()).toMatchObject({ transferred: 1, pending: 0 });
+    } else expect(result).toMatchObject({ transferred: 134, pending: 0 });
+    expect(deferred()).toBe(deferrals);
     expect(failures).toEqual([]);
     await f.reopenReceiver();
     expect(f.local.sqlite.prepare('SELECT text FROM pdf_page_text ORDER BY text').pluck().all())
