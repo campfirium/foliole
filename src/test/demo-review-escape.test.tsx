@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeAll, expect, it } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
 
 import './app-smoke.shared';
 
@@ -7,6 +7,7 @@ import { App } from '../app/App';
 import { createDemoWorkspaceSnapshot } from '../demo/demoWorkspaceSnapshot';
 import { preloadTranslationCatalog } from '../shared/localization/translations';
 import { installDemoRuntimeController, type DemoRuntimeController } from '../shared/platform/runtime/demoRuntime';
+import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { installBrowserWorkspace } from '../store/installBrowserWorkspace';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
@@ -44,6 +45,7 @@ function seedDemoWorkspace() {
 }
 
 it('leaves Demo Flow editing with Escape before running reading shortcuts', async () => {
+  vi.mocked(getRuntimeInvoke).mockReturnValue(null);
   installDemoRuntime();
   seedDemoWorkspace();
   localStorage.clear();

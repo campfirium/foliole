@@ -5,6 +5,7 @@ import './app-smoke.shared';
 
 import { App } from '../app/App';
 import { preloadTranslationCatalog } from '../shared/localization/translations';
+import { loadWorkspaceNodeLearning } from '../shared/platform/runtime/workspaceNodeLearningRepository';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, FIXED_TIMESTAMP } from './app-smoke.shared';
@@ -118,8 +119,8 @@ it('uses reading hotkeys with F/R action keys and Space as Read', async () => {
   expect(screen.queryByRole('button', { name: 'Good' })).not.toBeInTheDocument();
 
   fireEvent.keyDown(window, { key: 'f', code: 'KeyF' });
-  await waitFor(() => {
-    expect(useWorkspaceStore.getState().nodesById['node-1']?.reading?.lastHandledAt).toBeTruthy();
+  await waitFor(async () => {
+    expect((await loadWorkspaceNodeLearning('node-1', useWorkspaceStore.getState().libraryScope!))?.reading?.lastHandledAt).toBeTruthy();
   });
 });
 
@@ -138,8 +139,8 @@ it('dismisses reading review items with R', async () => {
   await enterFlow();
   fireEvent.keyDown(window, { key: 'r', code: 'KeyR' });
 
-  await waitFor(() => {
-    expect(useWorkspaceStore.getState().nodesById['node-1']?.reading?.lastHandledAt).toBeTruthy();
+  await waitFor(async () => {
+    expect((await loadWorkspaceNodeLearning('node-1', useWorkspaceStore.getState().libraryScope!))?.reading?.lastHandledAt).toBeTruthy();
   });
 });
 
@@ -158,8 +159,8 @@ it('uses numeric reading fallback keys', async () => {
   await enterFlow();
   fireEvent.keyDown(window, { key: '3', code: 'Digit3' });
 
-  await waitFor(() => {
-    expect(useWorkspaceStore.getState().nodesById['node-1']?.reading?.lastHandledAt).toBeTruthy();
+  await waitFor(async () => {
+    expect((await loadWorkspaceNodeLearning('node-1', useWorkspaceStore.getState().libraryScope!))?.reading?.lastHandledAt).toBeTruthy();
   });
 });
 
