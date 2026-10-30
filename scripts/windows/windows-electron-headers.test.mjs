@@ -25,7 +25,9 @@ function fixture() {
     write(path.join(source, 'node_headers', 'include', 'node', file), `verified ${file}`);
   }
   const archive = path.join(repoRoot, 'source.tar.gz');
-  expect(spawnSync('tar', ['-czf', archive, '-C', source, 'node_headers']).status).toBe(0);
+  const created = spawnSync('tar', ['-czf', path.basename(archive), '-C', 'source', 'node_headers'],
+    { cwd: repoRoot, encoding: 'utf8', windowsHide: true });
+  expect(created.status, created.error?.message ?? created.stderr).toBe(0);
   const bytes = [fs.readFileSync(archive), Buffer.from('verified Windows x64 library')];
   const files = electronHeaderFiles(repoRoot, version);
   const sums = bytes.map((body, index) => `${createHash('sha256').update(body).digest('hex')}  ${files[index + 1].remote}`).join('\n');
