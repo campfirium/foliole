@@ -16,6 +16,7 @@ import {
 } from '../android/macos-sync-group-desktop-session.mjs';
 import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
+import { assertSameJourneyFacts, loadDesktopJourneyFacts } from '../desktop/desktop-sync-journey-facts.mjs';
 import {
   createDesktopSyncConflictSeed, forkDesktopSyncConflict
 } from '../desktop/sync-group-conflict-action.mjs';
@@ -99,8 +100,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     const automaticSnapshot = await session.invoke('load_workspace_list_snapshot', {
       includePdfOpenings: false
     });
-    const factIds = Object.values(automaticSnapshot.nodesById).filter(({ title }) =>
-      /^Multi-device sync [AC] fact/u.test(String(title))).map(({ id }) => id).sort();
+    const factsBeforeRestart = await loadDesktopJourneyFacts(session);
     const beforeMacosRestart = await session.loadSyncTriggerResult();
     await session.close();
     const restartStartedAt = new Date().toISOString();
@@ -115,17 +115,12 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
       ? await waitForMacosAutomaticRun(session, beforeMacosRestart?.run_id, {
         startedAfter: restartStartedAt }) : null;
     const macosManualAfterRestart = await runAvailableManualSync(session);
-    const repeated = await session.invoke('load_workspace_list_snapshot', {
-      includePdfOpenings: false
-    });
-    const repeatedIds = Object.values(repeated.nodesById).filter(({ title }) =>
-      /^Multi-device sync [AC] fact/u.test(String(title))).map(({ id }) => id).sort();
-    if (JSON.stringify(repeatedIds) !== JSON.stringify(factIds)) {
-      throw new Error('Repeated Mac sync was not idempotent.');
-    }
+    const persistedJourneyFacts = await loadDesktopJourneyFacts(session);
+    assertSameJourneyFacts(factsBeforeRestart, persistedJourneyFacts);
     await windowsProvider.release('consumer_complete');
     const windows = await windowsProvider.finish(); windowsSettled = true;
     const windowsReceipt = windows.receipt;
+    assertSameJourneyFacts(persistedJourneyFacts, windowsReceipt.persistedJourneyFacts);
     const windowsEvidenceRoot = path.dirname(windows.evidenceRef);
     if (windowsReceipt.resultStatus !== 'success' || windowsReceipt.localDevicePersisted !== true
         || !automaticSnapshot?.nodesById?.[windowsReceipt.automaticFactId]) {
@@ -140,7 +135,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
         macosAutomatic: macosAutomaticFact.factId,
         windowsAutomatic: windowsReceipt.automaticFactId },
       join: { mode: 'use-group', replacedWindowsFactId: windowsReceipt.journeyFactId },
-      idempotent: true, macosRestarted: true,
+      idempotent: true, macosRestarted: true, persistedJourneyFacts,
       runs: { macos: { restartStartedAt, automaticAfterRestart: macosAutomaticAfterRestart,
         automaticBeforeRestart: macosAutomaticBeforeRestart,
         manualAfterRestart: macosManualAfterRestart,

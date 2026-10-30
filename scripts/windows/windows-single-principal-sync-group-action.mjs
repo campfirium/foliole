@@ -16,6 +16,7 @@ import {
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { forkDesktopSyncConflict } from '../desktop/sync-group-conflict-action.mjs';
 import { loadDesktopSyncRole } from '../desktop/desktop-dnssd-route-observation.mjs';
+import { assertSameJourneyFacts, loadDesktopJourneyFacts } from '../desktop/desktop-sync-journey-facts.mjs';
 import { waitForSyncGroupAutomaticRun } from '../desktop/sync-group-controller-read.mjs';
 import {
   waitForDesktopProductState
@@ -111,6 +112,7 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
   let initialResult;
   let manualBeforeRestart;
   let conflictProof;
+  let factsBeforeRestart;
   try {
     localFact = await createDesktopSyncGroupJourneyFact({
       device: 'C', evidenceRoot: path.join(options.evidenceRoot, 'windows-fact'),
@@ -163,16 +165,20 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
       loadSyncRole: () => loadDesktopSyncRole(session.app),
       invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args)
     });
+    factsBeforeRestart = await loadDesktopJourneyFacts({
+      invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args)
+    });
   } finally { await closeWindowsSyncGroupSession(session); }
   const restartStartedAt = new Date().toISOString();
   session = await openWindowsSyncGroupSession(options.paths, options.evidenceRoot);
   let restartedGroup;
   let manualAfterRestart;
+  let persistedJourneyFacts;
   try {
     restartedGroup = assertJoinedWindowsGroup(await invokeWindowsSyncGroupCommand(
       session.page, 'load_sync_group_overview'
     ), candidate.group_id);
-    const beforeRepeat = await waitForJourneyOrigins(session.page, ['A', 'C']);
+    await waitForJourneyOrigins(session.page, ['A', 'C']);
     const restartedAutomatic = automaticResult
       ? await waitForAutomaticSync(session, automaticResult.run_id, { startedAfter: restartStartedAt })
       : completedAutomatic(await loadSyncTriggerResult(session.app), undefined, restartStartedAt);
@@ -180,10 +186,10 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
       loadSyncRole: () => loadDesktopSyncRole(session.app),
       invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args)
     });
-    const afterRepeat = await waitForJourneyOrigins(session.page, ['A', 'C']);
-    if (Object.keys(afterRepeat.nodesById).length !== Object.keys(beforeRepeat.nodesById).length) {
-      throw new Error('Repeated Windows sync was not idempotent.');
-    }
+    persistedJourneyFacts = await loadDesktopJourneyFacts({
+      invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args)
+    });
+    assertSameJourneyFacts(factsBeforeRestart, persistedJourneyFacts);
     report(options.reportProgress, 'restarted');
     await waitForWindowsSyncGroupProviderRelease({
       action: 'single-principal-sync-group', repoRoot: options.paths.repoRoot
@@ -205,7 +211,7 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     runs: { restartStartedAt, automaticAfterRestart: automaticResult.afterRestart,
       automaticBeforeRestart: automaticResult.beforeRestart, initial: initialResult,
       manualAfterRestart, manualBeforeRestart },
-    idempotent: true, journeyFactId: localFact.factId, journeyOrigins: ['A', 'C'],
+    idempotent: true, journeyFactId: localFact.factId, journeyOrigins: ['A', 'C'], persistedJourneyFacts,
     conflict: conflictProof,
     resultStatus: 'success', schemaVersion: 2
   }, null, 2)}\n`, 'utf8');

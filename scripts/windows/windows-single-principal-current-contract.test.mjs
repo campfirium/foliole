@@ -42,15 +42,19 @@ afterEach(() => { if (root) fs.rmSync(root, { recursive: true, force: true }); v
 function currentHosts() {
   host.created = 0;
   const group = { group_id: 'group-test', local_device_identity_key: 'mac', devices: ['mac', 'windows'] };
-  const snapshot = { nodesById: { A1: {}, A2: {}, C1: {} } };
+  const snapshot = { nodesById: { A1: { title: 'Multi-device sync A fact' },
+    A2: { title: 'Multi-device sync A fact' }, C1: { title: 'Multi-device sync C fact' } } };
+  const persistedJourneyFacts = Object.entries(snapshot.nodesById).map(([id, node]) =>
+    ({ id, title: node.title, content: `body-${id}` }));
   const activity = [];
   host.session = {
     enable: async () => ({ sync_group: group, server_status: { port: 38643 } }),
     accept: async () => ({ sync_group: group }), load: async () => ({ sync_group: group }),
     loadSyncRole: async () => ({ hasUpstream: true, hasDownstream: false }),
     loadSyncTriggerResult: async () => null, close: vi.fn(async () => {}),
-    invoke: async command => {
+    invoke: async (command, args) => {
       if (command === 'load_workspace_list_snapshot') return snapshot;
+      if (command === 'load_node_document') return { nodeId: args.node_id, content: `body-${args.node_id}` };
       if (command === 'load_desktop_sync_diagnostics') return { activity: [...activity] };
       if (command === 'sync_companion_now') activity.unshift({ kind: 'run_finished',
         trigger_reason: 'manual', status: 'completed', result: 'completed',
@@ -72,7 +76,7 @@ function currentHosts() {
     waitForProgress: vi.fn(async () => {}), release: vi.fn(async () => {}),
     cancelAndSettle: vi.fn(async () => {}),
     finish: async () => ({ evidenceRef: '/windows/receipt.json', receipt: {
-      resultStatus: 'success', localDevicePersisted: true,
+      resultStatus: 'success', localDevicePersisted: true, persistedJourneyFacts,
       automaticFactId: 'C1', journeyFactId: 'retired-C', localDeviceIdentityKey: 'windows',
       runs: { automaticBeforeRestart: { run_id: 'win-before', reason: 'automatic', status: 'completed' },
         automaticAfterRestart: { run_id: 'win-after', reason: 'automatic', status: 'completed' },
@@ -175,9 +179,9 @@ it('does not count a public no-peer result as manual completion on the root', as
   currentHosts();
   host.session.loadSyncRole = async () => ({ hasUpstream: false, hasDownstream: false });
   const invoke = host.session.invoke;
-  host.session.invoke = async command => {
+  host.session.invoke = async (command, args) => {
     if (command === 'sync_companion_now') throw new Error('sync_group_peer_unavailable');
-    return invoke(command);
+    return invoke(command, args);
   };
   const result = await runMacosWindowsSinglePrincipalSyncGroup({ repoRoot: root });
   expect(result.receipt.runs.macos.manualBeforeRestart).toBeNull();
@@ -188,8 +192,8 @@ it.each(['manualBeforeRestart', 'manualAfterRestart'])('rejects missing complete
   root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-no-manual-'));
   currentHosts();
   const invoke = host.session.invoke;
-  host.session.invoke = command => command === 'sync_companion_now'
-    ? Promise.reject(new Error('sync_group_peer_unavailable')) : invoke(command);
+  host.session.invoke = (command, args) => command === 'sync_companion_now'
+    ? Promise.reject(new Error('sync_group_peer_unavailable')) : invoke(command, args);
   host.session.loadSyncRole = async () => ({ hasUpstream: false, hasDownstream: false });
   const finish = host.provider.finish;
   host.provider.finish = async () => {
@@ -207,10 +211,10 @@ it('retains a completed automatic round when a later skipped attempt replaces th
     reason: 'automatic', status: 'skipped', run_id: 'skipped'
   }).mockResolvedValueOnce(automatic('resumed')).mockResolvedValueOnce(automatic('before-close')).mockResolvedValue(automatic('after'));
   const invoke = host.session.invoke;
-  host.session.invoke = async command => command === 'load_desktop_sync_diagnostics'
-    ? { activity: [...(await invoke(command)).activity, { kind: 'run_finished', trigger_reason: 'automatic', status: 'completed',
+  host.session.invoke = async (command, args) => command === 'load_desktop_sync_diagnostics'
+    ? { activity: [...(await invoke(command, args)).activity, { kind: 'run_finished', trigger_reason: 'automatic', status: 'completed',
       result: 'completed', run_id: 'saved-before', started_at: '2026-10-30T03:15:21Z',
-      occurred_at: '2026-10-30T03:15:22Z' }] } : invoke(command);
+      occurred_at: '2026-10-30T03:15:22Z' }] } : invoke(command, args);
   const finish = host.provider.finish;
   host.provider.finish = async () => {
     const result = await finish();

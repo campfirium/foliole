@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 const host = vi.hoisted(() => ({ root: '', owner: 'macos', opens: 0, facts: 0,
-  result: null, events: [], manualRuns: [] }));
+  result: null, events: [], manualRuns: [], fault: null }));
 vi.mock('./windows-multi-device-sync-readiness.mjs', () => ({ provisionWindowsAcceptanceRoot: () => {} }));
 vi.mock('./windows-sync-group-recovery-action.mjs', () => ({
   waitForJoinedGroup: async () => ({ sync_group: group() }),
@@ -16,9 +16,11 @@ vi.mock('./windows-sync-group-recovery-action.mjs', () => ({
       : host.owner === 'windows' ? run('automatic', 'after') : run('manual', 'manual');
     return { app: { evaluate: async () => host.result }, page: {} };
   },
-  invokeWindowsSyncGroupCommand: async (_page, command) => {
+  invokeWindowsSyncGroupCommand: async (_page, command, args) => {
     if (command === 'complete_sync_group_join' || command === 'load_sync_group_overview') return { sync_group: group() };
     if (command === 'load_workspace_list_snapshot') return snapshot();
+    if (command === 'load_node_document') return { nodeId: args.node_id,
+      content: host.opens > 1 && host.fault === 'body' && args.node_id === 'C1' ? 'lost body' : `body-${args.node_id}` };
     if (command === 'sync_companion_now') {
       if (host.owner === 'macos') throw new Error('sync_group_peer_unavailable');
       host.manualRuns.unshift({ kind: 'run_finished', trigger_reason: 'manual', result: 'completed', status: 'completed',
@@ -72,11 +74,19 @@ import { runWindowsSinglePrincipalSyncGroup } from './windows-single-principal-s
 function run(reason, run_id) { return { reason, run_id, status: 'completed' }; }
 function group() { return { group_id: `group-${'a'.repeat(8)}-aaaa-aaaa-aaaa-${'a'.repeat(12)}`,
   local_device_identity_key: 'windows', devices: [{ device_identity_key: 'windows' }, { device_identity_key: 'macos' }] }; }
-function snapshot() { return { nodesById: { A1: {}, A2: {}, C1: {}, conflict: { id: 'conflict', title: 'T152 conflict t152-conflict-example' } } }; }
+function snapshot() {
+  const nodesById = { A1: { title: 'Multi-device sync A fact' }, A2: { title: 'Multi-device sync A fact' },
+    C1: { title: 'Multi-device sync C fact' }, conflict: { id: 'conflict', title: 'T152 conflict t152-conflict-example' } };
+  if (host.opens > 1 && host.fault === 'identity') {
+    delete nodesById.A2;
+    nodesById.unrelated = { title: 'Unrelated replacement' };
+  }
+  return { nodesById };
+}
 afterEach(() => { if (host.root) fs.rmSync(host.root, { recursive: true, force: true }); });
 it.each(['macos', 'windows'])('finishes with %s owning automatic sync and keeps the restarted peer alive until released', async owner => {
   host.root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-role-'));
-  Object.assign(host, { owner, opens: 0, facts: 0, result: null, events: [], manualRuns: [] });
+  Object.assign(host, { owner, opens: 0, facts: 0, result: null, events: [], manualRuns: [], fault: null });
   await runWindowsSinglePrincipalSyncGroup({ paths: {}, evidenceRoot: host.root,
     expectedGroupId: group().group_id, expectedGroupTag: 'a'.repeat(32),
     reportProgress: value => host.events.push(value.milestone) });
@@ -96,4 +106,12 @@ it.each(['missing', 'failed', 'automatic'])('rejects an initial activity without
     started_at: 'start', occurred_at: 'finish', status: kind === 'failed' ? 'failed' : 'completed',
     result: kind === 'failed' ? 'failed' : 'completed', trigger_reason: kind === 'automatic' ? 'automatic' : 'initial' }];
   expect(() => completedInitialRun(activity)).toThrow('initial sync did not complete');
+});
+
+it.each(['identity', 'body'])('rejects %s loss after restart despite an unchanged node count', async fault => {
+  host.root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-fact-loss-'));
+  Object.assign(host, { owner: 'macos', opens: 0, facts: 0, result: null, events: [], manualRuns: [], fault });
+  await expect(runWindowsSinglePrincipalSyncGroup({ paths: {}, evidenceRoot: host.root,
+    expectedGroupId: group().group_id, expectedGroupTag: 'a'.repeat(32),
+    reportProgress: () => {} })).rejects.toThrow('Journey facts changed');
 });
