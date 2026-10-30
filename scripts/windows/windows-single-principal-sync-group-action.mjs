@@ -53,9 +53,11 @@ export async function loadSyncTriggerResult(app) {
   });
 }
 
-export async function waitForAutomaticSync(session, previousRunId, timeoutMs = 2 * 60_000) {
+export async function waitForAutomaticSync(session, previousRunId, {
+  startedAfter, timeoutMs = 2 * 60_000
+} = {}) {
   return waitForSyncGroupAutomaticRun(() => loadSyncTriggerResult(session.app),
-    previousRunId, { timeoutMs });
+    previousRunId, { startedAfter, timeoutMs });
 }
 
 async function discoverExpectedGroup(page, identity, timeoutMs = 2 * 60_000) {
@@ -162,6 +164,7 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
       invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args)
     });
   } finally { await closeWindowsSyncGroupSession(session); }
+  const restartStartedAt = new Date().toISOString();
   session = await openWindowsSyncGroupSession(options.paths, options.evidenceRoot);
   let restartedGroup;
   let manualAfterRestart;
@@ -171,8 +174,8 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     ), candidate.group_id);
     const beforeRepeat = await waitForJourneyOrigins(session.page, ['A', 'C']);
     const restartedAutomatic = automaticResult
-      ? await waitForAutomaticSync(session, automaticResult.run_id)
-      : completedAutomatic(await loadSyncTriggerResult(session.app));
+      ? await waitForAutomaticSync(session, automaticResult.run_id, { startedAfter: restartStartedAt })
+      : completedAutomatic(await loadSyncTriggerResult(session.app), undefined, restartStartedAt);
     manualAfterRestart = await runAvailableManualSync({
       loadSyncRole: () => loadDesktopSyncRole(session.app),
       invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args)
@@ -199,7 +202,7 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     automaticFactId: automaticFact.factId,
     automaticRunIds: { afterRestart: automaticResult.afterRestart?.run_id ?? null,
       beforeRestart: automaticResult.beforeRestart?.run_id ?? null },
-    runs: { automaticAfterRestart: automaticResult.afterRestart,
+    runs: { restartStartedAt, automaticAfterRestart: automaticResult.afterRestart,
       automaticBeforeRestart: automaticResult.beforeRestart, initial: initialResult,
       manualAfterRestart, manualBeforeRestart },
     idempotent: true, journeyFactId: localFact.factId, journeyOrigins: ['A', 'C'],

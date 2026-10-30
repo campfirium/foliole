@@ -16,14 +16,15 @@ export async function readSyncGroupControllerState(action, { now = Date.now,
 }
 
 export async function waitForSyncGroupAutomaticRun(action, previousRunId, {
-  now = Date.now, timeoutMs = 3 * 60_000, wait = delay
+  now = Date.now, startedAfter, timeoutMs = 3 * 60_000, wait = delay
 } = {}) {
   const deadline = now() + timeoutMs;
   let result;
   while (now() < deadline) {
     result = await readSyncGroupControllerState(action, { now, timeoutMs, wait });
-    if (result?.run_id !== previousRunId && result?.reason === 'automatic'
-        && result?.status === 'completed') return result;
+    if (result?.run_id && result.run_id !== previousRunId && result.reason === 'automatic'
+        && result.status === 'completed' && (startedAfter === undefined
+          || Date.parse(result.started_at) >= Date.parse(startedAfter))) return result;
     await wait(250);
   }
   throw new Error(`Automatic Sync Group run did not complete: ${JSON.stringify(result)}`);

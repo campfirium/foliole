@@ -8,9 +8,10 @@ export function assertJoinedWindowsGroup(overview, groupId) {
   return group;
 }
 
-export function completedAutomatic(result, previousRunId) {
-  return result?.reason === 'automatic' && result.status === 'completed'
-    && result.run_id !== previousRunId ? result : null;
+export function completedAutomatic(result, previousRunId, startedAfter) {
+  return result?.reason === 'automatic' && result.status === 'completed' && result.run_id
+    && result.run_id !== previousRunId && (startedAfter === undefined
+      || Date.parse(result.started_at) >= Date.parse(startedAfter)) ? result : null;
 }
 
 export async function readCompletedAutomatic(session) {

@@ -154,9 +154,9 @@ export async function openMacosSyncGroupDesktopSession({
 }
 
 export async function waitForMacosAutomaticRun(session, previousRunId, {
-  timeoutMs = 90_000
+  startedAfter, timeoutMs = 90_000
 } = {}) {
-  return waitForSyncGroupAutomaticRun(session.loadSyncTriggerResult, previousRunId, { timeoutMs });
+  return waitForSyncGroupAutomaticRun(session.loadSyncTriggerResult, previousRunId, { startedAfter, timeoutMs });
 }
 
 export async function waitForMacosDeviceRequest(session, expectedDeviceName, {

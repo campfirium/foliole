@@ -97,7 +97,7 @@ it('observes an outgoing-only automatic completion without requiring an incoming
   const app = { evaluate: vi.fn().mockResolvedValueOnce({ run_id: 'old', reason: 'initial', status: 'completed' })
     .mockResolvedValue({ run_id: 'new', reason: 'automatic', status: 'completed' }) };
   const page = { evaluate: vi.fn(async () => { throw new Error('No incoming apply event for outgoing-only sync'); }) };
-  await expect(waitForAutomaticSync({ app, page }, 'old', 2000)).resolves.toMatchObject({ run_id: 'new' });
+  await expect(waitForAutomaticSync({ app, page }, 'old', { timeoutMs: 2000 })).resolves.toMatchObject({ run_id: 'new' });
   expect(page.evaluate).not.toHaveBeenCalled();
 });
 

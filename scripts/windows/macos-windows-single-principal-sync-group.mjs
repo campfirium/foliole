@@ -103,6 +103,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
       /^Multi-device sync [AC] fact/u.test(String(title))).map(({ id }) => id).sort();
     const beforeMacosRestart = await session.loadSyncTriggerResult();
     await session.close();
+    const restartStartedAt = new Date().toISOString();
     session = await openMacosSyncGroupDesktopSession({ env: macosAcceptanceEnv(),
       libraryHome: path.join(sharedRoot, 'macos-library'), repoRoot,
       runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
@@ -111,7 +112,8 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
       throw new Error('Mac did not restore its two-Device Sync Group.');
     }
     const macosAutomaticAfterRestart = macosAutomaticBeforeRestart
-      ? await waitForMacosAutomaticRun(session, beforeMacosRestart?.run_id) : null;
+      ? await waitForMacosAutomaticRun(session, beforeMacosRestart?.run_id, {
+        startedAfter: restartStartedAt }) : null;
     const macosManualAfterRestart = await runAvailableManualSync(session);
     const repeated = await session.invoke('load_workspace_list_snapshot', {
       includePdfOpenings: false
@@ -139,7 +141,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
         windowsAutomatic: windowsReceipt.automaticFactId },
       join: { mode: 'use-group', replacedWindowsFactId: windowsReceipt.journeyFactId },
       idempotent: true, macosRestarted: true,
-      runs: { macos: { automaticAfterRestart: macosAutomaticAfterRestart,
+      runs: { macos: { restartStartedAt, automaticAfterRestart: macosAutomaticAfterRestart,
         automaticBeforeRestart: macosAutomaticBeforeRestart,
         manualAfterRestart: macosManualAfterRestart,
         manualBeforeRestart: macosManualBeforeRestart }, windows: windowsReceipt.runs },
