@@ -1,6 +1,12 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.settings.debug.resetReviews.action': '重置检测项复习',
+  'companion.settings.debug.resetReviews.title': '重置全部检测项的复习？',
+  'companion.settings.debug.resetReviews.description': '让全部测试检测项回到未复习，保留内容和主题阅读进度。',
+  'companion.settings.debug.resetReviews.confirm': '此测试库中的全部检测项将回到未复习。同一测试同步组内的其他设备同步后也会重置。复习历史保留，完成后将进入检测项复习。',
+  'companion.settings.debug.resetReviews.busy': '正在重置…',
+  'companion.settings.debug.resetReviews.error': '未能重置检测项复习，请重试。',
   'companion.settings.colorMode.saveError': '无法保存颜色模式，请重试。',
   'companion.settings.colorMode.hostError': '无法更新系统栏颜色，请重新打开 Foliole 后重试。',
   'companion.settings.sync.title': '同步',

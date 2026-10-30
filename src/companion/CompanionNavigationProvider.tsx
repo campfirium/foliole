@@ -9,7 +9,8 @@ import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionW
 import { restoreCompanionNavigation, type CompanionNavigationState } from './companionNavigationState';
 import { CompanionWorkspaceSyncLoading } from './CompanionWorkspaceSyncLoading';
 
-type Navigation = { flush(): Promise<void>; state: CompanionNavigationState; setState: Dispatch<SetStateAction<CompanionNavigationState>> };
+type Navigation = { flush(): Promise<void>; saveForReload(update: Partial<CompanionNavigationState>): Promise<void>;
+  state: CompanionNavigationState; setState: Dispatch<SetStateAction<CompanionNavigationState>> };
 const Context = createContext<Navigation | null>(null);
 
 export function useCompanionNavigationField<K extends keyof CompanionNavigationState>(
@@ -28,6 +29,10 @@ export function useCompanionNavigationField<K extends keyof CompanionNavigationS
 
 const noPendingNavigation = async () => {};
 export function useCompanionNavigationFlush() { return useContext(Context)?.flush ?? noPendingNavigation; }
+
+export function useCompanionNavigationSaveForReload() {
+  return useContext(Context)?.saveForReload ?? noPendingNavigation;
+}
 
 export function useHasCompanionNavigation() { return useContext(Context) !== null; }
 
@@ -61,6 +66,11 @@ function NavigationOwner(props: {
     setLoaded(current => current ? { ...current,
       state: typeof update === 'function' ? update(current.state) : update } : current);
   }, []);
+  async function saveForReload(update: Partial<CompanionNavigationState>) {
+    await pendingWrite.current;
+    if (!loaded || loaded.scope !== props.scope) throw new Error('Navigation is not ready.');
+    await saveCompanionNavigationResume(props.libraryScope, JSON.stringify({ ...loaded.state, ...update }));
+  }
   useEffect(() => {
     if (!props.ready || !loaded || loaded.scope !== props.scope) return;
     pendingWrite.current = saveCompanionNavigationResume(props.libraryScope, JSON.stringify(loaded.state));
@@ -68,5 +78,5 @@ function NavigationOwner(props: {
   }, [loaded, props.ready, props.libraryScope, props.scope]);
   if (error) throw error;
   if (!props.ready || !loaded || loaded.scope !== props.scope) return <CompanionWorkspaceSyncLoading />;
-  return <Context.Provider value={{ state: loaded.state, setState, flush }}>{props.children}</Context.Provider>;
+  return <Context.Provider value={{ state: loaded.state, setState, flush, saveForReload }}>{props.children}</Context.Provider>;
 }

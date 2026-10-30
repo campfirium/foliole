@@ -13,6 +13,7 @@ import {
 } from './CompanionSettingsContent';
 import { CompanionStorageSettingsContent } from './CompanionStorageSettingsContent';
 import { CompanionSyncContent } from './CompanionSyncContent';
+import { CompanionTestReviewReset } from './CompanionTestReviewReset';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -101,13 +102,9 @@ function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
     return <CompanionAppearanceSettingsDetail onBackToSettingsList={props.onBackToSettingsList} />;
   }
   if (props.settingsPage === 'debug') {
-    return renderPlaceholderSettingsDetail({
-      detail: t('companion.settings.debug.detail'),
-      onBack: props.onBackToSettingsList,
-      page: 'debug',
-      placeholderTitle: resolvePlaceholderTitle('debug', t),
-      title: t('companion.settings.debug.title')
-    });
+    return <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="debug" title={t('companion.settings.debug.title')}>
+      <CompanionTestReviewReset />
+    </CompanionSettingsDetail>;
   }
   return (
     <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="sync" title={t('companion.sync.deviceSync')}>

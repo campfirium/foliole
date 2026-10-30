@@ -1,4 +1,10 @@
 export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
+  'companion.settings.debug.resetReviews.action': 'Reset item reviews',
+  'companion.settings.debug.resetReviews.title': 'Reset all item reviews?',
+  'companion.settings.debug.resetReviews.description': 'Return all test items to unreviewed. Content and Topic reading progress are kept.',
+  'companion.settings.debug.resetReviews.confirm': 'All items in this test library will return to unreviewed. The reset also applies to other devices in the same test sync group after syncing. Review history is kept. Flow will open in review mode.',
+  'companion.settings.debug.resetReviews.busy': 'Resetting…',
+  'companion.settings.debug.resetReviews.error': 'Item reviews could not be reset. Try again.',
   'companion.settings.colorMode.saveError': 'Color mode could not be saved. Try again.',
   'companion.settings.colorMode.hostError': 'System bar colors could not be updated. Reopen Foliole to try again.',
   'companion.settings.sync.title': 'Sync',
