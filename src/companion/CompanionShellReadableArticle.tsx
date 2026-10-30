@@ -112,6 +112,10 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
   if (!props.surface.readableArticle) return <CompanionReviewLoading header={header} footer={footer} />;
   const activity = props.surface.readingActivity;
   const nodeId = props.surface.readableArticle.nodeId;
+  const node = props.workspaceSync.state.workspace_snapshot?.nodesById[nodeId];
+  const answer = props.flow
+    ? props.surface.isAnswerRevealed ? props.surface.effectiveReviewSession.currentCard?.reveal ?? null : null
+    : node?.kind === 'item' ? node.reveal : null;
   const exitFlowHere = props.surface.isFlowBrowsing
     ? () => props.surface.handleExitFlowHere(nodeId) : null;
 
@@ -124,8 +128,8 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
       activity={activity}
       flow={props.flow === true || props.surface.isFlowBrowsing}
       header={header}
-      isReviewItem={props.workspaceSync.state.workspace_snapshot?.nodesById[props.surface.readableArticle.nodeId]?.kind === 'item'}
-      answer={props.flow && props.surface.isAnswerRevealed ? props.surface.effectiveReviewSession.currentCard?.reveal ?? null : null}
+      isReviewItem={node?.kind === 'item'}
+      answer={answer}
       footer={footer}
       onAttachmentResourceSynced={() => continueCompanionAttachmentResourceSync(props.workspaceSync)}
       onExit={props.flow || props.surface.isFlowBrowsing ? () => props.surface.handleTabAction('recent') : props.onExit}
