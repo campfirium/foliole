@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import type { ReactNode, MutableRefObject } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -32,8 +33,8 @@ export function CompanionBottomSheet(props: {
             <div className="mb-3 flex shrink-0 items-center justify-between">
               {props.leadingAction}
               <AppDialogTitle>{props.title}</AppDialogTitle>
-              <AppDialogClose className="rounded-md px-2 py-1 text-sm font-medium text-companion-text-secondary transition hover:bg-companion-subtle">
-                {t('common.cancel')}
+              <AppDialogClose aria-label={t('common.done')} className="flex h-11 w-11 items-center justify-center rounded-md text-companion-text-secondary transition hover:bg-companion-subtle">
+                <Check aria-hidden="true" className="h-5 w-5" />
               </AppDialogClose>
             </div>
             <div className="min-h-0 overflow-y-auto" ref={props.scrollElementRef}>{props.children}</div>

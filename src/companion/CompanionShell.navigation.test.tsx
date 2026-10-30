@@ -239,9 +239,11 @@ describe('CompanionShell navigation', () => {
     expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-to', '18');
     openReadingAction('Appearance');
     expect(screen.getByRole('dialog', { name: 'Appearance' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Extra large' }));
-    expect(screen.getByTestId('companion-article-document').parentElement).toHaveAttribute('data-reading-font-size', 'xlarge');
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Increase Size' }));
+    expect(screen.getByTestId('companion-article-document').parentElement).toHaveAttribute('data-reading-font-size', '17');
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.queryByRole('dialog', { name: 'Appearance' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('companion-article-document').parentElement).toHaveAttribute('data-reading-font-size', '17');
     openReadingAction('Highlight');
     expect(screen.getByRole('dialog', { name: 'Highlight' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Readable topic body' }));
@@ -252,7 +254,7 @@ describe('CompanionShell navigation', () => {
     openReadingAction('Info');
     expect(screen.getByRole('dialog', { name: 'Info' })).toBeInTheDocument();
     expect(screen.getByText('PDF and text')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
 
     await expectReadingDocumentSearch(surface);
   });

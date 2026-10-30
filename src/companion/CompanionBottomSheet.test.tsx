@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../shared/localization/testLocalization';
@@ -6,6 +6,19 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 import { CompanionBottomSheet } from './CompanionBottomSheet';
 
 describe('CompanionBottomSheet', () => {
+  it('offers Done to dismiss the sheet without implying cancellation', () => {
+    const onOpenChange = vi.fn();
+    renderWithLocalization(
+      <CompanionBottomSheet onOpenChange={onOpenChange} open title="Actions">
+        <div>Actions</div>
+      </CompanionBottomSheet>
+    );
+
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
   it('keeps mobile sheets bounded and internally scrollable', () => {
     renderWithLocalization(
       <CompanionBottomSheet onOpenChange={vi.fn()} open title="Sheet">

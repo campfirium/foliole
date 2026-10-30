@@ -81,6 +81,7 @@ export const EN_TRANSLATIONS = {
   'shared.textLimit.exceeded': 'This change exceeds the 1 MiB (UTF-8) limit for a single text field and was not saved. Shorten the text and try again.',
   'shared.titleLimit.shortened': 'Title shortened to 100 characters and saved.',
   'common.cancel': 'Cancel',
+  'common.done': 'Done',
   ...EN_SHARED_UI_TRANSLATIONS,
   ...EN_COMPANION_TRANSLATIONS,
   ...EN_COMPANION_SYNC_TRANSLATIONS
