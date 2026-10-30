@@ -121,7 +121,7 @@ it('accepts Mac-owned automatic rounds and keeps Windows available through the M
   root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-mac-owned-'));
   currentHosts();
   host.session.loadSyncTriggerResult = vi.fn().mockResolvedValueOnce(automatic('mac-before'))
-    .mockResolvedValueOnce(automatic('mac-before-close')).mockResolvedValue(automatic('mac-after'));
+    .mockResolvedValueOnce(automatic('mac-resumed')).mockResolvedValueOnce(automatic('mac-before-close')).mockResolvedValue(automatic('mac-after'));
   const finish = host.provider.finish;
   host.provider.finish = async () => {
     const result = await finish();
@@ -195,7 +195,7 @@ it('retains a completed automatic round when a later skipped attempt replaces th
   currentHosts();
   host.session.loadSyncTriggerResult = vi.fn().mockResolvedValueOnce({
     reason: 'automatic', status: 'skipped', run_id: 'skipped'
-  }).mockResolvedValueOnce(automatic('before-close')).mockResolvedValue(automatic('after'));
+  }).mockResolvedValueOnce(automatic('resumed')).mockResolvedValueOnce(automatic('before-close')).mockResolvedValue(automatic('after'));
   const invoke = host.session.invoke;
   host.session.invoke = async command => command === 'load_desktop_sync_diagnostics'
     ? { activity: [{ kind: 'run_finished', trigger_reason: 'automatic', status: 'completed',
@@ -211,4 +211,21 @@ it('retains a completed automatic round when a later skipped attempt replaces th
   const result = await runMacosWindowsSinglePrincipalSyncGroup({ repoRoot: root });
   expect(result.receipt.runs.macos.automaticBeforeRestart.run_id).toBe('saved-before');
   expect(result.receipt.runs.macos.automaticAfterRestart.run_id).toBe('after');
+});
+
+it('waits for resumed automatic completion before attempting manual sync after conflict', async () => {
+  root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-resumed-manual-'));
+  currentHosts();
+  let reads = 0;
+  host.session.loadSyncTriggerResult = async () => automatic(++reads === 1 ? 'before' : `resumed-${reads}`);
+  host.session.loadSyncRole = async () => ({ hasUpstream: reads > 1, hasDownstream: false });
+  const finish = host.provider.finish;
+  host.provider.finish = async () => {
+    const result = await finish();
+    result.receipt.runs.manualBeforeRestart = null;
+    result.receipt.runs.manualAfterRestart = null;
+    return result;
+  };
+  const result = await runMacosWindowsSinglePrincipalSyncGroup({ repoRoot: root });
+  expect(result.receipt.runs.macos.manualBeforeRestart.status).toBe('completed');
 });

@@ -91,6 +91,9 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     await session.invoke('resume_companion_sync');
     await windowsProvider.release('consumer_complete');
     const conflict = await loadDesktopPeerConflict(session, conflictSeed.nodeId);
+    if (macosAutomaticBeforeRestart) {
+      await waitForMacosAutomaticRun(session, macosAutomaticBeforeRestart.run_id);
+    }
     const macosManualBeforeRestart = await runAvailableManualSync(session);
     await windowsProvider.waitForProgress('restarted');
     const automaticSnapshot = await session.invoke('load_workspace_list_snapshot', {

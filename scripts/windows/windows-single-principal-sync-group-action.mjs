@@ -156,6 +156,7 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     conflictProof = await loadDesktopPeerConflict({
       waitForState: args => waitForDesktopProductState(session.page, args)
     }, conflictNodeId);
+    if (automaticResult) await waitForAutomaticSync(session, automaticResult.run_id);
     manualBeforeRestart = await runAvailableManualSync({
       loadSyncRole: () => loadDesktopSyncRole(session.app),
       invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args)
