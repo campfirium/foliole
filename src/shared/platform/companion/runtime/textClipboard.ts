@@ -1,6 +1,6 @@
 import { registerPlugin } from '@capacitor/core';
 
-import { getCompanionRuntimeCapability, requireCompanionNativePlugin } from './companionRuntimeCapabilities';
+import { getCompanionRuntimeCapability, requireCompanionNativePlugin } from '../../companionRuntimeCapabilities';
 
 interface TextClipboardHost {
   writeClipboardText(options: { text: string }): Promise<void>;

@@ -6,7 +6,7 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 import { CompanionSelectionAnnotationToolbar } from './CompanionSelectionAnnotationToolbar';
 
 const clipboard = vi.hoisted(() => ({ writeClipboardText: vi.fn() }));
-vi.mock('../shared/platform/textClipboard', () => clipboard);
+vi.mock('../shared/platform/companion/runtime/textClipboard', () => clipboard);
 
 beforeEach(() => clipboard.writeClipboardText.mockReset().mockResolvedValue(undefined));
 

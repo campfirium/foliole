@@ -1,14 +1,14 @@
 import { App } from '@capacitor/app';
 
-import { resetItemReviewsWithDb } from '../../../lib/core/database/itemReviewReset';
-import { restartDailyFlowItemReviews } from '../../../lib/core/flow/itemReviewResetFlow';
+import { resetItemReviewsWithDb } from '../../../../../lib/core/database/itemReviewReset';
+import { restartDailyFlowItemReviews } from '../../../../../lib/core/flow/itemReviewResetFlow';
+import { getCompanionRuntimeCapability } from '../../companionRuntimeCapabilities';
+import { createCompanionUuid } from '../../companionUuid';
+import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
 
-import { companionDailyFlowSettings, ownedCompanionDailyFlowPersistence } from './companion/runtime/companionDailyFlow';
-import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
-import { iosCompanionHostName } from './companion/runtime/iosCompanionMutationState';
-import { runCompanionHighValueMutationTask } from './companion/sync/mutation/companionSyncMutationRevision';
-import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
-import { createCompanionUuid } from './companionUuid';
+import { companionDailyFlowSettings, ownedCompanionDailyFlowPersistence } from './companionDailyFlow';
+import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
+import { iosCompanionHostName } from './iosCompanionMutationState';
 
 export async function supportsCompanionTestReviewReset() {
   if (getCompanionRuntimeCapability().kind !== 'android-native') return false;

@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const reset = vi.hoisted(() => ({ supported: vi.fn(), run: vi.fn() }));
-vi.mock('../shared/platform/companionTestReviewReset', () => ({
+vi.mock('../shared/platform/companion/runtime/companionTestReviewReset', () => ({
   supportsCompanionTestReviewReset: reset.supported, resetCompanionTestItemReviews: reset.run
 }));
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { decideClipboardPasteSource } from '../../lib/clipboard/clipboardPasteSource';
-import { readClipboardText } from '../shared/platform/textClipboard';
+import { readClipboardText } from '../shared/platform/companion/runtime/textClipboard';
 
 export function useCompanionCaptureClipboard(props: {
   disabled: boolean;

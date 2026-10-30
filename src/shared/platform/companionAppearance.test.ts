@@ -12,7 +12,7 @@ vi.mock('./companionRuntimeCapabilities', () => ({
   getCompanionRuntimeCapability: () => ({ kind: host.kind })
 }));
 
-import { applyCompanionHostAppearance } from './companionAppearance';
+import { applyCompanionHostAppearance } from './companion/runtime/companionAppearance';
 
 beforeEach(() => { vi.clearAllMocks(); host.kind = 'web-preview'; });
 

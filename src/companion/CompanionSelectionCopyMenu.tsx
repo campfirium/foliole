@@ -2,7 +2,7 @@ import { Copy } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { writeClipboardText } from '../shared/platform/textClipboard';
+import { writeClipboardText } from '../shared/platform/companion/runtime/textClipboard';
 import { AppSelectionDropdownMenuItem, appFloatingSurfaceClassName } from '../shared/ui';
 
 export function CompanionSelectionCopyMenu(props: {

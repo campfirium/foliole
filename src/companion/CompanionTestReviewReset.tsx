@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { resetCompanionTestItemReviews, supportsCompanionTestReviewReset } from '../shared/platform/companionTestReviewReset';
+import { resetCompanionTestItemReviews, supportsCompanionTestReviewReset } from '../shared/platform/companion/runtime/companionTestReviewReset';
 import { AppButton } from '../shared/ui';
 import { AppDialog, AppDialogContent, AppDialogDescription, AppDialogOverlay,
   AppDialogPortal, AppDialogTitle } from '../shared/ui/Dialog';

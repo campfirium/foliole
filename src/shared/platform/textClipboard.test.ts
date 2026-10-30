@@ -7,7 +7,7 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: () => ({ readClipboardText: host.readClipboardText, writeClipboardText: host.writeClipboardText })
 }));
 
-import { readClipboardText, writeClipboardText } from './textClipboard';
+import { readClipboardText, writeClipboardText } from './companion/runtime/textClipboard';
 
 beforeEach(() => {
   vi.resetAllMocks();

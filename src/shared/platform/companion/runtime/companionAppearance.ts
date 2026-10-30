@@ -1,8 +1,7 @@
 import { registerPlugin, SystemBars, SystemBarsStyle } from '@capacitor/core';
 
-import type { ResolvedBaseColorMode } from '../../features/settings/model/baseColorMode';
-
-import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
+import type { ResolvedBaseColorMode } from '../../../../features/settings/model/baseColorMode';
+import { getCompanionRuntimeCapability } from '../../companionRuntimeCapabilities';
 
 interface CompanionAppearancePlugin {
   setAppearance(options: { backgroundColor: string }): Promise<void>;

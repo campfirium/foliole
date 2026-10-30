@@ -17,9 +17,9 @@ import { commitDailyFlow } from '../../../lib/core/flow/dailyFlowService';
 import { createInitialSchedulerCard } from '../../../lib/core/review/types';
 
 import { companionDailyFlowPersistence, companionDailyFlowSettings, loadCompanionDailySession, openCompanionDailyFlow } from './companion/runtime/companionDailyFlow';
+import { resetCompanionTestItemReviews, supportsCompanionTestReviewReset } from './companion/runtime/companionTestReviewReset';
 import { closeIosCompanionDatabase, getIosCompanionDatabaseOwner, initializeIosCompanionDatabase } from './companion/runtime/iosCompanionDatabaseBootstrap';
 import { createFakeCapacitorDatabaseManager } from './companionSyncNodeVersionsTestSupport';
-import { resetCompanionTestItemReviews, supportsCompanionTestReviewReset } from './companionTestReviewReset';
 
 let root = '';
 let sqlite: Database.Database;

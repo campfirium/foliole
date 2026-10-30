@@ -2,7 +2,7 @@ import { createContext, useContext, useLayoutEffect, useRef, useState, type Reac
 
 import { getBaseColorMode, setBaseColorMode } from '../features/settings/model/appearanceReadingModeSettings';
 import { resolveBaseColorMode, type BaseColorMode } from '../features/settings/model/baseColorMode';
-import { applyCompanionHostAppearance } from '../shared/platform/companionAppearance';
+import { applyCompanionHostAppearance } from '../shared/platform/companion/runtime/companionAppearance';
 
 function readColorMode() {
   try { return getBaseColorMode(); } catch { return 'system' as const; }

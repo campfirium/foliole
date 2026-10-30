@@ -8,7 +8,7 @@ import { CompanionCaptureSheet } from './CompanionCaptureSheet';
 import type { CompanionCaptureTextSaveResult } from './companionCaptureTextController';
 
 const clipboard = vi.hoisted(() => ({ readClipboardText: vi.fn() }));
-vi.mock('../shared/platform/textClipboard', () => clipboard);
+vi.mock('../shared/platform/companion/runtime/textClipboard', () => clipboard);
 beforeEach(() => { window.localStorage.clear(); vi.resetAllMocks(); });
 function renderSheet() {
   const onSave = vi.fn<(text: string) => Promise<CompanionCaptureTextSaveResult>>(async () => ({ nodeId: 'captured' }));
