@@ -1,7 +1,9 @@
-import { screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { LocalizationProvider, useTranslation } from '../shared/localization/LocalizationProvider';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
+import { preloadTranslationCatalog } from '../shared/localization/translations';
 
 import { CompanionBottomTabBar } from './CompanionFloatingBars';
 import { DEFAULT_COMPANION_TAB_CONFIG } from './CompanionTabsConfig';
@@ -28,6 +30,24 @@ describe('CompanionBottomTabBar', () => {
     expect(screen.getByRole('button', { name: 'Browse' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('data-testid', 'companion-tab-settings');
     expect(screen.queryByLabelText('Sync progress')).not.toBeInTheDocument();
+  });
+
+  it.each(['zh-Hans', 'zh-Hant'] as const)('keeps bottom navigation English in %s', async (locale) => {
+    expect(await preloadTranslationCatalog(locale)).toBe(true);
+    function LocalizedContent() {
+      const t = useTranslation();
+      return <h1>{t('companion.tabs.settings')}</h1>;
+    }
+    render(<LocalizationProvider initialLanguagePreference={locale}>
+      <LocalizedContent />
+      <CompanionBottomTabBar activeAction="recent" activeSecondaryDestinationId={null}
+        config={DEFAULT_COMPANION_TAB_CONFIG} onAction={vi.fn()}
+        onSecondaryDestination={vi.fn()} visible />
+    </LocalizationProvider>);
+    for (const name of ['Directory', 'Browse', 'Flow', 'Search', 'Settings']) {
+      expect(screen.getByRole('button', { name, exact: true })).toHaveTextContent(name);
+    }
+    expect(screen.getByRole('heading')).toHaveTextContent(locale === 'zh-Hans' ? '设置' : '設定');
   });
 
   it('uses the theme color for the active tab without a filled indicator', () => {
