@@ -28,7 +28,8 @@ final class FolioleCompanionSettingsNavigation {
                 ? TOP_BAR_LEFT_ACTION
                 : isVisible(snapshot, TOP_BAR_BACK) ? TOP_BAR_BACK : null;
             if (exit != null) clickObserved(instrumentation, webView, exit);
-            else if (isVisible(snapshot, "companion-review-action-read")
+            else if (isVisible(snapshot, "companion-article-document")
+                || isVisible(snapshot, "companion-review-action-read")
                 || isVisible(snapshot, "companion-review-action-reveal")) {
                 instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
             }
