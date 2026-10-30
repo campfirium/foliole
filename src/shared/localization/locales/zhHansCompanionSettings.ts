@@ -1,6 +1,8 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.settings.colorMode.saveError': '无法保存颜色模式，请重试。',
+  'companion.settings.colorMode.hostError': '无法更新系统栏颜色，请重新打开 Foliole 后重试。',
   'companion.settings.sync.title': '同步',
   'companion.settings.sync.detail': '同步内容并查看同步状态。',
   'companion.settings.device.title': '设备',
@@ -16,7 +18,7 @@ export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<Translation
   'companion.settings.storage.description': '清除这台设备上的 Foliole 数据并断开当前连接。桌面端和其他设备不会被删除。',
   'companion.settings.storage.error': '清除应用数据失败。',
   'companion.settings.appearance.title': '外观',
-  'companion.settings.appearance.detail': '使用已保存的样式自定义主题阅读。',
+  'companion.settings.appearance.detail': '选择颜色模式，自定义主题阅读。',
   'companion.settings.appearance.css.title': '自定义 CSS 片段',
   'companion.settings.appearance.css.description': '只有已保存并启用的片段会改变主题阅读。',
   'companion.settings.appearance.css.add': '添加片段',

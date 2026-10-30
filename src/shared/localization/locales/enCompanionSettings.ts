@@ -1,4 +1,6 @@
 export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
+  'companion.settings.colorMode.saveError': 'Color mode could not be saved. Try again.',
+  'companion.settings.colorMode.hostError': 'System bar colors could not be updated. Reopen Foliole to try again.',
   'companion.settings.sync.title': 'Sync',
   'companion.settings.sync.detail': 'Sync content and view sync status.',
   'companion.settings.device.title': 'Device',
@@ -15,7 +17,7 @@ export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
     'Clear Foliole data on this device and disconnect the current connection. Desktop and other devices are not deleted.',
   'companion.settings.storage.error': 'Failed to clear app data.',
   'companion.settings.appearance.title': 'Appearance',
-  'companion.settings.appearance.detail': 'Customize Topic reading with saved styles.',
+  'companion.settings.appearance.detail': 'Choose colors and customize Topic reading.',
   'companion.settings.appearance.css.title': 'Custom CSS snippets',
   'companion.settings.appearance.css.description': 'Saved and enabled snippets change Topic reading only.',
   'companion.settings.appearance.css.add': 'Add snippet',

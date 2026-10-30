@@ -12,6 +12,7 @@ import {
   StartupSurface
 } from '../shared/ui/StartupSurface';
 
+import { CompanionColorModeProvider } from './CompanionColorModeProvider';
 import { CompanionShell } from './CompanionShell';
 import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryDisplayNamesHydration';
 import { useCompanionBootstrap } from './useCompanionBootstrap';
@@ -70,9 +71,11 @@ function CompanionAppContent() {
 export function CompanionApp() {
   return (
     <LocalizationProvider>
-      <AppConfirmationProvider>
-        <CompanionAppContent />
-      </AppConfirmationProvider>
+      <CompanionColorModeProvider>
+        <AppConfirmationProvider>
+          <CompanionAppContent />
+        </AppConfirmationProvider>
+      </CompanionColorModeProvider>
     </LocalizationProvider>
   );
 }

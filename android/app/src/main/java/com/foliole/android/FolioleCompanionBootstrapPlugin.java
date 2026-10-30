@@ -11,6 +11,22 @@ import java.time.Instant;
 public class FolioleCompanionBootstrapPlugin extends Plugin {
 
     @PluginMethod
+    public void setAppearance(PluginCall call) {
+        String background = call.getString("backgroundColor");
+        if (background == null || !background.matches("#[0-9a-fA-F]{6}")) {
+            call.reject("Invalid appearance background color.");
+            return;
+        }
+        getActivity().runOnUiThread(() -> {
+            int color = android.graphics.Color.parseColor(background);
+            getActivity().getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(color));
+            getActivity().findViewById(android.R.id.content).setBackgroundColor(color);
+            getBridge().getWebView().setBackgroundColor(color);
+            call.resolve();
+        });
+    }
+
+    @PluginMethod
     public void readClipboardText(PluginCall call) {
         getActivity().runOnUiThread(() -> {
             try {

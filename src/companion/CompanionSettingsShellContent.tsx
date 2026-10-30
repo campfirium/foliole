@@ -2,6 +2,7 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDataRuntimeRepository';
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
 
+import { CompanionColorModeControl } from './CompanionColorModeControl';
 import { useOptionalCompanionCustomCss } from './CompanionCustomCssProvider';
 import { CompanionCustomCssSettingsContent } from './CompanionCustomCssSettingsContent';
 import { CompanionForegroundTimeContent } from './CompanionForegroundTimeContent';
@@ -51,20 +52,12 @@ type CompanionSettingsContentProps = {
 function CompanionAppearanceSettingsDetail(props: Pick<CompanionSettingsContentProps, 'onBackToSettingsList'>) {
   const t = useTranslation();
   const customCss = useOptionalCompanionCustomCss();
-  if (customCss?.isSupported) {
-    return (
-      <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="appearance" title={t('companion.settings.appearance.title')}>
-        <CompanionCustomCssSettingsContent />
-      </CompanionSettingsDetail>
-    );
-  }
-  return renderPlaceholderSettingsDetail({
-    detail: t('companion.settings.appearance.placeholderDetail'),
-    onBack: props.onBackToSettingsList,
-    page: 'appearance',
-    placeholderTitle: resolvePlaceholderTitle('appearance', t),
-    title: t('companion.settings.appearance.title')
-  });
+  return <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="appearance" title={t('companion.settings.appearance.title')}>
+    <CompanionColorModeControl />
+    {customCss?.isSupported ? <CompanionCustomCssSettingsContent /> : <CompanionPlaceholderSettingsContent
+      detail={t('companion.settings.appearance.placeholderDetail')}
+      title={resolvePlaceholderTitle('appearance', t)} />}
+  </CompanionSettingsDetail>;
 }
 
 function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {

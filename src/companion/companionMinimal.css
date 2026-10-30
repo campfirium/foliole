@@ -7,7 +7,7 @@
   --companion-list-body: #7b8087;
   --companion-list-meta: #858b87;
 }
-.dark {
+:root[data-resolved-base-color='dark'] {
   --companion-divider: #444541;
   --companion-list-title: rgb(var(--color-foreground));
   --companion-list-body: var(--companion-text-secondary);

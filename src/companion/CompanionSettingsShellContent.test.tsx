@@ -51,7 +51,7 @@ describe('CompanionSettingsShellContent', () => {
     render(<SettingsHarness runtimeKind={runtimeKind} />);
 
     expect(screen.getByTestId('companion-settings-appearance')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Customize Topic reading/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Choose colors and customize Topic reading/ }));
     expect(screen.getByText('Custom CSS snippets')).toBeInTheDocument();
     expect(screen.getByTestId('companion-custom-css-settings')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add snippet' })).toBeInTheDocument();
