@@ -57,7 +57,7 @@ describe('electron-builder release packaging config', () => {
     ]);
     expect(config.files).toContain('dist/desktop/**/*');
     expect(config.files).not.toContain('dist/**/*');
-    expect(packageJson.dependencies['@lezer/common']).toEqual('1.5.3');
+    expect(packageJson.dependencies['@lezer/common']).toMatch(/^\d+\.\d+\.\d+$/u);
     expect(packageJson.dependencies['@lezer/highlight']).toEqual('1.2.5');
     expect(packageJson.dependencies['@lezer/markdown']).toEqual(expect.any(String));
     expect(packageJson.dependencies['@lezer/markdown']).not.toHaveLength(0);

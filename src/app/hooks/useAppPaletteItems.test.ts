@@ -172,12 +172,12 @@ it('keeps current-node commands disabled when a non-node surface owns the center
   }
 });
 
-it('targets the active derived or review-only item without enabling topic-only commands', () => {
+it('targets the active review-only item without enabling annotations or topic-only commands', () => {
   const state = enabledState('node-1', { isReviewOnly: true });
 
   expect(state[APP_COMMAND_IDS.renameNode]).toBe(true);
   expect(state[APP_COMMAND_IDS.enterPriorityMode]).toBe(true);
-  expect(state[APP_COMMAND_IDS.addSelectionNote]).toBe(true);
+  expect(state[APP_COMMAND_IDS.addSelectionNote]).toBe(false);
   expect(state[APP_COMMAND_IDS.findInTopic]).toBe(false);
   expect(state[APP_COMMAND_IDS.mergeHighlightsIntoTopic]).toBe(false);
 });
@@ -193,9 +193,6 @@ it('keeps the current-node command matrix distinct from topic-only editor comman
     APP_COMMAND_IDS.renameNode,
     APP_COMMAND_IDS.enterPriorityMode,
     APP_COMMAND_IDS.exportCurrentArticle,
-    APP_COMMAND_IDS.createSelectionHighlight,
-    APP_COMMAND_IDS.createSelectionCloze,
-    APP_COMMAND_IDS.addSelectionNote,
     APP_COMMAND_IDS.toggleImmersiveMode
   ]) {
     expect(topic[commandId], `topic ${commandId}`).toBe(true);
@@ -203,6 +200,9 @@ it('keeps the current-node command matrix distinct from topic-only editor comman
   }
 
   for (const commandId of [
+    APP_COMMAND_IDS.createSelectionHighlight,
+    APP_COMMAND_IDS.createSelectionCloze,
+    APP_COMMAND_IDS.addSelectionNote,
     APP_COMMAND_IDS.findInTopic,
     APP_COMMAND_IDS.splitTopic,
     APP_COMMAND_IDS.mergeHighlightsIntoTopic,
