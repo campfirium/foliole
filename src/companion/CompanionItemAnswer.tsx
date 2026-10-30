@@ -21,9 +21,9 @@ type Props = {
 export function CompanionItemAnswer(props: Props) {
   const t = useTranslation();
   if (!props.editing && !props.answer) return null;
-  return <section style={props.style} className="border-t border-companion-divider pt-5">
+  return <section style={props.style} className="companion-item-answer border-t border-companion-divider pt-5">
     <CompanionArticleDocument key={props.editing ? 'editing' : 'reading'} content={props.answer ?? ''} nodeId={props.nodeId + '::answer'}
-      ariaLabel={t('companion.review.answer')} layout="review" scrollContainer="outer"
+      ariaLabel={t('companion.review.answer')} layout="review" scrollContainer={props.editing ? 'editor' : 'outer'}
       onMissingAttachmentResource={props.onMissingResource}
       {...definedProps({
         onChange: props.editing ? props.onChange : undefined,

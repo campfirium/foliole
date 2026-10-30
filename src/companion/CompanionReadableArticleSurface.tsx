@@ -20,6 +20,7 @@ import { getDefaultSelectionClientPoint, resolveExistingHighlightToolbarState } 
 import { useCompanionArticleScrollPosition } from './useCompanionArticleScrollPosition';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionContentEditingActions } from './useCompanionContentEditingActions';
+import { useCompanionItemEditViewport } from './useCompanionItemEditViewport';
 import { useCompanionNodeTextAlternative } from './useCompanionNodeTextAlternative';
 import { useCompanionPagedScroll } from './useCompanionPagedScroll';
 import { createPendingAnnotationActions, useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
@@ -188,11 +189,13 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
     nodeId: props.readableArticle.nodeId, external: props.snapshot === null,
     scrollTop: props.readableArticle.persistedNodeViewState?.scrollTop ?? 0, onScrollTopChange: props.onScrollTopChange
   });
+  const itemEditing = model.reading.isContentEditing && props.isReviewItem === true && props.answer != null;
+  useCompanionItemEditViewport(scrollPosition.surfaceRef, itemEditing);
   const pagedStyle = useCompanionPagedScroll(scrollPosition.surfaceRef, model.reading.isContentEditing);
   const { createSelectionAnnotation, deleteExistingHighlight } = createPendingAnnotationActions(props, pendingReadableArticle);
   return (
     <section
-      className={model.surfaceClassName}
+      className={`${model.surfaceClassName}${itemEditing ? ' companion-item-editing' : ''}`}
       style={pagedStyle}
       onClick={model.reading.handleSurfaceClick}
       onPointerDown={model.handleSurfacePointerDown}

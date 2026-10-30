@@ -23,7 +23,7 @@ export function ImmersiveArticleContent(props: {
   syncEndpointUrl?: string | null;
 }) {
   return (
-    <div className={`mx-auto w-full max-w-[760px] ${props.layout === 'review' ? '' : 'flex-1'}`}>
+    <div className={`${props.isContentEditing && props.isReviewItem && props.answer != null ? 'companion-item-edit-content' : ''} mx-auto w-full max-w-[760px] ${props.layout === 'review' ? '' : 'flex-1'}`}>
       <ReadableArticleDocument
         allowContentEditing={props.isContentEditing}
         layout={props.layout ?? 'article'}

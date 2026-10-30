@@ -43,9 +43,18 @@ it.each([['android', false], ['android', true], ['ios', false], ['ios', true]] a
   const question = EditorView.findFromDOM(screen.getByRole('textbox', { name: 'Question' }));
   const answer = revealed ? EditorView.findFromDOM(screen.getByRole('textbox', { name: 'Answer' })) : null;
   if (!question || (revealed && !answer)) throw new Error('Missing item editor');
+  if (answer) {
+    expect(getComputedStyle(question.scrollDOM).overflow).not.toBe('visible');
+    expect(getComputedStyle(answer.scrollDOM).overflow).not.toBe('visible');
+  }
   const focused = answer ?? question;
   act(() => focused.focus());
   await waitFor(() => expect(window.document.activeElement).toBe(focused.contentDOM));
+  act(() => question.focus());
+  expect(window.document.activeElement).toBe(question.contentDOM);
+  act(() => focused.focus());
+  expect(question.state.doc.toString()).toBe('Question');
+  if (answer) expect(answer.state.doc.toString()).toBe('Answer');
   activity.editRound?.begin();
   act(() => {
     question.dispatch({ changes: { from: 0, insert: 'New ' } });

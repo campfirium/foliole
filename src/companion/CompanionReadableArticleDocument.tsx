@@ -6,6 +6,7 @@ import type { CompanionContentSaveHandler } from '../shared/platform/companion/e
 import { CompanionArticleBodyStatusFallback } from './CompanionArticleBodyStatusFallback';
 import { CompanionArticleDocument } from './CompanionArticleDocument';
 import { CompanionItemAnswer } from './CompanionItemAnswer';
+import { CompanionItemEditLayout } from './CompanionItemEditLayout';
 import {
   CompanionPdfTextVersionToolbar,
   useCompanionPdfReadingEntry
@@ -179,7 +180,8 @@ export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
       {pdfAttachmentId ? (
         <CompanionPdfTextVersionToolbar onOpenPdf={pdfReading.onOpenPdf} />
       ) : null}
-      <ReadableArticleTextDocument
+      <CompanionItemEditLayout active={canEditAnswer} question={
+        <ReadableArticleTextDocument
         canEdit={canEdit}
         isReviewItem={props.isReviewItem === true}
         layout={props.layout ?? 'article'}
@@ -191,14 +193,14 @@ export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
         {...definedProps({
           readingRestoreCommandId: props.readingRestoreCommandId,
           readingSelection: props.readingSelection,
-          scrollContainer: props.scrollContainer
+          scrollContainer: canEditAnswer ? 'editor' : props.scrollContainer
         })}
-      />
-      <CompanionItemAnswer answer={canEditAnswer ? editorState.reveal : props.answer ?? null}
+      />} answer={
+        <CompanionItemAnswer answer={canEditAnswer ? editorState.reveal : props.answer ?? null}
         editing={canEditAnswer} nodeId={props.readableArticle.nodeId}
         style={typographyStyle(props.readingTypographySettings)} onMissingResource={syncMissingAttachmentResource}
         onChange={editorState.handleRevealChange} onEditorReady={onAnswerEditorReady}
-        onDocumentInput={editorState.markRevealBufferedInput} onBlur={() => void editorState.flushPendingSave().catch(() => undefined)} />
+        onDocumentInput={editorState.markRevealBufferedInput} onBlur={() => void editorState.flushPendingSave().catch(() => undefined)} />} />
       {editorState.error ? <p className="mt-3 px-1 text-sm text-error">{editorState.error}</p> : null}
     </>
   );
