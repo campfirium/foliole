@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { withRequestSyncReadonlySnapshot } from '../../electron/database/requestSyncReadonlySnapshot';
+import { closeRequestSyncReadonlyConnections, withRequestSyncReadonlySnapshot } from '../../electron/database/requestSyncReadonlySnapshot';
 import { closeLibraries, type Peer } from '../../electron/database/syncLibrary.testSupport';
 import { loadWorkspaceNodeDocument } from '../../lib/core/database/workspaceNodeDocument';
 import { predictDailyFlowDocument } from '../../lib/core/flow/dailyFlowPrediction';
@@ -11,7 +11,7 @@ import { act, assertDurable, node, now, open, persistence, settings, setupPeers,
 
 let peer: Peer;
 beforeEach(async () => { [peer] = await setupPeers(); peer.db.pragma('journal_mode = WAL'); });
-afterEach(async () => { vi.restoreAllMocks(); await closeLibraries(); });
+afterEach(async () => { vi.restoreAllMocks(); closeRequestSyncReadonlyConnections(); await closeLibraries(); });
 
 it('commits and resumes the next item even when preparing its successor would fail', async () => {
   for (const id of ['a', 'b', 'c']) node(peer, id, 'topic');
