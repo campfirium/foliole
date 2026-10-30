@@ -11,7 +11,7 @@ import {
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
 import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
 import {
-  assertJoinedWindowsGroup, completedAutomatic
+  assertJoinedWindowsGroup, completedAutomatic, loadDesktopPeerConflict
 } from './windows-single-principal-sync-group-contract.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { forkDesktopSyncConflict } from '../desktop/sync-group-conflict-action.mjs';
@@ -151,14 +151,10 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
       action: 'single-principal-sync-group', repoRoot: options.paths.repoRoot
     });
     await invokeWindowsSyncGroupCommand(session.page, 'resume_companion_sync');
+    conflictProof = await loadDesktopPeerConflict({
+      waitForState: args => waitForDesktopProductState(session.page, args)
+    }, conflictNodeId);
     manualBeforeRestart = await invokeWindowsSyncGroupCommand(session.page, 'sync_companion_now');
-    const conflicts = await waitForDesktopProductState(session.page, {
-      command: 'load_sync_node_conflicts', commandArgs: { objectIds: [conflictNodeId] },
-      condition: { count: 1, kind: 'sync-conflict-count' },
-      eventName: 'onWorkspaceSyncApplied', timeoutMs: 2 * 60_000
-    });
-    conflictProof = { conflictCount: conflicts.length, nodeId: conflictNodeId,
-      silentOverwrite: false, visible: true };
   } finally { await closeWindowsSyncGroupSession(session); }
   session = await openWindowsSyncGroupSession(options.paths, options.evidenceRoot);
   let restartedGroup;

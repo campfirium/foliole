@@ -46,7 +46,10 @@ vi.mock('../acceptance/desktop-product-event.mjs', () => ({
   waitForDesktopProductEvent: async () => {},
   waitForDesktopProductState: async (_page, args) => args.condition.kind === 'candidate-identity'
     ? { join_candidates: [{ group_id: group().group_id, group_tag: 'a'.repeat(32), endpoint_url: 'http://mac.test' }] }
-    : args.condition.kind === 'sync-conflict-count' ? [{}] : snapshot()
+    : args.condition.kind === 'sync-conflict-count' ? Promise.reject(new Error('Legacy conflict table is empty'))
+      : args.condition.kind === 'body-alternative-preview' ? { source_node_id: 'conflict', alternatives: [{}],
+        current_content: 'Cloze target alpha Note target beta Desktop fork macos',
+        updated_content: 'Cloze target alpha Note target beta Desktop fork windows' } : snapshot()
 }));
 import { runWindowsSinglePrincipalSyncGroup } from './windows-single-principal-sync-group-action.mjs';
 function run(reason, run_id) { return { reason, run_id, status: 'completed' }; }

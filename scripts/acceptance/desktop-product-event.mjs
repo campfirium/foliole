@@ -109,6 +109,12 @@ export async function waitForDesktopProductState(page, {
       if (condition.kind === 'sync-conflict-count') {
         return Array.isArray(value) && value.length >= condition.count;
       }
+      if (condition.kind === 'body-alternative-preview') {
+        const bodies = [value?.current_content, value?.updated_content];
+        return value?.source_node_id === condition.nodeId && value.alternatives?.length > 0
+          && condition.fragments.every(fragment => bodies.some(body =>
+            typeof body === 'string' && body.includes(fragment)));
+      }
       if (condition.kind === 'node-content-includes') {
         return value?.nodeId === condition.nodeId
           && condition.fragments.every((fragment) => String(value?.content).includes(fragment));

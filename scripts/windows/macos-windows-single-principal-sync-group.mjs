@@ -21,7 +21,7 @@ import {
 } from '../desktop/sync-group-conflict-action.mjs';
 import { createActionExecutor } from '../sync-group/multi-device-sync-action-executor.mjs';
 import { startWindowsSyncGroupProvider } from '../sync-group/multi-device-sync-windows-provider.mjs';
-import { assertAutomaticCoverage, completedAutomatic } from './windows-single-principal-sync-group-contract.mjs';
+import { assertAutomaticCoverage, completedAutomatic, loadDesktopPeerConflict } from './windows-single-principal-sync-group-contract.mjs';
 import { runMacosJoinsWindowsSyncGroup } from './macos-joins-windows-sync-group.mjs';
 
 const execute = promisify(execFile);
@@ -90,13 +90,8 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     await forkDesktopSyncConflict({ label: 'macos', nodeId: conflictSeed.nodeId, session });
     await session.invoke('resume_companion_sync');
     await windowsProvider.release('consumer_complete');
+    const conflict = await loadDesktopPeerConflict(session, conflictSeed.nodeId);
     const macosManualBeforeRestart = await session.invoke('sync_companion_now');
-    const conflicts = await session.waitForState({ command: 'load_sync_node_conflicts',
-      commandArgs: { objectIds: [conflictSeed.nodeId] },
-      condition: { count: 1, kind: 'sync-conflict-count' },
-      eventName: 'onWorkspaceSyncApplied', timeoutMs: 2 * 60_000 });
-    const conflict = { conflictCount: conflicts.length, nodeId: conflictSeed.nodeId,
-      silentOverwrite: false, visible: true };
     await windowsProvider.waitForProgress('restarted');
     const automaticSnapshot = await session.invoke('load_workspace_list_snapshot', {
       includePdfOpenings: false

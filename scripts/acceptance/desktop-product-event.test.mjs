@@ -169,3 +169,28 @@ it('rejects a discovery candidate when only one identity field matches', async (
     eventName: 'onSyncGroupDiscoveryChanged', timeoutMs: 100 }))
     .rejects.toThrow('did not match id and tag');
 });
+
+it.each(['complete', 'wrong-node', 'missing-fork', 'missing-seed', 'no-alternative'])(
+  'requires the exact original node and both visible fork bodies: %s', async state => {
+    const value = { source_node_id: 'node', alternatives: [{}],
+      current_content: 'Original body Desktop fork macos',
+      updated_content: 'Original body Desktop fork windows' };
+    if (state === 'wrong-node') value.source_node_id = 'other';
+    if (state === 'missing-fork') value.updated_content = 'Original body';
+    if (state === 'missing-seed') {
+      value.current_content = 'Desktop fork macos'; value.updated_content = 'Desktop fork windows';
+    }
+    if (state === 'no-alternative') value.alternatives = [];
+    const previous = globalThis.electronAPI;
+    globalThis.electronAPI = { invoke: async () => value, onWorkspaceSyncApplied: () => () => {} };
+    const page = { evaluate: (callback, args) => callback(args) };
+    try {
+      const result = waitForDesktopProductState(page, { command: 'load_node_text_alternative_preview',
+        commandArgs: { node_id: 'node' }, eventName: 'onWorkspaceSyncApplied', timeoutMs: 25,
+        condition: { kind: 'body-alternative-preview', nodeId: 'node',
+          fragments: ['Original body', 'Desktop fork macos', 'Desktop fork windows'] } });
+      if (state === 'complete') await expect(result).resolves.toEqual(value);
+      else await expect(result).rejects.toThrow('Timed out waiting');
+    } finally { globalThis.electronAPI = previous; }
+  }
+);

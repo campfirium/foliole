@@ -21,3 +21,13 @@ export function assertAutomaticCoverage(runs) {
     }
   }
 }
+
+export async function loadDesktopPeerConflict(session, nodeId) {
+  const fragments = ['Cloze target alpha', 'Note target beta',
+    'Desktop fork macos', 'Desktop fork windows'];
+  const preview = await session.waitForState({ command: 'load_node_text_alternative_preview',
+    commandArgs: { node_id: nodeId }, condition: { kind: 'body-alternative-preview', nodeId, fragments },
+    eventName: 'onWorkspaceSyncApplied', timeoutMs: 2 * 60_000 });
+  return { conflictCount: preview.alternatives.length, nodeId, resolution: 'body-alternatives',
+    silentOverwrite: false, visible: true };
+}

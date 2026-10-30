@@ -50,7 +50,10 @@ function currentHosts() {
     invoke: async command => command === 'load_workspace_list_snapshot' ? snapshot
       : { run_id: 'manual', reason: 'manual', status: 'completed' },
     waitForState: vi.fn(async args => {
-      if (args.condition.kind === 'sync-conflict-count') return [{ objectId: 'conflict' }];
+      if (args.condition.kind === 'sync-conflict-count') throw new Error('Legacy conflict table is empty');
+      if (args.condition.kind === 'body-alternative-preview') return { alternatives: [{}], source_node_id: 'conflict',
+        current_content: 'Cloze target alpha Note target beta Desktop fork macos',
+        updated_content: 'Cloze target alpha Note target beta Desktop fork windows' };
       if (args.condition.counts?.['Multi-device sync C fact'] > 1) {
         throw new Error('Use Group replaced the pre-join C fact; only the new fact is valid');
       }
