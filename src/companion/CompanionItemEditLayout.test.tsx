@@ -47,7 +47,7 @@ async function setup(question = 60, answer = 1000) {
   return { view, layout, document, save };
 }
 
-it.each([[60, 80, [60, 80]], [60, 1000, [60, 340]], [1000, 60, [340, 60]], [1000, 800, [200, 200]]])(
+it.each([[60, 80, [247.2, 152.8]], [60, 1000, [60, 340]], [1000, 60, [340, 60]], [1000, 800, [200, 200]]])(
   'keeps both fields available with natural heights %s and %s', async (question, answer, expected) => {
     const { layout } = await setup(question as number, answer as number);
     expect(layout?.style.gridTemplateRows).toBe((expected as number[]).map(n => `${n}px`).join(' auto '));

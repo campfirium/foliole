@@ -24,7 +24,7 @@
   flex: 1;
   height: 100%;
   min-height: 0;
-  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 61.8fr) auto minmax(0, 38.2fr);
   align-content: start;
 }
 .companion-item-edit-layout[data-active='true'] > div {
