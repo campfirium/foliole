@@ -160,3 +160,17 @@ it('gathers every desktop under the lowest-ranked desktop once it takes the fore
     await converge(middle, 'node-0', 'Through the new root');
   });
 });
+
+it('completes manual sync on the root after the downstream desktop persists and acknowledges the round', {
+  meta: { calibratedMs: 90_000 }
+}, async () => {
+  await withDesktops(2, async ([root, client]) => {
+    await expect.poll(() => sessions(client), { timeout: 10_000 }).toEqual([root.deviceId]);
+    const before = runsToward(root, client);
+    await edit(root, 'node-0', 'Manual root change');
+    const result = await root.process.invoke('activation_manual');
+    expect(result).toMatchObject({ reason: 'manual', status: 'completed' });
+    await converge(client, 'node-0', 'Manual root change');
+    expect([...runsToward(root, client)].filter(run => !before.has(run))).toEqual([]);
+  });
+});

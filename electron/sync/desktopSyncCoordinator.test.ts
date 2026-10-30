@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+const acknowledged = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock('./desktopPeerSessionRegistry.js', () => ({ captureDesktopPeerRoundCompletion: () => acknowledged }));
+
 const participation = vi.hoisted(() => ({ active: true }));
 vi.mock('./desktopCompanionSyncPreference.js', () => ({ isDesktopCompanionSyncParticipating: () => participation.active }));
 
@@ -163,8 +166,10 @@ it.each([null, { complete: false, cursor: 9 }])('does not publish completion for
       expect.objectContaining({ status: 'pending', error: null }));
     expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledTimes(2);
     expect(completed).not.toHaveBeenCalled();
+    expect(acknowledged).not.toHaveBeenCalled();
     await expect(runDesktopSyncCoordinator('manual')).resolves.toMatchObject({ status: 'completed' });
     expect(completed).toHaveBeenCalledOnce();
+    expect(acknowledged).toHaveBeenCalledTimes(2);
   } finally {
     unsubscribe();
   }

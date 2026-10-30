@@ -10,6 +10,7 @@ import { markWatchedConflictDecisionsSynced } from '../database/watchedConflictS
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
+import { captureDesktopPeerRoundCompletion } from './desktopPeerSessionRegistry.js';
 import { recordDesktopSyncActivity, type DesktopSyncActivityContext } from './desktopSyncActivityStore.js';
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import {
@@ -111,6 +112,7 @@ async function runOwnedSync(request: SyncRequest, continuations: DesktopSyncGrou
   const activity = { runId, reason, startedAt };
   await recordDesktopSyncActivity(activity, { direction: 'local', kind: 'run_started',
     message: 'Sync started', stage: 'run', status: 'started' });
+  const acknowledgements = peers.map(peer => captureDesktopPeerRoundCompletion(peer.peer_device_id));
   try {
     if (continuation && !await runWithDatabaseConnectionOwner(isDesktopCompanionSyncParticipating)) {
       return await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
@@ -143,6 +145,7 @@ async function runOwnedSync(request: SyncRequest, continuations: DesktopSyncGrou
       run_id: runId, started_at: startedAt, status: 'pending' });
     await runWithDatabaseConnectionOwner(() => markWatchedConflictDecisionsSynced(startedAt));
     await refreshKeepImportMonitorFromSettings();
+    for (const acknowledge of acknowledgements) await acknowledge();
     const result = await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
       run_id: runId, started_at: startedAt, status: 'completed' });
     for (const listener of completedListeners) listener();
