@@ -54,7 +54,7 @@ function currentHosts() {
     loadSyncTriggerResult: async () => null, close: vi.fn(async () => {}),
     invoke: async (command, args) => {
       if (command === 'load_workspace_list_snapshot') return snapshot;
-      if (command === 'load_node_document') return { nodeId: args.node_id, content: `body-${args.node_id}` };
+      if (command === 'load_node_document') return { nodeId: args.nodeId, content: `body-${args.nodeId}` };
       if (command === 'load_desktop_sync_diagnostics') return { activity: [...activity] };
       if (command === 'sync_companion_now') activity.unshift({ kind: 'run_finished',
         trigger_reason: 'manual', status: 'completed', result: 'completed',

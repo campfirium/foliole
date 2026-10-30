@@ -12,7 +12,7 @@ const facts = [
 it('hydrates complete documents rather than treating list metadata as body evidence', async () => {
   const session = { invoke: async (command, args) => command === 'load_workspace_list_snapshot'
     ? { nodesById: Object.fromEntries([...facts].reverse().map(({ id, title }) => [id, { title, content: '' }])) }
-    : { nodeId: args.node_id, content: facts.find(node => node.id === args.node_id).content } };
+    : { nodeId: args.nodeId, content: facts.find(node => node.id === args.nodeId).content } };
   const actual = await loadDesktopJourneyFacts(session);
   expect(actual).toEqual(facts);
   expect(() => assertSameJourneyFacts(facts, actual)).not.toThrow();

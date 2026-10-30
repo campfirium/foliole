@@ -19,8 +19,8 @@ vi.mock('./windows-sync-group-recovery-action.mjs', () => ({
   invokeWindowsSyncGroupCommand: async (_page, command, args) => {
     if (command === 'complete_sync_group_join' || command === 'load_sync_group_overview') return { sync_group: group() };
     if (command === 'load_workspace_list_snapshot') return snapshot();
-    if (command === 'load_node_document') return { nodeId: args.node_id,
-      content: host.opens > 1 && host.fault === 'body' && args.node_id === 'C1' ? 'lost body' : `body-${args.node_id}` };
+    if (command === 'load_node_document') return { nodeId: args.nodeId,
+      content: host.opens > 1 && host.fault === 'body' && args.nodeId === 'C1' ? 'lost body' : `body-${args.nodeId}` };
     if (command === 'sync_companion_now') {
       if (host.owner === 'macos') throw new Error('sync_group_peer_unavailable');
       host.manualRuns.unshift({ kind: 'run_finished', trigger_reason: 'manual', result: 'completed', status: 'completed',

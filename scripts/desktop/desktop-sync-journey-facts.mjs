@@ -3,7 +3,7 @@ export async function loadDesktopJourneyFacts(session) {
   const entries = Object.entries(snapshot.nodesById).filter(([, node]) =>
     /^Multi-device sync [AC] fact/u.test(String(node.title))).sort(([left], [right]) => left.localeCompare(right));
   return Promise.all(entries.map(async ([id, node]) => {
-    const document = await session.invoke('load_node_document', { node_id: id });
+    const document = await session.invoke('load_node_document', { nodeId: id });
     if (document?.nodeId !== id || typeof document.content !== 'string') {
       throw new Error(`Journey document is unavailable: ${id}`);
     }
