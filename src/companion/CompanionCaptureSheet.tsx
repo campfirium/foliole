@@ -1,5 +1,5 @@
 import { Clipboard, type LucideIcon } from 'lucide-react';
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useRef, type ComponentProps, type RefObject } from 'react';
 
 import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -19,6 +19,17 @@ import type { CompanionCaptureTextSaveError, CompanionCaptureTextSaveResult } fr
 import { companionMobileRailClassName } from './companionCssCompatibility';
 import { useCompanionCaptureClipboard } from './useCompanionCaptureClipboard';
 import { useCompanionCaptureDraft } from './useCompanionCaptureDraft';
+import { useCompanionItemEditViewport } from './useCompanionItemEditViewport';
+
+function CaptureSheetViewport(props: ComponentProps<typeof AppDialogContent>) {
+  const ref = useRef<HTMLDivElement>(null);
+  useCompanionItemEditViewport(ref, true);
+  return <AppDialogContent {...props} ref={ref} style={{
+    bottom: 'calc(100% - var(--companion-edit-viewport-top, 0px) - var(--companion-edit-viewport-height, 100%))',
+    maxHeight: 'calc(var(--companion-edit-viewport-height, 100%) - 12px)',
+    overflowY: 'auto'
+  }} />;
+}
 
 function CaptureActionRow(props: { icon: LucideIcon; label: string; disabled?: boolean; busy?: boolean; onClick?(): void }) {
   const Icon = props.icon;
@@ -131,7 +142,7 @@ export function CompanionCaptureSheet(props: {
     <AppDialog onOpenChange={handleOpenChange} open={props.open}>
       <AppDialogPortal>
         <AppDialogOverlay className="companion-sheet-overlay" />
-        <AppDialogContent onOpenAutoFocus={(event) => {
+        <CaptureSheetViewport onOpenAutoFocus={(event) => {
           event.preventDefault();
           inputRef.current?.focus({ preventScroll: true });
         }} className={`companion-sheet bottom-0 left-0 top-auto w-full translate-x-0 translate-y-0 [transform:translate(0,0)] rounded-b-none rounded-t-xl border-x-0 border-b-0 ${companionMobileRailClassName} pt-3 pb-6 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),24px)]`}>
@@ -145,7 +156,7 @@ export function CompanionCaptureSheet(props: {
               {clipboard.error ? <p className="mt-3 text-sm text-destructive" role="alert">{t(clipboard.error === 'empty' ? 'companion.capture.error.clipboardEmpty' : 'companion.capture.error.clipboardFailed')}</p> : null}
             </div>
           </div>
-        </AppDialogContent>
+        </CaptureSheetViewport>
       </AppDialogPortal>
     </AppDialog>
   );

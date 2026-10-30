@@ -73,7 +73,19 @@ extension FoliolePhysicalSyncGroupUITests {
         tapButton(named: "Capture", in: app, timeout: 30)
         let editor = app.textViews["Capture text"]
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public Capture editor is unavailable.")
-        editor.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 15),
+                      "Capture must focus its editor when opened.")
+        let keyboard = app.keyboards.firstMatch
+        let toolbar = app.toolbars["Toolbar"]
+        let save = localizedButton(named: "Save", in: app)
+        let visible = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            let bottom = toolbar.exists ? min(toolbar.frame.minY, keyboard.frame.minY) : keyboard.frame.minY
+            return editor.frame.height > 0 && editor.frame.minY >= 0 &&
+                editor.frame.maxY <= bottom && save.exists && save.frame.maxY <= bottom
+        }, object: app)
+        attachScreenshot(named: "Fri-capture-keyboard-visibility-before-input")
+        XCTAssertEqual(XCTWaiter.wait(for: [visible], timeout: 15), .completed,
+                       "Capture input and Save must remain visible above the software keyboard.")
         resolveOptionalCellularDataDecision()
         editor.typeText(title)
         XCTAssertEqual(editor.value as? String, title, "Capture must receive the complete requested text.")
