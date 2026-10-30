@@ -114,6 +114,9 @@ jobs:
           path: |
             .tmp/logs/quality-gate
             .tmp/vitest
+            .tmp/artifacts/t328-cost
+            .tmp/artifacts/t343-request-scale.json
+            .tmp/artifacts/t357-attachment-throughput.json
           if-no-files-found: ignore
           retention-days: 14
 

@@ -92,7 +92,8 @@ it('drains 256 MiB in windowed pulls under mobile request cost while admitting a
     expect(streamingProved).toBe(true);
     expect(totalBlocks).toBe(512);
     // One round yields to the edit; the next drains the rest without returning to inventory comparison.
-    expect(rounds).toBeLessThanOrEqual(3);
+    expect(rounds, JSON.stringify({ rounds, totalBlocks, requests: server.attachmentRequests(),
+      editLatencyMs, ...measurement.metrics() })).toBeLessThanOrEqual(3);
     expect(editLatencyMs).toBeGreaterThan(0);
     expect(editLatencyMs).toBeLessThan(5000);
     // Each pulled 512 KiB block no longer costs its own describe and pull request.
@@ -100,12 +101,11 @@ it('drains 256 MiB in windowed pulls under mobile request cost while admitting a
     expect(measurement.metrics().sourceOpens).toBeLessThanOrEqual(server.attachmentRequests());
     // Pushed blocks travel in the same windows, so neither direction costs a request per block.
     expect(server.attachmentRequests()).toBeLessThanOrEqual(512 / 8 + 32);
-    const metrics = { bytes: 256 * 1024 * 1024, nodesPerSide: 30000, requestDelayMs: REQUEST_DELAY_MS, attachmentRequests: server.attachmentRequests(), rounds, totalBlocks,
-      ...measurement.metrics(),
-      elapsedMs: Math.round(performance.now() - started), editLatencyMs: Math.round(editLatencyMs) };
-    await mkdir(path.resolve('.tmp/artifacts'), { recursive: true });
-    await writeFile(path.resolve('.tmp/artifacts/t357-attachment-throughput.json'), JSON.stringify(metrics, null, 2));
   } finally {
+    await saveThroughputEvidence({ bytes: 256 * 1024 * 1024, nodesPerSide: 30000, requestDelayMs: REQUEST_DELAY_MS,
+      attachmentRequests: server.attachmentRequests(), rounds, totalBlocks,
+      elapsedMs: Math.round(performance.now() - started), editLatencyMs: Math.round(editLatencyMs),
+      ...measurement.metrics() });
     measurement.close();
     releaseWaiter?.(); requestAttachmentWorkYield(); owner.close(); await server.close(); await local.close();
     await runWithDatabaseConnectionMaintenance(() => closeDatabaseConnection());
@@ -113,6 +113,13 @@ it('drains 256 MiB in windowed pulls under mobile request cost while admitting a
     vi.unstubAllEnvs(); await directory.remove(); sandbox.root = '';
   }
 });
+
+async function saveThroughputEvidence(metrics: Record<string, number>) {
+  try {
+    await mkdir(path.resolve('.tmp/artifacts'), { recursive: true });
+    await writeFile(path.resolve('.tmp/artifacts/t357-attachment-throughput.json'), JSON.stringify(metrics, null, 2));
+  } catch (error) { console.error('Could not write attachment throughput evidence:', error); }
+}
 
 async function syncDataDuringAttachment(host: RequestSyncDatabaseHost, exchange: RequestSyncExchange, targetPath: string) {
   const objectId = 'user_space:mac:desktop:*:search_aliases_document';
