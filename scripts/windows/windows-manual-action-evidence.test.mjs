@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
-import { runAvailableManualSync } from './windows-single-principal-sync-group-contract.mjs';
+import { assertManualCoverage, runAvailableManualSync } from './windows-single-principal-sync-group-contract.mjs';
 
 it.each(['manual', 'automatic'])('reads new %s completion after the public action returns an overview', async reason => {
   const activity = [{ kind: 'run_finished', trigger_reason: 'manual', status: 'completed',
@@ -50,4 +50,33 @@ it('propagates actual synchronization errors', async () => {
     if (command === 'load_desktop_sync_diagnostics') return { activity: [] };
     throw new Error('sync_pack_corrupt');
   } })).rejects.toThrow('sync_pack_corrupt');
+});
+
+it.each([{ result: 'partial', expected: 'pending' }, { result: 'waiting', expected: 'skipped' }])(
+  'retains an actual $result outcome without claiming completion or terminating the peer', async ({ result, expected }) => {
+    let invoked = false;
+    const session = { invoke: async command => {
+      if (command === 'sync_companion_now') { invoked = true; return { sync_group: {} }; }
+      return { activity: invoked ? [{ kind: 'run_finished', trigger_reason: 'manual',
+        status: 'skipped', result, run_id: 'waiting-peer', started_at: 'start', occurred_at: 'finish' }] : [] };
+    } };
+    await expect(runAvailableManualSync(session)).resolves.toMatchObject({ reason: 'manual', status: expected });
+  }
+);
+
+it('does not replace a pending manual outcome with an unrelated automatic completion', async () => {
+  let invoked = false;
+  const session = { invoke: async command => {
+    if (command === 'sync_companion_now') { invoked = true; return {}; }
+    const manual = { kind: 'run_finished', trigger_reason: 'manual', status: 'skipped', result: 'partial',
+      run_id: 'manual-pending', started_at: 'start', occurred_at: 'finish' };
+    return { activity: invoked ? [{ ...manual, trigger_reason: 'automatic', run_id: 'auto',
+      status: 'completed', result: 'completed' }, manual] : [] };
+  } };
+  await expect(runAvailableManualSync(session)).resolves.toMatchObject({ reason: 'manual', status: 'pending' });
+});
+
+it('does not count two incomplete peer outcomes as completed manual acceptance', () => {
+  const runs = { manualBeforeRestart: { status: 'pending' }, manualAfterRestart: { status: 'skipped' } };
+  expect(() => assertManualCoverage({ macos: runs, windows: runs })).toThrow('manualBeforeRestart');
 });
