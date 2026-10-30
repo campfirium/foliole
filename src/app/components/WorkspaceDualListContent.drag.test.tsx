@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState, type ComponentProps } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import type { NativeMoveNodesArgs, NativeMoveNodesResult } from '../../../lib/platform/nativeMoveContract';
 import { resetNodeListCollapseSessionForTest } from '../../features/nodes/components/nodeListCollapseSession';
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { definedProps } from '../../shared/lib/definedProps';
@@ -12,8 +13,10 @@ import { WorkspaceDualListContent } from './WorkspaceDualListContent';
 
 vi.mock('../../store/workspaceRuntimeSync', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../store/workspaceRuntimeSync')>()),
-  syncMoveNodesToRuntime: vi.fn(async (payload) => ({ movedNodeIds: payload.nodes.map((node: { nodeId: string }) => node.nodeId),
-    nodeOrder: payload.nodeOrder }))
+  syncMoveNodesToRuntime: vi.fn(async (payload: NativeMoveNodesArgs): Promise<NativeMoveNodesResult> => ({
+    movedNodeIds: payload.nodes.map(node => node.nodeId), nodes: payload.nodes,
+    parentOrders: payload.parentOrders, readings: []
+  }))
 }));
 
 function createNode(args: {
