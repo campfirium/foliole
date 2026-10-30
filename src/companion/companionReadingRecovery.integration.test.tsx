@@ -152,14 +152,23 @@ it('allows retry after the first write fails without advancing either topic', as
 it('recovers a failed refresh after a committed save without repeating the mutation', async () => {
   const ui = renderSurface(await loadCompanionWorkspaceSyncState());
   await waitFor(() => expect(ui.result.current.session.currentCard).not.toBeNull());
-  const refresh = vi.spyOn(workspaceRepository, 'refreshCompanionWorkspaceAfterMutation');
-  refresh.mockResolvedValueOnce(ui.result.current.state.workspace_snapshot);
-  refresh.mockRejectedValueOnce(new Error('Read unavailable'));
+  const originalRefresh = workspaceRepository.refreshCompanionWorkspaceAfterMutation;
+  let refreshError: string | null = 'Read unavailable';
+  vi.spyOn(workspaceRepository, 'refreshCompanionWorkspaceAfterMutation').mockImplementation((...args) => {
+    const saved = database!.prepare("SELECT state FROM node_reading WHERE node_id='first'").get() as { state: string } | undefined;
+    if (refreshError && saved?.state === 'dismissed') {
+      const error = refreshError;
+      refreshError = null;
+      return Promise.reject(new Error(error));
+    }
+    return originalRefresh(...args);
+  });
   await act(() => ui.result.current.handleDismissReviewTopic());
   expect(ui.result.current.readingError).toBeTruthy();
   expect(ui.result.current.session.currentCard?.nodeId).toBe('first');
   const rows = database!.prepare('SELECT * FROM node_reading ORDER BY node_id').all();
-  refresh.mockRejectedValueOnce(new Error('Read still unavailable'));
+  expect(rows).toContainEqual(expect.objectContaining({ node_id: 'first', state: 'dismissed' }));
+  refreshError = 'Read still unavailable';
   await act(() => ui.result.current.handleReadReviewTopic());
   expect(ui.result.current.readingError).toBeTruthy();
   expect(database!.prepare('SELECT * FROM node_reading ORDER BY node_id').all()).toEqual(rows);

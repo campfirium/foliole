@@ -49,7 +49,7 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
     setReadingError(null);
     setReviewError(null);
     try {
-      if (action === 'read' && await admitRead(token)) return;
+      if (action === 'read' && !pending.current && await admitRead(token)) return;
       await args.flow.readIntents?.drain();
       if (pending.current) { await finishPending(args, pending, setReadingError); return; }
       const prepared = await prepareSurfaceAction(args, token, action, () => latest.current.active);
