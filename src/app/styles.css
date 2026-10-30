@@ -402,7 +402,7 @@
   --app-settings-switch-on-bg: rgb(var(--role-accent-rgb) / 0.72);
   --app-settings-switch-knob-bg: rgb(var(--role-legacy-elevated-rgb));
   --companion-base: rgb(var(--role-legacy-canvas-rgb));
-  --companion-content: rgb(var(--role-legacy-elevated-rgb));
+  --companion-content: rgb(var(--role-legacy-canvas-rgb));
   --companion-subtle: rgb(var(--role-legacy-panel-rgb));
   --companion-divider: #444541;
   --companion-divider-strong: #555651;
