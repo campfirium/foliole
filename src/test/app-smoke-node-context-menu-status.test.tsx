@@ -3,6 +3,7 @@ import { expect, it } from 'vitest';
 
 import './app-smoke.shared';
 
+import { nodeReadingSummary } from '../../lib/core/nodes/nodeLearningSummary';
 import { App } from '../app/App';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { useWorkspaceStore } from '../store/workspaceStore';
@@ -86,14 +87,14 @@ it('returns dismissed reading nodes to pending from the node menu', async () => 
   fireEvent.click(screen.getByRole('menuitem', { name: 'Relearn' }));
   fireEvent.click(within(await screen.findByRole('dialog', { name: 'Relearn this topic?' })).getByRole('button', { name: 'Relearn' }));
 
-  await waitFor(() => expect(useWorkspaceStore.getState().nodesById['node-dismissed']?.reading).toBeNull());
+  await waitFor(() => expect(nodeReadingSummary(useWorkspaceStore.getState().nodesById['node-dismissed'])).toBeNull());
   expect(within(panel).getByRole('treeitem', { name: 'Dismissed note' }).querySelector('[data-node-icon="leaf"]')).toHaveAttribute(
     'data-node-icon-state',
     'pending'
   );
 });
 
-it('dismisses an entire topic from the node menu without deleting it', () => {
+it('dismisses an entire topic from the node menu without deleting it', async () => {
   const childTopic = createNode({
     id: 'node-child',
     kind: 'topic',
@@ -118,8 +119,8 @@ it('dismisses an entire topic from the node menu without deleting it', () => {
 
   fireEvent.click(screen.getByRole('menuitem', { name: 'Dismiss topic' }));
 
-  expect(useWorkspaceStore.getState().nodesById['node-parent']?.reading?.state).toBe('dismissed');
-  expect(useWorkspaceStore.getState().nodesById['node-child']?.reading?.state).toBe('dismissed');
+  await waitFor(() => expect(nodeReadingSummary(useWorkspaceStore.getState().nodesById['node-parent'])?.state).toBe('dismissed'));
+  expect(nodeReadingSummary(useWorkspaceStore.getState().nodesById['node-child'])?.state).toBe('dismissed');
   expect(useWorkspaceStore.getState().nodesById['node-child']).toBeDefined();
 });
 
@@ -159,12 +160,12 @@ it('toggles sequential reading from source topic menus without confirmation and 
 
   expect(screen.queryByRole('dialog', { name: /Relearn/i })).toBeNull();
   await waitFor(() => expect(useWorkspaceStore.getState().nodesById['node-source']?.sequentialReadingEnabled).toBe(true));
-  expect(useWorkspaceStore.getState().nodesById['node-first']?.reading?.state).toBe('active');
-  expect(useWorkspaceStore.getState().nodesById['node-second']?.reading?.state).toBe('locked');
+  expect(nodeReadingSummary(useWorkspaceStore.getState().nodesById['node-first'])?.state).toBe('active');
+  expect(nodeReadingSummary(useWorkspaceStore.getState().nodesById['node-second'])?.state).toBe('locked');
 
   openNodeMenu('Source topic');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Disable Sequential Reading' }));
-  await waitFor(() => expect(useWorkspaceStore.getState().nodesById['node-second']?.reading?.state).toBe('active'));
+  await waitFor(() => expect(nodeReadingSummary(useWorkspaceStore.getState().nodesById['node-second'])?.state).toBe('active'));
 });
 
 it('hides sequential reading actions from non-source menus', () => {

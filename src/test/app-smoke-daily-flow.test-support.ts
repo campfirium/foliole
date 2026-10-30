@@ -4,6 +4,8 @@ import { advanceDailyGrade } from '../../lib/core/flow/dailyFlowGrade';
 import { flowDay, flowPlan, prepareFlowSession } from '../../lib/core/flow/dailyFlowPlanning';
 import { advanceDailyReading } from '../../lib/core/flow/dailyFlowReading';
 import type { DailyFlowSession } from '../../lib/core/flow/dailyFlowSession';
+import { dailyFlowSourceSettingsSchema } from '../../lib/core/flow/dailyFlowSourceSettings';
+import { sourceSettingsReadingChanges } from '../../lib/core/flow/dailyFlowSourceSettingsLearning';
 import { dailyFlowViewSchema, type DailyFlowView } from '../../lib/core/flow/dailyFlowViewContract';
 import { restoreFlowHistorySession } from '../../lib/core/flow/flowHistorySession';
 import type { Node } from '../features/nodes/model/nodeTypes';
@@ -14,6 +16,20 @@ function toSmokeSnapshot(node: Node): WorkspaceNodeSnapshot {
   return { ...node, isTitleManual: node.isTitleManual ?? false,
     hideTitleHeading: node.hideTitleHeading ?? false, anchorLink: node.anchorLink ?? null,
     reading: node.reading ?? null, review: node.review ?? null };
+}
+
+function smokeLearning(state: DailyFlowSnapshot, nodeIds: string[]) {
+  return nodeIds.flatMap(nodeId => {
+    const node = state.nodesById[nodeId];
+    return node ? [{ nodeId, reading: node.reading, review: node.review }] : [];
+  });
+}
+
+function saveSmokeSourceSettings(state: DailyFlowSnapshot, persistedNodes: DailyFlowSnapshot['nodesById'], payload: unknown) {
+  const args = dailyFlowSourceSettingsSchema.parse(payload);
+  const readings = sourceSettingsReadingChanges(state, args).map(value => ({ nodeId: value.nodeId, reading: value.after }));
+  for (const value of readings) persistedNodes[value.nodeId] = { ...state.nodesById[value.nodeId]!, reading: value.reading };
+  return { updatedAt: args.now, readings };
 }
 
 function smokeView(payload: unknown, state: DailyFlowSnapshot, session: DailyFlowSession | undefined, revision: number): DailyFlowView {
@@ -83,5 +99,7 @@ export function createSmokeDailyFlow() {
       ...(args.readings ? { readings: args.readings.map(value => ({ nodeId: value.nodeId, reading: value.after })) } : {}) };
   }
 
-  return { open, commit, view: async (payload: unknown) => smokeView(payload, await snapshot(), session, revision) };
+  return { open, commit, learning: async (nodeIds: string[]) => smokeLearning(await snapshot(), nodeIds),
+    saveSourceSettings: async (payload: unknown) => saveSmokeSourceSettings(await snapshot(), persistedNodes, payload),
+    view: async (payload: unknown) => smokeView(payload, await snapshot(), session, revision) };
 }
