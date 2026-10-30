@@ -8,6 +8,7 @@ const {
   loadReadwiseBookEpub,
   cancelReadwiseReaderImport,
   mockWindow,
+  otherWindow,
   openReadwiseBookDownload,
   previewReadwiseImportCleanup,
   previewReadwiseReaderImport,
@@ -28,6 +29,7 @@ const {
     webContents: { send: vi.fn(), toggleDevTools: vi.fn() }
   },
   openReadwiseBookDownload: vi.fn(),
+  otherWindow: { isDestroyed: () => false, webContents: { send: vi.fn() } },
   previewReadwiseImportCleanup: vi.fn(),
   previewReadwiseReaderImport: vi.fn(),
   refreshReadwiseApiScheduler: vi.fn(),
@@ -41,7 +43,7 @@ vi.mock('../database/attachmentResourceDescription.js', () => ({ currentLibraryS
 vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => mockWindow),
-    getAllWindows: vi.fn(() => [mockWindow]),
+    getAllWindows: vi.fn(() => [mockWindow, otherWindow]),
     getFocusedWindow: vi.fn(() => mockWindow)
   },
   app: { exit: vi.fn(), getVersion: () => '1.0.0', relaunch: vi.fn() },
@@ -224,10 +226,19 @@ it('routes Readwise Reader preview and run commands through native invoke', asyn
 
   expect(previewReadwiseReaderImport).toHaveBeenCalledWith({ readwiseRootPath: '/Readwise' });
   expect(runReadwiseReaderImport).toHaveBeenCalledWith({
+    onRelayCompleted: expect.any(Function),
     settings: { readwiseRootPath: '/Readwise' },
     window: mockWindow
   });
   expect(refreshReadwiseApiScheduler).toHaveBeenCalledTimes(1);
+  expect(mockWindow.webContents.send).not.toHaveBeenCalled();
+  expect(otherWindow.webContents.send).not.toHaveBeenCalled();
+  runReadwiseReaderImport.mock.calls[0]![0].onRelayCompleted({
+    imported_count: 1, library_scope: 'library', workspace_scope: { kind: 'nodes', nodeIds: ['node-import-1'] }
+  });
+  expect(otherWindow.webContents.send).toHaveBeenCalledWith('foliole:workspace-content-changed', {
+    scope: 'workspace', libraryScope: 'library', workspaceScope: { kind: 'nodes', nodeIds: ['node-import-1'] }
+  });
   expect(mockWindow.webContents.send).not.toHaveBeenCalled();
 });
 

@@ -43,6 +43,7 @@ vi.mock('../database/importPipeline.js', () => ({
 }));
 
 vi.mock('./menu.js', () => ({ syncAppMenuState: vi.fn() }));
+vi.mock('../database/attachmentResourceDescription.js', () => ({ currentLibraryScope: () => 'library' }));
 vi.mock('./paths.js', () => ({ resolveAppPaths: vi.fn() }));
 vi.mock('./storageCommands.js', () => ({ handleStorageCommand: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./boot.js', () => ({ appendBootEvent: vi.fn(), bootReport: vi.fn().mockResolvedValue(undefined) }));
@@ -106,4 +107,7 @@ it('runs multi-file text imports through the native import command', async () =>
   });
 
   expect(runPreparedImport).toHaveBeenCalledTimes(2);
+  expect(runPreparedImport).toHaveBeenNthCalledWith(1, expect.objectContaining({ sourceLocator: '/tmp/first.md' }));
+  expect(runPreparedImport).toHaveBeenNthCalledWith(2, expect.objectContaining({ sourceLocator: '/tmp/second.md' }));
+  expect(mockWindow.webContents.send).toHaveBeenCalledWith('foliole:managed-inbox-updated', { importId: 'import-2' });
 });

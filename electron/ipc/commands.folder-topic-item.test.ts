@@ -140,8 +140,6 @@ it.each([
       reveal: null,
       anchorLink: null,
       imageRegions: null,
-      reading: null,
-      review: null,
       position: 0,
       createdAt: '2026-03-06T00:00:00.000Z',
       updatedAt: '2026-03-06T00:00:00.000Z'
