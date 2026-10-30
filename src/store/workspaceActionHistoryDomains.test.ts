@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { closeLibraries, type Peer } from '../../electron/database/syncLibrary.testSupport';
+import { readWorkspaceNodeLearning } from '../../lib/core/database/workspaceNodeLearning';
 import { dailyFlowCommitSchema, dailyFlowOpenSchema } from '../../lib/core/flow/dailyFlowContract';
 import { commitDailyFlow, openDailyFlow } from '../../lib/core/flow/dailyFlowService';
 import { readDailyFlow } from '../../lib/core/flow/dailyFlowStorage';
@@ -23,6 +24,7 @@ beforeEach(async () => {
     if (command === 'open_daily_flow') return openDailyFlow(peer.port, dailyFlowOpenSchema.parse(input), settings(peer), persistence);
     if (command === 'commit_daily_flow') return commitDailyFlow(peer.port, dailyFlowCommitSchema.parse(input), settings(peer), persistence);
     if (command === 'save_node_open_state') return Promise.resolve(null);
+    if (command === 'load_node_learning') return readWorkspaceNodeLearning(peer.driver, (input as { nodeIds: string[] }).nodeIds);
     throw new Error(`Unexpected history fixture command: ${command}`);
   });
 });
