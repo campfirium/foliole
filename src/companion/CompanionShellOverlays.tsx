@@ -20,6 +20,7 @@ export const CompanionShellOverlays = memo(function CompanionShellOverlays(props
   isNavigationVisible: boolean;
   onCaptureSave: ComponentProps<typeof CompanionCaptureSheet>['onSave'];
   onCaptureSheetOpenChange(open: boolean): void;
+  onCaptureClipboardCreated?(nodeId: string): void;
   onDismissReviewTopic: Surface['handleDismissReviewTopic'];
   onGradeReview: Surface['handleGradeReview'];
   onNavigationAction(action: CompanionTabAction): void;
@@ -43,6 +44,7 @@ export const CompanionShellOverlays = memo(function CompanionShellOverlays(props
         draftScope={props.captureDraftScope}
         onOpenChange={props.onCaptureSheetOpenChange}
         onSave={props.onCaptureSave}
+        {...(props.onCaptureClipboardCreated ? { onClipboardCreated: props.onCaptureClipboardCreated } : {})}
         open={props.isCaptureSheetOpen}
       />
 

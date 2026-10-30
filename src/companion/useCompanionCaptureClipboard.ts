@@ -5,9 +5,8 @@ import { readClipboardText } from '../shared/platform/textClipboard';
 
 export function useCompanionCaptureClipboard(props: {
   disabled: boolean;
-  draft: string;
   draftScope: string;
-  onChange(text: string): void;
+  onImport(text: string): Promise<void>;
   open: boolean;
 }) {
   const [isPasting, setIsPasting] = useState(false);
@@ -33,8 +32,7 @@ export function useCompanionCaptureClipboard(props: {
       const source = decideClipboardPasteSource({ plainText: await readClipboardText() });
       if (!isCurrent() || latest.current.disabled) return;
       if (!source) return setError('empty');
-      const { draft, onChange } = latest.current;
-      onChange(draft + (draft && !draft.endsWith('\n') ? '\n' : '') + source.content);
+      await latest.current.onImport(source.content);
     } catch {
       if (isCurrent()) setError('failed');
     } finally {

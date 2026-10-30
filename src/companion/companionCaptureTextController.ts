@@ -6,18 +6,19 @@ import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 type CompanionWorkspaceSyncApi = ReturnType<typeof useCompanionWorkspaceSync>;
 
-export type CompanionCaptureTextSaveError = 'empty' | 'inbox-unavailable' | 'save-failed';
+export type CompanionCaptureTextSaveError = 'empty' | 'inbox-unavailable' | 'target-unavailable' | 'save-failed';
 
 export type CompanionCaptureTextSaveResult =
   | { error: CompanionCaptureTextSaveError }
   | { nodeId: string; retryRefresh?: () => Promise<unknown> };
 
-export function createCompanionCaptureTextSaveHandler(workspaceSync: CompanionWorkspaceSyncApi) {
+export function createCompanionCaptureTextSaveHandler(workspaceSync: CompanionWorkspaceSyncApi, parentNodeId?: string) {
   return async (text: string): Promise<CompanionCaptureTextSaveResult> => {
     try {
       const result = await persistCompanionCapturedText({
         deviceId: workspaceSync.bootstrapState.device_id,
         snapshot: workspaceSync.state.workspace_snapshot,
+        ...(parentNodeId === undefined ? {} : { parentNodeId }),
         text
       });
       try {

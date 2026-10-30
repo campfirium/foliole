@@ -15,5 +15,6 @@ export const ZH_HANS_COMPANION_CAPTURE_TRANSLATIONS: Partial<Record<TranslationK
   'companion.capture.save': '保存',
   'companion.capture.saving': '保存中...',
   'companion.capture.error.inboxUnavailable': '请先同步这台设备，再保存新主题。',
+  'companion.capture.error.targetUnavailable': '这个位置已不可用。请关闭捕获窗口并选择其他位置。',
   'companion.capture.error.saveFailed': '无法保存这个主题。请重试。'
 };

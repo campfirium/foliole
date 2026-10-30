@@ -37,16 +37,17 @@ function useCaptureDraftState(open: boolean, draftScope: string) {
   };
 }
 
-export function useCompanionCaptureDraft(props: {
+interface CaptureDraftProps {
   draftScope: string;
   onSave(text: string): Promise<CompanionCaptureTextSaveResult>;
+  onClipboardCreated?(nodeId: string): void;
   onOpenChange(open: boolean): void;
   open: boolean;
-}) {
-  const {
-    draft, error, isSaving, retryRefresh, attempt, resetDraft, preserveOnClose,
-    setError, setIsSaving, setRetryRefresh, handleDraftChange
-  } = useCaptureDraftState(props.open, props.draftScope);
+}
+
+export function useCompanionCaptureDraft(props: CaptureDraftProps) {
+  const state = useCaptureDraftState(props.open, props.draftScope);
+  const { draft, error, isSaving, retryRefresh, resetDraft, preserveOnClose, handleDraftChange } = state;
   const handleOpenChange = (open: boolean) => {
     if (!open) resetDraft();
     props.onOpenChange(open);
@@ -58,22 +59,45 @@ export function useCompanionCaptureDraft(props: {
     preserveOnClose.current = true;
     props.onOpenChange(false);
   };
-  const handleSave = async () => {
-    if (attempt.current.busy || !draft.trim()) return;
+  const saveText = createCaptureTextSaver(props, state, handleOpenChange);
+  return {
+    draft, error, isSaving, isSaved: Boolean(retryRefresh),
+    canSave: (Boolean(retryRefresh) || draft.trim().length > 0) && !isSaving,
+    handleDraftChange, handleOpenChange, handleSave: () => saveText(draft, false),
+    handleSaveClipboard: (text: string) => saveText(text, true), closeForSystemBack
+  };
+}
+
+function createCaptureTextSaver(props: CaptureDraftProps, state: ReturnType<typeof useCaptureDraftState>,
+  handleOpenChange: (open: boolean) => void) {
+  const { draft, retryRefresh, attempt, preserveOnClose, setError, setIsSaving, setRetryRefresh } = state;
+  return async (text: string, clipboard: boolean) => {
+    if (attempt.current.busy || (!retryRefresh && !text.trim())) return;
     const session = attempt.current.session;
+    const complete = (nodeId: string) => {
+      if (session !== attempt.current.session) return;
+      if (clipboard) {
+        persistCaptureBackDraft(props.draftScope, draft);
+        preserveOnClose.current = true;
+        setRetryRefresh(null);
+        props.onOpenChange(false);
+        props.onClipboardCreated?.(nodeId);
+      } else handleOpenChange(false);
+    };
     attempt.current.busy = true;
     setIsSaving(true);
     setError(null);
     try {
       let result: CompanionCaptureTextSaveResult | null = null;
-      if (retryRefresh) await retryRefresh();
-      else result = await props.onSave(draft);
+      if (retryRefresh) { await retryRefresh(); return; }
+      else result = await props.onSave(text);
       if (session !== attempt.current.session) return;
       if (result && 'error' in result) setError(result.error);
       else if (result?.retryRefresh) {
         const retry = result.retryRefresh;
-        setRetryRefresh(() => retry);
-      } else handleOpenChange(false);
+        const nodeId = result.nodeId;
+        setRetryRefresh(() => async () => { await retry(); complete(nodeId); });
+      } else if (result && 'nodeId' in result) complete(result.nodeId);
     } catch {
       if (session === attempt.current.session && !retryRefresh) setError('save-failed');
     } finally {
@@ -82,10 +106,5 @@ export function useCompanionCaptureDraft(props: {
         setIsSaving(false);
       }
     }
-  };
-  return {
-    draft, error, isSaving, isSaved: Boolean(retryRefresh),
-    canSave: draft.trim().length > 0 && !isSaving,
-    handleDraftChange, handleOpenChange, handleSave, closeForSystemBack
   };
 }

@@ -164,6 +164,7 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
         isReadableArticleImmersive={isReadableArticleImmersive(model)}
         isReviewAnswerRevealed={model.surface.isAnswerRevealed}
         onCaptureSave={model.handleSaveCaptureText}
+        onCaptureClipboardCreated={model.handleOpenCapturedNode}
         onCaptureSheetOpenChange={model.setIsCaptureSheetOpen}
         onDismissReviewTopic={model.surface.handleDismissReviewTopic}
         onGradeReview={model.surface.handleGradeReview}

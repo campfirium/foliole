@@ -9,67 +9,63 @@ import type { CompanionCaptureTextSaveResult } from './companionCaptureTextContr
 
 const clipboard = vi.hoisted(() => ({ readClipboardText: vi.fn() }));
 vi.mock('../shared/platform/textClipboard', () => clipboard);
-
 beforeEach(() => { window.localStorage.clear(); vi.resetAllMocks(); });
-
 function renderSheet() {
   const onSave = vi.fn<(text: string) => Promise<CompanionCaptureTextSaveResult>>(async () => ({ nodeId: 'captured' }));
-  const props = { draftScope: 'clipboard-test', onOpenChange: vi.fn(), onSave, open: true };
+  const props = { draftScope: 'clipboard-test', onOpenChange: vi.fn(), onClipboardCreated: vi.fn(), onSave, open: true };
   return { ...renderWithLocalization(<CompanionCaptureSheet {...props} />), props };
 }
 const paste = () => fireEvent.click(screen.getByRole('button', { name: 'Paste from Clipboard' }));
 const text = () => screen.getByLabelText('Capture text');
 
-it('reads only on request and saves pasted Markdown through the capture save action', async () => {
+it('directly creates clipboard content and opens the created topic without another Save', async () => {
   clipboard.readClipboardText.mockResolvedValue('# Title\n\nText');
   const { props } = renderSheet();
   expect(clipboard.readClipboardText).not.toHaveBeenCalled();
-  expect(screen.getByRole('button', { name: 'Paste from Clipboard' })).toBeEnabled();
   paste();
-  await waitFor(() => expect(text()).toHaveValue('# Title\n\nText'));
-  expect(props.onSave).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(props.onSave).toHaveBeenCalledWith('# Title\n\nText'));
+  await waitFor(() => expect(props.onClipboardCreated).toHaveBeenCalledWith('captured'));
+  expect(props.onOpenChange).toHaveBeenCalledWith(false);
 });
 
-it('keeps edits made during the read, prevents duplicate reads and blocks saving until it settles', async () => {
+it('keeps typed input separate, includes edits during reading in the restored draft and prevents duplicate imports', async () => {
   let resolve!: (value: string) => void;
   clipboard.readClipboardText.mockReturnValue(new Promise<string>(done => { resolve = done; }));
-  renderSheet();
+  const { props, rerender } = renderSheet();
   fireEvent.change(text(), { target: { value: 'Original' } });
-  paste();
-  paste();
+  paste(); paste();
   expect(clipboard.readClipboardText).toHaveBeenCalledTimes(1);
   expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   fireEvent.change(text(), { target: { value: 'Latest' } });
-  await act(async () => resolve('  pasted\ntext  '));
-  expect(text()).toHaveValue('Latest\n  pasted\ntext  ');
-  expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+  await act(async () => resolve('Clipboard'));
+  expect(props.onSave).toHaveBeenCalledExactlyOnceWith('Clipboard');
+  rerender(<CompanionCaptureSheet {...props} open={false} />);
+  rerender(<CompanionCaptureSheet {...props} open />);
+  expect(text()).toHaveValue('Latest');
 });
 
-it.each(['', ' \n\t'])('reports an empty clipboard without changing the draft: %j', async value => {
+it.each(['', ' \n\t'])('reports an empty clipboard without changing the draft or creating anything: %j', async value => {
   clipboard.readClipboardText.mockResolvedValue(value);
-  renderSheet();
+  const { props } = renderSheet();
   fireEvent.change(text(), { target: { value: 'Keep this' } });
   paste();
   expect(await screen.findByRole('alert')).toHaveTextContent('No text found');
   expect(text()).toHaveValue('Keep this');
+  expect(props.onSave).not.toHaveBeenCalled();
 });
 
-it('reports access failure, preserves the draft and allows retry', async () => {
-  clipboard.readClipboardText.mockRejectedValueOnce(new DOMException('Denied', 'NotAllowedError'))
-    .mockResolvedValueOnce('Retry');
-  renderSheet();
-  fireEvent.change(text(), { target: { value: 'Keep' } });
+it('reports access failure and allows a direct import retry', async () => {
+  clipboard.readClipboardText.mockRejectedValueOnce(new DOMException('Denied', 'NotAllowedError')).mockResolvedValueOnce('Retry');
+  const { props } = renderSheet();
   paste();
   expect(await screen.findByRole('alert')).toHaveTextContent('Could not read the clipboard');
-  expect(text()).toHaveValue('Keep');
+  expect(props.onSave).not.toHaveBeenCalled();
   paste();
-  await waitFor(() => expect(text()).toHaveValue('Keep\nRetry'));
-  expect(screen.queryByRole('alert')).toBeNull();
+  await waitFor(() => expect(props.onClipboardCreated).toHaveBeenCalledWith('captured'));
+  expect(props.onSave).toHaveBeenCalledExactlyOnceWith('Retry');
 });
 
-it.each(['cancel', 'system-back'])('ignores late results after %s and reopening', async close => {
+it.each(['cancel', 'system-back'])('ignores late clipboard reads after %s and reopening', async close => {
   let resolve!: (value: string) => void;
   clipboard.readClipboardText.mockReturnValue(new Promise<string>(done => { resolve = done; }));
   const { rerender, props } = renderSheet();
@@ -81,32 +77,49 @@ it.each(['cancel', 'system-back'])('ignores late results after %s and reopening'
   rerender(<CompanionCaptureSheet {...props} open />);
   await act(async () => resolve('Stale text'));
   expect(text()).toHaveValue(close === 'cancel' ? '' : 'Original');
-  expect(screen.getByRole('button', { name: 'Paste from Clipboard' })).toBeEnabled();
+  expect(props.onSave).not.toHaveBeenCalled();
 });
 
-it('retains pasted text after save failure and blocks pasting after a committed save', async () => {
-  clipboard.readClipboardText.mockResolvedValue('Paste');
+it('keeps the window and draft on write failure and retries without mixing the draft', async () => {
+  clipboard.readClipboardText.mockResolvedValue('Clipboard');
   const { props } = renderSheet();
   props.onSave.mockResolvedValueOnce({ error: 'save-failed' });
+  fireEvent.change(text(), { target: { value: 'Draft' } });
   paste();
-  await waitFor(() => expect(text()).toHaveValue('Paste'));
-  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Could not save');
-  expect(text()).toHaveValue('Paste');
-  props.onSave.mockResolvedValueOnce({ nodeId: 'captured', retryRefresh: vi.fn() });
-  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Paste from Clipboard' })).toBeDisabled());
+  expect(text()).toHaveValue('Draft');
+  expect(props.onClipboardCreated).not.toHaveBeenCalled();
+  paste();
+  await waitFor(() => expect(props.onClipboardCreated).toHaveBeenCalledWith('captured'));
+  expect(props.onSave.mock.calls).toEqual([['Clipboard'], ['Clipboard']]);
 });
 
-it('prevents clipboard reads while a save is pending', async () => {
-  let resolve!: (value: CompanionCaptureTextSaveResult) => void;
+it('retries only refresh after a committed import, even with an empty draft', async () => {
+  clipboard.readClipboardText.mockResolvedValue('Clipboard');
   const { props } = renderSheet();
-  props.onSave.mockReturnValue(new Promise(done => { resolve = done; }));
-  fireEvent.change(text(), { target: { value: 'Saving' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-  expect(screen.getByRole('button', { name: 'Paste from Clipboard' })).toBeDisabled();
+  const retry = vi.fn().mockRejectedValueOnce(new Error('Read unavailable')).mockResolvedValueOnce(undefined);
+  props.onSave.mockResolvedValue({ nodeId: 'captured', retryRefresh: retry });
   paste();
-  expect(clipboard.readClipboardText).not.toHaveBeenCalled();
-  await act(async () => resolve({ error: 'save-failed' }));
-  expect(screen.getByRole('button', { name: 'Paste from Clipboard' })).toBeEnabled();
+  expect(await screen.findByRole('alert')).toHaveTextContent('Topic saved');
+  expect(props.onClipboardCreated).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'Paste from Clipboard' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+  await waitFor(() => expect(props.onClipboardCreated).toHaveBeenCalledWith('captured'));
+  expect(props.onSave).toHaveBeenCalledTimes(1);
+});
+
+it('does not navigate when an earlier write completes after cancel and reopening', async () => {
+  let resolve!: (value: CompanionCaptureTextSaveResult) => void;
+  clipboard.readClipboardText.mockResolvedValue('Clipboard');
+  const { props, rerender } = renderSheet();
+  props.onSave.mockReturnValue(new Promise(done => { resolve = done; }));
+  paste();
+  await waitFor(() => expect(props.onSave).toHaveBeenCalledTimes(1));
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  rerender(<CompanionCaptureSheet {...props} open={false} />);
+  rerender(<CompanionCaptureSheet {...props} open />);
+  await act(async () => resolve({ nodeId: 'old-topic' }));
+  expect(props.onClipboardCreated).not.toHaveBeenCalled();
 });

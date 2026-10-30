@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, type UIEvent as ReactUIEvent } from 'react';
+import { useCallback, useEffect, useMemo, type UIEvent as ReactUIEvent } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 
-import { createCompanionCaptureTextSaveHandler } from './companionCaptureTextController';
 import { CompanionCustomCssProvider } from './CompanionCustomCssProvider';
 import { CompanionDraftProvider } from './CompanionDraftProvider';
 import type { CompanionTabAction } from './CompanionFloatingBars';
@@ -16,6 +15,7 @@ import { CompanionSyncProtocolNotice } from './CompanionSyncProtocolNotice';
 import { useCompanionAndroidBack } from './useCompanionAndroidBack';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionBrowseSortState } from './useCompanionBrowseSortState';
+import { useCompanionCaptureController } from './useCompanionCaptureController';
 import { useCompanionDirectorySelectionState } from './useCompanionDirectorySelectionState';
 import { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
 import { useCompanionReviewTraining } from './useCompanionReviewTraining';
@@ -87,13 +87,11 @@ function buildCompanionShellModel(args: {
   directoryState: ReturnType<typeof useCompanionDirectorySelectionState>;
   floatingBar: ReturnType<typeof useFloatingBarVisibility>;
   handleContainerScroll: ReturnType<typeof useCompanionShellScrollHandler>;
-  handleSaveCaptureText: ReturnType<typeof createCompanionCaptureTextSaveHandler>;
+  capture: ReturnType<typeof useCompanionCaptureController>;
   isBrowseDirectoryOpen: boolean;
-  isCaptureSheetOpen: boolean;
   isOnlyReviewOpen: boolean;
   reviewChrome: ReturnType<typeof useCompanionReviewChrome>;
   searchArticle: ReturnType<typeof useCompanionSearchNavigation>;
-  setIsCaptureSheetOpen(open: boolean): void;
   setSettingsPage: ReturnType<typeof useCompanionSyncSettingsPage>['setSettingsPage'];
   settingsPage: ReturnType<typeof useCompanionSyncSettingsPage>['settingsPage'];
   surface: ReturnType<typeof useCompanionArticleSurface>;
@@ -115,11 +113,10 @@ function buildCompanionShellModel(args: {
     handleOpenSearchExternalDocument: args.searchArticle.openExternalDocument,
     handleOpenSearchPdf: args.searchArticle.openPdf,
     handleOpenSearchTopic: args.searchArticle.openTopic,
-    handleSaveCaptureText: args.handleSaveCaptureText,
+    ...args.capture,
     handleSecondaryDestination: args.actions.secondaryDestinations.handleSecondaryDestination,
     isBottomBarDisabled: args.reviewChrome.isBottomBarDisabled,
     isBrowseDirectoryOpen: args.isBrowseDirectoryOpen,
-    isCaptureSheetOpen: args.isCaptureSheetOpen,
     isOnlyReviewOpen: args.isOnlyReviewOpen,
     isSearchArticleOpen: args.searchArticle.isTopicOpen,
     isNavigationVisible: args.workspaceSync.isWorkspaceSyncStateReady && args.reviewChrome.isNavigationVisible,
@@ -128,7 +125,6 @@ function buildCompanionShellModel(args: {
     searchExternalDocument: args.searchArticle.externalDocument,
     searchPdfResult: args.searchArticle.pdfResult,
     searchMatch: args.searchArticle.searchMatch,
-    setIsCaptureSheetOpen: args.setIsCaptureSheetOpen,
     setBrowseSortDirection: args.browseSort.setBrowseSortDirection,
     setBrowseSortKey: args.browseSort.setBrowseSortKey,
     setDirectorySelection: args.directoryState.setDirectorySelection,
@@ -144,7 +140,6 @@ function useCompanionShellModel(workspaceSync: ReturnType<typeof useCompanionWor
   const floatingBar = useFloatingBarVisibility('companion-bottom-tabs');
   const browseSort = useCompanionBrowseSortState();
   const [isBrowseDirectoryOpen, setIsBrowseDirectoryOpen] = useCompanionNavigationField('isBrowseDirectoryOpen', false);
-  const [isCaptureSheetOpen, setIsCaptureSheetOpen] = useState(false);
   const [isOnlyReviewOpen, setIsOnlyReviewOpen] = useCompanionNavigationField('isOnlyReviewOpen', false);
   const surface = useSortedArticleSurface(workspaceSync, floatingBar, browseSort, isOnlyReviewOpen);
   const companionTabs = useCompanionTabsConfig();
@@ -157,7 +152,9 @@ function useCompanionShellModel(workspaceSync: ReturnType<typeof useCompanionWor
   const directoryState = useCompanionDirectorySelectionState(isBrowseDirectoryOpen);
   const externalDirectory = useCompanionExternalDirectory();
   const handleContainerScroll = useCompanionShellScrollHandler(floatingBar, surface);
-  const handleSaveCaptureText = useMemo(() => createCompanionCaptureTextSaveHandler(workspaceSync), [workspaceSync]);
+  const capture = useCompanionCaptureController({
+    directorySelection: directoryState.directorySelection, isBrowseDirectoryOpen, setIsBrowseDirectoryOpen, surface, workspaceSync
+  });
   const actions = useCompanionShellActions({
     browseSortDirection: browseSort.browseSortDirection,
     browseSortKey: browseSort.browseSortKey,
@@ -168,7 +165,7 @@ function useCompanionShellModel(workspaceSync: ReturnType<typeof useCompanionWor
     setBrowseSortDirection: browseSort.setBrowseSortDirection,
     setBrowseSortKey: browseSort.setBrowseSortKey,
     setIsBrowseDirectoryOpen,
-    setIsCaptureSheetOpen,
+    setIsCaptureSheetOpen: capture.setIsCaptureSheetOpen,
     setIsOnlyReviewOpen,
     setSettingsPage,
     settingsPage,
@@ -184,13 +181,11 @@ function useCompanionShellModel(workspaceSync: ReturnType<typeof useCompanionWor
     directoryState,
     floatingBar,
     handleContainerScroll,
-    handleSaveCaptureText,
+    capture,
     isBrowseDirectoryOpen,
-    isCaptureSheetOpen,
     isOnlyReviewOpen,
     reviewChrome,
     searchArticle,
-    setIsCaptureSheetOpen,
     setSettingsPage,
     settingsPage,
     surface,

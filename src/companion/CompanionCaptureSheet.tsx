@@ -96,19 +96,21 @@ function CaptureTextBox(props: {
 function resolveCaptureErrorLabel(error: CompanionCaptureTextSaveError | null, t: ReturnType<typeof useTranslation>) {
   if (!error) return null;
   if (error === 'inbox-unavailable') return t('companion.capture.error.inboxUnavailable');
+  if (error === 'target-unavailable') return t('companion.capture.error.targetUnavailable');
   return t('companion.capture.error.saveFailed');
 }
 
 export function CompanionCaptureSheet(props: {
   draftScope: string;
   onSave(text: string): Promise<CompanionCaptureTextSaveResult>;
+  onClipboardCreated?(nodeId: string): void;
   onOpenChange(open: boolean): void;
   open: boolean;
 }) {
   const t = useTranslation();
   const state = useCompanionCaptureDraft(props);
   const clipboard = useCompanionCaptureClipboard({
-    ...props, draft: state.draft, disabled: state.isSaving || state.isSaved, onChange: state.handleDraftChange
+    ...props, disabled: state.isSaving || state.isSaved, onImport: state.handleSaveClipboard
   });
   const inputRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
