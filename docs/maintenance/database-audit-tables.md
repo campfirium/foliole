@@ -9,7 +9,7 @@ T284 首轮，2026-10-01。实际离线库 schema 89：54 表；当前源码 fre
 | `attachment_blobs` | 旧附件 blob 登记；旧资源事实 | `electron/attachments/canonicalAttachmentMigration.ts:84` | `lib/core/database/attachmentManifestRetirement.ts:15`、`electron/attachments/canonicalAttachmentMigration.ts:110` | attachment_id, content_hash；当前 fresh 已退役；不可直接清旧活库 |
 | `attachment_receive_checkpoints` | 断点/依赖 attachment_receive_checkpoints；可恢复传输状态 | `lib/core/sync/attachmentReceiveCheckpoint.ts:12` | `lib/core/sync/attachmentReceiveCheckpoint.ts:10` | content_hash；按对应接收生命周期；dependency rows/transfers 和 known claims 有消费清理；retired epoch/view 防重放，未确认一般 TTL |
 | `attachments` | 旧附件登记；旧资源事实 | `lib/core/database/attachmentManifestRetirementMigration.ts:16`、`lib/core/database/attachmentIdMigration.ts:30` | `lib/core/database/nodeResourceReferencesMigration.ts:22`、`lib/core/database/attachmentManifestRetirementMigration.ts:9` | 见逐表 key/FK JSON；当前 fresh 已退役；真实库迁移验证另项 |
-| `content_blob_data` | 正文 blob 实体字节；资源事实 | `lib/core/database/contentBodyBlobs.ts:21`、`lib/core/database/androidCompanionMutationDefinitions.ts:58` | `lib/core/database/nodeBodyResolution.ts:50`、`lib/core/database/workspaceSearchIndex.ts:34` | hash；必须核对版本/远程/hold owner；直接 owner 不是全集 |
+| `content_blob_data` | 正文 blob 实体字节；资源事实 | `lib/core/database/contentBodyBlobs.ts:21`、`lib/core/database/androidCompanionMutationDefinitions.ts:58` | `lib/core/database/textBodyBlobCollection.ts`、`lib/core/database/contentBodyBlobs.ts` | hash；当前节点正文直接属于 nodes.content；版本/远程/hold owner 另核对，直接 owner 不是全集 |
 | `content_blobs` | 正文/资源 manifest；资源事实 | `lib/core/database/contentBodyBlobs.ts:13`、`lib/core/database/androidCompanionMutationDefinitions.ts:54` | `lib/core/database/androidCompanionMutationDefinitions.ts:101`、`lib/core/database/workspaceSnapshot.ts:172` | hash；必须核对完整 owner 图；本轮不决定回收 |
 | `data_migration_state` | 已执行数据迁移标记；维护事实 | `lib/core/database/dataMigrationState.ts:35` | `lib/core/database/dataMigrationState.ts:25` | migration_id, run_id；无一般 TTL，防重放 |
 | `desktop_sources` | 桌面来源登记；来源事实 | `lib/core/database/numberedMigrationWatchedSourceRecovery.ts:89`、`lib/core/database/numberedMigrationReadwiseHostSettings.ts:87` | `lib/core/database/numberedMigrationWatchedSourceRecovery.ts:74`、`lib/core/database/numberedMigrationReadwiseHostSettings.ts:66` | 见逐表 key/FK JSON；显式来源移除/切换 |
@@ -99,3 +99,51 @@ T284 首轮，2026-10-01。实际离线库 schema 89：54 表；当前源码 fre
 | external：`external_search_metadata` | 外部索引策略与重建状态；派生 | `externalSearchSidecar.ts` 读写 | 随正式重建更新 |
 
 首轮唯一可解析正式离线库目录只有主库，未取得真实 index/external 库，所以这两类实际空间、增长和孤立记录未测，不能记成 0。资源主体包括正文 blob、PDF 文本、节点 JSON resource_references 和资料库资源文件；本任务仅核对 SQLite 元数据，不遍历/清理资源原件。节点版本 snapshot_json/hold 的间接正文 owner 需专项语义核对。Companion 的宿主本地表与数据未取得，本轮结论只覆盖 Mac 桌面；通用统计入口可用于将来授权导出的移动库副本。
+
+## 2026-10-30 发布前增量复核
+
+T673：真实主库快照 schema 183，共98表；index 14表、external 8表，三库完整性通过、外键违反0。每库独立WAL只读快照，不声称跨库同事务。相对首轮表单补齐以下39个当前表；上表其余存续表继续沿用已有语义，旧表保留为历史，不表示当前仍存在。当前 fresh/upgrade 的执行证据单独由升级演练提供，不由本统计推定。
+
+| 表 | 用途 / 属性 | 写入者依据 | 读取者依据 | 引用 / 退出条件 |
+| --- | --- | --- | --- | --- |
+| `attachment_parse_queue` | 待解析引用工作；可重建队列 | `lib/core/database/attachmentDemandSchema.ts` | `lib/core/sync/attachmentDemandPreparation.ts` | article_id；解析/节点退出后消费，不因观察未完成累计清理日数 |
+| `attachment_pending` | 已解析待下载引用；可恢复需求 | `lib/core/sync/attachmentDemandPreparation.ts` | `lib/core/sync/attachmentDemandQueue.ts` | article_id, storage_key；接收完成或重新解析时移除，非资源实体 |
+| `attachment_reference_cache` | 正文引用解析结果；派生缓存 | `lib/core/attachments/attachmentReferenceCache.ts` | `lib/core/attachments/attachmentReferenceSnapshot.ts` | node_id FK cascade；body_hash和resources校验后复用，节点退出随删 |
+| `daily_flow_state` | 本机每日清单、位置与幂等回执；持久本机状态 | `lib/core/flow/dailyFlowSqliteStore.ts` | `lib/core/flow/dailyFlowStorage.ts` | day_key/op_id/node_id；跨日或显式重建清单，操作回执保重试和撤销；不传播远端游标 |
+| `daily_flow_entries` | 本机每日清单、位置与幂等回执；持久本机状态 | `lib/core/flow/dailyFlowSqliteStore.ts` | `lib/core/flow/dailyFlowStorage.ts` | day_key/op_id/node_id；跨日或显式重建清单，操作回执保重试和撤销；不传播远端游标 |
+| `daily_flow_operations` | 本机每日清单、位置与幂等回执；持久本机状态 | `lib/core/flow/dailyFlowSqliteStore.ts` | `lib/core/flow/dailyFlowStorage.ts` | day_key/op_id/node_id；跨日或显式重建清单，操作回执保重试和撤销；不传播远端游标 |
+| `daily_flow_sync_facts` | 学习操作与历史清单事实；不可按年龄随删 | `lib/core/flow/dailyFlowSyncWrites.ts` | `lib/core/flow/dailyFlowLocalApplicationMigration.ts` | id/root/day/parent；事实与本机清单不同；不添加一般TTL |
+| `daily_flow_sync_projection` | 已应用学习事实及投影头；派生进度 | `lib/core/flow/dailyFlowProjectionFacts.ts` | `lib/core/flow/dailyFlowSyncWrites.ts` | 当前投影重建时替换，保留源学习事实 |
+| `daily_flow_projection_facts` | 已应用学习事实及投影头；派生进度 | `lib/core/flow/dailyFlowProjectionFacts.ts` | `lib/core/flow/dailyFlowSyncWrites.ts` | 当前投影重建时替换，保留源学习事实 |
+| `daily_flow_fact_rows` | 历史清单关系行与完整性标志；迁移/事实载体 | `lib/core/database/dailyFlowTableMigration.ts` | `lib/core/sync/dailyFlowTableRead.ts` | fact/list FK cascade；当前不传远端每日清单，旧事实保迁移，不按node缺失清除 |
+| `daily_flow_lists` | 历史清单关系行与完整性标志；迁移/事实载体 | `lib/core/database/dailyFlowTableMigration.ts` | `lib/core/sync/dailyFlowTableRead.ts` | fact/list FK cascade；当前不传远端每日清单，旧事实保迁移，不按node缺失清除 |
+| `daily_flow_local_operation_rows` | 本日学习操作前态及基线；本机回放状态 | `lib/core/flow/dailyFlowSyncWrites.ts` | `lib/core/flow/dailyFlowLocalApplicationMigration.ts` | day_key；新学习日清理旧本机回放行，不删除原始评分事实 |
+| `daily_flow_local_operation_state` | 本日学习操作前态及基线；本机回放状态 | `lib/core/flow/dailyFlowSyncWrites.ts` | `lib/core/flow/dailyFlowLocalApplicationMigration.ts` | day_key；新学习日清理旧本机回放行，不删除原始评分事实 |
+| `foreground_daily_time` | 前台时长按来源日累计及覆盖起点；原始统计事实 | `lib/core/database/foregroundTimeStore.ts` | `lib/core/database/foregroundTimeHistory.ts` | source/day；恢复有显式替换合同，不因节点退出丢时长，无通用TTL |
+| `foreground_time_coverage` | 前台时长按来源日累计及覆盖起点；原始统计事实 | `lib/core/database/foregroundTimeStore.ts` | `lib/core/database/foregroundTimeHistory.ts` | source/day；恢复有显式替换合同，不因节点退出丢时长，无通用TTL |
+| `framed_sync_inventory` | 同步对象、版本及子事实投影；可重建清单 | `lib/core/database/framedSyncInventorySchema.ts` | `lib/core/sync/framedSyncInventory.ts` | 触发器随对象/版本/事实更新；删除退役映射，不能代替原始事实 |
+| `framed_sync_version_summary` | 同步对象、版本及子事实投影；可重建清单 | `lib/core/database/framedSyncInventorySchema.ts` | `lib/core/sync/framedSyncInventory.ts` | 触发器随对象/版本/事实更新；删除退役映射，不能代替原始事实 |
+| `framed_sync_fact_summary` | 同步对象、版本及子事实投影；可重建清单 | `lib/core/database/framedSyncInventorySchema.ts` | `lib/core/sync/framedSyncInventory.ts` | 触发器随对象/版本/事实更新；删除退役映射，不能代替原始事实 |
+| `framed_sync_node_digest` | 对象历史比较摘要；可重建投影 | `lib/core/database/framedSyncDigestSchema.ts` | `lib/core/sync/framedSyncInventory.ts` | 对象投影变化驱动；不能将摘要相等扩成删除事实授权 |
+| `framed_sync_resource_availability` | 资源可用性；可重建投影 | `lib/core/database/framedSyncResourceAvailability.ts` | `lib/core/sync/framedSyncInventory.ts` | hash；实体/manifest变化更新，不是资源实体或唯一owner |
+| `legacy_body_migration_progress` | 正文迁移游标与保护原因；可恢复进度/安全状态 | `lib/core/database/legacyBodyMigrationSchema.ts` | `lib/core/database/legacyBodyMigrationSchema.ts` | migration/object；仅对应迁移阶段消费，不按时间清理；一般TTL未知 |
+| `legacy_body_migration_protections` | 正文迁移游标与保护原因；可恢复进度/安全状态 | `lib/core/database/legacyBodyMigrationSchema.ts` | `lib/core/database/legacyBodyMigrationSchema.ts` | migration/object；仅对应迁移阶段消费，不按时间清理；一般TTL未知 |
+| `parent_child_order_members` | 直属孩子反向索引；派生关系 | `lib/core/database/parentChildOrderMembers.ts` | `lib/core/database/parentChildOrder.ts` | parent_child_order触发器同步增删；全量重建只在迁移，不另留全局双写事实 |
+| `parent_order_sources` | 各作者顺序事实；持久合并输入 | `lib/core/database/currentParentOrderStore.ts` | `lib/core/database/currentParentOrderSchema.ts` | parent/author/counter；恢复epoch旋转保旧作者事实，不按年龄清理 |
+| `parent_order_writer` | 当前设备与资料绑定的作者身份；宿主事实 | `lib/core/database/parentOrderWriter.ts` | `lib/core/database/parentOrderWriter.ts` | singleton binding/source_epoch；恢复轮换作者，不能沿用旧epoch写入 |
+| `parent_order_projection_pending` | 受影响父级的重算队列；派生工作 | `lib/core/database/currentParentOrderSchema.ts` | `lib/core/database/currentParentOrderStore.ts` | parent_id；节点结构变更入队，重算后消费 |
+| `pdf_text_artifact` | PDF提取版本到文本资源映射；派生定位 | `lib/core/sync/pdfTextArtifact.ts` | `lib/core/sync/pdfTextArtifact.ts` | pdf_hash/extractor_version；导入核对hash/连续页后事务替换，恢复重置；一般TTL未知 |
+| `stored_import_locators` | 导入来源到现存节点的查找索引；派生关系 | `lib/core/database/storedImportLocatorSchema.ts` | `lib/core/database/storedSourceSearch.ts` | source/node；来源与节点trigger更新，节点永久删除后移除 |
+| `stored_source_search` | 外部与已移除来源FTS；可重建索引 | `lib/core/database/storedSourceSearchSchema.ts` | `lib/core/database/storedSourceSearch.ts` | 来源变动触发更新；源不存在或重建时退出，不是用户原始正文 |
+| `stored_source_search_config` | stored_source_search的FTS5内部shadow；派生存储 | `lib/core/database/storedSourceSearchSchema.ts` | `lib/core/database/storedSourceSearch.ts` | SQLite随虚表管理；禁止单独删除shadow或重复汇总虚表与shadow空间 |
+| `stored_source_search_content` | stored_source_search的FTS5内部shadow；派生存储 | `lib/core/database/storedSourceSearchSchema.ts` | `lib/core/database/storedSourceSearch.ts` | SQLite随虚表管理；禁止单独删除shadow或重复汇总虚表与shadow空间 |
+| `stored_source_search_data` | stored_source_search的FTS5内部shadow；派生存储 | `lib/core/database/storedSourceSearchSchema.ts` | `lib/core/database/storedSourceSearch.ts` | SQLite随虚表管理；禁止单独删除shadow或重复汇总虚表与shadow空间 |
+| `stored_source_search_docsize` | stored_source_search的FTS5内部shadow；派生存储 | `lib/core/database/storedSourceSearchSchema.ts` | `lib/core/database/storedSourceSearch.ts` | SQLite随虚表管理；禁止单独删除shadow或重复汇总虚表与shadow空间 |
+| `stored_source_search_idx` | stored_source_search的FTS5内部shadow；派生存储 | `lib/core/database/storedSourceSearchSchema.ts` | `lib/core/database/storedSourceSearch.ts` | SQLite随虚表管理；禁止单独删除shadow或重复汇总虚表与shadow空间 |
+| `sync_group_metadata` | 覆盖进度、采用状态、epoch与coverage；组控制事实 | `lib/core/sync/syncGroupLocalAdoption.ts` | `lib/core/sync/syncGroupCoverageStore.ts` | 每key有各自完成/重置合同；overwrite成功移除进度，不设整表TTL |
+| `sync_node_child_owners` | 子同步对象到节点的归属索引；可重建owner关系 | `lib/core/sync/framedSyncNodeChildFact.ts` | `lib/core/sync/framedSyncInventory.ts` | object_type/id；墓碑/历史回收才退出，节点暂缺不等于可删 |
+| `topic_daily_count_entries` | 按日唯一阅读事实、覆盖起点及聚合；持久统计 | `lib/core/database/reviewDailyCounts.ts` | `lib/core/database/reviewCalendarHistory.ts` | day/node；entries驱动counts，节点退出仍保历史统计，不按missingNode删历史 |
+| `topic_daily_count_coverage` | 按日唯一阅读事实、覆盖起点及聚合；持久统计 | `lib/core/database/reviewDailyCounts.ts` | `lib/core/database/reviewCalendarHistory.ts` | day/node；entries驱动counts，节点退出仍保历史统计，不按missingNode删历史 |
+| `topic_daily_counts` | 按日唯一阅读事实、覆盖起点及聚合；持久统计 | `lib/core/database/reviewDailyCounts.ts` | `lib/core/database/reviewCalendarHistory.ts` | day/node；entries驱动counts，节点退出仍保历史统计，不按missingNode删历史 |
+
+本轮fresh与公开schema46夹具经当前生产迁移后均为schema183、97表、完整性ok、外键0；真实库独有`source_ownership_cutover`历史切换标记。仅证明上述样本的统计和共享schema迁移可读，完整恢复及业务事实由升级演练另证。统计及主线程实测使用的本轮数据库快照已删除，保留脱敏JSON和探针；正式库未写入。
