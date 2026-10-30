@@ -12,7 +12,13 @@ vi.mock('node:child_process', () => ({ execFile: (_command, _args, _options, cal
 vi.mock('../android/macos-sync-group-desktop-session.mjs', () => ({
   openMacosSyncGroupDesktopSession: async () => host.session,
   waitForMacosDeviceRequest: async () => ({ request_id: 'request' }),
-  waitForMacosAutomaticRun: async () => { throw new Error('Anchor must not poll its members'); }
+  waitForMacosAutomaticRun: async (session, previous) => {
+    const run = await session.loadSyncTriggerResult();
+    if (run?.run_id === previous || run?.reason !== 'automatic' || run?.status !== 'completed') {
+      throw new Error('No new completed automatic round after restart');
+    }
+    return run;
+  }
 }));
 vi.mock('../sync-group/multi-device-sync-action-executor.mjs', () => ({ createActionExecutor: () => vi.fn() }));
 vi.mock('../sync-group/multi-device-sync-windows-provider.mjs', () => ({
@@ -57,7 +63,8 @@ function currentHosts() {
     finish: async () => ({ evidenceRef: '/windows/receipt.json', receipt: {
       resultStatus: 'success', localDevicePersisted: true,
       automaticFactId: 'C1', journeyFactId: 'retired-C', localDeviceIdentityKey: 'windows',
-      runs: { automaticBeforeRestart: { reason: 'automatic', status: 'completed' } }
+      runs: { automaticBeforeRestart: { run_id: 'win-before', reason: 'automatic', status: 'completed' },
+        automaticAfterRestart: { run_id: 'win-after', reason: 'automatic', status: 'completed' } }
     } })
   };
 }
@@ -89,7 +96,7 @@ it('reads the completion receipt through the native database owner during synchr
       owned = true;
       try { return await action(); } finally { owned = false; }
     } },
-    '/runtime/sync/desktopSyncCoordinator.js': { loadDesktopSyncTriggerResult: () => {
+    '/runtime/sync/desktopSyncCoordinator.js': { loadActiveDesktopSyncRun: () => null, loadDesktopSyncTriggerResult: () => {
       if (!owned) throw new TypeError('This database connection is busy executing a query');
       return receipt;
     } }
@@ -100,4 +107,52 @@ it('reads the completion receipt through the native database owner during synchr
   const app = { evaluate: action => action({ app: { getAppPath: () => '/runtime' } }) };
   await expect(loadSyncTriggerResult(app)).resolves.toEqual(receipt);
   expect(owned).toBe(false);
+});
+
+const automatic = run_id => ({ run_id, reason: 'automatic', status: 'completed' });
+
+it('accepts Mac-owned automatic rounds and keeps Windows available through the Mac restart', async () => {
+  root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-mac-owned-'));
+  currentHosts();
+  host.session.loadSyncTriggerResult = vi.fn().mockResolvedValueOnce(automatic('mac-before'))
+    .mockResolvedValueOnce(automatic('mac-before-close')).mockResolvedValue(automatic('mac-after'));
+  const finish = host.provider.finish;
+  host.provider.finish = async () => {
+    const result = await finish();
+    result.receipt.runs = { automaticBeforeRestart: null, automaticAfterRestart: null };
+    return result;
+  };
+  const result = await runMacosWindowsSinglePrincipalSyncGroup({ repoRoot: root });
+  expect(result.receipt.runs.macos).toMatchObject({
+    automaticBeforeRestart: automatic('mac-before'), automaticAfterRestart: automatic('mac-after')
+  });
+  expect(host.provider.release).toHaveBeenCalledTimes(2);
+});
+
+it('rejects converged facts without any completed automatic round', async () => {
+  root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-no-automatic-'));
+  currentHosts();
+  const finish = host.provider.finish;
+  host.provider.finish = async () => {
+    const result = await finish();
+    result.receipt.runs = { automaticBeforeRestart: null, automaticAfterRestart: null };
+    return result;
+  };
+  await expect(runMacosWindowsSinglePrincipalSyncGroup({ repoRoot: root }))
+    .rejects.toThrow('completed automatic');
+});
+
+it.each(['manual', 'stale'])('rejects %s evidence in place of a new post-restart automatic round', async kind => {
+  root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-invalid-restart-'));
+  currentHosts();
+  const finish = host.provider.finish;
+  host.provider.finish = async () => {
+    const result = await finish();
+    result.receipt.runs.automaticAfterRestart = kind === 'manual'
+      ? { run_id: 'manual-after', reason: 'manual', status: 'completed' }
+      : result.receipt.runs.automaticBeforeRestart;
+    return result;
+  };
+  await expect(runMacosWindowsSinglePrincipalSyncGroup({ repoRoot: root }))
+    .rejects.toThrow('automaticAfterRestart');
 });

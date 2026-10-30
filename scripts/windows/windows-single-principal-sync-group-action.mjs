@@ -11,7 +11,7 @@ import {
 import { closeWindowsSyncGroupSession } from './windows-sync-group-session-close.mjs';
 import { waitForWindowsSyncGroupProviderRelease } from './windows-sync-group-provider-release.mjs';
 import {
-  assertJoinedWindowsGroup
+  assertJoinedWindowsGroup, completedAutomatic
 } from './windows-single-principal-sync-group-contract.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import { forkDesktopSyncConflict } from '../desktop/sync-group-conflict-action.mjs';
@@ -36,7 +36,7 @@ async function waitForJourneyOriginCount(page, origin, count, timeoutMs = 2 * 60
 }
 
 export async function loadSyncTriggerResult(app) {
-  return app.evaluate(({ app: electronApp }) => {
+  return app.evaluate(async ({ app: electronApp }) => {
     const pathApi = process.getBuiltinModule('node:path');
     const moduleApi = process.getBuiltinModule('node:module');
     if (!pathApi || !moduleApi) throw new Error('Node built-ins unavailable.');
@@ -44,9 +44,11 @@ export async function loadSyncTriggerResult(app) {
     const { runWithDatabaseConnectionOwner } = loadModule(pathApi.join(
       electronApp.getAppPath(), 'database', 'connection.js'
     ));
-    return runWithDatabaseConnectionOwner(() => loadModule(pathApi.join(
+    const coordinator = loadModule(pathApi.join(
       electronApp.getAppPath(), 'sync', 'desktopSyncCoordinator.js'
-    )).loadDesktopSyncTriggerResult());
+    ));
+    await coordinator.loadActiveDesktopSyncRun()?.catch(() => undefined);
+    return runWithDatabaseConnectionOwner(() => coordinator.loadDesktopSyncTriggerResult());
   });
 }
 
@@ -130,15 +132,14 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     if (joinedSnapshot.nodesById?.[localFact.factId]) {
       throw new Error('Windows retained its replaced pre-join fact after Use Group.');
     }
-    const beforeAutomatic = initialResult;
     automaticFact = await createDesktopSyncGroupJourneyFact({
       device: 'C', evidenceRoot: path.join(options.evidenceRoot, 'windows-automatic-fact'),
       session: { invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args) }
     });
-    automaticResult = await waitForAutomaticSync(session, beforeAutomatic?.run_id);
-    report(options.reportProgress, 'automatic-converged');
     await waitForJourneyOrigins(session.page, ['A', 'C']);
     await waitForJourneyOriginCount(session.page, 'A', 2);
+    automaticResult = completedAutomatic(await loadSyncTriggerResult(session.app));
+    report(options.reportProgress, 'automatic-converged');
     const conflictNodeId = await conflictSeed(session.page);
     await invokeWindowsSyncGroupCommand(session.page, 'pause_companion_sync');
     await forkDesktopSyncConflict({ label: 'windows', nodeId: conflictNodeId,
@@ -167,13 +168,18 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
       session.page, 'load_sync_group_overview'
     ), candidate.group_id);
     const beforeRepeat = await waitForJourneyOrigins(session.page, ['A', 'C']);
-    const restartedAutomatic = await waitForAutomaticSync(session, automaticResult?.run_id);
+    const restartedAutomatic = automaticResult
+      ? await waitForAutomaticSync(session, automaticResult.run_id)
+      : completedAutomatic(await loadSyncTriggerResult(session.app));
     manualAfterRestart = await invokeWindowsSyncGroupCommand(session.page, 'sync_companion_now');
     const afterRepeat = await waitForJourneyOrigins(session.page, ['A', 'C']);
     if (Object.keys(afterRepeat.nodesById).length !== Object.keys(beforeRepeat.nodesById).length) {
       throw new Error('Repeated Windows sync was not idempotent.');
     }
     report(options.reportProgress, 'restarted');
+    await waitForWindowsSyncGroupProviderRelease({
+      action: 'single-principal-sync-group', repoRoot: options.paths.repoRoot
+    });
     automaticResult = { afterRestart: restartedAutomatic, beforeRestart: automaticResult };
   } finally { await closeWindowsSyncGroupSession(session); }
   const manifestPath = path.join(options.evidenceRoot,
@@ -186,8 +192,8 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
     localDevicePersisted: firstGroup.local_device_identity_key
       === restartedGroup.local_device_identity_key,
     automaticFactId: automaticFact.factId,
-    automaticRunIds: { afterRestart: automaticResult.afterRestart.run_id,
-      beforeRestart: automaticResult.beforeRestart.run_id },
+    automaticRunIds: { afterRestart: automaticResult.afterRestart?.run_id ?? null,
+      beforeRestart: automaticResult.beforeRestart?.run_id ?? null },
     runs: { automaticAfterRestart: automaticResult.afterRestart,
       automaticBeforeRestart: automaticResult.beforeRestart, initial: initialResult,
       manualAfterRestart, manualBeforeRestart },

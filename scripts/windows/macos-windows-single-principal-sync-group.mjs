@@ -12,7 +12,7 @@ import {
   buildT152TwoDeviceProof, writeT152ResourceLocator
 } from '../acceptance/t152-two-device-proof-builder.mjs';
 import {
-  openMacosSyncGroupDesktopSession, waitForMacosDeviceRequest
+  openMacosSyncGroupDesktopSession, waitForMacosDeviceRequest, waitForMacosAutomaticRun
 } from '../android/macos-sync-group-desktop-session.mjs';
 import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channel.mjs';
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
@@ -21,6 +21,7 @@ import {
 } from '../desktop/sync-group-conflict-action.mjs';
 import { createActionExecutor } from '../sync-group/multi-device-sync-action-executor.mjs';
 import { startWindowsSyncGroupProvider } from '../sync-group/multi-device-sync-windows-provider.mjs';
+import { assertAutomaticCoverage, completedAutomatic } from './windows-single-principal-sync-group-contract.mjs';
 import { runMacosJoinsWindowsSyncGroup } from './macos-joins-windows-sync-group.mjs';
 
 const execute = promisify(execFile);
@@ -81,10 +82,10 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     }
     const accepted = await session.accept(request.request_id);
     await waitForOriginCount(session, 'C', 1);
-    const macosAutomaticBeforeRestart = null;
     const macosAutomaticFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'macos-automatic-fact'), session });
     await windowsProvider.waitForProgress('conflict-fork-ready');
+    const macosAutomaticBeforeRestart = completedAutomatic(await session.loadSyncTriggerResult());
     await session.invoke('pause_companion_sync');
     await forkDesktopSyncConflict({ label: 'macos', nodeId: conflictSeed.nodeId, session });
     await session.invoke('resume_companion_sync');
@@ -102,6 +103,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     });
     const factIds = Object.values(automaticSnapshot.nodesById).filter(({ title }) =>
       /^Multi-device sync [AC] fact/u.test(String(title))).map(({ id }) => id).sort();
+    const beforeMacosRestart = await session.loadSyncTriggerResult();
     await session.close();
     session = await openMacosSyncGroupDesktopSession({ env: macosAcceptanceEnv(),
       libraryHome: path.join(sharedRoot, 'macos-library'), repoRoot,
@@ -110,7 +112,8 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     if (restarted.sync_group?.group_id !== initial.sync_group.group_id) {
       throw new Error('Mac did not restore its two-Device Sync Group.');
     }
-    const macosAutomaticAfterRestart = null;
+    const macosAutomaticAfterRestart = macosAutomaticBeforeRestart
+      ? await waitForMacosAutomaticRun(session, beforeMacosRestart?.run_id) : null;
     const macosManualAfterRestart = await session.invoke('sync_companion_now');
     const repeated = await session.invoke('load_workspace_list_snapshot', {
       includePdfOpenings: false
@@ -120,6 +123,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
     if (JSON.stringify(repeatedIds) !== JSON.stringify(factIds)) {
       throw new Error('Repeated Mac sync was not idempotent.');
     }
+    await windowsProvider.release('consumer_complete');
     const windows = await windowsProvider.finish(); windowsSettled = true;
     const windowsReceipt = windows.receipt;
     const windowsEvidenceRoot = path.dirname(windows.evidenceRef);
@@ -147,6 +151,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
       conflict,
       resultStatus: 'success', schemaVersion: 4, sharedRoot,
       windowsEvidenceRoot };
+    assertAutomaticCoverage(receipt.runs);
     const receiptPath = path.join(evidenceRoot, 'receipt.json');
     fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
     if (process.env.FOLIOLE_T152_CELL_ID) {
@@ -159,7 +164,7 @@ export async function runMacosWindowsSinglePrincipalSyncGroup({
         identity: receipt.deviceIdentities.macos, library: macosLibrary
       });
       writeT152TwoDeviceCellReceipt(buildT152TwoDeviceProof({
-        automaticBeforeRestartHost: 'windows',
+        automaticBeforeRestartHost: macosAutomaticBeforeRestart ? 'macos' : 'windows',
         builds: { macos: acceptedTip, windows: windowsReceipt.buildIdentity },
         business: { idempotent: true, twoWayUnion: true }, conflict,
         devices: { macos: { identity: receipt.deviceIdentities.macos },
