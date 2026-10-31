@@ -1,14 +1,11 @@
-import { isNodeTitleTruncated, normalizeNodeTitle } from '../../lib/core/nodes/nodeTitleBudget';
-import {
-  replaceUniqueArticleTitleHeading
-} from '../features/nodes/model/articleTitleHeading';
-import { UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
+import { isNodeTitleTruncated } from '../../lib/core/nodes/nodeTitleBudget';
 import { resolveNodeDerivedTitle } from '../features/nodes/model/nodeDerivedTitle';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 import { canSaveNodeText, showNodeTitleShortenedNotice } from '../shared/ui/nodeTextSaveBudget';
 
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import { createWorkspaceNodeMutationPatch } from './workspaceNodeMutationPatch';
+import { buildRenamedWorkspaceNode, loadWorkspaceTitleDocument } from './workspaceNodeTitleMutation';
 import {
   hasWorkspaceNodeMutationRuntime,
   syncNodeContentMutationToRuntime,
@@ -25,43 +22,20 @@ type WorkspaceSet = (
     | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
 
-function syncUniqueArticleHeadingFromTitle(
-  node: WorkspaceState['nodesById'][string],
-  title: string
-) {
-  if (node.kind !== 'topic') {
-    return node.content;
-  }
-  return replaceUniqueArticleTitleHeading(node.content, title) ?? node.content;
-}
-
 export function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceState['updateNodeTitle'] {
   return async (nodeId, title) => {
+    const pendingDocument = loadWorkspaceTitleDocument(set, nodeId);
+    const document = pendingDocument instanceof Promise ? await pendingDocument : pendingDocument;
+    if (document === null) return false;
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     let localPatch: Partial<WorkspaceState> | null = null;
     let beforeTitle: string | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node || isProtectedRootNode(node)) {
-        return state;
-      }
-      const nextTitle = normalizeNodeTitle(title.trim()) || UNTITLED_NODE_TITLE;
-      if (node.title === nextTitle) {
-        if (isNodeTitleTruncated(title.trim())) showNodeTitleShortenedNotice();
-        return state;
-      }
+      if (!node) return state;
+      const nextNode = buildRenamedWorkspaceNode(node, title, document);
+      if (!nextNode) return state;
       beforeTitle = node.title;
-      const nextContent = syncUniqueArticleHeadingFromTitle(node, nextTitle);
-      const nextNode = {
-        ...node,
-        content: nextContent,
-        hasContent: nextContent.trim().length > 0,
-        hideTitleHeading: false,
-        title: nextTitle,
-        isTitleManual: true,
-        updatedAt: new Date().toISOString()
-      };
-      if (!canSaveNodeText(nextNode)) return state;
       nextNodeForSync = nextNode;
       localPatch = {
         nodesById: {
