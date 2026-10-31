@@ -114,7 +114,7 @@ export function bindMainWindowNavigationGuard(
   };
   applyDisplayScale();
   window.webContents.on('will-navigate', (event, url) => {
-    if (isInitialMainWindowRendererNavigation(
+    if (isAllowedMainWindowRendererNavigation(
       window.webContents.getURL(),
       url,
       initialRendererUrl
@@ -146,13 +146,14 @@ export function bindMainWindowNavigationGuard(
   window.webContents.on('did-finish-load', applyDisplayScale);
 }
 
-function isInitialMainWindowRendererNavigation(
+function isAllowedMainWindowRendererNavigation(
   currentUrl: string,
   targetUrl: string,
   initialRendererUrl?: string
 ) {
   try {
     const parsedUrl = new URL(targetUrl);
+    if (parsedUrl.protocol === 'file:' && currentUrl === targetUrl) return true;
     if (initialRendererUrl) {
       const configuredUrl = new URL(initialRendererUrl);
       if (parsedUrl.origin === configuredUrl.origin
