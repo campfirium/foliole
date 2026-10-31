@@ -174,7 +174,7 @@ it('opens a whole-image excerpt annotation and updates only its annotation suffi
   } as never;
   const { result } = renderHook(() => useEditorContextCommands(buildHookArgs({ nodesById, updateNodeContent })));
 
-  act(() => imageRegion.dispatchEvent(new MouseEvent('mouseup', {
+  act(() => imageRegion.dispatchEvent(new MouseEvent('click', {
     bubbles: true, button: 0, clientX: 80, clientY: 120
   })));
   expect(result.current.contextMenu).toMatchObject({

@@ -66,8 +66,11 @@ interface SelectionAnnotationToolbarArgs {
   trashedNodeIds: string[];
 }
 
-function createAnnotationToolbarMouseDownHandler(args: SelectionAnnotationToolbarArgs, startedInToolbar: { current: boolean }) {
+type ToolbarPointerState = { current: boolean; wholeImageHandled: boolean };
+
+function createAnnotationToolbarMouseDownHandler(args: SelectionAnnotationToolbarArgs, startedInToolbar: ToolbarPointerState) {
   return (event: MouseEvent | PointerEvent) => {
+    startedInToolbar.wholeImageHandled = false;
     startedInToolbar.current = isAnnotationToolbarTarget(event.target);
     if (startedInToolbar.current || isHighlightRangeHandleTarget(event.target)) {
       return;
@@ -116,7 +119,7 @@ function hasPdfTextSelection(target: EventTarget | null) {
     Boolean(selection && !selection.isCollapsed && selection.rangeCount > 0);
 }
 
-function createAnnotationToolbarMouseUpHandler(args: SelectionAnnotationToolbarArgs, startedInToolbar: { current: boolean }) {
+function createAnnotationToolbarMouseUpHandler(args: SelectionAnnotationToolbarArgs, startedInToolbar: ToolbarPointerState) {
   return (event: MouseEvent) => {
     const cameFromToolbar = startedInToolbar.current;
     startedInToolbar.current = false;
@@ -136,7 +139,10 @@ function createAnnotationToolbarMouseUpHandler(args: SelectionAnnotationToolbarA
       return;
     }
     const wholeImageTarget = getWholeImageExcerptTarget(event.target);
-    if (wholeImageTarget && openWholeImageExcerptToolbar(args, event, wholeImageTarget)) return;
+    if (wholeImageTarget && openWholeImageExcerptToolbar(args, event, wholeImageTarget)) {
+      startedInToolbar.wholeImageHandled = true;
+      return;
+    }
     if (isHighlightTarget(event.target) && openExistingHighlightToolbar(args, event)) {
       return;
     }
@@ -156,6 +162,18 @@ function createAnnotationToolbarMouseUpHandler(args: SelectionAnnotationToolbarA
       payload,
       top: position.top
     });
+  };
+}
+
+function createWholeImageExcerptClickHandler(args: SelectionAnnotationToolbarArgs, pointerState: ToolbarPointerState) {
+  return (event: MouseEvent) => {
+    if (pointerState.wholeImageHandled) { pointerState.wholeImageHandled = false; return; }
+    if (!args.selectionToolbarEnabled || event.button !== 0 || args.isTrashViewOpen || !args.activeNodeId) return;
+    const target = getWholeImageExcerptTarget(event.target);
+    if (!target) return;
+    const surface = target.closest('.cm-md-image-surface');
+    if (surface?.querySelector('.cm-md-image-cloze-actions:not([hidden])')) return;
+    void openWholeImageExcerptToolbar(args, event, target);
   };
 }
 
@@ -191,9 +209,10 @@ export function useSelectionAnnotationToolbar(args: SelectionAnnotationToolbarAr
   }, [args.selectionToolbarEnabled, args.setContextMenu]);
 
   useEffect(() => {
-    const startedInToolbar = { current: false };
+    const startedInToolbar = { current: false, wholeImageHandled: false };
     const handleMouseDown = createAnnotationToolbarMouseDownHandler(args, startedInToolbar);
     const handleMouseUp = createAnnotationToolbarMouseUpHandler(args, startedInToolbar);
+    const handleImageClick = createWholeImageExcerptClickHandler(args, startedInToolbar);
     const handleKeyDown = createPdfHighlightKeyDownHandler(args);
     const handleDeletion = createSelectionToolbarDeletionHandler(args);
     document.addEventListener('keydown', handleDeletion, true);
@@ -201,11 +220,13 @@ export function useSelectionAnnotationToolbar(args: SelectionAnnotationToolbarAr
     document.addEventListener('mousedown', handleMouseDown, true);
     document.addEventListener('pointerdown', handleMouseDown, true);
     document.addEventListener('mouseup', handleMouseUp, true);
+    document.addEventListener('click', handleImageClick, true);
     return () => {
       document.removeEventListener('keydown', handleDeletion, true);
       document.removeEventListener('mousedown', handleMouseDown, true);
       document.removeEventListener('pointerdown', handleMouseDown, true);
       document.removeEventListener('mouseup', handleMouseUp, true);
+      document.removeEventListener('click', handleImageClick, true);
       document.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [args]);
