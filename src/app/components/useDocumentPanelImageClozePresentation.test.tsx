@@ -51,7 +51,8 @@ it('keeps the registered nonempty presentation through unrelated React commits a
   act(() => hook.rerender({ ...changed, onOpenNode }));
   expect(derive.mock.calls.length).toBe(callsAfterSourceReset);
   expect(callsAfterSourceReset).toBe(callsBeforeCallback + 1);
-  expect(presentation()?.onOpenNode).toBe(onOpenNode);
+  presentation()?.onOpenNode?.('child');
+  expect(onOpenNode).toHaveBeenCalledWith('child');
   hook.unmount();
   window.removeEventListener(IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT, notify);
   derive.mockRestore();
@@ -104,4 +105,24 @@ it('handles one committed production priority action without recomputing image r
   hook.unmount();
   derive.mockRestore();
   useWorkspaceStore.setState(previous, true);
+});
+
+
+it('keeps nonempty image presentation registered while updating its navigation callback', () => {
+  const firstOpen = vi.fn();
+  const nextOpen = vi.fn();
+  const initial = { activeNode: parent, editorNodeId: parent.id, onOpenNode: firstOpen,
+    nodesById: { [parent.id]: parent, child }, trashedNodeIds: [] as string[] };
+  const hook = renderHook(useDocumentPanelImageClozePresentation, { initialProps: initial });
+  const notify = vi.fn();
+  window.addEventListener(IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT, notify);
+  const before = getImageClozeEditorPresentation(parent.id);
+  act(() => hook.rerender({ ...initial, onOpenNode: nextOpen }));
+  expect(notify).not.toHaveBeenCalled();
+  expect(getImageClozeEditorPresentation(parent.id)).toBe(before);
+  before?.onOpenNode?.('child');
+  expect(nextOpen).toHaveBeenCalledWith('child');
+  expect(firstOpen).not.toHaveBeenCalled();
+  hook.unmount();
+  window.removeEventListener(IMAGE_CLOZE_PRESENTATION_CHANGE_EVENT, notify);
 });
