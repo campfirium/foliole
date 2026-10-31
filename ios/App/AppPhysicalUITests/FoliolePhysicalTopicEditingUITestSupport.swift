@@ -17,7 +17,7 @@ extension FoliolePhysicalSyncGroupUITests {
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 15),
                       "The topic editor must open the software keyboard before moving its caret.")
         editor.press(forDuration: 1.0)
-        let selectAll = app.buttons.matching(
+        let selectAll = app.menuItems.matching(
             NSPredicate(format: "label IN %@", ["Select All", "全选"])
         ).firstMatch
         XCTAssertTrue(selectAll.waitForExistence(timeout: 10),
