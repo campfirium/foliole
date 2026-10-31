@@ -202,7 +202,7 @@ export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
   };
 
   return (
-    <AppSelectionDropdownMenu left={props.left} onClose={props.onClose} outsidePointerMode="passthrough" top={props.top}>
+    <AppSelectionDropdownMenu left={props.left} onClose={props.onClose} outsidePointerMode="passthrough" preserveAnnotationToolbar top={props.top}>
       {confirmation ? (
         <WebLookupConfirmationPanel
           message={confirmation.message}
