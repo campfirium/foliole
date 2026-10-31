@@ -45,10 +45,15 @@ test('opens Google and ChatGPT through real right-click menu presses', async ({
   expect(new URL(urls![1]!).searchParams.get('prompt')).toContain('Lookup target text');
   await editor.click({ button: 'right', position: { x: 10, y: 10 } });
   await expect(page.getByRole('menu')).toBeVisible();
-  await page.getByRole('menu').screenshot({ path: '.tmp/artifacts/T676/web-lookup-menu.png' });
+  await page.getByRole('menu').screenshot({ path: '.tmp/artifacts/T673-16/web-lookup-menu.png' });
   await testInfo.attach('web-lookup-menu', {
     body: await page.screenshot(), contentType: 'image/png'
   });
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toBeHidden();
+  await expect(editor).toBeFocused();
+  await editor.click({ button: 'right', position: { x: 10, y: 10 } });
+  await expect(page.getByRole('menu')).toBeVisible();
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(page.getByRole('menu')).toBeHidden();
 });

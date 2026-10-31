@@ -22,8 +22,8 @@ function isOrdinaryPromptEditorActive(activeElement: Element) {
   );
 }
 
-function isDialogOpen() {
-  return Boolean(document.querySelector('[role="dialog"]'));
+function isEscapeOverlayOpen() {
+  return Boolean(document.querySelector('[role="dialog"], [role="menu"]'));
 }
 
 function blurActiveMarkdownEditor() {
@@ -110,7 +110,7 @@ export function useReviewEditorEscapeBlur(args: {
       }
     };
     const handlePriorityEscape = (event: KeyboardEvent) => {
-      if (isDialogOpen()) {
+      if (isEscapeOverlayOpen()) {
         return false;
       }
       if (args.enabled) {
@@ -122,7 +122,7 @@ export function useReviewEditorEscapeBlur(args: {
     const unlistenPriorityEscape = onWindowPriorityEscape(handlePriorityEscape);
     const unlistenNativeEscape = onNativeEditingEscape({
       exitEditing: () => blurActiveEditorForNativeEscape(args.enabled, args.onExitEditing),
-      isDialogOpen,
+      isDialogOpen: isEscapeOverlayOpen,
       isEditing: () => {
         const activeElement = document.activeElement;
         return activeElement instanceof Element && isMarkdownEditorActive(activeElement);
