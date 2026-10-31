@@ -28,11 +28,22 @@ async function setVisibleRegion(page: Page, height: number, offsetTop: number, e
 }
 
 async function expectCaptureInsideVisibleRegion(page: Page, top: number, height: number) {
-  for (const control of [page.getByRole('textbox'), page.getByRole('button', { name: 'Save', exact: true })]) {
+  const controls = [page.getByRole('textbox'), page.getByRole('button', { name: 'Save', exact: true }),
+    page.getByRole('button', { name: 'Cancel', exact: true })];
+  for (const control of controls) {
     await expect.poll(async () => {
       const bounds = await control.boundingBox();
       return bounds !== null && bounds.height > 0 && bounds.y >= top && bounds.y + bounds.height <= top + height;
     }).toBe(true);
+  }
+  const bounds = await Promise.all(controls.map(control => control.boundingBox()));
+  for (let index = 0; index < bounds.length; index++) {
+    for (const other of bounds.slice(index + 1)) {
+      const current = bounds[index]!;
+      expect(current.x + current.width <= other!.x || other!.x + other!.width <= current.x ||
+        current.y + current.height <= other!.y || other!.y + other!.height <= current.y,
+      'Capture controls must not overlap').toBe(true);
+    }
   }
 }
 
@@ -62,4 +73,26 @@ test('Capture keeps its input and Save visible as the keyboard opens, moves and 
   await setVisibleRegion(page, 812, 0);
   await expectCaptureInsideVisibleRegion(page, 0, 812);
   await page.screenshot({ path: '.tmp/artifacts/T673/capture-keyboard-dismissed.png' });
+});
+
+test('Capture remains usable when a landscape keyboard leaves only one input row', async ({ page }) => {
+  await page.setViewportSize({ width: 839, height: 343 });
+  await openCapture(page);
+  await setVisibleRegion(page, 343, 0);
+  await page.setViewportSize({ width: 839, height: 62 });
+  await setVisibleRegion(page, 62, 0);
+  await expectCaptureInsideVisibleRegion(page, 0, 62);
+  const input = page.getByRole('textbox');
+  await input.fill('Landscape capture preserves this exact text.');
+  await expect(input).toBeFocused();
+  await page.screenshot({ path: '.tmp/artifacts/T673/capture-landscape-keyboard.png' });
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByLabel('Saved text')).toHaveText('Landscape capture preserves this exact text.');
+  await expect(input).not.toBeVisible();
+  await page.setViewportSize({ width: 839, height: 343 });
+  await setVisibleRegion(page, 343, 0);
+  await page.getByRole('button', { name: 'Open capture' }).click();
+  await expectCaptureInsideVisibleRegion(page, 0, 343);
+  await expect(input).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Paste from Clipboard' })).toBeVisible();
 });

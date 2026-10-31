@@ -1,0 +1,43 @@
+.companion-capture-compact .companion-capture-handle,
+.companion-capture-compact .companion-capture-clipboard,
+.companion-capture-compact [data-app-dialog-title] {
+  display: none;
+}
+
+.companion-capture-compact .companion-capture-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.companion-capture-compact .companion-capture-header {
+  display: contents;
+}
+
+.companion-capture-compact .companion-capture-header > button {
+  grid-row: 1;
+  grid-column: 1;
+}
+
+.companion-capture-compact .companion-capture-header > [data-testid='companion-capture-save'] {
+  grid-column: 3;
+}
+
+.companion-capture-compact .companion-capture-input {
+  grid-row: 1;
+  grid-column: 2;
+  min-width: 0;
+  padding: 4px 8px;
+}
+
+.companion-capture-compact textarea {
+  display: block;
+  min-height: 24px;
+  height: min(96px, max(24px, calc(var(--companion-edit-viewport-height) - 20px)));
+}
+
+.companion-capture-compact [role='alert'] {
+  grid-column: 1 / -1;
+}

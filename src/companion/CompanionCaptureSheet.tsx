@@ -1,5 +1,7 @@
 import { Clipboard, type LucideIcon } from 'lucide-react';
-import { useEffect, useRef, type ComponentProps, type RefObject } from 'react';
+import { useEffect, useRef, useState, type ComponentProps, type RefObject } from 'react';
+
+import './companionCaptureViewport.css';
 
 import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -23,10 +25,15 @@ import { useCompanionItemEditViewport } from './useCompanionItemEditViewport';
 
 function CaptureSheetViewport(props: ComponentProps<typeof AppDialogContent>) {
   const ref = useRef<HTMLDivElement>(null);
-  useCompanionItemEditViewport(ref, true);
-  return <AppDialogContent {...props} ref={ref} style={{
+  const [height, setHeight] = useState(window.visualViewport?.height ?? window.innerHeight);
+  useCompanionItemEditViewport(ref, true, setHeight);
+  const compact = height < 200;
+  return <AppDialogContent {...props} ref={ref}
+    className={cn(props.className, compact && 'companion-capture-compact')} style={{
     bottom: 'calc(100% - var(--companion-edit-viewport-top, 0px) - var(--companion-edit-viewport-height, 100%))',
-    maxHeight: 'calc(var(--companion-edit-viewport-height, 100%) - 12px)',
+    maxHeight: compact ? 'var(--companion-edit-viewport-height, 100%)'
+      : 'calc(var(--companion-edit-viewport-height, 100%) - 12px)',
+    ...(compact ? { paddingTop: 0, paddingBottom: 0 } : {}),
     overflowY: 'auto'
   }} />;
 }
@@ -56,7 +63,7 @@ function CaptureSheetHeader(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className="mb-4 flex items-center justify-between">
+    <div className="companion-capture-header mb-4 flex items-center justify-between">
       <AppDialogClose className="rounded-md px-2 py-1 text-sm font-medium text-companion-text-secondary transition hover:bg-companion-subtle" onClick={props.onCancel}>
         {t(props.isSaved ? 'companion.capture.close' : 'common.cancel')}
       </AppDialogClose>
@@ -86,7 +93,7 @@ function CaptureTextBox(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className="rounded-md border border-companion-divider px-4 py-4">
+    <div className="companion-capture-input rounded-md border border-companion-divider px-4 py-4">
       <textarea
         ref={props.inputRef}
         aria-label={t('companion.capture.text')}
@@ -146,12 +153,12 @@ export function CompanionCaptureSheet(props: {
           event.preventDefault();
           inputRef.current?.focus({ preventScroll: true });
         }} className={`companion-sheet bottom-0 left-0 top-auto w-full translate-x-0 translate-y-0 [transform:translate(0,0)] rounded-b-none rounded-t-xl border-x-0 border-b-0 ${companionMobileRailClassName} pt-3 pb-6 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),24px)]`}>
-          <div aria-hidden="true" className="mx-auto mb-3 h-1 w-9 rounded-full bg-companion-divider-strong" />
-          <div className="mx-auto w-full max-w-[760px]">
+          <div aria-hidden="true" className="companion-capture-handle mx-auto mb-3 h-1 w-9 rounded-full bg-companion-divider-strong" />
+          <div className="companion-capture-body mx-auto w-full max-w-[760px]">
             <CaptureSheetHeader canSave={canSave && !clipboard.isPasting} isSaving={isSaving} isSaved={isSaved} onCancel={() => handleOpenChange(false)} onSave={handleSave} />
             <CaptureTextBox draft={draft} inputRef={inputRef} readOnly={isSaving || isSaved} onChange={handleDraftChange} />
             {errorLabel ? <p className="mt-3 text-sm text-destructive" role="alert">{errorLabel}</p> : null}
-            <div className="mt-5 border-t border-companion-divider">
+            <div className="companion-capture-clipboard mt-5 border-t border-companion-divider">
               <CaptureActionRow icon={Clipboard} label={t('companion.capture.paste')} disabled={isSaving || isSaved || clipboard.isPasting} busy={clipboard.isPasting} onClick={clipboard.paste} />
               {clipboard.error ? <p className="mt-3 text-sm text-destructive" role="alert">{t(clipboard.error === 'empty' ? 'companion.capture.error.clipboardEmpty' : 'companion.capture.error.clipboardFailed')}</p> : null}
             </div>

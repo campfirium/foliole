@@ -1,14 +1,17 @@
 import { useLayoutEffect, type RefObject } from 'react';
 
 /** Follow both resize-based native keyboards and visual-viewport-only browser keyboards. */
-export function useCompanionItemEditViewport(ref: RefObject<HTMLElement | null>, active: boolean) {
+export function useCompanionItemEditViewport(ref: RefObject<HTMLElement | null>, active: boolean,
+  onHeightChange?: (height: number) => void) {
   useLayoutEffect(() => {
     const surface = ref.current;
     if (!active || !surface) return;
     const viewport = window.visualViewport;
     const update = () => {
-      surface.style.setProperty('--companion-edit-viewport-height', `${viewport?.height ?? window.innerHeight}px`);
+      const height = viewport?.height ?? window.innerHeight;
+      surface.style.setProperty('--companion-edit-viewport-height', `${height}px`);
       surface.style.setProperty('--companion-edit-viewport-top', `${viewport?.offsetTop ?? 0}px`);
+      onHeightChange?.(height);
     };
     update();
     viewport?.addEventListener('resize', update);
@@ -24,5 +27,5 @@ export function useCompanionItemEditViewport(ref: RefObject<HTMLElement | null>,
       surface.style.removeProperty('--companion-edit-viewport-top');
       surface.scrollTop = scrollTop;
     };
-  }, [active, ref]);
+  }, [active, ref, onHeightChange]);
 }
