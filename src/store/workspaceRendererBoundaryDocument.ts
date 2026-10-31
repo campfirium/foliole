@@ -93,6 +93,8 @@ export function mergeWorkspaceNodeDocument<T extends object & { id?: string; upd
   const content = keepLocalContent ? stateNode.content : document.content;
   return {
     ...node,
+    ...(!keepLocalContent && document.currentVersionId !== undefined ? { currentVersionId: document.currentVersionId } : {}),
+    ...(!keepLocalContent && document.updatedAt !== undefined ? { updatedAt: document.updatedAt } : {}),
     bodyStatus: keepLocalContent
       ? (content.trim().length > 0 ? 'ready' : 'empty')
       : document.bodyStatus ?? (content.trim().length > 0 ? 'ready' : 'empty'),
