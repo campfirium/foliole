@@ -14,7 +14,8 @@ import { flushPermanentMirrorRetirements } from './mirrorPermanentDelete.js';
 export async function rebuildMirrorOutput() {
   const definition = DESKTOP_OPERATION_DEFINITIONS['mirror-incremental'];
   const task = desktopTaskScheduler.submit({
-    concurrencyKey: definition.concurrencyKey,
+    // Keep incremental callbacks distinct; the shared CPU claim serializes mirror work.
+    concurrencyKey: 'mirror-rebuild',
     duplicatePolicy: 'enqueue',
     id: 'mirror-rebuild',
     label: 'Mirror output rebuild',

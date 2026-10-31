@@ -25,6 +25,7 @@ import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import * as renderer from '../mirror/articleMirrorRenderWorkerClient.js';
 import * as storage from '../mirror/mirrorOutputStorage.js';
+import { flushMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 import { resetMirrorTestWorkspace } from '../mirror/mirrorTestDatabase.js';
 
 import { flushBootEvents } from './boot.js';
@@ -161,4 +162,24 @@ it('serializes repeated rebuilds without holding the database during rendering',
   }
   expect(events).toEqual(['reset', 'commit', 'commit', 'reset', 'commit', 'commit']);
   expect(await document('beta')).toEqual(beta);
+});
+
+it('writes a new article created after full planning when its flush overlaps the rebuild', async () => {
+  const gate = pauseFirstRender();
+  const rebuilding = invoke('rebuild_mirror_output');
+  await gate.entered;
+  await invoke('create_topic', { nodeId: 'late', parentNodeId: null, kind: 'topic', title: 'Late article',
+    content: 'Created after the full plan. Complete durable body.', reveal: null, anchorLink: null,
+    isTitleManual: true, hideTitleHeading: false, position: 0,
+    createdAt: '2026-10-31T00:02:00.000Z', updatedAt: '2026-10-31T00:02:00.000Z' });
+  const flushing = flushMirrorSync();
+  try {
+    expect(await document('late')).toMatchObject({ content: 'Created after the full plan. Complete durable body.' });
+  } finally {
+    gate.release();
+    await Promise.all([rebuilding, flushing]);
+  }
+  expect(await fs.readFile(path.join(root, 'Library/Mirror/Late article.md'), 'utf8'))
+    .toContain('Created after the full plan. Complete durable body.');
+  expect(storage.loadMirrorArticleRecords().get('late')).toMatchObject({ relativePath: 'Late article.md' });
 });
