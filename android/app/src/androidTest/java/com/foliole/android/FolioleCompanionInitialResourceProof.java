@@ -58,7 +58,7 @@ final class FolioleCompanionInitialResourceProof {
             .put("legacyDirtyObjects", projection.getJSONArray("dirty_objects"));
         if (!nodeCommitted || fixtureKeys.size() != 2
             || !fixtureKeys.contains(availableHash + ".png") || !fixtureKeys.contains(recoveringHash + ".png")
-            || !bodyReady || !availableReady || !recoveringAbsent
+            || !bodyReady || !availableReady || (partial && !recoveringAbsent)
             || (partial && (missing.length() != 1
                 || !recoveringHash.equals(missing.optString(0))))
             || (!partial && missing.length() != 0)) {
