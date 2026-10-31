@@ -16,9 +16,14 @@ extension FoliolePhysicalSyncGroupUITests {
         editor.tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 15),
                       "The topic editor must open the software keyboard before moving its caret.")
-        editor.typeKey(.downArrow, modifierFlags: .command)
-        prepareLatinKeyboard(in: app)
-        typeOnSoftwareKeyboard("\n\n\(text)", in: app)
+        editor.press(forDuration: 1.0)
+        let selectAll = app.buttons.matching(
+            NSPredicate(format: "label IN %@", ["Select All", "全选"])
+        ).firstMatch
+        XCTAssertTrue(selectAll.waitForExistence(timeout: 10),
+                      "The native editing menu must offer Select All before replacing the complete body.")
+        selectAll.tap()
+        editor.typeText(originalBody + "\n\n" + text)
         let submittedBody = editor.value as? String ?? ""
         XCTAssertTrue(submittedBody.contains(existingText), "Editing must preserve the existing text.")
         XCTAssertTrue(submittedBody.contains(text), "Editing must receive the complete new text.")
