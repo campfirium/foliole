@@ -10,6 +10,7 @@ import {
 import type { EditorInputBase } from './useEditorDraftUserInputEvidence';
 
 export interface EditorDraftCommitOptions {
+  historySave?: import('../../features/editor/model/editorTextReplaySave').EditorTextReplaySave;
   baseContent?: string;
   newImageReferences?: readonly ContentImageReference[] | undefined;
   baseVersionId?: string | null;

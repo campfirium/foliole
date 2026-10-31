@@ -179,6 +179,7 @@ async function updateNodeContent(
     if (diagnosticsEnabled) {
       logUpdateNodeContentDiagnostic({ applied: false, contentLength: content.length, localState, metrics, nodeId });
     }
+    options.historySave?.reject();
     return false;
   }
   const nextNodeForSync = localState.nextNodeForSync;
@@ -186,6 +187,7 @@ async function updateNodeContent(
   const runtimePatchStartedAt = diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
   const applied = true;
   scheduleNodeContentRuntimePersist({
+    historySave: options.historySave,
     baseContent: options.baseContent,
     contentLength: content.length,
     diagnosticsEnabled,

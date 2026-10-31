@@ -11,7 +11,7 @@ interface DocumentPanelAnswerSectionProps {
   editorAppearanceKey: string;
   editorNodeId: string | null;
   fitBlockImagesToViewport?: boolean;
-  onAnswerChange: (answer: string) => void;
+  onAnswerChange: (answer: string, meta?: import('../../features/editor/adapters/EditorAdapter').EditorContentChangeMeta) => void;
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onAnswerImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number; viewportHeight: number } | null) => void;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;

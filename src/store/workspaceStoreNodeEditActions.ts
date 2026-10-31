@@ -8,11 +8,9 @@ import { createWorkspaceNodeMutationPatch } from './workspaceNodeMutationPatch';
 import { buildRenamedWorkspaceNode, loadWorkspaceTitleDocument } from './workspaceNodeTitleMutation';
 import {
   hasWorkspaceNodeMutationRuntime,
-  syncNodeContentMutationToRuntime,
-  syncNodeRevealMutationToRuntime
+  syncNodeContentMutationToRuntime
 } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
-import { drainPendingNodeContentRuntimePersist } from './workspaceStoreContentRuntimePersist';
 import { buildCommittedTitleMutation, preserveCurrentBodyInPatch } from './workspaceStructureRenameCommit';
 
 type WorkspaceSet = (
@@ -118,54 +116,4 @@ export function createUpdateNodeDerivedTitleAction(set: WorkspaceSet): Workspace
   };
 }
 
-export function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceState['updateNodeReveal'] {
-  return async (nodeId, reveal) => {
-    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
-    let localPatch: Partial<WorkspaceState> | null = null;
-    set((state) => {
-      const node = state.nodesById[nodeId];
-      if (!node || isProtectedRootNode(node) || state.trashedNodeIds.includes(nodeId)
-        || (node.reveal === null && node.hasReveal !== true)) {
-        return state;
-      }
-      const nextNode = {
-        ...node,
-        hasReveal: reveal !== null,
-        reveal,
-        updatedAt: new Date().toISOString()
-      };
-      if (!canSaveNodeText(nextNode)) return state;
-      nextNodeForSync = nextNode;
-      localPatch = {
-        nodesById: {
-          ...state.nodesById,
-          [nodeId]: nextNode
-        }
-      };
-      return state;
-    });
-    if (!nextNodeForSync) return false;
-    const shouldUseLocalFallback = !hasWorkspaceNodeMutationRuntime();
-    if (!await drainPendingNodeContentRuntimePersist(nodeId)) return false;
-    let stillPresent = false;
-    set(state => {
-      stillPresent = Boolean(state.nodesById[nodeId]) && !state.trashedNodeIds.includes(nodeId);
-      return state;
-    });
-    if (!stillPresent) return false;
-    const result = await syncNodeRevealMutationToRuntime(nextNodeForSync);
-    let applied = false;
-    set((state) => {
-      const acceptedPatch = result
-        ? createWorkspaceNodeMutationPatch(state, result)
-        : shouldUseLocalFallback ? localPatch : null;
-      if (!acceptedPatch) return state;
-      applied = true;
-      return acceptedPatch;
-    });
-    if (applied) {
-      syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
-    }
-    return applied;
-  };
-}
+export { createUpdateNodeRevealAction } from './workspaceStoreRevealAction';

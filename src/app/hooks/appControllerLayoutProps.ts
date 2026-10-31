@@ -135,7 +135,7 @@ export interface BuildControllerLayoutPropsArgs {
     updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
     updateNodePriority: (nodeId: string, priority: number | null) => void;
     updateNodeShortTerm: (nodeId: string, enableShortTerm: boolean | null) => void;
-    updateNodeReveal: (nodeId: string, reveal: string) => Promise<boolean>;
+    updateNodeReveal: WorkspaceState['updateNodeReveal'];
     isHydrated: boolean;
     editorOperationHistory: EditorOperationHistoryState;
   };

@@ -14,7 +14,7 @@ import {
 } from './workspaceEditorAnnotationCreationSettlement';
 import { startEditorAnnotationHistoryMutation } from './workspaceEditorAnnotationHistoryMutation';
 import { createEditorAnnotationDeleteEntry } from './workspaceEditorAnnotationOperationEntry';
-import { applyWorkspaceTextHistory } from './workspaceEditorTextHistory';
+import { createPendingEditorTextReplays } from './workspaceEditorTextReplayPending';
 import {
   hasWorkspaceNodeMutationRuntime,
   syncNodeContentToRuntime,
@@ -96,18 +96,17 @@ function createOperationRunner(set: WorkspaceSet, get: WorkspaceGet) {
     if (!succeeded) return clearQueued(nodeId);
     queueMicrotask(() => drain(nodeId));
   };
+  const textReplays = createPendingEditorTextReplays(get, settle);
   applyForNode = (nodeId, mode, context, queueWhenBlocked = true) => {
     checkScope();
-    if (hasBlockingAnnotation(get, nodeId)) {
+    if (textReplays.has(nodeId) || hasBlockingAnnotation(get, nodeId)) {
       if (!queueWhenBlocked) return 'blocked';
       return enqueue(nodeId, { ...(context ? { context } : {}), mode }) ? 'pending' : 'failed';
     }
     const entry = getEditorOperationTopEntry(get().editorOperationHistory, nodeId, mode);
     if (!entry) return 'noop';
     if (entry.type === 'text.edit') {
-      return applyWorkspaceTextHistory({ entry, mode, nodeId, set, ...(context ? { context } : {}) })
-        ? 'applied'
-        : 'failed';
+      return textReplays.apply({ entry, mode, nodeId, set, ...(context ? { context } : {}) });
     }
     startEditorAnnotationHistoryMutation({
       entry,

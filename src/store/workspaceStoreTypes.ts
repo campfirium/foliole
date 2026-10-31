@@ -56,7 +56,7 @@ export interface WorkspaceState {
   updateNodeContent: (nodeId: string, content: string, options?: WorkspaceNodeContentOptions) => Promise<boolean>;
   updateHighlightAnchorRange?: (highlightNodeId: string, range: { from: number; to: number }) => boolean;
   updateVirtualNodeFilter: (nodeId: string, value: string) => void;
-  updateNodeReveal: (nodeId: string, reveal: string) => Promise<boolean>;
+  updateNodeReveal: (nodeId: string, reveal: string, options?: Pick<WorkspaceNodeContentOptions, 'historySave' | 'newImageReferences'>) => Promise<boolean>;
   updateNodePriority: (nodeId: string, priority: number | null) => void;
   updateNodeDesiredRetention: (nodeId: string, desiredRetention: number | null) => void;
   updateNodeShortTerm: (nodeId: string, enableShortTerm: boolean | null) => void;
@@ -122,6 +122,7 @@ export interface ReadReviewTopicOptions {
 }
 
 export interface WorkspaceNodeContentOptions {
+  historySave?: import('../features/editor/model/editorTextReplaySave').EditorTextReplaySave;
   baseContent?: string;
   baseVersionId?: string | null;
   newImageReferences?: readonly import('../../lib/core/sync/localContentEditResources').ContentImageReference[] | undefined;

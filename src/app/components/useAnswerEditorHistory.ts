@@ -4,6 +4,7 @@ import type { EditorAdapter, EditorContentChangeMeta } from '../../features/edit
 import { getEditorTextHistorySource } from '../../features/editor/model/editorNativeOperationHistory';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { EditorOperationApplyContext } from '../../store/workspaceStoreTypes';
+import { applyEditorTextReplay } from '../hooks/editorTextReplaySave';
 import { registerUndoRouterContentContext } from '../hooks/undoRouter';
 
 export function useAnswerEditorHistory(answerDocumentId: string | null) {
@@ -17,7 +18,7 @@ export function useAnswerEditorHistory(answerDocumentId: string | null) {
     if (!adapter || !answerDocumentId) return;
     adapter.bindTextHistorySource?.(nodeId => getEditorTextHistorySource(useWorkspaceStore.getState().editorOperationHistory, nodeId));
     const context: EditorOperationApplyContext = {
-      applyText: (entry, mode) => adapterRef.current?.applyTextHistory?.(entry, mode) ?? false,
+      applyText: (entry, mode) => applyEditorTextReplay(adapterRef.current, entry, mode),
       currentContent: adapter.getContent(),
       getCurrentContent: () => adapterRef.current?.getContent() ?? '',
       nodeId: answerDocumentId

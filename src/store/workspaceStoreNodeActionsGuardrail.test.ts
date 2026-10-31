@@ -146,7 +146,7 @@ describe('workspace node actions runtime guardrail', () => {
     expectNoWorkspacePersist(invoke);
   });
 
-  it('updateNodeReveal uses update_node_reveal only and never save_workspace_state', async () => {
+  it('saves answers through the shared node content bridge without a workspace snapshot', async () => {
     const { actions, harness, invoke, seedNodeId } = await createActionsHarness();
     const node = harness.getState().nodesById[seedNodeId];
     if (!node) {
@@ -161,7 +161,7 @@ describe('workspace node actions runtime guardrail', () => {
 
     await actions.updateNodeReveal(seedNodeId, 'New reveal');
 
-    expect(getInvokedCommands(invoke)).toEqual(['update_node_reveal']);
+    expect(getInvokedCommands(invoke)).toEqual(['update_node_content_with_anchors']);
     expectNoWorkspacePersist(invoke);
   });
 });

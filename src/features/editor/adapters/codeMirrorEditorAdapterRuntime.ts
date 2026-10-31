@@ -110,7 +110,8 @@ function createEditorViewRuntime(
       }
       const nodeId = args.getNodeId();
       if (args.isApplyingHistoryReplay()) {
-        onChange(content ?? args.getContent(), { nodeId, origin: 'history' });
+        const historySave = args.textHistory.getReplaySave();
+        onChange(content ?? args.getContent(), { nodeId, origin: 'history', ...(historySave ? { historySave } : {}) });
         return;
       }
       const textTransactions = args.textHistory.collect(update, nodeId);

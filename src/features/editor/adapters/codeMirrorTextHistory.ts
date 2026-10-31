@@ -4,6 +4,7 @@ import { EditorView, type ViewUpdate } from '@codemirror/view';
 
 import { editorHistorySelection } from '../model/editorNativeOperationHistory';
 import type { EditorOperationSelectionSnapshot, EditorTextEditOperationEntry, EditorTextHistoryInput } from '../model/editorOperationHistory';
+import type { EditorTextReplaySave } from '../model/editorTextReplaySave';
 import { captureNativeTextHistory, findNativeTextHistory, isolateNativeTextHistory, runNativeTextHistory } from '../model/nativeTextHistory';
 import { isHistoricalTextInput, nativeTextHistoryExtensions, nativeTextHistoryGroups, nativeTextHistoryInputFilter } from '../model/nativeTextHistoryGroups';
 
@@ -29,6 +30,7 @@ export function collectCodeMirrorTextHistoryEntries(update: ViewUpdate, nodeId: 
 
 export class CodeMirrorTextHistoryController {
   private applying = false;
+  private replaySave: EditorTextReplaySave | undefined;
   private documentId: string | null = null;
   private latest: EditorState | null = null;
   private source: EditorTextHistorySource | null = null;
@@ -53,6 +55,8 @@ export class CodeMirrorTextHistoryController {
   }
 
   isApplying() { return this.applying; }
+
+  getReplaySave() { return this.replaySave; }
 
   bind(source: EditorTextHistorySource, view: EditorView) {
     this.source = source;
@@ -112,7 +116,7 @@ export class CodeMirrorTextHistoryController {
     this.restore(view, canonical);
   }
 
-  apply(entry: EditorTextEditOperationEntry, mode: 'redo' | 'undo', view: EditorView) {
+  apply(entry: EditorTextEditOperationEntry, mode: 'redo' | 'undo', view: EditorView, save?: EditorTextReplaySave) {
     if (entry.nodeId !== this.guards.getNodeId() || this.guards.isApplyingExternalContent() || this.applying ||
       !entry.nativeState || !view.state.doc.eq(entry.nativeState.doc)) return false;
     if (view.state.field(historyField) !== entry.nativeState.field(historyField)) this.install(view, entry.nativeState);
@@ -120,6 +124,7 @@ export class CodeMirrorTextHistoryController {
     if (!candidate) return false;
     const tr = candidate.startState === view.state ? candidate : view.state.update(candidate, { filter: false });
     this.applying = true;
+    this.replaySave = save;
     try {
       view.dispatch(tr);
       if (!view.state.doc.eq(tr.newDoc)) return false;
@@ -129,6 +134,6 @@ export class CodeMirrorTextHistoryController {
       this.guards.discardPending();
       return { nativeState: this.latest };
     } catch { return false; }
-    finally { this.applying = false; }
+    finally { this.applying = false; this.replaySave = undefined; }
   }
 }

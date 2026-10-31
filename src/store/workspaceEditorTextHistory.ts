@@ -24,5 +24,5 @@ export function applyWorkspaceTextHistory(args: {
     editorOperationHistory: moveEditorOperationEntry(state.editorOperationHistory, args.nodeId, args.mode,
       typeof applied === 'object' ? applied.nativeState : undefined)
   }));
-  return true;
+  return typeof applied === 'object' && applied.persistence ? { persistence: applied.persistence, ...(applied.save ? { save: applied.save } : {}) } : true;
 }

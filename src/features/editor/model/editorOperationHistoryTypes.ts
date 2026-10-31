@@ -54,6 +54,8 @@ export interface EditorTextEditOperationEntry {
 }
 
 export interface EditorTextHistoryReplayResult {
+  persistence?: Promise<boolean>;
+  save?: import('./editorTextReplaySave').EditorTextReplaySave;
   nativeState: EditorState;
 }
 

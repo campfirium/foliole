@@ -9,8 +9,7 @@ import {
   syncNodeContentToRuntime,
   syncNodeContentWithAnchorsMutationToRuntime,
   syncNodeContentWithAnchorsToRuntime,
-  syncNodeOrderToRuntime,
-  syncNodeRevealMutationToRuntime
+  syncNodeOrderToRuntime
 } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
@@ -174,7 +173,7 @@ describe('createWorkspaceNodeActions reveal sync', () => {
       ...fixture, nodesById: { ...fixture.nodesById, 'node-1': node }, trashedNodeIds: ['node-1']
     });
     expect(await createWorkspaceNodeActions(harness.setState).updateNodeReveal('node-1', 'Late answer')).toBe(false);
-    expect(syncNodeRevealMutationToRuntime).not.toHaveBeenCalled();
+    expect(syncNodeContentWithAnchorsMutationToRuntime).not.toHaveBeenCalled();
   });
 
   it.each(['loaded', 'evicted'])('syncs updateNodeReveal through runtime command bridge with a %s document', async documentState => {
@@ -200,12 +199,12 @@ describe('createWorkspaceNodeActions reveal sync', () => {
 
     await actions.updateNodeReveal('node-1', 'New reveal');
 
-    expect(syncNodeRevealMutationToRuntime).toHaveBeenCalledTimes(1);
-    expect(syncNodeRevealMutationToRuntime).toHaveBeenCalledWith(
+    expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledTimes(1);
+    expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'node-1',
         reveal: 'New reveal'
-      })
+      }), [], expect.any(Array)
     );
   });
 });

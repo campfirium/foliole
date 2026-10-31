@@ -4,7 +4,7 @@ import { createWorkspaceRuntimeNodeSnapshot } from '../shared/platform/workspace
 
 import { acknowledgeContentEdit, captureContentEdit } from './workspaceContentEditAcknowledgements';
 import { mergeHydratedNode } from './workspaceHydrateObjectMerge';
-import { markNodeContentEdited, markNodeContentPersisted, resetNodeContentVersionGuardForTests } from './workspaceNodeContentVersionGuard';
+import { markNodeContentEdited, markNodeContentPersisted, markNodeRevealEdited, markNodeRevealPersisted, resetNodeContentVersionGuardForTests } from './workspaceNodeContentVersionGuard';
 import type { WorkspaceState } from './workspaceStore';
 import { createWorkspaceNodeActionsFixture } from './workspaceStoreNodeActions.test-support';
 
@@ -65,4 +65,23 @@ it('does not overwrite newer input with the merged projection', () => {
   });
   expect(state.nodesById.topic).toMatchObject({ content: 'Continued local', currentVersionId: 'ver_local' });
   expect(state.nodesById.topic!.currentVersionId).toBe('ver_local');
+});
+
+
+it('keeps newer answer input through hydration and a late answer receipt without replacing the body', () => {
+  const version = markNodeRevealEdited(node.id);
+  markNodeRevealEdited(node.id);
+  const local = { ...node, content: 'New body', reveal: 'New answer', hasReveal: true };
+  const remote = { ...node, content: 'Remote body', reveal: 'Old saved answer', updatedAt: '2026-09-20T00:03:00Z' };
+  expect(mergeHydratedNode(local, remote).reveal).toBe('New answer');
+  let state: WorkspaceState = { ...createWorkspaceNodeActionsFixture(), nodesById: { topic: local } };
+  acknowledgeContentEdit({
+    field: 'reveal', edit: captureContentEdit(node), node, version,
+    result: { nodes: [createWorkspaceRuntimeNodeSnapshot(remote)],
+      contentEdit: { currentVersionId: 'ver_answer', submittedVersionId: 'ver_answer' } },
+    set: update => { state = { ...state, ...(typeof update === 'function' ? update(state) : update) }; }
+  });
+  markNodeRevealPersisted(node.id, version);
+  expect(state.nodesById.topic).toMatchObject({ content: 'New body', reveal: 'New answer' });
+  expect(mergeHydratedNode(state.nodesById.topic, remote).reveal).toBe('New answer');
 });

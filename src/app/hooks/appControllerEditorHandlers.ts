@@ -1,4 +1,4 @@
-import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorAdapter, EditorContentChangeMeta } from '../../features/editor/adapters/EditorAdapter';
 import { getEditorTextHistorySource } from '../../features/editor/model/editorNativeOperationHistory';
 import { getEditorOperationSession } from '../../features/editor/model/editorOperationHistory';
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
@@ -8,6 +8,7 @@ import type { EditorOperationApplyContext } from '../../store/workspaceStoreType
 
 import { isVirtualEditorNode } from './appControllerLayoutContext';
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
+import { applyEditorTextReplay } from './editorTextReplaySave';
 import type { EditorDraftCommitOptions } from './useEditorDraftFlushCallbacks';
 
 
@@ -28,9 +29,13 @@ function isBlankTextEditAfterAnnotation(args: BuildControllerLayoutPropsArgs, no
 }
 
 export function createAnswerChangeHandler(args: BuildControllerLayoutPropsArgs) {
-  return (answer: string) => {
+  return (answer: string, meta?: EditorContentChangeMeta) => {
+    args.runtime.flushPendingEditorDraft?.();
     if (args.ws.activeNodeId && !args.runtime.isViewingTrashNode) {
-      args.ws.updateNodeReveal(args.ws.activeNodeId, answer);
+      args.ws.updateNodeReveal(args.ws.activeNodeId, answer, {
+        ...(meta?.historySave ? { historySave: meta.historySave } : {}),
+        ...(meta?.newImageReferences ? { newImageReferences: meta.newImageReferences } : {})
+      });
     }
   };
 }
@@ -65,7 +70,7 @@ export function createEditorOperationApplyContext(
   if (!nodeId || !node) return undefined;
   const editor = args.runtime.editorRef.current;
   return {
-    applyText: (entry, mode) => editor?.applyTextHistory?.(entry, mode) ?? false,
+    applyText: (entry, mode) => applyEditorTextReplay(editor, entry, mode),
     currentContent: editor?.getContent() ?? node.content,
     getCurrentContent: () => editor?.getContent() ?? args.ws.nodesById[nodeId]?.content ?? '',
     nodeId

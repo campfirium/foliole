@@ -3,6 +3,7 @@ import { parseStoredImageRegions } from '../../lib/core/database/imageRegionCode
 import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
 import { parseNewImageReferences } from '../../lib/core/sync/localContentEditResources.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
+import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 import { currentLibraryScope } from '../database/attachmentResourceDescription.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -11,7 +12,7 @@ import { upsertVersionedNodeContentWithAnchors } from '../database/nodeVersioned
 import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
 import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
-import { asString, parseNodeAnchorLocatorUpdateArray, parseNodeSnapshotArgs } from './commandParsers.js';
+import { asNullableString, asString, parseNodeAnchorLocatorUpdateArray, parseNodeSnapshotArgs } from './commandParsers.js';
 import { readObjectArg } from './storageCommandSupport.js';
 import { buildNodeMutationPatchResult, type OriginWindow } from './storageNodeMutationResult.js';
 
@@ -19,12 +20,15 @@ export async function handleLocalContentEditCommand(args: Record<string, unknown
   const libraryScope = currentLibraryScope();
   const parent = parseNodeSnapshotArgs(readObjectArg(args.parent, 'parent'));
   const edit = readObjectArg(args.edit, 'edit');
+  if (edit.field !== undefined && edit.field !== 'reveal') throw new Error('content_edit_field_invalid');
   const affectedAnchors = parseNodeAnchorLocatorUpdateArray(args.affectedAnchors, 'affectedAnchors');
   const versionId = asString(edit.versionId, 'versionId');
   const hostName = loadOrCreateDesktopHostName(parent.updatedAt);
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
   const result = await applyLocalContentEdit(port, {
+    ...(edit.field === 'reveal' ? { field: 'reveal' as const } : {}),
     ...(edit.baseContent !== undefined ? { baseContent: asString(edit.baseContent, 'baseContent') } : {}),
+    ...(edit.reveal !== undefined ? { reveal: asNullableString(edit.reveal, 'reveal') } : {}),
     baseVersionId: asString(edit.baseVersionId, 'baseVersionId'),
     versionId,
     newImageReferences: parseNewImageReferences(edit.newImageReferences),
@@ -34,12 +38,7 @@ export async function handleLocalContentEditCommand(args: Record<string, unknown
     nodeId: parent.nodeId,
     title: parent.title,
     updatedAt: parent.updatedAt
-  }, (record) => {
-    const { driver } = openDatabaseConnection();
-    driver.execute('UPDATE nodes SET resource_references = ?, image_sources = ? WHERE id = ?',
-      [record.snapshot.resource_references!, record.snapshot.image_sources ?? null, parent.nodeId]);
-    upsertVersionedNodeContentWithAnchors(parent, affectedAnchors, { versionId });
-  });
+  }, applyContentRecord(parent, affectedAnchors, versionId));
   await collectNodeVersionPayloads(port, parent.nodeId).catch((error: unknown) => {
     console.warn('[node-version-retention] local collection failed', error);
   });
@@ -60,6 +59,7 @@ export async function handleLocalContentEditCommand(args: Record<string, unknown
       nodes: [{
         ...parent,
         content: result.current.body_text ?? '',
+        reveal: result.current.snapshot.reveal ?? null,
         hideTitleHeading: result.current.snapshot.hide_title_heading,
         title: result.current.snapshot.title,
         updatedAt: result.current.updated_at
@@ -71,5 +71,22 @@ export async function handleLocalContentEditCommand(args: Record<string, unknown
       currentVersionId: result.current.version_id!,
       submittedVersionId: result.submittedVersionId
     }
+  };
+}
+
+function applyContentRecord(
+  parent: ReturnType<typeof parseNodeSnapshotArgs>,
+  affectedAnchors: ReturnType<typeof parseNodeAnchorLocatorUpdateArray>,
+  versionId: string
+) {
+  return (record: NativeSyncNodeRecord) => {
+    const { driver } = openDatabaseConnection();
+    driver.execute('UPDATE nodes SET resource_references = ?, image_sources = ? WHERE id = ?',
+      [record.snapshot.resource_references!, record.snapshot.image_sources ?? null, parent.nodeId]);
+    upsertVersionedNodeContentWithAnchors({ ...parent,
+      content: record.body_text ?? '', title: record.snapshot.title,
+      hideTitleHeading: record.snapshot.hide_title_heading ?? false,
+      reveal: record.snapshot.reveal ?? null
+    }, affectedAnchors, { versionId });
   };
 }

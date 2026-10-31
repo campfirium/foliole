@@ -1,5 +1,7 @@
 interface NodeContentVersionState {
   createPending: boolean;
+  revealVersion: number;
+  dirtyRevealVersion: number | null;
   currentVersion: number;
   dirtyVersion: number | null;
   lastPersistedVersion: number;
@@ -13,6 +15,8 @@ function getOrCreateNodeContentVersionState(nodeId: string) {
   if (existing) return existing;
   const created = {
     createPending: false,
+    revealVersion: 0,
+    dirtyRevealVersion: null,
     currentVersion: 0,
     dirtyVersion: null,
     lastPersistedVersion: 0
@@ -101,4 +105,24 @@ export function isLatestNodeContentVersion(nodeId: string, version: number) {
 
 export function hasUnconfirmedNodeContent(nodeId: string) {
   return nodeContentVersions.get(nodeId)?.dirtyVersion != null;
+}
+
+export function markNodeRevealEdited(nodeId: string) {
+  const state = getOrCreateNodeContentVersionState(nodeId);
+  state.revealVersion += 1;
+  state.dirtyRevealVersion = state.revealVersion;
+  return state.revealVersion;
+}
+
+export function isLatestNodeRevealVersion(nodeId: string, version: number) {
+  return (nodeContentVersions.get(nodeId)?.revealVersion ?? 0) <= version;
+}
+
+export function markNodeRevealPersisted(nodeId: string, version: number) {
+  const state = getOrCreateNodeContentVersionState(nodeId);
+  if (state.dirtyRevealVersion !== null && state.dirtyRevealVersion <= version) state.dirtyRevealVersion = null;
+}
+
+export function hasUnconfirmedNodeReveal(nodeId: string) {
+  return nodeContentVersions.get(nodeId)?.dirtyRevealVersion != null;
 }

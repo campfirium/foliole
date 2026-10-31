@@ -48,7 +48,7 @@ export interface DocumentPanelSectionProps {
   onCompleteApplyingReadingPosition?: (reason: string, selection?: EditorSelection, commandId?: string) => void;
   showAnswerSection: boolean;
   showDocumentOutline?: boolean;
-  onAnswerChange: (answer: string) => void;
+  onAnswerChange: (answer: string, meta?: import('../../features/editor/adapters/EditorAdapter').EditorContentChangeMeta) => void;
   onEditorChange: (content: string) => void;
   onEditorInput?: (meta: EditorContentChangeMeta) => void;
   onEditorUndo?: () => boolean;

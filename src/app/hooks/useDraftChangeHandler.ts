@@ -21,7 +21,7 @@ export function useDraftChangeHandler(args: DraftChangeHandlerArgs) {
   return useCallback((content: string, meta?: EditorContentChangeMeta) => {
     const sourceNodeId = meta?.nodeId ?? args.nodeId;
     if (meta?.origin === 'history') {
-      applyEditorDraftHistoryReplay({ ...args, content, nodeId: sourceNodeId });
+      applyEditorDraftHistoryReplay({ ...args, content, nodeId: sourceNodeId, ...(meta.historySave ? { historySave: meta.historySave } : {}) });
       return;
     }
     if (!sourceNodeId) {

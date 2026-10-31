@@ -141,8 +141,8 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   flushContentChanges() { this.externalChangeBuffer.flushNow(); }
   getContent() { return this.view.state.doc.toString(); }
   bindTextHistorySource(source: import('./EditorAdapter').EditorTextHistorySource) { this.textHistory.bind(source, this.view); }
-  applyTextHistory(entry: EditorTextEditOperationEntry, mode: 'redo' | 'undo') {
-    return this.textHistory.apply(entry, mode, this.view);
+  applyTextHistory(entry: EditorTextEditOperationEntry, mode: 'redo' | 'undo', save?: import('../model/editorTextReplaySave').EditorTextReplaySave) {
+    return this.textHistory.apply(entry, mode, this.view, save);
   }
   getDocumentPositionAtViewportY(clientY: number) { return resolveDocumentPositionAtViewportY(this.view, clientY); }
   getDocumentPositionAtClientPoint(clientX: number, clientY: number) { return this.view.posAtCoords({ x: clientX, y: clientY }, false); }

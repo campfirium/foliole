@@ -52,7 +52,7 @@ export interface DocumentPanelBodyLayoutProps {
   fitBlockImagesToViewport?: boolean;
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
   hasAnswerSection: boolean;
-  onAnswerChange: (answer: string) => void;
+  onAnswerChange: (answer: string, meta?: import('../../features/editor/adapters/EditorAdapter').EditorContentChangeMeta) => void;
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onEditorChange: (content: string) => void;
   onEditorInput?: (meta: EditorContentChangeMeta) => void;
