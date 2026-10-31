@@ -13,6 +13,9 @@ extension FoliolePhysicalSyncGroupUITests {
         let editor = app.textViews["Topic body"]
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public topic editor is unavailable on Fri.")
         let originalBody = editor.value as? String ?? ""
+        editor.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 15),
+                      "The topic editor must open the software keyboard before moving its caret.")
         editor.typeKey(.downArrow, modifierFlags: .command)
         prepareLatinKeyboard(in: app)
         typeOnSoftwareKeyboard("\n\n\(text)", in: app)
