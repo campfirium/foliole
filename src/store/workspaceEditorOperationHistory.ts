@@ -2,26 +2,16 @@ import {
   getEditorOperationTopEntry,
   isPendingEditorAnnotationEntry,
   pushEditorOperationEntry,
-  removeEditorOperationEntry,
-  type EditorAnnotationOperationEntry,
   type EditorOperationHistoryInput
 } from '../features/editor/model/editorOperationHistory';
 
 import {
-  confirmPendingEditorAnnotationEntry,
-  isSameEditorAnnotationEntry,
   settleEditorAnnotationCreation
 } from './workspaceEditorAnnotationCreationSettlement';
+import { deleteEditorAnnotations } from './workspaceEditorAnnotationDelete';
 import { startEditorAnnotationHistoryMutation } from './workspaceEditorAnnotationHistoryMutation';
-import { createEditorAnnotationDeleteEntry } from './workspaceEditorAnnotationOperationEntry';
 import { createPendingEditorTextReplays } from './workspaceEditorTextReplayPending';
-import {
-  hasWorkspaceNodeMutationRuntime,
-  syncNodeContentToRuntime,
-  syncSoftDeleteNodesToRuntime
-} from './workspaceRuntimeSync';
 import type { EditorOperationApplyContext, WorkspaceState } from './workspaceStoreTypes';
-import { computeDeleteNodesMutation } from './workspaceTrashMutations';
 
 type WorkspaceSet = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState> | WorkspaceState)) => void;
 type WorkspaceGet = () => WorkspaceState;
@@ -124,67 +114,12 @@ function createOperationRunner(set: WorkspaceSet, get: WorkspaceGet) {
   };
 }
 
-function deleteEditorAnnotations(
-  set: WorkspaceSet,
-  nodeIds: string[],
-  onSettled: (nodeId: string, succeeded: boolean) => void
-) {
-  let entry: EditorAnnotationOperationEntry | null = null;
-  let deletedAt = '';
-  set((state) => {
-    const created = createEditorAnnotationDeleteEntry(state, nodeIds);
-    const mutation = computeDeleteNodesMutation(state, nodeIds);
-    if (!created || !mutation) return state;
-    entry = { ...created, canonical: 'pending' };
-    deletedAt = mutation.deletedAt;
-    return { editorOperationHistory: pushEditorOperationEntry(state.editorOperationHistory, entry) };
-  });
-  if (!entry) return;
-  void Promise.resolve(syncSoftDeleteNodesToRuntime({ deletedAt, nodeIds })).then((result) => {
-    const acceptedIds = result?.deletedNodeIds ?? (!hasWorkspaceNodeMutationRuntime() ? nodeIds : []);
-    let settledExactly = false;
-    set((state) => {
-      const acceptedIdSet = new Set(acceptedIds);
-      if (acceptedIds.length !== nodeIds.length || nodeIds.some((id) => !acceptedIdSet.has(id))) {
-        return {
-          editorOperationHistory: removeEditorOperationEntry(
-            state.editorOperationHistory,
-            entry!.nodeId,
-            (item) => isSameEditorAnnotationEntry(item, nodeIds, 'annotation.delete')
-          )
-        };
-      }
-      const mutation = computeDeleteNodesMutation(state, acceptedIds, deletedAt);
-      const confirmed = confirmPendingEditorAnnotationEntry(state, entry!.nodeId, nodeIds);
-      if (!mutation || !confirmed) return state;
-      settledExactly = confirmed.wasTop;
-      mutation.parentNodesToSync.forEach(syncNodeContentToRuntime);
-      return {
-        nodesById: mutation.patch.nodesById,
-        reviewSession: mutation.patch.reviewSession,
-        trashedNodeDeletedAtById: mutation.patch.trashedNodeDeletedAtById,
-        trashedNodeIds: mutation.patch.trashedNodeIds,
-        editorOperationHistory: confirmed.history
-      };
-    });
-    onSettled(entry!.nodeId, settledExactly);
-  }).catch(() => {
-    set((state) => ({
-      editorOperationHistory: removeEditorOperationEntry(
-        state.editorOperationHistory,
-        entry!.nodeId,
-        (item) => isSameEditorAnnotationEntry(item, nodeIds, 'annotation.delete')
-      )
-    }));
-    onSettled(entry!.nodeId, false);
-  });
-}
-
 export function createWorkspaceEditorOperationHistoryActions(set: WorkspaceSet, get: WorkspaceGet) {
   const runner = createOperationRunner(set, get);
   return {
     deleteEditorAnnotationNodes: (nodeIds: string[]) => deleteEditorAnnotations(
       set,
+      get,
       nodeIds,
       (nodeId, succeeded) => runner.settle(nodeId, succeeded)
     ),

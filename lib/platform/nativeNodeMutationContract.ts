@@ -82,6 +82,7 @@ export type NativeNodeSnapshotBatchMutationSpec = {
 export type { NativeMoveNodesArgs, NativeMoveNodesResult, NativeMoveNodePatch } from './nativeMoveContract.js';
 
 export interface NativeRestoreNodesResult {
+  annotationHistory?: import('./nativeTrashCommandMap.js').NativeAnnotationTrashReceipt;
   restoredNodeIds: string[];
   nodeOrder?: string[];
   manualParentOrders?: Array<{ parentNodeId: string; childIds: string[]; updatedAt: string }>;
@@ -92,6 +93,7 @@ export interface NativeRestoreNodesResult {
 }
 
 export interface NativeSoftDeleteNodesResult {
+  annotationHistory?: import('./nativeTrashCommandMap.js').NativeAnnotationTrashReceipt;
   deletedNodeIds: string[];
 }
 

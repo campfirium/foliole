@@ -3,6 +3,7 @@ import { loadVisibleWorkspaceNodeOrder } from '../../lib/core/database/workspace
 import type { NativeRestoreNodesResult } from '../../lib/platform/nativeNodeMutationContract.js';
 import type { NativeRestoreNodesArgs, NativeSoftDeleteNodesArgs, NativeTrashParentUpdate } from '../../lib/platform/nativeTrashCommandMap.js';
 
+import { checkAnnotationTrashGuard } from './annotationTrashGuard.js';
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { restoreNodes, softDeleteNodesDeferringSyncVersions } from './nodeMutations.js';
@@ -53,18 +54,22 @@ function persistManualOrders(orders: Array<{ parentNodeId: string; childIds: str
 
 /** Commits the visible Trash state; the deleted nodes' sync versions follow in background batches. */
 export function softDeleteNodesWithParents(input: NativeSoftDeleteNodesArgs) {
-  withTransaction(openDatabaseConnection().driver, () => {
+  const receipt = withTransaction(openDatabaseConnection().driver, () => {
+    const history = checkAnnotationTrashGuard(input.nodeIds, input.annotationHistory, input.parentUpdates?.map(parent => parent.nodeId));
     softDeleteNodesDeferringSyncVersions(input);
     persistParentUpdates(input.nodeIds, input.parentUpdates ?? []);
+    return history ? { ...history, deletedAt: input.deletedAt } : undefined;
   });
   scheduleNodeSyncVersionDrain();
+  return receipt;
 }
 
 export function restoreNodesWithParents(input: NativeRestoreNodesArgs): NativeRestoreNodesResult {
   const driver = openDatabaseConnection().driver;
   const result = withTransaction(driver, () => {
+    const history = checkAnnotationTrashGuard(input.nodeIds, input.annotationHistory, input.parentUpdates?.map(parent => parent.nodeId));
     const restored = restoreNodes(input);
-    if ((input.parentUpdates?.length || input.parentOrders) && (restored.skippedConflicts.length > 0 ||
+    if ((input.annotationHistory || input.parentUpdates?.length || input.parentOrders) && (restored.skippedConflicts.length > 0 ||
         restored.restoredNodeIds.length !== input.nodeIds.length ||
         !input.nodeIds.every((id) => restored.restoredNodeIds.includes(id)))) {
       throw new Error('cannot restore complete Trash transition');
@@ -72,7 +77,7 @@ export function restoreNodesWithParents(input: NativeRestoreNodesArgs): NativeRe
     persistParentUpdates(input.nodeIds, input.parentUpdates ?? []);
     const manualParentOrders = input.parentOrders
       ? persistManualOrders(restoreDeletedParentOrders(driver, restored.restoredNodeIds, input.parentOrders)) : [];
-    return { ...restored, nodeOrder: loadVisibleWorkspaceNodeOrder(driver),
+    return { ...restored, ...(history ? { annotationHistory: { ...history, deletedAt: null } } : {}), nodeOrder: loadVisibleWorkspaceNodeOrder(driver),
       ...(manualParentOrders.length ? { manualParentOrders } : {}) };
   });
   scheduleNodeSyncVersionDrain();

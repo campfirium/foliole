@@ -2,6 +2,7 @@ import fs from 'node:fs';
 
 import type { Page } from '@playwright/test';
 
+import { redoShortcut, undoShortcut } from './harness/contextualContentHistory';
 import { expect, test } from './harness/fixtures';
 import { loadNodeDocument, loadWorkspaceSnapshot } from './harness/localDataFileAcceptance';
 import { expectWorkspaceShell } from './harness/settings';
@@ -117,6 +118,17 @@ test('creates and deletes an image cloze region without leaving it on the image'
   const childBefore = await loadNodeDocument(desktopWindow, childId!);
   expect(childBefore?.content).toBeTruthy();
   expect(childBefore?.reveal).toBeTruthy();
+
+  const createdRegions = (await loadNodeDocument(desktopWindow, 'topic-image-cloze'))?.imageRegions;
+  await desktopWindow.evaluate(() => window.__folioleDebug?.setEditorSelection?.('prompt-editor', 0, 0));
+  await desktopWindow.keyboard.press(undoShortcut());
+  await expect(regions).toHaveCount(0);
+  await expect.poll(async () => (await loadWorkspaceSnapshot(desktopWindow)).trashedNodeIds).toContain(childId);
+  expect((await loadNodeDocument(desktopWindow, 'topic-image-cloze'))?.imageRegions ?? null).toBeNull();
+  await desktopWindow.keyboard.press(redoShortcut());
+  await expect(regions).toHaveCount(1);
+  await expect.poll(async () => (await loadWorkspaceSnapshot(desktopWindow)).trashedNodeIds).not.toContain(childId);
+  expect((await loadNodeDocument(desktopWindow, 'topic-image-cloze'))?.imageRegions).toEqual(createdRegions);
 
   await clickRegionBorder(desktopWindow);
   console.log(JSON.stringify(await collectSelectionDebugState(desktopWindow), null, 2));

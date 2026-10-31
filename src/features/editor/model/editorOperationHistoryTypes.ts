@@ -60,6 +60,14 @@ export interface EditorTextHistoryReplayResult {
 }
 
 export interface EditorAnnotationOperationState {
+  historyFacts?: import('../../../../lib/core/nodes/annotationHistoryFacts').AnnotationHistoryFact[];
+  historyDeletedAt?: string | null;
+  historyParents?: Array<{
+    nodeId: string;
+    before: import('../../../../lib/platform/nativeWorkspaceNodeContract').NativeWorkspaceImageRegionGroup[] | null;
+    after: import('../../../../lib/platform/nativeWorkspaceNodeContract').NativeWorkspaceImageRegionGroup[] | null;
+  }>;
+
   applyingMode?: 'redo' | 'undo';
   canonical: 'confirmed' | 'pending';
 }

@@ -1,3 +1,4 @@
+import { captureAnnotationHistoryFact } from '../../lib/core/nodes/annotationHistoryFacts';
 import type {
   EditorAnnotationOperationEntry,
   EditorAnnotationOperationSnapshot
@@ -52,6 +53,8 @@ export function createEditorAnnotationCreateEntry(
   }
   return {
     annotations,
+    historyFacts: nodes.map(captureAnnotationHistoryFact),
+    historyDeletedAt: null,
     canonical: 'pending',
     nodeId: parentNodeId,
     title: 'Create Annotation',
