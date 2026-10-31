@@ -85,3 +85,16 @@ it('rejects shared credential permissions and repository contained credentials',
   expect(() => loadUploadSigning(inside, repo)).toThrow('outside the repository');
   expect(loadUploadSigning(undefined, repo)).toBeNull();
 });
+
+it('accepts an explicit Keychain reference and rejects ambiguous or invalid password sources', () => {
+  const file = path.join(credentials, 'keychain.json');
+  const keychain = { service: 'com.campfirium.foliole.android.upload', account: 'upload' };
+  const write = (value) => fs.writeFileSync(file, JSON.stringify(value), { mode: 0o600 });
+  write({ keystore: config.keystore, alias: 'upload', keychain });
+  expect(loadUploadSigning(file, repo)).toEqual({ keystore: config.keystore, alias: 'upload', keychain });
+  for (const invalid of [{}, { keychain: null }, { keychain: { service: '', account: 'upload' } },
+    { keychain, passwordFile: config.passwordFile }]) {
+    write({ keystore: config.keystore, alias: 'upload', ...invalid });
+    expect(() => loadUploadSigning(file, repo)).toThrow('Upload signing configuration');
+  }
+});
