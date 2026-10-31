@@ -6,7 +6,7 @@ import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { runWindowsDefaultSyncJourneyControl } from './windows-default-sync-journey-control.mjs';
-import { parseWindowsDevControlArgs, windowsDevSshSpec } from './windows-dev-control.mjs';
+import { parseWindowsDevControlArgs, windowsDevPushSpec, windowsDevSshSpec } from './windows-dev-control.mjs';
 
 const roots = [];
 afterEach(() => roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true })));
@@ -66,6 +66,26 @@ function options(current) {
     sourceRef: 'refs/heads/dev', stdout: { write: vi.fn() }
   };
 }
+
+it('runs the default journey against an explicit release candidate through the existing mirror', async () => {
+  const current = fixture();
+  const parsed = parseWindowsDevControlArgs([
+    'default-sync-journey', '--source-ref', 'refs/heads/release'
+  ], {});
+  const runOptions = { ...options(current), ...parsed, buildPushSpec: windowsDevPushSpec };
+  const result = await runWindowsDefaultSyncJourneyControl(runOptions);
+  expect(current.executeGit.mock.calls[1][0].at(-1))
+    .toBe('+refs/heads/release:refs/heads/dev');
+  expect(result).toMatchObject({ acceptedTip: 'a'.repeat(40), ref: 'refs/heads/release' });
+});
+
+it('keeps release selection out of unrelated actions and rejects other journey branches', () => {
+  for (const [action, sourceRef] of [
+    ['verify', 'refs/heads/release'], ['default-sync-journey', 'refs/heads/feature']
+  ]) {
+    expect(() => parseWindowsDevControlArgs([action, '--source-ref', sourceRef], {})).toThrow();
+  }
+});
 
 it('copies the bounded receipt, summary, log, and four screenshots after revision equality', async () => {
   const current = fixture();
