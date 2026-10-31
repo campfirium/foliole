@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, X509Certificate } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { uploadSigningPassword } from './macos-a5-signing-password.mjs';
 
 function privateFile(file, sourceRepoRoot) {
   if (!path.isAbsolute(file)) throw new Error('Upload signing files require absolute paths.');
@@ -24,16 +23,9 @@ export function loadUploadSigning(configFile, sourceRepoRoot) {
     const file = privateFile(configFile, sourceRepoRoot);
     const config = JSON.parse(fs.readFileSync(file, 'utf8'));
     if (!/^[a-zA-Z0-9._-]+$/u.test(config.alias ?? '')) throw new Error('Invalid key alias.');
-    const hasKeychain = config.keychain !== undefined;
-    if (hasKeychain === (config.passwordFile !== undefined)) throw new Error('Specify one password source.');
-    if (hasKeychain && (![config.keychain?.service, config.keychain?.account]
-      .every((value) => typeof value === 'string' && /^[a-zA-Z0-9@._-]+$/u.test(value)))) {
-      throw new Error('Invalid Keychain reference.');
-    }
     return { alias: config.alias,
       keystore: privateFile(config.keystore, sourceRepoRoot),
-      ...(hasKeychain ? { keychain: config.keychain }
-        : { passwordFile: privateFile(config.passwordFile, sourceRepoRoot) }) };
+      passwordFile: privateFile(config.passwordFile, sourceRepoRoot) };
   } catch {
     throw new Error('Upload signing configuration is missing, invalid, or not privately stored outside the repository.');
   }
@@ -50,7 +42,8 @@ function javaTool(java, tool, args, env) {
 }
 
 function signingEnv(config, env) {
-  const password = uploadSigningPassword(config);
+  const password = fs.readFileSync(config.passwordFile, 'utf8').trimEnd();
+  if (!password || /[\r\n]/u.test(password)) throw new Error('Upload signing password file is invalid.');
   // Only the signing tools receive the secret; Gradle, npm and Capacitor do not.
   return { ...env, FOLIOLE_ANDROID_UPLOAD_STORE_PASSWORD: password };
 }
