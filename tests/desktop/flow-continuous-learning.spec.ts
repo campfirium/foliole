@@ -64,22 +64,26 @@ test('keeps the planned reading after five grades and persists its complete lear
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId)).toBe(planned[5]);
   await page.getByRole('button', { name: /^Read$/, exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().readTopicCount)).toBe(1);
-  const beforeReload = await page.evaluate(async () => ({
+  const beforeReload = await page.evaluate(async ids => ({
     session: window.__folioleWorkspaceDebug!.getReviewSession(),
-    disk: await window.electronAPI.invoke('load_workspace_snapshot', {})
-  }));
+    disk: await window.electronAPI.invoke('load_workspace_snapshot', {}),
+    documents: await Promise.all(ids.map(nodeId => window.electronAPI.invoke('load_node_document', { nodeId })))
+  }), planned);
   fs.mkdirSync(output, { recursive: true });
   await page.screenshot({ path: `${output}/after-learning.png` });
   await page.reload();
   await expectWorkspaceShell(page);
   await page.getByRole('button', { name: /^Enter Flow$/ }).click();
-  const restored = await page.evaluate(async () => ({
+  const restored = await page.evaluate(async ids => ({
     session: window.__folioleWorkspaceDebug!.getReviewSession(),
-    disk: await window.electronAPI.invoke('load_workspace_snapshot', {})
-  }));
+    disk: await window.electronAPI.invoke('load_workspace_snapshot', {}),
+    documents: await Promise.all(ids.map(nodeId => window.electronAPI.invoke('load_node_document', { nodeId })))
+  }), planned);
   expect(restored.session.currentNodeId).toBe(beforeReload.session.currentNodeId);
   expect(restored.session.reviewedItemCount).toBe(5);
   expect(restored.session.readTopicCount).toBe(1);
+  expect(beforeReload.documents.every(document => document.content.length > 0)).toBe(true);
+  expect(restored.documents).toEqual(beforeReload.documents);
   for (const id of planned) expect(restored.disk.nodesById[id]).toEqual(beforeReload.disk.nodesById[id]);
   fs.writeFileSync(`${output}/result.json`, JSON.stringify({ initial, planned, grades, beforeReload, restored }, null, 2));
 });
