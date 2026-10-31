@@ -18,6 +18,7 @@ export function createImageClozeActionButton(args: { ariaLabel: string; iconPath
   button.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true" class="cm-md-image-icon"><path d="${args.iconPath}"></path></svg>`;
   button.type = 'button';
   button.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
     event.stopPropagation();
   });
   button.addEventListener('pointerup', (event) => {
