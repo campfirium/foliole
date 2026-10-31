@@ -21,7 +21,7 @@ function configurePageElement(
   Object.defineProperty(element, 'clientHeight', { configurable: true, value: 300 });
 }
 
-function PdfSearchSingleTargetScrollHarness() {
+function PdfSearchSingleTargetScrollHarness({ positionReady = true }: { positionReady?: boolean }) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
   const pageTextByNumberRef = useRef<Record<number, string>>({
@@ -46,6 +46,7 @@ function PdfSearchSingleTargetScrollHarness() {
 
   usePdfSearchEffect({
     matches: TARGET_MATCHES,
+    positionReady,
     onSearchDebugChange: () => undefined,
     onSearchHighlightsChange: () => undefined,
     onSearchRequestHandled: () => undefined,
@@ -200,4 +201,17 @@ describe('usePdfSearchEffect target jump', () => {
     });
     expect(scrollToMock).toHaveBeenCalledTimes(1);
   });
+});
+
+it('keeps the match pending until initial positioning completes, then leaves later scrolling alone', async () => {
+  const scroll = vi.fn();
+  window.HTMLElement.prototype.scrollTo = scroll;
+  const view = render(<PdfSearchSingleTargetScrollHarness positionReady={false} />);
+  expect(screen.getByTestId('pdf-search-single-target-status')).toHaveTextContent('pending');
+  expect(scroll).not.toHaveBeenCalled();
+  view.rerender(<PdfSearchSingleTargetScrollHarness positionReady />);
+  await waitFor(() => expect(screen.getByTestId('pdf-search-single-target-status')).toHaveTextContent('cleared'));
+  expect(scroll).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole('button', { name: 'tick' }));
+  expect(scroll).toHaveBeenCalledOnce();
 });

@@ -22,6 +22,7 @@ interface PdfDocumentViewportContentBodyProps {
   onClearSearch: () => void;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
+  onPositionReadyChange?: (ready: boolean) => void;
   onTextContentLoad: (pageNumber: number, text: PdfPageTextEntry) => void;
   onNextPage: () => void;
   onPageChange: (value: number) => void;
@@ -124,6 +125,9 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
   const previousPdfSourceRef = useRef(props.pdfSource);
   const heightView = usePdfHeightFitView(props, isLayoutReady && isInitialRenderReady);
   const adapted = heightView.props;
+  useEffect(() => {
+    props.onPositionReadyChange?.(isLayoutReady && isInitialRenderReady);
+  }, [isInitialRenderReady, isLayoutReady, props.onPositionReadyChange]);
   const { displayedZoom, handlePageLoadSuccess } = useDisplayedPdfZoom({
     fitWidthTargetWidth,
     visiblePage: adapted.visiblePage,

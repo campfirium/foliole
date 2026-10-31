@@ -109,3 +109,20 @@ it('pages with Space and Shift Space while keeping editing and free zoom untouch
   expect(free.defaultPrevented).toBe(false);
   expect(props.onNextPage).toHaveBeenCalledOnce();
 });
+
+it('retains a page request consumed before the reading view finishes loading', async () => {
+  let finishLoading!: (view: Awaited<ReturnType<typeof loadPdfReadingView>>) => void;
+  vi.mocked(loadPdfReadingView).mockImplementation(() => new Promise((resolve) => { finishLoading = resolve; }));
+  const base = makeProps();
+  const shell = document.createElement('div');
+  shell.getBoundingClientRect = () => ({ top: 200 - base.scrollContainerRef.current.scrollTop, left: 0 }) as DOMRect;
+  const props = { ...base, pageElementsRef: { current: { 2: shell } },
+    persistedPageDimensions: { ...base.persistedPageDimensions, 2: { width: 600, height: 1000 } } };
+  const request = { id: 1, page: 2 };
+  const { result, rerender } = renderHook(({ pageJumpRequest }) => usePdfHeightFitView({ ...props, pageJumpRequest }, true),
+    { wrapper: Wrapper, initialProps: { pageJumpRequest: request as typeof request | null } });
+  rerender({ pageJumpRequest: null });
+  await act(async () => { finishLoading({ mode: 'auto', automatic, manual: null, automaticVersion: 1 }); });
+  await waitFor(() => expect(base.scrollContainerRef.current.scrollTop).toBe(272));
+  expect(result.current.props.zoom).toBe(80);
+});

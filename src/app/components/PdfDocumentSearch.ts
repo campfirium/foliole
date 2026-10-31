@@ -19,6 +19,7 @@ export interface PdfSearchStatus {
 
 export interface PdfSearchArgs {
   matches: RuntimePdfDocumentSearchMatch[];
+  positionReady?: boolean;
   onSearchDebugChange: (debug: PdfSearchDebugInfo) => void;
   onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
   onSearchRequestHandled?: (requestId: number) => void;
@@ -75,6 +76,7 @@ export interface PdfSearchDebugInfo {
 export { collectMatches } from './pdfSearchMatchCollection';
 export function usePdfSearchEffect({
   matches,
+  positionReady = true,
   onSearchDebugChange,
   onSearchHighlightsChange,
   onSearchRequestHandled,
@@ -91,6 +93,7 @@ export function usePdfSearchEffect({
 }: PdfSearchArgs) {
   usePdfSearchCycleEffect({
     matches,
+    positionReady,
     pageElementsRef,
     pageTextByNumberRef,
     scrollContainerRef,

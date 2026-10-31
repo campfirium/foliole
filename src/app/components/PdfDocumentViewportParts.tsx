@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 
 import { type PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';
@@ -150,27 +150,9 @@ interface PdfDocumentViewportContentProps {
 }
 
 export function PdfDocumentViewportContent(props: PdfDocumentViewportContentProps) {
-  usePdfDocumentViewportSearchRuntime(resolvePdfSearchRuntimeArgs(props));
-  return renderPdfViewportContentBody(resolveViewportContentBodyProps(props));
-}
-
-function renderPdfViewportContentBody(
-  props: Omit<
-    PdfDocumentViewportContentProps,
-    | 'onSearchDebugChange'
-    | 'onSearchHighlightsChange'
-    | 'onSearchRequestHandled'
-    | 'onSearchStatusChange'
-    | 'onSearchTargetHandled'
-    | 'nodeId'
-    | 'pageTextByNumberRef'
-    | 'pdfIndexStatus'
-    | 'searchRequest'
-    | 'searchRevision'
-    | 'searchTarget'
-  >
-) {
-  return <PdfDocumentViewportContentBody {...props} />;
+  const [positionReady, setPositionReady] = useState(false);
+  usePdfDocumentViewportSearchRuntime({ ...resolvePdfSearchRuntimeArgs(props), positionReady: positionReady && !props.pageJumpRequest });
+  return <PdfDocumentViewportContentBody {...resolveViewportContentBodyProps(props)} onPositionReadyChange={setPositionReady} />;
 }
 
 function resolvePdfSearchRuntimeArgs(props: PdfDocumentViewportContentProps) {

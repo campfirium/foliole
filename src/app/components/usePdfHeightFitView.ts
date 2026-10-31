@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MutableRefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject } from 'react';
 
 import { usePdfReadingView } from '../../features/pdf/components/PdfReadingViewContext';
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
@@ -72,14 +72,11 @@ export function usePdfHeightFitView<T extends HeightFitProps>(props: T, ready: b
 function useFitAlignment(props: HeightFitProps,
   fit: ReturnType<typeof resolvePdfHeightFit> | null, page: number, key: string, ready: boolean) {
   const applied = useRef('');
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = props.scrollContainerRef.current;
     const shell = props.pageElementsRef.current[page];
     if (!fit || !ready || props.pageJumpRequest || !container || !shell || applied.current === key) return;
-    const frame = window.requestAnimationFrame(() => {
-      alignPdfHeightFit(container, shell, fit);
-      applied.current = key;
-    });
-    return () => window.cancelAnimationFrame(frame);
+    alignPdfHeightFit(container, shell, fit);
+    applied.current = key;
   }, [fit, key, page, props.pageElementsRef, props.pageJumpRequest, props.scrollContainerRef, ready]);
 }

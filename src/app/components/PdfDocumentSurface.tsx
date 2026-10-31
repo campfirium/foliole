@@ -75,7 +75,10 @@ export function PdfDocumentSurface({
   useRegisterPdfSurface(
     nodeId,
     pdfSystem.actions.requestAnchorJump,
-    searchState.applyExternalSearch,
+    (request) => {
+      pdfSystem.actions.requestPageChange(request.page);
+      searchState.applyExternalSearch(request);
+    },
     selectionState.requestAnnotation,
     isVisible
   );
