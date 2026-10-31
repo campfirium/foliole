@@ -32,6 +32,9 @@ export function applyHiddenNativeDesktopWindowOptions(
         ...hiddenOptions,
         height: HIDDEN_NATIVE_DESKTOP_TEST_BOUNDS.height,
         opacity: 0,
+        // Use Electron's virtual renderer surface so AppKit tracking events from
+        // the user's desktop cannot overwrite Playwright's pointer position.
+        webPreferences: { ...options.webPreferences, offscreen: true },
         width: HIDDEN_NATIVE_DESKTOP_TEST_BOUNDS.width
       }
     : { ...hiddenOptions, ...HIDDEN_NATIVE_DESKTOP_TEST_BOUNDS };
