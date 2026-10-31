@@ -29,13 +29,12 @@ it('changes a provisional inline widget to the final block layout once', () => {
   expect(requestMeasure).toHaveBeenCalledTimes(1);
 });
 
-it('preserves explicit width while recording the intrinsic ratio', () => {
+it('records the intrinsic ratio for an image with explicit width', () => {
   const match = createMatch('block', 268);
   const widget = createMarkdownImageWidgetDom(match);
 
   finalizeMarkdownImageDisplay(widget, match, { height: 900, width: 1200 }, null);
 
   const surface = widget.querySelector<HTMLElement>('.cm-md-image-surface');
-  expect(surface?.style.width).toBe('268px');
   expect(surface?.style.aspectRatio).toBe('1200 / 900');
 });

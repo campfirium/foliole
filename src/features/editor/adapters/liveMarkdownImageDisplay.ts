@@ -7,6 +7,11 @@ function replaceDisplayClass(element: Element, prefix: string, display: Markdown
   element.classList.add(`${prefix}-${display}`);
 }
 
+function fitBlockImageWidth(width: number, size: ImageIntrinsicSize) {
+  const ratio = size.width / size.height;
+  return `min(${width}px, calc(var(--editor-image-max-height, ${width / ratio}px) * ${ratio}))`;
+}
+
 function applyIntrinsicSlot(surface: HTMLElement | null, display: MarkdownImageMatch['display'], size: ImageIntrinsicSize) {
   if (!surface) return;
   surface.style.aspectRatio = `${size.width} / ${size.height}`;
@@ -16,7 +21,7 @@ function applyIntrinsicSlot(surface: HTMLElement | null, display: MarkdownImageM
     return;
   }
   surface.style.removeProperty('height');
-  surface.style.width = `${size.width}px`;
+  surface.style.width = fitBlockImageWidth(size.width, size);
 }
 
 export function finalizeMarkdownImageDisplay(
@@ -44,7 +49,7 @@ export function finalizeMarkdownImageDisplay(
   if (imageMatch.displayWidth) {
     if (surface) {
       surface.style.aspectRatio = `${size.width} / ${size.height}`;
-      surface.style.width = `${imageMatch.displayWidth}px`;
+      surface.style.width = fitBlockImageWidth(imageMatch.displayWidth, size);
     }
   } else {
     applyIntrinsicSlot(surface, display, size);
