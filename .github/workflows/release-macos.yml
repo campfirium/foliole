@@ -142,6 +142,8 @@ jobs:
           security list-keychain -d user -s "$keychain_path"
           security find-identity -v -p codesigning "$keychain_path"
       - name: Build, sign, notarize, and verify macOS release
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: npm run macos:github:notarize
       - name: Verify macOS updater artifacts and packaged distribution identity
         env:
