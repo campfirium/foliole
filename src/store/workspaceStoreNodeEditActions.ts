@@ -15,6 +15,7 @@ import {
   syncNodeRevealMutationToRuntime
 } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
+import { drainPendingNodeContentRuntimePersist } from './workspaceStoreContentRuntimePersist';
 import { buildCommittedTitleMutation, preserveCurrentBodyInPatch } from './workspaceStructureRenameCommit';
 
 type WorkspaceSet = (
@@ -149,7 +150,8 @@ export function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceState[
     let localPatch: Partial<WorkspaceState> | null = null;
     set((state) => {
       const node = state.nodesById[nodeId];
-      if (!node || isProtectedRootNode(node) || node.reveal === null) {
+      if (!node || isProtectedRootNode(node) || state.trashedNodeIds.includes(nodeId)
+        || (node.reveal === null && node.hasReveal !== true)) {
         return state;
       }
       const nextNode = {
@@ -170,6 +172,13 @@ export function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceState[
     });
     if (!nextNodeForSync) return false;
     const shouldUseLocalFallback = !hasWorkspaceNodeMutationRuntime();
+    if (!await drainPendingNodeContentRuntimePersist(nodeId)) return false;
+    let stillPresent = false;
+    set(state => {
+      stillPresent = Boolean(state.nodesById[nodeId]) && !state.trashedNodeIds.includes(nodeId);
+      return state;
+    });
+    if (!stillPresent) return false;
     const result = await syncNodeRevealMutationToRuntime(nextNodeForSync);
     let applied = false;
     set((state) => {
