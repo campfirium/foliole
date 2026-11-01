@@ -52,7 +52,7 @@ function checked(run, command, args, options) {
   return result.stdout;
 }
 
-// Packs from the Mac npm cache first and downloads only what it lacks.
+// Packs locked URLs on the Mac; every resulting tarball must match the lock.
 function packTarballs({ fsApi, repoRoot, root, run, tarballs }) {
   const staging = path.join(root, 'staging');
   const output = path.join(root, 'tarballs');
@@ -61,19 +61,21 @@ function packTarballs({ fsApi, repoRoot, root, run, tarballs }) {
   const files = [];
   for (let index = 0; index < tarballs.length; index += PACK_CHUNK) {
     const chunk = tarballs.slice(index, index + PACK_CHUNK);
-    const packed = JSON.parse(checked(run, 'npm', ['pack', ...chunk.map(({ resolved }) => resolved),
-      '--pack-destination', staging, '--prefer-offline', '--json'], { cwd: repoRoot }));
-    packed.forEach((result, offset) => {
-      const expected = chunk[offset].integrity;
-      const bytes = fsApi.readFileSync(path.join(staging, result.filename));
-      if (integrityOf(bytes) !== expected) {
-        throw new Error(`Packed ${chunk[offset].resolved} does not match the locked integrity`);
-      }
-      const file = fileName(expected);
-      fsApi.writeFileSync(path.join(output, file), bytes);
-      fsApi.rmSync(path.join(staging, result.filename), { force: true });
-      files.push({ file, integrity: expected });
-    });
+    checked(run, 'npm', ['pack', ...chunk.map(({ resolved }) => resolved),
+      '--pack-destination', staging, '--prefer-offline', '--json', '--allow-remote=all', '--ignore-scripts'], { cwd: repoRoot });
+    const packed = new Map(fsApi.readdirSync(staging).map((name) => {
+      const bytes = fsApi.readFileSync(path.join(staging, name));
+      return [integrityOf(bytes), { bytes, name }];
+    }));
+    for (const { integrity, resolved } of chunk) {
+      const result = packed.get(integrity);
+      if (!result) throw new Error(`Packed ${resolved} does not match the locked integrity`);
+      const file = fileName(integrity);
+      fsApi.writeFileSync(path.join(output, file), result.bytes);
+      fsApi.rmSync(path.join(staging, result.name), { force: true });
+      files.push({ file, integrity });
+    }
+    if (fsApi.readdirSync(staging).length) throw new Error('Packed tarballs include unlocked bytes');
   }
   fsApi.rmSync(staging, { force: true, recursive: true });
   return files;
