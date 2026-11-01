@@ -46,7 +46,10 @@ beforeEach(async () => {
   writes.length = 0;
   failDocumentRead = null;
 });
-afterEach(async () => { closeDatabaseConnection(); await fs.rm(root, { recursive: true, force: true }); });
+afterEach(async () => {
+  closeDatabaseConnection();
+  await fs.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+});
 
 async function createNode(id: string, content: string, reveal: string | null = null, parentNodeId: string | null = null) {
   await handleStorageCommand('create_topic', {
