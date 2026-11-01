@@ -4,11 +4,11 @@ import { listPrChecks, recordMonitorError, runGh } from './github-monitor-gh.mjs
 const NATIVE_REVIEW_POLICY = [
   'Native dependency review boundary:',
   'Inspect the verified full diff before classifying each proposal; titles and branch names do not establish dependency intent.',
-  'Any Gradle build or Wrapper changes, Swift Package.swift or Package.resolved changes, or mixed source changes require manual review.',
-  'Do not adopt these proposals in this handoff, execute their proposed scripts, or close their PRs; report the exact changes and leave them open for explicit adoption authorization.',
-  'Review Wrapper scripts and JAR provenance against the official distribution and checksum before any later adoption.',
+  'Review Gradle build/Wrapper and Swift manifest/lock changes before local adoption; native updates do not inherently require a second authorization.',
+  'Do not execute unreviewed PR scripts. Verify official Wrapper distribution/checksums and JAR provenance, regenerate locally and inspect scripts before running applicable Android checks.',
+  'Unrelated source changes, unverifiable scripts/binaries or incompatible toolchains block the affected group, not other eligible updates.',
   'For Swift updates, review both SwiftProtobuf exact constraints and the App and host lock files together; generated Capacitor manifests follow npm ownership.',
-  'Other verified npm proposals retain the existing adoption and Electron eligibility requirements.',
+  'Group related dependencies for local dev changes and share applicable validation; one writer protects shared files, not a one-package limit. Preserve Electron eligibility requirements.',
   'See docs/maintenance/native-dependency-updates.md for ownership, validation and coverage limits.'
 ].join('\n');
 

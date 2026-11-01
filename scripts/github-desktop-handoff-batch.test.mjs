@@ -95,13 +95,15 @@ describe('Dependabot batch notifications', () => {
       .toEqual(first.map((event) => event.dedupeKey));
   });
 
-  it('delivers Gradle and Swift proposals with an explicit review-only native policy', () => {
+  it('delivers Gradle and Swift proposals for handling with native provenance boundaries', () => {
     github.prs = [bot(21, 'Bump Gradle'), bot(22, 'Bump SwiftProtobuf')];
     const state = stateForScan();
     const events = scan(state);
     expect(events).toHaveLength(1);
     expect(events[0].prNumbers).toEqual(['21', '22']);
-    expect(events[0].prompt).toContain('Do not adopt these proposals in this handoff');
+    expect(events[0].handlingMode).toBe('classify-then-handle-batch');
+    expect(events[0].prompt).toContain('JAR provenance');
+    expect(events[0].prompt).not.toContain('Do not adopt these proposals in this handoff');
     expect(events[0].prompt).toContain('both SwiftProtobuf exact constraints');
     expect(events[0].prompt).toContain('verified full diff');
     const submitted = [];

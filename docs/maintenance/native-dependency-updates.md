@@ -1,6 +1,8 @@
 # Native dependency update proposals
 
-Dependabot checks these roots for version updates targeting `dev`:
+Renovate owns ordinary version proposals targeting `dev` for these roots.
+Dependabot retains alerts and security updates; its ordinary proposal limits are
+zero. See `dependency-updates.md` for the updater ownership and handoff policy.
 
 | Ecosystem | Root | Owner |
 | --- | --- | --- |
@@ -9,15 +11,15 @@ Dependabot checks these roots for version updates targeting `dev`:
 | Swift | `/ios/App` | Host-test package and its direct Swift dependencies |
 | Swift | `/ios/App/FramedSyncRuntimePackage` | Shared native runtime's Swift package constraints |
 
-Native checks use the existing 09:00 Asia/Shanghai daily schedule. GitHub's daily version-update schedule runs on weekdays. These proposals do not establish complete vulnerability coverage or prove which transitive components an APK or IPA contains. Security updates and version updates have different coverage and branch behavior; a `dev` version-update entry does not prove private security alerts are available or monitored.
+Renovate uses the configured update policy without an extra weekly window or pre-PR approval. These proposals do not establish complete vulnerability coverage or prove which transitive components an APK or IPA contains. Security updates and version updates have different coverage and branch behavior; a `dev` version-update entry does not prove private security alerts are available or monitored.
 
 ## Review before adoption
 
-The existing notification producer groups Dependabot proposals by target branch, irrespective of ecosystem. A proposal is a request for review, not trusted executable code. The producer does not run proposed Gradle or Swift scripts to determine intent.
+The existing notification producer groups verified Dependabot and Renovate proposals by repository and target branch, irrespective of ecosystem or author. A proposal is an update lead, not trusted executable code. The producer does not run proposed Gradle or Swift scripts to determine intent.
 
-Grouping spans monitor scans: each repository and target branch collects newly observed proposals until no new member has arrived for five minutes, or thirty minutes have elapsed since the first observation. Delivery occurs on the next successful existing monitor scan, not through an additional timer. Pending membership and timestamps survive producer restarts in its existing state file. Rebases and reordered results do not extend the window; closed or excluded draft PRs are removed before delivery. Only successful event submission records notification delivery. Existing delivery checkpoints are preserved, and a later independent arrival wave may create another batch. This window groups notifications only; it does not decide update eligibility or assign competing implementation writers. Non-Dependabot PR signals and security-alert notifications are not delayed by this window.
+Grouping spans monitor scans: each repository and target branch collects newly observed proposals until no new member has arrived for five minutes, or thirty minutes have elapsed since the first observation. Delivery occurs on the next successful existing monitor scan, not through an additional timer. Pending membership and timestamps survive producer restarts in its existing state file. Rebases and reordered results do not extend the window; closed or excluded draft PRs are removed before delivery. Only successful event submission records notification delivery. Existing delivery checkpoints are preserved, and a later independent arrival wave may create another batch. This window groups notifications only; it does not decide update eligibility or assign competing implementation writers. Other-author PR signals, later Renovate check failures and security-alert notifications are not delayed by this window.
 
-Read the current verified author, base, head revision and complete diff in the maintenance task. Native and mixed-source proposals stay review-only until explicitly authorized for adoption. Keep them open and report the scope and compatibility requirements. Existing npm/Electron adoption rules continue to apply to other verified proposals in the same batch. Do not assume a title or branch name proves a proposal is limited to dependencies.
+Read the current verified author, base, head revision and complete diff in the maintenance task. When the maintainer continues an authorized handling batch, reviewed native updates may be implemented on local `dev` without a second adoption confirmation. Explicit review-only, single-PR and different-base restrictions remain. Unrelated source changes, unverifiable executable assets or an independent migration beyond scope block only the affected group. Existing npm/Electron requirements remain. Do not assume a title or branch name proves dependency intent.
 
 For a Gradle Wrapper proposal, verify official distribution and Wrapper JAR checksums, regenerate using a verified patched distribution, and inspect script changes. Dependency declarations in Gradle are executable build code; review changes before running a candidate. A patch must also pass the applicable Android build and regression checks. A successful build is not a vulnerability scan.
 

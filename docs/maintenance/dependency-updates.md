@@ -72,9 +72,43 @@ plan or configure self-hosted infrastructure for this repository.
 
 Record the first hosted job and its candidate inventory before switching updater
 ownership. Local schema validation and extraction are preparation evidence only.
-Renovate proposals use a review-only notification path even when checks pass;
-the Dependabot author exception is not extended to a new bot automatically.
+Verified Renovate and Dependabot proposals share the existing dependency batch
+notification path, including proposals with passing or absent checks. Their exact
+author identities are `app/renovate` and `app/dependabot`; other authors retain
+independent review. Later Renovate check failures retain their separate read-only
+reminders and do not acquire a second dependency writer.
 The retired dashboard Issue #185 is not a user support request.
+
+## Local adoption
+
+The existing handoff groups newly observed proposals by repository and target
+branch across scans: five quiet minutes after the last arrival, capped at thirty
+minutes from the first. Delivery occurs on the next existing scan. Pending windows
+and delivered checkpoints survive restarts; old individual review notifications
+are not replayed when changing the route. A successful inbox submission is not
+proof that a maintainer viewed or continued the paused task.
+
+When the maintainer continues an authorized handling batch, one agent reviews
+the current proposals from both verified bots and implements eligible updates on
+the direct local `dev` checkout. An explicit review-only or single-PR instruction
+takes precedence. A proposal for another base stays read-only. Inspect the full
+diff, current head, release evidence and compatibility before executing code;
+bot identity does not make its changes safe to run.
+
+Choose upgrade targets, then group related dependencies and combine compatible
+routine updates. A group can contain multiple packages and PRs. Shared manifests,
+lockfiles and generated outputs have one writer; that protection does not impose
+a one-package limit. Keep ordinary groups in one task, splitting only an
+independently scoped migration when warranted. Do not create a branch or worktree
+unless requested, or merge/check out the bot's branch.
+
+Run focused behavior checks and necessary builds per group, then share applicable
+checks for the final combination and hosted evidence for the exact integrated
+revision. Builds alone do not prove runtime or data behavior. Follow affected host
+rules without turning ordinary updates into full release acceptance. A blocked
+group does not hold unrelated eligible updates. Commit validated changes, verify
+their remote containment and required checks, then close only covered proposals
+without merging. Do not use PR count to determine install, test or task count.
 
 References: [Renovate installation](https://docs.renovatebot.com/getting-started/installing-onboarding/),
 [free hosting](https://docs.renovatebot.com/mend-hosted/overview/),
