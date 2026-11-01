@@ -175,9 +175,10 @@ export function createSharedViteConfig(projectRoot: string, options: SharedViteC
       ...(options.pdfJsResources ? [pdfJsResourcesPlugin(projectRoot)] : [])
     ],
     resolve: {
-      alias: {
-        '@': path.resolve(projectRoot, './src')
-      }
+      alias: [
+        { find: '@', replacement: path.resolve(projectRoot, './src') },
+        { find: /^pdfjs-dist$/, replacement: path.resolve(projectRoot, 'node_modules/pdfjs-dist/legacy/build/pdf.mjs') }
+      ]
     },
     server: {
       cors: true,

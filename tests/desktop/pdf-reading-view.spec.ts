@@ -9,7 +9,10 @@ import { PDF_ZOOM_MAX } from '../../src/features/pdf/model/pdfSystemStateUtils';
 
 import { expect, test } from './harness/fixtures';
 import { capturePdfSurface } from './pdf-canvas-content';
+import { maskNewPdfBuiltins } from './pdf-minimum-browser';
 import { revealPdfBars } from './pdf-top-bars-interaction';
+
+test.beforeEach(({ desktopWindow }) => maskNewPdfBuiltins(desktopWindow));
 
 test('PDF automatic and manual views preserve ranges across reload @pdf', async ({
   desktopApp,
