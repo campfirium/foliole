@@ -1,4 +1,4 @@
-export const INTERFACE_FONT_OPTIONS = ['default', 'system', 'serif', 'custom'] as const;
+export const INTERFACE_FONT_OPTIONS = ['default', 'system', 'serif', 'noto-sans-sc', 'custom'] as const;
 export const MONOSPACE_FONT_OPTIONS = ['default', 'jetbrains', 'cascadia', 'consolas', 'fira', 'sarasa', 'custom'] as const;
 export const PDF_READING_MODE_OPTIONS = ['original', 'inverted', 'warm'] as const;
 

@@ -31,6 +31,7 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('typography', 'typography-text-font', 'settings.appearance.textFont.title', 'settings.appearance.textFont.description'),
   row('typography', 'typography-monospace-font', 'settings.appearance.monospaceFont.title', 'settings.appearance.monospaceFont.description'),
   row('typography', 'typography-reading-font-size', 'settings.appearance.fontSize.title', 'settings.appearance.fontSize.description'),
+  row('typography', 'typography-reading-font-weight', 'settings.appearance.fontWeight.title', 'settings.appearance.fontWeight.description'),
   row('typography', 'typography-reading-line-height', 'settings.appearance.lineHeight.title', 'settings.appearance.lineHeight.description'),
   row('typography', 'typography-paragraph-spacing', 'settings.appearance.paragraphSpacing.title', 'settings.appearance.paragraphSpacing.description'),
   row('typography', 'typography-reading-width', 'settings.appearance.readingWidth.title', 'settings.appearance.readingWidth.description'),

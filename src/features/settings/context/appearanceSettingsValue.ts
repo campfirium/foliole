@@ -17,6 +17,7 @@ function createReadingSettingsValue(state: AppearanceStateValues) {
   return {
     immersiveDoubleClickEditEnabled: state.immersiveDoubleClickEditEnabledState,
     readingContentWidth: state.readingContentWidthState,
+    readingFontWeightSettings: state.readingFontWeightSettings,
     readingLineHeight: state.readingLineHeightState,
     readingParagraphSpacing: state.readingParagraphSpacingState
   };
@@ -96,6 +97,7 @@ export function useAppearanceSettingsValue(state: AppearanceStateValues): Appear
       state.nodeListRowSpacingState,
       state.pdfReadingModeState,
       state.readingContentWidthState,
+      state.readingFontWeightSettings,
       state.readingLineHeightState,
       state.readingParagraphSpacingState,
       state.workspaceDividerOpacityPercentState,

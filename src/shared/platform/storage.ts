@@ -35,6 +35,18 @@ async function persistSnapshotToRuntimeStorage() {
   if (saved && canUseLocalStorage()) {
     window.dispatchEvent(new window.Event(RUNTIME_APP_SETTINGS_SAVED_EVENT));
   }
+  return saved;
+}
+
+export async function saveWhitelistedLocalStorageItem(key: string, value: string) {
+  assertLocalStorageWhitelist(key);
+  if (!canUseLocalStorage()) return false;
+  try {
+    window.localStorage.setItem(key, value);
+    return await persistSnapshotToRuntimeStorage();
+  } catch {
+    return false;
+  }
 }
 
 export function getWhitelistedLocalStorageItem(key: string): string | null {

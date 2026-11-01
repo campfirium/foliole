@@ -45,6 +45,7 @@ interface ApplyAppearanceSettingsInput {
   monospaceFont: MonospaceFontPreset;
   pdfReadingMode: PdfReadingMode;
   readingContentWidth: number;
+  readingFontWeight?: number;
   readingLineHeight: ReadingLineHeight;
   readingParagraphSpacing: ReadingParagraphSpacing;
   resolvedBaseColor: ResolvedBaseColorMode;
@@ -105,6 +106,7 @@ export function applyAppearanceSettings(settings: ApplyAppearanceSettingsInput) 
   root.style.setProperty('--content-panel-font-family', resolveInterfaceFontFamily(settings.interfaceFont, sanitizeFontFamily(settings.customInterfaceFont)));
   root.style.setProperty('--content-panel-mono-font-family', resolveMonospaceFontFamily(settings.monospaceFont, sanitizeFontFamily(settings.customMonospaceFont)));
   root.style.setProperty('--document-max-width', `${settings.readingContentWidth}px`);
+  root.style.setProperty('--content-panel-font-weight', String(settings.interfaceFont === 'noto-sans-sc' ? settings.readingFontWeight ?? 400 : 400));
   applyEditorTypographyScale(root, clampedFontSize);
   applyReadingLineHeight(root, settings.readingLineHeight);
   applyReadingParagraphSpacing(root, settings.readingParagraphSpacing);

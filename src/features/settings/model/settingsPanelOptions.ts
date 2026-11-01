@@ -92,6 +92,7 @@ export const SETTINGS_CATEGORY_STORAGE_KEY = APP_SETTINGS_STORAGE_KEYS.settingsA
 export const INTERFACE_PRESET_OPTION_VALUES: InterfaceFontPreset[] = [
   'default',
   'system',
+  'noto-sans-sc',
   'serif'
 ];
 
@@ -126,6 +127,8 @@ export function presetLabel(preset: InterfaceFontPreset, t?: Translate) {
       return t ? t('settings.appearance.fontPreset.system') : 'System UI';
     case 'serif':
       return t ? t('settings.appearance.fontPreset.serif') : 'Serif';
+    case 'noto-sans-sc':
+      return 'Noto Sans SC';
     default:
       return t ? t('settings.appearance.fontPreset.custom') : 'Custom';
   }

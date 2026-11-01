@@ -1,4 +1,5 @@
 import type { InterfaceFontPreset, MonospaceFontPreset } from './appearanceSettings';
+import '../../../shared/typography/notoSansSc.css';
 import {
   DEFAULT_READING_LINE_HEIGHT,
   DEFAULT_READING_PARAGRAPH_SPACING,
@@ -18,6 +19,7 @@ const INTERFACE_FONT_PRESET_VALUES: Record<InterfaceFontPreset, string> = {
   default: TEXT_SYSTEM_FONT_FALLBACK,
   system: TEXT_SYSTEM_FONT_FALLBACK,
   serif: "'Source Serif 4', 'Noto Serif CJK SC', 'Songti SC', SimSun, Georgia, serif",
+  'noto-sans-sc': "'Foliole Noto Sans SC', var(--font-family-text)",
   custom: TEXT_SYSTEM_FONT_FALLBACK
 };
 

@@ -19,6 +19,8 @@ import type {
 } from '../model/appearanceSettings';
 import type { BaseColorMode, ResolvedBaseColorMode } from '../model/baseColorMode';
 
+import type { ReadingFontWeightSettings } from './useReadingFontWeightSettings';
+
 export interface AppearanceSettingsContextValue {
   accentColorPreset: AccentColorPreset;
   autoLocalizeRemoteImages: boolean;
@@ -32,6 +34,7 @@ export interface AppearanceSettingsContextValue {
   clozeColorPreset: ClozeColorPreset;
   pdfReadingMode: PdfReadingMode;
   readingContentWidth: number;
+  readingFontWeightSettings: ReadingFontWeightSettings;
   readingLineHeight: ReadingLineHeight;
   readingParagraphSpacing: ReadingParagraphSpacing;
   fontColorPreset: FontColorPreset;

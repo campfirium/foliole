@@ -52,6 +52,7 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'pdfReadingMode',
   'immersiveDoubleClickEditEnabled',
   'readingLineHeight',
+  'readingFontWeight',
   'readingParagraphSpacing',
   'readingContentWidth',
   'dimImagesInDarkMode',
