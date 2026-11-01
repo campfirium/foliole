@@ -15,3 +15,8 @@ it('includes Lucide-style keywords in icon search terms', () => {
 it('includes generated name variants in icon search terms', () => {
   expect(findIcon('BookOpen')?.searchTerms).toEqual(expect.arrayContaining(['BookOpen', 'Book Open', 'book-open']));
 });
+
+it('keeps existing brand icon choices available after the library retires them', () => {
+  expect(findIcon('Github')?.id).toBe('Github');
+  expect(findIcon('Youtube')?.id).toBe('Youtube');
+});

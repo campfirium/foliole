@@ -1,8 +1,3 @@
-import {
-  Github,
-  Youtube
-} from 'lucide-react';
-
 import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
@@ -10,6 +5,7 @@ import {
   SettingsRow,
   SettingsSection
 } from '../../../../shared/ui';
+import { Github, Youtube } from '../../../../shared/ui/BrandIcons';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 

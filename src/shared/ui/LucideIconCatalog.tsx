@@ -1,6 +1,8 @@
 import { FileUp, icons, type LucideIcon } from 'lucide-react';
 
-const ICON_BY_ID = icons as Record<string, LucideIcon>;
+import { Github, Youtube } from './BrandIcons';
+
+const ICON_BY_ID: Record<string, LucideIcon> = { ...icons, Github, Youtube };
 
 const LUCIDE_ICON_KEYWORDS: Record<string, string[]> = {
   BotMessageSquare: ['bot', 'chat', 'comment', 'conversation', 'dialog', 'discussion', 'feedback'],

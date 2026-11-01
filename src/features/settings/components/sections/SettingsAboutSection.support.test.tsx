@@ -60,6 +60,9 @@ it('runs support commands from About settings', async () => {
   const onRunSupportCommand = vi.fn();
   renderWithLocalization(<SettingsAboutSection onRunSupportCommand={onRunSupportCommand} />);
 
+  expect(screen.getByRole('button', { name: /^GitHub$/ }).querySelector('svg')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'YouTube' }).querySelector('svg')).toBeInTheDocument();
+
   fireEvent.click(await screen.findByRole('button', { name: 'Check for Updates' }));
   expect(screen.getByText('Checking')).toBeInTheDocument();
   expect(screen.getByText('Checking for updates...')).toBeInTheDocument();
