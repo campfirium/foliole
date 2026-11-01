@@ -1,6 +1,6 @@
 /* global document, window, NodeFilter, Event, URL, requestAnimationFrame, crypto, process, console */
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { chromium } from '@playwright/test';
@@ -123,7 +123,9 @@ async function checkFlow(page, frame, databaseFile, result) {
 
 async function main() {
   const root = process.cwd();
-  const output = await mkdtemp(path.join(root, '.tmp/artifacts/T673-18/production-'));
+  const artifactRoot = process.argv[2] ?? path.join(root, '.tmp/artifacts/T673-18');
+  await mkdir(artifactRoot, { recursive: true });
+  const output = await mkdtemp(path.join(artifactRoot, 'production-'));
   const databaseFile = path.join(output, 'foliole-companionSQLite.db');
   Object.assign(process.env, { FOLIOLE_COMPANION_PREVIEW_DB: databaseFile, VITE_FOLIOLE_DEV_APP_LANGUAGE: 'en', FOLIOLE_VITE_HMR: '1' });
   const server = await createServer({ configFile: path.join(root, 'vite.companion.config.ts'), root: path.join(root, 'src/companion'),
