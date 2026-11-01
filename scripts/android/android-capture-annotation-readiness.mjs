@@ -1,4 +1,4 @@
-const REQUIRED_TABLES = ['nodes', 'parent_child_order', 'content_blobs', 'companion_meta'];
+const REQUIRED_TABLES = ['nodes', 'parent_child_order', 'content_blobs', 'content_blob_data', 'companion_meta'];
 
 function tableExists(database, table) {
   return database.prepare(
@@ -29,7 +29,15 @@ export function inspectCaptureAnnotationWorkspace(database) {
     counts: {
       content_blobs: countRows(database, 'content_blobs'),
       parent_child_order: countRows(database, 'parent_child_order'),
-      nodes: countRows(database, 'nodes')
+      nodes: countRows(database, 'nodes'),
+      readable_topics: tables.nodes && tables.content_blob_data ? database.prepare(`
+        SELECT COUNT(*) AS count FROM nodes n
+        LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+        WHERE n.kind = 'topic' AND n.deleted_at IS NULL AND length(trim(CASE
+          WHEN NULLIF(TRIM(n.body_blob_hash), '') IS NULL THEN n.content
+          WHEN cbd.hash IS NOT NULL THEN CAST(cbd.data AS TEXT)
+          ELSE '' END)) > 0
+      `).get().count : null
     },
     pairingWorkspace: {
       localDeviceIdentityPresent: companionMetaPresent(database, 'device_id'),
@@ -45,7 +53,7 @@ function missingPrerequisites(snapshot) {
   if (!snapshot.database?.exists) missing.push('database_missing');
   else if (snapshot.database.unreadable || !inspection) missing.push('database_unreadable');
   if (inspection && (inspection.counts.nodes <= 1 || inspection.counts.parent_child_order <= 0
-      || inspection.counts.content_blobs <= 0)) missing.push('acceptance_workspace_empty');
+      || !(inspection.counts.readable_topics > 0))) missing.push('acceptance_workspace_empty');
   if (inspection && (!inspection.canonicalInbox.active
       || inspection.canonicalInbox.kind !== 'folder')) missing.push('canonical_inbox_missing');
   if (inspection && (!inspection.pairingWorkspace.localDeviceIdentityPresent

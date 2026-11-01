@@ -7,7 +7,7 @@ import {
 } from './android-capture-annotation-readiness.mjs';
 
 function databaseFixture({ counts = {}, inbox = { kind: 'folder' }, meta = {} } = {}) {
-  const tables = new Set(['nodes', 'parent_child_order', 'content_blobs', 'companion_meta']);
+  const tables = new Set(['nodes', 'parent_child_order', 'content_blobs', 'content_blob_data', 'companion_meta']);
   return {
     prepare(sql) {
       return {
