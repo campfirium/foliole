@@ -75,3 +75,23 @@ describe('Dependabot configuration contract', () => {
     expect(native.some(update => update.directory.includes('CapApp-SPM'))).toBe(false);
   });
 });
+
+// File matching also considers lockfiles, so exclusions must preserve both root files.
+describe('Renovate npm manifest ownership', () => {
+  const renovate = JSON.parse(fs.readFileSync('.github/renovate.json', 'utf8'));
+
+  it('excludes nested npm manifests without excluding the root manifest or lockfile', () => {
+    const exclusion = renovate.packageRules.find(rule => rule.enabled === false && rule.matchManagers.includes('npm'));
+    // These positive regexes describe the exclusion domain, including every lockfile candidate.
+    const patterns = exclusion.matchFileNames.map(pattern => {
+      expect(pattern.startsWith('/')).toBe(true);
+      expect(pattern.endsWith('/')).toBe(true);
+      return new RegExp(pattern.slice(1, -1));
+    });
+    const excluded = file => patterns.some(pattern => pattern.test(file));
+    expect(excluded('package.json')).toBe(false);
+    expect(excluded('package-lock.json')).toBe(false);
+    expect(excluded('electron/native/foliole-desktop-dnssd/package.json')).toBe(true);
+    expect(excluded('scripts/oneoff/package.json')).toBe(true);
+  });
+});
