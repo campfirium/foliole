@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { captureSecurityCandidate, sameSecurityCandidate } from '../security/security-inputs.mjs';
 import { prepareIosAcceptanceCache, prepareIosRuntimeContractCache } from './ios-local-storage.mjs';
 import { SWIFT_LOCKS, swiftPins, compareSwiftResolution, swiftManifestEvidence,
   checkSwiftManifestCoverage, swiftHostNodes } from './swift-security-evidence.mjs';
@@ -27,8 +28,7 @@ export function collectSwiftSecurityInventory({ root, output, resolve = false })
   const json = file => JSON.parse(readFileSync(path.resolve(root, file), 'utf8'));
   const capture = file => { report.inputs[file] ??= hash(file); };
   try {
-    report.source = { revision: run('git', ['rev-parse', 'HEAD']),
-      worktreeDirty: Boolean(run('git', ['status', '--porcelain'])) };
+    report.source = captureSecurityCandidate(root, args => run('git', args));
     for (const file of ['package-lock.json', 'ios/App/App.xcodeproj/project.pbxproj']) capture(file);
     for (const [name, file] of Object.entries(SWIFT_LOCKS)) {
       capture(file);
@@ -38,8 +38,8 @@ export function collectSwiftSecurityInventory({ root, output, resolve = false })
     for (const [file, before] of Object.entries(report.inputs)) {
       if (hash(file) !== before) report.errors.push({ reason: 'input-changed-during-collection', file });
     }
-    if (run('git', ['rev-parse', 'HEAD']) !== report.source.revision) {
-      report.errors.push({ reason: 'revision-changed-during-collection' });
+    if (!sameSecurityCandidate(report.source, captureSecurityCandidate(root, args => run('git', args)))) {
+      report.errors.push({ reason: 'candidate-inputs-changed-during-collection' });
     }
   } catch (error) {
     report.errors.push({ reason: 'collection-failed', message: error.message,

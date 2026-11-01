@@ -60,7 +60,7 @@ function fixture() {
   mkdirSync(parent, { recursive: true });
   const root = mkdtempSync(path.join(parent, 'inventory-'));
   temporary.push(root);
-  for (const file of [...Object.values(SWIFT_LOCKS), 'package-lock.json', 'ios/App/App.xcodeproj/project.pbxproj']) {
+  for (const file of [...Object.values(SWIFT_LOCKS), 'package.json', '.npmrc', 'package-lock.json', 'ios/App/App.xcodeproj/project.pbxproj']) {
     mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
     writeFileSync(path.join(root, file), file.endsWith('resolved') ? JSON.stringify(lock) : '{}');
   }

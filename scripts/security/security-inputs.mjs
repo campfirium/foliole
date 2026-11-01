@@ -36,3 +36,14 @@ export function workflowReferences(root) {
   }
   return { references, errors };
 }
+
+export function captureSecurityCandidate(root, git) {
+  const identity = securityInputIdentity(root, git(['ls-files']).trim().split('\n'));
+  const worktreeDirty = Boolean(git(['status', '--porcelain']).trim());
+  return { revision: git(['rev-parse', 'HEAD']).trim(), inputDigest: identity.inputDigest,
+    mode: worktreeDirty ? 'working-tree' : 'committed', worktreeDirty };
+}
+
+export function sameSecurityCandidate(before, after) {
+  return before.revision === after.revision && before.inputDigest === after.inputDigest;
+}

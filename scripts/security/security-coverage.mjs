@@ -1,5 +1,5 @@
-const official = (id, scope, source, versionSources) => ({ id, scope, owner: 'security-maintenance',
-  versionSources, routes: [{ id: 'official-review', ttlHours: 192, source }] });
+const official = (id, scope, source, versionSources, extraRoutes = []) => ({ id, scope, owner: 'security-maintenance',
+  versionSources, routes: [...extraRoutes, { id: 'official-review', ttlHours: 192, source }] });
 
 export const SECURITY_COVERAGE = [
   { id: 'npm-runtime', scope: 'Production npm dependencies', owner: 'security-maintenance',
@@ -9,7 +9,7 @@ export const SECURITY_COVERAGE = [
   { id: 'android-maven', scope: 'Resolved runtime, buildscript and protobuf tools', owner: 'security-maintenance',
     versionSources: ['Android resolved inventory'], routes: [{ id: 'osv-maven', ttlHours: 26 }] },
   official('swift-native', 'Both Swift graphs, local plugin edges and remote packages',
-    'https://github.com/ionic-team/capacitor/security/advisories', ['App and host Swift graphs/locks']),
+    'https://github.com/ionic-team/capacitor/security/advisories', ['App and host Swift graphs/locks'], [{ id: 'resolution', ttlHours: 26 }]),
   official('embedded-native', 'SQLCipher core, embedded SQLite and cryptographic providers',
     'https://www.zetetic.net/blog/', ['Actual AAR/XCFramework and packaged binary components']),
   official('gradle', 'Gradle distribution and Wrapper integrity',

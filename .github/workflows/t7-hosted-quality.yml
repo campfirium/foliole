@@ -72,3 +72,64 @@ jobs:
       execution_lane: dev-t7
       target_sha: ${{ needs.context.outputs.target_sha }}
       trigger_ref: ${{ needs.context.outputs.trigger_ref }}
+
+  security_maintenance:
+    name: Independent dependency security
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Qualification and notification use the report, before any release-gate expansion.
+    continue-on-error: true
+    env:
+      FOLIOLE_SECURITY_TARGET_SHA: ${{ github.sha }}
+      FOLIOLE_ANDROID_HOST_MODE: native-linux
+    steps:
+      - name: Check out the scheduled security target
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify the security target
+        run: test "$(git rev-parse HEAD)" = "${FOLIOLE_SECURITY_TARGET_SHA}"
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Activate pinned npm
+        run: node scripts/quality/pinned-npm.mjs activate
+      - name: Set up Java for native dependency resolution
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install Linux DNS-SD build headers
+        run: sudo apt-get update && sudo apt-get install -y libavahi-client-dev
+      - name: Install dependencies
+        run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Build companion assets for dependency graph preparation
+        run: npm run android:web:build
+      - name: Prepare the native dependency graph
+        run: npm run android:sync
+      - name: Collect current advisory and coverage evidence
+        run: node scripts/security/hosted-security-maintenance.mjs
+      - name: Record a failed collection if setup prevented the reporter
+        if: ${{ always() }}
+        run: |
+          node --input-type=module -e '
+            import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+            const root = ".tmp/artifacts/security-maintenance/hosted";
+            mkdirSync(root, { recursive: true });
+            if (!existsSync(`${root}/coverage.json`) && !existsSync(`${root}/failure.json`)) {
+              writeFileSync(`${root}/failure.json`, JSON.stringify({ status: "error", requestedTarget: process.env.FOLIOLE_SECURITY_TARGET_SHA, reason: "collection-unavailable-see-job-log" }));
+            }
+          '
+      - name: Retain security evidence independently of full-quality admission
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-maintenance-${{ github.sha }}-${{ github.run_attempt }}
+          path: .tmp/artifacts/security-maintenance/hosted
+          if-no-files-found: error
+          retention-days: 14

@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
+import { captureSecurityCandidate, sameSecurityCandidate } from '../security/security-inputs.mjs';
 import { createAndroidSecurityReport } from './android-security-report.mjs';
 
 export async function collectAndroidDependencySecurity({
@@ -31,16 +32,20 @@ export async function collectAndroidDependencySecurity({
   return { report, reportPath };
 }
 
-export async function runAndroidDependencySecurity({ paths, env, execute, captured }) {
-  const source = { mode: 'working-tree',
-    revision: captured('git', ['rev-parse', 'HEAD'], { cwd: paths.buildRoot }),
-    worktreeDirty: Boolean(captured('git', ['status', '--porcelain'], { cwd: paths.buildRoot })) };
+export async function runAndroidDependencySecurity({ paths, env, execute, captured, fetchImpl }) {
+  const git = args => captured('git', args, { cwd: paths.buildRoot });
+  const source = captureSecurityCandidate(paths.buildRoot, git);
   const { report, reportPath } = await collectAndroidDependencySecurity({
     projectRoot: path.join(paths.buildRoot, 'android'), gradle: paths.gradle,
     initScript: path.join(paths.buildRoot, 'scripts/android/android-dependency-inventory.gradle'),
     outputDir: path.join(paths.artifactsRoot, 'security-maintenance/android', paths.runId),
-    env, execute, source
+    env, execute, source, fetchImpl
   });
+  if (!sameSecurityCandidate(source, captureSecurityCandidate(paths.buildRoot, git))) {
+    report.status = 'error';
+    report.errors.push({ reason: 'candidate-inputs-changed-during-extraction' });
+    writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
+  }
   console.log(JSON.stringify({ reportPath, status: report.status, overallStatus: report.overallStatus,
     packages: report.advisories?.results.length ?? 0, findings: report.findings.length,
     errors: report.errors.length, gaps: report.gaps.length }));

@@ -13,20 +13,34 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const readJson = file => JSON.parse(readFileSync(file, 'utf8'));
 
 function nativeObservation(asset, file, snapshot) {
-  const route = asset === 'android-maven' ? 'osv-maven' : 'official-review';
+  const route = asset === 'android-maven' ? 'osv-maven' : 'resolution';
+  let evidence;
   try {
-    const evidence = readJson(file);
+    evidence = readJson(file);
+    if (evidence.schemaVersion !== 1 || evidence.platform !== (asset === 'android-maven' ? 'android' : 'ios')) {
+      throw new Error('Malformed native evidence schema/platform');
+    }
+    if (asset === 'android-maven' && (!evidence.inventory?.configurations?.length
+      || !evidence.inventory.gradleVersion || !evidence.inventory.java?.version
+      || !Array.isArray(evidence.findings) || !Array.isArray(evidence.errors))) {
+      throw new Error('Incomplete Android evidence inventory');
+    }
+    if (asset === 'swift-native' && evidence.status === 'resolved'
+      && ['app', 'host'].some(name => evidence.graphs?.[name]?.status !== 'resolved')) {
+      throw new Error('Swift evidence is missing a resolved graph');
+    }
     const facts = asset === 'android-maven' ? evidence.inventory : evidence.environment;
     snapshot.nativeEvidence[asset] = { file, sha256: digest(readFileSync(file)), facts };
     snapshot.environments[asset] = digest(JSON.stringify(facts));
     return { asset, route,
       candidate: { revision: evidence.source?.revision, inputDigest: evidence.source?.inputDigest },
       environment: snapshot.environments[asset], checkedAt: evidence.generatedAt ?? evidence.finishedAt,
-      status: asset === 'android-maven' ? evidence.status : 'unsupported',
-      source: asset === 'android-maven' ? 'resolved Gradle / OSV Maven' : 'Swift graph extraction is not an advisory review',
+      status: asset === 'android-maven' ? evidence.status : evidence.status === 'resolved' ? 'clean' : 'unsupported',
+      source: asset === 'android-maven' ? 'resolved Gradle / OSV Maven' : 'Swift App and host resolution (automated advisories unsupported)',
       findings: evidence.findings ?? [], gaps: evidence.gaps ?? [],
-      reason: asset === 'swift-native' ? 'dated-official-review-not-imported' : undefined };
-  } catch (error) { return { asset, route, status: 'error', reason: error.message }; }
+      reason: asset === 'swift-native' && evidence.status !== 'resolved' ? 'matching-live-resolution-unavailable' : undefined };
+  } catch (error) { return { asset, route, status: 'error', reason: error.message,
+    findings: Array.isArray(evidence?.findings) ? evidence.findings : [] }; }
 }
 
 export function collectSecurityMaintenance({ root, output, nativeReports = {}, now = Date.now(),
