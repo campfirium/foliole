@@ -22,6 +22,8 @@ function prepareProducer() {
     'github-desktop-handoff-pr-events', 'github-desktop-handoff-title',
     'github-monitor-gh', 'github-actions-handoff-policy', 'github-dependabot-alert-events'
   ]) fs.copyFileSync(path.join(sourceRoot, `scripts/${name}.mjs`), path.join(root, `scripts/${name}.mjs`));
+  fs.cpSync(path.join(sourceRoot, 'scripts/security'), path.join(root, 'scripts/security'), { recursive: true });
+  fs.symlinkSync(path.join(sourceRoot, 'node_modules'), path.join(root, 'node_modules'), 'junction');
   fs.writeFileSync(path.join(root, 'package.json'), '{"type":"module"}');
   fs.writeFileSync(path.join(root, 'pr'), 'console.log(process.env.TEST_PRS);');
   fs.writeFileSync(path.join(root, 'clock.mjs'), 'Date.now = () => Number(process.env.TEST_NOW);');
