@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { parseWindowsDevControlArgs } from './windows-dev-control.mjs';
-import { runWindowsTestDatabaseDiagnostic, TEST_DATABASE_DIAGNOSTIC_FILE } from './windows-test-database-diagnostic.mjs';
+import { runWindowsTestDatabaseDiagnostic, TEST_DATABASE_DIAGNOSTIC_FILES } from './windows-test-database-diagnostic.mjs';
 import { runWindowsTestDatabaseDiagnosticControl } from './windows-test-database-diagnostic-control.mjs';
 
 const roots = [];
@@ -21,7 +21,7 @@ it('accepts only the fixed diagnostic action without caller-supplied commands', 
   expect(() => parseWindowsDevControlArgs(['test-database-cleanup', '--file', 'other.test.ts'], {})).toThrow();
 });
 
-it.each([0, 1])('runs the original file under Electron ABI and retains lifecycle evidence on exit %s', async code => {
+it.each([0, 1])('runs the cleanup regressions under Electron ABI and retains lifecycle evidence on exit %s', async code => {
   const repoRoot = root();
   const execute = vi.fn(async (_command, args, options) => {
     if (args[0] === 'rev-parse') return { code: 0, stdout: 'a'.repeat(40) };
@@ -31,7 +31,9 @@ it.each([0, 1])('runs the original file under Electron ABI and retains lifecycle
   const result = await runWindowsTestDatabaseDiagnostic({ paths: {
     repoRoot, gitPath: 'git', systemNode: 'system-node', systemNpmCli: 'npm-cli'
   }, execute, prepare: async () => ({ output: '', installed: false, lockSha256: 'lock' }) });
-  expect(execute.mock.calls[1][1]).toEqual(['npm-cli', 'run', 'test:sqlite:electron', '--', TEST_DATABASE_DIAGNOSTIC_FILE]);
+  expect(execute.mock.calls[1][1]).toEqual(['npm-cli', 'run', 'test:sqlite:electron', '--',
+    'src/store/workspaceStoreNodeRelearn.integration.test.ts', 'src/store/workspaceRenameBody.integration.test.ts']);
+  expect(result.receipt.files).toEqual(TEST_DATABASE_DIAGNOSTIC_FILES);
   expect(result.receipt).toMatchObject({ revision: 'a'.repeat(40), lifecycleEvents: 1,
     resultStatus: code ? 'failed' : 'passed' });
   expect(result.exitCode).toBe(code);

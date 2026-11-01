@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let root = '';
@@ -16,6 +17,8 @@ vi.mock('../../electron/deviceAnchorStore.js', () => ({
   loadDesktopLibraryWriterBinding: (libraryPath: string) => ({ deviceAnchor: 'rename-body', libraryPath })
 }));
 vi.mock('../../electron/sync/desktopMemberSyncCadence.js', () => ({ requestDesktopHighValueSync: vi.fn() }));
+// Mirror export has its own integration suite and must not outlive this document fixture.
+vi.mock('../../electron/mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
 vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => async (command: string, args: Record<string, unknown>) => {
   if (command === 'load_node_document' && failDocumentRead === 'throw') throw new Error('document unavailable');
   if (command === 'load_node_document' && failDocumentRead === 'failed') return { nodeId: args.nodeId,
@@ -27,8 +30,10 @@ vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => asy
 import { closeDatabaseConnection, openDatabaseConnection } from '../../electron/database/connection.js';
 import { resetSeededWorkspace } from '../../electron/database/databaseTestWorkspace.js';
 import { initializeDatabase } from '../../electron/database/migrate.js';
+import { flushCoalescedWorkspaceSearchInvalidations } from '../../electron/database/searchIndexInvalidationCoalescer.js';
 import { loadWorkspaceListSnapshot } from '../../electron/database/workspaceListSnapshot.js';
 import { loadWorkspaceNodeDocument } from '../../electron/database/workspaceNodeDocument.js';
+import { observeWorkspaceTestDatabaseLifecycle } from '../../electron/database/workspaceTestDatabaseLifecycle.testSupport.js';
 import { handleStorageCommand } from '../../electron/ipc/storageCommands.js';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
@@ -39,7 +44,9 @@ import {
 } from './workspaceStoreNodeActions.test-support';
 import { createUpdateNodeTitleAction } from './workspaceStoreNodeEditActions';
 
-beforeEach(async () => {
+let snapshotConnections = () => undefined as void;
+beforeEach(async context => {
+  snapshotConnections = observeWorkspaceTestDatabaseLifecycle(context.task.name);
   root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-rename-body-'));
   initializeDatabase();
   resetSeededWorkspace();
@@ -47,9 +54,21 @@ beforeEach(async () => {
   failDocumentRead = null;
 });
 afterEach(async () => {
-  closeDatabaseConnection();
-  await fs.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  try {
+    await closeFixtureDatabase();
+    await fs.rm(root, { recursive: true, force: true });
+    await expect(fs.access(root)).rejects.toThrow();
+  } finally {
+    snapshotConnections();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  }
 });
+
+async function closeFixtureDatabase() {
+  await flushCoalescedWorkspaceSearchInvalidations();
+  closeDatabaseConnection();
+}
 
 async function createNode(id: string, content: string, reveal: string | null = null, parentNodeId: string | null = null) {
   await handleStorageCommand('create_topic', {
@@ -138,4 +157,20 @@ it('captures a loaded rename before an immediate renderer projection releases it
   h.publish(toRendererBoundaryNode(h.current(), false));
   expect(await rename).toBe(true);
   expect(loadWorkspaceNodeDocument('rename')).toMatchObject({ content: 'Loaded body.' });
+});
+
+it('does not reopen the fixture database from deferred work after teardown', async () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  await createNode('rename', 'Durable body.');
+  const h = createHarness('rename');
+  expect(await h.rename('rename', 'After')).toBe(true);
+  expect(loadWorkspaceNodeDocument('rename')?.content).toBe('Durable body.');
+  await closeFixtureDatabase();
+  const prepare = vi.spyOn(Database.prototype, 'prepare').mockClear();
+  try {
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(prepare).not.toHaveBeenCalled();
+  } finally {
+    prepare.mockRestore();
+  }
 });

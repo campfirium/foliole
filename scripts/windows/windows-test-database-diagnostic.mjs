@@ -10,6 +10,8 @@ import { ensureWindowsPreflightDependencies } from './windows-remote-preflight-d
 
 export const TEST_DATABASE_DIAGNOSTIC_ACTION = 'test-database-cleanup';
 export const TEST_DATABASE_DIAGNOSTIC_FILE = 'src/store/workspaceStoreNodeRelearn.integration.test.ts';
+export const TEST_DATABASE_DIAGNOSTIC_FILES = [TEST_DATABASE_DIAGNOSTIC_FILE,
+  'src/store/workspaceRenameBody.integration.test.ts'];
 
 export async function runWindowsTestDatabaseDiagnostic({ execute = executeBounded, fsApi = fs,
   paths = windowsDevPaths(), prepare = ensureWindowsPreflightDependencies,
@@ -22,7 +24,7 @@ export async function runWindowsTestDatabaseDiagnostic({ execute = executeBounde
   fsApi.writeFileSync(lifecycle, '');
   let output = '';
   const receipt = { action: TEST_DATABASE_DIAGNOSTIC_ACTION, runId, schemaVersion: 1,
-    startedAt: now().toISOString(), file: TEST_DATABASE_DIAGNOSTIC_FILE,
+    startedAt: now().toISOString(), file: TEST_DATABASE_DIAGNOSTIC_FILE, files: TEST_DATABASE_DIAGNOSTIC_FILES,
     environment: { platform: process.platform, arch: process.arch, node: process.version } };
   try {
     const source = await execute(paths.gitPath, ['rev-parse', 'HEAD'], {
@@ -33,7 +35,7 @@ export async function runWindowsTestDatabaseDiagnostic({ execute = executeBounde
     output += dependencies.output;
     receipt.dependencies = { installed: dependencies.installed, lockSha256: dependencies.lockSha256 };
     const result = await execute(paths.systemNode, [paths.systemNpmCli, 'run',
-      'test:sqlite:electron', '--', TEST_DATABASE_DIAGNOSTIC_FILE], {
+      'test:sqlite:electron', '--', ...TEST_DATABASE_DIAGNOSTIC_FILES], {
       cwd: paths.repoRoot, env: { ...process.env, FOLIOLE_TEST_DB_LIFECYCLE_LOG: lifecycle },
       timeoutMs: 10 * 60_000, timeoutCode: 'test_database_cleanup_timeout', windowsHide: true });
     output += result.output ?? '';
