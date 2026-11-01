@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { listGithubMonitorEvents } from './github-desktop-handoff-events.mjs';
+import { notifySecurityMonitor } from './security/security-monitor-notifications.mjs';
 
 export function resolveRepositoryRoot(moduleUrl = import.meta.url) {
   return path.resolve(path.dirname(fileURLToPath(moduleUrl)), '..');
@@ -137,8 +138,12 @@ function scan({ emit = false, includeExisting = false } = {}) {
   state.lastErrors = errors;
   state.lastCheckedAt = new Date().toISOString();
   if (emit) writeJson(STATE_FILE, state);
-  if (emit) submitMonitorEvents(events, state);
-  return { emit, events, stateFile: STATE_FILE };
+  let securityNotifications;
+  if (emit) {
+    try { submitMonitorEvents(events, state); }
+    finally { securityNotifications = notifySecurityMonitor(REPO_ROOT, errors); }
+  }
+  return { emit, events, stateFile: STATE_FILE, securityNotifications };
 }
 
 async function monitor() {

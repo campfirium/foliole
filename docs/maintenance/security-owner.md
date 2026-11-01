@@ -7,6 +7,7 @@ It consumes the existing coverage report without turning missing coverage into a
 ```sh
 node scripts/security/security-owner-cli.mjs import REPORT ENVELOPE package-lock.json
 node scripts/security/security-owner-cli.mjs status
+node scripts/security/security-owner-cli.mjs notify
 node scripts/security/security-owner-cli.mjs disposition DISPOSITION.json
 ```
 
@@ -41,4 +42,23 @@ clean, and expired records remain available for review.
 The owner's overall qualification remains incomplete: candidate acceptance belongs
 to the coverage aggregate for the exact current candidate and environment. Historic
 findings and error history are useful facts, not release approval. This entry point
-does not yet retrieve artifacts, enqueue notifications or schedule official reviews.
+does not independently retrieve artifacts or schedule official reviews.
+
+Imports and dispositions now enqueue changed findings and source states through the
+existing Desktop handoff inbox contract. The existing GitHub producer also refreshes
+source health and retries pending security notifications on its ordinary scan. No
+additional daemon or polling loop is installed. Unchanged evidence stays quiet;
+recovery and recurrence create distinct episodes. Source freshness is checked on
+each invocation, including when the repository has no new commit.
+
+An immutable notification intent is flushed before enqueue; its stable event ID and
+dedupe key survive a crash before the enqueue checkpoint. Failed enqueue leaves the
+intent pending with a visible error. A retry uses the same identity; transport owns
+delivery retries and deduplication. `status` reports enqueue receipts separately from
+queued/processing, dead-letter, Desktop-open failure and `thread-open-requested`.
+The latter proves the transport requested Desktop navigation after a verified paused
+task; it does not prove a person viewed it. Dedupe without verified delivery remains
+unverified. Dead letters are visible and are not silently resubmitted as new episodes.
+Inspect their evidence and replay through the handoff skill after resolving the cause.
+Notification intent and enqueue/error records live under the same private durable
+owner. Raw report transport provenance remains the importer's responsibility.
