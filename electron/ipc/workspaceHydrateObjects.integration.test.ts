@@ -17,11 +17,13 @@ vi.mock('../../src/shared/platform/runtime/editorOperationHistoryRuntimeReposito
 
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { currentLibraryScope } from '../database/attachmentResourceDescription.js';
-import { closeDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { resetSeededWorkspace } from '../database/databaseTestWorkspace.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { initializeDatabase } from '../database/migrate.js';
+import { upsertVersionedNodeSnapshot } from '../database/nodeVersionedMutations.js';
 import { loadReadingProgress, saveReadingProgress } from '../database/readingProgress.js';
+import { loadWorkspaceNodeDocument } from '../database/workspaceNodeDocument.js';
 
 import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from './storageReadCommands.js';
 
@@ -30,7 +32,8 @@ const rendererModule = (modulePath: string) => import(modulePath);
 const { getRuntimeInvoke } = await rendererModule('../../src/shared/platform/runtimeInvoke.ts');
 const { loadReadingProgressFromRuntime } = await rendererModule('../../src/shared/platform/workspaceRuntimeRepository.ts');
 const { workspacePersistStoreStorage } = await rendererModule('../../src/store/workspacePersistStorage.ts');
-const { createInitialWorkspaceState } = await rendererModule('../../src/store/workspaceStore.ts');
+const { refreshWorkspaceSyncProjection } = await rendererModule('../../src/store/workspaceSyncProjectionRefresh.ts');
+const { createInitialWorkspaceState, useWorkspaceStore } = await rendererModule('../../src/store/workspaceStore.ts');
 const { createWorkspaceStorePersistConfig } = await rendererModule('../../src/store/workspaceStorePersistConfig.ts');
 
 let tempRoot = '';
@@ -114,4 +117,59 @@ it('releases a failed read and never substitutes stale browser data or a previou
   expect(second?.state.activeNodeId).toBe(secondId);
   expect(second?.state.nodesById[secondId]?.content).toContain('Second library body');
   expect(first?.state.nodesById[firstId]?.content).toContain('First library body');
+});
+
+it('retains SQLite collection projections by reference without serializing the workspace', async () => {
+  const content = '---\ncollections:\n  - Research\nauthor: Ada\n---\n# Research article\n\nOriginal body';
+  const imported = runPreparedImport(createPreparedDesktopTextImport({
+    content, fileName: 'research.md', filePath: '/tmp/research.md', importedAt: timestamp, kind: 'markdown'
+  }));
+  const nodeId = imported.nodeId!;
+  importTopic('Other active article');
+  const stringify = vi.spyOn(JSON, 'stringify');
+  const value = await workspacePersistStoreStorage.getItem(key);
+  const listRead = invoke.mock.calls.findIndex(([command]) => command === 'load_workspace_list_snapshot');
+  const snapshot = await invoke.mock.results[listRead]!.value;
+  expect(snapshot.nodesById[nodeId]).toMatchObject({ content: '', hasContent: true, collections: ['Research'] });
+  expect(value?.state.nodesById[nodeId]?.collections).toBe(snapshot.nodesById[nodeId].collections);
+  expect(value?.state.nodesById[nodeId]?.authorText).toBe('Ada');
+  expect(stringify.mock.calls.filter(([input]) => input?.state?.nodesById || input?.nodesById)).toHaveLength(0);
+  closeDatabaseConnection();
+  expect(loadWorkspaceNodeDocument(nodeId)?.content).toBe(content);
+});
+
+it('publishes consecutive SQLite body commits in one hydrated store while preserving navigation and original fields', async () => {
+  const nodeId = importTopic('Before');
+  const value = await workspacePersistStoreStorage.getItem(key);
+  const config = createWorkspaceStorePersistConfig(() => undefined);
+  useWorkspaceStore.setState(config.merge!(value!.state, createInitialWorkspaceState()));
+  const original = useWorkspaceStore.getState().nodesById[nodeId]!;
+  const readOriginalFacts = () => openDatabaseConnection().driver.queryOne(
+    'SELECT import_source_fingerprint, import_content_fingerprint, resource_references, created_at FROM nodes WHERE id = ?', [nodeId]);
+  const originalFacts = readOriginalFacts();
+  const scope = currentLibraryScope();
+  for (const [body, updatedAt] of [
+    ['After', '2026-10-29T00:00:00.000Z'], ['Body 2', '2026-10-30T00:00:00.000Z']
+  ] as const) {
+    const version = upsertVersionedNodeSnapshot({
+      nodeId, kind: 'topic', title: original.title, content: body, reveal: null,
+      parentNodeId: original.parentNodeId ?? null, anchorLink: null, position: original.position ?? null,
+      isTitleManual: original.isTitleManual, createdAt: original.createdAt, updatedAt
+    });
+    const document = loadWorkspaceNodeDocument(nodeId)!;
+    const projection = handleWorkspaceReadCommand('load_workspace_list_projection', { nodeIds: [nodeId], libraryScope: scope })!;
+    expect(projection).toMatchObject({ nodesById: { [nodeId]: { updatedAt: document.updatedAt, currentVersionId: document.currentVersionId } } });
+    expect(document.currentVersionId).toBe(version);
+    invoke.mockClear();
+    await refreshWorkspaceSyncProjection({ kind: 'nodes', nodeIds: [nodeId] }, scope);
+    const current = useWorkspaceStore.getState();
+    expect(current.activeNodeId).toBe(nodeId);
+    expect(current.nodesById[nodeId]).toMatchObject({ content: body, currentVersionId: version,
+      createdAt: original.createdAt, title: original.title, parentNodeId: original.parentNodeId });
+    expect(readOriginalFacts()).toEqual(originalFacts);
+    expect(invoke.mock.calls.filter(([command]) => command === 'load_workspace_list_snapshot')).toHaveLength(0);
+    expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toHaveLength(1);
+  }
+  closeDatabaseConnection();
+  expect(loadWorkspaceNodeDocument(nodeId)?.content).toBe('Body 2');
 });

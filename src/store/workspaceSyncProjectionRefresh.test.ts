@@ -48,7 +48,7 @@ it('keeps a queued full refresh when the first ambient node scope names the curr
 it('loads the affected active body without a list hydrate and keeps current navigation', async () => {
   const invoke = vi.fn().mockImplementation(async (command: string) => {
     if (command === 'load_workspace_list_projection') return projection();
-    if (command === 'load_node_document') return { ...node(), content: 'After', hideTitleHeading: false };
+    if (command === 'load_node_document') return { ...node('topic', '2026-10-02T00:00:00Z'), content: 'After', hideTitleHeading: false };
     if (command === 'save_editor_operation_history') return null;
     throw new Error(`unexpected command:${command}`);
   });
@@ -66,7 +66,7 @@ it('publishes the accepted committed version even when its author clock is older
   incoming.nodesById.topic!.currentVersionId = 'accepted-version';
   const invoke = vi.fn().mockImplementation(async (command: string) => {
     if (command === 'load_workspace_list_projection') return incoming;
-    if (command === 'load_node_document') return { ...node(), content: 'Accepted body', hideTitleHeading: false };
+    if (command === 'load_node_document') return { ...incoming.nodesById.topic, content: 'Accepted body', hideTitleHeading: false };
     return null;
   });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
@@ -135,7 +135,7 @@ it('drains another commit to the same node that arrives during a read', async ()
   let reads = 0;
   const invoke = vi.fn().mockImplementation(async (command: string) => {
     if (command === 'load_workspace_list_projection') return ++reads === 1 ? first : projection('2026-10-03T00:00:00Z');
-    if (command === 'load_node_document') return { ...node(), content: `Body ${reads}`, hideTitleHeading: false };
+    if (command === 'load_node_document') return { ...node('topic', reads === 1 ? '2026-10-02T00:00:00Z' : '2026-10-03T00:00:00Z'), content: `Body ${reads}`, hideTitleHeading: false };
     if (command === 'save_editor_operation_history') return null;
     throw new Error(`unexpected command:${command}`);
   });
