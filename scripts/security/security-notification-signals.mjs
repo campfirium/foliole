@@ -1,4 +1,5 @@
 import { digest } from './security-inputs.mjs';
+import { normalizeSecurityNotificationSignals } from './security-notification-policy.mjs';
 
 // Evidence timestamps are excluded: a fresh identical observation is quiet.
 export function securityNotificationSignals(state) {
@@ -23,7 +24,7 @@ export function securityNotificationSignals(state) {
     signals[`health:${health.role}`] = { kind: 'source-health', scope: health.role,
       reason: health.reason, sequence: health.sequence };
   }
-  return Object.fromEntries(Object.entries(signals).sort(([a], [b]) => a.localeCompare(b)));
+  return normalizeSecurityNotificationSignals(signals);
 }
 
 export function changedSecuritySignals(previous, current) {

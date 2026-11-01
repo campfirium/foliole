@@ -2,6 +2,7 @@ import path from 'node:path';
 import { digest } from './security-inputs.mjs';
 import { readOwnerRecords, writeOwnerRecord } from './security-owner-files.mjs';
 import { changedSecuritySignals } from './security-notification-signals.mjs';
+import { normalizeSecurityNotificationSignals } from './security-notification-policy.mjs';
 
 export const SECURITY_NOTIFICATION_GROUPS = ['android', 'ios', 'shared'];
 
@@ -17,7 +18,8 @@ function groupFor(signal) {
 }
 
 export function groupSecuritySignals(signals, group) {
-  return Object.fromEntries(Object.entries(signals).filter(([, signal]) => groupFor(signal) === group));
+  return Object.fromEntries(Object.entries(normalizeSecurityNotificationSignals(signals))
+    .filter(([, signal]) => groupFor(signal) === group));
 }
 
 const batchRecords = owner => readOwnerRecords(path.join(owner, 'notification-batches'));
@@ -34,7 +36,7 @@ export function readySecurityBatch(owner, history, signals, group, now, options)
   const records = batchRecords(owner);
   const pending = latestBatch(records, group);
   const sameBaseline = pending?.baselineId === (baseline?.id ?? null);
-  const unchanged = sameBaseline && !changedSecuritySignals(pending.signals, current).length;
+  const unchanged = sameBaseline && !changedSecuritySignals(groupSecuritySignals(pending.signals, group), current).length;
   let batch = pending;
   if (!unchanged) {
     const continuing = sameBaseline && pending.active;

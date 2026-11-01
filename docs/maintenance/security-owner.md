@@ -90,3 +90,16 @@ observations retain the intermediate history. A later change after a delivered
 batch starts a new batch, just as newly arriving PRs do. Existing notification
 history is retained as the initial comparison baseline, avoiding duplicate alerts
 when switching to grouped batches. Enqueue/crash retries retain the batch identity.
+
+Notification policy does not change stored findings or coverage qualification.
+Known informational Android SDK and embedded SQLite/LibTomCrypt version comparisons
+remain visible in `status` without opening investigation chats. The four fixed iOS
+coverage-review placeholders also remain in `status`. SQLCipher vendor release
+notices, JDK trust changes, Apple security releases, unknown finding identities and
+source failures still notify, including informational findings. Ordinary package
+updates follow the staged handover in [dependency updates](dependency-updates.md).
+
+A missing source and a later source error share one notification identity per
+scope, so a transition is one change rather than a gap recovery plus a new error.
+Existing delivered and pending batch comparisons use the same normalization;
+immutable queued intents retain their original content and event IDs on retry.
