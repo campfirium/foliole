@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import semver from 'semver';
+import semver from './ios-security-semver.mjs';
 import { captureSecurityCandidate, sameSecurityCandidate, digest } from '../security/security-inputs.mjs';
 import { collectSwiftSecurityInventory } from './swift-security-inventory.mjs';
 import { scanSwiftLocks } from './swift-vulnerability-scan.mjs';

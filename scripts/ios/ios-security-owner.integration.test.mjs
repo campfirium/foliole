@@ -98,6 +98,10 @@ it('carries vendor discovery through source faults, process restart, recovery an
     expired.generatedAt = new Date(now - 27 * 3_600_000).toISOString();
     expect(() => importSecurityObservation(owner, { ...upgraded, rawReport: JSON.stringify(expired), now: now + 60_000 })).toThrow('Expired');
     expect(projectSecurityOwner(owner, now + 193 * 3_600_000).sources.some(row => row.stale)).toBe(true);
+    const beforeStale = notifications().length;
+    notifySecurityOwner(owner, process.cwd(), { now: now + 193 * 3_600_000, codexHome });
+    expect(notifications()).toHaveLength(beforeStale + 1);
+    expect(notifications().sort((a, b) => a.sequence - b.sequence).at(-1).changes.some(change => change.current?.stale)).toBe(true);
   } finally {
     await publisher.close();
     rmSync(root, { recursive: true, force: true });

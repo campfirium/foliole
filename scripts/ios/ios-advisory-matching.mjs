@@ -1,4 +1,4 @@
-import semver from 'semver';
+import semver from './ios-security-semver.mjs';
 
 export function protobufCppMetadata(text) {
   const number = Number(/^#define GOOGLE_PROTOBUF_VERSION\s+(\d+)$/mu.exec(text)?.[1]);

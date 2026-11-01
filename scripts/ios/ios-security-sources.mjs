@@ -1,6 +1,6 @@
 /* global fetch, AbortSignal, URL */
 import { createHash } from 'node:crypto';
-import semver from 'semver';
+import semver from './ios-security-semver.mjs';
 
 export const IOS_REPOSITORIES = {
   'capacitor-swift-pm': ['ionic-team/capacitor-swift-pm', 'ionic-team/capacitor'],

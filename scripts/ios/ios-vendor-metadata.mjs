@@ -1,4 +1,4 @@
-import semver from 'semver';
+import semver from './ios-security-semver.mjs';
 
 const plain = html => html.replace(/<[^>]*>/gu, ' ').replace(/&nbsp;/gu, ' ')
   .replace(/&amp;/gu, '&').replace(/\s+/gu, ' ').trim();
