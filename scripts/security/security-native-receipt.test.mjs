@@ -19,7 +19,9 @@ function repository() {
   roots.push(root);
   for (const directory of ['android', 'scripts/android']) mkdirSync(path.join(root, directory), { recursive: true });
   prepareAndroidSecurityFixture(path.join(root, 'android'));
-  copyFileSync('scripts/android/android-dependency-inventory.gradle', path.join(root, 'scripts/android/android-dependency-inventory.gradle'));
+  for (const file of ['android-dependency-inventory.gradle', 'android-toolchain-inventory.gradle']) {
+    copyFileSync(`scripts/android/${file}`, path.join(root, 'scripts/android', file));
+  }
   for (const file of ['package.json', 'package-lock.json', '.npmrc']) writeFileSync(path.join(root, file), '{}');
   writeFileSync(path.join(root, '.gitignore'), '.gradle/\nreports/\n');
   const git = args => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();

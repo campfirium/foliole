@@ -75,6 +75,9 @@ jobs:
 
   security_maintenance:
     name: Independent dependency security
+    permissions:
+      contents: write
+      actions: read
     if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -112,7 +115,22 @@ jobs:
         run: npm run android:web:build
       - name: Prepare the native dependency graph
         run: npm run android:sync
+      - name: Submit the actual resolved Android graph
+        id: android_graph
+        env:
+          DEPENDENCY_GRAPH_RUNTIME_INCLUDE_CONFIGURATIONS: .*RuntimeClasspath
+        continue-on-error: true
+        uses: gradle/actions/dependency-submission@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          build-root-directory: android
+          cache-disabled: true
+          validate-wrappers: true
+          dependency-resolution-task: folioleSecurityDependencies
+          additional-arguments: --no-daemon --no-configuration-cache -I ../scripts/android/android-dependency-inventory.gradle -PfolioleSecurityReport=../.tmp/artifacts/security-maintenance/hosted/submission-inventory.json
+          dependency-graph-report-dir: .tmp/artifacts/security-maintenance/hosted/dependency-graph
       - name: Collect current advisory and coverage evidence
+        env:
+          FOLIOLE_ANDROID_GRAPH_STATUS: ${{ steps.android_graph.outcome }}
         run: node scripts/security/hosted-security-maintenance.mjs
       - name: Record a failed collection if setup prevented the reporter
         if: ${{ always() }}

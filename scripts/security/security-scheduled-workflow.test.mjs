@@ -25,6 +25,15 @@ it('runs the same exact security target when full admission skips, without chang
   const workflow = parse(readFileSync('.github/workflows/t7-hosted-quality.yml', 'utf8'));
   const security = workflow.jobs.security_maintenance;
   expect(security.needs).toBeUndefined();
+  expect(security.permissions.contents).toBe('write');
+  const submission = security.steps.find(step => step.id === 'android_graph');
+  expect(submission.uses).toContain('gradle/actions/dependency-submission@');
+  expect(submission.with['dependency-resolution-task']).toBe('folioleSecurityDependencies');
+  expect(submission.with['validate-wrappers']).toBe(true);
+  expect(submission.with['additional-arguments']).toContain('--no-configuration-cache');
+  expect(submission.with['additional-arguments']).toContain('android-dependency-inventory.gradle');
+  expect(security.steps.find(step => step.name === 'Collect current advisory and coverage evidence').env.FOLIOLE_ANDROID_GRAPH_STATUS)
+    .toBe('${{ steps.android_graph.outcome }}');
   expect(security.if).toBe("github.ref == 'refs/heads/dev'");
   expect(security['timeout-minutes']).toBe(20);
   expect(security.env.FOLIOLE_SECURITY_TARGET_SHA).toBe('${{ github.sha }}');

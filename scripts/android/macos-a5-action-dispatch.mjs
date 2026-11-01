@@ -22,6 +22,7 @@ import {
 import {
   runMacosA5SyncGroupJoinPrepareEntry
 } from './macos-a5-sync-group-join-prepare-entry.mjs';
+import { dispatchMacosA5SecurityAction } from './macos-a5-security-actions.mjs';
 import { runMacosA5SyncNowEntry } from './macos-a5-sync-now-entry.mjs';
 
 export { macosA5ErrorEvidence };
@@ -30,10 +31,7 @@ export async function dispatchMacosA5Action({
   action, assertFixed, build, buildIdentity, captureAnnotation, captured, checked, deploy,
   env, execute, markMutationBoundary, pairingReadiness, paths, readiness, serial
 }) {
-  if (action === 'dependency-security') {
-    const { runAndroidDependencySecurity } = await import('./android-dependency-security.mjs');
-    await runAndroidDependencySecurity({ paths, env, execute, captured });
-  }
+  await dispatchMacosA5SecurityAction({ action, paths, env, execute, captured, assertFixed, serial });
   if (action === 'bundle-release') {
     const { buildReleaseBundle } = await import('./macos-a5-release-bundle.mjs');
     buildReleaseBundle({ checked, captured, env, paths });

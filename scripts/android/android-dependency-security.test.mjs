@@ -41,6 +41,9 @@ describe.runIf(process.platform !== 'win32')('resolved Android inventory through
     const { report, reportPath } = await collectAndroidDependencySecurity({ ...reportOptions,
       outputDir: path.join(root, 'report'), fetchImpl });
     expect(report.status).toBe('findings');
+    expect(report.inventory.java.home).toBeTruthy();
+    expect(report.inventory.java.trustStore.certificates.length).toBeGreaterThan(0);
+    expect(report.inventory.java.trustStore.sha256).toMatch(/^[a-f0-9]{64}$/u);
     expect(report.overallStatus).toBe('incomplete');
     const runtime = name => report.inventory.configurations.find(row => row.name === name);
     expect(runtime('debugRuntimeClasspath').modules).toContainEqual({ group: 'example', name: 'leaf', version: '2.0' });

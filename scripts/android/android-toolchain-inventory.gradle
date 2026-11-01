@@ -1,0 +1,48 @@
+import java.security.KeyStore
+import java.security.MessageDigest
+
+def securityHash(File file) {
+    def digest = MessageDigest.getInstance('SHA-256')
+    file.withInputStream { stream ->
+        byte[] buffer = new byte[65536]
+        int count
+        while ((count = stream.read(buffer)) > 0) digest.update(buffer, 0, count)
+    }
+    return digest.digest().encodeHex().toString()
+}
+
+ext.folioleSecurityJava = {
+    def home = new File(System.getProperty('java.home'))
+    def selected = System.getProperty('javax.net.ssl.trustStore')
+    def store = selected ? new File(selected) : new File(home, 'lib/security/jssecacerts')
+    if (!selected && !store.exists()) store = new File(home, 'lib/security/cacerts')
+    def result = [version: System.getProperty('java.version'), vendor: System.getProperty('java.vendor'),
+        runtime: System.getProperty('java.runtime.version'), home: home.canonicalPath,
+        vm: System.getProperty('java.vm.name'), os: System.getProperty('os.name'), arch: System.getProperty('os.arch'),
+        trustStore: [path: store.canonicalPath, status: 'unknown']]
+    try {
+        def keys = KeyStore.getInstance(store, System.getProperty('javax.net.ssl.trustStorePassword', 'changeit').toCharArray())
+        def expired = []
+        def fingerprints = []
+        def subjects = []
+        keys.aliases().each { alias ->
+            def cert = keys.getCertificate(alias)
+            if (cert) {
+                if (cert instanceof java.security.cert.X509Certificate) subjects.add(cert.subjectX500Principal.name)
+                fingerprints.add(MessageDigest.getInstance('SHA-256').digest(cert.encoded).encodeHex().toString())
+                if (cert instanceof java.security.cert.X509Certificate && cert.notAfter.before(new Date())) expired.add(alias)
+            }
+        }
+        result.trustStore = [path: store.canonicalPath, sha256: securityHash(store),
+            certificates: fingerprints.sort(), subjects: subjects.sort(), expired: expired, status: 'inventoried-not-a-trust-verdict']
+    } catch (Exception ignored) { result.trustStore.reason = 'trust-store-unreadable-or-non-file-provider' }
+    return result
+}
+
+ext.folioleSecurityArtifacts = { configuration ->
+    configuration.incoming.artifactView {
+        componentFilter { id -> id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier &&
+            id.group == 'net.zetetic' && id.module == 'sqlcipher-android' }
+    }.artifacts.artifacts.collect { [group: it.id.componentIdentifier.group, name: it.id.componentIdentifier.module, version: it.id.componentIdentifier.version,
+        file: it.file.canonicalPath, sha256: securityHash(it.file)] }
+}

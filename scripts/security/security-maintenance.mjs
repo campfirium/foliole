@@ -32,7 +32,9 @@ function nativeObservation(asset, file, snapshot, observations) {
     }
     if (asset === 'android-maven') {
       for (const check of evidence.officialObservations ?? []) {
-        if (!['gradle', 'embedded-native'].includes(check.asset) || check.route !== 'vendor-notices') {
+        if (!(check.asset === 'embedded-native' && check.route === 'component-notices')
+          && !(check.asset === 'android-maven' && check.route === 'dependency-submission')
+          && !(['gradle', 'embedded-native', 'jdk', 'android-tools', 'android-os-webview'].includes(check.asset) && check.route === 'vendor-notices')) {
           throw new Error('Unsupported Android official observation');
         }
         const environment = digest(JSON.stringify(check.evidence?.versions ?? {}));

@@ -4,6 +4,8 @@ import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.artifacts.result.UnresolvedDependencyResult
 
+apply from: new File(gradle.startParameter.allInitScripts.find { it.name == 'android-dependency-inventory.gradle' }.parentFile, 'android-toolchain-inventory.gradle')
+
 def securityConfiguration(project, configuration, kind) {
     def row = [project: project.path, name: configuration.name, kind: kind,
                modules: [], edges: [], unresolved: [], localFiles: [], status: 'resolved']
@@ -22,12 +24,13 @@ def securityConfiguration(project, configuration, kind) {
                     reason: 'dependency-resolution-failed'])
             }
         }
+        row.nativeArtifacts = gradle.ext.folioleSecurityArtifacts(configuration)
         row.localFiles = configuration.allDependencies.withType(FileCollectionDependency)
             .collectMany { it.files.files.collect { file -> file.name } }.unique().sort()
         if (!row.unresolved.empty) row.status = 'error'
-    } catch (Exception ignored) {
+    } catch (Exception failure) {
         row.status = 'error'
-        row.unresolved.add([reason: 'configuration-resolution-failed'])
+        row.unresolved.add([reason: 'configuration-resolution-failed', detail: failure.message])
     }
     row.modules.sort { a, b -> "${a.group}:${a.name}:${a.version}" <=> "${b.group}:${b.name}:${b.version}" }
     return row
@@ -39,7 +42,7 @@ gradle.projectsEvaluated {
         doLast {
             def report = [schemaVersion: 1, generatedAt: java.time.Instant.now().toString(),
                 gradleVersion: gradle.gradleVersion,
-                java: [version: System.getProperty('java.version'), vendor: System.getProperty('java.vendor')],
+                java: gradle.ext.folioleSecurityJava(),
                 configurations: [], uninspectedConfigurations: [], android: []]
             root.allprojects.sort { it.path }.each { project ->
                 def selected = []
@@ -73,7 +76,7 @@ gradle.projectsEvaluated {
                 if (project.plugins.hasPlugin('com.android.application')) {
                     def android = project.extensions.getByName('android')
                     report.android.add([project: project.path, compileSdk: android.compileSdkVersion,
-                        buildTools: android.buildToolsVersion])
+                        buildTools: android.buildToolsVersion, sdkDirectory: android.sdkDirectory.canonicalPath])
                 }
             }
             def output = new File(root.property('folioleSecurityReport').toString())
