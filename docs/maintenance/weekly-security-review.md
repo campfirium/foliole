@@ -1,5 +1,8 @@
 # Weekly official-source security review
 
+The manual review contract is preserved below. Recurring scripted execution belongs
+to a separate task; the full-model weekly automation is paused at the user's request.
+
 Run this review each Monday at 10:00 Asia/Shanghai in the saved local project.
 The durable owner is `.lab/internal/security-maintenance/`; scheduling belongs to
 the project automation, independently of an implementation chat. Keep the computer

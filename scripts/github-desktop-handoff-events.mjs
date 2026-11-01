@@ -112,6 +112,9 @@ function listActionEvents(config, state, includeExisting, errors, renderTemplate
       recordMonitorError(errors, 'github-actions', workflow, error);
       continue;
     }
+    if (workflow === '.github/workflows/t7-hosted-quality.yml') {
+      state.securityRunCandidate = runs.find(run => run.headBranch === 'dev' && run.status === 'completed') ?? null;
+    }
     const latestAllowedRunId = String(runs.find((candidate) => allowedBranch(config, candidate))?.databaseId ?? '');
     for (const run of runs) {
       if (!allowedBranch(config, run)) continue;
@@ -164,6 +167,7 @@ function listIssueEvents(config, state, includeExisting, errors, renderTemplate)
 
 export function listGithubMonitorEvents(configs, state, includeExisting, errors, renderTemplate) {
   state.submitted ??= {};
+  state.securityRunCandidate = null;
   return [
     ...listDependabotAlertEvents(configs.dependabotAlerts, state, errors, renderTemplate),
     ...listActionEvents(configs.actions, state, includeExisting, errors, renderTemplate),

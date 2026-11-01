@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { listGithubMonitorEvents } from './github-desktop-handoff-events.mjs';
 import { notifySecurityMonitor } from './security/security-monitor-notifications.mjs';
+import { refreshGithubSecurityOwner } from './security/github-security-import.mjs';
 
 export function resolveRepositoryRoot(moduleUrl = import.meta.url) {
   return path.resolve(path.dirname(fileURLToPath(moduleUrl)), '..');
@@ -139,11 +140,17 @@ function scan({ emit = false, includeExisting = false } = {}) {
   state.lastCheckedAt = new Date().toISOString();
   if (emit) writeJson(STATE_FILE, state);
   let securityNotifications;
+  let securityImport;
   if (emit) {
     try { submitMonitorEvents(events, state); }
-    finally { securityNotifications = notifySecurityMonitor(REPO_ROOT, errors); }
+    finally {
+      if (configs.actions?.enabled && configs.actions.workflows?.includes('.github/workflows/t7-hosted-quality.yml')) {
+        securityImport = refreshGithubSecurityOwner(REPO_ROOT, state.securityRunCandidate);
+      }
+      securityNotifications = notifySecurityMonitor(REPO_ROOT, errors);
+    }
   }
-  return { emit, events, stateFile: STATE_FILE, securityNotifications };
+  return { emit, events, stateFile: STATE_FILE, securityImport, securityNotifications };
 }
 
 async function monitor() {

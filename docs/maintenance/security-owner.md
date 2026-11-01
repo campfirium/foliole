@@ -42,7 +42,17 @@ clean, and expired records remain available for review.
 The owner's overall qualification remains incomplete: candidate acceptance belongs
 to the coverage aggregate for the exact current candidate and environment. Historic
 findings and error history are useful facts, not release approval. This entry point
-does not independently retrieve artifacts or schedule official reviews.
+does not itself authenticate caller-supplied envelopes or schedule official reviews.
+
+The existing GitHub producer now consumes the latest completed dev scheduled run
+from its ordinary workflow query, independently of the outer full-quality result.
+It verifies repository/head repository, workflow path, branch, SHA and attempt,
+paginates artifacts, verifies the exact artifact identity and downloaded ZIP SHA-256,
+then reads the candidate's lock bytes before invoking the owner import. Failures and
+missing/stale results become durable source health; previous findings remain. The
+durable observation is the import checkpoint, so restart/duplicate scans do not
+download the same run again. This uses the existing Mac producer and system `unzip`;
+missing host extraction support is an explicit failure, not successful coverage.
 
 Imports and dispositions now enqueue changed findings and source states through the
 existing Desktop handoff inbox contract. The existing GitHub producer also refreshes

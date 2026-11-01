@@ -62,6 +62,19 @@ function renderTemplate(_template, data) {
 }
 
 describe('GitHub desktop handoff action events', () => {
+  it('exposes the latest completed dev security source even when full quality succeeded or was skipped', () => {
+    const state = { actions: {}, submitted: {}, issues: {}, prs: {} };
+    gh.runs = [run({ databaseId: 203, status: 'in_progress', conclusion: '' }),
+      run({ databaseId: 202, conclusion: 'success' })];
+    expect(listGithubMonitorEvents(config(), state, false, [], renderTemplate)).toEqual([]);
+    expect(state.securityRunCandidate).toMatchObject({ databaseId: 202, conclusion: 'success' });
+    gh.runs = [run({ databaseId: 204, conclusion: 'skipped' })];
+    listGithubMonitorEvents(config(), state, false, [], renderTemplate);
+    expect(state.securityRunCandidate.databaseId).toBe(204);
+    listGithubMonitorEvents(config({ enabled: false }), state, false, [], renderTemplate);
+    expect(state.securityRunCandidate).toBeNull();
+  });
+
   it('emits the latest existing failure for visibility reconciliation on the first scan', () => {
     gh.runs = [run({ databaseId: 101 })];
     const state = { actions: {}, submitted: {}, issues: {}, prs: {} };
