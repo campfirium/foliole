@@ -31,11 +31,17 @@ function relevantPackage(repository, pkg) {
 }
 
 function assessRange(version, range) {
-  if (typeof range !== 'string') return undefined;
+  if (typeof range !== 'string' || !semver.valid(version)) return undefined;
   const parts = range.split(',').map(part => part.trim());
-  if (parts.length > 1 && !(parts.length === 2 && /^>=?/u.test(parts[0]) && /^<=?/u.test(parts[1]))) return undefined;
+  if (parts.length > 1 && !(parts.length === 2 && /^>=?/u.test(parts[0]) && /^<=?/u.test(parts[1]))) {
+    if (semver.prerelease(version)) return undefined;
+    // Repeated upper bounds can describe release branches; do not guess their union/intersection.
+    // A version outside every complete bound is excluded under either interpretation.
+    const upperBounds = parts.every(part => /^<=?\s*\d+\.\d+\.\d+$/u.test(part) && semver.validRange(part));
+    return upperBounds && parts.every(part => !semver.satisfies(version, part)) ? false : undefined;
+  }
   const normalized = parts.join(' ');
-  if (!semver.validRange(normalized) || !semver.valid(version)) return undefined;
+  if (!semver.validRange(normalized)) return undefined;
   return semver.satisfies(version, normalized);
 }
 
