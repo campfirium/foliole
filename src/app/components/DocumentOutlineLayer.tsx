@@ -14,6 +14,7 @@ import {
   resolveOutlineHorizontalMetrics
 } from './DocumentOutlineLayerModel';
 import { useOutlinePanelPositioning } from './documentOutlineLayerPositioning';
+import { useOutlineHoverRegion } from './useOutlineHoverRegion';
 
 interface DocumentOutlineLayerProps {
   content: string;
@@ -86,6 +87,7 @@ function useOutlineHoverState(
   };
 
   useEffect(() => clearOpenDelay, []);
+  useOutlineHoverRegion({ isOpen, layerRef, onEnter: openOutline, onLeave: closeOutline });
 
   return {
     anchorPosition,
@@ -137,7 +139,7 @@ export function DocumentOutlineLayer({
   return (
     <div
       aria-label={t('desktop.document.outlineHoverZone')}
-      className="pointer-events-auto absolute inset-y-0 right-0 z-surface-overlay"
+      className="pointer-events-none absolute inset-y-0 right-0 z-surface-overlay"
       onMouseEnter={(event) => {
         openOutline(event.clientY);
       }}

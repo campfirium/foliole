@@ -78,13 +78,36 @@ describe('DocumentOutlineLayer', () => {
     advanceOutlineOpenDelay();
     const listShell = screen.getByLabelText('Topic outline').parentElement;
     expect(listShell).toHaveAttribute('aria-hidden', 'false');
+    expect(listShell).toHaveStyle({ pointerEvents: 'auto' });
     fireEvent.mouseLeave(hoverZone);
 
     expect(listShell).toHaveAttribute('aria-hidden', 'true');
+    expect(listShell).toHaveStyle({ pointerEvents: 'none' });
   });
 });
 
 describe('DocumentOutlineLayer content', () => {
+  it('opens from document hover without activating over content controls', () => {
+    vi.useFakeTimers();
+    renderOutline('# Title\n## Section');
+    const zone = screen.getByLabelText('Document outline hover zone');
+    const host = zone.parentElement!;
+    vi.spyOn(zone, 'getBoundingClientRect').mockReturnValue({
+      left: 100, right: 200, top: 0, bottom: 400
+    } as DOMRect);
+    const control = document.createElement('button');
+    host.append(control);
+    fireEvent.mouseMove(control, { clientX: 150, clientY: 200 });
+    advanceOutlineOpenDelay();
+    expect(screen.getByLabelText('Topic outline').parentElement).toHaveAttribute('aria-hidden', 'true');
+    fireEvent.mouseMove(host, { clientX: 150, clientY: 200 });
+    advanceOutlineOpenDelay();
+    expect(screen.getByLabelText('Topic outline').parentElement).toHaveAttribute('aria-hidden', 'false');
+    fireEvent.mouseLeave(host);
+    expect(screen.getByLabelText('Topic outline').parentElement).toHaveAttribute('aria-hidden', 'true');
+    control.remove();
+  });
+
   it('does not render the first heading as an outline entry', () => {
     vi.useFakeTimers();
     renderOutline('# Article Title\n## Deep dive\n### Detail', 16);

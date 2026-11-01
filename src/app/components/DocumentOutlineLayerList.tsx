@@ -60,13 +60,14 @@ export function OutlineList({
     <div
       aria-hidden={!isOpen}
       className={cn(
-        'scrollbar-hidden pointer-events-auto absolute overflow-y-auto transition-all duration-150',
+        'scrollbar-hidden absolute overflow-y-auto transition-all duration-150',
         isOpen ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'
       )}
       ref={panelRef}
       style={{
         bottom: `${OUTLINE_PANEL_BOTTOM_PX}px`,
         opacity: isOpen ? OUTLINE_VISIBLE_OPACITY : 0,
+        pointerEvents: isOpen ? 'auto' : 'none',
         right: `${horizontalMetrics.panelRight}px`,
         top: `${OUTLINE_PANEL_TOP_PX}px`,
         width: `${horizontalMetrics.panelWidth}px`

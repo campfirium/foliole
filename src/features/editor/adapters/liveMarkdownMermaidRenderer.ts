@@ -33,6 +33,8 @@ function resolveMermaidThemeConfig() {
   return {
     config: {
       htmlLabels: false,
+      layout: 'dagre',
+      look: 'classic' as const,
       securityLevel: 'strict' as const,
       startOnLoad: false,
       theme: 'base' as const,
