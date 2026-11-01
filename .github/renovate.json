@@ -44,7 +44,7 @@
         "npm"
       ],
       "matchFileNames": [
-        "!package.json"
+        "/\\/package\\.json$/"
       ],
       "enabled": false
     },
