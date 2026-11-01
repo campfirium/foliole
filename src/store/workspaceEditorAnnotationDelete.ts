@@ -5,6 +5,7 @@ import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 import { confirmPendingEditorAnnotationEntry, isSameEditorAnnotationEntry } from './workspaceEditorAnnotationCreationSettlement';
 import { createEditorAnnotationDeleteEntry } from './workspaceEditorAnnotationOperationEntry';
 import { annotationParentStates, prepareAnnotationTargets } from './workspaceEditorAnnotationTrash';
+import { reconcileExplicitImageRegionRemoval, type ImageRegionDeletion } from './workspaceImageClozeRegionDeletion';
 import { hasWorkspaceNodeMutationRuntime, syncSoftDeleteNodesToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStoreTypes';
 import { computeDeleteNodesMutation, type DeleteNodeMutationResult } from './workspaceTrashMutations';
@@ -14,10 +15,12 @@ type WorkspaceSet = (partial: Partial<WorkspaceState> | ((state: WorkspaceState)
 type Prepared = { entry: EditorAnnotationOperationEntry; mutation: DeleteNodeMutationResult;
   parents: NonNullable<EditorAnnotationOperationEntry['historyParents']> };
 
-function prepareDeletion(set: WorkspaceSet, nodeIds: string[]): Prepared | undefined {
+function prepareDeletion(set: WorkspaceSet, nodeIds: string[], imageRegion?: ImageRegionDeletion): Prepared | undefined {
   let prepared: Prepared | undefined;
   set(state => {
-    const mutation = computeDeleteNodesMutation(state, nodeIds);
+    let mutation = computeDeleteNodesMutation(state, nodeIds);
+    if (mutation && imageRegion) mutation = reconcileExplicitImageRegionRemoval(mutation,
+      imageRegion.parentNodeId, imageRegion.attachmentId, imageRegion.regionId);
     const created = mutation && createEditorAnnotationDeleteEntry(state, mutation.nodeIds);
     if (!mutation || !created) return state;
     const entry = { ...created, canonical: 'pending' as const };
@@ -39,11 +42,11 @@ async function commitDeletion(prepared: Prepared, scope: WorkspaceState, get: ()
 
 export function deleteEditorAnnotations(
   write: WorkspaceSet, get: () => WorkspaceState, nodeIds: string[],
-  onSettled: (nodeId: string, canContinue: boolean) => void
+  onSettled: (nodeId: string, canContinue: boolean) => void, imageRegion?: ImageRegionDeletion
 ) {
   const scope = get();
   const set: WorkspaceSet = patch => { if (get().libraryScope === scope.libraryScope) write(patch); };
-  const prepared = prepareDeletion(set, nodeIds);
+  const prepared = prepareDeletion(set, nodeIds, imageRegion);
   if (!prepared) return;
   const { entry, mutation: submitted, parents } = prepared;
   const ids = submitted.nodeIds;
@@ -53,12 +56,14 @@ export function deleteEditorAnnotations(
       item => isSameEditorAnnotationEntry(item, ids, 'annotation.delete')) }));
     onSettled(entry.nodeId, false);
   };
-  void commitDeletion(prepared, scope, get).then(result => {
+  return commitDeletion(prepared, scope, get).then(result => {
     const accepted = result?.deletedNodeIds ?? (!hasWorkspaceNodeMutationRuntime() ? ids : []);
     if (accepted.length !== ids.length || new Set(accepted).size !== ids.length || ids.some(id => !accepted.includes(id))) return fail();
     let canContinue = false;
     set(state => {
-      const mutation = computeDeleteNodesMutation(state, accepted, submitted.deletedAt, 'receipt');
+      let mutation = computeDeleteNodesMutation(state, accepted, submitted.deletedAt, 'receipt');
+      if (mutation && imageRegion) mutation = reconcileExplicitImageRegionRemoval(mutation,
+        imageRegion.parentNodeId, imageRegion.attachmentId, imageRegion.regionId);
       const confirmed = confirmPendingEditorAnnotationEntry(state, entry.nodeId, ids, {
         ...(result?.annotationHistory ? { historyFacts: result.annotationHistory.nodes } : {}),
         historyDeletedAt: submitted.deletedAt, historyParents: parents
@@ -67,7 +72,7 @@ export function deleteEditorAnnotations(
       canContinue = confirmed?.wasTop ?? false;
       for (const parent of parents) {
         const current = state.nodesById[parent.nodeId];
-        if (current && hashAnnotationValue(current.imageRegions) !== hashAnnotationValue(parent.before)) mutation.patch.nodesById[parent.nodeId] = current;
+        if (!imageRegion && current && hashAnnotationValue(current.imageRegions) !== hashAnnotationValue(parent.before)) mutation.patch.nodesById[parent.nodeId] = current;
       }
       return { ...mutation.patch, editorOperationHistory: confirmed?.history ?? state.editorOperationHistory };
     });

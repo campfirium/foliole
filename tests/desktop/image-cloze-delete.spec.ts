@@ -102,6 +102,20 @@ async function collectSelectionDebugState(desktopWindow: Page) {
   });
 }
 
+async function verifyImageDeletionReplay(desktopWindow: Page, childId: string,
+  createdRegions: unknown,
+  testInfo: import('@playwright/test').TestInfo) {
+  const regions = desktopWindow.locator('.cm-md-image-cloze-region');
+  await desktopWindow.keyboard.press(undoShortcut());
+  await expect(regions).toHaveCount(1);
+  await expect.poll(async () => (await loadWorkspaceSnapshot(desktopWindow)).trashedNodeIds).not.toContain(childId);
+  expect((await loadNodeDocument(desktopWindow, 'topic-image-cloze'))?.imageRegions).toEqual(createdRegions);
+  await testInfo.attach('image-cloze-delete-undo', { contentType: 'image/png', body: await desktopWindow.screenshot() });
+  await desktopWindow.keyboard.press(redoShortcut());
+  await expect(regions).toHaveCount(0);
+  await expect.poll(async () => (await loadWorkspaceSnapshot(desktopWindow)).trashedNodeIds).toContain(childId);
+}
+
 test('creates and deletes an image cloze region without leaving it on the image', async ({ desktopWindow }, testInfo) => {
   await seedImageTopic(desktopWindow);
   await openSeededTopic(desktopWindow);
@@ -138,6 +152,7 @@ test('creates and deletes an image cloze region without leaving it on the image'
   try {
     await expect(regions).toHaveCount(0);
     await expect.poll(async () => (await loadWorkspaceSnapshot(desktopWindow)).trashedNodeIds).toContain(childId);
+    await verifyImageDeletionReplay(desktopWindow, childId!, createdRegions, testInfo);
     await desktopWindow.reload();
     await expectWorkspaceShell(desktopWindow);
     await openSeededTopic(desktopWindow);

@@ -1,9 +1,12 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { captureAnnotationHistoryFact } from '../../lib/core/nodes/annotationHistoryFacts';
 import { createEmptyEditorOperationHistory, getEditorOperationSession } from '../features/editor/model/editorOperationHistory';
 import { deriveImageClozeRegionsFromChildren } from '../features/image-cloze/model/imageCloze';
 
 import { createEmptyWorkspaceActionHistory } from './workspaceActionHistory';
+import { createApplicationHistory } from './workspaceApplicationHistory';
+import { projectApplicationWorkspaceHistory } from './workspaceApplicationWorkspaceHistory';
 import { useWorkspaceStore } from './workspaceStore';
 import { createWorkspaceNodeActionsFixture } from './workspaceStoreNodeActions.test-support';
 
@@ -29,7 +32,7 @@ beforeEach(() => {
     nodesById: fixture.nodesById, nodeOrder: fixture.nodeOrder, activeNodeId: 'node-1',
     navigation: fixture.navigation, reviewSession: fixture.reviewSession,
     trashedNodeIds: [], trashedNodeDeletedAtById: {},
-    editorOperationHistory: createEmptyEditorOperationHistory(), appActionHistory: createEmptyWorkspaceActionHistory()
+    editorOperationHistory: createEmptyEditorOperationHistory(), appActionHistory: projectApplicationWorkspaceHistory(createEmptyWorkspaceActionHistory(), createApplicationHistory())
   });
 });
 
@@ -39,19 +42,28 @@ async function seedRegion() {
   return id;
 }
 
-function deferDelete() {
+async function deferDelete() {
   let resolve!: (result: { deletedNodeIds: string[] }) => void;
   const receipt = new Promise<{ deletedNodeIds: string[] }>((done) => { resolve = done; });
-  runtimeInvoke.mockImplementationOnce(() => receipt);
+  const original = runtimeInvoke.getMockImplementation()!;
+  runtimeInvoke.mockImplementation((command, payload) => {
+    if (command !== 'soft_delete_nodes') return original(command, payload);
+    const facts = (payload.nodeIds as string[]).map(id => useWorkspaceStore.getState().nodesById[id])
+      .filter((node): node is NonNullable<typeof node> => Boolean(node)).map(captureAnnotationHistoryFact);
+    return receipt.then(result => ({ ...result, annotationHistory: { nodes: facts, deletedAt: payload.deletedAt } }));
+  });
   const deletion = useWorkspaceStore.getState().deleteImageClozeRegion('node-1', 'image', 'region-1');
+  await vi.waitFor(() => expect(runtimeInvoke).toHaveBeenCalledWith('soft_delete_nodes', expect.objectContaining({ annotationHistory: { mode: 'capture', expectedDeletedAt: null, parents: expect.any(Array) } })));
   return { deletion, resolve };
 }
 
 it('preserves edits, creation, navigation and review changes made while deletion awaits its receipt', async () => {
   const id = await seedRegion();
-  const { deletion, resolve } = deferDelete();
+  const { deletion, resolve } = await deferDelete();
   expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain(id);
   await useWorkspaceStore.getState().updateNodeTitle('node-1', 'Edited during deletion');
+  expect(await useWorkspaceStore.getState().updateNodeContent('node-1', 'Parent body during deletion')).toBe(true);
+  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('Parent body during deletion');
   const created = await useWorkspaceStore.getState().createRootNode('Created during deletion');
   if (!created) throw new Error('Expected concurrent creation');
   expect(await useWorkspaceStore.getState().updateNodeContent(created, 'Edited new content')).toBe(true);
@@ -66,6 +78,7 @@ it('preserves edits, creation, navigation and review changes made while deletion
   await deletion;
   const final = useWorkspaceStore.getState();
   expect(final.nodesById['node-1']?.title).toBe('Edited during deletion');
+  expect(final.nodesById['node-1']?.content).toBe(current.nodesById['node-1']?.content);
   expect(final.nodesById[created]).toEqual(current.nodesById[created]);
   expect(final.nodeOrder).toEqual(current.nodeOrder);
   expect(final.activeNodeId).toBe(created);
@@ -77,8 +90,10 @@ it('preserves edits, creation, navigation and review changes made while deletion
   expect(final.trashedNodeIds).toContain(id);
   expect(final.nodesById['node-1']?.imageRegions).toBeNull();
   expect(getEditorOperationSession(final.editorOperationHistory, 'node-1').undoStack.at(-1)?.type).toBe('annotation.delete');
-  useWorkspaceStore.getState().openNode('node-1');
-  expect(useWorkspaceStore.getState().undoEditorOperation()).toBe(true);
+  const history = final.appActionHistory.application!;
+  expect(history.undo.findIndex(operation => operation.domain === 'editor' && operation.entry.type === 'annotation.delete'))
+    .toBeLessThan(history.undo.findIndex(operation => operation.domain === 'workspace' && operation.entry.type === 'structure.create'));
+  expect(await useWorkspaceStore.getState().restoreNode(id)).toBe(id);
   await vi.waitFor(() => expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain(id));
   expect(useWorkspaceStore.getState().nodesById[created]).toEqual(current.nodesById[created]);
   expect(deriveImageClozeRegionsFromChildren({ nodeId: 'node-1', ...useWorkspaceStore.getState() })[0]?.regions[0]?.id).toBe(region.id);
@@ -97,13 +112,14 @@ it('does not mutate the previous store snapshot when appending to an existing im
 it.each([{ deletedNodeIds: [] }, { deletedNodeIds: ['unexpected'] }])(
   'does not publish rejected receipt $deletedNodeIds', async ({ deletedNodeIds }) => {
   await seedRegion();
-  const { deletion, resolve } = deferDelete();
+  const { deletion, resolve } = await deferDelete();
   await useWorkspaceStore.getState().updateNodeContent('node-1', 'Latest');
   const latest = useWorkspaceStore.getState();
   resolve({ deletedNodeIds });
   await deletion;
   expect(useWorkspaceStore.getState().nodesById).toBe(latest.nodesById);
-  expect(useWorkspaceStore.getState().editorOperationHistory).toBe(latest.editorOperationHistory);
+  expect(getEditorOperationSession(useWorkspaceStore.getState().editorOperationHistory, 'node-1').undoStack)
+    .toEqual(getEditorOperationSession(latest.editorOperationHistory, 'node-1').undoStack.filter(entry => entry.type !== 'annotation.delete'));
   expect(useWorkspaceStore.getState().trashedNodeIds).toEqual([]);
 });
 
@@ -112,7 +128,7 @@ it('keeps a newly added region on the current parent and removes a legacy region
   useWorkspaceStore.setState((state) => ({ nodesById: { ...state.nodesById,
     [id]: { ...state.nodesById[id]!, anchorLink: { ...state.nodesById[id]!.anchorLink!, id: 'legacy' }, imageRegions: null }
   } }));
-  const { deletion, resolve } = deferDelete();
+  const { deletion, resolve } = await deferDelete();
   await useWorkspaceStore.getState().createImageClozeNodes('node-1', 'image', source, [{ ...region, id: 'region-2' }]);
   resolve({ deletedNodeIds: [id] });
   await deletion;
@@ -129,21 +145,22 @@ function addRelatedNode(id: string, parentNodeId: string, templateId: string) {
 it.each(['partial', 'duplicate', 'extra'])('rejects a %s receipt without changing current state or undo', async (kind) => {
   const id = await seedRegion();
   addRelatedNode('sibling', 'node-1', id);
-  const { deletion, resolve } = deferDelete();
+  const { deletion, resolve } = await deferDelete();
   await useWorkspaceStore.getState().updateNodeContent('node-1', 'Latest parent');
   const latest = useWorkspaceStore.getState();
   const deletedNodeIds = kind === 'partial' ? [id] : kind === 'duplicate' ? [id, id] : [id, 'sibling', 'extra'];
   resolve({ deletedNodeIds });
   await deletion;
   expect(useWorkspaceStore.getState().nodesById).toBe(latest.nodesById);
-  expect(useWorkspaceStore.getState().editorOperationHistory).toBe(latest.editorOperationHistory);
+  expect(getEditorOperationSession(useWorkspaceStore.getState().editorOperationHistory, 'node-1').undoStack)
+    .toEqual(getEditorOperationSession(latest.editorOperationHistory, 'node-1').undoStack.filter(entry => entry.type !== 'annotation.delete'));
   expect(useWorkspaceStore.getState().trashedNodeIds).toEqual([]);
 });
 
 it('applies only receipt ids even when descendants are added or moved during the wait', async () => {
   const id = await seedRegion();
   addRelatedNode('old-descendant', id, id);
-  const { deletion, resolve } = deferDelete();
+  const { deletion, resolve } = await deferDelete();
   addRelatedNode('new-descendant', id, id);
   useWorkspaceStore.setState((state) => ({ nodesById: {
     ...state.nodesById, 'old-descendant': { ...state.nodesById['old-descendant']!, parentNodeId: 'node-1' }
@@ -154,12 +171,12 @@ it('applies only receipt ids even when descendants are added or moved during the
   expect(useWorkspaceStore.getState().trashedNodeIds).not.toContain('new-descendant');
   expect(useWorkspaceStore.getState().nodesById['new-descendant']?.parentNodeId).toBe(id);
   const entry = getEditorOperationSession(useWorkspaceStore.getState().editorOperationHistory, 'node-1').undoStack.at(-1);
-  expect(entry).toMatchObject({ annotations: [{ nodeId: 'old-descendant' }, { nodeId: id }] });
+  expect(entry?.type !== 'text.edit' && entry?.annotations.map(annotation => annotation.nodeId).sort()).toEqual([id, 'old-descendant'].sort());
 });
 
 it('does not resurrect a parent removed while waiting for the receipt', async () => {
   const id = await seedRegion();
-  const { deletion, resolve } = deferDelete();
+  const { deletion, resolve } = await deferDelete();
   useWorkspaceStore.setState((state) => ({
     nodeOrder: state.nodeOrder.filter((nodeId) => nodeId !== 'node-1'),
     nodesById: Object.fromEntries(Object.entries(state.nodesById).filter(([nodeId]) => nodeId !== 'node-1'))
