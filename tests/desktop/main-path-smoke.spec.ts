@@ -95,13 +95,14 @@ test('desktop main path smoke covers import, reading, review entry, and sync set
   });
 
   await openImportedNode(desktopWindow);
-  await expect(desktopWindow.getByRole('button', { name: IMPORTED_TITLE, exact: true })).toBeVisible();
+  await expect(desktopWindow.getByRole('treeitem', { name: IMPORTED_TITLE, exact: true }))
+    .toHaveAttribute('aria-selected', 'true');
   await expect(desktopWindow.getByRole('main', { name: WORKSPACE_NAME })).toContainText(READING_LINE);
 
   await desktopWindow.getByRole('button', { name: /^(Enter Flow|进入 Flow)$/ }).click();
   await expect(desktopWindow.getByRole('group', { name: 'Flow toolbar' })).toBeVisible();
-  await desktopWindow.getByRole('button', { name: IMPORTED_TITLE, exact: true }).click();
-  await expect(desktopWindow.getByRole('main', { name: WORKSPACE_NAME })).toContainText(IMPORTED_TITLE);
+  await openImportedNode(desktopWindow);
+  await expect(desktopWindow.getByRole('main', { name: WORKSPACE_NAME })).toContainText(READING_LINE);
 
   const settingsDialog = await openSettingsCategory(desktopWindow, 'Sync');
   const syncSection = settingsDialog.getByRole('region', { name: /^(Sync section|同步设置区)$/ });
