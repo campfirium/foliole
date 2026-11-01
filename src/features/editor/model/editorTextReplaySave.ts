@@ -14,7 +14,7 @@ export function createEditorTextReplaySave(onFailure: (retry: () => void) => voi
   let resolve!: (saved: boolean) => void;
   const completion = new Promise<boolean>(done => { resolve = done; });
   let persist: (() => Promise<boolean>) | null = null;
-  const confirm = (saved: boolean) => {
+  const confirmSave = (saved: boolean) => {
     if (status === 'saved' || status === 'rejected') return;
     if (saved) { status = 'saved'; resolve(true); }
     else if (status !== 'failed') { status = 'failed'; onFailure(() => { void attempt(); }); }
@@ -22,12 +22,12 @@ export function createEditorTextReplaySave(onFailure: (retry: () => void) => voi
   const attempt = async () => {
     if (!persist || status === 'saving' || status === 'saved' || status === 'rejected') return;
     status = 'saving';
-    try { confirm(await persist()); } catch { confirm(false); }
+    try { confirmSave(await persist()); } catch { confirmSave(false); }
   };
   return {
     requestId: crypto.randomUUID(),
     completion,
-    confirm,
+    confirm: confirmSave,
     retry: () => { void attempt(); },
     get status() { return status; },
     submit(save) {
