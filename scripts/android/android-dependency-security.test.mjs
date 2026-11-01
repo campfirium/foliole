@@ -83,6 +83,20 @@ describe.runIf(process.platform !== 'win32')('resolved Android inventory through
     expect(JSON.parse(readFileSync(reportPath, 'utf8'))).toMatchObject({ status: 'error', overallStatus: 'incomplete' });
   });
 
+  it('does not qualify a successful tool step when GitHub says the snapshot was superseded', async () => {
+    const receipt = path.join(root, 'superseded.json');
+    const revision = 'a'.repeat(40);
+    writeFileSync(receipt, JSON.stringify({ schemaVersion: 1, expected: revision, status: 'error',
+      checkedAt: new Date().toISOString(), submissions: [{ result: { result: 'ACCEPTED', message: 'superseded' } }] }));
+    const { report } = await collectAndroidDependencySecurity({ ...reportOptions,
+      outputDir: path.join(root, 'superseded-report'), source: { revision },
+      env: { ...reportOptions.env, GITHUB_ACTIONS: 'true', FOLIOLE_ANDROID_GRAPH_STATUS: 'success',
+        FOLIOLE_ANDROID_SUBMISSION_RECEIPT: receipt },
+      fetchImpl: async (_url, options) => ({ ok: true, json: async () => ({ results: JSON.parse(options.body).queries.map(() => ({})) }) }) });
+    expect(report.officialObservations.find(row => row.route === 'dependency-submission').status).toBe('error');
+    expect(report.inventory.configurations.some(row => row.name === 'debugRuntimeClasspath')).toBe(true);
+  }, 90_000);
+
   it('refuses an empty or malformed inventory before querying any advisory service', async () => {
     await expect(createAndroidSecurityReport({}, { fetchImpl: success })).rejects.toThrow('inventory');
   });

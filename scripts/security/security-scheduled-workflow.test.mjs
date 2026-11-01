@@ -32,8 +32,10 @@ it('runs the same exact security target when full admission skips, without chang
   expect(submission.with['validate-wrappers']).toBe(true);
   expect(submission.with['additional-arguments']).toContain('--no-configuration-cache');
   expect(submission.with['additional-arguments']).toContain('android-dependency-inventory.gradle');
-  expect(security.steps.find(step => step.name === 'Collect current advisory and coverage evidence').env.FOLIOLE_ANDROID_GRAPH_STATUS)
-    .toBe('${{ steps.android_graph.outcome }}');
+  expect(submission.with['dependency-graph']).toBe('generate-and-upload');
+  expect(security.steps.find(step => step.id === 'android_submission').run).toBe('node scripts/android/android-dependency-submission.mjs');
+  expect(security.steps.find(step => step.name === 'Collect current advisory and coverage evidence').env.FOLIOLE_ANDROID_SUBMISSION_RECEIPT)
+    .toBe('.tmp/artifacts/security-maintenance/hosted/dependency-submission.json');
   expect(security.if).toBe("github.ref == 'refs/heads/dev'");
   expect(security['timeout-minutes']).toBe(20);
   expect(security.env.FOLIOLE_SECURITY_TARGET_SHA).toBe('${{ github.sha }}');

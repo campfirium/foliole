@@ -1,6 +1,6 @@
 # Android security maintenance
 
-The independent `security_maintenance` job in Scheduled Dev Quality runs daily on `dev`, including when full quality skips and when there are no new commits. It resolves real debug/release runtime, buildscript and protobuf tool configurations, queries OSV, submits a graph using Gradle's official dependency-submission action, and reads the primary sources below. Setup/submission/source failures remain report failures or gaps, with evidence uploaded even on failure. Existing security artifact intake and durable owner notifications own delivery; this adds no daemon, second GitHub polling loop or model schedule.
+The independent `security_maintenance` job in Scheduled Dev Quality runs daily on `dev`, including when full quality skips and when there are no new commits. It resolves real debug/release runtime, buildscript and protobuf tool configurations, queries OSV, generates a graph using Gradle's official dependency-submission action and submits it with a retained GitHub API receipt, and reads the primary sources below. Setup/submission/source failures remain report failures or gaps, with evidence uploaded even on failure. Existing security artifact intake and durable owner notifications own delivery; this adds no daemon, second GitHub polling loop or model schedule.
 
 | Asset | Version evidence | Automated source and limit | Responsibility |
 | --- | --- | --- | --- |
@@ -21,6 +21,6 @@ The independent `security_maintenance` job in Scheduled Dev Quality runs daily o
 - `node scripts/security/security-maintenance.mjs OUTPUT --android-report REPORT`: assemble the existing coverage schema, retaining all other platform obligations.
 - Use the existing `security-owner-cli.mjs` import/status commands and [security owner documentation](security-owner.md) for durable intake, assessment and delivery evidence.
 
-A graph API acceptance that says it is superseded is not evidence that repository dependency results changed. Retain the response and verify the current scheduled workflow and repository graph. No workflow, graph submission or version check authorizes merging PRs, dismissing alerts, changing repository security settings, publishing, broad upgrades or device resets.
+Only a dated, candidate-matched API receipt with `result: SUCCESS` qualifies dependency submission. An Action step's success or an API acceptance that says it is superseded does not qualify. The small submission adapter fills this observed acknowledgement gap in the mature action; it does not scan dependencies. Retain the response and verify the current scheduled workflow and repository graph. No workflow, graph submission or version check authorizes merging PRs, dismissing alerts, changing repository security settings, publishing, broad upgrades or device resets.
 
 The device used for compatibility testing may be out of security support. Supporting old readers is a functional compatibility promise, not a guarantee of security patches or an instruction to install new OS/WebView packages automatically.

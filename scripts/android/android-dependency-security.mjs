@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import { captureSecurityCandidate, sameSecurityCandidate } from '../security/security-inputs.mjs';
 import { collectAndroidDeviceNotices, readAndroidDeviceSecurity } from './android-device-security.mjs';
+import { androidSubmissionObservation } from './android-dependency-submission.mjs';
 import { collectAndroidComponentNotices } from './android-component-notices.mjs';
 import { inspectAndroidNativeComponents } from './android-native-components.mjs';
 import { collectAndroidToolchainNotices } from './android-toolchain-notices.mjs';
@@ -33,12 +34,7 @@ export async function collectAndroidDependencySecurity({
     report.officialObservations.push(await collectAndroidComponentNotices(report.inventory.nativeComponents, { fetchImpl }));
     report.officialObservations.push(...await collectAndroidToolchainNotices(report.inventory, { fetchImpl }));
     report.officialObservations.push(await collectAndroidDeviceNotices(readAndroidDeviceSecurity(path.dirname(projectRoot)), { fetchImpl }));
-    report.officialObservations.push({ asset: 'android-maven', route: 'dependency-submission',
-      checkedAt: new Date().toISOString(), source: 'https://github.com/gradle/actions/tree/v6.4.1/dependency-submission',
-      status: env.FOLIOLE_ANDROID_GRAPH_STATUS === 'success' ? 'clean' : env.GITHUB_ACTIONS === 'true' ? 'error' : 'unsupported',
-      reason: env.GITHUB_ACTIONS === 'true' ? `dependency-submission-${env.FOLIOLE_ANDROID_GRAPH_STATUS ?? 'missing'}` : 'submission-is-owned-by-hosted-scheduled-job',
-      findings: [], evidence: { versions: { gradle: report.inventory.gradleVersion },
-        outcome: env.FOLIOLE_ANDROID_GRAPH_STATUS, runId: env.GITHUB_RUN_ID } });
+    report.officialObservations.push(androidSubmissionObservation(env, source, report.inventory));
   } catch (error) {
     report = { schemaVersion: 1, platform: 'android', status: 'error', overallStatus: 'incomplete',
       coverage: 'partial', generatedAt: new Date().toISOString(), source,
