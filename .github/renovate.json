@@ -1,0 +1,127 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "enabledManagers": [
+    "npm",
+    "gradle",
+    "gradle-wrapper",
+    "swift"
+  ],
+  "baseBranchPatterns": [
+    "dev"
+  ],
+  "timezone": "Asia/Shanghai",
+  "schedule": [
+    "* 9-12 * * 1"
+  ],
+  "minimumReleaseAge": "7 days",
+  "prConcurrentLimit": 2,
+  "branchConcurrentLimit": 2,
+  "prHourlyLimit": 1,
+  "automerge": false,
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "Dependency maintenance",
+  "dependencyDashboardApproval": true,
+  "vulnerabilityAlerts": {
+    "enabled": false
+  },
+  "rangeStrategy": "pin",
+  "ignorePaths": [
+    "**/node_modules/**",
+    ".lab/**",
+    ".tmp/**",
+    ".cache/**",
+    "ios/App/CapApp-SPM/**",
+    "android/capacitor.settings.gradle",
+    "android/app/capacitor.build.gradle"
+  ],
+  "packageRules": [
+    {
+      "description": "Update the root npm manifest only; native plugin manifests belong to their publishers.",
+      "matchManagers": [
+        "npm"
+      ],
+      "matchFileNames": [
+        "!package.json"
+      ],
+      "enabled": false
+    },
+    {
+      "matchManagers": [
+        "gradle",
+        "gradle-wrapper"
+      ],
+      "matchFileNames": [
+        "!android/**"
+      ],
+      "enabled": false
+    },
+    {
+      "matchManagers": [
+        "swift"
+      ],
+      "matchFileNames": [
+        "!/^(?:ios/App/Package\\.swift|ios/App/FramedSyncRuntimePackage/Package\\.swift)$/"
+      ],
+      "enabled": false
+    },
+    {
+      "matchManagers": [
+        "npm"
+      ],
+      "matchPackageNames": [
+        "@capacitor/**",
+        "@capacitor-community/sqlite"
+      ],
+      "groupName": "capacitor"
+    },
+    {
+      "matchManagers": [
+        "npm"
+      ],
+      "matchPackageNames": [
+        "@codemirror/**",
+        "@lezer/**"
+      ],
+      "groupName": "editor"
+    },
+    {
+      "matchManagers": [
+        "swift"
+      ],
+      "matchPackageNames": [
+        "apple/swift-protobuf"
+      ],
+      "groupName": "swift-protobuf"
+    },
+    {
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "matchManagers": [
+        "npm"
+      ],
+      "matchPackageNames": [
+        "electron",
+        "better-sqlite3",
+        "@capacitor-community/sqlite"
+      ],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Electron follows the existing latest-stable review policy.",
+      "matchManagers": [
+        "npm"
+      ],
+      "matchPackageNames": [
+        "electron"
+      ],
+      "minimumReleaseAge": "0 days"
+    }
+  ]
+}
