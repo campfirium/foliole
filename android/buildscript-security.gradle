@@ -1,0 +1,27 @@
+def patches = [
+    'com.android.tools.build:gradle': [version: '8.13.2', reason: 'Keep Capacitor build plugins on the same compatible AGP patch.'],
+    'org.jetbrains.kotlin:kotlin-gradle-plugin': [version: '2.4.21', reason: 'GHSA-r937-wjx7-w2jp fixes unsafe build-cache deserialization.'],
+    'com.google.guava:guava': [version: '33.7.2-jre', reason: 'GHSA-xxph-c9ww-hj94 fixes deserialization memory exhaustion.'],
+    'org.apache.commons:commons-compress': [version: '1.28.0', reason: 'GHSA-4265-ccf5-phj5 and GHSA-4g9r-vxhx-9pgx fix malformed archive denial of service.'],
+    'org.bitbucket.b_c:jose4j': [version: '0.9.7', reason: 'GHSA-3677-xxcr-wjqv fixes compressed JWE denial of service.'],
+    'org.jdom:jdom2': [version: '2.0.6.1', reason: 'GHSA-2363-cqg2-863c fixes XML external entity injection.']
+]
+
+['netty-buffer', 'netty-codec', 'netty-codec-http', 'netty-codec-http2', 'netty-codec-socks',
+ 'netty-common', 'netty-handler', 'netty-handler-proxy', 'netty-resolver', 'netty-transport',
+ 'netty-transport-native-unix-common'].each { module ->
+    patches["io.netty:${module}"] = [version: '4.1.139.Final',
+        reason: 'Resolve Netty security fixes, including GHSA-c4c3-7fpv-j4q5, with aligned 4.1 modules.']
+}
+['bcprov-jdk18on', 'bcpkix-jdk18on', 'bcutil-jdk18on'].each { module ->
+    patches["org.bouncycastle:${module}"] = [version: '1.86',
+        reason: 'GHSA-9pwp-9qqc-pr26 and related ASN.1/crypto fixes require aligned Bouncy Castle modules.']
+}
+
+ext.applyBuildscriptSecurity = { handler ->
+    patches.each { coordinate, patch ->
+        handler.dependencies.constraints.add('classpath', "${coordinate}:${patch.version}") {
+            because(patch.reason)
+        }
+    }
+}

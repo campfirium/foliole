@@ -42,3 +42,11 @@ Gradle distribution advisories require Gradle's official security announcements;
 An advisory match establishes a version match, not a reachable exploit in the build or the shipped application. Review runtime versus build-time scopes, official conditions and remediation compatibility before changing dependency constraints. Do not silently force transitive build-tool versions or automatically dismiss findings after a build passes.
 
 References: [Gradle resolution API](https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/result/ResolutionResult.html), [OSV batch API and pagination](https://google.github.io/osv.dev/post-v1-querybatch/).
+
+## Build dependency remediation
+
+`android/buildscript-security.gradle` supplies documented minimum-version constraints to root and plugin buildscript classpaths. It uses ordinary Gradle constraints: unused modules are not added and newer upstream versions are allowed. Netty and Bouncy Castle modules share a family baseline. AGP remains on the compatible 8.13 patch line; the Kotlin build plugin is upgraded for its build-cache deserialization advisory, while language/API settings preserve the existing source level.
+
+`android/kotlin-runtime.gradle` limits the existing Kotlin standard-library compatibility rule to application compile/runtime classpaths. Compiler tooling resolves its own libraries; applying the old application stdlib version to compiler configurations can break the patched compiler. The application runtime dependency graph must remain unchanged for this build-only remediation.
+
+Review these constraints when upgrading upstream build plugins. Remove a constraint only after an unconstrained resolved graph selects a fixed version, the live advisory check succeeds and debug/test APK plus release bundle builds pass. A successful build alone does not resolve a security finding; retain both before/after version evidence and current advisory results. Constraints do not remediate JDK, SDK or embedded native-library gaps.

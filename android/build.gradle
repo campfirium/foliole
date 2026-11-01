@@ -1,13 +1,17 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
+    apply from: 'buildscript-security.gradle'
+    ext.kotlin_version = '2.4.21'
+    project.applyBuildscriptSecurity(buildscript)
 
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.13.0'
+        classpath 'com.android.tools.build:gradle:8.13.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath 'com.google.gms:google-services:4.4.4'
         classpath 'com.google.protobuf:protobuf-gradle-plugin:0.10.0'
 
@@ -26,14 +30,16 @@ allprojects {
 }
 
 subprojects {
-    configurations.configureEach {
-        resolutionStrategy.eachDependency { details ->
-            if (details.requested.group == 'org.jetbrains.kotlin' &&
-                ['kotlin-stdlib', 'kotlin-stdlib-jdk7', 'kotlin-stdlib-jdk8'].contains(details.requested.name)) {
-                details.useVersion rootProject.ext.kotlinStdlibVersion
+    rootProject.applyBuildscriptSecurity(buildscript)
+    plugins.withId('kotlin-android') {
+        kotlin {
+            compilerOptions {
+                languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+                apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
             }
         }
     }
+    apply from: rootProject.file('kotlin-runtime.gradle')
 }
 
 task clean(type: Delete) {
