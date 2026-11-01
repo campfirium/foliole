@@ -18,6 +18,7 @@
 
 ## Validation
 
+- Swift dependency evidence: `node scripts/ios/swift-security-inventory.mjs <output-dir>` reads both tracked locks without native tools; add `--resolve` on macOS to verify App and host graphs plus evaluated plugin manifests. Run `npm run test:files -- scripts/ios/swift-security-evidence.test.mjs` before live collection. This read-only maintenance entry does not install or launch an app; successful extraction still requires separate dated upstream security review and does not attest an iPhone runtime.
 - Public minimal iOS workflow: `npm run android:web:build`, `npx cap sync ios`, `node -e "import('./scripts/ios/ios-local-storage.mjs').then(({ prepareIosAcceptanceCache }) => prepareIosAcceptanceCache(process.cwd()))"`, then `xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath .cache/ios-acceptance-build/DerivedData CODE_SIGNING_ALLOWED=NO build`. Generic compilation must not write DerivedData to `.tmp/artifacts/<task-entry>`.
 - For changes not requiring a real iOS runtime, start with registered explicit file checks. `quality:ios*` and `ios:sync:preflight` are hosted-only.
 - Isolated Simulator acceptance must retain Xcode local signing and verify signatures before installation. `CODE_SIGNING_ALLOWED=NO` is only for generic compilation without running the App; do not reuse its output to accept Keychain or visible runtime behavior, as missing entitlements produce false failures.
