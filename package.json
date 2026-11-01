@@ -278,7 +278,7 @@
     "@typescript-eslint/parser": "8.72.0",
     "@vitejs/plugin-react": "6.1.2",
     "autoprefixer": "10.6.1",
-    "electron": "45.1.0",
+    "electron": "45.2.1",
     "electron-builder": "26.18.0",
     "eslint": "10.13.0",
     "eslint-plugin-import-x": "4.17.1",

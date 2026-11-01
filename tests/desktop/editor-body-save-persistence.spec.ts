@@ -151,7 +151,7 @@ test('persists a long pasted body after immediate node switch and relaunch', asy
   }
 });
 
-test('keeps rich paste undo and redo available after relaunch', async ({ desktopApp, desktopSession, desktopWindow }) => {
+test('keeps rich paste content and starts a fresh editing history after relaunch', async ({ desktopApp, desktopSession, desktopWindow }) => {
   let secondSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
 
   try {
@@ -182,27 +182,25 @@ test('keeps rich paste undo and redo available after relaunch', async ({ desktop
     });
     await expectWorkspaceShell(secondSession.firstWindow);
     await openNode(secondSession.firstWindow, SOURCE_ID);
-    await expect.poll(() => collectEditorOperationHistory(secondSession!.firstWindow)).toMatchObject({
-      undoStack: [expect.objectContaining({ nodeId: SOURCE_ID, type: 'text.edit' })]
-    });
-
-    await secondSession.firstWindow.locator('.prompt-editor-host .cm-content').click();
-    await clickNativeHistoryCommand(secondSession.electronApp, secondSession.firstWindow, 'app.undo');
     await expect.poll(() => collectActiveEditorState(secondSession!.firstWindow)).toMatchObject({
-      activeNodeId: SOURCE_ID,
-      editorContent: BASE_CONTENT,
-      nodeContent: BASE_CONTENT
+      activeNodeId: SOURCE_ID, editorContent: RICH_PASTE_CONTENT, nodeContent: RICH_PASTE_CONTENT
     });
     await expect.poll(() => collectEditorOperationHistory(secondSession!.firstWindow)).toEqual({
-      invalidations: [],
-      redoStack: [{ nodeId: SOURCE_ID, type: 'text.edit', userEvent: 'input.paste' }],
-      undoStack: []
+      invalidations: [], redoStack: [], undoStack: []
+    });
+
+    const nextContent = RICH_PASTE_CONTENT + ' after restart';
+    await pasteAtPosition(secondSession.firstWindow, ' after restart', RICH_PASTE_CONTENT.length);
+    await expect.poll(() => collectActiveEditorState(secondSession!.firstWindow)).toMatchObject({
+      editorContent: nextContent, nodeContent: nextContent
+    });
+    await clickNativeHistoryCommand(secondSession.electronApp, secondSession.firstWindow, 'app.undo');
+    await expect.poll(() => collectActiveEditorState(secondSession!.firstWindow)).toMatchObject({
+      editorContent: RICH_PASTE_CONTENT, nodeContent: RICH_PASTE_CONTENT
     });
     await clickNativeHistoryCommand(secondSession.electronApp, secondSession.firstWindow, 'app.redo');
     await expect.poll(() => collectActiveEditorState(secondSession!.firstWindow)).toMatchObject({
-      activeNodeId: SOURCE_ID,
-      editorContent: RICH_PASTE_CONTENT,
-      nodeContent: RICH_PASTE_CONTENT
+      editorContent: nextContent, nodeContent: nextContent
     });
   } finally {
     await secondSession?.close();
