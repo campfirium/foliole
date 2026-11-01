@@ -13,7 +13,7 @@ import { officialSecurityObservations } from './official-security-review.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const readJson = file => JSON.parse(readFileSync(file, 'utf8'));
 
-function nativeObservation(asset, file, snapshot) {
+function nativeObservation(asset, file, snapshot, observations) {
   const route = asset === 'android-maven' ? 'osv-maven' : 'resolution';
   let evidence;
   try {
@@ -29,6 +29,16 @@ function nativeObservation(asset, file, snapshot) {
     if (asset === 'swift-native' && evidence.status === 'resolved'
       && ['app', 'host'].some(name => evidence.graphs?.[name]?.status !== 'resolved')) {
       throw new Error('Swift evidence is missing a resolved graph');
+    }
+    if (asset === 'android-maven') {
+      for (const check of evidence.officialObservations ?? []) {
+        if (!['gradle', 'embedded-native'].includes(check.asset) || check.route !== 'vendor-notices') {
+          throw new Error('Unsupported Android official observation');
+        }
+        const environment = digest(JSON.stringify(check.evidence?.versions ?? {}));
+        snapshot.environments[check.asset] = environment;
+        observations.push({ ...check, candidate: evidence.source, environment });
+      }
     }
     const facts = asset === 'android-maven' ? evidence.inventory : evidence.environment;
     snapshot.nativeEvidence[asset] = { file, sha256: digest(readFileSync(file)), facts };
@@ -73,7 +83,7 @@ export function collectSecurityMaintenance({ root, output, nativeReports = {}, o
     return npmAuditObservation(result, { asset, candidate: snapshot.candidate,
       environment, checkedAt: new Date(now).toISOString() });
   });
-  observations.push(...Object.entries(nativeReports).map(([asset, file]) => nativeObservation(asset, file, snapshot)));
+  observations.push(...Object.entries(nativeReports).map(([asset, file]) => nativeObservation(asset, file, snapshot, observations)));
   observations.push(...officialSecurityObservations(officialReview, snapshot));
   const report = createCoverageReport({ snapshot, observations, now });
   if (tools.npm === 'unavailable' || snapshot.actions.errors.length) {

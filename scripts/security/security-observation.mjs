@@ -64,7 +64,7 @@ function normaliseCheck(asset, check, report, lock) {
   try {
     result.findings = asset.id.startsWith('npm-') ? npmFindings(rows, lock)
       : asset.id === 'android-maven' ? mavenFindings(rows)
-        : check.route === 'official-review' ? officialFindings(rows) : [];
+        : ['official-review', 'vendor-notices'].includes(check.route) ? officialFindings(rows) : [];
     if (!result.findings.length) throw new Error('Finding source has no supported advisory details');
   } catch (error) { result.status = 'error'; result.reason = error.message; result.unqualifiedFindings = rows.length; }
   result.findings = result.findings.map(finding => ({ ...finding,

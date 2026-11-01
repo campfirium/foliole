@@ -5,6 +5,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { captureSecurityCandidate, sameSecurityCandidate } from '../security/security-inputs.mjs';
+import { collectAndroidOfficialSecurity } from './android-official-security.mjs';
 import { createAndroidSecurityReport } from './android-security-report.mjs';
 
 export async function collectAndroidDependencySecurity({
@@ -22,6 +23,7 @@ export async function collectAndroidDependencySecurity({
     const raw = readFileSync(inventoryPath, 'utf8');
     report = await createAndroidSecurityReport(JSON.parse(raw), { fetchImpl,
       source: { ...source, inventorySha256: createHash('sha256').update(raw).digest('hex') } });
+    report.officialObservations = await collectAndroidOfficialSecurity(report.inventory, { fetchImpl });
   } catch (error) {
     report = { schemaVersion: 1, platform: 'android', status: 'error', overallStatus: 'incomplete',
       coverage: 'partial', generatedAt: new Date().toISOString(), source,
