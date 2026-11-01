@@ -46,7 +46,6 @@ type PdfPageProxy = Awaited<ReturnType<Awaited<ReturnType<typeof getDocument>['p
 async function mapPdfPages<T>(bytes: Uint8Array, read: (pdfPage: PdfPageProxy, page: number) => Promise<T>) {
   const loadingTask = getDocument({
     data: toPdfDocumentData(bytes),
-    isEvalSupported: false,
     useWorkerFetch: false
   });
   const document = await loadingTask.promise;
@@ -57,7 +56,7 @@ async function mapPdfPages<T>(bytes: Uint8Array, read: (pdfPage: PdfPageProxy, p
     }
     return pages;
   } finally {
-    await document.destroy();
+    await loadingTask.destroy();
   }
 }
 

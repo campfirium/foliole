@@ -121,6 +121,7 @@ function renderPdfDocument(
         />
       ) : null}
       <Document
+        suspense={false}
         className={isLayoutReady ? 'pdf-document-page-stack mx-auto flex w-full max-w-none flex-col items-center gap-4' : 'hidden'}
         data-testid="pdf-document-view"
         file={props.pdfSource}
@@ -131,25 +132,7 @@ function renderPdfDocument(
         options={PDF_DOCUMENT_OPTIONS}
       >
         <PdfReadingViewDocument />
-        <PdfDocumentPages
-          fitWidthTargetWidth={props.fitWidthTargetWidth}
-          highlightLocators={props.highlightLocators}
-          onPageRenderReady={handlePageRenderReady}
-          onTextContentLoad={props.onTextContentLoad}
-          onTextLayerRender={props.onTextLayerRender}
-          onPageLoadSuccess={handlePageLoadSuccess}
-          pageJumpRequest={props.pageJumpRequest}
-          pageDimensionsByNumber={pageDimensionsByNumber}
-          pageElementsRef={props.pageElementsRef}
-          pdfSelectionLocator={props.pdfSelectionLocator}
-          rotation={props.rotation}
-          searchQuery={props.searchQuery}
-          searchHighlights={props.searchHighlights}
-          totalPages={props.totalPages}
-          visiblePage={props.visiblePage}
-          zoomMode={props.zoomMode}
-          zoom={props.zoom}
-        />
+        {renderPdfDocumentPages(props, pageDimensionsByNumber, handlePageRenderReady, handlePageLoadSuccess)}
       </Document>
     </>
   );
@@ -184,4 +167,33 @@ function createPageLoadSuccessHandler(
         : { ...current, [pageNumber]: dimensions }
     );
   };
+}
+
+function renderPdfDocumentPages(
+  props: PdfViewportDocumentProps,
+  pageDimensionsByNumber: Record<number, PdfPageDimensions>,
+  handlePageRenderReady: (pageNumber: number) => void,
+  handlePageLoadSuccess: ReturnType<typeof createPageLoadSuccessHandler>
+) {
+  return (
+    <PdfDocumentPages
+      fitWidthTargetWidth={props.fitWidthTargetWidth}
+      highlightLocators={props.highlightLocators}
+      onPageRenderReady={handlePageRenderReady}
+      onTextContentLoad={props.onTextContentLoad}
+      onTextLayerRender={props.onTextLayerRender}
+      onPageLoadSuccess={handlePageLoadSuccess}
+      pageJumpRequest={props.pageJumpRequest}
+      pageDimensionsByNumber={pageDimensionsByNumber}
+      pageElementsRef={props.pageElementsRef}
+      pdfSelectionLocator={props.pdfSelectionLocator}
+      rotation={props.rotation}
+      searchQuery={props.searchQuery}
+      searchHighlights={props.searchHighlights}
+      totalPages={props.totalPages}
+      visiblePage={props.visiblePage}
+      zoomMode={props.zoomMode}
+      zoom={props.zoom}
+    />
+  );
 }

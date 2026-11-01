@@ -140,6 +140,7 @@ export function SimplePdfDocument(props: {
       />
       <div className="min-h-0 flex-1 overflow-auto py-3" ref={scrollContainerRef}>
         <Document
+          suspense={false}
           key={source}
           file={source}
           loading={<AppEmptyState description={t('desktop.pdf.simple.preparing.page')} title={t('desktop.pdf.simple.preparing.title')} />}

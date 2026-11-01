@@ -8,9 +8,11 @@ export function createCapacitorConfig(env: NodeJS.ProcessEnv = process.env): Cap
     appId: 'com.campfirium.foliole.android',
     appName: 'Foliole',
     android: {
+      minWebViewVersion: 125,
       // Native bridge logs serialize complete SQLite results on the WebView thread.
       loggingBehavior: env.FOLIOLE_DEV_LIVE_RELOAD === '1' ? 'debug' : 'none'
     },
+    experimental: { ios: { spm: { swiftToolsVersion: '6.0' } } },
     plugins: {
       CapacitorSQLite: {
         androidIsEncryption: false,

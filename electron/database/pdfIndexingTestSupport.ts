@@ -18,9 +18,9 @@ vi.mock('pdfjs-dist/legacy/build/pdf.mjs', async (importOriginal) => {
   const original = await importOriginal<typeof import('pdfjs-dist/legacy/build/pdf.mjs')>();
   return { ...original, getDocument: (...args: Parameters<typeof original.getDocument>) => {
     const task = original.getDocument(...args);
-    return { promise: task.promise.then(async (document) => {
-      const destroy = document.destroy.bind(document);
-      document.destroy = async () => { await destroy(); mockExtraction.finished?.(); };
+    return { destroy: () => task.destroy(), promise: task.promise.then(async (document) => {
+      const destroy = task.destroy.bind(task);
+      task.destroy = async () => { await destroy(); mockExtraction.finished?.(); };
       mockExtraction.loaded?.();
       if (mockExtraction.gate) await mockExtraction.gate;
       if (mockExtraction.failPage) document.getPage = async () => { throw new Error('isolated extraction failure'); };

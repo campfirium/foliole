@@ -8,6 +8,7 @@ import type { PdfReadingView, PdfViewRect } from '../../src/features/pdf/model/p
 import { PDF_ZOOM_MAX } from '../../src/features/pdf/model/pdfSystemStateUtils';
 
 import { expect, test } from './harness/fixtures';
+import { capturePdfSurface } from './pdf-canvas-content';
 import { revealPdfBars } from './pdf-top-bars-interaction';
 
 test('PDF automatic and manual views preserve ranges across reload @pdf', async ({
@@ -46,7 +47,7 @@ test('PDF automatic and manual views preserve ranges across reload @pdf', async 
   });
   await assertHeightFit(desktopWindow, manualRecord?.manual);
   await verifyViewPaging(desktopWindow, manualRecord?.manual);
-  await surface.screenshot({ path: path.resolve('.tmp/artifacts/pdf-view-manual-native.png') });
+  await capturePdfSurface(surface, path.resolve('.tmp/artifacts/pdf-view-manual-native.png'));
   await reveal();
   await automatic.click();
   await expect(automatic).toHaveAttribute('aria-pressed', 'true');
@@ -67,7 +68,7 @@ test('PDF automatic and manual views preserve ranges across reload @pdf', async 
   await automatic.click();
   await expect(automatic).toHaveAttribute('aria-pressed', 'true');
   await assertHeightFit(desktopWindow, autoRecord?.automatic);
-  await surface.screenshot({ path: path.resolve('.tmp/artifacts/pdf-view-automatic-native.png') });
+  await capturePdfSurface(surface, path.resolve('.tmp/artifacts/pdf-view-automatic-native.png'));
   await verifyFreeZoom(desktopWindow, autoRecord, manualRecord);
 });
 
@@ -86,12 +87,12 @@ async function verifyFitTooltips(desktopWindow: Page) {
   await expect(desktopWindow.getByRole('tooltip')).toContainText(
     /Automatically detect the content range and fit it to the reading area height\.|自动识别内容范围并适配阅读区高度。/
   );
-  await surface.screenshot({ path: path.resolve('.tmp/artifacts/pdf-auto-fit-tooltip-native.png') });
+  await capturePdfSurface(surface, path.resolve('.tmp/artifacts/pdf-auto-fit-tooltip-native.png'));
   await manual.hover();
   await expect(desktopWindow.getByRole('tooltip')).toContainText(
     /Fit your selected range to the reading area height\.|按你框选的范围适配阅读区高度。/
   );
-  await surface.screenshot({ path: path.resolve('.tmp/artifacts/pdf-custom-fit-tooltip-native.png') });
+  await capturePdfSurface(surface, path.resolve('.tmp/artifacts/pdf-custom-fit-tooltip-native.png'));
 }
 
 async function verifyFreeZoom(desktopWindow: Page, autoRecord: PdfReadingView | null,
@@ -115,7 +116,7 @@ async function verifyFreeZoom(desktopWindow: Page, autoRecord: PdfReadingView | 
   expect(await readSavedView(desktopWindow)).toMatchObject({ mode: 'free', automatic: autoRecord?.automatic, manual: manualRecord?.manual });
   const canvas = surface.locator('.react-pdf__Page canvas').first();
   await expect.poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.toDataURL('image/png').startsWith('data:image/png;base64,'))).toBe(true);
-  await surface.screenshot({ path: path.resolve('.tmp/artifacts/pdf-view-free-native.png') });
+  await capturePdfSurface(surface, path.resolve('.tmp/artifacts/pdf-view-free-native.png'));
 }
 
 async function openPdf(desktopApp: ElectronApplication, desktopWindow: Page) {
@@ -198,7 +199,7 @@ async function seedObsoleteRange(page: Page) {
   const file = process.env.FOLIOLE_PDF_VIEW_FIXTURE ?? path.resolve('tests/desktop/fixtures/pdf-user-journey.pdf');
   const pdf = await getDocument({ data: new Uint8Array(await readFile(file)) }).promise;
   const fingerprint = pdf.fingerprints[0];
-  await pdf.destroy();
+  await pdf.loadingTask.destroy();
   if (!fingerprint) throw new Error('PDF fingerprint is missing.');
   await page.evaluate(async (id) => {
     const settings = await window.electronAPI?.invoke('load_app_settings_state', {});

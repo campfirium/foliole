@@ -9,7 +9,7 @@ import { locateReadwiseTextInPdf, type PdfPageForMatch } from './readwisePdfMatc
 
 async function realPdfPages(): Promise<PdfPageForMatch[]> {
   const bytes = readFileSync('tests/desktop/fixtures/pdf-user-journey.pdf');
-  const pdf = await getDocument({ data: new Uint8Array(bytes), isEvalSupported: false, useWorkerFetch: false }).promise;
+  const pdf = await getDocument({ data: new Uint8Array(bytes), useWorkerFetch: false }).promise;
   try {
     const pages: PdfPageForMatch[] = [];
     for (let number = 1; number <= pdf.numPages; number += 1) {
@@ -27,7 +27,7 @@ async function realPdfPages(): Promise<PdfPageForMatch[]> {
     }
     return pages;
   } finally {
-    await pdf.destroy();
+    await pdf.loadingTask.destroy();
   }
 }
 

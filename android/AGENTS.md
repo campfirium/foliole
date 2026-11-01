@@ -17,14 +17,11 @@
 - For the initial Android delivery, prioritize storage, lifecycle, sync entry points, and review using real data; do not first expand desktop-scale UI breadth or complex editing surfaces.
 - Check official Capacitor and Android documentation before changing Android permissions, lifecycle, file access, sharing, intents, or plugin seams.
 
-## Legacy E-Reader Compatibility
+## E-Reader Support
 
-- Older Android compatibility targets basic usability on e-ink devices/readers, not every old phone or complete visual parity with modern mobile devices.
-- In older reader environments such as Android 9 / WebView 74, prioritize startup, sync, directories, browsing, reading, search, and basic settings. Blank screens, crashes, collapsed layouts, and unusable core click targets must be fixed.
-- Static visual degradation is acceptable on old readers. Do not pursue animation, complex transitions, glass/blur effects, dynamic colors, fine shadows, or high-refresh visuals for older Android.
-- Put compatibility fixes in the companion build chain, WebView runtime polyfills, Android native API version boundaries, or shared platform adapters. Do not duplicate business UI or workflows for older Android.
-- Keep old-WebView CSS/JS compatibility within one APK and one companion code path wherever possible. Separate legacy Android packages require an explicit user request or release policy.
-- When Android 9 compatibility conflicts with modern desktop/mobile visuals, preserve the modern primary path and provide reader degradation that keeps core reading and sync intact.
+- E-ink readers follow the current companion dependency and WebView requirements; historical Android or WebView targets are not permanent support commitments.
+- Within the supported runtime range, prioritize startup, sync, directories, reading, search, settings, and usable click targets; static visual degradation is acceptable.
+- Keep platform adaptations in the companion build chain or thin host adapters without duplicating business UI or workflows.
 
 ## Implementation Rules
 

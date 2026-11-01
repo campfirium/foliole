@@ -97,9 +97,10 @@ describe('vite config', () => {
     expect(transformed).not.toContain('STARTUP_INJECTED_CSS');
   });
 
-  it('targets Android 9 WebView-compatible syntax for the companion bundle', () => {
-    expect(companionViteConfig.build?.target).toBe('chrome64');
-    expect(companionViteConfig.build?.cssTarget).toBe('chrome64');
+  it('targets the upstream minimum browser versions for the companion bundle', () => {
+    expect(companionViteConfig.build?.target).toEqual(['chrome125', 'safari18']);
+    expect(companionViteConfig.build?.cssTarget).toEqual(['chrome125', 'safari18']);
+    expect(capacitorConfig.android?.minWebViewVersion).toBe(125);
   });
 
   it('initializes the Android Capacitor SQLite plugin without encrypted database setup', () => {

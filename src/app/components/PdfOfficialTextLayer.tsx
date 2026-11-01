@@ -25,6 +25,8 @@ export function PdfOfficialTextLayer() {
     void Promise.all([
       page.getTextContent(),
       layer.render({
+        // @ts-expect-error PDF.js 6.3 accepts null images in its own viewer but omits null from the declaration.
+        images: null,
         viewport: page.getViewport({ scale, rotation: rotate }),
         textContentParams: { includeMarkedContent: true, disableNormalization: false }
       })

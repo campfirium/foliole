@@ -55,8 +55,8 @@ export default mergeConfig(
     build: {
       emptyOutDir: true,
       outDir: path.resolve(PROJECT_ROOT, 'dist/companion'),
-      target: 'chrome64',
-      cssTarget: 'chrome64'
+      target: ['chrome125', 'safari18'],
+      cssTarget: ['chrome125', 'safari18']
     }
   })
 );
