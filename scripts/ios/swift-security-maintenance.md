@@ -26,6 +26,11 @@ framework headers/core and npm plugin manifests. UTF8-range shares the vendored 
 revision; Abseil's bundled cctz shares its recorded revision. SDK/system libraries belong
 to the selected Xcode/SDK and OS, not a guessed separate package version. Cordova's binary
 is pinned by Capacitor's URL/checksum; plist `1.0` is not an Apache Cordova version.
+Protobuf's release tag and its C++ library version are distinct: the fixed entry reads
+`GOOGLE_PROTOBUF_VERSION` from the pinned vendored header (v35.1 currently embeds C++
+7.35.1). Public advisories are filtered by ecosystem/package identity before range matching;
+PHP/Python/Java bindings do not become iOS C++ findings. Supported ranges are evaluated;
+ambiguous multi-branch syntax or unknown identities stay explicit review items.
 
 SQLCipher's implementation release API is positively checked against its 4.19 announcement
 and both named fixes; the reviewed predicate covers 4.x below 4.19. SQLite's official CVE

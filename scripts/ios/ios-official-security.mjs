@@ -3,6 +3,7 @@ import path from 'node:path';
 import { IOS_REPOSITORIES, APPLE_RELEASES, readOfficialSource, releaseMetadata,
   appleReleaseMetadata, pendingReleases, assessSqlcipherRelease } from './ios-security-sources.mjs';
 import { sqliteAdvisoryMetadata, appleSecurityMetadata, appleAdvisoryMetadata } from './ios-vendor-metadata.mjs';
+import { advisoryReviews, protobufCppMetadata } from './ios-advisory-matching.mjs';
 
 export async function collectIosOfficialSecurity({ pins, output, token, now = Date.now(), fetchSource }) {
   mkdirSync(output, { recursive: true });
@@ -35,7 +36,7 @@ export async function collectIosOfficialSecurity({ pins, output, token, now = Da
       const id = repository.replace('/', '--');
       const releases = await read(`${id}-releases`, `https://api.github.com/repos/${repository}/releases?per_page=100`, releaseMetadata);
       const advisories = await read(`${id}-advisories`, `https://api.github.com/repos/${repository}/security-advisories`, advisoryMetadata);
-      if (advisories?.length) report.gaps.push(`${repository}: ${advisories.length} public notices retained for package/range review; empty lists never attest safety`);
+      if (advisories?.length) report.gaps.push(`${repository}: ${advisories.length} public notices retained with ecosystem/range evaluation; empty lists never attest safety`);
       if (advisories && repository !== 'protocolbuffers/protobuf') {
         report.findings.push(...advisoryReviews(repository, pin.version, advisories));
       }
@@ -53,7 +54,11 @@ export async function collectIosOfficialSecurity({ pins, output, token, now = Da
   if (protobuf) {
     report.vendored = await read('swift-protobuf-vendored',
       `https://raw.githubusercontent.com/apple/swift-protobuf/${protobuf.revision}/Sources/protobuf/VERSIONS.json`, vendoredMetadata);
-    if (report.vendored) await collectVendored(report, report.vendored, read);
+    if (report.vendored) {
+      report.protobufCpp = await read('swift-protobuf-cpp-version',
+        `https://raw.githubusercontent.com/apple/swift-protobuf/${protobuf.revision}/Sources/protobuf/protobuf/src/google/protobuf/stubs/common.h`, protobufCppMetadata);
+      await collectVendored(report, report.vendored, read);
+    }
   }
   report.apple = await read('apple-releases', APPLE_RELEASES, appleReleaseMetadata);
   report.appleSecurity = await read('apple-security-releases', 'https://support.apple.com/en-us/100100', appleSecurityMetadata);
@@ -70,7 +75,7 @@ function advisoryMetadata(text) {
   }
   // Trivy evaluates Swift ranges. These additional advisory records retain other ecosystem/vendor notices for review.
   return rows.map(row => ({ advisory: row.ghsa_id, source: row.html_url, summary: row.summary,
-    vulnerabilities: row.vulnerabilities, publishedAt: row.published_at }));
+    vulnerabilities: row.vulnerabilities, publishedAt: row.published_at, severity: row.severity }));
 }
 
 export function vendoredMetadata(text) {
@@ -89,11 +94,12 @@ async function collectVendored(report, versions, read) {
     report.packages.push({ identity: id, version: installed.tag, revision: installed.commit,
       scope: 'host build-time protoc; not SwiftProtobuf runtime', repositories: [repository] });
     if (releases) qualifyReleaseWindow(report, id, releases, installed.tag);
-    if (advisories) report.findings.push(...advisoryReviews(repository, installed.tag, advisories));
+    if (advisories) report.findings.push(...advisoryReviews(repository, installed.tag, advisories,
+      component === 'protobuf' ? report.protobufCpp?.version ?? 'unknown' : installed.tag));
     if (releases && component === 'protobuf') {
       report.findings.push(...pendingReleases(releases, installed.tag.replace(/^v/u, '')).map(row => releaseReview(repository, installed.tag, row)));
     }
-    if (advisories?.length) report.gaps.push(`${id}: ${advisories.length} public advisories require component-specific affected-range review`);
+    if (advisories?.length) report.gaps.push(`${id}: ${advisories.length} public advisories retained with component-specific range assessment`);
     if (component === 'abseil') report.gaps.push('Abseil date-based release tags require explicit upgrade/applicability review');
   }
 }
@@ -101,12 +107,6 @@ async function collectVendored(report, versions, read) {
 function releaseReview(repository, version, row) {
   return { platform: 'ios', advisory: `release-${row.tag}`, package: repository, versions: [version],
     severity: 'info', source: row.source, assessment: row.disposition };
-}
-
-function advisoryReviews(repository, version, advisories) {
-  return advisories.map(row => ({ platform: 'ios', advisory: `review-${row.advisory}`,
-    package: repository, versions: [version], severity: 'info', source: row.source,
-    assessment: 'Official advisory notice; package/range applicability requires review, not a confirmed vulnerability' }));
 }
 
 function qualifyReleaseWindow(report, id, releases, version) {

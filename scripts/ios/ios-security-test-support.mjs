@@ -5,12 +5,12 @@ import { SQLCIPHER_ADVISORY } from './ios-security-sources.mjs';
 
 // External publisher fixture only; acquisition, parsing, coverage, owner and transport remain production paths.
 export async function startOfficialPublisher(now) {
-  const state = { failure: false, malformed: false };
+  const state = { failure: false, malformed: false, advisories: [] };
   const server = createServer((request, response) => {
     response.setHeader('date', new Date(now).toUTCString());
     if (state.failure) { response.writeHead(503); response.end('unavailable'); return; }
     if (state.malformed) { response.end('invalid source payload'); return; }
-    if (request.url.includes('/security-advisories')) response.end('[]');
+    if (request.url.includes('/security-advisories')) response.end(JSON.stringify(state.advisories));
     else if (request.url.includes('/repos/')) response.end(JSON.stringify([
       { tag_name: 'v4.20.0', body: '', published_at: '2026-10-27T00:00:00Z', prerelease: false,
         html_url: 'https://github.com/sqlcipher/sqlcipher/releases/tag/v4.20.0' },
