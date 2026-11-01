@@ -87,7 +87,9 @@ export function parseWindowsDevControlArgs(argv, env = process.env) {
       'Windows DEV control only accepts a registered fixed action'
     );
   }
-  if (parsedSource.explicit && args[0] !== 'multi-device-sync-candidate') {
+  const releaseJourney = args[0] === 'default-sync-journey'
+    && ['refs/heads/dev', 'refs/heads/release'].includes(parsedSource.sourceRef);
+  if (parsedSource.explicit && args[0] !== 'multi-device-sync-candidate' && !releaseJourney) {
     throw new Error('Windows DEV source ref is only accepted for candidate preparation');
   }
   if (parsedRevision.revision && !['internal-install', 'internal-open'].includes(args[0])) {

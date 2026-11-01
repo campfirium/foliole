@@ -22,6 +22,7 @@ export interface NativeMenuShortcutAccelerator {
 interface MenuState {
   acceleratorsById: ReadonlyMap<string, string>;
   enabledSet: ReadonlySet<string> | null;
+  history?: { undoTitle: string; redoTitle: string; nativeEditing: boolean };
 }
 
 const defaultMenuState: MenuState = {
@@ -29,17 +30,18 @@ const defaultMenuState: MenuState = {
   enabledSet: null
 };
 
-function shouldAlwaysDispatchCommand(commandId: string) {
-  return commandId === 'app.undo' || commandId === 'app.redo';
+function shouldAlwaysDispatchCommand(commandId: string, state: MenuState) {
+  return (commandId === 'app.undo' || commandId === 'app.redo') && (state.history?.nativeEditing ?? true);
 }
 
 function commandItem(label: string, commandId: string, state: MenuState): MenuItemConstructorOptions {
   const accelerator = state.acceleratorsById.get(commandId);
   return {
     ...(accelerator ? { accelerator } : {}),
-    enabled: state.enabledSet ? shouldAlwaysDispatchCommand(commandId) || state.enabledSet.has(commandId) : true,
+    enabled: state.enabledSet ? shouldAlwaysDispatchCommand(commandId, state) || state.enabledSet.has(commandId) : true,
     id: commandId,
-    label,
+    label: commandId === 'app.undo' ? state.history?.nativeEditing ? 'Undo' : state.history?.undoTitle ?? label
+      : commandId === 'app.redo' ? state.history?.nativeEditing ? 'Redo' : state.history?.redoTitle ?? label : label,
     click: (_menuItem, candidate) => {
       const window = resolveMenuCommandWindow(candidate);
       if (!window) {
@@ -219,11 +221,12 @@ export function installAppMenu(platform: NodeJS.Platform = process.platform) {
 export function syncAppMenuState(
   enabledCommandIds: string[],
   shortcutAccelerators: NativeMenuShortcutAccelerator[] = [],
-  platform: NodeJS.Platform = process.platform
+  platform: NodeJS.Platform = process.platform,
+  history?: MenuState['history']
 ) {
   const enabledSet = new Set(enabledCommandIds);
   const acceleratorsById = new Map(shortcutAccelerators.map((item) => [item.commandId, item.accelerator]));
-  setAppMenu(buildAppMenuTemplate({ acceleratorsById, enabledSet }, platform));
+  setAppMenu(buildAppMenuTemplate({ acceleratorsById, enabledSet, ...(history ? { history } : {}) }, platform));
 }
 
 export function canDispatchNativeMenuAccelerator(commandId: string, accelerator: string) {

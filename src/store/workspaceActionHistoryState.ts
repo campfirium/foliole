@@ -1,12 +1,14 @@
 import { compactFlowHistoryEntry, rebaseFollowingFlowHistoryDue } from '../../lib/core/flow/flowHistoryEntry';
 
 import type { WorkspaceActionHistoryEntry } from './workspaceActionHistoryEntry';
+import { admitWorkspaceApplication, removeWorkspaceApplication } from './workspaceApplicationWorkspaceHistory';
 import type { WorkspaceNodeMetadataHistoryEntry } from './workspaceNodeMetadataHistory';
 import type { WorkspaceStructurePendingCreate } from './workspaceStructureHistoryTypes';
 
 export const ACTION_HISTORY_LIMIT = 50;
 
 export interface WorkspaceActionHistoryState<Entry = WorkspaceActionHistoryEntry> {
+  application?: import('./workspaceApplicationHistory').ApplicationHistory;
   applying?: { entryId: string; mode: 'redo' | 'undo' } | null;
   pendingAction?: { entry: WorkspaceActionHistoryEntry; undoRequested: boolean } | null;
   pendingCreate?: WorkspaceStructurePendingCreate | null;
@@ -26,6 +28,7 @@ export function pushWorkspaceUndoEntry<Entry>(
   history: WorkspaceActionHistoryState<Entry>,
   entry: Entry
 ): WorkspaceActionHistoryState<Entry> {
+  if (history.application) return admitWorkspaceApplication(history, entry as WorkspaceActionHistoryEntry, true);
   return {
     ...history,
     redoStack: [],
@@ -37,18 +40,21 @@ export function beginWorkspaceAction(
   history: WorkspaceActionHistoryState,
   entry: WorkspaceActionHistoryEntry
 ): WorkspaceActionHistoryState {
-  return { ...history, pendingAction: { entry, undoRequested: false } };
+  const next = { ...history, pendingAction: { entry, undoRequested: false } };
+  return history.application ? admitWorkspaceApplication(next, entry, false) : next;
 }
 
 export function failWorkspaceAction(history: WorkspaceActionHistoryState, entryId: string) {
-  return history.pendingAction?.entry.id === entryId ? { ...history, pendingAction: null } : history;
+  const next = history.pendingAction?.entry.id === entryId ? { ...history, pendingAction: null } : history;
+  return next.application ? removeWorkspaceApplication(next, entryId) : next;
 }
 
 export function settleWorkspaceAction(history: WorkspaceActionHistoryState, entryId: string) {
   const pending = history.pendingAction;
   if (!pending || pending.entry.id !== entryId) return { history, undoRequested: false };
   return {
-    history: pushWorkspaceUndoEntry({ ...history, pendingAction: null }, pending.entry),
+    history: history.application && !history.application.undo.some(value => value.id === entryId)
+      ? { ...history, pendingAction: null } : pushWorkspaceUndoEntry({ ...history, pendingAction: null }, pending.entry),
     undoRequested: pending.undoRequested
   };
 }
@@ -57,14 +63,16 @@ export function beginWorkspaceStructureCreate(
   history: WorkspaceActionHistoryState,
   entry: WorkspaceStructurePendingCreate['entry']
 ): WorkspaceActionHistoryState {
-  return { ...history, pendingCreate: { entry, undoRequested: false } };
+  const next = { ...history, pendingCreate: { entry, undoRequested: false } };
+  return history.application ? admitWorkspaceApplication(next, entry, false) : next;
 }
 
 export function failWorkspaceStructureCreate(
   history: WorkspaceActionHistoryState,
   entryId: string
 ): WorkspaceActionHistoryState {
-  return history.pendingCreate?.entry.id === entryId ? { ...history, pendingCreate: null } : history;
+  const next = history.pendingCreate?.entry.id === entryId ? { ...history, pendingCreate: null } : history;
+  return next.application ? removeWorkspaceApplication(next, entryId) : next;
 }
 
 export function settleWorkspaceStructureCreate(
@@ -74,7 +82,8 @@ export function settleWorkspaceStructureCreate(
   const pending = history.pendingCreate;
   if (!pending || pending.entry.id !== entryId) return { history, undoRequested: false };
   return {
-    history: pushWorkspaceUndoEntry({ ...history, pendingCreate: null }, pending.entry),
+    history: history.application && !history.application.undo.some(value => value.id === entryId)
+      ? { ...history, pendingCreate: null } : pushWorkspaceUndoEntry({ ...history, pendingCreate: null }, pending.entry),
     undoRequested: pending.undoRequested
   };
 }

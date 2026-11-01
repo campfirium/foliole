@@ -1,3 +1,4 @@
+import { annotationTrashReceiptSchema } from '../../../lib/platform/annotationHistorySchemas';
 import type { NativeCommandName } from '../../../lib/platform/nativeContract';
 
 import { logRuntimeError } from './runtimeLogging';
@@ -13,6 +14,7 @@ export function isRestoreNodesResult(value: unknown): value is WorkspaceRestoreN
   return Boolean(
     value &&
       typeof value === 'object' &&
+      (!('annotationHistory' in value) || annotationTrashReceiptSchema.safeParse(value.annotationHistory).success) &&
       Array.isArray((value as WorkspaceRestoreNodesResult).restoredNodeIds) &&
       Array.isArray((value as WorkspaceRestoreNodesResult).skippedConflicts) &&
       (!('nodeOrder' in value) || isStringArray((value as WorkspaceRestoreNodesResult).nodeOrder)) &&
@@ -26,6 +28,7 @@ export function isSoftDeleteNodesResult(value: unknown): value is WorkspaceSoftD
   return Boolean(
     value &&
       typeof value === 'object' &&
+      (!('annotationHistory' in value) || annotationTrashReceiptSchema.safeParse(value.annotationHistory).success) &&
       Array.isArray((value as WorkspaceSoftDeleteNodesResult).deletedNodeIds)
   );
 }

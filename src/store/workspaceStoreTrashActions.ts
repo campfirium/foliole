@@ -1,14 +1,12 @@
-import { pushEditorOperationEntry } from '../features/editor/model/editorOperationHistory';
 import { removeImageClozeRegion } from '../features/image-cloze/model/imageCloze';
 
-import { createEditorAnnotationDeleteEntry } from './workspaceEditorAnnotationOperationEntry';
+import { deleteEditorAnnotations } from './workspaceEditorAnnotationDelete';
 import { findLiveImageClozeChildNodeIds } from './workspaceImageClozeRegionDeleteTargets';
 import type { WorkspaceState } from './workspaceStore';
 import { createDeleteNodesPermanentlyAction } from './workspaceStorePermanentDeleteAction';
 import { createRestoreNodeAction } from './workspaceStoreRestoreAction';
 import { createDeleteNodesAction } from './workspaceStoreStructureDeleteAction';
-import { computeDeleteNodesMutation, type DeleteNodeMutationResult } from './workspaceTrashMutations';
-import { commitSoftDeleteMutation, type TrashRuntimeHandlers } from './workspaceTrashRuntimeCommit';
+import type { TrashRuntimeHandlers } from './workspaceTrashRuntimeCommit';
 
 type WorkspaceSet = (
   partial:
@@ -27,81 +25,24 @@ type WorkspaceTrashActions = Pick<
   | 'deleteNodesPermanently'
 >;
 
-function reconcileExplicitImageRegionRemoval(
-  mutation: DeleteNodeMutationResult,
-  parentNodeId: string,
-  attachmentId: string,
-  regionId: string
-) {
-  const parentNode = mutation.patch.nodesById[parentNodeId];
-  if (!parentNode) {
-    return mutation;
-  }
-  const nextImageRegions = removeImageClozeRegion(parentNode.imageRegions, attachmentId, regionId);
-  if (nextImageRegions === parentNode.imageRegions) {
-    return mutation;
-  }
-  const updatedParentNode = {
-    ...parentNode,
-    imageRegions: nextImageRegions,
-    updatedAt: mutation.deletedAt
-  };
-  return {
-    ...mutation,
-    parentNodesToSync: [
-      ...mutation.parentNodesToSync.filter((node) => node.id !== parentNodeId),
-      updatedParentNode
-    ],
-    patch: {
-      ...mutation.patch,
-      nodesById: {
-        ...mutation.patch.nodesById,
-        [parentNodeId]: updatedParentNode
-      }
-    }
-  };
-}
-
-function createCommittedImageRegionDeletePatch(args: {
-  deletedAt: string;
-  deletedNodeIds: string[];
-  attachmentId: string;
-  regionId: string;
-  parentNodeId: string;
-  state: WorkspaceState;
-}) {
-  const currentMutation = computeDeleteNodesMutation(args.state, args.deletedNodeIds, args.deletedAt, 'receipt');
-  if (!currentMutation) {
-    return args.state;
-  }
-  const committedMutation = reconcileExplicitImageRegionRemoval(
-    currentMutation, args.parentNodeId, args.attachmentId, args.regionId
-  );
-  const entry = createEditorAnnotationDeleteEntry(args.state, committedMutation.nodeIds, args.parentNodeId);
-  return {
-    ...committedMutation.patch,
-    ...(entry ? { editorOperationHistory: pushEditorOperationEntry(args.state.editorOperationHistory, entry) } : {})
-  };
-}
-
 function createDeleteImageClozeRegionAction(
   set: WorkspaceSet,
-  runtimeHandlers: TrashRuntimeHandlers
+  runtimeHandlers: TrashRuntimeHandlers,
+  get?: () => WorkspaceState
 ): WorkspaceTrashActions['deleteImageClozeRegion'] {
+  const read = get ?? (() => {
+    let snapshot!: WorkspaceState;
+    set(state => { snapshot = state; return state; });
+    return snapshot;
+  });
   return async (parentNodeId, attachmentId, regionId) => {
-    let mutation: DeleteNodeMutationResult | null = null;
+    const liveChildNodeIds = findLiveImageClozeChildNodeIds(read(), parentNodeId, attachmentId, regionId);
+    if (liveChildNodeIds.length > 0) {
+      await deleteEditorAnnotations(set, read, liveChildNodeIds, () => {}, { parentNodeId, attachmentId, regionId });
+      return;
+    }
     let updatedParentNode: WorkspaceState['nodesById'][string] | null = null;
-
     set((state) => {
-      const liveChildNodeIds = findLiveImageClozeChildNodeIds(state, parentNodeId, attachmentId, regionId);
-      if (liveChildNodeIds.length > 0) {
-        mutation = computeDeleteNodesMutation(state, liveChildNodeIds);
-        if (mutation) {
-          mutation = reconcileExplicitImageRegionRemoval(mutation, parentNodeId, attachmentId, regionId);
-        }
-        return state;
-      }
-
       const parentNode = state.nodesById[parentNodeId];
       if (!parentNode) {
         return state;
@@ -123,25 +64,6 @@ function createDeleteImageClozeRegionAction(
       };
     });
 
-    const pendingMutation = mutation as DeleteNodeMutationResult | null;
-    if (pendingMutation) {
-      const deletedAt = pendingMutation.deletedAt;
-      const result = await commitSoftDeleteMutation(runtimeHandlers, pendingMutation);
-      set((state) => {
-        if (!pendingMutation || !result) {
-          return state;
-        }
-        return createCommittedImageRegionDeletePatch({
-          deletedAt,
-          deletedNodeIds: result.deletedNodeIds,
-          attachmentId,
-          regionId,
-          parentNodeId,
-          state
-        });
-      });
-      return;
-    }
     if (updatedParentNode) {
       runtimeHandlers.syncNodeContent(updatedParentNode);
     }
@@ -157,7 +79,7 @@ export function createWorkspaceTrashActions(
   const deleteNodesPermanently = createDeleteNodesPermanentlyAction(set, runtimeHandlers);
 
   return {
-    deleteImageClozeRegion: createDeleteImageClozeRegionAction(set, runtimeHandlers),
+    deleteImageClozeRegion: createDeleteImageClozeRegionAction(set, runtimeHandlers, get),
     deleteNode: (nodeId) => deleteNodes([nodeId]),
     deleteNodes,
     restoreNode: createRestoreNodeAction(set, runtimeHandlers),

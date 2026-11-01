@@ -41,6 +41,9 @@ export async function saveWorkspaceNodeMutationSnapshotNow(args: {
     return null;
   }
   const payload = await createLoadedNodeSnapshot(args);
+  if (payload && args.command === NATIVE_COMMANDS.updateNodeReveal) {
+    payload.reveal = args.node.reveal;
+  }
   if (!payload) {
     logRuntimeError('runtime sync failed', {
       area: 'native',

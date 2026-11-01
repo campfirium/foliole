@@ -8,6 +8,7 @@ import type { PdfPageTextEntry } from './pdfPageText';
 
 export interface PdfDocumentViewportSearchRuntimeProps {
   nodeId: string | null;
+  positionReady?: boolean;
   onSearchDebugChange: (debug: PdfSearchDebugInfo) => void;
   onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
   onSearchRequestHandled: (requestId: number) => void;
@@ -28,6 +29,7 @@ export function usePdfDocumentViewportSearchRuntime(props: PdfDocumentViewportSe
   const matches = usePdfDocumentSearchMatches(props.nodeId, props.pdfIndexStatus, props.searchQuery);
   usePdfSearchEffect({
     matches,
+    positionReady: props.positionReady ?? true,
     onSearchDebugChange: props.onSearchDebugChange,
     onSearchHighlightsChange: props.onSearchHighlightsChange,
     onSearchRequestHandled: props.onSearchRequestHandled,

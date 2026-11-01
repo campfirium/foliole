@@ -68,15 +68,16 @@ it('pins hidden native desktop test windows offscreen and out of the taskbar', (
   expect(applyHiddenNativeDesktopWindowOptions({ x: 80 }, {})).toEqual({ x: 80 });
 });
 
-it('uses transparent hidden native windows on macOS where offscreen bounds are clamped', () => {
+it('isolates the macOS hidden renderer while retaining secure preload options', () => {
   expect(applyHiddenNativeDesktopWindowOptions(
-    { height: 900, show: true, width: 1400 },
+    { height: 900, show: true, width: 1400, webPreferences: { preload: '/tmp/preload.cjs', sandbox: true } },
     { FOLIOLE_ELECTRON_NATIVE_HIDDEN: '1' },
     'darwin'
   )).toMatchObject({
     focusable: false,
     height: 1000,
     opacity: 0,
+    webPreferences: { offscreen: true, preload: '/tmp/preload.cjs', sandbox: true },
     show: false,
     skipTaskbar: true,
     width: 1600

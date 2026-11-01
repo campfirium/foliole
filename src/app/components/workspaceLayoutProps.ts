@@ -129,7 +129,7 @@ export interface WorkspaceLayoutFieldTypes {
   externalEntriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
   externalSelection: ExternalLibrarySelection;
   nodeViewById: Record<string, NodeViewState | undefined>;
-  onAnswerChange: (answer: string) => void;
+  onAnswerChange: (answer: string, meta?: import('../../features/editor/adapters/EditorAdapter').EditorContentChangeMeta) => void;
   onEditorChange: (content: string) => void;
   onEditorUndo: () => boolean;
   onEditorRedo: () => boolean;

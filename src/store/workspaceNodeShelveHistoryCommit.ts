@@ -6,6 +6,7 @@ import {
   settleWorkspaceAction
 } from './workspaceActionHistory';
 import { areRelatedReadingsValid } from './workspaceActionHistoryReading';
+import { settleApplicationAction } from './workspaceApplicationActionAdmission';
 import {
   applyWorkspaceHistoryContext,
   isSameWorkspaceReviewSession
@@ -55,6 +56,7 @@ export function finishNodeShelveHistoryPersistence(args: {
   void getWorkspaceHistoryPersistence().persistShelveSnapshots(args.nodes, args.now).then((persisted) => {
     let undoRequested = false;
     args.set((state) => {
+      if (persisted && state.appActionHistory.application) return settleApplicationAction(state, args.entry.id, args.entry);
       if (!isShelveEntryApplicable(state, args.entry) ||
           state.appActionHistory.pendingAction?.entry.id !== args.entry.id) {
         return { appActionHistory: createEmptyWorkspaceActionHistory() };

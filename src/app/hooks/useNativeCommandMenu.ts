@@ -1,14 +1,17 @@
 import { useEffect } from 'react';
 
+import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { resolveNativeMenuAccelerator } from '../../shared/commands/nativeAccelerators';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { onNativeMenuCommand, syncNativeMenuState } from '../../shared/platform/commandMenu';
 
-import { runFocusedTextHistory } from './commandTextHistory';
+import { ownsTextHistory, runFocusedTextHistory } from './commandTextHistory';
 
 export function useNativeCommandMenu(items: CommandPaletteItem[], onRunCommand: (id: string) => void) {
   useEffect(() => {
-    void syncNativeMenuState({
+    const sync = () => { void syncNativeMenuState({
+      history: { undoTitle: items.find(item => item.id === APP_COMMAND_IDS.undo)?.title ?? 'Undo',
+        redoTitle: items.find(item => item.id === APP_COMMAND_IDS.redo)?.title ?? 'Redo', nativeEditing: ownsTextHistory(document.activeElement) },
       enabledCommandIds: items.filter((item) => item.enabled).map((item) => item.id),
       shortcutAccelerators: items
         .map((item) => ({
@@ -16,7 +19,11 @@ export function useNativeCommandMenu(items: CommandPaletteItem[], onRunCommand: 
           commandId: item.id
         }))
         .filter((item) => item.accelerator)
-    });
+    }); };
+    sync();
+    document.addEventListener('focusin', sync);
+    document.addEventListener('focusout', sync);
+    return () => { document.removeEventListener('focusin', sync); document.removeEventListener('focusout', sync); };
   }, [items]);
 
   useEffect(() => {

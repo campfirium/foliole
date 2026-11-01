@@ -51,8 +51,8 @@ function createSelectionPointerHandlers(args: {
       args.overlay.hidden = false;
       const point = toRelativeImagePoint(args.overlay, event);
       const region = findImageRegionNearBorder(args.presentation, args.attachmentId, point);
+      if (region) event.preventDefault();
       if (region?.openNodeId) {
-        event.preventDefault();
         event.stopImmediatePropagation();
         args.presentation?.onOpenNode?.(region.openNodeId);
         return;

@@ -105,13 +105,16 @@ export function createRestoreNodeAction(
   return async (nodeId) => {
     let idsToRestoreForSync: string[] = [];
     let rootNodeId: string | null = null;
+    let applicationRestore: WorkspaceState['restoreApplicationNode'];
 
     set((state) => {
+      if (state.appActionHistory.application) applicationRestore = state.restoreApplicationNode;
       rootNodeId = collectTrashRootActionTargets(state, [nodeId])[0] ?? null;
       idsToRestoreForSync = rootNodeId ? collectNodeSubtreeIds(rootNodeId, state.nodesById) : [];
       return state;
     });
 
+    if (applicationRestore) return applicationRestore(nodeId);
     if (!rootNodeId || idsToRestoreForSync.length === 0) {
       return null;
     }

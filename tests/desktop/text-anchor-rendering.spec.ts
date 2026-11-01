@@ -65,7 +65,7 @@ test('renders text highlights and multi-range clozes in the parent document and 
   await expectWorkspaceShell(desktopWindow);
   await seedTextAnchorWorkspace(desktopWindow);
 
-  await expect(desktopWindow.getByRole('button', { name: 'Playwright Text Anchor Parent', exact: true })).toBeVisible();
+  await expect(desktopWindow.getByRole('treeitem', { name: 'Playwright Text Anchor Parent', exact: true })).toBeVisible();
   await expect(desktopWindow.locator('.prompt-editor-host .cm-md-highlight')).toContainText('Beta');
 
   const state = await collectTextAnchorState(desktopWindow);

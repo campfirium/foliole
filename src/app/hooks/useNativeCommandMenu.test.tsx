@@ -61,6 +61,7 @@ describe('useNativeCommandMenu', () => {
     await waitFor(() => {
       expect(syncNativeMenuState).toHaveBeenCalledWith({
         enabledCommandIds: [APP_COMMAND_IDS.importSingleFile],
+        history: { undoTitle: 'Undo', redoTitle: 'Redo', nativeEditing: false },
         shortcutAccelerators: [{ accelerator: 'Control+I', commandId: APP_COMMAND_IDS.importSingleFile }]
       });
       expect(onRunCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.importSingleFile);

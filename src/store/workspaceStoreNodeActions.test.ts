@@ -9,8 +9,7 @@ import {
   syncNodeContentToRuntime,
   syncNodeContentWithAnchorsMutationToRuntime,
   syncNodeContentWithAnchorsToRuntime,
-  syncNodeOrderToRuntime,
-  syncNodeRevealMutationToRuntime
+  syncNodeOrderToRuntime
 } from './workspaceRuntimeSync';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
 import {
@@ -167,7 +166,17 @@ it('treats a missing Inbox as a workspace invariant violation', async () => {
 describe('createWorkspaceNodeActions reveal sync', () => {
   beforeEach(resetRuntimeMocks);
 
-  it('syncs updateNodeReveal through runtime command bridge', async () => {
+  it('does not let a late answer save rewrite a deleted Item', async () => {
+    const fixture = createWorkspaceNodeActionsFixture();
+    const node = { ...fixture.nodesById['node-1']!, kind: 'item' as const, hasReveal: true, reveal: 'Saved answer' };
+    const harness = createWorkspaceNodeActionsSetStateHarness({
+      ...fixture, nodesById: { ...fixture.nodesById, 'node-1': node }, trashedNodeIds: ['node-1']
+    });
+    expect(await createWorkspaceNodeActions(harness.setState).updateNodeReveal('node-1', 'Late answer')).toBe(false);
+    expect(syncNodeContentWithAnchorsMutationToRuntime).not.toHaveBeenCalled();
+  });
+
+  it.each(['loaded', 'evicted'])('syncs updateNodeReveal through runtime command bridge with a %s document', async documentState => {
     const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
     const actions = createWorkspaceNodeActions(harness.setState);
     const state = harness.getState();
@@ -180,19 +189,22 @@ describe('createWorkspaceNodeActions reveal sync', () => {
         ...state.nodesById,
         'node-1': {
           ...node,
-          reveal: 'Old reveal'
+          content: documentState === 'evicted' ? '' : node.content,
+          hasContent: true,
+          hasReveal: true,
+          reveal: documentState === 'evicted' ? null : 'Old reveal'
         }
       }
     });
 
     await actions.updateNodeReveal('node-1', 'New reveal');
 
-    expect(syncNodeRevealMutationToRuntime).toHaveBeenCalledTimes(1);
-    expect(syncNodeRevealMutationToRuntime).toHaveBeenCalledWith(
+    expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledTimes(1);
+    expect(syncNodeContentWithAnchorsMutationToRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'node-1',
         reveal: 'New reveal'
-      })
+      }), [], expect.any(Array)
     );
   });
 });

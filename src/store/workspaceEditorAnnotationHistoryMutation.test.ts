@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { captureAnnotationHistoryFact } from '../../lib/core/nodes/annotationHistoryFacts';
 import {
   getEditorOperationSession,
   moveEditorOperationEntry,
@@ -21,6 +22,10 @@ vi.mock('./workspaceRuntimeSync', async (importOriginal) => ({
 }));
 
 const ENTRY: EditorAnnotationOperationEntry = {
+  historyDeletedAt: '2026-10-01T00:00:00.000Z',
+  historyFacts: ['highlight-1', 'highlight-2'].map(id => captureAnnotationHistoryFact({
+    id, parentNodeId: 'node-1', kind: 'topic', content: '# Seed', reveal: null
+  })),
   annotations: ['highlight-1', 'highlight-2'].map((nodeId, index) => ({
     anchorId: `anchor-${index + 1}`,
     kind: 'highlight' as const,
@@ -63,6 +68,8 @@ it('does not consume a grouped annotation undo after a partial canonical delete'
   expect(startEditorAnnotationHistoryMutation({ entry: ENTRY, get: harness.getState, mode: 'undo', set: harness.setState })).toBe(true);
   await vi.waitFor(() => expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').undoStack.at(-1))
     .toMatchObject({ canonical: 'confirmed', type: 'annotation.create' }));
+  await vi.waitFor(() => expect(syncSoftDeleteNodesToRuntime).toHaveBeenCalledTimes(1));
+  await vi.waitFor(() => expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').undoStack.at(-1)).not.toHaveProperty('applyingMode'));
   expect(harness.getState().trashedNodeIds).toEqual([]);
 });
 
@@ -73,6 +80,8 @@ it('does not consume a grouped annotation redo after a partial canonical restore
   expect(startEditorAnnotationHistoryMutation({ entry: ENTRY, get: harness.getState, mode: 'redo', set: harness.setState })).toBe(true);
   await vi.waitFor(() => expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').redoStack.at(-1))
     .toMatchObject({ canonical: 'confirmed', type: 'annotation.create' }));
+  await vi.waitFor(() => expect(syncRestoreNodesToRuntime).toHaveBeenCalledTimes(1));
+  await vi.waitFor(() => expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').redoStack.at(-1)).not.toHaveProperty('applyingMode'));
   expect(harness.getState().trashedNodeIds).toEqual(['highlight-1', 'highlight-2']);
 });
 
@@ -84,6 +93,7 @@ it('applies a late canonical delete without replaying or replacing newer topic h
   const harness = createHarness();
 
   expect(startEditorAnnotationHistoryMutation({ entry: ENTRY, get: harness.getState, mode: 'undo', set: harness.setState })).toBe(true);
+  await vi.waitFor(() => expect(syncSoftDeleteNodesToRuntime).toHaveBeenCalledTimes(1));
   harness.setState((state) => ({
     editorOperationHistory: pushEditorOperationEntry(state.editorOperationHistory, createTextHistoryEntry({
       afterContent: '# Seed\n\nNewer text',

@@ -17,6 +17,8 @@ import { mergedTopicTextBodies } from './topicTextBodies.js';
 import { normalizeTextAlternativesForHash } from './topicTextState.js';
 
 export interface LocalContentEdit {
+  /** Answer-only input uses content as a base witness, never as a replacement. */
+  field?: 'reveal';
   reveal?: string | null;
   newImageReferences?: readonly ContentImageReference[];
   baseContent?: string;
@@ -48,14 +50,15 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
       if (hash !== hashTextBody(input.baseContent)) throw new Error('content_edit_base_content_mismatch');
       base.body_text = input.baseContent;
     }
-    if (input.title !== base.snapshot.title) input = { ...input, title: normalizeNodeTitle(input.title) };
-    assertNodeTextFieldsWithinBudget(input);
     const stored = await loadRetainedSyncNodeVersionFact(tx, input.versionId, false);
     const current = await loadCurrentSyncNodeRecord(tx, input.nodeId, Boolean(stored));
     if (!current) throw new Error('content_edit_current_version_unavailable');
     if (base.body_text === null && typeof current.body_text === 'string' && hashTextBody(current.body_text) === base.snapshot.body_blob_hash) {
       base.body_text = current.body_text;
     }
+    input = resolveEditFields(input, base);
+    if (input.title !== base.snapshot.title) input = { ...input, title: normalizeNodeTitle(input.title) };
+    assertNodeTextFieldsWithinBudget(input);
     const added = parseNewImageReferences(input.newImageReferences);
     const imageInputHash = contentEditImageInputHash(added);
     const bodyHash = input.content === base.body_text ? base.snapshot.body_blob_hash : hashTextBody(input.content);
@@ -83,6 +86,17 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
     if (!applied) throw new Error('content_edit_result_unavailable');
     return { current: applied, submittedVersionId: input.versionId };
   });
+}
+
+function resolveEditFields(input: LocalContentEditInput, base: NativeSyncNodeRecord): LocalContentEditInput {
+  if (input.field !== 'reveal') return input;
+  if (base.snapshot.body_deleted) throw new Error('content_edit_base_body_unavailable');
+  if (typeof base.body_text !== 'string') {
+    if (hashTextBody(input.content) !== base.snapshot.body_blob_hash) throw new Error('content_edit_base_body_unavailable');
+    base.body_text = input.content;
+  }
+  return { ...input, content: base.body_text, title: base.snapshot.title,
+    hideTitleHeading: base.snapshot.hide_title_heading ?? false };
 }
 
 function createEditRecord(base: NativeSyncNodeRecord, input: LocalContentEditInput,

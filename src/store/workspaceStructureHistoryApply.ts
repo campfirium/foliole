@@ -1,3 +1,4 @@
+import type { WorkspaceHistoryExecution } from './workspaceHistoryApplyResult';
 import { applyWorkspaceHistoryContext } from './workspaceHistoryContext';
 import { getWorkspaceMutationRepository } from './workspaceMutationRepository';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
@@ -46,13 +47,16 @@ async function applyTrashTransition(args: {
   entry: WorkspaceStructureCreateEntry | WorkspaceStructureDeleteEntry;
   get: () => WorkspaceState;
   mode: 'redo' | 'undo';
+  execution?: WorkspaceHistoryExecution;
 }) {
   const restoring = (args.entry.type === 'structure.create') === (args.mode === 'redo');
   const sourceTrashed = restoring;
   const before = args.get();
   if (!isTrashSourceApplicable(before, args.entry.nodeIds, sourceTrashed)) return null;
+  if (args.execution && !args.execution.beforeSubmit()) return null;
   if (restoring) {
     const result = await getWorkspaceMutationRepository().syncRestoreNodes({ nodeIds: args.entry.nodeIds });
+    if (result && isExactIdSet(result.restoredNodeIds, args.entry.nodeIds) && !result.skippedConflicts.length) args.execution?.committed(args.entry);
     const latest = args.get();
     if (!result || result.skippedConflicts.length > 0 ||
         !isExactIdSet(result.restoredNodeIds, args.entry.nodeIds) ||
@@ -71,6 +75,7 @@ async function applyTrashTransition(args: {
     deletedAt,
     nodeIds: args.entry.nodeIds
   });
+  if (result && isExactIdSet(result.deletedNodeIds, args.entry.nodeIds)) args.execution?.committed(args.entry);
   const latest = args.get();
   if (!result || !isExactIdSet(result.deletedNodeIds, args.entry.nodeIds) ||
       !isTrashSourceApplicable(latest, args.entry.nodeIds, false)) return null;
@@ -85,13 +90,14 @@ export function applyWorkspaceStructureHistory(args: {
   entry: WorkspaceStructureHistoryEntry;
   get: () => WorkspaceState;
   mode: 'redo' | 'undo';
+  execution?: WorkspaceHistoryExecution;
 }): Promise<Partial<WorkspaceState> | null> {
   if (args.entry.type === 'structure.rename') {
-    return applyWorkspaceStructureRenameHistory(args.get, args.entry, args.mode);
+    return applyWorkspaceStructureRenameHistory(args.get, args.entry, args.mode, args.execution);
   }
-  if (args.entry.type === 'structure.move') return applyStructureMoveHistory(args.get, args.entry, args.mode);
+  if (args.entry.type === 'structure.move') return applyStructureMoveHistory(args.get, args.entry, args.mode, args.execution);
   if (args.entry.type === 'structure.create' || args.entry.type === 'structure.delete') {
-    return applyTrashTransition({ entry: args.entry, get: args.get, mode: args.mode });
+    return applyTrashTransition(args as Parameters<typeof applyTrashTransition>[0]);
   }
   return Promise.resolve(null);
 }

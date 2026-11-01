@@ -5,6 +5,7 @@ import type {
   MoveNodesInput,
 } from '../database/nodeMutations.js';
 
+import { parseAnnotationTrashGuard } from './annotationTrashArgs.js';
 import { asImageRegions } from './commandParserImageRegions.js';
 import { asTimestamp } from './commandParserPrimitives.js';
 
@@ -64,6 +65,7 @@ function asMoveNodePatch(value: unknown) {
 export function parseSoftDeleteNodesArgs(args: Record<string, unknown>): NativeSoftDeleteNodesArgs {
   return {
     nodeIds: asStringArray(args.nodeIds, 'nodeIds'),
+    ...(args.annotationHistory !== undefined ? { annotationHistory: parseAnnotationTrashGuard(args.annotationHistory) } : {}),
     deletedAt: asString(args.deletedAt, 'deletedAt'),
     ...(args.parentUpdates !== undefined ? { parentUpdates: parseParentUpdates(args.parentUpdates) } : {})
   };
@@ -72,6 +74,7 @@ export function parseSoftDeleteNodesArgs(args: Record<string, unknown>): NativeS
 export function parseRestoreNodesArgs(args: Record<string, unknown>): NativeRestoreNodesArgs {
   return {
     nodeIds: asStringArray(args.nodeIds, 'nodeIds'),
+    ...(args.annotationHistory !== undefined ? { annotationHistory: parseAnnotationTrashGuard(args.annotationHistory, 'restore') } : {}),
     ...(args.parentOrders !== undefined ? { parentOrders: parseRestoreParentOrders(args.parentOrders) } : {}),
     ...(args.parentUpdates !== undefined ? { parentUpdates: parseParentUpdates(args.parentUpdates) } : {})
   };

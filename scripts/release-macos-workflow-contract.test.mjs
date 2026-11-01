@@ -1,6 +1,8 @@
 // @vitest-environment node
 
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import process from 'node:process';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
@@ -8,6 +10,19 @@ const source = fs.readFileSync('.github/workflows/release-macos.yml', 'utf8');
 const workflow = parse(source);
 
 describe('release macOS workflow contract', () => {
+  it('gives the package build a bounded heap above the observed two GiB compiler failure', () => {
+    const step = workflow.jobs['release-macos'].steps
+      .find((entry) => entry.run === 'npm run macos:github:notarize');
+    // Model the failed hosted process default when the build has no explicit budget.
+    const env = { ...process.env,
+      NODE_OPTIONS: step.env?.NODE_OPTIONS ?? '--max-old-space-size=2048' };
+    const heapLimit = Number(execFileSync(process.execPath, [
+      '-p', 'require("node:v8").getHeapStatistics().heap_size_limit'
+    ], { env, encoding: 'utf8' }));
+    expect(heapLimit).toBeGreaterThan(3 * 1024 ** 3);
+    expect(heapLimit).toBeLessThan(5 * 1024 ** 3);
+  });
+
   it('is a reusable-only package producer with an explicit secret allowlist', () => {
     expect(workflow.name).toBe('Release macOS Package');
     expect(workflow.on.workflow_dispatch).toBeUndefined();

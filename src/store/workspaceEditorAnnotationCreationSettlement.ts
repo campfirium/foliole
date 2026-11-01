@@ -71,7 +71,7 @@ function rollbackPendingCreation(state: WorkspaceState, nodeId: string, nodeIds:
   };
 }
 
-export function confirmPendingEditorAnnotationEntry(state: WorkspaceState, nodeId: string, nodeIds: string[]) {
+export function confirmPendingEditorAnnotationEntry(state: WorkspaceState, nodeId: string, nodeIds: string[], patch: Partial<Pick<EditorAnnotationOperationEntry, 'historyFacts' | 'historyDeletedAt' | 'historyParents'>> = {}) {
   const session = getEditorOperationSession(state.editorOperationHistory, nodeId);
   let entryIndex = -1;
   for (let index = session.undoStack.length - 1; index >= 0; index -= 1) {
@@ -90,7 +90,7 @@ export function confirmPendingEditorAnnotationEntry(state: WorkspaceState, nodeI
       nodeId,
       'undo',
       (candidate) => candidate === entry,
-      () => ({ ...entry, canonical: 'confirmed' })
+      () => ({ ...entry, ...patch, canonical: 'confirmed' })
     ),
     wasTop: entryIndex === session.undoStack.length - 1
   };

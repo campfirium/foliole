@@ -16,7 +16,7 @@ export function usePdfViewPaging(props: {
   const fitToPage = view?.fitToPage;
   useEffect(() => {
     const request = props.pageJumpRequest;
-    if (active && request && request.positionY === undefined) fitToPage?.(request.page);
+    if (request && request.positionY === undefined) fitToPage?.(request.page);
   }, [active, fitToPage, props.pageJumpRequest]);
   useEffect(() => {
     if (!active) return;

@@ -72,6 +72,11 @@ function createWorkspaceBrowseState() {
   };
 }
 
+function createApplicationHistoryActions() {
+  return { undoApplicationOperation: vi.fn(), redoApplicationOperation: vi.fn(),
+    undoWorkspaceAction: vi.fn(), redoWorkspaceAction: vi.fn() };
+}
+
 export function createWorkspaceState() {
   return {
     ...createWorkspaceBrowseState(),
@@ -106,7 +111,6 @@ export function createWorkspaceState() {
       'node-1': createWorkspaceNode()
     },
     openNode: vi.fn(),
-    redoWorkspaceAction: vi.fn(),
     resetLayout: vi.fn(),
     revealReviewAnswer: vi.fn(),
     reviewSession: createWorkspaceReviewSession(),
@@ -121,7 +125,7 @@ export function createWorkspaceState() {
     setRightSidebarWidth: vi.fn(),
     startReviewSession: vi.fn(),
     trashedNodeIds: [],
-    undoWorkspaceAction: vi.fn(),
+    ...createApplicationHistoryActions(),
     updateHighlightAnchorRange: vi.fn(() => false),
     updateNodeContent: vi.fn(),
     updateNodeDerivedTitle: vi.fn(),

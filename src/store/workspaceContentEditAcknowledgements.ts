@@ -4,7 +4,7 @@ import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 import { patchWorkspaceRecord } from '../shared/workspaceRecordPatch';
 
-import { isLatestNodeContentVersion } from './workspaceNodeContentVersionGuard';
+import { isLatestNodeContentVersion, isLatestNodeRevealVersion } from './workspaceNodeContentVersionGuard';
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import type { WorkspaceState } from './workspaceStore';
 
@@ -32,6 +32,7 @@ export function captureContentEdit(node: Node, baseContent?: string): LocalConte
 }
 
 export function acknowledgeContentEdit(args: {
+  field?: 'content' | 'reveal';
   edit: LocalContentEdit | undefined;
   node: Node;
   result: WorkspaceNodeMutationPatchResult | null;
@@ -47,6 +48,17 @@ export function acknowledgeContentEdit(args: {
   args.set((state) => {
     const current = state.nodesById[args.node.id];
     if (!current) return {};
+    const versionId = acknowledgement.submittedVersionId;
+    if (args.field === 'reveal') {
+      const isLatest = isLatestNodeRevealVersion(args.node.id, args.version);
+      const revealPatch = isLatest
+        ? { reveal: persisted.reveal, hasReveal: persisted.reveal !== null } : {};
+      const node = { ...current, ...revealPatch, currentVersionId: isLatest ? acknowledgement.currentVersionId : versionId,
+        pendingImageReferences: (current.pendingImageReferences ?? []).filter(reference => !args.edit?.newImageReferences?.some(
+          saved => saved.storage_key === reference.storage_key && saved.original_name === reference.original_name)) };
+      syncWorkspaceNodeDocumentCacheFromNode(node);
+      return { nodesById: patchWorkspaceRecord(state.nodesById, { [node.id]: node }) };
+    }
     const node: Node = isLatestNodeContentVersion(args.node.id, args.version) ? {
       ...current,
       bodyStatus: persisted.content.trim().length > 0 ? 'ready' : 'empty',

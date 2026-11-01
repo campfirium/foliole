@@ -1,13 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { resetDailyFlowGeneration } from './harness/dailyFlowGeneration';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
 const session = (page: import('@playwright/test').Page) =>
   page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession());
 
-test('advances Soon without changing reading facts and restores its successor after reload', async ({ desktopWindow: page }) => {
+test('advances Soon without changing reading facts and restores its successor after reload', async ({ desktopApp, desktopWindow: page }) => {
   await expectWorkspaceShell(page);
   await page.evaluate(async () => {
     window.localStorage.setItem('foliole-app-language', 'en');
@@ -16,10 +17,10 @@ test('advances Soon without changing reading facts and restores its successor af
       if (node.kind === 'topic' || node.kind === 'item') await window.__folioleWorkspaceDebug!.deleteNode(node.id);
     }
     await window.__folioleWorkspaceDebug!.seedNodes(['a', 'b', 'c'].map(id => ({
-      id: `learning-${id}`, kind: 'topic', title: `Learning ${id}`, content: `Reading body ${id}`,
-      createdAt: new Date().toISOString()
+      id: `learning-${id}`, kind: 'topic', title: `Learning ${id}`, content: `Reading body ${id}`
     })), { persist: true });
   });
+  await resetDailyFlowGeneration(desktopApp);
   await page.reload();
   await expectWorkspaceShell(page);
   await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 
 import {
   deriveImageClozeRegionsFromChildren,
@@ -98,7 +98,12 @@ export function useDocumentPanelImageClozePresentation(args: {
   const { source, selectedNodesById } = useDocumentPanelImageInputs(
     args.editorNodeId ? args.activeNode : undefined, args.nodesById, args.trashedNodeIds
   );
-  const { editorNodeId, onOpenNode } = args;
+  const { editorNodeId } = args;
+  const onOpenNodeRef = useRef(args.onOpenNode);
+  useLayoutEffect(() => {
+    onOpenNodeRef.current = args.onOpenNode;
+  }, [args.onOpenNode]);
+  const onOpenNode = useCallback((nodeId: string) => onOpenNodeRef.current(nodeId), []);
   const canCreate = canCreateSelectionAnnotation(args.activeNode);
   const parentRegions = useMemo(() => {
     if (!source || getImageClozeLocator(source.anchorLink)) return [];

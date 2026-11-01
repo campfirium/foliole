@@ -56,14 +56,17 @@ async function pushCurrentTopicSoon(page: Page, testInfo: TestInfo) {
     contentType: 'application/json'
   });
   expect(after.activeNodeId).not.toBe(before.activeNodeId);
-  expect(after.reviewSession?.soonNodeIds ?? []).toContain(before.activeNodeId);
+  expect(after.reviewSession?.readTopicCount).toBe((before.reviewSession?.readTopicCount ?? 0) + 1);
+  expect(await page.evaluate(id => window.__folioleWorkspaceDebug!.getNode(id!)!.reading, before.activeNodeId))
+    .toEqual(before.activeReading);
   expect(after.toolbarText).toContain('Soon');
+  return before.activeNodeId;
 }
 
 async function clickSoonUntilQueueClear(page: Page) {
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const current = await collectReviewState(page);
-    if (current.reviewSession?.currentNodeId && current.reviewSession.queueNodeIds.length === 0) {
+    if (await page.getByRole('button', { name: 'Queue clear' }).isVisible()) {
       break;
     }
     const activeBeforeSoon = current.activeNodeId;
@@ -79,7 +82,6 @@ async function assertQueueClearStage(page: Page, testInfo: TestInfo) {
     contentType: 'application/json'
   });
   expect(queueClear.reviewSession?.currentNodeId).toBeTruthy();
-  expect(queueClear.reviewSession?.queueNodeIds ?? []).toHaveLength(0);
   await expect(page.getByRole('button', { name: 'Queue clear' })).toBeVisible();
   await expect(page.getByTestId('app-runtime-notice')).toHaveCount(0);
   await attachScreenshot(page, testInfo, 'reading-soon-queue-clear-screenshot');
@@ -112,9 +114,10 @@ test('clicking Soon advances the guided reading review action in the desktop run
   await desktopWindow.getByRole('button', { name: 'Read', exact: true }).click();
   await expect(desktopWindow.getByRole('button', { name: 'Soon', exact: true })).toBeVisible();
 
-  await pushCurrentTopicSoon(desktopWindow, testInfo);
+  const deferredTopic = await pushCurrentTopicSoon(desktopWindow, testInfo);
   await clickSoonUntilQueueClear(desktopWindow);
   await assertQueueClearStage(desktopWindow, testInfo);
+  expect((await collectReviewState(desktopWindow)).reviewSession?.currentNodeId).toBe(deferredTopic);
   await readUntilAllClear(desktopWindow);
   await assertAllClearNotice(desktopWindow, testInfo);
 

@@ -1,5 +1,6 @@
 import { readNodeAuthorText } from '../../lib/core/nodes/nodeAuthorFrontmatter';
 import { projectNodeLearningSummary } from '../../lib/core/nodes/nodeLearningSummary';
+import { readTopicCollections } from '../../lib/core/nodes/topicCollectionsFrontmatter';
 import type { Node } from '../features/nodes/model/nodeTypes';
 import {
   readWorkspaceRecordPatch,
@@ -39,15 +40,31 @@ function shouldKeepNodeDocument(
   return nodeId === activeNodeId || keepNodeIds.has(nodeId);
 }
 
+function projectCollections(node: Node) {
+  if (!isNodeDocumentLoaded(node)) return node.collections;
+  let collections: string[];
+  try {
+    collections = readTopicCollections(node.content);
+  } catch {
+    collections = [];
+  }
+  const previous = node.collections ?? [];
+  return previous.length === collections.length && previous.every((value, index) => value === collections[index])
+    ? node.collections
+    : collections;
+}
+
 export function toRendererBoundaryNode(source: Node, keepDocument: boolean): Node {
   const node = projectNodeLearningSummary(source);
   const nextHasContent = resolveNodeContentState(node);
   const nextHasReveal = resolveNodeRevealState(node);
   const authorText = isNodeDocumentLoaded(node) ? readNodeAuthorText(node.content) : node.authorText ?? null;
+  const collections = projectCollections(node);
   if (keepDocument) {
     return {
       ...node,
       authorText,
+      ...(collections !== undefined ? { collections } : {}),
       ...(nextHasContent !== undefined ? { hasContent: nextHasContent } : {}),
       ...(nextHasReveal !== undefined ? { hasReveal: nextHasReveal } : {})
     };
@@ -55,6 +72,7 @@ export function toRendererBoundaryNode(source: Node, keepDocument: boolean): Nod
   return {
     ...node,
     authorText,
+    ...(collections !== undefined ? { collections } : {}),
     content: '',
     ...(nextHasContent !== undefined ? { hasContent: nextHasContent } : {}),
     reveal: null,

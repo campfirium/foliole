@@ -104,3 +104,32 @@ it('allows only the configured dev renderer during the initial web navigation', 
   expect(devNavigationEvent.preventDefault).not.toHaveBeenCalled();
   expect(externalNavigationEvent.preventDefault).toHaveBeenCalledTimes(1);
 });
+
+it('allows reloading the loaded local workspace while blocking other documents', () => {
+  const currentUrl = 'file:///Users/example/Foliole/runtime-renderer-index.html';
+  const handlers: Array<(event: { preventDefault: () => void }, url: string) => void> = [];
+  const webContents = {
+    getURL: () => currentUrl,
+    on: (name: string, handler: typeof handlers[number]) => {
+      if (name === 'will-navigate') handlers.push(handler);
+    },
+    setZoomFactor: vi.fn(),
+    setWindowOpenHandler: vi.fn()
+  };
+  const window = {
+    isDestroyed: () => false, on: vi.fn(), once: vi.fn(), setTitle: vi.fn(), webContents
+  };
+  bindMainWindowNavigationGuard(window as never);
+  const reload = { preventDefault: vi.fn() };
+  handlers[0]?.(reload, currentUrl);
+  expect(reload.preventDefault).not.toHaveBeenCalled();
+  for (const target of [
+    'file:///Users/example/Foliole/secret.txt',
+    `${currentUrl}?startupView=library-setup`,
+    'https://example.com/'
+  ]) {
+    const event = { preventDefault: vi.fn() };
+    handlers[0]?.(event, target);
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+  }
+});

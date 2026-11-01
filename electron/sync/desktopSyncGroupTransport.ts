@@ -8,7 +8,7 @@ import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../datab
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { loadPendingWatchedFolderConflicts } from '../database/watchedFolderConflictDecisions.js';
 
-import { desktopPeerSessionId } from './desktopPeerSessionRegistry.js';
+import { desktopPeerSessionRegistry } from './desktopPeerSessionRegistry.js';
 import { runDesktopRequestSyncDatabaseRound } from './desktopRequestSyncDatabaseRound.js';
 import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 import { continueDesktopRequestSyncResources } from './desktopRequestSyncResources.js';
@@ -49,12 +49,14 @@ export async function continueDesktopSyncGroupSync(
   return runDesktopSyncGroupPeerSingleFlight(
     target.peer_device_id,
     async () => {
+      const session = desktopPeerSessionRegistry.get(target.peer_device_id);
       try {
-        const sessionId = desktopPeerSessionId(target.peer_device_id);
+        const sessionId = session?.reply.session;
         return await runSyncPeerRound({ owner: desktopSyncPeerRoundOwner(), peerId: target.peer_device_id,
+          ...(session ? { signal: session.controller.signal } : {}),
           execute: (id, lease) => continuePeerSync(target, activity, { id, lease, admitted: false, ...(sessionId ? { sessionId } : {}) }) });
       } catch (error) {
-        if (isSyncPeerRoundRetryableError(error)) return { complete: false };
+        if (session?.controller.signal.aborted || isSyncPeerRoundRetryableError(error)) return { complete: false };
         throw error;
       }
     }

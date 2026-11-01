@@ -11,7 +11,7 @@ interface DocumentPanelAnswerSectionProps {
   editorAppearanceKey: string;
   editorNodeId: string | null;
   fitBlockImagesToViewport?: boolean;
-  onAnswerChange: (answer: string) => void;
+  onAnswerChange: (answer: string, meta?: import('../../features/editor/adapters/EditorAdapter').EditorContentChangeMeta) => void;
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onAnswerImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number; viewportHeight: number } | null) => void;
   onPastedTextAnchors?: (payload: { anchors: ClipboardAnchorRange[]; content: string; nodeId: string }) => void;
@@ -25,7 +25,7 @@ export function DocumentPanelAnswerSection(props: DocumentPanelAnswerSectionProp
   const t = useTranslation();
   const answerNodeId = getImageClozeAnswerEditorNodeId(props.editorNodeId);
   const answerEditorKey = `answer-${props.editorAppearanceKey}-${answerNodeId ?? 'none'}`;
-  const answerHistory = useAnswerEditorHistory(answerNodeId);
+  const answerHistory = useAnswerEditorHistory(answerNodeId, props.editorNodeId);
 
   return (
     <section

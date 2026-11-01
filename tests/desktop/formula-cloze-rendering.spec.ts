@@ -1,3 +1,4 @@
+import { redoShortcut, undoShortcut } from './harness/contextualContentHistory';
 import { expect, test } from './harness/fixtures';
 import {
   collectFormulaClozeDebugState,
@@ -11,6 +12,7 @@ import {
   readFormulaClozeCreateEventCount,
   seedFormulaClozeWorkspace
 } from './harness/formulaCloze';
+import { loadWorkspaceSnapshot } from './harness/localDataFileAcceptance';
 import { expectWorkspaceShell } from './harness/settings';
 
 async function openSeededFormulaParent(desktopWindow: Parameters<typeof seedFormulaClozeWorkspace>[0]) {
@@ -111,6 +113,11 @@ test('creates a formula cloze by dragging on the rendered formula and shows the 
   expect(parentState.height).toBeGreaterThan(8);
 
   const childId = await findFormulaClozeChildId(desktopWindow);
+  await desktopWindow.evaluate(() => window.__folioleDebug?.setEditorSelection?.('prompt-editor', 0, 0));
+  await desktopWindow.keyboard.press(undoShortcut());
+  await expect.poll(async () => (await loadWorkspaceSnapshot(desktopWindow)).trashedNodeIds).toContain(childId);
+  await desktopWindow.keyboard.press(redoShortcut());
+  await expect.poll(async () => (await loadWorkspaceSnapshot(desktopWindow)).trashedNodeIds).not.toContain(childId);
   await openFormulaClozeChild(desktopWindow, childId);
   const childState = await collectFormulaRegionState(desktopWindow);
   await testInfo.attach('formula-cloze-drag-state', {

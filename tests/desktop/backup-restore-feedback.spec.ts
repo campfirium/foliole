@@ -32,11 +32,13 @@ test('reports failed and successful database restores through the native bridge'
   await testInfo.attach('restore-failure', { path: testInfo.outputPath('restore-failure.png'), contentType: 'image/png' });
   await failure.getByRole('button', { name: DONE }).click();
 
+  const previousRenderer = await desktopWindow.evaluate(() => performance.timeOrigin);
   await settings.locator('[data-settings-row]').filter({ has: desktopWindow.getByRole('heading', { name: path.basename(backup.destinationPath) }) })
     .getByRole('button', { name: RESTORE }).click();
   const success = desktopWindow.getByRole('dialog', { name: /^(Backup restored|备份已恢复)$/ });
   await expect(success).toBeVisible();
   await expect(success).toContainText(path.basename(backup.destinationPath));
+  expect(await desktopWindow.evaluate(() => performance.timeOrigin)).not.toBe(previousRenderer);
   await success.screenshot({ path: testInfo.outputPath('restore-success.png') });
   await testInfo.attach('restore-success', { path: testInfo.outputPath('restore-success.png'), contentType: 'image/png' });
   await success.getByRole('button', { name: DONE }).click();

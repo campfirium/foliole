@@ -180,3 +180,53 @@ it('prepares files without versions and atomically saves image names through the
   await expect(handleLocalContentEditCommand({ ...request, edit: { ...request.edit, newImageReferences: [] } }, null))
     .rejects.toThrow('content_edit_version_mismatch');
 });
+
+it.each(['New answer', '', null])('saves an answer and preserves it through a subsequent body replay: %s', async reveal => {
+  const initial = { ...nodeInput('Question body', '2026-07-25T04:30:00.000Z'), kind: 'item' as const, reveal: 'Original answer' };
+  const baseVersionId = upsertVersionedNodeSnapshot(initial)!;
+  const answer = await handleLocalContentEditCommand({
+    parent: { ...initial, reveal, updatedAt: '2026-07-25T04:31:00.000Z' }, affectedAnchors: [],
+    edit: { baseVersionId, versionId: 'ver_answer_replay', reveal }
+  }, null) as unknown as { contentEdit: { submittedVersionId: string }; nodes: Array<{ reveal: string | null }> };
+  const read = () => openDatabaseConnection().sqlite.prepare('SELECT content, reveal, current_version_id FROM nodes WHERE id = ?').get(initial.nodeId);
+  expect(read()).toMatchObject({ content: 'Question body', reveal, current_version_id: 'ver_answer_replay' });
+  expect(answer.nodes[0]?.reveal).toBe(reveal);
+  await handleLocalContentEditCommand({
+    parent: { ...initial, content: 'Restored question', updatedAt: '2026-07-25T04:32:00.000Z' }, affectedAnchors: [],
+    edit: { baseVersionId: answer.contentEdit.submittedVersionId, versionId: 'ver_body_replay' }
+  }, null);
+  expect(read()).toMatchObject({ content: 'Restored question', reveal, current_version_id: 'ver_body_replay' });
+});
+
+it('rejects a malformed answer before changing stored facts', async () => {
+  const initial = nodeInput('Question', '2026-07-25T04:30:00.000Z');
+  const baseVersionId = upsertVersionedNodeSnapshot(initial)!;
+  await expect(handleLocalContentEditCommand({ parent: initial, affectedAnchors: [],
+    edit: { baseVersionId, versionId: 'bad-answer', reveal: 42 } }, null)).rejects.toThrow();
+  expect(openDatabaseConnection().sqlite.prepare('SELECT content, reveal FROM nodes WHERE id = ?').get(initial.nodeId))
+    .toEqual({ content: 'Question', reveal: null });
+  expect(openDatabaseConnection().sqlite.prepare('SELECT count(*) FROM node_sync_versions').pluck().get()).toBe(1);
+});
+
+it.each([false, true])('saves only the answer with an old parent question (stale basis=%s)', async stale => {
+  const initial = { ...nodeInput('Question', '2026-07-25T04:30:00.000Z'), kind: 'item' as const, reveal: 'Old answer' };
+  const baseVersionId = upsertVersionedNodeSnapshot(initial)!;
+  await retainLocalEditBase(createBetterSqliteDbPort(openDatabaseConnection().sqlite), {
+    holdId: 'answer-editor', nodeId: initial.nodeId, versionId: baseVersionId
+  });
+  await handleLocalContentEditCommand({ parent: { ...initial, content: 'Question edit', updatedAt: '2026-07-25T04:31:00.000Z' },
+    affectedAnchors: [], edit: { baseVersionId, versionId: 'body-before-answer' } }, null);
+  await handleLocalContentEditCommand({ parent: { ...initial, reveal: 'Answer edit', updatedAt: '2026-07-25T04:32:00.000Z' },
+    affectedAnchors: [], edit: { baseVersionId: stale ? baseVersionId : 'body-before-answer', versionId: 'answer-only', field: 'reveal', reveal: 'Answer edit' } }, null);
+  expect(openDatabaseConnection().sqlite.prepare('SELECT content, reveal FROM nodes WHERE id = ?').get(initial.nodeId))
+    .toEqual({ content: 'Question edit', reveal: 'Answer edit' });
+});
+
+it.each([42, 'content'])('rejects an unsupported field before writing: %s', async field => {
+  const initial = nodeInput('Question', '2026-07-25T04:30:00.000Z');
+  const baseVersionId = upsertVersionedNodeSnapshot(initial)!;
+  await expect(handleLocalContentEditCommand({ parent: initial, affectedAnchors: [],
+    edit: { baseVersionId, versionId: 'bad-field', field, reveal: 'Answer' } }, null)).rejects.toThrow('content_edit_field_invalid');
+  expect(openDatabaseConnection().sqlite.prepare('SELECT content, reveal FROM nodes WHERE id = ?').get(initial.nodeId))
+    .toEqual({ content: 'Question', reveal: null });
+});

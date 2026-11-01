@@ -67,3 +67,40 @@ test('moves automatic mirror output after normal, case-only and conflicting arti
   }
   await testInfo.attach('article-rename-output', { body: JSON.stringify(outputs, null, 2), contentType: 'application/json' });
 });
+
+test('retains an unopened article body through rename, subsequent opening and renderer reload', async ({
+  desktopApp, desktopWindow
+}, testInfo) => {
+  await expectWorkspaceShell(desktopWindow);
+  await desktopWindow.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
+  await desktopWindow.evaluate(async () => {
+    const debug = window.__folioleWorkspaceDebug!;
+    await debug.seedNodes([
+      { id: 't513-rename', title: 'Before', kind: 'topic', content: '# Before\n\nComplete original body 中😀.' },
+      { id: 't513-rename-other', title: 'Control', kind: 'topic', content: 'Untouched control.' }
+    ], { persist: true });
+    await debug.openNode!('t513-rename-other');
+  });
+  await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug!.getNode('t513-rename')?.content)).toBe('');
+  const result = await desktopWindow.evaluate(async () => {
+    const debug = window.__folioleWorkspaceDebug!;
+    const before = await window.electronAPI!.invoke('load_node_document', { nodeId: 't513-rename' });
+    const renamed = await debug.updateNodeTitle('t513-rename', 'After');
+    const after = await window.electronAPI!.invoke('load_node_document', { nodeId: 't513-rename' });
+    await debug.openNode!('t513-rename');
+    return { before, after, renamed };
+  });
+  expect(result.renamed).toBe(true);
+  expect(result.before).toMatchObject({ content: '# Before\n\nComplete original body 中😀.' });
+  expect(result.after).toMatchObject({ content: '# After\n\nComplete original body 中😀.' });
+  await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug!.getNode('t513-rename')?.content))
+    .toBe('# After\n\nComplete original body 中😀.');
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  await expect.poll(() => desktopWindow.evaluate(async () =>
+    window.electronAPI!.invoke('load_node_document', { nodeId: 't513-rename' }))).toMatchObject(result.after as object);
+  await expect.poll(async () => (await readOutputs(desktopApp)).files.find(file => file.article_id === 't513-rename')?.body,
+    { timeout: 90_000 }).toContain('Complete original body 中😀.');
+  await desktopWindow.screenshot({ path: testInfo.outputPath('unopened-rename.png') });
+  await testInfo.attach('unopened-rename-documents', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
+});

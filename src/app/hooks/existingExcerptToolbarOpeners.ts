@@ -81,10 +81,33 @@ export function openPdfExcerptToolbar(args: ExistingExcerptToolbarArgs, event: M
 }
 
 export function openWholeImageExcerptToolbar(args: ExistingExcerptToolbarArgs, event: MouseEvent, target: HTMLElement) {
-  return openResolvedExcerpt(args, event, target, resolveWholeImageExistingExcerpt({
+  const match = resolveWholeImageExistingExcerpt({
     activeNodeId: args.activeNodeId ?? '',
     nodesById: args.nodesById,
     target,
     trashedNodeIds: args.trashedNodeIds
-  }));
+  });
+  if (!match) return false;
+  if (isNodeDocumentLoaded(args.nodesById[match.nodeId]) || !hasWorkspaceRuntimeRepository()) {
+    return openResolvedExcerpt(args, event, target, match);
+  }
+  const original = args.nodesById[match.nodeId]!;
+  const group = original.imageRegions?.find((entry) => entry.regions.some((region) => region.id === target.dataset.regionId));
+  const regionIndex = group?.regions.findIndex((region) => region.id === target.dataset.regionId) ?? -1;
+  return ensureWorkspaceNodeDocumentReady(match.nodeId, { keepWarm: true }).then(() => {
+    const state = useWorkspaceStore.getState();
+    const current = state.nodesById[match.nodeId];
+    if (state.activeNodeId !== args.activeNodeId || !isNodeDocumentLoaded(current)
+      || JSON.stringify(current?.anchorLink) !== JSON.stringify(original.anchorLink)) return false;
+    const region = current?.imageRegions?.find((entry) => entry.attachmentId === group?.attachmentId)?.regions[regionIndex];
+    const previousRegion = group?.regions[regionIndex];
+    if (!region || !previousRegion || ['x', 'y', 'width', 'height'].some((key) =>
+      region[key as 'x' | 'y' | 'width' | 'height'] !== previousRegion[key as 'x' | 'y' | 'width' | 'height'])) return false;
+    const prepared = resolveWholeImageExistingExcerpt({
+      activeNodeId: args.activeNodeId ?? '', nodesById: state.nodesById, target, trashedNodeIds: state.trashedNodeIds
+    }, region.id);
+    return prepared?.nodeId === match.nodeId
+      ? openResolvedExcerpt({ ...args, nodesById: state.nodesById }, event, target, prepared)
+      : false;
+  });
 }

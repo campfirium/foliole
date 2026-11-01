@@ -6,6 +6,7 @@ import type { EditorDraftCommit } from './useEditorDraftFlushCallbacks';
 import { clearDraftTimer, type PendingTitleRefresh } from './useEditorDraftPendingCommit';
 
 export interface EditorDraftHistoryReplayArgs {
+  historySave?: import('../../features/editor/model/editorTextReplaySave').EditorTextReplaySave;
   clearPendingDraftCommit: () => void;
   clearPendingUserInputEvidence: (nodeId: string | null) => void;
   content: string;
@@ -24,5 +25,5 @@ export function applyEditorDraftHistoryReplay(args: EditorDraftHistoryReplayArgs
   args.setPendingTitleRefresh(null);
   args.setDraftState({ content: args.content, nodeId: args.nodeId });
   deferNodeContentRuntimePersist(args.nodeId);
-  args.onCommit(args.nodeId, args.content, { historyReplay: true, publishLocal: true });
+  args.onCommit(args.nodeId, args.content, { historyReplay: true, publishLocal: true, ...(args.historySave ? { historySave: args.historySave } : {}) });
 }

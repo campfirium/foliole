@@ -67,37 +67,43 @@ test('uses a stable lower answer divider for short items and lends spare space t
   await expect.poll(async () => (await metrics(desktopWindow)).ratio).toBeCloseTo(0.618, 2);
 });
 
-test('fits item images in the same split and keeps ordinary topics at full height', async ({ desktopApp, desktopWindow }) => {
-  await expectWorkspaceShell(desktopWindow);
-  await mkdir(evidence, { recursive: true });
-  const bytesBase64 = await desktopApp.evaluate(({ nativeImage }) => nativeImage
-    .createFromPath(`${process.cwd()}/assets/brand/foliole-leaf-tight.png`)
-    .resize({ width: 1200, height: 80 }).toPNG().toString('base64'));
-  const hash = createHash('sha256').update(Buffer.from(bytesBase64, 'base64')).digest('hex');
-  const image = `![Leaf](asset://${hash}.png)`;
-  await desktopWindow.evaluate(async ({ bytesBase64, image }) => {
-    await window.__folioleWorkspaceDebug!.seedNodes([
-      { id: 'image-topic', title: 'Topic', kind: 'topic', content: 'Full height topic.' },
-      { id: 'image-item', title: 'Question', kind: 'item', content: image, reveal: image }
-    ]);
-    await window.__folioleWorkspaceDebug!.importClipboardImageAttachment({ bytesBase64, mimeType: 'image/png', nodeId: 'image-item' });
-    await window.__folioleWorkspaceDebug!.openNode('image-item');
-  }, { bytesBase64, image });
-  const exitFlow = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
-  if (await exitFlow.isVisible()) await exitFlow.click();
-  await desktopWindow.evaluate(() => window.__folioleWorkspaceDebug!.openNode('image-item'));
-  await expect(desktopWindow.locator('.answer-editor-host')).toBeVisible();
-  await expect.poll(() => desktopWindow.locator('.document-panel-editor-stack img.cm-md-image-element').evaluateAll(images =>
-    images.length === 2 && images.every(image => (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
-  await expect.poll(async () => (await metrics(desktopWindow)).questionOverflow).toBeLessThanOrEqual(2);
-  await expect.poll(async () => (await metrics(desktopWindow)).answerOverflow).toBeLessThanOrEqual(2);
-  await desktopWindow.screenshot({ path: path.join(evidence, 'images.png') });
-  await desktopWindow.evaluate(async () => {
-    await window.__folioleWorkspaceDebug!.seedNodes([{ id: 'topic', title: 'Topic', kind: 'topic', content: 'Full height topic.' }]);
-    await window.__folioleWorkspaceDebug!.openNode('topic');
+for (const imageSize of [{ width: 1200, height: 80 }, { width: 1024, height: 1024 }]) {
+  test(`fits ${imageSize.width}x${imageSize.height} item images and keeps topics at full height`, async ({ desktopApp, desktopWindow }) => {
+    await expectWorkspaceShell(desktopWindow);
+    await mkdir(evidence, { recursive: true });
+    const bytesBase64 = await desktopApp.evaluate(({ nativeImage }, size) => nativeImage
+      .createFromPath(`${process.cwd()}/assets/brand/foliole-leaf-tight.png`)
+      .resize(size).toPNG().toString('base64'), imageSize);
+    const hash = createHash('sha256').update(Buffer.from(bytesBase64, 'base64')).digest('hex');
+    const image = `![Leaf](asset://${hash}.png)`;
+    await desktopWindow.evaluate(async ({ bytesBase64, image }) => {
+      await window.__folioleWorkspaceDebug!.seedNodes([
+        { id: 'image-topic', title: 'Topic', kind: 'topic', content: 'Full height topic.' },
+        { id: 'image-item', title: 'Question', kind: 'item', content: image, reveal: image }
+      ]);
+      await window.__folioleWorkspaceDebug!.importClipboardImageAttachment({ bytesBase64, mimeType: 'image/png', nodeId: 'image-item' });
+      await window.__folioleWorkspaceDebug!.openNode('image-item');
+    }, { bytesBase64, image });
+    const exitFlow = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
+    if (await exitFlow.isVisible()) await exitFlow.click();
+    await desktopWindow.evaluate(() => window.__folioleWorkspaceDebug!.openNode('image-item'));
+    await expect(desktopWindow.locator('.answer-editor-host')).toBeVisible();
+    await expect.poll(() => desktopWindow.locator('.document-panel-editor-stack img.cm-md-image-element').evaluateAll((images, width) =>
+      images.length === 2 && images.every(image => (image as HTMLImageElement).naturalWidth === width), imageSize.width)).toBe(true);
+    await expect.poll(async () => (await metrics(desktopWindow)).questionOverflow).toBeLessThanOrEqual(2);
+    await expect.poll(async () => (await metrics(desktopWindow)).answerOverflow).toBeLessThanOrEqual(2);
+    await desktopWindow.screenshot({ path: path.join(evidence, `images-${imageSize.width}x${imageSize.height}.png`) });
+    await desktopWindow.evaluate(async ({ bytesBase64, hash }) => {
+      await window.__folioleWorkspaceDebug!.seedNodes([{ id: 'topic', title: 'Topic', kind: 'topic',
+        content: `Full height topic.\n\n![Leaf|268](asset://${hash}.png)` }]);
+      await window.__folioleWorkspaceDebug!.importClipboardImageAttachment({ bytesBase64, mimeType: 'image/png', nodeId: 'topic' });
+      await window.__folioleWorkspaceDebug!.openNode('topic');
+    }, { bytesBase64, hash });
+    await expect(desktopWindow.locator('.prompt-editor-host .cm-content')).toContainText('Full height topic.');
+    await expect.poll(() => desktopWindow.locator('.prompt-editor-host .cm-md-image-surface')
+      .evaluate(surface => surface.getBoundingClientRect().width)).toBeCloseTo(268, 1);
+    await expect(desktopWindow.locator('.answer-editor-host')).toHaveCount(0);
+    expect(await desktopWindow.locator('.prompt-editor-host').evaluate(host =>
+      host.getBoundingClientRect().height / document.querySelector('.document-panel-editor-stack')!.getBoundingClientRect().height)).toBeGreaterThan(0.98);
   });
-  await expect(desktopWindow.locator('.prompt-editor-host .cm-content')).toContainText('Full height topic.');
-  await expect(desktopWindow.locator('.answer-editor-host')).toHaveCount(0);
-  expect(await desktopWindow.locator('.prompt-editor-host').evaluate(host =>
-    host.getBoundingClientRect().height / document.querySelector('.document-panel-editor-stack')!.getBoundingClientRect().height)).toBeGreaterThan(0.98);
-});
+}

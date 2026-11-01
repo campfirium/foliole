@@ -1,3 +1,4 @@
+import type { WorkspaceHistoryExecution } from './workspaceHistoryApplyResult';
 import { buildMoveRuntimePayload, mergeMoveResult, moveResultMatchesRequest } from './workspaceMoveCommit';
 import { confirmMoveReadingContent } from './workspaceMoveContentBarrier';
 import { refreshMoveStructure } from './workspaceMoveRefresh';
@@ -29,7 +30,7 @@ function buildRestorePatch(state: WorkspaceState, entry: WorkspaceStructureMoveE
 }
 
 export async function applyStructureMoveHistory(
-  get: () => WorkspaceState, entry: WorkspaceStructureMoveEntry, mode: 'redo' | 'undo'
+  get: () => WorkspaceState, entry: WorkspaceStructureMoveEntry, mode: 'redo' | 'undo', execution?: WorkspaceHistoryExecution
 ) {
   let before = get();
   if (!isStructureMoveApplicable(before, entry, mode)) return null;
@@ -40,11 +41,13 @@ export async function applyStructureMoveHistory(
   if (!isStructureMoveApplicable(before, entry, mode)) return null;
   patch = buildRestorePatch(before, entry, mode);
   const payload = buildMoveRuntimePayload(before, patch, entry.rootNodeIds, true);
+  if (execution && !execution.beforeSubmit()) return null;
   const result = await getWorkspaceMutationRepository().syncMoveNodes(payload);
   if (!result || !moveResultMatchesRequest(payload, result)) {
     await refreshMoveStructure(before, payload);
     return null;
   }
+  execution?.committed(entry);
   const merged = mergeMoveResult(before, get(), payload, result);
   if (merged) return merged;
   await refreshMoveStructure(before, payload);

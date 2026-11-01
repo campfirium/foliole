@@ -109,7 +109,7 @@ it('serializes redo requested while annotation undo is still pending', async () 
   expect(historyActions.redoEditorOperation()).toBe(true);
   pendingDelete.resolve({ deletedNodeIds: [createdId!] });
 
-  await vi.waitFor(() => expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith({ nodeIds: [createdId] }));
+  await vi.waitFor(() => expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith(expect.objectContaining({ nodeIds: [createdId], annotationHistory: expect.objectContaining({ mode: 'replay' }) })));
   await vi.waitFor(() => expect(harness.getState().trashedNodeIds).not.toContain(createdId));
   expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1').undoStack).toHaveLength(1);
 });
@@ -129,7 +129,7 @@ it('keeps later redo commands after an extra queued undo becomes a no-op', async
   expect(historyActions.redoEditorOperation()).toBe(true);
   pendingDelete.resolve({ deletedNodeIds: [createdId!] });
 
-  await vi.waitFor(() => expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith({ nodeIds: [createdId] }));
+  await vi.waitFor(() => expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith(expect.objectContaining({ nodeIds: [createdId], annotationHistory: expect.objectContaining({ mode: 'replay' }) })));
   pendingRestore.resolve({ restoredNodeIds: [createdId!], skippedConflicts: [] });
   await vi.waitFor(() => expect(harness.getState().trashedNodeIds).not.toContain(createdId));
   expect(getEditorOperationSession(harness.getState().editorOperationHistory, 'node-1')).toMatchObject({
@@ -161,7 +161,7 @@ it('preserves every rapid undo and redo across annotation and text history', asy
   expect(historyActions.redoEditorOperation(context)).toBe(true);
   pendingDelete.resolve({ deletedNodeIds: [createdId!] });
 
-  await vi.waitFor(() => expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith({ nodeIds: [createdId] }));
+  await vi.waitFor(() => expect(syncRestoreNodesToRuntime).toHaveBeenCalledWith(expect.objectContaining({ nodeIds: [createdId], annotationHistory: expect.objectContaining({ mode: 'replay' }) })));
   pendingRestore.resolve({ restoredNodeIds: [createdId!], skippedConflicts: [] });
   await vi.waitFor(() => expect(harness.getState().trashedNodeIds).not.toContain(createdId));
   expect(harness.getState().nodesById['node-1']?.content).toBe(afterContent);

@@ -191,3 +191,25 @@ it('resumes local adoption after interruption and database reopening without pub
   expect(completed.restore).toBeNull();
   expect((await provider!.send('reopen')).library.nodesById['local-before']).toBeUndefined();
 });
+
+
+it('keeps a round pending when its upstream session closes and converges on the next round', async () => {
+  const peers = await setup(false);
+  const [applicant, provider] = workers;
+  for (const worker of [applicant!, provider!]) {
+    await worker.send('sessionStop');
+    await worker.send('register', { members: peers.map(peer => ({ device: peer.device, name: 'Member' })) });
+  }
+  await applicant!.send('seed', { id: 'local-session-switch', content: 'Local content' });
+  await provider!.send('seed', { id: 'remote-session-switch', content: 'Remote content' });
+  await expect(applicant!.send('sessionSwitchSync', { ...peers[1]! })).resolves.toMatchObject({
+    switched: true, cancelled: true, result: { complete: false }
+  });
+  await sync(applicant!, peers[1]!);
+  for (const worker of [applicant!, provider!]) {
+    const state = await worker.send('reopen');
+    expect(state.library.nodesById['local-session-switch']?.content).toBe('Local content');
+    expect(state.library.nodesById['remote-session-switch']?.content).toBe('Remote content');
+    expect(state.restore).toBeNull();
+  }
+});

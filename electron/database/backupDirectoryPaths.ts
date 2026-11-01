@@ -1,5 +1,12 @@
 import path from 'node:path';
 
+export class BackupDirectoryPathError extends Error {
+  constructor(readonly directory: string, readonly extra = false) {
+    super(`${extra ? 'Extra backup' : 'Backup'} location is not valid on this device. Choose a folder on this device or reset the location.`);
+    this.name = 'BackupDirectoryPathError';
+  }
+}
+
 export function isBackupDirectoryPath(value: string, platform = process.platform): boolean {
   if (!value) return true;
   if (value.includes('\0')) return false;
@@ -16,5 +23,5 @@ export function normalizeBackupDirectory(value: unknown, platform = process.plat
 
 export function assertBackupDirectoryPath(value: string, extra = false) {
   if (isBackupDirectoryPath(value)) return;
-  throw new Error(`${extra ? 'Extra backup' : 'Backup'} location is not valid on this device. Choose a folder on this device or reset the location.`);
+  throw new BackupDirectoryPathError(value, extra);
 }

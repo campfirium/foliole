@@ -1,5 +1,8 @@
 import { cursorLineEnd, cursorLineStart } from '@codemirror/commands';
+import { EditorState } from '@codemirror/state';
 import { afterEach, describe, expect, it } from 'vitest';
+
+import { nativeTextHistoryExtensions } from '../model/nativeTextHistoryGroups';
 
 import { handleMarkdownCompatibleHtmlPaste } from './htmlPaste';
 import { nativeHistoryTestView } from './nativeTextHistory.testSupport';
@@ -91,4 +94,19 @@ describe('CodeMirror text history selection', () => {
     expect(runtime.replay('redo')).toBe(true);
     expect(runtime.view.state.selection.eq(after)).toBe(true);
   });
+});
+
+
+it('presents a background replay selection once without stealing later caret movement', () => {
+  const runtime = createView();
+  const state = EditorState.create({ doc: 'Restored answer', selection: { anchor: 2, head: 9 },
+    extensions: nativeTextHistoryExtensions });
+  const presentation = {};
+  runtime.controller.bind(() => ({ state, boundary: null, presentation }), runtime.view);
+  runtime.setContent(state.doc.toString());
+  expect(runtime.view.state.selection.main).toMatchObject({ anchor: 2, head: 9 });
+  expect(runtime.view.hasFocus).toBe(true);
+  runtime.view.dispatch({ selection: { anchor: 4 } });
+  runtime.controller.settle(runtime.view);
+  expect(runtime.view.state.selection.main.head).toBe(4);
 });

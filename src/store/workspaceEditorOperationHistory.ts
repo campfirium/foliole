@@ -2,26 +2,16 @@ import {
   getEditorOperationTopEntry,
   isPendingEditorAnnotationEntry,
   pushEditorOperationEntry,
-  removeEditorOperationEntry,
-  type EditorAnnotationOperationEntry,
   type EditorOperationHistoryInput
 } from '../features/editor/model/editorOperationHistory';
 
 import {
-  confirmPendingEditorAnnotationEntry,
-  isSameEditorAnnotationEntry,
   settleEditorAnnotationCreation
 } from './workspaceEditorAnnotationCreationSettlement';
+import { deleteEditorAnnotations } from './workspaceEditorAnnotationDelete';
 import { startEditorAnnotationHistoryMutation } from './workspaceEditorAnnotationHistoryMutation';
-import { createEditorAnnotationDeleteEntry } from './workspaceEditorAnnotationOperationEntry';
-import { applyWorkspaceTextHistory } from './workspaceEditorTextHistory';
-import {
-  hasWorkspaceNodeMutationRuntime,
-  syncNodeContentToRuntime,
-  syncSoftDeleteNodesToRuntime
-} from './workspaceRuntimeSync';
+import { createPendingEditorTextReplays } from './workspaceEditorTextReplayPending';
 import type { EditorOperationApplyContext, WorkspaceState } from './workspaceStoreTypes';
-import { computeDeleteNodesMutation } from './workspaceTrashMutations';
 
 type WorkspaceSet = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState> | WorkspaceState)) => void;
 type WorkspaceGet = () => WorkspaceState;
@@ -96,18 +86,17 @@ function createOperationRunner(set: WorkspaceSet, get: WorkspaceGet) {
     if (!succeeded) return clearQueued(nodeId);
     queueMicrotask(() => drain(nodeId));
   };
+  const textReplays = createPendingEditorTextReplays(get, settle);
   applyForNode = (nodeId, mode, context, queueWhenBlocked = true) => {
     checkScope();
-    if (hasBlockingAnnotation(get, nodeId)) {
+    if (textReplays.has(nodeId) || hasBlockingAnnotation(get, nodeId)) {
       if (!queueWhenBlocked) return 'blocked';
       return enqueue(nodeId, { ...(context ? { context } : {}), mode }) ? 'pending' : 'failed';
     }
     const entry = getEditorOperationTopEntry(get().editorOperationHistory, nodeId, mode);
     if (!entry) return 'noop';
     if (entry.type === 'text.edit') {
-      return applyWorkspaceTextHistory({ entry, mode, nodeId, set, ...(context ? { context } : {}) })
-        ? 'applied'
-        : 'failed';
+      return textReplays.apply({ entry, mode, nodeId, set, ...(context ? { context } : {}) });
     }
     startEditorAnnotationHistoryMutation({
       entry,
@@ -125,67 +114,12 @@ function createOperationRunner(set: WorkspaceSet, get: WorkspaceGet) {
   };
 }
 
-function deleteEditorAnnotations(
-  set: WorkspaceSet,
-  nodeIds: string[],
-  onSettled: (nodeId: string, succeeded: boolean) => void
-) {
-  let entry: EditorAnnotationOperationEntry | null = null;
-  let deletedAt = '';
-  set((state) => {
-    const created = createEditorAnnotationDeleteEntry(state, nodeIds);
-    const mutation = computeDeleteNodesMutation(state, nodeIds);
-    if (!created || !mutation) return state;
-    entry = { ...created, canonical: 'pending' };
-    deletedAt = mutation.deletedAt;
-    return { editorOperationHistory: pushEditorOperationEntry(state.editorOperationHistory, entry) };
-  });
-  if (!entry) return;
-  void Promise.resolve(syncSoftDeleteNodesToRuntime({ deletedAt, nodeIds })).then((result) => {
-    const acceptedIds = result?.deletedNodeIds ?? (!hasWorkspaceNodeMutationRuntime() ? nodeIds : []);
-    let settledExactly = false;
-    set((state) => {
-      const acceptedIdSet = new Set(acceptedIds);
-      if (acceptedIds.length !== nodeIds.length || nodeIds.some((id) => !acceptedIdSet.has(id))) {
-        return {
-          editorOperationHistory: removeEditorOperationEntry(
-            state.editorOperationHistory,
-            entry!.nodeId,
-            (item) => isSameEditorAnnotationEntry(item, nodeIds, 'annotation.delete')
-          )
-        };
-      }
-      const mutation = computeDeleteNodesMutation(state, acceptedIds, deletedAt);
-      const confirmed = confirmPendingEditorAnnotationEntry(state, entry!.nodeId, nodeIds);
-      if (!mutation || !confirmed) return state;
-      settledExactly = confirmed.wasTop;
-      mutation.parentNodesToSync.forEach(syncNodeContentToRuntime);
-      return {
-        nodesById: mutation.patch.nodesById,
-        reviewSession: mutation.patch.reviewSession,
-        trashedNodeDeletedAtById: mutation.patch.trashedNodeDeletedAtById,
-        trashedNodeIds: mutation.patch.trashedNodeIds,
-        editorOperationHistory: confirmed.history
-      };
-    });
-    onSettled(entry!.nodeId, settledExactly);
-  }).catch(() => {
-    set((state) => ({
-      editorOperationHistory: removeEditorOperationEntry(
-        state.editorOperationHistory,
-        entry!.nodeId,
-        (item) => isSameEditorAnnotationEntry(item, nodeIds, 'annotation.delete')
-      )
-    }));
-    onSettled(entry!.nodeId, false);
-  });
-}
-
 export function createWorkspaceEditorOperationHistoryActions(set: WorkspaceSet, get: WorkspaceGet) {
   const runner = createOperationRunner(set, get);
   return {
     deleteEditorAnnotationNodes: (nodeIds: string[]) => deleteEditorAnnotations(
       set,
+      get,
       nodeIds,
       (nodeId, succeeded) => runner.settle(nodeId, succeeded)
     ),
@@ -193,6 +127,7 @@ export function createWorkspaceEditorOperationHistoryActions(set: WorkspaceSet, 
       editorOperationHistory: pushEditorOperationEntry(state.editorOperationHistory, entry)
     })),
     redoEditorOperation: (context?: EditorOperationApplyContext) => {
+      if (get().appActionHistory.application) return get().redoApplicationOperation?.(context) ?? false;
       const requestedNodeId = context?.nodeId ?? get().activeNodeId;
       if (!requestedNodeId) return false;
       const nodeId = resolveOperationTarget(get(), requestedNodeId, 'redo');
@@ -205,6 +140,7 @@ export function createWorkspaceEditorOperationHistoryActions(set: WorkspaceSet, 
       }
     },
     undoEditorOperation: (context?: EditorOperationApplyContext) => {
+      if (get().appActionHistory.application) return get().undoApplicationOperation?.(context) ?? false;
       const requestedNodeId = context?.nodeId ?? get().activeNodeId;
       if (!requestedNodeId) return false;
       const nodeId = resolveOperationTarget(get(), requestedNodeId, 'undo');

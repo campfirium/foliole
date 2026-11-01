@@ -41,6 +41,7 @@ export interface EditorTextHistoryInput {
 }
 
 export interface EditorTextEditOperationEntry {
+  applicationOperationId?: string;
   type: 'text.edit';
   nodeId: string;
   target?: EditorTextOperationTarget;
@@ -54,10 +55,21 @@ export interface EditorTextEditOperationEntry {
 }
 
 export interface EditorTextHistoryReplayResult {
+  persistence?: Promise<boolean>;
+  save?: import('./editorTextReplaySave').EditorTextReplaySave;
   nativeState: EditorState;
 }
 
 export interface EditorAnnotationOperationState {
+  applicationOperationId?: string;
+  historyFacts?: import('../../../../lib/core/nodes/annotationHistoryFacts').AnnotationHistoryFact[];
+  historyDeletedAt?: string | null;
+  historyParents?: Array<{
+    nodeId: string;
+    before: import('../../../../lib/platform/nativeWorkspaceNodeContract').NativeWorkspaceImageRegionGroup[] | null;
+    after: import('../../../../lib/platform/nativeWorkspaceNodeContract').NativeWorkspaceImageRegionGroup[] | null;
+  }>;
+
   applyingMode?: 'redo' | 'undo';
   canonical: 'confirmed' | 'pending';
 }
@@ -97,6 +109,7 @@ export interface EditorOperationHistoryInvalidation {
 export type EditorOperationHistoryInput = EditorAnnotationOperationEntry | EditorTextHistoryInput;
 
 export interface EditorOperationHistoryState {
+  application?: import('../../../store/workspaceApplicationHistory').ApplicationHistory | undefined;
   nativeTextStates: Record<string, EditorState>;
   invalidations: EditorOperationHistoryInvalidation[];
   recentNodeIds: string[];

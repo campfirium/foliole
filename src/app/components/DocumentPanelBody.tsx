@@ -50,7 +50,7 @@ interface DocumentPanelBodyProps {
     title: string;
   };
   hasAnswerSection: boolean;
-  onAnswerChange: (answer: string) => void;
+  onAnswerChange: (answer: string, meta?: import('../../features/editor/adapters/EditorAdapter').EditorContentChangeMeta) => void;
   onAnswerImageMetricsChange?: (metrics: BlockImageMetrics | null) => void;
   onAnswerImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onEditorChange: (content: string) => void;

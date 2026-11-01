@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import { resetDailyFlowGeneration } from './harness/dailyFlowGeneration';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
@@ -28,7 +29,7 @@ test('desktop Flow panel does not show Demo preview day controls in normal runti
   await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
 });
 
-test('desktop Resume returns to the current Flow topic', async ({ desktopWindow }) => {
+test('desktop Resume returns to the current Flow topic', async ({ desktopApp, desktopWindow }) => {
   await expectWorkspaceShell(desktopWindow);
   await desktopWindow.evaluate(async () => {
     const stored = await window.electronAPI.invoke('load_workspace_snapshot', {});
@@ -54,6 +55,7 @@ test('desktop Resume returns to the current Flow topic', async ({ desktopWindow 
     globalThis.window.__folioleWorkspaceDebug?.listNodes().some((node) => node.id === 'desktop-flow-resume-topic-2')
   );
 
+  await resetDailyFlowGeneration(desktopApp);
   await desktopWindow.reload();
   await expectWorkspaceShell(desktopWindow);
   const exitFlow = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });

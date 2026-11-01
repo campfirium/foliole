@@ -7,6 +7,7 @@ import {
 import type { Translate } from '../shared/localization/LocalizationProvider';
 
 import { getWorkspaceRedoTitle, getWorkspaceUndoTitle, type WorkspaceActionHistoryState } from './workspaceActionHistory';
+import { getApplicationHistoryTarget } from './workspaceApplicationHistory';
 import { resolveWorkspaceHistoryCommand, type HistoryCommandMode } from './workspaceHistoryCommandState';
 import type { WorkspaceState } from './workspaceStore';
 import type { EditorOperationApplyContext } from './workspaceStoreTypes';
@@ -26,6 +27,17 @@ export function getHistoryCommandState(args: {
   t: Translate;
 }) {
   const { mode, target, t } = args;
+  const application = args.appActionHistory.application;
+  if (application) {
+    const operation = getApplicationHistoryTarget(application, mode);
+    const entry = operation?.entry;
+    const title = !entry ? undefined : operation?.domain === 'workspace' ? entry.title :
+      t(entry.type === 'text.edit' ? 'desktop.command.editorOperation.editText' :
+        entry.type === 'annotation.create' ? 'desktop.command.editorOperation.createAnnotation' : 'desktop.command.editorOperation.deleteAnnotation');
+    return { enabled: Boolean(operation && !operation.blocked),
+      title: title ? t(mode === 'undo' ? 'desktop.command.undoOperation' : 'desktop.command.redoOperation', { operation: title })
+        : t(mode === 'undo' ? 'desktop.command.undo' : 'desktop.command.redo') };
+  }
   if (target.owner === 'workspace') {
     return {
       enabled: Boolean(resolveWorkspaceHistoryCommand(args.appActionHistory, mode)),
@@ -44,9 +56,15 @@ export function getHistoryCommandState(args: {
 export function createHistoryCommands(args: {
   flushPendingEditorDraft?: () => boolean;
   getEditorOperationContext: () => EditorOperationApplyContext | undefined;
-  ws: Pick<WorkspaceState, 'redoEditorOperation' | 'redoWorkspaceAction' | 'undoEditorOperation' | 'undoWorkspaceAction'>;
+  ws: Pick<WorkspaceState, 'redoEditorOperation' | 'redoWorkspaceAction' | 'undoEditorOperation' | 'undoWorkspaceAction'> &
+    Partial<Pick<WorkspaceState, 'appActionHistory' | 'undoApplicationOperation' | 'redoApplicationOperation'>>;
 }) {
   const execute = (mode: HistoryCommandMode) => {
+    if (args.ws.appActionHistory?.application) {
+      args.flushPendingEditorDraft?.();
+      const context = getUndoRouterContentContext(args.getEditorOperationContext());
+      return (mode === 'undo' ? args.ws.undoApplicationOperation : args.ws.redoApplicationOperation)?.(context) ?? false;
+    }
     const owner = getUndoRouterOwner();
     const fallback = owner === 'content' ? args.getEditorOperationContext() : undefined;
     const target = resolveUndoCommandTarget(owner, getUndoRouterContentDocumentId(), fallback?.nodeId ?? null);

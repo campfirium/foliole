@@ -16,6 +16,7 @@ import {
   isNodeCreatePending,
   markNodeCreateConfirmed,
   markNodeContentPersisted,
+  markNodeRevealPersisted,
   waitForNodeCreateConfirmations
 } from './workspaceNodeContentVersionGuard';
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
@@ -34,7 +35,8 @@ const contentPersistQueue = createNodeContentPersistQueue({
   isBlocked: isNodeCreatePending,
   persist: runNodeContentRuntimePersist,
   readContinuation: readContentEditContinuation,
-  continue: continuePendingContentEdit
+  continue: continuePendingContentEdit,
+  scope: args => args.libraryScope
 });
 
 subscribeContentEditAcknowledgements((event) => {
@@ -79,6 +81,10 @@ export async function applyNodeContentRuntimePatch(args: {
 }
 
 async function runNodeContentRuntimePersist(args: {
+  historySave?: import('../features/editor/model/editorTextReplaySave').EditorTextReplaySave | undefined;
+  field?: 'content' | 'reveal';
+  libraryScope?: string | undefined;
+  isCurrent?: (() => boolean) | undefined;
   baseContent?: string | undefined;
   edit?: LocalContentEdit | undefined;
   inputBaseVersionId?: string | undefined;
@@ -93,6 +99,10 @@ async function runNodeContentRuntimePersist(args: {
 }) {
   if (!args.edit) args.edit = captureContentEdit(args.nextNodeForSync, args.baseContent);
   args.inputBaseVersionId ??= args.edit?.baseVersionId;
+  if (args.field === 'reveal' && args.edit) {
+    args.edit.field = 'reveal';
+    args.edit.reveal = args.nextNodeForSync.reveal;
+  }
   const runtimeMetrics = args.diagnosticsEnabled ? createUpdateNodeContentMetrics(true) : args.metrics;
   const runtimeResult = await applyNodeContentRuntimePatch({
     ...args.localState,
@@ -101,6 +111,7 @@ async function runNodeContentRuntimePersist(args: {
     nextNodeForSync: Object.assign({}, args.nextNodeForSync, args.edit ? { contentEdit: args.edit } : {})
   });
   const runtimeAccepted = Boolean(runtimeResult) || !hasWorkspaceNodeMutationRuntime();
+  if (args.isCurrent?.() === false) { args.historySave?.confirm(runtimeAccepted); return runtimeAccepted; }
   applyRuntimeAnchorAcknowledgements(args.set, runtimeResult);
   if (args.diagnosticsEnabled) {
     logUpdateNodeContentDiagnostic({
@@ -115,18 +126,35 @@ async function runNodeContentRuntimePersist(args: {
   if (runtimeAccepted) {
     args.submittedVersionId = runtimeResult?.contentEdit?.submittedVersionId;
     acknowledgeContentEdit({ ...args, edit: args.edit, node: args.nextNodeForSync, result: runtimeResult });
-    markNodeContentPersisted(args.nextNodeForSync.id, args.version);
+    if (args.field === 'reveal') markNodeRevealPersisted(args.nextNodeForSync.id, args.version);
+    else markNodeContentPersisted(args.nextNodeForSync.id, args.version);
   }
+  args.historySave?.confirm(runtimeAccepted);
   return runtimeAccepted;
 }
 
 export function scheduleNodeContentRuntimePersist(args: Parameters<typeof runNodeContentRuntimePersist>[0]) {
+  let libraryScope: string | undefined;
+  args.set(state => { libraryScope = state.libraryScope; return state; });
+  let current = true;
+  const scopedSet: WorkspaceSet = update => args.set(state => {
+    current = state.libraryScope === libraryScope;
+    return current ? (typeof update === 'function' ? update(state) : update) : state;
+  });
+  const isCurrent = () => { scopedSet(state => state); return current; };
   const cacheStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
   syncWorkspaceNodeDocumentCacheFromNode(args.nextNodeForSync);
   args.localState.locatorUpdatedNodesForSync.forEach(syncWorkspaceNodeDocumentCacheFromNode);
   args.metrics.runtimeCacheSyncMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - cacheStartedAt : 0;
   const edit = captureContentEdit(args.nextNodeForSync, args.baseContent);
-  contentPersistQueue.schedule(args.nextNodeForSync.id, { ...args, edit, inputBaseVersionId: edit?.baseVersionId });
+  const commit = contentPersistQueue.schedule(args.nextNodeForSync.id,
+    { ...args, set: scopedSet, libraryScope, isCurrent, edit, inputBaseVersionId: edit?.baseVersionId },
+    { fixed: Boolean(args.historySave) || args.field === 'reveal' });
+  args.historySave?.submit(async () => {
+    await waitForNodeCreateConfirmations([args.nextNodeForSync.id]);
+    return commit.run();
+  });
+  return commit;
 }
 
 export const deferNodeContentRuntimePersist = contentPersistQueue.defer;

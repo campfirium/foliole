@@ -1,18 +1,15 @@
-import { isNodeTitleTruncated, normalizeNodeTitle } from '../../lib/core/nodes/nodeTitleBudget';
-import {
-  replaceUniqueArticleTitleHeading
-} from '../features/nodes/model/articleTitleHeading';
-import { UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
+import { isNodeTitleTruncated } from '../../lib/core/nodes/nodeTitleBudget';
 import { resolveNodeDerivedTitle } from '../features/nodes/model/nodeDerivedTitle';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 import { canSaveNodeText, showNodeTitleShortenedNotice } from '../shared/ui/nodeTextSaveBudget';
 
+import { admitApplicationTitle, settleApplicationAction } from './workspaceApplicationActionAdmission';
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import { createWorkspaceNodeMutationPatch } from './workspaceNodeMutationPatch';
+import { buildRenamedWorkspaceNode, loadWorkspaceTitleDocument } from './workspaceNodeTitleMutation';
 import {
   hasWorkspaceNodeMutationRuntime,
-  syncNodeContentMutationToRuntime,
-  syncNodeRevealMutationToRuntime
+  syncNodeContentMutationToRuntime
 } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
 import { buildCommittedTitleMutation, preserveCurrentBodyInPatch } from './workspaceStructureRenameCommit';
@@ -24,43 +21,23 @@ type WorkspaceSet = (
     | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
 
-function syncUniqueArticleHeadingFromTitle(
-  node: WorkspaceState['nodesById'][string],
-  title: string
-) {
-  if (node.kind !== 'topic') {
-    return node.content;
-  }
-  return replaceUniqueArticleTitleHeading(node.content, title) ?? node.content;
-}
-
 export function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceState['updateNodeTitle'] {
   return async (nodeId, title) => {
+    const { entry: admission, libraryScope } = admitApplicationTitle(set, nodeId, title);
+    const fail = () => { if (admission) set(state => settleApplicationAction(state, admission!.id, null)); return false; };
+    const pendingDocument = loadWorkspaceTitleDocument(set, nodeId);
+    const document = pendingDocument instanceof Promise ? await pendingDocument : pendingDocument;
+    if (document === null) return fail();
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     let localPatch: Partial<WorkspaceState> | null = null;
     let beforeTitle: string | null = null;
     set((state) => {
+      if (state.libraryScope !== libraryScope) return state;
       const node = state.nodesById[nodeId];
-      if (!node || isProtectedRootNode(node)) {
-        return state;
-      }
-      const nextTitle = normalizeNodeTitle(title.trim()) || UNTITLED_NODE_TITLE;
-      if (node.title === nextTitle) {
-        if (isNodeTitleTruncated(title.trim())) showNodeTitleShortenedNotice();
-        return state;
-      }
+      if (!node) return state;
+      const nextNode = buildRenamedWorkspaceNode(node, title, document);
+      if (!nextNode) return state;
       beforeTitle = node.title;
-      const nextContent = syncUniqueArticleHeadingFromTitle(node, nextTitle);
-      const nextNode = {
-        ...node,
-        content: nextContent,
-        hasContent: nextContent.trim().length > 0,
-        hideTitleHeading: false,
-        title: nextTitle,
-        isTitleManual: true,
-        updatedAt: new Date().toISOString()
-      };
-      if (!canSaveNodeText(nextNode)) return state;
       nextNodeForSync = nextNode;
       localPatch = {
         nodesById: {
@@ -70,17 +47,25 @@ export function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceState['
       };
       return state;
     });
-    if (!nextNodeForSync) return false;
+    if (!nextNodeForSync) return fail();
     const shouldUseLocalFallback = !hasWorkspaceNodeMutationRuntime();
     const result = await syncNodeContentMutationToRuntime(nextNodeForSync);
     let applied = false;
     let nodesToCache: WorkspaceState['nodesById'][string][] = [];
     set((state) => {
+      if (state.libraryScope !== libraryScope) return state;
       const committed = buildCommittedTitleMutation({
         beforeTitle, localPatch, nextNodeForSync: nextNodeForSync!, nodeId, result,
-        shouldUseLocalFallback, state
+        shouldUseLocalFallback, state, ...(admission ? { admission } : {})
       });
-      if (!committed) return state;
+      if (!committed) {
+        if (admission) {
+          const accepted = result?.nodes.find(node => node.nodeId === nodeId);
+          applied = Boolean(accepted && result?.updatedNodeIds?.includes(nodeId));
+          return settleApplicationAction(state, admission.id, applied ? { ...admission, afterTitle: accepted!.title } : null);
+        }
+        return state;
+      }
       applied = true;
       nodesToCache = committed.nodesToCache;
       return committed.patch;
@@ -143,46 +128,4 @@ export function createUpdateNodeDerivedTitleAction(set: WorkspaceSet): Workspace
   };
 }
 
-export function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceState['updateNodeReveal'] {
-  return async (nodeId, reveal) => {
-    let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
-    let localPatch: Partial<WorkspaceState> | null = null;
-    set((state) => {
-      const node = state.nodesById[nodeId];
-      if (!node || isProtectedRootNode(node) || node.reveal === null) {
-        return state;
-      }
-      const nextNode = {
-        ...node,
-        hasReveal: reveal !== null,
-        reveal,
-        updatedAt: new Date().toISOString()
-      };
-      if (!canSaveNodeText(nextNode)) return state;
-      nextNodeForSync = nextNode;
-      localPatch = {
-        nodesById: {
-          ...state.nodesById,
-          [nodeId]: nextNode
-        }
-      };
-      return state;
-    });
-    if (!nextNodeForSync) return false;
-    const shouldUseLocalFallback = !hasWorkspaceNodeMutationRuntime();
-    const result = await syncNodeRevealMutationToRuntime(nextNodeForSync);
-    let applied = false;
-    set((state) => {
-      const acceptedPatch = result
-        ? createWorkspaceNodeMutationPatch(state, result)
-        : shouldUseLocalFallback ? localPatch : null;
-      if (!acceptedPatch) return state;
-      applied = true;
-      return acceptedPatch;
-    });
-    if (applied) {
-      syncWorkspaceNodeDocumentCacheFromNode(nextNodeForSync);
-    }
-    return applied;
-  };
-}
+export { createUpdateNodeRevealAction } from './workspaceStoreRevealAction';

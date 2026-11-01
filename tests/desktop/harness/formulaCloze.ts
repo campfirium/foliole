@@ -85,7 +85,7 @@ export async function readFormulaClozeCreateEventCount(desktopWindow: Page) {
 }
 
 export async function dragFormulaClozeRegion(desktopWindow: Page) {
-  await desktopWindow.waitForSelector('.prompt-editor-host .cm-md-math-widget-block');
+  await desktopWindow.locator('.prompt-editor-host .cm-md-math-widget-block').click({ trial: true });
   const box = await desktopWindow.evaluate(() => {
     const getFormulaLeafRectsInPage = () => {
       const visualRoot = document.querySelector('.prompt-editor-host .cm-md-math-widget-block .katex-html');
@@ -117,7 +117,7 @@ export async function dragFormulaClozeRegion(desktopWindow: Page) {
 }
 
 export async function dragFirstFormulaRowLeftRegion(desktopWindow: Page) {
-  await desktopWindow.waitForSelector('.prompt-editor-host .cm-md-math-widget-block');
+  await desktopWindow.locator('.prompt-editor-host .cm-md-math-widget-block').click({ trial: true });
   const box = await desktopWindow.evaluate(() => {
     const getFormulaLeafRectsInPage = () => {
       const visualRoot = document.querySelector('.prompt-editor-host .cm-md-math-widget-block .katex-html');

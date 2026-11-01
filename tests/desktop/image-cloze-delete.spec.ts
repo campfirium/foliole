@@ -1,9 +1,13 @@
+import fs from 'node:fs';
+
 import type { Page } from '@playwright/test';
 
+import { redoShortcut, undoShortcut } from './harness/contextualContentHistory';
 import { expect, test } from './harness/fixtures';
+import { loadNodeDocument, loadWorkspaceSnapshot } from './harness/localDataFileAcceptance';
+import { expectWorkspaceShell } from './harness/settings';
 
-const DEBUG_PNG_BASE64 =
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a2d8AAAAASUVORK5CYII=';
+const DEBUG_PNG_BASE64 = fs.readFileSync('assets/brand/foliole-leaf-tight.png').toString('base64');
 
 async function seedImageTopic(desktopWindow: Page) {
   const seeded = await desktopWindow.evaluate(async ({ debugPngBase64 }) => {
@@ -61,6 +65,8 @@ async function waitForImageSurface(desktopWindow: Page) {
 
 async function dragCreateRegion(desktopWindow: Page) {
   const surface = await waitForImageSurface(desktopWindow);
+  await surface.hover();
+  await expect(surface.locator('.cm-md-image-cloze-overlay')).toBeVisible();
   const box = await surface.boundingBox();
   if (!box) {
     throw new Error('missing image surface box');
@@ -73,33 +79,10 @@ async function dragCreateRegion(desktopWindow: Page) {
 }
 
 async function clickRegionBorder(desktopWindow: Page) {
-  await desktopWindow.evaluate(() => {
-    const overlay = document.querySelector('.cm-md-image-cloze-overlay') as HTMLElement | null;
-    const region = document.querySelector('.cm-md-image-cloze-region') as HTMLElement | null;
-    const surface = document.querySelector('.cm-md-image-surface-block') as HTMLElement | null;
-    if (!overlay || !region || !surface) {
-      throw new Error('missing image cloze selection surface');
-    }
-    surface.dispatchEvent(new Event('pointerenter', { bubbles: true }));
-    const overlayRect = overlay.getBoundingClientRect();
-    const regionRect = region.getBoundingClientRect();
-    const clientX = regionRect.right - 4;
-    const clientY = regionRect.bottom - 4;
-    overlay.dispatchEvent(new PointerEvent('pointermove', {
-      bubbles: true,
-      button: 0,
-      clientX,
-      clientY,
-      pointerId: 7
-    }));
-    overlay.dispatchEvent(new PointerEvent('pointerdown', {
-      bubbles: true,
-      button: 0,
-      clientX: Math.max(overlayRect.left, Math.min(overlayRect.right, clientX)),
-      clientY: Math.max(overlayRect.top, Math.min(overlayRect.bottom, clientY)),
-      pointerId: 7
-    }));
-  });
+  const region = desktopWindow.locator('.cm-md-image-cloze-region').first();
+  const bounds = await region.boundingBox();
+  if (!bounds) throw new Error('Missing image cloze region bounds');
+  await desktopWindow.mouse.click(bounds.x + bounds.width - 4, bounds.y + bounds.height - 4);
 }
 
 async function collectSelectionDebugState(desktopWindow: Page) {
@@ -119,18 +102,75 @@ async function collectSelectionDebugState(desktopWindow: Page) {
   });
 }
 
-test('creates and deletes an image cloze region without leaving it on the image', async ({ desktopWindow }) => {
+async function verifyImageDeletionReplay(desktopWindow: Page, childId: string,
+  createdRegions: unknown,
+  testInfo: import('@playwright/test').TestInfo) {
+  const regions = desktopWindow.locator('.cm-md-image-cloze-region');
+  await desktopWindow.keyboard.press(undoShortcut());
+  await expect(regions).toHaveCount(1);
+  await expect.poll(async () => (await loadWorkspaceSnapshot(desktopWindow)).trashedNodeIds).not.toContain(childId);
+  expect((await loadNodeDocument(desktopWindow, 'topic-image-cloze'))?.imageRegions).toEqual(createdRegions);
+  await testInfo.attach('image-cloze-delete-undo', { contentType: 'image/png', body: await desktopWindow.screenshot() });
+  await desktopWindow.keyboard.press(redoShortcut());
+  await expect(regions).toHaveCount(0);
+  await expect.poll(async () => (await loadWorkspaceSnapshot(desktopWindow)).trashedNodeIds).toContain(childId);
+}
+
+test('creates and deletes an image cloze region without leaving it on the image', async ({ desktopWindow }, testInfo) => {
   await seedImageTopic(desktopWindow);
   await openSeededTopic(desktopWindow);
+  const original = await loadNodeDocument(desktopWindow, 'topic-image-cloze');
+  expect(original?.content).toBeTruthy();
   await dragCreateRegion(desktopWindow);
 
   const regions = desktopWindow.locator('.cm-md-image-cloze-region');
   await expect(regions).toHaveCount(1);
+  const childId = await desktopWindow.evaluate(() => window.__folioleWorkspaceDebug!.listNodes()
+    .map((node) => window.__folioleWorkspaceDebug!.getNode(node.id))
+    .find((node) => node?.parentNodeId === 'topic-image-cloze' && node.anchorKind === 'cloze')?.id);
+  expect(childId).toBeTruthy();
+  const childBefore = await loadNodeDocument(desktopWindow, childId!);
+  expect(childBefore?.content).toBeTruthy();
+  expect(childBefore?.reveal).toBeTruthy();
+
+  const createdRegions = (await loadNodeDocument(desktopWindow, 'topic-image-cloze'))?.imageRegions;
+  await desktopWindow.evaluate(() => window.__folioleDebug?.setEditorSelection?.('prompt-editor', 0, 0));
+  await desktopWindow.keyboard.press(undoShortcut());
+  await expect(regions).toHaveCount(0);
+  await expect.poll(async () => (await loadWorkspaceSnapshot(desktopWindow)).trashedNodeIds).toContain(childId);
+  expect((await loadNodeDocument(desktopWindow, 'topic-image-cloze'))?.imageRegions ?? null).toBeNull();
+  await desktopWindow.keyboard.press(redoShortcut());
+  await expect(regions).toHaveCount(1);
+  await expect.poll(async () => (await loadWorkspaceSnapshot(desktopWindow)).trashedNodeIds).not.toContain(childId);
+  expect((await loadNodeDocument(desktopWindow, 'topic-image-cloze'))?.imageRegions).toEqual(createdRegions);
 
   await clickRegionBorder(desktopWindow);
   console.log(JSON.stringify(await collectSelectionDebugState(desktopWindow), null, 2));
   await expect(desktopWindow.getByRole('button', { name: 'Delete image cloze' })).toBeVisible();
   await desktopWindow.getByRole('button', { name: 'Delete image cloze' }).click();
-
-  await expect(regions).toHaveCount(0);
+  const invocation = await desktopWindow.evaluate(() => window.__FOLIOLE_DESKTOP_DEBUG_PROBE__?.getSnapshot());
+  try {
+    await expect(regions).toHaveCount(0);
+    await expect.poll(async () => (await loadWorkspaceSnapshot(desktopWindow)).trashedNodeIds).toContain(childId);
+    await verifyImageDeletionReplay(desktopWindow, childId!, createdRegions, testInfo);
+    await desktopWindow.reload();
+    await expectWorkspaceShell(desktopWindow);
+    await openSeededTopic(desktopWindow);
+    await waitForImageSurface(desktopWindow);
+    await expect(regions).toHaveCount(0);
+    expect((await loadWorkspaceSnapshot(desktopWindow)).trashedNodeIds).toContain(childId);
+    expect((await loadNodeDocument(desktopWindow, 'topic-image-cloze'))?.content).toBe(original?.content);
+    const childAfter = await loadNodeDocument(desktopWindow, childId!);
+    expect(childAfter?.content).toBe(childBefore?.content);
+    expect(childAfter?.reveal).toBe(childBefore?.reveal);
+    await testInfo.attach('image-cloze-delete-after-reopen', {
+      contentType: 'image/png', body: await desktopWindow.screenshot()
+    });
+  } finally {
+    await testInfo.attach('image-cloze-delete-facts', { contentType: 'application/json', body: Buffer.from(JSON.stringify({
+      invocation, snapshot: await loadWorkspaceSnapshot(desktopWindow),
+      renderer: await desktopWindow.evaluate(() => window.__folioleWorkspaceDebug!.listNodes()
+        .map((node) => window.__folioleWorkspaceDebug!.getNode(node.id)))
+    }, null, 2)) });
+  }
 });

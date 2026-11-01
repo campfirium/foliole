@@ -139,9 +139,16 @@ describe('app controller editor history handlers', () => {
     });
   });
 
-  it('matches text history against the current editor document instead of the stale store body', () => {
+});
+
+describe('app controller text replay receipt', () => {
+  it('matches text history against the current editor document and tracks its exact save', async () => {
     const { args } = createArgs();
-    const applyTextHistory = vi.fn(() => true);
+    const nativeState = {} as never;
+    const applyTextHistory = vi.fn((_entry, _mode, save) => {
+      save.submit(async () => true);
+      return { nativeState };
+    });
     let editorContent = 'Current unsaved editor body';
     args.runtime.editorRef = {
       current: { applyTextHistory, getContent: () => editorContent }
@@ -155,7 +162,9 @@ describe('app controller editor history handlers', () => {
     });
     editorContent = 'Newer queued body';
     expect(context?.getCurrentContent?.()).toBe('Newer queued body');
-    expect(context?.applyText({} as never, 'undo')).toBe(true);
-    expect(applyTextHistory).toHaveBeenCalledWith({}, 'undo');
+    const applied = context?.applyText({} as never, 'undo');
+    expect(applied).toMatchObject({ nativeState, persistence: expect.any(Promise) });
+    if (applied && typeof applied === 'object') await expect(applied.persistence).resolves.toBe(true);
+    expect(applyTextHistory).toHaveBeenCalledWith({}, 'undo', expect.objectContaining({ requestId: expect.any(String) }));
   });
 });

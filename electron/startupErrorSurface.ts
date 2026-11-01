@@ -4,6 +4,7 @@ import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnos
 import { appendBootEvent } from './ipc/boot.js';
 import { resolveAppPaths } from './ipc/paths.js';
 import type { StartupRendererView } from './rendererLoader.js';
+import { recoverStartupBackupDirectory } from './startupBackupDirectoryRecovery.js';
 
 type LoadMainWindow = (window: BrowserWindow, startupView?: StartupRendererView | null) => Promise<void>;
 
@@ -51,6 +52,13 @@ export async function loadStartupErrorSurface(args: {
     await args.loadMainWindow(args.window, createStartupErrorView(args.error, args.moduleLabel));
     if (!args.window.isVisible()) {
       args.window.show();
+    }
+    if (args.moduleLabel === 'Database migration') {
+      try { await recoverStartupBackupDirectory(args.error, args.window); }
+      catch (error) {
+        await reportStartupRuntimeServicesFailure(error, args.moduleLabel);
+        if (!args.window.isDestroyed()) await args.loadMainWindow(args.window, createStartupErrorView(error, args.moduleLabel));
+      }
     }
   }
 }

@@ -74,9 +74,9 @@ function handleCreateNodeCommand(args: Record<string, unknown>, kind: 'folder' |
 
 function handleSoftDeleteNodeCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
   const parsed = parseSoftDeleteNodesArgs(args);
-  softDeleteNodesWithParents(parsed);
+  const annotationHistory = softDeleteNodesWithParents(parsed);
   scheduleMirrorSync([...parsed.nodeIds, ...(parsed.parentUpdates ?? []).map((parent) => parent.nodeId)]);
-  return completeWorkspaceMutation({ deletedNodeIds: parsed.nodeIds }, originWindow, { kind: 'nodes',
+  return completeWorkspaceMutation({ deletedNodeIds: parsed.nodeIds, ...(annotationHistory ? { annotationHistory } : {}) }, originWindow, { kind: 'nodes',
     nodeIds: [...parsed.nodeIds, ...parsed.parentUpdates?.map(parent => parent.nodeId) ?? []], structure: true });
 }
 

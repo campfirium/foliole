@@ -16,3 +16,8 @@ export function appliedWorkspaceHistory(
 ): WorkspaceHistoryApplyResult {
   return { entry, patch, status: 'applied' };
 }
+
+export interface WorkspaceHistoryExecution {
+  beforeSubmit: () => boolean;
+  committed: (entry: WorkspaceActionHistoryEntry) => void;
+}

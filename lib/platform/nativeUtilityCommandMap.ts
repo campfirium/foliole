@@ -92,6 +92,7 @@ export type NativeUtilityCommandMap = {
     args: {
       enabledCommandIds: string[];
       shortcutAccelerators?: { accelerator: string; commandId: string }[];
+      history?: { undoTitle: string; redoTitle: string; nativeEditing: boolean };
     };
     result: null;
   };

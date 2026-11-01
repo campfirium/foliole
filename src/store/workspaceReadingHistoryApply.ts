@@ -11,7 +11,7 @@ import {
 } from './workspaceActionHistoryReading';
 import { hasPersistentDailyFlow, hasTargetedDailyFlow, saveDailyHistory } from './workspaceDailyFlowMutations';
 import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
-import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult } from './workspaceHistoryApplyResult';
+import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult, type WorkspaceHistoryExecution } from './workspaceHistoryApplyResult';
 import {
   applyWorkspaceHistoryContext,
   isSameWorkspaceReviewSession
@@ -65,6 +65,7 @@ function buildApplyNodes(
 }
 
 export async function applyWorkspaceReadingHistory(args: {
+  execution?: WorkspaceHistoryExecution;
   entry: WorkspaceTopicDismissHistoryEntry;
   get: () => WorkspaceState;
   mode: 'redo' | 'undo';
@@ -85,6 +86,7 @@ export async function applyWorkspaceReadingHistory(args: {
   const beforeNodes = args.get().nodesById;
   let learning: Record<string, DailyFlowLearningReceipt> | undefined;
   let displayNodes: Record<string, WorkspaceNodeSnapshot> | undefined;
+  if (args.execution && !args.execution.beforeSubmit()) return { status: 'invalid' };
   try {
     const persisted = !args.entry.standalone && hasPersistentDailyFlow(args.get().reviewSession)
       ? await saveDailyHistory({ session: args.get().reviewSession, entry: args.entry, mode: args.mode, now: args.mutationTimestamp, knownNodes: args.get().nodesById })
@@ -100,6 +102,7 @@ export async function applyWorkspaceReadingHistory(args: {
   } catch (error) {
     return { status: isWorkspacePartialPersistenceError(error) ? 'invalid' : 'failed' };
   }
+  args.execution?.committed({ ...args.entry, mutationTimestamp: args.mutationTimestamp });
   const latest = args.get();
   const affectedIds = [args.entry.nodeId, ...(args.entry.relatedReadings ?? []).map(value => value.nodeId)];
   if (affectedIds.some(nodeId => !isSameNodeReading(beforeNodes[nodeId], latest.nodesById[nodeId]))) {

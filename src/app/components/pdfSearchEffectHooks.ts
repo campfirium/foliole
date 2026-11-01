@@ -47,6 +47,7 @@ function runPdfSearchCycle(args: {
   lastRequestIdRef: { current: number | null };
   lastScrolledMatchIdRef: { current: string | null };
   matches: PdfSearchArgs['matches'];
+  positionReady: boolean;
   onSearchDebugChange: (debug: PdfSearchDebugInfo) => void;
   onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
   onSearchRequestHandled?: (requestId: number) => void;
@@ -58,6 +59,7 @@ function runPdfSearchCycle(args: {
   searchTarget: PdfSearchTarget | null;
   totalPages: number;
 }) {
+  if (!args.positionReady) return;
   const matches = collectIndexedPdfSearchMatches(args.matches, args.pageElementsRef);
   args.onSearchDebugChange({ pages: [] });
   if (matches.length === 0) {
@@ -159,6 +161,7 @@ function useRunPdfSearchCycleEffect(args: PdfSearchArgs, stateRefs: PdfSearchSta
   }, [
     args.pageElementsRef,
     args.matches,
+    args.positionReady,
     args.pageTextByNumberRef,
     args.scrollContainerRef,
     args.searchQuery,
@@ -193,6 +196,7 @@ function runActivePdfSearchCycle(
     container,
     pageElementsRef: args.pageElementsRef,
     matches: args.matches,
+    positionReady: args.positionReady ?? true,
     query,
     searchRequest: args.searchRequest,
     searchTarget: args.searchTarget,

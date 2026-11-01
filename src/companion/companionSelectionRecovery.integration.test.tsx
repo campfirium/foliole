@@ -70,6 +70,12 @@ const payload: SelectionCommandPayload = {
     range: { from: 6, to: 10 }, locator: { from: 6, to: 10, originalText: 'Beta' } }]
 };
 
+const replacementPayload: SelectionCommandPayload = {
+  parentNodeId: 'source', anchorId: 'anchor-gamma', selectionText: 'Gamma', clozeContent: 'Alpha Beta [...]',
+  entries: [{ anchorId: 'anchor-gamma', selectionText: 'Gamma', clozeContent: 'Alpha Beta [...]',
+    range: { from: 11, to: 16 }, locator: { from: 11, to: 16, originalText: 'Gamma' } }]
+};
+
 function AnnotationSurface({ initial }: { initial: NativeCompanionWorkspaceSyncState }) {
   const [state, setState] = useState(initial);
   const [open, setOpen] = useState(true);
@@ -85,7 +91,7 @@ function AnnotationSurface({ initial }: { initial: NativeCompanionWorkspaceSyncS
     <button onClick={async () => setState(await loadCompanionWorkspaceSyncState())}>Refresh workspace</button>
     <button onClick={() => setOpen(false)}>Dismiss</button>
     <button onClick={() => setOpen(true)}>Open selection</button>
-    <button onClick={() => setSelection({ ...payload, anchorId: 'another-anchor' })}>Change selection</button>
+    <button onClick={() => setSelection(replacementPayload)}>Change selection</button>
     <SelectionAnnotationToolbarLayer onCreateSelectionAnnotation={save}
     onClose={() => setOpen(false)} snapshot={state.workspace_snapshot}
     resolveSelectionPayload={() => selection}
@@ -183,7 +189,7 @@ it.each(['reopen', 'replace'])('isolates the previous pending save when selectio
   const original = workspaceRepository.refreshCompanionWorkspaceAfterMutation;
   let finish!: () => void;
   const waiting = new Promise<void>((resolve) => { finish = resolve; });
-  vi.spyOn(workspaceRepository, 'refreshCompanionWorkspaceAfterMutation').mockImplementationOnce(async (snapshot) => {
+  const refresh = vi.spyOn(workspaceRepository, 'refreshCompanionWorkspaceAfterMutation').mockImplementationOnce(async (snapshot) => {
     await waiting;
     return original(snapshot);
   });
@@ -196,11 +202,19 @@ it.each(['reopen', 'replace'])('isolates the previous pending save when selectio
   } else fireEvent.click(screen.getByRole('button', { name: 'Change selection' }));
   fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
   fireEvent.change(screen.getByPlaceholderText('Add annotation...'), { target: { value: 'New draft' } });
-  await act(async () => { finish(); await waiting; });
+  await act(async () => { finish(); await refresh.mock.results[0]!.value; });
   expect(screen.getByPlaceholderText('Add annotation...')).toHaveValue('New draft');
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(screen.queryByRole('toolbar')).toBeNull());
   expect(savedAnnotations()).toHaveLength(2);
+  expect(savedAnnotations()).toEqual(expect.arrayContaining([
+    expect.objectContaining({ content: 'Beta' }),
+    expect.objectContaining({ content: `${mode === 'replace' ? 'Gamma' : 'Beta'}\n※ New draft` })
+  ]));
+  const saved = savedAnnotations();
+  await closeIosCompanionDatabase();
+  await openLibrary();
+  expect(savedAnnotations()).toEqual(saved);
 });
 
 it('starts a fresh selection after dismissing a saved annotation with a failed refresh', async () => {

@@ -49,7 +49,7 @@ it('passes prepared runtime values to persistence without JSON encoding or deep 
       activeNodeId: 'topic', nodeOrder: ['topic'], trashedNodeIds: [],
       nodesById: { topic: {
         id: 'topic', kind: 'topic', title: 'Topic', content: '', reveal: null,
-        hasContent: false, hasReveal: false, collections,
+        hasContent: true, hasReveal: false, collections,
         createdAt: '2026-10-28T00:00:00.000Z', updatedAt: '2026-10-28T00:00:00.000Z'
       } }
     } : null);

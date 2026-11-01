@@ -16,6 +16,7 @@ import {
   applyReadingSnapshot,
   applyRelatedReadingSnapshots,
   areRelatedReadingsValid} from './workspaceActionHistoryReading';
+import { settleApplicationAction } from './workspaceApplicationActionAdmission';
 import { prepareWorkspaceDismissLearning } from './workspaceDismissOperationLearning';
 import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { captureWorkspaceHistoryContext, isSameWorkspaceReviewSession } from './workspaceHistoryContext';
@@ -77,6 +78,7 @@ function finishDismissPersistence(args: {
           nodesById: revertDismissEntry(state, args.entry)
         };
       }
+      if (state.appActionHistory.application) return settleApplicationAction(state, args.entry.id, args.entry);
       if (!isDismissEntryApplicable(state, args.entry) ||
           state.appActionHistory.pendingAction?.entry.id !== args.entry.id) {
         return { appActionHistory: createEmptyWorkspaceActionHistory() };

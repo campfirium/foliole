@@ -6,7 +6,7 @@ import type {
 } from '../shared/platform/workspaceRuntimeTypes';
 
 import { acknowledgeCreatedContentVersion } from './workspaceContentEditAcknowledgements';
-import { shouldKeepLocalNodeContent } from './workspaceNodeContentVersionGuard';
+import { shouldKeepLocalNodeContent, hasUnconfirmedNodeReveal } from './workspaceNodeContentVersionGuard';
 import type { WorkspaceState } from './workspaceStore';
 
 type WorkspacePatch = Partial<Pick<WorkspaceState, 'activeNodeId' | 'nodeOrder' | 'nodesById'>>;
@@ -43,6 +43,7 @@ function nodeFromSnapshot(snapshot: WorkspaceRuntimeNodeSnapshot, current?: Node
 }
 
 function mergeRuntimeNodePatch(current: Node | undefined, next: Node): Node {
+  if (current && hasUnconfirmedNodeReveal(current.id)) next = { ...next, reveal: current.reveal, hasReveal: current.hasReveal ?? current.reveal !== null };
   if (!current) {
     return next;
   }

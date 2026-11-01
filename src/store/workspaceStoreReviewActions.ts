@@ -9,6 +9,7 @@ import {
 
 import { resolveReviewQueueReadingAvailableAt } from './reviewQueuePlannerReadingPaths';
 import { isReviewProfileDue } from './reviewQueuePlannerTime';
+import { reserveApplicationGrade } from './workspaceApplicationGradeAdmission';
 import { openWorkspaceDailyFlow } from './workspaceDailyFlowSessionActions';
 import { prepareWorkspaceFlowDay } from './workspaceFlowDayAction';
 import { isSameNodeReview } from './workspaceNodeLearningComparison';
@@ -77,7 +78,7 @@ function createGradeReviewCardAction(
   scheduler: ReviewSchedulerAdapter,
   persistence: WorkspaceReviewPersistenceAdapter
 ): WorkspaceReviewActions['gradeReviewCard'] {
-  return async (grade: ReviewGrade, now = new Date().toISOString()) => {
+  const execute = async (grade: ReviewGrade, now: string, applicationEntryId?: string) => {
     if (!await prepareWorkspaceFlowDay(set, get, now)) return false;
     const rendererBefore = get();
     const currentNodeId = rendererBefore.reviewSession.currentNodeId;
@@ -103,6 +104,7 @@ function createGradeReviewCardAction(
     if (!result) return false;
     const committed = await commitWorkspaceReviewGrade({
       currentNodeId,
+      ...(applicationEntryId ? { applicationEntryId } : {}),
       get,
       grade,
       now,
@@ -118,6 +120,7 @@ function createGradeReviewCardAction(
 
     return true;
   };
+  return (grade, now = new Date().toISOString()) => reserveApplicationGrade(set, get, grade, now, execute);
 }
 function createExitReviewSessionAction(set: WorkspaceSet): WorkspaceReviewActions['exitReviewSession'] {
   return () => set(() => ({ reviewSession: createEmptyReviewSession() }));

@@ -39,8 +39,7 @@ export function resolveWholeImageExistingExcerpt(input: {
   nodesById: Record<string, Node>;
   target: HTMLElement;
   trashedNodeIds: string[];
-}) {
-  const regionId = input.target.dataset.regionId;
+}, regionId = input.target.dataset.regionId) {
   if (!regionId) return null;
   let match: Node | null = null;
   for (const nodeId in input.nodesById) {

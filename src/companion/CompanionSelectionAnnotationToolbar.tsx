@@ -38,7 +38,12 @@ function resolveApplyPayload(props: CompanionSelectionAnnotationToolbarProps) {
 
 export function CompanionSelectionAnnotationToolbar(props: CompanionSelectionAnnotationToolbarProps) {
   if (!props.state) return null;
-  return <ToolbarSession key={props.state.existingHighlight?.nodeId ?? `${props.state.payload?.parentNodeId}:${props.state.payload?.anchorId}`} {...props} />;
+  const payload = props.state.payload;
+  // Recalculating the same selection generates new anchor IDs while a write may still be pending.
+  const sessionKey = props.state.existingHighlight?.nodeId ?? JSON.stringify([
+    payload?.parentNodeId, payload?.entries.map((entry) => entry.locator), payload?.clozeContent
+  ]);
+  return <ToolbarSession key={sessionKey} {...props} />;
 }
 
 function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {

@@ -35,6 +35,7 @@ const config = {
     'python3',
     'rg',
     'sqlite3',
+    'swiftc',
     'taskkill',
     'taskkill.exe',
     'where.exe',

@@ -2,6 +2,7 @@ import { moveOrderChildren } from '../../lib/core/nodes/structureMoveOrder';
 import { canNodeBeMoved } from '../features/nodes/model/nodeMovementRules';
 import type { WorkspaceMoveNodesPayload, WorkspaceMoveNodesResult } from '../shared/platform/workspaceRuntimeTypes';
 
+import { admitApplicationAction, settleApplicationAction } from './workspaceApplicationActionAdmission';
 import { buildMoveRuntimePayload, moveResultMatchesRequest } from './workspaceMoveCommit';
 import { confirmMoveReadingContent } from './workspaceMoveContentBarrier';
 import { commitMoveTransaction } from './workspaceMoveHistoryCommit';
@@ -16,6 +17,7 @@ import { canMoveRootsIntoTarget } from './workspaceNodeKindRules';
 import { collectOrderedSubtreeIds } from './workspaceNodeTreeOrder';
 import type { WorkspaceState } from './workspaceStore';
 import { collectMovedNodeBlock, collectMoveRootIds } from './workspaceStoreMoveHelpers';
+import { createStructureMoveEntry } from './workspaceStructureHistoryEntries';
 
 type WorkspaceSet = (
   partial:
@@ -32,6 +34,7 @@ export type MoveNodesTransaction = {
   movedNodeIds: string[];
   rootNodeIds: string[];
   before: WorkspaceState;
+  applicationEntry?: NonNullable<ReturnType<typeof createStructureMoveEntry>>;
   targetNodeId: string | null;
   intent: NodeDropIntent;
   patch: Pick<WorkspaceState, 'nodeOrder' | 'nodesById'>;
@@ -178,10 +181,16 @@ export function createMoveNodesAction(
     if (!preparedTransaction) {
       return false;
     }
+    const applicationEntry = preparedTransaction.before.appActionHistory.application ? createStructureMoveEntry({
+      before: preparedTransaction.before, after: { ...preparedTransaction.before, ...preparedTransaction.patch },
+      movedNodeIds: preparedTransaction.movedNodeIds, rootNodeIds: preparedTransaction.rootNodeIds
+    }) : null;
+    if (applicationEntry) admitApplicationAction(set, applicationEntry);
+    const fail = () => { if (applicationEntry) set(state => settleApplicationAction(state, applicationEntry.id, null)); return false; };
     if (preparedTransaction.runtimePayload.maintainSequentialReading) {
       const ready = confirmMoveReadingContent(preparedTransaction.before, preparedTransaction.patch.nodesById,
         preparedTransaction.rootNodeIds);
-      if (!(typeof ready === 'boolean' ? ready : await ready)) return false;
+      if (!(typeof ready === 'boolean' ? ready : await ready)) return fail();
     }
     let latest: WorkspaceState = preparedTransaction.before;
     set((state) => { latest = state; return state; });
@@ -189,20 +198,21 @@ export function createMoveNodesAction(
       moveOrderChildren(order.parentNodeId, latest.nodeOrder.filter((id) =>
         latest.nodesById[id]?.parentNodeId === order.parentNodeId)).join('\0') !== order.expectedChildIds.join('\0')) ||
       preparedTransaction.runtimePayload.nodes.some((node) =>
-        latest.nodesById[node.nodeId]?.parentNodeId !== node.expectedParentNodeId)) return false;
+        latest.nodesById[node.nodeId]?.parentNodeId !== node.expectedParentNodeId)) return fail();
     // Saving related content can change node objects without changing the intended structural operation.
     const current = prepareMoveNodesTransaction(latest, nodeIds, targetNodeId, intent);
-    if (!current) return false;
+    if (!current) return fail();
+    if (applicationEntry) current.applicationEntry = applicationEntry;
     const result = await onNodesMoved?.(current.runtimePayload);
     if (!result || !moveResultMatchesRequest(current.runtimePayload, result)) {
       await refreshMoveStructure(latest, current.runtimePayload);
-      return false;
+      return fail();
     }
 
     let applied = false;
     set((state) => {
       const committedPatch = commitMoveTransaction(state, current, result);
-      if (!committedPatch) return state;
+      if (!committedPatch) return applicationEntry ? settleApplicationAction(state, applicationEntry.id, applicationEntry) : state;
       applied = true;
       return committedPatch;
     });

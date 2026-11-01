@@ -94,6 +94,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.onPastedAnchors = options.onPastedAnchors ?? null;
     this.textHistory = new CodeMirrorTextHistoryController({
       discardPending: () => this.externalChangeBuffer.discardPending(),
+      focus: () => this.focus(),
       getNodeId: () => this.nodeId,
       isApplyingExternalContent: () => this.isApplyingExternalContent,
       setApplyingExternalContent: value => { this.isApplyingExternalContent = value; }
@@ -141,8 +142,8 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
   flushContentChanges() { this.externalChangeBuffer.flushNow(); }
   getContent() { return this.view.state.doc.toString(); }
   bindTextHistorySource(source: import('./EditorAdapter').EditorTextHistorySource) { this.textHistory.bind(source, this.view); }
-  applyTextHistory(entry: EditorTextEditOperationEntry, mode: 'redo' | 'undo') {
-    return this.textHistory.apply(entry, mode, this.view);
+  applyTextHistory(entry: EditorTextEditOperationEntry, mode: 'redo' | 'undo', save?: import('../model/editorTextReplaySave').EditorTextReplaySave) {
+    return this.textHistory.apply(entry, mode, this.view, save);
   }
   getDocumentPositionAtViewportY(clientY: number) { return resolveDocumentPositionAtViewportY(this.view, clientY); }
   getDocumentPositionAtClientPoint(clientX: number, clientY: number) { return this.view.posAtCoords({ x: clientX, y: clientY }, false); }
@@ -166,7 +167,9 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.reconfigureLiveMarkdown();
   }
   setReadOnly(readOnly: boolean) {
+    const retainReplayFocus = readOnly && this.view.hasFocus && this.textHistory.ownsReplayFocus(this.view);
     setCodeMirrorReadOnly(this.view, this.readOnlyCompartment, readOnly);
+    if (retainReplayFocus) this.deferredFocus.request();
     this.deferredFocus.resolve();
   }
   setNodeId(nodeId: string | null) {

@@ -1,3 +1,4 @@
+import { hashAnnotationValue } from '../../lib/core/nodes/annotationHistoryFacts';
 import {
   getEditorOperationTopEntry,
   moveEditorOperationEntry,
@@ -6,16 +7,12 @@ import {
   replaceEditorOperationEntryWhere,
   type EditorAnnotationOperationEntry
 } from '../features/editor/model/editorOperationHistory';
+import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 
+import { commitAnnotationDelete as commitDelete, commitAnnotationRestore as commitRestore } from './workspaceEditorAnnotationTrash';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
-import {
-  hasWorkspaceNodeMutationRuntime,
-  syncNodeContentToRuntime,
-  syncRestoreNodesToRuntime,
-  syncSoftDeleteNodesToRuntime
-} from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
-import { computeDeleteNodesMutation, type DeleteNodeMutationResult } from './workspaceTrashMutations';
+import { computeDeleteNodesMutation } from './workspaceTrashMutations';
 
 type WorkspaceSet = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState> | WorkspaceState)) => void;
 type WorkspaceGet = () => WorkspaceState;
@@ -31,32 +28,6 @@ function isApplyingEntry(
   mode: 'redo' | 'undo'
 ) {
   return isSameEntry(candidate, entry) && candidate?.applyingMode === mode;
-}
-
-function confirmsExactNodeSet(expectedNodeIds: string[], acceptedNodeIds: string[]) {
-  if (acceptedNodeIds.length !== expectedNodeIds.length) return false;
-  const accepted = new Set(acceptedNodeIds);
-  return expectedNodeIds.every((nodeId) => accepted.has(nodeId));
-}
-
-function confirmedDeleteResult(mutation: DeleteNodeMutationResult, deletedNodeIds?: string[]) {
-  const acceptedIds = deletedNodeIds ?? mutation.nodeIds;
-  return confirmsExactNodeSet(mutation.nodeIds, acceptedIds) ? acceptedIds : null;
-}
-
-async function commitDelete(entry: EditorAnnotationOperationEntry, snapshot: WorkspaceState) {
-  const mutation = computeDeleteNodesMutation(snapshot, entry.annotations.map(({ nodeId }) => nodeId));
-  if (!mutation) return null;
-  const result = await syncSoftDeleteNodesToRuntime({ deletedAt: mutation.deletedAt, nodeIds: mutation.nodeIds });
-  const deletedNodeIds = result?.deletedNodeIds ?? (!hasWorkspaceNodeMutationRuntime() ? mutation.nodeIds : undefined);
-  return confirmedDeleteResult(mutation, deletedNodeIds) ? { deletedNodeIds: deletedNodeIds!, mutation } : null;
-}
-
-async function commitRestore(entry: EditorAnnotationOperationEntry) {
-  const nodeIds = entry.annotations.map(({ nodeId }) => nodeId);
-  const result = await syncRestoreNodesToRuntime({ nodeIds });
-  const restoredNodeIds = result?.restoredNodeIds ?? (!hasWorkspaceNodeMutationRuntime() ? nodeIds : []);
-  return confirmsExactNodeSet(nodeIds, restoredNodeIds) ? restoredNodeIds : null;
 }
 
 function createRestorePatch(state: WorkspaceState, restoredNodeIds: string[]) {
@@ -86,13 +57,17 @@ function finishDelete(
   let settledExactly = false;
   set((state) => {
     const current = getEditorOperationTopEntry(state.editorOperationHistory, entry.nodeId, mode);
-    const mutation = computeDeleteNodesMutation(state, result.deletedNodeIds, result.mutation.deletedAt);
+    const mutation = computeDeleteNodesMutation(state, result.deletedNodeIds, result.mutation.deletedAt, 'receipt');
     settledExactly = Boolean(
       mutation && current && current.type !== 'text.edit' && isApplyingEntry(current, entry, mode)
     );
-    const history = finishSuccessfulHistory(state, entry, mode, current);
+    const history = finishSuccessfulHistory(state, result.entry, mode, current);
+    if (mutation) for (const parent of result.entry.historyParents ?? []) {
+      const original = state.nodesById[parent.nodeId];
+      if (original && hashAnnotationValue(original.imageRegions) !== hashAnnotationValue(parent.before)) mutation.patch.nodesById[parent.nodeId] = original;
+    }
     if (!mutation) return { editorOperationHistory: history };
-    mutation.parentNodesToSync.forEach(syncNodeContentToRuntime);
+
     return {
       nodesById: mutation.patch.nodesById,
       navigation: mutation.patch.navigation,
@@ -103,6 +78,15 @@ function finishDelete(
     };
   });
   onSettled?.(settledExactly);
+}
+
+function applyRestoredParentRegions(state: WorkspaceState, entry: EditorAnnotationOperationEntry) {
+  const nodesById = { ...state.nodesById };
+  for (const parent of entry.historyParents ?? []) {
+    const current = nodesById[parent.nodeId];
+    if (current && hashAnnotationValue(current.imageRegions) === hashAnnotationValue(parent.after)) nodesById[parent.nodeId] = { ...current, imageRegions: parent.before };
+  }
+  return nodesById;
 }
 
 function finishRestore(
@@ -125,6 +109,7 @@ function finishRestore(
     );
     return {
       ...createRestorePatch(state, restoredNodeIds),
+      nodesById: applyRestoredParentRegions(state, entry),
       editorOperationHistory: finishSuccessfulHistory(state, entry, mode, current)
     };
   });
@@ -169,6 +154,8 @@ export function startEditorAnnotationHistoryMutation(args: {
   get: WorkspaceGet;
   mode: 'redo' | 'undo';
   onSettled?: (succeeded: boolean) => void;
+  onCommitted?: (result: { mode: 'redo' | 'undo'; nodeIds: string[]; entry: EditorAnnotationOperationEntry }) => void;
+  beforeSubmit?: () => boolean;
   set: WorkspaceSet;
 }) {
   const libraryScope = args.get().libraryScope;
@@ -184,18 +171,32 @@ export function startEditorAnnotationHistoryMutation(args: {
       applyingMode: args.mode
     })
   }));
+  const notifyFailure = () => {
+    if (args.get().libraryScope === libraryScope) showAppRuntimeNotice(
+      args.mode === 'undo' ? 'Undo could not be applied.' : 'Redo could not be applied.', 'error');
+  };
   const shouldDelete = (args.entry.type === 'annotation.create') === (args.mode === 'undo');
   if (shouldDelete) {
-    void commitDelete(args.entry, args.get())
-      .then((result) => finishDelete(set, args.entry, args.mode, result, onSettled))
+    void commitDelete(args.entry, args.get(), args.get, args.beforeSubmit)
+      .then((result) => {
+        if (result) args.onCommitted?.({ mode: args.mode, nodeIds: result.deletedNodeIds, entry: result.entry });
+        else notifyFailure();
+        finishDelete(set, args.entry, args.mode, result, onSettled);
+      })
       .catch(() => {
+        notifyFailure();
         finishFailure(set, args.entry, args.mode);
         onSettled(false);
       });
   } else {
-    void commitRestore(args.entry)
-      .then((result) => finishRestore(set, args.entry, args.mode, result, onSettled))
+    void commitRestore(args.entry, args.get, args.beforeSubmit)
+      .then((result) => {
+        if (result) args.onCommitted?.({ mode: args.mode, nodeIds: result, entry: args.entry });
+        else notifyFailure();
+        finishRestore(set, args.entry, args.mode, result, onSettled);
+      })
       .catch(() => {
+        notifyFailure();
         finishFailure(set, args.entry, args.mode);
         onSettled(false);
       });

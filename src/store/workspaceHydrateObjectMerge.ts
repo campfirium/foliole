@@ -1,7 +1,7 @@
 import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
 import type { Node, NodeReadingProfile, NodeReviewProfile } from '../features/nodes/model/nodeTypes';
 
-import { hasUnconfirmedNodeContent } from './workspaceNodeContentVersionGuard';
+import { hasUnconfirmedNodeContent, hasUnconfirmedNodeReveal } from './workspaceNodeContentVersionGuard';
 import type { WorkspacePersistedState, WorkspaceState } from './workspaceStoreTypes';
 
 export function mergeNodeOpenStateById(
@@ -89,6 +89,10 @@ export function mergeHydratedNode(current: Node | undefined, next: Node) {
       review: chooseReviewProfile(current.review, next.review)
     })
   }, chooseDeletedAt(current, next));
+  if (hasUnconfirmedNodeReveal(current.id)) {
+    merged.reveal = current.reveal;
+    merged.hasReveal = current.hasReveal ?? current.reveal !== null;
+  }
   if (next.learningSummary) {
     delete merged.reading;
     delete merged.review;
