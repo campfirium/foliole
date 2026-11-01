@@ -49,11 +49,15 @@ function prepareHandoffBoundary() {
 }
 
 function scan(seconds, numbers, { emit = true, fail = false } = {}) {
-  const proposals = numbers.map(number => ({
-    number, title: `Update ${number}`, baseRefName: 'dev', headRefName: `deps/${number}`,
-    headRefOid: `head-${number}`, author: { login: 'app/dependabot' },
-    url: `https://github.com/owner/repo/pull/${number}`
-  }));
+  const proposals = numbers.map(input => {
+    const number = typeof input === 'object' ? input.number : input;
+    return {
+      number, title: `Update ${number}`, baseRefName: 'dev', headRefName: `deps/${number}`,
+      headRefOid: `head-${number}`, author: { login: 'app/dependabot' },
+      url: `https://github.com/owner/repo/pull/${number}`,
+      ...(typeof input === 'object' ? input : {})
+    };
+  });
   return JSON.parse(execFileSync(process.execPath, [
     '--import', path.join(root, 'clock.mjs'),
     path.join(root, 'scripts/github-desktop-handoff-monitor.mjs'), 'scan',
@@ -98,4 +102,41 @@ describe('Dependabot producer persisted handoffs', () => {
     expect(readState().prs).toEqual({ 1: 'dependabot:dev:1' });
     expect(scan(302, [1]).events).toEqual([]);
   });
+
+  it('delivers both verified bots in one persisted window across failed delivery and restart', () => {
+    const renovate = { number: 2, author: { login: 'app/renovate' } };
+    expect(scan(0, [1]).events).toEqual([]);
+    expect(scan(240, [1, renovate]).events).toEqual([]);
+    expect(scan(300, [1, renovate]).events).toEqual([]);
+    expect(() => scan(540, [1, renovate], { fail: true })).toThrow();
+    expect(readState().prs).toEqual({});
+    const events = scan(541, [renovate, 1]).events;
+    expect(events).toHaveLength(1);
+    expect(events[0].prNumbers).toEqual(['1', '2']);
+    expect(events[0].handlingMode).toBe('classify-then-handle-batch');
+    expect(events[0].prompt).toContain('app/renovate');
+    expect(events[0].prompt).toContain('app/dependabot');
+    expect(Object.keys(readState().prs).sort()).toEqual(['1', '2']);
+    expect(readState().dependabotBatches).toEqual({});
+    expect(scan(600, [1, { ...renovate, headRefOid: 'rebased' }]).events).toEqual([]);
+    expect(fs.readFileSync(deliveries, 'utf8').trim().split('\n')).toHaveLength(1);
+  });
+
+  it('keeps old pending deadlines and delivered review checkpoints when adding Renovate', () => {
+    scan(0, [1]);
+    const state = readState();
+    state.prs['2'] = '2:proposal';
+    state.submitted['pr:4:local'] = { emittedAt: '2026-11-01T00:00:00Z' };
+    fs.writeFileSync(stateFile, JSON.stringify(state));
+    const delivered = { number: 2, author: { login: 'app/renovate' } };
+    const fresh = { number: 3, author: { login: 'app/renovate' } };
+    const legacy = { number: 4, author: { login: 'app/dependabot' } };
+    expect(scan(1799, [1, delivered, fresh, legacy]).events).toEqual([]);
+    const events = scan(1800, [1, delivered, fresh, legacy]).events;
+    expect(events).toHaveLength(1);
+    expect(events[0].prNumbers).toEqual(['1', '3']);
+    expect(readState().prs['2']).toBe('2:proposal');
+    expect(scan(1801, [1, delivered, fresh, legacy]).events).toEqual([]);
+  });
+
 });

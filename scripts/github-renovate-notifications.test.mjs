@@ -16,13 +16,14 @@ import { submitMonitorEvents } from './github-desktop-handoff-monitor.mjs';
 const config = { prs: {
   enabled: true, repository: 'campfirium/foliole', workspace: '/repo',
   dedupeKeyPattern: 'pr:{eventId}', template: 'review.md',
-  includeNoChecks: true, failureBuckets: ['fail']
+  includeNoChecks: true, failureBuckets: ['fail'], batchTemplate: 'batch.md', batchQuietSeconds: 0
 } };
 const proposal = { number: 200, title: 'Update dependency', baseRefName: 'dev',
   author: { login: 'app/renovate' }, headRefName: 'renovate/dependency',
   headRefOid: 'initial-head', url: 'https://github.com/campfirium/foliole/pull/200' };
 const initial = () => ({ actions: {}, issues: {}, prs: {}, submitted: {} });
-const scan = state => listGithubMonitorEvents(config, state, false, [], (_template, data) => data.handlingMode);
+const scan = state => listGithubMonitorEvents(config, state, false, [], (_template, data) => data.handlingMode)
+  .filter(event => !state.submitted[event.dedupeKey]);
 let folder;
 beforeEach(() => {
   github.prs = [{ ...proposal }];
@@ -40,11 +41,11 @@ function deliver(state, events, submit = () => undefined) {
 }
 const restart = () => JSON.parse(fs.readFileSync(path.join(folder, 'state.json'), 'utf8'));
 
-it('delivers a passing Renovate proposal for review once across rebase and checkpoint restart', () => {
+it('delivers a passing Renovate proposal in one handling batch once across rebase and checkpoint restart', () => {
   const state = initial();
   const events = scan(state);
   expect(events).toEqual([expect.objectContaining({
-    number: '200', handlingMode: 'review', prompt: 'review', eventId: '200:proposal'
+    prNumbers: ['200'], handlingMode: 'classify-then-handle-batch', eventId: 'dependabot:dev:200'
   })]);
   deliver(state, events);
   github.prs[0].headRefOid = 'rebased-head';
@@ -55,7 +56,7 @@ it('uses the same proposal identity while checks are absent, pending or passing'
   const state = initial();
   github.checks = [];
   const events = scan(state);
-  expect(events[0]).toMatchObject({ eventId: '200:proposal', handlingMode: 'review' });
+  expect(events[0]).toMatchObject({ eventId: 'dependabot:dev:200', handlingMode: 'classify-then-handle-batch' });
   deliver(state, events);
   github.checks = [{ name: 'CI', bucket: 'pending' }];
   expect(scan(restart())).toEqual([]);
@@ -69,7 +70,7 @@ it('retries a proposal after failed delivery without consuming its checkpoint', 
   expect(events).toHaveLength(1);
   expect(() => deliver(state, events, () => { throw new Error('transport failed'); })).toThrow('transport failed');
   expect(state.prs).toEqual({});
-  expect(scan(state).map(event => event.eventId)).toEqual(['200:proposal']);
+  expect(scan(state).map(event => event.eventId)).toEqual(['dependabot:dev:200']);
 });
 
 it('keeps new failing-check signals after the proposal was delivered', () => {
@@ -86,10 +87,14 @@ it('keeps new failing-check signals after the proposal was delivered', () => {
   expect(scan(restart())).toEqual([]);
 });
 
-it('does not send a second review proposal after an initial failure was already delivered', () => {
+it('still notifies a failing check after a batch containing an already failing proposal', () => {
   github.checks = [{ name: 'CI', bucket: 'fail' }];
   const state = initial();
   deliver(state, scan(state));
+  const failed = scan(restart());
+  expect(failed).toEqual([expect.objectContaining({ eventId: '200:CI', handlingMode: 'review' })]);
+  deliver(state, failed);
+  expect(scan(restart())).toEqual([]);
   github.checks = [{ name: 'CI', bucket: 'pass' }];
   expect(scan(restart())).toEqual([]);
 });

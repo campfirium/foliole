@@ -38,10 +38,10 @@ function batchEvent(config, members, renderTemplate, batchKey) {
   const eventId = `dependabot:${encodeURIComponent(baseRefName)}:${prNumbers.join('-')}`;
   const data = {
     baseRefName, eventId, prNumbers,
-    handoffTitle: `Dependabot batch (${prNumbers.length} PRs) -> ${baseRefName}`,
+    handoffTitle: `Dependency updates (${prNumbers.length} PRs) -> ${baseRefName}`,
     handlingMode: 'classify-then-handle-batch',
     prList: sorted.map((pr) => (
-      `- #${pr.number}: ${pr.title}\n  ${pr.url}\n  Branch: ${pr.headRefName} -> ${pr.baseRefName}; head: ${pr.headRefOid}`
+      `- #${pr.number}: ${pr.title}\n  ${pr.url}\n  Author: ${pr.author.login}; branch: ${pr.headRefName} -> ${pr.baseRefName}; head: ${pr.headRefOid}`
     )).join('\n'),
     repository: config.repository,
     source: 'foliole/github-pr',
@@ -88,13 +88,14 @@ function collectPrEvents(config, state, prs, errors, renderTemplate) {
   state.dependabotBatches ??= {};
   for (const pr of prs) {
     if (pr.isDraft && !config.includeDrafts) continue;
-    if (pr.author?.login === 'app/dependabot') {
-      if (wasNotified(config, state, pr)) continue;
+    const dependencyBot = ['app/dependabot', 'app/renovate'].includes(pr.author?.login);
+    if (dependencyBot && !wasNotified(config, state, pr)) {
       const members = batches.get(pr.baseRefName) ?? [];
       members.push(pr);
       batches.set(pr.baseRefName, members);
       continue;
     }
+    if (pr.author?.login === 'app/dependabot') continue;
     try {
       const event = independentPrEvent(config, state, pr, renderTemplate);
       if (event) events.push(event);

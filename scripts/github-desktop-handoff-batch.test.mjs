@@ -34,7 +34,7 @@ describe('Dependabot batch notifications', () => {
   beforeEach(() => { github.prs = []; });
 
   it('notifies one mixed-risk batch while keeping every other author independent', () => {
-    github.prs = [bot(3, 'Electron update'), bot(1, 'Security update'), bot(2),
+    github.prs = [{ ...bot(3, 'Electron update'), author: { login: 'app/renovate' } }, bot(1, 'Security update'), bot(2),
       { ...bot(4), author: { login: 'octocat' } },
       { ...bot(5), author: { login: 'other-bot' } }];
     const events = scan(stateForScan());
@@ -78,7 +78,8 @@ describe('Dependabot batch notifications', () => {
   });
 
   it('keeps target branches separate and excludes drafts without consuming them', () => {
-    github.prs = [bot(1), bot(2, 'Update', 'main'), { ...bot(3), isDraft: true }];
+    github.prs = [bot(1), { ...bot(2, 'Update', 'main'), author: { login: 'app/renovate' } },
+      { ...bot(3), author: { login: 'app/renovate' }, isDraft: true }];
     const state = stateForScan();
     const events = scan(state);
     expect(events.map((event) => event.prNumbers)).toEqual([['1'], ['2']]);
