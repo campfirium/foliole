@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, expect, it } from 'vitest';
@@ -7,6 +8,24 @@ import { parse } from 'yaml';
 import { runHostedSecurityMaintenance, verifyHostedSecurityTarget } from './hosted-security-maintenance.mjs';
 
 const roots = [];
+const require = createRequire(import.meta.url);
+const semver = createRequire(require.resolve('@capacitor/cli/package.json'))('semver');
+
+it.each(['t7-hosted-quality.yml', 'hosted-quality-android-host.yml'])(
+  '%s excludes the observed unsafe JDK builds from its requested Java runtime', file => {
+    const workflow = parse(readFileSync(`.github/workflows/${file}`, 'utf8'));
+    const steps = Object.values(workflow.jobs).flatMap(job => job.steps ?? []);
+    const inputs = steps.find(step => step.uses?.startsWith('actions/setup-java@')).with;
+    const matches = version => semver.valid(inputs['java-version']) && semver.parse(inputs['java-version']).build.length
+      ? semver.compareBuild(version, inputs['java-version']) === 0 : semver.satisfies(version, inputs['java-version']);
+    const unsafe = [{ distribution: 'temurin', version: '21.0.12+1' },
+      { distribution: 'temurin', version: '21.0.13+9' }, { distribution: 'zulu', version: '21.0.13+9' }];
+    expect(unsafe.some(row => row.distribution === inputs.distribution && matches(row.version))).toBe(false);
+    expect(inputs.distribution).toBe('zulu');
+    expect(matches('21.0.13+1')).toBe(true);
+    expect(inputs['check-latest']).toBe(true);
+  }
+);
 afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }); });
 function repository() {
   const artifacts = path.resolve('.tmp/artifacts/T674/security-hosted-tests');

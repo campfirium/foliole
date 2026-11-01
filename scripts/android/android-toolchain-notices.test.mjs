@@ -20,6 +20,23 @@ const java = { version: '21.0.11', vendor: 'Homebrew', trustStore: {
   certificates: ['fingerprint'], subjects: ['CN=Compromised Root,O=Example'] } };
 const certs = 'String[] ROOTS = {"Compromised Root", "Root Two", "Root Three", "Root Four"};';
 
+it('checks the approved Linux Azul distribution against its own official release metadata and trust store', async () => {
+  const selected = { ...java, vendor: 'Azul Systems, Inc.', version: '21.0.13.0.3', os: 'Linux', arch: 'amd64',
+    trustStore: { certificates: ['fingerprint'], subjects: ['CN=Trusted'] } };
+  const urls = [];
+  const fetchImpl = async url => {
+    urls.push(url);
+    return response(url.includes('CheckCerts') ? certs : [{ java_version: [21, 0, 13, 0, 3],
+      availability_type: 'CA', latest: true, name: 'zulu-linux_x64.tar.gz' }]);
+  };
+  expect((await jdkNotices(selected, fetchImpl)).findings).toEqual([]);
+  expect(urls.some(url => url.startsWith('https://api.azul.com/metadata/'))).toBe(true);
+  const unsafe = await jdkNotices({ ...selected, trustStore: java.trustStore }, fetchImpl);
+  expect(unsafe.findings.some(row => row.advisory.startsWith('distrusted-root-'))).toBe(true);
+  await expect(jdkNotices(selected, async () => response([]))).rejects.toThrow();
+  await expect(jdkNotices({ ...selected, os: 'Other' }, fetchImpl)).rejects.toThrow();
+});
+
 it('checks the selected JDK distributor and actual compromised roots without executing downloaded code', async () => {
   const fetchImpl = async url => response(url.includes('CheckCerts') ? certs : { versions: { stable: '21.0.13.0.3' } });
   const result = await jdkNotices(java, fetchImpl);

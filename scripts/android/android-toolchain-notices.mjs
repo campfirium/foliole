@@ -10,6 +10,7 @@ export const ANDROID_TOOLCHAIN_SOURCES = {
   sdk: 'https://dl.google.com/android/repository/repository2-3.xml',
   brew: 'https://formulae.brew.sh/api/formula/openjdk@21.json',
   temurin: 'https://api.adoptium.net/v3/assets/latest/21/hotspot?architecture=x64&image_type=jdk&os=linux&vendor=eclipse',
+  zulu: 'https://api.azul.com/metadata/v1/zulu/packages/?java_version=21&os=linux&arch=x86&hw_bitness=64&java_package_type=jdk&archive_type=tar.gz&javafx_bundled=false&crac_supported=false&release_status=ga&availability_types=CA&latest=true&page_size=100',
   certs: 'https://cr.openjdk.org/~mr/CheckCerts.java'
 };
 async function fetchText(url, fetchImpl) {
@@ -26,12 +27,17 @@ export async function jdkNotices(java, fetchImpl) {
   if (!java?.version || !java.trustStore?.certificates?.length || !java.trustStore.subjects?.length) {
     throw new Error('Actual Java distribution and trust store were not established');
   }
+  const azul = /Azul/iu.test(java.vendor);
+  if (azul && (java.os !== 'Linux' || java.arch !== 'amd64')) throw new Error('Unsupported Azul JDK host');
   const source = java.vendor === 'Homebrew' ? ANDROID_TOOLCHAIN_SOURCES.brew
-    : /Adoptium|Temurin/iu.test(java.vendor) ? ANDROID_TOOLCHAIN_SOURCES.temurin : null;
+    : azul ? ANDROID_TOOLCHAIN_SOURCES.zulu
+      : /Adoptium|Temurin/iu.test(java.vendor) ? ANDROID_TOOLCHAIN_SOURCES.temurin : null;
   if (!source) throw new Error(`Unsupported JDK distributor: ${java.vendor}`);
   const text = await fetchText(source, fetchImpl);
   const body = JSON.parse(text);
-  const latest = java.vendor === 'Homebrew' ? body.versions?.stable : body[0]?.version?.openjdk_version;
+  const latest = java.vendor === 'Homebrew' ? body.versions?.stable : azul
+    ? body.find(row => row.availability_type === 'CA' && row.latest && row.java_version?.[0] === 21
+      && row.name?.endsWith('-linux_x64.tar.gz'))?.java_version.join('.') : body[0]?.version?.openjdk_version;
   if (!latest || !/^21\.\d+\.\d+/u.test(latest)) throw new Error('JDK metadata has no selected-line stable release');
   const roots = await fetchText(ANDROID_TOOLCHAIN_SOURCES.certs, fetchImpl);
   const names = [...(roots.match(/String\[\] ROOTS = \{([\s\S]*?)\};/u)?.[1] ?? '').matchAll(/"([^"\r\n]+)"/gu)].map(match => match[1]);
