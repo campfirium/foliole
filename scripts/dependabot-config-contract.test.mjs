@@ -76,36 +76,34 @@ describe('Dependabot configuration contract', () => {
   });
 });
 
-// File matching also considers lockfiles, so exclusions must preserve both root files.
 describe('Renovate update ownership', () => {
   const renovate = JSON.parse(fs.readFileSync('.github/renovate.json', 'utf8'));
 
-  it('allows routine proposals while requiring review for major and native database updates', () => {
-    expect(renovate.dependencyDashboardApproval).toBe(false);
+  it('raises reviewable PRs directly without a dashboard approval step', () => {
+    expect(renovate.dependencyDashboard).toBe(false);
+    expect(renovate.dependencyDashboardApproval ?? false).toBe(false);
     expect(renovate.automerge).toBe(false);
     expect(renovate.vulnerabilityAlerts.enabled).toBe(false);
-    expect(renovate.prConcurrentLimit).toBeLessThanOrEqual(2);
-    expect(renovate.packageRules).toEqual(expect.arrayContaining([
-      expect.objectContaining({ matchUpdateTypes: ['major'], dependencyDashboardApproval: true }),
-      expect.objectContaining({
-        matchPackageNames: expect.arrayContaining(['electron', 'better-sqlite3', '@capacitor-community/sqlite']),
-        dependencyDashboardApproval: true
-      })
-    ]));
+    const preapprovals = renovate.packageRules.filter(rule => rule.dependencyDashboardApproval);
+    expect(preapprovals).toEqual([]);
   });
 
-  it('excludes nested npm manifests without excluding the root manifest or lockfile', () => {
-    const exclusion = renovate.packageRules.find(rule => rule.enabled === false && rule.matchManagers.includes('npm'));
-    // These positive regexes describe the exclusion domain, including every lockfile candidate.
-    const patterns = exclusion.matchFileNames.map(pattern => {
-      expect(pattern.startsWith('/')).toBe(true);
-      expect(pattern.endsWith('/')).toBe(true);
-      return new RegExp(pattern.slice(1, -1));
-    });
-    const excluded = file => patterns.some(pattern => pattern.test(file));
-    expect(excluded('package.json')).toBe(false);
-    expect(excluded('package-lock.json')).toBe(false);
-    expect(excluded('electron/native/foliole-desktop-dnssd/package.json')).toBe(true);
-    expect(excluded('scripts/oneoff/package.json')).toBe(true);
+  it('does not impose a weekly proposal window or unmeasured lower throughput limits', () => {
+    expect(renovate.schedule ?? []).toEqual([]);
+    expect(renovate.prConcurrentLimit ?? 10).toBeGreaterThanOrEqual(10);
+    expect(renovate.branchConcurrentLimit ?? 10).toBeGreaterThanOrEqual(10);
+    expect(renovate.prHourlyLimit ?? 2).toBeGreaterThanOrEqual(2);
+  });
+
+  it('discovers owned manifests and limits the existing release-age delay to npm', () => {
+    expect(renovate.packageRules.some(rule => rule.enabled === false)).toBe(false);
+    expect(renovate.minimumReleaseAge).toBeUndefined();
+    expect(renovate.packageRules).toContainEqual(expect.objectContaining({
+      matchManagers: ['npm'], minimumReleaseAge: '7 days'
+    }));
+    expect(renovate.ignorePaths).toEqual(expect.arrayContaining([
+      '**/node_modules/**', 'ios/App/CapApp-SPM/**',
+      'android/capacitor.settings.gradle', 'android/app/capacitor.build.gradle'
+    ]));
   });
 });

@@ -13,17 +13,8 @@
     "dev"
   ],
   "timezone": "Asia/Shanghai",
-  "schedule": [
-    "* 9-12 * * 1"
-  ],
-  "minimumReleaseAge": "7 days",
-  "prConcurrentLimit": 2,
-  "branchConcurrentLimit": 2,
-  "prHourlyLimit": 1,
   "automerge": false,
-  "dependencyDashboard": true,
-  "dependencyDashboardTitle": "Dependency maintenance",
-  "dependencyDashboardApproval": false,
+  "dependencyDashboard": false,
   "vulnerabilityAlerts": {
     "enabled": false
   },
@@ -39,33 +30,11 @@
   ],
   "packageRules": [
     {
-      "description": "Update the root npm manifest only; native plugin manifests belong to their publishers.",
+      "description": "Match the existing npm installation release-age policy.",
       "matchManagers": [
         "npm"
       ],
-      "matchFileNames": [
-        "/\\/package\\.json$/"
-      ],
-      "enabled": false
-    },
-    {
-      "matchManagers": [
-        "gradle",
-        "gradle-wrapper"
-      ],
-      "matchFileNames": [
-        "!android/**"
-      ],
-      "enabled": false
-    },
-    {
-      "matchManagers": [
-        "swift"
-      ],
-      "matchFileNames": [
-        "!/^(?:ios/App/Package\\.swift|ios/App/FramedSyncRuntimePackage/Package\\.swift)$/"
-      ],
-      "enabled": false
+      "minimumReleaseAge": "7 days"
     },
     {
       "matchManagers": [
@@ -95,23 +64,6 @@
         "apple/swift-protobuf"
       ],
       "groupName": "swift-protobuf"
-    },
-    {
-      "matchUpdateTypes": [
-        "major"
-      ],
-      "dependencyDashboardApproval": true
-    },
-    {
-      "matchManagers": [
-        "npm"
-      ],
-      "matchPackageNames": [
-        "electron",
-        "better-sqlite3",
-        "@capacitor-community/sqlite"
-      ],
-      "dependencyDashboardApproval": true
     },
     {
       "description": "Electron follows the existing latest-stable review policy.",

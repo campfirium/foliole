@@ -3,10 +3,11 @@
 ## Update ownership
 
 The free Mend-hosted Renovate app owns ordinary version proposals through
-`.github/renovate.json` and the [Dependency maintenance dashboard](https://github.com/campfirium/foliole/issues/185).
+`.github/renovate.json`. Updates are proposed directly as pull requests.
 Dependabot ordinary version-update limits are zero; GitHub remains the security
-fix owner. Major updates, Electron, better-sqlite3 and the Capacitor SQLite plugin
-still require dashboard approval, including any group containing that plugin.
+fix owner. The dashboard Issue and pre-PR checkbox approvals are disabled.
+Every proposal, including major updates, requires review before local adoption;
+creating a PR grants no permission to merge or execute its proposed code.
 
 Hosted job `b01a8186-f449-4e1f-820c-438fee77b483` completed on 2026-11-01 with
 root npm dependencies, Android dependencies, Gradle Wrapper and both hand-owned
@@ -15,8 +16,8 @@ the corrected npm exclusion matches nested manifests without matching the root
 manifest or `package-lock.json`. Local extraction alone was not activation proof.
 The pre-existing Gradle major PR remains open and is outside the routine handover.
 
-To roll back, require approval for all Renovate ordinary updates and restore the
-Dependabot ordinary limits in the same change: npm 10, Gradle 5, each Swift root 3.
+To roll back, disable Renovate and restore the Dependabot ordinary limits in the
+same change: npm 10, Gradle 5, each Swift root 3.
 Do not close existing PRs automatically when changing updater ownership.
 
 Keep GitHub's dependency graph, Dependabot alerts and security updates enabled.
@@ -25,17 +26,20 @@ Native inventories, Trivy and vendor checks keep their existing responsibilities
 
 ## Update policy
 
-- Renovate opens at most two concurrent ordinary PRs, with one new PR per hour.
-  Existing proposals and GitHub security updates are outside this limit.
-- Ordinary updates wait seven days and use Monday 09:00–12:00 Asia/Shanghai.
-  Electron retains its existing latest-stable review policy without this delay.
+- No additional proposal schedule is imposed. The standard Renovate defaults
+  apply: up to ten concurrent PRs and two new PRs per hour. These throttle CI
+  bursts; they are not targets for how few updates the maintainer should see.
+- npm proposals follow the existing seven-day installation release-age policy.
+  Electron retains its latest-stable exception without this delay. Gradle and
+  Swift do not inherit an npm-specific waiting period.
 - No update is automatically merged. Major and database/runtime changes require
   explicit review; a PR is an untrusted proposal, not permission to execute it.
 - Capacitor packages share a group; plugins must satisfy peer compatibility, and
   do not all need identical version numbers. CodeMirror/Lezer share an editor
   group. Both hand-owned SwiftProtobuf declarations share a native runtime group.
-- npm updates belong to the root manifest. Gradle and Wrapper updates belong to
-  `android/`. Swift updates belong to the two hand-owned package manifests.
+- Managers discover tracked first-party manifests, including nested desktop npm
+  packages and Gradle maintenance scripts. Generated plugin manifests remain
+  excluded; a first-party nested package is not a third-party plugin manifest.
   GitHub Actions version updates remain outside this configuration.
 
 ## Capacitor and native ownership
@@ -68,8 +72,9 @@ plan or configure self-hosted infrastructure for this repository.
 
 Record the first hosted job and its candidate inventory before switching updater
 ownership. Local schema validation and extraction are preparation evidence only.
-Renovate proposals retain the existing general PR review path; the Dependabot
-author exception is not extended to a new bot automatically.
+Renovate proposals use a review-only notification path even when checks pass;
+the Dependabot author exception is not extended to a new bot automatically.
+The retired dashboard Issue #185 is not a user support request.
 
 References: [Renovate installation](https://docs.renovatebot.com/getting-started/installing-onboarding/),
 [free hosting](https://docs.renovatebot.com/mend-hosted/overview/),
