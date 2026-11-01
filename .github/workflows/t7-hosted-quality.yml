@@ -140,6 +140,11 @@ jobs:
         env:
           FOLIOLE_ANDROID_SUBMISSION_RECEIPT: .tmp/artifacts/security-maintenance/hosted/dependency-submission.json
         run: node scripts/security/hosted-security-maintenance.mjs
+      - name: Refresh iOS evidence in the existing security artifact
+        if: ${{ always() }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ios/hosted-ios-security-maintenance.mjs
       - name: Record a failed collection if setup prevented the reporter
         if: ${{ always() }}
         run: |

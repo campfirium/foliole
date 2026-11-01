@@ -75,3 +75,15 @@ it('keeps independent audit results and a persisted source failure when native r
   expect(report.hosted.nativeError).toBe('native resolution unavailable');
   expect(JSON.parse(readFileSync(path.join(output, 'coverage.json'), 'utf8')).hosted.target).toBe(args.expected);
 });
+
+it('refreshes iOS in the same independent security artifact even when the Android collector reports incomplete', () => {
+  const job = parse(readFileSync('.github/workflows/t7-hosted-quality.yml', 'utf8')).jobs.security_maintenance;
+  const collector = job.steps.findIndex(step => step.run === 'node scripts/security/hosted-security-maintenance.mjs');
+  const refresh = job.steps.findIndex(step => step.run === 'node scripts/ios/hosted-ios-security-maintenance.mjs');
+  const upload = job.steps.findIndex(step => step.uses === 'actions/upload-artifact@v4');
+  expect(refresh).toBeGreaterThan(collector);
+  expect(refresh).toBeLessThan(upload);
+  expect(job.steps[refresh].if).toBe('${{ always() }}');
+  expect(job.steps[refresh].env.GITHUB_TOKEN).toBe('${{ github.token }}');
+  expect(job.needs).toBeUndefined();
+});
