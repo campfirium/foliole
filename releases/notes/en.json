@@ -9,7 +9,8 @@
       "Fixed",
       "Electron has been updated with security fixes.",
       "Undo and redo work correctly across materials.",
-      "Search results jump to the correct location when a PDF is first opened."
+      "Search results jump to the correct location when a PDF is first opened.",
+      "The editor context menu works correctly."
     ]
   },
   "0.7.16": {
