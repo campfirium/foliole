@@ -54,4 +54,24 @@ describe('Dependabot configuration contract', () => {
   it('omits disabled package ecosystems instead of retaining inert schedules', () => {
     expect(updateFor('github-actions')).toBeUndefined();
   });
+
+  it('checks Android builds and both hand-owned Swift roots for updates on dev', () => {
+    const native = config.updates.filter(update => ['gradle', 'swift'].includes(update['package-ecosystem']));
+    expect(native.map(update => [update['package-ecosystem'], update.directory]))
+      .toEqual(expect.arrayContaining([
+        ['gradle', '/android'],
+        ['swift', '/ios/App'],
+        ['swift', '/ios/App/FramedSyncRuntimePackage']
+      ]));
+    for (const update of native) {
+      expect(fs.existsSync(`.${update.directory}/${update['package-ecosystem'] === 'swift' ? 'Package.swift' : 'build.gradle'}`))
+        .toBe(true);
+      expect(update['target-branch']).toBe('dev');
+      expect(update.schedule).toMatchObject({ interval: 'daily', timezone: 'Asia/Shanghai' });
+      expect(update['open-pull-requests-limit']).toBeGreaterThan(0);
+      expect(update.ignore).toBeUndefined();
+      expect(update.allow).toBeUndefined();
+    }
+    expect(native.some(update => update.directory.includes('CapApp-SPM'))).toBe(false);
+  });
 });

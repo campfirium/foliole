@@ -41,9 +41,8 @@ describe('Dependabot batch notifications', () => {
     expect(events).toHaveLength(3);
     const batch = events.find((event) => event.prNumbers);
     expect(batch.prNumbers).toEqual(['1', '2', '3']);
-    const prompt = JSON.parse(batch.prompt);
-    expect(prompt.template).toBe('batch.md');
-    for (const pr of github.prs.slice(0, 3)) expect(prompt.prList).toContain(pr.url);
+    expect(batch.prompt).toContain('"template":"batch.md"');
+    for (const pr of github.prs.slice(0, 3)) expect(batch.prompt).toContain(pr.url);
     expect(events.filter((event) => !event.prNumbers).map((event) => event.number)).toEqual(['4', '5']);
   });
 
@@ -95,6 +94,21 @@ describe('Dependabot batch notifications', () => {
       .toEqual(first.map((event) => event.dedupeKey));
   });
 
+  it('delivers Gradle and Swift proposals with an explicit review-only native policy', () => {
+    github.prs = [bot(21, 'Bump Gradle'), bot(22, 'Bump SwiftProtobuf')];
+    const state = stateForScan();
+    const events = scan(state);
+    expect(events).toHaveLength(1);
+    expect(events[0].prNumbers).toEqual(['21', '22']);
+    expect(events[0].prompt).toContain('Do not adopt these proposals in this handoff');
+    expect(events[0].prompt).toContain('both SwiftProtobuf exact constraints');
+    expect(events[0].prompt).toContain('verified full diff');
+    const submitted = [];
+    deliver(events, state, event => submitted.push(event));
+    expect(submitted[0].prompt).toBe(events[0].prompt);
+    expect(scan(JSON.parse(JSON.stringify(state)))).toEqual([]);
+  });
+
   it('does not consume proposals if the batch template cannot render', () => {
     github.prs = [bot(1), bot(2)];
     const state = stateForScan();
@@ -106,5 +120,9 @@ describe('Dependabot batch notifications', () => {
     expect(errors).toHaveLength(1);
     expect(state.prs).toEqual({});
     expect(state.submitted).toEqual({});
+    const recovered = scan(state);
+    expect(recovered[0].prNumbers).toEqual(['1', '2']);
+    deliver(recovered, state);
+    expect(scan(state)).toEqual([]);
   });
 });

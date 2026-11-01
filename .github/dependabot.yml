@@ -65,3 +65,39 @@ updates:
     commit-message:
       prefix: deps
       prefix-development: deps-dev
+
+  - package-ecosystem: gradle
+    directory: /android
+    target-branch: dev
+    schedule:
+      interval: daily
+      time: "09:00"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 5
+    labels: []
+    commit-message:
+      prefix: deps-android
+
+  - package-ecosystem: swift
+    directory: /ios/App
+    target-branch: dev
+    schedule:
+      interval: daily
+      time: "09:00"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 3
+    labels: []
+    commit-message:
+      prefix: deps-ios
+
+  - package-ecosystem: swift
+    directory: /ios/App/FramedSyncRuntimePackage
+    target-branch: dev
+    schedule:
+      interval: daily
+      time: "09:00"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 3
+    labels: []
+    commit-message:
+      prefix: deps-ios

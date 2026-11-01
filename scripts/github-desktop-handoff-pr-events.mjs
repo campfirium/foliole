@@ -1,6 +1,17 @@
 import { buildPrHandoffData } from './github-desktop-handoff-title.mjs';
 import { listPrChecks, recordMonitorError, runGh } from './github-monitor-gh.mjs';
 
+const NATIVE_REVIEW_POLICY = [
+  'Native dependency review boundary:',
+  'Inspect the verified full diff before classifying each proposal; titles and branch names do not establish dependency intent.',
+  'Any Gradle build or Wrapper changes, Swift Package.swift or Package.resolved changes, or mixed source changes require manual review.',
+  'Do not adopt these proposals in this handoff, execute their proposed scripts, or close their PRs; report the exact changes and leave them open for explicit adoption authorization.',
+  'Review Wrapper scripts and JAR provenance against the official distribution and checksum before any later adoption.',
+  'For Swift updates, review both SwiftProtobuf exact constraints and the App and host lock files together; generated Capacitor manifests follow npm ownership.',
+  'Other verified npm proposals retain the existing adoption and Electron eligibility requirements.',
+  'See docs/maintenance/native-dependency-updates.md for ownership, validation and coverage limits.'
+].join('\n');
+
 function independentPrEvent(config, pr, renderTemplate) {
   const data = buildPrHandoffData(config, pr, listPrChecks(config, pr));
   if (!data.failingChecks) return null;
@@ -38,7 +49,7 @@ function batchEvent(config, members, renderTemplate) {
   return {
     ...data,
     dedupeKey: config.dedupeKeyPattern.replace('{eventId}', eventId),
-    prompt: renderTemplate(config.batchTemplate, data),
+    prompt: `${renderTemplate(config.batchTemplate, data)}\n\n${NATIVE_REVIEW_POLICY}`,
     title: data.handoffTitle,
     ttlSeconds: config.defaultTtlSeconds
   };
