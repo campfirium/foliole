@@ -66,6 +66,9 @@ export interface WorkspaceState {
   unshelveNode: (nodeId: string, now?: string) => boolean;
   dismissNode: (nodeId: string, now?: string) => boolean;
   dismissNodes: (targets: NodeDismissTargets, now?: string) => boolean;
+  restoreApplicationNode?: (nodeId: string) => Promise<string | null>;
+  undoApplicationOperation?: ((context?: EditorOperationApplyContext) => boolean) | undefined;
+  redoApplicationOperation?: ((context?: EditorOperationApplyContext) => boolean) | undefined;
   undoWorkspaceAction: (now?: string) => boolean | Promise<boolean>;
   redoWorkspaceAction: (now?: string) => boolean | Promise<boolean>;
   pushEditorOperationEntry: (entry: EditorOperationHistoryInput) => void;

@@ -4,6 +4,7 @@ import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 
 import { beginWorkspaceAction, createEmptyWorkspaceActionHistory, failWorkspaceAction, settleWorkspaceAction } from './workspaceActionHistory';
 import { createWorkspaceActionHistoryEntryId } from './workspaceActionHistoryEntry';
+import { settleApplicationAction } from './workspaceApplicationActionAdmission';
 import { sourcePreferences } from './workspaceDailyFlowSourceSettingsActions';
 import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import { captureWorkspaceHistoryContext, isSameWorkspaceReviewSession } from './workspaceHistoryContext';
@@ -85,7 +86,8 @@ async function persistDatabaseShelve(args: Args, entry: WorkspaceTopicShelveHist
       const node = nodesById[entry.nodeId];
       if (node) nodesById[entry.nodeId] = { ...node, shelvedAt: entry.afterShelvedAt, updatedAt: saved.updatedAt };
       if (!isSameWorkspaceReviewSession(state.reviewSession, entry.beforeContext.reviewSession)) {
-        return { nodesById, appActionHistory: createEmptyWorkspaceActionHistory() };
+        return state.appActionHistory.application ? { nodesById, ...settleApplicationAction(state, entry.id, entry) }
+          : { nodesById, appActionHistory: createEmptyWorkspaceActionHistory() };
       }
       entry.afterContext = captureWorkspaceHistoryContext(state);
       const settled = settleWorkspaceAction(state.appActionHistory, entry.id);

@@ -80,6 +80,13 @@ export function getEditorTextHistorySource(history: EditorOperationHistoryState,
   if (!nodeId) return null;
   const key = editorTextTargetKey(nodeId, target);
   const session = history.sessionsByNodeId[nodeId];
+  if (history.application) {
+    const top = history.application.undo.at(-1);
+    const state = history.nativeTextStates[key] ?? null;
+    return { state, ...(history.application.textPresentation?.nativeTargetKey === key
+      ? { presentation: history.application.textPresentation } : {}), boundary: top?.domain === 'editor' && top.entry.type === 'text.edit' && top.entry.nativeTargetKey === key
+      ? state?.field(nativeTextHistoryGroups).applicationBoundary ?? null : top ?? history.application };
+  }
   const top = session?.undoStack.at(-1);
   return { state: history.nativeTextStates[key] ?? null,
     boundary: top?.type === 'text.edit' && top.nativeTargetKey !== key ? top : session?.textBoundary ?? null };

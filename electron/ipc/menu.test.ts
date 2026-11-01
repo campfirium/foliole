@@ -262,3 +262,13 @@ describe('native app menu rebuilding', () => {
     expect(menuMock.setApplicationMenu).toHaveBeenCalledTimes(2);
   });
 });
+
+it('uses application history labels and availability while keeping native input undo available', () => {
+  resetMenuMock();
+  syncAppMenuState([], [], 'darwin', { undoTitle: 'Undo Edit Text', redoTitle: 'Redo Grade Review', nativeEditing: false });
+  const items = collectMenuItems(menuMock.applicationMenu!.items as MockMenuItem[]);
+  expect(items.find(item => item.id === 'app.undo')).toMatchObject({ label: 'Undo Edit Text', enabled: false });
+  syncAppMenuState([], [], 'darwin', { undoTitle: 'Undo Edit Text', redoTitle: 'Redo', nativeEditing: true });
+  const native = collectMenuItems(menuMock.applicationMenu!.items as MockMenuItem[]);
+  expect(native.find(item => item.id === 'app.undo')).toMatchObject({ label: 'Undo', enabled: true });
+});

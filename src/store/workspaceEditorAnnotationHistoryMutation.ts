@@ -154,7 +154,8 @@ export function startEditorAnnotationHistoryMutation(args: {
   get: WorkspaceGet;
   mode: 'redo' | 'undo';
   onSettled?: (succeeded: boolean) => void;
-  onCommitted?: (result: { mode: 'redo' | 'undo'; nodeIds: string[] }) => void;
+  onCommitted?: (result: { mode: 'redo' | 'undo'; nodeIds: string[]; entry: EditorAnnotationOperationEntry }) => void;
+  beforeSubmit?: () => boolean;
   set: WorkspaceSet;
 }) {
   const libraryScope = args.get().libraryScope;
@@ -176,9 +177,9 @@ export function startEditorAnnotationHistoryMutation(args: {
   };
   const shouldDelete = (args.entry.type === 'annotation.create') === (args.mode === 'undo');
   if (shouldDelete) {
-    void commitDelete(args.entry, args.get(), args.get)
+    void commitDelete(args.entry, args.get(), args.get, args.beforeSubmit)
       .then((result) => {
-        if (result) args.onCommitted?.({ mode: args.mode, nodeIds: result.deletedNodeIds });
+        if (result) args.onCommitted?.({ mode: args.mode, nodeIds: result.deletedNodeIds, entry: result.entry });
         else notifyFailure();
         finishDelete(set, args.entry, args.mode, result, onSettled);
       })
@@ -188,9 +189,9 @@ export function startEditorAnnotationHistoryMutation(args: {
         onSettled(false);
       });
   } else {
-    void commitRestore(args.entry, args.get)
+    void commitRestore(args.entry, args.get, args.beforeSubmit)
       .then((result) => {
-        if (result) args.onCommitted?.({ mode: args.mode, nodeIds: result });
+        if (result) args.onCommitted?.({ mode: args.mode, nodeIds: result, entry: args.entry });
         else notifyFailure();
         finishRestore(set, args.entry, args.mode, result, onSettled);
       })

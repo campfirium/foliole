@@ -118,7 +118,8 @@ it('reports a committed delete after a later text step without manufacturing red
   await vi.waitFor(() => expect(read()?.deleted_at).toEqual(expect.any(String)));
   harness.getState().pushEditorOperationEntry(createTextHistoryEntry({ beforeContent: '# Seed', afterContent: '# Seed later' }));
   release();
-  await vi.waitFor(() => expect(committed).toHaveBeenCalledWith({ mode: 'undo', nodeIds: [id] }));
+  await vi.waitFor(() => expect(committed).toHaveBeenCalledWith({ mode: 'undo', nodeIds: [id],
+    entry: expect.objectContaining({ type: 'annotation.create', historyDeletedAt: expect.any(String) }) }));
   await vi.waitFor(() => expect(harness.getState().trashedNodeIds).toContain(id));
   expect(session().redoStack).toEqual([]);
   expect(session().undoStack.at(-1)).toMatchObject({ type: 'text.edit' });

@@ -94,6 +94,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.onPastedAnchors = options.onPastedAnchors ?? null;
     this.textHistory = new CodeMirrorTextHistoryController({
       discardPending: () => this.externalChangeBuffer.discardPending(),
+      focus: () => this.focus(),
       getNodeId: () => this.nodeId,
       isApplyingExternalContent: () => this.isApplyingExternalContent,
       setApplyingExternalContent: value => { this.isApplyingExternalContent = value; }
@@ -166,7 +167,9 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.reconfigureLiveMarkdown();
   }
   setReadOnly(readOnly: boolean) {
+    const retainReplayFocus = readOnly && this.view.hasFocus && this.textHistory.ownsReplayFocus(this.view);
     setCodeMirrorReadOnly(this.view, this.readOnlyCompartment, readOnly);
+    if (retainReplayFocus) this.deferredFocus.request();
     this.deferredFocus.resolve();
   }
   setNodeId(nodeId: string | null) {

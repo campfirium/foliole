@@ -41,6 +41,7 @@ export interface EditorTextHistoryInput {
 }
 
 export interface EditorTextEditOperationEntry {
+  applicationOperationId?: string;
   type: 'text.edit';
   nodeId: string;
   target?: EditorTextOperationTarget;
@@ -60,6 +61,7 @@ export interface EditorTextHistoryReplayResult {
 }
 
 export interface EditorAnnotationOperationState {
+  applicationOperationId?: string;
   historyFacts?: import('../../../../lib/core/nodes/annotationHistoryFacts').AnnotationHistoryFact[];
   historyDeletedAt?: string | null;
   historyParents?: Array<{
@@ -107,6 +109,7 @@ export interface EditorOperationHistoryInvalidation {
 export type EditorOperationHistoryInput = EditorAnnotationOperationEntry | EditorTextHistoryInput;
 
 export interface EditorOperationHistoryState {
+  application?: import('../../../store/workspaceApplicationHistory').ApplicationHistory | undefined;
   nativeTextStates: Record<string, EditorState>;
   invalidations: EditorOperationHistoryInvalidation[];
   recentNodeIds: string[];

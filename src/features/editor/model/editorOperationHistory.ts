@@ -1,6 +1,7 @@
 import type { EditorState } from '@codemirror/state';
 
 import type { Translate } from '../../../shared/localization/LocalizationProvider';
+import { prepareApplicationEditorInput, publishApplicationEditorInput, publishApplicationEditorMutation } from '../../../store/workspaceApplicationEditorHistory';
 
 import { isolateDocumentTextHistory, prepareNativeEditorTextEntry, retainNativeTextEntries, retainNativeTextStates, replaceNativeTextState } from './editorNativeOperationHistory';
 import type {
@@ -66,6 +67,8 @@ export function pushEditorOperationEntry(
   input: EditorOperationHistoryInput,
   limit = DEFAULT_OPERATION_LIMIT
 ): EditorOperationHistoryState {
+  if (history.application) return publishApplicationEditorInput(history, input,
+    pushEditorOperationEntry(prepareApplicationEditorInput(history, input), input, limit));
   const session = getEditorOperationSession(history, input.nodeId);
   if (input.type !== 'text.input') {
     return touchSession({ ...history, nativeTextStates: isolateDocumentTextHistory(history, input.nodeId) },
@@ -88,7 +91,9 @@ export function replaceEditorOperationEntry(
   nodeId: string,
   mode: 'redo' | 'undo',
   entry: EditorOperationHistoryEntry
-) {
+): EditorOperationHistoryState {
+  if (history.application) return publishApplicationEditorMutation(history,
+    replaceEditorOperationEntry({ ...history, application: undefined }, nodeId, mode, entry), nodeId, undefined, false);
   const session = getEditorOperationSession(history, nodeId);
   const stack = mode === 'undo' ? session.undoStack : session.redoStack;
   if (stack.at(-1)?.type !== entry.type) return history;
@@ -104,7 +109,9 @@ export function replaceEditorOperationEntryWhere(
   mode: 'redo' | 'undo',
   predicate: (entry: EditorOperationHistoryEntry) => boolean,
   replacement: (entry: EditorOperationHistoryEntry) => EditorOperationHistoryEntry
-) {
+): EditorOperationHistoryState {
+  if (history.application) return publishApplicationEditorMutation(history,
+    replaceEditorOperationEntryWhere({ ...history, application: undefined }, nodeId, mode, predicate, replacement), nodeId, undefined, false);
   const session = getEditorOperationSession(history, nodeId);
   const stack = mode === 'undo' ? session.undoStack : session.redoStack;
   let targetIndex = -1;
@@ -126,7 +133,9 @@ export function removeEditorOperationEntryFromStack(
   nodeId: string,
   mode: 'redo' | 'undo',
   predicate: (entry: EditorOperationHistoryEntry) => boolean
-) {
+): EditorOperationHistoryState {
+  if (history.application) return publishApplicationEditorMutation(history,
+    removeEditorOperationEntryFromStack({ ...history, application: undefined }, nodeId, mode, predicate), nodeId, undefined, true);
   const session = getEditorOperationSession(history, nodeId);
   return touchSession(history, nodeId, mode === 'undo'
     ? { ...session, undoStack: session.undoStack.filter((entry) => !predicate(entry)) }
@@ -138,7 +147,9 @@ export function moveEditorOperationEntry(
   nodeId: string,
   mode: 'redo' | 'undo',
   nativeState?: EditorState
-) {
+): EditorOperationHistoryState {
+  if (history.application) return publishApplicationEditorMutation(history,
+    moveEditorOperationEntry({ ...history, application: undefined }, nodeId, mode, nativeState), nodeId, mode, false);
   const session = getEditorOperationSession(history, nodeId);
   const source = mode === 'undo' ? session.undoStack : session.redoStack;
   const entry = source.at(-1);
@@ -163,7 +174,9 @@ export function removeEditorOperationEntry(
   history: EditorOperationHistoryState,
   nodeId: string,
   predicate: (entry: EditorOperationHistoryEntry) => boolean
-) {
+): EditorOperationHistoryState {
+  if (history.application) return publishApplicationEditorMutation(history,
+    removeEditorOperationEntry({ ...history, application: undefined }, nodeId, predicate), nodeId, undefined, true);
   const session = getEditorOperationSession(history, nodeId);
   return touchSession(history, nodeId, {
     redoStack: session.redoStack.filter((entry) => !predicate(entry)),

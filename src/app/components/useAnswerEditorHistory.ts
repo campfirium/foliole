@@ -7,7 +7,7 @@ import type { EditorOperationApplyContext } from '../../store/workspaceStoreType
 import { applyEditorTextReplay } from '../hooks/editorTextReplaySave';
 import { registerUndoRouterContentContext } from '../hooks/undoRouter';
 
-export function useAnswerEditorHistory(answerDocumentId: string | null) {
+export function useAnswerEditorHistory(answerDocumentId: string | null, targetNodeId?: string | null) {
   const adapterRef = useRef<EditorAdapter | null>(null);
   const unregisterRef = useRef<(() => void) | null>(null);
 
@@ -16,7 +16,8 @@ export function useAnswerEditorHistory(answerDocumentId: string | null) {
     unregisterRef.current = null;
     adapterRef.current = adapter;
     if (!adapter || !answerDocumentId) return;
-    adapter.bindTextHistorySource?.(nodeId => getEditorTextHistorySource(useWorkspaceStore.getState().editorOperationHistory, nodeId));
+    adapter.bindTextHistorySource?.(nodeId => getEditorTextHistorySource(useWorkspaceStore.getState().editorOperationHistory, nodeId,
+      targetNodeId ? { nodeId: targetNodeId, field: 'reveal' } : undefined));
     const context: EditorOperationApplyContext = {
       applyText: (entry, mode) => applyEditorTextReplay(adapterRef.current, entry, mode),
       currentContent: adapter.getContent(),
@@ -24,15 +25,19 @@ export function useAnswerEditorHistory(answerDocumentId: string | null) {
       nodeId: answerDocumentId
     };
     unregisterRef.current = registerUndoRouterContentContext(answerDocumentId, context);
-  }, [answerDocumentId]);
+  }, [answerDocumentId, targetNodeId]);
 
   const handleDocumentInput = useCallback((meta?: EditorContentChangeMeta) => {
     for (const transaction of meta?.textTransactions ?? []) {
       if (transaction.nodeId === answerDocumentId) {
-        useWorkspaceStore.getState().pushEditorOperationEntry(transaction);
+        const state = useWorkspaceStore.getState();
+        const version = targetNodeId ? state.nodesById?.[targetNodeId]?.currentVersionId ?? '' : '';
+        state.pushEditorOperationEntry(targetNodeId ? { ...transaction, target: {
+          nodeId: targetNodeId, field: 'reveal', beforeVersionId: version, afterVersionId: version
+        } } : transaction);
       }
     }
-  }, [answerDocumentId]);
+  }, [answerDocumentId, targetNodeId]);
 
   useEffect(() => () => unregisterRef.current?.(), []);
 

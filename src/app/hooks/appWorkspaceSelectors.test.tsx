@@ -80,3 +80,10 @@ it('keeps membership arrays stable when only node content changes', () => {
   expect(result.current.nodeOrder).toBe(nodeOrder);
   expect(result.current.trashedNodeIds).toBe(trashedNodeIds);
 });
+
+it('exposes the application history commands to desktop command consumers', () => {
+  const { result } = renderHook(() => useWorkspaceSelectors());
+  expect(result.current.undoApplicationOperation).toBe(useWorkspaceStore.getState().undoApplicationOperation);
+  expect(result.current.redoApplicationOperation).toBe(useWorkspaceStore.getState().redoApplicationOperation);
+  expect(result.current.undoApplicationOperation).toBeTypeOf('function');
+});

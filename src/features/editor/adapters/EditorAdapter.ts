@@ -60,6 +60,7 @@ export type { EditorDiffDecorations } from './lineDiffDecorations';
 export type EditorTextHistorySource = (nodeId: string | null) => {
   state: import('@codemirror/state').EditorState | null;
   boundary: object | null;
+  presentation?: object;
 } | null;
 
 export interface EditorAdapter {

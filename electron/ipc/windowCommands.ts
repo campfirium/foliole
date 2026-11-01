@@ -24,6 +24,7 @@ import { listSystemFonts } from './fonts.js';
 import { handleInitialLibrarySetupCommand } from './initialLibrarySetupCommands.js';
 import { resolveAllowedLocalOpenPath } from './localOpenPathGuard.js';
 import { syncAppMenuState } from './menu.js';
+import { parseMenuHistoryState } from './menuHistoryState.js';
 import { resolveAppPaths } from './paths.js';
 import { handleSplitTopicPreferencesCommand } from './splitTopicPreferencesCommands.js';
 import { handleWindowControlCommand, resolveTargetWindow } from './windowControlCommands.js';
@@ -135,7 +136,8 @@ function handleUtilityCommand(request: InvokeRequest) {
     return copyDiagnosticReport({ app });
   }
   if (request.command === NATIVE_COMMANDS.syncAppMenuState) {
-    syncAppMenuState(asStringArray(args.enabledCommandIds, 'enabledCommandIds'), asShortcutAccelerators(args.shortcutAccelerators));
+    syncAppMenuState(asStringArray(args.enabledCommandIds, 'enabledCommandIds'), asShortcutAccelerators(args.shortcutAccelerators), undefined,
+      parseMenuHistoryState(args.history));
     return null;
   }
   if (request.command === NATIVE_COMMANDS.appGetVersion) {

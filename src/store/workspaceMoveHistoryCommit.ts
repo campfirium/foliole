@@ -1,6 +1,7 @@
 import type { NativeMoveNodesResult } from '../../lib/platform/nativeMoveContract';
 
 import { pushWorkspaceUndoEntry } from './workspaceActionHistory';
+import { settleApplicationAction } from './workspaceApplicationActionAdmission';
 import { resolveWorkspaceBrowseRootForTarget } from './workspaceBrowseRoot';
 import { mergeMoveResult } from './workspaceMoveCommit';
 import type { WorkspaceState } from './workspaceStore';
@@ -26,6 +27,7 @@ function buildCommittedMovePatch(state: WorkspaceState, transaction: MoveNodesTr
 }
 
 export function commitMoveTransaction(state: WorkspaceState, transaction: MoveNodesTransaction, result: NativeMoveNodesResult) {
+  if (state.libraryScope !== transaction.before.libraryScope) return null;
   const patch = buildCommittedMovePatch(state, transaction, result);
   if (!patch) return null;
   const firstRoot = state.nodesById[transaction.rootNodeIds[0] ?? ''];
@@ -39,6 +41,8 @@ export function commitMoveTransaction(state: WorkspaceState, transaction: MoveNo
     : null;
   return {
     ...patch,
-    ...(entry ? { appActionHistory: pushWorkspaceUndoEntry(state.appActionHistory, entry) } : {})
+    ...(transaction.applicationEntry ? settleApplicationAction(state, transaction.applicationEntry.id,
+      entry ? { ...entry, id: transaction.applicationEntry.id } : transaction.applicationEntry)
+      : entry ? { appActionHistory: pushWorkspaceUndoEntry(state.appActionHistory, entry) } : {})
   };
 }

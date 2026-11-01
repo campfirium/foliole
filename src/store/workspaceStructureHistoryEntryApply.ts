@@ -1,4 +1,4 @@
-import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult } from './workspaceHistoryApplyResult';
+import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult, type WorkspaceHistoryExecution } from './workspaceHistoryApplyResult';
 import type { WorkspaceState } from './workspaceStore';
 import {
   applyWorkspaceStructureHistory,
@@ -7,6 +7,7 @@ import {
 import type { WorkspaceStructureHistoryEntry } from './workspaceStructureHistoryTypes';
 
 export async function applyWorkspaceStructureHistoryEntry(args: {
+  execution?: WorkspaceHistoryExecution;
   entry: WorkspaceStructureHistoryEntry;
   get: () => WorkspaceState;
   mode: 'redo' | 'undo';

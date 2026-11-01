@@ -5,7 +5,7 @@ import { toNodeReviewProfile } from '../features/review/model/reviewTypes';
 
 import { hasPersistentDailyFlow, hasTargetedDailyFlow, saveDailyHistory } from './workspaceDailyFlowMutations';
 import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
-import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult } from './workspaceHistoryApplyResult';
+import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult, type WorkspaceHistoryExecution } from './workspaceHistoryApplyResult';
 import { applyWorkspaceHistoryContext } from './workspaceHistoryContext';
 import { getWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
 import type { WorkspaceReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
@@ -14,6 +14,7 @@ import { resolveEarliestReviewDueAt } from './workspaceReviewSessionProgress';
 import type { WorkspaceState } from './workspaceStore';
 
 export async function applyWorkspaceReviewGradeHistory(args: {
+  execution?: WorkspaceHistoryExecution;
   entry: WorkspaceReviewGradeHistoryEntry;
   get: () => WorkspaceState;
   mode: 'redo' | 'undo';
@@ -27,6 +28,7 @@ export async function applyWorkspaceReviewGradeHistory(args: {
   const beforeNodes = args.get().nodesById;
   let learning: Record<string, DailyFlowLearningReceipt> | undefined;
   let displayNodes: Record<string, WorkspaceNodeSnapshot> | undefined;
+  if (args.execution && !args.execution.beforeSubmit()) return { status: 'invalid' };
   try {
     const persisted = hasPersistentDailyFlow(args.get().reviewSession)
       ? await saveDailyHistory({ session: args.get().reviewSession, entry: args.entry, mode: args.mode, now: args.mutationTimestamp, knownNodes: args.get().nodesById })
@@ -43,6 +45,9 @@ export async function applyWorkspaceReviewGradeHistory(args: {
       reviewResult = { review: persisted.card ? toNodeReviewProfile(persisted.card) : null };
     } else if (typeof persisted !== 'boolean') reviewResult = persisted;
   } catch { return { status: 'failed' }; }
+  args.execution?.committed({ ...args.entry, mutationTimestamp: args.mutationTimestamp,
+    ...(reviewResult ? args.mode === 'undo' ? { beforeReview: reviewResult.review } : { afterReview: reviewResult.review } : {}),
+    ...(args.mode === 'redo' ? { reviewOpId: reviewHistoryOpId(args.entry.reviewOpId ?? args.entry.id, args.mutationTimestamp, 'redo') } : {}) });
   const applied = prepare();
   if (!applied) return { status: 'invalid' };
   const nodesById = reviewResult && !hasTargetedDailyFlow(args.get().reviewSession) ? { ...applied.nodesById, [args.entry.nodeId]: {

@@ -45,3 +45,11 @@ it('registers answer replay context and records only its text transactions', () 
   unmount();
   expect(getUndoRouterContentContext(undefined)).toBeUndefined();
 });
+
+it('records the answer field against its actual node for replay after leaving the document', () => {
+  const { result } = renderHook(() => useAnswerEditorHistory('node-1::answer', 'node-1'));
+  act(() => result.current.handleDocumentInput({ nodeId: 'node-1::answer', textTransactions: [{ nodeId: 'node-1::answer' } as never] }));
+  expect(storeMocks.pushEditorOperationEntry).toHaveBeenCalledWith(expect.objectContaining({
+    nodeId: 'node-1::answer', target: expect.objectContaining({ nodeId: 'node-1', field: 'reveal' })
+  }));
+});

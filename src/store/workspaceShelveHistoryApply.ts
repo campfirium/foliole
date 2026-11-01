@@ -5,7 +5,7 @@ import {
   areRelatedReadingsValid
 } from './workspaceActionHistoryReading';
 import { sourcePreferences } from './workspaceDailyFlowSourceSettingsActions';
-import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult } from './workspaceHistoryApplyResult';
+import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult, type WorkspaceHistoryExecution } from './workspaceHistoryApplyResult';
 import {
   applyWorkspaceHistoryContext,
   isSameWorkspaceReviewSession
@@ -61,6 +61,7 @@ function buildApplyNodes(
 }
 
 export async function applyWorkspaceShelveHistory(args: {
+  execution?: WorkspaceHistoryExecution;
   entry: WorkspaceTopicShelveHistoryEntry;
   get: () => WorkspaceState;
   mode: 'redo' | 'undo';
@@ -68,6 +69,7 @@ export async function applyWorkspaceShelveHistory(args: {
 }): Promise<WorkspaceHistoryApplyResult> {
   if (!isApplicable(args.get(), args.entry, args.mode)) return { status: 'invalid' };
   const prepared = buildApplyNodes(args.get(), args.entry, args.mode, args.mutationTimestamp);
+  if (args.execution && !args.execution.beforeSubmit()) return { status: 'invalid' };
   try {
     const persisted = args.entry.databaseMutation
       ? await saveDatabaseShelveCommand(args.entry, args.mode, args.mutationTimestamp,
@@ -78,6 +80,7 @@ export async function applyWorkspaceShelveHistory(args: {
   } catch (error) {
     return { status: isWorkspacePartialPersistenceError(error) ? 'invalid' : 'failed' };
   }
+  args.execution?.committed({ ...args.entry, mutationTimestamp: args.mutationTimestamp });
   const latest = args.get();
   if (!isApplicable(latest, args.entry, args.mode)) return { status: 'invalid' };
   const applied = buildApplyNodes(latest, args.entry, args.mode, args.mutationTimestamp);

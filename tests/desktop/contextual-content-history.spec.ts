@@ -93,15 +93,14 @@ async function exerciseTopicPartition(page: Parameters<typeof focusEditor>[0], i
   });
   await focusEditor(page);
   await pressUndo(page);
-  await expect.poll(() => collectActiveEditorState(page, CONTEXT_A_ID)).toMatchObject({
-    editorContent: `${CONTEXT_A_CONTENT}${immediateText}`,
-    nodeContent: `${CONTEXT_A_CONTENT}${immediateText}`
+  await expect.poll(() => collectActiveEditorState(page, CONTEXT_B_ID)).toMatchObject({
+    activeNodeId: CONTEXT_B_ID, editorContent: CONTEXT_B_CONTENT, nodeContent: CONTEXT_B_CONTENT
   });
-  await expect.poll(async () => (await loadNodeDocument(page, CONTEXT_B_ID))?.content)
-    .toBe(`${CONTEXT_B_CONTENT} B-latest`);
+  await expect.poll(async () => (await loadNodeDocument(page, CONTEXT_A_ID))?.content)
+    .toBe(`${CONTEXT_A_CONTENT}${immediateText} A-latest`);
   await pressRedo(page);
-  await expect.poll(() => collectNode(page, CONTEXT_A_ID)).toMatchObject({
-    content: `${CONTEXT_A_CONTENT}${immediateText} A-latest`
+  await expect.poll(() => collectActiveEditorState(page, CONTEXT_B_ID)).toMatchObject({
+    editorContent: `${CONTEXT_B_CONTENT} B-latest`, nodeContent: `${CONTEXT_B_CONTENT} B-latest`
   });
 }
 
@@ -111,16 +110,13 @@ async function exerciseOwnerRouting(page: Parameters<typeof focusEditor>[0]) {
   await openNode(page, EMPTY_CONTEXT_ID);
   await focusEditor(page);
   await pressUndo(page);
-  await expect.poll(() => collectNode(page, WORKSPACE_TARGET_ID)).toMatchObject({ trashed: true });
-
-  await focusWorkspace(page);
-  await pressUndo(page);
   await expect.poll(() => collectNode(page, WORKSPACE_TARGET_ID)).toMatchObject({ trashed: false });
+  await focusWorkspace(page);
   await pressRedo(page);
   await expect.poll(() => collectNode(page, WORKSPACE_TARGET_ID)).toMatchObject({ trashed: true });
 }
 
-test('routes immediate text and annotation history by topic without workspace fallback', async ({ desktopWindow }) => {
+test('routes mixed text, annotation and workspace history in actual global order', async ({ desktopWindow }) => {
   await expectWorkspaceShell(desktopWindow);
   await seedContextualHistoryWorkspace(desktopWindow);
   const immediateText = await exerciseImmediateMixedHistory(desktopWindow);

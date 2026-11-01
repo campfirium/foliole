@@ -55,6 +55,8 @@ function selectWorkspaceMutationActions(state: WorkspaceState) {
     deleteImageClozeRegion: state.deleteImageClozeRegion,
     moveNode: state.moveNode,
     moveNodes: state.moveNodes,
+    redoApplicationOperation: state.redoApplicationOperation,
+    undoApplicationOperation: state.undoApplicationOperation,
     redoWorkspaceAction: state.redoWorkspaceAction,
     redoEditorOperation: state.redoEditorOperation,
     setNodeViewState: state.setNodeViewState,

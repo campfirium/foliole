@@ -22,13 +22,14 @@ export async function prepareAnnotationTargets(entry: Entry, snapshot: Workspace
   return snapshot.libraryScope === get().libraryScope && !ids.some(id => hasUnconfirmedNodeContent(id) || hasUnconfirmedNodeReveal(id));
 }
 
-export async function commitAnnotationDelete(entry: Entry, snapshot: WorkspaceState, get: () => WorkspaceState) {
+export async function commitAnnotationDelete(entry: Entry, snapshot: WorkspaceState, get: () => WorkspaceState, beforeSubmit: () => boolean = () => true) {
   const native = hasWorkspaceNodeMutationRuntime();
   if (native && (!entry.historyFacts || !await prepareAnnotationTargets(entry, snapshot, get))) return null;
   const state = get();
   const mutation = computeDeleteNodesMutation(state, entry.annotations.map(node => node.nodeId));
   if (!mutation) return null;
   const parents = annotationParentStates(state, mutation);
+  if (!beforeSubmit()) return null;
   const result = await syncSoftDeleteNodesToRuntime({ deletedAt: mutation.deletedAt, nodeIds: mutation.nodeIds,
     ...createTrashParentUpdates(mutation.parentNodesToSync),
     ...(native ? { annotationHistory: { mode: 'replay' as const, nodes: entry.historyFacts!, expectedDeletedAt: null,
@@ -38,13 +39,14 @@ export async function commitAnnotationDelete(entry: Entry, snapshot: WorkspaceSt
     entry: { ...entry, historyDeletedAt: mutation.deletedAt, historyParents: parents } } : null;
 }
 
-export async function commitAnnotationRestore(entry: Entry, get: () => WorkspaceState) {
+export async function commitAnnotationRestore(entry: Entry, get: () => WorkspaceState, beforeSubmit: () => boolean = () => true) {
   const nodeIds = entry.annotations.map(node => node.nodeId);
   const native = hasWorkspaceNodeMutationRuntime();
   if (native && (!entry.historyFacts || !entry.historyDeletedAt)) return null;
   const parents = entry.historyParents ?? [];
   if (native && parents.some(parent => !get().nodesById[parent.nodeId]
     || hashAnnotationValue(get().nodesById[parent.nodeId]!.imageRegions) !== hashAnnotationValue(parent.after))) return null;
+  if (!beforeSubmit()) return null;
   const result = await syncRestoreNodesToRuntime({ nodeIds,
     ...(parents.length ? { parentUpdates: parents.map(parent => ({ nodeId: parent.nodeId,
       imageRegions: parent.before, updatedAt: new Date().toISOString() })) } : {}),

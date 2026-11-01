@@ -1,4 +1,5 @@
 import { pushWorkspaceUndoEntry } from './workspaceActionHistory';
+import { settleApplicationAction } from './workspaceApplicationActionAdmission';
 import { createWorkspaceNodeMutationPatch } from './workspaceNodeMutationPatch';
 import { syncNodeContentMutationToRuntime } from './workspaceRuntimeSync';
 import type { WorkspaceState } from './workspaceStore';
@@ -30,6 +31,7 @@ export function preserveCurrentBodyInPatch(
 }
 
 export function buildCommittedTitleMutation(args: {
+  admission?: ReturnType<typeof createStructureRenameEntry>;
   beforeTitle: string | null;
   localPatch: Partial<WorkspaceState> | null;
   nextNodeForSync: WorkspaceState['nodesById'][string];
@@ -60,6 +62,8 @@ export function buildCommittedTitleMutation(args: {
     : [args.nextNodeForSync];
   return {
     nodesToCache,
-    patch: { ...patch, ...(entry ? { appActionHistory: pushWorkspaceUndoEntry(args.state.appActionHistory, entry) } : {}) }
+    patch: { ...patch, ...(args.admission
+      ? settleApplicationAction(args.state, args.admission.id, { ...args.admission, afterTitle: acceptedNode.title })
+      : entry ? { appActionHistory: pushWorkspaceUndoEntry(args.state.appActionHistory, entry) } : {}) }
   };
 }

@@ -30,6 +30,7 @@ export function collectCodeMirrorTextHistoryEntries(update: ViewUpdate, nodeId: 
 
 export class CodeMirrorTextHistoryController {
   private applying = false;
+  private presentation: object | undefined;
   private replaySave: EditorTextReplaySave | undefined;
   private documentId: string | null = null;
   private latest: EditorState | null = null;
@@ -38,6 +39,7 @@ export class CodeMirrorTextHistoryController {
 
   constructor(private readonly guards: {
     discardPending: () => void;
+    focus?: () => void;
     getNodeId: () => string | null;
     isApplyingExternalContent: () => boolean;
     setApplyingExternalContent: (value: boolean) => void;
@@ -55,6 +57,11 @@ export class CodeMirrorTextHistoryController {
   }
 
   isApplying() { return this.applying; }
+
+  ownsReplayFocus(view: EditorView) {
+    const source = this.source?.(this.guards.getNodeId());
+    return Boolean(source?.presentation && source.presentation === this.presentation && source.state?.doc.eq(view.state.doc));
+  }
 
   getReplaySave() { return this.replaySave; }
 
@@ -88,17 +95,27 @@ export class CodeMirrorTextHistoryController {
   private restore(view: EditorView, canonical = this.source?.(this.guards.getNodeId())?.state ?? this.latest) {
     const state = canonical ? findNativeTextHistory(canonical, view.state.doc.toString()) : null;
     this.install(view, state ? isolateNativeTextHistory(state) : null);
+    this.present(view);
   }
 
   setContent(content: string, view: EditorView) {
     this.nodeChanged(view);
     const currentContent = view.state.doc.toString();
-    if (currentContent === content) return;
+    if (currentContent === content) { this.present(view); return; }
     const canonical = this.source?.(this.guards.getNodeId())?.state ?? this.latest;
     this.guards.setApplyingExternalContent(true);
     try { applyExternalEditorContent({ content, currentContent, view }); }
     finally { this.guards.setApplyingExternalContent(false); }
     this.restore(view, canonical);
+  }
+
+  private present(view: EditorView) {
+    const source = this.source?.(this.guards.getNodeId());
+    if (!source?.presentation || source.presentation === this.presentation || !source.state?.doc.eq(view.state.doc)) return;
+    this.presentation = source.presentation;
+    view.dispatch({ selection: source.state.selection, annotations: Transaction.addToHistory.of(false), scrollIntoView: true });
+    if (this.guards.focus) this.guards.focus();
+    else view.focus();
   }
 
   settle(view: EditorView) {

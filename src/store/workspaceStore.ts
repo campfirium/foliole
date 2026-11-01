@@ -3,22 +3,26 @@ import { persist } from 'zustand/middleware';
 
 import { createEmptyEditorOperationHistory } from '../features/editor/model/editorOperationHistory';
 import { DEFAULT_REVIEW_SESSION_MODE } from '../features/review/model/reviewSessionMode';
+import { isDesktopRuntime } from '../shared/platform/runtime';
 
 import { createEmptyWorkspaceActionHistory, createWorkspaceActionHistoryActions } from './workspaceActionHistory';
+import { projectApplicationEditorHistory } from './workspaceApplicationEditorHistory';
+import { createApplicationHistory } from './workspaceApplicationHistory';
+import { createApplicationHistoryActions } from './workspaceApplicationHistoryActions';
+import { publishApplicationHistories } from './workspaceApplicationHistoryPublish';
+import { projectApplicationWorkspaceHistory } from './workspaceApplicationWorkspaceHistory';
 import { prepareBrowserWorkspacePublish } from './workspaceBrowserCommit';
 import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
-import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
 import { installDailyFlowExternalRefresh } from './workspaceDailyFlowSessionActions';
 import { createWorkspaceEditorOperationHistoryActions } from './workspaceEditorOperationHistory';
 import { loadWorkspaceLayoutPreferenceSnapshot } from './workspaceLayoutPrefs';
 import { INITIAL_WORKSPACE_NAVIGATION_STATE } from './workspaceNavigation';
 import { registerPendingNodeSyncRendererBoundary } from './workspaceRendererBoundaryPendingSync';
-import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import { createEmptyWorkspaceSnapshot } from './workspaceSeed';
+import { createWorkspaceActiveNodeAction } from './workspaceStoreActiveNodeAction';
 import { createWorkspaceLayoutActions } from './workspaceStoreLayoutActions';
 import { createWorkspaceNavigationActions } from './workspaceStoreNavigationActions';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
-import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 import { createWorkspaceStorePersistConfig } from './workspaceStorePersistConfig';
 import { withWorkspaceRendererBoundary } from './workspaceStoreRendererBoundary';
 import { createWorkspaceReviewActions } from './workspaceStoreReviewActions';
@@ -94,6 +98,7 @@ export function createInitialWorkspaceState(now = new Date()): Pick<
 }
 
 const initialState = createInitialWorkspaceState();
+let wakeApplicationHistory = () => {};
 let updateWorkspaceHydrationState: () => void = () => undefined;
 let updateWorkspaceHydrationError: (error: unknown) => void = () => undefined;
 
@@ -115,32 +120,22 @@ const workspaceStore = create<WorkspaceState>()(
           if (nextState === currentState) {
             return currentState;
           }
-          return prepareBrowserWorkspacePublish(currentState, withWorkspaceRendererBoundary(nextState, currentState));
+          return prepareBrowserWorkspacePublish(currentState, withWorkspaceRendererBoundary(publishApplicationHistories(nextState, currentState), currentState));
         });
       };
 
+      const applicationActions = createApplicationHistoryActions(boundaryAwareSet, get);
+      wakeApplicationHistory = applicationActions.wakeApplicationHistory;
+      const application = isDesktopRuntime() ? createApplicationHistory() : undefined;
       return ({
       ...initialState,
+      ...(application ? {
+        appActionHistory: projectApplicationWorkspaceHistory(initialState.appActionHistory, application),
+        editorOperationHistory: projectApplicationEditorHistory(initialState.editorOperationHistory, application)
+      } : {}),
+      ...applicationActions,
       ...createWorkspaceLayoutActions(boundaryAwareSet, defaultLayoutState),
-      setActiveNode: (nodeId) => {
-        if (nodeId === null) {
-          boundaryAwareSet({ activeNodeId: null });
-          return;
-        }
-        const openedAt = new Date().toISOString();
-        let didOpen = false;
-        boundaryAwareSet((state) => {
-          if (!isCanonicalVisibleNodeId(state, nodeId)) {
-            return state;
-          }
-          didOpen = true;
-          return {
-            activeNodeId: nodeId,
-            reviewSession: reconcileReviewSession(state, nodeId)
-          };
-        });
-        if (didOpen) void persistNodeOpened(boundaryAwareSet, nodeId, openedAt);
-      },
+      setActiveNode: createWorkspaceActiveNodeAction(boundaryAwareSet),
       setBrowseRootNode: (nodeId) => {
         boundaryAwareSet((state) => ({
           browseRootNodeId: resolveWorkspaceBrowseRootNodeId({
@@ -177,9 +172,9 @@ workspaceStore.setState = ((partial, replace) =>
         return currentState;
       }
       return prepareBrowserWorkspacePublish(currentState, withWorkspaceRendererBoundary(
-        'activeNodeId' in nextState || !('nodesById' in nextState)
+        publishApplicationHistories('activeNodeId' in nextState || !('nodesById' in nextState)
           ? nextState
-          : { ...nextState, activeNodeId: currentState.activeNodeId },
+          : { ...nextState, activeNodeId: currentState.activeNodeId }, currentState),
         currentState
       ));
     };
@@ -190,6 +185,10 @@ workspaceStore.setState = ((partial, replace) =>
 
     return rawWorkspaceSetState(nextPartial, false);
   }) as typeof workspaceStore.setState;
+
+workspaceStore.subscribe((state, previous) => {
+  if (state.appActionHistory.application !== previous.appActionHistory.application) wakeApplicationHistory();
+});
 
 registerPendingNodeSyncRendererBoundary(workspaceStore);
 

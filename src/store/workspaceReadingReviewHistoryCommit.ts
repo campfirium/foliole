@@ -9,6 +9,7 @@ import {
   settleWorkspaceAction
 } from './workspaceActionHistory';
 import { applyReadingSnapshot, applyRelatedReadingSnapshots} from './workspaceActionHistoryReading';
+import { settleApplicationAction } from './workspaceApplicationActionAdmission';
 import { hasPersistentDailyFlow, saveDailyReading } from './workspaceDailyFlowMutations';
 import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { recoverWorkspaceDailyFlow } from './workspaceDailyFlowSessionActions';
@@ -74,7 +75,10 @@ function settleCommittedReadingPatch(set: WorkspaceSet, result: ReadingReviewPat
   let undoRequested = false;
   set((state) => {
     const committed = applyCommittedReadingPatch(state, result, beforeReviewSession);
-    if (!committed) return { appActionHistory: createEmptyWorkspaceActionHistory() };
+    if (!committed) {
+      if (state.appActionHistory.application && result.historyEntry) { applied = true; return settleApplicationAction(state, result.historyEntry.id, result.historyEntry); }
+      return { appActionHistory: createEmptyWorkspaceActionHistory() };
+    }
     applied = true;
     undoRequested = committed.undoRequested;
     return committed.patch;

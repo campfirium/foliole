@@ -1,8 +1,10 @@
+import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { getEditorTextHistorySource } from '../model/editorNativeOperationHistory';
 import { createEmptyEditorOperationHistory, getEditorOperationTopEntry, moveEditorOperationEntry, pushEditorOperationEntry } from '../model/editorOperationHistory';
+import { nativeTextHistoryExtensions } from '../model/nativeTextHistoryGroups';
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
 
@@ -110,4 +112,25 @@ it('starts a separate composition group after reconnecting an external prefix', 
   expect(runtime.adapter.getContent()).toBe('AB');
   expect(runtime.replay('undo')).toBe(true);
   expect(runtime.adapter.getContent()).toBe('A');
+});
+
+
+it('keeps a replay focus request while the target editor is loading', () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const adapter = new CodeMirrorEditorAdapter(host, { initialContent: 'Answer', nodeId: 'a', readOnly: true, onChange: () => {} });
+  adapters.push(adapter);
+  const state = EditorState.create({ doc: 'Answer', selection: { anchor: 1, head: 4 }, extensions: nativeTextHistoryExtensions });
+  const view = (adapter as unknown as { view: EditorView }).view;
+  const focus = vi.spyOn(view, 'focus');
+  adapter.bindTextHistorySource?.(() => ({ state, boundary: null, presentation: state }));
+  expect(focus).not.toHaveBeenCalled();
+  adapter.setReadOnly(false);
+  expect(focus).toHaveBeenCalledOnce();
+  expect(view.hasFocus).toBe(true);
+  expect(view.state.selection.main).toMatchObject({ anchor: 1, head: 4 });
+  adapter.setReadOnly(true);
+  view.contentDOM.blur();
+  adapter.setReadOnly(false);
+  expect(view.hasFocus).toBe(true);
 });

@@ -6,6 +6,7 @@ import {
   failWorkspaceAction,
   settleWorkspaceAction
 } from './workspaceActionHistory';
+import { settleApplicationAction } from './workspaceApplicationActionAdmission';
 import { createWorkspaceDeleteHistoryEntry, type WorkspaceDeleteHistoryEntry } from './workspaceDeleteHistoryEntry';
 import { acceptWorkspaceHistoryCommand } from './workspaceHistoryCommandAcceptance';
 import type { WorkspaceState } from './workspaceStore';
@@ -29,7 +30,10 @@ function showTrashUndoNotice(entry: WorkspaceDeleteHistoryEntry, get: () => Work
     'success',
     {
       label: 'Undo',
-      onSelect: () => { get().undoWorkspaceAction(entry.id); }
+      onSelect: () => {
+        if (get().appActionHistory.application) void get().restoreNode(entry.rootNodeId);
+        else get().undoWorkspaceAction(entry.id);
+      }
     },
     {
       durationMs: TRASH_NOTICE_DURATION_MS,
@@ -101,6 +105,11 @@ async function deleteWithWorkspaceHistory(args: {
   let committed = false;
   let undoRequested = false;
   args.set((state) => {
+    if (state.appActionHistory.application && result.status === 'applied') {
+      committed = true;
+      const exact = computeDeleteNodesMutation(state, result.deletedNodeIds, mutation.deletedAt, 'receipt');
+      return { ...(exact?.patch ?? {}), ...settleApplicationAction(state, entry.id, entry) };
+    }
     const pendingMatches = state.appActionHistory.pendingAction?.entry.id === entry.id;
     if (!pendingMatches || result.status === 'invalid') {
       return { appActionHistory: createEmptyWorkspaceActionHistory() };

@@ -6,6 +6,7 @@ import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes'
 import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
 
 import { createEmptyWorkspaceActionHistory } from './workspaceActionHistory';
+import { publishApplicationHistories } from './workspaceApplicationHistoryPublish';
 import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
 import { mergeHydratedWorkspaceMembership, mergeNodeOpenStateById } from './workspaceHydrateObjectMerge';
 import { parsePersistedWorkspaceState } from './workspacePersistedStateParser';
@@ -120,12 +121,12 @@ export function createWorkspaceStorePersistConfig(
           trashedNodeIds: nextState.trashedNodeIds
         })
       };
-      return withWorkspaceRendererBoundary({
+      return withWorkspaceRendererBoundary(publishApplicationHistories({
         ...nextWorkspaceState,
         reviewSession: persisted.reviewSession
           ? reconcileReviewSession(nextWorkspaceState)
           : nextWorkspaceState.reviewSession
-      }, current);
+      }, current), current);
     },
     onRehydrateStorage: () => (_state: unknown, error?: unknown) => {
       onHydrated(error);

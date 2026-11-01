@@ -12,6 +12,7 @@ import {
   settleWorkspaceAction
 } from './workspaceActionHistory';
 import { createWorkspaceActionHistoryEntryId } from './workspaceActionHistoryEntry';
+import { settleApplicationAction } from './workspaceApplicationActionAdmission';
 import { hasPersistentDailyFlow, saveDailyGrade } from './workspaceDailyFlowMutations';
 import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { recoverWorkspaceDailyFlow } from './workspaceDailyFlowSessionActions';
@@ -57,7 +58,10 @@ function settleReviewGradeHistory(set: WorkspaceSet, gradedState: NonNullable<Re
   set((state) => {
     const applicable = state.appActionHistory.pendingAction?.entry.id === entry.id &&
       isReviewGradeApplicable(state, entry, beforeNodes);
-    if (!applicable) return { appActionHistory: createEmptyWorkspaceActionHistory() };
+    if (!applicable) {
+      if (state.appActionHistory.application) { applied = true; return settleApplicationAction(state, entry.id, entry); }
+      return { appActionHistory: createEmptyWorkspaceActionHistory() };
+    }
     const settled = settleWorkspaceAction({ ...state.appActionHistory,
       pendingAction: { ...state.appActionHistory.pendingAction!, entry }
     }, entry.id);
@@ -73,6 +77,7 @@ function settleReviewGradeHistory(set: WorkspaceSet, gradedState: NonNullable<Re
 }
 
 export async function commitWorkspaceReviewGrade(args: {
+  applicationEntryId?: string;
   currentNodeId: string;
   get: () => WorkspaceState;
   grade: ReviewGrade;
@@ -139,7 +144,7 @@ function createPendingGradeEntry(args: Parameters<typeof commitWorkspaceReviewGr
     afterReview: args.result.nodePatch.review,
     beforeContext: context,
     beforeReview: args.snapshot.nodesById[args.currentNodeId]?.review ?? null,
-    id: args.snapshot.reviewSession.daily ? dailyFlowOperationId(args.snapshot.reviewSession.daily, args.currentNodeId, `grade:${args.grade}`) : createWorkspaceActionHistoryEntryId(),
+    id: args.applicationEntryId ?? (args.snapshot.reviewSession.daily ? dailyFlowOperationId(args.snapshot.reviewSession.daily, args.currentNodeId, `grade:${args.grade}`) : createWorkspaceActionHistoryEntryId()),
     mutationTimestamp: args.now,
     nodeId: args.currentNodeId
   });

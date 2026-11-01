@@ -127,6 +127,7 @@ export function createWorkspaceEditorOperationHistoryActions(set: WorkspaceSet, 
       editorOperationHistory: pushEditorOperationEntry(state.editorOperationHistory, entry)
     })),
     redoEditorOperation: (context?: EditorOperationApplyContext) => {
+      if (get().appActionHistory.application) return get().redoApplicationOperation?.(context) ?? false;
       const requestedNodeId = context?.nodeId ?? get().activeNodeId;
       if (!requestedNodeId) return false;
       const nodeId = resolveOperationTarget(get(), requestedNodeId, 'redo');
@@ -139,6 +140,7 @@ export function createWorkspaceEditorOperationHistoryActions(set: WorkspaceSet, 
       }
     },
     undoEditorOperation: (context?: EditorOperationApplyContext) => {
+      if (get().appActionHistory.application) return get().undoApplicationOperation?.(context) ?? false;
       const requestedNodeId = context?.nodeId ?? get().activeNodeId;
       if (!requestedNodeId) return false;
       const nodeId = resolveOperationTarget(get(), requestedNodeId, 'undo');

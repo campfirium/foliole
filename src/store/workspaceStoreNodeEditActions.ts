@@ -3,6 +3,7 @@ import { resolveNodeDerivedTitle } from '../features/nodes/model/nodeDerivedTitl
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
 import { canSaveNodeText, showNodeTitleShortenedNotice } from '../shared/ui/nodeTextSaveBudget';
 
+import { admitApplicationTitle, settleApplicationAction } from './workspaceApplicationActionAdmission';
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import { createWorkspaceNodeMutationPatch } from './workspaceNodeMutationPatch';
 import { buildRenamedWorkspaceNode, loadWorkspaceTitleDocument } from './workspaceNodeTitleMutation';
@@ -22,13 +23,16 @@ type WorkspaceSet = (
 
 export function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceState['updateNodeTitle'] {
   return async (nodeId, title) => {
+    const { entry: admission, libraryScope } = admitApplicationTitle(set, nodeId, title);
+    const fail = () => { if (admission) set(state => settleApplicationAction(state, admission!.id, null)); return false; };
     const pendingDocument = loadWorkspaceTitleDocument(set, nodeId);
     const document = pendingDocument instanceof Promise ? await pendingDocument : pendingDocument;
-    if (document === null) return false;
+    if (document === null) return fail();
     let nextNodeForSync: WorkspaceState['nodesById'][string] | null = null;
     let localPatch: Partial<WorkspaceState> | null = null;
     let beforeTitle: string | null = null;
     set((state) => {
+      if (state.libraryScope !== libraryScope) return state;
       const node = state.nodesById[nodeId];
       if (!node) return state;
       const nextNode = buildRenamedWorkspaceNode(node, title, document);
@@ -43,17 +47,25 @@ export function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceState['
       };
       return state;
     });
-    if (!nextNodeForSync) return false;
+    if (!nextNodeForSync) return fail();
     const shouldUseLocalFallback = !hasWorkspaceNodeMutationRuntime();
     const result = await syncNodeContentMutationToRuntime(nextNodeForSync);
     let applied = false;
     let nodesToCache: WorkspaceState['nodesById'][string][] = [];
     set((state) => {
+      if (state.libraryScope !== libraryScope) return state;
       const committed = buildCommittedTitleMutation({
         beforeTitle, localPatch, nextNodeForSync: nextNodeForSync!, nodeId, result,
-        shouldUseLocalFallback, state
+        shouldUseLocalFallback, state, ...(admission ? { admission } : {})
       });
-      if (!committed) return state;
+      if (!committed) {
+        if (admission) {
+          const accepted = result?.nodes.find(node => node.nodeId === nodeId);
+          applied = Boolean(accepted && result?.updatedNodeIds?.includes(nodeId));
+          return settleApplicationAction(state, admission.id, applied ? { ...admission, afterTitle: accepted!.title } : null);
+        }
+        return state;
+      }
       applied = true;
       nodesToCache = committed.nodesToCache;
       return committed.patch;

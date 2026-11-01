@@ -1,5 +1,6 @@
 import { replaceUniqueArticleTitleHeading } from '../features/nodes/model/articleTitleHeading';
 
+import type { WorkspaceHistoryExecution } from './workspaceHistoryApplyResult';
 import { getWorkspaceMutationRepository } from './workspaceMutationRepository';
 import { createWorkspaceNodeMutationPatch } from './workspaceNodeMutationPatch';
 import type { WorkspaceState } from './workspaceStore';
@@ -8,7 +9,7 @@ import type { WorkspaceStructureRenameEntry } from './workspaceStructureHistoryT
 export async function applyWorkspaceStructureRenameHistory(
   get: () => WorkspaceState,
   entry: WorkspaceStructureRenameEntry,
-  mode: 'redo' | 'undo'
+  mode: 'redo' | 'undo', execution?: WorkspaceHistoryExecution
 ) {
   const sourceTitle = mode === 'undo' ? entry.afterTitle : entry.beforeTitle;
   const targetTitle = mode === 'undo' ? entry.beforeTitle : entry.afterTitle;
@@ -26,7 +27,9 @@ export async function applyWorkspaceStructureRenameHistory(
     title: targetTitle,
     updatedAt: new Date().toISOString()
   };
+  if (execution && !execution.beforeSubmit()) return null;
   const result = await getWorkspaceMutationRepository().syncNodeMutation(requested);
+  if (result?.updatedNodeIds?.includes(entry.nodeId)) execution?.committed(entry);
   const latest = get();
   if (!result?.updatedNodeIds?.includes(entry.nodeId) || latest.nodesById[entry.nodeId]?.title !== sourceTitle) {
     return null;

@@ -27,9 +27,9 @@ test('keeps undo across document switches and starts empty after renderer restar
   await openNode(page, CONTEXT_A_ID);
   await focusEditor(page);
   await page.keyboard.press(undoShortcut());
-  await expect.poll(async () => (await loadNodeDocument(page, CONTEXT_A_ID))?.content).toBe(CONTEXT_A_CONTENT);
+  await expect.poll(async () => (await loadNodeDocument(page, CONTEXT_B_ID))?.content).toBe(CONTEXT_B_CONTENT);
   await page.keyboard.press(redoShortcut());
-  await expect.poll(async () => (await loadNodeDocument(page, CONTEXT_A_ID))?.content).toBe(`${CONTEXT_A_CONTENT} saved A`);
+  await expect.poll(async () => (await loadNodeDocument(page, CONTEXT_B_ID))?.content).toBe(`${CONTEXT_B_CONTENT} saved B`);
   await openNode(page, CONTEXT_B_ID);
   await focusEditor(page);
   await page.keyboard.press(undoShortcut());

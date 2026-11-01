@@ -2,15 +2,17 @@ import { restoreFlowHistoryEntry } from '../../lib/core/flow/flowHistoryEntry';
 
 import type { WorkspaceActionHistoryEntry } from './workspaceActionHistoryEntry';
 import { applyWorkspaceDeleteHistory } from './workspaceDeleteHistoryApply';
-import type { WorkspaceHistoryApplyResult } from './workspaceHistoryApplyResult';
+import type { WorkspaceHistoryApplyResult, WorkspaceHistoryExecution } from './workspaceHistoryApplyResult';
 import { createWorkspaceHistoryMutationTimestamp } from './workspaceHistoryTimestamp';
 import { applyWorkspaceReadingHistory } from './workspaceReadingHistoryApply';
+import { applyWorkspaceRestoreHistory } from './workspaceRestoreHistory';
 import { applyWorkspaceReviewGradeHistory } from './workspaceReviewGradeHistoryApply';
 import { applyWorkspaceShelveHistory } from './workspaceShelveHistoryApply';
 import type { WorkspaceState } from './workspaceStore';
 import { applyWorkspaceStructureHistoryEntry } from './workspaceStructureHistoryEntryApply';
 
 export function applyWorkspaceHistoryEntry(args: {
+  execution?: WorkspaceHistoryExecution;
   entry: WorkspaceActionHistoryEntry;
   get: () => WorkspaceState;
   mode: 'redo' | 'undo';
@@ -29,6 +31,7 @@ export function applyWorkspaceHistoryEntry(args: {
   if (args.entry.type === 'review.grade') {
     return applyWorkspaceReviewGradeHistory({ ...args, entry: args.entry, mutationTimestamp });
   }
+  if (args.entry.type === 'workspace.restore') return applyWorkspaceRestoreHistory({ ...args, entry: args.entry, mutationTimestamp });
   if (args.entry.type === 'workspace.delete') {
     return applyWorkspaceDeleteHistory({ ...args, entry: args.entry, mutationTimestamp });
   }

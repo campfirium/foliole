@@ -41,6 +41,8 @@ function requestPendingUndo(set: WorkspaceSet, expectedEntryId?: string) {
 function createApplyWorkspaceHistoryAction(set: WorkspaceSet, get: WorkspaceGet, mode: 'redo' | 'undo', awaitCommit = false) {
   return (expectedEntryId?: string) => {
     const snapshot = get();
+    if (snapshot.appActionHistory.application && !expectedEntryId) return (mode === 'undo'
+      ? snapshot.undoApplicationOperation : snapshot.redoApplicationOperation)?.() ?? false;
     const command = resolveWorkspaceHistoryCommand(snapshot.appActionHistory, mode, expectedEntryId);
     if (!command) return false;
     if (command.phase === 'pending') return requestPendingUndo(set, expectedEntryId);

@@ -4,7 +4,7 @@ import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 import { captureWorkspaceDeleteParentSnapshot, type WorkspaceDeleteHistoryEntry,
   type WorkspaceDeleteParentSnapshot } from './workspaceDeleteHistoryEntry';
 import { restoreDeleteHistoryOrder, restoreDeleteManualOrders } from './workspaceDeleteHistoryOrder';
-import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult } from './workspaceHistoryApplyResult';
+import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult, type WorkspaceHistoryExecution } from './workspaceHistoryApplyResult';
 import { applyWorkspaceHistoryContext } from './workspaceHistoryContext';
 import { getWorkspaceMutationRepository } from './workspaceMutationRepository';
 import type { WorkspaceState } from './workspaceStore';
@@ -17,10 +17,9 @@ function isExactIdSet(left: string[], right: string[]) {
 function areParentSnapshotsApplicable(state: WorkspaceState, snapshots: Record<string, WorkspaceDeleteParentSnapshot>) {
   return Object.entries(snapshots).every(([nodeId, snapshot]) => {
     const node = state.nodesById[nodeId];
-    return node?.content === snapshot.content &&
-      (node?.updatedAt === snapshot.updatedAt ||
-        JSON.stringify(node?.manualChildOrder ?? null) !== JSON.stringify(snapshot.manualChildOrder ?? null)) &&
-      JSON.stringify(node?.imageRegions ?? null) === JSON.stringify(snapshot.imageRegions ?? null);
+    const sourceMatches = state.appActionHistory.application || (node?.content === snapshot.content &&
+      (node?.updatedAt === snapshot.updatedAt || JSON.stringify(node?.manualChildOrder ?? null) !== JSON.stringify(snapshot.manualChildOrder ?? null)));
+    return Boolean(node && sourceMatches) && JSON.stringify(node?.imageRegions ?? null) === JSON.stringify(snapshot.imageRegions ?? null);
   });
 }
 
@@ -106,6 +105,7 @@ function buildAppliedEntry(
 }
 
 export async function applyWorkspaceDeleteHistory(args: {
+  execution?: WorkspaceHistoryExecution;
   entry: WorkspaceDeleteHistoryEntry;
   get: () => WorkspaceState;
   mode: 'redo' | 'undo';
@@ -116,6 +116,7 @@ export async function applyWorkspaceDeleteHistory(args: {
     order.parentNodeId ? [[order.parentNodeId, args.get().nodesById[order.parentNodeId]?.manualChildOrder ?? null]] : []));
   const rawParents = args.mode === 'undo' ? args.entry.beforeParentNodesById : args.entry.afterParentNodesById;
   const parentNodesById = withMutationTimestamp(rawParents, args.get(), args.mutationTimestamp);
+  if (args.execution && !args.execution.beforeSubmit()) return { status: 'invalid' };
   const persisted = await persistDeleteTransition({
     ...args,
     parentNodes: Object.values(parentNodesById)
@@ -124,6 +125,7 @@ export async function applyWorkspaceDeleteHistory(args: {
     showAppRuntimeNotice('Could not update Trash. Please try again.', 'error');
     return { status: persisted.status };
   }
+  args.execution?.committed(buildAppliedEntry(args.entry, args.mode, args.mutationTimestamp, parentNodesById));
   const latest = args.get();
   if (!isApplicable(latest, args.entry, args.mode)) return { status: 'invalid' };
   const trashed = new Set(latest.trashedNodeIds);

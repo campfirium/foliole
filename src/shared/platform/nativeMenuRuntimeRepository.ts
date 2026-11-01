@@ -10,6 +10,7 @@ export type NativeMenuUnlisten = (() => void) | null;
 export interface NativeMenuStateSyncPayload {
   enabledCommandIds: string[];
   shortcutAccelerators?: { accelerator: string; commandId: string }[];
+  history?: { undoTitle: string; redoTitle: string; nativeEditing: boolean };
 }
 
 function getElectronBridge() {
@@ -41,7 +42,8 @@ export async function syncNativeMenuState(payload: NativeMenuStateSyncPayload) {
   try {
     await runtimeInvoke(NATIVE_COMMANDS.syncAppMenuState, {
       enabledCommandIds: uniqueEnabledCommandIds,
-      shortcutAccelerators: payload.shortcutAccelerators ?? []
+      shortcutAccelerators: payload.shortcutAccelerators ?? [],
+      ...(payload.history ? { history: payload.history } : {})
     });
   } catch (error) {
     logRuntimeWarning('native menu sync failed', {

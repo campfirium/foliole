@@ -25,7 +25,7 @@ export function DocumentPanelAnswerSection(props: DocumentPanelAnswerSectionProp
   const t = useTranslation();
   const answerNodeId = getImageClozeAnswerEditorNodeId(props.editorNodeId);
   const answerEditorKey = `answer-${props.editorAppearanceKey}-${answerNodeId ?? 'none'}`;
-  const answerHistory = useAnswerEditorHistory(answerNodeId);
+  const answerHistory = useAnswerEditorHistory(answerNodeId, props.editorNodeId);
 
   return (
     <section
