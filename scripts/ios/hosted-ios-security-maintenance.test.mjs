@@ -24,14 +24,23 @@ it('updates the existing artifact with iOS checks and retains scheduled identity
     inventory: { status: 'lock-evidence', graphs: {}, inputs: {} }, scanner: { status: 'clean', findings: [], errors: [] },
     official: { errors: [], findings: [], sources: [], packages: [], gaps: [] }, environment: { tools: {}, components: {} } };
   receipt.checks = iosMaintenanceChecks(receipt);
+  const sourceCheck = receipt.checks.find(check => check.asset === 'swift-native' && check.route === 'official-review');
+  sourceCheck.status = 'error';
+  sourceCheck.reason = 'Official source HTTP 503';
   const file = path.join(output, 'coverage.json');
   writeFileSync(file, JSON.stringify(base));
   try {
+    await runHostedIosSecurityMaintenance({ root, output, expected, collect: async () => receipt });
+    expect(JSON.parse(readFileSync(file, 'utf8')).coverage.find(asset => asset.id === 'swift-native')
+      .checks.find(check => check.route === 'official-review').status).toBe('error');
+    receipt.checks = iosMaintenanceChecks(receipt);
     await runHostedIosSecurityMaintenance({ root, output, expected, collect: async () => receipt });
     const persisted = JSON.parse(readFileSync(file, 'utf8'));
     expect(persisted.hosted).toEqual(base.hosted);
     expect(persisted.ios.candidate.revision).toBe(expected);
     expect(persisted.overallStatus).toBe('incomplete');
+    expect(persisted.coverage.find(asset => asset.id === 'swift-native')
+      .checks.find(check => check.route === 'official-review').status).toBe('findings');
     base.snapshot.candidate.revision = 'f'.repeat(40);
     writeFileSync(file, JSON.stringify(base));
     await expect(runHostedIosSecurityMaintenance({ root, output, expected })).rejects.toThrow('candidate mismatch');

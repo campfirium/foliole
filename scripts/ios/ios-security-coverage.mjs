@@ -5,9 +5,7 @@ import { digest } from '../security/security-inputs.mjs';
 // Keep the existing complete report/owner schema; unrelated checks retain their original evidence.
 export function mergeIosSecurityCoverage(base, receipt, now = Date.now()) {
   const snapshot = structuredClone(base.snapshot);
-  const observations = base.coverage.flatMap(asset => asset.checks
-    .filter(check => check.reason !== 'required-observation-missing')
-    .map(check => ({ ...check, asset: asset.id })));
+  const observations = originalObservations(base, snapshot, receipt.checks);
   for (const incoming of receipt.checks) {
     const original = observations.find(check => check.asset === incoming.asset && check.route === incoming.route);
     const key = `${incoming.asset}:${incoming.route}`;
@@ -16,6 +14,7 @@ export function mergeIosSecurityCoverage(base, receipt, now = Date.now()) {
     const qualified = original && qualifyOriginal(original, snapshot, previousEnvironment, now);
     const combined = qualified ? combineCheck(qualified, incoming) : { ...incoming };
     combined.environment = environment;
+    combined.evidence = { ...combined.evidence, iosMerge: { schemaVersion: 1, original: original ?? null } };
     if (original) observations.splice(observations.indexOf(original), 1, combined);
     else observations.push(combined);
     snapshot.environments[key] = environment;
@@ -27,6 +26,24 @@ export function mergeIosSecurityCoverage(base, receipt, now = Date.now()) {
     scope: 'iOS evidence only; unknown applicability remains explicit review findings' };
   if (base.hosted) result.hosted = base.hosted;
   return result;
+}
+
+function originalObservations(base, snapshot, incoming) {
+  const replacements = new Set(incoming.map(check => `${check.asset}:${check.route}`));
+  return base.coverage.flatMap(asset => asset.checks.flatMap(check => {
+    if (check.reason === 'required-observation-missing') return [];
+    const key = `${asset.id}:${check.route}`;
+    const observed = check.observed ?? check;
+    const layer = observed.evidence?.iosMerge;
+    if (!replacements.has(key) || !layer) return [{ ...check, asset: asset.id }];
+    if (layer.schemaVersion !== 1) throw new Error('Unsupported iOS retry provenance; regenerate base coverage');
+    if (!layer.original) {
+      delete snapshot.environments[key];
+      return [];
+    }
+    snapshot.environments[key] = layer.original.environment;
+    return [{ ...layer.original, asset: asset.id }];
+  }));
 }
 
 function qualifyOriginal(check, snapshot, environment, now) {

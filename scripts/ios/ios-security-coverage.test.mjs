@@ -50,3 +50,25 @@ it('rejects tampered scanner archives before extraction', () => {
   expect(() => verifyTrivyArchive('tampered', digest('official-release'))).toThrow('SHA-256 mismatch');
   expect(() => verifyTrivyArchive('official-release', digest('official-release'))).not.toThrow();
 });
+
+it('replaces an earlier iOS attempt on retry so a recovered source does not remain failed', () => {
+  const now = Date.now();
+  const { base, receipt } = reports(now);
+  const prior = base.coverage.find(asset => asset.id === 'embedded-native').checks.find(check => check.route === 'official-review');
+  prior.status = 'findings';
+  prior.findings = [{ package: 'android/native', advisory: 'prior', versions: ['1.0'], platform: 'android' }];
+  const failed = reports(now).receipt;
+  const swift = failed.checks.find(check => check.asset === 'swift-native' && check.route === 'official-review');
+  swift.status = 'error';
+  swift.reason = 'Official source HTTP 503';
+  const first = mergeIosSecurityCoverage(base, failed, now);
+  const recovered = mergeIosSecurityCoverage(first, receipt, now + 1000);
+  const check = recovered.coverage.find(asset => asset.id === 'swift-native').checks.find(row => row.route === 'official-review');
+  expect(check.status).toBe('findings');
+  expect(check.reason).not.toContain('HTTP 503');
+  const embedded = recovered.coverage.find(asset => asset.id === 'embedded-native').checks.find(row => row.route === 'official-review');
+  expect(embedded.findings.filter(row => row.package === 'android/native')).toHaveLength(1);
+  const repeated = mergeIosSecurityCoverage(recovered, receipt, now + 2000);
+  expect(repeated.coverage.find(asset => asset.id === 'embedded-native').checks.find(row => row.route === 'official-review').findings)
+    .toEqual(embedded.findings);
+});

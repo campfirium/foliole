@@ -54,6 +54,11 @@ old findings after a version upgrade; source failure preserves the previous fact
 `mergeIosSecurityCoverage` consumes a complete existing coverage report and combines
 same-asset provenance without replacing other-platform findings or refreshing expired
 evidence. Its result uses the existing durable owner and notification transport. The shared
+adapter records the pre-iOS layer inside its report evidence: retrying that report replaces
+the prior iOS attempt, so a recovered source can recover without duplicating findings.
+The retained other-platform layer keeps its original timestamp and qualification.
+Reports created before this retry provenance was introduced should use a freshly collected
+base report; they are rebuildable evidence, not a second durable state owner. The shared
 scheduled job must invoke this adapter before artifact upload; no separate scheduler,
 daemon, model timer or GitHub poller is supplied here. Until that shared call has actually
 run, local execution does not establish automatic daily coverage or CI qualification.
