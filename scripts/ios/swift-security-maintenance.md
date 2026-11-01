@@ -1,5 +1,66 @@
 # Swift dependency security evidence
 
+## Fixed advisory and vendor refresh
+
+```sh
+node scripts/ios/ios-security-controls.mjs .tmp/artifacts/ios-security/controls
+node scripts/ios/ios-security-maintenance.mjs .tmp/artifacts/ios-security/current
+# Actual Mac graph, binary components, tools/SDK and read-only fixed iPhone OS:
+node scripts/ios/ios-security-maintenance.mjs .tmp/artifacts/ios-security/mac --resolve --device
+# Merge into an existing complete maintenance report without changing the owner schema:
+node scripts/ios/ios-security-maintenance.mjs .tmp/artifacts/ios-security/merged --base-coverage PATH_TO_COVERAGE_JSON
+```
+
+The entry downloads Trivy 0.76.1 into a repository-local rebuildable tools cache, validates
+the official release SHA-256 before extraction, and checks every pin from both locks against
+the scanner inventory. `FOLIOLE_TRIVY_BIN` may select an already-qualified binary. The DB is
+refreshed by Trivy and its actual `UpdatedAt` must be within 26 hours. Swift advisories come
+from GHSA; zero results do not cover vendor-only announcements or embedded components.
+Positive controls use isolated Package.resolved metadata for Capacitor 8.5.0/8.5.1 and
+GHSA-rvm3-566m-v7fv. They never execute vulnerable code or change the app's dependencies.
+
+Official APIs retain releases and public advisories for the four pinned remote packages,
+their implementation repositories, and protoc's vendored Protobuf/Abseil. Versions come
+from both locks, evaluated manifests, pinned `Sources/protobuf/VERSIONS.json`, actual
+framework headers/core and npm plugin manifests. UTF8-range shares the vendored Protobuf
+revision; Abseil's bundled cctz shares its recorded revision. SDK/system libraries belong
+to the selected Xcode/SDK and OS, not a guessed separate package version. Cordova's binary
+is pinned by Capacitor's URL/checksum; plist `1.0` is not an Apache Cordova version.
+
+SQLCipher's implementation release API is positively checked against its 4.19 announcement
+and both named fixes; the reviewed predicate covers 4.x below 4.19. SQLite's official CVE
+table is checked against CVE-2026-11822/3.53.2 and parsed with explicit non-core exclusions.
+Below-fix versions require exposure review, not automatic exploitability claims.
+Apple Developer RSS was discovered from its official release page; the security release
+metadata table is qualified against a known iOS security release and a real CVE/WebKit
+advisory. Markup changes fail explicitly. New versions and advisory notices are review
+items, distinct from confirmed affected-version findings. Mac, CI and device evidence
+remain separate. WebKit and Common Crypto follow Apple OS security maintenance; no
+independent version is invented. A successful read is source health, not universal safety.
+
+Each `ios-security.json` retains raw source files, digests, response dates, source errors,
+scanner/graph evidence and existing-schema checks. HTTP/parse/date/pagination failures are
+errors. Release windows must reach the installed baseline when a full page is returned;
+advisory pagination is never silently truncated. Empty advisory lists never attest safety.
+Unknown applicability is an explicit informational review finding, so successful source
+recovery cannot silently report overall clean. Fresh complete source evaluation can retire
+old findings after a version upgrade; source failure preserves the previous facts.
+
+`mergeIosSecurityCoverage` consumes a complete existing coverage report and combines
+same-asset provenance without replacing other-platform findings or refreshing expired
+evidence. Its result uses the existing durable owner and notification transport. The shared
+scheduled job must invoke this adapter before artifact upload; no separate scheduler,
+daemon, model timer or GitHub poller is supplied here. Until that shared call has actually
+run, local execution does not establish automatic daily coverage or CI qualification.
+
+Behavior verification includes source failure/malformed data, stale evidence, discovery,
+deduplication, child-process restart, recovery and recurrence against the production owner
+and existing inbox, with an isolated publisher/transport boundary. Live source/scanner
+qualification is separately recorded in the task evidence; queued inbox events are not
+claimed as desktop delivery without a corresponding transport receipt.
+
+## Dependency graph extraction
+
 Run from the repository root. This entry collects evidence without changing dependency versions,
 installing an app, upgrading Xcode, or querying a vulnerability database.
 

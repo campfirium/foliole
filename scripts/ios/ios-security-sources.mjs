@@ -22,6 +22,7 @@ export async function readOfficialSource(url, { fetchSource = fetch, now = Date.
   }
   const text = await response.text();
   return { url, checkedAt: new Date(now).toISOString(), serverDate: new Date(serverDate).toISOString(),
+    pagination: response.headers.get('link'),
     sha256: createHash('sha256').update(text).digest('hex'), text };
 }
 
@@ -41,6 +42,7 @@ export function assessSqlcipherRelease(releases, version) {
     || !/security/iu.test(control.body) || !control.body.includes('hexkey')
     || !control.body.includes('sqlcipher_export')) throw new Error('SQLCipher vendor positive control missing');
   if (!semver.valid(version)) throw new Error('Unknown SQLCipher core version');
+  if (semver.major(version) !== 4) throw new Error('SQLCipher version is outside the reviewed 4.x advisory predicate');
   // A reviewed vendor predicate, not an inference from the latest version or release prose.
   return semver.satisfies(version, '>=4.0.0 <4.19.0') ? [{ platform: 'ios',
     advisory: 'sqlcipher-4.19.0-export-hexkey', package: 'sqlcipher/sqlcipher', versions: [version],
@@ -49,9 +51,11 @@ export function assessSqlcipherRelease(releases, version) {
 }
 
 export function pendingReleases(releases, version) {
-  if (!semver.valid(version)) throw new Error('Unknown installed release version');
-  return releases.filter(row => !row.prerelease && semver.valid(row.tag.replace(/^v/u, ''))
-    && semver.gt(row.tag.replace(/^v/u, ''), version)).map(row => ({ ...row,
+  const numeric = value => /^v?\d+\.\d+(?:\.\d+)?$/u.test(value) ? semver.coerce(value)?.version : undefined;
+  const installed = numeric(version);
+  if (!installed) throw new Error('Unknown installed release version');
+  return releases.filter(row => !row.prerelease && numeric(row.tag)
+    && semver.gt(numeric(row.tag), installed)).map(row => ({ ...row,
     disposition: 'release-review-required; not a confirmed vulnerability' }));
 }
 
