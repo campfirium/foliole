@@ -12,11 +12,10 @@
     "allowJs": false,
     "allowImportingTsExtensions": true,
     "noEmit": true,
-    "esModuleInterop": false,
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
