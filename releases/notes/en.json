@@ -1,4 +1,17 @@
 {
+  "0.7.17": {
+    "notes": [
+      "New",
+      "Automatic review optimization: FSRS parameter training is triggered by review volume in each folder to optimize review scheduling.",
+      "Improved",
+      "Refined Markdown mirroring and exports.",
+      "Improved desktop responsiveness to reduce pauses during lengthy operations.",
+      "Fixed",
+      "Electron has been updated with security fixes.",
+      "Undo and redo work correctly across materials.",
+      "Search results jump to the correct location when a PDF is first opened."
+    ]
+  },
   "0.7.16": {
     "notes": [
       "Fixed",
