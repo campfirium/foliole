@@ -14,7 +14,7 @@ root npm dependencies, Android dependencies, Gradle Wrapper and both hand-owned
 Swift manifests detected. The initial job exposed a lockfile exclusion error;
 the corrected npm exclusion matches nested manifests without matching the root
 manifest or `package-lock.json`. Local extraction alone was not activation proof.
-The pre-existing Gradle major PR remains open and is outside the routine handover.
+Native major updates require the linked host migration and applicable build checks before adoption.
 
 To roll back, disable Renovate and restore the Dependabot ordinary limits in the
 same change: npm 10, Gradle 5, each Swift root 3.

@@ -13,12 +13,12 @@ const wrapperRoot = path.resolve('android/gradle/wrapper');
 const properties = readFileSync(path.join(wrapperRoot, 'gradle-wrapper.properties'), 'utf8');
 
 describe('Android Gradle distribution security', () => {
-  it('selects the patched Gradle 8 maintenance line over HTTPS with integrity verification', () => {
+  it('selects the patched Gradle 9 maintenance line over HTTPS with integrity verification', () => {
     const version = properties.match(/gradle-(\d+)\.(\d+)\.(\d+)-all\.zip/u);
     expect(version, 'The Android build must select an explicit Gradle distribution').not.toBeNull();
     const [, major, minor, patch] = version.map(Number);
-    expect(major).toBe(8);
-    expect(minor > 14 || (minor === 14 && patch >= 6)).toBe(true);
+    expect(major).toBe(9);
+    expect(minor > 8 || (minor === 8 && patch >= 1)).toBe(true);
     expect(properties).toMatch(/^distributionUrl=https\\:\/\/services\.gradle\.org\//mu);
     expect(properties).toMatch(/^distributionSha256Sum=[a-f0-9]{64}$/mu);
   });

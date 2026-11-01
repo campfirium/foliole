@@ -75,8 +75,9 @@ gradle.projectsEvaluated {
                 }
                 if (project.plugins.hasPlugin('com.android.application')) {
                     def android = project.extensions.getByName('android')
+                    def sdk = project.extensions.getByName('androidComponents').sdkComponents
                     report.android.add([project: project.path, compileSdk: android.compileSdkVersion,
-                        buildTools: android.buildToolsVersion, sdkDirectory: android.sdkDirectory.canonicalPath])
+                        buildTools: android.buildToolsVersion, sdkDirectory: sdk.sdkDirectory.get().asFile.canonicalPath])
                 }
             }
             def output = root.file(root.property('folioleSecurityReport').toString())

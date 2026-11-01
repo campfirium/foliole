@@ -1,5 +1,5 @@
 def patches = [
-    'com.android.tools.build:gradle': [version: '8.13.2', reason: 'Keep Capacitor build plugins on the same compatible AGP patch.'],
+    'com.android.tools.build:gradle': [version: '9.4.1', reason: 'Align host and Capacitor build plugins with the verified Gradle 9 toolchain.'],
     'org.jetbrains.kotlin:kotlin-gradle-plugin': [version: '2.4.21', reason: 'GHSA-r937-wjx7-w2jp fixes unsafe build-cache deserialization.'],
     'com.google.guava:guava': [version: '33.7.2-jre', reason: 'GHSA-xxph-c9ww-hj94 fixes deserialization memory exhaustion.'],
     'org.apache.commons:commons-compress': [version: '1.28.0', reason: 'GHSA-4265-ccf5-phj5 and GHSA-4g9r-vxhx-9pgx fix malformed archive denial of service.'],

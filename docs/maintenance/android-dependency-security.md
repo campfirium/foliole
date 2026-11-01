@@ -45,7 +45,7 @@ References: [Gradle resolution API](https://docs.gradle.org/current/javadoc/org/
 
 ## Build dependency remediation
 
-`android/buildscript-security.gradle` supplies documented minimum-version constraints to root and plugin buildscript classpaths. It uses ordinary Gradle constraints: unused modules are not added and newer upstream versions are allowed. Netty and Bouncy Castle modules share a family baseline. AGP remains on the compatible 8.13 patch line; the Kotlin build plugin is upgraded for its build-cache deserialization advisory, while language/API settings preserve the existing source level.
+`android/buildscript-security.gradle` supplies documented minimum-version constraints to root and plugin buildscript classpaths. It uses ordinary Gradle constraints: unused modules are not added and newer upstream versions are allowed. Netty and Bouncy Castle modules share a family baseline. AGP is aligned on the verified 9.4 patch line with Gradle 9.8; the Kotlin build plugin is upgraded for its build-cache deserialization advisory, while language/API settings preserve the existing source level.
 
 `android/kotlin-runtime.gradle` limits the existing Kotlin standard-library compatibility rule to application compile/runtime classpaths. Compiler tooling resolves its own libraries; applying the old application stdlib version to compiler configurations can break the patched compiler. The application runtime dependency graph must remain unchanged for this build-only remediation.
 
