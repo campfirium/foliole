@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 apply plugin: 'com.google.protobuf'
 
-def framedSyncProtobufVersion = '4.34.1'
+def framedSyncProtobufVersion = '4.36.2'
 def folioleApplicationId = System.getenv("FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID") ?: "com.campfirium.foliole.android"
 def folioleApplicationNames = [
     'com.campfirium.foliole.android': 'Foliole',
