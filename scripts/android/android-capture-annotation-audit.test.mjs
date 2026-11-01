@@ -99,20 +99,20 @@ it('rejects a current node version attributed to another host', () => {
 });
 
 
-it('reads blob-backed bodies even when inline content is stale', () => {
+it('reads canonical bodies even when retired blob content is stale', () => {
   const db = sqliteFixture();
-  for (const { id, content } of db.prepare('SELECT id, content FROM nodes').all()) {
-    db.prepare('INSERT INTO content_blob_data VALUES (?, ?)').run(id, Buffer.from(content));
-    db.prepare("UPDATE nodes SET body_blob_hash = ?, content = 'stale preview' WHERE id = ?").run(id, id);
+  for (const { id } of db.prepare('SELECT id, content FROM nodes').all()) {
+    db.prepare('INSERT INTO content_blob_data VALUES (?, ?)').run(id, Buffer.from('Retired stale text'));
+    db.prepare("UPDATE nodes SET body_blob_hash = ? WHERE id = ?").run(id, id);
   }
   expect(auditCaptureAnnotationDatabase(db, 'task3-proof').resultStatus).toBe('success');
   db.close();
 });
 
-it('rejects an unavailable referenced body instead of accepting inline text', () => {
+it('reads canonical bodies despite retired missing blob references', () => {
   const db = sqliteFixture();
   db.prepare("UPDATE nodes SET body_blob_hash = 'missing' WHERE id = 'capture-1'").run();
-  expect(() => auditCaptureAnnotationDatabase(db, 'task3-proof')).toThrow('Capture Topic was not found');
+  expect(auditCaptureAnnotationDatabase(db, 'task3-proof').resultStatus).toBe('success');
   db.close();
 });
 
@@ -120,5 +120,14 @@ it('rejects a version belonging to a different node', () => {
   const db = sqliteFixture();
   db.prepare("UPDATE node_sync_versions SET object_id = 'wrong-node' WHERE version_id = 'android#note'").run();
   expect(() => auditCaptureAnnotationDatabase(db, 'task3-proof')).toThrow('selection Note was not found');
+  db.close();
+});
+
+it('rejects missing canonical Capture content even if a retired blob remains', () => {
+  const db = sqliteFixture();
+  const { content } = db.prepare("SELECT content FROM nodes WHERE id = 'capture-1'").get();
+  db.prepare('INSERT INTO content_blob_data VALUES (?, ?)').run('retired', Buffer.from(content));
+  db.prepare("UPDATE nodes SET content = '', body_blob_hash = 'retired' WHERE id = 'capture-1'").run();
+  expect(() => auditCaptureAnnotationDatabase(db, 'task3-proof')).toThrow('Capture Topic was not found');
   db.close();
 });

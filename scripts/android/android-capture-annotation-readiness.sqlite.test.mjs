@@ -48,7 +48,7 @@ it('accepts persisted canonical article text without legacy blob rows', () => {
 });
 
 it.each([
-  { body: null }, { body: '' }, { body: '   ' }, { deleted: '2026-11-01' }, { bodyBlobHash: 'missing', body: 'Stale inline preview' }
+  { body: null }, { body: '' }, { body: '   ' }, { deleted: '2026-11-01' }
 ])('rejects a workspace without active readable text: %j', input => {
   const result = readiness(workspace({ ...input, blobs: 1 }));
   expect(result.resultStatus).toBe('approval_required');
@@ -68,7 +68,12 @@ it.each([
   expect(result.missingPrerequisites).toContain(missing);
 });
 
-it('accepts a readable referenced body while ignoring its empty inline preview', () => {
-  expect(readiness(workspace({ body: '', bodyBlobHash: 'body-hash', blobBody: 'Available body' })))
+it('accepts canonical text with a retired missing blob reference', () => {
+  expect(readiness(workspace({ bodyBlobHash: 'retired-missing' })))
     .toMatchObject({ resultStatus: 'ready', missingPrerequisites: [] });
+});
+
+it('rejects empty canonical text even if a retired blob still has content', () => {
+  expect(readiness(workspace({ body: '', bodyBlobHash: 'retired', blobBody: 'Old body' })))
+    .toMatchObject({ resultStatus: 'approval_required', missingPrerequisites: ['acceptance_workspace_empty'] });
 });

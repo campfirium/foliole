@@ -1,10 +1,3 @@
-// Match the shared inline/blob body contract; a missing referenced blob is not inline content.
-const BODY_CONTENT_SQL = `CASE
-  WHEN NULLIF(TRIM(n.body_blob_hash), '') IS NULL THEN n.content
-  WHEN cbd.hash IS NOT NULL THEN CAST(cbd.data AS TEXT)
-  ELSE ''
-END`;
-
 function requiredRow(db, sql, params, label) {
   const row = db.prepare(sql).get(...params);
   if (!row) throw new Error(`${label} was not found in the Android database`);
@@ -36,32 +29,29 @@ function anchorSource(row, kind, expectedText, label) {
 
 export function auditCaptureAnnotationDatabase(db, token) {
   const capture = requiredRow(db, `
-    SELECT ${BODY_CONTENT_SQL} AS content, n.id, n.current_version_id, n.last_modified_by_host_name,
+    SELECT n.content AS content, n.id, n.current_version_id, n.last_modified_by_host_name,
       n.parent_id, n.updated_at, v.host_name AS version_host_name
     FROM nodes n
-    LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
     INNER JOIN node_sync_versions v ON v.version_id = n.current_version_id AND v.object_id = n.id
-    WHERE n.parent_id = 'special-inbox' AND ${BODY_CONTENT_SQL} LIKE ? AND n.deleted_at IS NULL
+    WHERE n.parent_id = 'special-inbox' AND n.content LIKE ? AND n.deleted_at IS NULL
     ORDER BY n.updated_at DESC LIMIT 1
   `, [`%A5 capture ${token}%`], 'Capture Topic');
   const cloze = requiredRow(db, `
-    SELECT n.id, n.anchor_link, ${BODY_CONTENT_SQL} AS content, n.current_version_id, n.kind,
+    SELECT n.id, n.anchor_link, n.content AS content, n.current_version_id, n.kind,
       n.last_modified_by_host_name, n.parent_id, n.reveal, n.updated_at,
       v.host_name AS version_host_name
     FROM nodes n
-    LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
     INNER JOIN node_sync_versions v ON v.version_id = n.current_version_id AND v.object_id = n.id
     WHERE n.parent_id = ? AND n.kind = 'item' AND n.reveal = ? AND n.deleted_at IS NULL
     ORDER BY n.updated_at DESC LIMIT 1
   `, [capture.id, 'Cloze target alpha'], 'Cloze Item');
   const note = requiredRow(db, `
-    SELECT n.id, n.anchor_link, ${BODY_CONTENT_SQL} AS content, n.current_version_id, n.kind,
+    SELECT n.id, n.anchor_link, n.content AS content, n.current_version_id, n.kind,
       n.last_modified_by_host_name, n.parent_id, n.updated_at,
       v.host_name AS version_host_name
     FROM nodes n
-    LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
     INNER JOIN node_sync_versions v ON v.version_id = n.current_version_id AND v.object_id = n.id
-    WHERE n.parent_id = ? AND n.kind = 'topic' AND ${BODY_CONTENT_SQL} LIKE ? AND n.deleted_at IS NULL
+    WHERE n.parent_id = ? AND n.kind = 'topic' AND n.content LIKE ? AND n.deleted_at IS NULL
     ORDER BY n.updated_at DESC LIMIT 1
   `, [capture.id, `%A5 note ${token}%`], 'selection Note');
   const review = requiredRow(

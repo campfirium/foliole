@@ -1,4 +1,4 @@
-const REQUIRED_TABLES = ['nodes', 'parent_child_order', 'content_blobs', 'content_blob_data', 'companion_meta'];
+const REQUIRED_TABLES = ['nodes', 'parent_child_order', 'content_blobs', 'companion_meta'];
 
 function tableExists(database, table) {
   return database.prepare(
@@ -30,14 +30,10 @@ export function inspectCaptureAnnotationWorkspace(database) {
       content_blobs: countRows(database, 'content_blobs'),
       parent_child_order: countRows(database, 'parent_child_order'),
       nodes: countRows(database, 'nodes'),
-      readable_topics: tables.nodes && tables.content_blob_data ? database.prepare(`
-        SELECT COUNT(*) AS count FROM nodes n
-        LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
-        WHERE n.kind = 'topic' AND n.deleted_at IS NULL AND length(trim(CASE
-          WHEN NULLIF(TRIM(n.body_blob_hash), '') IS NULL THEN n.content
-          WHEN cbd.hash IS NOT NULL THEN CAST(cbd.data AS TEXT)
-          ELSE '' END)) > 0
-      `).get().count : null
+      readable_topics: tables.nodes ? database.prepare(
+        "SELECT COUNT(*) AS count FROM nodes WHERE kind = 'topic' AND deleted_at IS NULL "
+        + "AND length(trim(content)) > 0"
+      ).get().count : null
     },
     pairingWorkspace: {
       localDeviceIdentityPresent: companionMetaPresent(database, 'device_id'),
