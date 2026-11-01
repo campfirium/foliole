@@ -73,6 +73,9 @@ jobs:
         run: npm run electron:rebuild:native
       - name: Verify Electron sqlite runner
         run: node scripts/quality/hosted-electron-sqlite-preflight.mjs
+      - name: Install Chromium for Android source production tests
+        if: inputs.domain == 'android-source'
+        run: node node_modules/@playwright/test/cli.js install --with-deps --only-shell chromium
       - name: Run canonical shared domain
         if: inputs.domain == 'shared'
         run: npm run test:release:shared
