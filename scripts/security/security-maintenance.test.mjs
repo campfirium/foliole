@@ -120,3 +120,22 @@ it('reports malformed workflow YAML as an extraction error instead of omitting i
   writeFileSync(path.join(root, '.github/workflows/broken.yml'), 'jobs: [');
   expect(workflowReferences(root).errors).toHaveLength(1);
 });
+
+it('keeps independent native source environments qualified when one asset has multiple checks', () => {
+  const root = repository(), output = path.join(root, 'output');
+  const initial = collectSecurityMaintenance({ root, output, now, run: fakeNpm });
+  const file = path.join(output, 'android.json');
+  const check = (asset, route, versions, status = 'clean') => ({ asset, route, status, findings: [],
+    checkedAt: new Date(now).toISOString(), source: 'https://example.com/primary', evidence: { versions } });
+  writeFileSync(file, JSON.stringify({ schemaVersion: 1, platform: 'android', status: 'clean',
+    generatedAt: new Date(now).toISOString(), source: initial.snapshot.candidate, findings: [], errors: [],
+    inventory: { configurations: [{ name: 'debugRuntimeClasspath' }], gradleVersion: '8.14.6', java: { version: '21' } },
+    officialObservations: [check('embedded-native', 'vendor-notices', { sqlcipher: '4.20.0' }),
+      check('embedded-native', 'component-notices', { sqlite: '3.54.1', crypto: '1.18.2' }),
+      check('android-maven', 'dependency-submission', { action: '6.4.1' }, 'unsupported')] }));
+  const report = collectSecurityMaintenance({ root, output, now, run: fakeNpm, nativeReports: { 'android-maven': file } });
+  const embedded = report.coverage.find(asset => asset.id === 'embedded-native');
+  expect(embedded.checks.filter(check => check.route !== 'official-review').map(check => check.status)).toEqual(['clean', 'clean']);
+  expect(report.coverage.find(asset => asset.id === 'android-maven').checks.map(check => check.status)).toEqual(['clean', 'unsupported']);
+  expect(embedded.checks.find(check => check.route === 'official-review').status).toBe('error');
+});

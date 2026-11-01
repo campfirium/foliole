@@ -37,6 +37,7 @@ function officialObservation(row, review, snapshot) {
   }
   const environment = digest(JSON.stringify({ tools: snapshot.tools, review: review.environment, versions: row.versions }));
   snapshot.environments[row.asset] = environment;
+  snapshot.environments[`${row.asset}:official-review`] = environment;
   return { asset: row.asset, route: 'official-review', candidate: review.candidate,
     environment, checkedAt: review.checkedAt, source: row.sources.join(' '), status: row.status,
     reason: row.reason, findings: row.findings,

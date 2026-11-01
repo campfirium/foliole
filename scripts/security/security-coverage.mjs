@@ -56,7 +56,7 @@ export function assessObservation(observation, { candidate, environment, now, tt
 export function createCoverageReport({ snapshot, observations, now = Date.now(), assets = SECURITY_COVERAGE }) {
   const coverage = assets.map(asset => ({ ...asset, checks: asset.routes.map(route => ({
     route: route.id, ...assessObservation(observations.find(row => row.asset === asset.id && row.route === route.id),
-      { candidate: snapshot.candidate, environment: snapshot.environments[asset.id], now, ttlHours: route.ttlHours })
+      { candidate: snapshot.candidate, environment: snapshot.environments[`${asset.id}:${route.id}`] ?? snapshot.environments[asset.id], now, ttlHours: route.ttlHours })
   })) }));
   const checks = coverage.flatMap(asset => asset.checks);
   return { schemaVersion: 1, generatedAt: new Date(now).toISOString(), snapshot, coverage,

@@ -38,13 +38,14 @@ function nativeObservation(asset, file, snapshot, observations) {
           throw new Error('Unsupported Android official observation');
         }
         const environment = digest(JSON.stringify(check.evidence?.versions ?? {}));
-        snapshot.environments[check.asset] = environment;
+        snapshot.environments[`${check.asset}:${check.route}`] = environment;
         observations.push({ ...check, candidate: evidence.source, environment });
       }
     }
     const facts = asset === 'android-maven' ? evidence.inventory : evidence.environment;
     snapshot.nativeEvidence[asset] = { file, sha256: digest(readFileSync(file)), facts };
     snapshot.environments[asset] = digest(JSON.stringify(facts));
+    snapshot.environments[`${asset}:${route}`] = snapshot.environments[asset];
     return { asset, route,
       candidate: { revision: evidence.source?.revision, inputDigest: evidence.source?.inputDigest },
       environment: snapshot.environments[asset], checkedAt: evidence.generatedAt ?? evidence.finishedAt,
