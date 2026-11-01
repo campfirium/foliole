@@ -28,8 +28,15 @@ export function securityNotificationSignals(state) {
 
 export function changedSecuritySignals(previous, current) {
   return [...new Set([...Object.keys(previous), ...Object.keys(current)])].sort().flatMap(key => {
-    if (digest(JSON.stringify(previous[key] ?? null)) === digest(JSON.stringify(current[key] ?? null))) return [];
+    if (signalDigest(previous[key]) === signalDigest(current[key])) return [];
     return [{ key, state: current[key] ? 'actionable' : 'recovered', previous: previous[key] ?? null,
       current: current[key] ?? null }];
   });
+}
+
+function signalDigest(signal) {
+  // Starting an investigation changes ownership, not the security evidence.
+  const comparable = signal?.kind === 'finding' && signal.disposition === 'investigating'
+    ? { ...signal, disposition: 'unassessed' } : signal;
+  return digest(JSON.stringify(comparable ?? null));
 }

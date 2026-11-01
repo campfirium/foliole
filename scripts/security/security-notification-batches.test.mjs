@@ -5,7 +5,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { afterEach, expect, it } from 'vitest';
 import { notificationObservation } from './security-notification-fixture.mjs';
-import { importSecurityObservation, projectSecurityOwner } from './security-owner.mjs';
+import { importSecurityObservation, projectSecurityOwner, setSecurityDisposition } from './security-owner.mjs';
 import { pendingSecurityNotificationBatches } from './security-notification-batches.mjs';
 import { securityNotificationSignals } from './security-notification-signals.mjs';
 import { notifySecurityOwner, securityNotificationStatus } from './security-notifications.mjs';
@@ -40,6 +40,32 @@ function observe(options, offset, android = '1.0', ios = '1.0') {
   return notifySecurityOwner(options.owner, process.cwd(), { ...options, now: now + offset });
 }
 const history = options => readOwnerRecords(path.join(options.owner, 'notifications'));
+
+it('keeps investigation bookkeeping quiet across restart while retaining risk changes and expiry reminders', () => {
+  const options = setup();
+  observe(options, 0, '1.0', null);
+  notifySecurityOwner(options.owner, process.cwd(), { ...options, now: now + 300_000 });
+  const finding = projectSecurityOwner(options.owner, now + 360_000).findings.find(row => row.active);
+  setSecurityDisposition(options.owner, { finding: finding.key, versionDigest: finding.versionDigest,
+    riskDigest: finding.riskDigest, status: 'investigating', reason: 'Already owned by the current investigation',
+    expiresAt: new Date(now + 1_200_000).toISOString() }, now + 360_000);
+  notifySecurityOwner(options.owner, process.cwd(), { ...options, now: now + 360_000 });
+  notifySecurityOwner(options.owner, process.cwd(), { ...options, now: now + 660_000 });
+  expect(history(options)).toHaveLength(1);
+  const code = "import { notifySecurityOwner } from './scripts/security/security-notifications.mjs'; notifySecurityOwner(process.argv[1], process.cwd(), { now: Number(process.argv[2]) });";
+  execFileSync(process.execPath, ['--input-type=module', '-e', code, options.owner, String(now + 720_000)],
+    { env: { ...process.env, CODEX_HOME: options.codexHome, ELECTRON_RUN_AS_NODE: '1' } });
+  expect(history(options)).toHaveLength(1);
+  expect(pendingSecurityNotificationBatches(options.owner)).toEqual([]);
+  notifySecurityOwner(options.owner, process.cwd(), { ...options, now: now + 1_260_000 });
+  notifySecurityOwner(options.owner, process.cwd(), { ...options, now: now + 1_560_000 });
+  expect(history(options)).toHaveLength(2);
+  expect(history(options).find(row => row.sequence === 2).changes[0].current.disposition).toBe('expired-or-evidence-changed');
+  observe(options, 1_620_000, '1.1', null);
+  notifySecurityOwner(options.owner, process.cwd(), { ...options, now: now + 1_920_000 });
+  expect(history(options)).toHaveLength(3);
+  expect(history(options).find(row => row.sequence === 3).changes[0].current.versions).toEqual(['1.1']);
+});
 
 it('debounces real Android/iPhone owner imports independently and emits only final facts for each batch', () => {
   const options = setup();
