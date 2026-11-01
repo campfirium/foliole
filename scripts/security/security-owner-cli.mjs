@@ -5,6 +5,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { importSecurityObservation, projectSecurityOwner, setSecurityDisposition } from './security-owner.mjs';
 import { notifySecurityOwner, securityNotificationStatus } from './security-notifications.mjs';
+import { pendingSecurityNotificationBatches } from './security-notification-batches.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const owner = path.join(root, '.lab/internal/security-maintenance');
@@ -21,7 +22,7 @@ try {
     console.log(JSON.stringify({ status: state.overallStatus, observations: state.observations,
       activeFindings: state.findings.filter(finding => finding.active), gaps: state.gaps, importHealth: state.health,
       sourceErrors: state.sources.filter(source => ['error', 'unsupported'].includes(source.status) || source.stale),
-      notifications: securityNotificationStatus(owner) }));
+      notifications: securityNotificationStatus(owner), pendingNotifications: pendingSecurityNotificationBatches(owner) }));
   } else if (command === 'disposition' && args.length === 1) {
     console.log(JSON.stringify(setSecurityDisposition(owner, json(args[0]))));
     notifySecurityOwner(owner, root);

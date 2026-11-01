@@ -62,7 +62,8 @@ it('imports a real ZIP despite a successful outer workflow and persists dedupe a
   const codexHome = path.join(f.root, 'codex');
   mkdirSync(path.join(codexHome, 'local-tools/desktop-handoff'), { recursive: true });
   writeFileSync(path.join(codexHome, 'local-tools/desktop-handoff/config.json'), '{}');
-  expect(notifySecurityOwner(owner(f), f.root, { codexHome, now })[0].delivery.status).toBe('queued');
+  expect(notifySecurityOwner(owner(f), f.root, { codexHome, now })).toHaveLength(0);
+  expect(notifySecurityOwner(owner(f), f.root, { codexHome, now: now + 300_000 })[0].delivery.status).toBe('queued');
 });
 
 it.each(['workflow', 'branch', 'fork', 'head', 'attempt', 'artifact-run', 'artifact-head', 'digest', 'expired', 'lock'])(

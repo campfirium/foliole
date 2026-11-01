@@ -47,14 +47,15 @@ it('persists official findings and unknown scopes, then delivers only changed re
   mkdirSync(runtime, { recursive: true }); writeFileSync(path.join(runtime, 'config.json'), '{}');
   importSecurityObservation(owner, { ...f.input, rawReport: JSON.stringify(report) });
   expect(findings(projectSecurityOwner(owner, now))[0]).toMatchObject({ provider: 'official-review', severity: 'high', versions: ['8.14.3'] });
-  expect(notifySecurityOwner(owner, f.root, { codexHome, now })).toHaveLength(1);
-  expect(notifySecurityOwner(owner, f.root, { codexHome, now })).toHaveLength(1);
+  const notifications = notifySecurityOwner(owner, f.root, { codexHome, now, batchQuietMs: 0 });
+  expect(notifications.every(notification => notification.delivery.status === 'queued')).toBe(true);
+  expect(notifySecurityOwner(owner, f.root, { codexHome, now, batchQuietMs: 0 })).toEqual(notifications);
   row.status = 'clean'; row.findings = []; row.versions = { gradle: '8.14.6' };
   f.review.checkedAt = new Date(now + 1000).toISOString();
   const recovered = collect(f); recovered.generatedAt = new Date(now + 1000).toISOString();
   importSecurityObservation(owner, { ...f.input, now: now + 1000, rawReport: JSON.stringify(recovered) });
   expect(findings(projectSecurityOwner(owner, now + 1000))).toHaveLength(0);
-  expect(notifySecurityOwner(owner, f.root, { codexHome, now: now + 1000 })).toHaveLength(2);
+  expect(notifySecurityOwner(owner, f.root, { codexHome, now: now + 1000, batchQuietMs: 0 })).toHaveLength(notifications.length + 1);
   expect(projectSecurityOwner(owner, now + 1000).sources.find(source => source.asset === 'embedded-native').status).toBe('unsupported');
 });
 

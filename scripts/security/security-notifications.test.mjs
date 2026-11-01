@@ -24,7 +24,7 @@ function setup() {
   const runtime = handoffRuntime(codexHome);
   mkdirSync(runtime, { recursive: true });
   writeFileSync(path.join(runtime, 'config.json'), JSON.stringify({ maxPromptLength: 6000 }));
-  return { owner: path.join(root, 'owner'), codexHome, now };
+  return { owner: path.join(root, 'owner'), codexHome, now, batchQuietMs: 0 };
 }
 function fault(owner, status = 'error', offset = 0) {
   recordOwnerHealth(owner, { role: 'github-alerts', status, reason: status === 'error' ? 'permission unavailable' : undefined,
@@ -74,7 +74,7 @@ it('retains intent and leaves enqueue unacknowledged on submission failure, then
 it('replays a real process crash after enqueue before checkpoint with the identical event identity', () => {
   const options = setup();
   fault(options.owner);
-  const crashing = "import { notifySecurityOwner } from './scripts/security/security-notifications.mjs'; notifySecurityOwner(process.argv[1], process.cwd(), { beforeCheckpoint: () => process.exit(73) });";
+  const crashing = "import { notifySecurityOwner } from './scripts/security/security-notifications.mjs'; notifySecurityOwner(process.argv[1], process.cwd(), { batchQuietMs: 0, beforeCheckpoint: () => process.exit(73) });";
   expect(() => child(crashing, [options.owner], options)).toThrow();
   const [before] = securityNotificationStatus(options.owner, options.codexHome);
   expect(before.enqueue).toBeNull();

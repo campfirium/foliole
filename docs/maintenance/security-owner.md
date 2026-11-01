@@ -72,3 +72,21 @@ unverified. Dead letters are visible and are not silently resubmitted as new epi
 Inspect their evidence and replay through the handoff skill after resolving the cause.
 Notification intent and enqueue/error records live under the same private durable
 owner. Raw report transport provenance remains the importer's responsibility.
+
+Security notifications use the same batching policy as Dependabot PR notifications:
+five quiet minutes after the last change, with a thirty-minute maximum wait from
+the first change. Android and iPhone changes form independent batches and open
+separately named tasks. Desktop/shared findings and transport health retain a
+separate shared batch; they are not discarded or assigned to a mobile platform.
+The existing producer checks the deadlines on its normal invocations; no additional
+timer, daemon or model wakeup is installed, so delivery occurs on the first scan
+after a deadline rather than exactly at the deadline.
+
+Pending batch snapshots are durable under `notification-batches/` and visible in
+`status` as `pendingNotifications`. Each notification contains the net change from
+the previous notification for that group: corrections replace intermediate facts,
+and changes that return to the previous state before delivery stay quiet. Raw
+observations retain the intermediate history. A later change after a delivered
+batch starts a new batch, just as newly arriving PRs do. Existing notification
+history is retained as the initial comparison baseline, avoiding duplicate alerts
+when switching to grouped batches. Enqueue/crash retries retain the batch identity.

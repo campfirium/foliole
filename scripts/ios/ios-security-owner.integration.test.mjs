@@ -47,10 +47,10 @@ async function setupOwnerFixture() {
     const input = { ...source, rawReport: JSON.stringify(coverage), now: timestamp,
       envelope: { ...source.envelope, artifactId: sequence } };
     importSecurityObservation(owner, input);
-    notifySecurityOwner(owner, process.cwd(), { now: timestamp, codexHome });
+    notifySecurityOwner(owner, process.cwd(), { now: timestamp, codexHome, batchQuietMs: 0 });
     return input;
   };
-  const notifications = () => readOwnerRecords(path.join(owner, 'notifications'));
+  const notifications = () => readOwnerRecords(path.join(owner, 'notifications')).filter(record => record.group === 'ios');
   const vendor = () => projectSecurityOwner(owner, now + 60_000).findings.find(row =>
     row.advisory === 'sqlcipher-4.19.0-export-hexkey');
   return { now, root, publisher, owner, codexHome, observe, notifications, vendor };
@@ -62,7 +62,7 @@ it('carries vendor discovery through source faults, process restart, recovery an
     await observe();
     expect(vendor()).toMatchObject({ active: true, versions: ['4.17.0'], severity: 'low' });
     expect(notifications()).toHaveLength(1);
-    const [delivery] = securityNotificationStatus(owner, codexHome);
+    const delivery = securityNotificationStatus(owner, codexHome).find(row => row.id === notifications()[0].id);
     expect(delivery.delivery.status).toBe('queued');
     expect(JSON.parse(readFileSync(delivery.enqueue.receipt.eventFile, 'utf8')).prompt).toContain(delivery.id);
     expect(notifications()[0].signals).toEqual(expect.objectContaining({
@@ -99,7 +99,7 @@ it('carries vendor discovery through source faults, process restart, recovery an
     expect(() => importSecurityObservation(owner, { ...upgraded, rawReport: JSON.stringify(expired), now: now + 60_000 })).toThrow('Expired');
     expect(projectSecurityOwner(owner, now + 193 * 3_600_000).sources.some(row => row.stale)).toBe(true);
     const beforeStale = notifications().length;
-    notifySecurityOwner(owner, process.cwd(), { now: now + 193 * 3_600_000, codexHome });
+    notifySecurityOwner(owner, process.cwd(), { now: now + 193 * 3_600_000, codexHome, batchQuietMs: 0 });
     expect(notifications()).toHaveLength(beforeStale + 1);
     expect(notifications().sort((a, b) => a.sequence - b.sequence).at(-1).changes.some(change => change.current?.stale)).toBe(true);
   } finally {

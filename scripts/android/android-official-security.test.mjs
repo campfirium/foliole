@@ -59,7 +59,7 @@ it('persists actual vendor results through failure, restart, recovery and repeat
         ? { ...row, candidate: report.snapshot.candidate } : check);
     }
     importSecurityObservation(owner, { ...input, rawReport: JSON.stringify(report) });
-    return notifySecurityOwner(owner, process.cwd(), { codexHome, now: now + offset });
+    return notifySecurityOwner(owner, process.cwd(), { codexHome, now: now + offset, batchQuietMs: 0 });
   };
   expect(await observe(0)).toHaveLength(1);
   expect(projectSecurityOwner(owner).findings.filter(row => row.active)).toHaveLength(3);
