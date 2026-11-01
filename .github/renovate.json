@@ -23,7 +23,7 @@
   "automerge": false,
   "dependencyDashboard": true,
   "dependencyDashboardTitle": "Dependency maintenance",
-  "dependencyDashboardApproval": true,
+  "dependencyDashboardApproval": false,
   "vulnerabilityAlerts": {
     "enabled": false
   },

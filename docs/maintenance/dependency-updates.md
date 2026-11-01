@@ -1,21 +1,23 @@
 # Dependency updates
 
-## Current handover phase
+## Update ownership
 
-The repository prepares the free Mend-hosted Renovate app through
-`.github/renovate.json`. Every ordinary update initially requires approval in the
-Dependency maintenance dashboard. Do not approve proposals during qualification.
-Dependabot remains the active version updater until a successful hosted Renovate
-job proves access to this repository and the expected dependency candidates.
-Installing the app alone does not prove extraction or successful operation.
+The free Mend-hosted Renovate app owns ordinary version proposals through
+`.github/renovate.json` and the [Dependency maintenance dashboard](https://github.com/campfirium/foliole/issues/185).
+Dependabot ordinary version-update limits are zero; GitHub remains the security
+fix owner. Major updates, Electron, better-sqlite3 and the Capacitor SQLite plugin
+still require dashboard approval, including any group containing that plugin.
 
-After qualification, make one change on `dev` that sets each Dependabot ordinary
-version-update limit to zero and releases Renovate's routine minor/patch updates
-from dashboard approval. Keep approval for major updates, Electron, better-sqlite3
-and the Capacitor SQLite plugin, including a group containing that plugin.
-Check existing proposals for the same package/version before releasing a group.
-Existing PRs are not closed by this handover. To roll back, restore the previous
-Dependabot limits and require approval for all Renovate ordinary updates again.
+Hosted job `b01a8186-f449-4e1f-820c-438fee77b483` completed on 2026-11-01 with
+root npm dependencies, Android dependencies, Gradle Wrapper and both hand-owned
+Swift manifests detected. The initial job exposed a lockfile exclusion error;
+the corrected npm exclusion matches nested manifests without matching the root
+manifest or `package-lock.json`. Local extraction alone was not activation proof.
+The pre-existing Gradle major PR remains open and is outside the routine handover.
+
+To roll back, require approval for all Renovate ordinary updates and restore the
+Dependabot ordinary limits in the same change: npm 10, Gradle 5, each Swift root 3.
+Do not close existing PRs automatically when changing updater ownership.
 
 Keep GitHub's dependency graph, Dependabot alerts and security updates enabled.
 Renovate vulnerability fix PRs are disabled to avoid a second security-fix owner.

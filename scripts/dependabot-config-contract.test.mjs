@@ -9,7 +9,7 @@ const config = parse(fs.readFileSync('.github/dependabot.yml', 'utf8'));
 const updateFor = ecosystem => config.updates.find(update => update['package-ecosystem'] === ecosystem);
 
 describe('Dependabot configuration contract', () => {
-  it('signals direct patch and minor updates while keeping native exceptions separate', () => {
+  it('retains security update configuration while ordinary updates belong to Renovate', () => {
     const npm = updateFor('npm');
 
     expect(npm['target-branch']).toBe('dev');
@@ -18,7 +18,7 @@ describe('Dependabot configuration contract', () => {
       time: '09:00',
       timezone: 'Asia/Shanghai'
     });
-    expect(npm['open-pull-requests-limit']).toBe(10);
+    expect(npm['open-pull-requests-limit']).toBe(0);
     expect(npm.cooldown).toBeUndefined();
     expect(npm.allow).toEqual([
       { 'dependency-name': 'electron' },
@@ -55,7 +55,7 @@ describe('Dependabot configuration contract', () => {
     expect(updateFor('github-actions')).toBeUndefined();
   });
 
-  it('checks Android builds and both hand-owned Swift roots for updates on dev', () => {
+  it('retains native security update coverage without competing ordinary proposals', () => {
     const native = config.updates.filter(update => ['gradle', 'swift'].includes(update['package-ecosystem']));
     expect(native.map(update => [update['package-ecosystem'], update.directory]))
       .toEqual(expect.arrayContaining([
@@ -68,7 +68,7 @@ describe('Dependabot configuration contract', () => {
         .toBe(true);
       expect(update['target-branch']).toBe('dev');
       expect(update.schedule).toMatchObject({ interval: 'daily', timezone: 'Asia/Shanghai' });
-      expect(update['open-pull-requests-limit']).toBeGreaterThan(0);
+      expect(update['open-pull-requests-limit']).toBe(0);
       expect(update.ignore).toBeUndefined();
       expect(update.allow).toBeUndefined();
     }
@@ -77,8 +77,22 @@ describe('Dependabot configuration contract', () => {
 });
 
 // File matching also considers lockfiles, so exclusions must preserve both root files.
-describe('Renovate npm manifest ownership', () => {
+describe('Renovate update ownership', () => {
   const renovate = JSON.parse(fs.readFileSync('.github/renovate.json', 'utf8'));
+
+  it('allows routine proposals while requiring review for major and native database updates', () => {
+    expect(renovate.dependencyDashboardApproval).toBe(false);
+    expect(renovate.automerge).toBe(false);
+    expect(renovate.vulnerabilityAlerts.enabled).toBe(false);
+    expect(renovate.prConcurrentLimit).toBeLessThanOrEqual(2);
+    expect(renovate.packageRules).toEqual(expect.arrayContaining([
+      expect.objectContaining({ matchUpdateTypes: ['major'], dependencyDashboardApproval: true }),
+      expect.objectContaining({
+        matchPackageNames: expect.arrayContaining(['electron', 'better-sqlite3', '@capacitor-community/sqlite']),
+        dependencyDashboardApproval: true
+      })
+    ]));
+  });
 
   it('excludes nested npm manifests without excluding the root manifest or lockfile', () => {
     const exclusion = renovate.packageRules.find(rule => rule.enabled === false && rule.matchManagers.includes('npm'));

@@ -8,7 +8,7 @@ updates:
       interval: daily
       time: "09:00"
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 0
     allow:
       - dependency-name: electron
       - dependency-name: better-sqlite3
@@ -73,7 +73,7 @@ updates:
       interval: daily
       time: "09:00"
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     labels: []
     commit-message:
       prefix: deps-android
@@ -85,7 +85,7 @@ updates:
       interval: daily
       time: "09:00"
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
     labels: []
     commit-message:
       prefix: deps-ios
@@ -97,7 +97,7 @@ updates:
       interval: daily
       time: "09:00"
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
     labels: []
     commit-message:
       prefix: deps-ios
