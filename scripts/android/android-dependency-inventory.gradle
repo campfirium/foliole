@@ -79,7 +79,7 @@ gradle.projectsEvaluated {
                         buildTools: android.buildToolsVersion, sdkDirectory: android.sdkDirectory.canonicalPath])
                 }
             }
-            def output = new File(root.property('folioleSecurityReport').toString())
+            def output = root.file(root.property('folioleSecurityReport').toString())
             output.parentFile.mkdirs()
             output.text = JsonOutput.prettyPrint(JsonOutput.toJson(report)) + '\n'
         }

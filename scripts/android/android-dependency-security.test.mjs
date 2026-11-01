@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -28,6 +28,21 @@ beforeAll(() => {
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 describe.runIf(process.platform !== 'win32')('resolved Android inventory through advisory results', () => {
+  it('writes a relative inventory under the Gradle project when invoked from another directory', async () => {
+    const invocation = path.join(root, 'invocation');
+    mkdirSync(invocation);
+    const relativeReport = 'relative-report/inventory.json';
+    const result = await execute(reportOptions.gradle, ['--no-daemon', '--no-configuration-cache', '--console=plain',
+      '-p', root, '-I', reportOptions.initScript, 'folioleSecurityDependencies',
+      `-PfolioleSecurityReport=${relativeReport}`], { cwd: invocation, env: reportOptions.env, timeoutMs: 90_000 });
+    expect(result.code, result.output).toBe(0);
+    expect(existsSync(path.join(root, relativeReport))).toBe(true);
+    const inventory = JSON.parse(readFileSync(path.join(root, relativeReport), 'utf8'));
+    expect(inventory.configurations.find(row => row.name === 'debugRuntimeClasspath').modules)
+      .toContainEqual({ group: 'example', name: 'leaf', version: '2.0' });
+    expect(existsSync(path.join(invocation, relativeReport))).toBe(false);
+  }, 90_000);
+
   it('uses selected transitive versions, separates runtime variants and persists source findings', async () => {
     const queries = [];
     const fetchImpl = async (_url, options) => {
