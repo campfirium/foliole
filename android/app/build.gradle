@@ -60,6 +60,11 @@ repositories {
 }
 
 dependencies {
+    constraints {
+        implementation('net.zetetic:sqlcipher-android:4.20.0') {
+            because('SQLCipher 4.19 fixes schema export quoting and invalid URI hexkey handling.')
+        }
+    }
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
