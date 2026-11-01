@@ -18,6 +18,8 @@ function applyObservation(observation, state) {
         observation: observation.id, versionDigest: digest(JSON.stringify(versions)) });
       item.severity = finding.severity;
       item.affectedRange = finding.affectedRange;
+      item.source = finding.source;
+      item.assessment = finding.assessment;
       item.lastObservedVersions = [...new Set([...item.sources.values()].flatMap(value => value.versions))].sort();
       state.facts.set(finding.key, item);
     }

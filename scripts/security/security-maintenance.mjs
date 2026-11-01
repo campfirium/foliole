@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { createCoverageReport } from './security-coverage.mjs';
 import { npmAuditObservation } from './npm-security-evidence.mjs';
 import { digest, securityInputIdentity, workflowReferences } from './security-inputs.mjs';
+import { officialSecurityObservations } from './official-security-review.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const readJson = file => JSON.parse(readFileSync(file, 'utf8'));
@@ -43,7 +44,7 @@ function nativeObservation(asset, file, snapshot) {
     findings: Array.isArray(evidence?.findings) ? evidence.findings : [] }; }
 }
 
-export function collectSecurityMaintenance({ root, output, nativeReports = {}, now = Date.now(),
+export function collectSecurityMaintenance({ root, output, nativeReports = {}, officialReview, now = Date.now(),
   run = (command, args, options) => spawnSync(command, args, options),
   git = args => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim() }) {
   mkdirSync(output, { recursive: true });
@@ -73,6 +74,7 @@ export function collectSecurityMaintenance({ root, output, nativeReports = {}, n
       environment, checkedAt: new Date(now).toISOString() });
   });
   observations.push(...Object.entries(nativeReports).map(([asset, file]) => nativeObservation(asset, file, snapshot)));
+  observations.push(...officialSecurityObservations(officialReview, snapshot));
   const report = createCoverageReport({ snapshot, observations, now });
   if (tools.npm === 'unavailable' || snapshot.actions.errors.length) {
     report.overallStatus = 'incomplete';
@@ -90,14 +92,16 @@ export function collectSecurityMaintenance({ root, output, nativeReports = {}, n
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const [output, ...args] = process.argv.slice(2);
-    if (!output || args.length % 2) throw new Error('Usage: security-maintenance.mjs OUTPUT [--android-report FILE] [--swift-report FILE]');
+    if (!output || args.length % 2) throw new Error('Usage: security-maintenance.mjs OUTPUT [--android-report FILE] [--swift-report FILE] [--official-review FILE]');
     const nativeReports = {};
+    let officialReview;
     for (let index = 0; index < args.length; index += 2) {
+      if (args[index] === '--official-review' && !officialReview) { officialReview = args[index + 1]; continue; }
       const asset = { '--android-report': 'android-maven', '--swift-report': 'swift-native' }[args[index]];
       if (!asset || nativeReports[asset]) throw new Error(`Unknown/duplicate option: ${args[index]}`);
       nativeReports[asset] = args[index + 1];
     }
-    const report = collectSecurityMaintenance({ root, output: path.resolve(output), nativeReports });
+    const report = collectSecurityMaintenance({ root, output: path.resolve(output), nativeReports, officialReview });
     console.log(JSON.stringify({ report: path.resolve(output, 'coverage.json'), status: report.overallStatus,
       findings: report.findings.map(row => row.id), gaps: report.gaps.map(row => row.id) }));
     if (report.overallStatus !== 'clean') process.exitCode = 1;

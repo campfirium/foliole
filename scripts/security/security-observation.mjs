@@ -30,6 +30,19 @@ function mavenFindings(rows) {
     versions: [token(row.module?.version, 'version')], source: 'https://osv.dev/', severity: 'unclassified' })));
 }
 
+function officialFindings(rows) {
+  return rows.map(row => {
+    if (!Array.isArray(row.versions) || !row.versions.length || !/^https:\/\//u.test(row.source ?? '')
+      || !['info', 'low', 'moderate', 'high', 'critical', 'unclassified'].includes(row.severity)) {
+      throw new Error('Official finding requires affected versions, severity and a primary source');
+    }
+    return { provider: 'official-review', platform: token(row.platform, 'platform'),
+      advisory: token(row.advisory, 'advisory'), package: token(row.package, 'package'),
+      versions: row.versions.map(version => token(version, 'version')).sort(),
+      severity: row.severity, affectedRange: row.affectedRange, source: row.source, assessment: row.assessment };
+  });
+}
+
 function normaliseCheck(asset, check, report, lock) {
   if (!asset.routes.some(route => route.id === check.route)
     || !['clean', 'findings', 'error', 'unsupported'].includes(check.status)) {
@@ -38,7 +51,8 @@ function normaliseCheck(asset, check, report, lock) {
   const key = `${asset.id}:${check.route}`;
   const result = { key, asset: asset.id, route: check.route, status: check.status,
     ttlHours: asset.routes.find(route => route.id === check.route).ttlHours,
-    reason: check.reason, attempted: check.reason !== 'required-observation-missing', findings: [], unqualifiedFindings: 0 };
+    reason: check.reason, evidence: check.evidence,
+    attempted: check.reason !== 'required-observation-missing', findings: [], unqualifiedFindings: 0 };
   const original = check.observed ?? check;
   const rows = original.findings ?? [];
   if (!rows.length) return result;
@@ -49,7 +63,8 @@ function normaliseCheck(asset, check, report, lock) {
   }
   try {
     result.findings = asset.id.startsWith('npm-') ? npmFindings(rows, lock)
-      : asset.id === 'android-maven' ? mavenFindings(rows) : [];
+      : asset.id === 'android-maven' ? mavenFindings(rows)
+        : check.route === 'official-review' ? officialFindings(rows) : [];
     if (!result.findings.length) throw new Error('Finding source has no supported advisory details');
   } catch (error) { result.status = 'error'; result.reason = error.message; result.unqualifiedFindings = rows.length; }
   result.findings = result.findings.map(finding => ({ ...finding,
