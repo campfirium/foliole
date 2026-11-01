@@ -1,4 +1,5 @@
 import { waitFor } from '@testing-library/react';
+import { useLayoutEffect } from 'react';
 import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -25,7 +26,8 @@ vi.mock('./WorkspaceRightSidebarPerformancePanel', () => ({
 
 vi.mock('./WorkspaceRightSidebarReviewQueuePanel', () => ({
   WorkspaceRightSidebarReviewQueuePanel: (props: unknown) => {
-    reviewQueuePanelRender(props);
+    // Suspense may discard render attempts; measure updates committed to the panel.
+    useLayoutEffect(() => { reviewQueuePanelRender(props); });
     return <div data-testid="review-queue-panel" />;
   }
 }));

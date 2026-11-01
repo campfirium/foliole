@@ -116,7 +116,7 @@ it('keeps search results lightweight until the chosen node is opened', async () 
   fireEvent.change(input, { target: { value: 'Atlas' } });
 
   await waitFor(() => {
-    expect(within(dialog).getByRole('button', { name: /Project Atlas/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /Project\s*Atlas/i })).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /Weekly Log/i })).toBeInTheDocument();
   });
   expect(within(within(dialog).getByRole('button', { name: /Weekly Log/i })).getByText(/launch checklist and follow-up notes/i)).toBeInTheDocument();

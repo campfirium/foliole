@@ -94,7 +94,8 @@ it('opens external search hits in the popup preview panel instead of the workspa
 
   fireEvent.change(input, { target: { value: 'Atlas' } });
 
-  const resultButton = await within(dialog).findByRole('button', { name: /Atlas External/i });
+  // Highlight spans can contribute adjacent accessible-name fragments in jsdom.
+  const resultButton = await within(dialog).findByRole('button', { name: /Atlas\s*External/i });
   fireEvent.click(resultButton, { shiftKey: true });
 
   await waitFor(() => {
