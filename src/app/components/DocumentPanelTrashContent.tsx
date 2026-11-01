@@ -1,4 +1,5 @@
 import { ChevronDown, Trash2 } from 'lucide-react';
+import type { JSX } from 'react';
 import { useState } from 'react';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';

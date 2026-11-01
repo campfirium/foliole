@@ -89,7 +89,7 @@ function usePageLayoutCorrection(refs: PositionRefs, width: number) {
 export function useSimplePdfPosition(scrollRef: RefObject<HTMLDivElement | null>, width: number, initialPage: number, persistence?: SimplePdfPositionPersistence) {
   const latestPersistence = useRef(persistence);
   latestPersistence.current = persistence;
-  const saved = useRef<SavedPage>();
+  const saved = useRef<SavedPage>(undefined);
   const pending = useRef<PendingPage | null>(null);
   const frame = useRef(0);
   const refs = { frame, pending, saved, scrollRef, persistence: latestPersistence };

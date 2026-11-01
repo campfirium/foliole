@@ -32,7 +32,7 @@ interface TopicSearchState {
   close: () => void;
   currentIndex: number;
   hasMatches: boolean;
-  inputRef: RefObject<HTMLInputElement>;
+  inputRef: RefObject<HTMLInputElement | null>;
   isOpen: boolean;
   matchCount: number;
   query: string;
@@ -40,7 +40,7 @@ interface TopicSearchState {
   step: (direction: 1 | -1) => void;
 }
 
-function refocusTopicSearchInput(inputRef: RefObject<HTMLInputElement>) {
+function refocusTopicSearchInput(inputRef: RefObject<HTMLInputElement | null>) {
   requestAnimationFrame(() => {
     inputRef.current?.focus();
   });
@@ -138,7 +138,7 @@ function useResetTopicSearchState(
 
 function useRevealTopicSearchMatch(
   currentIndex: number,
-  inputRef: RefObject<HTMLInputElement>,
+  inputRef: RefObject<HTMLInputElement | null>,
   isOpen: boolean,
   matches: EditorSelection[],
   onRevealDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => void,
@@ -175,7 +175,7 @@ function useTopicSearchDecorations(
   useEffect(() => () => onUpdateSearchDecorations(null), [onUpdateSearchDecorations]);
 }
 
-function useFocusTopicSearchInput(focusRequestId: number, inputRef: RefObject<HTMLInputElement>) {
+function useFocusTopicSearchInput(focusRequestId: number, inputRef: RefObject<HTMLInputElement | null>) {
   useEffect(() => {
     if (!focusRequestId) {
       return;

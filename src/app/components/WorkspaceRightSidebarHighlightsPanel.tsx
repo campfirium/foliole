@@ -17,7 +17,7 @@ interface WorkspaceRightSidebarHighlightsPanelProps {
   trashedNodeIds: string[];
   nodesById: Record<string, Node>;
   onRevealHighlight: (nodeId: string) => void;
-  scrollElementRef?: RefObject<HTMLElement>;
+  scrollElementRef?: RefObject<HTMLElement | null>;
 }
 
 function isHighlightPanelTopic(node: Node) {

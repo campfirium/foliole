@@ -133,7 +133,7 @@ function RemovedSourceEmptySurface() {
 
 function RemovedSourcePreviewContent(props: {
   confirmId: string | null;
-  contentAreaRef: RefObject<HTMLDivElement>;
+  contentAreaRef: RefObject<HTMLDivElement | null>;
   editorAppearanceKey: string;
   entry: SelectedRemovedSource;
   errorMessage: string;

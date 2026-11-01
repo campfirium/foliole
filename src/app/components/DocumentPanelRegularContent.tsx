@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import type { ComponentProps, ReactNode, RefObject } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';

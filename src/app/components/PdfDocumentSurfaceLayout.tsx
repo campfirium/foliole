@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 
 import { type PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';

@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import type { ComponentProps, RefObject } from 'react';
 
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';

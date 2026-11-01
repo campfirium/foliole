@@ -87,7 +87,7 @@ function CaptureSheetHeader(props: {
 
 function CaptureTextBox(props: {
   draft: string;
-  inputRef: RefObject<HTMLTextAreaElement>;
+  inputRef: RefObject<HTMLTextAreaElement | null>;
   readOnly: boolean;
   onChange(value: string): void;
 }) {

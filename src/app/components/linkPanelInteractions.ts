@@ -56,7 +56,7 @@ const EMBEDDED_SCROLLBAR_CSS = `
 `;
 
 function syncLinkPanelState(
-  ref: RefObject<LinkPanelWebviewTag>,
+  ref: RefObject<LinkPanelWebviewTag | null>,
   panelId: string,
   onStateChange: (panelId: string, state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>) => void
 ) {
@@ -225,7 +225,7 @@ export function useLinkPanelDrag(
 export function useLinkPanelLifecycle(args: {
   onStateChange: (panelId: string, state: Partial<Pick<LinkPanelRecord, 'canGoBack' | 'canGoForward' | 'currentUrl' | 'title'>>) => void;
   panelId: string;
-  webviewRef: RefObject<LinkPanelWebviewTag>;
+  webviewRef: RefObject<LinkPanelWebviewTag | null>;
 }) {
   useEffect(() => {
     const webview = args.webviewRef.current;

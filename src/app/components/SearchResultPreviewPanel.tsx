@@ -109,7 +109,7 @@ function SearchResultPreviewWindow(props: {
   frame: ReturnType<typeof useExternalDocumentPreviewPanelFrame>;
   isLoading: boolean;
   onOpenResult: (result: WorkspaceSearchResult) => void;
-  overlayRef: RefObject<HTMLDivElement>;
+  overlayRef: RefObject<HTMLDivElement | null>;
   result: WorkspaceSearchResult;
 }) {
   const t = useTranslation();

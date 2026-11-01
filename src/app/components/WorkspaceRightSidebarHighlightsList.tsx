@@ -21,7 +21,7 @@ interface WorkspaceRightSidebarHighlightsListProps {
   ariaLabel: string;
   highlights: readonly SidebarHighlightItem[];
   onRevealHighlight: (nodeId: string) => void;
-  scrollElementRef: RefObject<HTMLElement>;
+  scrollElementRef: RefObject<HTMLElement | null>;
 }
 
 function renderHighlightRow(

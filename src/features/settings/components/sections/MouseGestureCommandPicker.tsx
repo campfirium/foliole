@@ -29,7 +29,7 @@ function CommandPickerContent(props: {
   onChange: (commandId: string | null) => void;
   onQueryChange: (query: string) => void;
   query: string;
-  searchRef: RefObject<HTMLInputElement>;
+  searchRef: RefObject<HTMLInputElement | null>;
 }) {
   const t = useTranslation();
   const listRef = useRef<HTMLDivElement>(null);

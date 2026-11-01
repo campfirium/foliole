@@ -7,6 +7,7 @@ import {
   TableOfContents,
   Waypoints
 } from 'lucide-react';
+import type { JSX } from 'react';
 
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 

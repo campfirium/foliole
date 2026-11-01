@@ -59,7 +59,7 @@ function useCompanionDocumentSearchState(props: CompanionDocumentSearchSheetProp
 }
 
 function DocumentSearchControls(props: {
-  inputRef: RefObject<HTMLInputElement>;
+  inputRef: RefObject<HTMLInputElement | null>;
   hasMatches: boolean;
   onClose(): void;
   onQueryChange(value: string): void;

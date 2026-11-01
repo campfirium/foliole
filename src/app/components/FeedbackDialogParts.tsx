@@ -51,7 +51,7 @@ type FeedbackDialogContentProps = {
   onRemoveAttachment: (index: number) => void;
   onSubmit: () => Promise<void>;
   state: SubmitState;
-  turnstileContainerRef: RefObject<HTMLDivElement>;
+  turnstileContainerRef: RefObject<HTMLDivElement | null>;
   turnstileSiteKey?: string | undefined;
 };
 
@@ -137,7 +137,7 @@ export function buildFeedbackContentProps(args: {
   removeAttachment: (index: number) => void;
   state: SubmitState;
   submit: () => Promise<void>;
-  turnstileContainerRef: RefObject<HTMLDivElement>;
+  turnstileContainerRef: RefObject<HTMLDivElement | null>;
   turnstileSiteKey: string | undefined;
 }) {
   return {

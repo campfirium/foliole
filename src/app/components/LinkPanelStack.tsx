@@ -26,7 +26,7 @@ function LinkPanelHeader(props: {
   onClose: (panelId: string) => void;
   onDragStart: (event: ReactPointerEvent<HTMLElement>) => void;
   panel: LinkPanelRecord;
-  webviewRef: RefObject<LinkPanelWebviewTag>;
+  webviewRef: RefObject<LinkPanelWebviewTag | null>;
 }) {
   const t = useTranslation();
 

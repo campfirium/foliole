@@ -1,4 +1,5 @@
 import { CornerDownRight, Highlighter, MessageSquare, MoreHorizontal, RectangleEllipsis, X } from 'lucide-react';
+import type { JSX } from 'react';
 import { useRef, useState, type ReactNode } from 'react';
 
 import { cn } from '../shared/lib/utils';

@@ -73,7 +73,7 @@ function WorkspaceSurfaceColorArea(props: {
 
 function WorkspaceSurfaceColorSliderSection(props: {
   color: WorkspaceSurfaceColorValue;
-  nativeInputRef: React.RefObject<HTMLInputElement>;
+  nativeInputRef: React.RefObject<HTMLInputElement | null>;
   onAlphaChange: (alphaPercent: number) => void;
   onColorChange: (color: WorkspaceSurfaceColorValue) => void;
 }) {

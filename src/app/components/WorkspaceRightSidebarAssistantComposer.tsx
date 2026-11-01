@@ -14,7 +14,7 @@ type AssistantComposerProps = {
   contextFollowEnabled: boolean;
   contextFollowLabel: string;
   inputLabel: string;
-  inputRef?: RefObject<HTMLTextAreaElement>;
+  inputRef?: RefObject<HTMLTextAreaElement | null>;
   imageErrorText?: string | null;
   images?: NativeAssistantImageDraft[];
   messageText: string;
@@ -64,7 +64,7 @@ export function WorkspaceRightSidebarAssistantComposer(props: AssistantComposerP
 }
 
 function AssistantComposerActions(props: {
-  fileInputRef: RefObject<HTMLInputElement>;
+  fileInputRef: RefObject<HTMLInputElement | null>;
   props: AssistantComposerProps;
 }) {
   const composer = props.props;

@@ -41,7 +41,7 @@ export interface WorkspaceRightSidebarPanelProps {
   reviewCurrentNodeId: string | null;
   reviewFlowWindow?: ReviewFlowWindow;
   reviewQueueNodeIds: string[];
-  scrollElementRef?: RefObject<HTMLDivElement>;
+  scrollElementRef?: RefObject<HTMLDivElement | null>;
   trashedNodeIds: string[];
 }
 
