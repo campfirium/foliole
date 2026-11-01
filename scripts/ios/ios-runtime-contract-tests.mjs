@@ -146,6 +146,8 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-sync-trigger-host-contract.test.mjs',
   'scripts/ios/macos-fri-two-device-sync.test.mjs',
   'scripts/ios/mobile-node-link-registration.test.mjs',
+  'scripts/ios/sqlcipher-security.test.mjs',
+  'scripts/ios/swift-security-evidence.test.mjs',
   'scripts/ios/windows-fri-two-device-sync.test.mjs',
 ];
 
