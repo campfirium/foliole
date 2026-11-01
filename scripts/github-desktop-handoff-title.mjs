@@ -3,12 +3,19 @@ import { getPrCheckSignal } from './github-monitor-gh.mjs';
 export function buildPrHandoffData(config, pr, checks) {
   const number = String(pr.number);
   const dependabotHandoff = pr.author?.login === 'app/dependabot';
-  const checkSignal = dependabotHandoff
+  let checkSignal = dependabotHandoff
     ? { eventSuffix: 'local', label: 'Dependabot update proposal' }
     : getPrCheckSignal(config, checks);
+  const renovateProposal = pr.author?.login === 'app/renovate'
+    && ['', 'no-checks'].includes(checkSignal.eventSuffix);
+  if (renovateProposal) {
+    checkSignal = { eventSuffix: 'proposal', label: 'Renovate update proposal' };
+  }
   const noChecks = checkSignal.eventSuffix === 'no-checks';
   const handoffTitle = dependabotHandoff
     ? `PR #${number} Dependabot update`
+    : renovateProposal
+    ? `PR #${number} Renovate update for review`
     : noChecks
     ? `PR #${number} needs PR handling`
     : `PR #${number} failed: ${checkSignal.label}`;

@@ -12,9 +12,10 @@ const NATIVE_REVIEW_POLICY = [
   'See docs/maintenance/native-dependency-updates.md for ownership, validation and coverage limits.'
 ].join('\n');
 
-function independentPrEvent(config, pr, renderTemplate) {
+function independentPrEvent(config, state, pr, renderTemplate) {
   const data = buildPrHandoffData(config, pr, listPrChecks(config, pr));
   if (!data.failingChecks) return null;
+  if (data.checkSignalSuffix === 'proposal' && state.prs[String(pr.number)]) return null;
   return {
     ...data,
     dedupeKey: config.dedupeKeyPattern.replace('{eventId}', data.eventId),
@@ -95,7 +96,7 @@ function collectPrEvents(config, state, prs, errors, renderTemplate) {
       continue;
     }
     try {
-      const event = independentPrEvent(config, pr, renderTemplate);
+      const event = independentPrEvent(config, state, pr, renderTemplate);
       if (event) events.push(event);
     } catch (error) {
       recordMonitorError(errors, 'github-pr-checks', `#${pr.number}`, error);
