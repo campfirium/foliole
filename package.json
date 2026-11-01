@@ -5,7 +5,7 @@
   "author": "Foliole",
   "license": "Apache-2.0",
   "private": true,
-  "packageManager": "npm@11.19.0",
+  "packageManager": "npm@12.2.1",
   "type": "module",
   "main": "dist/electron/main.js",
   "scripts": {
@@ -299,7 +299,7 @@
   "overrides": {
     "katex": "$katex",
     "xcode": {
-      "uuid": "11.1.1"
+      "uuid": "14.0.3"
     },
     "@electron/asar": {
       ".": "$@electron/asar",
