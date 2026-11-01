@@ -2,7 +2,8 @@
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { afterEach, expect, it } from 'vitest';
+import process from 'node:process';
+import { afterEach, describe, expect, it } from 'vitest';
 import { runAndroidDependencySecurity } from '../android/android-dependency-security.mjs';
 import { prepareAndroidSecurityFixture } from '../android/android-security-fixture.mjs';
 import { execute, captured } from '../android/macos-a5-process.mjs';
@@ -27,11 +28,13 @@ function repository() {
   return { root, git };
 }
 
+// Windows is not an Android build host; exercise real Gradle on Mac/Linux.
+describe.runIf(process.platform !== 'win32')('native Gradle input receipts', () => {
 it.each([false, true])('binds real Gradle evidence to stable inputs and retains findings if inputs change: mutate=%s', async mutate => {
   const { root, git } = repository();
   const original = captureSecurityCandidate(root, git);
   const args = { paths: { buildRoot: root, artifactsRoot: path.join(root, 'reports'), runId: 'fixture',
-    gradle: path.resolve('android/gradlew') }, env: macosA5GradleEnv(), captured,
+    gradle: path.resolve('android/gradlew') }, env: process.platform === 'darwin' ? macosA5GradleEnv() : process.env, captured,
   execute: async (...parameters) => {
     const result = await execute(...parameters);
     if (mutate) appendFileSync(path.join(root, 'android/build.gradle'), '\n// Changed during collection\n');
@@ -50,3 +53,5 @@ it.each([false, true])('binds real Gradle evidence to stable inputs and retains 
     expect(report.findings).toHaveLength(1);
   } else expect(report.status).toBe('clean');
 }, 90_000);
+
+});

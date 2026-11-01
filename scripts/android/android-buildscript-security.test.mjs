@@ -2,6 +2,7 @@
 
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 import { expect, it } from 'vitest';
 
@@ -59,7 +60,8 @@ function fixture(root) {
   } }`);
 }
 
-it('patches buildscript graphs without adding unused modules, downgrading newer fixes or changing runtime dependencies', async () => {
+// Gradle fixtures run on supported Mac/Linux Android build hosts.
+it.runIf(process.platform !== 'win32')('patches buildscript graphs without adding unused modules, downgrading newer fixes or changing runtime dependencies', async () => {
   const artifacts = path.resolve('.tmp/artifacts/T674/android-buildscript-tests');
   mkdirSync(artifacts, { recursive: true });
   const root = mkdtempSync(path.join(artifacts, 'constraints-'));
@@ -67,7 +69,7 @@ it('patches buildscript graphs without adding unused modules, downgrading newer 
     fixture(root);
     const baseline = await collectAndroidDependencySecurity({ projectRoot: root,
       gradle: path.resolve('android/gradlew'), initScript: path.resolve('scripts/android/android-dependency-inventory.gradle'),
-      outputDir: path.join(root, 'before'), env: macosA5GradleEnv(),
+      outputDir: path.join(root, 'before'), env: process.platform === 'darwin' ? macosA5GradleEnv() : process.env,
       execute: (command, args, options) => execute(command, [...args, '-PunpatchedFixture'], options),
       fetchImpl: async (_url, options) => ({ ok: true,
         json: async () => ({ results: JSON.parse(options.body).queries.map(() => ({})) }) }) });
@@ -76,7 +78,7 @@ it('patches buildscript graphs without adding unused modules, downgrading newer 
     for (const [group, name, version] of versions) expect(before.modules).toContainEqual({ group, name, version });
     const { reportPath } = await collectAndroidDependencySecurity({ projectRoot: root,
       gradle: path.resolve('android/gradlew'), initScript: path.resolve('scripts/android/android-dependency-inventory.gradle'),
-      outputDir: path.join(root, 'report'), env: macosA5GradleEnv(),
+      outputDir: path.join(root, 'report'), env: process.platform === 'darwin' ? macosA5GradleEnv() : process.env,
       execute: (command, args, options) => execute(command, [...args, ':app:verifyCompilerRuntime'], options),
       fetchImpl: async (_url, options) => ({ ok: true,
         json: async () => ({ results: JSON.parse(options.body).queries.map(() => ({})) }) }) });

@@ -4,9 +4,9 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { resolveIosAcceptanceCache } from './ios-local-storage.mjs';
+import { prepareIosAcceptanceCache } from './ios-local-storage.mjs';
 
-// SKIP: Apple framework requires macOS | 2026-11-01 | revive: run on the macOS native lane
+// The Apple framework contract runs on macOS; other hosts cannot load this native framework.
 const native = describe.runIf(process.platform === 'darwin');
 native('resolved SQLCipher native security and persistence', () => {
   let root;
@@ -16,14 +16,18 @@ native('resolved SQLCipher native security and persistence', () => {
     mkdirSync(artifacts, { recursive: true });
     root = mkdtempSync(path.join(artifacts, 'run-'));
     binary = path.join(root, 'contract');
-    const framework = path.join(resolveIosAcceptanceCache(process.cwd()).sourcePackages,
+    const cache = prepareIosAcceptanceCache(process.cwd());
+    execFileSync('xcodebuild', ['-resolvePackageDependencies', '-project', 'ios/App/App.xcodeproj',
+      '-scheme', 'App', '-onlyUsePackageVersionsFromResolvedFile', '-derivedDataPath', cache.derivedData,
+      '-clonedSourcePackagesDirPath', cache.sourcePackages], { stdio: 'pipe', timeout: 180_000 });
+    const framework = path.join(cache.sourcePackages,
       'artifacts/sqlcipher.swift/SQLCipher/SQLCipher.xcframework/macos-arm64_x86_64');
     expect(existsSync(path.join(framework, 'SQLCipher.framework')),
       'Resolve the App Swift packages before native dependency verification').toBe(true);
     execFileSync('xcrun', ['clang', 'scripts/ios/sqlcipher-security-fixture.c',
       '-I', path.join(framework, 'SQLCipher.framework/Headers'), '-F', framework,
       '-framework', 'SQLCipher', `-Wl,-rpath,${framework}`, '-o', binary]);
-  });
+  }, 180_000);
   afterAll(() => { if (root) rmSync(root, { recursive: true, force: true }); });
   const run = (...args) => execFileSync(binary, args, { encoding: 'utf8' });
   it('rejects an invalid nonempty URI hexkey instead of creating an unencrypted database', () => {

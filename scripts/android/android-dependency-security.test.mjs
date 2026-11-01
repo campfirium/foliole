@@ -2,6 +2,7 @@
 
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import process from 'node:process';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { collectAndroidDependencySecurity } from './android-dependency-security.mjs';
@@ -21,12 +22,12 @@ beforeAll(() => {
   prepareAndroidSecurityFixture(root);
   Object.assign(reportOptions, { projectRoot: root, gradle: path.resolve('android/gradlew'),
     initScript: path.resolve('scripts/android/android-dependency-inventory.gradle'),
-    env: macosA5GradleEnv(), execute, source: { mode: 'integration-fixture' } });
+    env: process.platform === 'darwin' ? macosA5GradleEnv() : process.env, execute, source: { mode: 'integration-fixture' } });
 });
 
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
-describe('resolved Android inventory through advisory results', () => {
+describe.runIf(process.platform !== 'win32')('resolved Android inventory through advisory results', () => {
   it('uses selected transitive versions, separates runtime variants and persists source findings', async () => {
     const queries = [];
     const fetchImpl = async (_url, options) => {
