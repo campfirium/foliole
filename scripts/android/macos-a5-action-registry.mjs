@@ -1,4 +1,7 @@
 const ACTION_OVERRIDES = Object.freeze({
+  'dependency-security': { deviceLeaseMode: null, formalSourceClass: 'ordinary-only',
+    formalTarget: 'dependency-report', formalTargetIdentity: 'android-resolved-dependencies',
+    mutatesFixedA5: false },
   'existing-sync-preflight': { deviceLeaseMode: 'readonly-lifecycle',
     formalSourceClass: 'source-free-readonly', mutatesFixedA5: false },
   'bundle-release': { deviceLeaseMode: null, formalTarget: 'build-capsule',

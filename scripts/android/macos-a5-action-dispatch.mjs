@@ -30,6 +30,10 @@ export async function dispatchMacosA5Action({
   action, assertFixed, build, buildIdentity, captureAnnotation, captured, checked, deploy,
   env, execute, markMutationBoundary, pairingReadiness, paths, readiness, serial
 }) {
+  if (action === 'dependency-security') {
+    const { runAndroidDependencySecurity } = await import('./android-dependency-security.mjs');
+    await runAndroidDependencySecurity({ paths, env, execute, captured });
+  }
   if (action === 'bundle-release') {
     const { buildReleaseBundle } = await import('./macos-a5-release-bundle.mjs');
     buildReleaseBundle({ checked, captured, env, paths });

@@ -1,0 +1,84 @@
+import groovy.json.JsonOutput
+import org.gradle.api.artifacts.FileCollectionDependency
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.result.ResolvedDependencyResult
+import org.gradle.api.artifacts.result.UnresolvedDependencyResult
+
+def securityConfiguration(project, configuration, kind) {
+    def row = [project: project.path, name: configuration.name, kind: kind,
+               modules: [], edges: [], unresolved: [], localFiles: [], status: 'resolved']
+    try {
+        def resolution = configuration.incoming.resolutionResult
+        row.modules = resolution.allComponents.findAll {
+            it.id instanceof ModuleComponentIdentifier
+        }.collect { [group: it.id.group, name: it.id.module, version: it.id.version] }
+        resolution.allDependencies.each { dependency ->
+            if (dependency instanceof ResolvedDependencyResult) {
+                row.edges.add([from: dependency.from.id.displayName,
+                    requested: dependency.requested.displayName,
+                    selected: dependency.selected.id.displayName])
+            } else if (dependency instanceof UnresolvedDependencyResult) {
+                row.unresolved.add([requested: dependency.requested.displayName,
+                    reason: 'dependency-resolution-failed'])
+            }
+        }
+        row.localFiles = configuration.allDependencies.withType(FileCollectionDependency)
+            .collectMany { it.files.files.collect { file -> file.name } }.unique().sort()
+        if (!row.unresolved.empty) row.status = 'error'
+    } catch (Exception ignored) {
+        row.status = 'error'
+        row.unresolved.add([reason: 'configuration-resolution-failed'])
+    }
+    row.modules.sort { a, b -> "${a.group}:${a.name}:${a.version}" <=> "${b.group}:${b.name}:${b.version}" }
+    return row
+}
+
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    root.tasks.register('folioleSecurityDependencies') {
+        doLast {
+            def report = [schemaVersion: 1, generatedAt: java.time.Instant.now().toString(),
+                gradleVersion: gradle.gradleVersion,
+                java: [version: System.getProperty('java.version'), vendor: System.getProperty('java.vendor')],
+                configurations: [], uninspectedConfigurations: [], android: []]
+            root.allprojects.sort { it.path }.each { project ->
+                def selected = []
+                if (project.path == ':app') {
+                    ['debugRuntimeClasspath', 'releaseRuntimeClasspath'].each { name ->
+                        def configuration = project.configurations.findByName(name)
+                        if (configuration?.canBeResolved) {
+                            selected.add(name)
+                            report.configurations.add(securityConfiguration(project, configuration, 'runtime'))
+                        } else {
+                            report.configurations.add([project: project.path, name: name, kind: 'runtime',
+                                status: 'error', modules: [], edges: [], localFiles: [],
+                                unresolved: [[reason: 'required-configuration-missing']]])
+                        }
+                    }
+                }
+                project.configurations.findAll {
+                    it.canBeResolved && it.name.toLowerCase().contains('protobuf')
+                }.each { configuration ->
+                    selected.add(configuration.name)
+                    report.configurations.add(securityConfiguration(project, configuration, 'build-tool'))
+                }
+                def classpath = project.buildscript.configurations.findByName('classpath')
+                if (classpath?.canBeResolved) {
+                    report.configurations.add(securityConfiguration(project, classpath, 'buildscript'))
+                }
+                project.configurations.findAll { it.canBeResolved && !selected.contains(it.name) }.each {
+                    report.uninspectedConfigurations.add([project: project.path, name: it.name,
+                        reason: 'outside-selected-runtime-and-build-tool-scope'])
+                }
+                if (project.plugins.hasPlugin('com.android.application')) {
+                    def android = project.extensions.getByName('android')
+                    report.android.add([project: project.path, compileSdk: android.compileSdkVersion,
+                        buildTools: android.buildToolsVersion])
+                }
+            }
+            def output = new File(root.property('folioleSecurityReport').toString())
+            output.parentFile.mkdirs()
+            output.text = JsonOutput.prettyPrint(JsonOutput.toJson(report)) + '\n'
+        }
+    }
+}

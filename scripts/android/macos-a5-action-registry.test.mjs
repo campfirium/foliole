@@ -6,6 +6,13 @@ import {
   assertFormalMacosA5Action, assertRegisteredMacosA5Action
 } from './macos-a5-action-registry.mjs';
 
+it('allows a local dependency check without touching the device or claiming formal acceptance', () => {
+  const action = assertRegisteredMacosA5Action('dependency-security');
+  expect(action).toMatchObject({ deviceLeaseMode: null, mutatesFixedA5: false,
+    formalSourceClass: 'ordinary-only', requiresHiddenDesktopRuntime: false });
+  expect(() => assertFormalMacosA5Action(action)).toThrow('unavailable');
+});
+
 it('inspects the existing daily group without building or starting a hidden desktop', () => {
   expect(assertRegisteredMacosA5Action('existing-sync-preflight')).toMatchObject({
     deviceLeaseMode: 'readonly-lifecycle', formalSourceClass: 'source-free-readonly',
