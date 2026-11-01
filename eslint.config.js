@@ -1,7 +1,7 @@
 import js from '@eslint/js';
 import tsEslintPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
-import importPlugin from 'eslint-plugin-import';
+import importOrder from 'eslint-plugin-import-x/rules/order';
 import globals from 'globals';
 
 export default [
@@ -40,7 +40,7 @@ export default [
     },
     plugins: {
       '@typescript-eslint': tsEslintPlugin,
-      import: importPlugin
+      import: { rules: { order: importOrder } }
     },
     rules: {
       ...tsEslintPlugin.configs.recommended.rules,
