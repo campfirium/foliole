@@ -30,7 +30,7 @@ function wasNotified(config, state, pr) {
   return Boolean(state.prs[String(pr.number)] || state.submitted[previousKey]);
 }
 
-function batchEvent(config, members, renderTemplate) {
+function batchEvent(config, members, renderTemplate, batchKey) {
   const sorted = [...members].sort((first, second) => first.number - second.number);
   const prNumbers = sorted.map((pr) => String(pr.number));
   const baseRefName = sorted[0].baseRefName;
@@ -48,6 +48,7 @@ function batchEvent(config, members, renderTemplate) {
   };
   return {
     ...data,
+    dependabotBatchKey: batchKey,
     dedupeKey: config.dedupeKeyPattern.replace('{eventId}', eventId),
     prompt: `${renderTemplate(config.batchTemplate, data)}\n\n${NATIVE_REVIEW_POLICY}`,
     title: data.handoffTitle,
@@ -55,9 +56,35 @@ function batchEvent(config, members, renderTemplate) {
   };
 }
 
+function batchReady(config, state, members, batchKey) {
+  const now = Date.now();
+  const prNumbers = members.map(pr => String(pr.number));
+  const pending = state.dependabotBatches[batchKey] ?? {
+    firstObservedAt: now, lastArrivalAt: now, prNumbers: []
+  };
+  if (prNumbers.some(number => !pending.prNumbers.includes(number))) {
+    pending.lastArrivalAt = now;
+  }
+  pending.prNumbers = prNumbers;
+  state.dependabotBatches[batchKey] = pending;
+  const quietMs = (config.batchQuietSeconds ?? 300) * 1000;
+  const maxWaitMs = (config.batchMaxWaitSeconds ?? 1800) * 1000;
+  return now - pending.lastArrivalAt >= quietMs || now - pending.firstObservedAt >= maxWaitMs;
+}
+
+function clearEmptyBatches(config, state, batches) {
+  for (const batchKey of Object.keys(state.dependabotBatches)) {
+    const [repository, branch] = JSON.parse(batchKey);
+    if (repository === config.repository && !batches.has(branch)) {
+      delete state.dependabotBatches[batchKey];
+    }
+  }
+}
+
 function collectPrEvents(config, state, prs, errors, renderTemplate) {
   const events = [];
   const batches = new Map();
+  state.dependabotBatches ??= {};
   for (const pr of prs) {
     if (pr.isDraft && !config.includeDrafts) continue;
     if (pr.author?.login === 'app/dependabot') {
@@ -74,8 +101,11 @@ function collectPrEvents(config, state, prs, errors, renderTemplate) {
       recordMonitorError(errors, 'github-pr-checks', `#${pr.number}`, error);
     }
   }
+  clearEmptyBatches(config, state, batches);
   for (const [branch, members] of batches) {
-    try { events.push(batchEvent(config, members, renderTemplate)); }
+    const batchKey = JSON.stringify([config.repository, branch]);
+    if (!batchReady(config, state, members, batchKey)) continue;
+    try { events.push(batchEvent(config, members, renderTemplate, batchKey)); }
     catch (error) { recordMonitorError(errors, 'github-pr-batch', branch, error); }
   }
   return events;

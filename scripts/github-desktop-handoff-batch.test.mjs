@@ -15,7 +15,7 @@ const config = {
   prs: {
     enabled: true, repository: 'owner/repo', workspace: '/repo',
     autoImplementAuthors: ['app/dependabot'], dedupeKeyPattern: 'pr:{eventId}',
-    template: 'pr.md', batchTemplate: 'batch.md'
+    template: 'pr.md', batchTemplate: 'batch.md', batchQuietSeconds: 0
   }
 };
 const bot = (number, title = 'Update dependency', baseRefName = 'dev') => ({

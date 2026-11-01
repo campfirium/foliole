@@ -107,6 +107,9 @@ function acknowledgeEvent(state, event, emittedAt) {
     for (const number of event.prNumbers ?? (event.number ? [event.number] : [])) {
       state.prs[String(number)] = event.eventId;
     }
+    if (event.dependabotBatchKey) {
+      delete state.dependabotBatches[event.dependabotBatchKey];
+    }
   }
 }
 
