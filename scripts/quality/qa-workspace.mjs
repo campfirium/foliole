@@ -39,6 +39,10 @@ function prepareQaWorkspace(record) {
     for (const name of ['.tmp/system', '.cache', '.lab/internal/runtime']) {
       mkdirSync(path.join(record.worktreePath, name), { recursive: true });
     }
+    writeFileSync(path.join(record.worktreePath, 'AGENTS.local.md'),
+      `# Registered QA workspace\n\nRead ${record.devRoot}/AGENTS.local.md and applicable same-relative-directory private rules there.\n`
+      + `This checkout is QA on ${QA_BRANCH}; keep repairs and test state here. Read private specifications from ${record.devRoot}/.lab/specs as needed.\n`
+      + 'Do not run development preview stop/start or fixed Windows/device controllers from this checkout.\n');
     assertQaPrivateDirectories(record.worktreePath);
     record.phase = 'prepared';
     writeFileSync(qaRecordPath(record.devRoot), `${JSON.stringify(record, null, 2)}\n`);

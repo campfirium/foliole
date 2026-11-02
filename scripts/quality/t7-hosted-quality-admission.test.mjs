@@ -50,11 +50,14 @@ describe('Scheduled Dev Quality admission decision', () => {
   });
 });
 
-function createRunner({ release = false, runsByWorkflow = {} } = {}) {
+function createRunner({ release = false, qa = false, runsByWorkflow = {} } = {}) {
   return vi.fn(async (_command, args) => {
     const endpoint = args.at(-1);
     if (endpoint.includes('/git/ref/heads/release')) {
       return release ? { code: 0, stderr: '', stdout: '{}' } : { code: 1, stderr: 'HTTP 404: Not Found', stdout: '' };
+    }
+    if (endpoint.includes('/git/ref/heads/codex/qa')) {
+      return qa ? { code: 0, stderr: '', stdout: '{}' } : { code: 1, stderr: 'HTTP 404: Not Found', stdout: '' };
     }
     const workflow = Object.keys(runsByWorkflow).find((name) => endpoint.includes(`/workflows/${name}/`));
     return { code: 0, stderr: '', stdout: JSON.stringify({ workflow_runs: runsByWorkflow[workflow] ?? [] }) };
@@ -65,6 +68,12 @@ const env = { FOLIOLE_QUALITY_REPOSITORY: 'campfirium/foliole', FOLIOLE_QUALITY_
   FOLIOLE_QUALITY_TARGET_SHA: SHA };
 
 describe('Scheduled Dev Quality admission resolution', () => {
+  it('keeps the single QA lane instead of starting another dev chain', async () => {
+    const runner = createRunner({ qa: true });
+    await expect(resolveT7Admission({ env, runner, readVerdict: vi.fn() }))
+      .resolves.toEqual({ reason: 'qa-occupied-recover-existing-lane', shouldRun: false });
+    expect(runner).toHaveBeenCalledTimes(2);
+  });
   it('pauses while the release branch exists without reading run history', async () => {
     const runner = createRunner({ release: true });
     await expect(resolveT7Admission({ env, runner, readVerdict: vi.fn() }))

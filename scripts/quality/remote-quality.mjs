@@ -17,6 +17,7 @@ import { runWindowsRemoteQualityPreflight } from './remote-quality-preflight-win
 import { monitorRemoteQualityJobs, requireSuccess } from './remote-quality-monitor.mjs';
 import { resolveReplayStages } from './remote-quality-replay.mjs';
 import { awaitCoveringFullRun, findActiveHostedQualityRuns } from './remote-quality-active.mjs';
+import { runQaRemoteQuality } from './qa-remote-quality.mjs';
 export { parseRemoteQualityArgs } from './remote-quality-args.mjs';
 export { findActiveHostedQualityRuns } from './remote-quality-active.mjs';
 export { monitorRemoteQualityJobs } from './remote-quality-monitor.mjs';
@@ -100,6 +101,11 @@ export async function runRemoteQuality(options = {}) {
     runner, 'gh', ['repo', 'view', '--json', 'nameWithOwner,defaultBranchRef'], { cwd }
   ));
   const branch = await requireSuccess(runner, 'git', ['branch', '--show-current'], { cwd });
+  if (branch === 'codex/qa') {
+    return runQaRemoteQuality({ args, cwd, repo: repoInfo.nameWithOwner, runner,
+      preflight: options.qaPreflight, readVerdict: options.readChainVerdict,
+      monitor: options.qaMonitor, pollIntervalMs: options.pollIntervalMs, wait: options.wait });
+  }
   const sourceBranch = assertRemoteQualityRepositoryContext({
     defaultBranch: repoInfo.defaultBranchRef.name, localBranch: branch, sourceRef: args.sourceRef
   });

@@ -48,11 +48,11 @@ function ghApi(runner, endpoint) {
   return runner('gh', ['api', '-H', 'X-GitHub-Api-Version: 2026-03-10', endpoint]);
 }
 
-async function readReleaseActive(runner, repository) {
-  const result = await ghApi(runner, `repos/${repository}/git/ref/heads/release`);
+async function readBranchActive(runner, repository, branch) {
+  const result = await ghApi(runner, `repos/${repository}/git/ref/heads/${branch}`);
   if (result.code === 0) return true;
   if (/\b404\b|not found/iu.test(result.stderr || result.stdout)) return false;
-  throw new Error(`failed to read release ref: ${result.stderr || result.stdout}`.trim());
+  throw new Error(`failed to read ${branch} ref: ${result.stderr || result.stdout}`.trim());
 }
 
 async function readDevQualityRuns(runner, repository) {
@@ -78,7 +78,10 @@ export async function resolveT7Admission(options = {}) {
   }
   const runner = options.runner ?? runProcess;
   const readVerdict = options.readVerdict ?? readChainVerdict;
-  if (await readReleaseActive(runner, repository)) return { reason: 'release-active', shouldRun: false };
+  if (await readBranchActive(runner, repository, 'release')) return { reason: 'release-active', shouldRun: false };
+  if (await readBranchActive(runner, repository, 'codex/qa')) {
+    return { reason: 'qa-occupied-recover-existing-lane', shouldRun: false };
+  }
   const runs = await readDevQualityRuns(runner, repository);
   if (decideT7Admission({ releaseActive: false, runs, currentRunId, verdicts: [] }) === 'active-run') {
     return { reason: 'active-run', shouldRun: false };

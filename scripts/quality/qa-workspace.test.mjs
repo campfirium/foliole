@@ -8,6 +8,7 @@ import { afterEach, expect, it } from 'vitest';
 
 import { finishTransientWorktree, sweepTransientWorktrees } from '../diagnostics/transient-worktree-lifecycle.mjs';
 import { withResourceGate } from '../lib/resource-gate.mjs';
+import { resolveDesktopAppRoot, resolveDesktopLaunchTarget } from '../desktop/playwright-desktop-launch-target.mjs';
 import { runQaWorkspaceCommand, startQaWorkspace } from './qa-workspace.mjs';
 import { QA_BRANCH, qaGit, qaRecordPath, qaWorkspaceEnvironment, readQaWorkspace,
   verifyMountedQaVolume } from './qa-workspace-state.mjs';
@@ -26,7 +27,7 @@ function fixture() {
   qaGit(repoRoot, 'config', 'user.name', 'Test');
   qaGit(repoRoot, 'config', 'core.fsmonitor', 'false');
   writeFileSync(path.join(repoRoot, 'base.txt'), 'base\n');
-  writeFileSync(path.join(repoRoot, '.gitignore'), '.tmp/\n.cache/\n.lab/\nnode_modules/\n');
+  writeFileSync(path.join(repoRoot, '.gitignore'), '.tmp/\n.cache/\n.lab/\nnode_modules/\nAGENTS.local.md\n');
   qaGit(repoRoot, 'add', '.');
   qaGit(repoRoot, 'commit', '-m', 'base');
   return { repoRoot, volumeRoot, worktreePath: path.join(volumeRoot, 'qa'), owner: 'test-chat',
@@ -111,6 +112,24 @@ it('keeps mutable paths private and rejects a development-cache symlink', () => 
   rmSync(path.join(options.worktreePath, '.cache'), { recursive: true });
   symlinkSync(options.repoRoot, path.join(options.worktreePath, '.cache'), 'dir');
   expect(() => qaWorkspaceEnvironment(state)).toThrow(/must be private/u);
+});
+
+it('does not inherit the development application, database or installed runtime', () => {
+  const options = fixture();
+  const record = startQaWorkspace(options);
+  const env = qaWorkspaceEnvironment(record, {
+    FOLIOLE_ELECTRON_APP_ROOT: options.repoRoot,
+    FOLIOLE_ELECTRON_TEST_STATE_ROOT: options.repoRoot,
+    FOLIOLE_MAIN_DATABASE_PATH: path.join(options.repoRoot, 'daily.db'),
+    FOLIOLE_ELECTRON_INSTALLED_EXE_PATH: '/installed/Foliole',
+    FOLIOLE_ELECTRON_LAUNCH_MODE: 'installed'
+  });
+  const appRoot = resolveDesktopAppRoot(env);
+  const target = resolveDesktopLaunchTarget(appRoot, () => true, env);
+  expect(appRoot).toBe(options.worktreePath);
+  expect(target.mainEntry).toBe(path.join(options.worktreePath, 'dist/electron/main.js'));
+  expect(target.launchMode).not.toBe('installed');
+  expect(env.FOLIOLE_MAIN_DATABASE_PATH).toBe(path.join(options.worktreePath, '.tmp/qa-state/foliole.db'));
 });
 
 it('actually waits for the dev resource gate and runs in QA with its lock held', async () => {

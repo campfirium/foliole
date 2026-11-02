@@ -51,8 +51,21 @@ export function assertQaPrivateDirectories(worktreePath) {
 
 export function qaWorkspaceEnvironment(record, inherited = {}) {
   assertQaPrivateDirectories(record.worktreePath);
+  const isolated = { ...inherited };
+  for (const key of ['FOLIOLE_ELECTRON_EXECUTABLE_PATH', 'FOLIOLE_ELECTRON_INSTALLED_EXE_PATH',
+    'FOLIOLE_ELECTRON_LAUNCH_MODE', 'FOLIOLE_WINDOWS_WORKDIR', 'WINDOWS_WORKDIR', 'FOLIOLE_HIDDEN_CREDENTIAL_MAIN_PATH']) {
+    delete isolated[key];
+  }
+  const stateRoot = path.join(record.worktreePath, '.tmp/qa-state');
   return {
-    ...inherited,
+    ...isolated,
+    FOLIOLE_ELECTRON_APP_ROOT: record.worktreePath,
+    FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot,
+    FOLIOLE_PREVIEW_SANDBOX_ROOT: stateRoot,
+    FOLIOLE_USER_DATA_PATH: path.join(stateRoot, 'user-data'),
+    FOLIOLE_SESSION_DATA_PATH: path.join(stateRoot, 'session-data'),
+    FOLIOLE_MAIN_DATABASE_PATH: path.join(stateRoot, 'foliole.db'),
+    FOLIOLE_WORKDIR: stateRoot,
     FOLIOLE_RESOURCE_GATE_HELD: '',
     FOLIOLE_RESOURCE_GATE_REPO_ROOT: record.worktreePath,
     FOLIOLE_RESOURCE_GATE_RUNTIME_DIR: path.join(record.devRoot, '.lab/internal/runtime'),
