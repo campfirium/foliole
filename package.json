@@ -155,6 +155,7 @@
     "agent:loop:dry-run": "bash scripts/codex/run-loop.sh --dry-run",
     "aide:online-smoke": "node scripts/agent-control/foliole-aide-online-smoke.mjs",
     "hooks:install": "node scripts/install-git-hooks.mjs",
+    "postinstall": "node scripts/ios/prepare-system-sqlite.mjs",
     "prepare": "npm run hooks:install && npm run macos:internal:prepare-runtime",
     "quality:fast": "node scripts/quality/run-quality-fast.mjs",
     "quality:remote": "node scripts/quality/remote-quality.mjs",

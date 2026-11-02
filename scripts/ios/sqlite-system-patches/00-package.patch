@@ -1,0 +1,23 @@
+--- a/Package.swift
++++ b/Package.swift
+@@ -11,7 +11,6 @@
+     ],
+     dependencies: [
+         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.0.0"),
+-        .package(url: "https://github.com/sqlcipher/SQLCipher.swift.git", from: "4.14.0"),
+         .package(url: "https://github.com/weichsel/ZIPFoundation.git", from: "0.9.0")
+     ],
+     targets: [
+@@ -20,10 +19,10 @@
+             dependencies: [
+                 .product(name: "Capacitor", package: "capacitor-swift-pm"),
+                 .product(name: "Cordova", package: "capacitor-swift-pm"),
+-                .product(name: "SQLCipher", package: "SQLCipher.swift"),
+                 .product(name: "ZIPFoundation", package: "ZIPFoundation")
+             ],
+-            path: "ios/Plugin"),
++            path: "ios/Plugin",
++            linkerSettings: [.linkedLibrary("sqlite3")]),
+         .testTarget(
+             name: "CapacitorSQLitePluginTests",
+             dependencies: ["CapacitorSQLitePlugin"],

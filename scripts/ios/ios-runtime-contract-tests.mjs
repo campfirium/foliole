@@ -136,6 +136,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-resource-profile.test.mjs',
   'scripts/ios/ios-scene-lifecycle-host-contract.test.mjs',
   'scripts/ios/ios-security-coverage.test.mjs',
+  'scripts/ios/ios-system-sqlite-environment.test.mjs',
   'scripts/ios/ios-security-owner.integration.test.mjs',
   'scripts/ios/ios-security-sources.test.mjs',
   'scripts/ios/ios-simulator-live.test.mjs',

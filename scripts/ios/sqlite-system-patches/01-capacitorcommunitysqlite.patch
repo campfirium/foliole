@@ -1,0 +1,11 @@
+--- a/CapacitorCommunitySqlite.podspec
++++ b/CapacitorCommunitySqlite.podspec
+@@ -13,7 +13,7 @@
+   s.source_files = 'ios/Plugin/**/*.{swift,h,m,c,cc,mm,cpp}'
+   s.ios.deployment_target = '15.0'
+   s.dependency 'Capacitor'
+-  s.dependency 'SQLCipher'
++  s.libraries = 'sqlite3'
+   s.dependency 'ZIPFoundation'
+   s.swift_version = '5.1'
+ end

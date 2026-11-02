@@ -67,7 +67,9 @@ export function iosMaintenanceChecks(report) {
     [...swiftFindings, gap('swift-native', 'Vendor-only notices, package applicability and independent Cordova source version remain unqualified')],
     { scanner, sources: official.sources, packages: official.packages, gaps: official.gaps }),
   make('embedded-native', 'official-review', sourceErrors || nativeErrors ? 'error' : 'findings',
-    sourceErrors || nativeErrors || 'iOS slice only: SQLCipher vendor predicate and SQLite fixes checked; system crypto and other platforms require separate evidence',
+    sourceErrors || nativeErrors || (environment.components?.systemSqlite
+      ? 'System SQLite follows the device OS; SDK header does not establish runtime version or advisory applicability'
+      : 'iOS slice only: SQLCipher vendor predicate and SQLite fixes checked; system crypto and other platforms require separate evidence'),
     [...embeddedFindings, gap('embedded-native', 'iOS component evidence does not attest other platforms or OS cryptographic internals')],
     { versions: environment.components, sources: official.sources.filter(row => /sqlcipher|sqlite/u.test(row.id)) }),
   make('apple-tools', 'official-review', sourceErrors || nativeErrors ? 'error' : 'findings',

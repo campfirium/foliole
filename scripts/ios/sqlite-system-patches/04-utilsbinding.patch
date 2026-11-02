@@ -1,0 +1,11 @@
+--- a/ios/Plugin/Utils/UtilsBinding.swift
++++ b/ios/Plugin/Utils/UtilsBinding.swift
+@@ -7,7 +7,7 @@
+ //
+ 
+ import Foundation
+-import SQLCipher
++import SQLite3
+ 
+ let SQLITETRANSIENT = unsafeBitCast(-1, to:
+                                         sqlite3_destructor_type.self)

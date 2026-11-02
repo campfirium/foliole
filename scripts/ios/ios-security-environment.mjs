@@ -57,14 +57,17 @@ export function collectIosEnvironment({ root, inventory, device = false,
 function resolvedComponents(inventory, run) {
   const artifacts = inventory.graphs.app.artifacts;
   const sql = artifacts.find(row => row.targetName === 'SQLCipher');
+  const pinned = inventory.graphs.app.pins.find(row => row.identity === 'sqlcipher.swift');
+  if (!pinned && !sql) return systemSqliteComponents(artifacts, run);
   if (!sql?.path || !sql.source?.checksum) throw new Error('Resolved SQLCipher binary identity is missing');
+  if (!pinned) throw new Error('SQLCipher artifact is present without a matching package pin');
   const header = path.join(sql.path, 'ios-arm64/SQLCipher.framework/Headers/sqlite3.h');
   const raw = readFileSync(header);
   const sqlite = /^#define SQLITE_VERSION\s+"([\d.]+)"/mu.exec(raw.toString())?.[1];
   if (!sqlite) throw new Error('Actual iOS framework SQLite version is missing');
   const framework = path.join(sql.path, 'macos-arm64_x86_64/SQLCipher.framework/SQLCipher');
   const native = JSON.parse(run('python3', ['-c', SQLCIPHER_VERSION_PROBE, framework]));
-  const expected = inventory.graphs.app.pins.find(row => row.identity === 'sqlcipher.swift').version;
+  const expected = pinned.version;
   if (native.sqlite !== sqlite || native.sqlcipher.split(' ')[0] !== expected) {
     throw new Error('SQLCipher actual core/header version does not match resolved wrapper');
   }
@@ -75,6 +78,20 @@ function resolvedComponents(inventory, run) {
   binaries: artifacts.map(row => ({ name: row.targetName, source: row.source,
     plistVersion: run('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleShortVersionString',
       path.join(row.path, 'ios-arm64', `${row.targetName}.framework/Info.plist`)]).trim() })),
+  cordova: { version: 'Capacitor-pinned fork; independent Apache Cordova version unknown',
+    reason: 'Framework plist 1.0 and compatibility macros do not establish Apache source version' } };
+}
+
+function systemSqliteComponents(artifacts, run) {
+  const sdk = run('xcrun', ['--sdk', 'iphoneos', '--show-sdk-path']).trim();
+  const header = path.join(sdk, 'usr/include/sqlite3.h');
+  const raw = readFileSync(header);
+  const sdkVersion = /^#define SQLITE_VERSION\s+"([\d.]+)"/mu.exec(raw.toString())?.[1];
+  if (!sdkVersion) throw new Error('System SQLite SDK header version is missing');
+  return { systemSqlite: { provider: 'Apple system SQLite', sdkVersion,
+    header, headerSha256: digest(raw), runtime: 'Not observed; runtime SQLite follows the device OS',
+    scope: 'SDK header only; not an iPhone runtime version or security attestation' },
+  binaries: artifacts.map(row => ({ name: row.targetName, source: row.source })),
   cordova: { version: 'Capacitor-pinned fork; independent Apache Cordova version unknown',
     reason: 'Framework plist 1.0 and compatibility macros do not establish Apache source version' } };
 }
