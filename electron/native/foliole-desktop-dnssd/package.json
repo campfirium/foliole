@@ -7,6 +7,6 @@
   "types": "index.d.ts",
   "gypfile": true,
   "dependencies": {
-    "node-addon-api": "8.5.0"
+    "node-addon-api": "8.9.2"
   }
 }
