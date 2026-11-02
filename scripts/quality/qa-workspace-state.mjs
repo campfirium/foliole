@@ -21,7 +21,9 @@ export function readQaWorkspace(repoRoot) {
       || !path.isAbsolute(record.worktreePath) || !path.isAbsolute(record.devRoot)) {
     throw new Error('Invalid QA workspace record; preserve it for recovery');
   }
-  if (!existsSync(record.worktreePath)) return { ...record, phase: 'unavailable' };
+  if (!existsSync(record.worktreePath)) {
+    return { ...record, phase: record.phase === 'finishing' ? 'finishing' : 'unavailable', available: false };
+  }
   const branch = qaGit(record.worktreePath, 'branch', '--show-current');
   if (branch !== QA_BRANCH) throw new Error('QA workspace branch changed; recovery required');
   return { ...record, head: qaGit(record.worktreePath, 'rev-parse', 'HEAD') };

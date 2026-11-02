@@ -8,6 +8,9 @@ import { fileURLToPath, URL } from 'node:url';
 
 import { createTransientWorktree } from '../diagnostics/transient-worktree-lifecycle.mjs';
 import { assertQualityCommandAllowed } from './quality-command-contracts.mjs';
+import { normalizeSpawnCommand } from '../lib/spawn-command.mjs';
+import { integrateQaWorkspace } from './qa-workspace-integration.mjs';
+import { finishQaWorkspace } from './qa-workspace-finish.mjs';
 import {
   assertQaPrivateDirectories, QA_BRANCH, qaGit, qaRecordPath, qaWorkspaceEnvironment,
   readQaWorkspace, verifyMountedQaVolume
@@ -26,7 +29,7 @@ export function startQaWorkspace({ repoRoot, volumeRoot, worktreePath, owner,
   if (!target.startsWith(`${volume}${path.sep}`) || existsSync(target)) {
     throw new Error('QA path must be a new directory on the mounted QA volume');
   }
-  const record = { schemaVersion: 1, branch: QA_BRANCH, devRoot, worktreePath: target,
+  const record = { schemaVersion: 1, branch: QA_BRANCH, devRoot, volumeRoot: volume, worktreePath: target,
     owner, base: qaGit(devRoot, 'rev-parse', 'HEAD'), phase: 'preparing' };
   writeFileSync(qaRecordPath(devRoot), `${JSON.stringify(record, null, 2)}\n`, { flag: 'wx' });
   return prepareQaWorkspace(record);
@@ -71,6 +74,16 @@ export async function runQaWorkspaceCommand({ repoRoot, command, env = process.e
   });
 }
 
+function validateIntegration(cwd, command) {
+  if (!command.length) throw new Error('Integration requires an affected validation command after --');
+  const { bin, args } = normalizeSpawnCommand(command);
+  return new Promise((resolve, reject) => {
+    const child = spawn(bin, args, { cwd, stdio: 'inherit', shell: false });
+    child.once('error', reject);
+    child.once('exit', code => code === 0 ? resolve() : reject(new Error('Integration validation failed')));
+  });
+}
+
 async function main(args) {
   assertQualityCommandAllowed('runner:qa-workspace');
   const separator = args.indexOf('--');
@@ -90,7 +103,13 @@ async function main(args) {
     process.exitCode = await runQaWorkspaceCommand({ repoRoot, command: args.slice(separator + 1) });
     return;
   }
-  throw new Error('Usage: qa-workspace.mjs start|status|run');
+  if (args[0] === 'integrate') {
+    if (separator < 0) throw new Error('Integration requires validation after --');
+    return console.log(JSON.stringify(await integrateQaWorkspace({ repoRoot,
+      validate: cwd => validateIntegration(cwd, args.slice(separator + 1)) }), null, 2));
+  }
+  if (args[0] === 'finish') return console.log(JSON.stringify(await finishQaWorkspace({ repoRoot }), null, 2));
+  throw new Error('Usage: qa-workspace.mjs start|status|run|integrate|finish');
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
