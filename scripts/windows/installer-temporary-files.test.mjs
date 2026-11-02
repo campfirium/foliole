@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import process from 'node:process';
 import { promisify } from 'node:util';
 
 import { afterEach, expect, it } from 'vitest';
@@ -45,7 +46,9 @@ it('matches installer cleanup patterns through the actual legacy glob dependency
       ['literal[1].txt', 'nested/three.txt', 'one.txt', 'two.log']],
     ['nested/**/*.txt', { dot: true }, ['nested/.hidden.txt', 'nested/three.txt']],
     ['missing{1,2}.txt', { nonull: true }, ['missing1.txt', 'missing2.txt']],
-    ['literal\\[1\\].txt', {}, ['literal[1].txt']]
+    ['literal[[]1].txt', {}, ['literal[1].txt']],
+    // Legacy glob treats backslashes as separators on Windows and escapes on macOS.
+    ['literal\\[1\\].txt', {}, process.platform === 'win32' ? [] : ['literal[1].txt']]
   ];
   for (const [pattern, options, expected] of cases) {
     expect(glob.sync(pattern, { cwd, nodir: true, ...options }).sort()).toEqual(expected);
