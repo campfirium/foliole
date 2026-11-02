@@ -86,6 +86,7 @@ function assertKind(entry, kind) {
 export function registerTransientWorktree({
   createdAt = new Date().toISOString(),
   kind,
+  retainedBy,
   repoRoot = defaultRepoRoot,
   targetRef,
   worktreePath
@@ -100,6 +101,7 @@ export function registerTransientWorktree({
     branch: entry.branch === true ? null : entry.branch ?? null,
     createdAt,
     kind,
+    ...(retainedBy ? { retainedBy } : {}),
     schemaVersion: 1,
     targetRef,
     worktreePath: canonicalWorktreePath(worktreePath)
@@ -111,6 +113,7 @@ export function registerTransientWorktree({
 export function createTransientWorktree({
   branch,
   kind,
+  retainedBy,
   repoRoot = defaultRepoRoot,
   sourceRef,
   targetRef,
@@ -133,7 +136,7 @@ export function createTransientWorktree({
     : ['worktree', 'add', '-b', branch, worktreePath, source];
   git(repoRoot, addArguments);
   try {
-    return registerTransientWorktree({ kind, repoRoot, targetRef, worktreePath });
+    return registerTransientWorktree({ kind, retainedBy, repoRoot, targetRef, worktreePath });
   } catch (error) {
     git(repoRoot, ['worktree', 'remove', '--force', worktreePath]);
     if (kind === 'development') git(repoRoot, ['branch', '-D', branch]);
@@ -155,9 +158,12 @@ function assertReadyToRemove(repoRoot, worktreePath, marker) {
   }
 }
 
-export function finishTransientWorktree({ repoRoot = defaultRepoRoot, worktreePath }) {
+export function finishTransientWorktree({ repoRoot = defaultRepoRoot, worktreePath, releaseRetention = false }) {
   const entry = findWorktree(repoRoot, worktreePath);
   const marker = readMarker(worktreePath);
+  if (marker.retainedBy && !releaseRetention) {
+    throw new Error(`worktree retained by ${marker.retainedBy}: ${worktreePath}`);
+  }
   assertReadyToRemove(repoRoot, worktreePath, marker);
   if (entry.locked) git(repoRoot, ['worktree', 'unlock', worktreePath]);
   git(repoRoot, ['worktree', 'remove', '--force', worktreePath]);
@@ -182,6 +188,7 @@ export function sweepTransientWorktrees({
       const path = markerPath(entry.worktree);
       if (!existsSync(path)) continue;
       const marker = readMarker(entry.worktree);
+      if (marker.retainedBy) continue;
       const expiryMs = nowMs - days * DAY_MS;
       if (Date.parse(marker.createdAt) > expiryMs) continue;
       const activeLock = entry.locked && statSync(lockPath(entry.worktree)).mtimeMs > expiryMs;

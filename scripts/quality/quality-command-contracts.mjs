@@ -78,6 +78,10 @@ const CONTRACTS = [
     surface: 'npm'
   }),
   contract('runner:remote-quality', 'orchestrator', 'remote-quality.mjs'),
+  contract('quality:qa:workspace', 'orchestrator', 'one registered QA workspace lifecycle', {
+    runner: 'runner:qa-workspace', surface: 'npm'
+  }),
+  contract('runner:qa-workspace', 'orchestrator', 'qa-workspace.mjs'),
   ...RELEASE_CONTROLS.map(([name, requiredState]) => contract(
     name,
     'release-control',

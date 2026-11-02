@@ -158,6 +158,7 @@
     "prepare": "npm run hooks:install && npm run macos:internal:prepare-runtime",
     "quality:fast": "node scripts/quality/run-quality-fast.mjs",
     "quality:remote": "node scripts/quality/remote-quality.mjs",
+    "quality:qa:workspace": "node scripts/quality/qa-workspace.mjs",
     "quality:desktop": "node scripts/quality/quality-command-contracts.mjs allow quality:desktop && bash scripts/quality/quality-gate-target.sh desktop",
     "quality:desktop:fail-fast": "node scripts/quality/quality-command-contracts.mjs allow quality:desktop:fail-fast && bash scripts/quality/quality-gate-target.sh desktop --fail-fast",
     "quality:android": "node scripts/quality/quality-command-contracts.mjs allow quality:android && bash scripts/quality/quality-gate-target.sh android",
