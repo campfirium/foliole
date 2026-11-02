@@ -65,7 +65,7 @@ async function updateRuntimeLibraryPathWithConfirmation(args: {
       throw error;
     }
     if (!(await confirmExistingLibraryHome(args.confirmationPath, args.t))) {
-      throw new Error(LIBRARY_HOME_SWITCH_CANCELLED_ERROR);
+      throw new Error(LIBRARY_HOME_SWITCH_CANCELLED_ERROR, { cause: error });
     }
     return updateRuntimeLibraryPathSetting(args.location, args.nextPath, {
       confirmExistingLibraryHome: true

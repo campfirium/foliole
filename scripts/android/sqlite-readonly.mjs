@@ -36,7 +36,7 @@ export async function openReadonlySqliteDatabase(filePath) {
     } catch (nodeSqliteError) {
       const betterMessage = betterSqliteError instanceof Error ? betterSqliteError.message : String(betterSqliteError);
       const nodeMessage = nodeSqliteError instanceof Error ? nodeSqliteError.message : String(nodeSqliteError);
-      throw new Error(`sqlite open failed: better-sqlite3=${betterMessage}; node:sqlite=${nodeMessage}`);
+      throw new Error(`sqlite open failed: better-sqlite3=${betterMessage}; node:sqlite=${nodeMessage}`, { cause: nodeSqliteError });
     }
   }
 }
@@ -51,7 +51,7 @@ export function openReadonlySqliteDatabaseSync(filePath) {
     } catch (nodeSqliteError) {
       const betterMessage = betterSqliteError instanceof Error ? betterSqliteError.message : String(betterSqliteError);
       const nodeMessage = nodeSqliteError instanceof Error ? nodeSqliteError.message : String(nodeSqliteError);
-      throw new Error(`sqlite open failed: better-sqlite3=${betterMessage}; node:sqlite=${nodeMessage}`);
+      throw new Error(`sqlite open failed: better-sqlite3=${betterMessage}; node:sqlite=${nodeMessage}`, { cause: nodeSqliteError });
     }
   }
 }

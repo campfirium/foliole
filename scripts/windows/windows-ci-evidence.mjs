@@ -43,7 +43,7 @@ function inspectWindowsCiContext(options) {
     return { ...verifyWindowsCiContext(options), error: '', status: 'success' };
   } catch (error) {
     const env = options?.env ?? process.env;
-    let head = '';
+    let head;
     try {
       head = options?.readHead?.() ?? execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
     } catch {

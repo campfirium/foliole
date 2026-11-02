@@ -44,7 +44,7 @@ function fixture() {
     VALUES ('node', 'known-deletion', ?, 'tomb-hash', 'source', 'now')`).run(++seq);
   db.prepare(`INSERT INTO sync_object_state
     (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at)
-    VALUES ('node', 'live', ?, 'live-hash', 'source', 'now')`).run(++seq);
+    VALUES ('node', 'live', ?, 'live-hash', 'source', 'now')`).run(seq + 1);
   db.exec(`INSERT INTO sync_delivery_receipts
     (peer_id, stream_name, operation_id, object_type, object_id, payload_identity, status, created_at, updated_at)
     VALUES ('peer', 'state', 'node_reading:unsent:5', 'node_reading', 'unsent', 'hash', 'pending', 'now', 'now'),

@@ -91,7 +91,7 @@ export async function commitWorkspaceReviewGrade(args: {
   const entry = createPendingGradeEntry(args);
   if (!beginReviewGradeHistory(args.set, entry, args.rendererBefore ?? args.snapshot)) return false;
   let review: WorkspaceReviewGradeHistoryEntry['afterReview'] = args.result.nodePatch.review;
-  let persisted = false;
+  let persisted: boolean;
   let persistedSession: WorkspaceState['reviewSession'] | undefined;
   let persistedSource: WorkspaceState['reviewSession'] | undefined;
   let receiptLearning: Record<string, DailyFlowLearningReceipt> | undefined;

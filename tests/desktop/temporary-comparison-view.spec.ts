@@ -120,11 +120,11 @@ test('pasted comparison draft survives close until an explicit write action', as
   await openSeededTopic(desktopWindow);
 
   let dialog = await openManualComparison(desktopWindow);
-  let editor = await replaceManualContent(desktopWindow, dialog, MANUAL_CONTENT);
+  await replaceManualContent(desktopWindow, dialog, MANUAL_CONTENT);
   await expect(dialog.getByLabel(/Comparison overview ruler|对比概览标尺/).getByRole('button').first()).toBeVisible();
   await dialog.getByRole('button', { name: /Source update|来源更新/ }).click();
   await dialog.getByRole('button', { name: /Pasted draft|粘贴改稿/ }).click();
-  editor = dialog.locator('.cm-content[contenteditable="true"]').last();
+  const editor = dialog.locator('.cm-content[contenteditable="true"]').last();
   await expect(editor).toContainText(MANUAL_CONTENT.replaceAll('\n', ''));
 
   const screenshotPath = path.resolve('.tmp/artifacts/desktop-acceptance/temporary-comparison-view.png');

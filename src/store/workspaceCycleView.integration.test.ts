@@ -45,7 +45,7 @@ it('prepares a first sidebar without learning time, reads without writes, and st
 it('shows every saved successor once beyond the old lap without admitting unrelated material', async () => {
   for (const id of ['a', 'b', 'c']) node(peer, id, 'topic');
   let session = (await openDailyFlow(peer.port, { now, mode: 'reading-only' }, config(), persistence)).session;
-  session = await act(peer, session, 'soon');
+  await act(peer, session, 'soon');
   node(peer, 'new-tail', 'topic');
   session = (await openDailyFlow(peer.port, { now, mode: 'reading-only' }, config(), persistence)).session;
   expect(session.cycle!.tailKey).toBeGreaterThan(session.cycle!.lapLimit);

@@ -41,7 +41,7 @@ function saveStateKindAppearanceField<K extends keyof NodeIconStateAppearance>(
   value: NodeIconStateAppearance[K]
 ) {
   const key = getNodeIconKindStateAppearanceStorageKey(state, kind);
-  let override: Partial<NodeIconStateAppearance> = {};
+  let override: Partial<NodeIconStateAppearance>;
   try {
     override = JSON.parse(getWhitelistedLocalStorageItem(key) ?? '{}') as Partial<NodeIconStateAppearance>;
   } catch {
@@ -56,7 +56,7 @@ function saveStateKindAppearanceFields(
   fields: Partial<NodeIconStateAppearance>
 ) {
   const key = getNodeIconKindStateAppearanceStorageKey(state, kind);
-  let override: Partial<NodeIconStateAppearance> = {};
+  let override: Partial<NodeIconStateAppearance>;
   try {
     override = JSON.parse(getWhitelistedLocalStorageItem(key) ?? '{}') as Partial<NodeIconStateAppearance>;
   } catch {

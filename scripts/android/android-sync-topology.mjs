@@ -104,7 +104,7 @@ export function extractSyncStateFromSqliteBytes(buffer) {
   const eventKeyIndex = text.indexOf('workspace_sync_events');
   const arrayStart = eventKeyIndex >= 0 ? text.indexOf('[', eventKeyIndex) : -1;
   const eventsJson = arrayStart >= 0 ? balancedJsonArray(text, arrayStart) : null;
-  let syncEvents = [];
+  let syncEvents;
   try {
     const parsed = eventsJson ? JSON.parse(eventsJson) : [];
     syncEvents = Array.isArray(parsed) ? parsed : [];

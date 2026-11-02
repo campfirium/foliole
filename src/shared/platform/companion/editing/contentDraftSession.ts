@@ -209,7 +209,7 @@ export class ContentDraftSession {
     this.pending = null;
     this.error = null;
     if (this.sequence === edit.sequence && this.bufferedInput.size === 0) {
-      let nextHoldId: string | null = null;
+      let nextHoldId: string | null;
       try {
         nextHoldId = this.baseHold.id && ack.currentVersionId !== ack.submittedVersionId
           ? await this.baseHold.stage(ack.currentVersionId) : null;

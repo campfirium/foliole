@@ -32,7 +32,7 @@ export async function submitReadingReviewFeedback(nodeId: string | null, save: (
   const previous = feedback.nodeId === nodeId ? feedback : emptyFeedback;
   const attempt: ReadingFeedback = { ...previous, nodeId, isSubmitting: true };
   publish(attempt);
-  let saved = false;
+  let saved: boolean;
   try {
     saved = await save();
   } catch {

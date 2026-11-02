@@ -34,7 +34,7 @@ export function copyPdfJsResources(projectRoot: string, outputDirectory: string)
 }
 
 function resolveRequestedResource(projectRoot: string, requestUrl: string) {
-  let pathname = '';
+  let pathname: string;
   try {
     pathname = new URL(requestUrl, 'http://127.0.0.1').pathname;
   } catch {

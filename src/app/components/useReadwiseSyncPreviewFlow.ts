@@ -118,7 +118,7 @@ async function startSync(
   setters.setIsStartingSync(true);
   setters.setSyncError(null);
   setters.setSyncProgress(null);
-  let unsubscribe: (() => void) | null = null;
+  let unsubscribe: (() => void) | null;
   try {
     unsubscribe = await onReadwiseReaderImportProgress(setters.setSyncProgress);
   } catch {

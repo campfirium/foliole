@@ -60,7 +60,7 @@ export function parseSystemEntryDisplayNamesValueJson(valueJson: string) {
   try {
     return parseSystemEntryDisplayNamesPayload(JSON.parse(valueJson));
   } catch (error) {
-    if (error instanceof SyntaxError) throw new Error('invalid_system_entry_display_names_json');
+    if (error instanceof SyntaxError) throw new Error('invalid_system_entry_display_names_json', { cause: error });
     throw error;
   }
 }

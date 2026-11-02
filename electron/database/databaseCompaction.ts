@@ -74,12 +74,12 @@ export async function compactDatabaseInMaintenance(
     return { after, before, safety_snapshot_path: safetySnapshot.currentPath };
   } catch (error) {
     if (!connectionClosed || !safetySnapshot) {
-      throw new Error('The database was not compacted. Your current library is unchanged.');
+      throw new Error('The database was not compacted. Your current library is unchanged.', { cause: error });
     }
     await recoverCurrentDatabaseAfterRestoreFailure({
       error, replacementComplete, safetySnapshot, targetPath
     });
-    throw new Error('The database was not compacted. Your current library has been restored.');
+    throw new Error('The database was not compacted. Your current library has been restored.', { cause: error });
   } finally {
     await fs.rm(candidatePath, { force: true });
     if (safetySnapshot) {

@@ -152,7 +152,7 @@ async function resolveRoutePlan(bashExe, changedFiles, env = process.env) {
   try {
     return JSON.parse(result.stdout);
   } catch (error) {
-    throw new Error(`quality route JSON parse failed: ${error.message}\n${result.stdout}`.trim());
+    throw new Error(`quality route JSON parse failed: ${error.message}\n${result.stdout}`.trim(), { cause: error });
   }
 }
 

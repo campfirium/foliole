@@ -34,9 +34,8 @@ it('undoes and redoes mobile progress after a real peer grades the same item and
   const id = session.currentNodeId!;
   const snapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
   session.isAnswerRevealed = true;
-  const result = await persistFlowMutation({ action: 'grade', grade: 3, nodeId: id, now: '2026-10-26T08:01:00.000Z',
+  await persistFlowMutation({ action: 'grade', grade: 3, nodeId: id, now: '2026-10-26T08:01:00.000Z',
     snapshot, history: { key: 'flow_history:sync', mode: 'review-first', session } });
-  session = result.session!;
   await act(peers.desktop, remote, 'grade', '2026-10-26T08:02:00.000Z');
   await peers.exchange();
   session = (await openCompanionDailyFlow({ now: '2026-10-26T08:03:00.000Z', mode: 'review-first' })).session;
@@ -49,7 +48,7 @@ it('undoes and redoes mobile progress after a real peer grades the same item and
     expect(peer.db.prepare('SELECT * FROM review_log WHERE kind=\'review\' ORDER BY op_id').all()).toEqual(before);
     expect(peer.db.prepare('SELECT reps FROM node_review WHERE node_id=?').get(id)).toEqual({ reps: 3 });
   }
-  session = (await replayCompanionFlowHistory('flow_history:sync', 'redo', session))!;
+  await replayCompanionFlowHistory('flow_history:sync', 'redo', session);
   await peers.exchange();
   for (const peer of [peers.mobile, peers.desktop]) {
     expect(peer.db.prepare('SELECT reps FROM node_review WHERE node_id=?').get(id)).toEqual({ reps: 4 });

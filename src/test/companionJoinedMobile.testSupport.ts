@@ -97,7 +97,7 @@ function configureTransport(identity: string) {
       const body = decryptWorkgroupPayloadNode({ context: { groupTag, direction: 'response', method: 'POST',
         pathWithQuery: `${url.pathname}${url.search}`, contentType: 'application/json; charset=utf-8' },
       envelope: JSON.parse(error.message.slice(error.message.indexOf(':') + 1)), groupKey: secret });
-      throw new Error(`${error.message.slice(0, error.message.indexOf(':'))}:${body}`);
+      throw new Error(`${error.message.slice(0, error.message.indexOf(':'))}:${body}`, { cause: error });
     }
   });
 }

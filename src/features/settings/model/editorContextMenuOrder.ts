@@ -10,7 +10,7 @@ export const commandMenuKey = (id: string) => `command:${id}`;
 export function loadEditorContextMenuOrder(links: WebLookupEntry[], commands: DocumentHeaderMenuItemConfig[]) {
   const available = [...links.map((entry) => webLookupMenuKey(entry.id)), ...commands.map((item) => commandMenuKey(item.id))];
   const raw = getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.editorContextMenuOrder);
-  let stored: unknown = null;
+  let stored: unknown;
   try { stored = raw ? JSON.parse(raw) : null; } catch { stored = null; }
   if (!Array.isArray(stored)) return available;
   const seen = new Set<string>();

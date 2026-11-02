@@ -56,7 +56,7 @@ function matchingProcesses() {
 }
 
 async function resourceLocks(runtimeDir) {
-  let names = [];
+  let names;
   try {
     names = await readdir(runtimeDir);
   } catch {

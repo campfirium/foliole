@@ -101,7 +101,7 @@ export async function installMasDevelopmentApp(options = {}) {
         preserveStaging = true;
         throw new AggregateError(
           [error, recoveryError],
-          `Foliole Internal recovery failed; previous app preserved at ${backupPath}`
+          `Foliole Internal recovery failed; previous app preserved at ${backupPath}`, { cause: recoveryError }
         );
       }
       throw error;

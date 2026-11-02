@@ -172,7 +172,7 @@ async function collectEvents(options) {
 }
 
 export async function collectAndroidDeviceSnapshot(rawOptions) {
-  let serial = '';
+  let serial;
   try {
     serial = await resolveSerial(rawOptions);
   } catch (error) {

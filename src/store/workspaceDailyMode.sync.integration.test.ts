@@ -19,7 +19,7 @@ it.each(['delete', 'shelve', 'read'] as const)('retires hidden Soon after remote
   local = await act(mobile, local, 'soon');
   local = await act(mobile, local, 'soon');
   const untouched = local.currentNodeId;
-  local = await open(mobile);
+  await open(mobile);
   local = (await openDailyFlow(mobile.port, { now, mode: 'review-first' }, settings(mobile), persistence)).session;
   expect(local.currentNodeId).toBe('review');
   expect(local.soonNodeIds).toEqual([]);
@@ -64,8 +64,8 @@ it('rejects a stale review-only grade while retaining valid Soon after a synchro
   const first = local.currentNodeId!;
   local = await act(mobile, local, 'soon');
   const second = local.currentNodeId!;
-  local = await act(mobile, local, 'soon');
-  local = await open(mobile);
+  await act(mobile, local, 'soon');
+  await open(mobile);
   local = (await openDailyFlow(mobile.port, { now, mode: 'review-first' }, settings(mobile), persistence)).session;
   const remote = (await openDailyFlow(desktop.port, { now, mode: 'review-first' }, settings(desktop), persistence)).session;
   await act(desktop, remote, 'grade', due);

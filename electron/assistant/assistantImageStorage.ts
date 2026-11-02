@@ -78,7 +78,7 @@ async function persistAssistantImage(image: ValidatedAssistantImage): Promise<St
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
     const existing = await fs.readFile(filePath);
-    if (createHash('sha256').update(existing).digest('hex') !== image.id) throw new Error('assistant_image_hash_mismatch');
+    if (createHash('sha256').update(existing).digest('hex') !== image.id) throw new Error('assistant_image_hash_mismatch', { cause: error });
     return { ...toAttachment(image), createdFile: false, filePath };
   }
 }

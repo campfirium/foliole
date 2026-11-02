@@ -117,6 +117,6 @@ export async function verifyNativeSyncGroupCanSignRequest(endpointUrl?: string) 
     }
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'unknown error';
-    throw new Error(`Sync Group credentials cannot sign sync requests: ${reason}`);
+    throw new Error(`Sync Group credentials cannot sign sync requests: ${reason}`, { cause: error });
   }
 }

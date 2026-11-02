@@ -41,7 +41,7 @@ function readOwner(ownerPath, fsApi) {
     }
     return owner;
   } catch (error) {
-    throw new Error(`Mac A5 lease owner is unreadable; refusing recovery: ${error.message}`);
+    throw new Error(`Mac A5 lease owner is unreadable; refusing recovery: ${error.message}`, { cause: error });
   }
 }
 
@@ -78,7 +78,7 @@ export function acquireMacosA5DeviceLease(context, mode, {
     const previous = readOwner(paths.ownerPath, fsApi);
     if (isProcessIdentityActive(previous, execute)) {
       throw new Error(
-        `Fixed A5 is already owned by run ${previous.runId} (${previous.action}).`
+        `Fixed A5 is already owned by run ${previous.runId} (${previous.action}).`, { cause: error }
       );
     }
     removeOwnedLease(paths, previous, fsApi);

@@ -60,7 +60,7 @@ export function acquireMacosHiddenCredentialSessionLock(session, {
     if (error?.code !== 'EEXIST') throw error;
     const ownerPid = readLockPid(session.lockPath, fileSystem);
     if (!ownerPid || processIsAlive(ownerPid, signalProcess)) {
-      throw new Error('macos_hidden_electron_credential_session_busy');
+      throw new Error('macos_hidden_electron_credential_session_busy', { cause: error });
     }
     fileSystem.unlinkSync(session.lockPath);
     claim();

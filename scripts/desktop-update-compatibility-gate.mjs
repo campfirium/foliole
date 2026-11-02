@@ -81,7 +81,7 @@ export async function runCompatibilityGate(options, execute = executeFile) {
       const detail = `${error?.stdout ?? ''}\n${error?.stderr ?? ''}`.trim();
       const status = [error?.code, error?.signal].filter(Boolean).join('/');
       throw new Error(
-        `Electron updater runtime failed${status ? ` (${status})` : ''}${detail ? `:\n${detail}` : '.'}`
+        `Electron updater runtime failed${status ? ` (${status})` : ''}${detail ? `:\n${detail}` : '.'}`, { cause: error }
       );
     }
     const evidence = parseEvidence(result.stdout);

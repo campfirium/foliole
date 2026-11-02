@@ -83,7 +83,7 @@ export async function killPid(pid, options = {}) {
     process.kill(pid, 'SIGTERM');
   } catch (error) {
     if (!processAlive(pid)) return;
-    throw new Error(`process terminate failed pid=${pid} ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`process terminate failed pid=${pid} ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
   if (await waitForProcessExit(pid, timeoutMs)) return;
   process.kill(pid, 'SIGKILL');

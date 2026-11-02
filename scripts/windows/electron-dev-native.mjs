@@ -46,7 +46,7 @@ function assertLocalDatabaseWritable() {
     handle = fs.openSync(databasePath, useTemporaryLibrary ? 'a+' : 'r+');
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`native preview process cannot open the live database for write from this launch context: ${databasePath}; detail=${detail}`);
+    throw new Error(`native preview process cannot open the live database for write from this launch context: ${databasePath}; detail=${detail}`, { cause: error });
   } finally {
     if (handle !== null) {
       fs.closeSync(handle);

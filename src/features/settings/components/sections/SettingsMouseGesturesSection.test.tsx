@@ -193,10 +193,10 @@ describe('custom mouse gesture recording', () => {
 
   it('binds a two-segment gesture and confirms before replacing an assigned gesture', () => {
     renderSection();
-    let surface = openRecording('Search');
+    openRecording('Search');
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    surface = openRecording('Search');
+    let surface = openRecording('Search');
     drawRecording(surface, [[140, 100], [140, 140]]);
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));

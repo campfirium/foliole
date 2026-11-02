@@ -23,7 +23,7 @@ export function validatePairSyncRecoveryResult({
 }
 
 export function sanitizePairSyncRecoveryProgressEvidence({ android, approval } = {}) {
-  let safeAndroid = null;
+  let safeAndroid;
   try { safeAndroid = android ? validatePairSyncAndroidEvidence(android) : null; }
   catch { safeAndroid = null; }
   return { android: safeAndroid, approval: validatePairSyncApprovalEvidence(approval) };

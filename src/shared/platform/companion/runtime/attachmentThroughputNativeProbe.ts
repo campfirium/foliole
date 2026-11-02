@@ -74,7 +74,7 @@ async function measure(db: RequestSyncDatabaseHost, host: Awaited<ReturnType<typ
     }
     if (blocks !== 512) throw new Error(`Throughput block count differs: ${blocks}`);
     return { elapsedMs: Math.round(performance.now() - started), rounds, blocks, phases, ...measurement.metrics };
-  } catch (error) { throw new Error(`Throughput failed after ${rounds} rounds / ${blocks} blocks: ${String(error)}; ${JSON.stringify(measurement.metrics)}`); }
+  } catch (error) { throw new Error(`Throughput failed after ${rounds} rounds / ${blocks} blocks: ${String(error)}; ${JSON.stringify(measurement.metrics)}`, { cause: error }); }
   finally { measurement.close(); }
 }
 

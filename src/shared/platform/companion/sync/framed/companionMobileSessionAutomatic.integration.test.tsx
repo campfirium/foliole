@@ -72,7 +72,7 @@ it('opens notifications from the ready endpoint effect and recovers stale sessio
     }, { timeout: 15000 });
     expect(mobile.http.mock.calls.slice(requestCount).some(([request]) => request.url.includes('sync-session'))).toBe(true);
   } catch (error) {
-    throw new Error(`${String(error)}; sync errors: ${JSON.stringify(errors)}`);
+    throw new Error(`${String(error)}; sync errors: ${JSON.stringify(errors)}`, { cause: error });
   } finally {
     hook.unmount();
     await closeCompanionDesktopSession();

@@ -54,7 +54,7 @@ export async function executeAideTool(
     return result(payload, response.ok);
   } catch (error) {
     if (options.signal?.aborted) throw error;
-    if (definition.mutates) throw new Error('tool_write_outcome_uncertain');
+    if (definition.mutates) throw new Error('tool_write_outcome_uncertain', { cause: error });
     return failure('connection_failed');
   }
 }

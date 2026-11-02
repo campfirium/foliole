@@ -73,7 +73,7 @@ export function createInternalDatabaseSnapshot({
     }
   } catch (error) {
     throw new Error(
-      `failed to create ${reason} snapshot at ${destinationPath}: ${formatErrorMessage(error)}`
+      `failed to create ${reason} snapshot at ${destinationPath}: ${formatErrorMessage(error)}`, { cause: error }
     );
   }
 
@@ -108,7 +108,7 @@ export async function createInternalDatabaseSnapshotWithBackup({
     }
   } catch (error) {
     throw new Error(
-      `failed to create ${reason} snapshot at ${destinationPath}: ${formatErrorMessage(error)}`
+      `failed to create ${reason} snapshot at ${destinationPath}: ${formatErrorMessage(error)}`, { cause: error }
     );
   }
 

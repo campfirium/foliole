@@ -18,7 +18,7 @@ it.each((['grade', 'read'] as const).flatMap(action => (['parent', 'self'] as co
   publish(desktop, 'minute');
   await exchange(desktop, mobile);
   let local = (await openDailyFlow(mobile.port, { now, mode: 'recommended', preferredNodeId: 'minute' }, settings(mobile), persistence)).session;
-  local = await act(mobile, local, 'grade');
+  await act(mobile, local, 'grade');
   const minuteDue = (await snapshot(mobile)).nodesById.minute!.review!.due;
   expect(minuteDue).toBe('2026-10-26T08:10:00.000Z');
   const removed = removal === 'parent' ? 'parent' : 'minute';
@@ -47,10 +47,11 @@ it('still admits a valid minute item alongside a retired entry, then returns to 
     publish(desktop, id);
   }
   await exchange(desktop, mobile);
-  let local = await open(mobile);
+  await open(mobile);
+  let local: Awaited<ReturnType<typeof open>>;
   for (const id of ['retired', 'waiting']) {
     local = (await openDailyFlow(mobile.port, { now, mode: 'recommended', preferredNodeId: id }, settings(mobile), persistence)).session;
-    local = await act(mobile, local, 'grade');
+    await act(mobile, local, 'grade');
   }
   softDeleteNodes(desktop.driver, { nodeIds: ['retired'], deletedAt: '2026-10-26T08:02:00.000Z' });
   publish(desktop, 'retired', '2026-10-26T08:02:00.000Z');
@@ -113,7 +114,7 @@ it('keeps reading-only actions local while a valid minute review waits for the n
   await exchange(desktop, mobile);
   let local = await open(mobile);
   expect(local.currentNodeId).toBe('minute');
-  local = await act(mobile, local, 'grade');
+  await act(mobile, local, 'grade');
   local = await open(mobile, now, settings(mobile), 'reading-only');
   const reads = vi.spyOn(persistence, 'learningSnapshot');
   for (let i = 0; i < 2; i += 1) {
@@ -123,7 +124,7 @@ it('keeps reading-only actions local while a valid minute review waits for the n
     expect(reads.mock.calls.slice(1).every(call => call[1] !== undefined)).toBe(true);
   }
   await assertDurable(mobile, local);
-  local = await open(mobile, '2026-10-26T08:10:00.000Z');
+  await open(mobile, '2026-10-26T08:10:00.000Z');
   local = (await openDailyFlow(mobile.port, { now: '2026-10-26T08:10:00.000Z', mode: 'review-first' }, settings(mobile), persistence)).session;
   expect(local.currentNodeId).toBe('minute');
   await assertDurable(mobile, local);

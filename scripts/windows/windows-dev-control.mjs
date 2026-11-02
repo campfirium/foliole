@@ -172,7 +172,7 @@ export async function runWindowsDevControl({
     await stopWindowsDevCandidateRuntime({ env, executeSsh, host, stdout });
   }
   let remoteError = null;
-  let remoteOutput = '';
+  let remoteOutput;
   try {
     remoteOutput = await executeSsh(buildSshSpec(host, action), { env });
   } catch (error) {
