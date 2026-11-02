@@ -106,16 +106,26 @@ Choose upgrade targets, then group related dependencies and combine compatible
 routine updates. A group can contain multiple packages and PRs. Shared manifests,
 lockfiles and generated outputs have one writer; that protection does not impose
 a one-package limit. Keep ordinary groups in one task, splitting only an
-independently scoped migration when warranted. Do not create a branch or worktree
-unless requested, or merge/check out the bot's branch.
+independently scoped migration when warranted. Development uses local dev without
+a feature branch or worktree; active remote QA uses the registered check workspace.
+Do not merge or check out the bot's branch.
 
 Run focused behavior checks and necessary builds per group, then share applicable
-checks for the final combination and hosted evidence for the exact integrated
-revision. Builds alone do not prove runtime or data behavior. Follow affected host
-rules without turning ordinary updates into full release acceptance. A blocked
-group does not hold unrelated eligible updates. Commit validated changes, verify
-their remote containment and required checks, then close only covered proposals
-without merging. Do not use PR count to determine install, test or task count.
+checks for the final combination. Builds alone do not prove runtime or data
+behavior. Commit the locally validated candidate before active remote QA.
+Dependency validation and its repairs/rechecks use the registered workspace on
+`check`: workspace operations use `quality:qa:workspace` from the development
+checkout, while `quality:remote` runs from the clean QA checkout. The QA owner
+handles preflight, hosted checks, bounded repairs, verified integration and
+workspace release. Scheduled dev checks, their repairs and rechecks retain dev;
+release checks and subsequent handling retain the release lane. A failure or a
+larger repair does not automatically transfer ownership or change lanes.
+
+Follow affected host rules without turning ordinary updates into full release
+acceptance. A blocked group does not hold unrelated eligible updates. Before
+closing a covered proposal, verify required checks for the exact QA candidate,
+its integration into dev and remote dev containment, including any QA repairs.
+Do not use PR count to determine install, test, commit or task count.
 
 References: [Renovate installation](https://docs.renovatebot.com/getting-started/installing-onboarding/),
 [free hosting](https://docs.renovatebot.com/mend-hosted/overview/),
