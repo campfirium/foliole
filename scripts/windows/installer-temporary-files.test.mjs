@@ -9,8 +9,11 @@ import { promisify } from 'node:util';
 import { afterEach, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
-const installerTemp = require('electron-winstaller/lib/temp-utils.js');
-const installerRequire = createRequire(require.resolve('electron-winstaller/lib/temp-utils.js'));
+const builderRequire = createRequire(require.resolve('electron-builder'));
+const appBuilderRequire = createRequire(builderRequire.resolve('app-builder-lib'));
+const squirrelRequire = createRequire(appBuilderRequire.resolve('electron-builder-squirrel-windows'));
+const installerRequire = createRequire(squirrelRequire.resolve('electron-winstaller'));
+const installerTemp = installerRequire('./temp-utils.js');
 const temp = installerRequire('temp');
 const tempRequire = createRequire(installerRequire.resolve('temp'));
 const rimraf = tempRequire('rimraf');
