@@ -8,7 +8,6 @@
 *.jsx text eol=lf
 *.md text eol=lf
 *.mjs text eol=lf
-scripts/ios/sqlite-system-patches/*.patch text eol=lf whitespace=-blank-at-eol
 *.ps1 text eol=lf
 *.sh text eol=lf
 *.ts text eol=lf
