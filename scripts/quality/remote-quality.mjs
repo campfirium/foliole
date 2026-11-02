@@ -101,7 +101,7 @@ export async function runRemoteQuality(options = {}) {
     runner, 'gh', ['repo', 'view', '--json', 'nameWithOwner,defaultBranchRef'], { cwd }
   ));
   const branch = await requireSuccess(runner, 'git', ['branch', '--show-current'], { cwd });
-  if (branch === 'codex/qa') {
+  if (branch === 'check') {
     return runQaRemoteQuality({ args, cwd, repo: repoInfo.nameWithOwner, runner,
       preflight: options.qaPreflight, readVerdict: options.readChainVerdict,
       monitor: options.qaMonitor, pollIntervalMs: options.pollIntervalMs, wait: options.wait });
