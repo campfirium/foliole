@@ -51,3 +51,26 @@ test('long review content retains outer page scrolling and accessible grade butt
     await page.screenshot({ path: `.tmp/artifacts/T672/review-${query.replaceAll(/[=&]/g, '-')}.png` });
   }
 });
+
+test('revealed item editing scrolls each field independently inside its allocated space', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await openReview(page, 'editing&question=long&answer=long');
+  await page.getByRole('button', { name: 'Edit item', exact: true }).click();
+  for (const name of ['Question', 'Answer']) {
+    await expect(page.getByRole('textbox', { name, exact: true })).toBeVisible();
+  }
+  const fields = page.locator('.companion-item-edit-layout .cm-scroller');
+  for (const field of await fields.all()) {
+    await expect.poll(() => field.evaluate(element => ({
+      scrollable: ['auto', 'scroll'].includes(getComputedStyle(element).overflowY),
+      overflowing: element.scrollHeight > element.clientHeight
+    }))).toEqual({ scrollable: true, overflowing: true });
+    await field.evaluate(element => { element.scrollTop = 0; });
+  }
+  await fields.nth(0).evaluate(element => { element.scrollTop = 50; });
+  await expect.poll(() => fields.nth(0).evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+  expect(await fields.nth(1).evaluate(element => element.scrollTop)).toBe(0);
+  await fields.nth(1).evaluate(element => { element.scrollTop = 80; });
+  await expect.poll(() => fields.nth(1).evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+  await page.screenshot({ path: '.tmp/artifacts/T680/item-editor-independent-scroll.png' });
+});

@@ -6,9 +6,27 @@ import '../../src/companion/companionMinimal.css';
 import { CompanionBottomReviewBar } from '../../src/companion/CompanionBottomReviewBar';
 import { CompanionColorModeProvider } from '../../src/companion/CompanionColorModeProvider';
 import { CompanionDraftProvider } from '../../src/companion/CompanionDraftProvider';
+import { ReadableArticleDocument } from '../../src/companion/CompanionReadableArticleDocument';
 import { ImmersiveReadableArticle } from '../../src/companion/CompanionReadableArticleSurface';
 import { MouseGestureSettingsProvider } from '../../src/features/settings/context/MouseGestureSettingsProvider';
 import { LocalizationProvider } from '../../src/shared/localization/LocalizationProvider';
+import type { CompanionContentSaveHandler } from '../../src/shared/platform/companion/editing/companionContentEditContract';
+
+function EditingReview({ content, answer }: { content: string; answer: string }) {
+  const [editing, setEditing] = useState(false);
+  const [save] = useState<CompanionContentSaveHandler>(() => Object.assign(
+    async (_id: string, next: string) => ({ content: next, reveal: answer, currentVersionId: 'base', submittedVersionId: 'base' }),
+    { readSource: async () => ({ content, reveal: answer, versionId: 'base' }) }
+  ));
+  return <><button onClick={() => setEditing(true)}>Edit item</button>
+    <div style={{ height: 300, display: 'flex', flexDirection: 'column' }}>
+      <ReadableArticleDocument isReviewItem allowContentEditing={editing} onSaveContent={save}
+        answer={answer} scrollContainer="outer"
+        readableArticle={{ nodeId: 'review-item', content, title: 'Question', hideTitleHeading: false,
+          persistedNodeViewState: null, pdfAttachmentId: null, textAnchorDecorations: [] }}
+        readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default' }} />
+    </div></>;
+}
 
 function Review() {
   const params = new URLSearchParams(location.search);
@@ -18,6 +36,7 @@ function Review() {
   const [revealed, setRevealed] = useState(!params.has('hidden'));
   const [grade, setGrade] = useState<number | null>(null);
   return <LocalizationProvider initialLanguagePreference="en"><CompanionColorModeProvider><MouseGestureSettingsProvider><CompanionDraftProvider>
+    {params.has('editing') ? <EditingReview content={content} answer={answer} /> : <>
     <ImmersiveReadableArticle flow isReviewItem answer={revealed ? answer : null} header={<span>Flow practice</span>}
       onExit={() => {}} snapshot={null}
       readableArticle={{ nodeId: 'review-item', content, title: 'Question', hideTitleHeading: false,
@@ -26,6 +45,7 @@ function Review() {
         onRevealAnswer={() => setRevealed(true)} onGrade={setGrade} onReadReviewTopic={() => {}}
         onPostponeReviewTopic={() => {}} onDismissReviewTopic={() => {}} reviewCardKey="review-item" />} />
     <output aria-label="Submitted grade">{grade ?? 'None'}</output>
+    </>}
   </CompanionDraftProvider></MouseGestureSettingsProvider></CompanionColorModeProvider></LocalizationProvider>;
 }
 

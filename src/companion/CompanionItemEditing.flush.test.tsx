@@ -44,8 +44,9 @@ it.each([['android', false], ['android', true], ['ios', false], ['ios', true]] a
   const answer = revealed ? EditorView.findFromDOM(screen.getByRole('textbox', { name: 'Answer' })) : null;
   if (!question || (revealed && !answer)) throw new Error('Missing item editor');
   if (answer) {
-    expect(getComputedStyle(question.scrollDOM).overflow).not.toBe('visible');
-    expect(getComputedStyle(answer.scrollDOM).overflow).not.toBe('visible');
+    // jsdom does not compute cross-axis overflow; real scrolling is covered by companion-item-review.spec.ts.
+    expect(['auto', 'scroll']).toContain(getComputedStyle(question.scrollDOM).overflowX);
+    expect(['auto', 'scroll']).toContain(getComputedStyle(answer.scrollDOM).overflowX);
   }
   const focused = answer ?? question;
   act(() => focused.focus());
