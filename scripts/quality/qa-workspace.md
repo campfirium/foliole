@@ -42,5 +42,7 @@ for recovery; an unavailable or interrupted workspace is not a completed QA run.
 Completion requires matching full evidence and integration of the current QA tip.
 Remote cleanup comes before local worktree cleanup; the owner record stays in
 `finishing` until both succeed. Retry `finish` after resolving a cleanup failure.
+Terminal wait logs and the candidate/integration record are retained under the
+development checkout's `.tmp/artifacts/qa/<run-id>` before removing the QA directory.
 Preparation alone does not prove quality acceptance. Local validation may wait for
 the development preview to release the shared resource; do not stop it implicitly.

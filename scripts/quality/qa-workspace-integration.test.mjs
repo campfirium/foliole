@@ -68,6 +68,7 @@ it('returns only a verified prefix, then the rest, with real hooks and independe
   expect(realpathSync(path.join(f.dev, '.cache'))).toBe(path.join(f.root, 'cache'));
   const finish = { repoRoot: f.dev, verifyRun: f.verifyRun, verifyVolume: f.verifyVolume, removeRemote: async () => {} };
   expect(await finishQaWorkspace(finish)).toEqual({ phase: 'idle' });
+  expect(JSON.parse(readFileSync(path.join(f.dev, '.tmp/artifacts/qa/42/workspace.json'), 'utf8')).cleanupTip).toBe(second);
   expect(existsSync(f.qa)).toBe(false);
   const next = startQaWorkspace({ repoRoot: f.dev, volumeRoot: f.root, worktreePath: f.qa,
     owner: 'next-owner', verifyVolume: f.verifyVolume });

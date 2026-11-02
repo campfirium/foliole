@@ -1,5 +1,6 @@
-import { existsSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import path from 'node:path';
 
 import { finishTransientWorktree } from '../diagnostics/transient-worktree-lifecycle.mjs';
 import { qaGit, qaRecordPath, readQaWorkspace, verifyMountedQaVolume } from './qa-workspace-state.mjs';
@@ -21,6 +22,14 @@ function qaGitHub(record, args) {
   return result.stdout;
 }
 
+function retainQaEvidence(record) {
+  const destination = path.join(record.devRoot, '.tmp/artifacts/qa', String(record.run.runId));
+  mkdirSync(destination, { recursive: true });
+  const logs = path.join(record.worktreePath, '.tmp/waits');
+  if (existsSync(logs)) cpSync(logs, path.join(destination, 'waits'), { recursive: true });
+  writeFileSync(path.join(destination, 'workspace.json'), `${JSON.stringify(record, null, 2)}\n`);
+}
+
 export async function finishQaWorkspace({ repoRoot, verifyRun = verifyQaRun,
   removeRemote = removeQaRemote, verifyVolume = verifyMountedQaVolume,
   finishLocal = finishTransientWorktree }) {
@@ -40,6 +49,7 @@ export async function finishQaWorkspace({ repoRoot, verifyRun = verifyQaRun,
   if (existsSync(record.worktreePath) && record.head !== record.cleanupTip) {
     throw new Error('QA changed after cleanup began; preserve the lane');
   }
+  retainQaEvidence(record);
   // Keep the owner record until remote and local cleanup both succeed.
   await removeRemote(record);
   if (existsSync(record.worktreePath)) {
