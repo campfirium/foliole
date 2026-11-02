@@ -13,6 +13,7 @@ const providerStops = new WeakMap();
 export function createSyncGroupProviderCompileArgs(repoRoot, artifactDir) {
   return [
     path.join(repoRoot, 'node_modules/typescript/bin/tsc'),
+    '--ignoreConfig',
     path.join(repoRoot, 'scripts/ios/ios-sync-group-provider-fixture.ts'),
     '--outDir', path.join(artifactDir, 'service-dist'),
     '--rootDir', repoRoot,
