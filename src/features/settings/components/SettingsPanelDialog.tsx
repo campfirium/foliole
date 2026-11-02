@@ -113,6 +113,7 @@ export function SettingsPanelDialog(props: SettingsPanelDialogProps) {
           aria-describedby={undefined}
           className={settingsDialogSurfaceClassName(`grid h-[min(860px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[260px_minmax(0,1fr)] overflow-hidden ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`)}
           data-settings-root-dialog="true"
+          inert={props.isPreviewActive}
           onEscapeKeyDown={(event) => {
             if (props.searchQuery.trim().length > 0) {
               event.preventDefault();

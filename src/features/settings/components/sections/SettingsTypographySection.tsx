@@ -4,7 +4,7 @@ import { useSettingsFontOptions } from '../useSettingsFontOptions';
 import { NodeListRowSpacingSection } from './NodeListRowSpacingSection';
 import { SettingsAppearanceFontSection } from './SettingsAppearanceFontSection';
 
-export function SettingsTypographySection() {
+export function SettingsTypographySection(props: { onEnterPreview: () => void }) {
   const appearance = useAppearanceSettings();
   const fontOptions = useSettingsFontOptions({
     customInterfaceFont: appearance.customInterfaceFont,
@@ -16,6 +16,7 @@ export function SettingsTypographySection() {
     <>
       <SettingsAppearanceFontSection
         {...fontOptions}
+        onEnterPreview={props.onEnterPreview}
         interfaceFontSize={appearance.interfaceFontSize}
         onInterfaceFontSelectionChange={(value) => value.startsWith('preset:')
           ? appearance.setInterfaceFontPreset(value.slice(7) as typeof appearance.interfaceFontPreset)

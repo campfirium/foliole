@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 
 import {
   onWindowEscape,
-  onWindowKeydown,
-  type KeydownUnlisten
+  onWindowKeydownCapture,
+  onWindowPriorityEscape
 } from '../../../shared/platform/keyboard';
 
 const FOREGROUND_DIALOG_SELECTOR = '[role="dialog"].z-modal:not([data-settings-root-dialog="true"])';
@@ -14,16 +14,19 @@ export function useSettingsPreviewMode() {
 
   useEffect(() => {
     if (!isPreviewActive) return undefined;
-    let unlistenKeydown: KeydownUnlisten = () => {};
-    const stopPreview = () => {
+    const stopPreview = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
       setIsPreviewActive(false);
-      unlistenKeydown();
     };
-    unlistenKeydown = onWindowKeydown(stopPreview);
-    window.addEventListener('pointerdown', stopPreview, { once: true });
+    const unlistenKeydown = onWindowKeydownCapture(stopPreview);
+    const unlistenEscape = onWindowPriorityEscape(stopPreview);
+    window.addEventListener('pointerdown', stopPreview, { once: true, capture: true });
     return () => {
       unlistenKeydown();
-      window.removeEventListener('pointerdown', stopPreview);
+      unlistenEscape();
+      window.removeEventListener('pointerdown', stopPreview, true);
     };
   }, [isPreviewActive]);
 

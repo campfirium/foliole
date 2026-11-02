@@ -200,7 +200,7 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
     case 'appearance':
       return <SettingsAppearanceSection onEnterPreview={props.onEnterPreview} onSettingsBackdropTransparentChange={props.onSettingsBackdropTransparentChange} />;
     case 'typography':
-      return <SettingsTypographySection />;
+      return <SettingsTypographySection onEnterPreview={props.onEnterPreview} />;
     case 'rail':
       return props.desktopAdapters
         ? <SettingsRailSection actionItems={props.hotkeyItems} renderRailItemIcon={props.desktopAdapters.renderRailItemIcon} />
