@@ -1,4 +1,4 @@
-import { EditorState } from '@codemirror/state';
+import { EditorState, Transaction } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { afterEach, expect, it, vi } from 'vitest';
 
@@ -22,7 +22,8 @@ function editor(content = 'A') {
   adapter.bindTextHistorySource?.(id => getEditorTextHistorySource(history, id));
   const view = (adapter as unknown as { view: EditorView }).view;
   return { adapter, view,
-    type: (text: string) => view.dispatch({ changes: { from: view.state.doc.length, insert: text }, userEvent: 'input.type' }),
+    type: (text: string, time?: number) => view.dispatch({ changes: { from: view.state.doc.length, insert: text },
+      userEvent: 'input.type', annotations: time === undefined ? [] : Transaction.time.of(time) }),
     setDocument(id: string, value: string) { nodeId = id; adapter.setNodeId(id); adapter.setContent(value); },
     replay(mode: 'redo' | 'undo') {
       const entry = getEditorOperationTopEntry(history, nodeId, mode);
@@ -40,13 +41,30 @@ it.each([25_000, 250_000, 1_000_000])('does not encode the %i-character document
   const content = '中😀text\n'.repeat(Math.ceil(size / 8)).slice(0, size);
   const runtime = editor(content);
   const encode = vi.spyOn(TextEncoder.prototype, 'encode');
-  for (const text of ['a', 'b', 'c', 'd']) runtime.type(text);
+  // Model a rapid input burst independently of document processing time.
+  ['a', 'b', 'c', 'd'].forEach((text, index) => runtime.type(text, 1000 + index * 10));
   expect(encode).not.toHaveBeenCalled();
   expect(runtime.replay('undo')).toBe(true);
   expect(runtime.adapter.getContent()).toBe(content);
   expect(runtime.replay('redo')).toBe(true);
   expect(runtime.adapter.getContent()).toBe(content + 'abcd');
   expect(encode).not.toHaveBeenCalled();
+});
+
+it('keeps separate undo groups when typing pauses beyond the native grouping interval', () => {
+  const runtime = editor();
+  runtime.type('a', 1000);
+  runtime.type('b', 1600);
+  runtime.type('c', 1610);
+  runtime.type('d', 1620);
+  expect(runtime.replay('undo')).toBe(true);
+  expect(runtime.adapter.getContent()).toBe('Aa');
+  expect(runtime.replay('undo')).toBe(true);
+  expect(runtime.adapter.getContent()).toBe('A');
+  expect(runtime.replay('redo')).toBe(true);
+  expect(runtime.adapter.getContent()).toBe('Aa');
+  expect(runtime.replay('redo')).toBe(true);
+  expect(runtime.adapter.getContent()).toBe('Aabcd');
 });
 
 it('preserves independent native undo/redo while one adapter switches documents', () => {
