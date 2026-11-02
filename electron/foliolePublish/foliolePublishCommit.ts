@@ -26,7 +26,7 @@ export function commitPublishedTopic(input: {
     activation.rollback();
     if (oldContent) writeFileAtomic(contentFile, oldContent); else fs.rmSync(contentFile, { force: true });
     if (oldIndex) writeFileAtomic(indexFile, oldIndex); else fs.rmSync(indexFile, { force: true });
-    throw new Error(`The site was deployed, but Foliole could not save the local publish state: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`The site was deployed, but Foliole could not save the local publish state: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   } finally {
     discardStagedFoliolePublishSite(input.staged);
   }

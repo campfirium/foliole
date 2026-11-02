@@ -58,7 +58,7 @@ export async function deliverFramedSyncDifferencesInDependencyOrder(
           const parent = dependency ? resolve({ ...difference, ...dependency }) : null;
           if (!dependency) throw error;
           if (parent && key(parent) === differenceKey && dependency.code !== 'framed_sync_review_node_missing:') {
-            throw new Error('framed_sync_node_parent_cycle');
+            throw new Error('framed_sync_node_parent_cycle', { cause: error });
           }
           if (!parent || key(parent) === differenceKey || delivered.has(key(parent))) {
             deferred.set(differenceKey, difference);

@@ -40,7 +40,7 @@ function readTargetRow(nodeId: string) {
 export function loadReadwiseOriginalEpubTarget(nodeId: string): ReadwiseOriginalEpubTarget | null {
   const row = readTargetRow(nodeId);
   if (!row?.connection_ref || !row.document_id) return null;
-  let parsedState: unknown = null;
+  let parsedState: unknown;
   try { parsedState = JSON.parse(row.state_json || '{}'); } catch { return null; }
   const state = normalizeReadwiseApiDocumentImportState(parsedState);
   if (state.metadata.category !== 'epub') return null;

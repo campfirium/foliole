@@ -25,7 +25,7 @@ export async function consumeReadwiseOriginalFile<T>(
       validateDeclaredMime(response.headers.get('content-type'), category);
       return await consume(response, idle);
     } catch (error) {
-      if (idle.didExpire()) throw new Error('original_file_download_stalled');
+      if (idle.didExpire()) throw new Error('original_file_download_stalled', { cause: error });
       throw error;
     } finally {
       idle.dispose();

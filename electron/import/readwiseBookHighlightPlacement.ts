@@ -193,7 +193,7 @@ export async function placeReadwiseBookHighlights(input: {
     return { matchedCount: 0, unmatchedCount: 0 };
   }
 
-  let markdown = '';
+  let markdown: string;
   try {
     markdown = await fs.readFile(input.highlightMarkdownPath, 'utf8');
   } catch {

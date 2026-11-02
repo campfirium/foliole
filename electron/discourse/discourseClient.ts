@@ -105,7 +105,7 @@ async function fetchPublishResponse(input: string, init: RequestInit, operation:
     return await fetch(input, init);
   } catch (error) {
     recordPublishNetworkFailure(operation, error);
-    throw new Error(DISCOURSE_PUBLISH_CONNECTION_ERROR);
+    throw new Error(DISCOURSE_PUBLISH_CONNECTION_ERROR, { cause: error });
   }
 }
 

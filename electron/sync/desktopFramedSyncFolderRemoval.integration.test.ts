@@ -26,7 +26,6 @@ const bodyHash = hashTextBody(body);
 
 it('synchronizes folder deletion over production HTTP and preserves it after both peers reopen', { meta: { calibratedMs: 60_000 } }, async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
-  let target = fixture.rightSnapshot;
   try {
     await seedFolder(fixture.leftSnapshot.databasePath, fixture.leftSnapshot.deviceId);
     await fixture.left.seed({ nodeId: 'independent-topic', title: 'Imported topic', content: 'Independent content' });
@@ -38,7 +37,7 @@ it('synchronizes folder deletion over production HTTP and preserves it after bot
     expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true });
     for (const snapshot of [fixture.leftSnapshot, fixture.rightSnapshot]) assertDocument(snapshot.databasePath, false);
     await fixture.restartLeft();
-    target = (await fixture.restartRight()).snapshot;
+    const target = (await fixture.restartRight()).snapshot;
     expect(await reconnectFixturePeer(fixture.left, target)).toMatchObject({ complete: true });
     expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
     for (const snapshot of [fixture.leftSnapshot, fixture.rightSnapshot]) {

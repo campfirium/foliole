@@ -60,7 +60,7 @@ export async function resolveReadwiseSourceImportDecision(
   }
 ) {
   const articlePath = path.join(options.highlightDirectoryPath, source.sourceName);
-  let detectedHighlightCount = 0;
+  let detectedHighlightCount: number;
   let hasHighlightFile = false;
   try {
     const articleMarkdown = await fs.readFile(articlePath, 'utf8');

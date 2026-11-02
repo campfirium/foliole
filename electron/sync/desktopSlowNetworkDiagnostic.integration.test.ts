@@ -42,7 +42,6 @@ it.each([{ mbps: 5, rttMs: 80, initialScan: false }, { mbps: 5, rttMs: 80, initi
   const server = await attachmentHttpServer(0);
 
   const owner = createSyncPeerRoundOwnership(60000);
-  let baselineMs = 0;
   const started = performance.now();
   let rounds = 0;
   let totalBlocks = 0;
@@ -63,7 +62,7 @@ it.each([{ mbps: 5, rttMs: 80, initialScan: false }, { mbps: 5, rttMs: 80, initi
   const relay = await slowNetworkRelay(server.url, profile);
   const host = local.host;
   try {
-    baselineMs = await measureBaseline(owner, relay.url, local.database, target.databasePath);
+    const baselineMs = await measureBaseline(owner, relay.url, local.database, target.databasePath);
     while (!editLatencyMs) {
       const { lease, peerRound, exchange } = openScaleRound(owner, relay.url);
       try {

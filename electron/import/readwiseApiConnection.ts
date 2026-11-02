@@ -116,7 +116,7 @@ export async function connectReadwiseApiFromClipboard(
   if (response.status !== 204) return result('connection_failed');
   const remoteSource = loadReadwiseRemoteSource() ? undefined : createReadwiseRemoteSource();
   const secretRef = settings.apiConnection.secretRef ?? `readwise-api-${randomUUID()}.bin`;
-  let previousToken = '';
+  let previousToken: string;
   try {
     previousToken = settings.apiConnection.secretRef
       ? readReadwiseApiSecret(settings.apiConnection.secretRef) : '';
@@ -147,7 +147,7 @@ export async function connectReadwiseApiFromClipboard(
 export function disconnectReadwiseApi(): NativeReadwiseApiConnectionResult {
   const settings = loadStoredReadwiseHostSettings();
   const secretRef = settings.apiConnection.secretRef;
-  let previousToken = '';
+  let previousToken: string;
   try {
     ensureSecureStorageBackend('Readwise API token');
     previousToken = secretRef ? readReadwiseApiSecret(secretRef) : '';
