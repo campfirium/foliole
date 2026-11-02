@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import fs from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
@@ -35,7 +36,10 @@ describe('T7 hosted quality workflow contract', () => {
 
   it('serializes scheduled and manual dev quality while release keeps its own group', () => {
     const remote = parse(read('.github/workflows/remote-quality.yml'));
-    expect(remote.concurrency).toEqual({ group: 'quality-dev', 'cancel-in-progress': true });
+    const groupFor = ref => runInNewContext(remote.concurrency.group.slice(3, -2), { github: { ref } });
+    expect(groupFor('refs/heads/dev')).toBe('quality-dev');
+    expect(groupFor('refs/heads/codex/qa')).toBe('quality-qa');
+    expect(remote.concurrency['cancel-in-progress']).toBe(true);
     expect(hosted.concurrency).toEqual({ group: 'quality-dev', 'cancel-in-progress': false });
     expect(release.concurrency).toEqual({ group: 'quality-release', 'cancel-in-progress': true });
     const workflows = fs.readdirSync('.github/workflows').filter((file) => file.endsWith('.yml'));
