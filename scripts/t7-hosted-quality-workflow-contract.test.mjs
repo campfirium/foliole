@@ -38,7 +38,7 @@ describe('T7 hosted quality workflow contract', () => {
     const remote = parse(read('.github/workflows/remote-quality.yml'));
     const groupFor = ref => runInNewContext(remote.concurrency.group.slice(3, -2), { github: { ref } });
     expect(groupFor('refs/heads/dev')).toBe('quality-dev');
-    expect(groupFor('refs/heads/codex/qa')).toBe('quality-qa');
+    expect(groupFor('refs/heads/check')).toBe('quality-qa');
     expect(remote.concurrency['cancel-in-progress']).toBe(true);
     expect(hosted.concurrency).toEqual({ group: 'quality-dev', 'cancel-in-progress': false });
     expect(release.concurrency).toEqual({ group: 'quality-release', 'cancel-in-progress': true });

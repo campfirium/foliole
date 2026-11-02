@@ -1,12 +1,12 @@
 /* global console, process */
 import { realpathSync, writeFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
 import path from 'node:path';
 
 import { readChainVerdict } from './chain-verdict-read.mjs';
 import { monitorRemoteQualityJobs, requireSuccess } from './remote-quality-monitor.mjs';
 import { parseRemoteQualityRun } from './remote-quality-run-title.mjs';
-import { QA_BRANCH, qaGit, qaRecordPath, readQaWorkspace } from './qa-workspace-state.mjs';
-import { runQaWorkspaceCommand } from './qa-workspace.mjs';
+import { QA_BRANCH, qaGit, qaRecordPath, qaWorkspaceEnvironment, readQaWorkspace } from './qa-workspace-state.mjs';
 
 function saveRun(cwd, run) {
   const record = readQaWorkspace(cwd);
@@ -31,9 +31,14 @@ export async function qaPreflightBase({ cwd, repo, runner, targetSha, scope }) {
 }
 
 async function runPreflight({ record, base, targetSha, scope }) {
-  const code = await runQaWorkspaceCommand({ repoRoot: record.worktreePath, command: [process.execPath,
-    path.join(record.worktreePath, 'scripts/quality/qa-remote-preflight.mjs'), base, targetSha, scope] });
-  if (code !== 0) throw new Error('QA local preflight failed; no hosted run dispatched');
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [path.join(record.worktreePath,
+      'scripts/quality/qa-remote-preflight.mjs'), base, targetSha, scope], {
+      cwd: record.worktreePath, env: qaWorkspaceEnvironment(record, process.env), stdio: 'inherit', shell: false
+    });
+    child.once('error', reject);
+    child.once('exit', code => code === 0 ? resolve() : reject(new Error('QA local preflight failed; no hosted run dispatched')));
+  });
 }
 
 async function selectQaRun({ cwd, repo, runner, targetSha, scope, record }) {

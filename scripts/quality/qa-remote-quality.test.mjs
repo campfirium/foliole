@@ -1,17 +1,22 @@
 // @vitest-environment node
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { setTimeout as delay } from 'node:timers/promises';
 import { afterEach, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
 import { qaPreflightBase, runQaRemoteQuality } from './qa-remote-quality.mjs';
 import { runRemoteQuality } from './remote-quality.mjs';
 import { qaGit, readQaWorkspace } from './qa-workspace-state.mjs';
 import { startQaWorkspace } from './qa-workspace.mjs';
+import { withResourceGate } from '../lib/resource-gate.mjs';
 
 const roots = [];
-afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }); });
+afterEach(() => {
+  vi.unstubAllEnvs();
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+});
 
 function fixture() {
   const artifacts = path.resolve('.tmp/artifacts/T682/remote-fixtures');
@@ -23,7 +28,7 @@ function fixture() {
   qaGit(dev, 'config', 'user.name', 'Test');
   qaGit(dev, 'config', 'user.email', 'test@example.com');
   qaGit(dev, 'config', 'core.fsmonitor', 'false');
-  writeFileSync(path.join(dev, '.gitignore'), '.tmp/\n.cache/\n.lab/\nAGENTS.local.md\n');
+  writeFileSync(path.join(dev, '.gitignore'), '.tmp/\n.cache/\n.lab/\nscripts\nsrc\nlib\nAGENTS.local.md\n');
   qaGit(dev, 'add', '.gitignore');
   qaGit(dev, 'commit', '-m', 'base');
   execFileSync('git', ['init', '--bare', path.join(root, 'origin')], { stdio: 'pipe' });
@@ -34,7 +39,7 @@ function fixture() {
   const calls = [];
   const active = [];
   const green = [];
-  const identity = { head_branch: 'codex/qa', head_sha: state.base };
+  const identity = { head_branch: 'check', head_sha: state.base };
   const runner = vi.fn(async (command, args, options = {}) => {
     calls.push({ command, args, options });
     if (command === 'gh' && args[0] === 'auth') return { code: 0, stdout: '', stderr: '' };
@@ -70,12 +75,12 @@ it('pushes and checks the registered QA snapshot while dev continues independent
   const result = await runRemoteQuality({ args: ['--scope', 'full'], cwd: f.cwd,
     runner: f.options.runner, qaPreflight: f.preflight, qaMonitor: f.monitor, readChainVerdict: f.readVerdict });
   const dispatch = f.calls.find(call => call.args.includes('--method'));
-  expect(JSON.parse(dispatch.options.input)).toEqual({ ref: 'codex/qa', inputs: {
+  expect(JSON.parse(dispatch.options.input)).toEqual({ ref: 'check', inputs: {
     scope: 'full', target_sha: f.identity.head_sha, trigger_short: f.identity.head_sha.slice(0, 9)
   } });
-  expect(qaGit(f.cwd, 'ls-remote', 'origin', 'refs/heads/codex/qa')).toContain(f.identity.head_sha);
+  expect(qaGit(f.cwd, 'ls-remote', 'origin', 'refs/heads/check')).toContain(f.identity.head_sha);
   expect(f.preflight).toHaveBeenCalledWith(expect.objectContaining({ targetSha: f.identity.head_sha, base: f.identity.head_sha }));
-  expect(result.sourceRef).toBe('refs/heads/codex/qa');
+  expect(result.sourceRef).toBe('refs/heads/check');
   expect(readQaWorkspace(f.cwd).run).toMatchObject({ runId: 42, passed: true });
   expect(qaGit(f.dev, 'rev-parse', 'HEAD')).not.toBe(result.targetSha);
 });
@@ -88,6 +93,26 @@ it('resumes the saved run without dispatching another or occupying Windows', asy
   expect(f.preflight).toHaveBeenCalledTimes(1);
   expect(f.monitor).toHaveBeenCalledTimes(2);
   expect(f.calls.some(call => call.args.some(arg => arg.includes('windows')))).toBe(false);
+});
+
+it('does not queue metadata-only preflight behind an open development preview', async () => {
+  const f = fixture();
+  for (const directory of ['scripts', 'src', 'lib']) {
+    symlinkSync(path.resolve(directory), path.join(f.cwd, directory), 'dir');
+  }
+  vi.stubEnv('FOLIOLE_RESOURCE_GATE_HELD', '');
+  vi.stubEnv('FOLIOLE_RESOURCE_GATE_RUNTIME_DIR', path.join(f.dev, '.lab/internal/runtime'));
+  let pending;
+  try {
+    await withResourceGate({ className: 'preview', repoRoot: f.dev, fn: async () => {
+      pending = runRemoteQuality({ args: ['--scope', 'full'], cwd: f.cwd,
+        runner: f.options.runner, qaMonitor: f.monitor, readChainVerdict: f.readVerdict });
+      const outcome = await Promise.race([pending.then(() => 'dispatched'), delay(3000).then(() => 'blocked')]);
+      expect(outcome).toBe('dispatched');
+    } });
+  } finally {
+    await pending;
+  }
 });
 
 it('keeps the failed run for recovery and never marks its candidate passed', async () => {
@@ -118,7 +143,7 @@ it('rejects dirty repairs, Windows preflight, and a mismatched remote source ide
 
 it('refuses to replace an active QA run of another snapshot', async () => {
   const f = fixture();
-  f.active.push({ id: 33, head_branch: 'codex/qa', head_sha: 'b'.repeat(40),
+  f.active.push({ id: 33, head_branch: 'check', head_sha: 'b'.repeat(40),
     status: 'in_progress', html_url: 'https://github.test/runs/33' });
   await expect(runQaRemoteQuality(f.options)).rejects.toThrow(/already has an active/u);
   expect(f.calls.some(call => call.args.includes('--method'))).toBe(false);

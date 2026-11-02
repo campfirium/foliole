@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { accessSync, constants, existsSync, lstatSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 
-export const QA_BRANCH = 'codex/qa';
+export const QA_BRANCH = 'check';
 
 export function qaGit(cwd, ...args) {
   return execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' }).trim();

@@ -79,7 +79,7 @@ export async function resolveT7Admission(options = {}) {
   const runner = options.runner ?? runProcess;
   const readVerdict = options.readVerdict ?? readChainVerdict;
   if (await readBranchActive(runner, repository, 'release')) return { reason: 'release-active', shouldRun: false };
-  if (await readBranchActive(runner, repository, 'codex/qa')) {
+  if (await readBranchActive(runner, repository, 'check')) {
     return { reason: 'qa-occupied-recover-existing-lane', shouldRun: false };
   }
   const runs = await readDevQualityRuns(runner, repository);

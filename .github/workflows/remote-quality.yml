@@ -42,7 +42,7 @@ permissions:
 
 # The latest dev dispatch wins; release runs never join this group.
 concurrency:
-  group: ${{ github.ref == 'refs/heads/codex/qa' && 'quality-qa' || 'quality-dev' }}
+  group: ${{ github.ref == 'refs/heads/check' && 'quality-qa' || 'quality-dev' }}
   cancel-in-progress: true
 
 jobs:
@@ -50,10 +50,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Require a quality source branch
-        if: github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/codex/qa'
+        if: github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/check'
         run: exit 1
       - name: Require the exact QA source and workflow snapshot
-        if: github.ref == 'refs/heads/codex/qa'
+        if: github.ref == 'refs/heads/check'
         env:
           TARGET_SHA: ${{ inputs.target_sha }}
           WORKFLOW_SHA: ${{ github.workflow_sha }}

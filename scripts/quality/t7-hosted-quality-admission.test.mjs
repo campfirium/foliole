@@ -56,7 +56,7 @@ function createRunner({ release = false, qa = false, runsByWorkflow = {} } = {})
     if (endpoint.includes('/git/ref/heads/release')) {
       return release ? { code: 0, stderr: '', stdout: '{}' } : { code: 1, stderr: 'HTTP 404: Not Found', stdout: '' };
     }
-    if (endpoint.includes('/git/ref/heads/codex/qa')) {
+    if (endpoint.includes('/git/ref/heads/check')) {
       return qa ? { code: 0, stderr: '', stdout: '{}' } : { code: 1, stderr: 'HTTP 404: Not Found', stdout: '' };
     }
     const workflow = Object.keys(runsByWorkflow).find((name) => endpoint.includes(`/workflows/${name}/`));
