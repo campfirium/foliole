@@ -122,9 +122,10 @@ beforeEach(() => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
 });
 
-it('focuses PDF search from the shared find-in-document command', async () => {
+it('focuses PDF search from the shared find-in-document command', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   renderWithLocalization(<DocumentPanelSection {...defaultProps} />);
-  const searchInput = await screen.findByRole('textbox', { name: 'PDF search' });
+  // The first case also loads the reader and toolbar chunks on a cold worker.
+  const searchInput = await screen.findByRole('textbox', { name: 'PDF search' }, RELEASE_GATE_WAIT_OPTIONS);
 
   window.dispatchEvent(new Event(DOCUMENT_TOPIC_SEARCH_OPEN_EVENT));
 
