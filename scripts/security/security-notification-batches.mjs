@@ -38,7 +38,7 @@ export function readySecurityBatch(owner, history, signals, group, now, options)
   const sameBaseline = pending?.baselineId === (baseline?.id ?? null);
   const unchanged = sameBaseline && !changedSecuritySignals(groupSecuritySignals(pending.signals, group), current).length;
   let batch = pending;
-  if (!unchanged) {
+  if (!unchanged || (!changes.length && pending?.active)) {
     const continuing = sameBaseline && pending.active;
     const contents = { schemaVersion: 1, group, baselineId: baseline?.id ?? null,
       sequence: (pending?.sequence ?? 0) + 1, signals: current, active: changes.length > 0,

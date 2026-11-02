@@ -41,7 +41,7 @@ describe('Dependabot batch notifications', () => {
     expect(events).toHaveLength(3);
     const batch = events.find((event) => event.prNumbers);
     expect(batch.prNumbers).toEqual(['1', '2', '3']);
-    expect(batch.prompt).toContain('"template":"batch.md"');
+    expect(batch.prompt).toContain('$gh-pr-handler');
     for (const pr of github.prs.slice(0, 3)) expect(batch.prompt).toContain(pr.url);
     expect(events.filter((event) => !event.prNumbers).map((event) => event.number)).toEqual(['4', '5']);
   });
@@ -102,30 +102,27 @@ describe('Dependabot batch notifications', () => {
     expect(events).toHaveLength(1);
     expect(events[0].prNumbers).toEqual(['21', '22']);
     expect(events[0].handlingMode).toBe('classify-then-handle-batch');
-    expect(events[0].prompt).toContain('JAR provenance');
-    expect(events[0].prompt).not.toContain('Do not adopt these proposals in this handoff');
-    expect(events[0].prompt).toContain('both SwiftProtobuf exact constraints');
-    expect(events[0].prompt).toContain('verified full diff');
+    expect(events[0].prompt).toContain('docs/maintenance/native-dependency-updates.md');
+    expect(events[0].prompt).toContain('Review provenance and compatibility');
+    expect(events[0].prompt).toContain('gh pr diff');
     const submitted = [];
     deliver(events, state, event => submitted.push(event));
     expect(submitted[0].prompt).toBe(events[0].prompt);
     expect(scan(JSON.parse(JSON.stringify(state)))).toEqual([]);
   });
 
-  it('does not consume proposals if the batch template cannot render', () => {
+  it('does not require a personal workflow template to hand off dependency proposals', () => {
     github.prs = [bot(1), bot(2)];
     const state = stateForScan();
     const errors = [];
     const events = listGithubMonitorEvents(config, state, false, errors, () => {
       throw new Error('missing template');
     });
-    expect(events).toEqual([]);
-    expect(errors).toHaveLength(1);
+    expect(events[0].prNumbers).toEqual(['1', '2']);
+    expect(errors).toEqual([]);
     expect(state.prs).toEqual({});
     expect(state.submitted).toEqual({});
-    const recovered = scan(state);
-    expect(recovered[0].prNumbers).toEqual(['1', '2']);
-    deliver(recovered, state);
+    deliver(events, state);
     expect(scan(state)).toEqual([]);
   });
 });

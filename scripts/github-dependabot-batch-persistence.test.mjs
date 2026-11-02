@@ -35,6 +35,7 @@ function prepareHandoffBoundary() {
   const submitDir = path.join(codexHome, 'skills/codex-desktop-handoff/scripts');
   fs.mkdirSync(monitorDir, { recursive: true });
   fs.mkdirSync(submitDir, { recursive: true });
+  fs.writeFileSync(path.join(codexHome, 'local-tools/desktop-handoff/config.json'), '{"maxPromptLength":6000}');
   fs.writeFileSync(path.join(monitorDir, 'github-prs.json'), JSON.stringify({
     enabled: true, repository: 'owner/repo', batchTemplate: 'batch.md',
     dedupeKeyPattern: 'pr:{eventId}'
@@ -43,6 +44,8 @@ function prepareHandoffBoundary() {
   fs.writeFileSync(path.join(submitDir, 'submit-event.mjs'), [
     "import fs from 'node:fs';",
     'if (process.env.TEST_SUBMIT_FAIL) process.exit(1);',
+    "const prompt = process.argv[process.argv.indexOf('--prompt') + 1];",
+    'if (prompt.length > 6000) { fs.writeFileSync(process.env.TEST_DELIVERIES + ".rejected", prompt); process.exit(1); }',
     "fs.appendFileSync(process.env.TEST_DELIVERIES, JSON.stringify(process.argv.slice(2)) + '\\n');",
     "console.log('{\"ok\":true}');"
   ].join('\n'));
@@ -74,6 +77,32 @@ const readState = () => JSON.parse(fs.readFileSync(stateFile, 'utf8'));
 describe('Dependabot producer persisted handoffs', () => {
   beforeEach(prepareProducer);
   afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  it('delivers a short actionable handoff without copying an oversized legacy workflow template', () => {
+    const template = path.join(codexHome, 'local-tools/desktop-handoff/projects/foliole/monitors/batch.md');
+    fs.writeFileSync(template, 'Legacy workflow instructions. '.repeat(190) + '{{prList}}');
+    scan(0, [190, 191]);
+    const [event] = scan(300, [190, 191]).events;
+    expect(event.prompt.length).toBeLessThanOrEqual(6000);
+    expect(event.prompt).toContain('gh pr view');
+    expect(event.prompt).toContain('gh pr diff');
+    expect(event.prompt).toContain('$gh-pr-handler');
+    expect(event.prompt).toContain('https://github.com/owner/repo/pull/190');
+    expect(readState().prs).toEqual({ 190: 'dependabot:dev:190-191', 191: 'dependabot:dev:190-191' });
+    expect(scan(301, [190, 191]).events).toEqual([]);
+  });
+
+  it('rejects oversized events before enqueue and leaves the batch retryable after restart', () => {
+    const proposal = { number: 1, title: 'x'.repeat(6100) };
+    scan(0, [proposal]);
+    expect(() => scan(300, [proposal])).toThrow();
+    expect(fs.existsSync(deliveries)).toBe(false);
+    expect(fs.existsSync(`${deliveries}.rejected`)).toBe(false);
+    expect(readState().prs).toEqual({});
+    expect(readState().submitted).toEqual({});
+    expect(scan(301, [1]).events[0].prNumbers).toEqual(['1']);
+    expect(readState().prs).toEqual({ 1: 'dependabot:dev:1' });
+  });
 
   it('persists the cross-process arrival window and delivers once without replaying old PRs', () => {
     expect(scan(0, [179]).events).toEqual([]);

@@ -26,6 +26,11 @@ export function normalizeSecurityNotificationSignals(signals) {
   const result = {};
   for (const [key, signal] of Object.entries(signals)) {
     if (statusOnlyFinding(key, signal)) continue;
+    if (signal.kind === 'source') {
+      if (['clean', 'findings'].includes(signal.status)) continue;
+      result[key] = { ...signal, stale: false };
+      continue;
+    }
     if (signal.kind === 'missing-source' && key === `gap:${signal.scope}`) {
       const sourceKey = `source:${signal.scope}`;
       result[sourceKey] ??= { kind: 'source', scope: signal.scope, status: 'missing',

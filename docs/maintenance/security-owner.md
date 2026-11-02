@@ -92,6 +92,11 @@ history is retained as the initial comparison baseline, avoiding duplicate alert
 when switching to grouped batches. Enqueue/crash retries retain the batch identity.
 
 Notification policy does not change stored findings or coverage qualification.
+Evidence age alone does not open investigation chats: expired observations stay
+visible in `status`, and qualification remains incomplete. The same rule applies
+to historical notification baselines, avoiding false recovery messages. Real
+source failures, missing or unsupported coverage, their recovery, and finding
+changes still notify; an unchanged failure becoming stale does not notify again.
 Known informational Android SDK and embedded SQLite/LibTomCrypt version comparisons
 remain visible in `status` without opening investigation chats. The four fixed iOS
 coverage-review placeholders also remain in `status`. SQLCipher vendor release

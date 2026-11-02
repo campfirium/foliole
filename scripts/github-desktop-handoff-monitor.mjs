@@ -79,6 +79,10 @@ function loadState() {
 }
 
 function submitEvent(event) {
+  const config = JSON.parse(fs.readFileSync(path.join(CODEX_HOME, 'local-tools/desktop-handoff/config.json'), 'utf8'));
+  if (event.prompt.length > config.maxPromptLength) {
+    throw new Error(`Handoff prompt is longer than ${config.maxPromptLength}; event was not enqueued`);
+  }
   const result = spawnSync(process.execPath, [
     SUBMIT_EVENT,
     '--path',

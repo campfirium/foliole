@@ -143,7 +143,7 @@ describe('Dependabot arrival coalescing across scans', () => {
     expect(scan(state)[0].prNumbers).toEqual(['2']);
   });
 
-  it('retains pending arrivals across API and template failures', () => {
+  it('retains pending arrivals across API failures without depending on personal templates', () => {
     const state = initialState();
     github.prs = [bot(1)];
     expect(scan(state)).toEqual([]);
@@ -157,7 +157,7 @@ describe('Dependabot arrival coalescing across scans', () => {
     github.error = null;
     expect(listGithubMonitorEvents({ prs: config }, state, false, [], () => {
       throw new Error('template unavailable');
-    })).toEqual([]);
+    })[0].prNumbers).toEqual(['1']);
     expect(state.prs).toEqual({});
     expect(scan(state)[0].prNumbers).toEqual(['1']);
   });

@@ -88,6 +88,13 @@ and delivered checkpoints survive restarts; old individual review notifications
 are not replayed when changing the route. A successful inbox submission is not
 proof that a maintainer viewed or continued the paused task.
 
+Dependency batches use a compact source-controlled handoff instead of copying
+personal workflow templates. They carry proposal identities and point to the
+existing skills; the handling task fetches current PR bodies, comments and diffs.
+The producer checks the configured prompt limit before enqueue, so an oversized
+event fails without consuming its batch or PR checkpoints. Enqueue still does not
+attest eventual Desktop delivery; inspect dead letters for downstream failures.
+
 When the maintainer continues an authorized handling batch, one agent reviews
 the current proposals from both verified bots and implements eligible updates on
 the direct local `dev` checkout. An explicit review-only or single-PR instruction

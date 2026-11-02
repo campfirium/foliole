@@ -12,9 +12,7 @@ export function securityNotificationSignals(state) {
       disposition: finding.disposition?.status ?? 'unassessed' };
   }
   for (const source of state.sources) {
-    if (source.status === 'clean' || source.status === 'findings') {
-      if (!source.stale) continue;
-    }
+    if (source.status === 'clean' || source.status === 'findings') continue;
     signals[`source:${source.scope}`] = { kind: 'source', scope: source.scope,
       status: source.status, stale: source.stale, reason: source.reason ?? null };
   }
