@@ -139,7 +139,8 @@ jobs:
           set +e
           for mode in report report-worker sqlite sqlite-worker; do
             timeout 45s env ELECTRON_RUN_AS_NODE=1 gdb --batch \
-              -ex 'set pagination off' -ex 'set debuginfod enabled off' \
+              -ex 'set pagination off' -ex 'set disable-randomization off' \
+              -ex 'set debuginfod enabled off' \
               -ex run -ex 'thread apply all bt 25' -ex 'info registers' \
               -ex 'info sharedlibrary' --args node_modules/electron/dist/electron \
               .tmp/artifacts/T680/linux-native-probe.cjs "$mode" \
