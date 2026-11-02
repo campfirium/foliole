@@ -97,7 +97,8 @@ done < <(
     const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
     const source = fs.readFileSync(process.argv[1], 'utf8').trim();
     if (!source) throw new Error('npm view returned empty JSON output');
-    const timeMap = JSON.parse(source);
+    const response = JSON.parse(source);
+    const timeMap = Array.isArray(response) && response.length === 1 ? response[0] : response;
     const versions = Object.entries(timeMap)
       .filter(([version, publishedAt]) => /^\\d+\\.\\d+\\.\\d+$/.test(version) && typeof publishedAt === 'string')
       .map(([version, publishedAt]) => ({ version, publishedAt: new Date(publishedAt).getTime() }))

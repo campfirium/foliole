@@ -53,7 +53,7 @@ async function serveArchives(root) {
 
 function commitLock(repo, url, version, integrity) {
   const dependency = `${url}/${version}.tgz`;
-  const manifest = { name: 'capsule-fixture', version: '1.0.0',
+  const manifest = { name: 'capsule-fixture', version: '1.0.0', allowScripts: { [dependency]: true },
     dependencies: { 'capsule-cache-fixture': dependency } };
   const lock = { name: manifest.name, version: manifest.version, lockfileVersion: 3,
     packages: { '': manifest, 'node_modules/capsule-cache-fixture': {
@@ -144,7 +144,10 @@ it('reuses verified downloads across frozen capsules and repairs corrupt cache w
     git(repo, ['init', '-b', 'dev']);
     git(repo, ['config', 'user.email', 'cache@example.invalid']);
     git(repo, ['config', 'user.name', 'Cache Test']);
-    fs.writeFileSync(path.join(repo, '.npmrc'), 'cache=.tmp/npm-cache\naudit=false\nfund=false\n');
+    fs.writeFileSync(path.join(repo, '.npmrc'), [
+      'cache=.tmp/npm-cache', 'audit=false', 'fund=false',
+      'allow-remote=root', ''
+    ].join('\n'));
     const cache = path.join(repo, '.cache/npm-downloads');
     const install = createInstaller(repo, deadline);
     const requests = () => fs.readFileSync(path.join(root, 'requests.txt'), 'utf8').trim().split('\n');

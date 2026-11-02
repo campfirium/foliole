@@ -41,7 +41,8 @@ export function runNpmJson(args, options = {}) {
 }
 
 export function readNpmPackageMetadata(packageName, runNpm = runNpmJson) {
-  const metadata = runNpm(['view', packageName, 'dist-tags', 'time', '--json']);
+  const response = runNpm(['view', packageName, 'dist-tags', 'time', '--json']);
+  const metadata = Array.isArray(response) && response.length === 1 ? response[0] : response;
   const latest = metadata?.['dist-tags']?.latest;
   return { latest, publishedAt: metadata?.time?.[latest], time: metadata?.time ?? {} };
 }

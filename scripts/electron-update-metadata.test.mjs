@@ -30,12 +30,13 @@ function metadataRunner(overrides = {}) {
 }
 
 describe('Electron official metadata adapters', () => {
-  it('maps GitHub latest stable and npm exact publish time without a local clock', () => {
+  it.each([false, true])('maps exact npm publish time with an array response: %s', (arrayResponse) => {
     const runGh = metadataRunner();
-    const runNpm = vi.fn(() => ({
+    const metadata = {
       'dist-tags': { latest: '43.5.0' },
       time: { '43.5.0': '2026-08-31T00:00:00.000Z' }
-    }));
+    };
+    const runNpm = vi.fn(() => arrayResponse ? [metadata] : metadata);
 
     expect(readLatestElectronEligibilityInput({
       now: '2026-09-01T00:00:00.000Z',
