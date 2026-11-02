@@ -105,6 +105,47 @@ jobs:
         run: npm run electron:compile
       - name: Run canonical Electron bucket
         run: node scripts/quality/hosted-quality-bucket.mjs
+      - name: Capture temporary Linux native crash evidence
+        if: ${{ failure() && runner.os == 'Linux' && matrix.bucket == 'sync-heavy-services' && inputs.execution_lane == 'dev-remote' }}
+        continue-on-error: true
+        timeout-minutes: 4
+        shell: bash
+        run: |
+          command -v gdb
+          mkdir -p .tmp/artifacts/T680
+          cat > .tmp/artifacts/T680/linux-native-probe.cjs <<'PROBE'
+          const { Worker, isMainThread, workerData } = require('node:worker_threads');
+          function probe(mode) {
+            console.log('probe-start', mode, isMainThread, process.versions);
+            if (mode === 'report') {
+              console.log('report-before');
+              console.log('report-after', process.report.getReport().header.glibcVersionRuntime);
+            } else {
+              console.log('sqlite-before');
+              const Database = require(require('node:path').resolve('node_modules/better-sqlite3'));
+              const db = new Database(':memory:');
+              console.log('sqlite-opened', db.prepare('SELECT 1 AS value').get());
+              db.exec('CREATE TABLE evidence (value TEXT); INSERT INTO evidence VALUES (\'native probe\')');
+              console.log('sqlite-row', db.prepare('SELECT value FROM evidence').get());
+              db.close();
+            }
+            console.log('probe-complete', mode);
+          }
+          if (!isMainThread) probe(workerData);
+          else if (process.argv[2].endsWith('-worker')) {
+            new Worker(__filename, { workerData: process.argv[2].slice(0, -7) });
+          } else probe(process.argv[2]);
+          PROBE
+          set +e
+          for mode in report report-worker sqlite sqlite-worker; do
+            timeout 45s env ELECTRON_RUN_AS_NODE=1 gdb --batch \
+              -ex 'set pagination off' -ex 'set debuginfod enabled off' \
+              -ex run -ex 'thread apply all bt 25' -ex 'info registers' \
+              -ex 'info sharedlibrary' --args node_modules/electron/dist/electron \
+              .tmp/artifacts/T680/linux-native-probe.cjs "$mode" \
+              > ".tmp/artifacts/T680/linux-native-${mode}.log" 2>&1
+            cat ".tmp/artifacts/T680/linux-native-${mode}.log"
+          done
       - name: Upload Electron test logs
         if: ${{ always() }}
         continue-on-error: true
@@ -117,6 +158,7 @@ jobs:
             .tmp/artifacts/t328-cost
             .tmp/artifacts/t343-request-scale.json
             .tmp/artifacts/t357-attachment-throughput.json
+            .tmp/artifacts/T680/linux-native-*.log
           if-no-files-found: ignore
           retention-days: 14
 
