@@ -17,7 +17,7 @@ export const EN_SETTINGS_APPEARANCE_TRANSLATIONS = {
   'settings.appearance.fontCatalog.search': 'Search fonts',
   'settings.appearance.fontCatalog.empty': 'No matching fonts.',
   'settings.appearance.fontPreset.default': 'Default',
-  'settings.appearance.fontPreset.system': 'System UI',
+  'settings.appearance.fontPreset.system': 'System',
   'settings.appearance.fontPreset.serif': 'Serif',
   'settings.appearance.fontPreset.custom': 'Custom',
   'settings.appearance.fontSize.title': 'Font size',

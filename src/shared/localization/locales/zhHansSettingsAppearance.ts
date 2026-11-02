@@ -19,7 +19,7 @@ export const ZH_HANS_SETTINGS_APPEARANCE_TRANSLATIONS: Partial<Record<Translatio
   'settings.appearance.fontCatalog.search': '搜索字体',
   'settings.appearance.fontCatalog.empty': '没有匹配的字体。',
   'settings.appearance.fontPreset.default': 'Default',
-  'settings.appearance.fontPreset.system': '系统界面',
+  'settings.appearance.fontPreset.system': '系统',
   'settings.appearance.fontPreset.serif': '衬线',
   'settings.appearance.fontPreset.custom': 'Custom',
   'settings.appearance.fontSize.title': '字号',

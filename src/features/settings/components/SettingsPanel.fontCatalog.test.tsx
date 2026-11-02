@@ -41,8 +41,8 @@ it('loads and shares the system font catalog only after a font menu opens', asyn
   await waitFor(() => expect(mockedListAvailableSystemFonts).toHaveBeenCalledTimes(1));
   expect(screen.getByText('Loading system fonts…')).toBeInTheDocument();
   expect(screen.getByRole('progressbar', { name: 'Loading system fonts…' })).toBeInTheDocument();
-  expect(screen.getByRole('option', { name: 'Default' })).toHaveClass('bg-foreground/[0.06]');
-  expect(screen.getByRole('option', { name: 'Default' })).not.toHaveClass('bg-accent');
+  expect(screen.getByRole('option', { name: 'System' })).toHaveClass('bg-foreground/[0.06]');
+  expect(screen.getByRole('option', { name: 'System' })).not.toHaveClass('bg-accent');
 
   deferred.resolve({ fonts: ['XHei-Believe'], monospaceFonts: ['XHei-Believe-Mono'] });
   const loadedFont = await screen.findByRole('option', { name: 'XHei-Believe' });
@@ -76,3 +76,20 @@ it('preserves an already selected bundled face without adding it to the system f
   expect(screen.queryByRole('option', { name: 'Noto Sans SC' })).toBeNull();
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.interfaceFont)).toBe('noto-sans-sc');
 });
+
+for (const savedPreset of ['default', 'system']) {
+  it(`shows one system choice for the saved ${savedPreset} font mode`, async () => {
+    window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.interfaceFont, savedPreset);
+    mockedListAvailableSystemFonts.mockResolvedValue({ fonts: ['Reader System Font'], monospaceFonts: [] });
+    renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="typography" />);
+    const field = screen.getByRole('combobox', { name: 'Text font' });
+    expect(field).toHaveTextContent('System');
+    fireEvent.click(field);
+    await screen.findByRole('option', { name: 'Reader System Font' });
+    expect(screen.getAllByRole('option', { name: 'System' })).toHaveLength(1);
+    expect(screen.getByRole('option', { name: 'System' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('option', { name: 'Default' })).toBeNull();
+    expect(screen.queryByRole('option', { name: 'Serif' })).toBeNull();
+    expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.interfaceFont)).toBe(savedPreset);
+  });
+}

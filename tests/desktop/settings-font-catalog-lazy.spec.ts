@@ -19,6 +19,8 @@ test('loads the system font catalog only after a font menu opens', async ({ desk
   await expect(desktopWindow.getByText(LOADING_FONTS)).toHaveCount(0);
 
   await textFont.click();
+  await expect(desktopWindow.getByRole('option', { name: /^(System|系统)$/, exact: true })).toHaveCount(1);
+  await expect(desktopWindow.getByRole('option', { name: /^(Default|System UI|系统界面|Serif|衬线)$/, exact: true })).toHaveCount(0);
   await expect(desktopWindow.getByText(LOADING_FONTS)).toBeVisible();
   await expect(desktopWindow.getByRole('progressbar', { name: LOADING_FONTS })).toBeVisible();
   const fontSearch = desktopWindow.getByLabel(/^(Search fonts|搜索字体)$/);

@@ -90,9 +90,7 @@ export function getSettingsCategoryGroups(t: Translate) {
 export const SETTINGS_CATEGORY_STORAGE_KEY = APP_SETTINGS_STORAGE_KEYS.settingsActiveCategory;
 
 export const INTERFACE_PRESET_OPTION_VALUES: InterfaceFontPreset[] = [
-  'default',
-  'system',
-  'serif'
+  'default'
 ];
 
 export const MONOSPACE_PRESET_OPTION_VALUES: MonospaceFontPreset[] = [
@@ -121,9 +119,8 @@ export function getInitialSettingsCategory(): SettingsCategoryId {
 export function presetLabel(preset: InterfaceFontPreset, t?: Translate) {
   switch (preset) {
     case 'default':
-      return t ? t('settings.appearance.fontPreset.default') : 'Default';
     case 'system':
-      return t ? t('settings.appearance.fontPreset.system') : 'System UI';
+      return t ? t('settings.appearance.fontPreset.system') : 'System';
     case 'serif':
       return t ? t('settings.appearance.fontPreset.serif') : 'Serif';
     case 'noto-sans-sc':
