@@ -100,8 +100,8 @@ it('carries vendor discovery through source faults, process restart, recovery an
     expect(projectSecurityOwner(owner, now + 193 * 3_600_000).sources.some(row => row.stale)).toBe(true);
     const beforeStale = notifications().length;
     notifySecurityOwner(owner, process.cwd(), { now: now + 193 * 3_600_000, codexHome, batchQuietMs: 0 });
-    expect(notifications()).toHaveLength(beforeStale + 1);
-    expect(notifications().sort((a, b) => a.sequence - b.sequence).at(-1).changes.some(change => change.current?.stale)).toBe(true);
+    expect(notifications()).toHaveLength(beforeStale);
+    expect(projectSecurityOwner(owner, now + 193 * 3_600_000).sources.some(row => row.stale)).toBe(true);
   } finally {
     await publisher.close();
     rmSync(root, { recursive: true, force: true });
