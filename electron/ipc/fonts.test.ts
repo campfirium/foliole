@@ -31,22 +31,13 @@ it('keeps a Windows style-named family when no unsuffixed base family exists', a
   expect(catalog.fonts).toEqual(['Acme Display Bold', 'Solo Light']);
 });
 
-it('lists enabled macOS font families once and filters private families', async () => {
-  const exec = vi.fn(async () => JSON.stringify({
-    SPFontsDataType: [
-      { enabled: 'yes', typefaces: [
-        { enabled: 'yes', family: 'PingFang SC' },
-        { enabled: 'yes', family: 'PingFang SC' },
-        { enabled: 'no', family: 'Disabled Face' },
-        { enabled: 'yes', family: '.AppleSystemUIFont' },
-        { enabled: 'yes', family: 'LastResort' }
-      ] },
-      { enabled: 'no', typefaces: [{ enabled: 'yes', family: 'Disabled Family' }] }
-    ]
-  }));
+it('lists available macOS families without requesting the full font report', async () => {
+  const exec = vi.fn(async (file: string) => file === '/usr/bin/osascript'
+    ? JSON.stringify(['PingFang SC', 'PingFang SC', 'Menlo', '.AppleSystemUIFont', 'LastResort', '', null, 42])
+    : '');
   const catalog = await listSystemFontsForPlatform('darwin', exec);
-  expect(catalog.fonts).toEqual(['PingFang SC']);
-  expect(exec).toHaveBeenCalledWith('system_profiler', ['SPFontsDataType', '-json']);
+  expect(catalog.fonts).toEqual(['Menlo', 'PingFang SC']);
+  expect(catalog.monospace_fonts).toEqual(['Menlo']);
 });
 
 it('returns an empty safe catalog for malformed macOS JSON', async () => {
@@ -81,11 +72,16 @@ it('lists Windows fonts from registry query output instead of returning empty ca
 });
 
 it('shares one in-flight font catalog request for the application session', async () => {
-  const exec = vi.fn(async () => JSON.stringify({ SPFontsDataType: [{ typefaces: [{ family: 'Menlo' }] }] }));
+  const exec = vi.fn(async () => JSON.stringify(['Menlo']));
   const loadCatalog = createSystemFontCatalogLoader('darwin', exec);
 
   const [first, second] = await Promise.all([loadCatalog(), loadCatalog()]);
 
   expect(first).toBe(second);
   expect(exec).toHaveBeenCalledTimes(1);
+});
+
+it('rejects a non-array macOS catalog instead of exposing unrelated metadata', async () => {
+  const catalog = await listSystemFontsForPlatform('darwin', vi.fn(async () => JSON.stringify({ fonts: ['Menlo'] })));
+  expect(catalog).toEqual({ fonts: [], monospace_fonts: [] });
 });

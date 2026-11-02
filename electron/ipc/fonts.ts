@@ -110,19 +110,23 @@ async function listLinuxFonts(exec: ExecFileFn) {
 }
 
 async function listMacFonts(exec: ExecFileFn) {
-  const output = await runCommand(exec, 'system_profiler', ['SPFontsDataType', '-json']);
+  const script = [
+    'ObjC.import("AppKit");',
+    'var manager = $.NSFontManager.sharedFontManager;',
+    'JSON.stringify(ObjC.deepUnwrap(manager.availableFontFamilies).map(function(family) {',
+    'return ObjC.unwrap(manager.localizedNameForFamilyFace($(family), $()));',
+    '}));'
+  ].join('\n');
+  const output = await runCommand(exec, '/usr/bin/osascript', ['-l', 'JavaScript', '-e', script]);
   if (!output) {
     return [];
   }
   try {
-    const payload = JSON.parse(output) as { SPFontsDataType?: Array<{ enabled?: string; typefaces?: Array<{ enabled?: string; family?: string }> }> };
-    return (payload.SPFontsDataType ?? []).flatMap((font) => {
-      if (font.enabled === 'no') return [];
-      return (font.typefaces ?? [])
-        .filter((face) => face.enabled !== 'no')
-        .map((face) => face.family?.trim() ?? '')
-        .filter((family) => family.length > 0 && !family.startsWith('.') && family !== 'LastResort');
-    });
+    const payload: unknown = JSON.parse(output);
+    if (!Array.isArray(payload)) return [];
+    return payload.filter((family): family is string => typeof family === 'string')
+      .map((family) => family.trim())
+      .filter((family) => family.length > 0 && !family.startsWith('.') && family !== 'LastResort');
   } catch {
     return [];
   }

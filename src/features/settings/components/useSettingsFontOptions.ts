@@ -10,8 +10,11 @@ function useLazySystemFontCatalog() {
   const requestRef = useRef<Promise<void> | null>(null);
   const mountedRef = useRef(true);
 
-  useEffect(() => () => {
-    mountedRef.current = false;
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const request = useCallback(() => {

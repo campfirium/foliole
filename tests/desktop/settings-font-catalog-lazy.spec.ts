@@ -16,13 +16,18 @@ test('loads the system font catalog only after a font menu opens', async ({ desk
 
   await expect(textFont).toBeVisible();
   await expect(monospaceFont).toBeVisible();
+  await expect(textFont).toHaveText(/^(Default|默认)$/);
+  await expect(monospaceFont).toHaveText(/^(Default|默认)$/);
   await expect(desktopWindow.getByText(LOADING_FONTS)).toHaveCount(0);
 
+  const startedAt = Date.now();
   await textFont.click();
-  await expect(desktopWindow.getByRole('option', { name: /^(System|系统)$/, exact: true })).toHaveCount(1);
-  await expect(desktopWindow.getByRole('option', { name: /^(Default|System UI|系统界面|Serif|衬线)$/, exact: true })).toHaveCount(0);
-  await expect(desktopWindow.getByText(LOADING_FONTS)).toBeVisible();
-  await expect(desktopWindow.getByRole('progressbar', { name: LOADING_FONTS })).toBeVisible();
+  await expect(desktopWindow.getByRole('option', { name: /^(Default|默认)$/, exact: true })).toHaveCount(1);
+  await expect(desktopWindow.getByRole('option', { name: /^(System|系统|System UI|系统界面|Serif|衬线)$/, exact: true })).toHaveCount(0);
+  await expect(desktopWindow.getByText(LOADING_FONTS)).toHaveCount(0, { timeout: 5000 });
+  await testInfo.attach('font-menu-load-timing', {
+    body: JSON.stringify({ elapsedMs: Date.now() - startedAt }), contentType: 'application/json'
+  });
   const fontSearch = desktopWindow.getByLabel(/^(Search fonts|搜索字体)$/);
   await fontSearch.fill('system');
   await expect(fontSearch).toHaveValue('system');
@@ -30,7 +35,7 @@ test('loads the system font catalog only after a font menu opens', async ({ desk
   const screenshotDir = path.join(process.cwd(), '.tmp', 'artifacts', 'desktop-acceptance');
   await mkdir(screenshotDir, { recursive: true });
   await desktopWindow.screenshot({
-    path: path.join(screenshotDir, 'settings-font-catalog-lazy-loading.png')
+    path: path.join(screenshotDir, 'settings-font-catalog-loaded-default.png')
   });
 
   await expect(desktopWindow.getByText(LOADING_FONTS)).toHaveCount(0, { timeout: 30_000 });

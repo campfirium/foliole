@@ -120,7 +120,7 @@ export function presetLabel(preset: InterfaceFontPreset, t?: Translate) {
   switch (preset) {
     case 'default':
     case 'system':
-      return t ? t('settings.appearance.fontPreset.system') : 'System';
+      return t ? t('settings.appearance.fontPreset.default') : 'Default';
     case 'serif':
       return t ? t('settings.appearance.fontPreset.serif') : 'Serif';
     case 'noto-sans-sc':

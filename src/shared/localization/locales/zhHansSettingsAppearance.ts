@@ -18,7 +18,7 @@ export const ZH_HANS_SETTINGS_APPEARANCE_TRANSLATIONS: Partial<Record<Translatio
   'settings.appearance.fontCatalog.loading': '正在读取系统字体…',
   'settings.appearance.fontCatalog.search': '搜索字体',
   'settings.appearance.fontCatalog.empty': '没有匹配的字体。',
-  'settings.appearance.fontPreset.default': 'Default',
+  'settings.appearance.fontPreset.default': '默认',
   'settings.appearance.fontPreset.system': '系统',
   'settings.appearance.fontPreset.serif': '衬线',
   'settings.appearance.fontPreset.custom': 'Custom',
