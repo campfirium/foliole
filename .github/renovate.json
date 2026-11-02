@@ -14,6 +14,8 @@
   ],
   "timezone": "Asia/Shanghai",
   "automerge": false,
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 0,
   "dependencyDashboard": false,
   "vulnerabilityAlerts": {
     "enabled": false

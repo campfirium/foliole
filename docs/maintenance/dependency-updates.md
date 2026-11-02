@@ -26,9 +26,14 @@ Native inventories, Trivy and vendor checks keep their existing responsibilities
 
 ## Update policy
 
-- No additional proposal schedule is imposed. The standard Renovate defaults
-  apply: up to ten concurrent PRs and two new PRs per hour. These throttle CI
-  bursts; they are not targets for how few updates the maintainer should see.
+- No additional proposal schedule is imposed. `prHourlyLimit: 0` and
+  `prConcurrentLimit: 0` remove the default two-new-PRs-per-hour and ten-open-PR
+  limits so eligible updates discovered in a run can be proposed together for
+  batch review and local adoption. The unset `branchConcurrentLimit` inherits
+  `prConcurrentLimit`, so it does not retain a separate ten-branch limit.
+  This does not synchronize upstream releases or seven-day maturity dates,
+  guarantee that a hosted run finishes every proposal, or combine all updates
+  into one PR. Local validation is not evidence of hosted proposal creation.
 - npm proposals follow the existing seven-day installation release-age policy.
   Electron retains its latest-stable exception without this delay. Gradle and
   Swift do not inherit an npm-specific waiting period.
@@ -41,6 +46,13 @@ Native inventories, Trivy and vendor checks keep their existing responsibilities
   packages and Gradle maintenance scripts. Generated plugin manifests remain
   excluded; a first-party nested package is not a third-party plugin manifest.
   GitHub Actions version updates remain outside this configuration.
+
+Creating proposals and triggering CI are separate events. The current repository
+workflows have no `pull_request` or `pull_request_target` trigger. Development
+quality runs on its existing schedule or manual dispatch; active remote checks
+are dispatched separately. Release-branch and release-manifest push workflows
+retain their existing branch/path filters. A Renovate PR does not automatically
+run full quality checks; local adoption still requires the applicable validation.
 
 ## Capacitor and native ownership
 
@@ -128,6 +140,9 @@ its integration into dev and remote dev containment, including any QA repairs.
 Do not use PR count to determine install, test, commit or task count.
 
 References: [Renovate installation](https://docs.renovatebot.com/getting-started/installing-onboarding/),
+[PR hourly limit](https://docs.renovatebot.com/configuration-options/#prhourlylimit),
+[PR concurrency](https://docs.renovatebot.com/configuration-options/#prconcurrentlimit),
+[branch concurrency inheritance](https://docs.renovatebot.com/configuration-options/#branchconcurrentlimit),
 [free hosting](https://docs.renovatebot.com/mend-hosted/overview/),
 [Ionic reference configuration](https://github.com/ionic-team/ionic-react-conference-app/blob/main/renovate.json),
 [Swift manager](https://docs.renovatebot.com/modules/manager/swift/).

@@ -88,11 +88,12 @@ describe('Renovate update ownership', () => {
     expect(preapprovals).toEqual([]);
   });
 
-  it('does not impose a weekly proposal window or unmeasured lower throughput limits', () => {
+  it('does not defer eligible proposals through a schedule or PR and branch quotas', () => {
     expect(renovate.schedule ?? []).toEqual([]);
-    expect(renovate.prConcurrentLimit ?? 10).toBeGreaterThanOrEqual(10);
-    expect(renovate.branchConcurrentLimit ?? 10).toBeGreaterThanOrEqual(10);
-    expect(renovate.prHourlyLimit ?? 2).toBeGreaterThanOrEqual(2);
+    expect(renovate.prConcurrentLimit).toBe(0);
+    expect(renovate.prHourlyLimit).toBe(0);
+    // Renovate's null branch limit inherits the PR concurrency limit.
+    expect(renovate.branchConcurrentLimit ?? renovate.prConcurrentLimit).toBe(0);
   });
 
   it('discovers owned manifests and limits the existing release-age delay to npm', () => {
@@ -100,6 +101,9 @@ describe('Renovate update ownership', () => {
     expect(renovate.minimumReleaseAge).toBeUndefined();
     expect(renovate.packageRules).toContainEqual(expect.objectContaining({
       matchManagers: ['npm'], minimumReleaseAge: '7 days'
+    }));
+    expect(renovate.packageRules).toContainEqual(expect.objectContaining({
+      matchManagers: ['npm'], matchPackageNames: ['electron'], minimumReleaseAge: '0 days'
     }));
     expect(renovate.ignorePaths).toEqual(expect.arrayContaining([
       '**/node_modules/**', 'ios/App/CapApp-SPM/**',
