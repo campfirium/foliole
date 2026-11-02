@@ -108,13 +108,14 @@ jobs:
       - name: Capture temporary Linux native crash evidence
         if: ${{ failure() && runner.os == 'Linux' && matrix.bucket == 'sync-heavy-services' && inputs.execution_lane == 'dev-remote' }}
         continue-on-error: true
-        timeout-minutes: 4
+        timeout-minutes: 6
         shell: bash
         run: |
           command -v gdb
           mkdir -p .tmp/artifacts/T680
           cat > .tmp/artifacts/T680/linux-native-probe.cjs <<'PROBE'
           const { Worker, isMainThread, workerData } = require('node:worker_threads');
+          const { fork } = require('node:child_process');
           function probe(mode) {
             console.log('probe-start', mode, isMainThread, process.versions);
             if (mode === 'report') {
@@ -130,16 +131,23 @@ jobs:
               db.close();
             }
             console.log('probe-complete', mode);
+            if (process.send) process.send({ complete: mode }, () => process.disconnect());
           }
           if (!isMainThread) probe(workerData);
-          else if (process.argv[2].endsWith('-worker')) {
+          else if (process.argv[2].endsWith('-fork')) {
+            const child = fork(__filename, [process.argv[2].slice(0, -5)], { serialization: 'advanced' });
+            child.on('message', message => console.log('fork-message', message));
+            child.on('exit', (code, signal) => console.log('fork-exit', code, signal));
+          } else if (process.argv[2].endsWith('-worker')) {
             new Worker(__filename, { workerData: process.argv[2].slice(0, -7) });
           } else probe(process.argv[2]);
           PROBE
           set +e
-          for mode in report report-worker sqlite sqlite-worker; do
+          for mode in report report-worker sqlite sqlite-worker report-fork sqlite-fork; do
             timeout 45s env ELECTRON_RUN_AS_NODE=1 gdb --batch \
               -ex 'set pagination off' -ex 'set disable-randomization off' \
+              -ex 'set follow-fork-mode child' -ex 'set detach-on-fork off' \
+              -ex 'set schedule-multiple on' \
               -ex 'set debuginfod enabled off' \
               -ex run -ex 'thread apply all bt 25' -ex 'info registers' \
               -ex 'info sharedlibrary' --args node_modules/electron/dist/electron \
