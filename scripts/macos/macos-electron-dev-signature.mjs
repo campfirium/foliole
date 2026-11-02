@@ -3,7 +3,7 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
-import { signAsync } from '@electron/osx-sign';
+import { sign as signMacosApp } from '@electron/osx-sign';
 
 const DEV_BUNDLE_ID = 'com.campfirium.foliole.dev';
 const DEV_BUNDLE_NAME = 'Foliole DEV';
@@ -30,7 +30,7 @@ export async function prepareMacosElectronDevSignature({
   appRoot,
   platform = process.platform,
   run = runChecked,
-  sign = signAsync
+  sign = signMacosApp
 }) {
   if (platform !== 'darwin') return { changed: false, reason: 'not-macos' };
   const appBundle = path.join(appRoot, 'node_modules', 'electron', 'dist', 'Electron.app');

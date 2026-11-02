@@ -1,5 +1,8 @@
 // @vitest-environment node
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import process from 'node:process';
+import { URL } from 'node:url';
 
 import { expect, it, vi } from 'vitest';
 
@@ -9,6 +12,20 @@ import {
   MACOS_ELECTRON_DEV_SIGNING_IDENTITY,
   prepareMacosElectronDevSignature
 } from './macos-electron-dev-signature.mjs';
+
+it('loads DEV signing in native Node before dispatching host-specific work', () => {
+  const moduleUrl = new URL('./macos-electron-dev-signature.mjs', import.meta.url).href;
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', `
+    import { prepareMacosElectronDevSignature } from ${JSON.stringify(moduleUrl)};
+    console.log(JSON.stringify(await prepareMacosElectronDevSignature({
+      appRoot: '/unused', platform: 'linux'
+    })));
+  `], { encoding: 'utf8' });
+
+  expect(result.stderr).toBe('');
+  expect(result.status).toBe(0);
+  expect(JSON.parse(result.stdout)).toEqual({ changed: false, reason: 'not-macos' });
+});
 
 it('signs the DEV Electron bundle with one stable product identity', async () => {
   const plist = new Map([
