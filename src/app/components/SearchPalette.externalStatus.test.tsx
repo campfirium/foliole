@@ -75,7 +75,7 @@ it('keeps external result labels inline without a section header', async () => {
     target: { value: 'spaced' }
   });
 
-  await waitFor(() => expect(screen.getByRole('button', { name: /History of spaced repetition/ })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByRole('button', { name: /History\s*of\s*spaced\s*repetition/ })).toBeInTheDocument());
   expect(screen.getByText('External')).toBeInTheDocument();
   expect(screen.getByText('library')).toBeInTheDocument();
   expect(screen.queryByText('External folders')).not.toBeInTheDocument();

@@ -82,7 +82,7 @@ it('includes Removed source matches in workspace search', async () => {
     target: { value: 'launch' }
   });
 
-  expect(await screen.findByRole('button', { name: /Removed launch/ })).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: /Removed\s*launch/ })).toBeInTheDocument();
   expect(screen.getAllByText('Removed').length).toBeGreaterThan(0);
   expect(screen.getByText('/Readwise/Removed.md')).toBeInTheDocument();
   expect(mocks.loadRuntimeRemovedSources).not.toHaveBeenCalled();

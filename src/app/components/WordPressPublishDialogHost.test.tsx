@@ -143,8 +143,8 @@ it('publishes with the selected status and saves the returned binding locally', 
   render(<WordPressPublishDialogHost />);
   requestDialog();
   const status = await screen.findByRole('combobox', { name: 'Post status' });
-  fireEvent.click(await screen.findByRole('button', { name: '1 Writing' }));
-  fireEvent.click(screen.getByRole('button', { name: '1 foliole' }));
+  fireEvent.click(await screen.findByRole('button', { name: /^1\s*Writing$/ }));
+  fireEvent.click(screen.getByRole('button', { name: /^1\s*foliole$/ }));
   fireEvent.change(status, { target: { value: 'publish' } });
   fireEvent.keyDown(screen.getByRole('dialog'), { ctrlKey: true, key: 'Enter' });
   expect(repositoryMocks.publishTopicToWordPress).not.toHaveBeenCalled();

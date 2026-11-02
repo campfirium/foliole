@@ -49,8 +49,8 @@ function renderSettings() {
 it('uses one versioned theme selector while keeping both update actions', async () => {
   renderSettings();
   expect(await screen.findByText('Set the publishing page theme.')).toBeVisible();
-  expect(screen.getByRole('radio', { name: 'Default v4' })).toBeChecked();
-  const custom = screen.getByRole('radio', { name: 'Custom v4' });
+  expect(screen.getByRole('radio', { name: /^Default\s*v4$/ })).toBeChecked();
+  const custom = screen.getByRole('radio', { name: /^Custom\s*v4$/ });
   fireEvent.click(custom);
   await waitFor(() => expect(custom).toBeChecked());
   expect(runtime.openFoliolePublishCustomThemeFromRuntime).toHaveBeenCalledOnce();
@@ -63,9 +63,9 @@ it('uses one versioned theme selector while keeping both update actions', async 
   fireEvent.click(screen.getByRole('button', { name: 'Update Web' }));
   await waitFor(() => expect(runtime.publishFoliolePublishThemeChangesFromRuntime).toHaveBeenCalledOnce());
 
-  fireEvent.click(screen.getByRole('radio', { name: 'Default v4' }));
+  fireEvent.click(screen.getByRole('radio', { name: /^Default\s*v4$/ }));
   await waitFor(() => expect(runtime.useFoliolePublishThemeFromRuntime).toHaveBeenCalledOnce());
-  expect(screen.getByRole('radio', { name: 'Default v4' })).toBeChecked();
+  expect(screen.getByRole('radio', { name: /^Default\s*v4$/ })).toBeChecked();
   expect(screen.queryByText(/Using (Foliole|Custom) Theme/u)).not.toBeInTheDocument();
 });
 
@@ -75,5 +75,5 @@ it('does not invent a base version for a migrated Custom Theme', async () => {
   });
   renderSettings();
   expect(await screen.findByRole('radio', { name: 'Custom' })).toBeChecked();
-  expect(screen.queryByRole('radio', { name: 'Custom v4' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('radio', { name: /^Custom\s*v4$/ })).not.toBeInTheDocument();
 });

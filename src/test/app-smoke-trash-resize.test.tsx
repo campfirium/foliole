@@ -22,7 +22,10 @@ async function getTrashTree() {
 }
 
 async function getTrashTreeItem(title: string) {
-  return within(await getTrashTree()).findByRole('treeitem', { name: new RegExp(`\\b${title}\\b`) });
+  const label = await within(await getTrashTree()).findByText(title, { exact: true });
+  const row = label.closest<HTMLElement>('[role="treeitem"]');
+  if (!row) throw new Error(`Trash topic row unavailable: ${title}`);
+  return row;
 }
 
 function openCurrentFolderItemContextMenu(title: string) {

@@ -164,22 +164,23 @@ it('shows a progress state when runtime backlinks are pending and no local backl
 });
 
 it('shows a retryable error when runtime backlinks fail without local backlinks', async () => {
-  loadRuntimeNodeBacklinks
-    .mockRejectedValueOnce(new Error('runtime failed'))
-    .mockRejectedValueOnce(new Error('runtime failed'))
-    .mockResolvedValueOnce([{ context: 'Runtime context', matchCount: 1, sourceNodeId: 'source', sourceTitle: 'Source topic' }]);
+  loadRuntimeNodeBacklinks.mockRejectedValue(new Error('runtime failed'));
 
   renderPanelWithNodes('target', createPanelNodes(), ['target']);
 
   await waitFor(() => {
     expect(screen.getByRole('alert')).toHaveTextContent('Backlinks could not be loaded');
   });
+  const initialCalls = loadRuntimeNodeBacklinks.mock.calls.length;
+  loadRuntimeNodeBacklinks.mockResolvedValue([
+    { context: 'Runtime context', matchCount: 1, sourceNodeId: 'source', sourceTitle: 'Source topic' }
+  ]);
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
   await waitFor(() => {
     expect(screen.getByRole('button', { name: /Source topic/ })).toBeInTheDocument();
   });
-  expect(loadRuntimeNodeBacklinks).toHaveBeenCalledTimes(3);
+  expect(loadRuntimeNodeBacklinks).toHaveBeenCalledTimes(initialCalls + 1);
 });
 
 it('shows an error when the selected backlinks topic is unavailable', () => {

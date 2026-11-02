@@ -46,15 +46,15 @@ it('filters a complete search snapshot by spelling without starting another data
   renderWithLocalization(<SearchPalette isOpen nodeOrder={[]} nodesById={{}}
     onClose={() => undefined} onOpenResult={() => undefined} trashedNodeIds={[]} />);
   fireEvent.change(screen.getByRole('textbox', { name: 'Search workspace' }), { target: { value: 'Disney' } });
-  await waitFor(() => expect(screen.getByRole('button', { name: /Disney topic/ })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByRole('button', { name: /Disney\s*topic/ })).toBeInTheDocument());
   fireEvent.click(screen.getByRole('button', { name: '迪士尼' }));
   expect(screen.getByRole('status')).toHaveTextContent('Searching…');
   expect(screen.queryByText('No matching results')).not.toBeInTheDocument();
   await act(async () => resolveBatch({ hasMore: false, results: [later] }));
-  await waitFor(() => expect(screen.getByRole('button', { name: /迪士尼 topic/ })).toBeInTheDocument());
-  expect(screen.queryByRole('button', { name: /Disney topic/ })).not.toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole('button', { name: /迪士尼\s*topic/ })).toBeInTheDocument());
+  expect(screen.queryByRole('button', { name: /Disney\s*topic/ })).not.toBeInTheDocument();
   expect(invoke.mock.calls.filter(([command]) => command === 'search_workspace')).toHaveLength(1);
   fireEvent.click(screen.getByRole('button', { name: 'All' }));
-  await waitFor(() => expect(screen.getByRole('button', { name: /Disney topic/ })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByRole('button', { name: /Disney\s*topic/ })).toBeInTheDocument());
   expect(invoke.mock.calls.filter(([command]) => command === 'search_workspace')).toHaveLength(1);
 });

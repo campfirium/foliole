@@ -152,7 +152,7 @@ it('keeps fit width as the default persisted zoom mode for a new pdf', async () 
   renderWithLocalization(<DocumentPanelSection {...createDefaultProps()} onPersistPdfViewState={onPersistPdfViewState} />);
 
   await waitFor(() => expect(screen.getAllByTestId('pdf-document-page').length).toBeGreaterThan(1));
-  const pageInput = screen.getByRole('textbox', { name: 'PDF page' });
+  const pageInput = await screen.findByRole('textbox', { name: 'PDF page' });
   fireEvent.focus(pageInput);
   fireEvent.change(pageInput, {
     target: { value: '2' }
