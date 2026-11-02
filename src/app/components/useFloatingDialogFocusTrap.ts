@@ -37,15 +37,15 @@ export function useFloatingDialogFocusTrap(isActive = true) {
     return undefined;
   }, [isActive]);
 
-  useEffect(
-    () => () => {
-      if (isActive && shouldRestoreFocus(containerRef.current)) {
+  useEffect(() => {
+    const container = containerRef.current;
+    return () => {
+      if (isActive && shouldRestoreFocus(container)) {
         scheduleRestoreFocus(previousFocusRef.current);
         previousFocusRef.current = null;
       }
-    },
-    [isActive]
-  );
+    };
+  }, [isActive]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Tab') {
