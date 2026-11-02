@@ -92,9 +92,6 @@ jobs:
           avahi-daemon --check
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
-      - name: Prepare temporary Linux native debugger
-        if: ${{ runner.os == 'Linux' && matrix.bucket == 'sync-heavy-services' && inputs.execution_lane == 'dev-remote' }}
-        run: sudo apt-get install -y --no-install-recommends gdb
       - name: Install Electron runtime
         run: node node_modules/electron/install.js
       - name: Verify checked-out target SHA
@@ -106,12 +103,15 @@ jobs:
         run: node scripts/quality/hosted-electron-sqlite-preflight.mjs
       - name: Compile Electron workers
         run: npm run electron:compile
+      - name: Prepare temporary Linux native debugger
+        if: ${{ runner.os == 'Linux' && matrix.bucket == 'sync-heavy-services' && inputs.execution_lane == 'dev-remote' }}
+        run: sudo apt-get install -y --no-install-recommends gdb
       - name: Run canonical Electron bucket
         run: node scripts/quality/hosted-quality-bucket.mjs
       - name: Capture temporary Linux native crash evidence
         if: ${{ failure() && runner.os == 'Linux' && matrix.bucket == 'sync-heavy-services' && inputs.execution_lane == 'dev-remote' }}
         continue-on-error: true
-        timeout-minutes: 6
+        timeout-minutes: 8
         shell: bash
         run: |
           command -v gdb
@@ -158,6 +158,16 @@ jobs:
               > ".tmp/artifacts/T680/linux-native-${mode}.log" 2>&1
             cat ".tmp/artifacts/T680/linux-native-${mode}.log"
           done
+          timeout 120s env ELECTRON_RUN_AS_NODE=1 gdb --batch \
+            -ex 'set pagination off' -ex 'set disable-randomization off' \
+            -ex 'set follow-fork-mode child' -ex 'set detach-on-fork off' \
+            -ex 'set schedule-multiple on' -ex 'set debuginfod enabled off' \
+            -ex run -ex 'thread apply all bt 40' -ex 'info registers' \
+            -ex 'info sharedlibrary' --args node_modules/electron/dist/electron \
+            node_modules/vitest/vitest.mjs run --pool=forks --maxWorkers=1 --no-file-parallelism \
+            electron/database/automaticBackupForeground.integration.test.ts \
+            > .tmp/artifacts/T680/linux-native-production.log 2>&1
+          cat .tmp/artifacts/T680/linux-native-production.log
       - name: Upload Electron test logs
         if: ${{ always() }}
         continue-on-error: true
