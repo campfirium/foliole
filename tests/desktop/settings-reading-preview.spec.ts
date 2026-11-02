@@ -32,15 +32,18 @@ test('temporarily reveals the article and returns to the same reading settings',
   await mkdir(directory, { recursive: true });
   await desktopWindow.screenshot({ path: path.join(directory, 'reading-settings-hidden.png') });
   const link = desktopWindow.locator('.prompt-editor-host .cm-md-link-text').filter({ hasText: 'Preview link' });
-  await link.evaluate((element) => {
-    element.setAttribute('data-preview-hits', '0');
-    for (const event of ['pointerdown', 'click']) element.addEventListener(event, () => element.setAttribute('data-preview-hits', '1'));
+  await desktopWindow.evaluate(() => {
+    const root = window as typeof window & { previewTargetHits?: number };
+    root.previewTargetHits = 0;
+    for (const name of ['pointerdown', 'click']) document.addEventListener(name, (event) => {
+      if ((event.target as Element).closest('.cm-md-link-text')) root.previewTargetHits! += 1;
+    }, true);
   });
   const box = await link.boundingBox();
   expect(box).not.toBeNull();
   await desktopWindow.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
   await expect(dialog).toHaveCSS('opacity', '1');
-  await expect(link).toHaveAttribute('data-preview-hits', '0');
+  expect(await desktopWindow.evaluate(() => (window as typeof window & { previewTargetHits: number }).previewTargetHits)).toBe(0);
   expect(await scroller.evaluate((element) => element.scrollTop), JSON.stringify({ scrollTop, hiddenScrollTop })).toBe(hiddenScrollTop);
   await expect(size).toHaveValue('19');
   await expect(dialog.getByRole('heading', { level: 2, name: /^(Typography|字体与排版)$/ })).toBeVisible();

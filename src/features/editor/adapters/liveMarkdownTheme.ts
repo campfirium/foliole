@@ -33,14 +33,19 @@ export const liveMarkdownTheme = EditorView.theme({
     fontFamily: 'var(--content-panel-font-family, var(--font-family-sans))',
     fontSize: 'var(--content-panel-font-size, 1.0625rem)',
     fontWeight: 'var(--content-panel-font-weight, 400)',
+    textAutospace: 'normal',
     margin: '0 auto',
     maxWidth: 'min(100%, var(--document-max-width, 860px))',
     padding: liveMarkdownSpacing.contentPadding,
     width: '100%'
   },
   '.cm-widgetBuffer': { width: '0px' },
+  '@supports (text-autospace: normal)': {
+    '.cm-content[contenteditable="false"][aria-readonly="true"] .cm-widgetBuffer': { display: 'none' }
+  },
   '.cm-line': { padding: 0 },
-  '.cm-line-code, .cm-line-code-fence, .cm-md-inline-code, .cm-md-math-widget-inline, .cm-md-math-widget-block, .cm-line-math-block': { fontWeight: '400' },
+  '.cm-line-code, .cm-line-code-fence, .cm-md-inline-code, .cm-md-math-widget-inline, .cm-md-math-widget-block, .cm-line-math-block': { fontWeight: '400', textAutospace: 'no-autospace' },
+  '.cm-md-frontmatter-compact, .cm-md-frontmatter-header, .cm-md-frontmatter-meta-line': { textAutospace: 'no-autospace' },
   '.cm-line.cm-line-paragraph': { paddingBottom: 'var(--content-panel-paragraph-spacing, 0.75em)' },
   '.cm-line:has(.cm-md-image-widget-block)': { fontSize: '0', lineHeight: '0', minHeight: '0' },
   '.cm-line.cm-line-h1': { fontSize: 'var(--content-panel-h1-font-size, 1.5rem)', fontWeight: '700', letterSpacing: '-0.01em', paddingBottom: liveMarkdownSpacing.h1BlockEnd, paddingTop: liveMarkdownSpacing.h1BlockStart },
