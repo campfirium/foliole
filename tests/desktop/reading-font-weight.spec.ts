@@ -18,15 +18,17 @@ test('renders genuine intermediate reading weights and restores the device prefe
     await api.openNode('reading-weight');
   }, CONTENT);
   let dialog = await openSettingsCategory(desktopWindow, 'Typography');
-  await expect(dialog.getByRole('spinbutton', { name: TITLE })).toBeDisabled();
+  await expect(dialog.getByRole('slider', { name: TITLE })).toBeEnabled();
   await dialog.getByRole('combobox', { name: FONT }).click();
   await desktopWindow.getByRole('option', { name: 'Noto Sans SC', exact: true }).click();
-  await expect(dialog.getByRole('spinbutton', { name: TITLE })).toBeEnabled();
+  await expect(dialog.getByRole('slider', { name: TITLE })).toBeEnabled();
   const artifactDir = path.resolve('.tmp/artifacts/T681');
   await mkdir(artifactDir, { recursive: true });
   const samples: Buffer[] = [];
   for (const weight of [400, 450, 500]) {
-    await dialog.getByRole('button', { name: String(weight), exact: true }).click();
+    await expect(dialog.getByRole('slider', { name: TITLE })).toBeEnabled();
+    await dialog.getByRole('slider', { name: TITLE }).press('Home');
+    for (let value = 100; value < weight; value += 50) await dialog.getByRole('slider', { name: TITLE }).press('ArrowRight');
     await expect.poll(() => desktopWindow.evaluate(async () => {
       const settings = await window.electronAPI!.invoke('load_app_settings_state');
       return (settings as Record<string, string>)['foliole-reading-font-weight'];
@@ -36,7 +38,7 @@ test('renders genuine intermediate reading weights and restores the device prefe
     await expect(paragraph).toHaveCSS('font-weight', String(weight));
     await expect(paragraph).toHaveCSS('font-family', /Foliole Noto Sans SC/);
     samples.push(await paragraph.screenshot({ path: path.join(artifactDir, `weight-${weight}.png`), caret: 'hide' }));
-    await expect(desktopWindow.locator('.prompt-editor-host .cm-md-strong')).toHaveCSS('font-weight', '600');
+    await expect(desktopWindow.locator('.prompt-editor-host .cm-md-strong')).toHaveCSS('font-weight', String(Math.max(600, weight + 200)));
     await expect(desktopWindow.locator('.prompt-editor-host .cm-md-inline-code')).toHaveCSS('font-weight', '400');
     await expect(desktopWindow.locator('.prompt-editor-host .cm-line-h1')).toHaveCSS('font-weight', '700');
     dialog = await openSettingsCategory(desktopWindow, 'Typography');
@@ -48,11 +50,11 @@ test('renders genuine intermediate reading weights and restores the device prefe
   await expectWorkspaceShell(desktopWindow);
   dialog = await openSettingsCategory(desktopWindow, 'Typography');
   await expect(dialog.getByRole('combobox', { name: FONT })).toContainText('Noto Sans SC');
-  await expect(dialog.getByRole('spinbutton', { name: TITLE })).toHaveValue('500');
-  await expect(dialog.getByRole('spinbutton', { name: TITLE })).toBeEnabled();
-  await dialog.getByRole('spinbutton', { name: TITLE }).fill('435');
+  await expect(dialog.getByRole('slider', { name: TITLE })).toHaveValue('500');
+  await expect(dialog.getByRole('slider', { name: TITLE })).toBeEnabled();
+  await dialog.getByRole('slider', { name: TITLE }).press('ArrowLeft');
   await dialog.getByRole('heading', { name: /^(Reading|阅读)$/, exact: true }).click();
-  await expect.poll(() => desktopWindow.evaluate(() => localStorage.getItem('foliole-reading-font-weight'))).toBe('435');
+  await expect.poll(() => desktopWindow.evaluate(() => localStorage.getItem('foliole-reading-font-weight'))).toBe('450');
   await desktopWindow.screenshot({ path: path.join(artifactDir, 'reading-weight-settings.png') });
   await testInfo.attach('reading-weight-controls', { body: await desktopWindow.screenshot(), contentType: 'image/png' });
 });

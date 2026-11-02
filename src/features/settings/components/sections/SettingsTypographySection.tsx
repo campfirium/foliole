@@ -12,15 +12,22 @@ export function SettingsTypographySection(props: { onEnterPreview: () => void })
     interfaceFontPreset: appearance.interfaceFontPreset,
     monospaceFontPreset: appearance.monospaceFontPreset
   });
+  const selectTextFont = (value: string) => {
+    if (value === fontOptions.selectedInterfaceFontValue) return;
+    void appearance.readingFontWeightSettings.update(400);
+    if (value.startsWith('preset:')) appearance.setInterfaceFontPreset(value.slice(7) as typeof appearance.interfaceFontPreset);
+    else if (value.startsWith('font:')) {
+      appearance.setCustomInterfaceFont(value.slice(5));
+      appearance.setInterfaceFontPreset('custom');
+    }
+  };
   return (
     <>
       <SettingsAppearanceFontSection
         {...fontOptions}
         onEnterPreview={props.onEnterPreview}
         interfaceFontSize={appearance.interfaceFontSize}
-        onInterfaceFontSelectionChange={(value) => value.startsWith('preset:')
-          ? appearance.setInterfaceFontPreset(value.slice(7) as typeof appearance.interfaceFontPreset)
-          : value.startsWith('font:') && (appearance.setCustomInterfaceFont(value.slice(5)), appearance.setInterfaceFontPreset('custom'))}
+        onInterfaceFontSelectionChange={selectTextFont}
         onInterfaceFontSizeChange={appearance.setInterfaceFontSize}
         onInterfaceFontSizeReset={appearance.resetInterfaceFontSize}
         onMonospaceFontSelectionChange={(value) => value.startsWith('mono-preset:')

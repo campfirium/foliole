@@ -1,6 +1,7 @@
 import { getLocalStorageAppSettingsKeys } from '../config/appSettingsClassification';
 
 import { saveRuntimeAppSettingsState } from './appSettingsState';
+import { getDemoRuntimeState } from './runtime/demoRuntime';
 
 const LOCAL_STORAGE_WHITELIST = new Set<string>(getLocalStorageAppSettingsKeys());
 export const RUNTIME_APP_SETTINGS_SAVED_EVENT = 'foliole:runtime-app-settings-saved';
@@ -43,6 +44,7 @@ export async function saveWhitelistedLocalStorageItem(key: string, value: string
   if (!canUseLocalStorage()) return false;
   try {
     window.localStorage.setItem(key, value);
+    if (getDemoRuntimeState().isDemo) return true;
     return await persistSnapshotToRuntimeStorage();
   } catch {
     return false;

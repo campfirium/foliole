@@ -106,7 +106,11 @@ export function applyAppearanceSettings(settings: ApplyAppearanceSettingsInput) 
   root.style.setProperty('--content-panel-font-family', resolveInterfaceFontFamily(settings.interfaceFont, sanitizeFontFamily(settings.customInterfaceFont)));
   root.style.setProperty('--content-panel-mono-font-family', resolveMonospaceFontFamily(settings.monospaceFont, sanitizeFontFamily(settings.customMonospaceFont)));
   root.style.setProperty('--document-max-width', `${settings.readingContentWidth}px`);
-  root.style.setProperty('--content-panel-font-weight', String(settings.interfaceFont === 'noto-sans-sc' ? settings.readingFontWeight ?? 400 : 400));
+  const readingWeight = settings.readingFontWeight ?? 400;
+  root.style.setProperty('--content-panel-font-weight', String(readingWeight));
+  root.style.setProperty('--content-panel-strong-font-weight', String(Math.max(600, readingWeight + 200)));
+  root.style.setProperty('--content-panel-heading-font-weight', String(Math.max(700, readingWeight + 200)));
+  root.style.setProperty('--content-panel-subheading-font-weight', String(Math.max(650, readingWeight + 200)));
   applyEditorTypographyScale(root, clampedFontSize);
   applyReadingLineHeight(root, settings.readingLineHeight);
   applyReadingParagraphSpacing(root, settings.readingParagraphSpacing);

@@ -44,7 +44,13 @@ it('restores defaults for invalid values and bounds user input', async () => {
   const { result } = renderHook(useReadingFontWeightSettings);
   expect(result.current.value).toBe(400);
   await act(() => result.current.update(900));
-  expect(result.current.value).toBe(550);
+  expect(result.current.value).toBe(700);
   await act(() => result.current.update(450.2));
+  expect(result.current.value).toBe(450);
+});
+
+it('normalizes a previously saved fine value to the nearest current 50-unit step', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.readingFontWeight, '435');
+  const { result } = renderHook(useReadingFontWeightSettings);
   expect(result.current.value).toBe(450);
 });

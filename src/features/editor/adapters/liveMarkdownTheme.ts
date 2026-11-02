@@ -48,9 +48,9 @@ export const liveMarkdownTheme = EditorView.theme({
   '.cm-md-frontmatter-compact, .cm-md-frontmatter-header, .cm-md-frontmatter-meta-line': { textAutospace: 'no-autospace' },
   '.cm-line.cm-line-paragraph': { paddingBottom: 'var(--content-panel-paragraph-spacing, 0.75em)' },
   '.cm-line:has(.cm-md-image-widget-block)': { fontSize: '0', lineHeight: '0', minHeight: '0' },
-  '.cm-line.cm-line-h1': { fontSize: 'var(--content-panel-h1-font-size, 1.5rem)', fontWeight: '700', letterSpacing: '-0.01em', paddingBottom: liveMarkdownSpacing.h1BlockEnd, paddingTop: liveMarkdownSpacing.h1BlockStart },
+  '.cm-line.cm-line-h1': { fontSize: 'var(--content-panel-h1-font-size, 1.5rem)', fontWeight: 'var(--content-panel-heading-font-weight, 700)', letterSpacing: '-0.01em', paddingBottom: liveMarkdownSpacing.h1BlockEnd, paddingTop: liveMarkdownSpacing.h1BlockStart },
   '.cm-line.cm-line-h2': { fontSize: 'var(--content-panel-h2-font-size, 1.25rem)', fontWeight: '700', paddingBottom: liveMarkdownSpacing.h2BlockEnd, paddingTop: liveMarkdownSpacing.h2BlockStart },
-  '.cm-line.cm-line-h3': { fontSize: 'var(--content-panel-h3-font-size, 1.08rem)', fontWeight: '650', paddingTop: liveMarkdownSpacing.h3BlockStart },
+  '.cm-line.cm-line-h3': { fontSize: 'var(--content-panel-h3-font-size, 1.08rem)', fontWeight: 'var(--content-panel-subheading-font-weight, 650)', paddingTop: liveMarkdownSpacing.h3BlockStart },
   '.cm-line.cm-line-quote': { borderLeft: 'var(--editor-border-width-accent) solid var(--role-accent)', color: 'var(--role-text)', paddingBottom: 'var(--editor-space-xxs)', paddingTop: 'var(--editor-space-xxs)', paddingLeft: 'var(--editor-space-md)' },
   '.cm-line.cm-line-code, .cm-line.cm-line-code-fence': { backgroundColor: 'rgb(var(--role-ink-rgb) / 0.06)', borderRadius: 0, fontFamily: 'var(--content-panel-mono-font-family, var(--font-family-mono))', fontSize: 'var(--content-panel-code-font-size, 0.86rem)', padding: liveMarkdownSpacing.codeLinePadding },
   '.cm-line.cm-line-code-fence-hidden': { backgroundColor: 'transparent', borderRadius: 0, border: 0, fontSize: '0', lineHeight: '0', margin: 0, minHeight: 0, overflow: 'hidden', padding: '0 !important' },
@@ -74,7 +74,7 @@ export const liveMarkdownTheme = EditorView.theme({
     display: 'none'
   },
   '.cm-md-emphasis': { fontStyle: 'italic', fontSynthesisStyle: 'none' },
-  '.cm-md-strong': { fontWeight: '600' },
+  '.cm-md-strong': { fontWeight: 'var(--content-panel-strong-font-weight, 600)' },
   '.cm-md-strikethrough': { textDecoration: 'line-through' },
   '.cm-md-thematic-break': {
     borderTop: '1.5px solid rgb(var(--role-legacy-border-strong-rgb) / 0.58)',

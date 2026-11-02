@@ -4,73 +4,56 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
   READING_FONT_WEIGHT_DEFAULT, READING_FONT_WEIGHT_MAX, READING_FONT_WEIGHT_MIN,
-  READING_FONT_WEIGHT_STEP, normalizeReadingFontWeight
+  READING_FONT_WEIGHT_STEP
 } from '../../../../shared/typography/readingFontWeight';
+import { adjacentReadingWeight, nearestReadingWeight } from '../../../../shared/typography/readingFontWeightProbe';
 import {
-  SettingsControlSlot, SettingsRow, settingsButtonClassName, settingsFieldClassName,
+  SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME, SETTINGS_RANGE_WIDTH_CLASS_NAME, SETTINGS_VALUE_WIDTH_CLASS_NAME,
+  SettingsControlSlot, SettingsRow, settingsButtonClassName, settingsControlValueClassName,
   settingsRangeClassName, settingsResetButtonClassName
 } from '../../../../shared/ui';
 import { useAppearanceSettings } from '../../context/AppearanceSettingsProvider';
-
-function useNotoReadingFont(enabled: boolean, retry: number) {
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  useEffect(() => {
-    if (!enabled) return;
-    let active = true;
-    setStatus('loading');
-    void document.fonts?.load('400 17px "Foliole Noto Sans SC"').then((faces) => {
-      if (active) setStatus(faces.length > 0 ? 'ready' : 'error');
-    }).catch(() => { if (active) setStatus('error'); });
-    return () => { active = false; };
-  }, [enabled, retry]);
-  return status;
-}
+import { useReadingFontWeights } from '../../context/useReadingFontWeights';
 
 export function ReadingFontWeightRow() {
   const t = useTranslation();
-  const { interfaceFontPreset, readingFontWeightSettings: settings } = useAppearanceSettings();
-  const enabled = interfaceFontPreset === 'noto-sans-sc';
+  const { interfaceFontPreset, customInterfaceFont, readingFontWeightSettings: settings } = useAppearanceSettings();
   const [retry, setRetry] = useState(0);
-  const status = useNotoReadingFont(enabled, retry);
-  const [draft, setDraft] = useState(String(settings.value));
-  useEffect(() => setDraft(String(settings.value)), [settings.value]);
-  const disabled = !enabled || status !== 'ready';
-  const commit = () => {
-    if (draft.trim() === '' || !Number.isFinite(Number(draft))) {
-      setDraft(String(settings.value));
-      return;
-    }
-    const next = normalizeReadingFontWeight(draft);
-    setDraft(String(next));
-    void settings.update(next);
-  };
+  const { status, weights } = useReadingFontWeights(interfaceFontPreset, customInterfaceFont, retry);
+  const disabled = status !== 'ready' || weights.length < 2;
+  useEffect(() => {
+    if (status !== 'ready') return;
+    const next = nearestReadingWeight(settings.value, weights);
+    if (next !== settings.value) void settings.update(next);
+  }, [settings, status, weights]);
   return (
     <SettingsRow title={t('settings.appearance.fontWeight.title')}
       description={t('settings.appearance.fontWeight.description')}>
       <SettingsControlSlot className="flex-col items-end gap-2">
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2 ${SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME}`}>
           <button aria-label={t('settings.appearance.fontWeight.reset')} className={settingsResetButtonClassName()}
             disabled={disabled || settings.value === READING_FONT_WEIGHT_DEFAULT}
             onClick={() => void settings.update(READING_FONT_WEIGHT_DEFAULT)} type="button">
             <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
           </button>
-          <input aria-label={t('settings.appearance.fontWeight.slider')} className={settingsRangeClassName('w-36')}
+          <input aria-label={t('settings.appearance.fontWeight.title')} className={settingsRangeClassName(SETTINGS_RANGE_WIDTH_CLASS_NAME)}
             disabled={disabled} min={READING_FONT_WEIGHT_MIN} max={READING_FONT_WEIGHT_MAX} step={READING_FONT_WEIGHT_STEP}
-            type="range" value={settings.value} onChange={(event) => void settings.update(Number(event.target.value))} />
-          <input aria-label={t('settings.appearance.fontWeight.title')} className={settingsFieldClassName('w-20')}
-            disabled={disabled} type="number" min={READING_FONT_WEIGHT_MIN} max={READING_FONT_WEIGHT_MAX} step={1}
-            value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={commit}
+            aria-valuetext={String(settings.value)} aria-busy={status === 'loading'}
+            type="range" value={settings.value}
+            onChange={(event) => {
+              const next = nearestReadingWeight(Number(event.target.value), weights);
+              if (next !== settings.value) void settings.update(next);
+            }}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') { event.preventDefault(); commit(); }
-              if (event.key === 'Escape') { event.stopPropagation(); setDraft(String(settings.value)); }
+              if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+              event.preventDefault();
+              const next = event.key === 'Home' ? weights[0] : event.key === 'End' ? weights.at(-1)
+                : adjacentReadingWeight(settings.value, weights, ['ArrowRight', 'ArrowUp'].includes(event.key) ? 1 : -1);
+              if (next !== undefined && next !== settings.value) void settings.update(next);
             }} />
+          <span className={settingsControlValueClassName(SETTINGS_VALUE_WIDTH_CLASS_NAME)}>{settings.value}</span>
         </div>
-        <div className="flex items-center gap-2">
-          {[400, 450, 500].map((weight) => <button key={weight} type="button" disabled={disabled}
-            className={settingsButtonClassName()} onClick={() => void settings.update(weight)}>{weight}</button>)}
-        </div>
-        {enabled && status === 'loading' ? <p role="status" className="text-xs text-muted-foreground">{t('settings.appearance.fontWeight.loading')}</p> : null}
-        {enabled && status === 'error' ? <p role="alert" className="text-xs text-destructive">
+        {status === 'error' ? <p role="alert" className="text-xs text-destructive">
           {t('settings.appearance.fontWeight.loadError')}
           <button className={settingsButtonClassName()} type="button" onClick={() => setRetry(retry + 1)}>{t('settings.appearance.fontWeight.retry')}</button>
         </p> : null}

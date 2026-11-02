@@ -3,53 +3,84 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvoke } from '../../../../lib/platform/nativeContract';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { probeReadingFontWeights } from '../../../shared/typography/readingFontWeightProbe';
 
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
 
 vi.mock('../model/systemFonts', () => ({ listAvailableSystemFonts: vi.fn(async () => ({ fonts: [], monospaceFonts: [] })) }));
-const load = vi.fn();
+vi.mock('../../../shared/typography/readingFontWeightProbe', async (original) => ({
+  ...await original<typeof import('../../../shared/typography/readingFontWeightProbe')>(),
+  probeReadingFontWeights: vi.fn()
+}));
+const probe = vi.mocked(probeReadingFontWeights);
 beforeEach(() => {
   window.localStorage.clear();
-  load.mockReset().mockResolvedValue([{}]);
-  Object.defineProperty(document, 'fonts', { configurable: true, value: { load } });
+  probe.mockReset().mockImplementation(async (family) => family.includes('Noto')
+    ? Array.from({ length: 13 }, (_, index) => 100 + index * 50) : [400, 700]);
   window.electronAPI = { invoke: vi.fn(async () => null) as NativeInvoke } as NonNullable<typeof window.electronAPI>;
 });
 
-it('allows fine weight only for the verified reading font and preserves its preference across font changes', async () => {
+function openTypography() {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="typography" />);
-  expect(screen.getByRole('spinbutton', { name: 'Font weight' })).toBeDisabled();
-  fireEvent.click(screen.getByRole('combobox', { name: 'Text font' }));
-  fireEvent.click(screen.getByRole('option', { name: 'Noto Sans SC' }));
-  const field = screen.getByRole('spinbutton', { name: 'Font weight' });
-  await waitFor(() => expect(field).toBeEnabled());
-  fireEvent.change(field, { target: { value: '435' } });
-  fireEvent.blur(field);
-  await waitFor(() => expect(document.documentElement.style.getPropertyValue('--content-panel-font-weight')).toBe('435'));
-  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingFontWeight)).toBe('435');
-  fireEvent.click(screen.getByRole('combobox', { name: 'Text font' }));
-  fireEvent.click(screen.getByRole('option', { name: 'Default' }));
-  expect(field).toBeDisabled();
-  expect(document.documentElement.style.getPropertyValue('--content-panel-font-weight')).toBe('400');
-  fireEvent.click(screen.getByRole('combobox', { name: 'Text font' }));
-  fireEvent.click(screen.getByRole('option', { name: 'Noto Sans SC' }));
-  await waitFor(() => expect(field).toBeEnabled());
-  expect(field).toHaveValue(435);
-  fireEvent.click(screen.getByRole('button', { name: 'Reset font weight' }));
-  await waitFor(() => expect(field).toHaveValue(400));
+  return screen.getByRole('slider', { name: /Font weight/ });
+}
+
+it('enables the system font at centered regular weight and jumps between effective weights without probing on drag', async () => {
+  const slider = openTypography();
+  await waitFor(() => expect(slider).toBeEnabled());
+  expect(slider).toHaveValue('400');
+  expect((400 - Number(slider.getAttribute('min'))) / (Number(slider.getAttribute('max')) - Number(slider.getAttribute('min')))).toBe(0.5);
+  expect(screen.queryByRole('spinbutton', { name: 'Font weight' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /^450$/ })).toBeNull();
+  fireEvent.keyDown(slider, { key: 'ArrowRight' });
+  await waitFor(() => expect(slider).toHaveValue('700'));
+  expect(document.documentElement.style.getPropertyValue('--content-panel-font-weight')).toBe('700');
+  fireEvent.keyDown(slider, { key: 'ArrowLeft' });
+  await waitFor(() => expect(slider).toHaveValue('400'));
+  fireEvent.change(slider, { target: { value: '100' } });
+  expect(slider).toHaveValue('400');
+  expect(probe).toHaveBeenCalledTimes(1);
 });
 
-it('leaves an empty numeric draft unapplied and permits retry after a font load failure', async () => {
-  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.interfaceFont, 'noto-sans-sc');
-  load.mockRejectedValueOnce(new Error('font unavailable'));
-  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="typography" />);
-  await screen.findByText('Could not load Noto Sans SC.');
-  expect(screen.getByRole('spinbutton', { name: 'Font weight' })).toBeDisabled();
+it('resets to regular on font selection, then enables fine steps and saves the visible weight', async () => {
+  const slider = openTypography();
+  await waitFor(() => expect(slider).toBeEnabled());
+  fireEvent.keyDown(slider, { key: 'End' });
+  await waitFor(() => expect(slider).toHaveValue('700'));
+  fireEvent.click(screen.getByRole('combobox', { name: 'Text font' }));
+  fireEvent.click(screen.getByRole('option', { name: 'Noto Sans SC' }));
+  expect(slider).toHaveValue('400');
+  await waitFor(() => expect(slider).toBeEnabled());
+  fireEvent.keyDown(slider, { key: 'ArrowRight' });
+  await waitFor(() => expect(slider).toHaveValue('450'));
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingFontWeight)).toBe('450');
+  expect(probe).toHaveBeenCalledTimes(2);
+  fireEvent.click(screen.getByRole('button', { name: 'Reset font weight' }));
+  await waitFor(() => expect(slider).toHaveValue('400'));
+});
+
+it('keeps single-face fonts at regular and retries a failed capability check', async () => {
+  probe.mockRejectedValueOnce(new Error('font unavailable')).mockResolvedValueOnce([400]);
+  const slider = openTypography();
+  await screen.findByText('Could not check this font.');
+  expect(slider).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-  const field = screen.getByRole('spinbutton', { name: 'Font weight' });
-  await waitFor(() => expect(field).toBeEnabled());
-  fireEvent.change(field, { target: { value: '' } });
-  fireEvent.blur(field);
-  expect(field).toHaveValue(400);
-  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.readingFontWeight)).toBeNull();
+  await waitFor(() => expect(probe).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(screen.queryByText('Could not check this font.')).toBeNull());
+  expect(slider).toHaveValue('400');
+  expect(slider).toBeDisabled();
+});
+
+it('ignores the previous font detection when a new selection finishes first', async () => {
+  let finishOld!: (weights: number[]) => void;
+  probe.mockImplementationOnce(() => new Promise((resolve) => { finishOld = resolve; }));
+  const slider = openTypography();
+  expect(slider).toBeDisabled();
+  fireEvent.click(screen.getByRole('combobox', { name: 'Text font' }));
+  fireEvent.click(screen.getByRole('option', { name: 'Noto Sans SC' }));
+  await waitFor(() => expect(slider).toBeEnabled());
+  finishOld([400]);
+  fireEvent.keyDown(slider, { key: 'ArrowRight' });
+  await waitFor(() => expect(slider).toHaveValue('450'));
 });
