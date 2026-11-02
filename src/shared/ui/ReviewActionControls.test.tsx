@@ -112,7 +112,7 @@ it('adds short overlay dividers between grade actions only for overlay surface',
   expect(document.querySelector('[data-review-overlay-divider]')).toHaveClass('h-4');
   expect(screen.getByRole('button', { name: 'Again' }).className).toContain('rounded-none');
   expect(screen.getByRole('button', { name: 'Again' }).className).toContain('border-0');
-  expect(screen.getByRole('button', { name: 'Again' })).toHaveStyle({ border: '0', borderRadius: '0' });
+  expect(screen.getByRole('button', { name: 'Again' })).toHaveStyle({ borderWidth: '0px', borderRadius: '0px' });
   expect(screen.getByRole('button', { name: 'Again' })).not.toHaveAttribute('data-active');
 });
 
@@ -133,7 +133,7 @@ it('adds short overlay dividers between reading review actions only for overlay 
   expect(document.querySelector('[data-review-overlay-divider]')).toHaveClass('h-4');
   expect(screen.getByRole('button', { name: 'Soon' }).className).toContain('rounded-none');
   expect(screen.getByRole('button', { name: 'Soon' }).className).toContain('border-0');
-  expect(screen.getByRole('button', { name: 'Soon' })).toHaveStyle({ border: '0', borderRadius: '0' });
+  expect(screen.getByRole('button', { name: 'Soon' })).toHaveStyle({ borderWidth: '0px', borderRadius: '0px' });
   expect(screen.getByRole('button', { name: 'Soon' })).not.toHaveAttribute('data-active');
 });
 

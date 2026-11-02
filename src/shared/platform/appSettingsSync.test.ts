@@ -113,6 +113,7 @@ it('uses the native system color mode for system startup colors', async () => {
 });
 
 it('applies default macOS font smoothing before the theme settings are available', async () => {
+  const setProperty = vi.spyOn(document.documentElement.style, 'setProperty');
   vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('MacIntel');
   const invoke = vi.fn(() => new Promise(() => undefined));
   window.electronAPI = createMockElectronApi(invoke);
@@ -120,10 +121,11 @@ it('applies default macOS font smoothing before the theme settings are available
   void syncAppSettingsWithRuntime();
   await Promise.resolve();
 
-  expect(document.documentElement.style.getPropertyValue('-webkit-font-smoothing')).toBe('antialiased');
+  expect(setProperty).toHaveBeenCalledWith('-webkit-font-smoothing', 'antialiased');
 });
 
 it('lets the runtime snapshot disable a local macOS font smoothing override', async () => {
+  const removeProperty = vi.spyOn(document.documentElement.style, 'removeProperty');
   vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('MacIntel');
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.macOsFontSmoothing, 'true');
   const invoke = createRuntimeInvoke({
@@ -134,5 +136,5 @@ it('lets the runtime snapshot disable a local macOS font smoothing override', as
   await syncAppSettingsWithRuntime();
 
   expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.macOsFontSmoothing)).toBe('false');
-  expect(document.documentElement.style.getPropertyValue('-webkit-font-smoothing')).toBe('');
+  expect(removeProperty).toHaveBeenCalledWith('-webkit-font-smoothing');
 });

@@ -40,7 +40,7 @@ it('uses the overlay action button style for paused resume', () => {
   renderOverlayResume();
 
   const resumeButton = screen.getByRole('button', { name: 'Resume review' });
-  expect(resumeButton).toHaveStyle({ border: '0', borderRadius: '0' });
+  expect(resumeButton).toHaveStyle({ borderWidth: '0px', borderRadius: '0px' });
   expect(resumeButton.className).toContain('min-w-20');
   expect(resumeButton.className).toContain('rounded-none');
   expect(resumeButton).toHaveTextContent('Resume');
@@ -53,7 +53,7 @@ it('uses the overlay action button style when resuming from a reading queue', ()
   });
 
   const resumeButton = screen.getByRole('button', { name: 'Resume review' });
-  expect(resumeButton).toHaveStyle({ border: '0', borderRadius: '0' });
+  expect(resumeButton).toHaveStyle({ borderWidth: '0px', borderRadius: '0px' });
   expect(resumeButton.className).toContain('min-w-20');
   expect(document.querySelectorAll('[data-review-overlay-divider]')).toHaveLength(0);
 });
@@ -66,7 +66,7 @@ it('uses the overlay action button style for unrevealed FSRS prompts', () => {
   });
 
   const showAnswerButton = screen.getByRole('button', { name: 'Show Answer' });
-  expect(showAnswerButton).toHaveStyle({ border: '0', borderRadius: '0' });
+  expect(showAnswerButton).toHaveStyle({ borderWidth: '0px', borderRadius: '0px' });
   expect(showAnswerButton.className).toContain('min-w-20');
   expect(showAnswerButton.className).toContain('rounded-none');
   expect(showAnswerButton.className).not.toContain('min-w-32');

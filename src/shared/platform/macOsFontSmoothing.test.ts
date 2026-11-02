@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   applyMacOsFontSmoothing,
@@ -7,6 +7,7 @@ import {
 } from './macOsFontSmoothing';
 
 afterEach(() => {
+  vi.restoreAllMocks();
   document.documentElement.style.removeProperty('-webkit-font-smoothing');
 });
 
@@ -26,20 +27,24 @@ describe('macOS font smoothing platform contract', () => {
 
   it('applies antialiased when enabled and removes the override when disabled', () => {
     const root = document.documentElement;
+    // jsdom does not implement this vendor property; Electron coverage verifies CSS application.
+    const setProperty = vi.spyOn(root.style, 'setProperty');
+    const removeProperty = vi.spyOn(root.style, 'removeProperty');
 
     applyMacOsFontSmoothing(true, root, true);
-    expect(root.style.getPropertyValue('-webkit-font-smoothing')).toBe('antialiased');
+    expect(setProperty).toHaveBeenCalledWith('-webkit-font-smoothing', 'antialiased');
 
     applyMacOsFontSmoothing(false, root, true);
-    expect(root.style.getPropertyValue('-webkit-font-smoothing')).toBe('');
+    expect(removeProperty).toHaveBeenCalledWith('-webkit-font-smoothing');
   });
 
   it('removes a stale override on unsupported renderers', () => {
     const root = document.documentElement;
     root.style.setProperty('-webkit-font-smoothing', 'antialiased');
+    const removeProperty = vi.spyOn(root.style, 'removeProperty');
 
     applyMacOsFontSmoothing(true, root, false);
 
-    expect(root.style.getPropertyValue('-webkit-font-smoothing')).toBe('');
+    expect(removeProperty).toHaveBeenCalledWith('-webkit-font-smoothing');
   });
 });

@@ -70,7 +70,7 @@ it('passes overlay surface to reading actions inside session controls', () => {
 
   expect(screen.getByLabelText('Reading review actions').className).toContain('[&_button]:!border-0');
   expect(document.querySelectorAll('[data-review-overlay-divider]')).toHaveLength(5);
-  expect(screen.getByRole('button', { name: 'Soon' })).toHaveStyle({ border: '0', borderRadius: '0' });
+  expect(screen.getByRole('button', { name: 'Soon' })).toHaveStyle({ borderWidth: '0px', borderRadius: '0px' });
   expect(screen.getByRole('button', { name: 'Soon' })).not.toHaveAttribute('data-active');
 });
 

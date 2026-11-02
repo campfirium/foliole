@@ -61,7 +61,7 @@ function expectBlockAndInlineImageLayout(host: HTMLElement) {
   expect(widgets[1]).toHaveAttribute('data-md-image-display', 'inline');
   expect(images[0]).toHaveClass('cm-md-image-element-block');
   expect(images[1]).toHaveClass('cm-md-image-element-inline');
-  expect(getComputedStyle(widgets[1] as HTMLElement).height).toBe('1lh');
+  // One-line geometry is verified in inline-image-line-height.spec.ts on real Chromium.
 }
 
 function createOutlinedPresentation() {
