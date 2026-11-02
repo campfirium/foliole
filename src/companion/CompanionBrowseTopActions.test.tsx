@@ -31,7 +31,7 @@ it('opens sort choices from the browse menu sort row', () => {
   expect(screen.getByRole('dialog', { name: 'Browse menu' })).toBeInTheDocument();
   expect(screen.queryByText('Recent -> Older')).not.toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Sort Last opened' }));
+  fireEvent.click(screen.getByRole('button', { name: /^Sort\s*Last opened$/ }));
   const sortDialog = screen.getByRole('dialog', { name: 'Sort' });
 
   expect(within(sortDialog).getByText('Order by')).toBeInTheDocument();
