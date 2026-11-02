@@ -74,6 +74,7 @@ async function saveScaleFailure(output: string, error: unknown, fixture: Failure
 }
 
 it('preserves the original failure and captured counts after the receiver has closed', async () => {
+  await fs.mkdir(path.resolve('.tmp/artifacts'), { recursive: true });
   const root = await fs.mkdtemp(path.resolve('.tmp/artifacts/T637-scale-failure-'));
   const original = new Error('original_scale_assertion');
   const requests = { source: { pulls: 60 }, target: {} };
