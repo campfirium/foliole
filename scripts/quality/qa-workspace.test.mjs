@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameS
 import path from 'node:path';
 import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { finishTransientWorktree, sweepTransientWorktrees } from '../diagnostics/transient-worktree-lifecycle.mjs';
 import { withResourceGate } from '../lib/resource-gate.mjs';
@@ -39,6 +39,7 @@ function commit(cwd, file, contents) {
   qaGit(cwd, 'commit', '-m', file);
 }
 afterEach(() => {
+  vi.unstubAllEnvs();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
@@ -134,6 +135,8 @@ it('does not inherit the development application, database or installed runtime'
 
 it('actually waits for the dev resource gate and runs in QA with its lock held', async () => {
   const options = fixture();
+  vi.stubEnv('FOLIOLE_RESOURCE_GATE_HELD', '');
+  vi.stubEnv('FOLIOLE_RESOURCE_GATE_RUNTIME_DIR', path.join(options.repoRoot, '.lab/internal/runtime'));
   startQaWorkspace(options);
   const resultFile = path.join(options.worktreePath, '.tmp', 'command.json');
   const command = [process.execPath, '-e', `require('fs').writeFileSync(${JSON.stringify(resultFile)},
