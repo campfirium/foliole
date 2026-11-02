@@ -8,6 +8,7 @@ export interface SettingsFontComboboxProps {
   onChange: (value: string) => void;
   onOpen: () => void;
   options: Array<{ label: string; value: string }>;
+  selectedLabel?: string;
   value: string;
 }
 

@@ -12,6 +12,13 @@ const CONTENT = '中文正文粗细变化Noto Sans SC 2026\n\n**Semantic bold**\
 
 test('renders genuine intermediate reading weights and restores the device preference', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
+  await desktopWindow.evaluate(async () => {
+    const settings = { 'foliole-interface-font-preset': 'noto-sans-sc', 'foliole-reading-font-weight': '400' };
+    for (const [key, value] of Object.entries(settings)) localStorage.setItem(key, value);
+    await window.electronAPI!.invoke('save_app_settings_state', { settings });
+  });
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
   await desktopWindow.evaluate(async (content) => {
     const api = window.__folioleWorkspaceDebug!;
     await api.seedNodes([{ content, id: 'reading-weight', kind: 'topic', title: 'Reading weight' }]);
@@ -19,9 +26,7 @@ test('renders genuine intermediate reading weights and restores the device prefe
   }, CONTENT);
   let dialog = await openSettingsCategory(desktopWindow, 'Typography');
   await expect(dialog.getByRole('slider', { name: TITLE })).toBeEnabled();
-  await dialog.getByRole('combobox', { name: FONT }).click();
-  await desktopWindow.getByRole('option', { name: 'Noto Sans SC', exact: true }).click();
-  await expect(dialog.getByRole('slider', { name: TITLE })).toBeEnabled();
+  await expect(dialog.getByRole('combobox', { name: FONT })).toContainText('Noto Sans SC');
   const artifactDir = path.resolve('.tmp/artifacts/T681');
   await mkdir(artifactDir, { recursive: true });
   const samples: Buffer[] = [];

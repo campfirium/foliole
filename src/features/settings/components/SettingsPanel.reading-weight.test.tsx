@@ -8,7 +8,7 @@ import { probeReadingFontWeights } from '../../../shared/typography/readingFontW
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
 
-vi.mock('../model/systemFonts', () => ({ listAvailableSystemFonts: vi.fn(async () => ({ fonts: [], monospaceFonts: [] })) }));
+vi.mock('../model/systemFonts', () => ({ listAvailableSystemFonts: vi.fn(async () => ({ fonts: ['Noto Sans SC'], monospaceFonts: [] })) }));
 vi.mock('../../../shared/typography/readingFontWeightProbe', async (original) => ({
   ...await original<typeof import('../../../shared/typography/readingFontWeightProbe')>(),
   probeReadingFontWeights: vi.fn()
@@ -49,7 +49,7 @@ it('resets to regular on font selection, then enables fine steps and saves the v
   fireEvent.keyDown(slider, { key: 'End' });
   await waitFor(() => expect(slider).toHaveValue('700'));
   fireEvent.click(screen.getByRole('combobox', { name: 'Text font' }));
-  fireEvent.click(screen.getByRole('option', { name: 'Noto Sans SC' }));
+  fireEvent.click(await screen.findByRole('option', { name: 'Noto Sans SC' }));
   expect(slider).toHaveValue('400');
   await waitFor(() => expect(slider).toBeEnabled());
   fireEvent.keyDown(slider, { key: 'ArrowRight' });
@@ -78,7 +78,7 @@ it('ignores the previous font detection when a new selection finishes first', as
   const slider = openTypography();
   expect(slider).toBeDisabled();
   fireEvent.click(screen.getByRole('combobox', { name: 'Text font' }));
-  fireEvent.click(screen.getByRole('option', { name: 'Noto Sans SC' }));
+  fireEvent.click(await screen.findByRole('option', { name: 'Noto Sans SC' }));
   await waitFor(() => expect(slider).toBeEnabled());
   finishOld([400]);
   fireEvent.keyDown(slider, { key: 'ArrowRight' });

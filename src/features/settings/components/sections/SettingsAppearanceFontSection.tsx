@@ -1,5 +1,6 @@
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { SettingsSection, settingsButtonClassName } from '../../../../shared/ui';
+import type { InterfaceFontPreset } from '../../model/appearanceSettings';
 import {
   INTERFACE_PRESET_OPTION_VALUES,
   MONOSPACE_PRESET_OPTION_VALUES,
@@ -41,11 +42,14 @@ export function SettingsAppearanceFontSection(props: {
   const t = useTranslation();
   const textOptions = [...buildFontOptions('preset', INTERFACE_PRESET_OPTION_VALUES, (value) => presetLabel(value, t)), ...buildFontOptions('font', props.interfaceFontOptions, (font) => font)];
   const monospaceOptions = [...buildFontOptions('mono-preset', MONOSPACE_PRESET_OPTION_VALUES, (value) => monospacePresetLabel(value, t)), ...buildFontOptions('mono-font', props.monospaceFontOptions, (font) => font)];
+  const textFontLabel = props.selectedInterfaceFontValue.startsWith('preset:')
+    ? presetLabel(props.selectedInterfaceFontValue.slice(7) as InterfaceFontPreset, t)
+    : props.selectedInterfaceFontValue.slice(5);
 
   return (
     <SettingsSection ariaLabel={t('settings.appearance.section.readingTypography')} title={t('settings.appearance.section.readingTypography')}
       actions={<button className={settingsButtonClassName()} onClick={props.onEnterPreview} type="button">{t('settings.appearance.surface.preview')}</button>}>
-      <div data-settings-search-row-id="typography-text-font"><SettingsFontComboboxRow ariaLabel={t('settings.appearance.textFont.title')} description={t('settings.appearance.textFont.description')} label={t('settings.appearance.textFont.title')} loading={props.isLoadingFontOptions} onChange={props.onInterfaceFontSelectionChange} onOpen={props.requestFontOptions} options={textOptions} value={props.selectedInterfaceFontValue} /></div>
+      <div data-settings-search-row-id="typography-text-font"><SettingsFontComboboxRow ariaLabel={t('settings.appearance.textFont.title')} description={t('settings.appearance.textFont.description')} label={t('settings.appearance.textFont.title')} loading={props.isLoadingFontOptions} onChange={props.onInterfaceFontSelectionChange} onOpen={props.requestFontOptions} options={textOptions} selectedLabel={textFontLabel} value={props.selectedInterfaceFontValue} /></div>
       <div data-settings-search-row-id="typography-monospace-font"><SettingsFontComboboxRow ariaLabel={t('settings.appearance.monospaceFont.aria')} description={t('settings.appearance.monospaceFont.description')} label={t('settings.appearance.monospaceFont.title')} loading={props.isLoadingFontOptions} onChange={props.onMonospaceFontSelectionChange} onOpen={props.requestFontOptions} options={monospaceOptions} value={props.selectedMonospaceFontValue} /></div>
       <div data-settings-search-row-id="typography-reading-font-size"><FontSizeRow interfaceFontSize={props.interfaceFontSize} onInterfaceFontSizeChange={props.onInterfaceFontSizeChange} onInterfaceFontSizeReset={props.onInterfaceFontSizeReset} /></div>
       <div data-settings-search-row-id="typography-reading-font-weight"><ReadingFontWeightRow /></div>

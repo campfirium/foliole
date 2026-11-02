@@ -11,7 +11,7 @@ export function SettingsFontComboboxRow(props: SettingsFontComboboxProps) {
   const listId = useId();
   const loadingId = useId();
   const state = useSettingsFontCombobox(props);
-  const selectedLabel = props.options.find((option) => option.value === props.value)?.label ?? props.value;
+  const selectedLabel = props.selectedLabel ?? props.options.find((option) => option.value === props.value)?.label ?? props.value;
 
   return (
     <SettingsRow description={props.description} title={props.label}>

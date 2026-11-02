@@ -92,7 +92,6 @@ export const SETTINGS_CATEGORY_STORAGE_KEY = APP_SETTINGS_STORAGE_KEYS.settingsA
 export const INTERFACE_PRESET_OPTION_VALUES: InterfaceFontPreset[] = [
   'default',
   'system',
-  'noto-sans-sc',
   'serif'
 ];
 

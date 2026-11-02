@@ -37,9 +37,16 @@ test('loads the system font catalog only after a font menu opens', async ({ desk
   }
   const options = desktopWindow.getByRole('option');
   await expect(options).not.toHaveCount(0);
-  const searchableFont = await options.nth(Math.min(3, (await options.count()) - 1)).innerText();
-  await desktopWindow.getByLabel(/^(Search fonts|搜索字体)$/).fill(searchableFont);
-  const matchingOption = desktopWindow.getByRole('option', { name: searchableFont, exact: true });
+  const nativeFonts = await desktopWindow.evaluate(async () => {
+    const catalog = await window.electronAPI!.invoke('list_system_fonts') as { fonts: string[] };
+    return catalog.fonts;
+  });
+  expect(nativeFonts.length).toBeGreaterThan(0);
+  const optionLabels = await options.allTextContents();
+  const searchableFont = nativeFonts.find((font) => optionLabels.includes(font));
+  expect(searchableFont).toBeDefined();
+  await desktopWindow.getByLabel(/^(Search fonts|搜索字体)$/).fill(searchableFont!);
+  const matchingOption = desktopWindow.getByRole('option', { name: searchableFont!, exact: true });
   await expect(matchingOption).toBeVisible();
   await matchingOption.click();
 
