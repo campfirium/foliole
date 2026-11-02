@@ -48,6 +48,7 @@ const ACTION_OVERRIDES = Object.freeze({
   's220-resource-diagnostic': { formalSourceClass: 'ordinary-only' },
   'sync-group-stopped-status': { formalSourceClass: 'ordinary-only' },
   't234-webview-session': { formalSourceClass: 'ordinary-only' },
+  'review-video-session': { formalSourceClass: 'ordinary-only' },
   'acceptance-sync-events': { formalSourceClass: 'ordinary-only', mutatesFixedA5: false },
   't250-dense-session': { requiresHiddenDesktopRuntime: true },
   'leave-sync-group': { requiresHiddenDesktopRuntime: true },

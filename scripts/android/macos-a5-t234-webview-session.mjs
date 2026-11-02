@@ -38,7 +38,7 @@ function waitForSessionEnd() {
 
 export async function runT234WebViewSession({
   assertFixed, buildIdentity, captured, checked, paths, serial,
-  waitForEnd = waitForSessionEnd, execute = executeProcess
+  waitForEnd = waitForSessionEnd, execute = executeProcess, restoreAppId = MAIN_APP
 }) {
   const appId = CAPACITY_APP;
   assertFixed();
@@ -83,7 +83,7 @@ export async function runT234WebViewSession({
     let cleanupError;
     try {
       checked(paths.adb, ['-s', serial, 'shell', 'am', 'start', '-W', '-n',
-        `${MAIN_APP}/com.foliole.android.MainActivity`]);
+        `${restoreAppId}/com.foliole.android.MainActivity`]);
     } catch (error) { cleanupError = error; }
     for (const driverApp of DRIVER_APPS) {
       try {

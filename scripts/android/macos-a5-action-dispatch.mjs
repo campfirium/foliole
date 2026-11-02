@@ -160,6 +160,10 @@ export async function dispatchMacosA5Action({
     await runT234WebViewSession({ assertFixed: () => assertFixed(paths), buildIdentity,
       captured, checked, paths, serial });
   }
+  if (action === 'review-video-session') {
+    const { runA5ReviewVideoSession } = await import('./macos-a5-review-video-session.mjs');
+    await runA5ReviewVideoSession({ assertFixed: () => assertFixed(paths), buildIdentity, captured, checked, paths, serial });
+  }
   if (action === 'acceptance-sync-events') {
     const { readA5AcceptanceSyncEvents } = await import('./macos-a5-acceptance-sync-events.mjs');
     await readA5AcceptanceSyncEvents({ assertFixed: () => assertFixed(paths),
