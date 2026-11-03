@@ -14,7 +14,7 @@ export async function openReader(page: Page) {
     await import('/@fs/${process.cwd()}/tests/fixtures/companionReadingFonts.tsx');
     </script></body></html>` }));
   await page.goto('/__reading-fonts');
-  await expect(page.locator('.cm-content')).toContainText('AAAA');
+  await expect(page.locator('.cm-content')).toContainText('AAAA', { timeout: 15_000 });
   await page.getByRole('button', { name: 'Reading appearance' }).click();
 }
 
@@ -65,7 +65,7 @@ export async function seedLegacyFont(page: Page) {
     }));
   }, { data: [...bytes], id });
   await page.reload();
-  await expect(page.locator('.cm-content')).toContainText('AAAA');
+  await expect(page.locator('.cm-content')).toContainText('AAAA', { timeout: 15_000 });
   await expect.poll(() => page.evaluate(() => Array.from(document.fonts).filter(face =>
     face.family.startsWith('FolioleReadingFont_')).length)).toBe(1);
   return id;

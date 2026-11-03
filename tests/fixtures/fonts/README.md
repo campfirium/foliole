@@ -7,3 +7,10 @@ browser: Regular 400, Bold 800, Italic 600, BoldItalic 1000 font units.
 They share the embedded family `Foliole Test Reading`, with OS/2 weights
 400/700 and upright/italic flags. Filenames do not define their family.
 The fixture outlines contain no third-party font artwork.
+
+Reading-ConflictingRegular uses a different original triangular outline and advance
+in the same embedded family/400/upright slot, to prove conflicts do not overwrite.
+
+Reading-PreferredRegular and Reading-PreferredBold have different legacy
+family names (name ID 1), but share `Foliole Preferred Family` in name ID 16.
+Their original triangle glyphs identify correct grouping by typographic family.
