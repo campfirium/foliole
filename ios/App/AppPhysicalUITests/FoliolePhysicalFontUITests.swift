@@ -21,8 +21,20 @@ final class FoliolePhysicalFontUITests: XCTestCase {
         systemFont.tap()
         XCTAssertEqual(app.buttons["Device fonts"].value as? String, "PingFang SC")
         screenshot("Fri-system-font-selected")
-        let importedFonts = app.switches.matching(identifier: "RobotoMono-Regular")
-        let previousImportCount = importedFonts.count
+        importFont(in: app)
+        let selectedFont = app.switches.matching(NSPredicate(
+            format: "label == %@ AND value == %@", "Roboto Mono", "1"
+        )).firstMatch
+        XCTAssertTrue(selectedFont.waitForExistence(timeout: 20))
+        XCTAssertEqual(app.switches.matching(identifier: "Roboto Mono").count, 1)
+        screenshot("Fri-custom-font-selected")
+        importFont(in: app)
+        XCTAssertEqual(app.switches.matching(identifier: "Roboto Mono").count, 1)
+        XCTAssertTrue(selectedFont.exists)
+        screenshot("Fri-custom-font-duplicate")
+    }
+
+    private func importFont(in app: XCUIApplication) {
         app.buttons["Add font"].tap()
         XCTAssertTrue(app.otherElements["Browse View (Picker)"].waitForExistence(timeout: 15))
         app.buttons["Recents"].tap()
@@ -39,12 +51,10 @@ final class FoliolePhysicalFontUITests: XCTestCase {
         let fontFile = app.cells["RobotoMono-Regular.otf, otf"]
         XCTAssertTrue(fontFile.waitForExistence(timeout: 10))
         fontFile.tap()
-        let selectedFont = app.switches.matching(NSPredicate(
-            format: "label == %@ AND value == %@", "RobotoMono-Regular", "1"
-        )).firstMatch
-        XCTAssertTrue(selectedFont.waitForExistence(timeout: 20))
-        XCTAssertEqual(importedFonts.count, previousImportCount + 1)
-        screenshot("Fri-custom-font-selected")
+        let confirm = app.buttons["Add fonts"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 20))
+        confirm.tap()
+        XCTAssertTrue(confirm.waitForNonExistence(timeout: 20))
     }
 
     private func prepareArticle(named title: String, in app: XCUIApplication) {

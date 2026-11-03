@@ -22,6 +22,14 @@ function useFontList(setError: (error: 'actionError') => void) {
   return [fonts, setFonts] as const;
 }
 
+async function selectStoredFont(id: string, current: { current: CustomFontProps }) {
+  const previousFamily = current.current.settings.fontFamily;
+  if (!await activateReadingFont(id)) throw new Error('Font is missing');
+  const { settings, onChange } = current.current;
+  if (settings.fontFamily !== previousFamily) return;
+  if (onChange({ ...settings, fontFamily: `custom:${id}` }) === false) throw new Error('Could not save selection');
+}
+
 export function useReadingCustomFonts(props: CustomFontProps) {
   const [error, setError] = useState<'importError' | 'actionError' | null>(null);
   const [fonts, setFonts] = useFontList(setError);
@@ -34,11 +42,8 @@ export function useReadingCustomFonts(props: CustomFontProps) {
   async function selectFont(id: string) {
     setBusy(true);
     setError(null);
-    try {
-      if (!await activateReadingFont(id)) throw new Error('Font is missing');
-      const { settings, onChange } = current.current;
-      if (onChange({ ...settings, fontFamily: `custom:${id}` }) === false) throw new Error('Could not save selection');
-    } catch { setError('actionError'); }
+    try { await selectStoredFont(id, current); }
+    catch { setError('actionError'); }
     finally { setBusy(false); }
   }
 
@@ -53,13 +58,14 @@ export function useReadingCustomFonts(props: CustomFontProps) {
 
   async function confirmImport() {
     if (!prepared) return;
+    const previousFamily = current.current.settings.fontFamily;
     setBusy(true);
     setError(null);
     try {
       const imported = await commitReadingFonts(prepared);
       setFonts(await listReadingFonts());
       setPrepared(null);
-      if (imported.length === 1) {
+      if (imported.length === 1 && current.current.settings.fontFamily === previousFamily) {
         const { settings, onChange } = current.current;
         if (onChange({ ...settings, fontFamily: `custom:${imported[0]!.id}` }) === false) setError('actionError');
       }

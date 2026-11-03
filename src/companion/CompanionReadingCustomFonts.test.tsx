@@ -84,3 +84,34 @@ it('does not change selection if a stored family cannot load', async () => {
   expect(await screen.findByRole('alert')).toBeInTheDocument();
   expect(onChange).not.toHaveBeenCalled();
 });
+
+it('keeps a newer font choice when an earlier stored font finishes loading', async () => {
+  fontsMock.listReadingFonts.mockResolvedValue([family]);
+  let finish!: (loaded: boolean) => void;
+  fontsMock.activateReadingFont.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+  const onChange = vi.fn();
+  const view = render(<CompanionReadingCustomFonts onChange={onChange}
+    settings={DEFAULT_READING_TYPOGRAPHY_SETTINGS} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Reader' }));
+  view.rerender(<CompanionReadingCustomFonts onChange={onChange}
+    settings={{ ...DEFAULT_READING_TYPOGRAPHY_SETTINGS, fontFamily: 'serif' }} />);
+  finish(true);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Reader' })).toBeEnabled());
+  expect(onChange).not.toHaveBeenCalled();
+});
+
+it('keeps a newer font choice when an import finishes saving', async () => {
+  let finish!: (fonts: typeof family[]) => void;
+  fontsMock.commitReadingFonts.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+  const onChange = vi.fn();
+  const view = render(<CompanionReadingCustomFonts onChange={onChange}
+    settings={DEFAULT_READING_TYPOGRAPHY_SETTINGS} />);
+  upload(view.container);
+  fireEvent.click(await screen.findByRole('button', { name: 'Add fonts' }));
+  view.rerender(<CompanionReadingCustomFonts onChange={onChange}
+    settings={{ ...DEFAULT_READING_TYPOGRAPHY_SETTINGS, fontFamily: 'serif' }} />);
+  fontsMock.listReadingFonts.mockResolvedValue([family]);
+  finish([family]);
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Add fonts' })).not.toBeInTheDocument());
+  expect(onChange).not.toHaveBeenCalled();
+});
