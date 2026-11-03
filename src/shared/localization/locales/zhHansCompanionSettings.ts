@@ -1,14 +1,17 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.settings.learning.reviewGroup': '复习安排',
+  'companion.settings.learning.priorityGroup': '主题优先级',
+  'companion.settings.learning.mixGroup': '阅读与复习比例',
+  'companion.settings.learning.intervalGroup': '阅读间隔',
   'companion.settings.learning.title': '学习设置',
   'companion.settings.learning.section': '学习',
-  'companion.settings.learning.dayStart': '新一天开始时间（小时）',
+  'companion.settings.learning.dayStart': '新一天开始时间',
   'companion.settings.learning.readingRatio': '阅读比例',
   'companion.settings.learning.reviewRatio': '复习比例',
   'companion.settings.learning.growthMin': '阅读间隔增长下限',
   'companion.settings.learning.growthMax': '阅读间隔增长上限',
-  'companion.settings.learning.save': '保存',
   'companion.settings.learning.loading': '正在读取学习设置…',
   'companion.settings.learning.loadError': '无法读取学习设置，请重试。',
   'companion.settings.learning.saveError': '修改未能保存，请重试。',

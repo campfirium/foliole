@@ -1,4 +1,5 @@
 import { Minus, Plus } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { useTranslation } from '@/shared/localization/LocalizationProvider';
 
@@ -6,14 +7,16 @@ export function CompanionReadingNumberControl(props: {
   label: string;
   value: number;
   min: number;
-  max: number;
+  max?: number;
   step: number;
   unit?: string;
+  disabled?: boolean;
+  valueControl?: ReactNode;
   onChange(value: number): void;
 }) {
   const t = useTranslation();
   const change = (direction: number) => props.onChange(
-    Number(Math.min(props.max, Math.max(props.min, (direction > 0
+    Number(Math.min(props.max ?? Number.MAX_SAFE_INTEGER, Math.max(props.min, (direction > 0
       ? Math.floor(props.value / props.step + 1e-8) + 1
       : Math.ceil(props.value / props.step - 1e-8) - 1) * props.step)).toFixed(2))
   );
@@ -22,18 +25,18 @@ export function CompanionReadingNumberControl(props: {
     + 'focus-visible:outline-companion-accent';
   return (
     <div className="flex min-h-14 items-center justify-between gap-3 border-b border-companion-divider py-2">
-      <span className="text-sm font-medium text-foreground">{props.label}</span>
+      <span className="min-w-0 text-sm font-medium text-foreground">{props.label}</span>
       <div className="flex shrink-0 items-center gap-2">
-        <output aria-label={props.label} aria-live="polite" className="min-w-12 text-right text-sm tabular-nums text-companion-text-secondary">
+        {props.valueControl ?? <output aria-label={props.label} aria-live="polite" className="min-w-12 text-right text-sm tabular-nums text-companion-text-secondary">
           {props.value}{props.unit}
-        </output>
+        </output>}
         <div className="flex divide-x divide-companion-divider rounded-md border border-companion-divider">
           <button aria-label={t('companion.reading.font.decrease', { setting: props.label })}
-            className={buttonClass} disabled={props.value <= props.min} onClick={() => change(-1)} type="button">
+            className={buttonClass} disabled={props.disabled || props.value <= props.min} onClick={() => change(-1)} type="button">
             <Minus aria-hidden="true" size={16} />
           </button>
           <button aria-label={t('companion.reading.font.increase', { setting: props.label })}
-            className={buttonClass} disabled={props.value >= props.max} onClick={() => change(1)} type="button">
+            className={buttonClass} disabled={props.disabled || props.value >= (props.max ?? Number.MAX_SAFE_INTEGER)} onClick={() => change(1)} type="button">
             <Plus aria-hidden="true" size={16} />
           </button>
         </div>

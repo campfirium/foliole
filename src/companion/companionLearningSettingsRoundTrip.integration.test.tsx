@@ -21,7 +21,7 @@ vi.mock('@capacitor/core', async () => {
 });
 
 const values = [
-  ['Desired retention', '0.82'], ['Maximum interval days', '120'], ['New day starts at (hour)', '7'],
+  ['Desired retention', '0.82'], ['Maximum interval days', '120'], ['New day starts at', '7'],
   ['New item load balancing', '14'], ['Default topic priority', '6'], ['Priority weight', '3'],
   ['Reading ratio', '2'], ['Review ratio', '3'], ['Reading initial interval days', '1.5'],
   ['Minimum reading interval growth', '1.2'], ['Maximum reading interval growth', '1.8']
@@ -62,12 +62,15 @@ it.each(['android', 'ios'] as const)('saves all nine settings through the %s own
   hydrateCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
   await open(platform);
   render(<CompanionLearningSettingsContent />);
-  for (const [label, value] of values) expect(await screen.findByRole('spinbutton', { name: label })).toHaveValue(Number(value));
+  for (const [label, value] of values) {
+    const control = await screen.findByLabelText(label);
+    expect(control).toHaveValue(control instanceof HTMLSelectElement ? value : Number(value));
+  }
   expect(getCurrentReviewSchedulerSettings()).toEqual(expected);
 });
 
 it.each([
-  ['Desired retention', '1'], ['Maximum interval days', '0'], ['New day starts at (hour)', '24'],
+  ['Desired retention', '1'], ['Maximum interval days', '0'], ['New day starts at', '24'],
   ['New item load balancing', '100'], ['Default topic priority', '0'], ['Priority weight', '0'],
   ['Reading ratio', '0'], ['Review ratio', '0'], ['Reading initial interval days', '0'],
   ['Minimum reading interval growth', '0'], ['Maximum reading interval growth', '0']
@@ -77,9 +80,9 @@ it.each([
   await open('android');
   hydrateCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
   render(<CompanionLearningSettingsContent />);
-  const input = await screen.findByRole('spinbutton', { name: label });
+  const input = await screen.findByLabelText(label);
   fireEvent.change(input, { target: { value } });
-  fireEvent.submit(input.closest('form')!);
+  if (input instanceof HTMLInputElement) fireEvent.blur(input);
   expect(sqlite!.prepare('SELECT * FROM setting_records').all()).toEqual([]);
   expect(getCurrentReviewSchedulerSettings()).toEqual(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
 });

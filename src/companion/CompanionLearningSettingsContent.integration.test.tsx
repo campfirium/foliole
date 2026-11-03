@@ -74,12 +74,13 @@ it.each(['setting_records', 'sync_object_state'])('keeps the saved value on %s w
   const input = await screen.findByRole('spinbutton', { name: 'Desired retention' });
   library.database.exec(`CREATE TRIGGER reject_setting BEFORE INSERT ON ${table} BEGIN SELECT RAISE(ABORT,'full'); END`);
   fireEvent.change(input, { target: { value: '0.8' } });
-  fireEvent.submit(input.closest('form')!);
+  fireEvent.blur(input);
   expect(await screen.findByRole('alert')).toHaveTextContent('Changes could not be saved');
   expect(getCurrentReviewSchedulerSettings().desiredRetention).toBe(0.9);
   expect(library.database.prepare('SELECT * FROM setting_records').all()).toEqual([]);
   library.database.exec('DROP TRIGGER reject_setting');
-  await changeSetting('Desired retention', '0.8');
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Retry' })); });
+  await vi.waitFor(() => expect(getCurrentReviewSchedulerSettings().desiredRetention).toBe(0.8));
   expect(getCurrentReviewSchedulerSettings().desiredRetention).toBe(0.8);
 });
 
@@ -130,4 +131,58 @@ it('applies new-item balancing to real cloze creation without moving existing du
   expect(library.database.prepare('SELECT * FROM node_review ORDER BY node_id').all()).toEqual(before);
   const third = await createCloze();
   expect(Date.parse(third.due)).toBeGreaterThan(Date.parse(first.due));
+});
+
+it('uses the established mobile stepper to adjust and save retention without a separate save action', async () => {
+  render(<CompanionLearningSettingsContent />);
+  const increase = await screen.findByRole('button', { name: 'Increase Desired retention' });
+  fireEvent.click(increase);
+  await vi.waitFor(() => expect(getCurrentReviewSchedulerSettings().desiredRetention).toBe(0.91));
+  const row = library.database.prepare("SELECT value_json FROM setting_records WHERE key='review_scheduler_settings'").get() as { value_json: string };
+  expect(JSON.parse(row.value_json).desiredRetention).toBe(0.91);
+  expect(screen.queryByRole('button', { name: 'Save', exact: true })).not.toBeInTheDocument();
+});
+
+it('commits precise entry on keyboard completion and cancels an unfinished edit', async () => {
+  render(<CompanionLearningSettingsContent />);
+  const input = await screen.findByRole('spinbutton', { name: 'Maximum interval days' });
+  input.focus();
+  fireEvent.change(input, { target: { value: '240' } });
+  fireEvent.keyDown(input, { key: 'Enter' });
+  await vi.waitFor(() => expect(getCurrentReviewSchedulerSettings().maximumIntervalDays).toBe(240));
+  await vi.waitFor(() => expect(input).not.toBeDisabled());
+  input.focus();
+  fireEvent.change(input, { target: { value: '999' } });
+  fireEvent.keyDown(input, { key: 'Escape' });
+  expect(input).toHaveValue(240);
+  expect(getCurrentReviewSchedulerSettings().maximumIntervalDays).toBe(240);
+});
+
+it('steps from a precise draft when focus moves to its increase button', async () => {
+  render(<CompanionLearningSettingsContent />);
+  const input = await screen.findByRole('spinbutton', { name: 'Desired retention' });
+  const increase = screen.getByRole('button', { name: 'Increase Desired retention' });
+  fireEvent.change(input, { target: { value: '0.94' } });
+  fireEvent.blur(input, { relatedTarget: increase });
+  fireEvent.click(increase);
+  await vi.waitFor(() => expect(getCurrentReviewSchedulerSettings().desiredRetention).toBe(0.95));
+});
+
+it('commits the latest typed value when input and completion arrive in the same event batch', async () => {
+  render(<CompanionLearningSettingsContent />);
+  const input = await screen.findByRole('spinbutton', { name: 'Reading initial interval days' });
+  await act(async () => {
+    fireEvent.change(input, { target: { value: '2' } });
+    fireEvent.blur(input);
+  });
+  await vi.waitFor(() => expect(getCurrentReviewSchedulerSettings().pushQueue.readingInitialIntervalMs).toBe(172_800_000));
+});
+
+it('retains the first precise edit across repeated settings reentry', async () => {
+  for (let index = 0; index < 5; index++) {
+    const ui = render(<CompanionLearningSettingsContent />);
+    await changeSetting('Reading initial interval days', '2');
+    await changeSetting('Reading initial interval days', '1');
+    ui.unmount();
+  }
 });

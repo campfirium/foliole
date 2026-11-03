@@ -32,7 +32,7 @@ it('keeps the live day and current topic after changing the boundary, then adopt
   const before = await open(now);
   expect(before.session.currentNodeId).not.toBeNull();
   render(<CompanionLearningSettingsContent />);
-  await changeLearningSetting('New day starts at (hour)', '10');
+  await changeLearningSetting('New day starts at', '10');
   const after = await open(now);
   expect(after.session.dayWindow).toEqual(before.session.dayWindow);
   expect(after.session.currentNodeId).toBe(before.session.currentNodeId);

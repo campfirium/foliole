@@ -47,3 +47,11 @@ export const COMPANION_LEARNING_SETTING_FIELDS: readonly CompanionLearningSettin
       min: Math.min(max, settings.pushQueue.readingIntervalGrowthFactorRange.min), max
     } } }) }
 ];
+
+
+export const COMPANION_LEARNING_SETTING_GROUPS: readonly { title: TranslationKey; keys: string[] }[] = [
+  { title: 'companion.settings.learning.reviewGroup', keys: ['desiredRetention', 'maximumIntervalDays', 'newItemLoadBalancingDays', 'newDayStartsAtHour'] },
+  { title: 'companion.settings.learning.priorityGroup', keys: ['defaultPriority', 'priorityRatio'] },
+  { title: 'companion.settings.learning.mixGroup', keys: ['queueMixReading', 'queueMixFsrs'] },
+  { title: 'companion.settings.learning.intervalGroup', keys: ['readingInitialIntervalDays', 'readingGrowthMin', 'readingGrowthMax'] }
+];
