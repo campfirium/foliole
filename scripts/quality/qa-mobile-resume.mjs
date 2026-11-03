@@ -13,6 +13,7 @@ import { runQaWorkspaceCommand } from './qa-workspace.mjs';
 
 export const MOBILE_RESUME_TESTS = [
   'scripts/quality/mobile-beta-evidence.test.mjs', 'scripts/quality/qa-mobile-resume.test.mjs',
+  'scripts/quality/mobile-distribution-workflow.test.mjs',
   'scripts/quality/remote-quality.test.mjs', 'scripts/quality/remote-quality-run-title.test.mjs',
   'scripts/quality/qa-workspace-integration.test.mjs', 'scripts/quality/chain-verdict-read.test.mjs',
   'scripts/ios/testflight-contract.test.mjs', 'scripts/ios/testflight-workflow.test.mjs',
@@ -80,6 +81,7 @@ async function selectMobileResume({ record, sourceSha, qualityRunId, cwd, repo, 
       record.dispatchPending = { kind: 'mobile-resume', targetSha: sourceSha, qualityRunId, startedAt: new Date().toISOString() };
       saveQaRecord(record);
       const response = JSON.parse(await requireSuccess(runner, 'gh', ['api', '--method', 'POST',
+        '-H', 'X-GitHub-Api-Version: 2026-03-10',
         `repos/${repo}/actions/workflows/remote-quality.yml/dispatches`, '--input', '-'], { cwd,
         input: JSON.stringify({ ref: 'check', inputs: { scope: 'full', target_sha: sourceSha,
           trigger_short: sourceSha.slice(0, 9), mobile_distribution: 'ios', mobile_quality_run_id: qualityRunId } }) }));

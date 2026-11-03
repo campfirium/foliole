@@ -49,6 +49,8 @@ App Store Connect beta description, review contact and any required export-compl
 
 ## Verification
 
+The hosted archive uses the imported Apple Distribution private key, with App Store profiles fetched by the pinned `prepare_signing` Fastlane lane for the app and Share Extension. A generated xcconfig assigns profiles only to those targets and disables standalone signing for package targets; export uses the same manual distribution profiles. The lane may create a missing App Store profile for the existing installed certificate; it never creates or revokes certificates. No Development private key is needed. Both archived bundles and the final App Store IPA still undergo signature verification.
+
 Run explicit local tests before hosted execution:
 
 ```sh

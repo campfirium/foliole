@@ -2,11 +2,15 @@
 import { describe, expect, it } from 'vitest';
 import { createTestflightCandidate, verifyTestflightReceipt, IOS_APP_ID,
   IOS_GROUP_ID, IOS_INVITATION } from './testflight-candidate.mjs';
-import { archiveArguments, testflightBuildEnv } from './testflight-archive.mjs';
+import { archiveArguments, distributionSigningConfig, testflightBuildEnv } from './testflight-archive.mjs';
 import { verifyIosBundleMetadata } from './testflight-signature.mjs';
 import { assertApprovedTestflightBuild, appleReadToken } from './testflight-publication.mjs';
 import { Buffer } from 'node:buffer';
 import { generateKeyPairSync, verify } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import path from 'node:path';
+import process from 'node:process';
 
 const sha = 'a'.repeat(40);
 const input = { headSha: sha, acceptedSha: sha, runSha: sha, ref: 'refs/heads/release',
@@ -50,9 +54,11 @@ describe('TestFlight exact candidate and public availability', () => {
       VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE: '1' })).toEqual({ KEEP: 'yes' });
   });
 
-  it('leaves automatic archive signing available to app, extension and package targets', () => {
-    const args = archiveArguments({ archive: 'archive', derivedData: 'cache', candidate, keyPath: 'key' });
-    expect(args).toContain('CODE_SIGN_STYLE=Automatic');
+  it('archives with target-scoped distribution profiles instead of requesting a development key', () => {
+    const args = archiveArguments({ archive: 'archive', derivedData: 'cache', candidate, keyPath: 'key', signingConfig: 'distribution.xcconfig' });
+    expect(args).toContain('-xcconfig');
+    expect(args).toContain('distribution.xcconfig');
+    expect(args).not.toContain('CODE_SIGN_STYLE=Automatic');
     expect(args.some(arg => arg?.startsWith('CODE_SIGN_IDENTITY='))).toBe(false);
     expect(args).toContain('-allowProvisioningUpdates');
   });
@@ -65,6 +71,50 @@ describe('TestFlight exact candidate and public availability', () => {
       expect(() => verifyTestflightReceipt({ ...receipt, ...change })).toThrow();
     }
     expect(() => verifyTestflightReceipt(receipt, { sha: 'b'.repeat(40) })).toThrow();
+  });
+
+  it('assigns App Store profiles only to the app and extension and rejects missing profiles', () => {
+    const profiles = { App: '11111111-1111-4111-8111-111111111111',
+      FolioleShareExtension: '22222222-2222-4222-8222-222222222222' };
+    const settings = distributionSigningConfig(profiles);
+    expect(settings).toContain('CODE_SIGN_STYLE = Manual');
+    expect(settings).toContain('CODE_SIGN_IDENTITY = Apple Distribution');
+    expect(settings).toContain('CODE_SIGNING_ALLOWED = $(FOLIOLE_SIGNING_$(TARGET_NAME):default=NO)');
+    for (const [target, uuid] of Object.entries(profiles)) {
+      expect(settings).toContain(`FOLIOLE_PROFILE_${target} = ${uuid}`);
+    }
+    for (const value of [undefined, '', 'profile\nCODE_SIGN_STYLE = Automatic']) {
+      expect(() => distributionSigningConfig({ ...profiles, App: value })).toThrow(/profile/);
+    }
+  });
+
+  it('fetches distribution profiles against installed keys without renewing certificates', () => {
+    mkdirSync('.tmp/artifacts', { recursive: true });
+    const directory = mkdtempSync(path.resolve('.tmp/artifacts/signing-'));
+    const file = path.join(directory, 'profiles.json');
+    const script = `
+      def opt_out_usage; end
+      def default_platform(*); end
+      def platform(*); yield; end
+      def desc(*); end
+      def lane(name, &block); (@lanes ||= {})[name] = block; end
+      def app_store_connect_api_key(**); {}; end
+      def get_provisioning_profile(**options)
+        raise 'Wrong signing credential request' unless options[:development] == false &&
+          options[:adhoc] == false && options[:force] == false && options[:skip_certificate_verification] == false
+        options.fetch(:app_identifier)
+      end
+      load ARGV.fetch(0)
+      @lanes.fetch(:prepare_signing).call
+    `;
+    try {
+      execFileSync('ruby', ['-e', script, path.resolve('scripts/ios/fastlane/Fastfile')], {
+        env: { ...process.env, APPLE_API_KEY_ID: 'test', APPLE_API_ISSUER: 'test',
+          APPLE_API_KEY_BASE64: 'test', FOLIOLE_IOS_SIGNING_PROFILES: file }
+      });
+      expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ App: 'com.campfirium.foliole.ios',
+        FolioleShareExtension: 'com.campfirium.foliole.ios.share' });
+    } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 
   it('requires App Store entitlements and matching host/extension versions', () => {

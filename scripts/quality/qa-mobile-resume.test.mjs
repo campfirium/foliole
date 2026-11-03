@@ -29,7 +29,8 @@ function fixture() {
   const runner = vi.fn(async (command, args, options) => {
     calls.push({ command, args, options });
     if (command === 'git') return { code: 0, stdout: '', stderr: '' };
-    if (args.includes('--method')) return { code: 0, stdout: JSON.stringify(response), stderr: '' };
+    if (args.includes('--method')) return { code: 0,
+      stdout: args.includes('X-GitHub-Api-Version: 2026-03-10') ? JSON.stringify(response) : '', stderr: '' };
     if (args.some(arg => arg.includes('runs?branch='))) return { code: 0, stdout: '{"workflow_runs":[]}', stderr: '' };
     return { code: 0, stdout: JSON.stringify({ head_branch: 'check', head_sha: sourceSha,
       display_title: `Dev Quality Check (mobile_resume) @ ${sourceSha.slice(0, 9)} [mobile:ios] [reuse:42]` }), stderr: '' };

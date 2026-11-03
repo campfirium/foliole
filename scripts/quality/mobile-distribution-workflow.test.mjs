@@ -8,7 +8,8 @@ import { parse } from 'yaml';
 
 const remote = parse(readFileSync('.github/workflows/remote-quality.yml', 'utf8'));
 const signing = parse(readFileSync('.github/workflows/release-ios.yml', 'utf8'));
-const evaluate = (expression, context) => runInNewContext(expression.replace(/^\$\{\{|\}\}$/gu, ''), context);
+const evaluate = (expression, context) => runInNewContext(expression
+  .replace(/^\$\{\{|\}\}$/gu, '').replace(/needs\.([\w-]+)/gu, 'needs["$1"]'), context);
 const guard = remote.jobs['dev-ref'].steps.find(step => step.env?.MOBILE);
 const execute = (step, env) => spawnSync('bash', ['-e', '-c', step.run], {
   env: { ...process.env, ...env }, encoding: 'utf8'
@@ -24,16 +25,25 @@ it('allows normal quality but requires full check QA for any mobile side effect'
   }
 });
 
-it('has no path from failed, narrow or ordinary quality to signing', () => {
+it('requires successful full quality or verified reuse before mobile signing', () => {
   expect(remote.on.workflow_dispatch.inputs.mobile_distribution.default).toBe('none');
-  const context = { inputs: { mobile_distribution: 'none', scope: 'full' } };
+  const context = { always: () => true, inputs: { mobile_distribution: 'none', scope: 'full' },
+    needs: { 'mobile-context': { result: 'success' } } };
   expect(evaluate(remote.jobs['mobile-ios'].if, context)).toBe(false);
-  expect(evaluate(remote.jobs['mobile-context'].if, { inputs: { mobile_distribution: 'ios', scope: 'ios' } })).toBe(false);
-  expect(remote.jobs['mobile-context'].needs).toBe('full-quality');
-  expect(remote.jobs['mobile-ios'].needs).toEqual(['full-quality', 'mobile-context']);
-  expect(remote.jobs['mobile-ios'].with.target_sha).toBe('${{ needs.full-quality.outputs.accepted_sha }}');
-  // With no always()/failure() override, Actions requires all direct needs to succeed.
-  expect(remote.jobs['mobile-ios'].if).not.toMatch(/always|failure|cancelled/u);
+  for (const scope of ['full', 'ios']) {
+    for (const full of ['success', 'failure', 'skipped', 'cancelled']) {
+      for (const reuse of ['success', 'failure', 'skipped', 'cancelled']) {
+        const admitted = scope === 'full' && (full === 'success' || reuse === 'success');
+        const needs = { 'full-quality': { result: full }, 'mobile-reuse': { result: reuse } };
+        const inputs = { mobile_distribution: 'ios', scope };
+        expect(evaluate(remote.jobs['mobile-context'].if, { ...context, inputs, needs })).toBe(admitted);
+        needs['mobile-context'] = { result: admitted ? 'success' : 'skipped' };
+        expect(evaluate(remote.jobs['mobile-ios'].if, { ...context, inputs, needs })).toBe(admitted);
+      }
+    }
+  }
+  expect(remote.jobs['mobile-ios'].needs).toContain('mobile-context');
+  expect(remote.jobs['mobile-ios'].with.target_sha).toBe('${{ needs.full-quality.outputs.accepted_sha || needs.mobile-reuse.outputs.accepted_sha }}');
   expect(remote.jobs['mobile-ios'].with.execution_lane).toBe('qa-mobile-beta');
   expect(remote.jobs['mobile-ios'].uses).toBe('./.github/workflows/release-ios.yml');
   expect(remote.permissions.contents).toBe('read');
