@@ -1,7 +1,7 @@
 import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { invalidateAttachmentResourceResolution } from '../shared/platform/attachmentResources';
-import { publishCompanionImportedFile } from '../shared/platform/companion/runtime/companionFileImportPublication';
+import { publishCompanionImportedFile, publishCompanionImportedFiles } from '../shared/platform/companion/runtime/companionFileImportPublication';
 import { runCompanionHistoryMutation } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { completeCompanionPdfTextImport } from '../shared/platform/companion/runtime/companionImportedPdfText';
 import { persistCompanionImportedTextWithDb } from '../shared/platform/companion/runtime/companionImportedText';
@@ -25,7 +25,7 @@ export function createCompanionFileImportHandler(workspace: Pick<ReturnType<type
     try {
       signal?.throwIfAborted();
       owner = getIosCompanionDatabaseOwner();
-      const prepared = await prepareSelectedTextImport(file);
+      const prepared = await prepareSelectedTextImport(file, signal);
       importWarning = prepared.importWarning;
       signal?.throwIfAborted();
       const commit = () => runCompanionHistoryMutation(async db => {
@@ -34,14 +34,20 @@ export function createCompanionFileImportHandler(workspace: Pick<ReturnType<type
         await assertCaptureParentAvailable(db, parentNodeId);
         if (prepared.pdfSource) invalidateAttachmentResourceResolution(prepared.pdfSource.storageKey);
         const imported = await persistCompanionImportedTextWithDb(db, prepared, parentNodeId,
-          prepared.pdfSource ? [{ storage_key: prepared.pdfSource.storageKey, original_name: file.name, role: 'reference' }] : []);
+          prepared.pdfSource ? [{ storage_key: prepared.pdfSource.storageKey, original_name: file.name, role: 'reference' }] : prepared.epubBook?.resources ?? [],
+          prepared.epubBook?.chapters);
         if (prepared.pdfSource) {
           await recordFramedSyncResourceAvailability(db, [prepared.pdfSource.storageKey.slice(0, 64)], true);
+        }
+        for (const resource of prepared.epubBook?.files ?? []) {
+          invalidateAttachmentResourceResolution(resource.storageKey);
+          await recordFramedSyncResourceAvailability(db, [resource.storageKey.slice(0, 64)], true);
         }
         signal?.throwIfAborted();
         return imported;
       }, { kind: 'full' }, node => { committed.nodeId = node.id; });
-      const node = prepared.pdfSource ? await publishCompanionImportedFile(prepared.pdfSource, commit, owner, signal) : await commit();
+      const node = prepared.pdfSource ? await publishCompanionImportedFile(prepared.pdfSource, commit, owner, signal)
+        : prepared.epubBook ? await publishCompanionImportedFiles(prepared.epubBook.files, commit, owner, signal) : await commit();
       if (prepared.pdfSource) await completeCompanionPdfTextImport(prepared.pdfSource, node.id, owner, signal);
       try { await refresh(); }
       catch { return { nodeId: node.id, retryRefresh: refresh, ...(importWarning ? { importWarning } : {}) }; }

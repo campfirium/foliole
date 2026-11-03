@@ -1,10 +1,7 @@
 import path from 'node:path';
 
-const IMAGE_FILE_MIME_TYPES = new Map([
-  ['.gif', 'image/gif'], ['.jpg', 'image/jpeg'], ['.jpeg', 'image/jpeg'],
-  ['.png', 'image/png'], ['.webp', 'image/webp']
-]);
+import { imageMimeTypeFromExtension } from '../../lib/core/import/epub/epubImageMimeType.js';
 
 export function resolveImageMimeType(fileNameOrPath: string) {
-  return IMAGE_FILE_MIME_TYPES.get(path.extname(fileNameOrPath).toLowerCase()) ?? null;
+  return imageMimeTypeFromExtension(path.extname(fileNameOrPath));
 }

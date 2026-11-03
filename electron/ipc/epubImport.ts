@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
-import type { PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
+import { prepareEpubBookNode, buildEpubRootContent, type PreparedBookNode } from '../../lib/core/import/epub/epubPreparedBook.js';
 import { createEpubGeneratedNodeId } from '../../lib/core/import/epubGeneratedNodeIdentity.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -17,16 +17,6 @@ import { applyEpubSequentialReadingMode } from './epubSequentialReading.js';
 import { stageEpubText } from './epubStagedContent.js';
 import { type ImportSourceDescriptor } from './importSourcePipeline.js';
 
-interface PreparedBookNode {
-  content: string;
-  degradedReason: string | null;
-  embeddedImages: PreparedImportEmbeddedImage[];
-  hideTitleHeading: boolean;
-  key: string;
-  parentKey: string | null;
-  title: string;
-}
-
 interface EpubImportOptions {
   sequentialReadingMode?: 'free' | 'sequential';
   sourceIdentity?: string;
@@ -35,32 +25,8 @@ interface EpubImportOptions {
 }
 
 function prepareBookNode(node: RawBookNode, index: number, importedAt: string, root?: string) {
-  const prepared = createPreparedDesktopTextImport({
-    content: node.content,
-    degradedReason: node.degradedReason,
-    fileName: `chapter-${index + 1}.xhtml`,
-    filePath: `epub-chapter#${node.key}`,
-    importedAt,
-    kind: 'epub',
-    managedEpubImageDestinations: node.embeddedImages.map((image) => image.destination),
-    sourceProfile: 'epub',
-    titleStrategy: 'heading'
-  });
-  const result = {
-    content: prepared.content,
-    degradedReason: prepared.degradedReason,
-    embeddedImages: node.embeddedImages,
-    hideTitleHeading: prepared.hideTitleHeading,
-    key: node.key,
-    parentKey: node.parentKey,
-    title: node.title
-  } satisfies PreparedBookNode;
-  return root ? stageEpubText(result, ['content'], root) : result;
-}
-
-function buildRootContent(title: string, body: string) {
-  const trimmedBody = body.trim();
-  return trimmedBody ? `# ${title}\n\n${trimmedBody}` : `# ${title}`;
+  const prepared = prepareEpubBookNode(node, index, importedAt);
+  return root ? stageEpubText(prepared, ['content'], root) : prepared;
 }
 
 function createBookNodes(
@@ -122,7 +88,7 @@ export async function loadEpubPreview(source: ImportSourceDescriptor) {
   try {
     const importedAt = new Date().toISOString();
     const nodes = book.nodes.map((node, index) => prepareBookNode(node, index, importedAt, book.workingDirectory));
-    return [buildRootContent(book.title, book.rootContent), ...nodes.map((node) => node.content)].join('\n\n').trim();
+    return [buildEpubRootContent(book.title, book.rootContent), ...nodes.map((node) => node.content)].join('\n\n').trim();
   } finally { await book.dispose?.(); }
 }
 
@@ -131,7 +97,7 @@ export async function runEpubImport(source: ImportSourceDescriptor, importedAt: 
   try {
     const nodes = book.nodes.map((node, index) => prepareBookNode(node, index, importedAt, book.workingDirectory));
     const rootNode = createPreparedDesktopTextImport({
-      content: buildRootContent(book.title, book.rootContent),
+      content: buildEpubRootContent(book.title, book.rootContent),
       degradedReason: book.rootDegradedReason,
       fileName: source.sourceName,
       filePath: source.filePath,

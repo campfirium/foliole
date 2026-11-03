@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { companionEpubBook } from '../fixtures/companionEpubBook';
+
 test.use({ viewport: { width: 375, height: 812 } });
 
 async function openFixture(page: import('@playwright/test').Page) {
@@ -53,4 +55,20 @@ test('a selected PDF opens in the existing original reader without clearing the 
   await page.screenshot({ path: '.tmp/artifacts/T645-2/pdf-original-reader.png', animations: 'disabled' });
   await page.getByRole('button', { name: 'Open capture' }).click();
   await expect(page.getByRole('textbox', { name: 'Capture text' })).toHaveValue('Keep the PDF draft');
+});
+
+test('a selected compressed EPUB imports chapter content and preserves the independent draft', async ({ page }) => {
+  await openFixture(page);
+  await page.getByRole('button', { name: 'Open capture' }).click();
+  await page.getByRole('textbox', { name: 'Capture text' }).fill('Keep my EPUB draft');
+  await page.getByLabel('Upload File', { exact: true }).setInputFiles({ name: 'Book.epub', mimeType: 'application/epub+zip', buffer: companionEpubBook() });
+  await expect(page.getByRole('dialog', { name: 'Capture', exact: true })).not.toBeVisible();
+  const article = page.getByRole('article', { name: 'Imported topic' });
+  await expect(article).toContainText('Pocket Book');
+  await expect(article).toContainText('Part One');
+  await expect(article).toContainText('First chapter body.');
+  await expect(article).toContainText('Second chapter body.');
+  await expect(article).toContainText('asset://');
+  await page.getByRole('button', { name: 'Open capture' }).click();
+  await expect(page.getByRole('textbox', { name: 'Capture text' })).toHaveValue('Keep my EPUB draft');
 });

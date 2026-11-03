@@ -5,21 +5,24 @@ import { formatImportImageDegradation, isUnmanagedImportImage } from '../../../.
 import { rewriteImportedImageReferences } from '../../../../lib/core/import/importImageReferences';
 import { readTextFileImportPayload } from '../../../../lib/core/import/textFilePayload';
 
+import type { prepareSelectedEpubImport } from './selectedEpubImport';
 import { prepareSelectedPdfImport } from './selectedPdfImport';
 
 export type SelectedImportFile = Pick<File, 'name' | 'arrayBuffer'>;
 export type SelectedImportWarning = 'images' | 'conversion';
-export const SELECTED_TEXT_IMPORT_ACCEPT = '.txt,.md,.markdown,.html,.htm,.pdf,text/plain,text/markdown,text/html,application/pdf';
+export const SELECTED_TEXT_IMPORT_ACCEPT = '.txt,.md,.markdown,.html,.htm,.pdf,.epub,application/epub+zip,text/plain,text/markdown,text/html,application/pdf';
 export type PreparedSelectedFileImport = PreparedImportRecord & {
   importWarning?: SelectedImportWarning;
+  epubBook?: Awaited<ReturnType<typeof prepareSelectedEpubImport>>['epubBook'];
   pdfSource?: { bytes: Uint8Array; storageKey: string };
 };
 
 /** File objects grant access to the selected bytes, never to an adjacent directory. */
-export async function prepareSelectedTextImport(file: SelectedImportFile): Promise<PreparedSelectedFileImport> {
+export async function prepareSelectedTextImport(file: SelectedImportFile, signal?: AbortSignal): Promise<PreparedSelectedFileImport> {
   const kind = resolveImportFileKind(file.name.slice(file.name.lastIndexOf('.')));
-  if (kind === 'epub') throw new Error('Unsupported file format.');
   const bytes = new Uint8Array(await file.arrayBuffer());
+  signal?.throwIfAborted();
+  if (kind === 'epub') return (await import('./selectedEpubImport')).prepareSelectedEpubImport(bytes, file.name, signal);
   if (kind === 'pdf') return prepareSelectedPdfImport(bytes, file.name);
   const payload = readTextFileImportPayload(bytes, kind);
   const prepared = createPreparedDesktopTextImport({

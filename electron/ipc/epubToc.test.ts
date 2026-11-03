@@ -30,3 +30,17 @@ it('keeps ncx toc href fragments while normalizing paths', () => {
     }
   ]);
 });
+
+it('keeps a text-only parent label separate from its nested chapter links', () => {
+  const manifest = new Map<string, EpubManifestItem>([
+    ['nav', { href: 'OPS/nav.xhtml', mediaType: 'application/xhtml+xml', properties: ['nav'] }]
+  ]);
+  const entries = new Map([['OPS/nav.xhtml', new TextEncoder().encode(
+    '<nav epub:type="toc"><ol><li><span>Part One</span><ol><li><a href="one.xhtml">First</a></li><li><a href="two.xhtml">Second</a></li></ol></li></ol></nav>')]]);
+  expect(readEpubToc({ entries, manifest, opfDirectory: 'OPS', opfXml: '' })).toEqual([
+    { title: 'Part One', href: null, children: [
+      { title: 'First', href: 'OPS/one.xhtml', children: [] },
+      { title: 'Second', href: 'OPS/two.xhtml', children: [] }
+    ] }
+  ]);
+});

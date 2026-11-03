@@ -2,8 +2,11 @@ import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import type { PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
+
 import { readEpubArchiveIndex, type EpubZipEntry } from './epubArchive.js';
 import { extractEpubEntry } from './epubArchiveExtraction.js';
+import { createFileBackedEpubImage } from './epubStagedContent.js';
 
 export class EpubArchiveEntries extends Map<string, Uint8Array> {
   readonly files = new Map<string, string>();
@@ -21,6 +24,10 @@ export class EpubArchiveEntries extends Map<string, Uint8Array> {
     if (!entry || !filePath || this.extracted.has(name)) return;
     await extractEpubEntry(this.sourcePath, entry, filePath);
     this.extracted.add(name);
+  }
+  image(name: string, metadata: Omit<PreparedImportEmbeddedImage, 'bytes'>) {
+    const filePath = this.files.get(name);
+    return filePath ? createFileBackedEpubImage(metadata, filePath) : undefined;
   }
   override get(name: string) {
     const filePath = this.files.get(name);

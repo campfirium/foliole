@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { File } from 'node:buffer';
+import { File, Blob } from 'node:buffer';
 
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
@@ -8,6 +8,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { computeSyncContentHash } from '../../lib/core/database/syncState';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import { readFramedSyncObjectPayload } from '../../lib/core/sync/framedSyncObjectStatePayload';
+import { companionEpubBook } from '../../tests/fixtures/companionEpubBook';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 import * as workspaceRepository from '../shared/platform/companion/companionWorkspaceRepository';
 import * as snapshots from '../shared/platform/companion/companionWorkspaceSnapshotStore';
@@ -30,7 +31,7 @@ vi.mock('@capacitor/core', async () => {
 
 let library: Awaited<ReturnType<typeof createSearchLibrary>>;
 beforeEach(async () => { window.localStorage.clear(); library = await createSearchLibrary(0); });
-afterEach(async () => { cleanup(); vi.restoreAllMocks(); await library.close(); });
+afterEach(async () => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); await library.close(); });
 
 function CaptureSurface(props: { initial: Awaited<ReturnType<typeof loadCompanionWorkspaceSyncState>> }) {
   const [state, setState] = useState(props.initial);
@@ -95,7 +96,7 @@ it('uses the desktop filename title and collision suffix for files without a hea
 });
 
 it.each([
-  ['unsupported format', 'Readable body', 'source.epub'],
+  ['unsupported format', 'Readable body', 'source.bin'],
   ['empty file', '', 'source.txt'],
   ['invalid declared UTF-8', new Uint8Array([0xef, 0xbb, 0xbf, 0xff]), 'source.txt']
 ])('rejects %s without saving a topic or clearing the draft', async (_label, body, name) => {
@@ -203,6 +204,15 @@ it.each([
   expect(runs()).toHaveLength(1);
   expect(runs()[0]).toMatchObject({ result_status: 'degraded', source_name: name });
   fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+  expect(screen.getByLabelText('Capture text')).toHaveValue('Draft stays here');
+});
+
+it('opens the imported EPUB root and retains its independent text draft', async () => {
+  vi.stubGlobal('Blob', Blob);
+  await openCapture(); choose(companionEpubBook(false), 'Book.epub');
+  expect(await screen.findByTestId('imported-topic')).toHaveTextContent('Pocket Book');
+  expect(library.database.prepare("SELECT title FROM nodes WHERE title='Second section'").get()).toEqual({ title: 'Second section' });
   fireEvent.click(screen.getByRole('button', { name: 'Add' }));
   expect(screen.getByLabelText('Capture text')).toHaveValue('Draft stays here');
 });

@@ -44,3 +44,13 @@ export async function publishCompanionImportedFile<T>(source: { bytes: Uint8Arra
     return committed.result as T;
   } finally { await session.close(); }
 }
+
+/** Acquire resources in canonical order, keeping each lease until the entire book commits. */
+export async function publishCompanionImportedFiles<T>(sources: { bytes: Uint8Array; storageKey: string }[],
+  commit: () => Promise<T>, owner: ReturnType<typeof getIosCompanionDatabaseOwner>, signal?: AbortSignal): Promise<T> {
+  const ordered = [...new Map(sources.map(source => [source.storageKey, source])).values()]
+    .sort((left, right) => left.storageKey.localeCompare(right.storageKey));
+  const publish = (index: number): Promise<T> => index === ordered.length ? commit()
+    : publishCompanionImportedFile(ordered[index]!, () => publish(index + 1), owner, signal);
+  return publish(0);
+}

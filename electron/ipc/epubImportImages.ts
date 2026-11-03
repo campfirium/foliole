@@ -1,8 +1,7 @@
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
-import { parseNodeResourceReferences, serializeNodeResourceReferences, type NodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
+import { parseNodeResourceReferences, serializeNodeResourceReferences } from '../../lib/core/database/nodeResourceReferences.js';
 import type { PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
-import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
-import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
+import { rewriteEpubEmbeddedImages } from '../../lib/core/import/epub/epubImageReferences.js';
 import { importEpubImageFile } from '../attachments/importEpubImageFile.js';
 import { importImageAttachmentBytes } from '../attachments/importImageAttachmentBytes.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -17,56 +16,20 @@ interface PreparedImportNodeContent {
   title: string;
 }
 
-async function rewriteEmbeddedImages(nodeId: string, node: PreparedImportNodeContent) {
-  const imagesByDestination = new Map(node.embeddedImages.map((image) => [image.destination, image] as const));
-  const degradedMessages: string[] = [];
-  const resources: NodeResourceReference[] = [];
-  let rewrittenContent = '';
-  let previousEnd = 0;
-
-  for (const reference of collectMarkdownImageReferences(node.content)) {
-    rewrittenContent += node.content.slice(previousEnd, reference.start);
-    previousEnd = reference.end;
-
-    const parsedTarget = parseMarkdownImageTarget(reference.rawTarget);
-    const image = parsedTarget ? imagesByDestination.get(parsedTarget.destination) : null;
-    if (!parsedTarget || !image) {
-      rewrittenContent += reference.fullMatch;
-      continue;
-    }
-
-    const imagePath = epubImageFilePath(image);
-    const importedImage = imagePath ? await importEpubImageFile({
-      sourcePath: imagePath, nodeId, originalName: image.originalName, errorSource: image.destination
-    }) : await importImageAttachmentBytes({
-      bytes: image.bytes,
-      errorSource: image.destination,
-      mimeType: image.mimeType,
-      nodeId,
-      originalName: image.originalName
-    });
-    if (importedImage.status === 'error') {
-      degradedMessages.push(importedImage.message);
-      rewrittenContent += reference.fullMatch;
-      continue;
-    }
-
-    resources.push({ storage_key: importedImage.storage_key, original_name: importedImage.original_name, role: 'image' });
-    const suffix = parsedTarget.suffix ? ` ${parsedTarget.suffix}` : '';
-    rewrittenContent += `![${reference.altText}](${buildAssetMarkdownUrl(importedImage.storage_key)}${suffix})`;
-  }
-
-  rewrittenContent += node.content.slice(previousEnd);
-  return { rewrittenContent, degradedMessages, resources };
-
-}
 
 export async function importEmbeddedImagesForNode<T extends PreparedImportNodeContent>(nodeId: string, importedAt: string, node: T) {
   if (node.embeddedImages.length === 0) {
     return node;
   }
 
-  const { rewrittenContent, degradedMessages, resources } = await rewriteEmbeddedImages(nodeId, node);
+  const { rewrittenContent, degradedMessages, resources } = await rewriteEpubEmbeddedImages(node, image => {
+    const imagePath = epubImageFilePath(image);
+    return imagePath ? importEpubImageFile({
+      sourcePath: imagePath, nodeId, originalName: image.originalName, errorSource: image.destination
+    }) : importImageAttachmentBytes({
+      bytes: image.bytes, errorSource: image.destination, mimeType: image.mimeType, nodeId, originalName: image.originalName
+    });
+  });
   if (rewrittenContent === node.content && degradedMessages.length === 0) return node;
 
   await runWithDatabaseConnectionOwner(() => {

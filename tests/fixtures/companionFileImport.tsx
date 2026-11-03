@@ -21,7 +21,9 @@ function FileImportFixture() {
       onSave={async () => ({ nodeId: 'manual-topic' })}
       onImportFile={async file => {
         const prepared = await prepareSelectedTextImport(file);
-        setImported(prepared.content);
+        setImported(prepared.epubBook
+          ? [prepared.content, ...prepared.epubBook.chapters.map(chapter => chapter.content)].join('\n\n')
+          : prepared.content);
         if (prepared.pdfSource) {
           const source = URL.createObjectURL(new Blob([Uint8Array.from(prepared.pdfSource.bytes)], { type: 'application/pdf' }));
           // The fixture supplies only the native file URL boundary; PDF parsing and rendering stay real.
