@@ -117,12 +117,10 @@ test('skips short legacy deletion titles while retaining exact API deletions in 
       const connection = load('database/connection');
       return connection.runWithDatabaseConnectionOwner(() => {
         const driver = connection.openDatabaseConnection().driver;
-        const host = load('database/readwiseHostAssignment').loadReadwiseHostAssignment().current_host_name;
-        driver.execute(`INSERT INTO desktop_sources (
-          source_ref,source_type,config_ref,host_name,host_platform,root_path,path_flavor,
-          type_settings_json,created_at,updated_at
-        ) VALUES ('readwise:title-test','readwise','title-test',?,'darwin','/tmp','posix',
-          '{"kind":"articles"}','old','old')`, [host]);
+        load('database/desktopSources').upsertDesktopSource({
+          configRef: 'title-test', rootPath: '/tmp', sourceType: 'readwise',
+          typeSettings: { kind: 'articles' }, updatedAt: 'old'
+        });
         for (const title of ['ChatGPT', 'x'.repeat(19), 'x'.repeat(20)]) {
           driver.execute(`INSERT INTO keep_import_items (
             rule_id,source_path,source_mtime_ms,source_size_bytes,source_state,local_node_state,
