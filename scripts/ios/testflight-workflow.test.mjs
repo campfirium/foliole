@@ -1,9 +1,32 @@
 // @vitest-environment node
-import { readFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
+import process from 'node:process';
 import { expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 const workflow = parse(readFileSync('.github/workflows/release-ios.yml', 'utf8'));
+
+it('selects a supported Xcode and refuses SDKs below Apple upload requirements', () => {
+  const upload = workflow.jobs['signed-upload'];
+  expect(Number(upload.env.DEVELOPER_DIR?.match(/Xcode_(\d+)/u)?.[1] ?? 0)).toBeGreaterThanOrEqual(26);
+  const step = upload.steps.find(entry => entry.id === 'toolchain');
+  mkdirSync('.tmp/artifacts', { recursive: true });
+  const directory = mkdtempSync(path.resolve('.tmp/artifacts/testflight-sdk-'));
+  try {
+    for (const [command, output] of [['xcodebuild', 'Xcode 26.3'], ['xcrun', '$SDK_VERSION']]) {
+      const file = path.join(directory, command);
+      writeFileSync(file, `#!/bin/sh\necho "${output}"\n`); chmodSync(file, 0o755);
+    }
+    for (const SDK_VERSION of ['18.5', '25.4', '26.2', '27.2']) {
+      const result = spawnSync('bash', ['-e', '-c', step.run], {
+        env: { ...process.env, SDK_VERSION, PATH: `${directory}:/usr/bin:/bin` }, encoding: 'utf8'
+      });
+      expect(result.status === 0).toBe(Number(SDK_VERSION.split('.')[0]) >= 26);
+    }
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
 it('reuses the successful upload artifact on a Linux-only retry with a newer run attempt', () => {
   const upload = workflow.jobs['signed-upload'];
   const review = workflow.jobs['external-review'];

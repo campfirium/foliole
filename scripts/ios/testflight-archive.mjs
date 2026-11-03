@@ -21,22 +21,39 @@ export function testflightBuildEnv(env) {
     !key.startsWith('VITE_FOLIOLE_IOS_DATABASE_UPGRADE_FAULT')));
 }
 
-export function archiveArguments({ archive, derivedData, candidate, keyPath }) {
+export function distributionSigningConfig(profiles) {
+  for (const target of ['App', 'FolioleShareExtension']) {
+    if (!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/iu.test(profiles[target] ?? '')) {
+      throw new Error(`Missing App Store profile for ${target}`);
+    }
+  }
+  return ['CODE_SIGN_STYLE = Manual', 'CODE_SIGN_IDENTITY = Apple Distribution',
+    'CODE_SIGNING_ALLOWED = $(FOLIOLE_SIGNING_$(TARGET_NAME):default=NO)',
+    'FOLIOLE_SIGNING_App = YES', 'FOLIOLE_SIGNING_FolioleShareExtension = YES',
+    'PROVISIONING_PROFILE_SPECIFIER = $(FOLIOLE_PROFILE_$(TARGET_NAME))',
+    `FOLIOLE_PROFILE_App = ${profiles.App}`,
+    `FOLIOLE_PROFILE_FolioleShareExtension = ${profiles.FolioleShareExtension}`, ''].join('\n');
+}
+
+export function archiveArguments({ archive, derivedData, candidate, keyPath, signingConfig }) {
   return ['-project', 'ios/App/App.xcodeproj', '-scheme', 'App', '-configuration', 'Release',
     '-destination', 'generic/platform=iOS', '-derivedDataPath', derivedData, '-archivePath', archive,
     '-onlyUsePackageVersionsFromResolvedFile', '-disableAutomaticPackageResolution',
     '-allowProvisioningUpdates', '-authenticationKeyPath', keyPath,
     '-authenticationKeyID', process.env.APPLE_API_KEY_ID,
     '-authenticationKeyIssuerID', process.env.APPLE_API_ISSUER,
-    'DEVELOPMENT_TEAM=V589TQH334', 'CODE_SIGN_STYLE=Automatic',
+    '-xcconfig', signingConfig, 'DEVELOPMENT_TEAM=V589TQH334',
     `MARKETING_VERSION=${candidate.version}`, `CURRENT_PROJECT_VERSION=${candidate.buildNumber}`, 'archive'];
 }
 
-async function exportArchive({ output, archive, keyPath, env }) {
+async function exportArchive({ output, archive, keyPath, env, profiles }) {
   const options = path.join(output, 'ExportOptions.plist');
   await writeFile(options, '<?xml version="1.0"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict>' +
     '<key>method</key><string>app-store-connect</string><key>destination</key><string>export</string>' +
-    '<key>signingStyle</key><string>automatic</string><key>teamID</key><string>V589TQH334</string>' +
+    '<key>signingStyle</key><string>manual</string><key>teamID</key><string>V589TQH334</string>' +
+    '<key>signingCertificate</key><string>Apple Distribution</string><key>provisioningProfiles</key><dict>' +
+    `<key>com.campfirium.foliole.ios</key><string>${profiles.App}</string>` +
+    `<key>com.campfirium.foliole.ios.share</key><string>${profiles.FolioleShareExtension}</string></dict>` +
     '<key>manageAppVersionAndBuildNumber</key><false/><key>testFlightInternalTestingOnly</key><false/>' +
     '<key>uploadSymbols</key><true/></dict></plist>');
   const exportDirectory = path.join(output, 'export');
@@ -71,9 +88,16 @@ async function main() {
   await mkdir(derivedData, { recursive: true });
   run('npm', ['run', 'android:web:build'], { env });
   run('npx', ['cap', 'sync', 'ios'], { env });
-  run('xcodebuild', archiveArguments({ archive, derivedData, candidate, keyPath }), { env });
+  const profileFile = path.join(output, 'signing-profiles.json');
+  run('bundle', ['exec', 'fastlane', 'ios', 'prepare_signing'], {
+    cwd: path.resolve('scripts/ios'), env: { ...env, FOLIOLE_IOS_SIGNING_PROFILES: profileFile }
+  });
+  const profiles = JSON.parse(await readFile(profileFile, 'utf8'));
+  const signingConfig = path.join(output, 'Distribution.xcconfig');
+  await writeFile(signingConfig, distributionSigningConfig(profiles));
+  run('xcodebuild', archiveArguments({ archive, derivedData, candidate, keyPath, signingConfig }), { env });
   verifyTestflightArchive(archive, candidate);
-  const exportDirectory = await exportArchive({ output, archive, keyPath, env });
+  const exportDirectory = await exportArchive({ output, archive, keyPath, env, profiles });
   const files = (await readdir(exportDirectory)).filter((name) => name.endsWith('.ipa'));
   if (files.length !== 1) throw new Error('Expected exactly one exported signed IPA');
   const ipa = path.join(exportDirectory, files[0]);

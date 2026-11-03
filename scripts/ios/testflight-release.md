@@ -49,6 +49,10 @@ App Store Connect beta description, review contact and any required export-compl
 
 ## Verification
 
+The hosted archive uses the imported Apple Distribution private key, with App Store profiles fetched by the pinned `prepare_signing` Fastlane lane for the app and Share Extension. A generated xcconfig assigns profiles only to those targets and disables standalone signing for package targets; export uses the same manual distribution profiles. The lane may create a missing App Store profile for the existing installed certificate; it never creates or revokes certificates. No Development private key is needed. Both archived bundles and the final App Store IPA still undergo signature verification.
+
+The macOS producer explicitly selects the runner's installed Xcode 26.3 and checks that the iPhone SDK major is at least 26 before installing dependencies or credentials. The macOS 15 image defaults to Xcode 16.4, which does not meet Apple's upload requirement. Downloaded profiles stay under the current distribution artifact directory.
+
 Run explicit local tests before hosted execution:
 
 ```sh
@@ -58,6 +62,8 @@ npm run test:files -- scripts/ios/testflight-contract.test.mjs scripts/ios/testf
 The distribution test executes the production Ruby state machine with simulated Apple responses and a virtual clock. It covers processing, timeout, unresolved compliance, wrong identity, review rejection and repeat submission. It does not prove Apple's live permissions or signing.
 
 Ruby dependencies are pinned in `fastlane/Gemfile.lock`, including checksums. Use Ruby 4.0 and Bundler 4.0.23; run `bundle install --gemfile scripts/ios/fastlane/Gemfile`, then `bundle exec fastlane lanes` from `scripts/ios`. The generated lockfile is kept intact as one dependency-resolution artifact.
+
+With `BUNDLE_GEMFILE` set to that pinned Gemfile, run `bundle exec ruby scripts/ios/testflight-signing-test.rb` from the repository root to validate the production lane through Fastlane's real option parser without Apple access. The hosted producer runs this before importing credentials.
 
 A real selected release or QA distribution must still prove signing, upload, Apple processing, external submission and the approved group update. No Simulator or device installation is performed by these scripts. Runtime preview and acceptance retain their existing host workflows.
 

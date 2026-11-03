@@ -41,6 +41,22 @@ class FolioleTestflightApi
 end
 
 platform :ios do
+  desc 'Install App Store profiles matching the imported distribution key'
+  lane :prepare_signing do
+    key = apple_api_key
+    profiles = {}
+    { 'App' => 'com.campfirium.foliole.ios',
+      'FolioleShareExtension' => 'com.campfirium.foliole.ios.share' }.each do |target, identifier|
+      profiles[target] = get_provisioning_profile(
+        api_key: key, app_identifier: identifier, platform: 'ios',
+        output_path: File.dirname(ENV.fetch('FOLIOLE_IOS_SIGNING_PROFILES')),
+        development: false, force: false,
+        skip_certificate_verification: false
+      )
+    end
+    File.write(ENV.fetch('FOLIOLE_IOS_SIGNING_PROFILES'), JSON.pretty_generate(profiles))
+  end
+
   desc 'Allocate above the latest uploaded iPhone build across QA and release'
   lane :prepare_build do
     latest = latest_testflight_build_number(
