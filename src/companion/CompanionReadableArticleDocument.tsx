@@ -179,7 +179,8 @@ export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
   return (
     <>
       {pdfAttachmentId ? (
-        <CompanionPdfTextVersionToolbar onOpenPdf={pdfReading.onOpenPdf} />
+        <CompanionPdfTextVersionToolbar onOpenPdf={pdfReading.onOpenPdf}
+          originalUnavailable={pdfReading.originalUnavailable} onDismiss={pdfReading.dismissOriginalUnavailable} />
       ) : null}
       <CompanionItemReviewLayout active={props.layout === 'review' && props.isReviewItem === true && !canEdit && props.answer != null}
         version={`${props.readableArticle.nodeId}:${props.readableArticle.content}:${props.answer}`}>

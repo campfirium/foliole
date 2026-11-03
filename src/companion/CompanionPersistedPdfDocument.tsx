@@ -2,8 +2,11 @@ import { lazy, useCallback, useRef, type ComponentProps } from 'react';
 
 import type { SimplePdfDocument } from '../features/pdf/components/SimplePdfDocument';
 import type { SimplePdfPosition } from '../features/pdf/components/useSimplePdfPosition';
+import { isPdfOriginalUnsupported } from '../shared/platform/runtime/pdfOriginalSupport';
 
 import { useCompanionNavigationField } from './CompanionNavigationProvider';
+import { CompanionPdfErrorBoundary } from './CompanionPdfErrorBoundary';
+import { CompanionPdfUnavailable } from './CompanionPdfUnavailable';
 
 const PdfDocument = lazy(() => import('../features/pdf/components/SimplePdfDocument')
   .then(module => ({ default: module.SimplePdfDocument })));
@@ -15,5 +18,11 @@ export function CompanionPersistedPdfDocument(props: ComponentProps<typeof Simpl
   const onChange = useCallback((position: SimplePdfPosition) => {
     setPositions(current => ({ ...current, [props.attachmentId]: position }));
   }, [props.attachmentId, setPositions]);
-  return <PdfDocument {...props} positionPersistence={{ initial: initial.current, onChange }} />;
+  const fallback = <CompanionPdfUnavailable outdated={false}
+    onBack={props.onBackToText} backLabel={props.backLabel} />;
+  if (isPdfOriginalUnsupported()) return <CompanionPdfUnavailable outdated
+    onBack={props.onBackToText} backLabel={props.backLabel} />;
+  return <CompanionPdfErrorBoundary key={props.attachmentId} fallback={fallback}>
+    <PdfDocument {...props} positionPersistence={{ initial: initial.current, onChange }} />
+  </CompanionPdfErrorBoundary>;
 }
