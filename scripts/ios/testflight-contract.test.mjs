@@ -46,9 +46,15 @@ describe('TestFlight exact candidate and public availability', () => {
     const args = archiveArguments({ archive: 'a', derivedData: 'd', candidate, keyPath: 'key' });
     expect(args).toContain('MARKETING_VERSION=0.7.18');
     expect(args).toContain('CURRENT_PROJECT_VERSION=321.2');
-    expect(args).toContain('CODE_SIGN_IDENTITY=Apple Distribution');
     expect(testflightBuildEnv({ KEEP: 'yes', FOLIOLE_DEV_LIVE_RELOAD: '1',
       VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE: '1' })).toEqual({ KEEP: 'yes' });
+  });
+
+  it('leaves automatic archive signing available to app, extension and package targets', () => {
+    const args = archiveArguments({ archive: 'archive', derivedData: 'cache', candidate, keyPath: 'key' });
+    expect(args).toContain('CODE_SIGN_STYLE=Automatic');
+    expect(args.some(arg => arg?.startsWith('CODE_SIGN_IDENTITY='))).toBe(false);
+    expect(args).toContain('-allowProvisioningUpdates');
   });
 
   it('requires a receipt for the exact release, destination, signed IPA and submitted review', () => {

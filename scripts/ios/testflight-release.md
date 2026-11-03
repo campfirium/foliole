@@ -19,7 +19,7 @@ Only iOS is enabled. Android approval alone does not enable uploads: add its app
 ## Execution
 
 1. Formal release quality and release-candidate checks, or the explicit complete QA chain, accept the source SHA in this run.
-2. `release-ios.yml` uses macOS to run `node scripts/ios/testflight-archive.mjs`, verify the host and share extension, and execute `bundle exec fastlane ios upload` from `scripts/ios`. Upload does not wait for Apple processing.
+2. Archive signing stays automatic for the app, extension and Swift package targets; the App Store Connect export re-signs the output for distribution, and IPA verification requires distribution entitlements and profiles. Do not force a distribution identity across archive targets. `release-ios.yml` uses macOS to run `node scripts/ios/testflight-archive.mjs`, verify the host and share extension, and execute `bundle exec fastlane ios upload` from `scripts/ios`. Upload does not wait for Apple processing.
 3. A separate Ubuntu job consumes the same-run candidate artifact. `bundle exec fastlane ios distribute` checks the exact app/version/build every five minutes, for at most one hour. It assigns the existing external group, enables automatic notification, submits external review and exits. It never waits for human review approval.
 4. Apple approves and distributes the update through the existing group. The website invitation remains https://testflight.apple.com/join/PszuhyJA.
 

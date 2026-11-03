@@ -27,7 +27,7 @@ export function archiveArguments({ archive, derivedData, candidate, keyPath }) {
     '-allowProvisioningUpdates', '-authenticationKeyPath', keyPath,
     '-authenticationKeyID', process.env.APPLE_API_KEY_ID,
     '-authenticationKeyIssuerID', process.env.APPLE_API_ISSUER,
-    'DEVELOPMENT_TEAM=V589TQH334', 'CODE_SIGN_STYLE=Automatic', 'CODE_SIGN_IDENTITY=Apple Distribution',
+    'DEVELOPMENT_TEAM=V589TQH334', 'CODE_SIGN_STYLE=Automatic',
     `MARKETING_VERSION=${candidate.version}`, `CURRENT_PROJECT_VERSION=${candidate.buildNumber}`, 'archive'];
 }
 
