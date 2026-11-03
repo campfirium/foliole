@@ -4,6 +4,8 @@ require 'fastlane'
 require 'sigh'
 require 'tmpdir'
 require 'fileutils'
+require 'yaml'
+require 'open3'
 
 def opt_out_usage; end
 def default_platform(*); end
@@ -37,3 +39,38 @@ Dir.mktmpdir('testflight-signing-', root) do |directory|
   raise 'Both distribution targets must receive their own profile' unless profiles == expected
 end
 puts 'Validated App Store signing options for app and extension.'
+
+workflow = YAML.safe_load(File.read(File.expand_path('../../.github/workflows/release-ios.yml', __dir__)), aliases: true)
+install = workflow.fetch('jobs').fetch('signed-upload').fetch('steps').find do |step|
+  step['name'] == 'Install iPhone distribution credentials in a temporary keychain'
+end
+Dir.mktmpdir('testflight-credential-contract-', root) do |directory|
+  trace = File.join(directory, 'security.log')
+  security = File.join(directory, 'security')
+  File.write(security, <<~'SH')
+    #!/bin/sh
+    printf '%s\n' "$*" >> "$FOLIOLE_TEST_SECURITY_TRACE"
+    if [ "$1" = '-h' ]; then echo 'set-key-partition-list'; fi
+    if [ "$1" = 'find-identity' ]; then
+      echo '1) AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA "Apple Distribution: Test"'
+    fi
+  SH
+  File.write(File.join(directory, 'codesign'), "#!/bin/sh\nexit 0\n")
+  FileUtils.chmod(0o755, [security, File.join(directory, 'codesign')])
+  env = { 'PATH' => "#{directory}:#{ENV.fetch('PATH')}", 'RUNNER_TEMP' => directory,
+          'FOLIOLE_TEST_SECURITY_TRACE' => trace, 'GITHUB_ENV' => File.join(directory, 'env'),
+          'APPLE_API_ISSUER' => 'test', 'APPLE_API_KEY_ID' => 'test',
+          'APPLE_API_KEY_BASE64' => 'dGVzdA==',
+          'IOS_DISTRIBUTION_CERTIFICATE_BASE64' => 'dGVzdA==',
+          'IOS_DISTRIBUTION_CERTIFICATE_PASSWORD' => 'test' }
+  output, status = Open3.capture2e(env, 'bash', '-e', '-c', install.fetch('run'))
+  raise "Credential installation contract failed: #{output}" unless status.success?
+  calls = File.read(trace)
+  unless calls.lines.any? { |line| line.start_with?('import ') && line.include?('-T /usr/bin/codesign') }
+    raise 'The imported private key must authorize the codesign application without prompting'
+  end
+  unless calls.lines.any? { |line| line.start_with?('set-key-partition-list ') && line.include?('codesign:') && line.include?(' -s ') }
+    raise 'The signing key must receive the noninteractive codesign partition'
+  end
+end
+puts 'Validated noninteractive credential installation through the production workflow.'

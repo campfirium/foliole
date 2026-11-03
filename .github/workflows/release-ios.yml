@@ -101,9 +101,30 @@ jobs:
           security create-keychain -p "$password" "$keychain"
           security set-keychain-settings -lut 10800 "$keychain"
           security unlock-keychain -p "$password" "$keychain"
-          security import "$RUNNER_TEMP/ios-distribution.p12" -P "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD" -t cert -f pkcs12 -k "$keychain"
-          security set-key-partition-list -S apple-tool:,apple: -k "$password" "$keychain"
+          export FOLIOLE_IOS_KEYCHAIN="$keychain" FOLIOLE_IOS_KEYCHAIN_PASSWORD="$password"
+          bundle exec ruby -r fastlane -e '
+            FastlaneCore::KeychainImporter.import_file(
+              File.join(ENV.fetch("RUNNER_TEMP"), "ios-distribution.p12"), ENV.fetch("FOLIOLE_IOS_KEYCHAIN"),
+              keychain_password: ENV.fetch("FOLIOLE_IOS_KEYCHAIN_PASSWORD"),
+              certificate_password: ENV.fetch("IOS_DISTRIBUTION_CERTIFICATE_PASSWORD"), certificate_format: "pkcs12"
+            )'
           security list-keychains -d user -s "$keychain"
+          node --input-type=module -e '
+            import { execFileSync } from "node:child_process";
+            import { copyFileSync, rmSync } from "node:fs";
+            import path from "node:path";
+            const keychain = process.env.FOLIOLE_IOS_KEYCHAIN;
+            const list = execFileSync("security", ["find-identity", "-v", "-p", "codesigning", keychain], { encoding: "utf8" });
+            const identities = [...list.matchAll(/([A-F0-9]{40}) "Apple Distribution:/g)];
+            if (identities.length !== 1) throw new Error("Expected one installed distribution signing identity");
+            const probe = path.join(process.env.RUNNER_TEMP, "foliole-signing-probe");
+            copyFileSync("/usr/bin/true", probe);
+            try {
+              execFileSync("codesign", ["--force", "--sign", identities[0][1], "--keychain", keychain, "--timestamp=none", probe],
+                { timeout: 30000, killSignal: "SIGKILL", stdio: "inherit" });
+              execFileSync("codesign", ["--verify", "--strict", probe], { timeout: 10000, killSignal: "SIGKILL", stdio: "inherit" });
+            } finally { rmSync(probe, { force: true }); }
+            console.log("Distribution private key signed and verified without interaction");'
           echo "APPLE_API_KEY=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
       - name: Allocate the next Apple build number under the shared upload lock
         working-directory: scripts/ios

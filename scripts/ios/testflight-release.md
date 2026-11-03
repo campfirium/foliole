@@ -53,6 +53,8 @@ The hosted archive uses the imported Apple Distribution private key, with App St
 
 The macOS producer explicitly selects the runner's installed Xcode 26.3 and checks that the iPhone SDK major is at least 26 before installing dependencies or credentials. The macOS 15 image defaults to Xcode 16.4, which does not meet Apple's upload requirement. Downloaded profiles stay under the current distribution artifact directory.
 
+Credential installation uses the pinned Fastlane keychain importer, including trusted signing applications and its `codesign:` partition. Before any archive, the installed Distribution private key must sign a temporary executable within 30 seconds and pass signature verification. This uses only the isolated runner keychain; it never requests an iPhone password or revokes a certificate. The local Ruby contract exercises the production installer with fake Security/codesign commands; the hosted probe verifies real private-key access.
+
 Run explicit local tests before hosted execution:
 
 ```sh
