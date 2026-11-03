@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		688100000000000000000003 /* FolioleCompanionAppDataFiles.swift in Share Sources */ = {isa = PBXBuildFile; fileRef = 688100000000000000000002 /* FolioleCompanionAppDataFiles.swift */; };
 		688100000000000000000001 /* FolioleCompanionAppDataFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 688100000000000000000002 /* FolioleCompanionAppDataFiles.swift */; };
 		50F100991FED79650016851F /* FoliolePhysicalClozeRecoveryUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100981FED79650016851F; };
 		89FECD10EF4A4E16B6EA5756 /* FolioleRequestSyncRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6AA406AD5824E1DB7779A8A /* FolioleRequestSyncRoute.swift */; };
@@ -680,6 +681,7 @@
 			files = (
 				221B00000000000000000001 /* ShareViewController.swift in Sources */,
 				221B00000000000000000002 /* FolioleShareInboxQueue.swift in Share Sources */,
+				688100000000000000000003 /* FolioleCompanionAppDataFiles.swift in Share Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
