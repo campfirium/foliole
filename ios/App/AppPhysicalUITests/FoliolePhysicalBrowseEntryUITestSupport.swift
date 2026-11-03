@@ -20,12 +20,16 @@ extension XCTestCase {
             } else if exit.isHittable {
                 exit.tap()
             } else if body.exists, body.staticTexts.firstMatch.isHittable {
-                body.staticTexts.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                body.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
                 _ = exit.waitForExistence(timeout: 5)
             } else {
                 _ = browse.waitForExistence(timeout: 1)
             }
         }
+        let hierarchy = XCTAttachment(string: app.debugDescription)
+        hierarchy.name = "Browse-entry-failure-hierarchy"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
         XCTFail("Browse did not become available on the iPhone development build.")
     }
 
