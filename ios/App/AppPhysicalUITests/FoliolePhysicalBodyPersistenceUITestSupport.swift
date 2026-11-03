@@ -32,9 +32,11 @@ final class FoliolePhysicalDatabaseUpgradeUITests: XCTestCase {
         app.launchArguments += ["--foliole-physical-acceptance",
                                 "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
+        resolveOptionalCellularDataDecision()
         try openUpgradeSearch("Legacy upgrade retained sentence", in: app)
         app.terminate()
         app.launch()
+        resolveOptionalCellularDataDecision()
         try openUpgradeSearch("Legacy upgrade retained sentence", in: app)
         openBrowseSurface(in: app)
         let capture = app.buttons["Capture"]
@@ -50,6 +52,7 @@ final class FoliolePhysicalDatabaseUpgradeUITests: XCTestCase {
         XCTAssertFalse(editor.waitForExistence(timeout: 5))
         app.terminate()
         app.launch()
+        resolveOptionalCellularDataDecision()
         try openUpgradeSearch("Fri upgrade subsequent write", in: app)
         try openUpgradeSearch("Legacy upgrade retained sentence", in: app)
         let screenshot = XCTAttachment(screenshot: app.screenshot())
@@ -67,6 +70,7 @@ final class FoliolePhysicalDatabaseUpgradeUITests: XCTestCase {
         let search = app.searchFields["Search synced topics"]
         XCTAssertTrue(search.waitForExistence(timeout: 30))
         search.tap()
+        resolveOptionalCellularDataDecision()
         if let value = search.value as? String, !value.isEmpty, value != "Search synced topics" {
             search.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: value.count))
         }
