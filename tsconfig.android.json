@@ -13,6 +13,7 @@
     "src/shared/commands/**/*.tsx",
     "src/shared/config/**/*.ts",
     "src/shared/config/**/*.tsx",
+    "src/shared/typography/opentype.d.ts",
     "vite.companion.config.ts",
     "capacitor.config.ts"
   ],
