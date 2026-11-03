@@ -20,7 +20,7 @@ extension XCTestCase {
             } else if exit.isHittable {
                 exit.tap()
             } else if body.exists, body.staticTexts.firstMatch.isHittable {
-                body.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                body.staticTexts.firstMatch.tap()
                 _ = exit.waitForExistence(timeout: 5)
             } else {
                 _ = browse.waitForExistence(timeout: 1)
