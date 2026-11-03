@@ -1,4 +1,7 @@
 export const controlledRuntimeSqliteTests = [
+  'scripts/ios/fri-upgrade-migration.integration.test.mjs',
+  'src/companion/companionLearningSettingsRoundTrip.integration.test.tsx',
+  'src/shared/platform/companion/runtime/iosCompanionAppDataReset.integration.test.ts',
   'electron/startupBackupDirectoryRecovery.integration.test.ts',
   'src/companion/companionWorkspaceSyncFlow.progressive.integration.test.ts',
   'src/shared/platform/companionTestReviewReset.integration.test.ts',
