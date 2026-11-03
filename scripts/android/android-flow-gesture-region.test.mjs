@@ -8,7 +8,6 @@ import { URL } from 'node:url';
 
 import { expect, it } from 'vitest';
 
-import { macosA5GradleEnv } from './macos-a5-runtime-paths.mjs';
 
 const STUBS = {
   'android/os/Build.java': `package android.os; public class Build {
@@ -53,7 +52,7 @@ it('keeps Flow edge ownership independent of WebView selection and layout', () =
   const parent = path.resolve('.tmp/artifacts/T644');
   fs.mkdirSync(parent, { recursive: true });
   const root = fs.mkdtempSync(path.join(parent, 'native-gesture-'));
-  const javaHome = process.platform === 'darwin' ? macosA5GradleEnv().JAVA_HOME : process.env.JAVA_HOME;
+  const javaHome = process.env.JAVA_HOME;
   const binary = name => javaHome ? path.join(javaHome, 'bin', name) : name;
   try {
     const sources = { ...STUBS,

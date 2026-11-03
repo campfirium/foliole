@@ -2,7 +2,6 @@ import { Buffer } from 'node:buffer';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-maintenance-action.mjs';
 
 const IMAGES = [
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
@@ -10,7 +9,6 @@ const IMAGES = [
 ];
 export const RESOURCE_LAN_FIRST_HASH = createHash('sha256')
   .update(Buffer.from(IMAGES[0], 'base64')).digest('hex');
-const APP_ID = 'com.campfirium.foliole.android.acceptance';
 
 export function assertOwnedResourcePath(libraryHome, assetsDir, storageKey) {
   const library = fs.realpathSync(libraryHome);
@@ -55,58 +53,4 @@ export async function seedA5ResourceLanProbe(session, libraryHome) {
   const savedBytes = fs.readFileSync(missingPath);
   fs.unlinkSync(missingPath);
   return { images, nodeId, restore: () => fs.writeFileSync(missingPath, savedBytes), missingPath };
-}
-
-export async function verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot, fixture, groupId }) {
-  const observations = [];
-  let restoredAt;
-  try {
-    for (const phase of ['missing', 'restored', 'restarted']) {
-      if (phase === 'restored') {
-        fixture.restore();
-        restoredAt = new Date().toISOString();
-      }
-      const result = await runMacosA5InstrumentationMechanics({ appId: APP_ID, buildIdentity, env,
-        evidenceRoot: path.join(evidenceRoot, `resource-${phase}`), execute: args.execute,
-        installMain: false, needsTransport: false, instrumentationOwnsActivity: true,
-        instrumentationArgs: ['-e', 'resourcePhase', phase, '-e', 'resourceNodeId', fixture.nodeId,
-          '-e', 'resourceGroupId', groupId, '-e', 'availableHash', fixture.images[0].hash,
-          '-e', 'recoveringHash', fixture.images[1].hash], paths: args.paths, serial: args.serial,
-        testClass: 'com.foliole.android.FolioleResourceLanTest',
-        validateInstrumentation: ({ stdout }) => {
-          if (!/folioleResourceLanReceipt=.*"passed":true/u.test(stdout)) {
-            throw new Error(`Physical LAN resource ${phase} was not verified.`);
-          }
-        }
-      });
-      const screenshot = path.join(evidenceRoot, `resource-${phase}.png`);
-      args.checked(args.paths.adb, ['-s', args.serial, 'pull',
-        `/sdcard/Android/data/${APP_ID}/files/resource-${phase}.png`, screenshot]);
-      observations.push({ phase, evidencePath: result.evidencePath, screenshot });
-    }
-  } finally { fixture.restore(); }
-  fs.writeFileSync(path.join(evidenceRoot, 'resource-lan.json'), `${JSON.stringify({
-    nodeId: fixture.nodeId, images: fixture.images, observations, restoredAt,
-    physicalDevices: ['macos', 'fixed-a5-87a33a4b'], transport: 'product-discovered LAN; no ADB reverse',
-    failure: 'Mac isolated attachment bytes temporarily absent, then restored', resultStatus: 'success'
-  }, null, 2)}\n`);
-  return { restoredAt };
-}
-
-export async function verifyA5ResourceLanPresence({ args, buildIdentity, env, evidenceRoot, fixture, groupId }) {
-  const phase = 'missing';
-  const result = await runMacosA5InstrumentationMechanics({ appId: APP_ID, buildIdentity, env,
-    evidenceRoot, execute: args.execute, installMain: false, needsTransport: false,
-    instrumentationOwnsActivity: true,
-    instrumentationArgs: ['-e', 'resourcePhase', phase, '-e', 'resourceNodeId', fixture.nodeId,
-      '-e', 'resourceGroupId', groupId, '-e', 'availableHash', fixture.images[0].hash,
-      '-e', 'recoveringHash', fixture.images[1].hash], paths: args.paths, serial: args.serial,
-    testClass: 'com.foliole.android.FolioleResourceLanTest',
-    validateInstrumentation: ({ stdout }) => {
-      if (!/folioleResourceLanReceipt=.*"passed":true/u.test(stdout)) {
-        throw new Error('A5 did not retain the independently cached attachment.');
-      }
-    }
-  });
-  return { evidencePath: result.evidencePath, hash: fixture.images[0].hash };
 }

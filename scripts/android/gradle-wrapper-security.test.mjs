@@ -7,7 +7,6 @@ import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { macosA5GradleEnv } from './macos-a5-runtime-paths.mjs';
 
 const wrapperRoot = path.resolve('android/gradle/wrapper');
 const properties = readFileSync(path.join(wrapperRoot, 'gradle-wrapper.properties'), 'utf8');
@@ -37,7 +36,7 @@ describe('Android Gradle distribution security', () => {
       writeFileSync(path.join(wrapperDir, 'gradle-wrapper.properties'), properties.replace(
         /^distributionUrl=.*$/mu, `distributionUrl=${pathToFileURL(distribution).href}`
       ));
-      const env = macosA5GradleEnv();
+      const env = process.env;
       const java = process.platform === 'darwin' ? path.join(env.JAVA_HOME, 'bin/java') : 'java';
       const result = spawnSync(java, [
         '-Dgradle.user.home=' + path.join(root, 'gradle-home'),

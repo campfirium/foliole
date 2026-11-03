@@ -1,7 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
 
-import { macosA5GradleEnv } from '../android/macos-a5-runtime-paths.mjs';
 
 const COMMANDS = [
   ['node', ['scripts/sync/generate-framed-sync-golden.mjs', '--check']],
@@ -22,8 +21,7 @@ const COMMANDS = [
 for (const [command, args] of COMMANDS) {
   const result = spawnSync(command, args, {
     cwd: command === './gradlew' ? 'android' : process.cwd(),
-    env: command === './gradlew' && process.platform === 'darwin'
-      ? macosA5GradleEnv(process.env) : process.env,
+    env: process.env,
     stdio: 'inherit'
   });
   if (result.error) throw result.error;

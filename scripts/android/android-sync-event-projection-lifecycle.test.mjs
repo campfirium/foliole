@@ -7,7 +7,6 @@ import process from 'node:process';
 
 import { expect, it } from 'vitest';
 
-import { macosA5GradleEnv } from './macos-a5-runtime-paths.mjs';
 
 const SOURCE = 'android/app/src/androidTest/java/com/foliole/android/FolioleAcceptanceSyncEventProjectionTest.java';
 const STUBS = {
@@ -70,7 +69,7 @@ it('projects stored sync events when activity startup and Browse navigation are 
   const parent = path.resolve('.tmp/artifacts');
   fs.mkdirSync(parent, { recursive: true });
   const root = fs.mkdtempSync(path.join(parent, 'sync-projection-lifecycle-'));
-  const javaHome = process.platform === 'darwin' ? macosA5GradleEnv().JAVA_HOME : process.env.JAVA_HOME;
+  const javaHome = process.env.JAVA_HOME;
   const binary = name => javaHome ? path.join(javaHome, 'bin', name) : name;
   try {
     const files = [];

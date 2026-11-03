@@ -53,8 +53,8 @@ export function runAndroidWebDev(options = {}) {
   const launch = createWebDevLaunch(options);
   const database = launch.options.env.FOLIOLE_COMPANION_PREVIEW_DB;
   if (options.data !== 'empty' && !existsSync(database)) {
-    throw new Error('No device preview library. Run `node scripts/android/macos-a5-dev.mjs preview-pull` '
-      + 'first, or start with `--data empty`.');
+    throw new Error('No device preview library. Prepare the preview library first, '
+      + 'or start with `--data empty`.');
   }
   mkdirSync(path.dirname(database), { recursive: true });
   return new Promise((resolve, reject) => {

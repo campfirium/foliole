@@ -12,6 +12,11 @@ const args = process.argv.slice(2);
 fs.appendFileSync(process.env.FAKE_TRACE, JSON.stringify({ tool, args, cwd: process.cwd() }) + '\\n');
 const config = JSON.parse(process.env.FAKE_CONFIG || '{}');
 if (config.fail === tool) { console.error('fixture build failed'); process.exit(1); }
+if (tool === 'gradlew' && !config.noOutputs) {
+  const output = path.join(process.cwd(), 'app/build/outputs/apk/debug/app-debug.apk');
+  fs.mkdirSync(path.dirname(output), { recursive: true });
+  fs.writeFileSync(output, 'newly built fixture apk');
+}
 if (tool === 'aapt2') console.log("package: name='" + (config.package || 'com.campfirium.foliole.android') + "' versionCode='1'");
 if (tool === 'adb') {
   const command = args.slice(2);
@@ -43,7 +48,7 @@ export function androidCliFixture(config = {}) {
   for (const directory of [bin, path.join(root, 'android')]) {
     writeFileSync(path.join(directory, 'package.json'), JSON.stringify({ type: 'commonjs' }));
   }
-  for (const file of ['android.mjs', 'android-upgrade.mjs']) {
+  for (const file of ['android.mjs', 'android-upgrade.mjs', 'android-artifacts.mjs']) {
     copyFileSync(path.join(ROOT, 'scripts/build', file), path.join(scripts, file));
   }
   for (const name of ['adb', 'aapt2', 'npm', 'npx']) {

@@ -15,9 +15,9 @@ The independent `security_maintenance` job in Scheduled Dev Quality runs daily o
 
 ## Local entry points
 
-- `node scripts/android/macos-a5-dev.mjs dependency-security`: collect actual Mac build inputs and source results without installing or modifying device data.
-- `node scripts/android/macos-a5-dev.mjs dependency-graph`: additionally generate a snapshot with the pinned official Gradle graph plugin, including Gradle itself and runtime/development scopes. This does not submit it or prove GitHub ingestion.
-- `node scripts/android/macos-a5-dev.mjs security-device`: read only the fixed device's OS patch and WebView provider through the existing lifecycle lease; record `.lab/internal/security-maintenance/android-device.json`.
+- [Hosted security maintenance](../../scripts/security/hosted-security-maintenance.mjs) calls the public Android collector with the selected checkout, Gradle Wrapper and standard SDK/JDK environment; it does not install or modify device data.
+- The public Android collector supports `dependencyGraph: true` to additionally generate a snapshot with the pinned official Gradle graph plugin. Generation does not submit it or prove GitHub ingestion.
+- Device OS patch and WebView evidence is collected separately from build dependency evidence; fixed personal device entry points are not included in the public checkout.
 - `node scripts/security/security-maintenance.mjs OUTPUT --android-report REPORT`: assemble the existing coverage schema, retaining all other platform obligations.
 - Use the existing `security-owner-cli.mjs` import/status commands and [security owner documentation](security-owner.md) for durable intake, assessment and delivery evidence.
 

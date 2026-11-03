@@ -9,7 +9,6 @@ import { collectAndroidDependencySecurity } from './android-dependency-security.
 import { prepareAndroidSecurityFixture } from './android-security-fixture.mjs';
 import { createAndroidSecurityReport } from './android-security-report.mjs';
 import { execute } from './macos-a5-process.mjs';
-import { macosA5GradleEnv } from './macos-a5-runtime-paths.mjs';
 
 let root;
 const reportOptions = {};
@@ -22,7 +21,7 @@ beforeAll(() => {
   prepareAndroidSecurityFixture(root);
   Object.assign(reportOptions, { projectRoot: root, gradle: path.resolve('android/gradlew'),
     initScript: path.resolve('scripts/android/android-dependency-inventory.gradle'),
-    env: process.platform === 'darwin' ? macosA5GradleEnv() : process.env, execute, source: { mode: 'integration-fixture' } });
+    env: process.env, execute, source: { mode: 'integration-fixture' } });
 });
 
 afterAll(() => rmSync(root, { recursive: true, force: true }));

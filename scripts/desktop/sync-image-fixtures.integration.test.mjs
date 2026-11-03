@@ -13,7 +13,7 @@ vi.mock('../../electron/ipc/paths.js', () => ({ resolveAppPaths: () => ({ app_da
 vi.mock('../../electron/ipc/workspaceContentChangedEvents.js', () => ({ notifyWorkspaceContentChanged: vi.fn() }));
 vi.mock('../../electron/mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
 
-import { seedA5ResourceLanProbe } from '../android/macos-a5-resource-lan-probe.mjs';
+import { seedA5ResourceLanProbe } from '../android/resource-lan-fixture.mjs';
 import { createDesktopSyncGroupJourneyFact } from './sync-group-journey-fact-action.mjs';
 import { createSyncFromZeroDataset } from './sync-from-zero-dataset-action.mjs';
 import { closeDatabaseConnection } from '../../electron/database/connection.js';

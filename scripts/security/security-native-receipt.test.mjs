@@ -7,7 +7,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { runAndroidDependencySecurity } from '../android/android-dependency-security.mjs';
 import { prepareAndroidSecurityFixture } from '../android/android-security-fixture.mjs';
 import { execute, captured } from '../android/macos-a5-process.mjs';
-import { macosA5GradleEnv } from '../android/macos-a5-runtime-paths.mjs';
 import { captureSecurityCandidate } from './security-inputs.mjs';
 
 const roots = [];
@@ -36,7 +35,7 @@ it.each([false, true])('binds real Gradle evidence to stable inputs and retains 
   const { root, git } = repository();
   const original = captureSecurityCandidate(root, git);
   const args = { paths: { buildRoot: root, artifactsRoot: path.join(root, 'reports'), runId: 'fixture',
-    gradle: path.resolve('android/gradlew') }, env: process.platform === 'darwin' ? macosA5GradleEnv() : process.env, captured,
+    gradle: path.resolve('android/gradlew') }, env: process.env, captured,
   execute: async (...parameters) => {
     const result = await execute(...parameters);
     if (mutate) appendFileSync(path.join(root, 'android/build.gradle'), '\n// Changed during collection\n');

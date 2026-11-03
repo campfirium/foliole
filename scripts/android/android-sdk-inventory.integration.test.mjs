@@ -6,13 +6,12 @@ import process from 'node:process';
 import { expect, it } from 'vitest';
 
 import { execute } from './macos-a5-process.mjs';
-import { macosA5GradleEnv } from './macos-a5-runtime-paths.mjs';
 
 it.runIf(process.platform !== 'win32')('reports the SDK used by a real Android application through the public AGP API', async () => {
   const artifacts = path.resolve('.tmp/artifacts/T680/sdk-inventory-tests');
   mkdirSync(artifacts, { recursive: true });
   const root = mkdtempSync(path.join(artifacts, 'application-'));
-  const env = process.platform === 'darwin' ? macosA5GradleEnv() : process.env;
+  const env = process.env;
   const agp = readFileSync('android/build.gradle', 'utf8').match(/com.android.tools.build:gradle:([\d.]+)/u)[1];
   try {
     mkdirSync(path.join(root, 'app/src/main'), { recursive: true });

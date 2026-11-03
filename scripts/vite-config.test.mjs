@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { readFileSync } from 'node:fs';
+import process from 'node:process';
 
 import { describe, expect, it } from 'vitest';
 
@@ -16,13 +17,24 @@ import demoViteConfig, {
   normalizeDemoCanonicalRouteHtml
 } from '../vite.demo.config.ts';
 import viteConfig from '../vite.config.ts';
-import { injectDefaultStartupSkeletonHtml, resolvePlatformTestExcludes, resolveViteHmrSetting } from '../vite.shared.ts';
+import { createSharedViteConfig, injectDefaultStartupSkeletonHtml, resolvePlatformTestExcludes, resolveViteHmrSetting } from '../vite.shared.ts';
 import { WINDOWS_A5_LIVE_RELOAD_URL } from './windows/windows-a5-live-reload-server.mjs';
 
 const normalizePath = (value) => String(value).replaceAll('\\', '/');
 const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
 
 describe('vite config', () => {
+  it('collects personal tests only when their paths are explicitly requested', () => {
+    const original = [...process.argv];
+    const requested = '.local/scripts/android/explicit.test.mjs';
+    try {
+      process.argv.push(requested);
+      const config = createSharedViteConfig(process.cwd());
+      expect(config.test.include).toContain(requested);
+      expect(config.test.include).not.toContain('.local/scripts/**/*.test.mjs');
+    } finally { process.argv.splice(0, process.argv.length, ...original); }
+  });
+
   it('keeps the explicit sync simulator outside ordinary test discovery', () => {
     expect(viteConfig.test?.include).not.toContain('scripts/sync/simulator/simulator.runner.mjs');
   });

@@ -9,7 +9,6 @@ import { expect, it } from 'vitest';
 import { collectAndroidDependencySecurity } from './android-dependency-security.mjs';
 import { writeMavenFixturePackage } from './android-security-fixture.mjs';
 import { execute } from './macos-a5-process.mjs';
-import { macosA5GradleEnv } from './macos-a5-runtime-paths.mjs';
 
 const versions = [
   ['com.google.guava', 'guava', '33.3.1-jre', '33.7.2-jre'],
@@ -69,7 +68,7 @@ it.runIf(process.platform !== 'win32')('patches buildscript graphs without addin
     fixture(root);
     const baseline = await collectAndroidDependencySecurity({ projectRoot: root,
       gradle: path.resolve('android/gradlew'), initScript: path.resolve('scripts/android/android-dependency-inventory.gradle'),
-      outputDir: path.join(root, 'before'), env: process.platform === 'darwin' ? macosA5GradleEnv() : process.env,
+      outputDir: path.join(root, 'before'), env: process.env,
       execute: (command, args, options) => execute(command, [...args, '-PunpatchedFixture'], options),
       fetchImpl: async (_url, options) => ({ ok: true,
         json: async () => ({ results: JSON.parse(options.body).queries.map(() => ({})) }) }) });
@@ -78,7 +77,7 @@ it.runIf(process.platform !== 'win32')('patches buildscript graphs without addin
     for (const [group, name, version] of versions) expect(before.modules).toContainEqual({ group, name, version });
     const { reportPath } = await collectAndroidDependencySecurity({ projectRoot: root,
       gradle: path.resolve('android/gradlew'), initScript: path.resolve('scripts/android/android-dependency-inventory.gradle'),
-      outputDir: path.join(root, 'report'), env: process.platform === 'darwin' ? macosA5GradleEnv() : process.env,
+      outputDir: path.join(root, 'report'), env: process.env,
       execute: (command, args, options) => execute(command, [...args, ':app:verifyCompilerRuntime'], options),
       fetchImpl: async (_url, options) => ({ ok: true,
         json: async () => ({ results: JSON.parse(options.body).queries.map(() => ({})) }) }) });

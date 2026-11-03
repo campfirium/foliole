@@ -1,16 +1,12 @@
 # Android resolved dependency security report
 
-Run the registered Mac action from the checkout:
+The scheduled security lane calls the public `runAndroidDependencySecurity` collector through [hosted security maintenance](../../scripts/security/hosted-security-maintenance.mjs). It uses the selected checkout, its Gradle Wrapper, and the caller's `JAVA_HOME` and Android SDK environment. Maintainer-specific device shortcuts are private and are not required by this collector.
 
-```sh
-node scripts/android/macos-a5-dev.mjs dependency-security
-```
-
-This action reads the current Android project through its Gradle Wrapper, resolves selected dependency graphs and queries the public OSV Maven advisory API. It does not build an APK, install or start an application, acquire a device lease, start ADB, update dependencies, or change the global toolchain. It rejects formal acceptance mode. Existing Android project prerequisites must already be prepared; missing prerequisites produce an error rather than an implicit rebuild or fallback.
+The collector reads the current Android project through its Gradle Wrapper, resolves selected dependency graphs and queries the public OSV Maven advisory API. It does not build an APK, install or start an application, acquire a device lease, start ADB, update dependencies, or change the global toolchain. Existing Android project prerequisites must already be prepared; missing prerequisites produce an error rather than an implicit rebuild or fallback.
 
 ## Evidence
 
-The command prints a report path under `.tmp/artifacts/security-maintenance/android/<run-id>/`:
+The collector prints a report path under `.tmp/artifacts/security-maintenance/android/<run-id>/`:
 
 - `inventory.json`: Gradle resolution results, selected versions, dependency edges, unresolved selectors, toolchain versions and uninspected configurations.
 - `gradle.log`: extraction output.

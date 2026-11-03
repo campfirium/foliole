@@ -50,13 +50,6 @@ export const CAPABILITY_CONTRACTS = [
     platforms: ['darwin', 'linux', 'win32']
   },
   {
-    adapter: { args: ['scripts/sync-group/multi-device-sync-cli.mjs'], bin: 'node' },
-    adapterPath: 'scripts/sync-group/multi-device-sync-cli.mjs',
-    name: 'multi-device-sync',
-    placements: ['macos-only'],
-    platforms: ['darwin']
-  },
-  {
     adapter: { args: ['scripts/quality/remote-quality.mjs'], bin: 'node' },
     adapterPath: 'scripts/quality/remote-quality.mjs',
     name: 'quality:remote',
