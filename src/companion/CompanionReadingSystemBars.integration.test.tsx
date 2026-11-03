@@ -62,10 +62,10 @@ it('restores the bar during editing and reapplies the saved choice after foregro
   const view = render(<ImmersiveReadableArticle {...base.props} onSaveArticleContent={createContentSaveMock({ content: 'Reading body', versionId: 'initial' })} />);
   await waitFor(() => expect(host.hide).toHaveBeenCalled());
   more();
-  fireEvent.click(screen.getByRole('button', { name: 'Done', exact: true }));
-  fireEvent.click(screen.getByRole('button', { name: 'Edit content', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Edit content' }));
   await waitFor(() => expect(host.show).toHaveBeenCalled());
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   await act(async () => undefined);
   host.hide.mockClear();
   await act(async () => { foreground.forEach(callback => callback()); foreground.forEach(callback => callback()); });

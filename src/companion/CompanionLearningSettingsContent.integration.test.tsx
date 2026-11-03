@@ -141,7 +141,7 @@ it('confirms precise input and cancels a later edit without saving on blur', asy
   fireEvent.change(input, { target: { value: '999' } });
   fireEvent.blur(input);
   expect(getCurrentReviewSchedulerSettings().maximumIntervalDays).toBe(240);
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(await openLearningSetting('Maximum interval days')).toHaveValue(240);
 });
 
@@ -172,7 +172,7 @@ it('opens a focused editor from the setting row and does not persist canceled in
   fireEvent.change(input, { target: { value: '180' } });
   fireEvent.blur(input);
   expect(library.database.prepare('SELECT * FROM setting_records').all()).toEqual([]);
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(getCurrentReviewSchedulerSettings().maximumIntervalDays).toBe(36500);
 });

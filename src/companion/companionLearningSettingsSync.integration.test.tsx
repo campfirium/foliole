@@ -40,9 +40,9 @@ it('exchanges saved settings with an independent desktop and merges a later mobi
   await peers.exchange();
   await hydrateCompanionReviewSchedulerSettings();
   expect(await openLearningSetting('Desired retention')).toHaveValue(0.86);
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(await openLearningSetting('New item load balancing')).toHaveValue(21);
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   vi.setSystemTime(new Date('2026-11-03T08:00:02Z'));
   await changeLearningSetting('Maximum interval days', '120');
   expect(getCurrentReviewSchedulerSettings()).toMatchObject({ desiredRetention: 0.86,

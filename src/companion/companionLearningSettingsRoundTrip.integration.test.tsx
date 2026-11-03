@@ -65,7 +65,7 @@ it.each(['android', 'ios'] as const)('saves all nine settings through the %s own
   for (const [label, value] of values) {
     const control = await openLearningSetting(label);
     expect(control).toHaveValue(control instanceof HTMLSelectElement ? value : Number(value));
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   }
   expect(getCurrentReviewSchedulerSettings()).toEqual(expected);
 });
