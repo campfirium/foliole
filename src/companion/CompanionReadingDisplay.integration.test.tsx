@@ -15,7 +15,7 @@ function openMore() {
   fireEvent.click(screen.getByText('Reading body'));
   fireEvent.click(screen.getByRole('button', { name: 'More reading actions' }));
   expect(screen.queryByRole('switch', { name: 'Floating reading toolbars' })).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Appearance', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
   expect(screen.getByRole('group', { name: 'Screen display' })).toBeInTheDocument();
 }
 afterEach(() => { localStorage.clear(); vi.restoreAllMocks(); });

@@ -14,7 +14,7 @@ vi.mock('@capacitor/core', async original => {
   const actual = await original<typeof import('@capacitor/core')>();
   return { ...actual, Capacitor: { ...actual.Capacitor, isNativePlatform: () => true, getPlatform: () => host.platform },
     registerPlugin: (name: string) => {
-      const plugin = actual.registerPlugin(name);
+      const plugin = actual.registerPlugin<object>(name);
       return name === 'FolioleCompanionBootstrap' ? new Proxy(plugin, { get(target, key) {
         return key === 'setReadingSystemBars' ? host.apply : Reflect.get(target, key);
       } }) : plugin;
@@ -32,7 +32,7 @@ function article(nodeId = 'first', editing = false) {
 function more() {
   fireEvent.click(screen.getByText('Reading body'));
   fireEvent.click(screen.getByRole('button', { name: 'More reading actions' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Appearance', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
 }
 const applied = async (enabled: boolean, hidden = false) => {
   await waitFor(() => expect(host.apply).toHaveBeenLastCalledWith(target(enabled, hidden)));
@@ -73,9 +73,9 @@ it('keeps both preferences independent across articles, reentry and leaving read
 it('restores normal window layout while editing and reapplies the current chrome state on foreground and rotation', async () => {
   localStorage.setItem(key, JSON.stringify({ hideSystemStatusBar: true }));
   render(article('first', true)); await applied(true, true); more();
-  fireEvent.click(screen.getByRole('button', { name: 'Done', exact: true }));
-  fireEvent.click(screen.getByRole('button', { name: 'Edit content', exact: true })); await applied(false);
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true })); await applied(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Edit content' })); await applied(false);
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' })); await applied(true);
   host.apply.mockClear();
   await act(async () => { foreground.forEach(callback => callback()); foreground.forEach(callback => callback()); });
   expect(host.apply).toHaveBeenCalledTimes(1);
