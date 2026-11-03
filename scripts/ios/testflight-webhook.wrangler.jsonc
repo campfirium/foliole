@@ -1,0 +1,12 @@
+{
+  "name": "foliole-testflight-events",
+  "main": "testflight-webhook.mjs",
+  "compatibility_date": "2026-11-03",
+  "workers_dev": true,
+  "vars": {
+    "GITHUB_REPOSITORY": "campfirium/foliole",
+    "GITHUB_WORKFLOW": "ios-testflight-event.yml",
+    "GITHUB_REF": "dev"
+  },
+  "observability": { "enabled": false }
+}
