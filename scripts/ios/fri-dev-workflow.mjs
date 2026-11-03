@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { prepareFriDatabaseUpgrade, finishFriDatabaseUpgrade } from './fri-database-upgrade.mjs';
 import { createFriPhysicalReadinessAdapter } from './fri-physical-readiness.mjs';
 import { retainFriDevelopmentApps } from './fri-app-retention.mjs';
 import { assertFriRunSucceeded } from './fri-run-result.mjs';
@@ -61,9 +62,10 @@ function execute(command, args, options = {}) {
 }
 
 export function buildFriDevWorkflowCommands({ evidenceRoot, repoRoot, runnerPath = FRI_XCUITEST_RUNNER, scenario = 'browse' }) {
-  if (!['browse', 'library-capacity', 'library-capacity-workspace', 'request-snapshot'].includes(scenario)) {
+  if (!['browse', 'library-capacity', 'library-capacity-workspace', 'request-snapshot', 'database-upgrade'].includes(scenario)) {
     throw new Error('Unsupported Fri development scenario.');
   }
+  const upgrade = scenario === 'database-upgrade';
   const requestSnapshot = scenario === 'request-snapshot';
   const capacity = scenario.startsWith('library-capacity');
   const method = scenario === 'library-capacity-workspace'
@@ -76,7 +78,8 @@ export function buildFriDevWorkflowCommands({ evidenceRoot, repoRoot, runnerPath
     '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'),
     '--scheme', 'AppPhysicalUITests',
     '--artifacts-dir', path.join(evidenceRoot, 'xcuitest'),
-    '--only-testing', requestSnapshot ? 'AppPhysicalUITests/FoliolePhysicalReadonlySnapshotUITests/testProductionRequestSnapshotCancellation'
+    '--only-testing', upgrade ? 'AppPhysicalUITests/FoliolePhysicalDatabaseUpgradeUITests/testRetainsLegacyFactsAcrossInstallAndRestart'
+      : requestSnapshot ? 'AppPhysicalUITests/FoliolePhysicalReadonlySnapshotUITests/testProductionRequestSnapshotCancellation'
       : capacity ? FRI_DEV_TEST.replace('testOpensAndOperatesBrowse', method) : FRI_DEV_TEST];
   return [
     { command: 'npm', args: ['run', 'android:web:build'], env: buildEnv, stage: 'companion-build' },
@@ -108,10 +111,16 @@ export async function runFriDevWorkflow({
   revisionCheck = assertFriPinnedRevision,
   runnerPath = FRI_XCUITEST_RUNNER,
   scenario = 'browse',
+  legacyFramework = null,
+  upgradePrepare = prepareFriDatabaseUpgrade,
+  upgradeFinish = finishFriDatabaseUpgrade,
   run = execute
 }) {
   if (!fs.existsSync(runnerPath)) {
     throw new Error(`Fixed Fri XCUITest runner is missing: ${runnerPath}`);
+  }
+  if (scenario === 'database-upgrade' && !legacyFramework) {
+    throw new Error('Database upgrade acceptance requires an explicit legacy SQLCipher framework');
   }
   const pinned = revision === null ? null : revisionCheck(repoRoot, revision);
   fs.mkdirSync(evidenceRoot, { recursive: true });
@@ -122,11 +131,14 @@ export async function runFriDevWorkflow({
   await readiness();
   await retention({
     evidenceRoot: path.join(evidenceRoot, 'fri-app-retention'),
+    ...(scenario === 'database-upgrade' ? { freshAcceptance: true } : {}),
     run
   });
-  for (const entry of commands.slice(2)) {
-    await run(entry.command, entry.args, { cwd: repoRoot, env: entry.env, stage: entry.stage });
-  }
+  await run(commands[2].command, commands[2].args, { cwd: repoRoot, env: commands[2].env, stage: commands[2].stage });
+  const upgradeOptions = { repoRoot, evidenceRoot, legacyFramework, run };
+  if (scenario === 'database-upgrade') await upgradePrepare(upgradeOptions);
+  await run(commands[3].command, commands[3].args, { cwd: repoRoot, env: commands[3].env, stage: commands[3].stage });
+  if (scenario === 'database-upgrade') await upgradeFinish(upgradeOptions);
   if (pinned) {
     revisionCheck(repoRoot, revision);
     writeFriPinnedRevision(evidenceRoot, pinned);
@@ -140,6 +152,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     ?? path.join(repoRoot, '.tmp/artifacts/t162-fri-dev-workflow', timestamp()));
   const result = await runFriDevWorkflow({ evidenceRoot, repoRoot,
     revision: process.argv.includes('--revision') ? option(process.argv.slice(2), '--revision') ?? '' : null,
-    scenario: option(process.argv.slice(2), '--scenario') ?? 'browse' });
+    scenario: option(process.argv.slice(2), '--scenario') ?? 'browse',
+    legacyFramework: option(process.argv.slice(2), '--legacy-sqlcipher-framework') });
   console.log(`[fri-dev-workflow] status=success evidence=${result.evidenceRoot}`);
 }
