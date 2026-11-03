@@ -49,7 +49,7 @@ platform :ios do
       'FolioleShareExtension' => 'com.campfirium.foliole.ios.share' }.each do |target, identifier|
       profiles[target] = get_provisioning_profile(
         api_key: key, app_identifier: identifier, platform: 'ios',
-        development: false, adhoc: false, force: false,
+        development: false, force: false,
         skip_certificate_verification: false
       )
     end

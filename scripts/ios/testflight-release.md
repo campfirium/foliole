@@ -61,6 +61,8 @@ The distribution test executes the production Ruby state machine with simulated 
 
 Ruby dependencies are pinned in `fastlane/Gemfile.lock`, including checksums. Use Ruby 4.0 and Bundler 4.0.23; run `bundle install --gemfile scripts/ios/fastlane/Gemfile`, then `bundle exec fastlane lanes` from `scripts/ios`. The generated lockfile is kept intact as one dependency-resolution artifact.
 
+With `BUNDLE_GEMFILE` set to that pinned Gemfile, run `bundle exec ruby scripts/ios/testflight-signing-test.rb` from the repository root to validate the production lane through Fastlane's real option parser without Apple access. The hosted producer runs this before importing credentials.
+
 A real selected release or QA distribution must still prove signing, upload, Apple processing, external submission and the approved group update. No Simulator or device installation is performed by these scripts. Runtime preview and acceptance retain their existing host workflows.
 
 ## Release assets and publication

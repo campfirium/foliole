@@ -74,6 +74,8 @@ jobs:
         run: node scripts/quality/hosted-npm-ci.mjs
       - uses: ruby/setup-ruby@v1
         with: { ruby-version: '4.0', bundler-cache: true }
+      - name: Validate pinned Fastlane signing options without Apple access
+        run: bundle exec ruby scripts/ios/testflight-signing-test.rb
       - name: Install iPhone distribution credentials in a temporary keychain
         env:
           IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}

@@ -101,7 +101,7 @@ describe('TestFlight exact candidate and public availability', () => {
       def app_store_connect_api_key(**); {}; end
       def get_provisioning_profile(**options)
         raise 'Wrong signing credential request' unless options[:development] == false &&
-          options[:adhoc] == false && options[:force] == false && options[:skip_certificate_verification] == false
+          options.fetch(:adhoc, false) == false && options[:force] == false && options[:skip_certificate_verification] == false
         options.fetch(:app_identifier)
       end
       load ARGV.fetch(0)

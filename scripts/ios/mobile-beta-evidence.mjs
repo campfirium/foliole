@@ -11,6 +11,7 @@ export const MOBILE_DISTRIBUTION_REPAIR_PATHS = new Set([
   'scripts/ios/testflight-candidate.mjs', 'scripts/ios/testflight-release.md',
   'scripts/ios/testflight-workflow.test.mjs', 'scripts/ios/testflight-signature.mjs',
   'scripts/ios/fastlane/Fastfile',
+  'scripts/ios/testflight-signing-test.rb',
   'scripts/ios/mobile-beta-evidence.mjs', 'scripts/quality/mobile-beta-evidence.test.mjs',
   'scripts/ios/mobile-beta-evidence-read.mjs', 'scripts/quality/qa-mobile-resume.test.mjs',
   'scripts/quality/qa-mobile-resume.mjs', 'scripts/quality/qa-remote-quality.mjs',
