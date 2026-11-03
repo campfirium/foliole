@@ -4,26 +4,26 @@ import path from 'node:path';
 import process from 'node:process';
 import { digest } from '../security/security-inputs.mjs';
 
-const FRI = 'CB302BF0-6B5B-5737-8DA8-21F8081E19E7';
-const FRI_UDID = '00008110-001109A802A0401E';
-
-export function qualifyFriEnvironment(details) {
+export function qualifyIosDeviceEnvironment(details, { deviceId, deviceName } = {}) {
   const result = details.result;
-  if (result?.deviceProperties?.name !== 'Fri' || result.hardwareProperties?.udid !== FRI_UDID
-    || !result.deviceProperties.osVersionNumber || !result.deviceProperties.osBuildUpdate) {
-    throw new Error('Fixed iPhone identity or actual OS version is unavailable');
+  const name = result?.deviceProperties?.name;
+  if (!deviceId || result?.hardwareProperties?.udid !== deviceId || !name
+      || deviceName && name !== deviceName
+      || !result.deviceProperties.osVersionNumber || !result.deviceProperties.osBuildUpdate) {
+    throw new Error('Requested iPhone identity or actual OS version is unavailable');
   }
-  return { device: 'Fri', os: result.deviceProperties.osVersionNumber,
+  return { device: name, os: result.deviceProperties.osVersionNumber,
     build: result.deviceProperties.osBuildUpdate, transport: result.connectionProperties?.transportType,
     webkit: 'System WebKit follows this OS; standalone runtime build not observed',
     crypto: 'System Common Crypto follows this OS; standalone version not published' };
 }
 
-export function collectIosEnvironment({ root, inventory, device = false,
+export function collectIosEnvironment({ root, inventory, device = false, deviceId, deviceName,
   run = (command, args) => execFileSync(command, args,
     { cwd: root, encoding: 'utf8', timeout: 30_000, maxBuffer: 8 * 1024 * 1024 }) }) {
+  if (device && !deviceId) throw new Error('Device security collection requires an explicit device ID');
   const result = { platform: process.platform, arch: process.arch, checkedAt: new Date().toISOString(),
-    tools: {}, components: {}, errors: [], device: { status: 'unsupported', reason: 'Fixed iPhone was not queried in this environment' } };
+    tools: {}, components: {}, errors: [], device: { status: 'unsupported', reason: 'No iPhone was queried in this environment' } };
   const capture = (key, collect) => {
     try { return collect(); }
     catch (error) { result.errors.push({ key, reason: error.message }); return { status: 'error', reason: error.message }; }
@@ -48,9 +48,9 @@ export function collectIosEnvironment({ root, inventory, device = false,
       return { name: pkg.name, version: pkg.version, manifest, sha256: digest(raw), edges: row.edges };
     }));
   } else result.errors.push({ key: 'resolved-components', reason: 'Live matching App/host resolution is unavailable' });
-  if (device) result.device = capture('fixed-iPhone', () => ({ status: 'observed',
-    ...qualifyFriEnvironment(JSON.parse(run('xcrun', ['devicectl', '--quiet', 'device', 'info', 'details',
-      '--device', FRI, '--json-output', '-']))) }));
+  if (device) result.device = capture('requested-iPhone', () => ({ status: 'observed',
+    ...qualifyIosDeviceEnvironment(JSON.parse(run('xcrun', ['devicectl', '--quiet', 'device', 'info', 'details',
+      '--device', deviceId, '--json-output', '-'])), { deviceId, deviceName }) }));
   return result;
 }
 

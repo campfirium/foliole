@@ -5,8 +5,8 @@
 ```sh
 node scripts/ios/ios-security-controls.mjs .tmp/artifacts/ios-security/controls
 node scripts/ios/ios-security-maintenance.mjs .tmp/artifacts/ios-security/current
-# Actual Mac graph, binary components, tools/SDK and read-only fixed iPhone OS:
-node scripts/ios/ios-security-maintenance.mjs .tmp/artifacts/ios-security/mac --resolve --device
+# Actual Mac graph, binary components, tools/SDK and read-only explicitly selected iPhone OS:
+node scripts/ios/ios-security-maintenance.mjs .tmp/artifacts/ios-security/mac --resolve --device <explicit-device-udid>
 # Merge into an existing complete maintenance report without changing the owner schema:
 node scripts/ios/ios-security-maintenance.mjs .tmp/artifacts/ios-security/merged --base-coverage PATH_TO_COVERAGE_JSON
 ```

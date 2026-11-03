@@ -150,6 +150,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/ios-sync-trigger-acceptance-runner.test.mjs',
   'scripts/ios/ios-sync-trigger-host-contract.test.mjs',
   'scripts/ios/ios-vendor-metadata.test.mjs',
+  'scripts/ios/ios-security-environment.test.mjs',
   'scripts/ios/mobile-node-link-registration.test.mjs',
   'scripts/ios/sqlcipher-security.test.mjs',
   'scripts/ios/swift-security-evidence.test.mjs',

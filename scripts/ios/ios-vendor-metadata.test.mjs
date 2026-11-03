@@ -4,7 +4,6 @@ import { APPLE_SECURITY, SQLITE_CVES } from './ios-security-test-support.mjs';
 import { sqliteAdvisoryMetadata, assessSqliteAdvisories, appleSecurityMetadata,
   appleAdvisoryMetadata } from './ios-vendor-metadata.mjs';
 import { pendingReleases } from './ios-security-sources.mjs';
-import { qualifyFriEnvironment } from './ios-security-environment.mjs';
 import { appleUpdateReviews } from './ios-security-maintenance.mjs';
 
 it('qualifies vendor table records, preserves non-core exclusions and matches only below documented SQLite fix', () => {
@@ -29,12 +28,4 @@ it('retains Apple release metadata and marks device update information as applic
 it('handles real two-part Protobuf versions and rejects unknown installed versions', () => {
   expect(pendingReleases([{ tag: 'v35.2', prerelease: false }], 'v35.1')).toHaveLength(1);
   expect(() => pendingReleases([], 'unknown')).toThrow();
-});
-
-it('requires the fixed iPhone identity and records OS separately from standalone WebKit version', () => {
-  const details = { result: { deviceProperties: { name: 'Fri', osVersionNumber: '27.0.1', osBuildUpdate: '24A446' },
-    hardwareProperties: { udid: '00008110-001109A802A0401E' } } };
-  expect(qualifyFriEnvironment(details).webkit).toContain('not observed');
-  details.result.hardwareProperties.udid = 'another-device';
-  expect(() => qualifyFriEnvironment(details)).toThrow('identity');
 });

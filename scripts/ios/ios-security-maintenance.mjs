@@ -15,7 +15,8 @@ import { mergeIosSecurityCoverage } from './ios-security-coverage.mjs';
 import { ensureIosTrivy } from './ios-security-trivy.mjs';
 
 export async function collectIosSecurityMaintenance({ root, output, trivy, cache, resolve = false,
-  device = false, token, now = Date.now() }) {
+  device = false, deviceId, deviceName, token, now = Date.now() }) {
+  if (device && !deviceId) throw new Error('Device security collection requires an explicit device ID');
   mkdirSync(output, { recursive: true });
   const git = args => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
   const candidate = captureSecurityCandidate(root, git);
@@ -30,7 +31,7 @@ export async function collectIosSecurityMaintenance({ root, output, trivy, cache
   const pins = [...new Map(Object.values(inventory.graphs).flatMap(graph => graph.pins ?? [])
     .map(pin => [`${pin.identity}:${pin.version}:${pin.revision}`, pin])).values()];
   const official = await collectIosOfficialSecurity({ pins, output: path.join(output, 'official'), token, now });
-  const environment = collectIosEnvironment({ root, inventory, device });
+  const environment = collectIosEnvironment({ root, inventory, device, deviceId, deviceName });
   const report = { schemaVersion: 1, platform: 'ios', checkedAt: new Date(now).toISOString(),
     candidate, inventory, scanner, official, environment, errors: [], status: 'incomplete' };
   if (!sameSecurityCandidate(candidate, captureSecurityCandidate(root, git))) {
@@ -95,16 +96,19 @@ export function appleUpdateReviews(releases, environment, scope) {
   }));
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const [output, ...flags] = process.argv.slice(2);
+export async function runIosSecurityMaintenanceCli(argv, { deviceName } = {}) {
+  const [output, ...flags] = argv;
+  const deviceIndex = flags.indexOf('--device');
+  const deviceId = deviceIndex < 0 ? undefined : flags.splice(deviceIndex, 2)[1];
   const baseIndex = flags.indexOf('--base-coverage');
   const baseFile = baseIndex < 0 ? undefined : flags.splice(baseIndex, 2)[1];
-  if (!output || baseIndex >= 0 && !baseFile || flags.some(flag => !['--resolve', '--device'].includes(flag))) {
-    throw new Error('Usage: ios-security-maintenance.mjs OUTPUT [--resolve] [--device] [--base-coverage FILE]; set FOLIOLE_TRIVY_BIN');
+  if (!output || baseIndex >= 0 && !baseFile || deviceIndex >= 0 && (!deviceId || deviceId.startsWith('--'))
+      || flags.some(flag => flag !== '--resolve')) {
+    throw new Error('Usage: ios-security-maintenance.mjs OUTPUT [--resolve] [--device UDID] [--base-coverage FILE]; set FOLIOLE_TRIVY_BIN');
   }
   const report = await collectIosSecurityMaintenance({ root: process.cwd(), output: path.resolve(output),
     trivy: process.env.FOLIOLE_TRIVY_BIN ?? await ensureIosTrivy({ root: process.cwd() }), cache: path.resolve('.cache/ios-security-trivy'),
-    token: process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN, resolve: flags.includes('--resolve'), device: flags.includes('--device') });
+    token: process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN, resolve: flags.includes('--resolve'), device: Boolean(deviceId), deviceId, deviceName });
   console.log(JSON.stringify({ status: report.status, output, scanner: report.scanner.status,
     errors: report.official.errors, findings: report.checks.flatMap(check => check.findings).length }));
   if (baseFile) {
@@ -112,4 +116,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     writeFileSync(path.join(path.resolve(output), 'coverage.json'), `${JSON.stringify(coverage, null, 2)}\n`);
   }
   process.exitCode = report.errors.length || report.checks.some(check => check.status === 'error') ? 1 : 0;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await runIosSecurityMaintenanceCli(process.argv.slice(2));
 }
