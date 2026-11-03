@@ -1,4 +1,7 @@
 export const EN_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS = {
+  'companion.reading.hideSystemStatusBar': 'Hide system status bar',
+  'companion.reading.systemStatusBarError': 'Could not change the system status bar. Your reading preference has not changed.',
+  'companion.reading.retrySystemStatusBar': 'Retry system status bar',
   'companion.reading.overlayToolbars': 'Overlay toolbars',
   'companion.reading.font.saveError': 'Could not save reading settings. Your previous settings are still in use.',
   'companion.reading.font.decrease': 'Decrease {setting}',

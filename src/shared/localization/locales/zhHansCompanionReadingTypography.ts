@@ -1,4 +1,7 @@
 export const ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS = {
+  'companion.reading.hideSystemStatusBar': '隐藏系统状态栏',
+  'companion.reading.systemStatusBarError': '未能切换系统状态栏，阅读偏好未更改。',
+  'companion.reading.retrySystemStatusBar': '重试切换系统状态栏',
   'companion.reading.overlayToolbars': '工具栏不占位',
   'companion.reading.font.saveError': '阅读设置未能保存，仍使用上次保存的设置。',
   'companion.reading.font.decrease': '减小{setting}',

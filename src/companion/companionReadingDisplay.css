@@ -15,3 +15,8 @@ section.companion-reading-overlay:has(> .companion-review-footer)::after {
 .companion-reading-overlay .markdown-editor-host[data-scroll-container='outer'] {
   height: auto;
 }
+
+/* The open reading menu presents its own accessible inline host error. */
+body:has(.companion-reading-display-controls) .companion-reading-system-bar-banner {
+  display: none;
+}

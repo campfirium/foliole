@@ -17,7 +17,8 @@ function Reader() {
     persistedNodeViewState: null, pdfAttachmentId: null, title: 'Display topic', textAnchorDecorations: [] };
   return reading ? <ImmersiveReadableArticle key={article.nodeId} flow={flow} readableArticle={article} snapshot={null}
     isReviewItem={params.has('answer')} answer={params.has('answer') ? 'Answer text at the bottom.' : null}
-    onSaveArticleContent={async () => {}} onExit={() => setReading(false)}
+    onSaveArticleContent={Object.assign(async (_id: string, saved: string) => ({ content: saved,
+      currentVersionId: 'saved', submittedVersionId: 'saved' }), { readSource: async () => ({ content, versionId: 'initial' }) })} onExit={() => setReading(false)}
     header={<button type="button" onClick={() => setFlow(!flow)}>Switch reading route</button>}
     footer={flow ? <CompanionBottomBar className="companion-review-footer"><button type="button">Show answer</button></CompanionBottomBar> : null} />
     : <button type="button" onClick={() => setReading(true)}>Return to reading</button>;

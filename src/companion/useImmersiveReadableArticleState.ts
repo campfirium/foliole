@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 
+import { useCompanionReadingSystemBars } from './useCompanionReadingSystemBars';
 import { useImmersiveReadingSurfaceTap } from './useImmersiveReadingSurfaceTap';
 
 import type { EditorSelection } from '@/features/editor/adapters/EditorAdapter';
@@ -13,6 +14,7 @@ export function useImmersiveReadableArticleState(initialSelection: EditorSelecti
   const [openReadingSheet, setOpenReadingSheet] = useState<'font' | 'highlight' | 'info' | null>(null);
   const [readingTarget, setReadingTarget] = useState<{ selection: EditorSelection; commandId: string } | null>(null);
   const nextReadingCommandId = useRef(0);
+  useCompanionReadingSystemBars(isContentEditing);
 
   const surfaceTap = useImmersiveReadingSurfaceTap(isContentEditing, setIsChromeVisible);
 

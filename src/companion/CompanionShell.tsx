@@ -5,6 +5,7 @@ import { cancelRetiredHandoffNotifications } from '../shared/platform/companionH
 import { logRuntimeError } from '../shared/platform/runtimeLogging';
 
 import { CompanionNavigationProvider } from './CompanionNavigationProvider';
+import { CompanionReadingSystemBarNotice } from './CompanionReadingSystemBarNotice';
 import { CompanionRestoredShell } from './CompanionRestoredShell';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -20,6 +21,7 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
   const snapshot = workspaceSync.state.workspace_snapshot;
   return <CompanionNavigationProvider ready={workspaceSync.isWorkspaceSyncStateReady} snapshot={snapshot}
     libraryScope={snapshot?.libraryScope ?? props.bootstrapState.database_path ?? 'preview'}>
+    <CompanionReadingSystemBarNotice />
     <CompanionRestoredShell bootstrapState={props.bootstrapState} workspaceSync={workspaceSync} />
   </CompanionNavigationProvider>;
 }
