@@ -111,6 +111,7 @@
     "build:windows": "npm run windows:package",
     "build:linux": "node scripts/build/linux.mjs",
     "build:android": "node scripts/build/android.mjs",
+    "upgrade:android": "node scripts/build/android-upgrade.mjs",
     "macos:internal:dispatch": "node scripts/macos/launch-internal-update.mjs",
     "macos:internal:prepare-runtime": "node scripts/macos/mas-electron-runtime.mjs",
     "macos:internal:update": "node scripts/macos/package-mas.mjs --install",

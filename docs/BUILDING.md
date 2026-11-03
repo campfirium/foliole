@@ -1,6 +1,8 @@
 # Build from Source
 
-Start from a [release tag](https://github.com/campfirium/foliole/releases). The `dev` branch contains unreleased work. Install Node.js 22.13+ (22.x), npm, Python 3, and your platform's native build tools, then run `npm ci` at the repository root.
+For everyday use, start from a [release tag](https://github.com/campfirium/foliole/releases). For the latest unreleased source, use the `dev` branch of [campfirium/foliole](https://github.com/campfirium/foliole). Preserve any local changes when updating an existing checkout; do not reset or clean them away. Record the selected commit with `git rev-parse HEAD`.
+
+Install Node.js 22.13+ (22.x), npm, Python 3, and your platform's native build tools, then run `npm ci` at the repository root. Build commands use that checkout; they do not fetch newer source. Installation is a separate step in the Android workflow below.
 
 Build on the operating system you are targeting.
 
@@ -41,6 +43,24 @@ npm run build:android
 ```
 
 The debug APK is `android/app/build/outputs/apk/debug/app-debug.apk`. A debug build needs no release keystore.
+
+The public build produces the ordinary offline Foliole app. Unset `FOLIOLE_DEV_LIVE_RELOAD`, `FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID`, and any acceptance-specific `FOLIOLE_ANDROID_COMPANION_SYNC_PORT` before building. These settings belong to separate development workflows.
+
+### Upgrade an existing Android installation
+
+Enable USB debugging and authorize this computer on the intended phone. Put Android SDK Platform-Tools (`adb`) and the installed Build-Tools directory (`aapt2`) on `PATH`, or supply executable paths with `--adb` and `--aapt2`. List devices with `adb devices -l`, then use the serial of the phone the user wants to upgrade:
+
+```sh
+npm run upgrade:android -- --device PHONE_SERIAL --apk android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Run this only after the build above succeeds. A leftover APK path does not establish which commit produced it. An Agent should report the source commit it built and stop if any build stage fails.
+
+This command requires ordinary Foliole (`com.campfirium.foliole.android`) to be installed for the phone's foreground Android user. It verifies the APK package, requests a data-preserving replacement on the explicit device and user, then starts Foliole. It does not select a device automatically, back up or copy the database, synchronize libraries, uninstall the app, or clear its data. An acceptance app alone does not count as the ordinary installation.
+
+Android must accept the signing identity and version as an update. Keep the original debug keystore when rebuilding your own installation: a new computer's debug key, a release-signed installation, or a newer installed version may prevent replacement. The command stops on failure without attempting a downgrade or reinstall. See [Android signing](https://developer.android.com/studio/publish/app-signing) and [ADB installation options](https://developer.android.com/tools/adb).
+
+Successful installation and successful launch are reported separately. If launch fails after installation, the new app is already installed; the command does not reinstall or restore data. Installation success alone does not verify that the new code can read every existing note and attachment. For a first installation, install the built APK on the selected phone using Android's standard installation tools instead; this upgrade command deliberately requires an existing app.
 
 ## iOS
 
