@@ -7,24 +7,8 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import {
-  friAcceptanceBundle, persistFriProjection, resolveFriEvidenceRoot, runFriSyncEventProjection
+  loadProjection, persistFriProjection, resolveFriEvidenceRoot
 } from './ios-acceptance-sync-event-projection.mjs';
-
-it('runs the isolated signed projection target and accepts only its fixed fields', () => {
-  const source = fs.readFileSync('scripts/ios/ios-acceptance-sync-event-projection.mjs', 'utf8');
-  const projectionTest = fs.readFileSync(
-    'ios/App/AppAcceptanceProjectionTests/FolioleAcceptanceSyncEventProjectionTests.swift',
-    'utf8'
-  );
-  expect(source).toContain('AppAcceptanceProjectionTests/FolioleAcceptanceSyncEventProjectionTests');
-  expect(source).toContain('FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix');
-  expect(source).toContain('value.container_identity !== applicationId');
-  expect(source).not.toMatch(/CapacitorDatabase|device copy|container_path|workgroup_key|endpoint/u);
-  expect(projectionTest).toContain('requiredEnvironment("FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX")');
-  expect(projectionTest).toContain('XCTAssertEqual(suffix, ".dev")');
-  expect(projectionTest).toContain('"error": event["status"] as? String == "failed"');
-  expect(projectionTest).not.toContain('.t152-acceptance');
-});
 
 it('reads the current signed projection while exposing only sync completion fields', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fri-current-projection-'));
@@ -37,12 +21,8 @@ it('reads the current signed projection while exposing only sync completion fiel
       message: 'Sync completed.', summary: { nodes: 1 } }]
   };
   const file = path.join(root, 'projection.json');
-  const execute = async () => ({ code: 0, lines: [JSON.stringify({
-    classification: 'accepted', promoted: root
-  })] });
-  const run = () => runFriSyncEventProjection({ buildIdentity: 'candidate',
-    bundle: friAcceptanceBundle('t635'), evidenceRoot: path.join(root, 'saved'),
-    execute, repoRoot: root });
+  const run = async () => persistFriProjection(
+    loadProjection(root, 'candidate', 'com.campfirium.foliole.ios.dev'), path.join(root, 'saved'));
   try {
     fs.writeFileSync(file, JSON.stringify(value));
     const result = await run();
@@ -58,15 +38,6 @@ it('reads the current signed projection while exposing only sync completion fiel
     fs.writeFileSync(file, JSON.stringify(value));
     await expect(run()).rejects.toThrow('unsupported fields');
   } finally { fs.rmSync(root, { force: true, recursive: true }); }
-});
-
-it('uses one fixed signed acceptance container for the task', () => {
-  expect(friAcceptanceBundle('t173')).toEqual({
-    applicationId: 'com.campfirium.foliole.ios.dev',
-    suffix: '.dev'
-  });
-  expect(() => friAcceptanceBundle('12345678-1234-4234-8234-123456789abc'))
-    .toThrow('task identity');
 });
 
 it('loads promoted Fri evidence from the runner receipt', () => {

@@ -1,10 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { assertFriRunSucceeded } from './fri-run-result.mjs';
 
-/* global process */
-
-const FRI_RUNNER = '/Users/roamer/.codex/skills/ios-physical-acceptance/scripts/run-fri-xcuitest.sh';
 const EVENT_KEYS = new Set([
   'device_identity_key', 'error', 'occurred_at', 'result', 'run_id', 'started_at', 'status',
   'trigger_reason'
@@ -24,15 +20,8 @@ function projectionFiles(root) {
     .map((entry) => path.join(entry.parentPath, entry.name));
 }
 
-export function friAcceptanceBundle(taskId) {
-  if (!/^t[0-9]+$/u.test(taskId ?? '')) {
-    throw new Error('Fri acceptance task identity is missing or invalid.');
-  }
-  const suffix = '.dev';
-  return { applicationId: `com.campfirium.foliole.ios${suffix}`, suffix };
-}
 
-function loadProjection(root, buildIdentity, applicationId) {
+export function loadProjection(root, buildIdentity, applicationId) {
   for (const file of projectionFiles(root)) {
     let value;
     try { value = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { continue; }
@@ -80,23 +69,4 @@ export function persistFriProjection(projection, evidenceRoot) {
   const file = path.join(evidenceRoot, 'projection.json');
   fs.writeFileSync(file, `${JSON.stringify(projection.value, null, 2)}\n`);
   return { file, value: projection.value };
-}
-
-export async function runFriSyncEventProjection({ buildIdentity, evidenceRoot, execute,
-  repoRoot, bundle, desktopForkLabel, runnerArgs = [] }) {
-  const result = await execute('bash', [FRI_RUNNER,
-    '--project', path.join(repoRoot, 'ios/App/App.xcodeproj'), '--scheme', 'AppPhysicalUITests',
-    '--artifacts-dir', evidenceRoot,
-    '--keep-app-foreground', bundle.applicationId,
-    ...runnerArgs,
-    '--only-testing', 'AppAcceptanceProjectionTests/FolioleAcceptanceSyncEventProjectionTests/testProjectsSyncEvents'
-  ], { action: 'fri-sync-event-projection', cwd: repoRoot, env: { ...process.env,
-    FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix,
-    ...(desktopForkLabel ? { FOLIOLE_T152_DESKTOP_FORK_LABEL: desktopForkLabel } : {}),
-    FOLIOLE_T152_BUILD_IDENTITY: buildIdentity }, hardDeadlineMs: 30 * 60_000,
-  host: 'ios-b', stage: 'fri-sync-event-projection' });
-  assertFriRunSucceeded(result, 'Fri acceptance sync event projection');
-  const projection = loadProjection(resolveFriEvidenceRoot(result, evidenceRoot),
-    buildIdentity, bundle.applicationId);
-  return persistFriProjection(projection, evidenceRoot);
 }

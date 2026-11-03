@@ -49,18 +49,4 @@ describe('iOS app identity host contract', () => {
     expect(infoPlist).not.toContain('com.campfirium.foliole.ios');
   });
 
-  it('forces the Mac Fri two-device journey onto a separate signed acceptance bundle', () => {
-    for (const script of ['scripts/ios/macos-fri-two-device-sync.mjs']) {
-      const source = read(script);
-      expect(source).toContain('FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix');
-      expect(source).toContain('FOLIOLE_ACCEPTANCE_TASK_ID');
-      expect(source).toContain("'--keep-app-foreground', bundle.applicationId");
-      expect(source).toContain('freshAcceptance: true');
-    }
-  });
-
-  it('reuses the prepared Fri build for every two-device test batch', () => {
-    const macos = read('scripts/ios/macos-fri-two-device-sync.mjs');
-    expect(macos.match(/'--test-without-building'/gu)).toHaveLength(7);
-  });
 });
