@@ -124,27 +124,52 @@ Do not merge or check out the bot's branch.
 
 Run focused behavior checks and necessary builds per group, then share applicable
 checks for the final combination. Builds alone do not prove runtime or data
-behavior. Commit the locally validated candidate before active remote QA.
-Dependency validation and its repairs/rechecks use the registered workspace on
-`check`: workspace operations use `quality:qa:workspace` from the development
-checkout, while `quality:remote` runs from the clean QA checkout. The QA owner
-handles preflight, hosted checks, bounded repairs, verified integration and
-workspace release. Scheduled dev checks, their repairs and rechecks retain dev;
-release checks and subsequent handling retain the release lane. A failure or a
-larger repair does not automatically transfer ownership or change lanes.
+behavior. After local checks and scoped commits, record the pending-QA handoff
+below and finish the dependency task. Do not start a check workspace, remote run
+or another chat solely to close its PR. Use normal scheduled dev delivery unless
+a manual push is separately authorized; an explicit QA request can start a batch.
+On later dependency batches, recognize implementations already present in dev
+instead of repeating installs or commits because the PR is still open.
+
+The next centralized check task reads pending entries at batch start and owns
+validation and PR closure for updates contained in its frozen candidate and
+covered by its checks. The original dependency task need not return. Active QA
+and repairs use the registered workspace on `check`: workspace operations use
+`quality:qa:workspace` from dev, while `quality:remote` runs from the clean QA
+checkout. Its owner handles preflight, hosted checks, repairs, integration and
+workspace release. Scheduled dev and release workflows retain their own lanes.
 
 Follow affected host rules without turning ordinary updates into full release
-acceptance. A blocked group does not hold unrelated eligible updates. Before
-closing an adopted proposal, verify required checks for the exact QA candidate,
-its integration into dev and remote dev containment, including any QA repairs.
-Do not use PR count to determine install, test, commit or task count.
+acceptance. A blocked group does not hold unrelated eligible updates. The QA owner
+closes each eligible PR after required checks for the containing candidate, dev
+integration and remote dev containment, including repairs. Re-read author, base
+and head; review any changed proposal and confirm it is still covered. Comment
+with the superseding commit and passing QA evidence, verify closure and remove
+the pending row. Failed, uncovered or undelivered rows retain evidence and the
+next action under the QA owner; workspace release does not discard closure work.
+Check publication alone does not authorize a dev push. Do not use PR count to
+determine install, test, commit or task count.
+
+### Locally implemented updates awaiting centralized QA
+
+These entries hand validation and closure to the next centralized check task;
+they are not upstream compatibility deferrals and do not start QA themselves.
+Use repository `campfirium/foliole`, base `dev`, unless a row explicitly says
+otherwise. Record the verified author/head, implementation commit, local
+evidence and required QA coverage. Candidate containment alone is not a pass.
+
+| PR and reviewed proposal | Local implementation and evidence | Required QA and closure owner |
+| --- | --- | --- |
+| [#199](https://github.com/campfirium/foliole/pull/199); `app/renovate`; head `c8696b8b0846698325451f977da23bf3dda396e3`; lucide-react 1.61.0 → 1.62.0 | `eb4f2558f`; 2026-11-04: `npm run test:files -- src/shared/ui/LucideIconCatalog.test.ts src/features/nodes/components/NodeTreeRowIconGraphic.test.tsx src/features/settings/components/sections/SettingsRailIconPicker.test.tsx src/companion/CompanionSelectionAnnotationToolbar.test.tsx` passed (20 tests); `npm run build` passed; `npm ls lucide-react react --depth=0` confirmed compatible peers. | Next centralized check task: hosted dependency hardening and risk-matched desktop/shared/companion coverage, then remote dev containment and PR closure; no QA run started by this handoff. |
 
 ## Reviewed proposals and deferred adoption
 
-Every reviewed proposal ends with an explicit decision. Close adopted proposals
-after the evidence above. Close rejected or deferred proposals after recording the
-actual reason; closure does not claim adoption, validation or vulnerability repair.
-An open proposal is temporary work owned by an active handler, not a reminder.
+Every reviewed proposal ends with an explicit decision. Locally implemented
+updates may remain open with the pending-QA handoff above, owned by the next
+centralized check task rather than an indefinitely active dependency task.
+Close adopted proposals after the evidence above. Close rejected or upstream-
+deferred proposals after recording the actual reason; closure does not claim
+adoption, validation or vulnerability repair.
 Do not bulk-close unreviewed, human-authored or out-of-scope proposals to reach zero.
 An access failure or interrupted review remains visibly incomplete with an owner.
 
