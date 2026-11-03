@@ -1,3 +1,5 @@
+import { installPromiseWithResolvers } from '../shared/lib/promiseWithResolvers';
+
 type ReplaceAllPattern = string | RegExp;
 type ReplaceAllReplacement = string | ((substring: string, ...args: unknown[]) => string);
 
@@ -76,18 +78,6 @@ function installPromiseAllSettledPolyfill() {
   });
 }
 
-function installPromiseWithResolversPolyfill() {
-  defineMissingProperty(Promise, 'withResolvers', function withResolvers<T>(this: PromiseConstructor) {
-    let resolve!: (value: T | PromiseLike<T>) => void;
-    let reject!: (reason?: unknown) => void;
-    const promise = new this<T>((resolvePromise, rejectPromise) => {
-      resolve = resolvePromise;
-      reject = rejectPromise;
-    });
-    return { promise, resolve, reject };
-  });
-}
-
 function installPromiseFinallyPolyfill() {
   defineMissingProperty(Promise.prototype, 'finally', function promiseFinally<T>(
     this: Promise<T>,
@@ -147,7 +137,7 @@ export function installCompanionWebViewCompatibilityPolyfills() {
   installObjectFromEntriesPolyfill();
   installUrlParsePolyfill();
   installPromiseAllSettledPolyfill();
-  installPromiseWithResolversPolyfill();
+  installPromiseWithResolvers();
   installPromiseFinallyPolyfill();
   installStructuredCloneFallback();
 }

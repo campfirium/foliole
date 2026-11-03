@@ -56,14 +56,26 @@ function resolveRequestedResource(projectRoot: string, requestUrl: string) {
 
 export function pdfJsResourcesPlugin(projectRoot: string): Plugin {
   let outputDirectory = '';
+  let building = false;
   return {
     name: 'pdfjs-resources',
     configResolved(config) {
       outputDirectory = config.build.outDir;
+      building = config.command === 'build';
+    },
+    buildStart() {
+      if (!building) return;
+      this.emitFile({ type: 'chunk', id: path.join(projectRoot, 'src/shared/platform/runtime/pdfTextWorker.ts'),
+        fileName: `${PDFJS_RESOURCE_PUBLIC_PATH}/pdf-text-worker.mjs`, preserveSignature: 'strict' });
     },
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
         if (request.method !== 'GET' && request.method !== 'HEAD') {
+          next();
+          return;
+        }
+        if (request.url?.split('?')[0] === `/${PDFJS_RESOURCE_PUBLIC_PATH}/pdf-text-worker.mjs`) {
+          request.url = `/@fs/${path.join(projectRoot, 'src/shared/platform/runtime/pdfTextWorker.ts')}`;
           next();
           return;
         }
