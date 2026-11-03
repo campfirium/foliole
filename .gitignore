@@ -1,4 +1,5 @@
 .lab/
+.local/scripts/
 .claude/
 .agents/
 .codex

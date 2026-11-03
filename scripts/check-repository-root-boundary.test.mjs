@@ -24,6 +24,7 @@ async function createFixtureRoot() {
     '.github',
     '.githooks',
     '.lab',
+    '.local',
     '.tmp',
     'dist',
     'docs',

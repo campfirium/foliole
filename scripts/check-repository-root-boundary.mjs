@@ -19,7 +19,7 @@ const ACTIVE_ROOT_SEMANTICS = new Map([
   ['tests', 'test support']
 ]);
 const ACTIVE_ROOTS = new Set(ACTIVE_ROOT_SEMANTICS.keys());
-const BASELINE_ALLOWED_ROOTS = new Set(['.agents', '.claude', '.codex', '.git', '.github', '.githooks', '.lab']);
+const BASELINE_ALLOWED_ROOTS = new Set(['.agents', '.claude', '.codex', '.git', '.github', '.githooks', '.lab', '.local']);
 const EXEMPT_ROOTS = new Set([
   '.cache',
   '.tmp',
