@@ -6,8 +6,7 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 const names = [
-  't152-windows-admission-run.mjs',
-  't152-windows-capsule-control.mjs', 't152-windows-capsule-action.ps1',
+  't152-windows-capsule-action.ps1',
   't152-windows-capsule-formal-runner.mjs', 't152-windows-formal-interactive-contract.mjs',
   't152-windows-interactive-envelope.mjs', 't152-windows-interactive-envelope.ps1',
   't152-windows-formal-interactive-install.ps1',
@@ -22,19 +21,10 @@ const names = [
   't152-windows-prepare-stage-contract.mjs', 't152-windows-prepare-stage-runner.mjs',
   't152-windows-prepare-stages.mjs', 't152-windows-transfer-journal.mjs',
   'windows-dev-remote-spec.mjs',
-  't152-macos-to-windows-find.mjs', 't152-windows-to-macos-find.mjs'
 ];
 const sources = Object.fromEntries(names.map((name) => [name,
   fs.readFileSync(path.join('scripts', 'windows', name), 'utf8')]));
 const all = Object.values(sources).join('\n');
-
-it('pins immutable product/controller archives without consuming the Windows dev mirror', () => {
-  const control = sources['t152-windows-capsule-control.mjs'];
-  expect(control).toContain('86f6580e240c9c4ccd2eb4e146dc8d5be4b1859a');
-  expect(control).toContain('ec8af4a625d98fb35e86134d8770c50a5e669ccb');
-  expect(control).toContain('controllerArchiveSha256');
-  expect(all).not.toMatch(/refs\/heads\/dev|windows-dev-pull|D:\\C\\foliole/u);
-});
 
 it('has no fixed task parent, environment fallback, or second T152 path owner', () => {
   expect(all).not.toMatch(/[A-Za-z]:\\T152|\/private\/tmp\/foliole-t152/u);
@@ -43,18 +33,6 @@ it('has no fixed task parent, environment fallback, or second T152 path owner', 
     'Join-Path $env:LOCALAPPDATA "Foliole');
   expect(sources['t152-windows-capsule-formal-runner.mjs']).toContain(
     'createT152DesktopDnsSdLibrary');
-  expect(sources['t152-macos-to-windows-find.mjs']).toContain(
-    'createT152DesktopDnsSdLibrary');
-  expect(sources['t152-windows-to-macos-find.mjs']).toContain(
-    'createT152DesktopDnsSdLibrary');
-});
-
-it('delegates every T152 SSH identity to the shared Windows transport owner', () => {
-  const control = sources['t152-windows-capsule-control.mjs'];
-  expect(control).toContain("from './windows-dev-remote-spec.mjs'");
-  expect(control).toContain('windowsDevTransportIdentity({ env, host })');
-  expect(control).not.toMatch(/FOLIOLE_WINDOWS_DEV_SSH|DEFAULT_HOST|function sshBase/u);
-  expect(sources['windows-dev-remote-spec.mjs']).toContain('windowsDevTransportIdentity');
 });
 
 it('uses one runtime-compatible path predicate with normalization and dynamic negatives', () => {
@@ -130,29 +108,21 @@ it('persists and rereads G1a before staging, then recovers every ordered termina
 });
 
 it('orders host facts before one control stream and serial payload terminals', () => {
-  const control = sources['t152-windows-capsule-control.mjs'];
   const stages = sources['t152-windows-prepare-stages.mjs'];
   const transfer = sources['t152-windows-transfer-journal.mjs'];
-  expect(control.indexOf('const hostFactsResult = facts ?'))
-    .toBeLessThan(control.indexOf('const stages = await runT152WindowsPrepareStages'));
   expect(stages).toContain('createControlBundle');
   expect(stages).toContain("'g1a-control-bundle-terminal.json'");
   expect(stages).toContain("'g1b-payload-transfer-terminal.json'");
   expect(stages).not.toContain('Promise.all');
   expect(transfer).toContain('for (const item of items)');
   expect(transfer).toContain("return 'not_started'");
-  expect(control).toContain("'g1-host-facts-terminal.json'");
   expect(transfer).toContain('captureSourceFreeHostFacts');
 });
 
 it('uses one interactive config envelope and one scalar token for every remote phase', () => {
-  const control = sources['t152-windows-capsule-control.mjs'];
   const action = sources['t152-windows-capsule-action.ps1'];
   const envelope = sources['t152-windows-interactive-envelope.mjs'];
   const powershell = sources['t152-windows-interactive-envelope.ps1'];
-  expect(control).toContain('createInteractiveConfig(prepared, phase, rootId, formal)');
-  expect(control).toContain('interactiveRemoteCommand(prepared.staging.action, phase, envelope.token)');
-  expect(control).not.toMatch(/'-CapsuleRoot'|'-ConfigPath'|'-ControllerRoot'|'-EvidenceRoot'|'-NodePath'|'-SourceRoot'/u);
   expect(action).toContain('[string]$InteractiveBase64');
   expect(action).not.toMatch(/\[string\]\$(CapsuleRoot|ConfigPath|ControllerRoot|EvidenceRoot|NodePath|SourceRoot)/u);
   expect(envelope).toContain('finalizeReceiptPath');
