@@ -56,7 +56,7 @@ it('rejects changed original content, review facts, cursor or a missing subseque
   }
 });
 
-// SKIP: Requires an explicitly supplied retained Apple 4.17 framework | 2026-11-03 | revive: configure FOLIOLE_IOS_LEGACY_SQLCIPHER_FRAMEWORK
+// Environment guard: Requires an explicitly supplied retained Apple 4.17 framework | 2026-11-03 | revive: configure FOLIOLE_IOS_LEGACY_SQLCIPHER_FRAMEWORK
 it.runIf(process.platform === 'darwin' && Boolean(process.env.FOLIOLE_IOS_LEGACY_SQLCIPHER_FRAMEWORK))(
   'uses the real old engine to preserve a database and checks persisted facts through SQLite', () => {
     const root = temporary();
@@ -72,7 +72,7 @@ it.runIf(process.platform === 'darwin' && Boolean(process.env.FOLIOLE_IOS_LEGACY
   }
 );
 
-// SKIP: Needs the signed development app and explicitly supplied old framework | 2026-11-03 | revive: prepare the physical build and legacy fixture framework
+// Environment guard: Needs the signed development app and explicitly supplied old framework | 2026-11-03 | revive: prepare the physical build and legacy fixture framework
 it.runIf(Boolean(process.env.FOLIOLE_IOS_LEGACY_SQLCIPHER_FRAMEWORK) &&
   existsSync('.cache/ios-physical-acceptance/AppPhysicalUITests/DerivedData/Build/Products/Debug-iphoneos/App.app'))(
   'admits the actual 4.20 artifact even when its bundle marketing version is 1.0', async () => {

@@ -23,7 +23,7 @@ vi.mock('@capacitor/core', async () => {
     registerPlugin: () => createCompanionNativeSyncStub() };
 });
 
-// SKIP: Needs retained Apple SQLCipher 4.17 framework | 2026-11-03 | revive: set FOLIOLE_IOS_LEGACY_SQLCIPHER_FRAMEWORK
+// Environment guard: Needs retained Apple SQLCipher 4.17 framework | 2026-11-03 | revive: set FOLIOLE_IOS_LEGACY_SQLCIPHER_FRAMEWORK
 it.runIf(Boolean(process.env.FOLIOLE_IOS_LEGACY_SQLCIPHER_FRAMEWORK))(
   'boots the old-engine physical fixture through current production migrations without losing original facts', async () => {
     const parent = path.resolve('.tmp/artifacts/fri-upgrade-migration');

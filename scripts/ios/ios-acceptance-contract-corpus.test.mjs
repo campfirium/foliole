@@ -11,7 +11,9 @@ it('keeps the versioned old database isolated to its independent upgrade entry',
     .filter((name) => /\.(?:mjs|ts)$/u.test(name) && !name.includes('.test.'))
     .filter((name) => fs.readFileSync(`scripts/ios/${name}`, 'utf8')
       .includes('./ios-database-upgrade-contract-fixture.mjs'));
-  expect(importers).toEqual(['ios-database-upgrade-acceptance-runner.mjs']);
+  expect(importers).toEqual(['fri-database-upgrade.mjs', 'ios-database-upgrade-acceptance-runner.mjs']);
+  expect(reachableImports('scripts/ios/fri-dev-workflow.mjs'))
+    .toContain('scripts/ios/ios-database-upgrade-contract-fixture.mjs');
 });
 
 function reachableImports(entry) {

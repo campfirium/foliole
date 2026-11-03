@@ -38,7 +38,8 @@ it('handles the iOS Local Network system card before waiting for a Device candid
   const physicalTest = [
     'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupUITests.swift',
     'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupUITestSupport.swift',
-    'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupMutationUITestSupport.swift'
+    'ios/App/AppPhysicalUITests/FoliolePhysicalSyncGroupMutationUITestSupport.swift',
+    'ios/App/AppPhysicalUITests/FoliolePhysicalBrowseEntryUITestSupport.swift'
   ].map(read).join('\n');
   const appDelegate = read('ios/App/App/AppDelegate.swift');
 
