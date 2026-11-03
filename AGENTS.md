@@ -34,6 +34,7 @@ Read any same-directory `AGENTS.local.md` alongside this file; it contains priva
 
 ## Read Before Editing
 
+- Before designing or implementing a mobile capability, inspect the corresponding desktop behavior, settings, shared logic, and relevant product decisions and tests. Summarize the verified baseline with sources, state what mobile inherits, and justify proposed differences by mobile constraints or explicit user goals before choosing a design. If no desktop counterpart exists or its behavior remains uncertain, state that gap; do not invent a baseline. Reuse established business and data semantics unless the user authorizes a change; adapt presentation and interaction to the mobile host.
 - For `docs/i18n/guides/**`, read `docs/i18n/guides/README.md` first; English `en` sources are required. The Demo may offer a preset browser experience, but must not imply a Web edition, production data environment, desktop replacement, or persistent online workspace.
 
 ## Risk Routing
