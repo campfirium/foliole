@@ -213,6 +213,10 @@ it('opens the imported EPUB root and retains its independent text draft', async 
   await openCapture(); choose(companionEpubBook(false), 'Book.epub');
   expect(await screen.findByTestId('imported-topic')).toHaveTextContent('Pocket Book');
   expect(library.database.prepare("SELECT title FROM nodes WHERE title='Second section'").get()).toEqual({ title: 'Second section' });
+  await screen.findByRole('dialog', { name: 'Choose reading mode' });
+  fireEvent.click(screen.getByRole('button', { name: /Sequential reading/ }));
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Choose reading mode' })).toBeNull());
+  expect(library.database.prepare("SELECT count(*) AS count FROM nodes WHERE sequential_reading_enabled=1").get()).toEqual({ count: 1 });
   fireEvent.click(screen.getByRole('button', { name: 'Add' }));
   expect(screen.getByLabelText('Capture text')).toHaveValue('Draft stays here');
 });

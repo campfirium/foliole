@@ -1,12 +1,13 @@
 import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { invalidateAttachmentResourceResolution } from '../shared/platform/attachmentResources';
+import { setCompanionEpubReadingMode } from '../shared/platform/companion/runtime/companionEpubReadingMode';
 import { publishCompanionImportedFile, publishCompanionImportedFiles } from '../shared/platform/companion/runtime/companionFileImportPublication';
 import { runCompanionHistoryMutation } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { completeCompanionPdfTextImport } from '../shared/platform/companion/runtime/companionImportedPdfText';
 import { persistCompanionImportedTextWithDb } from '../shared/platform/companion/runtime/companionImportedText';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
-import { prepareSelectedTextImport, type SelectedImportFile, type SelectedImportWarning } from '../shared/platform/import/selectedImportFile';
+import { prepareSelectedTextImport, type SelectedImportFile, type SelectedImportWarning, type PreparedSelectedFileImport } from '../shared/platform/import/selectedImportFile';
 
 import { assertCaptureParentAvailable, getCompanionCaptureTextErrorCode } from './companionCaptureTextActions';
 import type { CompanionCaptureTextSaveResult } from './companionCaptureTextController';
@@ -16,6 +17,7 @@ export function createCompanionFileImportHandler(workspace: Pick<ReturnType<type
   parentNodeId = INBOX_NODE_ID) {
   return async (file: SelectedImportFile, signal?: AbortSignal): Promise<CompanionCaptureTextSaveResult> => {
     const committed = { nodeId: null as string | null };
+    let epubReadingMode: Extract<CompanionCaptureTextSaveResult, { nodeId: string }>['epubReadingMode'];
     let importWarning: SelectedImportWarning | undefined;
     let owner: ReturnType<typeof getIosCompanionDatabaseOwner> | undefined;
     const refresh = () => {
@@ -28,33 +30,44 @@ export function createCompanionFileImportHandler(workspace: Pick<ReturnType<type
       const prepared = await prepareSelectedTextImport(file, signal);
       importWarning = prepared.importWarning;
       signal?.throwIfAborted();
-      const commit = () => runCompanionHistoryMutation(async db => {
-        signal?.throwIfAborted();
-        if (owner !== getIosCompanionDatabaseOwner()) throw new Error('Import library changed.');
-        await assertCaptureParentAvailable(db, parentNodeId);
-        if (prepared.pdfSource) invalidateAttachmentResourceResolution(prepared.pdfSource.storageKey);
-        const imported = await persistCompanionImportedTextWithDb(db, prepared, parentNodeId,
-          prepared.pdfSource ? [{ storage_key: prepared.pdfSource.storageKey, original_name: file.name, role: 'reference' }] : prepared.epubBook?.resources ?? [],
-          prepared.epubBook?.chapters);
-        if (prepared.pdfSource) {
-          await recordFramedSyncResourceAvailability(db, [prepared.pdfSource.storageKey.slice(0, 64)], true);
+      const commit = () => persistSelectedFile(prepared, file, parentNodeId, owner!, signal, node => {
+        committed.nodeId = node.id;
+        if (prepared.epubBook) {
+          const bookOwner = owner!;
+          epubReadingMode = { fileName: file.name, apply: mode => setCompanionEpubReadingMode(node.id, mode === 'sequential', bookOwner) };
         }
-        for (const resource of prepared.epubBook?.files ?? []) {
-          invalidateAttachmentResourceResolution(resource.storageKey);
-          await recordFramedSyncResourceAvailability(db, [resource.storageKey.slice(0, 64)], true);
-        }
-        signal?.throwIfAborted();
-        return imported;
-      }, { kind: 'full' }, node => { committed.nodeId = node.id; });
+      });
       const node = prepared.pdfSource ? await publishCompanionImportedFile(prepared.pdfSource, commit, owner, signal)
         : prepared.epubBook ? await publishCompanionImportedFiles(prepared.epubBook.files, commit, owner, signal) : await commit();
       if (prepared.pdfSource) await completeCompanionPdfTextImport(prepared.pdfSource, node.id, owner, signal);
       try { await refresh(); }
-      catch { return { nodeId: node.id, retryRefresh: refresh, ...(importWarning ? { importWarning } : {}) }; }
-      return { nodeId: node.id, ...(importWarning ? { importWarning } : {}) };
+      catch { return { nodeId: node.id, retryRefresh: refresh, ...(importWarning ? { importWarning } : {}), ...(epubReadingMode ? { epubReadingMode } : {}) }; }
+      return { nodeId: node.id, ...(importWarning ? { importWarning } : {}), ...(epubReadingMode ? { epubReadingMode } : {}) };
     } catch (error) {
-      if (committed.nodeId) return { nodeId: committed.nodeId, retryRefresh: refresh, ...(importWarning ? { importWarning } : {}) };
+      if (committed.nodeId) return { nodeId: committed.nodeId, retryRefresh: refresh, ...(importWarning ? { importWarning } : {}), ...(epubReadingMode ? { epubReadingMode } : {}) };
       return { error: getCompanionCaptureTextErrorCode(error) ?? 'save-failed' };
     }
   };
+}
+
+function persistSelectedFile(prepared: PreparedSelectedFileImport, file: SelectedImportFile, parentNodeId: string,
+  owner: ReturnType<typeof getIosCompanionDatabaseOwner>, signal: AbortSignal | undefined, onCommitted: (node: { id: string }) => void) {
+  return runCompanionHistoryMutation(async db => {
+    signal?.throwIfAborted();
+    if (owner !== getIosCompanionDatabaseOwner()) throw new Error('Import library changed.');
+    await assertCaptureParentAvailable(db, parentNodeId);
+    if (prepared.pdfSource) invalidateAttachmentResourceResolution(prepared.pdfSource.storageKey);
+    const imported = await persistCompanionImportedTextWithDb(db, prepared, parentNodeId,
+      prepared.pdfSource ? [{ storage_key: prepared.pdfSource.storageKey, original_name: file.name, role: 'reference' }] : prepared.epubBook?.resources ?? [],
+      prepared.epubBook?.chapters);
+    if (prepared.pdfSource) {
+      await recordFramedSyncResourceAvailability(db, [prepared.pdfSource.storageKey.slice(0, 64)], true);
+    }
+    for (const resource of prepared.epubBook?.files ?? []) {
+      invalidateAttachmentResourceResolution(resource.storageKey);
+      await recordFramedSyncResourceAvailability(db, [resource.storageKey.slice(0, 64)], true);
+    }
+    signal?.throwIfAborted();
+    return imported;
+  }, { kind: 'full' }, onCommitted);
 }

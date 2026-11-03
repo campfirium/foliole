@@ -1,6 +1,7 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_CAPTURE_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.capture.import.readingModeDescription': '选择章节进入复习队列的方式。',
   'companion.capture.title': '捕获',
   'companion.capture.text': '捕获文本',
   'companion.capture.placeholder': '输入一个新主题',

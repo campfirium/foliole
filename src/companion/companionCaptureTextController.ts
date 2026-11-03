@@ -4,7 +4,9 @@ import {
   getCompanionCaptureTextErrorCode,
   persistCompanionCapturedText
 } from './companionCaptureTextActions';
+import type { CompanionEpubReadingModeChoice } from './useCompanionEpubReadingMode';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
+
 
 type CompanionWorkspaceSyncApi = ReturnType<typeof useCompanionWorkspaceSync>;
 
@@ -12,7 +14,7 @@ export type CompanionCaptureTextSaveError = 'empty' | 'inbox-unavailable' | 'tar
 
 export type CompanionCaptureTextSaveResult =
   | { error: CompanionCaptureTextSaveError }
-  | { nodeId: string; retryRefresh?: () => Promise<unknown>; importWarning?: SelectedImportWarning };
+  | { nodeId: string; retryRefresh?: () => Promise<unknown>; importWarning?: SelectedImportWarning; epubReadingMode?: CompanionEpubReadingModeChoice };
 
 export function createCompanionCaptureTextSaveHandler(workspaceSync: CompanionWorkspaceSyncApi, parentNodeId?: string) {
   return async (text: string): Promise<CompanionCaptureTextSaveResult> => {

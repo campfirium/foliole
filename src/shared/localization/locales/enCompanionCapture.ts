@@ -1,4 +1,5 @@
 export const EN_COMPANION_CAPTURE_TRANSLATIONS = {
+  'companion.capture.import.readingModeDescription': 'Choose how chapters enter the Review queue.',
   'companion.capture.title': 'Capture',
   'companion.capture.text': 'Capture text',
   'companion.capture.placeholder': 'Type a new topic',

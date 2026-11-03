@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ComponentProps, type RefObject } from
 
 import './companionCaptureViewport.css';
 
+import { EpubImportReleaseModeChoice } from '../features/import/components/EpubImportReleaseModeChoice';
 import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { SELECTED_TEXT_IMPORT_ACCEPT, type SelectedImportFile } from '../shared/platform/import/selectedImportFile';
@@ -188,6 +189,10 @@ export function CompanionCaptureSheet(props: {
         </CaptureSheetViewport>
       </AppDialogPortal>
     </AppDialog>
+    {state.epubMode.choice && !state.importWarning ? <EpubImportReleaseModeChoice fileName={state.epubMode.choice.fileName} mobile
+      description={t('companion.capture.import.readingModeDescription')}
+      busy={state.epubMode.busy} error={state.epubMode.failed ? t('companion.selection.saveError') : null}
+      onSelect={state.epubMode.select} onClose={state.epubMode.close} /> : null}
     <CompanionFileImportNotice warning={state.importWarning} onClose={state.dismissImportWarning} />
     </>
   );

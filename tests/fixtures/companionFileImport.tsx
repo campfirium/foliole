@@ -12,9 +12,11 @@ import { extractRuntimePdfPageText } from '../../src/shared/platform/runtime/pdf
 function FileImportFixture() {
   const [open, setOpen] = useState(false);
   const [imported, setImported] = useState('');
+  const [readingMode, setReadingMode] = useState('');
   const [pdf, setPdf] = useState<{ attachmentId: string; title: string } | null>(null);
   return <LocalizationProvider initialLanguagePreference="en">
     <button onClick={() => setOpen(true)}>Open capture</button>
+    <output aria-label="Saved reading mode">{readingMode}</output>
     <article aria-label="Imported topic">{imported}</article>
     {pdf ? <SimplePdfDocument {...pdf} /> : null}
     <CompanionCaptureSheet draftScope="file-layout" open={open} onOpenChange={setOpen}
@@ -34,7 +36,8 @@ function FileImportFixture() {
           const pages = await extractRuntimePdfPageText(prepared.pdfSource.bytes);
           setImported(pages.map(page => page.text).join('\n\n'));
         }
-        return { nodeId: 'file-topic', ...(prepared.importWarning ? { importWarning: prepared.importWarning } : {}) };
+        return { nodeId: 'file-topic', ...(prepared.epubBook ? { epubReadingMode: { fileName: file.name,
+          apply: async (mode: 'sequential' | 'free') => { setReadingMode(mode); } } } : {}), ...(prepared.importWarning ? { importWarning: prepared.importWarning } : {}) };
       }} />
   </LocalizationProvider>;
 }

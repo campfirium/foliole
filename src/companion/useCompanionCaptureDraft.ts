@@ -4,6 +4,7 @@ import type { SelectedImportFile, SelectedImportWarning } from '../shared/platfo
 
 import { clearCaptureBackDraft, persistCaptureBackDraft, readCaptureBackDraft } from './companionCaptureDraftStorage';
 import type { CompanionCaptureTextSaveError, CompanionCaptureTextSaveResult } from './companionCaptureTextController';
+import { useCompanionEpubReadingMode, type CompanionEpubReadingModeChoice } from './useCompanionEpubReadingMode';
 
 function useCaptureDraftState(open: boolean, draftScope: string) {
   const [draft, setDraft] = useState(() => readCaptureBackDraft(draftScope));
@@ -52,6 +53,7 @@ interface CaptureDraftProps {
 
 export function useCompanionCaptureDraft(props: CaptureDraftProps) {
   const state = useCaptureDraftState(props.open, props.draftScope);
+  const epubMode = useCompanionEpubReadingMode();
   const { draft, error, isSaving, retryRefresh, resetDraft, preserveOnClose, handleDraftChange } = state;
   const handleOpenChange = (open: boolean) => {
     if (!open) resetDraft();
@@ -64,9 +66,9 @@ export function useCompanionCaptureDraft(props: CaptureDraftProps) {
     preserveOnClose.current = true;
     props.onOpenChange(false);
   };
-  const saveText = createCaptureTextSaver(props, state, handleOpenChange);
+  const saveText = createCaptureTextSaver(props, state, handleOpenChange, epubMode.offer);
   return {
-    draft, error, isSaving, isSaved: Boolean(retryRefresh), importWarning: state.importWarning,
+    epubMode, draft, error, isSaving, isSaved: Boolean(retryRefresh), importWarning: state.importWarning,
     dismissImportWarning: () => state.setImportWarning(null),
     canSave: (Boolean(retryRefresh) || draft.trim().length > 0) && !isSaving,
     handleDraftChange, handleOpenChange, handleSave: () => saveText(draft, false),
@@ -76,7 +78,7 @@ export function useCompanionCaptureDraft(props: CaptureDraftProps) {
 }
 
 function createCaptureTextSaver(props: CaptureDraftProps, state: ReturnType<typeof useCaptureDraftState>,
-  handleOpenChange: (open: boolean) => void) {
+  handleOpenChange: (open: boolean) => void, offerEpubMode: (choice: CompanionEpubReadingModeChoice) => void) {
   const { draft, retryRefresh, attempt, preserveOnClose, setError, setIsSaving, setRetryRefresh } = state;
   return async (text: string | SelectedImportFile, clipboard: boolean) => {
     if (attempt.current.busy || (!retryRefresh && typeof text === 'string' && !text.trim())) return;
@@ -85,7 +87,7 @@ function createCaptureTextSaver(props: CaptureDraftProps, state: ReturnType<type
       return;
     }
     const session = attempt.current.session;
-    const complete = (nodeId: string, warning?: SelectedImportWarning) => {
+    const complete = (nodeId: string, warning?: SelectedImportWarning, choice?: CompanionEpubReadingModeChoice) => {
       if (session !== attempt.current.session) return;
       if (warning) state.setImportWarning(warning);
       if (clipboard) {
@@ -94,6 +96,7 @@ function createCaptureTextSaver(props: CaptureDraftProps, state: ReturnType<type
         setRetryRefresh(null);
         props.onOpenChange(false);
         props.onClipboardCreated?.(nodeId);
+        if (choice) offerEpubMode(choice);
       } else handleOpenChange(false);
     };
     attempt.current.busy = true;
@@ -112,8 +115,9 @@ function createCaptureTextSaver(props: CaptureDraftProps, state: ReturnType<type
         const retry = result.retryRefresh;
         const nodeId = result.nodeId;
         const warning = result.importWarning;
-        setRetryRefresh(() => async () => { await retry(); complete(nodeId, warning); });
-      } else if (result && 'nodeId' in result) complete(result.nodeId, result.importWarning);
+        const choice = result.epubReadingMode;
+        setRetryRefresh(() => async () => { await retry(); complete(nodeId, warning, choice); });
+      } else if (result && 'nodeId' in result) complete(result.nodeId, result.importWarning, result.epubReadingMode);
     } catch {
       if (session === attempt.current.session && !retryRefresh) setError('save-failed');
     } finally {

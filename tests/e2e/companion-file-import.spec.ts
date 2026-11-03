@@ -63,6 +63,11 @@ test('a selected compressed EPUB imports chapter content and preserves the indep
   await page.getByRole('textbox', { name: 'Capture text' }).fill('Keep my EPUB draft');
   await page.getByLabel('Upload File', { exact: true }).setInputFiles({ name: 'Book.epub', mimeType: 'application/epub+zip', buffer: companionEpubBook() });
   await expect(page.getByRole('dialog', { name: 'Capture', exact: true })).not.toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Choose reading mode' })).toBeVisible();
+  await page.locator('.companion-sheet-overlay').waitFor({ state: 'detached' });
+  await page.screenshot({ path: '.tmp/artifacts/T645-2/epub-reading-mode.png', animations: 'disabled' });
+  await page.getByRole('button', { name: /Sequential reading/ }).click();
+  await expect(page.getByLabel('Saved reading mode')).toHaveText('sequential');
   const article = page.getByRole('article', { name: 'Imported topic' });
   await expect(article).toContainText('Pocket Book');
   await expect(article).toContainText('Part One');
