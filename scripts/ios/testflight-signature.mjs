@@ -14,6 +14,18 @@ function decodePlist(xml) {
   return JSON.parse(execFileSync('plutil', ['-convert', 'json', '-o', '-', '-'], { input: xml, encoding: 'utf8' }));
 }
 
+function profileMetadata(xml) {
+  const script = [
+    'import json, plistlib, sys',
+    'profile = plistlib.loads(sys.stdin.buffer.read())',
+    'entitlements = profile["Entitlements"]',
+    'json.dump({"ProvisionedDevices": "ProvisionedDevices" in profile,',
+    '"ProvisionsAllDevices": profile.get("ProvisionsAllDevices", False),',
+    '"Entitlements": {key: entitlements.get(key) for key in ["get-task-allow", "application-identifier"]}}, sys.stdout)'
+  ].join('\n');
+  return JSON.parse(execFileSync('/usr/bin/python3', ['-c', script], { input: xml, encoding: 'utf8' }));
+}
+
 export function verifyIosBundleMetadata(info, entitlements, candidate, bundleId) {
   if (info.CFBundleIdentifier !== bundleId || info.CFBundleShortVersionString !== candidate.version ||
       info.CFBundleVersion !== candidate.buildNumber) throw new Error('Signed iPhone bundle identity mismatch');
@@ -31,7 +43,7 @@ function verifyBundle(bundle, candidate, id, requireDistribution) {
   const entitlements = decodePlist(execFileSync('codesign', ['-d', '--entitlements', ':-', bundle]));
   if (requireDistribution) {
     verifyIosBundleMetadata(info, entitlements, candidate, id);
-    const profile = decodePlist(execFileSync('security', ['cms', '-D', '-i', path.join(bundle, 'embedded.mobileprovision')]));
+    const profile = profileMetadata(execFileSync('security', ['cms', '-D', '-i', path.join(bundle, 'embedded.mobileprovision')]));
     if (profile.ProvisionedDevices || profile.ProvisionsAllDevices || profile.Entitlements?.['get-task-allow'] !== false ||
         profile.Entitlements?.['application-identifier'] !== `${TEAM}.${id}`) {
       throw new Error('Exported iPhone profile is not an App Store distribution profile');

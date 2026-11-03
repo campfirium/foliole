@@ -55,6 +55,8 @@ The macOS producer explicitly selects the runner's installed Xcode 26.3 and chec
 
 Credential installation uses the pinned Fastlane keychain importer, including trusted signing applications and its `codesign:` partition. Before any archive, the installed Distribution private key must sign a temporary executable within 30 seconds and pass signature verification. This uses only the isolated runner keychain; it never requests an iPhone password or revokes a certificate. The local Ruby contract exercises the production installer with fake Security/codesign commands; the hosted probe verifies real private-key access.
 
+Provisioning profiles contain native plist dates and certificate data, which cannot be converted wholesale to JSON by `plutil`. After the existing CMS decode, the verifier uses the Mac toolchain's `/usr/bin/python3` standard `plistlib` parser to expose only the profile flags and entitlement fields it checks. The Ruby fixture runs the production IPA verifier with real plist parsing and rejects development, Ad Hoc and enterprise profiles.
+
 Run explicit local tests before hosted execution:
 
 ```sh
