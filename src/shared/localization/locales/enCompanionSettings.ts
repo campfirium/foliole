@@ -18,9 +18,9 @@ export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
   'companion.settings.storage.clearing': 'Clearing...',
   'companion.settings.storage.clearDialog.title': 'Clear App Data?',
   'companion.settings.storage.clearDialog.description':
-    'This will disconnect the current connection and clear Foliole app data on this device. Data on your desktop and other devices will not be deleted.',
+    'This will permanently clear Foliole data on this device and disconnect it. Content stored only on this device or that has not been synced will be lost. Data already on your other devices will not be deleted. This cannot be undone.',
   'companion.settings.storage.description':
-    'Clear Foliole data on this device and disconnect the current connection. Desktop and other devices are not deleted.',
+    'Permanently clear Foliole data on this device, including content stored only here or not yet synced.',
   'companion.settings.storage.error': 'Failed to clear app data.',
   'companion.settings.appearance.title': 'Appearance',
   'companion.settings.appearance.detail': 'Choose colors and customize Topic reading.',

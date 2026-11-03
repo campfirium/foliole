@@ -20,8 +20,8 @@ export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<Translation
   'companion.settings.storage.clearing': '正在清除...',
   'companion.settings.storage.clearDialog.title': '清除应用数据？',
   'companion.settings.storage.clearDialog.description':
-    '这会断开当前连接，并清除这台设备上的 Foliole 应用数据。桌面端和其他设备上的数据不会被删除。',
-  'companion.settings.storage.description': '清除这台设备上的 Foliole 数据并断开当前连接。桌面端和其他设备不会被删除。',
+    '这会永久清除这台设备上的 Foliole 数据并断开连接。仅存于本机或尚未同步的内容也会丢失。其他设备上已有的数据不会被删除。此操作无法撤销。',
+  'companion.settings.storage.description': '永久清除这台设备上的 Foliole 数据，包括仅存于本机或尚未同步的内容。',
   'companion.settings.storage.error': '清除应用数据失败。',
   'companion.settings.appearance.title': '外观',
   'companion.settings.appearance.detail': '选择颜色模式，自定义主题阅读。',
