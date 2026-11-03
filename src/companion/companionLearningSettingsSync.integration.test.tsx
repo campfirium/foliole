@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { writeSettingRecord } from '../../electron/database/settingRecords';
@@ -8,7 +8,7 @@ import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, getCurrentReviewSchedulerSettings,
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { connectCompanionPeer } from '../test/companionDailySync.testSupport';
 
-import { changeLearningSetting } from './companionLearningSettings.testSupport';
+import { openLearningSetting, changeLearningSetting } from './companionLearningSettings.testSupport';
 import { CompanionLearningSettingsContent } from './CompanionLearningSettingsContent';
 import { hydrateCompanionReviewSchedulerSettings } from './companionReviewSchedulerSettingsHydration';
 
@@ -39,8 +39,10 @@ it('exchanges saved settings with an independent desktop and merges a later mobi
     updatedAt: new Date().toISOString() });
   await peers.exchange();
   await hydrateCompanionReviewSchedulerSettings();
-  expect(await screen.findByRole('spinbutton', { name: 'Desired retention' })).toHaveValue(0.86);
-  expect(screen.getByRole('spinbutton', { name: 'New item load balancing' })).toHaveValue(21);
+  expect(await openLearningSetting('Desired retention')).toHaveValue(0.86);
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }));
+  expect(await openLearningSetting('New item load balancing')).toHaveValue(21);
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }));
   vi.setSystemTime(new Date('2026-11-03T08:00:02Z'));
   await changeLearningSetting('Maximum interval days', '120');
   expect(getCurrentReviewSchedulerSettings()).toMatchObject({ desiredRetention: 0.86,

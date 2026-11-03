@@ -11,7 +11,7 @@ import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, getCurrentReviewSchedulerSettings,
 import { closeIosCompanionDatabase, initializeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 
-import { changeLearningSetting } from './companionLearningSettings.testSupport';
+import { openLearningSetting, changeLearningSetting } from './companionLearningSettings.testSupport';
 import { CompanionLearningSettingsContent } from './CompanionLearningSettingsContent';
 
 const runtime = vi.hoisted(() => ({ platform: 'android' }));
@@ -23,8 +23,8 @@ vi.mock('@capacitor/core', async () => {
 const values = [
   ['Desired retention', '0.82'], ['Maximum interval days', '120'], ['New day starts at', '7'],
   ['New item load balancing', '14'], ['Default topic priority', '6'], ['Priority weight', '3'],
-  ['Reading ratio', '2'], ['Review ratio', '3'], ['Reading initial interval days', '1.5'],
-  ['Minimum reading interval growth', '1.2'], ['Maximum reading interval growth', '1.8']
+  ['Reading queue mix ratio', '2'], ['Review item queue mix ratio', '3'], ['Reading initial interval days', '1.5'],
+  ['Reading growth factor min', '1.2'], ['Reading growth factor max', '1.8']
 ] as const;
 let root = '';
 let sqlite: Database.Database | null = null;
@@ -63,8 +63,9 @@ it.each(['android', 'ios'] as const)('saves all nine settings through the %s own
   await open(platform);
   render(<CompanionLearningSettingsContent />);
   for (const [label, value] of values) {
-    const control = await screen.findByLabelText(label);
+    const control = await openLearningSetting(label);
     expect(control).toHaveValue(control instanceof HTMLSelectElement ? value : Number(value));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }));
   }
   expect(getCurrentReviewSchedulerSettings()).toEqual(expected);
 });
@@ -72,17 +73,17 @@ it.each(['android', 'ios'] as const)('saves all nine settings through the %s own
 it.each([
   ['Desired retention', '1'], ['Maximum interval days', '0'], ['New day starts at', '24'],
   ['New item load balancing', '100'], ['Default topic priority', '0'], ['Priority weight', '0'],
-  ['Reading ratio', '0'], ['Review ratio', '0'], ['Reading initial interval days', '0'],
-  ['Minimum reading interval growth', '0'], ['Maximum reading interval growth', '0']
+  ['Reading queue mix ratio', '0'], ['Review item queue mix ratio', '0'], ['Reading initial interval days', '0'],
+  ['Reading growth factor min', '0'], ['Reading growth factor max', '0']
 ])('rejects invalid %s without changing persisted settings', async (label, value) => {
   runtime.platform = 'android';
   root = mkdtempSync(path.join(os.tmpdir(), 'mobile-learning-'));
   await open('android');
   hydrateCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
   render(<CompanionLearningSettingsContent />);
-  const input = await screen.findByLabelText(label);
+  const input = await openLearningSetting(label);
   fireEvent.change(input, { target: { value } });
-  if (input instanceof HTMLInputElement) fireEvent.blur(input);
+  if (input instanceof HTMLInputElement) fireEvent.submit(input.closest('form')!);
   expect(sqlite!.prepare('SELECT * FROM setting_records').all()).toEqual([]);
   expect(getCurrentReviewSchedulerSettings()).toEqual(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
 });
@@ -94,10 +95,10 @@ it('keeps paired growth limits ordered when either endpoint crosses the other', 
   await open('android');
   hydrateCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
   render(<CompanionLearningSettingsContent />);
-  await changeLearningSetting('Minimum reading interval growth', '2');
+  await changeLearningSetting('Reading growth factor min', '2');
   expect(getCurrentReviewSchedulerSettings().pushQueue.readingIntervalGrowthFactorRange).toEqual({ min: 2, max: 2 });
-  expect(screen.getByRole('spinbutton', { name: 'Maximum reading interval growth' })).toHaveValue(2);
-  await changeLearningSetting('Maximum reading interval growth', '1.1');
+  expect(await openLearningSetting('Reading growth factor max')).toHaveValue(2);
+  await changeLearningSetting('Reading growth factor max', '1.1');
   expect(getCurrentReviewSchedulerSettings().pushQueue.readingIntervalGrowthFactorRange).toEqual({ min: 1.1, max: 1.1 });
-  expect(screen.getByRole('spinbutton', { name: 'Minimum reading interval growth' })).toHaveValue(1.1);
+  expect(await openLearningSetting('Reading growth factor min')).toHaveValue(1.1);
 });

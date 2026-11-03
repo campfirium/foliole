@@ -8,7 +8,8 @@ import { loadCompanionReviewSettings } from '../shared/platform/companion/settin
 import { AppButton } from '../shared/ui';
 
 import { CompanionLearningSettingControl } from './CompanionLearningSettingControl';
-import { COMPANION_LEARNING_SETTING_FIELDS, COMPANION_LEARNING_SETTING_GROUPS } from './companionLearningSettingFields';
+import { COMPANION_LEARNING_SETTING_GROUPS } from './companionLearningSettingFields';
+import { COMPANION_LEARNING_SETTING_ROWS } from './companionLearningSettingRows';
 
 export function CompanionLearningSettingsContent() {
   const t = useTranslation();
@@ -29,9 +30,9 @@ export function CompanionLearningSettingsContent() {
   </div>;
   return <section aria-label={t('companion.settings.learning.title')}>
     {COMPANION_LEARNING_SETTING_GROUPS.map(group => <fieldset className="mt-5 first:mt-0" key={group.title}>
-      <legend className="pb-1 text-xs text-companion-text-tertiary">{t(group.title)}</legend>
-      {COMPANION_LEARNING_SETTING_FIELDS.filter(field => group.keys.includes(field.key)).map(field =>
-        <CompanionLearningSettingControl field={field} key={field.key} settings={settings} />)}
+      {group.keys.length > 1 ? <legend className="pb-1 text-xs text-companion-text-tertiary">{t(group.title)}</legend> : null}
+      {COMPANION_LEARNING_SETTING_ROWS.filter(row => group.keys.includes(row.key)).map(row =>
+        <CompanionLearningSettingControl row={row} key={row.key} settings={settings} />)}
     </fieldset>)}
   </section>;
 }

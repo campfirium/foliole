@@ -11,7 +11,7 @@ import { readIosCompanionDatabase, writeIosCompanionDatabase } from '../shared/p
 import { saveIosReviewWithDb } from '../shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
-import { changeLearningSetting as changeSetting } from './companionLearningSettings.testSupport';
+import { openLearningSetting, changeLearningSetting as changeSetting } from './companionLearningSettings.testSupport';
 import { CompanionLearningSettingsContent } from './CompanionLearningSettingsContent';
 import { persistCompanionSelectionAnnotation } from './companionSelectionAnnotationActions';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
@@ -66,15 +66,15 @@ it('saves retention from the mobile form, keeps existing facts, grades with it a
   await reopenSearchLibrary(library.root, '2026-11-03T09:00:00Z');
   hydrateCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS);
   render(<CompanionLearningSettingsContent />);
-  expect(await screen.findByRole('spinbutton', { name: 'Desired retention' })).toHaveValue(0.85);
+  expect(await openLearningSetting('Desired retention')).toHaveValue(0.85);
 });
 
 it.each(['setting_records', 'sync_object_state'])('keeps the saved value on %s write failure and retries the same draft', async table => {
   render(<CompanionLearningSettingsContent />);
-  const input = await screen.findByRole('spinbutton', { name: 'Desired retention' });
+  const input = await openLearningSetting('Desired retention');
   library.database.exec(`CREATE TRIGGER reject_setting BEFORE INSERT ON ${table} BEGIN SELECT RAISE(ABORT,'full'); END`);
   fireEvent.change(input, { target: { value: '0.8' } });
-  fireEvent.blur(input);
+  fireEvent.submit(input.closest('form')!);
   expect(await screen.findByRole('alert')).toHaveTextContent('Changes could not be saved');
   expect(getCurrentReviewSchedulerSettings().desiredRetention).toBe(0.9);
   expect(library.database.prepare('SELECT * FROM setting_records').all()).toEqual([]);
@@ -91,7 +91,7 @@ it('shows a load failure instead of letting a malformed persisted setting be ove
   expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
   library.database.prepare('DELETE FROM setting_records').run();
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Retry' })); });
-  expect(await screen.findByRole('spinbutton', { name: 'Desired retention' })).toHaveValue(0.9);
+  expect(await openLearningSetting('Desired retention')).toHaveValue(0.9);
 });
 
 it('uses the saved maximum in subsequent reviews with the unchanged shared scheduler', async () => {
@@ -133,47 +133,24 @@ it('applies new-item balancing to real cloze creation without moving existing du
   expect(Date.parse(third.due)).toBeGreaterThan(Date.parse(first.due));
 });
 
-it('uses the established mobile stepper to adjust and save retention without a separate save action', async () => {
+it('confirms precise input and cancels a later edit without saving on blur', async () => {
   render(<CompanionLearningSettingsContent />);
-  const increase = await screen.findByRole('button', { name: 'Increase Desired retention' });
-  fireEvent.click(increase);
-  await vi.waitFor(() => expect(getCurrentReviewSchedulerSettings().desiredRetention).toBe(0.91));
-  const row = library.database.prepare("SELECT value_json FROM setting_records WHERE key='review_scheduler_settings'").get() as { value_json: string };
-  expect(JSON.parse(row.value_json).desiredRetention).toBe(0.91);
-  expect(screen.queryByRole('button', { name: 'Save', exact: true })).not.toBeInTheDocument();
-});
-
-it('commits precise entry on keyboard completion and cancels an unfinished edit', async () => {
-  render(<CompanionLearningSettingsContent />);
-  const input = await screen.findByRole('spinbutton', { name: 'Maximum interval days' });
-  input.focus();
-  fireEvent.change(input, { target: { value: '240' } });
-  fireEvent.keyDown(input, { key: 'Enter' });
-  await vi.waitFor(() => expect(getCurrentReviewSchedulerSettings().maximumIntervalDays).toBe(240));
-  await vi.waitFor(() => expect(input).not.toBeDisabled());
-  input.focus();
-  fireEvent.change(input, { target: { value: '999' } });
-  fireEvent.keyDown(input, { key: 'Escape' });
+  await changeSetting('Maximum interval days', '240');
+  const input = await openLearningSetting('Maximum interval days');
   expect(input).toHaveValue(240);
+  fireEvent.change(input, { target: { value: '999' } });
+  fireEvent.blur(input);
   expect(getCurrentReviewSchedulerSettings().maximumIntervalDays).toBe(240);
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }));
+  expect(await openLearningSetting('Maximum interval days')).toHaveValue(240);
 });
 
-it('steps from a precise draft when focus moves to its increase button', async () => {
+it('commits the latest typed value when input and confirmation arrive in the same event batch', async () => {
   render(<CompanionLearningSettingsContent />);
-  const input = await screen.findByRole('spinbutton', { name: 'Desired retention' });
-  const increase = screen.getByRole('button', { name: 'Increase Desired retention' });
-  fireEvent.change(input, { target: { value: '0.94' } });
-  fireEvent.blur(input, { relatedTarget: increase });
-  fireEvent.click(increase);
-  await vi.waitFor(() => expect(getCurrentReviewSchedulerSettings().desiredRetention).toBe(0.95));
-});
-
-it('commits the latest typed value when input and completion arrive in the same event batch', async () => {
-  render(<CompanionLearningSettingsContent />);
-  const input = await screen.findByRole('spinbutton', { name: 'Reading initial interval days' });
+  const input = await openLearningSetting('Reading initial interval days');
   await act(async () => {
     fireEvent.change(input, { target: { value: '2' } });
-    fireEvent.blur(input);
+    fireEvent.submit(input.closest('form')!);
   });
   await vi.waitFor(() => expect(getCurrentReviewSchedulerSettings().pushQueue.readingInitialIntervalMs).toBe(172_800_000));
 });
@@ -185,4 +162,41 @@ it('retains the first precise edit across repeated settings reentry', async () =
     await changeSetting('Reading initial interval days', '1');
     ui.unmount();
   }
+});
+
+it('opens a focused editor from the setting row and does not persist canceled input', async () => {
+  render(<CompanionLearningSettingsContent />);
+  fireEvent.click(await screen.findByRole('button', { name: /Maximum interval/ }));
+  expect(screen.getByRole('dialog')).toBeInTheDocument();
+  const input = screen.getByRole('spinbutton', { name: 'Maximum interval days' });
+  fireEvent.change(input, { target: { value: '180' } });
+  fireEvent.blur(input);
+  expect(library.database.prepare('SELECT * FROM setting_records').all()).toEqual([]);
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel', exact: true }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(getCurrentReviewSchedulerSettings().maximumIntervalDays).toBe(36500);
+});
+
+it('edits the growth pair together with desktop copy and commits both values atomically after retry', async () => {
+  render(<CompanionLearningSettingsContent />);
+  const lower = await openLearningSetting('Reading growth factor min');
+  const upper = screen.getByRole('spinbutton', { name: 'Reading growth factor max' });
+  expect(lower).toHaveValue(1.1);
+  expect(upper).toHaveValue(1.5);
+  expect(screen.getByRole('dialog')).toHaveTextContent('How quickly the reading interval grows after each pass.');
+  fireEvent.change(lower, { target: { value: '1.2' } });
+  fireEvent.change(upper, { target: { value: '1.4' } });
+  expect(library.database.prepare('SELECT * FROM setting_records').all()).toEqual([]);
+  library.database.exec("CREATE TRIGGER reject_pair BEFORE INSERT ON sync_object_state BEGIN SELECT RAISE(ABORT,'full'); END");
+  fireEvent.submit(lower.closest('form')!);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Changes could not be saved');
+  expect(getCurrentReviewSchedulerSettings().pushQueue.readingIntervalGrowthFactorRange).toEqual({ min: 1.1, max: 1.5 });
+  expect(library.database.prepare('SELECT * FROM setting_records').all()).toEqual([]);
+  expect(lower).toHaveValue(1.2);
+  expect(upper).toHaveValue(1.4);
+  library.database.exec('DROP TRIGGER reject_pair');
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  await vi.waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  const row = library.database.prepare("SELECT value_json FROM setting_records WHERE key='review_scheduler_settings'").get() as { value_json: string };
+  expect(JSON.parse(row.value_json).pushQueue.readingIntervalGrowthFactorRange).toEqual({ min: 1.2, max: 1.4 });
 });
