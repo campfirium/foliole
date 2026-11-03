@@ -74,3 +74,53 @@ Dir.mktmpdir('testflight-credential-contract-', root) do |directory|
   end
 end
 puts 'Validated noninteractive credential installation through the production workflow.'
+
+def plist_xml(body)
+  %(<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict>#{body}</dict></plist>)
+end
+
+Dir.mktmpdir('testflight-profile-parser-', root) do |directory|
+  app = File.join(directory, 'Payload/App.app')
+  extension = File.join(app, 'PlugIns/FolioleShareExtension.appex')
+  FileUtils.mkdir_p(extension)
+  [app, extension].each do |bundle|
+    identifier = 'com.campfirium.foliole.ios' + (bundle == app ? '' : '.share')
+    info = "<key>CFBundleIdentifier</key><string>#{identifier}</string>" \
+           '<key>CFBundleShortVersionString</key><string>1.2.3</string><key>CFBundleVersion</key><string>2.1</string>'
+    entitlements = "<key>application-identifier</key><string>V589TQH334.#{identifier}</string>" \
+                   '<key>com.apple.developer.team-identifier</key><string>V589TQH334</string>' \
+                   '<key>get-task-allow</key><false/><key>com.apple.security.application-groups</key>' \
+                   '<array><string>group.com.campfirium.foliole.ios.share</string></array>'
+    File.write(File.join(bundle, 'Info.plist'), plist_xml(info))
+    File.write(File.join(bundle, 'Entitlements.plist'), plist_xml(entitlements))
+  end
+  File.write(File.join(directory, 'codesign'), <<~'SH')
+    #!/bin/sh
+    if [ "$1" = '--verify' ]; then exit 0; fi
+    for target in "$@"; do :; done
+    cat "$target/Entitlements.plist"
+  SH
+  File.write(File.join(directory, 'security'), "#!/bin/sh\nfor target in \"$@\"; do :; done\ncat \"$target\"\n")
+  FileUtils.chmod(0o755, [File.join(directory, 'codesign'), File.join(directory, 'security')])
+  { 'app-store' => '', 'adhoc' => '<key>ProvisionedDevices</key><array><string>device</string></array>',
+    'enterprise' => '<key>ProvisionsAllDevices</key><true/>', 'debug' => '', 'wrong-app' => '' }.each do |kind, field|
+    [app, extension].each do |bundle|
+      entitlements = File.read(File.join(bundle, 'Entitlements.plist'))[/<dict>(.*)<\/dict>/, 1]
+      entitlements = entitlements.sub('<false/>', '<true/>') if kind == 'debug'
+      entitlements = entitlements.sub('V589TQH334.com.campfirium.foliole.ios', 'V589TQH334.invalid') if kind == 'wrong-app'
+      profile = '<key>CreationDate</key><date>2026-11-03T00:00:00Z</date>' \
+                '<key>DeveloperCertificates</key><array><data>AAECA/8=</data></array>' \
+                "<key>Entitlements</key><dict>#{entitlements}</dict>" + (kind == 'debug' ? '' : field)
+      File.write(File.join(bundle, 'embedded.mobileprovision'), plist_xml(profile))
+    end
+    ipa = File.join(directory, "#{kind}.ipa")
+    _, zipped = Open3.capture2e('zip', '-qr', ipa, 'Payload', chdir: directory)
+    raise 'Could not prepare parser fixture' unless zipped.success?
+    script = "import { verifyTestflightIpa } from './scripts/ios/testflight-signature.mjs'; " \
+             "verifyTestflightIpa(process.argv[1],process.argv[2],{version:'1.2.3',buildNumber:'2.1'});"
+    output, verified = Open3.capture2e({ 'PATH' => "#{directory}:#{ENV.fetch('PATH')}" },
+                                      'node', '--input-type=module', '-e', script, ipa, File.join(directory, "verified-#{kind}"))
+    raise "Profile parser result differs for #{kind}: #{output}" unless verified.success? == (kind == 'app-store')
+  end
+end
+puts 'Validated production IPA profile parsing with dates, certificate data and rejected non-store profiles.'
