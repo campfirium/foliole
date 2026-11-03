@@ -43,7 +43,7 @@ async function setup(registerMembers = true) {
 }
 
 async function sync(worker: { send(action: string, args: Record<string, unknown>): Promise<unknown> },
-  peer: Record<string, unknown>) {
+  peer: { origin: string; identity: string }) {
   await expect.poll(async () => worker.send('sync', { ...peer }).catch((error: Error) => {
     if (!error.message.includes('sync_group_sync_incomplete')) throw error;
     return { status: 'pending' };
@@ -57,7 +57,7 @@ it('does not treat repeated pending fixture rounds as completed synchronization'
     .mockResolvedValueOnce({ status: 'pending' })
     .mockResolvedValueOnce({ status: 'pending' })
     .mockImplementation(async () => { completed = true; return { status: 'completed' }; });
-  await sync({ send }, { origin: 'http://fixture' });
+  await sync({ send }, { origin: 'http://fixture', identity: 'fixture-peer' });
   expect(completed).toBe(true);
 });
 
