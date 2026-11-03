@@ -1,8 +1,11 @@
 // @vitest-environment node
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
+import { spawnSync } from 'node:child_process';
+import { URL } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
@@ -30,7 +33,25 @@ describe('macOS Electron dev entry', () => {
     expect(paths.dailyRoot).toBe(path.join(repoRoot, MACOS_DAILY_DEBUG_ROOT));
     expect(paths.resetPreviewRoot).toBe(path.join(repoRoot, MACOS_RESET_PREVIEW_ROOT));
     expect(paths.dailyRoot).not.toBe(paths.resetPreviewRoot);
-    expect(MACOS_DAILY_LIBRARY_HOME).toBe('/Users/roamer/Documents/Foliole');
+    expect(MACOS_DAILY_LIBRARY_HOME).toBe(path.join(os.homedir(), 'Documents', 'Foliole'));
+  });
+
+  it('uses the current user home and protects that user daily library', () => {
+    const home = path.join(os.tmpdir(), 'foliole-other-user');
+    const moduleUrl = new URL('./macos-electron-dev-environment.mjs', import.meta.url).href;
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', `
+      import { resolveMacosElectronDevLibraryHome as resolve } from ${JSON.stringify(moduleUrl)};
+      let refused = false;
+      try { resolve(['--library-home', ${JSON.stringify(path.join(home, 'Documents', 'Foliole'))}]); }
+      catch (error) { refused = error.message.includes('daily library'); }
+      console.log(JSON.stringify({ libraryHome: resolve([]), refused }));
+    `], { encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home } });
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({
+      libraryHome: path.join(home, 'Documents', 'Foliole Dev'),
+      refused: true
+    });
   });
 
   it('accepts the complete explicit control surface', () => {

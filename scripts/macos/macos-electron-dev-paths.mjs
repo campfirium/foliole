@@ -1,13 +1,14 @@
 /* global process */
 
+import os from 'node:os';
 import path from 'node:path';
 
 import { resolveElectronDevArtifactPaths } from '../desktop/electron-dev-control-state.mjs';
 
 export const MACOS_DAILY_DEBUG_ROOT = path.join('.tmp', 'macos-desktop-daily-debug');
-export const MACOS_DAILY_LIBRARY_HOME = '/Users/roamer/Documents/Foliole';
+export const MACOS_DAILY_LIBRARY_HOME = path.join(os.homedir(), 'Documents', 'Foliole');
 // DEV keeps its own library and port so it can run beside the installed daily app.
-export const MACOS_DEV_LIBRARY_HOME = '/Users/roamer/Documents/Foliole Dev';
+export const MACOS_DEV_LIBRARY_HOME = path.join(os.homedir(), 'Documents', 'Foliole Dev');
 export const MACOS_DEV_SYNC_PORT = '38645';
 export const MACOS_RESET_PREVIEW_ROOT = path.join('.tmp', 'macos-desktop-reset-preview');
 

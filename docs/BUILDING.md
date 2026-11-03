@@ -14,6 +14,8 @@ npm run build:macos
 
 On an arm64 Mac with Xcode installed, this produces a DMG and ZIP in `artifacts/macos/source-arm64/`. The app includes Foliole Aide's Codex helper, global capture, and the `foliole` CLI. By default, it uses separate app data and library folders from an installed Foliole release.
 
+The build only creates packages. Keep the extracted source app in its own directory and open it there: its bundle is still named `Foliole.app`, so copying it over `/Applications/Foliole.app` would replace that app. This source identity runs alongside the release; it does not upgrade the release or migrate its library.
+
 The local package is signed ad hoc and is not notarized; it needs no Foliole certificate. Distributing a trusted macOS app requires signing and notarizing with your own Apple credentials.
 
 ## Windows
