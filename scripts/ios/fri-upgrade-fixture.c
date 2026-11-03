@@ -27,6 +27,8 @@ int main(int argc, char **argv) {
     check(sqlite3_backup_finish(backup) == SQLITE_OK, "Finish old-engine backup");
     const char *sql = "PRAGMA journal_mode=DELETE; UPDATE nodes SET content='Legacy upgrade retained sentence.' "
         "WHERE id='upgrade-node';"
+        "INSERT INTO nodes(id,kind,title,is_title_manual,content,created_at,updated_at) "
+        "VALUES('special-inbox','folder','Inbox',1,'','2026-07-21T00:00:00.000Z','2026-07-21T00:00:00.000Z');"
         // The historical synthetic labels predate the content-addressed attachment contract.
         "UPDATE attachments SET id='" ATTACHMENT_ID "' WHERE id='attachment-1';"
         "UPDATE attachment_blobs SET attachment_id='" ATTACHMENT_ID "', content_hash='" ATTACHMENT_ID
