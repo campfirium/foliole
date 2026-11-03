@@ -4,7 +4,7 @@ import { promises as fs } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { buildRestoreFixture, completeJoinWithDiagnostics, startRestoreFixture } from './backupRestoreSyncGroup.testSupport.js';
 
@@ -42,12 +42,24 @@ async function setup(registerMembers = true) {
   return { script, peers, groupId };
 }
 
-async function sync(worker: (typeof workers)[number], peer: Awaited<ReturnType<typeof setup>>['peers'][number]) {
-  await worker.send('sync', { ...peer }).catch((error: Error) => {
+async function sync(worker: { send(action: string, args: Record<string, unknown>): Promise<unknown> },
+  peer: Record<string, unknown>) {
+  await expect.poll(async () => worker.send('sync', { ...peer }).catch((error: Error) => {
     if (!error.message.includes('sync_group_sync_incomplete')) throw error;
-  });
-  await worker.send('sync', { ...peer });
+    return { status: 'pending' };
+  }), { timeout: 20000 }).toMatchObject({ status: 'completed' });
 }
+
+it('does not treat repeated pending fixture rounds as completed synchronization', async () => {
+  let completed = false;
+  const send = vi.fn()
+    .mockResolvedValueOnce({ status: 'pending' })
+    .mockResolvedValueOnce({ status: 'pending' })
+    .mockResolvedValueOnce({ status: 'pending' })
+    .mockImplementation(async () => { completed = true; return { status: 'completed' }; });
+  await sync({ send }, { origin: 'http://fixture' });
+  expect(completed).toBe(true);
+});
 
 it('preserves restore data while another asynchronous database transaction is active', { meta: { calibratedMs: 90000 } }, async () => {
   const { groupId } = await setup(false);
