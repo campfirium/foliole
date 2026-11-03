@@ -6,13 +6,14 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionCaptureSheet } from './CompanionCaptureSheet';
+import type { CompanionCaptureTextSaveResult } from './companionCaptureTextController';
 
 beforeEach(() => window.localStorage.clear());
 afterEach(cleanup);
 
 function setup() {
   const props = { draftScope: 'file-test', open: true, onSave: vi.fn(), onOpenChange: vi.fn(),
-    onClipboardCreated: vi.fn(), onImportFile: vi.fn(async () => ({ nodeId: 'imported' })) };
+    onClipboardCreated: vi.fn(), onImportFile: vi.fn(async (): Promise<CompanionCaptureTextSaveResult> => ({ nodeId: 'imported' })) };
   const view = renderWithLocalization(<CompanionCaptureSheet {...props} />);
   fireEvent.change(screen.getByLabelText('Capture text'), { target: { value: 'Keep my draft' } });
   return { props, ...view };
@@ -58,4 +59,30 @@ it('keeps the draft after import failure and allows choosing the same file again
   choose();
   await waitFor(() => expect(props.onClipboardCreated).toHaveBeenCalledWith('imported'));
   expect(props.onImportFile).toHaveBeenCalledTimes(2);
+});
+
+it('shows an incomplete image notice after opening the imported topic and keeps the original draft', async () => {
+  const { props, rerender } = setup();
+  props.onImportFile.mockResolvedValueOnce({ nodeId: 'imported', importWarning: 'images' });
+  choose();
+  await waitFor(() => expect(props.onClipboardCreated).toHaveBeenCalledWith('imported'));
+  rerender(<CompanionCaptureSheet {...props} open={false} />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Text imported. Some local images');
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+  expect(screen.queryByRole('alert')).toBeNull();
+  rerender(<CompanionCaptureSheet {...props} />);
+  expect(screen.getByLabelText('Capture text')).toHaveValue('Keep my draft');
+});
+
+it('preserves the conversion warning through a refresh-only retry', async () => {
+  const { props, rerender } = setup();
+  const retry = vi.fn(async () => {});
+  props.onImportFile.mockResolvedValueOnce({ nodeId: 'imported', retryRefresh: retry, importWarning: 'conversion' });
+  choose();
+  expect(await screen.findByRole('alert')).toHaveTextContent('Topic saved');
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+  await waitFor(() => expect(props.onClipboardCreated).toHaveBeenCalledWith('imported'));
+  rerender(<CompanionCaptureSheet {...props} open={false} />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('File imported. Some formatting');
+  expect(props.onImportFile).toHaveBeenCalledTimes(1);
 });

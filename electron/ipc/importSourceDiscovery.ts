@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import type { ImportSourceKind } from '../../lib/core/import/contract.js';
+import { resolveImportFileKind } from '../../lib/core/import/importFileKind.js';
 import { resolveLocalImageInboxImportMode, type LocalImageInboxImportMode } from '../import/localImageInboxSource.js';
 import { isSameOrNestedPath } from '../libraryPathSafety.js';
 
@@ -46,13 +47,7 @@ function resolveDirectoryAdapter(
 }
 
 export function resolveImportKind(filePath: string): ImportSourceKind {
-  const extension = path.extname(filePath).toLowerCase();
-  if (EPUB_EXTENSIONS.has(extension)) return 'epub';
-  if (PDF_EXTENSIONS.has(extension)) return 'pdf';
-  if (HTML_EXTENSIONS.has(extension)) return 'html';
-  if (TEXT_EXTENSIONS.has(extension)) return 'text';
-  if (MARKDOWN_EXTENSIONS.has(extension)) return 'markdown';
-  throw new Error(`unsupported import file extension: ${extension || '(none)'}`);
+  return resolveImportFileKind(path.extname(filePath));
 }
 
 async function detectObsidianVaultRoot(rootDir: string) {

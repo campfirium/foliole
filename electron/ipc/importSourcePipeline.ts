@@ -6,11 +6,9 @@ import type {
   ImportSourceKind
 } from '../../lib/core/import/contract.js';
 import { buildRetainedDegradedImportContent } from '../../lib/core/import/controlledContext.js';
-import { convertHtmlToMarkdownCompatible, formatHtmlConversionDegradedReason } from '../../lib/core/import/htmlToMarkdownCompatible.js';
 import { normalizeImportNodeTitleStrategy, type ImportNodeTitleStrategy } from '../../lib/core/import/importManagerSettings.js';
+import { readTextFileImportPayload, toTextFileImportPayload } from '../../lib/core/import/textFilePayload.js';
 import type { NativeTextImportArgs } from '../../lib/platform/nativeContract.js';
-import { decodeHtmlFile } from '../import/decodeHtmlFile.js';
-import { decodeTextFile } from '../import/decodeTextFile.js';
 
 import { buildPreparedImportRecord, type LoadPreparedImportOptions } from './importPreparedRecord.js';
 export {
@@ -22,10 +20,6 @@ export {
 } from './importSourceDiscovery.js';
 import { resolveImportKind, type ImportSourceDescriptor } from './importSourceDiscovery.js';
 export { buildPreparedImportRecord };
-
-function stripUtf8Bom(content: string) {
-  return content.startsWith('\uFEFF') ? content.slice(1) : content;
-}
 
 export function resolveImportHighlightPolicy(args?: Pick<NativeTextImportArgs, 'highlight_policy'>): ImportHighlightPolicy {
   return args?.highlight_policy === 'adopt' ? 'adopt' : 'reference_only';
@@ -46,7 +40,6 @@ export function importTargetParentNodeProps(args?: Pick<NativeTextImportArgs, 't
 }
 
 export function toImportPayload(content: string, kind: ImportSourceKind, sourceName = 'Imported source') {
-  const normalizedContent = stripUtf8Bom(content);
   if (kind === 'epub') {
     const reason = 'EPUB import degraded: text extraction is not implemented yet';
     return {
@@ -60,14 +53,7 @@ export function toImportPayload(content: string, kind: ImportSourceKind, sourceN
       degradedReason: null
     };
   }
-  if (kind !== 'html') {
-    return { content: normalizedContent, degradedReason: null };
-  }
-  const converted = convertHtmlToMarkdownCompatible(normalizedContent);
-  return {
-    content: converted.content,
-    degradedReason: formatHtmlConversionDegradedReason(converted.warnings)
-  };
+  return toTextFileImportPayload(content, kind);
 }
 
 export async function loadPreparedImportRecord(
@@ -77,12 +63,7 @@ export async function loadPreparedImportRecord(
   const payload =
     source.kind === 'epub' || source.kind === 'pdf'
       ? toImportPayload('', source.kind, source.sourceName)
-      : toImportPayload(
-        source.kind === 'text' || source.kind === 'html'
-          ? (source.kind === 'html' ? decodeHtmlFile : decodeTextFile)(await fs.readFile(source.filePath))
-          : await fs.readFile(source.filePath, 'utf8'),
-        source.kind, source.sourceName
-      );
+      : readTextFileImportPayload(await fs.readFile(source.filePath), source.kind);
   return buildPreparedImportRecord(source, {
     ...payload,
     ...options,

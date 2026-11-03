@@ -1,3 +1,5 @@
+import type { SelectedImportWarning } from '../shared/platform/import/selectedImportFile';
+
 import {
   getCompanionCaptureTextErrorCode,
   persistCompanionCapturedText
@@ -10,7 +12,7 @@ export type CompanionCaptureTextSaveError = 'empty' | 'inbox-unavailable' | 'tar
 
 export type CompanionCaptureTextSaveResult =
   | { error: CompanionCaptureTextSaveError }
-  | { nodeId: string; retryRefresh?: () => Promise<unknown> };
+  | { nodeId: string; retryRefresh?: () => Promise<unknown>; importWarning?: SelectedImportWarning };
 
 export function createCompanionCaptureTextSaveHandler(workspaceSync: CompanionWorkspaceSyncApi, parentNodeId?: string) {
   return async (text: string): Promise<CompanionCaptureTextSaveResult> => {

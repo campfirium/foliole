@@ -6,6 +6,8 @@ export const EN_COMPANION_CAPTURE_TRANSLATIONS = {
   'companion.capture.error.clipboardEmpty': 'No text found on the clipboard.',
   'companion.capture.error.clipboardFailed': 'Could not read the clipboard. Allow clipboard access and try again.',
   'companion.capture.upload': 'Upload File',
+  'companion.capture.import.imagesUnavailable': 'Text imported. Some local images could not be imported from the selected file.',
+  'companion.capture.import.conversionIncomplete': 'File imported. Some formatting or embedded content could not be converted.',
   'companion.capture.close': 'Close',
   'companion.capture.refresh': 'Refresh',
   'companion.capture.refreshing': 'Refreshing...',

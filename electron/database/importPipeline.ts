@@ -8,14 +8,12 @@ import { upsertNodeResourceReference } from '../../lib/core/database/nodeResourc
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import { expandPartitionedNodeForImport, partitionStoredNodeBody } from '../../lib/core/database/partitionedNodeBodyMutation.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
-import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
-import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
-import { normalizeSafeMarkdownDataImageUrl, parseMarkdownDataImageSize } from '../../lib/platform/markdownImageDataUrl.js';
+import { formatImportImageDegradation } from '../../lib/core/import/importImagePolicy.js';
+import { rewriteImportedImageReferences } from '../../lib/core/import/importImageReferences.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { prepareImportedNodeDeletionVersions } from './importedNodeDeletionVersions.js';
 import { importMarkdownImageAttachment, importPdfSourceAttachment } from './importPipelineAttachments.js';
-import { rewriteInlineImageReferences } from './inlineImageReferences.js';
 
 export type { PersistedImportRecord, PreparedImportRecord };
 
@@ -42,63 +40,6 @@ function readImportNodeContent(nodeId: string) {
   return { content: body.content, title: row.title };
 }
 
-const SMALL_IMAGE_MAX_SIDE = 128;
-
-function isSmallDataImageDestination(destination: string) {
-  const size = parseMarkdownDataImageSize(destination);
-  return Boolean(size && size.width <= SMALL_IMAGE_MAX_SIDE && size.height <= SMALL_IMAGE_MAX_SIDE);
-}
-
-function compactConsecutiveSmallDataImages(content: string) {
-  let compacted = '';
-  let cursor = 0;
-  let previousWasSmallDataImage = false;
-
-  for (const reference of collectMarkdownImageReferences(content)) {
-    const parsedTarget = parseMarkdownImageTarget(reference.rawTarget);
-    const isSmallDataImage = Boolean(parsedTarget && isSmallDataImageDestination(parsedTarget.destination));
-    const gap = content.slice(cursor, reference.start);
-    compacted += previousWasSmallDataImage && isSmallDataImage && gap.trim().length === 0 ? ' ' : gap;
-    compacted += reference.fullMatch;
-    cursor = reference.end;
-    previousWasSmallDataImage = isSmallDataImage;
-  }
-
-  return `${compacted}${content.slice(cursor)}`;
-}
-
-function rewriteImportImageReferences(input: {
-  content: string;
-  degradedMessages: string[];
-  nodeId: string;
-  sourceLocator: string;
-}) {
-  return rewriteInlineImageReferences(input.content, (reference) => {
-    const normalizedDataImageUrl = normalizeSafeMarkdownDataImageUrl(reference.destination);
-    if (normalizedDataImageUrl) {
-      const suffix = reference.suffix ? ` ${reference.suffix}` : '';
-      return `![${reference.altText}](${normalizedDataImageUrl}${suffix})`;
-    }
-
-    const importResult = importMarkdownImageAttachment({
-      destination: reference.destination,
-      nodeId: input.nodeId,
-      sourceLocator: input.sourceLocator,
-      syntax: reference.syntax
-    });
-    if (importResult.status === 'skipped') {
-      return reference.fullMatch;
-    }
-    if (importResult.status === 'error') {
-      input.degradedMessages.push(importResult.message);
-      return reference.fullMatch;
-    }
-
-    const suffix = reference.suffix ? ` ${reference.suffix}` : '';
-    return `![${reference.altText}](${buildAssetMarkdownUrl(importResult.storageKey)}${suffix})`;
-  });
-}
-
 function rewriteImportLocalImages(record: PersistedImportRecord, prepared: PreparedImportRecord) {
   if (
     (prepared.sourceKind !== 'markdown' && prepared.sourceKind !== 'html') ||
@@ -112,14 +53,8 @@ function rewriteImportLocalImages(record: PersistedImportRecord, prepared: Prepa
   const nodeId = record.nodeId;
   const persistedNode = readImportNodeContent(nodeId);
   const currentContent = persistedNode?.content ?? prepared.content;
-  const degradedMessages: string[] = [];
-  const rewrittenImagesContent = rewriteImportImageReferences({
-    content: currentContent,
-    degradedMessages,
-    nodeId,
-    sourceLocator: prepared.sourceLocator
-  });
-  const rewrittenContent = compactConsecutiveSmallDataImages(rewrittenImagesContent);
+  const { content: rewrittenContent, degradedMessages } = rewriteImportedImageReferences(currentContent,
+    reference => importMarkdownImageAttachment({ ...reference, nodeId, sourceLocator: prepared.sourceLocator }));
 
   if (rewrittenContent === currentContent && degradedMessages.length === 0) {
     return record;
@@ -143,7 +78,7 @@ function rewriteImportLocalImages(record: PersistedImportRecord, prepared: Prepa
 
   const degradedReason = appendDegradedReason(
     record.degradedReason,
-    `${prepared.sourceKind === 'html' ? 'HTML' : 'Markdown'} local image import degraded: ${degradedMessages.join(' | ')}`
+    formatImportImageDegradation(prepared.sourceKind, degradedMessages)
   );
 
   connection.driver.execute('UPDATE import_runs SET result_status = ?, degraded_reason = ? WHERE id = ?', [

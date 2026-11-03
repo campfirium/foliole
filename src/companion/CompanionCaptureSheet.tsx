@@ -5,7 +5,7 @@ import './companionCaptureViewport.css';
 
 import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import type { SelectedImportFile } from '../shared/platform/import/selectedImportFile';
+import { SELECTED_TEXT_IMPORT_ACCEPT, type SelectedImportFile } from '../shared/platform/import/selectedImportFile';
 import {
   AppDialog,
   AppDialogClose,
@@ -20,6 +20,7 @@ import {
 import { COMPANION_ANDROID_CAPTURE_BACK_EVENT } from './companionAndroidBackEvent';
 import type { CompanionCaptureTextSaveError, CompanionCaptureTextSaveResult } from './companionCaptureTextController';
 import { companionMobileRailClassName } from './companionCssCompatibility';
+import { CompanionFileImportNotice } from './CompanionFileImportNotice';
 import { useCompanionCaptureClipboard } from './useCompanionCaptureClipboard';
 import { useCompanionCaptureDraft } from './useCompanionCaptureDraft';
 import { useCompanionItemEditViewport } from './useCompanionItemEditViewport';
@@ -59,7 +60,7 @@ function CaptureFileAction(props: { disabled: boolean; onImport(file: SelectedIm
   const t = useTranslation();
   const input = useRef<HTMLInputElement>(null);
   return <>
-    <input ref={input} type="file" accept=".txt,text/plain" hidden tabIndex={-1}
+    <input ref={input} type="file" accept={SELECTED_TEXT_IMPORT_ACCEPT} hidden tabIndex={-1}
       aria-label={t('companion.capture.upload')} disabled={props.disabled}
       onChange={event => {
         const file = event.currentTarget.files?.[0];
@@ -164,6 +165,7 @@ export function CompanionCaptureSheet(props: {
     : resolveCaptureErrorLabel(state.error, t);
 
   return (
+    <>
     <AppDialog onOpenChange={handleOpenChange} open={props.open}>
       <AppDialogPortal>
         <AppDialogOverlay className="companion-sheet-overlay" />
@@ -186,5 +188,7 @@ export function CompanionCaptureSheet(props: {
         </CaptureSheetViewport>
       </AppDialogPortal>
     </AppDialog>
+    <CompanionFileImportNotice warning={state.importWarning} onClose={state.dismissImportWarning} />
+    </>
   );
 }

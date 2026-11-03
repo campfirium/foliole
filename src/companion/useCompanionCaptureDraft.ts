@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { SelectedImportFile } from '../shared/platform/import/selectedImportFile';
+import type { SelectedImportFile, SelectedImportWarning } from '../shared/platform/import/selectedImportFile';
 
 import { clearCaptureBackDraft, persistCaptureBackDraft, readCaptureBackDraft } from './companionCaptureDraftStorage';
 import type { CompanionCaptureTextSaveError, CompanionCaptureTextSaveResult } from './companionCaptureTextController';
@@ -10,6 +10,7 @@ function useCaptureDraftState(open: boolean, draftScope: string) {
   const [error, setError] = useState<CompanionCaptureTextSaveError | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [retryRefresh, setRetryRefresh] = useState<(() => Promise<unknown>) | null>(null);
+  const [importWarning, setImportWarning] = useState<SelectedImportWarning | null>(null);
   const attempt = useRef({ session: 0, busy: false, controller: null as AbortController | null });
   const preserveOnClose = useRef(false);
   const wasOpen = useRef(open);
@@ -35,7 +36,7 @@ function useCaptureDraftState(open: boolean, draftScope: string) {
     setError(null);
   };
   return {
-    draft, error, isSaving, retryRefresh, attempt, resetDraft, preserveOnClose,
+    draft, error, isSaving, retryRefresh, attempt, resetDraft, preserveOnClose, importWarning, setImportWarning,
     setError, setIsSaving, setRetryRefresh, handleDraftChange
   };
 }
@@ -65,7 +66,8 @@ export function useCompanionCaptureDraft(props: CaptureDraftProps) {
   };
   const saveText = createCaptureTextSaver(props, state, handleOpenChange);
   return {
-    draft, error, isSaving, isSaved: Boolean(retryRefresh),
+    draft, error, isSaving, isSaved: Boolean(retryRefresh), importWarning: state.importWarning,
+    dismissImportWarning: () => state.setImportWarning(null),
     canSave: (Boolean(retryRefresh) || draft.trim().length > 0) && !isSaving,
     handleDraftChange, handleOpenChange, handleSave: () => saveText(draft, false),
     handleSaveClipboard: (text: string) => saveText(text, true), closeForSystemBack,
@@ -83,8 +85,9 @@ function createCaptureTextSaver(props: CaptureDraftProps, state: ReturnType<type
       return;
     }
     const session = attempt.current.session;
-    const complete = (nodeId: string) => {
+    const complete = (nodeId: string, warning?: SelectedImportWarning) => {
       if (session !== attempt.current.session) return;
+      if (warning) state.setImportWarning(warning);
       if (clipboard) {
         persistCaptureBackDraft(props.draftScope, draft);
         preserveOnClose.current = true;
@@ -108,8 +111,9 @@ function createCaptureTextSaver(props: CaptureDraftProps, state: ReturnType<type
       else if (result?.retryRefresh) {
         const retry = result.retryRefresh;
         const nodeId = result.nodeId;
-        setRetryRefresh(() => async () => { await retry(); complete(nodeId); });
-      } else if (result && 'nodeId' in result) complete(result.nodeId);
+        const warning = result.importWarning;
+        setRetryRefresh(() => async () => { await retry(); complete(nodeId, warning); });
+      } else if (result && 'nodeId' in result) complete(result.nodeId, result.importWarning);
     } catch {
       if (session === attempt.current.session && !retryRefresh) setError('save-failed');
     } finally {

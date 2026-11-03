@@ -8,6 +8,8 @@ export const ZH_HANS_COMPANION_CAPTURE_TRANSLATIONS: Partial<Record<TranslationK
   'companion.capture.error.clipboardEmpty': '剪贴板中没有文本。',
   'companion.capture.error.clipboardFailed': '无法读取剪贴板。请允许访问剪贴板后重试。',
   'companion.capture.upload': '上传文件',
+  'companion.capture.import.imagesUnavailable': '正文已导入。部分本地图片无法从所选文件中导入。',
+  'companion.capture.import.conversionIncomplete': '文件已导入。部分格式或嵌入内容无法转换。',
   'companion.capture.close': '关闭',
   'companion.capture.refresh': '刷新',
   'companion.capture.refreshing': '刷新中...',

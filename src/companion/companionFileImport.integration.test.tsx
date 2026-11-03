@@ -185,3 +185,24 @@ it('installs the shared import history table when reopening an existing companio
   expect(reopened.db.prepare('SELECT source_name FROM import_runs').all()).toEqual([{ source_name: 'source.txt' }]);
   expect(reopened.db.prepare("SELECT id FROM nodes WHERE id='special-inbox'").get()).toEqual({ id: 'special-inbox' });
 });
+
+it.each([
+  ['source.md', '# Imported\n\nReadable body\n\n![Missing](figure.png)', false],
+  ['source.html', '<h1>Imported</h1><p>Readable body</p><img src="figure.png" alt="Missing">', true]
+])('opens the imported %s and shows its durable image warning without clearing the draft', async (name, body, retry) => {
+  await openCapture();
+  if (retry) vi.spyOn(workspaceRepository, 'refreshCompanionWorkspaceAfterMutation')
+    .mockRejectedValueOnce(new Error('Read failed'));
+  choose(body, name);
+  if (retry) {
+    expect(await screen.findByRole('alert')).toHaveTextContent('Topic saved');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+  }
+  expect(await screen.findByTestId('imported-topic')).toHaveTextContent('Readable body');
+  expect(await screen.findByRole('alert')).toHaveTextContent('Text imported. Some local images');
+  expect(runs()).toHaveLength(1);
+  expect(runs()[0]).toMatchObject({ result_status: 'degraded', source_name: name });
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+  expect(screen.getByLabelText('Capture text')).toHaveValue('Draft stays here');
+});

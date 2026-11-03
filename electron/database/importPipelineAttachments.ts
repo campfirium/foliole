@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import { upsertNodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
-import { isDataUrlDestination, normalizeSafeMarkdownDataImageUrl } from '../../lib/platform/markdownImageDataUrl.js';
+import { isUnmanagedImportImage } from '../../lib/core/import/importImagePolicy.js';
 import { prepareCanonicalImageAttachment } from '../attachments/importImageAttachmentBytes.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 
@@ -18,21 +18,8 @@ const IMAGE_ATTACHMENT_ROLE = 'image';
 const PDF_ATTACHMENT_ROLE = 'reference';
 const PDF_MIME_TYPE = 'application/pdf';
 
-const SUPPORTED_IMAGE_EXTENSIONS = new Set([
-  '.gif', '.jpeg', '.jpg', '.png', '.webp'
-]);
-
 function createContentHash(bytes: Uint8Array) {
   return createHash('sha256').update(bytes).digest('hex');
-}
-
-function isRemoteImageDestination(destination: string) {
-  try {
-    const parsedUrl = new URL(destination);
-    return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
-  } catch {
-    return false;
-  }
 }
 
 function isAbsoluteLocalPath(destination: string) {
@@ -60,10 +47,6 @@ function resolveLocalImageSourcePaths(destination: string, sourceLocator: string
   const attachmentRootPath = resolveExternalAttachmentRoot(sourceLocator);
   if (attachmentRootPath) candidates.push(path.resolve(attachmentRootPath, decodedDestination));
   return [...new Set(candidates)];
-}
-
-function resolveMimeType(sourcePath: string) {
-  return SUPPORTED_IMAGE_EXTENSIONS.has(path.extname(sourcePath).toLowerCase());
 }
 
 function persistAttachmentFile(storagePath: string, bytes: Uint8Array) {
@@ -112,17 +95,10 @@ export function importMarkdownImageAttachment(input: {
   sourceLocator: string;
   syntax: 'markdown' | 'obsidian';
 }) {
-  if (
-    isRemoteImageDestination(input.destination) ||
-    isDataUrlDestination(input.destination) ||
-    normalizeSafeMarkdownDataImageUrl(input.destination) ||
-    input.destination.startsWith('asset://')
-  ) {
-    return { status: 'skipped' as const };
-  }
+  if (!isUnmanagedImportImage(input.destination, input.syntax)) return { status: 'skipped' as const };
   const candidatePaths = resolveLocalImageSourcePaths(input.destination, input.sourceLocator);
   const sourcePath = candidatePaths.find((candidate) => fs.existsSync(candidate)) ?? candidatePaths[0] ?? null;
-  if (!sourcePath || (input.syntax === 'obsidian' && !resolveMimeType(sourcePath))) {
+  if (!sourcePath) {
     return { status: 'skipped' as const };
   }
   return importLocalImageAttachment(input.nodeId, sourcePath);
