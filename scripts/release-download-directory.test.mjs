@@ -49,3 +49,10 @@ describe('public platform download directory', () => {
     })).toThrow('download asset');
   });
 });
+
+it('keeps the fixed TestFlight invitation outside exact GitHub download assets', () => {
+  const withStore = { platforms: [...registry.platforms,
+    { id: 'ios', status: 'active', deliveryChannel: 'testflight' }] };
+  expect(createPlatformDownloadDirectory({ registry: withStore, manifest, publishedReleases }))
+    .toEqual(createPlatformDownloadDirectory({ registry, manifest, publishedReleases }));
+});

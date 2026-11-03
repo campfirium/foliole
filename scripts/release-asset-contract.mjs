@@ -8,6 +8,7 @@ import { validateDesktopUpdateArtifacts } from './desktop-update-artifact-contra
 import { verifyLinuxPackageDirectory } from './linux/linux-deb-contract.mjs';
 import { resolveReleasePlatformIdentity } from './release-platform-contract.mjs';
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
+import { verifyTestflightReceiptFile } from './ios/testflight-candidate.mjs';
 
 function sorted(values) {
   return [...values].sort((left, right) => left.localeCompare(right));
@@ -36,6 +37,10 @@ export async function validateReleaseAssetDirectory({ directory, identity }) {
   const names = await readdir(directory);
   assertExactReleaseAssets(identity, names);
   for (const platform of selectedPlatforms(identity)) {
+    if (platform.artifactContract === 'testflight-submission') {
+      await verifyTestflightReceiptFile(directory, identity.intent.version, identity.sourceSha);
+      continue;
+    }
     if (platform.artifactContract === 'linux-packages') {
       await verifyLinuxPackageDirectory(directory, identity.intent.version, {
         allowOtherFiles: true, checksumFile: `SHA256SUMS-${platform.id}.txt`

@@ -66,6 +66,7 @@ const RELEASE_WORKFLOW_CONTRACT_TESTS = [
   'scripts/release-candidate-quality-workflow-contract.test.mjs',
   'scripts/release-macos-workflow-contract.test.mjs',
   'scripts/release-windows-workflow-contract.test.mjs',
+  'scripts/ios/testflight-workflow.test.mjs',
   'scripts/t7-release-workflow-contract.test.mjs',
   'scripts/windows/release-windows-validation-kit-contract.test.mjs'
 ];
@@ -158,7 +159,7 @@ export const CRITICAL_TEST_ROUTES = [
   },
   {
     triggers: [
-      /^\.github\/workflows\/(?:publish-release|release-(?:assembly|candidate-quality|linux|macos|quality-recheck|windows)|t7-release)\.yml$/u
+      /^\.github\/workflows\/(?:publish-release|release-(?:assembly|candidate-quality|ios|linux|macos|preempt-dev|quality-recheck|windows)|t7-release)\.yml$/u
     ],
     tests: RELEASE_WORKFLOW_CONTRACT_TESTS
   },

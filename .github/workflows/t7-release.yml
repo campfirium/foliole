@@ -32,6 +32,7 @@ on:
           - macos
           - windows
           - linux
+          - ios
           - assembly
           - full
       target_sha:
@@ -61,25 +62,9 @@ jobs:
   preempt_dev_quality:
     name: Cancel running dev quality
     if: github.event_name == 'push' || inputs.stage == 'full'
-    runs-on: ubuntu-latest
     permissions:
       actions: write
-    steps:
-      - name: Cancel dev hosted quality so the release run owns the runners
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          for workflow in remote-quality.yml t7-hosted-quality.yml; do
-            for status in in_progress queued waiting pending requested; do
-              gh run list --workflow "$workflow" --branch dev --status "$status" --limit 50 \
-                --json databaseId --jq '.[].databaseId' | while read -r run_id; do
-                echo "Cancelling $workflow run $run_id ($status)"
-                gh run cancel "$run_id" || echo "Run $run_id already finished"
-              done
-            done
-          done
+    uses: ./.github/workflows/release-preempt-dev.yml
 
   release_context:
     name: Resolve release identity
@@ -221,6 +206,24 @@ jobs:
       trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
       attest_artifact: true
 
+  ios_package:
+    name: iPhone TestFlight
+    if: ${{ !cancelled() && needs.release_context.result == 'success' && contains(fromJSON(needs.release_context.outputs.release_scope_json), 'ios') && (((github.event_name == 'push' || inputs.stage == 'full') && needs.release_candidate.result == 'success') || inputs.stage == 'ios' || inputs.stage == 'assembly') }}
+    needs: [release_context, release_candidate]
+    permissions: { contents: read, actions: read }
+    uses: ./.github/workflows/release-ios.yml
+    with:
+      execution_lane: release-t7
+      target_sha: ${{ (inputs.stage == 'ios' || inputs.stage == 'assembly') && needs.release_context.outputs.target_sha || needs.release_candidate.outputs.accepted_sha }}
+      target_version: ${{ needs.release_context.outputs.target_version }}
+      trigger_ref: ${{ needs.release_context.outputs.trigger_ref }}
+    secrets:
+      APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+      APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+      APPLE_NOTARY_API_KEY_BASE64: ${{ secrets.APPLE_NOTARY_API_KEY_BASE64 }}
+      IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+      IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+
   assemble_draft:
     name: Assemble release draft
     if: >-
@@ -228,8 +231,9 @@ jobs:
         && ((contains(fromJSON(needs.release_context.outputs.release_scope_json), 'macos') && needs.macos_package.result == 'success') || (!contains(fromJSON(needs.release_context.outputs.release_scope_json), 'macos') && needs.macos_package.result == 'skipped'))
         && ((contains(fromJSON(needs.release_context.outputs.release_scope_json), 'windows') && needs.windows_package.result == 'success') || (!contains(fromJSON(needs.release_context.outputs.release_scope_json), 'windows') && needs.windows_package.result == 'skipped'))
         && ((contains(fromJSON(needs.release_context.outputs.release_scope_json), 'linux') && needs.linux_package.result == 'success') || (!contains(fromJSON(needs.release_context.outputs.release_scope_json), 'linux') && needs.linux_package.result == 'skipped'))
+        && ((contains(fromJSON(needs.release_context.outputs.release_scope_json), 'ios') && needs.ios_package.result == 'success') || (!contains(fromJSON(needs.release_context.outputs.release_scope_json), 'ios') && needs.ios_package.result == 'skipped'))
       }}
-    needs: [release_context, macos_package, windows_package, linux_package]
+    needs: [release_context, macos_package, windows_package, linux_package, ios_package]
     permissions:
       actions: read
       contents: write
@@ -237,6 +241,8 @@ jobs:
     with:
       linux_artifact_name: ${{ needs.linux_package.outputs.artifact_name }}
       linux_sha: ${{ needs.linux_package.outputs.packaged_sha }}
+      ios_artifact_name: ${{ needs.ios_package.outputs.artifact_name }}
+      ios_sha: ${{ needs.ios_package.outputs.packaged_sha }}
       macos_artifact_name: ${{ needs.macos_package.outputs.artifact_name }}
       macos_sha: ${{ needs.macos_package.outputs.packaged_sha }}
       release_intent_digest: ${{ needs.release_context.outputs.release_intent_digest }}
@@ -247,7 +253,7 @@ jobs:
 
   timing_summary:
     if: ${{ always() && (github.event_name == 'push' || inputs.stage == 'full') }}
-    needs: [release_context, t6_quality, release_candidate, macos_package, windows_package, linux_package, assemble_draft]
+    needs: [release_context, t6_quality, release_candidate, macos_package, windows_package, linux_package, ios_package, assemble_draft]
     permissions: { actions: read, contents: read }
     uses: ./.github/workflows/hosted-quality-timing-summary.yml
     with:

@@ -7,8 +7,8 @@ import { parse } from 'yaml';
 
 const workflow = parse(fs.readFileSync('.github/workflows/t7-release.yml', 'utf8'));
 const assembly = parse(fs.readFileSync('.github/workflows/release-assembly.yml', 'utf8'));
-const platforms = ['macos', 'windows', 'linux'];
-const scopes = Array.from({ length: 7 }, (_, index) =>
+const platforms = ['macos', 'windows', 'linux', 'ios'];
+const scopes = Array.from({ length: 15 }, (_, index) =>
   platforms.filter((_, bit) => (index + 1) & (1 << bit)));
 
 function context(scope, stage = '', event = 'push') {

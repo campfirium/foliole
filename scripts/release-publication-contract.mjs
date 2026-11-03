@@ -11,7 +11,11 @@ function sameMembers(left, right) {
 
 function requireBridgeRecord(identity, manifest, version) {
   const entry = manifest?.releases?.find((candidate) => candidate?.version === version);
-  if (!entry || !sameMembers(entry.platforms ?? [], identity.activePlatforms)) {
+  const storePlatforms = (identity.registry?.platforms ?? [])
+    .filter((platform) => platform.update.mode === 'store').map((platform) => platform.id);
+  const bridgeScope = identity.activePlatforms.filter((id) => !storePlatforms.includes(id));
+  const recordedScope = (entry?.platforms ?? []).filter((id) => !storePlatforms.includes(id));
+  if (!entry || !sameMembers(recordedScope, bridgeScope)) {
     throw new Error('scoped publication requires a full-platform compatibility bridge record.');
   }
 }

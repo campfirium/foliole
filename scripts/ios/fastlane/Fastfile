@@ -1,0 +1,63 @@
+require_relative '../testflight-distribution'
+
+opt_out_usage
+default_platform(:ios)
+
+def apple_api_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch('APPLE_API_KEY_ID'), issuer_id: ENV.fetch('APPLE_API_ISSUER'),
+    key_content: ENV.fetch('APPLE_NOTARY_API_KEY_BASE64'), is_key_content_base64: true,
+    in_house: false
+  )
+end
+
+class FolioleTestflightApi
+  def find_builds(version, number)
+    Spaceship::ConnectAPI::Build.all(app_id: FolioleTestflight::APP_ID, version: version,
+                                    build_number: number, platform: 'IOS')
+  end
+
+  def ensure_external_group(build, group_id)
+    groups = build.app.get_beta_groups
+    group = groups.find { |entry| entry.id == group_id }
+    raise 'Configured external group is missing or internal' unless group && !group.is_internal_group
+    build.add_beta_groups(beta_groups: [group])
+  end
+
+  def enable_automatic_notification(build)
+    Spaceship::ConnectAPI.patch_build_beta_details(
+      build_beta_details_id: build.build_beta_detail.id, attributes: { autoNotifyEnabled: true }
+    )
+  end
+
+  def submit_review(build)
+    build.post_beta_app_review_submission
+  end
+
+  def reload_build(id)
+    Spaceship::ConnectAPI::Build.get(build_id: id)
+  end
+end
+
+platform :ios do
+  desc 'Upload the exact signed IPA and exit without waiting for Apple processing'
+  lane :upload do
+    upload_to_testflight(
+      api_key: apple_api_key, apple_id: FolioleTestflight::APP_ID,
+      app_identifier: 'com.campfirium.foliole.ios', ipa: ENV.fetch('FOLIOLE_IOS_IPA'),
+      skip_waiting_for_build_processing: true, skip_submission: true
+    )
+  end
+
+  desc 'Wait for one exact candidate, submit external review, and exit before approval'
+  lane :distribute do
+    apple_api_key
+    candidate = JSON.parse(File.read(ENV.fetch('FOLIOLE_IOS_CANDIDATE')))
+    unless candidate['runId'] == ENV.fetch('GITHUB_RUN_ID') &&
+           candidate['sourceSha'] == ENV.fetch('FOLIOLE_IOS_EXPECTED_SHA')
+      raise 'Candidate must belong to this workflow run and accepted source commit'
+    end
+    receipt = FolioleTestflight.distribute(api: FolioleTestflightApi.new, candidate: candidate)
+    File.write(ENV.fetch('FOLIOLE_IOS_RECEIPT'), JSON.pretty_generate(receipt))
+  end
+end

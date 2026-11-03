@@ -123,7 +123,7 @@ export function resolveReleasePlatformIdentity({ registry: inputRegistry, intent
     .filter(({ id }) => intent.selectedPlatforms.includes(id))
     .flatMap((platform) => platform.managedAssets.map((asset) => asset.replaceAll('{version}', intent.version)));
   const digest = createHash('sha256').update(JSON.stringify({ intent, registry, sha })).digest('hex');
-  return { activePlatforms: activePlatforms.map(({ id }) => id), digest, hardGatePlatforms, intent, managedAssets, registry, updaterBaselines };
+  return { sourceSha: sha, activePlatforms: activePlatforms.map(({ id }) => id), digest, hardGatePlatforms, intent, managedAssets, registry, updaterBaselines };
 }
 
 export function assertReleaseIntentDigest(identity, expectedDigest) {

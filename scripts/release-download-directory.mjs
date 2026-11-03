@@ -19,7 +19,7 @@ function currentRelease(manifest, platformId) {
 
 export function listPlatformDownloadVersions(manifest, registry) {
   return [...new Set(registry.platforms
-    .filter((platform) => platform.status === 'active')
+    .filter((platform) => platform.status === 'active' && platform.deliveryChannel === 'github-release')
     .map((platform) => currentRelease(manifest, platform.id)?.version)
     .filter(Boolean))];
 }
@@ -47,7 +47,9 @@ function availableDownload(platform, release, publishedRelease, repository) {
 }
 
 export function createPlatformDownloadDirectory({ manifest, publishedReleases, registry, repository = REPOSITORY }) {
-  const platforms = Object.fromEntries(registry.platforms.map((platform) => {
+  // Store invitations are maintained separately from exact GitHub installer assets.
+  const platforms = Object.fromEntries(registry.platforms.filter((platform) =>
+    platform.deliveryChannel === 'github-release').map((platform) => {
     if (platform.status === 'retired') {
       return [platform.id, {
         archiveUrl: platform.retirement.archiveUrl,

@@ -8,6 +8,7 @@ import path from 'node:path';
 import { resolveReleasePlatformIdentity } from './release-platform-contract.mjs';
 import { assertT7Publication } from './release-publication-contract.mjs';
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
+import { assertIosReleaseAvailable } from './ios/testflight-publication.mjs';
 
 function json(command, args, cwd, run) {
   return JSON.parse(run(command, args, { cwd, encoding: 'utf8' }));
@@ -35,6 +36,7 @@ export async function publishRelease({ cwd = process.cwd(), run = execFileSync }
   if (candidate.tagName !== tag || candidate.isDraft !== true) {
     throw new Error('public transition requires the confirmed unpublished Draft.');
   }
+  await assertIosReleaseAvailable({ identity, cwd, tag, run });
   run('gh', [
     'release', 'edit', tag, '-R', 'campfirium/foliole', '--draft=false',
     `--latest=${publication.makeLatest}`

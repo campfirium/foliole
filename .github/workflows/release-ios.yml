@@ -1,0 +1,159 @@
+name: Release iPhone to TestFlight
+
+on:
+  workflow_call:
+    inputs:
+      target_sha: { required: true, type: string }
+      target_version: { required: true, type: string }
+      execution_lane: { required: true, type: string }
+      trigger_ref: { required: true, type: string }
+    secrets:
+      APPLE_API_ISSUER: { required: true }
+      APPLE_API_KEY_ID: { required: true }
+      APPLE_NOTARY_API_KEY_BASE64: { required: true }
+      IOS_DISTRIBUTION_CERTIFICATE_BASE64: { required: true }
+      IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: { required: true }
+    outputs:
+      artifact_name:
+        value: ${{ jobs.external-review.outputs.artifact_name }}
+      packaged_sha:
+        value: ${{ jobs.external-review.outputs.packaged_sha }}
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  BUNDLE_GEMFILE: ${{ github.workspace }}/scripts/ios/fastlane/Gemfile
+  FASTLANE_SKIP_UPDATE_CHECK: 'true'
+  FASTLANE_HIDE_CHANGELOG: 'true'
+
+jobs:
+  signed-upload:
+    name: Sign and upload iPhone without waiting for Apple processing
+    runs-on: macos-15
+    timeout-minutes: 90
+    concurrency:
+      group: testflight-ios-sign-upload
+      cancel-in-progress: false
+    outputs:
+      candidate_artifact: ${{ steps.candidate.outputs.artifact_name }}
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+      TARGET_VERSION: ${{ inputs.target_version }}
+      APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+      APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+      APPLE_NOTARY_API_KEY_BASE64: ${{ secrets.APPLE_NOTARY_API_KEY_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ inputs.target_sha }}', persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - name: Verify the same accepted release candidate
+        env:
+          TRIGGER_REF: ${{ inputs.trigger_ref }}
+          EXECUTION_LANE: ${{ inputs.execution_lane }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/release
+          test "$TRIGGER_REF" = refs/heads/release
+          test "$EXECUTION_LANE" = release-t7
+          test "$GITHUB_SHA" = "$TARGET_SHA"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(node -p 'require("./package.json").version')" = "$TARGET_VERSION"
+      - name: Install pinned source dependencies
+        run: node scripts/quality/hosted-npm-ci.mjs
+      - uses: ruby/setup-ruby@v1
+        with: { ruby-version: '4.0', bundler-cache: true }
+      - name: Install iPhone distribution credentials in a temporary keychain
+        env:
+          IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          for name in APPLE_API_ISSUER APPLE_API_KEY_ID APPLE_NOTARY_API_KEY_BASE64 IOS_DISTRIBUTION_CERTIFICATE_BASE64 IOS_DISTRIBUTION_CERTIFICATE_PASSWORD; do
+            test -n "${!name}" || { echo "Missing credential: $name" >&2; exit 1; }
+          done
+          keychain="$RUNNER_TEMP/foliole-ios-signing.keychain-db"
+          password="$(openssl rand -base64 32)"
+          printf '%s' "$IOS_DISTRIBUTION_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/ios-distribution.p12"
+          printf '%s' "$APPLE_NOTARY_API_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 10800 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security import "$RUNNER_TEMP/ios-distribution.p12" -P "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD" -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -k "$password" "$keychain"
+          security list-keychains -d user -s "$keychain"
+          echo "APPLE_API_KEY=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+      - name: Archive, export, and verify both signed bundles
+        run: node scripts/ios/testflight-archive.mjs
+      - name: Upload the verified IPA and release the macOS runner
+        working-directory: scripts/ios
+        run: bundle exec fastlane ios upload
+      - name: Hand the exact candidate to the Linux continuation
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-upload-${{ inputs.target_sha }}-${{ github.run_attempt }}
+          path: .tmp/artifacts/ios-testflight/candidate.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Export uploaded candidate identity
+        id: candidate
+        run: echo 'artifact_name=ios-upload-${{ inputs.target_sha }}-${{ github.run_attempt }}' >> "$GITHUB_OUTPUT"
+      - name: Remove temporary signing credentials
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/foliole-ios-signing.keychain-db" || true
+          rm -f "$RUNNER_TEMP/ios-distribution.p12" "$RUNNER_TEMP/AuthKey.p8"
+
+  external-review:
+    name: Wait on Linux and submit external review without waiting for approval
+    needs: signed-upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    concurrency:
+      group: testflight-ios-external-review
+      cancel-in-progress: false
+    outputs:
+      artifact_name: ${{ steps.receipt.outputs.artifact_name }}
+      packaged_sha: ${{ steps.receipt.outputs.packaged_sha }}
+    env:
+      APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+      APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+      APPLE_NOTARY_API_KEY_BASE64: ${{ secrets.APPLE_NOTARY_API_KEY_BASE64 }}
+      FOLIOLE_IOS_EXPECTED_SHA: ${{ inputs.target_sha }}
+      FOLIOLE_IOS_CANDIDATE: ${{ github.workspace }}/.tmp/artifacts/ios-testflight-upload/candidate.json
+      FOLIOLE_IOS_RECEIPT: ${{ github.workspace }}/.tmp/artifacts/ios-testflight-receipt/Foliole-iOS-${{ inputs.target_version }}-TestFlight.json
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ inputs.target_sha }}', persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/download-artifact@v5
+        with:
+          name: ${{ needs.signed-upload.outputs.candidate_artifact }}
+          path: .tmp/artifacts/ios-testflight-upload
+      - uses: ruby/setup-ruby@v1
+        with: { ruby-version: '4.0', bundler-cache: true }
+      - name: Submit this exact candidate to the existing external group
+        working-directory: scripts/ios
+        run: |
+          mkdir -p ../../.tmp/artifacts/ios-testflight-receipt
+          bundle exec fastlane ios distribute
+      - name: Verify the submitted receipt
+        env:
+          VERSION: ${{ inputs.target_version }}
+        run: node --input-type=module -e "import { verifyTestflightReceiptFile } from './scripts/ios/testflight-candidate.mjs'; await verifyTestflightReceiptFile('.tmp/artifacts/ios-testflight-receipt', process.env.VERSION, process.env.FOLIOLE_IOS_EXPECTED_SHA);"
+      - name: Preserve the review submission receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-ios-${{ inputs.target_sha }}-${{ github.run_attempt }}
+          path: .tmp/artifacts/ios-testflight-receipt
+          if-no-files-found: error
+          retention-days: 14
+      - name: Export producer identity
+        id: receipt
+        run: |
+          echo 'artifact_name=release-ios-${{ inputs.target_sha }}-${{ github.run_attempt }}' >> "$GITHUB_OUTPUT"
+          echo 'packaged_sha=${{ inputs.target_sha }}' >> "$GITHUB_OUTPUT"

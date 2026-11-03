@@ -61,6 +61,17 @@
         "mode": "manual",
         "baselineVersion": null
       }
+    },
+    {
+      "id": "ios",
+      "displayName": "iPhone (TestFlight)",
+      "status": "active",
+      "architectures": ["arm64"],
+      "deliveryChannel": "testflight",
+      "t7Required": true,
+      "artifactContract": "testflight-submission",
+      "managedAssets": ["Foliole-iOS-{version}-TestFlight.json"],
+      "update": { "mode": "store", "baselineVersion": null }
     }
   ]
 }

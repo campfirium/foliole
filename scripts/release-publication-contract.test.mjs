@@ -50,3 +50,11 @@ describe('release publication contract', () => {
     })).toThrow('platforms must exactly match');
   });
 });
+
+it('does not require a historic desktop compatibility bridge to include a newly added store channel', () => {
+  const selected = { ...identity('scoped', ['ios']), activePlatforms: ['macos', 'windows', 'ios'],
+    registry: { platforms: [{ id: 'ios', update: { mode: 'store' } }] } };
+  expect(assertT7Publication(selected, BRIDGE_MANIFEST).mode).toBe('scoped');
+  expect(() => assertT7Publication(selected, { ...BRIDGE_MANIFEST,
+    releases: [{ version: '0.8.0', platforms: ['windows'] }] })).toThrow();
+});

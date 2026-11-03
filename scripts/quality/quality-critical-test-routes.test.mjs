@@ -78,6 +78,7 @@ const RELEASE_WORKFLOW_CONTRACTS = [
   'scripts/release-candidate-quality-workflow-contract.test.mjs',
   'scripts/release-macos-workflow-contract.test.mjs',
   'scripts/release-windows-workflow-contract.test.mjs',
+  'scripts/ios/testflight-workflow.test.mjs',
   'scripts/t7-release-workflow-contract.test.mjs',
   'scripts/windows/release-windows-validation-kit-contract.test.mjs'
 ];
@@ -154,12 +155,14 @@ describe('quality critical test routes', () => {
     expect(resolveCriticalTestFiles([
       '.github/workflows/release-candidate-quality.yml',
       '.github/workflows/release-assembly.yml',
+      '.github/workflows/release-ios.yml',
+      '.github/workflows/release-preempt-dev.yml',
       '.github/workflows/release-linux.yml',
       '.github/workflows/release-macos.yml',
       '.github/workflows/release-quality-recheck.yml',
       '.github/workflows/release-windows.yml',
       '.github/workflows/t7-release.yml'
-    ], existing)).toEqual(RELEASE_WORKFLOW_CONTRACTS);
+    ], existing)).toEqual([...RELEASE_WORKFLOW_CONTRACTS].sort());
   });
 
   it('routes hosted-quality handoff behavior changes to their shared contract set', () => {

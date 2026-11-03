@@ -30,7 +30,7 @@ describe('T7 release workflow contract', () => {
     expect(workflow.name).toBe('Release');
     const dispatch = workflow.on.workflow_dispatch.inputs;
     expect(dispatch.stage.options).toEqual([
-      ...qualityStages, 'release-candidate', 'macos', 'windows', 'linux', 'assembly', 'full'
+      ...qualityStages, 'release-candidate', 'macos', 'windows', 'linux', 'ios', 'assembly', 'full'
     ]);
     expect(dispatch.target_sha).toMatchObject({ required: true, type: 'string' });
     expect(dispatch.target_version).toMatchObject({ required: true, type: 'string' });
@@ -74,7 +74,9 @@ describe('T7 release workflow contract', () => {
       .toEqual(['0', '1200']);
     expect(jobs.preempt_dev_quality.permissions).toEqual({ actions: 'write' });
     expect(jobs.preempt_dev_quality.needs).toBeUndefined();
-    const preempt = jobs.preempt_dev_quality.steps.map((step) => step.run ?? '').join('\n');
+    expect(jobs.preempt_dev_quality.uses).toBe('./.github/workflows/release-preempt-dev.yml');
+    const preemption = parse(fs.readFileSync('.github/workflows/release-preempt-dev.yml', 'utf8'));
+    const preempt = preemption.jobs['cancel-dev-quality'].steps.map((step) => step.run ?? '').join('\n');
     for (const workflow of ['remote-quality.yml', 't7-hosted-quality.yml']) expect(preempt).toContain(workflow);
     expect(preempt).toContain('--branch dev');
     expect(preempt).toContain('gh run cancel');
@@ -102,7 +104,7 @@ describe('T7 release workflow contract', () => {
     expect(jobs.release_context.outputs.release_make_latest)
       .toBe('${{ steps.identity.outputs.release_make_latest }}');
     expect(jobs.assemble_draft.needs)
-      .toEqual(['release_context', 'macos_package', 'windows_package', 'linux_package']);
+      .toEqual(['release_context', 'macos_package', 'windows_package', 'linux_package', 'ios_package']);
     expect(jobs.assemble_draft.uses).toBe('./.github/workflows/release-assembly.yml');
     expect(jobs.assemble_draft.with.target_sha)
       .toBe('${{ needs.release_context.outputs.target_sha }}');
@@ -124,7 +126,7 @@ describe('T7 release workflow contract', () => {
   it('keeps draft assembly reusable-only and identity-bound to same-run producers', () => {
     expect(assembly.on.workflow_dispatch).toBeUndefined();
     expect(Object.keys(assembly.on.workflow_call.inputs)).toEqual([
-      'linux_artifact_name', 'linux_sha', 'macos_artifact_name', 'macos_sha',
+      'ios_artifact_name', 'ios_sha', 'linux_artifact_name', 'linux_sha', 'macos_artifact_name', 'macos_sha',
       'release_intent_digest', 'target_sha', 'target_version',
       'windows_artifact_name', 'windows_sha'
     ]);
@@ -148,7 +150,7 @@ describe('T7 release workflow contract', () => {
   });
 
   it('keeps selected asset validation and same-run downloads', () => {
-    expect(assemblySource.match(/uses: actions\/download-artifact@v5/gu)).toHaveLength(3);
+    expect(assemblySource.match(/uses: actions\/download-artifact@v5/gu)).toHaveLength(4);
     expect(assemblySource).not.toContain('run-id:');
     expect(assemblySource).not.toContain('repository:');
     expect(assemblySource).toContain('node scripts/release-assembly-assets.mjs');
