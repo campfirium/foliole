@@ -1,3 +1,5 @@
+import { IMPORT_RUN_SCHEMA } from './importRunSchema.js';
+
 export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS mirror_articles (
     article_id TEXT PRIMARY KEY REFERENCES nodes(id) ON DELETE CASCADE,
@@ -86,21 +88,7 @@ export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
     payload_json TEXT NOT NULL,
     PRIMARY KEY (connection_ref, record_kind, remote_id)
   )`,
-  `CREATE TABLE IF NOT EXISTS import_runs (
-    id TEXT PRIMARY KEY,
-    source_fingerprint TEXT NOT NULL,
-    provider TEXT NOT NULL,
-    source_kind TEXT NOT NULL,
-    source_name TEXT NOT NULL,
-    source_locator TEXT NOT NULL,
-    content_fingerprint TEXT NOT NULL,
-    duplicate_semantic TEXT NOT NULL,
-    result_status TEXT NOT NULL,
-    node_id TEXT,
-    imported_at TEXT NOT NULL,
-    degraded_reason TEXT,
-    failure_reason TEXT
-  )`,
+  IMPORT_RUN_SCHEMA,
   `CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,

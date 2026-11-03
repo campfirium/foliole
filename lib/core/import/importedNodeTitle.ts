@@ -1,5 +1,3 @@
-import path from 'node:path';
-
 export type ImportNodeTitleStrategy = 'file_name' | 'heading';
 
 const FENCE_PATTERN = /^\s{0,3}(```|~~~)/;
@@ -16,7 +14,9 @@ function stripInlineMarkdown(value: string) {
 
 function stripImportFileExtension(sourceName: string) {
   const normalized = sourceName.replace(/\\/g, '/');
-  const extension = path.extname(normalized);
+  const segment = normalized.slice(normalized.lastIndexOf('/') + 1);
+  const dot = segment.lastIndexOf('.');
+  const extension = dot > 0 && segment !== '..' ? segment.slice(dot) : '';
   if (!extension) {
     return normalized;
   }

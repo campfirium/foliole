@@ -1,7 +1,9 @@
 import { WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS } from './desktopSourceConnectionSchemaStatements.js';
 import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from './desktopSourceSchemaStatements.js';
+import { IMPORT_RUN_SCHEMA } from './importRunSchema.js';
 
 export const ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS = [
+  IMPORT_RUN_SCHEMA,
   ...DESKTOP_SOURCE_SCHEMA_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS content_blobs (
     hash TEXT PRIMARY KEY,

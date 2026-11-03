@@ -131,7 +131,7 @@ export function getCompanionCaptureTextErrorCode(error: unknown): CompanionCaptu
   return null;
 }
 
-async function assertCaptureParentAvailable(db: DbPort, parentNodeId: string) {
+export async function assertCaptureParentAvailable(db: DbPort, parentNodeId: string) {
   const visited = new Set<string>();
   let nodeId: string | null = parentNodeId;
   while (nodeId) {

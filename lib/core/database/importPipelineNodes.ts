@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
+import { importedTitleCandidate } from '../import/importedTitleCandidate.js';
 import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
-import { isNodeTitleTruncated, NODE_TITLE_MAX_CHARS, normalizeNodeTitle } from '../nodes/nodeTitleBudget.js';
+import { isNodeTitleTruncated, normalizeNodeTitle } from '../nodes/nodeTitleBudget.js';
 
 import type { DatabaseDriver } from './driver.js';
 import { applyParentContentChange } from './parentContentMutation.js';
@@ -25,19 +26,12 @@ interface ExistingNodeRow {
 }
 
 function resolveNextImportedTitle(driver: DatabaseDriver, desiredTitle: string, reports?: string[]) {
-  const base = normalizeNodeTitle(desiredTitle.trim() || 'Untitled');
+  const base = importedTitleCandidate(desiredTitle);
   let candidate = base;
   let sequence = 1;
   while (driver.queryOne('SELECT id FROM nodes WHERE deleted_at IS NULL AND title = ?', [candidate])) {
-    const suffix = ` ${++sequence}`;
-    let prefix = '';
-    let count = 0;
-    for (const character of base) {
-      if (++count > NODE_TITLE_MAX_CHARS - suffix.length) break;
-      prefix += character;
-    }
-    if (isNodeTitleTruncated(`${base}${suffix}`)) reports?.push('Imported topic title was shortened to 100 characters.');
-    candidate = `${prefix}${suffix}`;
+    candidate = importedTitleCandidate(base, ++sequence);
+    if (isNodeTitleTruncated(`${base} ${sequence}`)) reports?.push('Imported topic title was shortened to 100 characters.');
   }
   return candidate;
 }

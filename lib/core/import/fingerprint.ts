@@ -1,6 +1,6 @@
-import { createHash } from 'node:crypto';
-
 import { formatHighlightCardContent } from '../annotations/textAnnotationContent.js';
+import { hashTextBody } from '../database/textBodyHash.js';
+
 
 import {
   IMPORT_PROVIDER_DESKTOP_TEXT_FILE,
@@ -48,7 +48,7 @@ interface CreatePreparedDesktopTextImportInput {
 }
 
 function hashFingerprint(...parts: string[]) {
-  return createHash('sha256').update(parts.join('\u001F'), 'utf8').digest('hex');
+  return hashTextBody(parts.join('\u001F'));
 }
 
 export function createTrackedDesktopSourceFingerprint(sourceIdentity: string) {

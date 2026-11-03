@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { SelectedImportFile } from '../shared/platform/import/selectedImportFile';
+
 import { clearCaptureBackDraft, persistCaptureBackDraft, readCaptureBackDraft } from './companionCaptureDraftStorage';
 import type { CompanionCaptureTextSaveError, CompanionCaptureTextSaveResult } from './companionCaptureTextController';
 
@@ -8,11 +10,12 @@ function useCaptureDraftState(open: boolean, draftScope: string) {
   const [error, setError] = useState<CompanionCaptureTextSaveError | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [retryRefresh, setRetryRefresh] = useState<(() => Promise<unknown>) | null>(null);
-  const attempt = useRef({ session: 0, busy: false });
+  const attempt = useRef({ session: 0, busy: false, controller: null as AbortController | null });
   const preserveOnClose = useRef(false);
   const wasOpen = useRef(open);
   const resetDraft = useCallback(() => {
-    attempt.current = { session: attempt.current.session + 1, busy: false };
+    attempt.current.controller?.abort();
+    attempt.current = { session: attempt.current.session + 1, busy: false, controller: null };
     setDraft('');
     setError(null);
     setIsSaving(false);
@@ -24,7 +27,7 @@ function useCaptureDraftState(open: boolean, draftScope: string) {
     if (open) preserveOnClose.current = false;
     wasOpen.current = open;
   }, [open, resetDraft]);
-  useEffect(() => () => { attempt.current.session += 1; }, []);
+  useEffect(() => () => { attempt.current.controller?.abort(); attempt.current.session += 1; }, [draftScope]);
 
   const handleDraftChange = (value: string) => {
     if (attempt.current.busy || retryRefresh) return;
@@ -40,6 +43,7 @@ function useCaptureDraftState(open: boolean, draftScope: string) {
 interface CaptureDraftProps {
   draftScope: string;
   onSave(text: string): Promise<CompanionCaptureTextSaveResult>;
+  onImportFile?(file: SelectedImportFile, signal?: AbortSignal): Promise<CompanionCaptureTextSaveResult>;
   onClipboardCreated?(nodeId: string): void;
   onOpenChange(open: boolean): void;
   open: boolean;
@@ -64,15 +68,20 @@ export function useCompanionCaptureDraft(props: CaptureDraftProps) {
     draft, error, isSaving, isSaved: Boolean(retryRefresh),
     canSave: (Boolean(retryRefresh) || draft.trim().length > 0) && !isSaving,
     handleDraftChange, handleOpenChange, handleSave: () => saveText(draft, false),
-    handleSaveClipboard: (text: string) => saveText(text, true), closeForSystemBack
+    handleSaveClipboard: (text: string) => saveText(text, true), closeForSystemBack,
+    handleImportFile: (file: SelectedImportFile) => saveText(file, true)
   };
 }
 
 function createCaptureTextSaver(props: CaptureDraftProps, state: ReturnType<typeof useCaptureDraftState>,
   handleOpenChange: (open: boolean) => void) {
   const { draft, retryRefresh, attempt, preserveOnClose, setError, setIsSaving, setRetryRefresh } = state;
-  return async (text: string, clipboard: boolean) => {
-    if (attempt.current.busy || (!retryRefresh && !text.trim())) return;
+  return async (text: string | SelectedImportFile, clipboard: boolean) => {
+    if (attempt.current.busy || (!retryRefresh && typeof text === 'string' && !text.trim())) return;
+    if (typeof text !== 'string' && !persistCaptureBackDraft(props.draftScope, draft)) {
+      setError('save-failed');
+      return;
+    }
     const session = attempt.current.session;
     const complete = (nodeId: string) => {
       if (session !== attempt.current.session) return;
@@ -85,12 +94,15 @@ function createCaptureTextSaver(props: CaptureDraftProps, state: ReturnType<type
       } else handleOpenChange(false);
     };
     attempt.current.busy = true;
+    const controller = typeof text === 'string' ? null : new AbortController();
+    attempt.current.controller = controller;
     setIsSaving(true);
     setError(null);
     try {
       let result: CompanionCaptureTextSaveResult | null = null;
       if (retryRefresh) { await retryRefresh(); return; }
-      else result = await props.onSave(text);
+      else if (typeof text === 'string') result = await props.onSave(text);
+      else if (props.onImportFile) result = await props.onImportFile(text, controller?.signal);
       if (session !== attempt.current.session) return;
       if (result && 'error' in result) setError(result.error);
       else if (result?.retryRefresh) {

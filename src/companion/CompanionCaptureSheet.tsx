@@ -1,10 +1,11 @@
-import { Clipboard, type LucideIcon } from 'lucide-react';
+import { Clipboard, Upload, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ComponentProps, type RefObject } from 'react';
 
 import './companionCaptureViewport.css';
 
 import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import type { SelectedImportFile } from '../shared/platform/import/selectedImportFile';
 import {
   AppDialog,
   AppDialogClose,
@@ -52,6 +53,22 @@ function CaptureActionRow(props: { icon: LucideIcon; label: string; disabled?: b
       <span className="text-base font-medium">{props.label}</span>
     </button>
   );
+}
+
+function CaptureFileAction(props: { disabled: boolean; onImport(file: SelectedImportFile): Promise<void> }) {
+  const t = useTranslation();
+  const input = useRef<HTMLInputElement>(null);
+  return <>
+    <input ref={input} type="file" accept=".txt,text/plain" hidden tabIndex={-1}
+      aria-label={t('companion.capture.upload')} disabled={props.disabled}
+      onChange={event => {
+        const file = event.currentTarget.files?.[0];
+        event.currentTarget.value = '';
+        if (file) void props.onImport(file);
+      }} />
+    <CaptureActionRow icon={Upload} label={t('companion.capture.upload')} disabled={props.disabled}
+      onClick={() => input.current?.click()} />
+  </>;
 }
 
 function CaptureSheetHeader(props: {
@@ -121,6 +138,7 @@ function resolveCaptureErrorLabel(error: CompanionCaptureTextSaveError | null, t
 export function CompanionCaptureSheet(props: {
   draftScope: string;
   onSave(text: string): Promise<CompanionCaptureTextSaveResult>;
+  onImportFile?(file: SelectedImportFile, signal?: AbortSignal): Promise<CompanionCaptureTextSaveResult>;
   onClipboardCreated?(nodeId: string): void;
   onOpenChange(open: boolean): void;
   open: boolean;
@@ -160,6 +178,8 @@ export function CompanionCaptureSheet(props: {
             {errorLabel ? <p className="mt-3 text-sm text-destructive" role="alert">{errorLabel}</p> : null}
             <div className="companion-capture-clipboard mt-5 border-t border-companion-divider">
               <CaptureActionRow icon={Clipboard} label={t('companion.capture.paste')} disabled={isSaving || isSaved || clipboard.isPasting} busy={clipboard.isPasting} onClick={clipboard.paste} />
+              {props.onImportFile ? <CaptureFileAction disabled={isSaving || isSaved || clipboard.isPasting}
+                onImport={state.handleImportFile} /> : null}
               {clipboard.error ? <p className="mt-3 text-sm text-destructive" role="alert">{t(clipboard.error === 'empty' ? 'companion.capture.error.clipboardEmpty' : 'companion.capture.error.clipboardFailed')}</p> : null}
             </div>
           </div>

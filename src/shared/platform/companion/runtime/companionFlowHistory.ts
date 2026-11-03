@@ -102,14 +102,17 @@ function flowHistoryRefreshScope(entry: CompanionWorkspaceHistoryEntry): Workspa
 }
 
 export function runCompanionHistoryMutation<T>(task: (db: DbPort) => Promise<T>,
-  refreshScope: WorkspaceRefreshScope | ((result: T) => WorkspaceRefreshScope) = { kind: 'full' }) {
+  refreshScope: WorkspaceRefreshScope | ((result: T) => WorkspaceRefreshScope) = { kind: 'full' },
+  onCommitted?: (result: T) => void) {
   const owner = getIosCompanionDatabaseOwner();
   const scope = getCompanionReadingScope();
-  return runCompanionHighValueMutationTask(() => {
+  return runCompanionHighValueMutationTask(async () => {
     if (scope !== getCompanionReadingScope() || owner !== getIosCompanionDatabaseOwner()) {
       throw new Error('flow_history_context_changed');
     }
-    return owner.runWriter(db => db.transaction(task));
+    const result = await owner.runWriter(db => db.transaction(task));
+    onCommitted?.(result);
+    return result;
   }, refreshScope);
 }
 

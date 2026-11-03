@@ -5,6 +5,7 @@ import { resolveTopicCreationParentId } from '../features/nodes/model/topicCreat
 
 import { createCompanionCaptureTextSaveHandler } from './companionCaptureTextController';
 import type { CompanionDirectorySelection } from './CompanionDirectoryModel';
+import { createCompanionFileImportHandler } from './companionFileImportActions';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -33,5 +34,6 @@ export function useCompanionCaptureController(args: {
     latest.current.surface.handleSelectBrowseNode(nodeId);
   };
   return { isCaptureSheetOpen, setIsCaptureSheetOpen, handleOpenCapturedNode,
+    handleImportFile: createCompanionFileImportHandler(args.workspaceSync, parentNodeId),
     handleSaveCaptureText: createCompanionCaptureTextSaveHandler(args.workspaceSync, parentNodeId) };
 }
