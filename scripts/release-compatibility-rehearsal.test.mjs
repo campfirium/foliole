@@ -53,7 +53,7 @@ function step(version, selectedPlatforms, publicationMode, notes = { notes: [`Sh
   return {
     assets: assets(version, selectedPlatforms),
     notes,
-    producerPlatforms: ['macos', 'windows'],
+    producerPlatforms: [...selectedPlatforms],
     publicationMode,
     selectedPlatforms,
     sha: version.replaceAll('.', '').padEnd(40, 'a'),
@@ -105,10 +105,10 @@ describe('isolated compatibility transition rehearsal', () => {
     expect(resolveRehearsalPlatformVersion(bridge, 'windows')).toBe('0.8.0');
   });
 
-  it('does not skip an unselected platform producer hard gate', () => {
+  it('does not skip a selected platform producer hard gate', () => {
     const bridgeStep = step('0.8.0', ['macos', 'windows'], 'bridge');
     bridgeStep.producerPlatforms = ['windows'];
-    expect(() => applyIsolatedReleaseStep(INITIAL, REGISTRY, bridgeStep)).toThrow('every active T7 producer');
+    expect(() => applyIsolatedReleaseStep(INITIAL, REGISTRY, bridgeStep)).toThrow('every selected T7 producer');
   });
 
   it('forms pinned bridge input while preserving final user publication confirmation', () => {

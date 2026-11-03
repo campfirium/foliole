@@ -49,11 +49,11 @@ function resolve(overrides = {}) {
 }
 
 describe('platform release contract', () => {
-  it('separates all hard gates from selected scope and keeps platform baselines independent', () => {
+  it('selects producer hard gates while keeping all platform baselines independent', () => {
     const identity = resolve();
 
     expect(identity.activePlatforms).toEqual(['macos', 'windows']);
-    expect(identity.hardGatePlatforms).toEqual(['macos', 'windows']);
+    expect(identity.hardGatePlatforms).toEqual(['windows']);
     expect(identity.intent.selectedPlatforms).toEqual(['windows']);
     expect(identity.updaterBaselines).toEqual({ macos: '0.7.2', windows: '0.7.3' });
     expect(identity.managedAssets).toEqual(['Foliole-Windows-x64-0.8.0.exe']);
@@ -74,7 +74,7 @@ describe('platform release contract', () => {
       intent: intent(['linux'])
     });
 
-    expect(identity.hardGatePlatforms).toEqual(['macos', 'windows', 'linux']);
+    expect(identity.hardGatePlatforms).toEqual(['linux']);
     expect(identity.updaterBaselines.linux).toBe('');
     expect(identity.managedAssets).toEqual([
       'Foliole-Linux-Experimental-amd64-0.8.0.deb',

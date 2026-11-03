@@ -21,7 +21,7 @@ function releaseUrl(version) {
 
 function requireAllProducers(identity, producerPlatforms) {
   if (!sameMembers(identity.hardGatePlatforms, producerPlatforms)) {
-    throw new Error('rehearsal must pass every active T7 producer before publication.');
+    throw new Error('rehearsal must pass every selected T7 producer before publication.');
   }
 }
 

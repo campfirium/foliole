@@ -1,10 +1,9 @@
 // @vitest-environment node
 
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { assembleReleaseAssets } from './release-assembly-assets.mjs';
 import { resolveReleasePlatformIdentity } from './release-platform-contract.mjs';
@@ -90,38 +89,81 @@ function identity(selectedPlatforms) {
   });
 }
 
-async function fixture() {
-  const root = await mkdtemp(path.join(tmpdir(), 'foliole-release-assembly-'));
+const roots = [];
+afterEach(async () => {
+  await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true })));
+});
+
+async function fixture(scope = ['macos', 'windows', 'linux']) {
+  await mkdir('.tmp/artifacts', { recursive: true });
+  const root = await mkdtemp(path.resolve('.tmp/artifacts/release-assembly-'));
+  roots.push(root);
   const inputRoot = path.join(root, 'input');
-  await writePlatform(inputRoot, 'macos');
-  await writePlatform(inputRoot, 'windows');
-  await writeLinux(inputRoot);
+  for (const platform of scope) {
+    if (platform === 'linux') await writeLinux(inputRoot);
+    else await writePlatform(inputRoot, platform);
+  }
   return { inputRoot, outputRoot: path.join(root, 'output') };
 }
 
 describe('release assembly assets', () => {
   it.each([
-    [['macos', 'windows', 'linux'], 13],
-    [['windows'], 4],
-    [['macos'], 6],
-    [['linux'], 3]
-  ])('stages exactly the %s intent while validating every active producer', async (scope, count) => {
-    const paths = await fixture();
-    await expect(assembleReleaseAssets({ ...paths, identity: identity(scope) }))
-      .resolves.toHaveLength(count);
+    [['macos', 'windows', 'linux']],
+    [['windows']],
+    [['macos']],
+    [['linux']],
+    [['macos', 'windows']],
+    [['macos', 'linux']],
+    [['windows', 'linux']]
+  ])('assembles %s without any unselected producer directory', async scope => {
+    const paths = await fixture(scope);
+    const selected = identity(scope);
+    await expect(assembleReleaseAssets({ ...paths, identity: selected }))
+      .resolves.toEqual([...selected.managedAssets].sort((left, right) => left.localeCompare(right)));
   });
 
-  it('blocks a scoped Draft when an unselected active producer is incomplete', async () => {
+  it('ignores incomplete unselected producer artifacts', async () => {
     const paths = await fixture();
     await writeFile(path.join(paths.inputRoot, 'macos', 'latest-mac.yml'), 'version: 0.8.0\n');
     await expect(assembleReleaseAssets({ ...paths, identity: identity(['windows']) }))
+      .resolves.toEqual(expect.arrayContaining(identity(['windows']).managedAssets));
+  });
+
+  it('removes old scope assets when assembling again into the same output directory', async () => {
+    const paths = await fixture();
+    await assembleReleaseAssets({ ...paths, identity: identity(['macos', 'windows', 'linux']) });
+    await rm(path.join(paths.inputRoot, 'macos'), { recursive: true });
+    await rm(path.join(paths.inputRoot, 'linux'), { recursive: true });
+    const selected = identity(['windows']);
+    await expect(assembleReleaseAssets({ ...paths, identity: selected }))
+      .resolves.toEqual([...selected.managedAssets].sort((left, right) => left.localeCompare(right)));
+  });
+
+  it.each(['macos', 'windows'])('blocks corrupted selected %s installer bytes', async platform => {
+    const paths = await fixture([platform]);
+    const installer = REGISTRY.platforms.find(({ id }) => id === platform).managedAssets[0]
+      .replaceAll('{version}', VERSION);
+    await writeFile(path.join(paths.inputRoot, platform, installer), 'corrupted');
+    await expect(assembleReleaseAssets({ ...paths, identity: identity([platform]) }))
+      .rejects.toThrow(/mismatch/u);
+  });
+
+  it('blocks a selected producer with the wrong updater version', async () => {
+    const paths = await fixture(['macos']);
+    await writeFile(path.join(paths.inputRoot, 'macos', 'latest-mac.yml'), 'version: 0.8.0\n');
+    await expect(assembleReleaseAssets({ ...paths, identity: identity(['macos']) }))
       .rejects.toThrow('version mismatch');
   });
 
-  it('blocks every Draft when the Linux DEB checksum does not match', async () => {
+  it.each(['macos', 'windows', 'linux'])('blocks missing selected %s artifacts', async platform => {
+    const paths = await fixture([]);
+    await expect(assembleReleaseAssets({ ...paths, identity: identity([platform]) })).rejects.toThrow();
+  });
+
+  it('blocks selected Linux when the DEB checksum does not match', async () => {
     const paths = await fixture();
     await writeFile(path.join(paths.inputRoot, 'linux', 'SHA256SUMS.txt'), `${'0'.repeat(64)} *Foliole-Linux-Experimental-amd64-${VERSION}.deb\n`);
-    await expect(assembleReleaseAssets({ ...paths, identity: identity(['windows']) }))
+    await expect(assembleReleaseAssets({ ...paths, identity: identity(['linux']) }))
       .rejects.toThrow('Linux package checksum count mismatch');
   });
 });

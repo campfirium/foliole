@@ -90,6 +90,7 @@ jobs:
       release_make_latest: ${{ steps.identity.outputs.release_make_latest }}
       release_intent_digest: ${{ steps.identity.outputs.release_intent_digest }}
       release_scope: ${{ steps.identity.outputs.release_scope }}
+      release_scope_json: ${{ steps.identity.outputs.release_scope_json }}
       target_sha: ${{ steps.identity.outputs.target_sha }}
       target_version: ${{ steps.identity.outputs.target_version }}
       trigger_ref: ${{ steps.identity.outputs.trigger_ref }}
@@ -163,7 +164,7 @@ jobs:
 
   macos_package:
     name: macOS package
-    if: ${{ always() && needs.release_context.result == 'success' && (((github.event_name == 'push' || inputs.stage == 'full') && needs.release_candidate.result == 'success') || inputs.stage == 'macos' || inputs.stage == 'assembly') }}
+    if: ${{ !cancelled() && needs.release_context.result == 'success' && contains(fromJSON(needs.release_context.outputs.release_scope_json), 'macos') && (((github.event_name == 'push' || inputs.stage == 'full') && needs.release_candidate.result == 'success') || inputs.stage == 'macos' || inputs.stage == 'assembly') }}
     needs: [release_context, release_candidate]
     permissions:
       artifact-metadata: write
@@ -188,7 +189,7 @@ jobs:
 
   windows_package:
     name: Windows package
-    if: ${{ always() && needs.release_context.result == 'success' && (((github.event_name == 'push' || inputs.stage == 'full') && needs.release_candidate.result == 'success') || inputs.stage == 'windows' || inputs.stage == 'assembly') }}
+    if: ${{ !cancelled() && needs.release_context.result == 'success' && contains(fromJSON(needs.release_context.outputs.release_scope_json), 'windows') && (((github.event_name == 'push' || inputs.stage == 'full') && needs.release_candidate.result == 'success') || inputs.stage == 'windows' || inputs.stage == 'assembly') }}
     needs: [release_context, release_candidate]
     permissions:
       artifact-metadata: write
@@ -209,7 +210,7 @@ jobs:
 
   linux_package:
     name: Linux Experimental package
-    if: ${{ always() && needs.release_context.result == 'success' && (((github.event_name == 'push' || inputs.stage == 'full') && needs.release_candidate.result == 'success') || inputs.stage == 'linux' || inputs.stage == 'assembly') }}
+    if: ${{ !cancelled() && needs.release_context.result == 'success' && contains(fromJSON(needs.release_context.outputs.release_scope_json), 'linux') && (((github.event_name == 'push' || inputs.stage == 'full') && needs.release_candidate.result == 'success') || inputs.stage == 'linux' || inputs.stage == 'assembly') }}
     needs: [release_context, release_candidate]
     permissions: { artifact-metadata: write, attestations: write, contents: read, id-token: write }
     uses: ./.github/workflows/release-linux.yml
@@ -222,7 +223,12 @@ jobs:
 
   assemble_draft:
     name: Assemble release draft
-    if: ${{ always() && needs.release_context.result == 'success' && (github.event_name == 'push' || inputs.stage == 'full' || inputs.stage == 'assembly') && needs.macos_package.result == 'success' && needs.windows_package.result == 'success' && needs.linux_package.result == 'success' }}
+    if: >-
+      ${{ !cancelled() && needs.release_context.result == 'success' && (github.event_name == 'push' || inputs.stage == 'full' || inputs.stage == 'assembly')
+        && ((contains(fromJSON(needs.release_context.outputs.release_scope_json), 'macos') && needs.macos_package.result == 'success') || (!contains(fromJSON(needs.release_context.outputs.release_scope_json), 'macos') && needs.macos_package.result == 'skipped'))
+        && ((contains(fromJSON(needs.release_context.outputs.release_scope_json), 'windows') && needs.windows_package.result == 'success') || (!contains(fromJSON(needs.release_context.outputs.release_scope_json), 'windows') && needs.windows_package.result == 'skipped'))
+        && ((contains(fromJSON(needs.release_context.outputs.release_scope_json), 'linux') && needs.linux_package.result == 'success') || (!contains(fromJSON(needs.release_context.outputs.release_scope_json), 'linux') && needs.linux_package.result == 'skipped'))
+      }}
     needs: [release_context, macos_package, windows_package, linux_package]
     permissions:
       actions: read

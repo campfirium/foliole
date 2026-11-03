@@ -114,7 +114,8 @@ export function resolveReleasePlatformIdentity({ registry: inputRegistry, intent
   const registry = validatePlatformRegistry(inputRegistry);
   const intent = validateReleaseIntent(inputIntent, registry, packageVersion);
   const activePlatforms = registry.platforms.filter(({ status }) => status === 'active');
-  const hardGatePlatforms = activePlatforms.filter(({ t7Required }) => t7Required).map(({ id }) => id);
+  const hardGatePlatforms = activePlatforms
+    .filter(({ id, t7Required }) => t7Required && intent.selectedPlatforms.includes(id)).map(({ id }) => id);
   const updaterBaselines = Object.fromEntries(activePlatforms.map(({ id, update }) => [
     id, update.mode === 'electron-updater' ? update.baselineVersion : ''
   ]));

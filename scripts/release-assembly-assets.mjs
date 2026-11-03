@@ -18,15 +18,15 @@ function sourceName(platform, asset) {
   return asset === producerChecksum(platform) ? 'SHA256SUMS.txt' : asset;
 }
 
-async function validateActiveProducers(identity, inputRoot) {
-  const active = identity.registry.platforms.filter((platform) => platform.status === 'active');
-  for (const platform of active) {
+async function validateSelectedProducers(identity, inputRoot) {
+  const selected = identity.registry.platforms.filter(({ id }) => identity.intent.selectedPlatforms.includes(id));
+  for (const platform of selected) {
     const directory = path.join(inputRoot, platform.id);
     if (platform.artifactContract === 'linux-packages') {
       await verifyLinuxPackageDirectory(directory, identity.intent.version);
       continue;
     }
-    if (platform.artifactContract !== 'desktop-updater') throw new Error(`unsupported active artifact contract: ${platform.artifactContract}`);
+    if (platform.artifactContract !== 'desktop-updater') throw new Error(`unsupported selected artifact contract: ${platform.artifactContract}`);
     await validateDesktopUpdateArtifacts({
       directory, platform: platform.id,
       version: identity.intent.version
@@ -35,7 +35,7 @@ async function validateActiveProducers(identity, inputRoot) {
 }
 
 export async function assembleReleaseAssets({ identity, inputRoot, outputRoot }) {
-  await validateActiveProducers(identity, inputRoot);
+  await validateSelectedProducers(identity, inputRoot);
   await rm(outputRoot, { force: true, recursive: true });
   await mkdir(outputRoot, { recursive: true });
   const selected = new Set(identity.intent.selectedPlatforms);

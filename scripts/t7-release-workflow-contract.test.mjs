@@ -108,7 +108,7 @@ describe('T7 release workflow contract', () => {
       .toBe('${{ needs.release_context.outputs.target_sha }}');
   });
 
-  it('routes each package stage alone and rebuilds every producer for assembly', () => {
+  it('routes each package stage alone and rebuilds selected producers for assembly', () => {
     const stageJobs = { linux: workflow.jobs.linux_package, macos: workflow.jobs.macos_package,
       windows: workflow.jobs.windows_package };
     for (const [stage, job] of Object.entries(stageJobs)) {
@@ -147,13 +147,10 @@ describe('T7 release workflow contract', () => {
     expect(source.match(/contents: write/gu)).toHaveLength(1);
   });
 
-  it('hard-gates all active producers and stages only the frozen scope', () => {
+  it('keeps selected asset validation and same-run downloads', () => {
     expect(assemblySource.match(/uses: actions\/download-artifact@v5/gu)).toHaveLength(3);
     expect(assemblySource).not.toContain('run-id:');
     expect(assemblySource).not.toContain('repository:');
-    expect(assemblySource).toContain('test "$MACOS_SHA" = "$TARGET_SHA"');
-    expect(assemblySource).toContain('test "$WINDOWS_SHA" = "$TARGET_SHA"');
-    expect(assemblySource).toContain('test "$LINUX_SHA" = "$TARGET_SHA"');
     expect(assemblySource).toContain('node scripts/release-assembly-assets.mjs');
     expect(assemblySource).toContain('--output-root=release-assets/upload');
     expect(assemblySource).toContain('node scripts/release-asset-contract.mjs list');

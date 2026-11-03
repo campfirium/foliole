@@ -72,6 +72,7 @@ async function main() {
   console.log(`target_sha=${target.sha}`);
   console.log(`release_intent_digest=${target.digest}`);
   console.log(`release_scope=${target.intent.selectedPlatforms.join(',')}`);
+  console.log(`release_scope_json=${JSON.stringify(target.intent.selectedPlatforms)}`);
   console.log(`release_hard_gates=${target.hardGatePlatforms.join(',')}`);
   if (target.publication) {
     console.log(`release_bridge_version=${target.publication.bridgeVersion}`);

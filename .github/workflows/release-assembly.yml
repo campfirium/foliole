@@ -3,15 +3,15 @@ name: Release Draft Assembly
 on:
   workflow_call:
     inputs:
-      linux_artifact_name: { required: true, type: string }
-      linux_sha: { required: true, type: string }
-      macos_artifact_name: { required: true, type: string }
-      macos_sha: { required: true, type: string }
+      linux_artifact_name: { required: false, type: string }
+      linux_sha: { required: false, type: string }
+      macos_artifact_name: { required: false, type: string }
+      macos_sha: { required: false, type: string }
       release_intent_digest: { required: true, type: string }
       target_sha: { required: true, type: string }
       target_version: { required: true, type: string }
-      windows_artifact_name: { required: true, type: string }
-      windows_sha: { required: true, type: string }
+      windows_artifact_name: { required: false, type: string }
+      windows_sha: { required: false, type: string }
 
 permissions:
   actions: read
@@ -38,27 +38,46 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Confirm frozen release intent
+        id: identity
         env:
           FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST: ${{ env.RELEASE_INTENT_DIGEST }}
           FOLIOLE_RELEASE_REF_NAME: release
           FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE: "true"
           FOLIOLE_RELEASE_RUN_SHA: ${{ env.TARGET_SHA }}
-        run: node scripts/release-target-contract.mjs > /dev/null
+        run: |
+          set -euo pipefail
+          test -n "$RELEASE_INTENT_DIGEST"
+          node scripts/release-target-contract.mjs >> "$GITHUB_OUTPUT"
+      - name: Verify selected producer identities before download
+        env:
+          RELEASE_SCOPE: ${{ steps.identity.outputs.release_scope }}
+          LINUX_ARTIFACT_NAME: ${{ inputs.linux_artifact_name }}
+          MACOS_ARTIFACT_NAME: ${{ inputs.macos_artifact_name }}
+          WINDOWS_ARTIFACT_NAME: ${{ inputs.windows_artifact_name }}
+        run: |
+          set -euo pipefail
+          for platform in ${RELEASE_SCOPE//,/ }; do
+            prefix="$(tr '[:lower:]' '[:upper:]' <<< "$platform")"
+            sha_variable="${prefix}_SHA"
+            artifact_variable="${prefix}_ARTIFACT_NAME"
+            test "${!sha_variable}" = "$TARGET_SHA"
+            test -n "${!artifact_variable}"
+          done
       - name: Download same-run macOS artifacts
+        if: contains(fromJSON(steps.identity.outputs.release_scope_json), 'macos')
         uses: actions/download-artifact@v5
         with: { name: "${{ inputs.macos_artifact_name }}", path: release-assets/macos }
       - name: Download same-run Windows artifacts
+        if: contains(fromJSON(steps.identity.outputs.release_scope_json), 'windows')
         uses: actions/download-artifact@v5
         with: { name: "${{ inputs.windows_artifact_name }}", path: release-assets/windows }
       - name: Download same-run Linux artifacts
+        if: contains(fromJSON(steps.identity.outputs.release_scope_json), 'linux')
         uses: actions/download-artifact@v5
         with: { name: "${{ inputs.linux_artifact_name }}", path: release-assets/linux }
-      - name: Verify every hard gate and stage selected assets
+      - name: Verify and stage selected assets
         run: |
           set -euo pipefail
-          test "$MACOS_SHA" = "$TARGET_SHA"
-          test "$WINDOWS_SHA" = "$TARGET_SHA"
-          test "$LINUX_SHA" = "$TARGET_SHA"
           node scripts/release-assembly-assets.mjs --version="$TARGET_VERSION" --sha="$TARGET_SHA" \
             --input-root=release-assets --output-root=release-assets/upload
       - name: Reconcile the single unpublished draft
