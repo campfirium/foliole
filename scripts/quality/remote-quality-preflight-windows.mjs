@@ -1,7 +1,9 @@
-/* global console */
+/* global console, process */
 
-import { runWindowsDevControl } from '../windows/windows-dev-control.mjs';
-import { assertPushedPreflightTarget } from '../windows/windows-remote-preflight-control.mjs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+import { assertPushedPreflightTarget } from './remote-quality-pushed-target.mjs';
 import { MAX_PREFLIGHT_TESTS, planPreflightSelection } from './remote-quality-preflight-plan.mjs';
 import { preflightFailureMessage, resolvePreflightBase } from './remote-quality-preflight.mjs';
 
@@ -9,6 +11,18 @@ function formatFailedFiles(failure) {
   return (failure?.failedFiles ?? []).map(({ file, message }) => (
     `  ${file}${message ? `: ${message.split('\n')[0]}` : ''}`
   ));
+}
+
+async function loadWindowsPreflightControl(cwd, env) {
+  const configured = env.FOLIOLE_WINDOWS_PREFLIGHT_ADAPTER;
+  if (!configured) throw new Error('Windows preflight requires FOLIOLE_WINDOWS_PREFLIGHT_ADAPTER');
+  const adapter = await import(pathToFileURL(path.resolve(cwd, configured)).href);
+  if (typeof adapter.createWindowsPreflightControl !== 'function') {
+    throw new Error('Windows preflight adapter must export createWindowsPreflightControl');
+  }
+  const control = await adapter.createWindowsPreflightControl({ cwd });
+  if (typeof control !== 'function') throw new Error('Windows preflight adapter must return a control function');
+  return control;
 }
 
 // A Windows receipt stands in for the local preflight only when it ran this
@@ -44,7 +58,6 @@ export function verifyWindowsPreflightReceipt({ base, cap, expected, receipt, ta
 
 export async function runWindowsRemoteQualityPreflight(options) {
   const { cwd, head, log = console.log, runner } = options;
-  const control = options.control ?? ((argv) => runWindowsDevControl({ argv, repoRoot: cwd }));
   (options.verifyPushed ?? assertPushedPreflightTarget)(cwd, head);
   const base = options.base ?? await resolvePreflightBase({ ...options, cwd, runner });
   const cap = options.cap ?? MAX_PREFLIGHT_TESTS;
@@ -55,6 +68,7 @@ export async function runWindowsRemoteQualityPreflight(options) {
   log(`[remote-preflight] ${plan.changedFiles.length} changed file(s) since ${base.slice(0, 12)}; `
     + `${plan.entries.length} related test file(s); running ${expected.length} on Windows`);
   if (expected.length === 0) return { base, deferred: plan.deferred, host: 'windows', run: plan.run };
+  const control = options.control ?? await loadWindowsPreflightControl(cwd, options.env ?? process.env);
   const startedAt = Date.now();
   const result = await control(['remote-preflight', '--revision', head, '--preflight-base', base]);
   verifyWindowsPreflightReceipt({ base, cap, expected, receipt: result.receipt, target: head });

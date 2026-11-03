@@ -1,6 +1,6 @@
 /* global process */
 
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -8,11 +8,13 @@ import path from 'node:path';
 import { WINDOWS_DEV_EVIDENCE_PREFIX } from './windows-dev-paths.mjs';
 import { prepareWindowsInternalRuntime } from './windows-internal-runtime-transfer.mjs';
 import { WINDOWS_DEV_DEFAULT_SSH, windowsDevScpSpec, windowsDevSshSpec } from './windows-dev-remote-spec.mjs';
+import { assertPushedPreflightTarget } from '../quality/remote-quality-pushed-target.mjs';
+
+export { assertPushedPreflightTarget };
 
 export const WINDOWS_REMOTE_PREFLIGHT_ACTION = 'remote-preflight';
 const SHA = /^[0-9a-f]{40}$/u;
 const LINE = /\[windows-dev-action\] remote-preflight identity=([A-Za-z0-9.-]{1,96}) receipt=([^\r\n]+)/u;
-const PUSHED_REF = 'refs/remotes/origin/dev';
 
 function execute(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -28,19 +30,6 @@ function execute(command, args, options = {}) {
         { output }));
     });
   });
-}
-
-// Windows consumes only pushed dev, so the exact target must already be on
-// the pushed branch before it is mirrored.
-export function assertPushedPreflightTarget(repoRoot, target, run = spawnSync) {
-  if (!SHA.test(target ?? '')) throw new Error('remote preflight target must be a full SHA');
-  if (run('git', ['cat-file', '-e', `${target}^{commit}`], { cwd: repoRoot }).status !== 0) {
-    throw new Error(`remote preflight target ${target} is not a local commit; fetch origin dev first`);
-  }
-  if (run('git', ['merge-base', '--is-ancestor', target, PUSHED_REF], { cwd: repoRoot }).status !== 0) {
-    throw new Error(`remote preflight target ${target} is not on pushed origin/dev; push dev first`);
-  }
-  return target;
 }
 
 export function parseWindowsRemotePreflightEvidence(output) {

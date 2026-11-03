@@ -74,6 +74,13 @@ describe('Windows preflight orchestration', () => {
       '--preflight-base', BASE]);
     expect(plan).toHaveBeenCalledWith(expect.objectContaining({ head: TARGET, host: 'windows', revision: true }));
   });
+
+  it('needs no machine adapter when the selection contains no Windows tests', async () => {
+    await expect(runWindowsRemoteQualityPreflight({ base: BASE, cwd: '/repo', head: TARGET,
+      env: {}, log: () => {}, verifyPushed: () => TARGET,
+      plan: async () => ({ changedFiles: [], deferred: [], entries: [], run: [] }) }))
+      .resolves.toMatchObject({ host: 'windows', run: [] });
+  });
 });
 
 describe('preflight host selection', () => {
