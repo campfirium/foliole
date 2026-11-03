@@ -12,6 +12,7 @@ export function parseRemoteQualityArgs(args) {
       result.skipPreflight = true;
       index -= 1;
     } else if (name === '--scope') result.scope = value;
+    else if (name === '--mobile-distribution') result.mobileDistribution = value;
     else if (name === '--replay') result.replay = value;
     else if (name === '--preflight-host') result.preflightHost = value;
     else if (name === '--source-ref') result.sourceRef = normalizeRemoteQualitySourceRef(value);
@@ -29,6 +30,12 @@ export function parseRemoteQualityArgs(args) {
     result.scope = 'replay';
   } else if (!ALLOWED_SCOPES.has(result.scope)) {
     throw new Error('--scope must be desktop, shared, android, ios, or full');
+  }
+  if (result.mobileDistribution !== undefined) {
+    if (result.mobileDistribution !== 'ios') throw new Error('--mobile-distribution currently supports only ios');
+    if (result.scope !== 'full' || result.skipPreflight) {
+      throw new Error('Mobile distribution requires full quality without a preflight bypass');
+    }
   }
   return result;
 }

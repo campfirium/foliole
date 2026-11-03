@@ -10,7 +10,7 @@ import { generateKeyPairSync, verify } from 'node:crypto';
 
 const sha = 'a'.repeat(40);
 const input = { headSha: sha, acceptedSha: sha, runSha: sha, ref: 'refs/heads/release',
-  version: '0.7.18', packageVersion: '0.7.18', runId: '123456', runNumber: '321', runAttempt: '2' };
+  version: '0.7.18', packageVersion: '0.7.18', runId: '123456', buildNumber: '321.2', executionLane: 'release-t7' };
 const candidate = createTestflightCandidate(input);
 const receipt = { ...candidate, ipaSha256: 'b'.repeat(64), appId: IOS_APP_ID, groupId: IOS_GROUP_ID,
   invitationUrl: IOS_INVITATION, channel: 'testflight', buildId: 'build-123',
@@ -28,11 +28,19 @@ function live(state = 'IN_BETA_TESTING') {
 }
 
 describe('TestFlight exact candidate and public availability', () => {
+  it('accepts the complete QA candidate only on its explicit distribution lane', () => {
+    const qa = { ...input, executionLane: 'qa-mobile-beta', ref: 'refs/heads/check' };
+    expect(createTestflightCandidate(qa)).toMatchObject({ sourceSha: sha, acceptedSha: sha });
+    for (const change of [{ executionLane: 'dev-remote' }, { ref: 'refs/heads/dev' },
+      { executionLane: 'release-t7' }, { acceptedSha: 'b'.repeat(40) }, { runSha: 'b'.repeat(40) }]) {
+      expect(() => createTestflightCandidate({ ...qa, ...change })).toThrow();
+    }
+  });
   it('binds both targets to the accepted source and a unique workflow build', () => {
     expect(candidate.buildNumber).toBe('321.2');
-    expect(createTestflightCandidate({ ...input, runAttempt: '3' }).buildNumber).toBe('321.3');
+    expect(createTestflightCandidate({ ...input, buildNumber: '322.1' }).buildNumber).toBe('322.1');
     for (const change of [{ acceptedSha: 'b'.repeat(40) }, { runSha: 'b'.repeat(40) },
-      { packageVersion: '0.7.19' }, { ref: 'refs/heads/dev' }, { runNumber: '10000' }, { runAttempt: '100' }]) {
+      { packageVersion: '0.7.19' }, { ref: 'refs/heads/dev' }, { buildNumber: '10000.1' }, { buildNumber: undefined }, { executionLane: 'qa-mobile-beta' }]) {
       expect(() => createTestflightCandidate({ ...input, ...change })).toThrow();
     }
     const args = archiveArguments({ archive: 'a', derivedData: 'd', candidate, keyPath: 'key' });

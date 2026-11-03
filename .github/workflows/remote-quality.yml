@@ -5,7 +5,7 @@ run-name: >-
   Dev Quality Check (${{ inputs.scope }}) @ ${{
   (inputs.trigger_short != '' && startsWith(github.sha, inputs.trigger_short) && inputs.target_sha == github.sha && inputs.trigger_short)
   || (inputs.trigger_short != '' && startsWith(github.sha, inputs.trigger_short) && format('{0} via {1}', inputs.target_sha, inputs.trigger_short))
-  || format('{0} via {1}', inputs.target_sha, github.sha) }}
+  || format('{0} via {1}', inputs.target_sha, github.sha) }}${{ inputs.mobile_distribution == 'ios' && ' [mobile:ios]' || '' }}
 
 on:
   workflow_dispatch:
@@ -21,6 +21,12 @@ on:
           - ios
           - full
           - replay
+      mobile_distribution:
+        description: Optional mobile beta distribution after complete quality
+        required: false
+        default: none
+        type: choice
+        options: [none, ios]
       stages:
         description: Explicit replay stage IDs; full always uses all
         required: false
@@ -42,8 +48,8 @@ permissions:
 
 # The latest dev dispatch wins; release runs never join this group.
 concurrency:
-  group: ${{ github.ref == 'refs/heads/check' && 'quality-qa' || 'quality-dev' }}
-  cancel-in-progress: true
+  group: ${{ inputs.mobile_distribution == 'ios' && 'quality-qa-mobile' || (github.ref == 'refs/heads/check' && 'quality-qa' || 'quality-dev') }}
+  cancel-in-progress: ${{ inputs.mobile_distribution != 'ios' }}
 
 jobs:
   dev-ref:
@@ -59,6 +65,16 @@ jobs:
           WORKFLOW_SHA: ${{ github.workflow_sha }}
           EVENT_SHA: ${{ github.sha }}
         run: test "$TARGET_SHA" = "$EVENT_SHA" && test "$TARGET_SHA" = "$WORKFLOW_SHA"
+      - name: Require complete QA for mobile distribution
+        env:
+          MOBILE: ${{ inputs.mobile_distribution }}
+          SCOPE: ${{ inputs.scope }}
+        run: |
+          case "$MOBILE" in
+            none|'') ;;
+            ios) test "$GITHUB_REF" = refs/heads/check && test "$SCOPE" = full ;;
+            *) exit 1 ;;
+          esac
       - name: Require an explicit replay selection
         if: inputs.scope == 'replay'
         env:
@@ -98,9 +114,44 @@ jobs:
       trigger_ref: ${{ github.ref }}
       stages: ${{ inputs.scope == 'replay' && inputs.stages || 'all' }}
 
+  mobile-context:
+    if: inputs.mobile_distribution == 'ios' && inputs.scope == 'full'
+    needs: full-quality
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.identity.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ inputs.target_sha }}', persist-credentials: false }
+      - name: Require this complete chain's accepted candidate
+        id: identity
+        env:
+          ACCEPTED_SHA: ${{ needs.full-quality.outputs.accepted_sha }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          test "$ACCEPTED_SHA" = "$TARGET_SHA"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
+
+  mobile-ios:
+    if: inputs.mobile_distribution == 'ios'
+    needs: [full-quality, mobile-context]
+    uses: ./.github/workflows/release-ios.yml
+    with:
+      target_sha: ${{ needs.full-quality.outputs.accepted_sha }}
+      target_version: ${{ needs.mobile-context.outputs.version }}
+      execution_lane: qa-mobile-beta
+      trigger_ref: ${{ github.ref }}
+    secrets:
+      IOS_APP_STORE_API_ISSUER: ${{ secrets.IOS_APP_STORE_API_ISSUER }}
+      IOS_APP_STORE_API_KEY_ID: ${{ secrets.IOS_APP_STORE_API_KEY_ID }}
+      IOS_APP_STORE_API_KEY_BASE64: ${{ secrets.IOS_APP_STORE_API_KEY_BASE64 }}
+      IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+      IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+
   timing-summary:
     if: ${{ always() }}
-    needs: [dev-ref, scoped-quality, full-quality]
+    needs: [dev-ref, scoped-quality, full-quality, mobile-context, mobile-ios]
     permissions: { actions: read, contents: read }
     uses: ./.github/workflows/hosted-quality-timing-summary.yml
     with:

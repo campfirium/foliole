@@ -41,38 +41,46 @@ async function runPreflight({ record, base, targetSha, scope }) {
   });
 }
 
-async function selectQaRun({ cwd, repo, runner, targetSha, scope, record }) {
-  if (record.run?.targetSha === targetSha && record.run.scope === scope) return record.run;
+async function selectQaRun({ cwd, repo, runner, targetSha, scope, record, mobileDistribution }) {
+  const matches = run => (run.mobileDistribution ?? '') === (mobileDistribution ?? '');
+  if (record.run?.targetSha === targetSha && record.run.scope === scope && matches(record.run)) return record.run;
+  if (record.dispatchPending && !matches(record.dispatchPending)) {
+    throw new Error('Pending QA distribution choice differs; recover the original request first');
+  }
   const { workflow_runs: runs } = JSON.parse(await requireSuccess(runner, 'gh', ['api',
     `repos/${repo}/actions/workflows/remote-quality.yml/runs?branch=${encodeURIComponent(QA_BRANCH)}&per_page=50`], { cwd }));
   if (record.dispatchPending) {
     const recovered = runs.find(run => run.head_branch === QA_BRANCH && run.head_sha === targetSha
-      && parseRemoteQualityRun(run)?.scope === scope && run.created_at >= record.dispatchPending.startedAt);
+      && parseRemoteQualityRun(run)?.scope === scope && matches(parseRemoteQualityRun(run)) && run.created_at >= record.dispatchPending.startedAt);
     if (!recovered) throw new Error('Pending QA dispatch has no identified run; verify delivery before retrying');
-    const saved = { runId: recovered.id, targetSha, scope, url: recovered.html_url };
+    const saved = { runId: recovered.id, targetSha, scope, url: recovered.html_url,
+      ...(mobileDistribution ? { mobileDistribution } : {}) };
     saveRun(cwd, saved);
     return saved;
   }
   const active = runs.filter(run => run.head_branch === QA_BRANCH && run.status !== 'completed');
   const existing = active.find(run => run.head_sha === targetSha
-    && [scope, 'full'].includes(parseRemoteQualityRun(run)?.scope));
+    && [scope, 'full'].includes(parseRemoteQualityRun(run)?.scope) && matches(parseRemoteQualityRun(run)));
   if (!existing && active.length) throw new Error(`QA already has an active run: ${active[0].html_url}`);
   return existing ? { runId: existing.id, targetSha,
-    scope: parseRemoteQualityRun(existing).scope, url: existing.html_url } : null;
+    scope: parseRemoteQualityRun(existing).scope, url: existing.html_url,
+    ...(mobileDistribution ? { mobileDistribution } : {}) } : null;
 }
 
-async function dispatchQaRun({ cwd, repo, runner, scope, targetSha }) {
-  const payload = { ref: QA_BRANCH, inputs: { scope, target_sha: targetSha, trigger_short: targetSha.slice(0, 9) } };
+async function dispatchQaRun({ cwd, repo, runner, scope, targetSha, mobileDistribution }) {
+  const distribution = mobileDistribution ? { mobileDistribution } : {};
+  const payload = { ref: QA_BRANCH, inputs: { scope, target_sha: targetSha, trigger_short: targetSha.slice(0, 9),
+    ...(mobileDistribution ? { mobile_distribution: mobileDistribution } : {}) } };
   const record = readQaWorkspace(cwd);
   delete record.head;
   writeFileSync(qaRecordPath(cwd), `${JSON.stringify({ ...record,
-    dispatchPending: { targetSha, scope, startedAt: new Date().toISOString() } }, null, 2)}\n`);
+    dispatchPending: { targetSha, scope, ...distribution, startedAt: new Date().toISOString() } }, null, 2)}\n`);
   const result = JSON.parse(await requireSuccess(runner, 'gh', ['api', '--method', 'POST',
     '-H', 'X-GitHub-Api-Version: 2026-03-10',
     `repos/${repo}/actions/workflows/remote-quality.yml/dispatches`, '--input', '-'],
   { cwd, input: JSON.stringify(payload) }));
   if (!result.workflow_run_id || !result.html_url) throw new Error('QA dispatch returned no run identity; recover before redispatch');
-  return { runId: result.workflow_run_id, url: result.html_url, scope, targetSha };
+  return { runId: result.workflow_run_id, url: result.html_url, scope, targetSha, ...distribution };
 }
 
 export async function runQaRemoteQuality({ args, cwd, repo, runner, preflight = runPreflight,
@@ -80,13 +88,17 @@ export async function runQaRemoteQuality({ args, cwd, repo, runner, preflight = 
   if (args.replay || args.skipPreflight || args.preflightHost === 'windows') {
     throw new Error('QA uses Mac preflight and explicit scopes; replay and preflight bypass are unavailable');
   }
+  if (args.mobileDistribution && (args.mobileDistribution !== 'ios' || args.scope !== 'full')) {
+    throw new Error('Mobile distribution requires full QA and an enabled platform (ios)');
+  }
   const record = readQaWorkspace(cwd);
   if (record.phase !== 'prepared' || realpathSync(cwd) !== realpathSync(record.worktreePath)) {
     throw new Error('Run QA quality from its registered prepared workspace');
   }
   if (qaGit(cwd, 'status', '--porcelain', '--untracked-files=all')) throw new Error('Commit QA repairs before dispatch');
   const targetSha = qaGit(cwd, 'rev-parse', 'HEAD');
-  let run = await selectQaRun({ cwd, repo, runner, targetSha, scope: args.scope, record });
+  let run = await selectQaRun({ cwd, repo, runner, targetSha, scope: args.scope, record,
+    mobileDistribution: args.mobileDistribution });
   if (!run) {
     const base = await qaPreflightBase({ cwd, repo, runner, targetSha, scope: args.scope });
     await preflight({ record, base, targetSha, scope: args.scope });
@@ -94,7 +106,7 @@ export async function runQaRemoteQuality({ args, cwd, repo, runner, preflight = 
       throw new Error('QA changed during preflight; no hosted run dispatched');
     }
     await requireSuccess(runner, 'git', ['push', 'origin', `HEAD:refs/heads/${QA_BRANCH}`], { cwd });
-    run = await dispatchQaRun({ cwd, repo, runner, scope: args.scope, targetSha });
+    run = await dispatchQaRun({ cwd, repo, runner, scope: args.scope, targetSha, mobileDistribution: args.mobileDistribution });
     saveRun(cwd, run);
   }
   console.log(`[qa-quality] ${run.scope} ${run.targetSha}: ${run.url}`);

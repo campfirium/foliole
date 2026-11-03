@@ -106,6 +106,7 @@ export async function runRemoteQuality(options = {}) {
       preflight: options.qaPreflight, readVerdict: options.readChainVerdict,
       monitor: options.qaMonitor, pollIntervalMs: options.pollIntervalMs, wait: options.wait });
   }
+  if (args.mobileDistribution) throw new Error('Mobile distribution requires the registered check QA workspace');
   const sourceBranch = assertRemoteQualityRepositoryContext({
     defaultBranch: repoInfo.defaultBranchRef.name, localBranch: branch, sourceRef: args.sourceRef
   });

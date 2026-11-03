@@ -20,6 +20,11 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 assertQualityCommandAllowed('runner:ios-runtime-contract');
 
 export const IOS_RUNTIME_CONTRACT_TESTS = [
+  'scripts/ios/testflight-contract.test.mjs',
+  'scripts/ios/testflight-build-number.test.mjs',
+  'scripts/ios/testflight-distribution.test.mjs',
+  'scripts/ios/testflight-release-assets.test.mjs',
+  'scripts/ios/testflight-workflow.test.mjs',
   'scripts/ios/ios-acceptance-build-command.test.mjs',
   'src/companion/iosAcceptanceRequestSync.test.ts',
   'scripts/ios/ios-hosted-request-successor.test.mjs',

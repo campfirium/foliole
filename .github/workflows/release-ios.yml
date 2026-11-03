@@ -41,6 +41,7 @@ jobs:
     env:
       TARGET_SHA: ${{ inputs.target_sha }}
       TARGET_VERSION: ${{ inputs.target_version }}
+      FOLIOLE_IOS_EXECUTION_LANE: ${{ inputs.execution_lane }}
       APPLE_API_ISSUER: ${{ secrets.IOS_APP_STORE_API_ISSUER }}
       APPLE_API_KEY_ID: ${{ secrets.IOS_APP_STORE_API_KEY_ID }}
       APPLE_API_KEY_BASE64: ${{ secrets.IOS_APP_STORE_API_KEY_BASE64 }}
@@ -49,14 +50,16 @@ jobs:
         with: { ref: '${{ inputs.target_sha }}', persist-credentials: false }
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
-      - name: Verify the same accepted release candidate
+      - name: Verify the same accepted release or mobile QA candidate
         env:
           TRIGGER_REF: ${{ inputs.trigger_ref }}
           EXECUTION_LANE: ${{ inputs.execution_lane }}
         run: |
-          test "$GITHUB_REF" = refs/heads/release
-          test "$TRIGGER_REF" = refs/heads/release
-          test "$EXECUTION_LANE" = release-t7
+          test "$GITHUB_REF" = "$TRIGGER_REF"
+          case "$EXECUTION_LANE:$TRIGGER_REF" in
+            release-t7:refs/heads/release|qa-mobile-beta:refs/heads/check) ;;
+            *) exit 1 ;;
+          esac
           test "$GITHUB_SHA" = "$TARGET_SHA"
           test "$(git rev-parse HEAD)" = "$TARGET_SHA"
           test "$(node -p 'require("./package.json").version')" = "$TARGET_VERSION"
@@ -86,6 +89,9 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -k "$password" "$keychain"
           security list-keychains -d user -s "$keychain"
           echo "APPLE_API_KEY=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+      - name: Allocate the next Apple build number under the shared upload lock
+        working-directory: scripts/ios
+        run: bundle exec fastlane ios prepare_build
       - name: Archive, export, and verify both signed bundles
         run: node scripts/ios/testflight-archive.mjs
       - name: Upload the verified IPA and release the macOS runner

@@ -7,18 +7,18 @@ const SHA = /^[0-9a-f]{40}$/u;
 const VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;
 
 export function createTestflightCandidate({ headSha, acceptedSha, runSha, version, packageVersion,
-  runId, runNumber, runAttempt, ref }) {
-  if (ref !== 'refs/heads/release') throw new Error('iPhone packages require the exact release branch');
+  runId, buildNumber, ref, executionLane }) {
+  const expectedRef = { 'release-t7': 'refs/heads/release', 'qa-mobile-beta': 'refs/heads/check' }[executionLane];
+  if (!expectedRef || ref !== expectedRef) throw new Error('iPhone packages require the exact authorized lane and branch');
   if (!SHA.test(headSha) || headSha !== acceptedSha || headSha !== runSha) {
     throw new Error('iPhone source must match this run and its accepted quality SHA');
   }
   if (!VERSION.test(version) || version !== packageVersion) throw new Error('iPhone product version mismatch');
   if (!/^[1-9]\d*$/u.test(runId)) throw new Error('Missing GitHub run identity');
-  if (!/^[1-9]\d{0,3}$/u.test(runNumber) || !/^[1-9]\d?$/u.test(runAttempt)) {
-    throw new Error('GitHub run number/attempt exceeds the supported Apple build-number range');
+  if (!/^[1-9]\d{0,3}\.\d{1,2}$/u.test(buildNumber ?? '')) {
+    throw new Error('Missing or invalid allocated Apple build number');
   }
-  return { schemaVersion: 1, sourceSha: headSha, acceptedSha, version, runId,
-    buildNumber: `${runNumber}.${runAttempt}` };
+  return { schemaVersion: 1, sourceSha: headSha, acceptedSha, version, runId, buildNumber };
 }
 
 export function verifyTestflightReceipt(receipt, { version, sha } = {}) {

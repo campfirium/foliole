@@ -49,6 +49,7 @@ const PINNED_NPM_WORKFLOW_CONTRACT_TESTS = [
 ];
 
 const HOSTED_QUALITY_WORKFLOW_CONTRACT_TESTS = [
+  'scripts/quality/mobile-distribution-workflow.test.mjs',
   'scripts/hosted-quality-tooling-workflow-contract.test.mjs',
   'scripts/hosted-windows-x64-workflow-contract.test.mjs',
   'scripts/t4-desktop-canonical-workflow-contract.test.mjs',
@@ -61,6 +62,7 @@ const HOSTED_QUALITY_WORKFLOW_CONTRACT_TESTS = [
 ];
 
 const RELEASE_WORKFLOW_CONTRACT_TESTS = [
+  'scripts/quality/mobile-distribution-workflow.test.mjs',
   'scripts/electron-builder-config.test.mjs',
   'scripts/quality/hosted-npm-ci-workflow-contract.test.mjs',
   'scripts/release-candidate-quality-workflow-contract.test.mjs',

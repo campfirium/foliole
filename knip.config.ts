@@ -34,6 +34,7 @@ const config = {
     'ps',
     'python3',
     'rg',
+    'ruby',
     'sqlite3',
     'swiftc',
     'taskkill',

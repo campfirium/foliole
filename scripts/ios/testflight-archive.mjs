@@ -53,7 +53,7 @@ async function main() {
   const candidate = createTestflightCandidate({
     headSha: capture('git', ['rev-parse', 'HEAD']), acceptedSha: env.TARGET_SHA,
     runSha: env.GITHUB_SHA, ref: env.GITHUB_REF, runId: env.GITHUB_RUN_ID,
-    runNumber: env.GITHUB_RUN_NUMBER, runAttempt: env.GITHUB_RUN_ATTEMPT,
+    buildNumber: env.FOLIOLE_IOS_BUILD_NUMBER, executionLane: env.FOLIOLE_IOS_EXECUTION_LANE,
     version: env.TARGET_VERSION, packageVersion: JSON.parse(await readFile('package.json', 'utf8')).version
   });
   if (capture('git', ['status', '--porcelain', '--untracked-files=no'])) throw new Error('Candidate source is dirty');

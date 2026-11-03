@@ -61,6 +61,7 @@ const HOSTED_QUALITY_GAP_ROUTES = [
 ];
 
 const HOSTED_QUALITY_CONTRACTS = [
+  'scripts/quality/mobile-distribution-workflow.test.mjs',
   'scripts/hosted-quality-tooling-workflow-contract.test.mjs',
   'scripts/hosted-windows-x64-workflow-contract.test.mjs',
   'scripts/quality/t7-hosted-quality-admission.test.mjs',
@@ -73,6 +74,7 @@ const HOSTED_QUALITY_CONTRACTS = [
 ];
 
 const RELEASE_WORKFLOW_CONTRACTS = [
+  'scripts/quality/mobile-distribution-workflow.test.mjs',
   'scripts/electron-builder-config.test.mjs',
   'scripts/quality/hosted-npm-ci-workflow-contract.test.mjs',
   'scripts/release-candidate-quality-workflow-contract.test.mjs',
