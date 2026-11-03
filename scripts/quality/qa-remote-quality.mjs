@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 
 import { readChainVerdict } from './chain-verdict-read.mjs';
+import { runQaMobileResume } from './qa-mobile-resume.mjs';
 import { monitorRemoteQualityJobs, requireSuccess } from './remote-quality-monitor.mjs';
 import { parseRemoteQualityRun } from './remote-quality-run-title.mjs';
 import { QA_BRANCH, qaGit, qaRecordPath, qaWorkspaceEnvironment, readQaWorkspace } from './qa-workspace-state.mjs';
@@ -85,6 +86,7 @@ async function dispatchQaRun({ cwd, repo, runner, scope, targetSha, mobileDistri
 
 export async function runQaRemoteQuality({ args, cwd, repo, runner, preflight = runPreflight,
   readVerdict = readChainVerdict, monitor = monitorRemoteQualityJobs, ...waitOptions }) {
+  if (args.mobileQualityRunId) return runQaMobileResume({ args, cwd, repo, runner, monitor, ...waitOptions });
   if (args.replay || args.skipPreflight || args.preflightHost === 'windows') {
     throw new Error('QA uses Mac preflight and explicit scopes; replay and preflight bypass are unavailable');
   }

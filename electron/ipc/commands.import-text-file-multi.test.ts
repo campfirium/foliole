@@ -6,7 +6,7 @@ import { handleInvokeRequest } from './commands.js';
 import { resetImportPathAuthorizationForTests } from './importPathAuthorization.js';
 
 const { readFile, runPreparedImport, showOpenDialog } = vi.hoisted(() => ({
-  readFile: vi.fn().mockResolvedValue('# Imported title\nBody'),
+  readFile: vi.fn().mockResolvedValue(Buffer.from('# Imported title\nBody')),
   runPreparedImport: vi.fn(),
   showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['/tmp/first.md', '/tmp/second.md'] })
 }));

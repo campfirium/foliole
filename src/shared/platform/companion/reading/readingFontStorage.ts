@@ -1,4 +1,4 @@
-import type { ReadingFontRecord } from '../typography/readingFontFamily';
+import type { ReadingFontRecord } from '../../../typography/readingFontFamily';
 
 const DATABASE_NAME = 'foliole-companion-reading-fonts';
 const STORE_NAME = 'fonts';

@@ -3,6 +3,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 
 import { afterEach, expect, it } from 'vitest';
 
@@ -114,7 +115,7 @@ it('binds the explicit test identity to the existing Mac DEV library across a fr
     action: 'sync-existing', appIdentity: 'test', repoRoot: temporaryRepo(),
     runId: '77777777-7777-7777-7777-777777777777'
   });
-  expect(context.desktopDevLibrary).toBe('/Users/roamer/Documents/Foliole Dev');
+  expect(context.desktopDevLibrary).toBe(path.join(os.homedir(), 'Documents', 'Foliole Dev'));
   expect(withMacosA5BuildRoot(context, '/capsule/source', '/capsule', 'c'.repeat(64)).desktopDevLibrary)
-    .toBe('/Users/roamer/Documents/Foliole Dev');
+    .toBe(path.join(os.homedir(), 'Documents', 'Foliole Dev'));
 });

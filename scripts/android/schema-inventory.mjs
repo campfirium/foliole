@@ -99,6 +99,8 @@ export function loadDesktopFreshSchemaStatements(repoRoot = REPO_ROOT) {
   const body = extractArrayBody(source, 'DESKTOP_FRESH_SCHEMA_STATEMENTS');
   const statements = extractStatementsFromBody(body, arrays);
   statements.push(...extractStatementsFromBody(
+    readRepoFile(repoRoot, 'lib/core/database/importRunSchema.ts'), arrays));
+  statements.push(...extractStatementsFromBody(
     readRepoFile(repoRoot, 'lib/core/sync/pdfTextArtifact.ts'), arrays));
   statements.push(...extractStatementsFromBody(
     readRepoFile(repoRoot, 'lib/core/database/numberedMigrationParentChildOrder.ts'), arrays));

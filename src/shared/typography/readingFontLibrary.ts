@@ -1,5 +1,5 @@
+import { readFontRecords, writeFontRecords } from '../platform/companion/reading/readingFontStorage';
 import { createCompanionUuid } from '../platform/companionUuid';
-import { readFontRecords, writeFontRecords } from '../platform/readingFontStorage';
 
 import { fontFamily, fontVariants, type ReadingFontRecord, type ReadingFontVariant } from './readingFontFamily';
 import { appendFontVariant, parseReadingFont } from './readingFontMetadata';

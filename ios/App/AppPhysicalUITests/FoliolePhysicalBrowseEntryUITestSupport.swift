@@ -26,6 +26,10 @@ extension XCTestCase {
                 _ = browse.waitForExistence(timeout: 1)
             }
         }
+        let hierarchy = XCTAttachment(string: app.debugDescription)
+        hierarchy.name = "Browse-entry-failure-hierarchy"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
         XCTFail("Browse did not become available on the iPhone development build.")
     }
 
@@ -53,5 +57,16 @@ extension XCTestCase {
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15)).tap()
         XCTAssertTrue(notice.waitForNonExistence(timeout: 5),
                       "The sync protocol notice did not close after an outside tap.")
+    }
+    func resolveOptionalCellularDataDecision() {
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let localNetworkAllow = springboard.buttons.matching(NSPredicate(
+            format: "label IN %@", ["Allow", "允许"]
+        )).firstMatch
+        if localNetworkAllow.waitForExistence(timeout: 1) { localNetworkAllow.tap() }
+        let fullAccess = springboard.buttons.matching(NSPredicate(
+            format: "label IN %@", ["WLAN & Cellular Data", "Wi-Fi & Cellular Data", "无线局域网与蜂窝网络", "无线局域网与蜂窝数据"]
+        )).firstMatch
+        if fullAccess.waitForExistence(timeout: 3) { fullAccess.tap() }
     }
 }

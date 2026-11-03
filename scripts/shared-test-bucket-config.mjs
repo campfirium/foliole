@@ -26,7 +26,7 @@ function recursiveTestTargets(directory) {
 }
 
 function directoryBuckets(directory, labelPrefix, reportPrefix) {
-  return immediateDirectoryTargets(directory).map((target) => {
+  return immediateDirectoryTargets(directory).filter((target) => recursiveTestTargets(target).length > 0).map((target) => {
     const name = path.posix.basename(target);
     return {
       label: `${labelPrefix}-${name}`,
@@ -122,7 +122,7 @@ export const SHARED_TEST_BUCKETS = [
     label: 'features-guided',
     pool: 'threads', fileParallelism: true,
     report: '.tmp/vitest/shared-src-features-guided.json',
-    targets: ['src/features/guidedSample', 'src/features/help']
+    targets: ['src/features/guidedSample', 'src/features/help', 'src/features/import']
   },
   { label: 'store-native', fileParallelism: true, report: '.tmp/vitest/shared-src-store-native.json', targets: nativeStoreTests },
   { label: 'store', pool: 'threads', fileParallelism: true, report: '.tmp/vitest/shared-src-store.json',

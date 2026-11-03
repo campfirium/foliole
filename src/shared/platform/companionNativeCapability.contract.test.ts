@@ -45,6 +45,10 @@ function createHost(platform: string, headers: Header[] = [], failure?: Error) {
   const resolve = (name: string) => {
     if (name === '@capacitor/core') return exports;
     if (name === './companionRuntimeCapabilities') return capabilities;
+    // This boundary scene has no pending reset; durable reset behavior has SQLite integration coverage.
+    if (name === './companion/runtime/iosCompanionAppDataReset') {
+      return { resumeIosCompanionAppDataReset: async () => undefined };
+    }
     throw new Error(`Unexpected dependency: ${name}`);
   };
   return {

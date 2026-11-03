@@ -9,6 +9,13 @@ export interface CompanionAppDataPlugin {
   clearAppData(): Promise<NativeCompanionWorkspaceSyncState>;
 }
 
+interface IosCompanionAppDataFilesPlugin {
+  clearAppData(): Promise<void>;
+}
+
+// iOS clears native files after the shared SQLite owner has closed its databases.
+export const FolioleIosCompanionAppDataFiles = registerPlugin<IosCompanionAppDataFilesPlugin>('FolioleCompanionSync');
+
 export const FolioleCompanionAppData = registerPlugin<CompanionAppDataPlugin>('FolioleCompanionAppData');
 
 export function supportsCompanionAppDataClear() {

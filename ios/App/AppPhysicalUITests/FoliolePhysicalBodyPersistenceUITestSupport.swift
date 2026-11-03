@@ -22,3 +22,72 @@ extension FoliolePhysicalSyncGroupUITests {
         tapButton(named: "Done", in: app, timeout: 30)
     }
 }
+
+// Starts with an old-engine file staged by the explicit database-upgrade workflow.
+final class FoliolePhysicalDatabaseUpgradeUITests: XCTestCase {
+    override func setUpWithError() throws { continueAfterFailure = false }
+
+    func testRetainsLegacyFactsAcrossInstallAndRestart() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["--foliole-physical-acceptance",
+                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        resolveOptionalCellularDataDecision()
+        try openUpgradeSearch("Legacy upgrade retained sentence", in: app)
+        app.terminate()
+        app.launch()
+        resolveOptionalCellularDataDecision()
+        try openUpgradeSearch("Legacy upgrade retained sentence", in: app)
+        openBrowseSurface(in: app)
+        let capture = app.buttons["Capture"]
+        XCTAssertTrue(waitDismissingSyncNotice(capture, in: app, timeout: 30))
+        capture.tap()
+        let editor = app.textViews["Capture text"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 30))
+        editor.tap()
+        editor.typeText("Fri upgrade subsequent write.")
+        XCTAssertEqual(editor.value as? String, "Fri upgrade subsequent write.")
+        let save = app.buttons["Save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 30))
+        save.tap()
+        XCTAssertTrue(editor.waitForNonExistence(timeout: 15), "Successful Capture must close before restarting.")
+        app.terminate()
+        app.launch()
+        resolveOptionalCellularDataDecision()
+        try openUpgradeSearch("Fri upgrade subsequent write", in: app)
+        try openUpgradeSearch("Legacy upgrade retained sentence", in: app)
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Fri-old-database-retained-after-new-write-and-restart"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        app.terminate()
+    }
+
+    private func openUpgradeSearch(_ text: String, in app: XCUIApplication) throws {
+        openBrowseSurface(in: app)
+        let searchButton = app.buttons["Search"]
+        XCTAssertTrue(waitDismissingSyncNotice(searchButton, in: app, timeout: 45))
+        searchButton.tap()
+        let search = app.searchFields["Search synced topics"]
+        XCTAssertTrue(search.waitForExistence(timeout: 30))
+        search.tap()
+        resolveOptionalCellularDataDecision()
+        if search.value as? String != text {
+            if let value = search.value as? String, !value.isEmpty, value != "Search synced topics" {
+                search.press(forDuration: 1.2)
+                let selectAll = app.menuItems.matching(NSPredicate(format: "label IN %@", ["Select All", "全选"])).firstMatch
+                XCTAssertTrue(selectAll.waitForExistence(timeout: 10), "Select the retained query before replacing it.")
+                selectAll.tap()
+                search.typeText(XCUIKeyboardKey.delete.rawValue)
+            }
+            search.typeText(text)
+        }
+        XCTAssertEqual(search.value as? String, text, "Search must use the requested query exactly.")
+        let result = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
+        XCTAssertTrue(result.waitForExistence(timeout: 45), "Old database content was not searchable.")
+        if app.toolbars.buttons["Done"].exists { app.toolbars.buttons["Done"].tap() }
+        result.tap()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", text))
+            .firstMatch.waitForExistence(timeout: 30), "Persisted content was not readable.")
+    }
+}

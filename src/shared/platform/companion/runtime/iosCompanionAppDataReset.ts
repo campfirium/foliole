@@ -1,9 +1,9 @@
-import { CapacitorSQLite } from '@capacitor-community/sqlite';
-
 import { COMPANION_DATABASE_NAME, COMPANION_DATABASE_VERSION } from '../../../../../lib/platform/nativeCompanionContract';
+import { FolioleIosCompanionAppDataFiles } from '../../companionAppDataRuntimeRepository';
 import { runCompanionSyncControlWriterTask } from '../../companionSyncWriterQueue';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 
+import { deleteCompanionDatabaseFiles } from './companionDatabaseManager';
 import { closeIosCompanionDatabase, getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
 const resetKey = 'foliole-companion-ios-data-clear';
@@ -36,14 +36,9 @@ export async function resumeIosCompanionAppDataReset() {
   const names = [COMPANION_DATABASE_NAME, 'foliole-foreground-time-owners'];
   if (journalId) names.push(`foliole-read-intents-${journalId}`);
   for (const database of names) {
-    if ((await CapacitorSQLite.isDatabase({ database })).result) {
-      await CapacitorSQLite.createConnection({ database, encrypted: false, mode: 'no-encryption',
-        version: database === COMPANION_DATABASE_NAME ? COMPANION_DATABASE_VERSION : 1, readonly: false });
-      try { await CapacitorSQLite.deleteDatabase({ database }); }
-      finally { await CapacitorSQLite.closeConnection({ database, readonly: false }); }
-    }
+    await deleteCompanionDatabaseFiles(database, database === COMPANION_DATABASE_NAME ? COMPANION_DATABASE_VERSION : 1);
   }
-  await FolioleCompanionSync.clearAppData();
+  await FolioleIosCompanionAppDataFiles.clearAppData();
   // Removing intent is the final step; a native failure remains resumable after restart.
   window.sessionStorage.clear();
   window.localStorage.clear();

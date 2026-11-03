@@ -90,7 +90,7 @@ function FlowEdgeTouchRegion(props: {
   return <button type="button" data-testid={`flow-edge-${props.mode}`} aria-label={props.label}
     disabled={!props.enabled} className="pointer-events-auto absolute"
     style={{ width: FLOW_GESTURE_REGION.edgeWidth, height: FLOW_GESTURE_REGION.bandHeight,
-      top: `min(calc(100% - ${FLOW_GESTURE_REGION.bandHeight}px), max(44px, calc((100% / 3 - ${FLOW_GESTURE_REGION.bandHeight}px) / 2)))`,
+      top: `max(0px, calc((100% - ${FLOW_GESTURE_REGION.bandHeight}px) / 2))`,
       [props.mode === 'undo' ? 'left' : 'right']: 0, touchAction: props.paged ? 'pinch-zoom' : 'pan-y pinch-zoom' }}
     onPointerDown={event => { tap.onPointerDown(event); props.onBegin(event); }}
     onPointerUp={event => { tap.onPointerUp(event); props.onFinish(event); }}

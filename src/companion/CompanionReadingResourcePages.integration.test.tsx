@@ -72,7 +72,7 @@ it('returns an external document to its parent directory after row and menu open
   for (const menu of [false, true]) {
     if (menu) {
       fireEvent.click(screen.getByRole('button', { name: 'More: 000000' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Open', exact: true }));
+      fireEvent.click(screen.getByRole('button', { name: 'Open' }));
     } else fireEvent.click(row);
     fireEvent.click(await screen.findByTestId('companion-article-document'));
     expect(screen.queryByRole('dialog')).toBeNull();

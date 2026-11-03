@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { supportsCompanionReadingSystemBars } from '../shared/platform/companionReadingSystemBars';
+import { supportsCompanionReadingSystemBars } from '../shared/platform/companion/reading/companionReadingSystemBars';
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
 import { AppSwitch } from '../shared/ui/AppSwitch';
 

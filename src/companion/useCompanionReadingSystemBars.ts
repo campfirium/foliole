@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 import { subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
-import { companionReadingSystemBars, supportsCompanionReadingSystemBars } from '../shared/platform/companionReadingSystemBars';
+import { companionReadingSystemBars, supportsCompanionReadingSystemBars } from '../shared/platform/companion/reading/companionReadingSystemBars';
 
 import { useCompanionReadingDisplay } from './companionReadingDisplay';
 

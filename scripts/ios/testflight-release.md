@@ -16,10 +16,24 @@ Before requesting distribution, the owner must record compatibility evidence for
 
 Only iOS is enabled. Android approval alone does not enable uploads: add its approved channel adapter and verification at this same optional distribution boundary when available.
 
+## Resume a distribution-only repair
+
+When complete QA passed and only signing, packaging or distribution tooling changed, keep the original full receipt and use the registered QA checkout:
+
+```sh
+npm run quality:remote -- --scope full --mobile-distribution ios --reuse-mobile-quality <original-full-run-id>
+```
+
+This selects `mobile_resume`, not another full test execution. The evidence job reads the original complete quality artifact and actual admission jobs, requires the same trusted repository and QA source, and checks exact tracked product/quality inputs against the new candidate. Only the explicitly bounded distribution files may differ. Cancelled, expired, incomplete or failed quality and product/dependency/original-stage changes refuse reuse. A full run whose only failure was mobile distribution can supply the passed quality evidence. Changed distribution contracts run locally and on the hosted evidence job before signing.
+
+The new proof and final TestFlight receipt retain both the original quality source/run/attempt and actual packaged source/run; old stage results are never rewritten as tests of the new commit. Registered QA integration and finish verify this evidence plus the successful distribution run. Existing ordinary full/release paths keep their current contract.
+
+If upload already succeeded and only Linux processing/review failed, rerun that failed Linux job in the same run and recover the same QA entry. Reuse its uploaded candidate and earlier proof artifact; do not rerun the successful signing/upload job. Inspect Apple first whenever upload outcome is unknown.
+
 ## Execution
 
 1. Formal release quality and release-candidate checks, or the explicit complete QA chain, accept the source SHA in this run.
-2. `release-ios.yml` uses macOS to run `node scripts/ios/testflight-archive.mjs`, verify the host and share extension, and execute `bundle exec fastlane ios upload` from `scripts/ios`. Upload does not wait for Apple processing.
+2. Archive signing stays automatic for the app, extension and Swift package targets; the App Store Connect export re-signs the output for distribution, and IPA verification requires distribution entitlements and profiles. Do not force a distribution identity across archive targets. `release-ios.yml` uses macOS to run `node scripts/ios/testflight-archive.mjs`, verify the host and share extension, and execute `bundle exec fastlane ios upload` from `scripts/ios`. Upload does not wait for Apple processing.
 3. A separate Ubuntu job consumes the same-run candidate artifact. `bundle exec fastlane ios distribute` checks the exact app/version/build every five minutes, for at most one hour. It assigns the existing external group, enables automatic notification, submits external review and exits. It never waits for human review approval.
 4. Apple approves and distributes the update through the existing group. The website invitation remains https://testflight.apple.com/join/PszuhyJA.
 
