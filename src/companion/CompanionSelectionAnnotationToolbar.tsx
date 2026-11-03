@@ -66,7 +66,7 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
     session.save(() => props.onDeleteExistingHighlight(target.nodeId, session.guard), props.onClose);
   }
   return (
-    <div className="fixed z-floating" data-companion-selection-toolbar="true"
+    <div className="fixed z-floating [--shadow-popover:none]" data-companion-selection-toolbar="true"
       onContextMenu={(event) => event.preventDefault()} onPointerDown={(event) => event.stopPropagation()}
       style={{ left: state.left, top: state.top }}>
       <CompanionSelectionToolbarActions isExistingHighlight={isExistingHighlight} isCloze={state.existingHighlight?.kind === 'cloze'} disabled={disabled}

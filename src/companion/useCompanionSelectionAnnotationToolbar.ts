@@ -143,17 +143,18 @@ function useClearSelectionAndCloseToolbar(args: {
 }
 
 function useOwnedSelectionToolbar(nodeId: string) {
-  const [ownedToolbar, setOwnedToolbar] = useState<{ nodeId: string; state: CompanionSelectionAnnotationToolbarState | null } | null>(null);
+  const [ownedToolbar, setOwnedToolbar] = useState<{ nodeId: string; state: CompanionSelectionAnnotationToolbarState | null }>({ nodeId, state: null });
   const activeNode = useRef(nodeId);
   activeNode.current = nodeId;
   const setSelectionToolbar = useCallback((next: SetStateAction<CompanionSelectionAnnotationToolbarState | null>) => {
     if (activeNode.current !== nodeId) return;
     setOwnedToolbar((owned) => {
-      const current = owned?.nodeId === nodeId ? owned.state : null;
-      return { nodeId, state: typeof next === 'function' ? next(current) : next };
+      const current = owned.nodeId === nodeId ? owned.state : null;
+      const state = typeof next === 'function' ? next(current) : next;
+      return owned.nodeId === nodeId && state === current ? owned : { nodeId, state };
     });
   }, [nodeId]);
-  const selectionToolbar = ownedToolbar?.nodeId === nodeId ? ownedToolbar.state : null;
+  const selectionToolbar = ownedToolbar.nodeId === nodeId ? ownedToolbar.state : null;
   return [selectionToolbar, setSelectionToolbar] as const;
 }
 

@@ -82,6 +82,22 @@ it('keeps a long-press selection scheduled across an unrelated page render', () 
   expect(result.current.selectionToolbar?.payload?.selectionText).toBe('Welcome');
 });
 
+it('does not redraw the reading consumer for repeated moves while the toolbar is hidden', () => {
+  const onReadingRender = vi.fn();
+  const { result } = renderHook(() => {
+    onReadingRender();
+    return useCompanionSelectionAnnotationToolbar({ canCreateAnnotation: true, nodeId: 'node-1', snapshot: null });
+  });
+  const rendersBeforeDrag = onReadingRender.mock.calls.length;
+  for (let index = 0; index < 8; index += 1) {
+    act(() => {
+      document.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 80 + index, clientY: 120 }));
+    });
+  }
+  expect(result.current.selectionToolbar).toBeNull();
+  expect(onReadingRender.mock.calls.length).toBe(rendersBeforeDrag);
+});
+
 it.each(['node', 'editing'] as const)('cancels a pending selection toolbar when changing %s', change => {
   const { result, rerender } = renderHook((props: { nodeId: string; canCreateAnnotation: boolean }) =>
     useCompanionSelectionAnnotationToolbar({ ...props, snapshot: null }),
