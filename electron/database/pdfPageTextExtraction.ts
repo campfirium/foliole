@@ -2,43 +2,13 @@ import { promises as fs } from 'node:fs';
 
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
+import { readPdfTextPage, type ExtractedPdfPage } from '../../lib/core/pdf/pdfPageTextExtraction.js';
 import type { PdfPageForMatch } from '../../lib/core/readwise/readwisePdfMatch.js';
 
-export interface ExtractedPdfPage {
-  page: number;
-  pageHeight: number | null;
-  pageWidth: number | null;
-  text: string;
-}
+export type { ExtractedPdfPage };
 
 export function toPdfDocumentData(bytes: Uint8Array) {
   return new Uint8Array(bytes);
-}
-
-function resolvePdfPageText(content: { items: unknown[] }) {
-  return content.items
-    .map((item) => {
-      if (!item || typeof item !== 'object') {
-        return '';
-      }
-      return 'str' in item && typeof item.str === 'string' ? item.str : '';
-    })
-    .join('');
-}
-
-function resolvePdfPageDimensions(pdfPage: { getViewport: (input: { scale: number }) => { width?: number; height?: number } }) {
-  const viewport = pdfPage.getViewport({ scale: 1 });
-  if (
-    typeof viewport.width !== 'number' ||
-    !Number.isFinite(viewport.width) ||
-    viewport.width <= 0 ||
-    typeof viewport.height !== 'number' ||
-    !Number.isFinite(viewport.height) ||
-    viewport.height <= 0
-  ) {
-    return null;
-  }
-  return { height: viewport.height, width: viewport.width };
 }
 
 type PdfPageProxy = Awaited<ReturnType<Awaited<ReturnType<typeof getDocument>['promise']>['getPage']>>;
@@ -62,16 +32,7 @@ async function mapPdfPages<T>(bytes: Uint8Array, read: (pdfPage: PdfPageProxy, p
 
 /** Reads every page's text; pdf.js parses in the calling thread, so the main process runs this in a worker. */
 export async function extractPdfPageTextFromFile(filePath: string): Promise<ExtractedPdfPage[]> {
-  return mapPdfPages(await fs.readFile(filePath), async (pdfPage, page) => {
-    const textContent = await pdfPage.getTextContent();
-    const pageDimensions = resolvePdfPageDimensions(pdfPage);
-    return {
-      page,
-      pageHeight: pageDimensions?.height ?? null,
-      pageWidth: pageDimensions?.width ?? null,
-      text: resolvePdfPageText(textContent)
-    };
-  });
+  return mapPdfPages(await fs.readFile(filePath), readPdfTextPage);
 }
 
 /** Reads positioned text items so Readwise highlights can be matched to PDF page geometry. */

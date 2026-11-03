@@ -47,6 +47,7 @@ test('a selected PDF opens in the existing original reader without clearing the 
   await expect(page.getByRole('dialog', { name: 'Capture', exact: true })).not.toBeVisible();
   const renderedPage = page.locator('[data-pdf-page="1"] canvas');
   await expect(renderedPage).toBeVisible();
+  await expect(page.getByRole('article', { name: 'Imported topic' })).toContainText('Foliole PDF User Journey Page 3 gamma keyword');
   await expect(page.locator('.react-pdf__Page__textContent').first()).toContainText('Foliole');
   await page.locator('.companion-sheet-overlay').waitFor({ state: 'detached' });
   await page.screenshot({ path: '.tmp/artifacts/T645-2/pdf-original-reader.png', animations: 'disabled' });

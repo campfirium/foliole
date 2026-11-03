@@ -3,6 +3,7 @@ import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { invalidateAttachmentResourceResolution } from '../shared/platform/attachmentResources';
 import { publishCompanionImportedFile } from '../shared/platform/companion/runtime/companionFileImportPublication';
 import { runCompanionHistoryMutation } from '../shared/platform/companion/runtime/companionFlowHistory';
+import { completeCompanionPdfTextImport } from '../shared/platform/companion/runtime/companionImportedPdfText';
 import { persistCompanionImportedTextWithDb } from '../shared/platform/companion/runtime/companionImportedText';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { prepareSelectedTextImport, type SelectedImportFile, type SelectedImportWarning } from '../shared/platform/import/selectedImportFile';
@@ -41,6 +42,7 @@ export function createCompanionFileImportHandler(workspace: Pick<ReturnType<type
         return imported;
       }, { kind: 'full' }, node => { committed.nodeId = node.id; });
       const node = prepared.pdfSource ? await publishCompanionImportedFile(prepared.pdfSource, commit, owner, signal) : await commit();
+      if (prepared.pdfSource) await completeCompanionPdfTextImport(prepared.pdfSource, node.id, owner, signal);
       try { await refresh(); }
       catch { return { nodeId: node.id, retryRefresh: refresh, ...(importWarning ? { importWarning } : {}) }; }
       return { nodeId: node.id, ...(importWarning ? { importWarning } : {}) };

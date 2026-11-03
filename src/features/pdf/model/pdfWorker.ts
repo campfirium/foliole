@@ -1,11 +1,7 @@
 import { pdfjs } from 'react-pdf';
 
+import { configurePdfWorker as configureRuntimePdfWorker } from '../../../shared/platform/runtime/pdfWorker';
+
 export function configurePdfWorker() {
-  const workerUrl = new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).toString();
-
-  if ('pdfjsWorker' in globalThis) {
-    Reflect.deleteProperty(globalThis as Record<string, unknown>, 'pdfjsWorker');
-  }
-
-  pdfjs.GlobalWorkerOptions.workerSrc = `${workerUrl}?v=${encodeURIComponent(pdfjs.version)}`;
+  configureRuntimePdfWorker(pdfjs);
 }

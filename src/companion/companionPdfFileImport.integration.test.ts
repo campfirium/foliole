@@ -6,11 +6,12 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import * as pdfPageReader from '../../lib/core/pdf/pdfPageTextExtraction';
 import type { NativeCompanionFramedFileRequest } from '../../lib/platform/nativeCompanionFramedFilesContract';
 import { resetAttachmentResourceResolutionCacheForTest, resolveRuntimeAttachmentResource } from '../shared/platform/attachmentResources';
 import { createSearchLibrary, reopenSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
-import { loadIosCompanionNodeDocument } from '../shared/platform/companion/runtime/iosCompanionActiveDatabaseReads';
+import { loadIosCompanionNodeDocument, loadIosPdfPageText, searchIosPdfPageText } from '../shared/platform/companion/runtime/iosCompanionActiveDatabaseReads';
 import { companionAttachmentNativeFiles } from '../shared/platform/companion/sync/framed/companionAttachmentNativeFiles.testSupport';
 import { resolveLoadedCompanionArticle } from '../shared/platform/companionReadableArticle';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
@@ -49,7 +50,7 @@ beforeEach(async () => {
   storageKey = `${createHash('sha256').update(bytes).digest('hex')}.pdf`;
   native.publishedPath = path.join(directory, storageKey);
 });
-afterEach(async () => { await library.close(); });
+afterEach(async () => { vi.restoreAllMocks(); await library.close(); });
 
 async function importPdf(name = 'Reading.pdf', source: Uint8Array = bytes, failRefresh = false) {
   return createCompanionFileImportHandler({ refreshAfterMutation: async () => {
@@ -73,7 +74,15 @@ it('publishes byte-identical original PDF storage and persists a reopenable orig
   const snapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot;
   const article = resolveLoadedCompanionArticle(snapshot, await loadIosCompanionNodeDocument(result.nodeId));
   expect(article).toMatchObject({ title: 'Reading', pdfAttachmentId: storageKey.slice(0, 64) });
-  expect(resolveCompanionPdfReadingEntry(article!)).toBe('original');
+  expect(resolveCompanionPdfReadingEntry(article!)).toBe('text');
+  expect(article!.content).toContain('Foliole PDF User Journey Page 1 alpha keyword');
+  expect(article!.content).toContain('Foliole PDF User Journey Page 3 gamma keyword');
+  expect(await searchIosPdfPageText('gamma')).toMatchObject([{ attachment_id: storageKey.slice(0, 64), page: 3 }]);
+  expect(await loadIosPdfPageText(storageKey.slice(0, 64))).toEqual([
+    { page: 1, text: 'Foliole PDF User Journey Page 1 alpha keyword', page_width: 612, page_height: 792 },
+    { page: 2, text: 'Foliole PDF User Journey Page 2 beta keyword', page_width: 612, page_height: 792 },
+    { page: 3, text: 'Foliole PDF User Journey Page 3 gamma keyword', page_width: 612, page_height: 792 }
+  ]);
 });
 
 it('reuses an existing identical original for a second independent PDF import', async () => {
@@ -151,4 +160,81 @@ it('cancels during the original write and retries from the same partial storage 
   native.access = access;
   expect(await importPdf()).toHaveProperty('nodeId');
   expect(await readFile(path.join(directory, storageKey))).toEqual(bytes);
+});
+
+it('keeps a malformed PDF original imported when page-text extraction fails', async () => {
+  const broken = new TextEncoder().encode('%PDF-1.4\nThis document is truncated.');
+  const result = await importPdf('Broken.pdf', broken);
+  if ('error' in result) throw new Error(result.error);
+  const hash = createHash('sha256').update(broken).digest('hex');
+  expect(await readFile(path.join(directory, `${hash}.pdf`))).toEqual(Buffer.from(broken));
+  expect(library.database.prepare('SELECT status,version FROM pdf_index_state WHERE attachment_id=?').get(hash))
+    .toEqual({ status: 'failed', version: 1 });
+  expect(await loadIosPdfPageText(hash)).toEqual([]);
+  const article = await loadIosCompanionNodeDocument(result.nodeId);
+  expect(article!.pdf_attachment_id).toBe(hash);
+  expect(resolveCompanionPdfReadingEntry({ ...article!, nodeId: result.nodeId, pdfAttachmentId: hash })).toBe('original');
+});
+
+it('retains the original and rolls back derived pages when their transaction fails', async () => {
+  library.database.exec("CREATE TRIGGER reject_pages BEFORE INSERT ON pdf_page_text BEGIN SELECT RAISE(ABORT,'Unavailable'); END");
+  const result = await importPdf();
+  expect(result).toHaveProperty('nodeId');
+  expect(await readFile(path.join(directory, storageKey))).toEqual(bytes);
+  expect(await loadIosPdfPageText(storageKey.slice(0, 64))).toEqual([]);
+  expect(library.database.prepare('SELECT * FROM pdf_text_artifact').all()).toEqual([]);
+  expect(library.database.prepare('SELECT status FROM pdf_index_state').get()).toEqual({ status: 'failed' });
+  expect(library.database.prepare('SELECT count(*) AS count FROM import_runs').get()).toEqual({ count: 1 });
+});
+
+it('keeps image-only PDFs readable as originals while persisting their page dimensions', async () => {
+  const imageOnly = Buffer.from(bytes.toString('latin1').replace(/BT[\s\S]*?ET/gu, text => ' '.repeat(text.length)), 'latin1');
+  const result = await importPdf('Scanned.pdf', imageOnly);
+  if ('error' in result) throw new Error(result.error);
+  const hash = createHash('sha256').update(imageOnly).digest('hex');
+  expect(await loadIosPdfPageText(hash)).toEqual([1, 2, 3].map(page => ({ page, text: '', page_width: 612, page_height: 792 })));
+  const document = await loadIosCompanionNodeDocument(result.nodeId);
+  expect(resolveCompanionPdfReadingEntry({ ...document!, nodeId: result.nodeId, pdfAttachmentId: hash })).toBe('original');
+});
+
+it('keeps the committed original when extraction is cancelled after reading its first page', async () => {
+  const controller = new AbortController();
+  const read = pdfPageReader.readPdfTextPage;
+  vi.spyOn(pdfPageReader, 'readPdfTextPage').mockImplementation(async (...args) => {
+    const page = await read(...args); controller.abort(); return page;
+  });
+  const result = await createCompanionFileImportHandler({ refreshAfterMutation: async () => null })(
+    new File([Uint8Array.from(bytes)], 'Reading.pdf'), controller.signal);
+  expect(result).toHaveProperty('nodeId');
+  expect(await readFile(path.join(directory, storageKey))).toEqual(bytes);
+  expect(await loadIosPdfPageText(storageKey.slice(0, 64))).toEqual([]);
+  expect(library.database.prepare('SELECT count(*) AS count FROM import_runs').get()).toEqual({ count: 1 });
+});
+
+it('does not write parsed pages to a different generation after reopening during extraction', async () => {
+  const read = pdfPageReader.readPdfTextPage;
+  vi.spyOn(pdfPageReader, 'readPdfTextPage').mockImplementation(async (...args) => {
+    const page = await read(...args);
+    if (args[1] === 1) await reopenSearchLibrary(library.root, '2026-11-03T07:00:00Z');
+    return page;
+  });
+  expect(await importPdf()).toHaveProperty('nodeId');
+  expect(await loadIosPdfPageText(storageKey.slice(0, 64))).toEqual([]);
+  expect(await readFile(path.join(directory, storageKey))).toEqual(bytes);
+});
+
+it('preserves prior successful page data if a later import cannot replace its derived rows', async () => {
+  await importPdf();
+  const saved = await loadIosPdfPageText(storageKey.slice(0, 64));
+  library.database.exec("CREATE TRIGGER reject_pages BEFORE INSERT ON pdf_page_text BEGIN SELECT RAISE(ABORT,'Unavailable'); END");
+  expect(await importPdf('Again.pdf')).toHaveProperty('nodeId');
+  expect(await loadIosPdfPageText(storageKey.slice(0, 64))).toEqual(saved);
+  expect(library.database.prepare('SELECT status FROM pdf_index_state').get()).toEqual({ status: 'ready' });
+});
+
+it('records a parser failure even when its error message is empty', async () => {
+  vi.spyOn(pdfPageReader, 'readPdfTextPage').mockRejectedValueOnce(new Error(''));
+  expect(await importPdf()).toHaveProperty('nodeId');
+  expect(await loadIosPdfPageText(storageKey.slice(0, 64))).toEqual([]);
+  expect(library.database.prepare('SELECT status FROM pdf_index_state').get()).toEqual({ status: 'failed' });
 });

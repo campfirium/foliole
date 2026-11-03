@@ -20,7 +20,13 @@ export async function exportPdfTextArtifact(db: DbPort, pdf: string, version: nu
   if (!state) return null;
   const pages = z.array(pageSchema).parse(await db.query(
     'SELECT page, text, page_width, page_height FROM pdf_page_text WHERE attachment_id = ? ORDER BY page', [pdf]));
-  const text = JSON.stringify(artifactSchema.parse({ pdf, version, pages }));
+  return buildPdfTextArtifact(pdf, pages);
+}
+
+export function buildPdfTextArtifact(pdf: string, pages: Array<{
+  page: number; text: string; page_width: number | null; page_height: number | null;
+}>) {
+  const text = JSON.stringify(artifactSchema.parse({ pdf, version: PDF_TEXT_EXTRACTOR_VERSION, pages }));
   return { text, storageKey: `${hashTextBody(text)}.pdftext` };
 }
 

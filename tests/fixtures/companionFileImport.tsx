@@ -7,6 +7,7 @@ import { CompanionCaptureSheet } from '../../src/companion/CompanionCaptureSheet
 import { SimplePdfDocument } from '../../src/features/pdf/components/SimplePdfDocument';
 import { LocalizationProvider } from '../../src/shared/localization/LocalizationProvider';
 import { prepareSelectedTextImport } from '../../src/shared/platform/import/selectedImportFile';
+import { extractRuntimePdfPageText } from '../../src/shared/platform/runtime/pdfPageTextExtraction';
 
 function FileImportFixture() {
   const [open, setOpen] = useState(false);
@@ -28,6 +29,8 @@ function FileImportFixture() {
             invoke: async () => ({ status: 'ready', resource_url: source })
           } });
           setPdf({ attachmentId: prepared.pdfSource.storageKey.slice(0, 64), title: prepared.title });
+          const pages = await extractRuntimePdfPageText(prepared.pdfSource.bytes);
+          setImported(pages.map(page => page.text).join('\n\n'));
         }
         return { nodeId: 'file-topic', ...(prepared.importWarning ? { importWarning: prepared.importWarning } : {}) };
       }} />
