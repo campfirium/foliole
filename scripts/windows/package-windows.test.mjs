@@ -46,7 +46,7 @@ describe('windows package runner', () => {
       expect(resolveInstallMode(['node', 'script'])).toBe(false);
       expect(resolveInstallMode(['node', 'script', '--install'])).toBe(true);
       process.env.npm_config_install = 'true';
-      expect(resolveInstallMode(['node', 'script'])).toBe(true);
+      expect(resolveInstallMode(['node', 'script'])).toBe(false);
     } finally {
       if (previousInstallFlag === undefined) {
         delete process.env.npm_config_install;

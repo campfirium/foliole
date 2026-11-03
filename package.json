@@ -106,7 +106,7 @@
     "electron:rebuild:native": "electron-rebuild -f -w better-sqlite3,@foliole/desktop-dnssd",
     "electron:build": "npm run build && npm run electron:compile && electron-builder --config electron/builder.json",
     "build:macos": "node scripts/build/macos.mjs",
-    "build:windows": "npm run windows:package",
+    "build:windows": "node scripts/build/windows.mjs",
     "build:linux": "node scripts/build/linux.mjs",
     "build:android": "node scripts/build/android.mjs",
     "upgrade:android": "node scripts/build/android-upgrade.mjs",

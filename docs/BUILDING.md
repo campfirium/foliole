@@ -24,6 +24,8 @@ npm run build:windows
 
 Run this on Windows with Visual Studio C++ Build Tools installed. The installer is in `artifacts/windows/`.
 
+`build:windows` only builds the installer. It accepts no forwarded options and ignores inherited npm installation settings. To install after reviewing the result, run the generated installer, or explicitly use `npm run windows:package:install` to package and install. That installation command can replace an existing Foliole installation.
+
 ## Linux x64
 
 ```sh

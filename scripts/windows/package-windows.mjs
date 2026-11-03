@@ -35,7 +35,7 @@ export function resolvePackageMode(platform = process.platform) {
 }
 
 export function resolveInstallMode(argv = process.argv) {
-  return argv.includes('--install') || process.env.npm_config_install === 'true';
+  return argv.includes('--install');
 }
 
 export function resolveInternalMode(argv = process.argv) {
