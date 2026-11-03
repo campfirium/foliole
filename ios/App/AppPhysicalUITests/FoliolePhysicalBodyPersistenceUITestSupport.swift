@@ -71,10 +71,17 @@ final class FoliolePhysicalDatabaseUpgradeUITests: XCTestCase {
         XCTAssertTrue(search.waitForExistence(timeout: 30))
         search.tap()
         resolveOptionalCellularDataDecision()
-        if let value = search.value as? String, !value.isEmpty, value != "Search synced topics" {
-            search.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: value.count))
+        if search.value as? String != text {
+            if let value = search.value as? String, !value.isEmpty, value != "Search synced topics" {
+                search.press(forDuration: 1.2)
+                let selectAll = app.menuItems.matching(NSPredicate(format: "label IN %@", ["Select All", "全选"])).firstMatch
+                XCTAssertTrue(selectAll.waitForExistence(timeout: 10), "Select the retained query before replacing it.")
+                selectAll.tap()
+                search.typeText(XCUIKeyboardKey.delete.rawValue)
+            }
+            search.typeText(text)
         }
-        search.typeText(text)
+        XCTAssertEqual(search.value as? String, text, "Search must use the requested query exactly.")
         let result = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
         XCTAssertTrue(result.waitForExistence(timeout: 45), "Old database content was not searchable.")
         if app.toolbars.buttons["Done"].exists { app.toolbars.buttons["Done"].tap() }
