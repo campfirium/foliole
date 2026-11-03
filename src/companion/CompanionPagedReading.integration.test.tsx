@@ -28,6 +28,9 @@ it('defaults to continuous scrolling and switches exclusively to durable paged s
   expect(remounted.surface.style.overflowY).toBe('hidden');
   openReadingMode();
   expect(screen.getByRole('button', { name: 'Paged scroll' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: 'Paged scroll' })).toHaveTextContent('Paged scroll');
+  expect(screen.getByRole('button', { name: 'Continuous scroll' })).toHaveTextContent('Continuous scroll');
+  expect(screen.queryByText(/Tap the left edge for the previous page/)).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Continuous scroll' }));
   expect(remounted.surface.style.overflowY).not.toBe('hidden');
   expect(loadCompanionReadingMode()).toBe('continuous');
