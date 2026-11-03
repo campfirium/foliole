@@ -16,5 +16,9 @@ export interface CompanionLearningSettingField {
 
 export const COMPANION_LEARNING_SETTING_FIELDS: readonly CompanionLearningSettingField[] = [
   { key: 'desiredRetention', label: 'settings.review.desiredRetention.aria', min: 0.01, max: 0.99, step: 0.01,
-    read: value => value.desiredRetention, patch: desiredRetention => ({ desiredRetention }) }
+    read: value => value.desiredRetention, patch: desiredRetention => ({ desiredRetention }) },
+  { key: 'maximumIntervalDays', label: 'settings.review.maximumInterval.aria', min: 1, step: 1,
+    read: value => value.maximumIntervalDays, patch: maximumIntervalDays => ({ maximumIntervalDays }) },
+  { key: 'newItemLoadBalancingDays', label: 'settings.review.newItemLoadBalancing.title', min: 1, max: 99, step: 1,
+    read: value => value.newItemLoadBalancingDays, patch: newItemLoadBalancingDays => ({ newItemLoadBalancingDays }) }
 ];

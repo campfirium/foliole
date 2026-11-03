@@ -9,9 +9,11 @@ import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, getCurrentReviewSchedulerSettings,
 import { createSearchLibrary, reopenSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { readIosCompanionDatabase, writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import { saveIosReviewWithDb } from '../shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites';
+import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
 import { COMPANION_LEARNING_SETTING_FIELDS } from './companionLearningSettingFields';
 import { CompanionLearningSettingsContent } from './CompanionLearningSettingsContent';
+import { persistCompanionSelectionAnnotation } from './companionSelectionAnnotationActions';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 
@@ -98,4 +100,43 @@ it('shows a load failure instead of letting a malformed persisted setting be ove
   library.database.prepare('DELETE FROM setting_records').run();
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Retry' })); });
   expect(await screen.findByRole('spinbutton', { name: 'Desired retention' })).toHaveValue(0.9);
+});
+
+it('uses the saved maximum in subsequent reviews with the unchanged shared scheduler', async () => {
+  library.database.prepare(`INSERT INTO nodes (id,kind,title,content,created_at,updated_at)
+    VALUES ('item','item','Question','Original','2026-10-01','2026-10-01')`).run();
+  render(<CompanionLearningSettingsContent />);
+  await changeSetting('Maximum interval days', '10');
+  for (const [opId, reviewedAt] of [['one', '2026-10-01T08:00:00Z'], ['two', '2026-10-20T08:00:00Z']]) {
+    await writeIosCompanionDatabase(db => db.transaction(tx => saveIosReviewWithDb(tx, {
+      node_id: 'item', review_json: '{}', review_log_json: JSON.stringify({ opId, grade: 4, reviewedAt, schedulerVersion: 'test' })
+    })));
+  }
+  const history = await readIosCompanionDatabase(db => readNodeReviewHistoryWithDb(db, 'item'));
+  expect(history.parameters.maximumIntervalDays).toBe(10);
+  const uncapped = recomputeReview(history.events, { ...history.parameters, maximumIntervalDays: 36500 })!;
+  const actual = library.database.prepare("SELECT scheduled_days FROM node_review WHERE node_id='item'").get() as { scheduled_days: number };
+  expect(actual.scheduled_days).toBeLessThan(uncapped.scheduled_days);
+});
+
+it('applies new-item balancing to real cloze creation without moving existing due dates', async () => {
+  library.database.prepare(`INSERT INTO nodes (id,title,content,created_at,updated_at)
+    VALUES ('source','Source','Original selected words','2026-10-01','2026-10-01')`).run();
+  render(<CompanionLearningSettingsContent />);
+  await changeSetting('New item load balancing', '1');
+  async function createCloze() {
+    const snapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot;
+    const result = await persistCompanionSelectionAnnotation({ deviceId: 'Search', kind: 'cloze', snapshot,
+      payload: { anchorId: crypto.randomUUID(), parentNodeId: 'source', clozeContent: 'Original [...]',
+        selectionText: 'selected words', entries: [{ locator: { from: 9, to: 23, originalText: 'selected words' } }] } });
+    expect(result).not.toBeNull();
+    return library.database.prepare('SELECT due FROM node_review WHERE node_id=?').get(result!.nodeId) as { due: string };
+  }
+  const first = await createCloze();
+  expect(await createCloze()).toEqual(first);
+  const before = library.database.prepare('SELECT * FROM node_review ORDER BY node_id').all();
+  await changeSetting('New item load balancing', '2');
+  expect(library.database.prepare('SELECT * FROM node_review ORDER BY node_id').all()).toEqual(before);
+  const third = await createCloze();
+  expect(Date.parse(third.due)).toBeGreaterThan(Date.parse(first.due));
 });
