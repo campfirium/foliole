@@ -124,3 +124,10 @@ it.each(['ios', 'web'])('does not expose Android system bar control on %s', asyn
   expect(screen.getByRole('switch', { name: 'Floating reading toolbars' })).toBeInTheDocument();
   await act(async () => undefined); expect(host.apply).not.toHaveBeenCalled();
 });
+
+it('shows the Android system bar option as unavailable in the local browser preview', async () => {
+  host.platform = 'foliole-browser-preview'; render(article()); more();
+  expect(screen.getByRole('switch', { name: 'Hide system status bar' })).toBeDisabled();
+  expect(screen.getByRole('switch', { name: 'Floating reading toolbars' })).toBeEnabled();
+  await act(async () => undefined); expect(host.apply).not.toHaveBeenCalled();
+});

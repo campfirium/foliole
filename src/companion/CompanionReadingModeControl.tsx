@@ -1,3 +1,4 @@
+import { ArrowDownUp, GalleryVerticalEnd } from 'lucide-react';
 import { useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -12,16 +13,18 @@ export function CompanionReadingModeControl() {
   const [saveError, setSaveError] = useState(false);
   return <fieldset className="py-4">
     <legend className="text-sm font-medium text-foreground">{t('companion.reading.mode')}</legend>
-    <div className="grid grid-cols-2 gap-2">
+    <div className="flex gap-2">
       {MODES.map(option => <button
+        aria-label={t(`companion.reading.mode.${option}`)}
         aria-pressed={mode === option}
-        className={`min-h-11 rounded-md border px-3 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-companion-accent ${mode === option
+        className={`flex min-h-11 min-w-11 items-center justify-center rounded-md border px-3 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-companion-accent ${mode === option
           ? 'border-companion-accent bg-companion-accent-soft text-companion-accent'
           : 'border-companion-divider text-foreground active:bg-companion-subtle/80'}`}
         key={option}
         onClick={() => setSaveError(!saveCompanionReadingMode(option))}
         type="button"
-      >{t(`companion.reading.mode.${option}`)}</button>)}
+      >{option === 'continuous' ? <ArrowDownUp aria-hidden="true" className="size-5" />
+        : <GalleryVerticalEnd aria-hidden="true" className="size-5" />}</button>)}
     </div>
     {mode === 'paged' ? <p className="mt-3 text-sm text-companion-text-secondary">{t('companion.reading.mode.pagedHint')}</p> : null}
     {saveError ? <p className="mt-3 text-sm text-error" role="alert">{t('companion.reading.font.saveError')}</p> : null}
