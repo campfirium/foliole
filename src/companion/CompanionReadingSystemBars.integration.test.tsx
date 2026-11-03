@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { createContentSaveMock } from './companionContentEditingTestSupport';
@@ -32,6 +32,7 @@ function article(nodeId = 'first', editing = false) {
 function more() {
   fireEvent.click(screen.getByText('Reading body'));
   fireEvent.click(screen.getByRole('button', { name: 'More reading actions' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance', exact: true }));
 }
 const applied = async (enabled: boolean, hidden = false) => {
   await waitFor(() => expect(host.apply).toHaveBeenLastCalledWith(target(enabled, hidden)));
@@ -55,7 +56,7 @@ it('shows time and battery with reading tools and hides them together without di
 it('keeps both preferences independent across articles, reentry and leaving reading', async () => {
   const view = render(article()); more();
   const system = screen.getByRole('switch', { name: 'Hide system status bar' });
-  const overlay = screen.getByRole('switch', { name: 'Overlay toolbars' });
+  const overlay = screen.getByRole('switch', { name: 'Floating reading toolbars' });
   expect(system).not.toBeChecked(); expect(overlay).not.toBeChecked();
   fireEvent.click(system); await applied(true);
   expect(overlay).not.toBeChecked();
@@ -64,7 +65,7 @@ it('keeps both preferences independent across articles, reentry and leaving read
   fireEvent.click(system); await applied(true);
   view.rerender(article('second')); await applied(true, true); more();
   expect(screen.getByRole('switch', { name: 'Hide system status bar' })).toBeChecked();
-  expect(screen.getByRole('switch', { name: 'Overlay toolbars' })).toBeChecked();
+  expect(screen.getByRole('switch', { name: 'Floating reading toolbars' })).toBeChecked();
   view.rerender(<p>Library</p>); await applied(false);
   expect(JSON.parse(localStorage.getItem(key)!)).toEqual({ hideSystemStatusBar: true, overlayToolbars: true });
 });
@@ -95,17 +96,17 @@ it('keeps failed exit restoration visible in the surviving shell and retries its
 
 it('preserves saved settings when storage is full, then retries', async () => {
   render(article()); more();
-  fireEvent.click(screen.getByRole('switch', { name: 'Overlay toolbars' }));
+  fireEvent.click(screen.getByRole('switch', { name: 'Floating reading toolbars' }));
   fireEvent.click(screen.getByRole('switch', { name: 'Hide system status bar' })); await applied(true);
   const stored = localStorage.getItem(key);
   const used = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)!)
     .reduce((total, item) => total + item.length + localStorage.getItem(item)!.length, 0);
   localStorage.setItem('quota', 'x'.repeat(5_000_000 - used - 5));
   fireEvent.click(screen.getByRole('switch', { name: 'Hide system status bar' }));
-  expect(screen.getByRole('alert')).toHaveTextContent('Could not save reading settings');
+  expect(within(screen.getByRole('group', { name: 'Screen display' })).getByRole('alert')).toHaveTextContent('Could not save reading settings');
   expect(localStorage.getItem(key)).toBe(stored);
   localStorage.removeItem('quota'); fireEvent.click(screen.getByRole('switch', { name: 'Hide system status bar' }));
-  await applied(false); expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  await applied(false); expect(within(screen.getByRole('group', { name: 'Screen display' })).queryByRole('alert')).not.toBeInTheDocument();
 });
 
 it('finishes a delayed hide with normal window restoration after the reader unmounts', async () => {
@@ -120,6 +121,6 @@ it('finishes a delayed hide with normal window restoration after the reader unmo
 it.each(['ios', 'web'])('does not expose Android system bar control on %s', async platform => {
   host.platform = platform; render(article()); more();
   expect(screen.queryByRole('switch', { name: 'Hide system status bar' })).not.toBeInTheDocument();
-  expect(screen.getByRole('switch', { name: 'Overlay toolbars' })).toBeInTheDocument();
+  expect(screen.getByRole('switch', { name: 'Floating reading toolbars' })).toBeInTheDocument();
   await act(async () => undefined); expect(host.apply).not.toHaveBeenCalled();
 });

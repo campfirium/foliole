@@ -80,7 +80,6 @@ export function ReadingActionsSheet(props: {
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.actions')}>
       <div className="border-t border-companion-divider">
         <CompanionFlowOrEditHistoryActions open={props.open} {...(props.editHistory ? { editHistory: props.editHistory } : {})} />
-        <CompanionReadingDisplayControls />
         <CompanionFlowModeControl onSelect={() => props.onOpenChange(false)} />
         <ReadingExitFlowHereAction onClose={() => props.onOpenChange(false)} />
         <CompanionWorkspaceCurrentNodeAction onSelect={() => props.onOpenChange(false)} />
@@ -176,6 +175,7 @@ export function ReadingFontSheet(props: {
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.font')}>
       <CompanionColorModeControl />
       <CompanionReadingModeControl />
+      <CompanionReadingDisplayControls />
       {props.fontLoadError ? <p className="py-3 text-sm text-error" role="alert">{t('companion.reading.font.loadError')}</p> : null}
       {props.saveError ? (
         <p className="py-3 text-sm text-error" role="alert">{t('companion.reading.font.saveError')}</p>

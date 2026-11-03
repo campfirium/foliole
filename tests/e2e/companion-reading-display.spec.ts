@@ -25,6 +25,7 @@ async function more(page: Page) {
   const button = page.getByRole('button', { name: 'More reading actions' });
   if (!await button.isVisible()) await page.touchscreen.tap(10, 350);
   await button.click();
+  await page.getByRole('button', { name: 'Appearance', exact: true }).click();
 }
 const top = (page: Page) => page.locator('.cm-line').first().evaluate(element => element.getBoundingClientRect().top);
 
@@ -33,14 +34,16 @@ for (const flow of [false, true]) {
     await openReader(page, flow);
     const originalTop = await top(page);
     await more(page);
-    await page.getByRole('switch', { name: 'Overlay toolbars' }).click();
+    await expect(page.getByRole('group', { name: 'Screen display' })).toBeVisible();
+    await page.screenshot({ path: `.tmp/artifacts/T701/screen-display-settings-${flow}.png` });
+    await page.getByRole('switch', { name: 'Floating reading toolbars' }).click();
     await done(page);
     await expect.poll(() => top(page)).toBeLessThan(originalTop - 20);
     await page.screenshot({ path: `.tmp/artifacts/T701/overlay-${flow}.png` });
     await page.getByRole('button', { name: 'Exit', exact: true }).click();
     await page.getByRole('button', { name: 'Return to reading' }).click();
     await more(page);
-    await expect(page.getByRole('switch', { name: 'Overlay toolbars' })).toBeChecked();
+    await expect(page.getByRole('switch', { name: 'Floating reading toolbars' })).toBeChecked();
     await done(page);
     await page.touchscreen.tap(10, 350);
     await expect(page.getByRole('button', { name: 'Exit', exact: true })).toBeHidden();
@@ -48,13 +51,13 @@ for (const flow of [false, true]) {
     await expect.poll(() => top(page)).toBeLessThan(originalTop - 20);
     await page.reload();
     await more(page);
-    await expect(page.getByRole('switch', { name: 'Overlay toolbars' })).toBeChecked();
+    await expect(page.getByRole('switch', { name: 'Floating reading toolbars' })).toBeChecked();
   });
 
   test(`overlay keeps the final line reachable in continuous and paged reading: flow=${flow}`, async ({ page }) => {
     await openReader(page, flow);
     await more(page);
-    await page.getByRole('switch', { name: 'Overlay toolbars' }).click();
+    await page.getByRole('switch', { name: 'Floating reading toolbars' }).click();
     await done(page);
     const surface = page.locator('section').filter({ has: page.locator('.cm-content') }).first();
     await expect.poll(() => surface.evaluate(element => {
@@ -70,7 +73,6 @@ for (const flow of [false, true]) {
     }).toBeLessThanOrEqual(limit);
     await surface.evaluate(element => { element.scrollTop = 0; });
     await more(page);
-    await page.getByRole('button', { name: 'Appearance', exact: true }).click();
     await page.getByRole('button', { name: 'Paged scroll', exact: true }).click();
     await done(page);
     for (let i = 0; i < 30; i++) await page.touchscreen.tap(360, 400);
@@ -81,7 +83,7 @@ for (const flow of [false, true]) {
 test('temporarily restores toolbar space for editing without changing the saved preference', async ({ page }) => {
   await openReader(page, false);
   await more(page);
-  await page.getByRole('switch', { name: 'Overlay toolbars' }).click();
+  await page.getByRole('switch', { name: 'Floating reading toolbars' }).click();
   await done(page);
   const readingTop = await top(page);
   await page.getByRole('button', { name: 'Edit content', exact: true }).click();
@@ -90,7 +92,7 @@ test('temporarily restores toolbar space for editing without changing the saved 
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect.poll(() => top(page)).toBe(readingTop);
   await more(page);
-  await expect(page.getByRole('switch', { name: 'Overlay toolbars' })).toBeChecked();
+  await expect(page.getByRole('switch', { name: 'Floating reading toolbars' })).toBeChecked();
 });
 
 
@@ -99,7 +101,7 @@ test('revealed Flow answers gain the toolbar area and can scroll clear of the an
   const grid = page.locator('.companion-item-review-layout');
   const before = await grid.evaluate(element => element.getBoundingClientRect().height);
   await more(page);
-  await page.getByRole('switch', { name: 'Overlay toolbars' }).click();
+  await page.getByRole('switch', { name: 'Floating reading toolbars' }).click();
   await done(page);
   await expect.poll(() => grid.evaluate(element => element.getBoundingClientRect().height)).toBeGreaterThan(before + 20);
   const surface = page.locator('section.companion-review-surface');

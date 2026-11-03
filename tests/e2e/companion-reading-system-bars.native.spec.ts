@@ -17,6 +17,7 @@ async function closeMenu(page: Page) {
 }
 async function setHidden(page: Page, value: boolean) {
   await more(page);
+  await page.getByRole('button', { name: 'Appearance', exact: true }).click();
   const toggle = page.getByRole('switch', { name: 'Hide system status bar' });
   if ((await toggle.getAttribute('aria-checked') === 'true') !== value) await toggle.click();
   await closeMenu(page);
