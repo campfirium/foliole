@@ -20,15 +20,19 @@ function temporary() {
 
 it('selects the upgrade UI test and prepares old state between build and native execution', async () => {
   const stages = [];
-  const run = vi.fn((_command, _args, options) => { stages.push(options.stage); });
-  const retention = vi.fn(async () => { stages.push('retention'); });
+  let foregroundOwnerInstalled = true;
+  const run = vi.fn((_command, _args, options) => {
+    if (options.stage === 'fri-dev-xcuitest-build') expect(foregroundOwnerInstalled).toBe(true);
+    stages.push(options.stage);
+  });
+  const retention = vi.fn(async () => { foregroundOwnerInstalled = false; stages.push('retention'); });
   await runFriDevWorkflow({ repoRoot: '/repo', evidenceRoot: temporary(), runnerPath: '/bin/sh',
     scenario: 'database-upgrade', legacyFramework: '/explicit/SQLCipher.framework',
     readiness: async () => { stages.push('readiness'); }, retention, run,
     upgradePrepare: async () => { stages.push('prepare-old-database'); },
     upgradeFinish: async () => { stages.push('verify-preserved-facts'); } });
-  expect(stages).toEqual(['companion-build', 'capacitor-ios-sync', 'readiness', 'retention',
-    'fri-dev-xcuitest-build', 'prepare-old-database', 'fri-dev-xcuitest-run', 'verify-preserved-facts']);
+  expect(stages).toEqual(['companion-build', 'capacitor-ios-sync', 'readiness', 'fri-dev-xcuitest-build',
+    'retention', 'prepare-old-database', 'fri-dev-xcuitest-run', 'verify-preserved-facts']);
   expect(retention).toHaveBeenCalledWith(expect.objectContaining({ freshAcceptance: true }));
   const commands = buildFriDevWorkflowCommands({ repoRoot: '/repo', evidenceRoot: '/evidence', scenario: 'database-upgrade' });
   expect(commands[2].args).toContain('AppPhysicalUITests/FoliolePhysicalDatabaseUpgradeUITests/testRetainsLegacyFactsAcrossInstallAndRestart');

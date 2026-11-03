@@ -129,12 +129,14 @@ export async function runFriDevWorkflow({
     run(entry.command, entry.args, { cwd: repoRoot, env: entry.env, stage: entry.stage });
   }
   await readiness();
-  await retention({
+  const retain = () => retention({
     evidenceRoot: path.join(evidenceRoot, 'fri-app-retention'),
     ...(scenario === 'database-upgrade' ? { freshAcceptance: true } : {}),
     run
   });
+  if (scenario !== 'database-upgrade') await retain();
   await run(commands[2].command, commands[2].args, { cwd: repoRoot, env: commands[2].env, stage: commands[2].stage });
+  if (scenario === 'database-upgrade') await retain();
   const upgradeOptions = { repoRoot, evidenceRoot, legacyFramework, run };
   if (scenario === 'database-upgrade') await upgradePrepare(upgradeOptions);
   await run(commands[3].command, commands[3].args, { cwd: repoRoot, env: commands[3].env, stage: commands[3].stage });
