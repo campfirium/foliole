@@ -39,11 +39,11 @@ export async function runQaMobileResume({ args, cwd, repo, runner, monitor = mon
   const qualityRunId = args.mobileQualityRunId;
   const selected = await selectMobileResume({ record, sourceSha, qualityRunId, cwd, repo, runner, readQuality, validate });
   console.log(`[qa-mobile-resume] ${sourceSha} reuses quality ${qualityRunId}: ${selected.url}`);
+  const result = await monitor({ cwd, repo, runner, runId: selected.runId, ...waitOptions });
+  if (result.failed) throw new Error(`Mobile distribution failed: ${selected.url}`);
   const identity = JSON.parse(await requireSuccess(runner, 'gh', ['api', `repos/${repo}/actions/runs/${selected.runId}`], { cwd }));
   if (identity.head_branch !== 'check' || identity.head_sha !== sourceSha ||
       parseRemoteQualityRun(identity)?.qualityRunId !== qualityRunId) throw new Error('Mobile run identity differs');
-  const result = await monitor({ cwd, repo, runner, runId: selected.runId, ...waitOptions });
-  if (result.failed) throw new Error(`Mobile distribution failed: ${selected.url}`);
   readCompleted({ repository: repo, runId: selected.runId, sourceSha, cwd });
   record.run = { ...selected, passed: true };
   saveQaRecord(record);
