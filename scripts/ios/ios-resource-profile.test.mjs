@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 
 import { describe, expect, it } from 'vitest';
 
@@ -26,6 +27,21 @@ describe('iOS resource profile', () => {
 
     expect([...new Set(listed)].sort()).toEqual(existing);
     expect(listed).toHaveLength(new Set(listed).size);
+  });
+
+  it('selects the retained legacy-engine test only on a configured Mac', () => {
+    const source = fs.readFileSync('scripts/ios/ios-runtime-contract-tests.mjs', 'utf8');
+    const expression = source.match(/export const IOS_RUNTIME_SQLITE_CONTRACT_TESTS = (\[[\s\S]*?\n\]);/u)?.[1];
+    expect(expression).toBeDefined();
+    const legacyTest = 'scripts/ios/fri-upgrade-migration.integration.test.mjs';
+    for (const platform of ['darwin', 'linux', 'win32']) {
+      for (const configured of [false, true]) {
+        const env = configured ? { FOLIOLE_IOS_LEGACY_SQLCIPHER_FRAMEWORK: '/retained/SQLCipher.framework' } : {};
+        const tests = vm.runInNewContext(expression, { process: { platform, env } });
+        expect(tests.includes(legacyTest)).toBe(platform === 'darwin' && configured);
+        expect(tests).toContain('src/companion/companionCaptureTextActions.ios.test.ts');
+      }
+    }
   });
 
   it('defaults command-line iOS work to the background profile', () => {

@@ -165,7 +165,8 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
 ];
 
 export const IOS_RUNTIME_SQLITE_CONTRACT_TESTS = [
-  'scripts/ios/fri-upgrade-migration.integration.test.mjs',
+  ...(process.platform === 'darwin' && process.env.FOLIOLE_IOS_LEGACY_SQLCIPHER_FRAMEWORK
+    ? ['scripts/ios/fri-upgrade-migration.integration.test.mjs'] : []),
   'src/companion/companionCaptureTextActions.ios.test.ts',
   'src/companion/companionTrashActions.ios.test.ts',
   'src/shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites.test.ts',

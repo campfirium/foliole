@@ -26,7 +26,7 @@ function recursiveTestTargets(directory) {
 }
 
 function directoryBuckets(directory, labelPrefix, reportPrefix) {
-  return immediateDirectoryTargets(directory).map((target) => {
+  return immediateDirectoryTargets(directory).filter((target) => recursiveTestTargets(target).length > 0).map((target) => {
     const name = path.posix.basename(target);
     return {
       label: `${labelPrefix}-${name}`,

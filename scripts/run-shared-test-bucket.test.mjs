@@ -100,6 +100,11 @@ describe('run-shared-test-bucket', () => {
   it('keeps split shared buckets covering every shared test exactly once', async () => {
     const selected = await expandSharedBucketTargets();
 
+    for (const bucket of SHARED_TEST_BUCKETS.filter(({ label }) => label.startsWith('shared-'))) {
+      const expanded = await Promise.all(bucket.targets.map(async target =>
+        (await stat(target)).isDirectory() ? collectTests(target) : [target]));
+      expect(expanded.flat().length, bucket.label).toBeGreaterThan(0);
+    }
     expect(selected).toEqual(await collectTests('src/shared'));
     expect(new Set(selected).size).toBe(selected.length);
   });
