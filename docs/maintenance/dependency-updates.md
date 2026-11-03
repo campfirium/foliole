@@ -135,9 +135,44 @@ larger repair does not automatically transfer ownership or change lanes.
 
 Follow affected host rules without turning ordinary updates into full release
 acceptance. A blocked group does not hold unrelated eligible updates. Before
-closing a covered proposal, verify required checks for the exact QA candidate,
+closing an adopted proposal, verify required checks for the exact QA candidate,
 its integration into dev and remote dev containment, including any QA repairs.
 Do not use PR count to determine install, test, commit or task count.
+
+## Reviewed proposals and deferred adoption
+
+Every reviewed proposal ends with an explicit decision. Close adopted proposals
+after the evidence above. Close rejected or deferred proposals after recording the
+actual reason; closure does not claim adoption, validation or vulnerability repair.
+An open proposal is temporary work owned by an active handler, not a reminder.
+Do not bulk-close unreviewed, human-authored or out-of-scope proposals to reach zero.
+An access failure or interrupted review remains visibly incomplete with an owner.
+
+For a deferral, record the package and exact proposed version, evidence, upstream
+condition to resume, review date and reviewing owner here. The dependency-batch
+handler rechecks these conditions before selecting upgrades. A weekly check in
+the owning Codex chat covers periods without new PRs; it checks official evidence
+without installing, running full QA or creating another writer. Unchanged blockers
+stay quiet. When a condition changes, report the new evidence once for adoption
+through the ordinary handler. Update or remove the row when that decision lands.
+A failed upstream query is unknown, not an unchanged or resolved condition.
+
+Renovate matches closed proposals using their branch and version-bearing title.
+Major proposals use the full target version so rejecting one version does not
+ignore the whole major series. Before closing an older major-only title, rename
+it to the matching full-version title. Do not use broad ignore rules or forced
+recreation of the same rejected version. For grouped or nonunique proposals,
+verify the updater's actual recreation behavior before closing; the weekly
+condition review also covers support changes without a new target version.
+
+| Proposal | Deferred target and evidence | Resume condition | Reviewed | Owner |
+| --- | --- | --- | --- | --- |
+| [#191](https://github.com/campfirium/foliole/pull/191) | pdfjs-dist 6.4.299; React-PDF 11.0.0 pins 6.3.289, creating mismatched main and worker runtimes. | Official React-PDF supports a matching newer PDF.js; adopt and validate the pair. | 2026-11-03 | Dependency batch handler; weekly Codex check |
+| [#192](https://github.com/campfirium/foliole/pull/192) | minimatch 10.2.6; actual glob7 escaped-name regression, plus GHSA-g3hv-75wg-m249 still affects this target. | Upstream installer/temp/rimraf/glob chain supports a patched matcher, or a reviewed alternative passes the existing installer behavior tests; advisory repair remains separate. | 2026-11-03 | Dependency batch handler; weekly Codex check |
+| [#193](https://github.com/campfirium/foliole/pull/193) | TypeScript 7.0.2; typescript-eslint 8.72.1 requires TypeScript <6.1 and the new compiler API is not stable. | Official lint tooling supports TS7 and the production compiler-API consumers have a supported migration path. | 2026-11-03 | Dependency batch handler; weekly Codex check |
+
+See [Renovate closed-PR matching](https://docs.renovatebot.com/key-concepts/pull-requests/)
+and [version title configuration](https://docs.renovatebot.com/configuration-options/#commitmessageextra).
 
 References: [Renovate installation](https://docs.renovatebot.com/getting-started/installing-onboarding/),
 [PR hourly limit](https://docs.renovatebot.com/configuration-options/#prhourlylimit),

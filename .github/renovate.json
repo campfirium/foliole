@@ -32,6 +32,13 @@
   ],
   "packageRules": [
     {
+      "description": "Closing a deferred major proposal must not suppress later versions of that major.",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "commitMessageExtra": "to {{prettyNewVersion}}"
+    },
+    {
       "description": "Match the existing npm installation release-age policy.",
       "matchManagers": [
         "npm"
