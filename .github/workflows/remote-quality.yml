@@ -2,10 +2,10 @@ name: Dev Quality Check
 # Expressions cannot slice strings, so the dispatcher passes the trigger commit's 9-character
 # prefix; the title only uses it when it really prefixes github.sha, otherwise both stay full.
 run-name: >-
-  Dev Quality Check (${{ inputs.scope }}) @ ${{
+  Dev Quality Check (${{ inputs.mobile_quality_run_id != '' && 'mobile_resume' || inputs.scope }}) @ ${{
   (inputs.trigger_short != '' && startsWith(github.sha, inputs.trigger_short) && inputs.target_sha == github.sha && inputs.trigger_short)
   || (inputs.trigger_short != '' && startsWith(github.sha, inputs.trigger_short) && format('{0} via {1}', inputs.target_sha, inputs.trigger_short))
-  || format('{0} via {1}', inputs.target_sha, github.sha) }}${{ inputs.mobile_distribution == 'ios' && ' [mobile:ios]' || '' }}
+  || format('{0} via {1}', inputs.target_sha, github.sha) }}${{ inputs.mobile_distribution == 'ios' && ' [mobile:ios]' || '' }}${{ inputs.mobile_quality_run_id != '' && format(' [reuse:{0}]', inputs.mobile_quality_run_id) || '' }}
 
 on:
   workflow_dispatch:
@@ -27,6 +27,11 @@ on:
         default: none
         type: choice
         options: [none, ios]
+      mobile_quality_run_id:
+        description: Reuse this complete mobile QA when only distribution inputs changed
+        required: false
+        default: ''
+        type: string
       stages:
         description: Explicit replay stage IDs; full always uses all
         required: false
@@ -75,6 +80,16 @@ jobs:
             ios) test "$GITHUB_REF" = refs/heads/check && test "$SCOPE" = full ;;
             *) exit 1 ;;
           esac
+      - name: Validate mobile quality reuse selection
+        env:
+          QUALITY_RUN: ${{ inputs.mobile_quality_run_id }}
+          MOBILE: ${{ inputs.mobile_distribution }}
+          SCOPE: ${{ inputs.scope }}
+        run: |
+          if [ -n "$QUALITY_RUN" ]; then
+            test "$GITHUB_REF" = refs/heads/check && test "$MOBILE" = ios && test "$SCOPE" = full
+            node -e 'if (!/^[1-9]\d*$/.test(process.env.QUALITY_RUN)) throw new Error("Invalid quality run")'
+          fi
       - name: Require an explicit replay selection
         if: inputs.scope == 'replay'
         env:
@@ -105,7 +120,7 @@ jobs:
       scope: ${{ inputs.scope }}
 
   full-quality:
-    if: (inputs.scope == 'full' || inputs.scope == 'replay') && needs.dev-ref.result == 'success'
+    if: inputs.mobile_quality_run_id == '' && (inputs.scope == 'full' || inputs.scope == 'replay') && needs.dev-ref.result == 'success'
     needs: dev-ref
     uses: ./.github/workflows/dev-quality-chain.yml
     with:
@@ -114,9 +129,40 @@ jobs:
       trigger_ref: ${{ github.ref }}
       stages: ${{ inputs.scope == 'replay' && inputs.stages || 'all' }}
 
+  mobile-reuse:
+    if: inputs.mobile_quality_run_id != '' && needs.dev-ref.result == 'success'
+    needs: dev-ref
+    runs-on: ubuntu-latest
+    outputs:
+      accepted_sha: ${{ steps.identity.outputs.accepted_sha }}
+      artifact: ${{ steps.identity.outputs.artifact }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Verify original full quality and unchanged product inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOLIOLE_MOBILE_QUALITY_RUN_ID: ${{ inputs.mobile_quality_run_id }}
+        run: node scripts/ios/mobile-beta-evidence-read.mjs
+      - name: Verify affected distribution contracts
+        run: node scripts/quality/qa-mobile-resume.mjs --contracts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-quality-reuse-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .tmp/artifacts/mobile-quality-reuse/mobile-quality-evidence.json
+          if-no-files-found: error
+          retention-days: 14
+      - id: identity
+        run: |
+          echo "accepted_sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          echo 'artifact=mobile-quality-reuse-${{ github.run_id }}-${{ github.run_attempt }}' >> "$GITHUB_OUTPUT"
+
   mobile-context:
-    if: inputs.mobile_distribution == 'ios' && inputs.scope == 'full'
-    needs: full-quality
+    if: always() && inputs.mobile_distribution == 'ios' && inputs.scope == 'full' && (needs.full-quality.result == 'success' || needs.mobile-reuse.result == 'success')
+    needs: [full-quality, mobile-reuse]
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.identity.outputs.version }}
@@ -126,7 +172,7 @@ jobs:
       - name: Require this complete chain's accepted candidate
         id: identity
         env:
-          ACCEPTED_SHA: ${{ needs.full-quality.outputs.accepted_sha }}
+          ACCEPTED_SHA: ${{ needs.full-quality.outputs.accepted_sha || needs.mobile-reuse.outputs.accepted_sha }}
           TARGET_SHA: ${{ inputs.target_sha }}
         run: |
           test "$ACCEPTED_SHA" = "$TARGET_SHA"
@@ -134,12 +180,13 @@ jobs:
           echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
 
   mobile-ios:
-    if: inputs.mobile_distribution == 'ios'
-    needs: [full-quality, mobile-context]
+    if: always() && inputs.mobile_distribution == 'ios' && needs.mobile-context.result == 'success'
+    needs: [full-quality, mobile-reuse, mobile-context]
     uses: ./.github/workflows/release-ios.yml
     with:
-      target_sha: ${{ needs.full-quality.outputs.accepted_sha }}
+      target_sha: ${{ needs.full-quality.outputs.accepted_sha || needs.mobile-reuse.outputs.accepted_sha }}
       target_version: ${{ needs.mobile-context.outputs.version }}
+      quality_evidence_artifact: ${{ needs.mobile-reuse.outputs.artifact }}
       execution_lane: qa-mobile-beta
       trigger_ref: ${{ github.ref }}
     secrets:
@@ -151,7 +198,7 @@ jobs:
 
   timing-summary:
     if: ${{ always() }}
-    needs: [dev-ref, scoped-quality, full-quality, mobile-context, mobile-ios]
+    needs: [dev-ref, scoped-quality, full-quality, mobile-reuse, mobile-context, mobile-ios]
     permissions: { actions: read, contents: read }
     uses: ./.github/workflows/hosted-quality-timing-summary.yml
     with:

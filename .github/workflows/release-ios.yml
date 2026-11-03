@@ -7,6 +7,7 @@ on:
       target_version: { required: true, type: string }
       execution_lane: { required: true, type: string }
       trigger_ref: { required: true, type: string }
+      quality_evidence_artifact: { required: false, default: '', type: string }
     secrets:
       IOS_APP_STORE_API_ISSUER: { required: true }
       IOS_APP_STORE_API_KEY_ID: { required: true }
@@ -45,11 +46,17 @@ jobs:
       APPLE_API_ISSUER: ${{ secrets.IOS_APP_STORE_API_ISSUER }}
       APPLE_API_KEY_ID: ${{ secrets.IOS_APP_STORE_API_KEY_ID }}
       APPLE_API_KEY_BASE64: ${{ secrets.IOS_APP_STORE_API_KEY_BASE64 }}
+      FOLIOLE_IOS_QUALITY_EVIDENCE: ${{ inputs.quality_evidence_artifact != '' && format('{0}/.tmp/artifacts/mobile-quality-reuse/mobile-quality-evidence.json', github.workspace) || '' }}
     steps:
       - uses: actions/checkout@v4
         with: { ref: '${{ inputs.target_sha }}', persist-credentials: false }
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
+      - uses: actions/download-artifact@v5
+        if: inputs.quality_evidence_artifact != ''
+        with:
+          name: ${{ inputs.quality_evidence_artifact }}
+          path: .tmp/artifacts/mobile-quality-reuse
       - name: Verify the same accepted release or mobile QA candidate
         env:
           TRIGGER_REF: ${{ inputs.trigger_ref }}

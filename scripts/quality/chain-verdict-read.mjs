@@ -40,12 +40,12 @@ function ghApi(endpoint, binary = false) {
   });
 }
 
-function readReceipt(archive) {
+export function readReceipt(archive, member = 'chain-verdict.json') {
   const directory = mkdtempSync(path.join(os.tmpdir(), 'chain-verdict-'));
   try {
     const file = path.join(directory, 'receipt.zip');
     writeFileSync(file, archive);
-    const json = execFileSync('unzip', ['-p', file, 'chain-verdict.json'], {
+    const json = execFileSync('unzip', ['-p', file, member], {
       encoding: 'utf8', maxBuffer: 1024 * 1024
     });
     return JSON.parse(json);
@@ -54,20 +54,24 @@ function readReceipt(archive) {
   }
 }
 
-export function readChainVerdict({ repository, runId, targetSha, api = ghApi, decode = readReceipt }) {
+export function readChainEvidence({ repository, runId, api = ghApi, decode = readReceipt }) {
   if (!/^[\w.-]+\/[\w.-]+$/u.test(repository) || !/^\d+$/u.test(String(runId))) {
     throw new Error('An explicit repository and run ID are required');
   }
   const base = `repos/${repository}/actions`;
   const readRun = () => JSON.parse(api(`${base}/runs/${runId}`));
   const run = readRun();
-  if (run.status !== 'completed') return { verdict: 'incomplete' };
+  if (run.status !== 'completed') return { run };
   const name = `chain-verdict-${run.id}-${run.run_attempt}`;
   const { artifacts } = JSON.parse(api(`${base}/runs/${runId}/artifacts?name=${name}&per_page=100`));
   const matches = artifacts.filter(artifact => artifact.name === name && !artifact.expired);
-  if (matches.length !== 1) return { verdict: 'incomplete' };
+  if (matches.length !== 1) return { run };
   const artifact = matches[0];
   const receipt = decode(api(`${base}/artifacts/${artifact.id}/zip`, true));
   // A rerun may have started while the artifact was being downloaded.
-  return consumeChainVerdict({ run: readRun(), artifact, receipt, targetSha });
+  return { run: readRun(), artifact, receipt };
+}
+
+export function readChainVerdict({ targetSha, ...options }) {
+  return consumeChainVerdict({ ...readChainEvidence(options), targetSha });
 }

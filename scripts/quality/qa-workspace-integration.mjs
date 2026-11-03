@@ -5,6 +5,7 @@ import process from 'node:process';
 
 import { qaGit, qaRecordPath, readQaWorkspace } from './qa-workspace-state.mjs';
 import { readChainVerdict } from './chain-verdict-read.mjs';
+import { readMobileResumeEvidence } from '../ios/mobile-beta-evidence-read.mjs';
 
 export function saveQaRecord(record) {
   const saved = { ...record };
@@ -13,12 +14,17 @@ export function saveQaRecord(record) {
 }
 
 export function verifyQaRun(record, full = false) {
-  if (!record.run?.passed || (full && record.run.scope !== 'full')) throw new Error('QA needs matching passed evidence');
+  if (!record.run?.passed || (full && !['full', 'mobile-resume'].includes(record.run.scope))) throw new Error('QA needs matching passed evidence');
   const repository = execFileSync('gh', ['repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner'],
     { cwd: record.worktreePath, encoding: 'utf8' }).trim();
   const run = JSON.parse(execFileSync('gh', ['api', `repos/${repository}/actions/runs/${record.run.runId}`], { encoding: 'utf8' }));
   if (run.status !== 'completed' || run.conclusion !== 'success' || run.head_branch !== record.branch
       || run.head_sha !== record.run.targetSha) throw new Error('QA evidence is no longer a matching successful run');
+  if (record.run.scope === 'mobile-resume') {
+    const evidence = readMobileResumeEvidence({ repository, runId: run.id, sourceSha: record.run.targetSha, cwd: record.worktreePath });
+    if (evidence.qualityRunId !== record.run.qualityRunId) throw new Error('Mobile quality source differs from the owned delivery');
+    return;
+  }
   if (full) {
     const receipt = readChainVerdict({ repository, runId: run.id, targetSha: record.head });
     if (receipt.kind !== 'full' || receipt.verdict !== 'passed' || receipt.accepted_sha !== record.head) {

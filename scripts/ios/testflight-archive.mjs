@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { createTestflightCandidate } from './testflight-candidate.mjs';
 import { verifyTestflightArchive, verifyTestflightIpa } from './testflight-signature.mjs';
+import { verifyMobileEvidenceIdentity } from './mobile-beta-evidence.mjs';
 
 function run(command, args, options = {}) {
   return execFileSync(command, args, { stdio: 'inherit', ...options });
@@ -56,6 +57,10 @@ async function main() {
     buildNumber: env.FOLIOLE_IOS_BUILD_NUMBER, executionLane: env.FOLIOLE_IOS_EXECUTION_LANE,
     version: env.TARGET_VERSION, packageVersion: JSON.parse(await readFile('package.json', 'utf8')).version
   });
+  if (env.FOLIOLE_IOS_QUALITY_EVIDENCE) {
+    candidate.qualityEvidence = verifyMobileEvidenceIdentity(JSON.parse(await readFile(
+      env.FOLIOLE_IOS_QUALITY_EVIDENCE, 'utf8')), { sourceSha: candidate.sourceSha, runId: candidate.runId });
+  }
   if (capture('git', ['status', '--porcelain', '--untracked-files=no'])) throw new Error('Candidate source is dirty');
   const output = path.resolve('.tmp/artifacts/ios-testflight');
   const derivedData = path.resolve('.cache/ios-testflight/DerivedData');
