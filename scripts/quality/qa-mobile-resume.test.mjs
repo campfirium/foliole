@@ -63,6 +63,22 @@ it('recovers the owned run without another push, preflight or dispatch', async (
   expect(f.options.monitor).toHaveBeenCalledWith(expect.objectContaining({ runId: 88 }));
 });
 
+it('waits for terminal run metadata before verifying and recording successful delivery', async () => {
+  const f = fixture();
+  let completed = false;
+  const runner = f.options.runner.getMockImplementation();
+  f.options.runner.mockImplementation(async (command, args, options) => {
+    if (command === 'gh' && args.includes('repos/owner/repo/actions/runs/88') && !completed) {
+      return { code: 0, stdout: JSON.stringify({ head_branch: null, head_sha: null }), stderr: '' };
+    }
+    return runner(command, args, options);
+  });
+  f.options.monitor.mockImplementation(async () => { completed = true; return { failed: false }; });
+  await runQaMobileResume(f.options);
+  expect(f.options.monitor).toHaveBeenCalledOnce();
+  expect(readQaWorkspace(f.dev).run.passed).toBe(true);
+});
+
 it('does not dispatch when original quality or product equivalence fails', async () => {
   const f = fixture(); f.options.readQuality.mockImplementation(() => { throw new Error('product differs'); });
   await expect(runQaMobileResume(f.options)).rejects.toThrow('product differs');
@@ -80,6 +96,19 @@ it('keeps an ambiguous dispatch pending and refuses to dispatch it twice', async
 it('does not mark failed distribution as passed', async () => {
   const f = fixture(); f.options.monitor.mockResolvedValue({ failed: true });
   await expect(runQaMobileResume(f.options)).rejects.toThrow('Mobile distribution failed');
+  expect(readQaWorkspace(f.dev).run.passed).not.toBe(true);
+});
+
+it('refuses terminal evidence for a different source without recording success', async () => {
+  const f = fixture();
+  const runner = f.options.runner.getMockImplementation();
+  f.options.runner.mockImplementation(async (command, args, options) => {
+    if (command === 'gh' && args.includes('repos/owner/repo/actions/runs/88')) {
+      return { code: 0, stdout: JSON.stringify({ head_branch: 'check', head_sha: 'b'.repeat(40) }), stderr: '' };
+    }
+    return runner(command, args, options);
+  });
+  await expect(runQaMobileResume(f.options)).rejects.toThrow('Mobile run identity differs');
   expect(readQaWorkspace(f.dev).run.passed).not.toBe(true);
 });
 
