@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,
   DEFAULT_FOLDER_LIST_SORT_KEY,
@@ -26,7 +28,7 @@ import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
 type ReviewBreadcrumbItem = { id: string; isCurrent?: boolean; label: string; targetNodeId: string };
-type CompanionShellContentProps = CompanionShellSearchRouteProps & {
+export type CompanionShellContentProps = CompanionShellSearchRouteProps & {
   directorySelection: CompanionDirectorySelection;
   browseSortDirection?: FolderListSortDirection;
   browseSortKey?: FolderListSortKey;
@@ -101,7 +103,8 @@ function readingNavigation(props: CompanionShellContentProps) {
 }
 
 function renderRecentContent(props: CompanionShellContentProps) {
-  const navigation = readingNavigation(props);
+  const navigation = props.surface.selectedBrowseNodeId && !props.surface.browsedFolder
+    ? readingNavigation(props) : undefined;
   if (props.isBrowseDirectoryOpen) {
     if (
       (props.directorySelection.kind === 'internal' ||
@@ -121,6 +124,7 @@ function renderRecentContent(props: CompanionShellContentProps) {
     }
     return (
       <CompanionDirectoryContent
+        articleOnly={props.directorySelection.kind === 'externalDocument'}
         onChangeSelection={props.onChangeDirectorySelection}
         onExitArticle={(selection) => {
           props.surface.handleExitDirectoryArticle();
@@ -137,11 +141,12 @@ function renderRecentContent(props: CompanionShellContentProps) {
   return <RecentBrowseContent navigation={navigation} surface={props.surface} workspaceSync={props.workspaceSync} />;
 }
 
-export function renderCompanionShellContent(props: CompanionShellContentProps) {
+function renderContent(props: CompanionShellContentProps) {
   if (!props.workspaceSync.isWorkspaceSyncStateReady) {
     return <CompanionWorkspaceSyncLoading />;
   }
   const searchSurface = renderCompanionShellSearchSurface({
+    readerOnly: Boolean(props.searchExternalDocument || props.searchPdfResult || props.isSearchArticleOpen),
     externalDocument: props.searchExternalDocument,
     pdfResult: props.searchPdfResult,
     searchMatch: props.searchMatch,
@@ -183,4 +188,24 @@ export function renderCompanionShellContent(props: CompanionShellContentProps) {
       workspaceSync={props.workspaceSync}
     />
   );
+}
+
+export function resolveCompanionShellPage(props: CompanionShellContentProps): {
+  key: 'recent' | 'directory' | 'search' | null; reading: boolean; content: ReactNode;
+} {
+  if (!props.workspaceSync.isWorkspaceSyncStateReady) {
+    return { key: null, reading: false, content: <CompanionWorkspaceSyncLoading /> };
+  }
+  const search = Boolean(props.searchExternalDocument || props.searchPdfResult || props.isSearchArticleOpen);
+  const browse = props.surface.activeAction === 'recent' || props.surface.isFlowBrowsing;
+  const reading = search || (browse && Boolean(props.surface.selectedBrowseNodeId) && !props.surface.browsedFolder
+    && (!props.isBrowseDirectoryOpen || DirectoryArticle.canRenderCompanionDirectoryArticle(props)))
+    || (browse && props.isBrowseDirectoryOpen && props.directorySelection.kind === 'externalDocument');
+  const key = search || props.surface.activeAction === 'search' ? 'search'
+    : browse ? props.isBrowseDirectoryOpen ? 'directory' : 'recent' : null;
+  return { key, reading, content: renderContent(props) };
+}
+
+export function renderCompanionShellContent(props: CompanionShellContentProps) {
+  return renderContent(props);
 }

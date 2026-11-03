@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 
 import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,
@@ -53,11 +53,17 @@ export function useCompanionBrowseState(
   );
   const needsRecentArticles = display.activeAction === 'recent' || (display.activeAction === 'review' &&
     selectedBrowseNodeId !== null && selectedBrowseNodeId !== display.flowNodeId);
-  const projectedArticles = useMemo(
-    // Hidden Flow does not consume this list; entering Browse projects the current snapshot.
-    () => needsRecentArticles ? resolveCompanionRecentArticles(browseSnapshot, sort.sortKey, sort.sortDirection) : [],
-    [browseSnapshot, needsRecentArticles, sort.sortDirection, sort.sortKey]
-  );
+  const projection = useRef<{ snapshot: typeof browseSnapshot; sortKey: typeof sort.sortKey;
+    sortDirection: typeof sort.sortDirection; articles: CompanionRecentArticle[] } | null>(null);
+  const projectedArticles = useMemo(() => {
+    if (!needsRecentArticles) return projection.current?.articles ?? [];
+    const previous = projection.current;
+    if (previous && previous.snapshot === browseSnapshot && previous.sortKey === sort.sortKey &&
+      previous.sortDirection === sort.sortDirection) return previous.articles;
+    const articles = resolveCompanionRecentArticles(browseSnapshot, sort.sortKey, sort.sortDirection);
+    projection.current = { snapshot: browseSnapshot, ...sort, articles };
+    return articles;
+  }, [browseSnapshot, needsRecentArticles, sort.sortDirection, sort.sortKey]);
   const recentArticles = useMemo(() => projectedArticles.length > 0
     ? projectedArticles : buildReadableArticleFallback(workspaceSync.readableArticle),
   [projectedArticles, workspaceSync.readableArticle]);

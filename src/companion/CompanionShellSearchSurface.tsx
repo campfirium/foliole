@@ -28,6 +28,7 @@ export type CompanionShellSearchRouteProps = {
 };
 
 export function renderCompanionShellSearchSurface(props: {
+  readerOnly?: boolean;
   externalDocument: Pick<CompanionExternalDocumentSearchResult, 'document_id'> | null;
   searchMatch?: CompanionSearchMatch | null | undefined;
   pdfResult: Pick<CompanionPdfPageTextSearchResult, 'attachment_id' | 'page'> | null;
@@ -45,11 +46,11 @@ export function renderCompanionShellSearchSurface(props: {
   if (!isSearchSurfaceOpen) return null;
   return (
     <>
-      <CompanionSearchContent
+      {!props.readerOnly ? <CompanionSearchContent
         onOpenExternalDocument={props.onOpenExternalDocument}
         onOpenPdf={props.onOpenPdf}
         onOpenTopic={props.onOpenTopic}
-      />
+      /> : null}
       {props.externalDocument ? (
         <CompanionSearchExternalArticle searchMatch={props.searchMatch} document={props.externalDocument} onExit={props.onExitExternalDocument} />
       ) : null}

@@ -1,5 +1,3 @@
-import { useRef } from 'react';
-
 import {
   companionMainBottomInsetClassName,
   companionMobileRailClassName,
@@ -9,10 +7,10 @@ import {
 import { canRenderCompanionDirectoryArticle } from './CompanionDirectoryReadableArticleModel';
 import { CompanionFlowBrowseBar } from './CompanionFlowBrowseBar';
 import { CompanionFlowHistorySurface } from './CompanionFlowHistorySurface';
-import { CompanionListViewportProvider } from './CompanionListViewport';
+import { CompanionPageStack } from './CompanionPageStack';
 import { CompanionPreviewLifecycle } from './CompanionPreviewLifecycle';
 import type { CompanionShellModel } from './CompanionShell';
-import { renderCompanionShellContent } from './CompanionShellContent';
+import { resolveCompanionShellPage } from './CompanionShellContent';
 import { CompanionShellOverlays } from './CompanionShellOverlays';
 import { CompanionShellTopBar } from './CompanionShellTopBar';
 import { CompanionWorkspaceActionsProvider } from './CompanionWorkspaceActions';
@@ -33,57 +31,49 @@ function getTopBarBackHandler(model: CompanionShellModel) {
     : () => undefined;
 }
 
-function renderCompanionMainContent(model: CompanionShellModel) {
+function resolveMainPage(model: CompanionShellModel) {
   const bottomInsetClassName = model.surface.activeAction === 'review' && !model.surface.isFlowBrowsing
     ? companionReviewBottomInsetClassName
     : companionMainBottomInsetClassName;
-  if (!model.workspaceSync.isWorkspaceSyncStateReady) {
-    return (
-      <div className={`mx-auto flex min-h-full w-full max-w-[760px] flex-col ${companionMobileRailClassName} pt-0 ${bottomInsetClassName}`}>
-        <CompanionWorkspaceSyncLoading />
-      </div>
-    );
-  }
-  return (
-    <div className={`mx-auto flex min-h-full w-full max-w-[760px] flex-col ${companionMobileRailClassName} pt-0 ${bottomInsetClassName}`}>
-      {!hasImmersiveReadingContent(model) && <CompanionShellTopBar
-        onOpenSyncSettings={() => openCompanionSyncSettings(model)}
-        topBarProps={model.topBarProps}
-        workspaceSync={model.workspaceSync}
-      />}
-      {renderCompanionShellContent({
-        hasSnapshot: Boolean(model.workspaceSync.state.workspace_snapshot),
-        browseSortDirection: model.browseSortDirection,
-        browseSortKey: model.browseSortKey,
-        directorySelection: model.directorySelection,
-        onBackDirectorySelection: getTopBarBackHandler(model),
-        onBackToSettingsList: () => model.setSettingsPage('list'),
-        onChangeDirectorySelection: model.setDirectorySelection,
-        onChangeBrowseSortDirection: model.setBrowseSortDirection,
-        onChangeBrowseSortKey: model.setBrowseSortKey,
-        isBrowseDirectoryOpen: model.isBrowseDirectoryOpen,
-        isSearchArticleOpen: model.isSearchArticleOpen,
-        onExitSearchArticle: model.handleExitSearchArticle,
-        onExitSearchExternalDocument: model.handleExitSearchExternalDocument,
-        onExitSearchPdf: model.handleExitSearchPdf,
-        onOpenSyncSettingsPage: model.setSettingsPage,
-        onOpenSyncSettings: () => model.setSettingsPage('sync'),
-        onOpenSearchExternalDocument: model.handleOpenSearchExternalDocument,
-        onOpenSearchPdf: model.handleOpenSearchPdf,
-        onOpenSearchTopic: model.handleOpenSearchTopic,
-        onResetDirectorySelection: () => model.setDirectorySelection({ kind: 'root' }),
-        onSelectReviewBreadcrumbItem: model.surface.handleSelectBrowseNode,
-        reviewBreadcrumbItems: model.reviewBreadcrumbItems,
-        searchExternalDocument: model.searchExternalDocument,
-        searchPdfResult: model.searchPdfResult,
-        searchMatch: model.searchMatch,
-        settingsPage: model.settingsPage,
-        surface: model.surface,
-        workspaceError: model.workspaceSync.error,
-        workspaceSync: model.workspaceSync
-      })}
-    </div>
-  );
+  const page = resolveCompanionShellPage({
+    hasSnapshot: Boolean(model.workspaceSync.state.workspace_snapshot),
+    browseSortDirection: model.browseSortDirection,
+    browseSortKey: model.browseSortKey,
+    directorySelection: model.directorySelection,
+    onBackDirectorySelection: getTopBarBackHandler(model),
+    onBackToSettingsList: () => model.setSettingsPage('list'),
+    onChangeDirectorySelection: model.setDirectorySelection,
+    onChangeBrowseSortDirection: model.setBrowseSortDirection,
+    onChangeBrowseSortKey: model.setBrowseSortKey,
+    isBrowseDirectoryOpen: model.isBrowseDirectoryOpen,
+    isSearchArticleOpen: model.isSearchArticleOpen,
+    onExitSearchArticle: model.handleExitSearchArticle,
+    onExitSearchExternalDocument: model.handleExitSearchExternalDocument,
+    onExitSearchPdf: model.handleExitSearchPdf,
+    onOpenSyncSettingsPage: model.setSettingsPage,
+    onOpenSyncSettings: () => model.setSettingsPage('sync'),
+    onOpenSearchExternalDocument: model.handleOpenSearchExternalDocument,
+    onOpenSearchPdf: model.handleOpenSearchPdf,
+    onOpenSearchTopic: model.handleOpenSearchTopic,
+    onResetDirectorySelection: () => model.setDirectorySelection({ kind: 'root' }),
+    onSelectReviewBreadcrumbItem: model.surface.handleSelectBrowseNode,
+    reviewBreadcrumbItems: model.reviewBreadcrumbItems,
+    searchExternalDocument: model.searchExternalDocument,
+    searchPdfResult: model.searchPdfResult,
+    searchMatch: model.searchMatch,
+    settingsPage: model.settingsPage,
+    surface: model.surface,
+    workspaceError: model.workspaceSync.error,
+    workspaceSync: model.workspaceSync
+  });
+  const reading = page.reading || hasImmersiveReadingContent(model);
+  const content = <div className={`mx-auto flex min-h-full w-full max-w-[760px] flex-col ${companionMobileRailClassName} pt-0 ${bottomInsetClassName}`}>
+    {!reading && model.workspaceSync.isWorkspaceSyncStateReady ? <CompanionShellTopBar
+      onOpenSyncSettings={() => openCompanionSyncSettings(model)} topBarProps={model.topBarProps}
+      workspaceSync={model.workspaceSync} /> : null}
+    {model.workspaceSync.isWorkspaceSyncStateReady ? page.content : <CompanionWorkspaceSyncLoading />}
+  </div>;
+  return { ...page, reading, content };
 }
 
 function isReadableArticleImmersive(model: CompanionShellModel) {
@@ -121,7 +111,7 @@ function FlowHistorySurface(props: { children: React.ReactNode; model: Companion
 
 export function CompanionShellView(props: { model: CompanionShellModel }) {
   const { model } = props;
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const page = resolveMainPage(model);
   return (
     <FlowHistorySurface model={model}>
       {import.meta.env.DEV && window.__FOLIOLE_COMPANION_PREVIEW_HOST__ !== undefined ? (
@@ -132,22 +122,9 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
           ready={model.workspaceSync.isWorkspaceSyncStateReady
             && (model.surface.activeAction !== 'review' || model.surface.flowReady)} />
       ) : null}
-      <main className={`${companionViewportHeightClassName} bg-companion-base text-foreground`}>
-        <div
-          className={`${companionViewportHeightClassName} overflow-y-auto`}
-          data-testid="companion-scroll-container"
-          ref={scrollRef}
-          onClick={model.handleContentTap}
-          onScroll={model.handleContainerScroll}
-          onTouchEnd={model.floatingBar.handleTouchEnd}
-          onTouchMove={model.floatingBar.handleTouchMove}
-          onTouchStart={model.floatingBar.handleTouchStart}
-        >
-          <CompanionListViewportProvider scrollRef={scrollRef}
-            sortIdentity={`${model.browseSortKey}:${model.browseSortDirection}`}>
-            {renderCompanionMainContent(model)}
-          </CompanionListViewportProvider>
-        </div>
+      <main className={`relative ${companionViewportHeightClassName} bg-companion-base text-foreground`}>
+        <CompanionPageStack key={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? model.workspaceSync.bootstrapState?.database_path ?? 'preview'}
+          model={model} pageKey={page.key} reading={page.reading} content={page.content} />
       </main>
       {model.surface.isFlowBrowsing && !model.surface.readingActivity.editing ? (
         <CompanionFlowBrowseBar onResume={model.surface.handleResumeFlow} />

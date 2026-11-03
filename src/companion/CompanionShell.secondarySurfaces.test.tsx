@@ -148,7 +148,7 @@ function expectCaptureSheet() {
   expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   expect(screen.getByRole('textbox', { name: 'Capture text' })).toBeInTheDocument();
   expect(screen.getByText('Paste from Clipboard')).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Upload File' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Upload File' })).toBeInTheDocument();
 }
 
 function expectBrowseMenuSheet() {

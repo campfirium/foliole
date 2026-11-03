@@ -1,12 +1,14 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { FolderListSortDirection, FolderListSortKey } from '../features/nodes/model/folderListOrdering';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { retainCompanionOpenVirtualFolder } from '../shared/platform/companion/browse/companionOpenVirtualFolders';
 import {
   resolveCompanionFolderViewByNodeId,
   resolveCompanionTrashFolderViewByNodeId
 } from '../shared/platform/companionBrowseLists';
+import { AppButton, AppLoadingState } from '../shared/ui';
 
 import { toReadableExternalArticle } from './CompanionDirectoryExternalArticle';
 import { CompanionDirectoryList } from './CompanionDirectoryListSurface';
@@ -22,6 +24,7 @@ import { useCompanionExternalDirectory, useCompanionExternalDocument } from './u
 export type { CompanionDirectorySelection } from './CompanionDirectoryModel';
 
 interface CompanionDirectoryContentProps {
+  articleOnly?: boolean;
   selection: CompanionDirectorySelection;
   onChangeSelection(selection: CompanionDirectorySelection): void;
   onExitArticle(selection: CompanionDirectorySelection): void;
@@ -90,6 +93,10 @@ function CompanionDirectoryListContent(props: {
 }
 
 export function CompanionDirectoryContent(props: CompanionDirectoryContentProps) {
+  const t = useTranslation();
+  const folderId = (props.selection.kind === 'virtual' || props.selection.kind === 'internal')
+    && props.snapshot?.nodesById[props.selection.nodeId]?.virtualFilter ? props.selection.nodeId : null;
+  useEffect(() => folderId ? retainCompanionOpenVirtualFolder(folderId) : undefined, [folderId]);
   const directory = useCompanionExternalDirectory();
   const externalDocument = useCompanionExternalDocument(props.selection);
   const { sections } = useCompanionDirectorySections({
@@ -130,6 +137,13 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
       />
     );
   }
+
+  if (props.articleOnly) return <section className="fixed inset-0 z-surface-raised bg-companion-base px-4 pt-12">
+    <AppButton onClick={() => props.onExitArticle(parentSelection ?? { kind: 'root' })} variant="ghost">
+      {t('companion.back')}
+    </AppButton>
+    <AppLoadingState title={t('companion.topicBody.loading.title')} />
+  </section>;
 
   return <CompanionDirectoryListContent
     directory={directory}
