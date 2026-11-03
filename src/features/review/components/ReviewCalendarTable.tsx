@@ -23,10 +23,12 @@ export function ReviewCalendarTable(props: ReviewCalendarTableProps) {
     const valid = date.getMonth() === month.getMonth();
     if (!valid) return { key: `${calendarDateKey(month)}-${day}`, valid: false, current: false, past: false, label: '', values: props.duration ? [null, null, null] : [null, null] };
     const value = props.counts(key);
-    const time = props.duration ? formatForegroundTime(props.duration(key), locale) : undefined;
+    const duration = props.duration?.(key);
+    const time = duration === undefined ? undefined
+      : duration === null || duration < 60_000 ? '' : Math.floor(duration / 60_000).toLocaleString(locale);
     const label = `${key} · ${t(key < props.today ? 'desktop.reviewCalendar.completed' : 'desktop.reviewCalendar.due')} · ` +
       `Items: ${value.items ?? t('desktop.reviewCalendar.unavailable')} · Topics: ${value.topics ?? t('desktop.reviewCalendar.unavailable')}` +
-      (props.duration ? ` · ${t('desktop.foregroundTime.title')}: ${time || t('desktop.reviewCalendar.unavailable')}` : '');
+      (duration !== undefined ? ` · ${t('desktop.foregroundTime.title')}: ${formatForegroundTime(duration, locale) || t('desktop.reviewCalendar.unavailable')}` : '');
     return { key, valid, label, current: key === props.today, past: key < props.today, values: time === undefined ? [value.items, value.topics] : [value.items, value.topics, time] };
   }
   const rows = Array.from({ length: 31 }, (_, index) => ({
