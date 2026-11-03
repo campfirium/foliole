@@ -12,6 +12,7 @@ export const CORE_TABLES = [
   'external_documents',
   'external_search_folders',
   'import_sources',
+  'import_runs',
   'node_reading',
   'node_reading_host_state',
   'node_review',
@@ -45,7 +46,6 @@ export const CORE_TABLES = [
 
 export const DESKTOP_ONLY_TABLES = new Set([
   'external_folder_host_preferences',
-  'import_runs',
   'incoming_updates',
   'keep_import_item_cache',
   'keep_import_items',

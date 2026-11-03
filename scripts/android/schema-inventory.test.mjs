@@ -19,7 +19,8 @@ import { ANDROID_COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/and
 import {
   EXPECTED_SHARED_SCHEMA_DRIFT
 } from './schema-inventory-expected.mjs';
-import { buildSchemaDriftReport } from './schema-inventory.mjs';
+import { IMPORT_RUN_SCHEMA } from '../../lib/core/database/importRunSchema.ts';
+import { buildSchemaDriftReport, loadDesktopFreshSchemaStatements } from './schema-inventory.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const COMPANION_SCHEMA = path.join(REPO_ROOT, 'android', 'app', 'src', 'main', 'assets', 'companion-core-schema.json');
@@ -87,7 +88,6 @@ describe('schema inventory drift gate', () => {
 
     expect(report.desktopOnly).toEqual([
       { classification: 'known-platform-only', table: 'external_folder_host_preferences' },
-      { classification: 'known-platform-only', table: 'import_runs' },
       { classification: 'known-platform-only', table: 'incoming_updates' },
       { classification: 'known-platform-only', table: 'keep_import_item_cache' },
       { classification: 'known-platform-only', table: 'keep_import_items' },
@@ -100,6 +100,9 @@ describe('schema inventory drift gate', () => {
       { classification: 'known-platform-only', table: 'settings' },
       { classification: 'known-platform-only', table: 'sync_peers' }
     ]);
+    expect(loadDesktopFreshSchemaStatements()).toContain(IMPORT_RUN_SCHEMA);
+    expect(ANDROID_COMPANION_SCHEMA_STATEMENTS).toContain(IMPORT_RUN_SCHEMA);
+    expect(report.shared.filter(({ table }) => table === 'import_runs')).toEqual([]);
     expect(report.androidOnly).toEqual([
       { classification: 'known-platform-only', table: 'companion_meta' }
     ]);
