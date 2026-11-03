@@ -1,14 +1,16 @@
-import { Capacitor, SystemBars, SystemBarType } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 
-import { ReadingSystemBarOwner } from './readingSystemBarOwner';
+import { ReadingSystemBarOwner, type ReadingSystemBarTarget } from './readingSystemBarOwner';
+
+interface ReadingSystemBarsHost {
+  setReadingSystemBars(target: ReadingSystemBarTarget): Promise<void>;
+}
+const host = registerPlugin<ReadingSystemBarsHost>('FolioleCompanionBootstrap');
 
 export function supportsCompanionReadingSystemBars() {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 }
 
-export const companionReadingSystemBars = new ReadingSystemBarOwner(async hidden => {
-  if (!supportsCompanionReadingSystemBars()) return;
-  const options = { bar: SystemBarType.StatusBar };
-  if (hidden) await SystemBars.hide(options);
-  else await SystemBars.show(options);
+export const companionReadingSystemBars = new ReadingSystemBarOwner(async target => {
+  if (supportsCompanionReadingSystemBars()) await host.setReadingSystemBars(target);
 });

@@ -102,7 +102,7 @@ html, body, #root, #root * { scrollbar-width: none; }
 .companion-review-surface {
   --companion-review-controls-height: 44px;
   --companion-review-breadcrumb-height: 36px;
-  padding-top: calc(env(safe-area-inset-top, 0px) + var(--companion-review-controls-height) + var(--companion-page-content-gap));
+  padding-top: calc(env(safe-area-inset-top, 0px) + var(--companion-review-controls-height) + var(--companion-page-content-gap) + var(--companion-system-chrome-top, 0px));
 }
 .companion-review-header {
   padding-bottom: var(--companion-page-content-gap);

@@ -20,3 +20,7 @@ section.companion-reading-overlay:has(> .companion-review-footer)::after {
 body:has(.companion-reading-display-controls) .companion-reading-system-bar-banner {
   display: none;
 }
+/* The system bar and reading controls overlay one stable reading canvas. */
+section > .companion-reading-top-chrome {
+  padding-top: max(env(safe-area-inset-top, 0px), var(--companion-system-chrome-top, 0px));
+}

@@ -12,6 +12,24 @@ public class FolioleCompanionBootstrapPlugin extends Plugin {
     private FolioleFlowGestureRegion flowGestureRegion;
 
     @PluginMethod
+    public void setReadingSystemBars(PluginCall call) {
+        Boolean enabled = call.getBoolean("enabled");
+        Boolean hidden = call.getBoolean("hidden");
+        if (enabled == null || hidden == null || (hidden && !enabled)) {
+            call.reject("Invalid reading system bar state.");
+            return;
+        }
+        getActivity().runOnUiThread(() -> {
+            try {
+                ((MainActivity) getActivity()).setReadingSystemBars(enabled, hidden);
+                call.resolve();
+            } catch (Exception error) {
+                call.reject("Could not update reading system bars.", error);
+            }
+        });
+    }
+
+    @PluginMethod
     public void setAppearance(PluginCall call) {
         String background = call.getString("backgroundColor");
         if (background == null || !background.matches("#[0-9a-fA-F]{6}")) {

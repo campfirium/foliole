@@ -5,13 +5,17 @@ import { companionReadingSystemBars, supportsCompanionReadingSystemBars } from '
 
 import { useCompanionReadingDisplay } from './companionReadingDisplay';
 
-export function useCompanionReadingSystemBars(editing: boolean) {
+export function useCompanionReadingSystemBars(editing: boolean, chromeVisible: boolean) {
+  useEffect(() => () => {
+    if (supportsCompanionReadingSystemBars()) void companionReadingSystemBars.request({ enabled: false, hidden: false });
+  }, []);
   const { hideSystemStatusBar } = useCompanionReadingDisplay();
   useEffect(() => {
     if (!supportsCompanionReadingSystemBars()) return;
-    const hidden = hideSystemStatusBar && !editing;
-    void companionReadingSystemBars.request(hidden);
-    const reapply = () => { void companionReadingSystemBars.request(hidden, true); };
+    const enabled = hideSystemStatusBar && !editing;
+    const target = { enabled, hidden: enabled && !chromeVisible };
+    void companionReadingSystemBars.request(target);
+    const reapply = () => { void companionReadingSystemBars.request(target, true); };
     let active = true;
     let unsubscribe: (() => void) | undefined;
     void subscribeNativeAppForeground(() => { if (active) reapply(); }).then(remove => {
@@ -23,7 +27,6 @@ export function useCompanionReadingSystemBars(editing: boolean) {
       active = false;
       unsubscribe?.();
       window.removeEventListener('orientationchange', reapply);
-      void companionReadingSystemBars.request(false);
     };
-  }, [hideSystemStatusBar, editing]);
+  }, [hideSystemStatusBar, editing, chromeVisible]);
 }

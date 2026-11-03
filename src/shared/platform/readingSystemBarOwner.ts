@@ -1,13 +1,17 @@
+export interface ReadingSystemBarTarget { enabled: boolean; hidden: boolean }
+const sameTarget = (a: ReadingSystemBarTarget, b: ReadingSystemBarTarget | undefined) =>
+  a.enabled === b?.enabled && a.hidden === b?.hidden;
+
 /** Owns the latest reading target across renderer mounts and delayed host calls. */
 export class ReadingSystemBarOwner {
-  private target = false;
-  private applied: boolean | undefined;
+  private target: ReadingSystemBarTarget = { enabled: false, hidden: false };
+  private applied: ReadingSystemBarTarget | undefined;
   private revision = 0;
   private pending: Promise<void> | null = null;
   private failed = false;
   private listeners = new Set<() => void>();
 
-  constructor(private readonly apply: (hidden: boolean) => Promise<void>) {}
+  constructor(private readonly apply: (target: ReadingSystemBarTarget) => Promise<void>) {}
 
   getError = () => this.failed;
   subscribe = (listener: () => void) => {
@@ -20,12 +24,12 @@ export class ReadingSystemBarOwner {
   };
   retry = () => this.request(this.target, true);
 
-  request(hidden: boolean, force = false): Promise<void> {
-    if (hidden === this.target && this.pending) return this.pending;
-    if (hidden === this.target && hidden === this.applied && !force && !this.failed) return Promise.resolve();
-    this.target = hidden;
+  request(target: ReadingSystemBarTarget, force = false): Promise<void> {
+    if (sameTarget(target, this.target) && this.pending) return this.pending;
+    if (sameTarget(target, this.target) && sameTarget(target, this.applied) && !force && !this.failed) return Promise.resolve();
+    this.target = target;
     this.revision += 1;
-    if (!this.pending) this.pending = this.drain().finally(() => { this.pending = null; });
+    if (!this.pending) this.pending = Promise.resolve().then(() => this.drain()).finally(() => { this.pending = null; });
     return this.pending;
   }
 
@@ -33,10 +37,10 @@ export class ReadingSystemBarOwner {
     let completed: number;
     do {
       completed = this.revision;
-      const hidden = this.target;
+      const target = this.target;
       try {
-        await this.apply(hidden);
-        this.applied = hidden;
+        await this.apply(target);
+        this.applied = target;
         if (completed === this.revision) this.failed = false;
       } catch {
         if (completed === this.revision) this.failed = true;

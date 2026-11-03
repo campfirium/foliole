@@ -14,6 +14,8 @@ export function createCapacitorConfig(env: NodeJS.ProcessEnv = process.env): Cap
     },
     experimental: { ios: { spm: { swiftToolsVersion: '6.0' } } },
     plugins: {
+      // MainActivity owns window insets so reading chrome can overlay a stable full-height canvas.
+      SystemBars: { insetsHandling: 'disable' },
       CapacitorSQLite: {
         androidIsEncryption: false,
         iosDatabaseLocation: 'Library/CapacitorDatabase',

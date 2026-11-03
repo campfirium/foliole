@@ -14,7 +14,7 @@ export function useImmersiveReadableArticleState(initialSelection: EditorSelecti
   const [openReadingSheet, setOpenReadingSheet] = useState<'font' | 'highlight' | 'info' | null>(null);
   const [readingTarget, setReadingTarget] = useState<{ selection: EditorSelection; commandId: string } | null>(null);
   const nextReadingCommandId = useRef(0);
-  useCompanionReadingSystemBars(isContentEditing);
+  useCompanionReadingSystemBars(isContentEditing, isChromeVisible);
 
   const surfaceTap = useImmersiveReadingSurfaceTap(isContentEditing, setIsChromeVisible);
 
