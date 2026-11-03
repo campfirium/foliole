@@ -68,6 +68,23 @@ it('keeps vendor releases, info security risks and unknown identities in the sam
   expect(projectSecurityOwner(options.owner, now).findings.filter(row => row.active)).toHaveLength(6);
 });
 
+it('retains device bulletin observations without opening work and still delivers actionable risks', () => {
+  const options = setup();
+  const bulletin = finding('android', 'android-os-webview', 'device-review-2026-11-01-157.0.8103.30');
+  observe(options, 0, [bulletin]);
+  expect(notify(options)).toHaveLength(0);
+  expect(projectSecurityOwner(options.owner, now).findings.filter(row => row.active)).toHaveLength(1);
+  observe(options, 1000, [{ ...bulletin, severity: 'high' },
+    finding('android', 'android-os-webview', 'GHSA-example-applicable'),
+    finding('android', 'android-os-webview', 'device-review-unknown')]);
+  notify(options, 1000);
+  const changes = history(options).flatMap(row => row.changes);
+  expect(changes.map(row => row.current?.advisory).sort()).toEqual([
+    bulletin.advisory, 'GHSA-example-applicable', 'device-review-unknown'
+  ].sort());
+  expect(projectSecurityOwner(options.owner, now + 1000).overallStatus).toBe('incomplete');
+});
+
 it('compares one source continuously from missing to error, recovery and recurrence', () => {
   const options = setup();
   observe(options, 0, [], { status: 'unsupported', reason: 'required-observation-missing' });

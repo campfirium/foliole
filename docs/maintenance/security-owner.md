@@ -97,8 +97,14 @@ visible in `status`, and qualification remains incomplete. The same rule applies
 to historical notification baselines, avoiding false recovery messages. Real
 source failures, missing or unsupported coverage, their recovery, and finding
 changes still notify; an unchanged failure becoming stale does not notify again.
-Known informational Android SDK and embedded SQLite/LibTomCrypt version comparisons
-remain visible in `status` without opening investigation chats. The four fixed iOS
+Known informational Android SDK and embedded SQLite/LibTomCrypt version comparisons,
+and Android OS/WebView bulletin comparisons with the known `device-review` identity,
+remain visible in `status` without opening investigation chats. OS and WebView
+updates belong to device vendors and administrators, not the Foliole development
+queue. Foliole owns its minimum runtime requirements, compatibility and applicable
+application vulnerabilities. This notification routing does not mark a device safe
+or patched; concrete advisories, higher severity findings, unknown identities and
+source failures still notify. The four fixed iOS
 coverage-review placeholders also remain in `status`. SQLCipher vendor release
 notices, JDK trust changes, Apple security releases, unknown finding identities and
 source failures still notify, including informational findings. Ordinary package

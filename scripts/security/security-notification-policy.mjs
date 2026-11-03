@@ -16,6 +16,9 @@ function statusOnlyFinding(key, signal) {
   if (signal.package === 'android-sdk') {
     return /^release-review-(?:build-tools|platform-tools|cmdline-tools)-/u.test(signal.advisory);
   }
+  if (signal.package === 'android-os-webview') {
+    return /^device-review-\d{4}-\d{2}-\d{2}-\d+\.\d+\.\d+\.\d+$/u.test(signal.advisory);
+  }
   // These producers compare versions only. SQLCipher vendor releases, JDK trust
   // changes and unknown identities remain actionable, including info findings.
   return ['sqlite', 'libtomcrypt'].includes(signal.package)
