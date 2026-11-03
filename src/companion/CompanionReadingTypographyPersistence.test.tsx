@@ -32,7 +32,7 @@ it('finely adjusts the rendered text and restores exact values after remounting'
   expect(screen.getByText('1.6')).toBeInTheDocument();
   for (const name of ['Increase Size', 'Increase Line height', 'Serif', 'High']) choose(name);
   expect(loadReadingTypographySettings()).toEqual({
-    fontSize: 17, fontFamily: 'serif', lineHeight: 1.7, contrast: 'high'
+    fontSize: 17, fontFamily: 'serif', lineHeight: 1.7, contrast: 'high', paragraphSpacing: 0.35
   });
   const document = view.container.querySelector('[data-reading-font-size]') as HTMLElement;
   expect(document.style.getPropertyValue('--content-panel-font-size')).toBe('17px');
@@ -94,5 +94,50 @@ it('aligns an existing fractional line height to tenths when adjusted', async ()
   choose('Decrease Line height');
   expect(screen.getByText('1.6')).toBeInTheDocument();
   expect(loadReadingTypographySettings().lineHeight).toBe(1.6);
+  await act(async () => undefined);
+});
+
+
+it('adjusts paragraph spacing in the current reader and retains it on reentry', async () => {
+  const view = mountArticle();
+  const document = view.container.querySelector('[data-reading-font-size]') as HTMLElement;
+  expect(document.style.getPropertyValue('--content-panel-paragraph-spacing')).toBe('0.35em');
+  openAppearance();
+  choose('Increase Paragraph spacing');
+  expect(document.style.getPropertyValue('--content-panel-paragraph-spacing')).toBe('0.4em');
+  expect(loadReadingTypographySettings()).toMatchObject({ paragraphSpacing: 0.4 });
+  choose('Decrease Paragraph spacing');
+  expect(document.style.getPropertyValue('--content-panel-paragraph-spacing')).toBe('0.35em');
+  choose('Increase Paragraph spacing');
+  view.unmount();
+  const returned = mountArticle();
+  openAppearance();
+  expect(screen.getByLabelText('Paragraph spacing')).toHaveTextContent('0.4em');
+  expect(returned.container.querySelector('[data-reading-font-size]'))
+    .toHaveStyle({ '--content-panel-paragraph-spacing': '0.4em' });
+  await act(async () => undefined);
+});
+
+it('keeps paragraph spacing and its persisted value on failure, then retries', async () => {
+  const view = mountArticle();
+  openAppearance();
+  choose('Increase Paragraph spacing');
+  const confirmed = loadReadingTypographySettings();
+  const storage = window.localStorage;
+  let used = 0;
+  for (let i = 0; i < storage.length; i += 1) {
+    const key = storage.key(i)!;
+    used += key.length + storage.getItem(key)!.length;
+  }
+  storage.setItem('quota', 'x'.repeat(5_000_000 - used - 'quota'.length));
+  choose('Increase Paragraph spacing');
+  expect(screen.getByRole('alert')).toBeInTheDocument();
+  expect(loadReadingTypographySettings()).toEqual(confirmed);
+  expect(view.container.querySelector('[data-reading-font-size]'))
+    .toHaveStyle({ '--content-panel-paragraph-spacing': '0.4em' });
+  storage.removeItem('quota');
+  choose('Increase Paragraph spacing');
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(loadReadingTypographySettings()).toMatchObject({ paragraphSpacing: 0.45 });
   await act(async () => undefined);
 });

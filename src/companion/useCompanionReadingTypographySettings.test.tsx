@@ -23,7 +23,8 @@ describe('useCompanionReadingTypographySettings', () => {
         contrast: 'high',
         fontFamily: 'serif',
         fontSize: 22,
-        lineHeight: 1.73
+        lineHeight: 1.73,
+        paragraphSpacing: 0.35
       });
     });
 
@@ -31,7 +32,8 @@ describe('useCompanionReadingTypographySettings', () => {
       contrast: 'high',
       fontFamily: 'serif',
       fontSize: 22,
-      lineHeight: 1.73
+      lineHeight: 1.73,
+      paragraphSpacing: 0.35
     });
     expect(syncObjectsMock.saveCompanionSyncSettingRecord).not.toHaveBeenCalled();
   });

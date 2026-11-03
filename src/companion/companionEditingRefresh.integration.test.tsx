@@ -119,7 +119,7 @@ it.each([
       readableArticle={{ content, currentVersionId, hideTitleHeading: false,
         nodeId: 'topic', persistedNodeViewState: null, pdfAttachmentId: null,
         textAnchorDecorations: [], title: 'Topic' }}
-      readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default' }} />
+      readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default', paragraphSpacing: 0.35 }} />
   </CompanionDraftProvider></MouseGestureSettingsProvider></LocalizationProvider>;
   const view = render(document(node.content, 'base'));
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'Topic body' })).toHaveAttribute('contenteditable', 'true'));

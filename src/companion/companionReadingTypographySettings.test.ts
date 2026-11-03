@@ -31,7 +31,8 @@ describe('companion reading typography settings', () => {
       contrast: 'high',
       fontFamily: 'serif',
       fontSize: 19,
-      lineHeight: 1.78
+      lineHeight: 1.78,
+      paragraphSpacing: 0.35
     });
   });
 
@@ -82,4 +83,19 @@ it('bounds numeric inputs and rejects non-finite values', () => {
 it('does not interpret object prototype names as stored sizes', () => {
   expect(normalizeReadingTypographySettings({ fontSize: 'constructor', lineHeight: 'toString' }))
     .toEqual(DEFAULT_READING_TYPOGRAPHY_SETTINGS);
+});
+
+
+it('preserves the existing paragraph spacing for absent and invalid settings', () => {
+  for (const paragraphSpacing of [undefined, null, '', '0.8', NaN, Infinity, {}, []]) {
+    expect(normalizeReadingTypographySettings({ paragraphSpacing })).toMatchObject({ paragraphSpacing: 0.35 });
+  }
+});
+
+it('uses shared paragraph spacing bounds and steps when saving and hydrating', () => {
+  for (const [input, expected] of [[-1, 0], [2, 1.5], [0.43, 0.45], [0.35, 0.35]]) {
+    const settings = { ...DEFAULT_READING_TYPOGRAPHY_SETTINGS, paragraphSpacing: input! };
+    expect(saveReadingTypographySettings(settings)).toBe(true);
+    expect(loadReadingTypographySettings()).toMatchObject({ paragraphSpacing: expected });
+  }
 });

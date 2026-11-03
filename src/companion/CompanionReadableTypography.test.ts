@@ -3,6 +3,9 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { typographyStyle } from './companionReadableTypographyStyle';
+import { DEFAULT_READING_TYPOGRAPHY_SETTINGS } from './companionReadingTypographySettings';
+
 function readWorkspaceFile(path: string) {
   return readFileSync(join(process.cwd(), path), 'utf8');
 }
@@ -22,7 +25,8 @@ describe('companion readable typography', () => {
     expect(combined).toContain('--content-panel-paragraph-spacing');
     expect(combined).toContain('--document-content-inline-padding');
     expect(combined).toContain('0px');
-    expect(combined).toContain('0.35em');
+    expect(typographyStyle(DEFAULT_READING_TYPOGRAPHY_SETTINGS))
+      .toHaveProperty('--content-panel-paragraph-spacing', '0.35em');
     expect(combined).toContain('--content-panel-font-family');
     expect(combined).not.toContain('saveCompanionSyncSettingRecord');
     expect(combined).not.toContain('appSettingsClassification');

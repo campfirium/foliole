@@ -32,7 +32,7 @@ it.each([['android', false], ['android', true], ['ios', false], ['ios', true]] a
     activity={activity} onSaveContent={save} answer={revealed ? 'Answer' : null}
     readableArticle={{ content: 'Question', nodeId: 'topic', title: 'Item', hideTitleHeading: false,
       persistedNodeViewState: null, pdfAttachmentId: null, textAnchorDecorations: [] }}
-    readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default' }} />
+    readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default', paragraphSpacing: 0.35 }} />
   </CompanionDraftProvider></MouseGestureSettingsProvider>;
   const view = renderWithLocalization(document(false));
   if (revealed) await screen.findByRole('document', { name: 'Answer' });

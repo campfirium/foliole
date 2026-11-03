@@ -38,7 +38,7 @@ async function setup(question = 60, answer = 1000) {
     allowContentEditing={editing} onSaveContent={save} answer="Answer\n\n" scrollContainer="outer"
     readableArticle={{ content: 'Question\n\n', nodeId: 'item', title: 'Item', hideTitleHeading: false,
       persistedNodeViewState: null, pdfAttachmentId: null, textAnchorDecorations: [] }}
-    readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default' }} />
+    readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default', paragraphSpacing: 0.35 }} />
   </CompanionDraftProvider>;
   const view = render(document(false));
   view.rerender(document(true));

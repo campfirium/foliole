@@ -164,3 +164,18 @@ it('disables adjustments at the supported reading limits', () => {
   expect(screen.getByRole('button', { name: 'Increase Line height' })).toBeDisabled();
   expect(onChange).not.toHaveBeenCalled();
 });
+
+
+it('disables paragraph spacing changes at the shared bounds', () => {
+  const onChange = vi.fn();
+  const view = render(<ReadingFontSheet open onOpenChange={() => undefined} onChange={onChange}
+    settings={{ ...DEFAULT_READING_TYPOGRAPHY_SETTINGS, paragraphSpacing: 0 }} />);
+  expect(screen.getByRole('button', { name: 'Decrease Paragraph spacing' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Increase Paragraph spacing' }));
+  expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ paragraphSpacing: 0.05 }));
+  view.rerender(<ReadingFontSheet open onOpenChange={() => undefined} onChange={onChange}
+    settings={{ ...DEFAULT_READING_TYPOGRAPHY_SETTINGS, paragraphSpacing: 1.5 }} />);
+  expect(screen.getByRole('button', { name: 'Increase Paragraph spacing' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Decrease Paragraph spacing' }));
+  expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ paragraphSpacing: 1.45 }));
+});

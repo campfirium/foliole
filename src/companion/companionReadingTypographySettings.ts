@@ -1,6 +1,13 @@
-import { READING_LINE_HEIGHT_MIN, READING_LINE_HEIGHT_MAX } from '@/features/settings/model/appearanceSettingsOptions';
+import {
+  READING_PARAGRAPH_SPACING_MIN, READING_PARAGRAPH_SPACING_MAX, READING_PARAGRAPH_SPACING_STEP,
+  READING_LINE_HEIGHT_MIN, READING_LINE_HEIGHT_MAX
+} from '@/features/settings/model/appearanceSettingsOptions';
+import { normalizeReadingParagraphSpacing } from '@/features/settings/model/appearanceTypography';
 
-export { READING_LINE_HEIGHT_MIN, READING_LINE_HEIGHT_MAX };
+export {
+  READING_LINE_HEIGHT_MIN, READING_LINE_HEIGHT_MAX,
+  READING_PARAGRAPH_SPACING_MIN, READING_PARAGRAPH_SPACING_MAX, READING_PARAGRAPH_SPACING_STEP
+};
 export const READING_LINE_HEIGHT_STEP = 0.1;
 
 export type CompanionReadingFontSize = number | 'small' | 'default' | 'large' | 'xlarge';
@@ -13,13 +20,15 @@ export interface CompanionReadingTypographySettings {
   fontFamily: CompanionReadingFontFamily;
   fontSize: CompanionReadingFontSize;
   lineHeight: CompanionReadingLineHeight;
+  paragraphSpacing: number;
 }
 
 export const DEFAULT_READING_TYPOGRAPHY_SETTINGS: CompanionReadingTypographySettings = {
   contrast: 'default',
   fontFamily: 'sans',
   fontSize: 16,
-  lineHeight: 1.6
+  lineHeight: 1.6,
+  paragraphSpacing: 0.35
 };
 
 const STORAGE_KEY = 'foliole-companion-reading-typography-settings';
@@ -41,6 +50,11 @@ export function readingLineHeight(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value)
     ? Number(Math.min(READING_LINE_HEIGHT_MAX, Math.max(READING_LINE_HEIGHT_MIN, value)).toFixed(2)) : 1.6;
 }
+export function readingParagraphSpacing(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? normalizeReadingParagraphSpacing(value) : DEFAULT_READING_TYPOGRAPHY_SETTINGS.paragraphSpacing;
+}
+
 const FONT_FAMILIES = new Set(['sans', 'serif']);
 const CONTRASTS = new Set(['default', 'high']);
 
@@ -61,7 +75,8 @@ export function normalizeReadingTypographySettings(value: unknown): CompanionRea
       ? record.fontFamily as CompanionReadingFontFamily
       : pickEnum(record.fontFamily, FONT_FAMILIES, DEFAULT_READING_TYPOGRAPHY_SETTINGS.fontFamily),
     fontSize: readingFontSize(record.fontSize),
-    lineHeight: readingLineHeight(record.lineHeight)
+    lineHeight: readingLineHeight(record.lineHeight),
+    paragraphSpacing: readingParagraphSpacing(record.paragraphSpacing)
   };
 }
 

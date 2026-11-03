@@ -18,7 +18,7 @@ it.each(['missing', 'fetching'] as const)('keeps focused editing while a saved b
         readableArticle={{ bodyStatus, content, currentVersionId: 'base', hideTitleHeading: false,
           nodeId: 'topic-1', persistedNodeViewState: null, pdfAttachmentId: null,
           textAnchorDecorations: [], title: 'Topic' }}
-        readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default' }} />
+        readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default', paragraphSpacing: 0.35 }} />
     </MouseGestureSettingsProvider></LocalizationProvider>
   );
   const view = render(renderDocument('ready', 'Original body'));

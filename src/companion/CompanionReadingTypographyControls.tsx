@@ -7,8 +7,9 @@ import type {
   CompanionReadingContrast
 } from './companionReadingTypographySettings';
 import {
-  readingFontSize, readingLineHeight, READING_FONT_SIZE_MIN, READING_FONT_SIZE_MAX,
-  READING_LINE_HEIGHT_MIN, READING_LINE_HEIGHT_MAX, READING_LINE_HEIGHT_STEP
+  readingFontSize, readingLineHeight, readingParagraphSpacing, READING_FONT_SIZE_MIN, READING_FONT_SIZE_MAX,
+  READING_LINE_HEIGHT_MIN, READING_LINE_HEIGHT_MAX, READING_LINE_HEIGHT_STEP,
+  READING_PARAGRAPH_SPACING_MIN, READING_PARAGRAPH_SPACING_MAX, READING_PARAGRAPH_SPACING_STEP
 } from './companionReadingTypographySettings';
 
 import { useTranslation } from '@/shared/localization/LocalizationProvider';
@@ -71,6 +72,13 @@ export function CompanionReadingTypographyControls(props: {
         onChange={(lineHeight) => props.onChange({ ...props.settings, lineHeight })}
         value={readingLineHeight(props.settings.lineHeight)}
         min={READING_LINE_HEIGHT_MIN} max={READING_LINE_HEIGHT_MAX} step={READING_LINE_HEIGHT_STEP}
+      />
+      <CompanionReadingNumberControl
+        label={t('settings.appearance.paragraphSpacing.title')}
+        onChange={(paragraphSpacing) => props.onChange({ ...props.settings, paragraphSpacing })}
+        value={readingParagraphSpacing(props.settings.paragraphSpacing)}
+        min={READING_PARAGRAPH_SPACING_MIN} max={READING_PARAGRAPH_SPACING_MAX}
+        step={READING_PARAGRAPH_SPACING_STEP} unit="em"
       />
       <ReadingTypographyOptionGroup
         label={t('companion.reading.font.family')}

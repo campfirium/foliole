@@ -19,7 +19,7 @@ it.each([false, true])('keeps the answer visibility while editing and cancelling
     activity={activity} onSaveContent={save} answer={revealed ? reveal : null}
     readableArticle={{ content: 'Question', nodeId: 'item', title: 'Item', hideTitleHeading: false,
       persistedNodeViewState: null, pdfAttachmentId: null, textAnchorDecorations: [] }}
-    readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default' }} />
+    readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default', paragraphSpacing: 0.35 }} />
   </CompanionDraftProvider>);
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'Question' })).not.toHaveAttribute('readonly'));
   const question = screen.getByRole('textbox', { name: 'Question' });
