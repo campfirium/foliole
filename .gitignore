@@ -18,6 +18,6 @@ blob-report/
 *.tsbuildinfo
 logs/
 src-tauri/
-.tmp/
-.cache/
+/.tmp
+/.cache
 .tmp-vitest/
