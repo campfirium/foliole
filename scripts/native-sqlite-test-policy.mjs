@@ -217,7 +217,7 @@ const controlledElectronSqliteTests = [
   'scripts/demo/export-demo-pack.test.mjs',
   'scripts/windows/windows-sync-group-recovery-inspect.test.mjs',
   'scripts/android/schema-inventory.test.mjs',
-  '.local/scripts/android/macos-a5-preview-pull.test.mjs',
+  '.lab/scripts/android/macos-a5-preview-pull.test.mjs',
   'scripts/android/android-sync-audit-core.test.mjs',
   'scripts/android/android-sync-cleanup-host-private.test.mjs',
   'scripts/sqlite/sqlite-recovery-drill.test.mjs',

@@ -206,7 +206,7 @@ export function createSharedViteConfig(projectRoot: string, options: SharedViteC
         'lib/**/*.test.tsx',
         'scripts/**/*.test.mjs',
         ...process.argv.filter(file => file.endsWith('.test.mjs')
-          && path.relative(projectRoot, path.resolve(file)).replaceAll('\\', '/').startsWith('.local/scripts/')),
+          && path.relative(projectRoot, path.resolve(file)).replaceAll('\\', '/').startsWith('.lab/scripts/')),
         ...(process.env.FOLIOLE_SIM_OUTPUT ? ['scripts/sync/simulator/simulator.runner.mjs'] : [])
       ],
       exclude: ['tests/**', 'node_modules/**', 'dist/**', ...resolvePlatformTestExcludes()],

@@ -67,7 +67,10 @@ export async function runLintChanged(args = process.argv.slice(2)) {
     return 0;
   }
   const eslint = path.resolve('node_modules/eslint/bin/eslint.js');
-  const result = spawnSync(process.execPath, [eslint, '--cache', '--cache-location', '.tmp/eslint-cache/changed/', ...targets], { stdio: 'inherit' });
+  const explicitLab = args[0] === '--explicit' && targets.some(file =>
+    path.relative(process.cwd(), path.resolve(file)).replaceAll('\\', '/').startsWith('.lab/scripts/'));
+  const result = spawnSync(process.execPath, [eslint, '--cache', '--cache-location',
+    '.tmp/eslint-cache/changed/', ...(explicitLab ? ['--no-ignore'] : []), ...targets], { stdio: 'inherit' });
   return result.status ?? 1;
 }
 

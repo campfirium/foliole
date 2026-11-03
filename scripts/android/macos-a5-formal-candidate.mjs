@@ -33,7 +33,7 @@ export function parseMacosA5Invocation(argv) {
     args.splice(identityIndex, 2);
   }
   if (args.length !== 1) {
-    throw new Error('Usage: node .local/scripts/android/macos-a5-dev.mjs <registered-action> '
+    throw new Error('Usage: node .lab/scripts/android/macos-a5-dev.mjs <registered-action> '
       + '[--formal [--revision <sha>]] [--identity test]');
   }
   return { action: args[0], formal, ...(revision ? { revision } : {}), ...(identity ? { identity } : {}) };

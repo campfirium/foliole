@@ -26,12 +26,12 @@ const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
 describe('vite config', () => {
   it('collects personal tests only when their paths are explicitly requested', () => {
     const original = [...process.argv];
-    const requested = '.local/scripts/android/explicit.test.mjs';
+    const requested = '.lab/scripts/android/explicit.test.mjs';
     try {
       process.argv.push(requested);
       const config = createSharedViteConfig(process.cwd());
       expect(config.test.include).toContain(requested);
-      expect(config.test.include).not.toContain('.local/scripts/**/*.test.mjs');
+      expect(config.test.include).not.toContain('.lab/scripts/**/*.test.mjs');
     } finally { process.argv.splice(0, process.argv.length, ...original); }
   });
 
