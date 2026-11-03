@@ -51,6 +51,8 @@ App Store Connect beta description, review contact and any required export-compl
 
 The hosted archive uses the imported Apple Distribution private key, with App Store profiles fetched by the pinned `prepare_signing` Fastlane lane for the app and Share Extension. A generated xcconfig assigns profiles only to those targets and disables standalone signing for package targets; export uses the same manual distribution profiles. The lane may create a missing App Store profile for the existing installed certificate; it never creates or revokes certificates. No Development private key is needed. Both archived bundles and the final App Store IPA still undergo signature verification.
 
+The macOS producer explicitly selects the runner's installed Xcode 26.3 and checks that the iPhone SDK major is at least 26 before installing dependencies or credentials. The macOS 15 image defaults to Xcode 16.4, which does not meet Apple's upload requirement. Downloaded profiles stay under the current distribution artifact directory.
+
 Run explicit local tests before hosted execution:
 
 ```sh

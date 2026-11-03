@@ -17,6 +17,9 @@ def get_provisioning_profile(**options)
          config[:force] == false && config[:skip_certificate_verification] == false
     raise 'Signing must use verified installed distribution credentials and App Store profiles'
   end
+  unless config[:output_path] == File.dirname(ENV.fetch('FOLIOLE_IOS_SIGNING_PROFILES'))
+    raise 'Downloaded profiles must stay with the distribution artifacts'
+  end
   options.fetch(:app_identifier)
 end
 

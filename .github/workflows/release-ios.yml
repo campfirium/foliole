@@ -40,6 +40,7 @@ jobs:
     outputs:
       candidate_artifact: ${{ steps.candidate.outputs.artifact_name }}
     env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
       TARGET_SHA: ${{ inputs.target_sha }}
       TARGET_VERSION: ${{ inputs.target_version }}
       FOLIOLE_IOS_EXECUTION_LANE: ${{ inputs.execution_lane }}
@@ -50,6 +51,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { ref: '${{ inputs.target_sha }}', persist-credentials: false }
+      - name: Require an Apple upload-supported iPhone SDK
+        id: toolchain
+        run: |
+          xcodebuild -version
+          sdk="$(xcrun --sdk iphoneos --show-sdk-version)"
+          test "${sdk%%.*}" -ge 26
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - uses: actions/download-artifact@v5
