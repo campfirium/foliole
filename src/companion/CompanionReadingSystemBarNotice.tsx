@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { companionReadingSystemBars } from '../shared/platform/companionReadingSystemBars';
+import { companionReadingSystemBars } from '../shared/platform/companion/reading/companionReadingSystemBars';
 
 export function CompanionReadingSystemBarNotice(props: { inline?: boolean }) {
   const failed = useSyncExternalStore(companionReadingSystemBars.subscribe, companionReadingSystemBars.getError);

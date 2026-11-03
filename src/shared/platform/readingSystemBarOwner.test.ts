@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest';
 
-import { ReadingSystemBarOwner } from './readingSystemBarOwner';
+import { ReadingSystemBarOwner } from './companion/reading/readingSystemBarOwner';
 
 const state = (hidden: boolean) => ({ enabled: hidden, hidden });
 
