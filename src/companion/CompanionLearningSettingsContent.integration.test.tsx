@@ -69,10 +69,10 @@ it('saves retention from the mobile form, keeps existing facts, grades with it a
   expect(await screen.findByRole('spinbutton', { name: 'Desired retention' })).toHaveValue(0.85);
 });
 
-it('keeps the saved value on write failure and retries the same draft', async () => {
+it.each(['setting_records', 'sync_object_state'])('keeps the saved value on %s write failure and retries the same draft', async table => {
   render(<CompanionLearningSettingsContent />);
   const input = await screen.findByRole('spinbutton', { name: 'Desired retention' });
-  library.database.exec("CREATE TRIGGER reject_setting BEFORE INSERT ON setting_records BEGIN SELECT RAISE(ABORT,'full'); END");
+  library.database.exec(`CREATE TRIGGER reject_setting BEFORE INSERT ON ${table} BEGIN SELECT RAISE(ABORT,'full'); END`);
   fireEvent.change(input, { target: { value: '0.8' } });
   fireEvent.submit(input.closest('form')!);
   expect(await screen.findByRole('alert')).toHaveTextContent('Changes could not be saved');

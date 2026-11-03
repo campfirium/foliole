@@ -1,6 +1,11 @@
 export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
   'companion.settings.learning.title': 'Learning settings',
   'companion.settings.learning.section': 'Learning',
+  'companion.settings.learning.dayStart': 'New day starts at (hour)',
+  'companion.settings.learning.readingRatio': 'Reading ratio',
+  'companion.settings.learning.reviewRatio': 'Review ratio',
+  'companion.settings.learning.growthMin': 'Minimum reading interval growth',
+  'companion.settings.learning.growthMax': 'Maximum reading interval growth',
   'companion.settings.learning.save': 'Save',
   'companion.settings.learning.loading': 'Loading learning settings…',
   'companion.settings.learning.loadError': 'Learning settings could not be loaded. Try again.',

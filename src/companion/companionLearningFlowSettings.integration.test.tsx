@@ -8,7 +8,9 @@ import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, hydrateCurrentReviewSchedulerSetting
 import { companionDailyFlowSettings, openCompanionDailyFlow, ownedCompanionDailyFlowPersistence } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
+import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
+import { persistFlowMutation } from './companionFlowMutation';
 import { changeLearningSetting } from './companionLearningSettings.testSupport';
 import { CompanionLearningSettingsContent } from './CompanionLearningSettingsContent';
 
@@ -30,7 +32,7 @@ it('keeps the live day and current topic after changing the boundary, then adopt
   const before = await open(now);
   expect(before.session.currentNodeId).not.toBeNull();
   render(<CompanionLearningSettingsContent />);
-  await changeLearningSetting('New day starts at', '10');
+  await changeLearningSetting('New day starts at (hour)', '10');
   const after = await open(now);
   expect(after.session.dayWindow).toEqual(before.session.dayWindow);
   expect(after.session.currentNodeId).toBe(before.session.currentNodeId);
@@ -95,11 +97,31 @@ it('uses the configured reading/review ratio when the next daily list is planned
   await openCompanionDailyFlow({ now, mode: 'recommended' });
   expect(rows().slice(0, 6)).toEqual(['item', 'item', 'item', 'item', 'item', 'topic']);
   render(<CompanionLearningSettingsContent />);
-  await changeLearningSetting('Reading queue mix ratio', '3');
-  await changeLearningSetting('Review item queue mix ratio', '1');
+  await changeLearningSetting('Reading ratio', '3');
+  await changeLearningSetting('Review ratio', '1');
   const existing = await openCompanionDailyFlow({ now, mode: 'recommended', preserveCurrent: true });
   const next = new Date(Date.parse(existing.session.dayWindow!.end) + 60_000).toISOString();
   await openCompanionDailyFlow({ now: next, mode: 'recommended' });
   expect(rows().slice(0, 4)).toEqual(['item', 'topic', 'topic', 'topic']);
   expect(getCurrentReviewSchedulerSettings().pushQueue.queueMixRatio).toEqual({ reading: 3, fsrs: 1 });
+});
+
+it('uses the saved reading interval and growth on consecutive real Read actions without rewriting existing progress', async () => {
+  render(<CompanionLearningSettingsContent />);
+  await changeLearningSetting('Reading initial interval days', '2');
+  await changeLearningSetting('Minimum reading interval growth', '2');
+  await changeLearningSetting('Maximum reading interval growth', '2');
+  async function read(now: string) {
+    const snapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
+    await persistFlowMutation({ action: 'read', nodeId: '000000', now, snapshot });
+    return library.database.prepare("SELECT interval_duration_ms, repetition_count, next_at FROM node_reading WHERE node_id='000000'")
+      .get() as { interval_duration_ms: number; repetition_count: number; next_at: string };
+  }
+  const first = await read('2026-11-03T08:00:00.000Z');
+  expect(first).toEqual({ interval_duration_ms: 2 * 86_400_000, repetition_count: 1, next_at: '2026-11-05T08:00:00.000Z' });
+  await changeLearningSetting('Maximum reading interval growth', '3');
+  await changeLearningSetting('Minimum reading interval growth', '3');
+  expect(library.database.prepare("SELECT interval_duration_ms,repetition_count,next_at FROM node_reading WHERE node_id='000000'").get()).toEqual(first);
+  const second = await read(first.next_at);
+  expect(second).toEqual({ interval_duration_ms: 6 * 86_400_000, repetition_count: 2, next_at: '2026-11-11T08:00:00.000Z' });
 });

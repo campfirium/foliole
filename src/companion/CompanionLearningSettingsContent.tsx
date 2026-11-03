@@ -30,7 +30,7 @@ function LearningSettingRow(props: { field: CompanionLearningSettingField; setti
     <label className="block text-sm font-medium text-foreground" htmlFor={id}>{t(props.field.label)}</label>
     <div className="mt-2 flex items-center gap-3">
       <input className="min-h-11 min-w-0 flex-1 rounded-md border border-companion-divider bg-background px-3 text-base tabular-nums text-foreground"
-        disabled={saving} id={id} inputMode="decimal" max={props.field.max} min={props.field.min}
+        disabled={saving} id={id} inputMode={props.field.step === 1 ? 'numeric' : 'decimal'} max={props.field.max} min={props.field.min}
         onChange={event => setValue(event.target.value)} required step={props.field.step} type="number" value={value} />
       <AppButton className="min-h-11" disabled={saving || (!failed && value === String(current))} type="submit">
         {t('companion.settings.learning.save')}
