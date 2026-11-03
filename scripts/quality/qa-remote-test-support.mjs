@@ -55,4 +55,3 @@ export function fixture() {
   return { cwd, dev, calls, active, green, identity, preflight, monitor, readVerdict,
     options: { cwd, repo: 'example/repo', runner, args: { scope: 'full' }, preflight, monitor, readVerdict } };
 }
-
