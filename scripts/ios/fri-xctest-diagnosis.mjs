@@ -10,6 +10,7 @@ function failureKind(message) {
   if (/refused channel request.*XCTest|Lost connection to.*testmanager|connection.*(?:interrupted|invalidated).*XCTest/iu.test(message)) {
     return 'automation-channel';
   }
+  if (/app(?:lication)? crashed|crashed during launch/iu.test(message)) return 'app-crash';
   return 'test-failure';
 }
 
@@ -55,6 +56,7 @@ export function diagnoseFriXCTest({ log = '', summary = null, action = 'test',
       source: 'status', message: `Xcode exit ${xcodeStatus}` });
   }
   return { methodsStarted: facts.methodsStarted, failures,
+    testResult: ['Passed', 'Failed'].includes(summary?.result) ? summary.result : null,
     evidence: { logAvailable: Boolean(log), summaryAvailable: Boolean(summary),
       summaryStatus, attachmentsStatus },
     statuses: { action, xcodeStatus, keepStatus } };
