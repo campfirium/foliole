@@ -17,12 +17,14 @@ function ReadingChromeButton(props: {
   testId?: string | undefined;
 }) {
   const Icon = props.icon;
-  const activation = useCompanionTouchClick(() => props.onClick?.(), { disabled: props.disabled === true });
+  const activation = useCompanionTouchClick(() => props.onClick?.(), {
+    disabled: props.disabled === true, nativeClickFallback: true
+  });
   return (
     <button
       aria-disabled={props.disabled ? 'true' : undefined}
       aria-label={props.label}
-      className="inline-flex h-11 w-10 items-center justify-center rounded-md text-companion-text-secondary transition hover:text-foreground disabled:text-companion-text-tertiary"
+      className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-md text-companion-text-secondary transition hover:text-foreground disabled:text-companion-text-tertiary"
       data-testid={props.testId}
       disabled={props.disabled}
       {...activation}
@@ -39,13 +41,13 @@ function ReadingChromeTextButton(props: {
   primary?: boolean | undefined;
   testId?: string | undefined;
 }) {
-  const activation = useCompanionTouchClick(() => props.onClick?.());
+  const activation = useCompanionTouchClick(() => props.onClick?.(), { nativeClickFallback: true });
   return (
     <button
       aria-label={props.label}
       className={props.primary
-        ? 'inline-flex h-9 min-w-[56px] items-center justify-center rounded-md border border-companion-divider bg-companion-content/80 px-3 text-sm font-medium text-foreground transition'
-        : 'inline-flex h-9 min-w-[56px] items-center justify-center rounded-md px-3 text-sm font-medium text-companion-text-secondary transition hover:text-foreground'}
+        ? 'inline-flex h-12 min-w-[56px] items-center justify-center rounded-md border border-companion-divider bg-companion-content/80 px-3 text-sm font-medium text-foreground transition'
+        : 'inline-flex h-12 min-w-[56px] items-center justify-center rounded-md px-3 text-sm font-medium text-companion-text-secondary transition hover:text-foreground'}
       {...activation}
       data-testid={props.testId}
       type="button"
@@ -99,7 +101,7 @@ function ReadingTopChrome(props: {
               <ReadingChromeButton icon={ChevronLeft} label={t(props.review ? 'companion.review.exit' : 'companion.reading.exit')} onClick={props.onExit} testId="companion-reading-exit" />
               {props.isReviewItem ? <ItemFlowHistoryButtons /> : <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />}
             </div>
-            {!props.review ? <span className="pointer-events-none absolute left-1/2 w-[calc(100%-12.25rem)] max-w-[52vw] -translate-x-1/2 truncate text-center text-sm font-medium text-foreground sm:max-w-sm">
+            {!props.review ? <span className="pointer-events-none absolute left-1/2 w-[calc(100%-14rem)] max-w-[52vw] -translate-x-1/2 truncate text-center text-sm font-medium text-foreground sm:max-w-sm">
               {props.title}
             </span> : null}
             <div className="ml-auto flex items-center">

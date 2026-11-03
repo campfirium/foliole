@@ -8,14 +8,17 @@ export function useCompanionTouchClick(onActivate: (event: MouseEvent<HTMLElemen
   disabled?: boolean;
   ignoreTarget?: (target: EventTarget) => boolean;
   preserveSelection?: boolean;
+  nativeClickFallback?: boolean;
 } = {}) {
   const selectionAtPress = useRef(false);
   const touch = useRef<TouchTap | null>(null);
   const compatibilityClickTarget = useRef<EventTarget | null>(null);
+  const activatedTouch = useRef(false);
 
   const ignored = (target: EventTarget) => options.disabled || options.ignoreTarget?.(target);
 
   function onPointerDown(event: PointerEvent<HTMLElement>) {
+    activatedTouch.current = false;
     selectionAtPress.current = Boolean(options.preserveSelection && window.getSelection()?.isCollapsed === false);
     compatibilityClickTarget.current = event.pointerType === 'touch' ? event.currentTarget : null;
     touch.current = event.pointerType === 'touch' && event.isPrimary && !ignored(event.target)
@@ -35,6 +38,7 @@ export function useCompanionTouchClick(onActivate: (event: MouseEvent<HTMLElemen
       Math.hypot(event.clientX - started.x, event.clientY - started.y) > 8 ||
       (options.preserveSelection && window.getSelection()?.isCollapsed === false)) return;
     compatibilityClickTarget.current = event.currentTarget;
+    activatedTouch.current = true;
     suppressCompanionPressClick(event.currentTarget.ownerDocument);
     onActivate(event);
   }
@@ -44,7 +48,9 @@ export function useCompanionTouchClick(onActivate: (event: MouseEvent<HTMLElemen
   function onClick(event: MouseEvent<HTMLElement>) {
     const handledTouchTarget = compatibilityClickTarget.current;
     compatibilityClickTarget.current = null;
-    if (event.detail > 0 && handledTouchTarget === event.currentTarget) return;
+    const suppressTouchClick = !options.nativeClickFallback || activatedTouch.current;
+    activatedTouch.current = false;
+    if (event.detail > 0 && handledTouchTarget === event.currentTarget && suppressTouchClick) return;
     if (selectionAtPress.current || ignored(event.target) || (options.preserveSelection && window.getSelection()?.isCollapsed === false)) return;
     onActivate(event);
   }

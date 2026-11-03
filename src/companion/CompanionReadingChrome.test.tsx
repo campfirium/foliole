@@ -61,7 +61,6 @@ describe('ReadingChrome', () => {
     renderChrome();
 
     expect(screen.getByRole('button', { name: 'Exit' }).closest('div')?.parentElement?.parentElement?.className).toContain('pt-0');
-    expect(screen.getByRole('button', { name: 'Exit' }).className).toContain('h-11');
     expect(screen.getByRole('button', { name: 'Exit' }).className).not.toContain('ring-companion-divider');
     expect(screen.getByText('Long reading title').className).toContain('text-center');
     expect(screen.getByText('Long reading title').closest('div')?.parentElement?.className).toContain('px-2.5');

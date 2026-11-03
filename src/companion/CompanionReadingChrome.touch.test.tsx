@@ -44,6 +44,22 @@ describe('ReadingChrome touch actions', () => {
     expect(activate).toHaveBeenCalledTimes(3);
   });
 
+  it.each(['small movement', 'slower press'])(
+    'honors a browser-confirmed button click after %s', gesture => {
+      const activate = renderActions();
+      const button = screen.getByRole('button', { name: 'Exit' });
+      const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+      touch(button, 'pointerdown', 20);
+      if (gesture === 'small movement') touch(button, 'pointermove', 29);
+      else now.mockReturnValue(1_550);
+      touch(button, 'pointerup', gesture === 'small movement' ? 29 : 20);
+      expect(activate).not.toHaveBeenCalled();
+      fireEvent.click(button, { detail: 1 });
+      expect(activate).toHaveBeenCalledTimes(1);
+      now.mockRestore();
+    }
+  );
+
   it.each(['pointermove', 'pointercancel', 'long press'])(
     'does not activate from %s', (gesture) => {
       const activate = renderActions();
