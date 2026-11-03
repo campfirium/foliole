@@ -1,4 +1,4 @@
-import { SQLiteConnection, SQLiteDBConnection, type CapacitorSQLitePlugin } from '@capacitor-community/sqlite';
+import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection, type CapacitorSQLitePlugin } from '@capacitor-community/sqlite';
 
 import { COMPANION_DATABASE_NAME } from '../../../../../lib/platform/nativeCompanionContract';
 
@@ -20,4 +20,13 @@ export class CompanionDatabaseManager extends SQLiteConnection {
     }
     await super.closeConnection(database, readonly);
   }
+}
+
+/** Delete a closed companion database through the trusted native connection adapter. */
+export async function deleteCompanionDatabaseFiles(database: string, version: number) {
+  if (!(await CapacitorSQLite.isDatabase({ database })).result) return;
+  await CapacitorSQLite.createConnection({ database, encrypted: false, mode: 'no-encryption',
+    version, readonly: false });
+  try { await CapacitorSQLite.deleteDatabase({ database }); }
+  finally { await CapacitorSQLite.closeConnection({ database, readonly: false }); }
 }

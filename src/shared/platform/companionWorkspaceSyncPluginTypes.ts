@@ -39,7 +39,6 @@ export type CompanionSyncParticipationState = SyncParticipationSnapshot;
 export interface CompanionWorkspaceSyncPlugin
   extends AttachmentMaintenanceHostPlugin, RemoteImageResourcePlugin,
   NativeCompanionFramedPayloadBudgetPlugin, NativeCompanionFramedFilesPlugin, NativeRequestSyncHttpPlugin {
-  clearAppData(): Promise<void>;
   desktopHttpRequest(args: {
     body?: string;
     headers?: Record<string, string>;
