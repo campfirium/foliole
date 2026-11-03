@@ -141,8 +141,9 @@ export const CRITICAL_TEST_ROUTES = [
     ]
   },
   {
-    triggers: [/^scripts\/windows\/windows-dev-control\.mjs$/u],
-    tests: ['scripts/windows/windows-android-dev-helper-boundary.test.mjs']
+    triggers: [/^scripts\/windows\/windows-dev-action(?:-args|s)\.mjs$/u],
+    tests: ['scripts/windows/windows-dev-action-args.test.mjs',
+      'scripts/windows/windows-android-dev-helper-boundary.test.mjs']
   },
   {
     triggers: [

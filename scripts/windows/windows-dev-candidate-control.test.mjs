@@ -10,42 +10,9 @@ import {
   assertPinnedCandidateRevision, copyWindowsCandidateReceipt, extractCandidateRevision,
   extractCandidateSourceRef, freezeWindowsCandidate, windowsCandidatePushArgs
 } from './windows-dev-candidate-control.mjs';
-import { parseWindowsDevControlArgs, windowsDevPushSpec } from './windows-dev-control.mjs';
 
 const sourceRef = 'refs/heads/codex/t121-8-sync-from-zero-thread';
 const candidate = { revision: 'a'.repeat(40), treeDigest: 'b'.repeat(40) };
-
-it('maps an explicit candidate source ref only to the Windows dev mirror', () => {
-  expect(extractCandidateSourceRef(['multi-device-sync-candidate', '--source-ref', sourceRef]))
-    .toEqual({ args: ['multi-device-sync-candidate'], explicit: true, sourceRef });
-  expect(windowsCandidatePushArgs('host', sourceRef)).toEqual([
-    'push', '--no-verify', '--porcelain', 'host:foliole-dev.git',
-    `+${sourceRef}:refs/heads/dev`
-  ]);
-  expect(() => extractCandidateSourceRef(['multi-device-sync-candidate', '--source-ref', 'dev']))
-    .toThrow('explicit refs/heads ref');
-  expect(parseWindowsDevControlArgs([
-    'multi-device-sync-candidate', '--source-ref', sourceRef
-  ], {})).toMatchObject({ action: 'multi-device-sync-candidate', sourceRef });
-  expect(windowsDevPushSpec('host', {}, '/Users/dev', sourceRef).args.at(-1))
-    .toBe(`+${sourceRef}:refs/heads/dev`);
-  expect(() => parseWindowsDevControlArgs(['verify', '--source-ref', sourceRef], {}))
-    .toThrow('only accepted for candidate preparation');
-});
-
-it('pins Internal actions to a full commit instead of a later dev tip', () => {
-  const revision = 'a'.repeat(40);
-  expect(extractCandidateRevision(['internal-install', '--revision', revision]))
-    .toEqual({ args: ['internal-install'], revision });
-  expect(parseWindowsDevControlArgs(['internal-open', '--revision', revision], {}))
-    .toMatchObject({ action: 'internal-open', revision });
-  expect(windowsCandidatePushArgs('host', 'refs/heads/dev', revision).at(-1))
-    .toBe(`+${revision}:refs/heads/dev`);
-  expect(() => parseWindowsDevControlArgs(['verify', '--revision', revision], {}))
-    .toThrow('only accepted for Internal');
-  expect(() => extractCandidateRevision(['internal-install', '--revision', 'abc']))
-    .toThrow('full SHA');
-});
 
 it('freezes the committed dev tree while leaving Mac edits untouched', { meta: { calibratedMs: 15_000 } }, async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-dirty-candidate-'));
@@ -119,4 +86,19 @@ it('rejects a Windows receipt from a different candidate before mutation', async
         revision: 'c'.repeat(40), treeDigest: 'b'.repeat(40) }, resultStatus: 'success'
     })) })).rejects.toThrow('does not match the local frozen candidate');
   fs.rmSync(repoRoot, { force: true, recursive: true });
+});
+it('maps and validates the public candidate source and revision arguments', () => {
+  expect(extractCandidateSourceRef(['multi-device-sync-candidate', '--source-ref', sourceRef]))
+    .toEqual({ args: ['multi-device-sync-candidate'], explicit: true, sourceRef });
+  expect(windowsCandidatePushArgs('host', sourceRef)).toEqual([
+    'push', '--no-verify', '--porcelain', 'host:foliole-dev.git', `+${sourceRef}:refs/heads/dev`
+  ]);
+  expect(() => extractCandidateSourceRef(['multi-device-sync-candidate', '--source-ref', 'dev']))
+    .toThrow('explicit refs/heads ref');
+  const revision = 'a'.repeat(40);
+  expect(extractCandidateRevision(['internal-install', '--revision', revision]))
+    .toEqual({ args: ['internal-install'], revision });
+  expect(windowsCandidatePushArgs('host', 'refs/heads/dev', revision).at(-1))
+    .toBe(`+${revision}:refs/heads/dev`);
+  expect(() => extractCandidateRevision(['internal-install', '--revision', 'abc'])).toThrow('full SHA');
 });

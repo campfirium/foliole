@@ -49,9 +49,8 @@ describe('iOS app identity host contract', () => {
     expect(infoPlist).not.toContain('com.campfirium.foliole.ios');
   });
 
-  it('forces both Fri two-device journeys onto a separate signed acceptance bundle', () => {
-    for (const script of ['scripts/ios/macos-fri-two-device-sync.mjs',
-      'scripts/ios/windows-fri-two-device-sync.mjs']) {
+  it('forces the Mac Fri two-device journey onto a separate signed acceptance bundle', () => {
+    for (const script of ['scripts/ios/macos-fri-two-device-sync.mjs']) {
       const source = read(script);
       expect(source).toContain('FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix');
       expect(source).toContain('FOLIOLE_ACCEPTANCE_TASK_ID');
@@ -62,9 +61,6 @@ describe('iOS app identity host contract', () => {
 
   it('reuses the prepared Fri build for every two-device test batch', () => {
     const macos = read('scripts/ios/macos-fri-two-device-sync.mjs');
-    const windows = read('scripts/ios/windows-fri-two-device-sync.mjs');
     expect(macos.match(/'--test-without-building'/gu)).toHaveLength(7);
-    expect(windows.match(/'--test-without-building'/gu)).toHaveLength(3);
-    expect(windows).toContain("sourceRef: 'refs/heads/dev'");
   });
 });

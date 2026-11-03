@@ -17,15 +17,3 @@ it('uses a fresh task-owned client and stops after exact product discovery', () 
   expect(source).not.toContain('complete_sync_group_join');
   expect(source).not.toContain('sync_companion_now');
 });
-
-it('binds the Mac driver to one new attempt and the exact created identity', () => {
-  const source = fs.readFileSync(
-    'scripts/windows/macos-windows-desktop-dnssd-diagnostic.mjs', 'utf8'
-  );
-  expect(source).toContain('const attemptId = randomUUID()');
-  expect(source).toContain("action: 'desktop-dnssd-find-diagnostic'");
-  expect(source).toContain('expectedGroupId: groupId, expectedGroupTag: groupTag');
-  expect(source).toContain('windows.receipt.requestSent !== false');
-  expect(source).not.toContain('--resume');
-  expect(source).not.toContain('request_sync_group_join');
-});

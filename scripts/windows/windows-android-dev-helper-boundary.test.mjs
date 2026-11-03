@@ -6,7 +6,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { RETIRED_PACKAGE_SCRIPTS, RETIRED_SCRIPT_ASSETS } from '../lib/script-domain-retirements.mjs';
-import { WINDOWS_DEV_ACTIONS } from './windows-dev-control.mjs';
+import { WINDOWS_DEV_ACTIONS } from './windows-dev-actions.mjs';
 import {
   WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS
 } from './windows-sync-group-provider-release-control.mjs';
@@ -55,7 +55,6 @@ describe('Windows Android DEV helper boundary', () => {
     expect(packageScripts['android:host:test'])
       .toBe(`${hostedGuard} android:host:test && node scripts/android/native-linux-host.mjs gradle testDebugUnitTest`);
 
-    const controller = source('scripts/windows/windows-dev-control.mjs');
     const adapter = source('scripts/windows/windows-dev-device-action.mjs');
     expect(WINDOWS_DEV_ACTIONS).toEqual(expect.arrayContaining([
       'desktop-preview',
@@ -68,7 +67,7 @@ describe('Windows Android DEV helper boundary', () => {
     ]));
     expect(adapter).toContain("WINDOWS_DEV_ADB_PORT = '5037'");
     expect(adapter).toContain("WINDOWS_DEV_A5_SERIAL = '87a33a4b'");
-    expect(`${controller}\n${adapter}`).not.toMatch(/windows-android-lab-(?:request|state|operation|worker)/u);
+    expect(adapter).not.toMatch(/windows-android-lab-(?:request|state|operation|worker)/u);
   });
 
   it('preserves the separate physical release validation chain', () => {

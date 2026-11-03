@@ -50,8 +50,9 @@ const HOSTED_QUALITY_GAP_ROUTES = [
     'scripts/android/java-sql-surface.test.mjs'
   ]],
   ['Windows DEV action registry', [
-    'scripts/windows/windows-dev-control.mjs'
-  ], ['scripts/windows/windows-android-dev-helper-boundary.test.mjs']],
+    'scripts/windows/windows-dev-action-args.mjs'
+  ], ['scripts/windows/windows-dev-action-args.test.mjs',
+    'scripts/windows/windows-android-dev-helper-boundary.test.mjs']],
   ['pinned npm workflow', ['package.json', 'package-lock.json'], [
     'scripts/quality/pinned-npm.test.mjs',
     'scripts/quality/chain-workflow-contract.test.mjs',

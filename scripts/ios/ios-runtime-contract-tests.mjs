@@ -160,7 +160,6 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/sqlcipher-security.test.mjs',
   'scripts/ios/swift-security-evidence.test.mjs',
   'scripts/ios/swift-vulnerability-scan.test.mjs',
-  'scripts/ios/windows-fri-two-device-sync.test.mjs',
 ];
 
 export const IOS_RUNTIME_SQLITE_CONTRACT_TESTS = [

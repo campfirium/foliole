@@ -19,6 +19,7 @@ it('registers one fixed diagnostic without Android or signing preparation', () =
 });
 
 it.each(['DEFAULT', 'NORMAL'])('counts native and explicit commits in temporary databases with %s', mode => {
+  fs.mkdirSync(path.resolve('.tmp/artifacts'), { recursive: true });
   const root = fs.mkdtempSync(path.resolve('.tmp/artifacts/sqlite-diagnostic-test-'));
   const invocation = diagnosticInvocation({ root, mode, scenario: diagnosticCases()[0], repoRoot: process.cwd() });
   fs.mkdirSync(invocation.directory, { recursive: true });

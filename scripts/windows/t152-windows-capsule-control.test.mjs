@@ -20,7 +20,6 @@ const names = [
   't152-windows-prepare-validation.mjs',
   't152-windows-prepare-stage-contract.mjs', 't152-windows-prepare-stage-runner.mjs',
   't152-windows-prepare-stages.mjs', 't152-windows-transfer-journal.mjs',
-  'windows-dev-remote-spec.mjs',
 ];
 const sources = Object.fromEntries(names.map((name) => [name,
   fs.readFileSync(path.join('scripts', 'windows', name), 'utf8')]));
