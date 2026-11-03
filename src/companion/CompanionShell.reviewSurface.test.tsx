@@ -59,7 +59,7 @@ describe('CompanionShell review surfaces', () => {
   it('reserves review footer space separately from the normal bottom tabs', async () => {
     await renderShellWithSurface(reviewSurface(readingReviewCard));
 
-    const content = screen.getByTestId('companion-scroll-container').firstElementChild;
+    const content = screen.getByText(readingReviewCard.content).closest('.companion-review-surface');
     expect(content?.className).toContain('[padding-bottom:8rem]');
     expect(content?.className).not.toContain('[padding-bottom:4.5rem]');
   });

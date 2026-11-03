@@ -64,7 +64,7 @@ const {
     report_text: '# Foliole Diagnostic Report',
     status: 'generated'
   }),
-  readFile: vi.fn().mockResolvedValue('# Imported title\nBody'),
+  readFile: vi.fn().mockResolvedValue(Buffer.from('# Imported title\nBody')),
   recordPreparedImportFailure: vi.fn(),
   runPreparedImport: vi.fn(),
   showItemInFolder: vi.fn(),
@@ -135,7 +135,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockWindow.isMaximized.mockReturnValue(false);
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [fixturePath('inbox.md')] });
-  readFile.mockResolvedValue('# Imported title\nBody');
+  readFile.mockResolvedValue(Buffer.from('# Imported title\nBody'));
   runPreparedImport.mockReturnValue({ ...importedMarkdownResult, sourceLocator: fixturePath('inbox.md') });
   recordPreparedImportFailure.mockReturnValue({ ...failedMarkdownResult, sourceLocator: fixturePath('inbox.md') });
 });
@@ -202,7 +202,7 @@ it('returns null when native import selection is cancelled', async () => {
 
 it('classifies TXT metadata without preloading file content', async () => {
   showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [fixturePath('inbox.txt')] });
-  readFile.mockResolvedValue('Plain text body');
+  readFile.mockResolvedValue(Buffer.from('Plain text body'));
 
   await expect(handleInvokeRequest({ command: 'select_import_text_file', args: {} })).resolves.toEqual({
     content: '',
