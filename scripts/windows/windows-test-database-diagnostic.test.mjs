@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { parseWindowsDevControlArgs } from './windows-dev-control.mjs';
+import { parseWindowsDevActionArgs } from './windows-dev-action-args.mjs';
 import { runWindowsTestDatabaseDiagnostic, TEST_DATABASE_DIAGNOSTIC_FILES } from './windows-test-database-diagnostic.mjs';
 import { runWindowsTestDatabaseDiagnosticControl } from './windows-test-database-diagnostic-control.mjs';
 
@@ -17,8 +17,8 @@ function root() {
 }
 
 it('accepts only the fixed diagnostic action without caller-supplied commands', () => {
-  expect(parseWindowsDevControlArgs(['test-database-cleanup'], {}).action).toBe('test-database-cleanup');
-  expect(() => parseWindowsDevControlArgs(['test-database-cleanup', '--file', 'other.test.ts'], {})).toThrow();
+  expect(parseWindowsDevActionArgs(['test-database-cleanup'], {}).action).toBe('test-database-cleanup');
+  expect(() => parseWindowsDevActionArgs(['test-database-cleanup', '--file', 'other.test.ts'], {})).toThrow();
 });
 
 it.each([0, 1])('runs the cleanup regressions under Electron ABI and retains lifecycle evidence on exit %s', async code => {

@@ -5,15 +5,15 @@ import path from 'node:path';
 import process from 'node:process';
 import { expect, it, vi } from 'vitest';
 
-import { parseWindowsDevControlArgs } from './windows-dev-control.mjs';
+import { parseWindowsDevActionArgs } from './windows-dev-action-args.mjs';
 import { normalizeWindowsDevAction } from './windows-dev-action-contract.mjs';
 import { runWindowsSyncSqliteDiagnostic } from './windows-sync-sqlite-diagnostic-control.mjs';
 
 it('routes the fixed micro submode without invoking Electron preparation', async () => {
-  expect(parseWindowsDevControlArgs(['sync-sqlite-diagnostic', '--mode', 'micro']))
+  expect(parseWindowsDevActionArgs(['sync-sqlite-diagnostic', '--mode', 'micro']))
     .toMatchObject({ action: 'sync-sqlite-diagnostic', diagnosticMode: 'micro' });
   expect(normalizeWindowsDevAction('sync-sqlite-diagnostic-micro')).toBe('sync-sqlite-diagnostic');
-  expect(() => parseWindowsDevControlArgs(['deploy', '--mode', 'micro'])).toThrow();
+  expect(() => parseWindowsDevActionArgs(['deploy', '--mode', 'micro'])).toThrow();
   const execute = vi.fn().mockResolvedValue({ code: 0, output: '' });
   await runWindowsSyncSqliteDiagnostic({ action: 'sync-sqlite-diagnostic', diagnosticMode: 'micro',
     execute, fsApi: { writeFileSync: vi.fn() }, evidenceRoot: '.tmp',
@@ -22,7 +22,7 @@ it('routes the fixed micro submode without invoking Electron preparation', async
 });
 
 it('runs the download probe without invoking sync tests or dependency installation', async () => {
-  expect(parseWindowsDevControlArgs(['sync-sqlite-diagnostic', '--mode', 'download']))
+  expect(parseWindowsDevActionArgs(['sync-sqlite-diagnostic', '--mode', 'download']))
     .toMatchObject({ diagnosticMode: 'download' });
   expect(normalizeWindowsDevAction('sync-sqlite-diagnostic-download')).toBe('sync-sqlite-diagnostic');
   const execute = vi.fn().mockResolvedValue({ code: 0, output: '' });

@@ -2,11 +2,11 @@
 
 import { expect, it, vi } from 'vitest';
 
-import { parseWindowsDevControlArgs } from './windows-dev-control.mjs';
+import { parseWindowsDevActionArgs } from './windows-dev-action-args.mjs';
 import { runWindowsReadwiseApiImportAcceptance } from './windows-readwise-api-import-action.mjs';
 
 it('registers and runs the fixed Windows Reader API import acceptance', async () => {
-  expect(parseWindowsDevControlArgs(['readwise-api-import'], {}))
+  expect(parseWindowsDevActionArgs(['readwise-api-import'], {}))
     .toMatchObject({ action: 'readwise-api-import' });
   const paths = {
     repoRoot: 'D:\\C\\foliole', systemNode: 'node.exe', systemNpmCli: 'npm-cli.js'

@@ -8,11 +8,11 @@ import { expect, it, vi } from 'vitest';
 
 import { runWindowsSyncSqliteDiagnostic } from './windows-sync-sqlite-diagnostic-control.mjs';
 import { diagnosticCases, diagnosticInvocation } from './windows-sync-sqlite-diagnostic.mjs';
-import { parseWindowsDevControlArgs } from './windows-dev-control.mjs';
+import { parseWindowsDevActionArgs } from './windows-dev-action-args.mjs';
 import { windowsDevRequiredTools } from './windows-dev-build-preflight.mjs';
 
 it('registers one fixed diagnostic without Android or signing preparation', () => {
-  expect(parseWindowsDevControlArgs(['sync-sqlite-diagnostic'])).toMatchObject({ action: 'sync-sqlite-diagnostic' });
+  expect(parseWindowsDevActionArgs(['sync-sqlite-diagnostic'])).toMatchObject({ action: 'sync-sqlite-diagnostic' });
   expect(windowsDevRequiredTools('sync-sqlite-diagnostic', { systemNode: 'node', systemNpmCli: 'npm',
     gitPath: 'git', tarPath: 'tar', adbPath: 'adb' })).toEqual(['node', 'npm', 'git', 'tar']);
   expect(diagnosticCases().map(item => item.name)).toEqual(['group-restore', 'database-15', 'large-restore', 'large-adoption']);
@@ -59,7 +59,7 @@ it('preserves preparation output when the bounded command times out', async () =
 
 
 it('runs only the named snapshot test without SQLite interception or durability overrides', () => {
-  expect(parseWindowsDevControlArgs(['sync-sqlite-diagnostic', '--mode', 'snapshot']))
+  expect(parseWindowsDevActionArgs(['sync-sqlite-diagnostic', '--mode', 'snapshot']))
     .toMatchObject({ action: 'sync-sqlite-diagnostic', diagnosticMode: 'snapshot' });
   const cases = diagnosticCases('snapshot');
   expect(cases).toHaveLength(1);
@@ -71,7 +71,7 @@ it('runs only the named snapshot test without SQLite interception or durability 
 
 
 it('runs the remaining failures separately without SQLite interception', () => {
-  expect(parseWindowsDevControlArgs(['sync-sqlite-diagnostic', '--mode', 'remaining']))
+  expect(parseWindowsDevActionArgs(['sync-sqlite-diagnostic', '--mode', 'remaining']))
     .toMatchObject({ diagnosticMode: 'remaining' });
   const cases = diagnosticCases('remaining');
   expect(cases.map(item => item.filter)).toEqual([

@@ -3,11 +3,11 @@
 import { expect, it, vi } from 'vitest';
 
 import { WINDOWS_DEV_BUILD_ACTIONS } from './windows-dev-build-actions.mjs';
-import { parseWindowsDevControlArgs } from './windows-dev-control.mjs';
+import { parseWindowsDevActionArgs } from './windows-dev-action-args.mjs';
 import { runWindowsReadwiseApiSchedulerAcceptance } from './windows-readwise-api-scheduler-action.mjs';
 
 it('registers and runs the fixed Windows Reader API scheduler acceptance', async () => {
-  expect(parseWindowsDevControlArgs(['readwise-api-scheduler'], {}))
+  expect(parseWindowsDevActionArgs(['readwise-api-scheduler'], {}))
     .toMatchObject({ action: 'readwise-api-scheduler' });
   expect(WINDOWS_DEV_BUILD_ACTIONS).toContain('readwise-api-scheduler');
   const paths = { repoRoot: 'D:\\C\\foliole', systemNode: 'node.exe', systemNpmCli: 'npm-cli.js' };

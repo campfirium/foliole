@@ -2,11 +2,11 @@
 
 import { expect, it, vi } from 'vitest';
 
-import { parseWindowsDevControlArgs } from './windows-dev-control.mjs';
+import { parseWindowsDevActionArgs } from './windows-dev-action-args.mjs';
 import { runWindowsReadwiseApiConnectionAcceptance } from './windows-readwise-api-connection-action.mjs';
 
 it('registers a fixed Windows DEV action for Readwise API connection acceptance', () => {
-  expect(parseWindowsDevControlArgs(['readwise-api-connection'], {}))
+  expect(parseWindowsDevActionArgs(['readwise-api-connection'], {}))
     .toMatchObject({ action: 'readwise-api-connection' });
 });
 

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { expect, it, vi } from 'vitest';
 
 import { toWindowsDevWireAction } from './windows-dev-action-contract.mjs';
-import { parseWindowsDevControlArgs } from './windows-dev-control.mjs';
+import { parseWindowsDevActionArgs } from './windows-dev-action-args.mjs';
 import {
   runWindowsSyncGroupJoinPrepareAcceptance
 } from './windows-sync-group-join-prepare-action.mjs';
@@ -13,7 +13,7 @@ import {
 } from './windows-sync-group-join-prepare-control.mjs';
 
 it('registers one fixed Windows desktop join-prepare action without a legacy alias', () => {
-  expect(parseWindowsDevControlArgs(['sync-group-join-prepare'], {}))
+  expect(parseWindowsDevActionArgs(['sync-group-join-prepare'], {}))
     .toMatchObject({ action: 'sync-group-join-prepare' });
   expect(toWindowsDevWireAction('sync-group-join-prepare')).toBe('sync-group-join-prepare');
   const build = fs.readFileSync('scripts/windows/windows-dev-build.mjs', 'utf8');

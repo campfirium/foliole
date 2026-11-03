@@ -4,7 +4,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { expect, it, vi } from 'vitest';
 import { verifyOfflineElectronArchive } from './windows-electron-offline-prepare.mjs';
-import { parseWindowsDevControlArgs } from './windows-dev-control.mjs';
+import { parseWindowsDevActionArgs } from './windows-dev-action-args.mjs';
 import { normalizeWindowsDevAction } from './windows-dev-action-contract.mjs';
 import { runWindowsSyncSqliteDiagnostic } from './windows-sync-sqlite-diagnostic-control.mjs';
 
@@ -22,7 +22,7 @@ it('rejects corrupted and unrecognized archives before extraction', () => {
 });
 
 it('prepares only the offline archive and verifies native SQLite without package installation', async () => {
-  expect(parseWindowsDevControlArgs(['sync-sqlite-diagnostic', '--mode', 'offline']))
+  expect(parseWindowsDevActionArgs(['sync-sqlite-diagnostic', '--mode', 'offline']))
     .toMatchObject({ diagnosticMode: 'offline' });
   expect(normalizeWindowsDevAction('sync-sqlite-diagnostic-offline')).toBe('sync-sqlite-diagnostic');
   const execute = vi.fn().mockResolvedValue({ code: 0, output: '' });

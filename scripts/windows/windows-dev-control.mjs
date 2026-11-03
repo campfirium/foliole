@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* global console, process */
 
-import { extractSqliteDiagnosticMode } from './windows-dev-action-contract.mjs';
+import { parseWindowsDevActionArgs } from './windows-dev-action-args.mjs';
 import { copyWindowsSyncSqliteDiagnostic } from './windows-sync-sqlite-diagnostic-control.mjs';
 import { runWindowsTestDatabaseDiagnosticControl } from './windows-test-database-diagnostic-control.mjs';
 import { prepareWindowsInternalRuntime } from './windows-internal-runtime-transfer.mjs';
@@ -19,14 +19,13 @@ import {
 } from './windows-dev-control-evidence.mjs';
 import { runWindowsSyncGroupControl } from './windows-sync-group-control-router.mjs';
 import {
-  assertPinnedCandidateRevision, collectWindowsCandidateControl, extractCandidateRevision,
-  extractCandidateSourceRef, freezeWindowsCandidate, windowsCandidatePushArgs
+  assertPinnedCandidateRevision, collectWindowsCandidateControl,
+  freezeWindowsCandidate, windowsCandidatePushArgs
 } from './windows-dev-candidate-control.mjs';
 import { stopWindowsDevCandidateRuntime } from './windows-dev-candidate-runtime-control.mjs';
 import { WINDOWS_DEV_DEFAULT_SSH, windowsDevScpSpec, windowsDevSshSpec } from
   './windows-dev-remote-spec.mjs';
 import { isWindowsSyncGroupProviderReleaseAction } from './windows-sync-group-provider-release-control.mjs';
-import { WINDOWS_DEV_ACTIONS } from './windows-dev-actions.mjs';
 import { copyWindowsDeviceProfileEvidence } from './windows-device-profile-control.mjs';
 import {
   copyWindowsSyncGroupJoinPrepareEvidence
@@ -71,33 +70,9 @@ function execute(command, args, options = {}) {
 }
 
 export function parseWindowsDevControlArgs(argv, env = process.env) {
-  const { args: modeArgs, diagnosticMode } = extractSqliteDiagnosticMode(argv);
-  const parsedSource = extractCandidateSourceRef(modeArgs);
-  const parsedRevision = extractCandidateRevision(parsedSource.args);
-  const args = parsedRevision.args;
-  const hostIndex = args.indexOf('--host');
-  const host = hostIndex >= 0
-    ? args.splice(hostIndex, 2)[1]
-    : env.FOLIOLE_WINDOWS_DEV_SSH || WINDOWS_DEV_DEFAULT_SSH;
-  if (!host || !/^[A-Za-z0-9._\\-]+@[A-Za-z0-9.-]+$/u.test(host)) {
-    throw new Error('Windows DEV SSH host must use user@host format');
-  }
-  if (args.length !== 1 || !WINDOWS_DEV_ACTIONS.includes(args[0])) {
-    throw new Error(
-      'Windows DEV control only accepts a registered fixed action'
-    );
-  }
-  const releaseJourney = args[0] === 'default-sync-journey'
-    && ['refs/heads/dev', 'refs/heads/release'].includes(parsedSource.sourceRef);
-  if (parsedSource.explicit && args[0] !== 'multi-device-sync-candidate' && !releaseJourney) {
-    throw new Error('Windows DEV source ref is only accepted for candidate preparation');
-  }
-  if (parsedRevision.revision && !['internal-install', 'internal-open'].includes(args[0])) {
-    throw new Error('Pinned Windows revision is only accepted for Internal installation and opening');
-  }
-  return { action: args[0], host, ...(diagnosticMode ? { diagnosticMode } : {}),
-    ...(parsedSource.explicit ? { sourceRef: parsedSource.sourceRef } : {}),
-    ...(parsedRevision.revision ? { revision: parsedRevision.revision } : {}) };
+  return parseWindowsDevActionArgs(argv, {
+    ...env, FOLIOLE_WINDOWS_DEV_SSH: env.FOLIOLE_WINDOWS_DEV_SSH || WINDOWS_DEV_DEFAULT_SSH
+  });
 }
 
 export function windowsDevPushSpec(host, env = process.env, home = os.homedir(), sourceRef, revision) {

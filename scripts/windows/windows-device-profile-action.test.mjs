@@ -6,14 +6,14 @@ import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 
 import { toWindowsDevWireAction } from './windows-dev-action-contract.mjs';
-import { parseWindowsDevControlArgs } from './windows-dev-control.mjs';
+import { parseWindowsDevActionArgs } from './windows-dev-action-args.mjs';
 import { runWindowsDevBuild } from './windows-dev-build.mjs';
 import { parseWindowsDevSuccessEvidence } from './windows-dev-control-evidence.mjs';
 import { runWindowsDeviceProfileAcceptance } from './windows-device-profile-action.mjs';
 import { copyWindowsDeviceProfileEvidence } from './windows-device-profile-control.mjs';
 
 it('routes one fixed Windows desktop profile action through the old wrapper', () => {
-  expect(parseWindowsDevControlArgs(['device-profile'], {})).toMatchObject({ action: 'device-profile' });
+  expect(parseWindowsDevActionArgs(['device-profile'], {})).toMatchObject({ action: 'device-profile' });
   expect(toWindowsDevWireAction('device-profile')).toBe('deviceprofile');
   const build = fs.readFileSync('scripts/windows/windows-dev-build.mjs', 'utf8');
   expect(build).toContain("runWindowsDeviceProfileAcceptance(action, execute, paths)");

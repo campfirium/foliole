@@ -2,11 +2,11 @@
 
 import { expect, test, vi } from 'vitest';
 
-import { parseWindowsDevControlArgs } from './windows-dev-control.mjs';
+import { parseWindowsDevActionArgs } from './windows-dev-action-args.mjs';
 import { runWindowsReadwiseApiExternalAcceptance } from './windows-readwise-api-external-action.mjs';
 
 test('routes the Readwise API External acceptance action', async () => {
-  expect(parseWindowsDevControlArgs(['readwise-api-external'], {}))
+  expect(parseWindowsDevActionArgs(['readwise-api-external'], {}))
     .toMatchObject({ action: 'readwise-api-external' });
   const execute = vi.fn().mockResolvedValue({ code: 0, output: 'passed' });
   const paths = { repoRoot: 'D:\\C\\foliole', systemNode: 'node.exe', systemNpmCli: 'npm-cli.js' };
