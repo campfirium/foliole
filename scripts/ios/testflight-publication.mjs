@@ -8,10 +8,10 @@ import { verifyTestflightReceipt, IOS_APP_ID, IOS_GROUP_ID } from './testflight-
 function encode(value) { return Buffer.from(JSON.stringify(value)).toString('base64url'); }
 
 export async function appleReadToken(env = process.env) {
-  const keyId = env.APPLE_API_KEY_ID;
-  const issuer = env.APPLE_API_ISSUER;
-  const pem = env.APPLE_API_KEY ? await readFile(env.APPLE_API_KEY) :
-    Buffer.from(env.APPLE_NOTARY_API_KEY_BASE64 ?? '', 'base64');
+  const keyId = env.IOS_APP_STORE_API_KEY_ID;
+  const issuer = env.IOS_APP_STORE_API_ISSUER;
+  const pem = env.IOS_APP_STORE_API_KEY_FILE ? await readFile(env.IOS_APP_STORE_API_KEY_FILE) :
+    Buffer.from(env.IOS_APP_STORE_API_KEY_BASE64 ?? '', 'base64');
   if (!keyId || !issuer || !pem.length) throw new Error('Apple API credentials are required to confirm iPhone availability');
   const now = Math.floor(Date.now() / 1000);
   const unsigned = `${encode({ alg: 'ES256', kid: keyId, typ: 'JWT' })}.${encode({

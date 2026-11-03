@@ -13,7 +13,7 @@ The Linux continuation can be rerun after a processing timeout without uploading
 
 ## Credentials
 
-The trusted workflow requires `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`, and `APPLE_NOTARY_API_KEY_BASE64` for an App Store Connect key with suitable upload, external-testing and automatic-provisioning permissions. A notarization-only key is insufficient.
+The trusted workflow requires `IOS_APP_STORE_API_KEY_ID`, `IOS_APP_STORE_API_ISSUER`, and `IOS_APP_STORE_API_KEY_BASE64` for an App Store Connect key with suitable upload, external-testing and automatic-provisioning permissions. External testing requires App Manager or a higher role; the existing Developer-role notarization key is insufficient. Keep the dedicated iPhone credentials separate from macOS notarization credentials. Team API keys apply across all apps in the Apple team.
 
 `IOS_DISTRIBUTION_CERTIFICATE_BASE64` contains a PKCS#12 export of the team's Apple Distribution certificate **and private key**. `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD` protects that export. The existing macOS Developer ID certificate cannot replace it. The workflow imports the certificate into a temporary keychain, uses automatic provisioning for both registered bundle IDs and their shared App Group, and deletes temporary credentials on exit. Do not put credentials in source, artifacts or logs.
 
@@ -38,3 +38,5 @@ A real selected release must still prove signing, upload, Apple processing, exte
 GitHub draft assembly stores a SHA-bound submission receipt, not an IPA download. A receipt may report pending review. Public GitHub publication performs a fresh Apple API check of that exact build and refuses to advertise an unapproved or unavailable iPhone update. The public transition retains the existing user-confirmed publication procedure; it does not hold a runner while Apple reviews.
 
 References: [fastlane upload](https://docs.fastlane.tools/actions/upload_to_testflight/), [Apple external testing](https://developer.apple.com/help/app-store-connect/test-a-beta-version/invite-external-testers/), [App Store Connect API](https://developer.apple.com/documentation/appstoreconnectapi).
+
+For local public-release confirmation, explicitly provide `IOS_APP_STORE_API_KEY_ID`, `IOS_APP_STORE_API_ISSUER`, and either `IOS_APP_STORE_API_KEY_FILE` (an absolute private-key path) or `IOS_APP_STORE_API_KEY_BASE64` to the existing publication command. The checker does not discover credentials or reuse a notarization key implicitly.

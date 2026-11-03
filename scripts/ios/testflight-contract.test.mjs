@@ -83,8 +83,10 @@ describe('TestFlight exact candidate and public availability', () => {
   it('signs short-lived Apple API tokens using ES256', async () => {
     const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
     const pem = privateKey.export({ type: 'pkcs8', format: 'pem' });
-    const token = await appleReadToken({ APPLE_API_KEY_ID: 'test-key', APPLE_API_ISSUER: 'issuer',
-      APPLE_NOTARY_API_KEY_BASE64: Buffer.from(pem).toString('base64') });
+    await expect(appleReadToken({ APPLE_API_KEY_ID: 'notary-key', APPLE_API_ISSUER: 'issuer',
+      APPLE_NOTARY_API_KEY_BASE64: Buffer.from(pem).toString('base64') })).rejects.toThrow(/credentials/);
+    const token = await appleReadToken({ IOS_APP_STORE_API_KEY_ID: 'test-key', IOS_APP_STORE_API_ISSUER: 'issuer',
+      IOS_APP_STORE_API_KEY_BASE64: Buffer.from(pem).toString('base64') });
     const [header, payload, signature] = token.split('.');
     const claims = JSON.parse(Buffer.from(payload, 'base64url'));
     expect(claims.exp - claims.iat).toBe(300);
