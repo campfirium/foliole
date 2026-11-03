@@ -27,10 +27,10 @@ describe('companion app data clear capability', () => {
     expect(supportsCompanionAppDataClear()).toBe(true);
   });
 
-  it('keeps iOS unavailable until every native data store can be cleared', () => {
+  it('allows iOS to use its resumable native app-data reset', () => {
     capacitorState.getPlatform.mockReturnValue('ios');
     capacitorState.isNativePlatform.mockReturnValue(true);
 
-    expect(supportsCompanionAppDataClear()).toBe(false);
+    expect(supportsCompanionAppDataClear()).toBe(true);
   });
 });

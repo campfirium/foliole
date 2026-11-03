@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const loadBootstrap = vi.fn();
 const initializeIosCompanionDatabase = vi.fn();
+const resumeReset = vi.hoisted(() => vi.fn(async () => {}));
 const capacitorState = vi.hoisted(() => ({
   isPluginAvailable: vi.fn(() => true),
   getPlatform: vi.fn(() => 'ios'),
@@ -14,12 +15,13 @@ vi.mock('@capacitor/core', () => ({
 }));
 
 vi.mock('./companion/runtime/iosCompanionDatabaseBootstrap', () => ({ initializeIosCompanionDatabase }));
+vi.mock('./companion/runtime/iosCompanionAppDataReset', () => ({ resumeIosCompanionAppDataReset: resumeReset }));
 
-describe('companionBootstrap ios boundary', () => {
-  beforeEach(() => {
+beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
     window.localStorage.clear();
+    resumeReset.mockResolvedValue(undefined);
     initializeIosCompanionDatabase.mockImplementation(async (state) => ({
       ...state,
       database_path: '/Library/CapacitorDatabase/foliole-companionSQLite.db',
@@ -27,6 +29,15 @@ describe('companionBootstrap ios boundary', () => {
       device_id: 'ios-frozen-execution-id',
       device_name: state.host_name
     }));
+});
+
+describe('companionBootstrap ios boundary', () => {
+  it('does not open the library when an interrupted clear cannot finish', async () => {
+    resumeReset.mockRejectedValue(new Error('Files unavailable'));
+    const { loadCompanionBootstrapState } = await import('./companionBootstrap');
+    await expect(loadCompanionBootstrapState()).rejects.toThrow('Files unavailable');
+    expect(loadBootstrap).not.toHaveBeenCalled();
+    expect(initializeIosCompanionDatabase).not.toHaveBeenCalled();
   });
 
   it('loads ios bootstrap through the native plugin without creating a web identity', async () => {

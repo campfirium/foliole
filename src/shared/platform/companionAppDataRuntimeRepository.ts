@@ -13,8 +13,7 @@ export const FolioleCompanionAppData = registerPlugin<CompanionAppDataPlugin>('F
 
 export function supportsCompanionAppDataClear() {
   const runtime = getCompanionRuntimeCapability();
-  // Keep iOS disabled until SQLite, files, UserDefaults, and Keychain can be cleared atomically.
-  return runtime.kind === 'android-native' || runtime.kind === 'web-preview';
+  return runtime.kind === 'android-native' || runtime.kind === 'ios-native' || runtime.kind === 'web-preview';
 }
 
 export { isNativeAndroidCompanionRuntime };

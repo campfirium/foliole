@@ -31,6 +31,7 @@ let package = Package(
                 "config.xml", "public"
             ],
             sources: [
+                "FolioleCompanionAppDataFiles.swift",
                 "FolioleCompanionCanonicalAttachmentKey.swift",
                 "FolioleAttachmentBlockStorage.swift",
                 "FolioleCompanionAttachmentResourceDownload.swift",

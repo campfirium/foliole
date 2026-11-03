@@ -44,9 +44,9 @@ async function closeActiveDatabase() {
   if (owner) await closeCompanionReadIntents(owner);
   if (owner) await closeCompanionFramedPayloadBudget(owner);
   await stopCompanionForegroundTime();
-  if (activeOwner === owner) activeOwner = null;
   invalidateCompanionReadingScope();
   await owner?.close();
+  if (activeOwner === owner) activeOwner = null;
 }
 
 export function initializeIosCompanionDatabase(

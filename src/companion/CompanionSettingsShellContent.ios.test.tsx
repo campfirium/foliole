@@ -13,8 +13,8 @@ import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDa
 
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 
-it('shows iOS attachment storage without exposing incomplete app-data clearing', () => {
-  expect(supportsCompanionAppDataClear()).toBe(false);
+it('shows iOS storage and app-data clearing while keeping unsupported custom styles hidden', () => {
+  expect(supportsCompanionAppDataClear()).toBe(true);
 
   const props = {
     onBackToSettingsList: vi.fn(),
@@ -27,11 +27,11 @@ it('shows iOS attachment storage without exposing incomplete app-data clearing',
 
   expect(screen.queryByText('3 sections')).not.toBeInTheDocument();
   expect(screen.getByText('Storage')).toBeInTheDocument();
-  expect(screen.getByText('Local attachments')).toBeInTheDocument();
+  expect(screen.getByText('Clear local Foliole data.')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Clear local app data/ })).not.toBeInTheDocument();
   view.rerender(renderCompanionSettingsContent({ ...props, settingsPage: 'storage' }));
-  expect(screen.queryByText('App data')).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Clear App Data' })).not.toBeInTheDocument();
+  expect(screen.getByText('App data')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Clear App Data' })).toBeInTheDocument();
   view.rerender(renderCompanionSettingsContent({ ...props, settingsPage: 'appearance' }));
   expect(screen.getByText('Custom styles are not available on this device')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Add snippet' })).not.toBeInTheDocument();

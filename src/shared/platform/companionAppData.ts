@@ -2,6 +2,7 @@ import type { NativeCompanionWorkspaceSyncState } from '../../../lib/platform/na
 
 import { invalidateCompanionReadingScope } from './companion/reading/companionReadingScope';
 import { clearIosCompanionActiveData } from './companion/runtime/iosCompanionActiveDataClear';
+import { clearIosCompanionAppData } from './companion/runtime/iosCompanionAppDataReset';
 import {
   FolioleCompanionAppData,
   isNativeAndroidCompanionRuntime
@@ -16,7 +17,11 @@ import {
 
 export async function clearCompanionAppData(): Promise<NativeCompanionWorkspaceSyncState> {
   const runtime = getCompanionRuntimeCapability();
-  if (runtime.kind !== 'android-native' && runtime.kind !== 'ios-native') {
+  if (runtime.kind === 'ios-native') {
+    await clearIosCompanionAppData();
+    return normalizeWorkspaceSyncState(null);
+  }
+  if (runtime.kind !== 'android-native') {
     invalidateCompanionReadingScope();
     return writeWebSyncState({
       ...readWebSyncState(),

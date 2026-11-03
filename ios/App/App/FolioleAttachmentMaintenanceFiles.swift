@@ -3,6 +3,16 @@ import CryptoKit
 import Foundation
 
 extension FolioleCompanionSyncPlugin {
+    @objc func clearAppData(_ call: CAPPluginCall) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                try FolioleAttachmentMaintenanceFiles.clearAppData()
+                try FolioleShareInboxQueue.clear()
+                call.resolve()
+            } catch { call.reject("Failed to clear app data: \(error.localizedDescription)") }
+        }
+    }
+
     @objc func maintainAttachmentFiles(_ call: CAPPluginCall) {
         Task {
             do { call.resolve(try FolioleAttachmentMaintenanceFiles.execute(call)) }
@@ -13,6 +23,12 @@ extension FolioleCompanionSyncPlugin {
 
 enum FolioleAttachmentMaintenanceFiles {
     private static let manager = FileManager.default
+
+    static func clearAppData() throws {
+        let attachments = try directory(false)
+        try FolioleCompanionAppDataFiles.clear(support: attachments.deletingLastPathComponent(),
+                                              attachmentDirectory: attachments.lastPathComponent)
+    }
 
     static func directory(_ trash: Bool) throws -> URL {
         let support = try manager.url(for: .applicationSupportDirectory, in: .userDomainMask,

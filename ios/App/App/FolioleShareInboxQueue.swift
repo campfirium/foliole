@@ -46,6 +46,10 @@ enum FolioleShareInboxQueue {
         try mutate { items in items.removeAll { $0.deliveryID == deliveryID } }
     }
 
+    static func clear() throws {
+        try FolioleCompanionAppDataFiles.clearShareInbox(at: queueDirectory())
+    }
+
     private static func queueDirectory() throws -> URL {
         guard let appGroupIdentifier = Bundle.main.object(forInfoDictionaryKey: "FolioleShareAppGroup") as? String,
               appGroupIdentifier.hasPrefix("group."), !appGroupIdentifier.contains("$(") else {

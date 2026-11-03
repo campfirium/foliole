@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		688100000000000000000001 /* FolioleCompanionAppDataFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 688100000000000000000002 /* FolioleCompanionAppDataFiles.swift */; };
 		50F100991FED79650016851F /* FoliolePhysicalClozeRecoveryUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100981FED79650016851F; };
 		89FECD10EF4A4E16B6EA5756 /* FolioleRequestSyncRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6AA406AD5824E1DB7779A8A /* FolioleRequestSyncRoute.swift */; };
 		F10000000000000000000001 /* FoliolePhysicalReadonlySnapshotUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* FoliolePhysicalReadonlySnapshotUITests.swift */; };
@@ -144,6 +145,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		688100000000000000000002 /* FolioleCompanionAppDataFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAppDataFiles.swift; sourceTree = "<group>"; };
 		50F100981FED79650016851F /* FoliolePhysicalClozeRecoveryUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalClozeRecoveryUITests.swift; sourceTree = "<group>"; };
 		B6AA406AD5824E1DB7779A8A /* FolioleRequestSyncRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleRequestSyncRoute.swift; sourceTree = "<group>"; };
 		F10000000000000000000002 /* FoliolePhysicalReadonlySnapshotUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalReadonlySnapshotUITests.swift; sourceTree = "<group>"; };
@@ -311,6 +313,7 @@
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				50F010031FED79650016851F /* FolioleBridgeViewController.swift */,
 				50F010041FED79650016851F /* FolioleCompanionBootstrapPlugin.swift */,
+				688100000000000000000002 /* FolioleCompanionAppDataFiles.swift */,
 				221A00000000000000000002 /* FolioleShareInboxQueue.swift */,
 				221A00000000000000000003 /* FolioleCompanionShareInboxPlugin.swift */,
 				50F020061FED79650016851F /* companion-bridge-contract-definitions.json */,
@@ -612,6 +615,7 @@
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				50F010011FED79650016851F /* FolioleBridgeViewController.swift in Sources */,
 				50F010021FED79650016851F /* FolioleCompanionBootstrapPlugin.swift in Sources */,
+				688100000000000000000001 /* FolioleCompanionAppDataFiles.swift in Sources */,
 				221B00000000000000000003 /* FolioleShareInboxQueue.swift in App Sources */,
 				221B00000000000000000004 /* FolioleCompanionShareInboxPlugin.swift in Sources */,
 				50F021111FED79650016851F /* FolioleCompanionContractStore.swift in Sources */,

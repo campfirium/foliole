@@ -66,11 +66,11 @@ export async function createSearchLibrary(count = 125, bodySize = 4096) {
   } };
 }
 
-export async function reopenSearchLibrary(root: string, now: string) {
+export async function reopenSearchLibrary(root: string, now: string, databaseExists = true) {
   await closeIosCompanionDatabase();
   const db = new Database(path.join(root, 'library.db'));
   const connection = { ...createFakeCapacitorConnection(db), getUrl: async () => ({ url: path.join(root, 'library.db') }) };
-  const manager = createFakeCapacitorDatabaseManager(db, true, () => {});
+  const manager = createFakeCapacitorDatabaseManager(db, databaseExists, () => {});
   const nativeConnection = connection as unknown as Awaited<ReturnType<typeof manager.createConnection>>;
   const create = manager.createConnection.bind(manager);
   const retrieve = manager.retrieveConnection.bind(manager);

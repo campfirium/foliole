@@ -71,6 +71,10 @@ export function isNativeCompanionRuntime() {
 
 async function initializeNativeCompanionBootstrapState() {
   requireCompanionNativePlugin('bootstrap', 'FolioleCompanionBootstrap');
+  if (getCompanionRuntimeCapability().kind === 'ios-native') {
+    const { resumeIosCompanionAppDataReset } = await import('./companion/runtime/iosCompanionAppDataReset');
+    await resumeIosCompanionAppDataReset();
+  }
   const result = normalizeCompanionBootstrapState(await FolioleCompanionBootstrap.loadBootstrap());
   if (!result) {
     throw new Error('Native companion bootstrap returned an invalid payload.');
