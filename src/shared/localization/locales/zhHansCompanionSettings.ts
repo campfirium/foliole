@@ -1,6 +1,7 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.settings.language.saveError': '无法保存应用语言，请重试。',
   'companion.settings.debug.resetReviews.action': '重置检测项复习',
   'companion.settings.debug.resetReviews.title': '重置全部检测项的复习？',
   'companion.settings.debug.resetReviews.description': '让全部测试检测项回到未复习，保留内容和主题阅读进度。',

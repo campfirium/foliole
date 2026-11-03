@@ -1,4 +1,5 @@
 export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
+  'companion.settings.language.saveError': 'App language could not be saved. Try again.',
   'companion.settings.debug.resetReviews.action': 'Reset item reviews',
   'companion.settings.debug.resetReviews.title': 'Reset all item reviews?',
   'companion.settings.debug.resetReviews.description': 'Return all test items to unreviewed. Content and Topic reading progress are kept.',

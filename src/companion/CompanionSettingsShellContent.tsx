@@ -6,6 +6,7 @@ import { CompanionColorModeControl } from './CompanionColorModeControl';
 import { useOptionalCompanionCustomCss } from './CompanionCustomCssProvider';
 import { CompanionCustomCssSettingsContent } from './CompanionCustomCssSettingsContent';
 import { CompanionForegroundTimeContent } from './CompanionForegroundTimeContent';
+import { CompanionLanguageControl } from './CompanionLanguageControl';
 import {
   CompanionPlaceholderSettingsContent,
   CompanionSettingsDetail,
@@ -54,6 +55,7 @@ function CompanionAppearanceSettingsDetail(props: Pick<CompanionSettingsContentP
   const t = useTranslation();
   const customCss = useOptionalCompanionCustomCss();
   return <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="appearance" title={t('companion.settings.appearance.title')}>
+    <CompanionLanguageControl />
     <CompanionColorModeControl />
     {customCss?.isSupported ? <CompanionCustomCssSettingsContent /> : <CompanionPlaceholderSettingsContent
       detail={t('companion.settings.appearance.placeholderDetail')}
