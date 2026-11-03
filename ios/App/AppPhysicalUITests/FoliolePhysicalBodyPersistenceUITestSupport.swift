@@ -46,10 +46,11 @@ final class FoliolePhysicalDatabaseUpgradeUITests: XCTestCase {
         XCTAssertTrue(editor.waitForExistence(timeout: 30))
         editor.tap()
         editor.typeText("Fri upgrade subsequent write.")
+        XCTAssertEqual(editor.value as? String, "Fri upgrade subsequent write.")
         let save = app.buttons["Save"]
         XCTAssertTrue(save.waitForExistence(timeout: 30))
         save.tap()
-        XCTAssertFalse(editor.waitForExistence(timeout: 5))
+        XCTAssertTrue(editor.waitForNonExistence(timeout: 15), "Successful Capture must close before restarting.")
         app.terminate()
         app.launch()
         resolveOptionalCellularDataDecision()
