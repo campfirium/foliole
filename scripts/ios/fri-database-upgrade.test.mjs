@@ -1,11 +1,11 @@
 // @vitest-environment node
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { afterEach, expect, it, vi } from 'vitest';
 
-import { createFriLegacyFixture, readFriUpgradeFacts, verifyFriUpgradeFacts } from './fri-database-upgrade.mjs';
+import { createFriLegacyFixture, prepareFriDatabaseUpgrade, readFriUpgradeFacts, verifyFriUpgradeFacts, verifyFriCipherArtifact } from './fri-database-upgrade.mjs';
 import { buildFriDevWorkflowCommands, runFriDevWorkflow } from './fri-dev-workflow.mjs';
 
 const roots = [];
@@ -67,3 +67,24 @@ it.runIf(process.platform === 'darwin' && Boolean(process.env.FOLIOLE_IOS_LEGACY
     expect(() => verifyFriUpgradeFacts(before, readFriUpgradeFacts(fixture.database))).toThrow(/grade/u);
   }
 );
+
+// SKIP: Needs the signed development app and explicitly supplied old framework | 2026-11-03 | revive: prepare the physical build and legacy fixture framework
+it.runIf(Boolean(process.env.FOLIOLE_IOS_LEGACY_SQLCIPHER_FRAMEWORK) &&
+  existsSync('.cache/ios-physical-acceptance/AppPhysicalUITests/DerivedData/Build/Products/Debug-iphoneos/App.app'))(
+  'admits the actual 4.20 artifact even when its bundle marketing version is 1.0', async () => {
+    const run = vi.fn(async () => { throw new Error('device-adapter-stopped'); });
+    await expect(prepareFriDatabaseUpgrade({ repoRoot: process.cwd(), evidenceRoot: temporary(),
+      legacyFramework: process.env.FOLIOLE_IOS_LEGACY_SQLCIPHER_FRAMEWORK, run }))
+      .rejects.toThrow('device-adapter-stopped');
+    expect(run).toHaveBeenCalledOnce();
+  }
+);
+
+it('rejects a different native binary or lock even if bundle metadata looks identical', () => {
+  const pin = { state: { version: '4.20.0', revision: 'a'.repeat(40) } };
+  expect(verifyFriCipherArtifact({ pin, appUuid: 'native-uuid', artifactUuid: 'native-uuid' })).toBe('4.20.0');
+  for (const change of [{ appUuid: 'old-native-uuid' }, { artifactUuid: null },
+    { pin: { state: { version: '4.17.0', revision: 'a'.repeat(40) } } }]) {
+    expect(() => verifyFriCipherArtifact({ pin, appUuid: 'native-uuid', artifactUuid: 'native-uuid', ...change })).toThrow();
+  }
+});

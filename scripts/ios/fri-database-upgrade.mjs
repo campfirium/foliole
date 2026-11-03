@@ -56,15 +56,28 @@ export function createFriLegacyFixture({ repoRoot, evidenceRoot, legacyFramework
   return { database, directory, identity };
 }
 
+export function verifyFriCipherArtifact({ pin, appUuid, artifactUuid }) {
+  if (pin?.state?.version !== '4.20.0' || !/^[a-f0-9]{40}$/u.test(pin?.state?.revision ?? '')) {
+    throw new Error('Upgrade app requires the pinned SQLCipher 4.20.0 dependency');
+  }
+  if (!appUuid || !artifactUuid || appUuid !== artifactUuid) throw new Error('Upgrade app differs from the pinned SQLCipher binary');
+  return pin.state.version;
+}
+
 function builtUpgradeApp(repoRoot) {
   const app = path.join(repoRoot, '.cache/ios-physical-acceptance/AppPhysicalUITests/DerivedData/Build/Products/Debug-iphoneos/App.app');
   const read = (file, key) => capture('plutil', ['-extract', key, 'raw', '-o', '-', file]);
   if (read(path.join(app, 'Info.plist'), 'CFBundleIdentifier') !== FRI_DEV_APP_ID) {
     throw new Error('Upgrade acceptance may install only the fixed development app');
   }
-  const framework = path.join(app, 'Frameworks/SQLCipher.framework/Info.plist');
-  const version = read(framework, 'CFBundleShortVersionString');
-  if (!version.startsWith('4.20.0')) throw new Error('Upgrade app must link SQLCipher 4.20.0');
+  const pin = JSON.parse(readFileSync(path.join(repoRoot,
+    'ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved'), 'utf8'))
+    .pins.find(entry => entry.identity === 'sqlcipher.swift');
+  const artifact = path.join(repoRoot, '.cache/ios-physical-acceptance/AppPhysicalUITests/DerivedData',
+    'SourcePackages/artifacts/sqlcipher.swift/SQLCipher/SQLCipher.xcframework/ios-arm64/SQLCipher.framework/SQLCipher');
+  const uuid = binary => capture('xcrun', ['dwarfdump', '--uuid', binary]).match(/^UUID: ([A-F0-9-]+) \(arm64\)/mu)?.[1];
+  const version = verifyFriCipherArtifact({ pin, artifactUuid: uuid(artifact),
+    appUuid: uuid(path.join(app, 'Frameworks/SQLCipher.framework/SQLCipher')) });
   return { app, version };
 }
 
