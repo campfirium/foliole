@@ -14,6 +14,7 @@ import { notifyAttachmentResourceAvailable } from '../../../runtime/attachmentRe
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
+import { createCompanionAttachmentFiles } from './companionAttachmentFiles.js';
 import { decodeCompanionFileBytes } from './companionFileBytes.js';
 import { createCompanionFramedSyncFiles } from './companionFramedSyncFiles.js';
 import { importCompanionPdfTextArtifact } from './companionPdfTextArtifact.js';
@@ -38,26 +39,8 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
   const files = createCompanionFramedSyncFiles(FolioleCompanionSync, owner);
   const call = (operation: Operation) => FolioleCompanionSync.accessFramedSyncFile({ ...owner, ...operation, operation: 'attachment' });
   const stat = async (key: string, partial = false) => statSchema.parse(await call({ key, partial, action: 'stat' }));
-  let acquired: Promise<unknown> | undefined;
-  const receiver = createAttachmentBlockReceiver({
-    exclusive: (hash, execute) => files.exclusive(`attachment-${hash}`, async () => {
-      acquired ??= call({ key: hash, action: 'acquire' }).catch(error => { acquired = undefined; throw error; });
-      await acquired;
-      return execute();
-    }),
-    async complete(resource) {
-      const info = await stat(resource.storageKey);
-      if (!info.present) return false;
-      return info.length === resource.byteLength && info.hash === resource.storageKey.slice(0, 64);
-    },
-    partialLength: async hash => (await stat(hash, true)).length,
-    truncate: async (key, length) => { await call({ key, length, action: 'truncate' }); },
-    append: async (key, offset, bytes) => { await call({ key, offset, base64: encode(bytes), action: 'append' }); },
-    verifyPartial: async key => (await call({ key, partial: true, action: 'hash' })).hash === key,
-    discardPartial: async key => { await call({ key, action: 'discard' }); },
-    publish: async resource => { attachmentSourceVerification.invalidate(resource.storageKey); await call({ key: resource.storageKey, action: 'publish' }); },
-    availability: (hash, available) => db.write(port => recordFramedSyncResourceAvailability(port, [hash], available))
-  });
+  const receiver = createAttachmentBlockReceiver(createCompanionAttachmentFiles(owner,
+    (hash, available) => db.write(port => recordFramedSyncResourceAvailability(port, [hash], available))));
   const inspect = async (keys: string[]) => z.array(z.boolean()).parse(
     (await call({ key: '', keys, action: 'source-stat-batch' })).presence);
   const completed = <T extends AttachmentBlockResult>(key: string, pending: Promise<T>) => completeReceived(db, key, pending);
@@ -90,12 +73,6 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
     needs: async () => (await readRequestSyncAttachmentNeedsSlice(db, inspect, attachmentWorkBudget(), true)).keys
   };
   return host;
-}
-
-function encode(bytes: Uint8Array) {
-  const parts: string[] = [];
-  for (let offset = 0; offset < bytes.length; offset += 8192) parts.push(String.fromCharCode(...bytes.subarray(offset, offset + 8192)));
-  return btoa(parts.join(''));
 }
 
 async function notifyComplete<T extends AttachmentBlockResult>(storageKey: string, pending: Promise<T>) {

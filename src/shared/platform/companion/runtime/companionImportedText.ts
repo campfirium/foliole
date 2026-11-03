@@ -1,4 +1,5 @@
 import { buildImportRecord, importEventStatement, importSourceStatement } from '../../../../../lib/core/database/importRecordStatements';
+import type { NodeResourceReference } from '../../../../../lib/core/database/nodeResourceReferences';
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import type { PreparedImportRecord } from '../../../../../lib/core/import/contract';
@@ -12,7 +13,8 @@ import { commitCompanionNodeHistoryWithDb } from './companionNodeHistory';
 import { iosCompanionContentHash, iosCompanionHostName, markIosCompanionMutation } from './iosCompanionMutationState';
 
 /** Called inside the current library writer transaction after validating the target. */
-export async function persistCompanionImportedTextWithDb(db: DbPort, prepared: PreparedImportRecord, parentNodeId: string) {
+export async function persistCompanionImportedTextWithDb(db: DbPort, prepared: PreparedImportRecord, parentNodeId: string,
+  resourceReferences: NodeResourceReference[] = []) {
   if (!prepared.content.trim()) throw new Error('The selected file has no readable text.');
   const title = await resolveTitle(db, prepared.nodeTitle);
   const node: WorkspaceNodeSnapshot = {
@@ -20,7 +22,8 @@ export async function persistCompanionImportedTextWithDb(db: DbPort, prepared: P
     content: prepared.content, isTitleManual: true, hideTitleHeading: prepared.hideTitleHeading,
     openingText: resolveNodeOpeningText(prepared.content, title), anchorLink: null,
     createdAt: prepared.importedAt, updatedAt: prepared.importedAt, reading: null, reveal: null, review: null,
-    importSourceFingerprint: prepared.sourceFingerprint, importContentFingerprint: prepared.contentFingerprint
+    importSourceFingerprint: prepared.sourceFingerprint, importContentFingerprint: prepared.contentFingerprint,
+    resourceReferences
   };
   assertNodeTextForSave(node);
   const hostName = await iosCompanionHostName(db);

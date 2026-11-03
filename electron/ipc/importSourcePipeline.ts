@@ -7,6 +7,7 @@ import type {
 } from '../../lib/core/import/contract.js';
 import { buildRetainedDegradedImportContent } from '../../lib/core/import/controlledContext.js';
 import { normalizeImportNodeTitleStrategy, type ImportNodeTitleStrategy } from '../../lib/core/import/importManagerSettings.js';
+import { buildPdfReaderPlaceholder } from '../../lib/core/import/pdfReaderPlaceholder.js';
 import { readTextFileImportPayload, toTextFileImportPayload } from '../../lib/core/import/textFilePayload.js';
 import type { NativeTextImportArgs } from '../../lib/platform/nativeContract.js';
 
@@ -49,7 +50,7 @@ export function toImportPayload(content: string, kind: ImportSourceKind, sourceN
   }
   if (kind === 'pdf') {
     return {
-      content: [`# ${path.parse(sourceName).name}`, '', 'Linked PDF source ready for the reader surface.'].join('\n'),
+      content: buildPdfReaderPlaceholder(sourceName),
       degradedReason: null
     };
   }
