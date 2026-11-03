@@ -20,5 +20,7 @@ export const COMPANION_LEARNING_SETTING_FIELDS: readonly CompanionLearningSettin
   { key: 'maximumIntervalDays', label: 'settings.review.maximumInterval.aria', min: 1, step: 1,
     read: value => value.maximumIntervalDays, patch: maximumIntervalDays => ({ maximumIntervalDays }) },
   { key: 'newItemLoadBalancingDays', label: 'settings.review.newItemLoadBalancing.title', min: 1, max: 99, step: 1,
-    read: value => value.newItemLoadBalancingDays, patch: newItemLoadBalancingDays => ({ newItemLoadBalancingDays }) }
+    read: value => value.newItemLoadBalancingDays, patch: newItemLoadBalancingDays => ({ newItemLoadBalancingDays }) },
+  { key: 'newDayStartsAtHour', label: 'settings.review.newDayStartsAt.aria', min: 0, max: 23, step: 1,
+    read: value => value.newDayStartsAtHour, patch: newDayStartsAtHour => ({ newDayStartsAtHour }) }
 ];
