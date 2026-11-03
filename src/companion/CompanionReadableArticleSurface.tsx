@@ -5,13 +5,13 @@ import type { CompanionContentSaveHandler } from '../shared/platform/companion/e
 import type { CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligibility';
 
-import { companionReadingSurfaceClassName, companionReviewSurfaceClassName } from './companionCssCompatibility';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { findCompanionClozeTarget } from './companionExistingHighlightActions';
 import { ImmersiveArticleContent } from './CompanionImmersiveArticleContent';
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
 import { SelectionAnnotationToolbarLayer } from './CompanionReadableArticleSelectionToolbarLayer';
 import type { CompanionReadingActivity } from './companionReadingActivity';
+import { useCompanionReadingDisplayLayout } from './companionReadingDisplayLayout';
 import { CompanionReviewHeader } from './CompanionReviewHeader';
 import { resolveCompanionSearchSelection, type CompanionSearchMatch } from './companionSearchMatch';
 import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
@@ -121,8 +121,7 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
     toolbar.closeSelectionToolbar();
   }
   const toolbarEvents = createArticleToolbarEvents(toolbar, reading);
-  const chromeReservedSpacing = 'pt-14 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+3.5rem)] pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)]';
-  const surfaceClassName = props.flow ? companionReviewSurfaceClassName : `${companionReadingSurfaceClassName} flex flex-col ${chromeReservedSpacing}`;
+  const surfaceClassName = useCompanionReadingDisplayLayout(props.flow, reading.isContentEditing);
   const cloze = findCompanionClozeTarget(snapshot, props.readableArticle.nodeId);
   const openClozeRemoval = cloze && props.onDeleteExistingHighlight && !reading.isContentEditing ? () => {
     reading.setIsActionsSheetOpen(false);

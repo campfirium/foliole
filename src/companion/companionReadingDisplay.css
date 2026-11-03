@@ -1,0 +1,17 @@
+/* Overlay mode reclaims toolbar space while preserving the system safe area. */
+section.companion-reading-overlay {
+  padding-top: calc(env(safe-area-inset-top, 0px) + var(--companion-page-content-gap));
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--companion-page-content-gap));
+}
+/* Flow actions stay available. End padding is a scroll runway, not a smaller viewport. */
+section.companion-reading-overlay:has(> .companion-review-footer)::after {
+  content: '';
+  display: block;
+  height: 4rem;
+  flex-shrink: 0;
+}
+/* Outer scrolling must include the document's natural height before the end runway. */
+.companion-reading-overlay [data-companion-article-document] > div,
+.companion-reading-overlay .markdown-editor-host[data-scroll-container='outer'] {
+  height: auto;
+}

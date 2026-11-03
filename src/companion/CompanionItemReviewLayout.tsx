@@ -3,6 +3,7 @@ import { useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { allocateItemAnswerHeight } from '../shared/ui/itemAnswerAllocation';
 
 import './companionItemReviewLayout.css';
+import { useCompanionReadingDisplay } from './companionReadingDisplay';
 
 function naturalHeight(pane: HTMLElement | null) {
   const content = pane?.querySelector<HTMLElement>('.cm-content');
@@ -14,6 +15,7 @@ function naturalHeight(pane: HTMLElement | null) {
 }
 
 function useReviewSpace(root: RefObject<HTMLDivElement | null>, active: boolean, version: string) {
+  const { overlayToolbars } = useCompanionReadingDisplay();
   useLayoutEffect(() => {
     const element = root.current;
     const surface = element?.closest<HTMLElement>('.companion-review-surface');
@@ -24,7 +26,7 @@ function useReviewSpace(root: RefObject<HTMLDivElement | null>, active: boolean,
     const update = () => {
       const surfaceTop = surface.getBoundingClientRect().top;
       const contentTop = element.getBoundingClientRect().top - surfaceTop + surface.scrollTop;
-      const footerTop = footer ? footer.getBoundingClientRect().top - surfaceTop
+      const footerTop = overlayToolbars ? surface.clientHeight : footer ? footer.getBoundingClientRect().top - surfaceTop
         : surface.clientHeight - (Number.parseFloat(getComputedStyle(surface).paddingBottom) || 0);
       const available = Math.max(0, footerTop - contentTop);
       const questionHeight = naturalHeight(question);
@@ -51,7 +53,7 @@ function useReviewSpace(root: RefObject<HTMLDivElement | null>, active: boolean,
       element.style.minHeight = '';
       element.style.gridTemplateRows = '';
     };
-  }, [root, active, version]);
+  }, [root, active, version, overlayToolbars]);
 }
 
 export function CompanionItemReviewLayout(props: { active: boolean; version: string; children: ReactNode }) {

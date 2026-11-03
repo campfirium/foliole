@@ -5,6 +5,7 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { companionFlexRowGap2ClassName, companionMobileChromeHitRailClassName } from './companionCssCompatibility';
 import { useCompanionFlowHistoryControls } from './CompanionFlowHistoryContext';
+import { useCompanionReadingDisplay } from './companionReadingDisplay';
 import type { CompanionReadingNavigationControls } from './useCompanionReadingNavigation';
 import { useCompanionTouchClick } from './useCompanionTouchClick';
 
@@ -135,6 +136,8 @@ export function ReadingChrome(props: {
   title: string;
   visible?: boolean;
 }) {
+  const { overlayToolbars } = useCompanionReadingDisplay();
+  if (overlayToolbars && props.visible === false && !props.isContentEditing) return null;
   if (props.isContentEditing) {
     return <EditingChrome onOpenActions={props.onOpenActions} onCancelContentEditing={props.onCancelContentEditing} onToggleContentEditing={props.onToggleContentEditing} />;
   }
