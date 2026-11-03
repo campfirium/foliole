@@ -1,4 +1,4 @@
-import { Bug, Clock, Database, Palette, RefreshCw, type LucideIcon } from 'lucide-react';
+import { BookOpen, Bug, Clock, Database, Palette, RefreshCw, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -64,6 +64,7 @@ function DataAppearanceSettingsSection(props: {
 export function CompanionSettingsList(props: {
   onOpenAppearance(): void;
   onOpenDebug(): void;
+  onOpenLearning?(): void;
   onOpenForegroundTime?(): void;
   onOpenStorage(): void;
   onOpenSync(): void;
@@ -83,9 +84,12 @@ export function CompanionSettingsList(props: {
             title={t('companion.settings.sync.title')}
           />
         </SettingsListSection>
-        {props.onOpenForegroundTime ? <SettingsListSection title={t('desktop.reviewCalendar.title')}>
+        {props.onOpenLearning || props.onOpenForegroundTime ? <SettingsListSection title={t('companion.settings.learning.section')}>
+          {props.onOpenLearning ? <SettingsListItem Icon={BookOpen} detail="" onClick={props.onOpenLearning}
+            title={t('companion.settings.learning.title')} /> : null}
+          {props.onOpenForegroundTime ?
           <SettingsListItem Icon={Clock} detail="" onClick={props.onOpenForegroundTime}
-            title={t('desktop.foregroundTime.title')} />
+            title={t('desktop.foregroundTime.title')} /> : null}
         </SettingsListSection> : null}
         <DataAppearanceSettingsSection
           onOpenAppearance={props.onOpenAppearance}

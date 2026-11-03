@@ -1,4 +1,10 @@
 export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
+  'companion.settings.learning.title': 'Learning settings',
+  'companion.settings.learning.section': 'Learning',
+  'companion.settings.learning.save': 'Save',
+  'companion.settings.learning.loading': 'Loading learning settings…',
+  'companion.settings.learning.loadError': 'Learning settings could not be loaded. Try again.',
+  'companion.settings.learning.saveError': 'Changes could not be saved. Try again.',
   'companion.settings.language.saveError': 'App language could not be saved. Try again.',
   'companion.settings.debug.resetReviews.action': 'Reset item reviews',
   'companion.settings.debug.resetReviews.title': 'Reset all item reviews?',

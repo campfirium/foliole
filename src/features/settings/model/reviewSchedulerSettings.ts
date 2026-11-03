@@ -15,6 +15,12 @@ import {
 } from '../../../shared/platform/settingsRuntimeRepository';
 
 const settingsListeners = new Set<(hour: number) => void>();
+const schedulerListeners = new Set<() => void>();
+
+export function subscribeReviewSchedulerSettings(handler: () => void) {
+  schedulerListeners.add(handler);
+  return () => { schedulerListeners.delete(handler); };
+}
 
 export function subscribeReviewDayBoundary(handler: (hour: number) => void) {
   settingsListeners.add(handler);
@@ -30,6 +36,7 @@ export function getCurrentReviewSchedulerSettings() {
 function syncCurrentReviewSchedulerSettings(settings: ReviewSchedulerSettings) {
   const previousHour = currentReviewSchedulerSettings.newDayStartsAtHour;
   currentReviewSchedulerSettings = settings;
+  for (const handler of schedulerListeners) handler();
   if (previousHour !== settings.newDayStartsAtHour) {
     for (const handler of settingsListeners) handler(settings.newDayStartsAtHour);
   }

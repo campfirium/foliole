@@ -1,6 +1,12 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.settings.learning.title': '学习设置',
+  'companion.settings.learning.section': '学习',
+  'companion.settings.learning.save': '保存',
+  'companion.settings.learning.loading': '正在读取学习设置…',
+  'companion.settings.learning.loadError': '无法读取学习设置，请重试。',
+  'companion.settings.learning.saveError': '修改未能保存，请重试。',
   'companion.settings.language.saveError': '无法保存应用语言，请重试。',
   'companion.settings.debug.resetReviews.action': '重置检测项复习',
   'companion.settings.debug.resetReviews.title': '重置全部检测项的复习？',

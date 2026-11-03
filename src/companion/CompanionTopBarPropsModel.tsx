@@ -68,6 +68,7 @@ function resolveSettingsTopBar(
   onBackToSettingsList: () => void,
   onBackToSyncSettings: () => void
 ) {
+  if (settingsPage === 'learning') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.learning.title') };
   if (settingsPage === 'sync') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.sync.deviceSync') };
   if (settingsPage === 'device') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.device.title') };
   if (settingsPage === 'storage') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.storage.title') };
