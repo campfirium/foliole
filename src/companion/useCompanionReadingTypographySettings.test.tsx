@@ -49,3 +49,18 @@ describe('useCompanionReadingTypographySettings', () => {
       .toBe('sans');
   });
 });
+
+it('keeps a selected font id and reports a retryable load failure', async () => {
+  const fonts = await import('./companionReadingFonts');
+  vi.mocked(fonts.activateReadingFont).mockRejectedValueOnce(new Error('font load failed'));
+  window.localStorage.setItem('foliole-companion-reading-typography-settings', JSON.stringify({
+    fontFamily: 'custom:12345678-1234-1234-1234-123456789abc'
+  }));
+  const { useCompanionReadingTypographySettings } = await import('./useCompanionReadingTypographySettings');
+  const { result } = renderHook(() => useCompanionReadingTypographySettings());
+  await waitFor(() => expect(result.current.fontLoadError).toBe(true));
+  expect(result.current.settings.fontFamily).toBe('custom:12345678-1234-1234-1234-123456789abc');
+  expect(JSON.parse(window.localStorage.getItem('foliole-companion-reading-typography-settings')!).fontFamily)
+    .toBe('custom:12345678-1234-1234-1234-123456789abc');
+  window.localStorage.clear();
+});

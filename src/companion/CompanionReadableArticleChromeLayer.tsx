@@ -60,6 +60,7 @@ interface ImmersiveChromeLayerProps {
   readableArticle: ReadableArticle;
   readingTypographySettings: CompanionReadingTypographySettings;
   readingTypographySaveError?: boolean | undefined;
+  readingTypographyFontLoadError?: boolean | undefined;
   searchOpen: boolean;
   snapshot?: WorkspaceSnapshot | null;
   textAlternative?: TextAlternativeState;
@@ -99,21 +100,12 @@ function ReadingChromeControls(props: {
   );
 }
 
-function ReadingSheetsLayer(props: {
-  editor: EditorAdapter | null;
-  onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info' | null): void;
-  onOpenSearchSheet(open: boolean): void;
-  onOpenOutline(open: boolean): void;
-  onReadingTypographySettingsChange(settings: CompanionReadingTypographySettings): void;
-  onSelectOutlineItem(item: { from: number; to: number }): void;
-  openReadingSheet: 'font' | 'highlight' | 'info' | null;
-  readingTypographySettings: CompanionReadingTypographySettings;
-  readingTypographySaveError?: boolean | undefined;
-  searchOpen: boolean;
-  outlineOpen: boolean;
-  readableArticle: ReadableArticle;
-  textAlternative?: TextAlternativeState;
-}) {
+type ReadingSheetsLayerProps = Pick<ImmersiveChromeLayerProps,
+  'editor' | 'onOpenReadingSheet' | 'onOpenSearchSheet' | 'onOpenOutline' | 'onReadingTypographySettingsChange'
+  | 'onSelectOutlineItem' | 'openReadingSheet' | 'readingTypographySettings' | 'readingTypographySaveError'
+  | 'readingTypographyFontLoadError' | 'searchOpen' | 'outlineOpen' | 'readableArticle' | 'textAlternative'>;
+
+function ReadingSheetsLayer(props: ReadingSheetsLayerProps) {
   const highlights = useMemo(() => props.openReadingSheet === 'highlight' ? buildCompanionHighlightPanelItems({
     content: props.readableArticle.content,
     textAnchorDecorations: props.readableArticle.textAnchorDecorations
@@ -136,6 +128,7 @@ function ReadingSheetsLayer(props: {
         open={props.openReadingSheet === 'font'}
         settings={props.readingTypographySettings}
         saveError={props.readingTypographySaveError}
+        fontLoadError={props.readingTypographyFontLoadError}
       />
       <ReadingHighlightSheet
         highlights={highlights}
@@ -218,6 +211,7 @@ export function ImmersiveChromeLayer(props: ImmersiveChromeLayerProps) {
         openReadingSheet={props.openReadingSheet}
         readingTypographySettings={props.readingTypographySettings}
         readingTypographySaveError={props.readingTypographySaveError}
+        readingTypographyFontLoadError={props.readingTypographyFontLoadError}
         searchOpen={props.searchOpen}
         outlineOpen={props.outlineOpen}
         readableArticle={props.readableArticle}

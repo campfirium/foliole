@@ -167,12 +167,14 @@ export function ReadingFontSheet(props: {
   open: boolean;
   settings: CompanionReadingTypographySettings;
   saveError?: boolean | undefined;
+  fontLoadError?: boolean | undefined;
 }) {
   const t = useTranslation();
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.font')}>
       <CompanionColorModeControl />
       <CompanionReadingModeControl />
+      {props.fontLoadError ? <p className="py-3 text-sm text-error" role="alert">{t('companion.reading.font.loadError')}</p> : null}
       {props.saveError ? (
         <p className="py-3 text-sm text-error" role="alert">{t('companion.reading.font.saveError')}</p>
       ) : null}

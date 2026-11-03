@@ -1,4 +1,5 @@
 export const ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS = {
+  'companion.reading.overlayToolbars': '工具栏不占位',
   'companion.reading.font.saveError': '阅读设置未能保存，仍使用上次保存的设置。',
   'companion.reading.font.decrease': '减小{setting}',
   'companion.reading.font.increase': '增大{setting}',
@@ -17,8 +18,14 @@ export const ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS = {
   'companion.reading.font.system': '设备字体',
   'companion.reading.font.import': '添加字体',
   'companion.reading.font.remove': '删除',
-  'companion.reading.font.importError': '无法添加此字体。请选择小于 20 MB 的 TTF 或 OTF 文件。',
+  'companion.reading.font.importError': '无法添加这些字体。请使用每个小于 20 MB 的 TTF 或 OTF 文件，同一字体的字重与样式不能冲突。',
   'companion.reading.font.contrast': '正文对比度',
   'companion.reading.font.contrast.default': 'Default',
-  'companion.reading.font.contrast.high': '高'
+  'companion.reading.font.contrast.high': '高',
+  'companion.reading.font.addVariants': '添加变体',
+  'companion.reading.font.preview': '字体预览',
+  'companion.reading.font.confirm': '添加字体',
+  'companion.reading.font.cancel': '取消',
+  'companion.reading.font.actionError': '无法加载、保存或删除此字体，字体文件仍然保留。',
+  'companion.reading.font.loadError': '无法加载所选字体，请重新选择以重试。',
 } as const;

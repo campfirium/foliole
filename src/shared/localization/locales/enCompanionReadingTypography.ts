@@ -1,4 +1,5 @@
 export const EN_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS = {
+  'companion.reading.overlayToolbars': 'Overlay toolbars',
   'companion.reading.font.saveError': 'Could not save reading settings. Your previous settings are still in use.',
   'companion.reading.font.decrease': 'Decrease {setting}',
   'companion.reading.font.increase': 'Increase {setting}',
@@ -17,8 +18,14 @@ export const EN_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS = {
   'companion.reading.font.system': 'Device fonts',
   'companion.reading.font.import': 'Add font',
   'companion.reading.font.remove': 'Remove',
-  'companion.reading.font.importError': 'Could not add this font. Choose a TTF or OTF file under 20 MB.',
+  'companion.reading.font.importError': 'Could not add these fonts. Use matching TTF or OTF files under 20 MB each, without conflicting weights or styles.',
   'companion.reading.font.contrast': 'Body contrast',
   'companion.reading.font.contrast.default': 'Default',
-  'companion.reading.font.contrast.high': 'High'
+  'companion.reading.font.contrast.high': 'High',
+  'companion.reading.font.addVariants': 'Add variants',
+  'companion.reading.font.preview': 'Font preview',
+  'companion.reading.font.confirm': 'Add fonts',
+  'companion.reading.font.cancel': 'Cancel',
+  'companion.reading.font.actionError': 'Could not load, save, or remove this font. Your font files are still available.',
+  'companion.reading.font.loadError': 'Could not load the selected font. Select it again to retry.',
 } as const;
