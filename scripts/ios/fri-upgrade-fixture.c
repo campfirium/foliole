@@ -7,6 +7,8 @@ static void check(int ok, const char *message) {
     if (!ok) { fprintf(stderr, "%s\n", message); exit(1); }
 }
 
+#define ATTACHMENT_ID "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
 int main(int argc, char **argv) {
     check(argc == 3, "Expected source fixture and destination database");
     sqlite3 *source = NULL, *target = NULL;
@@ -24,7 +26,12 @@ int main(int argc, char **argv) {
     check(sqlite3_backup_step(backup, -1) == SQLITE_DONE, "Copy old database");
     check(sqlite3_backup_finish(backup) == SQLITE_OK, "Finish old-engine backup");
     const char *sql = "PRAGMA journal_mode=DELETE; UPDATE nodes SET content='Legacy upgrade retained sentence.' "
-        "WHERE id='upgrade-node';";
+        "WHERE id='upgrade-node';"
+        // The historical synthetic labels predate the content-addressed attachment contract.
+        "UPDATE attachments SET id='" ATTACHMENT_ID "' WHERE id='attachment-1';"
+        "UPDATE attachment_blobs SET attachment_id='" ATTACHMENT_ID "', content_hash='" ATTACHMENT_ID
+        "', storage_key='" ATTACHMENT_ID ".png' WHERE attachment_id='attachment-1';"
+        "UPDATE node_attachments SET attachment_id='" ATTACHMENT_ID "' WHERE attachment_id='attachment-1';";
     check(sqlite3_exec(target, sql, NULL, NULL, NULL) == SQLITE_OK, sqlite3_errmsg(target));
     check(sqlite3_close(source) == SQLITE_OK && sqlite3_close(target) == SQLITE_OK, "Close old database");
     return 0;
