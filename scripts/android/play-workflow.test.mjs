@@ -1,6 +1,7 @@
 // @vitest-environment node
 import process from 'node:process';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { runInNewContext } from 'node:vm';
 import { expect, it } from 'vitest';
@@ -64,3 +65,24 @@ it('isolates signing and API secrets from package scripts and preserves the sign
   expect(evaluate(remote.concurrency['cancel-in-progress'], context)).toBe(false);
   expect(workflow.on.workflow_dispatch).toBeUndefined();
 });
+
+
+it.runIf(process.platform !== 'win32').each(['release-android.yml', 'hosted-quality-android-host.yml'])(
+  'installs the pinned NDK through the configured SDK when sdkmanager is absent from PATH: %s', name => {
+    mkdirSync('.tmp/artifacts/T251-13', { recursive: true });
+    const root = mkdtempSync(path.resolve('.tmp/artifacts/T251-13/sdk-tool-'));
+    try {
+      const directory = path.join(root, 'cmdline-tools/latest/bin');
+      mkdirSync(directory, { recursive: true });
+      const request = path.join(root, 'request');
+      writeFileSync(path.join(directory, 'sdkmanager'), '#!/bin/sh\nprintf "%s" "$1" > "$SDK_REQUEST"\n', { mode: 0o700 });
+      const source = parse(readFileSync(`.github/workflows/${name}`, 'utf8'));
+      const step = Object.values(source.jobs).flatMap(job => job.steps ?? [])
+        .find(item => item.run?.includes('sdkmanager'));
+      const result = spawnSync('/bin/bash', ['-e', '-c', step.run], {
+        env: { ANDROID_HOME: root, PATH: root, SDK_REQUEST: request }, encoding: 'utf8'
+      });
+      expect(result.status, result.stderr).toBe(0);
+      expect(readFileSync(request, 'utf8')).toBe('ndk;25.2.9519653');
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });

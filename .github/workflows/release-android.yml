@@ -52,7 +52,7 @@ jobs:
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
       - name: Install pinned SQLCipher toolchain
-        run: sdkmanager "ndk;25.2.9519653"
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;25.2.9519653"'
       - name: Build the allocated production AAB without signing credentials
         run: node scripts/android/play-release.mjs build
       - name: Sign with the existing Play upload certificate
