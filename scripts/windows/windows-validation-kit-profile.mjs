@@ -1,5 +1,5 @@
 export const WINDOWS_VALIDATION_KIT_SCHEMA_VERSION = 1;
-export const WINDOWS_VALIDATION_REQUIRED_NODE_MAJOR = 22;
+export const WINDOWS_VALIDATION_REQUIRED_NODE_MAJOR = 24;
 export const WINDOWS_VALIDATION_RUNTIME_PACKAGES = [
   '@playwright/test',
   'playwright',

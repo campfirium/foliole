@@ -140,7 +140,7 @@ jobs:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0, persist-credentials: false }
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
+        with: { node-version: 24.22.2, cache: npm }
       - run: node scripts/quality/hosted-npm-ci.mjs
       - name: Verify original full quality and unchanged product inputs
         env:

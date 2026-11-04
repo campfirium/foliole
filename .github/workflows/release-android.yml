@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
         with: { ref: '${{ inputs.target_sha }}', persist-credentials: false }
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
+        with: { node-version: 24.22.2, cache: npm }
       - name: Require exact accepted QA identity
         run: node scripts/android/play-release.mjs guard
       - name: Restore only this run's original Play candidate

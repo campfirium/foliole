@@ -53,7 +53,7 @@ describe('Windows validation kit build', () => {
     const { kitRoot, manifest } = buildWindowsValidationKit({
       env: { GITHUB_RUN_ATTEMPT: '2', GITHUB_RUN_ID: '1234' },
       head: () => commitSha,
-      nodeVersion: '22.14.0',
+      nodeVersion: '24.22.2',
       outputRoot: artifactRoot,
       repoRoot: process.cwd()
     });
@@ -63,7 +63,7 @@ describe('Windows validation kit build', () => {
     const runtimeVersions = Object.fromEntries(['@playwright/test', 'playwright', 'playwright-core']
       .map(name => [name, lock.packages[`node_modules/${name}`].version]));
     expect(manifest.runtimePackages).toEqual(runtimeVersions);
-    expect(manifest.generatedWithNodeVersion).toBe('22.14.0');
+    expect(manifest.generatedWithNodeVersion).toBe('24.22.2');
     const playwright = spawnSync(process.execPath, [path.join(kitRoot, 'node_modules/playwright/cli.js'), '--version'], {
       cwd: kitRoot,
       encoding: 'utf8'
@@ -73,11 +73,11 @@ describe('Windows validation kit build', () => {
     expect(() => verifyWindowsValidationKit({
       expected: { ...expected, runId: 'wrong' },
       kitRoot,
-      nodeVersion: '22.14.0'
+      nodeVersion: '24.22.2'
     })).toThrow('runId');
-    expect(() => verifyWindowsValidationKit({ expected, kitRoot, nodeVersion: '21.0.0' })).toThrow('Node 22');
+    expect(() => verifyWindowsValidationKit({ expected, kitRoot, nodeVersion: '21.0.0' })).toThrow('Node 24');
     const packageJson = path.join(kitRoot, 'package.json');
     fs.appendFileSync(packageJson, 'tamper');
-    expect(() => verifyWindowsValidationKit({ expected, kitRoot, nodeVersion: '22.14.0' })).toThrow('hash mismatch');
+    expect(() => verifyWindowsValidationKit({ expected, kitRoot, nodeVersion: '24.22.2' })).toThrow('hash mismatch');
   });
 });

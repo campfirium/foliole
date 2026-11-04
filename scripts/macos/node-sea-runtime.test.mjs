@@ -8,11 +8,11 @@ import { NODE_SEA_RELEASE, resolveNodeSeaReleasePaths } from './node-sea-runtime
 
 it('pins the official arm64 Node SEA runtime and checksum', () => {
   expect(NODE_SEA_RELEASE).toEqual({
-    archive: 'node-v22.23.4-darwin-arm64.tar.gz',
-    sha256: 'c9e1dbc748b33ed2d14f42445191ecaf14c56259c7a9a26d0042c49ec2b66428',
-    version: '22.23.4'
+    archive: 'node-v24.22.2-darwin-arm64.tar.gz',
+    sha256: 'aa9549349e47dffaa42dcf95d6e06ade8c4bdafc980979883b88767670df385a',
+    version: '24.22.2'
   });
   expect(resolveNodeSeaReleasePaths('/repo').nodePath).toBe(
-    path.join('/repo', '.tmp/macos/node-sea-runtime/node-v22.23.4-darwin-arm64/bin/node')
+    path.join('/repo', '.tmp/macos/node-sea-runtime/node-v24.22.2-darwin-arm64/bin/node')
   );
 });

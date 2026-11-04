@@ -33,11 +33,15 @@ const copy = vi.fn();
 const owner = () => getIosCompanionDatabaseOwner();
 const rows = () => owner().read(db => db.query<{ stage: string; last_error: string | null }>(
   'SELECT stage,last_error FROM folder_attachment_work'));
+const unusedBackupMethod = async (): Promise<never> => { throw new Error('Unexpected backup-port call'); };
 const runBackup = () => consumeCompanionFolderAttachmentWork({
+  addListener: unusedBackupMethod, openSource: unusedBackupMethod, closeSource: unusedBackupMethod,
+  getState: unusedBackupMethod, clearDirectory: unusedBackupMethod, backupDatabase: unusedBackupMethod,
+  deleteAttachment: unusedBackupMethod, cancelDatabase: unusedBackupMethod,
   prepareAttachmentDirectory: async () => {}, copyAttachment: copy,
   finishAttachments: async ({ pending, errorMessage }) => ({ configured: true, directoryId: 'profile',
     directoryLabel: 'Backup', databaseSavedAt: 'committed', phase: 'pending' as const, attachmentFilesPending: pending, errorMessage })
-} as CompanionFolderBackupPort, {
+} satisfies CompanionFolderBackupPort, {
   write: task => owner().runWriter(task), inventory
 }, { requestId: 'manual', sourceEpoch: 'owner', profile: 'profile' });
 

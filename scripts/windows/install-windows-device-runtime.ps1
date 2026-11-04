@@ -1,4 +1,4 @@
-param([string]$Version = "22.23.1")
+param([string]$Version = "24.22.2")
 
 $ErrorActionPreference = "Stop"
 $deviceRoot = Join-Path $env:LOCALAPPDATA "Foliole\windows-device"

@@ -11,7 +11,7 @@ it('accepts a Windows domain user SSH destination', () => {
   });
   expect(remoteDevicePaths('family\\tester@192.168.0.20', {}, '/Users/example')).toEqual({
     dispatcher: 'C:/Users/tester/AppData/Local/Foliole/windows-device/windows-device-dispatcher.mjs',
-    node: 'C:/Users/tester/AppData/Local/Foliole/windows-device/runtime/node-v22.23.1-win-x64/node.exe',
+    node: 'C:/Users/tester/AppData/Local/Foliole/windows-device/runtime/node-v24.22.2-win-x64/node.exe',
     sshKey: path.join('/Users/example', '.ssh', 'agent', 'foliole-windows-device')
   });
 });

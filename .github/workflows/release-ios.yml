@@ -58,7 +58,7 @@ jobs:
           sdk="$(xcrun --sdk iphoneos --show-sdk-version)"
           test "${sdk%%.*}" -ge 26
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
+        with: { node-version: 24.22.2, cache: npm }
       - uses: actions/download-artifact@v5
         if: inputs.quality_evidence_artifact != ''
         with:
@@ -172,7 +172,7 @@ jobs:
       - uses: actions/checkout@v4
         with: { ref: '${{ inputs.target_sha }}', persist-credentials: false }
       - uses: actions/setup-node@v4
-        with: { node-version: 22 }
+        with: { node-version: 24.22.2 }
       - uses: actions/download-artifact@v5
         with:
           name: ${{ needs.signed-upload.outputs.candidate_artifact }}

@@ -211,6 +211,9 @@
     "database:audit:snapshot": "python3 scripts/database/database-audit-snapshot.py",
     "database:audit": "node --no-warnings scripts/database/database-audit.mjs"
   },
+  "engines": {
+    "node": ">=24.22.2 <25"
+  },
   "dependencies": {
     "@capacitor-community/sqlite": "8.1.1",
     "@capacitor/app": "8.1.2",

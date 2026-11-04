@@ -19,7 +19,7 @@ $files = @(
 
 $nodePathFile = Join-Path $installRoot "node-path.txt"
 if ([string]::IsNullOrWhiteSpace($NodePath) -and (Test-Path $nodePathFile)) { $NodePath = Get-Content $nodePathFile -Raw }
-if (-not (Test-Path $NodePath)) { throw "Node 22 was not found; run install-windows-device-runtime.ps1 first" }
+if (-not (Test-Path $NodePath)) { throw "Node 24 was not found; run install-windows-device-runtime.ps1 first" }
 if (-not $SkipSystemSetup) {
   if (-not (Get-Service -Name sshd -ErrorAction SilentlyContinue)) {
     & dism.exe /Online /Add-Capability /CapabilityName:OpenSSH.Server~~~~0.0.1.0
