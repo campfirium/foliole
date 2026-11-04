@@ -6,6 +6,7 @@ import process from 'node:process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createPackageWithOptions, extractFile, statFile } from '@electron/asar';
+import { convertVersion, createWindowsInstaller } from 'electron-winstaller';
 import { ESLint } from 'eslint';
 import { afterEach, expect, it } from 'vitest';
 
@@ -45,13 +46,14 @@ it('preserves builder inclusion, exclusion and dot-file matching', () => {
   expect(filter(map, statSync(map))).toBe(false);
 });
 
-it('preserves legacy Windows installer glob and template FileList consumers', () => {
+it('preserves Windows installer glob and template FileList consumers', () => {
   const root = fixture();
   const builder = createRequire(builderRequire.resolve('app-builder-lib'));
   const installer = createRequire(builder.resolve('electron-winstaller'));
-  const temporary = createRequire(installer.resolve('temp'));
-  const remove = createRequire(temporary.resolve('rimraf'));
-  expect(remove('glob').sync('**/*.{js,node}', { cwd: root }).sort()).toEqual(['main.js', 'native/addon.node']);
+  expect(installer('electron-winstaller').createWindowsInstaller).toBe(createWindowsInstaller);
+  expect(convertVersion('1.2.3-beta.1+metadata')).toBe('1.2.3-beta1');
+  const temporary = installer('./temp-utils.js');
+  expect(temporary.glob.sync('**/*.{js,node}', { cwd: root }).sort()).toEqual(['main.js', 'native/addon.node']);
   const { FileList } = builder('filelist');
   expect(new FileList(path.join(root, '**/*.node')).toArray()).toEqual([path.join(root, 'native/addon.node')]);
 });
