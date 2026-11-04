@@ -91,11 +91,19 @@ it.runIf(process.platform === 'darwin')('merges both native architectures and pr
   const root = fixture();
   const x64AppPath = await nativeBundle(root, 'x86_64');
   const arm64AppPath = await nativeBundle(root, 'arm64');
-  const outAppPath = path.join(root, 'universal.app');
-  const { makeUniversalApp } = await import(pathToFileURL(builderRequire.resolve('@electron/universal')).href);
-  await makeUniversalApp({ x64AppPath, arm64AppPath, outAppPath });
-  const architectures = execFileSync('xcrun', ['lipo', '-archs', path.join(outAppPath, 'Contents/MacOS/fixture')], { encoding: 'utf8' });
-  expect(architectures).toContain('x86_64');
-  expect(architectures).toContain('arm64');
-  expect(extractFile(path.join(outAppPath, 'Contents/Resources/app.asar'), 'main.js').toString()).toBe('module.exports = 42;');
+  const previousNoAsar = process.noAsar;
+  try {
+    process.noAsar = true;
+    expect(statSync(path.join(x64AppPath, 'Contents/Resources/app.asar')).isFile()).toBe(true);
+    expect(statSync(path.join(arm64AppPath, 'Contents/Resources/app.asar')).isFile()).toBe(true);
+    const outAppPath = path.join(root, 'universal.app');
+    const { makeUniversalApp } = await import(pathToFileURL(builderRequire.resolve('@electron/universal')).href);
+    await makeUniversalApp({ x64AppPath, arm64AppPath, outAppPath });
+    const architectures = execFileSync('xcrun', ['lipo', '-archs', path.join(outAppPath, 'Contents/MacOS/fixture')], { encoding: 'utf8' });
+    expect(architectures).toContain('x86_64');
+    expect(architectures).toContain('arm64');
+    expect(extractFile(path.join(outAppPath, 'Contents/Resources/app.asar'), 'main.js').toString()).toBe('module.exports = 42;');
+  } finally {
+    process.noAsar = previousNoAsar;
+  }
 }, 60000);
