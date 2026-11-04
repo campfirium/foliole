@@ -10,6 +10,7 @@ final class FolioleCompanionAppDataStore {
     private FolioleCompanionAppDataStore() {}
 
     static JSObject clear(Context context) throws Exception {
+        deleteRecursively(new File(context.getFilesDir(), "folder-database-backup.json"));
         deleteRecursively(new File(context.getFilesDir(), "attachments"));
         deleteRecursively(new File(context.getFilesDir(), "attachments.trash"));
         deleteRecursively(new File(context.getFilesDir(), "attachment-observations.json"));

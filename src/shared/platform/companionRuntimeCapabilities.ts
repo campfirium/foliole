@@ -27,6 +27,7 @@ export const COMPANION_CAPABILITY_NAMES = [
   'attachment-maintenance',
   'remote-image-import',
   'bootstrap',
+  'folder-database-backup',
   'external-document-directory',
   'external-document-read',
   'external-document-search',

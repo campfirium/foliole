@@ -64,6 +64,10 @@ function fixture() {
     mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
     writeFileSync(path.join(root, file), file.endsWith('resolved') ? JSON.stringify(lock) : '{}');
   }
+  const native = path.join(root, 'scripts/build/mobile-sqlcipher-pins.json');
+  mkdirSync(path.dirname(native), { recursive: true });
+  writeFileSync(native, JSON.stringify({ version: '4.20.0',
+    core: { url: 'https://github.com/sqlcipher/sqlcipher/archive/refs/tags/v4.20.0.tar.gz', sha256: 'b'.repeat(64) } }));
   execFileSync('git', ['init', '-q', root]);
   execFileSync('git', ['-C', root, 'add', '.']);
   execFileSync('git', ['-C', root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test',
@@ -78,6 +82,8 @@ describe('Swift lock-only collection uses real files without native tools', () =
     const report = collectSwiftSecurityInventory({ root, output });
     expect(report.status).toBe('lock-evidence');
     expect(report.errors).toEqual([]);
+    expect(report.nativeDependencies).toEqual([expect.objectContaining({ identity: 'sqlcipher',
+      version: '4.20.0', archive: expect.objectContaining({ sha256: 'b'.repeat(64) }) })]);
     expect(report.graphs.app.status).toBe('lock-evidence');
     expect(report.graphs.host.status).toBe('lock-evidence');
     expect(report.automatedAdvisories.status).toBe('unsupported');

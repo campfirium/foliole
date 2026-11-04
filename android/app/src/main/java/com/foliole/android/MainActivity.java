@@ -32,6 +32,7 @@ public class MainActivity extends BridgeActivity {
         boolean refreshWebAssets = webAssetSignature != null && shouldRefreshWebAssets(webAssetSignature);
         registerPlugin(CapacitorSQLitePlugin.class);
         registerPlugin(FolioleCompanionBootstrapPlugin.class);
+        registerPlugin(FolioleCompanionFolderBackupPlugin.class);
         registerPlugin(FolioleCompanionAppDataPlugin.class);
         registerPlugin(FolioleCompanionSyncPlugin.class);
         registerPlugin(FolioleCompanionShareInboxPlugin.class);

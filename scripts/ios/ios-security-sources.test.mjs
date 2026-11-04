@@ -1,10 +1,34 @@
 /* global Response */
 // @vitest-environment node
 import { expect, it } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import path from 'node:path';
+import { collectIosOfficialSecurity } from './ios-official-security.mjs';
+import { startOfficialPublisher } from './ios-security-test-support.mjs';
 import { APPLE_RELEASES, SQLCIPHER_ADVISORY, readOfficialSource,
   releaseMetadata, assessSqlcipherRelease, pendingReleases, appleReleaseMetadata } from './ios-security-sources.mjs';
 
 const sqlRelease = { tag: 'v4.19.0', body: `security sqlcipher_export hexkey ${SQLCIPHER_ADVISORY}` };
+it('retains vendor vulnerability coverage when the App uses a locally built SQLCipher core', async () => {
+  const now = Date.now();
+  const publisher = await startOfficialPublisher(now);
+  const parent = path.resolve('.tmp/artifacts/T692/native-source-review');
+  mkdirSync(parent, { recursive: true });
+  const root = mkdtempSync(path.join(parent, 'run-'));
+  try {
+    const report = await collectIosOfficialSecurity({
+      pins: [{ identity: 'sqlcipher', version: '4.17.0', url: 'https://github.com/sqlcipher/sqlcipher.git' }],
+      output: root, now, fetchSource: publisher.fetchSource
+    });
+    expect(report.errors).toEqual([]);
+    expect(report.findings).toContainEqual(expect.objectContaining({
+      package: 'sqlcipher/sqlcipher', advisory: 'sqlcipher-4.19.0-export-hexkey'
+    }));
+  } finally {
+    await publisher.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 it('finds vendor-only SQLCipher issues at 4.17 and 4.18, and clears only at the reviewed fixed range', () => {
   for (const version of ['4.17.0', '4.18.0']) {
     expect(assessSqlcipherRelease([sqlRelease], version)[0]).toMatchObject({ versions: [version], severity: 'low' });

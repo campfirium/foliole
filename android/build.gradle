@@ -23,7 +23,22 @@ buildscript {
 apply from: "variables.gradle"
 
 allprojects {
+    configurations.configureEach {
+        resolutionStrategy.force 'net.zetetic:sqlcipher-android:4.20.0'
+    }
     repositories {
+        exclusiveContent {
+            forRepository {
+                maven {
+                    url = rootProject.file('../.cache/mobile-sqlcipher/maven').toURI()
+                    metadataSources {
+                        mavenPom()
+                        ignoreGradleMetadataRedirection()
+                    }
+                }
+            }
+            filter { includeModule('net.zetetic', 'sqlcipher-android') }
+        }
         google()
         mavenCentral()
     }

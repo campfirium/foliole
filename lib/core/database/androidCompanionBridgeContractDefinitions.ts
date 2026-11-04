@@ -1,3 +1,5 @@
+import { COMPANION_FOLDER_BACKUP_FILES } from '../../platform/companionFolderBackupContract.js';
+
 import {
   ANDROID_COMPANION_SYNC_GROUP_SECURITY_CONTRACT_DEFINITIONS
 } from './androidCompanionSyncGroupSecurityContractDefinitions.js';
@@ -17,6 +19,7 @@ import { COMPANION_TOPIC_SEARCH_HOST_CONTRACT } from './companionTopicSearchDefi
 export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
   hostApi: {
     attachmentResourceSync: COMPANION_ATTACHMENT_RESOURCE_HOST_CONTRACT_DEFINITIONS,
+    folderBackup: COMPANION_FOLDER_BACKUP_FILES,
     bootstrap: {
       hostNameDefaults: {
         defaultHostName: 'Android device',

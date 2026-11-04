@@ -89,12 +89,28 @@ static void export_quoted_alias(void) {
     sqlite3_close(db);
 }
 
+static void verify_readonly_page_access(const char *file) {
+    create_database(file, 0);
+    sqlite3 *db = NULL;
+    require(sqlite3_open_v2(file, &db, SQLITE_OPEN_READONLY, NULL) == SQLITE_OK,
+        "Cannot open readonly page source");
+    require(sqlite3_compileoption_used("ENABLE_DBPAGE_VTAB"), "Page access is not compiled in");
+    require(scalar(db, "SELECT length(data) FROM sqlite_dbpage WHERE pgno=1") > 0,
+        "Cannot read a consistent source page");
+    require(sqlite3_exec(db, "INSERT INTO sqlite_dbpage(pgno,data) "
+        "SELECT pgno,data FROM sqlite_dbpage WHERE pgno=1", NULL, NULL, NULL) != SQLITE_OK,
+        "Readonly source unexpectedly accepted a page write");
+    require(scalar(db, "SELECT count(*) FROM facts") == 1, "Readonly page access changed facts");
+    sqlite3_close(db);
+}
+
 int main(int argc, char **argv) {
     require(argc >= 2, "Scenario required");
     if (!strcmp(argv[1], "alias")) export_quoted_alias();
     else {
         require(argc >= 3, "Test file required");
         if (!strcmp(argv[1], "hexkey")) reject_invalid_hexkey(argv[2]);
+        else if (!strcmp(argv[1], "dbpage")) verify_readonly_page_access(argv[2]);
         else {
             int encrypted = argc > 3 && !strcmp(argv[3], "encrypted");
             if (!strcmp(argv[1], "create")) create_database(argv[2], encrypted);

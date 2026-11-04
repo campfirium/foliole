@@ -207,3 +207,29 @@ it('reports native open failures other than a replaced document connection', asy
   expect(manager.closeConnection).not.toHaveBeenCalled();
   expect(manager.createConnection).toHaveBeenCalledTimes(1);
 });
+
+it('keeps interactive writers available during backup source registration and waits for native source release before closing', async () => {
+  const { owner, manager } = harness();
+  await owner.open({ expectedHostName: 'device', now: '2026-08-06T00:00:00Z' });
+  let register: () => void = () => undefined;
+  let release: () => void = () => undefined;
+  const port = {
+    openSource: vi.fn(() => new Promise<void>((resolve) => { register = resolve; })),
+    closeSource: vi.fn(() => new Promise<void>((resolve) => { release = resolve; })),
+    getState: vi.fn(), backupDatabase: vi.fn(), cancelDatabase: vi.fn(), addListener: vi.fn()
+  };
+  const registration = owner.folderBackupSource(port);
+  let written = false;
+  await owner.runWriter(async () => { written = true; });
+  expect(written).toBe(true);
+  register();
+  const epoch = await registration;
+  expect(await owner.folderBackupSource(port)).toBe(epoch);
+  expect(port.openSource).toHaveBeenCalledTimes(1);
+  const closed = owner.close();
+  await vi.waitFor(() => expect(port.closeSource).toHaveBeenCalledWith({ sourceEpoch: epoch }));
+  expect(manager.closeConnection).not.toHaveBeenCalled();
+  release();
+  await closed;
+  expect(manager.closeConnection).toHaveBeenCalledWith('foliole-companion', false);
+});

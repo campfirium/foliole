@@ -5,6 +5,7 @@ import semver from './ios-security-semver.mjs';
 export const IOS_REPOSITORIES = {
   'capacitor-swift-pm': ['ionic-team/capacitor-swift-pm', 'ionic-team/capacitor'],
   'sqlcipher.swift': ['sqlcipher/SQLCipher.swift', 'sqlcipher/sqlcipher'],
+  sqlcipher: ['sqlcipher/sqlcipher'],
   'swift-protobuf': ['apple/swift-protobuf', 'protocolbuffers/protobuf'],
   zipfoundation: ['weichsel/ZIPFoundation']
 };

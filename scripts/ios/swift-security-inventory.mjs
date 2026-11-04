@@ -29,6 +29,11 @@ export function collectSwiftSecurityInventory({ root, output, resolve = false })
   const capture = file => { report.inputs[file] ??= hash(file); };
   try {
     report.source = captureSecurityCandidate(root, args => run('git', args));
+    const nativeInputs = 'scripts/build/mobile-sqlcipher-pins.json';
+    capture(nativeInputs);
+    const native = json(nativeInputs);
+    report.nativeDependencies = [{ identity: 'sqlcipher', version: native.version,
+      url: 'https://github.com/sqlcipher/sqlcipher.git', archive: native.core }];
     for (const file of ['package-lock.json', 'ios/App/App.xcodeproj/project.pbxproj']) capture(file);
     for (const [name, file] of Object.entries(SWIFT_LOCKS)) {
       capture(file);
@@ -74,6 +79,12 @@ function resolveGraphs({ root, output, report, run, json, capture, toolEnv }) {
     .map(row => ({ identity: row.packageRef.identity, url: row.packageRef.location,
       ...row.state.checkoutState }));
   report.graphs.app.artifacts = workspace.object.artifacts;
+  const buildReceipt = '.cache/mobile-sqlcipher/ios.json';
+  capture(buildReceipt);
+  report.graphs.app.sourceBuild = json(buildReceipt);
+  for (const slice of ['ios-arm64', 'macos-arm64_x86_64']) {
+    capture(path.join(report.graphs.app.sourceBuild.artifact, slice, 'SQLCipher.framework/SQLCipher'));
+  }
   const remoteRoots = dependencies.filter(row => row.packageRef.kind === 'remoteSourceControl')
     .map(row => path.join(appCache.sourcePackages, 'checkouts', row.subpath));
   const localRoots = dependencies.filter(row => row.packageRef.kind === 'fileSystem')

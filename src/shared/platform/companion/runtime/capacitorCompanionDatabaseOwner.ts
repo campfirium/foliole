@@ -11,9 +11,11 @@ import type { WorkspaceRefreshScope } from '../../../../../lib/core/database/wor
 import type { PriorityIndexNode } from '../../../../../lib/core/nodes/workspaceNodePriorityState';
 import type { RegularPushQueuePriority } from '../../../../../lib/core/review/unifiedPushQueueRules';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
+import type { CompanionFolderBackupPort } from '../../../../../lib/platform/companionFolderBackupContract';
 import { COMPANION_DATABASE_NAME } from '../../../../../lib/platform/nativeCompanionContract';
 import { createCapacitorSqliteDbPort } from '../../capacitorSqliteDbPort';
 import { clearRetiredCompanionEditHistory, createCompanionEditHistorySession, readConfirmedCompanionEditHistory } from '../editing/companionEditHistorySession';
+import { CompanionFolderBackupSource } from '../folderBackup/companionFolderBackupSource';
 
 import { loadCompanionForegroundOwner } from './companionForegroundTimeOwner';
 import { CompanionNodePriorityState } from './companionNodePriorityState';
@@ -50,6 +52,7 @@ export class CapacitorCompanionDatabaseOwner {
   private snapshots: CompanionRequestSyncSnapshots | null = null;
   private readIntents: Awaited<ReturnType<typeof openCompanionReadIntentStorage>> | null = null;
   private readonly nodePriorities = new CompanionNodePriorityState();
+  private nativeBackupSource = new CompanionFolderBackupSource();
 
   constructor(
     private readonly manager: CapacitorCompanionDatabaseManager,
@@ -82,6 +85,7 @@ export class CapacitorCompanionDatabaseOwner {
       this.db = db;
       this.journalMode = result.journalMode;
       this.path = databasePath;
+      this.nativeBackupSource = new CompanionFolderBackupSource();
       this.snapshots = new CompanionRequestSyncSnapshots(this.manager, this.platform);
       return { ...result, databasePath } satisfies CapacitorCompanionOpenResult;
     } catch (error) {
@@ -119,6 +123,12 @@ export class CapacitorCompanionDatabaseOwner {
   get databasePath() {
     if (!this.path) throw new Error('Companion database owner is not open.');
     return this.path;
+  }
+
+  folderBackupSource(port: CompanionFolderBackupPort) {
+    this.requireDb();
+    if (this.pendingCloses) throw new Error('Companion database owner is closing.');
+    return this.nativeBackupSource.acquire(this.databasePath, port);
   }
 
   async readBackgroundSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal) {
@@ -187,7 +197,13 @@ export class CapacitorCompanionDatabaseOwner {
 
   close() {
     this.pendingCloses += 1;
-    return this.enqueue(() => this.closeDatabase()).finally(() => { this.pendingCloses -= 1; });
+    const nativeClose = this.nativeBackupSource.close();
+    // Observe early rejection while queued writes drain; the close below still propagates it.
+    nativeClose.catch(() => undefined);
+    return this.enqueue(async () => {
+      await nativeClose;
+      return this.closeDatabase();
+    }).finally(() => { this.pendingCloses -= 1; });
   }
 
   private async closeDatabase() {

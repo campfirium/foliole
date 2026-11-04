@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { digest } from '../security/security-inputs.mjs';
@@ -57,19 +57,24 @@ export function collectIosEnvironment({ root, inventory, device = false, deviceI
 function resolvedComponents(inventory, run) {
   const artifacts = inventory.graphs.app.artifacts;
   const sql = artifacts.find(row => row.targetName === 'SQLCipher');
-  if (!sql?.path || !sql.source?.checksum) throw new Error('Resolved SQLCipher binary identity is missing');
+  const build = inventory.graphs.app.sourceBuild;
+  if (!sql?.path || sql.source?.type !== 'local' || !build?.artifact
+      || realpathSync(sql.path) !== realpathSync(build.artifact)) {
+    throw new Error('Resolved SQLCipher binary does not match the prepared source build');
+  }
   const header = path.join(sql.path, 'ios-arm64/SQLCipher.framework/Headers/sqlite3.h');
   const raw = readFileSync(header);
   const sqlite = /^#define SQLITE_VERSION\s+"([\d.]+)"/mu.exec(raw.toString())?.[1];
   if (!sqlite) throw new Error('Actual iOS framework SQLite version is missing');
   const framework = path.join(sql.path, 'macos-arm64_x86_64/SQLCipher.framework/SQLCipher');
   const native = JSON.parse(run('python3', ['-c', SQLCIPHER_VERSION_PROBE, framework]));
-  const expected = inventory.graphs.app.pins.find(row => row.identity === 'sqlcipher.swift').version;
-  if (native.sqlite !== sqlite || native.sqlcipher.split(' ')[0] !== expected) {
-    throw new Error('SQLCipher actual core/header version does not match resolved wrapper');
+  const component = inventory.nativeDependencies.find(row => row.identity === 'sqlcipher');
+  const expected = component.version;
+  if (native.sqlite !== sqlite || native.sqlcipher.split(' ')[0] !== expected || !native.dbpage) {
+    throw new Error('SQLCipher actual core/header or page access does not match the prepared build');
   }
-  return { sqlcipher: { wrapper: expected, actualMacCore: native.sqlcipher, sqlite,
-    header, headerSha256: digest(raw), artifact: sql.source,
+  return { sqlcipher: { implementationVersion: expected, actualMacCore: native.sqlcipher, sqlite,
+    header, headerSha256: digest(raw), artifact: sql.source, source: component.archive, build,
     scope: 'Resolved iOS header and same XCFramework Mac slice; no iPhone runtime claim',
     crypto: 'Apple Community provider is OS Common Crypto; vendor matrix 4.19.0, OS-specific version' },
   binaries: artifacts.map(row => ({ name: row.targetName, source: row.source,
@@ -83,7 +88,7 @@ const SQLCIPHER_VERSION_PROBE = `import ctypes,json,sys
 s=ctypes.CDLL(sys.argv[1]);s.sqlite3_libversion.restype=ctypes.c_char_p
 db=ctypes.c_void_p();assert s.sqlite3_open(b':memory:',ctypes.byref(db))==0
 CB=ctypes.CFUNCTYPE(ctypes.c_int,ctypes.c_void_p,ctypes.c_int,ctypes.POINTER(ctypes.c_char_p),ctypes.POINTER(ctypes.c_char_p))
-r={'sqlite':s.sqlite3_libversion().decode()}
+r={'sqlite':s.sqlite3_libversion().decode(),'dbpage':bool(s.sqlite3_compileoption_used(b'ENABLE_DBPAGE_VTAB'))}
 def cb(a,n,v,c):
  r['sqlcipher']=v[0].decode();return 0
 c=CB(cb);assert s.sqlite3_exec(db,b'PRAGMA cipher_version',c,None,None)==0

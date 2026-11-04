@@ -28,7 +28,8 @@ export async function collectIosSecurityMaintenance({ root, output, trivy, cache
   } catch (error) {
     scanner = { status: 'error', findings: [], graphs: {}, errors: [error.message] };
   }
-  const pins = [...new Map(Object.values(inventory.graphs).flatMap(graph => graph.pins ?? [])
+  const pins = [...new Map([...Object.values(inventory.graphs).flatMap(graph => graph.pins ?? []),
+    ...(inventory.nativeDependencies ?? [])]
     .map(pin => [`${pin.identity}:${pin.version}:${pin.revision}`, pin])).values()];
   const official = await collectIosOfficialSecurity({ pins, output: path.join(output, 'official'), token, now });
   const environment = collectIosEnvironment({ root, inventory, device, deviceId, deviceName });

@@ -34,5 +34,7 @@
 
 ## Validation
 
+- `capacitor:sync:before` prepares the pinned SQLCipher 4.20.0 JNI/LibTomCrypt build with DBPAGE using NDK 25.2.9519653. It retains the vendor AAR Java classes and publishes the rebuilt AAR/POM to root `.cache/mobile-sqlcipher/maven`; the Gradle exclusive repository prevents an implicit vendor-binary fallback. Run `npm run test:files -- scripts/build/mobile-sqlcipher-sources.test.mjs` before the existing host build entry. This hook does not install or operate a device.
+
 - `npm run android:web:dev` is the companion browser preview entry. Its development server serves a local SQLite copy and injects a development-only preview host. It is for UI debugging, not device, Capacitor host, or acceptance evidence; preview code must not enter production builds.
 - Hosted Linux `android:sync`, `android:host:lint`, and `android:host:test` serve native host quality checks.
