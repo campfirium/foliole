@@ -10,11 +10,14 @@ interface Source {
 
 /** One explicit manual backup owns the native request; no automatic execution is enabled here. */
 export async function consumeCompanionFolderAttachmentWork(port: CompanionFolderBackupPort, source: Source,
-  input: { requestId: string; sourceEpoch: string; profile: string; deletions?: FolderAttachmentWork[] }) {
+  input: { requestId: string; sourceEpoch: string; profile: string; deletions?: FolderAttachmentWork[]; continueWork?: () => boolean }) {
   let copied = 0;
   let pending: number | null = null;
   let errorMessage: string | null = null;
   try {
+    if (input.continueWork && !input.continueWork()) return port.finishAttachments({
+      requestId: input.requestId, copied, pending, errorMessage
+    });
     if (!input.profile) throw new Error('Backup folder identity is missing.');
     const initialized = await source.write(db => configureFolderAttachmentProfile(db, input.profile));
     if (!initialized) {
@@ -25,6 +28,7 @@ export async function consumeCompanionFolderAttachmentWork(port: CompanionFolder
     await port.prepareAttachmentDirectory(input);
     const work = await source.write(db => readFolderAttachmentWork(db, input.profile));
     for (const entry of work) {
+      if (input.continueWork && !input.continueWork()) break;
       if (entry.action === 'delete' && !input.deletions?.some(candidate => candidate.storage_key === entry.storage_key
         && candidate.token === entry.token && candidate.stage === entry.stage)) continue;
       try {

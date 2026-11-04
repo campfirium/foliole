@@ -17,6 +17,7 @@ import { createCapacitorSqliteDbPort } from '../../capacitorSqliteDbPort';
 import { clearRetiredCompanionEditHistory, createCompanionEditHistorySession, readConfirmedCompanionEditHistory } from '../editing/companionEditHistorySession';
 import { CompanionFolderBackupSource } from '../folderBackup/companionFolderBackupSource';
 
+import { CompanionDatabaseCommits } from './companionDatabaseCommits';
 import { loadCompanionForegroundOwner } from './companionForegroundTimeOwner';
 import { CompanionNodePriorityState } from './companionNodePriorityState';
 import { createOwnedCompanionConnection } from './companionOwnedConnection';
@@ -42,6 +43,7 @@ export interface CapacitorCompanionOpenResult extends CompanionDatabaseBootstrap
 }
 
 export class CapacitorCompanionDatabaseOwner {
+  readonly committedWrites = new CompanionDatabaseCommits();
   private connection: SQLiteDBConnection | null = null;
   private db: DbPort | null = null;
   private journalMode: CompanionDatabaseBootstrapResult['journalMode'] | null = null;
@@ -144,9 +146,9 @@ export class CapacitorCompanionDatabaseOwner {
     }
   }
 
-  runWriter<T>(task: (db: DbPort) => Promise<T>): Promise<T> {
+  runWriter<T>(task: (db: DbPort) => Promise<T>, notifyBackup = true): Promise<T> {
     for (const reader of this.backgroundReaders) reader.abort(new Error('attachment_scan_foreground_write'));
-    return this.enqueue(() => task(this.requireDb()));
+    return this.enqueue(() => this.committedWrites.write(this.requireDb(), task, notifyBackup));
   }
 
   readNodePriorities(db: DbPort, defaultPriority: RegularPushQueuePriority, initial?: Iterable<PriorityIndexNode>) {

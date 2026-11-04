@@ -101,9 +101,9 @@ function updateMeta(sql: string, values: unknown[], meta: Map<string, string>) {
 describe('iosCompanionDatabaseBootstrap version contract', () => {
   it('tracks the latest shared companion migration independently of the desktop schema', () => {
     expect(COMPANION_DATABASE_VERSION).toBe(
-      // Later inventory migrations run through the shared executor only.
+      // beforeVersion is the inclusive target version, matching the shared migration executor.
       Math.max(111, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
-        ...ANDROID_COMPANION_MIGRATION_PLAN.map((migration) => migration.beforeVersion + 1))
+        ...ANDROID_COMPANION_MIGRATION_PLAN.map((migration) => migration.beforeVersion))
     );
   });
 });

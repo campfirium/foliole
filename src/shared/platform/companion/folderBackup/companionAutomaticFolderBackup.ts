@@ -1,0 +1,55 @@
+import type { DbPort } from '../../../../../lib/core/sync/dbPort';
+import { subscribeNativeAppForeground } from '../../appLifecycle';
+import type { CapacitorCompanionDatabaseOwner } from '../runtime/capacitorCompanionDatabaseOwner';
+import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
+
+import { backUpCompanionDatabase, subscribeManualCompanionFolderBackup } from './companionFolderBackup';
+import { getCompanionFolderBackupPort, supportsCompanionFolderDatabaseBackup } from './companionFolderBackupRuntimeRepository';
+import { CompanionFolderBackupWorker } from './companionFolderBackupWorker';
+
+const key = 'folder_backup_automatic';
+const listeners = new Set<(enabled: boolean) => void>();
+let active: { owner: CapacitorCompanionDatabaseOwner; worker: CompanionFolderBackupWorker } | null = null;
+
+export async function readCompanionAutomaticFolderBackup(db: DbPort) {
+  const [row] = await db.query<{ value: string }>('SELECT value FROM companion_meta WHERE key=?', [key]);
+  return row?.value === 'true';
+}
+
+export function subscribeCompanionAutomaticFolderBackup(listener: (enabled: boolean) => void) {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+export async function getCompanionAutomaticFolderBackup() {
+  return getIosCompanionDatabaseOwner().read(readCompanionAutomaticFolderBackup);
+}
+
+export async function setCompanionAutomaticFolderBackup(enabled: boolean) {
+  const session = active;
+  if (!session || session.owner !== getIosCompanionDatabaseOwner()) throw new Error('Backup database owner is not ready.');
+  if (enabled && !(await getCompanionFolderBackupPort().getState()).configured) throw new Error('Choose a backup folder first.');
+  await session.worker.setEnabled(enabled);
+  for (const listener of listeners) { try { listener(enabled); } catch { /* The preference is already saved. */ } }
+}
+
+export async function bindCompanionAutomaticFolderBackup(owner: CapacitorCompanionDatabaseOwner) {
+  if (!supportsCompanionFolderDatabaseBackup()) return () => undefined;
+  const worker = new CompanionFolderBackupWorker(await owner.read(readCompanionAutomaticFolderBackup), {
+    saveEnabled: enabled => owner.runWriter(async db => {
+      await db.run('INSERT OR REPLACE INTO companion_meta(key,value,updated_at) VALUES (?,?,?)',
+        [key, String(enabled), new Date().toISOString()]);
+    }, false),
+    run: async continueWork => {
+      const result = await backUpCompanionDatabase(false, { automatic: true, continueWork });
+      return { errorMessage: result.state.errorMessage };
+    }
+  });
+  const session = { owner, worker };
+  active = session;
+  const committed = owner.committedWrites.subscribe(() => worker.wake());
+  const manual = subscribeManualCompanionFolderBackup(() => worker.wake(true));
+  const foreground = await subscribeNativeAppForeground(() => worker.wake(true));
+  worker.wake(true);
+  return () => { committed(); manual(); foreground(); worker.stop(); if (active === session) active = null; };
+}

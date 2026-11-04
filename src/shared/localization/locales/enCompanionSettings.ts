@@ -31,6 +31,8 @@ export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
   'companion.settings.storage.detail': 'Clear local Foliole data.',
   'companion.settings.storage.databaseBackup': 'Database backup',
   'companion.settings.storage.backupFolder': 'Backup folder',
+  'companion.settings.storage.automaticBackup': 'Automatic backup',
+  'companion.settings.storage.automaticBackupHint': 'Save changes while Foliole is running. Unfinished files resume when you reopen the app.',
   'companion.settings.storage.databaseBackupHint': 'Save the database and available attachments to a folder you choose.',
   'companion.settings.storage.backupWorking': 'Saving…',
   'companion.settings.storage.backupNow': 'Back up now',

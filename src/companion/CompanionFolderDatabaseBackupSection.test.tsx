@@ -7,7 +7,7 @@ const fixture = vi.hoisted(() => {
   const state: CompanionFolderBackupState = { configured: true, directoryLabel: 'Documents/Backup', databaseSavedAt: null,
     phase: 'idle', errorMessage: null };
   const listeners = new Set<(event: { state: unknown }) => void>();
-  return { state, listeners, request: vi.fn(), port: {
+  return { state, listeners, automatic: false, setAutomatic: vi.fn(), request: vi.fn(), port: {
     getState: vi.fn(async () => ({ ...state })),
     addListener: vi.fn(async (_: string, listener: (event: { state: unknown }) => void) => {
       listeners.add(listener);
@@ -32,6 +32,11 @@ it('shows the last unfinished attachment result without presenting it as a compl
   expect(screen.getByRole('button', { name: 'Back up now' })).toBeEnabled();
   view.unmount();
 });
+vi.mock('../shared/platform/companion/folderBackup/companionAutomaticFolderBackup', () => ({
+  getCompanionAutomaticFolderBackup: async () => fixture.automatic,
+  setCompanionAutomaticFolderBackup: fixture.setAutomatic,
+  subscribeCompanionAutomaticFolderBackup: () => () => undefined
+}));
 vi.mock('../shared/platform/companion/folderBackup/companionFolderBackupRuntimeRepository', () => ({
   supportsCompanionFolderDatabaseBackup: () => true, getCompanionFolderBackupPort: () => fixture.port
 }));
@@ -58,4 +63,18 @@ it('retains working state across leaving and returning, then receives the actual
   expect(screen.getByRole('status')).toHaveTextContent(new Date(completed.databaseSavedAt!).toLocaleString());
   second.unmount();
   await waitFor(() => expect(fixture.listeners.size).toBe(0));
+});
+
+it('keeps automatic backup separate from folder authorization and lets it be disabled during a backup', async () => {
+  fixture.automatic = false;
+  const view = render(<CompanionFolderDatabaseBackupSection />);
+  const toggle = await screen.findByRole('switch', { name: 'Automatic backup' });
+  await waitFor(() => expect(toggle).toBeEnabled()); expect(toggle).not.toBeChecked();
+  expect(fixture.setAutomatic).not.toHaveBeenCalled();
+  fireEvent.click(toggle); await waitFor(() => expect(fixture.setAutomatic).toHaveBeenCalledWith(true));
+  await waitFor(() => expect(toggle).toBeChecked());
+  act(() => { for (const listener of fixture.listeners) listener({ state: { ...fixture.state, phase: 'working' } }); });
+  expect(toggle).toBeEnabled(); fireEvent.click(toggle);
+  await waitFor(() => expect(fixture.setAutomatic).toHaveBeenLastCalledWith(false));
+  await waitFor(() => expect(toggle).not.toBeChecked()); view.unmount();
 });

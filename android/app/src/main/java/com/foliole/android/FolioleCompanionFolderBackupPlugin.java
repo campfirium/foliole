@@ -43,7 +43,10 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
         if (operation != null) operation.cancel(call::resolve); else call.resolve();
     }
     @PluginMethod public synchronized void cancelDatabase(PluginCall call) {
-        if (call.getString("requestId") != null && call.getString("requestId").equals(activeRequest)) attachmentCancelled = true;
+        if (call.getString("requestId") != null && call.getString("requestId").equals(activeRequest)) {
+            attachmentCancelled = true;
+            if (operation == null && !copyingAttachment) activeRequest = null;
+        }
         if (operation != null && operation.requestId.equals(call.getString("requestId"))) operation.cancel(null);
         call.resolve();
     }

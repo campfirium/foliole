@@ -33,6 +33,8 @@ export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<Translation
   'companion.settings.storage.detail': '清除本机 Foliole 数据。',
   'companion.settings.storage.databaseBackup': '数据库备份',
   'companion.settings.storage.backupFolder': '备份目录',
+  'companion.settings.storage.automaticBackup': '自动备份',
+  'companion.settings.storage.automaticBackupHint': 'Foliole 运行时保存变更，未完成的文件在重开后继续。',
   'companion.settings.storage.databaseBackupHint': '将数据库与本机可用附件保存到所选目录。',
   'companion.settings.storage.backupWorking': '正在保存…',
   'companion.settings.storage.backupNow': '立即备份',

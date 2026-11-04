@@ -52,6 +52,7 @@ export async function folderAttachmentWorkFixture(native: {
     return { copied: true };
   };
   const port = {
+    cancelDatabase: vi.fn(async () => undefined),
     prepareAttachmentDirectory: vi.fn(async () => undefined),
     copyAttachment: vi.fn(copy),
     finishAttachments: vi.fn(async (input: { copied: number; pending: number | null; errorMessage: string | null }) => ({

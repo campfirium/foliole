@@ -6,6 +6,7 @@ import type {
   NativeCompanionBootstrapState
 } from '../../../../../lib/platform/nativeCompanionContract';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
+import { bindCompanionAutomaticFolderBackup } from '../folderBackup/companionAutomaticFolderBackup';
 import { invalidateCompanionReadingScope } from '../reading/companionReadingScope';
 
 import {
@@ -25,6 +26,7 @@ export interface IosCompanionDatabaseBootstrapOptions {
 }
 
 let activeOwner: CapacitorCompanionDatabaseOwner | null = null;
+let stopFolderBackup: (() => void) | null = null;
 let unsubscribeNodePriorities: (() => void) | null = null;
 let lifecycleTail: Promise<void> = Promise.resolve();
 
@@ -39,6 +41,8 @@ export function closeIosCompanionDatabase() {
 
 async function closeActiveDatabase() {
   const owner = activeOwner;
+  stopFolderBackup?.();
+  stopFolderBackup = null;
   unsubscribeNodePriorities?.();
   unsubscribeNodePriorities = null;
   if (owner) await closeCompanionReadIntents(owner);
@@ -93,6 +97,7 @@ async function initializeDatabase(
   activeOwner = owner;
   invalidateCompanionReadingScope();
   unsubscribeNodePriorities = bindCompanionNodePriorities(owner);
+  stopFolderBackup = await bindCompanionAutomaticFolderBackup(owner);
   return {
     ...nativeState,
     database_path: result.databasePath,
