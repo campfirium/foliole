@@ -78,7 +78,7 @@ export function CompanionFolderDatabaseBackupSection() {
     <SettingsSection ariaLabel={t('companion.settings.storage.databaseBackup')} title={t('companion.settings.storage.databaseBackup')}>
       <SettingsRow title={state?.directoryLabel ?? t('companion.settings.storage.backupFolder')}
         description={t('companion.settings.storage.databaseBackupHint')}>
-        <SettingsControlSlot>
+        <SettingsControlSlot className="flex-wrap">
           <AppButton data-testid="companion-database-backup" disabled={working} onClick={() => void run(false)} size="sm">
             {t(working ? 'companion.settings.storage.backupWorking' : 'companion.settings.storage.backupNow')}
           </AppButton>
