@@ -115,7 +115,7 @@ jobs:
       - name: Build companion assets for dependency graph preparation
         run: npm run android:web:build
       - name: Install the SQLCipher native toolchain
-        run: sdkmanager "ndk;25.2.9519653"
+        run: '"${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "ndk;25.2.9519653"'
       - name: Prepare the native dependency graph
         run: npm run android:sync
       - name: Generate the actual resolved Android graph

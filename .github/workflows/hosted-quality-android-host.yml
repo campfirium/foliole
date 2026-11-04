@@ -62,7 +62,7 @@ jobs:
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
       - name: Install the SQLCipher native toolchain
-        run: sdkmanager "ndk;25.2.9519653"
+        run: '"${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "ndk;25.2.9519653"'
       - name: Run canonical Android host tail
         run: npm run quality:release:android:tail
       - name: Upload Android quality logs
