@@ -16,7 +16,7 @@ import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 const native = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), resolve: vi.fn() }));
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('./companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: () => ({
     ...createCompanionNativeSyncStub(), readRemoteImageResponse: native.read, writeImageAttachment: native.write, resolveAttachmentResource: native.resolve
   }) };
 });
@@ -36,7 +36,7 @@ const rows = () => owner().read(db => db.query<{ stage: string; last_error: stri
 const runBackup = () => consumeCompanionFolderAttachmentWork({
   prepareAttachmentDirectory: async () => {}, copyAttachment: copy,
   finishAttachments: async ({ pending, errorMessage }) => ({ configured: true, directoryId: 'profile',
-    directoryLabel: 'Backup', databaseSavedAt: 'committed', phase: 'pending', attachmentFilesPending: pending, errorMessage })
+    directoryLabel: 'Backup', databaseSavedAt: 'committed', phase: 'pending' as const, attachmentFilesPending: pending, errorMessage })
 } as CompanionFolderBackupPort, {
   write: task => owner().runWriter(task), inventory
 }, { requestId: 'manual', sourceEpoch: 'owner', profile: 'profile' });

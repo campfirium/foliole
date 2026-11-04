@@ -36,15 +36,26 @@ class FolioleFolderBackupDocuments {
         }
         return found;
     }
-    void prepare(boolean owned, Runnable persistOwnership) throws Exception {
+    void prepare(boolean owned, boolean creationPending, Runnable persistCreation, Runnable persistOwnership) throws Exception {
         Uri document = find(filename);
-        if (document != null && !owned) throw new IllegalStateException("This folder already contains an unrecognized backup file. Choose another folder.");
+        if (document != null && !owned) {
+            if (!creationPending || !isEmpty(document)) {
+                throw new IllegalStateException("This folder already contains an unrecognized backup file. Choose another folder.");
+            }
+            persistOwnership.run();
+        }
         if (document == null) {
             if (owned) throw new FileNotFoundException("Backup file is missing.");
+            persistCreation.run();
             if (DocumentsContract.createDocument(context.getContentResolver(), root(), "application/octet-stream", filename) == null) {
                 throw new IllegalStateException("Cannot create backup database.");
             }
             persistOwnership.run();
+        }
+    }
+    private boolean isEmpty(Uri document) throws Exception {
+        try (ParcelFileDescriptor descriptor = context.getContentResolver().openFileDescriptor(document, "r")) {
+            return descriptor != null && descriptor.getStatSize() == 0;
         }
     }
     public int openFile(String virtualPath, int flags) throws Exception {

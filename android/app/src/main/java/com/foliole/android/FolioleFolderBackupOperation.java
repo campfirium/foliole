@@ -62,10 +62,8 @@ final class FolioleFolderBackupOperation extends FolioleFolderBackupDocuments {
         Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
         JSONObject profile = store.load();
         synchronized (this) { if (cancelled) throw new IllegalStateException("Backup cancelled."); }
-        prepare(profile.optBoolean("ownsTarget"), () -> {
-            try { store.update(profileId, value -> value.put("ownsTarget", true)); }
-            catch (Exception error) { throw new IllegalStateException(error); }
-        });
+        prepare(profile.optBoolean("ownsTarget"), profile.optBoolean("targetCreationPending"),
+            () -> updateTargetCreation(true), () -> updateTargetCreation(false));
         long active;
         synchronized (this) {
             if (cancelled) throw new IllegalStateException("Backup cancelled.");
@@ -84,5 +82,13 @@ final class FolioleFolderBackupOperation extends FolioleFolderBackupDocuments {
     }
     private static String optional(JSONObject profile, String key) {
         return profile.has(key) && !profile.isNull(key) ? profile.optString(key) : null;
+    }
+    private void updateTargetCreation(boolean pending) {
+        try {
+            store.update(profileId, value -> {
+                if (pending) value.put("targetCreationPending", true);
+                else { value.put("ownsTarget", true); value.remove("targetCreationPending"); }
+            });
+        } catch (Exception error) { throw new IllegalStateException(error); }
     }
 }
