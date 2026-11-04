@@ -1,10 +1,12 @@
-import { Rating, fsrs, type FSRS, type Grade } from 'ts-fsrs';
+import { Rating, type Grade } from 'ts-fsrs';
 
+import { fsrsDefinition, reviewElapsedDays, type FsrsCard, type FsrsConfig, type FsrsResult, type FsrsScheduler } from './fsrsDefinition.js';
 import type { SchedulerCard, SchedulerGradeResult, SchedulerPreviewResult } from './types.js';
 
 export type SchedulerRating = 'Again' | 'Hard' | 'Good' | 'Easy';
 
 export interface FsrsGradeRequest {
+  nodeId?: string;
   desiredRetention?: number;
   card: SchedulerCard;
   enableShortTerm?: boolean;
@@ -13,6 +15,7 @@ export interface FsrsGradeRequest {
 }
 
 export interface FsrsPreviewRequest {
+  nodeId?: string;
   desiredRetention?: number;
   card: SchedulerCard;
   enableShortTerm?: boolean;
@@ -27,20 +30,7 @@ export interface FsrsSchedulerRuntimeOverrides {
 export interface FsrsSchedulerSource<TSettings> {
   loadSettings: () => TSettings;
   getSettingsVersion: (settings: TSettings, overrides?: FsrsSchedulerRuntimeOverrides) => string;
-  createParameters: (settings: TSettings, overrides?: FsrsSchedulerRuntimeOverrides) => Parameters<typeof fsrs>[0];
-}
-
-interface FsrsCardSnapshot {
-  due: Date;
-  last_review?: Date;
-  state: SchedulerCard['state'];
-  stability: number;
-  difficulty: number;
-  elapsed_days: number;
-  scheduled_days: number;
-  learning_steps: number;
-  reps: number;
-  lapses: number;
+  createParameters: (settings: TSettings, overrides?: FsrsSchedulerRuntimeOverrides) => FsrsConfig;
 }
 
 function toRating(value: SchedulerRating): Grade {
@@ -56,47 +46,42 @@ function toRating(value: SchedulerRating): Grade {
   return Rating.Easy;
 }
 
-function toFsrsCard(card: SchedulerCard): FsrsCardSnapshot {
-  return {
-    due: new Date(card.due),
-    ...(card.last_review ? { last_review: new Date(card.last_review) } : {}),
+function toFsrsCard(card: SchedulerCard, nodeId = 'detached-review'): FsrsCard {
+  return fsrsDefinition.schema.card.parse({
+    cardId: nodeId,
+    dueAt: new Date(card.due),
+    lastReviewAt: card.state === 0 || !card.last_review ? null : new Date(card.last_review),
     state: card.state,
+    scheduleStatus: card.state === 0 ? 'new' : card.state === 2 ? 'review' : 'learning',
     stability: card.stability,
     difficulty: card.difficulty,
-    elapsed_days: card.elapsed_days,
-    scheduled_days: card.scheduled_days,
-    learning_steps: 0,
+    scheduledDays: card.scheduled_days,
+    learningStep: 0,
     reps: card.reps,
     lapses: card.lapses
-  };
+  });
 }
 
-function fromFsrsCard(card: FsrsCardSnapshot): SchedulerCard {
+function toSchedulerResult(item: FsrsResult): SchedulerGradeResult {
+  const { card, revlog } = item;
   return {
-    due: card.due.toISOString(),
-    last_review: card.last_review ? card.last_review.toISOString() : null,
-    state: card.state,
-    stability: card.stability,
-    difficulty: card.difficulty,
-    elapsed_days: card.elapsed_days,
-    scheduled_days: card.scheduled_days,
-    reps: card.reps,
-    lapses: card.lapses
-  };
-}
-
-function toSchedulerResult(item: {
-  card: FsrsCardSnapshot;
-  log: { review: Date };
-}): SchedulerGradeResult {
-  return {
-    card: fromFsrsCard(item.card),
-    reviewed_at: item.log.review.toISOString()
+    card: {
+      due: card.dueAt.toISOString(),
+      last_review: card.lastReviewAt?.toISOString() ?? null,
+      state: card.state,
+      stability: card.stability,
+      difficulty: card.difficulty,
+      elapsed_days: revlog.lastReviewAt ? reviewElapsedDays(revlog.lastReviewAt, revlog.reviewTime) : 0,
+      scheduled_days: card.scheduledDays,
+      reps: card.reps,
+      lapses: card.lapses
+    },
+    reviewed_at: revlog.reviewTime.toISOString()
   };
 }
 
 export function createFsrsReviewScheduler<TSettings>(source: FsrsSchedulerSource<TSettings>) {
-  let schedulerCache: { key: string; scheduler: FSRS } | null = null;
+  let schedulerCache: { key: string; scheduler: FsrsScheduler } | null = null;
 
   function createRuntimeOverrides(request: FsrsSchedulerRuntimeOverrides): FsrsSchedulerRuntimeOverrides {
     return {
@@ -111,7 +96,7 @@ export function createFsrsReviewScheduler<TSettings>(source: FsrsSchedulerSource
     if (!schedulerCache || schedulerCache.key !== key) {
       schedulerCache = {
         key,
-        scheduler: fsrs(source.createParameters(settings, overrides))
+        scheduler: fsrsDefinition.create({ config: source.createParameters(settings, overrides) })
       };
     }
     return schedulerCache.scheduler;
@@ -120,21 +105,22 @@ export function createFsrsReviewScheduler<TSettings>(source: FsrsSchedulerSource
   return {
     grade(request: FsrsGradeRequest): SchedulerGradeResult {
       const reviewAt = new Date(request.now);
-      const next = getScheduler(createRuntimeOverrides(request)).next(
-        toFsrsCard(request.card),
-        reviewAt,
-        toRating(request.rating)
-      );
+      const next = getScheduler(createRuntimeOverrides(request)).review({
+        card: toFsrsCard(request.card, request.nodeId),
+        now: reviewAt,
+        grade: toRating(request.rating)
+      });
       return toSchedulerResult(next);
     },
     preview(request: FsrsPreviewRequest): SchedulerPreviewResult {
       const reviewAt = new Date(request.now);
-      const preview = getScheduler(createRuntimeOverrides(request)).repeat(toFsrsCard(request.card), reviewAt);
+      const preview = getScheduler(createRuntimeOverrides(request)).preview({
+        card: toFsrsCard(request.card, request.nodeId), now: reviewAt
+      });
+      const results = new Map([...preview].map(candidate => [candidate.grade, toSchedulerResult(candidate)]));
       return {
-        Again: toSchedulerResult(preview[Rating.Again]),
-        Hard: toSchedulerResult(preview[Rating.Hard]),
-        Good: toSchedulerResult(preview[Rating.Good]),
-        Easy: toSchedulerResult(preview[Rating.Easy])
+        Again: results.get(Rating.Again)!, Hard: results.get(Rating.Hard)!,
+        Good: results.get(Rating.Good)!, Easy: results.get(Rating.Easy)!
       };
     }
   };

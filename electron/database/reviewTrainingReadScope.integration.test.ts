@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { generatorParameters } from 'ts-fsrs';
+import { migrateFSRS6Parameters } from 'ts-fsrs/models/fsrs-6';
 import { expect, it, vi } from 'vitest';
 
 import { readReviewTrainingInput, readReviewTrainingInputWithDb } from '../../lib/core/database/reviewTrainingInput.js';
@@ -17,7 +17,7 @@ for (const asynchronous of [false, true]) {
     try {
       const driver = await seedTrainingPeer(peer);
       peer.sqlite.exec("UPDATE nodes SET parent_id='other' WHERE id='folder'; UPDATE nodes SET enable_short_term=0 WHERE id='other'");
-      const model: ReviewTrainingModel = { folderId: 'other', weights: [...generatorParameters().w],
+      const model: ReviewTrainingModel = { folderId: 'other', weights: [...migrateFSRS6Parameters()],
         enabled: true, reviewCount: 2048, engine: REVIEW_TRAINING_ENGINE,
         trainedAt: '2026-10-27T00:00:00Z', candidate: { logLoss: 0.3, rmse: 0.2 }, baseline: { logLoss: 0.5, rmse: 0.4 } };
       const expected = readReviewTrainingInput(driver, 'folder', 'scope');

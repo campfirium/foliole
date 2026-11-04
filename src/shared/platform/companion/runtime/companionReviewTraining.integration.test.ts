@@ -8,7 +8,7 @@ import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('./companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: createCompanionNativeSyncStub };
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: createCompanionNativeSyncStub };
 });
 
 import { createBetterSqlite3Driver } from '../../../../../electron/database/betterSqlite3Driver';

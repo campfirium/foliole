@@ -12,13 +12,13 @@ export interface ReviewEvent {
 }
 
 /** Events are immutable facts; snapshots and event scheduler versions never seed this calculation. */
-export function recomputeReview(events: readonly ReviewEvent[], parameters: ReviewSchedulerSettings): SchedulerCard | null {
-  return replayReviewEventsFromBaseline(events, parameters, null);
+export function recomputeReview(events: readonly ReviewEvent[], parameters: ReviewSchedulerSettings, nodeId?: string): SchedulerCard | null {
+  return replayReviewEventsFromBaseline(events, parameters, null, nodeId);
 }
 
 /** A browser import may carry an explicit pre-event profile; native replay always supplies null. */
 export function replayReviewEventsFromBaseline(events: readonly ReviewEvent[], parameters: ReviewSchedulerSettings,
-  baseline: SchedulerCard | null): SchedulerCard | null {
+  baseline: SchedulerCard | null, nodeId?: string): SchedulerCard | null {
   const voids = new Set(events.filter(event => event.kind === 'void').map(event => event.voids_op_id));
   const ordered = events.map(event => ({ ...event, instant: reviewInstant(event.reviewed_at) }))
     .sort((a, b) => a.instant - b.instant
@@ -34,18 +34,18 @@ export function replayReviewEventsFromBaseline(events: readonly ReviewEvent[], p
     // Keep absolute scheduler timestamps. Local day-boundary display belongs to the consumer,
     // otherwise identical facts produce different persisted values in different time zones.
     card = scheduler.grade({ card: card ?? createInitialSchedulerCard(event.reviewed_at),
-      rating: mapGradeToRustRating(grade), now: event.reviewed_at }).card;
+      ...(nodeId ? { nodeId } : {}), rating: mapGradeToRustRating(grade), now: event.reviewed_at }).card;
   }
   return card;
 }
 
 /** Preview the candidate at its event time; persistence still projects the complete immutable history. */
 export function previewReviewAt(events: readonly ReviewEvent[], parameters: ReviewSchedulerSettings,
-  candidate: { grade: number; now: string }): SchedulerCard | null {
+  candidate: { grade: number; now: string; nodeId?: string }): SchedulerCard | null {
   const instant = reviewInstant(candidate.now);
   const history = events.filter(event => reviewInstant(event.reviewed_at) <= instant);
   return recomputeReview([...history, { op_id: '~preview', kind: 'review', grade: candidate.grade,
-    reviewed_at: candidate.now, voids_op_id: null }], parameters);
+    reviewed_at: candidate.now, voids_op_id: null }], parameters, candidate.nodeId);
 }
 
 function reviewInstant(value: string) {

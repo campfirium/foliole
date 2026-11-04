@@ -30,6 +30,7 @@ export function createLocalReviewSchedulerAdapter(options: LocalReviewSchedulerA
       assertSchedulerGradeInput(input);
       return scheduler.grade({
         card: input.card,
+        ...(input.nodeId ? { nodeId: input.nodeId } : {}),
         ...(input.desiredRetention === undefined ? {} : { desiredRetention: input.desiredRetention }),
         ...(input.enableShortTerm === undefined ? {} : { enableShortTerm: input.enableShortTerm }),
         rating: mapGradeToRustRating(input.grade),

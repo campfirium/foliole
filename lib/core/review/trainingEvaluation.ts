@@ -1,4 +1,4 @@
-import { forgetting_curve } from 'ts-fsrs';
+import { forgettingCurve } from 'ts-fsrs/models/fsrs-6';
 
 import type { TrainingHistory } from './trainingHistory.js';
 
@@ -25,7 +25,7 @@ export function evaluateReviewTraining(model: HistoryModel, weights: number[],
       if (elapsed > 0) longTerm += 1;
       if (elapsed > 0 && history.times[index]! >= cutoff) {
         const predicted = Math.min(1 - 1e-7, Math.max(1e-7,
-          forgetting_curve(weights, elapsed, states[index - 1]!.stability)));
+          forgettingCurve(weights, elapsed, states[index - 1]!.stability)));
         const actual = history.ratings[index] === 1 ? 0 : 1;
         loss -= actual * Math.log(predicted) + (1 - actual) * Math.log(1 - predicted);
         const key = `${bin(elapsed, 248, 3.62)}:${bin(longTerm + 1, 1.99, 1.89)}:${lapses ? bin(lapses, 1.65, 1.73) : 0}`;

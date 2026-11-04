@@ -1,5 +1,7 @@
-import { FSRSVersion, generatorParameters } from 'ts-fsrs';
+import { FSRSVersion } from 'ts-fsrs';
+import { migrateFSRS6Parameters } from 'ts-fsrs/models/fsrs-6';
 
+import type { FsrsConfig } from './fsrsDefinition.js';
 import { normalizeNewItemLoadBalancingDays } from './newItemReviewSlots.js';
 import {
   DEFAULT_NEW_DAY_STARTS_AT_HOUR,
@@ -12,7 +14,7 @@ import {
   type UnifiedPushQueueRulesPatch
 } from './unifiedPushQueueRules.js';
 
-const REVIEW_SCHEDULER_ALGORITHM = `ts-fsrs@${FSRSVersion.replace(/^v/, '')}`;
+const REVIEW_SCHEDULER_ALGORITHM = `ts-fsrs@${FSRSVersion.replace(/^v/, '')} using FSRS-6.0`;
 
 export interface ReviewSchedulerSettings {
   weights?: number[] | undefined;
@@ -155,13 +157,18 @@ export function createReviewSchedulerParameters(
   overrides: ReviewSchedulerRuntimeOverrides = {}
 ) {
   const enableShortTerm = overrides.enableShortTerm ?? settings.enableShortTerm;
-  return generatorParameters({
-    ...(settings.weights ? { w: settings.weights } : {}),
-    request_retention: clampDesiredRetention(overrides.desiredRetention ?? settings.desiredRetention),
-    maximum_interval: settings.maximumIntervalDays,
-    enable_fuzz: true,
-    enable_short_term: enableShortTerm
-  });
+  return {
+    weights: migrateFSRS6Parameters(settings.weights),
+    desiredRetention: clampDesiredRetention(overrides.desiredRetention ?? settings.desiredRetention),
+    maximumInterval: settings.maximumIntervalDays,
+    enableFuzz: true,
+    enableShortTerm,
+    fractionalDays: false,
+    numRelearningSteps: 1,
+    learningSteps: ['1m', '10m'],
+    relearningSteps: ['10m'],
+    clearStatsOnForget: false
+  } satisfies FsrsConfig;
 }
 
 export function getReviewSchedulerSettingsSignature(settings: ReviewSchedulerSettings) {
@@ -187,7 +194,7 @@ export function getReviewSchedulerVersion(
 ) {
   const enableShortTerm = overrides.enableShortTerm ?? settings.enableShortTerm;
   return [
-    settings.algorithm,
+    REVIEW_SCHEDULER_ALGORITHM,
     ...(settings.weights ? [settings.weights.join(',')] : []),
     `dr=${clampDesiredRetention(overrides.desiredRetention ?? settings.desiredRetention).toFixed(2)}`,
     `mi=${settings.maximumIntervalDays}`,

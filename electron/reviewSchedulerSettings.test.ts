@@ -97,7 +97,7 @@ it('keeps interval fuzz built in even when legacy settings disabled it', () => {
   });
 
   expect('enableFuzz' in normalized).toBe(false);
-  expect(createReviewSchedulerParameters(normalized).enable_fuzz).toBe(true);
+  expect(createReviewSchedulerParameters(normalized).enableFuzz).toBe(true);
   expect(getReviewSchedulerVersion(normalized)).not.toContain('fz=');
 });
 

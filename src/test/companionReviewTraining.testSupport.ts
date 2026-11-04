@@ -1,4 +1,4 @@
-import { generatorParameters } from 'ts-fsrs';
+import { migrateFSRS6Parameters } from 'ts-fsrs/models/fsrs-6';
 
 import { createBetterSqlite3Driver } from '../../electron/database/betterSqlite3Driver';
 import { restoreFixture } from '../../electron/database/requestSyncRestoreRecovery.testSupport';
@@ -13,7 +13,7 @@ import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapsho
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 
 export function mobileReviewModel(folderId: string | null): ReviewTrainingModel {
-  const weights = [...generatorParameters().w];
+  const weights = [...migrateFSRS6Parameters()];
   weights[0] = 3; weights[1] = 5; weights[2] = 12; weights[3] = 30;
   return { folderId, weights, enabled: true, reviewCount: 2048, trainedAt: '2026-10-25T12:00:00.000Z',
     engine: REVIEW_TRAINING_ENGINE, baseline: { logLoss: 0.5, rmse: 0.3 }, candidate: { logLoss: 0.4, rmse: 0.2 } };

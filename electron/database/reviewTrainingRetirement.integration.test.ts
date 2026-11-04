@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { generatorParameters } from 'ts-fsrs';
+import { migrateFSRS6Parameters } from 'ts-fsrs/models/fsrs-6';
 import { expect, it } from 'vitest';
 
 import { readReviewTrainingInput, readReviewTrainingPlan, readReviewTrainingPlanWithDb } from '../../lib/core/database/reviewTrainingInput.js';
@@ -19,7 +19,7 @@ import { seedTrainingPeer } from './reviewTraining.testSupport.js';
 import { writeSettingRecord } from './settingRecords.js';
 
 function model(folderId: string | null, initialStability = 8): ReviewTrainingModel {
-  const weights = [...generatorParameters().w];
+  const weights = [...migrateFSRS6Parameters()];
   weights[0] = initialStability;
   return { folderId, weights, enabled: true, reviewCount: 2048, engine: REVIEW_TRAINING_ENGINE,
     trainedAt: '2026-10-27T00:00:00.000Z', candidate: { logLoss: 0.3, rmse: 0.2 }, baseline: { logLoss: 0.5, rmse: 0.4 } };

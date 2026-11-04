@@ -15,7 +15,7 @@ export function projectBrowserReview(workspace: BrowserFlowWorkspace, flow: Brow
     desiredRetention: resolveNodeDesiredRetentionSetting(nodeId, workspace.nodesById, global.desiredRetention).value,
     enableShortTerm: resolveNodeShortTermSetting(nodeId, workspace.nodesById).value };
   const events = Object.values(flow.reviewEvents).filter(value => value.nodeId === nodeId).map(value => value.event);
-  return replayReviewEventsFromBaseline(events, parameters, flow.reviewBases[nodeId] ?? null);
+  return replayReviewEventsFromBaseline(events, parameters, flow.reviewBases[nodeId] ?? null, nodeId);
 }
 
 export function appendBrowserReviewHistory(flow: BrowserDailyFlowState, value: History, now: string) {

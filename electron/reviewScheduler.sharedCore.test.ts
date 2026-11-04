@@ -1,6 +1,5 @@
 // @vitest-environment node
 
-import { generatorParameters } from 'ts-fsrs';
 import { expect, it } from 'vitest';
 
 import {
@@ -11,6 +10,7 @@ import {
   createInitialSchedulerCard
 } from '../lib/core/review/index.js';
 import type { SchedulerCard, SchedulerGradeInput, SchedulerGradeResult } from '../lib/core/review/index.js';
+import { createReviewSchedulerParameters, DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../lib/core/review/settings.js';
 
 const NOW = '2026-03-06T00:00:00.000Z';
 
@@ -23,12 +23,7 @@ function createScheduler(desiredRetention: number) {
     }),
     getSettingsVersion: (settings) => `dr=${settings.desiredRetention.toFixed(2)}`,
     createParameters: (settings) =>
-      generatorParameters({
-        request_retention: settings.desiredRetention,
-        maximum_interval: settings.maximumIntervalDays,
-        enable_fuzz: true,
-        enable_short_term: settings.enableShortTerm
-      })
+      createReviewSchedulerParameters({ ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, ...settings })
   });
 }
 

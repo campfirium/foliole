@@ -22,7 +22,7 @@ async function history(input: SchedulerPreviewInput) {
   if (!nodeId) throw new Error('companion_review_node_required');
   const { events, parameters } = await readIosCompanionDatabase(db => readNodeReviewHistoryWithDb(db, nodeId));
   return (grade: number) => {
-    const card = previewReviewAt(events, parameters, { grade, now: input.now });
+    const card = previewReviewAt(events, parameters, { grade, now: input.now, nodeId });
     if (!card) throw new Error('review_history_preview_missing');
     return { card, reviewed_at: input.now };
   };

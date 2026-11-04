@@ -12,7 +12,7 @@ function loadReviewHistory(request: NativeReviewPreviewArgs['request']) {
   const events = driver.queryAll('SELECT * FROM review_log WHERE node_id = ?', [request.nodeId])
     .map(row => identityReviewRowSchema.parse(row));
   return (grade: number) => {
-    const card = previewReviewAt(events, settings, { grade, now: request.now });
+    const card = previewReviewAt(events, settings, { grade, now: request.now, ...(request.nodeId ? { nodeId: request.nodeId } : {}) });
     if (!card) throw new Error('review_history_preview_missing');
     return { card, reviewed_at: request.now };
   };
