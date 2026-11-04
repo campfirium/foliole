@@ -12,7 +12,7 @@ const statSchema = z.object({ present: z.boolean(), length: z.number().int().non
 type Operation = Omit<Extract<NativeCompanionFramedFileRequest, { operation: 'attachment' }>, 'operation' | 'library_key' | 'generation_id'>;
 
 export function createCompanionAttachmentFiles(owner: NativeCompanionFramedPayloadBudgetOwner,
-  availability: AttachmentBlockFiles['availability']): AttachmentBlockFiles {
+  availability: AttachmentBlockFiles['availability'], beforePublish?: (key: string) => Promise<void>): AttachmentBlockFiles {
   const files = createCompanionFramedSyncFiles(FolioleCompanionSync, owner);
   const call = (operation: Operation) => FolioleCompanionSync.accessFramedSyncFile({ ...owner, ...operation, operation: 'attachment' });
   const stat = async (key: string, partial = false) => statSchema.parse(await call({ key, partial, action: 'stat' }));
@@ -33,7 +33,11 @@ export function createCompanionAttachmentFiles(owner: NativeCompanionFramedPaylo
     append: async (key, offset, bytes) => { await call({ key, offset, base64: encode(bytes), action: 'append' }); },
     verifyPartial: async key => (await call({ key, partial: true, action: 'hash' })).hash === key,
     discardPartial: async key => { await call({ key, action: 'discard' }); },
-    publish: async resource => { attachmentSourceVerification.invalidate(resource.storageKey); await call({ key: resource.storageKey, action: 'publish' }); },
+    publish: async resource => {
+      await beforePublish?.(resource.storageKey);
+      attachmentSourceVerification.invalidate(resource.storageKey);
+      await call({ key: resource.storageKey, action: 'publish' });
+    },
     availability
   };
 }

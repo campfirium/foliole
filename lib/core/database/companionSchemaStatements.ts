@@ -7,6 +7,7 @@ import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from './androidCompanion
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from './androidCompanionSyncSchemaStatements.js';
 import { ATTACHMENT_DEMAND_SCHEMA } from './attachmentDemandSchema.js';
 import { ATTACHMENT_REFERENCE_CACHE_SCHEMA } from './attachmentReferenceCacheSchema.js';
+import { FOLDER_ATTACHMENT_WORK_SCHEMA } from './companionFolderAttachmentWork.js';
 import { CURRENT_PARENT_ORDER_SCHEMA } from './currentParentOrderSchema.js';
 import { DAILY_FLOW_LOCAL_APPLICATION_SCHEMA } from './dailyFlowLocalApplicationSchema.js';
 import { DAILY_FLOW_CURRENT_SCHEMA } from './dailyFlowSchema.js';
@@ -49,6 +50,7 @@ export const COMPANION_SCHEMA_STATEMENTS = [
   ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
   ...CURRENT_PARENT_ORDER_SCHEMA,
   ...ATTACHMENT_DEMAND_SCHEMA,
+  ...FOLDER_ATTACHMENT_WORK_SCHEMA,
 
   ...FRAMED_SYNC_INVENTORY_TABLES,
   ...FRAMED_SYNC_DIGEST_SCHEMA

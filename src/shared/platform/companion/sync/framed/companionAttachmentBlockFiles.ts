@@ -11,6 +11,7 @@ import type { RequestSyncDatabaseHost } from '../../../../../../lib/core/sync/re
 import type { NativeCompanionFramedFileRequest } from '../../../../../../lib/platform/nativeCompanionFramedFilesContract.js';
 import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
 import { notifyAttachmentResourceAvailable } from '../../../runtime/attachmentResourceAvailability.js';
+import { companionFolderAttachmentRecorder, type CompanionFolderAttachmentRecorder } from '../../folderBackup/companionFolderAttachmentRecorder.js';
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
@@ -28,24 +29,24 @@ export function currentCompanionAttachmentHost(db: RequestSyncDatabaseHost): Pro
   const owner = companionFramedFileOwner(database);
   const cached = hosts.get(database);
   if (cached?.generation === owner.generation_id) return cached.host;
-  const host = createCompanionAttachmentHost(db, owner);
+  const host = createCompanionAttachmentHost(db, owner, companionFolderAttachmentRecorder(db));
   hosts.set(database, { generation: owner.generation_id, host });
   void host.catch(() => { if (hosts.get(database)?.host === host) hosts.delete(database); });
   return host;
 }
 
 export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
-  owner: ReturnType<typeof companionFramedFileOwner>): Promise<RequestSyncAttachmentHost> {
+  owner: ReturnType<typeof companionFramedFileOwner>, recorder?: CompanionFolderAttachmentRecorder): Promise<RequestSyncAttachmentHost> {
   const files = createCompanionFramedSyncFiles(FolioleCompanionSync, owner);
   const call = (operation: Operation) => FolioleCompanionSync.accessFramedSyncFile({ ...owner, ...operation, operation: 'attachment' });
   const stat = async (key: string, partial = false) => statSchema.parse(await call({ key, partial, action: 'stat' }));
   const receiver = createAttachmentBlockReceiver(createCompanionAttachmentFiles(owner,
-    (hash, available) => db.write(port => recordFramedSyncResourceAvailability(port, [hash], available))));
+    (hash, available) => db.write(port => recordFramedSyncResourceAvailability(port, [hash], available)), recorder?.prepare));
   const inspect = async (keys: string[]) => z.array(z.boolean()).parse(
     (await call({ key: '', keys, action: 'source-stat-batch' })).presence);
-  const completed = <T extends AttachmentBlockResult>(key: string, pending: Promise<T>) => completeReceived(db, key, pending);
+  const completed = <T extends AttachmentBlockResult>(key: string, pending: Promise<T>) => completeReceived(db, key, pending, recorder);
   const host: RequestSyncAttachmentHost = {
-    openReceiveSession: options => receiver.openReceiveSession(options, resource => commitReceived(db, resource)),
+    openReceiveSession: options => receiver.openReceiveSession(options, resource => commitReceived(db, resource, recorder)),
     attempted: key => db.write(port => recordAttachmentDemandAttempt(port, key)),
     async importPdfText(pdf, artifact) {
       await importCompanionPdfTextArtifact(db, host, pdf, artifact);
@@ -55,7 +56,7 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
       return readRequestSyncAttachmentNeedsSlice(db, inspect, shouldYield, true, excluded);
     },
     status: resource => completed(resource.storageKey, receiver.status(resource)),
-    receiveWindow: receiveCompanionWindow(db, receiver),
+    receiveWindow: receiveCompanionWindow(db, receiver, recorder),
     receive: (resource, offset, bytes) => completed(resource.storageKey, receiver.receive(resource, offset, bytes)),
     withFile: (key, consume, options) => files.exclusive(`send-${key}`, async () => {
       const info = statSchema.parse(await call({ key, action: 'source-open' }));
@@ -81,24 +82,29 @@ async function notifyComplete<T extends AttachmentBlockResult>(storageKey: strin
   return result;
 }
 
-async function completeReceived<T extends AttachmentBlockResult>(db: RequestSyncDatabaseHost, key: string, pending: Promise<T>) {
+async function completeReceived<T extends AttachmentBlockResult>(db: RequestSyncDatabaseHost, key: string,
+  pending: Promise<T>, recorder?: CompanionFolderAttachmentRecorder) {
   const result = await notifyComplete(key, pending);
-  if (result.kind === 'complete' && !key.endsWith('.pdf')) await db.write(port => completeAttachmentDemand(port, key));
+  if (result.kind === 'complete') await db.write(port => port.transaction(async tx => {
+    await recorder?.complete(tx, key);
+    if (!key.endsWith('.pdf')) await completeAttachmentDemand(tx, key);
+  }));
   return result;
 }
 
-function receiveCompanionWindow(db: RequestSyncDatabaseHost, receiver: ReturnType<typeof createAttachmentBlockReceiver>)
+function receiveCompanionWindow(db: RequestSyncDatabaseHost, receiver: ReturnType<typeof createAttachmentBlockReceiver>, recorder?: CompanionFolderAttachmentRecorder)
   : NonNullable<RequestSyncAttachmentHost['receiveWindow']> {
   return async (resource, offset, execute) => {
     const result = await receiver.receiveWindow(resource, offset, execute);
     if (result.offset === resource.byteLength) await completeReceived(db, resource.storageKey,
-      Promise.resolve({ kind: 'complete', offset: result.offset }));
+      Promise.resolve({ kind: 'complete', offset: result.offset }), recorder);
     return result;
   };
 }
 
-async function commitReceived(db: RequestSyncDatabaseHost, resource: AttachmentBlockResource) {
+async function commitReceived(db: RequestSyncDatabaseHost, resource: AttachmentBlockResource, recorder?: CompanionFolderAttachmentRecorder) {
   await db.write(port => port.transaction(async tx => {
+    await recorder?.complete(tx, resource.storageKey);
     await recordFramedSyncResourceAvailability(tx, [resource.storageKey.slice(0, 64)], true);
     if (!resource.storageKey.endsWith('.pdf')) await completeAttachmentDemand(tx, resource.storageKey);
   }));

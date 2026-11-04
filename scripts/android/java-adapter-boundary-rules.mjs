@@ -28,6 +28,7 @@ export const CLASSIFICATIONS = {
     files: [
       'FolioleCompanionAppDataPlugin.java',
       'FolioleCompanionBootstrapPlugin.java',
+      'FolioleCompanionFolderBackupPlugin.java',
       'FolioleCompanionPluginErrors.java',
       'FolioleCompanionResourcePluginActions.java',
       'FolioleCompanionShareInboxPlugin.java',
@@ -98,6 +99,12 @@ export const CLASSIFICATIONS = {
       'FolioleAttachmentMaintenanceFiles.java',
       'FolioleAttachmentBlockFiles.java',
       'FolioleAttachmentReceiveFile.java',
+      'FolioleFolderBackupAttachmentCopy.java',
+      'FolioleFolderBackupAttachmentTarget.java',
+      'FolioleFolderBackupDocumentNames.java',
+      'FolioleFolderBackupDocuments.java',
+      'FolioleFolderBackupOperation.java',
+      'FolioleFolderBackupProfile.java',
       'MainActivity.java'
     ]
   }

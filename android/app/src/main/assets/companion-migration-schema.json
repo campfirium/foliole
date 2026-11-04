@@ -678,6 +678,15 @@
         }
       ],
       "beforeVersion": 108
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to install unfinished folder attachment work.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 112
     }
   ],
   "planKeys": {

@@ -1,8 +1,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
-import type { CompanionFolderBackupPort } from '../../../lib/platform/companionFolderBackupContract';
-
-import { getCompanionRuntimeCapability, requireCompanionNativePlugin } from './companionRuntimeCapabilities';
+import type { CompanionFolderBackupPort } from '../../../../../lib/platform/companionFolderBackupContract';
+import { getCompanionRuntimeCapability, requireCompanionNativePlugin } from '../../companionRuntimeCapabilities';
 
 const pluginName = 'FolioleCompanionFolderBackup';
 const native = registerPlugin<CompanionFolderBackupPort>(pluginName);

@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 
 import type { CompanionFolderBackupState } from '../../lib/platform/companionFolderBackupContract';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { backUpCompanionDatabase } from '../shared/platform/companionFolderBackup';
-import { getCompanionFolderBackupPort, supportsCompanionFolderDatabaseBackup } from '../shared/platform/companionFolderBackupRuntimeRepository';
+import { backUpCompanionDatabase } from '../shared/platform/companion/folderBackup/companionFolderBackup';
+import { getCompanionFolderBackupPort, supportsCompanionFolderDatabaseBackup } from '../shared/platform/companion/folderBackup/companionFolderBackupRuntimeRepository';
 import { AppButton, SettingsControlSlot, SettingsRow, SettingsSection } from '../shared/ui';
 
 export function CompanionFolderDatabaseBackupSection() {
@@ -56,6 +56,8 @@ export function CompanionFolderDatabaseBackupSection() {
         </SettingsControlSlot>
       </SettingsRow>
       {state?.databaseSavedAt ? <p role="status">{t('companion.settings.storage.backupSaved')} {new Date(state.databaseSavedAt).toLocaleString()}</p> : null}
+      {state?.databaseSavedAt ? <p>{t('companion.settings.storage.backupAttachmentsUnchecked')}</p> : null}
+      {state?.attachmentFilesPending != null ? <p>{t('companion.settings.storage.backupAttachmentsPending')} {state.attachmentFilesPending}</p> : null}
       {error ? <p role="alert">{error}</p> : null}
     </SettingsSection>
   );
