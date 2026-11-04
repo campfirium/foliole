@@ -38,6 +38,14 @@ class FolioleTestflightApi
   def reload_build(id)
     Spaceship::ConnectAPI::Build.get(build_id: id)
   end
+
+  def list_builds
+    Spaceship::ConnectAPI::Build.all(app_id: FolioleTestflight::APP_ID, platform: 'IOS')
+  end
+
+  def expire_build(build)
+    build.expire!
+  end
 end
 
 platform :ios do
@@ -76,7 +84,7 @@ platform :ios do
     )
   end
 
-  desc 'Wait for one exact candidate, submit external review, and exit before approval'
+  desc 'Submit external review and expire older builds without waiting for approval'
   lane :distribute do
     apple_api_key
     candidate = JSON.parse(File.read(ENV.fetch('FOLIOLE_IOS_CANDIDATE')))

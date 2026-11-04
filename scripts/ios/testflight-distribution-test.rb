@@ -30,7 +30,16 @@ class DistributionTest < Minitest::Test
     end
     def reload_build(id)
       @calls << [:reload, id]
-      @build
+      [@build, *@older_builds].find { |entry| entry.id == id }
+    end
+    attr_writer :older_builds
+    def list_builds
+      @calls << [:list]
+      [@build, *@older_builds]
+    end
+    def expire_build(build)
+      @calls << [:expire, build.id]
+      build.expired = true
     end
   end
 
@@ -104,9 +113,12 @@ class DistributionTest < Minitest::Test
   def test_existing_review_and_approved_states_are_not_resubmitted
     FolioleTestflight::ACCEPTED.each do |state|
       @api = Api.new(state)
+      old = old_build('old')
+      @api.older_builds = [old]
       receipt = distribute(pause: ->(_) { flunk 'Must not wait for approval' })
       assert_equal state, receipt['externalBuildState']
       refute @api.calls.any? { |call| call.first == :submit }
+      assert old.expired
     end
   end
 
@@ -114,5 +126,101 @@ class DistributionTest < Minitest::Test
     @api = Api.new('BETA_REJECTED')
     assert_raises(RuntimeError) { distribute }
     assert @api.calls.all? { |call| call.first == :find }
+  end
+
+  def old_build(id, version: '0.7.18', number: '321.1', **changes)
+    OpenStruct.new(@api.build.to_h.merge(id: id, app_version: version, version: number).merge(changes))
+  end
+
+  def test_submission_immediately_expires_older_builds_without_waiting_for_approval
+    old = old_build('old', number: '9.1')
+    previous = old_build('previous', version: '0.7.17', number: '999.1')
+    @api.older_builds = [old, previous]
+    receipt = distribute(pause: ->(_) { flunk 'Must not wait for approval' })
+    assert_equal 'WAITING_FOR_BETA_REVIEW', receipt['externalBuildState']
+    assert old.expired, 'The old build must expire as part of publishing the new build'
+    assert previous.expired
+    refute @api.build.expired
+    assert_operator @api.calls.index([:submit]), :<, @api.calls.index([:expire, 'old'])
+    assert_equal %w[old previous], receipt['expiredBuildIds']
+  end
+
+  def test_current_newer_expired_failed_and_other_platform_builds_are_preserved
+    newer = old_build('newer', number: '322.1')
+    next_version = old_build('next', version: '0.7.19', number: '1')
+    expired = old_build('expired', expired: true)
+    failed = old_build('failed', processing_state: 'FAILED')
+    processing = old_build('processing', processing_state: 'PROCESSING')
+    mac = old_build('mac', pre_release_version: OpenStruct.new(platform: 'MAC_OS'))
+    @api.older_builds = [newer, next_version, expired, failed, processing, mac]
+    distribute
+    assert_empty @api.calls.select { |call| call.first == :expire }
+  end
+
+  def test_version_and_build_order_is_numeric_and_missing_components_are_zero
+    @candidate['version'] = @api.build.app_version = '0.10.0'
+    @candidate['buildNumber'] = @api.build.version = '2.1'
+    old = old_build('legacy', version: '0.9.0', number: '99')
+    same = old_build('same', version: '0.10.0', number: '2.1.0')
+    @api.older_builds = [old, same]
+    distribute
+    assert old.expired
+    refute same.expired
+  end
+
+  def test_retries_continue_after_partial_expiration_without_resubmitting_review
+    first = old_build('first')
+    second = old_build('second')
+    @api.older_builds = [first, second]
+    @api.define_singleton_method(:expire_build) do |build|
+      raise 'Apple unavailable' if build.id == 'second' && !@retried
+      @calls << [:expire, build.id]
+      build.expired = true
+    end
+    assert_raises(RuntimeError) { distribute }
+    assert first.expired
+    refute second.expired
+    @api.instance_variable_set(:@retried, true)
+    distribute
+    distribute
+    assert second.expired
+    assert_equal 1, @api.calls.count { |call| call == [:submit] }
+    assert_equal 1, @api.calls.count { |call| call == [:expire, 'first'] }
+    assert_equal 1, @api.calls.count { |call| call == [:expire, 'second'] }
+  end
+
+  def test_unconfirmed_submission_does_not_expire_anything
+    old = old_build('old')
+    @api.older_builds = [old]
+    @api.define_singleton_method(:submit_review) { |_| }
+    assert_raises(RuntimeError) { distribute }
+    refute old.expired
+  end
+
+  def test_wrong_app_or_unknown_version_refuses_expiration_before_any_write
+    [old_build('wrong', app: OpenStruct.new(id: 'other-app')),
+     old_build('unknown', number: 'unknown')].each do |invalid|
+      old = old_build('old')
+      @api.older_builds = [old, invalid]
+      assert_raises(RuntimeError) { distribute }
+      refute old.expired
+    end
+  end
+
+  def test_expiration_must_be_confirmed_by_apple
+    @api.older_builds = [old_build('old')]
+    @api.define_singleton_method(:expire_build) { |_| }
+    assert_raises(RuntimeError) { distribute }
+  end
+
+  def test_replacement_must_remain_valid_during_expiration
+    old = old_build('old')
+    @api.older_builds = [old]
+    @api.define_singleton_method(:list_builds) do
+      @build.expired = true
+      [@build, *@older_builds]
+    end
+    assert_raises(RuntimeError) { distribute }
+    refute old.expired
   end
 end
