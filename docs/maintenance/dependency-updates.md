@@ -162,6 +162,37 @@ evidence and required QA coverage. Candidate containment alone is not a pass.
 | --- | --- | --- |
 | [#199](https://github.com/campfirium/foliole/pull/199); `app/renovate`; head `c8696b8b0846698325451f977da23bf3dda396e3`; lucide-react 1.61.0 → 1.62.0 | `eb4f2558f`; 2026-11-04: `npm run test:files -- src/shared/ui/LucideIconCatalog.test.ts src/features/nodes/components/NodeTreeRowIconGraphic.test.tsx src/features/settings/components/sections/SettingsRailIconPicker.test.tsx src/companion/CompanionSelectionAnnotationToolbar.test.tsx` passed (20 tests); `npm run build` passed; `npm ls lucide-react react --depth=0` confirmed compatible peers. | Next centralized check task: hosted dependency hardening and risk-matched desktop/shared/companion coverage, then remote dev containment and PR closure; no QA run started by this handoff. |
 
+### Review blocked before local adoption
+
+- 2026-11-04, [#200](https://github.com/campfirium/foliole/pull/200),
+  `app/renovate`, head `ef50d39e37ec51ab967254b12ce1857f7ae95689`:
+  Electron 45.2.1 → 45.2.2 is the official latest stable target. npm publication
+  was 2026-11-03T21:43:24.912Z; the existing Electron maturity exception applies.
+  The candidate manifest/lock changes are local and uncommitted, not adopted.
+  Native rebuild/health (SQLite ABI and DNS-SD lifecycle), `quality:fast`, the
+  desktop build and both hidden-native presentation/main-path smoke specs passed.
+  Five focused files passed (24 tests); the toolchain compatibility file passed
+  four of five tests under Electron and all five under ordinary Node.
+- The blocking test is `merges both native architectures and preserves
+  application payload` in `scripts/security/security-toolchain-compatibility.test.mjs`:
+  Electron-as-Node consistently reports `ENOTEMPTY` removing the temporary
+  universal app's `Contents/Resources`, with unmanaged-file-descriptor warnings.
+  A diagnostic rerun using the official 45.2.1 runtime and the same dependency
+  graph/temp root reproduces it. This is an existing baseline failure, not
+  evidence of a 45.2.2 regression; ordinary-Node success does not erase it.
+- Owner: current dependency batch handler. Keep #200 open and retain the local
+  candidate. Resolve the existing toolchain failure through its repair owner,
+  then rerun the six-file Electron test command and the affected local gates
+  before committing/registering pending QA. Do not start QA or close the PR as
+  a substitute for the local gate. Evidence: `.tmp/waits/t712-local-validation.log`,
+  `.tmp/waits/t712-electron-toolchain-recheck.log`,
+  `.tmp/waits/t712-baseline-toolchain.log`, `.tmp/waits/t712-toolchain-recheck.log`,
+  `.tmp/waits/t712-electron-runtime.log`, `.tmp/waits/t712-fast-and-desktop.log`.
+- [Official release notes](https://releases.electronjs.org/release/v45.2.2)
+  describe Wayland hidden-parent and CSS-removal fixes plus Chromium/Node updates,
+  without a disclosed security advisory: no separate expedited Foliole release
+  is recommended; no major-version follow-up is required.
+
 ## Reviewed proposals and deferred adoption
 
 Every reviewed proposal ends with an explicit decision. Locally implemented
@@ -199,6 +230,13 @@ batch review also covers support changes without a new target version.
 | [#191](https://github.com/campfirium/foliole/pull/191) | pdfjs-dist 6.4.299; React-PDF 11.0.0 pins 6.3.289, creating mismatched main and worker runtimes. | Official React-PDF supports a matching newer PDF.js; adopt and validate the pair. | 2026-11-03 | Dependency batch handler |
 | [#192](https://github.com/campfirium/foliole/pull/192) | minimatch 10.2.6; actual glob7 escaped-name regression, plus GHSA-g3hv-75wg-m249 still affects this target. | Upstream installer/temp/rimraf/glob chain supports a patched matcher, or a reviewed alternative passes the existing installer behavior tests; advisory repair remains separate. | 2026-11-03 | Dependency batch handler |
 | [#193](https://github.com/campfirium/foliole/pull/193) | TypeScript 7.0.2; typescript-eslint 8.72.1 requires TypeScript <6.1 and the new compiler API is not stable. | Official lint tooling supports TS7 and the production compiler-API consumers have a supported migration path. | 2026-11-03 | Dependency batch handler |
+| [#201](https://github.com/campfirium/foliole/pull/201); `app/renovate`; head `79374fade5d55c3932768518b55f09a61b3f3130` | minimatch 11.0.2 replaces only the glob 7.2.3 compatibility override (3.1.5), not the modern 11.0.3 override. An isolated real glob 7.2.3 graph with the proposed matcher returns no match for `literal\\[1\\].txt`; the current graph correctly returns `literal[1].txt`, violating the existing installer cleanup regression contract. PR remains open under this batch's restriction against closing unvalidated proposals. | On the next dependency batch, including related installer/temp/rimraf/glob updates, verify upstream compatibility and rerun `npm run test:files -- scripts/windows/installer-temporary-files.test.mjs scripts/security/security-toolchain-compatibility.test.mjs` against the reviewed candidate; adopt only when escaped-name matching and cleanup pass. | 2026-11-04 | Dependency batch handler |
+
+The 2026-11-04 batch also rechecked the earlier deferrals: React-PDF latest
+11.0.0 still pins PDF.js 6.3.289; typescript-eslint latest 8.72.1 still requires
+TypeScript below 6.1. The legacy matcher regression persists with the newer
+11.0.2 proposal, so #192's compatibility resume condition is not met. These
+checks do not claim that any existing security advisory has been repaired.
 
 See [Renovate closed-PR matching](https://docs.renovatebot.com/key-concepts/pull-requests/)
 and [version title configuration](https://docs.renovatebot.com/configuration-options/#commitmessageextra).
