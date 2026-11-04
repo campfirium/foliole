@@ -1,6 +1,7 @@
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDataRuntimeRepository';
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
+import { SettingsTouchSurface } from '../shared/ui/SettingsTouchSurface';
 
 import { CompanionColorModeControl } from './CompanionColorModeControl';
 import { useOptionalCompanionCustomCss } from './CompanionCustomCssProvider';
@@ -65,10 +66,14 @@ function CompanionAppearanceSettingsDetail(props: Pick<CompanionSettingsContentP
   </CompanionSettingsDetail>;
 }
 
+function supportsStorageSettings() {
+  return supportsCompanionAppDataClear()
+    || ['ios-native', 'browser-preview'].includes(getCompanionRuntimeCapability().kind);
+}
+
 function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
   const t = useTranslation();
-  const showStorage = supportsCompanionAppDataClear()
-    || getCompanionRuntimeCapability().kind === 'ios-native';
+  const showStorage = supportsStorageSettings();
   if (props.settingsPage === 'list' || (props.settingsPage === 'storage' && !showStorage)) {
     return (
       <CompanionSettingsList
@@ -127,5 +132,5 @@ function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
 }
 
 export function renderCompanionSettingsContent(props: CompanionSettingsContentProps) {
-  return <CompanionSettingsContentSurface {...props} />;
+  return <SettingsTouchSurface><CompanionSettingsContentSurface {...props} /></SettingsTouchSurface>;
 }

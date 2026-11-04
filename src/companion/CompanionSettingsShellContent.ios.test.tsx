@@ -4,7 +4,8 @@ import { expect, it, vi } from 'vitest';
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
     getPlatform: () => 'ios',
-    isNativePlatform: () => true
+    isNativePlatform: () => true,
+    isPluginAvailable: () => false
   },
   registerPlugin: vi.fn(() => ({}))
 }));

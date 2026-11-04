@@ -3,7 +3,13 @@ import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const appDataRuntime = vi.hoisted(() => ({
-  supportsClear: vi.fn(() => true)
+  supportsClear: vi.fn(() => true),
+  kind: 'web-preview'
+}));
+
+vi.mock('../shared/platform/companionRuntimeCapabilities', async importOriginal => ({
+  ...await importOriginal<typeof import('../shared/platform/companionRuntimeCapabilities')>(),
+  getCompanionRuntimeCapability: () => ({ kind: appDataRuntime.kind, platform: 'web' })
 }));
 
 vi.mock('../shared/platform/companionAppDataRuntimeRepository', () => ({
@@ -34,6 +40,7 @@ function SettingsHarness({ runtimeKind = 'web-preview' }: { runtimeKind?: 'web-p
 describe('CompanionSettingsShellContent', () => {
   beforeEach(() => {
     appDataRuntime.supportsClear.mockReturnValue(true);
+    appDataRuntime.kind = 'web-preview';
   });
 
   it('keeps the settings entry focused on Sync and omits unavailable Device details', () => {
@@ -71,5 +78,20 @@ describe('CompanionSettingsShellContent', () => {
 
     expect(screen.queryByText('3 sections')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Clear local app data/ })).not.toBeInTheDocument();
+  });
+
+  it('opens Storage in the browser preview while keeping device operations disabled', async () => {
+    appDataRuntime.kind = 'browser-preview';
+    appDataRuntime.supportsClear.mockReturnValue(false);
+    render(<SettingsHarness />);
+    fireEvent.click(screen.getByTestId('companion-settings-storage'));
+    expect(await screen.findByRole('heading', { name: 'Database backup' })).toBeInTheDocument();
+    expect(screen.getByText('Backup and storage actions are available in the mobile app.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back up now' })).toBeDisabled();
+    expect(screen.getByRole('switch', { name: 'Automatic backup' })).toBeDisabled();
+    expect(screen.getByRole('heading', { name: 'Local attachments' })).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Clear App Data' })).toBeDisabled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

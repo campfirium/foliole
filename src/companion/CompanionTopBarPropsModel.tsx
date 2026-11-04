@@ -37,7 +37,7 @@ export function resolveCompanionTopBarProps(
   onOpenAppearance: () => void
 ) {
   if (surface.activeAction === 'more') {
-    return resolveSettingsTopBar(t, settingsPage, onBackToSettingsList, onBackToSyncSettings);
+    return resolveSettingsTopBar(t, settingsPage, onBackToSettingsList, onBackToSyncSettings, onExitReview);
   }
   if (surface.activeAction === 'recent') {
     return resolveBrowseTopBar({
@@ -66,8 +66,10 @@ function resolveSettingsTopBar(
   t: Translate,
   settingsPage: CompanionSettingsPage,
   onBackToSettingsList: () => void,
-  onBackToSyncSettings: () => void
+  onBackToSyncSettings: () => void,
+  onExitSettings: () => void
 ) {
+  if (settingsPage === 'foregroundTime') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('desktop.foregroundTime.title') };
   if (settingsPage === 'reviewStatistics') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('desktop.reviewCalendar.title') };
   if (settingsPage === 'learning') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.learning.title') };
   if (settingsPage === 'sync') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.sync.deviceSync') };
@@ -79,7 +81,7 @@ function resolveSettingsTopBar(
   if (settingsPage === 'syncGroup') return { backLabel: t('companion.sync.deviceSync'), onBack: onBackToSyncSettings, title: t('companion.sync.group') };
   if (settingsPage === 'syncActivity') return { backLabel: t('companion.sync.deviceSync'), onBack: onBackToSyncSettings, title: t('companion.sync.activity.title') };
   if (settingsPage === 'syncConnection') return { backLabel: t('companion.sync.deviceSync'), onBack: onBackToSyncSettings, title: t('companion.sync.connection.title') };
-  return { title: t('companion.settings.title') };
+  return { backLabel: t('companion.back'), onBack: onExitSettings, title: t('companion.settings.title') };
 }
 
 function resolveBrowseTopBar(args: {

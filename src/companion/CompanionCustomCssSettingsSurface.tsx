@@ -90,12 +90,10 @@ function CustomCssSnippetList(props: Pick<SettingsSurfaceProps, 'collection' | '
 
 export function CompanionCustomCssSettingsSurface(props: SettingsSurfaceProps) {
   return (
-    <section className="px-5 py-5" data-testid="companion-custom-css-settings">
-      <div className="rounded-2xl border border-companion-divider bg-companion-content px-5 py-5">
-        <CustomCssSettingsHeader {...props} />
-        <CustomCssSettingsIssue {...props} />
-        <CustomCssSnippetList {...props} />
-      </div>
+    <section className="py-5" data-testid="companion-custom-css-settings">
+      <CustomCssSettingsHeader {...props} />
+      <CustomCssSettingsIssue {...props} />
+      <CustomCssSnippetList {...props} />
     </section>
   );
 }

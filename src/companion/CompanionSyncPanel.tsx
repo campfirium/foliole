@@ -109,7 +109,7 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
   const manualSyncFailed = props.manualSyncAction?.status === 'terminal'
     && props.manualSyncAction.terminalResult === 'failed';
   return (
-    <section className="mb-8 px-5 py-3">
+    <section className="mb-8">
       <div className="flex flex-col gap-5">
         {!props.syncGroup && isNativeCompanionSyncParticipationRuntime()
           ? <CompanionSyncParticipationControls /> : null}

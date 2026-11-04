@@ -1,4 +1,5 @@
 export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
+  'companion.settings.storage.previewUnavailable': 'Backup and storage actions are available in the mobile app.',
   'companion.statistics.date': 'Date',
   'companion.settings.learning.reviewGroup': 'Review schedule',
   'companion.settings.learning.priorityGroup': 'Topic priority',

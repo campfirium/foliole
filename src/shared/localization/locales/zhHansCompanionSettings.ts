@@ -1,6 +1,7 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.settings.storage.previewUnavailable': '备份与存储操作需在手机应用中使用。',
   'companion.statistics.date': '日期',
   'companion.settings.learning.reviewGroup': '复习安排',
   'companion.settings.learning.priorityGroup': '主题优先级',

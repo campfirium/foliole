@@ -18,7 +18,7 @@ export function CompanionForegroundTimeContent() {
   const days = Array.from({ length }, (_, index) => calendarDateKey(new Date(month.getFullYear(), month.getMonth(), index + 1)))
     .filter((day) => day <= today).reverse();
   const change = (delta: number) => setMonth(new Date(month.getFullYear(), month.getMonth() + delta, 1));
-  return <div className="px-4 py-3">
+  return <div>
     {history.totalDurationMs !== null ? <AppStatistic label={t('desktop.foregroundTime.total')}
       value={formatForegroundTime(history.totalDurationMs, locale)} /> : null}
     <div className="mb-4 flex items-center justify-between gap-2">

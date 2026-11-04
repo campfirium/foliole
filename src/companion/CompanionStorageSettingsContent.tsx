@@ -4,7 +4,8 @@ import { SettingsAttachmentStorageSection } from '../features/settings/component
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { clearCompanionAppData } from '../shared/platform/companionAppData';
 import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDataRuntimeRepository';
-import { AppSpinner } from '../shared/ui';
+import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
+import { AppButton, AppSpinner, SettingsControlSlot, SettingsRow, SettingsSection } from '../shared/ui';
 import {
   AppDialog,
   AppDialogContent,
@@ -70,6 +71,7 @@ export function CompanionStorageSettingsContent() {
   const [isClearing, setIsClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const canClearAppData = supportsCompanionAppDataClear();
+  const preview = getCompanionRuntimeCapability().kind === 'browser-preview';
 
   async function handleClearAppData() {
     setIsClearing(true);
@@ -85,27 +87,27 @@ export function CompanionStorageSettingsContent() {
   }
 
   return (
-    <section className="px-5 py-5">
-      <SettingsAttachmentStorageSection />
+    <section>
+      {preview ? <p className="mb-5 text-sm leading-6 text-companion-text-secondary">{t('companion.settings.storage.previewUnavailable')}</p> : null}
       <CompanionFolderDatabaseBackupSection />
-      {canClearAppData ? <div className="rounded-2xl border border-companion-divider bg-companion-content px-5 py-5">
-        <h3 className="text-base font-semibold text-foreground">{t('companion.settings.storage.appData')}</h3>
-        <p className="mt-2 text-sm leading-6 text-companion-text-secondary">
-          {t('companion.settings.storage.description')}
-        </p>
-        <button
-          aria-busy={isClearing || undefined}
-          className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-error/60 px-4 py-3 text-sm font-semibold text-error transition hover:bg-error/5 disabled:cursor-not-allowed ${isClearing ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
-          disabled={isClearing}
-          data-testid="companion-storage-clear"
-          onClick={() => setIsConfirmOpen(true)}
-          type="button"
-        >
-          {isClearing ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
-          <span>{t(isClearing ? 'companion.settings.storage.clearing' : 'companion.settings.storage.clear')}</span>
-        </button>
+      <SettingsAttachmentStorageSection unavailable={preview} />
+      {canClearAppData || preview ? <SettingsSection title={t('companion.settings.storage.appData')}>
+        <SettingsRow description={t('companion.settings.storage.description')}>
+          <SettingsControlSlot>
+            <AppButton
+              aria-busy={isClearing || undefined}
+              disabled={isClearing || !canClearAppData}
+              data-testid="companion-storage-clear"
+              onClick={() => setIsConfirmOpen(true)}
+              variant="danger"
+            >
+              {isClearing ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
+              <span>{t(isClearing ? 'companion.settings.storage.clearing' : 'companion.settings.storage.clear')}</span>
+            </AppButton>
+          </SettingsControlSlot>
+        </SettingsRow>
         {error ? <p className="mt-3 text-sm leading-6 text-error">{error}</p> : null}
-      </div> : null}
+      </SettingsSection> : null}
       {canClearAppData ? <ClearAppDataDialog
         isClearing={isClearing}
         isOpen={isConfirmOpen}

@@ -37,6 +37,17 @@ describe('CompanionTopBarPropsModel', () => {
     expect(buildTopBarProps()).toMatchObject({ title: 'Settings' });
   });
 
+  it('lets the settings home return to browsing', () => {
+    expect(buildTopBarProps()).toMatchObject({ backLabel: 'Back', onBack: expect.any(Function) });
+  });
+
+  it('lets every settings detail return to its parent', () => {
+    for (const page of ['learning', 'foregroundTime', 'reviewStatistics', 'storage', 'appearance', 'debug', 'sync', 'device', 'tabs']) {
+      expect(buildTopBarProps(page)).toMatchObject({ backLabel: 'Settings', onBack: expect.any(Function) });
+    }
+    expect(buildTopBarProps('foregroundTime')).toMatchObject({ title: 'Foreground time' });
+  });
+
   it('keeps settings detail pages on their existing back chrome', () => {
     expect(buildTopBarProps('sync')).toMatchObject({ backLabel: 'Settings', title: 'Sync' });
     expect(buildTopBarProps('syncGroup')).toMatchObject({ backLabel: 'Sync', title: 'Sync Group' });

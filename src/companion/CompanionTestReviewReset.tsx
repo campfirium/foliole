@@ -46,7 +46,7 @@ export function CompanionTestReviewReset({ onComplete = reloadApp }: { onComplet
   }
   if (!supported) return <CompanionPlaceholderSettingsContent detail={t('companion.settings.debug.detail')}
     title={t('companion.settings.debug.placeholderTitle')} />;
-  return <section className="px-5 py-5">
+  return <section className="py-4">
     <p className="mb-4 text-sm leading-6 text-companion-text-secondary">{t('companion.settings.debug.resetReviews.description')}</p>
     <AppButton onClick={() => setConfirm(true)}>{t('companion.settings.debug.resetReviews.action')}</AppButton>
     <ResetDialog open={confirm} busy={busy} failed={failed} onOpenChange={open => { if (!busy) setConfirm(open); }}

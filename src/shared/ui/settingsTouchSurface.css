@@ -1,0 +1,81 @@
+.settings-touch-surface {
+  --settings-touch-row-height: 56px;
+  --settings-touch-control-height: 44px;
+  --settings-touch-group-gap: 32px;
+  --settings-touch-row-gap: 12px;
+  --settings-touch-row-padding: 16px;
+  --settings-touch-line: var(--role-content-line);
+  min-width: 0;
+  width: 100%;
+  padding-top: 8px;
+  padding-bottom: 24px;
+}
+.settings-touch-surface [data-settings-section] {
+  margin-bottom: var(--settings-touch-group-gap);
+  padding-top: 0;
+}
+.settings-touch-surface [data-settings-section]::before { display: none; }
+.settings-touch-surface [data-settings-section]:last-child { margin-bottom: 0; }
+.settings-touch-surface [data-settings-section-header] { padding: 0 0 8px; }
+.settings-touch-surface [data-settings-section-header] h3 {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 400;
+  color: var(--role-text-secondary);
+}
+.settings-touch-surface [data-settings-row] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--settings-touch-row-gap);
+  min-height: var(--settings-touch-row-height);
+  padding: var(--settings-touch-row-padding) 0;
+}
+.settings-touch-surface [data-settings-row]::before {
+  left: 0;
+  right: 0;
+  border-color: var(--settings-touch-line);
+}
+.settings-touch-surface [data-settings-row] h4 {
+  font-size: 16px;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+.settings-touch-surface [data-settings-row] p,
+.settings-touch-surface [data-settings-section-header] p {
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--role-text-secondary);
+  overflow-wrap: anywhere;
+}
+.settings-touch-surface [data-settings-control-slot] {
+  align-self: stretch;
+  justify-content: flex-start;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  width: 100%;
+  gap: 8px;
+}
+.settings-touch-surface [data-settings-control-slot] > button:not([role='switch']),
+.settings-touch-surface [data-settings-control-slot] > input {
+  min-height: var(--settings-touch-control-height);
+  height: auto;
+  max-width: 100%;
+  white-space: normal;
+}
+.settings-touch-surface [data-settings-control-slot] > button:not([role='switch']) { flex: 1 1 auto; }
+.settings-touch-surface [data-settings-control-layout='inline'] {
+  flex-direction: row;
+  align-items: center;
+}
+.settings-touch-surface [data-settings-control-layout='inline'] [data-settings-control-slot] {
+  flex: 0 0 auto;
+  align-self: center;
+  width: auto;
+}
+.settings-touch-surface [data-settings-control-layout='inline'] input[type='number'] { width: 80px; }
+.settings-touch-surface [role='switch']::before {
+  content: '';
+  position: absolute;
+  inset: -10px 0;
+}

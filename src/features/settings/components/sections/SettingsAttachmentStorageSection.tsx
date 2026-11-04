@@ -30,29 +30,29 @@ function useAttachmentStorageSettings() {
   return { status, threshold, setThreshold, busy, error, run };
 }
 
-export function SettingsAttachmentStorageSection() {
+export function SettingsAttachmentStorageSection({ unavailable = false }: { unavailable?: boolean }) {
   const t = useTranslation();
   const { status, threshold, setThreshold, busy, error, run } = useAttachmentStorageSettings();
   const [confirmEmpty, setConfirmEmpty] = useState(false);
-  if (!status && !error) return null;
+  if (!status && !error && !unavailable) return null;
   return (
     <SettingsSection ariaLabel={t('settings.attachments.title')} title={t('settings.attachments.title')}>
       {error ? <p role="alert">{t('settings.attachments.error')}</p> : null}
-      <SettingsRow title={t('settings.attachments.used')} description={status ? bytes(status.usedBytes) : '—'}>
-        <SettingsControlSlot><AppButton disabled={busy} onClick={() => void run({ action: 'status' })} size="sm">
+      <SettingsRow controlLayout="inline" title={t('settings.attachments.used')} description={status ? bytes(status.usedBytes) : '—'}>
+        <SettingsControlSlot><AppButton disabled={busy || unavailable} onClick={() => void run({ action: 'status' })} size="sm">
           {t('settings.attachments.refresh')}
         </AppButton></SettingsControlSlot>
       </SettingsRow>
-      <SettingsRow title={t('settings.attachments.threshold')} description={t('settings.attachments.thresholdHint')}>
+      <SettingsRow controlLayout="inline" title={t('settings.attachments.threshold')} description={t('settings.attachments.thresholdHint')}>
         <SettingsControlSlot><AppInput aria-label={t('settings.attachments.threshold')} disabled={busy || !status}
-          min={1} type="number" value={threshold} onChange={(event) => setThreshold(event.target.value)}
+          min={1} placeholder="—" type="number" value={unavailable ? '' : threshold} onChange={(event) => setThreshold(event.target.value)}
           onBlur={() => {
             if (status && Number.isSafeInteger(Number(threshold)) && Number(threshold) > 0) {
               void run({ action: 'configure', settings: { automatic: status.automatic, observationThreshold: Number(threshold) } });
             } else setThreshold(String(status?.observationThreshold ?? 30));
           }} /></SettingsControlSlot>
       </SettingsRow>
-      <SettingsRow title={t('settings.attachments.automatic')} description={t('settings.attachments.automaticHint')}>
+      <SettingsRow controlLayout="inline" title={t('settings.attachments.automatic')} description={t('settings.attachments.automaticHint')}>
         <SettingsControlSlot><AppSwitch aria-label={t('settings.attachments.automatic')} checked={status?.automatic ?? false}
           disabled={busy || !status} onCheckedChange={(automatic) => {
             if (status) void run({ action: 'configure', settings: { automatic, observationThreshold: status.observationThreshold } });

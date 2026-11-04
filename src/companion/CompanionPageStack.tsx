@@ -47,7 +47,8 @@ export function CompanionPageStack(props: {
   return <>
     {Object.entries(pages).map(([key, page]) => <ScrollPage key={key} pageKey={key}
       active={key === pageKey && !reading} model={model} sortIdentity={page!.sortIdentity}>{page!.content}</ScrollPage>)}
-    {!pageKey && !reading ? <ScrollPage pageKey="other" active model={model} sortIdentity="">{content}</ScrollPage> : null}
+    {!pageKey && !reading ? <ScrollPage key={model.surface.activeAction === 'more' ? model.settingsPage : 'other'}
+      pageKey="other" active model={model} sortIdentity="">{content}</ScrollPage> : null}
     {reading ? content : null}
   </>;
 }

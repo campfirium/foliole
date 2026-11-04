@@ -73,7 +73,7 @@ export function CompanionSettingsList(props: {
 }) {
   const t = useTranslation();
   return (
-    <section className="companion-page-start pb-4">
+    <section className="pb-4">
       <div className="space-y-5">
         <SettingsListSection first title={t('companion.settings.section.syncDevice')}>
           <SettingsListItem
@@ -114,7 +114,7 @@ export function CompanionSettingsList(props: {
 
 export function CompanionPlaceholderSettingsContent(props: { detail: string; title: string }) {
   return (
-    <section className="border-t border-companion-divider px-1 py-6">
+    <section className="py-4">
       <h2 className="text-sm font-semibold leading-6 text-foreground">{props.title}</h2>
       <p className="mt-1 max-w-[28rem] text-sm leading-6 text-companion-text-secondary">{props.detail}</p>
     </section>
@@ -127,5 +127,5 @@ export function CompanionSettingsDetail(props: {
   page: CompanionSettingsPage;
   title: string;
 }) {
-  return <section className="py-4">{props.children}</section>;
+  return <section>{props.children}</section>;
 }

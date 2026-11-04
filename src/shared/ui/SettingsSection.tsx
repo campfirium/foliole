@@ -129,6 +129,7 @@ export function SettingsSection({
   return (
     <section
       aria-label={ariaLabel}
+      data-settings-section
       data-settings-search-row-id={searchRowId}
       className={cn(
         'relative mb-8 pt-7 before:absolute before:left-settings-panel-x before:right-settings-panel-x before:top-0 before:border-t before:border-settings-divider/70 first:pt-0 first:before:hidden last:mb-0',
@@ -136,7 +137,7 @@ export function SettingsSection({
       )}
     >
       {hasHeader ? (
-        <div className="px-settings-panel-x pb-3">
+        <div className="px-settings-panel-x pb-3" data-settings-section-header>
           <SettingsSectionHeader
             actions={actions}
             contentId={contentId}

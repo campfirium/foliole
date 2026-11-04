@@ -6,6 +6,7 @@ import { clearCompanionFolderBackupDirectory, getCompanionAutomaticFolderBackup,
 import { backUpCompanionDatabase } from '../shared/platform/companion/folderBackup/companionFolderBackup';
 import { getCompanionFolderBackupPort, supportsCompanionFolderDatabaseBackup } from '../shared/platform/companion/folderBackup/companionFolderBackupRuntimeRepository';
 import { getCompanionFolderBackupState, subscribeCompanionFolderBackupWork } from '../shared/platform/companion/folderBackup/companionFolderBackupState';
+import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
 import { AppButton, AppSwitch, SettingsControlSlot, SettingsRow, SettingsSection } from '../shared/ui';
 
 function useFolderBackupState(supported: boolean) {
@@ -46,6 +47,7 @@ function useFolderBackupState(supported: boolean) {
 export function CompanionFolderDatabaseBackupSection() {
   const t = useTranslation();
   const supported = supportsCompanionFolderDatabaseBackup();
+  const preview = getCompanionRuntimeCapability().kind === 'browser-preview';
   const { state, setState, error, setError, automatic, setAutomatic } = useFolderBackupState(supported);
   const [changingAutomatic, setChangingAutomatic] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -73,13 +75,13 @@ export function CompanionFolderDatabaseBackupSection() {
   }
 
   const working = busy || state?.phase === 'working';
-  if (!supported) return null;
+  if (!supported && !preview) return null;
   return (
     <SettingsSection ariaLabel={t('companion.settings.storage.databaseBackup')} title={t('companion.settings.storage.databaseBackup')}>
       <SettingsRow title={state?.directoryLabel ?? t('companion.settings.storage.backupFolder')}
         description={t('companion.settings.storage.databaseBackupHint')}>
         <SettingsControlSlot className="flex-wrap">
-          <AppButton data-testid="companion-database-backup" disabled={working} onClick={() => void run(false)} size="sm">
+          <AppButton data-testid="companion-database-backup" disabled={working || !supported} onClick={() => void run(false)} size="sm">
             {t(working ? 'companion.settings.storage.backupWorking' : 'companion.settings.storage.backupNow')}
           </AppButton>
           {state?.configured ? <AppButton disabled={working} onClick={() => void run(true)} size="sm">
@@ -90,17 +92,17 @@ export function CompanionFolderDatabaseBackupSection() {
           </AppButton> : null}
         </SettingsControlSlot>
       </SettingsRow>
-      <SettingsRow title={t('companion.settings.storage.automaticBackup')} description={t('companion.settings.storage.automaticBackupHint')}>
+      <SettingsRow controlLayout="inline" title={t('companion.settings.storage.automaticBackup')} description={t('companion.settings.storage.automaticBackupHint')}>
         <SettingsControlSlot>
           <AppSwitch aria-label={t('companion.settings.storage.automaticBackup')} checked={automatic === true}
             disabled={automatic === null || changingAutomatic || forgetting || (!state?.configured && automatic !== true)}
             onCheckedChange={value => void toggleAutomatic(value)} />
         </SettingsControlSlot>
       </SettingsRow>
-      {state?.databaseSavedAt ? <p role="status">{t('companion.settings.storage.backupSaved')} {new Date(state.databaseSavedAt).toLocaleString()}</p> : null}
-      {state?.databaseSavedAt ? <p>{t('companion.settings.storage.backupAttachmentsUnchecked')}</p> : null}
-      {state?.attachmentFilesPending != null ? <p>{t('companion.settings.storage.backupAttachmentsPending')} {state.attachmentFilesPending}</p> : null}
-      {error ? <p role="alert">{error}</p> : null}
+      {state?.databaseSavedAt ? <p className="text-sm leading-6 text-companion-text-secondary" role="status">{t('companion.settings.storage.backupSaved')} {new Date(state.databaseSavedAt).toLocaleString()}</p> : null}
+      {state?.databaseSavedAt ? <p className="text-sm leading-6 text-companion-text-secondary">{t('companion.settings.storage.backupAttachmentsUnchecked')}</p> : null}
+      {state?.attachmentFilesPending != null ? <p className="text-sm leading-6 text-companion-text-secondary">{t('companion.settings.storage.backupAttachmentsPending')} {state.attachmentFilesPending}</p> : null}
+      {error ? <p className="text-sm leading-6 text-error" role="alert">{error}</p> : null}
     </SettingsSection>
   );
 }

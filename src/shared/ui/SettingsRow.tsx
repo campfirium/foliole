@@ -5,6 +5,7 @@ import { cn } from '@/shared/lib/utils';
 export interface SettingsRowProps extends HTMLAttributes<HTMLDivElement> {
   children?: ReactNode;
   className?: string;
+  controlLayout?: 'stacked' | 'inline';
   description?: ReactNode;
   detail?: { label: string; value: ReactNode };
   readonly?: boolean;
@@ -14,6 +15,7 @@ export interface SettingsRowProps extends HTMLAttributes<HTMLDivElement> {
 export function SettingsRow({
   children,
   className,
+  controlLayout = 'stacked',
   description,
   detail,
   readonly = false,
@@ -30,6 +32,7 @@ export function SettingsRow({
         className
       )}
       data-settings-row
+      data-settings-control-layout={controlLayout}
       {...rest}
     >
       {hasCopy ? (
