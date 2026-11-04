@@ -33,6 +33,17 @@ repository, owner-only (0600). Existing upload key SHA256 must be
 `3A:63:39:38:11:29:26:8C:65:1A:97:3F:A4:FF:A2:4F:F2:E3:E6:B3:32:F2:28:E4:E1:E0:AB:02:AF:BE:18:0B`.
 No secrets are printed or included in artifacts.
 
+If the browser reports a generated JSON download but no file is retrievable, do not
+claim that it was saved or repeatedly create keys. Google cannot re-download the
+private portion. The supported alternative is to generate an RSA private key
+locally, save the service-account JSON outside the repository (0600), and upload
+only its X.509 PEM public certificate through **Upload existing key**. Use a generic
+certificate subject, verify certificate/private-key agreement, and record expiry
+for rotation before it expires. Confirm the credential replacement/revocation with
+the user, then prove real token exchange and a read-only Play release query before
+revoking the unretrieved old key. Configure GitHub through stdin, never chat,
+command arguments or artifacts. See [Google key upload](https://docs.cloud.google.com/iam/docs/keys-upload).
+
 ## Deliver a candidate
 
 Complete compatibility and local behavior evidence under `foliole-mobile-beta`.
