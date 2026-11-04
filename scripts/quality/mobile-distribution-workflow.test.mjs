@@ -20,7 +20,7 @@ it('allows normal quality but requires full check QA for any mobile side effect'
     expect(execute(guard, { GITHUB_REF, MOBILE: 'none', SCOPE: 'ios' }).status).toBe(0);
   }
   expect(execute(guard, { GITHUB_REF: 'refs/heads/check', MOBILE: 'ios', SCOPE: 'full' }).status).toBe(0);
-  for (const env of [{ GITHUB_REF: 'refs/heads/dev' }, { SCOPE: 'ios' }, { MOBILE: 'android' }]) {
+  for (const env of [{ GITHUB_REF: 'refs/heads/dev' }, { SCOPE: 'ios' }, { MOBILE: 'windows' }]) {
     expect(execute(guard, { GITHUB_REF: 'refs/heads/check', MOBILE: 'ios', SCOPE: 'full', ...env }).status).not.toBe(0);
   }
 });

@@ -90,8 +90,8 @@ export async function runQaRemoteQuality({ args, cwd, repo, runner, preflight = 
   if (args.replay || args.skipPreflight || args.preflightHost === 'windows') {
     throw new Error('QA uses Mac preflight and explicit scopes; replay and preflight bypass are unavailable');
   }
-  if (args.mobileDistribution && (args.mobileDistribution !== 'ios' || args.scope !== 'full')) {
-    throw new Error('Mobile distribution requires full QA and an enabled platform (ios)');
+  if (args.mobileDistribution && (!['ios', 'android'].includes(args.mobileDistribution) || args.scope !== 'full')) {
+    throw new Error('Mobile distribution requires full QA and an enabled platform (ios or android)');
   }
   const record = readQaWorkspace(cwd);
   if (record.phase !== 'prepared' || realpathSync(cwd) !== realpathSync(record.worktreePath)) {

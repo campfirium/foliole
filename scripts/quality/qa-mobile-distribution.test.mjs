@@ -79,7 +79,7 @@ it('rejects unsupported platforms, narrow checks, replay and preflight bypass', 
   expect(parseRemoteQualityArgs(['--scope', 'full', '--mobile-distribution', 'ios'])).toMatchObject(args);
   for (const values of [
     ['--scope', 'ios', '--mobile-distribution', 'ios'],
-    ['--scope', 'full', '--mobile-distribution', 'android'],
+    ['--scope', 'full', '--mobile-distribution', 'windows'],
     ['--scope', 'full', '--mobile-distribution', 'ios', '--skip-preflight'],
     ['--replay', '42', '--mobile-distribution', 'ios']
   ]) expect(() => parseRemoteQualityArgs(values)).toThrow();

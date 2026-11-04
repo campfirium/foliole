@@ -1,0 +1,102 @@
+name: Distribute Android to Play open testing
+on:
+  workflow_call:
+    inputs:
+      target_sha: { required: true, type: string }
+      target_version: { required: true, type: string }
+      execution_lane: { required: true, type: string }
+      trigger_ref: { required: true, type: string }
+    secrets:
+      ANDROID_PLAY_SERVICE_ACCOUNT_JSON: { required: true }
+      ANDROID_UPLOAD_KEYSTORE_BASE64: { required: true }
+      ANDROID_UPLOAD_KEYSTORE_PASSWORD: { required: true }
+      ANDROID_UPLOAD_KEY_ALIAS: { required: true }
+permissions: { contents: read, actions: read }
+jobs:
+  play:
+    name: Sign, upload and submit Android to Play
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    concurrency: { group: play-android-open-testing, cancel-in-progress: false }
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+      ACCEPTED_SHA: ${{ inputs.target_sha }}
+      TARGET_VERSION: ${{ inputs.target_version }}
+      EXECUTION_LANE: ${{ inputs.execution_lane }}
+      TRIGGER_REF: ${{ inputs.trigger_ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ inputs.target_sha }}', persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - name: Require exact accepted QA identity
+        run: node scripts/android/play-release.mjs guard
+      - name: Restore only this run's original Play candidate
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: node scripts/android/play-release.mjs restore
+      - name: Allocate from actual Play history without changing a pending review
+        env: { ANDROID_PLAY_SERVICE_ACCOUNT_JSON: '${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}' }
+        run: node scripts/android/play-release.mjs prepare
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-play-${{ github.run_id }}-${{ github.run_attempt }}-prepared
+          path: .tmp/artifacts/android-play/candidate.json
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/setup-java@v4
+        with: { distribution: zulu, java-version: '21.0.13+1', check-latest: true }
+      - name: Activate pinned npm
+        run: node scripts/quality/pinned-npm.mjs activate
+      - name: Install Linux DNS-SD build headers
+        run: sudo apt-get update && sudo apt-get install -y libavahi-client-dev
+      - name: Install dependencies
+        run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Install pinned SQLCipher toolchain
+        run: sdkmanager "ndk;25.2.9519653"
+      - name: Build the allocated production AAB without signing credentials
+        run: node scripts/android/play-release.mjs build
+      - name: Sign with the existing Play upload certificate
+        env:
+          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          ANDROID_UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+        run: node scripts/android/play-release.mjs sign
+      - name: Save immutable signed candidate before any upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-play-${{ github.run_id }}-${{ github.run_attempt }}-signed
+          path: |
+            .tmp/artifacts/android-play/candidate.json
+            .tmp/artifacts/android-play/app-release-signed.aab
+            .tmp/artifacts/android-play/bundle.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload or reconcile the original signed AAB
+        env: { ANDROID_PLAY_SERVICE_ACCOUNT_JSON: '${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}' }
+        run: node scripts/android/play-release.mjs upload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-play-${{ github.run_id }}-${{ github.run_attempt }}-uploaded
+          path: .tmp/artifacts/android-play/candidate.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Submit the update without cancelling an existing review
+        env: { ANDROID_PLAY_SERVICE_ACCOUNT_JSON: '${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}' }
+        run: node scripts/android/play-release.mjs commit
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-play-${{ github.run_id }}-${{ github.run_attempt }}-committed
+          path: .tmp/artifacts/android-play/candidate.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Read the actual Play release lifecycle
+        env: { ANDROID_PLAY_SERVICE_ACCOUNT_JSON: '${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}' }
+        run: node scripts/android/play-release.mjs observe
+      - name: Preserve result or uncertain operation for reconciliation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-play-${{ github.run_id }}-${{ github.run_attempt }}-observed
+          path: .tmp/artifacts/android-play/candidate.json
+          if-no-files-found: ignore
+          retention-days: 30

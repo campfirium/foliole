@@ -33,7 +33,7 @@ export function parseRemoteQualityArgs(args) {
     throw new Error('--scope must be desktop, shared, android, ios, or full');
   }
   if (result.mobileDistribution !== undefined) {
-    if (result.mobileDistribution !== 'ios') throw new Error('--mobile-distribution currently supports only ios');
+    if (!['ios', 'android'].includes(result.mobileDistribution)) throw new Error('--mobile-distribution supports ios or android');
     if (result.scope !== 'full' || result.skipPreflight) {
       throw new Error('Mobile distribution requires full quality without a preflight bypass');
     }

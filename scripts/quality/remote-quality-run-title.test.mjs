@@ -14,7 +14,7 @@ describe('remote quality run titles', () => {
   it('distinguishes a mobile distribution run from ordinary quality during recovery', () => {
     expect(parseRemoteQualityRun(run('Dev Quality Check (full) @ 3c2a68dfc [mobile:ios]')))
       .toEqual({ scope: 'full', testedSha: HEAD, mobileDistribution: 'ios' });
-    expect(parseRemoteQualityRun(run('Dev Quality Check (full) @ 3c2a68dfc [mobile:android]'))).toBeNull();
+    expect(parseRemoteQualityRun(run('Dev Quality Check (full) @ 3c2a68dfc [mobile:windows]'))).toBeNull();
   });
 
   it('takes the full commit from head_sha for a new short full title', () => {

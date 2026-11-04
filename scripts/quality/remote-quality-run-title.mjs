@@ -4,7 +4,7 @@
 //   old, before short titles:           "Dev Quality Check (full) @ <40 hex> via <40 hex>"
 // A 9-character short SHA is display only: the full commit always comes from the
 // title's 40-character target or from the run's head_sha, never from the short SHA.
-const TITLE_PATTERN = /^Dev Quality Check \((\w+)\) @ ([0-9a-f]{9}|[0-9a-f]{40})(?: via ([0-9a-f]{9}|[0-9a-f]{40}))?(?: \[mobile:(ios)\])?(?: \[reuse:([1-9]\d*)\])?$/u;
+const TITLE_PATTERN = /^Dev Quality Check \((\w+)\) @ ([0-9a-f]{9}|[0-9a-f]{40})(?: via ([0-9a-f]{9}|[0-9a-f]{40}))?(?: \[mobile:(ios|android)\])?(?: \[reuse:([1-9]\d*)\])?$/u;
 const FULL_SHA = /^[0-9a-f]{40}$/u;
 const SHORT_LENGTH = 9;
 

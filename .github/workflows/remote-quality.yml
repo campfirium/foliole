@@ -5,7 +5,7 @@ run-name: >-
   Dev Quality Check (${{ inputs.mobile_quality_run_id != '' && 'mobile_resume' || inputs.scope }}) @ ${{
   (inputs.trigger_short != '' && startsWith(github.sha, inputs.trigger_short) && inputs.target_sha == github.sha && inputs.trigger_short)
   || (inputs.trigger_short != '' && startsWith(github.sha, inputs.trigger_short) && format('{0} via {1}', inputs.target_sha, inputs.trigger_short))
-  || format('{0} via {1}', inputs.target_sha, github.sha) }}${{ inputs.mobile_distribution == 'ios' && ' [mobile:ios]' || '' }}${{ inputs.mobile_quality_run_id != '' && format(' [reuse:{0}]', inputs.mobile_quality_run_id) || '' }}
+  || format('{0} via {1}', inputs.target_sha, github.sha) }}${{ inputs.mobile_distribution != 'none' && inputs.mobile_distribution != '' && format(' [mobile:{0}]', inputs.mobile_distribution) || '' }}${{ inputs.mobile_quality_run_id != '' && format(' [reuse:{0}]', inputs.mobile_quality_run_id) || '' }}
 
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ on:
         required: false
         default: none
         type: choice
-        options: [none, ios]
+        options: [none, ios, android]
       mobile_quality_run_id:
         description: Reuse this complete mobile QA when only distribution inputs changed
         required: false
@@ -53,8 +53,8 @@ permissions:
 
 # The latest dev dispatch wins; release runs never join this group.
 concurrency:
-  group: ${{ inputs.mobile_distribution == 'ios' && 'quality-qa-mobile' || (github.ref == 'refs/heads/check' && 'quality-qa' || 'quality-dev') }}
-  cancel-in-progress: ${{ inputs.mobile_distribution != 'ios' }}
+  group: ${{ inputs.mobile_distribution != 'none' && inputs.mobile_distribution != '' && 'quality-qa-mobile' || (github.ref == 'refs/heads/check' && 'quality-qa' || 'quality-dev') }}
+  cancel-in-progress: ${{ inputs.mobile_distribution == 'none' || inputs.mobile_distribution == '' }}
 
 jobs:
   dev-ref:
@@ -77,7 +77,7 @@ jobs:
         run: |
           case "$MOBILE" in
             none|'') ;;
-            ios) test "$GITHUB_REF" = refs/heads/check && test "$SCOPE" = full ;;
+            ios|android) test "$GITHUB_REF" = refs/heads/check && test "$SCOPE" = full ;;
             *) exit 1 ;;
           esac
       - name: Validate mobile quality reuse selection
@@ -161,7 +161,7 @@ jobs:
           echo 'artifact=mobile-quality-reuse-${{ github.run_id }}-${{ github.run_attempt }}' >> "$GITHUB_OUTPUT"
 
   mobile-context:
-    if: always() && inputs.mobile_distribution == 'ios' && inputs.scope == 'full' && (needs.full-quality.result == 'success' || needs.mobile-reuse.result == 'success')
+    if: always() && (inputs.mobile_distribution == 'ios' || inputs.mobile_distribution == 'android') && inputs.scope == 'full' && (needs.full-quality.result == 'success' || needs.mobile-reuse.result == 'success')
     needs: [full-quality, mobile-reuse]
     runs-on: ubuntu-latest
     outputs:
@@ -196,9 +196,24 @@ jobs:
       IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
       IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
 
+  mobile-android:
+    if: always() && inputs.mobile_distribution == 'android' && needs.mobile-context.result == 'success'
+    needs: [full-quality, mobile-context]
+    uses: ./.github/workflows/release-android.yml
+    with:
+      target_sha: ${{ needs.full-quality.outputs.accepted_sha }}
+      target_version: ${{ needs.mobile-context.outputs.version }}
+      execution_lane: qa-mobile-beta
+      trigger_ref: ${{ github.ref }}
+    secrets:
+      ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}
+      ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+      ANDROID_UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+      ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+
   timing-summary:
     if: ${{ always() }}
-    needs: [dev-ref, scoped-quality, full-quality, mobile-reuse, mobile-context, mobile-ios]
+    needs: [dev-ref, scoped-quality, full-quality, mobile-reuse, mobile-context, mobile-ios, mobile-android]
     permissions: { actions: read, contents: read }
     uses: ./.github/workflows/hosted-quality-timing-summary.yml
     with:
