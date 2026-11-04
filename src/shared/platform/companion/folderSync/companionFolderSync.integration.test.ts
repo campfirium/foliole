@@ -46,20 +46,23 @@ async function fixture() {
 it('connects the actual companion runtime to coherent database export and persisted native folder state', async () => {
   const f = await fixture();
   const epoch = f.sqlite.prepare('SELECT library_epoch FROM node_version_local_proof_state').pluck().get();
-  expect(await readCompanionFolderSyncState()).toEqual({ deviceSyncConfigured: false, location: null });
+  expect(await readCompanionFolderSyncState()).toEqual({ enabled: false, location: null });
   await companionFolderSync.choose();
+  await companionFolderSync.setEnabled(true);
   expect(await companionFolderSync.write()).toMatchObject({ changed: true, changedObjects: 1, generation: 1 });
   expect((await readCompanionFolderSyncState()).location!.completion).toMatchObject({ sourceId: epoch, generation: 1 });
   expect(await companionFolderSync.write()).toMatchObject({ changed: false, protocolBytesWritten: 0 });
   expect(f.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('topic')).toBe('First article');
 });
 
-it('refuses folder writes for a configured device group even without a reachable endpoint', async () => {
+it('saves independently alongside a configured device group without a reachable endpoint', async () => {
   const f = await fixture();
   f.sqlite.exec(`INSERT INTO sync_groups VALUES ('group','Group','key','2026-11-04','2026-11-04');
     INSERT INTO sync_group_local_state VALUES (1,'group','device','active','2026-11-04')`);
   await companionFolderSync.choose();
-  expect((await readCompanionFolderSyncState()).deviceSyncConfigured).toBe(true);
-  await expect(companionFolderSync.write()).rejects.toThrow('folder_sync_device_sync_configured');
-  expect((await readCompanionFolderSyncState()).location!.completion).toBeNull();
+  await companionFolderSync.setEnabled(true);
+  expect((await readCompanionFolderSyncState()).enabled).toBe(true);
+  expect(await companionFolderSync.write()).toMatchObject({ changed: true, generation: 1 });
+  expect((await readCompanionFolderSyncState()).location!.completion).not.toBeNull();
+  expect(f.sqlite.prepare('SELECT group_id FROM sync_group_local_state').pluck().get()).toBe('group');
 });

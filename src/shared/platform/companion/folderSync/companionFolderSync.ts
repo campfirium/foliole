@@ -6,7 +6,6 @@ import { companionFramedFileOwner } from '../runtime/companionFramedPayloadBudge
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap.js';
 import { currentCompanionAttachmentHost } from '../sync/framed/companionAttachmentBlockFiles.js';
 import { currentCompanionRequestSyncDatabaseHost } from '../sync/framed/companionRequestSyncDatabaseHost.js';
-import { loadCompanionSyncGroup } from '../sync/syncGroupStore.js';
 
 import { createFolderSyncService } from './folderSyncService.js';
 
@@ -23,7 +22,6 @@ async function sourceIdentity() {
 }
 
 export const companionFolderSync = createFolderSyncService(plugin, async () => {
-  if (await loadCompanionSyncGroup()) throw new Error('folder_sync_device_sync_configured');
   const owner = getIosCompanionDatabaseOwner();
   const identity = companionFramedFileOwner(owner);
   const sourceId = await sourceIdentity();
@@ -37,9 +35,10 @@ export const companionFolderSync = createFolderSyncService(plugin, async () => {
 });
 
 export async function readCompanionFolderSyncState() {
-  const [{ location }, group, sourceId] = await Promise.all([
-    companionFolderSync.read(), loadCompanionSyncGroup(), sourceIdentity()
+  const [{ location, enabled }, sourceId] = await Promise.all([
+    companionFolderSync.read(), sourceIdentity()
   ]);
-  return { deviceSyncConfigured: Boolean(group), location: location ? { ...location,
-    completion: location.completion?.sourceId === sourceId ? location.completion : null } : null };
+  return { enabled, location: location ? { ...location,
+    completion: location.completion?.sourceId === sourceId ? location.completion : null,
+    failure: location.failure?.sourceId === sourceId ? location.failure : null } : null };
 }

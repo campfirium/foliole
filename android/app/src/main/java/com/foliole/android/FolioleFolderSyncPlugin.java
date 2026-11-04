@@ -25,7 +25,16 @@ public class FolioleFolderSyncPlugin extends Plugin {
     @Override public void load() { location = new FolioleFolderSyncLocation(getContext()); }
 
     @PluginMethod public void readLocation(PluginCall call) {
-        perform(call, () -> new JSObject().put("location", nullable(location.read())));
+        perform(call, () -> new JSObject().put("location", nullable(location.read())).put("enabled", location.enabled()));
+    }
+
+    @PluginMethod public void setEnabled(PluginCall call) {
+        perform(call, () -> {
+            Boolean enabled = call.getBoolean("enabled");
+            if (enabled == null) throw new IllegalArgumentException("folder_sync_enabled_required");
+            location.setEnabled(enabled);
+            return new JSObject();
+        });
     }
 
     @PluginMethod public void chooseLocation(PluginCall call) {
@@ -71,6 +80,13 @@ public class FolioleFolderSyncPlugin extends Plugin {
         perform(call, () -> {
             android.net.Uri tree = location.requireLease(call.getString("token"), call.getString("lease"), this);
             return access(new FolioleFolderSyncDocuments(getContext().getContentResolver(), tree), call);
+        });
+    }
+
+    @PluginMethod public void saveFailure(PluginCall call) {
+        perform(call, () -> {
+            location.failed(call.getString("token"), call.getString("sourceId"), call.getString("occurredAt"));
+            return new JSObject();
         });
     }
 

@@ -10,6 +10,7 @@ export interface FolderSyncLocation {
   name: string;
   authorized: boolean;
   completion: FolderSyncCompletion | null;
+  failure?: { sourceId: string; occurredAt: string } | null;
 }
 
 export type FolderSyncFileOperation = { key: string } & (
@@ -20,11 +21,13 @@ export type FolderSyncFileOperation = { key: string } & (
 );
 
 export interface FolderSyncNativePlugin {
-  readLocation(): Promise<{ location: FolderSyncLocation | null }>;
+  readLocation(): Promise<{ location: FolderSyncLocation | null; enabled: boolean }>;
+  setEnabled(input: { enabled: boolean }): Promise<void>;
   chooseLocation(): Promise<{ location: FolderSyncLocation | null; cancelled: boolean }>;
   acquire(input: { token: string }): Promise<{ lease: string }>;
   release(input: { token: string; lease: string }): Promise<void>;
   saveCompletion(input: { token: string; lease: string; completion: FolderSyncCompletion }): Promise<void>;
+  saveFailure(input: { token: string; sourceId: string; occurredAt: string }): Promise<void>;
   access(input: { token: string; lease: string } & FolderSyncFileOperation): Promise<{
     base64?: string | null; present?: boolean; length?: number; hash?: string;
   }>;

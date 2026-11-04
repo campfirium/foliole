@@ -30,10 +30,12 @@ it('selects once, copies actual facts and resources through the native contract,
   const resources = await f.resources();
   expect((await f.service.read()).location).toBeNull();
   await f.service.choose();
+  await f.service.setEnabled(true);
   const written = await f.service.write();
   expect(written).toMatchObject({ changed: true, transferredResources: 2, pendingResources: [] });
   expect(await fs.readFile(path.join(f.root, 'destination/attachments', resources.imageKey))).toEqual(resources.image);
   const reopened = f.reopen();
+  expect((await reopened.read()).enabled).toBe(true);
   expect((await reopened.read()).location).toMatchObject({ token: 'tree-token', name: 'Documents',
     completion: { sourceId: 'source', generation: 1, pendingResources: 0 } });
   expect(await reopened.write()).toMatchObject({ changed: false, protocolBytesWritten: 0, transferredResources: 0 });
@@ -43,6 +45,7 @@ it('selects once, copies actual facts and resources through the native contract,
 it('keeps the selected folder and completed result when the picker is cancelled', async () => {
   const f = await fixture();
   await f.service.choose();
+  await f.service.setEnabled(true);
   await f.service.write();
   const before = await f.service.read();
   f.native.cancel();
@@ -53,6 +56,7 @@ it('keeps the selected folder and completed result when the picker is cancelled'
 it('rejects revoked permission, and retries after access returns without losing the previous result', async () => {
   const f = await fixture();
   await f.service.choose();
+  await f.service.setEnabled(true);
   await f.service.write();
   const before = (await f.service.read()).location!.completion;
   await applyConvergentSyncNodesWithDbPort(f.db, [textBranch('v2', 'New body', f.first)]);
@@ -66,20 +70,39 @@ it('rejects revoked permission, and retries after access returns without losing 
 it('leaves completion unchanged on target failure, releases ownership, then retries the same changes', async () => {
   const f = await fixture();
   await f.service.choose();
+  await f.service.setEnabled(true);
   await f.service.write();
   const before = (await f.service.read()).location!.completion;
   await applyConvergentSyncNodesWithDbPort(f.db, [textBranch('v2', 'New body', f.first)]);
   f.native.fail(true);
   await expect(f.service.write()).rejects.toThrow('space_unavailable');
   expect((await f.service.read()).location!.completion).toEqual(before);
+  expect((await f.reopen().read()).location!.failure).toMatchObject({ sourceId: 'source' });
   expect(f.native.hasLease()).toBe(false);
   f.native.fail(false);
   expect(await f.service.write()).toMatchObject({ changed: true, generation: 2 });
+  expect((await f.reopen().read()).location!.failure).toBeNull();
+});
+
+it('keeps the independent switch disabled across reopening without deleting its existing copy', async () => {
+  const f = await fixture();
+  expect((await f.service.read()).enabled).toBe(false);
+  await f.service.choose();
+  await expect(f.service.write()).rejects.toThrow('folder_sync_disabled');
+  await f.service.setEnabled(true);
+  await f.service.write();
+  const before = (await f.service.read()).location!.completion;
+  await f.service.setEnabled(false);
+  const reopened = f.reopen();
+  expect((await reopened.read()).enabled).toBe(false);
+  expect((await reopened.read()).location!.completion).toEqual(before);
+  await expect(reopened.write()).rejects.toThrow('folder_sync_disabled');
 });
 
 it('does not save completion for a library which ceased being current while acquiring its folder', async () => {
   const f = await fixture();
   await f.service.choose();
+  await f.service.setEnabled(true);
   const acquire = f.native.plugin.acquire;
   f.native.plugin.acquire = async input => { const result = await acquire(input); f.changeLibrary(); return result; };
   await expect(f.service.write()).rejects.toThrow('library_changed');
@@ -91,6 +114,7 @@ it('retains the existing attachment pending semantics and prevents a second serv
   const f = await fixture();
   await f.resources(false);
   await f.service.choose();
+  await f.service.setEnabled(true);
   expect(await f.service.write()).toMatchObject({ databaseComplete: true, transferredResources: 0 });
   expect((await f.service.read()).location!.completion).toMatchObject({ pendingResources: 2 });
   const lease = await f.native.plugin.acquire({ token: 'tree-token' });

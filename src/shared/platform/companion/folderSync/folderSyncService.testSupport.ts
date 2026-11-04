@@ -7,6 +7,7 @@ import type { FolderSyncLocation, FolderSyncNativePlugin, FolderSyncFileOperatio
 /** Test host boundary: real target files and durable state, simulated system picker/URI permission. */
 export function folderNativeFixture(root: string) {
   const statePath = path.join(root, 'location.json');
+  const enabledPath = path.join(root, 'enabled.json');
   let authorized = true;
   let lease: string | null = null;
   let cancel = false;
@@ -20,7 +21,12 @@ export function folderNativeFixture(root: string) {
     if (value !== lease || token !== (await read())?.token || permission && !authorized) throw new Error('folder_sync_authorization_required');
   };
   const plugin: FolderSyncNativePlugin = {
-    readLocation: async () => ({ location: await read() }),
+    readLocation: async () => ({ location: await read(), enabled: await fs.readFile(enabledPath, 'utf8')
+      .then(value => value === 'true', error => { if (error.code === 'ENOENT') return false; throw error; }) }),
+    async setEnabled({ enabled }) {
+      if (enabled && (!authorized || !await read())) throw new Error('folder_sync_authorization_required');
+      await fs.writeFile(enabledPath, JSON.stringify(enabled));
+    },
     async chooseLocation() {
       if (cancel) return { cancelled: true, location: await read() };
       const location: FolderSyncLocation = { token: 'tree-token', name: 'Documents', authorized, completion: null };
@@ -36,7 +42,11 @@ export function folderNativeFixture(root: string) {
     async release(input) { await verify(input.token, input.lease, false); lease = null; },
     async saveCompletion(input) {
       await verify(input.token, input.lease);
-      await fs.writeFile(statePath, JSON.stringify({ ...(await read()), completion: input.completion }));
+      await fs.writeFile(statePath, JSON.stringify({ ...(await read()), completion: input.completion, failure: null }));
+    },
+    async saveFailure({ token, sourceId, occurredAt }) {
+      if (token !== (await read())?.token) throw new Error('folder_sync_authorization_required');
+      await fs.writeFile(statePath, JSON.stringify({ ...(await read()), failure: { sourceId, occurredAt } }));
     },
     async access(input) {
       await verify(input.token, input.lease);

@@ -21,6 +21,15 @@ final class FolioleFolderSyncLocation {
         preferences = context.getSharedPreferences("foliole_folder_sync", Context.MODE_PRIVATE);
     }
 
+    boolean enabled() { return preferences.getBoolean("enabled", false); }
+
+    void setEnabled(boolean enabled) throws Exception {
+        synchronized (FolioleFolderSyncLocation.class) {
+            if (enabled) requireToken(preferences.getString("token", null));
+            if (!preferences.edit().putBoolean("enabled", enabled).commit()) throw new IllegalStateException("folder_sync_enabled_save_failed");
+        }
+    }
+
     synchronized JSObject read() throws Exception {
         String token = preferences.getString("token", null);
         if (token == null) return null;
@@ -31,6 +40,8 @@ final class FolioleFolderSyncLocation {
             .put("authorized", authorized);
         String completion = preferences.getString("completion", null);
         result.put("completion", completion == null ? JSONObject.NULL : new JSONObject(completion));
+        String failure = preferences.getString("failure", null);
+        result.put("failure", failure == null ? JSONObject.NULL : new JSONObject(failure));
         return result;
     }
 
@@ -52,7 +63,7 @@ final class FolioleFolderSyncLocation {
             String oldUri = preferences.getString("uri", null);
             if (uri.toString().equals(oldUri)) return;
             if (!preferences.edit().putString("token", UUID.randomUUID().toString()).putString("uri", uri.toString())
-                    .putString("name", name).remove("completion").commit()) throw new IllegalStateException("folder_sync_location_save_failed");
+                    .putString("name", name).remove("completion").remove("failure").commit()) throw new IllegalStateException("folder_sync_location_save_failed");
             if (oldUri != null) {
                 try { context.getContentResolver().releasePersistableUriPermission(Uri.parse(oldUri), permissions); }
                 catch (SecurityException ignored) { /* An already revoked old grant cannot be released again. */ }
@@ -96,7 +107,16 @@ final class FolioleFolderSyncLocation {
             if (completion == null || completion.getString("sourceId", "").isEmpty()
                     || completion.getString("checkedAt", "").isEmpty() || completion.getLong("generation") <= 0
                     || completion.getInt("pendingResources") < 0) throw new IllegalArgumentException("folder_sync_completion_invalid");
-            if (!preferences.edit().putString("completion", completion.toString()).commit()) throw new IllegalStateException("folder_sync_completion_save_failed");
+            if (!preferences.edit().putString("completion", completion.toString()).remove("failure").commit()) throw new IllegalStateException("folder_sync_completion_save_failed");
+        }
+    }
+
+    void failed(String token, String sourceId, String occurredAt) throws Exception {
+        synchronized (FolioleFolderSyncLocation.class) {
+            if (token == null || !token.equals(preferences.getString("token", null)) || sourceId == null || sourceId.isEmpty()
+                    || occurredAt == null || occurredAt.isEmpty()) throw new IllegalArgumentException("folder_sync_failure_invalid");
+            JSONObject failure = new JSONObject().put("sourceId", sourceId).put("occurredAt", occurredAt);
+            if (!preferences.edit().putString("failure", failure.toString()).commit()) throw new IllegalStateException("folder_sync_failure_save_failed");
         }
     }
 
