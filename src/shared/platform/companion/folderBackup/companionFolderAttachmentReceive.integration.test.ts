@@ -28,6 +28,7 @@ afterEach(async () => {
 });
 
 async function fixture() {
+  await mkdir(path.resolve('.tmp/artifacts/T692'), { recursive: true });
   const root = await mkdtemp(path.resolve('.tmp/artifacts/T692/receive-work-'));
   roots.push(root);
   const directory = path.join(root, 'attachments');

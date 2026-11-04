@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
@@ -11,6 +11,7 @@ import { COMPANION_DATABASE_VERSION } from '../../platform/nativeCompanionContra
 import { createCompanionDatabase, migrateCompanionDatabase } from './companionDatabaseMigrationExecutor.js';
 
 it('upgrades an existing companion atomically without changing original attachment demand or content', async () => {
+  await mkdir(path.resolve('.tmp/artifacts/T692'), { recursive: true });
   const root = await mkdtemp(path.resolve('.tmp/artifacts/T692/work-migration-'));
   const databasePath = path.join(root, 'source.sqlite');
   let sqlite = new Database(databasePath);

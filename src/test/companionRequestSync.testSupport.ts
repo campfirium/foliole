@@ -11,6 +11,7 @@ import { postCompanionRequestFixture } from '../../electron/sync/companionReques
 import { createDesktopFramedSyncFiles } from '../../electron/sync/desktopFramedSyncFiles.js';
 import { buildDesktopFramedSyncFixture, createDesktopFramedSyncTwoProcessFixture } from '../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
 import { createDesktopSyncGroupSignedHeaders } from '../../electron/sync/desktopSyncGroupSignedHeaders.js';
+import { FOLDER_ATTACHMENT_WORK_SCHEMA } from '../../lib/core/database/companionFolderAttachmentWork.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { framedSyncFileKey, type FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import type { NativeRequestSyncHttpRequest } from '../../lib/platform/nativeRequestSyncHttpContract.js';
@@ -93,6 +94,7 @@ export async function createCompanionRequestFixture(script = compiledScript) {
   function open() {
     const database = new Database(fixture.leftSnapshot.databasePath);
     database.exec('CREATE TABLE IF NOT EXISTS companion_meta (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT)');
+    for (const statement of FOLDER_ATTACHMENT_WORK_SCHEMA) database.exec(statement);
     database.prepare("INSERT OR REPLACE INTO companion_meta VALUES ('host_name', 'Mobile', 'now')").run();
     native.db = createCompanionEditHistorySession(createBetterSqliteDbPort(database));
     return database;

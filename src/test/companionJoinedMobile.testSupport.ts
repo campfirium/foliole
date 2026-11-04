@@ -12,6 +12,7 @@ import { postCompanionRequestFixture } from '../../electron/sync/companionReques
 import { createDesktopFramedSyncFiles } from '../../electron/sync/desktopFramedSyncFiles.js';
 import { createDesktopSyncGroupSignedHeaders } from '../../electron/sync/desktopSyncGroupSignedHeaders.js';
 import { decryptWorkgroupPayloadNode, encryptWorkgroupPayloadNode } from '../../electron/sync/workgroupAeadNode.js';
+import { FOLDER_ATTACHMENT_WORK_SCHEMA } from '../../lib/core/database/companionFolderAttachmentWork.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import type { SyncGroupJoinDeviceFacts } from '../../lib/platform/syncGroupJoinContract.js';
@@ -120,6 +121,7 @@ export async function createJoiningMobile() {
   function open() {
     const db = new Database(local.database);
     db.exec('CREATE TABLE IF NOT EXISTS companion_meta (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT)');
+    for (const statement of FOLDER_ATTACHMENT_WORK_SCHEMA) db.exec(statement);
     db.prepare("INSERT OR REPLACE INTO companion_meta VALUES ('host_name', 'Mobile', 'now')").run();
     mobile.db = createCompanionEditHistorySession(createBetterSqliteDbPort(db));
     return db;

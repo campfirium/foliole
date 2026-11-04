@@ -34,6 +34,8 @@ const owner = () => getIosCompanionDatabaseOwner();
 const rows = () => owner().read(db => db.query<{ stage: string; last_error: string | null }>(
   'SELECT stage,last_error FROM folder_attachment_work'));
 const runBackup = () => consumeCompanionFolderAttachmentWork({
+  addListener: vi.fn(), openSource: vi.fn(), closeSource: vi.fn(), getState: vi.fn(),
+  backupDatabase: vi.fn(), cancelDatabase: vi.fn(),
   prepareAttachmentDirectory: async () => {}, copyAttachment: copy,
   finishAttachments: async ({ pending, errorMessage }) => ({ configured: true, directoryId: 'profile',
     directoryLabel: 'Backup', databaseSavedAt: 'committed', phase: 'pending', attachmentFilesPending: pending, errorMessage })

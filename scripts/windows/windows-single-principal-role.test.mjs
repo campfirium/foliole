@@ -1,7 +1,7 @@
 // @vitest-environment node
 import fs from 'node:fs';
 import path from 'node:path';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const host = vi.hoisted(() => ({ root: '', owner: 'macos', opens: 0, facts: 0,
   result: null, events: [], manualRuns: [], fault: null }));
 vi.mock('./windows-multi-device-sync-readiness.mjs', () => ({ provisionWindowsAcceptanceRoot: () => {} }));
@@ -83,6 +83,7 @@ function snapshot() {
   }
   return { nodesById };
 }
+beforeEach(() => { fs.mkdirSync(path.resolve('.tmp/artifacts'), { recursive: true }); });
 afterEach(() => { if (host.root) fs.rmSync(host.root, { recursive: true, force: true }); });
 it.each(['macos', 'windows'])('finishes with %s owning automatic sync and keeps the restarted peer alive until released', async owner => {
   host.root = fs.mkdtempSync(path.resolve('.tmp/artifacts/windows-role-'));

@@ -21,6 +21,7 @@ export const attachmentDigest = (bytes: Uint8Array) => createHash('sha256').upda
 export async function folderAttachmentWorkFixture(native: {
   access: { mockImplementation(execute: (input: NativeCompanionFramedFileRequest) => Promise<unknown>): unknown };
 }, createPort: (sqlite: Database.Database) => DbPort) {
+  await mkdir(path.resolve('.tmp/artifacts/T692'), { recursive: true });
   const root = await mkdtemp(path.resolve('.tmp/artifacts/T692/durable-work-'));
   const directory = path.join(root, 'source'), target = path.join(root, 'target');
   await mkdir(directory); await mkdir(target);
