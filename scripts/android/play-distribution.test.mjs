@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { expect, it, vi } from 'vitest';
 import { allocatePlayVersion, preparePlayCandidate, uploadPlayCandidate, commitPlayCandidate, observePlayCandidate,
   verifyPlayCandidate } from './play-distribution.mjs';
-import { createPlayApi, requireNoPendingReview } from './play-api.mjs';
+import { createPlayApi, readPlayReleases, requireNoPendingReview } from './play-api.mjs';
 
 const identity = { sourceSha: 'a'.repeat(40), acceptedSha: 'a'.repeat(40), runId: '42', version: '0.7.17' };
 const bytes = Buffer.from('signed bundle fixture');
@@ -56,6 +56,21 @@ it('runs prepare, upload, commit and observed review continuously on the same ca
     status: 'completed', releaseNotes: [{ language: 'en-US', text: 'Alpha update' }] }] });
   expect(f.calls.find(call => call.route.includes(':commit')).route).toContain('changesInReviewBehavior=ERROR_IF_IN_REVIEW');
   expect(f.calls.filter(call => call.route.includes('uploadType'))).toHaveLength(1);
+});
+
+it('prepares a replacement after Play omits the empty list of current releases', async () => {
+  const f = fixture();
+  const api = async (...args) => args[1] === 'tracks/beta/releases' ? {} : f.api(...args);
+  const candidate = await preparePlayCandidate(api, identity);
+  expect(candidate.versionCode).toBe(18);
+  expect(f.calls.some(call => call.route === 'edits')).toBe(true);
+});
+
+it('rejects malformed release lists and failed inventory requests', async () => {
+  for (const response of [null, [], { releases: null }, { releases: {} }]) {
+    await expect(readPlayReleases(async () => response)).rejects.toThrow(/inventory is unavailable/u);
+  }
+  await expect(readPlayReleases(async () => { throw new Error('HTTP 403'); })).rejects.toThrow('HTTP 403');
 });
 
 it('does not create edits or upload while code2 is under review', async () => {

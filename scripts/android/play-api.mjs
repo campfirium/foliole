@@ -50,8 +50,12 @@ export function createPlayApi(token, fetchImpl = fetch) {
 
 export async function readPlayReleases(api) {
   const result = await api('GET', `tracks/${PLAY_TRACK}/releases`);
-  if (!Array.isArray(result.releases)) throw new Error('Play release inventory is unavailable');
-  return result.releases;
+  if (!result || typeof result !== 'object' || Array.isArray(result)) {
+    throw new Error('Play release inventory is unavailable');
+  }
+  const releases = result.releases === undefined ? [] : result.releases;
+  if (!Array.isArray(releases)) throw new Error('Play release inventory is unavailable');
+  return releases;
 }
 
 export function requireNoPendingReview(releases) {
