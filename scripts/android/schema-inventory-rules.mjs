@@ -59,7 +59,8 @@ export const DESKTOP_ONLY_TABLES = new Set([
   'sync_peers'
 ]);
 
-export const ANDROID_ONLY_TABLES = new Set(['companion_meta']);
+// Folder attachment work belongs to the mobile directory grant and is never a peer sync fact.
+export const ANDROID_ONLY_TABLES = new Set(['companion_meta', 'folder_attachment_work']);
 
 const LEGACY_REPAIR_TABLES = new Set(['sync_object_state_next']);
 

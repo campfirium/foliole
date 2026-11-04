@@ -47,6 +47,13 @@ command arguments or artifacts. See [Google key upload](https://docs.cloud.googl
 ## Deliver a candidate
 
 Complete compatibility and local behavior evidence under `foliole-mobile-beta`.
+The independent Mac QA checkout needs its own dependencies, Electron executable and
+native rebuild before preflight. Pass the existing JDK 21 `JAVA_HOME` and Android
+SDK `ANDROID_HOME` / `ANDROID_SDK_ROOT` to that QA process; a shell that cannot find
+Java is a preparation failure, not a reason to skip Java/Gradle contracts. Prepare
+the Electron executable before JSON-output fixtures so first-use download output
+does not contaminate their output.
+
 New product/dependency/quality inputs require a fresh full QA; do not attach an old
 full result to a new product candidate. Prepare the registered QA workspace under
 the existing QA skill. Ordinary QA never distributes. The explicit entry is:

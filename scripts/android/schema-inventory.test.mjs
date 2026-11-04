@@ -104,7 +104,8 @@ describe('schema inventory drift gate', () => {
     expect(ANDROID_COMPANION_SCHEMA_STATEMENTS).toContain(IMPORT_RUN_SCHEMA);
     expect(report.shared.filter(({ table }) => table === 'import_runs')).toEqual([]);
     expect(report.androidOnly).toEqual([
-      { classification: 'known-platform-only', table: 'companion_meta' }
+      { classification: 'known-platform-only', table: 'companion_meta' },
+      { classification: 'known-platform-only', table: 'folder_attachment_work' }
     ]);
     expect(report.androidJavaSharedDdl).toEqual([]);
     expect(report.unattributed).toEqual([]);
