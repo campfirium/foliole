@@ -1,6 +1,7 @@
 import { recordFramedSyncResourceAvailability } from '../../../../../lib/core/database/framedSyncResourceAvailability';
 import { ATTACHMENT_BLOCK_BYTES } from '../../../../../lib/core/sync/attachmentBlockReceiver';
 import { createAttachmentReceiveSession } from '../../../../../lib/core/sync/attachmentReceiveSession';
+import { companionFolderAttachmentRecorder } from '../folderBackup/companionFolderAttachmentRecorder';
 import { createCompanionAttachmentFiles } from '../sync/framed/companionAttachmentFiles';
 import { currentCompanionRequestSyncDatabaseHost } from '../sync/framed/companionRequestSyncDatabaseHost';
 
@@ -13,7 +14,8 @@ export async function publishCompanionImportedFile<T>(source: { bytes: Uint8Arra
   const db = await currentCompanionRequestSyncDatabaseHost();
   if (owner !== getIosCompanionDatabaseOwner()) throw new Error('Import library changed.');
   const files = createCompanionAttachmentFiles(companionFramedFileOwner(owner),
-    (hash, available) => db.write(port => recordFramedSyncResourceAvailability(port, [hash], available)));
+    (hash, available) => db.write(port => recordFramedSyncResourceAvailability(port, [hash], available)),
+    companionFolderAttachmentRecorder(db).prepare);
   const committed: { result?: T } = {};
   const session = createAttachmentReceiveSession(files, { shouldYield: () => false, ...(signal ? { signal } : {}) },
     async () => {

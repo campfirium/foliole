@@ -1,3 +1,4 @@
+import { completeFolderAttachmentCopy } from '../../lib/core/database/companionFolderAttachmentWork';
 import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { invalidateAttachmentResourceResolution } from '../shared/platform/attachmentResources';
@@ -62,10 +63,12 @@ function persistSelectedFile(prepared: PreparedSelectedFileImport, file: Selecte
       prepared.epubBook?.chapters);
     if (prepared.pdfSource) {
       await recordFramedSyncResourceAvailability(db, [prepared.pdfSource.storageKey.slice(0, 64)], true);
+      await completeFolderAttachmentCopy(db, prepared.pdfSource.storageKey);
     }
     for (const resource of prepared.epubBook?.files ?? []) {
       invalidateAttachmentResourceResolution(resource.storageKey);
       await recordFramedSyncResourceAvailability(db, [resource.storageKey.slice(0, 64)], true);
+      await completeFolderAttachmentCopy(db, resource.storageKey);
     }
     signal?.throwIfAborted();
     return imported;
