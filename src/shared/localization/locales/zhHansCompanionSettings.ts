@@ -1,6 +1,7 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.statistics.date': '日期',
   'companion.settings.learning.reviewGroup': '复习安排',
   'companion.settings.learning.priorityGroup': '主题优先级',
   'companion.settings.learning.mixGroup': '阅读与复习比例',

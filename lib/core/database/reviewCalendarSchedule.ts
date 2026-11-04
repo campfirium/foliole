@@ -1,6 +1,7 @@
 import type { NativeReviewCalendarDay } from '../../platform/nativeReviewCalendarContract.js';
 import { reviewCalendarDayKey } from '../review/reviewCalendarDates.js';
 import { resolveReadingAvailableAt, resolveStoredReviewDueAt } from '../review/reviewDayBoundary.js';
+import type { DbPort } from '../sync/dbPort.js';
 
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 
@@ -38,11 +39,11 @@ const CANDIDATES_SQL = `WITH RECURSIVE candidates AS (
   FROM candidates c JOIN allowed a ON a.target=c.id`;
 
 /** Owns only this read's date fields; no node/profile graph escapes to the renderer. */
-export function readReviewCalendarSchedule(driver: DatabaseDriver, now: string, hour: number): NativeReviewCalendarDay[] {
+function projectSchedule(rows: ScheduledRow[], now: string, hour: number): NativeReviewCalendarDay[] {
   if (!Number.isFinite(Date.parse(now))) throw new Error('Invalid calendar time');
   const today = reviewCalendarDayKey(new Date(now), hour);
   const days = new Map<string, NativeReviewCalendarDay>();
-  for (const row of driver.queryAll<ScheduledRow>(CANDIDATES_SQL)) {
+  for (const row of rows) {
     const available = row.bucket === 'topics'
       ? resolveReadingAvailableAt({ lastHandledAt: row.last_handled_at, nextAt: row.due, newDayStartsAtHour: hour })
       : resolveStoredReviewDueAt({ due: row.due, scheduledDays: row.scheduled_days, newDayStartsAtHour: hour });
@@ -53,4 +54,12 @@ export function readReviewCalendarSchedule(driver: DatabaseDriver, now: string, 
     days.set(day, entry);
   }
   return [...days.values()].sort((a, b) => a.day < b.day ? -1 : a.day > b.day ? 1 : 0);
+}
+
+export function readReviewCalendarSchedule(driver: DatabaseDriver, now: string, hour: number): NativeReviewCalendarDay[] {
+  return projectSchedule(driver.queryAll<ScheduledRow>(CANDIDATES_SQL), now, hour);
+}
+
+export async function readReviewCalendarScheduleWithDb(db: DbPort, now: string, hour: number) {
+  return projectSchedule(await db.query<ScheduledRow>(CANDIDATES_SQL), now, hour);
 }

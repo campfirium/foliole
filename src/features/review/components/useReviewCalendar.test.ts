@@ -65,3 +65,17 @@ it('uses database counts without refreshing for node mutations or focus, and rel
   renderHook(useReviewCalendar);
   await waitFor(() => expect(mocks.load).toHaveBeenCalledTimes(2));
 });
+
+it('queries the displayed mobile month and discards an older month response', async () => {
+  let finishOld!: (value: NativeReviewCalendar) => void;
+  mocks.load.mockImplementationOnce(() => new Promise<NativeReviewCalendar>(resolve => { finishOld = resolve; }))
+    .mockResolvedValue({ scheduledDays: [], days: [{ day: '2026-09-02', topics: 5, items: 2 }], topicCoverageFrom: '2026-09-01' });
+  const hook = renderHook(({ offset }) => useReviewCalendar({ monthOffset: offset, libraryScope: 'mobile' }), { initialProps: { offset: 0 } });
+  expect(mocks.load.mock.calls[0]![0]).toMatchObject({ libraryScope: 'mobile',
+    from: new Date(2026, 9, 1, 4).toISOString(), to: new Date(2026, 10, 1, 4).toISOString() });
+  hook.rerender({ offset: -1 });
+  expect(hook.result.current.loading).toBe(true);
+  await waitFor(() => expect(hook.result.current.counts('2026-09-02').topics).toBe(5));
+  await act(async () => finishOld({ scheduledDays: [], days: [], topicCoverageFrom: '2026-01-01' }));
+  expect(hook.result.current.counts('2026-09-02').topics).toBe(5);
+});

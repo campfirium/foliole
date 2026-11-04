@@ -7,29 +7,38 @@ import { loadReviewCalendarHistoryFromRuntime } from '../../../shared/platform/r
 import { useWorkspaceStore } from '../../../store/workspaceStore';
 import { getCurrentReviewSchedulerSettings } from '../../settings/model/reviewSchedulerSettings';
 
-export function useReviewCalendar() {
-  const libraryScope = useWorkspaceStore((s) => s.libraryScope);
+export function useReviewCalendar(options: { monthOffset?: number; libraryScope?: string; load?: typeof loadReviewCalendarHistoryFromRuntime } = {}) {
+  const load = options.load ?? loadReviewCalendarHistoryFromRuntime;
+  const storedScope = useWorkspaceStore((s) => s.libraryScope);
+  const libraryScope = options.libraryScope ?? storedScope ?? '';
   const [now, setNow] = useState(() => new Date());
   const [snapshot, setSnapshot] = useState<{ scope: string; value: NativeReviewCalendar } | null>(null);
-  const history = snapshot && snapshot.scope === libraryScope ? snapshot.value : null;
+
   const [failed, setFailed] = useState(false);
   const [retry, setRetry] = useState(0);
   const hour = getCurrentReviewSchedulerSettings().newDayStartsAtHour;
   const today = reviewCalendarDayKey(now, hour);
-  const months = useMemo(() => reviewCalendarMonths(resolveCurrentDayStart(now, hour)), [today, hour]);
+  const months = useMemo(() => {
+    const current = resolveCurrentDayStart(now, hour);
+    return options.monthOffset === undefined ? reviewCalendarMonths(current)
+      : [new Date(current.getFullYear(), current.getMonth() + options.monthOffset, 1)];
+  }, [today, hour, options.monthOffset]);
   const from = new Date(months[0]!.getFullYear(), months[0]!.getMonth(), 1, hour).toISOString();
-  const last = months[11]!;
+  const last = months.at(-1)!;
   const to = new Date(last.getFullYear(), last.getMonth() + 1, 1, hour).toISOString();
+
+  const requestKey = `${libraryScope}:${from}:${to}`;
+  const history = snapshot?.scope === requestKey ? snapshot.value : null;
 
   useEffect(() => {
     let cancelled = false;
     setSnapshot(null); setFailed(false);
-    if (!libraryScope) { setFailed(true); return; }
-    void loadReviewCalendarHistoryFromRuntime({ from, to, now: now.toISOString(), libraryScope }).then((result) => {
-      if (!cancelled) setSnapshot({ scope: libraryScope, value: result });
+    if (!libraryScope && options.libraryScope === undefined) { setFailed(true); return; }
+    void load({ from, to, now: now.toISOString(), libraryScope }).then((result) => {
+      if (!cancelled) setSnapshot({ scope: requestKey, value: result });
     }).catch(() => { if (!cancelled) setFailed(true); });
     return () => { cancelled = true; };
-  }, [from, to, libraryScope, retry, now]);
+  }, [from, to, libraryScope, options.libraryScope, retry, now, requestKey, load]);
 
   useEffect(() => {
     const update = () => { setNow(new Date()); setRetry((v) => v + 1); };
@@ -45,5 +54,5 @@ export function useReviewCalendar() {
     if (day >= today) return schedule.get(day) ?? { day, items: 0, topics: 0 };
     return recorded.get(day) ?? { day, items: 0, topics: day < history.topicCoverageFrom ? null : 0 };
   }
-  return { today, months, counts, failed, retry: () => setRetry((v) => v + 1) };
+  return { today, months, counts, failed, loading: !history && !failed, retry: () => setRetry((v) => v + 1) };
 }

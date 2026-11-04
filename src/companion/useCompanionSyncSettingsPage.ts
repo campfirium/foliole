@@ -7,6 +7,7 @@ import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 export type CompanionSettingsPage =
   | 'learning'
   | 'foregroundTime'
+  | 'reviewStatistics'
   | 'list'
   | 'sync'
   | 'device'

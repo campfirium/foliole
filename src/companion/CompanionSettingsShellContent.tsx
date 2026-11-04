@@ -8,6 +8,7 @@ import { CompanionCustomCssSettingsContent } from './CompanionCustomCssSettingsC
 import { CompanionForegroundTimeContent } from './CompanionForegroundTimeContent';
 import { CompanionLanguageControl } from './CompanionLanguageControl';
 import { CompanionLearningSettingsContent } from './CompanionLearningSettingsContent';
+import { CompanionReviewStatisticsContent } from './CompanionReviewStatisticsContent';
 import {
   CompanionPlaceholderSettingsContent,
   CompanionSettingsDetail,
@@ -74,6 +75,7 @@ function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
         onOpenAppearance={() => props.onOpenSyncSettingsPage('appearance')}
         onOpenLearning={() => props.onOpenSyncSettingsPage('learning')}
         onOpenForegroundTime={() => props.onOpenSyncSettingsPage('foregroundTime')}
+        onOpenReviewStatistics={() => props.onOpenSyncSettingsPage('reviewStatistics')}
         onOpenDebug={() => props.onOpenSyncSettingsPage('debug')}
         onOpenStorage={() => props.onOpenSyncSettingsPage('storage')}
         onOpenSync={props.onOpenSyncSettings}
@@ -82,6 +84,8 @@ function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
     );
   }
   if (props.settingsPage === 'learning') return <CompanionLearningSettingsContent />;
+  if (props.settingsPage === 'reviewStatistics') return <CompanionReviewStatisticsContent
+    libraryScope={props.workspaceSync.state.workspace_snapshot?.libraryScope ?? ''} />;
   if (props.settingsPage === 'foregroundTime') {
     return <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="foregroundTime" title={t('desktop.foregroundTime.title')}>
       <CompanionForegroundTimeContent />

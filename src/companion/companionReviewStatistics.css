@@ -1,0 +1,54 @@
+/* Mobile statistics pattern: dates and quantities share a right-aligned column. */
+.companion-statistics {
+  --companion-statistics-date-size: 18px;
+  --companion-statistics-value-size: 12px;
+  --companion-statistics-week-height: 86px;
+  --companion-statistics-cell-inset: 4px;
+  --companion-statistics-quantity-offset: 5px;
+  --companion-statistics-week-line: rgb(var(--role-ink-rgb) / 0.075);
+  --companion-statistics-today-line: rgb(var(--role-ink-rgb) / 0.3);
+  padding: 0 8px 24px;
+  color: var(--role-text-secondary);
+}
+.companion-statistics-month {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 20px;
+  color: var(--role-content-text);
+}
+.companion-statistics-month > button { width: 44px; height: 44px; }
+.companion-statistics-month > span { font-size: 16px; font-weight: 500; }
+.companion-statistics-calendar { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.companion-statistics-calendar th {
+  padding: 0 var(--companion-statistics-cell-inset) 8px 0;
+  font-size: var(--companion-statistics-value-size);
+  font-weight: 400;
+  text-align: right;
+}
+.companion-statistics-calendar td { vertical-align: top; padding: 0; }
+.companion-statistics-calendar tbody tr:not(:last-child) { border-bottom: 1px solid var(--companion-statistics-week-line); }
+.companion-statistics-cell {
+  display: grid;
+  grid-template-rows: 24px 17px 17px;
+  align-content: start;
+  justify-items: end;
+  min-height: var(--companion-statistics-week-height);
+  padding: 10px var(--companion-statistics-cell-inset);
+  font-variant-numeric: tabular-nums;
+}
+.companion-statistics-cell time { position: relative; font-size: var(--companion-statistics-date-size); line-height: 24px; font-weight: 450; }
+.companion-statistics-cell > span { min-height: 17px; font-size: var(--companion-statistics-value-size); line-height: 17px; white-space: nowrap; transform: translateY(var(--companion-statistics-quantity-offset)); }
+.companion-statistics-guide > span:first-child { line-height: 24px; transform: none; }
+.companion-statistics-cell[aria-current='date'] time::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 1px;
+  background: var(--companion-statistics-today-line);
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.companion-statistics-error { display: flex; gap: 8px; align-items: center; font-size: 12px; }

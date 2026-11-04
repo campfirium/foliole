@@ -1,4 +1,5 @@
 export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
+  'companion.statistics.date': 'Date',
   'companion.settings.learning.reviewGroup': 'Review schedule',
   'companion.settings.learning.priorityGroup': 'Topic priority',
   'companion.settings.learning.mixGroup': 'Reading and review ratio',
