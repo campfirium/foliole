@@ -23,7 +23,7 @@ export function CompanionReviewCalendar(props: CalendarProps) {
     const unavailable = t('desktop.reviewCalendar.unavailable');
     const label = `${key} · ${t(key < props.today ? 'desktop.reviewCalendar.completed' : 'desktop.reviewCalendar.due')}` +
       ` · ${t('settings.icons.node.topic')}: ${count.topics ?? unavailable} · ${t('settings.icons.node.item')}: ${count.items ?? unavailable}`;
-    const display = (value: number | null) => props.loading ? '' : value === null ? '?' : value === 0 ? '' : value.toLocaleString(locale);
+    const display = (value: number | null) => props.loading || value === null || value === 0 ? '' : value.toLocaleString(locale);
     return <td key={key}><div role="group" aria-label={label} aria-current={key === props.today ? 'date' : undefined}
       title={label} className="companion-statistics-cell">
       <time dateTime={key}>{day}</time><span>{display(count.topics)}</span><span>{display(count.items)}</span>

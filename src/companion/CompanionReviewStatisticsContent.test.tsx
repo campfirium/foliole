@@ -23,7 +23,7 @@ it('shows the approved three-line month with a first-empty-cell guide, hidden ze
   expect(day('2026-11-04')).toHaveAttribute('aria-current', 'date');
   expect(within(day('2026-11-04')).getByText('19')).toBeVisible();
   expect(day('2026-11-02')).toHaveAccessibleName(/Topic: 3 · Item: 2/);
-  expect(day('2026-11-01')).toHaveTextContent('?');
+  expect(day('2026-11-01')).toHaveTextContent(/^1$/);
   expect(day('2026-11-05')).toHaveTextContent(/^5$/);
   expect(screen.getByText('Date')).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Completed' })).toBeNull();
