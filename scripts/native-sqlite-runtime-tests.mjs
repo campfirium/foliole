@@ -1,4 +1,5 @@
 export const controlledRuntimeSqliteTests = [
+  'src/shared/platform/companion/runtime/companionImageBackup.integration.test.ts',
   'src/companion/companionFileImportBackup.integration.test.ts',
   'lib/core/database/companionFolderAttachmentMigration.integration.test.ts',
   'src/shared/platform/companion/folderBackup/companionFolderAttachmentReceive.integration.test.ts',

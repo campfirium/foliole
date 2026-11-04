@@ -2,6 +2,12 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const native = vi.hoisted(() => ({ readRemoteImageResponse: vi.fn(), writeImageAttachment: vi.fn() }));
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: native }));
+vi.mock('../sync/framed/companionRequestSyncDatabaseHost', () => ({
+  currentCompanionRequestSyncDatabaseHost: async () => ({ write: async () => {} })
+}));
+vi.mock('../sync/framed/companionFramedSyncFiles', () => ({
+  currentCompanionFramedSyncFiles: () => ({ exclusive: async (_key: string, task: () => Promise<unknown>) => task() })
+}));
 vi.mock('../../companionRuntimeCapabilities', () => ({ requireAvailableCompanionRuntime: vi.fn() }));
 
 import { importCompanionImageResource } from './companionImageImporter';

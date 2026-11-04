@@ -1,3 +1,4 @@
+import { completeFolderAttachmentCopy, prepareFolderAttachmentCopy } from '../../../../../lib/core/database/companionFolderAttachmentWork';
 import { attachmentSourceVerification } from '../../../../../lib/core/sync/attachmentSourceVerification.js';
 import { classifyAttachmentBytes } from '../../../../../lib/platform/attachmentByteClassification';
 import { buildCanonicalAttachmentStorageKey } from '../../../../../lib/platform/attachmentResource';
@@ -5,6 +6,8 @@ import { REMOTE_IMAGE_MAX_BYTES, REMOTE_IMAGE_MAX_REDIRECTS } from '../../../../
 import { isAllowedRemoteImageHostname } from '../../../../../lib/platform/remoteImageUrlGuard';
 import { requireAvailableCompanionRuntime } from '../../companionRuntimeCapabilities';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
+import { currentCompanionFramedSyncFiles } from '../sync/framed/companionFramedSyncFiles';
+import { currentCompanionRequestSyncDatabaseHost } from '../sync/framed/companionRequestSyncDatabaseHost';
 
 function safeUrl(value: string) {
   const url = new URL(value);
@@ -41,7 +44,14 @@ export async function importCompanionImageResource(sourceUrl: string) {
   const storageKey = buildCanonicalAttachmentStorageKey(contentHash, mimeType);
   if (!storageKey) throw new Error('remote_image_identity_rejected');
   attachmentSourceVerification.invalidate(storageKey);
-  const stored = await FolioleCompanionSync.writeImageAttachment({ bytesBase64, contentHash, mimeType, storageKey });
+  const host = await currentCompanionRequestSyncDatabaseHost();
+  const files = currentCompanionFramedSyncFiles();
+  const stored = await files.exclusive(`attachment-${contentHash}`, async () => {
+    await host.write(db => prepareFolderAttachmentCopy(db, storageKey));
+    const result = await FolioleCompanionSync.writeImageAttachment({ bytesBase64, contentHash, mimeType, storageKey });
+    await host.write(db => db.transaction(tx => completeFolderAttachmentCopy(tx, storageKey)));
+    return result;
+  });
   const originalName = decodeURIComponent(new URL(sourceUrl).pathname.split('/').at(-1) ?? '') || storageKey;
   return { contentHash, mimeType, originalName, sizeBytes: bytes.length, storageKey, storedFile: stored.storedFile };
 }
