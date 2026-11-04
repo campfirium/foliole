@@ -43,16 +43,17 @@ function titles() {
     .map((button) => button.getAttribute('aria-label')?.replace(/^Open\s+/, ''));
 }
 
-it.each(['name', 'dateSaved', 'dateImported', 'dateLastOpened'] as const)(
-  'keeps folders first when selecting %s and reversing direction', (key) => {
+it.each([
+  ['name', ['A document', 'B folder', 'Y document', 'Z folder'], ['Z folder', 'Y document', 'B folder', 'A document']],
+  ['dateSaved', ['Z folder', 'B folder', 'Y document', 'A document'], ['A document', 'Y document', 'B folder', 'Z folder']],
+  ['dateImported', ['Z folder', 'B folder', 'Y document', 'A document'], ['A document', 'Y document', 'B folder', 'Z folder']],
+  ['dateLastOpened', ['A document', 'Y document', 'B folder', 'Z folder'], ['A document', 'Y document', 'B folder', 'Z folder']]
+] as const)(
+  'keeps desktop folders and documents mixed when selecting %s and reversing direction', (key, ascending, descending) => {
     const { rerender } = renderWithLocalization(list(key, 'asc'));
-    expect(titles().slice(0, 2)).toEqual(key === 'name' || key === 'dateLastOpened'
-      ? ['B folder', 'Z folder'] : ['Z folder', 'B folder']);
+    expect(titles()).toEqual(ascending);
     rerender(list(key, 'desc'));
-    expect(titles().slice(0, 2)).toEqual(key === 'name'
-      ? ['Z folder', 'B folder'] : ['B folder', 'Z folder']);
-    expect(titles().slice(2)).toEqual(key === 'name'
-      ? ['Y document', 'A document'] : ['A document', 'Y document']);
+    expect(titles()).toEqual(descending);
   }
 );
 

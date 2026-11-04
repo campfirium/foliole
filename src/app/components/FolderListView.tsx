@@ -120,7 +120,6 @@ function useResolvedFolderListState(props: FolderListViewProps) {
       ? 'manual'
       : props.sortOptions?.[0]?.key ?? DEFAULT_FOLDER_LIST_SORT_KEY,
     filterSearchResults: props.filterSearchResults,
-    foldersFirst: Boolean(props.folderNodeId && !props.nodesById[props.folderNodeId]?.virtualFilter),
     listedNodes,
     nodeOpenStateById,
     listRebuildKey: buildFolderListRebuildKey(props, listedNodes),

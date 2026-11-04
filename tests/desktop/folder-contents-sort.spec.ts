@@ -4,7 +4,7 @@ import path from 'node:path';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-test('directory cards keep subfolders first in either name direction', async ({ desktopWindow }) => {
+test('desktop directory cards mix folders and documents in either name direction', async ({ desktopWindow }) => {
   await expectWorkspaceShell(desktopWindow);
   await desktopWindow.evaluate(async () => {
     await window.__folioleWorkspaceDebug?.seedNodes([
@@ -21,12 +21,12 @@ test('directory cards keep subfolders first in either name direction', async ({ 
   await view.getByRole('button', { name: /^(Sort list by .+|按.+排序列表)$/ }).click();
   await desktopWindow.getByRole('menuitem', { name: /^(Name|名称)$/ }).click();
   await expect.poll(() => cards.evaluateAll((items) => items.map((item) => item.getAttribute('aria-label'))))
-    .toEqual(['Open B folder', 'Open Z folder', 'Open A document', 'Open Y document']);
+    .toEqual(['Open A document', 'Open B folder', 'Open Y document', 'Open Z folder']);
   await view.getByRole('button', { name: /^(Sort list by .+|按.+排序列表)$/ }).click();
   await desktopWindow.getByRole('menuitem', { name: 'Z -> A', exact: true }).click();
   await expect.poll(() => cards.evaluateAll((items) => items.map((item) => item.getAttribute('aria-label'))))
-    .toEqual(['Open Z folder', 'Open B folder', 'Open Y document', 'Open A document']);
-  const screenshot = path.resolve('.tmp/artifacts/T658/folders-first.png');
+    .toEqual(['Open Z folder', 'Open Y document', 'Open B folder', 'Open A document']);
+  const screenshot = path.resolve('.tmp/artifacts/T658/desktop-mixed-sort.png');
   await mkdir(path.dirname(screenshot), { recursive: true });
   await desktopWindow.screenshot({ path: screenshot });
 });
