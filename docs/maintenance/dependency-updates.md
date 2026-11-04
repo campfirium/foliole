@@ -162,36 +162,22 @@ evidence and required QA coverage. Candidate containment alone is not a pass.
 | --- | --- | --- |
 | [#199](https://github.com/campfirium/foliole/pull/199); `app/renovate`; head `c8696b8b0846698325451f977da23bf3dda396e3`; lucide-react 1.61.0 → 1.62.0 | `eb4f2558f`; 2026-11-04: `npm run test:files -- src/shared/ui/LucideIconCatalog.test.ts src/features/nodes/components/NodeTreeRowIconGraphic.test.tsx src/features/settings/components/sections/SettingsRailIconPicker.test.tsx src/companion/CompanionSelectionAnnotationToolbar.test.tsx` passed (20 tests); `npm run build` passed; `npm ls lucide-react react --depth=0` confirmed compatible peers. | Next centralized check task: hosted dependency hardening and risk-matched desktop/shared/companion coverage, then remote dev containment and PR closure; no QA run started by this handoff. |
 
-### Review blocked before local adoption
+| [#200](https://github.com/campfirium/foliole/pull/200); `app/renovate`; head `ef50d39e37ec51ab967254b12ce1857f7ae95689`; Electron 45.2.1 → 45.2.2 | `390a759ac`; 2026-11-04: native rebuild/health passed (SQLite ABI, security bookmarks and DNS-SD lifecycle); six focused files passed (29 tests), covering preload, SQLite lifecycle, import/reimport, installer cleanup, toolchain compatibility and minimatch limits; ordinary-Node toolchain tests and scoped lint passed; `quality:fast` passed (including 28 related tests); desktop build and both hidden-native presentation/main-path smoke specs passed. Logs: `.tmp/waits/t712-final-local.log`, `.tmp/waits/t712-asar-regression-green.log`, `.tmp/waits/t712-electron-runtime.log`, `.tmp/waits/t712-fast-and-desktop.log`. | Next centralized check task: hosted dependency hardening and desktop quality covering runtime/native compatibility, SQLite/preload and packaging contracts, then remote dev containment and PR closure. No QA run or manual dev push started here; Mac evidence does not prove other native hosts. |
 
-- 2026-11-04, [#200](https://github.com/campfirium/foliole/pull/200),
-  `app/renovate`, head `ef50d39e37ec51ab967254b12ce1857f7ae95689`:
-  Electron 45.2.1 → 45.2.2 is the official latest stable target. npm publication
-  was 2026-11-03T21:43:24.912Z; the existing Electron maturity exception applies.
-  The candidate manifest/lock changes are local and uncommitted, not adopted.
-  Native rebuild/health (SQLite ABI and DNS-SD lifecycle), `quality:fast`, the
-  desktop build and both hidden-native presentation/main-path smoke specs passed.
-  Five focused files passed (24 tests); the toolchain compatibility file passed
-  four of five tests under Electron and all five under ordinary Node.
-- The blocking test is `merges both native architectures and preserves
-  application payload` in `scripts/security/security-toolchain-compatibility.test.mjs`:
-  Electron-as-Node consistently reports `ENOTEMPTY` removing the temporary
-  universal app's `Contents/Resources`, with unmanaged-file-descriptor warnings.
-  A diagnostic rerun using the official 45.2.1 runtime and the same dependency
-  graph/temp root reproduces it. This is an existing baseline failure, not
-  evidence of a 45.2.2 regression; ordinary-Node success does not erase it.
-- Owner: current dependency batch handler. Keep #200 open and retain the local
-  candidate. Resolve the existing toolchain failure through its repair owner,
-  then rerun the six-file Electron test command and the affected local gates
-  before committing/registering pending QA. Do not start QA or close the PR as
-  a substitute for the local gate. Evidence: `.tmp/waits/t712-local-validation.log`,
-  `.tmp/waits/t712-electron-toolchain-recheck.log`,
-  `.tmp/waits/t712-baseline-toolchain.log`, `.tmp/waits/t712-toolchain-recheck.log`,
-  `.tmp/waits/t712-electron-runtime.log`, `.tmp/waits/t712-fast-and-desktop.log`.
-- [Official release notes](https://releases.electronjs.org/release/v45.2.2)
-  describe Wayland hidden-parent and CSS-removal fixes plus Chromium/Node updates,
-  without a disclosed security advisory: no separate expedited Foliole release
-  is recommended; no major-version follow-up is required.
+The #200 local blocker recorded in `a6257b5f6` is resolved. Electron virtualizes
+ASAR archives as directories; universal packaging needs raw files, as on Node.
+The existing merge test now scopes `process.noAsar` to that operation and restores
+it in `finally`, retaining both architecture and payload assertions. New physical
+file assertions failed before the fix and passed afterward; logs are
+`.tmp/waits/t712-asar-regression-red.log` and the green log above. The same old
+failure was reproduced with 45.2.1, so it was not a runtime-upgrade regression.
+See [Electron's documented raw archive semantics](https://www.electronjs.org/docs/latest/tutorial/asar-archives#treating-an-asar-archive-as-a-normal-file).
+
+Electron 45.2.2 matches the [official latest stable release](https://releases.electronjs.org/release/v45.2.2).
+Its npm publication was 2026-11-03T21:43:24.912Z; the Electron maturity exception
+applies. Official notes list Wayland hidden-parent and CSS-removal fixes plus
+Chromium/Node updates, without a disclosed security advisory: follow the normal
+Foliole release schedule; no major-version follow-up is required.
 
 ## Reviewed proposals and deferred adoption
 
