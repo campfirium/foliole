@@ -71,6 +71,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await drainPendingNodeContentRuntimePersists();
   resetPendingNodeContentRuntimePersistsForTests();
   resetNodeContentVersionGuardForTests();
   closeDatabaseConnection();

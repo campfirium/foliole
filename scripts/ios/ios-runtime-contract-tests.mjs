@@ -23,6 +23,7 @@ export const IOS_RUNTIME_CONTRACT_TESTS = [
   'scripts/ios/testflight-contract.test.mjs',
   'scripts/ios/testflight-build-number.test.mjs',
   'scripts/ios/testflight-distribution.test.mjs',
+  'scripts/ios/testflight-encryption.test.mjs',
   'scripts/ios/testflight-release-assets.test.mjs',
   'scripts/ios/testflight-workflow.test.mjs',
   'scripts/ios/ios-acceptance-build-command.test.mjs',

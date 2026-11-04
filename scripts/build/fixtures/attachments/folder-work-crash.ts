@@ -14,7 +14,10 @@ const sqlite = new Database(path.join(root, 'source.sqlite'));
 sqlite.pragma('journal_mode=WAL');
 sqlite.pragma('synchronous=FULL');
 const db = createBetterSqliteDbPort(sqlite);
-const stop = () => { process.kill(process.pid, 'SIGKILL'); };
+const stop = () => {
+  writeFileSync(path.join(root, 'crash-boundary'), boundary);
+  process.kill(process.pid, 'SIGKILL');
+};
 await prepareFolderAttachmentCopy(db, key);
 if (boundary === 'before-source') stop();
 const file = path.join(root, 'source', key);
