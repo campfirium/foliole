@@ -1,6 +1,19 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.settings.folderSync.title': '保存到文件夹',
+  'companion.settings.folderSync.loading': '正在读取文件夹…',
+  'companion.settings.folderSync.retry': '重试',
+  'companion.settings.folderSync.description': '在指定文件夹中保存一份资料副本。',
+  'companion.settings.folderSync.choose': '选择文件夹',
+  'companion.settings.folderSync.change': '更改文件夹',
+  'companion.settings.folderSync.save': '立即保存',
+  'companion.settings.folderSync.saving': '正在保存…',
+  'companion.settings.folderSync.checked': '上次保存：',
+  'companion.settings.folderSync.pending': '部分附件尚未复制，可再次保存以重试。',
+  'companion.settings.folderSync.permission': '无法访问此文件夹，请重新选择。',
+  'companion.settings.folderSync.deviceSync': '已配置设备同步；未配置设备同步时可使用文件夹副本。',
+  'companion.settings.folderSync.error': '未能访问或保存到文件夹，请检查访问权限和剩余空间后重试。',
   'companion.statistics.date': '日期',
   'companion.settings.learning.reviewGroup': '复习安排',
   'companion.settings.learning.priorityGroup': '主题优先级',

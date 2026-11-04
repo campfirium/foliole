@@ -35,6 +35,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(FolioleCompanionAppDataPlugin.class);
         registerPlugin(FolioleCompanionSyncPlugin.class);
         registerPlugin(FolioleCompanionShareInboxPlugin.class);
+        registerPlugin(FolioleFolderSyncPlugin.class);
         receiveSharedText(getIntent());
         super.onCreate(savedInstanceState);
         WebView webView = getBridge().getWebView();

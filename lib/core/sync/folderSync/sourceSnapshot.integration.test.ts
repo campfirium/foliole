@@ -134,5 +134,17 @@ it('honors cancellation and releases partially staged source data without changi
   await expect(captureFolderSyncSource({ host, previous: [], signal: controller.signal }))
     .rejects.toThrow('source_scope_changed');
   expect(f.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('topic')).toBe('First article');
-  expect(await f.files.list('folder-sync')).toEqual([]);
+  expect(await f.files.list('requests/folder-sync')).toEqual([]);
+});
+
+it('lets existing startup request cleanup remove an abandoned folder export without changing source facts', async () => {
+  const f = await fixture();
+  const snapshot = await captureFolderSyncSource({ host: f.host, previous: [] });
+  cleanups.push(snapshot.dispose);
+  const frame = snapshot.objects[0]!.frames[0]!;
+  expect(await f.files.read(frame.key)).not.toBeNull();
+  // The production host removes abandoned request files when configuring a new database generation.
+  await f.files.remove('requests');
+  expect(await f.files.read(frame.key)).toBeNull();
+  expect(f.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('topic')).toBe('First article');
 });

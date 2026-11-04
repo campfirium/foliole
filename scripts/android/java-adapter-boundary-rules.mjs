@@ -26,6 +26,7 @@ export const CLASSIFICATIONS = {
   bridge_plugin_adapter: {
     responsibility: 'Land Capacitor calls into Android network, credentials, file, and request-transfer services.',
     files: [
+      'FolioleFolderSyncPlugin.java',
       'FolioleCompanionAppDataPlugin.java',
       'FolioleCompanionBootstrapPlugin.java',
       'FolioleCompanionPluginErrors.java',
@@ -41,6 +42,10 @@ export const CLASSIFICATIONS = {
   host_platform_adapter: {
     responsibility: 'Wrap Android identity, network, credentials, app-private files, and lifecycle APIs.',
     files: [
+      'FolioleFolderSyncDocuments.java',
+      'FolioleFolderSyncLease.java',
+      'FolioleFolderSyncLocation.java',
+      'FolioleFolderSyncPaths.java',
       'FolioleCompanionAppDataStore.java',
       'FolioleCompanionAttachmentFileResolver.java',
       'FolioleCompanionAttachmentFileStage.java',

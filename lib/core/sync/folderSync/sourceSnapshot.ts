@@ -35,7 +35,7 @@ export async function captureFolderSyncSource(input: {
   signal?: AbortSignal;
 }): Promise<FolderSyncSourceSnapshot> {
   const contextId = crypto.getRandomValues(new Uint8Array(32));
-  const directory = framedSyncFileKey('folder-sync', bytesToHex(contextId));
+  const directory = framedSyncFileKey('requests', 'folder-sync', bytesToHex(contextId));
   const dispose = () => input.host.files.remove(directory);
   try {
     input.signal?.throwIfAborted();
