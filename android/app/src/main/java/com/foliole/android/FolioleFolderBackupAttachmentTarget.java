@@ -30,6 +30,27 @@ final class FolioleFolderBackupAttachmentTarget implements FolioleFolderBackupAt
             return FolioleFolderBackupAttachmentCopy.copy(key.substring(0, 64), input, target, cancelled);
         }
     }
+    static void delete(Context context, JSONObject profile, String key, BooleanSupplier cancelled) throws Exception {
+        if (!FolioleCompanionCanonicalAttachmentKey.valid(key)) throw new IllegalArgumentException("Invalid attachment name.");
+        // A failed deletion, local move, or a later restored source cannot authorize removing its backup.
+        for (boolean trash : new boolean[] {false, true}) {
+            File directory = FolioleAttachmentMaintenanceFiles.directory(context, trash);
+            if (!directory.isDirectory() || !directory.canRead()) throw new IllegalStateException("Cannot read source attachment directory.");
+            if (new File(directory, key).exists()) throw new IllegalStateException("Source attachment still exists.");
+        }
+        FolioleFolderBackupAttachmentTarget target = new FolioleFolderBackupAttachmentTarget(context, profile, key);
+        FolioleFolderBackupAttachmentCopy.delete(key.substring(0, 64), new FolioleFolderBackupAttachmentCopy.DeletionTarget() {
+            public InputStream existing() throws Exception { return target.existing(); }
+            public void remove() throws Exception {
+                Uri document = target.find(target.folder, key);
+                if (document == null) return;
+                if (!DocumentsContract.deleteDocument(context.getContentResolver(), document) || target.find(target.folder, key) != null) {
+                    throw new IllegalStateException("Cannot remove backup attachment.");
+                }
+            }
+        }, cancelled);
+    }
+
     static void prepareDirectory(Context context, JSONObject profile) throws Exception {
         new FolioleFolderBackupAttachmentTarget(context, profile, "");
     }

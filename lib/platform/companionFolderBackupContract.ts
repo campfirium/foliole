@@ -35,6 +35,7 @@ export interface CompanionFolderBackupPort {
   backupDatabase(input: { sourceEpoch: string; requestId: string; chooseDirectory: boolean }): Promise<CompanionFolderDatabaseBackupResult>;
   prepareAttachmentDirectory(input: { sourceEpoch: string; requestId: string }): Promise<void>;
   copyAttachment(input: { sourceEpoch: string; requestId: string; storageKey: string }): Promise<{ copied: boolean }>;
+  deleteAttachment(input: { sourceEpoch: string; requestId: string; storageKey: string }): Promise<void>;
   finishAttachments(input: { requestId: string; copied: number; pending: number | null; errorMessage: string | null }): Promise<CompanionFolderBackupState>;
   cancelDatabase(input: { requestId: string }): Promise<void>;
 }

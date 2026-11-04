@@ -47,6 +47,22 @@ public final class FolderAttachmentCopyFixture {
         try { copy(target, bytes, new AtomicBoolean()); throw new AssertionError("accepted failed copy"); }
         catch (IOException | IllegalStateException expected) { require(!Files.exists(target.partial)); }
     }
+    static void deletion(Target target) throws Exception {
+        FolioleFolderBackupAttachmentCopy.DeletionTarget deleting = new FolioleFolderBackupAttachmentCopy.DeletionTarget() {
+            public InputStream existing() throws Exception { return target.existing(); }
+            public void remove() throws Exception { Files.delete(target.finalFile); }
+        };
+        AtomicBoolean cancelled = new AtomicBoolean(true);
+        try { FolioleFolderBackupAttachmentCopy.delete(digest(BYTES), deleting, cancelled::get); throw new AssertionError(); }
+        catch (InterruptedException expected) { require(Files.exists(target.finalFile)); }
+        Files.write(target.finalFile, new byte[] {9});
+        try { FolioleFolderBackupAttachmentCopy.delete(digest(BYTES), deleting, () -> false); throw new AssertionError(); }
+        catch (IllegalStateException expected) { require(Files.readAllBytes(target.finalFile)[0] == 9); }
+        Files.write(target.finalFile, BYTES);
+        FolioleFolderBackupAttachmentCopy.delete(digest(BYTES), deleting, () -> false);
+        require(!Files.exists(target.finalFile));
+        FolioleFolderBackupAttachmentCopy.delete(digest(BYTES), deleting, () -> false);
+    }
     public static void main(String[] args) throws Exception {
         Path root = Path.of(args[0]);
         Target target = new Target(root);
@@ -78,6 +94,7 @@ public final class FolderAttachmentCopyFixture {
         // Retry the same target after every failure; no intermediate reconstruction.
         require(copy(target, BYTES, new AtomicBoolean()));
         require(java.util.Arrays.equals(Files.readAllBytes(target.finalFile), BYTES));
+        deletion(target);
         System.out.println("verified file copy, unchanged skip, conflict retention, source mutation, write/readback/publish failures, cancellation and retry passed");
     }
 }

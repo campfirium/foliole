@@ -47,11 +47,11 @@ export async function seedFolderAttachmentBaseline(db: DbPort, profile: string, 
 }
 
 /** Register before native publication; a new intent never overwrites an older valid backup obligation. */
-export async function prepareFolderAttachmentCopy(db: DbPort, key: string) {
+export async function prepareFolderAttachmentCopy(db: DbPort, key: string, action: 'copy' | 'delete' = 'copy') {
   checkKey(key);
   const token = crypto.randomUUID();
-  await db.run(`INSERT INTO folder_attachment_work(storage_key,stage,action,token) VALUES (?,'source','copy',?)
-    ON CONFLICT(storage_key,stage) DO UPDATE SET action=excluded.action,token=excluded.token,last_error=NULL`, [key, token]);
+  await db.run(`INSERT INTO folder_attachment_work(storage_key,stage,action,token) VALUES (?,'source',?,?)
+    ON CONFLICT(storage_key,stage) DO UPDATE SET action=excluded.action,token=excluded.token,last_error=NULL`, [key, action, token]);
   return token;
 }
 
@@ -61,16 +61,16 @@ export async function completeFolderAttachmentCopy(db: DbPort, key: string) {
     "SELECT * FROM folder_attachment_work WHERE storage_key=? AND stage='source'", [key]);
   if (await readFolderAttachmentProfile(db)) {
     const token = source?.token ?? crypto.randomUUID();
-    if (source) await upsertBackup(db, key, token);
+    if (source) await upsertBackup(db, key, token, source.action);
     else await db.run(`INSERT OR IGNORE INTO folder_attachment_work(storage_key,stage,action,token)
       VALUES (?,'backup','copy',?)`, [key, token]);
   }
   if (source) await db.run("DELETE FROM folder_attachment_work WHERE storage_key=? AND stage='source' AND token=?", [key, source.token]);
 }
 
-async function upsertBackup(db: DbPort, key: string, token: string) {
-  await db.run(`INSERT INTO folder_attachment_work(storage_key,stage,action,token) VALUES (?,'backup','copy',?)
-    ON CONFLICT(storage_key,stage) DO UPDATE SET action=excluded.action,token=excluded.token,last_error=NULL`, [key, token]);
+async function upsertBackup(db: DbPort, key: string, token: string, action: 'copy' | 'delete') {
+  await db.run(`INSERT INTO folder_attachment_work(storage_key,stage,action,token) VALUES (?,'backup',?,?)
+    ON CONFLICT(storage_key,stage) DO UPDATE SET action=excluded.action,token=excluded.token,last_error=NULL`, [key, action, token]);
 }
 
 export async function readFolderAttachmentWork(db: DbPort, profile: string) {

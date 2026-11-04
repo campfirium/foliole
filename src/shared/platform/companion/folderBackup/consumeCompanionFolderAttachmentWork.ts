@@ -1,5 +1,5 @@
 import { configureFolderAttachmentProfile, confirmFolderAttachmentCopy, countFolderAttachmentWork,
-  failFolderAttachmentCopy, readFolderAttachmentWork, seedFolderAttachmentBaseline } from '../../../../../lib/core/database/companionFolderAttachmentWork';
+  failFolderAttachmentCopy, readFolderAttachmentWork, seedFolderAttachmentBaseline, type FolderAttachmentWork } from '../../../../../lib/core/database/companionFolderAttachmentWork';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { CompanionFolderBackupPort } from '../../../../../lib/platform/companionFolderBackupContract';
 
@@ -10,7 +10,7 @@ interface Source {
 
 /** One explicit manual backup owns the native request; no automatic execution is enabled here. */
 export async function consumeCompanionFolderAttachmentWork(port: CompanionFolderBackupPort, source: Source,
-  input: { requestId: string; sourceEpoch: string; profile: string }) {
+  input: { requestId: string; sourceEpoch: string; profile: string; deletions?: FolderAttachmentWork[] }) {
   let copied = 0;
   let pending: number | null = null;
   let errorMessage: string | null = null;
@@ -25,11 +25,14 @@ export async function consumeCompanionFolderAttachmentWork(port: CompanionFolder
     await port.prepareAttachmentDirectory(input);
     const work = await source.write(db => readFolderAttachmentWork(db, input.profile));
     for (const entry of work) {
-      // Delete is deliberately not executed until its database-reference protection is delivered.
-      if (entry.action !== 'copy') continue;
+      if (entry.action === 'delete' && !input.deletions?.some(candidate => candidate.storage_key === entry.storage_key
+        && candidate.token === entry.token && candidate.stage === entry.stage)) continue;
       try {
-        const result = await port.copyAttachment({ ...input, storageKey: entry.storage_key });
-        if (result.copied) copied += 1;
+        if (entry.action === 'delete') await port.deleteAttachment({ ...input, storageKey: entry.storage_key });
+        else {
+          const result = await port.copyAttachment({ ...input, storageKey: entry.storage_key });
+          if (result.copied) copied += 1;
+        }
         await source.write(db => confirmFolderAttachmentCopy(db, input.profile, entry));
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

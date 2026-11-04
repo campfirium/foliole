@@ -5,6 +5,9 @@ vi.mock('./companion/runtime/iosCompanionDatabaseBootstrap', () => ({ getIosComp
   folderBackupSource: f.register, runWriter: f.writer
 }) }));
 vi.mock('./companion/folderBackup/companionFolderBackupRuntimeRepository', () => ({ getCompanionFolderBackupPort: () => ({ backupDatabase: f.backup }) }));
+vi.mock('./companion/folderBackup/companionFolderAttachmentDeletion', () => ({
+  captureFolderAttachmentDeletions: vi.fn(async () => null), validateFolderAttachmentDeletions: vi.fn(async () => [])
+}));
 vi.mock('./companion/folderBackup/consumeCompanionFolderAttachmentWork', () => ({ consumeCompanionFolderAttachmentWork: f.consume }));
 vi.mock('./companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: { maintainAttachmentFiles: f.inventory } }));
 

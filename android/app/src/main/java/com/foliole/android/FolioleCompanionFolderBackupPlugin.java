@@ -123,7 +123,9 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
             }, "FolioleBackupDirectory").start();
         } catch (Exception error) { call.reject(error.getMessage(), error); }
     }
-    @PluginMethod public synchronized void copyAttachment(PluginCall call) {
+    @PluginMethod public synchronized void copyAttachment(PluginCall call) { processAttachment(call, false); }
+    @PluginMethod public synchronized void deleteAttachment(PluginCall call) { processAttachment(call, true); }
+    private void processAttachment(PluginCall call, boolean deleting) {
         try {
             requireAttachmentRequest(call);
             if (copyingAttachment) throw new IllegalStateException("An attachment is already being copied.");
@@ -132,7 +134,9 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
             new Thread(() -> {
                 try {
                     android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
-                    boolean copied = FolioleFolderBackupAttachmentTarget.copy(getContext(), profile,
+                    if (deleting) FolioleFolderBackupAttachmentTarget.delete(getContext(), profile,
+                        call.getString("storageKey"), () -> attachmentStopped(call));
+                    boolean copied = !deleting && FolioleFolderBackupAttachmentTarget.copy(getContext(), profile,
                         call.getString("storageKey"), () -> attachmentStopped(call));
                     synchronized (this) { copyingAttachment = false; }
                     call.resolve(new JSObject().put("copied", copied));

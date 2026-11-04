@@ -1,6 +1,10 @@
 // @vitest-environment node
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { configureFolderAttachmentProfile, prepareFolderAttachmentCopy, completeFolderAttachmentCopy } from '../../../../../lib/core/database/companionFolderAttachmentWork';
 import { hashTextBody } from '../../../../../lib/core/database/textBodyHash';
 import type { AttachmentObservationState } from '../../../../../lib/platform/attachmentMaintenanceContract';
 import { createDisplayLibrary } from '../sync/workspace-state/companionDisplaySnapshotConcurrency.testSupport';
@@ -23,6 +27,9 @@ vi.mock('../../../../../lib/core/import/replaceArticleImageSource', async import
 
 const runtime = vi.hoisted(() => ({ owner: null as CapacitorCompanionDatabaseOwner | null,
   files: vi.fn() }));
+vi.mock('../sync/framed/companionFramedSyncFiles', () => ({ currentCompanionFramedSyncFiles: () => ({
+  exclusive: async (_key: string, execute: () => Promise<unknown>) => execute()
+}) }));
 vi.mock('./iosCompanionDatabaseBootstrap', () => ({ getIosCompanionDatabaseOwner: () => runtime.owner }));
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: { maintainAttachmentFiles: runtime.files } }));
 
@@ -134,4 +141,39 @@ it('reuses unchanged current bodies without parsing them on the UI thread', asyn
     expect(parsing.calls).toBe(0);
     expect(worker.monitor.parsed).toBe(0);
   } finally { await library.close(); }
+});
+
+it.each(['unreferenced', 'mounted', 'failed'])('records only a successful genuine deletion: %s', async mode => {
+  const library = createDisplayLibrary('android');
+  runtime.owner = library.owner;
+  const root = await mkdtemp(path.resolve('.tmp/artifacts/T692/maintenance-delete-'));
+  const key = `${'d'.repeat(64)}.png`, file = path.join(root, key);
+  await writeFile(file, 'original');
+  runtime.files.mockImplementation(async ({ operation, trash }) => {
+    if (operation === 'generation') return { generation: 'fixture' };
+    if (operation === 'read-state') return {};
+    if (operation === 'inventory') return { files: trash ? (await readdir(root)).map(storageKey => ({ storageKey, sizeBytes: 8 })) : [] };
+    if (operation === 'remove-trash') {
+      if (mode === 'failed') throw new Error('source delete refused');
+      await rm(file); return { available: false };
+    }
+    throw new Error(`Unexpected operation ${operation}`);
+  });
+  try {
+    await library.owner.open({ expectedHostName: 'fixture', now: '2026-11-04T00:00:00Z' });
+    await library.owner.runWriter(async db => {
+      await configureFolderAttachmentProfile(db, 'profile');
+      if (mode === 'mounted') await db.run(`INSERT INTO nodes(id,title,content,resource_references,created_at,updated_at)
+        VALUES ('mounted','Mounted','',?,'now','now')`, [JSON.stringify([{ storage_key: key, role: 'reference', original_name: null }])]);
+      if (mode === 'failed') { await prepareFolderAttachmentCopy(db, key); await completeFolderAttachmentCopy(db, key); }
+    });
+    if (mode === 'failed') {
+      await expect(runCompanionAttachmentMaintenance({ action: 'empty-trash' })).rejects.toThrow('source delete refused');
+      expect(await readFile(file, 'utf8')).toBe('original');
+    } else await runCompanionAttachmentMaintenance({ action: 'empty-trash' });
+    const rows = await library.owner.read(db => db.query('SELECT stage,action FROM folder_attachment_work ORDER BY stage'));
+    expect(rows).toEqual(mode === 'mounted' ? [] : mode === 'failed'
+      ? [{ stage: 'backup', action: 'copy' }, { stage: 'source', action: 'delete' }]
+      : [{ stage: 'backup', action: 'delete' }]);
+  } finally { await library.close(); await rm(root, { recursive: true, force: true }); }
 });

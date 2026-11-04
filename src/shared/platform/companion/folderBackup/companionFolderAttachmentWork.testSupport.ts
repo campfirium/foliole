@@ -40,12 +40,12 @@ export async function folderAttachmentWorkFixture(native: {
     .filter(key => /^[a-f0-9]{64}\.png$/.test(key)).map(storageKey => ({ storageKey, sizeBytes: 0 })) }));
   const copy = async ({ storageKey }: { storageKey: string }) => {
     const file = path.join(target, storageKey), expected = storageKey.slice(0, 64);
+    const source = path.join(directory, storageKey);
+    if (attachmentDigest(await readFile(source)) !== expected) throw new Error('source checksum mismatch');
     try {
       if (attachmentDigest(await readFile(file)) !== expected) throw new Error('target changed externally');
       return { copied: false };
     } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
-    const source = path.join(directory, storageKey);
-    if (attachmentDigest(await readFile(source)) !== expected) throw new Error('source checksum mismatch');
     await copyFile(source, `${file}.partial`);
     if (attachmentDigest(await readFile(`${file}.partial`)) !== expected) throw new Error('copy checksum mismatch');
     await rename(`${file}.partial`, file);

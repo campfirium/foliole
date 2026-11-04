@@ -15,6 +15,21 @@ final class FolioleFolderBackupAttachmentCopy {
         void publish() throws Exception;
         void discard() throws Exception;
     }
+    interface DeletionTarget {
+        InputStream existing() throws Exception;
+        void remove() throws Exception;
+    }
+    static void delete(String expectedHash, DeletionTarget target, BooleanSupplier cancelled) throws Exception {
+        check(cancelled);
+        try (InputStream existing = target.existing()) {
+            if (existing == null) return;
+            if (!expectedHash.equals(hash(existing, null, cancelled))) {
+                throw new IllegalStateException("Backup attachment has changed outside Foliole.");
+            }
+        }
+        check(cancelled);
+        target.remove();
+    }
     static boolean copy(String expectedHash, InputStream source, Target target, BooleanSupplier cancelled) throws Exception {
         check(cancelled);
         try (InputStream existing = target.existing()) {

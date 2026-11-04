@@ -1,15 +1,14 @@
 import { maintainAttachments } from '../../../../../lib/core/attachments/attachmentMaintenance';
 import { requeueMissingObservedAttachments } from '../../../../../lib/core/attachments/attachmentReferenceCache';
 import { attachmentDatabaseRevision } from '../../../../../lib/core/attachments/attachmentReferenceSnapshot';
-import { recordFramedSyncResourceAvailability } from '../../../../../lib/core/database/framedSyncResourceAvailability.js';
 import { requeueMissingAttachmentArticles } from '../../../../../lib/core/sync/attachmentDemandQueue.js';
-import { attachmentSourceVerification } from '../../../../../lib/core/sync/attachmentSourceVerification.js';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { AttachmentMaintenanceResult, AttachmentMaintenanceStatus, AttachmentObservationRequest,
   AttachmentObservationResult, AttachmentStatusRequest, AttachmentMaintenanceRequest, AttachmentObservationState } from '../../../../../lib/platform/attachmentMaintenanceContract';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 
 import type { CapacitorCompanionDatabaseOwner } from './capacitorCompanionDatabaseOwner';
+import { companionAttachmentFileOperation } from './companionAttachmentFileOperation';
 import { readCompanionObservationReferences } from './companionAttachmentObservation';
 import { readCompanionAttachmentReferences } from './companionAttachmentReferenceSnapshot';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
@@ -35,14 +34,7 @@ function maintain(owner: CapacitorCompanionDatabaseOwner, request: AttachmentMai
     let expectedRevision: string | undefined;
     const write = <T>(task: (db: DbPort) => Promise<T>) => activeDb ? task(activeDb) : owner.runWriter(task);
     const files = FolioleCompanionSync.maintainAttachmentFiles.bind(FolioleCompanionSync);
-    const updateAvailability = async (operation: 'move' | 'remove-trash', storageKey: string, trash?: boolean) => {
-      signal?.throwIfAborted();
-      attachmentSourceVerification.invalidate(storageKey);
-      const result = await files({ operation, storageKey, ...(trash === undefined ? {} : { trash }) });
-      if (typeof result.available !== 'boolean') throw new Error('attachment_availability_missing');
-      const available = result.available;
-      await write(db => recordFramedSyncResourceAvailability(db, [storageKey.slice(0, 64)], available));
-    };
+    const updateAvailability = companionAttachmentFileOperation(owner, files, write, signal);
     const now = new Date();
     const day = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
     const generation = async () => {
