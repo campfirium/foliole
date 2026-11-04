@@ -20,6 +20,7 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
     private String epoch, source, activeRequest;
     private FolioleFolderBackupOperation operation;
     private String phase = "idle", errorMessage;
+    private boolean copyingAttachment, attachmentCancelled;
 
     @Override public void load() { store = new FolioleFolderBackupProfile(getContext()); }
 
@@ -38,10 +39,11 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
     }
     @PluginMethod public synchronized void closeSource(PluginCall call) {
         if (epoch == null || !epoch.equals(call.getString("sourceEpoch"))) { call.resolve(); return; }
-        epoch = null; source = null;
+        epoch = null; source = null; attachmentCancelled = true;
         if (operation != null) operation.cancel(call::resolve); else call.resolve();
     }
     @PluginMethod public synchronized void cancelDatabase(PluginCall call) {
+        if (call.getString("requestId") != null && call.getString("requestId").equals(activeRequest)) attachmentCancelled = true;
         if (operation != null && operation.requestId.equals(call.getString("requestId"))) operation.cancel(null);
         call.resolve();
     }
@@ -85,15 +87,16 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
     private synchronized void start(PluginCall call) throws Exception {
         if (epoch == null || !epoch.equals(call.getString("sourceEpoch"))) throw new IllegalStateException("Database owner is closed.");
         FolioleFolderBackupOperation job = new FolioleFolderBackupOperation(getContext(), store.load(), activeRequest, epoch, source, store);
-        operation = job; phase = "working"; errorMessage = null;
+        operation = job; attachmentCancelled = false; phase = "working"; errorMessage = null;
         emitState(null);
         new Thread(() -> {
             try {
                 String[] result = job.run();
                 synchronized (this) {
-                    phase = "1".equals(result[2]) ? "pending" : "saved";
+                    phase = "1".equals(result[2]) ? "pending" : "working";
                     JSObject response = response(call, false, result);
-                    operation = null; activeRequest = null;
+                    operation = null;
+                    if (!"1".equals(result[1])) activeRequest = null;
                     emitState(response);
                     call.resolve(response);
                 }
@@ -108,6 +111,66 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
             }
         }, "FolioleFolderBackup").start();
     }
+    @PluginMethod public synchronized void prepareAttachmentDirectory(PluginCall call) {
+        try {
+            requireAttachmentRequest(call);
+            JSONObject profile = store.load();
+            new Thread(() -> {
+                try {
+                    FolioleFolderBackupAttachmentTarget.prepareDirectory(getContext(), profile);
+                    call.resolve();
+                } catch (Exception error) { call.reject(error.getMessage(), error); }
+            }, "FolioleBackupDirectory").start();
+        } catch (Exception error) { call.reject(error.getMessage(), error); }
+    }
+    @PluginMethod public synchronized void copyAttachment(PluginCall call) {
+        try {
+            requireAttachmentRequest(call);
+            if (copyingAttachment) throw new IllegalStateException("An attachment is already being copied.");
+            JSONObject profile = store.load();
+            copyingAttachment = true;
+            new Thread(() -> {
+                try {
+                    android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+                    boolean copied = FolioleFolderBackupAttachmentTarget.copy(getContext(), profile,
+                        call.getString("storageKey"), () -> attachmentStopped(call));
+                    synchronized (this) { copyingAttachment = false; }
+                    call.resolve(new JSObject().put("copied", copied));
+                } catch (Exception error) {
+                    synchronized (this) { copyingAttachment = false; }
+                    call.reject(error.getMessage(), error);
+                }
+            }, "FolioleBackupAttachment").start();
+        } catch (Exception error) { call.reject(error.getMessage(), error); }
+    }
+    private synchronized boolean attachmentStopped(PluginCall call) {
+        return attachmentCancelled || epoch == null || !epoch.equals(call.getString("sourceEpoch"));
+    }
+    private void requireAttachmentRequest(PluginCall call) {
+        if (operation != null || activeRequest == null || !activeRequest.equals(call.getString("requestId"))) {
+            throw new IllegalStateException("Database backup must finish before attachments.");
+        }
+        if (attachmentStopped(call)) throw new IllegalStateException("Database owner is closed or backup cancelled.");
+    }
+    @PluginMethod public synchronized void finishAttachments(PluginCall call) {
+        try {
+            if (activeRequest == null || !activeRequest.equals(call.getString("requestId")) || operation != null || copyingAttachment) {
+                throw new IllegalStateException("Attachment backup is not ready to finish.");
+            }
+            JSONObject profile = store.load();
+            store.update(profile.getString("id"), value -> {
+                value.put("attachmentFilesCopied", call.getInt("copied", 0));
+                Integer pending = call.getInt("pending");
+                value.put("attachmentFilesPending", pending == null ? JSONObject.NULL : pending);
+                value.put("attachmentError", call.getString("errorMessage", ""));
+            });
+            phase = "pending";
+            errorMessage = call.getString("errorMessage");
+            activeRequest = null;
+            emitState(null);
+            call.resolve(state());
+        } catch (Exception error) { activeRequest = null; call.reject(error.getMessage(), error); }
+    }
     private void emitState(JSObject result) {
         try {
             JSObject event = new JSObject().put("state", state());
@@ -120,7 +183,10 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
         return new JSObject().put("configured", profile != null)
             .put("directoryLabel", profile == null ? JSONObject.NULL : profile.opt("label"))
             .put("databaseSavedAt", profile == null || !profile.has("savedAt") ? JSONObject.NULL : profile.opt("savedAt"))
-            .put("phase", phase).put("errorMessage", errorMessage == null ? JSONObject.NULL : errorMessage);
+            .put("attachmentFilesCopied", profile == null ? 0 : profile.optInt("attachmentFilesCopied", 0))
+            .put("attachmentFilesPending", profile == null || !profile.has("attachmentFilesPending") ? JSONObject.NULL : profile.opt("attachmentFilesPending"))
+            .put("phase", phase).put("errorMessage", errorMessage == null
+                ? profile == null ? JSONObject.NULL : profile.has("attachmentError") ? profile.opt("attachmentError") : JSONObject.NULL : errorMessage);
     }
     private JSObject response(PluginCall call, boolean cancelled, String[] result) throws Exception {
         return new JSObject().put("requestId", call.getString("requestId")).put("cancelled", cancelled)
@@ -129,7 +195,7 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
             .put("changedPages", result == null ? 0 : Long.parseLong(result[4])).put("state", state());
     }
     @Override protected synchronized void handleOnDestroy() {
-        epoch = null; source = null;
+        epoch = null; source = null; attachmentCancelled = true;
         if (operation != null) operation.cancel(null);
         super.handleOnDestroy();
     }

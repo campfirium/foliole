@@ -11,6 +11,8 @@ export interface CompanionFolderBackupState {
   databaseSavedAt: string | null;
   phase: 'idle' | 'working' | 'pending' | 'saved' | 'failed';
   errorMessage: string | null;
+  attachmentFilesCopied?: number;
+  attachmentFilesPending?: number | null;
 }
 
 export interface CompanionFolderDatabaseBackupResult {
@@ -30,5 +32,8 @@ export interface CompanionFolderBackupPort {
   closeSource(input: { sourceEpoch: string }): Promise<void>;
   getState(): Promise<CompanionFolderBackupState>;
   backupDatabase(input: { sourceEpoch: string; requestId: string; chooseDirectory: boolean }): Promise<CompanionFolderDatabaseBackupResult>;
+  prepareAttachmentDirectory(input: { sourceEpoch: string; requestId: string }): Promise<void>;
+  copyAttachment(input: { sourceEpoch: string; requestId: string; storageKey: string }): Promise<{ copied: boolean }>;
+  finishAttachments(input: { requestId: string; copied: number; pending: number | null; errorMessage: string | null }): Promise<CompanionFolderBackupState>;
   cancelDatabase(input: { requestId: string }): Promise<void>;
 }
