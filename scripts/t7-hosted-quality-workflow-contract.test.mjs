@@ -36,10 +36,17 @@ describe('T7 hosted quality workflow contract', () => {
 
   it('serializes scheduled and manual dev quality while release keeps its own group', () => {
     const remote = parse(read('.github/workflows/remote-quality.yml'));
-    const groupFor = ref => runInNewContext(remote.concurrency.group.slice(3, -2), { github: { ref }, inputs: {} });
+    const inputs = { mobile_distribution: 'none' };
+    const groupFor = (ref, distribution = 'none') => runInNewContext(remote.concurrency.group.slice(3, -2),
+      { github: { ref }, inputs: { mobile_distribution: distribution } });
     expect(groupFor('refs/heads/dev')).toBe('quality-dev');
     expect(groupFor('refs/heads/check')).toBe('quality-qa');
-    expect(runInNewContext(remote.concurrency['cancel-in-progress'].slice(3, -2), { inputs: {} })).toBe(true);
+    expect(runInNewContext(remote.concurrency['cancel-in-progress'].slice(3, -2), { inputs })).toBe(true);
+    for (const distribution of ['ios', 'android']) {
+      expect(groupFor('refs/heads/check', distribution)).toBe('quality-qa-mobile');
+      expect(runInNewContext(remote.concurrency['cancel-in-progress'].slice(3, -2),
+        { inputs: { mobile_distribution: distribution } })).toBe(false);
+    }
     expect(hosted.concurrency).toEqual({ group: 'quality-dev', 'cancel-in-progress': false });
     expect(release.concurrency).toEqual({ group: 'quality-release', 'cancel-in-progress': true });
     const workflows = fs.readdirSync('.github/workflows').filter((file) => file.endsWith('.yml'));
