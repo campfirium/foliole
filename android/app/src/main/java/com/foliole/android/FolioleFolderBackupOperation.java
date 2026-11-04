@@ -53,8 +53,6 @@ final class FolioleFolderBackupOperation extends FolioleFolderBackupDocuments {
                 profile.put("fingerprint", preparedFingerprint);
                 profile.remove("pendingFingerprint");
                 profile.put("savedAt", Instant.now().toString());
-                profile.remove("attachmentFilesPending");
-                profile.remove("attachmentError");
             });
         } catch (Exception error) { callbackError = error; }
     }
