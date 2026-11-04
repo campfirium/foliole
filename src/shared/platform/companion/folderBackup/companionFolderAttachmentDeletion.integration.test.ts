@@ -37,9 +37,11 @@ it('retains the old copy when source deletion fails and completes only after a s
   const item = await f.receive('delete me'); await f.run();
   await prepareFolderAttachmentCopy(f.db, item.key, 'delete');
   await consume(await captureFolderAttachmentDeletions(owner));
-  expect(remove).toHaveBeenCalledTimes(1);
+  expect(remove).not.toHaveBeenCalled();
   expect(await readFile(item.file)).toEqual(item.bytes);
-  expect(f.rows()).toHaveLength(1);
+  expect(f.rows()).toEqual([]);
+  // A later genuine deletion is a new source action; the failed action was proven ineffective.
+  await prepareFolderAttachmentCopy(f.db, item.key, 'delete');
   await rm(item.source); await f.reopen();
   await consume(await captureFolderAttachmentDeletions(owner));
   expect(await f.exists(item.file)).toBe(false); expect(f.rows()).toEqual([]);

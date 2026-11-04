@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 
 import type { CompanionFolderBackupState } from '../../lib/platform/companionFolderBackupContract';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { getCompanionAutomaticFolderBackup, setCompanionAutomaticFolderBackup, subscribeCompanionAutomaticFolderBackup } from '../shared/platform/companion/folderBackup/companionAutomaticFolderBackup';
+import { clearCompanionFolderBackupDirectory, getCompanionAutomaticFolderBackup, setCompanionAutomaticFolderBackup, subscribeCompanionAutomaticFolderBackup } from '../shared/platform/companion/folderBackup/companionAutomaticFolderBackup';
 import { backUpCompanionDatabase } from '../shared/platform/companion/folderBackup/companionFolderBackup';
 import { getCompanionFolderBackupPort, supportsCompanionFolderDatabaseBackup } from '../shared/platform/companion/folderBackup/companionFolderBackupRuntimeRepository';
+import { getCompanionFolderBackupState, subscribeCompanionFolderBackupWork } from '../shared/platform/companion/folderBackup/companionFolderBackupState';
 import { AppButton, AppSwitch, SettingsControlSlot, SettingsRow, SettingsSection } from '../shared/ui';
 
 function useFolderBackupState(supported: boolean) {
@@ -16,22 +17,25 @@ function useFolderBackupState(supported: boolean) {
     let active = true;
     let receivedEvents = 0;
     let automaticRevision = 0;
-    const automaticSubscription = subscribeCompanionAutomaticFolderBackup(value => { automaticRevision++; if (active && automaticRevision === 0) setAutomatic(value); });
+    const automaticSubscription = subscribeCompanionAutomaticFolderBackup(value => { automaticRevision++; if (active) setAutomatic(value); });
     void getCompanionAutomaticFolderBackup().then(value => { if (active && automaticRevision === 0) setAutomatic(value); })
       .catch((failure: unknown) => { if (active) setError(String(failure)); });
     const port = getCompanionFolderBackupPort();
+    const refresh = (value?: CompanionFolderBackupState) => {
+      const revision = ++receivedEvents;
+      void getCompanionFolderBackupState(value).then(next => {
+        if (active && receivedEvents === revision) { setState(next); setError(next.errorMessage); }
+      }).catch((failure: unknown) => { if (active) setError(String(failure)); });
+    };
+    const workSubscription = subscribeCompanionFolderBackupWork(() => refresh());
     const subscription = port.addListener('backupStateChanged', ({ state: value }) => {
-      receivedEvents += 1;
-      if (active) { setState(value); setError(value.errorMessage); }
+      if (active) { setState(value); setError(value.errorMessage); refresh(value); }
     });
-    void subscription.then(async () => {
-      const revision = receivedEvents;
-      const value = await port.getState();
-      if (active && receivedEvents === revision) { setState(value); setError(value.errorMessage); }
-    }).catch((failure: unknown) => { if (active) setError(String(failure)); });
+    void subscription.then(() => refresh()).catch((failure: unknown) => { if (active) setError(String(failure)); });
     return () => {
       active = false;
       automaticSubscription();
+      workSubscription();
       void subscription.then((listener) => listener.remove()).catch(() => undefined);
     };
   }, [supported]);
@@ -45,12 +49,20 @@ export function CompanionFolderDatabaseBackupSection() {
   const { state, setState, error, setError, automatic, setAutomatic } = useFolderBackupState(supported);
   const [changingAutomatic, setChangingAutomatic] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [forgetting, setForgetting] = useState(false);
   async function run(chooseDirectory: boolean) {
     setBusy(true);
     setError(null);
     try { setState((await backUpCompanionDatabase(chooseDirectory)).state); }
     catch (failure) { setError(failure instanceof Error ? failure.message : String(failure)); }
     finally { setBusy(false); }
+  }
+
+  async function forgetDirectory() {
+    setBusy(true); setForgetting(true);
+    try { setState(await clearCompanionFolderBackupDirectory()); setAutomatic(false); }
+    catch (failure) { setError(failure instanceof Error ? failure.message : String(failure)); }
+    finally { setBusy(false); setForgetting(false); }
   }
 
   async function toggleAutomatic(enabled: boolean) {
@@ -73,12 +85,15 @@ export function CompanionFolderDatabaseBackupSection() {
           {state?.configured ? <AppButton disabled={working} onClick={() => void run(true)} size="sm">
             {t('companion.settings.storage.changeBackupFolder')}
           </AppButton> : null}
+          {state?.configured ? <AppButton disabled={working} onClick={() => void forgetDirectory()} size="sm">
+            {t('companion.settings.storage.forgetBackupFolder')}
+          </AppButton> : null}
         </SettingsControlSlot>
       </SettingsRow>
       <SettingsRow title={t('companion.settings.storage.automaticBackup')} description={t('companion.settings.storage.automaticBackupHint')}>
         <SettingsControlSlot>
           <AppSwitch aria-label={t('companion.settings.storage.automaticBackup')} checked={automatic === true}
-            disabled={automatic === null || changingAutomatic || (!state?.configured && automatic !== true)}
+            disabled={automatic === null || changingAutomatic || forgetting || (!state?.configured && automatic !== true)}
             onCheckedChange={value => void toggleAutomatic(value)} />
         </SettingsControlSlot>
       </SettingsRow>

@@ -15,14 +15,22 @@ export function subscribeManualCompanionFolderBackup(listener: () => void) {
 
 let backupTail: Promise<unknown> = Promise.resolve();
 
-export function backUpCompanionDatabase(chooseDirectory = false, options: BackupOptions = {}) {
+function enqueueBackup<T>(run: () => Promise<T>) {
   const owner = getIosCompanionDatabaseOwner();
   const result = backupTail.catch(() => undefined).then(() => {
     if (getIosCompanionDatabaseOwner() !== owner) throw new Error('Backup database owner changed.');
-    return runBackup(chooseDirectory, options);
+    return run();
   });
   backupTail = result;
-  return result.then(value => {
+  return result;
+}
+
+export function forgetCompanionFolderBackupDirectory() {
+  return enqueueBackup(() => getCompanionFolderBackupPort().clearDirectory());
+}
+
+export function backUpCompanionDatabase(chooseDirectory = false, options: BackupOptions = {}) {
+  return enqueueBackup(() => runBackup(chooseDirectory, options)).then(value => {
     if (!options.automatic && !value.cancelled && value.databaseCommitted) {
       for (const listener of manualListeners) { try { listener(); } catch { /* Backup observers do not own the result. */ } }
     }

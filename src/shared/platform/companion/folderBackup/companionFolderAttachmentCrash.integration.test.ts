@@ -6,7 +6,7 @@ import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../electron/database/betterSqliteDbPort';
-import { completeFolderAttachmentCopy } from '../../../../../lib/core/database/companionFolderAttachmentWork';
+import { completeFolderAttachmentCopy, prepareFolderAttachmentCopy } from '../../../../../lib/core/database/companionFolderAttachmentWork';
 import type { CompanionFolderBackupPort } from '../../../../../lib/platform/companionFolderBackupContract';
 
 import { attachmentDigest, folderAttachmentWorkFixture } from './companionFolderAttachmentWork.testSupport';
@@ -63,7 +63,8 @@ it.each(['before-source', 'after-source', 'after-ready', 'after-target', 'after-
       { write: f.host.write, inventory: f.inventory }, { profile: 'profile', requestId: 'committed', sourceEpoch: 'owner',
         deletions: f.rows() as never[] });
     if (boundary === 'before-source') {
-      expect((await run()).attachmentFilesPending).toBe(1); expect(await f.exists(item.file)).toBe(true);
+      expect((await run()).attachmentFilesPending).toBe(0); expect(await f.exists(item.file)).toBe(true);
+      await prepareFolderAttachmentCopy(f.db, item.key, 'delete');
       await rm(item.source); await f.db.transaction(tx => completeFolderAttachmentCopy(tx, item.key));
     }
     await f.sqlite.backup(path.join(f.root, 'Foliole.sqlite'));

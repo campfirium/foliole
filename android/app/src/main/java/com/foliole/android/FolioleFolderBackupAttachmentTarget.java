@@ -40,10 +40,13 @@ final class FolioleFolderBackupAttachmentTarget implements FolioleFolderBackupAt
         }
         FolioleFolderBackupAttachmentTarget target = new FolioleFolderBackupAttachmentTarget(context, profile, key);
         FolioleFolderBackupAttachmentCopy.delete(key.substring(0, 64), new FolioleFolderBackupAttachmentCopy.DeletionTarget() {
-            public InputStream existing() throws Exception { return target.existing(); }
+            private Uri document;
+            public InputStream existing() throws Exception {
+                document = target.find(target.folder, key);
+                return document == null ? null : target.read(document);
+            }
             public void remove() throws Exception {
-                Uri document = target.find(target.folder, key);
-                if (document == null) return;
+                if (!document.equals(target.find(target.folder, key))) throw new IllegalStateException("Backup attachment changed during deletion.");
                 if (!DocumentsContract.deleteDocument(context.getContentResolver(), document) || target.find(target.folder, key) != null) {
                     throw new IllegalStateException("Cannot remove backup attachment.");
                 }

@@ -3,13 +3,13 @@ import { subscribeNativeAppForeground } from '../../appLifecycle';
 import type { CapacitorCompanionDatabaseOwner } from '../runtime/capacitorCompanionDatabaseOwner';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
-import { backUpCompanionDatabase, subscribeManualCompanionFolderBackup } from './companionFolderBackup';
+import { backUpCompanionDatabase, forgetCompanionFolderBackupDirectory, subscribeManualCompanionFolderBackup } from './companionFolderBackup';
 import { getCompanionFolderBackupPort, supportsCompanionFolderDatabaseBackup } from './companionFolderBackupRuntimeRepository';
 import { CompanionFolderBackupWorker } from './companionFolderBackupWorker';
 
 const key = 'folder_backup_automatic';
 const listeners = new Set<(enabled: boolean) => void>();
-let active: { owner: CapacitorCompanionDatabaseOwner; worker: CompanionFolderBackupWorker } | null = null;
+let active: { owner: CapacitorCompanionDatabaseOwner; worker: CompanionFolderBackupWorker; clearing: boolean } | null = null;
 
 export async function readCompanionAutomaticFolderBackup(db: DbPort) {
   const [row] = await db.query<{ value: string }>('SELECT value FROM companion_meta WHERE key=?', [key]);
@@ -28,9 +28,19 @@ export async function getCompanionAutomaticFolderBackup() {
 export async function setCompanionAutomaticFolderBackup(enabled: boolean) {
   const session = active;
   if (!session || session.owner !== getIosCompanionDatabaseOwner()) throw new Error('Backup database owner is not ready.');
-  if (enabled && !(await getCompanionFolderBackupPort().getState()).configured) throw new Error('Choose a backup folder first.');
-  await session.worker.setEnabled(enabled);
-  for (const listener of listeners) { try { listener(enabled); } catch { /* The preference is already saved. */ } }
+  if (enabled && session.clearing) throw new Error('Backup folder is being disconnected.');
+  await session.worker.setEnabled(enabled, async () => {
+    if (enabled && !(await getCompanionFolderBackupPort().getState()).configured) throw new Error('Choose a backup folder first.');
+  });
+  for (const listener of listeners) { try { listener(session.worker.automatic); } catch { /* The preference is already saved. */ } }
+}
+
+export async function clearCompanionFolderBackupDirectory() {
+  const session = active;
+  if (!session) throw new Error('Backup database owner is not ready.');
+  session.clearing = true;
+  try { await setCompanionAutomaticFolderBackup(false); return await forgetCompanionFolderBackupDirectory(); }
+  finally { session.clearing = false; }
 }
 
 export async function bindCompanionAutomaticFolderBackup(owner: CapacitorCompanionDatabaseOwner) {
@@ -45,9 +55,9 @@ export async function bindCompanionAutomaticFolderBackup(owner: CapacitorCompani
       return { errorMessage: result.state.errorMessage };
     }
   });
-  const session = { owner, worker };
+  const session = { owner, worker, clearing: false };
   active = session;
-  const committed = owner.committedWrites.subscribe(() => worker.wake());
+  const committed = owner.committedWrites.subscribe(() => worker.wake(true));
   const manual = subscribeManualCompanionFolderBackup(() => worker.wake(true));
   const foreground = await subscribeNativeAppForeground(() => worker.wake(true));
   worker.wake(true);

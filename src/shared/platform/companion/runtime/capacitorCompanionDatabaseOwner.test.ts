@@ -216,7 +216,7 @@ it('keeps interactive writers available during backup source registration and wa
   const port = {
     openSource: vi.fn(() => new Promise<void>((resolve) => { register = resolve; })),
     closeSource: vi.fn(() => new Promise<void>((resolve) => { release = resolve; })),
-    getState: vi.fn(), backupDatabase: vi.fn(), cancelDatabase: vi.fn(), addListener: vi.fn(),
+    getState: vi.fn(), clearDirectory: vi.fn(), backupDatabase: vi.fn(), cancelDatabase: vi.fn(), addListener: vi.fn(),
     prepareAttachmentDirectory: vi.fn(), copyAttachment: vi.fn(), deleteAttachment: vi.fn(), finishAttachments: vi.fn()
   };
   const registration = owner.folderBackupSource(port);

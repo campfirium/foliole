@@ -32,6 +32,7 @@ export interface CompanionFolderBackupPort {
   openSource(input: { sourceEpoch: string; databasePath: string }): Promise<void>;
   closeSource(input: { sourceEpoch: string }): Promise<void>;
   getState(): Promise<CompanionFolderBackupState>;
+  clearDirectory(): Promise<CompanionFolderBackupState>;
   backupDatabase(input: { sourceEpoch: string; requestId: string; chooseDirectory: boolean }): Promise<CompanionFolderDatabaseBackupResult>;
   prepareAttachmentDirectory(input: { sourceEpoch: string; requestId: string }): Promise<void>;
   copyAttachment(input: { sourceEpoch: string; requestId: string; storageKey: string }): Promise<{ copied: boolean }>;

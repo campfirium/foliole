@@ -8,7 +8,7 @@ interface Source {
   inventory(): Promise<{ files?: { storageKey: string; sizeBytes: number }[] }>;
 }
 
-/** One explicit manual backup owns the native request; no automatic execution is enabled here. */
+/** One serialized backup request consumes known work; scheduling and user consent remain outside this consumer. */
 export async function consumeCompanionFolderAttachmentWork(port: CompanionFolderBackupPort, source: Source,
   input: { requestId: string; sourceEpoch: string; profile: string; deletions?: FolderAttachmentWork[]; continueWork?: () => boolean }) {
   let copied = 0;
@@ -29,6 +29,15 @@ export async function consumeCompanionFolderAttachmentWork(port: CompanionFolder
     const work = await source.write(db => readFolderAttachmentWork(db, input.profile));
     for (const entry of work) {
       if (input.continueWork && !input.continueWork()) break;
+      // A failed source deletion (or a later restore) can be discharged only by verifying the original and its copy.
+      if (entry.action === 'delete' && entry.stage === 'source') {
+        try {
+          const result = await port.copyAttachment({ ...input, storageKey: entry.storage_key });
+          if (result.copied) copied += 1;
+          await source.write(db => confirmFolderAttachmentCopy(db, input.profile, entry));
+          continue;
+        } catch { /* An absent original is deletable only with this request's committed snapshot permission. */ }
+      }
       if (entry.action === 'delete' && !input.deletions?.some(candidate => candidate.storage_key === entry.storage_key
         && candidate.token === entry.token && candidate.stage === entry.stage)) continue;
       try {

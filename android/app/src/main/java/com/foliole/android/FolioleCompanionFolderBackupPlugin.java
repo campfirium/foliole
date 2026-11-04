@@ -22,7 +22,11 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
     private String phase = "idle", errorMessage;
     private boolean copyingAttachment, attachmentCancelled;
 
-    @Override public void load() { store = new FolioleFolderBackupProfile(getContext()); }
+    @Override public void load() {
+        store = new FolioleFolderBackupProfile(getContext());
+        try { phase = store.resumePhase(); }
+        catch (Exception error) { phase = "failed"; errorMessage = error.getMessage(); }
+    }
 
     @PluginMethod public synchronized void openSource(PluginCall call) {
         try {
@@ -53,6 +57,13 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
     @PluginMethod public synchronized void getState(PluginCall call) {
         try { call.resolve(state()); } catch (Exception error) { call.reject(error.getMessage(), error); }
     }
+    @PluginMethod public synchronized void clearDirectory(PluginCall call) {
+        try {
+            if (activeRequest != null || operation != null || copyingAttachment) throw new IllegalStateException("A backup is still running.");
+            store.clear(); phase = "idle"; errorMessage = null;
+            emitState(null); call.resolve(state());
+        } catch (Exception error) { call.reject(error.getMessage(), error); }
+    }
     @PluginMethod public synchronized void backupDatabase(PluginCall call) {
         try {
             if (activeRequest != null) throw new IllegalStateException("A database backup is already running.");
@@ -65,7 +76,7 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
                     | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
                 startActivityForResult(call, intent, "folderSelected");
             } else start(call);
-        } catch (Exception error) { activeRequest = null; call.reject(error.getMessage(), error); }
+        } catch (Exception error) { activeRequest = null; failed(error); emitState(null); call.reject(error.getMessage(), error); }
     }
     @ActivityCallback private synchronized void folderSelected(PluginCall call, ActivityResult result) {
         if (call == null) { activeRequest = null; return; }
@@ -85,12 +96,13 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
                 store.save(profile);
             }
             start(call);
-        } catch (Exception error) { activeRequest = null; call.reject(error.getMessage(), error); }
+        } catch (Exception error) { activeRequest = null; failed(error); emitState(null); call.reject(error.getMessage(), error); }
     }
     private synchronized void start(PluginCall call) throws Exception {
         if (epoch == null || !epoch.equals(call.getString("sourceEpoch"))) throw new IllegalStateException("Database owner is closed.");
         FolioleFolderBackupOperation job = new FolioleFolderBackupOperation(getContext(), store.load(), activeRequest, epoch, source, store);
         operation = job; attachmentCancelled = false; phase = "working"; errorMessage = null;
+        store.status(phase, null);
         emitState(null);
         new Thread(() -> {
             try {
@@ -105,7 +117,7 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
                 }
             } catch (Exception error) {
                 synchronized (this) {
-                    phase = "failed"; errorMessage = error.getMessage();
+                    failed(error);
                     operation = null; activeRequest = null; emitState(null);
                 }
                 call.reject(error.getMessage(), error);
@@ -171,12 +183,18 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
                 value.put("attachmentFilesPending", pending == null ? JSONObject.NULL : pending);
                 value.put("attachmentError", call.getString("errorMessage", ""));
             });
-            phase = "pending";
             errorMessage = call.getString("errorMessage");
+            phase = errorMessage != null && !errorMessage.isEmpty() ? "failed"
+                : call.getInt("pending", -1) == 0 ? "saved" : "pending";
+            store.status(phase, errorMessage);
             activeRequest = null;
             emitState(null);
             call.resolve(state());
-        } catch (Exception error) { activeRequest = null; call.reject(error.getMessage(), error); }
+        } catch (Exception error) { activeRequest = null; failed(error); emitState(null); call.reject(error.getMessage(), error); }
+    }
+    private void failed(Exception error) {
+        phase = "failed"; errorMessage = error.getMessage();
+        try { store.status(phase, errorMessage); } catch (Exception statusError) { error.addSuppressed(statusError); }
     }
     private void emitState(JSObject result) {
         try {
@@ -186,16 +204,9 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
         } catch (Exception error) { android.util.Log.e("FolioleFolderBackup", "Cannot publish backup state", error); }
     }
     private JSObject state() throws Exception {
-        JSONObject profile = store.load();
-        return new JSObject().put("configured", profile != null)
-            .put("directoryId", profile == null ? JSONObject.NULL : profile.opt("id"))
-            .put("directoryLabel", profile == null ? JSONObject.NULL : profile.opt("label"))
-            .put("databaseSavedAt", profile == null || !profile.has("savedAt") ? JSONObject.NULL : profile.opt("savedAt"))
-            .put("attachmentFilesCopied", profile == null ? 0 : profile.optInt("attachmentFilesCopied", 0))
-            .put("attachmentFilesPending", profile == null || !profile.has("attachmentFilesPending") ? JSONObject.NULL : profile.opt("attachmentFilesPending"))
-            .put("phase", phase).put("errorMessage", errorMessage == null
-                ? profile == null ? JSONObject.NULL : profile.has("attachmentError") ? profile.opt("attachmentError") : JSONObject.NULL : errorMessage);
+        return store.state(phase, errorMessage);
     }
+
     private JSObject response(PluginCall call, boolean cancelled, String[] result) throws Exception {
         return new JSObject().put("requestId", call.getString("requestId")).put("cancelled", cancelled)
             .put("databaseCommitted", result != null && "1".equals(result[1]))

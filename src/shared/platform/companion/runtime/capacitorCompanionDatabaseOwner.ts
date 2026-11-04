@@ -146,9 +146,9 @@ export class CapacitorCompanionDatabaseOwner {
     }
   }
 
-  runWriter<T>(task: (db: DbPort) => Promise<T>, notifyBackup = true): Promise<T> {
-    for (const reader of this.backgroundReaders) reader.abort(new Error('attachment_scan_foreground_write'));
-    return this.enqueue(() => this.committedWrites.write(this.requireDb(), task, notifyBackup));
+  runWriter<T>(task: (db: DbPort) => Promise<T>, businessWrite = true): Promise<T> {
+    if (businessWrite) for (const reader of this.backgroundReaders) reader.abort(new Error('attachment_scan_foreground_write'));
+    return this.enqueue(() => this.committedWrites.write(this.requireDb(), task, businessWrite));
   }
 
   readNodePriorities(db: DbPort, defaultPriority: RegularPushQueuePriority, initial?: Iterable<PriorityIndexNode>) {
