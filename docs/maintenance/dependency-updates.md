@@ -178,6 +178,10 @@ applies. Official notes list Wayland hidden-parent and CSS-removal fixes plus
 Chromium/Node updates, without a disclosed security advisory: follow the normal
 Foliole release schedule; no major-version follow-up is required.
 
+On 2026-11-05, #199 advanced to head `220c9689ee68139169d0a9b78b354c1da93ce979`
+and lucide-react 1.63.0. The older implementation above does not cover that target;
+the current proposal's local validation blocker is recorded below.
+
 ## Reviewed proposals and deferred adoption
 
 Every reviewed proposal ends with an explicit decision. Locally implemented
@@ -215,6 +219,8 @@ batch review also covers support changes without a new target version.
 | [#191](https://github.com/campfirium/foliole/pull/191) | pdfjs-dist 6.4.299; React-PDF 11.0.0 pins 6.3.289, creating mismatched main and worker runtimes. | Official React-PDF supports a matching newer PDF.js; adopt and validate the pair. | 2026-11-03 | Dependency batch handler |
 | [#192](https://github.com/campfirium/foliole/pull/192) | minimatch 10.2.6; actual glob7 escaped-name regression, plus GHSA-g3hv-75wg-m249 still affects this target. | Upstream installer/temp/rimraf/glob chain supports a patched matcher, or a reviewed alternative passes the existing installer behavior tests; advisory repair remains separate. | 2026-11-03 | Dependency batch handler |
 | [#193](https://github.com/campfirium/foliole/pull/193) | TypeScript 7.0.2; typescript-eslint 8.72.1 requires TypeScript <6.1 and the new compiler API is not stable. | Official lint tooling supports TS7 and the production compiler-API consumers have a supported migration path. | 2026-11-03 | Dependency batch handler |
+| [#199](https://github.com/campfirium/foliole/pull/199); `app/renovate`; head `220c9689ee68139169d0a9b78b354c1da93ce979` | lucide-react 1.63.0 passed seven-day maturity and compatible React peers. Six focused files passed (30 tests), including icon consumers and installer/toolchain contracts, but `npm run build` failed with TS2352 in `src/shared/platform/companion/runtime/companionImageBackup.integration.test.ts:36`: the backup-port fixture lacks required methods. The same failure reproduces after restoring 1.62.0; the dependency change was reverted, not adopted. Logs: `.tmp/waits/t714-local-validation.log`, `.tmp/waits/t714-baseline-build.log`. | After the existing mobile-backup work repairs its baseline typecheck, the next dependency batch reruns the four icon-consumer tests listed above, `npm run build`, and `npm ls lucide-react react --depth=0` on the current reviewed target; only then commit and register centralized QA. Keep the PR open. | 2026-11-05 | Dependency batch handler; backup implementation owner repairs the unrelated baseline |
+| [#202](https://github.com/campfirium/foliole/pull/202); `app/renovate`; head `cef38822a5969ddfe5eb0dc7ee3f172a464c12bf` | ts-fsrs 6.0.0 and srs-kit 1.0.0 were published 2026-10-28 and satisfy maturity. An isolated `npm install --dry-run --engine-strict --ignore-scripts --package-lock=false --prefix .tmp/artifacts/dependency-202-engine ts-fsrs@6.0.0` fails with EBADENGINE: Node >=24 is required, but local Node is 22.23.4 and hosted/release workflows select 22. The proposal also leaves removed `forgetting_curve` imports in the queue, training evaluation and scheduling panel, and expects removed `elapsed_days` card output. No dependency or user-data changes were retained. | First coordinate Node >=24 across development and hosted/release toolchains as an independently scoped migration. Then the dependency batch implements the documented v6 API migration explicitly retaining FSRS-6 weights and memory semantics, adapts elapsed-time outputs without rewriting historical facts, and passes scheduler preview/grade/replay, training, queue, persisted SQLite and build coverage before centralized QA. Recheck on the next dependency batch or explicit Node/FSRS migration request; keep the PR open. | 2026-11-05 | Dependency batch handler |
 | [#201](https://github.com/campfirium/foliole/pull/201); `app/renovate`; head `79374fade5d55c3932768518b55f09a61b3f3130` | minimatch 11.0.2 replaces only the glob 7.2.3 compatibility override (3.1.5), not the modern 11.0.3 override. An isolated real glob 7.2.3 graph with the proposed matcher returns no match for `literal\\[1\\].txt`; the current graph correctly returns `literal[1].txt`, violating the existing installer cleanup regression contract. PR remains open under this batch's restriction against closing unvalidated proposals. | On the next dependency batch, including related installer/temp/rimraf/glob updates, verify upstream compatibility and rerun `npm run test:files -- scripts/windows/installer-temporary-files.test.mjs scripts/security/security-toolchain-compatibility.test.mjs` against the reviewed candidate; adopt only when escaped-name matching and cleanup pass. | 2026-11-04 | Dependency batch handler |
 
 The 2026-11-04 batch also rechecked the earlier deferrals: React-PDF latest
@@ -222,6 +228,15 @@ The 2026-11-04 batch also rechecked the earlier deferrals: React-PDF latest
 TypeScript below 6.1. The legacy matcher regression persists with the newer
 11.0.2 proposal, so #192's compatibility resume condition is not met. These
 checks do not claim that any existing security advisory has been repaired.
+
+The 2026-11-05 batch rechecked those upstream versions and the installer chain:
+React-PDF and typescript-eslint retain the constraints above; electron-winstaller
+5.4.4 still uses temp, whose latest 0.9.4 uses rimraf 2.6.x and glob 7.
+The isolated #201 graph still fails escaped-name matching while the installed
+graph passes (`.tmp/artifacts/T714/minimatch/result.json`). No PR was closed.
+The ts-fsrs [official migration guide](https://open-spaced-repetition.github.io/ts-fsrs/guide/migration)
+separates package/API adoption from upgrading the model to FSRS-7; this review
+does not authorize a model change or invent missing memory/history.
 
 See [Renovate closed-PR matching](https://docs.renovatebot.com/key-concepts/pull-requests/)
 and [version title configuration](https://docs.renovatebot.com/configuration-options/#commitmessageextra).
