@@ -30,5 +30,10 @@ test('counts scheduled Topics in the calendar and excludes unstarted reading con
     .toHaveText(/^(Min|分钟)$/);
   await expect(calendar.locator('[aria-current="date"]')).toHaveAttribute('aria-label', /Topics: 1(?: |$)/);
   await expect(calendar.getByRole('group', { name: /Topics: 1(?: |$)/ })).toHaveCount(2);
-  await desktopWindow.screenshot({ path: path.resolve('.tmp/artifacts/T632/calendar-database-counts.png') });
+  await expect(calendar.getByRole('status', { name: /^(Total foreground time|累计前台时长)$/ })).toHaveCount(0);
+  const totals = calendar.getByRole('rowheader', { name: /^(Time total|时长合计)$/ });
+  await expect(totals).toHaveCount(1);
+  await expect(calendar.locator('tfoot').getByRole('cell')).toHaveCount(12);
+  await totals.scrollIntoViewIfNeeded();
+  await desktopWindow.screenshot({ path: path.resolve('.tmp/artifacts/T722/calendar-month-time-totals.png') });
 });

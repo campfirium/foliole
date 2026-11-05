@@ -86,7 +86,7 @@ test('retains foreground duration after old-backup restore and application relau
     const calendarButton = reopened.firstWindow.getByRole('button', { name: /^(Open Review Statistics|打开复习统计)$/ });
     await calendarButton.click();
     await expect(reopened.firstWindow.getByRole('dialog', { name: /^(Review statistics|复习统计)$/ })).toBeVisible();
-    await expect(reopened.firstWindow.getByRole('status', { name: /^(Total foreground time|累计前台时长)$/ })).toHaveText(/^(<1|[1-9]\d*)(m|分钟)$/);
+    await expect(reopened.firstWindow.locator('tfoot')).toContainText(/(<1|[1-9]\d*)(m|分钟)/);
     const directory = path.resolve('.tmp/artifacts/T338');
     await mkdir(directory, { recursive: true });
     await reopened.firstWindow.screenshot({ path: path.join(directory, 'foreground-time-calendar.png') });

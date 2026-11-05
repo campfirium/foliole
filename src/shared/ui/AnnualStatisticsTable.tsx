@@ -19,6 +19,7 @@ interface AnnualStatisticsTableProps {
   dayLabel: string;
   groups: AnnualStatisticsGroup[];
   rows: { label: string; cells: AnnualStatisticsCell[] }[];
+  footer?: { label: string; shortLabel: string; cells: AnnualStatisticsCell[] };
   metrics: readonly { shortLabel: string; label: string }[];
 }
 
@@ -33,6 +34,12 @@ export function AnnualStatisticsTable(props: AnnualStatisticsTableProps) {
       <th scope="row" className={`relative h-statistics-row pr-2.5 text-right text-ui-sm ${row.cells.some((cell) => cell.current) ? "font-medium text-companion-accent before:absolute before:left-0.5 before:top-1/2 before:size-1 before:-translate-y-1/2 before:rounded-full before:bg-companion-accent" : "font-normal text-foreground/56"}`}>{row.label}</th>
       {row.cells.map((cell) => <StatisticsCell key={cell.key} cell={cell} />)}
     </tr>)}</tbody>
+    {props.footer ? <tfoot className="border-t border-foreground/[0.055]">
+      <tr><th scope="row" aria-label={props.footer.label} title={props.footer.label}
+        className="py-1 pr-1 text-right text-ui-xs font-normal text-foreground/56">{props.footer.shortLabel}</th>
+        {props.footer.cells.map((cell) => <StatisticsCell key={cell.key} cell={cell} />)}
+      </tr>
+    </tfoot> : null}
   </table>;
 }
 

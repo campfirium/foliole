@@ -34,7 +34,28 @@ export function ReviewCalendarTable(props: ReviewCalendarTableProps) {
   const rows = Array.from({ length: 31 }, (_, index) => ({
     label: String(index + 1).padStart(2, '0'), cells: props.months.map((month) => cell(month, index + 1))
   }));
+  const footer = props.duration ? {
+    label: t('desktop.foregroundTime.monthTotal'), shortLabel: t('desktop.foregroundTime.monthTotalShort'),
+    cells: props.months.map((month, index) => {
+      const duration = monthlyDuration(month, props.today, props.duration!);
+      return { key: groups[index]!.key, valid: true, current: false, past: false,
+        label: `${groups[index]!.label} ${month.getFullYear()} · ${t('desktop.foregroundTime.monthTotal')}`,
+        values: [null, null, formatForegroundTime(duration, locale)] };
+    })
+  } : undefined;
   return <AnnualStatisticsTable label={t('desktop.reviewCalendar.title')} dayLabel={t('desktop.reviewCalendar.day')}
-    groups={groups} rows={rows} metrics={[{ shortLabel: 'It', label: 'Items' }, { shortLabel: 'To', label: 'Topics' },
+    groups={groups} rows={rows} {...(footer ? { footer } : {})} metrics={[{ shortLabel: 'It', label: 'Items' }, { shortLabel: 'To', label: 'Topics' },
       ...(props.duration ? [{ shortLabel: t('desktop.foregroundTime.short'), label: t('desktop.foregroundTime.title') }] : [])]} />;
+}
+
+function monthlyDuration(month: Date, today: string, duration: (day: string) => number | null) {
+  let total: number | null = null;
+  const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  for (let day = 1; day <= days; day++) {
+    const key = calendarDateKey(new Date(month.getFullYear(), month.getMonth(), day));
+    if (key > today) break;
+    const value = duration(key);
+    if (value !== null) total = (total ?? 0) + value;
+  }
+  return total;
 }

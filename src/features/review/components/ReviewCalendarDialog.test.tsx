@@ -26,7 +26,8 @@ it('opens all twelve months together with both quantity columns and zero-padded 
   render(<ReviewCalendarDialog />);
   act(() => runAppCommand(APP_COMMAND_IDS.openReviewCalendar, {} as never));
   const table = within(await screen.findByRole('dialog')).getByRole('table');
-  expect(screen.getByRole('status', { name: 'desktop.foregroundTime.total' })).toHaveTextContent('2m');
+  expect(screen.queryByRole('status', { name: 'desktop.foregroundTime.total' })).not.toBeInTheDocument();
+  expect(within(table).getByRole('rowheader', { name: 'desktop.foregroundTime.monthTotal' })).toBeVisible();
   expect(within(table).getByRole('columnheader', { name: 'June' })).toBeVisible();
   expect(within(table).getByRole('columnheader', { name: 'May' })).toBeVisible();
   expect(within(table).getAllByRole('columnheader', { name: /Items$/ })).toHaveLength(12);

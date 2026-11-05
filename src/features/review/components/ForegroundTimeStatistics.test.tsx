@@ -46,3 +46,47 @@ it('formats known zero, sub-minute time and unavailable time separately', () => 
   expect(formatForegroundTime(4_800_000, 'en')).toBe('80m');
   expect(formatForegroundTime(4_800_000, 'zh-Hans')).toBe('80分钟');
 });
+
+it('totals only recorded time per month before rounding, leaving Item and Topic totals empty', () => {
+  render(<ReviewCalendarTable months={[new Date(2028, 1, 1), new Date(2028, 2, 1)]} today="2028-03-02"
+    counts={() => ({ items: 3, topics: 7 })} duration={(day) => ({
+      '2028-02-01': 40_000, '2028-02-29': 40_000, '2028-03-01': 120_000,
+      '2028-03-02': 60_000, '2028-03-03': 900_000
+    } as Record<string, number>)[day] ?? null} />);
+  const footer = screen.getByRole('rowheader', { name: 'desktop.foregroundTime.monthTotal' }).closest('tr')!;
+  const cells = within(footer).getAllByRole('cell');
+  expect(cells.map((cell) => cell.textContent)).toEqual(['1m', '3m']);
+  cells.forEach((cell) => {
+    const values = within(cell).getByRole('group').children;
+    expect(values[0]).toHaveTextContent(/^$/);
+    expect(values[1]).toHaveTextContent(/^$/);
+  });
+});
+
+it('distinguishes known zero time from unavailable and future months', () => {
+  render(<ReviewCalendarTable months={[new Date(2026, 8, 1), new Date(2026, 9, 1), new Date(2026, 10, 1)]}
+    today="2026-10-02" counts={() => ({ items: null, topics: null })}
+    duration={(day) => day === '2026-10-01' ? 0 : null} />);
+  const footer = screen.getByRole('rowheader', { name: 'desktop.foregroundTime.monthTotal' }).closest('tr')!;
+  expect(within(footer).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['', '0m', '']);
+});
+
+it('omits time totals when the table has no time metric', () => {
+  render(<ReviewCalendarTable months={[new Date(2026, 9, 1)]} today="2026-10-02"
+    counts={() => ({ items: 3, topics: 7 })} />);
+  expect(screen.queryByRole('rowheader', { name: 'desktop.foregroundTime.monthTotal' })).not.toBeInTheDocument();
+});
+
+it('refreshes monthly totals as history loads, changes and becomes unavailable', () => {
+  const props = { months: [new Date(2026, 9, 1)], today: '2026-10-02',
+    counts: () => ({ items: 3, topics: 7 }) };
+  const { rerender } = render(<ReviewCalendarTable {...props} duration={() => null} />);
+  const footer = () => screen.getByRole('rowheader', { name: 'desktop.foregroundTime.monthTotal' }).closest('tr')!;
+  expect(within(footer()).getByRole('cell')).toHaveTextContent(/^$/);
+  rerender(<ReviewCalendarTable {...props} duration={() => 30_000} />);
+  expect(within(footer()).getByRole('cell')).toHaveTextContent(/^1m$/);
+  rerender(<ReviewCalendarTable {...props} duration={() => 60_000} />);
+  expect(within(footer()).getByRole('cell')).toHaveTextContent(/^2m$/);
+  rerender(<ReviewCalendarTable {...props} duration={() => null} />);
+  expect(within(footer()).getByRole('cell')).toHaveTextContent(/^$/);
+});
