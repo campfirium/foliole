@@ -96,7 +96,7 @@ test('returns from fullscreen Outline to the same reader and restores its opener
 
 
 test('continues through ten derived generations and opens the deep Item as a card', async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 812 });
+  await page.setViewportSize({ width: 320, height: 360 });
   await openOutline(page, 'deep');
   await expect(page.getByRole('button', { name: 'Derived detail 1', exact: true })).toHaveCount(0);
   let title = 'Topic passage in the original text.';
@@ -110,6 +110,37 @@ test('continues through ten derived generations and opens the deep Item as a car
   await page.getByRole('button', { name: 'Derived detail 10', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('document', { name: 'Question' })).toContainText('Body at depth 10.');
+});
+
+test('automatically expands every descendant that fits one screen and respects subsequent manual collapse', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await openOutline(page, 'compact');
+  for (let depth = 1; depth <= 3; depth++) {
+    await expect(page.getByRole('button', { name: `Derived detail ${depth}`, exact: true })).toBeInViewport();
+  }
+  const scroller = page.getByRole('dialog').locator('.app-scrollbar');
+  expect(await scroller.evaluate(element => element.scrollHeight <= element.clientHeight)).toBe(true);
+  await expect(page.getByRole('dialog').locator('.lucide-map-pin, .lucide-arrow-up-right')).toHaveCount(0);
+  const toggle = page.getByRole('button', { name: 'Toggle content for Topic passage in the original text. (1)', exact: true });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await toggle.click();
+  await page.setViewportSize({ width: 375, height: 900 });
+  await expect(page.getByRole('button', { name: 'Derived detail 1', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Source heading', exact: true })).toBeVisible();
+});
+
+test('keeps deeper content collapsed when the viewport or wrapped text cannot fit the whole tree', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 220 });
+  await openOutline(page, 'compact');
+  await expect(page.getByRole('button', { name: 'Derived detail 1', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Source heading', exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 812 });
+  await expect(page.getByRole('button', { name: 'Derived detail 3', exact: true })).toBeVisible();
+  await openOutline(page, 'wrapped');
+  const toggle = page.getByRole('button', { name: 'Toggle content for Topic passage in the original text. (1)', exact: true });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await toggle.click();
+  await expect(page.getByRole('button', { name: 'Long descendant title '.repeat(80).trim(), exact: true })).toBeVisible();
 });
 
 test('keeps all six heading levels and wraps long unlocated card titles on a narrow screen', async ({ page }) => {

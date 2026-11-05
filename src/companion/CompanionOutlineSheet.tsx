@@ -12,6 +12,7 @@ import { CompanionFullscreenSheet } from './CompanionFullscreenSheet';
 import { OutlineEntryRow, OutlineSectionHeading } from './CompanionOutlineRows';
 import type { CompanionReadingActivity } from './companionReadingActivity';
 import { useCompanionOutlineCardNavigation } from './useCompanionOutlineCardNavigation';
+import { useCompanionOutlineExpansion } from './useCompanionOutlineExpansion';
 
 interface OutlineSheetProps {
   activity?: CompanionReadingActivity | undefined;
@@ -33,13 +34,10 @@ function OutlineContents(props: OutlineSheetProps & { scrollElementRef: MutableR
   }), [props.content, props.nodeId, props.snapshot, props.textAnchorDecorations]);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const navigation = useCompanionOutlineCardNavigation({ ...props, entries: model.entries });
-  const [expandedEntries, setExpandedEntries] = useState<ReadonlySet<string>>(() =>
-    new Set(Object.values(model.entries).filter(entry => entry.kind === 'folder').map(entry => entry.id)));
+  const { expanded: expandedEntries, toggle: toggleEntry, markManual } = useCompanionOutlineExpansion(model, props.scrollElementRef);
   const rows = useMemo(() => collectVisibleOutlineRows(model, collapsed, expandedEntries), [model, collapsed, expandedEntries]);
-  function toggleEntry(id: string) {
-    setExpandedEntries(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
-  }
   function toggle(id: string) {
+    markManual();
     setCollapsed(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   }
   async function select(id: string) {

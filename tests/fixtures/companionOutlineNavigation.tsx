@@ -12,9 +12,9 @@ import { createExplicitArticleSnapshot, createNodeRecord } from '../../src/share
 import { resolveReadableCompanionArticleByNodeId } from '../../src/shared/platform/companionReadableArticle';
 
 const scenario = new URLSearchParams(window.location.search).get('scenario') ?? 'headings';
-const content = [...(['headings', 'deep', 'long'].includes(scenario) ? ['# Outline acceptance article'] : []), scenario === 'long'
+const content = [...(['headings', 'deep', 'compact', 'wrapped', 'long'].includes(scenario) ? ['# Outline acceptance article'] : []), scenario === 'long'
   ? Array.from({ length: 6 }, (_, index) => '#'.repeat(index + 1) + ` Heading ${index + 1}`).join('\n\n')
-  : ['headings', 'deep'].includes(scenario) ? '## Source heading' : 'Source text',
+  : ['headings', 'deep', 'compact', 'wrapped'].includes(scenario) ? '## Source heading' : 'Source text',
   ...Array.from({ length: 16 }, (_, index) => `Context paragraph ${index + 1}. Read the original text in this topic.`),
   'Topic passage in the original text.', 'Item passage in the original text.'].join('\n\n');
 const snapshot = createExplicitArticleSnapshot();
@@ -31,13 +31,14 @@ for (const kind of ['topic', 'item'] as const) {
   }) });
   snapshot.nodeOrder.push(kind);
 }
-if (scenario === 'deep') {
+if (['deep', 'compact', 'wrapped'].includes(scenario)) {
+  const levels = scenario === 'deep' ? 10 : 3;
   let parentNodeId = 'topic';
-  for (let depth = 1; depth <= 10; depth++) {
+  for (let depth = 1; depth <= levels; depth++) {
     const id = `deep-${depth}`;
     Object.assign(snapshot.nodesById, { [id]: createNodeRecord({ id, parentNodeId,
-      kind: depth === 10 ? 'item' : 'topic', title: `Derived detail ${depth}`,
-      content: `Body at depth ${depth}.`, reveal: depth === 10 ? 'Deep answer.' : null }) });
+      kind: depth === levels ? 'item' : 'topic', title: scenario === 'wrapped' && depth === 1 ? 'Long descendant title '.repeat(80) : `Derived detail ${depth}`,
+      content: `Body at depth ${depth}.`, reveal: depth === levels ? 'Deep answer.' : null }) });
     snapshot.nodeOrder.push(id);
     parentNodeId = id;
   }
