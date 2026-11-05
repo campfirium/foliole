@@ -4,12 +4,19 @@ import type { CompanionFolderBackupState } from '../../lib/platform/companionFol
 import { getCompanionAutomaticFolderBackup, subscribeCompanionAutomaticFolderBackup } from '../shared/platform/companion/folderBackup/companionAutomaticFolderBackup';
 import { getCompanionFolderBackupPort } from '../shared/platform/companion/folderBackup/companionFolderBackupRuntimeRepository';
 import { getCompanionFolderBackupState, subscribeCompanionFolderBackupWork } from '../shared/platform/companion/folderBackup/companionFolderBackupState';
+import { getCompanionSettingsPreview } from '../shared/platform/companionSettingsPreview';
 
 export function useCompanionFolderBackupState(supported: boolean) {
   const [state, setState] = useState<CompanionFolderBackupState | null>(null);
   const [automatic, setAutomatic] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
+    const preview = getCompanionSettingsPreview();
+    if (preview) {
+      const refresh = () => { const value = preview.snapshot(); setState(value.backup); setAutomatic(value.automaticBackup); setError(value.backup.errorMessage); };
+      refresh();
+      return preview.subscribe(refresh);
+    }
     if (!supported) return;
     let active = true;
     let receivedEvents = 0;

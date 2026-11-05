@@ -22,6 +22,7 @@ function reloadCompanionApp() {
 
 function ClearAppDataDialog(props: {
   isClearing: boolean;
+  unavailable: boolean;
   isOpen: boolean;
   onClear: () => void;
   onOpenChange: (open: boolean) => void;
@@ -40,7 +41,7 @@ function ClearAppDataDialog(props: {
             <button
               aria-busy={props.isClearing || undefined}
               className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-error/60 px-4 py-3 text-sm font-semibold text-error transition hover:bg-error/5 disabled:cursor-not-allowed ${props.isClearing ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
-              disabled={props.isClearing}
+              disabled={props.isClearing || props.unavailable}
               data-testid="companion-storage-clear-confirm"
               onClick={props.onClear}
               type="button"
@@ -91,7 +92,7 @@ export function CompanionStorageSettingsContent() {
           <SettingsControlSlot>
             <AppButton
               aria-busy={isClearing || undefined}
-              disabled={isClearing || !canClearAppData}
+              disabled={isClearing || (!canClearAppData && !preview)}
               data-testid="companion-storage-clear"
               onClick={() => setIsConfirmOpen(true)}
               variant="danger"
@@ -103,7 +104,8 @@ export function CompanionStorageSettingsContent() {
         </SettingsRow>
         {error ? <p className="mt-3 text-sm leading-6 text-error">{error}</p> : null}
       </SettingsSection> : null}
-      {canClearAppData ? <ClearAppDataDialog
+      {canClearAppData || preview ? <ClearAppDataDialog
+        unavailable={!canClearAppData}
         isClearing={isClearing}
         isOpen={isConfirmOpen}
         onClear={() => void handleClearAppData()}

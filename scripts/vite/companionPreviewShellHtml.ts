@@ -7,6 +7,8 @@ export function companionPreviewShellHtml(projectRoot: string) {
 <title>Foliole preview</title><style>
 html,body{margin:0;width:100%;height:100%;font:14px system-ui;color-scheme:light dark}
 body{overflow:hidden}
+.preview-data-note{position:absolute;top:12px;left:16px;max-width:260px;margin:0;color:GrayText;font:12px/1.6 system-ui}
+@media(max-width:650px){.preview-data-note{top:auto;bottom:4px;left:12px;right:12px;max-width:none;font-size:10px}}
 .preview-viewport{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(var(--preview-scale));transform-origin:center}
 .preview-status-bar{position:absolute;inset:0 0 auto;height:var(--preview-status-bar-height);box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;padding:0 22px 0 28px;background:Canvas;color:CanvasText;font:600 15px -apple-system,BlinkMacSystemFont,system-ui,sans-serif;letter-spacing:-.3px;user-select:none;pointer-events:none}
 .preview-status-icons{display:flex;align-items:center;gap:6px}

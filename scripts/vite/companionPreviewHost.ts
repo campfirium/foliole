@@ -1,6 +1,7 @@
 import { createCompanionPreviewDocument } from './companionPreviewDocument';
 import { createCompanionPreviewShareInboxPlugin, createCompanionPreviewSyncPlugin } from './companionPreviewHostPlugins';
 import { observeCompanionPreviewReadiness } from './companionPreviewReadiness';
+import { createCompanionSettingsPreview } from './companionSettingsPreview';
 import type {} from './companionPreviewShell';
 
 // Dev-only stand-in for the native Capacitor bridge. The companion Vite dev server injects
@@ -75,6 +76,7 @@ export function installCompanionPreviewHost(target: object, hostName: string) {
   const connection = createCompanionPreviewDocument();
   const { session } = connection;
   Object.assign(target, {
+    __folioleSettingsPreview: createCompanionSettingsPreview(),
     Capacitor: createCompanionPreviewBridge(createCompanionPreviewPlugins(hostName, session, connection.call)),
     CapacitorCustomPlatform: { name: COMPANION_PREVIEW_PLATFORM, plugins: {} }
   });

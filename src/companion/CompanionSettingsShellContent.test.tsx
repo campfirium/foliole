@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 
 const appDataRuntime = vi.hoisted(() => ({
   supportsClear: vi.fn(() => true),
@@ -17,6 +17,8 @@ vi.mock('../shared/platform/companionAppDataRuntimeRepository', () => ({
   isNativeAndroidCompanionRuntime: vi.fn(() => false),
   supportsCompanionAppDataClear: appDataRuntime.supportsClear
 }));
+
+import { createCompanionSettingsPreview } from '../../scripts/vite/companionSettingsPreview';
 
 import { CompanionCustomCssProvider } from './CompanionCustomCssProvider';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
@@ -42,6 +44,7 @@ describe('CompanionSettingsShellContent', () => {
     appDataRuntime.supportsClear.mockReturnValue(true);
     appDataRuntime.kind = 'web-preview';
   });
+  afterEach(() => { delete window.__folioleSettingsPreview; });
 
   it('keeps the settings entry focused on Sync and omits unavailable Device details', () => {
     render(<SettingsHarness />);
@@ -83,16 +86,34 @@ describe('CompanionSettingsShellContent', () => {
   it('opens Backup and Attachments directly from Settings and leaves clearing on the home page', async () => {
     appDataRuntime.kind = 'browser-preview';
     appDataRuntime.supportsClear.mockReturnValue(false);
+    window.__folioleSettingsPreview = createCompanionSettingsPreview();
     render(<SettingsHarness />);
-    expect(screen.getByRole('button', { name: 'Clear App Data' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Clear App Data' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear App Data' }));
+    const clearDialog = await screen.findByRole('dialog');
+    expect(within(clearDialog).getByRole('button', { name: 'Clear App Data' })).toBeDisabled();
+    fireEvent.click(within(clearDialog).getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByTestId('companion-settings-storage')).not.toBeInTheDocument();
-    expect(screen.getByTestId('companion-settings-backup')).toHaveTextContent('All backed up · Example');
+    expect(screen.getByTestId('companion-settings-backup')).toHaveTextContent('Pending automatic backup: 3');
     fireEvent.click(screen.getByTestId('companion-settings-backup'));
-    expect(screen.getByRole('status')).toHaveTextContent('All backed up · Example');
-    expect(screen.getByText('Backup status is an example. Backup actions are available in the mobile app.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Back up now' })).toBeDisabled();
-    expect(screen.getByRole('switch', { name: 'Automatic backup' })).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Pending automatic backup: 3');
+    expect(screen.queryByText(/Backup status is an example/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Documents / Foliole Backups' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Back up now' })).toBeEnabled();
+    expect(screen.getByRole('switch', { name: 'Automatic backup' })).toBeEnabled();
     expect(screen.queryByRole('switch', { name: 'Automatic cleanup' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Clear App Data' })).not.toBeInTheDocument();
   });
+});
+
+it('shows attachment size and trash summaries in preview without technical notices in the product page', async () => {
+  appDataRuntime.kind = 'browser-preview'; appDataRuntime.supportsClear.mockReturnValue(false);
+  window.__folioleSettingsPreview = createCompanionSettingsPreview();
+  const view = render(<SettingsHarness />);
+  expect(await screen.findByText('Used 16.2 MB · Trash 0 B')).toBeInTheDocument();
+  fireEvent.click(screen.getByTestId('companion-settings-attachments'));
+  expect(await screen.findByRole('button', { name: '30 days' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Move to trash' })).toBeEnabled();
+  expect(screen.queryByText(/available in the mobile app/)).not.toBeInTheDocument();
+  view.unmount(); delete window.__folioleSettingsPreview;
 });

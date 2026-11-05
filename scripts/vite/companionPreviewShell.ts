@@ -38,7 +38,10 @@ function createShellElements(document: Document) {
   const content = document.createElement('div');
   content.className = 'preview-content';
   content.append(frame, frozen, overlay);
-  document.body.append(viewport);
+  const note = document.createElement('p');
+  note.className = 'preview-data-note';
+  note.textContent = 'Settings preview uses demo data. Actions do not back up or delete your files.';
+  document.body.append(note, viewport);
   viewport.append(createCompanionPreviewStatusBar(document), content);
   return { frame, frozen, overlay, status, retry, viewport };
 }
