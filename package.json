@@ -10,6 +10,7 @@
   "main": "dist/electron/main.js",
   "scripts": {
     "capacitor:sync:before": "node scripts/build/mobile-sqlcipher.mjs",
+    "capacitor:copy:before": "node scripts/build/mobile-sqlcipher.mjs",
     "dev": "npm run appearance:colors:generate && vite",
     "build": "npm run appearance:colors:generate && tsc --incremental --tsBuildInfoFile .tmp/typescript/root.tsbuildinfo && vite build",
     "build:vite-only": "npm run appearance:colors:generate && vite build",
