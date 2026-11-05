@@ -17,6 +17,6 @@ export function createGithubSignOptions(options) {
 }
 
 export default async function signGithubApp(options) {
-  const { signAsync } = await import('@electron/osx-sign');
-  await signAsync(createGithubSignOptions(options));
+  const { sign } = await import('@electron/osx-sign');
+  await sign(createGithubSignOptions(options));
 }

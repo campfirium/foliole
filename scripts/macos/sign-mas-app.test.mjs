@@ -4,7 +4,13 @@ import { URL } from 'node:url';
 
 import { expect, it } from 'vitest';
 
-import { createMasSignOptions } from './sign-mas-app.mjs';
+import signGithubApp from './sign-github-app.mjs';
+import signMasApp, { createMasSignOptions } from './sign-mas-app.mjs';
+
+it.each([signMasApp, signGithubApp])('delegates signing input validation to the installed signer', async (signApp) => {
+  await expect(signApp({ app: '/invalid-signing-input.txt', optionsForFile: () => ({}) }))
+    .rejects.toThrow('Extension of application must be `.app`.');
+});
 
 it('grants JIT only to embedded Codex while keeping ordinary tools on sandbox inheritance', () => {
   const options = createMasSignOptions({

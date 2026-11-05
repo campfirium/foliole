@@ -48,8 +48,8 @@ export function createMacSignOptions(options, entitlements = {}) {
 }
 
 export default async function signMasApp(options) {
-  const { signAsync } = await import('@electron/osx-sign');
-  await signAsync(createMacSignOptions(options));
+  const { sign } = await import('@electron/osx-sign');
+  await sign(createMacSignOptions(options));
 }
 
 export const createMasSignOptions = createMacSignOptions;
