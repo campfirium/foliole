@@ -7,6 +7,7 @@ import { supportsCompanionFolderDatabaseBackup } from '../shared/platform/compan
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
 
 import { companionBackupSummary } from './companionBackupSummary';
+import { CompanionHighlightPrefixSetting } from './CompanionHighlightPrefixSetting';
 import { CompanionListRow, CompanionListSection } from './CompanionListSurface';
 import { CompanionStorageSettingsContent } from './CompanionStorageSettingsContent';
 import { useCompanionFolderBackupState } from './useCompanionFolderBackupState';
@@ -99,6 +100,7 @@ export function CompanionSettingsList(props: {
             title={t('companion.settings.learning.title')} /> : null}
           {props.onOpenClozeGuard ? <SettingsListItem Icon={RectangleEllipsis} detail="" onClick={props.onOpenClozeGuard}
             title={t('settings.editor.clozeGuard.section')} /> : null}
+          <CompanionHighlightPrefixSetting />
           {props.onOpenReviewStatistics ? <SettingsListItem Icon={CalendarDays} detail="" onClick={props.onOpenReviewStatistics}
             title={t('desktop.reviewCalendar.title')} /> : null}
           {props.onOpenForegroundTime ?

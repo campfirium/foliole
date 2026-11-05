@@ -1,4 +1,5 @@
 export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
+  'companion.settings.highlightPrefix.loadError': 'Annotation prefix could not be loaded. Try again.',
   'companion.settings.clozeGuard.loadError': 'Cloze guard settings could not be loaded. Try again.',
   'companion.settings.storage.clearConfirm': 'Clear data',
   'companion.settings.storage.backupFailedReason': 'Backup failed: {reason}',

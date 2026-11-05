@@ -6,6 +6,7 @@ import {
   deriveNodeTitleForCloze,
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
+import { getHighlightAnnotationPrefix } from '../shared/config/highlightAnnotationPrefixSetting';
 import { recordCompanionAnnotationHistory } from '../shared/platform/companion/editing/companionEditHistoryRecording';
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import { saveIosReviewWithDb } from '../shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites';
@@ -88,7 +89,7 @@ async function buildAnnotationDraft(args: PersistSelectionAnnotationArgs): Promi
   const content = args.kind === 'cloze'
     ? cloze.prompt
     : args.kind === 'note'
-      ? createSelectionAnnotatedHighlightContent(args.payload, args.note)
+      ? createSelectionAnnotatedHighlightContent(args.payload, args.note, getHighlightAnnotationPrefix())
       : createSelectionHighlightContent(args.payload);
   if (!content || (args.kind === 'cloze' && !cloze.answer)) {
     return null;
