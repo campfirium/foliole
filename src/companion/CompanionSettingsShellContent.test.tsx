@@ -98,7 +98,7 @@ describe('CompanionSettingsShellContent', () => {
     fireEvent.click(screen.getByTestId('companion-settings-backup'));
     expect(screen.getByRole('status')).toHaveTextContent('Pending automatic backup: 3');
     expect(screen.queryByText(/Backup status is an example/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Documents / Foliole Backups' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Backup location Documents / Foliole Backups' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Back up now' })).toBeEnabled();
     expect(screen.getByRole('switch', { name: 'Automatic backup' })).toBeEnabled();
     expect(screen.queryByRole('switch', { name: 'Automatic cleanup' })).not.toBeInTheDocument();

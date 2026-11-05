@@ -90,7 +90,7 @@ it('keeps automatic backup separate from folder authorization and lets it be dis
 it('lets the user stop using the folder without requesting another backup', async () => {
   fixture.forget.mockResolvedValue({ configured: false, directoryLabel: null, databaseSavedAt: null, phase: 'idle', errorMessage: null });
   const view = render(<CompanionFolderDatabaseBackupSection />);
-  fireEvent.click(await screen.findByRole('button', { name: 'Documents/Backup' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Backup location Documents/Backup' }));
   fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Stop using folder' }));
   await waitFor(() => expect(fixture.forget).toHaveBeenCalledTimes(1));
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Stop using folder' })).not.toBeInTheDocument());
@@ -113,7 +113,7 @@ it('keeps the remaining work visible in both modes and separates location detail
   await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Pending manual backup: 3'));
   act(() => { for (const listener of fixture.automaticListeners) listener(true); });
   expect(screen.getByRole('status')).toHaveTextContent('Pending automatic backup: 3');
-  fireEvent.click(screen.getByRole('button', { name: 'Documents/Backup' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Backup location Documents/Backup' }));
   const dialog = await screen.findByRole('dialog');
   expect(dialog).toHaveTextContent('Documents/Backup');
   expect(fixture.request).not.toHaveBeenCalled();

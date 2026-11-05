@@ -7,6 +7,7 @@ import { supportsCompanionFolderDatabaseBackup } from '../shared/platform/compan
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
 import { getCompanionSettingsPreview } from '../shared/platform/companionSettingsPreview';
 import { AppButton, AppSwitch, SettingsControlSlot, SettingsRow, SettingsSection } from '../shared/ui';
+import { SettingsValueRow } from '../shared/ui/SettingsValueRow';
 
 import { CompanionBackupLocationDialog } from './CompanionBackupLocationDialog';
 import { companionBackupSummary } from './companionBackupSummary';
@@ -50,12 +51,9 @@ export function CompanionFolderDatabaseBackupSection() {
     <section>
       <p className="mb-5 text-sm leading-6 text-companion-text-secondary">{t('companion.settings.storage.databaseBackupHint')}</p>
       <SettingsSection ariaLabel={t('companion.settings.storage.databaseBackup')}>
-        <SettingsRow controlLayout="inline" title={t('companion.settings.storage.backupFolder')}>
-          <SettingsControlSlot><AppButton disabled={working || !supported} size="sm"
-            onClick={() => state?.configured ? setLocationOpen(true) : void run(true)}>
-            {state?.directoryLabel ?? t('companion.settings.storage.chooseBackupFolder')}
-          </AppButton></SettingsControlSlot>
-        </SettingsRow>
+        <SettingsValueRow title={t('companion.settings.storage.backupFolder')}
+          value={state?.directoryLabel ?? t('companion.settings.storage.chooseBackupFolder')}
+          disabled={working || !supported} onClick={() => state?.configured ? setLocationOpen(true) : void run(true)} />
         <SettingsRow controlLayout="inline" title={t('companion.settings.storage.automaticBackup')} description={t('companion.settings.storage.automaticBackupHint')}>
           <SettingsControlSlot><AppSwitch aria-label={t('companion.settings.storage.automaticBackup')} checked={automatic === true}
             disabled={automatic === null || changingAutomatic || forgetting || (!state?.configured && automatic !== true)}

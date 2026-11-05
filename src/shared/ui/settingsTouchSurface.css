@@ -79,3 +79,10 @@
   position: absolute;
   inset: -10px 0;
 }
+.settings-touch-surface [data-settings-value-row] {
+  display: block;
+  padding: 0;
+}
+.settings-touch-surface [data-settings-value-row] > button {
+  min-height: var(--settings-touch-row-height);
+}
