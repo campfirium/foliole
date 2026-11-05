@@ -9,6 +9,19 @@ const read = (file) => fs.readFileSync(file, 'utf8');
 const hostedSource = read('.github/workflows/t7-hosted-quality.yml');
 const hosted = parse(hostedSource);
 const release = parse(read('.github/workflows/t7-release.yml'));
+const remote = parse(read('.github/workflows/remote-quality.yml'));
+const dispatchDefaults = Object.fromEntries(Object.entries(remote.on.workflow_dispatch.inputs)
+  .filter(([, input]) => Object.hasOwn(input, 'default'))
+  .map(([name, input]) => [name, input.default]));
+
+const concurrencyFor = (ref, overrides = {}) => {
+  const context = { github: { ref }, inputs: { ...dispatchDefaults, ...overrides } };
+  const evaluate = (expression) => runInNewContext(expression.slice(3, -2), context);
+  return {
+    group: evaluate(remote.concurrency.group),
+    'cancel-in-progress': evaluate(remote.concurrency['cancel-in-progress']),
+  };
+};
 
 describe('T7 hosted quality workflow contract', () => {
   it('owns the scheduled and manual dev entry above the reusable dev chain', () => {
@@ -35,17 +48,12 @@ describe('T7 hosted quality workflow contract', () => {
   });
 
   it('serializes scheduled and manual dev quality while release keeps its own group', () => {
-    const remote = parse(read('.github/workflows/remote-quality.yml'));
-    const inputs = { mobile_distribution: 'none' };
-    const groupFor = (ref, distribution = 'none') => runInNewContext(remote.concurrency.group.slice(3, -2),
-      { github: { ref }, inputs: { mobile_distribution: distribution } });
-    expect(groupFor('refs/heads/dev')).toBe('quality-dev');
-    expect(groupFor('refs/heads/check')).toBe('quality-qa');
-    expect(runInNewContext(remote.concurrency['cancel-in-progress'].slice(3, -2), { inputs })).toBe(true);
+    expect(dispatchDefaults).toMatchObject({ mobile_distribution: 'none', mobile_quality_run_id: '' });
+    expect(concurrencyFor('refs/heads/dev')).toEqual({ group: 'quality-dev', 'cancel-in-progress': true });
+    expect(concurrencyFor('refs/heads/check')).toEqual({ group: 'quality-qa', 'cancel-in-progress': true });
     for (const distribution of ['ios', 'android']) {
-      expect(groupFor('refs/heads/check', distribution)).toBe('quality-qa-mobile');
-      expect(runInNewContext(remote.concurrency['cancel-in-progress'].slice(3, -2),
-        { inputs: { mobile_distribution: distribution } })).toBe(false);
+      expect(concurrencyFor('refs/heads/check', { mobile_distribution: distribution }))
+        .toEqual({ group: 'quality-qa-mobile', 'cancel-in-progress': false });
     }
     expect(hosted.concurrency).toEqual({ group: 'quality-dev', 'cancel-in-progress': false });
     expect(release.concurrency).toEqual({ group: 'quality-release', 'cancel-in-progress': true });
@@ -53,6 +61,19 @@ describe('T7 hosted quality workflow contract', () => {
     const referencing = workflows.filter((file) => read(`.github/workflows/${file}`).includes('quality-release'));
     expect(referencing).toEqual(['t7-release.yml']);
     expect(workflows.some((file) => read(`.github/workflows/${file}`).includes('foliole-t7-exclusive'))).toBe(false);
+  });
+
+  it('keeps iOS distribution resume in the non-cancelling mobile group', () => {
+    expect(concurrencyFor('refs/heads/check', {
+      scope: 'full', mobile_distribution: 'ios', mobile_quality_run_id: '42',
+    })).toEqual({ group: 'quality-qa-mobile', 'cancel-in-progress': false });
+  });
+
+  it.each(['refs/heads/dev', 'refs/heads/check'])('accepts an empty distribution on %s', (ref) => {
+    expect(concurrencyFor(ref, { mobile_distribution: '' })).toEqual({
+      group: ref === 'refs/heads/check' ? 'quality-qa' : 'quality-dev',
+      'cancel-in-progress': true,
+    });
   });
 
   it('scopes reusable quality job groups to the calling run', () => {
