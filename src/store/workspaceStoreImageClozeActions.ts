@@ -1,5 +1,6 @@
 import { pushEditorOperationEntry } from '../features/editor/model/editorOperationHistory';
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../features/image-cloze/model/imageCloze';
+import { imageClozeNodeFields } from '../features/image-cloze/model/imageClozeDraft';
 import { deriveNodeTitleForCloze } from '../features/nodes/model/deriveNodeTitle';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligibility';
@@ -53,29 +54,10 @@ function createImageClozeNode(
   const createdNode: WorkspaceNode = {
     id: nodeId,
     parentNodeId,
-    kind: 'item',
+    ...imageClozeNodeFields(attachmentId, sourcePayload, regions),
     title: untitledState.title,
     hasContent: sourcePayload.promptContent.trim().length > 0,
-    content: sourcePayload.promptContent,
-    anchorLink: {
-      id: primaryRegion.id,
-      kind: 'cloze',
-      locator: {
-        attachmentId,
-        height: primaryRegion.height,
-        width: primaryRegion.width,
-        x: primaryRegion.x,
-        y: primaryRegion.y
-      }
-    },
-    imageRegions: [
-      {
-        attachmentId,
-        regions: regions.map(({ id, height, width, x, y }) => ({ id, height, width, x, y }))
-      }
-    ],
     hasReveal: true,
-    reveal: sourcePayload.revealContent,
     review: createImageClozeReviewProfile(state, timestamp),
     createdAt: timestamp,
     updatedAt: timestamp

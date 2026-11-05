@@ -3,7 +3,6 @@ import { isImageClozeLocator, type ImageRegionLocator as ImageClozeLocator } fro
 import {
   isTextAnchorLocator,
   type Node,
-  type NodeAnchorLink,
   type NodeImageRegionGroup
 } from '../../nodes/model/nodeTypes';
 
@@ -11,6 +10,10 @@ import { appendUniqueRegions, collectChildRegionIds, collectNodePresentedRegions
 
 export { isImageClozeLocator, removeImageClozeRegion } from '../../../../lib/core/nodes/imageRegionRemoval';
 export type { ImageRegionLocator as ImageClozeLocator } from '../../../../lib/core/nodes/imageRegionRemoval';
+
+export type ImageClozeNodeSource = Pick<Node, 'id' | 'parentNodeId' | 'imageRegions'> & {
+  anchorLink?: { id: string; kind: string; locator?: unknown } | null;
+};
 
 export interface ImageClozeSourcePayload {
   promptContent: string;
@@ -68,24 +71,24 @@ export function appendImageClozeRegions(
   return existingGroups.map((group) => group === existingGroup ? { ...group, regions: appendedRegions } : group);
 }
 
-function isImageClozeAnchorLink(anchorLink: NodeAnchorLink | null | undefined) {
+function isImageClozeAnchorLink(anchorLink: ImageClozeNodeSource['anchorLink']) {
   return anchorLink?.kind === 'cloze' && isImageClozeLocator(anchorLink.locator);
 }
 
-export function getImageClozeLocator(anchorLink: NodeAnchorLink | null | undefined): ImageClozeLocator | null {
+export function getImageClozeLocator(anchorLink: ImageClozeNodeSource['anchorLink']): ImageClozeLocator | null {
   if (!anchorLink || anchorLink.kind !== 'cloze' || !isImageClozeLocator(anchorLink.locator)) {
     return null;
   }
   return anchorLink.locator;
 }
 
-export function isImageClozeNode(node: Node | null | undefined) {
+export function isImageClozeNode(node: ImageClozeNodeSource | null | undefined) {
   return Boolean(node && isImageClozeAnchorLink(node.anchorLink));
 }
 
-export function deriveImageClozeRegionsFromChildren(args: {
+export function deriveImageClozeRegionsFromChildren<T extends ImageClozeNodeSource>(args: {
   nodeId: string;
-  nodesById: Record<string, Node>;
+  nodesById: Record<string, T>;
   trashedNodeIds?: string[];
 }) {
   const groupsByAttachmentId = new Map<string, NodeImageRegionGroup>();
@@ -96,7 +99,7 @@ export function deriveImageClozeRegionsFromChildren(args: {
     !(node.anchorLink?.kind === 'image-excerpt' && isTextAnchorLocator(node.anchorLink.locator))
   );
 
-  const childrenByParentId = new Map<string | null, Node[]>();
+  const childrenByParentId = new Map<string | null, ImageClozeNodeSource[]>();
   for (const node of visibleNodes) {
     const siblings = childrenByParentId.get(node.parentNodeId) ?? [];
     siblings.push(node);

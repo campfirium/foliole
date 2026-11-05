@@ -3,6 +3,7 @@ import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligi
 import { FlowExitHereContext } from '../shared/ui/FlowExitHereContext';
 
 import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
+import { CompanionImageClozeLayer } from './CompanionImageClozeLayer';
 import { CompanionNextTopicFooter } from './CompanionNextTopicFooter';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import { ReviewBreadcrumb } from './CompanionReviewBreadcrumb';
@@ -120,6 +121,8 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
 
   return (
     <FlowExitHereContext.Provider value={exitFlowHere}>
+    <CompanionImageClozeLayer activity={activity} nodeId={nodeId} workspaceSync={props.workspaceSync}
+      content={props.surface.readableArticle.content} versionId={props.surface.readableArticle.currentVersionId ?? null}>
     <ImmersiveReadableArticle
       key={props.surface.readableArticle.nodeId}
       searchMatch={props.searchMatch}
@@ -140,6 +143,7 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
       syncEndpointUrl={resolveShellSyncEndpoint(props.workspaceSync)}
       {...resolveNodeMutationProps(props.workspaceSync, activity, props.surface.readableArticle.nodeId)}
     />
+    </CompanionImageClozeLayer>
     </FlowExitHereContext.Provider>
   );
 }

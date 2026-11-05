@@ -1,0 +1,17 @@
+export const EN_COMPANION_IMAGE_CLOZE_TRANSLATIONS = {
+  'companion.imageCloze.confirm': 'Confirm',
+  'companion.imageCloze.title': 'Image cloze',
+  'companion.imageCloze.saving': 'Creating…',
+  'companion.imageCloze.positionHelp': 'Pinch to zoom and drag to position the image. Then add a mask.',
+  'companion.imageCloze.markHelp': 'Drag a mask to move it. Drag its corners to resize it.',
+  'companion.imageCloze.source': 'Original image',
+  'companion.imageCloze.region': 'Mask {number}',
+  'companion.imageCloze.missing': 'The image is unavailable. Cancel and reopen it after the image is restored.',
+  'companion.imageCloze.failed': 'Could not create the Item. Your masks are kept; try confirming again. If the article changed, cancel and reopen the image.',
+  'companion.imageCloze.zoomOut': 'Zoom out',
+  'companion.imageCloze.zoomIn': 'Zoom in',
+  'companion.imageCloze.adjust': 'Adjust masks',
+  'companion.imageCloze.position': 'Position image',
+  'companion.imageCloze.add': 'Add mask',
+  'companion.imageCloze.remove': 'Remove last mask',
+} as const;

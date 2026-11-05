@@ -12,5 +12,5 @@ export function selectImageClozeOccurrencePresentation(
     region.attachmentId === imageMatch.attachmentId &&
     (!region.imageRange || region.imageRange.from === imageMatch.from && region.imageRange.to === imageMatch.to)
   );
-  return regions.length > 0 ? { ...presentation, regions } : null;
+  return { ...presentation, regions };
 }

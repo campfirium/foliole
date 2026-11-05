@@ -2,6 +2,7 @@ import type { TranslationKey } from '../translations';
 
 import { ZH_HANS_COMPANION_APP_TRANSLATIONS } from './zhHansCompanionApp';
 import { ZH_HANS_COMPANION_CAPTURE_TRANSLATIONS } from './zhHansCompanionCapture';
+import { ZH_HANS_COMPANION_IMAGE_CLOZE_TRANSLATIONS } from './zhHansCompanionImageCloze';
 import { ZH_HANS_COMPANION_READING_TRANSLATIONS } from './zhHansCompanionReading';
 import { ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS } from './zhHansCompanionReadingTypography';
 import { ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS } from './zhHansCompanionSettings';
@@ -9,6 +10,7 @@ import { ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS } from './zhHansCompanionSettin
 export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   ...ZH_HANS_COMPANION_APP_TRANSLATIONS,
   ...ZH_HANS_COMPANION_CAPTURE_TRANSLATIONS,
+  ...ZH_HANS_COMPANION_IMAGE_CLOZE_TRANSLATIONS,
   ...ZH_HANS_COMPANION_READING_TRANSLATIONS,
   ...ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS,
   ...ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS,

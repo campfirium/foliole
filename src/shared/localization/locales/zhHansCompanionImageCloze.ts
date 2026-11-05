@@ -1,0 +1,17 @@
+export const ZH_HANS_COMPANION_IMAGE_CLOZE_TRANSLATIONS = {
+  'companion.imageCloze.confirm': '确定',
+  'companion.imageCloze.title': '图片挖空',
+  'companion.imageCloze.saving': '正在创建…',
+  'companion.imageCloze.positionHelp': '双指缩放、拖动图片，定好位置后添加遮罩。',
+  'companion.imageCloze.markHelp': '拖动遮罩调整位置，拖动四角调整大小。',
+  'companion.imageCloze.source': '原图',
+  'companion.imageCloze.region': '遮罩 {number}',
+  'companion.imageCloze.missing': '图片暂不可用，请取消，待图片恢复后重新打开。',
+  'companion.imageCloze.failed': '未能创建 Item，已保留遮罩，可再次确认。若正文已变化，请取消后重新打开图片。',
+  'companion.imageCloze.zoomOut': '缩小图片',
+  'companion.imageCloze.zoomIn': '放大图片',
+  'companion.imageCloze.adjust': '调整遮罩',
+  'companion.imageCloze.position': '调整图片',
+  'companion.imageCloze.add': '添加遮罩',
+  'companion.imageCloze.remove': '移除最后一个遮罩',
+} as const;

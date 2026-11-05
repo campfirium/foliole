@@ -1,6 +1,6 @@
-import type { Node, NodeImageRegionGroup } from '../../nodes/model/nodeTypes';
+import type { NodeImageRegionGroup } from '../../nodes/model/nodeTypes';
 
-import { getImageClozeLocator } from './imageCloze';
+import { getImageClozeLocator, type ImageClozeNodeSource } from './imageCloze';
 
 export function appendUniqueRegions(
   groupsByAttachmentId: Map<string, NodeImageRegionGroup>,
@@ -24,7 +24,7 @@ export function appendUniqueRegions(
   }
 }
 
-export function collectNodePresentedRegions(node: Node) {
+export function collectNodePresentedRegions(node: ImageClozeNodeSource) {
   const presentedByAttachmentId = new Map<string, NodeImageRegionGroup>();
   for (const group of node.imageRegions ?? []) {
     appendUniqueRegions(presentedByAttachmentId, group.attachmentId, group.regions);
@@ -45,7 +45,7 @@ export function collectNodePresentedRegions(node: Node) {
   return presentedByAttachmentId;
 }
 
-export function collectChildRegionIds(nodes: Node[]) {
+export function collectChildRegionIds(nodes: ImageClozeNodeSource[]) {
   const regionIdsByAttachmentId = new Map<string, Set<string>>();
   for (const node of nodes) {
     const presentedRegions = collectNodePresentedRegions(node);
