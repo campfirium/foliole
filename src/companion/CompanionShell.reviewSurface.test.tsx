@@ -82,7 +82,8 @@ it.each([readingReviewCard, fsrsReviewCard])('keeps the page toolbar hidden thro
   refresh();
   expect(screen.queryByRole('heading', { name: 'Flow' })).not.toBeInTheDocument();
   expect(screen.queryByTestId('companion-reading-exit')).not.toBeInTheDocument();
-  expect(screen.getByText('Loading topic body.')).toBeInTheDocument();
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  expect(screen.queryByText('Loading topic body.')).not.toBeInTheDocument();
   expect(screen.getByRole('navigation', { name: 'Review breadcrumb' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: card.title })).not.toBeInTheDocument();
   expect(screen.getByLabelText(card.itemKind === 'fsrs' ? 'Good' : 'Read')).toBeDisabled();

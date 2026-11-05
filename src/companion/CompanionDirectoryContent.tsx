@@ -8,7 +8,7 @@ import {
   resolveCompanionFolderViewByNodeId,
   resolveCompanionTrashFolderViewByNodeId
 } from '../shared/platform/companionBrowseLists';
-import { AppButton, AppLoadingState } from '../shared/ui';
+import { AppButton } from '../shared/ui';
 
 import { toReadableExternalArticle } from './CompanionDirectoryExternalArticle';
 import { CompanionDirectoryList } from './CompanionDirectoryListSurface';
@@ -138,11 +138,10 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
     );
   }
 
-  if (props.articleOnly) return <section className="fixed inset-0 z-surface-raised bg-companion-base px-4 pt-12">
+  if (props.articleOnly) return <section aria-busy="true" className="fixed inset-0 z-surface-raised bg-companion-base px-4 pt-12">
     <AppButton onClick={() => props.onExitArticle(parentSelection ?? { kind: 'root' })} variant="ghost">
       {t('companion.back')}
     </AppButton>
-    <AppLoadingState title={t('companion.topicBody.loading.title')} />
   </section>;
 
   return <CompanionDirectoryListContent
