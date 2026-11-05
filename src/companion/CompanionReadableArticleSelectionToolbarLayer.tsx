@@ -1,7 +1,11 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import { readCompanionHighlight } from '../shared/platform/companion/reading/companionHighlightRead';
 import type { CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 
+import type { CompanionExistingHighlightTarget } from './companionExistingHighlightActions';
+import { resolveCompanionAdjustableHighlight } from './CompanionHighlightRangeHandles';
+import type { CompanionHighlightRangeHandler } from './companionHighlightRangePersistence';
 import {
   CompanionSelectionAnnotationToolbar,
   type CompanionSelectionAnnotationKind,
@@ -11,6 +15,10 @@ import {
 import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
 
 export function SelectionAnnotationToolbarLayer(props: {
+  editor?: EditorAdapter | null;
+  parentNodeId?: string;
+  onAdjustExistingHighlightRange?: CompanionHighlightRangeHandler;
+  onActivateExistingHighlight?: (target: CompanionExistingHighlightTarget) => void;
   onAddExistingHighlightNote?: (nodeId: string, originalText: string, note: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
   onClose(): void;
   onOpenExistingHighlight?: ((nodeId: string) => void) | undefined;
@@ -24,14 +32,24 @@ export function SelectionAnnotationToolbarLayer(props: {
   state: CompanionSelectionAnnotationToolbarState | null;
   snapshot: WorkspaceSnapshot | null;
 }) {
+  const adjustable = resolveCompanionAdjustableHighlight({ editor: props.editor ?? null,
+    nodeId: props.state?.existingHighlight?.nodeId, parentNodeId: props.parentNodeId, snapshot: props.snapshot });
+  const state = props.state?.existingHighlight && adjustable ? { ...props.state,
+    existingHighlight: { ...props.state.existingHighlight, originalText: adjustable.locator.originalText } } : props.state;
   return (
     <CompanionSelectionAnnotationToolbar
+      editor={props.editor} parentNodeId={props.parentNodeId} snapshot={props.snapshot}
+      onAdjustExistingHighlightRange={props.onAdjustExistingHighlightRange}
       onAddExistingHighlightNote={async (nodeId, originalText, note, guard) => {
         const result = await props.onAddExistingHighlightNote?.(nodeId, originalText, note, guard);
         if (!result) throw new Error('companion_highlight_node_unavailable');
       }}
       onApply={async (kind, payload, note) => {
-        await props.onCreateSelectionAnnotation?.(kind, payload, note);
+        const nodeId = await props.onCreateSelectionAnnotation?.(kind, payload, note);
+        if (nodeId && props.onActivateExistingHighlight) {
+          props.onActivateExistingHighlight({ nodeId, kind: kind === 'cloze' ? 'cloze' : 'highlight', originalText: payload.selectionText });
+          return true;
+        }
       }}
       onClose={props.onClose}
       onOpenExistingHighlight={props.onOpenExistingHighlight}
@@ -41,7 +59,7 @@ export function SelectionAnnotationToolbarLayer(props: {
       }}
       resolveSelectionPayload={props.resolveSelectionPayload}
       loadExistingHighlight={(nodeId) => readCompanionHighlight(props.snapshot, nodeId, props.state?.existingHighlight?.kind)}
-      state={props.state}
+      state={state}
     />
   );
 }

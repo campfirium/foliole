@@ -5,11 +5,12 @@ import type { CompanionContentSaveHandler } from '../shared/platform/companion/e
 import type { CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligibility';
 
+import { CompanionArticleSelectionLayer } from './CompanionArticleSelectionLayer';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { findCompanionClozeTarget } from './companionExistingHighlightActions';
+import type { CompanionHighlightRangeHandler } from './companionHighlightRangePersistence';
 import { ImmersiveArticleContent } from './CompanionImmersiveArticleContent';
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
-import { SelectionAnnotationToolbarLayer } from './CompanionReadableArticleSelectionToolbarLayer';
 import type { CompanionReadingActivity } from './companionReadingActivity';
 import { useCompanionReadingDisplayLayout } from './companionReadingDisplayLayout';
 import { CompanionReviewHeader } from './CompanionReviewHeader';
@@ -23,7 +24,7 @@ import { useCompanionContentEditingActions } from './useCompanionContentEditingA
 import { useCompanionItemEditViewport } from './useCompanionItemEditViewport';
 import { useCompanionNodeTextAlternative } from './useCompanionNodeTextAlternative';
 import { useCompanionPagedScroll } from './useCompanionPagedScroll';
-import { createPendingAnnotationActions, useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
+import { useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
 import { useCompanionReadableAndroidBack } from './useCompanionReadableAndroidBack';
 import type { CompanionReadingNavigationControls } from './useCompanionReadingNavigation';
 import { useCompanionReadingTypographySettings } from './useCompanionReadingTypographySettings';
@@ -35,7 +36,7 @@ import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
 
-interface ImmersiveReadableArticleProps {
+export interface ImmersiveReadableArticleProps {
   editHistory?: CompanionEditHistoryActionsProps;
   navigation?: CompanionReadingNavigationControls | undefined;
   activity?: CompanionReadingActivity;
@@ -52,6 +53,7 @@ interface ImmersiveReadableArticleProps {
     note?: string
   ) => Promise<string | null> | string | null;
   onAddExistingHighlightNote?: (nodeId: string, originalText: string, note: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
+  onAdjustExistingHighlightRange?: CompanionHighlightRangeHandler;
   onDeleteExistingHighlight?: (nodeId: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
   onOpenExistingHighlight?: ((nodeId: string) => void) | undefined;
   onBack?: () => void;
@@ -196,7 +198,6 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   const itemEditing = model.reading.isContentEditing && props.isReviewItem === true && props.answer != null;
   useCompanionItemEditViewport(scrollPosition.surfaceRef, itemEditing);
   const pagedStyle = useCompanionPagedScroll(scrollPosition.surfaceRef, model.reading.isContentEditing);
-  const { createSelectionAnnotation, deleteExistingHighlight } = createPendingAnnotationActions(props, pendingReadableArticle);
   return (
     <section
       data-reading-chrome-visible={model.reading.isChromeVisible && !model.reading.isContentEditing}
@@ -229,19 +230,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
         })}
       />
       <>{model.reading.isContentEditing ? null : props.footer}</>
-      <SelectionAnnotationToolbarLayer
-        key={props.readableArticle.nodeId}
-        onOpenExistingHighlight={props.onOpenExistingHighlight}
-        snapshot={props.snapshot}
-        onClose={model.toolbar.clearSelectionAndCloseToolbar}
-        resolveSelectionPayload={model.toolbar.resolveSelectionPayload}
-        state={model.toolbar.selectionToolbar}
-        {...definedProps({
-          onAddExistingHighlightNote: props.onAddExistingHighlightNote,
-          onCreateSelectionAnnotation: props.onCreateSelectionAnnotation ? createSelectionAnnotation : undefined,
-          onDeleteExistingHighlight: props.onDeleteExistingHighlight ? deleteExistingHighlight : undefined
-        })}
-      />
+      <CompanionArticleSelectionLayer articleProps={props} toolbar={model.toolbar} pending={pendingReadableArticle} />
     </section>
   );
 }

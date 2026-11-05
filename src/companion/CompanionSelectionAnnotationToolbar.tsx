@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionHighlightRead, CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 import type { SelectionCommandPayload } from '../shared/selectionCommandPayload';
@@ -7,6 +9,8 @@ import { AppButton, appFloatingSurfaceClassName } from '../shared/ui';
 
 import { CompanionClozeGuardDialog } from './CompanionClozeGuardDialog';
 import type { CompanionExistingHighlightTarget } from './companionExistingHighlightActions';
+import { CompanionHighlightRangeHandles } from './CompanionHighlightRangeHandles';
+import type { CompanionHighlightRangeHandler } from './companionHighlightRangePersistence';
 import { CompanionSelectionNotePanel, CompanionSelectionToolbarActions } from './CompanionSelectionToolbarControls';
 import { useCompanionHighlightSession } from './useCompanionHighlightSession';
 import { useCompanionSelectionApply } from './useCompanionSelectionApply';
@@ -23,8 +27,12 @@ export interface CompanionSelectionAnnotationToolbarState {
 }
 
 interface CompanionSelectionAnnotationToolbarProps {
+  editor?: EditorAdapter | null | undefined;
+  parentNodeId?: string | undefined;
+  snapshot?: WorkspaceSnapshot | null | undefined;
+  onAdjustExistingHighlightRange?: CompanionHighlightRangeHandler | undefined;
   onAddExistingHighlightNote: (nodeId: string, originalText: string, note: string, guard?: CompanionHighlightReadGuard) => Promise<void> | void;
-  onApply: (kind: CompanionSelectionAnnotationKind, payload: SelectionCommandPayload, note?: string) => Promise<void> | void;
+  onApply: (kind: CompanionSelectionAnnotationKind, payload: SelectionCommandPayload, note?: string) => Promise<void | boolean> | void | boolean;
   onClose: () => void;
   onOpenExistingHighlight?: ((nodeId: string) => void) | undefined;
   onDeleteExistingHighlight: (nodeId: string, guard?: CompanionHighlightReadGuard) => Promise<void> | void;
@@ -67,9 +75,17 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
     session.save(() => props.onDeleteExistingHighlight(target.nodeId, session.guard), props.onClose);
   }
   return (
-    <div className="fixed z-floating [--shadow-popover:none]" data-companion-selection-toolbar="true"
+    <div className="fixed z-floating select-none [--shadow-popover:none]" data-companion-selection-toolbar="true"
       onContextMenu={(event) => event.preventDefault()} onPointerDown={(event) => event.stopPropagation()}
       style={{ left: state.left, top: state.top }}>
+      {state.existingHighlight && props.onAdjustExistingHighlightRange ? <CompanionHighlightRangeHandles
+        editor={props.editor ?? null} parentNodeId={props.parentNodeId} nodeId={state.existingHighlight.nodeId}
+        snapshot={props.snapshot ?? null} disabled={disabled || isNoteOpen}
+        onCommit={(nodeId, range) => session.save(async () => {
+          if (!session.guard || !props.editor) throw new Error('companion_highlight_node_unavailable');
+          const result = await props.onAdjustExistingHighlightRange!(nodeId, range, props.editor.getContent(), session.guard);
+          if (!result) throw new Error('companion_highlight_node_unavailable');
+        }, () => {})} /> : null}
       {creation.guardPayload ? <CompanionClozeGuardDialog
         disabled={creation.saving || creation.saved} onCancel={creation.cancelGuard} onChoose={creation.confirmGuard}
         status={creation.error ? <CreationStatus creation={creation} /> : null} /> : null}

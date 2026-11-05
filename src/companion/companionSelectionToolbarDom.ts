@@ -6,7 +6,11 @@ const ARTICLE_INTERACTIVE_TARGET_SELECTOR = 'button, a, input, textarea, select,
 const RECENT_SELECTION_INTERACTION_MS = 2_000;
 
 export function isCompanionSelectionToolbarTarget(target: EventTarget | null) {
-  return target instanceof Element && target.closest('[data-companion-selection-toolbar]') !== null;
+  return target instanceof Element && target.closest('[data-companion-selection-toolbar], [data-highlight-range-handle]') !== null;
+}
+
+export function isCompanionHighlightRangeDragging() {
+  return document.querySelector('[data-highlight-range-dragging="true"]') !== null;
 }
 
 export function isCompanionArticleInteractiveTarget(target: EventTarget | null) {

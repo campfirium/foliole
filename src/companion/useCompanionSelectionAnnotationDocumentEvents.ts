@@ -92,6 +92,7 @@ export function useCompanionSelectionAnnotationDocumentEvents(args: SelectionAnn
       return;
     }
     const rememberSelectionInteraction = (event: MouseEvent | PointerEvent | TouchEvent) => {
+      if (toolbarDom.isCompanionHighlightRangeDragging()) return;
       if (event.type === 'pointerdown') tapRef.current = readSelectionAtTap(args.editorRef.current, event as PointerEvent);
       if (event.type === 'touchmove') tapRef.current = null;
       const tap = tapRef.current;
@@ -105,6 +106,7 @@ export function useCompanionSelectionAnnotationDocumentEvents(args: SelectionAnn
       args.closeSelectionToolbar();
     };
     const handleSelectionEnd = (event: MouseEvent | PointerEvent | TouchEvent) => {
+      if (toolbarDom.isCompanionHighlightRangeDragging()) return;
       const started = tapRef.current;
       if (event.type === 'pointerup') tapRef.current = null;
       if (clearFinishedOutsideTap(event, started, args)) return;
@@ -116,6 +118,7 @@ export function useCompanionSelectionAnnotationDocumentEvents(args: SelectionAnn
       args.scheduleSelectionToolbarOpen(args.lastFallbackRef.current, isExistingHighlightTarget(event.target));
     };
     const handleSelectionChange = () => {
+      if (toolbarDom.isCompanionHighlightRangeDragging()) return;
       if (toolbarDom.isCompanionSelectionToolbarActiveElement()) return;
       if (toolbarDom.hasRecentSelectionInteraction(args.lastSelectionInteractionAtRef.current)) {
         args.scheduleSelectionToolbarOpen(undefined, false);

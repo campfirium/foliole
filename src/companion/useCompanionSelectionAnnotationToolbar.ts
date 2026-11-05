@@ -158,6 +158,17 @@ function useOwnedSelectionToolbar(nodeId: string) {
   return [selectionToolbar, setSelectionToolbar] as const;
 }
 
+function createdHighlightActivation(
+  clear: () => void,
+  set: (state: CompanionSelectionAnnotationToolbarState) => void,
+  scheduler: ReturnType<typeof useCompanionSelectionAnnotationScheduler>
+) {
+  return (target: Parameters<typeof resolveExistingHighlightToolbarState>[0]) => {
+    clear();
+    set(resolveExistingHighlightToolbarState(target, scheduler.lastFallbackRef.current ?? getDefaultSelectionClientPoint()));
+  };
+}
+
 export function useCompanionSelectionAnnotationToolbar(props: {
   canCreateAnnotation: boolean;
   nodeId: string;
@@ -210,6 +221,7 @@ export function useCompanionSelectionAnnotationToolbar(props: {
   useEffect(() => scheduler.clearScheduledOpen, [scheduler.clearScheduledOpen, props.nodeId, props.canCreateAnnotation]);
 
   return {
+    activateCreatedHighlight: createdHighlightActivation(clearSelectionAndCloseToolbar, setSelectionToolbar, scheduler),
     closeSelectionToolbar,
     clearSelectionAndCloseToolbar,
     editorRef,

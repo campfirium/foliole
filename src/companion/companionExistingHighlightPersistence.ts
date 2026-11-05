@@ -19,10 +19,10 @@ interface ExistingHighlightMutation {
   node: WorkspaceNodeSnapshot;
   guard?: CompanionHighlightReadGuard;
   snapshot: WorkspaceSnapshot;
-  update: (node: WorkspaceNodeSnapshot, timestamp: string) => WorkspaceNodeSnapshot;
+  update: (node: WorkspaceNodeSnapshot, timestamp: string) => WorkspaceNodeSnapshot | Promise<WorkspaceNodeSnapshot>;
 }
 
-function persistExistingHighlightNode(args: ExistingHighlightMutation) {
+export function persistExistingHighlightNode(args: ExistingHighlightMutation) {
   return isAvailableNativeCompanionRuntime()
     ? runCompanionOptionalHighValueMutationTask(() => writeExistingHighlight(args, true), { kind: 'full' })
     : writeExistingHighlight(args, false);
@@ -32,7 +32,7 @@ async function writeExistingHighlight(args: ExistingHighlightMutation, withinWri
   assertCompanionHighlightRead(args.node, args.guard);
   const sourceNode = await hydrateNativeNodeContent(args.node);
   assertCompanionHighlightRead(sourceNode, args.guard);
-  const node = args.update(sourceNode, new Date().toISOString());
+  const node = await args.update(sourceNode, new Date().toISOString());
   const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId);
   const versionedNode = { ...node, currentVersionId: nodeVersion.version_id };
   assertCompanionHighlightRead(sourceNode, args.guard);

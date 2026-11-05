@@ -13,6 +13,7 @@ import type { CompanionSearchMatch } from './companionSearchMatch';
 import {
   createCompanionExistingHighlightDeleteHandler,
   createCompanionExistingHighlightNoteHandler,
+  createCompanionExistingHighlightRangeHandler,
   createCompanionSelectionAnnotationHandler
 } from './companionSelectionAnnotationController';
 import { createCompanionTopicContentSaveHandler } from './companionTopicEditingController';
@@ -60,6 +61,8 @@ function resolveNodeMutationProps(workspaceSync: WorkspaceSync, activity: Surfac
         refresh: () => workspaceSync.refreshAfterMutation(undefined, nodeId) }
     } : {}),
     ...(supportsCompanionNodeMutationSurface('existing-highlight-edit') ? {
+      onAdjustExistingHighlightRange: (...args: Parameters<ReturnType<typeof createCompanionExistingHighlightRangeHandler>>) =>
+        activity.run('selection', () => createCompanionExistingHighlightRangeHandler(workspaceSync)(...args)),
       onAddExistingHighlightNote: (...args: Parameters<ReturnType<typeof createCompanionExistingHighlightNoteHandler>>) =>
         activity.run('note', () => createCompanionExistingHighlightNoteHandler(workspaceSync)(...args)),
       onDeleteExistingHighlight: (...args: Parameters<ReturnType<typeof createCompanionExistingHighlightDeleteHandler>>) =>

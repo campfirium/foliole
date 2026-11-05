@@ -8,7 +8,7 @@ import { CompanionSelectionRefreshError } from './companionSelectionRefreshError
 
 export function useCompanionSelectionApply(args: {
   resolvePayload: () => SelectionCommandPayload | null;
-  onApply: (kind: CompanionSelectionAnnotationKind, payload: SelectionCommandPayload, note?: string) => Promise<void> | void;
+  onApply: (kind: CompanionSelectionAnnotationKind, payload: SelectionCommandPayload, note?: string) => Promise<void | boolean> | void | boolean;
   onClose: () => void;
 }) {
   const mounted = useRef(true);
@@ -21,13 +21,13 @@ export function useCompanionSelectionApply(args: {
     mounted.current = true;
     return () => { mounted.current = false; };
   }, []);
-  async function run(action: () => Promise<unknown> | void) {
+  async function run(action: () => unknown) {
     if (pending.current) return;
     pending.current = true;
     setSaving(true);
     try {
-      await action();
-      if (mounted.current) args.onClose();
+      const keepOpen = await action();
+      if (mounted.current && keepOpen !== true) args.onClose();
     } catch (failure) {
       if (!mounted.current) return;
       if (failure instanceof CompanionSelectionRefreshError) recovery.current = failure;
@@ -53,8 +53,9 @@ export function useCompanionSelectionApply(args: {
       if (!guardPayload || pending.current || recovery.current) return;
       const payload = guardPayload;
       void run(async () => {
-        await args.onApply(kind, payload);
+        const keepOpen = await args.onApply(kind, payload);
         if (mounted.current) setGuardPayload(null);
+        return keepOpen;
       });
     },
     retryRefresh: () => { if (recovery.current) void run(recovery.current.retryRefresh); }

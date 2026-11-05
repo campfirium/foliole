@@ -112,6 +112,28 @@ it('commits the dragged highlight range', () => {
   expect(onCommit).toHaveBeenCalledWith('highlight-1', { from: 3, to: 7 });
 });
 
+it.each(['cancel', 'detach'] as const)('discards a touch drag on %s without saving a partial range', mode => {
+  const onCommit = vi.fn(() => true);
+  const editor = createEditorAdapter({ getDocumentPositionAtClientPoint: () => 3,
+    getPositionClientRect: () => mockRect(40, 80, 8, 20), setHighlightRangePreview: vi.fn() });
+  const view = renderWithLocalization(<HighlightRangeHandles touch editor={editor}
+    highlight={{ kind: 'highlight', locator: { from: 0, to: 7 }, nodeId: 'highlight-1' }} onCommit={onCommit} />);
+  const handle = document.querySelector('[data-highlight-range-handle]')!;
+  act(() => {
+    handle.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    document.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 70, clientY: 90 }));
+  });
+  expect(editor.setHighlightRangePreview).toHaveBeenCalledWith('highlight-1', { from: 3, to: 7 });
+  act(() => {
+    if (mode === 'cancel') document.dispatchEvent(new MouseEvent('pointercancel', { bubbles: true }));
+    else view.unmount();
+    document.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+  });
+  expect(onCommit).not.toHaveBeenCalled();
+  expect(editor.setHighlightRangePreview).toHaveBeenLastCalledWith('highlight-1', null);
+  expect(document.querySelector('[data-highlight-range-dragging]')).toBeNull();
+});
+
 it('keeps the committed range when pointerup follows pointermove before React state flushes', () => {
   const onCommit = vi.fn(() => true);
   const editor = createEditorAdapter({

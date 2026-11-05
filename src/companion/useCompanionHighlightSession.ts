@@ -63,11 +63,11 @@ async function readHighlight(args: {
 
 function useHighlightSaveSession(read: ReturnType<typeof useHighlightReadSession>, ready: boolean) {
   function save(action: () => Promise<void> | void, close: () => void) {
-    if (!read.isCurrent() || !ready || read.loading || read.session.pending) return;
+    if (!read.isCurrent() || !ready || read.loading || read.session.pending) return Promise.resolve(false);
     const request = read.lifetime.current.request;
     read.lifetime.current.submitting = true;
     // Once submitted, the owner retains this write even when the toolbar detaches.
-    void read.session.write(() => {
+    return read.session.write(() => {
       if (read.scope !== getCompanionReadingScope()) throw new Error('companion_highlight_session_changed');
       if (read.session.refresh) return read.session.refresh().then(() => undefined);
       return Promise.resolve().then(action).catch((error) => {
@@ -75,8 +75,10 @@ function useHighlightSaveSession(read: ReturnType<typeof useHighlightReadSession
         throw error;
       });
     }).then(() => {
+      read.lifetime.current.submitting = false;
       if (read.isCurrent() && request === read.lifetime.current.request) close();
-    }).catch(() => { read.lifetime.current.submitting = false; });
+      return true;
+    }).catch(() => { read.lifetime.current.submitting = false; return false; });
   }
   return { save, saving: Boolean(read.session.pending) };
 }
