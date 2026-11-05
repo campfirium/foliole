@@ -67,3 +67,9 @@ it('refuses absent or corrupted history rather than inventing a starting number'
   fs.rmSync(file);
   expect(() => readPlayVersionHistory(file)).toThrow();
 });
+
+it('persists an attempted prebuilt upload receipt without requiring its expired inventory snapshot', () => {
+  const file = fixture();
+  recordPlayVersion({ ...receipt, schemaVersion: 2, phase: 'upload-unknown' }, file);
+  expect(readPlayVersionHistory(file)).toMatchObject({ highestVersionCode: 23, evidence: { phase: 'upload-unknown' } });
+});

@@ -1,8 +1,5 @@
 // @vitest-environment node
-import { readFileSync } from 'node:fs';
-import { parse } from 'yaml';
 import { afterEach, expect, it } from 'vitest';
-import { preparePlayCandidate } from './play-distribution.mjs';
 import { admitPlaySubmission } from './play-admission.mjs';
 import { resumePendingPlaySubmission } from './play-submission-queue.mjs';
 import { readPlaySubmissionState, writePlaySubmissionState } from './play-submission-store.mjs';
@@ -112,16 +109,6 @@ it('advances three accepted sources in order only after each original release is
   f.releases[0].releaseLifecycleState = 'RELEASE_LIFECYCLE_STATE_PUBLISHED';
   expect(await resume(f)).toBe('resuming'); expect(f.reruns).toEqual([4301, 4401]);
   expect(await admit(f, 44)).toMatchObject({ proceed: true });
-});
-
-it('routes the real workflow to successful waiting before its first Google edit or upload', async () => {
-  const f = await fixture(); f.release('IN_REVIEW');
-  const workflow = parse(readFileSync('.github/workflows/release-android.yml', 'utf8'));
-  const result = workflow.jobs.play.needs === 'admission'
-    ? await admit(f)
-    : await preparePlayCandidate(f.clients().play, {}, { highestVersionCode: 3 });
-  expect(result).toMatchObject({ proceed: false, state: 'waiting' });
-  expect(f.calls.filter(call => call.route.includes('edits'))).toEqual([]);
 });
 
 it('requires accepted full Android quality and exact source identity before registering a queue ticket', async () => {

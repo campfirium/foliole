@@ -97,24 +97,44 @@ Sources: [release resource methods](https://developers.google.com/android-publis
 
 ## Submission queue
 
-The trusted default-branch admission job validates the original full quality ZIP,
+The trusted default-branch preparation job validates the original full quality ZIP,
 its digest, actual source run/lane, admission jobs and source package version. It
 registers an immutable `foliole-play-submission` Deployment in
-`foliole-play-beta-queue` before any version allocation, Google edit or upload.
-A pending review, approval without publication, or earlier queue ticket produces
-`waiting` with a successful job; Android build and delivery are skipped. Formal
-Draft assembly waits for actual Android assets. Outer release and Android QA
-concurrency queues preserve pending source runs rather than replacing them.
+`foliole-play-beta-queue` and durably reserves a version code before building.
+Reservation reads the actual bundle/APK/all-track inventory through a short-lived
+edit snapshot. It never uploads, updates tracks or commits the snapshot, and must
+confirm deletion before allowing a build. Creation/cleanup markers and the reserved
+number survive response loss and restart. All later allocations include these
+reservations even if a ticket is retired or its archive expires.
 
-The existing schedule first observes registered releases, then processes the oldest
-unfinished ticket. It waits until the preceding release is published, revalidates
-its original full-quality artifact and resumes only the Android admission job with
-GitHub's job-rerun API. That API also reruns dependent packaging/assembly jobs; it
-does not rerun full quality or other platforms' successful packaging. The admission
-job checks current Play state again, and existing upload/commit protections remain
-in force. Original source SHA and release notes are retained even when branches
-advance. Publication observations are durable so an older release disappearing
-from Google's inventory after replacement cannot stall the next queued candidate.
+The original source then builds and signs once, saving an immutable signed ZIP
+before upload admission checks the preceding review. New signed candidates use
+schema version 2 and contain no upload edit. Pending review, approval without
+publication or an earlier ticket produces successful `waiting` after packaging;
+the upload is skipped. The checker verifies the original quality, reserved version,
+source and signed ZIP before rerunning only **Admit prepared Android upload or
+wait for review** and dependent delivery/assembly jobs. Build/sign is upstream and
+is not rerun. Admission checks again and exports the verified original artifact
+name directly to delivery, without depending on stale build-job outputs.
+
+After admission, trusted delivery creates a fresh upload edit using durable
+`creating`/`open:<id>` markers on the original candidate. Lost creation responses
+stop automatic creation; known edits, upload hashes and commit outcomes use the
+existing exact-candidate recovery. A package whose reserved number conflicts with
+new remote changes fails rather than being silently renumbered or rebuilt.
+
+Older queued runs without the `prebuilt` contract retain their original
+build-after-publication job and schema version 1 recovery. Rerunning a job uses
+that original workflow snapshot, so changing dev does not retrofit an already
+queued run. Do not replace or dispatch a duplicate source to conceal this boundary.
+A newer prebuilt source cannot reserve ahead of an older legacy ticket whose code
+is not fixed; complete or explicitly resolve that original ticket first.
+
+Publication observations remain durable so an older release disappearing from
+Google's inventory after replacement cannot stall the next queued candidate.
+Expired checkpoints fail closed and require owner reconciliation; they are not
+permission to build a replacement. Formal Draft assembly still waits for actual
+Android delivery assets. Existing concurrency queues preserve source runs.
 
 A review rejection blocks the affected queue and its successors. A blocked queue,
 cancelled source run or approval awaiting publication fails the scheduled check

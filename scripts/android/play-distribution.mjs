@@ -17,11 +17,11 @@ export function allocatePlayVersion({ bundles, apks, tracks, releases, historyVe
 }
 
 export function verifyPlayCandidate(state, { sourceSha, runId, version }) {
-  if (state?.schemaVersion !== 1 || !/^[a-f0-9]{40}$/u.test(sourceSha ?? '') ||
+  if (![1, 2].includes(state?.schemaVersion) || !/^[a-f0-9]{40}$/u.test(sourceSha ?? '') ||
       state.sourceSha !== sourceSha || state.acceptedSha !== sourceSha || state.runId !== String(runId) ||
       state.version !== version || state.packageName !== PLAY_PACKAGE || state.track !== PLAY_TRACK ||
       !Number.isSafeInteger(state.versionCode) || state.versionCode <= 2 || state.versionCode > 2100000000 ||
-      !/^\d+$/u.test(state.editId ?? '')) throw new Error('Saved Play candidate identity differs');
+      (state.schemaVersion === 1 ? !/^\d+$/u.test(state.editId ?? '') : (state.editId !== undefined && !/^\d+$/u.test(state.editId)))) throw new Error('Saved Play candidate identity differs');
   return state;
 }
 

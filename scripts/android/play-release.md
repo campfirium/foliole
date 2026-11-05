@@ -71,7 +71,7 @@ is exposed by the adapter. Package version comes from the candidate's package.js
 versionCode exceeds versioned history, durable candidate reservations and current
 Play bundle/APK/all-track inventory plus release states. An unresolved earlier
 operation blocks a new edit. The application-wide non-cancelling concurrency group
-covers allocation, build and delivery. Conflicts never trigger automatic increment
+covers reservation, build and delivery. Conflicts never trigger automatic increment
 or re-upload.
 Review English `play-release-notes.txt` with the candidate before dispatch.
 
@@ -83,10 +83,14 @@ Play versionCode and SHA256 must match that exact archive.
 
 ## Protect review and report actual state
 
-Trusted admission durably queues accepted sources behind outstanding beta changes
-and earlier submissions. Waiting succeeds without building, allocating a code or
-creating an edit; the existing review checker resumes the original Android job
-after its predecessor is published, and pauses on rejection. See
+Trusted preparation reserves the exact source version code from full inventory
+and durable history, closes its short-lived read-only inventory snapshot, then
+builds/signs and saves the original AAB while the earlier beta is still in review.
+Upload admission waits behind outstanding beta changes and earlier submissions.
+The existing review checker resumes only upload admission and delivery after the
+predecessor is published; it does not rebuild the archive. Fresh upload edits are
+created only after admission. Older already-queued workflow snapshots retain their
+original recovery path and are not silently migrated. See
 [submission queue](play-review-check.md#submission-queue). The inner upload
 preflight still refuses outstanding beta drafts, pending submission, review or
 approved unpublished changes before creating an edit. Commit explicitly uses
@@ -116,6 +120,11 @@ also require release-candidate acceptance. These facts and the trusted checker S
 are registered as a GitHub Deployment under `foliole-play-beta` before upload.
 Only this trusted job receives `deployments:write`; package preparation reads
 reservations. No extra secret or source-writing permission is needed.
+
+For schema version 2, a signed candidate has no upload edit; durable edit creation
+is recorded separately before POST and its exact edit ID is saved before upload.
+An uncertain creation never creates a replacement automatically. Existing schema
+version 1 candidates retain their original edit and recovery contract.
 
 Before each upload/commit, a durable deployment status records that the operation
 may have started. A lost response resumes the original edit/version/hash and never

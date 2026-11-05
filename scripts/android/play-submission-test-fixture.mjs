@@ -10,7 +10,8 @@ import { createPlayRegistration } from '../mobile/mobile-candidate-provenance.mj
 import { writeMobileCandidatePhase } from '../mobile/mobile-candidate-phase.mjs';
 import { createPlayApi } from './play-api.mjs';
 import { registrationFixture } from '../mobile/mobile-candidate-test-fixtures.mjs';
-import { PLAY_ADMISSION_JOB } from './play-queue-evidence.mjs';
+import { handlePrebuildPlayRequest } from './play-prebuild-play-fixture.mjs';
+import { PLAY_ADMISSION_JOB, PLAY_UPLOAD_ADMISSION_JOB } from './play-queue-evidence.mjs';
 
 function addSource(f, root, id) {
   const source = registrationFixture();
@@ -28,17 +29,40 @@ function addSource(f, root, id) {
   const zip = path.join(root, `${id}.zip`); execFileSync('zip', ['-q', zip, 'chain-verdict.json'], { cwd: folder });
   source.bytes = readFileSync(zip);
   source.qualityArtifact.digest = `sha256:${createHash('sha256').update(source.bytes).digest('hex')}`;
+  source.jobs.push({ name: `mobile-android / ${PLAY_UPLOAD_ADMISSION_JOB}`, id: id * 100 + 2 });
   source.jobs.push({ name: `mobile-android / ${PLAY_ADMISSION_JOB}`, id: id * 100 + 1 });
   f.sources.set(String(id), source);
   return source;
 }
 
+function saveSignedSource(f, root, id, versionCode) {
+  const source = f.sources.get(String(id));
+  const folder = path.join(root, `${id}-signed`); mkdirSync(path.join(folder, 'base/dex'), { recursive: true });
+  writeFileSync(path.join(folder, 'base/dex/classes.dex'), 'original application code');
+  execFileSync('zip', ['-qr', 'app-release-signed.aab', 'base'], { cwd: folder });
+  const bundle = readFileSync(path.join(folder, 'app-release-signed.aab'));
+  source.candidate = { ...source.candidate, schemaVersion: 2, sourceSha: source.run.head_sha,
+    acceptedSha: source.run.head_sha, runId: String(id), versionCode, aabSha256: createHash('sha256').update(bundle).digest('hex') };
+  delete source.candidate.editId;
+  f.uploadCandidate = source.candidate;
+  writeFileSync(path.join(folder, 'candidate.json'), JSON.stringify(source.candidate));
+  const archive = path.join(root, `${id}-signed.zip`);
+  execFileSync('zip', ['-q', archive, 'candidate.json', 'app-release-signed.aab'], { cwd: folder });
+  source.signedBytes = readFileSync(archive);
+  source.signedArtifact = { ...source.signedArtifact, id: id * 100 + 10, name: `android-play-${id}-1-signed`,
+    digest: `sha256:${createHash('sha256').update(source.signedBytes).digest('hex')}`,
+    workflow_run: { id, head_sha: source.run.head_sha } };
+  return bundle;
+}
+
+
 function createSubmissionServer(f) {
   return createServer(async (request, response) => {
-    let raw = ''; for await (const chunk of request) raw += chunk;
+    const chunks = []; for await (const chunk of request) chunks.push(chunk);
+    const raw = Buffer.concat(chunks);
     const route = request.url.replace(/^\/repos\/campfirium\/foliole\//u, '')
-      .replace(/^\/androidpublisher\/v3\/applications\/com.campfirium.foliole.android\//u, '');
-    const body = raw ? JSON.parse(raw) : undefined;
+      .replace(/^(?:\/upload)?\/androidpublisher\/v3\/applications\/com.campfirium.foliole.android\//u, '');
+    const body = !raw.length ? undefined : request.headers['content-type'] === 'application/octet-stream' ? raw : JSON.parse(raw.toString());
     f.calls.push({ method: request.method, route, body });
     const send = value => { response.setHeader('content-type', 'application/json'); response.end(JSON.stringify(value)); };
     if (route === 'tracks/beta/releases') return send({ releases: f.releases });
@@ -61,7 +85,10 @@ function createSubmissionServer(f) {
     if (sourceRoute) {
       const source = f.sources.get(sourceRoute[1]); const suffix = sourceRoute[2];
       if (!suffix) return send(source.run);
-      if (suffix.startsWith('/artifacts')) return send({ total_count: 1, artifacts: [source.qualityArtifact] });
+      if (suffix.startsWith('/artifacts')) {
+        const artifacts = [source.qualityArtifact, ...(source.signedBytes ? [source.signedArtifact] : [])];
+        return send({ total_count: artifacts.length, artifacts });
+      }
       if (suffix.includes('/jobs')) return send({ total_count: source.jobs.length, jobs: source.jobs });
     }
     if (route.startsWith('actions/artifacts/')) {
@@ -69,6 +96,7 @@ function createSubmissionServer(f) {
     }
     if (route.startsWith('contents/package.json')) return send({ encoding: 'base64',
       content: Buffer.from('{"version":"0.7.17"}').toString('base64') });
+    if (handlePrebuildPlayRequest(f, { request, response, route, body, send })) return;
     const rerun = route.match(/^actions\/jobs\/(\d+)\/rerun$/u);
     if (rerun) {
       if (!f.loseBeforeDispatch) {
@@ -87,14 +115,18 @@ export async function submissionFixture() {
   mkdirSync('.tmp/artifacts/T725', { recursive: true });
   const root = mkdtempSync(path.resolve('.tmp/artifacts/T725/queue-'));
   const f = { rows: [], histories: new Map(), calls: [], releases: [], sources: new Map(), lostDispatch: false,
-    lostRegistration: false, reruns: [], loseBeforeDispatch: false };
+    lostRegistration: false, edits: new Set(), nextEdit: 900, reruns: [], loseBeforeDispatch: false };
   f.addSource = (id = 42) => addSource(f, root, id);
   f.addSource();
   const server = createSubmissionServer(f);
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const request = (url, options) => fetch(url.replace(/^https:\/\/[^/]+/u, `http://127.0.0.1:${server.address().port}`), options);
   f.clients = () => ({ github: createMobileGithubApi('test-token', request,
-    route => [...f.sources.values()].find(source => source.qualityArtifact.id === Number(route.split('/')[2])).bytes), play: createPlayApi('test-token', request) });
+    route => {
+      const id = Number(route.split('/')[2]);
+      const source = [...f.sources.values()].find(item => item.qualityArtifact.id === id || item.signedArtifact.id === id);
+      return source.qualityArtifact.id === id ? source.bytes : source.signedBytes;
+    }), play: createPlayApi('test-token', request) });
   f.delivered = async (id, code, lifecycle) => {
     const source = f.sources.get(String(id));
     const candidate = { ...source.candidate, sourceSha: source.run.head_sha, acceptedSha: source.run.head_sha,
@@ -108,6 +140,7 @@ export async function submissionFixture() {
       activeArtifacts: [{ versionCode: code }], releaseLifecycleState: `RELEASE_LIFECYCLE_STATE_${lifecycle}` }];
     return registration;
   };
+  f.saveSigned = (id, versionCode) => saveSignedSource(f, root, id, versionCode);
   f.env = (id = 42) => {
     const run = f.sources.get(String(id)).run;
     return { GITHUB_RUN_ID: String(id), GITHUB_RUN_ATTEMPT: String(run.run_attempt),

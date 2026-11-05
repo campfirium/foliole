@@ -57,6 +57,7 @@ export function verifyPlayQuality({ run, qualityArtifact, quality, jobs }) {
 export function createPlayRegistration({ run, signedArtifact, qualityArtifact, quality, jobs, candidate, registrarSha }) {
   const { lane, accepted } = verifyPlayQuality({ run, qualityArtifact, quality, jobs });
   verifyPlayCandidate(candidate, { sourceSha: run.head_sha, runId: String(run.id), version: candidate.version });
+  if (candidate.schemaVersion === 2 && candidate.editId !== undefined) fail('prebuilt signed candidate must not own an upload edit');
   if (candidate.phase !== 'signed' || !/^\d+\.\d+\.\d+$/u.test(candidate.version ?? '') ||
       !/^[a-f\d]{64}$/u.test(candidate.aabSha256 ?? '') || candidate.certificateSha256 !== UPLOAD_CERTIFICATE) {
     fail('a signed original upload candidate is required');
@@ -84,6 +85,7 @@ export function verifyMobileRegistrationPayload(payload) {
   verifyPlayCandidate(payload.candidate, { sourceSha: payload.sourceSha, runId: payload.runId,
     version: payload.candidate?.version });
   verifyPlayDexIdentity(payload.dexSha256, payload.dexSha256);
+  if (payload.candidate.schemaVersion === 2 && payload.candidate.editId !== undefined) fail('prebuilt persisted candidate must not own an upload edit');
   if (payload.candidate.phase !== 'signed' || !/^\d+\.\d+\.\d+$/u.test(payload.candidate.version ?? '') ||
       payload.candidate.certificateSha256 !== UPLOAD_CERTIFICATE ||
       !/^[a-f\d]{64}$/u.test(payload.candidate.aabSha256 ?? '')) fail('persisted signed candidate is invalid');

@@ -1,3 +1,4 @@
+import { resolvePlayUploadEdit } from './play-upload-edit.mjs';
 import { readPlayReleases } from './play-api.mjs';
 import { uploadPlayCandidate, commitPlayCandidate, observePlayCandidate, verifyPlayBundle } from './play-distribution.mjs';
 import { verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
@@ -19,6 +20,7 @@ export async function deliverRegisteredPlayCandidate({ github, play, registratio
   if (['commit-unknown', 'committed', 'observed'].includes(state.phase)) {
     throw new Error('Original Play commit is not observable; preserve its durable candidate and never upload again');
   }
+  await resolvePlayUploadEdit({ github, play, registration, state });
   if (state.phase === 'upload-unknown') {
     const inventory = await play('GET', `edits/${state.editId}/bundles`);
     const bundle = inventory.bundles?.find(item => Number(item.versionCode) === state.versionCode);

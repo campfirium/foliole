@@ -10,6 +10,7 @@ import { createMobileGithubApi, listMobileCandidates, registerMobileCandidate, v
 import { extractSignedPlayArchive, readPlayRegistration } from '../mobile/mobile-candidate-read.mjs';
 import { MOBILE_REPOSITORY } from '../mobile/mobile-candidate-provenance.mjs';
 import { playAccessToken, createPlayApi, createPlayApkDownloader } from './play-api.mjs';
+import { requirePlayReservation } from './play-preparation-state.mjs';
 import { deliverRegisteredPlayCandidate } from './play-delivery.mjs';
 import { collectPlayUniversalApk, inspectPlayApk, PLAY_APP_CERTIFICATE_SHA256 } from './play-generated-apk.mjs';
 import { verifyPlayDexIdentity } from './play-dex-identity.mjs';
@@ -27,8 +28,14 @@ export async function resolvePlayDeliveryRegistration(github, env, registrarSha)
       run.run_attempt !== Number(env.GITHUB_RUN_ATTEMPT)) throw new Error('Actual delivery run differs from the accepted lane');
   const rows = (await listMobileCandidates(github, run.head_sha)).filter(row => row.payload?.runId === runId);
   if (rows.length > 1) throw new Error('Original delivery has multiple durable candidates');
-  const row = rows.length ? verifyStoredMobileCandidate(rows[0]) : await registerMobileCandidate(github,
-    await readPlayRegistration(github, { runId, artifactName: env.CANDIDATE_ARTIFACT, registrarSha }));
+  let row;
+  if (rows.length) row = verifyStoredMobileCandidate(rows[0]);
+  else {
+    const payload = await readPlayRegistration(github, { runId, artifactName: env.CANDIDATE_ARTIFACT, registrarSha });
+    await requirePlayReservation(github, payload.candidate);
+    row = await registerMobileCandidate(github, payload);
+  }
+  await requirePlayReservation(github, row.payload.candidate);
   if (row.payload.candidate.version !== env.TARGET_VERSION || row.payload.workflow !== workflow ||
       row.payload.sourceSha !== run.head_sha) throw new Error('Durable delivery candidate differs');
   return row;

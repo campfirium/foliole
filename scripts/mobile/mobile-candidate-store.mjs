@@ -57,7 +57,7 @@ export function verifyStoredMobileCandidate(row) {
 }
 
 function sameCandidate(left, right) {
-  return ['runId', 'sourceSha', 'version', 'versionCode', 'packageName', 'track', 'editId', 'aabSha256', 'certificateSha256']
+  return ['schemaVersion', 'runId', 'sourceSha', 'version', 'versionCode', 'packageName', 'track', 'editId', 'aabSha256', 'certificateSha256']
     .every(key => left.candidate[key] === right.candidate[key]);
 }
 

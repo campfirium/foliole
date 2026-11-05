@@ -2,7 +2,8 @@ import { readPlayReleases } from './play-api.mjs';
 import { listMobileCandidates, verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
 import { readMobileStatus, readMobileCandidatePhase } from '../mobile/mobile-candidate-phase.mjs';
 import { readReservedPlayHistory } from './play-candidate-history.mjs';
-import { readPlayQueueEvidence } from './play-queue-evidence.mjs';
+import { readPrebuiltPlayCandidate } from './play-prebuilt-candidate.mjs';
+import { readPlayQueueEvidence, PLAY_UPLOAD_ADMISSION_JOB } from './play-queue-evidence.mjs';
 import { listPlaySubmissions, readPlaySubmissionState, writePlaySubmissionState } from './play-submission-store.mjs';
 
 const PUBLISHED = 'RELEASE_LIFECYCLE_STATE_PUBLISHED';
@@ -112,7 +113,8 @@ export async function resumePendingPlaySubmission({ github, play, candidateId })
     }
     if (ready !== 'ready') return ready;
     await readReservedPlayHistory(github);
-    const evidence = await readPlayQueueEvidence(github, row.payload.runId);
+    const evidence = await readPlayQueueEvidence(github, row.payload.runId, row.payload.prebuilt ? PLAY_UPLOAD_ADMISSION_JOB : undefined);
+    if (row.payload.prebuilt) await readPrebuiltPlayCandidate(github, row);
     if (evidence.run.head_sha !== row.payload.sourceSha || evidence.version !== row.payload.version ||
         evidence.qualityArtifact.digest !== row.payload.qualityArtifact.digest) throw new Error('Queued quality identity changed');
     await writePlaySubmissionState(github, row, `resuming:${evidence.run.run_attempt}`);

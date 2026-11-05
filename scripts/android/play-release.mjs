@@ -7,6 +7,9 @@ import { preparePlayCandidate, verifyPlayCandidate } from './play-distribution.m
 import { buildPlayBundle, signPlayBundle } from './play-build.mjs';
 import { restorePlayCheckpoints } from './play-checkpoints.mjs';
 import { createMobileGithubApi } from '../mobile/mobile-candidate-store.mjs';
+import { listPlaySubmissions } from './play-submission-store.mjs';
+import { readPlayPreparation } from './play-preparation-state.mjs';
+import { PLAY_PACKAGE, PLAY_TRACK } from './play-api.mjs';
 import { readReservedPlayHistory } from './play-candidate-history.mjs';
 
 export function playRunnerIdentity(env, root) {
@@ -49,6 +52,17 @@ export async function runPlayRelease(command, env = process.env) {
   const state = fs.existsSync(file) ? verifyPlayCandidate(JSON.parse(fs.readFileSync(file)), identity) : null;
   if (buildOrSign(command, state, root, directory, env, save)) return;
   if (!['prepare', 'inspect'].includes(command)) throw new Error('Use trusted durable delivery for Play upload, commit and observe');
+  if (command === 'prepare' && env.PLAY_PREBUILT === 'true') {
+    if (state) return;
+    const rows = (await listPlaySubmissions(createMobileGithubApi(env.GH_TOKEN)))
+      .filter(row => row.payload.runId === identity.runId && row.payload.sourceSha === identity.sourceSha && row.payload.prebuilt);
+    if (rows.length !== 1) throw new Error('Exact prebuilt submission reservation is missing');
+    const prepared = await readPlayPreparation(createMobileGithubApi(env.GH_TOKEN), rows[0]);
+    if (prepared.phase !== 'cleared' || !prepared.versionCode) throw new Error('Play version reservation is incomplete');
+    save(verifyPlayCandidate({ schemaVersion: 2, ...identity, packageName: PLAY_PACKAGE, track: PLAY_TRACK,
+      versionCode: prepared.versionCode, phase: 'prepared' }, identity));
+    return;
+  }
   const api = createPlayApi(await playAccessToken(env.ANDROID_PLAY_SERVICE_ACCOUNT_JSON));
   if (command === 'inspect') {
     const result = await api('GET', 'tracks/beta/releases');

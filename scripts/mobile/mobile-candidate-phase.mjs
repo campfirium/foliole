@@ -20,6 +20,8 @@ export async function readMobileStatus(api, id, prefix) {
 export async function readMobileCandidatePhase(api, id) {
   const { value, hasHistory } = await readMobileStatus(api, id, PREFIX);
   if (value === undefined) {
+    const edit = await readMobileStatus(api, id, 'Play upload edit: ');
+    if (edit.value === 'creating' || /^open:[1-9]\d*$/u.test(edit.value ?? '')) return 'signed';
     if (hasHistory) throw new Error('Unknown mobile operation history requires reconciliation');
     return 'signed';
   }

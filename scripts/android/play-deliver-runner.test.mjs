@@ -15,7 +15,7 @@ function fixture(lane = 'dev-remote') {
     EXECUTION_LANE: lane === 'release-t7' ? 'release-t7' : 'qa-mobile-beta' };
   const api = async (method, route) => {
     if (route === 'actions/runs/42') return f.run;
-    if (route.startsWith('deployments?')) return rows;
+    if (route.startsWith('deployments?')) return route.includes('task=foliole-play-submission&') ? [] : rows;
     if (route.includes('/statuses?per_page=100')) return [{ creator: { login: 'github-actions[bot]' }, description: 'Play candidate: observed' }];
     throw new Error('Unexpected external operation');
   };

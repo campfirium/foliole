@@ -6,7 +6,9 @@ import { readReceipt } from '../quality/chain-verdict-read.mjs';
 
 export const PLAY_ADMISSION_JOB = 'Admit Android submission or wait for review';
 
-export async function readPlayQueueEvidence(github, runId) {
+export const PLAY_UPLOAD_ADMISSION_JOB = 'Admit prepared Android upload or wait for review';
+
+export async function readPlayQueueEvidence(github, runId, jobName = PLAY_ADMISSION_JOB) {
   if (!/^[1-9]\d*$/u.test(String(runId))) throw new Error('Exact queued source run is required');
   const base = `actions/runs/${runId}`;
   const run = await github('GET', base);
@@ -25,7 +27,7 @@ export async function readPlayQueueEvidence(github, runId) {
   const jobs = await allPages(github, `${base}/attempts/${quality.run_attempt}/jobs`, 'jobs');
   const { lane, accepted } = verifyPlayQuality({ run, qualityArtifact: artifact, quality, jobs });
   const currentJobs = await allPages(github, `${base}/attempts/${run.run_attempt}/jobs`, 'jobs');
-  const admission = currentJobs.filter(job => job.name === PLAY_ADMISSION_JOB || job.name.endsWith(` / ${PLAY_ADMISSION_JOB}`));
+  const admission = currentJobs.filter(job => job.name === jobName || job.name.endsWith(` / ${jobName}`));
   if (admission.length !== 1 || !Number.isSafeInteger(admission[0].id)) throw new Error('Exact Android admission job is missing');
   const pkg = await github('GET', `contents/package.json?ref=${run.head_sha}`);
   if (pkg.encoding !== 'base64') throw new Error('Queued source package is unavailable');

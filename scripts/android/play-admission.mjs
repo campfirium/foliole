@@ -7,12 +7,13 @@ import { assertQualityCommandAllowed } from '../quality/quality-command-contract
 import { createMobileGithubApi } from '../mobile/mobile-candidate-store.mjs';
 import { requireTrustedMobileRegistrar } from '../mobile/mobile-candidate-register.mjs';
 import { playAccessToken, createPlayApi, readPlayReleases } from './play-api.mjs';
-import { readPlayQueueEvidence } from './play-queue-evidence.mjs';
+import { readPrebuiltPlayCandidate } from './play-prebuilt-candidate.mjs';
+import { readPlayQueueEvidence, PLAY_UPLOAD_ADMISSION_JOB } from './play-queue-evidence.mjs';
 import { registerPlaySubmission, writePlaySubmissionState } from './play-submission-store.mjs';
 import { pendingPlayBlockers, playSubmissionContext, playSubmissionReadiness } from './play-submission-queue.mjs';
 
-export async function admitPlaySubmission({ github, play, env, registrarSha }) {
-  const evidence = await readPlayQueueEvidence(github, env.GITHUB_RUN_ID);
+export async function registerAcceptedPlaySubmission({ github, play, env, registrarSha, prebuilt = false, upload = false }) {
+  const evidence = await readPlayQueueEvidence(github, env.GITHUB_RUN_ID, upload ? PLAY_UPLOAD_ADMISSION_JOB : undefined);
   const { run, lane, version } = evidence;
   const branch = lane === 'release-t7' ? 'release' : 'check';
   if (run.status !== 'in_progress' || run.run_attempt !== Number(env.GITHUB_RUN_ATTEMPT) ||
@@ -21,16 +22,24 @@ export async function admitPlaySubmission({ github, play, env, registrarSha }) {
       env.EXECUTION_LANE !== (branch === 'release' ? 'release-t7' : 'qa-mobile-beta')) {
     throw new Error('Actual queued run differs from the accepted Android lane');
   }
-  const row = await registerPlaySubmission(github, { evidence, registrarSha,
+  return registerPlaySubmission(github, { evidence, registrarSha, prebuilt,
     blockers: pendingPlayBlockers(await readPlayReleases(play)) });
+}
+
+export async function admitPlaySubmission({ github, play, env, registrarSha }) {
+  const row = await registerAcceptedPlaySubmission({ github, play, env, registrarSha,
+    prebuilt: env.PLAY_PREBUILT === 'true', upload: env.PLAY_PREBUILT === 'true' });
+  if (env.PLAY_PREBUILT === 'true' && !row.payload.prebuilt) throw new Error('Legacy submission must retain its original workflow');
+  const prebuilt = row.payload.prebuilt ? await readPrebuiltPlayCandidate(github, row) : undefined;
+  const artifactName = prebuilt?.signedArtifact.name;
   const context = await playSubmissionContext(github, play);
   const previous = context.states.get(row.id);
   // Recovery of an admitted source belongs to its original checkpoint path.
-  if (['submitted', 'published', 'admitted'].includes(previous)) return { proceed: true, state: previous, id: row.id };
+  if (['submitted', 'published', 'admitted'].includes(previous)) return { proceed: true, state: previous, id: row.id, artifactName };
   const ready = playSubmissionReadiness(row, context);
   const state = previous === 'retired' ? 'retired' : ready === 'ready' ? 'admitted' : ready === 'blocked' ? 'blocked' : 'waiting';
   await writePlaySubmissionState(github, row, state);
-  return { proceed: state === 'admitted', state, id: row.id };
+  return { proceed: state === 'admitted', state, id: row.id, artifactName };
 }
 
 export async function runPlayAdmission(env = process.env) {
@@ -40,7 +49,7 @@ export async function runPlayAdmission(env = process.env) {
   await requireTrustedMobileRegistrar({ api: github, env, headSha: registrarSha });
   const play = createPlayApi(await playAccessToken(env.ANDROID_PLAY_SERVICE_ACCOUNT_JSON));
   const result = await admitPlaySubmission({ github, play, env, registrarSha });
-  if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, `proceed=${result.proceed}\nsubmission_state=${result.state}\n`);
+  if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, `proceed=${result.proceed}\nsubmission_state=${result.state}\nsigned_artifact=${result.artifactName ?? ''}\n`);
   if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY,
     `Android submission: **${result.state}** (queue ${result.id}). Waiting preserves the previous review; no new upload has started.\n`);
   console.log(JSON.stringify(result));

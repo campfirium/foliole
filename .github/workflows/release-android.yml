@@ -13,7 +13,7 @@ on:
       ANDROID_UPLOAD_KEY_ALIAS: { required: true }
     outputs:
       submission_state:
-        value: ${{ jobs.admission.outputs.submission_state }}
+        value: ${{ jobs.submission.outputs.submission_state }}
       artifact_name:
         value: ${{ jobs.delivery.outputs.artifact_name }}
       packaged_sha:
@@ -39,12 +39,12 @@ jobs:
         with: { ref: dev, persist-credentials: false }
       - uses: actions/setup-node@v4
         with: { node-version: 26.13.0 }
-      - name: Preserve the accepted source until its Play submission turn
+      - name: Reserve the accepted version for building before review completes
         id: admit
         env:
           GH_TOKEN: ${{ github.token }}
           ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}
-        run: node scripts/android/play-admission.mjs
+        run: node scripts/android/play-preparation.mjs
   play:
     needs: admission
     if: needs.admission.outputs.proceed == 'true'
@@ -60,6 +60,7 @@ jobs:
       TARGET_VERSION: ${{ inputs.target_version }}
       EXECUTION_LANE: ${{ inputs.execution_lane }}
       TRIGGER_REF: ${{ inputs.trigger_ref }}
+      PLAY_PREBUILT: 'true'
     steps:
       - uses: actions/checkout@v4
         with: { ref: '${{ inputs.target_sha }}', persist-credentials: false }
@@ -70,9 +71,8 @@ jobs:
       - name: Restore only this run's original Play candidate
         env: { GH_TOKEN: '${{ github.token }}' }
         run: node scripts/android/play-release.mjs restore
-      - name: Allocate from actual Play history without changing a pending review
+      - name: Restore the durably reserved version without a Google edit
         env:
-          ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}
           GH_TOKEN: ${{ github.token }}
         run: node scripts/android/play-release.mjs prepare
       - uses: actions/upload-artifact@v4
@@ -112,9 +112,37 @@ jobs:
       - name: Export immutable signed checkpoint identity
         id: candidate
         run: echo 'artifact_name=android-play-${{ github.run_id }}-${{ github.run_attempt }}-signed' >> "$GITHUB_OUTPUT"
+  submission:
+    name: Admit prepared Android upload or wait for review
+    needs: play
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: { contents: read, actions: read, deployments: write }
+    outputs:
+      proceed: ${{ steps.admit.outputs.proceed }}
+      submission_state: ${{ steps.admit.outputs.submission_state }}
+      signed_artifact: ${{ steps.admit.outputs.signed_artifact }}
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+      TARGET_VERSION: ${{ inputs.target_version }}
+      EXECUTION_LANE: ${{ inputs.execution_lane }}
+      TRIGGER_REF: ${{ inputs.trigger_ref }}
+      PLAY_PREBUILT: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: dev, persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 26.13.0 }
+      - name: Wait for publication without rebuilding the signed archive
+        id: admit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: node scripts/android/play-admission.mjs
   delivery:
     name: Deliver the durable Android candidate
-    needs: play
+    needs: [play, submission]
+    if: needs.submission.outputs.proceed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions: { contents: read, actions: read, deployments: write }
@@ -126,7 +154,7 @@ jobs:
       TARGET_VERSION: ${{ inputs.target_version }}
       EXECUTION_LANE: ${{ inputs.execution_lane }}
       TRIGGER_REF: ${{ inputs.trigger_ref }}
-      CANDIDATE_ARTIFACT: ${{ needs.play.outputs.signed_artifact }}
+      CANDIDATE_ARTIFACT: ${{ needs.submission.outputs.signed_artifact }}
     steps:
       - name: Execute only trusted default-branch delivery code
         uses: actions/checkout@v4

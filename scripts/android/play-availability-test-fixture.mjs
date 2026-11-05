@@ -34,7 +34,7 @@ export async function availabilityFixture() {
         const page = Number(new URL(route, 'http://local').searchParams.get('page') ?? 1);
         respond(response, history.slice((page - 1) * 100, page * 100)); return;
       }
-      respond(response, f.rows); return;
+      respond(response, f.rows.filter(row => row.task === new URL(route, 'http://local').searchParams.get('task'))); return;
     }
     if (route.endsWith('/tracks/beta/releases')) {
       respond(response, { releases: f.absent ? [] : [{ track: 'beta', releaseName: f.releaseName,

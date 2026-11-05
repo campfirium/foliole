@@ -53,7 +53,7 @@ it('isolates signing and API secrets from package scripts and preserves the sign
   const steps = job.steps;
   const checkpoint = steps.find(step => step.name === 'Save immutable signed candidate before any upload');
   expect(checkpoint.with.path).toContain('app-release-signed.aab');
-  expect(workflow.jobs.delivery.needs).toBe('play');
+  expect(workflow.jobs.delivery.needs).toEqual(['play', 'submission']);
   expect(workflow.jobs.delivery.steps[0].with).toEqual({ ref: 'dev', 'persist-credentials': false });
   const delivery = workflow.jobs.delivery.steps.find(step => step.id === 'deliver');
   expect(delivery.run).toBe('node scripts/android/play-deliver-runner.mjs');

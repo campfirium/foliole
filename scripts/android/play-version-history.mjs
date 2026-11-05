@@ -21,7 +21,7 @@ export function recordPlayVersion(receipt, file = historyFile) {
   const history = readPlayVersionHistory(file);
   const phases = ['upload-unknown', 'uploaded', 'commit-unknown', 'committed', 'observed'];
   if (receipt?.packageName !== PLAY_PACKAGE || receipt.track !== 'beta' || !phases.includes(receipt.phase) ||
-      receipt.schemaVersion !== 1 || !Number.isSafeInteger(receipt.versionCode) || receipt.versionCode < 1 ||
+      ![1, 2].includes(receipt.schemaVersion) || !Number.isSafeInteger(receipt.versionCode) || receipt.versionCode < 1 ||
       receipt.versionCode > 2100000000 || !/^[a-f0-9]{40}$/u.test(receipt.sourceSha ?? '') ||
       receipt.acceptedSha !== receipt.sourceSha || !/^[1-9]\d*$/u.test(receipt.runId ?? '') ||
       !/^[a-f0-9]{64}$/u.test(receipt.aabSha256 ?? '')) {

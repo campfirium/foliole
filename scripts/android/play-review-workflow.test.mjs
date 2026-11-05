@@ -29,10 +29,14 @@ it('gives only the trusted default branch checker state writes and exact-job con
 it('gates the actual build on admission and keeps outer Android queues from cancelling older work', () => {
   const admission = delivery.jobs.admission;
   expect(admission.steps[0].with).toEqual({ ref: 'dev', 'persist-credentials': false });
-  expect(admission.steps.at(-1).run).toBe('node scripts/android/play-admission.mjs');
+  expect(admission.steps.at(-1).run).toBe('node scripts/android/play-preparation.mjs');
   expect(admission.permissions).toEqual({ contents: 'read', actions: 'read', deployments: 'write' });
   expect(delivery.jobs.play.needs).toBe('admission');
   expect(delivery.jobs.play.if).toBe("needs.admission.outputs.proceed == 'true'");
+  expect(delivery.jobs.submission.needs).toBe('play');
+  expect(delivery.jobs.submission.steps.at(-1).run).toBe('node scripts/android/play-admission.mjs');
+  expect(delivery.jobs.delivery.needs).toEqual(['play', 'submission']);
+  expect(delivery.jobs.delivery.if).toBe("needs.submission.outputs.proceed == 'true'");
   const formal = parse(readFileSync('.github/workflows/t7-release.yml', 'utf8'));
   expect(formal.concurrency).toMatchObject({ 'cancel-in-progress': false, queue: 'max' });
   expect(formal.jobs.assemble_draft.if).toContain("needs.android_package.outputs.submission_state == 'admitted'");

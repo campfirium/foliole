@@ -1,6 +1,8 @@
 import { listMobileCandidates, verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
 import { readPlayVersionHistory } from './play-version-history.mjs';
 import { readMobileCandidatePhase } from '../mobile/mobile-candidate-phase.mjs';
+import { listPlaySubmissions } from './play-submission-store.mjs';
+import { readPlayPreparation } from './play-preparation-state.mjs';
 import { readPlaySnapshot } from './play-availability-state.mjs';
 
 export async function readReservedPlayHistory(github, history = readPlayVersionHistory()) {
@@ -15,6 +17,11 @@ export async function readReservedPlayHistory(github, history = readPlayVersionH
       throw new Error('An earlier Play operation remains unresolved; recover its original run before creating another edit');
     }
     codes.push(saved.payload.candidate.versionCode);
+  }
+  for (const row of await listPlaySubmissions(github)) {
+    const preparation = await readPlayPreparation(github, row);
+    if (preparation.phase !== 'cleared') throw new Error('An earlier Play preparation snapshot remains unresolved');
+    if (preparation.versionCode) codes.push(preparation.versionCode);
   }
   return { ...history, highestVersionCode: Math.max(history.highestVersionCode, ...codes) };
 }
