@@ -151,7 +151,7 @@ jobs:
           rm -f "$RUNNER_TEMP/ios-distribution.p12" "$RUNNER_TEMP/AuthKey.p8"
 
   external-review:
-    name: Submit external review and expire older iPhone builds on Linux
+    name: Submit iPhone external review on Linux
     needs: signed-upload
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -179,7 +179,7 @@ jobs:
           path: .tmp/artifacts/ios-testflight-upload
       - uses: ruby/setup-ruby@v1
         with: { ruby-version: '4.0', bundler-cache: true }
-      - name: Submit this exact candidate and immediately expire older iPhone builds
+      - name: Submit this exact candidate while preserving older available builds
         working-directory: scripts/ios
         run: |
           mkdir -p ../../.tmp/artifacts/ios-testflight-receipt

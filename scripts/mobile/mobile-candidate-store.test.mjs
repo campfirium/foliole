@@ -61,3 +61,12 @@ it('refuses malformed persisted facts and sanitizes API failures without executi
   const corrupt = createMobileGithubApi('secret', async () => ({ ok: true, json: async () => { throw new Error('secret'); } }));
   await expect(corrupt('GET', 'deployments')).rejects.toThrow('GitHub candidate response is invalid');
 });
+
+it('uses the existing artifact client only for exact binary downloads and does not follow API redirects itself', async () => {
+  const routes = [];
+  const api = createMobileGithubApi('scoped', async () => { throw new Error('JSON transport must not receive artifact redirects'); },
+    route => { routes.push(route); return new Uint8Array([80, 75]); });
+  expect(await api('GET', 'actions/artifacts/42/zip', undefined, true)).toEqual(new Uint8Array([80, 75]));
+  await expect(api('GET', '../untrusted', undefined, true)).rejects.toThrow(/Exact GitHub artifact/u);
+  expect(routes).toEqual(['actions/artifacts/42/zip']);
+});

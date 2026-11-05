@@ -11,13 +11,21 @@ on:
       ANDROID_UPLOAD_KEYSTORE_BASE64: { required: true }
       ANDROID_UPLOAD_KEYSTORE_PASSWORD: { required: true }
       ANDROID_UPLOAD_KEY_ALIAS: { required: true }
-permissions: { contents: read, actions: read }
+    outputs:
+      artifact_name:
+        value: ${{ jobs.delivery.outputs.artifact_name }}
+      packaged_sha:
+        value: ${{ jobs.delivery.outputs.packaged_sha }}
+permissions: { contents: read, actions: read, deployments: read }
+concurrency: { group: play-android-open-testing, cancel-in-progress: false }
 jobs:
   play:
-    name: Sign, upload and submit Android to Play
+    name: Build and sign the original Android candidate
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    concurrency: { group: play-android-open-testing, cancel-in-progress: false }
+    outputs:
+      signed_artifact: ${{ steps.candidate.outputs.artifact_name }}
+    permissions: { contents: read, actions: read, deployments: read }
     env:
       TARGET_SHA: ${{ inputs.target_sha }}
       ACCEPTED_SHA: ${{ inputs.target_sha }}
@@ -35,7 +43,9 @@ jobs:
         env: { GH_TOKEN: '${{ github.token }}' }
         run: node scripts/android/play-release.mjs restore
       - name: Allocate from actual Play history without changing a pending review
-        env: { ANDROID_PLAY_SERVICE_ACCOUNT_JSON: '${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}' }
+        env:
+          ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}
+          GH_TOKEN: ${{ github.token }}
         run: node scripts/android/play-release.mjs prepare
       - uses: actions/upload-artifact@v4
         with:
@@ -71,32 +81,54 @@ jobs:
             .tmp/artifacts/android-play/bundle.json
           if-no-files-found: error
           retention-days: 30
-      - name: Upload or reconcile the original signed AAB
-        env: { ANDROID_PLAY_SERVICE_ACCOUNT_JSON: '${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}' }
-        run: node scripts/android/play-release.mjs upload
-      - uses: actions/upload-artifact@v4
-        with:
-          name: android-play-${{ github.run_id }}-${{ github.run_attempt }}-uploaded
-          path: .tmp/artifacts/android-play/candidate.json
-          if-no-files-found: error
-          retention-days: 30
-      - name: Submit the update without cancelling an existing review
-        env: { ANDROID_PLAY_SERVICE_ACCOUNT_JSON: '${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}' }
-        run: node scripts/android/play-release.mjs commit
-      - uses: actions/upload-artifact@v4
-        with:
-          name: android-play-${{ github.run_id }}-${{ github.run_attempt }}-committed
-          path: .tmp/artifacts/android-play/candidate.json
-          if-no-files-found: error
-          retention-days: 30
-      - name: Read the actual Play release lifecycle
-        env: { ANDROID_PLAY_SERVICE_ACCOUNT_JSON: '${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}' }
-        run: node scripts/android/play-release.mjs observe
-      - name: Preserve result or uncertain operation for reconciliation
+      - name: Export immutable signed checkpoint identity
+        id: candidate
+        run: echo 'artifact_name=android-play-${{ github.run_id }}-${{ github.run_attempt }}-signed' >> "$GITHUB_OUTPUT"
+  delivery:
+    name: Deliver the durable Android candidate
+    needs: play
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions: { contents: read, actions: read, deployments: write }
+    outputs:
+      artifact_name: ${{ steps.deliver.outputs.artifact_name }}
+      packaged_sha: ${{ steps.deliver.outputs.packaged_sha }}
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+      TARGET_VERSION: ${{ inputs.target_version }}
+      EXECUTION_LANE: ${{ inputs.execution_lane }}
+      TRIGGER_REF: ${{ inputs.trigger_ref }}
+      CANDIDATE_ARTIFACT: ${{ needs.play.outputs.signed_artifact }}
+    steps:
+      - name: Execute only trusted default-branch delivery code
+        uses: actions/checkout@v4
+        with: { ref: dev, persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24.22.2 }
+      - uses: actions/setup-java@v4
+        with: { distribution: zulu, java-version: '21.0.13+1', check-latest: true }
+      - name: Prepare Android inspection tools
+        if: inputs.execution_lane == 'release-t7'
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"'
+      - name: Register, deliver or reconcile the original candidate before collecting release assets
+        id: deliver
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: node scripts/android/play-deliver-runner.mjs
+      - name: Preserve exact operation outcome for existing recovery tools
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: android-play-${{ github.run_id }}-${{ github.run_attempt }}-observed
           path: .tmp/artifacts/android-play/candidate.json
           if-no-files-found: ignore
+          retention-days: 30
+      - name: Preserve verified Play APK and release receipt
+        if: inputs.execution_lane == 'release-t7'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-android-${{ inputs.target_sha }}-${{ github.run_attempt }}
+          path: .tmp/artifacts/android-play-release
+          if-no-files-found: error
           retention-days: 30

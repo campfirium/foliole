@@ -197,6 +197,7 @@ jobs:
       IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
 
   mobile-android:
+    permissions: { contents: read, actions: read, deployments: write }
     if: always() && inputs.mobile_distribution == 'android' && needs.mobile-context.result == 'success'
     needs: [full-quality, mobile-context]
     uses: ./.github/workflows/release-android.yml

@@ -1,6 +1,7 @@
 import { fullChainStages, stagesVerdict } from '../quality/chain-verdict.mjs';
 import { verifyPlayCandidate } from '../android/play-distribution.mjs';
 import { parseRemoteQualityRun } from '../quality/remote-quality-run-title.mjs';
+import { verifyPlayDexIdentity } from '../android/play-dex-identity.mjs';
 
 export const MOBILE_REPOSITORY = 'campfirium/foliole';
 export const MOBILE_TASK = 'foliole-mobile-candidate';
@@ -13,6 +14,7 @@ function verifyOrigin(run, candidate) {
       String(run.id) !== candidate?.runId || !Number.isSafeInteger(run.run_attempt) ||
       !['in_progress', 'completed'].includes(run.status) ||
       !/^\d+\.\d+\.\d+$/u.test(candidate.version ?? '')) fail('run or version identity differs');
+  if (run.status === 'completed' && !['success', 'failure'].includes(run.conclusion)) fail('source run was cancelled or expired');
   const release = run.head_branch === 'release' && run.path === '.github/workflows/t7-release.yml' &&
     ['push', 'workflow_dispatch'].includes(run.event);
   const remote = parseRemoteQualityRun(run);
@@ -36,7 +38,7 @@ function artifactFact(artifact, name, run) {
   return { id: artifact.id, name: artifact.name, digest: artifact.digest };
 }
 
-export function createPlayRegistration({ run, signedArtifact, qualityArtifact, quality, jobs, candidate }) {
+export function createPlayRegistration({ run, signedArtifact, qualityArtifact, quality, jobs, candidate, registrarSha }) {
   const lane = verifyOrigin(run, candidate);
   const signedAttempt = Number(signedArtifact?.name?.match(/^android-play-\d+-([1-9]\d*)-signed$/u)?.[1]);
   if (!signedAttempt || signedAttempt > run.run_attempt) fail('signed attempt is invalid');
@@ -61,20 +63,23 @@ export function createPlayRegistration({ run, signedArtifact, qualityArtifact, q
   const original = Object.fromEntries(['schemaVersion', 'sourceSha', 'acceptedSha', 'version', 'runId',
     'packageName', 'track', 'editId', 'expiryTimeSeconds', 'versionCode', 'historyVersionCode',
     'aabSha256', 'certificateSha256', 'phase'].filter(key => candidate[key] !== undefined).map(key => [key, candidate[key]]));
-  return { schemaVersion: 1, kind: MOBILE_TASK, platform: 'android', repository: MOBILE_REPOSITORY,
+  const result = { schemaVersion: 1, kind: MOBILE_TASK, platform: 'android', repository: MOBILE_REPOSITORY,
     lane, sourceSha: run.head_sha, runId: String(run.id), signedAttempt,
     workflow: run.path, signedArtifact: signed, qualityArtifact: accepted, qualityAttempt: quality.run_attempt,
-    candidate: original };
+    candidate: original, dexSha256: candidate.dexSha256, registrarSha };
+  return verifyMobileRegistrationPayload(result);
 }
 
 export function verifyMobileRegistrationPayload(payload) {
   if (payload?.schemaVersion !== 1 || payload.kind !== MOBILE_TASK || payload.platform !== 'android' ||
       payload.repository !== MOBILE_REPOSITORY || !['dev-remote', 'release-t7'].includes(payload.lane) ||
+      !/^[a-f\d]{40}$/u.test(payload.registrarSha ?? '') ||
       !/^[1-9]\d*$/u.test(payload.runId ?? '') || !Number.isSafeInteger(payload.signedAttempt) ||
       !Number.isSafeInteger(payload.qualityAttempt) || payload.qualityAttempt < 1 ||
       payload.signedAttempt < payload.qualityAttempt) fail('persisted origin is invalid');
   verifyPlayCandidate(payload.candidate, { sourceSha: payload.sourceSha, runId: payload.runId,
     version: payload.candidate?.version });
+  verifyPlayDexIdentity(payload.dexSha256, payload.dexSha256);
   if (payload.candidate.phase !== 'signed' || !/^\d+\.\d+\.\d+$/u.test(payload.candidate.version ?? '') ||
       payload.candidate.certificateSha256 !== UPLOAD_CERTIFICATE ||
       !/^[a-f\d]{64}$/u.test(payload.candidate.aabSha256 ?? '')) fail('persisted signed candidate is invalid');

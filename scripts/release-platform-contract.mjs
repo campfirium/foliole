@@ -110,6 +110,14 @@ export function validateReleaseIntent(intent, registry, packageVersion) {
   return { schemaVersion: 1, version, publicationMode, selectedPlatforms, scopeBasis };
 }
 
+export function createDefaultReleaseIntent({ registry: input, version, publicationMode }) {
+  const registry = validatePlatformRegistry(input);
+  const selectedPlatforms = registry.platforms.filter(platform => platform.status === 'active').map(platform => platform.id);
+  return validateReleaseIntent({ schemaVersion: 1, version, publicationMode, selectedPlatforms,
+    scopeBasis: Object.fromEntries(selectedPlatforms.map(id => [id, 'All active platforms are included in this release.']))
+  }, registry, version);
+}
+
 export function resolveReleasePlatformIdentity({ registry: inputRegistry, intent: inputIntent, packageVersion, sha }) {
   const registry = validatePlatformRegistry(inputRegistry);
   const intent = validateReleaseIntent(inputIntent, registry, packageVersion);

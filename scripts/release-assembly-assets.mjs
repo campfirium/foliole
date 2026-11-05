@@ -10,6 +10,7 @@ import { resolveReleasePlatformIdentity } from './release-platform-contract.mjs'
 import { validateReleaseAssetDirectory } from './release-asset-contract.mjs';
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
 import { verifyTestflightReceiptFile } from './ios/testflight-candidate.mjs';
+import { verifyPlayReleaseAssets } from './android/play-release-assets.mjs';
 
 function producerChecksum(platform) {
   return platform.managedAssets.find((asset) => asset === `SHA256SUMS-${platform.id}.txt`);
@@ -23,6 +24,10 @@ async function validateSelectedProducers(identity, inputRoot) {
   const selected = identity.registry.platforms.filter(({ id }) => identity.intent.selectedPlatforms.includes(id));
   for (const platform of selected) {
     const directory = path.join(inputRoot, platform.id);
+    if (platform.artifactContract === 'play-universal-apk') {
+      await verifyPlayReleaseAssets(directory, identity.intent.version, identity.sourceSha);
+      continue;
+    }
     if (platform.artifactContract === 'testflight-submission') {
       await verifyTestflightReceiptFile(directory, identity.intent.version, identity.sourceSha);
       continue;

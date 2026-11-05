@@ -14,6 +14,8 @@ const qualityRecheckSource = fs.readFileSync('.github/workflows/release-quality-
 const linuxResponsiveness = parse(fs.readFileSync(
   '.github/workflows/hosted-quality-linux-responsiveness.yml', 'utf8'));
 const workflow = parse(source);
+const contextSource = fs.readFileSync('.github/workflows/release-context.yml', 'utf8');
+const releaseContext = parse(contextSource);
 const assembly = parse(assemblySource);
 const qualityRecheck = parse(qualityRecheckSource);
 const qualityStages = [
@@ -42,16 +44,16 @@ describe('T7 release workflow contract', () => {
       group: 'quality-release',
       'cancel-in-progress': true
     });
-    expect(source).toContain('FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}');
-    expect(source).toContain('test "$GITHUB_REF" = "refs/heads/release"');
-    expect(source).toContain('test "$REQUESTED_SHA" = "$GITHUB_SHA"');
-    expect(source).toContain('test "$remote_sha" = "$REQUESTED_SHA"');
-    expect(source).toContain('test "$REQUESTED_VERSION" = "$(node -p');
-    expect(source).toContain('node scripts/release-target-contract.mjs >> "$GITHUB_OUTPUT"');
+    expect(contextSource).toContain('FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}');
+    expect(contextSource).toContain('test "$GITHUB_REF" = "refs/heads/release"');
+    expect(contextSource).toContain('test "$REQUESTED_SHA" = "$GITHUB_SHA"');
+    expect(contextSource).toContain('test "$remote_sha" = "$REQUESTED_SHA"');
+    expect(contextSource).toContain('test "$REQUESTED_VERSION" = "$(node -p');
+    expect(contextSource).toContain('node scripts/release-target-contract.mjs >> "$GITHUB_OUTPUT"');
     expect(assemblySource).toContain('FOLIOLE_RELEASE_EXPECTED_INTENT_DIGEST');
-    expect(`${source}\n${assemblySource}`.match(/FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE/gu))
+    expect(`${contextSource}\n${assemblySource}`.match(/FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE/gu))
       .toHaveLength(2);
-    expect(source).toContain('node scripts/desktop-update-release-policy.mjs');
+    expect(contextSource).toContain('node scripts/desktop-update-release-policy.mjs');
     expect(fs.existsSync('.github/workflows/publish-release.yml')).toBe(false);
   });
 
@@ -97,14 +99,14 @@ describe('T7 release workflow contract', () => {
       .toBe('${{ needs.release_context.outputs.macos_updater_baseline_version }}');
     expect(jobs.windows_package.with.updater_baseline_version)
       .toBe('${{ needs.release_context.outputs.windows_updater_baseline_version }}');
-    expect(jobs.release_context.outputs.release_scope)
+    expect(releaseContext.jobs.resolve.outputs.release_scope)
       .toBe('${{ steps.identity.outputs.release_scope }}');
-    expect(jobs.release_context.outputs.release_intent_digest)
+    expect(releaseContext.jobs.resolve.outputs.release_intent_digest)
       .toBe('${{ steps.identity.outputs.release_intent_digest }}');
-    expect(jobs.release_context.outputs.release_make_latest)
+    expect(releaseContext.jobs.resolve.outputs.release_make_latest)
       .toBe('${{ steps.identity.outputs.release_make_latest }}');
     expect(jobs.assemble_draft.needs)
-      .toEqual(['release_context', 'macos_package', 'windows_package', 'linux_package', 'ios_package']);
+      .toEqual(['release_context', 'macos_package', 'windows_package', 'linux_package', 'ios_package', 'android_package']);
     expect(jobs.assemble_draft.uses).toBe('./.github/workflows/release-assembly.yml');
     expect(jobs.assemble_draft.with.target_sha)
       .toBe('${{ needs.release_context.outputs.target_sha }}');
@@ -126,7 +128,7 @@ describe('T7 release workflow contract', () => {
   it('keeps draft assembly reusable-only and identity-bound to same-run producers', () => {
     expect(assembly.on.workflow_dispatch).toBeUndefined();
     expect(Object.keys(assembly.on.workflow_call.inputs)).toEqual([
-      'ios_artifact_name', 'ios_sha', 'linux_artifact_name', 'linux_sha', 'macos_artifact_name', 'macos_sha',
+      'android_artifact_name', 'android_sha', 'ios_artifact_name', 'ios_sha', 'linux_artifact_name', 'linux_sha', 'macos_artifact_name', 'macos_sha',
       'release_intent_digest', 'target_sha', 'target_version',
       'windows_artifact_name', 'windows_sha'
     ]);
@@ -150,7 +152,10 @@ describe('T7 release workflow contract', () => {
   });
 
   it('keeps selected asset validation and same-run downloads', () => {
-    expect(assemblySource.match(/uses: actions\/download-artifact@v5/gu)).toHaveLength(4);
+    const downloads = assembly.jobs.assemble.steps.filter(step => step.uses === 'actions/download-artifact@v5');
+    for (const platform of ['macos', 'windows', 'linux', 'ios', 'android']) {
+      expect(downloads.some(step => step.with.path === `release-assets/${platform}`)).toBe(true);
+    }
     expect(assemblySource).not.toContain('run-id:');
     expect(assemblySource).not.toContain('repository:');
     expect(assemblySource).toContain('node scripts/release-assembly-assets.mjs');

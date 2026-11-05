@@ -91,6 +91,7 @@
     "electron:compile": "tsc -p electron/tsconfig.json",
     "release:doctor": "node scripts/release-doctor.mjs",
     "release:verify:post": "node scripts/release-doctor.mjs --phase=post",
+    "release:intent": "node scripts/release-intent.mjs",
     "release:windows:package": "node scripts/windows/package-windows.mjs",
     "electron:dev": "node scripts/run-electron-dev.mjs",
     "electron:dev:native": "node scripts/windows/electron-dev-native.mjs",

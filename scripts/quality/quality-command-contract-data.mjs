@@ -1,4 +1,5 @@
 export const LOCAL_QUICK_PACKAGES = [
+  ['release:intent', 'prepare an explicit all-active release intent without external mutation'],
   ['appearance:colors:check', 'fixed generated-color drift check'],
   ['check:native-contracts', 'fixed native command contract check'],
   ['scripts:domains:check', 'fixed script-domain inventory check'],
@@ -108,7 +109,7 @@ export const HOSTED_ONLY_PACKAGES = [
 ];
 
 export const HOSTED_RUNNERS = [
-  ['runner:mobile-candidate-register', 'trusted default-branch mobile candidate provenance and durable registration'],
+  ['runner:mobile-candidate-register', 'trusted default-branch mobile registration and original-candidate delivery'],
   ['runner:quality-gate-target', 'quality-gate.sh and all quality-gate-target.sh targets'],
   ['runner:quality-gate-repair', 'quality-gate-repair.mjs'],
   ['runner:hosted-quality-bucket', 'sequential same-host quality owner bucket'],

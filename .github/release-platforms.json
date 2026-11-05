@@ -63,6 +63,18 @@
       }
     },
     {
+      "id": "android",
+      "displayName": "Android",
+      "status": "active",
+      "architectures": ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"],
+      "deliveryChannel": "github-release",
+      "t7Required": true,
+      "artifactContract": "play-universal-apk",
+      "downloadAsset": "Foliole-Android-{version}.apk",
+      "managedAssets": ["Foliole-Android-{version}.apk", "Foliole-Android-{version}-Play.json"],
+      "update": { "mode": "store", "baselineVersion": null }
+    },
+    {
       "id": "ios",
       "displayName": "iPhone (TestFlight)",
       "status": "active",

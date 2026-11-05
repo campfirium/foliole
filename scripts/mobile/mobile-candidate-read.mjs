@@ -5,18 +5,25 @@ import { createHash } from 'node:crypto';
 import { Buffer } from 'node:buffer';
 import { readReceipt } from '../quality/chain-verdict-read.mjs';
 import { createPlayRegistration } from './mobile-candidate-provenance.mjs';
+import { readPlayDexIdentity } from '../android/play-dex-identity.mjs';
 
 export function readSignedPlayArchive(bytes) {
+  return extractSignedPlayArchive(bytes).candidate;
+}
+
+export function extractSignedPlayArchive(bytes) {
   fs.mkdirSync('.tmp/artifacts', { recursive: true });
   const root = fs.mkdtempSync(path.resolve('.tmp/artifacts/mobile-candidate-read-'));
   try {
     const archive = path.join(root, 'signed.zip'); fs.writeFileSync(archive, bytes);
-    const member = name => execFileSync('unzip', ['-p', archive, name], { maxBuffer: 512 * 1024 * 1024 });
-    const candidate = JSON.parse(member('candidate.json').toString('utf8'));
-    if (createHash('sha256').update(member('app-release-signed.aab')).digest('hex') !== candidate.aabSha256) {
+    const member = (name, maxBuffer = 512 * 1024 * 1024) => execFileSync('unzip', ['-p', archive, name], { maxBuffer });
+    const candidate = JSON.parse(member('candidate.json', 1024 * 1024).toString('utf8'));
+    const bundle = member('app-release-signed.aab');
+    if (createHash('sha256').update(bundle).digest('hex') !== candidate.aabSha256) {
       throw new Error('Signed Play archive digest differs from the original candidate');
     }
-    return candidate;
+    const bundleFile = path.join(root, 'signed.aab'); fs.writeFileSync(bundleFile, bundle);
+    return { candidate: { ...candidate, dexSha256: readPlayDexIdentity(bundleFile, true) }, bundle };
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 }
 
@@ -31,7 +38,7 @@ async function allPages(api, route, field) {
   }
 }
 
-export async function readPlayRegistration(api, { runId, artifactName }) {
+export async function readPlayRegistration(api, { runId, artifactName, registrarSha }) {
   if (!/^[1-9]\d*$/u.test(String(runId)) ||
       !new RegExp(`^android-play-${runId}-[1-9]\\d*-signed$`, 'u').test(artifactName ?? '')) {
     throw new Error('Exact original signed Play artifact and run are required');
@@ -71,5 +78,5 @@ export async function readPlayRegistration(api, { runId, artifactName }) {
   }
   const latest = await api('GET', route);
   if (latest.head_sha !== run.head_sha || latest.run_attempt !== run.run_attempt) throw new Error('Source run changed during registration');
-  return createPlayRegistration({ run: latest, candidate, signedArtifact, qualityArtifact, quality, jobs });
+  return createPlayRegistration({ run: latest, candidate, signedArtifact, qualityArtifact, quality, jobs, registrarSha });
 }

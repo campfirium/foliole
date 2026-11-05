@@ -1,0 +1,72 @@
+name: Resolve exact release context
+on:
+  workflow_call:
+    inputs:
+      requested_sha: { required: false, type: string }
+      requested_version: { required: false, type: string }
+    outputs:
+      macos_updater_baseline_version:
+        value: ${{ jobs.resolve.outputs.macos_updater_baseline_version }}
+      release_hard_gates:
+        value: ${{ jobs.resolve.outputs.release_hard_gates }}
+      release_make_latest:
+        value: ${{ jobs.resolve.outputs.release_make_latest }}
+      release_intent_digest:
+        value: ${{ jobs.resolve.outputs.release_intent_digest }}
+      release_scope:
+        value: ${{ jobs.resolve.outputs.release_scope }}
+      release_scope_json:
+        value: ${{ jobs.resolve.outputs.release_scope_json }}
+      target_sha:
+        value: ${{ jobs.resolve.outputs.target_sha }}
+      target_version:
+        value: ${{ jobs.resolve.outputs.target_version }}
+      trigger_ref:
+        value: ${{ jobs.resolve.outputs.trigger_ref }}
+      windows_updater_baseline_version:
+        value: ${{ jobs.resolve.outputs.windows_updater_baseline_version }}
+permissions: { contents: read }
+jobs:
+  resolve:
+    name: Resolve release identity
+    runs-on: ubuntu-latest
+    outputs:
+      macos_updater_baseline_version: ${{ steps.identity.outputs.macos_updater_baseline_version }}
+      release_hard_gates: ${{ steps.identity.outputs.release_hard_gates }}
+      release_make_latest: ${{ steps.identity.outputs.release_make_latest }}
+      release_intent_digest: ${{ steps.identity.outputs.release_intent_digest }}
+      release_scope: ${{ steps.identity.outputs.release_scope }}
+      release_scope_json: ${{ steps.identity.outputs.release_scope_json }}
+      target_sha: ${{ steps.identity.outputs.target_sha }}
+      target_version: ${{ steps.identity.outputs.target_version }}
+      trigger_ref: ${{ steps.identity.outputs.trigger_ref }}
+      windows_updater_baseline_version: ${{ steps.identity.outputs.windows_updater_baseline_version }}
+    steps:
+      - name: Check out release tip
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.requested_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require the exact release branch and versioned content
+        id: identity
+        env:
+          FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}
+          FOLIOLE_RELEASE_REQUIRE_PUBLICATION_MODE: "true"
+          FOLIOLE_RELEASE_RUN_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.requested_sha || github.sha }}
+          REQUESTED_SHA: ${{ inputs.requested_sha }}
+          REQUESTED_VERSION: ${{ inputs.requested_version }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]]; then
+            test "$GITHUB_REF" = "refs/heads/release"
+            test "$REQUESTED_SHA" = "$GITHUB_SHA"
+            remote_sha="$(git ls-remote origin refs/heads/release | cut -f1)"
+            test -n "$remote_sha"
+            test "$remote_sha" = "$REQUESTED_SHA"
+            test "$REQUESTED_VERSION" = "$(node -p "require('./package.json').version")"
+          fi
+          node scripts/release-target-contract.mjs >> "$GITHUB_OUTPUT"
+          node scripts/desktop-update-release-policy.mjs \
+            --candidate="$(node -p "require('./package.json').version")" > /dev/null
+          echo "trigger_ref=${GITHUB_REF}" >> "$GITHUB_OUTPUT"

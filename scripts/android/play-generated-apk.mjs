@@ -4,6 +4,9 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { PLAY_PACKAGE } from './play-api.mjs';
 import { verifyPlayCandidate } from './play-distribution.mjs';
+import { readPlayDexIdentity, verifyPlayDexIdentity } from './play-dex-identity.mjs';
+
+export const PLAY_APP_CERTIFICATE_SHA256 = '0a5301b54c3af22b4bf54c6942ee334c017a780b395b92194669a7167f7ea086';
 
 export function normalizePlayCertificate(value) {
   if (typeof value !== 'string' || !/^(?:[a-f\d]{64}|(?:[a-f\d]{2}:){31}[a-f\d]{2})$/iu.test(value)) {
@@ -42,7 +45,7 @@ export function inspectPlayApk(file, { buildTools, env }, run = execFileSync) {
 }
 
 export async function collectPlayUniversalApk({ api, download, candidate, identity, certificateSha256,
-  directory, inspect }) {
+  directory, inspect, expectedDexSha256 }) {
   verifyPlayCandidate(candidate, identity);
   if (!/^[a-f\d]{64}$/u.test(candidate.aabSha256 ?? '') ||
       !['uploaded', 'commit-unknown', 'committed', 'observed'].includes(candidate.phase)) {
@@ -60,8 +63,11 @@ export async function collectPlayUniversalApk({ api, download, candidate, identi
         actual.version !== identity.version || actual.certificateSha256 !== selected.certificateSha256) {
       throw new Error('Generated APK package, version or signing certificate differs');
     }
+    const dexSha256 = expectedDexSha256 ? readPlayDexIdentity(file) : undefined;
+    if (expectedDexSha256) verifyPlayDexIdentity(dexSha256, expectedDexSha256);
     const receipt = { schemaVersion: 1, ...identity, ...actual, aabSha256: candidate.aabSha256,
-      apkSha256: createHash('sha256').update(bytes).digest('hex'), size: bytes.length };
+      apkSha256: createHash('sha256').update(bytes).digest('hex'), size: bytes.length,
+      ...(dexSha256 ? { dexSha256 } : {}) };
     const asset = `Foliole-Android-${identity.version}.apk`;
     // Failed inspection never replaces a previously verified download or receipt.
     fs.renameSync(file, path.join(directory, asset));

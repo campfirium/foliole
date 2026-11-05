@@ -38,6 +38,7 @@ it('executes the real Android candidate guard before credentials or build and re
   const guard = workflow.jobs.play.steps.find(step => step.name === 'Require exact accepted QA identity');
   const run = change => spawnSync('bash', ['-e', '-c', guard.run], { env: { ...process.env, ...env, ...change } });
   expect(run({}).status).toBe(0);
+  expect(run({ GITHUB_REF: 'refs/heads/release', TRIGGER_REF: 'refs/heads/release', EXECUTION_LANE: 'release-t7' }).status).toBe(0);
   for (const change of [{ GITHUB_REF: 'refs/heads/dev' }, { TRIGGER_REF: 'refs/heads/release' },
     { EXECUTION_LANE: 'release-t7' }, { TARGET_SHA: 'b'.repeat(40) }, { ACCEPTED_SHA: 'b'.repeat(40) },
     { GITHUB_SHA: 'b'.repeat(40) }, { TARGET_VERSION: '0.0.0' }, { GITHUB_RUN_ID: '' }]) {
@@ -47,12 +48,15 @@ it('executes the real Android candidate guard before credentials or build and re
 
 it('isolates signing and API secrets from package scripts and preserves the signed checkpoint before upload', () => {
   const job = workflow.jobs.play;
-  expect(job.concurrency).toEqual({ group: 'play-android-open-testing', 'cancel-in-progress': false });
+  expect(workflow.concurrency).toEqual({ group: 'play-android-open-testing', 'cancel-in-progress': false });
   expect(Object.keys(job.env)).not.toContain('ANDROID_PLAY_SERVICE_ACCOUNT_JSON');
   const steps = job.steps;
-  const upload = steps.findIndex(step => step.run?.endsWith('play-release.mjs upload'));
-  expect(steps[upload - 1].uses).toBe('actions/upload-artifact@v4');
-  expect(steps[upload - 1].with.path).toContain('app-release-signed.aab');
+  const checkpoint = steps.find(step => step.name === 'Save immutable signed candidate before any upload');
+  expect(checkpoint.with.path).toContain('app-release-signed.aab');
+  expect(workflow.jobs.delivery.needs).toBe('play');
+  expect(workflow.jobs.delivery.steps[0].with).toEqual({ ref: 'dev', 'persist-credentials': false });
+  const delivery = workflow.jobs.delivery.steps.find(step => step.id === 'deliver');
+  expect(delivery.run).toBe('node scripts/android/play-deliver-runner.mjs');
   for (const step of steps.filter(item => item.env)) {
     if (Object.keys(step.env).some(key => key.startsWith('ANDROID_UPLOAD'))) {
       expect(step.run).toBe('node scripts/android/play-release.mjs sign');

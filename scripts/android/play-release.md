@@ -1,8 +1,10 @@
 # Android open testing distribution
 
-This adapter uses the registered QA checkout and the existing Play application
-`com.campfirium.foliole.android`, open testing API track `beta`. It does not publish
-production, modify countries/testers, create a GitHub Release, or change iOS.
+This adapter uses the existing Play application `com.campfirium.foliole.android`,
+open testing API track `beta`. It supports an exact accepted formal release on
+`release` and explicit full mobile QA on the registered `check` checkout. It does
+not publish production, modify countries/testers, or change iOS. Formal release
+assembly owns the GitHub Draft; the adapter supplies its verified APK and receipt.
 
 ## Enable credentials
 
@@ -62,13 +64,15 @@ the existing QA skill. Ordinary QA never distributes. The explicit entry is:
 npm run quality:remote -- --scope full --mobile-distribution android
 ```
 
-`remote-quality.yml` admits only exact `check` source/workflow snapshots. Its full
-chain accepted SHA gates the Android reusable workflow. No direct workflow dispatch
+`remote-quality.yml` admits only exact `check` source/workflow snapshots. Ordinary
+QA still defaults to no distribution. T7 admits its exact release candidate after
+the full chain and release-candidate acceptance. No direct distribution dispatch
 is exposed by the adapter. Package version comes from the candidate's package.json;
-versionCode is one above the maximum of verified durable history and current Play
-bundle/APK/all-track inventory plus release states,
-under the application-wide non-cancelling distribution concurrency group. Historical
-code conflicts from an external writer fail without automatic increment/re-upload.
+versionCode exceeds versioned history, durable candidate reservations and current
+Play bundle/APK/all-track inventory plus release states. An unresolved earlier
+operation blocks a new edit. The application-wide non-cancelling concurrency group
+covers allocation, build and delivery. Conflicts never trigger automatic increment
+or re-upload.
 Review English `play-release-notes.txt` with the candidate before dispatch.
 
 The runner builds unsigned production Web/Capacitor/AAB assets without signing/API
@@ -92,6 +96,29 @@ code, edit, archive digest, certificate and observed `releaseLifecycleState`.
 track rollout is not proof of review approval or installation. Unknown, missing,
 rejected, draft and not-sent states fail; inspect the recorded state in Console.
 The workflow performs one status read, without adding a background poller.
+
+## Durable registration and trusted delivery
+
+After the source job builds/signs and checkpoints the AAB, a separate job checks
+out only the current trusted `dev` default branch. It never executes candidate
+code or installs candidate dependencies. The trusted implementation must reach
+the default branch before a release or explicit mobile delivery uses this path.
+
+The job checks the actual repository/run/workflow/source, original artifact and
+quality attempts, complete quality stages and admission job. It verifies archive
+digests, the AAB digest, product version and base-module DEX digests. Formal releases
+also require release-candidate acceptance. These facts and the trusted checker SHA
+are registered as a GitHub Deployment under `foliole-play-beta` before upload.
+Only this trusted job receives `deployments:write`; package preparation reads
+reservations. No extra secret or source-writing permission is needed.
+
+Before each upload/commit, a durable deployment status records that the operation
+may have started. A lost response resumes the original edit/version/hash and never
+blindly repeats an upload or commit. Confirmed uploads can be reconciled from Play
+after checkpoint expiry; a committed release can be observed and its APK collected
+without the original AAB archive. Uncertain absent uploads or expired edits need
+manual reconciliation. The standalone registration workflow's manual entry uses
+the same default-branch code and provenance checks; it cannot upload or publish.
 
 Official references: [API access](https://developers.google.com/android-publisher/getting_started),
 [tracks](https://developers.google.com/android-publisher/tracks),
@@ -128,9 +155,9 @@ successful full-quality jobs; do not rerun all jobs or dispatch another distribu
 to demonstrate recovery. The job restores only that run's immutable artifacts,
 including the signed archive and latest state. Expired checkpoints fail closed.
 Build/sign failure before a signed checkpoint can rebuild the same allocated code.
-After a signed checkpoint, a rerun reconciles the existing edit's exact code/hash;
-an absent or different bundle requires manual investigation and is never retried
-automatically. An expired/invalid edit also requires investigation.
+After durable registration, delivery resumes using its original operation phase
+and exact edit/code/hash. An absent uncertain upload, different bundle or expired
+edit requires manual investigation; it is never uploaded automatically again.
 
 If commit response was lost, read the exact release name/code from the lifecycle
 endpoint. A matching observed release is resumed without upload/commit. Otherwise
@@ -160,7 +187,21 @@ Android `apksigner` and `aapt2` before writing the APK and digest receipt.
 `createPlayApkDownloader` performs an authenticated binary GET with `alt=media`;
 it never creates an edit, uploads, commits or substitutes a split/local APK.
 
-This library is not yet connected to QA, T7 or public release assembly. Missing
-universal output, missing independent certificate baseline, permission failure,
-or an identity/signature mismatch blocks collection for release use. Read-only
-download success does not mean the beta release is approved or installable.
+T7 collects the APK and `Foliole-Android-{version}-Play.json` only after the original
+Play candidate is observed. Explicit mobile QA keeps its channel receipt without
+requiring GitHub APK assets. Missing universal output, permission failure, or any
+identity/signature mismatch blocks formal asset collection. DEX bytes must also
+match the original AAB, rejecting injected installer-check/protection code. The
+current application signing certificate was independently verified in Play Console;
+the upload certificate is not used as a substitute.
+
+Installer checks were explicitly disabled for future versions. Already-generated
+protected APKs do not change and must not be substituted. Download success is not
+approval, tester availability or an installed retained-data upgrade. The later
+publication gate must still query actual channel availability.
+
+For a new formal product version, `npm run release:intent` previews an intent for
+every active registry platform; add `-- --write` after choosing that new version.
+It preserves published scope/history and refuses to rewrite an already-public
+version. Android has store update semantics and an exact GitHub APK download; it
+does not become a desktop updater platform or invalidate the historical bridge.

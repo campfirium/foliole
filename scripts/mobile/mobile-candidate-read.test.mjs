@@ -16,15 +16,19 @@ afterEach(() => { for (const root of roots.splice(0)) fs.rmSync(root, { recursiv
 function archives() {
   fs.mkdirSync('.tmp/artifacts', { recursive: true });
   const root = fs.mkdtempSync(path.resolve('.tmp/artifacts/mobile-registration-test-')); roots.push(root);
-  const f = registrationFixture(); const aab = Buffer.from('original signed-byte boundary');
-  f.candidate.aabSha256 = createHash('sha256').update(aab).digest('hex');
+  const f = registrationFixture();
   const zipped = (name, members) => {
     const folder = path.join(root, name); fs.mkdirSync(folder);
-    for (const [member, bytes] of Object.entries(members)) fs.writeFileSync(path.join(folder, member), bytes);
+    for (const [member, bytes] of Object.entries(members)) {
+      fs.mkdirSync(path.dirname(path.join(folder, member)), { recursive: true });
+      fs.writeFileSync(path.join(folder, member), bytes);
+    }
     const target = path.join(root, `${name}.zip`);
-    execFileSync('zip', ['-j', target, ...Object.keys(members).map(member => path.join(folder, member))]);
+    execFileSync('zip', ['-r', target, '.'], { cwd: folder });
     return fs.readFileSync(target);
   };
+  const aab = zipped('bundle', { 'base/dex/classes.dex': 'original signed-byte boundary' });
+  f.candidate.aabSha256 = createHash('sha256').update(aab).digest('hex');
   const zip = new Map([[10, zipped('signed', { 'candidate.json': JSON.stringify(f.candidate), 'app-release-signed.aab': aab })],
     [11, zipped('quality', { 'chain-verdict.json': JSON.stringify(f.quality) })]]);
   for (const artifact of [f.signedArtifact, f.qualityArtifact]) {
@@ -49,7 +53,7 @@ function archives() {
 }
 
 it('reads actual checkpoint ZIP bytes, verifies provenance and preserves one candidate across independent registration calls', async () => {
-  const f = archives(); const source = { runId: '42', artifactName: f.signedArtifact.name };
+  const f = archives(); const source = { runId: '42', artifactName: f.signedArtifact.name, registrarSha: f.registrarSha };
   const first = await registerMobileCandidate(f.api, await readPlayRegistration(f.api, source));
   expect(first.payload.candidate.aabSha256).toBe(f.candidate.aabSha256);
   const recovered = await registerMobileCandidate(f.api, await readPlayRegistration(f.api, source));

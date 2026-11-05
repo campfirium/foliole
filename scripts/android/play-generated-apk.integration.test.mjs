@@ -29,6 +29,8 @@ beforeAll(() => {
   const unsigned = path.join(root, 'unsigned.apk');
   run(path.join(tools.buildTools, 'aapt2'), ['link', '-I', path.join(sdk, 'platforms/android-36/android.jar'),
     '--manifest', manifest, '-o', unsigned]);
+  fs.writeFileSync(path.join(root, 'classes.dex'), 'original executable byte boundary');
+  run(path.join(process.env.JAVA_HOME, 'bin/jar'), ['--update', '--file', unsigned, '-C', root, 'classes.dex']);
   const key = path.join(root, 'fixture.p12');
   const passwordFile = path.join(root, 'password');
   fs.writeFileSync(passwordFile, randomBytes(24).toString('hex'), { mode: 0o600 });
@@ -42,11 +44,21 @@ beforeAll(() => {
     '--ks-pass', `file:${passwordFile}`, '--out', signed, unsigned]);
   bytes = fs.readFileSync(signed);
 });
+
+it('rejects an otherwise valid same-signature APK when its executable code differs from the uploaded AAB', async () => {
+  await expect(collectPlayUniversalApk({ candidate, identity, certificateSha256: certificate,
+    directory: path.join(root, 'code-mismatch'), expectedDexSha256: { 'classes.dex': 'f'.repeat(64) },
+    api: async () => ({ generatedApks: [{ certificateSha256Hash: certificate,
+      generatedUniversalApk: { downloadId: 'modified-code-boundary' } }] }),
+    download: async () => bytes, inspect: file => inspectPlayApk(file, tools) }))
+    .rejects.toThrow(/executable code differs/u);
+});
 afterAll(() => { if (root) fs.rmSync(root, { recursive: true, force: true }); });
 
 it('persists only a cryptographically verified APK and rejects real post-signing corruption without losing the previous result', async () => {
   const directory = path.join(root, 'collected');
   const input = { candidate, identity, certificateSha256: certificate, directory,
+    expectedDexSha256: { 'classes.dex': createHash('sha256').update('original executable byte boundary').digest('hex') },
     api: async () => ({ generatedApks: [{ certificateSha256Hash: certificate,
       generatedUniversalApk: { downloadId: 'isolated-byte-boundary' } }] }),
     download: async () => bytes, inspect: file => inspectPlayApk(file, tools) };

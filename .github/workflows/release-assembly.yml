@@ -3,6 +3,8 @@ name: Release Draft Assembly
 on:
   workflow_call:
     inputs:
+      android_artifact_name: { required: false, type: string }
+      android_sha: { required: false, type: string }
       ios_artifact_name: { required: false, type: string }
       ios_sha: { required: false, type: string }
       linux_artifact_name: { required: false, type: string }
@@ -26,6 +28,7 @@ jobs:
     timeout-minutes: 20
     env:
       GH_TOKEN: ${{ github.token }}
+      ANDROID_SHA: ${{ inputs.android_sha }}
       IOS_SHA: ${{ inputs.ios_sha }}
       LINUX_SHA: ${{ inputs.linux_sha }}
       MACOS_SHA: ${{ inputs.macos_sha }}
@@ -54,6 +57,7 @@ jobs:
       - name: Verify selected producer identities before download
         env:
           RELEASE_SCOPE: ${{ steps.identity.outputs.release_scope }}
+          ANDROID_ARTIFACT_NAME: ${{ inputs.android_artifact_name }}
           IOS_ARTIFACT_NAME: ${{ inputs.ios_artifact_name }}
           LINUX_ARTIFACT_NAME: ${{ inputs.linux_artifact_name }}
           MACOS_ARTIFACT_NAME: ${{ inputs.macos_artifact_name }}
@@ -79,6 +83,10 @@ jobs:
         if: contains(fromJSON(steps.identity.outputs.release_scope_json), 'linux')
         uses: actions/download-artifact@v5
         with: { name: "${{ inputs.linux_artifact_name }}", path: release-assets/linux }
+      - name: Download same-run verified Android APK and receipt
+        if: contains(fromJSON(steps.identity.outputs.release_scope_json), 'android')
+        uses: actions/download-artifact@v5
+        with: { name: "${{ inputs.android_artifact_name }}", path: release-assets/android }
       - name: Download same-run iPhone submission receipt
         if: contains(fromJSON(steps.identity.outputs.release_scope_json), 'ios')
         uses: actions/download-artifact@v5

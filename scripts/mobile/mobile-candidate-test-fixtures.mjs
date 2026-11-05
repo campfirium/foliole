@@ -14,11 +14,10 @@ export function registrationFixture(lane = 'dev-remote') {
     needs: Object.fromEntries(fullChainStages(lane).map(stage => [stage, { result: 'success', outputs: { accepted_sha: sha } }])) });
   const candidate = { schemaVersion: 1, sourceSha: sha, acceptedSha: sha, runId: '42', version: '0.7.17',
     packageName: 'com.campfirium.foliole.android', track: 'beta', editId: '123', versionCode: 4,
-    aabSha256: 'c'.repeat(64), phase: 'signed',
+    aabSha256: 'c'.repeat(64), phase: 'signed', dexSha256: { 'classes.dex': 'd'.repeat(64) },
     certificateSha256: '3A:63:39:38:11:29:26:8C:65:1A:97:3F:A4:FF:A2:4F:F2:E3:E6:B3:32:F2:28:E4:E1:E0:AB:02:AF:BE:18:0B' };
-  return { run, quality, candidate, signedArtifact: artifact(10, 'android-play-42-1-signed'),
+  return { run, quality, candidate, registrarSha: 'e'.repeat(40), signedArtifact: artifact(10, 'android-play-42-1-signed'),
     qualityArtifact: artifact(11, 'chain-verdict-42-1'), jobs: [{
       name: release ? 'Full chain / quality-admission / verdict' : 'full-quality / quality-admission / verdict', conclusion: 'success' },
     ...(release ? [{ name: 'Release candidate quality / Release candidate quality', conclusion: 'success' }] : [])] };
 }
-

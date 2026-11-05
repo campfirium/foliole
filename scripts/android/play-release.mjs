@@ -2,18 +2,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { createPlayApi, playAccessToken, readPlayReleases } from './play-api.mjs';
-import { preparePlayCandidate, verifyPlayCandidate, uploadPlayCandidate, commitPlayCandidate, observePlayCandidate } from './play-distribution.mjs';
+import { createPlayApi, playAccessToken } from './play-api.mjs';
+import { preparePlayCandidate, verifyPlayCandidate } from './play-distribution.mjs';
 import { buildPlayBundle, signPlayBundle } from './play-build.mjs';
 import { restorePlayCheckpoints } from './play-checkpoints.mjs';
+import { createMobileGithubApi } from '../mobile/mobile-candidate-store.mjs';
+import { readReservedPlayHistory } from './play-candidate-history.mjs';
 
 export function playRunnerIdentity(env, root) {
   const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
   const version = JSON.parse(fs.readFileSync(path.join(root, 'package.json'))).version;
-  if (env.GITHUB_REF !== 'refs/heads/check' || env.TRIGGER_REF !== 'refs/heads/check' ||
-      env.EXECUTION_LANE !== 'qa-mobile-beta' || env.GITHUB_SHA !== sourceSha ||
+  const ref = { 'qa-mobile-beta': 'refs/heads/check', 'release-t7': 'refs/heads/release' }[env.EXECUTION_LANE];
+  if (!ref || env.GITHUB_REF !== ref || env.TRIGGER_REF !== ref || env.GITHUB_SHA !== sourceSha ||
       env.TARGET_SHA !== sourceSha || env.ACCEPTED_SHA !== sourceSha || env.TARGET_VERSION !== version ||
-      !/^[1-9]\d*$/u.test(env.GITHUB_RUN_ID ?? '')) throw new Error('Play requires the exact accepted full QA candidate on check');
+      !/^[1-9]\d*$/u.test(env.GITHUB_RUN_ID ?? '')) throw new Error('Play requires the exact accepted release or full QA candidate');
   return { sourceSha, acceptedSha: sourceSha, version, runId: env.GITHUB_RUN_ID };
 }
 
@@ -46,7 +48,7 @@ export async function runPlayRelease(command, env = process.env) {
   if (command === 'guard') return;
   const state = fs.existsSync(file) ? verifyPlayCandidate(JSON.parse(fs.readFileSync(file)), identity) : null;
   if (buildOrSign(command, state, root, directory, env, save)) return;
-  if (!['prepare', 'upload', 'commit', 'observe', 'inspect'].includes(command)) throw new Error('Unknown Play release action');
+  if (!['prepare', 'inspect'].includes(command)) throw new Error('Use trusted durable delivery for Play upload, commit and observe');
   const api = createPlayApi(await playAccessToken(env.ANDROID_PLAY_SERVICE_ACCOUNT_JSON));
   if (command === 'inspect') {
     const result = await api('GET', 'tracks/beta/releases');
@@ -54,34 +56,11 @@ export async function runPlayRelease(command, env = process.env) {
     return;
   }
   if (command === 'prepare') {
-    if (!state) save(await preparePlayCandidate(api, identity));
+    if (!state) save(await preparePlayCandidate(api, identity,
+      await readReservedPlayHistory(createMobileGithubApi(env.GH_TOKEN))));
     return;
   }
-  if (!state?.aabSha256) throw new Error('Missing signed candidate');
-  const marker = path.join(directory, 'restored');
-  const restored = fs.existsSync(marker) && fs.readFileSync(marker, 'utf8') === 'upload-may-have-started';
-  if (restored && command === 'upload' && ['uploaded', 'commit-unknown', 'committed', 'observed'].includes(state.phase)) {
-    const releases = await readPlayReleases(api);
-    const name = `${state.version}.${state.versionCode}.${state.sourceSha.slice(0, 9)}`;
-    if (releases.some(release => release.releaseName === name &&
-        release.activeArtifacts?.some(item => Number(item.versionCode) === state.versionCode))) {
-      state.releaseName = name;
-      return observePlayCandidate({ api, state, save });
-    }
-  }
-  if (command === 'upload' && ['prepared', 'signed', 'upload-unknown'].includes(state.phase)) {
-    return uploadPlayCandidate({ api, state, bytes: fs.readFileSync(path.join(directory, 'app-release-signed.aab')), restored, save });
-  }
-  if (command === 'commit' && state.phase === 'uploaded') {
-    return commitPlayCandidate({ api, state, notes: fs.readFileSync(path.join(root, 'scripts/android/play-release-notes.txt'), 'utf8'), save });
-  }
-  if (command === 'observe' || state.phase === 'commit-unknown') {
-    const receipt = await observePlayCandidate({ api, state, save });
-    console.log(`[android-play] ${receipt.version}/${receipt.versionCode}: ${receipt.releaseLifecycleState}`);
-    if (env.GITHUB_STEP_SUMMARY) fs.appendFileSync(env.GITHUB_STEP_SUMMARY,
-      `Android ${receipt.version}/${receipt.versionCode}: ${receipt.releaseLifecycleState}\nSource: ${receipt.sourceSha}\n`);
-    return receipt;
-  }
+
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename) {

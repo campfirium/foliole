@@ -1,11 +1,21 @@
 /* global AbortSignal, fetch */
-import { Buffer } from 'node:buffer';
+import process from 'node:process';
+import { execFileSync } from 'node:child_process';
 import { isDeepStrictEqual } from 'node:util';
 import { MOBILE_REPOSITORY, MOBILE_TASK, PLAY_CANDIDATE_ENVIRONMENT, verifyMobileRegistrationPayload } from './mobile-candidate-provenance.mjs';
 
-export function createMobileGithubApi(token, request = fetch) {
+export function createMobileGithubApi(token, request = fetch, downloadArtifact) {
   if (!token) throw new Error('A scoped GitHub token is required');
+  const download = downloadArtifact ?? (route => execFileSync('gh', ['api', `repos/${MOBILE_REPOSITORY}/${route}`], {
+    env: { ...process.env, GH_TOKEN: token }, maxBuffer: 512 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe']
+  }));
   return async (method, route, body, binary = false) => {
+    // GitHub CLI handles artifact redirects without a custom cross-origin credential path.
+    if (binary) {
+      if (method !== 'GET' || !/^actions\/artifacts\/[1-9]\d*\/zip$/u.test(route)) throw new Error('Exact GitHub artifact download is required');
+      try { return await download(route); }
+      catch { throw new Error('Original GitHub artifact could not be downloaded'); }
+    }
     let response;
     try {
       response = await request(`https://api.github.com/repos/${MOBILE_REPOSITORY}${route ? `/${route}` : ''}`, {
@@ -16,7 +26,7 @@ export function createMobileGithubApi(token, request = fetch) {
       });
     } catch { throw new Error('GitHub candidate request outcome is unknown; reconcile the original candidate'); }
     if (!response.ok) throw new Error(`GitHub candidate request failed (HTTP ${response.status})`);
-    try { return binary ? Buffer.from(await response.arrayBuffer()) : await response.json(); }
+    try { return await response.json(); }
     catch { throw new Error('GitHub candidate response is invalid; reconcile the original candidate'); }
   };
 }

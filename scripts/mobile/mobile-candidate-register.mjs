@@ -22,7 +22,7 @@ export async function runMobileRegistration(env = process.env) {
   const api = createMobileGithubApi(env.GH_TOKEN);
   const headSha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   await requireTrustedMobileRegistrar({ api, env, headSha });
-  const payload = await readPlayRegistration(api, { runId: env.CANDIDATE_RUN_ID, artifactName: env.CANDIDATE_ARTIFACT });
+  const payload = await readPlayRegistration(api, { runId: env.CANDIDATE_RUN_ID, artifactName: env.CANDIDATE_ARTIFACT, registrarSha: headSha });
   const registered = await registerMobileCandidate(api, payload);
   if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, `deployment_id=${registered.id}\n`);
   console.log(`[mobile-candidate] registered=${registered.id} source=${payload.sourceSha} run=${payload.runId}`);

@@ -7,8 +7,8 @@ import { parse } from 'yaml';
 
 const workflow = parse(fs.readFileSync('.github/workflows/t7-release.yml', 'utf8'));
 const assembly = parse(fs.readFileSync('.github/workflows/release-assembly.yml', 'utf8'));
-const platforms = ['macos', 'windows', 'linux', 'ios'];
-const scopes = Array.from({ length: 15 }, (_, index) =>
+const platforms = ['macos', 'windows', 'linux', 'ios', 'android'];
+const scopes = Array.from({ length: (1 << platforms.length) - 1 }, (_, index) =>
   platforms.filter((_, bit) => (index + 1) & (1 << bit)));
 
 function context(scope, stage = '', event = 'push') {
@@ -53,7 +53,7 @@ describe('selected release packaging', () => {
   });
 
   it.each(scopes.map(scope => [scope]))('narrow rechecks respect %s and never assemble', scope => {
-    for (const stage of platforms) {
+    for (const stage of platforms.filter(id => workflow.on.workflow_dispatch.inputs.stage.options.includes(id))) {
       const values = context(scope, stage, 'workflow_dispatch');
       for (const platform of platforms) {
         expect(enabled(workflow.jobs[`${platform}_package`].if, values))

@@ -9,6 +9,7 @@ import { verifyLinuxPackageDirectory } from './linux/linux-deb-contract.mjs';
 import { resolveReleasePlatformIdentity } from './release-platform-contract.mjs';
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
 import { verifyTestflightReceiptFile } from './ios/testflight-candidate.mjs';
+import { verifyPlayReleaseAssets } from './android/play-release-assets.mjs';
 
 function sorted(values) {
   return [...values].sort((left, right) => left.localeCompare(right));
@@ -37,6 +38,10 @@ export async function validateReleaseAssetDirectory({ directory, identity }) {
   const names = await readdir(directory);
   assertExactReleaseAssets(identity, names);
   for (const platform of selectedPlatforms(identity)) {
+    if (platform.artifactContract === 'play-universal-apk') {
+      await verifyPlayReleaseAssets(directory, identity.intent.version, identity.sourceSha);
+      continue;
+    }
     if (platform.artifactContract === 'testflight-submission') {
       await verifyTestflightReceiptFile(directory, identity.intent.version, identity.sourceSha);
       continue;
