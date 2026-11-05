@@ -56,12 +56,19 @@ jobs:
           node -e "const { execFileSync } = require('node:child_process'); const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); if (head !== process.env.TARGET_SHA) throw new Error('Checked out SHA does not match TARGET_SHA')"
       - name: Build Android web application
         run: npm run android:web:build
+      - name: Install browser for mobile settings regression
+        run: npm exec -- playwright install --with-deps chromium
+      - name: Verify mobile settings with built styles
+        run: npm run test:e2e -- tests/e2e/companion-settings-sheets.spec.ts --workers=1
       - name: Upload Android web build logs
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: android-web-build-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
-          path: .tmp/logs/quality-gate
+          path: |
+            .tmp/logs/quality-gate
+            .tmp/playwright-results/e2e
+            .tmp/artifacts/T719
           if-no-files-found: ignore
           retention-days: 14
 

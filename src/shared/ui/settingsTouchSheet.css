@@ -5,8 +5,10 @@
   bottom: 0;
   width: 100%;
   max-width: none;
+  max-height: 90vh;
   max-height: 90dvh;
   padding: 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
   transform: none;
   translate: none;
   overflow-y: auto;
@@ -21,8 +23,8 @@
 .settings-touch-sheet [data-settings-sheet-header] button { min-height: 44px; border: 0; background: transparent; font-size: 14px; color: var(--role-text-secondary); }
 .settings-touch-sheet [data-app-dialog-body] { margin: 0; padding: 0; font-size: 13px; line-height: 21px; }
 .settings-touch-sheet [data-app-dialog-body] > p { font-size: 13px; line-height: 21px; }
-.settings-touch-sheet [data-app-dialog-actions] { display: flex; justify-content: flex-end; gap: 24px; margin-top: 20px; padding: 0; border: 0; background: transparent; }
-.settings-touch-sheet [data-app-dialog-actions] button { min-height: 44px; padding: 8px; border: 0; background: transparent; font-size: 14px; font-weight: 400; }
+.settings-touch-sheet [data-app-dialog-actions] { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-top: 20px; padding: 0; border: 0; background: transparent; }
+.settings-touch-sheet [data-app-dialog-actions] button { min-height: 44px; max-width: 100%; white-space: normal; overflow-wrap: anywhere; padding: 8px; border: 0; background: transparent; font-size: 14px; font-weight: 400; }
 .settings-touch-sheet [data-settings-sheet-location] { margin: 0; font-size: 14px; line-height: 23px; overflow-wrap: anywhere; }
 .settings-touch-sheet [data-settings-sheet-caption] { margin: 0 0 6px; font-size: 13px; line-height: 21px; color: var(--role-text-secondary); }
 .settings-touch-sheet [data-settings-sheet-primary] { width: 100%; min-height: 44px; margin-top: 24px; padding: 10px 16px; border: 1px solid var(--role-accent); border-radius: 8px; background: transparent; font-size: 15px; font-weight: 400; color: var(--role-accent); }
@@ -32,3 +34,7 @@
 .settings-touch-sheet [data-settings-sheet-number] span { flex-shrink: 0; color: var(--role-text-secondary); font-size: 14px; }
 
 .settings-touch-sheet-overlay { background: rgb(var(--role-ink-rgb) / 0.25); }
+
+.settings-touch-sheet [data-settings-sheet-choices] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; margin-top: 20px; }
+.settings-touch-sheet [data-settings-sheet-choices] label { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; font-size: 14px; overflow-wrap: anywhere; }
+.settings-touch-sheet [data-settings-sheet-choices] input { flex-shrink: 0; width: 18px; height: 18px; accent-color: var(--role-accent); }

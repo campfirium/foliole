@@ -1,4 +1,5 @@
 export const EN_SETTINGS_ATTACHMENTS_TRANSLATIONS = {
+  'settings.attachments.thresholdCustom': 'Custom days',
   'settings.attachments.daysUnit': 'days',
   'settings.attachments.title': 'Local attachments',
   'settings.attachments.error': "Could not finish the attachment operation. Please try again.",

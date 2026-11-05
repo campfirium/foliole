@@ -1,6 +1,7 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_SETTINGS_ATTACHMENTS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'settings.attachments.thresholdCustom': '自定义天数',
   'settings.attachments.daysUnit': '天',
   'settings.attachments.title': '本机附件',
   'settings.attachments.error': "附件操作未完成，请重试。",

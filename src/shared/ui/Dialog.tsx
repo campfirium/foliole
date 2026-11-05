@@ -24,12 +24,13 @@ AppDialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 type AppDialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
   layout?: 'bare' | 'task' | 'notice';
+  placement?: 'center' | 'bottom';
 };
 
 const AppDialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   AppDialogContentProps
->(({ className, layout = 'bare', onOpenAutoFocus, ...props }, ref) => {
+>(({ className, layout = 'bare', placement = 'center', onOpenAutoFocus, ...props }, ref) => {
   const contentRef = React.useRef<React.ElementRef<typeof DialogPrimitive.Content> | null>(null);
   const setContentRef = React.useCallback(
     (node: React.ElementRef<typeof DialogPrimitive.Content> | null) => {
@@ -57,7 +58,8 @@ const AppDialogContent = React.forwardRef<
       ref={setContentRef}
       className={cn(
         appFloatingSurfaceClassName('panel'),
-        'fixed left-1/2 top-1/2 z-modal -translate-x-1/2 -translate-y-1/2 text-foreground outline-none',
+        'fixed z-modal text-foreground outline-none',
+        placement === 'center' ? 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2' : 'inset-x-0 bottom-0',
         layout !== 'bare' && [
           'flex flex-col overflow-hidden !bg-canvas p-0',
           '[&>[data-app-dialog-title]]:m-0 [&>[data-app-dialog-title]]:flex [&>[data-app-dialog-title]]:min-h-14 [&>[data-app-dialog-title]]:shrink-0 [&>[data-app-dialog-title]]:items-center',

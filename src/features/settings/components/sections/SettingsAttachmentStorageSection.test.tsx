@@ -21,6 +21,7 @@ it('edits the mobile waiting period in a dialog, rejects invalid input and saves
   const view = render(<SettingsAttachmentStorageSection mobile />);
   fireEvent.click(await screen.findByRole('button', { name: 'Days unused before cleanup 30 days' }));
   const dialog = await screen.findByRole('dialog');
+  fireEvent.click(within(dialog).getByRole('radio', { name: 'Custom days' }));
   const input = within(dialog).getByRole('textbox', { name: 'Days unused before cleanup' });
   fireEvent.change(input, { target: { value: '0' } });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
@@ -67,4 +68,22 @@ it('keeps marking and permanent cleanup distinct when automatic marking is toggl
   fireEvent.click(screen.getByRole('button', { name: 'Mark ready to clean' }));
   await waitFor(() => expect(fixture.run).toHaveBeenCalledWith({ action: 'clean' }));
   view.unmount();
+});
+
+it('offers touch choices without opening a keyboard and discards an unconfirmed change', async () => {
+  render(<SettingsAttachmentStorageSection mobile />);
+  const open = await screen.findByRole('button', { name: 'Days unused before cleanup 30 days' });
+  fireEvent.click(open);
+  const dialog = await screen.findByRole('dialog');
+  expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument();
+  expect(within(dialog).getByRole('radio', { name: '30 days' })).toBeChecked();
+  fireEvent.click(within(dialog).getByRole('radio', { name: '60 days' }));
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+  expect(fixture.run).not.toHaveBeenCalledWith(expect.objectContaining({ action: 'configure' }));
+  fireEvent.click(open);
+  expect(screen.getByRole('radio', { name: '30 days' })).toBeChecked();
+  fireEvent.click(screen.getByRole('radio', { name: '60 days' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  await waitFor(() => expect(fixture.run).toHaveBeenCalledWith({ action: 'configure', settings: { automatic: true, observationThreshold: 60 } }));
+  expect(await screen.findByRole('button', { name: 'Days unused before cleanup 60 days' })).toBeInTheDocument();
 });

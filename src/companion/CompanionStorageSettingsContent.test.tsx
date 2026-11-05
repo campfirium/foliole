@@ -59,8 +59,10 @@ it.each([
   await preloadTranslationCatalog(locale);
   render(<LocalizationProvider initialLanguagePreference={locale}><CompanionStorageSettingsContent /></LocalizationProvider>);
 
+  expect(screen.getByRole('button', { name: clear })).toHaveTextContent(clear);
   fireEvent.click(screen.getByRole('button', { name: clear }));
   const dialog = await screen.findByRole('dialog');
+  expect(within(dialog).getByRole('button', { name: clear })).toHaveTextContent(clear);
   for (const risk of risks) expect(dialog).toHaveTextContent(risk);
   expect(clearCompanionAppData).not.toHaveBeenCalled();
 
