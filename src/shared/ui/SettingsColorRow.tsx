@@ -32,7 +32,9 @@ export function SettingsColorRow(props: {
           <label data-settings-color-swatch className="relative h-9 w-9 shrink-0">
             <span
               aria-hidden="true"
-              className={settingsColorSwatchClassName('pointer-events-none absolute inset-0')}
+              className={settingsColorSwatchClassName(props.compact
+                ? 'pointer-events-none absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2'
+                : 'pointer-events-none absolute inset-0')}
               style={{ backgroundColor: props.value }}
             />
             <input

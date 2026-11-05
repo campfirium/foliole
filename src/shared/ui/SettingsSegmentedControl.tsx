@@ -5,6 +5,7 @@ import {
   SettingsControlSlot,
   SettingsRow
 } from './SettingsLayout';
+import { settingsTouchChoiceButtonClassName, settingsTouchChoiceGroupClassName } from './settingsTouchChoiceStyles';
 
 import { cn } from '@/shared/lib/utils';
 
@@ -22,6 +23,7 @@ interface SettingsSegmentedControlProps {
   onChange: (value: string) => void;
   options: SettingsSegmentedOption[];
   value: string;
+  variant?: 'default' | 'touch';
 }
 
 interface SettingsSegmentedRowProps extends Omit<SettingsSegmentedControlProps, 'ariaLabel'> {
@@ -38,14 +40,15 @@ export function SettingsSegmentedControl({
   disabled = false,
   onChange,
   options,
-  value
+  value,
+  variant = 'default'
 }: SettingsSegmentedControlProps) {
   return (
     <div
       aria-label={ariaLabel}
       className={cn(
-        'inline-flex h-9 max-w-full items-stretch overflow-hidden rounded-md border border-settings-control-border bg-settings-control text-ui-md transition-colors',
-        'hover:border-settings-control-border-hover',
+        variant === 'touch' ? settingsTouchChoiceGroupClassName :
+          'inline-flex h-9 max-w-full items-stretch overflow-hidden rounded-md border border-settings-control-border bg-settings-control text-ui-md transition-colors hover:border-settings-control-border-hover',
         disabled && 'pointer-events-none opacity-50',
         className
       )}
@@ -57,7 +60,7 @@ export function SettingsSegmentedControl({
           <button
             aria-checked={active}
             aria-label={option.ariaLabel}
-            className={cn(
+            className={variant === 'touch' ? settingsTouchChoiceButtonClassName(active) : cn(
               'min-w-0 max-w-[12rem] shrink-0 border-l border-settings-control-border/35 px-3 text-foreground/68 transition-colors first:border-l-0',
               'flex h-full items-center justify-center whitespace-nowrap',
               'hover:bg-settings-control-hover hover:text-foreground',
@@ -88,6 +91,7 @@ export function SettingsSegmentedRow(props: SettingsSegmentedRowProps) {
         <div className="flex max-w-full flex-col items-start gap-3">
           <SettingsSegmentedControl
             ariaLabel={props.ariaLabel ?? props.label}
+            {...(props.variant ? { variant: props.variant } : {})}
             {...(props.className !== undefined ? { className: props.className } : {})}
             {...(props.disabled !== undefined ? { disabled: props.disabled } : {})}
             onChange={props.onChange}

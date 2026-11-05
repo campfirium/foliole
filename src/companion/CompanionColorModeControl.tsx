@@ -1,6 +1,7 @@
 import type { BaseColorMode } from '../features/settings/model/baseColorMode';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { settingsSwitchClassName, settingsSwitchKnobClassName } from '../shared/ui';
+import { settingsTouchChoiceButtonClassName, settingsTouchChoiceGroupClassName } from '../shared/ui/settingsTouchChoiceStyles';
 
 import { useCompanionColorMode } from './CompanionColorModeProvider';
 import { CompanionPdfReadingModeControl } from './CompanionPdfReadingModeControl';
@@ -13,11 +14,9 @@ export function CompanionColorModeControl() {
   if (!colorMode) return null;
   return <fieldset className="border-b border-companion-divider py-4">
     <legend className="text-sm font-medium text-foreground">{t('settings.appearance.colorMode.section')}</legend>
-    <div className="grid grid-cols-3 gap-2">
+    <div className={settingsTouchChoiceGroupClassName}>
       {OPTIONS.map((mode) => <button aria-pressed={colorMode.mode === mode}
-        className={`min-h-11 rounded-md border px-2 text-sm text-foreground ${colorMode.mode === mode
-          ? 'border-companion-accent bg-companion-accent-soft'
-          : 'border-companion-divider active:bg-companion-subtle/80'}`}
+        className={settingsTouchChoiceButtonClassName(colorMode.mode === mode)}
         key={mode} onClick={() => colorMode.updateMode(mode)} type="button">
         {t(`settings.appearance.colorMode.${mode}`)}
       </button>)}

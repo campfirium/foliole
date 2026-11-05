@@ -7,7 +7,7 @@ import { pdfColorSample } from '../fixtures/pdfColorSample';
 
 async function load(page: Page) {
   await page.goto('/__pdf-colors');
-  await expect(page.getByRole('combobox', { name: 'PDF in dark mode' })).toBeVisible();
+  await expect(page.getByRole('radiogroup', { name: 'PDF in dark mode' })).toBeVisible();
   const directory = path.resolve('dist/companion/assets');
   const stylesheet = readdirSync(directory).find(name => /^index-.*\.css$/.test(name));
   if (!stylesheet) throw new Error('Run npm run android:web:build before this test.');
@@ -39,12 +39,12 @@ test('preserves real PDF layers, zoom and position while changing colors and res
   await page.emulateMedia({ colorScheme: 'dark' });
   const bytes = await routePdf(page);
   await load(page);
-  const picker = page.getByRole('combobox', { name: 'PDF in dark mode' });
+  const picker = page.getByRole('radiogroup', { name: 'PDF in dark mode' });
   const pdf = page.getByRole('region', { name: 'Color sample PDF reader' });
   const canvas = page.locator('[data-pdf-page="2"] canvas');
   const layer = page.locator('[data-pdf-page="2"] .react-pdf__Page');
   await expect(page.locator('[data-pdf-page="2"] .textLayer')).toContainText(/./);
-  await expect(picker).toHaveValue('warm');
+  await expect(picker.getByRole('radio', { name: 'Warm', exact: true })).toBeChecked();
   await expect(canvas).toHaveCSS('filter', 'sepia(0.24) saturate(0.72) brightness(0.84) contrast(0.96)');
   await page.getByRole('button', { name: '+', exact: true }).click();
   await expect(page.getByText('120%', { exact: true })).toBeVisible();
@@ -58,12 +58,12 @@ test('preserves real PDF layers, zoom and position while changing colors and res
   const position = await scroll.evaluate(element => element.scrollTop);
   const originalPixels = await canvas.evaluate(element => (element as HTMLCanvasElement).toDataURL());
   await canvas.evaluate(element => { element.dataset.testIdentity = 'same-canvas'; });
-  await picker.selectOption('inverted');
+  await picker.getByRole('radio', { name: 'Inverted', exact: true }).click();
   await expect(layer).toHaveCSS('filter', 'invert(0.94) hue-rotate(180deg) brightness(0.92) contrast(0.92)');
   await expect(canvas).toHaveCSS('filter', 'none');
-  await picker.selectOption('original');
+  await picker.getByRole('radio', { name: 'Original', exact: true }).click();
   await expect(layer).toHaveCSS('filter', 'none');
-  await picker.selectOption('warm');
+  await picker.getByRole('radio', { name: 'Warm', exact: true }).click();
   await expect(canvas).toHaveAttribute('data-test-identity', 'same-canvas');
   expect(await canvas.evaluate(element => (element as HTMLCanvasElement).toDataURL())).toBe(originalPixels);
   await expect(page.locator('[data-pdf-page="2"] .annotationLayer a')).toHaveAttribute('href', 'https://example.org/pdf-sample');
@@ -71,11 +71,11 @@ test('preserves real PDF layers, zoom and position while changing colors and res
   await expect(page.getByText('120%', { exact: true })).toBeVisible();
   await page.emulateMedia({ colorScheme: 'light' });
   await expect(canvas).toHaveCSS('filter', 'none');
-  await expect(picker).toHaveValue('warm');
+  await expect(picker.getByRole('radio', { name: 'Warm', exact: true })).toBeChecked();
   await page.emulateMedia({ colorScheme: 'dark' });
   await expect(canvas).not.toHaveCSS('filter', 'none');
   await page.screenshot({ path: '.tmp/artifacts/T700/pdf-warm.png', fullPage: true });
-  await picker.selectOption('inverted');
+  await picker.getByRole('radio', { name: 'Inverted', exact: true }).click();
   await page.getByRole('button', { name: 'Another PDF', exact: true }).click();
   await expect(layer).toHaveCSS('filter', 'invert(0.94) hue-rotate(180deg) brightness(0.92) contrast(0.92)');
   await page.getByRole('button', { name: 'Text', exact: true }).click();
@@ -83,9 +83,11 @@ test('preserves real PDF layers, zoom and position while changing colors and res
   await page.getByRole('button', { name: 'Reopen PDF', exact: true }).click();
   await expect(canvas).toBeVisible();
   await load(page);
-  await expect(picker).toHaveValue('inverted');
+  await expect(picker.getByRole('radio', { name: 'Inverted', exact: true })).toBeChecked();
   await expect(layer).toHaveCSS('filter', 'invert(0.94) hue-rotate(180deg) brightness(0.92) contrast(0.92)');
-  expect(await picker.evaluate(element => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+  for (const option of await picker.getByRole('radio').all()) {
+    expect(await option.evaluate(element => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+  }
   expect(await page.locator('body').evaluate(element => element.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: '.tmp/artifacts/T700/pdf-inverted.png', fullPage: true });
   expect(await page.evaluate(async () => Array.from(new Uint8Array(await (await fetch('/__color-sample.pdf')).arrayBuffer())))).toEqual([...bytes]);
