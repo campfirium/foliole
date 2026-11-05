@@ -23,10 +23,16 @@ function playMotion(element: HTMLElement, motion: Motion, keyframes: Keyframe[],
   const finish = () => {
     if (!motion.mounted || motion.animation !== animation) return;
     motion.animation = null;
+    if (navigate) {
+      // Keep the outgoing page offscreen and the list revealed until React unmounts it.
+      element.style.transform = offscreen;
+      animation.cancel();
+      navigate();
+      return;
+    }
     motion.leaving = false;
     animation.cancel();
     motion.changed(false);
-    navigate?.();
   };
   void animation.finished.then(finish, finish);
 }

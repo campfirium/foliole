@@ -41,11 +41,14 @@ function Reader(props: { ready: boolean; onExit(): void }) {
   </article>;
 }
 
-function Navigation(props: { ready?: boolean; flow?: boolean }) {
+function Navigation(props: { ready?: boolean; flow?: boolean; destinationReady?: Promise<void> }) {
   const [reading, setReading] = useState(false);
   const model = { surface: { activeAction: props.flow ? 'review' : 'recent' }, floatingBar: {} } as CompanionShellModel;
   return <CompanionPageStack model={model} pageKey={props.flow ? null : 'recent'} reading={reading}
-    content={reading ? <Reader ready={props.ready ?? true} onExit={() => setReading(false)} />
+    content={reading ? <Reader ready={props.ready ?? true} onExit={() => {
+      if (props.destinationReady) void props.destinationReady.then(() => setReading(false));
+      else setReading(false);
+    }} />
       : <button onClick={() => setReading(true)}>Open article</button>} />;
 }
 
@@ -91,6 +94,30 @@ it('reverses an unfinished arrival and ignores repeated back presses', async () 
   expect(samples).toHaveLength(2);
   await finish(samples[1]!);
   expect(screen.getByRole('button', { name: 'Open article' })).toBeVisible();
+});
+
+it('keeps the revealed list and the departed reader in place until the destination commits', async () => {
+  const destination = Promise.withResolvers<void>();
+  render(<Navigation destinationReady={destination.promise} />);
+  const row = screen.getByRole('button', { name: 'Open article' });
+  const list = screen.getByTestId('companion-scroll-container');
+  list.scrollTop = 320;
+  fireEvent.click(row);
+  await finish(samples[0]!);
+  const back = screen.getByRole('button', { name: 'Back to list' });
+  fireEvent.click(back);
+  await finish(samples[1]!);
+
+  expect(list).toBeVisible();
+  expect(list).toHaveAttribute('inert');
+  expect(document.querySelector('[data-companion-article-transition]')).toHaveStyle({ transform: 'translateX(100%)' });
+  fireEvent.click(back);
+  expect(samples).toHaveLength(2);
+  await act(async () => { destination.resolve(); });
+  expect(screen.getByRole('button', { name: 'Open article' })).toBe(row);
+  expect(screen.getByTestId('companion-scroll-container')).toBe(list);
+  expect(list.scrollTop).toBe(320);
+  expect(screen.queryByText('Article body')).not.toBeInTheDocument();
 });
 
 it.each([true, false])('navigates immediately without sliding for reduced motion=%s or Flow', reducedMotion => {
