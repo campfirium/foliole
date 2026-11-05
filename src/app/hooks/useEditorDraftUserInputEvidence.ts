@@ -1,4 +1,6 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+
+import { subscribeContentEditAcknowledgements } from '../../store/workspaceContentEditAcknowledgements';
 
 import type { PendingDraftCommit } from './useEditorDraftPendingCommit';
 
@@ -7,6 +9,17 @@ export interface EditorInputBase { content: string; versionId: string | null | u
 export function useEditorDraftUserInputEvidence(getPendingDraftCommit: () => PendingDraftCommit | null,
   source: EditorInputBase & { nodeId: string | null }) {
   const pendingUserInputRef = useRef<{ contentLength: number | null; nodeId: string | null; base: EditorInputBase | null } | null>(null);
+  const createdBaseRef = useRef<{ nodeId: string; versionId: string } | null>(null);
+  useEffect(() => subscribeContentEditAcknowledgements(event => {
+    if (event.type !== 'created' || event.nodeId !== source.nodeId) return;
+    createdBaseRef.current = { nodeId: event.nodeId, versionId: event.versionId };
+    const input = pendingUserInputRef.current;
+    if (input?.nodeId === event.nodeId && input.base && !input.base.versionId) {
+      input.base.versionId = event.versionId;
+    }
+    const pending = getPendingDraftCommit();
+    if (pending?.nodeId === event.nodeId && !pending.baseVersionId) pending.baseVersionId = event.versionId;
+  }), [getPendingDraftCommit, source.nodeId]);
   const clearPendingUserInputEvidence = useCallback((sourceNodeId: string | null) => {
     if (!sourceNodeId || pendingUserInputRef.current?.nodeId === sourceNodeId) {
       pendingUserInputRef.current = null;
@@ -31,8 +44,10 @@ export function useEditorDraftUserInputEvidence(getPendingDraftCommit: () => Pen
   }, []);
   const markPendingUserInputEvidence = useCallback((sourceNodeId: string | null, contentLength: number | null) => {
     const previous = pendingUserInputRef.current;
+    const created = createdBaseRef.current;
+    const versionId = source.versionId ?? (created?.nodeId === sourceNodeId ? created.versionId : source.versionId);
     const base = previous?.nodeId === sourceNodeId ? previous.base
-      : sourceNodeId === source.nodeId ? { content: source.content, versionId: source.versionId } : null;
+      : sourceNodeId === source.nodeId ? { content: source.content, versionId } : null;
     pendingUserInputRef.current = { contentLength, nodeId: sourceNodeId, base };
   }, [source.nodeId, source.content, source.versionId]);
   const readInputBase = useCallback((nodeId: string | null) =>

@@ -29,6 +29,25 @@ vi.mock('../../store/workspaceContentEditAcknowledgements', () => ({
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
+it('keeps a new editor writable throughout creation and its first saved version', async () => {
+  native.retain.mockImplementation(() => new Promise(() => undefined));
+  const view = renderHook(({ versionId }) => useWorkspaceEditorBaseHold({
+    flushDraft: () => true, nodeId: 'new', versionId
+  }), { initialProps: { versionId: null as string | null } });
+  expect(view.result.current).toBe(true);
+  act(() => {
+    for (const listener of native.listeners) listener({ type: 'created', nodeId: 'new', versionId: 'created' });
+  });
+  view.rerender({ versionId: 'created' });
+  expect(view.result.current).toBe(true);
+  act(() => {
+    for (const listener of native.listeners) listener({ type: 'saved', nodeId: 'new',
+      baseVersionId: 'created', submittedVersionId: 'first-save', currentVersionId: 'first-save' });
+  });
+  view.rerender({ versionId: 'first-save' });
+  expect(view.result.current).toBe(true);
+});
+
 it('makes the editor writable only after its base is durably held', async () => {
   let finish!: () => void;
   native.retain.mockImplementationOnce(() => new Promise<void>((resolve) => { finish = resolve; }));

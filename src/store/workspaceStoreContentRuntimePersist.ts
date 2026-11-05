@@ -147,6 +147,16 @@ export function scheduleNodeContentRuntimePersist(args: Parameters<typeof runNod
   args.localState.locatorUpdatedNodesForSync.forEach(syncWorkspaceNodeDocumentCacheFromNode);
   args.metrics.runtimeCacheSyncMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - cacheStartedAt : 0;
   const edit = captureContentEdit(args.nextNodeForSync, args.baseContent);
+  // A newer full draft can replace an unsaved draft, but its optimistic body is
+  // not a new durable base. Carry the original witness into that replacement.
+  if (edit && args.field !== 'reveal') contentPersistQueue.updatePending(args.nextNodeForSync.id, previous => {
+    const baseVersionId = previous.edit?.baseVersionId ?? previous.nextNodeForSync.currentVersionId;
+    if (previous.field !== 'reveal' && previous.libraryScope === libraryScope
+      && baseVersionId === edit.baseVersionId && previous.nextNodeForSync.content === args.baseContent) {
+      const witness = previous.edit?.baseContent ?? previous.baseContent;
+      if (witness !== undefined) edit.baseContent = witness;
+    }
+  });
   const commit = contentPersistQueue.schedule(args.nextNodeForSync.id,
     { ...args, set: scopedSet, libraryScope, isCurrent, edit, inputBaseVersionId: edit?.baseVersionId },
     { fixed: Boolean(args.historySave) || args.field === 'reveal' });

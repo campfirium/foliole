@@ -23,15 +23,21 @@ export function useWorkspaceEditorBaseHold(args: {
   const key = args.nodeId && args.versionId ? `${args.nodeId}\u0000${args.versionId}` : null;
   const token = useMemo(() => key ? crypto.randomUUID() : null, [key]);
   useEffect(() => subscribeContentEditAcknowledgements((event) => {
-    if (event.type !== 'saved' || event.nodeId !== args.nodeId
-      || event.currentVersionId !== event.submittedVersionId) return;
+    if (event.nodeId !== args.nodeId) return;
+    if (event.type === 'created') {
+      // Creation has no inherited alternatives; topic history retains its identity.
+      // The draft supplies its original body witness while the ordinary hold starts.
+      if (!args.versionId) readyRef.current = { token: null, session, versionId: event.versionId };
+      return;
+    }
+    if (event.currentVersionId !== event.submittedVersionId) return;
     const current = readyRef.current;
     // The workspace publishes synchronously; protection must advance before that render,
     // rather than waiting for a lower-priority React state update.
     if (current?.session === session && current.versionId === event.baseVersionId) {
       readyRef.current = { ...current, versionId: event.submittedVersionId };
     }
-  }), [args.nodeId, session]);
+  }), [args.nodeId, args.versionId, session]);
   useEffect(() => {
     if (!args.nodeId || !args.versionId || !hasWorkspaceRuntimeRepository()) return;
     const nodeId = args.nodeId;
