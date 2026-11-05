@@ -32,6 +32,19 @@
   ],
   "packageRules": [
     {
+      "description": "Preserve Node engine compatibility ranges while still proposing out-of-range upgrades.",
+      "matchManagers": [
+        "npm"
+      ],
+      "matchDepTypes": [
+        "engines"
+      ],
+      "matchPackageNames": [
+        "node"
+      ],
+      "rangeStrategy": "replace"
+    },
+    {
       "description": "Closing a deferred major proposal must not suppress later versions of that major.",
       "matchUpdateTypes": [
         "major"

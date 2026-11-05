@@ -232,7 +232,9 @@ Local semver checks confirm that difference; manifest and lock engines agree.
 The [official release](https://nodejs.org/en/blog/release/v26.13.0) is dated
 2026-10-28; release maturity is not the reason for rejection. PR remains open
 under this batch's no-unvalidated-closure restriction. Next dependency batch
-owner rechecks if its target/diff changes; no updater configuration was changed.
+owner rechecks changed proposals. The requested Node npm engines exception now
+uses `replace`, retaining ranges and out-of-range proposals; other packages keep
+`pin`. Regression: red before, green after; hosted reconciliation is unverified.
 Re-listed and reviewed all six open bot proposals: #208/#203/#199 already have
 local implementations, #201 remains with its existing QA owner, and #189's
 AGP 9.5.1 compatibility/build validation remains a separate native increment.

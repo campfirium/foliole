@@ -96,6 +96,16 @@ describe('Renovate update ownership', () => {
     expect(renovate.branchConcurrentLimit ?? renovate.prConcurrentLimit).toBe(0);
   });
 
+  it('preserves Node engine ranges without changing ordinary dependency pinning', () => {
+    expect(renovate.rangeStrategy).toBe('pin');
+    expect(renovate.packageRules).toContainEqual(expect.objectContaining({
+      matchManagers: ['npm'],
+      matchDepTypes: ['engines'],
+      matchPackageNames: ['node'],
+      rangeStrategy: 'replace'
+    }));
+  });
+
   it('discovers owned manifests and limits the existing release-age delay to npm', () => {
     expect(renovate.packageRules.some(rule => rule.enabled === false)).toBe(false);
     expect(renovate.minimumReleaseAge).toBeUndefined();
