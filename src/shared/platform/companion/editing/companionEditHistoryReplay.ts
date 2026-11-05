@@ -92,8 +92,8 @@ async function replayAnnotations(db: DbPort, entry: EditorAnnotationOperationEnt
     if (JSON.stringify(current.anchorLink ?? null) !== JSON.stringify(parseStoredAnchorLink(original.snapshot.anchor_link))) {
       throw new Error('editor_history_annotation_anchor_changed');
     }
-    const [child] = await db.query('SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL LIMIT 1', [current.id]);
-    if (trash && child) throw new Error('editor_history_annotation_has_children');
+    const children = await db.query<{ id: string }>('SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL', [current.id]);
+    if (trash && children.some(child => !entry.annotations.some(target => target.nodeId === child.id))) throw new Error('editor_history_annotation_has_children');
     const now = new Date().toISOString();
     versions.push(await toWorkspaceNativeNodeVersion({ ...current, deletedAt: trash ? now : null, updatedAt: now }, hostName));
     annotations.push({ ...annotation, review: (trash ? await readCompanionHistoryReview(db, current.id) : annotation.review) ?? null });

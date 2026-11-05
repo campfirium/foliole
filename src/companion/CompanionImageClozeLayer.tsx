@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 're
 
 import { collectImageMatches } from '../features/editor/model/markdownImageMatches';
 import { createCompanionImageCloze, type CompanionImageClozeRequest } from '../shared/platform/companion/editing/companionImageCloze';
+import { deleteCompanionImageCloze } from '../shared/platform/companion/editing/companionImageClozeDeletion';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
 import { supportsCompanionNodeMutationSurface } from '../shared/platform/companionWorkspaceRuntimeRepository';
@@ -53,10 +54,19 @@ export function CompanionImageClozeLayer(props: {
     });
     setDraft(null);
   }
+  async function remove(regionId: string) {
+    if (!draft) return;
+    await props.activity.flush('image-cloze');
+    await props.activity.run('image-cloze', async () => {
+      const versionId = await deleteCompanionImageCloze({ ...draft, regionId });
+      setDraft(current => current ? { ...current, expectedVersionId: versionId } : null);
+      await props.workspaceSync.refreshAfterMutation(undefined, props.nodeId);
+    });
+  }
   return <div className="contents" onClickCapture={open}>
     {props.children}
     {draft ? <CompanionImageClozeEditor key={draft.nodeId} attachmentId={draft.attachmentId} src={draft.src}
       savedRegions={savedRegions.filter(region => region.attachmentId === draft.attachmentId)}
-      onCancel={() => { void props.activity.run('image-cloze', async () => {}); setDraft(null); }} onConfirm={confirm} /> : null}
+      onCancel={() => { void props.activity.run('image-cloze', async () => {}); setDraft(null); }} onConfirm={confirm} onDelete={remove} /> : null}
   </div>;
 }

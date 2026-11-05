@@ -20,6 +20,7 @@ import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runti
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
 import { CompanionArticleDocument } from './CompanionArticleDocument';
+import { drawImageClozeMask, installImageClozePointerEvents } from './companionImageCloze.testSupport';
 import { CompanionImageClozeLayer } from './CompanionImageClozeLayer';
 import { CompanionReadingActivity } from './companionReadingActivity';
 import { installReadingRangeGeometry } from './companionReadingPages.testSupport';
@@ -32,6 +33,9 @@ let library: Awaited<ReturnType<typeof createSearchLibrary>>;
 let restoreGeometry: () => void;
 beforeEach(async () => {
   restoreGeometry = installReadingRangeGeometry();
+  vi.stubGlobal('PointerEvent', installImageClozePointerEvents());
+  HTMLElement.prototype.setPointerCapture = vi.fn();
+  HTMLElement.prototype.hasPointerCapture = vi.fn(() => false);
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
   vi.spyOn(HTMLImageElement.prototype, 'complete', 'get').mockReturnValue(true);
   vi.spyOn(HTMLImageElement.prototype, 'naturalWidth', 'get').mockReturnValue(400);
@@ -62,7 +66,7 @@ it('uses the actual reading image tap, creates in SQLite, refreshes parent masks
   fireEvent.click(readingImage);
   expect(await screen.findByRole('dialog')).toBeVisible();
   fireEvent.load(screen.getByAltText('Original image'));
-  fireEvent.click(screen.getByRole('button', { name: 'Add mask' }));
+  drawImageClozeMask();
   fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
   await screen.findByRole('alert');
   expect(library.database.prepare("SELECT count(*) FROM nodes WHERE kind='item'").pluck().get()).toBe(1);
@@ -81,7 +85,7 @@ it('uses the actual reading image tap, creates in SQLite, refreshes parent masks
   const editor = await screen.findByRole('dialog');
   expect(editor.querySelectorAll('[data-region-state="outlined"]')).toHaveLength(1);
   fireEvent.load(screen.getByAltText('Original image'));
-  fireEvent.click(screen.getByRole('button', { name: 'Add mask' }));
+  drawImageClozeMask();
   expect(editor.querySelectorAll('[data-region-state="outlined"]')).toHaveLength(1);
   fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -90,9 +94,10 @@ it('uses the actual reading image tap, creates in SQLite, refreshes parent masks
   view.rerender(renderArticle());
   fireEvent.click(view.container.querySelector('.cm-md-image-element')!);
   expect((await screen.findByRole('dialog')).querySelectorAll('[data-region-state="outlined"]')).toHaveLength(2);
+  await deleteSecondMask(view, workspace, renderArticle, refresh, ids[0]!.id);
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   await reopenSearchLibrary(library.root, '2026-11-05T12:00:00Z');
-  expect(await loadCompanionWorkspaceNode(ids[0]!.id)).toEqual(saved);
+  expect(await loadCompanionWorkspaceNode(ids[0]!.id)).toEqual({ ...saved, updatedAt: expect.any(String) });
   workspace.state = await loadCompanionWorkspaceSyncState();
   view.rerender(renderArticle(ids[0]!.id, saved!.content, saved!.reveal));
   await waitFor(() => expect(view.container.querySelector('[data-region-state="hidden"]')).toBeTruthy());
@@ -100,3 +105,19 @@ it('uses the actual reading image tap, creates in SQLite, refreshes parent masks
   await act(async () => { fireEvent.click(view.container.querySelector('.cm-md-image-element')!); });
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
+
+async function deleteSecondMask(view: ReturnType<typeof renderWithLocalization>, workspace: ReturnType<typeof useCompanionWorkspaceSync>,
+  renderArticle: () => React.ReactElement, refresh: ReturnType<typeof vi.fn>, firstId: string) {
+  const latest = library.database.prepare("SELECT id FROM nodes WHERE kind='item' AND id != ?").get(firstId) as { id: string };
+  const latestNode = await loadCompanionWorkspaceNode(latest.id);
+  const latestRegion = latestNode!.imageRegions![0]!.regions[0]!.id;
+  fireEvent.click(screen.getByRole('dialog').querySelector(`[data-saved-region="${latestRegion}"]`)!);
+  expect(screen.getByRole('dialog').querySelector(`[data-saved-region="${latestRegion}"]`)).toHaveAttribute('data-region-state', 'selected');
+  fireEvent.click(screen.getByRole('button', { name: 'Delete selected mask' }));
+  await waitFor(() => expect(refresh).toHaveBeenCalledTimes(4));
+  workspace.state = await loadCompanionWorkspaceSyncState();
+  view.rerender(renderArticle());
+  await waitFor(() => expect(screen.getByRole('dialog').querySelectorAll('[data-saved-region]')).toHaveLength(1));
+  expect((await loadCompanionWorkspaceNode(latest.id))?.deletedAt).toBeTruthy();
+  expect((await loadCompanionWorkspaceNode(firstId))?.deletedAt).toBeFalsy();
+}

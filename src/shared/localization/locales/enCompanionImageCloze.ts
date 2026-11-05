@@ -1,9 +1,9 @@
 export const EN_COMPANION_IMAGE_CLOZE_TRANSLATIONS = {
   'companion.imageCloze.confirm': 'Confirm',
   'companion.imageCloze.title': 'Image cloze',
-  'companion.imageCloze.saving': 'Creating…',
+  'companion.imageCloze.saving': 'Saving…',
   'companion.imageCloze.positionHelp': 'Pinch to zoom and drag to position the image. Then add a mask.',
-  'companion.imageCloze.markHelp': 'Pinch to zoom. Drag the image to move it, or drag a mask and its corners to adjust it.',
+  'companion.imageCloze.markHelp': 'Use two fingers to zoom and move. Drag with one finger to draw a mask. Tap a mask to select it.',
   'companion.imageCloze.source': 'Original image',
   'companion.imageCloze.region': 'Mask {number}',
   'companion.imageCloze.missing': 'The image is unavailable. Cancel and reopen it after the image is restored.',
@@ -13,5 +13,6 @@ export const EN_COMPANION_IMAGE_CLOZE_TRANSLATIONS = {
   'companion.imageCloze.adjust': 'Adjust masks',
   'companion.imageCloze.position': 'Position image',
   'companion.imageCloze.add': 'Add mask',
-  'companion.imageCloze.remove': 'Remove last mask',
+  'companion.imageCloze.deleteFailed': 'Could not finish deleting the Item. Please try again.',
+  'companion.imageCloze.remove': 'Delete selected mask',
 } as const;

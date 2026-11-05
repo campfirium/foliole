@@ -22,6 +22,7 @@ import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBoo
 import { editableNode } from './companionContentEditingStable.testSupport';
 import { applyCompanionEditHistory } from './companionEditHistoryReplay';
 import { createCompanionImageCloze, type CompanionImageClozeRequest } from './companionImageCloze';
+import { deleteCompanionImageCloze } from './companionImageClozeDeletion';
 
 const hash = 'a'.repeat(64);
 const key = `${hash}.png`;
@@ -95,4 +96,50 @@ it('groups multiple masks in one Item and keeps it unchanged when a second Item 
   await reopenSearchLibrary(library!.root, '2026-11-05T12:00:00Z');
   expect(await loadCompanionWorkspaceNode('new-item')).toEqual(first);
   expect((await loadCompanionWorkspaceNode('second-item'))?.imageRegions?.[0]?.regions[0]?.id).toBe('region-3');
+});
+
+it('deletes the selected linked Item and its grouped masks durably, supports retry, undo and redo, and preserves another Item', async () => {
+  const request = await prepare();
+  request.regions.push({ ...request.regions[0]!, id: 'region-two', x: 0.6 });
+  await createCompanionImageCloze(request);
+  await createCompanionImageCloze({ ...request, nodeId: 'other', regions: [{ ...request.regions[0]!, id: 'other-region' }] });
+  const childVersion = await toWorkspaceNativeNodeVersion(editableNode({ id: 'descendant', parentNodeId: 'new-item', content: 'Keep this child', anchorLink: null }), 'source');
+  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [childVersion], { enqueueSearchInvalidations: false }));
+  const other = await loadCompanionWorkspaceNode('other');
+  const remove = { ...request, attachmentId: hash, regionId: 'region-two' };
+  await deleteCompanionImageCloze(remove);
+  expect((await loadCompanionWorkspaceNode('descendant'))?.deletedAt).toBeTruthy();
+  expect((await loadCompanionWorkspaceNode('new-item'))?.deletedAt).toBeTruthy();
+  expect(await loadCompanionWorkspaceNode('other')).toEqual({ ...other, updatedAt: expect.any(String) });
+  expect((await loadCompanionWorkspaceNode('topic'))?.content).toBe(content);
+  await deleteCompanionImageCloze(remove);
+  await applyCompanionEditHistory('topic', 'undo');
+  expect((await loadCompanionWorkspaceNode('new-item'))?.deletedAt).toBeFalsy();
+  expect((await loadCompanionWorkspaceNode('descendant'))?.deletedAt).toBeFalsy();
+  await applyCompanionEditHistory('topic', 'redo');
+  expect((await loadCompanionWorkspaceNode('descendant'))?.deletedAt).toBeTruthy();
+  expect((await loadCompanionWorkspaceNode('new-item'))?.deletedAt).toBeTruthy();
+  await applyCompanionEditHistory('topic', 'undo');
+  const foreign = await toWorkspaceNativeNodeVersion(editableNode({ id: 'foreign-child', parentNodeId: 'new-item', content: 'Added after undo', anchorLink: null }), 'source');
+  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [foreign], { enqueueSearchInvalidations: false }));
+  await expect(applyCompanionEditHistory('topic', 'redo')).rejects.toThrow('has_children');
+  expect((await loadCompanionWorkspaceNode('new-item'))?.deletedAt).toBeFalsy();
+  await deleteCompanionImageCloze({ ...remove, expectedVersionId: (await loadCompanionWorkspaceNode('topic'))!.currentVersionId ?? null });
+  await reopenSearchLibrary(library!.root, '2026-11-05T12:00:00Z');
+  expect((await loadCompanionWorkspaceNode('new-item'))?.deletedAt).toBeTruthy();
+  expect(await loadCompanionWorkspaceNode('other')).toEqual({ ...other, updatedAt: expect.any(String) });
+});
+
+it('rolls back a failed deletion, retains history and Item, then retries; rejects a changed parent and library', async () => {
+  const request = await prepare();
+  await createCompanionImageCloze(request);
+  const remove = { ...request, attachmentId: hash, regionId: 'region-1' };
+  library!.database.exec("CREATE TRIGGER fail_delete BEFORE UPDATE ON nodes WHEN NEW.id='new-item' AND NEW.deleted_at IS NOT NULL BEGIN SELECT RAISE(ABORT,'disk failed'); END");
+  await expect(deleteCompanionImageCloze(remove)).rejects.toThrow('disk failed');
+  expect((await loadCompanionWorkspaceNode('new-item'))?.deletedAt).toBeFalsy();
+  library!.database.exec('DROP TRIGGER fail_delete');
+  await expect(deleteCompanionImageCloze({ ...remove, expectedVersionId: 'stale' })).rejects.toThrow('source_changed');
+  await deleteCompanionImageCloze(remove);
+  invalidateCompanionReadingScope();
+  await expect(async () => deleteCompanionImageCloze(remove)).rejects.toThrow('library_changed');
 });
