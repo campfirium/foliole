@@ -39,11 +39,13 @@ beforeEach(async () => {
   snapshot = await library.snapshot();
 });
 
-async function prepareAnnotation(kind: 'highlight' | 'cloze') {
+async function prepareAnnotation(kind: 'highlight' | 'cloze', content = '# Article\n\nRead here') {
+  library.database.prepare("UPDATE nodes SET content=? WHERE id='article'").run(content);
+  const from = content.indexOf('Read here');
   const saved = await persistCompanionSelectionAnnotation({ deviceId: 'fixture', kind,
     snapshot: await library.snapshot(), payload: {
       parentNodeId: 'article', anchorId: 'read-anchor', selectionText: 'Read here', clozeContent: '# Article\n\n[...]',
-      entries: [{ locator: { from: 11, to: 20, originalText: 'Read here' } }]
+      entries: [{ locator: { from, to: from + 9, originalText: 'Read here' } }]
     } });
   highlightId = saved!.nodeId;
   snapshot = await library.snapshot();
@@ -109,7 +111,8 @@ it.each([
 
 
 it.each([false, true])('opens a lazy descendant through Outline and preserves Flow facts and existing list return, browse=%s', async browse => {
-  await prepareAnnotation('highlight');
+  const content = '# Article\n\n## Chapter\n\nRead here\n\n### Detail\n\nChapter context.';
+  await prepareAnnotation('highlight', content);
   const now = '2026-11-05T00:00:00Z';
   library.database.prepare('INSERT INTO nodes (id, parent_id, title, kind, content, reveal, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
     .run('outline-child', highlightId, 'Outline child Item', 'item', 'Deep question content', 'Deep answer content', now, now);
@@ -130,6 +133,16 @@ it.each([false, true])('opens a lazy descendant through Outline and preserves Fl
   const before = facts();
   fireEvent.click(await screen.findByRole('document', { name: 'Topic body' }));
   fireEvent.click(screen.getByRole('button', { name: 'Outline', exact: true }));
+  expect(screen.queryByRole('button', { name: 'Article', exact: true })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Chapter', exact: true })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Detail', exact: true })).toBeVisible();
+  const chapter = screen.getByRole('button', { name: 'Toggle content for Chapter (1)' });
+  expect(chapter).toHaveAttribute('aria-expanded', 'true');
+  fireEvent.click(chapter);
+  expect(screen.queryByRole('button', { name: 'Read here', exact: true })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Detail', exact: true })).toBeVisible();
+  fireEvent.click(chapter);
+  expect(screen.getByRole('button', { name: 'Read here', exact: true })).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Outline child Item', exact: true })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Toggle content for Read here (1)' }));
   fireEvent.click(screen.getByRole('button', { name: 'Outline child Item', exact: true }));
@@ -147,5 +160,5 @@ it.each([false, true])('opens a lazy descendant through Outline and preserves Fl
   cleanup();
   await library.reopen();
   expect(facts()).toEqual(before);
-  expect(library.database.prepare("SELECT content FROM nodes WHERE id='article'").get()).toEqual({ content: '# Article\n\nRead here' });
+  expect(library.database.prepare("SELECT content FROM nodes WHERE id='article'").get()).toEqual({ content });
 });

@@ -116,7 +116,7 @@ function createReadableSurface() {
   return {
     ...createSurface('recent'),
     readableArticle: {
-      content: '# Readable article\n\nReadable topic body',
+      content: '# Readable article\n\nReadable topic body\n\n## Chapter',
       hideTitleHeading: false,
       nodeId: 'topic-1',
       persistedNodeViewState: null,
@@ -224,10 +224,12 @@ describe('CompanionShell navigation', () => {
     expect(screen.getByRole('button', { name: 'Exit' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Outline' }));
     expect(screen.getByRole('dialog', { name: 'Outline' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Readable article' }));
+    expect(screen.queryByRole('button', { name: 'Readable article' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Chapter', exact: true }));
     expect(screen.queryByRole('dialog', { name: 'Outline' })).not.toBeInTheDocument();
-    expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-from', '2');
-    expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-to', '18');
+    const from = surface.readableArticle.content.indexOf('Chapter');
+    expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-from', String(from));
+    expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-to', String(from + 'Chapter'.length));
     openReadingAction('Appearance');
     expect(screen.getByRole('dialog', { name: 'Appearance' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Increase Size' }));

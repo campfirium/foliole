@@ -44,6 +44,7 @@ for (const width of [320, 375]) {
       expect(await page.getByRole('dialog', { name: 'Outline' }).boundingBox())
         .toMatchObject({ x: 0, y: 0, width, height: 812 });
       await expect(page.getByRole('tab')).toHaveCount(0);
+      await expect(page.getByRole('dialog').getByRole('button', { name: 'Outline acceptance article', exact: true })).toHaveCount(0);
       const heading = page.getByRole('button', { name: 'Source heading', exact: true });
       const toggle = page.getByRole('button', { name: 'Toggle content for Source heading (2)' });
       await expect(toggle).toHaveAttribute('aria-expanded', 'true');

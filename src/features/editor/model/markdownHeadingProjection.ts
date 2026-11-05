@@ -109,3 +109,13 @@ export function collectMarkdownHeadingRanges(text: string, offset = 0): Markdown
   visitHeadingNodes({ headings, node: tree.topNode, offset, source: text });
   return headings.sort((left, right) => left.from - right.from);
 }
+
+export function collectDocumentSectionHeadingRanges(text: string): MarkdownHeadingRange[] {
+  const tree = folioleMarkdownParser.parse(text);
+  const headings: MarkdownHeadingRange[] = [];
+  visitHeadingNodes({ headings, node: tree.topNode, offset: 0, source: text });
+  let firstBlock = tree.topNode.firstChild;
+  if (firstBlock?.name === 'Frontmatter') firstBlock = firstBlock.nextSibling;
+  const title = headings[0];
+  return title?.level === 1 && title.from === firstBlock?.from ? headings.slice(1) : headings;
+}

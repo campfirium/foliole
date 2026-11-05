@@ -3,7 +3,7 @@ import { collectVisibleNodeDescendants } from '../../nodes/model/nodeDescendants
 import { projectNodeListLabel } from '../../nodes/model/nodeListLabelProjection';
 import type { EditorTextAnchorDecoration, EditorSelection } from '../adapters/EditorAdapter';
 
-import { collectMarkdownHeadingRanges } from './markdownHeadingProjection';
+import { collectDocumentSectionHeadingRanges } from './markdownHeadingProjection';
 
 export interface DocumentPositionEntry {
   id: string;
@@ -43,9 +43,10 @@ export function collectDocumentOutlineNavigation(args: {
   snapshot: WorkspaceSnapshot | null;
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];
 }): DocumentOutlineNavigation {
-  const headings = collectMarkdownHeadingRanges(args.content);
+  const headings = collectDocumentSectionHeadingRanges(args.content);
+  const baseLevel = headings.reduce((level, heading) => Math.min(level, heading.level), 6);
   const sections: DocumentOutlineSection[] = headings.map(heading => ({
-    id: `heading:${heading.from}`, text: heading.text, kind: 'heading', level: heading.level,
+    id: `heading:${heading.from}`, text: heading.text, kind: 'heading', level: heading.level - baseLevel + 1,
     selection: { from: heading.contentFrom, to: heading.to - (args.content[heading.to - 1] === '\r' ? 1 : 0) }, entryIds: []
   }));
   const before: DocumentOutlineSection = { id: 'before', text: '…', kind: 'preface', level: 1, entryIds: [] };

@@ -12,9 +12,9 @@ import { createExplicitArticleSnapshot, createNodeRecord } from '../../src/share
 import { resolveReadableCompanionArticleByNodeId } from '../../src/shared/platform/companionReadableArticle';
 
 const scenario = new URLSearchParams(window.location.search).get('scenario') ?? 'headings';
-const content = [scenario === 'long'
+const content = [...(['headings', 'deep', 'long'].includes(scenario) ? ['# Outline acceptance article'] : []), scenario === 'long'
   ? Array.from({ length: 6 }, (_, index) => '#'.repeat(index + 1) + ` Heading ${index + 1}`).join('\n\n')
-  : ['headings', 'deep'].includes(scenario) ? '# Source heading' : 'Source text',
+  : ['headings', 'deep'].includes(scenario) ? '## Source heading' : 'Source text',
   ...Array.from({ length: 16 }, (_, index) => `Context paragraph ${index + 1}. Read the original text in this topic.`),
   'Topic passage in the original text.', 'Item passage in the original text.'].join('\n\n');
 const snapshot = createExplicitArticleSnapshot();
