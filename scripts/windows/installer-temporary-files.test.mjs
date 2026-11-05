@@ -44,11 +44,11 @@ it('matches installer cleanup patterns through the actual installer dependency',
     'ignored/four.txt', 'literal[1].txt']) write(cwd, name);
   const cases = [
     ['**/*.{txt,log}', { ignore: 'ignored/**' },
-      ['literal[1].txt', 'nested/three.txt', 'one.txt', 'two.log']],
-    ['nested/**/*.txt', { dot: true }, ['nested/.hidden.txt', 'nested/three.txt']],
+      ['literal[1].txt', path.join('nested', 'three.txt'), 'one.txt', 'two.log']],
+    ['nested/**/*.txt', { dot: true }, [path.join('nested', '.hidden.txt'), path.join('nested', 'three.txt')]],
     ['missing{1,2}.txt', { nonull: true }, ['missing1.txt', 'missing2.txt']],
     ['missing{1,2}.txt', { nonull: true, nobrace: true }, ['missing{1,2}.txt']],
-    ['nested/{three,missing}.txt', { nonull: true }, ['nested/missing.txt', 'nested/three.txt']],
+    ['nested/{three,missing}.txt', { nonull: true }, ['nested/missing.txt', path.join('nested', 'three.txt')]],
     ['literal[[]1].txt', {}, ['literal[1].txt']],
     // Legacy glob treats backslashes as separators on Windows and escapes on macOS.
     ['literal\\[1\\].txt', {}, process.platform === 'win32' ? [] : ['literal[1].txt']]
@@ -144,8 +144,8 @@ it.each(['sync', 'async'])('retains brace cleanup and reports removal errors: %s
   const remove = mode === 'sync' ? rimraf.sync : promisify(rimraf);
   await remove(`${root.replaceAll('\\', '/')}/{one,two}.tmp`);
   expect(fs.readdirSync(root)).toEqual(['keep.txt']);
-  const invalid = path.join(root, 'keep.txt', 'child');
+  const invalid = path.join(root, 'keep.txt\0child');
   if (mode === 'sync') expect(() => remove(invalid)).toThrow();
-  else await expect(remove(invalid)).rejects.toMatchObject({ code: 'ENOTDIR' });
+  else await expect(remove(invalid)).rejects.toMatchObject({ code: 'ERR_INVALID_ARG_VALUE' });
   expect(fs.readFileSync(path.join(root, 'keep.txt'), 'utf8')).toBe('keep.txt');
 });
