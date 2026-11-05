@@ -45,6 +45,19 @@ describe('consistent companion body reading', () => {
     expect(article?.textAnchorDecorations).toContainEqual({ from: 0, to: 7, kind: 'highlight', nodeId: 'note' });
   });
 
+  it('compares the full annotation catalog even when a text anchor cannot be mapped', async () => {
+    const source = snapshot();
+    const anchor = { id: 'missing-anchor', kind: 'highlight' as const, locator: { from: 0, to: 7, originalText: 'Missing' } };
+    source.nodesById.note = { ...source.nodesById['node-1']!, id: 'note', parentNodeId: 'node-1',
+      kind: 'topic', currentVersionId: 'note-v1', anchorLink: anchor };
+    mocks.query.mockResolvedValueOnce([document()]).mockResolvedValueOnce([
+      { id: 'note', current_version_id: 'note-v1', body_blob_hash: null, anchor_link: JSON.stringify(anchor), anchor_resolution_status: 'unmapped_missing' }
+    ]);
+    const article = await readCompanionArticle(source, 'node-1', () => true);
+    expect(article?.content).toBe('Current body');
+    expect(article?.textAnchorDecorations).toEqual([]);
+  });
+
   it('does not label a newer body with the old catalog version', async () => {
     mocks.query.mockResolvedValueOnce([document('v2')]).mockResolvedValueOnce([]);
     await expect(readCompanionArticle(snapshot(), 'node-1', () => true)).rejects.toBeInstanceOf(CompanionReadingSnapshotChanged);

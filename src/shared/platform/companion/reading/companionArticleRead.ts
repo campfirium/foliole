@@ -38,11 +38,11 @@ export function readCompanionArticle(
     if (scope !== getCompanionReadingScope() || !isCurrent()) return null;
     const document = await loadCompanionNodeDocument(db, nodeId);
     if (!document) return null;
+    // Compare the same raw facts as the catalog; locator mapping belongs to presentation.
     const annotations = await db.query<Annotation>(
       `SELECT n.id, n.current_version_id, n.body_blob_hash, n.anchor_link
        FROM nodes n
-       WHERE n.parent_id = ? AND n.anchor_link IS NOT NULL AND n.deleted_at IS NULL
-         AND COALESCE(n.anchor_resolution_status, '') NOT LIKE 'unmapped_%'`, [nodeId]
+       WHERE n.parent_id = ? AND n.anchor_link IS NOT NULL AND n.deleted_at IS NULL`, [nodeId]
     );
     if (scope !== getCompanionReadingScope() || !isCurrent()) return null;
     if ((snapshot.nodesById[nodeId]?.currentVersionId ?? null) !== document.current_version_id ||

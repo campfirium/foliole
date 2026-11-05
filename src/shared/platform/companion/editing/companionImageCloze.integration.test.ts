@@ -14,6 +14,7 @@ import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeA
 import { collectImageMatches } from '../../../../features/editor/model/markdownImageMatches';
 import { getImageClozeLocator } from '../../../../features/image-cloze/model/imageCloze';
 import { loadCompanionWorkspaceSyncState } from '../../companionWorkspaceSync';
+import { loadPreparedCompanionArticle } from '../reading/companionArticlePreparation';
 import { getCompanionReadingScope, invalidateCompanionReadingScope } from '../reading/companionReadingScope';
 import { createSearchLibrary, reopenSearchLibrary } from '../runtime/companionSearchSnapshot.testSupport';
 import { loadCompanionWorkspaceNode } from '../runtime/companionWorkspaceNodeStore';
@@ -127,8 +128,12 @@ it('deletes the selected linked Item and its grouped masks durably, supports ret
   await expect(applyCompanionEditHistory('topic', 'redo')).rejects.toThrow('has_children');
   expect((await loadCompanionWorkspaceNode('new-item'))?.deletedAt).toBeFalsy();
   await deleteCompanionImageCloze({ ...remove, expectedVersionId: (await loadCompanionWorkspaceNode('topic'))!.currentVersionId ?? null });
+  const afterDelete = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
+  expect((await loadPreparedCompanionArticle(afterDelete, 'topic', () => true))?.content).toBe(content);
   const reopened = await reopenSearchLibrary(library!.root, '2026-11-05T12:00:00Z');
   expect((await loadCompanionWorkspaceNode('new-item'))?.deletedAt).toBeTruthy();
+  const reopenedSnapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
+  expect((await loadPreparedCompanionArticle(reopenedSnapshot, 'topic', () => true))?.content).toBe(content);
   expect(await loadCompanionWorkspaceNode('other')).toEqual({ ...other, updatedAt: expect.any(String) });
   expect(reopened.db.prepare('SELECT * FROM node_review ORDER BY node_id').all()).toEqual(schedules);
 });
