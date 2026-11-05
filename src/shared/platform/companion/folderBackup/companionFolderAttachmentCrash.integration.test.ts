@@ -57,7 +57,10 @@ it.each(['before-source', 'after-source', 'after-ready', 'after-target', 'after-
       f.root, `delete-${boundary}`, item.key, item.bytes.toString('base64')], {
       cwd: process.cwd(), env: process.env, encoding: 'utf8', timeout: 15000
     });
-    expect(child.signal, child.stderr).toBe('SIGKILL'); await f.reopen();
+    expect(await readFile(path.join(f.root, 'crash-boundary'), 'utf8')).toBe(`delete-${boundary}`);
+    expect(child.signal, child.stderr).toBe(process.platform === 'win32' ? null : 'SIGKILL');
+    expect(child.status, child.stderr).toBe(process.platform === 'win32' ? 1 : null);
+    await f.reopen();
     const remove = vi.fn(async () => {
       if (await f.exists(item.source)) throw new Error('source still exists');
       await rm(item.file, { force: true });
