@@ -1,4 +1,5 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
+import { startTransition, useLayoutEffect, useSyncExternalStore } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import type { ContentEditAcknowledgement } from '../../store/workspaceContentEditAcknowledgements';
@@ -92,4 +93,33 @@ it('still waits for protection when an unrelated remote version arrives', async 
   await act(async () => undefined);
   view.rerender({ versionId: 'remote' });
   expect(view.result.current).toBe(false);
+});
+
+it.each([false, true])('keeps local saves editable across external-store publication (transition: %s)', async (transition) => {
+  native.retain.mockResolvedValueOnce(undefined).mockImplementation(() => new Promise(() => undefined));
+  let versionId = 'base';
+  const listeners = new Set<() => void>();
+  const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
+  const committed: boolean[] = [];
+  renderHook(() => {
+    const version = useSyncExternalStore(subscribe, () => versionId);
+    const ready = useWorkspaceEditorBaseHold({ flushDraft: () => true, nodeId: 'node', versionId: version });
+    useLayoutEffect(() => { committed.push(ready); });
+  });
+  await act(async () => undefined);
+  expect(committed.at(-1)).toBe(true);
+  committed.length = 0;
+  await act(async () => {
+    await Promise.resolve();
+    const acknowledge = () => {
+      for (const listener of native.listeners) listener({ type: 'saved', nodeId: 'node',
+        baseVersionId: 'base', currentVersionId: 'saved', submittedVersionId: 'saved' });
+    };
+    if (transition) startTransition(acknowledge);
+    else acknowledge();
+    versionId = 'saved';
+    for (const listener of listeners) listener();
+  });
+  expect(committed.length).toBeGreaterThan(0);
+  expect(committed).not.toContain(false);
 });

@@ -17,15 +17,20 @@ export function useWorkspaceEditorBaseHold(args: {
   const flushRef = useRef(args.flushDraft);
   flushRef.current = args.flushDraft;
   const session = useMemo(() => crypto.randomUUID(), [args.nodeId]);
-  const [ready, setReady] = useState<{ token: string | null; session: string; versionId: string } | null>(null);
+  const readyRef = useRef<{ token: string | null; session: string; versionId: string } | null>(null);
+  const [, notifyRetained] = useState(0);
   const latestRetained = useRef<{ session: string; promise: Promise<void> } | null>(null);
   const key = args.nodeId && args.versionId ? `${args.nodeId}\u0000${args.versionId}` : null;
   const token = useMemo(() => key ? crypto.randomUUID() : null, [key]);
   useEffect(() => subscribeContentEditAcknowledgements((event) => {
     if (event.type !== 'saved' || event.nodeId !== args.nodeId
       || event.currentVersionId !== event.submittedVersionId) return;
-    setReady((current) => current?.session === session && current.versionId === event.baseVersionId
-      ? { ...current, versionId: event.submittedVersionId } : current);
+    const current = readyRef.current;
+    // The workspace publishes synchronously; protection must advance before that render,
+    // rather than waiting for a lower-priority React state update.
+    if (current?.session === session && current.versionId === event.baseVersionId) {
+      readyRef.current = { ...current, versionId: event.submittedVersionId };
+    }
   }), [args.nodeId, session]);
   useEffect(() => {
     if (!args.nodeId || !args.versionId || !hasWorkspaceRuntimeRepository()) return;
@@ -36,7 +41,10 @@ export function useWorkspaceEditorBaseHold(args: {
     const retained = retainWorkspaceEditorBase(nodeId, versionId, holdId);
     latestRetained.current = { session, promise: retained };
     void retained.then(() => {
-      if (!retired) setReady({ token, session, versionId });
+      if (!retired) {
+        readyRef.current = { token, session, versionId };
+        notifyRetained(value => value + 1);
+      }
     }).catch(() => undefined);
     return () => {
       retired = true;
@@ -51,6 +59,7 @@ export function useWorkspaceEditorBaseHold(args: {
       }).catch(() => undefined);
     };
   }, [args.nodeId, args.versionId, session, token]);
+  const ready = readyRef.current;
   return !key || !hasWorkspaceRuntimeRepository() || ready?.token === token
     || (ready?.session === session && ready.versionId === args.versionId);
 }
