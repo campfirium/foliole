@@ -21,7 +21,7 @@ import { createCompanionFileImportHandler } from './companionFileImportActions';
 const native = vi.hoisted(() => ({ access: null as null | ((input: NativeCompanionFramedFileRequest) => Promise<unknown>), fail: false }));
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: () => ({
     ...createCompanionNativeSyncStub(), accessFramedSyncFile: async (input: NativeCompanionFramedFileRequest) => {
       if (input.operation === 'remove') return {};
       if (native.fail && input.operation === 'attachment' && input.action === 'publish') throw new Error('Unavailable');

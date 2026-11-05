@@ -12,7 +12,7 @@ const lifecycle = vi.hoisted(() => ({ listeners: new Map<string, Set<(state: { i
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
   return {
-    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
+    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false },
     registerPlugin: createCompanionNativeSyncStub
   };
 });

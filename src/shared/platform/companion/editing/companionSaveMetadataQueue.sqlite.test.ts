@@ -12,7 +12,7 @@ import { saveCompanionContentEdit } from './companionContentEditing';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../runtime/companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false },
     registerPlugin: createCompanionNativeSyncStub };
 });
 vi.mock('../../appLifecycle', () => ({

@@ -23,7 +23,7 @@ const native = vi.hoisted(() => ({ access: null as null | ((input: NativeCompani
 vi.mock('@capacitor/core', async () => {
   const { access } = await import('node:fs/promises');
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, convertFileSrc: (url: string) => url }, registerPlugin: () => ({
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false, convertFileSrc: (url: string) => url }, registerPlugin: () => ({
     ...createCompanionNativeSyncStub(), resolveAttachmentResource: async () => {
       try { await access(native.publishedPath); return { status: 'ready', resource_url: native.publishedPath }; }
       catch { return { status: 'missing_file' }; }

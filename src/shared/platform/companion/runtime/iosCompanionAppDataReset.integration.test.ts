@@ -7,7 +7,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const native = vi.hoisted(() => ({ clear: vi.fn(), files: new Map<string, string>(), connections: new Set<string>() }));
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('./companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'ios', isNativePlatform: () => true },
+  return { Capacitor: { getPlatform: () => 'ios', isNativePlatform: () => true, isPluginAvailable: () => false },
     registerPlugin: () => ({ ...createCompanionNativeSyncStub(),
       setSyncEnabled: async () => {}, stopSyncGroupProvider: async () => {}, stopDiscoverySession: async () => {},
       clearAppData: native.clear }) };
