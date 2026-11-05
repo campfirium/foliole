@@ -32,6 +32,10 @@ function Reader() {
       readableArticle={resolveReadableCompanionArticleByNodeId(snapshot, 'node-1')!}
       onCreateSelectionAnnotation={async (_kind, payload) => create(payload)}
       onAdjustExistingHighlightRange={async (nodeId, range) => {
+        if (new URLSearchParams(location.search).has('hold-range')) {
+          const response = await fetch('/__range-commit');
+          if (!response.ok) throw new Error('range_save_failed');
+        }
         const node = buildUpdatedTextAnchorNode({ node: snapshot.nodesById[nodeId]!, parentContent: content,
           range, timestamp: new Date().toISOString() });
         if (!node) return null;

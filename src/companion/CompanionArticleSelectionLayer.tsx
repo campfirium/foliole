@@ -10,7 +10,7 @@ export function CompanionArticleSelectionLayer({ articleProps: props, toolbar, p
   toolbar: ReturnType<typeof useCompanionSelectionAnnotationToolbar>;
   pending: ReturnType<typeof useCompanionPendingReadableArticle>;
 }) {
-  const { createSelectionAnnotation, deleteExistingHighlight } = createPendingAnnotationActions(props, pending);
+  const { createSelectionAnnotation, deleteExistingHighlight, adjustExistingHighlightRange } = createPendingAnnotationActions(props, pending);
   return <SelectionAnnotationToolbarLayer key={props.readableArticle.nodeId}
     editor={toolbar.editorRef.current} parentNodeId={props.readableArticle.nodeId}
     onActivateExistingHighlight={toolbar.activateCreatedHighlight}
@@ -18,7 +18,7 @@ export function CompanionArticleSelectionLayer({ articleProps: props, toolbar, p
     onClose={toolbar.clearSelectionAndCloseToolbar} resolveSelectionPayload={toolbar.resolveSelectionPayload}
     state={toolbar.selectionToolbar} {...definedProps({
       onAddExistingHighlightNote: props.onAddExistingHighlightNote,
-      onAdjustExistingHighlightRange: props.onAdjustExistingHighlightRange,
+      onAdjustExistingHighlightRange: props.onAdjustExistingHighlightRange ? adjustExistingHighlightRange : undefined,
       onCreateSelectionAnnotation: props.onCreateSelectionAnnotation ? createSelectionAnnotation : undefined,
       onDeleteExistingHighlight: props.onDeleteExistingHighlight ? deleteExistingHighlight : undefined
     })} />;

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 
+import type { CompanionHighlightRangeHandler } from './companionHighlightRangePersistence';
 import {
   createCompanionPendingTextAnchorDecorations,
   mergeCompanionPendingTextAnchorDecorations,
@@ -9,6 +10,7 @@ import {
 } from './companionPendingTextAnchorDecorations';
 import type { CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
 import { CompanionSelectionRefreshError } from './companionSelectionRefreshError';
+import { useCompanionPendingHighlightRanges } from './useCompanionPendingHighlightRanges';
 
 import type { EditorTextAnchorDecoration } from '@/features/editor/adapters/EditorAdapter';
 import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
@@ -37,6 +39,7 @@ function keepUnresolvedDeletedNodeIds(args: {
 }
 
 export function useCompanionPendingReadableArticle<T extends PendingReadableArticle>(readableArticle: T) {
+  const ranges = useCompanionPendingHighlightRanges(readableArticle);
   const [pendingDecorations, setPendingDecorations] = useState<readonly EditorTextAnchorDecoration[]>([]);
   const [pendingDeletedNodeIds, setPendingDeletedNodeIds] = useState<readonly string[]>([]);
 
@@ -57,14 +60,14 @@ export function useCompanionPendingReadableArticle<T extends PendingReadableArti
 
   const articleWithPendingDecorations = useMemo(() => ({
     ...readableArticle,
-    textAnchorDecorations: mergeCompanionPendingTextAnchorDecorations({
+    textAnchorDecorations: ranges.applyRanges(mergeCompanionPendingTextAnchorDecorations({
       pending: pendingDecorations,
       real: excludePendingDeletedDecorations({
         deletedNodeIds: pendingDeletedNodeIds,
         textAnchorDecorations: readableArticle.textAnchorDecorations
       })
-    })
-  }), [pendingDecorations, pendingDeletedNodeIds, readableArticle]);
+    }))
+  }), [pendingDecorations, pendingDeletedNodeIds, readableArticle, ranges.applyRanges]);
 
   const stageSelectionAnnotation = useCallback((kind: CompanionSelectionAnnotationKind, payload: SelectionCommandPayload) => {
     setPendingDecorations((pending) => mergeCompanionPendingTextAnchorDecorations({
@@ -82,6 +85,8 @@ export function useCompanionPendingReadableArticle<T extends PendingReadableArti
   }, []);
 
   return {
+    stageRange: ranges.stageRange,
+    restoreRange: ranges.restoreRange,
     readableArticle: articleWithPendingDecorations,
     restoreDeletedHighlight,
     stageDeletedHighlight,
@@ -93,6 +98,7 @@ export function createPendingAnnotationActions(
   props: {
     onCreateSelectionAnnotation?: (kind: CompanionSelectionAnnotationKind, payload: SelectionCommandPayload, note?: string) => Promise<string | null> | string | null;
     onDeleteExistingHighlight?: (nodeId: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
+    onAdjustExistingHighlightRange?: CompanionHighlightRangeHandler;
   },
   pendingReadableArticle: ReturnType<typeof useCompanionPendingReadableArticle>
 ) {
@@ -112,5 +118,16 @@ export function createPendingAnnotationActions(
       throw error;
     });
   }
-  return { createSelectionAnnotation, deleteExistingHighlight };
+  const adjustExistingHighlightRange: CompanionHighlightRangeHandler = async (nodeId, range, content, guard) => {
+    const pending = pendingReadableArticle.stageRange(nodeId, range);
+    try {
+      const result = await props.onAdjustExistingHighlightRange?.(nodeId, range, content, guard) ?? null;
+      if (!result) pendingReadableArticle.restoreRange(pending);
+      return result;
+    } catch (error) {
+      if (!(error instanceof CompanionSelectionRefreshError)) pendingReadableArticle.restoreRange(pending);
+      throw error;
+    }
+  };
+  return { createSelectionAnnotation, deleteExistingHighlight, adjustExistingHighlightRange };
 }

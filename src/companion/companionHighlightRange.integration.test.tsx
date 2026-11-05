@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import Database from 'better-sqlite3';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', async () => {
@@ -16,6 +16,7 @@ vi.mock('@capacitor/core', async () => {
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
+import { isTextAnchorLocator } from '../features/nodes/model/nodeTypes';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 import { readCompanionHighlight } from '../shared/platform/companion/reading/companionHighlightRead';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
@@ -31,6 +32,7 @@ import { SelectionAnnotationToolbarLayer } from './CompanionReadableArticleSelec
 import { persistCompanionSelectionAnnotation } from './companionSelectionAnnotationActions';
 import * as controllers from './companionSelectionAnnotationController';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
+import { createPendingAnnotationActions, useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 const body = 'Alpha Beta Gamma';
@@ -74,8 +76,8 @@ function editor(): EditorAdapter {
   } as unknown as EditorAdapter;
 }
 
-function Surface({ initial, nodeId, cloze = false, refreshFailures = 0 }: {
-  initial: NativeCompanionWorkspaceSyncState; nodeId: string; cloze?: boolean; refreshFailures?: number;
+function Surface({ initial, nodeId, cloze = false, refreshFailures = 0, holdRefresh }: {
+  initial: NativeCompanionWorkspaceSyncState; nodeId: string; cloze?: boolean; refreshFailures?: number; holdRefresh?: Promise<void>;
 }) {
   const [state, setState] = useState(initial);
   const [open, setOpen] = useState(true);
@@ -84,15 +86,24 @@ function Surface({ initial, nodeId, cloze = false, refreshFailures = 0 }: {
   const actions = createWorkspaceSnapshotActions({ state, setState, setError: () => {}, setStatus: () => {},
     setSyncConflictCount: () => {}, setSyncProgress: () => {} });
   const sync = { ...actions, state, bootstrapState: { device_id: 'range-device' },
-    refreshAfterMutation: (...args: Parameters<typeof actions.refreshAfterMutation>) => {
+    refreshAfterMutation: async (...args: Parameters<typeof actions.refreshAfterMutation>) => {
       if (remainingFailures.current-- > 0) return Promise.reject(new Error('refresh failed'));
+      await holdRefresh;
       return actions.refreshAfterMutation(...args);
     }
   } as ReturnType<typeof useCompanionWorkspaceSync>;
+  const article = useMemo(() => {
+    const locator = state.workspace_snapshot?.nodesById[nodeId]?.anchorLink?.locator;
+    return { nodeId: 'source', textAnchorDecorations: isTextAnchorLocator(locator)
+      ? [{ ...locator, nodeId, kind: cloze ? 'cloze' as const : 'highlight' as const }] : [] };
+  }, [state.workspace_snapshot, nodeId, cloze]);
+  const pending = useCompanionPendingReadableArticle(article);
+  const mutations = createPendingAnnotationActions({ onAdjustExistingHighlightRange: controllers.createCompanionExistingHighlightRangeHandler(sync) }, pending);
   return <CompanionDraftProvider>
+    <output data-testid="displayed-range">{JSON.stringify(pending.readableArticle.textAnchorDecorations)}</output>
     <button onClick={() => setOpen(false)}>Dismiss</button><button onClick={() => setOpen(true)}>Reopen</button>
     <SelectionAnnotationToolbarLayer editor={adapter} parentNodeId="source"
-      onAdjustExistingHighlightRange={controllers.createCompanionExistingHighlightRangeHandler(sync)}
+      onAdjustExistingHighlightRange={mutations.adjustExistingHighlightRange}
       onAddExistingHighlightNote={controllers.createCompanionExistingHighlightNoteHandler(sync)}
       onClose={() => setOpen(false)} snapshot={state.workspace_snapshot} resolveSelectionPayload={() => null}
       state={open ? { left: 20, top: 140, noteLeft: 20, noteTop: 190, payload: null,
@@ -137,6 +148,29 @@ it.each(['note', 'cloze'] as const)('adjusts %s through handles and retains the 
     expect(hydrated?.content).toBe('Alpha [...]');
     expect(hydrated?.reveal).toBe('Beta Gamma');
   }
+});
+
+it('holds the displayed range after dismissing handles while the real SQLite write waits for article refresh', async () => {
+  const saved = await persistCompanionSelectionAnnotation({ deviceId: 'fixture', kind: 'highlight', payload,
+    snapshot: (await loadCompanionWorkspaceSyncState()).workspace_snapshot });
+  let finish!: () => void;
+  const holdRefresh = new Promise<void>(resolve => { finish = resolve; });
+  renderWithLocalization(<Surface initial={await loadCompanionWorkspaceSyncState()} nodeId={saved!.nodeId} holdRefresh={holdRefresh} />);
+  const end = await screen.findByRole('button', { name: 'Adjust anchor end' });
+  await waitFor(() => expect(end).toBeEnabled());
+  act(() => {
+    fireEvent.pointerDown(end, { pointerId: 1, clientX: 80, clientY: 90 });
+    fireEvent.pointerMove(document, { pointerId: 1, clientX: 128, clientY: 90 });
+    fireEvent.pointerUp(document, { pointerId: 1 });
+  });
+  await waitFor(() => expect(JSON.parse(screen.getByTestId('displayed-range').textContent!)[0].to).toBe(16));
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+  expect(screen.queryByRole('button', { name: 'Adjust anchor end' })).toBeNull();
+  expect(JSON.parse(screen.getByTestId('displayed-range').textContent!)[0].to).toBe(16);
+  await waitFor(async () => expect((await loadCompanionWorkspaceNode(saved!.nodeId))?.anchorLink?.locator)
+    .toEqual({ from: 6, to: 16, originalText: 'Beta Gamma' }));
+  await act(async () => { finish(); });
+  expect(JSON.parse(screen.getByTestId('displayed-range').textContent!)[0].to).toBe(16);
 });
 
 it('retries a failed projection refresh without writing the saved range a second time', async () => {
