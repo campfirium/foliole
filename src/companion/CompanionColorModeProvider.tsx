@@ -1,6 +1,6 @@
 import { createContext, useContext, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
-import { getBaseColorMode, setBaseColorMode } from '../features/settings/model/appearanceReadingModeSettings';
+import { getBaseColorMode, getDimImagesInDarkMode, setBaseColorMode, setDimImagesInDarkMode } from '../features/settings/model/appearanceReadingModeSettings';
 import { resolveBaseColorMode, type BaseColorMode } from '../features/settings/model/baseColorMode';
 import { applyCompanionHostAppearance } from '../shared/platform/companion/runtime/companionAppearance';
 
@@ -49,6 +49,9 @@ function useApplyColorMode(mode: ReturnType<typeof useResolvedColorMode>) {
 
 interface CompanionColorModeValue {
   mode: BaseColorMode;
+  dimImages: boolean;
+  dimImagesSaveError: boolean;
+  updateDimImages(value: boolean): void;
   saveError: boolean;
   hostError: boolean;
   updateMode(mode: BaseColorMode): void;
@@ -58,6 +61,18 @@ const CompanionColorModeContext = createContext<CompanionColorModeValue | null>(
 
 export function CompanionColorModeProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState(readColorMode);
+  const [dimImages, setDimImages] = useState(getDimImagesInDarkMode);
+  const [dimImagesSaveError, setDimImagesSaveError] = useState(false);
+  useLayoutEffect(() => {
+    document.documentElement.dataset.dimImagesInDarkMode = String(dimImages);
+  }, [dimImages]);
+  const updateDimImages = (next: boolean) => {
+    try {
+      setDimImagesInDarkMode(next);
+      setDimImages(next);
+      setDimImagesSaveError(false);
+    } catch { setDimImagesSaveError(true); }
+  };
   const [saveError, setSaveError] = useState(false);
   const resolved = useResolvedColorMode(mode);
   const hostError = useApplyColorMode(resolved);
@@ -68,7 +83,7 @@ export function CompanionColorModeProvider({ children }: { children: ReactNode }
       setSaveError(false);
     } catch { setSaveError(true); }
   };
-  return <CompanionColorModeContext.Provider value={{ mode, saveError, hostError, updateMode }}>
+  return <CompanionColorModeContext.Provider value={{ mode, saveError, hostError, updateMode, dimImages, dimImagesSaveError, updateDimImages }}>
     {children}
   </CompanionColorModeContext.Provider>;
 }

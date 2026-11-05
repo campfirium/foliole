@@ -97,3 +97,47 @@ it('uses system mode for invalid stored data and releases its system subscriptio
   view.unmount();
   expect(listeners.size).toBe(0);
 });
+
+
+it('defaults image dimming on and preserves its choice across themes and remounts', () => {
+  const view = renderSettings();
+  const toggle = screen.getByRole('switch', { name: 'Dim images in dark mode' });
+  expect(toggle).toHaveAttribute('aria-checked', 'true');
+  expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('true');
+  setSystemDark(true);
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute('aria-checked', 'false');
+  expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('false');
+  expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.dimImagesInDarkMode)).toBe('false');
+  fireEvent.click(screen.getByRole('button', { name: 'Light' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Dark' }));
+  expect(toggle).toHaveAttribute('aria-checked', 'false');
+  view.unmount();
+  renderSettings();
+  expect(screen.getByRole('switch', { name: 'Dim images in dark mode' })).toHaveAttribute('aria-checked', 'false');
+  expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('false');
+  fireEvent.click(screen.getByRole('switch', { name: 'Dim images in dark mode' }));
+  expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('true');
+  expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.dimImagesInDarkMode)).toBe('true');
+});
+
+it('offers the same image preference in the reading Appearance sheet', () => {
+  render(<CompanionColorModeProvider>
+    <ReadingFontSheet open onOpenChange={vi.fn()} onChange={vi.fn()} settings={DEFAULT_READING_TYPOGRAPHY_SETTINGS} />
+  </CompanionColorModeProvider>);
+  fireEvent.click(screen.getByRole('switch', { name: 'Dim images in dark mode' }));
+  expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('false');
+  expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.dimImagesInDarkMode)).toBe('false');
+});
+
+it('keeps the saved image preference and reports failed writes without changing the theme', () => {
+  localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.dimImagesInDarkMode, 'false');
+  renderSettings();
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Storage unavailable'); });
+  fireEvent.click(screen.getByRole('switch', { name: 'Dim images in dark mode' }));
+  expect(screen.getByRole('alert')).toHaveTextContent('Could not save reading settings');
+  expect(screen.getByRole('switch', { name: 'Dim images in dark mode' })).toHaveAttribute('aria-checked', 'false');
+  expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('false');
+  expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.dimImagesInDarkMode)).toBe('false');
+  expect(document.documentElement.dataset.resolvedBaseColor).toBe('light');
+});
