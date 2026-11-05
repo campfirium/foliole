@@ -82,11 +82,6 @@ export const allowedRegexInventory = [
   { path: 'src/features/editor/model/formatCleanup.ts', line: "return { flags: '', isRegex: false, source: escapeRegExp(decoded) };", owner: 'format cleanup', reason: 'Treats plain cleanup input as escaped literal text.' },
   { path: 'src/features/editor/model/formatCleanup.ts', line: "return { flags: flags.replace(/[gyd]/g, ''), isRegex: true, source };", owner: 'format cleanup', reason: 'Removes stateful flags from user-configured cleanup patterns.' },
   {
-    path: 'src/features/editor/model/highlightAnnotationPrefixSetting.ts',
-    line: "const normalized = (value ?? '').replace(/\\r\\n?/g, '\\n').split('\\n')[0]?.slice(0, HIGHLIGHT_ANNOTATION_PREFIX_MAX_LENGTH) ?? '';",
-    owner: 'single-line annotation prefix setting'
-  },
-  {
     path: 'src/features/editor/adapters/clipboardImagePaste.ts',
     line: "const alt = result.original_name.replace(/\\.[^.]+$/, '').trim() || 'Pasted image';",
     owner: 'clipboard image filename cleanup'
