@@ -1,4 +1,4 @@
-import { Check, SquarePlus, Trash2, X } from 'lucide-react';
+import { Check, RectangleEllipsis, Trash2, X } from 'lucide-react';
 import { useLayoutEffect, useRef, useState } from 'react';
 
 import type { ImageClozeDraftRegion } from '../features/image-cloze/model/imageCloze';
@@ -51,7 +51,7 @@ export function CompanionImageClozeEditor(props: {
         {error ? <p role="alert" className="px-4 text-sm text-error">{t('companion.imageCloze.failed')}</p> : null}
         <footer className="flex shrink-0 items-center justify-center gap-4 px-3 py-3 [&_button]:min-h-11 [&_button]:min-w-11">
           <AppButton disabled={saving} onClick={props.onCancel} aria-label={t('common.cancel')} title={t('common.cancel')}><X aria-hidden="true" className="size-5" /></AppButton>
-          <AppButton disabled={saving || status !== 'ready'} variant={drawing ? 'emphasis' : 'default'} aria-pressed={drawing} aria-label={t('companion.imageCloze.add')} title={t('companion.imageCloze.add')} onClick={() => { setDrawing(current => !current); setSelected(null); }}><SquarePlus aria-hidden="true" className="size-5" /></AppButton>
+          <AppButton disabled={saving || status !== 'ready'} variant={drawing ? 'emphasis' : 'default'} aria-pressed={drawing} aria-label={t('companion.imageCloze.add')} title={t('companion.imageCloze.add')} onClick={() => { setDrawing(current => !current); setSelected(null); }}><RectangleEllipsis aria-hidden="true" className="size-5" /></AppButton>
           <AppButton disabled={saving || !selected} onClick={() => void removeSelected()} aria-label={t('companion.imageCloze.remove')} title={t('companion.imageCloze.remove')}><Trash2 aria-hidden="true" className="size-5" /></AppButton>
           <AppButton disabled={saving || status !== 'ready'} onClick={() => { if (hasChanges) void confirm(); else props.onCancel(); }} variant="emphasis" aria-label={t(saving ? 'companion.imageCloze.saving' : 'companion.imageCloze.confirm')} title={t('companion.imageCloze.confirm')}><Check aria-hidden="true" className="size-5" /></AppButton>
         </footer>
