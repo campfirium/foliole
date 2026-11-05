@@ -19,7 +19,6 @@ import type { CompanionReadingTypographySettings } from './companionReadingTypog
 import { CompanionWorkspaceCurrentNodeAction } from './CompanionWorkspaceActions';
 import { useCompanionTrashRestoreAction } from './useCompanionTrashRestoreAction';
 
-import { extractDocumentOutline } from '@/features/editor/model/documentOutline';
 import { AppEmptyState } from '@/shared/ui';
 import { SettingsTouchSurface } from '@/shared/ui/SettingsTouchSurface';
 import { VirtualListSurface } from '@/shared/ui/VirtualListSurface';
@@ -131,38 +130,7 @@ function ReadingTrashRestoreAction({ restore }: { restore: ReturnType<typeof use
   );
 }
 
-export function OutlineSheet(props: {
-  content: string;
-  onOpenChange(open: boolean): void;
-  onSelect(item: { from: number; to: number }): void;
-  open: boolean;
-}) {
-  const t = useTranslation();
-  const outlineItems = extractDocumentOutline(props.content);
-  return (
-    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.outline')}>
-      <div className="border-t border-companion-divider">
-        {outlineItems.length > 0 ? outlineItems.map((item) => (
-          <button
-            className="block w-full border-b border-companion-divider py-3 text-left text-sm text-foreground"
-            key={`${item.from}-${item.text}`}
-            onClick={() => props.onSelect(item)}
-            style={{ paddingLeft: `${Math.max(0, item.level - 1) * 14}px` }}
-            type="button"
-          >
-            {item.text}
-          </button>
-        )) : (
-          <AppEmptyState
-            className="min-h-0 items-start py-5 text-left text-companion-text-secondary"
-            description={t('companion.reading.noHeadings.description')}
-            title={t('companion.reading.noHeadings.title')}
-          />
-        )}
-      </div>
-    </ReadingBottomSheet>
-  );
-}
+export { OutlineSheet } from './CompanionOutlineSheet';
 
 export function ReadingFontSheet(props: {
   onChange(settings: CompanionReadingTypographySettings): void;

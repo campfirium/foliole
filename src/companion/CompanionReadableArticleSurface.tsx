@@ -151,6 +151,7 @@ function ImmersiveArticleChrome(props: {
   });
   return (
     <ImmersiveChromeLayer
+      snapshot={articleProps.snapshot}
       {...definedProps({ editHistory: articleProps.editHistory })}
       navigation={articleProps.navigation}
       actionsAtTop={articleProps.flow === true}
