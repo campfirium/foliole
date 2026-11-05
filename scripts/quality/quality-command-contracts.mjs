@@ -100,7 +100,7 @@ export function publicQualityPackageCommands() {
 }
 
 export function isPublicQualityPackageCommand(name) {
-  if (name === 'release:intent') return true;
+  if (['release:intent', 'release:downloads'].includes(name)) return true;
   return (/^(?:appearance:colors:check|deps:|check:|scripts:domains:check|windows:console:guard|native-dialog:guard|copy:guard|validate:|lint(?::|$)|typecheck(?::|$)|test:|quality:)/u.test(name) || EXACT_HOST_PACKAGE_CHECKS.has(name)) &&
     !name.startsWith('test:e2e');
 }

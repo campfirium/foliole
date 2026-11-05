@@ -6,6 +6,7 @@ import { publishRelease } from './release-publish.mjs';
 import { createFixture } from './release-doctor.test-support.mjs';
 
 const SHA = 'a'.repeat(40);
+const draftRead = args => args.includes('isDraft,tagName,url') || args.includes('assets,body,isDraft,tagName,targetCommitish,url');
 
 function runner(version, latestVersion, calls) {
   const tag = `v${version}`;
@@ -14,9 +15,11 @@ function runner(version, latestVersion, calls) {
     if (command === 'git' && args[0] === 'branch') return 'release\n';
     if (command === 'git' && args[0] === 'rev-parse') return `${SHA}\n`;
     if (args.includes('--draft=false')) return '';
-    if (args[2] === tag && args.includes('isDraft,tagName,url')) {
+    if (args[2] === tag && draftRead(args)) {
       return JSON.stringify({
-        isDraft: true, tagName: tag
+        isDraft: true, tagName: tag, targetCommitish: SHA,
+        assets: [{ name: `Foliole-Windows-x64-${version}.exe` }],
+        body: `### Fixed\n\nA fix.\n\n### Download\n\n| Windows |\n| --- |\n| [${version} · x64](https://github.com/campfirium/foliole/releases/download/${tag}/Foliole-Windows-x64-${version}.exe) |`
       });
     }
     if (args[2] === tag) return JSON.stringify({ isDraft: false, tagName: tag });
@@ -60,7 +63,7 @@ describe('release public transition', () => {
     const run = runner(fixture.version, '0.8.0', calls);
     const published = (command, args, options) => {
       const output = run(command, args, options);
-      if (command === 'gh' && args.includes('isDraft,tagName,url')) {
+      if (command === 'gh' && draftRead(args)) {
         return JSON.stringify({ ...JSON.parse(output), isDraft: false });
       }
       return output;
@@ -69,4 +72,16 @@ describe('release public transition', () => {
       .rejects.toThrow('requires the confirmed unpublished Draft');
     expect(calls.some((call) => call.includes('--draft=false'))).toBe(false);
   });
+
+  it.each(['### Fixed\n\nA fix.', '### Download\n\n| Windows |\n| --- |\n| [0.8.0](https://github.com/campfirium/foliole/releases/download/v0.8.0/Foliole-Windows-x64-0.8.0.exe) |'])(
+    'refuses publication when the reviewed body omits or misidentifies verified downloads', async body => {
+      const fixture = await createFixture(); const calls = [];
+      const base = runner(fixture.version, fixture.version, calls);
+      const run = (command, args, options) => {
+        const value = base(command, args, options);
+        return draftRead(args) ? JSON.stringify({ ...JSON.parse(value), body }) : value;
+      };
+      await expect(publishRelease({ cwd: fixture.rootDir, run })).rejects.toThrow(/Download|download/u);
+      expect(calls.some(call => call.includes('--draft=false'))).toBe(false);
+    });
 });

@@ -11,7 +11,7 @@ function compareVersions(left, right) {
   return 0;
 }
 
-function currentRelease(manifest, platformId) {
+export function currentPlatformRelease(manifest, platformId) {
   return [...(manifest.releases ?? [])]
     .filter((release) => release.platforms?.includes(platformId))
     .sort((left, right) => compareVersions(right.version, left.version))[0] ?? null;
@@ -20,7 +20,7 @@ function currentRelease(manifest, platformId) {
 export function listPlatformDownloadVersions(manifest, registry) {
   return [...new Set(registry.platforms
     .filter((platform) => platform.status === 'active' && platform.deliveryChannel === 'github-release')
-    .map((platform) => currentRelease(manifest, platform.id)?.version)
+    .map((platform) => currentPlatformRelease(manifest, platform.id)?.version)
     .filter(Boolean))];
 }
 
@@ -34,6 +34,12 @@ function availableDownload(platform, release, publishedRelease, repository) {
   if (!(publishedRelease.assets ?? []).some((entry) => entry?.name === asset)) {
     throw new Error(`${platform.id} download asset ${asset} is missing from ${tag}.`);
   }
+  return platformDownloadAddress(platform, release.version, repository);
+}
+
+export function platformDownloadAddress(platform, version, repository = REPOSITORY) {
+  const tag = `v${version}`;
+  const asset = platform.downloadAsset.replaceAll('{version}', version);
   return {
     architectures: platform.architectures,
     asset,
@@ -42,7 +48,7 @@ function availableDownload(platform, release, publishedRelease, repository) {
     status: 'available',
     tag,
     url: `https://github.com/${repository}/releases/download/${tag}/${asset}`,
-    version: release.version
+    version
   };
 }
 
@@ -59,7 +65,7 @@ export function createPlatformDownloadDirectory({ manifest, publishedReleases, r
         version: platform.retirement.lastPublicVersion
       }];
     }
-    const release = currentRelease(manifest, platform.id);
+    const release = currentPlatformRelease(manifest, platform.id);
     if (!release) return [platform.id, { channel: platform.deliveryChannel, status: 'unavailable' }];
     return [platform.id, availableDownload(platform, release, publishedReleases[release.version], repository)];
   }));

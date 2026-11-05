@@ -9,6 +9,8 @@ import { resolveReleasePlatformIdentity } from './release-platform-contract.mjs'
 import { assertT7Publication } from './release-publication-contract.mjs';
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
 import { assertIosReleaseAvailable } from './ios/testflight-publication.mjs';
+import { readReleaseDownloadPreview } from './release-download-preview.mjs';
+import { assertReleaseDownloadTable } from './release-download-table.mjs';
 
 function json(command, args, cwd, run) {
   return JSON.parse(run(command, args, { cwd, encoding: 'utf8' }));
@@ -31,11 +33,16 @@ export async function publishRelease({ cwd = process.cwd(), run = execFileSync }
   const tag = `v${identity.intent.version}`;
   const candidate = json('gh', [
     'release', 'view', tag, '-R', 'campfirium/foliole',
-    '--json', 'isDraft,tagName,url'
+    '--json', 'assets,body,isDraft,tagName,targetCommitish,url'
   ], cwd, run);
   if (candidate.tagName !== tag || candidate.isDraft !== true) {
     throw new Error('public transition requires the confirmed unpublished Draft.');
   }
+  const downloads = await readReleaseDownloadPreview({ cwd, run, identity, manifest, candidate: {
+    draft: candidate.isDraft, tag_name: candidate.tagName, target_commitish: candidate.targetCommitish,
+    assets: candidate.assets
+  } });
+  assertReleaseDownloadTable(candidate.body, downloads);
   await assertIosReleaseAvailable({ identity, cwd, tag, run });
   run('gh', [
     'release', 'edit', tag, '-R', 'campfirium/foliole', '--draft=false',
