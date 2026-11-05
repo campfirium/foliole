@@ -32,7 +32,7 @@ it('finely adjusts the rendered text and restores exact values after remounting'
   expect(screen.getByText('1.6')).toBeInTheDocument();
   for (const name of ['Increase Size', 'Increase Line height', 'Serif', 'High']) choose(name);
   expect(loadReadingTypographySettings()).toEqual({
-    fontWeight: 400, fontSize: 17, fontFamily: 'serif', lineHeight: 1.7, contrast: 'high', paragraphSpacing: 0.35
+    fontWeight: 400, fontSize: 17, fontFamily: 'serif', lineHeight: 1.7, contrast: 'high', paragraphSpacing: 0.35, textWidth: 100
   });
   const document = view.container.querySelector('[data-reading-font-size]') as HTMLElement;
   expect(document.style.getPropertyValue('--content-panel-font-size')).toBe('17px');
@@ -139,5 +139,38 @@ it('keeps paragraph spacing and its persisted value on failure, then retries', a
   choose('Increase Paragraph spacing');
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   expect(loadReadingTypographySettings()).toMatchObject({ paragraphSpacing: 0.45 });
+  await act(async () => undefined);
+});
+
+
+it('changes text width in the same reader, retains it after reentry, and recovers from save failure', async () => {
+  const view = mountArticle();
+  const body = view.container.querySelector('[data-reading-font-size]');
+  expect(body).toHaveStyle({ '--document-max-width': '100%' });
+  openAppearance();
+  expect(screen.getByRole('button', { name: 'Increase Text width' })).toBeDisabled();
+  choose('Decrease Text width');
+  expect(body).toHaveStyle({ '--document-max-width': '99%' });
+  expect(loadReadingTypographySettings().textWidth).toBe(99);
+  const storage = window.localStorage;
+  let used = 0;
+  for (let i = 0; i < storage.length; i += 1) {
+    const key = storage.key(i)!;
+    used += key.length + storage.getItem(key)!.length;
+  }
+  storage.setItem('quota', 'x'.repeat(5_000_000 - used - 'quota'.length));
+  choose('Increase Text width');
+  expect(screen.getByRole('alert')).toBeInTheDocument();
+  expect(body).toHaveStyle({ '--document-max-width': '99%' });
+  expect(loadReadingTypographySettings().textWidth).toBe(99);
+  storage.removeItem('quota');
+  choose('Decrease Text width');
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(body).toHaveStyle({ '--document-max-width': '98%' });
+  view.unmount();
+  const returned = mountArticle();
+  openAppearance();
+  expect(screen.getByLabelText('Text width')).toHaveTextContent('98%');
+  expect(returned.container.querySelector('[data-reading-font-size]')).toHaveStyle({ '--document-max-width': '98%' });
   await act(async () => undefined);
 });

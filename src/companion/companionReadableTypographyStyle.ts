@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 
 import { readingFontCssFamily } from './companionReadingFonts';
-import { readingFontSize, readingLineHeight, readingParagraphSpacing, type CompanionReadingTypographySettings } from './companionReadingTypographySettings';
+import { readingFontSize, readingLineHeight, readingParagraphSpacing, readingTextWidth, type CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 
 export function readingFontFamily(value: CompanionReadingTypographySettings['fontFamily']) {
   if (value === 'serif') return 'Georgia, "Times New Roman", serif';
@@ -18,6 +18,7 @@ export function typographyStyle(settings: CompanionReadingTypographySettings): C
     '--content-panel-line-height': String(readingLineHeight(settings.lineHeight)),
     '--content-panel-paragraph-spacing': `${readingParagraphSpacing(settings.paragraphSpacing)}em`,
     '--document-content-inline-padding': '0px',
+    '--document-max-width': `${readingTextWidth(settings.textWidth)}%`,
     '--content-panel-text-color': settings.contrast === 'high'
       ? 'var(--color-text-primary)'
       : 'color-mix(in srgb, var(--color-text-primary) 92%, var(--color-text-secondary))'

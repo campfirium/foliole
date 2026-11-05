@@ -23,6 +23,7 @@ export interface CompanionReadingTypographySettings {
   fontWeight: number;
   lineHeight: CompanionReadingLineHeight;
   paragraphSpacing: number;
+  textWidth: number;
 }
 
 export const DEFAULT_READING_TYPOGRAPHY_SETTINGS: CompanionReadingTypographySettings = {
@@ -31,13 +32,22 @@ export const DEFAULT_READING_TYPOGRAPHY_SETTINGS: CompanionReadingTypographySett
   fontSize: 16,
   fontWeight: 400,
   lineHeight: 1.6,
-  paragraphSpacing: 0.35
+  paragraphSpacing: 0.35,
+  textWidth: 100
 };
 
 const STORAGE_KEY = 'foliole-companion-reading-typography-settings';
 
 export const READING_FONT_SIZE_MIN = 14;
 export const READING_FONT_SIZE_MAX = 80;
+export const READING_TEXT_WIDTH_MIN = 50;
+export const READING_TEXT_WIDTH_MAX = 100;
+
+export function readingTextWidth(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.round(Math.min(READING_TEXT_WIDTH_MAX, Math.max(READING_TEXT_WIDTH_MIN, value)))
+    : DEFAULT_READING_TYPOGRAPHY_SETTINGS.textWidth;
+}
 
 const LEGACY_FONT_SIZES: Record<string, number> = { small: 15, default: 17, large: 19, xlarge: 21 };
 const LEGACY_LINE_HEIGHTS: Record<string, number> = { compact: 1.45, default: 1.62, relaxed: 1.78 };
@@ -80,7 +90,8 @@ export function normalizeReadingTypographySettings(value: unknown): CompanionRea
     fontSize: readingFontSize(record.fontSize),
     fontWeight: normalizeReadingFontWeight(record.fontWeight),
     lineHeight: readingLineHeight(record.lineHeight),
-    paragraphSpacing: readingParagraphSpacing(record.paragraphSpacing)
+    paragraphSpacing: readingParagraphSpacing(record.paragraphSpacing),
+    textWidth: readingTextWidth(record.textWidth)
   };
 }
 

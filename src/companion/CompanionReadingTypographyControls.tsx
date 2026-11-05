@@ -10,7 +10,8 @@ import type {
   CompanionReadingContrast
 } from './companionReadingTypographySettings';
 import {
-  readingFontSize, readingLineHeight, readingParagraphSpacing, READING_FONT_SIZE_MIN, READING_FONT_SIZE_MAX,
+  readingFontSize, readingLineHeight, readingParagraphSpacing, readingTextWidth, READING_FONT_SIZE_MIN, READING_FONT_SIZE_MAX,
+  READING_TEXT_WIDTH_MIN, READING_TEXT_WIDTH_MAX,
   READING_LINE_HEIGHT_MIN, READING_LINE_HEIGHT_MAX, READING_LINE_HEIGHT_STEP,
   READING_PARAGRAPH_SPACING_MIN, READING_PARAGRAPH_SPACING_MAX, READING_PARAGRAPH_SPACING_STEP
 } from './companionReadingTypographySettings';
@@ -57,6 +58,17 @@ function ReadingTypographyOptionGroup<T extends TypographySettingKey>(props: {
   );
 }
 
+function ReadingTextWidthControl(props: {
+  onChange(settings: CompanionReadingTypographySettings): void;
+  settings: CompanionReadingTypographySettings;
+}) {
+  const t = useTranslation();
+  return <CompanionReadingNumberControl label={t('companion.reading.font.textWidth')}
+    onChange={(textWidth) => props.onChange({ ...props.settings, textWidth })}
+    value={readingTextWidth(props.settings.textWidth)}
+    min={READING_TEXT_WIDTH_MIN} max={READING_TEXT_WIDTH_MAX} step={1} unit="%" />;
+}
+
 export function CompanionReadingTypographyControls(props: {
   onChange(settings: CompanionReadingTypographySettings): void;
   settings: CompanionReadingTypographySettings;
@@ -83,6 +95,7 @@ export function CompanionReadingTypographyControls(props: {
         value={readingLineHeight(props.settings.lineHeight)}
         min={READING_LINE_HEIGHT_MIN} max={READING_LINE_HEIGHT_MAX} step={READING_LINE_HEIGHT_STEP}
       />
+      <ReadingTextWidthControl {...props} />
       <CompanionReadingNumberControl
         label={t('settings.appearance.paragraphSpacing.title')}
         onChange={(paragraphSpacing) => props.onChange({ ...props.settings, paragraphSpacing })}

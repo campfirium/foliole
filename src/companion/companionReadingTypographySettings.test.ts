@@ -33,7 +33,7 @@ describe('companion reading typography settings', () => {
       fontSize: 19,
       fontWeight: 400,
       lineHeight: 1.78,
-      paragraphSpacing: 0.35
+      paragraphSpacing: 0.35, textWidth: 100
     });
   });
 
@@ -99,4 +99,16 @@ it('uses shared paragraph spacing bounds and steps when saving and hydrating', (
     expect(saveReadingTypographySettings(settings)).toBe(true);
     expect(loadReadingTypographySettings()).toMatchObject({ paragraphSpacing: expected });
   }
+});
+
+
+it('normalizes and persists fine text widths without changing other reading preferences', () => {
+  for (const value of [undefined, null, '80', NaN, Infinity, {}, []]) {
+    expect(normalizeReadingTypographySettings({ textWidth: value }).textWidth).toBe(100);
+  }
+  for (const [input, expected] of [[49, 50], [101, 100], [83.4, 83]]) {
+    expect(saveReadingTypographySettings({ ...DEFAULT_READING_TYPOGRAPHY_SETTINGS, textWidth: input! })).toBe(true);
+    expect(loadReadingTypographySettings()).toEqual({ ...DEFAULT_READING_TYPOGRAPHY_SETTINGS, textWidth: expected });
+  }
+  window.localStorage.clear();
 });

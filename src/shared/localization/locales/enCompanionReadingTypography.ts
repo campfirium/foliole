@@ -13,6 +13,7 @@ export const EN_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS = {
   'companion.reading.font.size.large': 'Large',
   'companion.reading.font.size.xlarge': 'Extra large',
   'companion.reading.font.lineHeight': 'Line height',
+  'companion.reading.font.textWidth': 'Text width',
   'companion.reading.font.lineHeight.compact': 'Compact',
   'companion.reading.font.lineHeight.default': 'Default',
   'companion.reading.font.lineHeight.relaxed': 'Relaxed',

@@ -13,6 +13,7 @@ export const ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS = {
   'companion.reading.font.size.large': '大',
   'companion.reading.font.size.xlarge': '特大',
   'companion.reading.font.lineHeight': '行距',
+  'companion.reading.font.textWidth': '文本宽度',
   'companion.reading.font.lineHeight.compact': '紧凑',
   'companion.reading.font.lineHeight.default': 'Default',
   'companion.reading.font.lineHeight.relaxed': '宽松',

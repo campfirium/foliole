@@ -25,7 +25,7 @@ describe('useCompanionReadingTypographySettings', () => {
         fontSize: 22,
         fontWeight: 400,
         lineHeight: 1.73,
-        paragraphSpacing: 0.35
+        paragraphSpacing: 0.35, textWidth: 100
       });
     });
 
@@ -35,7 +35,7 @@ describe('useCompanionReadingTypographySettings', () => {
       fontSize: 22,
       fontWeight: 400,
       lineHeight: 1.73,
-      paragraphSpacing: 0.35
+      paragraphSpacing: 0.35, textWidth: 100
     });
     expect(syncObjectsMock.saveCompanionSyncSettingRecord).not.toHaveBeenCalled();
   });
