@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useAttachmentStorageSettings } from '../features/settings/components/sections/useAttachmentStorageSettings';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { supportsCompanionFolderDatabaseBackup } from '../shared/platform/companion/folderBackup/companionFolderBackupRuntimeRepository';
+import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
 
 import { companionBackupSummary } from './companionBackupSummary';
 import { CompanionListRow, CompanionListSection } from './CompanionListSurface';
@@ -47,9 +48,9 @@ function DataAppearanceSettingsSection(props: {
   const attachments = useAttachmentStorageSettings();
   return <>
     {props.showStorage ? <SettingsListSection title={t('companion.settings.section.data')}>
-      <SettingsListItem Icon={Database} title={t('companion.settings.storage.databaseBackup')}
+      {supportsCompanionFolderDatabaseBackup() || getCompanionRuntimeCapability().kind === 'browser-preview' ? <SettingsListItem Icon={Database} title={t('companion.settings.storage.databaseBackup')}
         detail={supportsCompanionFolderDatabaseBackup() ? companionBackupSummary(backup.state, backup.automatic, backup.error, t) : ''}
-        onClick={props.onOpenBackup} testId="companion-settings-backup" />
+        onClick={props.onOpenBackup} testId="companion-settings-backup" /> : null}
       <SettingsListItem Icon={HardDrive} title={t('settings.attachments.title')}
         detail={attachments.status ? t('companion.settings.storage.attachmentSummary', {
           used: formatBytes(attachments.status.usedBytes), trash: formatBytes(attachments.status.trashBytes)
