@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { CompanionReadingCustomFonts } from './CompanionReadingCustomFonts';
 import { CompanionReadingFontWeightControl } from './CompanionReadingFontWeightControl';
+import { CompanionReadingMonospaceControl } from './CompanionReadingMonospaceControl';
 import { CompanionReadingNumberControl } from './CompanionReadingNumberControl';
 import { CompanionReadingSystemFonts } from './CompanionReadingSystemFonts';
 import type {
@@ -115,6 +116,7 @@ export function CompanionReadingTypographyControls(props: {
       />
       <CompanionReadingSystemFonts onChange={changeFont} settings={props.settings} />
       <CompanionReadingCustomFonts onChange={changeFont} settings={props.settings} />
+      <CompanionReadingMonospaceControl {...props} />
       <ReadingTypographyOptionGroup
         label={t('companion.reading.font.contrast')}
         onChange={props.onChange}

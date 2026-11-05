@@ -150,3 +150,14 @@
 .settings-touch-surface [data-settings-trash-row] p { margin: 6px 0 4px; font-size: 13px; line-height: 21px; }
 .settings-touch-surface [data-settings-trash-row] [data-settings-inline-value] { font-size: 14px; }
 .settings-touch-surface [data-settings-trash-actions] { margin-top: 12px; }
+
+.settings-touch-surface [data-settings-color-row] [data-settings-control-slot] { justify-content: flex-end; }
+.settings-touch-surface [data-settings-color-row] [data-settings-control-slot] > button {
+  flex: 0 0 auto;
+  min-width: var(--settings-touch-control-height);
+}
+.settings-touch-surface [data-settings-color-swatch] {
+  width: var(--settings-touch-control-height);
+  height: var(--settings-touch-control-height);
+}
+.settings-touch-surface [data-settings-color-row] input { min-height: var(--settings-touch-control-height); }

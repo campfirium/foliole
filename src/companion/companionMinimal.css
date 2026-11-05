@@ -7,9 +7,9 @@
   --companion-review-button-min-height: 44px;
   --companion-review-action-gap: 4px;
   --companion-divider: #e8e9eb;
-  --companion-list-title: #202226;
-  --companion-list-body: #7b8087;
-  --companion-list-meta: #858b87;
+  --companion-list-title: var(--role-text);
+  --companion-list-body: var(--companion-text-secondary);
+  --companion-list-meta: var(--companion-text-tertiary);
 }
 :root[data-resolved-base-color='dark'] {
   --companion-divider: #444541;

@@ -5,6 +5,7 @@ import { resolveBaseColorMode, type BaseColorMode } from '../features/settings/m
 import { applyCompanionHostAppearance } from '../shared/platform/companion/runtime/companionAppearance';
 
 import { useCompanionPdfReadingMode } from './useCompanionPdfReadingMode';
+import { useCompanionReadingColors } from './useCompanionReadingColors';
 
 function readColorMode() {
   try { return getBaseColorMode(); } catch { return 'system' as const; }
@@ -49,7 +50,7 @@ function useApplyColorMode(mode: ReturnType<typeof useResolvedColorMode>) {
   return hostError;
 }
 
-interface CompanionColorModeValue extends ReturnType<typeof useCompanionPdfReadingMode> {
+interface CompanionColorModeValue extends ReturnType<typeof useCompanionPdfReadingMode>, ReturnType<typeof useCompanionReadingColors> {
   mode: BaseColorMode;
   dimImages: boolean;
   dimImagesSaveError: boolean;
@@ -79,6 +80,7 @@ export function CompanionColorModeProvider({ children }: { children: ReactNode }
   const resolved = useResolvedColorMode(mode);
   const hostError = useApplyColorMode(resolved);
   const pdf = useCompanionPdfReadingMode(resolved);
+  const colors = useCompanionReadingColors(resolved);
   const updateMode = (next: BaseColorMode) => {
     try {
       setBaseColorMode(next);
@@ -86,7 +88,7 @@ export function CompanionColorModeProvider({ children }: { children: ReactNode }
       setSaveError(false);
     } catch { setSaveError(true); }
   };
-  return <CompanionColorModeContext.Provider value={{ ...pdf, mode, saveError, hostError, updateMode, dimImages, dimImagesSaveError, updateDimImages }}>
+  return <CompanionColorModeContext.Provider value={{ ...pdf, ...colors, mode, saveError, hostError, updateMode, dimImages, dimImagesSaveError, updateDimImages }}>
     {children}
   </CompanionColorModeContext.Provider>;
 }

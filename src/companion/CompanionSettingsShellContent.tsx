@@ -11,6 +11,7 @@ import { CompanionCustomCssSettingsContent } from './CompanionCustomCssSettingsC
 import { CompanionFolderDatabaseBackupSection } from './CompanionFolderDatabaseBackupSection';
 import { CompanionLanguageControl } from './CompanionLanguageControl';
 import { CompanionLearningSettingsContent } from './CompanionLearningSettingsContent';
+import { CompanionReadingColorControls } from './CompanionReadingColorControls';
 import { CompanionReviewStatisticsContent } from './CompanionReviewStatisticsContent';
 import {
   CompanionPlaceholderSettingsContent,
@@ -61,6 +62,7 @@ function CompanionAppearanceSettingsDetail(props: Pick<CompanionSettingsContentP
   return <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="appearance" title={t('companion.settings.appearance.title')}>
     <CompanionLanguageControl />
     <CompanionColorModeControl />
+    <CompanionReadingColorControls />
     {customCss?.isSupported ? <CompanionCustomCssSettingsContent /> : <CompanionPlaceholderSettingsContent
       detail={t('companion.settings.appearance.placeholderDetail')}
       title={resolvePlaceholderTitle('appearance', t)} />}

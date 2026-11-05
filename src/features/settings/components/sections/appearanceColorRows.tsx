@@ -1,70 +1,9 @@
-import { RotateCcw } from 'lucide-react';
-
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { SettingsColorRow } from '../../../../shared/ui/SettingsColorRow';
 import {
-  SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME,
-  SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME,
-  SettingsControlSlot,
-  SettingsRow,
-  settingsColorSwatchClassName,
-  settingsFieldClassName,
-  settingsResetButtonClassName
-} from '../../../../shared/ui';
-import {
-  DEFAULT_ACCENT_COLOR_PRESET,
-  DEFAULT_CLOZE_COLOR_PRESET,
-  DEFAULT_FONT_COLOR_PRESET,
-  DEFAULT_HIGHLIGHT_COLOR_PRESET,
-  DEFAULT_SELECTION_COLOR_PRESET
+  DEFAULT_ACCENT_COLOR_PRESET, DEFAULT_CLOZE_COLOR_PRESET, DEFAULT_FONT_COLOR_PRESET,
+  DEFAULT_HIGHLIGHT_COLOR_PRESET, DEFAULT_SELECTION_COLOR_PRESET
 } from '../../model/appearanceSettings';
-
-function ColorSettingRow(props: {
-  colorInputAriaLabel: string;
-  defaultValue: string;
-  description: string;
-  onChange: (value: string) => void;
-  onReset: () => void;
-  resetButtonAriaLabel: string;
-  title: string;
-  value: string;
-}) {
-  const t = useTranslation();
-
-  return (
-    <SettingsRow description={props.description} title={props.title}>
-      <SettingsControlSlot className={SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME}>
-        <button aria-label={props.resetButtonAriaLabel} className={settingsResetButtonClassName('disabled:cursor-default disabled:opacity-45')} disabled={props.value === props.defaultValue} onClick={props.onReset} type="button">
-          <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
-        </button>
-        <div className="inline-flex min-h-9 items-center gap-2.5">
-          <label className="relative h-9 w-9 shrink-0">
-            <span
-              aria-hidden="true"
-              className={settingsColorSwatchClassName('pointer-events-none absolute inset-0')}
-              style={{ backgroundColor: props.value }}
-            />
-            <input
-              aria-label={props.colorInputAriaLabel}
-              className="absolute inset-0 cursor-pointer opacity-0"
-              onChange={(event) => props.onChange(event.target.value)}
-              type="color"
-              value={props.value}
-            />
-          </label>
-          <label className="shrink-0 text-sm text-foreground/72">
-            <input
-              aria-label={t('settings.appearance.colors.hexValue', { title: props.title })}
-              className={settingsFieldClassName(`${SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME} tabular-nums`)}
-              onChange={(event) => props.onChange(event.target.value)}
-              spellCheck={false}
-              value={props.value.toUpperCase()}
-            />
-          </label>
-        </div>
-      </SettingsControlSlot>
-    </SettingsRow>
-  );
-}
 
 export function AccentColorRow(props: {
   defaultAccentColor: string;
@@ -75,7 +14,7 @@ export function AccentColorRow(props: {
   const t = useTranslation();
 
   return (
-    <ColorSettingRow
+    <SettingsColorRow
       colorInputAriaLabel={t('settings.appearance.accent.picker')}
       defaultValue={props.defaultAccentColor || DEFAULT_ACCENT_COLOR_PRESET}
       description={t('settings.appearance.accent.description')}
@@ -97,7 +36,7 @@ export function FontColorRow(props: {
   const t = useTranslation();
 
   return (
-    <ColorSettingRow
+    <SettingsColorRow
       colorInputAriaLabel={t('settings.appearance.fontColor.picker')}
       defaultValue={props.defaultFontColor || DEFAULT_FONT_COLOR_PRESET}
       description={t('settings.appearance.fontColor.description')}
@@ -119,7 +58,7 @@ export function HighlightColorRow(props: {
   const t = useTranslation();
 
   return (
-    <ColorSettingRow
+    <SettingsColorRow
       colorInputAriaLabel={t('settings.appearance.highlightColor.picker')}
       defaultValue={props.defaultHighlightColor || DEFAULT_HIGHLIGHT_COLOR_PRESET}
       description={t('settings.appearance.highlightColor.description')}
@@ -141,7 +80,7 @@ export function SelectionColorRow(props: {
   const t = useTranslation();
 
   return (
-    <ColorSettingRow
+    <SettingsColorRow
       colorInputAriaLabel={t('settings.appearance.selectionColor.picker')}
       defaultValue={props.defaultSelectionColor || DEFAULT_SELECTION_COLOR_PRESET}
       description={t('settings.appearance.selectionColor.description')}
@@ -163,7 +102,7 @@ export function ClozeColorRow(props: {
   const t = useTranslation();
 
   return (
-    <ColorSettingRow
+    <SettingsColorRow
       colorInputAriaLabel={t('settings.appearance.clozeColor.picker')}
       defaultValue={props.defaultClozeColor || DEFAULT_CLOZE_COLOR_PRESET}
       description={t('settings.appearance.clozeColor.description')}

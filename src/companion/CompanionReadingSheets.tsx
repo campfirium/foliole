@@ -11,6 +11,7 @@ import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryAct
 import { CompanionFlowOrEditHistoryActions } from './CompanionFlowHistorySurface';
 import { CompanionFlowModeControl } from './CompanionFlowModeControl';
 import type { CompanionHighlightPanelItem } from './companionHighlightPanelModel';
+import { CompanionReadingColorControls } from './CompanionReadingColorControls';
 import { CompanionReadingDisplayControls } from './CompanionReadingDisplayControls';
 import { CompanionReadingModeControl } from './CompanionReadingModeControl';
 import { CompanionReadingTypographyControls } from './CompanionReadingTypographyControls';
@@ -20,6 +21,7 @@ import { useCompanionTrashRestoreAction } from './useCompanionTrashRestoreAction
 
 import { extractDocumentOutline } from '@/features/editor/model/documentOutline';
 import { AppEmptyState } from '@/shared/ui';
+import { SettingsTouchSurface } from '@/shared/ui/SettingsTouchSurface';
 import { VirtualListSurface } from '@/shared/ui/VirtualListSurface';
 
 export { ReadingBottomSheet };
@@ -174,6 +176,7 @@ export function ReadingFontSheet(props: {
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.font')}>
       <CompanionColorModeControl />
+      <SettingsTouchSurface><CompanionReadingColorControls /></SettingsTouchSurface>
       <CompanionReadingModeControl />
       <CompanionReadingDisplayControls />
       {props.fontLoadError ? <p className="py-3 text-sm text-error" role="alert">{t('companion.reading.font.loadError')}</p> : null}

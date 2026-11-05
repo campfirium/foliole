@@ -1,3 +1,5 @@
+import { normalizeMonospaceFont, type CompanionMonospaceFont } from './companionReadingMonospace';
+
 import {
   READING_PARAGRAPH_SPACING_MIN, READING_PARAGRAPH_SPACING_MAX, READING_PARAGRAPH_SPACING_STEP,
   READING_LINE_HEIGHT_MIN, READING_LINE_HEIGHT_MAX
@@ -22,6 +24,7 @@ export interface CompanionReadingTypographySettings {
   fontSize: CompanionReadingFontSize;
   fontWeight: number;
   lineHeight: CompanionReadingLineHeight;
+  monospaceFont?: CompanionMonospaceFont;
   paragraphSpacing: number;
   textWidth: number;
 }
@@ -80,6 +83,7 @@ export function normalizeReadingTypographySettings(value: unknown): CompanionRea
     return DEFAULT_READING_TYPOGRAPHY_SETTINGS;
   }
   const record = value as Record<string, unknown>;
+  const monospaceFont = normalizeMonospaceFont(record.monospaceFont);
   return {
     contrast: pickEnum(record.contrast, CONTRASTS, DEFAULT_READING_TYPOGRAPHY_SETTINGS.contrast),
     fontFamily: typeof record.fontFamily === 'string' && (
@@ -91,7 +95,8 @@ export function normalizeReadingTypographySettings(value: unknown): CompanionRea
     fontWeight: normalizeReadingFontWeight(record.fontWeight),
     lineHeight: readingLineHeight(record.lineHeight),
     paragraphSpacing: readingParagraphSpacing(record.paragraphSpacing),
-    textWidth: readingTextWidth(record.textWidth)
+    textWidth: readingTextWidth(record.textWidth),
+    ...(monospaceFont ? { monospaceFont } : {})
   };
 }
 
