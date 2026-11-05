@@ -59,7 +59,12 @@ export class CompanionFolderBackupWorker {
     }
   }
 
-  stop() { this.closed = true; this.requested = false; this.clearTimer(); }
+  async stop() {
+    this.closed = true;
+    this.requested = false;
+    this.clearTimer();
+    await this.running;
+  }
 
   private clearTimer() { if (this.timer) clearTimeout(this.timer); this.timer = null; }
 }
