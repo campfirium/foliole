@@ -16,7 +16,7 @@ enum FolioleCompanionAppDataFiles {
 
     static func clear(support: URL, attachmentDirectory: String, defaults: UserDefaults = .standard) throws {
         let manager = FileManager.default
-        for name in [attachmentDirectory, attachmentDirectory + ".trash", "attachment-observations.json", "SyncRequests"] {
+        for name in [attachmentDirectory, attachmentDirectory + ".trash", "attachment-observations.json", "folder-database-backup.json", "SyncRequests"] {
             let file = support.appendingPathComponent(name)
             if manager.fileExists(atPath: file.path) { try manager.removeItem(at: file) }
         }

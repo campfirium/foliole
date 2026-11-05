@@ -2,13 +2,14 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const f = vi.hoisted(() => ({ backup: vi.fn(), consume: vi.fn(), validate: vi.fn(), register: vi.fn(), inventory: vi.fn(), cancel: vi.fn(async () => undefined), writer: vi.fn() }));
 vi.mock('./companion/runtime/iosCompanionDatabaseBootstrap', () => {
-  const owner = { folderBackupSource: f.register, runWriter: f.writer };
+  const owner = { folderBackupSource: f.register, runWriter: f.writer, read: vi.fn(async () => 'initial') };
   return { getIosCompanionDatabaseOwner: () => owner };
 });
 vi.mock('./companion/folderBackup/companionFolderBackupRuntimeRepository', () => ({ getCompanionFolderBackupPort: () => ({ backupDatabase: f.backup, cancelDatabase: f.cancel }) }));
 vi.mock('./companion/folderBackup/companionFolderAttachmentDeletion', () => ({
   captureFolderAttachmentDeletions: vi.fn(async () => null), validateFolderAttachmentDeletions: f.validate
 }));
+vi.mock('./companion/folderBackup/companionFolderBackupState', () => ({ getCompanionFolderBackupState: async (state: unknown) => state }));
 vi.mock('./companion/folderBackup/consumeCompanionFolderAttachmentWork', () => ({ consumeCompanionFolderAttachmentWork: f.consume }));
 vi.mock('./companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: { maintainAttachmentFiles: f.inventory } }));
 

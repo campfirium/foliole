@@ -61,6 +61,10 @@ final class FolioleCompanionContractStore {
         )
     }
 
+    func folderBackupContract() throws -> [String: String] {
+        try stringMap(path: ["hostApi", "folderBackup"], root: bridge)
+    }
+
     func syncGroupProviderContract() throws -> [String: Any] {
         try object(path: ["hostApi", "syncGroupProvider"], root: bridge)
     }

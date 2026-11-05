@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0086CE83A4F2F2D01D990BF7 /* FolioleFolderBackupAttachmentPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 672DC90B7CFB246FC0F3B997 /* FolioleFolderBackupAttachmentPlugin.swift */; };
+		C70EA252CA7C1F3B2F497ABA /* FolioleFolderBackupAttachments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BAF75796B7B72FBA061C320 /* FolioleFolderBackupAttachments.swift */; };
+		B32549765AC4F23C55D97F56 /* FolioleFolderBackupProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DDC1529FF61DE260C49A7CE /* FolioleFolderBackupProfile.swift */; };
+		487150C8D49787AC334C676C /* FolioleFolderBackupOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F83AFEBE0A039C5CC20A42EE /* FolioleFolderBackupOperation.swift */; };
+		3028EDEBDAD9E64F3A316EE8 /* FolioleFolderBackupDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD790EF31366F1B15AEF3DDA /* FolioleFolderBackupDirectory.swift */; };
+		6EA18670BA4C1EB0A6C72A9C /* FolioleFolderBackupPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 413A8E9FE313C808872D4990 /* FolioleFolderBackupPicker.swift */; };
+		D631800A5CF4912970F79A66 /* FolioleCompanionFolderBackupPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 515FD13AC521FE4597F68AE0 /* FolioleCompanionFolderBackupPlugin.swift */; };
 		688100000000000000000003 /* FolioleCompanionAppDataFiles.swift in Share Sources */ = {isa = PBXBuildFile; fileRef = 688100000000000000000002 /* FolioleCompanionAppDataFiles.swift */; };
 		688100000000000000000001 /* FolioleCompanionAppDataFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 688100000000000000000002 /* FolioleCompanionAppDataFiles.swift */; };
 		50F100991FED79650016851F /* FoliolePhysicalClozeRecoveryUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100981FED79650016851F; };
@@ -146,6 +153,13 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		672DC90B7CFB246FC0F3B997 /* FolioleFolderBackupAttachmentPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFolderBackupAttachmentPlugin.swift; sourceTree = "<group>"; };
+		7BAF75796B7B72FBA061C320 /* FolioleFolderBackupAttachments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFolderBackupAttachments.swift; sourceTree = "<group>"; };
+		7DDC1529FF61DE260C49A7CE /* FolioleFolderBackupProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFolderBackupProfile.swift; sourceTree = "<group>"; };
+		F83AFEBE0A039C5CC20A42EE /* FolioleFolderBackupOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFolderBackupOperation.swift; sourceTree = "<group>"; };
+		AD790EF31366F1B15AEF3DDA /* FolioleFolderBackupDirectory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFolderBackupDirectory.swift; sourceTree = "<group>"; };
+		413A8E9FE313C808872D4990 /* FolioleFolderBackupPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFolderBackupPicker.swift; sourceTree = "<group>"; };
+		515FD13AC521FE4597F68AE0 /* FolioleCompanionFolderBackupPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionFolderBackupPlugin.swift; sourceTree = "<group>"; };
 		688100000000000000000002 /* FolioleCompanionAppDataFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAppDataFiles.swift; sourceTree = "<group>"; };
 		50F100981FED79650016851F /* FoliolePhysicalClozeRecoveryUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalClozeRecoveryUITests.swift; sourceTree = "<group>"; };
 		B6AA406AD5824E1DB7779A8A /* FolioleRequestSyncRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleRequestSyncRoute.swift; sourceTree = "<group>"; };
@@ -315,6 +329,13 @@
 				50F010031FED79650016851F /* FolioleBridgeViewController.swift */,
 				50F010041FED79650016851F /* FolioleCompanionBootstrapPlugin.swift */,
 				688100000000000000000002 /* FolioleCompanionAppDataFiles.swift */,
+				672DC90B7CFB246FC0F3B997 /* FolioleFolderBackupAttachmentPlugin.swift */,
+				7BAF75796B7B72FBA061C320 /* FolioleFolderBackupAttachments.swift */,
+				7DDC1529FF61DE260C49A7CE /* FolioleFolderBackupProfile.swift */,
+				F83AFEBE0A039C5CC20A42EE /* FolioleFolderBackupOperation.swift */,
+				AD790EF31366F1B15AEF3DDA /* FolioleFolderBackupDirectory.swift */,
+				413A8E9FE313C808872D4990 /* FolioleFolderBackupPicker.swift */,
+				515FD13AC521FE4597F68AE0 /* FolioleCompanionFolderBackupPlugin.swift */,
 				221A00000000000000000002 /* FolioleShareInboxQueue.swift */,
 				221A00000000000000000003 /* FolioleCompanionShareInboxPlugin.swift */,
 				50F020061FED79650016851F /* companion-bridge-contract-definitions.json */,
@@ -617,6 +638,13 @@
 				50F010011FED79650016851F /* FolioleBridgeViewController.swift in Sources */,
 				50F010021FED79650016851F /* FolioleCompanionBootstrapPlugin.swift in Sources */,
 				688100000000000000000001 /* FolioleCompanionAppDataFiles.swift in Sources */,
+				0086CE83A4F2F2D01D990BF7 /* FolioleFolderBackupAttachmentPlugin.swift in Sources */,
+				C70EA252CA7C1F3B2F497ABA /* FolioleFolderBackupAttachments.swift in Sources */,
+				B32549765AC4F23C55D97F56 /* FolioleFolderBackupProfile.swift in Sources */,
+				487150C8D49787AC334C676C /* FolioleFolderBackupOperation.swift in Sources */,
+				3028EDEBDAD9E64F3A316EE8 /* FolioleFolderBackupDirectory.swift in Sources */,
+				6EA18670BA4C1EB0A6C72A9C /* FolioleFolderBackupPicker.swift in Sources */,
+				D631800A5CF4912970F79A66 /* FolioleCompanionFolderBackupPlugin.swift in Sources */,
 				221B00000000000000000003 /* FolioleShareInboxQueue.swift in App Sources */,
 				221B00000000000000000004 /* FolioleCompanionShareInboxPlugin.swift in Sources */,
 				50F021111FED79650016851F /* FolioleCompanionContractStore.swift in Sources */,

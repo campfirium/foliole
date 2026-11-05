@@ -9,6 +9,7 @@ final class FolioleBridgeViewController: CAPBridgeViewController {
 
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(FolioleCompanionBootstrapPlugin())
+        bridge?.registerPluginInstance(FolioleCompanionFolderBackupPlugin())
         let sync = FolioleCompanionSyncPlugin()
         bridge?.registerPluginInstance(sync)
         if let original = webView?.navigationDelegate {
