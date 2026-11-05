@@ -48,6 +48,24 @@ export function createPlayApi(token, fetchImpl = fetch) {
   };
 }
 
+export function createPlayApkDownloader(token, fetchImpl = fetch) {
+  if (!token) throw new Error('Play access token is required');
+  return async (versionCode, downloadId) => {
+    if (!Number.isSafeInteger(versionCode) || versionCode < 1 || versionCode > 2100000000 ||
+        typeof downloadId !== 'string' || !downloadId.trim()) throw new Error('Exact generated APK identity is required');
+    const route = `generatedApks/${versionCode}/downloads/${encodeURIComponent(downloadId)}:download?alt=media`;
+    let response;
+    try {
+      response = await fetchImpl(`${ROOT}/androidpublisher/v3/applications/${PLAY_PACKAGE}/${route}`, {
+        method: 'GET', redirect: 'error', signal: AbortSignal.timeout(120000),
+        headers: { authorization: `Bearer ${token}` }
+      });
+      if (response.ok) return Buffer.from(await response.arrayBuffer());
+    } catch { throw new Error('Play APK download failed; retry the same candidate without uploading'); }
+    throw new Error(`Play APK download failed (HTTP ${response.status})`);
+  };
+}
+
 export async function readPlayReleases(api) {
   const result = await api('GET', `tracks/${PLAY_TRACK}/releases`);
   if (!result || typeof result !== 'object' || Array.isArray(result)) {

@@ -3,7 +3,7 @@
 import { generateKeyPairSync, verify } from 'node:crypto';
 import { createServer } from 'node:http';
 import { expect, it } from 'vitest';
-import { playAccessToken, createPlayApi } from './play-api.mjs';
+import { playAccessToken, createPlayApi, createPlayApkDownloader } from './play-api.mjs';
 
 it('signs a real scoped service-account JWT and exchanges it only at the official token endpoint', async () => {
   const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
@@ -26,6 +26,31 @@ it('signs a real scoped service-account JWT and exchanges it only at the officia
   await expect(playAccessToken('bad JSON')).rejects.toThrow(/invalid/u);
   await expect(playAccessToken(JSON.stringify({ ...account, private_key: 'sensitive-invalid-key' })))
     .rejects.toThrow('Play service account private key is invalid');
+});
+
+it('downloads exact generated APK bytes using only a fixed authenticated GET and rejects failed reads', async () => {
+  const received = [];
+  const apk = Buffer.from([0x50, 0x4b, 3, 4, 0xff, 0, 1]);
+  const server = createServer((request, response) => {
+    received.push({ method: request.method, url: request.url, authorization: request.headers.authorization });
+    response.end(apk);
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const download = createPlayApkDownloader('temporary-token', (url, options) => {
+      expect(options.redirect).toBe('error');
+      return fetch(url.replace('https://androidpublisher.googleapis.com', `http://127.0.0.1:${server.address().port}`), options);
+    });
+    expect(await download(3, 'opaque/id+=')).toEqual(apk);
+    expect(received).toEqual([{ method: 'GET', authorization: 'Bearer temporary-token',
+      url: '/androidpublisher/v3/applications/com.campfirium.foliole.android/generatedApks/3/downloads/opaque%2Fid%2B%3D:download?alt=media' }]);
+    await expect(download(0, 'id')).rejects.toThrow(/identity/u);
+    await expect(download(3, '')).rejects.toThrow(/identity/u);
+    const failed = createPlayApkDownloader('secret', async () => ({ ok: false, status: 403 }));
+    await expect(failed(3, 'id')).rejects.toThrow('Play APK download failed (HTTP 403)');
+    const lost = createPlayApkDownloader('secret', async () => { throw new Error('secret'); });
+    await expect(lost(3, 'id')).rejects.toThrow('retry the same candidate without uploading');
+  } finally { await new Promise(resolve => server.close(resolve)); }
 });
 
 it('exercises production HTTP request serialization against an isolated Google boundary', async () => {

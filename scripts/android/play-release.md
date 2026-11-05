@@ -147,3 +147,20 @@ Local tests use simulated Google responses, real candidate guards, real Git fixt
 checkouts, checkpoint archive extraction and JDK signing fixtures. They do not prove
 Play credentials, real upload/submission, install or retained-data upgrades. Keep
 those external gaps explicit until corresponding real evidence exists.
+
+## Read-only generated APK collection
+
+`play-generated-apk.mjs` provides collection for a confirmed original upload.
+The caller must supply the trusted original candidate identity and an independently
+verified **application signing** certificate SHA256 from Play Console, not the
+upload certificate or a certificate selected from the generated-APK response.
+It requests that exact versionCode, selects only the universal APK for that key,
+and checks the actual APK signature, package, versionCode and product version with
+Android `apksigner` and `aapt2` before writing the APK and digest receipt.
+`createPlayApkDownloader` performs an authenticated binary GET with `alt=media`;
+it never creates an edit, uploads, commits or substitutes a split/local APK.
+
+This library is not yet connected to QA, T7 or public release assembly. Missing
+universal output, missing independent certificate baseline, permission failure,
+or an identity/signature mismatch blocks collection for release use. Read-only
+download success does not mean the beta release is approved or installable.
