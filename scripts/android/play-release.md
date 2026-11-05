@@ -203,8 +203,11 @@ publication gate must still query actual channel availability.
 For durable review continuation and temporary snapshot recovery, see
 [Play availability continuation](play-review-check.md).
 
-For a new formal product version, `npm run release:intent` previews an intent for
-every active registry platform; add `-- --write` after choosing that new version.
+For a new formal product version, the release owner selects the affected platforms
+and records cross-version sync evidence, for example `npm run release:intent --
+--platforms windows --sync compatible --basis "Windows-only fix; sync unchanged"`.
+Add `--write` to save the reviewed intent. A `coordinated` sync assessment requires
+all active platforms; compatible changes do not automatically rebuild other hosts.
 It preserves published scope/history and refuses to rewrite an already-public
 version. Android has store update semantics and an exact GitHub APK download; it
 does not become a desktop updater platform or invalidate the historical bridge.

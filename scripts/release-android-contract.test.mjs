@@ -5,7 +5,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { afterEach, expect, it } from 'vitest';
-import { createDefaultReleaseIntent, resolveReleasePlatformIdentity } from './release-platform-contract.mjs';
+import { createReleaseIntent, resolveReleasePlatformIdentity } from './release-platform-contract.mjs';
 import { prepareDefaultReleaseIntent } from './release-intent.mjs';
 import { assertT7Publication } from './release-publication-contract.mjs';
 import { createPlatformDownloadDirectory } from './release-download-directory.mjs';
@@ -23,11 +23,13 @@ function root() {
   const folder = fs.mkdtempSync(path.resolve('.tmp/artifacts/android-release-contract-')); roots.push(folder); return folder;
 }
 function identity() {
-  const intent = createDefaultReleaseIntent({ registry, version, publicationMode: 'scoped' });
+  const intent = createReleaseIntent({ registry, version, publicationMode: 'scoped',
+    platforms: registry.platforms.filter(platform => platform.status === 'active').map(platform => platform.id),
+    compatibility: { mode: 'coordinated', basis: 'Isolated coordinated release fixture.' } });
   return resolveReleasePlatformIdentity({ registry, intent, packageVersion: version, sha });
 }
 
-it('defaults new releases to every active producer while preserving old scoped intent and bridge history', async () => {
+it('supports an explicitly coordinated release while preserving old scoped intent and bridge history', async () => {
   const selected = identity();
   expect(new Set(selected.intent.selectedPlatforms)).toEqual(new Set(['macos', 'windows', 'linux', 'ios', 'android']));
   expect(selected.hardGatePlatforms).toContain('android');
@@ -44,12 +46,13 @@ it('defaults new releases to every active producer while preserving old scoped i
   fs.writeFileSync(path.join(folder, 'package.json'), JSON.stringify({ version }));
   fs.writeFileSync(path.join(folder, 'releases/update-manifest.json'), JSON.stringify(history));
   const file = path.join(folder, '.github/release-intent.json'); fs.writeFileSync(file, 'previous intent');
-  await prepareDefaultReleaseIntent(folder);
+  const options = { platforms: selected.intent.selectedPlatforms, compatibility: selected.intent.syncCompatibility };
+  await prepareDefaultReleaseIntent(folder, options);
   expect(fs.readFileSync(file, 'utf8')).toBe('previous intent');
-  await prepareDefaultReleaseIntent(folder, { write: true });
+  await prepareDefaultReleaseIntent(folder, { ...options, write: true });
   expect(JSON.parse(fs.readFileSync(file))).toEqual(selected.intent);
   fs.writeFileSync(path.join(folder, 'package.json'), JSON.stringify({ version: '0.7.17' }));
-  await expect(prepareDefaultReleaseIntent(folder, { write: true })).rejects.toThrow(/published history/u);
+  await expect(prepareDefaultReleaseIntent(folder, { ...options, write: true })).rejects.toThrow(/published history/u);
 });
 
 it('maps Android store updates to an exact GitHub APK without adding TestFlight to the download directory', () => {
@@ -81,6 +84,7 @@ function producer() {
   fs.writeFileSync(file, JSON.stringify(receipt));
   const full = identity();
   const selected = resolveReleasePlatformIdentity({ registry, intent: { ...full.intent, selectedPlatforms: ['android'],
+    syncCompatibility: { mode: 'compatible', basis: 'Isolated Android asset fixture; no sync contract change.' },
     scopeBasis: { android: 'Isolated asset verification' } }, packageVersion: version, sha });
   return { folder, inputRoot, outputRoot: path.join(folder, 'output'), identity: selected, receipt, file, apk, asset };
 }

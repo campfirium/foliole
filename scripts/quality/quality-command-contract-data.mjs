@@ -1,5 +1,5 @@
 export const LOCAL_QUICK_PACKAGES = [
-  ['release:intent', 'prepare an explicit all-active release intent without external mutation'],
+  ['release:intent', 'prepare an explicit platform scope and cross-version sync assessment without external mutation'],
   ['appearance:colors:check', 'fixed generated-color drift check'],
   ['check:native-contracts', 'fixed native command contract check'],
   ['scripts:domains:check', 'fixed script-domain inventory check'],

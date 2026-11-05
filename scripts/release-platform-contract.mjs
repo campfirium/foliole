@@ -107,14 +107,30 @@ export function validateReleaseIntent(intent, registry, packageVersion) {
   const scopeBasis = Object.fromEntries(selectedPlatforms.map((id) => [
     id, requireString(basis[id], `release intent scopeBasis.${id}`)
   ]));
-  return { schemaVersion: 1, version, publicationMode, selectedPlatforms, scopeBasis };
+  const syncCompatibility = validateSyncCompatibility(intent.syncCompatibility, selectedPlatforms, registry);
+  return { schemaVersion: 1, version, publicationMode, selectedPlatforms, scopeBasis,
+    ...(syncCompatibility ? { syncCompatibility } : {}) };
 }
 
-export function createDefaultReleaseIntent({ registry: input, version, publicationMode }) {
+function validateSyncCompatibility(value, selectedPlatforms, registry) {
+  // Published intents predate this assessment and remain immutable.
+  if (value === undefined) return undefined;
+  if (!['compatible', 'coordinated'].includes(value?.mode)) throw new Error('Release sync compatibility must be compatible or coordinated.');
+  const basis = requireString(value.basis, 'Release sync compatibility basis');
+  const active = registry.platforms.filter(platform => platform.status === 'active').map(platform => platform.id);
+  if (value.mode === 'coordinated' && [...selectedPlatforms].sort().join(',') !== active.sort().join(',')) {
+    throw new Error('A sync-incompatible coordinated release requires every active platform.');
+  }
+  return { mode: value.mode, basis };
+}
+
+export function createReleaseIntent({ registry: input, version, publicationMode, platforms, compatibility }) {
   const registry = validatePlatformRegistry(input);
-  const selectedPlatforms = registry.platforms.filter(platform => platform.status === 'active').map(platform => platform.id);
+  const selectedPlatforms = requireStringArray(platforms, 'Explicit release platforms');
+  if (!compatibility) throw new Error('An explicit cross-version sync compatibility assessment is required.');
   return validateReleaseIntent({ schemaVersion: 1, version, publicationMode, selectedPlatforms,
-    scopeBasis: Object.fromEntries(selectedPlatforms.map(id => [id, 'All active platforms are included in this release.']))
+    syncCompatibility: compatibility,
+    scopeBasis: Object.fromEntries(selectedPlatforms.map(id => [id, compatibility.basis]))
   }, registry, version);
 }
 
