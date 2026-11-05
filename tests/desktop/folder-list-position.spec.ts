@@ -34,17 +34,13 @@ async function seedFolder(page: Page, count: number) {
   await expect(folderList(page).getByTestId('folder-list-count')).toHaveText(String(count));
 }
 
-async function readPosition(list: Locator, fraction?: number) {
-  return list.evaluate((element, fraction) => {
+async function readPosition(list: Locator) {
+  return list.evaluate((element) => {
     let scroll = element.parentElement;
     while (scroll && !['auto', 'scroll'].includes(getComputedStyle(scroll).overflowY)) {
       scroll = scroll.parentElement;
     }
     if (!scroll) throw new Error('Folder scroll surface unavailable');
-    if (fraction !== undefined) {
-      scroll.scrollTop = (scroll.scrollHeight - scroll.clientHeight) * fraction;
-      scroll.dispatchEvent(new Event('scroll'));
-    }
     const viewport = scroll.getBoundingClientRect();
     const row = [...element.querySelectorAll('li')].find((candidate) => {
       const bounds = candidate.getBoundingClientRect();
@@ -54,21 +50,22 @@ async function readPosition(list: Locator, fraction?: number) {
     return {
       id: title?.getAttribute('data-testid')?.replace('folder-list-title-', '') ?? null,
       offset: row ? row.getBoundingClientRect().top - viewport.top : null,
+      scrollRange: scroll.scrollHeight - scroll.clientHeight,
       scrollTop: scroll.scrollTop
     };
-  }, fraction);
+  });
 }
 
 async function deepPosition(page: Page, count: number) {
   const list = folderList(page);
-  await readPosition(list, 0.7);
+  const initial = await readPosition(list);
+  await list.hover();
+  await page.mouse.wheel(0, initial.scrollRange * 0.7);
+  await expect.poll(async () => (await readPosition(list)).scrollTop).toBeGreaterThan(0);
   if (count >= 100) {
     await expect.poll(async () => Number(await list.locator('[data-index]').first().getAttribute('data-index')))
       .toBeGreaterThan(0);
   }
-  await page.evaluate(() => new Promise<void>((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-  }));
   await expect.poll(async () => (await readPosition(list)).id).not.toBeNull();
   const position = await readPosition(list);
   expect(position.scrollTop).toBeGreaterThan(0);
