@@ -17,7 +17,7 @@ on:
       packaged_sha:
         value: ${{ jobs.delivery.outputs.packaged_sha }}
 permissions: { contents: read, actions: read, deployments: read }
-concurrency: { group: play-android-open-testing, cancel-in-progress: false }
+concurrency: { group: play-android-open-testing, cancel-in-progress: false, queue: max }
 jobs:
   play:
     name: Build and sign the original Android candidate

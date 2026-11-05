@@ -48,7 +48,7 @@ it('executes the real Android candidate guard before credentials or build and re
 
 it('isolates signing and API secrets from package scripts and preserves the signed checkpoint before upload', () => {
   const job = workflow.jobs.play;
-  expect(workflow.concurrency).toEqual({ group: 'play-android-open-testing', 'cancel-in-progress': false });
+  expect(workflow.concurrency).toEqual({ group: 'play-android-open-testing', 'cancel-in-progress': false, queue: 'max' });
   expect(Object.keys(job.env)).not.toContain('ANDROID_PLAY_SERVICE_ACCOUNT_JSON');
   const steps = job.steps;
   const checkpoint = steps.find(step => step.name === 'Save immutable signed candidate before any upload');

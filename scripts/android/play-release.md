@@ -200,6 +200,9 @@ protected APKs do not change and must not be substituted. Download success is no
 approval, tester availability or an installed retained-data upgrade. The later
 publication gate must still query actual channel availability.
 
+For durable review continuation and temporary snapshot recovery, see
+[Play availability continuation](play-review-check.md).
+
 For a new formal product version, `npm run release:intent` previews an intent for
 every active registry platform; add `-- --write` after choosing that new version.
 It preserves published scope/history and refuses to rewrite an already-public

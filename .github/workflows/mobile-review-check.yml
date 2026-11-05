@@ -1,0 +1,29 @@
+name: Check mobile review availability
+on:
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+    inputs:
+      candidate_id:
+        description: 'Optional exact durable Android candidate ID; empty checks pending candidates'
+        required: false
+        type: string
+permissions: { contents: read }
+concurrency: { group: play-android-open-testing, cancel-in-progress: false, queue: max }
+jobs:
+  android:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: { contents: read, deployments: write }
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: dev, persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24.22.2 }
+      - name: Check registered Play candidates without uploading or committing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}
+          CANDIDATE_ID: ${{ inputs.candidate_id }}
+        run: node scripts/android/play-review-check.mjs

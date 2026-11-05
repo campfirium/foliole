@@ -43,7 +43,11 @@ export function createPlayApi(token, fetchImpl = fetch) {
       });
     } catch { throw new Error(`Play ${method} request outcome is unknown; reconcile the saved edit before retrying`); }
     // Never include response bodies, tokens or request bodies in logs.
-    if (!response.ok) throw new Error(`Play ${method} failed (HTTP ${response.status}); preserve the saved edit`);
+    if (!response.ok) {
+      const error = new Error(`Play ${method} failed (HTTP ${response.status}); preserve the saved edit`);
+      error.status = response.status;
+      throw error;
+    }
     return response.status === 204 ? {} : response.json();
   };
 }

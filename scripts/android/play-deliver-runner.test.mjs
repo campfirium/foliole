@@ -16,7 +16,7 @@ function fixture(lane = 'dev-remote') {
   const api = async (method, route) => {
     if (route === 'actions/runs/42') return f.run;
     if (route.startsWith('deployments?')) return rows;
-    if (route.endsWith('/statuses?per_page=100')) return [{ creator: { login: 'github-actions[bot]' }, description: 'Play candidate: observed' }];
+    if (route.includes('/statuses?per_page=100')) return [{ creator: { login: 'github-actions[bot]' }, description: 'Play candidate: observed' }];
     throw new Error('Unexpected external operation');
   };
   return { ...f, rows, env, api };
@@ -43,6 +43,6 @@ it('keeps every durable reservation above discarded Play inventory and the versi
 
 it('blocks a new edit while a previously registered upload remains uncertain', async () => {
   const f = fixture();
-  const api = async (...args) => args[1].endsWith('/statuses?per_page=100') ? [] : f.api(...args);
+  const api = async (...args) => args[1].includes('/statuses?per_page=100') ? [] : f.api(...args);
   await expect(readReservedPlayHistory(api, { highestVersionCode: 3 })).rejects.toThrow(/earlier Play operation remains unresolved/u);
 });
