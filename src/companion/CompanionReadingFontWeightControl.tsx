@@ -1,4 +1,3 @@
-import { RotateCcw } from 'lucide-react';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
 import { readingFontFamily } from './companionReadableTypographyStyle';
@@ -6,7 +5,7 @@ import { activateReadingFont } from './companionReadingFonts';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 
 import { useTranslation } from '@/shared/localization/LocalizationProvider';
-import { READING_FONT_WEIGHT_DEFAULT, READING_FONT_WEIGHT_MIN, READING_FONT_WEIGHT_MAX,
+import { READING_FONT_WEIGHT_MIN, READING_FONT_WEIGHT_MAX,
   READING_FONT_WEIGHT_STEP } from '@/shared/typography/readingFontWeight';
 import { adjacentReadingWeight, nearestReadingWeight } from '@/shared/typography/readingFontWeightProbe';
 import { useDetectedReadingFontWeights } from '@/shared/typography/useDetectedReadingFontWeights';
@@ -40,12 +39,6 @@ export function CompanionReadingFontWeightControl(props: {
       {t('settings.appearance.fontWeight.title')}
     </label>
       <div className="flex min-h-11 items-center gap-2">
-        <button aria-label={t('settings.appearance.fontWeight.reset')} type="button"
-          className="flex min-h-11 min-w-11 items-center justify-center rounded-md text-foreground disabled:opacity-40"
-          disabled={disabled || props.settings.fontWeight === READING_FONT_WEIGHT_DEFAULT}
-          onClick={() => update(READING_FONT_WEIGHT_DEFAULT)}>
-          <RotateCcw aria-hidden="true" size={18} />
-        </button>
         <input id={id} aria-label={t('settings.appearance.fontWeight.title')} type="range"
           className="min-h-11 min-w-0 flex-1 accent-companion-accent disabled:opacity-40"
           min={READING_FONT_WEIGHT_MIN} max={READING_FONT_WEIGHT_MAX} step={READING_FONT_WEIGHT_STEP}

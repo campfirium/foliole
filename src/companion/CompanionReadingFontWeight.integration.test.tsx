@@ -49,7 +49,8 @@ it('adjusts the actual reader, keeps weight through another article and reopens 
   await waitFor(() => expect(slider()).toBeEnabled());
   expect(slider()).toHaveValue('450');
   expect(body(reopened.container).style.getPropertyValue('--content-panel-font-weight')).toBe('450');
-  fireEvent.click(screen.getByRole('button', { name: 'Reset font weight' }));
+  expect(screen.queryByRole('button', { name: 'Reset font weight' })).not.toBeInTheDocument();
+  fireEvent.change(slider(), { target: { value: '400' } });
   expect(loadReadingTypographySettings().fontWeight).toBe(400);
 });
 
