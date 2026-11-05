@@ -16,13 +16,12 @@ export function structuralTokens(value) {
   ].sort();
 }
 
-export function protectedOccurrences(value, protectedLiterals) {
-  const exact = protectedLiterals.exact.includes(value) ? [value] : [];
-  const embedded = protectedLiterals.embedded.flatMap((literal) => {
-    const count = value.split(literal).length - 1;
-    return Array.from({ length: count }, () => literal);
-  });
-  return [...exact, ...embedded].sort();
+export function protectedOccurrences(value, protectedLiterals, key) {
+  const literal = protectedLiterals.exactByKey?.[key];
+  const exact = literal === value ? [value] : [];
+  const embeddedLiterals = [...protectedLiterals.embedded, ...(protectedLiterals.embeddedByKey?.[key] ?? [])];
+  const embedded = embeddedLiterals.filter((entry) => value.includes(entry));
+  return [...new Set([...exact, ...embedded])].sort();
 }
 
 export function compareEntry(key, english, translation, protectedLiterals) {
@@ -30,8 +29,8 @@ export function compareEntry(key, english, translation, protectedLiterals) {
   if (JSON.stringify(structuralTokens(english)) !== JSON.stringify(structuralTokens(translation))) {
     problems.push(`${key}: structure or placeholders changed`);
   }
-  const expectedProtected = protectedOccurrences(english, protectedLiterals);
-  const actualProtected = protectedOccurrences(translation, protectedLiterals);
+  const expectedProtected = protectedOccurrences(english, protectedLiterals, key);
+  const actualProtected = protectedOccurrences(translation, protectedLiterals, key);
   if (JSON.stringify(expectedProtected) !== JSON.stringify(actualProtected)) {
     problems.push(`${key}: protected literal changed`);
   }

@@ -29,7 +29,8 @@ async function checkLocale(locale, domains) {
       continue;
     }
     for (const key of enKeys) {
-      problems.push(...compareEntry(`${locale}/${key}`, en[key], translated[key], protectedLiterals));
+      const entryProblems = compareEntry(key, en[key], translated[key], protectedLiterals);
+      problems.push(...entryProblems.map((problem) => `${locale}/${problem}`));
     }
   }
   return problems;

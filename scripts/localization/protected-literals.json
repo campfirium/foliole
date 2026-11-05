@@ -1,23 +1,76 @@
 {
-  "exact": [
-    "Flow",
-    "Dismiss",
-    "Later",
-    "Read",
-    "Soon",
-    "Queue clear",
-    "Custom",
-    "Default",
-    "All clear for now.",
-    "Publish to the site",
-    "Publish to WordPress",
-    "Publish to Discourse"
-  ],
+  "exactByKey": {
+    "companion.tabs.learn": "Flow",
+    "desktop.actionHelp.nodeList.dismiss.title": "Dismiss",
+    "desktop.actionHelp.review.dismiss.title": "Dismiss",
+    "desktop.actionHelp.review.later.title": "Later",
+    "desktop.actionHelp.review.read.title": "Read",
+    "desktop.actionHelp.review.soon.title": "Soon",
+    "desktop.command.publishToDiscourse": "Publish to Discourse",
+    "desktop.command.publishToFoliole": "Publish to the site",
+    "desktop.command.publishToWordPress": "Publish to WordPress",
+    "desktop.command.section.flow": "Flow",
+    "desktop.discoursePublish.title": "Publish to Discourse",
+    "desktop.foliolePublish.title": "Publish to the site",
+    "desktop.nodeList.menu.dismiss": "Dismiss",
+    "desktop.reviewActions.queueClear": "Queue clear",
+    "desktop.reviewActions.reading.dismiss": "Dismiss",
+    "desktop.reviewActions.reading.later": "Later",
+    "desktop.reviewActions.reading.read": "Read",
+    "desktop.reviewActions.reading.soon": "Soon",
+    "desktop.reviewComplete.title.default": "Queue clear",
+    "desktop.reviewComplete.title.reviewFirst": "Queue clear",
+    "desktop.reviewSession.allClear.notice": "All clear for now.",
+    "desktop.reviewSession.summary.clear": "Queue clear",
+    "desktop.reviewSession.summary.complete": "Queue clear",
+    "desktop.rightPanel.flow": "Flow",
+    "desktop.rightPanel.flow.demo.laterGroup": "Later",
+    "desktop.wordpressPublish.dialogTitle": "Publish to WordPress",
+    "settings.publishing.discourse.title": "Publish to Discourse",
+    "settings.publishing.foliole.title": "Publish to the site",
+    "settings.publishing.wordpress.title": "Publish to WordPress"
+  },
+  "embeddedByKey": {
+    "desktop.command.openDiscussions": [
+      "Discussions"
+    ],
+    "desktop.externalLibrary.setupLabel": [
+      "External folders"
+    ],
+    "settings.about.discussions": [
+      "Discussions"
+    ],
+    "settings.about.issues": [
+      "Issues"
+    ],
+    "settings.category.externalSearch.label": [
+      "External folders"
+    ],
+    "settings.externalSources.desktopRequired": [
+      "External folders"
+    ],
+    "settings.externalSources.feedback.allMirrorsUpdated": [
+      "External folders"
+    ],
+    "settings.externalSources.sectionAria": [
+      "External folders"
+    ],
+    "settings.externalSources.tableAria": [
+      "External folders"
+    ],
+    "settings.externalSources.title": [
+      "External folders"
+    ],
+    "settings.externalSources.unavailable": [
+      "External folders"
+    ],
+    "settings.search.aboutCommunity.terms": [
+      "Issues",
+      "Discussions"
+    ]
+  },
   "embedded": [
     "Foliole",
-    "External folders",
-    "Discussions",
-    "Issues",
     "WordPress",
     "Discourse",
     "Readwise",

@@ -27,7 +27,7 @@ async function buildLocaleInput(locale, domains) {
       simplifiedChinese: zh[key],
       domain,
       surfaceRole: surfaceRole(key),
-      protectedLiterals: protectedOccurrences(english, protectedLiterals)
+      protectedLiterals: protectedOccurrences(english, protectedLiterals, key)
     }));
     await fs.writeFile(path.join(localeRoot, `${domain}.jsonl`), `${records.map(JSON.stringify).join('\n')}\n`);
   }
