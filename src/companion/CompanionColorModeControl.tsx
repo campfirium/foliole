@@ -3,6 +3,7 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { settingsSwitchClassName, settingsSwitchKnobClassName } from '../shared/ui';
 
 import { useCompanionColorMode } from './CompanionColorModeProvider';
+import { CompanionPdfReadingModeControl } from './CompanionPdfReadingModeControl';
 
 const OPTIONS: readonly BaseColorMode[] = ['system', 'light', 'dark'];
 
@@ -29,6 +30,7 @@ export function CompanionColorModeControl() {
         <span aria-hidden="true" className={settingsSwitchKnobClassName(colorMode.dimImages)} />
       </button>
     </div>
+    <CompanionPdfReadingModeControl />
     {colorMode.dimImagesSaveError ? <p className="mt-3 text-sm text-error" role="alert">{t('companion.reading.font.saveError')}</p> : null}
     {colorMode.saveError ? <p className="mt-3 text-sm text-error" role="alert">{t('companion.settings.colorMode.saveError')}</p> : null}
     {colorMode.hostError ? <p className="mt-3 text-sm text-error" role="alert">{t('companion.settings.colorMode.hostError')}</p> : null}

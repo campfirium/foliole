@@ -119,3 +119,5 @@ test('matches desktop image dimming across reading surfaces, themes, preview and
   await checkFilter(dimmed);
   expect(await page.locator('body').evaluate(e => e.scrollWidth <= innerWidth)).toBe(true);
 });
+
+import "./companion-pdf-colors";
