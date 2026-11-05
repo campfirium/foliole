@@ -47,7 +47,7 @@ describe('CompanionTopBarPropsModel', () => {
     }
     expect(buildTopBarProps('learning')).toMatchObject({ title: 'Review' });
     expect(buildTopBarProps('clozeGuard')).toMatchObject({ title: 'Cloze guard' });
-    expect(buildTopBarProps('foregroundTime')).toMatchObject({ title: 'Foreground time' });
+    expect(buildTopBarProps('foregroundTime')).toMatchObject({ title: 'Review statistics' });
   });
 
   it('keeps settings detail pages on their existing back chrome', () => {

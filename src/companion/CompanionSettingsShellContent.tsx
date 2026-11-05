@@ -9,7 +9,6 @@ import { CompanionColorModeControl } from './CompanionColorModeControl';
 import { useOptionalCompanionCustomCss } from './CompanionCustomCssProvider';
 import { CompanionCustomCssSettingsContent } from './CompanionCustomCssSettingsContent';
 import { CompanionFolderDatabaseBackupSection } from './CompanionFolderDatabaseBackupSection';
-import { CompanionForegroundTimeContent } from './CompanionForegroundTimeContent';
 import { CompanionLanguageControl } from './CompanionLanguageControl';
 import { CompanionLearningSettingsContent } from './CompanionLearningSettingsContent';
 import { CompanionReviewStatisticsContent } from './CompanionReviewStatisticsContent';
@@ -79,7 +78,6 @@ function CompanionSettingsHome(props: CompanionSettingsContentProps) {
       onOpenAppearance={() => props.onOpenSyncSettingsPage('appearance')}
       onOpenClozeGuard={() => props.onOpenSyncSettingsPage('clozeGuard')}
       onOpenLearning={() => props.onOpenSyncSettingsPage('learning')}
-      onOpenForegroundTime={() => props.onOpenSyncSettingsPage('foregroundTime')}
       onOpenReviewStatistics={() => props.onOpenSyncSettingsPage('reviewStatistics')}
       onOpenDebug={() => props.onOpenSyncSettingsPage('debug')}
       onOpenBackup={() => props.onOpenSyncSettingsPage('backup')}
@@ -97,13 +95,8 @@ function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
   if (props.settingsPage === 'attachments') return <SettingsAttachmentStorageSection mobile unavailable={getCompanionRuntimeCapability().kind === 'browser-preview'} />;
   if (props.settingsPage === 'clozeGuard') return <CompanionClozeGuardSettingsContent />;
   if (props.settingsPage === 'learning') return <CompanionLearningSettingsContent />;
-  if (props.settingsPage === 'reviewStatistics') return <CompanionReviewStatisticsContent
+  if (props.settingsPage === 'reviewStatistics' || props.settingsPage === 'foregroundTime') return <CompanionReviewStatisticsContent
     libraryScope={props.workspaceSync.state.workspace_snapshot?.libraryScope ?? ''} />;
-  if (props.settingsPage === 'foregroundTime') {
-    return <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="foregroundTime" title={t('desktop.foregroundTime.title')}>
-      <CompanionForegroundTimeContent />
-    </CompanionSettingsDetail>;
-  }
   if (props.settingsPage === 'device') {
     return renderPlaceholderSettingsDetail({
       detail: t('companion.settings.device.detail'),

@@ -1,7 +1,12 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
-const runtime = vi.hoisted(() => ({ load: vi.fn() }));
+const runtime = vi.hoisted(() => ({ load: vi.fn(), time: vi.fn(), retry: vi.fn() }));
+vi.mock('../features/review/components/useForegroundTimeHistory', () => ({
+  useForegroundTimeHistory: (...args: unknown[]) => runtime.time(...args) ?? {
+    failed: false, totalDurationMs: null, duration: () => null, retry: runtime.retry
+  }
+}));
 vi.mock('../shared/platform/companion/runtime/companionReviewCalendar', () => ({ loadCompanionReviewCalendar: runtime.load }));
 
 import { CompanionReviewStatisticsContent } from './CompanionReviewStatisticsContent';
@@ -13,7 +18,7 @@ function open(now = new Date(2026, 10, 4, 12)) {
 }
 const day = (key: string) => screen.getByRole('group', { name: new RegExp(`^${key} `) });
 
-it('shows the approved three-line month with a first-empty-cell guide, hidden zeros and independent quantities', async () => {
+it('shows the month with a first-empty-cell guide, hidden zeros and independent quantities', async () => {
   runtime.load.mockResolvedValue({ topicCoverageFrom: '2026-11-02', days: [
     { day: '2026-11-02', items: 2, topics: 3 }, { day: '2026-11-04', items: 99, topics: 99 }
   ], scheduledDays: [{ day: '2026-11-04', topics: 2846, items: 19 }] });
@@ -72,4 +77,33 @@ it('moves to the new review month at the day boundary without reopening', async 
   expect(runtime.load).toHaveBeenLastCalledWith(expect.objectContaining({
     from: new Date(2026, 10, 1, 4).toISOString(), to: new Date(2026, 11, 1, 4).toISOString()
   }));
+});
+
+
+it('combines total and daily foreground time with review counts using the selected review month', async () => {
+  runtime.load.mockResolvedValue({ topicCoverageFrom: '2026-01-01', days: [], scheduledDays: [] });
+  runtime.time.mockReturnValue({ failed: false, totalDurationMs: 120_000, retry: runtime.retry,
+    duration: (key: string) => key === '2026-11-03' ? 70_000 : null });
+  open();
+  await waitFor(() => expect(screen.getByRole('table')).toHaveAttribute('aria-busy', 'false'));
+  expect(screen.getByRole('status', { name: 'Total foreground time' })).toHaveTextContent('2m');
+  expect(day('2026-11-03')).toHaveAccessibleName(/Foreground time: 1m/);
+  expect(within(day('2026-11-03')).getByText('1')).toBeVisible();
+  expect(day('2026-11-05')).toHaveTextContent(/^5$/);
+  fireEvent.click(screen.getByRole('button', { name: 'Previous month' }));
+  expect(runtime.time).toHaveBeenLastCalledWith('2026-10-01', '2026-11-01', '2026-11-04');
+  fireEvent.click(screen.getByRole('button', { name: 'Next month' }));
+  expect(runtime.time).toHaveBeenLastCalledWith('2026-11-01', '2026-12-01', '2026-11-04');
+});
+
+it('keeps review counts visible when foreground time fails and offers a retry', async () => {
+  runtime.load.mockResolvedValue({ topicCoverageFrom: '2026-01-01', days: [],
+    scheduledDays: [{ day: '2026-11-04', topics: 2, items: 7 }] });
+  runtime.time.mockReturnValue({ failed: true, totalDurationMs: null, duration: () => null, retry: runtime.retry });
+  open();
+  await waitFor(() => expect(day('2026-11-04')).toHaveAccessibleName(/Topic: 2 · Item: 7/));
+  expect(screen.getByRole('alert')).toHaveTextContent('Could not load usage time');
+  expect(screen.queryByRole('status')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  expect(runtime.retry).toHaveBeenCalledOnce();
 });

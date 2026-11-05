@@ -69,7 +69,7 @@ function resolveSettingsTopBar(
   onBackToSyncSettings: () => void,
   onExitSettings: () => void
 ) {
-  if (settingsPage === 'foregroundTime') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('desktop.foregroundTime.title') };
+  if (settingsPage === 'foregroundTime') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('desktop.reviewCalendar.title') };
   if (settingsPage === 'reviewStatistics') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('desktop.reviewCalendar.title') };
   if (settingsPage === 'clozeGuard') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('settings.editor.clozeGuard.section') };
   if (settingsPage === 'learning') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('settings.category.review.label') };

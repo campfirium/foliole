@@ -1,4 +1,4 @@
-import { BookOpen, Bug, CalendarDays, Clock, Database, HardDrive, Palette, RefreshCw, RectangleEllipsis, type LucideIcon } from 'lucide-react';
+import { BookOpen, Bug, CalendarDays, Database, HardDrive, Palette, RefreshCw, RectangleEllipsis, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { useAttachmentStorageSettings } from '../features/settings/components/sections/useAttachmentStorageSettings';
@@ -75,7 +75,6 @@ export function CompanionSettingsList(props: {
   onOpenDebug(): void;
   onOpenLearning?(): void;
   onOpenClozeGuard?(): void;
-  onOpenForegroundTime?(): void;
   onOpenReviewStatistics?(): void;
   onOpenBackup(): void;
   onOpenAttachments(): void;
@@ -95,7 +94,7 @@ export function CompanionSettingsList(props: {
             title={t('companion.settings.sync.title')}
           />
         </SettingsListSection>
-        {props.onOpenLearning || props.onOpenClozeGuard || props.onOpenForegroundTime || props.onOpenReviewStatistics ? <SettingsListSection title={t('settings.group.workspace')}>
+        {props.onOpenLearning || props.onOpenClozeGuard || props.onOpenReviewStatistics ? <SettingsListSection title={t('settings.group.workspace')}>
           {props.onOpenLearning ? <SettingsListItem Icon={BookOpen} detail="" onClick={props.onOpenLearning}
             title={t('settings.category.review.label')} /> : null}
           {props.onOpenClozeGuard ? <SettingsListItem Icon={RectangleEllipsis} detail="" onClick={props.onOpenClozeGuard}
@@ -103,9 +102,6 @@ export function CompanionSettingsList(props: {
           <CompanionHighlightPrefixSetting />
           {props.onOpenReviewStatistics ? <SettingsListItem Icon={CalendarDays} detail="" onClick={props.onOpenReviewStatistics}
             title={t('desktop.reviewCalendar.title')} /> : null}
-          {props.onOpenForegroundTime ?
-          <SettingsListItem Icon={Clock} detail="" onClick={props.onOpenForegroundTime}
-            title={t('desktop.foregroundTime.title')} /> : null}
         </SettingsListSection> : null}
         <DataAppearanceSettingsSection
           onOpenAppearance={props.onOpenAppearance}

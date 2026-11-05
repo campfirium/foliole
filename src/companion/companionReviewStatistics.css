@@ -2,7 +2,7 @@
 .companion-statistics {
   --companion-statistics-date-size: 18px;
   --companion-statistics-value-size: 12px;
-  --companion-statistics-week-height: 86px;
+  --companion-statistics-week-height: 103px;
   --companion-statistics-cell-inset: 4px;
   --companion-statistics-quantity-offset: 5px;
   --companion-statistics-week-line: rgb(var(--role-ink-rgb) / 0.075);
@@ -31,7 +31,7 @@
 .companion-statistics-calendar tbody tr:not(:last-child) { border-bottom: 1px solid var(--companion-statistics-week-line); }
 .companion-statistics-cell {
   display: grid;
-  grid-template-rows: 24px 17px 17px;
+  grid-template-rows: 24px 17px 17px 17px;
   align-content: start;
   justify-items: end;
   min-height: var(--companion-statistics-week-height);

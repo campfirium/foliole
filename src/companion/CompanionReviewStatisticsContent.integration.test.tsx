@@ -44,15 +44,21 @@ it('opens persisted mobile review facts from settings and retains distinct count
       nextAt: '2026-11-04T08:00:00Z', priority: 0, repetitionCount: 1, readingPosition: 0, state: 'active'
     }) });
   }
+  library.database.prepare(`INSERT INTO foreground_daily_time (id,source_id,day_key,duration_ms)
+    VALUES ('time','source','2026-11-03',120000)`).run();
   const ui = render(<SettingsEntry />);
+  expect(screen.queryByRole('button', { name: 'Foreground time' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Review statistics' }));
   await waitFor(() => expect(screen.getByRole('group', { name: /^2026-11-03 / })).toHaveAccessibleName(/Topic: 1 · Item: 1/));
+  await waitFor(() => expect(screen.getByRole('group', { name: /^2026-11-03 / })).toHaveAccessibleName(/Foreground time: 2m/));
+  expect(screen.getByRole('status', { name: 'Total foreground time' })).toHaveTextContent('2m');
   expect(screen.getByRole('group', { name: /^2026-11-04 / })).toHaveAccessibleName(/Topic: 1/);
   ui.unmount();
   await reopenSearchLibrary(library.root, '2026-11-04T09:00:00Z');
   render(<SettingsEntry />);
   fireEvent.click(screen.getByRole('button', { name: 'Review statistics' }));
   await waitFor(() => expect(screen.getByRole('group', { name: /^2026-11-03 / })).toHaveAccessibleName(/Topic: 1 · Item: 1/));
+  await waitFor(() => expect(screen.getByRole('group', { name: /^2026-11-03 / })).toHaveAccessibleName(/Foreground time: 2m/));
   await expect(loadCompanionReviewCalendar({ libraryScope: 'other-library',
     from: '2026-11-01T00:00:00Z', to: '2026-12-01T00:00:00Z', now: new Date().toISOString()
   })).rejects.toThrow('calendar_library_changed');
