@@ -174,7 +174,7 @@ file assertions failed before the fix and passed afterward; logs are
 failure was reproduced with 45.2.1, so it was not a runtime-upgrade regression.
 See [Electron's documented raw archive semantics](https://www.electronjs.org/docs/latest/tutorial/asar-archives#treating-an-asar-archive-as-a-normal-file).
 
-Electron 45.2.2 matches the [official latest stable release](https://releases.electronjs.org/release/v45.2.2).
+The 2026-11-04 assessment matched Electron 45.2.2 to the [then-latest stable release](https://releases.electronjs.org/release/v45.2.2).
 Its npm publication was 2026-11-03T21:43:24.912Z; the Electron maturity exception
 applies. Official notes list Wayland hidden-parent and CSS-removal fixes plus
 Chromium/Node updates, without a disclosed security advisory: follow the normal
@@ -183,6 +183,16 @@ Foliole release schedule; no major-version follow-up is required.
 On 2026-11-05, #199 advanced to head `220c9689ee68139169d0a9b78b354c1da93ce979`
 and lucide-react 1.63.0. The older implementation above does not cover that target;
 the current proposal's local validation blocker is recorded below.
+
+## Current batch local validation blocker
+
+2026-11-05, owner T726: re-listed all nine open `app/renovate` proposals for `campfirium/foliole` / `dev` and read current bodies, comments and full diffs. No PR was closed, merged or adopted in this attempt. Existing #201 implementation remains owned by centralized QA; do not reinstall it. After restoring dependencies, `npm run electron:native:health` passed, including native rebuild, SQLite ABI and DNS-SD lifecycle (`.tmp/waits/t726-baseline-native.log`).
+
+- Tested #203 (`96f1853dad1e2fb44694cb1157462a843689fac7`, react-virtual 3.14.24 / virtual-core 3.19.9), #205 (`f5b966dd336a9dce7341b454251b2b31f3336698`, liquidjs 10.30.1) and current #199 (`c603db536b44ec9af6cdd0836bc473b7e0aafa90`, lucide-react 1.64.0). All meet npm's seven-day age rule. Ten focused files passed 55 contracts for list positions/remeasurement, icon consumers and production Liquid theme/site rendering. `npm run build` failed with 60 TypeScript errors; restoring all three original packages reproduced exactly the same 60 diagnostics. Manifests and lockfile are restored without a diff. Logs: `.tmp/waits/t726-routine-checks.log` and `.tmp/waits/t726-baseline-build.log`. This supersedes #199's earlier target-specific blocker below, not its historical QA evidence.
+- Recheck trigger: after companion/image-cloze implementation owners repair missing typography fixture fields, unsupported Testing Library `exact` options, the callable mock/Storage fixtures and optional image-region types, T726 or the next dependency batch reruns those ten files and `npm run build`, then native health and applicable host acceptance before any adoption commit or pending-QA registration. Do not repair unrelated feature fixtures in the dependency task or count the failed build as green.
+- #204 (`643d1318545ce7eb2c9b03ae846ba2917e3989fa`, protobuf-gradle-plugin 0.10.1) and #206 (`b9ecacda818b22ddc959611a9e6922428dbf097d`, Capacitor 8.6.0) received proposal review only; native compatibility/build and generated graph validation remain unperformed, not failed or rejected. Resume these as separate native increments under the active small-increment rule; no native files were changed.
+- #207 (`9d91b8f3effdb25c5b53d59f92aaf14105e099d6`) only widens engines to `<27` and updates Node types to 26.6.6; it does not provision Node 26.13.0. Preserve the lower bound and migrate `.node-version`, CI, CLI SEA checksum/runtime and Windows provisioning together when implementing. T725 currently writes overlapping Android release workflows; wait for that writer to finish before runtime migration. #187 (`9c6fedb125780058b1cdb3e90487af72a66020b2`) proposes exact Node24 engines and remains unadopted pending the coherent runtime decision, not a second competing engines write.
+- #200 now proposes 45.2.3 (`83eef9aff15383635f149ab82917347946d9de3c`), whereas installed Electron remains 45.2.2. [Official latest stable 45.2.3](https://releases.electronjs.org/release/v45.2.3) is the required target; no major follow-up is needed. Its notes list upstream component backports without a disclosed advisory: no separate release acceleration, follow normal publication. Runtime adoption and its native/build/Hidden Native checks remain unperformed; the old 45.2.2 QA row does not cover this changed proposal.
 
 ## Reviewed proposals and deferred adoption
 
