@@ -15,7 +15,7 @@ export function CompanionLearningSettingControl(props: { row: CompanionLearningS
     <AppDialogTrigger asChild>
       <button className="flex min-h-14 w-full items-center justify-between gap-3 border-b border-companion-divider py-3 text-left active:bg-companion-subtle/80"
         type="button">
-        <span className="text-sm font-medium text-foreground">{t(props.row.title)}</span>
+        <span data-settings-value-title className="text-ui-lg font-normal text-foreground">{t(props.row.title)}</span>
         <span className="flex shrink-0 items-center gap-2 text-base tabular-nums text-companion-text-secondary">
           {formatLearningRowValue(props.row, props.settings, t('settings.review.rangeTo'))}
           <ChevronRight aria-hidden="true" size={16} />
