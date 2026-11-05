@@ -5,14 +5,14 @@ import { companionReadingSystemBars, supportsCompanionReadingSystemBars } from '
 
 import { useCompanionReadingDisplay } from './companionReadingDisplay';
 
-export function useCompanionReadingSystemBars(editing: boolean, chromeVisible: boolean) {
+export function useCompanionReadingSystemBars(normalLayout: boolean, chromeVisible: boolean) {
   useEffect(() => () => {
     if (supportsCompanionReadingSystemBars()) void companionReadingSystemBars.request({ enabled: false, hidden: false });
   }, []);
   const { hideSystemStatusBar } = useCompanionReadingDisplay();
   useEffect(() => {
     if (!supportsCompanionReadingSystemBars()) return;
-    const enabled = hideSystemStatusBar && !editing;
+    const enabled = hideSystemStatusBar && !normalLayout;
     const target = { enabled, hidden: enabled && !chromeVisible };
     void companionReadingSystemBars.request(target);
     const reapply = () => { void companionReadingSystemBars.request(target, true); };
@@ -28,5 +28,5 @@ export function useCompanionReadingSystemBars(editing: boolean, chromeVisible: b
       unsubscribe?.();
       window.removeEventListener('orientationchange', reapply);
     };
-  }, [hideSystemStatusBar, editing, chromeVisible]);
+  }, [hideSystemStatusBar, normalLayout, chromeVisible]);
 }

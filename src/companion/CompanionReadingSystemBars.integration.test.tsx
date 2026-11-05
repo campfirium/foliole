@@ -53,6 +53,19 @@ it('shows time and battery with reading tools and hides them together without di
   await applied(false);
 });
 
+it('keeps the status bar outside Outline and restores the reading layout after closing', async () => {
+  localStorage.setItem(key, JSON.stringify({ hideSystemStatusBar: true }));
+  render(article());
+  await applied(true, true);
+  fireEvent.click(screen.getByText('Reading body'));
+  await applied(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Outline', exact: true }));
+  await applied(false);
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Outline' })).getByRole('button', { name: 'Back', exact: true }));
+  await applied(true);
+  expect(JSON.parse(localStorage.getItem(key)!)).toEqual({ hideSystemStatusBar: true });
+});
+
 it('keeps both preferences independent across articles, reentry and leaving reading', async () => {
   const view = render(article()); more();
   const system = screen.getByRole('switch', { name: 'Hide system status bar' });
