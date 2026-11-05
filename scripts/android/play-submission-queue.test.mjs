@@ -22,7 +22,7 @@ it('preserves the prior review, persists one waiting source and resumes only And
   f.sources.get('42').run.status = 'completed'; f.sources.get('42').run.conclusion = 'success';
   expect(await resume(f)).toBe('waiting');
   f.release('APPROVED_NOT_PUBLISHED');
-  expect(await resume(f)).toBe('waiting');
+  await expect(resume(f)).rejects.toThrow(/publication/u);
   f.release('PUBLISHED');
   expect(await resume(f)).toBe('resuming');
   expect(f.reruns).toEqual([4201]);
@@ -48,9 +48,9 @@ it('pauses on predecessor rejection, never bypasses it on later checks or manual
   const f = await fixture(); f.release('IN_REVIEW'); await admit(f);
   f.sources.get('42').run.status = 'completed'; f.sources.get('42').run.conclusion = 'success';
   f.release('NOT_APPROVED');
-  expect(await resume(f)).toBe('blocked');
+  await expect(resume(f)).rejects.toThrow(/blocked/u);
   f.release('PUBLISHED');
-  expect(await resume(f)).toBe('blocked');
+  await expect(resume(f)).rejects.toThrow(/blocked/u);
   await expect(admitPlaySubmission({ ...f.clients(), env: f.env(), registrarSha: 'e'.repeat(40) })).rejects.toThrow();
   expect(f.reruns).toEqual([]);
 });
@@ -60,7 +60,8 @@ it.each([true, false])('never duplicates a rerun after a lost response (server s
   Object.assign(f.sources.get('42').run, { status: 'completed', conclusion: 'success' });
   f.release('PUBLISHED'); f.lostDispatch = started; f.loseBeforeDispatch = !started;
   await expect(resume(f)).rejects.toThrow(/unknown/u);
-  expect(await resume(f)).toBe(started ? 'resuming' : 'resume-outcome-unknown');
+  if (started) expect(await resume(f)).toBe('resuming');
+  else await expect(resume(f)).rejects.toThrow(/unknown/u);
   expect(f.calls.filter(call => call.route === 'actions/jobs/4201/rerun')).toHaveLength(1);
 });
 
@@ -74,7 +75,7 @@ it('recovers a lost queue-registration response without creating a second ticket
 it.each(['cancelled', 'timed_out'])('does not resume a %s source', async conclusion => {
   const f = await fixture(); f.release('IN_REVIEW'); await admit(f);
   Object.assign(f.sources.get('42').run, { status: 'completed', conclusion }); f.release('PUBLISHED');
-  expect(await resume(f)).toBe('cancelled'); expect(f.reruns).toEqual([]);
+  await expect(resume(f)).rejects.toThrow(/cancelled/u); expect(f.reruns).toEqual([]);
 });
 
 it('keeps waiting on missing predecessors and rejects unknown states and expired quality without dispatch', async () => {

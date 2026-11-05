@@ -75,6 +75,11 @@ export function playSubmissionReadiness(row, { rows, states, releases, clearedBl
   return pendingPlayBlockers(releases).length ? 'waiting' : 'ready';
 }
 
+function requireSubmissionAttention(row, reason) {
+  throw new Error(`Android submission ${row.id}: ${reason}. Preserve the original candidate and checkpoints; ` +
+    `inspect https://github.com/campfirium/foliole/actions/runs/${row.payload.runId} before recovery`);
+}
+
 export async function resumePendingPlaySubmission({ github, play, candidateId }) {
   // An exact availability check must not resume an unrelated source run.
   if (candidateId) return 'inspection-only';
@@ -82,20 +87,29 @@ export async function resumePendingPlaySubmission({ github, play, candidateId })
   for (const row of context.rows) {
     const state = context.states.get(row.id);
     if (['published', 'retired'].includes(state)) continue;
+    if (['blocked', 'cancelled'].includes(state)) requireSubmissionAttention(row, `submission is ${state}`);
     if (state !== 'waiting' && !state.startsWith('resuming:')) return state;
     const run = await github('GET', `actions/runs/${row.payload.runId}`);
     if (state.startsWith('resuming:')) {
       // A lost rerun response must never cause a second dispatch.
-      if (run.run_attempt <= Number(state.split(':')[1])) return 'resume-outcome-unknown';
-      if (run.status === 'completed') return 'resume-needs-reconciliation';
+      if (run.run_attempt <= Number(state.split(':')[1])) requireSubmissionAttention(row, 'rerun outcome is unknown');
+      if (run.status === 'completed') requireSubmissionAttention(row, 'completed rerun needs admission reconciliation');
       return 'resuming';
     }
     if (run.status !== 'completed') return 'waiting';
     if (!['success', 'failure'].includes(run.conclusion)) {
-      await writePlaySubmissionState(github, row, 'cancelled'); return 'cancelled';
+      await writePlaySubmissionState(github, row, 'cancelled');
+      requireSubmissionAttention(row, 'source run was cancelled or did not complete normally');
     }
     const ready = playSubmissionReadiness(row, context);
-    if (ready === 'blocked') await writePlaySubmissionState(github, row, 'blocked');
+    if (ready === 'blocked') {
+      await writePlaySubmissionState(github, row, 'blocked');
+      requireSubmissionAttention(row, 'predecessor review was rejected or its submission is blocked');
+    }
+    if (ready === 'waiting' && context.releases.some(release =>
+      release.releaseLifecycleState === 'RELEASE_LIFECYCLE_STATE_APPROVED_NOT_PUBLISHED')) {
+      requireSubmissionAttention(row, 'approved beta awaits publication; inspect the complete Console publication scope');
+    }
     if (ready !== 'ready') return ready;
     await readReservedPlayHistory(github);
     const evidence = await readPlayQueueEvidence(github, row.payload.runId);

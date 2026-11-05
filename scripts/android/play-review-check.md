@@ -116,14 +116,20 @@ in force. Original source SHA and release notes are retained even when branches
 advance. Publication observations are durable so an older release disappearing
 from Google's inventory after replacement cannot stall the next queued candidate.
 
-A review rejection blocks the affected queue and its successors. Cancelled source
-runs, expired quality evidence and uncertain rerun responses require owner
+A review rejection blocks the affected queue and its successors. A blocked queue,
+cancelled source run or approval awaiting publication fails the scheduled check
+with the original run URL and a recovery instruction; it does not report a
+successful idle check. This also covers legacy Console releases that have no
+registered candidate notification. Ordinary review remains successful waiting.
+Failures appear in the existing GitHub Actions failure surface; this does not
+create a separate notification service or guarantee a user's notification settings.
+Expired quality evidence and uncertain rerun responses require owner
 reconciliation; they never trigger automatic replacement uploads or duplicate
 reruns. Before requesting a rerun, the checker durably writes
 `Play submission: resuming:<attempt>`. If its response is lost, a newer source
-attempt proves that it started; otherwise the checker reports
-`resume-outcome-unknown`. A completed attempt whose admission never recorded a new
-state reports `resume-needs-reconciliation`. Preserve these markers when inspecting
+attempt proves that it started; otherwise the checker fails with an unknown-outcome
+error. A completed attempt whose admission never recorded a new state fails with
+an admission-reconciliation error. Preserve these markers when inspecting
 the original run. GitHub's rerun age limit and artifact expiry still apply.
 
 `candidate_id` remains an exact availability inspection and never dispatches an
