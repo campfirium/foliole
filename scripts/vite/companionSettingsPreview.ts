@@ -1,5 +1,5 @@
 import type { AttachmentStatusRequest } from '../../lib/platform/attachmentMaintenanceContract';
-import type { CompanionSettingsPreview, CompanionSettingsPreviewSnapshot } from '../../src/shared/platform/companionSettingsPreview';
+import type { CompanionSettingsPreview, CompanionSettingsPreviewSnapshot } from '../../src/shared/platform/companion/preview/companionSettingsPreview';
 
 /** Dev-only UI fixture. Every action changes memory, never the copied library or phone files. */
 export function createCompanionSettingsPreview(): CompanionSettingsPreview {

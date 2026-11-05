@@ -56,7 +56,7 @@ describe('T7 hosted quality workflow contract', () => {
         .toEqual({ group: 'quality-qa-mobile', 'cancel-in-progress': false });
     }
     expect(hosted.concurrency).toEqual({ group: 'quality-dev', 'cancel-in-progress': false });
-    expect(release.concurrency).toEqual({ group: 'quality-release', 'cancel-in-progress': true });
+    expect(release.concurrency).toEqual({ group: 'quality-release', 'cancel-in-progress': false, queue: 'max' });
     const workflows = fs.readdirSync('.github/workflows').filter((file) => file.endsWith('.yml'));
     const referencing = workflows.filter((file) => read(`.github/workflows/${file}`).includes('quality-release'));
     expect(referencing).toEqual(['t7-release.yml']);

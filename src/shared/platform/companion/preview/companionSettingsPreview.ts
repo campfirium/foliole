@@ -1,7 +1,6 @@
-import type { AttachmentMaintenanceStatus, AttachmentStatusRequest } from '../../../lib/platform/attachmentMaintenanceContract';
-import type { CompanionFolderBackupState } from '../../../lib/platform/companionFolderBackupContract';
-
-import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
+import type { AttachmentMaintenanceStatus, AttachmentStatusRequest } from '../../../../../lib/platform/attachmentMaintenanceContract';
+import type { CompanionFolderBackupState } from '../../../../../lib/platform/companionFolderBackupContract';
+import { getCompanionRuntimeCapability } from '../../companionRuntimeCapabilities';
 
 export interface CompanionSettingsPreviewSnapshot {
   backup: CompanionFolderBackupState;

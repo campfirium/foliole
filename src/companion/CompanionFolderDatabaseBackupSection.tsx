@@ -4,8 +4,8 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { setCompanionAutomaticFolderBackup } from '../shared/platform/companion/folderBackup/companionAutomaticFolderBackup';
 import { backUpCompanionDatabase } from '../shared/platform/companion/folderBackup/companionFolderBackup';
 import { supportsCompanionFolderDatabaseBackup } from '../shared/platform/companion/folderBackup/companionFolderBackupRuntimeRepository';
+import { getCompanionSettingsPreview } from '../shared/platform/companion/preview/companionSettingsPreview';
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
-import { getCompanionSettingsPreview } from '../shared/platform/companionSettingsPreview';
 import { AppButton, AppSwitch, SettingsControlSlot, SettingsRow, SettingsSection } from '../shared/ui';
 import { SettingsValueRow } from '../shared/ui/SettingsValueRow';
 

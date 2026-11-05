@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import type { AttachmentStatusRequest, AttachmentMaintenanceStatus } from '../../../../../lib/platform/attachmentMaintenanceContract';
 import { runAttachmentMaintenance } from '../../../../shared/platform/attachments/attachmentMaintenance';
-import { getCompanionSettingsPreview } from '../../../../shared/platform/companionSettingsPreview';
+import { getCompanionSettingsPreview } from '../../../../shared/platform/companion/preview/companionSettingsPreview';
 
 export function useAttachmentStorageSettings() {
   const [status, setStatus] = useState<AttachmentMaintenanceStatus | null>(null);

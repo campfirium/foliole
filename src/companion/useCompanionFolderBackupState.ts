@@ -4,7 +4,7 @@ import type { CompanionFolderBackupState } from '../../lib/platform/companionFol
 import { getCompanionAutomaticFolderBackup, subscribeCompanionAutomaticFolderBackup } from '../shared/platform/companion/folderBackup/companionAutomaticFolderBackup';
 import { getCompanionFolderBackupPort } from '../shared/platform/companion/folderBackup/companionFolderBackupRuntimeRepository';
 import { getCompanionFolderBackupState, subscribeCompanionFolderBackupWork } from '../shared/platform/companion/folderBackup/companionFolderBackupState';
-import { getCompanionSettingsPreview } from '../shared/platform/companionSettingsPreview';
+import { getCompanionSettingsPreview } from '../shared/platform/companion/preview/companionSettingsPreview';
 
 export function useCompanionFolderBackupState(supported: boolean) {
   const [state, setState] = useState<CompanionFolderBackupState | null>(null);
