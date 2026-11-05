@@ -1,4 +1,5 @@
 export const controlledRuntimeSqliteTests = [
+  'src/companion/companionHighlightRange.integration.test.tsx',
   'src/shared/platform/companion/folderBackup/companionAutomaticFolderBackup.integration.test.ts',
   'src/shared/platform/companion/folderBackup/companionFolderAttachmentDeletion.integration.test.ts',
   'src/shared/platform/companion/folderBackup/companionFolderBackupDeletion.integration.test.ts',
