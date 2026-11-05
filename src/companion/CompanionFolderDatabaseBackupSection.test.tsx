@@ -28,8 +28,10 @@ it('shows the last unfinished attachment result without presenting it as a compl
   const view = render(<CompanionFolderDatabaseBackupSection />);
   await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Backup failed'));
   expect(screen.queryByText('All backed up')).not.toBeInTheDocument();
-  expect(screen.getByRole('alert')).toHaveTextContent('Directory permission unavailable.');
-  expect(screen.getByRole('button', { name: 'Back up now' })).toBeEnabled();
+  expect(screen.getByRole('status')).toHaveTextContent('Directory permission unavailable.');
+  expect(screen.getByRole('alert')).toHaveTextContent('Choose the backup folder again.');
+  fireEvent.click(screen.getByRole('button', { name: 'Choose again…' }));
+  await waitFor(() => expect(fixture.request).toHaveBeenCalledWith(true));
   view.unmount();
 });
 vi.mock('../shared/platform/companion/folderBackup/companionAutomaticFolderBackup', () => ({
@@ -87,14 +89,32 @@ it('keeps automatic backup separate from folder authorization and lets it be dis
   await waitFor(() => expect(toggle).not.toBeChecked()); view.unmount();
 });
 
-it('lets the user stop using the folder without requesting another backup', async () => {
-  fixture.forget.mockResolvedValue({ configured: false, directoryLabel: null, databaseSavedAt: null, phase: 'idle', errorMessage: null });
+it('shows only the current folder and change action, and closes without changing configuration', async () => {
   const view = render(<CompanionFolderDatabaseBackupSection />);
   fireEvent.click(await screen.findByRole('button', { name: 'Backup location Documents/Backup' }));
-  fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Stop using folder' }));
-  await waitFor(() => expect(fixture.forget).toHaveBeenCalledTimes(1));
-  await waitFor(() => expect(screen.queryByRole('button', { name: 'Stop using folder' })).not.toBeInTheDocument());
-  expect(fixture.request).not.toHaveBeenCalled(); expect(screen.getByRole('switch')).not.toBeChecked(); view.unmount();
+  const dialog = await screen.findByRole('dialog');
+  expect(dialog).toHaveTextContent('Documents/Backup');
+  expect(within(dialog).queryByRole('button', { name: 'Stop using folder' })).not.toBeInTheDocument();
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(fixture.request).not.toHaveBeenCalled();
+  expect(fixture.forget).not.toHaveBeenCalled();
+  view.unmount();
+});
+
+it.each([true, false])('sets up automatic backup from the unconfigured switch, configured=%s', async configured => {
+  fixture.automatic = false;
+  Object.assign(fixture.state, { configured: false, directoryLabel: null });
+  fixture.request.mockResolvedValue({ state: { ...fixture.state, configured, directoryLabel: configured ? 'Documents/Backup' : null } });
+  const view = render(<CompanionFolderDatabaseBackupSection />);
+  const toggle = await screen.findByRole('switch', { name: 'Automatic backup' });
+  await waitFor(() => expect(toggle).toBeEnabled());
+  fireEvent.click(toggle);
+  await waitFor(() => expect(fixture.request).toHaveBeenCalledWith(true));
+  await waitFor(() => expect(toggle).toBeEnabled());
+  if (configured) expect(fixture.setAutomatic).toHaveBeenCalledWith(true);
+  else expect(fixture.setAutomatic).not.toHaveBeenCalled();
+  view.unmount();
 });
 
 it('updates the automatic switch when the persisted setting changes outside this control', async () => {

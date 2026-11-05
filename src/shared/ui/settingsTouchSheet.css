@@ -19,7 +19,7 @@
 .settings-touch-sheet [data-settings-sheet-header] { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
 .settings-touch-sheet [data-app-dialog-title] { margin: 0; font-size: 16px; font-weight: 400; line-height: 24px; }
 .settings-touch-sheet [data-settings-sheet-header] button { min-height: 44px; border: 0; background: transparent; font-size: 14px; color: var(--role-text-secondary); }
-.settings-touch-sheet [data-app-dialog-body] { padding: 0; font-size: 13px; line-height: 21px; }
+.settings-touch-sheet [data-app-dialog-body] { margin: 0; padding: 0; font-size: 13px; line-height: 21px; }
 .settings-touch-sheet [data-app-dialog-body] > p { font-size: 13px; line-height: 21px; }
 .settings-touch-sheet [data-app-dialog-actions] { display: flex; justify-content: flex-end; gap: 24px; margin-top: 20px; padding: 0; border: 0; background: transparent; }
 .settings-touch-sheet [data-app-dialog-actions] button { min-height: 44px; padding: 8px; border: 0; background: transparent; font-size: 14px; font-weight: 400; }
@@ -30,3 +30,5 @@
 .settings-touch-sheet [data-settings-sheet-number] { display: flex; align-items: center; gap: 12px; margin-top: 24px; }
 .settings-touch-sheet [data-settings-sheet-number] input { flex: 1; min-width: 0; height: 44px; font-size: 14px; }
 .settings-touch-sheet [data-settings-sheet-number] span { flex-shrink: 0; color: var(--role-text-secondary); font-size: 14px; }
+
+.settings-touch-sheet-overlay { background: rgb(var(--role-ink-rgb) / 0.25); }

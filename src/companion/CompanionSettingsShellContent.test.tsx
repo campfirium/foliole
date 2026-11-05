@@ -53,7 +53,7 @@ describe('CompanionSettingsShellContent', () => {
     expect(screen.getByText('Data')).toBeInTheDocument();
     expect(screen.getByText('Development')).toBeInTheDocument();
 
-    expect(screen.getByRole('button', { name: /Sync content and view sync status/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sync' })).toBeInTheDocument();
     expect(screen.queryByText('Device')).not.toBeInTheDocument();
   });
 
@@ -61,7 +61,7 @@ describe('CompanionSettingsShellContent', () => {
     render(<SettingsHarness runtimeKind={runtimeKind} />);
 
     expect(screen.getByTestId('companion-settings-appearance')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Choose colors and customize Topic reading/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Appearance Language and display' }));
     expect(screen.getByText('Custom CSS snippets')).toBeInTheDocument();
     expect(screen.getByTestId('companion-custom-css-settings')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add snippet' })).toBeInTheDocument();
@@ -70,7 +70,7 @@ describe('CompanionSettingsShellContent', () => {
   it('opens the debug placeholder page', () => {
     render(<SettingsHarness />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Diagnostics/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Debug', exact: true }));
     expect(screen.getByText('Diagnostics')).toBeInTheDocument();
   });
 

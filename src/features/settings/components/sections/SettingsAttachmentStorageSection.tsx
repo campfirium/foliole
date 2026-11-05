@@ -4,7 +4,7 @@ import type { AttachmentMaintenanceStatus } from '../../../../../lib/platform/at
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { AppButton, AppInput, AppSwitch, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 import { AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../../shared/ui/Dialog';
-import { SettingsTouchSheet } from '../../../../shared/ui/SettingsTouchSheet';
+import { SettingsTouchSheet, SettingsTouchSheetOverlay } from '../../../../shared/ui/SettingsTouchSheet';
 import { SettingsValueRow } from '../../../../shared/ui/SettingsValueRow';
 
 import { AttachmentCleanupThresholdDialog } from './AttachmentCleanupThresholdDialog';
@@ -43,7 +43,7 @@ export function SettingsAttachmentStorageSection({ unavailable = false, mobile =
       </SettingsRow>
       <SettingsRow controlLayout={mobile ? 'inline' : 'stacked'} title={t('settings.attachments.eligible')}
         description={status ? mobile ? bytes(status.eligibleBytes) : `${bytes(status.eligibleBytes)} · ${t('settings.attachments.eligibleHint')}` : '—'}>
-        <SettingsControlSlot><AppButton disabled={busy || !status} onClick={() => void run({ action: 'clean' })} size="sm">
+        <SettingsControlSlot><AppButton disabled={busy || !status || (mobile && status.eligibleBytes === 0)} onClick={() => void run({ action: 'clean' })} size="sm">
           {t('settings.attachments.clean')}
         </AppButton></SettingsControlSlot>
       </SettingsRow>
@@ -67,11 +67,11 @@ function AttachmentTrashRow({ mobile, status, busy, onRestore, onEmpty }: {
   const t = useTranslation();
   const controls = <SettingsControlSlot>
     <AppButton disabled={busy || !status?.trash.length} size="sm" onClick={onRestore}>{t('settings.attachments.restore')}</AppButton>
-    <AppButton disabled={busy || !status?.trash.length} size="sm" onClick={onEmpty}>{t('settings.attachments.empty')}</AppButton>
+    <AppButton aria-label={t('settings.attachments.empty')} disabled={busy || !status?.trash.length} size="sm" onClick={onEmpty}>{t(mobile ? 'settings.attachments.emptyAction' : 'settings.attachments.empty')}</AppButton>
   </SettingsControlSlot>;
   if (!mobile) return <SettingsRow title={t('settings.attachments.trash')}
     description={status ? `${bytes(status.trashBytes)} · ${t('settings.attachments.trashHint')}` : '—'}>{controls}</SettingsRow>;
-  return <div data-settings-row>
+  return <div data-settings-row data-settings-trash-row>
     <div data-settings-summary><h4>{t('settings.attachments.trash')}</h4><span data-settings-inline-value>{status ? bytes(status.trashBytes) : '—'}</span></div>
     <p>{t('settings.attachments.trashHint')}</p>
     <div data-settings-trash-actions>{controls}</div>
@@ -85,12 +85,12 @@ function EmptyAttachmentTrashDialog({ mobile, busy, open, size, onOpenChange, on
   const Content = mobile ? SettingsTouchSheet : AppDialogContent;
   return (
     <AppDialog open={open} onOpenChange={onOpenChange}>
-      <AppDialogPortal><AppDialogOverlay /><Content {...(!mobile ? { layout: 'task' as const, className: 'w-[calc(100vw-3rem)] max-w-[420px]' } : {})}>
+      <AppDialogPortal>{mobile ? <SettingsTouchSheetOverlay /> : <AppDialogOverlay />}<Content {...(!mobile ? { layout: 'task' as const, className: 'w-[calc(100vw-3rem)] max-w-[420px]' } : {})}>
         <div data-settings-sheet-header><AppDialogTitle>{t('settings.attachments.emptyTitle')}</AppDialogTitle></div>
         <AppDialogBody><AppDialogDescription>{t('settings.attachments.emptyHint', { size })}</AppDialogDescription></AppDialogBody>
         <AppDialogActions>
           <AppButton onClick={() => onOpenChange(false)}>{t('common.cancel')}</AppButton>
-          <AppButton disabled={busy} onClick={onConfirm}>{t('settings.attachments.empty')}</AppButton>
+          <AppButton variant={mobile ? 'danger' : 'default'} disabled={busy} onClick={onConfirm}>{t('settings.attachments.empty')}</AppButton>
         </AppDialogActions>
       </Content></AppDialogPortal>
     </AppDialog>

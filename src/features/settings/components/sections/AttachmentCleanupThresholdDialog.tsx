@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { AppButton, AppInput } from '../../../../shared/ui';
-import { AppDialog, AppDialogActions, AppDialogBody, AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../../shared/ui/Dialog';
-import { SettingsTouchSheet } from '../../../../shared/ui/SettingsTouchSheet';
+import { AppDialog, AppDialogActions, AppDialogBody, AppDialogDescription, AppDialogPortal, AppDialogTitle } from '../../../../shared/ui/Dialog';
+import { SettingsTouchSheet, SettingsTouchSheetOverlay } from '../../../../shared/ui/SettingsTouchSheet';
 
 export function AttachmentCleanupThresholdDialog({ open, value, onOpenChange, onSave }: {
   open: boolean; value: number; onOpenChange(open: boolean): void; onSave(value: number): void;
@@ -14,7 +14,7 @@ export function AttachmentCleanupThresholdDialog({ open, value, onOpenChange, on
   const [invalid, setInvalid] = useState(false);
   useEffect(() => { if (open) { setDraft(String(value)); setInvalid(false); } }, [open, value]);
   return <AppDialog open={open} onOpenChange={onOpenChange}>
-    <AppDialogPortal><AppDialogOverlay /><SettingsTouchSheet onOpenAutoFocus={event => { event.preventDefault(); input.current?.focus(); input.current?.select(); }}>
+    <AppDialogPortal><SettingsTouchSheetOverlay /><SettingsTouchSheet onOpenAutoFocus={event => { event.preventDefault(); input.current?.focus(); input.current?.select(); }}>
       <form onSubmit={event => {
         event.preventDefault();
         const parsed = Number(draft);

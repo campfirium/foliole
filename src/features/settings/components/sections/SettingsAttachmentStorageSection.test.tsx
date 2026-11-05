@@ -14,7 +14,7 @@ beforeEach(() => {
     if (request.action === 'configure') Object.assign(fixture.status, request.settings);
     return { ...fixture.status };
   });
-  Object.assign(fixture.status, { automatic: true, observationThreshold: 30 });
+  Object.assign(fixture.status, { automatic: true, observationThreshold: 30, eligibleBytes: 2048 });
 });
 
 it('edits the mobile waiting period in a dialog, rejects invalid input and saves only on confirmation', async () => {
@@ -43,5 +43,13 @@ it('keeps moving to trash separate from confirmed permanent deletion', async () 
   expect(dialog).toHaveTextContent(/permanently deletes/);
   fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
   expect(fixture.run).not.toHaveBeenCalledWith({ action: 'empty-trash' });
+  view.unmount();
+});
+
+it('disables moving attachments when there is no eligible content', async () => {
+  fixture.status.eligibleBytes = 0;
+  const view = render(<SettingsAttachmentStorageSection mobile />);
+  expect(await screen.findByRole('button', { name: 'Move to trash' })).toBeDisabled();
+  expect(screen.getByRole('switch', { name: 'Automatic cleanup' })).toBeEnabled();
   view.unmount();
 });

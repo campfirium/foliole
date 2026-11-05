@@ -3,7 +3,9 @@ import type { useTranslation } from '../shared/localization/LocalizationProvider
 
 export function companionBackupSummary(state: CompanionFolderBackupState | null, automatic: boolean | null,
   error: string | null, t: ReturnType<typeof useTranslation>) {
-  if (error || state?.phase === 'failed') return t('companion.settings.storage.backupFailed');
+  const failure = error || state?.errorMessage;
+  if (failure) return t('companion.settings.storage.backupFailedReason', { reason: failure });
+  if (state?.phase === 'failed') return t('companion.settings.storage.backupFailed');
   if (!state) return t('companion.settings.storage.backupLoading');
   if (!state.configured) return t('companion.settings.storage.backupNotConfigured');
   if (state.pendingItems == null) return t('companion.settings.storage.backupNotStarted');

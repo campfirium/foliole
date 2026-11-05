@@ -87,8 +87,7 @@ export function CompanionSettingsList(props: {
         <SettingsListSection first title={t('companion.settings.section.syncDevice')}>
           <SettingsListItem
             Icon={RefreshCw}
-            accent
-            detail={t('companion.settings.sync.detail')}
+            detail=""
             onClick={props.onOpenSync}
             testId="companion-settings-sync"
             title={t('companion.settings.sync.title')}
@@ -112,7 +111,7 @@ export function CompanionSettingsList(props: {
         <SettingsListSection title={t('companion.settings.section.development')}>
           <SettingsListItem
             Icon={Bug}
-            detail={t('companion.settings.debug.detail')}
+            detail=""
             onClick={props.onOpenDebug}
             title={t('companion.settings.debug.title')}
           />

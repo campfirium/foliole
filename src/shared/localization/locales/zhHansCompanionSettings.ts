@@ -1,6 +1,11 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.settings.storage.clearConfirm': '清除数据',
+  'companion.settings.storage.backupFailedReason': '备份失败：{reason}',
+  'companion.settings.storage.backupReselectHint': '请重新选择备份文件夹。',
+  'companion.settings.storage.backupReselect': '重新选择…',
+  'companion.settings.storage.noBackupFolder': '未选择',
   'companion.settings.storage.currentBackupFolder': '当前文件夹',
   'companion.settings.storage.chooseBackupFolder': '选择文件夹…',
   'companion.settings.storage.backupFailed': '备份失败',
@@ -47,7 +52,7 @@ export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<Translation
   'companion.settings.storage.forgetBackupFolder': '停止使用目录',
   'companion.settings.storage.automaticBackup': '自动备份',
   'companion.settings.storage.automaticBackupHint': '使用 Foliole 时自动备份，未完成的下次打开继续。',
-  'companion.settings.storage.databaseBackupHint': '将应用数据备份到其他文件夹。',
+  'companion.settings.storage.databaseBackupHint': '将应用数据备份到手机上的其他文件夹。',
   'companion.settings.storage.backupWorking': '正在备份…',
   'companion.settings.storage.backupNow': '立即备份',
   'companion.settings.storage.changeBackupFolder': '更改位置…',
@@ -64,7 +69,7 @@ export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<Translation
   'companion.settings.storage.description': '永久清除这台设备上的 Foliole 数据，包括仅存于本机或尚未同步的内容。',
   'companion.settings.storage.error': '清除应用数据失败。',
   'companion.settings.appearance.title': '外观',
-  'companion.settings.appearance.detail': '选择颜色模式，自定义主题阅读。',
+  'companion.settings.appearance.detail': '语言与显示',
   'companion.settings.appearance.css.title': '自定义 CSS 片段',
   'companion.settings.appearance.css.description': '只有已保存并启用的片段会改变主题阅读。',
   'companion.settings.appearance.css.add': '添加片段',

@@ -62,7 +62,7 @@ describe('companion mobile text wrapping', () => {
       />
     );
 
-    expect(screen.getByText('Diagnostics are not available yet.').className).toContain('line-clamp-2');
+    expect(screen.getByText('Language and display').className).toContain('line-clamp-2');
   });
 
   it('stacks dense sync diagnostic metrics on mobile', () => {

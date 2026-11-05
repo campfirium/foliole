@@ -132,7 +132,7 @@
 .settings-touch-surface [data-settings-action-status] { font-size: 15px; line-height: 22px; color: var(--role-text); }
 .settings-touch-surface [data-settings-home] [data-companion-list-section] { padding-top: 0; margin-bottom: 24px; }
 .settings-touch-surface [data-settings-home] [data-companion-list-row] { min-height: 56px; padding: 12px 0; }
-.settings-touch-surface [data-settings-home] [data-companion-list-title] { font-size: 16px; font-weight: 400; line-height: 24px; }
+.settings-touch-surface [data-settings-home] [data-companion-list-title] { font-size: 16px; font-weight: 400; line-height: 22px; }
 .settings-touch-surface [data-settings-home] [data-companion-list-detail] { margin-top: 4px; font-size: 13px; line-height: 20px; }
 .settings-touch-surface [data-settings-home] [data-settings-row] { min-height: 56px; padding: 12px 0; }
 .settings-touch-surface [data-settings-home] [data-settings-row] h4 { font-size: 16px; line-height: 24px; }
@@ -142,3 +142,11 @@
 .settings-touch-surface [data-settings-inline-value] { font-size: 13px; line-height: 20px; color: var(--role-text-secondary); }
 .settings-touch-surface [data-settings-trash-actions] [data-settings-control-slot] { justify-content: flex-end; gap: 8px; }
 .settings-touch-surface [data-settings-trash-actions] [data-settings-control-slot] > button { flex: 0 0 auto; }
+
+.settings-touch-surface [data-settings-home] [data-companion-list-section] > h2 { padding-bottom: 4px; line-height: 22px; }
+.settings-touch-surface [data-settings-home] [data-settings-row] { margin-top: 8px; }
+.settings-touch-surface [data-settings-row] h4 + p { margin-top: 4px; }
+.settings-touch-surface [data-settings-trash-row] { display: block; padding: 16px 0; border-bottom: 1px solid var(--settings-touch-line); }
+.settings-touch-surface [data-settings-trash-row] p { margin: 6px 0 4px; font-size: 13px; line-height: 21px; }
+.settings-touch-surface [data-settings-trash-row] [data-settings-inline-value] { font-size: 14px; }
+.settings-touch-surface [data-settings-trash-actions] { margin-top: 12px; }

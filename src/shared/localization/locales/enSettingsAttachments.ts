@@ -1,4 +1,5 @@
 export const EN_SETTINGS_ATTACHMENTS_TRANSLATIONS = {
+  'settings.attachments.emptyAction': 'Empty trash…',
   'settings.attachments.daysUnit': 'days',
   'settings.attachments.description': 'Attachments move to the trash first. Emptying it permanently deletes them.',
   'settings.attachments.title': 'Attachments',

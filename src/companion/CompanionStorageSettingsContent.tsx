@@ -8,11 +8,10 @@ import { AppButton, AppSpinner, SettingsControlSlot, SettingsRow, SettingsSectio
 import {
   AppDialog,
   AppDialogDescription,
-  AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle
 } from '../shared/ui/Dialog';
-import { SettingsTouchSheet } from '../shared/ui/SettingsTouchSheet';
+import { SettingsTouchSheet, SettingsTouchSheetOverlay } from '../shared/ui/SettingsTouchSheet';
 
 import { removeCompanionCustomCssCache } from './companionCustomCssStorage';
 
@@ -31,7 +30,7 @@ function ClearAppDataDialog(props: {
   return (
     <AppDialog onOpenChange={props.onOpenChange} open={props.isOpen}>
       <AppDialogPortal>
-        <AppDialogOverlay />
+        <SettingsTouchSheetOverlay />
         <SettingsTouchSheet>
           <div data-settings-sheet-header><AppDialogTitle>{t('companion.settings.storage.clearDialog.title')}</AppDialogTitle></div>
           <AppDialogDescription className="mt-2">
@@ -47,6 +46,7 @@ function ClearAppDataDialog(props: {
               {t('common.cancel')}
             </button>
             <button
+              aria-label={t('companion.settings.storage.clear')}
               aria-busy={props.isClearing || undefined}
               className={`inline-flex items-center justify-center gap-2 px-2 py-3 text-sm font-normal text-error transition hover:bg-error/5 disabled:cursor-not-allowed ${props.isClearing ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
               disabled={props.isClearing || props.unavailable}
@@ -55,7 +55,7 @@ function ClearAppDataDialog(props: {
               type="button"
             >
               {props.isClearing ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
-              <span>{t(props.isClearing ? 'companion.settings.storage.clearing' : 'companion.settings.storage.clear')}</span>
+              <span>{t(props.isClearing ? 'companion.settings.storage.clearing' : 'companion.settings.storage.clearConfirm')}</span>
             </button>
           </div>
         </SettingsTouchSheet>

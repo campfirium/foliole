@@ -1,6 +1,7 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_SETTINGS_ATTACHMENTS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'settings.attachments.emptyAction': '清空回收站…',
   'settings.attachments.daysUnit': '天',
   'settings.attachments.description': '附件先移入回收站，清空后才会永久删除。',
   'settings.attachments.title': '附件',
