@@ -35,7 +35,7 @@ it('edits the mobile waiting period in a dialog, rejects invalid input and saves
 
 it('keeps moving to trash separate from confirmed permanent deletion', async () => {
   const view = render(<SettingsAttachmentStorageSection mobile />);
-  fireEvent.click(await screen.findByRole('button', { name: 'Move to trash' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Clean up now' }));
   await waitFor(() => expect(fixture.run).toHaveBeenCalledWith({ action: 'clean' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Empty trash' }));
   expect(fixture.run).not.toHaveBeenCalledWith({ action: 'empty-trash' });
@@ -49,7 +49,19 @@ it('keeps moving to trash separate from confirmed permanent deletion', async () 
 it('disables moving attachments when there is no eligible content', async () => {
   fixture.status.eligibleBytes = 0;
   const view = render(<SettingsAttachmentStorageSection mobile />);
-  expect(await screen.findByRole('button', { name: 'Move to trash' })).toBeDisabled();
+  expect(await screen.findByRole('button', { name: 'Clean up now' })).toBeDisabled();
   expect(screen.getByRole('switch', { name: 'Automatic cleanup' })).toBeEnabled();
+  view.unmount();
+});
+
+it('shows cleanup as automatic work, with an optional immediate action in either mode', async () => {
+  const view = render(<SettingsAttachmentStorageSection mobile />);
+  expect(await screen.findByText('Pending automatic cleanup')).toBeInTheDocument();
+  expect(screen.getByText('Run cleanup automatically after the waiting period.')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('switch', { name: 'Automatic cleanup' }));
+  expect(await screen.findByText('Pending manual cleanup')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Clean up now' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Clean up now' }));
+  await waitFor(() => expect(fixture.run).toHaveBeenCalledWith({ action: 'clean' }));
   view.unmount();
 });
