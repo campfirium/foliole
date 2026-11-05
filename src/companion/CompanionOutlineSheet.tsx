@@ -8,7 +8,7 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppEmptyState } from '../shared/ui';
 import { VirtualListSurface } from '../shared/ui/VirtualListSurface';
 
-import { CompanionFullscreenSheet } from './CompanionFullscreenSheet';
+import { CompanionBottomSheet } from './CompanionBottomSheet';
 import { OutlineEntryRow, OutlineSectionHeading } from './CompanionOutlineRows';
 import type { CompanionReadingActivity } from './companionReadingActivity';
 import { useCompanionOutlineCardNavigation } from './useCompanionOutlineCardNavigation';
@@ -63,7 +63,7 @@ function OutlineContents(props: OutlineSheetProps & { scrollElementRef: MutableR
 export function OutlineSheet(props: OutlineSheetProps) {
   const t = useTranslation();
   const scrollElementRef = useRef<HTMLDivElement | null>(null);
-  return <CompanionFullscreenSheet scrollElementRef={scrollElementRef} onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.outline')}>
+  return <CompanionBottomSheet retainReadingToolbar scrollElementRef={scrollElementRef} onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.outline')}>
     {props.open ? <OutlineContents key={props.nodeId} {...props} scrollElementRef={scrollElementRef} /> : null}
-  </CompanionFullscreenSheet>;
+  </CompanionBottomSheet>;
 }

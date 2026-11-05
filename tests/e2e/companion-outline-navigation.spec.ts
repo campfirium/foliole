@@ -18,6 +18,19 @@ async function openOutline(page: Page, scenario: string) {
   await expect(page.getByRole('dialog', { name: 'Outline' })).toBeVisible();
 }
 
+async function expectReadingSheet(page: Page) {
+  const dialog = page.getByRole('dialog', { name: 'Outline' });
+  const toolbar = page.locator('.companion-reading-top-chrome');
+  await expect(toolbar).toBeVisible();
+  await expect.poll(async () => {
+    const box = await dialog.boundingBox();
+    const chrome = await toolbar.boundingBox();
+    return !!box && !!chrome && box.y > chrome.y + chrome.height && box.x === 0
+      && Math.abs(box.y + box.height - page.viewportSize()!.height) < 1;
+  }).toBe(true);
+  expect(await dialog.evaluate(element => parseFloat(getComputedStyle(element).borderTopLeftRadius))).toBeGreaterThan(0);
+}
+
 test('keeps Outline on screen with the bundled companion styles', async ({ page }) => {
   const assets = `${process.cwd()}/dist/companion/assets`;
   const files = (await readdir(assets)).filter(file => file.endsWith('.css'));
@@ -28,10 +41,10 @@ test('keeps Outline on screen with the bundled companion styles', async ({ page 
   await page.evaluate(() => document.querySelectorAll('style, link[rel="stylesheet"]').forEach(node => node.remove()));
   await page.addStyleTag({ content: css });
   const dialog = page.getByRole('dialog', { name: 'Outline' });
-  expect(await dialog.boundingBox()).toMatchObject({ x: 0, y: 0, width: 393, height: 823 });
+  await expectReadingSheet(page);
   await page.getByRole('button', { name: 'Toggle content for Source heading (2)' }).click();
   await expect(page.getByRole('button', { name: 'Source heading', exact: true })).toBeInViewport();
-  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
   await expect(dialog).toHaveCount(0);
 });
 
@@ -41,11 +54,11 @@ for (const width of [320, 375]) {
       await page.setViewportSize({ width, height: 812 });
       await page.emulateMedia({ colorScheme });
       await openOutline(page, 'headings');
-      expect(await page.getByRole('dialog', { name: 'Outline' }).boundingBox())
-        .toMatchObject({ x: 0, y: 0, width, height: 812 });
+      await expectReadingSheet(page);
       await expect(page.getByRole('tab')).toHaveCount(0);
       await expect(page.getByRole('dialog').getByRole('button', { name: 'Outline acceptance article', exact: true })).toHaveCount(0);
       const heading = page.getByRole('button', { name: 'Source heading', exact: true });
+      await expect(heading.locator('svg, [data-node-icon]')).toHaveCount(0);
       const toggle = page.getByRole('button', { name: 'Toggle content for Source heading (2)' });
       await expect(toggle).toHaveAttribute('aria-expanded', 'true');
       expect((await toggle.boundingBox())!.height).toBeGreaterThanOrEqual(44);
@@ -81,10 +94,17 @@ test('lists related cards without a synthetic heading and handles truly empty co
   }
 });
 
-test('returns from fullscreen Outline to the same reader and restores its opener focus', async ({ page }) => {
+test('retains the reading toolbar behind a dismissible Outline sheet and restores opener focus', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await openOutline(page, 'headings');
-  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await expectReadingSheet(page);
+  const toolbar = page.locator('.companion-reading-top-chrome');
+  await expect(toolbar.getByText('Outline acceptance article', { exact: true })).toBeVisible();
+  await page.locator('.companion-sheet-overlay').click({ position: { x: 20, y: 20 } });
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('document', { name: 'Topic body' })).toBeVisible();
+  await page.getByRole('button', { name: 'Outline', exact: true }).click();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const opener = page.getByRole('button', { name: 'Outline', exact: true });
   await expect(opener).toBeFocused();

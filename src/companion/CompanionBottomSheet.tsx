@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import type { ReactNode, MutableRefObject } from 'react';
+import { useRef, type ReactNode, type MutableRefObject } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import {
@@ -13,23 +13,37 @@ import {
 
 import { companionMobileRailClassName } from './companionCssCompatibility';
 
+import './companionBottomSheet.css';
+
 export function CompanionBottomSheet(props: {
   children: ReactNode;
   scrollElementRef?: MutableRefObject<HTMLDivElement | null> | undefined;
   leadingAction?: ReactNode;
+  retainReadingToolbar?: boolean;
   onOpenChange(open: boolean): void;
   open: boolean;
   title: string;
 }) {
   const t = useTranslation();
+  const opener = useRef<HTMLElement | null>(null);
 
   return (
     <AppDialog onOpenChange={props.onOpenChange} open={props.open}>
       <AppDialogPortal>
-        <AppDialogOverlay className="companion-sheet-overlay" />
-        <AppDialogContent className={`companion-sheet bottom-0 left-0 top-auto flex max-h-[calc(100vh-2rem)] w-full translate-x-0 translate-y-0 flex-col overflow-hidden [transform:translate(0,0)] rounded-b-none rounded-t-xl border-x-0 border-b-0 ${companionMobileRailClassName} pt-3 pb-6 supports-[max-height:calc(100dvh-2rem)]:max-h-[calc(100dvh-2rem)] supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),24px)]`}>
+        <AppDialogOverlay className="companion-sheet-overlay"
+          onPointerDown={event => event.stopPropagation()}
+          onPointerUp={event => event.stopPropagation()}
+          onClick={event => { event.stopPropagation(); props.onOpenChange(false); }} />
+        <AppDialogContent placement="bottom"
+          onOpenAutoFocus={() => { opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; }}
+          onCloseAutoFocus={event => {
+            if (!opener.current?.isConnected) return;
+            event.preventDefault();
+            opener.current.focus({ preventScroll: true });
+          }}
+          className={`companion-sheet ${props.retainReadingToolbar ? 'companion-reading-sheet' : ''} bottom-0 left-0 top-auto flex max-h-[calc(100vh-2rem)] w-full translate-x-0 translate-y-0 flex-col overflow-hidden [transform:translate(0,0)] rounded-b-none rounded-t-xl border-x-0 border-b-0 ${companionMobileRailClassName} pt-3 pb-6 supports-[max-height:calc(100dvh-2rem)]:max-h-[calc(100dvh-2rem)] supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),24px)]`}>
           <div aria-hidden="true" className="mx-auto mb-3 h-1 w-9 shrink-0 rounded-full bg-companion-divider-strong" />
-          <div className="mx-auto flex min-h-0 w-full max-w-[760px] flex-col">
+          <div className={`mx-auto flex min-h-0 w-full max-w-[760px] flex-col ${props.retainReadingToolbar ? 'flex-1' : ''}`}>
             <div className="mb-3 flex shrink-0 items-center justify-between">
               {props.leadingAction}
               <AppDialogTitle>{props.title}</AppDialogTitle>
@@ -37,7 +51,7 @@ export function CompanionBottomSheet(props: {
                 <Check aria-hidden="true" className="h-5 w-5" />
               </AppDialogClose>
             </div>
-            <div className="min-h-0 overflow-y-auto" ref={props.scrollElementRef}>{props.children}</div>
+            <div className={`app-scrollbar min-h-0 overflow-y-auto ${props.retainReadingToolbar ? 'flex-1' : ''}`} ref={props.scrollElementRef}>{props.children}</div>
           </div>
         </AppDialogContent>
       </AppDialogPortal>

@@ -1,0 +1,6 @@
+.companion-sheet.companion-reading-sheet {
+  top: calc(max(env(safe-area-inset-top, 0px), var(--companion-system-chrome-top, 0px)) + 4rem);
+  bottom: 0;
+  height: auto;
+  max-height: none;
+}
