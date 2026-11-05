@@ -6,6 +6,7 @@ module FolioleTestflight
   APP_ID = '6818704122'
   GROUP_ID = 'dffdd27d-de26-44fb-a864-72fd2c7b5ef7'
   ACCEPTED = %w[WAITING_FOR_BETA_REVIEW IN_BETA_REVIEW BETA_APPROVED READY_FOR_BETA_TESTING IN_BETA_TESTING].freeze
+  AVAILABLE = %w[BETA_APPROVED READY_FOR_BETA_TESTING IN_BETA_TESTING].freeze
   TERMINAL_FAILURE = %w[PROCESSING_EXCEPTION EXPIRED BETA_REJECTED NOT_APPLICABLE].freeze
 
   def self.verify_candidate(candidate)
@@ -57,6 +58,7 @@ module FolioleTestflight
   end
 
   def self.expire_older_builds(api, candidate, current)
+    verify_available_build(current, candidate)
     current_order = numeric_version(candidate['version']) + numeric_version(candidate['buildNumber'])
     older = api.list_builds.select do |build|
       raise 'Apple returned a build from another app' unless build.app&.id == APP_ID
@@ -68,10 +70,7 @@ module FolioleTestflight
     end
     older.map do |build|
       replacement = api.reload_build(current.id)
-      verify_build(replacement, candidate)
-      unless ACCEPTED.include?(replacement.build_beta_detail&.external_build_state)
-        raise 'Replacement review submission is no longer confirmed'
-      end
+      verify_available_build(replacement, candidate)
       api.expire_build(build)
       confirmed = api.reload_build(build.id)
       unless confirmed&.id == build.id && confirmed.app&.id == APP_ID && confirmed.expired == true
@@ -79,6 +78,14 @@ module FolioleTestflight
       end
       puts "Expired older iPhone TestFlight build #{build.app_version} (#{build.version}), id #{build.id}"
       build.id
+    end
+  end
+
+  def self.verify_available_build(build, candidate)
+    verify_build(build, candidate)
+    unless AVAILABLE.include?(build.build_beta_detail&.external_build_state) &&
+           build.build_beta_detail.auto_notify_enabled == true
+      raise 'Replacement external testing is not available'
     end
   end
 
@@ -102,9 +109,8 @@ module FolioleTestflight
     verify_build(current, candidate)
     final_state = current.build_beta_detail&.external_build_state
     raise "Review submission not confirmed: #{final_state}" unless ACCEPTED.include?(final_state)
-    expired_ids = expire_older_builds(api, candidate, current)
     candidate.merge('appId' => APP_ID, 'buildId' => build.id, 'groupId' => GROUP_ID,
-                    'expiredBuildIds' => expired_ids,
+                    'expiredBuildIds' => [],
                     'externalBuildState' => final_state, 'channel' => 'testflight',
                     'invitationUrl' => 'https://testflight.apple.com/join/PszuhyJA')
   end

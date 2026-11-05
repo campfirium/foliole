@@ -118,7 +118,7 @@ class DistributionTest < Minitest::Test
       receipt = distribute(pause: ->(_) { flunk 'Must not wait for approval' })
       assert_equal state, receipt['externalBuildState']
       refute @api.calls.any? { |call| call.first == :submit }
-      assert old.expired
+      refute old.expired
     end
   end
 
@@ -132,17 +132,23 @@ class DistributionTest < Minitest::Test
     OpenStruct.new(@api.build.to_h.merge(id: id, app_version: version, version: number).merge(changes))
   end
 
-  def test_submission_immediately_expires_older_builds_without_waiting_for_approval
+  def test_submission_preserves_older_builds_without_waiting_for_approval
     old = old_build('old', number: '9.1')
     previous = old_build('previous', version: '0.7.17', number: '999.1')
     @api.older_builds = [old, previous]
     receipt = distribute(pause: ->(_) { flunk 'Must not wait for approval' })
     assert_equal 'WAITING_FOR_BETA_REVIEW', receipt['externalBuildState']
-    assert old.expired, 'The old build must expire as part of publishing the new build'
-    assert previous.expired
+    refute old.expired, 'Submitting a replacement must not remove the available build'
+    refute previous.expired
     refute @api.build.expired
-    assert_operator @api.calls.index([:submit]), :<, @api.calls.index([:expire, 'old'])
-    assert_equal %w[old previous], receipt['expiredBuildIds']
+    refute @api.calls.any? { |call| call.first == :expire }
+    assert_empty receipt['expiredBuildIds']
+  end
+
+  def expire_older_builds
+    @api.build.build_beta_detail.external_build_state = 'IN_BETA_TESTING'
+    @api.build.build_beta_detail.auto_notify_enabled = true
+    FolioleTestflight.expire_older_builds(@api, @candidate, @api.build)
   end
 
   def test_current_newer_expired_failed_and_other_platform_builds_are_preserved
@@ -153,7 +159,7 @@ class DistributionTest < Minitest::Test
     processing = old_build('processing', processing_state: 'PROCESSING')
     mac = old_build('mac', pre_release_version: OpenStruct.new(platform: 'MAC_OS'))
     @api.older_builds = [newer, next_version, expired, failed, processing, mac]
-    distribute
+    expire_older_builds
     assert_empty @api.calls.select { |call| call.first == :expire }
   end
 
@@ -163,7 +169,7 @@ class DistributionTest < Minitest::Test
     old = old_build('legacy', version: '0.9.0', number: '99')
     same = old_build('same', version: '0.10.0', number: '2.1.0')
     @api.older_builds = [old, same]
-    distribute
+    expire_older_builds
     assert old.expired
     refute same.expired
   end
@@ -177,14 +183,14 @@ class DistributionTest < Minitest::Test
       @calls << [:expire, build.id]
       build.expired = true
     end
-    assert_raises(RuntimeError) { distribute }
+    assert_raises(RuntimeError) { expire_older_builds }
     assert first.expired
     refute second.expired
     @api.instance_variable_set(:@retried, true)
-    distribute
-    distribute
+    expire_older_builds
+    expire_older_builds
     assert second.expired
-    assert_equal 1, @api.calls.count { |call| call == [:submit] }
+    assert_equal 0, @api.calls.count { |call| call == [:submit] }
     assert_equal 1, @api.calls.count { |call| call == [:expire, 'first'] }
     assert_equal 1, @api.calls.count { |call| call == [:expire, 'second'] }
   end
@@ -202,7 +208,7 @@ class DistributionTest < Minitest::Test
      old_build('unknown', number: 'unknown')].each do |invalid|
       old = old_build('old')
       @api.older_builds = [old, invalid]
-      assert_raises(RuntimeError) { distribute }
+      assert_raises(RuntimeError) { expire_older_builds }
       refute old.expired
     end
   end
@@ -210,7 +216,7 @@ class DistributionTest < Minitest::Test
   def test_expiration_must_be_confirmed_by_apple
     @api.older_builds = [old_build('old')]
     @api.define_singleton_method(:expire_build) { |_| }
-    assert_raises(RuntimeError) { distribute }
+    assert_raises(RuntimeError) { expire_older_builds }
   end
 
   def test_replacement_must_remain_valid_during_expiration
@@ -220,7 +226,7 @@ class DistributionTest < Minitest::Test
       @build.expired = true
       [@build, *@older_builds]
     end
-    assert_raises(RuntimeError) { distribute }
+    assert_raises(RuntimeError) { expire_older_builds }
     refute old.expired
   end
 end

@@ -84,7 +84,7 @@ platform :ios do
     )
   end
 
-  desc 'Submit external review and expire older builds without waiting for approval'
+  desc 'Submit external review while preserving existing available builds'
   lane :distribute do
     apple_api_key
     candidate = JSON.parse(File.read(ENV.fetch('FOLIOLE_IOS_CANDIDATE')))
