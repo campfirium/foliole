@@ -1,9 +1,7 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_SETTINGS_ATTACHMENTS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
-  'settings.attachments.emptyAction': '清理…',
   'settings.attachments.daysUnit': '天',
-  'settings.attachments.description': '闲置附件先标为可清理，以便恢复旧资料时找回；确认清理后才永久删除并释放空间。',
   'settings.attachments.title': '本机附件',
   'settings.attachments.error': "附件操作未完成，请重试。",
   'settings.attachments.used': "占用空间",
@@ -11,7 +9,7 @@ export const ZH_HANS_SETTINGS_ATTACHMENTS_TRANSLATIONS: Partial<Record<Translati
   'settings.attachments.thresholdValue': '{count} 天',
   'settings.attachments.thresholdInvalid': '请输入大于 0 的整数。',
   'settings.attachments.threshold': '闲置多久后可清理',
-  'settings.attachments.thresholdHint': '不再被任何主题使用的图片和文件，累计满设定天数后才能标为可清理。只累计完成附件检查的日期，并非连续的自然日。',
+  'settings.attachments.thresholdHint': '不再被任何主题使用的图片和文件，闲置满这么多个使用日后才能标为可清理。只算打开 Foliole 的日子。',
   'settings.attachments.automatic': "自动清理",
   'settings.attachments.automaticHint': '闲置期满的附件会自动标为可清理。',
   'settings.attachments.eligible': '未使用的附件',

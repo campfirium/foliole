@@ -18,7 +18,6 @@ export function SettingsAttachmentStorageSection({ unavailable = false, mobile =
   if (!status && !error && !unavailable) return null;
   return (
     <>
-    {mobile ? <p data-settings-page-description>{t('settings.attachments.description')}</p> : null}
     <SettingsSection ariaLabel={t('settings.attachments.title')} {...(!mobile ? { title: t('settings.attachments.title') } : {})}>
       {error ? <p role="alert">{t('settings.attachments.error')}</p> : null}
       <SettingsRow controlLayout="inline" title={t('settings.attachments.automatic')} description={t('settings.attachments.automaticHint')}>
@@ -42,7 +41,7 @@ export function SettingsAttachmentStorageSection({ unavailable = false, mobile =
         </AppButton></SettingsControlSlot>}
       </SettingsRow>
       <SettingsRow controlLayout={mobile ? 'inline' : 'stacked'} title={t('settings.attachments.eligible')}
-        description={status ? mobile ? bytes(status.eligibleBytes) : `${bytes(status.eligibleBytes)} · ${t('settings.attachments.eligibleHint')}` : '—'}>
+        description={status ? `${bytes(status.eligibleBytes)} · ${t('settings.attachments.eligibleHint')}` : '—'}>
         <SettingsControlSlot><AppButton disabled={busy || !status || (mobile && status.eligibleBytes === 0)} onClick={() => void run({ action: 'clean' })} size="sm">
           {t('settings.attachments.clean')}
         </AppButton></SettingsControlSlot>
@@ -67,7 +66,7 @@ function AttachmentTrashRow({ mobile, status, busy, onRestore, onEmpty }: {
   const t = useTranslation();
   const controls = <SettingsControlSlot>
     <AppButton disabled={busy || !status?.trash.length} size="sm" onClick={onRestore}>{t('settings.attachments.restore')}</AppButton>
-    <AppButton aria-label={t('settings.attachments.empty')} disabled={busy || !status?.trash.length} size="sm" onClick={onEmpty}>{t(mobile ? 'settings.attachments.emptyAction' : 'settings.attachments.empty')}</AppButton>
+    <AppButton aria-label={t('settings.attachments.empty')} disabled={busy || !status?.trash.length} size="sm" onClick={onEmpty}>{t('settings.attachments.empty')}</AppButton>
   </SettingsControlSlot>;
   if (!mobile) return <SettingsRow title={t('settings.attachments.trash')}
     description={status ? `${bytes(status.trashBytes)} · ${t('settings.attachments.trashHint')}` : '—'}>{controls}</SettingsRow>;

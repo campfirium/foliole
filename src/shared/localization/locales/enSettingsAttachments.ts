@@ -1,7 +1,5 @@
 export const EN_SETTINGS_ATTACHMENTS_TRANSLATIONS = {
-  'settings.attachments.emptyAction': 'Clean up…',
   'settings.attachments.daysUnit': 'days',
-  'settings.attachments.description': 'Unused attachments are marked ready to clean so they remain available when restoring older content. Confirm cleanup to permanently delete them and free space.',
   'settings.attachments.title': 'Local attachments',
   'settings.attachments.error': "Could not finish the attachment operation. Please try again.",
   'settings.attachments.used': "Storage used",
@@ -9,7 +7,7 @@ export const EN_SETTINGS_ATTACHMENTS_TRANSLATIONS = {
   'settings.attachments.thresholdValue': '{count} days',
   'settings.attachments.thresholdInvalid': 'Enter a whole number greater than 0.',
   'settings.attachments.threshold': 'Days unused before cleanup',
-  'settings.attachments.thresholdHint': 'Images and files no topic uses must reach the waiting period before they can be marked ready to clean. Only dates when an attachment check completes count, rather than consecutive calendar days.',
+  'settings.attachments.thresholdHint': 'Images and files no topic uses anymore must stay unused for this many days of use before they can be marked ready to clean. Only days you open Foliole count.',
   'settings.attachments.automatic': "Automatic cleanup",
   'settings.attachments.automaticHint': 'Attachments that stay unused long enough are marked ready to clean automatically.',
   'settings.attachments.eligible': 'Unused attachments',
