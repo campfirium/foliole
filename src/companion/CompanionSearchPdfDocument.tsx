@@ -5,6 +5,7 @@ import { syncCompanionAttachmentResourceFromDesktop } from '../shared/platform/c
 import type { CompanionPdfPageTextSearchResult } from '../shared/platform/companionSyncObjects';
 import { AppButton, AppLoadingState } from '../shared/ui';
 
+import { useCompanionArticleExit } from './CompanionArticleTransition';
 import { companionMobileRailClassName } from './companionCssCompatibility';
 import { CompanionPersistedPdfDocument } from './CompanionPersistedPdfDocument';
 
@@ -30,18 +31,19 @@ export function CompanionSearchPdfDocument(props: {
   syncEndpointUrl: string | null;
 }) {
   const t = useTranslation();
+  const onExit = useCompanionArticleExit(props.onExit);
   const syncMissingResource = useCallback(async (attachmentId: string) => {
     if (!props.syncEndpointUrl) return;
     await syncCompanionAttachmentResourceFromDesktop(props.syncEndpointUrl, attachmentId);
   }, [props.syncEndpointUrl]);
   return (
     <section className={`fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-hidden bg-companion-base ${companionMobileRailClassName} pt-10 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),40px)] text-foreground`}>
-      <Suspense fallback={<CompanionSearchPdfLoadingState onExit={props.onExit} />}>
+      <Suspense fallback={<CompanionSearchPdfLoadingState onExit={onExit} />}>
         <CompanionPersistedPdfDocument key={props.result.attachment_id}
           attachmentId={props.result.attachment_id}
           backLabel={t('companion.back')}
           initialPage={props.result.page}
-          onBackToText={props.onExit}
+          onBackToText={onExit}
           onMissingResource={syncMissingResource}
           title={t('companion.search.pdfPage', { page: props.result.page })}
         />

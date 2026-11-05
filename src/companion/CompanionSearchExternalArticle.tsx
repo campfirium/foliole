@@ -4,6 +4,7 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { loadCompanionExternalDocument, type CompanionExternalDocumentSearchResult } from '../shared/platform/companionExternalDocuments';
 import { AppButton } from '../shared/ui';
 
+import { useCompanionArticleExit } from './CompanionArticleTransition';
 import { toReadableExternalArticle } from './CompanionDirectoryExternalArticle';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import type { CompanionSearchMatch } from './companionSearchMatch';
@@ -14,6 +15,7 @@ export function CompanionSearchExternalArticle(props: {
   onExit(): void;
 }) {
   const t = useTranslation();
+  const exitPending = useCompanionArticleExit(props.onExit);
   const id = props.document.document_id;
   const [loaded, setLoaded] = useState<{ id: string; document: Awaited<ReturnType<typeof loadCompanionExternalDocument>> } | null>(null);
   useEffect(() => {
@@ -29,7 +31,7 @@ export function CompanionSearchExternalArticle(props: {
       readableArticle={toReadableExternalArticle(loaded.document)} snapshot={null} />
   );
   return <section className="fixed inset-0 z-surface-raised bg-companion-base px-4 pt-12">
-    <AppButton onClick={props.onExit} variant="ghost">{t('companion.back')}</AppButton>
+    <AppButton onClick={exitPending} variant="ghost">{t('companion.back')}</AppButton>
     <p role="status">{t(loaded?.id === id ? 'companion.search.unavailable' : 'companion.search.loading')}</p>
   </section>;
 }

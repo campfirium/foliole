@@ -10,6 +10,7 @@ import {
 } from '../shared/platform/companionBrowseLists';
 import { AppButton } from '../shared/ui';
 
+import { useCompanionArticleExit } from './CompanionArticleTransition';
 import { toReadableExternalArticle } from './CompanionDirectoryExternalArticle';
 import { CompanionDirectoryList } from './CompanionDirectoryListSurface';
 import {
@@ -127,6 +128,7 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
     if (!isContainer && item.source !== 'externalDocument') return;
     props.onChangeSelection(resolveItemSelection(item));
   };
+  const exitPending = useCompanionArticleExit(() => props.onExitArticle(parentSelection ?? { kind: 'root' }));
 
   if (props.selection.kind === 'externalDocument' && externalDocument) {
     return (
@@ -139,7 +141,7 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
   }
 
   if (props.articleOnly) return <section aria-busy="true" className="fixed inset-0 z-surface-raised bg-companion-base px-4 pt-12">
-    <AppButton onClick={() => props.onExitArticle(parentSelection ?? { kind: 'root' })} variant="ghost">
+    <AppButton onClick={exitPending} variant="ghost">
       {t('companion.back')}
     </AppButton>
   </section>;

@@ -6,6 +6,7 @@ import type { CompanionHighlightReadGuard } from '../shared/platform/companion/r
 import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligibility';
 
 import { CompanionArticleSelectionLayer } from './CompanionArticleSelectionLayer';
+import { useCompanionArticleExit } from './CompanionArticleTransition';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { findCompanionClozeTarget } from './companionExistingHighlightActions';
 import type { CompanionHighlightRangeHandler } from './companionHighlightRangePersistence';
@@ -188,7 +189,9 @@ function ImmersiveArticleChrome(props: {
   );
 }
 export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
-  const model = useImmersiveReadableArticleModel(props);
+  const onExit = useCompanionArticleExit(props.onExit);
+  const onBack = useCompanionArticleExit(props.onBack ?? props.onExit);
+  const model = useImmersiveReadableArticleModel({ ...props, onExit, onBack });
   const readingTypography = useCompanionReadingTypographySettings();
   const pendingReadableArticle = useCompanionPendingReadableArticle(props.readableArticle);
   const scrollPosition = useCompanionArticleScrollPosition({
@@ -212,7 +215,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       onTouchMove={model.closeToolbarFromArticleTouch}
       ref={scrollPosition.surfaceRef}
     >
-      <ImmersiveArticleChrome articleProps={props} model={model} readingTypography={readingTypography} />
+      <ImmersiveArticleChrome articleProps={{ ...props, onExit }} model={model} readingTypography={readingTypography} />
       {props.flow ? <CompanionReviewHeader>{props.header}</CompanionReviewHeader> : props.header}
       <ImmersiveArticleContent
         layout={props.flow ? 'review' : 'article'}

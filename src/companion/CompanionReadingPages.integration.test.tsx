@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vite
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({ ...createCompanionNativeSyncStub(), stopSyncGroupProvider: async () => {}, addListener: async () => ({ remove: async () => {} }) }) };
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: () => ({ ...createCompanionNativeSyncStub(), stopSyncGroupProvider: async () => {}, addListener: async () => ({ remove: async () => {} }) }) };
 });
 
 import { saveCompanionNavigationResume } from '../shared/platform/companion/runtime/companionNavigationResume';
