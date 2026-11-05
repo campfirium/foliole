@@ -106,6 +106,8 @@ it('deletes the selected linked Item and its grouped masks durably, supports ret
   const childVersion = await toWorkspaceNativeNodeVersion(editableNode({ id: 'descendant', parentNodeId: 'new-item', content: 'Keep this child', anchorLink: null }), 'source');
   await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [childVersion], { enqueueSearchInvalidations: false }));
   const other = await loadCompanionWorkspaceNode('other');
+  const schedules = library!.database.prepare('SELECT * FROM node_review ORDER BY node_id').all();
+  expect(schedules.length).toBeGreaterThanOrEqual(2);
   const remove = { ...request, attachmentId: hash, regionId: 'region-two' };
   await deleteCompanionImageCloze(remove);
   expect((await loadCompanionWorkspaceNode('descendant'))?.deletedAt).toBeTruthy();
@@ -125,9 +127,10 @@ it('deletes the selected linked Item and its grouped masks durably, supports ret
   await expect(applyCompanionEditHistory('topic', 'redo')).rejects.toThrow('has_children');
   expect((await loadCompanionWorkspaceNode('new-item'))?.deletedAt).toBeFalsy();
   await deleteCompanionImageCloze({ ...remove, expectedVersionId: (await loadCompanionWorkspaceNode('topic'))!.currentVersionId ?? null });
-  await reopenSearchLibrary(library!.root, '2026-11-05T12:00:00Z');
+  const reopened = await reopenSearchLibrary(library!.root, '2026-11-05T12:00:00Z');
   expect((await loadCompanionWorkspaceNode('new-item'))?.deletedAt).toBeTruthy();
   expect(await loadCompanionWorkspaceNode('other')).toEqual({ ...other, updatedAt: expect.any(String) });
+  expect(reopened.db.prepare('SELECT * FROM node_review ORDER BY node_id').all()).toEqual(schedules);
 });
 
 it('rolls back a failed deletion, retains history and Item, then retries; rejects a changed parent and library', async () => {
