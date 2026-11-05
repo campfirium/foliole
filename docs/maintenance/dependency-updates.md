@@ -224,6 +224,19 @@ Resolved locally on 2026-11-05: `08d9c1106` repairs the baseline (25 files / 156
 
 ## Reviewed proposals and deferred adoption
 
+2026-11-06, T730: #209 (`app/renovate`, base `dev`, head
+`cd7e3709f0c69b4af9a400be55b2aac82a30c80b`) is **not adopted**: Node
+26.13.0 is already provisioned by `3bf3d290e`; replacing engines
+`>=26.13.0 <27` with `v26.13.0` only rejects later compatible Node26 patches.
+Local semver checks confirm that difference; manifest and lock engines agree.
+The [official release](https://nodejs.org/en/blog/release/v26.13.0) is dated
+2026-10-28; release maturity is not the reason for rejection. PR remains open
+under this batch's no-unvalidated-closure restriction. Next dependency batch
+owner rechecks if its target/diff changes; no updater configuration was changed.
+Re-listed and reviewed all six open bot proposals: #208/#203/#199 already have
+local implementations, #201 remains with its existing QA owner, and #189's
+AGP 9.5.1 compatibility/build validation remains a separate native increment.
+
 Every reviewed proposal ends with an explicit decision. Locally implemented
 updates may remain open with the pending-QA handoff above, owned by the next
 centralized check task rather than an indefinitely active dependency task.
