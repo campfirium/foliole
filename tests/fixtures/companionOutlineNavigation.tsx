@@ -12,7 +12,9 @@ import { createExplicitArticleSnapshot, createNodeRecord } from '../../src/share
 import { resolveReadableCompanionArticleByNodeId } from '../../src/shared/platform/companionReadableArticle';
 
 const scenario = new URLSearchParams(window.location.search).get('scenario') ?? 'headings';
-const content = [scenario === 'headings' ? '# Source heading' : 'Source text',
+const content = [scenario === 'long'
+  ? Array.from({ length: 6 }, (_, index) => '#'.repeat(index + 1) + ` Heading ${index + 1}`).join('\n\n')
+  : ['headings', 'deep'].includes(scenario) ? '# Source heading' : 'Source text',
   ...Array.from({ length: 16 }, (_, index) => `Context paragraph ${index + 1}. Read the original text in this topic.`),
   'Topic passage in the original text.', 'Item passage in the original text.'].join('\n\n');
 const snapshot = createExplicitArticleSnapshot();
@@ -28,6 +30,22 @@ for (const kind of ['topic', 'item'] as const) {
     anchorLink: { id: kind, kind: kind === 'topic' ? 'highlight' : 'cloze', locator: { from, to: from + originalText.length, originalText } }
   }) });
   snapshot.nodeOrder.push(kind);
+}
+if (scenario === 'deep') {
+  let parentNodeId = 'topic';
+  for (let depth = 1; depth <= 10; depth++) {
+    const id = `deep-${depth}`;
+    Object.assign(snapshot.nodesById, { [id]: createNodeRecord({ id, parentNodeId,
+      kind: depth === 10 ? 'item' : 'topic', title: `Derived detail ${depth}`,
+      content: `Body at depth ${depth}.`, reveal: depth === 10 ? 'Deep answer.' : null }) });
+    snapshot.nodeOrder.push(id);
+    parentNodeId = id;
+  }
+}
+if (scenario === 'long') {
+  Object.assign(snapshot.nodesById, { long: createNodeRecord({ id: 'long', parentNodeId: 'node-1',
+    title: 'LongTitle'.repeat(40), content: 'Long title card body.' }) });
+  snapshot.nodeOrder.push('long');
 }
 function Reader() {
   const [nodeId, setNodeId] = useState('node-1');

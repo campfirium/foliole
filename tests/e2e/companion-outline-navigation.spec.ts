@@ -73,3 +73,32 @@ test('returns from fullscreen Outline to the same reader and restores its opener
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('document', { name: 'Topic body' })).toBeVisible();
 });
+
+
+test('continues through ten derived generations and opens the deep Item as a card', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 812 });
+  await openOutline(page, 'deep');
+  await expect(page.getByRole('button', { name: 'Derived detail 1', exact: true })).toHaveCount(0);
+  let title = 'Topic passage in the original text.';
+  for (let depth = 1; depth <= 10; depth++) {
+    await page.getByRole('button', { name: `Toggle content for ${title} (1)`, exact: true }).click();
+    title = `Derived detail ${depth}`;
+    await expect(page.getByRole('button', { name: title, exact: true })).toBeVisible();
+  }
+  expect(await page.getByRole('dialog').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await page.screenshot({ animations: 'disabled', path: '.tmp/artifacts/T721-1/deep-320.png' });
+  await page.getByRole('button', { name: 'Derived detail 10', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('document', { name: 'Question' })).toContainText('Body at depth 10.');
+});
+
+test('keeps all six heading levels and wraps long unlocated card titles on a narrow screen', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 812 });
+  await openOutline(page, 'long');
+  for (let level = 1; level <= 6; level++) await expect(page.getByRole('button', { name: `Heading ${level}`, exact: true })).toBeVisible();
+  const scroller = page.getByRole('dialog').locator('.app-scrollbar');
+  await scroller.evaluate(element => { element.scrollTop = element.scrollHeight; });
+  await expect(page.getByRole('button', { name: 'LongTitle'.repeat(40), exact: true })).toBeVisible();
+  expect(await scroller.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await page.screenshot({ animations: 'disabled', path: '.tmp/artifacts/T721-1/long-title-320.png' });
+});

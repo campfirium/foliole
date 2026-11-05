@@ -1,5 +1,5 @@
 import type { WorkspaceSnapshot } from '../../../../lib/core/database/workspaceSnapshot';
-import { selectCanonicalVisibleNodeIds } from '../../../shared/workspaceCanonicalSelectors';
+import { collectVisibleNodeDescendants } from '../../nodes/model/nodeDescendants';
 import { projectNodeListLabel } from '../../nodes/model/nodeListLabelProjection';
 import type { EditorTextAnchorDecoration, EditorSelection } from '../adapters/EditorAdapter';
 
@@ -52,21 +52,10 @@ export function collectDocumentOutlineNavigation(args: {
   const unplaced: DocumentOutlineSection = { id: 'unplaced', text: '', kind: 'unplaced', level: 1, entryIds: [] };
   const body: DocumentOutlineSection = { id: 'body', text: '', kind: 'body', level: 0, entryIds: [] };
   const entries: DocumentOutlineNavigation['entries'] = {};
-  const source = args.snapshot;
-  const ranges = firstRanges(args.textAnchorDecorations);
-  const visibleIds = source ? selectCanonicalVisibleNodeIds(source) : [];
-  const directIds = source && visibleIds.includes(args.activeNodeId) ? visibleIds.filter(id =>
-    source.nodesById[id]?.parentNodeId === args.activeNodeId) : [];
-  directIds.sort((left, right) => (ranges.get(left)?.from ?? Infinity) - (ranges.get(right)?.from ?? Infinity));
+  const { entries: relatedEntries, directIds, ranges } = collectEntries(args);
+  Object.assign(entries, relatedEntries);
   for (const id of directIds) {
-    const node = source!.nodesById[id]!;
-    if (node.kind === 'folder') continue;
     const range = ranges.get(id);
-    const canLocate = node.kind === 'topic' && node.anchorLink?.kind === 'highlight' && range?.kind === 'highlight';
-    entries[id] = { id, kind: node.kind, text: range
-      ? projectNodeListLabel(args.content.slice(range.from, range.to)) : projectNodeListLabel(node.title || node.openingText || ''),
-    action: canLocate ? 'position' : 'card', childIds: [],
-    ...(range ? { selection: { from: range.from, to: range.to } } : {}) };
     const headingIndex = range ? headings.findLastIndex(heading => heading.from <= range.from) : -1;
     const section = !headings.length ? body : !range ? unplaced : headingIndex < 0 ? before : sections[headingIndex]!;
     section.entryIds.push(id);
@@ -74,4 +63,42 @@ export function collectDocumentOutlineNavigation(args: {
   return { entries, sections: headings.length
     ? [...(before.entryIds.length ? [before] : []), ...sections, ...(unplaced.entryIds.length ? [unplaced] : [])]
     : body.entryIds.length ? [body] : [] };
+}
+
+function collectEntries(args: Parameters<typeof collectDocumentOutlineNavigation>[0]) {
+  const ranges = firstRanges(args.textAnchorDecorations);
+  const entries: DocumentOutlineNavigation['entries'] = {};
+  if (!args.snapshot) return { entries, directIds: [], ranges };
+  const graph = collectVisibleNodeDescendants(args.snapshot, args.activeNodeId);
+  const roots = new Set(graph.childrenById[args.activeNodeId] ?? []);
+  for (const id of [...graph.nodeIds].reverse()) {
+    const node = args.snapshot.nodesById[id]!;
+    const childIds = graph.childrenById[id]!.filter(childId => Boolean(entries[childId]));
+    if (node.kind === 'folder' && childIds.length === 0) continue;
+    const range = roots.has(id) ? ranges.get(id) : undefined;
+    const canLocate = node.kind === 'topic' && node.anchorLink?.kind === 'highlight' && range?.kind === 'highlight';
+    entries[id] = { id, kind: node.kind, text: range
+      ? projectNodeListLabel(args.content.slice(range.from, range.to)) : projectNodeListLabel(node.title || node.openingText || ''),
+    action: node.kind === 'folder' ? 'container' : canLocate ? 'position' : 'card', childIds,
+    ...(range ? { selection: { from: range.from, to: range.to } } : {}) };
+  }
+  const directIds = [...roots].filter(id => Boolean(entries[id]));
+  directIds.sort((left, right) => (ranges.get(left)?.from ?? Infinity) - (ranges.get(right)?.from ?? Infinity));
+  return { entries, directIds, ranges };
+}
+
+export function countDirectOutlineObjects(ids: readonly string[], entries: DocumentOutlineNavigation['entries']) {
+  let count = 0;
+  const pending = [...ids];
+  const visited = new Set<string>();
+  while (pending.length) {
+    const id = pending.pop()!;
+    if (visited.has(id)) continue;
+    visited.add(id);
+    const entry = entries[id];
+    if (!entry) continue;
+    if (entry.kind === 'folder') pending.push(...entry.childIds);
+    else count++;
+  }
+  return count;
 }

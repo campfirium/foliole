@@ -4,9 +4,10 @@ import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-vi.mock('@capacitor/core', async () => {
+vi.mock('@capacitor/core', async original => {
+  const actual = await original<typeof import('@capacitor/core')>();
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: createCompanionNativeSyncStub };
+  return { ...actual, Capacitor: { ...actual.Capacitor, getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: createCompanionNativeSyncStub };
 });
 vi.mock('../shared/platform/appLifecycle', () => ({
   subscribeNativeAppBackground: async () => () => {}, subscribeNativeAppForeground: async () => () => {}
@@ -21,16 +22,19 @@ import { createResumeLibrary } from '../test/companionNavigationResume.testSuppo
 
 import { CompanionDraftProvider } from './CompanionDraftProvider';
 import { CompanionNavigationProvider } from './CompanionNavigationProvider';
+import { installReadingRangeGeometry } from './companionReadingPages.testSupport';
 import { persistCompanionSelectionAnnotation } from './companionSelectionAnnotationActions';
 import { CompanionShellReadableArticle } from './CompanionShellReadableArticle';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { createFloatingBar, createWorkspaceSync } from './useCompanionArticleSurfaceTestSupport';
 import { useCompanionReadableArticleLoader } from './useCompanionReadableArticleLoader';
 
+let restoreGeometry: () => void;
 let library: Awaited<ReturnType<typeof createResumeLibrary>>;
 let highlightId: string;
 let snapshot: WorkspaceSnapshot;
 beforeEach(async () => {
+  restoreGeometry = installReadingRangeGeometry();
   library = await createResumeLibrary();
   snapshot = await library.snapshot();
 });
@@ -47,7 +51,7 @@ async function prepareAnnotation(kind: 'highlight' | 'cloze') {
   vi.spyOn(EditorView.prototype, 'posAtCoords').mockReturnValue(13);
   await saveCompanionFlowResume(snapshot.libraryScope!, 'article');
 }
-afterEach(async () => { cleanup(); vi.restoreAllMocks(); await library.close(); });
+afterEach(async () => { cleanup(); restoreGeometry(); vi.restoreAllMocks(); await library.close(); });
 
 function Reader({ browse }: { browse: boolean }) {
   const [readableArticle, setReadableArticle] = useState<CompanionReadableArticle | null>(null);
@@ -56,6 +60,7 @@ function Reader({ browse }: { browse: boolean }) {
   const surface = useCompanionArticleSurface(workspaceSync, createFloatingBar());
   return <>
     <button onClick={() => { surface.handleTabAction('recent'); surface.handleSelectBrowseNode('article'); }}>Browse source</button>
+    <button onClick={surface.handleResumeFlow}>Resume Flow</button>
     <output data-testid="opened-topic">{surface.readableArticle?.nodeId}</output>
     <CompanionShellReadableArticle flow={!browse && !surface.isFlowBrowsing} surface={surface} workspaceSync={workspaceSync}
       onExit={surface.handleExitBrowseArticle} />
@@ -100,4 +105,47 @@ it.each([
   fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
   await waitFor(() => expect(screen.getByTestId('opened-topic')).not.toHaveTextContent(highlightId));
   expect(facts()).toEqual(before);
+});
+
+
+it.each([false, true])('opens a lazy descendant through Outline and preserves Flow facts and existing list return, browse=%s', async browse => {
+  await prepareAnnotation('highlight');
+  const now = '2026-11-05T00:00:00Z';
+  library.database.prepare('INSERT INTO nodes (id, parent_id, title, kind, content, reveal, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run('outline-child', highlightId, 'Outline child Item', 'item', 'Deep question content', 'Deep answer content', now, now);
+  snapshot = await library.snapshot();
+  expect(snapshot.nodesById['outline-child']?.content).toBe('');
+  expect(snapshot.nodesById['outline-child']?.title).toBe('Outline child Item');
+  const facts = () => ({
+    reading: library.database.prepare('SELECT * FROM node_reading ORDER BY node_id').all(),
+    review: library.database.prepare('SELECT * FROM node_review ORDER BY node_id').all()
+  });
+  renderWithLocalization(<MouseGestureSettingsProvider><CompanionDraftProvider>
+    <CompanionNavigationProvider ready snapshot={snapshot} libraryScope={snapshot.libraryScope!}>
+      <Reader browse={browse} />
+    </CompanionNavigationProvider>
+  </CompanionDraftProvider></MouseGestureSettingsProvider>);
+  await waitFor(() => expect(screen.getByTestId('opened-topic')).toHaveTextContent('article'));
+  if (browse) fireEvent.click(screen.getByRole('button', { name: 'Browse source' }));
+  const before = facts();
+  fireEvent.click(await screen.findByRole('document', { name: 'Topic body' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Outline', exact: true }));
+  expect(screen.queryByRole('button', { name: 'Outline child Item', exact: true })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle content for Read here (1)' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Outline child Item', exact: true }));
+  await waitFor(() => expect(screen.getByTestId('opened-topic')).toHaveTextContent('outline-child'));
+  expect(await screen.findByRole('document', { name: 'Question' })).toHaveTextContent('Deep question content');
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(facts()).toEqual(before);
+  fireEvent.click(screen.getByRole('document', { name: 'Question' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
+  await waitFor(() => expect(screen.getByTestId('opened-topic')).toBeEmptyDOMElement());
+  expect(facts()).toEqual(before);
+  fireEvent.click(screen.getByRole('button', { name: 'Resume Flow' }));
+  await waitFor(() => expect(screen.getByTestId('opened-topic')).toHaveTextContent('article'));
+  expect(facts()).toEqual(before);
+  cleanup();
+  await library.reopen();
+  expect(facts()).toEqual(before);
+  expect(library.database.prepare("SELECT content FROM nodes WHERE id='article'").get()).toEqual({ content: '# Article\n\nRead here' });
 });

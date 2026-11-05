@@ -2,7 +2,8 @@ import { useMemo, useRef, useState, type MutableRefObject } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { EditorTextAnchorDecoration } from '../features/editor/adapters/EditorAdapter';
-import { collectDocumentOutlineNavigation, type DocumentOutlineSection, type DocumentPositionEntry } from '../features/editor/model/documentOutlineNavigation';
+import { collectDocumentOutlineNavigation, countDirectOutlineObjects } from '../features/editor/model/documentOutlineNavigation';
+import { collectVisibleOutlineRows } from '../features/editor/model/documentOutlineVisibleRows';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppEmptyState } from '../shared/ui';
 import { VirtualListSurface } from '../shared/ui/VirtualListSurface';
@@ -24,9 +25,6 @@ interface OutlineSheetProps {
   open: boolean;
 }
 
-type OutlineRow = { key: string; section: DocumentOutlineSection; entry?: never }
-  | { key: string; section: DocumentOutlineSection; entry: DocumentPositionEntry };
-
 function OutlineContents(props: OutlineSheetProps & { scrollElementRef: MutableRefObject<HTMLDivElement | null> }) {
   const t = useTranslation();
   const model = useMemo(() => collectDocumentOutlineNavigation({
@@ -35,11 +33,12 @@ function OutlineContents(props: OutlineSheetProps & { scrollElementRef: MutableR
   }), [props.content, props.nodeId, props.snapshot, props.textAnchorDecorations]);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const navigation = useCompanionOutlineCardNavigation({ ...props, entries: model.entries });
-  const rows = useMemo(() => model.sections.flatMap(section => {
-    const result: OutlineRow[] = section.text ? [{ key: section.id, section }] : [];
-    if (!collapsed.has(section.id)) for (const id of section.entryIds) result.push({ key: id, section, entry: model.entries[id]! });
-    return result;
-  }), [model, collapsed]);
+  const [expandedEntries, setExpandedEntries] = useState<ReadonlySet<string>>(() =>
+    new Set(Object.values(model.entries).filter(entry => entry.kind === 'folder').map(entry => entry.id)));
+  const rows = useMemo(() => collectVisibleOutlineRows(model, collapsed, expandedEntries), [model, collapsed, expandedEntries]);
+  function toggleEntry(id: string) {
+    setExpandedEntries(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  }
   function toggle(id: string) {
     setCollapsed(current => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   }
@@ -52,9 +51,11 @@ function OutlineContents(props: OutlineSheetProps & { scrollElementRef: MutableR
     {navigation.error ? <p className="py-3 text-sm text-error" role="alert">{t('companion.reading.outline.openError')}</p> : null}
     {rows.length ? <VirtualListSurface items={rows} getItemKey={row => row.key} estimateSize={() => 56}
       scrollElementRef={props.scrollElementRef} accountForOffset measureItems overscan={4} renderItem={row => row.entry
-        ? <OutlineEntryRow entry={row.entry} depth={row.section.level}
-          disabled={navigation.busy || (row.entry.action === 'card' && (!props.onOpenNode || props.activity?.editing === true))} onSelect={() => void select(row.entry.id)} />
-        : <OutlineSectionHeading section={row.section} expanded={!collapsed.has(row.section.id)} disabled={navigation.busy}
+        ? <OutlineEntryRow entry={row.entry} depth={row.depth}
+          count={countDirectOutlineObjects(row.entry.childIds, model.entries)} expanded={expandedEntries.has(row.entry.id)}
+          onToggle={() => toggleEntry(row.entry!.id)}
+          disabled={navigation.busy || (row.entry.action === 'card' && (!props.onOpenNode || props.activity?.editing === true))} onSelect={() => void select(row.entry!.id)} />
+        : <OutlineSectionHeading section={row.section} count={countDirectOutlineObjects(row.section.entryIds, model.entries)} expanded={!collapsed.has(row.section.id)} disabled={navigation.busy}
           onSelect={() => { if (row.section.selection) props.onSelect(row.section.selection); }} onToggle={() => toggle(row.section.id)} />
       } /> : <AppEmptyState className="items-start py-5 text-left text-companion-text-secondary"
       title={t('companion.reading.outline.empty')} description={t('companion.reading.outline.emptyDescription')} />}
