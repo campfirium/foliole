@@ -46,7 +46,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 24.22.2
+          node-version: 26.13.0
           cache: npm
       - name: Activate pinned npm
         run: node scripts/quality/pinned-npm.mjs activate

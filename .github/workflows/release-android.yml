@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
         with: { ref: dev, persist-credentials: false }
       - uses: actions/setup-node@v4
-        with: { node-version: 24.22.2 }
+        with: { node-version: 26.13.0 }
       - name: Preserve the accepted source until its Play submission turn
         id: admit
         env:
@@ -64,7 +64,7 @@ jobs:
       - uses: actions/checkout@v4
         with: { ref: '${{ inputs.target_sha }}', persist-credentials: false }
       - uses: actions/setup-node@v4
-        with: { node-version: 24.22.2, cache: npm }
+        with: { node-version: 26.13.0, cache: npm }
       - name: Require exact accepted QA identity
         run: node scripts/android/play-release.mjs guard
       - name: Restore only this run's original Play candidate
@@ -132,7 +132,7 @@ jobs:
         uses: actions/checkout@v4
         with: { ref: dev, persist-credentials: false }
       - uses: actions/setup-node@v4
-        with: { node-version: 24.22.2 }
+        with: { node-version: 26.13.0 }
       - uses: actions/setup-java@v4
         with: { distribution: zulu, java-version: '21.0.13+1', check-latest: true }
       - name: Prepare Android inspection tools

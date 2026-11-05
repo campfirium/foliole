@@ -6,9 +6,9 @@ import path from 'node:path';
 import { runtimeArchivePath } from './runtime-download-cache.mjs';
 
 export const NODE_SEA_RELEASE = {
-  archive: 'node-v24.22.2-darwin-arm64.tar.gz',
-  sha256: 'aa9549349e47dffaa42dcf95d6e06ade8c4bdafc980979883b88767670df385a',
-  version: '24.22.2'
+  archive: 'node-v26.13.0-darwin-arm64.tar.gz',
+  sha256: 'd38bd5e5a2ddce6bbb5ce45e46e208337da4d51fffe611e567fd32073d6439f6',
+  version: '26.13.0'
 };
 
 export function resolveNodeSeaReleasePaths(root) {

@@ -5,8 +5,8 @@ import { expect, it } from 'vitest';
 
 const script = fs.readFileSync('scripts/windows/install-windows-device-runtime.ps1', 'utf8');
 
-it('installs the pinned Node 24 x64 runtime with official checksum verification', () => {
-  expect(script).toContain('24.22.2');
+it('installs the pinned Node 26 x64 runtime with official checksum verification', () => {
+  expect(script).toContain('26.13.0');
   expect(script).toContain('https://nodejs.org/dist/v$Version');
   expect(script).toContain('SHASUMS256.txt');
   expect(script).toContain('Get-FileHash -Algorithm SHA256');

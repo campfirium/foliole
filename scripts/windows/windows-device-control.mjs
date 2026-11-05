@@ -20,7 +20,7 @@ export function remoteDevicePaths(host, env, home = os.homedir()) {
   const root = `C:/Users/${profileName}/AppData/Local/Foliole/windows-device`;
   return {
     dispatcher: env.FOLIOLE_WINDOWS_DEVICE_DISPATCHER || `${root}/windows-device-dispatcher.mjs`,
-    node: env.FOLIOLE_WINDOWS_DEVICE_NODE || `${root}/runtime/node-v24.22.2-win-x64/node.exe`,
+    node: env.FOLIOLE_WINDOWS_DEVICE_NODE || `${root}/runtime/node-v26.13.0-win-x64/node.exe`,
     sshKey: env.FOLIOLE_WINDOWS_DEVICE_SSH_KEY || path.join(home, '.ssh', 'agent', 'foliole-windows-device')
   };
 }
