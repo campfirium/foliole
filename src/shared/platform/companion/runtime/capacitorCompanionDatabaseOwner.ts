@@ -151,6 +151,12 @@ export class CapacitorCompanionDatabaseOwner {
     return this.enqueue(() => this.committedWrites.write(this.requireDb(), task, businessWrite));
   }
 
+  runWriterSequence<T>(task: (db: DbPort, commit: DbPort['transaction']) => Promise<T>): Promise<T> {
+    for (const reader of this.backgroundReaders) reader.abort(new Error('attachment_scan_foreground_write'));
+    return this.enqueue(() => task(this.requireDb(), execute =>
+      this.committedWrites.write(this.requireDb(), execute, true)));
+  }
+
   readNodePriorities(db: DbPort, defaultPriority: RegularPushQueuePriority, initial?: Iterable<PriorityIndexNode>) {
     if (db !== this.requireDb()) throw new Error('node_priority_index_requires_owned_connection');
     return this.nodePriorities.read(db, defaultPriority, initial);

@@ -53,7 +53,8 @@ async function createAnnotation(page) {
   await page.getByTestId('companion-selection-note').click();
   await page.getByTestId('companion-selection-note-text').fill('Quick annotation');
   await page.getByTestId('companion-selection-note-save').click();
-  await page.getByRole('toolbar').waitFor({ state: 'hidden' });
+  await page.getByTestId('companion-selection-note-text').waitFor({ state: 'hidden' });
+  await page.getByRole('toolbar').getByRole('button', { name: 'Close Highlight', exact: true }).waitFor();
 }
 
 async function main() {

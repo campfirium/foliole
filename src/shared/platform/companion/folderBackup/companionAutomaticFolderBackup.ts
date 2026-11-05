@@ -61,5 +61,9 @@ export async function bindCompanionAutomaticFolderBackup(owner: CapacitorCompani
   const manual = subscribeManualCompanionFolderBackup(() => worker.wake(true));
   const foreground = await subscribeNativeAppForeground(() => worker.wake(true));
   worker.wake(true);
-  return () => { committed(); manual(); foreground(); worker.stop(); if (active === session) active = null; };
+  return async () => {
+    committed(); manual(); foreground();
+    if (active === session) active = null;
+    await worker.stop();
+  };
 }

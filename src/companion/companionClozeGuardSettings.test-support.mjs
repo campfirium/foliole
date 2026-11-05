@@ -34,19 +34,18 @@ async function verifySavedCreation(page, file) {
   const children = () => withDatabase(file, db => db.prepare("SELECT kind,content,reveal,anchor_link FROM nodes WHERE parent_id='guard-source'").all());
   await openTopic(page);
   await selectAnswer(page, 'Long topic', false);
-  await page.getByRole('toolbar').waitFor({ state: 'hidden' });
+  await page.getByRole('toolbar').getByRole('button', { name: 'Close Highlight', exact: true }).waitFor();
   assert.equal(children().length, 1);
   assert.equal(children()[0].kind, 'topic');
   assert.equal(children()[0].content, 'Long topic');
   assert.equal(JSON.parse(children()[0].anchor_link).kind, 'highlight');
   // A second settings visit changes the next action without rebuilding intermediate state.
   await page.locator('[data-node-id="guard-source"] .cm-line').last().click();
-  await page.getByTestId('companion-reading-exit').click();
   await openSettings(page);
   await edit(page, 'Long cloze mistake guard', 'off');
   await openTopic(page);
   await selectAnswer(page, answer, false);
-  await page.getByRole('toolbar').waitFor({ state: 'hidden' });
+  await page.getByRole('toolbar').getByRole('button', { name: 'Delete cloze', exact: true }).waitFor();
   assert.equal(children().length, 2);
   assert.ok(children().some(node => node.kind === 'item' && node.reveal === answer));
   assert.equal(withDatabase(file, db => db.prepare("SELECT content FROM nodes WHERE id='guard-source'").get()).content, content);

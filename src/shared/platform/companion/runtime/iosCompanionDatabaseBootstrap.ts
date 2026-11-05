@@ -26,7 +26,7 @@ export interface IosCompanionDatabaseBootstrapOptions {
 }
 
 let activeOwner: CapacitorCompanionDatabaseOwner | null = null;
-let stopFolderBackup: (() => void) | null = null;
+let stopFolderBackup: (() => void | Promise<void>) | null = null;
 let unsubscribeNodePriorities: (() => void) | null = null;
 let lifecycleTail: Promise<void> = Promise.resolve();
 
@@ -41,7 +41,7 @@ export function closeIosCompanionDatabase() {
 
 async function closeActiveDatabase() {
   const owner = activeOwner;
-  stopFolderBackup?.();
+  await stopFolderBackup?.();
   stopFolderBackup = null;
   unsubscribeNodePriorities?.();
   unsubscribeNodePriorities = null;

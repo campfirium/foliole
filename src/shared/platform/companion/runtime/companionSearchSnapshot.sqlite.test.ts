@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('./companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false },
     registerPlugin: createCompanionNativeSyncStub };
 });
 
@@ -76,11 +76,10 @@ it('serializes all categories with a real writer and keeps committed facts after
       await tx.run('DELETE FROM pdf_page_text WHERE page=1');
     });
     wrote = true;
-    await db.transaction(async (tx) => {
+  }).then(() => writeIosCompanionDatabase(db => db.transaction(async (tx) => {
       await tx.run("DELETE FROM pdf_page_text WHERE page=2");
       throw new Error('later apply failed');
-    });
-  });
+  })));
   expect(wrote).toBe(false);
   release();
   const snapshot = await searching;

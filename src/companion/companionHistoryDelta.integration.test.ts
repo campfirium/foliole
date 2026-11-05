@@ -9,7 +9,7 @@ import { createHistoryDeltaFixture, historyKey, historyNow } from './companionHi
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: createCompanionNativeSyncStub };
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: createCompanionNativeSyncStub };
 });
 let app: Awaited<ReturnType<typeof createHistoryDeltaFixture>>;
 afterEach(async () => { vi.useRealTimers(); await app?.library.close(); hydrateCurrentReviewSchedulerSettings(DEFAULT_REVIEW_SCHEDULER_SETTINGS); });

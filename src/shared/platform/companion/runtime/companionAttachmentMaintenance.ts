@@ -64,16 +64,17 @@ function maintain(owner: CapacitorCompanionDatabaseOwner, request: AttachmentMai
         signal?.throwIfAborted();
         await files({ operation: 'write-state', state: JSON.stringify(state) });
       },
-      withStableRevision: (revision, action) => owner.runWriter(db => db.transaction(async (tx) => {
-        if ((expectedRevision ?? revision) !== await attachmentDatabaseRevision(tx)) throw new Error('attachment_scan_database_changed');
-        signal?.throwIfAborted();
-        activeDb = tx;
-        try {
-          const result = await action();
-          expectedRevision = await attachmentDatabaseRevision(tx);
-          return result;
-        } finally { activeDb = undefined; }
-      })),
+      withStableRevision: (revision, action) => owner.runWriterSequence(async (db, commit) => {
+        const result = await commit(async tx => {
+          if ((expectedRevision ?? revision) !== await attachmentDatabaseRevision(tx)) throw new Error('attachment_scan_database_changed');
+          signal?.throwIfAborted();
+          activeDb = tx;
+          try { return await action(); }
+          finally { activeDb = undefined; }
+        });
+        expectedRevision = await attachmentDatabaseRevision(db);
+        return result;
+      }),
       move: (storageKey, trash) => updateAvailability('move', storageKey, trash),
       requestMissing: (storageKeys) => write(db => (request.action === 'observe' ? requeueMissingObservedAttachments : requeueMissingAttachmentArticles)(db, storageKeys)),
       removeTrash: (storageKey) => updateAvailability('remove-trash', storageKey)

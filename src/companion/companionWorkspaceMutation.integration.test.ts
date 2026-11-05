@@ -10,7 +10,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
   return {
-    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
+    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false },
     registerPlugin: createCompanionNativeSyncStub
   };
 });
@@ -95,9 +95,10 @@ it('keeps a newer sync endpoint when a previously opened page finishes a local o
 
 it('opens local content without creating or rewriting sync metadata', async () => {
   const initial = await loadCompanionWorkspaceSyncState();
-  const before = database!.prepare('SELECT * FROM companion_meta ORDER BY key').all();
+  const metadata = () => database!.prepare("SELECT * FROM companion_meta WHERE key NOT LIKE 'folder_backup_%' ORDER BY key").all();
+  const before = metadata();
   const ui = surface(initial);
   await browse(initial, ui.actions);
   expect(ui.current().workspace_snapshot?.nodeOpenStateById?.topic?.lastOpenedAt).toBeTruthy();
-  expect(database!.prepare('SELECT * FROM companion_meta ORDER BY key').all()).toEqual(before);
+  expect(metadata()).toEqual(before);
 });

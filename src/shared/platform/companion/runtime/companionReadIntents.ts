@@ -156,7 +156,8 @@ export class CompanionReadIntents {
           ...(navigation.snapshot ? { snapshot: navigation.snapshot } : {}) } : undefined;
         const outcome = await runCompanionHighValueMutationTask(() => {
           this.applyingNodeId = row.intent.nodeId;
-          return this.owner.runWriter(db => applyReadIntent(db, this.journal, row.intent.admittedCommand ? row : row.intent.id, preparedNavigation));
+          return this.owner.runWriterSequence((db, commit) => applyReadIntent(db, this.journal,
+            row.intent.admittedCommand ? row : row.intent.id, preparedNavigation, commit));
         }, { kind: 'nodes', nodeIds: [], readingNodeIds: [row.intent.nodeId] })
           .finally(() => { this.applyingNodeId = null; });
         await this.journal.settle(row.intent.id, outcome.state,

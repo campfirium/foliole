@@ -26,7 +26,7 @@ export function CompanionImageClozeEditor(props: {
   const [view, setView] = useState(initialImageClozeView);
   const [drawing, setDrawing] = useState(false);
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing'>('loading');
-  const { busy, savedRegions, hasChanges, updateRegion, regions, setRegions, selected, setSelected, saving, error, deleteError, confirm, removeSelected } = useCompanionImageClozeSession(props, status === 'ready');
+  const { busy, savedRegions, hasChanges, updateRegion, regions, setRegions, selected, setSelected, saving, error, deleteError, confirm: saveChanges, removeSelected } = useCompanionImageClozeSession(props, status === 'ready');
   useLayoutEffect(() => {
     const back = (event: Event) => { event.preventDefault(); event.stopImmediatePropagation(); if (!busy.current) props.onCancel(); };
     document.addEventListener(COMPANION_ANDROID_BACK_EVENT, back, true);
@@ -53,7 +53,7 @@ export function CompanionImageClozeEditor(props: {
           <AppButton disabled={saving} onClick={props.onCancel} aria-label={t('common.cancel')} title={t('common.cancel')}><X aria-hidden="true" className="size-5" /></AppButton>
           <AppButton disabled={saving || status !== 'ready'} variant={drawing ? 'emphasis' : 'default'} aria-pressed={drawing} aria-label={t('companion.imageCloze.add')} title={t('companion.imageCloze.add')} onClick={() => { setDrawing(current => !current); setSelected(null); }}><RectangleEllipsis aria-hidden="true" className="size-5" /></AppButton>
           <AppButton disabled={saving || !selected} onClick={() => void removeSelected()} aria-label={t('companion.imageCloze.remove')} title={t('companion.imageCloze.remove')}><Trash2 aria-hidden="true" className="size-5" /></AppButton>
-          <AppButton disabled={saving || status !== 'ready'} onClick={() => { if (hasChanges) void confirm(); else props.onCancel(); }} variant="emphasis" aria-label={t(saving ? 'companion.imageCloze.saving' : 'companion.imageCloze.confirm')} title={t('companion.imageCloze.confirm')}><Check aria-hidden="true" className="size-5" /></AppButton>
+          <AppButton disabled={saving || status !== 'ready'} onClick={() => { if (hasChanges) void saveChanges(); else props.onCancel(); }} variant="emphasis" aria-label={t(saving ? 'companion.imageCloze.saving' : 'companion.imageCloze.confirm')} title={t('companion.imageCloze.confirm')}><Check aria-hidden="true" className="size-5" /></AppButton>
         </footer>
       </AppDialogContent>
     </AppDialogPortal>

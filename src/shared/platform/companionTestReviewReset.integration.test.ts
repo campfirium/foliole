@@ -10,7 +10,7 @@ const app = vi.hoisted(() => ({ id: 'com.campfirium.foliole.android.acceptance' 
 vi.mock('@capacitor/app', () => ({ App: { getInfo: async () => ({ id: app.id }) } }));
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('./companion/runtime/companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: createCompanionNativeSyncStub };
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: createCompanionNativeSyncStub };
 });
 
 import { commitDailyFlow } from '../../../lib/core/flow/dailyFlowService';

@@ -22,7 +22,7 @@ export async function automaticFolderBackupFixture(runtime: { owner: unknown; po
   let library = createDisplayLibrary('android');
   await library.owner.open({ expectedHostName: 'fixture', now: '2026-11-04T00:00:00Z' });
   const sourceDb = path.join(root, 'source.sqlite');
-  let stop = () => {};
+  let stop: () => void | Promise<void> = () => {};
   let inBackup = 0, maxInBackup = 0;
   const state = { configured: true, directoryLabel: 'Backup', directoryId: 'target', databaseSavedAt: null as string | null,
     phase: 'idle' as const, errorMessage: null as string | null, attachmentFilesPending: null as number | null };
@@ -51,7 +51,7 @@ export async function automaticFolderBackupFixture(runtime: { owner: unknown; po
     (await readdir(source)).map(storageKey => ({ storageKey, sizeBytes: 0 })) }));
   async function bind() { runtime.owner = library.owner; stop = await bindCompanionAutomaticFolderBackup(library.owner); }
   await bind();
-  cleanup.push(async () => { stop(); await library.close(); await rm(root, { recursive: true, force: true }); });
+  cleanup.push(async () => { await stop(); await library.close(); await rm(root, { recursive: true, force: true }); });
   const publish = async (text: string) => {
     const bytes = Buffer.from(text), key = `${createHash('sha256').update(bytes).digest('hex')}.png`;
     await library.owner.runWriter(db => prepareFolderAttachmentCopy(db, key));
@@ -60,7 +60,7 @@ export async function automaticFolderBackupFixture(runtime: { owner: unknown; po
     return { key, bytes };
   };
   const reopen = async () => {
-    stop(); const sqlite = new Database(library.file, { readonly: true });
+    await stop(); const sqlite = new Database(library.file, { readonly: true });
     try { await sqlite.backup(sourceDb); } finally { sqlite.close(); }
     await library.close(); library = createDisplayLibrary('android', sourceDb);
     await library.owner.open({ expectedHostName: 'fixture', now: '2026-11-04T00:00:00Z' }); await bind();

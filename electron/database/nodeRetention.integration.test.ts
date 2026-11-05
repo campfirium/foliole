@@ -27,13 +27,13 @@ it.each([
     expect(reviewState(peer)).toEqual(before);
     const card = score(peer, 'second', secondAt);
     const events = reviewFacts(peer).map(row => identityReviewRowSchema.parse(row));
-    expect(card).toEqual(recomputeReview(events, { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, desiredRetention: expected }));
+    expect(card).toEqual(recomputeReview(events, { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, desiredRetention: expected }, 'topic'));
     const previous = reviewState(peer);
     peer.sqlite.exec("UPDATE nodes SET desired_retention=NULL WHERE id='topic'");
     expect(reviewState(peer)).toEqual(previous);
     expect(score(peer, 'third', '2026-10-12T08:00:00.000Z')).toEqual(recomputeReview(
       reviewFacts(peer).map(row => identityReviewRowSchema.parse(row)),
-      { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, desiredRetention: parent ?? 0.95 }
+      { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, desiredRetention: parent ?? 0.95 }, 'topic'
     ));
   } finally { await f.close(); }
 });
@@ -53,7 +53,7 @@ it('converges durable review fields on incoming facts with inherited retention',
     expect(reviewState(a)).toEqual(reviewState(b));
     const expected = recomputeReview(reviewFacts(a).map(row => identityReviewRowSchema.parse(row)), {
       ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, desiredRetention: 0.99
-    });
+    }, 'topic');
     expect(a.sqlite.prepare('SELECT due FROM node_review').get()).toEqual({ due: expected?.due });
   } finally { await f.close(); }
 });

@@ -15,7 +15,7 @@ import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('./companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: createCompanionNativeSyncStub };
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: createCompanionNativeSyncStub };
 });
 let library: Awaited<ReturnType<typeof createSearchLibrary>>;
 const now = '2026-10-26T08:00:00.000Z';
