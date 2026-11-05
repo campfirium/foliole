@@ -9,11 +9,10 @@ export const PLAY_CANDIDATE_ENVIRONMENT = 'foliole-play-beta';
 const fail = message => { throw new Error(`Mobile candidate registration refused: ${message}`); };
 const UPLOAD_CERTIFICATE = '3A:63:39:38:11:29:26:8C:65:1A:97:3F:A4:FF:A2:4F:F2:E3:E6:B3:32:F2:28:E4:E1:E0:AB:02:AF:BE:18:0B';
 
-function verifyOrigin(run, candidate) {
+export function verifyPlaySource(run) {
   if (run?.head_repository?.full_name !== MOBILE_REPOSITORY ||
-      String(run.id) !== candidate?.runId || !Number.isSafeInteger(run.run_attempt) ||
-      !['in_progress', 'completed'].includes(run.status) ||
-      !/^\d+\.\d+\.\d+$/u.test(candidate.version ?? '')) fail('run or version identity differs');
+      !Number.isSafeInteger(run.id) || !Number.isSafeInteger(run.run_attempt) ||
+      !['in_progress', 'completed'].includes(run.status)) fail('run or version identity differs');
   if (run.status === 'completed' && !['success', 'failure'].includes(run.conclusion)) fail('source run was cancelled or expired');
   const release = run.head_branch === 'release' && run.path === '.github/workflows/t7-release.yml' &&
     ['push', 'workflow_dispatch'].includes(run.event);
@@ -22,11 +21,6 @@ function verifyOrigin(run, candidate) {
     run.event === 'workflow_dispatch' && remote?.scope === 'full' &&
     remote.mobileDistribution === 'android' && remote.testedSha === run.head_sha;
   if (!release && !qa) fail('not an authorized release or explicit Android full QA');
-  verifyPlayCandidate(candidate, { sourceSha: run.head_sha, runId: String(run.id), version: candidate.version });
-  if (candidate.phase !== 'signed' || !/^[a-f\d]{64}$/u.test(candidate.aabSha256 ?? '') ||
-      candidate.certificateSha256 !== UPLOAD_CERTIFICATE) {
-    fail('a signed original upload candidate is required');
-  }
   return release ? 'release-t7' : 'dev-remote';
 }
 
@@ -38,12 +32,9 @@ function artifactFact(artifact, name, run) {
   return { id: artifact.id, name: artifact.name, digest: artifact.digest };
 }
 
-export function createPlayRegistration({ run, signedArtifact, qualityArtifact, quality, jobs, candidate, registrarSha }) {
-  const lane = verifyOrigin(run, candidate);
-  const signedAttempt = Number(signedArtifact?.name?.match(/^android-play-\d+-([1-9]\d*)-signed$/u)?.[1]);
-  if (!signedAttempt || signedAttempt > run.run_attempt) fail('signed attempt is invalid');
-  const signed = artifactFact(signedArtifact, `android-play-${run.id}-${signedAttempt}-signed`, run);
-  if (!Number.isSafeInteger(quality?.run_attempt) || quality.run_attempt > signedAttempt ||
+export function verifyPlayQuality({ run, qualityArtifact, quality, jobs }) {
+  const lane = verifyPlaySource(run);
+  if (!Number.isSafeInteger(quality?.run_attempt) || quality.run_attempt > run.run_attempt ||
       String(quality.run_id) !== String(run.id) || quality.kind !== 'full' || quality.lane !== lane ||
       quality.target_sha !== run.head_sha || quality.accepted_sha !== run.head_sha || quality.verdict !== 'passed') {
     fail('full quality identity differs');
@@ -60,6 +51,19 @@ export function createPlayRegistration({ run, signedArtifact, qualityArtifact, q
     job.name === 'Release candidate quality / Release candidate quality' && job.conclusion === 'success')) {
     fail('release candidate acceptance did not succeed');
   }
+  return { lane, accepted };
+}
+
+export function createPlayRegistration({ run, signedArtifact, qualityArtifact, quality, jobs, candidate, registrarSha }) {
+  const { lane, accepted } = verifyPlayQuality({ run, qualityArtifact, quality, jobs });
+  verifyPlayCandidate(candidate, { sourceSha: run.head_sha, runId: String(run.id), version: candidate.version });
+  if (candidate.phase !== 'signed' || !/^\d+\.\d+\.\d+$/u.test(candidate.version ?? '') ||
+      !/^[a-f\d]{64}$/u.test(candidate.aabSha256 ?? '') || candidate.certificateSha256 !== UPLOAD_CERTIFICATE) {
+    fail('a signed original upload candidate is required');
+  }
+  const signedAttempt = Number(signedArtifact?.name?.match(/^android-play-\d+-([1-9]\d*)-signed$/u)?.[1]);
+  if (!signedAttempt || signedAttempt > run.run_attempt || quality.run_attempt > signedAttempt) fail('signed attempt is invalid');
+  const signed = artifactFact(signedArtifact, `android-play-${run.id}-${signedAttempt}-signed`, run);
   const original = Object.fromEntries(['schemaVersion', 'sourceSha', 'acceptedSha', 'version', 'runId',
     'packageName', 'track', 'editId', 'expiryTimeSeconds', 'versionCode', 'historyVersionCode',
     'aabSha256', 'certificateSha256', 'phase'].filter(key => candidate[key] !== undefined).map(key => [key, candidate[key]]));

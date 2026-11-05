@@ -9,8 +9,12 @@ gh workflow run mobile-review-check.yml --ref dev -f candidate_id=DEPLOYMENT_ID
 
 Only candidates already registered by trusted delivery are eligible. The checker
 executes current `dev` code, treats candidate source as data, and never uploads,
-updates tracks, commits edits, publishes a GitHub Release or cancels reviews.
-Both this workflow and the complete Android distribution workflow use the same
+updates tracks, commits edits, publishes a GitHub Release or cancels reviews directly.
+After availability checks it may resume one previously authorized Android submission
+through the exact source admission job and its dependent jobs.
+The checker has scoped Actions write permission for this exact-job continuation,
+without signing secrets or executing candidate code. Both this workflow and the
+complete Android distribution workflow use the same
 Play concurrency group with `queue: max`, preserving queued uploads.
 
 ## Temporary snapshot contract
@@ -68,3 +72,50 @@ the Mac handoff daemon to be running; remote checks retain state while it is off
 The default local cadence is 15 minutes, after the approximately 30-minute hosted
 check. GitHub scheduling may add delay. Only registered candidates are covered;
 legacy Console submissions without a durable registration are not inferred.
+
+## Submission queue
+
+The trusted default-branch admission job validates the original full quality ZIP,
+its digest, actual source run/lane, admission jobs and source package version. It
+registers an immutable `foliole-play-submission` Deployment in
+`foliole-play-beta-queue` before any version allocation, Google edit or upload.
+A pending review, approval without publication, or earlier queue ticket produces
+`waiting` with a successful job; Android build and delivery are skipped. Formal
+Draft assembly waits for actual Android assets. Outer release and Android QA
+concurrency queues preserve pending source runs rather than replacing them.
+
+The existing schedule first observes registered releases, then processes the oldest
+unfinished ticket. It waits until the preceding release is published, revalidates
+its original full-quality artifact and resumes only the Android admission job with
+GitHub's job-rerun API. That API also reruns dependent packaging/assembly jobs; it
+does not rerun full quality or other platforms' successful packaging. The admission
+job checks current Play state again, and existing upload/commit protections remain
+in force. Original source SHA and release notes are retained even when branches
+advance. Publication observations are durable so an older release disappearing
+from Google's inventory after replacement cannot stall the next queued candidate.
+
+A review rejection blocks the affected queue and its successors. Cancelled source
+runs, expired quality evidence and uncertain rerun responses require owner
+reconciliation; they never trigger automatic replacement uploads or duplicate
+reruns. Before requesting a rerun, the checker durably writes
+`Play submission: resuming:<attempt>`. If its response is lost, a newer source
+attempt proves that it started; otherwise the checker reports
+`resume-outcome-unknown`. A completed attempt whose admission never recorded a new
+state reports `resume-needs-reconciliation`. Preserve these markers when inspecting
+the original run. GitHub's rerun age limit and artifact expiry still apply.
+
+`candidate_id` remains an exact availability inspection and never dispatches an
+unrelated queue entry. A general scheduled or manual check without that field can
+continue the oldest eligible submission. Notifications are informational, not the
+submission trigger; GitHub scheduling can delay continuation.
+
+After explicit user authorization to abandon a particular rejected/cancelled or
+obsolete ticket, the owner may append `Play submission: retired` to that ticket's
+Deployment statuses (state `pending`, `auto_inactive=false`). This abandons only
+that queued request, does not claim publication, cancel Google review or retire
+other blocked successors. New authorized candidates can follow retired tickets;
+existing blocked successors require their own assessment. Never retire a ticket
+to hide an unresolved upload/edit or rerun outcome.
+
+Sources: [rerun one job and its dependents](https://docs.github.com/en/rest/actions/workflow-runs#re-run-a-job-from-a-workflow-run),
+[concurrency queues](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).

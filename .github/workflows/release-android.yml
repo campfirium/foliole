@@ -12,6 +12,8 @@ on:
       ANDROID_UPLOAD_KEYSTORE_PASSWORD: { required: true }
       ANDROID_UPLOAD_KEY_ALIAS: { required: true }
     outputs:
+      submission_state:
+        value: ${{ jobs.admission.outputs.submission_state }}
       artifact_name:
         value: ${{ jobs.delivery.outputs.artifact_name }}
       packaged_sha:
@@ -19,7 +21,33 @@ on:
 permissions: { contents: read, actions: read, deployments: read }
 concurrency: { group: play-android-open-testing, cancel-in-progress: false, queue: max }
 jobs:
+  admission:
+    name: Admit Android submission or wait for review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: { contents: read, actions: read, deployments: write }
+    outputs:
+      proceed: ${{ steps.admit.outputs.proceed }}
+      submission_state: ${{ steps.admit.outputs.submission_state }}
+    env:
+      TARGET_SHA: ${{ inputs.target_sha }}
+      TARGET_VERSION: ${{ inputs.target_version }}
+      EXECUTION_LANE: ${{ inputs.execution_lane }}
+      TRIGGER_REF: ${{ inputs.trigger_ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: dev, persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24.22.2 }
+      - name: Preserve the accepted source until its Play submission turn
+        id: admit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: node scripts/android/play-admission.mjs
   play:
+    needs: admission
+    if: needs.admission.outputs.proceed == 'true'
     name: Build and sign the original Android candidate
     runs-on: ubuntu-latest
     timeout-minutes: 90

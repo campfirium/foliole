@@ -27,7 +27,7 @@ export function extractSignedPlayArchive(bytes) {
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 }
 
-async function allPages(api, route, field) {
+export async function allPages(api, route, field) {
   const rows = [];
   for (let page = 1; ; page += 1) {
     const result = await api('GET', `${route}?per_page=100&page=${page}`);

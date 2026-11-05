@@ -7,6 +7,7 @@ import { requireTrustedMobileRegistrar } from '../mobile/mobile-candidate-regist
 import { createMobileGithubApi, listMobileCandidates, verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
 import { playAccessToken, createPlayApi } from './play-api.mjs';
 import { readPlayAvailability, readPlaySnapshot } from './play-availability-state.mjs';
+import { resumePendingPlaySubmission } from './play-submission-queue.mjs';
 import { checkRegisteredPlayAvailability } from './play-availability.mjs';
 
 export async function checkPendingPlayCandidates({ github, play, candidateId }) {
@@ -40,7 +41,8 @@ export async function runPlayReviewCheck(env = process.env) {
     return api(...args);
   };
   const results = await checkPendingPlayCandidates({ github, play, candidateId: env.CANDIDATE_ID });
-  console.log(JSON.stringify({ platform: 'android', candidates: results }));
+  const queue = await resumePendingPlaySubmission({ github, play, candidateId: env.CANDIDATE_ID });
+  console.log(JSON.stringify({ platform: 'android', candidates: results, queue }));
   return results;
 }
 

@@ -42,7 +42,8 @@ describe('T7 release workflow contract', () => {
     ]);
     expect(workflow.concurrency).toEqual({
       group: 'quality-release',
-      'cancel-in-progress': true
+      'cancel-in-progress': false,
+      queue: 'max'
     });
     expect(contextSource).toContain('FOLIOLE_RELEASE_REF_NAME: ${{ github.ref_name }}');
     expect(contextSource).toContain('test "$GITHUB_REF" = "refs/heads/release"');

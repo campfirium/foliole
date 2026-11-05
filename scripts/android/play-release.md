@@ -83,8 +83,13 @@ Play versionCode and SHA256 must match that exact archive.
 
 ## Protect review and report actual state
 
-Preflight refuses outstanding beta drafts, pending submission, review or approved
-unpublished changes before creating an edit. Commit explicitly uses
+Trusted admission durably queues accepted sources behind outstanding beta changes
+and earlier submissions. Waiting succeeds without building, allocating a code or
+creating an edit; the existing review checker resumes the original Android job
+after its predecessor is published, and pauses on rejection. See
+[submission queue](play-review-check.md#submission-queue). The inner upload
+preflight still refuses outstanding beta drafts, pending submission, review or
+approved unpublished changes before creating an edit. Commit explicitly uses
 `changesNotSentForReview=false&changesInReviewBehavior=ERROR_IF_IN_REVIEW`; the API's
 unsafe default would cancel an existing review. There is no retry that changes this
 parameter or silently changes to a draft. Server-side validation/commit failures

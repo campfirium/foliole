@@ -56,7 +56,8 @@ permissions:
 
 concurrency:
   group: quality-release
-  cancel-in-progress: true
+  cancel-in-progress: false
+  queue: max
 
 jobs:
   preempt_dev_quality:
@@ -211,7 +212,7 @@ jobs:
         && ((contains(fromJSON(needs.release_context.outputs.release_scope_json), 'macos') && needs.macos_package.result == 'success') || (!contains(fromJSON(needs.release_context.outputs.release_scope_json), 'macos') && needs.macos_package.result == 'skipped'))
         && ((contains(fromJSON(needs.release_context.outputs.release_scope_json), 'windows') && needs.windows_package.result == 'success') || (!contains(fromJSON(needs.release_context.outputs.release_scope_json), 'windows') && needs.windows_package.result == 'skipped'))
         && ((contains(fromJSON(needs.release_context.outputs.release_scope_json), 'linux') && needs.linux_package.result == 'success') || (!contains(fromJSON(needs.release_context.outputs.release_scope_json), 'linux') && needs.linux_package.result == 'skipped'))
-        && ((contains(fromJSON(needs.release_context.outputs.release_scope_json), 'android') && needs.android_package.result == 'success') || (!contains(fromJSON(needs.release_context.outputs.release_scope_json), 'android') && needs.android_package.result == 'skipped'))
+        && ((contains(fromJSON(needs.release_context.outputs.release_scope_json), 'android') && needs.android_package.result == 'success' && (needs.android_package.outputs.submission_state == 'admitted' || needs.android_package.outputs.submission_state == 'submitted' || needs.android_package.outputs.submission_state == 'published')) || (!contains(fromJSON(needs.release_context.outputs.release_scope_json), 'android') && needs.android_package.result == 'skipped'))
         && ((contains(fromJSON(needs.release_context.outputs.release_scope_json), 'ios') && needs.ios_package.result == 'success') || (!contains(fromJSON(needs.release_context.outputs.release_scope_json), 'ios') && needs.ios_package.result == 'skipped'))
       }}
     needs: [release_context, macos_package, windows_package, linux_package, ios_package, android_package]

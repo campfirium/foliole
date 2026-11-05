@@ -26,6 +26,7 @@ export function createMobileGithubApi(token, request = fetch, downloadArtifact) 
       });
     } catch { throw new Error('GitHub candidate request outcome is unknown; reconcile the original candidate'); }
     if (!response.ok) throw new Error(`GitHub candidate request failed (HTTP ${response.status})`);
+    if (method === 'POST' && /^actions\/jobs\/[1-9]\d*\/rerun$/u.test(route) && response.status === 201) return {};
     try { return await response.json(); }
     catch { throw new Error('GitHub candidate response is invalid; reconcile the original candidate'); }
   };

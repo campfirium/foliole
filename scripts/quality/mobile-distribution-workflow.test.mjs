@@ -76,3 +76,10 @@ it('rejects a quality receipt for another commit before resolving the upload con
   const step = remote.jobs['mobile-context'].steps.find(entry => entry.id === 'identity');
   expect(execute(step, { ACCEPTED_SHA: 'a'.repeat(40), TARGET_SHA: 'b'.repeat(40) }).status).not.toBe(0);
 });
+
+it('preserves every pending Android distribution while retaining ordinary QA cancellation', () => {
+  const context = mode => ({ github: { ref: 'refs/heads/check' }, inputs: { mobile_distribution: mode } });
+  expect(evaluate(remote.concurrency.queue, context('android'))).toBe('max');
+  expect(evaluate(remote.concurrency['cancel-in-progress'], context('android'))).toBe(false);
+  expect(evaluate(remote.concurrency.queue, context('none'))).toBe('single');
+});

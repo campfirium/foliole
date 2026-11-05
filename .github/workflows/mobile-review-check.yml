@@ -15,13 +15,13 @@ jobs:
     if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions: { contents: read, deployments: write }
+    permissions: { contents: read, actions: write, deployments: write }
     steps:
       - uses: actions/checkout@v4
         with: { ref: dev, persist-credentials: false }
       - uses: actions/setup-node@v4
         with: { node-version: 24.22.2 }
-      - name: Check registered Play candidates without uploading or committing
+      - name: Check Play availability and resume the oldest eligible submission
         env:
           GH_TOKEN: ${{ github.token }}
           ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}

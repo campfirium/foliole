@@ -20,7 +20,8 @@ function context(scope, stage = '', event = 'push') {
       } },
       release_candidate: { result: stage && stage !== 'full' ? 'skipped' : 'success' },
       ...Object.fromEntries(platforms.map(platform => [`${platform}_package`, {
-        result: scope.includes(platform) ? 'success' : 'skipped'
+        result: scope.includes(platform) ? 'success' : 'skipped',
+        outputs: platform === 'android' ? { submission_state: 'admitted' } : {}
       }]))
     }
   };
@@ -71,6 +72,12 @@ describe('selected release packaging', () => {
         expect(enabled(workflow.jobs.assemble_draft.if, values)).toBe(false);
       }
     }
+  });
+
+  it.each(['waiting', 'blocked', 'retired', ''])('does not assemble Android assets while submission is %s', state => {
+    const values = context(['android']);
+    values.needs.android_package.outputs.submission_state = state;
+    expect(enabled(workflow.jobs.assemble_draft.if, values)).toBe(false);
   });
 
   it('does not accept an unexpected producer outside the frozen scope', () => {

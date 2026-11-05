@@ -55,6 +55,7 @@ permissions:
 concurrency:
   group: ${{ inputs.mobile_distribution != 'none' && inputs.mobile_distribution != '' && 'quality-qa-mobile' || (github.ref == 'refs/heads/check' && 'quality-qa' || 'quality-dev') }}
   cancel-in-progress: ${{ inputs.mobile_distribution == 'none' || inputs.mobile_distribution == '' }}
+  queue: ${{ inputs.mobile_distribution == 'android' && 'max' || 'single' }}
 
 jobs:
   dev-ref:
