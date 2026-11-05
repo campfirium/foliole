@@ -9,7 +9,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('./companion/runtime/companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false },
     registerPlugin: createCompanionNativeSyncStub };
 });
 
@@ -122,7 +122,7 @@ it.each([1, 2, 3, 4] as const)('rebuilds mobile grading from its recorded histor
   await closeIosCompanionDatabase();
   await openLibrary();
   const rebuilt = toNodeReviewProfile((await createLocalReviewSchedulerAdapter().grade({
-    card: createInitialSchedulerCard(now), grade, now })).card);
+    nodeId: 'card', card: createInitialSchedulerCard(now), grade, now })).card);
   expect(desktopSnapshot().nodesById.card?.review).toEqual(rebuilt);
   expect((await loadCompanionWorkspaceSyncState()).workspace_snapshot?.nodesById.card?.review).toEqual(rebuilt);
 });
@@ -149,11 +149,11 @@ it.each([1, 2, 3, 4] as const)('uses received folder parameters immediately and 
   const snapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
   const actual = await gradeCompanionReviewCard({ grade, nodeId: 'card', now, snapshot });
   const next = [...events, { op_id: '~preview', kind: 'review' as const, grade, reviewed_at: now, voids_op_id: null }];
-  const expected = recomputeReview(next, { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, weights: model.weights })!;
+  const expected = recomputeReview(next, { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, weights: model.weights }, 'card')!;
   const normalized = normalizeScheduledCardDue({ card: expected, reviewedAt: now,
     newDayStartsAtHour: DEFAULT_REVIEW_SCHEDULER_SETTINGS.newDayStartsAtHour });
   expect(actual!.reviewLog.cardAfter).toEqual(normalized);
-  expect(expected).not.toEqual(recomputeReview(next, DEFAULT_REVIEW_SCHEDULER_SETTINGS));
+  expect(expected).not.toEqual(recomputeReview(next, DEFAULT_REVIEW_SCHEDULER_SETTINGS, 'card'));
   expect(database!.prepare('SELECT * FROM node_review').all()).toEqual(before);
   await persistCompanionReviewSyncObject({ itemKind: 'fsrs', nodeId: 'card', snapshot: actual!.snapshot, reviewLog: actual!.reviewLog });
   await closeIosCompanionDatabase(); await openLibrary();
@@ -166,7 +166,7 @@ it('resolves inheritance and current folder ownership on every request without r
   const now = '2026-05-04T12:00:00.000Z';
   const input = { nodeId: 'card', card: createInitialSchedulerCard(now), now, grade: 3 as const };
   const next = [...events, { op_id: '~preview', kind: 'review' as const, grade: 3, reviewed_at: now, voids_op_id: null }];
-  const expected = (weights?: number[]) => recomputeReview(next, { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, weights });
+  const expected = (weights?: number[]) => recomputeReview(next, { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS, weights }, 'card');
   expect((await adapter.grade(input)).card).toEqual(expected());
   const global = mobileReviewModel(null);
   await receiveMobileReviewModel(global);
@@ -203,7 +203,7 @@ it('replays reset and void facts with the current inherited retention and weight
   const input = { nodeId: 'card', card: createInitialSchedulerCard(now), now };
   const next = { op_id: '~preview', kind: 'review' as const, grade: 3, reviewed_at: now, voids_op_id: null };
   const expected = recomputeReview([...actualEvents, next], { ...DEFAULT_REVIEW_SCHEDULER_SETTINGS,
-    weights: model.weights, desiredRetention: 0.97 });
+    weights: model.weights, desiredRetention: 0.97 }, 'card');
   expect((await adapter.grade({ ...input, grade: 3 })).card).toEqual(expected);
   expect((await adapter.preview(input)).Good.card).toEqual(expected);
   expect(expected?.reps).toBe(1);

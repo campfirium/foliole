@@ -26,7 +26,7 @@ import { gradeCompanionReviewCard } from './companionReviewSession';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: createCompanionNativeSyncStub };
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: createCompanionNativeSyncStub };
 });
 
 const now = '2026-10-25T08:00:00.000Z';
@@ -91,6 +91,7 @@ it('keeps persisted redo identities through subsequent undo/redo cycles', async 
 });
 
 it('clears the redo branch after a replacement grade and restores from the original review state', async () => {
+  const untouchedCard = (await snapshot()).nodesById.b?.review;
   await grade(4);
   await grade(3);
   await replay('undo');
@@ -99,7 +100,7 @@ it('clears the redo branch after a replacement grade and restores from the origi
   expect((await loadCompanionFlowHistory(key)).redoStack).toHaveLength(0);
   expect(await replayCompanionFlowHistory(key, 'redo', session)).toBeNull();
   expect((await snapshot()).nodesById.a?.review?.reps).toBe(profile.reps + 1);
-  expect((await snapshot()).nodesById.b?.review).toEqual(profile);
+  expect((await snapshot()).nodesById.b?.review).toEqual(untouchedCard);
   expect(count()).toEqual({ count: 1 });
 });
 
