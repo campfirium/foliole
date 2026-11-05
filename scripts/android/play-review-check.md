@@ -51,3 +51,20 @@ Sources: [Google edit lifecycle](https://developers.google.com/android-publisher
 [release summary](https://developers.google.com/android-publisher/api-ref/rest/v3/applications.tracks.releases),
 [track states](https://developers.google.com/android-publisher/api-ref/rest/v3/edits.tracks),
 [GitHub concurrency](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#concurrency).
+
+## Desktop review notifications
+
+The checker saves the exact registered candidate's latest Google lifecycle as
+`Play review: <state>` in its trusted GitHub Deployment history, independently of
+`Play availability`. Approval does not establish tester availability.
+
+The existing local desktop handoff producer reads these trusted records through
+`github-play-review.json` in its personal monitor directory. It notifies once per
+candidate for approval, rejection and verified tester availability. First activation
+baselines existing results; later new candidates and state changes are eligible.
+Submission failures remain retryable, and submitted identities survive restarts.
+The monitor never calls Google, uploads, publishes or edits a release. It requires
+the Mac handoff daemon to be running; remote checks retain state while it is offline.
+The default local cadence is 15 minutes, after the approximately 30-minute hosted
+check. GitHub scheduling may add delay. Only registered candidates are covered;
+legacy Console submissions without a durable registration are not inferred.

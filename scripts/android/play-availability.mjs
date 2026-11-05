@@ -2,7 +2,7 @@ import { readPlayReleases } from './play-api.mjs';
 import { readReservedPlayHistory } from './play-candidate-history.mjs';
 import { verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
 import { readMobileCandidatePhase } from '../mobile/mobile-candidate-phase.mjs';
-import { readPlaySnapshot, writePlayCheckStatus } from './play-availability-state.mjs';
+import { readPlaySnapshot, writePlayCheckStatus, writePlayReviewStatus } from './play-availability-state.mjs';
 
 function exactRelease(releases, candidate) {
   const matches = releases.filter(release => release.track === candidate.track &&
@@ -54,6 +54,7 @@ async function checkCandidate(play, github, row) {
   const release = exactRelease(await readPlayReleases(play), candidate);
   if (!release) return 'waiting';
   const state = release.releaseLifecycleState;
+  await writePlayReviewStatus(github, row, state);
   if (state === 'RELEASE_LIFECYCLE_STATE_NOT_APPROVED') return 'rejected';
   if (['RELEASE_LIFECYCLE_STATE_IN_REVIEW', 'RELEASE_LIFECYCLE_STATE_APPROVED_NOT_PUBLISHED',
     'RELEASE_LIFECYCLE_STATE_NOT_SENT_FOR_REVIEW', 'RELEASE_LIFECYCLE_STATE_DRAFT'].includes(state)) return 'waiting';

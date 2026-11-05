@@ -62,6 +62,7 @@ export function loadConfigs(options = {}) {
     actions: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-actions.json')), workspace),
     dependabotAlerts: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-dependabot-alerts.json')), workspace),
     issues: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-issues.json')), workspace),
+    playReview: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-play-review.json')), workspace),
     prs: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-prs.json')), workspace)
   };
 }
@@ -159,7 +160,7 @@ function scan({ emit = false, includeExisting = false } = {}) {
 
 async function monitor() {
   const configs = loadConfigs();
-  const interval = Math.max(configs.actions?.pollIntervalSeconds ?? 900, configs.dependabotAlerts?.pollIntervalSeconds ?? 900, configs.prs?.pollIntervalSeconds ?? 900, configs.issues?.pollIntervalSeconds ?? 900);
+  const interval = Math.max(configs.actions?.pollIntervalSeconds ?? 900, configs.dependabotAlerts?.pollIntervalSeconds ?? 900, configs.prs?.pollIntervalSeconds ?? 900, configs.issues?.pollIntervalSeconds ?? 900, configs.playReview?.pollIntervalSeconds ?? 900);
   for (;;) {
     console.log(JSON.stringify({ ...scan({ emit: true }), checkedAt: new Date().toISOString() }));
     await new Promise((resolve) => setTimeout(resolve, interval * 1000));

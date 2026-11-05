@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -20,8 +21,9 @@ function prepareProducer() {
   for (const name of [
     'github-desktop-handoff-monitor', 'github-desktop-handoff-events',
     'github-desktop-handoff-pr-events', 'github-desktop-handoff-title',
-    'github-monitor-gh', 'github-actions-handoff-policy', 'github-dependabot-alert-events'
+    'github-monitor-gh', 'github-actions-handoff-policy', 'github-dependabot-alert-events', 'github-play-review-events'
   ]) fs.copyFileSync(path.join(sourceRoot, `scripts/${name}.mjs`), path.join(root, `scripts/${name}.mjs`));
+  fs.symlinkSync(path.join(sourceRoot, 'scripts/mobile'), path.join(root, 'scripts/mobile'), 'junction');
   fs.cpSync(path.join(sourceRoot, 'scripts/security'), path.join(root, 'scripts/security'), { recursive: true });
   fs.symlinkSync(path.join(sourceRoot, 'node_modules'), path.join(root, 'node_modules'), 'junction');
   fs.writeFileSync(path.join(root, 'package.json'), '{"type":"module"}');

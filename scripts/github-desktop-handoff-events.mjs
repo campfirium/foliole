@@ -1,3 +1,4 @@
+import { listPlayReviewEvents } from './github-play-review-events.mjs';
 import { buildIssueHandoffData } from './github-desktop-handoff-title.mjs';
 import { buildActionsHandoffIdentity } from './github-actions-handoff-policy.mjs';
 import { listPrEvents } from './github-desktop-handoff-pr-events.mjs';
@@ -169,6 +170,7 @@ export function listGithubMonitorEvents(configs, state, includeExisting, errors,
   state.submitted ??= {};
   state.securityRunCandidate = null;
   return [
+    ...listPlayReviewEvents(configs.playReview, state, includeExisting, errors, renderTemplate),
     ...listDependabotAlertEvents(configs.dependabotAlerts, state, errors, renderTemplate),
     ...listActionEvents(configs.actions, state, includeExisting, errors, renderTemplate),
     ...listPrEvents(configs.prs, state, errors, renderTemplate),

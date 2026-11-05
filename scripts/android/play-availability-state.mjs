@@ -28,3 +28,13 @@ export async function writePlayCheckStatus(github, row, kind, value) {
   return github('POST', `deployments/${row.id}/statuses`, { state: 'pending', description, auto_inactive: false,
     log_url: `https://github.com/campfirium/foliole/actions/runs/${row.payload.runId}` });
 }
+
+export async function writePlayReviewStatus(github, row, lifecycle) {
+  const prefix = 'Play review: ';
+  const value = lifecycle.replace('RELEASE_LIFECYCLE_STATE_', '');
+  const { value: previous } = await readMobileStatus(github, row.id, prefix);
+  if (previous === value) return;
+  return github('POST', `deployments/${row.id}/statuses`, { state: 'pending',
+    description: `${prefix}${value}`, auto_inactive: false,
+    log_url: `https://github.com/campfirium/foliole/actions/runs/${row.payload.runId}` });
+}
