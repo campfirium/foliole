@@ -14,6 +14,7 @@ export function useCompanionReadingTypographySettings() {
   const [fontLoadError, setFontLoadError] = useState(false);
   const updateSettings = useCallback((nextSettings: CompanionReadingTypographySettings) => {
     const next = normalizeReadingTypographySettings(nextSettings);
+    if (next.fontFamily !== settings.fontFamily) next.fontWeight = 400;
     if (!saveReadingTypographySettings(next)) {
       setSaveError(true);
       return false;
@@ -21,7 +22,7 @@ export function useCompanionReadingTypographySettings() {
     setSettings(next);
     setSaveError(false);
     return true;
-  }, []);
+  }, [settings.fontFamily]);
 
   useEffect(() => {
     setFontLoadError(false);

@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import { readingFontCssFamily } from './companionReadingFonts';
 import { readingFontSize, readingLineHeight, readingParagraphSpacing, type CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 
-function readingFontFamily(value: CompanionReadingTypographySettings['fontFamily']) {
+export function readingFontFamily(value: CompanionReadingTypographySettings['fontFamily']) {
   if (value === 'serif') return 'Georgia, "Times New Roman", serif';
   if (value === 'sans') return 'var(--font-family-sans)';
   if (value.startsWith('system:')) return `"${value.slice(7)}", var(--font-family-sans)`;
@@ -13,6 +13,7 @@ function readingFontFamily(value: CompanionReadingTypographySettings['fontFamily
 export function typographyStyle(settings: CompanionReadingTypographySettings): CSSProperties {
   return {
     '--content-panel-font-family': readingFontFamily(settings.fontFamily),
+    '--content-panel-font-weight': String(settings.fontWeight),
     '--content-panel-font-size': `${readingFontSize(settings.fontSize)}px`,
     '--content-panel-line-height': String(readingLineHeight(settings.lineHeight)),
     '--content-panel-paragraph-spacing': `${readingParagraphSpacing(settings.paragraphSpacing)}em`,

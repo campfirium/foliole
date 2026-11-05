@@ -23,6 +23,7 @@ describe('useCompanionReadingTypographySettings', () => {
         contrast: 'high',
         fontFamily: 'serif',
         fontSize: 22,
+        fontWeight: 400,
         lineHeight: 1.73,
         paragraphSpacing: 0.35
       });
@@ -32,6 +33,7 @@ describe('useCompanionReadingTypographySettings', () => {
       contrast: 'high',
       fontFamily: 'serif',
       fontSize: 22,
+      fontWeight: 400,
       lineHeight: 1.73,
       paragraphSpacing: 0.35
     });

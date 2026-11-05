@@ -32,7 +32,7 @@ it('finely adjusts the rendered text and restores exact values after remounting'
   expect(screen.getByText('1.6')).toBeInTheDocument();
   for (const name of ['Increase Size', 'Increase Line height', 'Serif', 'High']) choose(name);
   expect(loadReadingTypographySettings()).toEqual({
-    fontSize: 17, fontFamily: 'serif', lineHeight: 1.7, contrast: 'high', paragraphSpacing: 0.35
+    fontWeight: 400, fontSize: 17, fontFamily: 'serif', lineHeight: 1.7, contrast: 'high', paragraphSpacing: 0.35
   });
   const document = view.container.querySelector('[data-reading-font-size]') as HTMLElement;
   expect(document.style.getPropertyValue('--content-panel-font-size')).toBe('17px');

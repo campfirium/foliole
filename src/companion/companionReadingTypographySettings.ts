@@ -3,6 +3,7 @@ import {
   READING_LINE_HEIGHT_MIN, READING_LINE_HEIGHT_MAX
 } from '@/features/settings/model/appearanceSettingsOptions';
 import { normalizeReadingParagraphSpacing } from '@/features/settings/model/appearanceTypography';
+import { normalizeReadingFontWeight } from '@/shared/typography/readingFontWeight';
 
 export {
   READING_LINE_HEIGHT_MIN, READING_LINE_HEIGHT_MAX,
@@ -19,6 +20,7 @@ export interface CompanionReadingTypographySettings {
   contrast: CompanionReadingContrast;
   fontFamily: CompanionReadingFontFamily;
   fontSize: CompanionReadingFontSize;
+  fontWeight: number;
   lineHeight: CompanionReadingLineHeight;
   paragraphSpacing: number;
 }
@@ -27,6 +29,7 @@ export const DEFAULT_READING_TYPOGRAPHY_SETTINGS: CompanionReadingTypographySett
   contrast: 'default',
   fontFamily: 'sans',
   fontSize: 16,
+  fontWeight: 400,
   lineHeight: 1.6,
   paragraphSpacing: 0.35
 };
@@ -75,6 +78,7 @@ export function normalizeReadingTypographySettings(value: unknown): CompanionRea
       ? record.fontFamily as CompanionReadingFontFamily
       : pickEnum(record.fontFamily, FONT_FAMILIES, DEFAULT_READING_TYPOGRAPHY_SETTINGS.fontFamily),
     fontSize: readingFontSize(record.fontSize),
+    fontWeight: normalizeReadingFontWeight(record.fontWeight),
     lineHeight: readingLineHeight(record.lineHeight),
     paragraphSpacing: readingParagraphSpacing(record.paragraphSpacing)
   };

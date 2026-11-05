@@ -31,6 +31,7 @@ describe('companion reading typography settings', () => {
       contrast: 'high',
       fontFamily: 'serif',
       fontSize: 19,
+      fontWeight: 400,
       lineHeight: 1.78,
       paragraphSpacing: 0.35
     });

@@ -1,4 +1,7 @@
+import { useState } from 'react';
+
 import { CompanionReadingCustomFonts } from './CompanionReadingCustomFonts';
+import { CompanionReadingFontWeightControl } from './CompanionReadingFontWeightControl';
 import { CompanionReadingNumberControl } from './CompanionReadingNumberControl';
 import { CompanionReadingSystemFonts } from './CompanionReadingSystemFonts';
 import type {
@@ -59,6 +62,12 @@ export function CompanionReadingTypographyControls(props: {
   settings: CompanionReadingTypographySettings;
 }) {
   const t = useTranslation();
+  const [fontRevision, setFontRevision] = useState(0);
+  const changeFont = (settings: CompanionReadingTypographySettings) => {
+    const result = props.onChange(settings);
+    setFontRevision(value => value + 1);
+    return result;
+  };
   return (
     <div className="border-t border-companion-divider">
       <CompanionReadingNumberControl
@@ -67,6 +76,7 @@ export function CompanionReadingTypographyControls(props: {
         value={readingFontSize(props.settings.fontSize)}
         min={READING_FONT_SIZE_MIN} max={READING_FONT_SIZE_MAX} step={1} unit="px"
       />
+      <CompanionReadingFontWeightControl {...props} fontRevision={fontRevision} />
       <CompanionReadingNumberControl
         label={t('companion.reading.font.lineHeight')}
         onChange={(lineHeight) => props.onChange({ ...props.settings, lineHeight })}
@@ -82,7 +92,7 @@ export function CompanionReadingTypographyControls(props: {
       />
       <ReadingTypographyOptionGroup
         label={t('companion.reading.font.family')}
-        onChange={props.onChange}
+        onChange={changeFont}
         options={FONT_FAMILY_OPTIONS}
         settingKey="fontFamily"
         settings={props.settings}
@@ -90,8 +100,8 @@ export function CompanionReadingTypographyControls(props: {
           ? t(`companion.reading.font.family.${value}`)
           : value}
       />
-      <CompanionReadingSystemFonts onChange={props.onChange} settings={props.settings} />
-      <CompanionReadingCustomFonts onChange={props.onChange} settings={props.settings} />
+      <CompanionReadingSystemFonts onChange={changeFont} settings={props.settings} />
+      <CompanionReadingCustomFonts onChange={changeFont} settings={props.settings} />
       <ReadingTypographyOptionGroup
         label={t('companion.reading.font.contrast')}
         onChange={props.onChange}
