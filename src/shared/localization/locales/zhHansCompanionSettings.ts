@@ -16,7 +16,7 @@ export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<Translation
   'companion.settings.storage.backupPendingAutomatic': '待自动备份：{count} 项',
   'companion.settings.storage.backupPendingManual': '待手动备份：{count} 项',
   'companion.settings.section.data': '数据',
-  'companion.settings.storage.attachmentSummary': '占用 {used} · 回收站 {trash}',
+  'companion.settings.storage.attachmentSummary': '占用 {used} · 可清理 {trash}',
   'companion.statistics.date': '日期',
   'companion.settings.learning.reviewGroup': '复习安排',
   'companion.settings.learning.priorityGroup': '主题优先级',

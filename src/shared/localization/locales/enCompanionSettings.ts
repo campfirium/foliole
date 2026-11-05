@@ -14,7 +14,7 @@ export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
   'companion.settings.storage.backupPendingAutomatic': 'Pending automatic backup: {count}',
   'companion.settings.storage.backupPendingManual': 'Pending manual backup: {count}',
   'companion.settings.section.data': 'Data',
-  'companion.settings.storage.attachmentSummary': 'Used {used} · Trash {trash}',
+  'companion.settings.storage.attachmentSummary': 'Used {used} · Ready to clean {trash}',
   'companion.statistics.date': 'Date',
   'companion.settings.learning.reviewGroup': 'Review schedule',
   'companion.settings.learning.priorityGroup': 'Topic priority',

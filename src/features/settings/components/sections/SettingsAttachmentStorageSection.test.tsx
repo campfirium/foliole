@@ -19,9 +19,9 @@ beforeEach(() => {
 
 it('edits the mobile waiting period in a dialog, rejects invalid input and saves only on confirmation', async () => {
   const view = render(<SettingsAttachmentStorageSection mobile />);
-  fireEvent.click(await screen.findByRole('button', { name: 'Cleanup waiting days 30 days' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Days unused before cleanup 30 days' }));
   const dialog = await screen.findByRole('dialog');
-  const input = within(dialog).getByRole('textbox', { name: 'Cleanup waiting days' });
+  const input = within(dialog).getByRole('textbox', { name: 'Days unused before cleanup' });
   fireEvent.change(input, { target: { value: '0' } });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
   expect(within(dialog).getByRole('alert')).toBeInTheDocument();
@@ -29,15 +29,15 @@ it('edits the mobile waiting period in a dialog, rejects invalid input and saves
   fireEvent.change(input, { target: { value: '45' } });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
   await waitFor(() => expect(fixture.run).toHaveBeenCalledWith({ action: 'configure', settings: { automatic: true, observationThreshold: 45 } }));
-  expect(await screen.findByRole('button', { name: 'Cleanup waiting days 45 days' })).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Days unused before cleanup 45 days' })).toBeInTheDocument();
   view.unmount();
 });
 
 it('keeps moving to trash separate from confirmed permanent deletion', async () => {
   const view = render(<SettingsAttachmentStorageSection mobile />);
-  fireEvent.click(await screen.findByRole('button', { name: 'Clean up now' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Mark ready to clean' }));
   await waitFor(() => expect(fixture.run).toHaveBeenCalledWith({ action: 'clean' }));
-  fireEvent.click(await screen.findByRole('button', { name: 'Empty trash' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Clean up' }));
   expect(fixture.run).not.toHaveBeenCalledWith({ action: 'empty-trash' });
   const dialog = await screen.findByRole('dialog');
   expect(dialog).toHaveTextContent(/permanently deletes/);
@@ -49,19 +49,22 @@ it('keeps moving to trash separate from confirmed permanent deletion', async () 
 it('disables moving attachments when there is no eligible content', async () => {
   fixture.status.eligibleBytes = 0;
   const view = render(<SettingsAttachmentStorageSection mobile />);
-  expect(await screen.findByRole('button', { name: 'Clean up now' })).toBeDisabled();
+  expect(await screen.findByRole('button', { name: 'Mark ready to clean' })).toBeDisabled();
   expect(screen.getByRole('switch', { name: 'Automatic cleanup' })).toBeEnabled();
   view.unmount();
 });
 
-it('shows cleanup as automatic work, with an optional immediate action in either mode', async () => {
+it('keeps marking and permanent cleanup distinct when automatic marking is toggled', async () => {
   const view = render(<SettingsAttachmentStorageSection mobile />);
-  expect(await screen.findByText('Pending automatic cleanup')).toBeInTheDocument();
-  expect(screen.getByText('Run cleanup automatically after the waiting period.')).toBeInTheDocument();
+  expect(await screen.findByText('Unused attachments')).toBeInTheDocument();
+  expect(screen.getByText('Ready to clean')).toBeInTheDocument();
+  expect(screen.queryByText('Trash')).not.toBeInTheDocument();
+  expect(screen.getByText('Attachments that stay unused long enough are marked ready to clean automatically.')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('switch', { name: 'Automatic cleanup' }));
-  expect(await screen.findByText('Pending manual cleanup')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Clean up now' })).toBeEnabled();
-  fireEvent.click(screen.getByRole('button', { name: 'Clean up now' }));
+  await waitFor(() => expect(screen.getByRole('switch', { name: 'Automatic cleanup' })).not.toBeChecked());
+  expect(screen.getByText('Unused attachments')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Mark ready to clean' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Mark ready to clean' }));
   await waitFor(() => expect(fixture.run).toHaveBeenCalledWith({ action: 'clean' }));
   view.unmount();
 });

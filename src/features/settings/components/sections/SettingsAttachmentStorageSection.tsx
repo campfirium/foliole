@@ -41,10 +41,10 @@ export function SettingsAttachmentStorageSection({ unavailable = false, mobile =
           {t('settings.attachments.refresh')}
         </AppButton></SettingsControlSlot>}
       </SettingsRow>
-      <SettingsRow controlLayout={mobile ? 'inline' : 'stacked'} title={t(mobile ? status?.automatic ? 'settings.attachments.pendingAutomatic' : 'settings.attachments.pendingManual' : 'settings.attachments.eligible')}
+      <SettingsRow controlLayout={mobile ? 'inline' : 'stacked'} title={t('settings.attachments.eligible')}
         description={status ? mobile ? bytes(status.eligibleBytes) : `${bytes(status.eligibleBytes)} · ${t('settings.attachments.eligibleHint')}` : '—'}>
         <SettingsControlSlot><AppButton disabled={busy || !status || (mobile && status.eligibleBytes === 0)} onClick={() => void run({ action: 'clean' })} size="sm">
-          {t(mobile ? 'settings.attachments.cleanNow' : 'settings.attachments.clean')}
+          {t('settings.attachments.clean')}
         </AppButton></SettingsControlSlot>
       </SettingsRow>
       <AttachmentTrashRow mobile={mobile} status={status} busy={busy} onEmpty={() => setConfirmEmpty(true)}
