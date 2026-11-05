@@ -1,29 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { AppButton, AppInput } from '../../../../shared/ui';
-import { AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../../shared/ui/Dialog';
+import { AppDialog, AppDialogActions, AppDialogBody, AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../../shared/ui/Dialog';
+import { SettingsTouchSheet } from '../../../../shared/ui/SettingsTouchSheet';
 
 export function AttachmentCleanupThresholdDialog({ open, value, onOpenChange, onSave }: {
   open: boolean; value: number; onOpenChange(open: boolean): void; onSave(value: number): void;
 }) {
   const t = useTranslation();
+  const input = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState(String(value));
   const [invalid, setInvalid] = useState(false);
   useEffect(() => { if (open) { setDraft(String(value)); setInvalid(false); } }, [open, value]);
   return <AppDialog open={open} onOpenChange={onOpenChange}>
-    <AppDialogPortal><AppDialogOverlay /><AppDialogContent layout="task" className="w-[calc(100vw-3rem)] max-w-[420px]">
+    <AppDialogPortal><AppDialogOverlay /><SettingsTouchSheet onOpenAutoFocus={event => { event.preventDefault(); input.current?.focus(); input.current?.select(); }}>
       <form onSubmit={event => {
         event.preventDefault();
         const parsed = Number(draft);
         if (!/^\d+$/.test(draft.trim()) || !Number.isSafeInteger(parsed) || parsed < 1) return setInvalid(true);
         onSave(parsed);
       }}>
-        <AppDialogTitle>{t('settings.attachments.threshold')}</AppDialogTitle>
+        <div data-settings-sheet-header><AppDialogTitle>{t('settings.attachments.threshold')}</AppDialogTitle></div>
         <AppDialogBody>
           <AppDialogDescription>{t('settings.attachments.thresholdHint')}</AppDialogDescription>
-          <AppInput className="mt-4" aria-label={t('settings.attachments.threshold')} aria-invalid={invalid}
-            inputMode="numeric" value={draft} onChange={event => { setDraft(event.target.value); setInvalid(false); }} />
+          <div data-settings-sheet-number><AppInput ref={input} aria-label={t('settings.attachments.threshold')} aria-invalid={invalid}
+            inputMode="numeric" value={draft} onChange={event => { setDraft(event.target.value); setInvalid(false); }} /><span>{t('settings.attachments.daysUnit')}</span></div>
           {invalid ? <p role="alert">{t('settings.attachments.thresholdInvalid')}</p> : null}
         </AppDialogBody>
         <AppDialogActions>
@@ -31,6 +33,6 @@ export function AttachmentCleanupThresholdDialog({ open, value, onOpenChange, on
           <AppButton type="submit">{t('common.done')}</AppButton>
         </AppDialogActions>
       </form>
-    </AppDialogContent></AppDialogPortal>
+    </SettingsTouchSheet></AppDialogPortal>
   </AppDialog>;
 }

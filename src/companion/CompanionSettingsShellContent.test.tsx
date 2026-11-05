@@ -112,7 +112,7 @@ it('shows attachment size and trash summaries in preview without technical notic
   const view = render(<SettingsHarness />);
   expect(await screen.findByText('Used 16.2 MB · Trash 0 B')).toBeInTheDocument();
   fireEvent.click(screen.getByTestId('companion-settings-attachments'));
-  expect(await screen.findByRole('button', { name: '30 days' })).toBeEnabled();
+  expect(await screen.findByRole('button', { name: 'Cleanup waiting days 30 days' })).toBeEnabled();
   expect(screen.getByRole('button', { name: 'Move to trash' })).toBeEnabled();
   expect(screen.queryByText(/available in the mobile app/)).not.toBeInTheDocument();
   view.unmount(); delete window.__folioleSettingsPreview;

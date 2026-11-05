@@ -7,12 +7,12 @@ import { getCompanionRuntimeCapability } from '../shared/platform/companionRunti
 import { AppButton, AppSpinner, SettingsControlSlot, SettingsRow, SettingsSection } from '../shared/ui';
 import {
   AppDialog,
-  AppDialogContent,
   AppDialogDescription,
   AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle
 } from '../shared/ui/Dialog';
+import { SettingsTouchSheet } from '../shared/ui/SettingsTouchSheet';
 
 import { removeCompanionCustomCssCache } from './companionCustomCssStorage';
 
@@ -32,15 +32,23 @@ function ClearAppDataDialog(props: {
     <AppDialog onOpenChange={props.onOpenChange} open={props.isOpen}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent className="w-[calc(100vw-3rem)] max-w-[420px] px-5 py-5">
-          <AppDialogTitle>{t('companion.settings.storage.clearDialog.title')}</AppDialogTitle>
+        <SettingsTouchSheet>
+          <div data-settings-sheet-header><AppDialogTitle>{t('companion.settings.storage.clearDialog.title')}</AppDialogTitle></div>
           <AppDialogDescription className="mt-2">
             {t('companion.settings.storage.clearDialog.description')}
           </AppDialogDescription>
-          <div className="mt-5 flex flex-col gap-3">
+          <div className="mt-5 flex justify-end gap-6">
+            <button
+              className="px-2 py-3 text-sm font-normal text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
+              disabled={props.isClearing}
+              onClick={() => props.onOpenChange(false)}
+              type="button"
+            >
+              {t('common.cancel')}
+            </button>
             <button
               aria-busy={props.isClearing || undefined}
-              className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-error/60 px-4 py-3 text-sm font-semibold text-error transition hover:bg-error/5 disabled:cursor-not-allowed ${props.isClearing ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
+              className={`inline-flex items-center justify-center gap-2 px-2 py-3 text-sm font-normal text-error transition hover:bg-error/5 disabled:cursor-not-allowed ${props.isClearing ? 'disabled:opacity-100' : 'disabled:opacity-45'}`}
               disabled={props.isClearing || props.unavailable}
               data-testid="companion-storage-clear-confirm"
               onClick={props.onClear}
@@ -49,16 +57,8 @@ function ClearAppDataDialog(props: {
               {props.isClearing ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
               <span>{t(props.isClearing ? 'companion.settings.storage.clearing' : 'companion.settings.storage.clear')}</span>
             </button>
-            <button
-              className="w-full rounded-2xl border border-companion-divider px-4 py-3 text-sm font-medium text-foreground transition active:bg-companion-subtle/80 disabled:cursor-not-allowed disabled:opacity-45"
-              disabled={props.isClearing}
-              onClick={() => props.onOpenChange(false)}
-              type="button"
-            >
-              {t('common.cancel')}
-            </button>
           </div>
-        </AppDialogContent>
+        </SettingsTouchSheet>
       </AppDialogPortal>
     </AppDialog>
   );
@@ -91,6 +91,7 @@ export function CompanionStorageSettingsContent() {
         <SettingsRow controlLayout="inline" title={t('companion.settings.storage.appData')}>
           <SettingsControlSlot>
             <AppButton
+              aria-label={t('companion.settings.storage.clear')}
               aria-busy={isClearing || undefined}
               disabled={isClearing || (!canClearAppData && !preview)}
               data-testid="companion-storage-clear"
@@ -98,7 +99,7 @@ export function CompanionStorageSettingsContent() {
               variant="danger"
             >
               {isClearing ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
-              <span>{t(isClearing ? 'companion.settings.storage.clearing' : 'companion.settings.storage.clear')}</span>
+              <span>{t(isClearing ? 'companion.settings.storage.clearing' : 'companion.settings.storage.clearAction')}</span>
             </AppButton>
           </SettingsControlSlot>
         </SettingsRow>

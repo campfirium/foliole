@@ -1,4 +1,5 @@
 export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
+  'companion.settings.storage.currentBackupFolder': 'Current folder',
   'companion.settings.storage.chooseBackupFolder': 'Choose folder…',
   'companion.settings.storage.backupFailed': 'Backup failed',
   'companion.settings.storage.backupLoading': 'Checking backup…',
@@ -53,6 +54,7 @@ export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
   'companion.settings.storage.backupAttachmentsPending': 'Attachments waiting:',
   'companion.settings.storage.appData': 'App data',
   'companion.settings.storage.clear': 'Clear App Data',
+  'companion.settings.storage.clearAction': 'Clear…',
   'companion.settings.storage.clearing': 'Clearing...',
   'companion.settings.storage.clearDialog.title': 'Clear App Data?',
   'companion.settings.storage.clearDialog.description':

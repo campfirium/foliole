@@ -82,8 +82,8 @@ export function CompanionSettingsList(props: {
 }) {
   const t = useTranslation();
   return (
-    <section className="pb-4">
-      <div className="space-y-5">
+    <section className="pb-4" data-settings-home>
+      <div>
         <SettingsListSection first title={t('companion.settings.section.syncDevice')}>
           <SettingsListItem
             Icon={RefreshCw}

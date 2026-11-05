@@ -1,0 +1,25 @@
+import type { TranslationKey } from '../translations';
+
+export const ZH_HANS_SETTINGS_ATTACHMENTS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'settings.attachments.daysUnit': '天',
+  'settings.attachments.description': '附件先移入回收站，清空后才会永久删除。',
+  'settings.attachments.title': '附件',
+  'settings.attachments.error': "附件操作未完成，请重试。",
+  'settings.attachments.used': "占用空间",
+  'settings.attachments.refresh': "刷新",
+  'settings.attachments.thresholdValue': '{count} 天',
+  'settings.attachments.thresholdInvalid': '请输入大于 0 的整数。',
+  'settings.attachments.threshold': '清理等待天数',
+  'settings.attachments.thresholdHint': '附件不再被资料使用后，满设定天数才可移入回收站。只累计完成附件检查的日期，并非连续的自然日。',
+  'settings.attachments.automatic': "自动清理",
+  'settings.attachments.automaticHint': '将不再被资料使用的附件移入回收站。',
+  'settings.attachments.eligible': '可清理附件',
+  'settings.attachments.eligibleHint': "已闲置满设定天数",
+  'settings.attachments.clean': '移入回收站',
+  'settings.attachments.trash': '回收站',
+  'settings.attachments.trashHint': '回收站中的附件仍占用空间。',
+  'settings.attachments.restore': "全部恢复",
+  'settings.attachments.empty': '清空回收站',
+  'settings.attachments.emptyTitle': '清空回收站？',
+  'settings.attachments.emptyHint': "将永久删除并释放 {size}，无法恢复，不影响任何主题。",
+};

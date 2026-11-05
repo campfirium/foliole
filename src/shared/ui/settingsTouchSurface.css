@@ -1,9 +1,9 @@
 .settings-touch-surface {
-  --settings-touch-row-height: 56px;
+  --settings-touch-row-height: 64px;
   --settings-touch-control-height: 44px;
   --settings-touch-group-gap: 32px;
   --settings-touch-row-gap: 12px;
-  --settings-touch-row-padding: 16px;
+  --settings-touch-row-padding: 14px;
   --settings-touch-line: var(--role-content-line);
   min-width: 0;
   width: 100%;
@@ -37,14 +37,14 @@
   border-color: var(--settings-touch-line);
 }
 .settings-touch-surface [data-settings-row] h4 {
-  font-size: 16px;
-  line-height: 24px;
+  font-size: 15px;
+  line-height: 22px;
   overflow-wrap: anywhere;
 }
 .settings-touch-surface [data-settings-row] p,
 .settings-touch-surface [data-settings-section-header] p {
-  font-size: 13px;
-  line-height: 20px;
+  font-size: 12px;
+  line-height: 19px;
   color: var(--role-text-secondary);
   overflow-wrap: anywhere;
 }
@@ -86,3 +86,59 @@
 .settings-touch-surface [data-settings-value-row] > button {
   min-height: var(--settings-touch-row-height);
 }
+
+.settings-touch-surface [data-settings-page-description] {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 21px;
+  color: var(--role-text-secondary);
+}
+.settings-touch-surface [data-settings-value-row] > button {
+  padding: 14px 0;
+  gap: 12px;
+}
+.settings-touch-surface [data-settings-value-title] {
+  font-size: 15px;
+  line-height: 22px;
+}
+.settings-touch-surface [data-settings-value] {
+  max-width: 58%;
+  margin-left: auto;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--role-text-secondary);
+}
+.settings-touch-surface [data-settings-value-row] svg {
+  width: 16px;
+  height: 16px;
+  margin-left: -4px;
+}
+.settings-touch-surface [data-settings-control-slot] > button:not([role='switch']) {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+}
+.settings-touch-surface [role='switch'] {
+  width: 44px;
+  height: 26px;
+}
+.settings-touch-surface [role='switch'][aria-checked='true'] { background: var(--role-accent); }
+.settings-touch-surface [role='switch'][aria-checked='false'] { background: var(--settings-touch-line); }
+.settings-touch-surface [role='switch'] > span { width: 20px; height: 20px; translate: none; }
+.settings-touch-surface [role='switch'][aria-checked='false'] > span { transform: translateX(3px); }
+.settings-touch-surface [role='switch'][aria-checked='true'] > span { transform: translateX(21px); }
+.settings-touch-surface [data-settings-action-status] { font-size: 15px; line-height: 22px; color: var(--role-text); }
+.settings-touch-surface [data-settings-home] [data-companion-list-section] { padding-top: 0; margin-bottom: 24px; }
+.settings-touch-surface [data-settings-home] [data-companion-list-row] { min-height: 56px; padding: 12px 0; }
+.settings-touch-surface [data-settings-home] [data-companion-list-title] { font-size: 16px; font-weight: 400; line-height: 24px; }
+.settings-touch-surface [data-settings-home] [data-companion-list-detail] { margin-top: 4px; font-size: 13px; line-height: 20px; }
+.settings-touch-surface [data-settings-home] [data-settings-row] { min-height: 56px; padding: 12px 0; }
+.settings-touch-surface [data-settings-home] [data-settings-row] h4 { font-size: 16px; line-height: 24px; }
+.settings-touch-surface [data-settings-summary] { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.settings-touch-surface [data-settings-summary] h4 { min-width: 0; }
+.settings-touch-surface [data-settings-summary] + p { margin-top: 6px; }
+.settings-touch-surface [data-settings-inline-value] { font-size: 13px; line-height: 20px; color: var(--role-text-secondary); }
+.settings-touch-surface [data-settings-trash-actions] [data-settings-control-slot] { justify-content: flex-end; gap: 8px; }
+.settings-touch-surface [data-settings-trash-actions] [data-settings-control-slot] > button { flex: 0 0 auto; }

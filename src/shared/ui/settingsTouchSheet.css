@@ -1,0 +1,32 @@
+.settings-touch-sheet {
+  left: 0;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: none;
+  max-height: 90dvh;
+  padding: 20px;
+  transform: none;
+  translate: none;
+  overflow-y: auto;
+  border: 0;
+  border-radius: 16px 16px 0 0;
+  box-shadow: none;
+  background: var(--role-content-bg);
+  color: var(--role-text);
+}
+.settings-touch-sheet [data-settings-sheet-header] { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+.settings-touch-sheet [data-app-dialog-title] { margin: 0; font-size: 16px; font-weight: 400; line-height: 24px; }
+.settings-touch-sheet [data-settings-sheet-header] button { min-height: 44px; border: 0; background: transparent; font-size: 14px; color: var(--role-text-secondary); }
+.settings-touch-sheet [data-app-dialog-body] { padding: 0; font-size: 13px; line-height: 21px; }
+.settings-touch-sheet [data-app-dialog-body] > p { font-size: 13px; line-height: 21px; }
+.settings-touch-sheet [data-app-dialog-actions] { display: flex; justify-content: flex-end; gap: 24px; margin-top: 20px; padding: 0; border: 0; background: transparent; }
+.settings-touch-sheet [data-app-dialog-actions] button { min-height: 44px; padding: 8px; border: 0; background: transparent; font-size: 14px; font-weight: 400; }
+.settings-touch-sheet [data-settings-sheet-location] { margin: 0; font-size: 14px; line-height: 23px; overflow-wrap: anywhere; }
+.settings-touch-sheet [data-settings-sheet-caption] { margin: 0 0 6px; font-size: 13px; line-height: 21px; color: var(--role-text-secondary); }
+.settings-touch-sheet [data-settings-sheet-primary] { width: 100%; min-height: 44px; margin-top: 24px; padding: 10px 16px; border: 1px solid var(--role-accent); border-radius: 8px; background: transparent; font-size: 15px; font-weight: 400; color: var(--role-accent); }
+.settings-touch-sheet [data-settings-sheet-secondary] { margin-top: 8px; min-height: 44px; padding: 8px 0; border: 0; background: transparent; font-size: 13px; color: var(--role-text-secondary); }
+.settings-touch-sheet [data-settings-sheet-number] { display: flex; align-items: center; gap: 12px; margin-top: 24px; }
+.settings-touch-sheet [data-settings-sheet-number] input { flex: 1; min-width: 0; height: 44px; font-size: 14px; }
+.settings-touch-sheet [data-settings-sheet-number] span { flex-shrink: 0; color: var(--role-text-secondary); font-size: 14px; }

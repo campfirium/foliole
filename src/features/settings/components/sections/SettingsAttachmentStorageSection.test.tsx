@@ -19,7 +19,7 @@ beforeEach(() => {
 
 it('edits the mobile waiting period in a dialog, rejects invalid input and saves only on confirmation', async () => {
   const view = render(<SettingsAttachmentStorageSection mobile />);
-  fireEvent.click(await screen.findByRole('button', { name: '30 days' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Cleanup waiting days 30 days' }));
   const dialog = await screen.findByRole('dialog');
   const input = within(dialog).getByRole('textbox', { name: 'Cleanup waiting days' });
   fireEvent.change(input, { target: { value: '0' } });
@@ -29,7 +29,7 @@ it('edits the mobile waiting period in a dialog, rejects invalid input and saves
   fireEvent.change(input, { target: { value: '45' } });
   fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
   await waitFor(() => expect(fixture.run).toHaveBeenCalledWith({ action: 'configure', settings: { automatic: true, observationThreshold: 45 } }));
-  expect(await screen.findByRole('button', { name: '45 days' })).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Cleanup waiting days 45 days' })).toBeInTheDocument();
   view.unmount();
 });
 

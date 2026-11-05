@@ -49,7 +49,7 @@ export function CompanionFolderDatabaseBackupSection() {
   if (!supported && !preview) return null;
   return (
     <section>
-      <p className="mb-5 text-sm leading-6 text-companion-text-secondary">{t('companion.settings.storage.databaseBackupHint')}</p>
+      <p data-settings-page-description>{t('companion.settings.storage.databaseBackupHint')}</p>
       <SettingsSection ariaLabel={t('companion.settings.storage.databaseBackup')}>
         <SettingsValueRow title={t('companion.settings.storage.backupFolder')}
           value={state?.directoryLabel ?? t('companion.settings.storage.chooseBackupFolder')}
@@ -59,7 +59,7 @@ export function CompanionFolderDatabaseBackupSection() {
             disabled={automatic === null || changingAutomatic || forgetting || (!state?.configured && automatic !== true)}
             onCheckedChange={value => void toggleAutomatic(value)} /></SettingsControlSlot>
         </SettingsRow>
-        <SettingsRow controlLayout="inline" description={<span role="status">{companionBackupSummary(state, automatic, error, t)}</span>}>
+        <SettingsRow controlLayout="inline" description={<span role="status" data-settings-action-status>{companionBackupSummary(state, automatic, error, t)}</span>}>
           <SettingsControlSlot><AppButton data-testid="companion-database-backup" disabled={working || !supported || !state?.configured}
             onClick={() => void run(false)} size="sm">
             {t(working ? 'companion.settings.storage.backupWorking' : 'companion.settings.storage.backupNow')}

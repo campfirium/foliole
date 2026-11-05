@@ -1,6 +1,7 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.settings.storage.currentBackupFolder': '当前文件夹',
   'companion.settings.storage.chooseBackupFolder': '选择文件夹…',
   'companion.settings.storage.backupFailed': '备份失败',
   'companion.settings.storage.backupLoading': '正在检查备份…',
@@ -55,6 +56,7 @@ export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<Translation
   'companion.settings.storage.backupAttachmentsPending': '待备份附件：',
   'companion.settings.storage.appData': '应用数据',
   'companion.settings.storage.clear': '清除应用数据',
+  'companion.settings.storage.clearAction': '清除…',
   'companion.settings.storage.clearing': '正在清除...',
   'companion.settings.storage.clearDialog.title': '清除应用数据？',
   'companion.settings.storage.clearDialog.description':

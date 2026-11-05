@@ -1,25 +1,8 @@
 import { EN_BACKUP_RESTORE_SYNC_TRANSLATIONS } from './enBackupRestoreSync';
+import { EN_SETTINGS_ATTACHMENTS_TRANSLATIONS } from './enSettingsAttachments';
 export const EN_SETTINGS_STORAGE_TRANSLATIONS = {
   ...EN_BACKUP_RESTORE_SYNC_TRANSLATIONS,
-  'settings.attachments.title': 'Attachments',
-  'settings.attachments.error': "Could not finish the attachment operation. Please try again.",
-  'settings.attachments.used': "Storage used",
-  'settings.attachments.refresh': "Refresh",
-  'settings.attachments.thresholdValue': '{count} days',
-  'settings.attachments.thresholdInvalid': 'Enter a whole number greater than 0.',
-  'settings.attachments.threshold': 'Cleanup waiting days',
-  'settings.attachments.thresholdHint': 'Only dates when an attachment check completes count toward the waiting period, rather than consecutive calendar days.',
-  'settings.attachments.automatic': "Automatic cleanup",
-  'settings.attachments.automaticHint': 'Move attachments no topic uses to the trash after the waiting period.',
-  'settings.attachments.eligible': 'Eligible attachments',
-  'settings.attachments.eligibleHint': "Unused for the set number of days",
-  'settings.attachments.clean': 'Move to trash',
-  'settings.attachments.trash': 'Trash',
-  'settings.attachments.trashHint': 'Attachments in the trash still use storage space.',
-  'settings.attachments.restore': "Restore all",
-  'settings.attachments.empty': 'Empty trash',
-  'settings.attachments.emptyTitle': 'Empty attachment trash?',
-  'settings.attachments.emptyHint': "This permanently deletes them and frees {size}. They cannot be restored. No topics are affected.",
+  ...EN_SETTINGS_ATTACHMENTS_TRANSLATIONS,
 
   'settings.category.library.label': 'Storage',
   'settings.category.library.description': 'Set import and storage folders.',
