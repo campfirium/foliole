@@ -18,6 +18,16 @@ function renderOutline(fixture = createOutlineFixture(), activity?: CompanionRea
   return { ...view, sheet, onSelect, onOpenNode, onOpenChange };
 }
 
+it('uses object icons only for Topic and Item rows and leaves chapter labels unadorned', () => {
+  renderOutline();
+  expect(screen.getByRole('button', { name: 'Chapter', exact: true }).querySelector('svg, [data-node-icon]')).toBeNull();
+  for (const name of ['Alpha passage', 'Beta passage']) {
+    const button = screen.getByRole('button', { name });
+    expect(button.querySelector('[data-node-icon]')).not.toBeNull();
+    expect(button.querySelector('.lucide-map-pin, .lucide-arrow-up-right')).toBeNull();
+  }
+});
+
 it('shows headings and direct content together and keeps count clicks separate from navigation', () => {
   const { onSelect, onOpenNode } = renderOutline();
   expect(screen.queryByRole('tab')).toBeNull();

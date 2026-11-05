@@ -1,4 +1,4 @@
-import { ArrowUpRight, ChevronDown, ChevronRight, MapPin } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import type { DocumentOutlineSection, DocumentPositionEntry } from '../features/editor/model/documentOutlineNavigation';
 import { NodeTreeRowIcon } from '../features/nodes/components/NodeTreeRowIcon';
@@ -50,7 +50,6 @@ export function OutlineEntryRow(props: {
   const t = useTranslation();
   const entry = props.entry;
   const label = entry.text || t('desktop.search.context.untitled');
-  const PositionIcon = entry.action === 'position' ? MapPin : ArrowUpRight;
   const contents = <>
     <span aria-hidden="true" className="mt-0.5 shrink-0"><NodeTreeRowIcon baseOnly
       kind={entry.kind === 'item' ? 'review' : entry.kind === 'folder' ? props.expanded ? 'folder-open' : 'folder-closed' : 'reading'} state="pending" /></span>
@@ -61,7 +60,7 @@ export function OutlineEntryRow(props: {
       : <button className={`${outlineButtonClassName} flex items-start gap-2`} disabled={props.disabled}
         title={t(entry.action === 'position' ? 'companion.reading.outline.goToPassage' : 'companion.reading.outline.openCard')}
         onClick={props.onSelect} type="button">
-        {contents}<PositionIcon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-companion-text-secondary" />
+        {contents}
       </button>}
     {entry.childIds.length ? <OutlineExpansionButton count={props.count} title={label} expanded={props.expanded}
       disabled={props.disabled} onToggle={props.onToggle} /> : null}
