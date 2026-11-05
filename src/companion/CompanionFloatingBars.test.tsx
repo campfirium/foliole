@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { LocalizationProvider, useTranslation } from '../shared/localization/LocalizationProvider';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
-import { preloadTranslationCatalog } from '../shared/localization/translations';
+import { preloadTranslationCatalog, translate } from '../shared/localization/translations';
 
 import { CompanionBottomTabBar } from './CompanionFloatingBars';
 import { DEFAULT_COMPANION_TAB_CONFIG } from './CompanionTabsConfig';
@@ -32,7 +32,7 @@ describe('CompanionBottomTabBar', () => {
     expect(screen.queryByLabelText('Sync progress')).not.toBeInTheDocument();
   });
 
-  it.each(['zh-Hans', 'zh-Hant'] as const)('keeps bottom navigation English in %s', async (locale) => {
+  it.each(['zh-Hans', 'zh-Hant'] as const)('uses the active language for bottom navigation in %s', async (locale) => {
     expect(await preloadTranslationCatalog(locale)).toBe(true);
     function LocalizedContent() {
       const t = useTranslation();
@@ -44,7 +44,8 @@ describe('CompanionBottomTabBar', () => {
         config={DEFAULT_COMPANION_TAB_CONFIG} onAction={vi.fn()}
         onSecondaryDestination={vi.fn()} visible />
     </LocalizationProvider>);
-    for (const name of ['Directory', 'Browse', 'Flow', 'Search', 'Settings']) {
+    for (const key of ['companion.tabs.shortcut.directory', 'companion.tabs.browse', 'companion.tabs.learn', 'companion.tabs.search', 'companion.tabs.settings'] as const) {
+      const name = translate(locale, key);
       expect(screen.getByRole('button', { name })).toHaveTextContent(name);
     }
     expect(screen.getByRole('heading')).toHaveTextContent(locale === 'zh-Hans' ? '设置' : '設定');

@@ -142,7 +142,7 @@ it.each(['review', 'recent'])('keeps navigation hidden while a breadcrumb articl
     selectedBrowseNodeId: 'topic-1', readableArticle: null });
   refresh();
   expect(container.querySelector('header')).not.toBeInTheDocument();
-  expect(screen.getByRole('status')).toBeInTheDocument();
+  expect(container.querySelector('section[aria-busy="true"]')).toBeInTheDocument();
 
   useCompanionArticleSurface.mockReturnValue({ ...surface, activeAction, isFlowBrowsing: activeAction === 'review', selectedBrowseNodeId: 'topic-1',
     readableArticle: { ...surface.readableArticle, nodeId: 'topic-1', content: 'Parent article body' } });
