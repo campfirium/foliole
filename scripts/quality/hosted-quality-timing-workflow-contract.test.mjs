@@ -14,7 +14,8 @@ it('wires one non-gating terminal timing summary into Remote Quality and T7', ()
   const releaseCall = release.jobs.timing_summary;
 
   expect(remoteCall.if).toBe('${{ always() }}');
-  expect(remoteCall.needs).toEqual(['dev-ref', 'scoped-quality', 'full-quality', 'mobile-context', 'mobile-ios']);
+  expect(new Set(remoteCall.needs)).toEqual(new Set(
+    Object.keys(remote.jobs).filter(name => name !== 'timing-summary')));
   expect(releaseCall.if)
     .toBe("${{ always() && (github.event_name == 'push' || inputs.stage == 'full') }}");
   expect(releaseCall.needs).toContain('assemble_draft');

@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { expect, it, vi } from 'vitest';
 import { allocatePlayVersion, preparePlayCandidate, uploadPlayCandidate, commitPlayCandidate, observePlayCandidate,
   verifyPlayCandidate } from './play-distribution.mjs';
-import { createPlayApi, requireNoPendingReview } from './play-api.mjs';
+import { createPlayApi, readPlayReleases, requireNoPendingReview } from './play-api.mjs';
 
 const identity = { sourceSha: 'a'.repeat(40), acceptedSha: 'a'.repeat(40), runId: '42', version: '0.7.17' };
 const bytes = Buffer.from('signed bundle fixture');
@@ -36,15 +36,15 @@ function fixture() {
 
 it('allocates above actual bundle, APK, pending release and all track history rather than a fixed next code', () => {
   expect(allocatePlayVersion({ bundles: [{ versionCode: 4 }], apks: [{ versionCode: 99 }],
-    tracks: [{ releases: [{ versionCodes: ['102'] }] }], releases: [published] })).toBe(103);
-  for (const codes of [[], [{ versionCode: 'bad' }], [{ versionCode: 2100000000 }]]) {
-    expect(() => allocatePlayVersion({ bundles: codes, apks: [], tracks: [], releases: [] })).toThrow();
+    tracks: [{ releases: [{ versionCodes: ['102'] }] }], releases: [published], historyVersionCode: 2 })).toBe(103);
+  for (const codes of [[{ versionCode: 'bad' }], [{ versionCode: 2100000000 }]]) {
+    expect(() => allocatePlayVersion({ bundles: codes, apks: [], tracks: [], releases: [], historyVersionCode: 2 })).toThrow();
   }
 });
 
 it('runs prepare, upload, commit and observed review continuously on the same candidate', async () => {
   const f = fixture(); const save = vi.fn();
-  const candidate = await preparePlayCandidate(f.api, identity);
+  const candidate = await preparePlayCandidate(f.api, identity, { highestVersionCode: 2 });
   expect(candidate.versionCode).toBe(18);
   Object.assign(candidate, { aabSha256: sha256, phase: 'signed' });
   await uploadPlayCandidate({ api: f.api, state: candidate, bytes, save });
@@ -58,10 +58,37 @@ it('runs prepare, upload, commit and observed review continuously on the same ca
   expect(f.calls.filter(call => call.route.includes('uploadType'))).toHaveLength(1);
 });
 
+it('prepares a replacement after Play omits the empty list of current releases', async () => {
+  const f = fixture();
+  const api = async (...args) => args[1] === 'tracks/beta/releases' ? {} : f.api(...args);
+  const candidate = await preparePlayCandidate(api, identity, { highestVersionCode: 2 });
+  expect(candidate.versionCode).toBe(18);
+  expect(f.calls.some(call => call.route === 'edits')).toBe(true);
+});
+
+it('keeps a discarded upload code reserved when Play only lists an older bundle', async () => {
+  const f = fixture();
+  const api = async (...args) => {
+    if (args[1] === 'tracks/beta/releases') return {};
+    if (args[1] === 'edits/123/bundles') return { bundles: [{ versionCode: 1 }] };
+    if (args[1] === 'edits/123/tracks') return { tracks: [{ track: 'beta', releases: [{ versionCodes: ['1'] }] }] };
+    return f.api(...args);
+  };
+  const candidate = await preparePlayCandidate(api, identity, { highestVersionCode: 2 });
+  expect(candidate.versionCode).toBe(3);
+});
+
+it('rejects malformed release lists and failed inventory requests', async () => {
+  for (const response of [null, [], { releases: null }, { releases: {} }]) {
+    await expect(readPlayReleases(async () => response)).rejects.toThrow(/inventory is unavailable/u);
+  }
+  await expect(readPlayReleases(async () => { throw new Error('HTTP 403'); })).rejects.toThrow('HTTP 403');
+});
+
 it('does not create edits or upload while code2 is under review', async () => {
   const f = fixture(); f.setRelease({ ...published, activeArtifacts: [{ versionCode: 2 }],
     releaseLifecycleState: 'RELEASE_LIFECYCLE_STATE_IN_REVIEW' });
-  await expect(preparePlayCandidate(f.api, identity)).rejects.toThrow(/pending review/u);
+  await expect(preparePlayCandidate(f.api, identity, { highestVersionCode: 2 })).rejects.toThrow(/pending review/u);
   expect(f.calls).toHaveLength(1);
   for (const lifecycle of ['DRAFT', 'NOT_SENT_FOR_REVIEW', 'APPROVED_NOT_PUBLISHED', 'UNSPECIFIED']) {
     expect(() => requireNoPendingReview([{ releaseLifecycleState: `RELEASE_LIFECYCLE_STATE_${lifecycle}` }])).toThrow();

@@ -18,10 +18,15 @@ import { consumeCompanionFolderAttachmentWork } from './consumeCompanionFolderAt
 
 export const attachmentDigest = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 
+async function createFixtureRoot() {
+  await mkdir(path.resolve('.tmp/artifacts/T692'), { recursive: true });
+  return mkdtemp(path.resolve('.tmp/artifacts/T692/durable-work-'));
+}
+
 export async function folderAttachmentWorkFixture(native: {
   access: { mockImplementation(execute: (input: NativeCompanionFramedFileRequest) => Promise<unknown>): unknown };
 }, createPort: (sqlite: Database.Database) => DbPort) {
-  const root = await mkdtemp(path.resolve('.tmp/artifacts/T692/durable-work-'));
+  const root = await createFixtureRoot();
   const directory = path.join(root, 'source'), target = path.join(root, 'target');
   await mkdir(directory); await mkdir(target);
   const databasePath = path.join(root, 'source.sqlite');

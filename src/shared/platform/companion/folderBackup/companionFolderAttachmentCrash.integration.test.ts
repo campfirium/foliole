@@ -30,7 +30,10 @@ it.each(['before-source', 'after-source', 'after-ready', 'after-target', 'after-
       f.root, boundary, key, bytes.toString('base64')], {
       cwd: process.cwd(), env: process.env, encoding: 'utf8', timeout: 15000
     });
-    expect(child.signal, child.stderr).toBe('SIGKILL');
+    expect(await readFile(path.join(f.root, 'crash-boundary'), 'utf8')).toBe(boundary);
+    // Windows reports its forced process termination as exit code 1 rather than a POSIX signal.
+    expect(child.signal, child.stderr).toBe(process.platform === 'win32' ? null : 'SIGKILL');
+    expect(child.status, child.stderr).toBe(process.platform === 'win32' ? 1 : null);
     await f.reopen();
     if (boundary === 'before-source') {
       expect((await f.run()).attachmentFilesPending).toBe(1);

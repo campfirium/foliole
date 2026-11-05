@@ -87,8 +87,11 @@ public final class FolioleCompanionFolderBackupPlugin extends Plugin {
             }
             if (epoch == null || !epoch.equals(call.getString("sourceEpoch"))) throw new IllegalStateException("Database owner is closed.");
             Uri tree = data.getData();
-            int flags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-            getContext().getContentResolver().takePersistableUriPermission(tree, flags);
+            int readPermission = (data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0
+                    ? Intent.FLAG_GRANT_READ_URI_PERMISSION : 0;
+            int writePermission = (data.getFlags() & Intent.FLAG_GRANT_WRITE_URI_PERMISSION) != 0
+                    ? Intent.FLAG_GRANT_WRITE_URI_PERMISSION : 0;
+            getContext().getContentResolver().takePersistableUriPermission(tree, readPermission | writePermission);
             JSONObject profile = store.load();
             if (profile == null || !tree.toString().equals(profile.optString("tree"))) {
                 profile = new JSONObject().put("id", UUID.randomUUID().toString()).put("tree", tree.toString())

@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
+import { readPlayVersionHistory } from './play-version-history.mjs';
 import { PLAY_PACKAGE, PLAY_TRACK, readPlayReleases, requireNoPendingReview } from './play-api.mjs';
 
-export function allocatePlayVersion({ bundles, apks, tracks, releases }) {
+export function allocatePlayVersion({ bundles, apks, tracks, releases, historyVersionCode }) {
   if (![bundles, apks, tracks, releases].every(Array.isArray)) throw new Error('Incomplete Play version inventory');
-  const values = [...bundles, ...apks].map(item => item.versionCode);
+  const values = [historyVersionCode, ...[...bundles, ...apks].map(item => item.versionCode)];
   for (const track of tracks) for (const release of track.releases ?? []) values.push(...release.versionCodes ?? []);
   for (const release of releases) values.push(...(release.activeArtifacts ?? []).map(item => item.versionCode));
   const codes = values.map(Number);
@@ -24,7 +25,7 @@ export function verifyPlayCandidate(state, { sourceSha, runId, version }) {
   return state;
 }
 
-export async function preparePlayCandidate(api, identity) {
+export async function preparePlayCandidate(api, identity, history = readPlayVersionHistory()) {
   const releases = await readPlayReleases(api);
   requireNoPendingReview(releases);
   const edit = await api('POST', 'edits', {});
@@ -35,9 +36,9 @@ export async function preparePlayCandidate(api, identity) {
   ]);
   if (!tracks.tracks?.some(track => track.track === PLAY_TRACK)) throw new Error('Existing beta track was not found');
   const versionCode = allocatePlayVersion({ bundles: bundles.bundles ?? [], apks: apks.apks ?? [],
-    tracks: tracks.tracks, releases });
+    tracks: tracks.tracks, releases, historyVersionCode: history.highestVersionCode });
   const state = { schemaVersion: 1, ...identity, packageName: PLAY_PACKAGE, track: PLAY_TRACK,
-    editId: edit.id, expiryTimeSeconds: edit.expiryTimeSeconds, versionCode, phase: 'prepared' };
+    editId: edit.id, expiryTimeSeconds: edit.expiryTimeSeconds, versionCode, historyVersionCode: history.highestVersionCode, phase: 'prepared' };
   return verifyPlayCandidate(state, identity);
 }
 
