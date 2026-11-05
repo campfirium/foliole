@@ -1,6 +1,8 @@
 // @vitest-environment node
 
 import { describe, expect, it, vi } from 'vitest';
+import path from 'node:path';
+import process from 'node:process';
 import {
   activatePinnedNpm,
   isHostedPinnedNpmRegistryFailure,
@@ -46,11 +48,31 @@ describe('pinned npm quality tooling', () => {
     activatePinnedNpm({ runner, platform: 'linux', log });
 
     expect(runner.mock.calls.map(([command, args]) => [command, args])).toEqual([
-      ['corepack', ['enable', 'npm']],
+      ['corepack', ['enable', 'npm', '--install-directory', path.dirname(process.execPath)]],
       ['corepack', ['install', '--global', PINNED_NPM.descriptor]],
       ['npm', ['--version']]
     ]);
     expect(log).toHaveBeenCalledWith(`[pinned-npm] ok: ${PINNED_NPM.descriptor}`);
+  });
+
+  it('replaces npm beside the selected Node when Corepack belongs to an older runtime', () => {
+    const activeBin = path.dirname(process.execPath);
+    let activeVersion = '11.20.0';
+    const runner = vi.fn((_command, args) => {
+      if (args[0] === 'enable' && args.includes('--install-directory') && args.at(-1) === activeBin) {
+        activeVersion = PINNED_NPM.version;
+      }
+      return { status: 0, stdout: args.includes('--version') ? `${activeVersion}\n` : '', stderr: '' };
+    });
+    expect(activatePinnedNpm({ runner, platform: 'linux', log: vi.fn() })).toEqual(PINNED_NPM);
+  });
+
+  it('quotes the selected Windows Node directory when installing npm shims', () => {
+    const runner = successfulRunner();
+    activatePinnedNpm({ runner, platform: 'win32', nodeExecutable: 'C:\\Program Files\\nodejs\\node.exe',
+      windowsShell: 'cmd.exe', log: vi.fn() });
+    expect(runner.mock.calls[0][1]).toEqual(['/d', '/s', '/c',
+      'corepack.cmd enable npm --install-directory "C:\\Program Files\\nodejs"']);
   });
 
   it('retries one hosted npm registry failure and then succeeds', () => {
@@ -177,7 +199,7 @@ describe('pinned npm quality tooling', () => {
     activatePinnedNpm({ runner, platform: 'win32', windowsShell: 'cmd.exe' });
 
     expect(runner.mock.calls.map(([command, args]) => [command, args])).toEqual([
-      ['cmd.exe', ['/d', '/s', '/c', 'corepack.cmd enable npm']],
+      ['cmd.exe', ['/d', '/s', '/c', `corepack.cmd enable npm --install-directory ${path.dirname(process.execPath)}`]],
       ['cmd.exe', ['/d', '/s', '/c', `corepack.cmd install --global ${PINNED_NPM.descriptor}`]],
       ['cmd.exe', ['/d', '/s', '/c', 'npm.cmd --version']]
     ]);

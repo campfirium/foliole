@@ -46,7 +46,7 @@ function runChecked(runner, command, args, options, platform, windowsShell) {
 
 function runExecutable(runner, name, args, options, platform, windowsShell) {
   if (platform !== 'win32') return runner(name, args, options);
-  const commandLine = [`${name}.cmd`, ...args].join(' ');
+  const commandLine = [`${name}.cmd`, ...args].map(value => /\s/u.test(value) ? `"${value.replaceAll('"', '""')}"` : value).join(' ');
   return runner(windowsShell, ['/d', '/s', '/c', commandLine], options);
 }
 
@@ -122,7 +122,9 @@ export function activatePinnedNpm(options = {}) {
   const log = options.log ?? console.log;
   const pinned = readPinnedNpm(repoRoot);
   const runOptions = { cwd: repoRoot, stdio: 'inherit' };
-  runChecked(runner, 'corepack', ['enable', 'npm'], runOptions, platform, windowsShell);
+  const nodePath = platform === 'win32' ? path.win32 : path;
+  const installDirectory = nodePath.dirname(options.nodeExecutable ?? process.execPath);
+  runChecked(runner, 'corepack', ['enable', 'npm', '--install-directory', installDirectory], runOptions, platform, windowsShell);
   installPinnedNpm(pinned, {
     env,
     log,
