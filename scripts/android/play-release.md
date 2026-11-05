@@ -65,7 +65,8 @@ npm run quality:remote -- --scope full --mobile-distribution android
 `remote-quality.yml` admits only exact `check` source/workflow snapshots. Its full
 chain accepted SHA gates the Android reusable workflow. No direct workflow dispatch
 is exposed by the adapter. Package version comes from the candidate's package.json;
-versionCode comes from real Play bundle/APK/all-track inventory plus release states,
+versionCode is one above the maximum of verified durable history and current Play
+bundle/APK/all-track inventory plus release states,
 under the application-wide non-cancelling distribution concurrency group. Historical
 code conflicts from an external writer fail without automatic increment/re-upload.
 Review English `play-release-notes.txt` with the candidate before dispatch.
@@ -98,6 +99,28 @@ Official references: [API access](https://developers.google.com/android-publishe
 [safe commit](https://developers.google.com/android-publisher/api-ref/rest/v3/edits/commit),
 [release lifecycle](https://developers.google.com/android-publisher/api-ref/rest/v3/applications.tracks.releases).
 
+## Remember consumed version codes
+
+Play current-inventory APIs omit discarded or obsolete releases. The versioned
+`play-version-history.json` therefore retains the highest code proved by a Play
+receipt; missing or corrupt history fails closed. Allocation combines this floor
+with the current inventory rather than assuming either source is complete.
+
+After an attempted or confirmed upload, download the original run's newest
+`candidate.json` and retain it with the task evidence. Once QA integration and
+workspace release finish, run this from development and commit its history update
+before completing the delivery or withdrawing the new release:
+
+```sh
+node scripts/android/play-version-history.mjs record <candidate.json>
+```
+
+This accepts attempted/confirmed upload receipts, preserves their run/source/hash,
+never lowers the floor, and rejects unsigned or merely prepared candidates. An
+uncertain upload reserves its code until reconciled; it is never treated as free.
+The delivery owner performs this durable receipt step using existing repository
+permissions; the runner does not push source or gain credential permissions.
+
 ## Recover without duplicate uploads
 
 Keep the QA owner and original run. Use GitHub **Re-run failed jobs**, preserving
@@ -113,7 +136,8 @@ If commit response was lost, read the exact release name/code from the lifecycle
 endpoint. A matching observed release is resumed without upload/commit. Otherwise
 preserve the original edit and receipts; inspect Play Console before deciding any
 new operation. Console changes invalidate open API edits. Never delete the app,
-reset signing, reuse code2, replace or cancel the pending 0.7.17/code2 review.
+reset signing or reuse consumed codes. Replacing an existing review requires explicit
+authorization for that review; the safe commit guard remains enabled afterward.
 
 Distribution-only source repairs currently need a fresh full Android QA; the iOS
 `--reuse-mobile-quality` mechanism stays iOS-only. Same-run failed-job recovery
