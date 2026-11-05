@@ -19,7 +19,7 @@ it('persists the latest editor input when Done flushes before the editor debounc
       readableArticle={{ content: 'Original body', currentVersionId: 'base', hideTitleHeading: false,
         nodeId: 'topic', persistedNodeViewState: null, pdfAttachmentId: null,
         textAnchorDecorations: [], title: 'Topic' }}
-      readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default', paragraphSpacing: 0.35 }} />
+      readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default', paragraphSpacing: 0.35, fontWeight: 400, textWidth: 100 }} />
   </MouseGestureSettingsProvider></LocalizationProvider>);
   await waitFor(() => expect(editor).not.toBeNull());
   act(() => editor!.replaceRange(0, 0, 'New input '));
@@ -39,7 +39,7 @@ it('keeps buffered continued input when an earlier save acknowledgement arrives'
       readableArticle={{ content: 'Original body', currentVersionId: 'base', hideTitleHeading: false,
         nodeId: 'topic', persistedNodeViewState: null, pdfAttachmentId: null,
         textAnchorDecorations: [], title: 'Topic' }}
-      readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default', paragraphSpacing: 0.35 }} />
+      readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default', paragraphSpacing: 0.35, fontWeight: 400, textWidth: 100 }} />
   </MouseGestureSettingsProvider></LocalizationProvider>);
   await waitFor(() => expect(editor).not.toBeNull());
   act(() => editor!.replaceRange(0, 0, 'First '));
@@ -68,7 +68,7 @@ it('keeps buffered editor input when a remote source refresh arrives before Done
         readableArticle={{ content, currentVersionId: version, hideTitleHeading: false,
           nodeId: 'topic', persistedNodeViewState: null, pdfAttachmentId: null,
           textAnchorDecorations: [], title: 'Topic' }}
-        readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default', paragraphSpacing: 0.35 }} />
+        readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default', paragraphSpacing: 0.35, fontWeight: 400, textWidth: 100 }} />
     </MouseGestureSettingsProvider></LocalizationProvider>;
   const view = render(document('Original body', 'base'));
   await waitFor(() => expect(editor).not.toBeNull());

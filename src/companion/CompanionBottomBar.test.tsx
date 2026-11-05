@@ -33,7 +33,7 @@ it('uses the selected app language for every bottom navigation label', () => {
       onSecondaryDestination={() => undefined} visible />
   </LocalizationProvider>);
   for (const name of ['目录', '浏览', 'Flow', '搜索', '设置']) {
-    expect(screen.getByRole('button', { name, exact: true })).toBeVisible();
+    expect(screen.getByRole('button', { name })).toBeVisible();
   }
-  expect(screen.queryByRole('button', { name: 'Settings', exact: true })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Settings' })).not.toBeInTheDocument();
 });

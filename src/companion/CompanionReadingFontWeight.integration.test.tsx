@@ -104,9 +104,13 @@ it('keeps confirmed weight and rendered text after a failed write, then saves a 
   fireEvent.click(increase());
   const storage = window.localStorage;
   const failure = vi.spyOn(window, 'localStorage', 'get').mockReturnValue({
+    get length() { return storage.length; },
+    clear: storage.clear.bind(storage),
     getItem: storage.getItem.bind(storage),
+    key: storage.key.bind(storage),
+    removeItem: storage.removeItem.bind(storage),
     setItem: () => { throw new Error('storage denied'); }
-  } as Storage);
+  });
   fireEvent.click(increase());
   expect(screen.getByText(/Could not save reading settings/)).toHaveAttribute('role', 'alert');
   expect(value()).toHaveTextContent('450');

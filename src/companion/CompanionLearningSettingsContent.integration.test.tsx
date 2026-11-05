@@ -47,7 +47,7 @@ it('saves retention from the mobile form, keeps existing facts, grades with it a
   const before = library.database.prepare('SELECT * FROM node_review').all();
   const facts = library.database.prepare('SELECT * FROM review_log').all();
   const ui = render(<SettingsEntry />);
-  fireEvent.click(screen.getByRole('button', { name: 'Review', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Review' }));
   await changeSetting('Desired retention', '0.85');
   expect(getCurrentReviewSchedulerSettings().desiredRetention).toBe(0.85);
   expect(library.database.prepare('SELECT * FROM node_review').all()).toEqual(before);
@@ -60,7 +60,7 @@ it('saves retention from the mobile form, keeps existing facts, grades with it a
   await score('second', '2026-10-06T08:00:00Z');
   const history = await readIosCompanionDatabase(db => readNodeReviewHistoryWithDb(db, 'item'));
   expect(history.parameters.desiredRetention).toBe(0.85);
-  const expected = recomputeReview(history.events, history.parameters)!;
+  const expected = recomputeReview(history.events, history.parameters, 'item')!;
   expect(library.database.prepare("SELECT due FROM node_review WHERE node_id='item'").get()).toEqual({ due: expected.due });
   ui.unmount();
   await reopenSearchLibrary(library.root, '2026-11-03T09:00:00Z');

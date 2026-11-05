@@ -43,10 +43,10 @@ it('defaults to warm and applies all choices only in dark mode through system an
     expect(document.documentElement.dataset.pdfReadingMode).toBe(mode);
     expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.pdfReadingMode)).toBe(mode);
   }
-  fireEvent.click(screen.getByRole('button', { name: 'Light', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Light' }));
   expect(document.documentElement.dataset.pdfReadingMode).toBe('original');
   expect(option('warm')).toHaveAttribute('aria-checked', 'true');
-  fireEvent.click(screen.getByRole('button', { name: 'Dark', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Dark' }));
   expect(document.documentElement.dataset.pdfReadingMode).toBe('warm');
 });
 

@@ -20,7 +20,7 @@ function renderOutline(fixture = createOutlineFixture(), activity?: CompanionRea
 
 it('uses object icons only for Topic and Item rows and leaves chapter labels unadorned', () => {
   renderOutline();
-  expect(screen.getByRole('button', { name: 'Chapter', exact: true }).querySelector('svg, [data-node-icon]')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Chapter' }).querySelector('svg, [data-node-icon]')).toBeNull();
   for (const name of ['Alpha passage', 'Beta passage']) {
     const button = screen.getByRole('button', { name });
     expect(button.querySelector('[data-node-icon]')).not.toBeNull();
@@ -31,17 +31,17 @@ it('uses object icons only for Topic and Item rows and leaves chapter labels una
 it('shows headings and direct content together and keeps count clicks separate from navigation', () => {
   const { onSelect, onOpenNode } = renderOutline();
   expect(screen.queryByRole('tab')).toBeNull();
-  expect(screen.getByRole('button', { name: 'Chapter', exact: true })).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Detail', exact: true })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Chapter' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Detail' })).toBeVisible();
   const toggle = screen.getByRole('button', { name: 'Toggle content for Chapter (1)' });
   expect(toggle).toHaveAttribute('aria-expanded', 'true');
   fireEvent.click(toggle);
   expect(screen.queryByRole('button', { name: 'Alpha passage' })).toBeNull();
-  expect(screen.getByRole('button', { name: 'Detail', exact: true })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Detail' })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Beta passage' })).toBeVisible();
   expect(onSelect).not.toHaveBeenCalled();
   expect(onOpenNode).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Chapter', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Chapter' }));
   expect(onSelect).toHaveBeenCalledWith({ from: 19, to: 26 });
 });
 
@@ -60,7 +60,7 @@ it('locates a direct Highlight but opens an Item or an unlocated Topic as a card
 it('waits for reading work, suppresses duplicate clicks and keeps failed opening retryable', async () => {
   const activity = new CompanionReadingActivity('node-1', () => {});
   let finish!: () => void;
-  activity.flushDraft = vi.fn(() => new Promise(resolve => { finish = resolve; }));
+  activity.flushDraft = vi.fn(() => new Promise<void>(resolve => { finish = resolve; }));
   const { onOpenNode } = renderOutline(createOutlineFixture(), activity);
   const item = screen.getByRole('button', { name: 'Beta passage' });
   fireEvent.click(item);
@@ -108,22 +108,22 @@ it('expands one derived generation at a time and opens deeper cards without loca
   fixture.add('grandchild', 'Grandchild Item', 'item', 'child');
   const view = renderOutline(fixture);
   const chapter = screen.getByRole('button', { name: 'Toggle content for Chapter (1)' });
-  expect(screen.queryByRole('button', { name: 'Child Topic', exact: true })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Child Topic' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Toggle content for Alpha passage (1)' }));
-  expect(screen.getByRole('button', { name: 'Child Topic', exact: true })).toBeVisible();
-  expect(screen.queryByRole('button', { name: 'Grandchild Item', exact: true })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Child Topic' })).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Grandchild Item' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Toggle content for Child Topic (1)' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Grandchild Item', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Grandchild Item' }));
   await waitFor(() => expect(view.onOpenNode).toHaveBeenCalledExactlyOnceWith('grandchild'));
   expect(view.onSelect).not.toHaveBeenCalled();
   fireEvent.click(chapter);
-  expect(screen.queryByRole('button', { name: 'Child Topic', exact: true })).toBeNull();
-  expect(screen.getByRole('button', { name: 'Detail', exact: true })).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Child Topic' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Detail' })).toBeVisible();
   fireEvent.click(chapter);
-  expect(screen.getByRole('button', { name: 'Grandchild Item', exact: true })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Grandchild Item' })).toBeVisible();
   view.rerender(view.sheet(false));
   view.rerender(view.sheet(true));
-  expect(screen.queryByRole('button', { name: 'Child Topic', exact: true })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Child Topic' })).toBeNull();
 });
 
 it('uses fresh membership while a card opening waits for a save', async () => {

@@ -158,7 +158,7 @@ it('edits an existing grouped mask on the original Item and parent, retaining re
   await createCompanionImageCloze(request);
   const original = (await loadCompanionWorkspaceNode(request.nodeId))!;
   const parent = (await loadCompanionWorkspaceNode('topic'))!;
-  const version = await toWorkspaceNativeNodeVersion({ ...parent, imageRegions: original.imageRegions }, 'source', 'parent-regions');
+  const version = await toWorkspaceNativeNodeVersion({ ...parent, imageRegions: original.imageRegions ?? null }, 'source', 'parent-regions');
   await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [version], { enqueueSearchInvalidations: false }));
   const schedules = library!.database.prepare('SELECT * FROM node_review ORDER BY node_id').all();
   const before = request.regions[0]!;

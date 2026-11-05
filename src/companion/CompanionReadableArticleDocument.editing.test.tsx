@@ -19,7 +19,7 @@ const defaultReadingTypographySettings = {
   contrast: 'default',
   fontFamily: 'sans',
   fontSize: 'default',
-  lineHeight: 'default', paragraphSpacing: 0.35
+  lineHeight: 'default', paragraphSpacing: 0.35, fontWeight: 400, textWidth: 100
 } as const;
 
 vi.mock('@/features/editor/components/MarkdownEditor', () => ({

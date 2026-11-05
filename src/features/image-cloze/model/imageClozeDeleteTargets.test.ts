@@ -10,6 +10,6 @@ it('uses stable mask identity for modern Items even when another Item has the sa
     imageRegions: [{ attachmentId: 'image', regions: [{ id: regionId, ...rect }] }] });
   const selected = make('selected', 'region-one');
   const other = make('other', 'region-two');
-  const parent: ImageClozeNodeSource = { id: 'parent', parentNodeId: null, imageRegions: selected.imageRegions };
+  const parent: ImageClozeNodeSource = { id: 'parent', parentNodeId: null, imageRegions: selected.imageRegions ?? null };
   expect(findLiveImageClozeChildNodeIds({ nodesById: { parent, selected, other }, trashedNodeIds: [] }, 'parent', 'image', 'region-one')).toEqual(['selected']);
 });

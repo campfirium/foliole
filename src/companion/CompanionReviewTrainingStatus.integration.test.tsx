@@ -34,7 +34,7 @@ function SettingsEntry() {
 }
 
 async function openLearning() {
-  fireEvent.click(await screen.findByRole('button', { name: 'Review', exact: true }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Review' }));
   await screen.findByRole('heading', { name: 'Automatic review optimization' });
 }
 

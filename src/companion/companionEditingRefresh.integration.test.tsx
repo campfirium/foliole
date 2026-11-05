@@ -25,7 +25,7 @@ import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
   return {
-    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
+    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false },
     registerPlugin: createCompanionNativeSyncStub
   };
 });
@@ -119,7 +119,7 @@ it.each([
       readableArticle={{ content, currentVersionId, hideTitleHeading: false,
         nodeId: 'topic', persistedNodeViewState: null, pdfAttachmentId: null,
         textAnchorDecorations: [], title: 'Topic' }}
-      readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default', paragraphSpacing: 0.35 }} />
+      readingTypographySettings={{ contrast: 'default', fontFamily: 'sans', fontSize: 'default', lineHeight: 'default', paragraphSpacing: 0.35, fontWeight: 400, textWidth: 100 }} />
   </CompanionDraftProvider></MouseGestureSettingsProvider></LocalizationProvider>;
   const view = render(document(node.content, 'base'));
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'Topic body' })).toHaveAttribute('contenteditable', 'true'));

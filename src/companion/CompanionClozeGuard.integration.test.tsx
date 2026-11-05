@@ -45,7 +45,7 @@ async function mountToolbar(options: { resolve?: () => typeof payload | null; re
     onAddExistingHighlightNote={vi.fn()} onDeleteExistingHighlight={vi.fn()}
     {...(options.resolve ? { resolveSelectionPayload: options.resolve } : {})}
     state={{ left: 12, top: 12, noteLeft: 12, noteTop: 52, payload }} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Cloze', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Cloze' }));
   return { ...ui, onApply, onClose };
 }
 
@@ -65,7 +65,7 @@ it.each(['Cloze', 'Highlight'])('confirms %s using the captured selection after 
   let current: typeof payload | null = payload;
   const ui = await mountToolbar({ resolve: () => current });
   current = null;
-  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: choice, exact: true }));
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: choice }));
   await waitFor(() => expect(ui.onClose).toHaveBeenCalledTimes(1));
   expect(creations()).toHaveLength(1);
   const id = creations()[0]!.id;
@@ -97,13 +97,13 @@ it('keeps the original payload after a write failure and retries without a parti
   const ui = await mountToolbar({ resolve: () => current });
   current = null;
   library.database.exec("CREATE TRIGGER reject_cloze BEFORE INSERT ON nodes BEGIN SELECT RAISE(ABORT,'full'); END");
-  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cloze', exact: true }));
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cloze' }));
   await screen.findAllByRole('alert');
   expect(ui.onClose).not.toHaveBeenCalled();
   expect(creations()).toEqual([]);
   expect(library.database.prepare('SELECT * FROM node_review').all()).toEqual([]);
   library.database.exec('DROP TRIGGER reject_cloze');
-  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cloze', exact: true }));
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cloze' }));
   await waitFor(() => expect(ui.onClose).toHaveBeenCalledTimes(1));
   expect(creations()).toHaveLength(1);
   expect((await loadCompanionWorkspaceNode(creations()[0]!.id))?.reveal).toBe(answer);
@@ -113,10 +113,10 @@ it('retries only refresh after a confirmed creation was already committed', asyn
   vi.spyOn(console, 'error').mockImplementation(() => {});
   const refresh = vi.fn().mockRejectedValueOnce(new Error('refresh')).mockResolvedValue(undefined);
   const ui = await mountToolbar({ refresh });
-  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cloze', exact: true }));
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cloze' }));
   await screen.findAllByRole('alert');
   expect(creations()).toHaveLength(1);
-  expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cloze', exact: true })).toBeDisabled();
+  expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cloze' })).toBeDisabled();
   await act(async () => { fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Refresh' })); });
   expect(ui.onClose).toHaveBeenCalledTimes(1);
   expect(creations()).toHaveLength(1);

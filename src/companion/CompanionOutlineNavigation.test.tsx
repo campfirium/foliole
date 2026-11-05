@@ -30,7 +30,7 @@ it('locates headings and direct Highlights repeatedly and opens Items through th
   fireEvent.click(body);
   for (const label of ['Chapter', 'Alpha passage', 'Alpha passage']) {
     fireEvent.click(screen.getByRole('button', { name: 'Outline' }));
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: label, exact: true }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: label }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     await waitFor(() => expect(editor.state.selection.main.from).toBe(selection(label!).from));
     expect(editor.state.doc.toString()).toBe(content);

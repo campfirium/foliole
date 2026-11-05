@@ -70,8 +70,8 @@ async function createFromToolbar(choice?: string) {
     onApply={async (...args) => { await handle(...args); }} onClose={close}
     onAddExistingHighlightNote={vi.fn()} onDeleteExistingHighlight={vi.fn()}
     state={{ left: 12, top: 12, noteLeft: 12, noteTop: 52, payload }} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Cloze', exact: true }));
-  if (choice) fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: choice, exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Cloze' }));
+  if (choice) fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: choice }));
   await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
   ui.unmount();
   const rows = library.database.prepare("SELECT id,kind FROM nodes WHERE parent_id='source'").all() as { id: string; kind: string }[];

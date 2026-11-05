@@ -7,7 +7,7 @@ import { CompanionPageStack } from './CompanionPageStack';
 import type { CompanionShellModel } from './CompanionShell';
 
 type AnimationSample = {
-  target: HTMLElement; cancel: ReturnType<typeof vi.fn>; finish(): void; keyframes: Keyframe[]; options: KeyframeAnimationOptions;
+  target: HTMLElement; cancel: ReturnType<typeof vi.fn<() => void>>; finish(): void; keyframes: Keyframe[]; options: KeyframeAnimationOptions;
 };
 const samples: AnimationSample[] = [];
 const readerSamples = () => samples.filter(sample => sample.target.hasAttribute('data-companion-article-transition'));

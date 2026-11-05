@@ -70,7 +70,7 @@ describe('CompanionSettingsShellContent', () => {
   it('opens the debug placeholder page', () => {
     render(<SettingsHarness />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Debug', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Debug' }));
     expect(screen.getByText('Diagnostics')).toBeInTheDocument();
   });
 

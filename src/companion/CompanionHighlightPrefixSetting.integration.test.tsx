@@ -42,7 +42,7 @@ function mountSettings() {
 }
 
 function openSetting() {
-  fireEvent.click(screen.getByRole('button', { name: title, exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: title }));
   return screen.getByRole('textbox', { name: title });
 }
 

@@ -225,7 +225,7 @@ describe('CompanionShell navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Outline' }));
     expect(screen.getByRole('dialog', { name: 'Outline' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Readable article' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Chapter', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Chapter' }));
     expect(screen.queryByRole('dialog', { name: 'Outline' })).not.toBeInTheDocument();
     const from = surface.readableArticle.content.indexOf('Chapter');
     expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-from', String(from));

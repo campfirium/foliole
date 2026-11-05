@@ -59,9 +59,9 @@ it('keeps the status bar outside Outline and restores the reading layout after c
   await applied(true, true);
   fireEvent.click(screen.getByText('Reading body'));
   await applied(true);
-  fireEvent.click(screen.getByRole('button', { name: 'Outline', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Outline' }));
   await applied(false);
-  fireEvent.click(within(screen.getByRole('dialog', { name: 'Outline' })).getByRole('button', { name: 'Done', exact: true }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Outline' })).getByRole('button', { name: 'Done' }));
   await applied(true);
   expect(JSON.parse(localStorage.getItem(key)!)).toEqual({ hideSystemStatusBar: true });
 });
