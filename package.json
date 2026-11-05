@@ -216,7 +216,7 @@
     "database:audit": "node --no-warnings scripts/database/database-audit.mjs"
   },
   "engines": {
-    "node": ">=26.13.0 <27"
+    "node": "v26.13.0"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "8.1.1",
