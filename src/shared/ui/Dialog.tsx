@@ -24,7 +24,7 @@ AppDialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 type AppDialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
   layout?: 'bare' | 'task' | 'notice';
-  placement?: 'center' | 'bottom';
+  placement?: 'center' | 'bottom' | 'fullscreen';
 };
 
 const AppDialogContent = React.forwardRef<
@@ -59,7 +59,9 @@ const AppDialogContent = React.forwardRef<
       className={cn(
         appFloatingSurfaceClassName('panel'),
         'fixed z-modal text-foreground outline-none',
-        placement === 'center' ? 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2' : 'inset-x-0 bottom-0',
+        placement === 'center' && 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
+        placement === 'bottom' && 'inset-x-0 bottom-0',
+        placement === 'fullscreen' && 'inset-0',
         layout !== 'bare' && [
           'flex flex-col overflow-hidden !bg-canvas p-0',
           '[&>[data-app-dialog-title]]:m-0 [&>[data-app-dialog-title]]:flex [&>[data-app-dialog-title]]:min-h-14 [&>[data-app-dialog-title]]:shrink-0 [&>[data-app-dialog-title]]:items-center',

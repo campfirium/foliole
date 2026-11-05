@@ -1,3 +1,5 @@
+import { readFile, readdir } from 'node:fs/promises';
+
 import { expect, test, type Page } from '@playwright/test';
 
 async function openOutline(page: Page, scenario: string) {
@@ -15,6 +17,23 @@ async function openOutline(page: Page, scenario: string) {
   await page.getByRole('button', { name: 'Outline', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Outline' })).toBeVisible();
 }
+
+test('keeps Outline on screen with the bundled companion styles', async ({ page }) => {
+  const assets = `${process.cwd()}/dist/companion/assets`;
+  const files = (await readdir(assets)).filter(file => file.endsWith('.css'));
+  expect(files.length).toBeGreaterThan(0);
+  const css = (await Promise.all(files.map(file => readFile(`${assets}/${file}`, 'utf8')))).join('\n');
+  await page.setViewportSize({ width: 393, height: 823 });
+  await openOutline(page, 'headings');
+  await page.evaluate(() => document.querySelectorAll('style, link[rel="stylesheet"]').forEach(node => node.remove()));
+  await page.addStyleTag({ content: css });
+  const dialog = page.getByRole('dialog', { name: 'Outline' });
+  expect(await dialog.boundingBox()).toMatchObject({ x: 0, y: 0, width: 393, height: 823 });
+  await page.getByRole('button', { name: 'Toggle content for Source heading (2)' }).click();
+  await expect(page.getByRole('button', { name: 'Source heading', exact: true })).toBeInViewport();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+});
 
 for (const width of [320, 375]) {
   for (const colorScheme of ['light', 'dark'] as const) {

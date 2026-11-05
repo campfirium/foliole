@@ -18,7 +18,7 @@ export function CompanionFullscreenSheet(props: {
   return <AppDialog onOpenChange={props.onOpenChange} open={props.open}>
     <AppDialogPortal>
       <AppDialogOverlay />
-      <AppDialogContent className={`companion-fullscreen-sheet ${companionMobileRailClassName}`}
+      <AppDialogContent placement="fullscreen" className={`companion-fullscreen-sheet ${companionMobileRailClassName}`}
         onOpenAutoFocus={() => { opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; }}
         onCloseAutoFocus={event => {
           if (!opener.current?.isConnected) return;
