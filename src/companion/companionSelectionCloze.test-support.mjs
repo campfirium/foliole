@@ -84,7 +84,7 @@ async function holdUntilSelectionRecalculated(page, frame, result) {
 async function checkCreation(frame, databaseFile, expectedAnswer, expectedCount) {
   await selectText(frame, expectedAnswer, expectedCount > 1);
   await frame.getByRole('toolbar').getByRole('button', { name: 'Cloze', exact: true }).click();
-  await frame.getByRole('toolbar').waitFor({ state: 'hidden' });
+  await frame.getByRole('toolbar').getByRole('button', { name: 'Delete cloze', exact: true }).waitFor();
   assert.equal(await frame.evaluate(() => window.getSelection()?.toString()), '');
   const nodes = readNodes(databaseFile);
   const items = nodes.filter(node => node.kind === 'item');
