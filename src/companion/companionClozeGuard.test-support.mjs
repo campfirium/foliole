@@ -2,21 +2,22 @@
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { chromium } from '@playwright/test';
 import Database from 'better-sqlite3';
 import { createServer } from 'vite';
 
-const answer = 'A selected answer long enough to trigger protection';
+export const answer = 'A selected answer long enough to trigger protection';
 const secondAnswer = 'A different selected answer for creating a highlight';
-const content = `# Long topic\n\n${answer}. ${secondAnswer}. ${'The rest of this topic provides context for reading. '.repeat(15)}`;
+export const content = `# Long topic\n\n${answer}. ${secondAnswer}. ${'The rest of this topic provides context for reading. '.repeat(15)}`;
 
-function withDatabase(file, run) {
+export function withDatabase(file, run) {
   const db = new Database(file);
   try { return run(db); } finally { db.close(); }
 }
 
-async function selectAnswer(page, selected = answer) {
+export async function selectAnswer(page, selected = answer, waitForGuard = true) {
   await page.locator('[data-node-id="guard-source"]').evaluate((article, text) => {
     const walker = document.createTreeWalker(article, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
@@ -35,7 +36,7 @@ async function selectAnswer(page, selected = answer) {
   }, selected);
   await page.locator('[data-node-id="guard-source"]').dispatchEvent('pointerup', { pointerType: 'touch' });
   await page.getByRole('toolbar').getByRole('button', { name: 'Cloze', exact: true }).click();
-  await page.getByRole('dialog').waitFor();
+  if (waitForGuard) await page.getByRole('dialog').waitFor();
 }
 
 async function verifyJourney(page, frame, file, output, result) {
@@ -130,4 +131,4 @@ async function main() {
   }
 }
 
-await main();
+if (path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

@@ -5,6 +5,10 @@ import { APP_SETTINGS_STORAGE_KEYS } from './appSettings';
 
 const LONG_CLOZE_FRONT_GUARD_THRESHOLD = 500;
 const LONG_CLOZE_SELECTION_GUARD_MIN = 20;
+export const LONG_CLOZE_GUARD_LIMITS = {
+  selectionMin: { min: 0, max: 500 },
+  frontMax: { min: 50, max: 10000 }
+} as const;
 const LONG_CLOZE_FRONT_GUARD_MODE_OPTIONS = ['remind', 'convert', 'off'] as const;
 
 export type LongClozeFrontGuardMode = (typeof LONG_CLOZE_FRONT_GUARD_MODE_OPTIONS)[number];
@@ -36,8 +40,8 @@ export function getLongClozeSelectionGuardMin(): number {
   return normalizeGuardNumber(
     getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.longClozeFrontGuardSelectionMin),
     LONG_CLOZE_SELECTION_GUARD_MIN,
-    0,
-    500
+    LONG_CLOZE_GUARD_LIMITS.selectionMin.min,
+    LONG_CLOZE_GUARD_LIMITS.selectionMin.max
   );
 }
 
@@ -45,8 +49,8 @@ export function getLongClozeFrontGuardThreshold(): number {
   return normalizeGuardNumber(
     getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.longClozeFrontGuardFrontMax),
     LONG_CLOZE_FRONT_GUARD_THRESHOLD,
-    50,
-    10000
+    LONG_CLOZE_GUARD_LIMITS.frontMax.min,
+    LONG_CLOZE_GUARD_LIMITS.frontMax.max
   );
 }
 
@@ -57,13 +61,19 @@ export function setLongClozeFrontGuardMode(value: string): LongClozeFrontGuardMo
 }
 
 export function setLongClozeSelectionGuardMin(value: string | number): number {
-  const nextValue = normalizeGuardNumber(value, LONG_CLOZE_SELECTION_GUARD_MIN, 0, 500);
+  const nextValue = normalizeGuardNumber(
+    value, LONG_CLOZE_SELECTION_GUARD_MIN,
+    LONG_CLOZE_GUARD_LIMITS.selectionMin.min, LONG_CLOZE_GUARD_LIMITS.selectionMin.max
+  );
   setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.longClozeFrontGuardSelectionMin, String(nextValue));
   return nextValue;
 }
 
 export function setLongClozeFrontGuardThreshold(value: string | number): number {
-  const nextValue = normalizeGuardNumber(value, LONG_CLOZE_FRONT_GUARD_THRESHOLD, 50, 10000);
+  const nextValue = normalizeGuardNumber(
+    value, LONG_CLOZE_FRONT_GUARD_THRESHOLD,
+    LONG_CLOZE_GUARD_LIMITS.frontMax.min, LONG_CLOZE_GUARD_LIMITS.frontMax.max
+  );
   setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.longClozeFrontGuardFrontMax, String(nextValue));
   return nextValue;
 }

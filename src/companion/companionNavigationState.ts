@@ -23,7 +23,7 @@ const navigationSchema = z.object({
   isBrowseDirectoryOpen: z.boolean(),
   flowSessionMode: z.enum(['recommended', 'review-first', 'reading-only']).default('recommended'),
   directorySelection,
-  settingsPage: z.enum(['learning', 'foregroundTime', 'reviewStatistics', 'list', 'sync', 'device', 'storage', 'backup', 'attachments', 'appearance', 'debug',
+  settingsPage: z.enum(['learning', 'clozeGuard', 'foregroundTime', 'reviewStatistics', 'list', 'sync', 'device', 'storage', 'backup', 'attachments', 'appearance', 'debug',
     'tabs', 'syncGroup', 'syncActivity', 'syncConnection']),
   searchTopicNodeId: z.string().nullable(),
   searchQuery: z.string(),

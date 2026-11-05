@@ -6,6 +6,7 @@ import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 export type CompanionSettingsPage =
   | 'learning'
+  | 'clozeGuard'
   | 'foregroundTime'
   | 'reviewStatistics'
   | 'list'

@@ -42,9 +42,10 @@ describe('CompanionTopBarPropsModel', () => {
   });
 
   it('lets every settings detail return to its parent', () => {
-    for (const page of ['learning', 'foregroundTime', 'reviewStatistics', 'backup', 'appearance', 'debug', 'sync', 'device', 'tabs']) {
+    for (const page of ['clozeGuard', 'learning', 'foregroundTime', 'reviewStatistics', 'backup', 'appearance', 'debug', 'sync', 'device', 'tabs']) {
       expect(buildTopBarProps(page)).toMatchObject({ backLabel: 'Settings', onBack: expect.any(Function) });
     }
+    expect(buildTopBarProps('clozeGuard')).toMatchObject({ title: 'Cloze guard' });
     expect(buildTopBarProps('foregroundTime')).toMatchObject({ title: 'Foreground time' });
   });
 

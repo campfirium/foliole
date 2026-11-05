@@ -1,4 +1,4 @@
-import { BookOpen, Bug, CalendarDays, Clock, Database, HardDrive, Palette, RefreshCw, type LucideIcon } from 'lucide-react';
+import { BookOpen, Bug, CalendarDays, Clock, Database, HardDrive, Palette, RefreshCw, RectangleEllipsis, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { useAttachmentStorageSettings } from '../features/settings/components/sections/useAttachmentStorageSettings';
@@ -73,6 +73,7 @@ export function CompanionSettingsList(props: {
   onOpenAppearance(): void;
   onOpenDebug(): void;
   onOpenLearning?(): void;
+  onOpenClozeGuard?(): void;
   onOpenForegroundTime?(): void;
   onOpenReviewStatistics?(): void;
   onOpenBackup(): void;
@@ -93,9 +94,11 @@ export function CompanionSettingsList(props: {
             title={t('companion.settings.sync.title')}
           />
         </SettingsListSection>
-        {props.onOpenLearning || props.onOpenForegroundTime || props.onOpenReviewStatistics ? <SettingsListSection title={t('companion.settings.learning.section')}>
+        {props.onOpenLearning || props.onOpenClozeGuard || props.onOpenForegroundTime || props.onOpenReviewStatistics ? <SettingsListSection title={t('companion.settings.learning.section')}>
           {props.onOpenLearning ? <SettingsListItem Icon={BookOpen} detail="" onClick={props.onOpenLearning}
             title={t('companion.settings.learning.title')} /> : null}
+          {props.onOpenClozeGuard ? <SettingsListItem Icon={RectangleEllipsis} detail="" onClick={props.onOpenClozeGuard}
+            title={t('settings.editor.clozeGuard.section')} /> : null}
           {props.onOpenReviewStatistics ? <SettingsListItem Icon={CalendarDays} detail="" onClick={props.onOpenReviewStatistics}
             title={t('desktop.reviewCalendar.title')} /> : null}
           {props.onOpenForegroundTime ?

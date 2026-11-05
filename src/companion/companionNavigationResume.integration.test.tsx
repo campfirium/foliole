@@ -234,11 +234,11 @@ it('opens a new PDF search target instead of applying an older reading position'
   expect(saved.pdfPositionById.pdf).toBeUndefined();
 });
 
-it('keeps the settings subpage after reopening before joining a workspace', async () => {
+it.each(['backup', 'clozeGuard'] as const)('keeps the %s settings subpage after reopening before joining a workspace', async settingsPage => {
   await saveCompanionNavigationResume('unjoined', JSON.stringify({
-    ...initialCompanionNavigation(false), settingsPage: 'backup'
+    ...initialCompanionNavigation(false), settingsPage
   }));
   await library.reopen();
   render(<CompanionNavigationProvider ready snapshot={null} libraryScope="unjoined"><Page /></CompanionNavigationProvider>);
-  await waitFor(() => expect(screen.getByTestId('page')).toHaveTextContent('more:backup'));
+  await waitFor(() => expect(screen.getByTestId('page')).toHaveTextContent(`more:${settingsPage}`));
 });

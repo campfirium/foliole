@@ -1,4 +1,5 @@
 export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
+  'companion.settings.clozeGuard.loadError': 'Cloze guard settings could not be loaded. Try again.',
   'companion.settings.storage.clearConfirm': 'Clear data',
   'companion.settings.storage.backupFailedReason': 'Backup failed: {reason}',
   'companion.settings.storage.backupReselectHint': 'Choose the backup folder again.',

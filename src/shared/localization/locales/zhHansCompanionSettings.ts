@@ -1,6 +1,7 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.settings.clozeGuard.loadError': '无法读取挖空保护设置，请重试。',
   'companion.settings.storage.clearConfirm': '清除数据',
   'companion.settings.storage.backupFailedReason': '备份失败：{reason}',
   'companion.settings.storage.backupReselectHint': '请重新选择备份文件夹。',

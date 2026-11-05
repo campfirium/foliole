@@ -4,6 +4,7 @@ import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDa
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
 import { SettingsTouchSurface } from '../shared/ui/SettingsTouchSurface';
 
+import { CompanionClozeGuardSettingsContent } from './CompanionClozeGuardSettingsContent';
 import { CompanionColorModeControl } from './CompanionColorModeControl';
 import { useOptionalCompanionCustomCss } from './CompanionCustomCssProvider';
 import { CompanionCustomCssSettingsContent } from './CompanionCustomCssSettingsContent';
@@ -76,6 +77,7 @@ function CompanionSettingsHome(props: CompanionSettingsContentProps) {
   return (
     <CompanionSettingsList
       onOpenAppearance={() => props.onOpenSyncSettingsPage('appearance')}
+      onOpenClozeGuard={() => props.onOpenSyncSettingsPage('clozeGuard')}
       onOpenLearning={() => props.onOpenSyncSettingsPage('learning')}
       onOpenForegroundTime={() => props.onOpenSyncSettingsPage('foregroundTime')}
       onOpenReviewStatistics={() => props.onOpenSyncSettingsPage('reviewStatistics')}
@@ -93,6 +95,7 @@ function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
   if (props.settingsPage === 'list' || props.settingsPage === 'storage') return <CompanionSettingsHome {...props} />;
   if (props.settingsPage === 'backup') return <CompanionFolderDatabaseBackupSection />;
   if (props.settingsPage === 'attachments') return <SettingsAttachmentStorageSection mobile unavailable={getCompanionRuntimeCapability().kind === 'browser-preview'} />;
+  if (props.settingsPage === 'clozeGuard') return <CompanionClozeGuardSettingsContent />;
   if (props.settingsPage === 'learning') return <CompanionLearningSettingsContent />;
   if (props.settingsPage === 'reviewStatistics') return <CompanionReviewStatisticsContent
     libraryScope={props.workspaceSync.state.workspace_snapshot?.libraryScope ?? ''} />;
