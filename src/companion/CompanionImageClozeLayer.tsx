@@ -22,7 +22,7 @@ export function CompanionImageClozeLayer(props: {
   const accepted = useRef<string | null>(null);
   const snapshot = props.workspaceSync.state.workspace_snapshot;
   const node = snapshot?.nodesById[props.nodeId];
-  useCompanionImageClozePresentation(snapshot, props.nodeId);
+  const savedRegions = useCompanionImageClozePresentation(snapshot, props.nodeId);
   useEffect(() => subscribeCompanionReadingScope(() => setDraft(null)), []);
   useEffect(() => { setDraft(null); accepted.current = null; }, [props.nodeId]);
   function open(event: MouseEvent<HTMLDivElement>) {
@@ -56,6 +56,7 @@ export function CompanionImageClozeLayer(props: {
   return <div className="contents" onClickCapture={open}>
     {props.children}
     {draft ? <CompanionImageClozeEditor key={draft.nodeId} attachmentId={draft.attachmentId} src={draft.src}
+      savedRegions={savedRegions.filter(region => region.attachmentId === draft.attachmentId)}
       onCancel={() => { void props.activity.run('image-cloze', async () => {}); setDraft(null); }} onConfirm={confirm} /> : null}
   </div>;
 }

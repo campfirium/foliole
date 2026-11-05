@@ -23,4 +23,7 @@ export function useCompanionImageClozePresentation(snapshot: WorkspaceSnapshot |
       unregisterImageClozeEditorPresentation(nodeId + '::answer');
     };
   }, [nodeId, snapshot]);
+  const node = snapshot?.nodesById[nodeId];
+  return node && snapshot ? listImageClozePresentationRegions(mergeImageClozeRegionGroups(node.imageRegions,
+    deriveImageClozeRegionsFromChildren({ nodeId, nodesById: snapshot.nodesById, trashedNodeIds: snapshot.trashedNodeIds }))) : [];
 }

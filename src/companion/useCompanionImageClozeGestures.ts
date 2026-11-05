@@ -36,7 +36,7 @@ export function useCompanionImageClozeGestures(args: {
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     const points = [...pointers.current.values()];
     const point = center(points);
-    if (latest.current.marking) {
+    if (latest.current.marking && start.region && points.length === 1) {
       if (start.region && points.length === 1 && start.size.width > 0 && start.size.height > 0) latest.current.updateRegion({
         ...start.region, ...changeImageClozeRect(start.region, start.handle, (point.x - start.point.x) / start.size.width, (point.y - start.point.y) / start.size.height)
       });
@@ -45,13 +45,16 @@ export function useCompanionImageClozeGestures(args: {
     const bounds = event.currentTarget.getBoundingClientRect();
     const zoom = zoomImageClozeView(start.view, start.distance ? start.view.scale * distance(points) / start.distance : start.view.scale,
       { x: start.point.x - bounds.left - bounds.width / 2, y: start.point.y - bounds.top - bounds.height / 2 });
-    latest.current.setView({ ...zoom, x: zoom.x + point.x - start.point.x, y: zoom.y + point.y - start.point.y });
+    const maxX = Math.max(0, (start.size.width / start.view.scale * zoom.scale - bounds.width) / 2);
+    const maxY = Math.max(0, (start.size.height / start.view.scale * zoom.scale - bounds.height) / 2);
+    const clamp = (value: number, limit: number) => Math.max(-limit, Math.min(limit, value));
+    latest.current.setView({ ...zoom, x: clamp(zoom.x + point.x - start.point.x, maxX), y: clamp(zoom.y + point.y - start.point.y, maxY) });
   }
   function end(event: PointerEvent<HTMLDivElement>) {
     pointers.current.delete(event.pointerId);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    drag.current = null;
-    pointers.current.clear();
+    const point = [...pointers.current.values()][0];
+    drag.current = point && drag.current ? { ...drag.current, point, view: latest.current.view, distance: 0, region: undefined, size: event.currentTarget.querySelector('[data-cloze-image]')!.getBoundingClientRect() } : null;
   }
   return { onPointerDown: begin, onPointerMove: move, onPointerUp: end, onPointerCancel: end };
 }

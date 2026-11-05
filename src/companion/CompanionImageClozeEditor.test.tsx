@@ -34,7 +34,6 @@ function open(confirm = vi.fn<(regions: ImageClozeDraftRegion[]) => Promise<void
 
 it('positions the image, then moves and resizes a mask in original-image coordinates before confirming', async () => {
   const { confirm } = open();
-  fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
   fireEvent.click(screen.getByRole('button', { name: 'Add mask' }));
   const mask = screen.getByLabelText('Mask 1');
   fireEvent.pointerDown(mask, { button: 0, clientX: 160, clientY: 260 });
@@ -92,11 +91,34 @@ it('pinches and pans in positioning mode before adding a mask', async () => {
   fireEvent.pointerMove(canvas, { pointerId: 2, clientX: 300, clientY: 300 });
   expect(canvas.querySelector('[data-cloze-image]')).toHaveStyle({ transform: 'translate(-50%, -50%) translate(100px, 0px) scale(2)' });
   fireEvent.pointerUp(canvas, { pointerId: 2 });
-  fireEvent.pointerDown(canvas, { pointerId: 3, button: 0, clientX: 100, clientY: 100 });
-  fireEvent.pointerMove(canvas, { pointerId: 3, clientX: 120, clientY: 140 });
-  fireEvent.pointerUp(canvas, { pointerId: 3 });
-  expect(canvas.querySelector('[data-cloze-image]')).toHaveStyle({ transform: 'translate(-50%, -50%) translate(120px, 40px) scale(2)' });
+  fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 120, clientY: 340 });
+  fireEvent.pointerUp(canvas, { pointerId: 1 });
+  expect(canvas.querySelector('[data-cloze-image]')).toHaveStyle({ transform: 'translate(-50%, -50%) translate(120px, 0px) scale(2)' });
   fireEvent.click(screen.getByRole('button', { name: 'Add mask' }));
   fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
   await waitFor(() => expect(confirm).toHaveBeenCalledOnce());
+});
+
+it('uses pinch gestures while adjusting a mask and keeps the image within reach after a large pan', () => {
+  open();
+  fireEvent.click(screen.getByRole('button', { name: 'Add mask' }));
+  const canvas = screen.getByTestId('image-cloze-canvas');
+  const plane = canvas.querySelector<HTMLElement>('[data-cloze-image]')!;
+  fireEvent.pointerDown(canvas, { pointerId: 1, button: 0, clientX: 100, clientY: 300 });
+  fireEvent.pointerDown(canvas, { pointerId: 2, button: 0, clientX: 200, clientY: 300 });
+  fireEvent.pointerMove(canvas, { pointerId: 2, clientX: 300, clientY: 300 });
+  expect(plane.style.transform).toContain('scale(2)');
+  fireEvent.pointerUp(canvas, { pointerId: 2 });
+  fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 10000, clientY: 10000 });
+  const match = plane.style.transform.match(/translate\(([-.\d]+)px, ([-.\d]+)px\)/)!;
+  expect(Math.abs(Number(match[1]))).toBeLessThanOrEqual(600);
+  expect(Math.abs(Number(match[2]))).toBeLessThanOrEqual(100);
+  expect(screen.getByLabelText('Mask 1')).toBeVisible();
+});
+
+it('fits an already loaded cached image without waiting for another load event', () => {
+  vi.spyOn(HTMLImageElement.prototype, 'complete', 'get').mockReturnValue(true);
+  renderWithLocalization(<CompanionImageClozeEditor attachmentId={hash} src="cached.png" onConfirm={async () => {}} onCancel={() => {}} />);
+  expect(screen.getByRole('button', { name: 'Add mask' })).toBeEnabled();
+  expect(screen.getByAltText('Original image').parentElement).toHaveStyle({ width: '400px', height: '200px' });
 });

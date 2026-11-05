@@ -3,7 +3,7 @@ export const EN_COMPANION_IMAGE_CLOZE_TRANSLATIONS = {
   'companion.imageCloze.title': 'Image cloze',
   'companion.imageCloze.saving': 'Creating…',
   'companion.imageCloze.positionHelp': 'Pinch to zoom and drag to position the image. Then add a mask.',
-  'companion.imageCloze.markHelp': 'Drag a mask to move it. Drag its corners to resize it.',
+  'companion.imageCloze.markHelp': 'Pinch to zoom. Drag the image to move it, or drag a mask and its corners to adjust it.',
   'companion.imageCloze.source': 'Original image',
   'companion.imageCloze.region': 'Mask {number}',
   'companion.imageCloze.missing': 'The image is unavailable. Cancel and reopen it after the image is restored.',

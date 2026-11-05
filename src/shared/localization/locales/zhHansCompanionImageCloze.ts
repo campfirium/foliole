@@ -3,7 +3,7 @@ export const ZH_HANS_COMPANION_IMAGE_CLOZE_TRANSLATIONS = {
   'companion.imageCloze.title': '图片挖空',
   'companion.imageCloze.saving': '正在创建…',
   'companion.imageCloze.positionHelp': '双指缩放、拖动图片，定好位置后添加遮罩。',
-  'companion.imageCloze.markHelp': '拖动遮罩调整位置，拖动四角调整大小。',
+  'companion.imageCloze.markHelp': '双指缩放，拖动图片定位；拖动标记和四角调整挖空范围。',
   'companion.imageCloze.source': '原图',
   'companion.imageCloze.region': '遮罩 {number}',
   'companion.imageCloze.missing': '图片暂不可用，请取消，待图片恢复后重新打开。',

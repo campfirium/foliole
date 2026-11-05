@@ -76,6 +76,21 @@ it('uses the actual reading image tap, creates in SQLite, refreshes parent masks
   workspace.state = await loadCompanionWorkspaceSyncState();
   view.rerender(renderArticle());
   await waitFor(() => expect(view.container.querySelector('[data-region-state="outlined"]')).toBeTruthy());
+  // Continue from the refreshed reading surface, without rebuilding the layer.
+  fireEvent.click(view.container.querySelector('.cm-md-image-element')!);
+  const editor = await screen.findByRole('dialog');
+  expect(editor.querySelectorAll('[data-region-state="outlined"]')).toHaveLength(1);
+  fireEvent.load(screen.getByAltText('Original image'));
+  fireEvent.click(screen.getByRole('button', { name: 'Add mask' }));
+  expect(editor.querySelectorAll('[data-region-state="outlined"]')).toHaveLength(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(library.database.prepare("SELECT count(*) FROM nodes WHERE kind='item'").pluck().get()).toBe(2);
+  workspace.state = await loadCompanionWorkspaceSyncState();
+  view.rerender(renderArticle());
+  fireEvent.click(view.container.querySelector('.cm-md-image-element')!);
+  expect((await screen.findByRole('dialog')).querySelectorAll('[data-region-state="outlined"]')).toHaveLength(2);
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   await reopenSearchLibrary(library.root, '2026-11-05T12:00:00Z');
   expect(await loadCompanionWorkspaceNode(ids[0]!.id)).toEqual(saved);
   workspace.state = await loadCompanionWorkspaceSyncState();
