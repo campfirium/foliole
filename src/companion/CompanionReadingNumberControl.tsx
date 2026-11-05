@@ -11,6 +11,8 @@ export function CompanionReadingNumberControl(props: {
   step: number;
   unit?: string;
   disabled?: boolean;
+  busy?: boolean;
+  onStep?(direction: -1 | 1): void;
   valueControl?: ReactNode;
   onChange(value: number): void;
 }) {
@@ -27,16 +29,16 @@ export function CompanionReadingNumberControl(props: {
     <div className="flex min-h-14 items-center justify-between gap-3 border-b border-companion-divider py-2">
       <span className="min-w-0 text-sm font-medium text-foreground">{props.label}</span>
       <div className="flex shrink-0 items-center gap-2">
-        {props.valueControl ?? <output aria-label={props.label} aria-live="polite" className="min-w-12 text-right text-sm tabular-nums text-companion-text-secondary">
+        {props.valueControl ?? <output aria-label={props.label} aria-busy={props.busy} aria-live="polite" className="min-w-12 text-right text-sm tabular-nums text-companion-text-secondary">
           {props.value}{props.unit}
         </output>}
         <div className="flex divide-x divide-companion-divider rounded-md border border-companion-divider">
           <button aria-label={t('companion.reading.font.decrease', { setting: props.label })}
-            className={buttonClass} disabled={props.disabled || props.value <= props.min} onClick={() => change(-1)} type="button">
+            className={buttonClass} disabled={props.disabled || props.value <= props.min} onClick={() => props.onStep ? props.onStep(-1) : change(-1)} type="button">
             <Minus aria-hidden="true" size={16} />
           </button>
           <button aria-label={t('companion.reading.font.increase', { setting: props.label })}
-            className={buttonClass} disabled={props.disabled || props.value >= (props.max ?? Number.MAX_SAFE_INTEGER)} onClick={() => change(1)} type="button">
+            className={buttonClass} disabled={props.disabled || props.value >= (props.max ?? Number.MAX_SAFE_INTEGER)} onClick={() => props.onStep ? props.onStep(1) : change(1)} type="button">
             <Plus aria-hidden="true" size={16} />
           </button>
         </div>

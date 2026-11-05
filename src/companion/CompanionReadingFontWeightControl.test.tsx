@@ -25,10 +25,10 @@ it('waits for the stored font to load before checking its glyphs and retains the
   render(<CompanionReadingFontWeightControl settings={settings} onChange={onChange} fontRevision={0} />);
   await waitFor(() => expect(mocks.activate).toHaveBeenCalledTimes(1));
   expect(mocks.probe).not.toHaveBeenCalled();
-  expect(screen.getByRole('slider')).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Increase Font weight' })).toBeDisabled();
   await act(async () => finish(true));
-  await waitFor(() => expect(screen.getByRole('slider')).toBeEnabled());
-  expect(screen.getByRole('slider')).toHaveValue('450');
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Increase Font weight' })).toBeEnabled());
+  expect(screen.getByLabelText('Font weight')).toHaveTextContent('450');
   expect(onChange).not.toHaveBeenCalled();
 });
 
@@ -39,10 +39,10 @@ it('reports a load failure without probing a fallback font or changing the selec
   await screen.findByRole('alert');
   expect(mocks.probe).not.toHaveBeenCalled();
   expect(onChange).not.toHaveBeenCalled();
-  expect(screen.getByRole('slider')).toHaveValue('450');
-  expect(screen.getByRole('slider')).toBeDisabled();
+  expect(screen.getByLabelText('Font weight')).toHaveTextContent('450');
+  expect(screen.getByRole('button', { name: 'Increase Font weight' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-  await waitFor(() => expect(screen.getByRole('slider')).toBeEnabled());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Increase Font weight' })).toBeEnabled());
   expect(mocks.probe).toHaveBeenCalledTimes(1);
   expect(onChange).not.toHaveBeenCalled();
 });

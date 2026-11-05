@@ -21,7 +21,9 @@ function openAppearance() {
   fireEvent.click(screen.getByRole('button', { name: 'More reading actions' }));
   fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
 }
-const slider = () => screen.getByRole('slider', { name: 'Font weight' });
+const value = () => screen.getByLabelText('Font weight');
+const increase = () => screen.getByRole('button', { name: 'Increase Font weight' });
+const decrease = () => screen.getByRole('button', { name: 'Decrease Font weight' });
 const body = (container: HTMLElement) => container.querySelector('[data-reading-font-size]') as HTMLElement;
 
 beforeEach(() => {
@@ -33,11 +35,11 @@ afterEach(() => { vi.restoreAllMocks(); window.localStorage.clear(); });
 it('adjusts the actual reader, keeps weight through another article and reopens from saved settings', async () => {
   const view = render(article());
   openAppearance();
-  await waitFor(() => expect(slider()).toBeEnabled());
-  expect(slider()).toHaveValue('400');
-  expect(slider()).toHaveAttribute('min', '100');
-  expect(slider()).toHaveAttribute('max', '700');
-  fireEvent.change(slider(), { target: { value: '450' } });
+  await waitFor(() => expect(increase()).toBeEnabled());
+  expect(value()).toHaveTextContent('400');
+  expect(screen.queryByRole('slider', { name: 'Font weight' })).not.toBeInTheDocument();
+  expect(decrease()).toBeDisabled();
+  fireEvent.click(increase());
   expect(body(view.container).style.getPropertyValue('--content-panel-font-weight')).toBe('450');
   expect(loadReadingTypographySettings().fontWeight).toBe(450);
   expect(probe).toHaveBeenCalledTimes(1);
@@ -46,11 +48,11 @@ it('adjusts the actual reader, keeps weight through another article and reopens 
   view.unmount();
   const reopened = render(article('weight-second'));
   openAppearance();
-  await waitFor(() => expect(slider()).toBeEnabled());
-  expect(slider()).toHaveValue('450');
+  await waitFor(() => expect(increase()).toBeEnabled());
+  expect(value()).toHaveTextContent('450');
   expect(body(reopened.container).style.getPropertyValue('--content-panel-font-weight')).toBe('450');
   expect(screen.queryByRole('button', { name: 'Reset font weight' })).not.toBeInTheDocument();
-  fireEvent.change(slider(), { target: { value: '400' } });
+  fireEvent.click(decrease());
   expect(loadReadingTypographySettings().fontWeight).toBe(400);
 });
 
@@ -60,34 +62,37 @@ it('resets only on a font change and ignores an obsolete detection result', asyn
   const view = render(article());
   openAppearance();
   await waitFor(() => expect(probe).toHaveBeenCalledTimes(1));
-  expect(slider()).toBeDisabled();
+  expect(increase()).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Serif' }));
-  await waitFor(() => expect(slider()).toBeEnabled());
-  fireEvent.change(slider(), { target: { value: '500' } });
+  await waitFor(() => expect(increase()).toBeEnabled());
+  fireEvent.click(increase());
+  fireEvent.click(increase());
   await act(async () => finish([400]));
-  expect(slider()).toBeEnabled();
-  expect(slider()).toHaveValue('500');
+  expect(increase()).toBeEnabled();
+  expect(value()).toHaveTextContent('500');
   fireEvent.click(screen.getByRole('button', { name: 'Sans' }));
   expect(loadReadingTypographySettings().fontWeight).toBe(400);
   expect(body(view.container).style.getPropertyValue('--content-panel-font-weight')).toBe('400');
 });
 
-it('keeps a single effect at 400, snaps two effects, and retries a failed detection', async () => {
+it('disables unavailable steps, jumps between effective weights, and retries a failed detection', async () => {
   probe.mockResolvedValueOnce([400]);
   const view = render(article());
   openAppearance();
-  await waitFor(() => expect(slider()).toHaveAttribute('aria-busy', 'false'));
-  expect(slider()).toBeDisabled();
+  await waitFor(() => expect(value()).toHaveAttribute('aria-busy', 'false'));
+  expect(increase()).toBeDisabled();
   probe.mockRejectedValueOnce(new Error('measurement failed'));
   fireEvent.click(screen.getByRole('button', { name: 'Serif' }));
   await screen.findByRole('button', { name: 'Retry' });
-  expect(slider()).toBeDisabled();
+  expect(increase()).toBeDisabled();
   probe.mockResolvedValueOnce([400, 700]);
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-  await waitFor(() => expect(slider()).toBeEnabled());
-  fireEvent.change(slider(), { target: { value: '600' } });
+  await waitFor(() => expect(increase()).toBeEnabled());
+  fireEvent.click(increase());
   expect(loadReadingTypographySettings().fontWeight).toBe(700);
-  fireEvent.keyDown(slider(), { key: 'ArrowLeft' });
+  expect(increase()).toBeDisabled();
+  expect(probe).toHaveBeenCalledTimes(3);
+  fireEvent.click(decrease());
   expect(loadReadingTypographySettings().fontWeight).toBe(400);
   expect(body(view.container).style.getPropertyValue('--content-panel-font-weight')).toBe('400');
 });
@@ -95,20 +100,20 @@ it('keeps a single effect at 400, snaps two effects, and retries a failed detect
 it('keeps confirmed weight and rendered text after a failed write, then saves a retry', async () => {
   const view = render(article());
   openAppearance();
-  await waitFor(() => expect(slider()).toBeEnabled());
-  fireEvent.change(slider(), { target: { value: '450' } });
+  await waitFor(() => expect(increase()).toBeEnabled());
+  fireEvent.click(increase());
   const storage = window.localStorage;
   const failure = vi.spyOn(window, 'localStorage', 'get').mockReturnValue({
     getItem: storage.getItem.bind(storage),
     setItem: () => { throw new Error('storage denied'); }
   } as Storage);
-  fireEvent.change(slider(), { target: { value: '500' } });
+  fireEvent.click(increase());
   expect(screen.getByText(/Could not save reading settings/)).toHaveAttribute('role', 'alert');
-  expect(slider()).toHaveValue('450');
+  expect(value()).toHaveTextContent('450');
   expect(loadReadingTypographySettings().fontWeight).toBe(450);
   expect(body(view.container).style.getPropertyValue('--content-panel-font-weight')).toBe('450');
   failure.mockRestore();
-  fireEvent.change(slider(), { target: { value: '500' } });
+  fireEvent.click(increase());
   expect(loadReadingTypographySettings().fontWeight).toBe(500);
   expect(screen.queryByText(/Could not save reading settings/)).not.toBeInTheDocument();
 });
