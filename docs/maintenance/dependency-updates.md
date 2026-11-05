@@ -152,6 +152,19 @@ determine install, test, commit or task count.
 
 ### Locally implemented updates awaiting centralized QA
 
+T726 completed full QA for `7e5abc6426417cbe9616748cceaef8e9cca0c226`:
+[Android/full 42068459605](https://github.com/campfirium/foliole/actions/runs/42068459605)
+and [iPhone/full 42074860935](https://github.com/campfirium/foliole/actions/runs/42074860935),
+including dependency hardening, Windows, Android and iOS native coverage. Repairs
+integrate into dev `4adcb9cbf`; actual dev combination checks pass and the registered
+QA workspace is released. T726 retains closure ownership pending scheduled remote
+dev delivery and current-head review; do not repeat green QA just to wait for delivery.
+Earlier baseline failures below are historical, not current failures. TestFlight
+0.7.17 (3.1) is `IN_BETA_TESTING`; Android queue 7580529200 preserves this accepted
+source behind code3's existing review, without building or uploading a new package.
+The subsequently reopened #189 proposes AGP 9.5.1; it is outside this frozen
+candidate, remains unadopted/open, and requires its own next-batch validation.
+
 These entries hand validation and closure to the next centralized check task;
 they are not upstream compatibility deferrals and do not start QA themselves.
 Use repository `campfirium/foliole`, base `dev`, unless a row explicitly says
