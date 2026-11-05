@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { CompanionArticleTransition } from './CompanionArticleTransition';
 import { CompanionListViewportProvider } from './CompanionListViewport';
@@ -11,9 +11,15 @@ type SavedPage = { content: ReactNode; sortIdentity: string };
 type Pages = Partial<Record<CompanionListPageKey, SavedPage>>;
 
 function ScrollPage(props: {
+  motionRef?: RefObject<HTMLDivElement | null> | undefined;
   active: boolean; covered?: boolean; children: ReactNode; model: CompanionShellModel; pageKey: string; sortIdentity: string;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { motionRef } = props;
+  const setScrollRef = useCallback((element: HTMLDivElement | null) => {
+    scrollRef.current = element;
+    if (motionRef) motionRef.current = element;
+  }, [motionRef]);
   const { model, active } = props;
   return <div
     aria-hidden={active ? undefined : true}
@@ -26,7 +32,7 @@ function ScrollPage(props: {
     onTouchEnd={active ? model.floatingBar.handleTouchEnd : undefined}
     onTouchMove={active ? model.floatingBar.handleTouchMove : undefined}
     onTouchStart={active ? model.floatingBar.handleTouchStart : undefined}
-    ref={scrollRef}
+    ref={setScrollRef}
     style={{ visibility: active || props.covered ? 'visible' : 'hidden' }}
   >
     <PageActive.Provider value={active}><CompanionListViewportProvider scrollRef={scrollRef}
@@ -42,17 +48,19 @@ export function CompanionPageStack(props: {
 }) {
   const [pages, setPages] = useState<Pages>({});
   const [moving, setMoving] = useState(false);
+  const backdropRef = useRef<HTMLDivElement>(null);
   const { pageKey, reading, content, model } = props;
   if (pageKey && !reading && pages[pageKey]?.content !== content) {
     setPages({ ...pages, [pageKey]: { content, sortIdentity: `${model.browseSortKey}:${model.browseSortDirection}` } });
   }
   return <>
     {Object.entries(pages).map(([key, page]) => <ScrollPage key={key} pageKey={key}
+      motionRef={key === pageKey ? backdropRef : undefined}
       covered={moving && reading && key === pageKey}
       active={key === pageKey && !reading} model={model} sortIdentity={page!.sortIdentity}>{page!.content}</ScrollPage>)}
     {!pageKey && !reading ? <ScrollPage key={model.surface.activeAction === 'more' ? model.settingsPage : 'other'}
       pageKey="other" active model={model} sortIdentity="">{content}</ScrollPage> : null}
-    {reading ? pageKey ? <CompanionArticleTransition onMotionChange={setMoving}>
+    {reading ? pageKey ? <CompanionArticleTransition backdropRef={backdropRef} onMotionChange={setMoving}>
       {content}
     </CompanionArticleTransition> : content : null}
   </>;

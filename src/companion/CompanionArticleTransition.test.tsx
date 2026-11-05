@@ -7,9 +7,10 @@ import { CompanionPageStack } from './CompanionPageStack';
 import type { CompanionShellModel } from './CompanionShell';
 
 type AnimationSample = {
-  cancel: ReturnType<typeof vi.fn>; finish(): void; keyframes: Keyframe[]; options: KeyframeAnimationOptions;
+  target: HTMLElement; cancel: ReturnType<typeof vi.fn>; finish(): void; keyframes: Keyframe[]; options: KeyframeAnimationOptions;
 };
 const samples: AnimationSample[] = [];
+const readerSamples = () => samples.filter(sample => sample.target.hasAttribute('data-companion-article-transition'));
 const originalAnimate = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'animate');
 let reduced = false;
 beforeEach(() => {
@@ -17,10 +18,10 @@ beforeEach(() => {
   samples.length = 0;
   vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: reduced }) as MediaQueryList));
   Object.defineProperty(HTMLElement.prototype, 'animate', { configurable: true,
-    value: (keyframes: Keyframe[], options: KeyframeAnimationOptions) => {
+    value: function (this: HTMLElement, keyframes: Keyframe[], options: KeyframeAnimationOptions) {
       const deferred = Promise.withResolvers<void>();
       const cancel = vi.fn(() => deferred.reject(new DOMException('Cancelled', 'AbortError')));
-      samples.push({ cancel, finish: () => deferred.resolve(), keyframes, options });
+      samples.push({ target: this, cancel, finish: () => deferred.resolve(), keyframes, options });
       return { cancel, finished: deferred.promise };
     }
   });
@@ -62,25 +63,33 @@ it('slides in while loading, keeps the list inert underneath, and returns to its
   const list = screen.getByTestId('companion-scroll-container');
   list.scrollTop = 400;
   fireEvent.click(row);
-  expect(samples[0]!.keyframes).toEqual([{ transform: 'translateX(100%)' }, { transform: 'translateX(0)' }]);
+  expect(readerSamples()[0]!.keyframes).toEqual([{ transform: 'translateX(100%)' }, { transform: 'translateX(0)' }]);
   expect(list).toHaveAttribute('inert');
   expect(list).toHaveAttribute('aria-hidden', 'true');
   expect(list).toBeVisible();
+  const arrival = samples.find(sample => sample.target === list)!;
+  expect(arrival.keyframes.at(-1)).toEqual({ transform: 'translateX(-20%)' });
+  expect(arrival.options.duration).toBe(readerSamples()[0]!.options.duration);
   expect(screen.queryByRole('button', { name: 'Open article' })).not.toBeInTheDocument();
 
   view.rerender(<Navigation ready />);
   expect(screen.getByText('Article body')).toBeVisible();
-  expect(samples).toHaveLength(1);
-  await finish(samples[0]!);
+  expect(readerSamples()).toHaveLength(1);
+  await finish(readerSamples()[0]!);
   expect(list).not.toBeVisible();
+  expect(list).toHaveStyle({ transform: 'translateX(-20%)' });
   fireEvent.click(screen.getByRole('button', { name: 'Back to list' }));
-  expect(samples[1]!.keyframes.at(-1)).toEqual({ transform: 'translateX(100%)' });
+  expect(readerSamples()[1]!.keyframes.at(-1)).toEqual({ transform: 'translateX(100%)' });
   expect(list).toBeVisible();
+  const departure = samples.filter(sample => sample.target === list).at(-1)!;
+  expect(departure.keyframes).toEqual([{ transform: 'translateX(-20%)' }, { transform: 'translateX(0)' }]);
+  expect(departure.options.duration).toBe(readerSamples()[1]!.options.duration);
   expect(screen.queryByRole('button', { name: 'Open article' })).not.toBeInTheDocument();
-  await finish(samples[1]!);
+  await finish(readerSamples()[1]!);
   expect(screen.getByRole('button', { name: 'Open article' })).toBe(row);
   expect(screen.getByTestId('companion-scroll-container')).toBe(list);
   expect(list.scrollTop).toBe(400);
+  expect(list.style.transform).toBe('');
   expect(screen.queryByText('Article body')).not.toBeInTheDocument();
 });
 
@@ -90,9 +99,9 @@ it('reverses an unfinished arrival and ignores repeated back presses', async () 
   const back = screen.getByRole('button', { name: 'Back to list' });
   fireEvent.click(back);
   fireEvent.click(back);
-  expect(samples[0]!.cancel).toHaveBeenCalledOnce();
-  expect(samples).toHaveLength(2);
-  await finish(samples[1]!);
+  expect(readerSamples()[0]!.cancel).toHaveBeenCalledOnce();
+  expect(readerSamples()).toHaveLength(2);
+  await finish(readerSamples()[1]!);
   expect(screen.getByRole('button', { name: 'Open article' })).toBeVisible();
 });
 
@@ -103,16 +112,17 @@ it('keeps the revealed list and the departed reader in place until the destinati
   const list = screen.getByTestId('companion-scroll-container');
   list.scrollTop = 320;
   fireEvent.click(row);
-  await finish(samples[0]!);
+  await finish(readerSamples()[0]!);
   const back = screen.getByRole('button', { name: 'Back to list' });
   fireEvent.click(back);
-  await finish(samples[1]!);
+  await finish(readerSamples()[1]!);
 
   expect(list).toBeVisible();
   expect(list).toHaveAttribute('inert');
+  expect(list).toHaveStyle({ transform: 'translateX(0)' });
   expect(document.querySelector('[data-companion-article-transition]')).toHaveStyle({ transform: 'translateX(100%)' });
   fireEvent.click(back);
-  expect(samples).toHaveLength(2);
+  expect(readerSamples()).toHaveLength(2);
   await act(async () => { destination.resolve(); });
   expect(screen.getByRole('button', { name: 'Open article' })).toBe(row);
   expect(screen.getByTestId('companion-scroll-container')).toBe(list);
@@ -133,19 +143,19 @@ it.each([true, false])('navigates immediately without sliding for reduced motion
 it('does not complete an old departure after the reader is unmounted', async () => {
   const view = render(<Navigation />);
   fireEvent.click(screen.getByRole('button', { name: 'Open article' }));
-  await finish(samples[0]!);
+  await finish(readerSamples()[0]!);
   fireEvent.click(screen.getByRole('button', { name: 'Back to list' }));
   view.unmount();
-  await finish(samples[1]!);
-  expect(samples[1]!.cancel).toHaveBeenCalledOnce();
+  await finish(readerSamples()[1]!);
+  expect(readerSamples()[1]!.cancel).toHaveBeenCalledOnce();
   expect(screen.queryByRole('button', { name: 'Open article' })).not.toBeInTheDocument();
 });
 
 it('still returns to the list if the browser cancels the departure', async () => {
   render(<Navigation />);
   fireEvent.click(screen.getByRole('button', { name: 'Open article' }));
-  await finish(samples[0]!);
+  await finish(readerSamples()[0]!);
   fireEvent.click(screen.getByRole('button', { name: 'Back to list' }));
-  await act(async () => { samples[1]!.cancel(); });
+  await act(async () => { readerSamples()[1]!.cancel(); });
   expect(screen.getByRole('button', { name: 'Open article' })).toBeVisible();
 });
