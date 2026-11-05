@@ -202,7 +202,7 @@ describe('CompanionApp ready hosts', () => {
     }
     expect(within(bottomBar).getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: /Sync/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sync', exact: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sync' })).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('companion-settings-sync'));
     expect(screen.getByTestId('companion-sync-toggle')).toBeInTheDocument();
     expect(screen.queryByTestId('companion-sync-pause-toggle')).not.toBeInTheDocument();
@@ -230,7 +230,7 @@ describe('CompanionApp ready hosts', () => {
     }
     expect(within(bottomBar).getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: /Sync/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sync', exact: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sync' })).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('companion-settings-sync'));
     expect(screen.getByTestId('companion-sync-toggle')).toBeInTheDocument();
     expect(screen.queryByTestId('companion-sync-pause-toggle')).not.toBeInTheDocument();
