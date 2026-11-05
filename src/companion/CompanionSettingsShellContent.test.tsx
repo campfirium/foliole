@@ -86,7 +86,10 @@ describe('CompanionSettingsShellContent', () => {
     render(<SettingsHarness />);
     expect(screen.getByRole('button', { name: 'Clear App Data' })).toBeDisabled();
     expect(screen.queryByTestId('companion-settings-storage')).not.toBeInTheDocument();
+    expect(screen.getByTestId('companion-settings-backup')).toHaveTextContent('All backed up · Example');
     fireEvent.click(screen.getByTestId('companion-settings-backup'));
+    expect(screen.getByRole('status')).toHaveTextContent('All backed up · Example');
+    expect(screen.getByText('Backup status is an example. Backup actions are available in the mobile app.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Back up now' })).toBeDisabled();
     expect(screen.getByRole('switch', { name: 'Automatic backup' })).toBeDisabled();
     expect(screen.queryByRole('switch', { name: 'Automatic cleanup' })).not.toBeInTheDocument();

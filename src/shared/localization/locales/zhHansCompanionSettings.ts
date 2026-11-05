@@ -1,7 +1,9 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
-  'companion.settings.storage.previewUnavailable': '备份与存储操作需在手机应用中使用。',
+  'companion.settings.storage.previewUnavailable': '备份状态为示例，备份操作需在手机应用中使用。',
+  'companion.settings.storage.previewExample': '示例',
+  'companion.settings.storage.previewFolder': 'Foliole 备份（示例）',
   'companion.settings.storage.chooseBackupFolder': '选择文件夹…',
   'companion.settings.storage.backupFailed': '备份失败',
   'companion.settings.storage.backupLoading': '正在检查备份…',

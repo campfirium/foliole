@@ -52,7 +52,7 @@ export function CompanionFolderDatabaseBackupSection() {
         <SettingsRow controlLayout="inline" title={t('companion.settings.storage.backupFolder')}>
           <SettingsControlSlot><AppButton disabled={working || !supported} size="sm"
             onClick={() => state?.configured ? setLocationOpen(true) : void run(true)}>
-            {state?.directoryLabel ?? t('companion.settings.storage.chooseBackupFolder')}
+            {preview ? t('companion.settings.storage.previewFolder') : state?.directoryLabel ?? t('companion.settings.storage.chooseBackupFolder')}
           </AppButton></SettingsControlSlot>
         </SettingsRow>
         <SettingsRow controlLayout="inline" title={t('companion.settings.storage.automaticBackup')} description={t('companion.settings.storage.automaticBackupHint')}>
@@ -60,7 +60,7 @@ export function CompanionFolderDatabaseBackupSection() {
             disabled={automatic === null || changingAutomatic || forgetting || (!state?.configured && automatic !== true)}
             onCheckedChange={value => void toggleAutomatic(value)} /></SettingsControlSlot>
         </SettingsRow>
-        <SettingsRow controlLayout="inline" description={<span role="status">{!supported ? '—' : companionBackupSummary(state, automatic, error, t)}</span>}>
+        <SettingsRow controlLayout="inline" description={<span role="status">{companionBackupSummary(state, automatic, error, t, preview)}</span>}>
           <SettingsControlSlot><AppButton data-testid="companion-database-backup" disabled={working || !supported || !state?.configured}
             onClick={() => void run(false)} size="sm">
             {t(working ? 'companion.settings.storage.backupWorking' : 'companion.settings.storage.backupNow')}

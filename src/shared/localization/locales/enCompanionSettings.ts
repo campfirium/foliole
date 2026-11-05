@@ -1,5 +1,7 @@
 export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
-  'companion.settings.storage.previewUnavailable': 'Backup and storage actions are available in the mobile app.',
+  'companion.settings.storage.previewUnavailable': 'Backup status is an example. Backup actions are available in the mobile app.',
+  'companion.settings.storage.previewExample': 'Example',
+  'companion.settings.storage.previewFolder': 'Foliole backups (example)',
   'companion.settings.storage.chooseBackupFolder': 'Choose folder…',
   'companion.settings.storage.backupFailed': 'Backup failed',
   'companion.settings.storage.backupLoading': 'Checking backup…',

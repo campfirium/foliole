@@ -49,7 +49,7 @@ function DataAppearanceSettingsSection(props: {
   return <>
     {props.showStorage ? <SettingsListSection title={t('companion.settings.section.data')}>
       {supportsCompanionFolderDatabaseBackup() || getCompanionRuntimeCapability().kind === 'browser-preview' ? <SettingsListItem Icon={Database} title={t('companion.settings.storage.databaseBackup')}
-        detail={supportsCompanionFolderDatabaseBackup() ? companionBackupSummary(backup.state, backup.automatic, backup.error, t) : ''}
+        detail={companionBackupSummary(backup.state, backup.automatic, backup.error, t, getCompanionRuntimeCapability().kind === 'browser-preview')}
         onClick={props.onOpenBackup} testId="companion-settings-backup" /> : null}
       <SettingsListItem Icon={HardDrive} title={t('settings.attachments.title')}
         detail={attachments.status ? t('companion.settings.storage.attachmentSummary', {
