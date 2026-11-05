@@ -4,7 +4,7 @@ export const EN_SETTINGS_ATTACHMENTS_TRANSLATIONS = {
   'settings.attachments.cleanNow': 'Clean up now',
   'settings.attachments.emptyAction': 'Empty trash…',
   'settings.attachments.daysUnit': 'days',
-  'settings.attachments.description': 'Cleanup moves attachments no topic uses to the trash.',
+  'settings.attachments.description': 'To prevent accidental deletion, cleaned-up attachments stay in the trash for recovery. Emptying it permanently deletes them and frees space.',
   'settings.attachments.title': 'Attachments',
   'settings.attachments.error': "Could not finish the attachment operation. Please try again.",
   'settings.attachments.used': "Storage used",

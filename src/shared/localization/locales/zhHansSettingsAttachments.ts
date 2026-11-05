@@ -6,7 +6,7 @@ export const ZH_HANS_SETTINGS_ATTACHMENTS_TRANSLATIONS: Partial<Record<Translati
   'settings.attachments.cleanNow': '立即清理',
   'settings.attachments.emptyAction': '清空回收站…',
   'settings.attachments.daysUnit': '天',
-  'settings.attachments.description': '清理会将不再被资料使用的附件移入回收站。',
+  'settings.attachments.description': '为避免误删，清理后的附件先保留在回收站；清空后才永久删除并释放空间。',
   'settings.attachments.title': '附件',
   'settings.attachments.error': "附件操作未完成，请重试。",
   'settings.attachments.used': "占用空间",
