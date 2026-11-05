@@ -1,15 +1,14 @@
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor';
-import { loadCurrentSyncNodeRecord } from '../../../../../lib/core/sync/syncNodeGraph';
 import { parseAssetMarkdownUrl } from '../../../../../lib/platform/assetMarkdownUrl';
 import { parseCanonicalAttachmentStorageKey } from '../../../../../lib/platform/attachmentResource';
 import { collectImageMatches } from '../../../../features/editor/model/markdownImageMatches';
 import { buildImageClozeSourcePayload, type ImageClozeDraftRegion } from '../../../../features/image-cloze/model/imageCloze';
 import { imageClozeNodeFields } from '../../../../features/image-cloze/model/imageClozeDraft';
+import type { ImageClozeRegionEdit } from '../../../../features/image-cloze/model/imageClozeRegionEdit';
 import { deriveNodeTitleForCloze } from '../../../../features/nodes/model/deriveNodeTitle';
 import { createNewItemReviewProfiles } from '../../../../store/newItemReviewSlots';
-import { canCreateSelectionAnnotation } from '../../../selectionAnnotationEligibility';
 import { assertNodeTextForSave } from '../../../ui/nodeTextSaveBudget';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 import { loadCompanionWorkspaceSyncState } from '../../companionWorkspaceSync';
@@ -21,6 +20,7 @@ import { iosCompanionHostName } from '../runtime/iosCompanionMutationState';
 import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
 
 import { recordCompanionAnnotationHistory } from './companionEditHistoryRecording';
+import { applyCompanionImageClozeRegionEdits } from './companionImageClozeRegionEdits';
 
 
 export interface CompanionImageClozeRequest {
@@ -30,6 +30,7 @@ export interface CompanionImageClozeRequest {
   expectedVersionId: string | null;
   imageRange: { from: number; to: number };
   regions: ImageClozeDraftRegion[];
+  edits?: ImageClozeRegionEdit[];
   scope: ReturnType<typeof getCompanionReadingScope>;
 }
 
@@ -39,16 +40,18 @@ function sourceForRequest(request: CompanionImageClozeRequest) {
   const key = match && parseAssetMarkdownUrl(match.source);
   const source = buildImageClozeSourcePayload(request.expectedContent, request.imageRange);
   const hash = key ? parseCanonicalAttachmentStorageKey(key)?.contentHash : null;
-  if (!key || !hash || !source || !request.regions.length || request.regions.some(region =>
+  const regions = [...request.regions, ...(request.edits ?? []).flatMap(edit => [edit.before, edit.after])];
+  if (request.edits?.some(edit => edit.before.id !== edit.after.id || edit.before.attachmentId !== edit.after.attachmentId)) throw new Error('image_cloze_invalid_edit');
+  if (!key || !hash || !source || !regions.length || regions.some(region =>
     region.attachmentId !== hash || ![region.x, region.y, region.width, region.height].every(Number.isFinite) ||
     region.x < 0 || region.y < 0 || region.width <= 0 || region.height <= 0 ||
     region.x + region.width > 1.000001 || region.y + region.height > 1.000001)) throw new Error('image_cloze_invalid_source');
   return { key, hash, source };
 }
 
-export async function createCompanionImageCloze(request: CompanionImageClozeRequest) {
+export async function saveCompanionImageCloze(request: CompanionImageClozeRequest) {
   const { key, hash, source } = sourceForRequest(request);
-  const fields = imageClozeNodeFields(hash, source, request.regions);
+  const fields = request.regions.length ? imageClozeNodeFields(hash, source, request.regions) : null;
   const assertScope = () => {
     if (request.scope !== getCompanionReadingScope()) throw new Error('image_cloze_library_changed');
   };
@@ -61,6 +64,9 @@ export async function createCompanionImageCloze(request: CompanionImageClozeRequ
   const review = createNewItemReviewProfiles({ batchSize: 1, nodesById: snapshot?.nodesById ?? {}, now })[0]!;
   return runCompanionHighValueMutationTask(() => getIosCompanionDatabaseOwner().runWriter(db => db.transaction(async tx => {
     assertScope();
+    const parent = await applyCompanionImageClozeRegionEdits(tx, request);
+    assertScope();
+    if (!fields) return null;
     const existing = await loadCompanionWorkspaceNodeFromDb(tx, request.nodeId);
     if (existing) {
       if (existing.deletedAt || existing.parentNodeId !== request.parentNodeId || existing.content !== fields.content ||
@@ -69,10 +75,6 @@ export async function createCompanionImageCloze(request: CompanionImageClozeRequ
       }
       return existing.id;
     }
-    const parent = await loadCompanionWorkspaceNodeFromDb(tx, request.parentNodeId);
-    const current = await loadCurrentSyncNodeRecord(tx, request.parentNodeId);
-    if (!parent || parent.deletedAt || !canCreateSelectionAnnotation(parent) || parent.content !== request.expectedContent ||
-      (current?.version_id ?? null) !== request.expectedVersionId) throw new Error('image_cloze_source_changed');
     const node: WorkspaceNodeSnapshot = {
       ...fields, id: request.nodeId, parentNodeId: parent.id, title: deriveNodeTitleForCloze(fields.content, fields.reveal),
       isTitleManual: false, hideTitleHeading: false, reading: null, review, createdAt: now, updatedAt: now,
@@ -87,4 +89,11 @@ export async function createCompanionImageCloze(request: CompanionImageClozeRequ
     await recordCompanionAnnotationHistory(tx, { documentId: parent.id, before: null, after: { ...node, currentVersionId: version.version_id } });
     return node.id;
   })), { kind: 'full' });
+}
+
+export async function createCompanionImageCloze(request: CompanionImageClozeRequest) {
+  if (!request.regions.length) throw new Error('image_cloze_invalid_source');
+  const id = await saveCompanionImageCloze(request);
+  if (!id) throw new Error('image_cloze_not_saved');
+  return id;
 }

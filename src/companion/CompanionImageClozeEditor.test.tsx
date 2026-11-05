@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { ImageClozeDraftRegion } from '../features/image-cloze/model/imageCloze';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
-import { drawImageClozeMask, installImageClozePointerEvents } from './companionImageCloze.testSupport';
+import { drawImageClozeMask, installImageClozePointerEvents, tapImageClozeMask } from './companionImageCloze.testSupport';
 import { CompanionImageClozeEditor } from './CompanionImageClozeEditor';
 import { changeImageClozeRect, zoomImageClozeView } from './companionImageClozeGeometry';
 
@@ -55,7 +55,7 @@ it('keeps masks on write failure, blocks duplicate confirmation while saving, an
   open(confirm);
   drawImageClozeMask();
   fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('Your masks are kept');
+  expect(await screen.findByRole('alert')).toHaveTextContent('Your changes are kept');
   expect(screen.getByLabelText('Mask 1')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
   expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled();
@@ -130,7 +130,7 @@ it('reselects a saved mask visibly and deletes that selected mask, retaining it 
   fireEvent.load(screen.getByAltText('Original image'));
   const first = document.querySelector('[data-saved-region="saved-one"]')!;
   const second = document.querySelector('[data-saved-region="saved-two"]')!;
-  fireEvent.click(first);
+  tapImageClozeMask(first);
   expect(first).toHaveAttribute('data-region-state', 'selected');
   fireEvent.click(second);
   expect(first).toHaveAttribute('data-region-state', 'outlined');
@@ -149,7 +149,7 @@ it('deletes the selected draft rather than the last one, without deleting an exi
   const first = screen.getByLabelText('Mask 1');
   const firstId = first.getAttribute('data-cloze-region');
   drawImageClozeMask();
-  fireEvent.click(first);
+  tapImageClozeMask(first);
   expect(first).toHaveAttribute('data-region-state', 'selected');
   fireEvent.click(screen.getByRole('button', { name: 'Delete selected mask' }));
   expect(document.querySelector(`[data-cloze-region="${firstId}"]`)).not.toBeInTheDocument();
@@ -158,6 +158,7 @@ it('deletes the selected draft rather than the last one, without deleting an exi
 
 it('converts an in-progress stroke into two-finger navigation without leaving an accidental mask', () => {
   open();
+  fireEvent.click(screen.getByRole('button', { name: 'New mask' }));
   const canvas = screen.getByTestId('image-cloze-canvas');
   fireEvent.pointerDown(canvas, { pointerId: 1, button: 0, clientX: 100, clientY: 300 });
   fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 140, clientY: 340 });
@@ -169,4 +170,57 @@ it('converts an in-progress stroke into two-finger navigation without leaving an
   expect(document.querySelectorAll('[data-cloze-handle="move"]')).toHaveLength(0);
   drawImageClozeMask();
   expect(document.querySelectorAll('[data-cloze-handle="move"]')).toHaveLength(1);
+});
+
+it('pans by default, arms one new mask explicitly, and returns to image movement after drawing', () => {
+  open();
+  const canvas = screen.getByTestId('image-cloze-canvas');
+  fireEvent.pointerDown(canvas, { pointerId: 1, button: 0, clientX: 100, clientY: 300 });
+  fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 140, clientY: 340 });
+  fireEvent.pointerUp(canvas, { pointerId: 1 });
+  expect(canvas.querySelectorAll('[data-cloze-handle="move"]')).toHaveLength(0);
+  expect(canvas.querySelector('[data-cloze-image]')?.getAttribute('style')).toContain('translate(40px, 0px)');
+  drawImageClozeMask();
+  expect(screen.getByRole('button', { name: 'New mask' })).toHaveAttribute('aria-pressed', 'false');
+  expect(canvas.querySelectorAll('[data-cloze-handle="move"]')).toHaveLength(1);
+});
+
+it('selects an existing mask before editing it and commits the same region identity with new geometry', async () => {
+  const confirm = vi.fn(async () => {});
+  const saved = { id: 'existing', attachmentId: hash, x: 0.2, y: 0.2, width: 0.3, height: 0.2 };
+  renderWithLocalization(<CompanionImageClozeEditor attachmentId={hash} src="cached.png" savedRegions={[saved]} onConfirm={confirm} onCancel={() => {}} />);
+  fireEvent.load(screen.getByAltText('Original image'));
+  const canvas = screen.getByTestId('image-cloze-canvas');
+  const mask = canvas.querySelector('[data-saved-region="existing"]')!;
+  fireEvent.pointerDown(mask, { pointerId: 1, button: 0, clientX: 100, clientY: 300 });
+  fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 140, clientY: 340 });
+  fireEvent.pointerUp(canvas, { pointerId: 1 });
+  expect(mask).toHaveStyle({ left: '20%' });
+  tapImageClozeMask(mask);
+  expect(mask).toHaveAttribute('data-region-state', 'selected');
+  expect(mask.querySelector('[data-cloze-handle="se"]')).toBeVisible();
+  fireEvent.pointerDown(mask, { pointerId: 1, button: 0, clientX: 160, clientY: 260 });
+  fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 240, clientY: 300 });
+  fireEvent.pointerUp(canvas, { pointerId: 1 });
+  fireEvent.pointerDown(mask.querySelector('[data-cloze-handle="se"]')!, { pointerId: 1, button: 0, clientX: 300, clientY: 340 });
+  fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 380, clientY: 380 });
+  fireEvent.pointerUp(canvas, { pointerId: 1 });
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+  await waitFor(() => expect(confirm).toHaveBeenCalledOnce());
+  expect(confirm).toHaveBeenCalledWith([], [{ before: { ...saved, answer: '' }, after: expect.objectContaining({ id: 'existing', attachmentId: hash, x: expect.closeTo(0.3), y: expect.closeTo(0.3), width: expect.closeTo(0.4), height: expect.closeTo(0.3) }) }]);
+});
+
+it('ignores small finger jitter on a selected mask until an intentional drag begins', async () => {
+  const confirm = vi.fn(async () => {});
+  open(confirm);
+  drawImageClozeMask();
+  const canvas = screen.getByTestId('image-cloze-canvas');
+  const mask = screen.getByLabelText('Mask 1');
+  const position = mask.getAttribute('style');
+  fireEvent.pointerDown(mask, { pointerId: 1, button: 0, clientX: 160, clientY: 260 });
+  fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 162, clientY: 261 });
+  fireEvent.pointerUp(canvas, { pointerId: 1 });
+  expect(mask.getAttribute('style')).toBe(position);
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+  await waitFor(() => expect(confirm).toHaveBeenCalledOnce());
 });

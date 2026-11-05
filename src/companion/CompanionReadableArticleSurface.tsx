@@ -196,6 +196,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   const { createSelectionAnnotation, deleteExistingHighlight } = createPendingAnnotationActions(props, pendingReadableArticle);
   return (
     <section
+      data-reading-chrome-visible={model.reading.isChromeVisible && !model.reading.isContentEditing}
       className={`${model.surfaceClassName}${itemEditing ? ' companion-item-editing' : ''}`}
       style={pagedStyle}
       onClick={model.reading.handleSurfaceClick}

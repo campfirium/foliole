@@ -14,6 +14,7 @@ import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecu
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 import { editableNode } from '../shared/platform/companion/editing/companionContentEditingStable.testSupport';
+import { loadPreparedCompanionArticle } from '../shared/platform/companion/reading/companionArticlePreparation';
 import { createSearchLibrary, reopenSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
@@ -94,6 +95,7 @@ it('uses the actual reading image tap, creates in SQLite, refreshes parent masks
   view.rerender(renderArticle());
   fireEvent.click(view.container.querySelector('.cm-md-image-element')!);
   expect((await screen.findByRole('dialog')).querySelectorAll('[data-region-state="outlined"]')).toHaveLength(2);
+  await editSecondMask(view, workspace, renderArticle, refresh, ids[0]!.id);
   await deleteSecondMask(view, workspace, renderArticle, refresh, ids[0]!.id);
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   await reopenSearchLibrary(library.root, '2026-11-05T12:00:00Z');
@@ -114,10 +116,33 @@ async function deleteSecondMask(view: ReturnType<typeof renderWithLocalization>,
   fireEvent.click(screen.getByRole('dialog').querySelector(`[data-saved-region="${latestRegion}"]`)!);
   expect(screen.getByRole('dialog').querySelector(`[data-saved-region="${latestRegion}"]`)).toHaveAttribute('data-region-state', 'selected');
   fireEvent.click(screen.getByRole('button', { name: 'Delete selected mask' }));
-  await waitFor(() => expect(refresh).toHaveBeenCalledTimes(4));
+  await waitFor(() => expect(refresh).toHaveBeenCalledTimes(5));
   workspace.state = await loadCompanionWorkspaceSyncState();
   view.rerender(renderArticle());
   await waitFor(() => expect(screen.getByRole('dialog').querySelectorAll('[data-saved-region]')).toHaveLength(1));
   expect((await loadCompanionWorkspaceNode(latest.id))?.deletedAt).toBeTruthy();
   expect((await loadCompanionWorkspaceNode(firstId))?.deletedAt).toBeFalsy();
+}
+
+async function editSecondMask(view: ReturnType<typeof renderWithLocalization>, workspace: ReturnType<typeof useCompanionWorkspaceSync>,
+  renderArticle: () => React.ReactElement, refresh: ReturnType<typeof vi.fn>, firstId: string) {
+  const latest = library.database.prepare("SELECT id FROM nodes WHERE kind='item' AND id != ?").get(firstId) as { id: string };
+  const before = (await loadCompanionWorkspaceNode(latest.id))!;
+  const region = before.imageRegions![0]!.regions[0]!;
+  const mask = screen.getByRole('dialog').querySelector(`[data-saved-region="${region.id}"]`)!;
+  fireEvent.click(mask);
+  fireEvent.pointerDown(mask, { pointerId: 1, button: 0, clientX: 100, clientY: 280 });
+  fireEvent.pointerMove(screen.getByTestId('image-cloze-canvas'), { pointerId: 1, clientX: 120, clientY: 280 });
+  fireEvent.pointerUp(screen.getByTestId('image-cloze-canvas'), { pointerId: 1 });
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+  await waitFor(() => expect(refresh).toHaveBeenCalledTimes(4));
+  const after = (await loadCompanionWorkspaceNode(latest.id))!;
+  expect(after.imageRegions![0]!.regions[0]!.x).toBeCloseTo(region.x + 0.05);
+  expect(after.content).toBe(before.content); expect(after.reveal).toBe(before.reveal);
+  expect(library.database.prepare("SELECT count(*) FROM nodes WHERE kind='item'").pluck().get()).toBe(2);
+  workspace.state = await loadCompanionWorkspaceSyncState();
+  expect((await loadPreparedCompanionArticle(workspace.state.workspace_snapshot!, 'topic', () => true))?.content).toBe(content);
+  view.rerender(renderArticle());
+  fireEvent.click(view.container.querySelector('.cm-md-image-element')!);
+  expect((await screen.findByRole('dialog')).querySelector(`[data-saved-region="${region.id}"]`)).toHaveStyle({ left: `${(region.x + 0.05) * 100}%` });
 }

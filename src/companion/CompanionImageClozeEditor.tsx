@@ -1,8 +1,9 @@
-import { Check, Trash2, X } from 'lucide-react';
+import { Check, SquarePlus, Trash2, X } from 'lucide-react';
 import { useLayoutEffect, useRef, useState } from 'react';
 
 import type { ImageClozeDraftRegion } from '../features/image-cloze/model/imageCloze';
 import type { ImageClozeEditorPresentation } from '../features/image-cloze/model/imageClozePresentation';
+import type { ImageClozeRegionEdit } from '../features/image-cloze/model/imageClozeRegionEdit';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
 import { AppButton } from '../shared/ui';
@@ -17,14 +18,15 @@ export function CompanionImageClozeEditor(props: {
   attachmentId: string; src: string; onCancel(): void;
   savedRegions?: ImageClozeEditorPresentation['regions'];
   onDelete?(regionId: string): Promise<void>;
-  onConfirm(regions: ImageClozeDraftRegion[]): Promise<void>;
+  onConfirm(regions: ImageClozeDraftRegion[], edits?: ImageClozeRegionEdit[]): Promise<void>;
 }) {
   const t = useTranslation();
   const canvas = useRef<HTMLDivElement>(null);
   const image = useRef<HTMLImageElement>(null);
   const [view, setView] = useState(initialImageClozeView);
+  const [drawing, setDrawing] = useState(false);
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing'>('loading');
-  const { busy, regions, setRegions, selected, setSelected, saving, error, deleteError, confirm, removeSelected } = useCompanionImageClozeSession(props, status === 'ready');
+  const { busy, savedRegions, hasChanges, updateRegion, regions, setRegions, selected, setSelected, saving, error, deleteError, confirm, removeSelected } = useCompanionImageClozeSession(props, status === 'ready');
   useLayoutEffect(() => {
     const back = (event: Event) => { event.preventDefault(); event.stopImmediatePropagation(); if (!busy.current) props.onCancel(); };
     document.addEventListener(COMPANION_ANDROID_BACK_EVENT, back, true);
@@ -37,20 +39,21 @@ export function CompanionImageClozeEditor(props: {
         <header className="flex min-h-14 shrink-0 items-center justify-center gap-2 px-3 [&_button]:min-h-11">
           <AppDialogTitle>{t('companion.imageCloze.title')}</AppDialogTitle>
         </header>
-        <AppDialogDescription id="image-cloze-instructions" className="px-4 pb-3 text-sm">{t('companion.imageCloze.markHelp')}</AppDialogDescription>
-        <CompanionImageClozeCanvas canvas={canvas} image={image} src={props.src} view={view} regions={regions} savedRegions={props.savedRegions ?? []} marking selected={selected} select={setSelected}
+        <AppDialogDescription id="image-cloze-instructions" className="px-4 pb-3 text-sm">{t(drawing ? 'companion.imageCloze.drawHelp' : 'companion.imageCloze.markHelp')}</AppDialogDescription>
+        <CompanionImageClozeCanvas canvas={canvas} image={image} src={props.src} view={view} regions={regions} savedRegions={savedRegions} marking drawing={drawing} finishDrawing={() => setDrawing(false)} selected={selected} select={id => { setSelected(id); if (id) setDrawing(false); }}
           newRegion={() => ({ id: `region-${createCompanionUuid()}`, attachmentId: props.attachmentId, answer: '', x: 0, y: 0, width: 0, height: 0 })}
           drawRegion={region => { setRegions(current => [...current.filter(value => value.id !== region.id), region]); setSelected(region.id); }}
           removeRegion={id => { setRegions(current => current.filter(value => value.id !== id)); setSelected(current => current === id ? null : current); }}
           locked={saving || status !== 'ready'} setView={setView} onStatus={setStatus}
-          updateRegion={region => setRegions(current => current.map(value => value.id === region.id ? region : value))} />
+          updateRegion={updateRegion} />
         {status === 'missing' ? <p role="alert" className="px-4 text-sm text-error">{t('companion.imageCloze.missing')}</p> : null}
         {deleteError ? <p role="alert" className="px-4 text-sm text-error">{t('companion.imageCloze.deleteFailed')}</p> : null}
         {error ? <p role="alert" className="px-4 text-sm text-error">{t('companion.imageCloze.failed')}</p> : null}
         <footer className="flex shrink-0 items-center justify-center gap-4 px-3 py-3 [&_button]:min-h-11 [&_button]:min-w-11">
           <AppButton disabled={saving} onClick={props.onCancel} aria-label={t('common.cancel')} title={t('common.cancel')}><X aria-hidden="true" className="size-5" /></AppButton>
+          <AppButton disabled={saving || status !== 'ready'} variant={drawing ? 'emphasis' : 'default'} aria-pressed={drawing} aria-label={t('companion.imageCloze.add')} title={t('companion.imageCloze.add')} onClick={() => { setDrawing(current => !current); setSelected(null); }}><SquarePlus aria-hidden="true" className="size-5" /></AppButton>
           <AppButton disabled={saving || !selected} onClick={() => void removeSelected()} aria-label={t('companion.imageCloze.remove')} title={t('companion.imageCloze.remove')}><Trash2 aria-hidden="true" className="size-5" /></AppButton>
-          <AppButton disabled={saving || status !== 'ready'} onClick={() => { if (regions.length) void confirm(); else props.onCancel(); }} variant="emphasis" aria-label={t(saving ? 'companion.imageCloze.saving' : 'companion.imageCloze.confirm')} title={t('companion.imageCloze.confirm')}><Check aria-hidden="true" className="size-5" /></AppButton>
+          <AppButton disabled={saving || status !== 'ready'} onClick={() => { if (hasChanges) void confirm(); else props.onCancel(); }} variant="emphasis" aria-label={t(saving ? 'companion.imageCloze.saving' : 'companion.imageCloze.confirm')} title={t('companion.imageCloze.confirm')}><Check aria-hidden="true" className="size-5" /></AppButton>
         </footer>
       </AppDialogContent>
     </AppDialogPortal>

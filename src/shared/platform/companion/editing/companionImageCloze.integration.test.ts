@@ -22,7 +22,7 @@ import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBoo
 
 import { editableNode } from './companionContentEditingStable.testSupport';
 import { applyCompanionEditHistory } from './companionEditHistoryReplay';
-import { createCompanionImageCloze, type CompanionImageClozeRequest } from './companionImageCloze';
+import { createCompanionImageCloze, saveCompanionImageCloze, type CompanionImageClozeRequest } from './companionImageCloze';
 import { deleteCompanionImageCloze } from './companionImageClozeDeletion';
 
 const hash = 'a'.repeat(64);
@@ -150,4 +150,73 @@ it('rolls back a failed deletion, retains history and Item, then retries; reject
   await deleteCompanionImageCloze(remove);
   invalidateCompanionReadingScope();
   await expect(async () => deleteCompanionImageCloze(remove)).rejects.toThrow('library_changed');
+});
+
+it('edits an existing grouped mask on the original Item and parent, retaining review facts after reopen', async () => {
+  const request = await prepare();
+  request.regions.push({ ...request.regions[0]!, id: 'region-two', x: 0.6 });
+  await createCompanionImageCloze(request);
+  const original = (await loadCompanionWorkspaceNode(request.nodeId))!;
+  const parent = (await loadCompanionWorkspaceNode('topic'))!;
+  const version = await toWorkspaceNativeNodeVersion({ ...parent, imageRegions: original.imageRegions }, 'source', 'parent-regions');
+  await getIosCompanionDatabaseOwner().runWriter(db => applySyncNodesWithDbPort(db, [version], { enqueueSearchInvalidations: false }));
+  const schedules = library!.database.prepare('SELECT * FROM node_review ORDER BY node_id').all();
+  const before = request.regions[0]!;
+  const after = { ...before, x: 0.1, y: 0.15, width: 0.4, height: 0.35 };
+  const edit = { ...request, expectedVersionId: 'parent-regions', nodeId: 'edit-session', regions: [], edits: [{ before, after }] };
+  expect(await saveCompanionImageCloze(edit)).toBeNull();
+  const changed = (await loadCompanionWorkspaceNode(request.nodeId))!;
+  expect(changed.id).toBe(original.id);
+  expect(changed.content).toBe(original.content); expect(changed.reveal).toBe(original.reveal);
+  expect(changed.anchorLink?.locator).toMatchObject({ x: 0.1, width: 0.4 });
+  expect(changed.imageRegions![0]!.regions).toEqual([expect.objectContaining({ id: before.id, x: 0.1, height: 0.35 }), original.imageRegions![0]!.regions[1]]);
+  expect((await loadCompanionWorkspaceNode('topic'))?.imageRegions![0]!.regions[0]).toMatchObject({ id: before.id, x: 0.1, width: 0.4 });
+  expect(library!.database.prepare("SELECT count(*) FROM nodes WHERE kind='item'").pluck().get()).toBe(1);
+  const count = library!.database.prepare('SELECT count(*) FROM node_sync_versions').pluck().get();
+  await saveCompanionImageCloze(edit);
+  expect(library!.database.prepare('SELECT count(*) FROM node_sync_versions').pluck().get()).toBe(count);
+  const reopened = await reopenSearchLibrary(library!.root, '2026-11-05T12:00:00Z');
+  expect((await loadCompanionWorkspaceNode(request.nodeId))?.imageRegions).toEqual(changed.imageRegions);
+  expect(reopened.db.prepare('SELECT * FROM node_review ORDER BY node_id').all()).toEqual(schedules);
+  const snapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
+  expect((await loadPreparedCompanionArticle(snapshot, 'topic', () => true))?.content).toBe(content);
+});
+
+it('rolls back geometry edits when creating a new mask in the same confirmation fails, then retries atomically', async () => {
+  const request = await prepare();
+  await createCompanionImageCloze(request);
+  const original = (await loadCompanionWorkspaceNode(request.nodeId))!;
+  const before = request.regions[0]!;
+  const save = { ...request, nodeId: 'combined-save', regions: [{ ...before, id: 'new-region', x: 0.6 }], edits: [{ before, after: { ...before, x: 0.1 } }] };
+  library!.database.exec("CREATE TRIGGER fail_combined BEFORE INSERT ON nodes WHEN NEW.id='combined-save' BEGIN SELECT RAISE(ABORT,'disk failed'); END");
+  await expect(saveCompanionImageCloze(save)).rejects.toThrow('disk failed');
+  expect((await loadCompanionWorkspaceNode(request.nodeId))?.imageRegions).toEqual(original.imageRegions);
+  expect(await loadCompanionWorkspaceNode('combined-save')).toBeNull();
+  library!.database.exec('DROP TRIGGER fail_combined');
+  await saveCompanionImageCloze(save);
+  expect((await loadCompanionWorkspaceNode(request.nodeId))?.imageRegions![0]!.regions[0]?.x).toBe(0.1);
+  expect(await loadCompanionWorkspaceNode('combined-save')).toBeTruthy();
+});
+
+it('refuses stale existing-mask edits and invalid geometry without overwriting the current Item', async () => {
+  const request = await prepare();
+  await createCompanionImageCloze(request);
+  const before = request.regions[0]!;
+  const edit = { ...request, regions: [], edits: [{ before, after: { ...before, x: 0.1 } }] };
+  await saveCompanionImageCloze(edit);
+  await expect(saveCompanionImageCloze({ ...edit, edits: [{ before, after: { ...before, x: 0.5 } }] })).rejects.toThrow('region_changed');
+  await expect(saveCompanionImageCloze({ ...edit, edits: [{ before, after: { ...before, width: 2 } }] })).rejects.toThrow('invalid_source');
+  expect((await loadCompanionWorkspaceNode(request.nodeId))?.imageRegions![0]!.regions[0]!.x).toBe(0.1);
+});
+
+it('changes a secondary grouped mask without moving the primary answer anchor or its sibling mask', async () => {
+  const request = await prepare();
+  const second = { ...request.regions[0]!, id: 'second', x: 0.6 };
+  request.regions.push(second);
+  await createCompanionImageCloze(request);
+  const original = (await loadCompanionWorkspaceNode(request.nodeId))!;
+  await saveCompanionImageCloze({ ...request, regions: [], edits: [{ before: second, after: { ...second, x: 0.5, width: 0.2 } }] });
+  const changed = (await loadCompanionWorkspaceNode(request.nodeId))!;
+  expect(changed.anchorLink).toEqual(original.anchorLink);
+  expect(changed.imageRegions![0]!.regions).toEqual([original.imageRegions![0]!.regions[0], expect.objectContaining({ id: 'second', x: 0.5, width: 0.2 })]);
 });

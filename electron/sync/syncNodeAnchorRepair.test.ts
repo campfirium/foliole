@@ -49,6 +49,16 @@ it('repairs unique direct child text anchors after a remote parent content apply
   expect(child.updated_at).toBe('2026-05-10T08:00:00.000Z');
 });
 
+it('preserves image-coordinate anchors when parent text changes instead of marking them as unmapped text', async () => {
+  const anchor = JSON.stringify({ id: 'image-region', kind: 'cloze', locator: { attachmentId: 'image-hash', x: 0.2, y: 0.3, width: 0.4, height: 0.2 } });
+  insertLocalNode({ id: 'parent-1', content: 'Before ![image](asset://image-hash.png)', versionId: 'desktop#parent-v1' });
+  insertLocalNode({ id: 'child-1', parentId: 'parent-1', anchorLink: anchor });
+  const result = await applyRecords([parentRecord('After ![image](asset://image-hash.png)')]);
+  expect(result.unmappedAnchorRecords).toEqual([]);
+  expect(readAnchor('child-1').anchor_link).toBe(anchor);
+  expect(openDatabaseConnection().sqlite.prepare('SELECT anchor_resolution_status FROM nodes WHERE id=?').pluck().get('child-1')).toBe('resolved');
+});
+
 it('leaves ambiguous child anchors unchanged and reports them as unmapped', async () => {
   insertLocalNode({ id: 'parent-1', content: 'Alpha Beta Gamma', versionId: 'desktop#parent-v1' });
   const oldAnchor = textAnchor('anchor-1', 6, 10, 'Beta');

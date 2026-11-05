@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 
 import { collectImageMatches } from '../features/editor/model/markdownImageMatches';
-import { createCompanionImageCloze, type CompanionImageClozeRequest } from '../shared/platform/companion/editing/companionImageCloze';
+import type { ImageClozeRegionEdit } from '../features/image-cloze/model/imageClozeRegionEdit';
+import { saveCompanionImageCloze, type CompanionImageClozeRequest } from '../shared/platform/companion/editing/companionImageCloze';
 import { deleteCompanionImageCloze } from '../shared/platform/companion/editing/companionImageClozeDeletion';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
@@ -13,7 +14,7 @@ import type { CompanionReadingActivity } from './companionReadingActivity';
 import { useCompanionImageClozePresentation } from './useCompanionImageClozePresentation';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
-type Draft = Omit<CompanionImageClozeRequest, 'regions'> & { attachmentId: string; src: string };
+type Draft = Omit<CompanionImageClozeRequest, 'regions' | 'edits'> & { attachmentId: string; src: string };
 
 export function CompanionImageClozeLayer(props: {
   activity: CompanionReadingActivity; nodeId: string; content: string; versionId: string | null;
@@ -44,11 +45,13 @@ export function CompanionImageClozeLayer(props: {
       expectedVersionId: props.versionId, imageRange: { from, to }, attachmentId: match.attachmentId,
       src: image.currentSrc || image.src, scope: getCompanionReadingScope() });
   }
-  async function confirm(regions: CompanionImageClozeRequest['regions']) {
+  async function confirm(regions: CompanionImageClozeRequest['regions'], edits: ImageClozeRegionEdit[] = []) {
     if (!draft) return;
     await props.activity.flush('image-cloze');
     await props.activity.run('image-cloze', async () => {
-      if (!accepted.current) accepted.current = await createCompanionImageCloze({ ...draft, regions });
+      const signature = JSON.stringify({ regions, edits });
+      if (accepted.current && accepted.current !== signature) throw new Error('image_cloze_saved_request_changed');
+      if (!accepted.current) { await saveCompanionImageCloze({ ...draft, regions, edits }); accepted.current = signature; }
       if (draft.scope !== getCompanionReadingScope()) throw new Error('image_cloze_library_changed');
       await props.workspaceSync.refreshAfterMutation(undefined, props.nodeId);
     });

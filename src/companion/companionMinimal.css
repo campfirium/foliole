@@ -1,3 +1,5 @@
+@import './companionImageControls.css';
+
 /* Companion-only visual roles: shared by navigation, lists and secondary pages. */
 :root {
   --companion-page-content-gap: 8px;

@@ -1,6 +1,7 @@
 import { deriveMarkdownImageTextAnchorRegions } from '../anchors/markdownImageTextAnchor.js';
 import { repairTextAnchorLocatorInContent, type TextAnchorLocator } from '../anchors/textAnchorLocator.js';
 import { parseStoredAnchorLink } from '../database/anchorLinkCodec.js';
+import { isImageClozeLocator } from '../nodes/imageRegionRemoval.js';
 
 import type { SyncNodeAnchorUnmappedReason } from './syncNodeAnchorRepair.js';
 
@@ -68,6 +69,7 @@ export function remapRawAnchorLinkInContent(input: {
   if (!parsed) {
     return 'invalid_anchor_link';
   }
+  if (parsed.kind === 'cloze' && isImageClozeLocator(parsed.locator)) return null;
   if (!parsed.locator) {
     return 'no_locator';
   }
