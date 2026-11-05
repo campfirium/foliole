@@ -157,13 +157,21 @@ T726 completed full QA for `7e5abc6426417cbe9616748cceaef8e9cca0c226`:
 and [iPhone/full 42074860935](https://github.com/campfirium/foliole/actions/runs/42074860935),
 including dependency hardening, Windows, Android and iOS native coverage. Repairs
 integrate into dev `4adcb9cbf`; actual dev combination checks pass and the registered
-QA workspace is released. T726 retains closure ownership pending scheduled remote
+QA workspace is released. T726-1 now owns closure pending scheduled remote
 dev delivery and current-head review; do not repeat green QA just to wait for delivery.
 Earlier baseline failures below are historical, not current failures. TestFlight
 0.7.17 (3.1) is `IN_BETA_TESTING`; Android queue 7580529200 preserves this accepted
 source behind code3's existing review, without building or uploading a new package.
 The subsequently reopened #189 proposes AGP 9.5.1; it is outside this frozen
 candidate, remains unadopted/open, and requires its own next-batch validation.
+
+On 2026-11-06, T726-1 re-read #187's author, base, head, full diff, body and
+comments and closed the exact Node 24.22.2 pin as **not adopted**. Reviewed head:
+`9e032ec5642a6b81d33ce2bdbd5d9b82ea353728`; the pin conflicts with the coherent
+Node 26.13.0 baseline in `3bf3d290e`. This is not an adoption or remote-delivery
+claim. The exact-version title preserves future-version proposals without a
+major-wide ignore rule; future runtime proposals use normal batch review.
+[Closure evidence](https://github.com/campfirium/foliole/pull/187#issuecomment-6671054222).
 
 These entries hand validation and closure to the next centralized check task;
 they are not upstream compatibility deferrals and do not start QA themselves.

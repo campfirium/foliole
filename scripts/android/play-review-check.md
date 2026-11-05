@@ -73,6 +73,28 @@ The default local cadence is 15 minutes, after the approximately 30-minute hoste
 check. GitHub scheduling may add delay. Only registered candidates are covered;
 legacy Console submissions without a durable registration are not inferred.
 
+## Approval awaiting manual publication
+
+The Google Play Developer API discovery revision `20261105` exposes only `list`
+on `applications.tracks.releases`. It provides review lifecycle observations,
+not a method to publish one approved release. Updating an edit's track to
+`completed` and committing the edit is not evidence that managed publication
+has been released. Do not invent a publish route or recommit an approved release
+to bypass this state.
+
+With managed publishing disabled, Google normally publishes changes after
+approval; the existing checker can then resume the queued original source.
+With managed publishing enabled, `APPROVED_NOT_PUBLISHED` remains waiting.
+The owner must inspect the Console's complete ready-to-publish scope before
+deciding the manual action; beta inventory alone cannot exclude accompanying
+store-listing, policy or production changes. Never toggle this app-wide setting
+as an automatic recovery action. A historical setting observation is not a fresh
+confirmation of its current value.
+
+Sources: [release resource methods](https://developers.google.com/android-publisher/api-ref/rest/v3/applications.tracks.releases),
+[managed publishing](https://support.google.com/googleplay/android-developer/answer/9859654),
+[safe edit commit](https://developers.google.com/android-publisher/api-ref/rest/v3/edits/commit).
+
 ## Submission queue
 
 The trusted default-branch admission job validates the original full quality ZIP,
