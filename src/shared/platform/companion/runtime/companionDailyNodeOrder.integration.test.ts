@@ -12,7 +12,7 @@ import { openCompanionDailyFlow } from './companionDailyFlow';
 const runtime = vi.hoisted(() => ({ owner: null as CapacitorCompanionDatabaseOwner | null }));
 vi.mock('./iosCompanionDatabaseBootstrap', () => ({ getIosCompanionDatabaseOwner: () => runtime.owner! }));
 vi.mock('@capacitor/core', () => ({
-  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({})
+  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: () => ({})
 }));
 const now = '2026-10-28T08:00:00.000Z';
 type Library = ReturnType<typeof createDisplayLibrary>;
@@ -158,7 +158,7 @@ it.each(['android', 'ios'] as const)('%s keeps disconnected display-only members
           VALUES ('orphan','absent','Orphan','Body',0,'2026-01-01','2026-01-01'),
           ('cycle-a','cycle-b','Cycle A','Body',0,'2026-01-01','2026-01-01'),('cycle-b','cycle-a','Cycle B','Body',0,'2026-01-01','2026-01-01')`);
       } finally { await db.run('PRAGMA foreign_keys = ON'); }
-    });
+    }, false);
     const snapshot = await refreshCompanionWorkspaceSnapshot();
     expect(snapshot?.nodeOrder).toEqual(expect.arrayContaining(['orphan', 'cycle-a', 'cycle-b']));
     const reads = library.nodeOrderReads.length;

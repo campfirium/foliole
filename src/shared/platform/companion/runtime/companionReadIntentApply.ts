@@ -12,10 +12,11 @@ import { companionReadPersistence } from './companionReadPersistence';
 
 type Outcome = { state: 'applied' | 'superseded'; result: DailyFlowResult | null };
 
-export async function applyReadIntent(db: DbPort, journal: ReadIntentJournal, input: string | ReadIntentRow, navigation?: PreparedFlowNavigation): Promise<Outcome> {
+export async function applyReadIntent(db: DbPort, journal: ReadIntentJournal, input: string | ReadIntentRow, navigation?: PreparedFlowNavigation,
+  transaction: DbPort['transaction'] = execute => db.transaction(execute)): Promise<Outcome> {
   const saved = typeof input === 'string' ? (await journal.rows()).find(value => value.intent.id === input) : input;
   if (!saved) throw new Error('read_intent_missing');
-  if (saved.intent.admittedCommand && saved.command) return db.transaction(async tx => {
+  if (saved.intent.admittedCommand && saved.command) return transaction(async tx => {
     await assertReadIntentLibrary(tx, saved.intent.libraryId);
     if (await isReadIntentApplied(tx, saved)) return currentOutcome(tx, 'applied');
     const stored = await readDailyFlow(tx);
@@ -24,7 +25,7 @@ export async function applyReadIntent(db: DbPort, journal: ReadIntentJournal, in
     const command = { ...saved.command!, token: stored.session.daily!, sourceSession: stored.session };
     return commitRead(tx, saved.intent, command, saved.entry!, navigation, stored);
   });
-  const prepared = await db.transaction(async tx => {
+  const prepared = await transaction(async tx => {
     await assertReadIntentLibrary(tx, saved.intent.libraryId);
     if (await isReadIntentApplied(tx, saved)) return { confirmed: true as const };
     if (saved.command) return { command: saved.command, entry: saved.entry! };
@@ -39,7 +40,7 @@ export async function applyReadIntent(db: DbPort, journal: ReadIntentJournal, in
   // Preparation may reconcile peer facts. Its cursor must commit before the immutable command
   // reaches the independent journal, so a crash cannot retain a token for rolled-back state.
   if (!saved.command) await journal.prepare(saved.intent.id, prepared.command, prepared.entry);
-  return db.transaction(tx => commitRead(tx, saved.intent, prepared.command, prepared.entry));
+  return transaction(tx => commitRead(tx, saved.intent, prepared.command, prepared.entry));
 }
 
 async function currentOutcome(db: DbPort, state: Outcome['state']): Promise<Outcome> {
