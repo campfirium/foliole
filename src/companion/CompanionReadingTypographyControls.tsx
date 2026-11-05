@@ -18,6 +18,7 @@ import {
 } from './companionReadingTypographySettings';
 
 import { useTranslation } from '@/shared/localization/LocalizationProvider';
+import { SettingsTouchSurface } from '@/shared/ui/SettingsTouchSurface';
 
 type TypographySettingKey = keyof CompanionReadingTypographySettings;
 
@@ -116,7 +117,7 @@ export function CompanionReadingTypographyControls(props: {
       />
       <CompanionReadingSystemFonts onChange={changeFont} settings={props.settings} />
       <CompanionReadingCustomFonts onChange={changeFont} settings={props.settings} />
-      <CompanionReadingMonospaceControl {...props} />
+      <SettingsTouchSurface><CompanionReadingMonospaceControl {...props} /></SettingsTouchSurface>
       <ReadingTypographyOptionGroup
         label={t('companion.reading.font.contrast')}
         onChange={props.onChange}

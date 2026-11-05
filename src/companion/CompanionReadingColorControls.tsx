@@ -12,7 +12,7 @@ export function CompanionReadingColorControls() {
   return <SettingsSection title={t('settings.appearance.colors.section')} ariaLabel={t('settings.appearance.colors.sectionAria')}>
     {(Object.keys(READING_COLOR_CONTROLS) as ReadingColor[]).map(key => {
       const label = READING_COLOR_CONTROLS[key].label;
-      return <SettingsColorRow key={key}
+      return <SettingsColorRow compact key={key}
         title={t(`settings.appearance.${label}.title`)} description={t(`settings.appearance.${label}.description`)}
         colorInputAriaLabel={t(`settings.appearance.${label}.picker`)}
         resetButtonAriaLabel={t(`settings.appearance.${label}.reset`)}

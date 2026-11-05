@@ -92,3 +92,12 @@ it('keeps the confirmed color on write failure and allows retry', () => {
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   expect(input).toHaveValue('#abcdef');
 });
+
+it.each([false, true])('keeps detailed color editing out of the mobile settings list (reading sheet=%s)', sheet => {
+  mount(sheet);
+  expect(screen.queryAllByRole('textbox')).toHaveLength(0);
+  for (const [label] of colors) {
+    expect(screen.getByLabelText(`${label} picker`)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `Reset ${label.toLowerCase()}` })).toBeInTheDocument();
+  }
+});

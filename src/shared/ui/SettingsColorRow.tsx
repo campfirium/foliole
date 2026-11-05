@@ -10,6 +10,7 @@ import {
 
 export function SettingsColorRow(props: {
   colorInputAriaLabel: string;
+  compact?: boolean;
   defaultValue: string;
   description: string;
   onChange: (value: string) => void;
@@ -21,8 +22,9 @@ export function SettingsColorRow(props: {
   const t = useTranslation();
 
   return (
-    <SettingsRow data-settings-color-row description={props.description} title={props.title}>
-      <SettingsControlSlot className={SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME}>
+    <SettingsRow data-settings-color-row controlLayout={props.compact ? 'inline' : 'stacked'}
+      description={props.compact ? undefined : props.description} title={props.title}>
+      <SettingsControlSlot className={props.compact ? '' : SETTINGS_COMPOUND_CONTROL_WIDTH_CLASS_NAME}>
         <button aria-label={props.resetButtonAriaLabel} className={settingsResetButtonClassName('disabled:cursor-default disabled:opacity-45')} disabled={props.value === props.defaultValue} onClick={props.onReset} type="button">
           <RotateCcw aria-hidden="true" size={18} strokeWidth={1.9} />
         </button>
@@ -35,13 +37,13 @@ export function SettingsColorRow(props: {
             />
             <input
               aria-label={props.colorInputAriaLabel}
-              className="absolute inset-0 cursor-pointer opacity-0"
+              className="absolute inset-0 h-full w-full min-w-0 cursor-pointer opacity-0"
               onChange={(event) => props.onChange(event.target.value)}
               type="color"
               value={props.value}
             />
           </label>
-          <label className="shrink-0 text-sm text-foreground/72">
+          {!props.compact ? <label className="shrink-0 text-sm text-foreground/72">
             <input
               aria-label={t('settings.appearance.colors.hexValue', { title: props.title })}
               className={settingsFieldClassName(`${SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME} tabular-nums`)}
@@ -49,7 +51,7 @@ export function SettingsColorRow(props: {
               spellCheck={false}
               value={props.value.toUpperCase()}
             />
-          </label>
+          </label> : null}
         </div>
       </SettingsControlSlot>
     </SettingsRow>
