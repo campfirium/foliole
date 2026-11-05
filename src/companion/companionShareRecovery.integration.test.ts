@@ -10,7 +10,8 @@ const native = vi.hoisted(() => ({ loadPendingShares: vi.fn(), acknowledgeShare:
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
   return {
-    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => true },
+    Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true,
+      isPluginAvailable: (name: string) => name === 'FolioleCompanionShareInbox' },
     registerPlugin: () => ({ ...createCompanionNativeSyncStub(), ...native })
   };
 });
