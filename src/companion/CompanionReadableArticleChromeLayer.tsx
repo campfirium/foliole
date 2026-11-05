@@ -1,17 +1,14 @@
-import { useMemo } from 'react';
-
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
 import { CompanionDocumentSearchSheet } from './CompanionDocumentSearchSheet';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
-import { buildCompanionHighlightPanelItems } from './companionHighlightPanelModel';
 import { CompanionNodeTextAlternativeSheet } from './CompanionNodeTextAlternativeSheet';
 import { ReadingActionsLayer } from './CompanionReadingActionsLayer';
+import type { CompanionReadingActivity } from './companionReadingActivity';
 import { ReadingChrome } from './CompanionReadingChrome';
 import {
   OutlineSheet,
   ReadingFontSheet,
-  ReadingHighlightSheet,
   ReadingInfoSheet
 } from './CompanionReadingSheets';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
@@ -35,6 +32,8 @@ type TextAlternativeState = {
 
 interface ImmersiveChromeLayerProps {
   editHistory?: CompanionEditHistoryActionsProps;
+  activity?: CompanionReadingActivity | undefined;
+  onOpenOutlineNode?: ((nodeId: string) => void) | undefined;
   actionsOpen: boolean;
   canEditContent?: boolean;
   actionsAtTop?: boolean;
@@ -47,7 +46,7 @@ interface ImmersiveChromeLayerProps {
   onFindInDocument(): void;
   onOpenActions(open: boolean): void;
   onOpenOutline(open: boolean): void;
-  onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info' | null): void;
+  onOpenReadingSheet(sheet: 'font' | 'info' | null): void;
   onOpenSearchSheet(open: boolean): void;
   onReadingTypographySettingsChange(settings: CompanionReadingTypographySettings): void;
   onOpenClozeRemoval?: () => void;
@@ -55,7 +54,7 @@ interface ImmersiveChromeLayerProps {
   onSelectOutlineItem(item: { from: number; to: number }): void;
   onCancelContentEditing(): void;
   onToggleContentEditing(): void;
-  openReadingSheet: 'font' | 'highlight' | 'info' | null;
+  openReadingSheet: 'font' | 'info' | null;
   outlineOpen: boolean;
   readableArticle: ReadableArticle;
   readingTypographySettings: CompanionReadingTypographySettings;
@@ -101,25 +100,20 @@ function ReadingChromeControls(props: {
 }
 
 type ReadingSheetsLayerProps = Pick<ImmersiveChromeLayerProps,
-  'editor' | 'onOpenReadingSheet' | 'onOpenSearchSheet' | 'onOpenOutline' | 'onReadingTypographySettingsChange'
+  'activity' | 'onOpenOutlineNode' | 'editor' | 'onOpenReadingSheet' | 'onOpenSearchSheet' | 'onOpenOutline' | 'onReadingTypographySettingsChange'
   | 'onSelectOutlineItem' | 'openReadingSheet' | 'readingTypographySettings' | 'readingTypographySaveError'
   | 'snapshot' | 'readingTypographyFontLoadError' | 'searchOpen' | 'outlineOpen' | 'readableArticle' | 'textAlternative'>;
 
 function ReadingSheetsLayer(props: ReadingSheetsLayerProps) {
-  const highlights = useMemo(() => props.openReadingSheet === 'highlight' ? buildCompanionHighlightPanelItems({
-    content: props.readableArticle.content,
-    textAnchorDecorations: props.readableArticle.textAnchorDecorations
-  }) : [], [props.openReadingSheet, props.readableArticle.content, props.readableArticle.textAnchorDecorations]);
-  const selectHighlight = (item: { from: number; to: number }) => {
-    props.onSelectOutlineItem(item);
-    props.onOpenReadingSheet(null);
-  };
   return (
     <>
       <OutlineSheet
         key={props.readableArticle.nodeId}
         content={props.readableArticle.content}
-        nodesById={props.snapshot?.nodesById}
+        nodeId={props.readableArticle.nodeId}
+        snapshot={props.snapshot}
+        activity={props.activity}
+        onOpenNode={props.onOpenOutlineNode}
         textAnchorDecorations={props.readableArticle.textAnchorDecorations}
         onOpenChange={props.onOpenOutline}
         onSelect={props.onSelectOutlineItem}
@@ -132,12 +126,6 @@ function ReadingSheetsLayer(props: ReadingSheetsLayerProps) {
         settings={props.readingTypographySettings}
         saveError={props.readingTypographySaveError}
         fontLoadError={props.readingTypographyFontLoadError}
-      />
-      <ReadingHighlightSheet
-        highlights={highlights}
-        onOpenChange={(open) => props.onOpenReadingSheet(open ? 'highlight' : null)}
-        onSelect={selectHighlight}
-        open={props.openReadingSheet === 'highlight'}
       />
       <ReadingInfoSheet
         hasPdf={Boolean(props.readableArticle.pdfAttachmentId)}
@@ -196,6 +184,7 @@ export function ImmersiveChromeLayer(props: ImmersiveChromeLayerProps) {
         readableArticle={props.readableArticle}
       />
       <ReadingActionsLayer
+        {...definedProps({ onOpenOutline: props.isReviewItem ? () => props.onOpenOutline(true) : undefined })}
         {...definedProps({ editHistory: props.editHistory })}
         actionsOpen={props.actionsOpen}
         onFindInDocument={props.onFindInDocument}
@@ -205,6 +194,8 @@ export function ImmersiveChromeLayer(props: ImmersiveChromeLayerProps) {
         {...definedProps({ onRestoreFromTrash: props.onRestoreFromTrash, onOpenClozeRemoval: props.onOpenClozeRemoval })}
       />
       <ReadingSheetsLayer
+        activity={props.activity}
+        onOpenOutlineNode={props.onOpenOutlineNode}
         {...definedProps({ snapshot: props.snapshot })}
         editor={props.editor}
         onOpenOutline={props.onOpenOutline}

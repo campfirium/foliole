@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import '../../src/app/styles.css';
@@ -22,15 +22,23 @@ for (const kind of ['topic', 'item'] as const) {
   const originalText = kind === 'topic' ? 'Topic passage in the original text.' : 'Item passage in the original text.';
   const from = content.indexOf(originalText);
   Object.assign(snapshot.nodesById, { [kind]: createNodeRecord({
-    id: kind, parentNodeId: 'node-1', kind,
+    id: kind, parentNodeId: 'node-1', kind, title: originalText,
+    content: kind === 'topic' ? 'Derived Topic body.' : 'Question from the original text.',
+    reveal: kind === 'item' ? 'Answer from the original text.' : null,
     anchorLink: { id: kind, kind: kind === 'topic' ? 'highlight' : 'cloze', locator: { from, to: from + originalText.length, originalText } }
   }) });
+  snapshot.nodeOrder.push(kind);
 }
-const article = resolveReadableCompanionArticleByNodeId(snapshot, 'node-1')!;
+function Reader() {
+  const [nodeId, setNodeId] = useState('node-1');
+  const article = resolveReadableCompanionArticleByNodeId(snapshot, nodeId)!;
+  return <ImmersiveReadableArticle key={nodeId} onExit={() => setNodeId('node-1')}
+    snapshot={snapshot} readableArticle={article} isReviewItem={snapshot.nodesById[nodeId as keyof typeof snapshot.nodesById]?.kind === 'item'}
+    onOpenExistingHighlight={setNodeId} />;
+}
 createRoot(document.getElementById('root')!).render(
   <LocalizationProvider initialLanguagePreference="en"><CompanionColorModeProvider>
-    <MouseGestureSettingsProvider><CompanionDraftProvider>
-      <ImmersiveReadableArticle onExit={() => {}} snapshot={snapshot} readableArticle={article} />
+    <MouseGestureSettingsProvider><CompanionDraftProvider><Reader />
     </CompanionDraftProvider></MouseGestureSettingsProvider>
   </CompanionColorModeProvider></LocalizationProvider>
 );

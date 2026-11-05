@@ -18,39 +18,46 @@ async function openOutline(page: Page, scenario: string) {
 
 for (const width of [320, 375]) {
   for (const colorScheme of ['light', 'dark'] as const) {
-    test(`outline navigation at ${width}px in ${colorScheme}`, async ({ page }) => {
+    test(`integrated Outline at ${width}px in ${colorScheme}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 812 });
       await page.emulateMedia({ colorScheme });
       await openOutline(page, 'headings');
-      const fullscreen = await page.getByRole('dialog', { name: 'Outline' }).boundingBox();
-      expect(fullscreen).toMatchObject({ x: 0, y: 0, width, height: 812 });
-      await expect(page.getByRole('tab', { name: 'Outline' })).toHaveAttribute('aria-selected', 'true');
-      for (const tab of await page.getByRole('tab').all()) {
-        const bounds = await tab.boundingBox();
-        expect(bounds!.height).toBeGreaterThanOrEqual(44);
-      }
-      await page.getByRole('tab', { name: 'Item' }).click();
-      await page.screenshot({ animations: 'disabled', path: `.tmp/artifacts/T721/outline-${width}-${colorScheme}.png` });
-      const row = page.getByRole('tabpanel').getByRole('button', { name: 'Item passage in the original text.' });
-      await row.click();
+      expect(await page.getByRole('dialog', { name: 'Outline' }).boundingBox())
+        .toMatchObject({ x: 0, y: 0, width, height: 812 });
+      await expect(page.getByRole('tab')).toHaveCount(0);
+      const heading = page.getByRole('button', { name: 'Source heading', exact: true });
+      const toggle = page.getByRole('button', { name: 'Toggle content for Source heading (2)' });
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      expect((await toggle.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      await toggle.click();
+      await expect(page.getByRole('button', { name: 'Topic passage in the original text.' })).toHaveCount(0);
+      await expect(heading).toBeVisible();
+      await toggle.click();
+      await page.screenshot({ animations: 'disabled', path: `.tmp/artifacts/T721-1/outline-${width}-${colorScheme}.png` });
+      await page.getByRole('button', { name: 'Topic passage in the original text.' }).click();
       await expect(page.getByRole('dialog')).toHaveCount(0);
-      await expect(page.getByRole('document', { name: 'Topic body' })).toBeVisible();
-      const paragraph = page.locator('.cm-line').filter({ hasText: 'Item passage in the original text.' });
-      await expect(paragraph).toBeInViewport();
+      await expect(page.locator('.cm-line').filter({ hasText: 'Topic passage in the original text.' })).toBeInViewport();
       await page.getByRole('button', { name: 'Outline', exact: true }).click();
-      await expect(page.getByRole('tab', { name: 'Outline' })).toHaveAttribute('aria-selected', 'true');
       expect(await page.getByRole('dialog').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+      await page.getByRole('button', { name: 'Item passage in the original text.' }).click();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(page.getByRole('document', { name: 'Question' })).toContainText('Question from the original text.');
+      await page.getByRole('document', { name: 'Question' }).click();
+      await page.getByRole('button', { name: 'More reading actions' }).click();
+      await expect(page.getByRole('button', { name: 'Highlight', exact: true })).toHaveCount(0);
+      await page.getByRole('button', { name: 'Outline', exact: true }).click();
+      await expect(page.getByText('No headings or related topics and items', { exact: true })).toBeVisible();
     });
   }
 }
 
-test('opens the first nonempty page and retains all three tabs for an empty text', async ({ page }) => {
+test('lists related cards without a synthetic heading and handles truly empty content', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  for (const [scenario, selected] of [['topics', 'Topic'], ['items', 'Item'], ['empty', 'Outline']]) {
-    await openOutline(page, scenario!);
-    await expect(page.getByRole('tab', { name: selected, exact: true })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('tab')).toHaveCount(3);
-    if (scenario === 'empty') await expect(page.getByText('No headings in this topic')).toBeVisible();
+  for (const scenario of ['topics', 'items', 'empty']) {
+    await openOutline(page, scenario);
+    await expect(page.getByRole('tab')).toHaveCount(0);
+    if (scenario === 'empty') await expect(page.getByText('No headings or related topics and items', { exact: true })).toBeVisible();
+    else await expect(page.getByRole('button', { name: 'Item passage in the original text.' })).toBeVisible();
   }
 });
 

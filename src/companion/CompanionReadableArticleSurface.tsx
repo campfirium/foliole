@@ -151,6 +151,8 @@ function ImmersiveArticleChrome(props: {
   });
   return (
     <ImmersiveChromeLayer
+      activity={articleProps.activity}
+      onOpenOutlineNode={articleProps.onOpenExistingHighlight}
       snapshot={articleProps.snapshot}
       {...definedProps({ editHistory: articleProps.editHistory })}
       navigation={articleProps.navigation}

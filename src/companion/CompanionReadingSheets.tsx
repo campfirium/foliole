@@ -1,5 +1,5 @@
-import { Highlighter, Info, RotateCcw, Search, X, SlidersHorizontal } from 'lucide-react';
-import { useContext, useRef } from 'react';
+import { ListTree, Info, RotateCcw, Search, X, SlidersHorizontal } from 'lucide-react';
+import { useContext } from 'react';
 import type { ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -10,7 +10,6 @@ import { CompanionColorModeControl } from './CompanionColorModeControl';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { CompanionFlowOrEditHistoryActions } from './CompanionFlowHistorySurface';
 import { CompanionFlowModeControl } from './CompanionFlowModeControl';
-import type { CompanionHighlightPanelItem } from './companionHighlightPanelModel';
 import { CompanionReadingColorControls } from './CompanionReadingColorControls';
 import { CompanionReadingDisplayControls } from './CompanionReadingDisplayControls';
 import { CompanionReadingModeControl } from './CompanionReadingModeControl';
@@ -19,9 +18,7 @@ import type { CompanionReadingTypographySettings } from './companionReadingTypog
 import { CompanionWorkspaceCurrentNodeAction } from './CompanionWorkspaceActions';
 import { useCompanionTrashRestoreAction } from './useCompanionTrashRestoreAction';
 
-import { AppEmptyState } from '@/shared/ui';
 import { SettingsTouchSurface } from '@/shared/ui/SettingsTouchSurface';
-import { VirtualListSurface } from '@/shared/ui/VirtualListSurface';
 
 export { ReadingBottomSheet };
 
@@ -65,15 +62,16 @@ function ReadingExitFlowHereAction(props: { onClose(): void }) {
 export function ReadingActionsSheet(props: {
   editHistory?: CompanionEditHistoryActionsProps;
   onFindInDocument(): void;
+  onOpenOutline?: () => void;
   onOpenChange(open: boolean): void;
-  onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info'): void;
+  onOpenReadingSheet(sheet: 'font' | 'info'): void;
   onOpenClozeRemoval?: () => void;
   onRestoreFromTrash?: () => Promise<void> | void;
   open: boolean;
 }) {
   const t = useTranslation();
   const restore = useCompanionTrashRestoreAction(props);
-  const openReadingSheet = (sheet: 'font' | 'highlight' | 'info') => {
+  const openReadingSheet = (sheet: 'font' | 'info') => {
     props.onOpenChange(false);
     props.onOpenReadingSheet(sheet);
   };
@@ -94,11 +92,11 @@ export function ReadingActionsSheet(props: {
           label={t('companion.reading.font')}
           onClick={() => openReadingSheet('font')}
         />
-        <ReadingActionRow
-          icon={<Highlighter aria-hidden="true" className="h-5 w-5" />}
-          label={t('companion.reading.highlight')}
-          onClick={() => openReadingSheet('highlight')}
-        />
+        {props.onOpenOutline ? <ReadingActionRow
+          icon={<ListTree aria-hidden="true" className="h-5 w-5" />}
+          label={t('companion.reading.outline')}
+          onClick={() => { props.onOpenChange(false); props.onOpenOutline?.(); }}
+        /> : null}
         <ReadingActionRow
           icon={<Info aria-hidden="true" className="h-5 w-5" />}
           label={t('companion.reading.info')}
@@ -152,41 +150,6 @@ export function ReadingFontSheet(props: {
         <p className="py-3 text-sm text-error" role="alert">{t('companion.reading.font.saveError')}</p>
       ) : null}
       <CompanionReadingTypographyControls onChange={props.onChange} settings={props.settings} />
-    </ReadingBottomSheet>
-  );
-}
-
-const highlightKey = (highlight: CompanionHighlightPanelItem) => highlight.nodeId ?? `${highlight.from}-${highlight.to}`;
-
-export function ReadingHighlightSheet(props: {
-  highlights: readonly CompanionHighlightPanelItem[];
-  onOpenChange(open: boolean): void;
-  onSelect(item: { from: number; to: number }): void;
-  open: boolean;
-}) {
-  const t = useTranslation();
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  return (
-    <ReadingBottomSheet scrollElementRef={scrollRef} onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.highlight')}>
-      <div className="border-t border-companion-divider">
-        {props.highlights.length > 0 ? <VirtualListSurface items={props.highlights} getItemKey={highlightKey} estimateSize={() => 64}
-          scrollElementRef={scrollRef} accountForOffset measureItems overscan={4} renderItem={(highlight) => (
-          <button
-            className="block w-full border-b border-companion-divider py-3 text-left text-sm text-foreground active:bg-companion-subtle/80"
-            key={highlight.nodeId ?? `${highlight.from}-${highlight.to}`}
-            onClick={() => props.onSelect(highlight)}
-            type="button"
-          >
-            <span className="line-clamp-2">{highlight.text}</span>
-          </button>
-        )} /> : (
-          <AppEmptyState
-            className="min-h-0 items-start py-5 text-left text-companion-text-secondary"
-            description={t('companion.reading.noHighlights.description')}
-            title={t('companion.reading.noHighlights.title')}
-          />
-        )}
-      </div>
     </ReadingBottomSheet>
   );
 }

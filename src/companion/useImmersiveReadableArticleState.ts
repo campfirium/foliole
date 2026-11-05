@@ -11,7 +11,7 @@ export function useImmersiveReadableArticleState(initialSelection: EditorSelecti
   const [isActionsSheetOpen, setIsActionsSheetOpen] = useState(false);
   const [isContentEditing, setIsContentEditing] = useState(false);
   const [isSearchSheetOpen, setIsSearchSheetOpen] = useState(false);
-  const [openReadingSheet, setOpenReadingSheet] = useState<'font' | 'highlight' | 'info' | null>(null);
+  const [openReadingSheet, setOpenReadingSheet] = useState<'font' | 'info' | null>(null);
   const [readingTarget, setReadingTarget] = useState<{ selection: EditorSelection; commandId: string } | null>(null);
   const nextReadingCommandId = useRef(0);
   useCompanionReadingSystemBars(isContentEditing, isChromeVisible);

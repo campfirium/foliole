@@ -9,9 +9,10 @@ type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>
 export function ReadingActionsLayer(props: {
   editHistory?: CompanionEditHistoryActionsProps;
   actionsOpen: boolean;
+  onOpenOutline?: () => void;
   onFindInDocument(): void;
   onOpenActions(open: boolean): void;
-  onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info' | null): void;
+  onOpenReadingSheet(sheet: 'font' | 'info' | null): void;
   onOpenClozeRemoval?: () => void;
   onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
   readableArticle: ReadableArticle;
@@ -26,6 +27,7 @@ export function ReadingActionsLayer(props: {
       open={props.actionsOpen}
       {...definedProps({
         editHistory: props.editHistory,
+        onOpenOutline: props.onOpenOutline,
         onOpenClozeRemoval: props.onOpenClozeRemoval,
         onRestoreFromTrash: props.readableArticle.isTrashed && restoreFromTrash
           ? () => restoreFromTrash(props.readableArticle.nodeId)

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ReadingActionsSheet, ReadingFontSheet, ReadingHighlightSheet } from './CompanionReadingSheets';
+import { ReadingActionsSheet, ReadingFontSheet } from './CompanionReadingSheets';
 import { DEFAULT_READING_TYPOGRAPHY_SETTINGS } from './companionReadingTypographySettings';
 
 describe('ReadingActionsSheet', () => {
@@ -18,14 +18,14 @@ describe('ReadingActionsSheet', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Appearance' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Highlight' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Appearance' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Info' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Restore from trash' })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    expect(onOpenReadingSheet).toHaveBeenCalledWith('highlight');
+    expect(onOpenReadingSheet).toHaveBeenCalledWith('font');
   });
 
   it('keeps a failed trash restore visible in the actions sheet', async () => {
@@ -69,41 +69,6 @@ describe('ReadingActionsSheet', () => {
   });
 });
 
-describe('ReadingHighlightSheet', () => {
-  it('renders current topic highlights and selects a highlight row', () => {
-    const onOpenChange = vi.fn();
-    const onSelect = vi.fn();
-
-    render(
-      <ReadingHighlightSheet
-        highlights={[{ from: 4, nodeId: 'highlight-1', text: 'Selected passage', to: 20 }]}
-        onOpenChange={onOpenChange}
-        onSelect={onSelect}
-        open
-      />
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Selected passage' }));
-
-    expect(screen.getByRole('dialog', { name: 'Highlight' })).toBeInTheDocument();
-    expect(onSelect).toHaveBeenCalledWith({ from: 4, nodeId: 'highlight-1', text: 'Selected passage', to: 20 });
-  });
-
-  it('shows an empty state when the current topic has no highlights', () => {
-    render(
-      <ReadingHighlightSheet
-        highlights={[]}
-        onOpenChange={vi.fn()}
-        onSelect={vi.fn()}
-        open
-      />
-    );
-
-    expect(screen.getByText('No highlights in this topic')).toBeInTheDocument();
-    expect(screen.getByText('Highlights you create in this topic will appear here.')).toBeInTheDocument();
-  });
-});
-
 describe('ReadingFontSheet', () => {
   it('updates local reading typography settings from the Appearance sheet', () => {
     const onChange = vi.fn();
@@ -128,29 +93,6 @@ describe('ReadingFontSheet', () => {
     });
   });
 });
-
-it('windows a dense highlight list and keeps row actions bound to the highlight identity', async () => {
-  const clientHeight = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(300);
-  const clientWidth = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(400);
-  const height = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(300);
-  const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(400);
-  const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 300));
-  const highlights = Array.from({ length: 1000 }, (_, index) => ({ from: index * 10, to: index * 10 + 8, nodeId: `note-${index}`, text: `Passage ${index}` }));
-  const onSelect = vi.fn();
-  const view = render(<ReadingHighlightSheet highlights={highlights} onOpenChange={vi.fn()} onSelect={onSelect} open />);
-  try {
-    const first = await screen.findByRole('button', { name: 'Passage 0' });
-    expect(screen.getAllByRole('button', { name: /Passage/ }).length).toBeLessThan(30);
-    expect(screen.queryByRole('button', { name: 'Passage 999' })).toBeNull();
-    fireEvent.click(first);
-    expect(onSelect).toHaveBeenCalledWith(highlights[0]);
-  } finally {
-    clientHeight.mockRestore();
-    clientWidth.mockRestore();
-    view.unmount(); height.mockRestore(); width.mockRestore(); rect.mockRestore();
-  }
-});
-
 
 it('disables adjustments at the supported reading limits', () => {
   const onChange = vi.fn();

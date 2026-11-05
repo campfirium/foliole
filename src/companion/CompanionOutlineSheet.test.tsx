@@ -1,52 +1,93 @@
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { createOutlineFixture } from '../features/editor/model/documentOutlineNavigation.testSupport';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
+import { CompanionReadingActivity } from './companionReadingActivity';
 import { OutlineSheet } from './CompanionReadingSheets';
 
-const nodesById = { topic: { kind: 'topic' as const }, item: { kind: 'item' as const } };
-const decorations = [
-  { from: 0, to: 5, kind: 'highlight' as const, nodeId: 'topic' },
-  { from: 6, to: 10, kind: 'cloze' as const, nodeId: 'item' }
-];
-
-it.each([
-  { content: '# Heading\nAlpha Beta', anchors: decorations, expected: 'Outline' },
-  { content: 'Alpha Beta', anchors: decorations, expected: 'Topic' },
-  { content: 'Alpha Beta', anchors: decorations.slice(1), expected: 'Item' },
-  { content: 'Alpha Beta', anchors: [], expected: 'Outline' }
-])('selects $expected on opening without navigating', ({ content, anchors, expected }) => {
-  const select = vi.fn();
-  renderWithLocalization(<OutlineSheet content={content} nodesById={nodesById} textAnchorDecorations={anchors}
-    open onOpenChange={vi.fn()} onSelect={select} />);
-  expect(screen.getByRole('tab', { name: expected })).toHaveAttribute('aria-selected', 'true');
-  expect(screen.getAllByRole('tab')).toHaveLength(3);
-  expect(select).not.toHaveBeenCalled();
-  if (!anchors.length) expect(screen.getByText('No headings in this topic')).toBeVisible();
-});
-
-it('allows empty tabs and keyboard changes, then recomputes priority on reopening', () => {
-  const select = vi.fn();
-  const sheet = (open: boolean) => <OutlineSheet content="Alpha Beta" nodesById={nodesById}
-    textAnchorDecorations={decorations.slice(1)} open={open} onOpenChange={vi.fn()} onSelect={select} />;
+function renderOutline(fixture = createOutlineFixture(), activity?: CompanionReadingActivity) {
+  const onSelect = vi.fn();
+  const onOpenNode = vi.fn();
+  const onOpenChange = vi.fn();
+  const sheet = (open: boolean) => <OutlineSheet content={fixture.article().content} nodeId="node-1" snapshot={fixture.snapshot}
+    textAnchorDecorations={fixture.article().textAnchorDecorations} {...(activity ? { activity } : {})}
+    open={open} onOpenChange={onOpenChange} onSelect={onSelect} onOpenNode={onOpenNode} />;
   const view = renderWithLocalization(sheet(true));
-  fireEvent.click(screen.getByRole('tab', { name: 'Topic' }));
-  expect(screen.getByText('No topic locations in this text')).toBeVisible();
-  fireEvent.keyDown(screen.getByRole('tab', { name: 'Topic' }), { key: 'ArrowRight' });
-  expect(screen.getByRole('tab', { name: 'Item' })).toHaveFocus();
-  expect(within(screen.getByRole('tabpanel')).getByRole('button', { name: 'Beta' })).toBeVisible();
-  fireEvent.keyDown(screen.getByRole('tab', { name: 'Item' }), { key: 'Home' });
-  expect(screen.getByText('No headings in this topic')).toBeVisible();
-  expect(select).not.toHaveBeenCalled();
-  view.rerender(sheet(false));
-  view.rerender(sheet(true));
-  expect(screen.getByRole('tab', { name: 'Item' })).toHaveAttribute('aria-selected', 'true');
+  return { ...view, sheet, onSelect, onOpenNode, onOpenChange };
+}
+
+it('shows headings and direct content together and keeps count clicks separate from navigation', () => {
+  const { onSelect, onOpenNode } = renderOutline();
+  expect(screen.queryByRole('tab')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Chapter', exact: true })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Detail', exact: true })).toBeVisible();
+  const toggle = screen.getByRole('button', { name: 'Toggle content for Chapter (1)' });
+  expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  fireEvent.click(toggle);
+  expect(screen.queryByRole('button', { name: 'Alpha passage' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Detail', exact: true })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Beta passage' })).toBeVisible();
+  expect(onSelect).not.toHaveBeenCalled();
+  expect(onOpenNode).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Chapter', exact: true }));
+  expect(onSelect).toHaveBeenCalledWith({ from: 19, to: 26 });
 });
 
-it('keeps an empty Item page available without fabricating a location', () => {
-  renderWithLocalization(<OutlineSheet content="Body" open onOpenChange={vi.fn()} onSelect={vi.fn()} />);
-  fireEvent.click(screen.getByRole('tab', { name: 'Item' }));
-  expect(screen.getByText('No item locations in this text')).toBeVisible();
-  expect(within(screen.getByRole('tabpanel')).queryByRole('button')).toBeNull();
+it('locates a direct Highlight but opens an Item or an unlocated Topic as a card', async () => {
+  const { onSelect, onOpenNode, onOpenChange } = renderOutline();
+  fireEvent.click(screen.getByRole('button', { name: 'Alpha passage' }));
+  expect(onSelect).toHaveBeenCalledWith({ from: 28, to: 41 });
+  expect(onOpenNode).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Beta passage' }));
+  await waitFor(() => expect(onOpenNode).toHaveBeenCalledExactlyOnceWith('item'));
+  expect(onOpenChange).toHaveBeenCalledWith(false);
+  fireEvent.click(screen.getByRole('button', { name: 'Manual topic' }));
+  await waitFor(() => expect(onOpenNode).toHaveBeenLastCalledWith('manual'));
+});
+
+it('waits for reading work, suppresses duplicate clicks and keeps failed opening retryable', async () => {
+  const activity = new CompanionReadingActivity('node-1', () => {});
+  let finish!: () => void;
+  activity.flushDraft = vi.fn(() => new Promise(resolve => { finish = resolve; }));
+  const { onOpenNode } = renderOutline(createOutlineFixture(), activity);
+  const item = screen.getByRole('button', { name: 'Beta passage' });
+  fireEvent.click(item);
+  fireEvent.click(item);
+  await waitFor(() => expect(finish).toBeDefined());
+  expect(onOpenNode).not.toHaveBeenCalled();
+  expect(item).toBeDisabled();
+  finish();
+  await waitFor(() => expect(onOpenNode).toHaveBeenCalledTimes(1));
+  activity.flushDraft = async () => { throw new Error('save_failed'); };
+  fireEvent.click(item);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Finish or retry');
+  expect(onOpenNode).toHaveBeenCalledTimes(1);
+  activity.flushDraft = async () => {};
+  fireEvent.click(item);
+  await waitFor(() => expect(onOpenNode).toHaveBeenCalledTimes(2));
+});
+
+it('cancels pending opening after closing and resets section expansion when reopened', async () => {
+  const activity = new CompanionReadingActivity('node-1', () => {});
+  let finish!: () => void;
+  activity.flushDraft = () => new Promise(resolve => { finish = resolve; });
+  const view = renderOutline(createOutlineFixture(), activity);
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle content for Chapter (1)' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Beta passage' }));
+  await waitFor(() => expect(finish).toBeDefined());
+  view.rerender(view.sheet(false));
+  finish();
+  await waitFor(() => expect(view.onOpenNode).not.toHaveBeenCalled());
+  view.rerender(view.sheet(true));
+  expect(screen.getByRole('button', { name: 'Alpha passage' })).toBeVisible();
+});
+
+it('shows empty content without creating a synthetic heading', () => {
+  const fixture = createOutlineFixture('No headings or anchors');
+  fixture.snapshot.nodeOrder = ['node-1'];
+  renderOutline(fixture);
+  expect(screen.getByText('No headings or related topics and items')).toBeVisible();
+  expect(screen.queryByRole('tab')).toBeNull();
 });

@@ -1,25 +1,22 @@
 import { render } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-const highlightModelMock = vi.hoisted(() => vi.fn(() => []));
 
 const readingActionsSheetMock = vi.hoisted(() => vi.fn<(props: Record<string, unknown>) => null>(() => null));
 
 vi.mock('./CompanionDocumentSearchSheet', () => ({ CompanionDocumentSearchSheet: () => null }));
 vi.mock('./CompanionReadingChrome', () => ({ ReadingChrome: () => null }));
-vi.mock('./companionHighlightPanelModel', () => ({ buildCompanionHighlightPanelItems: highlightModelMock }));
 vi.mock('./CompanionReadingSheets', () => ({
   OutlineSheet: () => null,
   ReadingActionsSheet: (props: Record<string, unknown>) => readingActionsSheetMock(props),
   ReadingFontSheet: () => null,
-  ReadingHighlightSheet: () => null,
   ReadingInfoSheet: () => null
 }));
 
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
 import { DEFAULT_READING_TYPOGRAPHY_SETTINGS } from './companionReadingTypographySettings';
 
-function renderChrome(onRestoreFromTrash?: (nodeId: string) => void, sheet: 'highlight' | null = null) {
+function renderChrome(onRestoreFromTrash?: (nodeId: string) => void, sheet: 'font' | null = null) {
   render(
     <ImmersiveChromeLayer
       actionsOpen
@@ -48,7 +45,6 @@ function renderChrome(onRestoreFromTrash?: (nodeId: string) => void, sheet: 'hig
 
 beforeEach(() => {
   readingActionsSheetMock.mockClear();
-  highlightModelMock.mockClear();
 });
 
 it('does not recreate a trash restore action when the host omitted the handler', () => {
@@ -65,11 +61,4 @@ it('keeps trash restore reachable when the host provides the handler', () => {
   const props = readingActionsSheetMock.mock.calls[0]?.[0] as { onRestoreFromTrash(): void };
   props.onRestoreFromTrash();
   expect(onRestoreFromTrash).toHaveBeenCalledWith('topic-1');
-});
-
-it('does not derive the hidden highlight sheet and derives it when requested', () => {
-  renderChrome();
-  expect(highlightModelMock).not.toHaveBeenCalled();
-  renderChrome(undefined, 'highlight');
-  expect(highlightModelMock).toHaveBeenCalledTimes(1);
 });

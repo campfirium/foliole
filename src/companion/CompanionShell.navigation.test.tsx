@@ -172,14 +172,6 @@ function openReadingAction(name: 'Find in document' | 'Appearance' | 'Highlight'
   fireEvent.click(screen.getByRole('button', { name }));
 }
 
-function expectRepeatedHighlightSelectionCreatesNewCommand() {
-  const firstCommandId = screen.getByTestId('companion-article-document').getAttribute('data-reading-command-id');
-  expect(firstCommandId).toBeTruthy();
-  openReadingAction('Highlight');
-  fireEvent.click(screen.getByRole('button', { name: 'Readable topic body' }));
-  expect(screen.getByTestId('companion-article-document').getAttribute('data-reading-command-id')).not.toBe(firstCommandId);
-}
-
 async function verifyReviewExitNavigation() {
   const surface = createSurface('review');
   await renderShellWithSurface(surface);
@@ -243,13 +235,6 @@ describe('CompanionShell navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     expect(screen.queryByRole('dialog', { name: 'Appearance' })).not.toBeInTheDocument();
     expect(screen.getByTestId('companion-article-document').parentElement).toHaveAttribute('data-reading-font-size', '17');
-    openReadingAction('Highlight');
-    expect(screen.getByRole('dialog', { name: 'Highlight' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Readable topic body' }));
-    expect(screen.queryByRole('dialog', { name: 'Highlight' })).not.toBeInTheDocument();
-    expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-from', '20');
-    expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-to', '39');
-    expectRepeatedHighlightSelectionCreatesNewCommand();
     openReadingAction('Info');
     expect(screen.getByRole('dialog', { name: 'Info' })).toBeInTheDocument();
     expect(screen.getByText('PDF and text')).toBeInTheDocument();
