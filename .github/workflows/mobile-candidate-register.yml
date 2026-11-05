@@ -1,0 +1,36 @@
+name: Register original mobile candidate
+on:
+  workflow_call:
+    inputs:
+      source_run_id: { required: true, type: string }
+      candidate_artifact: { required: true, type: string }
+    outputs:
+      deployment_id:
+        value: ${{ jobs.register.outputs.deployment_id }}
+  workflow_dispatch:
+    inputs:
+      source_run_id: { required: true, type: string }
+      candidate_artifact: { required: true, type: string }
+permissions: { contents: read, actions: read, deployments: write }
+concurrency:
+  group: mobile-candidate-registration-${{ inputs.source_run_id }}
+  cancel-in-progress: false
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      deployment_id: ${{ steps.register.outputs.deployment_id }}
+    steps:
+      - name: Read trusted registration code from the default branch
+        uses: actions/checkout@v4
+        with: { ref: dev, persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24.22.2 }
+      - name: Verify source and quality before durable registration
+        id: register
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_RUN_ID: ${{ inputs.source_run_id }}
+          CANDIDATE_ARTIFACT: ${{ inputs.candidate_artifact }}
+        run: node scripts/mobile/mobile-candidate-register.mjs
