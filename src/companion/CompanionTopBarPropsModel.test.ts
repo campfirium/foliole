@@ -45,6 +45,7 @@ describe('CompanionTopBarPropsModel', () => {
     for (const page of ['clozeGuard', 'learning', 'foregroundTime', 'reviewStatistics', 'backup', 'appearance', 'debug', 'sync', 'device', 'tabs']) {
       expect(buildTopBarProps(page)).toMatchObject({ backLabel: 'Settings', onBack: expect.any(Function) });
     }
+    expect(buildTopBarProps('learning')).toMatchObject({ title: 'Review' });
     expect(buildTopBarProps('clozeGuard')).toMatchObject({ title: 'Cloze guard' });
     expect(buildTopBarProps('foregroundTime')).toMatchObject({ title: 'Foreground time' });
   });

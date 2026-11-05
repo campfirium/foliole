@@ -17,7 +17,7 @@ import { CompanionLearningSettingsContent } from './CompanionLearningSettingsCon
 const runtime = vi.hoisted(() => ({ platform: 'android' }));
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => runtime.platform, isNativePlatform: () => true }, registerPlugin: createCompanionNativeSyncStub };
+  return { Capacitor: { getPlatform: () => runtime.platform, isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: createCompanionNativeSyncStub };
 });
 
 const values = [

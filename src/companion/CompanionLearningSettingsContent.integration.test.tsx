@@ -47,7 +47,7 @@ it('saves retention from the mobile form, keeps existing facts, grades with it a
   const before = library.database.prepare('SELECT * FROM node_review').all();
   const facts = library.database.prepare('SELECT * FROM review_log').all();
   const ui = render(<SettingsEntry />);
-  fireEvent.click(screen.getByRole('button', { name: 'Learning settings' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Review', exact: true }));
   await changeSetting('Desired retention', '0.85');
   expect(getCurrentReviewSchedulerSettings().desiredRetention).toBe(0.85);
   expect(library.database.prepare('SELECT * FROM node_review').all()).toEqual(before);
@@ -87,7 +87,7 @@ it.each(['setting_records', 'sync_object_state'])('keeps the saved value on %s w
 it('shows a load failure instead of letting a malformed persisted setting be overwritten', async () => {
   library.database.prepare(`INSERT INTO setting_records (key,scope,platform,form_factor,host_name,value_json,content_hash,updated_at) VALUES ('review_scheduler_settings','user_space','android','phone','*','bad','hash','now')`).run();
   render(<CompanionLearningSettingsContent />);
-  expect(await screen.findByRole('alert')).toHaveTextContent('Learning settings could not be loaded');
+  expect(await screen.findByRole('alert')).toHaveTextContent('Review settings could not be loaded');
   expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
   library.database.prepare('DELETE FROM setting_records').run();
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Retry' })); });

@@ -13,11 +13,11 @@ export interface CompanionLearningSettingRow {
 export const COMPANION_LEARNING_SETTING_ROWS: readonly CompanionLearningSettingRow[] = [
   { key: 'desiredRetention', title: 'settings.search.reviewRetention.title', description: 'settings.review.desiredRetention.description', fields: ['desiredRetention'] },
   { key: 'maximumIntervalDays', title: 'settings.search.reviewMaximumInterval.title', description: 'settings.review.maximumInterval.description', fields: ['maximumIntervalDays'] },
-  { key: 'newItemLoadBalancingDays', title: 'settings.review.newItemLoadBalancing.title', description: 'settings.review.newItemLoadBalancing.description', fields: ['newItemLoadBalancingDays'] },
   { key: 'newDayStartsAtHour', title: 'settings.search.reviewDayStart.title', description: 'settings.search.reviewDayStart.description', fields: ['newDayStartsAtHour'] },
+  { key: 'newItemLoadBalancingDays', title: 'settings.review.newItemLoadBalancing.title', description: 'settings.review.newItemLoadBalancing.description', fields: ['newItemLoadBalancingDays'] },
   { key: 'defaultPriority', title: 'settings.search.reviewDefaultPriority.title', description: 'settings.search.reviewDefaultPriority.description', fields: ['defaultPriority'] },
-  { key: 'priorityRatio', title: 'settings.search.reviewPriorityWeight.title', description: 'settings.search.reviewPriorityWeight.description', fields: ['priorityRatio'] },
   { key: 'queueMix', title: 'settings.search.reviewMix.title', description: 'settings.search.reviewMix.description', fields: ['queueMixReading', 'queueMixFsrs'] },
+  { key: 'priorityRatio', title: 'settings.search.reviewPriorityWeight.title', description: 'settings.search.reviewPriorityWeight.description', fields: ['priorityRatio'] },
   { key: 'readingInitialIntervalDays', title: 'settings.search.reviewInitialInterval.title', description: 'settings.search.reviewInitialInterval.description', fields: ['readingInitialIntervalDays'] },
   { key: 'readingGrowth', title: 'settings.search.reviewIntervalGrowth.title', description: 'settings.search.reviewIntervalGrowth.description', fields: ['readingGrowthMin', 'readingGrowthMax'] }
 ];

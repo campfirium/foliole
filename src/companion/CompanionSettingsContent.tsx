@@ -95,9 +95,9 @@ export function CompanionSettingsList(props: {
             title={t('companion.settings.sync.title')}
           />
         </SettingsListSection>
-        {props.onOpenLearning || props.onOpenClozeGuard || props.onOpenForegroundTime || props.onOpenReviewStatistics ? <SettingsListSection title={t('companion.settings.learning.section')}>
+        {props.onOpenLearning || props.onOpenClozeGuard || props.onOpenForegroundTime || props.onOpenReviewStatistics ? <SettingsListSection title={t('settings.group.workspace')}>
           {props.onOpenLearning ? <SettingsListItem Icon={BookOpen} detail="" onClick={props.onOpenLearning}
-            title={t('companion.settings.learning.title')} /> : null}
+            title={t('settings.category.review.label')} /> : null}
           {props.onOpenClozeGuard ? <SettingsListItem Icon={RectangleEllipsis} detail="" onClick={props.onOpenClozeGuard}
             title={t('settings.editor.clozeGuard.section')} /> : null}
           <CompanionHighlightPrefixSetting />

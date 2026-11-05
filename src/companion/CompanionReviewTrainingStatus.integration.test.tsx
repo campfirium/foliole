@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -34,7 +34,7 @@ function SettingsEntry() {
 }
 
 async function openLearning() {
-  fireEvent.click(await screen.findByRole('button', { name: 'Learning settings' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Review', exact: true }));
   await screen.findByRole('heading', { name: 'Automatic review optimization' });
 }
 
@@ -45,6 +45,26 @@ async function saveModel() {
     engine: REVIEW_TRAINING_ENGINE, candidate: null, baseline: null };
   await saveCompanionReviewTrainingModel(model, plan.libraryScope);
 }
+
+it('opens Review with the desktop Scheduler structure and keeps its related settings together', async () => {
+  render(<SettingsEntry />);
+  expect(screen.getByRole('heading', { name: 'Workspace' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Learning settings' })).not.toBeInTheDocument();
+  await openLearning();
+  const scheduler = within(screen.getByRole('region', { name: 'Review settings section' }));
+  expect(scheduler.getByRole('heading', { name: 'Scheduler' })).toBeInTheDocument();
+  expect(scheduler.getByRole('heading', { name: 'Automatic review optimization' })).toBeInTheDocument();
+  expect(scheduler.queryByRole('group', { name: 'Review schedule' })).not.toBeInTheDocument();
+  expect(scheduler.queryByRole('group', { name: 'Topic priority' })).not.toBeInTheDocument();
+  expect(scheduler.queryByRole('group', { name: 'Reading intervals' })).not.toBeInTheDocument();
+  const day = scheduler.getByRole('button', { name: /^New day starts at/ });
+  const balance = scheduler.getByRole('button', { name: /^New item load balancing/ });
+  expect(day.compareDocumentPosition(balance) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  const mix = scheduler.getByRole('button', { name: /^Reading vs review mix/ });
+  const priority = scheduler.getByRole('button', { name: /^Priority weight/ });
+  expect(mix.compareDocumentPosition(priority) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(await scheduler.findByText('None yet')).toBeInTheDocument();
+});
 
 it('opens real history, observes a committed model in the same view, and restores it after reentry and database reopening', async () => {
   const ui = render(<SettingsEntry />);

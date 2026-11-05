@@ -5,10 +5,9 @@ import {
 } from '../features/settings/model/reviewSchedulerSettings';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { loadCompanionReviewSettings } from '../shared/platform/companion/settings/companionReviewSchedulerSettingsRepository';
-import { AppButton } from '../shared/ui';
+import { AppButton, SettingsSection } from '../shared/ui';
 
 import { CompanionLearningSettingControl } from './CompanionLearningSettingControl';
-import { COMPANION_LEARNING_SETTING_GROUPS } from './companionLearningSettingFields';
 import { COMPANION_LEARNING_SETTING_ROWS } from './companionLearningSettingRows';
 import { CompanionReviewTrainingStatus } from './CompanionReviewTrainingStatus';
 
@@ -29,12 +28,9 @@ export function CompanionLearningSettingsContent() {
     <p>{t('companion.settings.learning.loadError')}</p>
     <AppButton onClick={() => setAttempt(value => value + 1)}>{t('desktop.reviewCalendar.retry')}</AppButton>
   </div>;
-  return <section aria-label={t('companion.settings.learning.title')}>
+  return <SettingsSection ariaLabel={t('settings.review.sectionAria')} title={t('settings.review.section')}>
     <CompanionReviewTrainingStatus />
-    {COMPANION_LEARNING_SETTING_GROUPS.map(group => <fieldset className="mt-5 first:mt-0" key={group.title}>
-      {group.keys.length > 1 ? <legend className="pb-1 text-xs text-companion-text-tertiary">{t(group.title)}</legend> : null}
-      {COMPANION_LEARNING_SETTING_ROWS.filter(row => group.keys.includes(row.key)).map(row =>
-        <CompanionLearningSettingControl row={row} key={row.key} settings={settings} />)}
-    </fieldset>)}
-  </section>;
+    {COMPANION_LEARNING_SETTING_ROWS.map(row =>
+      <CompanionLearningSettingControl row={row} key={row.key} settings={settings} />)}
+  </SettingsSection>;
 }
