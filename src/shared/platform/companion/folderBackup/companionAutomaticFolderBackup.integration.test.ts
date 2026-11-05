@@ -5,6 +5,8 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { bindParentOrderWriterWithDbPort } from '../../../../../lib/core/sync/parentOrderWriter';
+
 import { automaticFolderBackupFixture, closeAutomaticBackupFixtures, gate,
   clearCompanionFolderBackupDirectory, getCompanionAutomaticFolderBackup, setCompanionAutomaticFolderBackup,
   backUpCompanionDatabase, getCompanionFolderBackupState } from './companionAutomaticFolderBackup.testSupport';
@@ -209,4 +211,23 @@ it('keeps database edits pending across reopening and does not hide newer edits 
     throw new Error('rollback progress');
   })).rejects.toThrow('rollback progress');
   expect((await getCompanionFolderBackupState()).pendingItems).toBe(0);
+});
+
+
+it('keeps a completed backup current when reopening rebinds the unchanged local writer', async () => {
+  const f = await fixture();
+  const binding = { deviceAnchor: 'bootstrap-device', libraryPath: '/stable/library' };
+  const bind = () => f.owner.runWriter(db => bindParentOrderWriterWithDbPort(db, binding));
+  const author = await bind();
+  await backUpCompanionDatabase();
+  expect((await getCompanionFolderBackupState()).pendingItems).toBe(0);
+  await f.reopen();
+  expect(await bind()).toBe(author);
+  expect((await getCompanionFolderBackupState()).pendingItems).toBe(0);
+  await f.owner.runWriter(db => db.run("INSERT INTO companion_meta(key,value,updated_at) VALUES ('real-setting','changed','now')"));
+  expect((await getCompanionFolderBackupState()).pendingItems).toBe(1);
+  await backUpCompanionDatabase();
+  const next = await f.owner.runWriter(db => bindParentOrderWriterWithDbPort(db, { ...binding, deviceAnchor: 'replacement-device' }));
+  expect(next).not.toBe(author);
+  expect((await getCompanionFolderBackupState()).pendingItems).toBe(1);
 });

@@ -12,7 +12,10 @@ export async function bindParentOrderWriterWithDbPort(db: DbPort, binding: {
   const { bindingId, authorId } = parentOrderWriterIdentity({ ...binding, sourceEpoch: epoch.source_epoch });
   await db.run(`INSERT INTO parent_order_writer VALUES (1, ?, ?, ?)
     ON CONFLICT(singleton_id) DO UPDATE SET binding_id = excluded.binding_id,
-      source_epoch = excluded.source_epoch, author_id = excluded.author_id`,
+      source_epoch = excluded.source_epoch, author_id = excluded.author_id
+    WHERE parent_order_writer.binding_id != excluded.binding_id
+      OR parent_order_writer.source_epoch != excluded.source_epoch
+      OR parent_order_writer.author_id != excluded.author_id`,
   [bindingId, epoch.source_epoch, authorId]);
   return authorId;
 }
