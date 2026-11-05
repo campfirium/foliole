@@ -1,6 +1,7 @@
-import { parseHighlightCardContent } from '../../../../../lib/core/annotations/textAnnotationContent';
+import { parseExcerptAnnotationContent } from '../../../../../lib/core/annotations/textAnnotationContent';
 import type { WorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
+import { getHighlightAnnotationPrefix } from '../../../config/highlightAnnotationPrefixSetting';
 import { isAvailableNativeCompanionRuntime } from '../../companionWorkspaceRuntimeRepository';
 import { loadCompanionWorkspaceNode } from '../runtime/companionWorkspaceNodeStore';
 
@@ -31,5 +32,8 @@ export async function readCompanionHighlight(snapshot: WorkspaceSnapshot | null,
     throw new Error('companion_highlight_node_unavailable');
   }
   assertCompanionHighlightRead(node, guard);
-  return { note: kind === 'cloze' ? '' : parseHighlightCardContent({ content: node.content }).note ?? '', guard };
+  const note = kind === 'cloze' ? '' : parseExcerptAnnotationContent({
+    content: node.content, notePrefix: getHighlightAnnotationPrefix()
+  }).note ?? '';
+  return { note, guard };
 }

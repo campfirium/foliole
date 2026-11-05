@@ -1,10 +1,11 @@
 import {
-  appendHighlightCardNote,
-  DEFAULT_HIGHLIGHT_ANNOTATION_PREFIX
+  parseExcerptAnnotationContent,
+  replaceExcerptAnnotation
 } from '../../lib/core/annotations/textAnnotationContent';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import { getTextAnchorLocators } from '../features/nodes/model/nodeTypes';
+import { getHighlightAnnotationPrefix } from '../shared/config/highlightAnnotationPrefixSetting';
 import { companionArticleChildIds } from '../shared/platform/companion/reading/companionReadingDemand';
 import { findTextAnchorAtPosition } from '../shared/textAnchorTarget';
 
@@ -18,11 +19,7 @@ export interface CompanionExistingHighlightTarget {
 }
 
 function getHighlightNote(node: WorkspaceNodeSnapshot) {
-  const marker = `\n${DEFAULT_HIGHLIGHT_ANNOTATION_PREFIX}`;
-  const markerIndex = node.content.indexOf(marker);
-  if (markerIndex < 0) return null;
-  const note = node.content.slice(markerIndex + marker.length).trim();
-  return note || null;
+  return parseExcerptAnnotationContent({ content: node.content, notePrefix: getHighlightAnnotationPrefix() }).note;
 }
 
 function toExistingHighlightTarget(node: WorkspaceNodeSnapshot | undefined): CompanionExistingHighlightTarget | null {
@@ -75,10 +72,10 @@ export function appendCompanionExistingHighlightNote(args: {
   node: WorkspaceNodeSnapshot;
   originalText: string;
 }) {
-  return appendHighlightCardNote({
-    content: args.node.content,
+  return replaceExcerptAnnotation({
+    content: args.node.content || args.originalText,
     note: args.note,
-    originalText: args.originalText
+    notePrefix: getHighlightAnnotationPrefix()
   });
 }
 

@@ -4,12 +4,14 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { APP_SETTINGS_STORAGE_KEYS } from '../shared/config/appSettings';
 import { getHighlightAnnotationPrefix } from '../shared/config/highlightAnnotationPrefixSetting';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
+import { readCompanionHighlight } from '../shared/platform/companion/reading/companionHighlightRead';
 import { createSearchLibrary, reopenSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 import { getSelectionCommandPayloadForContentRanges } from '../shared/selectionCommandPayload';
 
-import { persistCompanionSelectionAnnotation } from './companionSelectionAnnotationActions';
+import { findCompanionExistingHighlightAtPosition, findCompanionExistingHighlightFromPayload } from './companionExistingHighlightActions';
+import { addNoteToCompanionExistingHighlight, persistCompanionSelectionAnnotation } from './companionSelectionAnnotationActions';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 
 const runtime = vi.hoisted(() => ({ platform: 'android' }));
@@ -82,6 +84,35 @@ it.each([['', '※ '], ['A\r\nB', 'AB'], ['x'.repeat(30), 'x'.repeat(24)]])(
     mountSettings(); changeSetting(value!);
     expect(getHighlightAnnotationPrefix()).toBe(expected);
   });
+
+it.each(['android', 'ios'])('reads and edits actual %s annotations with the desktop current-marker semantics', async platform => {
+  runtime.platform = platform;
+  mountSettings(); changeSetting('Note: ');
+  const created = (await createNote('First'))!;
+  const target = { nodeId: created.nodeId, originalText: 'Selected passage', note: 'First' };
+  expect(findCompanionExistingHighlightFromPayload(created.snapshot, payload, content)).toMatchObject(target);
+  expect(findCompanionExistingHighlightAtPosition({ snapshot: created.snapshot,
+    parentNodeId: 'source', parentContent: content, position: 8 })).toMatchObject(target);
+  const read = await readCompanionHighlight(created.snapshot, created.nodeId);
+  expect(read.note).toBe('First');
+  const edited = (await addNoteToCompanionExistingHighlight({ deviceId: 'Search', nodeId: created.nodeId,
+    originalText: 'Selected passage', note: 'Edited\nSecond line', snapshot: created.snapshot, guard: read.guard }))!;
+  const before = 'Selected passage\nNote: Edited\nSecond line';
+  expect((await loadCompanionWorkspaceNode(created.nodeId))?.content).toBe(before);
+  expect((await readCompanionHighlight(edited.snapshot, created.nodeId)).note).toBe('Edited\nSecond line');
+  changeSetting('>> ');
+  expect((await loadCompanionWorkspaceNode(created.nodeId))?.content).toBe(before);
+  const old = await readCompanionHighlight(edited.snapshot, created.nodeId);
+  expect(old.note).toBe('');
+  const appended = (await addNoteToCompanionExistingHighlight({ deviceId: 'Search', nodeId: created.nodeId,
+    originalText: 'Selected passage', note: 'Another', snapshot: edited.snapshot, guard: old.guard }))!;
+  const expected = `${before}\n>> Another`;
+  expect((await loadCompanionWorkspaceNode(created.nodeId))?.content).toBe(expected);
+  expect((await readCompanionHighlight(appended.snapshot, created.nodeId)).note).toBe('Another');
+  library.database = (await reopenSearchLibrary(library.root, '2026-11-05T13:00:00Z')).db;
+  expect((await loadCompanionWorkspaceNode(created.nodeId))?.content).toBe(expected);
+  expect((await loadCompanionWorkspaceNode('source'))?.content).toBe(content);
+});
 
 it('keeps canceled drafts private and resets only when confirmed', () => {
   mountSettings(); changeSetting('Note: ');
