@@ -10,6 +10,7 @@ import { AppButton } from '../shared/ui';
 import { CompanionLearningSettingControl } from './CompanionLearningSettingControl';
 import { COMPANION_LEARNING_SETTING_GROUPS } from './companionLearningSettingFields';
 import { COMPANION_LEARNING_SETTING_ROWS } from './companionLearningSettingRows';
+import { CompanionReviewTrainingStatus } from './CompanionReviewTrainingStatus';
 
 export function CompanionLearningSettingsContent() {
   const t = useTranslation();
@@ -29,6 +30,7 @@ export function CompanionLearningSettingsContent() {
     <AppButton onClick={() => setAttempt(value => value + 1)}>{t('desktop.reviewCalendar.retry')}</AppButton>
   </div>;
   return <section aria-label={t('companion.settings.learning.title')}>
+    <CompanionReviewTrainingStatus />
     {COMPANION_LEARNING_SETTING_GROUPS.map(group => <fieldset className="mt-5 first:mt-0" key={group.title}>
       {group.keys.length > 1 ? <legend className="pb-1 text-xs text-companion-text-tertiary">{t(group.title)}</legend> : null}
       {COMPANION_LEARNING_SETTING_ROWS.filter(row => group.keys.includes(row.key)).map(row =>

@@ -1,6 +1,7 @@
 import { resolveDesktopSettingIdentity } from '../../../../../lib/core/database/desktopSettingPolicy';
 import { isSpecialRootNode } from '../../../../../lib/core/database/nodeMutationSpecialRoots';
 import { readReviewTrainingInputWithDb, readReviewTrainingPlanWithDb } from '../../../../../lib/core/database/reviewTrainingInput';
+import { parseReviewModels, reviewTrainingHistory, REVIEW_MODELS_SQL } from '../../../../../lib/core/database/reviewTrainingModels';
 import { reviewModelKey, reviewTrainingModelSchema, type ReviewTrainingModel } from '../../../../../lib/core/review/trainingModel';
 import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyncMutationRevision';
 
@@ -26,6 +27,21 @@ export function loadCompanionReviewTrainingPlan() {
   return owner.read(db => {
     assertOwner(owner, scope);
     return readReviewTrainingPlanWithDb(db, scope);
+  });
+}
+
+export async function loadCompanionReviewTrainingStatus() {
+  const owner = getIosCompanionDatabaseOwner();
+  const scope = scopeFor(owner);
+  return owner.readInteractiveSnapshot(async db => {
+    assertOwner(owner, scope);
+    const models = parseReviewModels(await db.query<{ key: string; value_json: string }>(REVIEW_MODELS_SQL));
+    const plan = reviewTrainingHistory(models);
+    const [folder] = plan.lastTrainedFolderId === null ? [] : await db.query<{ title: string }>(
+      "SELECT title FROM nodes WHERE id = ? AND kind = 'folder' AND deleted_at IS NULL", [plan.lastTrainedFolderId]);
+    assertOwner(owner, scope);
+    return { lastTrainedAt: plan.lastTrainedAt, lastTrainedFolderId: plan.lastTrainedFolderId,
+      folderTitle: folder?.title ?? null };
   });
 }
 

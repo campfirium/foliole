@@ -31,6 +31,12 @@ export function readReviewModels(driver: DatabaseDriver) {
   return parseReviewModels(driver.queryAll<{ key: string; value_json: string }>(REVIEW_MODELS_SQL));
 }
 
+export function reviewTrainingHistory(models: readonly ReviewTrainingModel[]) {
+  const latest = [...models].sort((a, b) => b.trainedAt.localeCompare(a.trainedAt)
+    || (a.folderId ?? '').localeCompare(b.folderId ?? ''))[0];
+  return { lastTrainedAt: latest?.trainedAt ?? null, lastTrainedFolderId: latest?.folderId ?? null };
+}
+
 export function readNodeReviewWeights(driver: DatabaseDriver, nodeId: string) {
   const nodes = driver.queryAll<ReviewTrainingNode & Record<string, unknown>>(REVIEW_TRAINING_ANCESTORS_SQL, [nodeId]);
   return resolveReviewWeights(nodeId, nodes, readReviewModels(driver));

@@ -7,7 +7,7 @@ import type { DbPort } from '../sync/dbPort.js';
 import type { DatabaseDriver } from './driver.js';
 import { isSpecialRootNode } from './nodeMutationSpecialRoots.js';
 import { EFFECTIVE_REVIEW_PREDICATE } from './reviewLogRecord.js';
-import { parseReviewModels, readReviewModels, REVIEW_MODELS_SQL, REVIEW_TRAINING_NODES_SQL } from './reviewTrainingModels.js';
+import { parseReviewModels, readReviewModels, reviewTrainingHistory, REVIEW_MODELS_SQL, REVIEW_TRAINING_NODES_SQL } from './reviewTrainingModels.js';
 
 const COUNTS_SQL = `SELECT r.node_id, COUNT(*) AS count FROM review_log r WHERE ${EFFECTIVE_REVIEW_PREDICATE} GROUP BY r.node_id`;
 const SETTINGS_SQL = 'SELECT id, parent_id AS parentNodeId, enable_short_term AS enableShortTerm FROM nodes WHERE deleted_at IS NULL';
@@ -53,10 +53,7 @@ function createPlan(nodes: ReviewTrainingNode[], models: ReviewTrainingModel[], 
     count - (models.find(model => model.folderId === id)?.reviewCount ?? 0) >= REVIEW_TRAINING_STEP
   ).sort(([a], [b]) => depth(a) - depth(b) || (a ?? '').localeCompare(b ?? ''))
     .map(([folderId, reviewCount]) => ({ folderId, reviewCount }));
-  const latest = [...models].sort((a, b) => b.trainedAt.localeCompare(a.trainedAt)
-    || (a.folderId ?? '').localeCompare(b.folderId ?? ''))[0];
-  return { folders, libraryScope, lastTrainedAt: latest?.trainedAt ?? null,
-    lastTrainedFolderId: latest?.folderId ?? null };
+  return { folders, libraryScope, ...reviewTrainingHistory(models) };
 }
 
 export function readReviewTrainingInput(driver: DatabaseDriver, folderId: string | null,
