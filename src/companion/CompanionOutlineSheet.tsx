@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 
-import { CompanionBottomSheet } from './CompanionBottomSheet';
 import { CompanionContentTabs } from './CompanionContentTabs';
+import { CompanionFullscreenSheet } from './CompanionFullscreenSheet';
 
 import type { EditorTextAnchorDecoration } from '@/features/editor/adapters/EditorAdapter';
 import { collectDocumentOutlineNavigation, DOCUMENT_OUTLINE_TABS, type DocumentOutlineTab } from '@/features/editor/model/documentOutlineNavigation';
@@ -49,7 +49,7 @@ function OutlineContents(props: OutlineSheetProps) {
 
 export function OutlineSheet(props: OutlineSheetProps) {
   const t = useTranslation();
-  return <CompanionBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.outline')}>
+  return <CompanionFullscreenSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.outline')}>
     {props.open ? <OutlineContents {...props} /> : null}
-  </CompanionBottomSheet>;
+  </CompanionFullscreenSheet>;
 }

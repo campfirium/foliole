@@ -22,6 +22,8 @@ for (const width of [320, 375]) {
       await page.setViewportSize({ width, height: 812 });
       await page.emulateMedia({ colorScheme });
       await openOutline(page, 'headings');
+      const fullscreen = await page.getByRole('dialog', { name: 'Outline' }).boundingBox();
+      expect(fullscreen).toMatchObject({ x: 0, y: 0, width, height: 812 });
       await expect(page.getByRole('tab', { name: 'Outline' })).toHaveAttribute('aria-selected', 'true');
       for (const tab of await page.getByRole('tab').all()) {
         const bounds = await tab.boundingBox();
@@ -50,4 +52,17 @@ test('opens the first nonempty page and retains all three tabs for an empty text
     await expect(page.getByRole('tab')).toHaveCount(3);
     if (scenario === 'empty') await expect(page.getByText('No headings in this topic')).toBeVisible();
   }
+});
+
+test('returns from fullscreen Outline to the same reader and restores its opener focus', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await openOutline(page, 'headings');
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const opener = page.getByRole('button', { name: 'Outline', exact: true });
+  await expect(opener).toBeFocused();
+  await opener.click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('document', { name: 'Topic body' })).toBeVisible();
 });
