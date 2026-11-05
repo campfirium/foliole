@@ -3,7 +3,9 @@ import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository'
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import { captureFolderAttachmentDeletions, validateFolderAttachmentDeletions } from './companionFolderAttachmentDeletion';
+import { confirmFolderDatabaseBackup, readFolderBackupRevision } from './companionFolderBackupProgress';
 import { getCompanionFolderBackupPort } from './companionFolderBackupRuntimeRepository';
+import { getCompanionFolderBackupState } from './companionFolderBackupState';
 import { consumeCompanionFolderAttachmentWork } from './consumeCompanionFolderAttachmentWork';
 
 interface BackupOptions { automatic?: boolean; continueWork?: () => boolean }
@@ -49,10 +51,12 @@ async function runBackup(chooseDirectory: boolean, options: BackupOptions) {
   // An unreadable attachment reference blocks deletion, not saving the database itself.
   const deletionSnapshot = await captureFolderAttachmentDeletions(owner).catch(() => null);
   try {
+  const revision = await owner.read(readFolderBackupRevision);
   const result = await port.backupDatabase({ sourceEpoch, requestId, chooseDirectory });
   if (result.requestId !== requestId) throw new Error('folder_backup_response_mismatch');
   if (!result.cancelled && result.databaseCommitted) {
     const deletions = await validateFolderAttachmentDeletions(owner, deletionSnapshot, result.state.directoryId ?? '');
+    await owner.runWriter(db => confirmFolderDatabaseBackup(db, result.state.directoryId ?? '', revision), false);
     result.state = await consumeCompanionFolderAttachmentWork(port, {
       write: execute => runCompanionSyncWriterTask(() => owner.runWriter(execute, false)),
       inventory: async () => {
@@ -63,6 +67,7 @@ async function runBackup(chooseDirectory: boolean, options: BackupOptions) {
       }
     }, { requestId, sourceEpoch, profile: result.state.directoryId ?? '', deletions, ...options });
   }
+  result.state = await getCompanionFolderBackupState(result.state);
   return result;
   } catch (error) {
     await port.cancelDatabase({ requestId }).catch(() => undefined);

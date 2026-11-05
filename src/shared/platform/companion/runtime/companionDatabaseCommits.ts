@@ -1,4 +1,5 @@
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
+import { markFolderBackupChanged } from '../folderBackup/companionFolderBackupProgress';
 
 /** Observes successful owner writes; backup bookkeeping explicitly opts out. */
 export class CompanionDatabaseCommits {
@@ -10,11 +11,17 @@ export class CompanionDatabaseCommits {
   }
 
   async write<T>(db: DbPort, execute: (db: DbPort) => Promise<T>, notify: boolean) {
-    if (!notify || !this.listeners.size) return execute(db);
-    const before = await db.query('SELECT total_changes() AS changes');
-    const result = await execute(db);
-    const after = await db.query('SELECT total_changes() AS changes');
-    if (JSON.stringify(before) !== JSON.stringify(after)) {
+    if (!notify) return execute(db);
+    let changed = false;
+    const result = await db.transaction(async tx => {
+      const before = await tx.query('SELECT total_changes() AS changes');
+      const value = await execute(tx);
+      const after = await tx.query('SELECT total_changes() AS changes');
+      changed = JSON.stringify(before) !== JSON.stringify(after);
+      if (changed) await markFolderBackupChanged(tx);
+      return value;
+    });
+    if (changed) {
       for (const listener of this.listeners) {
         try { listener(); } catch { /* Observers never change the original write result. */ }
       }

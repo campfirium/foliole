@@ -47,7 +47,7 @@ describe('CompanionSettingsShellContent', () => {
     render(<SettingsHarness />);
 
     expect(screen.getByText('Sync and device')).toBeInTheDocument();
-    expect(screen.getByText('Data and appearance')).toBeInTheDocument();
+    expect(screen.getByText('Data')).toBeInTheDocument();
     expect(screen.getByText('Development')).toBeInTheDocument();
 
     expect(screen.getByRole('button', { name: /Sync content and view sync status/ })).toBeInTheDocument();
@@ -80,18 +80,16 @@ describe('CompanionSettingsShellContent', () => {
     expect(screen.queryByRole('button', { name: /Clear local app data/ })).not.toBeInTheDocument();
   });
 
-  it('opens Storage in the browser preview while keeping device operations disabled', async () => {
+  it('opens Backup and Attachments directly from Settings and leaves clearing on the home page', async () => {
     appDataRuntime.kind = 'browser-preview';
     appDataRuntime.supportsClear.mockReturnValue(false);
     render(<SettingsHarness />);
-    fireEvent.click(screen.getByTestId('companion-settings-storage'));
-    expect(await screen.findByRole('heading', { name: 'Database backup' })).toBeInTheDocument();
-    expect(screen.getByText('Backup and storage actions are available in the mobile app.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear App Data' })).toBeDisabled();
+    expect(screen.queryByTestId('companion-settings-storage')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('companion-settings-backup'));
     expect(screen.getByRole('button', { name: 'Back up now' })).toBeDisabled();
     expect(screen.getByRole('switch', { name: 'Automatic backup' })).toBeDisabled();
-    expect(screen.getByRole('heading', { name: 'Local attachments' })).toBeInTheDocument();
-    expect(screen.getByRole('spinbutton')).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Clear App Data' })).toBeDisabled();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Automatic cleanup' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Clear App Data' })).not.toBeInTheDocument();
   });
 });

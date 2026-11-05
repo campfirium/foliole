@@ -1,10 +1,14 @@
-import { BookOpen, Bug, CalendarDays, Clock, Database, Palette, RefreshCw, type LucideIcon } from 'lucide-react';
+import { BookOpen, Bug, CalendarDays, Clock, Database, HardDrive, Palette, RefreshCw, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { useAttachmentStorageSettings } from '../features/settings/components/sections/useAttachmentStorageSettings';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDataRuntimeRepository';
+import { supportsCompanionFolderDatabaseBackup } from '../shared/platform/companion/folderBackup/companionFolderBackupRuntimeRepository';
 
+import { companionBackupSummary } from './companionBackupSummary';
 import { CompanionListRow, CompanionListSection } from './CompanionListSurface';
+import { CompanionStorageSettingsContent } from './CompanionStorageSettingsContent';
+import { useCompanionFolderBackupState } from './useCompanionFolderBackupState';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 
 function SettingsListItem(props: {
@@ -34,31 +38,33 @@ function SettingsListSection(props: { children: ReactNode; first?: boolean; titl
 
 function DataAppearanceSettingsSection(props: {
   onOpenAppearance(): void;
-  onOpenStorage(): void;
+  onOpenBackup(): void;
+  onOpenAttachments(): void;
   showStorage: boolean;
 }) {
   const t = useTranslation();
-  return (
-    <SettingsListSection title={t('companion.settings.section.dataAppearance')}>
-      {props.showStorage ? (
-        <SettingsListItem
-          Icon={Database}
-          detail={t(supportsCompanionAppDataClear()
-            ? 'companion.settings.storage.detail' : 'settings.attachments.title')}
-          onClick={props.onOpenStorage}
-          testId="companion-settings-storage"
-          title={t('companion.settings.storage.title')}
-        />
-      ) : null}
-      <SettingsListItem
-        Icon={Palette}
-        detail={t('companion.settings.appearance.detail')}
-        onClick={props.onOpenAppearance}
-        testId="companion-settings-appearance"
-        title={t('companion.settings.appearance.title')}
-      />
+  const backup = useCompanionFolderBackupState(supportsCompanionFolderDatabaseBackup());
+  const attachments = useAttachmentStorageSettings();
+  return <>
+    {props.showStorage ? <SettingsListSection title={t('companion.settings.section.data')}>
+      <SettingsListItem Icon={Database} title={t('companion.settings.storage.databaseBackup')}
+        detail={supportsCompanionFolderDatabaseBackup() ? companionBackupSummary(backup.state, backup.automatic, backup.error, t) : ''}
+        onClick={props.onOpenBackup} testId="companion-settings-backup" />
+      <SettingsListItem Icon={HardDrive} title={t('settings.attachments.title')}
+        detail={attachments.status ? t('companion.settings.storage.attachmentSummary', {
+          used: formatBytes(attachments.status.usedBytes), trash: formatBytes(attachments.status.trashBytes)
+        }) : ''} onClick={props.onOpenAttachments} testId="companion-settings-attachments" />
+      <CompanionStorageSettingsContent />
+    </SettingsListSection> : null}
+    <SettingsListSection title="">
+      <SettingsListItem Icon={Palette} detail={t('companion.settings.appearance.detail')}
+        onClick={props.onOpenAppearance} testId="companion-settings-appearance" title={t('companion.settings.appearance.title')} />
     </SettingsListSection>
-  );
+  </>;
+}
+
+function formatBytes(value: number) {
+  return value < 1024 * 1024 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1024 / 1024).toFixed(1)} MB`;
 }
 
 export function CompanionSettingsList(props: {
@@ -67,7 +73,8 @@ export function CompanionSettingsList(props: {
   onOpenLearning?(): void;
   onOpenForegroundTime?(): void;
   onOpenReviewStatistics?(): void;
-  onOpenStorage(): void;
+  onOpenBackup(): void;
+  onOpenAttachments(): void;
   onOpenSync(): void;
   showStorage: boolean;
 }) {
@@ -96,7 +103,8 @@ export function CompanionSettingsList(props: {
         </SettingsListSection> : null}
         <DataAppearanceSettingsSection
           onOpenAppearance={props.onOpenAppearance}
-          onOpenStorage={props.onOpenStorage}
+          onOpenBackup={props.onOpenBackup}
+          onOpenAttachments={props.onOpenAttachments}
           showStorage={props.showStorage}
         />
         <SettingsListSection title={t('companion.settings.section.development')}>

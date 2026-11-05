@@ -1,56 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-import type { CompanionFolderBackupState } from '../../lib/platform/companionFolderBackupContract';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { clearCompanionFolderBackupDirectory, getCompanionAutomaticFolderBackup, setCompanionAutomaticFolderBackup, subscribeCompanionAutomaticFolderBackup } from '../shared/platform/companion/folderBackup/companionAutomaticFolderBackup';
+import { clearCompanionFolderBackupDirectory, setCompanionAutomaticFolderBackup } from '../shared/platform/companion/folderBackup/companionAutomaticFolderBackup';
 import { backUpCompanionDatabase } from '../shared/platform/companion/folderBackup/companionFolderBackup';
-import { getCompanionFolderBackupPort, supportsCompanionFolderDatabaseBackup } from '../shared/platform/companion/folderBackup/companionFolderBackupRuntimeRepository';
-import { getCompanionFolderBackupState, subscribeCompanionFolderBackupWork } from '../shared/platform/companion/folderBackup/companionFolderBackupState';
+import { supportsCompanionFolderDatabaseBackup } from '../shared/platform/companion/folderBackup/companionFolderBackupRuntimeRepository';
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
 import { AppButton, AppSwitch, SettingsControlSlot, SettingsRow, SettingsSection } from '../shared/ui';
 
-function useFolderBackupState(supported: boolean) {
-  const [state, setState] = useState<CompanionFolderBackupState | null>(null);
-  const [automatic, setAutomatic] = useState<boolean | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    if (!supported) return;
-    let active = true;
-    let receivedEvents = 0;
-    let automaticRevision = 0;
-    const automaticSubscription = subscribeCompanionAutomaticFolderBackup(value => { automaticRevision++; if (active) setAutomatic(value); });
-    void getCompanionAutomaticFolderBackup().then(value => { if (active && automaticRevision === 0) setAutomatic(value); })
-      .catch((failure: unknown) => { if (active) setError(String(failure)); });
-    const port = getCompanionFolderBackupPort();
-    const refresh = (value?: CompanionFolderBackupState) => {
-      const revision = ++receivedEvents;
-      void getCompanionFolderBackupState(value).then(next => {
-        if (active && receivedEvents === revision) { setState(next); setError(next.errorMessage); }
-      }).catch((failure: unknown) => { if (active) setError(String(failure)); });
-    };
-    const workSubscription = subscribeCompanionFolderBackupWork(() => refresh());
-    const subscription = port.addListener('backupStateChanged', ({ state: value }) => {
-      if (active) { setState(value); setError(value.errorMessage); refresh(value); }
-    });
-    void subscription.then(() => refresh()).catch((failure: unknown) => { if (active) setError(String(failure)); });
-    return () => {
-      active = false;
-      automaticSubscription();
-      workSubscription();
-      void subscription.then((listener) => listener.remove()).catch(() => undefined);
-    };
-  }, [supported]);
-
-  return { state, setState, error, setError, automatic, setAutomatic };
-}
+import { CompanionBackupLocationDialog } from './CompanionBackupLocationDialog';
+import { companionBackupSummary } from './companionBackupSummary';
+import { useCompanionFolderBackupState } from './useCompanionFolderBackupState';
 
 export function CompanionFolderDatabaseBackupSection() {
   const t = useTranslation();
   const supported = supportsCompanionFolderDatabaseBackup();
   const preview = getCompanionRuntimeCapability().kind === 'browser-preview';
-  const { state, setState, error, setError, automatic, setAutomatic } = useFolderBackupState(supported);
+  const { state, setState, error, setError, automatic, setAutomatic } = useCompanionFolderBackupState(supported);
   const [changingAutomatic, setChangingAutomatic] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
   const [forgetting, setForgetting] = useState(false);
   async function run(chooseDirectory: boolean) {
     setBusy(true);
@@ -77,32 +45,32 @@ export function CompanionFolderDatabaseBackupSection() {
   const working = busy || state?.phase === 'working';
   if (!supported && !preview) return null;
   return (
-    <SettingsSection ariaLabel={t('companion.settings.storage.databaseBackup')} title={t('companion.settings.storage.databaseBackup')}>
-      <SettingsRow title={state?.directoryLabel ?? t('companion.settings.storage.backupFolder')}
-        description={t('companion.settings.storage.databaseBackupHint')}>
-        <SettingsControlSlot className="flex-wrap">
-          <AppButton data-testid="companion-database-backup" disabled={working || !supported} onClick={() => void run(false)} size="sm">
-            {t(working ? 'companion.settings.storage.backupWorking' : 'companion.settings.storage.backupNow')}
-          </AppButton>
-          {state?.configured ? <AppButton disabled={working} onClick={() => void run(true)} size="sm">
-            {t('companion.settings.storage.changeBackupFolder')}
-          </AppButton> : null}
-          {state?.configured ? <AppButton disabled={working} onClick={() => void forgetDirectory()} size="sm">
-            {t('companion.settings.storage.forgetBackupFolder')}
-          </AppButton> : null}
-        </SettingsControlSlot>
-      </SettingsRow>
-      <SettingsRow controlLayout="inline" title={t('companion.settings.storage.automaticBackup')} description={t('companion.settings.storage.automaticBackupHint')}>
-        <SettingsControlSlot>
-          <AppSwitch aria-label={t('companion.settings.storage.automaticBackup')} checked={automatic === true}
+    <section>
+      {preview ? <p className="mb-3 text-sm text-companion-text-secondary">{t('companion.settings.storage.previewUnavailable')}</p> : null}
+      <p className="mb-5 text-sm leading-6 text-companion-text-secondary">{t('companion.settings.storage.databaseBackupHint')}</p>
+      <SettingsSection ariaLabel={t('companion.settings.storage.databaseBackup')}>
+        <SettingsRow controlLayout="inline" title={t('companion.settings.storage.backupFolder')}>
+          <SettingsControlSlot><AppButton disabled={working || !supported} size="sm"
+            onClick={() => state?.configured ? setLocationOpen(true) : void run(true)}>
+            {state?.directoryLabel ?? t('companion.settings.storage.chooseBackupFolder')}
+          </AppButton></SettingsControlSlot>
+        </SettingsRow>
+        <SettingsRow controlLayout="inline" title={t('companion.settings.storage.automaticBackup')} description={t('companion.settings.storage.automaticBackupHint')}>
+          <SettingsControlSlot><AppSwitch aria-label={t('companion.settings.storage.automaticBackup')} checked={automatic === true}
             disabled={automatic === null || changingAutomatic || forgetting || (!state?.configured && automatic !== true)}
-            onCheckedChange={value => void toggleAutomatic(value)} />
-        </SettingsControlSlot>
-      </SettingsRow>
-      {state?.databaseSavedAt ? <p className="text-sm leading-6 text-companion-text-secondary" role="status">{t('companion.settings.storage.backupSaved')} {new Date(state.databaseSavedAt).toLocaleString()}</p> : null}
-      {state?.databaseSavedAt ? <p className="text-sm leading-6 text-companion-text-secondary">{t('companion.settings.storage.backupAttachmentsUnchecked')}</p> : null}
-      {state?.attachmentFilesPending != null ? <p className="text-sm leading-6 text-companion-text-secondary">{t('companion.settings.storage.backupAttachmentsPending')} {state.attachmentFilesPending}</p> : null}
-      {error ? <p className="text-sm leading-6 text-error" role="alert">{error}</p> : null}
-    </SettingsSection>
+            onCheckedChange={value => void toggleAutomatic(value)} /></SettingsControlSlot>
+        </SettingsRow>
+        <SettingsRow controlLayout="inline" description={<span role="status">{!supported ? '—' : companionBackupSummary(state, automatic, error, t)}</span>}>
+          <SettingsControlSlot><AppButton data-testid="companion-database-backup" disabled={working || !supported || !state?.configured}
+            onClick={() => void run(false)} size="sm">
+            {t(working ? 'companion.settings.storage.backupWorking' : 'companion.settings.storage.backupNow')}
+          </AppButton></SettingsControlSlot>
+        </SettingsRow>
+        {error ? <p className="text-sm leading-6 text-error" role="alert">{error}</p> : null}
+      </SettingsSection>
+      <CompanionBackupLocationDialog open={locationOpen} onOpenChange={setLocationOpen} working={working}
+        label={state?.directoryLabel ?? ''} onForget={() => { setLocationOpen(false); void forgetDirectory(); }}
+        onChange={() => { setLocationOpen(false); void run(true); }} />
+    </section>
   );
 }

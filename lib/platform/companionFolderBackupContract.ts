@@ -12,6 +12,7 @@ export interface CompanionFolderBackupState {
   databaseSavedAt: string | null;
   phase: 'idle' | 'working' | 'pending' | 'saved' | 'failed';
   errorMessage: string | null;
+  pendingItems?: number | null;
   attachmentFilesCopied?: number;
   attachmentFilesPending?: number | null;
 }

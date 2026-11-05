@@ -74,7 +74,8 @@ function resolveSettingsTopBar(
   if (settingsPage === 'learning') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.learning.title') };
   if (settingsPage === 'sync') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.sync.deviceSync') };
   if (settingsPage === 'device') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.device.title') };
-  if (settingsPage === 'storage') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.storage.title') };
+  if (settingsPage === 'backup') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.storage.databaseBackup') };
+  if (settingsPage === 'attachments') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('settings.attachments.title') };
   if (settingsPage === 'appearance') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.appearance.title') };
   if (settingsPage === 'debug') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.debug.title') };
   if (settingsPage === 'tabs') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.tabs.title') };

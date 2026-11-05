@@ -1,64 +1,42 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-import type { AttachmentStatusRequest, AttachmentMaintenanceStatus } from '../../../../../lib/platform/attachmentMaintenanceContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { runAttachmentMaintenance } from '../../../../shared/platform/attachments/attachmentMaintenance';
 import { AppButton, AppInput, AppSwitch, SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 import { AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../../../shared/ui/Dialog';
 
-function useAttachmentStorageSettings() {
-  const [status, setStatus] = useState<AttachmentMaintenanceStatus | null>(null);
-  const [threshold, setThreshold] = useState('30');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
-  useEffect(() => {
-    let active = true;
-    void runAttachmentMaintenance({ action: 'status' }).then((result) => {
-      if (!active) return;
-      setStatus(result); if (result) setThreshold(String(result.observationThreshold));
-    }).catch(() => { if (active) setError(true); });
-    return () => { active = false; };
-  }, []);
+import { AttachmentCleanupThresholdDialog } from './AttachmentCleanupThresholdDialog';
+import { useAttachmentStorageSettings } from './useAttachmentStorageSettings';
 
-  async function run(request: AttachmentStatusRequest) {
-    setBusy(true); setError(false);
-    try { setStatus(await runAttachmentMaintenance(request)); }
-    catch { setError(true); }
-    finally { setBusy(false); }
-  }
-
-  return { status, threshold, setThreshold, busy, error, run };
-}
-
-export function SettingsAttachmentStorageSection({ unavailable = false }: { unavailable?: boolean }) {
+export function SettingsAttachmentStorageSection({ unavailable = false, mobile = false }: { unavailable?: boolean; mobile?: boolean }) {
   const t = useTranslation();
   const { status, threshold, setThreshold, busy, error, run } = useAttachmentStorageSettings();
+  const [editThreshold, setEditThreshold] = useState(false);
   const [confirmEmpty, setConfirmEmpty] = useState(false);
   if (!status && !error && !unavailable) return null;
   return (
-    <SettingsSection ariaLabel={t('settings.attachments.title')} title={t('settings.attachments.title')}>
+    <SettingsSection ariaLabel={t('settings.attachments.title')} {...(!mobile ? { title: t('settings.attachments.title') } : {})}>
       {error ? <p role="alert">{t('settings.attachments.error')}</p> : null}
-      <SettingsRow controlLayout="inline" title={t('settings.attachments.used')} description={status ? bytes(status.usedBytes) : '—'}>
-        <SettingsControlSlot><AppButton disabled={busy || unavailable} onClick={() => void run({ action: 'status' })} size="sm">
-          {t('settings.attachments.refresh')}
-        </AppButton></SettingsControlSlot>
-      </SettingsRow>
-      <SettingsRow controlLayout="inline" title={t('settings.attachments.threshold')} description={t('settings.attachments.thresholdHint')}>
-        <SettingsControlSlot><AppInput aria-label={t('settings.attachments.threshold')} disabled={busy || !status}
-          min={1} placeholder="—" type="number" value={unavailable ? '' : threshold} onChange={(event) => setThreshold(event.target.value)}
-          onBlur={() => {
-            if (status && Number.isSafeInteger(Number(threshold)) && Number(threshold) > 0) {
-              void run({ action: 'configure', settings: { automatic: status.automatic, observationThreshold: Number(threshold) } });
-            } else setThreshold(String(status?.observationThreshold ?? 30));
-          }} /></SettingsControlSlot>
-      </SettingsRow>
       <SettingsRow controlLayout="inline" title={t('settings.attachments.automatic')} description={t('settings.attachments.automaticHint')}>
         <SettingsControlSlot><AppSwitch aria-label={t('settings.attachments.automatic')} checked={status?.automatic ?? false}
           disabled={busy || !status} onCheckedChange={(automatic) => {
             if (status) void run({ action: 'configure', settings: { automatic, observationThreshold: status.observationThreshold } });
           }} /></SettingsControlSlot>
       </SettingsRow>
-      <SettingsRow title={t('settings.attachments.eligible')}
+      <SettingsRow controlLayout="inline" title={t('settings.attachments.threshold')} {...(!mobile ? { description: t('settings.attachments.thresholdHint') } : {})}>
+        <SettingsControlSlot>{mobile ? <AppButton disabled={busy || !status} size="sm" onClick={() => setEditThreshold(true)}>{status ? t('settings.attachments.thresholdValue', { count: status.observationThreshold }) : '—'}</AppButton> : <AppInput aria-label={t('settings.attachments.threshold')} disabled={busy || !status}
+          min={1} placeholder="—" type="number" value={unavailable ? '' : threshold} onChange={(event) => setThreshold(event.target.value)}
+          onBlur={() => {
+            if (status && Number.isSafeInteger(Number(threshold)) && Number(threshold) > 0) {
+              void run({ action: 'configure', settings: { automatic: status.automatic, observationThreshold: Number(threshold) } });
+            } else setThreshold(String(status?.observationThreshold ?? 30));
+          }} />}</SettingsControlSlot>
+      </SettingsRow>
+      <SettingsRow controlLayout="inline" title={t('settings.attachments.used')} description={status ? bytes(status.usedBytes) : '—'}>
+        {!mobile ? <SettingsControlSlot><AppButton disabled={busy || unavailable} onClick={() => void run({ action: 'status' })} size="sm">
+          {t('settings.attachments.refresh')}
+        </AppButton></SettingsControlSlot> : null}
+      </SettingsRow>
+      <SettingsRow controlLayout={mobile ? 'inline' : 'stacked'} title={t('settings.attachments.eligible')}
         description={status ? `${bytes(status.eligibleBytes)} · ${t('settings.attachments.eligibleHint')}` : '—'}>
         <SettingsControlSlot><AppButton disabled={busy || !status} onClick={() => void run({ action: 'clean' })} size="sm">
           {t('settings.attachments.clean')}
@@ -76,6 +54,11 @@ export function SettingsAttachmentStorageSection({ unavailable = false }: { unav
           </AppButton>
         </SettingsControlSlot>
       </SettingsRow>
+      <AttachmentCleanupThresholdDialog open={editThreshold} value={status?.observationThreshold ?? 30}
+        onOpenChange={setEditThreshold} onSave={observationThreshold => {
+          setEditThreshold(false);
+          if (status) void run({ action: 'configure', settings: { automatic: status.automatic, observationThreshold } });
+        }} />
       <EmptyAttachmentTrashDialog busy={busy} open={confirmEmpty} size={bytes(status?.trashBytes ?? 0)}
         onOpenChange={setConfirmEmpty} onConfirm={() => { setConfirmEmpty(false); void run({ action: 'empty-trash' }); }} />
     </SettingsSection>

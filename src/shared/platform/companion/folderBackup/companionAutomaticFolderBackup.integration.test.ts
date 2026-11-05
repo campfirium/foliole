@@ -114,11 +114,11 @@ it('shows live unfinished work while automatic backup is off and retains its err
   const f = await fixture(); await backUpCompanionDatabase();
   await f.publish('live pending');
   expect(f.state.attachmentFilesPending).toBe(0);
-  expect((await getCompanionFolderBackupState()).attachmentFilesPending).toBe(1);
+  expect(await getCompanionFolderBackupState()).toMatchObject({ attachmentFilesPending: 1, pendingItems: 2 });
   f.copy.mockRejectedValueOnce(new Error('provider refused copy'));
   await backUpCompanionDatabase(); f.state.errorMessage = null;
   await f.reopen();
-  expect(await getCompanionFolderBackupState()).toMatchObject({ attachmentFilesPending: 1, errorMessage: 'provider refused copy' });
+  expect(await getCompanionFolderBackupState()).toMatchObject({ attachmentFilesPending: 1, pendingItems: 1, errorMessage: 'provider refused copy' });
 });
 
 it('disconnects after safely finishing an in-flight file, retains backups and work, then initializes a replacement folder once', async () => {
@@ -176,4 +176,37 @@ it('keeps an existing background reading snapshot alive through backup bookkeepi
     await f.owner.runWriter(db => db.run("INSERT INTO companion_meta(key,value,updated_at) VALUES ('backup-status','saved','now')"), false);
     release.release(); expect(await outcome).toEqual({ value: baseline });
   } finally { release.release(); await outcome; }
+});
+
+it('keeps database edits pending across reopening and does not hide newer edits behind an older backup', async () => {
+  const f = await fixture();
+  await backUpCompanionDatabase();
+  expect((await getCompanionFolderBackupState()).pendingItems).toBe(0);
+  await f.owner.runWriter(db => db.run("INSERT INTO nodes(id,title,content,created_at,updated_at) VALUES ('progress','New title','','now','now')"));
+  expect((await getCompanionFolderBackupState()).pendingItems).toBe(1);
+  await f.reopen();
+  expect((await getCompanionFolderBackupState()).pendingItems).toBe(1);
+  const started = gate(), release = gate();
+  const original = f.backup.getMockImplementation()!;
+  f.backup.mockImplementationOnce(async input => {
+    const result = await original(input);
+    started.release(); await release.promise; return result;
+  });
+  const saving = backUpCompanionDatabase();
+  await started.promise;
+  await f.owner.runWriter(db => db.run("UPDATE nodes SET title='Changed during backup' WHERE id='progress'"));
+  release.release(); await saving;
+  expect((await getCompanionFolderBackupState()).pendingItems).toBe(1);
+  await backUpCompanionDatabase();
+  expect((await getCompanionFolderBackupState()).pendingItems).toBe(0);
+  const target = new Database(path.join(f.target, 'Foliole.sqlite'), { readonly: true });
+  try { expect(target.prepare("SELECT title FROM nodes WHERE id='progress'").pluck().get()).toBe('Changed during backup'); }
+  finally { target.close(); }
+  await f.owner.runWriter(db => db.query('SELECT id FROM nodes'));
+  expect((await getCompanionFolderBackupState()).pendingItems).toBe(0);
+  await expect(f.owner.runWriter(async db => {
+    await db.run("UPDATE nodes SET title='Rolled back' WHERE id='progress'");
+    throw new Error('rollback progress');
+  })).rejects.toThrow('rollback progress');
+  expect((await getCompanionFolderBackupState()).pendingItems).toBe(0);
 });

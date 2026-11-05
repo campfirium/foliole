@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: createCompanionNativeSyncStub };
+  return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: createCompanionNativeSyncStub };
 });
 vi.mock('../shared/platform/appLifecycle', () => ({
   subscribeNativeAppBackground: async () => () => {}, subscribeNativeAppForeground: async () => () => {}
@@ -64,7 +64,7 @@ it.each(['search', 'more', 'recent'] as const)('restores the %s page after a sep
   const first = renderResumeSurface(await library.snapshot());
   await waitFor(() => expect(first.result.current).not.toBeNull());
   act(() => first.result.current.surface.handleTabAction(action));
-  if (action === 'more') act(() => first.result.current.settings.setSettingsPage('storage'));
+  if (action === 'more') act(() => first.result.current.settings.setSettingsPage('backup'));
   if (action === 'recent') act(() => {
     first.result.current.setDirectoryOpen(true);
     first.result.current.directory.setDirectorySelection({ kind: 'internal', nodeId: 'folder' });
@@ -72,7 +72,7 @@ it.each(['search', 'more', 'recent'] as const)('restores the %s page after a sep
   first.unmount();
   const second = renderResumeSurface(await library.reopen());
   await waitFor(() => expect(second.result.current?.surface.activeAction).toBe(action));
-  if (action === 'more') expect(second.result.current.settings.settingsPage).toBe('storage');
+  if (action === 'more') expect(second.result.current.settings.settingsPage).toBe('backup');
   if (action === 'recent') {
     expect(second.result.current.directoryOpen).toBe(true);
     expect(second.result.current.directory.directorySelection).toEqual({ kind: 'internal', nodeId: 'folder' });
@@ -236,9 +236,9 @@ it('opens a new PDF search target instead of applying an older reading position'
 
 it('keeps the settings subpage after reopening before joining a workspace', async () => {
   await saveCompanionNavigationResume('unjoined', JSON.stringify({
-    ...initialCompanionNavigation(false), settingsPage: 'storage'
+    ...initialCompanionNavigation(false), settingsPage: 'backup'
   }));
   await library.reopen();
   render(<CompanionNavigationProvider ready snapshot={null} libraryScope="unjoined"><Page /></CompanionNavigationProvider>);
-  await waitFor(() => expect(screen.getByTestId('page')).toHaveTextContent('more:storage'));
+  await waitFor(() => expect(screen.getByTestId('page')).toHaveTextContent('more:backup'));
 });

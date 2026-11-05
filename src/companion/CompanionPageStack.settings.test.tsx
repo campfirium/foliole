@@ -7,11 +7,11 @@ import type { CompanionShellModel } from './CompanionShell';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 
 function SettingsNavigation() {
-  const [page, setPage] = useState<CompanionSettingsPage>('storage');
+  const [page, setPage] = useState<CompanionSettingsPage>('backup');
   const model = { surface: { activeAction: 'more' }, settingsPage: page, floatingBar: {} } as CompanionShellModel;
   return <CompanionPageStack model={model} pageKey={null} reading={false} content={<>
     <h1>{page}</h1>
-    <button onClick={() => setPage(page === 'storage' ? 'list' : 'foregroundTime')}>Back</button>
+    <button onClick={() => setPage(page === 'backup' ? 'list' : 'foregroundTime')}>Back</button>
   </>} />;
 }
 

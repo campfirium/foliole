@@ -56,7 +56,7 @@ describe('companion mobile text wrapping', () => {
       <CompanionSettingsList
         onOpenAppearance={vi.fn()}
         onOpenDebug={vi.fn()}
-        onOpenStorage={vi.fn()}
+        onOpenBackup={vi.fn()} onOpenAttachments={vi.fn()}
         onOpenSync={vi.fn()}
         showStorage
       />

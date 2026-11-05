@@ -1,6 +1,5 @@
 import { useState } from 'react';
 
-import { SettingsAttachmentStorageSection } from '../features/settings/components/sections/SettingsAttachmentStorageSection';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { clearCompanionAppData } from '../shared/platform/companionAppData';
 import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDataRuntimeRepository';
@@ -16,7 +15,6 @@ import {
 } from '../shared/ui/Dialog';
 
 import { removeCompanionCustomCssCache } from './companionCustomCssStorage';
-import { CompanionFolderDatabaseBackupSection } from './CompanionFolderDatabaseBackupSection';
 
 function reloadCompanionApp() {
   window.location.reload();
@@ -88,11 +86,8 @@ export function CompanionStorageSettingsContent() {
 
   return (
     <section>
-      {preview ? <p className="mb-5 text-sm leading-6 text-companion-text-secondary">{t('companion.settings.storage.previewUnavailable')}</p> : null}
-      <CompanionFolderDatabaseBackupSection />
-      <SettingsAttachmentStorageSection unavailable={preview} />
-      {canClearAppData || preview ? <SettingsSection title={t('companion.settings.storage.appData')}>
-        <SettingsRow description={t('companion.settings.storage.description')}>
+      {canClearAppData || preview ? <SettingsSection>
+        <SettingsRow controlLayout="inline" title={t('companion.settings.storage.appData')}>
           <SettingsControlSlot>
             <AppButton
               aria-busy={isClearing || undefined}

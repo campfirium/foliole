@@ -1,3 +1,4 @@
+import { SettingsAttachmentStorageSection } from '../features/settings/components/sections/SettingsAttachmentStorageSection';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDataRuntimeRepository';
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
@@ -6,6 +7,7 @@ import { SettingsTouchSurface } from '../shared/ui/SettingsTouchSurface';
 import { CompanionColorModeControl } from './CompanionColorModeControl';
 import { useOptionalCompanionCustomCss } from './CompanionCustomCssProvider';
 import { CompanionCustomCssSettingsContent } from './CompanionCustomCssSettingsContent';
+import { CompanionFolderDatabaseBackupSection } from './CompanionFolderDatabaseBackupSection';
 import { CompanionForegroundTimeContent } from './CompanionForegroundTimeContent';
 import { CompanionLanguageControl } from './CompanionLanguageControl';
 import { CompanionLearningSettingsContent } from './CompanionLearningSettingsContent';
@@ -15,7 +17,6 @@ import {
   CompanionSettingsDetail,
   CompanionSettingsList
 } from './CompanionSettingsContent';
-import { CompanionStorageSettingsContent } from './CompanionStorageSettingsContent';
 import { CompanionSyncContent } from './CompanionSyncContent';
 import { CompanionTestReviewReset } from './CompanionTestReviewReset';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -71,23 +72,27 @@ function supportsStorageSettings() {
     || ['ios-native', 'browser-preview'].includes(getCompanionRuntimeCapability().kind);
 }
 
+function CompanionSettingsHome(props: CompanionSettingsContentProps) {
+  return (
+    <CompanionSettingsList
+      onOpenAppearance={() => props.onOpenSyncSettingsPage('appearance')}
+      onOpenLearning={() => props.onOpenSyncSettingsPage('learning')}
+      onOpenForegroundTime={() => props.onOpenSyncSettingsPage('foregroundTime')}
+      onOpenReviewStatistics={() => props.onOpenSyncSettingsPage('reviewStatistics')}
+      onOpenDebug={() => props.onOpenSyncSettingsPage('debug')}
+      onOpenBackup={() => props.onOpenSyncSettingsPage('backup')}
+      onOpenAttachments={() => props.onOpenSyncSettingsPage('attachments')}
+      onOpenSync={props.onOpenSyncSettings}
+      showStorage={supportsStorageSettings()}
+    />
+  );
+}
+
 function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
   const t = useTranslation();
-  const showStorage = supportsStorageSettings();
-  if (props.settingsPage === 'list' || (props.settingsPage === 'storage' && !showStorage)) {
-    return (
-      <CompanionSettingsList
-        onOpenAppearance={() => props.onOpenSyncSettingsPage('appearance')}
-        onOpenLearning={() => props.onOpenSyncSettingsPage('learning')}
-        onOpenForegroundTime={() => props.onOpenSyncSettingsPage('foregroundTime')}
-        onOpenReviewStatistics={() => props.onOpenSyncSettingsPage('reviewStatistics')}
-        onOpenDebug={() => props.onOpenSyncSettingsPage('debug')}
-        onOpenStorage={() => props.onOpenSyncSettingsPage('storage')}
-        onOpenSync={props.onOpenSyncSettings}
-        showStorage={showStorage}
-      />
-    );
-  }
+  if (props.settingsPage === 'list' || props.settingsPage === 'storage') return <CompanionSettingsHome {...props} />;
+  if (props.settingsPage === 'backup') return <CompanionFolderDatabaseBackupSection />;
+  if (props.settingsPage === 'attachments') return <SettingsAttachmentStorageSection mobile unavailable={getCompanionRuntimeCapability().kind === 'browser-preview'} />;
   if (props.settingsPage === 'learning') return <CompanionLearningSettingsContent />;
   if (props.settingsPage === 'reviewStatistics') return <CompanionReviewStatisticsContent
     libraryScope={props.workspaceSync.state.workspace_snapshot?.libraryScope ?? ''} />;
@@ -95,13 +100,6 @@ function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
     return <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="foregroundTime" title={t('desktop.foregroundTime.title')}>
       <CompanionForegroundTimeContent />
     </CompanionSettingsDetail>;
-  }
-  if (props.settingsPage === 'storage') {
-    return (
-      <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="storage" title={t('companion.settings.storage.title')}>
-        <CompanionStorageSettingsContent />
-      </CompanionSettingsDetail>
-    );
   }
   if (props.settingsPage === 'device') {
     return renderPlaceholderSettingsDetail({

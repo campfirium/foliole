@@ -27,10 +27,11 @@ it('shows iOS storage and app-data clearing while keeping unsupported custom sty
   const view = render(renderCompanionSettingsContent(props));
 
   expect(screen.queryByText('3 sections')).not.toBeInTheDocument();
-  expect(screen.getByText('Storage')).toBeInTheDocument();
-  expect(screen.getByText('Clear local Foliole data.')).toBeInTheDocument();
+  expect(screen.getByTestId('companion-settings-backup')).toBeInTheDocument();
+  expect(screen.getByTestId('companion-settings-attachments')).toBeInTheDocument();
+  expect(screen.queryByText('Storage')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Clear local app data/ })).not.toBeInTheDocument();
-  view.rerender(renderCompanionSettingsContent({ ...props, settingsPage: 'storage' }));
+  view.rerender(renderCompanionSettingsContent({ ...props, settingsPage: 'list' }));
   expect(screen.getByText('App data')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Clear App Data' })).toBeInTheDocument();
   view.rerender(renderCompanionSettingsContent({ ...props, settingsPage: 'appearance' }));
