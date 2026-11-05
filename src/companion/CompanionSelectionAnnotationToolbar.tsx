@@ -5,6 +5,7 @@ import type { CompanionHighlightRead, CompanionHighlightReadGuard } from '../sha
 import type { SelectionCommandPayload } from '../shared/selectionCommandPayload';
 import { AppButton, appFloatingSurfaceClassName } from '../shared/ui';
 
+import { CompanionClozeGuardDialog } from './CompanionClozeGuardDialog';
 import type { CompanionExistingHighlightTarget } from './companionExistingHighlightActions';
 import { CompanionSelectionNotePanel, CompanionSelectionToolbarActions } from './CompanionSelectionToolbarControls';
 import { useCompanionHighlightSession } from './useCompanionHighlightSession';
@@ -54,7 +55,7 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
   const state = props.state!;
   const isExistingHighlight = Boolean(state.existingHighlight);
   const draft = isExistingHighlight ? session.draft : noteDraft;
-  const disabled = isExistingHighlight ? session.loading || !session.ready || session.saving || session.saved : creation.saving || creation.saved;
+  const disabled = isExistingHighlight ? session.loading || !session.ready || session.saving || session.saved : creation.saving || creation.saved || Boolean(creation.guardPayload);
   function applyExistingNote() {
     const target = state.existingHighlight;
     if (!target) return;
@@ -69,6 +70,9 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
     <div className="fixed z-floating [--shadow-popover:none]" data-companion-selection-toolbar="true"
       onContextMenu={(event) => event.preventDefault()} onPointerDown={(event) => event.stopPropagation()}
       style={{ left: state.left, top: state.top }}>
+      {creation.guardPayload ? <CompanionClozeGuardDialog
+        disabled={creation.saving || creation.saved} onCancel={creation.cancelGuard} onChoose={creation.confirmGuard}
+        status={creation.error ? <CreationStatus creation={creation} /> : null} /> : null}
       <CompanionSelectionToolbarActions isExistingHighlight={isExistingHighlight} isCloze={state.existingHighlight?.kind === 'cloze'} disabled={disabled}
         getCopyText={() => state.existingHighlight?.originalText ?? resolveApplyPayload(props)?.selectionText ?? ''}
         onCopied={props.onClose} onAddNote={() => setIsNoteOpen(true)} onApply={creation.apply} onDeleteExistingHighlight={deleteExistingHighlight}

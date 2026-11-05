@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { resolveLongClozeGuardAction } from '../shared/selectionClozeGuard';
 import type { SelectionCommandPayload } from '../shared/selectionCommandPayload';
 
 import type { CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
@@ -13,6 +14,7 @@ export function useCompanionSelectionApply(args: {
   const mounted = useRef(true);
   const pending = useRef(false);
   const recovery = useRef<CompanionSelectionRefreshError | null>(null);
+  const [guardPayload, setGuardPayload] = useState<SelectionCommandPayload | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<unknown>(null);
   useEffect(() => {
@@ -37,11 +39,23 @@ export function useCompanionSelectionApply(args: {
     }
   }
   return {
-    error, saving, saved: Boolean(recovery.current),
+    error, saving, guardPayload, saved: Boolean(recovery.current),
     apply: (kind: CompanionSelectionAnnotationKind, note?: string) => {
-      if (recovery.current) return;
+      if (recovery.current || pending.current || guardPayload) return;
       const payload = args.resolvePayload();
-      if (payload) void run(() => args.onApply(kind, payload, note));
+      if (!payload) return;
+      const action = kind === 'cloze' ? resolveLongClozeGuardAction(payload) : kind;
+      if (action === 'remind') { setGuardPayload(payload); return; }
+      void run(() => args.onApply(action, payload, note));
+    },
+    cancelGuard: () => { setGuardPayload(null); args.onClose(); },
+    confirmGuard: (kind: 'cloze' | 'highlight') => {
+      if (!guardPayload || pending.current || recovery.current) return;
+      const payload = guardPayload;
+      void run(async () => {
+        await args.onApply(kind, payload);
+        if (mounted.current) setGuardPayload(null);
+      });
     },
     retryRefresh: () => { if (recovery.current) void run(recovery.current.retryRefresh); }
   };
