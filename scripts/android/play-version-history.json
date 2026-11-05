@@ -1,10 +1,12 @@
 {
   "schemaVersion": 1,
   "packageName": "com.campfirium.foliole.android",
-  "highestVersionCode": 2,
+  "highestVersionCode": 3,
   "evidence": {
-    "releaseName": "0.7.17.2.2ca046675",
-    "observedAt": "2026-11-04T23:33:58.228Z",
-    "source": "Google Play beta release lifecycle: IN_REVIEW"
+    "source": "https://github.com/campfirium/foliole/actions/runs/41941716807",
+    "observedAt": "2026-11-05T01:25:41.498Z",
+    "sourceSha": "ea7a7518c2c1efa920733eb35a78daa9a3f04f10",
+    "aabSha256": "b0ee731a75b816b2b380998e86692c901edfee643b54ca3a1dcd2c4cf8454e7f",
+    "phase": "observed"
   }
 }
