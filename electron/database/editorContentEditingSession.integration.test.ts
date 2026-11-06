@@ -168,3 +168,15 @@ it('keeps failed saves retryable and prevents an old exit from ending resumed in
   await act(async () => { window.dispatchEvent(new Event('blur')); await app.drain(); });
   expect(hasContentEditingSession(app.port, 'topic')).toBe(false);
 });
+
+it('settles keyboard focus departure after the buffered tail reaches SQLite', async () => {
+  const app = await createEditorHandoffFixture(true, true);
+  await act(async () => { app.input('Keyboard local'); expect(await app.drain()).toBe(true); });
+  await act(async () => { await app.remote(); });
+  act(() => { app.input('Keyboard local tail', false); app.view.result.current.onEditorKeyboardFocusLeave?.(); });
+  expect(hasContentEditingSession(app.port, 'topic')).toBe(true);
+  await act(async () => { app.view.result.current.handleEditorChange('Keyboard local tail'); await app.drain(); });
+  expect(hasContentEditingSession(app.port, 'topic')).toBe(false);
+  expect((await app.current()).parent_version_ids).toHaveLength(2);
+  expect(await app.bodies()).toContain('Keyboard local tail');
+});

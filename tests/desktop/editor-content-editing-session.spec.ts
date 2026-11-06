@@ -110,31 +110,33 @@ test('continues saving focused input across reception and settles on actual wind
   expect(await facts(session)).toEqual(final);
 });
 
-test('saves the final input and settles on Escape while the native window remains focused', async ({ desktopWindow: page, desktopSession: session }) => {
-  const { editor, window, base } = await openEditingSession(session, page);
-  await editor.click();
-  await session.electronApp.evaluate(({ app }) => app.focus({ steal: true }));
-  await window.evaluate(window => { window.focus(); window.webContents.focus(); });
-  await expect.poll(() => window.evaluate(window => window.isFocused())).toBe(true);
-  await page.evaluate(() => window.__folioleDebug?.setEditorSelection?.('prompt-editor', 0, 0));
-  await page.keyboard.insertText('Local ');
-  await expect.poll(() => facts(session)).toMatchObject({ content: 'Local Base' });
-  expect(await window.evaluate(window => window.isFocused())).toBe(true);
-  expect((await facts(session)).editing).toBe(true);
-  await facts(session, true, base.versionId);
-  await expect(editor).toHaveText('Local Base');
-  expect((await facts(session)).parents).toHaveLength(1);
-  await page.evaluate(() => window.__folioleDebug?.setEditorSelection?.('prompt-editor', 0, 0));
-  await page.keyboard.insertText('Tail ');
-  await page.keyboard.press('Escape');
-  await expect(editor).not.toBeFocused();
-  expect(await window.evaluate(window => window.isFocused())).toBe(true);
-  await expect.poll(async () => (await facts(session)).parents).toHaveLength(2);
-  const final = await facts(session);
-  expect(new Set([final.content, ...final.alternatives])).toEqual(new Set(['Remote branch', 'Tail Local Base']));
-  mkdirSync('.tmp/artifacts/T727', { recursive: true });
-  await page.screenshot({ path: '.tmp/artifacts/T727/editing-session-escape-exit.png' });
-  await page.reload();
-  await expectWorkspaceShell(page);
-  expect(await facts(session)).toEqual(final);
-});
+for (const exitKey of ['Escape', 'Tab', 'Shift+Tab']) {
+  test(`saves the final input and settles on ${exitKey} while the native window remains focused`, async ({ desktopWindow: page, desktopSession: session }) => {
+    const { editor, window, base } = await openEditingSession(session, page);
+    await editor.click();
+    await session.electronApp.evaluate(({ app }) => app.focus({ steal: true }));
+    await window.evaluate(window => { window.focus(); window.webContents.focus(); });
+    await expect.poll(() => window.evaluate(window => window.isFocused())).toBe(true);
+    await page.evaluate(() => window.__folioleDebug?.setEditorSelection?.('prompt-editor', 0, 0));
+    await page.keyboard.insertText('Local ');
+    await expect.poll(() => facts(session)).toMatchObject({ content: 'Local Base' });
+    expect(await window.evaluate(window => window.isFocused())).toBe(true);
+    expect((await facts(session)).editing).toBe(true);
+    await facts(session, true, base.versionId);
+    await expect(editor).toHaveText('Local Base');
+    expect((await facts(session)).parents).toHaveLength(1);
+    await page.evaluate(() => window.__folioleDebug?.setEditorSelection?.('prompt-editor', 0, 0));
+    await page.keyboard.insertText('Tail ');
+    await page.keyboard.press(exitKey);
+    await expect(editor).not.toBeFocused();
+    expect(await window.evaluate(window => window.isFocused())).toBe(true);
+    await expect.poll(async () => (await facts(session)).parents).toHaveLength(2);
+    const final = await facts(session);
+    expect(new Set([final.content, ...final.alternatives])).toEqual(new Set(['Remote branch', 'Tail Local Base']));
+    mkdirSync('.tmp/artifacts/T727', { recursive: true });
+    await page.screenshot({ path: `.tmp/artifacts/T727/editing-session-${exitKey.toLowerCase().replace('+', '-')}-exit.png` });
+    await page.reload();
+    await expectWorkspaceShell(page);
+    expect(await facts(session)).toEqual(final);
+  });
+}

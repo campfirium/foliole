@@ -57,6 +57,7 @@ export interface DocumentPanelBodyLayoutProps {
   onEditorChange: (content: string) => void;
   onEditorInput?: (meta: EditorContentChangeMeta) => void;
   onEditorFocus?: () => void;
+  onEditorKeyboardFocusLeave?: () => void;
   onEditorUndo?: () => boolean;
   onEditorRedo?: () => boolean;
   onEditorContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
@@ -116,6 +117,7 @@ function renderDocumentBodyContent(props: DocumentPanelBodyLayoutProps) {
           onDoubleClick: props.onEditorDoubleClick,
           onDocumentInput: props.onEditorInput,
           onFocusCapture: props.onEditorFocus,
+          onKeyboardFocusLeave: props.onEditorKeyboardFocusLeave,
           onFitBlockImageMetricsChange: props.onPromptImageMetricsChange,
           onImageLoadStateChange: props.onPromptImageLoadStateChange,
           onOpenExternalLink: props.onOpenExternalLink,

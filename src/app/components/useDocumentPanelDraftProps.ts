@@ -55,6 +55,7 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
       onEditorChange: editorDraft.handleEditorChange,
       onEditorInput: handleEditorInput,
       onEditorFocus: handleEditorFocus,
+      onEditorKeyboardFocusLeave: finishEditing,
       onExitEditorFocus: handleExitEditorFocus,
       onEditorUndo: handleEditorUndo,
       onEditorRedo: handleEditorRedo

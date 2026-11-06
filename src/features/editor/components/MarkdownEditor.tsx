@@ -24,6 +24,7 @@ import { MarkdownImagePreviewDialog } from './MarkdownImagePreviewDialog';
 import { MarkdownMermaidPreviewDialog } from './MarkdownMermaidPreviewDialog';
 import { MarkdownTablePreviewDialog } from './MarkdownTablePreviewDialog';
 import { useEditorMouseGesture } from './useEditorMouseGesture';
+import { useMarkdownEditorKeyboardFocusLeave } from './useMarkdownEditorKeyboardFocusLeave';
 import { useMarkdownImagePreview } from './useMarkdownImagePreview';
 import { useMarkdownMermaidPreview } from './useMarkdownMermaidPreview';
 import { useMarkdownTablePreview } from './useMarkdownTablePreview';
@@ -138,6 +139,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
 
 function MarkdownEditorContent(props: MarkdownEditorProps) {
   useMarkdownEditorPropsDiagnostic(props);
+  const keyboardFocus = useMarkdownEditorKeyboardFocusLeave(props);
   const { closeMermaidPreview, closePreview, closeTablePreview, hostRef, previewImage, previewMermaid, previewTable, rootRef, surface } = useMarkdownEditorModel(props);
   useEffect(() => syncMarkdownEditorAriaLabel(hostRef.current, props.ariaLabel), [hostRef, props.ariaLabel]);
 
@@ -153,12 +155,15 @@ function MarkdownEditorContent(props: MarkdownEditorProps) {
         hostRef={hostRef}
         immersiveEditing={props.immersiveEditing === true}
         mouseGesture={surface.mouseGesture}
-        onBlurCapture={props.onBlurCapture}
+        onBlurCapture={keyboardFocus.onBlurCapture}
         onFocusCapture={props.onFocusCapture}
         onBeforeInputCapture={props.onBeforeInputCapture}
         onContextMenu={props.onContextMenu}
         onDoubleClick={props.onDoubleClick}
-        onKeyDownCapture={(event) => handleMarkdownEditorKeyDownCapture(event, props)}
+        onKeyDownCapture={(event) => {
+          keyboardFocus.onKeyDownCapture(event);
+          handleMarkdownEditorKeyDownCapture(event, props);
+        }}
         readOnly={props.readOnly === true}
         readOnlyInteractionMode={props.readOnlyInteractionMode}
         reviewCaretLineHighlight={props.reviewCaretLineHighlight === true}
