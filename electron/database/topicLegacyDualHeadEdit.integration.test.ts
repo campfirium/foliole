@@ -22,6 +22,9 @@ beforeEach(startLibraries);
 afterEach(closeLibraries);
 
 it.each(['legacy', 'current'] as const)('records subsequent editing of pre-selection equal-body heads on %s', async mode => {
+  const runtime = mode === 'legacy' ? legacy.runtime : {
+    applyLocalContentEdit, applyRequestSyncObject, writeRequestSyncSnapshot, applyConvergentSyncNodesWithDbPort
+  };
   const initialize = mode === 'legacy' ? legacy.runtime.initializeDatabaseSchema : undefined;
   const a = createPeer('a', initialize);
   const b = createPeer('b', initialize);
@@ -31,10 +34,9 @@ it.each(['legacy', 'current'] as const)('records subsequent editing of pre-selec
   const right = textBranch('right', 'Shared complete body', base);
   for (const record of [base, left, right]) delete record.snapshot.text_selection;
   for (const peer of [a, b]) {
-    await applyConvergentSyncNodesWithDbPort(peer.port, [base, left], { collectVersionPayloads: false });
+    await runtime.applyConvergentSyncNodesWithDbPort(peer.port, [base, left], { collectVersionPayloads: false });
     await upsertRemoteVersion(peer.port, right);
   }
-  const runtime = mode === 'legacy' ? legacy.runtime : { applyLocalContentEdit, applyRequestSyncObject, writeRequestSyncSnapshot };
   await runtime.applyLocalContentEdit(a.port, { nodeId: 'topic', baseVersionId: 'left', versionId: 'edited',
     content: 'New complete user input', title: 'Topic', hideTitleHeading: false,
     hostName: 'a', updatedAt: new Date().toISOString() });
