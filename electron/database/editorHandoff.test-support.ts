@@ -2,8 +2,8 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { act, cleanup, renderHook } from '@testing-library/react';
-import { useSyncExternalStore } from 'react';
+import { act, cleanup, render, renderHook } from '@testing-library/react';
+import { createElement, useSyncExternalStore, type ReactNode } from 'react';
 import { afterEach, beforeEach, vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
 
@@ -138,7 +138,23 @@ async function seedEditorHandoff() {
   return { peer, port, base };
 }
 
-export async function createEditorHandoffFixture(sharedStore = false, editingSession = false) {
+function renderHandoffDraft<T>(useDraft: () => T, renderEditor?: (draft: T) => ReactNode) {
+  if (!renderEditor) return renderHook(useDraft);
+  let renderedDraft: T;
+  function EditorSurface() {
+    renderedDraft = useDraft();
+    return renderEditor?.(renderedDraft) ?? null;
+  }
+  return { ...render(createElement(EditorSurface)), result: { get current() { return renderedDraft; } } };
+}
+
+async function readHandoffBodies(port: ReturnType<typeof createBetterSqliteDbPort>, current: () => Promise<NativeSyncNodeRecord>) {
+  return new Set([(await current()).body_text,
+    ...(await readTopicAlternativeRecords(port, 'topic')).map(row => row.body_text)]);
+}
+
+export async function createEditorHandoffFixture(sharedStore = false, editingSession = false,
+  renderEditor?: (draft: ReturnType<typeof useDocumentPanelDraftProps>) => ReactNode) {
   const { peer, port, base } = await seedEditorHandoff();
   const initial = await initialEditorState(base, port);
   if (editingSession) initial.libraryScope = currentLibraryScope();
@@ -148,7 +164,7 @@ export async function createEditorHandoffFixture(sharedStore = false, editingSes
   const actions = createWorkspaceNodeActions(store.setState, store.getState);
   const select = createWorkspaceActiveNodeAction(store.setState);
   const ready: boolean[] = [];
-  const view = renderHook(() => {
+  const useHandoffDraft = () => {
     const state = useSyncExternalStore<ReturnType<typeof createWorkspaceNodeActionsFixture>>(store.subscribe, store.getState);
     useWorkspaceActiveNodeDocument(sharedStore ? state.activeNodeId : null);
     const current = state.nodesById[state.activeNodeId!];
@@ -162,7 +178,8 @@ export async function createEditorHandoffFixture(sharedStore = false, editingSes
       onCommit: (id: string, content: string, options: unknown) => actions.updateNodeContent(id, content, options) });
     ready.push(draft.holdReady);
     return draft;
-  });
+  };
+  const view = renderHandoffDraft(useHandoffDraft, renderEditor);
   await act(async () => undefined);
   ready.length = 0;
   const input = (content: string, deliver = true) => {
@@ -191,9 +208,8 @@ export async function createEditorHandoffFixture(sharedStore = false, editingSes
     store.setState((state: ReturnType<typeof createWorkspaceNodeActionsFixture>) => ({
       nodesById: { ...state.nodesById, topic: mergeHydratedNode(state.nodesById.topic, incoming) } }));
   };
-  return { peer, port, view, store, select, ready, input, drain, current, remote, heldBases,
-    async bodies() { return new Set([(await current()).body_text,
-      ...(await readTopicAlternativeRecords(port, 'topic')).map(row => row.body_text)]); },
+  return { peer, port, view, container: 'container' in view ? view.container : null, store, select, ready, input, drain, current, remote, heldBases,
+    bodies: () => readHandoffBodies(port, current),
     baseFact: () => loadRetainedSyncNodeVersionFact(port, 'base'),
     async converge() { await transferTopicText({ db: port }, peer); return peer.wholeBodies(); } };
 }

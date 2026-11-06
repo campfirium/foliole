@@ -64,6 +64,7 @@ export interface MarkdownEditorProps {
   onFitBlockImageMetricsChange?: (metrics: { imageCount: number; nonImageHeight: number; viewportHeight: number } | null) => void;
   onImageLoadStateChange?: (state: { loadedCount: number; totalCount: number }) => void;
   onDocumentInput?: (meta: EditorContentChangeMeta) => void;
+  onPendingInput?: (completion: Promise<void>) => void;
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
   onOpenNodeLink?: (title: string) => void;

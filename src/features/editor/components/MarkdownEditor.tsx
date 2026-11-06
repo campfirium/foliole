@@ -25,6 +25,7 @@ import { MarkdownMermaidPreviewDialog } from './MarkdownMermaidPreviewDialog';
 import { MarkdownTablePreviewDialog } from './MarkdownTablePreviewDialog';
 import { useEditorMouseGesture } from './useEditorMouseGesture';
 import { useMarkdownEditorFocusLeave } from './useMarkdownEditorFocusLeave';
+import { useMarkdownEditorInputCompletion } from './useMarkdownEditorInputCompletion';
 import { useMarkdownImagePreview } from './useMarkdownImagePreview';
 import { useMarkdownMermaidPreview } from './useMarkdownMermaidPreview';
 import { useMarkdownTablePreview } from './useMarkdownTablePreview';
@@ -140,6 +141,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
 function MarkdownEditorContent(props: MarkdownEditorProps) {
   useMarkdownEditorPropsDiagnostic(props);
   const editorFocus = useMarkdownEditorFocusLeave(props);
+  const inputCompletion = useMarkdownEditorInputCompletion(props);
   const { closeMermaidPreview, closePreview, closeTablePreview, hostRef, previewImage, previewMermaid, previewTable, rootRef, surface } = useMarkdownEditorModel(props);
   useEffect(() => syncMarkdownEditorAriaLabel(hostRef.current, props.ariaLabel), [hostRef, props.ariaLabel]);
 
@@ -156,6 +158,8 @@ function MarkdownEditorContent(props: MarkdownEditorProps) {
         immersiveEditing={props.immersiveEditing === true}
         mouseGesture={surface.mouseGesture}
         onBlurCapture={editorFocus.onBlurCapture}
+        onCompositionStartCapture={inputCompletion.start}
+        onCompositionEndCapture={inputCompletion.end}
         onFocusCapture={editorFocus.onFocusCapture}
         onBeforeInputCapture={props.onBeforeInputCapture}
         onContextMenu={props.onContextMenu}

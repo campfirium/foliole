@@ -219,3 +219,6 @@ it.each(['exit', 'refocus', 'failure'])('waits for an asynchronous text command 
   if (refocus || failed) await act(async () => { app.view.result.current.onExitEditorFocus(); await app.drain(); });
   expect((await app.current()).parent_version_ids).toHaveLength(2);
 });
+
+const { registerEditorCompositionExitTests } = await import('./editorCompositionExit.test-support.js');
+registerEditorCompositionExitTests();

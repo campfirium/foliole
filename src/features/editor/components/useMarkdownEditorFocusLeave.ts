@@ -1,20 +1,10 @@
 import { useEffect, useRef } from 'react';
 
+import { afterEditorEventDispatch } from '../model/editorEventCompletion';
+
 import type { MarkdownEditorProps } from './markdownEditorTypes';
 
 type Departure = { root: HTMLDivElement; notify: () => void };
-
-// Run after the observed event dispatch, including handlers which stop propagation.
-// This task boundary does not guess how long a command or composition needs.
-function afterEventDispatch(callback: () => void) {
-  const channel = new MessageChannel();
-  channel.port1.onmessage = () => {
-    channel.port1.close();
-    channel.port2.close();
-    callback();
-  };
-  channel.port2.postMessage(null);
-}
 
 export function useMarkdownEditorFocusLeave(props: MarkdownEditorProps) {
   const enabled = Boolean(props.onFocusLeave) && !props.readOnly;
@@ -27,7 +17,7 @@ export function useMarkdownEditorFocusLeave(props: MarkdownEditorProps) {
     const complete = () => {
       const interaction = pointer.current;
       const token = generation.current;
-      afterEventDispatch(() => {
+      afterEditorEventDispatch(() => {
         if (pointer.current !== interaction) return;
         pointer.current = null;
         const pending = departure.current;
@@ -38,7 +28,7 @@ export function useMarkdownEditorFocusLeave(props: MarkdownEditorProps) {
     const release = (event: MouseEvent) => {
       const target = event.target;
       const interaction = pointer.current;
-      afterEventDispatch(() => {
+      afterEditorEventDispatch(() => {
         if (pointer.current === interaction && target instanceof Node && !target.isConnected) complete();
       });
     };

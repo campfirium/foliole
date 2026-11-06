@@ -15,6 +15,8 @@ interface MarkdownEditorSurfaceProps {
   immersiveEditing: boolean;
   mouseGesture: ReturnType<typeof useEditorMouseGesture>;
   onBlurCapture: MarkdownEditorProps['onBlurCapture'];
+  onCompositionStartCapture: () => void;
+  onCompositionEndCapture: () => void;
   onFocusCapture: MarkdownEditorProps['onFocusCapture'];
   onBeforeInputCapture: MarkdownEditorProps['onBeforeInputCapture'];
   onContextMenu: MarkdownEditorProps['onContextMenu'];
@@ -34,6 +36,8 @@ export function MarkdownEditorSurface(args: MarkdownEditorSurfaceProps) {
       className={args.scrollContainer === 'outer' ? 'relative h-full w-full overflow-visible' : 'relative h-full w-full overflow-hidden'}
       onBeforeInputCapture={args.onBeforeInputCapture}
       onBlurCapture={args.onBlurCapture}
+      onCompositionStartCapture={args.onCompositionStartCapture}
+      onCompositionEndCapture={args.onCompositionEndCapture}
       onFocusCapture={args.onFocusCapture}
       onContextMenu={(event) => args.mouseGesture.handleContextMenu(event, args.onContextMenu)}
       onDoubleClick={args.onDoubleClick}
