@@ -11,18 +11,42 @@ final class FolioleFramedSyncTransportCompatibilityTests: XCTestCase {
         )
         let sessionID = try Data(hex: "00112233445566778899aabbccddeeff")
         XCTAssertEqual(context.deriveContextID(sessionID: sessionID).hex,
-                       "2f9edd47aa3a00bce4b4b6f50a3ab5eb38ab4dc372e0a8c0813ba78196204468")
+                       "8b926880b18711d13081d20fb27bfdfde806371be0115bf0891ab7a98f1030d2")
         let preamble = try FolioleFramedSyncPreamble(decoding: Data(hex:
-            "464f4c53594e43320060001c010000002f9edd47aa3a00bce4b4b6f50a3ab5eb38ab4dc372e0a8c0813ba7819620446800112233445566778899aabbccddeeff0506070800000000000000000000000000000000000000000000000000000000"))
+            "464f4c53594e43320060001d010000008b926880b18711d13081d20fb27bfdfde806371be0115bf0891ab7a98f1030d200112233445566778899aabbccddeeff0506070800000000000000000000000000000000000000000000000000000000"))
         let headerBytes = try Data(hex: "0000001e000000000000000000010000")
         let frame = FolioleFramedSyncWireFrame(
             header: try .init(decoding: headerBytes), headerBytes: headerBytes,
-            ciphertext: try Data(hex: "16c0b48f825871a7b75996d27d18408640410b5a7c0826a4e1864b64d116")
+            ciphertext: try Data(hex: "0eab8a8acb9612cad746e3909df4ae0aa5b410db0422ca13f1c4b54b1e25")
         )
         let plaintext = try FolioleFramedSyncFrameCrypto.decrypt(
             groupKey: Data(0...31), preamble: preamble, frame: frame, expectedSequence: 0
         )
         XCTAssertEqual(String(data: plaintext, encoding: .utf8), "session-vector")
+    }
+
+    func testFrozenTransferVectorAuthenticates() throws {
+        let preamble = try FolioleFramedSyncPreamble(decoding: Data(hex:
+            "464f4c53594e43320060001d02000000202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f101112131415161718191a1b1c1d1e1f0102030400000000000000000000000000000000000000000000000000000000"))
+        let header = try Data(hex: "0000001c000000000000000000020000")
+        let frame = FolioleFramedSyncWireFrame(
+            header: try .init(decoding: header), headerBytes: header,
+            ciphertext: try Data(hex: "d472ab32ec48331d4665fa4f883727df470e197af2d252d21833dfef")
+        )
+        XCTAssertEqual(try FolioleFramedSyncFrameCrypto.decrypt(
+            groupKey: Data(0...31), preamble: preamble, frame: frame, expectedSequence: 0),
+            try Data(hex: "6672616d652d766563746f72"))
+    }
+
+    func testRetiredAndUnknownVersionsFailClosed() throws {
+        for version: UInt8 in [28, 30] {
+            var encoded = FolioleFramedSyncWireTests.preamble()
+            encoded[11] = version
+            XCTAssertThrowsError(try FolioleFramedSyncPreamble(decoding: encoded)) { error in
+                XCTAssertEqual((error as? FolioleFramedSyncValidationError)?.code,
+                               "framed_sync_protocol_version_unsupported")
+            }
+        }
     }
 
     func testHTTPParserPreservesBinaryFramedBody() throws {

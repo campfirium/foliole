@@ -36,7 +36,7 @@ final class FramedSyncContractTests: XCTestCase {
     func testCorpusIsBoundToTheOnlyFramedSyncProto() throws {
         let fixture = try FramedSyncFixture.load()
         XCTAssertEqual(fixture.corpus.corpusVersion, 1)
-        XCTAssertEqual(fixture.corpus.protocolVersion, 28)
+        XCTAssertEqual(fixture.corpus.protocolVersion, 29)
         XCTAssertEqual(FramedSyncFixture.sha256Hex(fixture.proto), fixture.corpus.schemaSha256)
 
         let pluginProto = fixture.root.appendingPathComponent(
