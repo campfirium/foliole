@@ -11,11 +11,13 @@ import {
   resolveWorkspaceRightPanelContext
 } from './workspaceRightPanelAvailability';
 import { renderWorkspaceRightSidebarPanelContent } from './WorkspaceRightSidebarPanelRenderers';
+import { WorkspaceRightSidebarScrollContent } from './workspaceRightSidebarScroll';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 type WorkspaceRightSidebarNodesById = Record<string, Node>;
 
 interface WorkspaceRightSidebarOutlineDocument {
+  contextId?: string | null;
   activePosition: number;
   content: string;
   onRevealPosition: (position: number) => void;
@@ -41,6 +43,7 @@ export interface WorkspaceRightSidebarPanelProps {
   reviewCurrentNodeId: string | null;
   reviewFlowWindow?: ReviewFlowWindow;
   reviewQueueNodeIds: string[];
+  onPanelContentReady?: (() => void) | undefined;
   scrollElementRef?: RefObject<HTMLDivElement | null>;
   trashedNodeIds: string[];
 }
@@ -48,25 +51,30 @@ export interface WorkspaceRightSidebarPanelProps {
 export function renderWorkspaceRightSidebarPanel(props: WorkspaceRightSidebarPanelProps) {
   return (
     <Suspense fallback={null}>
-      {measureWorkspaceDiagnostic(
-        'workspace-right-sidebar-panel-select',
-        {
-          activeNodeId: props.activeNodeId,
-          activePanelId: props.activePanelId,
-          nodeCount: Object.keys(props.nodesById).length
-        },
-        () => {
-          if (props.isWorkspaceHydrated === false) return null;
-          const context = resolveWorkspaceRightPanelContext({
+      <WorkspaceRightSidebarScrollContent
+        key={props.activePanelId}
+        onReady={props.activePanelId === 'outline' ? undefined : props.onPanelContentReady}
+      >
+        {measureWorkspaceDiagnostic(
+          'workspace-right-sidebar-panel-select',
+          {
             activeNodeId: props.activeNodeId,
-            hasExternalDocument: Boolean(props.outlineDocument),
-            nodesById: props.nodesById
-          });
-          return isWorkspaceRightPanelAvailable(props.activePanelId, context)
-            ? renderWorkspaceRightSidebarPanelContent(props)
-            : null;
-        }
-      )}
+            activePanelId: props.activePanelId,
+            nodeCount: Object.keys(props.nodesById).length
+          },
+          () => {
+            if (props.isWorkspaceHydrated === false) return null;
+            const context = resolveWorkspaceRightPanelContext({
+              activeNodeId: props.activeNodeId,
+              hasExternalDocument: Boolean(props.outlineDocument),
+              nodesById: props.nodesById
+            });
+            return isWorkspaceRightPanelAvailable(props.activePanelId, context)
+              ? renderWorkspaceRightSidebarPanelContent(props)
+              : null;
+          }
+        )}
+      </WorkspaceRightSidebarScrollContent>
     </Suspense>
   );
 }

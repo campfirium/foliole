@@ -1,4 +1,4 @@
-import { memo, useRef } from 'react';
+import { memo, useLayoutEffect, useRef } from 'react';
 
 import { toRightPanelScaleId } from '../../features/settings/model/displayScaleSettings';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -17,6 +17,7 @@ import {
   renderWorkspaceRightSidebarPanel,
   type WorkspaceRightSidebarPanelProps
 } from './WorkspaceRightSidebarPanels';
+import { useWorkspaceRightSidebarScroll } from './workspaceRightSidebarScroll';
 
 export interface WorkspaceRightSidebarProps extends Omit<WorkspaceRightSidebarPanelProps, 'outlineActivePosition'> {
   outlineActivePosition?: number;
@@ -66,7 +67,8 @@ function areWorkspaceRightSidebarPropsEqual(previous: WorkspaceRightSidebarProps
 
 function renderActivePanelSurface(
   props: WorkspaceRightSidebarProps,
-  panelProps: WorkspaceRightSidebarPanelProps
+  panelProps: WorkspaceRightSidebarPanelProps,
+  onScroll: ReturnType<typeof useWorkspaceRightSidebarScroll>['savePanelScroll']
 ) {
   const contentClassName = props.activePanelId === 'assistant'
     ? 'flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden'
@@ -78,6 +80,8 @@ function renderActivePanelSurface(
     >
       <div
         className={contentClassName}
+        key={JSON.stringify([props.activePanelId, props.activeNodeId, props.outlineDocument?.contextId, Boolean(props.outlineDocument)])}
+        onScroll={onScroll}
         data-panel-content-root={props.activePanelId}
         ref={panelProps.scrollElementRef}
       >
@@ -90,6 +94,15 @@ function renderActivePanelSurface(
 export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
   const t = useTranslation();
   const scrollElementRef = useRef<HTMLDivElement>(null);
+  const pendingScrollRestore = useRef(false);
+  const { savePanelScroll, restorePanelScroll } = useWorkspaceRightSidebarScroll(props);
+  const restoreScroll = () => {
+    pendingScrollRestore.current = !scrollElementRef.current;
+    if (scrollElementRef.current) restorePanelScroll(scrollElementRef.current);
+  };
+  useLayoutEffect(() => {
+    if (pendingScrollRestore.current) restoreScroll();
+  });
   recordComponentRender('rightSidebar');
   useWorkspaceRenderDiagnostic('workspace-right-sidebar-render', {
     activeNodeId: props.activeNodeId,
@@ -101,7 +114,8 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
   const panelProps = {
     ...props,
     outlineActivePosition: props.outlineActivePosition ?? 0,
-    scrollElementRef
+    scrollElementRef,
+    onPanelContentReady: restoreScroll
   };
   return (
     <AppPanel
@@ -117,7 +131,7 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
         visible={props.activePanelId === 'assistant' && props.isPanelContentVisible !== false}
       />
       {props.activePanelId !== 'assistant' && props.isPanelContentVisible !== false
-        ? renderActivePanelSurface(props, panelProps)
+        ? renderActivePanelSurface(props, panelProps, savePanelScroll)
         : null}
     </AppPanel>
   );

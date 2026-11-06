@@ -19,6 +19,7 @@ interface WorkspaceRightSidebarOutlinePanelProps {
   editorAdapterRef?: EditorAdapterConnection | undefined;
   emptyDescription?: string;
   emptyDescriptionKind?: 'document' | 'topic';
+  onContentReady?: (() => void) | undefined;
   onRevealPosition: (position: number) => void;
 }
 
@@ -172,12 +173,14 @@ export function WorkspaceRightSidebarOutlinePanel({
   editorAdapterRef,
   emptyDescription,
   emptyDescriptionKind = 'topic',
-  onRevealPosition
+  onRevealPosition,
+  onContentReady
 }: WorkspaceRightSidebarOutlinePanelProps) {
   useWorkspaceRenderDiagnostic('workspace-outline-panel-render', {
     activePosition,
     contentLength: content.length
   });
+  const restored = useRef(false);
   const activeItemRef = useRef<HTMLButtonElement | null>(null);
   const outlineItems = useEditorOutlineItems(content, editorAdapterRef, contextNodeId);
   const treeItems = useMemo(() => resolveOutlineTreeItems(outlineItems), [outlineItems]);
@@ -189,6 +192,14 @@ export function WorkspaceRightSidebarOutlinePanel({
       scrollActiveOutlineItemIntoView(activeItemRef.current);
     }
   }, [activeIndex]);
+
+  useLayoutEffect(() => {
+    const ready = !editorAdapterRef || editorAdapterRef.current?.outline?.getSnapshot()?.nodeId === contextNodeId;
+    if (!restored.current && ready) {
+      onContentReady?.();
+      restored.current = true;
+    }
+  }, [contextNodeId, editorAdapterRef, onContentReady, outlineItems]);
 
   if (outlineItems.length === 0) {
     return (

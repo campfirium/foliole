@@ -169,12 +169,13 @@ function useExternalPreviewController(props: WorkspaceGridContentSource) {
     () =>
       props.externalLibrary.isExternalViewOpen
         ? {
+            contextId: previewPath,
             activePosition: 0,
             content: previewState.preview?.content ?? '',
             onRevealPosition
           }
         : undefined,
-    [onRevealPosition, previewState.preview?.content, props.externalLibrary.isExternalViewOpen]
+    [onRevealPosition, previewPath, previewState.preview?.content, props.externalLibrary.isExternalViewOpen]
   );
   return useMemo(
     () => ({ onEditorReady, outlineDocument, previewState }),

@@ -214,6 +214,7 @@ function renderOutlinePanel(
     | 'onRevealDocumentPosition'
     | 'outlineActivePosition'
     | 'outlineDocument'
+    | 'onPanelContentReady'
     | 'editorAdapterRef'
   >
 ) {
@@ -224,6 +225,7 @@ function renderOutlinePanel(
       activePosition={outlineDocument?.activePosition ?? props.outlineActivePosition}
       content={outlineDocument?.content ?? activeNode?.content ?? ''}
       contextNodeId={props.activeNodeId}
+      onContentReady={props.onPanelContentReady}
       editorAdapterRef={outlineDocument ? undefined : props.editorAdapterRef}
       {...(outlineDocument ? { emptyDescriptionKind: 'document' as const } : {})}
       onRevealPosition={
