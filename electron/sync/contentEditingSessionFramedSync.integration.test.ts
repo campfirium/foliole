@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { promises as fs } from 'node:fs';
+import path from 'node:path';
 
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
@@ -9,7 +10,7 @@ import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js'
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 import { readFixtureInventory, reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
-import { createDesktopFramedSyncTwoProcessFixture, type DesktopFramedSyncFixtureProcess } from './desktopFramedSyncTwoProcess.testSupport.js';
+import { buildDesktopFramedSyncFixture, createDesktopFramedSyncTwoProcessFixture, type DesktopFramedSyncFixtureProcess } from './desktopFramedSyncTwoProcess.testSupport.js';
 
 const nodeId = 'continuous-editor';
 const baseBody = 'Base 中😀\r\nLast\r\n';
@@ -103,4 +104,65 @@ async function exerciseForkAndExit(fixture: Fixture, baseId: string) {
     remote: await readFixtureInventory(fixture.right) })).toEqual([]);
   const restarted = await fixture.restartRight();
   expect(await read(restarted.snapshot.databasePath)).toEqual(right);
+}
+
+it.each(['left', 'right'] as const)('automatically sends successive ordinary saves without ending editing on %s',
+  { meta: { calibratedMs: 60_000 } }, async side => {
+    const artifacts = path.resolve('.tmp/artifacts/T727');
+    await fs.mkdir(artifacts, { recursive: true });
+    const buildRoot = await fs.mkdtemp(path.join(artifacts, 'continuous-auto-send-'));
+    const script = path.join(buildRoot, 'fixture.mjs');
+    await buildDesktopFramedSyncFixture(script, true);
+    const fixture = await createDesktopFramedSyncTwoProcessFixture(script, true, true);
+    let succeeded = false;
+    try {
+      await fixture.left.seed({ nodeId, content: baseBody, title: 'Concurrent article' });
+      await fixture.right.invoke('activation_start');
+      await fixture.left.invoke('activation_start');
+      await fixture.right.invoke('activation_found', { origin: fixture.leftSnapshot.origin });
+      await fixture.left.invoke('activation_found', { origin: fixture.rightSnapshot.origin });
+      const baseId = (await read(fixture[`${side}Snapshot`].databasePath)).current.version_id!;
+      await fixture[side].invoke('content_editing_session', { nodeId, sessionId: 'editing', action: 'begin' });
+      await assertAutomaticSaves(fixture, baseId, side);
+      const state = await read(fixture.rightSnapshot.databasePath);
+      const restarted = await fixture.restartRight();
+      expect(await read(restarted.snapshot.databasePath)).toEqual(state);
+      succeeded = true;
+    } finally {
+      await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
+      if (succeeded) {
+        await fs.rm(fixture.root, { recursive: true, force: true });
+        await fs.rm(buildRoot, { recursive: true, force: true });
+      } else console.info('Automatic editing fixture:', fixture.root, buildRoot);
+    }
+  });
+
+async function assertAutomaticSaves(fixture: Fixture, baseId: string, side: 'left' | 'right') {
+  const receiver = side === 'left' ? fixture.rightSnapshot : fixture.leftSnapshot;
+  let parentId = baseId;
+  let parentBody = baseBody;
+  for (const step of [1, 2, 3]) {
+    const versionId = `auto-${step}`;
+    const content = localBody(step);
+    await fixture[side].invoke('editor_content_edit', {
+      parent: { nodeId, kind: 'topic', parentNodeId: null, title: 'Concurrent article', content,
+        isTitleManual: true, reveal: null, anchorLink: null, position: 0,
+        createdAt: '2026-10-05T00:00:00.000Z', updatedAt: `2026-11-06T01:00:0${step}.000Z` },
+      affectedAnchors: [], edit: { baseVersionId: parentId, baseContent: parentBody, versionId }
+    });
+    // Observe persistence only: no mutation notification, sync request or exit is injected here.
+    await expect.poll(async () => (await read(receiver.databasePath)).current.version_id,
+      { timeout: 5_000, interval: 40 }).toBe(versionId);
+    for (const database of [fixture.leftSnapshot.databasePath, fixture.rightSnapshot.databasePath]) {
+      const state = await read(database);
+      expect(state.current).toMatchObject({ version_id: versionId, body_text: content, parent_version_ids: [parentId] });
+      expect(state.bodies).toEqual(new Set([content]));
+      expect(state.holds).toEqual([]);
+    }
+    parentId = versionId;
+    parentBody = content;
+  }
+  // A valid end token after all three deliveries proves saves did not end the live session.
+  await expect(fixture[side].invoke('content_editing_session', { nodeId, sessionId: 'editing', action: 'end' }))
+    .resolves.toEqual({ changed: true });
 }

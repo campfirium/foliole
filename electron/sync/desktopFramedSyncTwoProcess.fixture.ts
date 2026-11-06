@@ -163,7 +163,7 @@ async function run(command: Command) {
   if (command.action === 'seed') return seed(command.args);
   if (command.action === 'seed_parent_order_performance') return seedParentOrderPerformance(command.args);
   if (command.action === 'edit_parent_order_performance') return editParentOrderPerformance(command.args);
-  if (['retain_edit', 'release_edit', 'local_content_edit', 'content_editing_session'].includes(command.action))
+  if (['retain_edit', 'release_edit', 'local_content_edit', 'content_editing_session', 'editor_content_edit'].includes(command.action))
     return runDesktopFramedSyncEditCommand(command.action, command.args);
   if (['begin_identity_restore', 'publish_identity_restore', 'identity_restore_round'].includes(command.action)) {
     return runIdentityRestoreFixtureCommand(command.action, command.args, { deviceId, stateRoot });

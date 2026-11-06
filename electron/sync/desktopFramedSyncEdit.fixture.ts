@@ -2,13 +2,15 @@ import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
 import { releaseLocalEditBase, retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { currentLibraryScope } from '../database/attachmentResourceDescription.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { handleContentEditingSession } from '../ipc/storageContentEditingSession.js';
+import { handleLocalContentEditCommand } from '../ipc/storageLocalContentEditCommand.js';
 
 import { requestDesktopHighValueSync } from './desktopMemberSyncCadence.js';
 
 /** Drive ordinary editor operations against the disposable process database. */
 export async function runDesktopFramedSyncEditCommand(action: string, args: Readonly<Record<string, unknown>>) {
+  if (action === 'editor_content_edit') return runWithDatabaseConnectionOwner(() => handleLocalContentEditCommand(args, null));
   if (action === 'content_editing_session') return handleContentEditingSession({
     ...args, libraryScope: currentLibraryScope()
   });
