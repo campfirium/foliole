@@ -13,7 +13,8 @@ const pdf = `${'b'.repeat(64)}.pdf`;
 function fixture(count = 1) {
   const db = new Database(':memory:');
   db.exec(`CREATE TABLE nodes (id TEXT PRIMARY KEY, content TEXT, body_blob_hash TEXT,
-    resource_references TEXT NOT NULL DEFAULT '[]')`);
+    resource_references TEXT NOT NULL DEFAULT '[]');
+    CREATE TABLE node_text_alternatives (node_id TEXT, status TEXT, resource_references TEXT);`);
   const insert = db.prepare('INSERT INTO nodes(id, content, resource_references) VALUES (?, ?, ?)');
   for (let index = 0; index < count; index++) insert.run(`node-${index}`, `![image](asset://${image})`,
     serializeNodeResourceReferences([{ role: 'reference', storage_key: pdf, original_name: 'Original.pdf' }]));
@@ -26,7 +27,7 @@ it('collects the same references from 1000 nodes with bounded database round tri
     const query = vi.spyOn(port, 'query');
     const result = await readAttachmentReferenceSnapshot(port);
     expect(new Set(result.storageKeys)).toEqual(new Set([image, pdf]));
-    expect(query.mock.calls.length).toBeLessThanOrEqual(2 * Math.ceil(1000 / 128) + 5);
+    expect(query.mock.calls.length).toBeLessThanOrEqual(3 * Math.ceil(1000 / 128) + 5);
   } finally { db.close(); }
 });
 
