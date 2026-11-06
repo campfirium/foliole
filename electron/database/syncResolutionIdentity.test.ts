@@ -22,6 +22,7 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { readPersistedTopicBodies } from './topicTextState.testSupport.js';
 
 let root = '';
 afterEach(async () => {
@@ -110,7 +111,7 @@ it('resolves incomparable bases in one exchange while preserving both bodies aft
     const port = open(name);
     const reopened = (await loadCurrentSyncNodeRecord(port, 'topic'))!;
     expect(reopened.version_id).toBe(finalRight.version_id);
-    expect(new Set([reopened.body_text, ...reopened.alternative_bodies?.map((row) => row.text) ?? []]))
+    expect(await readPersistedTopicBodies(port))
       .toEqual(new Set([a.body_text, b.body_text]));
     const [before] = await port.query<{ count: number }>('SELECT COUNT(*) AS count FROM node_sync_versions');
     expect((await push(left)).version_id).toBe(finalRight.version_id);

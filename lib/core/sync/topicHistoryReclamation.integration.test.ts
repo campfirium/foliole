@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, expect, it } from 'vitest';
 
-import { textBranch, textDevice, wholeBodies } from '../../../electron/database/topicTextState.testSupport.js';
+import { textBranch, textDevice } from '../../../electron/database/topicTextState.testSupport.js';
 
 import { applyLocalContentEdit } from './localContentEdit.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
@@ -34,7 +34,7 @@ it('merges an offline full edit after its common ancestor body has retired', asy
   expect(d2).not.toBeNull();
   await online.receive([d2!]);
   const current = await online.current();
-  expect(wholeBodies(current)).toEqual(new Set(['Offline complete body', 'Online complete body']));
+  expect(await online.wholeBodies()).toEqual(new Set(['Offline complete body', 'Online complete body']));
   expect(current.parent_version_ids).toEqual(expect.arrayContaining(['d2', 'v3']));
   expect((await loadRetainedSyncNodeVersionFact(online.db, 'v1'))!.body_text).toBeNull();
 });

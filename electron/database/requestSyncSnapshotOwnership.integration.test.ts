@@ -11,6 +11,7 @@ import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInve
 import { withRequestSyncFiles, type RequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
 import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
+import { readTopicAlternativeRecords, writeTopicAlternative } from '../../lib/core/sync/topicAlternativeStore.js';
 import { alternativeForBody } from '../../lib/core/sync/topicTextState.js';
 import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
@@ -18,7 +19,7 @@ import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeLibraries, createPeer, edit, joinPeers, root, startLibraries } from './syncLibrary.testSupport.js';
 import { syncRequestLibrary } from './syncRequestLibrary.testSupport.js';
 import { withLibraryRequestSnapshot } from './syncRequestSnapshot.testSupport.js';
-import { textBranch, textDevice, wholeBodies } from './topicTextState.testSupport.js';
+import { textBranch, textDevice, readPersistedTopicBodies } from './topicTextState.testSupport.js';
 
 const hosts: ReturnType<typeof textDevice>[] = [];
 beforeEach(startLibraries);
@@ -71,9 +72,12 @@ it('owns the original main and alternative bodies after source editing, collecti
   const source = device(); const target = createPeer('frozen-target');
   const original = textBranch('original', '\ufeffOriginal\r\n😀\u0000end');
   const alternative = alternativeForBody(textBranch('alternative', 'Complete alternative'), '2026-10-13T00:00:00Z');
-  original.snapshot.text_alternatives = [alternative];
-  original.alternative_bodies = [{ hash: alternative.body_blob_hash, text: 'Complete alternative' }];
   await source.receive([original]);
+  const { id, ...metadata } = alternative;
+  await writeTopicAlternative(source.db, { ...metadata, alternative_id: id, node_id: 'topic',
+    source_version_id: 'alternative', body_text: 'Complete alternative', status: 'available',
+    updated_at: alternative.created_at, resource_references: '[]', image_sources: null }, true);
+  const expectedAlternatives = await readTopicAlternativeRecords(source.db, 'topic');
   const expectedVersions = await versions(source.db); const expectedParents = await parents(source.db);
   const selected = await difference(source.db);
   const files = createDesktopFramedSyncFiles(path.join(root, 'frozen'));
@@ -82,7 +86,7 @@ it('owns the original main and alternative bodies after source editing, collecti
     await withRequestSyncFiles(files, async first => {
       await writeRequestSyncSnapshot(source.db, selected, first);
       await source.receive([textBranch('edited', 'Later text', original)]);
-      source.sqlite.exec(`DELETE FROM content_blob_data; UPDATE node_sync_versions SET body_text = NULL,
+      source.sqlite.exec(`DELETE FROM node_text_alternatives; DELETE FROM content_blob_data; UPDATE node_sync_versions SET body_text = NULL,
         snapshot_json = json_remove(json_set(snapshot_json, '$.content', NULL), '$.text_alternative_bodies')
         WHERE version_id = 'original'`);
       expect(source.sqlite.prepare("SELECT body_text FROM node_sync_versions WHERE version_id='original'").pluck().get()).toBeNull();
@@ -97,7 +101,8 @@ it('owns the original main and alternative bodies after source editing, collecti
     const db = createBetterSqliteDbPort(reopened);
     expect(await versions(db)).toEqual(expectedVersions);
     expect(await parents(db)).toEqual(expectedParents);
-    expect(wholeBodies((await loadCurrentSyncNodeRecord(db, 'topic'))!))
+    expect(await readTopicAlternativeRecords(db, 'topic')).toEqual(expectedAlternatives);
+    expect(await readPersistedTopicBodies(db))
       .toEqual(new Set([original.body_text, 'Complete alternative']));
   } finally { reopened.close(); }
 });
@@ -134,7 +139,7 @@ it('keeps the receiver edit and both original branches when a previously fixed r
     const current = (await loadCurrentSyncNodeRecord(db, 'topic'))!;
     expect(current.snapshot.title).toBe('Receiver branch');
     expect(current.body_text).toBe('Receiver branch');
-    expect(wholeBodies(current)).toEqual(new Set(['Receiver branch', 'Sender branch']));
+    expect(await readPersistedTopicBodies(db)).toEqual(new Set(['Receiver branch', 'Sender branch']));
     expect((await versions(db)).filter(row => row.version_id === sender || row.version_id === receiver))
       .toEqual(originals.map(row => ({ ...row, body_text: null }))
         .sort((a, b) => String(a.version_id).localeCompare(String(b.version_id))));

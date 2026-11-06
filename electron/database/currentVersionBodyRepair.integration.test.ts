@@ -10,6 +10,7 @@ import {
   assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries
 } from './syncLibrary.testSupport.js';
 import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
+import { readPersistedTopicBodies } from './topicTextState.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
@@ -43,7 +44,7 @@ it.each(['empty', 'short', 'old'] as const)('appends a repair for %s body withou
   edit(target, '123\n456\n789-right\n');
   await sync(target, source);
   const merged = (await loadCurrentSyncNodeRecord(source.port, 'topic'))!;
-  expect(new Set([merged.body_text, ...merged.alternative_bodies?.map(body => body.text) ?? []]))
+  expect(await readPersistedTopicBodies(source.port))
     .toEqual(new Set(['123-left\n456\n789\n', '123\n456\n789-right\n']));
   assertPersisted(source, merged.body_text!, merged.version_id!);
   await sync(source, target);

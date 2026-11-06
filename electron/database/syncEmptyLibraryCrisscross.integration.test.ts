@@ -21,6 +21,7 @@ import {
   assertPersisted, closeLibraries, createPeer, edit, joinPeers, startLibraries, type Peer
 } from './syncLibrary.testSupport.js';
 import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
+import { readPersistedTopicBodies } from './topicTextState.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
@@ -114,8 +115,7 @@ it('resolves different production heads while preserving both bodies when their 
   for (const peer of [left, right]) {
     const final = await current(peer);
     assertPersisted(peer, final.body_text!, final.version_id!);
-    const alternatives = (final.alternative_bodies ?? []).map((entry) => entry.text);
-    expect(new Set([final.body_text, ...alternatives])).toEqual(new Set(['Left edit', 'Right edit']));
+    expect(await readPersistedTopicBodies(peer.port)).toEqual(new Set(['Left edit', 'Right edit']));
   }
 });
 
