@@ -52,7 +52,7 @@ it('seeds the node, writes through shared writers, and confirms on the first lau
   expect(mocks.saveView).toHaveBeenCalledWith({ nodeId: 'ios-state-node', scrollTop: 42 });
   expect(mocks.saveReading).toHaveBeenCalledWith(expect.objectContaining({ nodeId: 'ios-state-node' }));
   expect(mocks.saveReview).toHaveBeenCalledWith(expect.objectContaining({
-    nodeId: 'ios-state-node', reviewLog: expect.objectContaining({ schedulerVersion: 'fsrs-6' })
+    nodeId: 'ios-state-node', reviewLog: expect.objectContaining({ schedulerVersion: 'fsrs-7' })
   }));
   expect(mocks.saveSetting).toHaveBeenCalledWith({
     key: 'handoff_reminder_settings', valueJson: '{"enabled":true}'

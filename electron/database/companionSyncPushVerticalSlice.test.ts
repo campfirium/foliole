@@ -15,8 +15,8 @@ import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { restoreFixture, transfer, type RestorePeer } from './requestSyncRestoreRecovery.testSupport.js';
 
 const reviewedAt = '2026-04-30T01:00:00.000Z';
-const review = { node_id: 'node-1', difficulty: 2.11810397, due: '2026-05-03T01:00:00.000Z',
-  elapsed_days: 0, lapses: 0, last_review_at: reviewedAt, reps: 1, scheduled_days: 3, stability: 2.3065, state: 2 };
+const review = { node_id: 'node-1', difficulty: 3.53072398, due: '2026-05-04T01:00:00.000Z',
+  elapsed_days: 0, lapses: 0, last_review_at: reviewedAt, reps: 1, scheduled_days: 4, stability: 3.9221, stability_fast: 3.13768, state: 2 };
 const reviewLog = { host_name: 'android-device',
     grade: 3,
   id: 'review-op-android-1', node_id: 'node-1', op_id: 'op-android-1', reviewed_at: reviewedAt,
@@ -45,7 +45,7 @@ async function sendNode(source: RestorePeer, target: RestorePeer, id: string) {
 
 function expectReview(peer: RestorePeer) {
   expect(peer.sqlite.prepare(`SELECT node_id, difficulty, due, elapsed_days, lapses, last_review_at,
-    reps, scheduled_days, stability, state FROM node_review WHERE node_id = 'node-1'`).get()).toEqual(review);
+    reps, scheduled_days, stability, stability_fast, state FROM node_review WHERE node_id = 'node-1'`).get()).toEqual(review);
   expect(peer.sqlite.prepare('SELECT * FROM review_log ORDER BY op_id').all()).toEqual([reviewLog]);
   expect(peer.sqlite.prepare(`SELECT object_type, object_id, last_modified_by_host_name, content_hash
     FROM sync_object_state WHERE object_type = 'node_review' AND object_id = 'node-1'`).get()).toBeUndefined();

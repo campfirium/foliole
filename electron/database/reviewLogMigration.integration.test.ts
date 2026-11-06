@@ -5,6 +5,7 @@ import { expect, it } from 'vitest';
 import { createCompanionDatabase, migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { FRAMED_SYNC_INVENTORY_TRIGGERS } from '../../lib/core/database/framedSyncInventorySchema.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { applyNumberedSchemaMigrations } from '../../lib/core/database/numberedMigrations.js';
 import { migrateCompanionReviewLog, migrateReviewLog } from '../../lib/core/database/reviewLogMigration.js';
 import { applyReviewLogRecordsWithDbPort } from '../../lib/core/sync/syncReviewLogApply.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
@@ -27,7 +28,9 @@ async function fixture(host: string) {
   for (const sql of FRAMED_SYNC_INVENTORY_TRIGGERS) sqlite.exec(sql);
   for (const id of ['ordinary', 'new', 'reset', 'normal']) {
     sqlite.prepare("INSERT INTO nodes(id, kind, title, created_at, updated_at) VALUES (?, 'item', '', 'created', 'updated')").run(id);
-    if (id !== 'reset') sqlite.prepare('INSERT INTO node_review VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    if (id !== 'reset') sqlite.prepare(`INSERT INTO node_review
+      (node_id, due, last_review_at, state, stability, difficulty, elapsed_days, scheduled_days, reps, lapses)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(id, 'current-due', 'current-last', 2, 8, 4, 3, 5, 6, 1);
   }
   const insert = sqlite.prepare('INSERT INTO review_log VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
@@ -47,12 +50,21 @@ async function fixture(host: string) {
   return { sqlite, db };
 }
 
+// This contract covers history repair at v172, before the separately tested FSRS7 memory rebuild.
+function upgradeDesktop(sqlite: Database.Database, beforeCommit = () => {}) {
+  sqlite.transaction(() => {
+    applyNumberedSchemaMigrations({ sqlite, currentVersion: 171, targetVersion: 172,
+      legacyMessage: 'unsupported fixture', setUserVersion: version => sqlite.pragma(`user_version = ${version}`) });
+    beforeCommit();
+  })();
+}
+
 it.each(['desktop', 'companion'])('upgrades %s history without changing any existing review state', async host => {
   const { sqlite, db } = await fixture(host);
   try {
     const state = sqlite.prepare('SELECT * FROM node_review ORDER BY node_id').all();
     const originals = sqlite.prepare('SELECT id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at FROM review_log ORDER BY op_id').all();
-    if (host === 'desktop') initializeDatabaseSchema(sqlite);
+    if (host === 'desktop') upgradeDesktop(sqlite);
     else await db.transaction(tx => migrateCompanionDatabase(tx, 98, 99));
     expect(sqlite.prepare('SELECT * FROM node_review ORDER BY node_id').all()).toEqual(state);
     expect(sqlite.prepare("SELECT id, op_id, host_name, node_id, grade, scheduler_version, reviewed_at FROM review_log WHERE kind='review' ORDER BY op_id").all()).toEqual(originals);
@@ -94,12 +106,12 @@ it.each(['desktop', 'companion'])('rolls back %s repairs and column removal on i
   try {
     const original = sqlite.prepare('SELECT * FROM review_log ORDER BY op_id').all();
     const interrupted = async () => {
-      if (host === 'desktop') initializeDatabaseSchema(sqlite, { beforeVersionCommit: () => { throw new Error('interrupted'); } });
+      if (host === 'desktop') upgradeDesktop(sqlite, () => { throw new Error('interrupted'); });
       else await db.transaction(tx => migrateCompanionDatabase(tx, 98, 99, () => { throw new Error('interrupted'); }));
     };
     await expect(interrupted()).rejects.toThrow('interrupted');
     expect(sqlite.prepare('SELECT * FROM review_log ORDER BY op_id').all()).toEqual(original);
-    if (host === 'desktop') initializeDatabaseSchema(sqlite);
+    if (host === 'desktop') upgradeDesktop(sqlite);
     else await db.transaction(tx => migrateCompanionDatabase(tx, 98, 99));
     expect(sqlite.prepare('SELECT COUNT(*) FROM review_log').pluck().get()).toBe(10);
   } finally { sqlite.close(); }

@@ -53,8 +53,8 @@ beforeEach(async () => {
     peer.db.prepare("INSERT INTO companion_meta VALUES ('host_name', ?, 'now')").run(peer.name);
   }
   edit(desktop, 'Original question', 'Card', null, 'item');
-  score({ sqlite: desktop.db, id: desktop.name }, 'first', '2026-09-01T00:00:00.000Z');
-  score({ sqlite: desktop.db, id: desktop.name }, 'second', '2026-09-08T00:00:00.000Z');
+  score({ sqlite: desktop.db, id: desktop.name }, 'first', '2026-08-01T00:00:00.000Z');
+  score({ sqlite: desktop.db, id: desktop.name }, 'second', '2026-08-08T00:00:00.000Z');
   await sync(desktop, mobile);
 });
 afterEach(closeLibraries);

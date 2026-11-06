@@ -38,7 +38,8 @@ function deferred() {
 }
 
 export async function prepare() {
-  const nodes = [createQaNode('first', now), createQaNode('other', now)];
+  const nodes = [createQaNode('first', now), createQaNode('other', now)]
+    .map(node => ({ ...node, review: { ...node.review!, stabilityFast: 0 } }));
   nodes.forEach(saveNode);
   const harness = createSetStateHarness(createWorkspaceFixture(nodes));
   const computing = deferred();

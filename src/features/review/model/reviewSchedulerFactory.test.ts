@@ -40,7 +40,8 @@ describe('createReviewSchedulerAdapter', () => {
       card: { ...BASE_CARD },
       now: '2026-02-26T00:00:00.000Z'
     });
-    expect(preview.Good.card.scheduled_days).toBe(3);
+    expect(preview.Good).toEqual(result);
+    expect(preview.Good.card.stability_fast).toBeGreaterThan(0);
   });
 
   it('uses desktop invoke when available', async () => {

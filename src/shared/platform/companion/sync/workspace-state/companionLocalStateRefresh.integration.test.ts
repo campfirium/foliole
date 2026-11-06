@@ -29,7 +29,7 @@ vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({
 
 const review = {
   difficulty: 5.1, due: '2026-10-25T00:00:00.000Z', elapsedDays: 0, lapses: 0,
-  lastReviewAt: '2026-10-18T00:00:00.000Z', reps: 1, scheduledDays: 7, stability: 7.2, state: 2 as const
+  lastReviewAt: '2026-10-18T00:00:00.000Z', reps: 1, scheduledDays: 7, stability: 7.2, stabilityFast: 0.7, state: 2 as const
 };
 
 async function openLibrary() {

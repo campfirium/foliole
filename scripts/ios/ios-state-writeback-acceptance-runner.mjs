@@ -39,11 +39,11 @@ function sharedFactsPassed(facts) {
   return matches(facts?.reading, { interval_duration_ms: 60000, interval_growth_factor: 1.5,
     last_handled_at: '2026-07-21T00:01:00.000Z', next_at: '2026-07-21T00:02:00.000Z',
     priority: 2, repetition_count: 3, state: 'active' }) &&
-    matches(facts?.review, { difficulty: 2.11810397, due: '2026-07-24T00:01:00.000Z', elapsed_days: 0,
-      lapses: 0, last_review_at: '2026-07-21T00:01:00.000Z', reps: 1, scheduled_days: 3, stability: 2.3065, state: 2 }) &&
+    matches(facts?.review, { difficulty: 3.53072398, due: '2026-07-27T00:01:00.000Z', elapsed_days: 0,
+      lapses: 0, last_review_at: '2026-07-21T00:01:00.000Z', reps: 1, scheduled_days: 6, stability: 3.9221, stability_fast: 3.13768, state: 2 }) &&
     facts?.review_log?.length === 1 && typeof facts.review_log[0].op_id === 'string' &&
     facts.review_log[0].op_id.length > 0 && matches(facts.review_log[0], {
-      grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-6', reviewed_at: '2026-07-21T00:01:00.000Z',
+      grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-7', reviewed_at: '2026-07-21T00:01:00.000Z',
 
          });
 }

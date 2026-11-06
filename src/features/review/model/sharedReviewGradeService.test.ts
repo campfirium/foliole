@@ -2,8 +2,9 @@ import { expect, it, vi } from 'vitest';
 
 import { createLocalReviewSchedulerAdapter } from '../../../../lib/core/review/localSchedulerAdapter';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, getReviewSchedulerVersion } from '../../../../lib/core/review/settings';
+import { createInitialSchedulerCard } from '../../../../lib/core/review/types';
 
-import type { ReviewSchedulerAdapter } from './reviewTypes';
+import { toNodeReviewProfile, type ReviewSchedulerAdapter } from './reviewTypes';
 import { gradeSharedFsrsReviewNode } from './sharedReviewGradeService';
 
 function createScheduler(): ReviewSchedulerAdapter {
@@ -168,10 +169,13 @@ it('uses the configured new day start for day-based due dates', async () => {
 
 it('uses inherited retention for local grading and records its actual parameter version', async () => {
   const scheduler = createLocalReviewSchedulerAdapter();
+  const first = await scheduler.grade({ card: createInitialSchedulerCard('2026-04-20T08:00:00.000Z'),
+    grade: 3, enableShortTerm: false, now: '2026-04-20T08:00:00.000Z' });
+  const item = { ...createReviewedItemNode(), review: toNodeReviewProfile(first.card) };
   const results = await Promise.all([0.8, 0.99].map(desiredRetention => gradeSharedFsrsReviewNode({
     getSchedulerVersion: overrides => getReviewSchedulerVersion(DEFAULT_REVIEW_SCHEDULER_SETTINGS, overrides),
     grade: 3, newDayStartsAtHour: 4, nodeId: 'item-1',
-    nodesById: { 'folder-1': { ...createFolderNode(), desiredRetention }, 'item-1': createReviewedItemNode() },
+    nodesById: { 'folder-1': { ...createFolderNode(), desiredRetention }, 'item-1': item },
     now: '2026-04-22T08:10:00.000Z', scheduler
   })));
   expect(results[0]?.schedulerVersion).toContain('dr=0.80');

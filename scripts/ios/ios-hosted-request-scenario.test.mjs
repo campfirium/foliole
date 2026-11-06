@@ -89,9 +89,9 @@ it('writes shared learning facts through state HTTP without transmitting phone s
   const expected = {
     reading: { interval_duration_ms: 60000, interval_growth_factor: 1.5, last_handled_at: '2026-07-21T00:01:00.000Z',
       next_at: '2026-07-21T00:02:00.000Z', priority: 2, repetition_count: 3, state: 'active' },
-    review: { difficulty: 2.11810397, due: '2026-07-24T00:01:00.000Z', elapsed_days: 0, lapses: 0,
-      last_review_at: '2026-07-21T00:01:00.000Z', reps: 1, scheduled_days: 3, stability: 2.3065, state: 2 },
-    review_log: [{ op_id: 'phone-review-op', grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-6', reviewed_at: '2026-07-21T00:01:00.000Z',
+    review: { difficulty: 3.53072398, due: '2026-07-27T00:01:00.000Z', elapsed_days: 0, lapses: 0,
+      last_review_at: '2026-07-21T00:01:00.000Z', reps: 1, scheduled_days: 6, stability: 3.9221, stability_fast: 3.13768, state: 2 },
+    review_log: [{ op_id: 'phone-review-op', grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-7', reviewed_at: '2026-07-21T00:01:00.000Z',
 
          }],
     phone_private_setting_count: 0
@@ -125,7 +125,7 @@ async function writePhoneState({ phone, db }) {
     reps: 4, scheduledDays: 7, stability: 8.5, state: 2
   } });
   await applyReviewLogRecordsWithDbPort(db, [{ id: 'phone-review-id', op_id: 'phone-review-op', host_name: 'Phone',
-    node_id: 'ios-state-node', grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-6', reviewed_at: updatedAt,
+    node_id: 'ios-state-node', grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-7', reviewed_at: updatedAt,
 
   }], { requireExistingNode: true });
   const privateSetting = { scope: 'host', platform: 'ios', form_factor: 'phone', host_name: 'Phone',

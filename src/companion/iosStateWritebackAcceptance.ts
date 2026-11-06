@@ -50,7 +50,7 @@ async function writeAcceptanceState() {
       cardBefore: { difficulty: 6.1, due: REVIEWED_AT, stability: 4.2 },
       grade: 3,
       reviewedAt: REVIEWED_AT,
-      schedulerVersion: 'fsrs-6'
+      schedulerVersion: 'fsrs-7'
     }
   });
   await saveCompanionSyncSettingRecord({
