@@ -136,9 +136,7 @@ it.each([
   }
   if (finish === 'done') await act(() => activity.flush());
   const readBodies = () => library!.database.prepare(`SELECT n.content FROM nodes n WHERE n.id=?
-    UNION SELECT json_extract(body.value, '$.text') AS content FROM nodes n
-    JOIN node_sync_versions v ON v.version_id=n.current_version_id,
-    json_each(v.snapshot_json, '$.text_alternative_bodies') body WHERE n.id=?`).all('topic', 'topic');
+    UNION SELECT body_text AS content FROM node_text_alternatives WHERE node_id=? AND status='available'`).all('topic', 'topic');
   await waitFor(() => expect(readBodies()).toContainEqual({ content: 'Immediate input Original body' }), { timeout: 3000 });
   const bodies = readBodies();
   if (remoteChange) expect(bodies).toContainEqual({ content: 'Original body\nRemote suffix' });

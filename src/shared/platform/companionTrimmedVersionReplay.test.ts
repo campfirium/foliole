@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { closeLibraries, createPeer, joinPeers, startLibraries, type Peer } from '../../../electron/database/syncLibrary.testSupport.js';
 import { withLibraryRequestSnapshot } from '../../../electron/database/syncRequestSnapshot.testSupport.js';
+import { readPersistedTopicBodies } from '../../../electron/database/topicTextState.testSupport.js';
 import { buildCanonicalNodeSyncPayload } from '../../../lib/core/database/nodeSyncPayload.js';
 import { nodeSyncSnapshotHashMetadata } from '../../../lib/core/database/nodeSyncSnapshotMetadata.js';
 import { computeSyncContentHash } from '../../../lib/core/database/syncState.js';
@@ -51,8 +52,7 @@ it('replays a trimmed A to E chain into an offline A to F branch through current
   await withLibraryRequestSnapshot(online, offline, async replay => { await replay(); });
   const current = offline.db.prepare(`SELECT content, current_version_id FROM nodes WHERE id = ?`)
     .get(nodeId) as { content: string; current_version_id: string };
-  const chosen = await loadCurrentSyncNodeRecord(port, nodeId);
-  expect(new Set([chosen?.body_text, ...chosen?.alternative_bodies?.map(body => body.text) ?? []]))
+  expect(await readPersistedTopicBodies(port, nodeId))
     .toEqual(new Set(['left edited\nright one', 'left one\nright edited']));
   expect(current.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
   expect((await loadCurrentSyncNodeRecord(port, nodeId))?.version_id).toBe(current.current_version_id);

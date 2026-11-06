@@ -57,10 +57,7 @@ it.each(['android', 'ios'])('%s retains complete input branches and persists the
   await readCompanionContentSource('topic', 'editor-session');
   await insert(node({ content: 'Apples\nBread\nMilk coffee\n', currentVersionId: 'base' }), 'remote');
   const first = await saveCompanionContentEdit(edit('Apples tea\nBread\nMilk\n'));
-  const alternatives = database.prepare(`SELECT json_extract(body.value, '$.text') AS content FROM nodes n
-    JOIN node_sync_versions version ON version.version_id = n.current_version_id,
-    json_each(version.snapshot_json, '$.text_alternative_bodies') body
-    WHERE n.id = 'topic'`).all() as { content: string }[];
+  const alternatives = database.prepare(`SELECT body_text AS content FROM node_text_alternatives WHERE node_id = 'topic' AND status = 'available'`).all() as { content: string }[];
   expect([first.content, ...alternatives.map((entry) => entry.content)].sort())
     .toEqual(['Apples tea\nBread\nMilk\n', 'Apples\nBread\nMilk coffee\n'].sort());
   const second = await saveCompanionContentEdit(edit('Apples tea\nBread jam\nMilk\n', 'local-2', first.submittedVersionId));
@@ -144,10 +141,7 @@ it('retains overlapping input as current content or an existing text alternative
   await readCompanionContentSource('topic', 'editor-session');
   await insert(node({ content: 'Apples coffee\nBread\nMilk\n', currentVersionId: 'base' }), 'remote');
   const saved = await saveCompanionContentEdit(edit('Apples tea\nBread\nMilk\n'));
-  const rows = database.prepare(`SELECT json_extract(body.value, '$.text') AS body_text FROM nodes n
-    JOIN node_sync_versions version ON version.version_id = n.current_version_id,
-    json_each(version.snapshot_json, '$.text_alternative_bodies') body
-    WHERE n.id = 'topic'`).all() as { body_text: string }[];
+  const rows = database.prepare(`SELECT body_text FROM node_text_alternatives WHERE node_id = 'topic' AND status = 'available'`).all() as { body_text: string }[];
   expect([saved.content, ...rows.map((row) => row.body_text)]).toEqual(expect.arrayContaining([
     'Apples coffee\nBread\nMilk\n', 'Apples tea\nBread\nMilk\n'
   ]));

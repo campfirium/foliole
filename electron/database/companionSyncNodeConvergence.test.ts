@@ -19,7 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
-import { readTopicTextSnapshot } from '../../lib/core/sync/topicTextBodies.js';
+import { topicAlternativeHash, validateTopicAlternativeRecord } from '../../lib/core/sync/topicAlternativeRecord.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
@@ -99,7 +99,9 @@ function currentBodies() {
   const row = driver.queryOne<{ body_text: string; snapshot_json: string }>(
     `SELECT v.body_text, v.snapshot_json FROM node_sync_versions v
      JOIN nodes n ON n.current_version_id = v.version_id WHERE n.id = 'topic-1'`)!;
-  return new Set([row.body_text, ...readTopicTextSnapshot(row.snapshot_json).bodies.map((body) => body.text)]);
+  const alternatives = driver.queryAll<{ body_text: string }>(
+    "SELECT body_text FROM node_text_alternatives WHERE node_id = 'topic-1' AND status = 'available'");
+  return new Set([row.body_text, ...alternatives.map(body => body.body_text)]);
 }
 
 it('preserves both complete non-overlapping edits in one multi-parent resolution', async () => {
@@ -131,12 +133,16 @@ it('keeps one simple alternative when overlapping text edits cannot merge', asyn
   expect(currentBodies()).toEqual(new Set(['banana\nB\nC\n', 'orange\nB\nC\n']));
 });
 
-it('publishes alternatives as part of the current node version', async () => {
+it('publishes complete alternatives independently of the current node version', async () => {
   seedDivergedTopic('banana\nB\nC\n');
   await applyCompanionSyncPushAsync([createDivergedTopicPush('orange\nB\nC\n')]);
   expect(currentBodies()).toEqual(new Set(['banana\nB\nC\n', 'orange\nB\nC\n']));
   const driver = openDatabaseConnection().driver;
-  expect(driver.queryAll("SELECT * FROM sync_object_state WHERE object_type = 'node_text_alternative'")).toEqual([]);
+  const rows = driver.queryAll("SELECT * FROM node_text_alternatives WHERE node_id = 'topic-1' AND status = 'available'");
+  expect(rows).toHaveLength(1);
+  const alternative = validateTopicAlternativeRecord(rows[0]);
+  expect(driver.queryAll("SELECT object_id, content_hash, sync_dirty FROM sync_object_state WHERE object_type = 'node_text_alternative'"))
+    .toEqual([{ object_id: alternative.alternative_id, content_hash: topicAlternativeHash(alternative), sync_dirty: 1 }]);
   expect(driver.queryOne("SELECT sync_dirty FROM sync_object_state WHERE object_type = 'node' AND object_id = 'topic-1'"))
     .toEqual({ sync_dirty: 1 });
 });

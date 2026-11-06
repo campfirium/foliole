@@ -7,7 +7,7 @@ import type { Peer } from '../../../electron/database/syncLibrary.testSupport.js
 import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries } from '../../../electron/database/syncLibrary.testSupport.js';
 import { syncRequestLibrary as sync } from '../../../electron/database/syncRequestLibrary.testSupport.js';
 import { withLibraryRequestSnapshot } from '../../../electron/database/syncRequestSnapshot.testSupport.js';
-import { wholeBodies } from '../../../electron/database/topicTextState.testSupport.js';
+import { readPersistedTopicBodies } from '../../../electron/database/topicTextState.testSupport.js';
 import { applyLocalContentEdit } from '../../../lib/core/sync/localContentEdit.js';
 import { collectNodeVersionPayloads } from '../../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { isStoredAncestorVersion, loadCurrentSyncNodeRecord } from '../../../lib/core/sync/syncNodeGraph.js';
@@ -113,9 +113,7 @@ it.each([false, true])('keeps shared highlight history and later edits across a 
 async function persistedBodies(peer: Peer) {
   const reopened = new Database(peer.file, { readonly: true });
   try {
-    const record = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(reopened), 'topic');
-    if (!record) throw new Error('fixture_current_topic_missing');
-    return wholeBodies(record);
+    return await readPersistedTopicBodies(createBetterSqliteDbPort(reopened), 'topic');
   } finally { reopened.close(); }
 }
 
