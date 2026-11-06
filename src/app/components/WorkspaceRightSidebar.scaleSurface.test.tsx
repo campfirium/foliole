@@ -47,10 +47,12 @@ it('keeps the sidebar slot outside the active feature scale surface', () => {
   expect(assistantSurface).toHaveClass('flex-1', 'min-h-0', 'overflow-hidden');
   expect(assistantSurface).toContainElement(screen.getByTestId('feature-header'));
   expect(assistantSurface).toContainElement(screen.getByTestId('feature-body'));
-  expect(container.querySelectorAll('[data-panel-scale-surface]')).toHaveLength(1);
+  expect(assistantSurface).toBeVisible();
 
   rerender(<SidebarHarness activePanelId="outline" />);
   const outlineSurface = container.querySelector('[data-panel-scale-id="right-panel:outline"]');
   expect(outlineSurface).toContainElement(screen.getByTestId('feature-outline'));
-  expect(container.querySelectorAll('[data-panel-scale-surface]')).toHaveLength(1);
+  expect(outlineSurface).toBeVisible();
+  expect(assistantSurface).not.toBeVisible();
+  expect(assistantSurface?.parentElement).toHaveAttribute('inert');
 });

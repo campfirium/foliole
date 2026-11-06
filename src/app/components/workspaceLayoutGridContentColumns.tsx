@@ -64,7 +64,7 @@ function renderListColumns(
 function renderRightSidebarColumns(
   args: Pick<
     WorkspaceGridColumnProps,
-    'isRightSidebarCollapsed' | 'rightSidebarProps' | 'rightSidebarSplitterProps' | 'compactSidebars'
+    'isImmersiveMode' | 'isRightSidebarCollapsed' | 'rightSidebarProps' | 'rightSidebarSplitterProps' | 'compactSidebars'
   >
 ) {
   return [
@@ -72,13 +72,15 @@ function renderRightSidebarColumns(
       aria-hidden={args.isRightSidebarCollapsed}
       className="hidden min-w-0 overflow-visible xl:flex"
       key="right-sidebar-splitter"
+      style={args.isImmersiveMode ? { display: 'none' } : undefined}
     >
       <WorkspaceRightSidebarSplitter {...args.rightSidebarSplitterProps} />
     </div>,
     <div
       data-workspace-side-column="right"
       aria-hidden={args.isRightSidebarCollapsed}
-      hidden={args.compactSidebars?.rightFloating && args.isRightSidebarCollapsed}
+      hidden={args.isImmersiveMode || (args.compactSidebars?.rightFloating && args.isRightSidebarCollapsed)}
+      style={args.isImmersiveMode ? { display: 'none' } : undefined}
       className={args.compactSidebars?.rightFloating
         ? 'workspace-floating-sidebar workspace-floating-sidebar-right flex min-w-0 flex-col overflow-hidden'
         : 'hidden min-w-0 flex-col overflow-hidden xl:flex'}
@@ -87,16 +89,18 @@ function renderRightSidebarColumns(
       {args.compactSidebars?.rightFloating
         ? <WorkspaceCompactRightPanelActions activePanelId={args.rightSidebarProps.activePanelId} />
         : null}
-      {args.isRightSidebarCollapsed && (args.rightSidebarProps.activePanelId === 'performance' || args.rightSidebarProps.activePanelId === 'review-queue')
-        ? null
-        : <WorkspaceRightSidebar {...args.rightSidebarProps} />}
+      <WorkspaceRightSidebar {...args.rightSidebarProps}
+        isPanelContentVisible={!args.isImmersiveMode && !(args.isRightSidebarCollapsed && (
+          args.rightSidebarProps.activePanelId === 'assistant' || args.rightSidebarProps.activePanelId === 'performance'
+          || args.rightSidebarProps.activePanelId === 'review-queue'
+        ))} />
     </div>
   ];
 }
 
 export function renderWorkspaceGridColumns(args: WorkspaceGridColumnProps) {
   if (args.isImmersiveMode) {
-    return [renderDocumentColumn(args)];
+    return [renderDocumentColumn(args), ...renderRightSidebarColumns(args)];
   }
 
   return [

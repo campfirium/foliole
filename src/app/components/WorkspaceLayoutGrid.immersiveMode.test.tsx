@@ -29,8 +29,8 @@ vi.mock('./WorkspaceListSplitter', () => ({
 }));
 
 vi.mock('./WorkspaceRightSidebar', () => ({
-  WorkspaceRightSidebar: (props: { onSelectNode: unknown; onSelectBreadcrumbNode: unknown }) => (
-    <WorkspaceRightSidebarProbe {...props} />
+  WorkspaceRightSidebar: (props: { onSelectNode: unknown; onSelectBreadcrumbNode: unknown; isPanelContentVisible?: boolean }) => (
+    props.isPanelContentVisible === false ? null : <WorkspaceRightSidebarProbe {...props} />
   )
 }));
 
@@ -89,7 +89,7 @@ describe('WorkspaceLayoutGrid immersive mode mounting', () => {
     expect(screen.queryByTestId('list-area')).toBeNull();
     expect(screen.queryByTestId('list-splitter')).toBeNull();
     expect(screen.queryByTestId('right-sidebar')).toBeNull();
-    expect(screen.queryByTestId('right-sidebar-splitter')).toBeNull();
+    expect(screen.getByTestId('right-sidebar-splitter')).not.toBeVisible();
   });
 });
 
@@ -164,7 +164,7 @@ describe('WorkspaceLayoutGrid right sidebar wiring', () => {
   });
 });
 
-function WorkspaceRightSidebarProbe(props: { onSelectNode: unknown; onSelectBreadcrumbNode: unknown }) {
+function WorkspaceRightSidebarProbe(props: { onSelectNode: unknown; onSelectBreadcrumbNode: unknown; isPanelContentVisible?: boolean }) {
   return (
     <div
       data-breadcrumb-type={typeof props.onSelectBreadcrumbNode}

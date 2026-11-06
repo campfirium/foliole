@@ -11,6 +11,7 @@ import {
 
 import { useWorkspaceRenderDiagnostic } from './workspaceInputLagRenderDiagnostic';
 import { getWorkspaceRightPanelDefinition } from './workspaceRightPanelDefinitions';
+import { WorkspaceRightSidebarAssistantSession } from './WorkspaceRightSidebarAssistantSession';
 import { areFlowDayBucketsEqual, areFlowDayOffsetsEqual, areStringArraysEqual } from './workspaceRightSidebarFlowWindow';
 import {
   renderWorkspaceRightSidebarPanel,
@@ -19,6 +20,7 @@ import {
 
 export interface WorkspaceRightSidebarProps extends Omit<WorkspaceRightSidebarPanelProps, 'outlineActivePosition'> {
   outlineActivePosition?: number;
+  isPanelContentVisible?: boolean;
 }
 
 function areReviewQueueSidebarPropsEqual(previous: WorkspaceRightSidebarProps, next: WorkspaceRightSidebarProps) {
@@ -55,6 +57,7 @@ function areReviewFlowWindowsEqual(
 }
 
 function areWorkspaceRightSidebarPropsEqual(previous: WorkspaceRightSidebarProps, next: WorkspaceRightSidebarProps) {
+  if (previous.isPanelContentVisible !== next.isPanelContentVisible) return false;
   if (previous.activePanelId === 'review-queue' && next.activePanelId === 'review-queue') {
     return areReviewQueueSidebarPropsEqual(previous, next);
   }
@@ -109,7 +112,13 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
       headerClassName="hidden"
       title={null}
     >
-      {renderActivePanelSurface(props, panelProps)}
+      <WorkspaceRightSidebarAssistantSession
+        panelProps={panelProps}
+        visible={props.activePanelId === 'assistant' && props.isPanelContentVisible !== false}
+      />
+      {props.activePanelId !== 'assistant' && props.isPanelContentVisible !== false
+        ? renderActivePanelSurface(props, panelProps)
+        : null}
     </AppPanel>
   );
 }, areWorkspaceRightSidebarPropsEqual);
