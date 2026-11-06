@@ -19,7 +19,7 @@ interface SyncSettingPayload {
 }
 
 interface ReviewSchedulerSettingsCandidate {
-  objectId: string;
+  contentHash: string;
   settings: ReviewSchedulerSettings;
   updatedAt: string;
 }
@@ -38,7 +38,7 @@ Promise<CompanionReviewSchedulerSettingsHydrationResult> {
   const objects = await loadCompanionSyncObjects(settingObjectIds, ['setting']);
   const candidates = objects
     .map((object) => parseReviewSchedulerSettingsCandidate({
-      objectId: object.object_id,
+      contentHash: object.content_hash,
       payloadJson: object.payload_json,
       updatedAt: object.updated_at
     }))
@@ -71,7 +71,7 @@ function isReviewSchedulerSettingsObjectId(objectId: string) {
 }
 
 function parseReviewSchedulerSettingsCandidate(args: {
-  objectId: string;
+  contentHash: string;
   payloadJson: string | null;
   updatedAt: string;
 }) {
@@ -84,7 +84,7 @@ function parseReviewSchedulerSettingsCandidate(args: {
     return null;
   }
   return {
-    objectId: args.objectId,
+    contentHash: args.contentHash,
     settings: normalizeReviewSchedulerSettings(value),
     updatedAt: args.updatedAt
   };
@@ -125,7 +125,10 @@ function isReviewSchedulerSettingsPayload(payload: unknown) {
 }
 
 function selectLatestCandidate(candidates: ReviewSchedulerSettingsCandidate[]) {
-  return [...candidates].sort((left, right) => (
-    right.updatedAt.localeCompare(left.updatedAt) || right.objectId.localeCompare(left.objectId)
-  ))[0] ?? null;
+  return [...candidates].sort((left, right) => {
+    const byUpdatedAt = right.updatedAt.localeCompare(left.updatedAt);
+    if (byUpdatedAt) return byUpdatedAt;
+    // Match the setting repository and review projection's content_hash DESC ordering.
+    return left.contentHash < right.contentHash ? 1 : left.contentHash > right.contentHash ? -1 : 0;
+  })[0] ?? null;
 }

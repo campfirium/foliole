@@ -3,9 +3,11 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { writeSettingRecord } from '../../electron/database/settingRecords';
 import { closeLibraries } from '../../electron/database/syncLibrary.testSupport';
+import { readNodeReviewParameters } from '../../lib/core/database/reviewProjection';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, getCurrentReviewSchedulerSettings,
   hydrateCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
+import { loadCompanionReviewSettings } from '../shared/platform/companion/settings/companionReviewSchedulerSettingsRepository';
 import { connectCompanionPeer } from '../test/companionDailySync.testSupport';
 
 import { openLearningSetting, changeLearningSetting } from './companionLearningSettings.testSupport';
@@ -70,6 +72,17 @@ it('resolves simultaneous mobile and desktop preferences consistently after a re
     WHERE key='review_scheduler_settings' AND scope='user_space' ORDER BY updated_at DESC,content_hash DESC LIMIT 1`)
     .get() as { value_json: string }).value_json);
   expect(canonical(library.database)).toEqual(canonical(peers.desktop.db));
+  const facts = () => [library.database, peers.desktop.db].map(db => db.prepare(
+    'SELECT * FROM setting_records ORDER BY key, scope, platform, form_factor, host_name'
+  ).all());
+  const persisted = facts();
   await hydrateCompanionReviewSchedulerSettings();
   expect(getCurrentReviewSchedulerSettings().desiredRetention).toBe(canonical(library.database).desiredRetention);
+  expect(await openLearningSetting('Desired retention')).toHaveValue(canonical(library.database).desiredRetention);
+  expect((await loadCompanionReviewSettings()).desiredRetention).toBe(canonical(library.database).desiredRetention);
+  for (const peer of [peers.mobile, peers.desktop]) {
+    expect(readNodeReviewParameters(peer.driver, 'unconfigured-node').desiredRetention)
+      .toBe(canonical(library.database).desiredRetention);
+  }
+  expect(facts()).toEqual(persisted);
 });

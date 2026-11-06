@@ -21,6 +21,7 @@ function createSettings(overrides: Partial<typeof DEFAULT_REVIEW_SCHEDULER_SETTI
 }
 
 function settingObject(args: {
+  contentHash?: string;
   objectId?: string;
   scope?: string;
   settings?: Partial<typeof DEFAULT_REVIEW_SCHEDULER_SETTINGS>;
@@ -29,7 +30,7 @@ function settingObject(args: {
 }) {
   const scope = args.scope ?? 'user_space';
   return {
-    content_hash: 'hash',
+    content_hash: args.contentHash ?? 'hash',
     deleted_at: null,
     object_id: args.objectId ?? `${scope}:windows:desktop:*:review_scheduler_settings`,
     object_type: 'setting' as const,
@@ -130,6 +131,25 @@ describe('companion review scheduler settings hydration', () => {
 
   it('hydrates review scheduler settings from synced user-space setting objects', testHydratesSyncedSettings);
   it('selects the latest valid user-space scheduler setting record', testSelectsLatestSyncedSettings);
+  it.each([false, true])('uses the canonical content hash for simultaneous settings (reversed=%s)', async reversed => {
+    const loser = settingObject({
+      objectId: 'user_space:windows:desktop:*:review_scheduler_settings',
+      contentHash: '1'.repeat(64), settings: { desiredRetention: 0.88 }
+    });
+    const winner = settingObject({
+      objectId: 'user_space:android:phone:*:review_scheduler_settings',
+      contentHash: 'f'.repeat(64), settings: { desiredRetention: 0.76 }
+    });
+    const objects = reversed ? [winner, loser] : [loser, winner];
+    syncObjectsMock.loadCompanionSyncIndex.mockResolvedValue(objects);
+    syncObjectsMock.loadCompanionSyncObjects.mockResolvedValue(objects);
+    const api = await import('./companionReviewSchedulerSettingsHydration');
+
+    await expect(api.hydrateCompanionReviewSchedulerSettings()).resolves.toMatchObject({
+      settings: expect.objectContaining({ desiredRetention: 0.76 }), status: 'hydrated'
+    });
+    expect(getCurrentReviewSchedulerSettings().desiredRetention).toBe(0.76);
+  });
   it('uses defaults when no synced scheduler setting exists', testUsesDefaultsWithoutSyncedSettings);
   it('does not overwrite current settings when synced scheduler payload is malformed', testKeepsCurrentSettingsOnMalformedPayload);
 });
