@@ -44,6 +44,7 @@ function readIndexes(sqlite, schemaObjects) {
 }
 
 export function readDatabaseCapabilities(sqlite) {
+  const tableFlags = sqlite.prepare('PRAGMA table_list').all();
   const schemaObjects = sqlite.prepare(`SELECT type, name, tbl_name AS tableName, sql
     FROM sqlite_schema
     WHERE name NOT LIKE 'sqlite_%' AND type IN ('index', 'table', 'trigger', 'view')
@@ -53,7 +54,8 @@ export function readDatabaseCapabilities(sqlite) {
     tables: schemaObjects.filter((object) => object.type === 'table').map((table) => ({
       columns: readColumns(sqlite, table.name),
       foreignKeys: readForeignKeys(sqlite, table.name),
-      name: table.name
+      name: table.name,
+      strict: Number(tableFlags.find(flag => flag.schema === 'main' && flag.name === table.name)?.strict)
     })),
     triggers: schemaObjects.filter((object) => object.type === 'trigger').map(({ name }) => name),
     views: schemaObjects.filter((object) => object.type === 'view').map(({ name }) => name)
@@ -69,6 +71,17 @@ function findMissingEntries(actual, required) {
   return required.filter((entry) => !available.has(signature(entry)));
 }
 
+function comparableColumns(actual, required) {
+  return actual.columns.map((column) => {
+    // SQLite INTEGER affinity retains fractional values. These two historical
+    // day declarations satisfy the current numeric storage contract too.
+    const historicalDay = actual.name === 'node_review' && actual.strict === 0 && column.type === 'INTEGER' &&
+      ['elapsed_days', 'scheduled_days'].includes(column.name) &&
+      required.columns.some(candidate => candidate.name === column.name && candidate.type === 'REAL');
+    return historicalDay ? { ...column, type: 'REAL' } : column;
+  });
+}
+
 export function findMissingDatabaseCapabilities(actual, required) {
   const missing = [];
   for (const requiredTable of required.tables) {
@@ -77,7 +90,7 @@ export function findMissingDatabaseCapabilities(actual, required) {
       missing.push(`table:${requiredTable.name}`);
       continue;
     }
-    for (const column of findMissingEntries(actualTable.columns, requiredTable.columns)) {
+    for (const column of findMissingEntries(comparableColumns(actualTable, requiredTable), requiredTable.columns)) {
       missing.push(`column:${requiredTable.name}.${column.name}`);
     }
     for (const key of findMissingEntries(actualTable.foreignKeys, requiredTable.foreignKeys)) {
