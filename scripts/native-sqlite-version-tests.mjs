@@ -1,4 +1,6 @@
 export const controlledVersionSqliteTests = [
+  'electron/database/publicDesktopDatabaseCapabilities.test.ts',
+  'electron/database/requestSyncAnchorRepairEcho.integration.test.ts',
   'src/companion/CompanionImageClozeLayer.integration.test.tsx',
   'src/shared/platform/companion/editing/companionImageCloze.integration.test.ts',
   'src/store/workspaceDeleteHistoryOrder.integration.test.ts',
