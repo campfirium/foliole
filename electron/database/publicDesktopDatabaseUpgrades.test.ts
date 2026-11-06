@@ -82,9 +82,14 @@ function assertCurrentDatabase(sqlite: Database.Database, driver = createBetterS
   expect(snapshot?.nodesById['t166-root']).toMatchObject({ content: '# Stable user content' });
   expect(snapshot?.nodesById['t166-child']).toMatchObject({
     content: 'Preserve this child.', parentNodeId: 't166-root',
-    review: { state: 2, stability: 3.5, difficulty: 4.25, reps: 5, lapses: 1 },
+    // These immutable fixtures contain a legacy card snapshot, but no grading
+    // events. FSRS7 starts ungraded and preserves only its upgrade-time due.
+    review: { due: '2026-02-01T00:00:00.000Z', lastReviewAt: null,
+      state: 0, stability: 0, stabilityFast: 0, difficulty: 0,
+      elapsedDays: 0, scheduledDays: 0, reps: 0, lapses: 0 },
     reading: { intervalDurationMs: 900000, intervalGrowthFactor: 1.75, repetitionCount: 3 }
   });
+  expect(sqlite.prepare('SELECT * FROM review_log').all()).toEqual([]);
   expect(sqlite.prepare("SELECT value FROM settings WHERE key = 't166.fixture.preference'").get())
     .toEqual({ value: '{"enabled":true}' });
 }
@@ -96,6 +101,14 @@ async function installFixtureAsProductionDatabase(registration: { file: string; 
   const databasePath = path.join(mockedDocumentsDir, 'Foliole', 'Data', 'foliole.db');
   await mkdir(path.dirname(databasePath), { recursive: true });
   await copyFile(path.join(fixtureRoot, registration.file), databasePath);
+  const historical = new Database(databasePath);
+  try {
+    // Establish the input independently of the current migration output.
+    expect(historical.prepare('SELECT * FROM review_log').all()).toEqual([]);
+    expect(historical.prepare('SELECT due, state, stability, difficulty, reps, lapses FROM node_review WHERE node_id = ?')
+      .get('t166-child')).toEqual({ due: '2026-02-01T00:00:00.000Z',
+      state: 2, stability: 3.5, difficulty: 4.25, reps: 5, lapses: 1 });
+  } finally { historical.close(); }
   return databasePath;
 }
 
