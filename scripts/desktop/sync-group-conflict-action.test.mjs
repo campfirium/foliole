@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { expect, it, vi } from 'vitest';
 
 import {
@@ -21,7 +23,8 @@ it('creates and forks one business object only through product commands', async 
   const seed = await createDesktopSyncConflictSeed({ evidenceRoot: '/tmp/t152-conflict-test',
     now: () => new Date('2026-08-29T00:00:00.000Z'), session: { invoke } });
   expect(seed.nodeId).toContain('multi-device-sync-conflict');
-  await forkDesktopSyncConflict({ label: 'macos', nodeId: 'node', session: { invoke } });
+  const fork = await forkDesktopSyncConflict({ label: 'macos', nodeId: 'node', session: { invoke } });
+  expect(fork.content).toBe(`Note target beta.\n\nDesktop fork macos ${fork.updatedAt}`);
   expect(invoke).toHaveBeenCalledWith('update_node_content', expect.objectContaining({
     nodeId: 'node'
   }));
@@ -57,29 +60,77 @@ it('waits for the applied sync event before accepting a product conflict', async
     eventName: 'onWorkspaceSyncApplied', timeoutMs: 120_000 });
 });
 
-it('accepts both concurrent content forks on the exact product object', async () => {
-  const waitForState = vi.fn(async () => ({
-    content: 'Fri conflict fork\nDesktop fork macos', nodeId: 'node'
-  }));
-  await expect(loadConvergedDesktopSyncForks({ nodeId: 'node', session: { waitForState } }))
-    .resolves.toMatchObject({ resolution: 'merged-content', silentOverwrite: false, visible: true });
-  expect(waitForState).toHaveBeenCalledWith({ command: 'load_node_document',
-    commandArgs: { nodeId: 'node' }, condition: { fragments: [
+const MAC_BODY = 'Original complete paragraph.\n\nDesktop fork macos 2026-11-06T12:00:00.000Z';
+const WINDOWS_BODY = 'Original complete paragraph.\n\nDesktop fork windows 2026-11-06T12:00:01.000Z';
+
+function forkBodies(current = MAC_BODY, alternate = 'Original complete paragraph.\n\nFri conflict fork') {
+  const entry = { id: 'alternative#peer', body_blob_hash: createHash('sha256').update(alternate).digest('hex'),
+    source_host_name: 'peer', created_at: '2026-11-06T12:00:00.000Z', expires_at: '2026-12-06T12:00:00.000Z' };
+  const preview = { source_node_id: 'node', alternative_id: entry.id,
+    current_content: current, updated_content: alternate, alternatives: [entry] };
+  const session = { waitForState: vi.fn(async () => preview), invoke: vi.fn(async command =>
+    command === 'load_node_document' ? { nodeId: 'node', content: current, currentVersionId: 'current#2' } : preview) };
+  return { entry, preview, session };
+}
+
+it('retains separate complete Fri and desktop fork bodies on their original node', async () => {
+  const { session } = forkBodies();
+  await expect(loadConvergedDesktopSyncForks({ nodeId: 'node', session }))
+    .resolves.toMatchObject({ resolution: 'body-alternatives', currentContent: MAC_BODY,
+      currentVersionId: 'current#2', silentOverwrite: false, visible: true });
+  expect(session.waitForState).toHaveBeenCalledWith({ command: 'load_node_text_alternative_preview',
+    commandArgs: { node_id: 'node' }, condition: { fragments: [
       'Fri conflict fork', 'Desktop fork macos'
-    ], kind: 'node-content-includes', nodeId: 'node' },
+    ], kind: 'body-alternative-preview', nodeId: 'node' },
     eventName: 'onWorkspaceSyncApplied', timeoutMs: 120_000 });
 });
 
-it('accepts the actual Windows peer label when requested', async () => {
-  const waitForState = vi.fn(async () => ({
-    content: 'Fri conflict fork\nDesktop fork windows', nodeId: 'node'
-  }));
+it('accepts exact Windows and Mac writer bodies rather than requiring a Fri fragment', async () => {
+  const { session, entry } = forkBodies(WINDOWS_BODY, MAC_BODY);
   await expect(loadConvergedDesktopSyncForks({ desktopLabel: 'windows', nodeId: 'node',
-    session: { waitForState } })).resolves.toMatchObject({ resolution: 'merged-content' });
-  expect(waitForState).toHaveBeenCalledWith(expect.objectContaining({ condition: expect.objectContaining({
-    fragments: ['Fri conflict fork', 'Desktop fork windows']
+    peerFragment: 'Desktop fork macos', expectedContent: WINDOWS_BODY, session }))
+    .resolves.toMatchObject({ currentContent: WINDOWS_BODY, alternatives: [{ ...entry, content: MAC_BODY }] });
+  expect(session.waitForState).toHaveBeenCalledWith(expect.objectContaining({ condition: expect.objectContaining({
+    fragments: ['Desktop fork macos', 'Desktop fork windows']
   }) }));
 });
+
+it.each(['truncated', 'combined', 'other-node', 'other-id', 'hash', 'version', 'current-body'])(
+  'rejects %s evidence instead of claiming complete fork preservation', async fault => {
+    const { preview, session } = forkBodies(WINDOWS_BODY, MAC_BODY);
+    if (fault === 'truncated') preview.current_content = 'Desktop fork windows';
+    if (fault === 'combined') {
+      preview.updated_content = `${MAC_BODY}\n${WINDOWS_BODY}`;
+      preview.alternatives[0].body_blob_hash = createHash('sha256').update(preview.updated_content).digest('hex');
+    }
+    if (fault === 'other-node') preview.source_node_id = 'different-node';
+    if (fault === 'other-id') preview.alternative_id = 'unknown-alternative';
+    if (fault === 'hash') preview.alternatives[0].body_blob_hash = '0'.repeat(64);
+    if (fault === 'version') session.invoke = async () => ({ nodeId: 'node', content: WINDOWS_BODY });
+    if (fault === 'current-body') session.invoke = async () => ({ nodeId: 'node', content: 'another body', currentVersionId: 'current#2' });
+    await expect(loadConvergedDesktopSyncForks({ desktopLabel: 'windows', nodeId: 'node',
+      peerFragment: 'Desktop fork macos', expectedContent: WINDOWS_BODY, session })).rejects.toThrow();
+  });
+
+it.each(['complete', 'other-node', 'other-id', 'other-list'])(
+  'reads every listed alternative with stable original-node identity: %s', async mode => {
+    const { preview, session } = forkBodies(WINDOWS_BODY, MAC_BODY);
+    const text = 'Complete third independent body.';
+    const entry = { ...preview.alternatives[0], id: 'alternative#third',
+      body_blob_hash: createHash('sha256').update(text).digest('hex') };
+    preview.alternatives.push(entry);
+    session.invoke = vi.fn(async (command, args) => {
+      if (command === 'load_node_document') return { nodeId: 'node', content: WINDOWS_BODY, currentVersionId: 'current#2' };
+      expect(args).toEqual({ node_id: 'node', alternative_id: entry.id });
+      return { ...preview, alternative_id: mode === 'other-id' ? 'wrong-id' : entry.id,
+        source_node_id: mode === 'other-node' ? 'wrong-node' : 'node', updated_content: text,
+        alternatives: mode === 'other-list' ? [entry] : preview.alternatives };
+    });
+    const reading = loadConvergedDesktopSyncForks({ desktopLabel: 'windows', nodeId: 'node',
+      peerFragment: 'Desktop fork macos', expectedContent: WINDOWS_BODY, session });
+    if (mode !== 'complete') await expect(reading).rejects.toThrow();
+    else await expect(reading).resolves.toMatchObject({ alternatives: expect.arrayContaining([{ ...entry, content: text }]) });
+  });
 
 it('accepts both fork bodies on the original node without a renamed copy', async () => {
   const invoke = vi.fn(async () => ({ source_node_id: 'node', alternative_id: 'other',

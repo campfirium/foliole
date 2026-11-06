@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 
 const NOTE_TEXT = 'Note target beta';
 
@@ -60,13 +62,12 @@ export async function forkDesktopSyncConflict({ label, nodeId, session }) {
   }
   const node = { ...metadata, ...document };
   const updatedAt = new Date(Math.max(Date.now(), Date.parse(node.updatedAt ?? '') + 1)).toISOString();
-  const result = await session.invoke('update_node_content', { ...node,
-    content: `${node.content}\n\nDesktop fork ${label} ${updatedAt}`,
-    nodeId, updatedAt });
+  const content = `${node.content}\n\nDesktop fork ${label} ${updatedAt}`;
+  const result = await session.invoke('update_node_content', { ...node, content, nodeId, updatedAt });
   if (!result?.updatedNodeIds?.includes(nodeId)) {
     throw new Error('Desktop product command did not persist the conflict fork.');
   }
-  return { nodeId, updatedAt };
+  return { content, nodeId, updatedAt };
 }
 
 export async function loadVisibleDesktopSyncConflict({ nodeId, session }) {
@@ -82,19 +83,60 @@ export async function loadVisibleDesktopSyncConflict({ nodeId, session }) {
   return { conflictCount: conflicts.length, nodeId, silentOverwrite: false, visible: true };
 }
 
-export async function loadConvergedDesktopSyncForks({ desktopLabel = 'macos', nodeId, session }) {
-  const fragments = ['Fri conflict fork', `Desktop fork ${desktopLabel}`];
-  const document = await session.waitForState({
-    command: 'load_node_document',
-    commandArgs: { nodeId },
-    condition: { fragments, kind: 'node-content-includes', nodeId },
+function forkAlternativeMetadata(preview, nodeId) {
+  if (preview?.source_node_id !== nodeId || !Array.isArray(preview.alternatives)
+      || !preview.alternatives.length || typeof preview.current_content !== 'string') {
+    throw new Error('The product did not expose fork alternatives on the original node.');
+  }
+  const entries = [...preview.alternatives].sort((left, right) => String(left.id).localeCompare(String(right.id)));
+  if (entries.some(entry => typeof entry.id !== 'string' || !entry.id
+      || !/^[a-f0-9]{64}$/u.test(entry.body_blob_hash))
+      || new Set(entries.map(entry => entry.id)).size !== entries.length
+      || !entries.some(entry => entry.id === preview.alternative_id)) {
+    throw new Error('Fork alternative identity is invalid.');
+  }
+  return entries;
+}
+
+async function readForkAlternatives({ nodeId, preview, session }) {
+  const entries = forkAlternativeMetadata(preview, nodeId);
+  const alternatives = [];
+  for (const entry of entries) {
+    const other = entry.id === preview.alternative_id ? preview
+      : await session.invoke('load_node_text_alternative_preview', { node_id: nodeId, alternative_id: entry.id });
+    if (other?.alternative_id !== entry.id || other.current_content !== preview.current_content
+        || !isDeepStrictEqual(forkAlternativeMetadata(other, nodeId), entries)
+        || typeof other.updated_content !== 'string'
+        || createHash('sha256').update(other.updated_content).digest('hex') !== entry.body_blob_hash) {
+      throw new Error('Fork alternative identity or full body changed while reading.');
+    }
+    alternatives.push({ ...entry, content: other.updated_content });
+  }
+  return alternatives;
+}
+
+export async function loadConvergedDesktopSyncForks({ desktopLabel = 'macos',
+  peerFragment = 'Fri conflict fork', expectedContent, nodeId, session }) {
+  const fragments = [peerFragment, `Desktop fork ${desktopLabel}`];
+  const preview = await session.waitForState({
+    command: 'load_node_text_alternative_preview',
+    commandArgs: { node_id: nodeId },
+    condition: { fragments, kind: 'body-alternative-preview', nodeId },
     eventName: 'onWorkspaceSyncApplied',
     timeoutMs: 2 * 60_000
   });
-  if (!fragments.every((fragment) => String(document?.content).includes(fragment))) {
-    throw new Error('The product did not retain both concurrent content forks.');
+  const alternatives = await readForkAlternatives({ nodeId, preview, session });
+  const document = await session.invoke('load_node_document', { nodeId });
+  const bodies = [preview.current_content, ...alternatives.map(entry => entry.content)];
+  const matches = fragments.map(fragment => bodies.flatMap((body, index) => body.includes(fragment) ? [index] : []));
+  if (document?.nodeId !== nodeId || document.content !== preview.current_content
+      || typeof document.currentVersionId !== 'string' || !document.currentVersionId
+      || matches.some(indices => indices.length !== 1) || new Set(matches.flat()).size !== fragments.length
+      || (expectedContent !== undefined && !bodies.includes(expectedContent))) {
+    throw new Error('The product did not retain both complete fork bodies and their versions.');
   }
-  return { conflictCount: 0, nodeId, resolution: 'merged-content',
+  return { alternatives, conflictCount: alternatives.length, currentContent: document.content,
+    currentVersionId: document.currentVersionId, nodeId, resolution: 'body-alternatives',
     silentOverwrite: false, visible: true };
 }
 

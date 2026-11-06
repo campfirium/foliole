@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 
 import { createDesktopSyncGroupJourneyFact } from '../desktop/sync-group-journey-fact-action.mjs';
 import {
@@ -74,7 +75,14 @@ export async function runWindowsTwoDeviceSyncProvider(options) {
   let receivedBeforeRestart;
   let conflictProof;
   let conflictSeed;
+  let localFork;
   let acceptedRequestId;
+  const readConflict = () => loadConvergedDesktopSyncForks({ desktopLabel: 'windows',
+    peerFragment: 'Desktop fork macos', expectedContent: localFork.content,
+    nodeId: conflictSeed.nodeId, session: {
+      invoke: (command, args) => invokeWindowsSyncGroupCommand(session.page, command, args),
+      waitForState: args => waitForDesktopProductState(session.page, args)
+    } });
   try {
     creatorFact = await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(options.evidenceRoot, 'creator-fact'), session: {
@@ -117,7 +125,7 @@ export async function runWindowsTwoDeviceSyncProvider(options) {
     }
     report(options.reportProgress, 'automatic-converged');
     await invokeWindowsSyncGroupCommand(session.page, 'pause_companion_sync');
-    await forkDesktopSyncConflict({ label: 'windows', nodeId: conflictSeed.nodeId,
+    localFork = await forkDesktopSyncConflict({ label: 'windows', nodeId: conflictSeed.nodeId,
       session: { invoke: (command, args) => invokeWindowsSyncGroupCommand(
         session.page, command, args
       ) } });
@@ -126,11 +134,7 @@ export async function runWindowsTwoDeviceSyncProvider(options) {
       repoRoot: options.paths.repoRoot });
     await invokeWindowsSyncGroupCommand(session.page, 'resume_companion_sync');
     report(options.reportProgress, 'conflict-sync-resumed');
-    conflictProof = await loadConvergedDesktopSyncForks({ desktopLabel: 'windows',
-      nodeId: conflictSeed.nodeId, session: { waitForState: (args) => (
-        waitForDesktopProductState(session.page, args)
-      ) }
-    });
+    conflictProof = await readConflict();
   } finally {
     await closeWindowsSyncGroupSession(session);
   }
@@ -142,6 +146,9 @@ export async function runWindowsTwoDeviceSyncProvider(options) {
       (value) => value.sync_group?.group_id === groupId
         && value.sync_group.devices.length === 2, groupId);
     receivedAfterRestart = await waitForOrigins(session.page, ['A', 'B'], { B: 2 });
+    if (!isDeepStrictEqual(await readConflict(), conflictProof)) {
+      throw new Error('Windows restart changed retained fork bodies or versions.');
+    }
     if (await loadSyncTriggerResult(session.app) !== null) {
       throw new Error('Restarted Windows anchor incorrectly ran member synchronization.');
     }
