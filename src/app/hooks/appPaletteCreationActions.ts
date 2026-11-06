@@ -3,6 +3,7 @@ import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { createVirtualFolderCommand } from './appVirtualFolderCommand';
+import { runNodeCreationWithEditorFocus } from './runNodeCreationWithEditorFocus';
 
 export function createPaletteCreationActions(args: {
   externalView: ReturnType<typeof useWorkspaceControllerState>['externalView'];
@@ -14,11 +15,9 @@ export function createPaletteCreationActions(args: {
 }) {
   const createDirectNode = (kind: 'folder' | 'topic' | 'item') => async () => {
     args.trash.closeTrashView();
-    const nodeId = await args.ws.createRootNode('', kind);
-    if (kind === 'topic' && nodeId) {
-      args.layoutProps.document.editorAdapterRef.current?.focus();
-    }
-    return nodeId;
+    if (kind !== 'topic') return args.ws.createRootNode('', kind);
+    return runNodeCreationWithEditorFocus({ create: () => args.ws.createRootNode('', kind),
+      focus: () => args.layoutProps.document.editorAdapterRef.current?.focus() });
   };
   const createTopic = async () => {
     const browseRoot = args.ws.nodesById[args.ws.browseRootNodeId];
@@ -32,22 +31,21 @@ export function createPaletteCreationActions(args: {
       !hasIncompatibleSurface &&
       browseRoot?.id === INBOX_NODE_ID &&
       browseRoot.specialKind === 'inbox';
-    const nodeId = canCreateInCurrentFolder
-      ? await args.ws.createChildNode(browseRoot.id, '', 'topic')
-      : await args.ws.createRootNode('', 'topic');
-    if (!nodeId) return null;
-    const needsInboxNavigation = !canCreateInCurrentFolder && !isViewingInbox;
-    if (needsInboxNavigation) {
-      args.runtime.setIsViewingTrashNode(false);
-      args.trash.closeTrashView();
-      args.externalView.closeExternalView();
-      args.virtualView.closeVirtualView();
-      args.ws.setBrowseRootNode(INBOX_NODE_ID);
-      window.requestAnimationFrame(() => args.layoutProps.document.editorAdapterRef.current?.focus());
-    } else {
-      args.layoutProps.document.editorAdapterRef.current?.focus();
-    }
-    return nodeId;
+    return runNodeCreationWithEditorFocus({
+      create: () => canCreateInCurrentFolder
+        ? args.ws.createChildNode(browseRoot.id, '', 'topic')
+        : args.ws.createRootNode('', 'topic'),
+      focus: () => args.layoutProps.document.editorAdapterRef.current?.focus(),
+      prepareFocus: () => {
+        if (canCreateInCurrentFolder || isViewingInbox) return false;
+        args.runtime.setIsViewingTrashNode(false);
+        args.trash.closeTrashView();
+        args.externalView.closeExternalView();
+        args.virtualView.closeVirtualView();
+        args.ws.setBrowseRootNode(INBOX_NODE_ID);
+        return true;
+      }
+    });
   };
   return {
     createFolder: createDirectNode('folder'),

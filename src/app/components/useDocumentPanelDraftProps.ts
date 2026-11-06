@@ -2,9 +2,9 @@ import { useCallback, useMemo } from 'react';
 
 import { isProtectedRootNode } from '../../features/nodes/model/specialNodes';
 import type { EditorDraftCommitOptions } from '../hooks/useEditorDraftFlushCallbacks';
+import { useEditorDraftSync } from '../hooks/useEditorDraftSync';
 
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
-import { useProtectedWorkspaceEditorDraft } from './useProtectedWorkspaceEditorDraft';
 import { useWorkspaceContentEditingSession } from './useWorkspaceContentEditingSession';
 
 export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
@@ -25,7 +25,7 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
     }
     props.onEditorChange(content);
   }, [props.onEditorChange, props.onNodeContentChange]);
-  const editorDraft = useProtectedWorkspaceEditorDraft({
+  const editorDraft = useEditorDraftSync({
     committedContent: props.editorContent,
     committedVersionId: draftNodeId ? props.nodesById[draftNodeId]?.currentVersionId : undefined,
     nodeId: draftNodeId,
@@ -33,7 +33,6 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
     ...(props.onFinalizeNodeTitle ? { onFinalizeNode: props.onFinalizeNodeTitle } : {}),
     ...(props.onRegisterEditorDraftFlush ? { onRegisterFlush: props.onRegisterEditorDraftFlush } : {})
   });
-  const holdReady = editorDraft.holdReady;
   const sessionReadOnly = props.isEditorReadOnly || Boolean(props.isImmersiveMode && !props.isImmersiveEditing);
   const { handleEditorFocus, handleEditorInput, handlePendingInput, finishEditing } =
     useWorkspaceContentEditingSession(draftNodeId, sessionReadOnly, editorDraft);
@@ -52,7 +51,7 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
       ...props,
       editorContent: editorDraft.editorContent,
       editorNodeId: draftNodeId,
-      isEditorReadOnly: props.isEditorReadOnly || !holdReady,
+      isEditorReadOnly: props.isEditorReadOnly,
       onEditorChange: editorDraft.handleEditorChange,
       onEditorInput: handleEditorInput,
       onEditorPendingInput: handlePendingInput,
@@ -62,6 +61,6 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
       onEditorUndo: handleEditorUndo,
       onEditorRedo: handleEditorRedo
     }),
-    [draftNodeId, editorDraft.editorContent, editorDraft.handleEditorChange, handleEditorFocus, handleEditorInput, handlePendingInput, handleExitEditorFocus, handleEditorRedo, handleEditorUndo, holdReady, props]
+    [draftNodeId, editorDraft.editorContent, editorDraft.handleEditorChange, handleEditorFocus, handleEditorInput, handlePendingInput, handleExitEditorFocus, handleEditorRedo, handleEditorUndo, props]
   );
 }

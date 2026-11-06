@@ -225,3 +225,6 @@ registerEditorCompositionExitTests();
 
 const { registerEditorReadingModeExitTests } = await import('./editorReadingModeExit.test-support.js');
 registerEditorReadingModeExitTests();
+
+const { registerUnprotectedEditorTests } = await import('./editorUnprotectedInput.test-support.js');
+registerUnprotectedEditorTests();

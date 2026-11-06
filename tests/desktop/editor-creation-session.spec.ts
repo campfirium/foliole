@@ -29,7 +29,7 @@ async function creationFacts(session: DesktopSession, nodeId: string) {
 
 for (const kind of ['plain', 'code']) {
   test(`finishes a new ${kind} topic after exiting before its creation receipt`, async ({ desktopWindow: page, desktopSession: session }) => {
-    await openEditingSession(session, page);
+    const { window: appWindow } = await openEditingSession(session, page);
     await session.electronApp.evaluate(({ ipcMain }) => {
       const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
       const commands = require(`${process.cwd()}/dist/electron/ipc/commands.js`);
@@ -64,9 +64,12 @@ for (const kind of ['plain', 'code']) {
       await expect(editor).toBeFocused();
       await expect.poll(() => creationFacts(session, nodeId)).toMatchObject({ editing: true, content: '' });
       await page.keyboard.press('Escape');
+      await expect(editor).not.toBeFocused();
       expect((await creationFacts(session, nodeId)).editing).toBe(true);
       await creationReceipt(session, true);
       await expect.poll(() => creationFacts(session, nodeId)).toEqual({ editing: false, content });
+      expect(await appWindow.evaluate(window => window.isFocused())).toBe(true);
+      await expect(editor).not.toBeFocused();
       await page.reload();
       await expectWorkspaceShell(page);
       expect(await creationFacts(session, nodeId)).toEqual({ editing: false, content });

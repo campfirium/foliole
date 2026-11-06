@@ -33,9 +33,7 @@ function persisted(databasePath: string) {
       'SELECT content, current_version_id FROM nodes WHERE id = ?').get(nodeId);
     if (!node) throw new Error('concurrent_node_missing');
     const bodies = db.prepare<[string], { body_text: string }>(
-      `SELECT json_extract(body.value, '$.text') AS body_text FROM nodes n
-        JOIN node_sync_versions v ON v.version_id = n.current_version_id,
-        json_each(v.snapshot_json, '$.text_alternative_bodies') body WHERE n.id = ?`).all(nodeId);
+      `SELECT body_text FROM node_text_alternatives WHERE node_id = ? AND status = 'available'`).all(nodeId);
     const versions = db.prepare<[string], { version_id: string; body_text: string | null; retired: number | null; hash: string | null }>(
       `SELECT version_id, body_text, json_extract(snapshot_json, '$.body_deleted') AS retired,
        json_extract(snapshot_json, '$.body_blob_hash') AS hash FROM node_sync_versions WHERE object_id = ? ORDER BY version_id`).all(nodeId);

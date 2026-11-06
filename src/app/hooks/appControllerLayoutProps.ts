@@ -37,6 +37,7 @@ import {
 } from './appControllerTrashViewHandlers';
 import { buildLayoutProps } from './layoutPropsBuilder';
 import type { StartStudyModeOptions } from './reviewModeSessionActions';
+import { runNodeCreationWithEditorFocus } from './runNodeCreationWithEditorFocus';
 import {
   createCloseSettingsHandler,
   createOpenSettingsHandler
@@ -220,11 +221,11 @@ export function createFlushBeforeCreateChildNode(args: BuildControllerLayoutProp
       args.runtime.flushPendingEditorDraft();
     }
     await args.runtime.flushPendingEditorDraftImmediately();
-    const nodeId = await args.ws.createChildNode(parentNodeId, content, kind);
-    if (nodeId && kind === 'topic' && content.length === 0) {
-      args.runtime.editorRef.current?.focus();
-    }
-    return nodeId;
+    if (kind !== 'topic' || content.length > 0) return args.ws.createChildNode(parentNodeId, content, kind);
+    return runNodeCreationWithEditorFocus({
+      create: () => args.ws.createChildNode(parentNodeId, content, kind),
+      focus: () => args.runtime.editorRef.current?.focus()
+    });
   };
 }
 

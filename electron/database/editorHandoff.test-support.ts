@@ -27,7 +27,7 @@ import { transferTopicText } from './topicTextRequest.testSupport.js';
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 import { loadWorkspaceNodeDocument } from './workspaceNodeDocument.js';
 
-export const transport = { root: '', remoteGate: undefined as Promise<void> | undefined,
+export const transport = { root: '', holdGate: undefined as Promise<void> | undefined, remoteGate: undefined as Promise<void> | undefined,
   receiptGate: undefined as Promise<void> | undefined, failRetain: false, failSave: false, failSessionBegin: false,
   submitted: [] as Array<{ baseVersionId: string; versionId: string }> };
 export let receiptWaiting: (() => void) | undefined;
@@ -42,6 +42,7 @@ export async function invokeEditorHandoff(command: string, args: Record<string, 
     return runWithDatabaseConnectionOwner(() => handleContentEditingSession(args));
   }
   if (command === 'retain_node_editor_base' || command === 'release_node_editor_base') {
+    if (command === 'retain_node_editor_base') await transport.holdGate;
     if (command === 'retain_node_editor_base' && args.versionId === 'remote') {
       await transport.remoteGate;
       if (transport.failRetain) throw new Error('retain_failed');
@@ -62,7 +63,7 @@ export async function invokeEditorHandoff(command: string, args: Record<string, 
 }
 
 const rendererModule = (modulePath: string) => import(modulePath);
-const { useProtectedWorkspaceEditorDraft } = await rendererModule('../../src/app/components/useProtectedWorkspaceEditorDraft.ts');
+const { useEditorDraftSync } = await rendererModule('../../src/app/hooks/useEditorDraftSync.ts');
 const { editorHandoffPanelProps } = await rendererModule('../../src/app/components/documentPanelDraft.test-support.ts');
 const { useDocumentPanelDraftProps } = await rendererModule('../../src/app/components/useDocumentPanelDraftProps.ts');
 const { useWorkspaceActiveNodeDocument } = await rendererModule('../../src/app/hooks/useWorkspaceActiveNodeDocument.ts');
@@ -82,7 +83,7 @@ export function setupEditorHandoffTests() {
     transport.root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-editor-handoff-'));
     saveDefaultLibraryHome();
     initializeDatabase();
-    Object.assign(transport, { remoteGate: undefined, receiptGate: undefined, failRetain: false, failSave: false,
+    Object.assign(transport, { holdGate: undefined, remoteGate: undefined, receiptGate: undefined, failRetain: false, failSave: false,
       failSessionBegin: false, submitted: [] });
     receiptWaiting = undefined;
     vi.useFakeTimers();
@@ -183,10 +184,10 @@ export async function createEditorHandoffFixture(sharedStore = false, editingSes
     useWorkspaceActiveNodeDocument(sharedStore ? state.activeNodeId : null);
     const current = state.nodesById[state.activeNodeId!];
     if (editingSession) return useHandoffPanel(state, actions.updateNodeContent, ready, panelOverrides);
-    const draft = useProtectedWorkspaceEditorDraft({ nodeId: current.id, committedContent: current.content,
+    const draft = useEditorDraftSync({ nodeId: current.id, committedContent: current.content,
       committedVersionId: current.currentVersionId,
       onCommit: (id: string, content: string, options: unknown) => actions.updateNodeContent(id, content, options) });
-    ready.push(draft.holdReady);
+    ready.push(true);
     return draft;
   };
   const view = renderHandoffDraft(useHandoffDraft, renderEditor);

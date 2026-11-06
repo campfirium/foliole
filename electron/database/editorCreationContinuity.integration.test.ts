@@ -9,11 +9,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let root = '';
 let deliverCreation: () => void;
-let finishHold: () => void;
 let creationVersion = '';
-let holdGate: Promise<void>;
 let rejectSave = false;
-let rejectHold = false;
 const submitted: Array<{ baseVersionId: string; versionId: string }> = [];
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({ app_data_dir: root,
   app_cache_dir: path.join(root, 'cache'), app_config_dir: path.join(root, 'config'), app_log_dir: path.join(root, 'logs') }) }));
@@ -23,7 +20,6 @@ vi.mock('../../src/shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: ()
 
 import { saveDefaultLibraryHome } from '../ipc/libraryPathBootstrap.js';
 import { handleContentEditingSession } from '../ipc/storageContentEditingSession.js';
-import { handleEditorHoldCommand } from '../ipc/storageEditorHoldCommands.js';
 import { handleNodeMutationCommand } from '../ipc/storageNodeMutationCommands.js';
 
 import { currentLibraryScope } from './attachmentResourceDescription.js';
@@ -32,12 +28,6 @@ import { initializeDatabase } from './migrate.js';
 
 async function invoke(command: string, args: Record<string, unknown>) {
   if (command === 'set_node_content_editing_session') return runWithDatabaseConnectionOwner(() => handleContentEditingSession(args));
-  if (command === 'retain_node_editor_base') {
-    await holdGate;
-    if (rejectHold) throw new Error('hold_failed');
-    return runWithDatabaseConnectionOwner(() => handleEditorHoldCommand(command, args));
-  }
-  if (command === 'release_node_editor_base') return runWithDatabaseConnectionOwner(() => handleEditorHoldCommand(command, args));
   if (command === 'create_topic') {
     const delivery = new Promise<void>(resolve => { deliverCreation = resolve; });
     const result = await runWithDatabaseConnectionOwner(() => handleNodeMutationCommand(command, args));
@@ -70,13 +60,10 @@ beforeEach(async () => {
   initializeDatabase();
   submitted.length = 0;
   rejectSave = false;
-  rejectHold = false;
-  holdGate = new Promise(resolve => { finishHold = resolve; });
   vi.useFakeTimers();
 });
 afterEach(async () => {
   await act(async () => {
-    finishHold();
     cleanup();
     await drainPendingNodeContentRuntimePersists();
   });
@@ -103,22 +90,20 @@ export function editorFixture() {
   return { store, actions, view, commits };
 }
 
-it.each(['save', 'hold'] as const)('keeps accepting new-topic input after a failed %s', async fault => {
+it('keeps accepting new-topic input after a failed save', async () => {
   const app = editorFixture();
   let creating!: Promise<string | null>;
   act(() => { creating = app.actions.createRootNode(''); });
   const nodeId = app.store.getState().activeNodeId!;
   await act(async () => { deliverCreation(); await creating; });
-  rejectHold = fault === 'hold';
-  await act(async () => { finishHold(); });
-  rejectSave = fault === 'save';
+  rejectSave = true;
   act(() => {
     app.view.result.current.handleEditorInput({ nodeId, contentLength: 5 });
     app.view.result.current.handleEditorChange('First');
     vi.advanceTimersByTime(0);
   });
   await act(async () => {
-    expect(await drainPendingNodeContentRuntimePersists()).toBe(fault !== 'save');
+    expect(await drainPendingNodeContentRuntimePersists()).toBe(false);
   });
   expect(app.view.result.current.ready).toBe(true);
   expect(app.view.result.current.editorContent).toBe('First');
@@ -158,7 +143,6 @@ it('hands off both drafts when creation receipts arrive after switching to a sec
     deliverSecond(); await secondCreating;
     vi.advanceTimersByTime(0);
     expect(await drainPendingNodeContentRuntimePersists()).toBe(true);
-    finishHold();
   });
   expect(openDatabaseConnection().sqlite.prepare('SELECT content FROM nodes WHERE id IN (?, ?) ORDER BY content').pluck().all(firstId, secondId))
     .toEqual(['First draft', 'Second draft']);
@@ -198,8 +182,7 @@ it.each(['input-evidence', 'pending-draft', 'save-queue'] as const)(
     expect(submitted[1]?.baseVersionId).toBe(submitted[0]?.versionId);
     expect(app.commits).not.toContain(false);
     expect(app.view.result.current.editorContent).toBe(continued);
-    await act(async () => { finishHold(); });
-    await act(async () => {
+      await act(async () => {
       app.view.unmount();
       await drainPendingNodeContentRuntimePersists();
     });

@@ -1,6 +1,8 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
+import { useWorkspaceStore } from '../../store/workspaceStore';
+import { createWorkspaceNodeActionsFixture } from '../../store/workspaceStoreNodeActions.test-support';
 
 import { createPaletteCreationActions } from './appPaletteCreationActions';
 
@@ -17,6 +19,26 @@ function stubAnimationFrame() {
   return requestAnimationFrame;
 }
 
+function seedCreationState() {
+  const initial = createWorkspaceNodeActionsFixture();
+  initial.nodesById['node-new'] = { ...initial.nodesById['node-1']!, id: 'node-new' };
+  initial.nodeOrder.push('node-new');
+  useWorkspaceStore.setState({ ...initial, libraryScope: 'creation-test' });
+}
+async function createNode() {
+  useWorkspaceStore.setState({ activeNodeId: 'node-new' });
+  return 'node-new';
+}
+
+function creationFolders() {
+  return {
+    'folder-a': folder('folder-a'),
+    [HOME_NODE_ID]: folder(HOME_NODE_ID, 'home'),
+    [INBOX_NODE_ID]: folder(INBOX_NODE_ID, 'inbox'),
+    [VIRTUAL_ROOT_NODE_ID]: folder(VIRTUAL_ROOT_NODE_ID, 'virtual-root')
+  };
+}
+
 function createHarness(overrides: Record<string, unknown> = {}) {
   const focus = vi.fn();
   const closeTrashView = vi.fn();
@@ -24,8 +46,9 @@ function createHarness(overrides: Record<string, unknown> = {}) {
   const closeVirtualView = vi.fn();
   const setBrowseRootNode = vi.fn();
   const setIsViewingTrashNode = vi.fn();
-  const createChildNode = vi.fn(async () => 'node-new');
-  const createRootNode = vi.fn(async () => 'node-new');
+  seedCreationState();
+  const createChildNode = vi.fn(createNode);
+  const createRootNode = vi.fn(createNode);
   const requestAnimationFrame = stubAnimationFrame();
   const defaults = {
     externalView: { closeExternalView, isExternalViewOpen: false },
@@ -42,12 +65,7 @@ function createHarness(overrides: Record<string, unknown> = {}) {
       createChildNode,
       createRootNode,
       createVirtualNode: vi.fn(),
-      nodesById: {
-        'folder-a': folder('folder-a'),
-        [HOME_NODE_ID]: folder(HOME_NODE_ID, 'home'),
-        [INBOX_NODE_ID]: folder(INBOX_NODE_ID, 'inbox'),
-        [VIRTUAL_ROOT_NODE_ID]: folder(VIRTUAL_ROOT_NODE_ID, 'virtual-root')
-      },
+      nodesById: creationFolders(),
       setBrowseRootNode,
       trashedNodeIds: []
     }
@@ -161,4 +179,72 @@ it('keeps folder and item creation on their existing root path and exit timing',
   expect(harness.createRootNode).toHaveBeenNthCalledWith(1, '', 'folder');
   expect(harness.createRootNode).toHaveBeenNthCalledWith(2, '', 'item');
   expect(harness.focus).not.toHaveBeenCalled();
+});
+
+
+it.each(['keydown', 'pointerdown', 'node', 'library'])('does not restore creation focus after a later %s intent', async change => {
+  let release!: () => void;
+  const receipt = new Promise<void>(resolve => { release = resolve; });
+  const createChildNode = vi.fn(async () => {
+    useWorkspaceStore.setState({ activeNodeId: 'node-new' });
+    await receipt;
+    return 'node-new';
+  });
+  const harness = createHarness({ ws: { createChildNode } });
+  const creating = harness.actions.createTopic();
+  if (change === 'node') useWorkspaceStore.setState({ activeNodeId: 'node-1' });
+  else if (change === 'library') useWorkspaceStore.setState({ libraryScope: 'other-library' });
+  else document.dispatchEvent(change === 'keydown'
+    ? new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+    : new Event('pointerdown', { bubbles: true }));
+  release();
+  expect(await creating).toBe('node-new');
+  expect(harness.focus).not.toHaveBeenCalled();
+});
+
+
+it('does not reclaim focus from Escape during the navigation frame', async () => {
+  const harness = createHarness({ ws: { browseRootNodeId: HOME_NODE_ID } });
+  let frame!: FrameRequestCallback;
+  harness.requestAnimationFrame.mockImplementationOnce(callback => { frame = callback; return 1; });
+  expect(await harness.actions.createTopic()).toBe('node-new');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  frame(0);
+  expect(harness.focus).not.toHaveBeenCalled();
+});
+
+it('keeps the initiating keyboard command eligible to focus its new topic', async () => {
+  const harness = createHarness();
+  let creating!: Promise<string | null>;
+  window.addEventListener('keydown', () => { creating = harness.actions.createTopic(); }, { capture: true, once: true });
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', bubbles: true }));
+  expect(await creating).toBe('node-new');
+  expect(harness.focus).toHaveBeenCalledOnce();
+});
+
+it('revokes late focus for a native Escape that never reaches DOM keydown', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'electronAPI');
+  const native = new Set<(input: { type: string; key: string }) => void>();
+  Object.defineProperty(window, 'electronAPI', { configurable: true, value: {
+    onNativeKeyboardInput: (handler: (input: { type: string; key: string }) => void) => {
+      native.add(handler); return () => { native.delete(handler); };
+    }
+  } });
+  try {
+    let release!: () => void;
+    const receipt = new Promise<void>(resolve => { release = resolve; });
+    const harness = createHarness({ ws: { createChildNode: async () => {
+      useWorkspaceStore.setState({ activeNodeId: 'node-new' });
+      await receipt;
+      return 'node-new';
+    } } });
+    const creating = harness.actions.createTopic();
+    for (const handler of native) handler({ type: 'keyDown', key: 'Escape' });
+    release();
+    await creating;
+    expect(harness.focus).not.toHaveBeenCalled();
+  } finally {
+    if (descriptor) Object.defineProperty(window, 'electronAPI', descriptor);
+    else Reflect.deleteProperty(window, 'electronAPI');
+  }
 });

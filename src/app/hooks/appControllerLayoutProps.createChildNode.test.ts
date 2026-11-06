@@ -1,10 +1,20 @@
 import { expect, it, vi } from 'vitest';
 
+import { useWorkspaceStore } from '../../store/workspaceStore';
+import { createWorkspaceNodeActionsFixture } from '../../store/workspaceStoreNodeActions.test-support';
+
 import { createFlushBeforeCreateChildNode } from './appControllerLayoutProps';
 
 function createHarness() {
   const focus = vi.fn();
-  const createChildNode = vi.fn(async (parentNodeId: string): Promise<string | null> => `created-under-${parentNodeId}`);
+  useWorkspaceStore.setState({ ...createWorkspaceNodeActionsFixture(), libraryScope: 'child-creation-test' });
+  const createChildNode = vi.fn(async (parentNodeId: string): Promise<string | null> => {
+    const id = `created-under-${parentNodeId}`;
+    const state = useWorkspaceStore.getState();
+    useWorkspaceStore.setState({ activeNodeId: id, nodeOrder: [...state.nodeOrder, id],
+      nodesById: { ...state.nodesById, [id]: { ...state.nodesById['node-1']!, id } } });
+    return id;
+  });
   const handler = createFlushBeforeCreateChildNode({
     runtime: {
       editorRef: { current: { focus } as never },
