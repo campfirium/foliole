@@ -9,11 +9,13 @@ export async function runNodeCreationWithEditorFocus(args: {
 }) {
   const scope = useWorkspaceStore.getState().libraryScope;
   let cancelled = false;
+  let selectedNode: string | null | undefined;
   const cleanup = () => {
     window.removeEventListener('keydown', cancel, true);
     window.removeEventListener('pointerdown', cancel, true);
     window.removeEventListener('blur', cancel);
     unlistenNative();
+    unsubscribeStore();
   };
   const cancel = () => { cancelled = true; cleanup(); };
   const isCurrent = (nodeId: string) => {
@@ -21,6 +23,13 @@ export async function runNodeCreationWithEditorFocus(args: {
     return !cancelled && state.libraryScope === scope && state.activeNodeId === nodeId;
   };
   const unlistenNative = onNativeKeydown(input => { if (input.type === 'keyDown') cancel(); });
+  const unsubscribeStore = useWorkspaceStore.subscribe((state, previous) => {
+    if (state.libraryScope !== scope) cancel();
+    else if (state.activeNodeId !== previous.activeNodeId) {
+      if (selectedNode !== undefined) cancel();
+      else selectedNode = state.activeNodeId;
+    }
+  });
   window.addEventListener('keydown', cancel, true);
   window.addEventListener('pointerdown', cancel, true);
   window.addEventListener('blur', cancel);

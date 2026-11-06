@@ -48,6 +48,7 @@ const rendererModule = (modulePath: string) => import(modulePath);
 const { useDocumentPanelDraftProps } = await rendererModule('../../src/app/components/useDocumentPanelDraftProps.ts');
 const { editorHandoffPanelProps } = await rendererModule('../../src/app/components/documentPanelDraft.test-support.ts');
 const { useWorkspaceStore } = await rendererModule('../../src/store/workspaceStore.ts');
+const { runNodeCreationWithEditorFocus } = await rendererModule('../../src/app/hooks/runNodeCreationWithEditorFocus.ts');
 const { createWorkspaceNodeActions } = await rendererModule('../../src/store/workspaceStoreNodeActions.ts');
 const { createWorkspaceNodeActionsFixture } = await rendererModule('../../src/store/workspaceStoreNodeActions.test-support.ts');
 const { drainPendingNodeContentRuntimePersists, resetPendingNodeContentRuntimePersistsForTests } =
@@ -196,3 +197,30 @@ it.each(['input-evidence', 'pending-draft', 'save-queue'] as const)(
 
 const { registerCreationSessionExitTests } = await import('./editorCreationSessionExit.test-support.js');
 registerCreationSessionExitTests(editorFixture, () => deliverCreation, () => { rejectSave = true; });
+
+
+it('persists accepted creation input without reclaiming focus after leaving and returning', async () => {
+  const app = editorFixture();
+  const previousId = app.store.getState().activeNodeId;
+  const focus = vi.fn();
+  let creating!: Promise<string | null>;
+  act(() => { creating = runNodeCreationWithEditorFocus({ create: () => app.actions.createRootNode(''), focus }); });
+  const nodeId = app.store.getState().activeNodeId!;
+  act(() => {
+    app.view.result.current.handleEditorInput({ nodeId, contentLength: 17 });
+    app.view.result.current.handleEditorChange('Before navigation');
+    app.store.setState({ activeNodeId: previousId });
+  });
+  act(() => { app.store.setState({ activeNodeId: nodeId }); });
+  await act(async () => {
+    deliverCreation();
+    expect(await creating).toBe(nodeId);
+    vi.advanceTimersByTime(0);
+    expect(await drainPendingNodeContentRuntimePersists()).toBe(true);
+  });
+  expect(focus).not.toHaveBeenCalled();
+  expect(app.view.result.current.editorContent).toBe('Before navigation');
+  closeDatabaseConnection();
+  expect(openDatabaseConnection().sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(nodeId))
+    .toBe('Before navigation');
+});
