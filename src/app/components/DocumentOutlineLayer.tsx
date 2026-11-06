@@ -99,29 +99,38 @@ function useOutlineHoverState(
   };
 }
 
+function useOutlineSnapshot(content: string) {
+  const [outlineSnapshot, setOutlineSnapshot] = useState<{
+    content: string;
+    items: OutlineDisplayItem[];
+  } | null>(null);
+  const resolveOutlineItems = useCallback(() => {
+    if (outlineSnapshot?.content === content) {
+      return outlineSnapshot.items;
+    }
+    const nextItems = resolveDisplayItems(content);
+    setOutlineSnapshot({ content, items: nextItems });
+    return nextItems;
+  }, [content, outlineSnapshot]);
+  return { outlineSnapshot, resolveOutlineItems };
+}
+
 export function DocumentOutlineLayer({
   content,
   documentMaxWidth,
   onRevealPosition,
   onResolveDocumentPositionAtViewportY
 }: DocumentOutlineLayerProps) {
-  const t = useTranslation(), [outlineItems, setOutlineItems] = useState<OutlineDisplayItem[] | null>(null);
+  const t = useTranslation();
   const deferredContent = useDeferredValue(content);
   const hasOutlineCandidate = useMemo(() => mayHaveOutline(deferredContent), [deferredContent]);
-  const resolveOutlineItems = useCallback(() => {
-    if (outlineItems !== null) {
-      return outlineItems;
-    }
-    const nextItems = resolveDisplayItems(content);
-    setOutlineItems(nextItems);
-    return nextItems;
-  }, [content, outlineItems]);
-  useEffect(() => {
-    setOutlineItems(null);
-  }, [content]);
+  const { outlineSnapshot, resolveOutlineItems } = useOutlineSnapshot(content);
   const { anchorPosition, closeOutline, horizontalMetrics, isOpen, layerRef, openOutline } =
     useOutlineHoverState(documentMaxWidth, onResolveDocumentPositionAtViewportY, resolveOutlineItems);
-  const resolvedOutlineItems = outlineItems ?? [];
+  const resolvedOutlineItems = useMemo(() => {
+    if (outlineSnapshot?.content === content) return outlineSnapshot.items;
+    return isOpen ? resolveDisplayItems(content) : [];
+  }, [content, isOpen, outlineSnapshot]);
   const activeIndex = useMemo(
     () => resolveActiveIndex(resolvedOutlineItems, anchorPosition),
     [anchorPosition, resolvedOutlineItems]
