@@ -3,6 +3,7 @@ import { parseNodeResourceReferences } from '../database/nodeResourceReferences.
 
 import type { DbPort } from './dbPort.js';
 import { applyLocalContentEdit } from './localContentEdit.js';
+import type { LocalContentEditOptions } from './localContentEditBranch.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { loadCurrentSyncNodeRecord } from './syncNodeGraph.js';
 import { TOPIC_ALTERNATIVE_METADATA_COLUMNS, validateTopicAlternativeRecord, type TopicAlternativeMetadata, type TopicAlternativeRecord } from './topicAlternativeRecord.js';
@@ -11,7 +12,7 @@ import { retireTopicAlternative } from './topicAlternativeStore.js';
 export async function mutateTopicText(db: DbPort, input: {
   nodeId: string; alternativeId: string; action: 'promoted' | 'dismissed';
   now: string; versionId: string; hostName: string;
-}) {
+}, options: LocalContentEditOptions = {}) {
   return db.transaction(async tx => {
     const [node] = await tx.query('SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL', [input.nodeId]);
     if (!node) return unavailable(input);
@@ -31,7 +32,7 @@ export async function mutateTopicText(db: DbPort, input: {
       await applyLocalContentEdit(tx, { nodeId: input.nodeId, baseVersionId: current.version_id,
         baseContent: current.body_text ?? '', versionId: input.versionId, content: selected.body_text,
         newImageReferences: references, title: current.snapshot.title,
-        hideTitleHeading: current.snapshot.hide_title_heading, hostName: input.hostName, updatedAt: input.now });
+        hideTitleHeading: current.snapshot.hide_title_heading, hostName: input.hostName, updatedAt: input.now }, undefined, options);
     }
     await retireTopicAlternative(tx, row, input.action, input.now);
     await collectNodeVersionPayloads(tx, input.nodeId, Number.MAX_SAFE_INTEGER);

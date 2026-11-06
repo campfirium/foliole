@@ -53,6 +53,6 @@ export async function updateCompanionNodeTextAlternativeStatus(nodeId: string, a
     if (!node) throw new Error('text_alternative_unavailable');
     return mutateTopicText(tx, { nodeId: node.id, alternativeId, action: status,
       now: new Date().toISOString(), versionId: createOpaqueVersionRef(createCompanionUuid()),
-      hostName: await iosCompanionHostName(tx) });
+      hostName: await iosCompanionHostName(tx) }, { enqueueSearchInvalidations: false });
   })), { kind: 'full' });
 }
