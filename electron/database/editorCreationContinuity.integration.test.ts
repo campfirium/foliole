@@ -52,8 +52,7 @@ async function invoke(command: string, args: Record<string, unknown>) {
 
 // Cross the host's NodeNext compilation boundary using the renderer's actual modules.
 const rendererModule = (modulePath: string) => import(modulePath);
-const { useEditorDraftSync } = await rendererModule('../../src/app/hooks/useEditorDraftSync.ts');
-const { useWorkspaceEditorBaseHold } = await rendererModule('../../src/app/components/useWorkspaceEditorBaseHold.ts');
+const { useProtectedWorkspaceEditorDraft } = await rendererModule('../../src/app/components/useProtectedWorkspaceEditorDraft.ts');
 const { createWorkspaceNodeActions } = await rendererModule('../../src/store/workspaceStoreNodeActions.ts');
 const { createWorkspaceNodeActionsFixture } = await rendererModule('../../src/store/workspaceStoreNodeActions.test-support.ts');
 const { drainPendingNodeContentRuntimePersists, resetPendingNodeContentRuntimePersistsForTests } =
@@ -91,11 +90,10 @@ function editorFixture() {
   const view = renderHook(() => {
     const state = useSyncExternalStore(store.subscribe, store.getState);
     const node = state.activeNodeId ? state.nodesById[state.activeNodeId] : null;
-    const draft = useEditorDraftSync({ nodeId: node?.id ?? null, committedContent: node?.content ?? '',
+    const draft = useProtectedWorkspaceEditorDraft({ nodeId: node?.id ?? null, committedContent: node?.content ?? '',
       committedVersionId: node?.currentVersionId,
       onCommit: (id: string, content: string, options: unknown) => actions.updateNodeContent(id, content, options) });
-    const ready = useWorkspaceEditorBaseHold({ nodeId: node?.id ?? null, versionId: node?.currentVersionId,
-      flushDraft: draft.flushDraftSynchronously });
+    const ready = draft.holdReady;
     commits.push(ready);
     return { ...draft, ready };
   });

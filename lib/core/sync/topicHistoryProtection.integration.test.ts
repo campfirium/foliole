@@ -55,6 +55,16 @@ it('retains a baseline alternative unique holder until its editor releases it', 
   expect((await loadRetainedSyncNodeVersionFact(host.db, 'base'))!.snapshot.body_deleted).toBe(true);
 });
 
+it('rejects adopting a retired baseline whose live alternatives are no longer available', async () => {
+  const { host } = await history(true);
+  await collectNodeVersionPayloads(host.db, 'topic');
+  expect((await loadRetainedSyncNodeVersionFact(host.db, 'base'))!.snapshot.body_deleted).toBe(true);
+  await expect(retainLocalEditBase(host.db, { holdId: 'late-editor', nodeId: 'topic', versionId: 'base' }))
+    .rejects.toThrow('content_edit_base_alternatives_unavailable');
+  expect(host.sqlite.prepare('SELECT count(*) FROM node_version_local_holds').pluck().get()).toBe(0);
+  expect((await host.current()).body_text).toBe('Current');
+});
+
 it('keeps inherited alternatives when complete editor input uses a retired baseline', async () => {
   const { host, base } = await history(true, true);
   await retainLocalEditBase(host.db, { holdId: 'editor', nodeId: 'topic', versionId: 'base' });

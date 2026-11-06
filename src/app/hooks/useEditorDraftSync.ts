@@ -32,6 +32,7 @@ interface EditorDraftState {
 }
 
 interface CommittedContentSyncArgs {
+  hasBufferedInput: (nodeId: string | null) => boolean;
   clearPendingDraftCommit: () => void;
   committedContent: string;
   draftState: EditorDraftState;
@@ -70,6 +71,7 @@ function useCommittedContentSync(args: CommittedContentSyncArgs) {
       return;
     }
     runPendingTitleRefresh(args.flushPendingDraftForDifferentNode(args.nodeId), args.onFinalizeNode);
+    if (args.hasBufferedInput(args.nodeId)) return;
     const pendingCommit = args.getPendingDraftCommit();
     if (pendingCommit?.nodeId === args.nodeId) {
       if (pendingCommit.content === args.committedContent) {
@@ -91,6 +93,7 @@ function useCommittedContentSync(args: CommittedContentSyncArgs) {
     args.draftState.nodeId,
     args.flushPendingDraftForDifferentNode,
     args.getPendingDraftCommit,
+    args.hasBufferedInput,
     args.nodeId,
     args.onFinalizeNode,
     args.setDraftState
@@ -153,6 +156,7 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
 
   const editorContent = useEditorContent(nodeId, draftState, committedContent);
   useCommittedContentSync({
+    hasBufferedInput: userInputEvidence.hasBufferedInput,
     clearPendingDraftCommit: pending.clearPendingDraftCommit,
     committedContent,
     draftState,
@@ -163,5 +167,5 @@ export function useEditorDraftSync(args: UseEditorDraftSyncArgs) {
     setDraftState
   });
 
-  return createEditorDraftSyncApi({ editorContent, flushDraft, handleEditorChange, handleEditorInput });
+  return createEditorDraftSyncApi({ editorContent, flushDraft, handleEditorChange, handleEditorInput, userInputEvidence });
 }

@@ -64,6 +64,7 @@ it('retains the original input basis while the editor buffer has not delivered i
     { initialProps: { committedContent: 'Original', committedVersionId: 'ver_base' } });
   act(() => result.current.handleEditorInput({ nodeId: 'topic', contentLength: 'Local input'.length }));
   rerender({ committedContent: 'Remote', committedVersionId: 'ver_remote' });
+  expect(result.current.editorContent).toBe('Original');
   act(() => {
     result.current.handleEditorChange('Local input');
     vi.advanceTimersByTime(0);

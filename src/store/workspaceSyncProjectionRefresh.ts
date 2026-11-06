@@ -2,7 +2,8 @@ import type { WorkspaceRefreshScope } from '../../lib/core/database/workspaceSna
 import { loadWorkspaceListProjectionFromRuntime } from '../shared/platform/desktop/workspaceListProjectionRuntimeRepository';
 import { loadWorkspaceNodeDocumentFromRuntime } from '../shared/platform/workspaceRuntimeRepository';
 
-import { hasUnconfirmedNodeContent } from './workspaceNodeContentVersionGuard';
+import { deferNodeContentRefreshUntilPersisted, hasUnconfirmedNodeContent } from './workspaceNodeContentVersionGuard';
+import { requestWorkspaceSyncRefresh } from './workspaceRefreshScheduler';
 import { isNodeDocumentLoaded, mergeWorkspaceNodeDocument } from './workspaceRendererBoundary';
 import { useWorkspaceStore } from './workspaceStore';
 import { mergeWorkspaceSyncProjection, projectionChangesStructure } from './workspaceSyncProjectionMerge';
@@ -52,6 +53,13 @@ export async function refreshWorkspaceSyncProjection(scope: NodeScope, librarySc
       && (!activeNode || !isNodeDocumentLoaded(activeNode) || contentChanged)) {
     const document = await loadWorkspaceNodeDocumentFromRuntime(activeId);
     if (document) projection.nodesById[activeId] = mergeWorkspaceNodeDocument(projection.nodesById[activeId], document);
+  }
+  for (const nodeId of Object.keys(projection.nodesById)) {
+    if (hasUnconfirmedNodeContent(nodeId)) deferNodeContentRefreshUntilPersisted(nodeId, () => {
+      if (useWorkspaceStore.getState().libraryScope === libraryScope) {
+        requestWorkspaceSyncRefresh({ kind: 'nodes', nodeIds: [nodeId] }, libraryScope);
+      }
+    });
   }
   useWorkspaceStore.setState(current => current.libraryScope === libraryScope
     ? mergeWorkspaceSyncProjection(current, projection, baseline) : current);

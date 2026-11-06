@@ -12,7 +12,7 @@ type Node = WorkspaceState['nodesById'][string];
 type WorkspaceSet = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState>)) => void;
 export type ContentEditAcknowledgement =
   | { type: 'created'; nodeId: string; versionId: string }
-  | { type: 'saved'; nodeId: string; baseVersionId: string; submittedVersionId: string; currentVersionId: string };
+  | { type: 'saved'; nodeId: string; baseVersionId: string; submittedVersionId: string; submittedContent: string; currentVersionId: string };
 const listeners = new Set<(event: ContentEditAcknowledgement) => void>();
 
 export function subscribeContentEditAcknowledgements(listener: (event: ContentEditAcknowledgement) => void) {
@@ -43,8 +43,9 @@ export function acknowledgeContentEdit(args: {
   if (!args.edit || !acknowledgement) return;
   const persisted = args.result?.nodes.find((node) => node.nodeId === args.node.id);
   if (!persisted) return;
-  for (const listener of listeners) listener({ type: 'saved', nodeId: args.node.id,
-    baseVersionId: args.edit.baseVersionId, ...acknowledgement });
+  // Answer-only saves use content as a base witness, not as submitted body text.
+  if (args.field !== 'reveal') for (const listener of listeners) listener({ type: 'saved', nodeId: args.node.id,
+    baseVersionId: args.edit.baseVersionId, submittedContent: args.node.content, ...acknowledgement });
   args.set((state) => {
     const current = state.nodesById[args.node.id];
     if (!current) return {};

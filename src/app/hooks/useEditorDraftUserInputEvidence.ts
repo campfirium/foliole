@@ -2,13 +2,14 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import { subscribeContentEditAcknowledgements } from '../../store/workspaceContentEditAcknowledgements';
 
+import { useBufferedEditorInput } from './useBufferedEditorInput';
 import type { PendingDraftCommit } from './useEditorDraftPendingCommit';
 
 export interface EditorInputBase { content: string; versionId: string | null | undefined }
 
 export function useEditorDraftUserInputEvidence(getPendingDraftCommit: () => PendingDraftCommit | null,
   source: EditorInputBase & { nodeId: string | null }) {
-  const pendingUserInputRef = useRef<{ contentLength: number | null; nodeId: string | null; base: EditorInputBase | null } | null>(null);
+  const { pendingUserInputRef, clearPendingUserInputEvidence, hasBufferedInput, waitForBufferedInput } = useBufferedEditorInput();
   const createdBaseRef = useRef<{ nodeId: string; versionId: string } | null>(null);
   useEffect(() => subscribeContentEditAcknowledgements(event => {
     if (event.type !== 'created' || event.nodeId !== source.nodeId) return;
@@ -20,11 +21,12 @@ export function useEditorDraftUserInputEvidence(getPendingDraftCommit: () => Pen
     const pending = getPendingDraftCommit();
     if (pending?.nodeId === event.nodeId && !pending.baseVersionId) pending.baseVersionId = event.versionId;
   }), [getPendingDraftCommit, source.nodeId]);
-  const clearPendingUserInputEvidence = useCallback((sourceNodeId: string | null) => {
-    if (!sourceNodeId || pendingUserInputRef.current?.nodeId === sourceNodeId) {
-      pendingUserInputRef.current = null;
-    }
-  }, []);
+  const readDraftBaseVersionId = useCallback((nodeId: string) => {
+    const input = pendingUserInputRef.current;
+    const pending = getPendingDraftCommit();
+    return input?.nodeId === nodeId ? input.base?.versionId
+      : pending?.nodeId === nodeId ? pending.baseVersionId : null;
+  }, [getPendingDraftCommit]);
   const hasFreshDraftEvidence = useCallback((sourceNodeId: string | null, content: string) => {
     if (!sourceNodeId) {
       return false;
@@ -58,6 +60,9 @@ export function useEditorDraftUserInputEvidence(getPendingDraftCommit: () => Pen
     hasFreshDraftEvidence,
     hasPendingUserInputEvidence,
     markPendingUserInputEvidence,
-    readInputBase
+    readInputBase,
+    hasBufferedInput,
+    readDraftBaseVersionId,
+    waitForBufferedInput
   };
 }

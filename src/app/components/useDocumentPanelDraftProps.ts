@@ -2,10 +2,9 @@ import { useCallback, useMemo } from 'react';
 
 import { isProtectedRootNode } from '../../features/nodes/model/specialNodes';
 import type { EditorDraftCommitOptions } from '../hooks/useEditorDraftFlushCallbacks';
-import { useEditorDraftSync } from '../hooks/useEditorDraftSync';
 
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
-import { useWorkspaceEditorBaseHold } from './useWorkspaceEditorBaseHold';
+import { useProtectedWorkspaceEditorDraft } from './useProtectedWorkspaceEditorDraft';
 
 export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
   const draftNodeId = useMemo(() => {
@@ -25,7 +24,7 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
     }
     props.onEditorChange(content);
   }, [props.onEditorChange, props.onNodeContentChange]);
-  const editorDraft = useEditorDraftSync({
+  const editorDraft = useProtectedWorkspaceEditorDraft({
     committedContent: props.editorContent,
     committedVersionId: draftNodeId ? props.nodesById[draftNodeId]?.currentVersionId : undefined,
     nodeId: draftNodeId,
@@ -33,11 +32,7 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
     ...(props.onFinalizeNodeTitle ? { onFinalizeNode: props.onFinalizeNodeTitle } : {}),
     ...(props.onRegisterEditorDraftFlush ? { onRegisterFlush: props.onRegisterEditorDraftFlush } : {})
   });
-  const holdReady = useWorkspaceEditorBaseHold({
-    flushDraft: editorDraft.flushDraftSynchronously,
-    nodeId: draftNodeId,
-    versionId: draftNodeId ? props.nodesById[draftNodeId]?.currentVersionId : null
-  });
+  const holdReady = editorDraft.holdReady;
   const handleEditorUndo = useCallback(() => {
     return props.onEditorUndo?.() ?? false;
   }, [props.onEditorUndo]);

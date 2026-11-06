@@ -1,4 +1,5 @@
 interface NodeContentVersionState {
+  refreshAfterPersist: (() => void) | null;
   createPending: boolean;
   revealVersion: number;
   dirtyRevealVersion: number | null;
@@ -14,6 +15,7 @@ function getOrCreateNodeContentVersionState(nodeId: string) {
   const existing = nodeContentVersions.get(nodeId);
   if (existing) return existing;
   const created = {
+    refreshAfterPersist: null as (() => void) | null,
     createPending: false,
     revealVersion: 0,
     dirtyRevealVersion: null,
@@ -38,6 +40,18 @@ export function markNodeContentPersisted(nodeId: string, version: number) {
   if (state.dirtyVersion !== null && state.dirtyVersion <= state.lastPersistedVersion) {
     state.dirtyVersion = null;
   }
+  if (state.dirtyVersion === null) {
+    const refresh = state.refreshAfterPersist;
+    state.refreshAfterPersist = null;
+    refresh?.();
+  }
+}
+
+/** A remote projection deferred for a draft still needs reconciliation after its save. */
+export function deferNodeContentRefreshUntilPersisted(nodeId: string, refresh: () => void) {
+  const state = getOrCreateNodeContentVersionState(nodeId);
+  if (state.dirtyVersion === null) refresh();
+  else state.refreshAfterPersist = refresh;
 }
 
 export function markNodeCreatePending(nodeId: string) {

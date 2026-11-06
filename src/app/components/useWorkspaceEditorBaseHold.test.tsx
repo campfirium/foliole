@@ -4,7 +4,11 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import type { ContentEditAcknowledgement } from '../../store/workspaceContentEditAcknowledgements';
 
-import { useWorkspaceEditorBaseHold } from './useWorkspaceEditorBaseHold';
+import { useWorkspaceEditorBaseHold as useHeldDocument } from './useWorkspaceEditorBaseHold';
+
+function useWorkspaceEditorBaseHold(args: Omit<Parameters<typeof useHeldDocument>[0], 'content'>) {
+  return useHeldDocument({ ...args, content: '' }).ready;
+}
 
 const native = vi.hoisted(() => ({
   retain: vi.fn(), release: vi.fn(), drain: vi.fn(), listeners: new Set<(event: ContentEditAcknowledgement) => void>()
@@ -42,7 +46,7 @@ it('keeps a new editor writable throughout creation and its first saved version'
   expect(view.result.current).toBe(true);
   act(() => {
     for (const listener of native.listeners) listener({ type: 'saved', nodeId: 'new',
-      baseVersionId: 'created', submittedVersionId: 'first-save', currentVersionId: 'first-save' });
+      baseVersionId: 'created', submittedVersionId: 'first-save', submittedContent: '', currentVersionId: 'first-save' });
   });
   view.rerender({ versionId: 'first-save' });
   expect(view.result.current).toBe(true);
@@ -94,7 +98,7 @@ it('keeps accepting input after a locally saved version while retaining the prev
   const oldHold = native.retain.mock.calls[0]![2];
   act(() => {
     for (const listener of native.listeners) listener({ type: 'saved', nodeId: 'node',
-      baseVersionId: 'base', currentVersionId: 'saved', submittedVersionId: 'saved' });
+      baseVersionId: 'base', currentVersionId: 'saved', submittedVersionId: 'saved', submittedContent: '' });
   });
   view.rerender({ versionId: 'saved' });
   expect(view.result.current).toBe(true);
@@ -104,14 +108,14 @@ it('keeps accepting input after a locally saved version while retaining the prev
   expect(native.release).toHaveBeenCalledWith('node', oldHold);
 });
 
-it('still waits for protection when an unrelated remote version arrives', async () => {
+it('keeps the current editing session writable while a remote version awaits protection', async () => {
   native.retain.mockResolvedValueOnce(undefined).mockImplementationOnce(() => new Promise(() => undefined));
   const view = renderHook(({ versionId }) => useWorkspaceEditorBaseHold({
     flushDraft: () => true, nodeId: 'node', versionId
   }), { initialProps: { versionId: 'base' } });
   await act(async () => undefined);
   view.rerender({ versionId: 'remote' });
-  expect(view.result.current).toBe(false);
+  expect(view.result.current).toBe(true);
 });
 
 it.each([false, true])('keeps local saves editable across external-store publication (transition: %s)', async (transition) => {
@@ -132,7 +136,7 @@ it.each([false, true])('keeps local saves editable across external-store publica
     await Promise.resolve();
     const acknowledge = () => {
       for (const listener of native.listeners) listener({ type: 'saved', nodeId: 'node',
-        baseVersionId: 'base', currentVersionId: 'saved', submittedVersionId: 'saved' });
+        baseVersionId: 'base', currentVersionId: 'saved', submittedVersionId: 'saved', submittedContent: '' });
     };
     if (transition) startTransition(acknowledge);
     else acknowledge();
