@@ -184,6 +184,7 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(107, 'installSchema', 'Failed to install local attachment reference results.'),
   step(108, 'installSchema', 'Failed to install local learning operation state.'),
   step(112, 'installSchema', 'Failed to install unfinished folder attachment work.'),
+  step(113, 'installSchema', 'Failed to install FSRS-7 memory.'),
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {

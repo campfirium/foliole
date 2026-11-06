@@ -2,8 +2,9 @@ import { z } from 'zod';
 
 export const REVIEW_TRAINING_STEP = 1024;
 export const REVIEW_MODEL_KEY_PREFIX = 'review_training/';
-export const REVIEW_TRAINING_ENGINE = 'fsrs-browser@6.6.0';
-export const reviewWeightsSchema = z.array(z.number().finite()).length(21);
+export const RETIRED_REVIEW_TRAINING_ENGINE = 'fsrs-browser@6.6.0';
+export const REVIEW_TRAINING_ENGINE = '@open-spaced-repetition/binding-wasm32-wasip1@0.6.0:FSRS-7';
+export const reviewWeightsSchema = z.array(z.number().finite()).length(34);
 const metric = z.object({ logLoss: z.number().finite().nonnegative(), rmse: z.number().finite().nonnegative() }).strict();
 
 export const reviewTrainingModelSchema = z.object({

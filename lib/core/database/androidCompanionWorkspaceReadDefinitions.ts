@@ -103,9 +103,10 @@ export const ANDROID_COMPANION_WORKSPACE_READ_RULES = {
         { outputKey: 'lastReviewAt', rowKey: 'last_review_at', type: 'nullableString' },
         { outputKey: 'state', rowKey: 'review_state', type: 'long', defaultValue: 0 },
         { outputKey: 'stability', rowKey: 'stability', type: 'double', defaultValue: 0 },
+        { outputKey: 'stabilityFast', rowKey: 'stability_fast', type: 'double', defaultValue: 0 },
         { outputKey: 'difficulty', rowKey: 'difficulty', type: 'double', defaultValue: 0 },
-        { outputKey: 'elapsedDays', rowKey: 'elapsed_days', type: 'long', defaultValue: 0 },
-        { outputKey: 'scheduledDays', rowKey: 'scheduled_days', type: 'long', defaultValue: 0 },
+        { outputKey: 'elapsedDays', rowKey: 'elapsed_days', type: 'double', defaultValue: 0 },
+        { outputKey: 'scheduledDays', rowKey: 'scheduled_days', type: 'double', defaultValue: 0 },
         { outputKey: 'reps', rowKey: 'reps', type: 'long', defaultValue: 0 },
         { outputKey: 'lapses', rowKey: 'lapses', type: 'long', defaultValue: 0 }
       ]

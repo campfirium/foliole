@@ -76,6 +76,7 @@ interface WorkspaceNodeRow extends DatabaseRow {
   review_last_review_at: string | null;
   review_state: number | null;
   review_stability: number | null;
+  review_stability_fast?: number | null;
   review_difficulty: number | null;
   review_elapsed_days: number | null;
   review_scheduled_days: number | null;
@@ -133,7 +134,7 @@ function buildWorkspaceRowsSql(options: WorkspaceSnapshotLoadOptions) {
        nr.due AS review_due,
        nr.last_review_at AS review_last_review_at,
        nr.state AS review_state,
-       nr.stability AS review_stability,
+       nr.stability AS review_stability, nr.stability_fast AS review_stability_fast,
        nr.difficulty AS review_difficulty,
        nr.elapsed_days AS review_elapsed_days,
        nr.scheduled_days AS review_scheduled_days,

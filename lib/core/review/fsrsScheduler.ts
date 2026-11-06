@@ -1,5 +1,6 @@
 import { Rating, type Grade } from 'ts-fsrs';
 
+import { normalizeFsrs7Card } from './fsrs7Card.js';
 import { fsrsDefinition, reviewElapsedDays, type FsrsCard, type FsrsConfig, type FsrsResult, type FsrsScheduler } from './fsrsDefinition.js';
 import type { SchedulerCard, SchedulerGradeResult, SchedulerPreviewResult } from './types.js';
 
@@ -46,7 +47,8 @@ function toRating(value: SchedulerRating): Grade {
   return Rating.Easy;
 }
 
-function toFsrsCard(card: SchedulerCard, nodeId = 'detached-review'): FsrsCard {
+function toFsrsCard(input: SchedulerCard, nodeId = 'detached-review'): FsrsCard {
+  const card = normalizeFsrs7Card(input);
   return fsrsDefinition.schema.card.parse({
     cardId: nodeId,
     dueAt: new Date(card.due),
@@ -54,6 +56,7 @@ function toFsrsCard(card: SchedulerCard, nodeId = 'detached-review'): FsrsCard {
     state: card.state,
     scheduleStatus: card.state === 0 ? 'new' : card.state === 2 ? 'review' : 'learning',
     stability: card.stability,
+    stabilityFast: card.stability_fast ?? 0,
     difficulty: card.difficulty,
     scheduledDays: card.scheduled_days,
     learningStep: 0,
@@ -70,6 +73,7 @@ function toSchedulerResult(item: FsrsResult): SchedulerGradeResult {
       last_review: card.lastReviewAt?.toISOString() ?? null,
       state: card.state,
       stability: card.stability,
+      stability_fast: card.stabilityFast,
       difficulty: card.difficulty,
       elapsed_days: revlog.lastReviewAt ? reviewElapsedDays(revlog.lastReviewAt, revlog.reviewTime) : 0,
       scheduled_days: card.scheduledDays,

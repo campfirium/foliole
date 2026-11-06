@@ -4,7 +4,7 @@ import type { DbPort } from '../sync/dbPort.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 
 const learningColumns = {
-  node_review: ['node_id', 'due', 'last_review_at', 'state', 'stability', 'difficulty',
+  node_review: ['node_id', 'due', 'last_review_at', 'state', 'stability', 'stability_fast', 'difficulty',
     'elapsed_days', 'scheduled_days', 'reps', 'lapses'],
   node_reading: ['node_id', 'interval_duration_ms', 'interval_growth_factor', 'last_handled_at',
     'next_at', 'priority', 'repetition_count', 'state']

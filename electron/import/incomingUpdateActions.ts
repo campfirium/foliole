@@ -56,6 +56,7 @@ interface IncomingUpdateReviewRow extends DatabaseRow {
   reps: number;
   scheduled_days: number;
   stability: number;
+  stability_fast: number;
   state: 0 | 1 | 2 | 3;
 }
 
@@ -101,7 +102,7 @@ function readIncomingUpdateReading(nodeId: string) {
 
 function readIncomingUpdateReview(nodeId: string) {
   return openDatabaseConnection().driver.queryOne<IncomingUpdateReviewRow>(
-    `SELECT due, last_review_at, state, stability, difficulty,
+    `SELECT due, last_review_at, state, stability, stability_fast, difficulty,
             elapsed_days, scheduled_days, reps, lapses
      FROM node_review
      WHERE node_id = ?`,
@@ -135,6 +136,7 @@ function toNodeReviewPayload(row: IncomingUpdateReviewRow | null | undefined) {
         reps: row.reps,
         scheduledDays: row.scheduled_days,
         stability: row.stability,
+        stabilityFast: row.stability_fast,
         state: row.state
       }
     : null;

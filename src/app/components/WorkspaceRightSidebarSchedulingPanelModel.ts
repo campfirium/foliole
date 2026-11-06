@@ -1,4 +1,4 @@
-import { FSRS6_DEFAULT_WEIGHTS, forgettingCurve } from 'ts-fsrs/models/fsrs-6';
+import { FSRS7_DEFAULT_WEIGHTS, curve } from 'ts-fsrs/models/fsrs-7';
 
 import {
   resolveNodeDesiredRetentionSetting,
@@ -72,7 +72,7 @@ function getFsrsRetrievability(review: Node['review'], now: number) {
   const lastReviewMs = Date.parse(review.lastReviewAt);
   if (Number.isNaN(lastReviewMs)) return null;
   const elapsedDays = Math.max((now - lastReviewMs) / (24 * 60 * 60 * 1000), 0);
-  const retrievability = forgettingCurve(FSRS6_DEFAULT_WEIGHTS, elapsedDays, review.stability);
+  const retrievability = curve(FSRS7_DEFAULT_WEIGHTS, elapsedDays, { stability: review.stability, stabilityFast: review.stabilityFast ?? 0, difficulty: review.difficulty }).retrievability;
   return Number.isFinite(retrievability) ? retrievability : null;
 }
 

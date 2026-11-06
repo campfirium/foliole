@@ -23,8 +23,9 @@ import { writeSettingRecord } from './settingRecords.js';
 let train: typeof import('../../src/features/review/model/trainFolderReviewModel.js').trainFolderReviewModel;
 beforeAll(async () => {
   vi.stubGlobal('self', new EventTarget());
-  const wasm = await import('fsrs-browser/fsrs_browser.js');
-  wasm.initSync({ module: readFileSync('node_modules/fsrs-browser/fsrs_browser_bg.wasm') });
+  const { initializeReviewTrainingBinding } = await import('../../src/features/review/model/reviewTrainingBinding.js');
+  await initializeReviewTrainingBinding(await WebAssembly.compile(readFileSync(
+    'node_modules/@open-spaced-repetition/binding-wasm32-wasip1/fsrs-binding.wasm32-wasip1.wasm')));
   train = (await import('../../src/features/review/model/trainFolderReviewModel.js')).trainFolderReviewModel;
 });
 
@@ -33,7 +34,7 @@ it('reports the latest recorded training scope after restart even when the candi
   try {
     let driver = await seedTrainingPeer(peer);
     expect(readReviewTrainingPlan(driver, 'scope')).toMatchObject({ lastTrainedAt: null, lastTrainedFolderId: null });
-    const model = train(readReviewTrainingInput(driver, 'folder', 'scope'));
+    const model = await train(readReviewTrainingInput(driver, 'folder', 'scope'));
     const global = { ...model, folderId: null, trainedAt: '2026-10-26T06:30:00.000Z' };
     const folder = { ...model, enabled: false, candidate: model.baseline, trainedAt: '2026-10-27T06:30:00.000Z' };
     for (const entry of [folder, global]) writeSettingRecord(driver, {
@@ -54,7 +55,7 @@ it('trains on folder facts, syncs parameters, and uses them for the next durable
   try {
     const driver = await seedTrainingPeer(a); await seedTrainingPeer(b);
     const input = readReviewTrainingInput(driver, 'folder', 'test-library');
-    const model = train(input);
+    const model = await train(input);
     expect(model.enabled).toBe(true);
     expect(model.candidate!.logLoss).toBeLessThan(model.baseline!.logLoss);
     expect(model.candidate!.rmse).toBeLessThan(model.baseline!.rmse);
@@ -109,7 +110,7 @@ it('inherits enabled folder parameters and changes ownership when an item moves'
   const fixture = await restoreFixture(); const peer = fixture.peer('source');
   try {
     const driver = await seedTrainingPeer(peer);
-    const model = train(readReviewTrainingInput(driver, 'folder', 'scope'));
+    const model = await train(readReviewTrainingInput(driver, 'folder', 'scope'));
     writeSettingRecord(driver, { key: reviewModelKey('folder'), valueJson: JSON.stringify(model), updatedAt: model.trainedAt });
     const before = reviewState(peer);
     peer.sqlite.exec("UPDATE nodes SET parent_id='other' WHERE id='topic'");
@@ -130,13 +131,13 @@ it('never trains on held-out answers and preserves input when review events arri
   try {
     const driver = await seedTrainingPeer(peer);
     const input = readReviewTrainingInput(driver, 'folder', 'scope');
-    const original = train(input);
+    const original = await train(input);
     const cutoff = reviewTrainingCutoff(input.events);
-    const changed = train({ ...input, events: input.events.map(event =>
+    const changed = await train({ ...input, events: input.events.map(event =>
       Date.parse(event.reviewedAt) >= cutoff ? { ...event, grade: event.grade === 1 ? 3 : 1 } : event).reverse() });
     expect(changed.weights).toEqual(original.weights);
     expect(changed.candidate).not.toEqual(original.candidate);
-    const unchanged = train({ ...input, baselineWeights: original.weights });
+    const unchanged = await train({ ...input, baselineWeights: original.weights });
     expect(unchanged.enabled).toBe(false);
   } finally { await fixture.close(); }
 });

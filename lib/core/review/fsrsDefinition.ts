@@ -5,16 +5,16 @@ import {
   schedulerMonotonicIntervalMiddleware, schedulerScheduledDaysMiddleware,
   schedulerStatsMiddleware
 } from 'ts-fsrs/middlewares';
-import { FSRS6Model } from 'ts-fsrs/models/fsrs-6';
+import { FSRS7Model } from 'ts-fsrs/models/fsrs-7';
 
-const chrono = dateChrono.create({ config: { fractionalDays: false } });
+const chrono = dateChrono.create({ config: { fractionalDays: true } });
 
-/** Match v5's actual scheduler: UTC calendar days, clamped for early reviews. */
+/** FSRS-7 uses absolute fractional days, including same-day reviews. */
 export function reviewElapsedDays(previous: Date, current: Date) {
   return Math.max(0, chrono.difference(previous, current));
 }
 
-export const fsrsDefinition = defineScheduler({ model: FSRS6Model, chrono: dateChrono }).use(
+export const fsrsDefinition = defineScheduler({ model: FSRS7Model, chrono: dateChrono }).use(
   schedulerDesiredRetentionMiddleware,
   schedulerFuzzingMiddleware,
   schedulerStatsMiddleware,

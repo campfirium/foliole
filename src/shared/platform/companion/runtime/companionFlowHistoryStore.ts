@@ -9,7 +9,7 @@ import type { FlowHistoryEntry } from '../../../../store/workspaceReviewHistoryT
 import { definedProps } from '../../../lib/definedProps';
 
 const review = z.object({ due: z.string(), lastReviewAt: z.string().nullable(), state: z.union([
-  z.literal(0), z.literal(1), z.literal(2), z.literal(3)]), stability: z.number(), difficulty: z.number(),
+  z.literal(0), z.literal(1), z.literal(2), z.literal(3)]), stability: z.number(), stabilityFast: z.number().optional(), difficulty: z.number(),
 elapsedDays: z.number(), scheduledDays: z.number(), reps: z.number(), lapses: z.number() });
 
 

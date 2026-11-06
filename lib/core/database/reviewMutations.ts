@@ -8,6 +8,7 @@ interface ReviewCardSnapshot {
   last_review: string | null;
   state: 0 | 1 | 2 | 3;
   stability: number;
+  stabilityFast?: number | undefined;
   difficulty: number;
   elapsed_days: number;
   scheduled_days: number;

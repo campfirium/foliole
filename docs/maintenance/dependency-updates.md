@@ -301,3 +301,27 @@ References: [Renovate installation](https://docs.renovatebot.com/getting-started
 [free hosting](https://docs.renovatebot.com/mend-hosted/overview/),
 [Ionic reference configuration](https://github.com/ionic-team/ionic-react-conference-app/blob/main/renovate.json),
 [Swift manager](https://docs.renovatebot.com/modules/manager/swift/).
+
+## FSRS-7 model and optimizer adoption (2026-11-06)
+
+The model upgrade selects FSRS-7 in the already adopted ts-fsrs 6.0.0 API.
+`fsrs-browser` 6.6.0 is replaced by
+`@open-spaced-repetition/binding-wasm32-wasip1` 0.6.0 for single-thread Worker
+training. Scheduling, training and held-out evaluation use fractional UTC days
+and the same 34-weight model. Historical 21-weight training records remain facts
+but cannot supply weights or consume the new model's training eligibility.
+
+The published WASI loader creates an emnapi 2.0.0-beta.2 context, while npm can
+resolve its wasm-runtime peer range to emnapi 1.11.2. That combination fails on
+initialization with `this.bridge.setLastError is not a function`, independently
+of Vitest. The scoped wasm-runtime overrides align both emnapi peers to the
+loader's exact version; no generated loader or installed package is patched.
+Remove these overrides when the upstream dependency graph resolves a compatible
+context/core pair itself, after repeating real Worker training and restart.
+
+Local evidence includes real WASM training, exact-candidate chronological
+holdout evaluation, independent SQLite parameter exchange, schema upgrade
+rollback/retry, grade/undo/reopen, browser import and mobile owner hydration.
+The next centralized QA candidate should include this model/optimizer change
+and run dependency hardening and full quality. No separate QA, release, public
+push or dependency PR closure is implied by this adoption record.

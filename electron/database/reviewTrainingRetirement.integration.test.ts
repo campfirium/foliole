@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { migrateFSRS6Parameters } from 'ts-fsrs/models/fsrs-6';
+import { migrateFSRS7Parameters } from 'ts-fsrs/models/fsrs-7';
 import { expect, it } from 'vitest';
 
 import { readReviewTrainingInput, readReviewTrainingPlan, readReviewTrainingPlanWithDb } from '../../lib/core/database/reviewTrainingInput.js';
@@ -7,7 +7,7 @@ import { readNodeReviewWeights, readReviewModels } from '../../lib/core/database
 import { readStoredReviewCard } from '../../lib/core/database/storedReviewCard.js';
 import { recomputeReview } from '../../lib/core/review/recomputeReview.js';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/settings.js';
-import { REVIEW_TRAINING_ENGINE, reviewModelKey, type ReviewTrainingModel } from '../../lib/core/review/trainingModel.js';
+import { RETIRED_REVIEW_TRAINING_ENGINE, REVIEW_TRAINING_ENGINE, reviewModelKey, type ReviewTrainingModel } from '../../lib/core/review/trainingModel.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { identityReviewRowSchema } from '../../lib/core/sync/syncFactRowSchemas.js';
@@ -19,7 +19,7 @@ import { seedTrainingPeer } from './reviewTraining.testSupport.js';
 import { writeSettingRecord } from './settingRecords.js';
 
 function model(folderId: string | null, initialStability = 8): ReviewTrainingModel {
-  const weights = [...migrateFSRS6Parameters()];
+  const weights = [...migrateFSRS7Parameters()];
   weights[0] = initialStability;
   return { folderId, weights, enabled: true, reviewCount: 2048, engine: REVIEW_TRAINING_ENGINE,
     trainedAt: '2026-10-27T00:00:00.000Z', candidate: { logLoss: 0.3, rmse: 0.2 }, baseline: { logLoss: 0.5, rmse: 0.4 } };
@@ -111,4 +111,22 @@ it('keeps root and special-container history on defaults without creating a trai
     expect(readNodeReviewWeights(driver, 'topic')).toBeUndefined();
     expect(readReviewTrainingPlan(driver, 'scope').folders).toEqual([]);
   } finally { await fixture.close(); }
+});
+
+
+it('keeps legacy folder training facts inert and immediately restores FSRS7 eligibility after reopening', async () => {
+  const f = await restoreFixture(); const peer = f.peer('source');
+  try {
+    const driver = await seedTrainingPeer(peer);
+    const value = { ...model('folder'), engine: RETIRED_REVIEW_TRAINING_ENGINE, weights: Array(21).fill(1) };
+    writeSettingRecord(driver, { key: reviewModelKey('folder'), valueJson: JSON.stringify(value), updatedAt: value.trainedAt });
+    peer.reopen();
+    const current = createBetterSqlite3Driver(peer.sqlite);
+    expect(readReviewModels(current)).toEqual([]);
+    expect(readNodeReviewWeights(current, 'topic')).toBeUndefined();
+    expect(readReviewTrainingPlan(current, 'library').folders).toContainEqual({ folderId: 'folder', reviewCount: 2048 });
+    expect((await readReviewTrainingPlanWithDb(peer.db, 'library')).folders).toContainEqual({ folderId: 'folder', reviewCount: 2048 });
+    expect(peer.sqlite.prepare('SELECT value_json FROM setting_records WHERE key = ?').get(reviewModelKey('folder')))
+      .toEqual({ value_json: JSON.stringify(value) });
+  } finally { await f.close(); }
 });

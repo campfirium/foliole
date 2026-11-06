@@ -10,6 +10,7 @@ export interface NodeReviewSyncPayload {
   lastReviewAt: string | null;
   state: number;
   stability: number;
+  stabilityFast?: number | undefined;
   difficulty: number;
   elapsedDays: number;
   scheduledDays: number;
@@ -38,6 +39,7 @@ function writeNodeReviewSnapshot(
     input.review.lastReviewAt,
     input.review.state,
     input.review.stability,
+    input.review.stabilityFast ?? 0,
     input.review.difficulty,
     input.review.elapsedDays,
     input.review.scheduledDays,
@@ -48,8 +50,8 @@ function writeNodeReviewSnapshot(
 
 export function saveNodeReviewStateWithSync(driver: DatabaseDriver, input: WriteNodeReviewSyncInput) {
   const upsertReview = driver.prepare(`INSERT OR REPLACE INTO node_review (
-    node_id, due, last_review_at, state, stability, difficulty, elapsed_days, scheduled_days, reps, lapses
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    node_id, due, last_review_at, state, stability, stability_fast, difficulty, elapsed_days, scheduled_days, reps, lapses
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   return driver.transaction(() => {
     if (!input.history && input.review) writeNodeReviewSnapshot(input, upsertReview.run);
     else if (!input.history) {

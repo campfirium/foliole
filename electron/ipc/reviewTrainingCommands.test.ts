@@ -1,4 +1,4 @@
-import { migrateFSRS6Parameters } from 'ts-fsrs/models/fsrs-6';
+import { migrateFSRS7Parameters } from 'ts-fsrs/models/fsrs-7';
 import { expect, it, vi } from 'vitest';
 
 import { REVIEW_TRAINING_ENGINE } from '../../lib/core/review/trainingModel.js';
@@ -31,7 +31,7 @@ it('rejects missing or invalid training results before accessing storage', () =>
 it('rejects retired global training requests and saves before accessing storage', () => {
   expect(() => handleReviewTrainingCommand(NATIVE_COMMANDS.loadReviewTrainingInput,
     { folderId: null, libraryScope: 'current-library' })).toThrow('review_training_folder_invalid');
-  const model = { folderId: null, weights: [...migrateFSRS6Parameters()], enabled: false, reviewCount: 2048,
+  const model = { folderId: null, weights: [...migrateFSRS7Parameters()], enabled: false, reviewCount: 2048,
     trainedAt: '2026-10-27T00:00:00.000Z', engine: REVIEW_TRAINING_ENGINE, candidate: null, baseline: null };
   expect(() => handleReviewTrainingCommand(NATIVE_COMMANDS.saveReviewTrainingModel,
     { model, libraryScope: 'current-library' })).toThrow('review_training_folder_invalid');

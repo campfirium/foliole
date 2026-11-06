@@ -12,6 +12,7 @@ import { migrateExternalFolderDisplayPaths } from './externalFolderDisplayPathMi
 import { migrateForegroundSources, retireForegroundIdentityTriggers } from './foregroundSourceMigration.js';
 import { INVALIDATE_ALL_SYNC_DIGESTS, INVALIDATE_UNREADY_SYNC_DIGESTS, migrateFramedSyncDigests } from './framedSyncDigestSchema.js';
 import { migrateFramedSyncInventoryLookups } from './framedSyncInventoryLookupMigration.js';
+import { migrateFsrs7 } from './fsrs7Migration.js';
 import { migrateInitialReviewSchedule } from './initialReviewScheduleMigration.js';
 import { retireLegacySyncState } from './legacySyncRetirement.js';
 import { migrateMissingCurrentVersionInventory } from './missingCurrentVersionInventoryMigration.js';
@@ -64,5 +65,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 180, migrate: migrateAttachmentReferenceCache },
   { version: 181, migrate: migrateDailyFlowLocalApplications },
   { version: 182, migrate: migrateParentOrderInvalidation },
-  { version: 183, migrate: migrateMaterialFlowInvalidation }
+  { version: 183, migrate: migrateMaterialFlowInvalidation },
+  { version: 184, migrate: migrateFsrs7 }
 ];

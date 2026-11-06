@@ -53,9 +53,10 @@ export function assertSchedulerCard(value: unknown, field = 'card'): asserts val
 
   assertReviewState(value.state, `${field}.state`);
   assertNonNegativeNumber(value.stability, `${field}.stability`);
+  if (value.stability_fast !== undefined) assertNonNegativeNumber(value.stability_fast, `${field}.stability_fast`);
   assertNonNegativeNumber(value.difficulty, `${field}.difficulty`);
-  assertNonNegativeInteger(value.elapsed_days, `${field}.elapsed_days`);
-  assertNonNegativeInteger(value.scheduled_days, `${field}.scheduled_days`);
+  assertNonNegativeNumber(value.elapsed_days, `${field}.elapsed_days`);
+  assertNonNegativeNumber(value.scheduled_days, `${field}.scheduled_days`);
   assertNonNegativeInteger(value.reps, `${field}.reps`);
   assertNonNegativeInteger(value.lapses, `${field}.lapses`);
 }

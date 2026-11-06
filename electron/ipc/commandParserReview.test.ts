@@ -41,3 +41,15 @@ it('preserves node identity for folder parameters and rejects malformed identiti
     expect(() => parseReviewPreviewArgs({ request: { ...request, nodeId } })).toThrow('request.nodeId');
   }
 });
+
+
+it('preserves both FSRS7 memories and fractional intervals through native parsing', () => {
+  const learned = { ...card, stability: 4, stability_fast: 2, difficulty: 5, state: 2,
+    last_review: now, reps: 1, elapsed_days: 1 / 24, scheduled_days: 4.75 };
+  const request = { card: learned, now, rating: 'Good' };
+  expect(parseReviewGradeArgs({ request }).request.card).toEqual(learned);
+  expect(parseReviewPreviewArgs({ request }).request.card).toEqual(learned);
+  for (const elapsed_days of [-0.5, NaN, Infinity]) {
+    expect(() => parseReviewPreviewArgs({ request: { ...request, card: { ...learned, elapsed_days } } })).toThrow();
+  }
+});

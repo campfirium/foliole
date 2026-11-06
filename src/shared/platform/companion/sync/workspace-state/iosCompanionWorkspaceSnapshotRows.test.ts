@@ -115,6 +115,16 @@ it('preserves complete review rows, including valid zero and absent review state
     stability: 0, difficulty: 0, elapsed_days: 0, scheduled_days: 0, reps: 0, lapses: 0 };
   expect(buildIosWorkspaceNodes([{ ...nodeRow(), ...review }]).nodesById['node-1']?.review)
     .toEqual({ due: review.due, lastReviewAt: null, state: 0,
-      stability: 0, difficulty: 0, elapsedDays: 0, scheduledDays: 0, reps: 0, lapses: 0 });
+      stability: 0, stabilityFast: 0, difficulty: 0, elapsedDays: 0, scheduledDays: 0, reps: 0, lapses: 0 });
   expect(buildIosWorkspaceNodes([{ ...nodeRow(), ...review, due: null }]).nodesById['node-1']?.review).toBeNull();
+});
+
+
+it('hydrates both FSRS7 traces and fractional scheduling days without truncation', () => {
+  const review = { due: '2026-11-05T12:00:00Z', last_review_at: '2026-11-01T08:00:00Z', review_state: 2,
+    stability: 3.9221, stability_fast: 3.13768, difficulty: 3.53, elapsed_days: 1 / 24, scheduled_days: 4.77, reps: 1, lapses: 0 };
+  expect(buildIosWorkspaceNodes([{ ...nodeRow(), ...review }]).nodesById['node-1']?.review)
+    .toEqual({ due: review.due, lastReviewAt: review.last_review_at, state: 2,
+      stability: review.stability, stabilityFast: review.stability_fast, difficulty: review.difficulty,
+      elapsedDays: 1 / 24, scheduledDays: 4.77, reps: 1, lapses: 0 });
 });

@@ -60,8 +60,8 @@ beforeEach(async () => {
   insert.run('inbox', null, 'Inbox', 'folder', 0, now, now);
   insert.run('card', 'inbox', 'Card', 'item', 0, now, now);
   await saveCompanionSyncNodeReviewRecord({ nodeId: 'card', review: {
-    difficulty: 4.2, due: now, elapsedDays: 2, lapses: 1,
-    lastReviewAt: now, reps: 3, scheduledDays: 2, stability: 2.1, state: 2
+    difficulty: 4.2, due: now, elapsedDays: 2.25, lapses: 1,
+    lastReviewAt: now, reps: 3, scheduledDays: 2.5, stability: 2.1, stabilityFast: 1.7, state: 2
   } });
 });
 
@@ -84,9 +84,9 @@ function desktopSnapshot() {
 }
 
 it('preserves every persisted FSRS field through mobile load and reopen', async () => {
-  const expected = { difficulty: 4.2, due: '2026-05-01T00:00:00.000Z', elapsedDays: 2,
+  const expected = { difficulty: 4.2, due: '2026-05-01T00:00:00.000Z', elapsedDays: 2.25,
     lapses: 1, lastReviewAt: '2026-05-01T00:00:00.000Z', reps: 3,
-    scheduledDays: 2, stability: 2.1, state: 2 };
+    scheduledDays: 2.5, stability: 2.1, stabilityFast: 1.7, state: 2 };
   expect(desktopSnapshot().nodesById.card?.review).toEqual(expected);
   expect((await loadCompanionWorkspaceSyncState()).workspace_snapshot?.nodesById.card?.review).toEqual(expected);
   await closeIosCompanionDatabase();

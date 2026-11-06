@@ -50,9 +50,10 @@ export const nodeReview = sqliteTable('node_review', {
   lastReviewAt: text('last_review_at'),
   state: integer('state').notNull().default(0),
   stability: real('stability').notNull().default(0),
+  stabilityFast: real('stability_fast').notNull().default(0),
   difficulty: real('difficulty').notNull().default(0),
-  elapsedDays: integer('elapsed_days').notNull().default(0),
-  scheduledDays: integer('scheduled_days').notNull().default(0),
+  elapsedDays: real('elapsed_days').notNull().default(0),
+  scheduledDays: real('scheduled_days').notNull().default(0),
   reps: integer('reps').notNull().default(0),
   lapses: integer('lapses').notNull().default(0)
 });

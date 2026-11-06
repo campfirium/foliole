@@ -21,7 +21,7 @@ export const COMPANION_SNAPSHOT_NODE_QUERY = {
     'NULL AS position, ' +
     'rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, ' +
     'rds.reading_position, rd.repetition_count, rd.state AS reading_state, nr.due, nr.last_review_at, nr.state AS review_state, ' +
-    'nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash ' +
+    'nr.stability, nr.stability_fast, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash ' +
     'FROM nodes n LEFT JOIN visible_nodes visible ON visible.id = n.id ' +
     'LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL ' +
     'LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ? AND visible.id IS NOT NULL ' +
@@ -72,9 +72,10 @@ export const COMPANION_SNAPSHOT_NODE_QUERY = {
     { key: 'last_review_at', source: 'last_review_at', type: 'nullableString' },
     { key: 'review_state', source: 'review_state', type: 'long' },
     { key: 'stability', source: 'stability', type: 'double' },
+    { key: 'stability_fast', source: 'stability_fast', type: 'double' },
     { key: 'difficulty', source: 'difficulty', type: 'double' },
-    { key: 'elapsed_days', source: 'elapsed_days', type: 'long' },
-    { key: 'scheduled_days', source: 'scheduled_days', type: 'long' },
+    { key: 'elapsed_days', source: 'elapsed_days', type: 'double' },
+    { key: 'scheduled_days', source: 'scheduled_days', type: 'double' },
     { key: 'reps', source: 'reps', type: 'long' },
     { key: 'lapses', source: 'lapses', type: 'long' },
     { key: 'body_blob_hash', source: 'body_blob_hash', type: 'nullableString' }

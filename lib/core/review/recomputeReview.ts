@@ -1,3 +1,4 @@
+import { normalizeFsrs7Card } from './fsrs7Card.js';
 import { createFsrsReviewScheduler } from './fsrsScheduler.js';
 import { isReviewTimestamp } from './reviewTimestamp.js';
 import { createReviewSchedulerParameters, getReviewSchedulerVersion, type ReviewSchedulerSettings } from './settings.js';
@@ -25,7 +26,7 @@ export function replayReviewEventsFromBaseline(events: readonly ReviewEvent[], p
     || (a.op_id < b.op_id ? -1 : a.op_id > b.op_id ? 1 : 0));
   const scheduler = createFsrsReviewScheduler({ loadSettings: () => parameters,
     getSettingsVersion: getReviewSchedulerVersion, createParameters: createReviewSchedulerParameters });
-  let card: SchedulerCard | null = baseline;
+  let card: SchedulerCard | null = baseline ? normalizeFsrs7Card(baseline) : null;
   for (const event of ordered) {
     if (event.kind === 'reset') card = null;
     if (event.kind !== 'review' || voids.has(event.op_id)) continue;

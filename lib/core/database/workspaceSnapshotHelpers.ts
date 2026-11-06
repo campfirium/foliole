@@ -17,6 +17,7 @@ interface WorkspaceReviewProfile {
   lastReviewAt: string | null;
   state: 0 | 1 | 2 | 3;
   stability: number;
+  stabilityFast?: number | undefined;
   difficulty: number;
   elapsedDays: number;
   scheduledDays: number;
@@ -132,6 +133,7 @@ export interface WorkspaceNodeRowShape {
   review_reps: number | null;
   review_scheduled_days: number | null;
   review_stability: number | null;
+  review_stability_fast?: number | null;
   review_state: number | null;
   title: string;
   updated_at: string;

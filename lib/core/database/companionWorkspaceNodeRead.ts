@@ -14,7 +14,7 @@ export async function loadCompanionWorkspaceNodeFromDb(db: DbPort, nodeId: strin
 
 const LEARNING_NODE_SQL = `SELECT n.*,
   nr.due AS review_due, nr.last_review_at AS review_last_review_at,
-  nr.state AS review_state, nr.stability AS review_stability,
+  nr.state AS review_state, nr.stability AS review_stability, nr.stability_fast AS review_stability_fast,
   nr.difficulty AS review_difficulty, nr.elapsed_days AS review_elapsed_days,
   nr.scheduled_days AS review_scheduled_days, nr.reps AS review_reps, nr.lapses AS review_lapses,
   rd.interval_duration_ms AS reading_interval_duration_ms,

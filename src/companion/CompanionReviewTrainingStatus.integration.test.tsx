@@ -40,7 +40,7 @@ async function openLearning() {
 
 async function saveModel() {
   const plan = await loadCompanionReviewTrainingPlan();
-  const model: ReviewTrainingModel = { folderId: 'english', weights: Array.from({ length: 21 }, () => 1),
+  const model: ReviewTrainingModel = { folderId: 'english', weights: Array.from({ length: 34 }, () => 1),
     enabled: false, reviewCount: 1024, trainedAt: '2026-10-01T08:00:00.000Z',
     engine: REVIEW_TRAINING_ENGINE, candidate: null, baseline: null };
   await saveCompanionReviewTrainingModel(model, plan.libraryScope);

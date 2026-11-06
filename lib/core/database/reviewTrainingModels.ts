@@ -1,4 +1,4 @@
-import { reviewModelKey, reviewTrainingModelSchema, resolveReviewWeights,
+import { RETIRED_REVIEW_TRAINING_ENGINE, reviewModelKey, reviewTrainingModelSchema, resolveReviewWeights,
   type ReviewTrainingModel, type ReviewTrainingNode } from '../review/trainingModel.js';
 
 import type { DatabaseDriver } from './driver.js';
@@ -20,7 +20,11 @@ export function parseReviewModels(rows: readonly { key: string; value_json: stri
     // Retired global settings remain syncable history, never active models.
     if (row.key === reviewModelKey(null) || seen.has(row.key)) continue;
     seen.add(row.key);
-    const model = reviewTrainingModelSchema.parse(JSON.parse(row.value_json));
+    const value: unknown = JSON.parse(row.value_json);
+    // Retired facts remain syncable, but cannot supply weights or consume FSRS-7 training eligibility.
+    if (value && typeof value === 'object' && 'engine' in value
+      && value.engine === RETIRED_REVIEW_TRAINING_ENGINE) continue;
+    const model = reviewTrainingModelSchema.parse(value);
     if (reviewModelKey(model.folderId) !== row.key) throw new Error('review_model_folder_mismatch');
     models.push(model);
   }

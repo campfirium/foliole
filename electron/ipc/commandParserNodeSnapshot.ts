@@ -34,6 +34,7 @@ interface ReviewProfilePayload {
   lastReviewAt: string | null;
   state: 0 | 1 | 2 | 3;
   stability: number;
+  stabilityFast?: number | undefined;
   difficulty: number;
   elapsedDays: number;
   scheduledDays: number;
@@ -81,9 +82,10 @@ function asReviewProfile(value: unknown, field: string): ReviewProfilePayload | 
     lastReviewAt: asNullableString(payload.lastReviewAt, `${field}.lastReviewAt`),
     state: asIntegerInRange(payload.state, `${field}.state`, 0, 3) as ReviewProfilePayload['state'],
     stability: asNullableFiniteNumber(payload.stability, `${field}.stability`) ?? 0,
+    ...(payload.stabilityFast === undefined ? {} : { stabilityFast: asNullableFiniteNumber(payload.stabilityFast, `${field}.stabilityFast`) ?? 0 }),
     difficulty: asNullableFiniteNumber(payload.difficulty, `${field}.difficulty`) ?? 0,
-    elapsedDays: asNullableInteger(payload.elapsedDays, `${field}.elapsedDays`) ?? 0,
-    scheduledDays: asNullableInteger(payload.scheduledDays, `${field}.scheduledDays`) ?? 0,
+    elapsedDays: asNullableFiniteNumber(payload.elapsedDays, `${field}.elapsedDays`) ?? 0,
+    scheduledDays: asNullableFiniteNumber(payload.scheduledDays, `${field}.scheduledDays`) ?? 0,
     reps: asNullableInteger(payload.reps, `${field}.reps`) ?? 0,
     lapses: asNullableInteger(payload.lapses, `${field}.lapses`) ?? 0
   };

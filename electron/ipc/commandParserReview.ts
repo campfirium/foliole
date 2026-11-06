@@ -30,6 +30,12 @@ function asObject(value: unknown, field: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function asDayInterval(value: unknown, field: string) {
+  const days = asFiniteNumber(value, field);
+  if (days < 0 || days > Number.MAX_SAFE_INTEGER) throw new Error(`invalid argument: ${field}`);
+  return days;
+}
+
 function parseSchedulerCard(value: unknown, field: string): NativeSchedulerCard {
   const card = asObject(value, field);
   const lastReview = asNullableString(card.last_review, `${field}.last_review`);
@@ -38,9 +44,10 @@ function parseSchedulerCard(value: unknown, field: string): NativeSchedulerCard 
     last_review: lastReview === null ? null : asReviewTimestamp(lastReview, `${field}.last_review`),
     state: asIntegerInRange(card.state, `${field}.state`, 0, 3) as NativeSchedulerCard['state'],
     stability: asFiniteNumber(card.stability, `${field}.stability`),
+    ...(card.stability_fast === undefined ? {} : { stability_fast: asFiniteNumber(card.stability_fast, `${field}.stability_fast`) }),
     difficulty: asFiniteNumber(card.difficulty, `${field}.difficulty`),
-    elapsed_days: asIntegerInRange(card.elapsed_days, `${field}.elapsed_days`, 0, Number.MAX_SAFE_INTEGER),
-    scheduled_days: asIntegerInRange(card.scheduled_days, `${field}.scheduled_days`, 0, Number.MAX_SAFE_INTEGER),
+    elapsed_days: asDayInterval(card.elapsed_days, `${field}.elapsed_days`),
+    scheduled_days: asDayInterval(card.scheduled_days, `${field}.scheduled_days`),
     reps: asIntegerInRange(card.reps, `${field}.reps`, 0, Number.MAX_SAFE_INTEGER),
     lapses: asIntegerInRange(card.lapses, `${field}.lapses`, 0, Number.MAX_SAFE_INTEGER)
   };

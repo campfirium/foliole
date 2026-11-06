@@ -6,6 +6,7 @@ export interface SchedulerCard {
   last_review: string | null;
   state: ReviewState;
   stability: number;
+  stability_fast?: number | undefined;
   difficulty: number;
   elapsed_days: number;
   scheduled_days: number;
@@ -53,6 +54,7 @@ export function createInitialSchedulerCard(now: string): SchedulerCard {
     last_review: null,
     state: 0,
     stability: 0,
+    stability_fast: 0,
     difficulty: 0,
     elapsed_days: 0,
     scheduled_days: 0,

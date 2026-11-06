@@ -687,6 +687,15 @@
         }
       ],
       "beforeVersion": 112
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to install FSRS-7 memory.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 113
     }
   ],
   "planKeys": {

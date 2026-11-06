@@ -148,6 +148,6 @@ export function toReviewPayload(review: NativeWorkspaceReviewProfile) {
   return {
     difficulty: review.difficulty, due: review.due, elapsed_days: review.elapsedDays, lapses: review.lapses,
     last_review_at: review.lastReviewAt, reps: review.reps, scheduled_days: review.scheduledDays,
-    stability: review.stability, state: review.state
+    stability: review.stability, stability_fast: review.stabilityFast ?? 0, state: review.state
   };
 }

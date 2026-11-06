@@ -6,10 +6,10 @@ import { createEmptyWorkspaceActionHistory } from './workspaceActionHistoryState
 import { parsePersistedWorkspaceState } from './workspacePersistedStateParser';
 import type { WorkspacePersistedState, WorkspaceState } from './workspaceStoreTypes';
 
-export const BROWSER_WORKSPACE_VERSION = 2;
+export const BROWSER_WORKSPACE_VERSION = 3;
 export function readBrowserWorkspaceEnvelope(raw: string): { state: WorkspacePersistedState; version: number } {
   const value = JSON.parse(raw) as { version?: unknown; state?: Record<string, unknown> };
-  if ((value.version !== 0 && value.version !== BROWSER_WORKSPACE_VERSION) || !value.state ||
+  if ((value.version !== 0 && value.version !== 2 && value.version !== BROWSER_WORKSPACE_VERSION) || !value.state ||
     !Array.isArray(value.state.nodeOrder) || !value.state.nodesById) throw new Error('browser_workspace_format_unknown');
   const parsed = parsePersistedWorkspaceState(value.state);
   if (!parsed.nodesById || !parsed.nodeOrder || !parsed.layout) throw new Error('browser_workspace_format_unknown');

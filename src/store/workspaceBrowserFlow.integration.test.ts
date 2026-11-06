@@ -112,7 +112,7 @@ it('explicitly upgrades known legacy facts, Soon, timers and history before reti
   old.state.reviewSession = legacySession;
   localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(old));
   installBrowserWorkspace(store, localStorage);
-  expect(saved().version).toBe(2);
+  expect(saved().version).toBe(3);
   expect(store.getState().reviewSession).toEqual(legacySession);
   expect(store.getState().nodesById.a?.reading ?? null).toEqual(old.state.nodesById.a.reading ?? null);
   expect(store.getState().appActionHistory.undoStack).toEqual(old.state.appActionHistory.undoStack);
@@ -175,7 +175,7 @@ it('keeps grading, original facts and replay history durable across reload', asy
   expect(Object.values(saved().state.browserDailyFlow.reviewEvents)).toHaveLength(3);
 });
 
-it('retains a known legacy review profile when recording its first new grade', async () => {
+it('upgrades a legacy profile with no history to FSRS7 and records only genuine grades', async () => {
   const legacy = saved();
   legacy.version = 0;
   delete legacy.state.browserDailyFlow;
@@ -184,13 +184,16 @@ it('retains a known legacy review profile when recording its first new grade', a
       elapsedDays: 8, scheduledDays: 8, reps: 5, lapses: 1 } };
   localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(legacy));
   installBrowserWorkspace(store, localStorage);
+  expect(saved().state.nodesById.a.review.due).toBe(now);
+  expect(saved().state.nodesById.a.review.stabilityFast).toBe(0);
+  expect(Object.values(saved().state.browserDailyFlow.reviewEvents)).toHaveLength(0);
   await store.getState().setReviewSessionMode('review-first', now);
   await store.getState().startReviewSession(now);
   store.getState().revealReviewAnswer();
   expect(await store.getState().gradeReviewCard(3, now)).toBe(true);
-  expect(saved().state.nodesById.a.review.reps).toBe(6);
+  expect(saved().state.nodesById.a.review.reps).toBe(1);
   expect(await store.getState().undoWorkspaceAction()).toBe(true);
-  expect(saved().state.nodesById.a.review.reps).toBe(5);
+  expect(saved().state.nodesById.a.review.reps).toBe(0);
   expect(await store.getState().redoWorkspaceAction()).toBe(true);
-  expect(saved().state.nodesById.a.review.reps).toBe(6);
+  expect(saved().state.nodesById.a.review.reps).toBe(1);
 });

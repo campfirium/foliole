@@ -8,6 +8,7 @@ import { installBrowserDailyFlowRuntime } from '../shared/platform/runtime/daily
 import { browserWorkspaceTransaction, createBrowserWorkspaceActions } from './workspaceBrowserActions';
 import { installWorkspaceBrowserCommit } from './workspaceBrowserCommit';
 import { BROWSER_WORKSPACE_VERSION, readBrowserWorkspaceEnvelope } from './workspaceBrowserEnvelope';
+import { upgradeBrowserFsrs7 } from './workspaceBrowserFsrs7';
 import { partializeWorkspaceState } from './workspaceStorePersistConfig';
 import type { WorkspacePersistedState, WorkspaceState } from './workspaceStoreTypes';
 
@@ -23,6 +24,7 @@ export function installBrowserWorkspace(store: Store, storage: Storage, initial?
 }
 
 export function replaceBrowserWorkspace(store: Store, storage: Storage, incoming: WorkspacePersistedState & Partial<WorkspaceState>) {
+  const normalized = upgradeBrowserFsrs7(incoming);
   let expectedHash = hashTextBody(storage.getItem(KEY) ?? '');
   const save = (state: WorkspaceState) => {
     const raw = JSON.stringify({ version: BROWSER_WORKSPACE_VERSION,
@@ -38,7 +40,7 @@ export function replaceBrowserWorkspace(store: Store, storage: Storage, incoming
   };
   installBrowserDailyFlowRuntime(null);
   installWorkspaceBrowserCommit({ save });
-  store.setState({ ...incoming, browserDailyFlow: captureBrowserReviewBases(incoming.browserDailyFlow ?? emptyBrowserDailyFlow(), incoming.nodesById), libraryScope: 'browser-workspace', isHydrated: true, workspaceHydrationError: null });
+  store.setState({ ...normalized, browserDailyFlow: captureBrowserReviewBases(normalized.browserDailyFlow ?? emptyBrowserDailyFlow(), normalized.nodesById), libraryScope: 'browser-workspace', isHydrated: true, workspaceHydrationError: null });
   installBrowserDailyFlowRuntime(createBrowserDailyFlowRuntime({
     transaction: (nodes, action) => browserWorkspaceTransaction(store, nodes, action),
     settings: () => {
@@ -47,4 +49,5 @@ export function replaceBrowserWorkspace(store: Store, storage: Storage, incoming
     }
   }));
   store.setState(createBrowserWorkspaceActions(store));
+  if (normalized !== incoming) save(store.getState());
 }

@@ -80,6 +80,7 @@ function toWorkspaceNodeRow(row: SqlRow) {
     review_due: row.due,
     review_last_review_at: row.last_review_at,
     review_stability: row.stability,
+    review_stability_fast: row.stability_fast,
     review_difficulty: row.difficulty,
     review_elapsed_days: row.elapsed_days,
     review_scheduled_days: row.scheduled_days,

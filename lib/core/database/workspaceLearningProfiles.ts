@@ -33,6 +33,7 @@ export function toReviewProfile(row: WorkspaceLearningProfileRow): WorkspaceNode
     lastReviewAt: row.review_last_review_at,
     state: (row.review_state ?? 0) as 0 | 1 | 2 | 3,
     stability: row.review_stability ?? 0,
+    stabilityFast: row.review_stability_fast ?? 0,
     difficulty: row.review_difficulty ?? 0,
     elapsedDays: row.review_elapsed_days ?? 0,
     scheduledDays: row.review_scheduled_days ?? 0,

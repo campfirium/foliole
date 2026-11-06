@@ -25,7 +25,7 @@ const settingRow = z.object({ value_json: z.string() });
 const nodeRow = z.object({ id: z.string(), parent_id: z.string().nullable(), desired_retention: z.number().nullable(), enable_short_term: z.number().nullable() });
 
 /** Node-scoped parameter boundary. Retention inherits from the nearest explicit ancestor; trained weights resolve independently from folder ownership. */
-function parametersForNode(nodeId: string, settings: unknown[], ancestors: unknown[]) {
+export function parametersForNode(nodeId: string, settings: unknown[], ancestors: unknown[]) {
   const row = settings[0];
   const global = normalizeReviewSchedulerSettings(row ? JSON.parse(settingRow.parse(row).value_json) : null);
   const nodesById = Object.fromEntries(ancestors.map(value => {
@@ -43,7 +43,7 @@ export function readNodeReviewParameters(driver: DatabaseDriver, nodeId: string)
 }
 
 function values(nodeId: string, card: SchedulerCard) {
-  return [nodeId, card.due, card.last_review, card.state, card.stability, card.difficulty,
+  return [nodeId, card.due, card.last_review, card.state, card.stability, card.stability_fast ?? 0, card.difficulty,
     card.elapsed_days, card.scheduled_days, card.reps, card.lapses];
 }
 

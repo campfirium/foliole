@@ -25,10 +25,10 @@ export const dailyFlowReadingSchema = z.object({ intervalDurationMs: z.number(),
   nextAt: z.string(), priority: z.number(), readingPosition: z.number(), repetitionCount: z.number(),
   state: z.enum(['active', 'done', 'dismissed', 'locked']) });
 const review = z.object({ due: z.string(), lastReviewAt: z.string().nullable(), state: z.union([
-  z.literal(0), z.literal(1), z.literal(2), z.literal(3)]), stability: z.number(), difficulty: z.number(),
+  z.literal(0), z.literal(1), z.literal(2), z.literal(3)]), stability: z.number(), stabilityFast: z.number().optional(), difficulty: z.number(),
   elapsedDays: z.number(), scheduledDays: z.number(), reps: z.number(), lapses: z.number() });
 const card = z.object({ due: z.string(), last_review: z.string().nullable(), state: z.union([
-  z.literal(0), z.literal(1), z.literal(2), z.literal(3)]), stability: z.number(), difficulty: z.number(),
+  z.literal(0), z.literal(1), z.literal(2), z.literal(3)]), stability: z.number(), stability_fast: z.number().optional(), difficulty: z.number(),
   elapsed_days: z.number(), scheduled_days: z.number(), reps: z.number(), lapses: z.number() });
 export const dailyFlowCommitSchema = z.object({ opId: z.string().min(1), now: z.string().datetime(),
   token: z.object({ scope: z.string(), dayKey: z.string(), revision: z.number().int().nonnegative() }).strict(),

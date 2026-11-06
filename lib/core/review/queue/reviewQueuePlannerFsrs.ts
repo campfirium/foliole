@@ -1,4 +1,4 @@
-import { FSRS6_DEFAULT_WEIGHTS, forgettingCurve } from 'ts-fsrs/models/fsrs-6';
+import { FSRS7_DEFAULT_WEIGHTS, curve } from 'ts-fsrs/models/fsrs-7';
 
 import type { WorkspaceNodePaths } from '../../nodes/workspaceNodePaths.js';
 import { assembleFsrsPushQueue } from '../unifiedPushQueueAssembler.js';
@@ -15,7 +15,7 @@ function resolveFsrsRetrievability(node: ReviewQueueNode, now: string, time: Rev
     return 0;
   }
   const elapsedDays = Math.max((time.timestamp(now) - time.timestamp(card.lastReviewAt)) / (24 * 60 * 60 * 1000), 0);
-  const retrievability = forgettingCurve(FSRS6_DEFAULT_WEIGHTS, elapsedDays, card.stability);
+  const retrievability = curve(FSRS7_DEFAULT_WEIGHTS, elapsedDays, { stability: card.stability, stabilityFast: card.stabilityFast ?? 0, difficulty: card.difficulty }).retrievability;
   return Number.isFinite(retrievability) ? retrievability : 0;
 }
 

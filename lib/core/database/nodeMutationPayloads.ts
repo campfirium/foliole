@@ -10,6 +10,7 @@ export interface NodeReviewPayload {
   lastReviewAt: string | null;
   state: 0 | 1 | 2 | 3;
   stability: number;
+  stabilityFast?: number | undefined;
   difficulty: number;
   elapsedDays: number;
   scheduledDays: number;

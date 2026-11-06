@@ -97,9 +97,10 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
     last_review_at TEXT,
     state INTEGER NOT NULL DEFAULT 0,
     stability REAL NOT NULL DEFAULT 0,
+    stability_fast REAL NOT NULL DEFAULT 0,
     difficulty REAL NOT NULL DEFAULT 0,
-    elapsed_days INTEGER NOT NULL DEFAULT 0,
-    scheduled_days INTEGER NOT NULL DEFAULT 0,
+    elapsed_days REAL NOT NULL DEFAULT 0,
+    scheduled_days REAL NOT NULL DEFAULT 0,
     reps INTEGER NOT NULL DEFAULT 0,
     lapses INTEGER NOT NULL DEFAULT 0
   )`,

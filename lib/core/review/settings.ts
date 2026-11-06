@@ -1,5 +1,5 @@
 import { FSRSVersion } from 'ts-fsrs';
-import { migrateFSRS6Parameters } from 'ts-fsrs/models/fsrs-6';
+import { migrateFSRS7Parameters } from 'ts-fsrs/models/fsrs-7';
 
 import type { FsrsConfig } from './fsrsDefinition.js';
 import { normalizeNewItemLoadBalancingDays } from './newItemReviewSlots.js';
@@ -14,7 +14,7 @@ import {
   type UnifiedPushQueueRulesPatch
 } from './unifiedPushQueueRules.js';
 
-const REVIEW_SCHEDULER_ALGORITHM = `ts-fsrs@${FSRSVersion.replace(/^v/, '')} using FSRS-6.0`;
+const REVIEW_SCHEDULER_ALGORITHM = `ts-fsrs@${FSRSVersion.replace(/^v/, '')} using FSRS-7.0`;
 
 export interface ReviewSchedulerSettings {
   weights?: number[] | undefined;
@@ -158,13 +158,12 @@ export function createReviewSchedulerParameters(
 ) {
   const enableShortTerm = overrides.enableShortTerm ?? settings.enableShortTerm;
   return {
-    weights: migrateFSRS6Parameters(settings.weights),
+    weights: migrateFSRS7Parameters(settings.weights),
     desiredRetention: clampDesiredRetention(overrides.desiredRetention ?? settings.desiredRetention),
     maximumInterval: settings.maximumIntervalDays,
     enableFuzz: true,
     enableShortTerm,
-    fractionalDays: false,
-    numRelearningSteps: 1,
+    fractionalDays: true,
     learningSteps: ['1m', '10m'],
     relearningSteps: ['10m'],
     clearStatsOnForget: false

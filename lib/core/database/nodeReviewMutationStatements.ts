@@ -6,17 +6,19 @@ export const UPSERT_NODE_REVIEW_SQL = `INSERT INTO node_review (
   last_review_at,
   state,
   stability,
+  stability_fast,
   difficulty,
   elapsed_days,
   scheduled_days,
   reps,
   lapses
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(node_id) DO UPDATE SET
   due = excluded.due,
   last_review_at = excluded.last_review_at,
   state = excluded.state,
   stability = excluded.stability,
+  stability_fast = excluded.stability_fast,
   difficulty = excluded.difficulty,
   elapsed_days = excluded.elapsed_days,
   scheduled_days = excluded.scheduled_days,

@@ -28,6 +28,12 @@ function asIntegerInRange(value: unknown, field: string, min: number, max: numbe
   return value;
 }
 
+function asDayInterval(value: unknown, field: string) {
+  const days = asNumber(value, field);
+  if (!Number.isFinite(days) || days < 0 || days > Number.MAX_SAFE_INTEGER) throw new Error(`invalid argument: ${field}`);
+  return days;
+}
+
 function asReviewCardSnapshot(value: unknown, field: string): ApplyReviewGradeInput['cardBefore'] {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error(`invalid argument: ${field}`);
@@ -38,9 +44,10 @@ function asReviewCardSnapshot(value: unknown, field: string): ApplyReviewGradeIn
     last_review: asNullableString(payload.last_review, `${field}.last_review`),
     state: asIntegerInRange(payload.state, `${field}.state`, 0, 3) as 0 | 1 | 2 | 3,
     stability: asNumber(payload.stability, `${field}.stability`),
+    ...(payload.stability_fast === undefined ? {} : { stability_fast: asNumber(payload.stability_fast, `${field}.stability_fast`) }),
     difficulty: asNumber(payload.difficulty, `${field}.difficulty`),
-    elapsed_days: asIntegerInRange(payload.elapsed_days, `${field}.elapsed_days`, 0, Number.MAX_SAFE_INTEGER),
-    scheduled_days: asIntegerInRange(payload.scheduled_days, `${field}.scheduled_days`, 0, Number.MAX_SAFE_INTEGER),
+    elapsed_days: asDayInterval(payload.elapsed_days, `${field}.elapsed_days`),
+    scheduled_days: asDayInterval(payload.scheduled_days, `${field}.scheduled_days`),
     reps: asIntegerInRange(payload.reps, `${field}.reps`, 0, Number.MAX_SAFE_INTEGER),
     lapses: asIntegerInRange(payload.lapses, `${field}.lapses`, 0, Number.MAX_SAFE_INTEGER)
   };

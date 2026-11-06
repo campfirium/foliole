@@ -109,14 +109,14 @@ export async function writeNodeReviewObject(port: DbPort, record: SyncObjectReco
   const payload = asObject(record);
   const incomingReps = integer(payload.reps);
   await port.run(
-    `INSERT INTO node_review (node_id, due, last_review_at, state, stability, difficulty, elapsed_days, scheduled_days, reps, lapses) ` +
-    `VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(node_id) DO UPDATE SET due = excluded.due, ` +
-    `last_review_at = excluded.last_review_at, state = excluded.state, stability = excluded.stability, ` +
+    `INSERT INTO node_review (node_id, due, last_review_at, state, stability, stability_fast, difficulty, elapsed_days, scheduled_days, reps, lapses) ` +
+    `VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(node_id) DO UPDATE SET due = excluded.due, ` +
+    `last_review_at = excluded.last_review_at, state = excluded.state, stability = excluded.stability, stability_fast = excluded.stability_fast, ` +
     `difficulty = excluded.difficulty, elapsed_days = excluded.elapsed_days, scheduled_days = excluded.scheduled_days, ` +
     `reps = excluded.reps, lapses = excluded.lapses`,
     [record.object_id, text(payload.due) ?? record.updated_at, text(payload.last_review_at), integer(payload.state),
-      numberOrNull(payload.stability) ?? 0, numberOrNull(payload.difficulty) ?? 0, integer(payload.elapsed_days),
-      integer(payload.scheduled_days), incomingReps, integer(payload.lapses)]
+      numberOrNull(payload.stability) ?? 0, numberOrNull(payload.stability_fast) ?? 0, numberOrNull(payload.difficulty) ?? 0, numberOrNull(payload.elapsed_days) ?? 0,
+      numberOrNull(payload.scheduled_days) ?? 0, incomingReps, integer(payload.lapses)]
   );
 }
 

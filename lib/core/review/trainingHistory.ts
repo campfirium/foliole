@@ -2,7 +2,7 @@ import type { ReviewTrainingEvent } from './trainingModel.js';
 
 export interface TrainingHistory {
   ratings: Uint32Array;
-  deltas: Uint32Array;
+  deltas: Float64Array;
   times: number[];
 }
 
@@ -13,8 +13,8 @@ export function prepareTrainingHistory(events: readonly ReviewTrainingEvent[]) {
     if (!reviews.length) return;
     histories.push({ ratings: Uint32Array.from(reviews.map(review => review.rating)),
       times: reviews.map(review => review.time),
-      deltas: Uint32Array.from(reviews.map((review, index) => index === 0 ? 0 :
-        Math.floor(review.time / 86400000) - Math.floor(reviews[index - 1]!.time / 86400000))) });
+      deltas: Float64Array.from(reviews.map((review, index) => index === 0 ? 0 :
+        Math.max(0, review.time - reviews[index - 1]!.time) / 86400000)) });
   };
   const ordered = [...events].sort((a, b) => Date.parse(a.reviewedAt) - Date.parse(b.reviewedAt)
     || (a.opId < b.opId ? -1 : a.opId > b.opId ? 1 : 0));
@@ -37,10 +37,9 @@ export function reviewTrainingCutoff(events: readonly ReviewTrainingEvent[]) {
   return times[Math.floor(times.length * 0.8)] ?? Infinity;
 }
 
-/** Pass original rows to wasm; it constructs history prefixes without a JS-side quadratic expansion. */
-export function trainingAnkiArrays(histories: readonly TrainingHistory[], cutoff: number) {
-  const rows = histories.flatMap((history, card) => history.times.flatMap((time, index) =>
-    time < cutoff ? [{ card: BigInt(card + 1), grade: history.ratings[index]!, time: BigInt(time), type: index === 0 ? 0 : 1 }] : []));
-  return { cids: BigInt64Array.from(rows.map(row => row.card)), eases: Uint8Array.from(rows.map(row => row.grade)),
-    ids: BigInt64Array.from(rows.map(row => row.time)), types: Uint8Array.from(rows.map(row => row.type)) };
+/** Convert real events to the upstream CSV without constructing quadratic history prefixes in JS. */
+export function trainingReviewCsv(histories: readonly TrainingHistory[], cutoff: number) {
+  const rows = histories.flatMap((history, card) => history.times.flatMap((time, index) => time < cutoff
+    ? [`${time},${card},${history.ratings[index]},0,${index === 0 ? 0 : 2}`] : []));
+  return ['review_time,card_id,review_rating,review_duration,review_state', ...rows].join('\n');
 }
