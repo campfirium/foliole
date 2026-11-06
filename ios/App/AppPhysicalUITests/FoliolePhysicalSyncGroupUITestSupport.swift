@@ -28,7 +28,7 @@ extension FoliolePhysicalSyncGroupUITests {
         }
         tapButton(named: "Settings", in: app, timeout: 45)
         let sync = app.buttons.matching(
-            NSPredicate(format: "label BEGINSWITH %@ OR label BEGINSWITH %@", "Sync ", "同步 ")
+            NSPredicate(format: "label == %@ OR label == %@", "Sync", "同步")
         ).firstMatch
         XCTAssertTrue(sync.waitForExistence(timeout: 30), "Sync settings row is unavailable.")
         sync.tap()
