@@ -68,7 +68,7 @@ final class FoliolePhysicalDatabaseUpgradeUITests: XCTestCase {
         let searchButton = app.buttons["Search"]
         XCTAssertTrue(waitDismissingSyncNotice(searchButton, in: app, timeout: 45))
         searchButton.tap()
-        let search = app.searchFields["Search synced topics"]
+        let search = app.searchFields["Search topics"]
         XCTAssertTrue(search.waitForExistence(timeout: 30))
         search.tap()
         resolveOptionalCellularDataDecision()

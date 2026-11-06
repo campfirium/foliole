@@ -154,7 +154,7 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
         attachScreenshot(named: "T219-\(target)-saved-topic")
         revealAndExitReading(in: app, matching: token)
         tap("Search", in: app, timeout: 30)
-        let search = app.searchFields["Search synced topics"]
+        let search = app.searchFields["Search topics"]
         XCTAssertTrue(search.waitForExistence(timeout: 30), "T219 search is unavailable.")
         search.tap()
         let searchStarted = CFAbsoluteTimeGetCurrent()
