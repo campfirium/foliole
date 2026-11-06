@@ -5,9 +5,9 @@ import { subscribeConnectedEditorAdapter, type EditorAdapterConnection } from '.
 import { mayHaveOutline, resolveDisplayItems, resolveDisplayOutlineItems } from './DocumentOutlineLayerModel';
 import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
 
-export function useEditorOutlineItems(content: string, connection: EditorAdapterConnection | undefined, nodeId: string | null | undefined) {
+export function useEditorOutlineItems(content: string, connection: EditorAdapterConnection | undefined, nodeId: string | null | undefined, enabled = true) {
   const subscribe = useCallback((listener: () => void) => {
-    if (!connection) return () => undefined;
+    if (!connection || !enabled) return () => undefined;
     let unsubscribe = () => {};
     const connect = () => {
       unsubscribe();
@@ -17,11 +17,12 @@ export function useEditorOutlineItems(content: string, connection: EditorAdapter
     const disconnect = subscribeConnectedEditorAdapter(connection, connect);
     connect();
     return () => { disconnect(); unsubscribe(); };
-  }, [connection]);
-  const getSnapshot = useCallback(() => connection?.current?.outline?.getSnapshot() ?? null, [connection]);
+  }, [connection, enabled]);
+  const getSnapshot = useCallback(() => enabled ? connection?.current?.outline?.getSnapshot() ?? null : null, [connection, enabled]);
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   return useMemo(() => measureWorkspaceDiagnostic('workspace-outline-panel-build', { contentLength: content.length }, () => {
+    if (!enabled) return [];
     if (connection) return snapshot && snapshot.nodeId === nodeId ? resolveDisplayOutlineItems(snapshot.items) : [];
     return mayHaveOutline(content) ? resolveDisplayItems(content) : [];
-  }), [connection, content, nodeId, snapshot]);
+  }), [connection, content, enabled, nodeId, snapshot]);
 }

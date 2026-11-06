@@ -1,6 +1,7 @@
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 
 import type { EditorAdapter, EditorContentChangeMeta, EditorDiffDecorations, EditorSelection, EditorTextAnchorDecoration, EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorAdapterConnection } from '../../features/editor/adapters/editorAdapterConnection';
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import type { EditorRestoreSelectionMode } from '../../features/editor/model/editorRestoreCommand';
@@ -22,6 +23,7 @@ export interface BlockImageMetrics {
 }
 
 export interface DocumentPanelBodyLayoutProps {
+  editorAdapterRef?: EditorAdapterConnection;
   answerEditorDebugId?: string;
   documentMaxWidth: number;
   editorAppearanceKey: string;
@@ -171,6 +173,8 @@ function renderDocumentOutline(props: DocumentPanelBodyLayoutProps) {
   return (
     <DocumentOutlineLayer
       content={props.editorContent}
+      editorAdapterRef={props.editorAdapterRef}
+      contextNodeId={props.editorNodeId}
       documentMaxWidth={props.documentMaxWidth}
       onRevealPosition={props.onRevealDocumentPosition}
       onResolveDocumentPositionAtViewportY={props.onResolveDocumentPositionAtViewportY}

@@ -76,7 +76,7 @@ export function OutlineList({
       <nav aria-label={t('desktop.document.outline')} className="py-1">
         <ol className="m-0 list-none space-y-1 p-0">
           {items.map((item, index) => (
-            <li key={`${item.from}-${item.text}`}>
+            <li key={item.id ?? `${item.from}-${item.text}`}>
               <OutlineItem
                 isActive={index === activeIndex}
                 {...(index === activeIndex ? { itemRef: setActiveItemRef } : {})}

@@ -122,3 +122,47 @@ test('retains native sidebar focus through editor changes and resets it for anot
     currentNavigation: true, nativeLineMove: true, documentSwitch: true, externalReplacement: true
   }, null, 2));
 });
+
+test('updates sidebar and floating outlines together through one native editing session', async ({ desktopWindow: page }) => {
+  const sidebar = await prepare(page);
+  const toggle = page.locator('[data-workspace-sidebar-toggle="right"]:visible').first();
+  await toggle.click();
+  const zone = page.getByLabel('Document outline hover zone');
+  const bounds = await zone.boundingBox();
+  if (!bounds) throw new Error('outline hover zone missing');
+  await page.mouse.move(bounds.x + bounds.width - 20, bounds.y + 160);
+  const floating = page.getByRole('navigation', { name: 'Topic outline', exact: true });
+  await expect(floating).toBeVisible();
+  await expect(floating.locator('..')).toHaveCSS('opacity', '0.8');
+  const original = await floating.getByRole('button', { name: 'Target', exact: true }).elementHandle();
+  await floating.getByRole('button', { name: 'Target', exact: true }).focus();
+  await edit(page, initial.indexOf('Body'), initial.indexOf('Body'), 'More body\n');
+  const from = (await currentContent(page)).indexOf('Target');
+  await edit(page, from, from + 'Target'.length, 'Joint target');
+  expect(await original!.evaluate(element => element.isConnected && document.activeElement === element)).toBe(true);
+  await floating.getByRole('button', { name: 'Joint target', exact: true }).evaluate(element => (element as HTMLButtonElement).click());
+  await expect.poll(() => page.evaluate(() => window.__folioleDebug!.getEditorSelection('prompt-editor')?.from))
+    .toBe((await currentContent(page)).indexOf('Joint target'));
+  fs.mkdirSync(output, { recursive: true });
+  await page.screenshot({ path: path.join(output, 'joint-current.png'), animations: 'disabled' });
+  const twin = await floating.getByRole('button', { name: 'Twin', exact: true }).nth(1).elementHandle();
+  const first = (await currentContent(page)).indexOf('## Twin');
+  await edit(page, first, first, '## Twin\nNew duplicate\n\n');
+  await expect(floating.getByRole('button', { name: 'Twin', exact: true })).toHaveCount(3);
+  expect(await twin!.evaluate(element => element.isConnected)).toBe(true);
+  await toggle.click();
+  await expect(sidebar.getByRole('button', { name: 'Twin', exact: true })).toHaveCount(3);
+  await sidebar.getByRole('button', { name: 'Joint target', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.__folioleDebug!.getEditorSelection('prompt-editor')?.from))
+    .toBe((await currentContent(page)).indexOf('Joint target'));
+  await page.screenshot({ path: path.join(output, 'joint-sidebar-current.png'), animations: 'disabled' });
+  await page.evaluate(async id => { await window.__folioleWorkspaceDebug!.openNode(id); }, beta);
+  await expect(sidebar.getByRole('button', { name: 'Target', exact: true })).toBeVisible();
+  await toggle.click();
+  const nextBounds = await zone.boundingBox();
+  if (!nextBounds) throw new Error('outline hover zone missing after document switch');
+  await page.mouse.move(nextBounds.x + nextBounds.width - 20, nextBounds.y + 160);
+  await expect(floating.getByRole('button', { name: 'Target', exact: true })).toBeVisible();
+  expect(await original!.evaluate(element => element.isConnected)).toBe(false);
+  await expect(floating.getByRole('button', { name: 'Joint target', exact: true })).toHaveCount(0);
+});

@@ -1,5 +1,6 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 
+import type { EditorAdapterConnection } from '../../features/editor/adapters/editorAdapterConnection';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 import { OutlineList } from './DocumentOutlineLayerList';
@@ -7,17 +8,18 @@ import {
   getOutlineClosedLayerWidth,
   getOutlineLayerWidth,
   mayHaveOutline,
-  type OutlineDisplayItem,
   type OutlineHorizontalMetrics,
   resolveActiveIndex,
-  resolveDisplayItems,
   resolveOutlineHorizontalMetrics
 } from './DocumentOutlineLayerModel';
 import { useOutlinePanelPositioning } from './documentOutlineLayerPositioning';
+import { useEditorOutlineItems } from './useEditorOutlineItems';
 import { useOutlineHoverRegion } from './useOutlineHoverRegion';
 
 interface DocumentOutlineLayerProps {
   content: string;
+  editorAdapterRef?: EditorAdapterConnection | undefined;
+  contextNodeId?: string | null | undefined;
   documentMaxWidth: number;
   onRevealPosition: (position: number) => void;
   onResolveDocumentPositionAtViewportY: (clientY: number) => number | null;
@@ -40,8 +42,7 @@ function getOutlineLayerStyle(
 
 function useOutlineHoverState(
   documentMaxWidth: number,
-  onResolveDocumentPositionAtViewportY: (clientY: number) => number | null,
-  resolveOutlineItems: () => OutlineDisplayItem[]
+  onResolveDocumentPositionAtViewportY: (clientY: number) => number | null
 ) {
   const [anchorPosition, setAnchorPosition] = useState(0);
   const [horizontalMetrics, setHorizontalMetrics] = useState<OutlineHorizontalMetrics>({
@@ -65,9 +66,6 @@ function useOutlineHoverState(
     openDelayTimerRef.current = window.setTimeout(() => {
       openDelayTimerRef.current = null;
       if (!layerRef.current) {
-        return;
-      }
-      if (resolveOutlineItems().length === 0) {
         return;
       }
       const rect = layerRef.current.getBoundingClientRect();
@@ -99,38 +97,21 @@ function useOutlineHoverState(
   };
 }
 
-function useOutlineSnapshot(content: string) {
-  const [outlineSnapshot, setOutlineSnapshot] = useState<{
-    content: string;
-    items: OutlineDisplayItem[];
-  } | null>(null);
-  const resolveOutlineItems = useCallback(() => {
-    if (outlineSnapshot?.content === content) {
-      return outlineSnapshot.items;
-    }
-    const nextItems = resolveDisplayItems(content);
-    setOutlineSnapshot({ content, items: nextItems });
-    return nextItems;
-  }, [content, outlineSnapshot]);
-  return { outlineSnapshot, resolveOutlineItems };
-}
-
 export function DocumentOutlineLayer({
   content,
   documentMaxWidth,
+  editorAdapterRef,
+  contextNodeId,
   onRevealPosition,
   onResolveDocumentPositionAtViewportY
 }: DocumentOutlineLayerProps) {
   const t = useTranslation();
   const deferredContent = useDeferredValue(content);
   const hasOutlineCandidate = useMemo(() => mayHaveOutline(deferredContent), [deferredContent]);
-  const { outlineSnapshot, resolveOutlineItems } = useOutlineSnapshot(content);
-  const { anchorPosition, closeOutline, horizontalMetrics, isOpen, layerRef, openOutline } =
-    useOutlineHoverState(documentMaxWidth, onResolveDocumentPositionAtViewportY, resolveOutlineItems);
-  const resolvedOutlineItems = useMemo(() => {
-    if (outlineSnapshot?.content === content) return outlineSnapshot.items;
-    return isOpen ? resolveDisplayItems(content) : [];
-  }, [content, isOpen, outlineSnapshot]);
+  const { anchorPosition, closeOutline, horizontalMetrics, isOpen: openRequested, layerRef, openOutline } =
+    useOutlineHoverState(documentMaxWidth, onResolveDocumentPositionAtViewportY);
+  const resolvedOutlineItems = useEditorOutlineItems(content, editorAdapterRef, contextNodeId, openRequested);
+  const isOpen = openRequested && resolvedOutlineItems.length > 0;
   const activeIndex = useMemo(
     () => resolveActiveIndex(resolvedOutlineItems, anchorPosition),
     [anchorPosition, resolvedOutlineItems]

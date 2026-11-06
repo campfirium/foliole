@@ -1,3 +1,4 @@
+import { useCallback, useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
@@ -5,6 +6,7 @@ import type { EditorDiffDecorations } from '../../features/editor/adapters/Edito
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorTextAnchorDecoration } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
+import { setConnectedEditorAdapter, type EditorAdapterConnection } from '../../features/editor/adapters/editorAdapterConnection';
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import type { EditorRestoreSelectionMode } from '../../features/editor/model/editorRestoreCommand';
 import type { EditorNodeLinkPreviewRequest } from '../../features/editor/model/nodeLinkPreview';
@@ -82,6 +84,11 @@ export function DocumentPanelBody({
   showDocumentOutline = true,
   ...props
 }: DocumentPanelBodyProps) {
+  const editorAdapterRef = useRef<EditorAdapter | null>(null) satisfies EditorAdapterConnection;
+  const onEditorReady = useCallback((adapter: EditorAdapter | null) => {
+    setConnectedEditorAdapter(editorAdapterRef, adapter);
+    props.onEditorReady?.(adapter);
+  }, [props.onEditorReady]);
   const finishDiagnostic = startDocumentPanelDiagnostic('document-panel-body-render', {
     editorContentLength: props.editorContent.length,
     editorNodeId: props.editorNodeId,
@@ -122,7 +129,7 @@ export function DocumentPanelBody({
       className={cn('flex min-h-0 min-w-0 w-full flex-1 pl-4 pr-0 pt-2 pb-0 max-[1080px]:pl-2 max-[1080px]:pr-0 max-[1080px]:pt-2 max-[1080px]:pb-0')}
       ref={layoutRef}
     >
-      {renderDocumentPanelBodyLayout(bodyProps)}
+      {renderDocumentPanelBodyLayout({ ...bodyProps, editorAdapterRef, onEditorReady })}
     </div>
   );
 }
