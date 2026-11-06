@@ -1,4 +1,3 @@
-import { createLucideIcon, PanelRight } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -7,18 +6,11 @@ import { WindowTitleBarRightPanelActions } from './WindowTitleBarRightPanelActio
 import { resolveRightPanelAvailableWidth, resolveVisibleRightPanelCount } from './windowTitleBarRightPanelVisibility';
 import { normalizeWorkspaceRightPanelOrder } from './workspaceRightPanelOrder';
 import { loadWorkspaceRightPanelOrderPreference, saveWorkspaceRightPanelOrderPreference } from './workspaceRightPanelPreference';
+import { WorkspaceSidebarIcon } from './WorkspaceSidebarIcon';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
-
-const TITLEBAR_ICON_SIZE = 16;
-const TITLEBAR_ICON_STROKE = 1.75;
-const CollapsedRightSidebarIcon = createLucideIcon('CollapsedRightSidebar', [
-  ['rect', { width: 18, height: 18, x: 3, y: 3, rx: 2, key: 'frame' }],
-  ['path', { d: 'M17 7v10', key: 'panel' }]
-]);
 
 function RightSidebarToggleButton({ active, onClick }: { active: boolean; onClick: () => void }) {
   const t = useTranslation();
-  const Icon = active ? PanelRight : CollapsedRightSidebarIcon;
   return (
     <button
       data-workspace-sidebar-toggle="right"
@@ -28,7 +20,7 @@ function RightSidebarToggleButton({ active, onClick }: { active: boolean; onClic
       onClick={onClick}
       type="button"
     >
-      <Icon aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+      <WorkspaceSidebarIcon active={active} side="right" />
     </button>
   );
 }

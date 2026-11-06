@@ -1,7 +1,4 @@
-import { PanelLeft, PanelRight } from 'lucide-react';
-
-const TITLEBAR_ICON_SIZE = 16;
-const TITLEBAR_ICON_STROKE = 1.75;
+import { WorkspaceSidebarIcon } from './WorkspaceSidebarIcon';
 
 interface WindowSidebarToggleButtonProps {
   active: boolean;
@@ -25,11 +22,7 @@ export function WindowSidebarToggleButton({
       onClick={onClick}
       type="button"
     >
-      {side === 'left' ? (
-        <PanelLeft aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-      ) : (
-        <PanelRight aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
-      )}
+      <WorkspaceSidebarIcon active={active} side={side} />
     </button>
   );
 }

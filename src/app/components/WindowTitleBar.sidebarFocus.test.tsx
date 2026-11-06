@@ -23,9 +23,14 @@ it('keeps keyboard focus on the left toggle while closing and reopening the list
   }
   renderWithLocalization(<Harness />);
   const toggle = screen.getByRole('button', { name: 'Toggle left panel' });
+  const expandedIcon = toggle.querySelector('svg')!.innerHTML;
   toggle.focus();
   fireEvent.click(toggle);
   expect(screen.getByRole('button', { name: 'Toggle left panel' })).toHaveFocus();
+  expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  expect(toggle.querySelector('svg')!.innerHTML).not.toBe(expandedIcon);
   fireEvent.click(screen.getByRole('button', { name: 'Toggle left panel' }));
   expect(screen.getByRole('button', { name: 'Toggle left panel' })).toHaveFocus();
+  expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  expect(toggle.querySelector('svg')!.innerHTML).toBe(expandedIcon);
 });
