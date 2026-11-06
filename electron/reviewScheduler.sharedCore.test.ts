@@ -42,22 +42,24 @@ function createInitialCard() {
 }
 
 function createReviewedCard() {
-  return {
-    due: NOW,
-    last_review: '2026-03-01T00:00:00.000Z',
-    state: 2 as const,
-    stability: 4.5,
-    difficulty: 4.2,
-    elapsed_days: 5,
-    scheduled_days: 5,
-    reps: 6,
-    lapses: 1
-  };
+  const scheduler = createScheduler(0.9);
+  let card: SchedulerCard = createInitialSchedulerCard('2026-02-24T00:00:00.000Z');
+  const ratings = ['Good', 'Good', 'Again', 'Good', 'Good', 'Good'] as const;
+  ratings.forEach((rating, index) => {
+    card = scheduler.grade({
+      card,
+      rating,
+      now: new Date(Date.UTC(2026, 1, 24 + index)).toISOString()
+    }).card;
+  });
+  expect(card).toMatchObject({ reps: 6, lapses: 1 });
+  return card;
 }
 
 const PREVIEW_RATINGS = ['Again', 'Hard', 'Good', 'Easy'] as const;
 const CARD_NUMERIC_FIELDS = [
   'stability',
+  'stability_fast',
   'difficulty',
   'elapsed_days',
   'scheduled_days',
@@ -84,7 +86,7 @@ function expectValidReviewCard(card: SchedulerCard) {
 function expectReviewProgression(before: SchedulerCard, result: SchedulerGradeResult) {
   expect(result.reviewed_at).toBe(NOW);
   expectValidReviewCard(result.card);
-  expect(result.card.reps).toBeGreaterThanOrEqual(before.reps);
+  expect(result.card.reps).toBe(before.reps + 1);
   expect(result.card.lapses).toBeGreaterThanOrEqual(before.lapses);
 }
 
@@ -183,7 +185,7 @@ it('rejects negative scheduler card numbers at the shared core contract boundary
         scheduled_days: -1
       }
     }))
-  ).toThrow('Invalid scheduler field "card.scheduled_days": expected non-negative integer');
+  ).toThrow('Invalid scheduler field "card.scheduled_days": expected non-negative number');
 });
 
 it('rejects invalid scheduler grades at the shared core contract boundary', () => {
