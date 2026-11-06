@@ -6,6 +6,7 @@ import { subscribeMainWindowBlur } from '../../shared/platform/windowControls';
 import { waitForWorkspaceContentCommands } from '../../store/workspaceContentCommands';
 import { beginWorkspaceContentEditingSession, endWorkspaceContentEditingSession,
   type WorkspaceContentEditingSession } from '../../store/workspaceContentEditingSession';
+import { waitForNodeCreateConfirmations } from '../../store/workspaceNodeContentVersionGuard';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { drainPendingNodeContentRuntimePersist } from '../../store/workspaceStoreContentRuntimePersist';
 import type { useEditorDraftSync } from '../hooks/useEditorDraftSync';
@@ -57,6 +58,8 @@ function useFinishEditingSession(active: BoundaryRef) {
       await input.settleBufferedInput(session.nodeId);
       if (active.current !== boundary || useWorkspaceStore.getState().libraryScope !== session.libraryScope) return;
       input.flushDraftSynchronously();
+      await waitForNodeCreateConfirmations([session.nodeId]);
+      if (active.current !== boundary || useWorkspaceStore.getState().libraryScope !== session.libraryScope) return;
       if (!await drainPendingNodeContentRuntimePersist(session.nodeId)) {
         boundary.finishing = false;
         session.closing = false;

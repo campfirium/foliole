@@ -6,7 +6,6 @@ import path from 'node:path';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { useSyncExternalStore } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { createStore } from 'zustand/vanilla';
 
 let root = '';
 let deliverCreation: () => void;
@@ -23,36 +22,42 @@ vi.mock('../ipc/workspaceContentChangedEvents.js', () => ({ notifyWorkspaceConte
 vi.mock('../../src/shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => invoke }));
 
 import { saveDefaultLibraryHome } from '../ipc/libraryPathBootstrap.js';
+import { handleContentEditingSession } from '../ipc/storageContentEditingSession.js';
 import { handleEditorHoldCommand } from '../ipc/storageEditorHoldCommands.js';
 import { handleNodeMutationCommand } from '../ipc/storageNodeMutationCommands.js';
 
-import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { currentLibraryScope } from './attachmentResourceDescription.js';
+import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 
 async function invoke(command: string, args: Record<string, unknown>) {
+  if (command === 'set_node_content_editing_session') return runWithDatabaseConnectionOwner(() => handleContentEditingSession(args));
   if (command === 'retain_node_editor_base') {
     await holdGate;
     if (rejectHold) throw new Error('hold_failed');
-    return handleEditorHoldCommand(command, args);
+    return runWithDatabaseConnectionOwner(() => handleEditorHoldCommand(command, args));
   }
-  if (command === 'release_node_editor_base') return handleEditorHoldCommand(command, args);
+  if (command === 'release_node_editor_base') return runWithDatabaseConnectionOwner(() => handleEditorHoldCommand(command, args));
   if (command === 'create_topic') {
-    const result = handleNodeMutationCommand(command, args);
+    const delivery = new Promise<void>(resolve => { deliverCreation = resolve; });
+    const result = await runWithDatabaseConnectionOwner(() => handleNodeMutationCommand(command, args));
     creationVersion = (result as { nodes: Array<{ currentVersionId: string }> }).nodes[0]!.currentVersionId;
-    await new Promise<void>(resolve => { deliverCreation = resolve; });
+    await delivery;
     return result;
   }
   if (command === 'update_node_content_with_anchors') {
     if (rejectSave) { rejectSave = false; return null; }
     if (args.edit) submitted.push(args.edit as typeof submitted[number]);
-    return handleNodeMutationCommand(command, args);
+    return runWithDatabaseConnectionOwner(() => handleNodeMutationCommand(command, args));
   }
   throw new Error(`Unexpected editor command: ${command}`);
 }
 
 // Cross the host's NodeNext compilation boundary using the renderer's actual modules.
 const rendererModule = (modulePath: string) => import(modulePath);
-const { useProtectedWorkspaceEditorDraft } = await rendererModule('../../src/app/components/useProtectedWorkspaceEditorDraft.ts');
+const { useDocumentPanelDraftProps } = await rendererModule('../../src/app/components/useDocumentPanelDraftProps.ts');
+const { editorHandoffPanelProps } = await rendererModule('../../src/app/components/documentPanelDraft.test-support.ts');
+const { useWorkspaceStore } = await rendererModule('../../src/store/workspaceStore.ts');
 const { createWorkspaceNodeActions } = await rendererModule('../../src/store/workspaceStoreNodeActions.ts');
 const { createWorkspaceNodeActionsFixture } = await rendererModule('../../src/store/workspaceStoreNodeActions.test-support.ts');
 const { drainPendingNodeContentRuntimePersists, resetPendingNodeContentRuntimePersistsForTests } =
@@ -83,19 +88,17 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true });
 });
 
-function editorFixture() {
-  const store = createStore<ReturnType<typeof createWorkspaceNodeActionsFixture>>(() => createWorkspaceNodeActionsFixture());
+export function editorFixture() {
+  const store = useWorkspaceStore;
+  store.setState({ ...createWorkspaceNodeActionsFixture(), libraryScope: currentLibraryScope() });
   const actions = createWorkspaceNodeActions(store.setState, store.getState);
   const commits: boolean[] = [];
   const view = renderHook(() => {
     const state = useSyncExternalStore(store.subscribe, store.getState);
-    const node = state.activeNodeId ? state.nodesById[state.activeNodeId] : null;
-    const draft = useProtectedWorkspaceEditorDraft({ nodeId: node?.id ?? null, committedContent: node?.content ?? '',
-      committedVersionId: node?.currentVersionId,
-      onCommit: (id: string, content: string, options: unknown) => actions.updateNodeContent(id, content, options) });
-    const ready = draft.holdReady;
+    const draft = useDocumentPanelDraftProps(editorHandoffPanelProps(state, actions.updateNodeContent));
+    const ready = !draft.isEditorReadOnly;
     commits.push(ready);
-    return { ...draft, ready };
+    return { ...draft, ready, handleEditorInput: draft.onEditorInput, handleEditorChange: draft.onEditorChange };
   });
   return { store, actions, view, commits };
 }
@@ -207,3 +210,6 @@ it.each(['input-evidence', 'pending-draft', 'save-queue'] as const)(
     closeDatabaseConnection();
     expect(openDatabaseConnection().sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(nodeId)).toBe(continued);
   });
+
+const { registerCreationSessionExitTests } = await import('./editorCreationSessionExit.test-support.js');
+registerCreationSessionExitTests(editorFixture, () => deliverCreation, () => { rejectSave = true; });
