@@ -139,13 +139,18 @@ async function seedEditorHandoff() {
 }
 
 function renderHandoffDraft<T>(useDraft: () => T, renderEditor?: (draft: T) => ReactNode) {
-  if (!renderEditor) return renderHook(useDraft);
+  if (!renderEditor) {
+    const view = renderHook(useDraft);
+    return { ...view, rerender: () => view.rerender() };
+  }
   let renderedDraft: T;
   function EditorSurface() {
     renderedDraft = useDraft();
     return renderEditor?.(renderedDraft) ?? null;
   }
-  return { ...render(createElement(EditorSurface)), result: { get current() { return renderedDraft; } } };
+  const view = render(createElement(EditorSurface));
+  return { ...view, rerender: () => view.rerender(createElement(EditorSurface)),
+    result: { get current() { return renderedDraft; } } };
 }
 
 async function readHandoffBodies(port: ReturnType<typeof createBetterSqliteDbPort>, current: () => Promise<NativeSyncNodeRecord>) {
@@ -153,8 +158,17 @@ async function readHandoffBodies(port: ReturnType<typeof createBetterSqliteDbPor
     ...(await readTopicAlternativeRecords(port, 'topic')).map(row => row.body_text)]);
 }
 
+function useHandoffPanel(state: Parameters<typeof editorHandoffPanelProps>[0],
+  onChange: Parameters<typeof editorHandoffPanelProps>[1], ready: boolean[],
+  overrides?: () => Partial<Parameters<typeof useDocumentPanelDraftProps>[0]>) {
+  const panel = useDocumentPanelDraftProps({ ...editorHandoffPanelProps(state, onChange), ...overrides?.() });
+  ready.push(!panel.isEditorReadOnly);
+  return { ...panel, handleEditorInput: panel.onEditorInput, handleEditorChange: panel.onEditorChange };
+}
+
 export async function createEditorHandoffFixture(sharedStore = false, editingSession = false,
-  renderEditor?: (draft: ReturnType<typeof useDocumentPanelDraftProps>) => ReactNode) {
+  renderEditor?: (draft: ReturnType<typeof useDocumentPanelDraftProps>) => ReactNode,
+  panelOverrides?: () => Partial<Parameters<typeof useDocumentPanelDraftProps>[0]>) {
   const { peer, port, base } = await seedEditorHandoff();
   const initial = await initialEditorState(base, port);
   if (editingSession) initial.libraryScope = currentLibraryScope();
@@ -168,11 +182,7 @@ export async function createEditorHandoffFixture(sharedStore = false, editingSes
     const state = useSyncExternalStore<ReturnType<typeof createWorkspaceNodeActionsFixture>>(store.subscribe, store.getState);
     useWorkspaceActiveNodeDocument(sharedStore ? state.activeNodeId : null);
     const current = state.nodesById[state.activeNodeId!];
-    if (editingSession) {
-      const panel = useDocumentPanelDraftProps(editorHandoffPanelProps(state, actions.updateNodeContent));
-      ready.push(!panel.isEditorReadOnly);
-      return { ...panel, handleEditorInput: panel.onEditorInput, handleEditorChange: panel.onEditorChange };
-    }
+    if (editingSession) return useHandoffPanel(state, actions.updateNodeContent, ready, panelOverrides);
     const draft = useProtectedWorkspaceEditorDraft({ nodeId: current.id, committedContent: current.content,
       committedVersionId: current.currentVersionId,
       onCommit: (id: string, content: string, options: unknown) => actions.updateNodeContent(id, content, options) });

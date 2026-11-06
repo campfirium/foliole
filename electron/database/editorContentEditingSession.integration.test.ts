@@ -222,3 +222,6 @@ it.each(['exit', 'refocus', 'failure'])('waits for an asynchronous text command 
 
 const { registerEditorCompositionExitTests } = await import('./editorCompositionExit.test-support.js');
 registerEditorCompositionExitTests();
+
+const { registerEditorReadingModeExitTests } = await import('./editorReadingModeExit.test-support.js');
+registerEditorReadingModeExitTests();

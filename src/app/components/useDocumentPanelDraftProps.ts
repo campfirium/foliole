@@ -34,8 +34,9 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
     ...(props.onRegisterEditorDraftFlush ? { onRegisterFlush: props.onRegisterEditorDraftFlush } : {})
   });
   const holdReady = editorDraft.holdReady;
+  const sessionReadOnly = props.isEditorReadOnly || Boolean(props.isImmersiveMode && !props.isImmersiveEditing);
   const { handleEditorFocus, handleEditorInput, handlePendingInput, finishEditing } =
-    useWorkspaceContentEditingSession(draftNodeId, props.isEditorReadOnly, editorDraft);
+    useWorkspaceContentEditingSession(draftNodeId, sessionReadOnly, editorDraft);
   const handleExitEditorFocus = useCallback(() => {
     void finishEditing();
     return props.onExitEditorFocus?.() ?? false;
