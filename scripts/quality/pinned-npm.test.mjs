@@ -196,10 +196,11 @@ describe('pinned npm quality tooling', () => {
   it('launches Windows command shims through cmd.exe', () => {
     const runner = successfulRunner();
 
-    activatePinnedNpm({ runner, platform: 'win32', windowsShell: 'cmd.exe' });
+    activatePinnedNpm({ runner, platform: 'win32', windowsShell: 'cmd.exe',
+      nodeExecutable: 'C:\\nodejs\\node.exe' });
 
     expect(runner.mock.calls.map(([command, args]) => [command, args])).toEqual([
-      ['cmd.exe', ['/d', '/s', '/c', `corepack.cmd enable npm --install-directory ${path.dirname(process.execPath)}`]],
+      ['cmd.exe', ['/d', '/s', '/c', 'corepack.cmd enable npm --install-directory C:\\nodejs']],
       ['cmd.exe', ['/d', '/s', '/c', `corepack.cmd install --global ${PINNED_NPM.descriptor}`]],
       ['cmd.exe', ['/d', '/s', '/c', 'npm.cmd --version']]
     ]);
