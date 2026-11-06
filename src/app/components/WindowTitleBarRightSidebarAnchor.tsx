@@ -1,4 +1,4 @@
-import { PanelRight } from 'lucide-react';
+import { createLucideIcon, PanelRight } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -11,9 +11,14 @@ import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 const TITLEBAR_ICON_SIZE = 16;
 const TITLEBAR_ICON_STROKE = 1.75;
+const CollapsedRightSidebarIcon = createLucideIcon('CollapsedRightSidebar', [
+  ['rect', { width: 18, height: 18, x: 3, y: 3, rx: 2, key: 'frame' }],
+  ['path', { d: 'M17 7v10', key: 'panel' }]
+]);
 
 function RightSidebarToggleButton({ active, onClick }: { active: boolean; onClick: () => void }) {
   const t = useTranslation();
+  const Icon = active ? PanelRight : CollapsedRightSidebarIcon;
   return (
     <button
       data-workspace-sidebar-toggle="right"
@@ -23,7 +28,7 @@ function RightSidebarToggleButton({ active, onClick }: { active: boolean; onClic
       onClick={onClick}
       type="button"
     >
-      <PanelRight aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
+      <Icon aria-hidden="true" size={TITLEBAR_ICON_SIZE} strokeWidth={TITLEBAR_ICON_STROKE} />
     </button>
   );
 }
@@ -68,9 +73,6 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
   return (
     <div className="window-titlebar-right-anchor-shell relative z-local-control" data-collapsed={isCollapsed}>
       <div className="window-titlebar-right-content" data-collapsed={isCollapsed}>
-        <div className="window-titlebar-right-expanded-action">
-          <RightSidebarToggleButton active={!isCollapsed} onClick={props.onToggleRightSidebarVisibility} />
-        </div>
         <div className="window-titlebar-right-zone max-[1279px]:hidden" hidden={isCollapsed} style={{ pointerEvents: 'none' }}>
           {isCollapsed
             ? null
@@ -81,6 +83,9 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
                 setOrderedPanelIds={orderState.setOrderedPanelIds}
                 visiblePanelCount={visiblePanelCount}
               />}
+        </div>
+        <div className="window-titlebar-right-expanded-action">
+          <RightSidebarToggleButton active={!isCollapsed} onClick={props.onToggleRightSidebarVisibility} />
         </div>
       </div>
     </div>

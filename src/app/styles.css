@@ -813,7 +813,6 @@ b {
   flex: 1 1 auto;
   justify-content: flex-start;
   min-width: 0;
-  padding-right: calc(var(--window-titlebar-controls-width, 138px) + var(--window-titlebar-controls-gap, 8px));
   pointer-events: auto;
   -webkit-app-region: no-drag;
 }
@@ -833,7 +832,7 @@ b {
 .window-titlebar-right-anchor-shell {
   align-self: stretch;
   display: grid;
-  grid-template-columns: 1px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
   pointer-events: none;
   width: 100%;
@@ -851,18 +850,16 @@ b {
 
 .window-titlebar-right-content {
   align-self: stretch;
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
+  display: flex;
+  justify-content: flex-end;
   min-width: 0;
-}
-
-.window-titlebar-right-content[data-collapsed='true'] {
-  grid-template-columns: 32px;
+  padding-right: calc(var(--window-titlebar-controls-width, 138px) + max(8px, var(--window-titlebar-controls-gap, 8px)));
 }
 
 .window-titlebar-right-expanded-action {
   align-items: center;
   display: flex;
+  flex: 0 0 32px;
   justify-content: center;
   pointer-events: auto;
   -webkit-app-region: no-drag;

@@ -26,13 +26,19 @@ test('collapsed right sidebar toggle has breathing room at the window edge and r
     expect((await readSpacing()).gap).toBeLessThanOrEqual(18);
   }
   expect((await readSpacing()).centered).toBeLessThanOrEqual(1);
+  const collapsedBounds = await toggle.boundingBox();
   await desktopWindow.screenshot({ path: '.tmp/artifacts/right-sidebar-collapsed-spacing.png' });
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   await expect(titlebar.locator('.window-titlebar-right-panel-actions')).toBeVisible();
   const panelBounds = await titlebar.locator('.window-titlebar-right-panel-actions').boundingBox();
   const toggleBounds = await toggle.boundingBox();
-  expect(toggleBounds!.x + toggleBounds!.width).toBeLessThanOrEqual(panelBounds!.x);
+  expect(panelBounds!.x + panelBounds!.width).toBeLessThanOrEqual(toggleBounds!.x);
+  expect(Math.abs(toggleBounds!.x - collapsedBounds!.x)).toBeLessThanOrEqual(1);
+  if (await titlebar.getAttribute('data-window-controls') !== 'custom') {
+    expect((await readSpacing()).gap).toBeGreaterThanOrEqual(16);
+    expect((await readSpacing()).gap).toBeLessThanOrEqual(18);
+  }
   await desktopWindow.screenshot({ path: '.tmp/artifacts/right-sidebar-expanded-spacing.png' });
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
