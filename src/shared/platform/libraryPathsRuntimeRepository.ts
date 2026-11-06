@@ -164,6 +164,11 @@ export async function updateRuntimeLibraryPathSetting(
   }
 
   try {
+    if (location === 'library_home' &&
+        await (window as Window & { __folioleFlushPendingEditorDraftBeforeClose?: () => Promise<boolean> })
+          .__folioleFlushPendingEditorDraftBeforeClose?.() === false) {
+      throw new Error('editor draft could not be saved before changing library');
+    }
     const args: Record<string, unknown> = {
       location,
       path: nextPath
