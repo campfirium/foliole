@@ -3,11 +3,12 @@ import { createHash } from 'node:crypto';
 export function handlePrebuildPlayRequest(f, { request, response, route, body, send }) {
   const reply = value => { send(value); return true; };
   if (request.method === 'POST' && route === 'edits') {
-    const id = String(++f.nextEdit); f.edits.add(id);
+    if (f.createResponse) { response.statusCode = f.createResponse.status; response.end(f.createResponse.body); return true; }
+    const id = f.nextUploadEditId ?? String(++f.nextEdit); f.edits.add(id);
     if (f.loseCreate) { f.loseCreate = false; response.destroy(); return true; }
     return reply({ id });
   }
-  const inventory = route.match(/^edits\/(\d+)(.*)$/u);
+  const inventory = route.match(/^edits\/([^/:]+)(.*)$/u);
   if (!inventory) return false;
   if (request.method === 'DELETE') {
     f.edits.delete(inventory[1]);

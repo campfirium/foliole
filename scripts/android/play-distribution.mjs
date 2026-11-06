@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { validPlayEditId, playEditPath } from './play-edit-id.mjs';
 import { readPlayVersionHistory } from './play-version-history.mjs';
 import { PLAY_PACKAGE, PLAY_TRACK, readPlayReleases, requireNoPendingReview } from './play-api.mjs';
 
@@ -21,7 +22,7 @@ export function verifyPlayCandidate(state, { sourceSha, runId, version }) {
       state.sourceSha !== sourceSha || state.acceptedSha !== sourceSha || state.runId !== String(runId) ||
       state.version !== version || state.packageName !== PLAY_PACKAGE || state.track !== PLAY_TRACK ||
       !Number.isSafeInteger(state.versionCode) || state.versionCode <= 2 || state.versionCode > 2100000000 ||
-      (state.schemaVersion === 1 ? !/^\d+$/u.test(state.editId ?? '') : (state.editId !== undefined && !/^\d+$/u.test(state.editId)))) throw new Error('Saved Play candidate identity differs');
+      (state.schemaVersion === 1 ? !validPlayEditId(state.editId) : (state.editId !== undefined && !validPlayEditId(state.editId)))) throw new Error('Saved Play candidate identity differs');
   return state;
 }
 
@@ -29,8 +30,8 @@ export async function preparePlayCandidate(api, identity, history = readPlayVers
   const releases = await readPlayReleases(api);
   requireNoPendingReview(releases);
   const edit = await api('POST', 'edits', {});
-  if (!/^\d+$/u.test(edit.id ?? '')) throw new Error('Play returned no edit identity');
-  const base = `edits/${edit.id}`;
+  if (!validPlayEditId(edit.id)) throw new Error('Play returned no edit identity');
+  const base = playEditPath(edit.id);
   const [bundles, apks, tracks] = await Promise.all([
     api('GET', `${base}/bundles`), api('GET', `${base}/apks`), api('GET', `${base}/tracks`)
   ]);
@@ -51,7 +52,7 @@ export function verifyPlayBundle(bundle, state) {
 export async function uploadPlayCandidate({ api, state, bytes, restored = false, save }) {
   const digest = createHash('sha256').update(bytes).digest('hex');
   if (digest !== state.aabSha256 || !/^[a-f0-9]{64}$/u.test(digest)) throw new Error('Signed candidate changed');
-  const base = `edits/${state.editId}`;
+  const base = playEditPath(state.editId);
   const inventory = await api('GET', `${base}/bundles`);
   const existing = inventory.bundles?.find(bundle => Number(bundle.versionCode) === state.versionCode);
   if (existing) verifyPlayBundle(existing, state);
@@ -70,7 +71,7 @@ export async function commitPlayCandidate({ api, state, notes, save }) {
   if (state.phase !== 'uploaded') throw new Error('A confirmed upload is required');
   if (typeof notes !== 'string' || !notes.trim() || notes.length > 500) throw new Error('English release notes are required (maximum 500 characters)');
   requireNoPendingReview(await readPlayReleases(api));
-  const base = `edits/${state.editId}`;
+  const base = playEditPath(state.editId);
   const inventory = await api('GET', `${base}/bundles`);
   verifyPlayBundle(inventory.bundles?.find(bundle => Number(bundle.versionCode) === state.versionCode), state);
   const track = await api('GET', `${base}/tracks/${PLAY_TRACK}`);

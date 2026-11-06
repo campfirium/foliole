@@ -1,3 +1,5 @@
+import { openPlayEdit } from '../android/play-edit-id.mjs';
+
 const PHASES = new Set(['upload-unknown', 'uploaded', 'commit-unknown', 'committed', 'observed']);
 const PREFIX = 'Play candidate: ';
 
@@ -21,7 +23,7 @@ export async function readMobileCandidatePhase(api, id) {
   const { value, hasHistory } = await readMobileStatus(api, id, PREFIX);
   if (value === undefined) {
     const edit = await readMobileStatus(api, id, 'Play upload edit: ');
-    if (edit.value === 'creating' || /^open:[1-9]\d*$/u.test(edit.value ?? '')) return 'signed';
+    if (edit.value === 'creating' || openPlayEdit(edit.value)) return 'signed';
     if (hasHistory) throw new Error('Unknown mobile operation history requires reconciliation');
     return 'signed';
   }

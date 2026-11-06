@@ -1,4 +1,5 @@
 import { resolvePlayUploadEdit } from './play-upload-edit.mjs';
+import { playEditPath } from './play-edit-id.mjs';
 import { readPlayReleases } from './play-api.mjs';
 import { uploadPlayCandidate, commitPlayCandidate, observePlayCandidate, verifyPlayBundle } from './play-distribution.mjs';
 import { verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
@@ -22,7 +23,7 @@ export async function deliverRegisteredPlayCandidate({ github, play, registratio
   }
   await resolvePlayUploadEdit({ github, play, registration, state });
   if (state.phase === 'upload-unknown') {
-    const inventory = await play('GET', `edits/${state.editId}/bundles`);
+    const inventory = await play('GET', `${playEditPath(state.editId)}/bundles`);
     const bundle = inventory.bundles?.find(item => Number(item.versionCode) === state.versionCode);
     if (!bundle) throw new Error('Original upload is absent or uncertain; reconcile manually without uploading again');
     verifyPlayBundle(bundle, state);

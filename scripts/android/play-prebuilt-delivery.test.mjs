@@ -48,12 +48,13 @@ it.each(['loseUpload', 'loseCommit'])('recovers the same prebuilt archive after 
   expect(f.uploads).toBe(1); expect(f.commits).toBe(1);
 });
 
-it('preserves uncertain edit creation instead of creating another edit after restart', async () => {
+it('recovers a lost creation response before upload using the same original signed bundle', async () => {
   const { f, deliver } = await prepared(); f.loseCreate = true;
   await expect(deliver()).rejects.toThrow(/unknown/u);
-  await expect(deliver()).rejects.toThrow(/unknown/u);
   expect(f.uploads).toBeUndefined();
-  expect(f.calls.filter(call => call.method === 'POST' && call.route === 'edits')).toHaveLength(2);
+  expect(await deliver()).toMatchObject({ phase: 'observed' });
+  expect(f.uploads).toBe(1);
+  expect(f.calls.filter(call => call.method === 'POST' && call.route === 'edits')).toHaveLength(3);
 });
 
 it('refuses registration before upload when the signed source does not match its durable reserved number', async () => {

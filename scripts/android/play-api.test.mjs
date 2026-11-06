@@ -61,7 +61,8 @@ it('exercises production HTTP request serialization against an isolated Google b
     received.push({ method: request.method, url: request.url, authorization: request.headers.authorization,
       type: request.headers['content-type'], body: Buffer.concat(chunks).toString() });
     response.setHeader('content-type', 'application/json');
-    response.end(JSON.stringify({ versionCode: 23, sha256: 'a'.repeat(64) }));
+    response.end(JSON.stringify(request.url.endsWith('/edits') ? { id: 'opaque-edit' } :
+      { versionCode: 23, sha256: 'a'.repeat(64) }));
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   try {

@@ -1,6 +1,7 @@
 /* global AbortSignal, fetch, URLSearchParams */
 import { Buffer } from 'node:buffer';
 import { createSign } from 'node:crypto';
+import { validPlayEditId } from './play-edit-id.mjs';
 
 export const PLAY_PACKAGE = 'com.campfirium.foliole.android';
 export const PLAY_TRACK = 'beta';
@@ -42,14 +43,35 @@ export function createPlayApi(token, fetchImpl = fetch) {
         ...(body !== undefined ? { body: binary ? body : JSON.stringify(body) } : {})
       });
     } catch { throw new Error(`Play ${method} request outcome is unknown; reconcile the saved edit before retrying`); }
-    // Never include response bodies, tokens or request bodies in logs.
-    if (!response.ok) {
-      const error = new Error(`Play ${method} failed (HTTP ${response.status}); preserve the saved edit`);
-      error.status = response.status;
-      throw error;
-    }
-    return response.status === 204 ? {} : response.json();
+    return readPlayResponse(response, method, route);
   };
+}
+
+async function readPlayResponse(response, method, route) {
+  // Only bounded HTTP metadata is diagnostic; response bodies can contain secrets.
+  let bytes;
+  try { bytes = Buffer.from(await response.arrayBuffer()); }
+  catch { throw new Error(`Play ${method} response could not be read (HTTP ${response.status}); preserve the saved edit`); }
+  const media = response.headers.get('content-type')?.split(';')[0] ?? '';
+  const contentType = /^[\w.+-]+\/[\w.+-]+$/u.test(media) ? media : 'unknown';
+  const detail = `HTTP ${response.status}; content-type=${contentType}; bytes=${bytes.length}`;
+  const fail = reason => {
+    const error = new Error(`Play ${method} ${reason} (${detail}); preserve the saved edit`);
+    error.status = response.status;
+    throw error;
+  };
+  if (!response.ok) {
+    fail('failed');
+  }
+  const emptyRead = method === 'GET' && route === `tracks/${PLAY_TRACK}/releases`;
+  if (response.status === 204 && (method === 'DELETE' || emptyRead)) return {};
+  let result;
+  try { result = JSON.parse(bytes.toString('utf8')); }
+  catch { fail('response is unavailable'); }
+  if (!result || typeof result !== 'object' || Array.isArray(result)) fail('response shape is invalid');
+  if (method === 'POST' && route === 'edits' && !validPlayEditId(result.id)) fail('edit creation returned no valid identity');
+  if (method === 'GET' && route === `tracks/${PLAY_TRACK}/releases` && !validPlayReleases(result)) fail('release inventory is unavailable');
+  return result;
 }
 
 export function createPlayApkDownloader(token, fetchImpl = fetch) {
@@ -72,12 +94,19 @@ export function createPlayApkDownloader(token, fetchImpl = fetch) {
 
 export async function readPlayReleases(api) {
   const result = await api('GET', `tracks/${PLAY_TRACK}/releases`);
-  if (!result || typeof result !== 'object' || Array.isArray(result)) {
+  if (!validPlayReleases(result)) {
     throw new Error('Play release inventory is unavailable');
   }
-  const releases = result.releases === undefined ? [] : result.releases;
-  if (!Array.isArray(releases)) throw new Error('Play release inventory is unavailable');
-  return releases;
+  return result.releases ?? [];
+}
+
+function validPlayReleases(result) {
+  if (!result || typeof result !== 'object' || Array.isArray(result)) return false;
+  // ProtoJSON may omit an empty repeated field.
+  if (result.releases === undefined) return Object.keys(result).length === 0;
+  return Array.isArray(result.releases) && result.releases.every(release =>
+    release && release.track === PLAY_TRACK && typeof release.releaseName === 'string' && release.releaseName.length > 0 &&
+    typeof release.releaseLifecycleState === 'string' && release.releaseLifecycleState.startsWith('RELEASE_LIFECYCLE_STATE_'));
 }
 
 export function requireNoPendingReview(releases) {

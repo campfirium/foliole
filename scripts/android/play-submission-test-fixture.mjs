@@ -65,7 +65,12 @@ function createSubmissionServer(f) {
     const body = !raw.length ? undefined : request.headers['content-type'] === 'application/octet-stream' ? raw : JSON.parse(raw.toString());
     f.calls.push({ method: request.method, route, body });
     const send = value => { response.setHeader('content-type', 'application/json'); response.end(JSON.stringify(value)); };
-    if (route === 'tracks/beta/releases') return send({ releases: f.releases });
+    if (route === 'tracks/beta/releases') {
+      if (f.releaseResponse && !(f.releaseResponse.untilCommit && f.commits)) {
+        response.statusCode = f.releaseResponse.status; response.end(f.releaseResponse.body); return;
+      }
+      return send({ releases: f.releases });
+    }
     if (route.startsWith('deployments?')) return send(f.rows.filter(row => new URLSearchParams(route.split('?')[1]).get('task') === row.task));
     if (route === 'deployments' && request.method === 'POST') {
       const row = { id: f.rows.length + 701, sha: body.ref, task: body.task, environment: body.environment,

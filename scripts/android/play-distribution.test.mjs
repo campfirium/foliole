@@ -1,4 +1,4 @@
-/* global Buffer, structuredClone */
+/* global Buffer, structuredClone, Response */
 // @vitest-environment node
 import { createHash } from 'node:crypto';
 import { expect, it, vi } from 'vitest';
@@ -147,12 +147,12 @@ it('rejects source, channel, run and protected version mismatches', () => {
 });
 
 it('uses authenticated fixed Play endpoints and sanitizes all error responses', async () => {
-  const request = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ id: '123' }) }));
+  const request = vi.fn(async () => new Response(JSON.stringify({ id: '123' }), { status: 200 }));
   const api = createPlayApi('secret-token', request);
   await api('POST', 'edits', {});
   expect(request.mock.calls[0][0]).toBe('https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.campfirium.foliole.android/edits');
   expect(request.mock.calls[0][1].redirect).toBe('error');
-  request.mockResolvedValue({ ok: false, status: 403, json: () => ({ secret: 'do not log' }) });
+  request.mockResolvedValue(new Response(JSON.stringify({ secret: 'do not log' }), { status: 403 }));
   await expect(api('POST', 'edits', {})).rejects.toThrow('HTTP 403');
   request.mockRejectedValue(new Error('secret-token'));
   await expect(api('POST', 'edits', {})).rejects.toThrow(/outcome is unknown/u);
