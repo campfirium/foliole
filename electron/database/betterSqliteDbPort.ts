@@ -23,6 +23,7 @@ export interface BetterSqliteDbPortOptions {
 export function createBetterSqliteDbPort(sqlite: SqliteDatabase, options: BetterSqliteDbPortOptions = {}): DbPort {
   const coordinator = getSqliteConnectionCoordinator(sqlite);
   const port: DbPort & { readonly __dbPortName?: string } = {
+    connectionIdentity: sqlite,
     ...(options.name ? { __dbPortName: options.name } : {}),
     async run(sql, params = []) {
       return coordinator.runExclusive(() => normalizeRunResult(() => prepareStatement(sqlite, sql).run(...params)));
@@ -77,6 +78,7 @@ async function runScopedTransaction<T>(
 ) {
   let active = true;
   const scopedPort: DbPort = {
+    connectionIdentity: port.connectionIdentity ?? port,
     run(sql, params) {
       coordinator.assertScopedOwner(owner, active);
       return port.run(sql, params);

@@ -111,6 +111,7 @@ export interface ElectronAPI {
   onAssistantTurnEvent?: (handler: (payload: NativeAssistantTurnEvent) => void) => () => void;
   onDesktopUpdateState?: (handler: (payload: NativeDesktopUpdateState) => void) => () => void;
   onWindowResized: (handler: () => void) => () => void;
+  onWindowBlur?: (handler: () => void) => () => void;
   runtimeConfig?: ElectronRuntimeConfig;
   setNativeHotkeyRecordingActive?: (active: boolean) => void;
 }

@@ -3,6 +3,14 @@ import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import { getRuntimeInvoke } from './runtimeInvoke';
 import type { WorkspaceRuntimeNodeDocument } from './workspaceRuntimeTypes';
 
+export async function setWorkspaceContentEditingSession(args: {
+  action: 'begin' | 'end'; libraryScope: string; nodeId: string; sessionId: string;
+}) {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) return { changed: false };
+  return invoke(NATIVE_COMMANDS.setNodeContentEditingSession, args);
+}
+
 export async function loadWorkspaceNodeDocumentFromRuntime(nodeId: string): Promise<WorkspaceRuntimeNodeDocument | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {

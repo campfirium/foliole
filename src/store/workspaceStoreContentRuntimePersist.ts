@@ -4,6 +4,7 @@ import type { RuntimeNodeContentMutationDiagnostics } from '../shared/platform/w
 import { createNodeContentPersistQueue } from './nodeContentPersistQueue';
 import { acknowledgeContentEdit, captureContentEdit, subscribeContentEditAcknowledgements } from './workspaceContentEditAcknowledgements';
 import { continuePendingContentEdit, readContentEditContinuation } from './workspaceContentEditContinuation';
+import { readWorkspaceContentEditingSessionReady } from './workspaceContentEditingSession';
 import { readEditorInputDiagnosticTime } from './workspaceEditorInputDiagnostics';
 import {
   createUpdateNodeContentMetrics,
@@ -97,6 +98,8 @@ async function runNodeContentRuntimePersist(args: {
   set: WorkspaceSet;
   version: number;
 }) {
+  const editingReady = readWorkspaceContentEditingSessionReady(args.libraryScope, args.nextNodeForSync.id);
+  if (editingReady) await editingReady;
   if (!args.edit) args.edit = captureContentEdit(args.nextNodeForSync, args.baseContent);
   args.inputBaseVersionId ??= args.edit?.baseVersionId;
   if (args.field === 'reveal' && args.edit) {

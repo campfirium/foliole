@@ -10,11 +10,11 @@ vi.mock('../../src/shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: ()
   (command: string, args: Record<string, unknown>) => invokeEditorHandoff(command, args) }));
 
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
+import { readTopicAlternativeRecords } from '../../lib/core/sync/topicAlternativeStore.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { createEditorHandoffFixture, invokeEditorHandoff, observeReceiptWaiting, setupEditorHandoffTests, transport } from './editorHandoff.test-support.js';
-import { wholeBodies } from './topicTextState.testSupport.js';
 
 setupEditorHandoffTests();
 
@@ -51,7 +51,7 @@ it('adopts a protected remote body while idle and saves input based on that exac
   expect(transport.submitted[0]?.baseVersionId).toBe('remote');
   expect(app.ready).not.toContain(false);
   expect((await app.current()).body_text).toBe('Remote continued');
-  expect(await app.converge()).toEqual(wholeBodies(await app.current()));
+  expect(await app.converge()).toEqual(await app.bodies());
 });
 
 it.each([false, true])('preserves buffered input, its alternatives and continued saves through remote adoption (save fails: %s)', async failSave => {
@@ -66,7 +66,7 @@ it.each([false, true])('preserves buffered input, its alternatives and continued
   await act(async () => { finishRemote(); });
   expect(app.view.result.current.editorContent).toBe('Original');
   expect(app.heldBases()).toContain('base');
-  expect((await app.baseFact())!.alternative_bodies?.map(body => body.text)).toContain('Unique alternative');
+  expect(await app.bodies()).toContain('Unique alternative');
   transport.failSave = failSave;
   let finishReceipt!: () => void;
   transport.receiptGate = new Promise(resolve => { finishReceipt = resolve; });
@@ -82,7 +82,7 @@ it.each([false, true])('preserves buffered input, its alternatives and continued
   await act(async () => { app.view.result.current.handleEditorChange('Local continued'); expect(await app.drain()).toBe(true); });
   expect(app.ready).not.toContain(false);
   expect(transport.submitted[0]?.baseVersionId).toBe('base');
-  const bodies = wholeBodies(await app.current());
+  const bodies = await app.bodies();
   expect(bodies.has('Local continued')).toBe(true);
   expect(bodies.has('Remote')).toBe(true);
   expect(await app.converge()).toEqual(bodies);
@@ -90,7 +90,8 @@ it.each([false, true])('preserves buffered input, its alternatives and continued
   expect(app.heldBases()).toEqual([]);
   closeDatabaseConnection();
   const reopened = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
-  expect(wholeBodies((await loadCurrentSyncNodeRecord(reopened, 'topic'))!)).toEqual(bodies);
+  expect(new Set([(await loadCurrentSyncNodeRecord(reopened, 'topic'))!.body_text,
+    ...(await readTopicAlternativeRecords(reopened, 'topic')).map(row => row.body_text)])).toEqual(bodies);
 });
 
 it('continues from the protected original basis when a remote hold fails', async () => {
@@ -102,7 +103,7 @@ it('continues from the protected original basis when a remote hold fails', async
   await act(async () => { app.input('Local after failed hold'); expect(await app.drain()).toBe(true); });
   expect(transport.submitted[0]?.baseVersionId).toBe('base');
   expect(app.ready).not.toContain(false);
-  const bodies = wholeBodies(await app.current());
+  const bodies = await app.bodies();
   expect(bodies.has('Local after failed hold')).toBe(true);
   expect(bodies.has('Remote')).toBe(true);
   expect(await app.converge()).toEqual(bodies);

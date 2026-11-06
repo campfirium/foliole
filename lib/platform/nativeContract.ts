@@ -116,6 +116,10 @@ export type NativeCommandMap = NativeDailyFlowCommandMap & NativeReviewTrainingC
     args: { holdId: string; nodeId: string; versionId: string };
     result: { retained: true };
   };
+  [NATIVE_COMMANDS.setNodeContentEditingSession]: {
+    args: { action: 'begin' | 'end'; libraryScope: string; nodeId: string; sessionId: string };
+    result: { changed: boolean };
+  };
   [NATIVE_COMMANDS.releaseNodeEditorBase]: {
     args: { holdId: string; nodeId: string };
     result: { released: true };

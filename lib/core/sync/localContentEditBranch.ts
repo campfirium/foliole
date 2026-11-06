@@ -11,7 +11,7 @@ export interface LocalContentEditOptions {
 
 export async function applyEditorSyncNodeRecord(db: DbPort, record: NativeSyncNodeRecord,
   options: LocalContentEditOptions = {}) {
-  return applySyncNodesWithDbPort(db, [record], { ...options, operation: 'local_mutation' });
+  return applySyncNodesWithDbPort(db, [record], { ...options, editingBranch: true, operation: 'local_mutation' });
 }
 
 export async function applyLocalContentEditBranch(db: DbPort, record: NativeSyncNodeRecord,

@@ -12,24 +12,35 @@ import { loadWorkspaceListProjection } from '../../lib/core/database/workspaceLi
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionFact } from '../../lib/core/sync/syncNodeGraph.js';
+import { readTopicAlternativeRecords, writeTopicAlternative } from '../../lib/core/sync/topicAlternativeStore.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 import { saveDefaultLibraryHome } from '../ipc/libraryPathBootstrap.js';
+import { handleContentEditingSession } from '../ipc/storageContentEditingSession.js';
 import { handleEditorHoldCommand } from '../ipc/storageEditorHoldCommands.js';
 import { handleNodeMutationCommand } from '../ipc/storageNodeMutationCommands.js';
 
+import { currentLibraryScope } from './attachmentResourceDescription.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner } from './connection.js';
 import { initializeDatabase } from './migrate.js';
-import { textBranch, textDevice, wholeBodies } from './topicTextState.testSupport.js';
+import { transferTopicText } from './topicTextRequest.testSupport.js';
+import { textBranch, textDevice } from './topicTextState.testSupport.js';
 import { loadWorkspaceNodeDocument } from './workspaceNodeDocument.js';
 
 export const transport = { root: '', remoteGate: undefined as Promise<void> | undefined,
-  receiptGate: undefined as Promise<void> | undefined, failRetain: false, failSave: false,
+  receiptGate: undefined as Promise<void> | undefined, failRetain: false, failSave: false, failSessionBegin: false,
   submitted: [] as Array<{ baseVersionId: string; versionId: string }> };
 export let receiptWaiting: (() => void) | undefined;
 export function observeReceiptWaiting(callback: () => void) { receiptWaiting = callback; }
 
 export async function invokeEditorHandoff(command: string, args: Record<string, unknown>) {
+  if (command === 'set_node_content_editing_session') {
+    if (args.action === 'begin' && transport.failSessionBegin) {
+      transport.failSessionBegin = false;
+      throw new Error('session_registration_failed');
+    }
+    return runWithDatabaseConnectionOwner(() => handleContentEditingSession(args));
+  }
   if (command === 'retain_node_editor_base' || command === 'release_node_editor_base') {
     if (command === 'retain_node_editor_base' && args.versionId === 'remote') {
       await transport.remoteGate;
@@ -52,6 +63,8 @@ export async function invokeEditorHandoff(command: string, args: Record<string, 
 
 const rendererModule = (modulePath: string) => import(modulePath);
 const { useProtectedWorkspaceEditorDraft } = await rendererModule('../../src/app/components/useProtectedWorkspaceEditorDraft.ts');
+const { useWorkspaceContentEditingSession } = await rendererModule('../../src/app/components/useWorkspaceContentEditingSession.ts');
+const { useWorkspaceActiveNodeDocument } = await rendererModule('../../src/app/hooks/useWorkspaceActiveNodeDocument.ts');
 const { createWorkspaceNodeActionsFixture } = await rendererModule('../../src/store/workspaceStoreNodeActions.test-support.ts');
 const { createWorkspaceNodeActions } = await rendererModule('../../src/store/workspaceStoreNodeActions.ts');
 const { createWorkspaceActiveNodeAction } = await rendererModule('../../src/store/workspaceStoreActiveNodeAction.ts');
@@ -68,7 +81,8 @@ export function setupEditorHandoffTests() {
     transport.root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-editor-handoff-'));
     saveDefaultLibraryHome();
     initializeDatabase();
-    Object.assign(transport, { remoteGate: undefined, receiptGate: undefined, failRetain: false, failSave: false, submitted: [] });
+    Object.assign(transport, { remoteGate: undefined, receiptGate: undefined, failRetain: false, failSave: false,
+      failSessionBegin: false, submitted: [] });
     receiptWaiting = undefined;
     vi.useFakeTimers();
   });
@@ -86,6 +100,7 @@ export function setupEditorHandoffTests() {
 
 function node(record: NativeSyncNodeRecord) {
   return { id: record.object_id, kind: 'topic' as const, parentNodeId: null, content: record.body_text ?? '',
+    bodyStatus: 'ready' as const, hasContent: Boolean(record.body_text),
     title: record.snapshot.title, reveal: null, anchorLink: null, review: null,
     currentVersionId: record.version_id, createdAt: record.snapshot.created_at, updatedAt: record.updated_at };
 }
@@ -105,18 +120,27 @@ async function initialEditorState(base: NativeSyncNodeRecord, port: ReturnType<t
   return initial;
 }
 
-export async function createEditorHandoffFixture(sharedStore = false) {
+async function seedEditorHandoff() {
   const peer = textDevice();
   peers.push(peer);
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
   const base = textBranch('base', 'Original');
   const hash = hashTextBody('Unique alternative');
-  base.snapshot.text_alternatives = [{ id: 'unique', body_blob_hash: hash, source_host_name: 'peer',
-    created_at: new Date().toISOString(), expires_at: '2099-01-01T00:00:00Z' }];
-  base.alternative_bodies = [{ hash, text: 'Unique alternative' }];
   await peer.receive([base]);
   await applyConvergentSyncNodesWithDbPort(port, [base]);
+  for (const db of [port, peer.db]) await writeTopicAlternative(db, {
+    alternative_id: 'unique', node_id: 'topic', source_version_id: 'base', body_blob_hash: hash,
+    body_text: 'Unique alternative', source_host_name: 'peer', created_at: base.updated_at,
+    expires_at: '2099-01-01T00:00:00Z', status: 'available', updated_at: base.updated_at,
+    resource_references: '[]', image_sources: null
+  }, true);
+  return { peer, port, base };
+}
+
+export async function createEditorHandoffFixture(sharedStore = false, editingSession = false) {
+  const { peer, port, base } = await seedEditorHandoff();
   const initial = await initialEditorState(base, port);
+  if (editingSession) initial.libraryScope = currentLibraryScope();
   const store = sharedStore ? useWorkspaceStore
     : createStore<ReturnType<typeof createWorkspaceNodeActionsFixture>>(() => initial);
   if (sharedStore) store.setState(initial);
@@ -125,12 +149,14 @@ export async function createEditorHandoffFixture(sharedStore = false) {
   const ready: boolean[] = [];
   const view = renderHook(() => {
     const state = useSyncExternalStore<ReturnType<typeof createWorkspaceNodeActionsFixture>>(store.subscribe, store.getState);
+    useWorkspaceActiveNodeDocument(sharedStore ? state.activeNodeId : null);
     const current = state.nodesById[state.activeNodeId!];
     const draft = useProtectedWorkspaceEditorDraft({ nodeId: current.id, committedContent: current.content,
       committedVersionId: current.currentVersionId,
       onCommit: (id: string, content: string, options: unknown) => actions.updateNodeContent(id, content, options) });
     ready.push(draft.holdReady);
-    return draft;
+    const handleEditorInput = useWorkspaceContentEditingSession(current.id, false, draft);
+    return editingSession ? { ...draft, handleEditorInput } : draft;
   });
   await act(async () => undefined);
   ready.length = 0;
@@ -161,6 +187,8 @@ export async function createEditorHandoffFixture(sharedStore = false) {
       nodesById: { ...state.nodesById, topic: mergeHydratedNode(state.nodesById.topic, incoming) } }));
   };
   return { peer, port, view, store, select, ready, input, drain, current, remote, heldBases,
+    async bodies() { return new Set([(await current()).body_text,
+      ...(await readTopicAlternativeRecords(port, 'topic')).map(row => row.body_text)]); },
     baseFact: () => loadRetainedSyncNodeVersionFact(port, 'base'),
-    async converge() { await peer.receive([await current()]); return wholeBodies(await peer.current()); } };
+    async converge() { await transferTopicText({ db: port }, peer); return peer.wholeBodies(); } };
 }

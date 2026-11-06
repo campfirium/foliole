@@ -53,6 +53,7 @@ import { resolveRuntimeMode } from './runtimeMode.js';
 import { publishRuntimeSystemLanguage } from './runtimeSystemLanguage.js';
 import { prepareStartupRendererAppearance } from './startupRendererPreparation.js';
 import { desktopUpdateService } from './update/desktopUpdateRuntime.js';
+import { bindWindowBlurEvents } from './windowBlurEvents.js';
 import { bindWindowRuntimeDiagnostics, setStartupWindowPresentation } from './windowRuntimeDiagnostics.js';
 import { bindWindowStatePersistence } from './windowStateLifecycle.js';
 
@@ -172,6 +173,7 @@ async function createMainWindow(
     show: window.isVisible()
   });
   bindWindowResizeEvents(window);
+  bindWindowBlurEvents(window);
   bindHotkeyRecorderInput(window);
   if (!startupOptions.deferDatabaseBackedBindings) {
     bindWindowReadingProgressFlush(

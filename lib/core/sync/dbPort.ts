@@ -26,6 +26,8 @@ export class DbPortError extends Error {
 }
 
 export interface DbPort {
+  /** Shared by wrappers and transactions belonging to one live database connection. */
+  readonly connectionIdentity?: object;
   run(sql: string, params?: DbParams): Promise<DbRunResult>;
   query<T extends DbRow = DbRow>(sql: string, params?: DbParams): Promise<T[]>;
   transaction<T>(execute: (tx: DbPort) => Promise<T>): Promise<T>;

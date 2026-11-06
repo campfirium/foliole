@@ -161,6 +161,7 @@ export const NATIVE_COMMANDS = {
   loadWorkspaceListSnapshot: 'load_workspace_list_snapshot',
   loadNodeDocument: 'load_node_document',
   retainNodeEditorBase: 'retain_node_editor_base',
+  setNodeContentEditingSession: 'set_node_content_editing_session',
   releaseNodeEditorBase: 'release_node_editor_base',
   loadNodeBacklinks: 'load_node_backlinks',
   searchPdfDocument: 'search_pdf_document',

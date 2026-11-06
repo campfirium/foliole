@@ -7,6 +7,10 @@ import { logRuntimeWarning } from './runtimeLogging';
 
 export type WindowResizeUnlisten = (() => void) | null;
 
+export function subscribeMainWindowBlur(handler: () => void) {
+  return getElectronAPI()?.onWindowBlur?.(handler);
+}
+
 function getElectronBridge() {
   if (!isDesktopRuntime()) {
     return null;

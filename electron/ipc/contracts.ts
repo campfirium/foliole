@@ -21,6 +21,7 @@ export const IPC_SEARCH_ALIASES_CHANGED_EVENT_CHANNEL = 'foliole:search-aliases-
 export const IPC_SYSTEM_COLOR_MODE_CHANGED_EVENT_CHANNEL = 'foliole:system-color-mode-changed';
 export const IPC_WORKSPACE_SYNC_APPLIED_EVENT_CHANNEL = 'foliole:workspace-sync-applied';
 export const IPC_WINDOW_RESIZED_EVENT_CHANNEL = 'foliole:window-resized';
+export const IPC_WINDOW_BLUR_EVENT_CHANNEL = 'foliole:window-blur';
 export const IPC_HOTKEY_RECORDER_ACTIVE_CHANNEL = 'foliole:hotkey-recorder-active';
 export const IPC_NATIVE_KEYBOARD_INPUT_EVENT_CHANNEL = 'foliole:native-keyboard-input';
 

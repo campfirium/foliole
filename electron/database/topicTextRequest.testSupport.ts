@@ -10,7 +10,7 @@ import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js'
 
 import type { textDevice } from './topicTextState.testSupport.js';
 
-type Device = ReturnType<typeof textDevice>;
+type Device = Pick<ReturnType<typeof textDevice>, 'db'>;
 
 /** Serialize and apply actual node and child facts, rather than passing only the main-body version. */
 export async function transferTopicText(source: Device, target: Device) {
@@ -19,7 +19,7 @@ export async function transferTopicText(source: Device, target: Device) {
   const remote = await readFramedSyncInventoryEntry(target.db, key);
   const difference = compareFramedSyncInventories({ local: local ? [local] : [], remote: remote ? [remote] : [] })
     .find(value => value.direction === 'local_to_remote');
-  if (!difference) return;
+  if (!difference) return false;
   await mkdir('.tmp/artifacts', { recursive: true });
   const root = await mkdtemp(path.resolve('.tmp/artifacts/topic-text-request-'));
   try {
@@ -30,5 +30,6 @@ export async function transferTopicText(source: Device, target: Device) {
         currentVersion: { globalId: 'topic', versionId: difference.sourceSnapshot.currentVersionId! }
       });
     });
+    return true;
   } finally { await rm(root, { recursive: true, force: true }); }
 }

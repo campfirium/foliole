@@ -3,6 +3,7 @@ import type {
   NativeSyncNodeRecord
 } from '../../platform/nativeSyncContract.js';
 
+import { hasContentEditingSession } from './contentEditingSession.js';
 import type { DbPort, DbRow } from './dbPort.js';
 import type { SyncNodeAnchorRepairRecord, SyncNodeAnchorUnmappedRecord } from './syncNodeAnchorRepair.js';
 import {
@@ -45,6 +46,7 @@ export interface ApplySyncNodesWithDbPortResult {
 }
 
 export interface ApplySyncNodesWithDbPortOptions {
+  editingBranch?: boolean;
   enqueueSearchInvalidations?: boolean;
   deferBodyRetirement?: boolean;
   hashTextBody?: (content: string) => Promise<string> | string;
@@ -205,7 +207,15 @@ async function applyIncomingRecord(input: {
   const { tx, record, result, options } = input;
   if (await handleTombstoneGuard({ options, record, result, tx })) return false;
   const localNode = await loadLocalNodeSyncState(tx, record.object_id);
-  const decision = await decideNodeApply(tx, localNode, record, options.operation);
+  let decision = await decideNodeApply(tx, localNode, record, options.operation);
+  if (record.snapshot.kind === 'topic' && localNode && !localNode.deleted_at &&
+      !record.snapshot.deleted_at && hasContentEditingSession(tx, record.object_id) &&
+      record.version_id !== localNode.current_version_id) {
+    if (options.editingBranch) decision = 'apply_fast_forward';
+    else if (!options.operation || options.operation === 'remote_sync') {
+      await upsertRemoteVersion(tx, record); return false;
+    }
+  }
   if (decision === 'apply_missing_local' || decision === 'apply_fast_forward') {
     const preparedTextBodyHashes = new Map<NativeSyncNodeRecord, string>();
     if (input.preparedTextBodyHash) preparedTextBodyHashes.set(record, input.preparedTextBodyHash);
