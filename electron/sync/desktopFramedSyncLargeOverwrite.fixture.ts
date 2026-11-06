@@ -78,9 +78,8 @@ function assertLargeSeed() {
   const rows = driver.queryAll<{ object_id: string; count: number; smallest: number; largest: number }>(
     `WITH payloads AS (
       SELECT object_id, body_text AS text FROM node_sync_versions WHERE object_id LIKE ? AND body_text IS NOT NULL
-      UNION ALL SELECT version.object_id, json_extract(body.value, '$.text') AS text
-      FROM node_sync_versions version, json_each(version.snapshot_json, '$.text_alternative_bodies') body
-      WHERE version.object_id LIKE ?)
+      UNION ALL SELECT node_id AS object_id, body_text AS text FROM node_text_alternatives
+      WHERE node_id LIKE ? AND status = 'available')
     SELECT object_id, count(*) AS count, min(length(CAST(text AS BLOB))) AS smallest,
       max(length(CAST(text AS BLOB))) AS largest FROM payloads GROUP BY object_id`,
     [`${LARGE_OVERWRITE_PREFIX}%`, `${LARGE_OVERWRITE_PREFIX}%`]);

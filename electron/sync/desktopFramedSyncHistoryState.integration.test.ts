@@ -5,9 +5,8 @@ import { promises as fs } from 'node:fs';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
-import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { wholeBodies } from '../database/topicTextState.testSupport.js';
+import { readPersistedTopicBodies } from '../database/topicTextState.testSupport.js';
 
 import { readFixtureInventory, reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
@@ -111,7 +110,7 @@ it('keeps an offline editor branch and converges three production request peers 
     expect(await reconnectFixturePeer(fixture.right, third.snapshot)).toMatchObject({ complete: true });
     for (const snapshot of [fixture.leftSnapshot, fixture.rightSnapshot, third.snapshot]) {
       const current = new Database(snapshot.databasePath, { readonly: true });
-      try { expect(wholeBodies((await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(current), 'history-state'))!))
+      try { expect(await readPersistedTopicBodies(createBetterSqliteDbPort(current), 'history-state'))
         .toEqual(new Set(['Remote current body', 'Unsaved full offline input'])); }
       finally { current.close(); }
     }

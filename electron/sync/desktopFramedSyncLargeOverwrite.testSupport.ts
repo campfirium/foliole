@@ -6,6 +6,7 @@ import Database from 'better-sqlite3';
 import { expect } from 'vitest';
 
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
+import { readTopicAlternativeRecords } from '../../lib/core/sync/topicAlternativeStore.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 import { LARGE_OVERWRITE_PREFIX, largeOverwriteAttachment, largeOverwriteAttachmentIdentity,
@@ -25,6 +26,8 @@ export function largeOverwriteState(databasePath: string) {
         `SELECT edge.version_id, edge.parent_version_id, edge.ordinal FROM node_sync_version_parents edge
           JOIN node_sync_versions version ON version.version_id = edge.version_id
           WHERE version.object_id LIKE ? ORDER BY version.object_id, edge.version_id, edge.ordinal`).all(`${LARGE_OVERWRITE_PREFIX}%`),
+      alternatives: sqlite.prepare(`SELECT * FROM node_text_alternatives
+        WHERE node_id LIKE ? AND status = 'available' ORDER BY node_id, alternative_id`).all(`${LARGE_OVERWRITE_PREFIX}%`),
       retiredCount: sqlite.prepare<[string], { count: number }>(`SELECT count(*) AS count FROM node_sync_versions
         WHERE object_id LIKE ? AND json_extract(snapshot_json, '$.body_deleted') = 1`).get(`${LARGE_OVERWRITE_PREFIX}%`)?.count,
       retiredTables: sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'framed_sync_receipts'").all(),
@@ -40,6 +43,7 @@ export async function verifyLargeOverwriteBodies(databasePath: string) {
   const state = largeOverwriteState(databasePath);
   expect(state.nodes).toHaveLength(1000);
   expect(state.versions).toHaveLength(6000);
+  expect(state.alternatives).toHaveLength(2000);
   expect(state.parents).toHaveLength(7000);
   expect(state.retiredCount).toBe(5000);
   expect(state.inlineCount).toBe(1000);
@@ -52,7 +56,7 @@ export async function verifyLargeOverwriteBodies(databasePath: string) {
       expect(versions.every(version => /^[a-f0-9]{64}$/u.test(version.body_blob_hash))).toBe(true);
       const current = await loadCurrentSyncNodeRecord(db, largeOverwriteNodeId(index), false);
       if (!current || typeof current.body_text !== 'string') throw new Error('large_overwrite_body_missing');
-      const texts = [current.body_text, ...(current.alternative_bodies ?? []).map(body => body.text)];
+      const texts = [current.body_text, ...(await readTopicAlternativeRecords(db, largeOverwriteNodeId(index))).map(row => row.body_text)];
       expect(texts).toHaveLength(3);
       const expected = new Set([0, 1, 2].map(pass => createHash('sha256')
         .update(largeOverwriteBody(index, pass)).digest('hex')));
