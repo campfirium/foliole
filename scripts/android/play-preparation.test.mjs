@@ -48,11 +48,13 @@ it('recovers cleanup of the same snapshot after a lost deletion response and ret
   expect(f.calls.filter(call => call.method === 'DELETE').map(call => call.route)).toEqual(['edits/901', 'edits/901']);
 });
 
-it('does not reserve a later version ahead of an older legacy source whose code is not allocated yet', async () => {
+it('prepares a later source during review even when an older active legacy source has no allocated code', async () => {
   const f = await fixture();
   await admitPlaySubmission({ ...f.clients(), env: f.env(), registrarSha: 'e'.repeat(40) });
   f.addSource(43);
-  await expect(prepare(f, 43)).rejects.toThrow(/legacy submission/u);
-  expect(creates(f)).toHaveLength(0);
+  expect(await prepare(f, 43)).toMatchObject({ proceed: true, versionCode: 13 });
+  expect(creates(f)).toHaveLength(1);
+  expect(f.releases[0].releaseLifecycleState).toBe('RELEASE_LIFECYCLE_STATE_IN_REVIEW');
+  expect(f.reruns).toEqual([]);
   expect(f.rows[0].payload.prebuilt).toBeUndefined();
 });

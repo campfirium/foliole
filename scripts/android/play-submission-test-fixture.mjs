@@ -89,7 +89,11 @@ function createSubmissionServer(f) {
         const artifacts = [source.qualityArtifact, ...(source.signedBytes ? [source.signedArtifact] : [])];
         return send({ total_count: artifacts.length, artifacts });
       }
-      if (suffix.includes('/jobs')) return send({ total_count: source.jobs.length, jobs: source.jobs });
+      if (suffix.includes('/jobs')) {
+        const attempt = suffix.match(/attempts\/(\d+)\/jobs/u)?.[1];
+        const jobs = source.attemptJobs?.[attempt] ?? source.jobs;
+        return send({ total_count: jobs.length, jobs });
+      }
     }
     if (route.startsWith('actions/artifacts/')) {
       response.end([...f.sources.values()][0].bytes); return;

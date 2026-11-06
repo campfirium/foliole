@@ -127,8 +127,11 @@ Older queued runs without the `prebuilt` contract retain their original
 build-after-publication job and schema version 1 recovery. Rerunning a job uses
 that original workflow snapshot, so changing dev does not retrofit an already
 queued run. Do not replace or dispatch a duplicate source to conceal this boundary.
-A newer prebuilt source cannot reserve ahead of an older legacy ticket whose code
-is not fixed; complete or explicitly resolve that original ticket first.
+A newer accepted source reserves and builds independently of older queue or review
+waiting states, including legacy tickets without an allocated code. Review and
+submission readiness gate upload only; they never postpone packaging. Unresolved
+inventory edits still block another snapshot because creating one could invalidate
+the original edit.
 
 Publication observations remain durable so an older release disappearing from
 Google's inventory after replacement cannot stall the next queued candidate.
@@ -157,13 +160,19 @@ unrelated queue entry. A general scheduled or manual check without that field ca
 continue the oldest eligible submission. Notifications are informational, not the
 submission trigger; GitHub scheduling can delay continuation.
 
-After explicit user authorization to abandon a particular rejected/cancelled or
-obsolete ticket, the owner may append `Play submission: retired` to that ticket's
-Deployment statuses (state `pending`, `auto_inactive=false`). This abandons only
-that queued request, does not claim publication, cancel Google review or retire
-other blocked successors. New authorized candidates can follow retired tickets;
-existing blocked successors require their own assessment. Never retire a ticket
-to hide an unresolved upload/edit or rerun outcome.
+At upload admission and scheduled continuation, an older waiting source no longer
+blocks a later accepted source when its original Google release and version codes
+have disappeared, every original build/sign and delivery attempt completed as
+skipped, and there is no signed archive, registered candidate or unresolved
+preparation/upload/edit/commit/rerun operation. The later source retains its own
+quality, identity, reservation and signed-checkpoint checks. Current Google review
+still gates upload. The checker skips that unexecuted older source without
+rerunning it or changing its history; reserved codes remain consumed.
+
+Historical `retired` records are not publication or operation-reconciliation proof.
+This factual selection needs no retirement command or author authorization. It
+does not clear another blocked successor or bypass an unknown operation; missing
+execution evidence preserves the original queue protections.
 
 Sources: [rerun one job and its dependents](https://docs.github.com/en/rest/actions/workflow-runs#re-run-a-job-from-a-workflow-run),
 [concurrency queues](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).

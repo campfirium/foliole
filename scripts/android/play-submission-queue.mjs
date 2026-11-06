@@ -1,3 +1,4 @@
+import { obsoletePlaySubmissions } from './play-obsolete-submission.mjs';
 import { readPlayReleases } from './play-api.mjs';
 import { listMobileCandidates, verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
 import { readMobileStatus, readMobileCandidatePhase } from '../mobile/mobile-candidate-phase.mjs';
@@ -34,9 +35,12 @@ export async function playSubmissionContext(github, play) {
   const releases = await readPlayReleases(play);
   pendingPlayBlockers(releases);
   const candidates = (await listMobileCandidates(github)).map(verifyStoredMobileCandidate);
+  const obsolete = await obsoletePlaySubmissions(github, { rows, releases, candidates });
+  if (obsolete.size) await readReservedPlayHistory(github);
   const states = new Map();
   const clearedBlockers = new Set();
   for (const row of rows) {
+    if (obsolete.has(row.id)) continue;
     let state = await readPlaySubmissionState(github, row);
     const candidate = candidates.find(item => item.payload.runId === row.payload.runId);
     if (['admitted', 'submitted'].includes(state) && candidate &&
@@ -56,20 +60,24 @@ export async function playSubmissionContext(github, play) {
     }
     states.set(row.id, state);
   }
-  return { rows, states, releases, clearedBlockers };
+  return { rows, states, releases, clearedBlockers, obsolete };
 }
 
-export function playSubmissionReadiness(row, { rows, states, releases, clearedBlockers }) {
+export function playSubmissionReadiness(row, { rows, states, releases, clearedBlockers, obsolete }) {
   const own = states.get(row.id);
   if (['blocked', 'cancelled', 'retired'].includes(own)) return 'blocked';
   const predecessor = row.payload.predecessor;
-  if (predecessor !== null) {
+  if (predecessor !== null && !obsolete.has(predecessor)) {
     if (!rows.some(item => item.id === predecessor)) throw new Error('Queued predecessor is missing');
     const state = states.get(predecessor);
     if (['blocked', 'cancelled'].includes(state)) return 'blocked';
     if (!['published', 'retired'].includes(state)) return 'waiting';
   }
   for (const blocker of clearedBlockers.has(row.id) ? [] : row.payload.blockers) {
+    const obsoleteWait = rows.some(item => obsolete.has(item.id) && item.payload.blockers.some(previous =>
+      previous.releaseName === blocker.releaseName && previous.codes.length === blocker.codes.length &&
+      previous.codes.every(code => blocker.codes.includes(code))));
+    if (obsoleteWait) continue;
     const result = predecessorResult(blocker, releases);
     if (result !== 'ready') return result;
   }
@@ -86,6 +94,7 @@ export async function resumePendingPlaySubmission({ github, play, candidateId })
   if (candidateId) return 'inspection-only';
   const context = await playSubmissionContext(github, play);
   for (const row of context.rows) {
+    if (context.obsolete.has(row.id)) continue;
     const state = context.states.get(row.id);
     if (['published', 'retired'].includes(state)) continue;
     if (['blocked', 'cancelled'].includes(state)) requireSubmissionAttention(row, `submission is ${state}`);

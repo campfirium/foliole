@@ -1,5 +1,3 @@
-import { listMobileCandidates } from '../mobile/mobile-candidate-store.mjs';
-import { listPlaySubmissions, readPlaySubmissionState } from './play-submission-store.mjs';
 import { allocatePlayVersion } from './play-distribution.mjs';
 import { readPlayReleases, PLAY_TRACK } from './play-api.mjs';
 import { readReservedPlayHistory } from './play-candidate-history.mjs';
@@ -19,15 +17,6 @@ export async function reservePlayVersion({ github, play, row }) {
   if (state.phase === 'open') state = await clearSnapshot(github, play, row, state);
   if (state.versionCode) return state.versionCode;
   const history = await readReservedPlayHistory(github);
-  const earlier = (await listPlaySubmissions(github)).filter(item => item.id < row.id && !item.payload.prebuilt);
-  const candidates = earlier.length ? await listMobileCandidates(github) : [];
-  for (const item of earlier) {
-    const status = await readPlaySubmissionState(github, item);
-    if (!['published', 'retired'].includes(status) && !candidates.some(candidate =>
-      candidate.payload.runId === item.payload.runId && candidate.payload.sourceSha === item.payload.sourceSha)) {
-      throw new Error('Earlier legacy submission has no fixed version; finish its original run before preparing later sources');
-    }
-  }
   const releases = await readPlayReleases(play);
   await writePlayPreparation(github, row, { phase: 'creating' });
   const edit = await play('POST', 'edits', {});
