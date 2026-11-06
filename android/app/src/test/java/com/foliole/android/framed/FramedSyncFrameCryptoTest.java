@@ -11,17 +11,17 @@ public final class FramedSyncFrameCryptoTest {
     private static final byte[] GROUP_KEY = hex(
         "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
     private static final byte[] PREAMBLE = hex(
-        "464f4c53594e43320060001c010000002f9edd47aa3a00bce4b4b6f50a3ab5eb38ab4dc372e0a8c0813ba78196204468" +
+        "464f4c53594e43320060001d010000008b926880b18711d13081d20fb27bfdfde806371be0115bf0891ab7a98f1030d2" +
         "00112233445566778899aabbccddeeff0506070800000000000000000000000000000000000000000000000000000000");
     private static final byte[] HEADER = hex("0000001e000000000000000000010000");
     private static final byte[] CIPHERTEXT = hex(
-        "16c0b48f825871a7b75996d27d18408640410b5a7c0826a4e1864b64d116");
+        "0eab8a8acb9612cad746e3909df4ae0aa5b410db0422ca13f1c4b54b1e25");
 
     @Test public void decryptsTheFrozenSessionVector() throws Exception {
         FramedSyncPreamble preamble = FramedSyncPreamble.decode(PREAMBLE);
         FramedSyncWireFrame frame = frame(CIPHERTEXT);
 
-        assertArrayEquals(hex("284d8318a6a88b092f4d2f58275996f167941376657f61e00512233c18132526"),
+        assertArrayEquals(hex("dd0f7a8d3c9d43b0488de5d947a0e3539618b5d86c6bdeecebbe81484773c6d9"),
             FramedSyncFrameCrypto.frameKey(GROUP_KEY, preamble));
         assertArrayEquals("session-vector".getBytes(java.nio.charset.StandardCharsets.UTF_8),
             FramedSyncFrameCrypto.decrypt(GROUP_KEY, preamble, frame, 0));
@@ -35,6 +35,33 @@ public final class FramedSyncFrameCryptoTest {
             "frame_authentication_failed");
         reject(() -> FramedSyncFrameCrypto.decrypt(GROUP_KEY, preamble, frame(CIPHERTEXT), 1),
             "frame_sequence_not_contiguous");
+    }
+
+    @Test public void rejectsRetiredPreambleVersions() throws Exception {
+        for (int version : new int[] {28, 30}) {
+            byte[] encoded = PREAMBLE.clone();
+            encoded[11] = (byte) version;
+            try {
+                FramedSyncPreamble.decode(encoded);
+                fail("accepted retired or unknown protocol version");
+            } catch (IllegalArgumentException expected) {
+                assertEquals("framed_sync_protocol_version_unsupported", expected.getMessage());
+            }
+        }
+    }
+
+    @Test public void decryptsTheFrozenTransferVector() throws Exception {
+        byte[] encoded = hex("464f4c53594e43320060001d02000000202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f101112131415161718191a1b1c1d1e1f0102030400000000000000000000000000000000000000000000000000000000");
+        byte[] header = hex("0000001c000000000000000000020000");
+        byte[] ciphertext = hex("d472ab32ec48331d4665fa4f883727df470e197af2d252d21833dfef");
+        FramedSyncPreamble preamble = FramedSyncPreamble.decode(encoded);
+        FramedSyncStreamReader reader = new FramedSyncStreamReader(
+            new ByteArrayInputStream(concat(encoded, header, ciphertext)));
+        reader.readPreamble();
+        assertArrayEquals(hex("f8a3e211c4d18a6726472218ac240fb65ca49c3c444edb54b7e4ce3f08ff36fb"),
+            FramedSyncFrameCrypto.frameKey(GROUP_KEY, preamble));
+        assertArrayEquals(hex("6672616d652d766563746f72"),
+            FramedSyncFrameCrypto.decrypt(GROUP_KEY, preamble, reader.readFrame(), 0));
     }
 
     private static FramedSyncWireFrame frame(byte[] ciphertext) throws Exception {
