@@ -9,6 +9,7 @@ import {
   type RuntimeLibraryPathLocation,
   type RuntimeLibraryPaths
 } from '../../../shared/platform/libraryPathsRuntimeRepository';
+import { refreshWorkspaceState } from '../../../store/workspaceRefreshScheduler';
 
 import {
   confirmExistingLibraryHome,
@@ -90,6 +91,7 @@ async function runLocationUpdate(args: {
   args.setPendingLocation(args.location);
   try {
     args.setPaths(await args.performUpdate());
+    if (args.location === 'library_home') await refreshWorkspaceState('library-path-change');
   } catch (error) {
     if (isLibraryHomeSwitchCancelledError(error)) {
       return;

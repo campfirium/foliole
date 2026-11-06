@@ -1,9 +1,30 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import type { Locator, Page } from '@playwright/test';
+
 import { facts, openEditingSession } from './editorContentEditing.test-support';
-import { expect, test } from './harness/fixtures';
+import { expect, test, type DesktopSession } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsDialog } from './harness/settings';
+
+async function editAgainAfterSettings(page: Page, session: DesktopSession, editor: Locator, expected: string) {
+  await editor.click();
+  await page.evaluate(length => window.__folioleDebug?.setEditorSelection?.('prompt-editor', length, length), expected.length);
+  await page.keyboard.insertText('\nNew editing after settings');
+  const continued = expected + '\nNew editing after settings';
+  await expect.poll(() => facts(session)).toMatchObject({ content: continued, editing: true });
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await facts(session)).editing).toBe(false);
+  return continued;
+}
+
+async function selectLibraryDirectory(session: DesktopSession, target: string) {
+  await session.electronApp.evaluate(({ dialog }, target) => {
+    const original = dialog.showOpenDialog;
+    Object.assign(globalThis, { restoreLibrarySwitchDialog: () => { dialog.showOpenDialog = original; } });
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [target] });
+  }, target);
+}
 
 test('saves editing before changing the library location through Storage settings', async ({ desktopWindow: page, desktopSession: session }) => {
   await fs.mkdir('.tmp/artifacts/T727', { recursive: true });
@@ -31,12 +52,9 @@ test('saves editing before changing the library location through Storage setting
         return original();
       };
     });
-    await session.electronApp.evaluate(({ dialog }, target) => {
-      const original = dialog.showOpenDialog;
-      Object.assign(globalThis, { restoreLibrarySwitchDialog: () => { dialog.showOpenDialog = original; } });
-      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [target] });
-    }, target);
+    await selectLibraryDirectory(session, target);
     const settings = await openSettingsDialog(page);
+    await expect.poll(async () => (await facts(session)).editing).toBe(false);
     await settings.getByRole('button', { name: /^(Storage|存储)$/ }).click();
     await settings.locator('[data-settings-search-row-id="library-home"]').getByRole('button', { name: /Change location|更改位置/ }).click();
     await expect.poll(() => page.evaluate(() =>
@@ -47,10 +65,14 @@ test('saves editing before changing the library location through Storage setting
     await expect.poll(() => page.evaluate(() => window.electronAPI.invoke('load_library_path_settings', {})))
       .toMatchObject({ library_home: target });
     expect((await facts(session)).content).toBe(expected);
+    await page.keyboard.press('Escape');
+    await expect(settings).not.toBeVisible();
+    expect((await facts(session)).editing).toBe(false);
+    const continued = await editAgainAfterSettings(page, session, editor, expected);
     await page.screenshot({ path: '.tmp/artifacts/T727/library-switch-saved-tail.png' });
     await page.reload();
     await expectWorkspaceShell(page);
-    expect((await facts(session)).content).toBe(expected);
+    expect((await facts(session)).content).toBe(continued);
   } finally {
     await session.electronApp.evaluate(() => {
       (globalThis as unknown as { restoreLibrarySwitchDialog?: () => void }).restoreLibrarySwitchDialog?.();

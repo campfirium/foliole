@@ -48,7 +48,7 @@ async function runPendingContentCloseFlushCase() {
       await actions.updateNodeContent('node-1', 'Draft before close');
       return true;
     });
-    closeResult = await result.current.flushPendingEditorDraftImmediately();
+    closeResult = await result.current.flushPendingEditorDraftBeforeClose();
   });
 
   expect(closeResult).toBe(true);
@@ -75,7 +75,7 @@ async function runCreatePendingCloseFlushCase() {
       await actions.updateNodeContent('node-1', 'Draft while create is pending');
       return true;
     });
-    const closePromise = result.current.flushPendingEditorDraftImmediately().then((value) => {
+    const closePromise = result.current.flushPendingEditorDraftBeforeClose().then((value) => {
       closeResult = value;
     });
 
@@ -107,7 +107,7 @@ async function runFreshEditorContentCloseFlushCase() {
       getContent: () => 'Fresh close body'
     } as never;
     result.current.registerPendingEditorDraftFlush(null, closeFlush, freshFlush);
-    await result.current.flushPendingEditorDraftImmediately();
+    await result.current.flushPendingEditorDraftBeforeClose();
   });
 
   expect(freshFlush).toHaveBeenCalledWith(null, 'Fresh close body');
@@ -144,7 +144,7 @@ describe('useAppRuntime close flush persistence boundary', () => {
 
   it('waits for create-pending content before the close flush resolves', runCreatePendingCloseFlushCase);
 
-  it('captures fresh editor content before running close fallback flush', runFreshEditorContentCloseFlushCase);
+  it('captures fresh editor content when completing the close flush', runFreshEditorContentCloseFlushCase);
 
   it('falls back to pending draft flush when fresh editor content is not accepted', runFreshEditorContentFallbackFlushCase);
 });

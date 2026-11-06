@@ -17,6 +17,7 @@ export type WorkspaceRefreshSource =
   | 'global-capture-navigation'
   | 'guided-sample'
   | 'import-overview-reset'
+  | 'library-path-change'
   | 'managed-inbox'
   | 'merge-highlights'
   | 'queued'

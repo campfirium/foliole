@@ -35,22 +35,23 @@ export function useEditorDraftFlushRegistry(refs: EditorDraftFlushRefs) {
   const flushPendingEditorDraftImmediately = useCallback(
     async () => {
       flushActiveEditorTransaction(null);
-      const draftFlushed = (await refs.editorDraftCloseFlushRef.current?.()) ?? true;
+      refs.editorDraftFlushRef.current?.();
       try {
         const contentFlushed = await drainPendingNodeContentRuntimePersists();
         await flushDirtyWorkspaceNodeSyncVersions();
-        return draftFlushed && contentFlushed;
+        return contentFlushed;
       } catch {
         return false;
       }
     },
-    [flushActiveEditorTransaction, refs.editorDraftCloseFlushRef]
+    [flushActiveEditorTransaction, refs.editorDraftFlushRef]
   );
   const flushPendingEditorDraftBeforeClose = useCallback(async () => {
     const { libraryScope, activeNodeId } = useWorkspaceStore.getState();
     if (libraryScope && activeNodeId && !await waitForWorkspaceContentCommands(libraryScope, activeNodeId)) return false;
+    if (await refs.editorDraftCloseFlushRef.current?.() === false) return false;
     return flushPendingEditorDraftImmediately();
-  }, [flushPendingEditorDraftImmediately]);
+  }, [flushPendingEditorDraftImmediately, refs.editorDraftCloseFlushRef]);
   const registerPendingEditorDraftFlush = useCallback(
     (
       flush: (() => boolean) | null,

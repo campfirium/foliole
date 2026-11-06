@@ -10,14 +10,19 @@ vi.mock('electron', () => ({ nativeTheme: { themeSource: 'system', on: vi.fn() }
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({ app_data_dir: transport.root,
   app_cache_dir: `${transport.root}/cache`, app_config_dir: `${transport.root}/config`, app_log_dir: `${transport.root}/logs` }) }));
 vi.mock('../mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));
+vi.mock('../ipc/boot.js', () => ({ appendBootEvent: vi.fn(async () => undefined) }));
 vi.mock('../ipc/workspaceContentChangedEvents.js', () => ({ notifyWorkspaceContentChanged: vi.fn() }));
 vi.mock('../../src/shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () =>
   (command: string, args: Record<string, unknown> = {}) => invoke(command, structuredClone(args)) }));
 
-import { updateLibraryPathSetting } from '../ipc/libraryPaths.js';
+import { hasContentEditingSession } from '../../lib/core/sync/contentEditingSession.js';
+import { loadLibraryPathSettings, updateLibraryPathSetting } from '../ipc/libraryPaths.js';
 import { handleNodeMutationCommand } from '../ipc/storageNodeMutationCommands.js';
+import { handleReadingAndReviewCommand, handleWorkspaceReadCommand } from '../ipc/storageReadCommands.js';
 
-import { openDatabaseConnection } from './connection.js';
+import { currentLibraryScope } from './attachmentResourceDescription.js';
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from './connection.js';
 import { createEditorHandoffFixture, invokeEditorHandoff, observeReceiptWaiting,
   setupEditorHandoffTests, transport } from './editorHandoff.test-support.js';
 
@@ -29,6 +34,13 @@ const { updateRuntimeLibraryPathSetting } = await rendererModule('../../src/shar
 
 let switchRequests = 0;
 async function invoke(command: string, args: Record<string, unknown>) {
+  if (command === 'select_import_directory') return path.join(transport.root, 'Next');
+  if (command === 'load_library_path_settings') return loadLibraryPathSettings();
+  if (command === 'load_workspace_list_snapshot' || command === 'load_reading_progress') {
+    return runWithDatabaseConnectionOwner<unknown>(() => handleWorkspaceReadCommand(command, args)
+      ?? handleReadingAndReviewCommand(command, args));
+  }
+  if (command === 'append_reading_position_trace_log' || command === 'boot_report') return null;
   if (command === 'update_library_path_setting') {
     switchRequests += 1;
     return updateLibraryPathSetting({ location: 'library_home', path: String(args.path) });
@@ -99,15 +111,14 @@ it('keeps the current library and accepts continued input when the switch flush 
 });
 
 
-it.each([false, true])('waits for an accepted text command before switching library (failure: %s)', async failed => {
+it.each([false, true])('waits for an accepted text command at the registered close boundary (failure: %s)', async failed => {
   const app = await fixture();
-  const originalPath = openDatabaseConnection().dbPath;
   await act(async () => { app.input('Before command'); expect(await app.drain()).toBe(true); });
   let release!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; });
   let command!: Promise<boolean>;
-  let switching!: Promise<unknown>;
-  let failure: unknown;
+  let closing!: Promise<boolean>;
+  let closeCompleted = false;
   await act(async () => {
     command = runWorkspaceContentCommand(async () => {
       await gate;
@@ -116,19 +127,19 @@ it.each([false, true])('waits for an accepted text command before switching libr
       app.input('Accepted command tail');
       return app.drain();
     });
-    switching = updateRuntimeLibraryPathSetting('library_home', path.join(transport.root, 'Next'))
-      .catch((error: unknown) => { failure = error; });
-    await new Promise(resolve => setTimeout(resolve, 20));
+    closing = flushWindow.__folioleFlushPendingEditorDraftBeforeClose!().then(result => {
+      closeCompleted = true;
+      return result;
+    });
+    await Promise.resolve();
   });
-  const switchedBeforeCommand = switchRequests > 0 || openDatabaseConnection().dbPath !== originalPath;
-  await act(async () => { release(); await command; await switching; });
-  expect(switchedBeforeCommand).toBe(false);
+  expect(closeCompleted).toBe(false);
+  await act(async () => { release(); await command; expect(await closing).toBe(!failed); });
   if (failed) {
-    expect(failure).toBeInstanceOf(Error);
-    expect(openDatabaseConnection().dbPath).toBe(originalPath);
     await act(async () => { app.input('Continued after command failure'); expect(await app.drain()).toBe(true); });
-    await act(async () => { await updateRuntimeLibraryPathSetting('library_home', path.join(transport.root, 'Next')); });
-  } else expect(failure).toBeUndefined();
+    await act(async () => { expect(await flushWindow.__folioleFlushPendingEditorDraftBeforeClose!()).toBe(true); });
+  }
+  expect(switchRequests).toBe(0);
   expect(openDatabaseConnection().sqlite.prepare("SELECT content FROM nodes WHERE id = 'topic'").pluck().get())
     .toBe(failed ? 'Continued after command failure' : 'Accepted command tail');
 });
@@ -140,7 +151,7 @@ const { MouseGestureSettingsProvider } = await rendererModule('../../src/feature
 type CompositionEditor = { getContent(): string; replaceRange(from: number, to: number, content: string): void;
   flushContentChanges?(): void };
 
-it.each([false, true])('waits for composition completion before switching library (modified: %s)', async modified => {
+it.each([false, true])('keeps ordinary saves independent and waits for composition at close (modified: %s)', async modified => {
   let adapter: CompositionEditor | null = null;
   const app = await fixture(panel => createElement(LocalizationProvider, null,
     createElement(MouseGestureSettingsProvider, null, createElement(MarkdownEditor, {
@@ -151,7 +162,6 @@ it.each([false, true])('waits for composition completion before switching librar
     }))));
   const editor = adapter as unknown as CompositionEditor;
   const input = app.container!.querySelector<HTMLElement>('.cm-content')!;
-  const originalPath = openDatabaseConnection().dbPath;
   await act(async () => {
     input.focus();
     fireEvent.compositionStart(input);
@@ -161,19 +171,51 @@ it.each([false, true])('waits for composition completion before switching librar
       expect(await app.drain()).toBe(true);
     }
   });
-  let switching!: Promise<unknown>;
+  let ordinaryCompleted = false;
+  const ordinary = app.flush().then((result: boolean) => { ordinaryCompleted = true; return result; });
+  try {
+    await act(async () => { await vi.waitFor(() => expect(ordinaryCompleted).toBe(true)); });
+  } finally {
+    if (!ordinaryCompleted) await act(async () => { fireEvent.compositionEnd(input); await ordinary; });
+  }
+  expect(await ordinary).toBe(true);
+  let closing!: Promise<boolean>;
+  let closeCompleted = false;
   await act(async () => {
-    switching = updateRuntimeLibraryPathSetting('library_home', path.join(transport.root, 'Next'));
-    await new Promise(resolve => setTimeout(resolve, 20));
+    closing = flushWindow.__folioleFlushPendingEditorDraftBeforeClose!().then(result => {
+      closeCompleted = true;
+      return result;
+    });
+    await Promise.resolve();
   });
-  const switchedBeforeEnd = switchRequests > 0 || openDatabaseConnection().dbPath !== originalPath;
+  expect(closeCompleted).toBe(false);
   await act(async () => {
     editor.replaceRange(0, editor.getContent().length, 'Final 中文');
     editor.flushContentChanges?.();
     fireEvent.compositionEnd(input);
-    await switching;
+    expect(await closing).toBe(true);
   });
-  expect(switchedBeforeEnd).toBe(false);
+  expect(switchRequests).toBe(0);
   expect(openDatabaseConnection().sqlite.prepare("SELECT content FROM nodes WHERE id = 'topic'").pluck().get())
     .toBe('Final 中文');
+});
+
+
+const { useLibraryPathSettings } = await rendererModule('../../src/features/settings/components/useLibraryPathSettings.ts');
+
+it('starts a new editing session after leaving the editor and moving its library', async () => {
+  const app = await fixture();
+  await act(async () => { app.input('Before settings'); expect(await app.drain()).toBe(true); });
+  await act(async () => { await app.view.result.current.onEditorFocusLeave?.(); });
+  expect(hasContentEditingSession(app.port, 'topic')).toBe(false);
+  const settings = renderHook(() => useLibraryPathSettings(), {
+    wrapper: ({ children }) => createElement(LocalizationProvider, null, children)
+  });
+  await act(async () => { await settings.result.current.onChangeLocation('library_home'); });
+  expect(settings.result.current.errorByLocation.library_home).toBeNull();
+  expect(app.store.getState().libraryScope).toBe(currentLibraryScope());
+  await act(async () => { app.input('New input after settings'); expect(await app.drain()).toBe(true); });
+  expect(hasContentEditingSession(createBetterSqliteDbPort(openDatabaseConnection().sqlite), 'topic')).toBe(true);
+  expect(openDatabaseConnection().sqlite.prepare("SELECT content FROM nodes WHERE id = 'topic'").pluck().get())
+    .toBe('New input after settings');
 });
