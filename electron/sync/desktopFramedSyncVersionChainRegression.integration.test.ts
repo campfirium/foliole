@@ -5,8 +5,8 @@ import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
+import { readTopicAlternativeRecords } from '../../lib/core/sync/topicAlternativeStore.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { wholeBodies } from '../database/topicTextState.testSupport.js';
 
 import { readFixtureInventory }
   from './desktopFramedSyncPublicationRecovery.testSupport.js';
@@ -143,8 +143,10 @@ async function assertWholeTexts(databasePath: string, nodeId: string) {
   try {
     const record = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(sqlite), nodeId);
     expect(record).not.toBeNull();
-    expect(wholeBodies(record!)).toEqual(new Set(['Left branch body', 'Right branch body']));
-    expect(record!.snapshot.text_alternatives).toHaveLength(1);
+    const alternatives = await readTopicAlternativeRecords(createBetterSqliteDbPort(sqlite), nodeId);
+    expect(new Set([record!.body_text, ...alternatives.map(row => row.body_text)]))
+      .toEqual(new Set(['Left branch body', 'Right branch body']));
+    expect(alternatives).toHaveLength(1);
   } finally { sqlite.close(); }
 }
 

@@ -128,13 +128,13 @@ it('writes node_review and review_log in one grading mutation', () => {
   const logRow = selectReviewLogRow();
 
   expect(reviewRow).toMatchObject({
-    due: '2026-03-09T00:00:00.000Z',
+    due: '2026-03-10T00:00:00.000Z',
     last_review_at: '2026-03-06T00:00:00.000Z',
     state: 2,
-    stability: 2.3065,
-    difficulty: 2.11810397,
+    stability: 3.9221,
+    difficulty: 3.53072398,
     elapsed_days: 0,
-    scheduled_days: 3,
+    scheduled_days: 4,
     reps: 1,
     lapses: 0
   });

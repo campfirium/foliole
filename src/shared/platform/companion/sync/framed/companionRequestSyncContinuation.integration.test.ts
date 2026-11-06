@@ -52,9 +52,8 @@ it('converges a fork after the shared ancestor body was deleted', { meta: { cali
     const versions = 'SELECT version_id, parent_version_id, content_hash, body_text FROM node_sync_versions WHERE object_id = ? ORDER BY version_id';
     expect(right.prepare(versions).all(nodeId)).toEqual(host.sqlite.prepare(versions).all(nodeId));
     const currentBodies = host.sqlite.prepare<[string, string], { body: string }>(`SELECT content AS body FROM nodes WHERE id = ?
-      UNION ALL SELECT json_extract(body.value, '$.text') AS body FROM nodes n
-      JOIN node_sync_versions v ON v.version_id = n.current_version_id,
-      json_each(v.snapshot_json, '$.text_alternative_bodies') body WHERE n.id = ?`).all(nodeId, nodeId);
+      UNION ALL SELECT body_text AS body FROM node_text_alternatives
+      WHERE node_id = ? AND status = 'available'`).all(nodeId, nodeId);
     expect(new Set(currentBodies.map(row => row.body)))
       .toEqual(new Set(['Companion complete input', 'Desktop advanced input']));
     expect(host.sqlite.prepare(versions).all(nodeId)).toContainEqual(expect.objectContaining({ body_text: null }));
