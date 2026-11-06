@@ -1,13 +1,17 @@
 import { fireEvent, render, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { expect, it, vi } from 'vitest';
 
 import { useMarkdownEditorFocusLeave } from './useMarkdownEditorFocusLeave';
 
-function Editor({ leave, nodeId = 'topic', command }: { leave: () => void; nodeId?: string; command?: () => void }) {
+function Editor({ leave, nodeId = 'topic', command, removeOnRelease = false }: {
+  leave: () => void; nodeId?: string; command?: () => void; removeOnRelease?: boolean
+}) {
+  const [removed, setRemoved] = useState(false);
   const handlers = useMarkdownEditorFocusLeave({ nodeId, value: '', onChange: () => undefined,
     onFocusLeave: leave });
   return <><div {...handlers}><textarea aria-label="Body" /><button>Inside</button></div>
-    <button onClick={command}>Outside</button></>;
+    <span>{!removed && <button onClick={command} onMouseUp={() => removeOnRelease && setRemoved(true)}>Outside</button>}</span></>;
 }
 
 it.each([false, true])('ends editing only when Tab moves focus outside (shift=%s)', shiftKey => {
@@ -81,5 +85,17 @@ it('finishes cancelled pointer input without waiting for a click that will never
   fireEvent.pointerDown(button, { pointerId: 1 });
   button.focus();
   fireEvent.pointerCancel(button, { pointerId: 1 });
+  await waitFor(() => expect(leave).toHaveBeenCalledOnce());
+});
+
+it('finishes a pointer exit when mouseup removes the target and prevents any click', async () => {
+  const leave = vi.fn();
+  const view = render(<Editor leave={leave} removeOnRelease />);
+  const button = view.getByRole('button', { name: 'Outside' });
+  view.getByLabelText('Body').focus();
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  button.focus();
+  fireEvent.mouseUp(button);
+  expect(button.isConnected).toBe(false);
   await waitFor(() => expect(leave).toHaveBeenCalledOnce());
 });

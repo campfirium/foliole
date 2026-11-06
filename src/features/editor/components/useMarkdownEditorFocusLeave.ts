@@ -35,9 +35,17 @@ export function useMarkdownEditorFocusLeave(props: MarkdownEditorProps) {
         if (pending && token === generation.current && !pending.root.contains(document.activeElement)) pending.notify();
       });
     };
+    const release = (event: MouseEvent) => {
+      const target = event.target;
+      const interaction = pointer.current;
+      afterEventDispatch(() => {
+        if (pointer.current === interaction && target instanceof Node && !target.isConnected) complete();
+      });
+    };
     const cancel = (event: PointerEvent) => { if (pointer.current?.id === event.pointerId) complete(); };
     window.addEventListener('pointerdown', begin, true);
     window.addEventListener('click', complete, true);
+    window.addEventListener('mouseup', release, true);
     window.addEventListener('auxclick', complete, true);
     window.addEventListener('pointercancel', cancel, true);
     window.addEventListener('dragend', complete, true);
@@ -47,6 +55,7 @@ export function useMarkdownEditorFocusLeave(props: MarkdownEditorProps) {
       departure.current = null;
       window.removeEventListener('pointerdown', begin, true);
       window.removeEventListener('click', complete, true);
+      window.removeEventListener('mouseup', release, true);
       window.removeEventListener('auxclick', complete, true);
       window.removeEventListener('pointercancel', cancel, true);
       window.removeEventListener('dragend', complete, true);
