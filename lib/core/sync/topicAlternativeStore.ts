@@ -1,13 +1,13 @@
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStatements.js';
 
 import type { DbPort } from './dbPort.js';
-import { topicAlternativeHash, type TopicAlternativeRecord } from './topicAlternativeRecord.js';
+import { TOPIC_ALTERNATIVE_METADATA_COLUMNS, topicAlternativeHash, type TopicAlternativeMetadata, type TopicAlternativeRecord } from './topicAlternativeRecord.js';
 import { normalizeTextAlternativesForHash, type TopicTextAlternative } from './topicTextState.js';
 
 export const AVAILABLE_TOPIC_ALTERNATIVES_SQL = `SELECT * FROM node_text_alternatives
   WHERE node_id = ? AND status = 'available' ORDER BY created_at DESC, alternative_id DESC`;
 
-export function topicAlternativeEntry(row: TopicAlternativeRecord): TopicTextAlternative {
+export function topicAlternativeEntry(row: TopicAlternativeMetadata): TopicTextAlternative {
   return { id: row.alternative_id, body_blob_hash: row.body_blob_hash,
     source_host_name: row.source_host_name, created_at: row.created_at, expires_at: row.expires_at };
 }
@@ -17,13 +17,13 @@ export async function readTopicAlternativeRecords(db: DbPort, nodeId: string) {
 }
 
 export async function writeTopicAlternative(db: DbPort, record: TopicAlternativeRecord, local: boolean) {
-  const [existing] = await db.query<TopicAlternativeRecord>(
-    'SELECT * FROM node_text_alternatives WHERE alternative_id = ?', [record.alternative_id]);
+  const [existing] = await db.query<TopicAlternativeMetadata>(
+    `SELECT ${TOPIC_ALTERNATIVE_METADATA_COLUMNS} FROM node_text_alternatives WHERE alternative_id = ?`, [record.alternative_id]);
   if (existing && (existing.node_id !== record.node_id || existing.body_blob_hash !== record.body_blob_hash)) {
     throw new Error('text_alternative_identity_mismatch');
   }
-  if (existing?.status !== undefined) record = resolveTopicAlternative(existing, record);
-  if (existing && topicAlternativeHash(existing) === topicAlternativeHash(record)) return false;
+  const selected = existing ? resolveTopicAlternative(existing, record) : record;
+  if (existing && topicAlternativeHash(existing) === topicAlternativeHash(selected)) return false;
   await db.run(`INSERT INTO node_text_alternatives
     (alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at,
       body_blob_hash, expires_at, resource_references, image_sources) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -39,7 +39,7 @@ export async function writeTopicAlternative(db: DbPort, record: TopicAlternative
   return true;
 }
 
-export async function publishTopicAlternative(db: DbPort, record: TopicAlternativeRecord) {
+export async function publishTopicAlternative(db: DbPort, record: TopicAlternativeMetadata) {
   await db.run(`INSERT INTO sync_object_state
     (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty)
     VALUES ('node_text_alternative', ?, ${NEXT_SYNC_STATE_SEQ_SQL}, ?, ?, ?, 1)
@@ -50,7 +50,7 @@ export async function publishTopicAlternative(db: DbPort, record: TopicAlternati
 }
 
 /** Removed choices cannot be reactivated by a delayed creation; repeats never renew the deadline. */
-export function resolveTopicAlternative(left: TopicAlternativeRecord, right: TopicAlternativeRecord) {
+export function resolveTopicAlternative<T extends TopicAlternativeMetadata>(left: T, right: T): T {
   if (left.status === 'available' && right.status !== 'available') return right;
   if (left.status !== 'available' && right.status === 'available') return left;
   if (left.status === 'available') {
@@ -63,7 +63,7 @@ export function resolveTopicAlternative(left: TopicAlternativeRecord, right: Top
   return a >= b ? left : right;
 }
 
-export async function retireTopicAlternative(db: DbPort, record: TopicAlternativeRecord,
+export async function retireTopicAlternative(db: DbPort, record: TopicAlternativeMetadata,
   status: Exclude<TopicAlternativeRecord['status'], 'available'>, now: string) {
   return writeTopicAlternative(db, { ...record, status, updated_at: now,
     body_text: '', resource_references: '[]', image_sources: null }, true);
@@ -71,7 +71,8 @@ export async function retireTopicAlternative(db: DbPort, record: TopicAlternativ
 
 /** Called by alternative operations and conflict handling, never by ordinary main-body saves. */
 export async function settleTopicAlternatives(db: DbPort, nodeId: string, mainHash: string, now: string) {
-  const records = await readTopicAlternativeRecords(db, nodeId);
+  const records = await db.query<TopicAlternativeMetadata>(`SELECT ${TOPIC_ALTERNATIVE_METADATA_COLUMNS}
+    FROM node_text_alternatives WHERE node_id = ? AND status = 'available'`, [nodeId]);
   const selected = normalizeTextAlternativesForHash(records.map(topicAlternativeEntry), mainHash, now);
   const retained = new Set(selected.map(entry => entry.id));
   for (const record of records) if (!retained.has(record.alternative_id)) {

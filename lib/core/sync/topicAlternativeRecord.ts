@@ -15,6 +15,10 @@ export const topicAlternativeRecordSchema = z.object({
 });
 
 export type TopicAlternativeRecord = z.infer<typeof topicAlternativeRecordSchema>;
+export type TopicAlternativeMetadata = Omit<TopicAlternativeRecord, 'body_text'>;
+
+export const TOPIC_ALTERNATIVE_METADATA_COLUMNS = `alternative_id, node_id, source_version_id,
+  body_blob_hash, source_host_name, created_at, expires_at, resource_references, image_sources, status, updated_at`;
 
 export function validateTopicAlternativeRecord(value: unknown) {
   const record = topicAlternativeRecordSchema.parse(value);
@@ -28,7 +32,7 @@ export function validateTopicAlternativeRecord(value: unknown) {
   return record;
 }
 
-export function topicAlternativeHash(record: TopicAlternativeRecord) {
+export function topicAlternativeHash(record: TopicAlternativeMetadata) {
   const metadata = { ...record, body_text: undefined };
   return computeSyncContentHash('node_text_alternative', metadata);
 }

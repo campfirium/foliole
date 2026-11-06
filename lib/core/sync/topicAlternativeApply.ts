@@ -3,8 +3,8 @@ import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStat
 
 import type { DbPort } from './dbPort.js';
 import type { SyncObjectRecord } from './syncObjectRecord.js';
-import { topicAlternativeHash, validateTopicAlternativeRecord, type TopicAlternativeRecord } from './topicAlternativeRecord.js';
-import { publishTopicAlternative, resolveTopicAlternative, writeTopicAlternative } from './topicAlternativeStore.js';
+import { topicAlternativeHash, validateTopicAlternativeRecord } from './topicAlternativeRecord.js';
+import { publishTopicAlternative, writeTopicAlternative } from './topicAlternativeStore.js';
 
 /** Independent choice facts use their own terminal state, not absence from a main-body version. */
 export async function applyTopicAlternativeRecord(db: DbPort, record: SyncObjectRecord) {
@@ -25,11 +25,8 @@ export async function applyTopicAlternativeRecord(db: DbPort, record: SyncObject
     await deleteTopicAlternative(db, incoming.alternative_id, parent.deleted_at, undefined, incoming.node_id);
     return `node_text_alternative:${record.object_id}`;
   }
-  const [existing] = await db.query<TopicAlternativeRecord>(
-    'SELECT * FROM node_text_alternatives WHERE alternative_id = ?', [record.object_id]);
-  const selected = existing ? resolveTopicAlternative(existing, incoming) : incoming;
   const changed = await writeTopicAlternative(db, incoming, false);
-  if (changed || selected !== incoming) await publishTopicAlternative(db, selected);
+  if (changed) await publishTopicAlternative(db, incoming);
   return changed ? `node_text_alternative:${record.object_id}` : null;
 }
 

@@ -5,7 +5,7 @@ import type { DbPort } from './dbPort.js';
 import { applyLocalContentEdit } from './localContentEdit.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { loadCurrentSyncNodeRecord } from './syncNodeGraph.js';
-import { validateTopicAlternativeRecord, type TopicAlternativeRecord } from './topicAlternativeRecord.js';
+import { TOPIC_ALTERNATIVE_METADATA_COLUMNS, validateTopicAlternativeRecord, type TopicAlternativeMetadata, type TopicAlternativeRecord } from './topicAlternativeRecord.js';
 import { retireTopicAlternative } from './topicAlternativeStore.js';
 
 export async function mutateTopicText(db: DbPort, input: {
@@ -13,14 +13,17 @@ export async function mutateTopicText(db: DbPort, input: {
   now: string; versionId: string; hostName: string;
 }) {
   return db.transaction(async tx => {
-    const current = await loadCurrentSyncNodeRecord(tx, input.nodeId);
-    if (!current?.version_id || current.snapshot.deleted_at) return unavailable(input);
-    const [row] = await tx.query<TopicAlternativeRecord>(`SELECT * FROM node_text_alternatives
+    const [node] = await tx.query('SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL', [input.nodeId]);
+    if (!node) return unavailable(input);
+    const columns = input.action === 'promoted' ? '*' : TOPIC_ALTERNATIVE_METADATA_COLUMNS;
+    const [row] = await tx.query<TopicAlternativeMetadata>(`SELECT ${columns} FROM node_text_alternatives
       WHERE node_id = ? AND alternative_id = ? AND status = 'available' AND expires_at > ?`,
     [input.nodeId, input.alternativeId, input.now]);
     if (!row) return unavailable(input);
-    const selected = validateTopicAlternativeRecord(row);
     if (input.action === 'promoted') {
+      const selected = validateTopicAlternativeRecord(row as TopicAlternativeRecord);
+      const current = await loadCurrentSyncNodeRecord(tx, input.nodeId);
+      if (!current?.version_id) return unavailable(input);
       const sources = parseImageSources(selected.image_sources);
       const references = parseNodeResourceReferences(selected.resource_references)
         .filter(reference => reference.role === 'image')
@@ -30,9 +33,9 @@ export async function mutateTopicText(db: DbPort, input: {
         newImageReferences: references, title: current.snapshot.title,
         hideTitleHeading: current.snapshot.hide_title_heading, hostName: input.hostName, updatedAt: input.now });
     }
-    await retireTopicAlternative(tx, selected, input.action, input.now);
+    await retireTopicAlternative(tx, row, input.action, input.now);
     await collectNodeVersionPayloads(tx, input.nodeId, Number.MAX_SAFE_INTEGER);
-    return { alternative_id: selected.alternative_id, node_id: input.nodeId, status: input.action };
+    return { alternative_id: row.alternative_id, node_id: input.nodeId, status: input.action };
   });
 }
 
