@@ -125,7 +125,7 @@ function DailyFlowQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) 
   const dayBuckets = future?.view?.dayBuckets ?? [];
   const dayOffsetByNodeId = Object.fromEntries(dayBuckets.flatMap(bucket => bucket.nodeIds.map(id => [id, bucket.dayOffset])));
   return <FlowQueuePanel {...props} currentNodeId={result.view.currentNodeId}
-    nodesById={result.nodes ? { ...nodesById, ...result.nodes } : nodesById}
+    nodesById={result.nodes ? { ...result.nodes, ...nodesById } : nodesById}
     flowWindow={{ queueNodeIds: nodeIds, readyNodeIds: [], upcomingNodeIds: dayBuckets.flatMap(bucket => bucket.nodeIds), dayBuckets, dayOffsetByNodeId }} />;
 }
 

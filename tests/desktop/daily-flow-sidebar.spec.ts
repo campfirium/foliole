@@ -1,12 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { resetSeededDailyFlow } from './dailyFlowFixture.test-support';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
 const output = path.resolve('.tmp/artifacts/T536/sidebar-native');
 
-test('prepares the sidebar without starting learning and follows the durable Soon order', async ({ desktopWindow: page }) => {
+test('prepares the sidebar without starting learning and follows the durable Soon order', async ({ desktopApp, desktopWindow: page }) => {
   await expectWorkspaceShell(page);
   await page.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
   await page.reload();
@@ -24,6 +25,7 @@ test('prepares the sidebar without starting learning and follows the durable Soo
       createdAt: '2026-01-01T00:00:00.000Z'
     })), { persist: true });
   });
+  await resetSeededDailyFlow(desktopApp);
   await page.reload();
   await expectWorkspaceShell(page);
   const query = () => page.evaluate(stamp => window.electronAPI.invoke('read_daily_flow_view',
