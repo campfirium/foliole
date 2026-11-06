@@ -185,7 +185,7 @@ export function useWorkspaceControllerState(
     saveActiveNodeView,
     navigationReadingPosition
   );
-  useEditorDraftCloseFlushRegistration(isWorkspaceHydrated, runtime.flushPendingEditorDraftImmediately);
+  useEditorDraftCloseFlushRegistration(isWorkspaceHydrated, runtime.flushPendingEditorDraftBeforeClose);
   useWorkspaceReadingProgressPersistence({
     activeNodeId: ws.activeNodeId,
     browseRootNodeId: ws.browseRootNodeId,

@@ -2,6 +2,8 @@ import { useCallback, type MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { flushDirtyWorkspaceNodeSyncVersions } from '../../shared/platform/workspaceRuntimeRepository';
+import { waitForWorkspaceContentCommands } from '../../store/workspaceContentCommands';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 import { drainPendingNodeContentRuntimePersists } from '../../store/workspaceStoreContentRuntimePersist';
 
 export type EditorDraftFreshFlush = (sourceNodeId: string | null, content: string) => boolean;
@@ -44,6 +46,11 @@ export function useEditorDraftFlushRegistry(refs: EditorDraftFlushRefs) {
     },
     [flushActiveEditorTransaction, refs.editorDraftCloseFlushRef]
   );
+  const flushPendingEditorDraftBeforeClose = useCallback(async () => {
+    const { libraryScope, activeNodeId } = useWorkspaceStore.getState();
+    if (libraryScope && activeNodeId && !await waitForWorkspaceContentCommands(libraryScope, activeNodeId)) return false;
+    return flushPendingEditorDraftImmediately();
+  }, [flushPendingEditorDraftImmediately]);
   const registerPendingEditorDraftFlush = useCallback(
     (
       flush: (() => boolean) | null,
@@ -60,6 +67,7 @@ export function useEditorDraftFlushRegistry(refs: EditorDraftFlushRefs) {
     flushActiveEditorTransaction,
     flushPendingEditorDraft,
     flushPendingEditorDraftImmediately,
+    flushPendingEditorDraftBeforeClose,
     registerPendingEditorDraftFlush
   };
 }

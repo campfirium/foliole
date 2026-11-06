@@ -22,6 +22,7 @@ import { createEditorHandoffFixture, invokeEditorHandoff, observeReceiptWaiting,
 
 const rendererModule = (modulePath: string) => import(modulePath);
 const { drainPendingNodeContentRuntimePersists } = await rendererModule('../../src/store/workspaceStoreContentRuntimePersist.ts');
+const { runWorkspaceContentCommand } = await rendererModule('../../src/store/workspaceContentCommands.ts');
 const { useAppRuntime } = await rendererModule('../../src/app/hooks/useAppRuntime.ts');
 const { updateRuntimeLibraryPathSetting } = await rendererModule('../../src/shared/platform/libraryPathsRuntimeRepository.ts');
 
@@ -46,8 +47,8 @@ async function fixture() {
   const app = await createEditorHandoffFixture(true, true, undefined, () => ({
     onRegisterEditorDraftFlush: runtime.result.current.registerPendingEditorDraftFlush
   }));
-  flushWindow.__folioleFlushPendingEditorDraftBeforeClose = runtime.result.current.flushPendingEditorDraftImmediately;
-  return { ...app, drain: async () => {
+  flushWindow.__folioleFlushPendingEditorDraftBeforeClose = runtime.result.current.flushPendingEditorDraftBeforeClose;
+  return { ...app, flush: runtime.result.current.flushPendingEditorDraftImmediately, drain: async () => {
     runtime.result.current.flushPendingEditorDraft();
     return drainPendingNodeContentRuntimePersists();
   } };
@@ -94,4 +95,39 @@ it('keeps the current library and accepts continued input when the switch flush 
   expect(openDatabaseConnection().sqlite.prepare("SELECT content FROM nodes WHERE id = 'topic'").pluck().get())
     .toBe('Continued after failure');
   delete flushWindow.__folioleFlushPendingEditorDraftBeforeClose;
+});
+
+
+it.each([false, true])('waits for an accepted text command before switching library (failure: %s)', async failed => {
+  const app = await fixture();
+  const originalPath = openDatabaseConnection().dbPath;
+  await act(async () => { app.input('Before command'); expect(await app.drain()).toBe(true); });
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  let command!: Promise<boolean>;
+  let switching!: Promise<unknown>;
+  let failure: unknown;
+  await act(async () => {
+    command = runWorkspaceContentCommand(async () => {
+      await gate;
+      if (failed) return false;
+      expect(await app.flush()).toBe(true);
+      app.input('Accepted command tail');
+      return app.drain();
+    });
+    switching = updateRuntimeLibraryPathSetting('library_home', path.join(transport.root, 'Next'))
+      .catch((error: unknown) => { failure = error; });
+    await new Promise(resolve => setTimeout(resolve, 20));
+  });
+  const switchedBeforeCommand = switchRequests > 0 || openDatabaseConnection().dbPath !== originalPath;
+  await act(async () => { release(); await command; await switching; });
+  expect(switchedBeforeCommand).toBe(false);
+  if (failed) {
+    expect(failure).toBeInstanceOf(Error);
+    expect(openDatabaseConnection().dbPath).toBe(originalPath);
+    await act(async () => { app.input('Continued after command failure'); expect(await app.drain()).toBe(true); });
+    await act(async () => { await updateRuntimeLibraryPathSetting('library_home', path.join(transport.root, 'Next')); });
+  } else expect(failure).toBeUndefined();
+  expect(openDatabaseConnection().sqlite.prepare("SELECT content FROM nodes WHERE id = 'topic'").pluck().get())
+    .toBe(failed ? 'Continued after command failure' : 'Accepted command tail');
 });
