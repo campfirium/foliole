@@ -18,6 +18,8 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
+import { topicAlternativeHash, validateTopicAlternativeRecord } from '../../lib/core/sync/topicAlternativeRecord.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { applySyncObjectsAsync } from './syncObjectApply.js';
@@ -110,39 +112,27 @@ it('does not let an initial review payload overwrite an already reviewed card', 
   )).toEqual({ due: '2026-04-25T08:10:00.000Z', reps: 4 });
 });
 
-it('supersedes an older same-host text alternative before applying its replacement', async () => {
+it('retains distinct complete same-host alternatives without replacing the older fork', async () => {
   insertNode('node-1');
-  const alternative = (id: string, version: string, updatedAt: string) => ({
-    content_hash: `hash-${id}`,
-    deleted_at: null,
-    object_id: id,
-    object_type: 'node_text_alternative' as const,
-    payload_json: JSON.stringify({
-      alternative_id: id,
-      body_text: `Body ${version}`,
-      created_at: updatedAt,
-      node_id: 'node-1',
-      source_host_name: 'desktop-resolution',
-      source_version_id: version,
-      status: 'available',
-      updated_at: updatedAt
-    }),
-    updated_at: updatedAt
-  });
-
-  await expect(applySyncObjectsAsync([
-    alternative('alternative-old', 'version-old', '2026-04-22T08:10:00.000Z'),
-    alternative('alternative-new', 'version-new', '2026-04-22T08:11:00.000Z')
-  ])).resolves.toEqual([
-    'node_text_alternative:alternative-old',
-    'node_text_alternative:alternative-new'
+  const alternative = (id: string, version: string, updatedAt: string) => {
+    const payload = validateTopicAlternativeRecord({
+      alternative_id: id, node_id: 'node-1', source_version_id: version,
+      body_text: `Body ${version}`, body_blob_hash: hashTextBody(`Body ${version}`),
+      source_host_name: 'desktop-resolution', created_at: updatedAt, updated_at: updatedAt,
+      expires_at: '2099-01-01T00:00:00.000Z', resource_references: '[]', image_sources: null, status: 'available'
+    });
+    return { content_hash: topicAlternativeHash(payload), deleted_at: null, object_id: id,
+      object_type: 'node_text_alternative' as const, payload_json: JSON.stringify(payload), updated_at: updatedAt };
+  };
+  const states = [alternative('alternative-old', 'version-old', '2026-04-22T08:10:00.000Z'),
+    alternative('alternative-new', 'version-new', '2026-04-22T08:11:00.000Z')];
+  await expect(applySyncObjectsAsync(states)).resolves.toEqual([
+    'node_text_alternative:alternative-old', 'node_text_alternative:alternative-new'
   ]);
-
-  expect(openDatabaseConnection().driver.queryAll<{ alternative_id: string; status: string }>(
-    `SELECT alternative_id, status FROM node_text_alternatives
-     WHERE node_id = 'node-1' ORDER BY alternative_id`
-  )).toEqual([
-    { alternative_id: 'alternative-new', status: 'available' },
-    { alternative_id: 'alternative-old', status: 'superseded' }
-  ]);
+  const read = () => openDatabaseConnection().driver.queryAll(
+    "SELECT * FROM node_text_alternatives WHERE node_id = 'node-1' ORDER BY alternative_id");
+  const expected = [...states].reverse().map(state => JSON.parse(state.payload_json));
+  expect(read()).toEqual(expected);
+  await expect(applySyncObjectsAsync(states)).resolves.toEqual([]);
+  expect(read()).toEqual(expected);
 });
