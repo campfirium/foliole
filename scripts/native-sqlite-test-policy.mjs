@@ -151,6 +151,7 @@ const controlledElectronSqliteTests = [
   'electron/database/externalSearchCache.test.ts',
   'electron/database/externalSearchMirrorAvailability.test.ts',
   'electron/database/externalSearchSidecar.test.ts',
+  'electron/database/fsrs7Migration.integration.test.ts',
   'electron/database/hostStateCutoverPreparation.test.ts',
   'electron/database/editorOperationHistoryMigration.test.ts',
   'electron/database/iosUpgradeAttachmentRetirement.test.ts',
