@@ -52,7 +52,7 @@ export interface DocumentPanelSectionProps {
   onEditorChange: (content: string) => void;
   onEditorInput?: (meta: EditorContentChangeMeta) => void;
   onEditorFocus?: () => void;
-  onEditorKeyboardFocusLeave?: () => void;
+  onEditorFocusLeave?: () => void;
   onEditorUndo?: () => boolean;
   onEditorRedo?: () => boolean;
   onFinalizeNodeTitle?: (nodeId: string, content: string) => void;

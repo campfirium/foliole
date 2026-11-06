@@ -27,7 +27,7 @@ import { MarkdownEditor } from './MarkdownEditor';
 function renderEditor(
   reviewCaretLineHighlight: boolean,
   reviewEscapeBlurEnabled = reviewCaretLineHighlight,
-  options: { onExitEditing?: () => boolean; readOnly?: boolean } = {}
+  options: { onExitEditing?: () => boolean; onFocusLeave?: () => void; readOnly?: boolean } = {}
 ) {
   return render(
     <LocalizationProvider>
@@ -97,7 +97,8 @@ describe('MarkdownEditor review caret-line hint', () => {
 
 describe('MarkdownEditor Escape blur', () => {
   it('blurs review editor Escape before global Escape handlers', () => {
-    const view = renderEditor(false, true);
+    const onFocusLeave = vi.fn();
+    const view = renderEditor(false, true, { onFocusLeave });
     const host = view.container.querySelector('.markdown-editor-host') as HTMLElement;
     const editable = document.createElement('div');
     const globalEscape = vi.fn();
@@ -115,6 +116,7 @@ describe('MarkdownEditor Escape blur', () => {
     expect(host).toHaveAttribute('data-review-escape-blur', 'true');
     expect(wasNotPrevented).toBe(false);
     expect(globalEscape).not.toHaveBeenCalled();
+    expect(onFocusLeave).toHaveBeenCalledOnce();
   });
 
   it('blurs ordinary editor Escape outside review mode after CodeMirror keeps focus', async () => {

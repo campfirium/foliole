@@ -173,10 +173,49 @@ it('settles keyboard focus departure after the buffered tail reaches SQLite', as
   const app = await createEditorHandoffFixture(true, true);
   await act(async () => { app.input('Keyboard local'); expect(await app.drain()).toBe(true); });
   await act(async () => { await app.remote(); });
-  act(() => { app.input('Keyboard local tail', false); app.view.result.current.onEditorKeyboardFocusLeave?.(); });
+  act(() => { app.input('Keyboard local tail', false); app.view.result.current.onEditorFocusLeave?.(); });
   expect(hasContentEditingSession(app.port, 'topic')).toBe(true);
   await act(async () => { app.view.result.current.handleEditorChange('Keyboard local tail'); await app.drain(); });
   expect(hasContentEditingSession(app.port, 'topic')).toBe(false);
   expect((await app.current()).parent_version_ids).toHaveLength(2);
   expect(await app.bodies()).toContain('Keyboard local tail');
+});
+
+it.each(['exit', 'refocus', 'failure'])('waits for an asynchronous text command before exit (%s)', async mode => {
+  const refocus = mode === 'refocus';
+  const failed = mode === 'failure';
+  const app = await createEditorHandoffFixture(true, true);
+  await act(async () => { app.input('Before command'); expect(await app.drain()).toBe(true); });
+  await act(async () => { await app.remote(); });
+  const rendererModule = (modulePath: string) => import(modulePath);
+  const { createPaletteCommandRunner } = await rendererModule('../../src/app/hooks/appPaletteCommandRunner.ts');
+  const { APP_COMMAND_IDS } = await rendererModule('../../src/shared/commands/ids.ts');
+  let release!: () => void;
+  let done!: Promise<boolean>;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const run = createPaletteCommandRunner({ paletteItems: [], recordRecentCommand: () => undefined,
+    setCommandPaletteOpen: () => undefined, undoWorkspaceAction: () => {
+      done = gate.then(async () => {
+        if (failed) return false;
+        app.input('Command tail'); await app.drain(); return true;
+      });
+      return done;
+    }
+  } as unknown as Parameters<typeof createPaletteCommandRunner>[0]);
+  let editingBeforeCompletion = false;
+  await act(async () => {
+    run(APP_COMMAND_IDS.undo);
+    app.view.result.current.onExitEditorFocus();
+    await app.drain();
+    editingBeforeCompletion = hasContentEditingSession(app.port, 'topic');
+    if (refocus) app.view.result.current.onEditorFocus();
+    release();
+    await done;
+    await app.drain();
+  });
+  expect(editingBeforeCompletion).toBe(true);
+  expect(await app.bodies()).toContain(failed ? 'Before command' : 'Command tail');
+  expect(hasContentEditingSession(app.port, 'topic')).toBe(refocus || failed);
+  if (refocus || failed) await act(async () => { app.view.result.current.onExitEditorFocus(); await app.drain(); });
+  expect((await app.current()).parent_version_ids).toHaveLength(2);
 });

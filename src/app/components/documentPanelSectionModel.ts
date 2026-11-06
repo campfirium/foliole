@@ -187,7 +187,7 @@ function getDocumentPanelBodyProps(
     onEditorChange: props.onEditorChange,
     onEditorContextMenu: props.onEditorContextMenu,
     onEditorInput: props.onEditorInput,
-    ...definedProps({ onEditorFocus: props.onEditorFocus, onEditorKeyboardFocusLeave: props.onEditorKeyboardFocusLeave }),
+    ...definedProps({ onEditorFocus: props.onEditorFocus, onEditorFocusLeave: props.onEditorFocusLeave }),
     onEditorRedo: props.onEditorRedo,
     onEditorDoubleClick: props.isImmersiveMode && !props.isImmersiveEditing ? props.onEnterImmersiveEdit : undefined,
     onEditorUndo: props.onEditorUndo,

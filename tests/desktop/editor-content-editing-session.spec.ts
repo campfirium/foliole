@@ -1,4 +1,7 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+
+import { APP_COMMAND_IDS } from '../../src/shared/commands/ids';
+import { APP_SETTINGS_STORAGE_KEYS } from '../../src/shared/config/appSettings';
 
 import { expect, normalizeDesktopWindow, test, type DesktopSession } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
@@ -41,11 +44,13 @@ async function facts(session: DesktopSession, remote = false, baseVersionId?: st
   }, { nodeId, remote, baseVersionId });
 }
 
-async function openEditingSession(session: DesktopSession, page: import('@playwright/test').Page) {
+async function openEditingSession(session: DesktopSession, page: import('@playwright/test').Page, repair = false) {
   await expectWorkspaceShell(page);
-  await page.evaluate(async id => {
+  await page.evaluate(async ({ id, repair, storageKey, commandId }) => {
+    if (repair) localStorage.setItem(storageKey, JSON.stringify([{ id: 'user.repair', commandId, section: 'top',
+      order: 0, visible: true, source: 'user', labelOverride: 'Repair table', iconId: 'Table' }]));
     await window.__folioleWorkspaceDebug?.seedNodes([{ id, content: 'Base', kind: 'topic', title: 'Editing session' }], { persist: true });
-  }, nodeId);
+  }, { id: nodeId, repair, storageKey: APP_SETTINGS_STORAGE_KEYS.workspaceRailItems, commandId: APP_COMMAND_IDS.repairTable });
   await page.reload();
   await expectWorkspaceShell(page);
   const exitFlow = page.getByRole('button', { name: /Exit Flow|退出 Flow/ });
@@ -135,6 +140,51 @@ for (const exitKey of ['Escape', 'Tab', 'Shift+Tab']) {
     expect(new Set([final.content, ...final.alternatives])).toEqual(new Set(['Remote branch', 'Tail Local Base']));
     mkdirSync('.tmp/artifacts/T727', { recursive: true });
     await page.screenshot({ path: `.tmp/artifacts/T727/editing-session-${exitKey.toLowerCase().replace('+', '-')}-exit.png` });
+    await page.reload();
+    await expectWorkspaceShell(page);
+    expect(await facts(session)).toEqual(final);
+  });
+}
+
+for (const repair of [false, true]) {
+  test(`settles actual pointer focus loss after the toolbar action (repair: ${repair})`, async ({ desktopWindow: page, desktopSession: session }) => {
+    const { editor, window, base } = await openEditingSession(session, page, repair);
+    await editor.click();
+    await session.electronApp.evaluate(({ app }) => app.focus({ steal: true }));
+    await window.evaluate(window => { window.focus(); window.webContents.focus(); });
+    const local = repair ? '| A | B |\n\n| 1 | 2 |' : 'Pointer local';
+    await page.evaluate(() => window.__folioleDebug?.setEditorSelection?.('prompt-editor', 0, 4));
+    await page.keyboard.insertText(local);
+    await expect.poll(() => facts(session)).toMatchObject({ content: local, editing: true });
+    expect(await window.evaluate(window => window.isFocused())).toBe(true);
+    await facts(session, true, base.versionId);
+    expect((await facts(session)).parents).toHaveLength(1);
+    await page.evaluate(position => window.__folioleDebug?.setEditorSelection?.('prompt-editor', position, position), local.length);
+    await page.keyboard.insertText('\nTail');
+    await page.evaluate(length => {
+      window.__folioleDebug?.setEditorSelection?.('prompt-editor', 0, length);
+      const order: string[] = [];
+      Object.assign(window, { pointerExitOrder: order });
+      for (const name of ['pointerdown', 'focusout', 'click']) document.addEventListener(name, event => {
+        if (name !== 'focusout' || (event.target instanceof Element && event.target.closest('.prompt-editor-host'))) order.push(name);
+      }, true);
+    }, local.length);
+    const action = repair ? page.getByRole('button', { name: 'Repair table', exact: true })
+      : page.getByRole('button', { name: /^(Settings|设置)$/ }).first();
+    await action.click();
+    await expect(editor).not.toBeFocused();
+    expect(await window.evaluate(window => window.isFocused())).toBe(true);
+    await expect.poll(async () => (await facts(session)).parents).toHaveLength(2);
+    const final = await facts(session);
+    const expected = repair ? '| A | B |\n| --- | --- |\n| 1 | 2 |\nTail' : 'Pointer local\nTail';
+    expect(new Set([final.content, ...final.alternatives])).toEqual(new Set(['Remote branch', expected]));
+    expect(final.editing).toBe(false);
+    const order = await page.evaluate(() => (window as unknown as { pointerExitOrder: string[] }).pointerExitOrder);
+    expect(order.indexOf('pointerdown')).toBeLessThan(order.indexOf('focusout'));
+    expect(order.indexOf('focusout')).toBeLessThan(order.indexOf('click'));
+    mkdirSync('.tmp/artifacts/T727', { recursive: true });
+    writeFileSync(`.tmp/artifacts/T727/pointer-order-${repair}.json`, JSON.stringify(order));
+    await page.screenshot({ path: `.tmp/artifacts/T727/editing-session-pointer-${repair}.png` });
     await page.reload();
     await expectWorkspaceShell(page);
     expect(await facts(session)).toEqual(final);

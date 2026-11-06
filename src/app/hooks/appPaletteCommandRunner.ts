@@ -1,6 +1,7 @@
 import type { PdfReadingMode } from '../../features/settings/model/appearanceSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
+import { runWorkspaceContentCommand } from '../../store/workspaceContentCommands';
 
 import { runAppCommand } from './appCommands';
 import { runDemoCommandPreview } from './appPaletteDemoCommand';
@@ -139,8 +140,8 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
     ...createPaletteSettingsActions(args),
     ...createPaletteReviewCommandActions(args, toggleReviewMode),
     ...createPaletteEditorCommandActions(args),
-    undo: () => args.undoWorkspaceAction(),
-    redo: () => args.redoWorkspaceAction(),
+    undo: () => runWorkspaceContentCommand(() => args.undoWorkspaceAction()),
+    redo: () => runWorkspaceContentCommand(() => args.redoWorkspaceAction()),
     createFolder: args.createFolder,
     createItem: args.createItem,
     createSelectionCloze: args.createSelectionCloze,
@@ -165,11 +166,11 @@ function createPaletteCommandActions(args: PaletteCommandRunnerArgs, toggleRevie
       void args.openLocalFile?.();
     },
     reimportSelectedTopic: () => {
-      void args.reimportSelectedTopic();
+      return runWorkspaceContentCommand(() => args.reimportSelectedTopic());
     },
     openPerformancePanel: args.openPerformancePanel,
     splitTopic: () => {
-      void args.openSplitTopicDialog();
+      return runWorkspaceContentCommand(() => args.openSplitTopicDialog());
     },
     resetImportData: () => runResetImportDataCommand(args),
     toggleDevReviewStatusBarPersistence: args.toggleDevReviewStatusBarPersistence,

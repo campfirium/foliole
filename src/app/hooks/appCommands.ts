@@ -30,11 +30,11 @@ interface RunAppCommandActions {
   publishToFoliole?: () => void | Promise<void>;
   publishToDiscourse?: () => void | Promise<void>;
   publishToWordPress?: () => void | Promise<void>;
-  splitTopic?: () => void | Promise<void>;
+  splitTopic?: () => boolean | void | Promise<boolean | void>;
   findInTopic: () => void;
   toggleComparisonView?: () => void;
   reviewSourceUpdate?: () => void;
-  mergeHighlightsIntoTopic: () => void | Promise<void>;
+  mergeHighlightsIntoTopic: () => boolean | void | Promise<boolean | void>;
   createSelectionHighlight: () => void;
   createSelectionCloze: () => void;
   addSelectionNote: () => void;
@@ -52,7 +52,7 @@ interface RunAppCommandActions {
   toggleDismissedTopicsVisibility: () => void;
   openLocalFile?: () => void | Promise<void>;
   importSingleFile: () => void | Promise<void>;
-  reimportSelectedTopic: () => void | Promise<void>;
+  reimportSelectedTopic: () => boolean | void | Promise<boolean | void>;
   openPerformancePanel: () => void;
   resetImportData: () => boolean | void;
   toggleDevReviewStatusBarPersistence: () => void;

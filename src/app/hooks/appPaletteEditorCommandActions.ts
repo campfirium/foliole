@@ -1,3 +1,5 @@
+import { runWorkspaceContentCommand } from '../../store/workspaceContentCommands';
+
 export interface PaletteEditorCommandRunnerArgs {
   cleanFormatting: () => void;
   configureCleanFormatting: () => void;
@@ -26,7 +28,7 @@ export function createPaletteEditorCommandActions(args: PaletteEditorCommandRunn
     enterPriorityMode: args.enterPriorityMode,
     exportCurrentArticle: () => void args.exportCurrentArticle(),
     findInTopic: args.findInTopic,
-    mergeHighlightsIntoTopic: () => void args.mergeHighlightsIntoTopic(),
+    mergeHighlightsIntoTopic: () => runWorkspaceContentCommand(() => args.mergeHighlightsIntoTopic()),
     toggleComparisonView: args.toggleComparisonView,
     reviewSourceUpdate: args.reviewSourceUpdate,
     publishToFoliole: () => void args.publishToFoliole(),
