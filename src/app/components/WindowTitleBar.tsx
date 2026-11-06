@@ -133,7 +133,7 @@ function getWindowTitleBarStyle(
     '--window-titlebar-controls-width': `${controlsWidth}px`,
     '--window-titlebar-controls-gap': `${controlsWidth > 0 ? WINDOW_TITLEBAR_RIGHT_ZONE_CONTROL_GAP : 0}px`,
     '--window-titlebar-right-width': props.isRightSidebarCollapsed
-      ? `${controlsWidth + WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH}px`
+      ? `${controlsWidth + WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH + (controlsWidth === 0 ? 8 : 0)}px`
       : `${props.rightSidebarWidth}px`,
     '--workspace-list-width': `${props.listWidth}px`,
     '--workspace-titlebar-folder-column-width': props.isListCollapsed ? '0px' : 'var(--workspace-folder-column-width)',
