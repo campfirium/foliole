@@ -9,6 +9,7 @@ import {
 
 export function createCodeMirrorEditorView(args: {
   bodyBudgetExtension?: Extension;
+  outlineExtension?: Extension;
   textHistoryExtension?: Extension;
   diffDecorationsCompartment: Compartment;
   textAnchorDecorations: readonly import('./EditorAdapter').EditorTextAnchorDecoration[];
@@ -31,7 +32,7 @@ export function createCodeMirrorEditorView(args: {
     parent: args.host,
     state: EditorState.create({
       doc: args.options.initialContent,
-      extensions: [args.bodyBudgetExtension ?? [], args.textHistoryExtension ?? [], ...createCodeMirrorEditorExtensions({
+      extensions: [args.outlineExtension ?? [], args.bodyBudgetExtension ?? [], args.textHistoryExtension ?? [], ...createCodeMirrorEditorExtensions({
         diffDecorationsCompartment: args.diffDecorationsCompartment,
         textAnchorDecorations: args.textAnchorDecorations,
         hideTitleHeading: args.hideTitleHeading,

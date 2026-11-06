@@ -1,4 +1,5 @@
 import type { EditorAdapter, EditorContentChangeMeta } from '../../features/editor/adapters/EditorAdapter';
+import { setConnectedEditorAdapter } from '../../features/editor/adapters/editorAdapterConnection';
 import { getEditorTextHistorySource } from '../../features/editor/model/editorNativeOperationHistory';
 import { getEditorOperationSession } from '../../features/editor/model/editorOperationHistory';
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
@@ -54,7 +55,7 @@ export function createEditorChangeHandler(args: BuildControllerLayoutPropsArgs) 
 
 export function createEditorReadyHandler(args: BuildControllerLayoutPropsArgs) {
   return (adapter: EditorAdapter | null) => {
-    args.runtime.editorRef.current = adapter;
+    setConnectedEditorAdapter(args.runtime.editorRef, adapter);
     adapter?.bindTextHistorySource?.(nodeId => getEditorTextHistorySource(useWorkspaceStore.getState().editorOperationHistory, nodeId));
   };
 }

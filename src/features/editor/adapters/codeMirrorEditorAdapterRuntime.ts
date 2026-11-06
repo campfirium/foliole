@@ -9,6 +9,7 @@ import type {
 } from './codeMirrorEditorAdapterSupport';
 import { createCodeMirrorEditorControllers } from './codeMirrorEditorControllers';
 import { applyCodeMirrorLocalizedImageChanges } from './codeMirrorLocalizedImageChanges';
+import { createCodeMirrorOutlineExtension } from './codeMirrorOutline';
 import type { CodeMirrorTextHistoryController } from './codeMirrorTextHistory';
 import { createCodeMirrorEditorView } from './createCodeMirrorEditorView';
 import type { EditorBodyOverflow, EditorContentChangeMeta, EditorTextAnchorDecoration } from './EditorAdapter';
@@ -87,6 +88,7 @@ function createEditorViewRuntime(
   externalChangeBuffer: EditorExternalChangeBuffer
 ) {
   return createCodeMirrorEditorView({
+    outlineExtension: createCodeMirrorOutlineExtension(args),
     textHistoryExtension: args.textHistory.extension(args.options),
     bodyBudgetExtension: createBodyBudgetExtension((transaction) => {
       const nodeId = args.getNodeId();

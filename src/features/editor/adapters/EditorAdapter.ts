@@ -64,6 +64,7 @@ export type EditorTextHistorySource = (nodeId: string | null) => {
 } | null;
 
 export interface EditorAdapter {
+  readonly outline?: import('../model/editorOutline').EditorOutlineSource;
   bindTextHistorySource?(source: EditorTextHistorySource): void;
   onBodyOverflow?(listener: (request: EditorBodyOverflow) => void): () => void;
   destroy(): void;

@@ -37,6 +37,20 @@ function editor(content = 'A') {
 }
 afterEach(() => { adapters.splice(0).forEach(adapter => adapter.destroy()); vi.restoreAllMocks(); document.body.replaceChildren(); });
 
+it('keeps the current outline and surviving heading identity through native undo and redo', () => {
+  const runtime = editor('# Title\n\n## Heading');
+  const source = runtime.adapter.outline;
+  const original = source.getSnapshot().items.at(-1)!;
+  runtime.type(' renamed');
+  expect(source.getSnapshot().items.at(-1)).toMatchObject({ id: original.id, text: 'Heading renamed' });
+  expect(runtime.replay('undo')).toBe(true);
+  expect(source.getSnapshot().items.at(-1)).toMatchObject({ id: original.id, text: 'Heading' });
+  expect(runtime.replay('redo')).toBe(true);
+  const current = source.getSnapshot().items.at(-1)!;
+  expect(current).toMatchObject({ id: original.id, text: 'Heading renamed' });
+  expect(current.from).toBe(runtime.adapter.getContent().indexOf('Heading renamed'));
+});
+
 it.each([25_000, 250_000, 1_000_000])('does not encode the %i-character document for input history or native undo/redo', size => {
   const content = '中😀text\n'.repeat(Math.ceil(size / 8)).slice(0, size);
   const runtime = editor(content);

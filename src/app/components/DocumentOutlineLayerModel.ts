@@ -1,9 +1,10 @@
-import { extractDocumentOutline } from '../../features/editor/model/documentOutline';
+import { extractDocumentOutline, type DocumentOutlineItem } from '../../features/editor/model/documentOutline';
 
 const HOVER_ZONE_WIDTH_PX = 72;
 const OUTLINE_RIGHT_GAP_RATIO = 0.1;
 
 export interface OutlineDisplayItem {
+  id?: string;
   from: number;
   level: number;
   text: string;
@@ -42,7 +43,11 @@ export function getOutlineClosedLayerWidth(documentMaxWidth: number) {
 }
 
 export function resolveDisplayItems(content: string): OutlineDisplayItem[] {
-  const visibleItems = extractDocumentOutline(content).slice(1);
+  return resolveDisplayOutlineItems(extractDocumentOutline(content));
+}
+
+export function resolveDisplayOutlineItems<T extends DocumentOutlineItem>(items: readonly T[]): T[] {
+  const visibleItems = items.slice(1);
   const baseLevel = visibleItems.reduce((minLevel, item) => Math.min(minLevel, item.level), Number.POSITIVE_INFINITY);
 
   return visibleItems.map((item) => ({

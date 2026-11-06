@@ -1,18 +1,22 @@
 import { ChevronDown } from 'lucide-react';
 import { useLayoutEffect, useMemo, useRef, type MutableRefObject } from 'react';
 
+import type { EditorAdapterConnection } from '../../features/editor/adapters/editorAdapterConnection';
 import { cn } from '../../shared/lib/utils';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { InspectorList, InspectorListRow, InspectorSection, inspectorListInsetClassName, inspectorPanelSectionClassName } from '../../shared/ui';
 
-import { mayHaveOutline, resolveActiveIndex, resolveDisplayItems } from './DocumentOutlineLayerModel';
-import { measureWorkspaceDiagnostic, useWorkspaceRenderDiagnostic } from './workspaceInputLagRenderDiagnostic';
+import { resolveActiveIndex, resolveDisplayItems } from './DocumentOutlineLayerModel';
+import { useEditorOutlineItems } from './useEditorOutlineItems';
+import { useWorkspaceRenderDiagnostic } from './workspaceInputLagRenderDiagnostic';
 
 const OUTLINE_SCROLL_MARGIN_PX = 32;
 
 interface WorkspaceRightSidebarOutlinePanelProps {
   activePosition: number;
   content: string;
+  contextNodeId?: string | null;
+  editorAdapterRef?: EditorAdapterConnection | undefined;
   emptyDescription?: string;
   emptyDescriptionKind?: 'document' | 'topic';
   onRevealPosition: (position: number) => void;
@@ -47,17 +51,6 @@ function resolveOutlineTreeItems(items: ReturnType<typeof resolveDisplayItems>) 
     ...item,
     hasChildren: (items[index + 1]?.level ?? 0) > item.level
   }));
-}
-
-function useOutlineItems(content: string) {
-  return useMemo(
-    () => measureWorkspaceDiagnostic(
-      'workspace-outline-panel-build',
-      { contentLength: content.length },
-      () => (mayHaveOutline(content) ? resolveDisplayItems(content) : [])
-    ),
-    [content]
-  );
 }
 
 export function resolveOutlineActiveScrollTop(args: {
@@ -143,7 +136,7 @@ function OutlineItemsNav(props: {
     <nav aria-label={t('desktop.rightPanel.outline.navigation')} className={cn('relative min-h-full py-1', inspectorListInsetClassName)}>
       <InspectorList className="relative m-0 list-none p-0">
         {props.treeItems.map((item, index) => (
-          <li className="relative" key={`${item.from}-${item.text}`}>
+          <li className="relative" key={item.id ?? `${item.from}-${item.text}`}>
             <InspectorListRow
               active={index === props.activeIndex}
               aria-current={index === props.activeIndex ? 'location' : undefined}
@@ -175,6 +168,8 @@ function OutlineItemsNav(props: {
 export function WorkspaceRightSidebarOutlinePanel({
   activePosition,
   content,
+  contextNodeId,
+  editorAdapterRef,
   emptyDescription,
   emptyDescriptionKind = 'topic',
   onRevealPosition
@@ -184,7 +179,7 @@ export function WorkspaceRightSidebarOutlinePanel({
     contentLength: content.length
   });
   const activeItemRef = useRef<HTMLButtonElement | null>(null);
-  const outlineItems = useOutlineItems(content);
+  const outlineItems = useEditorOutlineItems(content, editorAdapterRef, contextNodeId);
   const treeItems = useMemo(() => resolveOutlineTreeItems(outlineItems), [outlineItems]);
   const activeIndex = useMemo(() => resolveActiveIndex(outlineItems, activePosition), [activePosition, outlineItems]);
   const hasNestedLevels = useMemo(() => treeItems.some((item) => item.level > 1), [treeItems]);
