@@ -68,6 +68,9 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
   return (
     <div className="window-titlebar-right-anchor-shell relative z-local-control" data-collapsed={isCollapsed}>
       <div className="window-titlebar-right-content" data-collapsed={isCollapsed}>
+        <div className="window-titlebar-right-expanded-action">
+          <RightSidebarToggleButton active={!isCollapsed} onClick={props.onToggleRightSidebarVisibility} />
+        </div>
         <div className="window-titlebar-right-zone max-[1279px]:hidden" hidden={isCollapsed} style={{ pointerEvents: 'none' }}>
           {isCollapsed
             ? null
@@ -78,9 +81,6 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
                 setOrderedPanelIds={orderState.setOrderedPanelIds}
                 visiblePanelCount={visiblePanelCount}
               />}
-        </div>
-        <div className="window-titlebar-right-expanded-action">
-          <RightSidebarToggleButton active={!isCollapsed} onClick={props.onToggleRightSidebarVisibility} />
         </div>
       </div>
     </div>

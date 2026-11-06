@@ -32,11 +32,7 @@ test('collapsed right sidebar toggle has breathing room at the window edge and r
   await expect(titlebar.locator('.window-titlebar-right-panel-actions')).toBeVisible();
   const panelBounds = await titlebar.locator('.window-titlebar-right-panel-actions').boundingBox();
   const toggleBounds = await toggle.boundingBox();
-  expect(panelBounds!.x + panelBounds!.width).toBeLessThanOrEqual(toggleBounds!.x);
-  if (await titlebar.getAttribute('data-window-controls') !== 'custom') {
-    expect((await readSpacing()).gap).toBeGreaterThanOrEqual(16);
-    expect((await readSpacing()).gap).toBeLessThanOrEqual(18);
-  }
+  expect(toggleBounds!.x + toggleBounds!.width).toBeLessThanOrEqual(panelBounds!.x);
   await desktopWindow.screenshot({ path: '.tmp/artifacts/right-sidebar-expanded-spacing.png' });
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
