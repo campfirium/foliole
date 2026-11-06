@@ -16,6 +16,62 @@ import { createEditorHandoffFixture, invokeEditorHandoff, observeReceiptWaiting,
 
 setupEditorHandoffTests();
 
+it('keeps an explicit exit retryable after persistence fails', async () => {
+  const app = await createEditorHandoffFixture(true, true);
+  await act(async () => { app.input('Before exit'); expect(await app.drain()).toBe(true); });
+  await act(async () => { await app.remote(); });
+  transport.failSave = true;
+  await act(async () => { app.input('Retry exit tail'); expect(await app.drain()).toBe(false); });
+  expect(hasContentEditingSession(app.port, 'topic')).toBe(true);
+  await act(async () => { app.view.result.current.onExitEditorFocus(); await app.drain(); });
+  expect(hasContentEditingSession(app.port, 'topic')).toBe(false);
+  expect((await app.current()).parent_version_ids).toHaveLength(2);
+  expect(await app.bodies()).toContain('Retry exit tail');
+});
+
+it('does not claim an unmodified editor when it receives focus', async () => {
+  const app = await createEditorHandoffFixture(true, true);
+  act(() => { app.view.result.current.onEditorFocus(); });
+  expect(hasContentEditingSession(app.port, 'topic')).toBe(false);
+  await act(async () => { await app.remote(); });
+  expect((await app.current()).body_text).toBe('Remote');
+  await act(async () => { app.view.result.current.onExitEditorFocus(); await app.drain(); });
+  expect((await app.current()).version_id).toBe('remote');
+});
+
+it('settles an explicit editor exit only after buffered tail input is durably saved', async () => {
+  const app = await createEditorHandoffFixture(true, true);
+  await act(async () => { app.input('Before exit'); expect(await app.drain()).toBe(true); });
+  await act(async () => { await app.remote(); });
+  act(() => { app.input('Before exit tail', false); app.view.result.current.onExitEditorFocus(); });
+  expect(hasContentEditingSession(app.port, 'topic')).toBe(true);
+  expect((await app.current()).parent_version_ids).toHaveLength(1);
+  await act(async () => { app.view.result.current.handleEditorChange('Before exit tail'); await app.drain(); });
+  expect(hasContentEditingSession(app.port, 'topic')).toBe(false);
+  expect((await app.current()).parent_version_ids).toHaveLength(2);
+  expect(await app.bodies()).toContain('Before exit tail');
+});
+
+it('keeps editing after refocusing during an exit receipt without requiring another keystroke', async () => {
+  const app = await createEditorHandoffFixture(true, true);
+  await act(async () => { app.input('Before exit'); expect(await app.drain()).toBe(true); });
+  await act(async () => { await app.remote(); });
+  let release!: () => void;
+  transport.receiptGate = new Promise(resolve => { release = resolve; });
+  const reached = new Promise<void>(resolve => observeReceiptWaiting(resolve));
+  let saving!: Promise<boolean>;
+  act(() => { app.input('Exit tail'); saving = app.drain(); });
+  await act(async () => { await reached; window.dispatchEvent(new Event('blur')); });
+  act(() => { app.view.result.current.onEditorFocus?.(); });
+  await act(async () => { release(); await saving; await app.drain(); });
+  expect(hasContentEditingSession(app.port, 'topic')).toBe(true);
+  expect((await app.current()).body_text).toBe('Exit tail');
+  expect((await app.current()).parent_version_ids).toHaveLength(1);
+  await act(async () => { app.view.result.current.onExitEditorFocus(); await app.drain(); });
+  expect(hasContentEditingSession(app.port, 'topic')).toBe(false);
+  expect((await app.current()).parent_version_ids).toHaveLength(2);
+});
+
 it('retries a failed session registration without requiring another keystroke', async () => {
   const app = await createEditorHandoffFixture(true, true);
   transport.failSessionBegin = true;

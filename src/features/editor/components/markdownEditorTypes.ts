@@ -54,6 +54,7 @@ export interface MarkdownEditorProps {
   onBeginApplyingReadingPosition?: (selection: EditorSelection, reason: string, commandId?: string) => void;
   onBeforeInputCapture?: (event: ReactFormEvent<HTMLDivElement>) => void;
   onBlurCapture?: (event: ReactFocusEvent<HTMLDivElement>) => void;
+  onFocusCapture?: (event: ReactFocusEvent<HTMLDivElement>) => void;
   onChange: (value: string, meta?: EditorContentChangeMeta) => void;
   onCompleteApplyingReadingPosition?: (reason: string, selection?: EditorSelection, commandId?: string) => void;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;

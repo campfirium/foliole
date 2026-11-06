@@ -34,7 +34,12 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
     ...(props.onRegisterEditorDraftFlush ? { onRegisterFlush: props.onRegisterEditorDraftFlush } : {})
   });
   const holdReady = editorDraft.holdReady;
-  const handleEditorInput = useWorkspaceContentEditingSession(draftNodeId, props.isEditorReadOnly, editorDraft);
+  const { handleEditorFocus, handleEditorInput, finishEditing } =
+    useWorkspaceContentEditingSession(draftNodeId, props.isEditorReadOnly, editorDraft);
+  const handleExitEditorFocus = useCallback(() => {
+    void finishEditing();
+    return props.onExitEditorFocus?.() ?? false;
+  }, [finishEditing, props.onExitEditorFocus]);
   const handleEditorUndo = useCallback(() => {
     return props.onEditorUndo?.() ?? false;
   }, [props.onEditorUndo]);
@@ -49,9 +54,11 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
       isEditorReadOnly: props.isEditorReadOnly || !holdReady,
       onEditorChange: editorDraft.handleEditorChange,
       onEditorInput: handleEditorInput,
+      onEditorFocus: handleEditorFocus,
+      onExitEditorFocus: handleExitEditorFocus,
       onEditorUndo: handleEditorUndo,
       onEditorRedo: handleEditorRedo
     }),
-    [draftNodeId, editorDraft.editorContent, editorDraft.handleEditorChange, handleEditorInput, handleEditorRedo, handleEditorUndo, holdReady, props]
+    [draftNodeId, editorDraft.editorContent, editorDraft.handleEditorChange, handleEditorFocus, handleEditorInput, handleExitEditorFocus, handleEditorRedo, handleEditorUndo, holdReady, props]
   );
 }

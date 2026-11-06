@@ -51,6 +51,7 @@ export interface DocumentPanelSectionProps {
   onAnswerChange: (answer: string, meta?: import('../../features/editor/adapters/EditorAdapter').EditorContentChangeMeta) => void;
   onEditorChange: (content: string) => void;
   onEditorInput?: (meta: EditorContentChangeMeta) => void;
+  onEditorFocus?: () => void;
   onEditorUndo?: () => boolean;
   onEditorRedo?: () => boolean;
   onFinalizeNodeTitle?: (nodeId: string, content: string) => void;

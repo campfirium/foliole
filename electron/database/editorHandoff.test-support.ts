@@ -63,7 +63,8 @@ export async function invokeEditorHandoff(command: string, args: Record<string, 
 
 const rendererModule = (modulePath: string) => import(modulePath);
 const { useProtectedWorkspaceEditorDraft } = await rendererModule('../../src/app/components/useProtectedWorkspaceEditorDraft.ts');
-const { useWorkspaceContentEditingSession } = await rendererModule('../../src/app/components/useWorkspaceContentEditingSession.ts');
+const { editorHandoffPanelProps } = await rendererModule('../../src/app/components/documentPanelDraft.test-support.ts');
+const { useDocumentPanelDraftProps } = await rendererModule('../../src/app/components/useDocumentPanelDraftProps.ts');
 const { useWorkspaceActiveNodeDocument } = await rendererModule('../../src/app/hooks/useWorkspaceActiveNodeDocument.ts');
 const { createWorkspaceNodeActionsFixture } = await rendererModule('../../src/store/workspaceStoreNodeActions.test-support.ts');
 const { createWorkspaceNodeActions } = await rendererModule('../../src/store/workspaceStoreNodeActions.ts');
@@ -151,12 +152,16 @@ export async function createEditorHandoffFixture(sharedStore = false, editingSes
     const state = useSyncExternalStore<ReturnType<typeof createWorkspaceNodeActionsFixture>>(store.subscribe, store.getState);
     useWorkspaceActiveNodeDocument(sharedStore ? state.activeNodeId : null);
     const current = state.nodesById[state.activeNodeId!];
+    if (editingSession) {
+      const panel = useDocumentPanelDraftProps(editorHandoffPanelProps(state, actions.updateNodeContent));
+      ready.push(!panel.isEditorReadOnly);
+      return { ...panel, handleEditorInput: panel.onEditorInput, handleEditorChange: panel.onEditorChange };
+    }
     const draft = useProtectedWorkspaceEditorDraft({ nodeId: current.id, committedContent: current.content,
       committedVersionId: current.currentVersionId,
       onCommit: (id: string, content: string, options: unknown) => actions.updateNodeContent(id, content, options) });
     ready.push(draft.holdReady);
-    const handleEditorInput = useWorkspaceContentEditingSession(current.id, false, draft);
-    return editingSession ? { ...draft, handleEditorInput } : draft;
+    return draft;
   });
   await act(async () => undefined);
   ready.length = 0;

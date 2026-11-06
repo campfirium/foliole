@@ -46,7 +46,14 @@ export function useWorkspaceContentEditingSession(nodeId: string | null, readOnl
     window.addEventListener('blur', onBlur);
     return () => { unsubscribeNativeBlur?.(); window.removeEventListener('blur', onBlur); void finish(); };
   }, [finish, libraryScope, nodeId, readOnly]);
-  return useCallback((meta?: EditorContentChangeMeta) => {
+  const handleEditorFocus = useCallback(() => {
+    const boundary = active.current;
+    if (!boundary?.session.closing || readOnly || boundary.session.nodeId !== nodeId ||
+        boundary.session.libraryScope !== libraryScope) return;
+    const session = beginWorkspaceContentEditingSession(libraryScope, nodeId);
+    if (session) active.current = { session, draft };
+  }, [draft, libraryScope, nodeId, readOnly]);
+  const handleEditorInput = useCallback((meta?: EditorContentChangeMeta) => {
     const sourceNodeId = meta?.nodeId ?? nodeId;
     if (sourceNodeId && !readOnly) {
       const session = beginWorkspaceContentEditingSession(libraryScope, sourceNodeId);
@@ -54,4 +61,5 @@ export function useWorkspaceContentEditingSession(nodeId: string | null, readOnl
     }
     draft.handleEditorInput(meta);
   }, [draft, libraryScope, nodeId, readOnly]);
+  return { handleEditorFocus, handleEditorInput, finishEditing: finish };
 }
