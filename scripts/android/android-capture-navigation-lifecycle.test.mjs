@@ -12,7 +12,8 @@ const SOURCE_ROOT = 'android/app/src/androidTest/java/com/foliole/android';
 const STUBS = {
   'android/app/Instrumentation.java': `package android.app;
     public class Instrumentation { public void sendKeyDownUpSync(int key) {
-      com.foliole.android.NavigationHarness.reading=false;
+      if (!com.foliole.android.NavigationHarness.settingsTarget)
+        com.foliole.android.NavigationHarness.reading=false;
       com.foliole.android.NavigationHarness.backCount++;
     } }`,
   'android/webkit/WebView.java': 'package android.webkit; public class WebView {}',
@@ -20,10 +21,11 @@ const STUBS = {
   'org/json/JSONObject.java': `package org.json;
     public class JSONObject {
       public String id="";
+      public boolean visible=true;
       public JSONArray elements=new JSONArray();
       public JSONObject() {}
       public JSONObject(String value) { id=value; }
-      public boolean optBoolean(String key) { return true; }
+      public boolean optBoolean(String key) { return !"visible".equals(key) || visible; }
       public String optString(String key) { return "testId".equals(key) ? id : ""; }
       public JSONArray getJSONArray(String key) { return elements; }
     }`,
@@ -42,14 +44,34 @@ const STUBS = {
       }
       static org.json.JSONObject snapshot(android.app.Instrumentation i,android.webkit.WebView v) {
         org.json.JSONObject result=new org.json.JSONObject();
-        result.elements.items.add(new org.json.JSONObject(NavigationHarness.reading
-          ? "companion-article-document" : "companion-tab-settings"));
+        org.json.JSONObject body=new org.json.JSONObject(NavigationHarness.reading
+          ? "companion-article-document" : "companion-tab-settings");
+        body.visible=!NavigationHarness.state.endsWith("-exit");
+        result.elements.items.add(body);
         if (NavigationHarness.flow && NavigationHarness.reading)
           result.elements.items.add(new org.json.JSONObject("companion-review-action-read"));
+        if (NavigationHarness.reading && NavigationHarness.chromeVisible) {
+          org.json.JSONObject exit=new org.json.JSONObject("companion-reading-exit");
+          exit.visible=!"hidden-exit".equals(NavigationHarness.state);
+          result.elements.items.add(exit);
+          if ("duplicate-exit".equals(NavigationHarness.state))
+            result.elements.items.add(new org.json.JSONObject("companion-reading-exit"));
+        }
         return result;
       }
       static org.json.JSONObject perform(android.app.Instrumentation i,android.webkit.WebView v,
           String id,String action,String value) {
+        if (NavigationHarness.reading && "companion-article-document".equals(id)) {
+          NavigationHarness.chromeVisible=true;
+          NavigationHarness.bodyClickCount++;
+          return new org.json.JSONObject();
+        }
+        if (NavigationHarness.reading && NavigationHarness.chromeVisible
+            && "companion-reading-exit".equals(id)) {
+          NavigationHarness.reading=false;
+          NavigationHarness.exitClickCount++;
+          return new org.json.JSONObject();
+        }
         if (!NavigationHarness.reading && "companion-tab-settings".equals(id)) {
           NavigationHarness.settingsOpened=true;
           return new org.json.JSONObject();
@@ -65,20 +87,33 @@ const STUBS = {
     }`,
   'com/foliole/android/NavigationHarness.java': `package com.foliole.android;
     public class NavigationHarness {
-      public static boolean reading,flow,settingsOpened;
-      public static int backCount;
+      public static boolean reading,flow,settingsOpened,chromeVisible,settingsTarget;
+      public static int backCount,bodyClickCount,exitClickCount;
+      public static String state;
+      public static Throwable navigationFailure;
       public static void main(String[] args) throws Exception {
-        reading=!"browse".equals(args[0]); flow="flow".equals(args[0]);
-        if ("settings".equals(args[1])) {
+        state=args[0]; reading=!"browse".equals(state); flow="flow".equals(state);
+        chromeVisible=state.endsWith("-exit"); settingsTarget="settings".equals(args[1]);
+        if (settingsTarget) {
           Thread action=new Thread(() -> {
             try { FolioleCompanionSettingsNavigation.open(new android.app.Instrumentation(),new android.webkit.WebView()); }
-            catch (Exception error) { throw new RuntimeException(error); }
+            catch (Throwable error) { navigationFailure=error; }
           });
           action.setDaemon(true); action.start(); action.join(3000);
+          if (state.endsWith("-exit")) {
+            if (settingsOpened || exitClickCount!=0) throw new AssertionError("Unsafe Exit target was clicked");
+            if ("duplicate-exit".equals(state) && (navigationFailure==null
+                || !navigationFailure.getMessage().contains("not unique")))
+              throw new AssertionError("Ambiguous Exit target was not rejected");
+            System.out.println("navigation ready"); return;
+          }
           if (action.isAlive() || !settingsOpened) throw new AssertionError("Settings navigation did not leave immersive reading");
+          int expected="browse".equals(state) ? 0 : 1;
+          if (bodyClickCount!=expected || exitClickCount!=expected)
+            throw new AssertionError("Settings must reveal and use the real reading Exit");
         } else FolioleCompanionCaptureNavigation.enterBrowseSurface(
           new android.app.Instrumentation(),new android.webkit.WebView(),500);
-        if (reading || backCount != ("browse".equals(args[0]) ? 0 : 1))
+        if (reading || backCount != (settingsTarget || "browse".equals(state) ? 0 : 1))
           throw new AssertionError("Browse was not reached without extra Back actions");
         System.out.println("navigation ready");
       }
@@ -86,9 +121,12 @@ const STUBS = {
 };
 
 const CASES = ['browse', 'settings'].flatMap(target =>
-  ['immersive', 'flow', 'browse'].map(state => ({ target, state })));
+  ['immersive', 'flow', 'browse'].map(state => ({ target, state,
+    name: `reaches ${target} from ${state} without requiring visible reading chrome` })))
+  .concat(['hidden-exit', 'duplicate-exit'].map(state => ({ target: 'settings', state,
+    name: `refuses unsafe Settings navigation from ${state}` })));
 
-it.each(CASES)('reaches $target from $state without requiring visible reading chrome', ({ target, state }) => {
+it.each(CASES)('$name', ({ target, state }) => {
   const parent = path.resolve('.tmp/artifacts');
   fs.mkdirSync(parent, { recursive: true });
   const root = fs.mkdtempSync(path.join(parent, 'capture-navigation-lifecycle-'));

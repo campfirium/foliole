@@ -10,6 +10,8 @@ import java.util.concurrent.TimeUnit;
 
 final class FolioleCompanionSettingsNavigation {
     private static final String SETTINGS_TAB = "companion-tab-settings";
+    private static final String READING_EXIT = "companion-reading-exit";
+    private static final String ARTICLE_DOCUMENT = "companion-article-document";
     private static final String TOP_BAR_BACK = "companion-top-bar-back";
     private static final String TOP_BAR_LEFT_ACTION = "companion-top-bar-left-action";
 
@@ -24,12 +26,13 @@ final class FolioleCompanionSettingsNavigation {
             if (isVisible(snapshot, SETTINGS_TAB)) {
                 if (clickObserved(instrumentation, webView, SETTINGS_TAB)) return;
             }
-            String exit = isVisible(snapshot, TOP_BAR_LEFT_ACTION)
-                ? TOP_BAR_LEFT_ACTION
+            String exit = isVisible(snapshot, READING_EXIT) ? READING_EXIT
+                : isVisible(snapshot, TOP_BAR_LEFT_ACTION) ? TOP_BAR_LEFT_ACTION
                 : isVisible(snapshot, TOP_BAR_BACK) ? TOP_BAR_BACK : null;
             if (exit != null) clickObserved(instrumentation, webView, exit);
-            else if (isVisible(snapshot, "companion-article-document")
-                || isVisible(snapshot, "companion-review-action-read")
+            else if (isVisible(snapshot, ARTICLE_DOCUMENT)) {
+                clickObserved(instrumentation, webView, ARTICLE_DOCUMENT);
+            } else if (isVisible(snapshot, "companion-review-action-read")
                 || isVisible(snapshot, "companion-review-action-reveal")) {
                 instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
             }
@@ -41,11 +44,13 @@ final class FolioleCompanionSettingsNavigation {
     }
 
     private static boolean isVisible(JSONObject snapshot, String testId) throws Exception {
+        int visibleCount = 0;
         for (int index = 0; index < snapshot.getJSONArray("elements").length(); index += 1) {
             JSONObject item = snapshot.getJSONArray("elements").getJSONObject(index);
-            if (testId.equals(item.optString("testId")) && item.optBoolean("visible")) return true;
+            if (testId.equals(item.optString("testId")) && item.optBoolean("visible")) visibleCount += 1;
         }
-        return false;
+        if (visibleCount > 1) throw new IllegalStateException("Semantic target is not unique: " + testId);
+        return visibleCount == 1;
     }
 
     private static boolean clickObserved(
