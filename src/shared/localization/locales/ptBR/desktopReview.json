@@ -88,5 +88,7 @@
   "desktop.nodeReview.usingReviewSettings": "Usando configurações de revisão: {value}",
   "desktop.nodeReview.usingQueueFallback": "Usando substituto de fila: {value}",
   "desktop.nodeReview.noLocalShortTerm": "Nenhuma configuração local de curto prazo",
-  "desktop.nodeReview.priority.p0": "P0 - Primeiro, sem escala de atraso"
+  "desktop.nodeReview.priority.p0": "P0 - Primeiro, sem escala de atraso",
+  "desktop.foregroundTime.monthTotal": "Tempo total",
+  "desktop.foregroundTime.monthTotalShort": "Total"
 }

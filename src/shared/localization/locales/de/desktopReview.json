@@ -88,5 +88,7 @@
   "desktop.nodeReview.usingReviewSettings": "Überprüfungseinstellungen verwenden: {value}",
   "desktop.nodeReview.usingQueueFallback": "Warteschlangen-Fallback verwenden: {value}",
   "desktop.nodeReview.noLocalShortTerm": "Keine lokale Kurzzeiteinstellung",
-  "desktop.nodeReview.priority.p0": "P0 – Erstens keine Verzögerungsskalierung"
+  "desktop.nodeReview.priority.p0": "P0 – Erstens keine Verzögerungsskalierung",
+  "desktop.foregroundTime.monthTotal": "Gesamtzeit",
+  "desktop.foregroundTime.monthTotalShort": "Gesamt"
 }

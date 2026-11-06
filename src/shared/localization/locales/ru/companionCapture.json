@@ -11,5 +11,11 @@
   "companion.capture.save": "Сохранить",
   "companion.capture.saving": "Сохранение...",
   "companion.capture.error.inboxUnavailable": "Синхронизируйте это устройство, прежде чем сохранять новую тему.",
-  "companion.capture.error.saveFailed": "Не удалось сохранить тему. Попробуйте еще раз."
+  "companion.capture.error.saveFailed": "Не удалось сохранить тему. Попробуйте еще раз.",
+  "companion.capture.import.readingModeDescription": "Выберите, как главы попадают в очередь повторения.",
+  "companion.capture.error.clipboardEmpty": "В буфере обмена нет текста.",
+  "companion.capture.error.clipboardFailed": "Не удалось прочитать буфер обмена. Разрешите доступ и повторите попытку.",
+  "companion.capture.import.imagesUnavailable": "Текст импортирован. Некоторые локальные изображения не удалось импортировать из выбранного файла.",
+  "companion.capture.import.conversionIncomplete": "Файл импортирован. Часть форматирования или встроенного содержимого не удалось преобразовать.",
+  "companion.capture.error.targetUnavailable": "Это расположение больше недоступно. Закройте захват и выберите другое расположение."
 }

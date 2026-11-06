@@ -166,5 +166,20 @@
   "companion.sync.displayUnavailable": "同期したデータを表示できませんでした。更新してもう一度お試しください。",
   "companion.sync.activityUnavailable": "同期履歴は一時的に利用できません。",
   "companion.sync.discovery.unavailable": "このデバイスまたはネットワークでは、同期グループを検出できません。",
-  "companion.sync.discovery.connectionFailed": "同期グループは見つかりましたが、Foliole は接続できませんでした。"
+  "companion.sync.discovery.connectionFailed": "同期グループは見つかりましたが、Foliole は接続できませんでした。",
+  "companion.review.question": "質問",
+  "companion.syncSetup.receiving.progress": "{total} 件中 {completed} 件を受信",
+  "companion.syncSetup.receiving.preparing": "グループと比較中…",
+  "companion.syncSetup.receiving.lastActivity": "最終受信：{time}",
+  "companion.syncSetup.receiving.paused": "Foliole がバックグラウンドに移ったため一時停止しました。自動的に再開します。",
+  "companion.syncSetup.receiving.retry": "再試行",
+  "companion.syncBackground.title": "同期グループと同期中",
+  "companion.syncBackground.progress": "{total} 件中 {completed} 件",
+  "companion.syncBackground.preparing": "グループと比較中…",
+  "companion.syncBackground.channel": "同期の進行状況",
+  "companion.review.exitFlow": "Flow を終了",
+  "companion.reading.pdfUnavailable.title": "元の PDF を利用できません",
+  "companion.reading.pdfUnavailable.oldWebView": "お使いのスマートフォンの Android System WebView が古いため、元の PDF を表示できません。",
+  "companion.reading.pdfUnavailable.oldWebViewText": "お使いのスマートフォンの Android System WebView が古いため、元の PDF を表示できません。抽出されたテキストは引き続き読めます。",
+  "companion.reading.pdfUnavailable.loadFailed": "元の PDF を開けませんでした。"
 }

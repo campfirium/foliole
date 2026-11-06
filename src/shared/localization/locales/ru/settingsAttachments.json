@@ -1,0 +1,23 @@
+{
+  "settings.attachments.thresholdCustom": "Своё количество дней",
+  "settings.attachments.daysUnit": "дней",
+  "settings.attachments.title": "Локальные вложения",
+  "settings.attachments.error": "Не удалось завершить операцию с вложениями. Повторите попытку.",
+  "settings.attachments.used": "Занято места",
+  "settings.attachments.refresh": "Обновить",
+  "settings.attachments.thresholdValue": "{count} дней",
+  "settings.attachments.thresholdInvalid": "Введите целое число больше 0.",
+  "settings.attachments.threshold": "Дни без использования до очистки",
+  "settings.attachments.thresholdHint": "Изображения и файлы, которые больше не используются ни в одной теме, должны оставаться неиспользуемыми столько дней работы с приложением, прежде чем их можно будет отметить как готовые к очистке. Учитываются только дни, когда вы открываете Foliole.",
+  "settings.attachments.automatic": "Автоматическая очистка",
+  "settings.attachments.automaticHint": "Вложения, которые не используются достаточно долго, автоматически отмечаются как готовые к очистке.",
+  "settings.attachments.eligible": "Неиспользуемые вложения",
+  "settings.attachments.eligibleHint": "Не используются заданное число дней",
+  "settings.attachments.clean": "Отметить как готовые к очистке",
+  "settings.attachments.trash": "Готово к очистке",
+  "settings.attachments.trashHint": "Можно восстановить до очистки",
+  "settings.attachments.restore": "Восстановить всё",
+  "settings.attachments.empty": "Очистить",
+  "settings.attachments.emptyTitle": "Очистить эти вложения?",
+  "settings.attachments.emptyHint": "Они будут удалены навсегда, освободив {size}. Восстановить их будет нельзя. Темы не затронуты."
+}

@@ -11,5 +11,11 @@
   "companion.capture.save": "保存",
   "companion.capture.saving": "保存中...",
   "companion.capture.error.inboxUnavailable": "新しいトピックを保存する前に、このデバイスを同期してください。",
-  "companion.capture.error.saveFailed": "このトピックを保存できませんでした。もう一度やり直してください。"
+  "companion.capture.error.saveFailed": "このトピックを保存できませんでした。もう一度やり直してください。",
+  "companion.capture.import.readingModeDescription": "章を復習キューに追加する方法を選択します。",
+  "companion.capture.error.clipboardEmpty": "クリップボードにテキストが見つかりません。",
+  "companion.capture.error.clipboardFailed": "クリップボードを読み取れませんでした。アクセスを許可して再試行してください。",
+  "companion.capture.import.imagesUnavailable": "テキストをインポートしました。選択したファイルから一部のローカル画像をインポートできませんでした。",
+  "companion.capture.import.conversionIncomplete": "ファイルをインポートしました。一部の書式や埋め込みコンテンツを変換できませんでした。",
+  "companion.capture.error.targetUnavailable": "この場所は利用できなくなりました。キャプチャを閉じて別の場所を選択してください。"
 }

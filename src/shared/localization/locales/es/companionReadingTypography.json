@@ -18,5 +18,19 @@
   "companion.reading.font.importError": "No se pudo añadir esta fuente. Elige un archivo TTF u OTF de menos de 20 MB.",
   "companion.reading.font.contrast": "Contraste corporal",
   "companion.reading.font.contrast.default": "Default",
-  "companion.reading.font.contrast.high": "Alto"
+  "companion.reading.font.contrast.high": "Alto",
+  "companion.reading.hideSystemStatusBar": "Ocultar barra de estado del sistema",
+  "companion.reading.systemStatusBarError": "No se pudo cambiar la barra de estado del sistema. Tu preferencia de lectura no ha cambiado.",
+  "companion.reading.retrySystemStatusBar": "Reintentar barra de estado del sistema",
+  "companion.reading.overlayToolbars": "Barras de lectura flotantes",
+  "companion.reading.screenDisplay": "Visualización de pantalla",
+  "companion.reading.font.decrease": "Reducir {setting}",
+  "companion.reading.font.increase": "Aumentar {setting}",
+  "companion.reading.font.textWidth": "Ancho del texto",
+  "companion.reading.font.addVariants": "Añadir variantes",
+  "companion.reading.font.preview": "Vista previa de la fuente",
+  "companion.reading.font.confirm": "Añadir fuentes",
+  "companion.reading.font.cancel": "Cancelar",
+  "companion.reading.font.actionError": "No se pudo cargar, guardar o eliminar esta fuente. Tus archivos de fuentes siguen disponibles.",
+  "companion.reading.font.loadError": "No se pudo cargar la fuente seleccionada. Vuelve a seleccionarla para reintentar."
 }

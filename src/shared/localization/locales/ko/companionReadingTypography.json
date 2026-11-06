@@ -18,5 +18,19 @@
   "companion.reading.font.importError": "이 글꼴을 추가할 수 없습니다. 20 MB 미만의 TTF 또는 OTF 파일을 선택하세요.",
   "companion.reading.font.contrast": "신체 대비",
   "companion.reading.font.contrast.default": "Default",
-  "companion.reading.font.contrast.high": "높음"
+  "companion.reading.font.contrast.high": "높음",
+  "companion.reading.hideSystemStatusBar": "시스템 상태 표시줄 숨기기",
+  "companion.reading.systemStatusBarError": "시스템 상태 표시줄을 변경하지 못했습니다. 읽기 환경설정은 변경되지 않았습니다.",
+  "companion.reading.retrySystemStatusBar": "시스템 상태 표시줄 다시 시도",
+  "companion.reading.overlayToolbars": "떠 있는 읽기 도구 모음",
+  "companion.reading.screenDisplay": "화면 표시",
+  "companion.reading.font.decrease": "{setting} 줄이기",
+  "companion.reading.font.increase": "{setting} 늘리기",
+  "companion.reading.font.textWidth": "텍스트 너비",
+  "companion.reading.font.addVariants": "변형 추가",
+  "companion.reading.font.preview": "글꼴 미리보기",
+  "companion.reading.font.confirm": "글꼴 추가",
+  "companion.reading.font.cancel": "취소",
+  "companion.reading.font.actionError": "이 글꼴을 불러오거나 저장하거나 제거하지 못했습니다. 글꼴 파일은 계속 사용할 수 있습니다.",
+  "companion.reading.font.loadError": "선택한 글꼴을 불러오지 못했습니다. 다시 선택하여 시도하세요."
 }

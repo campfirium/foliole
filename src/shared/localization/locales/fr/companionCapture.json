@@ -11,5 +11,11 @@
   "companion.capture.save": "Enregistrer",
   "companion.capture.saving": "Enregistrement...",
   "companion.capture.error.inboxUnavailable": "Synchronisez cet appareil avant d'enregistrer un nouveau sujet.",
-  "companion.capture.error.saveFailed": "Impossible d'enregistrer ce sujet. Essayer à nouveau."
+  "companion.capture.error.saveFailed": "Impossible d'enregistrer ce sujet. Essayer à nouveau.",
+  "companion.capture.import.readingModeDescription": "Choisissez comment les chapitres rejoignent la file de révision.",
+  "companion.capture.error.clipboardEmpty": "Aucun texte trouvé dans le presse-papiers.",
+  "companion.capture.error.clipboardFailed": "Impossible de lire le presse-papiers. Autorisez l’accès et réessayez.",
+  "companion.capture.import.imagesUnavailable": "Texte importé. Certaines images locales du fichier sélectionné n’ont pas pu être importées.",
+  "companion.capture.import.conversionIncomplete": "Fichier importé. Certains éléments de mise en forme ou contenus intégrés n’ont pas pu être convertis.",
+  "companion.capture.error.targetUnavailable": "Cet emplacement n’est plus disponible. Fermez Capturer et choisissez un autre emplacement."
 }

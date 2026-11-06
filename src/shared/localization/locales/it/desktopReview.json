@@ -88,5 +88,7 @@
   "desktop.nodeReview.usingReviewSettings": "Utilizzo delle impostazioni di revisione: {value}",
   "desktop.nodeReview.usingQueueFallback": "Utilizzo del fallback della coda: {value}",
   "desktop.nodeReview.noLocalShortTerm": "Nessuna impostazione locale a breve termine",
-  "desktop.nodeReview.priority.p0": "P0 - Innanzitutto, nessun ridimensionamento del ritardo"
+  "desktop.nodeReview.priority.p0": "P0 - Innanzitutto, nessun ridimensionamento del ritardo",
+  "desktop.foregroundTime.monthTotal": "Tempo totale",
+  "desktop.foregroundTime.monthTotalShort": "Totale"
 }

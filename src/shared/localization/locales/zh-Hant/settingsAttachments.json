@@ -1,0 +1,23 @@
+{
+  "settings.attachments.thresholdCustom": "自訂天數",
+  "settings.attachments.daysUnit": "天",
+  "settings.attachments.title": "本機附件",
+  "settings.attachments.error": "附件操作未完成，請再試一次。",
+  "settings.attachments.used": "占用空間",
+  "settings.attachments.refresh": "重新整理",
+  "settings.attachments.thresholdValue": "{count} 天",
+  "settings.attachments.thresholdInvalid": "請輸入大於 0 的整數。",
+  "settings.attachments.threshold": "清理前的閒置天數",
+  "settings.attachments.thresholdHint": "不再被任何主題使用的圖片和檔案，必須閒置滿這麼多個使用日後才能標為可清理。只計算開啟 Foliole 的日子。",
+  "settings.attachments.automatic": "自動清理",
+  "settings.attachments.automaticHint": "閒置期滿的附件會自動標為可清理。",
+  "settings.attachments.eligible": "未使用的附件",
+  "settings.attachments.eligibleHint": "已閒置滿設定天數",
+  "settings.attachments.clean": "標為可清理",
+  "settings.attachments.trash": "可清理",
+  "settings.attachments.trashHint": "清理前可還原",
+  "settings.attachments.restore": "全部還原",
+  "settings.attachments.empty": "清理",
+  "settings.attachments.emptyTitle": "清理這些附件？",
+  "settings.attachments.emptyHint": "將永久刪除並釋放 {size}，無法還原，不影響任何主題。"
+}

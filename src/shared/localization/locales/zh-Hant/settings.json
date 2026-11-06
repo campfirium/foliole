@@ -215,5 +215,17 @@
   "settings.customCopy.export": "匯出",
   "settings.customCopy.exported": "已匯出自訂文案。",
   "settings.customCopy.empty.title": "沒有相符的文案",
-  "settings.customCopy.empty.description": "請嘗試其他搜尋詞或清除篩選條件。"
+  "settings.customCopy.empty.description": "請嘗試其他搜尋詞或清除篩選條件。",
+  "settings.review.optimization": "自動複習最佳化",
+  "settings.review.optimizeNow": "立即最佳化",
+  "settings.review.optimizing": "正在最佳化…",
+  "settings.review.optimizationDescription": "根據複習歷史自動訓練 FSRS 參數，持續最佳化複習安排。按資料夾訓練（包含子資料夾），每累積足夠的複習記錄即觸發一次。",
+  "settings.review.recentTraining": "最近訓練",
+  "settings.review.noTrainingHistory": "暫無",
+  "settings.review.trainingLibrary": "整個資料庫",
+  "settings.review.trainingFolderUnavailable": "無法使用的資料夾",
+  "settings.review.trainingHistoryLoading": "正在載入訓練歷史…",
+  "settings.review.trainingHistoryFailed": "無法載入訓練歷史。",
+  "settings.review.lastOptimization": "上次最佳化：{time}",
+  "settings.review.optimizationFailed": "無法完成最佳化，請重試。"
 }

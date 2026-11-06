@@ -16,10 +16,10 @@
   "settings.appearance.fontCatalog.loading": "正在加載系統字體...",
   "settings.appearance.fontCatalog.search": "搜尋字體",
   "settings.appearance.fontCatalog.empty": "沒有匹配的字體。",
-  "settings.appearance.fontPreset.default": "Default",
+  "settings.appearance.fontPreset.default": "預設",
   "settings.appearance.fontPreset.system": "系統介面",
   "settings.appearance.fontPreset.serif": "襯線",
-  "settings.appearance.fontPreset.custom": "Custom",
+  "settings.appearance.fontPreset.custom": "自訂",
   "settings.appearance.fontSize.title": "字體大小",
   "settings.appearance.fontSize.description": "調整主要內容面板的字體大小（以像素為單位）。",
   "settings.appearance.fontSize.reset": "重置字體大小",
@@ -151,5 +151,13 @@
   "settings.appearance.surface.grid.bottomFolder": "底部資料夾",
   "settings.appearance.surface.grid.bottomTopic": "底部主題",
   "settings.appearance.surface.grid.bottomDocument": "底部文件",
-  "settings.appearance.surface.grid.bottomSidebar": "底部側邊欄"
+  "settings.appearance.surface.grid.bottomSidebar": "底部側邊欄",
+  "settings.appearance.fontWeight.title": "字型粗細",
+  "settings.appearance.fontWeight.description": "依字型調整粗細。",
+  "settings.appearance.fontWeight.reset": "重設字型粗細",
+  "settings.appearance.fontWeight.slider": "字型粗細滑桿",
+  "settings.appearance.fontWeight.loading": "正在載入字型…",
+  "settings.appearance.fontWeight.loadError": "無法檢查此字型。",
+  "settings.appearance.fontWeight.saveError": "無法儲存字型粗細。",
+  "settings.appearance.fontWeight.retry": "重試"
 }

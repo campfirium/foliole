@@ -72,7 +72,7 @@
   "settings.appearance.colorMode.aria": "Sección del modo de color de apariencia",
   "settings.appearance.colorMode.row": "Modo de color base",
   "settings.appearance.colorMode.description": "Elija si Foliole permanece claro, oscuro o sigue la apariencia del sistema.\nModo",
-  "settings.appearance.colorMode.modeAria": "",
+  "settings.appearance.colorMode.modeAria": "Modo",
   "settings.appearance.colorMode.light": "Luz",
   "settings.appearance.colorMode.dark": "Oscuro",
   "settings.appearance.colorMode.system": "Sistema",
@@ -215,5 +215,17 @@
   "settings.customCopy.export": "Exportar",
   "settings.customCopy.exported": "Se exportó el texto personalizado.",
   "settings.customCopy.empty.title": "No hay texto coincidente",
-  "settings.customCopy.empty.description": "Pruebe otra búsqueda o borre el filtro."
+  "settings.customCopy.empty.description": "Pruebe otra búsqueda o borre el filtro.",
+  "settings.review.optimization": "Optimización automática del repaso",
+  "settings.review.optimizeNow": "Optimizar ahora",
+  "settings.review.optimizing": "Optimizando…",
+  "settings.review.optimizationDescription": "Entrena automáticamente los parámetros FSRS a partir del historial de repasos para optimizar continuamente su programación. Se entrena por carpeta, incluidas las subcarpetas, cada vez que se acumulan suficientes registros de repaso.",
+  "settings.review.recentTraining": "Entrenamiento reciente",
+  "settings.review.noTrainingHistory": "Aún ninguno",
+  "settings.review.trainingLibrary": "Toda la biblioteca",
+  "settings.review.trainingFolderUnavailable": "Carpeta no disponible",
+  "settings.review.trainingHistoryLoading": "Cargando historial de entrenamiento…",
+  "settings.review.trainingHistoryFailed": "No se pudo cargar el historial de entrenamiento.",
+  "settings.review.lastOptimization": "Última optimización: {time}",
+  "settings.review.optimizationFailed": "No se pudo completar la optimización. Inténtalo de nuevo."
 }

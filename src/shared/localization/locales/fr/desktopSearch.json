@@ -55,11 +55,11 @@
   "desktop.reviewComplete.title.readingOnly": "Lecture terminée",
   "desktop.reviewComplete.title.default": "Queue clear",
   "desktop.reviewComplete.reviewed": "Révisé",
-  "desktop.reviewComplete.read": "Read",
+  "desktop.reviewComplete.read": "Lu",
   "desktop.reviewComplete.created": "Créé",
   "desktop.reviewComplete.item.one": "article",
   "desktop.reviewComplete.item.many": "articles\nSujet",
   "desktop.reviewComplete.topic.one": "Sujets",
-  "desktop.reviewComplete.topic.many": "",
+  "desktop.reviewComplete.topic.many": "thèmes",
   "desktop.editor.image.resize": "Redimensionner l’image"
 }

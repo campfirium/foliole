@@ -1,0 +1,19 @@
+{
+  "companion.imageCloze.confirm": "Confirmer",
+  "companion.imageCloze.title": "Texte à trous sur image",
+  "companion.imageCloze.saving": "Enregistrement…",
+  "companion.imageCloze.positionHelp": "Pincez pour zoomer et faites glisser l’image pour la positionner. Ajoutez ensuite un masque.",
+  "companion.imageCloze.drawHelp": "Faites glisser sur l’image pour dessiner un masque. Vous pourrez ensuite continuer à déplacer l’image.",
+  "companion.imageCloze.markHelp": "Faites glisser pour déplacer l’image. Pincez pour zoomer. Touchez un masque pour le sélectionner et le modifier.",
+  "companion.imageCloze.source": "Image originale",
+  "companion.imageCloze.region": "Masque {number}",
+  "companion.imageCloze.missing": "L’image est indisponible. Annulez et rouvrez-la une fois restaurée.",
+  "companion.imageCloze.failed": "Impossible d’enregistrer le texte à trous sur image. Vos modifications sont conservées ; réessayez. Si l’article a changé, annulez et rouvrez l’image.",
+  "companion.imageCloze.zoomOut": "Zoom arrière",
+  "companion.imageCloze.zoomIn": "Zoom avant",
+  "companion.imageCloze.adjust": "Ajuster les masques",
+  "companion.imageCloze.position": "Positionner l’image",
+  "companion.imageCloze.add": "Nouveau masque",
+  "companion.imageCloze.deleteFailed": "Impossible de terminer la suppression de l’élément. Veuillez réessayer.",
+  "companion.imageCloze.remove": "Supprimer le masque sélectionné"
+}

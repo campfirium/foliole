@@ -201,5 +201,6 @@
   "desktop.rightPanel.highlights.unavailableDescription": "所選主題不再可用。",
   "desktop.rightPanel.highlights.unavailableTitle": "主題不可用",
   "desktop.rightPanel.highlights.count": "亮點({count})",
-  "desktop.rightPanel.highlights.list": "文檔亮點"
+  "desktop.rightPanel.highlights.list": "文檔亮點",
+  "desktop.workspace.leaveFlowHere": "退出 Flow"
 }

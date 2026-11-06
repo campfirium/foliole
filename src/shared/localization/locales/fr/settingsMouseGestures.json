@@ -1,6 +1,6 @@
 {
   "settings.mouseGestures.trail.sectionAria": "Section du parcours des gestes de la souris\nSentier",
-  "settings.mouseGestures.trail.title": "",
+  "settings.mouseGestures.trail.title": "Tracé",
   "settings.mouseGestures.trail.resetColor": "Réinitialiser la couleur du sentier des gestes de la souris",
   "settings.mouseGestures.trail.colorAria": "Couleur du sentier des gestes de la souris",
   "settings.mouseGestures.trail.colorHexAria": "Couleur du sentier des gestes de la souris, hexadécimal",
@@ -15,7 +15,7 @@
   "settings.mouseGestures.thresholds.pointSpacing.description": "Distance minimale entre les points du sentier visible.",
   "settings.mouseGestures.thresholds.pointAria": "Seuil de point de trace des gestes de la souris",
   "settings.mouseGestures.area.sectionAria": "Section de la zone de geste de la souris\nZone",
-  "settings.mouseGestures.area.title": "",
+  "settings.mouseGestures.area.title": "Zone",
   "settings.mouseGestures.area.mainPanel": "Panneau principal",
   "settings.mouseGestures.bindings.sectionAria": "Section de liaison des gestes de la souris",
   "settings.mouseGestures.bindings.title": "Actions des gestes",

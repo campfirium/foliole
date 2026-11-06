@@ -18,5 +18,19 @@
   "companion.reading.font.importError": "このフォントを追加できません。20 MB 未満の TTF または OTF ファイルを選んでください。",
   "companion.reading.font.contrast": "ボディコントラスト",
   "companion.reading.font.contrast.default": "Default",
-  "companion.reading.font.contrast.high": "高"
+  "companion.reading.font.contrast.high": "高",
+  "companion.reading.hideSystemStatusBar": "システムのステータスバーを隠す",
+  "companion.reading.systemStatusBarError": "システムのステータスバーを変更できませんでした。読書設定は変更されていません。",
+  "companion.reading.retrySystemStatusBar": "ステータスバーの変更を再試行",
+  "companion.reading.overlayToolbars": "フローティング読書ツールバー",
+  "companion.reading.screenDisplay": "画面表示",
+  "companion.reading.font.decrease": "{setting} を減らす",
+  "companion.reading.font.increase": "{setting} を増やす",
+  "companion.reading.font.textWidth": "テキスト幅",
+  "companion.reading.font.addVariants": "バリエーションを追加",
+  "companion.reading.font.preview": "フォントのプレビュー",
+  "companion.reading.font.confirm": "フォントを追加",
+  "companion.reading.font.cancel": "キャンセル",
+  "companion.reading.font.actionError": "このフォントの読み込み・保存・削除ができませんでした。フォントファイルは引き続き利用できます。",
+  "companion.reading.font.loadError": "選択したフォントを読み込めませんでした。もう一度選択して再試行してください。"
 }

@@ -1,0 +1,23 @@
+{
+  "settings.attachments.thresholdCustom": "Giorni personalizzati",
+  "settings.attachments.daysUnit": "giorni",
+  "settings.attachments.title": "Allegati locali",
+  "settings.attachments.error": "Impossibile completare l’operazione sugli allegati. Riprova.",
+  "settings.attachments.used": "Spazio utilizzato",
+  "settings.attachments.refresh": "Aggiorna",
+  "settings.attachments.thresholdValue": "{count} giorni",
+  "settings.attachments.thresholdInvalid": "Inserisci un numero intero maggiore di 0.",
+  "settings.attachments.threshold": "Giorni di inutilizzo prima della pulizia",
+  "settings.attachments.thresholdHint": "Le immagini e i file che nessun argomento usa più devono rimanere inutilizzati per questo numero di giorni di utilizzo prima di poter essere contrassegnati come pronti per la pulizia. Contano solo i giorni in cui apri Foliole.",
+  "settings.attachments.automatic": "Pulizia automatica",
+  "settings.attachments.automaticHint": "Gli allegati inutilizzati abbastanza a lungo vengono contrassegnati automaticamente come pronti per la pulizia.",
+  "settings.attachments.eligible": "Allegati inutilizzati",
+  "settings.attachments.eligibleHint": "Inutilizzati per il numero di giorni impostato",
+  "settings.attachments.clean": "Segna come pronto per la pulizia",
+  "settings.attachments.trash": "Pronto per la pulizia",
+  "settings.attachments.trashHint": "Ripristinabili fino alla pulizia",
+  "settings.attachments.restore": "Ripristina tutto",
+  "settings.attachments.empty": "Pulisci",
+  "settings.attachments.emptyTitle": "Pulire questi allegati?",
+  "settings.attachments.emptyHint": "Verranno eliminati definitivamente, liberando {size}. Non sarà possibile ripristinarli. Nessun argomento verrà modificato."
+}

@@ -1,5 +1,5 @@
 {
-  "settings.general.system.section": "",
+  "settings.general.system.section": "Système",
   "settings.general.system.aria": "Paramètres système",
   "settings.general.openAtLogin.title": "Démarre Foliole automatiquement",
   "settings.general.openAtLogin.description": "Gardez la synchronisation locale et le clip global disponibles après le démarrage.",

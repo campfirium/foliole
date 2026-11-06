@@ -8,7 +8,7 @@
   "settings.icons.node.edit": "Modifica",
   "settings.icons.node.topic": "Argomento",
   "settings.icons.node.item": "Articolo\nIcona",
-  "settings.icons.node.icon": "",
+  "settings.icons.node.icon": "icona",
   "settings.icons.node.pending": "in sospeso",
   "settings.icons.node.scheduled": "programmato",
   "settings.icons.node.dismissed": "respinto",

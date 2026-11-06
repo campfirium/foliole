@@ -16,10 +16,10 @@
   "settings.appearance.fontCatalog.loading": "Chargement des polices système…",
   "settings.appearance.fontCatalog.search": "Rechercher des polices",
   "settings.appearance.fontCatalog.empty": "Aucune police correspondante.",
-  "settings.appearance.fontPreset.default": "Default",
+  "settings.appearance.fontPreset.default": "Par défaut",
   "settings.appearance.fontPreset.system": "Interface utilisateur du système",
   "settings.appearance.fontPreset.serif": "Serif",
-  "settings.appearance.fontPreset.custom": "Custom",
+  "settings.appearance.fontPreset.custom": "Personnalisé",
   "settings.appearance.fontSize.title": "Taille de la police",
   "settings.appearance.fontSize.description": "Ajustez la taille de la police du panneau de contenu principal en pixels.",
   "settings.appearance.fontSize.reset": "Réinitialiser la taille de la police",
@@ -151,5 +151,13 @@
   "settings.appearance.surface.grid.bottomFolder": "Dossier inférieur",
   "settings.appearance.surface.grid.bottomTopic": "Sujet du bas",
   "settings.appearance.surface.grid.bottomDocument": "Document du bas",
-  "settings.appearance.surface.grid.bottomSidebar": "Barre latérale inférieure"
+  "settings.appearance.surface.grid.bottomSidebar": "Barre latérale inférieure",
+  "settings.appearance.fontWeight.title": "Graisse de la police",
+  "settings.appearance.fontWeight.description": "Ajustez la graisse selon la police.",
+  "settings.appearance.fontWeight.reset": "Réinitialiser la graisse de la police",
+  "settings.appearance.fontWeight.slider": "Curseur de graisse de la police",
+  "settings.appearance.fontWeight.loading": "Chargement de la police…",
+  "settings.appearance.fontWeight.loadError": "Impossible de vérifier cette police.",
+  "settings.appearance.fontWeight.saveError": "Impossible d’enregistrer la graisse de la police.",
+  "settings.appearance.fontWeight.retry": "Réessayer"
 }

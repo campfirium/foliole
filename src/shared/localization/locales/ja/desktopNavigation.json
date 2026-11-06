@@ -201,5 +201,6 @@
   "desktop.rightPanel.highlights.unavailableDescription": "選択したトピックは利用できなくなりました。",
   "desktop.rightPanel.highlights.unavailableTitle": "トピックは利用できません",
   "desktop.rightPanel.highlights.count": "ハイライト({count})",
-  "desktop.rightPanel.highlights.list": "ドキュメントのハイライト"
+  "desktop.rightPanel.highlights.list": "ドキュメントのハイライト",
+  "desktop.workspace.leaveFlowHere": "Flow を終了"
 }

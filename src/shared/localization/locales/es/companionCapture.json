@@ -11,5 +11,11 @@
   "companion.capture.save": "Guardar",
   "companion.capture.saving": "Guardando...",
   "companion.capture.error.inboxUnavailable": "Sincroniza este dispositivo antes de guardar un tema nuevo.",
-  "companion.capture.error.saveFailed": "No se pudo guardar este tema. Intentar otra vez."
+  "companion.capture.error.saveFailed": "No se pudo guardar este tema. Intentar otra vez.",
+  "companion.capture.import.readingModeDescription": "Elige cómo entran los capítulos en la cola de repaso.",
+  "companion.capture.error.clipboardEmpty": "No se encontró texto en el portapapeles.",
+  "companion.capture.error.clipboardFailed": "No se pudo leer el portapapeles. Permite el acceso e inténtalo de nuevo.",
+  "companion.capture.import.imagesUnavailable": "Texto importado. No se pudieron importar algunas imágenes locales del archivo seleccionado.",
+  "companion.capture.import.conversionIncomplete": "Archivo importado. No se pudieron convertir algunos formatos o contenidos incrustados.",
+  "companion.capture.error.targetUnavailable": "Esta ubicación ya no está disponible. Cierra Captura y elige otra ubicación."
 }

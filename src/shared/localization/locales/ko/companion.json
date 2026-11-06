@@ -166,5 +166,20 @@
   "companion.sync.displayUnavailable": "동기화된 데이터를 표시하지 못했습니다. 새로 고쳐 다시 시도하세요.",
   "companion.sync.activityUnavailable": "동기화 기록을 일시적으로 사용할 수 없습니다.",
   "companion.sync.discovery.unavailable": "이 기기 또는 네트워크에서 동기화 그룹을 찾을 수 없습니다.",
-  "companion.sync.discovery.connectionFailed": "동기화 그룹을 찾았지만 Foliole에서 연결하지 못했습니다."
+  "companion.sync.discovery.connectionFailed": "동기화 그룹을 찾았지만 Foliole에서 연결하지 못했습니다.",
+  "companion.review.question": "질문",
+  "companion.syncSetup.receiving.progress": "{total}개 중 {completed}개 수신",
+  "companion.syncSetup.receiving.preparing": "그룹과 비교 중…",
+  "companion.syncSetup.receiving.lastActivity": "마지막 수신: {time}",
+  "companion.syncSetup.receiving.paused": "Foliole이 백그라운드에 있는 동안 일시 중지되었습니다. 자동으로 계속됩니다.",
+  "companion.syncSetup.receiving.retry": "다시 시도",
+  "companion.syncBackground.title": "동기화 그룹과 동기화 중",
+  "companion.syncBackground.progress": "{total}개 중 {completed}개",
+  "companion.syncBackground.preparing": "그룹과 비교 중…",
+  "companion.syncBackground.channel": "동기화 진행 상황",
+  "companion.review.exitFlow": "Flow 나가기",
+  "companion.reading.pdfUnavailable.title": "PDF 원본을 사용할 수 없음",
+  "companion.reading.pdfUnavailable.oldWebView": "휴대폰의 Android System WebView 구성 요소가 오래되어 PDF 원본을 표시할 수 없습니다.",
+  "companion.reading.pdfUnavailable.oldWebViewText": "휴대폰의 Android System WebView 구성 요소가 오래되어 PDF 원본을 표시할 수 없습니다. 추출된 텍스트는 계속 읽을 수 있습니다.",
+  "companion.reading.pdfUnavailable.loadFailed": "PDF 원본을 열지 못했습니다."
 }

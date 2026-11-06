@@ -1,0 +1,19 @@
+{
+  "companion.imageCloze.confirm": "確定",
+  "companion.imageCloze.title": "画像穴埋め",
+  "companion.imageCloze.saving": "保存中…",
+  "companion.imageCloze.positionHelp": "ピンチで拡大・縮小し、ドラッグして画像の位置を調整します。その後、マスクを追加してください。",
+  "companion.imageCloze.drawHelp": "画像上をドラッグしてマスクを1つ描きます。その後、画像の移動を続けられます。",
+  "companion.imageCloze.markHelp": "ドラッグで画像を移動し、ピンチで拡大・縮小します。マスクをタップすると選択して編集できます。",
+  "companion.imageCloze.source": "元の画像",
+  "companion.imageCloze.region": "マスク {number}",
+  "companion.imageCloze.missing": "画像を利用できません。キャンセルし、画像が復元された後で開き直してください。",
+  "companion.imageCloze.failed": "画像穴埋めを保存できませんでした。変更は保持されています。再試行してください。記事が変更された場合は、キャンセルして画像を開き直してください。",
+  "companion.imageCloze.zoomOut": "ズームアウト",
+  "companion.imageCloze.zoomIn": "ズームイン",
+  "companion.imageCloze.adjust": "マスクを調整",
+  "companion.imageCloze.position": "画像の位置を調整",
+  "companion.imageCloze.add": "新しいマスク",
+  "companion.imageCloze.deleteFailed": "項目の削除を完了できませんでした。再試行してください。",
+  "companion.imageCloze.remove": "選択したマスクを削除"
+}

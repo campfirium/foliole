@@ -88,5 +88,7 @@
   "desktop.nodeReview.usingReviewSettings": "使用審核設定：{value}",
   "desktop.nodeReview.usingQueueFallback": "使用佇列回退：{value}",
   "desktop.nodeReview.noLocalShortTerm": "無本地短期設置",
-  "desktop.nodeReview.priority.p0": "P0 - 首先，無延遲縮放"
+  "desktop.nodeReview.priority.p0": "P0 - 首先，無延遲縮放",
+  "desktop.foregroundTime.monthTotal": "時長總計",
+  "desktop.foregroundTime.monthTotalShort": "總計"
 }

@@ -1,0 +1,19 @@
+{
+  "companion.imageCloze.confirm": "확인",
+  "companion.imageCloze.title": "이미지 빈칸",
+  "companion.imageCloze.saving": "저장 중…",
+  "companion.imageCloze.positionHelp": "두 손가락으로 확대·축소하고 드래그하여 이미지 위치를 잡으세요. 그런 다음 마스크를 추가하세요.",
+  "companion.imageCloze.drawHelp": "이미지 위를 드래그하여 마스크 하나를 그리세요. 그 후 이미지를 계속 이동할 수 있습니다.",
+  "companion.imageCloze.markHelp": "드래그하여 이미지를 이동하고 두 손가락으로 확대·축소하세요. 마스크를 누르면 선택하여 편집할 수 있습니다.",
+  "companion.imageCloze.source": "원본 이미지",
+  "companion.imageCloze.region": "마스크 {number}",
+  "companion.imageCloze.missing": "이미지를 사용할 수 없습니다. 취소하고 이미지가 복원된 뒤 다시 여세요.",
+  "companion.imageCloze.failed": "이미지 빈칸을 저장하지 못했습니다. 변경 사항은 유지됩니다. 다시 시도하세요. 글이 변경되었다면 취소하고 이미지를 다시 여세요.",
+  "companion.imageCloze.zoomOut": "축소",
+  "companion.imageCloze.zoomIn": "확대",
+  "companion.imageCloze.adjust": "마스크 조정",
+  "companion.imageCloze.position": "이미지 위치 조정",
+  "companion.imageCloze.add": "새 마스크",
+  "companion.imageCloze.deleteFailed": "항목 삭제를 완료하지 못했습니다. 다시 시도하세요.",
+  "companion.imageCloze.remove": "선택한 마스크 삭제"
+}

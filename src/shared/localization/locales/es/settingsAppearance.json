@@ -16,10 +16,10 @@
   "settings.appearance.fontCatalog.loading": "Cargando fuentes del sistema…",
   "settings.appearance.fontCatalog.search": "Buscar fuentes",
   "settings.appearance.fontCatalog.empty": "No hay fuentes coincidentes.",
-  "settings.appearance.fontPreset.default": "Default",
+  "settings.appearance.fontPreset.default": "Predeterminado",
   "settings.appearance.fontPreset.system": "Interfaz de usuario del sistema",
   "settings.appearance.fontPreset.serif": "Serifa",
-  "settings.appearance.fontPreset.custom": "Custom",
+  "settings.appearance.fontPreset.custom": "Personalizado",
   "settings.appearance.fontSize.title": "Tamaño de fuente",
   "settings.appearance.fontSize.description": "Ajusta el tamaño de fuente del panel de contenido principal en píxeles.",
   "settings.appearance.fontSize.reset": "Restablecer tamaño de fuente",
@@ -151,5 +151,13 @@
   "settings.appearance.surface.grid.bottomFolder": "Carpeta inferior",
   "settings.appearance.surface.grid.bottomTopic": "Tema inferior",
   "settings.appearance.surface.grid.bottomDocument": "Documento inferior",
-  "settings.appearance.surface.grid.bottomSidebar": "Barra lateral inferior"
+  "settings.appearance.surface.grid.bottomSidebar": "Barra lateral inferior",
+  "settings.appearance.fontWeight.title": "Grosor de la fuente",
+  "settings.appearance.fontWeight.description": "Ajusta el grosor según la fuente.",
+  "settings.appearance.fontWeight.reset": "Restablecer grosor de la fuente",
+  "settings.appearance.fontWeight.slider": "Control del grosor de la fuente",
+  "settings.appearance.fontWeight.loading": "Cargando fuente…",
+  "settings.appearance.fontWeight.loadError": "No se pudo comprobar esta fuente.",
+  "settings.appearance.fontWeight.saveError": "No se pudo guardar el grosor de la fuente.",
+  "settings.appearance.fontWeight.retry": "Reintentar"
 }

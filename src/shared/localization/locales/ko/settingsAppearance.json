@@ -16,10 +16,10 @@
   "settings.appearance.fontCatalog.loading": "시스템 글꼴 로드 중…",
   "settings.appearance.fontCatalog.search": "글꼴 검색",
   "settings.appearance.fontCatalog.empty": "일치하는 글꼴이 없습니다.",
-  "settings.appearance.fontPreset.default": "Default",
+  "settings.appearance.fontPreset.default": "기본값",
   "settings.appearance.fontPreset.system": "시스템 UI",
   "settings.appearance.fontPreset.serif": "세리프",
-  "settings.appearance.fontPreset.custom": "Custom",
+  "settings.appearance.fontPreset.custom": "사용자 지정",
   "settings.appearance.fontSize.title": "글꼴 크기",
   "settings.appearance.fontSize.description": "기본 콘텐츠 패널 글꼴 크기를 픽셀 단위로 조정합니다.",
   "settings.appearance.fontSize.reset": "글꼴 크기 재설정",
@@ -151,5 +151,13 @@
   "settings.appearance.surface.grid.bottomFolder": "하단 폴더",
   "settings.appearance.surface.grid.bottomTopic": "하단 주제",
   "settings.appearance.surface.grid.bottomDocument": "하단 문서",
-  "settings.appearance.surface.grid.bottomSidebar": "하단 사이드바"
+  "settings.appearance.surface.grid.bottomSidebar": "하단 사이드바",
+  "settings.appearance.fontWeight.title": "글꼴 굵기",
+  "settings.appearance.fontWeight.description": "글꼴에 맞게 굵기를 조정하세요.",
+  "settings.appearance.fontWeight.reset": "글꼴 굵기 초기화",
+  "settings.appearance.fontWeight.slider": "글꼴 굵기 슬라이더",
+  "settings.appearance.fontWeight.loading": "글꼴 불러오는 중…",
+  "settings.appearance.fontWeight.loadError": "이 글꼴을 확인하지 못했습니다.",
+  "settings.appearance.fontWeight.saveError": "글꼴 굵기를 저장하지 못했습니다.",
+  "settings.appearance.fontWeight.retry": "재시도"
 }

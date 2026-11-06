@@ -16,7 +16,7 @@
   "settings.publishing.foliole.siteTitle.aria": "Titre du site public",
   "settings.publishing.foliole.siteTitle.required": "Saisissez un titre de site.",
   "settings.publishing.foliole.siteTitle.error.save": "Impossible d'enregistrer le titre du site.\nThème",
-  "settings.publishing.foliole.theme.title": "",
+  "settings.publishing.foliole.theme.title": "Thème",
   "settings.publishing.foliole.theme.description": "Définir le thème de la page de publication.",
   "settings.publishing.foliole.theme.aria": "Thème de la page de publication",
   "settings.publishing.foliole.theme.default": "Default",

@@ -215,5 +215,17 @@
   "settings.customCopy.export": "Esporta",
   "settings.customCopy.exported": "Testi personalizzati esportati.",
   "settings.customCopy.empty.title": "Nessun testo corrispondente",
-  "settings.customCopy.empty.description": "Prova un’altra ricerca o cancella il filtro."
+  "settings.customCopy.empty.description": "Prova un’altra ricerca o cancella il filtro.",
+  "settings.review.optimization": "Ottimizzazione automatica del ripasso",
+  "settings.review.optimizeNow": "Ottimizza ora",
+  "settings.review.optimizing": "Ottimizzazione…",
+  "settings.review.optimizationDescription": "Addestra automaticamente i parametri FSRS dalla cronologia dei ripassi per ottimizzarne continuamente la pianificazione. L’addestramento avviene per cartella, incluse le sottocartelle, ogni volta che si accumulano abbastanza registrazioni di ripasso.",
+  "settings.review.recentTraining": "Addestramento recente",
+  "settings.review.noTrainingHistory": "Ancora nessuno",
+  "settings.review.trainingLibrary": "Intera libreria",
+  "settings.review.trainingFolderUnavailable": "Cartella non disponibile",
+  "settings.review.trainingHistoryLoading": "Caricamento cronologia addestramento…",
+  "settings.review.trainingHistoryFailed": "Impossibile caricare la cronologia di addestramento.",
+  "settings.review.lastOptimization": "Ultima ottimizzazione: {time}",
+  "settings.review.optimizationFailed": "Impossibile completare l’ottimizzazione. Riprova."
 }

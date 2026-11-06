@@ -215,5 +215,17 @@
   "settings.customCopy.export": "Exportar",
   "settings.customCopy.exported": "Textos personalizados exportados.",
   "settings.customCopy.empty.title": "Nenhum texto correspondente",
-  "settings.customCopy.empty.description": "Tente outra pesquisa ou limpe o filtro."
+  "settings.customCopy.empty.description": "Tente outra pesquisa ou limpe o filtro.",
+  "settings.review.optimization": "Otimização automática de revisões",
+  "settings.review.optimizeNow": "Otimizar agora",
+  "settings.review.optimizing": "Otimizando…",
+  "settings.review.optimizationDescription": "Treina automaticamente os parâmetros FSRS com o histórico de revisões para otimizar continuamente a programação. O treinamento ocorre por pasta, incluindo subpastas, sempre que se acumulam registros de revisão suficientes.",
+  "settings.review.recentTraining": "Treinamento recente",
+  "settings.review.noTrainingHistory": "Nenhum ainda",
+  "settings.review.trainingLibrary": "Biblioteca inteira",
+  "settings.review.trainingFolderUnavailable": "Pasta indisponível",
+  "settings.review.trainingHistoryLoading": "Carregando histórico de treinamento…",
+  "settings.review.trainingHistoryFailed": "Não foi possível carregar o histórico de treinamento.",
+  "settings.review.lastOptimization": "Última otimização: {time}",
+  "settings.review.optimizationFailed": "Não foi possível concluir a otimização. Tente novamente."
 }

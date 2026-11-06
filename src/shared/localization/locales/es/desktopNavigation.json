@@ -201,5 +201,6 @@
   "desktop.rightPanel.highlights.unavailableDescription": "El tema seleccionado ya no está disponible.",
   "desktop.rightPanel.highlights.unavailableTitle": "Tema no disponible",
   "desktop.rightPanel.highlights.count": "DESTACADOS({count})",
-  "desktop.rightPanel.highlights.list": "Documento destacado"
+  "desktop.rightPanel.highlights.list": "Documento destacado",
+  "desktop.workspace.leaveFlowHere": "Salir de Flow"
 }

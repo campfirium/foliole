@@ -16,10 +16,10 @@
   "settings.appearance.fontCatalog.loading": "システム フォントを読み込み中…",
   "settings.appearance.fontCatalog.search": "フォントの検索",
   "settings.appearance.fontCatalog.empty": "一致するフォントがありません。",
-  "settings.appearance.fontPreset.default": "Default",
+  "settings.appearance.fontPreset.default": "デフォルト",
   "settings.appearance.fontPreset.system": "システム UI",
   "settings.appearance.fontPreset.serif": "セリフ",
-  "settings.appearance.fontPreset.custom": "Custom",
+  "settings.appearance.fontPreset.custom": "カスタム",
   "settings.appearance.fontSize.title": "フォント サイズ",
   "settings.appearance.fontSize.description": "メイン コンテンツ パネルのフォント サイズをピクセル単位で調整します。",
   "settings.appearance.fontSize.reset": "フォント サイズをリセット",
@@ -151,5 +151,13 @@
   "settings.appearance.surface.grid.bottomFolder": "最下位フォルダー",
   "settings.appearance.surface.grid.bottomTopic": "一番下のトピック",
   "settings.appearance.surface.grid.bottomDocument": "一番下のドキュメント",
-  "settings.appearance.surface.grid.bottomSidebar": "下部サイドバー"
+  "settings.appearance.surface.grid.bottomSidebar": "下部サイドバー",
+  "settings.appearance.fontWeight.title": "フォントの太さ",
+  "settings.appearance.fontWeight.description": "フォントに合わせて太さを調整します。",
+  "settings.appearance.fontWeight.reset": "フォントの太さをリセット",
+  "settings.appearance.fontWeight.slider": "フォントの太さスライダー",
+  "settings.appearance.fontWeight.loading": "フォントを読み込み中…",
+  "settings.appearance.fontWeight.loadError": "このフォントを確認できませんでした。",
+  "settings.appearance.fontWeight.saveError": "フォントの太さを保存できませんでした。",
+  "settings.appearance.fontWeight.retry": "再試行"
 }

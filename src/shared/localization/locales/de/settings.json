@@ -215,5 +215,17 @@
   "settings.customCopy.export": "Exportieren",
   "settings.customCopy.exported": "Benutzerdefinierte Texte wurden exportiert.",
   "settings.customCopy.empty.title": "Keine passenden Texte",
-  "settings.customCopy.empty.description": "Versuchen Sie eine andere Suche oder löschen Sie den Filter."
+  "settings.customCopy.empty.description": "Versuchen Sie eine andere Suche oder löschen Sie den Filter.",
+  "settings.review.optimization": "Automatische Wiederholungsoptimierung",
+  "settings.review.optimizeNow": "Jetzt optimieren",
+  "settings.review.optimizing": "Wird optimiert…",
+  "settings.review.optimizationDescription": "FSRS-Parameter automatisch anhand des Wiederholungsverlaufs trainieren, um die Wiederholungsplanung fortlaufend zu optimieren. Das Training erfolgt pro Ordner einschließlich Unterordnern, sobald genügend neue Wiederholungsdaten vorliegen.",
+  "settings.review.recentTraining": "Letztes Training",
+  "settings.review.noTrainingHistory": "Noch keine",
+  "settings.review.trainingLibrary": "Gesamte Bibliothek",
+  "settings.review.trainingFolderUnavailable": "Ordner nicht verfügbar",
+  "settings.review.trainingHistoryLoading": "Trainingsverlauf wird geladen…",
+  "settings.review.trainingHistoryFailed": "Der Trainingsverlauf konnte nicht geladen werden.",
+  "settings.review.lastOptimization": "Letzte Optimierung: {time}",
+  "settings.review.optimizationFailed": "Die Optimierung konnte nicht abgeschlossen werden. Versuchen Sie es erneut."
 }

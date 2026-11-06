@@ -215,5 +215,17 @@
   "settings.customCopy.export": "Экспортировать",
   "settings.customCopy.exported": "Пользовательский текст экспортирован.",
   "settings.customCopy.empty.title": "Нет подходящего текста",
-  "settings.customCopy.empty.description": "Попробуйте другой запрос или очистите фильтр."
+  "settings.customCopy.empty.description": "Попробуйте другой запрос или очистите фильтр.",
+  "settings.review.optimization": "Автоматическая оптимизация повторений",
+  "settings.review.optimizeNow": "Оптимизировать сейчас",
+  "settings.review.optimizing": "Оптимизация…",
+  "settings.review.optimizationDescription": "Автоматически обучать параметры FSRS на истории повторений для постоянной оптимизации расписания. Обучение выполняется для каждой папки вместе с подпапками при накоплении достаточного числа записей повторения.",
+  "settings.review.recentTraining": "Недавнее обучение",
+  "settings.review.noTrainingHistory": "Пока нет",
+  "settings.review.trainingLibrary": "Вся библиотека",
+  "settings.review.trainingFolderUnavailable": "Папка недоступна",
+  "settings.review.trainingHistoryLoading": "Загрузка истории обучения…",
+  "settings.review.trainingHistoryFailed": "Не удалось загрузить историю обучения.",
+  "settings.review.lastOptimization": "Последняя оптимизация: {time}",
+  "settings.review.optimizationFailed": "Не удалось завершить оптимизацию. Повторите попытку."
 }

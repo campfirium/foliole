@@ -1,0 +1,19 @@
+{
+  "companion.imageCloze.confirm": "Conferma",
+  "companion.imageCloze.title": "Cloze su immagine",
+  "companion.imageCloze.saving": "Salvataggio…",
+  "companion.imageCloze.positionHelp": "Pizzica per ingrandire o ridurre e trascina per posizionare l’immagine. Poi aggiungi una maschera.",
+  "companion.imageCloze.drawHelp": "Trascina sull’immagine per disegnare una maschera. Poi puoi continuare a spostare l’immagine.",
+  "companion.imageCloze.markHelp": "Trascina per spostare l’immagine. Pizzica per ingrandire o ridurre. Tocca una maschera per selezionarla e modificarla.",
+  "companion.imageCloze.source": "Immagine originale",
+  "companion.imageCloze.region": "Maschera {number}",
+  "companion.imageCloze.missing": "L’immagine non è disponibile. Annulla e riaprila dopo il ripristino.",
+  "companion.imageCloze.failed": "Impossibile salvare il cloze su immagine. Le modifiche sono conservate; riprova. Se l’articolo è cambiato, annulla e riapri l’immagine.",
+  "companion.imageCloze.zoomOut": "Rimpicciolisci",
+  "companion.imageCloze.zoomIn": "Ingrandisci",
+  "companion.imageCloze.adjust": "Regola maschere",
+  "companion.imageCloze.position": "Posiziona immagine",
+  "companion.imageCloze.add": "Nuova maschera",
+  "companion.imageCloze.deleteFailed": "Impossibile completare l’eliminazione dell’elemento. Riprova.",
+  "companion.imageCloze.remove": "Elimina maschera selezionata"
+}

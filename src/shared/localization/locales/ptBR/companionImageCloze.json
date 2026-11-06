@@ -1,0 +1,19 @@
+{
+  "companion.imageCloze.confirm": "Confirmar",
+  "companion.imageCloze.title": "Lacunas em imagem",
+  "companion.imageCloze.saving": "Salvando…",
+  "companion.imageCloze.positionHelp": "Faça o gesto de pinça para ajustar o zoom e arraste para posicionar a imagem. Depois adicione uma máscara.",
+  "companion.imageCloze.drawHelp": "Arraste sobre a imagem para desenhar uma máscara. Depois, continue movendo a imagem.",
+  "companion.imageCloze.markHelp": "Arraste para mover a imagem. Use o gesto de pinça para ajustar o zoom. Toque em uma máscara para selecioná-la e editá-la.",
+  "companion.imageCloze.source": "Imagem original",
+  "companion.imageCloze.region": "Máscara {number}",
+  "companion.imageCloze.missing": "A imagem está indisponível. Cancele e abra novamente após ela ser restaurada.",
+  "companion.imageCloze.failed": "Não foi possível salvar as lacunas em imagem. Suas alterações foram mantidas; tente novamente. Se o artigo mudou, cancele e abra a imagem novamente.",
+  "companion.imageCloze.zoomOut": "Diminuir zoom",
+  "companion.imageCloze.zoomIn": "Ampliar",
+  "companion.imageCloze.adjust": "Ajustar máscaras",
+  "companion.imageCloze.position": "Posicionar imagem",
+  "companion.imageCloze.add": "Nova máscara",
+  "companion.imageCloze.deleteFailed": "Não foi possível concluir a exclusão do item. Tente novamente.",
+  "companion.imageCloze.remove": "Excluir máscara selecionada"
+}

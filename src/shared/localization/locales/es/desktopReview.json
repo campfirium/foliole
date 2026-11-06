@@ -76,7 +76,7 @@
   "desktop.nodeReview.shortTerm.description": "Agregue reseñas adicionales para artículos nuevos. Configuración experimental de FSRS; habilítelo solo para el material que necesita práctica inicial.",
   "desktop.nodeReview.priority.description": "Afecta el pedido de revisión de los artículos de este {scope}. P0 es lo primero y no se retrasa por la escala de prioridad.",
   "desktop.nodeReview.optionsPanel": "Revisar panel de opciones\ncarpeta",
-  "desktop.nodeReview.scope.folder": "",
+  "desktop.nodeReview.scope.folder": "carpeta",
   "desktop.nodeReview.scope.topic": "tema",
   "desktop.nodeReview.scope.item": "artículo",
   "desktop.nodeReview.inherit": "Heredar valor resuelto",
@@ -88,5 +88,7 @@
   "desktop.nodeReview.usingReviewSettings": "Usando la configuración de revisión: {value}",
   "desktop.nodeReview.usingQueueFallback": "Usando cola alternativa: {value}",
   "desktop.nodeReview.noLocalShortTerm": "Sin configuración local a corto plazo",
-  "desktop.nodeReview.priority.p0": "P0 - Primero, escalado sin demora"
+  "desktop.nodeReview.priority.p0": "P0 - Primero, escalado sin demora",
+  "desktop.foregroundTime.monthTotal": "Tiempo total",
+  "desktop.foregroundTime.monthTotalShort": "Total"
 }

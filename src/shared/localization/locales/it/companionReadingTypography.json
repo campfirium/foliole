@@ -18,5 +18,19 @@
   "companion.reading.font.importError": "Impossibile aggiungere questo carattere. Scegli un file TTF o OTF inferiore a 20 MB.",
   "companion.reading.font.contrast": "Contrasto del corpo",
   "companion.reading.font.contrast.default": "Default",
-  "companion.reading.font.contrast.high": "Alto"
+  "companion.reading.font.contrast.high": "Alto",
+  "companion.reading.hideSystemStatusBar": "Nascondi barra di stato del sistema",
+  "companion.reading.systemStatusBarError": "Impossibile modificare la barra di stato del sistema. La preferenza di lettura non è cambiata.",
+  "companion.reading.retrySystemStatusBar": "Riprova barra di stato del sistema",
+  "companion.reading.overlayToolbars": "Barre di lettura mobili",
+  "companion.reading.screenDisplay": "Visualizzazione schermo",
+  "companion.reading.font.decrease": "Riduci {setting}",
+  "companion.reading.font.increase": "Aumenta {setting}",
+  "companion.reading.font.textWidth": "Larghezza testo",
+  "companion.reading.font.addVariants": "Aggiungi varianti",
+  "companion.reading.font.preview": "Anteprima carattere",
+  "companion.reading.font.confirm": "Aggiungi caratteri",
+  "companion.reading.font.cancel": "Annulla",
+  "companion.reading.font.actionError": "Impossibile caricare, salvare o rimuovere questo carattere. I file dei caratteri sono ancora disponibili.",
+  "companion.reading.font.loadError": "Impossibile caricare il carattere selezionato. Selezionalo di nuovo per riprovare."
 }

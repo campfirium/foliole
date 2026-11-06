@@ -1,0 +1,23 @@
+{
+  "settings.attachments.thresholdCustom": "사용자 지정 일수",
+  "settings.attachments.daysUnit": "일",
+  "settings.attachments.title": "로컬 첨부 파일",
+  "settings.attachments.error": "첨부 파일 작업을 완료하지 못했습니다. 다시 시도하세요.",
+  "settings.attachments.used": "사용 공간",
+  "settings.attachments.refresh": "새로 고침",
+  "settings.attachments.thresholdValue": "{count}일",
+  "settings.attachments.thresholdInvalid": "0보다 큰 정수를 입력하세요.",
+  "settings.attachments.threshold": "정리 전 미사용 일수",
+  "settings.attachments.thresholdHint": "어떤 주제에서도 사용하지 않는 이미지와 파일은 이만큼의 사용일 동안 사용되지 않아야 정리 가능으로 표시할 수 있습니다. Foliole을 연 날만 계산합니다.",
+  "settings.attachments.automatic": "자동 정리",
+  "settings.attachments.automaticHint": "충분한 기간 동안 사용하지 않은 첨부 파일을 자동으로 정리 가능으로 표시합니다.",
+  "settings.attachments.eligible": "사용하지 않는 첨부 파일",
+  "settings.attachments.eligibleHint": "설정한 일수 동안 사용하지 않음",
+  "settings.attachments.clean": "정리 가능으로 표시",
+  "settings.attachments.trash": "정리 가능",
+  "settings.attachments.trashHint": "정리 전까지 복원 가능",
+  "settings.attachments.restore": "모두 복원",
+  "settings.attachments.empty": "정리",
+  "settings.attachments.emptyTitle": "이 첨부 파일을 정리할까요?",
+  "settings.attachments.emptyHint": "영구적으로 삭제하고 {size}의 공간을 확보합니다. 복원할 수 없습니다. 주제에는 영향을 주지 않습니다."
+}

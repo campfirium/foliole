@@ -215,5 +215,17 @@
   "settings.customCopy.export": "내보내기",
   "settings.customCopy.exported": "사용자 지정 문구를 내보냈습니다.",
   "settings.customCopy.empty.title": "일치하는 문구 없음",
-  "settings.customCopy.empty.description": "다른 검색어를 사용하거나 필터를 해제하세요."
+  "settings.customCopy.empty.description": "다른 검색어를 사용하거나 필터를 해제하세요.",
+  "settings.review.optimization": "자동 복습 최적화",
+  "settings.review.optimizeNow": "지금 최적화",
+  "settings.review.optimizing": "최적화 중…",
+  "settings.review.optimizationDescription": "복습 기록으로 FSRS 매개변수를 자동 학습하여 복습 일정을 지속적으로 최적화합니다. 하위 폴더를 포함하여 폴더별로 학습하며, 충분한 복습 기록이 쌓일 때마다 실행됩니다.",
+  "settings.review.recentTraining": "최근 학습",
+  "settings.review.noTrainingHistory": "아직 없음",
+  "settings.review.trainingLibrary": "전체 라이브러리",
+  "settings.review.trainingFolderUnavailable": "사용할 수 없는 폴더",
+  "settings.review.trainingHistoryLoading": "학습 기록 불러오는 중…",
+  "settings.review.trainingHistoryFailed": "학습 기록을 불러오지 못했습니다.",
+  "settings.review.lastOptimization": "마지막 최적화: {time}",
+  "settings.review.optimizationFailed": "최적화를 완료하지 못했습니다. 다시 시도하세요."
 }

@@ -215,5 +215,17 @@
   "settings.customCopy.export": "エクスポート",
   "settings.customCopy.exported": "カスタム文言をエクスポートしました。",
   "settings.customCopy.empty.title": "一致する文言はありません",
-  "settings.customCopy.empty.description": "別の語句で検索するか、フィルターを解除してください。"
+  "settings.customCopy.empty.description": "別の語句で検索するか、フィルターを解除してください。",
+  "settings.review.optimization": "復習の自動最適化",
+  "settings.review.optimizeNow": "今すぐ最適化",
+  "settings.review.optimizing": "最適化中…",
+  "settings.review.optimizationDescription": "復習履歴から FSRS パラメータを自動学習し、復習スケジュールを継続的に最適化します。フォルダごとにサブフォルダを含めて学習し、十分な復習記録が蓄積されるたびに実行します。",
+  "settings.review.recentTraining": "最近の学習",
+  "settings.review.noTrainingHistory": "まだありません",
+  "settings.review.trainingLibrary": "ライブラリ全体",
+  "settings.review.trainingFolderUnavailable": "利用できないフォルダ",
+  "settings.review.trainingHistoryLoading": "学習履歴を読み込み中…",
+  "settings.review.trainingHistoryFailed": "学習履歴を読み込めませんでした。",
+  "settings.review.lastOptimization": "前回の最適化：{time}",
+  "settings.review.optimizationFailed": "最適化を完了できませんでした。再試行してください。"
 }

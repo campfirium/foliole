@@ -11,5 +11,11 @@
   "companion.capture.save": "Speichern",
   "companion.capture.saving": "Speichern...",
   "companion.capture.error.inboxUnavailable": "Synchronisieren Sie dieses Gerät, bevor Sie ein neues Thema speichern.",
-  "companion.capture.error.saveFailed": "Dieses Thema konnte nicht gespeichert werden. Versuchen Sie es erneut."
+  "companion.capture.error.saveFailed": "Dieses Thema konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+  "companion.capture.import.readingModeDescription": "Wählen Sie, wie Kapitel in die Wiederholungswarteschlange aufgenommen werden.",
+  "companion.capture.error.clipboardEmpty": "Kein Text in der Zwischenablage gefunden.",
+  "companion.capture.error.clipboardFailed": "Die Zwischenablage konnte nicht gelesen werden. Erlauben Sie den Zugriff und versuchen Sie es erneut.",
+  "companion.capture.import.imagesUnavailable": "Text importiert. Einige lokale Bilder konnten nicht aus der ausgewählten Datei importiert werden.",
+  "companion.capture.import.conversionIncomplete": "Datei importiert. Einige Formatierungen oder eingebettete Inhalte konnten nicht konvertiert werden.",
+  "companion.capture.error.targetUnavailable": "Dieser Speicherort ist nicht mehr verfügbar. Schließen Sie die Erfassung und wählen Sie einen anderen Speicherort."
 }

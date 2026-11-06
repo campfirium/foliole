@@ -91,7 +91,7 @@
   "desktop.importSource.table.aria": "Dossiers surveillés",
   "desktop.importSource.table.original": "Original",
   "desktop.importSource.table.highlight": "Point culminant\nMode",
-  "desktop.importSource.table.mode": "",
+  "desktop.importSource.table.mode": "Mode",
   "desktop.importSource.table.handling": "Manipulation",
   "desktop.importSource.table.preview": "Aperçu",
   "desktop.importSource.table.action": "Action",

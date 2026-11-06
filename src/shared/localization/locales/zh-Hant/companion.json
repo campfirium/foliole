@@ -166,5 +166,20 @@
   "companion.sync.displayUnavailable": "無法顯示同步內容，請重新整理後再試一次。",
   "companion.sync.activityUnavailable": "同步記錄暫時無法使用。",
   "companion.sync.discovery.unavailable": "目前無法在此裝置或網路上尋找同步組。",
-  "companion.sync.discovery.connectionFailed": "已找到同步組，但 Foliole 無法連線。"
+  "companion.sync.discovery.connectionFailed": "已找到同步組，但 Foliole 無法連線。",
+  "companion.review.question": "問題",
+  "companion.syncSetup.receiving.progress": "已接收 {completed} / {total}",
+  "companion.syncSetup.receiving.preparing": "正在與同步群組比對…",
+  "companion.syncSetup.receiving.lastActivity": "最近接收於 {time}",
+  "companion.syncSetup.receiving.paused": "Foliole 在背景執行時已暫停，會自動繼續。",
+  "companion.syncSetup.receiving.retry": "重試",
+  "companion.syncBackground.title": "正在與同步群組同步",
+  "companion.syncBackground.progress": "{completed} / {total}",
+  "companion.syncBackground.preparing": "正在與同步群組比對…",
+  "companion.syncBackground.channel": "同步進度",
+  "companion.review.exitFlow": "退出 Flow",
+  "companion.reading.pdfUnavailable.title": "無法使用 PDF 原件",
+  "companion.reading.pdfUnavailable.oldWebView": "手機的 Android System WebView 元件版本過舊，無法顯示 PDF 原件。",
+  "companion.reading.pdfUnavailable.oldWebViewText": "手機的 Android System WebView 元件版本過舊，無法顯示 PDF 原件。你仍可閱讀已擷取的文字。",
+  "companion.reading.pdfUnavailable.loadFailed": "無法開啟 PDF 原件。"
 }

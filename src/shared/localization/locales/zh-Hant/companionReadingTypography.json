@@ -18,5 +18,19 @@
   "companion.reading.font.importError": "無法新增此字體。請選擇小於 20 MB 的 TTF 或 OTF 檔案。",
   "companion.reading.font.contrast": "身材對比",
   "companion.reading.font.contrast.default": "Default",
-  "companion.reading.font.contrast.high": "高"
+  "companion.reading.font.contrast.high": "高",
+  "companion.reading.hideSystemStatusBar": "隱藏系統狀態列",
+  "companion.reading.systemStatusBarError": "無法變更系統狀態列。閱讀偏好設定未變更。",
+  "companion.reading.retrySystemStatusBar": "重試變更系統狀態列",
+  "companion.reading.overlayToolbars": "浮動閱讀工具列",
+  "companion.reading.screenDisplay": "螢幕顯示",
+  "companion.reading.font.decrease": "減小 {setting}",
+  "companion.reading.font.increase": "增大 {setting}",
+  "companion.reading.font.textWidth": "文字寬度",
+  "companion.reading.font.addVariants": "新增變體",
+  "companion.reading.font.preview": "字型預覽",
+  "companion.reading.font.confirm": "新增字型",
+  "companion.reading.font.cancel": "取消",
+  "companion.reading.font.actionError": "無法載入、儲存或移除此字型。字型檔案仍然保留。",
+  "companion.reading.font.loadError": "無法載入所選字型。請重新選取以重試。"
 }

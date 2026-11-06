@@ -16,10 +16,10 @@
   "settings.appearance.fontCatalog.loading": "Caricamento caratteri di sistema…",
   "settings.appearance.fontCatalog.search": "Cerca caratteri",
   "settings.appearance.fontCatalog.empty": "Nessun carattere corrispondente.",
-  "settings.appearance.fontPreset.default": "Default",
+  "settings.appearance.fontPreset.default": "Predefinito",
   "settings.appearance.fontPreset.system": "Interfaccia utente del sistema",
   "settings.appearance.fontPreset.serif": "Serif",
-  "settings.appearance.fontPreset.custom": "Custom",
+  "settings.appearance.fontPreset.custom": "Personalizzato",
   "settings.appearance.fontSize.title": "Dimensione carattere",
   "settings.appearance.fontSize.description": "Regola la dimensione del carattere del pannello del contenuto principale in pixel.",
   "settings.appearance.fontSize.reset": "Reimposta la dimensione del carattere",
@@ -151,5 +151,13 @@
   "settings.appearance.surface.grid.bottomFolder": "Cartella inferiore",
   "settings.appearance.surface.grid.bottomTopic": "Argomento in fondo",
   "settings.appearance.surface.grid.bottomDocument": "Documento inferiore",
-  "settings.appearance.surface.grid.bottomSidebar": "Barra laterale inferiore"
+  "settings.appearance.surface.grid.bottomSidebar": "Barra laterale inferiore",
+  "settings.appearance.fontWeight.title": "Spessore carattere",
+  "settings.appearance.fontWeight.description": "Regola lo spessore in base al carattere.",
+  "settings.appearance.fontWeight.reset": "Reimposta spessore carattere",
+  "settings.appearance.fontWeight.slider": "Cursore spessore carattere",
+  "settings.appearance.fontWeight.loading": "Caricamento carattere…",
+  "settings.appearance.fontWeight.loadError": "Impossibile verificare questo carattere.",
+  "settings.appearance.fontWeight.saveError": "Impossibile salvare lo spessore del carattere.",
+  "settings.appearance.fontWeight.retry": "Riprova"
 }

@@ -16,7 +16,7 @@
   "settings.search.generalSearchEnhancement.title": "Idioma de búsqueda de texto completo",
   "settings.search.generalSearchEnhancement.description": "Elija el patrón de idioma que Foliole debe utilizar al preparar la búsqueda de texto completo.",
   "settings.search.generalSearchEnhancement.terms": "búsqueda de texto completo|idioma de búsqueda|chino japonés coreano\nAplicación",
-  "settings.about.app.section": "",
+  "settings.about.app.section": "Aplicación",
   "settings.about.app.aria": "Sección de información de la aplicación",
   "settings.about.cli.section": "Línea de comando",
   "settings.about.cli.aria": "Sección de soporte de línea de comando",

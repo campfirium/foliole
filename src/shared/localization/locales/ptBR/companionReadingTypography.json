@@ -18,5 +18,19 @@
   "companion.reading.font.importError": "Não foi possível adicionar esta fonte. Escolha um arquivo TTF ou OTF com menos de 20 MB.",
   "companion.reading.font.contrast": "Contraste corporal",
   "companion.reading.font.contrast.default": "Default",
-  "companion.reading.font.contrast.high": "Alto"
+  "companion.reading.font.contrast.high": "Alto",
+  "companion.reading.hideSystemStatusBar": "Ocultar barra de status do sistema",
+  "companion.reading.systemStatusBarError": "Não foi possível alterar a barra de status do sistema. Sua preferência de leitura não mudou.",
+  "companion.reading.retrySystemStatusBar": "Tentar novamente a barra de status do sistema",
+  "companion.reading.overlayToolbars": "Barras de leitura flutuantes",
+  "companion.reading.screenDisplay": "Exibição da tela",
+  "companion.reading.font.decrease": "Diminuir {setting}",
+  "companion.reading.font.increase": "Aumentar {setting}",
+  "companion.reading.font.textWidth": "Largura do texto",
+  "companion.reading.font.addVariants": "Adicionar variantes",
+  "companion.reading.font.preview": "Prévia da fonte",
+  "companion.reading.font.confirm": "Adicionar fontes",
+  "companion.reading.font.cancel": "Cancelar",
+  "companion.reading.font.actionError": "Não foi possível carregar, salvar ou remover esta fonte. Seus arquivos de fontes continuam disponíveis.",
+  "companion.reading.font.loadError": "Não foi possível carregar a fonte selecionada. Selecione-a novamente para tentar outra vez."
 }

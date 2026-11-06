@@ -166,5 +166,20 @@
   "companion.sync.displayUnavailable": "Não foi possível exibir os dados sincronizados. Atualize para tentar novamente.",
   "companion.sync.activityUnavailable": "O histórico de sincronização está temporariamente indisponível.",
   "companion.sync.discovery.unavailable": "A busca por grupos de sincronização não está disponível neste dispositivo ou rede.",
-  "companion.sync.discovery.connectionFailed": "Um grupo de sincronização foi encontrado, mas o Foliole não conseguiu se conectar."
+  "companion.sync.discovery.connectionFailed": "Um grupo de sincronização foi encontrado, mas o Foliole não conseguiu se conectar.",
+  "companion.review.question": "Pergunta",
+  "companion.syncSetup.receiving.progress": "Recebidos {completed} de {total}",
+  "companion.syncSetup.receiving.preparing": "Comparando com o grupo…",
+  "companion.syncSetup.receiving.lastActivity": "Último recebimento: {time}",
+  "companion.syncSetup.receiving.paused": "Pausado enquanto o Foliole estava em segundo plano. Continua automaticamente.",
+  "companion.syncSetup.receiving.retry": "Tentar novamente",
+  "companion.syncBackground.title": "Sincronizando com seu grupo de sincronização",
+  "companion.syncBackground.progress": "{completed} de {total}",
+  "companion.syncBackground.preparing": "Comparando com o grupo…",
+  "companion.syncBackground.channel": "Progresso da sincronização",
+  "companion.review.exitFlow": "Sair do Flow",
+  "companion.reading.pdfUnavailable.title": "PDF original indisponível",
+  "companion.reading.pdfUnavailable.oldWebView": "O componente Android System WebView do seu telefone é antigo demais para exibir o PDF original.",
+  "companion.reading.pdfUnavailable.oldWebViewText": "O componente Android System WebView do seu telefone é antigo demais para exibir o PDF original. Você ainda pode ler o texto extraído.",
+  "companion.reading.pdfUnavailable.loadFailed": "Não foi possível abrir o PDF original."
 }

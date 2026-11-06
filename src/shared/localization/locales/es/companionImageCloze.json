@@ -1,0 +1,19 @@
+{
+  "companion.imageCloze.confirm": "Confirmar",
+  "companion.imageCloze.title": "Imagen con huecos",
+  "companion.imageCloze.saving": "Guardando…",
+  "companion.imageCloze.positionHelp": "Pellizca para ampliar o reducir y arrastra para colocar la imagen. Después añade una máscara.",
+  "companion.imageCloze.drawHelp": "Arrastra sobre la imagen para dibujar una máscara. Después puedes seguir moviendo la imagen.",
+  "companion.imageCloze.markHelp": "Arrastra para mover la imagen. Pellizca para ampliar o reducir. Toca una máscara para seleccionarla y editarla.",
+  "companion.imageCloze.source": "Imagen original",
+  "companion.imageCloze.region": "Máscara {number}",
+  "companion.imageCloze.missing": "La imagen no está disponible. Cancela y vuelve a abrirla cuando se restaure.",
+  "companion.imageCloze.failed": "No se pudo guardar la imagen con huecos. Se conservan tus cambios; inténtalo de nuevo. Si el artículo cambió, cancela y vuelve a abrir la imagen.",
+  "companion.imageCloze.zoomOut": "Alejar",
+  "companion.imageCloze.zoomIn": "Acercar",
+  "companion.imageCloze.adjust": "Ajustar máscaras",
+  "companion.imageCloze.position": "Colocar imagen",
+  "companion.imageCloze.add": "Nueva máscara",
+  "companion.imageCloze.deleteFailed": "No se pudo terminar de eliminar el ítem. Inténtalo de nuevo.",
+  "companion.imageCloze.remove": "Eliminar máscara seleccionada"
+}

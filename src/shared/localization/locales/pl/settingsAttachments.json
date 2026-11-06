@@ -1,0 +1,23 @@
+{
+  "settings.attachments.thresholdCustom": "Własna liczba dni",
+  "settings.attachments.daysUnit": "dni",
+  "settings.attachments.title": "Lokalne załączniki",
+  "settings.attachments.error": "Nie udało się dokończyć operacji na załącznikach. Spróbuj ponownie.",
+  "settings.attachments.used": "Zajęte miejsce",
+  "settings.attachments.refresh": "Odśwież",
+  "settings.attachments.thresholdValue": "{count} dni",
+  "settings.attachments.thresholdInvalid": "Wpisz liczbę całkowitą większą od 0.",
+  "settings.attachments.threshold": "Dni bez użycia przed czyszczeniem",
+  "settings.attachments.thresholdHint": "Obrazy i pliki, których żaden temat już nie używa, muszą pozostawać nieużywane przez tyle dni korzystania z aplikacji, zanim będzie można oznaczyć je jako gotowe do usunięcia. Liczą się tylko dni, w których otwierasz Foliole.",
+  "settings.attachments.automatic": "Automatyczne czyszczenie",
+  "settings.attachments.automaticHint": "Załączniki nieużywane wystarczająco długo są automatycznie oznaczane jako gotowe do usunięcia.",
+  "settings.attachments.eligible": "Nieużywane załączniki",
+  "settings.attachments.eligibleHint": "Nieużywane przez ustawioną liczbę dni",
+  "settings.attachments.clean": "Oznacz jako gotowe do usunięcia",
+  "settings.attachments.trash": "Gotowe do usunięcia",
+  "settings.attachments.trashHint": "Można przywrócić do czasu usunięcia",
+  "settings.attachments.restore": "Przywróć wszystko",
+  "settings.attachments.empty": "Wyczyść",
+  "settings.attachments.emptyTitle": "Usunąć te załączniki?",
+  "settings.attachments.emptyHint": "Zostaną trwale usunięte, zwalniając {size}. Nie będzie można ich przywrócić. Żaden temat nie zostanie zmieniony."
+}

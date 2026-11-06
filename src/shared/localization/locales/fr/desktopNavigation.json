@@ -122,7 +122,7 @@
   "desktop.rightPanel.assistant.diagnostic.codex.ready": "est prêt",
   "desktop.rightPanel.assistant.diagnostic.codex.unavailable": "n'est pas disponible",
   "desktop.rightPanel.assistant.diagnostic.codex.unknown": "n'a pas été atteint\nÉchec de",
-  "desktop.rightPanel.assistant.diagnostic.tools.failed": "",
+  "desktop.rightPanel.assistant.diagnostic.tools.failed": "échec",
   "desktop.rightPanel.assistant.diagnostic.tools.running": "en cours d'exécution",
   "desktop.rightPanel.assistant.diagnostic.tools.stopped": "arrêté",
   "desktop.rightPanel.assistant.diagnostic.tools.unknown": "non coché",
@@ -201,5 +201,6 @@
   "desktop.rightPanel.highlights.unavailableDescription": "Le sujet sélectionné n'est plus disponible.",
   "desktop.rightPanel.highlights.unavailableTitle": "Sujet indisponible",
   "desktop.rightPanel.highlights.count": "FAITS SAILLANTS({count})",
-  "desktop.rightPanel.highlights.list": "Points saillants du document"
+  "desktop.rightPanel.highlights.list": "Points saillants du document",
+  "desktop.workspace.leaveFlowHere": "Quitter Flow"
 }

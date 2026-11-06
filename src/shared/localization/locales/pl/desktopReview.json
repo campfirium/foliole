@@ -88,5 +88,7 @@
   "desktop.nodeReview.usingReviewSettings": "Korzystanie z ustawień recenzji: {value}",
   "desktop.nodeReview.usingQueueFallback": "Korzystanie z kolejki rezerwowej: {value}",
   "desktop.nodeReview.noLocalShortTerm": "Brak lokalnych ustawień krótkoterminowych",
-  "desktop.nodeReview.priority.p0": "P0 – Po pierwsze, brak skalowania opóźnienia"
+  "desktop.nodeReview.priority.p0": "P0 – Po pierwsze, brak skalowania opóźnienia",
+  "desktop.foregroundTime.monthTotal": "Łączny czas",
+  "desktop.foregroundTime.monthTotalShort": "Łącznie"
 }

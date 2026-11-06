@@ -1,0 +1,23 @@
+{
+  "settings.attachments.thresholdCustom": "Dias personalizados",
+  "settings.attachments.daysUnit": "dias",
+  "settings.attachments.title": "Anexos locais",
+  "settings.attachments.error": "Não foi possível concluir a operação com os anexos. Tente novamente.",
+  "settings.attachments.used": "Espaço usado",
+  "settings.attachments.refresh": "Atualizar",
+  "settings.attachments.thresholdValue": "{count} dias",
+  "settings.attachments.thresholdInvalid": "Insira um número inteiro maior que 0.",
+  "settings.attachments.threshold": "Dias sem uso antes da limpeza",
+  "settings.attachments.thresholdHint": "Imagens e arquivos que nenhum tópico usa mais devem permanecer sem uso por este número de dias de uso antes de poderem ser marcados como prontos para limpar. Só contam os dias em que você abre o Foliole.",
+  "settings.attachments.automatic": "Limpeza automática",
+  "settings.attachments.automaticHint": "Anexos sem uso por tempo suficiente são marcados automaticamente como prontos para limpar.",
+  "settings.attachments.eligible": "Anexos sem uso",
+  "settings.attachments.eligibleHint": "Sem uso pelo número de dias definido",
+  "settings.attachments.clean": "Marcar como pronto para limpar",
+  "settings.attachments.trash": "Pronto para limpar",
+  "settings.attachments.trashHint": "Podem ser restaurados até a limpeza",
+  "settings.attachments.restore": "Restaurar tudo",
+  "settings.attachments.empty": "Limpar",
+  "settings.attachments.emptyTitle": "Limpar estes anexos?",
+  "settings.attachments.emptyHint": "Isso os excluirá permanentemente e liberará {size}. Eles não poderão ser restaurados. Nenhum tópico será afetado."
+}

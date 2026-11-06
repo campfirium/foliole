@@ -18,5 +18,19 @@
   "companion.reading.font.importError": "Diese Schrift konnte nicht hinzugefügt werden. Wähle eine TTF- oder OTF-Datei unter 20 MB.",
   "companion.reading.font.contrast": "Körperkontrast",
   "companion.reading.font.contrast.default": "Default",
-  "companion.reading.font.contrast.high": "Hoch"
+  "companion.reading.font.contrast.high": "Hoch",
+  "companion.reading.hideSystemStatusBar": "Systemstatusleiste ausblenden",
+  "companion.reading.systemStatusBarError": "Die Systemstatusleiste konnte nicht geändert werden. Ihre Leseeinstellung bleibt unverändert.",
+  "companion.reading.retrySystemStatusBar": "Systemstatusleiste erneut versuchen",
+  "companion.reading.overlayToolbars": "Schwebende Lesewerkzeugleisten",
+  "companion.reading.screenDisplay": "Bildschirmanzeige",
+  "companion.reading.font.decrease": "{setting} verringern",
+  "companion.reading.font.increase": "{setting} erhöhen",
+  "companion.reading.font.textWidth": "Textbreite",
+  "companion.reading.font.addVariants": "Varianten hinzufügen",
+  "companion.reading.font.preview": "Schriftvorschau",
+  "companion.reading.font.confirm": "Schriften hinzufügen",
+  "companion.reading.font.cancel": "Abbrechen",
+  "companion.reading.font.actionError": "Diese Schrift konnte nicht geladen, gespeichert oder entfernt werden. Ihre Schriftdateien sind weiterhin verfügbar.",
+  "companion.reading.font.loadError": "Die ausgewählte Schrift konnte nicht geladen werden. Wählen Sie sie erneut aus, um es noch einmal zu versuchen."
 }

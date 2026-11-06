@@ -16,10 +16,10 @@
   "settings.appearance.fontCatalog.loading": "Systemschriftarten werden geladen…",
   "settings.appearance.fontCatalog.search": "Schriftarten suchen",
   "settings.appearance.fontCatalog.empty": "Keine passenden Schriftarten.",
-  "settings.appearance.fontPreset.default": "Default",
+  "settings.appearance.fontPreset.default": "Standard",
   "settings.appearance.fontPreset.system": "System-Benutzeroberfläche",
   "settings.appearance.fontPreset.serif": "Serif",
-  "settings.appearance.fontPreset.custom": "Custom",
+  "settings.appearance.fontPreset.custom": "Benutzerdefiniert",
   "settings.appearance.fontSize.title": "Schriftgröße",
   "settings.appearance.fontSize.description": "Passen Sie die Schriftgröße des Hauptinhaltsbereichs in Pixel an.",
   "settings.appearance.fontSize.reset": "Schriftgröße zurücksetzen",
@@ -151,5 +151,13 @@
   "settings.appearance.surface.grid.bottomFolder": "Unterster Ordner",
   "settings.appearance.surface.grid.bottomTopic": "Unteres Thema",
   "settings.appearance.surface.grid.bottomDocument": "Unterstes Dokument",
-  "settings.appearance.surface.grid.bottomSidebar": "Untere Seitenleiste"
+  "settings.appearance.surface.grid.bottomSidebar": "Untere Seitenleiste",
+  "settings.appearance.fontWeight.title": "Schriftstärke",
+  "settings.appearance.fontWeight.description": "Passen Sie die Stärke an die Schrift an.",
+  "settings.appearance.fontWeight.reset": "Schriftstärke zurücksetzen",
+  "settings.appearance.fontWeight.slider": "Schieberegler für die Schriftstärke",
+  "settings.appearance.fontWeight.loading": "Schrift wird geladen…",
+  "settings.appearance.fontWeight.loadError": "Diese Schrift konnte nicht geprüft werden.",
+  "settings.appearance.fontWeight.saveError": "Die Schriftstärke konnte nicht gespeichert werden.",
+  "settings.appearance.fontWeight.retry": "Wiederholen"
 }

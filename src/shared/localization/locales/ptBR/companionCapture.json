@@ -11,5 +11,11 @@
   "companion.capture.save": "Salvar",
   "companion.capture.saving": "Salvando...",
   "companion.capture.error.inboxUnavailable": "Sincronize este dispositivo antes de salvar um novo tópico.",
-  "companion.capture.error.saveFailed": "Não foi possível salvar este tópico. Tente novamente."
+  "companion.capture.error.saveFailed": "Não foi possível salvar este tópico. Tente novamente.",
+  "companion.capture.import.readingModeDescription": "Escolha como os capítulos entram na fila de revisão.",
+  "companion.capture.error.clipboardEmpty": "Nenhum texto encontrado na área de transferência.",
+  "companion.capture.error.clipboardFailed": "Não foi possível ler a área de transferência. Permita o acesso e tente novamente.",
+  "companion.capture.import.imagesUnavailable": "Texto importado. Não foi possível importar algumas imagens locais do arquivo selecionado.",
+  "companion.capture.import.conversionIncomplete": "Arquivo importado. Não foi possível converter parte da formatação ou do conteúdo incorporado.",
+  "companion.capture.error.targetUnavailable": "Este local não está mais disponível. Feche Capturar e escolha outro local."
 }

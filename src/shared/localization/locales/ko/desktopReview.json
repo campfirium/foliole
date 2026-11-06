@@ -88,5 +88,7 @@
   "desktop.nodeReview.usingReviewSettings": "검토 설정 사용: {value}",
   "desktop.nodeReview.usingQueueFallback": "대기열 대체 사용: {value}",
   "desktop.nodeReview.noLocalShortTerm": "로컬 단기 설정 없음",
-  "desktop.nodeReview.priority.p0": "P0 - 첫째, 지연 스케일링 없음"
+  "desktop.nodeReview.priority.p0": "P0 - 첫째, 지연 스케일링 없음",
+  "desktop.foregroundTime.monthTotal": "총 시간",
+  "desktop.foregroundTime.monthTotalShort": "합계"
 }

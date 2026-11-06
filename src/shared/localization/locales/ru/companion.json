@@ -166,5 +166,20 @@
   "companion.sync.displayUnavailable": "Не удалось показать синхронизированные данные. Обновите, чтобы повторить попытку.",
   "companion.sync.activityUnavailable": "История синхронизации временно недоступна.",
   "companion.sync.discovery.unavailable": "Поиск групп синхронизации недоступен на этом устройстве или в этой сети.",
-  "companion.sync.discovery.connectionFailed": "Группа синхронизации найдена, но Foliole не удалось к ней подключиться."
+  "companion.sync.discovery.connectionFailed": "Группа синхронизации найдена, но Foliole не удалось к ней подключиться.",
+  "companion.review.question": "Вопрос",
+  "companion.syncSetup.receiving.progress": "Получено {completed} из {total}",
+  "companion.syncSetup.receiving.preparing": "Сравнение с группой…",
+  "companion.syncSetup.receiving.lastActivity": "Последнее получение: {time}",
+  "companion.syncSetup.receiving.paused": "Приостановлено, пока Foliole работало в фоне. Продолжится автоматически.",
+  "companion.syncSetup.receiving.retry": "Повторить",
+  "companion.syncBackground.title": "Синхронизация с вашей группой синхронизации",
+  "companion.syncBackground.progress": "{completed} из {total}",
+  "companion.syncBackground.preparing": "Сравнение с группой…",
+  "companion.syncBackground.channel": "Ход синхронизации",
+  "companion.review.exitFlow": "Выйти из Flow",
+  "companion.reading.pdfUnavailable.title": "Оригинал PDF недоступен",
+  "companion.reading.pdfUnavailable.oldWebView": "Компонент Android System WebView на вашем телефоне устарел и не может отобразить оригинал PDF.",
+  "companion.reading.pdfUnavailable.oldWebViewText": "Компонент Android System WebView на вашем телефоне устарел и не может отобразить оригинал PDF. Вы по-прежнему можете читать извлечённый текст.",
+  "companion.reading.pdfUnavailable.loadFailed": "Не удалось открыть оригинал PDF."
 }

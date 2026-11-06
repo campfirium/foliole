@@ -18,5 +18,19 @@
   "companion.reading.font.importError": "Nie można dodać tej czcionki. Wybierz plik TTF lub OTF mniejszy niż 20 MB.",
   "companion.reading.font.contrast": "Kontrast ciała",
   "companion.reading.font.contrast.default": "Default",
-  "companion.reading.font.contrast.high": "Wysoka"
+  "companion.reading.font.contrast.high": "Wysoka",
+  "companion.reading.hideSystemStatusBar": "Ukryj systemowy pasek stanu",
+  "companion.reading.systemStatusBarError": "Nie udało się zmienić systemowego paska stanu. Preferencja czytania nie została zmieniona.",
+  "companion.reading.retrySystemStatusBar": "Ponów zmianę systemowego paska stanu",
+  "companion.reading.overlayToolbars": "Pływające paski narzędzi czytania",
+  "companion.reading.screenDisplay": "Wyświetlanie na ekranie",
+  "companion.reading.font.decrease": "Zmniejsz {setting}",
+  "companion.reading.font.increase": "Zwiększ {setting}",
+  "companion.reading.font.textWidth": "Szerokość tekstu",
+  "companion.reading.font.addVariants": "Dodaj warianty",
+  "companion.reading.font.preview": "Podgląd czcionki",
+  "companion.reading.font.confirm": "Dodaj czcionki",
+  "companion.reading.font.cancel": "Anuluj",
+  "companion.reading.font.actionError": "Nie udało się załadować, zapisać lub usunąć tej czcionki. Pliki czcionek są nadal dostępne.",
+  "companion.reading.font.loadError": "Nie udało się załadować wybranej czcionki. Wybierz ją ponownie, aby spróbować jeszcze raz."
 }

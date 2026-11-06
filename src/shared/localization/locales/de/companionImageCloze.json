@@ -1,0 +1,19 @@
+{
+  "companion.imageCloze.confirm": "Bestätigen",
+  "companion.imageCloze.title": "Bildlückentext",
+  "companion.imageCloze.saving": "Speichern…",
+  "companion.imageCloze.positionHelp": "Zum Zoomen zwei Finger auseinander- oder zusammenziehen und das Bild zum Positionieren ziehen. Fügen Sie anschließend eine Maske hinzu.",
+  "companion.imageCloze.drawHelp": "Ziehen Sie auf dem Bild, um eine Maske zu zeichnen. Danach können Sie das Bild weiter verschieben.",
+  "companion.imageCloze.markHelp": "Ziehen Sie, um das Bild zu verschieben. Zoomen Sie mit zwei Fingern. Tippen Sie auf eine Maske, um sie auszuwählen und zu bearbeiten.",
+  "companion.imageCloze.source": "Originalbild",
+  "companion.imageCloze.region": "Maske {number}",
+  "companion.imageCloze.missing": "Das Bild ist nicht verfügbar. Brechen Sie ab und öffnen Sie es erneut, sobald es wiederhergestellt wurde.",
+  "companion.imageCloze.failed": "Der Bildlückentext konnte nicht gespeichert werden. Ihre Änderungen bleiben erhalten; versuchen Sie es erneut. Falls sich der Artikel geändert hat, brechen Sie ab und öffnen Sie das Bild erneut.",
+  "companion.imageCloze.zoomOut": "Verkleinern",
+  "companion.imageCloze.zoomIn": "Vergrößern",
+  "companion.imageCloze.adjust": "Masken anpassen",
+  "companion.imageCloze.position": "Bild positionieren",
+  "companion.imageCloze.add": "Neue Maske",
+  "companion.imageCloze.deleteFailed": "Das Löschen des Lernelements konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
+  "companion.imageCloze.remove": "Ausgewählte Maske löschen"
+}

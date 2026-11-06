@@ -16,10 +16,10 @@
   "settings.appearance.fontCatalog.loading": "Загрузка системных шрифтов…",
   "settings.appearance.fontCatalog.search": "Поиск шрифтов",
   "settings.appearance.fontCatalog.empty": "Нет подходящих шрифтов.",
-  "settings.appearance.fontPreset.default": "Default",
+  "settings.appearance.fontPreset.default": "По умолчанию",
   "settings.appearance.fontPreset.system": "Системный интерфейс",
   "settings.appearance.fontPreset.serif": "с засечками",
-  "settings.appearance.fontPreset.custom": "Custom",
+  "settings.appearance.fontPreset.custom": "Свой вариант",
   "settings.appearance.fontSize.title": "Размер шрифта",
   "settings.appearance.fontSize.description": "Отрегулируйте размер шрифта панели основного контента в пикселях.",
   "settings.appearance.fontSize.reset": "Сбросить размер шрифта",
@@ -151,5 +151,13 @@
   "settings.appearance.surface.grid.bottomFolder": "Нижняя папка",
   "settings.appearance.surface.grid.bottomTopic": "Нижняя тема",
   "settings.appearance.surface.grid.bottomDocument": "Нижний документ",
-  "settings.appearance.surface.grid.bottomSidebar": "Нижняя боковая панель"
+  "settings.appearance.surface.grid.bottomSidebar": "Нижняя боковая панель",
+  "settings.appearance.fontWeight.title": "Насыщенность шрифта",
+  "settings.appearance.fontWeight.description": "Настройте насыщенность в соответствии со шрифтом.",
+  "settings.appearance.fontWeight.reset": "Сбросить насыщенность шрифта",
+  "settings.appearance.fontWeight.slider": "Ползунок насыщенности шрифта",
+  "settings.appearance.fontWeight.loading": "Загрузка шрифта…",
+  "settings.appearance.fontWeight.loadError": "Не удалось проверить этот шрифт.",
+  "settings.appearance.fontWeight.saveError": "Не удалось сохранить насыщенность шрифта.",
+  "settings.appearance.fontWeight.retry": "Повторить попытку"
 }

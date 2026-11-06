@@ -1,0 +1,23 @@
+{
+  "settings.attachments.thresholdCustom": "日数を指定",
+  "settings.attachments.daysUnit": "日",
+  "settings.attachments.title": "ローカル添付ファイル",
+  "settings.attachments.error": "添付ファイルの操作を完了できませんでした。もう一度お試しください。",
+  "settings.attachments.used": "使用容量",
+  "settings.attachments.refresh": "更新",
+  "settings.attachments.thresholdValue": "{count} 日",
+  "settings.attachments.thresholdInvalid": "0 より大きい整数を入力してください。",
+  "settings.attachments.threshold": "クリーンアップまでの未使用日数",
+  "settings.attachments.thresholdHint": "どのトピックからも使われなくなった画像やファイルは、この日数分の利用日を未使用のまま経過した後に、クリーンアップ可能としてマークできます。Foliole を開いた日のみ数えます。",
+  "settings.attachments.automatic": "自動クリーンアップ",
+  "settings.attachments.automaticHint": "十分な期間使われていない添付ファイルを、自動的にクリーンアップ可能としてマークします。",
+  "settings.attachments.eligible": "未使用の添付ファイル",
+  "settings.attachments.eligibleHint": "設定日数以上未使用",
+  "settings.attachments.clean": "クリーンアップ可能としてマーク",
+  "settings.attachments.trash": "クリーンアップ可能",
+  "settings.attachments.trashHint": "クリーンアップ前は復元可能",
+  "settings.attachments.restore": "すべて復元",
+  "settings.attachments.empty": "クリーンアップ",
+  "settings.attachments.emptyTitle": "これらの添付ファイルをクリーンアップしますか？",
+  "settings.attachments.emptyHint": "これらを完全に削除し、{size} を解放します。復元できません。トピックには影響しません。"
+}

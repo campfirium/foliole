@@ -16,10 +16,10 @@
   "settings.appearance.fontCatalog.loading": "Carregando fontes do sistema…",
   "settings.appearance.fontCatalog.search": "Pesquisar fontes",
   "settings.appearance.fontCatalog.empty": "Nenhuma fonte correspondente.",
-  "settings.appearance.fontPreset.default": "Default",
+  "settings.appearance.fontPreset.default": "Padrão",
   "settings.appearance.fontPreset.system": "IU do sistema",
   "settings.appearance.fontPreset.serif": "Serif",
-  "settings.appearance.fontPreset.custom": "Custom",
+  "settings.appearance.fontPreset.custom": "Personalizado",
   "settings.appearance.fontSize.title": "Tamanho da fonte",
   "settings.appearance.fontSize.description": "Ajuste o tamanho da fonte do painel de conteúdo principal em pixels.",
   "settings.appearance.fontSize.reset": "Redefinir tamanho da fonte",
@@ -151,5 +151,13 @@
   "settings.appearance.surface.grid.bottomFolder": "Pasta inferior",
   "settings.appearance.surface.grid.bottomTopic": "Tópico inferior",
   "settings.appearance.surface.grid.bottomDocument": "Documento inferior",
-  "settings.appearance.surface.grid.bottomSidebar": "Barra lateral inferior"
+  "settings.appearance.surface.grid.bottomSidebar": "Barra lateral inferior",
+  "settings.appearance.fontWeight.title": "Peso da fonte",
+  "settings.appearance.fontWeight.description": "Ajuste o peso de acordo com a fonte.",
+  "settings.appearance.fontWeight.reset": "Redefinir peso da fonte",
+  "settings.appearance.fontWeight.slider": "Controle de peso da fonte",
+  "settings.appearance.fontWeight.loading": "Carregando fonte…",
+  "settings.appearance.fontWeight.loadError": "Não foi possível verificar esta fonte.",
+  "settings.appearance.fontWeight.saveError": "Não foi possível salvar o peso da fonte.",
+  "settings.appearance.fontWeight.retry": "Tentar novamente"
 }

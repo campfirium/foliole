@@ -11,5 +11,11 @@
   "companion.capture.save": "Salva",
   "companion.capture.saving": "Salvataggio in corso...",
   "companion.capture.error.inboxUnavailable": "Sincronizza questo dispositivo prima di salvare un nuovo argomento.",
-  "companion.capture.error.saveFailed": "Impossibile salvare questo argomento. Riprova."
+  "companion.capture.error.saveFailed": "Impossibile salvare questo argomento. Riprova.",
+  "companion.capture.import.readingModeDescription": "Scegli come inserire i capitoli nella coda di ripasso.",
+  "companion.capture.error.clipboardEmpty": "Nessun testo trovato negli appunti.",
+  "companion.capture.error.clipboardFailed": "Impossibile leggere gli appunti. Consenti l’accesso e riprova.",
+  "companion.capture.import.imagesUnavailable": "Testo importato. Alcune immagini locali non sono state importate dal file selezionato.",
+  "companion.capture.import.conversionIncomplete": "File importato. Alcuni elementi di formattazione o contenuti incorporati non sono stati convertiti.",
+  "companion.capture.error.targetUnavailable": "Questa posizione non è più disponibile. Chiudi Cattura e scegli un’altra posizione."
 }

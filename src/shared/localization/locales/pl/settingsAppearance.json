@@ -16,10 +16,10 @@
   "settings.appearance.fontCatalog.loading": "Ładowanie czcionek systemowych…",
   "settings.appearance.fontCatalog.search": "Wyszukaj czcionki",
   "settings.appearance.fontCatalog.empty": "Brak pasujących czcionek.",
-  "settings.appearance.fontPreset.default": "Default",
+  "settings.appearance.fontPreset.default": "Domyślne",
   "settings.appearance.fontPreset.system": "Interfejs systemu",
   "settings.appearance.fontPreset.serif": "Szeryf",
-  "settings.appearance.fontPreset.custom": "Custom",
+  "settings.appearance.fontPreset.custom": "Własne",
   "settings.appearance.fontSize.title": "Rozmiar czcionki",
   "settings.appearance.fontSize.description": "Dostosuj rozmiar czcionki głównego panelu treści w pikselach.",
   "settings.appearance.fontSize.reset": "Zresetuj rozmiar czcionki",
@@ -151,5 +151,13 @@
   "settings.appearance.surface.grid.bottomFolder": "Dolny folder",
   "settings.appearance.surface.grid.bottomTopic": "Dolny temat",
   "settings.appearance.surface.grid.bottomDocument": "Dolny dokument",
-  "settings.appearance.surface.grid.bottomSidebar": "Dolny pasek boczny"
+  "settings.appearance.surface.grid.bottomSidebar": "Dolny pasek boczny",
+  "settings.appearance.fontWeight.title": "Grubość czcionki",
+  "settings.appearance.fontWeight.description": "Dostosuj grubość do czcionki.",
+  "settings.appearance.fontWeight.reset": "Zresetuj grubość czcionki",
+  "settings.appearance.fontWeight.slider": "Suwak grubości czcionki",
+  "settings.appearance.fontWeight.loading": "Ładowanie czcionki…",
+  "settings.appearance.fontWeight.loadError": "Nie udało się sprawdzić tej czcionki.",
+  "settings.appearance.fontWeight.saveError": "Nie udało się zapisać grubości czcionki.",
+  "settings.appearance.fontWeight.retry": "Spróbuj ponownie"
 }

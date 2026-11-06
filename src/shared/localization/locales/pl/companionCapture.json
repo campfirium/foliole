@@ -11,5 +11,11 @@
   "companion.capture.save": "Zapisz",
   "companion.capture.saving": "Zapisywanie...",
   "companion.capture.error.inboxUnavailable": "Zsynchronizuj to urządzenie przed zapisaniem nowego tematu.",
-  "companion.capture.error.saveFailed": "Nie udało się zapisać tego tematu. Spróbuj ponownie."
+  "companion.capture.error.saveFailed": "Nie udało się zapisać tego tematu. Spróbuj ponownie.",
+  "companion.capture.import.readingModeDescription": "Wybierz sposób dodawania rozdziałów do kolejki powtórek.",
+  "companion.capture.error.clipboardEmpty": "Nie znaleziono tekstu w schowku.",
+  "companion.capture.error.clipboardFailed": "Nie udało się odczytać schowka. Zezwól na dostęp i spróbuj ponownie.",
+  "companion.capture.import.imagesUnavailable": "Zaimportowano tekst. Nie udało się zaimportować części lokalnych obrazów z wybranego pliku.",
+  "companion.capture.import.conversionIncomplete": "Zaimportowano plik. Nie udało się przekonwertować części formatowania lub osadzonej zawartości.",
+  "companion.capture.error.targetUnavailable": "Ta lokalizacja nie jest już dostępna. Zamknij przechwytywanie i wybierz inną lokalizację."
 }

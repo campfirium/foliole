@@ -32,7 +32,7 @@
   "desktop.reviewSession.summary.item": "article\nArticles",
   "desktop.reviewSession.summary.items": "Sujet",
   "desktop.reviewSession.summary.topic": "Sujets",
-  "desktop.reviewSession.summary.topics": "",
+  "desktop.reviewSession.summary.topics": "thèmes",
   "desktop.reviewSession.summary.justNow": "Tout à l'heure",
   "desktop.reviewSession.summary.minute": "min",
   "desktop.reviewSession.summary.hour": "heures",
@@ -76,8 +76,8 @@
   "desktop.nodeReview.shortTerm.description": "Ajoutez des avis supplémentaires pour les nouveaux articles. Cadre expérimental du FSRS ; activer uniquement pour le matériel qui nécessite une pratique initiale.",
   "desktop.nodeReview.priority.description": "Affecte la commande de révision des articles dans ce {scope}. P0 vient en premier et n'est pas retardé par la mise à l'échelle des priorités.",
   "desktop.nodeReview.optionsPanel": "Panneau d'options de révision\nDossier",
-  "desktop.nodeReview.scope.folder": "",
-  "desktop.nodeReview.scope.topic": "",
+  "desktop.nodeReview.scope.folder": "dossier",
+  "desktop.nodeReview.scope.topic": "thème",
   "desktop.nodeReview.scope.item": "article",
   "desktop.nodeReview.inherit": "Hériter de la valeur résolue",
   "desktop.nodeReview.enabled": "Activé",
@@ -88,5 +88,7 @@
   "desktop.nodeReview.usingReviewSettings": "Utilisation des paramètres de révision : {value}",
   "desktop.nodeReview.usingQueueFallback": "Utilisation du repli de file d'attente : {value}",
   "desktop.nodeReview.noLocalShortTerm": "Pas de réglage local à court terme",
-  "desktop.nodeReview.priority.p0": "P0 - Premièrement, pas de mise à l'échelle du délai"
+  "desktop.nodeReview.priority.p0": "P0 - Premièrement, pas de mise à l'échelle du délai",
+  "desktop.foregroundTime.monthTotal": "Durée totale",
+  "desktop.foregroundTime.monthTotalShort": "Total"
 }

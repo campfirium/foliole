@@ -201,5 +201,6 @@
   "desktop.rightPanel.highlights.unavailableDescription": "O tópico selecionado não está mais disponível.",
   "desktop.rightPanel.highlights.unavailableTitle": "Tópico indisponível",
   "desktop.rightPanel.highlights.count": "DESTAQUES({count})",
-  "desktop.rightPanel.highlights.list": "Destaques do documento"
+  "desktop.rightPanel.highlights.list": "Destaques do documento",
+  "desktop.workspace.leaveFlowHere": "Sair do Flow"
 }

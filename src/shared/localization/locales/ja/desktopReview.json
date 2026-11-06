@@ -88,5 +88,7 @@
   "desktop.nodeReview.usingReviewSettings": "レビュー設定の使用: {value}",
   "desktop.nodeReview.usingQueueFallback": "キュー フォールバックの使用: {value}",
   "desktop.nodeReview.noLocalShortTerm": "ローカルの短期設定はありません",
-  "desktop.nodeReview.priority.p0": "P0 - まず、遅延スケーリングなし"
+  "desktop.nodeReview.priority.p0": "P0 - まず、遅延スケーリングなし",
+  "desktop.foregroundTime.monthTotal": "合計時間",
+  "desktop.foregroundTime.monthTotalShort": "合計"
 }

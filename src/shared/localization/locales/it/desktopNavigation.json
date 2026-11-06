@@ -117,7 +117,7 @@
   "desktop.rightPanel.assistant.diagnostic": "Risultato verifica: Codice {codex}; Foliole utensili {tools}.",
   "desktop.rightPanel.assistant.diagnostic.codex.authFailed": "richiede l'accesso",
   "desktop.rightPanel.assistant.diagnostic.codex.busy": "è occupato\nImpossibile avviare",
-  "desktop.rightPanel.assistant.diagnostic.codex.launchFailed": "",
+  "desktop.rightPanel.assistant.diagnostic.codex.launchFailed": "impossibile avviare",
   "desktop.rightPanel.assistant.diagnostic.codex.notConfigured": "non è configurato",
   "desktop.rightPanel.assistant.diagnostic.codex.ready": "è pronto",
   "desktop.rightPanel.assistant.diagnostic.codex.unavailable": "non è disponibile",
@@ -201,5 +201,6 @@
   "desktop.rightPanel.highlights.unavailableDescription": "L'argomento selezionato non è più disponibile.",
   "desktop.rightPanel.highlights.unavailableTitle": "Argomento non disponibile",
   "desktop.rightPanel.highlights.count": "IN EVIDENZA({count})",
-  "desktop.rightPanel.highlights.list": "Punti salienti del documento"
+  "desktop.rightPanel.highlights.list": "Punti salienti del documento",
+  "desktop.workspace.leaveFlowHere": "Esci da Flow"
 }

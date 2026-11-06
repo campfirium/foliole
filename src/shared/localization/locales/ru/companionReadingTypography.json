@@ -18,5 +18,19 @@
   "companion.reading.font.importError": "Не удалось добавить шрифт. Выберите файл TTF или OTF размером менее 20 МБ.",
   "companion.reading.font.contrast": "Контраст тела",
   "companion.reading.font.contrast.default": "Default",
-  "companion.reading.font.contrast.high": "Высокий"
+  "companion.reading.font.contrast.high": "Высокий",
+  "companion.reading.hideSystemStatusBar": "Скрыть системную строку состояния",
+  "companion.reading.systemStatusBarError": "Не удалось изменить системную строку состояния. Ваши настройки чтения не изменились.",
+  "companion.reading.retrySystemStatusBar": "Повторить изменение строки состояния",
+  "companion.reading.overlayToolbars": "Плавающие панели чтения",
+  "companion.reading.screenDisplay": "Отображение на экране",
+  "companion.reading.font.decrease": "Уменьшить {setting}",
+  "companion.reading.font.increase": "Увеличить {setting}",
+  "companion.reading.font.textWidth": "Ширина текста",
+  "companion.reading.font.addVariants": "Добавить варианты",
+  "companion.reading.font.preview": "Предпросмотр шрифта",
+  "companion.reading.font.confirm": "Добавить шрифты",
+  "companion.reading.font.cancel": "Отмена",
+  "companion.reading.font.actionError": "Не удалось загрузить, сохранить или удалить этот шрифт. Файлы шрифтов по-прежнему доступны.",
+  "companion.reading.font.loadError": "Не удалось загрузить выбранный шрифт. Выберите его снова для повторной попытки."
 }

@@ -201,5 +201,6 @@
   "desktop.rightPanel.highlights.unavailableDescription": "Wybrany temat nie jest już dostępny.",
   "desktop.rightPanel.highlights.unavailableTitle": "Temat niedostępny",
   "desktop.rightPanel.highlights.count": "NAJWAŻNIEJSZE({count})",
-  "desktop.rightPanel.highlights.list": "Najważniejsze informacje w dokumencie"
+  "desktop.rightPanel.highlights.list": "Najważniejsze informacje w dokumencie",
+  "desktop.workspace.leaveFlowHere": "Wyjdź z Flow"
 }

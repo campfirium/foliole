@@ -1,0 +1,23 @@
+{
+  "settings.attachments.thresholdCustom": "Benutzerdefinierte Tage",
+  "settings.attachments.daysUnit": "Tage",
+  "settings.attachments.title": "Lokale Anhänge",
+  "settings.attachments.error": "Der Anhangsvorgang konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
+  "settings.attachments.used": "Belegter Speicher",
+  "settings.attachments.refresh": "Aktualisieren",
+  "settings.attachments.thresholdValue": "{count} Tage",
+  "settings.attachments.thresholdInvalid": "Geben Sie eine ganze Zahl größer als 0 ein.",
+  "settings.attachments.threshold": "Ungenutzte Tage bis zur Bereinigung",
+  "settings.attachments.thresholdHint": "Bilder und Dateien, die von keinem Thema mehr verwendet werden, müssen diese Anzahl von Nutzungstagen ungenutzt bleiben, bevor sie als bereit zur Bereinigung markiert werden können. Es zählen nur Tage, an denen Sie Foliole öffnen.",
+  "settings.attachments.automatic": "Automatische Bereinigung",
+  "settings.attachments.automaticHint": "Anhänge, die lange genug ungenutzt bleiben, werden automatisch als bereit zur Bereinigung markiert.",
+  "settings.attachments.eligible": "Ungenutzte Anhänge",
+  "settings.attachments.eligibleHint": "Seit der festgelegten Anzahl von Tagen ungenutzt",
+  "settings.attachments.clean": "Als bereit zur Bereinigung markieren",
+  "settings.attachments.trash": "Bereit zur Bereinigung",
+  "settings.attachments.trashHint": "Bis zur Bereinigung wiederherstellbar",
+  "settings.attachments.restore": "Alle wiederherstellen",
+  "settings.attachments.empty": "Bereinigen",
+  "settings.attachments.emptyTitle": "Diese Anhänge bereinigen?",
+  "settings.attachments.emptyHint": "Die Anhänge werden endgültig gelöscht und {size} freigegeben. Sie können nicht wiederhergestellt werden. Themen sind nicht betroffen."
+}

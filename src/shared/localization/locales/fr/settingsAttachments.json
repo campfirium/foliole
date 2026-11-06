@@ -1,0 +1,23 @@
+{
+  "settings.attachments.thresholdCustom": "Nombre de jours personnalisé",
+  "settings.attachments.daysUnit": "jours",
+  "settings.attachments.title": "Pièces jointes locales",
+  "settings.attachments.error": "Impossible de terminer l’opération sur les pièces jointes. Veuillez réessayer.",
+  "settings.attachments.used": "Espace utilisé",
+  "settings.attachments.refresh": "Actualiser",
+  "settings.attachments.thresholdValue": "{count} jours",
+  "settings.attachments.thresholdInvalid": "Saisissez un nombre entier supérieur à 0.",
+  "settings.attachments.threshold": "Jours sans utilisation avant nettoyage",
+  "settings.attachments.thresholdHint": "Les images et fichiers qu’aucun thème n’utilise plus doivent rester inutilisés pendant ce nombre de jours d’utilisation avant de pouvoir être marqués comme prêts à nettoyer. Seuls les jours où vous ouvrez Foliole comptent.",
+  "settings.attachments.automatic": "Nettoyage automatique",
+  "settings.attachments.automaticHint": "Les pièces jointes inutilisées depuis assez longtemps sont automatiquement marquées comme prêtes à nettoyer.",
+  "settings.attachments.eligible": "Pièces jointes inutilisées",
+  "settings.attachments.eligibleHint": "Inutilisées depuis le nombre de jours défini",
+  "settings.attachments.clean": "Marquer comme prêt à nettoyer",
+  "settings.attachments.trash": "Prêt à nettoyer",
+  "settings.attachments.trashHint": "Restauration possible jusqu’au nettoyage",
+  "settings.attachments.restore": "Tout restaurer",
+  "settings.attachments.empty": "Nettoyer",
+  "settings.attachments.emptyTitle": "Nettoyer ces pièces jointes ?",
+  "settings.attachments.emptyHint": "Ces pièces jointes seront supprimées définitivement et libéreront {size}. Elles ne pourront pas être restaurées. Aucun thème n’est affecté."
+}

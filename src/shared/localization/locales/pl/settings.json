@@ -215,5 +215,17 @@
   "settings.customCopy.export": "Eksportuj",
   "settings.customCopy.exported": "Wyeksportowano tekst niestandardowy.",
   "settings.customCopy.empty.title": "Brak pasującego tekstu",
-  "settings.customCopy.empty.description": "Spróbuj wyszukać coś innego lub wyczyść filtr."
+  "settings.customCopy.empty.description": "Spróbuj wyszukać coś innego lub wyczyść filtr.",
+  "settings.review.optimization": "Automatyczna optymalizacja powtórek",
+  "settings.review.optimizeNow": "Optymalizuj teraz",
+  "settings.review.optimizing": "Optymalizowanie…",
+  "settings.review.optimizationDescription": "Automatycznie trenuj parametry FSRS na podstawie historii powtórek, aby stale optymalizować harmonogram. Trening odbywa się dla każdego folderu z podfolderami, gdy zgromadzi się wystarczająca liczba zapisów powtórek.",
+  "settings.review.recentTraining": "Ostatni trening",
+  "settings.review.noTrainingHistory": "Jeszcze brak",
+  "settings.review.trainingLibrary": "Cała biblioteka",
+  "settings.review.trainingFolderUnavailable": "Folder niedostępny",
+  "settings.review.trainingHistoryLoading": "Ładowanie historii treningu…",
+  "settings.review.trainingHistoryFailed": "Nie udało się załadować historii treningu.",
+  "settings.review.lastOptimization": "Ostatnia optymalizacja: {time}",
+  "settings.review.optimizationFailed": "Nie udało się zakończyć optymalizacji. Spróbuj ponownie."
 }

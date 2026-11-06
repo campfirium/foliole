@@ -1,0 +1,19 @@
+{
+  "companion.imageCloze.confirm": "確認",
+  "companion.imageCloze.title": "圖片挖空",
+  "companion.imageCloze.saving": "正在儲存...",
+  "companion.imageCloze.positionHelp": "雙指縮放並拖曳圖片以調整位置，然後新增遮罩。",
+  "companion.imageCloze.drawHelp": "在圖片上拖曳以畫出一個遮罩，之後可繼續移動圖片。",
+  "companion.imageCloze.markHelp": "拖曳以移動圖片，雙指縮放；點選遮罩即可選取並編輯。",
+  "companion.imageCloze.source": "原始圖片",
+  "companion.imageCloze.region": "遮罩 {number}",
+  "companion.imageCloze.missing": "圖片無法使用。請取消，待圖片還原後重新開啟。",
+  "companion.imageCloze.failed": "無法儲存圖片挖空。修改仍保留，請重試。若文章已變更，請取消後重新開啟圖片。",
+  "companion.imageCloze.zoomOut": "縮小",
+  "companion.imageCloze.zoomIn": "放大",
+  "companion.imageCloze.adjust": "調整遮罩",
+  "companion.imageCloze.position": "調整圖片位置",
+  "companion.imageCloze.add": "新增遮罩",
+  "companion.imageCloze.deleteFailed": "無法完成刪除檢測項，請重試。",
+  "companion.imageCloze.remove": "刪除選取的遮罩"
+}

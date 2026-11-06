@@ -1,0 +1,19 @@
+{
+  "companion.imageCloze.confirm": "Подтвердить",
+  "companion.imageCloze.title": "Пропуски на изображении",
+  "companion.imageCloze.saving": "Сохранение…",
+  "companion.imageCloze.positionHelp": "Сведите или разведите пальцы для изменения масштаба и перетащите изображение в нужное положение. Затем добавьте маску.",
+  "companion.imageCloze.drawHelp": "Проведите по изображению, чтобы нарисовать одну маску. Затем можно продолжить перемещать изображение.",
+  "companion.imageCloze.markHelp": "Перетаскивайте изображение для перемещения. Меняйте масштаб двумя пальцами. Нажмите на маску, чтобы выбрать и отредактировать её.",
+  "companion.imageCloze.source": "Исходное изображение",
+  "companion.imageCloze.region": "Маска {number}",
+  "companion.imageCloze.missing": "Изображение недоступно. Отмените действие и откройте его снова после восстановления.",
+  "companion.imageCloze.failed": "Не удалось сохранить пропуски на изображении. Изменения сохранены; повторите попытку. Если статья изменилась, отмените действие и откройте изображение снова.",
+  "companion.imageCloze.zoomOut": "Уменьшить масштаб",
+  "companion.imageCloze.zoomIn": "Увеличить масштаб",
+  "companion.imageCloze.adjust": "Настроить маски",
+  "companion.imageCloze.position": "Расположить изображение",
+  "companion.imageCloze.add": "Новая маска",
+  "companion.imageCloze.deleteFailed": "Не удалось завершить удаление элемента. Повторите попытку.",
+  "companion.imageCloze.remove": "Удалить выбранную маску"
+}

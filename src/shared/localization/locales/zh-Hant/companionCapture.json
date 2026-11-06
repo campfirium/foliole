@@ -11,5 +11,11 @@
   "companion.capture.save": "儲存",
   "companion.capture.saving": "正在儲存...",
   "companion.capture.error.inboxUnavailable": "在儲存新主題之前同步此裝置。",
-  "companion.capture.error.saveFailed": "無法保存該主題。再試一次。"
+  "companion.capture.error.saveFailed": "無法保存該主題。再試一次。",
+  "companion.capture.import.readingModeDescription": "選擇章節進入複習佇列的方式。",
+  "companion.capture.error.clipboardEmpty": "剪貼簿中沒有文字。",
+  "companion.capture.error.clipboardFailed": "無法讀取剪貼簿。請允許存取剪貼簿後重試。",
+  "companion.capture.import.imagesUnavailable": "文字已匯入。部分本機圖片無法從所選檔案中匯入。",
+  "companion.capture.import.conversionIncomplete": "檔案已匯入。部分格式或嵌入內容無法轉換。",
+  "companion.capture.error.targetUnavailable": "這個位置已無法使用。請關閉捕捉並選擇其他位置。"
 }

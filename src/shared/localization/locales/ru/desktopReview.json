@@ -88,5 +88,7 @@
   "desktop.nodeReview.usingReviewSettings": "Использование настроек проверки: {value}",
   "desktop.nodeReview.usingQueueFallback": "Использование резервной очереди: {value}",
   "desktop.nodeReview.noLocalShortTerm": "Нет локальной краткосрочной настройки",
-  "desktop.nodeReview.priority.p0": "P0 — во-первых, без масштабирования задержки"
+  "desktop.nodeReview.priority.p0": "P0 — во-первых, без масштабирования задержки",
+  "desktop.foregroundTime.monthTotal": "Общее время",
+  "desktop.foregroundTime.monthTotalShort": "Всего"
 }

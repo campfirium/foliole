@@ -201,5 +201,6 @@
   "desktop.rightPanel.highlights.unavailableDescription": "Выбранная тема больше не доступна.",
   "desktop.rightPanel.highlights.unavailableTitle": "Тема недоступна",
   "desktop.rightPanel.highlights.count": "ГЛАВНОЕ({count})",
-  "desktop.rightPanel.highlights.list": "Основные моменты документа"
+  "desktop.rightPanel.highlights.list": "Основные моменты документа",
+  "desktop.workspace.leaveFlowHere": "Выйти из Flow"
 }

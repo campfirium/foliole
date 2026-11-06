@@ -18,5 +18,19 @@
   "companion.reading.font.importError": "Impossible d’ajouter cette police. Choisissez un fichier TTF ou OTF de moins de 20 Mo.",
   "companion.reading.font.contrast": "Contraste du corps",
   "companion.reading.font.contrast.default": "Default",
-  "companion.reading.font.contrast.high": "Élevé"
+  "companion.reading.font.contrast.high": "Élevé",
+  "companion.reading.hideSystemStatusBar": "Masquer la barre d’état du système",
+  "companion.reading.systemStatusBarError": "Impossible de modifier la barre d’état du système. Votre préférence de lecture n’a pas changé.",
+  "companion.reading.retrySystemStatusBar": "Réessayer la barre d’état du système",
+  "companion.reading.overlayToolbars": "Barres d’outils de lecture flottantes",
+  "companion.reading.screenDisplay": "Affichage à l’écran",
+  "companion.reading.font.decrease": "Diminuer {setting}",
+  "companion.reading.font.increase": "Augmenter {setting}",
+  "companion.reading.font.textWidth": "Largeur du texte",
+  "companion.reading.font.addVariants": "Ajouter des variantes",
+  "companion.reading.font.preview": "Aperçu de la police",
+  "companion.reading.font.confirm": "Ajouter des polices",
+  "companion.reading.font.cancel": "Annuler",
+  "companion.reading.font.actionError": "Impossible de charger, d’enregistrer ou de supprimer cette police. Vos fichiers de polices restent disponibles.",
+  "companion.reading.font.loadError": "Impossible de charger la police sélectionnée. Sélectionnez-la à nouveau pour réessayer."
 }

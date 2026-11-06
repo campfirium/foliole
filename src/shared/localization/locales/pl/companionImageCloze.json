@@ -1,0 +1,19 @@
+{
+  "companion.imageCloze.confirm": "Potwierdź",
+  "companion.imageCloze.title": "Luki na obrazie",
+  "companion.imageCloze.saving": "Zapisuję…",
+  "companion.imageCloze.positionHelp": "Zsuń lub rozsuń palce, aby zmienić powiększenie, i przeciągnij obraz, aby go ustawić. Następnie dodaj maskę.",
+  "companion.imageCloze.drawHelp": "Przeciągnij po obrazie, aby narysować jedną maskę. Następnie możesz dalej przesuwać obraz.",
+  "companion.imageCloze.markHelp": "Przeciągnij, aby przesunąć obraz. Zsuń lub rozsuń palce, aby zmienić powiększenie. Dotknij maski, aby ją zaznaczyć i edytować.",
+  "companion.imageCloze.source": "Oryginalny obraz",
+  "companion.imageCloze.region": "Maska {number}",
+  "companion.imageCloze.missing": "Obraz jest niedostępny. Anuluj i otwórz go ponownie po przywróceniu.",
+  "companion.imageCloze.failed": "Nie udało się zapisać luk na obrazie. Zmiany zostały zachowane; spróbuj ponownie. Jeśli artykuł się zmienił, anuluj i ponownie otwórz obraz.",
+  "companion.imageCloze.zoomOut": "Pomniejsz",
+  "companion.imageCloze.zoomIn": "Powiększ",
+  "companion.imageCloze.adjust": "Dostosuj maski",
+  "companion.imageCloze.position": "Ustaw obraz",
+  "companion.imageCloze.add": "Nowa maska",
+  "companion.imageCloze.deleteFailed": "Nie udało się dokończyć usuwania elementu. Spróbuj ponownie.",
+  "companion.imageCloze.remove": "Usuń zaznaczoną maskę"
+}
