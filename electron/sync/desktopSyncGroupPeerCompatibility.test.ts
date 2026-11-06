@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest';
 
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
 import { assertDesktopSyncGroupPeerCompatible } from './desktopSyncGroupPeerCompatibility.js';
@@ -45,11 +46,15 @@ it('rejects a v4 peer missing the complete member capability', async () => {
 });
 
 it('rejects a provider missing the current request transport', async () => {
+  const transportCapability = `framed-sync-v${FRAMED_SYNC_PROTOCOL_VERSION}`;
+  expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities).toContain(transportCapability);
   const protocol = {
     ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities
-      .filter((capability) => capability !== 'framed-sync-v28')
+      .filter((capability) => capability !== transportCapability)
   };
+  expect(protocol.capabilities).not.toContain(transportCapability);
+  expect(protocol.capabilities).toHaveLength(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.length - 1);
   await expect(assertDesktopSyncGroupPeerCompatible(
     peer, vi.fn(async () => response(protocol)) as typeof fetch
   )).rejects.toThrow('sync_group_peer_incompatible:required_capability_missing');

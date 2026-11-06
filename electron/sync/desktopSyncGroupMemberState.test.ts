@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
@@ -104,8 +105,14 @@ it('allows the restore source to supply a new member with no restore state', () 
 it.each(['missing', 'legacy'] as const)('rejects %s protocol before applying or marking ready', kind => {
   const incoming = memberState();
   if (kind === 'missing') delete incoming.protocol;
-  else incoming.protocol = { ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-    capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.filter(value => value !== 'framed-sync-v28') };
+  else {
+    const transportCapability = `framed-sync-v${FRAMED_SYNC_PROTOCOL_VERSION}`;
+    expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities).toContain(transportCapability);
+    incoming.protocol = { ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+      capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.filter(value => value !== transportCapability) };
+    expect(incoming.protocol.capabilities).not.toContain(transportCapability);
+    expect(incoming.protocol.capabilities).toHaveLength(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.length - 1);
+  }
   expect(() => acceptDesktopSyncGroupMemberState(JSON.stringify(incoming), receiverDeviceId))
     .toThrow('sync_group_peer_incompatible');
   expect(mocks.apply).not.toHaveBeenCalled();
