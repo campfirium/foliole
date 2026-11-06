@@ -12,6 +12,7 @@ export const controlledVersionSqliteTests = [
   'electron/database/dynamicNodeVersionChains.companionDelete.test.ts',
   'electron/database/independentNodeVersionMigration.test.ts',
   'electron/database/nodeVersionPayloadCollector.test.ts',
+  'electron/sync/contentEditingSessionFramedSync.integration.test.ts',
   'electron/database/nodeVersionRetentionMigration.test.ts',
   'electron/database/nodeBodyVersionConsistency.integration.test.ts',
   'electron/database/nodeBodyStorageLifecycle.integration.test.ts',
