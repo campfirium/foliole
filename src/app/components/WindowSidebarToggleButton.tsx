@@ -18,6 +18,7 @@ export function WindowSidebarToggleButton({
 }: WindowSidebarToggleButtonProps) {
   return (
     <button
+      data-workspace-sidebar-toggle={side}
       aria-label={label}
       className="window-titlebar-leading-button"
       aria-pressed={active}

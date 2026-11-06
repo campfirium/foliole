@@ -16,6 +16,7 @@ function RightSidebarToggleButton({ active, onClick }: { active: boolean; onClic
   const t = useTranslation();
   return (
     <button
+      data-workspace-sidebar-toggle="right"
       aria-label={t('desktop.workspace.toggleRightSidebar')}
       className="window-titlebar-leading-button pointer-events-auto"
       aria-pressed={active}

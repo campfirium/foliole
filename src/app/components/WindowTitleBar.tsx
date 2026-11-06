@@ -94,19 +94,9 @@ function WindowLeadingActions({
   onToggleListVisibility
 }: WindowTitleBarProps) {
   const t = useTranslation();
-  if (isListCollapsed) {
-    return (
-      <div className="window-titlebar-left-zone relative z-local-control" data-collapsed="true">
-        <div className="window-titlebar-collapsed-left-action">
-          <WindowSidebarToggleButton active={false} label={t('desktop.workspace.toggleLeftPanel')} onClick={onToggleListVisibility} side="left" />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="window-titlebar-left-zone relative z-local-control" data-collapsed="false">
-      <div className="window-titlebar-leading">
+    <div className="window-titlebar-left-zone relative z-local-control" data-collapsed={isListCollapsed}>
+      <div className={isListCollapsed ? 'window-titlebar-collapsed-left-action' : 'window-titlebar-leading'}>
         <div className="window-titlebar-leading-primary">
           <WindowSidebarToggleButton active={!isListCollapsed} label={t('desktop.workspace.toggleLeftPanel')} onClick={onToggleListVisibility} side="left" />
         </div>

@@ -14,6 +14,7 @@ import {
   WorkspaceRightSidebarSplitter,
   type WorkspaceRightSidebarSplitterProps
 } from './WorkspaceRightSidebarSplitter';
+import { WorkspaceSidebarFocusBoundary } from './WorkspaceSidebarFocusBoundary';
 
 export interface WorkspaceGridColumnProps {
   documentSurfaceProps: WorkspaceDocumentSurfaceProps;
@@ -44,7 +45,8 @@ function renderListColumns(
   args: Pick<WorkspaceGridColumnProps, 'isListCollapsed' | 'listAreaProps' | 'listSplitterProps' | 'compactSidebars'>
 ) {
   return [
-    <div
+    <WorkspaceSidebarFocusBoundary
+      side="left" unavailable={args.isListCollapsed}
       data-workspace-side-column="list"
       aria-hidden={args.isListCollapsed}
       hidden={args.compactSidebars?.leftFloating && args.isListCollapsed}
@@ -54,10 +56,10 @@ function renderListColumns(
       key="list"
     >
       <WorkspaceListArea {...args.listAreaProps} />
-    </div>,
-    <div aria-hidden={args.isListCollapsed} className="flex min-w-0 overflow-visible max-[1080px]:hidden" key="list-splitter">
+    </WorkspaceSidebarFocusBoundary>,
+    <WorkspaceSidebarFocusBoundary side="left" unavailable={args.isListCollapsed || Boolean(args.compactSidebars?.leftFloating)} aria-hidden={args.isListCollapsed} className="flex min-w-0 overflow-visible max-[1080px]:hidden" key="list-splitter">
       <WorkspaceListSplitter {...args.listSplitterProps} />
-    </div>
+    </WorkspaceSidebarFocusBoundary>
   ];
 }
 
@@ -68,15 +70,17 @@ function renderRightSidebarColumns(
   >
 ) {
   return [
-    <div
+    <WorkspaceSidebarFocusBoundary
+      side="right" unavailable={args.isImmersiveMode || args.isRightSidebarCollapsed || Boolean(args.compactSidebars?.rightFloating)}
       aria-hidden={args.isRightSidebarCollapsed}
       className="hidden min-w-0 overflow-visible xl:flex"
       key="right-sidebar-splitter"
       style={args.isImmersiveMode ? { display: 'none' } : undefined}
     >
       <WorkspaceRightSidebarSplitter {...args.rightSidebarSplitterProps} />
-    </div>,
-    <div
+    </WorkspaceSidebarFocusBoundary>,
+    <WorkspaceSidebarFocusBoundary
+      side="right" unavailable={args.isImmersiveMode || args.isRightSidebarCollapsed}
       data-workspace-side-column="right"
       aria-hidden={args.isRightSidebarCollapsed}
       hidden={args.isImmersiveMode || (args.compactSidebars?.rightFloating && args.isRightSidebarCollapsed)}
@@ -94,7 +98,7 @@ function renderRightSidebarColumns(
           args.rightSidebarProps.activePanelId === 'assistant' || args.rightSidebarProps.activePanelId === 'performance'
           || args.rightSidebarProps.activePanelId === 'review-queue'
         ))} />
-    </div>
+    </WorkspaceSidebarFocusBoundary>
   ];
 }
 

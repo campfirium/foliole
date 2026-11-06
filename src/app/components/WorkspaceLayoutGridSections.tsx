@@ -162,7 +162,7 @@ export const WorkspaceDocumentArea = memo(function WorkspaceDocumentArea({
 }) {
   const t = useTranslation();
   return (
-    <section aria-label={t('desktop.workspace.documentAndReviewArea')} className="flex min-h-0 min-w-0 flex-1 flex-col gap-0" data-undo-history-owner="content">
+    <section data-workspace-document-focus-target tabIndex={-1} aria-label={t('desktop.workspace.documentAndReviewArea')} className="flex min-h-0 min-w-0 flex-1 flex-col gap-0" data-undo-history-owner="content">
       {studySessionCompleteSummaryProps ? (
         <StudySessionCompleteSummary {...studySessionCompleteSummaryProps} />
       ) : (
