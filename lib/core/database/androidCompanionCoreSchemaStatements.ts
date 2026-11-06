@@ -114,17 +114,13 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS node_text_alternatives (
     alternative_id TEXT PRIMARY KEY,
     node_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
-    source_version_id TEXT NOT NULL,
-    body_text TEXT NOT NULL,
-    source_host_name TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    status TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    source_version_id TEXT NOT NULL, body_text TEXT NOT NULL, source_host_name TEXT NOT NULL,
+    created_at TEXT NOT NULL, status TEXT NOT NULL, updated_at TEXT NOT NULL,
+    body_blob_hash TEXT NOT NULL DEFAULT '', expires_at TEXT NOT NULL DEFAULT '',
+    resource_references TEXT NOT NULL DEFAULT '[]', image_sources TEXT
   )`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS idx_node_text_alternatives_source_version
-    ON node_text_alternatives (node_id, source_version_id)`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS idx_node_text_alternatives_available_source
-    ON node_text_alternatives (node_id, source_host_name) WHERE status = 'available'`,
+  `CREATE INDEX IF NOT EXISTS idx_node_text_alternatives_active
+    ON node_text_alternatives(node_id, status, created_at)`,
   `CREATE TABLE IF NOT EXISTS node_order (
     node_id TEXT PRIMARY KEY REFERENCES nodes(id),
     position INTEGER NOT NULL

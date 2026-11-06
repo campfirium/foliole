@@ -13,10 +13,11 @@ import { readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSync
 import { withRequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
 import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
+import { readTopicAlternativeRecords } from '../../lib/core/sync/topicAlternativeStore.js';
 import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { textBranch, textDevice, wholeBodies } from './topicTextState.testSupport.js';
+import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
 it('preserves all conflict alternative bodies in a fresh companion library through current request snapshots', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'foliole-request-alternatives-'));
@@ -39,7 +40,9 @@ it('preserves all conflict alternative bodies in a fresh companion library throu
     sqlite.close(); sqlite = new Database(file);
     const restored = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(sqlite), 'topic');
     expect(restored?.version_id).toBe(whole.version_id);
-    expect(wholeBodies(restored!)).toEqual(new Set(['Main longest body', 'B', 'C']));
-    expect(restored?.snapshot.text_alternatives).toEqual(whole.snapshot.text_alternatives);
+    const rows = await readTopicAlternativeRecords(createBetterSqliteDbPort(sqlite), 'topic');
+    expect(new Set([restored?.body_text, ...rows.map(row => row.body_text)])).toEqual(new Set(['Main longest body', 'B', 'C']));
+    expect(rows.map(row => row.body_text).sort()).toEqual(['B', 'C']);
+    expect(restored?.snapshot.text_alternatives ?? []).toEqual([]);
   } finally { desktop.sqlite.close(); sqlite.close(); await rm(root, { recursive: true, force: true }); }
 });

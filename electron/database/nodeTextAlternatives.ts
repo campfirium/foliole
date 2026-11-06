@@ -2,9 +2,9 @@ import { randomUUID } from 'node:crypto';
 
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import { loadTopicTextBodiesWithDriver } from '../../lib/core/database/topicTextBodiesWithDriver.js';
 import { loadTopicTextStateWithDriver } from '../../lib/core/database/topicTextStateWithDriver.js';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
-import { readTopicTextSnapshot } from '../../lib/core/sync/topicTextBodies.js';
 import { expireTopicText } from '../../lib/core/sync/topicTextExpiry.js';
 import { mutateTopicText } from '../../lib/core/sync/topicTextMutation.js';
 
@@ -30,7 +30,7 @@ export function loadNodeTextAlternativePreviewWithDriver(
      WHERE n.id = ? AND n.deleted_at IS NULL`, [nodeId]);
   if (!row) return null;
   const body = resolveNodeBody(row);
-  const selectedBody = readTopicTextSnapshot(row.snapshot_json).bodies.find((entry) => entry.hash === selected.body_blob_hash)!;
+  const selectedBody = loadTopicTextBodiesWithDriver(driver, nodeId, [selected])[0]!;
   return {
     alternative_id: selected.id, alternatives, checked_at: now,
     current_content: body.content, current_highlight_count: 0, kind: 'sync_alternative' as const,
@@ -50,9 +50,8 @@ async function updateAlternative(nodeId: string, alternativeId: string, action: 
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'mutate-topic-text' });
   return port.transaction(async (tx) => {
     const [node] = await tx.query<{ id: string }>(
-      `SELECT n.id FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id,
-       json_each(v.snapshot_json, '$.text_alternatives') entry
-       WHERE n.id = ? AND json_extract(entry.value, '$.id') = ? AND n.deleted_at IS NULL`, [nodeId, alternativeId]);
+      `SELECT n.id FROM nodes n JOIN node_text_alternatives entry ON entry.node_id = n.id
+       WHERE n.id = ? AND entry.alternative_id = ? AND entry.status = 'available' AND n.deleted_at IS NULL`, [nodeId, alternativeId]);
     if (!node) return { alternative_id: alternativeId, node_id: null, status: 'unavailable' as const };
     return mutateTopicText(tx, { nodeId: node.id, alternativeId, action, now: new Date().toISOString(),
       versionId: createOpaqueVersionRef(randomUUID()), hostName: 'desktop-text-selection' });

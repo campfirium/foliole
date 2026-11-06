@@ -1,6 +1,4 @@
 export const ANDROID_COMPANION_CONVERGENCE_MUTATION_DEFINITIONS = {
-  nodeTextAlternativeUpdateStatus:
-    "UPDATE node_text_alternatives SET status = ?, updated_at = ? WHERE alternative_id = ? AND status = 'available'",
   nodeRekeyCopy:
     'INSERT OR IGNORE INTO nodes (' +
     'id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, ' +

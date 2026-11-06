@@ -1,7 +1,6 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort } from './dbPort.js';
-import { retainAlternativeImageResources } from './localContentEditResources.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { loadSyncNodeAncestorGraph, type SyncNodeAncestorGraph } from './syncNodeAncestorGraph.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
@@ -10,12 +9,11 @@ import { loadAncestorDistances } from './syncNodeLineage.js';
 import { selectNodeOperationValue } from './syncNodeOperationValue.js';
 import type { SyncNodeRecordMetadata, SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import { buildResolutionRecord, chooseEvidenceProjection, chooseProjection } from './syncNodeResolution.js';
-import { mergedTopicTextSourceBodies } from './topicTextBodies.js';
+import { recordTopicConflictAlternatives } from './topicAlternativeConflict.js';
 import { loadTopicTextConflictMetadata, selectChangedTopicMain } from './topicTextConflictMetadata.js';
-import { mergeTopicTextSourceAttachments } from './topicTextMerge.js';
 
 export async function resolveTopicSourceConflict<M extends SyncNodeRecordMetadata>(port: DbPort,
-  source: SyncNodeRecordSource<M>, collectVersionPayloads = true) {
+  source: SyncNodeRecordSource<M>, collectVersionPayloads = true, deferAlternatives = false) {
   let ordered = [...source.records].sort((left, right) => (left.version_id ?? '').localeCompare(right.version_id ?? ''));
   const local = await loadCurrentSyncNodeRecord(port, ordered[0]!.object_id, false);
   if (!local?.version_id || ordered.some((record) => !record.version_id)) {
@@ -38,20 +36,17 @@ export async function resolveTopicSourceConflict<M extends SyncNodeRecordMetadat
   ]);
   const completeSource: SyncNodeRecordSource = { records, isIdentityOnly: () => false,
     load: (db, metadata) => loaders.get(metadata)!(db) };
-  const resolution = buildResolutionRecord(records, winner, body, {
+  const snapshot = {
     ...currentSnapshot, deleted_at: deletion.value, parent_id: parent.value,
     text_selection: winner.snapshot.text_selection ?? {
       version_id: winner.version_id!, created_at: winner.version_created_at!
-    }, text_alternatives: []
-  });
-  resolution.snapshot.text_alternatives = resolution.snapshot.deleted_at ? [] :
-    await mergeTopicTextSourceAttachments(port, completeSource, winner, new Date().toISOString(), graph);
-  resolution.alternative_bodies = await mergedTopicTextSourceBodies(port, resolution.snapshot.text_alternatives ?? [], completeSource);
-  const resourceSources = await Promise.all(records.map(metadata => completeSource.load(port, metadata)));
-  const complete = buildResolutionRecord(records, winner, body, {
-    ...resolution.snapshot, ...retainAlternativeImageResources(resolution, resourceSources)
-  });
-  complete.alternative_bodies = resolution.alternative_bodies;
+    }
+  };
+  delete snapshot.text_alternatives;
+  if (!snapshot.deleted_at) {
+    await recordTopicConflictAlternatives(port, completeSource, winner, new Date().toISOString(), graph, !deferAlternatives);
+  }
+  const complete = buildResolutionRecord(records, winner, body, snapshot);
   const applied = await applySyncNodesWithDbPort(port, [complete], {
     enqueueSearchInvalidations: false, includeAlreadyApplied: true, operation: 'local_mutation'
   });

@@ -8,7 +8,6 @@ import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInve
 import { applyRequestSyncObject } from '../../lib/core/sync/requestSyncObjectApply.js';
 import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
 import { upsertRemoteVersion } from '../../lib/core/sync/syncNodeApplyAcceptedRemote.js';
-import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionFact } from '../../lib/core/sync/syncNodeGraph.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR, evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
 
@@ -32,7 +31,7 @@ async function oldPeers() {
   const v2 = textBranch('v2', 'Intermediate', v1);
   const v3 = textBranch('v3', 'Current complete body', v2);
   for (const peer of [a, b]) {
-    await applyConvergentSyncNodesWithDbPort(peer.port, [v1, v2, v3], { collectVersionPayloads: false });
+    await legacy.runtime.applyConvergentSyncNodesWithDbPort(peer.port, [v1, v2, v3], { collectVersionPayloads: false });
     peer.db.exec(`UPDATE node_sync_versions SET body_text = NULL,
       snapshot_json = json_set(snapshot_json, '$.content', NULL) WHERE version_id IN ('v1', 'v2')`);
   }
@@ -77,7 +76,7 @@ it('keeps two preexisting complete equal-body heads and their adopted pointer wh
     assertPersisted(peer, 'Current complete body', 'v3');
     expect(peer.db.prepare('SELECT version_id FROM node_sync_versions WHERE body_text IS NOT NULL ORDER BY version_id').all())
       .toEqual([{ version_id: 'extra-head' }, { version_id: 'v3' }]);
-    expect((await loadCurrentSyncNodeRecord(peer.port, 'topic'))!.snapshot.text_alternatives).toEqual([]);
+    expect((await loadCurrentSyncNodeRecord(peer.port, 'topic'))!.snapshot.text_alternatives ?? []).toEqual([]);
   }
 });
 

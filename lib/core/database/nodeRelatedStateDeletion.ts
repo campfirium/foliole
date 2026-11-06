@@ -1,8 +1,16 @@
+import { topicAlternativeDeletionHash } from '../sync/topicAlternativeApply.js';
+
 import type { DatabaseDriver } from './driver.js';
 import { requireDatabaseHostName } from './syncHostIdentity.js';
 import { computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
 
 export function recordNodeRelatedStateDeletion(driver: DatabaseDriver, nodeId: string, deletedAt: string) {
+  for (const row of driver.queryAll<{ alternative_id: string }>(
+    'SELECT alternative_id FROM node_text_alternatives WHERE node_id = ?', [nodeId])) {
+    upsertSyncObjectState(driver, { objectType: 'node_text_alternative', objectId: row.alternative_id,
+      deletedAt, updatedAt: deletedAt, lastModifiedByHostName: requireDatabaseHostName(driver), syncDirty: true,
+      contentHash: topicAlternativeDeletionHash(row.alternative_id, deletedAt) });
+  }
   const type = 'node_reading';
   const existing = driver.queryOne(`SELECT 1 FROM node_reading WHERE node_id = ?
     UNION SELECT 1 FROM sync_object_state WHERE object_type = ? AND object_id = ? AND deleted_at IS NULL`,

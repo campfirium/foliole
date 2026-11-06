@@ -11,7 +11,7 @@ import type { DeferredVisibilityPruning } from './syncNodeVisibilityPruning.js';
 import { resolveTopicSourceConflict } from './syncTopicConflict.js';
 import { expireTopicText, findTopicsWithExpiredText } from './topicTextExpiry.js';
 
-type ConvergeOptions = { collectVersionPayloads?: boolean; visibilityPruning?: DeferredVisibilityPruning };
+type ConvergeOptions = { deferAlternativeSettlement?: boolean; collectVersionPayloads?: boolean; visibilityPruning?: DeferredVisibilityPruning };
 
 export function applyConvergentSyncNodesWithDbPort(port: DbPort, records: NativeSyncNodeRecord[],
   options: ConvergeOptions = {}) {
@@ -33,14 +33,14 @@ async function convergeNodeSource<M extends SyncNodeRecordMetadata>(port: DbPort
   });
   const conflicts = groupByObjectId(result.conflictNodes);
   const resolvedNodeIds: string[] = [];
-  for (const group of conflicts) resolvedNodeIds.push(await resolveGroup(port, { ...source, records: group }));
+  for (const group of conflicts) resolvedNodeIds.push(await resolveGroup(port, { ...source, records: group }, options.deferAlternativeSettlement));
   if (result.blockedIds.length > 0) {
     throw new Error(`sync_node_apply_blocked:${result.blockedIds.join(',')}`);
   }
   let expired = false;
   const now = new Date().toISOString();
   for (const nodeId of await findTopicsWithExpiredText(port, [...new Set(records.map(record => record.object_id))], now)) {
-    if (await expireTopicText(port, nodeId, now, false)) expired = true;
+    if (await expireTopicText(port, nodeId, now)) expired = true;
   }
   const revivedIds = await reviveDeletedFoldersForLaterChildren(
     port, records, new Set([...result.appliedIds, ...resolvedNodeIds])
@@ -65,7 +65,7 @@ async function convergeNodeSource<M extends SyncNodeRecordMetadata>(port: DbPort
   };
 }
 
-async function resolveGroup<M extends SyncNodeRecordMetadata>(port: DbPort, source: SyncNodeRecordSource<M>) {
+async function resolveGroup<M extends SyncNodeRecordMetadata>(port: DbPort, source: SyncNodeRecordSource<M>, deferAlternatives = false) {
   if (source.records.every(record => record.snapshot.kind === 'folder')) {
     return (await resolveFolderSourceConflict(port, source)).object_id;
   }
@@ -75,7 +75,7 @@ async function resolveGroup<M extends SyncNodeRecordMetadata>(port: DbPort, sour
   if (source.records.some(record => record.snapshot.kind !== 'topic')) {
     throw new Error(`sync_node_conflict_kind_mismatch:${source.records[0]!.object_id}`);
   }
-  return (await resolveTopicSourceConflict(port, source, false)).object_id;
+  return (await resolveTopicSourceConflict(port, source, false, deferAlternatives)).object_id;
 }
 
 async function loadKnownNodeStateIds(port: DbPort, records: readonly SyncNodeRecordMetadata[]) {

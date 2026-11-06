@@ -31,8 +31,8 @@ async function fixture() {
   device.sqlite.exec("CREATE TABLE companion_meta (key TEXT PRIMARY KEY, value TEXT); INSERT INTO companion_meta VALUES ('host_name', 'mobile')");
   const base = textBranch('base', 'Base');
   await device.receive([base, textBranch('main', 'Long main body', base)]);
-  const current = await device.receive([textBranch('other', 'Other', base)]);
-  return { ...device, alternative: current.snapshot.text_alternatives![0]! };
+  await device.receive([textBranch('other', 'Other', base)]);
+  return { ...device, alternative: (await device.alternatives())[0]! };
 }
 
 it.each([24, 240, 2400].flatMap(count => (['dismissed', 'promoted'] as const).map(status => ({ count, status }))))(
@@ -45,7 +45,7 @@ it.each([24, 240, 2400].flatMap(count => (['dismissed', 'promoted'] as const).ma
       expect(observer.evaluatedIds.filter(id => id.startsWith('unrelated-'))).toEqual([]);
       const current = await device.current();
       expect(current.body_text).toBe(status === 'promoted' ? 'Other' : 'Long main body');
-      expect(current.snapshot.text_alternatives).toEqual([]);
+      expect(await device.alternatives()).toEqual([]);
       await expect(updateCompanionNodeTextAlternativeStatus('topic', device.alternative.id, status)).rejects.toThrow('text_alternative_unavailable');
       const reopened = new Database(device.sqlite.serialize());
       try {
@@ -63,6 +63,8 @@ it.each(['dismissed', 'promoted'] as const)('isolates unavailable %s pairs and r
   await expect(updateCompanionNodeTextAlternativeStatus('topic', 'stale', status)).rejects.toThrow('text_alternative_unavailable');
   expect(device.sqlite.serialize()).toEqual(before);
   device.sqlite.exec(`CREATE TRIGGER reject_selection BEFORE UPDATE OF current_version_id ON nodes
+    BEGIN SELECT RAISE(ABORT, 'selection_failed'); END`);
+  device.sqlite.exec(`CREATE TRIGGER reject_side_selection BEFORE UPDATE ON node_text_alternatives
     BEGIN SELECT RAISE(ABORT, 'selection_failed'); END`);
   const withTrigger = device.sqlite.serialize();
   await expect(updateCompanionNodeTextAlternativeStatus('topic', device.alternative.id, status)).rejects.toThrow('selection_failed');

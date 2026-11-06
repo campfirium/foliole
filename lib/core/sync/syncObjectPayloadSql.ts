@@ -1,4 +1,5 @@
 import { PARENT_ORDER_PAYLOAD_SQL } from '../database/currentParentOrderSchema.js';
+import { TOPIC_ALTERNATIVE_PAYLOAD_SQL } from '../database/topicAlternativePayloadSql.js';
 import { DAILY_FLOW_SYNC_PAYLOAD_SQL } from '../flow/dailyFlowSyncFact.js';
 
 import { FOREGROUND_SOURCE_PAYLOAD_SQL } from './foregroundSource.js';
@@ -37,11 +38,7 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     'interval_growth_factor', interval_growth_factor, 'last_handled_at', last_handled_at,
     'next_at', next_at, 'priority', priority, 'repetition_count', repetition_count, 'state', state
   ) AS payload_json FROM node_reading WHERE node_id = ?`,
-  node_text_alternative: `SELECT json_object(
-    'alternative_id', alternative_id, 'node_id', node_id, 'source_version_id', source_version_id,
-    'body_text', body_text, 'source_host_name', source_host_name, 'created_at', created_at,
-    'status', status, 'updated_at', updated_at
-  ) AS payload_json FROM node_text_alternatives WHERE alternative_id = ?`,
+  node_text_alternative: TOPIC_ALTERNATIVE_PAYLOAD_SQL,
   setting: `SELECT json_object(
     'key', key, 'scope', scope, 'platform', platform, 'form_factor', form_factor,
     'host_name', host_name, 'value_json', value_json

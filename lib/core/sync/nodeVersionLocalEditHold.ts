@@ -8,17 +8,11 @@ export async function retainLocalEditBase(port: DbPort, args: {
   versionId: string;
 }) {
   if (!args.holdId || !args.nodeId || !args.versionId) throw new Error('content_edit_hold_invalid');
-  const [version] = await port.query<{ version_id: string; alternatives_missing: number }>(
-    `SELECT version_id, EXISTS (
-      SELECT 1 FROM json_each(snapshot_json, '$.text_alternatives') alternative
-      WHERE json_extract(alternative.value, '$.expires_at') > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-      AND NOT EXISTS (SELECT 1 FROM json_each(snapshot_json, '$.text_alternative_bodies') body
-        WHERE json_extract(body.value, '$.hash') = json_extract(alternative.value, '$.body_blob_hash'))
-    ) AS alternatives_missing FROM node_sync_versions WHERE object_id = ? AND version_id = ?`,
+  const [version] = await port.query<{ version_id: string }>(
+    'SELECT version_id FROM node_sync_versions WHERE object_id = ? AND version_id = ?',
     [args.nodeId, args.versionId]
   );
   if (!version) throw new Error('content_edit_base_unavailable');
-  if (version.alternatives_missing) throw new Error('content_edit_base_alternatives_unavailable');
   const [held] = await port.query<{ object_id: string }>(
     'SELECT object_id FROM node_version_local_holds WHERE hold_id = ?', [args.holdId]
   );

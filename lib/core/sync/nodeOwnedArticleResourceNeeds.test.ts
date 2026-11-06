@@ -11,7 +11,8 @@ function fixture() {
   const db = new Database(':memory:');
   db.exec(`CREATE TABLE nodes (id TEXT PRIMARY KEY, content TEXT, body_blob_hash TEXT,
     resource_references TEXT NOT NULL DEFAULT '[]', image_sources TEXT);
-    CREATE TABLE node_sync_versions (snapshot_json TEXT);`);
+    CREATE TABLE node_sync_versions (snapshot_json TEXT);
+    CREATE TABLE node_text_alternatives (node_id TEXT, status TEXT, resource_references TEXT);`);
   return { db, port: createBetterSqliteDbPort(db, { name: 'node-owned-resource-needs' }) };
 }
 const image = `${'a'.repeat(64)}.png`;

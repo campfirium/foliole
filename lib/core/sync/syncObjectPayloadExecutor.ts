@@ -18,6 +18,7 @@ import { applySettingObject, applyViewStateObject } from './syncObjectPrivateSta
 import type { SyncObjectRecord } from './syncObjectRecord.js';
 import { applyWatchedFolderObject } from './syncObjectWatchedFolderPayloadExecutor.js';
 import { applyTopicDailyCount } from './syncTopicDailyCount.js';
+import { applyTopicAlternativeRecord } from './topicAlternativeApply.js';
 
 export async function applySyncObjectPayloadWithDbPort(
   port: DbPort,
@@ -46,7 +47,7 @@ export async function applySyncObjectPayloadWithDbPort(
     case 'node_review':
       return applyNodeReviewObject();
     case 'node_text_alternative':
-      return applyNodeTextAlternativeObject(port, record);
+      return applyTopicAlternativeRecord(port, record);
     case 'setting':
       return applySettingObject(port, record, options);
     case 'watched_folder':
@@ -56,36 +57,6 @@ export async function applySyncObjectPayloadWithDbPort(
     default:
       throw new Error(`Unsupported sync object type: ${String(record.object_type)}`);
   }
-}
-
-async function applyNodeTextAlternativeObject(port: DbPort, record: SyncObjectRecord) {
-  if (record.deleted_at) {
-    await port.run('DELETE FROM node_text_alternatives WHERE alternative_id = ?', [record.object_id]);
-    return;
-  }
-  const payload = asObject(record);
-  const nodeId = text(payload.node_id) ?? '';
-  const sourceHostName = text(payload.source_host_name) ?? '';
-  const status = text(payload.status) ?? 'available';
-  if (status === 'available') {
-    await port.run(
-      `UPDATE node_text_alternatives SET status = 'superseded', updated_at = ?
-       WHERE node_id = ? AND source_host_name = ? AND status = 'available' AND alternative_id <> ?`,
-      [record.updated_at, nodeId, sourceHostName, record.object_id]
-    );
-  }
-  await port.run(
-    `INSERT INTO node_text_alternatives (
-       alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(alternative_id) DO UPDATE SET
-       status = excluded.status, updated_at = excluded.updated_at
-     WHERE node_text_alternatives.status = 'available'
-       OR node_text_alternatives.status = excluded.status`,
-    [record.object_id, nodeId, text(payload.source_version_id) ?? '',
-      text(payload.body_text) ?? '', sourceHostName,
-      text(payload.created_at) ?? record.updated_at, status, record.updated_at]
-  );
 }
 
 async function applyExternalDocumentObject(port: DbPort, record: SyncObjectRecord) {

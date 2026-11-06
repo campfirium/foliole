@@ -27,7 +27,7 @@ async function legacyHost() {
   await host.receive([textBranch('base', main)]);
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) host.sqlite.exec(sql);
   const now = new Date().toISOString();
-  const insert = host.sqlite.prepare(`INSERT INTO node_text_alternatives VALUES
+  const insert = host.sqlite.prepare(`INSERT INTO node_text_alternatives (alternative_id,node_id,source_version_id,body_text,source_host_name,created_at,status,updated_at) VALUES
     (?, 'topic', ? || '-version', ?, ?, ?, 'available', ?)`);
   insert.run('retained', 'retained', alternative, 'original-host', now, now);
   insert.run('duplicate', 'duplicate', alternative, 'later-host', now, new Date(Date.now() + 1000).toISOString());
@@ -117,7 +117,7 @@ it.each([false, true])('keeps the newest three alternatives and leaves unrelated
     snapshot: { ...textBranch('unrelated-base', 'Unrelated body').snapshot, id: 'unrelated' }
   }]);
   const unrelated = host.sqlite.prepare("SELECT * FROM node_sync_versions WHERE object_id = 'unrelated'").all();
-  const insert = host.sqlite.prepare(`INSERT INTO node_text_alternatives VALUES
+  const insert = host.sqlite.prepare(`INSERT INTO node_text_alternatives (alternative_id,node_id,source_version_id,body_text,source_host_name,created_at,status,updated_at) VALUES
     (?, 'topic', ?, ?, ?, ?, 'available', ?)`);
   const now = new Date().toISOString();
   for (let index = 0; index < 4; index += 1) {

@@ -8,6 +8,7 @@ import type { CanonicalFact, CanonicalValue } from './framedSyncCanonicalManifes
 import { assertFramedExternalDocumentBody, selectFramedExternalDocumentBody } from './framedSyncExternalDocumentBody.js';
 import { framedSyncObjectStateFactId, FRAMED_SYNC_STATE_OBJECT_TYPES, isFramedSyncSharedStateObject } from './framedSyncObjectStateInventory.js';
 import { readFramedSyncObjectPayload } from './framedSyncObjectStatePayload.js';
+import { assertTopicAlternativeBody, projectTopicAlternativeBody } from './framedTopicAlternativeBody.js';
 import { loadSyncGroupOverwriteProgress } from './syncGroupOverwriteProgress.js';
 import { applySyncObjectInTransaction, type ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
 
@@ -27,10 +28,12 @@ export async function selectFramedSyncObjectStateFact(
   const [state] = await db.query<StateRow>(`SELECT content_hash, current_version_id, deleted_at, updated_at
     FROM sync_object_state WHERE object_type = ? AND object_id = ?`, [key.objectType, key.globalId]);
   if (!state || factId !== framedSyncObjectStateFactId(key.objectType, state.content_hash)) throw new Error('framed_sync_source_changed');
-  const payload = state.deleted_at ? null : await readFramedSyncObjectPayload(db, key);
+  let payload = state.deleted_at ? null : await readFramedSyncObjectPayload(db, key);
   if (!state.deleted_at && !payload) throw new Error('framed_sync_source_changed');
-  const blobs = key.objectType === 'external_document'
-    ? await selectFramedExternalDocumentBody(db, payload) : [];
+  const alternative = key.objectType === 'node_text_alternative' ? projectTopicAlternativeBody(payload) : null;
+  if (alternative) payload = alternative.payload;
+  const blobs = alternative?.blobs ?? (key.objectType === 'external_document'
+    ? await selectFramedExternalDocumentBody(db, payload) : []);
   return { blobs, body: [
     { name: 'content_hash', value: nullable(state.content_hash) },
     { name: 'current_version_id', value: nullable(state.current_version_id) },
@@ -59,7 +62,8 @@ export function restoreFramedSyncObjectStateFact(fact: CanonicalFact): NativeSyn
   const currentVersionId = string('current_version_id');
   const deletedAt = string('deleted_at');
   const payload = string('payload_json');
-  assertFramedExternalDocumentBody(fact, payload);
+  if (objectType === 'node_text_alternative') assertTopicAlternativeBody(fact, payload);
+  else assertFramedExternalDocumentBody(fact, payload);
   if (fact.factId !== framedSyncObjectStateFactId(objectType, contentHash) || bytesToHex(fact.sharedStateHash) !== contentHash ||
       (!deletedAt && payload === null)) throw new Error('framed_sync_object_state_fact_invalid');
   return { object_type: objectType, object_id: fact.globalId, content_hash: contentHash,

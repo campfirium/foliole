@@ -12,6 +12,7 @@ export type SyncObjectType =
   | 'import_source'
   | 'node'
   | 'parent_child_order'
+  | 'node_text_alternative'
   | 'node_open_state'
   | 'node_reading'
   | 'node_review'

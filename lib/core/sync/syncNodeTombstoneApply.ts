@@ -1,8 +1,10 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
+
 import type { DbPort, DbRow } from './dbPort.js';
 import { enqueueAppliedNodeDeleteSearchInvalidation } from './syncNodeSearchInvalidations.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
+import { deleteTopicAlternative } from './topicAlternativeApply.js';
 import { serializeTopicTextSnapshot } from './topicTextBodies.js';
 
 interface NodeTombstoneRow extends DbRow {
@@ -22,9 +24,12 @@ export async function loadNodeSyncTombstone(port: DbPort, nodeId: string) {
   return rows[0] ?? null;
 }
 
-async function deleteLocalNodeRows(port: DbPort, nodeId: string) {
+async function deleteLocalNodeRows(port: DbPort, nodeId: string, deletedAt: string) {
   const [child] = await port.query<{ id: string }>('SELECT id FROM nodes WHERE parent_id = ? ORDER BY id LIMIT 1', [nodeId]);
   if (child) throw new Error(`framed_sync_node_delete_child_pending:${child.id}`);
+  for (const row of await port.query<{ alternative_id: string }>('SELECT alternative_id FROM node_text_alternatives WHERE node_id = ?', [nodeId])) {
+    await deleteTopicAlternative(port, row.alternative_id, deletedAt, undefined, nodeId);
+  }
   await port.run('DELETE FROM review_log WHERE node_id = ?', [nodeId]);
   await port.run('DELETE FROM node_review WHERE node_id = ?', [nodeId]);
   await port.run('DELETE FROM node_reading WHERE node_id = ?', [nodeId]);
@@ -73,7 +78,7 @@ export async function applyRemoteNodeTombstone(
       createdAt
     ]
   );
-  await deleteLocalNodeRows(port, record.object_id);
+  await deleteLocalNodeRows(port, record.object_id, record.snapshot.deleted_at);
   await upsertAppliedNodeSyncState(port, record);
   if (enqueueSearchInvalidations) {
     await enqueueAppliedNodeDeleteSearchInvalidation(port, record.object_id, createdAt);

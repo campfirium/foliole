@@ -1,19 +1,4 @@
 export const ANDROID_COMPANION_CONVERGENCE_QUERY_DEFINITIONS = {
-  nodeTextAlternativeAvailable: {
-    resultKey: 'rows',
-    sql:
-      'SELECT alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at ' +
-      "FROM node_text_alternatives WHERE node_id = ? AND status = 'available' " +
-      'ORDER BY updated_at DESC, alternative_id ASC LIMIT 1',
-    columns: alternativeColumns()
-  },
-  nodeTextAlternativeById: {
-    resultKey: 'rows',
-    sql:
-      'SELECT alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at ' +
-      'FROM node_text_alternatives WHERE alternative_id = ? LIMIT 1',
-    columns: alternativeColumns()
-  },
   nodeExistsById: {
     resultKey: 'rows',
     sql: 'SELECT id FROM nodes WHERE id = ? LIMIT 1',
@@ -38,19 +23,6 @@ export const ANDROID_COMPANION_CONVERGENCE_QUERY_DEFINITIONS = {
     ]
   }
 };
-
-function alternativeColumns() {
-  return [
-    { key: 'alternative_id', source: 'alternative_id', type: 'string' },
-    { key: 'node_id', source: 'node_id', type: 'string' },
-    { key: 'source_version_id', source: 'source_version_id', type: 'string' },
-    { key: 'body_text', source: 'body_text', type: 'string' },
-    { key: 'source_host_name', source: 'source_host_name', type: 'string' },
-    { key: 'created_at', source: 'created_at', type: 'string' },
-    { key: 'status', source: 'status', type: 'string' },
-    { key: 'updated_at', source: 'updated_at', type: 'string' }
-  ] as const;
-}
 
 function nodeRekeyColumns() {
   const longs = new Set([

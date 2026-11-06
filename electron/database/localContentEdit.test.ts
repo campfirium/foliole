@@ -81,10 +81,7 @@ it('retains complete delayed edits using their real parent and preserves both br
   expect(result.current.body_text).toBe('Apples\nBread\nMilk and coffee\n');
   expect(result.current.parent_version_ids).toEqual([remote, 'ver_local-edit'].sort());
   const sqlite = openDatabaseConnection().sqlite;
-  expect(sqlite.prepare(`SELECT json_extract(body.value, '$.text') AS body_text FROM nodes n
-    JOIN node_sync_versions version ON version.version_id = n.current_version_id,
-    json_each(version.snapshot_json, '$.text_alternative_bodies') body
-    WHERE n.id = 'node-1'`).all())
+  expect(sqlite.prepare("SELECT body_text FROM node_text_alternatives WHERE node_id='node-1' AND status='available'").all())
     .toEqual([{ body_text: 'Apples and tea\nBread\nMilk\n' }]);
   const originalGraph = () => sqlite.prepare(`SELECT version_id, object_id, parent_version_id,
     host_name, created_at, content_hash,
@@ -129,10 +126,8 @@ it('retains an overlapping edit using the existing alternative policy', async ()
     { holdId: 'draft', nodeId: 'node-1', versionId: base });
   upsertVersionedNodeSnapshot(nodeInput('Remote replacement text', '2026-07-25T04:35:00.000Z'));
   const result = await edit(base, 'Local replacement');
-  const alternatives = openDatabaseConnection().sqlite.prepare(`SELECT json_extract(body.value, '$.text') AS body_text
-    FROM nodes n JOIN node_sync_versions version ON version.version_id = n.current_version_id,
-    json_each(version.snapshot_json, '$.text_alternative_bodies') body
-    WHERE n.id = 'node-1'`).all();
+  const alternatives = openDatabaseConnection().sqlite.prepare(
+    "SELECT body_text FROM node_text_alternatives WHERE node_id='node-1' AND status='available'").all();
   expect([result.current.body_text, ...alternatives.map((row) => (row as { body_text: string }).body_text)].sort())
     .toEqual(['Local replacement', 'Remote replacement text'].sort());
 });

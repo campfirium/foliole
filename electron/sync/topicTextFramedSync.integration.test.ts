@@ -11,7 +11,7 @@ import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js'
 import { mutateTopicText } from '../../lib/core/sync/topicTextMutation.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { textBranch, wholeBodies } from '../database/topicTextState.testSupport.js';
+import { textBranch } from '../database/topicTextState.testSupport.js';
 
 import { reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
@@ -42,11 +42,11 @@ it('converges forks and an adopted attachment over authenticated production HTTP
     const left = await read(fixture.leftSnapshot.databasePath);
     const right = await read(fixture.rightSnapshot.databasePath);
     expect(left.version_id).toBe(right.version_id);
-    expect(wholeBodies(left)).toEqual(new Set([a.body_text, b.body_text]));
+    expect(await bodies(fixture.leftSnapshot.databasePath)).toEqual(new Set([a.body_text, b.body_text]));
     const db = new Database(fixture.leftSnapshot.databasePath);
     try {
       await mutateTopicText(createBetterSqliteDbPort(db), { nodeId: 'topic', action: 'promoted',
-        alternativeId: left.snapshot.text_alternatives![0]!.id, now: new Date().toISOString(),
+        alternativeId: (db.prepare("SELECT alternative_id FROM node_text_alternatives WHERE status='available'").get() as { alternative_id: string }).alternative_id, now: new Date().toISOString(),
         versionId: 'adopt', hostName: 'desktop-a' });
     } finally { db.close(); }
     await fixture.restartLeft();
@@ -57,7 +57,7 @@ it('converges forks and an adopted attachment over authenticated production HTTP
     const adoptedRight = await read(target.databasePath);
     expect(adoptedLeft.version_id).toBe(adoptedRight.version_id);
     expect(adoptedRight.body_text).toBe(b.body_text);
-    expect(adoptedRight.snapshot.text_alternatives).toEqual([]);
+    expect(await bodies(target.databasePath)).toEqual(new Set([b.body_text]));
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });
@@ -109,7 +109,7 @@ it('preserves both body forks and their highlight and cloze anchors while order 
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
     expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true });
     const before = await read(fixture.leftSnapshot.databasePath);
-    expect(wholeBodies(before)).toEqual(new Set([a.body_text, b.body_text]));
+    expect(await bodies(fixture.leftSnapshot.databasePath)).toEqual(new Set([a.body_text, b.body_text]));
     const expected = [cloze, highlight].map(record => ({ id: record.object_id, parent_id: 'topic',
       anchor_link: record.snapshot.anchor_link, anchor_source_version_id: before.version_id }));
     expect(children(fixture.leftSnapshot.databasePath)).toEqual(expected);
@@ -130,3 +130,11 @@ it('preserves both body forks and their highlight and cloze anchors while order 
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
 });
+
+async function bodies(databasePath: string) {
+  const db = new Database(databasePath);
+  try {
+    const current = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(db), 'topic');
+    return new Set([current?.body_text, ...db.prepare("SELECT body_text FROM node_text_alternatives WHERE node_id='topic' AND status='available'").pluck().all()]);
+  } finally { db.close(); }
+}

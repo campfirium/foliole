@@ -21,7 +21,10 @@ import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js'
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { resolveNodeBody } from '../../lib/core/database/nodeBodyResolution.js';
 import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
+import { loadTopicTextStateWithDriver } from '../../lib/core/database/topicTextStateWithDriver.js';
+import { writeTopicAlternative } from '../../lib/core/sync/topicAlternativeStore.js';
 
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import {
@@ -41,7 +44,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-node-text-alternative-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
-  seedAlternative();
+  await seedAlternative();
 });
 
 afterEach(async () => {
@@ -73,7 +76,7 @@ it('promotes the alternate body through a new formal child version', async () =>
     count: number;
     sync_dirty: number;
   }>(
-    `SELECT ${buildNodeBodyContentSql('n')} AS content, n.current_version_id, v.parent_version_id, json_array_length(v.snapshot_json, '$.text_alternatives') AS count, s.sync_dirty
+    `SELECT ${buildNodeBodyContentSql('n')} AS content, n.current_version_id, v.parent_version_id, (SELECT COUNT(*) FROM node_text_alternatives a WHERE a.node_id=n.id AND a.status='available') AS count, s.sync_dirty
      FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash JOIN node_sync_versions v ON v.version_id = n.current_version_id
      JOIN sync_object_state s ON s.object_type = 'node' AND s.object_id = n.id
      WHERE n.id = 'topic-1'`
@@ -106,19 +109,16 @@ it('promotes the alternate body through a new formal child version', async () =>
 
 it('inherits alternative membership and expiry through a normal desktop edit', () => {
   const driver = openDatabaseConnection().driver;
-  const before = driver.queryOne<{ snapshot_json: string }>(
-    "SELECT snapshot_json FROM node_sync_versions WHERE version_id = 'desktop#1'"
-  );
-  const references = JSON.parse(before!.snapshot_json).text_alternatives;
+  const references = loadTopicTextStateWithDriver(driver, 'topic-1');
   driver.execute("UPDATE nodes SET content = 'Edited main', sync_dirty = 1 WHERE id = 'topic-1'");
   const next = flushNodeSyncVersionWithDriver(driver, 'topic-1', 'desktop');
   const row = driver.queryOne<{ snapshot_json: string; parent_version_id: string; body_text: string }>(
     'SELECT snapshot_json, parent_version_id, body_text FROM node_sync_versions WHERE version_id = ?', [next]
   );
   expect(row).toMatchObject({ body_text: 'Edited main', parent_version_id: 'desktop#1' });
-  expect(JSON.parse(row!.snapshot_json).text_alternatives).toEqual(references);
-  expect(JSON.parse(row!.snapshot_json).text_alternative_bodies).toEqual(
-    JSON.parse(before!.snapshot_json).text_alternative_bodies);
+  expect(loadTopicTextStateWithDriver(driver, 'topic-1')).toEqual(references);
+  expect(JSON.parse(row!.snapshot_json).text_alternatives ?? []).toEqual([]);
+  expect(JSON.parse(row!.snapshot_json).text_alternative_bodies ?? []).toEqual([]);
 });
 
 it('previews owned current and alternative text after the shared copy is removed', async () => {
@@ -131,14 +131,11 @@ it('previews owned current and alternative text after the shared copy is removed
   expect(await loadNodeTextAlternativePreview('topic-1')).toMatchObject({ current_content: 'Blob current body', updated_content: 'Other body' });
 });
 
-function seedAlternative() {
+async function seedAlternative() {
   const driver = openDatabaseConnection().driver;
   const now = new Date().toISOString();
   const otherHash = upsertTextBodyBlob(driver, 'Other body', now);
   const snapshot = JSON.stringify({
-    text_alternative_bodies: [{ hash: otherHash, text: 'Other body' }],
-    text_alternatives: [{ id: 'alternative-1', body_blob_hash: otherHash, source_host_name: 'android-device',
-      created_at: now, expires_at: new Date(Date.now() + 30 * 86400000).toISOString() }],
     anchor_link: null, attachments: [], content: 'Current body', created_at: '2026-07-25T00:00:00.000Z',
     deleted_at: null, desired_retention: null, hide_title_heading: false, id: 'topic-1', image_regions: null,
     is_title_manual: false, kind: 'topic', opening_text: null, parent_id: null, position: null, priority: null,
@@ -160,11 +157,17 @@ function seedAlternative() {
        (object_type, object_id, state_seq, current_version_id, content_hash, last_modified_by_host_name, updated_at, sync_dirty)
      VALUES ('node', 'topic-1', 1, 'desktop#1', 'current-hash', 'desktop', ?, 0)`, [now]
   );
+  await writeTopicAlternative(createBetterSqliteDbPort(openDatabaseConnection().sqlite), {
+    alternative_id: 'alternative-1', node_id: 'topic-1', source_version_id: '', body_text: 'Other body',
+    body_blob_hash: otherHash, source_host_name: 'android-device', created_at: now,
+    expires_at: new Date(Date.now() + 30 * 86400000).toISOString(), updated_at: now,
+    status: 'available', resource_references: '[]', image_sources: null
+  }, true);
 }
 
 function state() {
   return openDatabaseConnection().driver.queryOne<{ content: string; count: number; sync_dirty: number }>(
-    `SELECT n.content, json_array_length(v.snapshot_json, '$.text_alternatives') AS count, s.sync_dirty
+    `SELECT n.content, (SELECT COUNT(*) FROM node_text_alternatives a WHERE a.node_id=n.id AND a.status='available') AS count, MAX(s.sync_dirty, COALESCE((SELECT MAX(child.sync_dirty) FROM sync_object_state child JOIN sync_node_child_owners owner ON child.object_type=owner.object_type AND child.object_id=owner.object_id WHERE owner.node_id=n.id AND child.object_type='node_text_alternative'),0)) AS sync_dirty
      FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id
      JOIN sync_object_state s ON s.object_type = 'node' AND s.object_id = n.id WHERE n.id = 'topic-1'`
   );
@@ -196,7 +199,8 @@ it.each([dismissNodeTextAlternative, promoteNodeTextAlternative])('isolates wron
   expect(await mutate('topic-1', 'stale')).toMatchObject({ status: 'unavailable', node_id: null });
   expect(sqlite.serialize()).toEqual(before);
   sqlite.exec(`CREATE TRIGGER reject_selection BEFORE UPDATE OF current_version_id ON nodes
-    BEGIN SELECT RAISE(ABORT, 'selection_failed'); END`);
+    BEGIN SELECT RAISE(ABORT, 'selection_failed'); END;
+    CREATE TRIGGER reject_choice BEFORE UPDATE ON node_text_alternatives BEGIN SELECT RAISE(ABORT, 'selection_failed'); END`);
   const withTrigger = sqlite.serialize();
   await expect(mutate('topic-1', 'alternative-1')).rejects.toThrow('selection_failed');
   expect(sqlite.serialize()).toEqual(withTrigger);
@@ -208,7 +212,7 @@ it.each([dismissNodeTextAlternative, promoteNodeTextAlternative])('rejects delet
   let before = sqlite.serialize();
   expect(await mutate('topic-1', 'alternative-1')).toMatchObject({ status: 'unavailable' });
   expect(sqlite.serialize()).toEqual(before);
-  sqlite.exec("UPDATE nodes SET deleted_at = NULL WHERE id = 'topic-1'; UPDATE node_sync_versions SET snapshot_json = json_set(snapshot_json, '$.text_alternatives[0].expires_at', '2026-01-01T00:00:00.000Z')");
+  sqlite.exec("UPDATE nodes SET deleted_at = NULL WHERE id = 'topic-1'; UPDATE node_text_alternatives SET expires_at = '2026-01-01T00:00:00.000Z'");
   before = sqlite.serialize();
   expect(await mutate('topic-1', 'alternative-1')).toMatchObject({ status: 'unavailable' });
   expect(sqlite.serialize()).toEqual(before);

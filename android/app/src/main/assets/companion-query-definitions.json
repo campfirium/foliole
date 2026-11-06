@@ -1,97 +1,5 @@
 {
   "queries": {
-    "nodeTextAlternativeAvailable": {
-      "resultKey": "rows",
-      "sql": "SELECT alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at FROM node_text_alternatives WHERE node_id = ? AND status = 'available' ORDER BY updated_at DESC, alternative_id ASC LIMIT 1",
-      "columns": [
-        {
-          "key": "alternative_id",
-          "source": "alternative_id",
-          "type": "string"
-        },
-        {
-          "key": "node_id",
-          "source": "node_id",
-          "type": "string"
-        },
-        {
-          "key": "source_version_id",
-          "source": "source_version_id",
-          "type": "string"
-        },
-        {
-          "key": "body_text",
-          "source": "body_text",
-          "type": "string"
-        },
-        {
-          "key": "source_host_name",
-          "source": "source_host_name",
-          "type": "string"
-        },
-        {
-          "key": "created_at",
-          "source": "created_at",
-          "type": "string"
-        },
-        {
-          "key": "status",
-          "source": "status",
-          "type": "string"
-        },
-        {
-          "key": "updated_at",
-          "source": "updated_at",
-          "type": "string"
-        }
-      ]
-    },
-    "nodeTextAlternativeById": {
-      "resultKey": "rows",
-      "sql": "SELECT alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at FROM node_text_alternatives WHERE alternative_id = ? LIMIT 1",
-      "columns": [
-        {
-          "key": "alternative_id",
-          "source": "alternative_id",
-          "type": "string"
-        },
-        {
-          "key": "node_id",
-          "source": "node_id",
-          "type": "string"
-        },
-        {
-          "key": "source_version_id",
-          "source": "source_version_id",
-          "type": "string"
-        },
-        {
-          "key": "body_text",
-          "source": "body_text",
-          "type": "string"
-        },
-        {
-          "key": "source_host_name",
-          "source": "source_host_name",
-          "type": "string"
-        },
-        {
-          "key": "created_at",
-          "source": "created_at",
-          "type": "string"
-        },
-        {
-          "key": "status",
-          "source": "status",
-          "type": "string"
-        },
-        {
-          "key": "updated_at",
-          "source": "updated_at",
-          "type": "string"
-        }
-      ]
-    },
     "nodeExistsById": {
       "resultKey": "rows",
       "sql": "SELECT id FROM nodes WHERE id = ? LIMIT 1",
@@ -1627,54 +1535,11 @@
       "sql": "SELECT json_object('node_id', node_id, 'last_opened_at', last_opened_at) AS payload_json FROM node_open_state WHERE node_id = ? LIMIT 1"
     },
     "syncPayloadNodeTextAlternative": {
-      "columns": [
-        {
-          "key": "alternative_id",
-          "source": "alternative_id",
-          "type": "string"
-        },
-        {
-          "key": "node_id",
-          "source": "node_id",
-          "type": "string"
-        },
-        {
-          "key": "source_version_id",
-          "source": "source_version_id",
-          "type": "string"
-        },
-        {
-          "key": "body_text",
-          "source": "body_text",
-          "type": "string"
-        },
-        {
-          "key": "source_host_name",
-          "source": "source_host_name",
-          "type": "string"
-        },
-        {
-          "key": "created_at",
-          "source": "created_at",
-          "type": "string"
-        },
-        {
-          "key": "status",
-          "source": "status",
-          "type": "string"
-        },
-        {
-          "key": "updated_at",
-          "source": "updated_at",
-          "type": "string"
-        }
-      ],
-      "resultKey": "payloads",
       "syncPayload": {
         "argMode": "object_id",
         "objectType": "node_text_alternative"
       },
-      "sql": "SELECT alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at FROM node_text_alternatives WHERE alternative_id = ? LIMIT 1"
+      "sql": "SELECT json_object(\n  'alternative_id', alternative_id, 'node_id', node_id, 'source_version_id', source_version_id,\n  'body_text', body_text, 'body_blob_hash', body_blob_hash, 'source_host_name', source_host_name,\n  'created_at', created_at, 'expires_at', expires_at, 'resource_references', resource_references,\n  'image_sources', image_sources, 'status', status, 'updated_at', updated_at\n) AS payload_json FROM node_text_alternatives WHERE alternative_id = ?"
     },
     "syncPayloadForegroundSource": {
       "syncPayload": {

@@ -10,6 +10,7 @@ import type * as Inventory from '../../lib/core/sync/framedSyncInventoryRead.js'
 import type * as Edit from '../../lib/core/sync/localContentEdit.js';
 import type * as Apply from '../../lib/core/sync/requestSyncObjectApply.js';
 import type * as Snapshot from '../../lib/core/sync/requestSyncSnapshot.js';
+import type * as Convergence from '../../lib/core/sync/syncNodeConvergence.js';
 import type * as Protocol from '../../lib/platform/syncProtocolContract.js';
 
 /** The actually installed pre-retirement revision, compiled as a test fixture with its own imports. */
@@ -20,7 +21,7 @@ export async function legacyHistoryRuntime() {
   const archive = execFileSync('git', ['archive', revision, 'lib'], { maxBuffer: 40 * 1024 * 1024 });
   execFileSync('tar', ['-xf', '-', '-C', root], { input: archive });
   const entry = ['database/migrations', 'sync/framedSyncInventoryRead',
-    'sync/requestSyncObjectApply', 'sync/requestSyncSnapshot', 'sync/localContentEdit']
+    'sync/requestSyncObjectApply', 'sync/requestSyncSnapshot', 'sync/localContentEdit', 'sync/syncNodeConvergence']
     .map(file => `export * from './lib/core/${file}.ts';`).join('\n') +
     "\nexport * from './lib/platform/syncProtocolContract.ts';";
   const outfile = path.join(root, 'runtime.mjs');
@@ -29,7 +30,7 @@ export async function legacyHistoryRuntime() {
   await build({ configFile: false, logLevel: 'silent', build: { outDir: root, emptyOutDir: false,
     lib: { entry: input, formats: ['es'], fileName: () => 'runtime.mjs' },
     rolldownOptions: { external: id => !id.startsWith('.') && !path.isAbsolute(id) } } });
-  const runtime: Pick<typeof Migrations, 'initializeDatabaseSchema'> &
+  const runtime: Pick<typeof Convergence, 'applyConvergentSyncNodesWithDbPort'> & Pick<typeof Migrations, 'initializeDatabaseSchema'> &
     Pick<typeof Inventory, 'readFramedSyncInventory' | 'readFramedSyncInventoryEntry'> &
     Pick<typeof Apply, 'applyRequestSyncObject'> & Pick<typeof Snapshot, 'writeRequestSyncSnapshot'> &
     Pick<typeof Edit, 'applyLocalContentEdit'> &

@@ -51,7 +51,7 @@ export function planTopicBodyRetention(versions: TopicBodyVersion[], edges: Chai
   if (!lineageAncestors(graph)) return invalid();
   const ancestors = new Set(edges.map(edge => edge.parent_version_id));
   const keep = new Set([currentId, ...versions.filter(row => !ancestors.has(row.version_id)).map(row => row.version_id)]);
-  preserveBaselineAlternatives(versions, keep, editBases);
+  preserveHistoryBodies(versions, keep, editBases);
   const unavailable = versions.some(row => keep.has(row.version_id) && (row.body_available === 0 ||
     hashes.parse(JSON.parse(row.alternative_hashes_json)).some(hash =>
       !hashes.parse(JSON.parse(row.alternative_body_hashes_json)).includes(hash))));
@@ -60,15 +60,11 @@ export function planTopicBodyRetention(versions: TopicBodyVersion[], edges: Chai
   skipped: unavailable ? 'protected_body_unavailable' as const : null };
 }
 
-function preserveBaselineAlternatives(versions: TopicBodyVersion[], keep: Set<string>,
+function preserveHistoryBodies(versions: TopicBodyVersion[], keep: Set<string>,
   editBases: readonly { version_id: string; keep_body?: number }[]) {
-  const carried = new Set(versions.filter(row => keep.has(row.version_id)).flatMap(row =>
-    hashes.parse(JSON.parse(row.alternative_body_hashes_json))));
   for (const base of editBases) {
-    const row = versions.find(row => row.version_id === base.version_id);
-    if (row && base.keep_body === 1) keep.add(row.version_id);
-    if (row && hashes.parse(JSON.parse(row.effective_alternative_hashes_json)).some(hash => !carried.has(hash))) {
-      keep.add(row.version_id);
+    if (base.keep_body === 1 && versions.some(row => row.version_id === base.version_id)) {
+      keep.add(base.version_id);
     }
   }
 }

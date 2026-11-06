@@ -4,10 +4,11 @@ import { loadFramedExternalDocumentBody } from './framedSyncExternalDocumentBody
 import { revalidateFramedSyncInventorySource, requiredFramedSyncNodeVersionIds,
   type FramedSyncInventoryDifference } from './framedSyncInventory.js';
 import { readFramedSyncInventoryEntry } from './framedSyncInventoryRead.js';
-import { selectFramedSyncNodeChildFact } from './framedSyncNodeChildFact.js';
+import { parseFramedSyncNodeChildIdentity, selectFramedSyncNodeChildFact } from './framedSyncNodeChildFact.js';
 import { projectFramedSyncNodeIdentityFact, projectFramedSyncNodeRecord } from './framedSyncNodeProjection.js';
 import { selectFramedSyncObjectStateFact } from './framedSyncObjectStateFact.js';
 import { selectFramedSyncRelationReviewFactsWithDbPort } from './framedSyncRelationReviewSelection.js';
+import { loadTopicAlternativeBody } from './framedTopicAlternativeBody.js';
 import type { RequestSyncFiles } from './requestSyncFiles.js';
 import { selectRequestSyncNodeSource } from './requestSyncSelection.js';
 import { assertSyncGroupLocalPublicationAllowed } from './syncGroupLocalAdoption.js';
@@ -35,7 +36,10 @@ async function writeNodes(db: DbPort, difference: FramedSyncInventoryDifference,
   if (related.kind === 'deferred') throw new Error('framed_sync_source_changed');
   for (const fact of related.facts) await files.writeFact(fact);
   for (const id of difference.need.stateFactIds ?? []) {
-    await files.writeFact(await selectFramedSyncNodeChildFact(db, difference.globalId, id));
+    const fact = await selectFramedSyncNodeChildFact(db, difference.globalId, id);
+    for (const blob of fact.blobs) await files.writeBody(blob,
+      await loadTopicAlternativeBody(db, parseFramedSyncNodeChildIdentity(id).globalId, blob));
+    await files.writeFact(fact);
   }
 }
 
@@ -63,8 +67,12 @@ export async function writeRequestSyncSnapshot(db: DbPort, difference: FramedSyn
   for (const id of difference.need.stateFactIds?.length ? difference.need.stateFactIds : entry.stateFactIds ?? []) {
     const fact = await selectFramedSyncObjectStateFact(db, difference, id);
     for (const blob of fact.blobs) {
-      if (blob.role !== 5) throw new Error('request_sync_body_role_invalid');
-      await files.writeBody(blob, await loadFramedExternalDocumentBody(db, fact.globalId, blob));
+      if (fact.objectType === 'node_text_alternative') {
+        await files.writeBody(blob, await loadTopicAlternativeBody(db, fact.globalId, blob));
+      } else {
+        if (blob.role !== 5) throw new Error('request_sync_body_role_invalid');
+        await files.writeBody(blob, await loadFramedExternalDocumentBody(db, fact.globalId, blob));
+      }
     }
     await files.writeFact(fact);
   }

@@ -2,6 +2,7 @@
 import { afterEach, expect, it } from 'vitest';
 
 import { textBranch, textDevice } from '../../../electron/database/topicTextState.testSupport.js';
+import { migrateCompanionIndependentTopicAlternatives } from '../database/independentTopicAlternativesMigration.js';
 import { hashTextBody } from '../database/textBodyHash.js';
 
 import { applyLocalContentEdit } from './localContentEdit.js';
@@ -44,36 +45,37 @@ it('rejects deletion of a noncurrent live branch, then retires it after a comple
   expect((await loadRetainedSyncNodeVersionFact(host.db, 'branch'))!.snapshot.body_deleted).toBe(true);
 });
 
-it('retains a baseline alternative unique holder until its editor releases it', async () => {
+it('keeps explicitly requested historical bodies until the history reader releases them', async () => {
   const { host, base } = await history(true);
-  await retainLocalEditBase(host.db, { holdId: 'editor', nodeId: 'topic', versionId: 'base' });
+  await retainLocalEditBase(host.db, { holdId: 'editor_history_body:reader', nodeId: 'topic', versionId: 'base' });
   await upsertRemoteVersion(host.db, deleted(base));
   await collectNodeVersionPayloads(host.db, 'topic');
   expect((await loadRetainedSyncNodeVersionFact(host.db, 'base'))!.alternative_bodies)
     .toEqual(base.alternative_bodies);
-  await releaseLocalEditBase(host.db, 'editor', 'topic');
+  await releaseLocalEditBase(host.db, 'editor_history_body:reader', 'topic');
   expect((await loadRetainedSyncNodeVersionFact(host.db, 'base'))!.snapshot.body_deleted).toBe(true);
 });
 
-it('rejects adopting a retired baseline whose live alternatives are no longer available', async () => {
+it('allows an editor baseline after its obsolete embedded alternatives have been retired', async () => {
   const { host } = await history(true);
   await collectNodeVersionPayloads(host.db, 'topic');
   expect((await loadRetainedSyncNodeVersionFact(host.db, 'base'))!.snapshot.body_deleted).toBe(true);
   await expect(retainLocalEditBase(host.db, { holdId: 'late-editor', nodeId: 'topic', versionId: 'base' }))
-    .rejects.toThrow('content_edit_base_alternatives_unavailable');
-  expect(host.sqlite.prepare('SELECT count(*) FROM node_version_local_holds').pluck().get()).toBe(0);
+    .resolves.toBeUndefined();
+  expect(host.sqlite.prepare('SELECT count(*) FROM node_version_local_holds').pluck().get()).toBe(1);
   expect((await host.current()).body_text).toBe('Current');
 });
 
-it('keeps inherited alternatives when complete editor input uses a retired baseline', async () => {
-  const { host, base } = await history(true, true);
+it('keeps independently owned alternatives when complete editor input uses a retired baseline', async () => {
+  const { host } = await history(true, true);
+  await host.db.transaction(tx => migrateCompanionIndependentTopicAlternatives(tx));
   await retainLocalEditBase(host.db, { holdId: 'editor', nodeId: 'topic', versionId: 'base' });
   await collectNodeVersionPayloads(host.db, 'topic');
   expect((await loadRetainedSyncNodeVersionFact(host.db, 'base'))!.body_text).toBeNull();
   await applyLocalContentEdit(host.db, { nodeId: 'topic', baseVersionId: 'base', versionId: 'edit',
     content: 'Complete new input', title: 'Topic', hideTitleHeading: false, hostName: 'editor',
     updatedAt: new Date().toISOString() });
-  expect((await host.current()).alternative_bodies).toEqual(expect.arrayContaining(base.alternative_bodies!));
+  expect(await host.wholeBodies()).toContain('Alternative');
 });
 
 it.each(['missing identity', 'wrong owner'])('keeps the current text when an ancestor is absent from this node: %s', async fault => {
@@ -113,7 +115,8 @@ it.each(['folder', 'item'])('preserves all %s historical bodies', async kind => 
 });
 
 it('continues sequential saved input with its alternatives before the editor advances its hold', async () => {
-  const { host, base } = await history(true, true);
+  const { host } = await history(true, true);
+  await host.db.transaction(tx => migrateCompanionIndependentTopicAlternatives(tx));
   await retainLocalEditBase(host.db, { holdId: 'editor', nodeId: 'topic', versionId: 'head' });
   for (const [baseVersionId, versionId] of [['head', 'first'], ['first', 'second']]) {
     await applyLocalContentEdit(host.db, { nodeId: 'topic', baseVersionId: baseVersionId!, versionId: versionId!,
@@ -124,13 +127,11 @@ it('continues sequential saved input with its alternatives before the editor adv
   delete remote.alternative_bodies;
   await host.receive([remote]);
   await collectNodeVersionPayloads(host.db, 'topic');
-  expect((await loadRetainedSyncNodeVersionFact(host.db, 'second'))!.alternative_bodies)
-    .toEqual(expect.arrayContaining(base.alternative_bodies!));
+  expect(await host.wholeBodies()).toContain('Alternative');
+  expect((await loadRetainedSyncNodeVersionFact(host.db, 'second'))!.alternative_bodies ?? []).toEqual([]);
   await applyLocalContentEdit(host.db, { nodeId: 'topic', baseVersionId: 'second', baseContent: 'second',
     versionId: 'third', content: 'Third input', title: 'Topic', hideTitleHeading: false,
     hostName: 'editor', updatedAt: new Date().toISOString() });
   await releaseLocalEditBase(host.db, 'editor', 'topic');
-  const current = await host.current();
-  expect([current.body_text, ...(current.alternative_bodies ?? []).map(body => body.text)].sort())
-    .toEqual(['Remote continued', 'Third input'].sort());
+  expect(await host.wholeBodies()).toEqual(new Set(['Remote continued', 'Third input', 'Alternative']));
 });

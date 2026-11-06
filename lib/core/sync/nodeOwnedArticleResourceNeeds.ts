@@ -65,6 +65,14 @@ export async function loadNodeOwnedArticleResourceNeeds(port: DbPort, articleIds
     }
     for (const key of collectArticleImageStorageKeys(article.content ?? '')) addNeed(needs, key);
   }
+  for (let offset = 0; offset < articleIds.length; offset += ARTICLE_QUERY_IDS) {
+    const choices = await port.query<{ resource_references: string }>(`SELECT resource_references
+      FROM node_text_alternatives WHERE node_id IN (SELECT value FROM json_each(?)) AND status = 'available'`,
+    [JSON.stringify(articleIds.slice(offset, offset + ARTICLE_QUERY_IDS))]);
+    for (const choice of choices) for (const reference of parseNodeResourceReferences(choice.resource_references)) {
+      addNeed(needs, reference.storage_key);
+    }
+  }
   return { needs: [...needs.values()], unreadableArticleIds };
 }
 

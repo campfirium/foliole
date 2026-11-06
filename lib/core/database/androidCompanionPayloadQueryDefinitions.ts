@@ -1,19 +1,9 @@
 import { FOREGROUND_SOURCE_PAYLOAD_SQL } from '../sync/foregroundSource.js';
 
 import { ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS } from './androidCompanionLearningPayloadQueryDefinitions.js';
+import { TOPIC_ALTERNATIVE_PAYLOAD_SQL } from './topicAlternativePayloadSql.js';
 
 export type CompanionNativePlatform = 'android' | 'ios';
-
-const NODE_TEXT_ALTERNATIVE_COLUMNS = [
-  'alternative_id',
-  'node_id',
-  'source_version_id',
-  'body_text',
-  'source_host_name',
-  'created_at',
-  'status',
-  'updated_at'
-].map((key) => ({ key, source: key, type: 'string' }));
 
 export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
   syncPayloadExternalDocument: {
@@ -90,12 +80,8 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       'FROM node_open_state WHERE node_id = ? LIMIT 1'
   },
   syncPayloadNodeTextAlternative: {
-    columns: NODE_TEXT_ALTERNATIVE_COLUMNS,
-    resultKey: 'payloads',
     syncPayload: { argMode: 'object_id', objectType: 'node_text_alternative' },
-    sql:
-      'SELECT alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at ' +
-      'FROM node_text_alternatives WHERE alternative_id = ? LIMIT 1'
+    sql: TOPIC_ALTERNATIVE_PAYLOAD_SQL
   },
   syncPayloadForegroundSource: {
     syncPayload: { argMode: 'object_id', objectType: 'foreground_source' },

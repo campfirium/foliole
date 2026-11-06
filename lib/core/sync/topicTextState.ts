@@ -25,10 +25,6 @@ export function textAlternatives(record: SyncNodeRecordMetadata) {
   return record.snapshot.text_alternatives ?? [];
 }
 
-export function availableTextAlternatives(record: NativeSyncNodeRecord, now: string) {
-  return textAlternatives(record).filter((entry) => entry.expires_at > now);
-}
-
 export function alternativeForBody(record: NativeSyncNodeRecord, formedAt: string): TopicTextAlternative {
   const hash = hashTextBody(record.body_text ?? record.snapshot.content ?? '');
   return alternativeForBodyHash(record, hash, formedAt);

@@ -13,6 +13,7 @@ import { applySyncObjectPayloadWithDbPort } from './syncObjectPayloadExecutor.js
 import { asObject, text } from './syncObjectPayloadValues.js';
 import type { SyncObjectRecord } from './syncObjectRecord.js';
 import { compareReadwiseOwnerEpoch } from './syncReadwiseOwnerOrder.js';
+import { applyTopicAlternativeRecord } from './topicAlternativeApply.js';
 
 
 const REMOTE_DEVICE_ID = 'sync-remote';
@@ -129,6 +130,7 @@ async function applySingleSyncObjectInTransaction(
   record: SyncObjectRecord,
   options: ApplySyncObjectsWithDbPortOptions
 ) {
+  if (record.object_type === 'node_text_alternative') return applyTopicAlternativeRecord(port, record);
   if (record.object_type === 'parent_child_order') {
     const changed = await applyCurrentParentOrderRecord(port, record);
     return changed || options.includeAlreadyApplied ? `parent_child_order:${record.object_id}` : null;

@@ -2,7 +2,7 @@ import protobuf from 'protobufjs';
 import { expect, it, vi } from 'vitest';
 
 import { FRAMED_SYNC_PROTOCOL_VERSION } from './framedSyncContract.js';
-import schema from './generated/framed-sync-v28-schema.json' with { type: 'json' };
+import schema from './generated/framed-sync-v29-schema.json' with { type: 'json' };
 import { respondRequestSyncRoundControl } from './requestSyncPeerRound.js';
 import { prepareRequestSyncWire, readRequestSyncWire } from './requestSyncWire.js';
 

@@ -24,11 +24,11 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     'relayed-node-member-positions-v1',
     'canonical-attachment-storage-key-v1',
     'device-sync-groups-v1',
-    'framed-sync-v28',
+    'framed-sync-v29',
     'local-daily-flow-actions-v1',
     'fsrs7-review-projection-v1',
     'bucket-inventory-v1',
-    'topic-text-attachments-v1',
+    'independent-topic-text-alternatives-v1',
     'group-key-routing-v1',
     'lan-sync-v1',
     'node-tombstone-pack-v1',
@@ -49,9 +49,9 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     'workgroup-aead-v1',
     WORKGROUP_RESTORE_CAPABILITY
   ].sort()),
-  max_supported_version: 34,
-  min_supported_version: 34,
-  version: 34
+  max_supported_version: 35,
+  min_supported_version: 35,
+  version: 35
 } as const satisfies SyncProtocolDescriptor);
 
 export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities;

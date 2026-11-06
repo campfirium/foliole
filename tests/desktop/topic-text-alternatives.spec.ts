@@ -28,21 +28,14 @@ async function seedAlternatives(app: ElectronApplication, page: Page) {
   execFileSync(path.resolve(executable), ['-e', `
     const db = new (require('better-sqlite3'))(process.argv[1]);
     const hash = text => require('node:crypto').createHash('sha256').update(text).digest('hex');
-    const row = db.prepare('SELECT v.* FROM nodes n JOIN node_sync_versions v ON v.version_id=n.current_version_id WHERE n.id=?').get(process.argv[2]);
-    const snapshot = JSON.parse(row.snapshot_json);
     const now = new Date().toISOString();
     const expiry = new Date(Date.now()+30*86400000).toISOString();
-    snapshot.text_alternatives = ['B', 'C'].map(body => {
-      const digest = hash('Alternative body '+body);
-      const bytes = Buffer.from('Alternative body '+body);
-      db.prepare("INSERT INTO content_blobs(hash,storage_key,kind,mime_type,compression,original_size_bytes,stored_size_bytes,original_sha256,stored_sha256,availability,created_at,cached_at,last_verified_at) VALUES (?,?,'text_body','text/plain','none',?,?,?,?, 'local',?,?,?) ON CONFLICT(hash) DO NOTHING").run(digest, 'text/'+digest, bytes.length, bytes.length, digest, digest, now, now, now);
-      db.prepare('INSERT INTO content_blob_data(hash,data) VALUES (?,?) ON CONFLICT(hash) DO NOTHING').run(digest, bytes);
-      return {id:body,body_blob_hash:digest,source_host_name:'Device '+body,created_at:now,expires_at:expiry};
+    ['B', 'C'].forEach((body, index) => {
+      const text = 'Alternative body '+body;
+      db.prepare("INSERT INTO node_text_alternatives (alternative_id,node_id,source_version_id,body_text,source_host_name,created_at,status,updated_at, body_blob_hash,expires_at,resource_references,image_sources) VALUES (?,?,?,?,?,?,'available',?,?,?,'[]',NULL)")
+        .run(body, process.argv[2], 'source-'+body, text, 'Device '+body,
+          new Date(Date.now()-index*1000).toISOString(), now, hash(text), expiry);
     });
-    snapshot.text_alternative_bodies = ['B', 'C'].map(body => ({
-      hash: hash('Alternative body '+body), text: 'Alternative body '+body
-    }));
-    db.prepare('UPDATE node_sync_versions SET snapshot_json=? WHERE version_id=?').run(JSON.stringify(snapshot),row.version_id);
     db.close();
   `, path.join(home, 'Data', 'foliole.db'), NODE_ID], {
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, stdio: 'pipe'
@@ -75,8 +68,8 @@ test('selects, adopts and dismisses individual bodies while closing preserves al
   await dialog.getByRole('button', { name: /Alternative bodies \(2\)|备选正文（2）/ }).click();
   await desktopWindow.getByRole('menuitem', { name: /Device C/ }).click();
   await expect(dialog.locator('.cm-content').last()).toContainText('Alternative body C');
-  mkdirSync('.tmp/artifacts', { recursive: true });
-  await desktopWindow.screenshot({ path: '.tmp/artifacts/t329-alternative-selection.png' });
+  mkdirSync('.tmp/artifacts/T727', { recursive: true });
+  await desktopWindow.screenshot({ path: '.tmp/artifacts/T727/alternative-selection.png' });
   await desktopWindow.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   expect(await preview(desktopWindow)).toMatchObject({ alternatives: [{ id: 'B' }, { id: 'C' }] });

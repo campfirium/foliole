@@ -4,6 +4,7 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 import { hashText } from '../../lib/core/sync/syncNodeResolution.js';
+import { readTopicAlternativeRecords, topicAlternativeEntry } from '../../lib/core/sync/topicAlternativeStore.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -18,7 +19,18 @@ export function textDevice() {
       await applyConvergentSyncNodesWithDbPort(db, records);
       return (await loadCurrentSyncNodeRecord(db, 'topic'))!;
     },
-    async current() { return (await loadCurrentSyncNodeRecord(db, 'topic'))!; }
+    async current() { return (await loadCurrentSyncNodeRecord(db, 'topic'))!; },
+    async alternatives() { return (await readTopicAlternativeRecords(db, 'topic')).map(topicAlternativeEntry); },
+    imageReferences() {
+      const rows = sqlite.prepare(`SELECT resource_references FROM nodes WHERE id='topic'
+        UNION ALL SELECT resource_references FROM node_text_alternatives WHERE node_id='topic' AND status='available'`)
+        .all() as { resource_references: string }[];
+      return rows.flatMap(row => JSON.parse(row.resource_references));
+    },
+    async wholeBodies() {
+      const current = await loadCurrentSyncNodeRecord(db, 'topic');
+      return new Set([current?.body_text, ...(await readTopicAlternativeRecords(db, 'topic')).map(row => row.body_text)]);
+    }
   };
 }
 

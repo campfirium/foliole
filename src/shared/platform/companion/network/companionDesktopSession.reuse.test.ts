@@ -13,7 +13,7 @@ import { closeCompanionDesktopSession, companionDesktopSessionTarget, ensureComp
 import { resolveReachableCompanionWorkspaceSyncEndpoints } from './companionWorkspaceEndpoint';
 
 const target = { endpointUrl: 'http://mac:38641', deviceId: 'mac', groupId: 'group',
-  protocolVersion: 28, platform: 'darwin' };
+  protocolVersion: 29, platform: 'darwin' };
 
 async function connect() {
   runtime.group.mockResolvedValue({ group_id: 'group', local_device_identity_key: 'phone', devices: [] });

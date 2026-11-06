@@ -48,14 +48,14 @@ it('registers expiry committed while loading alternatives', async () => {
   try {
     const base = textBranch('base', 'Base');
     await device.receive([base, textBranch('main', 'Long main body', base)]);
-    const current = await device.receive([textBranch('other', 'Other', base)]);
-    const expiry = current.snapshot.text_alternatives![0]!.expires_at;
+    await device.receive([textBranch('other', 'Other', base)]);
+    const expiry = (await device.alternatives())[0]!.expires_at;
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(expiry).getTime() + 1);
     expect(await loadCompanionNodeTextAlternative('topic')).toBeNull();
     const read = vi.fn(async () => null);
     await companionWorkspaceSnapshots.refresh(read);
     expect(read).toHaveBeenCalledExactlyOnceWith({ current: null, scope: { kind: 'full' } });
-    expect((await device.current()).snapshot.text_alternatives).toEqual([]);
+    expect(await device.alternatives()).toEqual([]);
   } finally { device.sqlite.close(); }
 });

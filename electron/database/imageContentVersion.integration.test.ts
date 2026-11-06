@@ -5,6 +5,7 @@ import * as bodyHashing from '../../lib/core/database/textBodyHash.js';
 import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
 import { retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 import * as snapshotHashing from '../../lib/core/sync/syncNodeResolution.js';
+import { topicTextSnapshotHash } from '../../lib/core/sync/topicTextSnapshotHash.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
@@ -29,7 +30,7 @@ it('keeps metadata-only changes out of text choices when an offline peer edits t
   const edited = await b.current();
   const left = await a.receive([edited]); const right = await b.receive([metadata]);
   expect(left.body_text).toBe('Edited text');
-  expect(left.snapshot.text_alternatives).toEqual([]);
+  expect(await a.alternatives()).toEqual([]);
   expect(right.version_id).toBe(left.version_id);
 });
 
@@ -67,7 +68,7 @@ it('removes only baseline image differences and preserves unreferenced and concu
     content: 'After', title: 'Topic', hideTitleHeading: false, hostName: 'a', updatedAt: now });
   const result = await a.current();
   expect(JSON.parse(result.snapshot.resource_references!)).toEqual([orphan, concurrent]);
-  expect(result.snapshot.text_alternatives).toEqual([]);
+  expect(await a.alternatives()).toEqual([]);
   const remote = await b.receive([result]);
   expect(JSON.parse(remote.snapshot.resource_references!)).toEqual([orphan, concurrent]);
   expect((await a.receive([remote])).version_id).toBe(result.version_id);
@@ -84,13 +85,12 @@ it('protects an image name needed by a retained alternative and can promote it l
       content: `${body}\n${id}`, title: 'Topic', hideTitleHeading: false, hostName: id, updatedAt: now });
   }
   const merged = await a.receive([await b.current()]);
-  expect(merged.snapshot.text_alternatives).toHaveLength(1);
+  expect(await a.alternatives()).toHaveLength(1);
   await applyLocalContentEdit(a.db, { nodeId: 'topic', baseVersionId: merged.version_id!, versionId: 'remove-main',
     content: 'No main image', title: 'Topic', hideTitleHeading: false, hostName: 'a', updatedAt: now });
-  const result = await a.current();
-  expect(JSON.parse(result.snapshot.resource_references!)).toContainEqual(image);
+  expect(a.imageReferences()).toContainEqual(image);
   const { mutateTopicText } = await import('../../lib/core/sync/topicTextMutation.js');
-  await mutateTopicText(a.db, { nodeId: 'topic', alternativeId: result.snapshot.text_alternatives![0]!.id,
+  await mutateTopicText(a.db, { nodeId: 'topic', alternativeId: (await a.alternatives())[0]!.id,
     action: 'promoted', versionId: 'restore-image', hostName: 'a', now });
   const restored = await a.current();
   expect(restored.body_text).toContain(body);
@@ -127,11 +127,12 @@ it('preserves both branch image names through merging and explicit promotion', a
   const settledA = await a.receive([mergedB]);
   const settledB = await b.receive([mergedA]);
   expect((await a.receive([settledB])).version_id).toBe((await b.receive([settledA])).version_id);
-  expect(JSON.parse(mergedA.snapshot.resource_references!)).toEqual([image, second]);
+  expect(a.imageReferences()).toEqual(expect.arrayContaining([image, second]));
   const { mutateTopicText } = await import('../../lib/core/sync/topicTextMutation.js');
-  await mutateTopicText(a.db, { nodeId: 'topic', alternativeId: (await a.current()).snapshot.text_alternatives![0]!.id,
+  const selected = a.sqlite.prepare("SELECT resource_references FROM node_text_alternatives WHERE status='available'").get() as { resource_references: string };
+  await mutateTopicText(a.db, { nodeId: 'topic', alternativeId: (await a.alternatives())[0]!.id,
     action: 'promoted', versionId: 'promote-image', hostName: 'a', now });
-  expect(JSON.parse((await a.current()).snapshot.resource_references!)).toEqual([image, second]);
+  expect(JSON.parse((await a.current()).snapshot.resource_references!)).toEqual(JSON.parse(selected.resource_references));
 });
 
 it('keeps old metadata branches conservative and preserves an intentional A to B to A choice', async () => {
@@ -142,7 +143,7 @@ it('keeps old metadata branches conservative and preserves an intentional A to B
   await a.receive([oldMetadata]);
   const changed = textBranch('other-edit', 'B', base);
   const merged = await a.receive([changed]);
-  expect(new Set([merged.body_text, ...merged.alternative_bodies!.map(body => body.text)])).toEqual(new Set(['A', 'B']));
+  expect(await a.wholeBodies()).toEqual(new Set(['A', 'B']));
   await applyLocalContentEdit(a.db, { nodeId: 'topic', baseVersionId: merged.version_id!, versionId: 'to-b',
     content: 'B again', title: 'Topic', hideTitleHeading: false, hostName: 'a', updatedAt: now });
   const middle = await a.current();
@@ -187,9 +188,10 @@ it('reuses the body digest and hashes only the final complete local edit snapsho
     expect(prepared?.body_text).toBe(content);
     expect(prepared?.snapshot.text_selection?.version_id).toBe('measured');
     expect(JSON.parse(prepared!.snapshot.image_sources!)[image.storage_key]).toBe('https://example.com/original.png');
-    expect(prepared?.content_hash).toBe(snapshotHashing.hashText(JSON.stringify(prepared!.snapshot)));
+    expect(prepared?.content_hash).toBe(topicTextSnapshotHash(prepared!.snapshot));
     expect(measuredBodyCalls).toBe(1);
-    expect(measuredSnapshots).toEqual([JSON.stringify(prepared!.snapshot)]);
+    expect(measuredSnapshots).toHaveLength(1);
+    expect(JSON.parse(measuredSnapshots[0]!)).toMatchObject({ content });
   } finally { vi.restoreAllMocks(); }
   expect((await a.current()).version_id).toBe('base');
   await applyLocalContentEdit(a.db, input);

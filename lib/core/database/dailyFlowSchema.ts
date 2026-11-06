@@ -11,11 +11,17 @@ const learningColumns = {
 } as const;
 
 // Material writes never invalidate an already generated local sequence.
-export const DAILY_FLOW_LEARNING_TRIGGERS = Object.entries(learningColumns).flatMap(([table, columns]) =>
+function learningTriggers(includeFastStability: boolean) {
+  return Object.entries(learningColumns).flatMap(([table, columns]) =>
   ['INSERT', 'UPDATE', 'DELETE'].map(event =>
     `CREATE TRIGGER IF NOT EXISTS daily_flow_${table}_${event.toLowerCase()} AFTER ${event} ON ${table}
-      ${event === 'UPDATE' ? `WHEN ${columns.map(column => `OLD.${column} IS NOT NEW.${column}`).join(' OR ')}` : ''}
+      ${event === 'UPDATE' ? `WHEN ${columns.filter(column => includeFastStability || column !== 'stability_fast').map(column => `OLD.${column} IS NOT NEW.${column}`).join(' OR ')}` : ''}
       BEGIN UPDATE daily_flow_state SET invalidated = 1 WHERE id = 1; END`));
+}
+
+export const DAILY_FLOW_LEARNING_TRIGGERS = learningTriggers(true);
+// Historical Flow installation precedes the FSRS7 column migration.
+const HISTORICAL_DAILY_FLOW_SCHEMA = () => [...DAILY_FLOW_SCHEMA.slice(0, 3), ...learningTriggers(false)];
 
 export const DAILY_FLOW_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS daily_flow_state (
@@ -37,9 +43,9 @@ export const DAILY_FLOW_CURRENT_SCHEMA = [DAILY_FLOW_SCHEMA[0], CYCLE_ENTRY_SCHE
   DAILY_FLOW_SCHEMA[2].replace('card_json TEXT', 'card_json TEXT, source_session_json TEXT'), CYCLE_ENTRY_INDEX.replace('CREATE INDEX ', 'CREATE INDEX IF NOT EXISTS '), ...DAILY_FLOW_SCHEMA.slice(3)];
 
 export function migrateDailyFlow(sqlite: DatabaseMigrationTarget) {
-  for (const statement of DAILY_FLOW_SCHEMA) sqlite.exec(statement);
+  for (const statement of HISTORICAL_DAILY_FLOW_SCHEMA()) sqlite.exec(statement);
 }
 
 export async function migrateCompanionDailyFlow(db: DbPort) {
-  for (const statement of DAILY_FLOW_SCHEMA) await db.run(statement);
+  for (const statement of HISTORICAL_DAILY_FLOW_SCHEMA()) await db.run(statement);
 }

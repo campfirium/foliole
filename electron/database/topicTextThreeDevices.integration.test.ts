@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { afterEach, expect, it } from 'vitest';
 
-import { textBranch, textDevice, wholeBodies } from './topicTextState.testSupport.js';
+import { transferTopicText } from './topicTextRequest.testSupport.js';
+import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
 const devices: ReturnType<typeof textDevice>[] = [];
 afterEach(() => { devices.splice(0).forEach((value) => value.sqlite.close()); });
@@ -17,14 +18,15 @@ it.each([
     for (const host of hosts) await host.receive([branches[index]!]);
   }
   for (let round = 0; round < 3; round++) {
-    const heads = await Promise.all(hosts.map((host) => host.current()));
-    for (const host of hosts) await host.receive(heads);
+    for (const source of hosts) for (const target of hosts) {
+      if (source !== target) await transferTopicText(source, target);
+    }
   }
   const heads = await Promise.all(hosts.map((host) => host.current()));
   expect(new Set(heads.map((head) => head.version_id)).size).toBe(1);
   for (const head of heads) {
     expect(head.body_text).toBe('CCC');
-    expect(wholeBodies(head)).toEqual(new Set(['A', 'BB', 'CCC']));
+    expect(await hosts[heads.indexOf(head)]!.wholeBodies()).toEqual(new Set(['A', 'BB', 'CCC']));
   }
   for (const host of hosts) {
     expect((await host.receive(branches)).version_id).toBe(heads[0]!.version_id);

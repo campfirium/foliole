@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 import { parseImageSources, serializeImageSources } from '../database/imageSources.js';
-import { parseNodeResourceReferences, projectNodeResourceLinks, serializeNodeResourceReferences, type NodeResourceReference } from '../database/nodeResourceReferences.js';
+import { parseNodeResourceReferences, serializeNodeResourceReferences, type NodeResourceReference } from '../database/nodeResourceReferences.js';
 import { hashTextBody } from '../database/textBodyHash.js';
 import { collectArticleImageStorageKeys } from '../import/replaceArticleImageSource.js';
 
@@ -49,7 +49,7 @@ export function localContentEditResources(base: NativeSyncNodeRecord, current: N
   const concurrentBodies = currentHash !== baseHash
     && typeof current.body_text === 'string' ? [{ text: current.body_text }] : [];
   const concurrentAnswers = current.snapshot.reveal !== base.snapshot.reveal ? [{ text: current.snapshot.reveal ?? '' }] : [];
-  const protectedKeys = new Set([...concurrentAnswers, ...base.alternative_bodies ?? [], ...current.alternative_bodies ?? [], ...concurrentBodies]
+  const protectedKeys = new Set([...concurrentAnswers, ...concurrentBodies]
     .flatMap(body => collectArticleImageStorageKeys(body.text)));
   const references = parseNodeResourceReferences(current.snapshot.resource_references)
     .filter(reference => reference.role !== 'image' || !removed.has(reference.storage_key) || protectedKeys.has(reference.storage_key));
@@ -67,21 +67,4 @@ export function localContentEditImageSources(current: NativeSyncNodeRecord, cont
     if (reference.source_url && submitted.has(reference.storage_key)) sources[reference.storage_key] ??= reference.source_url;
   }
   return serializeImageSources(sources);
-}
-
-/** Carry names for selected alternate bodies from the immutable branch that owns them. */
-export function retainAlternativeImageResources(record: NativeSyncNodeRecord, sources: readonly NativeSyncNodeRecord[]) {
-  const needed = new Set((record.alternative_bodies ?? []).flatMap(body => collectArticleImageStorageKeys(body.text)));
-  const references = parseNodeResourceReferences(record.snapshot.resource_references);
-  const orderedSources = [...sources].sort((left, right) =>
-    `${left.version_created_at}\n${left.version_id}`.localeCompare(`${right.version_created_at}\n${right.version_id}`));
-  for (const source of orderedSources) {
-    for (const reference of parseNodeResourceReferences(source.snapshot.resource_references)) {
-      if (reference.role === 'image' && needed.has(reference.storage_key) &&
-          !references.some(existing => existing.role === 'image' && existing.storage_key === reference.storage_key)) references.push(reference);
-    }
-  }
-  const resources = serializeNodeResourceReferences(references);
-  if (resources === serializeNodeResourceReferences(parseNodeResourceReferences(record.snapshot.resource_references))) return {};
-  return { resource_references: resources, attachments: projectNodeResourceLinks(resources) };
 }

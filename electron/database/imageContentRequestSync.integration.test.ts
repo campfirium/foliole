@@ -46,7 +46,7 @@ it.each(['desktop', 'phone'])('preserves edits after a prepared snapshot with in
   });
   await sync(target, source); await sync(source, target);
   const converged = (await head(source))!;
-  const bodies = [converged.body_text, ...converged.alternative_bodies?.map(body => body.text) ?? []];
+  const bodies = [converged.body_text, ...source.db.prepare("SELECT body_text FROM node_text_alternatives WHERE status='available'").pluck().all()];
   expect(bodies).toContain('Source branch');
   expect(bodies).toContain('Target branch 3');
   const counts = [history(source).length, history(target).length];
@@ -107,7 +107,7 @@ it('metadata-only flush should preserve the main body selection during a concurr
   await sync(b, a);
   const merged = (await head(a))!;
   expect(merged.body_text).toBe('Original complete body\nMarker 1');
-  expect(merged.snapshot.text_alternatives).toEqual([]);
+  expect(a.db.prepare("SELECT COUNT(*) FROM node_text_alternatives WHERE status='available'").pluck().get()).toBe(0);
 });
 
 it('creates one merge for a new stale-base operation, then remains stable on replay', async () => {

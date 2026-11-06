@@ -16,7 +16,7 @@ import { applyRequestSyncObject } from '../../lib/core/sync/requestSyncObjectApp
 import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapshot.js';
 import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
-import { textBranch, textDevice, wholeBodies } from './topicTextState.testSupport.js';
+import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
 const devices: ReturnType<typeof textDevice>[] = [];
 let directory = '';
@@ -39,14 +39,11 @@ it('delivers every alternative body to an empty library through a real current r
     await receive(target, request);
     const restored = await target.current();
     expect(restored.version_id).toBe(whole.version_id);
-    expect(wholeBodies(restored)).toEqual(new Set(['Main longest body', 'B', 'C']));
-    const storedBodies = target.sqlite.prepare(
-      "SELECT json_extract(snapshot_json, '$.text_alternative_bodies') FROM node_sync_versions WHERE version_id = ?"
-    ).pluck().get(whole.version_id) as string;
-    expect(JSON.parse(storedBodies).map((body: { text: string }) => body.text).sort()).toEqual(['B', 'C']);
+    expect(await target.wholeBodies()).toEqual(new Set(['Main longest body', 'B', 'C']));
+    expect(target.sqlite.prepare("SELECT body_text FROM node_text_alternatives WHERE node_id = 'topic' AND status = 'available' ORDER BY body_text").pluck().all()).toEqual(['B', 'C']);
     expect(restored.snapshot).not.toHaveProperty('text_alternative_bodies');
     const rejected = textDevice(); devices.push(rejected);
-    await expect(receive(rejected, request, hashTextBody('B'))).rejects.toThrow('text_alternative_body_blob_invalid');
+    await expect(receive(rejected, request, hashTextBody('B'))).rejects.toThrow('framed_sync_published_body_unavailable');
     expect(rejected.sqlite.prepare("SELECT id FROM nodes WHERE id = 'topic'").get()).toBeUndefined();
     expect(rejected.sqlite.prepare('SELECT COUNT(*) FROM content_blob_data').pluck().get()).toBe(0);
     expect(rejected.sqlite.prepare('SELECT COUNT(*) FROM node_sync_versions').pluck().get()).toBe(0);
@@ -67,7 +64,18 @@ async function receive(target: ReturnType<typeof textDevice>, request: RequestSy
     peerState: { contract_version: 3, group_id: 'group', sender_device_identity_key: 'source',
       library_epoch: 'source-epoch', proof_revision: 0, source_proof_revisions: {}, devices: [], removals: [], restore: null },
     objectType: 'node', globalId: 'topic', requestId: new Uint8Array(16),
-    facts: () => request.readFacts(), loadBody: async (_db, blob) => {
+    facts: async function* () {
+      for await (const fact of request.readFacts()) {
+        if (!corruptHash || fact.kind !== 1) { yield fact; continue; }
+        yield { ...fact, body: fact.body.map(field => {
+          if (field.name !== 'payload_json' || field.value.kind !== 'string') return field;
+          const payload = JSON.parse(field.value.value);
+          return payload.body_blob_hash !== corruptHash ? field : {
+            ...field, value: { kind: 'string' as const, value: JSON.stringify({ ...payload, body_text: 'corrupted' }) }
+          };
+        }) };
+      }
+    }, loadBody: async (_db, blob) => {
       const data = await request.loadBody(blob);
       return bytesToHex(blob.sha256) === corruptHash ? new TextEncoder().encode('corrupted') : data;
     }

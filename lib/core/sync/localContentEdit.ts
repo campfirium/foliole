@@ -12,9 +12,7 @@ import { contentEditImageInputHash, localContentEditResources, localContentEditI
 import { retainSubmittedLocalEdit } from './nodeVersionLocalEditHold.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionFact } from './syncNodeGraph.js';
-import { hashText } from './syncNodeResolution.js';
-import { mergedTopicTextBodies } from './topicTextBodies.js';
-import { normalizeTextAlternativesForHash } from './topicTextState.js';
+import { topicTextSnapshotHash } from './topicTextSnapshotHash.js';
 
 export interface LocalContentEdit {
   /** Answer-only input uses content as a base witness, never as a replacement. */
@@ -73,9 +71,8 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
     if (!stored && sameBody && (input.reveal === undefined || input.reveal === base.snapshot.reveal) && added.length === 0) return { current, submittedVersionId: base.version_id! };
     const reveal = input.reveal === undefined ? base.snapshot.reveal : input.reveal;
     const imageSources = stored?.snapshot.image_sources ?? localContentEditImageSources(current, input.content + '\n' + (reveal ?? ''), added);
-    const record = createEditRecord(base, input, sameBody, bodyHash, imageSources,
+    const record = createEditRecord(base, input, sameBody, imageSources,
       stored?.snapshot.resource_references ?? localContentEditResources(base, current, input.content, added, input.reveal));
-    record.alternative_bodies = mergedTopicTextBodies(record.snapshot.text_alternatives ?? [], [base, current]);
     await retainSubmittedLocalEdit(tx, input.nodeId, input.baseVersionId, input.versionId);
     if (current.version_id === input.baseVersionId && applyFastForward) applyFastForward(record);
     else await applyLocalContentEditBranch(tx, stored?.body_text === null ? record : stored ?? record, options);
@@ -100,7 +97,7 @@ function resolveEditFields(input: LocalContentEditInput, base: NativeSyncNodeRec
 }
 
 function createEditRecord(base: NativeSyncNodeRecord, input: LocalContentEditInput,
-  sameBody: boolean, bodyHash: string | null | undefined, imageSources: string | null, resources?: string): NativeSyncNodeRecord {
+  sameBody: boolean, imageSources: string | null, resources?: string): NativeSyncNodeRecord {
   const snapshot = {
     ...base.snapshot,
     ...(resources === undefined ? {} : { resource_references: resources, attachments: projectNodeResourceLinks(resources) }),
@@ -113,15 +110,15 @@ function createEditRecord(base: NativeSyncNodeRecord, input: LocalContentEditInp
     updated_at: input.updatedAt,
     text_selection: sameBody
       ? base.snapshot.text_selection ?? { version_id: base.version_id!, created_at: base.version_created_at! }
-      : { version_id: input.versionId, created_at: input.updatedAt },
-    text_alternatives: normalizeTextAlternativesForHash(base.snapshot.text_alternatives ?? [], bodyHash ?? hashTextBody(input.content), input.updatedAt)
+      : { version_id: input.versionId, created_at: input.updatedAt }
   };
   delete snapshot.body_deleted;
-  return {
+  delete snapshot.text_alternatives;
+  const record: NativeSyncNodeRecord = {
     ...base,
     ancestor_version_ids: [input.baseVersionId, ...base.ancestor_version_ids],
     body_text: input.content,
-    content_hash: hashText(JSON.stringify(snapshot)),
+    content_hash: topicTextSnapshotHash(snapshot),
     host_name: input.hostName,
     parent_version_id: input.baseVersionId,
     parent_version_ids: [input.baseVersionId],
@@ -130,6 +127,8 @@ function createEditRecord(base: NativeSyncNodeRecord, input: LocalContentEditInp
     version_created_at: input.updatedAt,
     version_id: input.versionId
   };
+  delete record.alternative_bodies;
+  return record;
 }
 
 function matchesEdit(stored: NativeSyncNodeRecord, base: NativeSyncNodeRecord,

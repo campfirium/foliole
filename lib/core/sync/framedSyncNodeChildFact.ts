@@ -5,8 +5,10 @@ import { NODE_CHILD_STATE_TYPES, nodeChildOwnerSql } from '../database/nodeChild
 
 import type { DbPort } from './dbPort.js';
 import type { CanonicalFact } from './framedSyncCanonicalManifest.js';
+import type { FramedBodyLoader } from './framedSyncNodeRecordSource.js';
 import { applyFramedSyncObjectStateRecord, restoreFramedSyncObjectStateFact,
   selectFramedSyncObjectStateFact } from './framedSyncObjectStateFact.js';
+import { completeTopicAlternativeBody } from './framedTopicAlternativeBody.js';
 import type { ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
 
 const childIdentity = z.tuple([z.enum([...NODE_CHILD_STATE_TYPES, 'node_review']), z.string().min(1), z.string().regex(/^[a-f0-9]{64}$/u)]);
@@ -53,8 +55,9 @@ function assertOwner(record: NativeSyncObjectRecord, nodeId: string) {
 }
 
 export async function applyFramedSyncNodeChildFact(db: DbPort, fact: CanonicalFact,
-  options?: ApplySyncObjectsWithDbPortOptions) {
-  const record = restoreFramedSyncNodeChildFact(fact);
+  options?: ApplySyncObjectsWithDbPortOptions, loadBody?: FramedBodyLoader) {
+  let record = restoreFramedSyncNodeChildFact(fact);
+  if (record.object_type === 'node_text_alternative') record = await completeTopicAlternativeBody(db, fact, record, loadBody);
   const applied = await applyFramedSyncObjectStateRecord(db, record, options);
   if (record.deleted_at &&
       (record.object_type === 'import_source' || record.object_type === 'node_text_alternative')) {

@@ -3,7 +3,9 @@ import { afterEach, expect, it } from 'vitest';
 
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { migrateTextBodyOwnership } from '../../lib/core/database/textBodyOwnershipMigration.js';
+import { alternativeForBody } from '../../lib/core/sync/topicTextState.js';
+
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { restoreEmptyLegacyDailyFlowSchema } from './historicalMigration.test-support.js';
@@ -17,8 +19,11 @@ async function legacyHost() {
   restoreEmptyLegacyDailyFlowSchema(host.sqlite);
   devices.push(host);
   const base = textBranch('base', 'Base');
-  await host.receive([base, textBranch('main', 'Main complete text', base)]);
-  const whole = await host.receive([textBranch('other', '\uFEFF其他\r\n😀\u0000end', base)]);
+  const other = textBranch('other', '\uFEFF其他\r\n😀\u0000end', base);
+  const legacy = textBranch('main', 'Main complete text', base);
+  legacy.snapshot.text_alternatives = [alternativeForBody(other, legacy.updated_at)];
+  legacy.alternative_bodies = [{ hash: legacy.snapshot.text_alternatives[0]!.body_blob_hash, text: other.body_text! }];
+  const whole = await host.receive([base, legacy]);
   const driver = createBetterSqlite3Driver(host.sqlite);
   for (const body of whole.alternative_bodies!) upsertTextBodyBlob(driver, body.text, whole.updated_at);
   host.sqlite.exec("UPDATE node_sync_versions SET snapshot_json = json_remove(snapshot_json, '$.text_alternative_bodies')");
@@ -28,7 +33,7 @@ async function legacyHost() {
 async function upgrade(host: ReturnType<typeof textDevice>, companion: boolean) {
   host.sqlite.pragma(`user_version = ${companion ? 78 : 149}`);
   if (companion) await host.db.transaction((tx) => migrateCompanionDatabase(tx, 78, 79));
-  else initializeDatabaseSchema(host.sqlite);
+  else host.sqlite.transaction(() => migrateTextBodyOwnership(host.sqlite))();
 }
 
 it.each([false, true])('converts legacy alternative bodies once without changing identities through companion=%s', async (companion) => {
@@ -43,7 +48,7 @@ it.each([false, true])('converts legacy alternative bodies once without changing
   expect(current.snapshot.text_alternatives).toEqual(whole.snapshot.text_alternatives);
   expect(host.sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all()).toEqual(edges);
   if (companion) await host.db.transaction((tx) => migrateCompanionDatabase(tx, 79, 79));
-  else initializeDatabaseSchema(host.sqlite);
+  else host.sqlite.transaction(() => migrateTextBodyOwnership(host.sqlite))();
   expect(wholeBodies(await host.current())).toEqual(wholeBodies(whole));
 });
 

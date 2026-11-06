@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { collectNodeVersionChainWithDriver } from '../../lib/core/database/nodeVersionChainRetention.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
-import { loadTopicTextBodiesWithDriver } from '../../lib/core/database/topicTextBodiesWithDriver.js';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
@@ -29,9 +28,6 @@ export function flushNodeSyncVersionWithDriver(
        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [resolvedVersionId, row.id, row.current_version_id, hostName, now, contentHash, body,
         JSON.stringify({ ...snapshot,
-          ...(snapshot.text_alternatives.length ? {
-            text_alternative_bodies: loadTopicTextBodiesWithDriver(driver, nodeId, snapshot.text_alternatives)
-          } : {}),
           text_selection: resolveTextSelection(driver, row.current_version_id, body, resolvedVersionId, now) })]
     );
     driver.execute('INSERT INTO node_version_local_origins (version_id) VALUES (?)', [resolvedVersionId]);

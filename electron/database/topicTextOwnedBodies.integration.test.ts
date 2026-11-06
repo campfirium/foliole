@@ -1,7 +1,7 @@
 // @vitest-environment node
-import { bytesToHex } from '@noble/hashes/utils.js';
 import { afterEach, expect, it } from 'vitest';
 
+import { migrateCompanionIndependentTopicAlternatives } from '../../lib/core/database/independentTopicAlternativesMigration.js';
 import { buildCanonicalNodeSyncPayload } from '../../lib/core/database/nodeSyncPayload.js';
 import { nodeSyncSnapshotHashMetadata } from '../../lib/core/database/nodeSyncSnapshotMetadata.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
@@ -26,22 +26,22 @@ it('reads each version and selects its complete alternatives after shared body c
   await host.receive([base, textBranch('main', 'Main complete body with enough text', base)]);
   const alternatives = ['B\r\n😀\u0000end', 'C\n第二段'];
   const whole = await host.receive(alternatives.map((body, index) => textBranch(`branch-${index}`, body, base)));
-  const ids = whole.snapshot.text_alternatives!.map((entry) => entry.id);
-  const hashes = whole.snapshot.text_alternatives!.map((entry) => entry.body_blob_hash);
+  const ids = (await host.alternatives()).map((entry) => entry.id);
+  const hashes = (await host.alternatives()).map((entry) => entry.body_blob_hash);
   host.sqlite.prepare('DELETE FROM content_blob_data WHERE hash IN (SELECT value FROM json_each(?))')
     .run(JSON.stringify(hashes));
 
   const current = await host.current();
   const historical = await loadStoredSyncNodeVersionRecord(host.db, whole.version_id!);
-  expect(wholeBodies(current)).toEqual(wholeBodies(whole));
-  expect(wholeBodies(historical!)).toEqual(wholeBodies(whole));
+  expect(await host.wholeBodies()).toEqual(new Set([whole.body_text, ...alternatives]));
+  expect(historical!.body_text).toBe(whole.body_text);
   expect(current.version_id).toBe(whole.version_id);
   expect(current.content_hash).toBe(whole.content_hash);
-  expect(current.snapshot.text_alternatives!.map((entry) => entry.id)).toEqual(ids);
+  expect((await host.alternatives()).map(entry => entry.id)).toEqual(ids);
   expect(current.snapshot).not.toHaveProperty('text_alternative_bodies');
 
-  const selected = current.snapshot.text_alternatives![0]!;
-  const expected = current.alternative_bodies!.find((body) => body.hash === selected.body_blob_hash)!.text;
+  const selected = (await host.alternatives())[0]!;
+  const expected = host.sqlite.prepare('SELECT body_text FROM node_text_alternatives WHERE alternative_id=?').pluck().get(selected.id) as string;
   expect(loadNodeTextAlternativePreviewWithDriver(createBetterSqlite3Driver(host.sqlite), 'topic', selected.id))
     .toMatchObject({ current_content: whole.body_text, updated_content: expected, alternative_id: selected.id });
   await mutateTopicText(host.db, { nodeId: 'topic', alternativeId: selected.id, action: 'promoted',
@@ -49,7 +49,7 @@ it('reads each version and selects its complete alternatives after shared body c
   const promoted = await host.current();
   expect(promoted.body_text).toBe(expected);
   expect(promoted.parent_version_ids).toEqual([whole.version_id]);
-  expect(promoted.snapshot.text_alternatives!.map((entry) => entry.id)).not.toContain(selected.id);
+  expect((await host.alternatives()).map(entry => entry.id)).not.toContain(selected.id);
 });
 
 it('keeps complete alternatives in tombstone facts and restores them when a complete original version returns', async () => {
@@ -78,7 +78,7 @@ it('keeps complete alternatives in tombstone facts and restores them when a comp
   expect(restored!.snapshot.text_alternatives).toEqual(record.snapshot.text_alternatives);
 });
 
-it('keeps unexpired complete alternatives when another choice expires and rolls back a failed adoption', async () => {
+it('keeps unexpired complete alternatives when another choice expires and rolls back a failed expiry', async () => {
   const host = textDevice();
   devices.push(host);
   const record = textBranch('selected', 'Main body');
@@ -88,16 +88,18 @@ it('keeps unexpired complete alternatives when another choice expires and rolls 
     body_blob_hash: body.hash, source_host_name: 'peer', created_at: record.version_created_at!,
     expires_at: `${2099 + index}-01-01T00:00:00.000Z` }));
   await host.receive([record]);
+  await host.db.transaction(tx => migrateCompanionIndependentTopicAlternatives(tx));
+  const before = await host.current();
   const advertised = await readFramedSyncInventoryEntry(host.db, { globalId: 'topic', objectType: 'node' });
-  expect(advertised!.resourceHashes.map(bytesToHex)).toEqual(expect.arrayContaining(bodies.map((body) => body.hash)));
-  host.sqlite.exec("CREATE TRIGGER reject_expiry BEFORE UPDATE OF current_version_id ON nodes BEGIN SELECT RAISE(ABORT, 'reject_expiry'); END");
+  expect(advertised!.stateFactIds?.filter(id => id.includes('node_text_alternative'))).toHaveLength(2);
+  host.sqlite.exec("CREATE TRIGGER reject_expiry BEFORE UPDATE ON node_text_alternatives BEGIN SELECT RAISE(ABORT, 'reject_expiry'); END");
   await expect(expireTopicText(host.db, 'topic', '2099-06-01T00:00:00.000Z')).rejects.toThrow('reject_expiry');
-  expect(wholeBodies(await host.current())).toEqual(wholeBodies(record));
+  expect(await host.wholeBodies()).toEqual(new Set(['Main body', ...bodies.map(body => body.text)]));
   host.sqlite.exec('DROP TRIGGER reject_expiry');
   await expireTopicText(host.db, 'topic', '2099-06-01T00:00:00.000Z');
   const expired = await host.current();
   expect(expired.body_text).toBe('Main body');
-  expect(expired.alternative_bodies).toEqual([bodies[1]]);
+  expect(await host.wholeBodies()).toEqual(new Set(['Main body', 'Expires later']));
   expect(expired.snapshot.text_selection).toEqual(record.snapshot.text_selection);
-  expect(expired.parent_version_ids).toEqual([record.version_id]);
+  expect(expired.version_id).toBe(before.version_id);
 });

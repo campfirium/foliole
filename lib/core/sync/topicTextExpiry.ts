@@ -1,41 +1,21 @@
 import type { DbPort } from './dbPort.js';
-import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
-import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
-import { loadCurrentSyncNodeRecord } from './syncNodeGraph.js';
-import { buildResolutionRecord } from './syncNodeResolution.js';
-import { validateTopicTextBodies } from './topicTextBodies.js';
-import { availableTextAlternatives, textAlternatives } from './topicTextState.js';
+import type { TopicAlternativeRecord } from './topicAlternativeRecord.js';
+import { retireTopicAlternative } from './topicAlternativeStore.js';
 
-/** One read narrows a set of nodes to those whose current version has an expired text alternative. */
 export async function findTopicsWithExpiredText(db: DbPort, nodeIds: readonly string[], now: string) {
   if (!nodeIds.length) return new Set<string>();
-  const rows = await db.query<{ id: string }>(
-    `SELECT DISTINCT n.id FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id,
-     json_each(v.snapshot_json, '$.text_alternatives') entry
-     WHERE n.id IN (SELECT value FROM json_each(?)) AND json_extract(entry.value, '$.expires_at') <= ?`,
-    [JSON.stringify(nodeIds), now]);
-  return new Set(rows.map(row => row.id));
+  const rows = await db.query<{ node_id: string }>(`SELECT DISTINCT node_id FROM node_text_alternatives
+    WHERE node_id IN (SELECT value FROM json_each(?)) AND status = 'available' AND expires_at <= ?`,
+  [JSON.stringify(nodeIds), now]);
+  return new Set(rows.map(row => row.node_id));
 }
 
-/** Expiration changes the whole version, so stale peers cannot restore removed attachments. */
-export async function expireTopicText(db: DbPort, nodeId: string, now: string, collectVersionPayloads = true) {
-  return db.transaction(async (tx) => {
-    const [expired] = await tx.query<{ id: string }>(
-      `SELECT n.id FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id,
-       json_each(v.snapshot_json, '$.text_alternatives') entry
-       WHERE n.id = ? AND json_extract(entry.value, '$.expires_at') <= ? LIMIT 1`, [nodeId, now]);
-    if (!expired) return;
-    const current = await loadCurrentSyncNodeRecord(tx, nodeId, false);
-    if (!current || current.snapshot.kind !== 'topic') return;
-    const retained = availableTextAlternatives(current, now);
-    if (retained.length === textAlternatives(current).length) return;
-    const record = buildResolutionRecord([current], current, current.body_text ?? '', {
-      ...current.snapshot, text_alternatives: retained
-    });
-    record.alternative_bodies = validateTopicTextBodies(retained, current.alternative_bodies ?? []);
-    const result = await applySyncNodesWithDbPort(tx, [record], { operation: 'local_mutation' });
-    if (!result.appliedIds.includes(nodeId)) throw new Error('text_alternative_expiry_not_applied');
-    if (collectVersionPayloads) await collectNodeVersionPayloads(tx, nodeId, Number.MAX_SAFE_INTEGER);
-    return true;
+/** Expiration retires only the choice; it does not create a new main-body version. */
+export async function expireTopicText(db: DbPort, nodeId: string, now: string) {
+  return db.transaction(async tx => {
+    const rows = await tx.query<TopicAlternativeRecord>(`SELECT * FROM node_text_alternatives
+      WHERE node_id = ? AND status = 'available' AND expires_at <= ?`, [nodeId, now]);
+    for (const row of rows) await retireTopicAlternative(tx, row, 'expired', now);
+    return rows.length > 0;
   });
 }

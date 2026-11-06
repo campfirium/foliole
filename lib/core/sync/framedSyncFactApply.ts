@@ -7,12 +7,13 @@ import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrd
 import type { DbPort } from './dbPort.js';
 import type { CanonicalFact } from './framedSyncCanonicalManifest.js';
 import { withFramedExternalDocumentBody } from './framedSyncExternalDocumentBody.js';
-import { applyFramedSyncNodeChildFact } from './framedSyncNodeChildFact.js';
+import { applyFramedSyncNodeChildFact, parseFramedSyncNodeChildIdentity } from './framedSyncNodeChildFact.js';
 import { assertFramedSyncNodeParentDependencies } from './framedSyncNodeParentDependencies.js';
 import { framedSyncNodeRecordSource, type FramedBodyLoader } from './framedSyncNodeRecordSource.js';
 import { applyFramedSyncObjectStateRecord, restoreFramedSyncObjectStateFact } from './framedSyncObjectStateFact.js';
 import { applyFramedSyncRelationReviewFactsWithDbPort } from './framedSyncRelationReviewApply.js';
 import { appliedStateWorkspaceScope, joinWorkspaceScopes } from './framedSyncWorkspaceScope.js';
+import { completeTopicAlternativeBody } from './framedTopicAlternativeBody.js';
 import { withRequestSyncCurrentVersion, withRequestSyncCurrentVersions, type RequestSyncCurrentVersion } from './requestSyncCurrentVersion.js';
 import { requestSyncNodeSource } from './requestSyncNodeGraph.js';
 import { applySyncNodeSourceWithDbPort } from './syncNodeApplyExecutor.js';
@@ -20,6 +21,7 @@ import { applyConvergentSyncNodeSource } from './syncNodeConvergence.js';
 import { enqueueAppliedNodeBodySearchInvalidation } from './syncNodeSearchInvalidations.js';
 import type { DeferredVisibilityPruning } from './syncNodeVisibilityPruning.js';
 import type { ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
+import { settleTopicAlternatives } from './topicAlternativeStore.js';
 
 export type FramedFactSource = (db: DbPort, kinds?: readonly number[]) => AsyncIterable<CanonicalFact>;
 
@@ -55,7 +57,7 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
         workspaceScope = { kind: 'full' };
       }
       else {
-        const result = await applyConvergentSyncNodeSource(tx, nodeSource, { collectVersionPayloads: false,
+        const result = await applyConvergentSyncNodeSource(tx, nodeSource, { collectVersionPayloads: false, deferAlternativeSettlement: true,
           ...(options.visibilityPruning ? { visibilityPruning: options.visibilityPruning } : {}) });
         generatedChanges = result.handledConflictCount > 0;
         workspaceScope = result.workspaceScopeExpanded ? { kind: 'full' }
@@ -69,10 +71,17 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
       if (fact.kind === 3 || fact.kind === 4) await applyFramedSyncRelationReviewFactsWithDbPort(tx, [fact]);
       if (fact.kind === 4) workspaceScope = joinWorkspaceScopes(workspaceScope, { kind: 'nodes', nodeIds: [fact.globalId] });
     }
+    const nodeIds = new Set(nodeSource.records.map(record => record.object_id));
     for (const source of sources) for await (const fact of source(tx, [1])) {
+      if (fact.kind === 1 && fact.objectType === 'node' &&
+          parseFramedSyncNodeChildIdentity(fact.factId).objectType === 'node_text_alternative') nodeIds.add(fact.globalId);
       if (fact.kind === 1 && await applyFramedStateFact(tx, fact, options.loadBody, options.objectOptions)) {
         workspaceScope = joinWorkspaceScopes(workspaceScope, await appliedStateWorkspaceScope(tx, fact));
       }
+    }
+    for (const row of await tx.query<{ id: string; body_blob_hash: string }>(`SELECT id, body_blob_hash FROM nodes
+      WHERE kind = 'topic' AND deleted_at IS NULL AND id IN (SELECT value FROM json_each(?))`, [JSON.stringify([...nodeIds])])) {
+      await settleTopicAlternatives(tx, row.id, row.body_blob_hash, new Date().toISOString());
     }
     workspaceScope = await flushParentOrders(tx, workspaceScope, options.parentOrderFlush);
     return { generatedChanges, workspaceScope };
@@ -110,9 +119,10 @@ async function flushParentOrders(tx: DbPort, scope: WorkspaceRefreshScope, defer
 async function applyFramedStateFact(db: DbPort, fact: CanonicalFact, loadBody: FramedBodyLoader,
   options?: ApplySyncObjectsWithDbPortOptions) {
   if (fact.objectType === 'node') {
-    return applyFramedSyncNodeChildFact(db, fact, options);
+    return applyFramedSyncNodeChildFact(db, fact, options, loadBody);
   }
   let record = restoreFramedSyncObjectStateFact(fact);
+  if (record.object_type === 'node_text_alternative') record = await completeTopicAlternativeBody(db, fact, record, loadBody);
   if (record.object_type === 'external_document' && !record.deleted_at) {
     const bodies = [];
     for (const descriptor of fact.blobs) {

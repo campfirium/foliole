@@ -8,7 +8,7 @@ import {
   assertDecodedPayloadType,
   type ProtocolPayloadCase
 } from './framedSyncReceiver.js';
-import schema from './generated/framed-sync-v28-schema.json' with { type: 'json' };
+import schema from './generated/framed-sync-v29-schema.json' with { type: 'json' };
 
 const root = protobuf.Root.fromJSON(schema as protobuf.INamespace);
 const protocolMessage = root.lookupType('foliole.sync.v22.ProtocolMessage');
