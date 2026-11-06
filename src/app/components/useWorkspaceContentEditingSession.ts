@@ -81,6 +81,16 @@ export function useWorkspaceContentEditingSession(nodeId: string | null, readOnl
   const pendingInput = useRef<{ completion: Promise<void>; libraryScope: string | undefined; nodeId: string | null } | null>(null);
   const finish = useFinishEditingSession(active);
   useEditorSessionWindowExit(finish, libraryScope, nodeId, readOnly);
+  const settleAcceptedInput = useCallback(async () => {
+    let input: typeof pendingInput.current;
+    do {
+      input = pendingInput.current;
+      if (input?.libraryScope === libraryScope && input?.nodeId === nodeId) await input.completion;
+    } while (pendingInput.current !== input);
+    if (useWorkspaceStore.getState().libraryScope !== libraryScope) return false;
+    if (nodeId) await draft.settleBufferedInput(nodeId);
+    return useWorkspaceStore.getState().libraryScope === libraryScope;
+  }, [draft, libraryScope, nodeId]);
   const handlePendingInput = useCallback((completion: Promise<void>) => {
     pendingInput.current = { completion, libraryScope, nodeId };
     const boundary = active.current;
@@ -109,5 +119,5 @@ export function useWorkspaceContentEditingSession(nodeId: string | null, readOnl
     }
     draft.handleEditorInput(meta);
   }, [draft, libraryScope, nodeId, readOnly]);
-  return { handleEditorFocus, handleEditorInput, handlePendingInput, finishEditing: finish };
+  return { handleEditorFocus, handleEditorInput, handlePendingInput, finishEditing: finish, settleAcceptedInput };
 }

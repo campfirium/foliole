@@ -1,13 +1,25 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import { isProtectedRootNode } from '../../features/nodes/model/specialNodes';
-import type { EditorDraftCommitOptions } from '../hooks/useEditorDraftFlushCallbacks';
+import type { EditorDraftCommitOptions, EditorDraftFlushRegistration } from '../hooks/useEditorDraftFlushCallbacks';
 import { useEditorDraftSync } from '../hooks/useEditorDraftSync';
 
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
 import { useWorkspaceContentEditingSession } from './useWorkspaceContentEditingSession';
 
+function useInputFlushRegistration(register: EditorDraftFlushRegistration | undefined) {
+  const inputReady = useRef(async () => true);
+  const registerFlush = useCallback<EditorDraftFlushRegistration>((flush, closeFlush, freshFlush) => {
+    register?.(flush, closeFlush ? async () => {
+      if (!await inputReady.current()) return false;
+      return closeFlush();
+    } : null, freshFlush);
+  }, [register]);
+  return { inputReady, registerFlush };
+}
+
 export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
+  const flushRegistration = useInputFlushRegistration(props.onRegisterEditorDraftFlush);
   const draftNodeId = useMemo(() => {
     if (props.editorNodeId) {
       return props.editorNodeId;
@@ -31,11 +43,12 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
     nodeId: draftNodeId,
     onCommit: commitEditorContent,
     ...(props.onFinalizeNodeTitle ? { onFinalizeNode: props.onFinalizeNodeTitle } : {}),
-    ...(props.onRegisterEditorDraftFlush ? { onRegisterFlush: props.onRegisterEditorDraftFlush } : {})
+    onRegisterFlush: flushRegistration.registerFlush
   });
   const sessionReadOnly = props.isEditorReadOnly || Boolean(props.isImmersiveMode && !props.isImmersiveEditing);
-  const { handleEditorFocus, handleEditorInput, handlePendingInput, finishEditing } =
+  const { handleEditorFocus, handleEditorInput, handlePendingInput, finishEditing, settleAcceptedInput } =
     useWorkspaceContentEditingSession(draftNodeId, sessionReadOnly, editorDraft);
+  flushRegistration.inputReady.current = settleAcceptedInput;
   const handleExitEditorFocus = useCallback(() => {
     void finishEditing();
     return props.onExitEditorFocus?.() ?? false;

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import path from 'node:path';
 
-import { act, renderHook } from '@testing-library/react';
+import { act, fireEvent, renderHook } from '@testing-library/react';
+import { createElement } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 vi.mock('electron', () => ({ nativeTheme: { themeSource: 'system', on: vi.fn() },
@@ -40,11 +41,11 @@ const flushWindow = window as Window & { __folioleFlushPendingEditorDraftBeforeC
 setupEditorHandoffTests();
 afterEach(() => { delete flushWindow.__folioleFlushPendingEditorDraftBeforeClose; });
 
-async function fixture() {
+async function fixture(renderEditor?: Parameters<typeof createEditorHandoffFixture>[2]) {
   vi.useRealTimers();
   switchRequests = 0;
   const runtime = renderHook(() => useAppRuntime(320, 360));
-  const app = await createEditorHandoffFixture(true, true, undefined, () => ({
+  const app = await createEditorHandoffFixture(true, true, renderEditor, () => ({
     onRegisterEditorDraftFlush: runtime.result.current.registerPendingEditorDraftFlush
   }));
   flushWindow.__folioleFlushPendingEditorDraftBeforeClose = runtime.result.current.flushPendingEditorDraftBeforeClose;
@@ -130,4 +131,49 @@ it.each([false, true])('waits for an accepted text command before switching libr
   } else expect(failure).toBeUndefined();
   expect(openDatabaseConnection().sqlite.prepare("SELECT content FROM nodes WHERE id = 'topic'").pluck().get())
     .toBe(failed ? 'Continued after command failure' : 'Accepted command tail');
+});
+
+
+const { MarkdownEditor } = await rendererModule('../../src/features/editor/components/MarkdownEditor.tsx');
+const { LocalizationProvider } = await rendererModule('../../src/shared/localization/LocalizationProvider.tsx');
+const { MouseGestureSettingsProvider } = await rendererModule('../../src/features/settings/context/MouseGestureSettingsProvider.tsx');
+type CompositionEditor = { getContent(): string; replaceRange(from: number, to: number, content: string): void;
+  flushContentChanges?(): void };
+
+it.each([false, true])('waits for composition completion before switching library (modified: %s)', async modified => {
+  let adapter: CompositionEditor | null = null;
+  const app = await fixture(panel => createElement(LocalizationProvider, null,
+    createElement(MouseGestureSettingsProvider, null, createElement(MarkdownEditor, {
+      nodeId: panel.editorNodeId, value: panel.editorContent, onChange: panel.onEditorChange,
+      onDocumentInput: panel.onEditorInput, onPendingInput: panel.onEditorPendingInput,
+      onFocusCapture: panel.onEditorFocus, onFocusLeave: panel.onEditorFocusLeave,
+      onReady: (next: CompositionEditor | null) => { adapter = next; }
+    }))));
+  const editor = adapter as unknown as CompositionEditor;
+  const input = app.container!.querySelector<HTMLElement>('.cm-content')!;
+  const originalPath = openDatabaseConnection().dbPath;
+  await act(async () => {
+    input.focus();
+    fireEvent.compositionStart(input);
+    if (modified) {
+      editor.replaceRange(0, editor.getContent().length, 'Intermediate 中');
+      editor.flushContentChanges?.();
+      expect(await app.drain()).toBe(true);
+    }
+  });
+  let switching!: Promise<unknown>;
+  await act(async () => {
+    switching = updateRuntimeLibraryPathSetting('library_home', path.join(transport.root, 'Next'));
+    await new Promise(resolve => setTimeout(resolve, 20));
+  });
+  const switchedBeforeEnd = switchRequests > 0 || openDatabaseConnection().dbPath !== originalPath;
+  await act(async () => {
+    editor.replaceRange(0, editor.getContent().length, 'Final 中文');
+    editor.flushContentChanges?.();
+    fireEvent.compositionEnd(input);
+    await switching;
+  });
+  expect(switchedBeforeEnd).toBe(false);
+  expect(openDatabaseConnection().sqlite.prepare("SELECT content FROM nodes WHERE id = 'topic'").pluck().get())
+    .toBe('Final 中文');
 });
