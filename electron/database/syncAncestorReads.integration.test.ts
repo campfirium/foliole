@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
+import { readTopicAlternativeRecords } from '../../lib/core/sync/topicAlternativeStore.js';
 
 import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
 import { withLibraryRequestSnapshot } from './syncRequestSnapshot.testSupport.js';
@@ -31,15 +32,19 @@ it('retains an explicit return to old text against an offline branch and stays s
     const result = (await loadCurrentSyncNodeRecord(left.port, 'topic'))!;
     expect(await readPersistedTopicBodies(left.port))
       .toEqual(new Set(['Original', 'Offline body']));
+    const alternativeFacts = await readTopicAlternativeRecords(left.port, 'topic');
+    expect(alternativeFacts).toHaveLength(1);
     const facts = history(left);
     await replay();
     expect(history(left)).toEqual(facts);
+    expect(await readTopicAlternativeRecords(left.port, 'topic')).toStrictEqual(alternativeFacts);
     await withLibraryRequestSnapshot(left, right, replayBack => replayBack());
     for (const peer of [left, right]) {
       assertPersisted(peer, result.body_text!, result.version_id!);
       const current = (await loadCurrentSyncNodeRecord(peer.port, 'topic'))!;
       expect(current.snapshot.text_selection).toEqual(result.snapshot.text_selection);
       expect(await readPersistedTopicBodies(peer.port)).toEqual(new Set(['Original', 'Offline body']));
+      expect(await readTopicAlternativeRecords(peer.port, 'topic')).toStrictEqual(alternativeFacts);
     }
   });
 });
