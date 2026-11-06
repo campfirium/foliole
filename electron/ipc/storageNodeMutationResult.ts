@@ -10,7 +10,7 @@ export type OriginWindow = BrowserWindow | null;
 
 export function completeWorkspaceMutation(result: unknown = null, originWindow: OriginWindow = null,
   workspaceScope: WorkspaceRefreshScope = { kind: 'full' }, libraryScope?: string) {
-  notifyWorkspaceContentChanged(originWindow, { workspaceScope, ...(libraryScope ? { libraryScope } : {}) });
+  notifyWorkspaceContentChanged(null, { refreshingWindow: originWindow, workspaceScope, ...(libraryScope ? { libraryScope } : {}) });
   return result;
 }
 

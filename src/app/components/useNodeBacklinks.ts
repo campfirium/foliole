@@ -4,6 +4,8 @@ import type { Dispatch, SetStateAction } from 'react';
 import { collectBacklinks, type BacklinkItem } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { loadRuntimeNodeBacklinks } from '../../shared/platform/nodeBacklinksRuntimeRepository';
+import { onWorkspaceContentChanged, onWorkspaceSyncApplied } from '../../shared/platform/runtimeShellEvents';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
 
@@ -27,6 +29,7 @@ function collectLocalBacklinks(args: {
 interface RuntimeBacklinksState {
   errorMessage: string;
   isLoading: boolean;
+  libraryScope: string | undefined;
   targetNodeId: string | null;
   value: BacklinkItem[] | null;
 }
@@ -34,12 +37,14 @@ interface RuntimeBacklinksState {
 const EMPTY_RUNTIME_BACKLINKS_STATE: RuntimeBacklinksState = {
   errorMessage: '',
   isLoading: false,
+  libraryScope: undefined,
   targetNodeId: null,
   value: null
 };
 
 function startRuntimeBacklinksLoad(
   targetNodeId: string | null,
+  libraryScope: string | undefined,
   setRuntimeState: Dispatch<SetStateAction<RuntimeBacklinksState>>
 ) {
   if (!targetNodeId) {
@@ -47,32 +52,36 @@ function startRuntimeBacklinksLoad(
     return () => undefined;
   }
 
-  let cancelled = false;
-  setRuntimeState({
-    errorMessage: '',
-    isLoading: true,
-    targetNodeId,
-    value: null
-  });
-  void loadRuntimeNodeBacklinks(targetNodeId)
-    .then((backlinks) => {
-      if (!cancelled) {
-        setRuntimeState({ errorMessage: '', isLoading: false, targetNodeId, value: backlinks });
+  let generation = 0;
+  let disposed = false;
+  const unlisteners: (() => void)[] = [];
+  const reload = () => {
+    const request = ++generation;
+    setRuntimeState(current => ({ errorMessage: '', isLoading: true, targetNodeId, libraryScope,
+      value: current.targetNodeId === targetNodeId && current.libraryScope === libraryScope ? current.value : null }));
+    void loadRuntimeNodeBacklinks(targetNodeId).then(value => {
+      if (!disposed && request === generation) {
+        setRuntimeState({ errorMessage: '', isLoading: false, targetNodeId, libraryScope, value });
       }
-    })
-    .catch(() => {
-      if (!cancelled) {
-        setRuntimeState({
-          errorMessage: 'Backlinks could not be loaded.',
-          isLoading: false,
-          targetNodeId,
-          value: null
-        });
+    }).catch(() => {
+      if (!disposed && request === generation) {
+        setRuntimeState(current => ({ ...current, errorMessage: 'Backlinks could not be loaded.', isLoading: false }));
       }
     });
-
+  };
+  const changed = (payload: { libraryScope?: string }) => {
+    if (!disposed && (!payload.libraryScope || !libraryScope || payload.libraryScope === libraryScope)) reload();
+  };
+  reload();
+  for (const subscribe of [onWorkspaceContentChanged, onWorkspaceSyncApplied]) {
+    void subscribe(changed).then(unlisten => {
+      if (disposed) unlisten?.();
+      else if (unlisten) unlisteners.push(unlisten);
+    });
+  }
   return () => {
-    cancelled = true;
+    disposed = true;
+    unlisteners.forEach(unlisten => unlisten());
   };
 }
 
@@ -82,6 +91,7 @@ export function useNodeBacklinks(args: {
   targetNodeId: string | null;
   trashedNodeIds: string[];
 }) {
+  const libraryScope = useWorkspaceStore(state => state.libraryScope);
   const localBacklinks = useMemo(
     () => measureWorkspaceDiagnostic(
       'node-backlinks-local-collect',
@@ -101,10 +111,10 @@ export function useNodeBacklinks(args: {
   }, []);
 
   useEffect(() => {
-    return startRuntimeBacklinksLoad(args.targetNodeId, setRuntimeState);
-  }, [args.targetNodeId, refreshKey]);
+    return startRuntimeBacklinksLoad(args.targetNodeId, libraryScope, setRuntimeState);
+  }, [args.targetNodeId, libraryScope, refreshKey]);
 
-  const isCurrentRuntimeState = runtimeState.targetNodeId === args.targetNodeId;
+  const isCurrentRuntimeState = runtimeState.targetNodeId === args.targetNodeId && runtimeState.libraryScope === libraryScope;
   return {
     errorMessage: isCurrentRuntimeState ? runtimeState.errorMessage : '',
     isLoading: isCurrentRuntimeState ? runtimeState.isLoading : false,
