@@ -50,7 +50,7 @@ export async function handleStorageCommand(
       command === NATIVE_COMMANDS.releaseNodeEditorBase) {
     return handleEditorHoldCommand(command, args);
   }
-  const dailyFlowResult = await handleDailyFlowCommand(command, args);
+  const dailyFlowResult = await handleDailyFlowCommand(command, args, window);
   if (dailyFlowResult !== undefined) return dailyFlowResult;
   const syncMutationResult = handleSyncMutationCommand(command, args);
   if (syncMutationResult !== undefined) {
@@ -91,7 +91,7 @@ export async function handleStorageCommand(
   if (settingsResult !== undefined) {
     return settingsResult;
   }
-  const readingAndReviewResult = handleReadingAndReviewCommand(command, args);
+  const readingAndReviewResult = handleReadingAndReviewCommand(command, args, window);
   if (readingAndReviewResult !== undefined) {
     return readingAndReviewResult;
   }

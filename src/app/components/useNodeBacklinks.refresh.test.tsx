@@ -1,14 +1,15 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import type { WorkspaceRefreshScope } from '../../../lib/core/database/workspaceSnapshotRefresh';
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useNodeBacklinks } from './useNodeBacklinks';
 
 const runtime = vi.hoisted(() => ({
-  load: vi.fn(), changed: null as null | ((payload: { libraryScope?: string }) => void),
-  synced: null as null | ((payload: { libraryScope?: string }) => void), unlisten: vi.fn()
+  load: vi.fn(), changed: null as null | ((payload: { libraryScope?: string; workspaceScope?: WorkspaceRefreshScope }) => void),
+  synced: null as null | ((payload: { libraryScope?: string; workspaceScope?: WorkspaceRefreshScope }) => void), unlisten: vi.fn()
 }));
 vi.mock('../../shared/platform/nodeBacklinksRuntimeRepository', () => ({ loadRuntimeNodeBacklinks: runtime.load }));
 vi.mock('../../shared/platform/runtimeShellEvents', () => ({
@@ -82,4 +83,15 @@ it('does not accept replies for another target or a previous library with the sa
   expect(runtime.load).toHaveBeenCalledTimes(3);
   view.unmount();
   expect(runtime.unlisten).toHaveBeenCalledTimes(6);
+});
+
+it('does not reread backlinks for a learning-only notification', async () => {
+  runtime.load.mockResolvedValue(item('Saved'));
+  const view = hook();
+  await waitFor(() => expect(view.result.current.value).toEqual(item('Saved')));
+  act(() => runtime.changed?.({ libraryScope: 'library-a', workspaceScope: {
+    kind: 'nodes', nodeIds: [], readingNodeIds: ['target']
+  } }));
+  expect(runtime.load).toHaveBeenCalledTimes(1);
+  expect(view.result.current.value).toEqual(item('Saved'));
 });

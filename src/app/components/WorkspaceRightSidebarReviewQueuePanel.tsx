@@ -117,7 +117,9 @@ function DailyFlowQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) 
   const demo = useDemoRuntimeState();
   const future = useDailyFlowFuture(now, demo.isDemo && isHydrated, true);
   const nodesById = useWorkspaceStore(state => state.nodesById);
-  const result = useDailyFlowView({ libraryScope, reviewSession, reviewSessionMode, nodesById,
+  const nodeOrder = useWorkspaceStore(state => state.nodeOrder);
+  const trashedNodeIds = useWorkspaceStore(state => state.trashedNodeIds);
+  const result = useDailyFlowView({ libraryScope, reviewSession, reviewSessionMode, nodesById, nodeOrder, trashedNodeIds,
     now, includeEntries: true, enabled: isHydrated && Boolean(now) });
   if (result?.error || future?.error) return <p role="alert">Could not load Flow.</p>;
   if (!result?.view) return null;

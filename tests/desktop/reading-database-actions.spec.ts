@@ -41,6 +41,7 @@ for (const action of ['Read', 'Later', 'Dismiss'] as const) {
     await runPaletteHistoryCommand(page, `Redo ${action} Topic`);
     await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId)).not.toBe(before.id);
     await page.reload(); await expectWorkspaceShell(page);
+    await page.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated());
     expect(await page.evaluate(async id => (await window.electronAPI.invoke('load_workspace_snapshot', {})).nodesById[id]?.reading, before.id)).toEqual(after);
     expect(await page.evaluate(id => window.__folioleWorkspaceDebug!.getNode(id)?.reading, before.id)).toBeNull();
     await page.screenshot({ path: path.resolve(`.tmp/artifacts/T632/reading-${action.toLowerCase()}-database.png`) });

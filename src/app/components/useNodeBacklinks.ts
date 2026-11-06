@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 
+import type { WorkspaceRefreshScope } from '../../../lib/core/database/workspaceSnapshotRefresh';
 import { collectBacklinks, type BacklinkItem } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { loadRuntimeNodeBacklinks } from '../../shared/platform/nodeBacklinksRuntimeRepository';
@@ -69,7 +70,9 @@ function startRuntimeBacklinksLoad(
       }
     });
   };
-  const changed = (payload: { libraryScope?: string }) => {
+  const changed = (payload: { libraryScope?: string; workspaceScope?: WorkspaceRefreshScope }) => {
+    const scope = payload.workspaceScope;
+    if (scope?.kind === 'nodes' && !scope.nodeIds.length && !scope.structure) return;
     if (!disposed && (!payload.libraryScope || !libraryScope || payload.libraryScope === libraryScope)) reload();
   };
   reload();
@@ -118,6 +121,7 @@ export function useNodeBacklinks(args: {
   return {
     errorMessage: isCurrentRuntimeState ? runtimeState.errorMessage : '',
     isLoading: isCurrentRuntimeState ? runtimeState.isLoading : false,
+    hasLoaded: isCurrentRuntimeState && runtimeState.value !== null,
     retry,
     value: isCurrentRuntimeState ? runtimeState.value ?? localBacklinks : localBacklinks
   };

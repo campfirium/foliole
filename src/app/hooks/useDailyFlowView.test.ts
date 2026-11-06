@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { DailyFlowView } from '../../../lib/core/flow/dailyFlowViewContract';
 import { loadDailyFlowViewRuntime } from '../../shared/platform/runtime/dailyFlowRuntimeRepository';
+import { createQaNode } from '../../store/workspaceStoreReviewActions.test-support';
 
 import { useDailyFlowView } from './useDailyFlowView';
 
@@ -15,7 +16,12 @@ const view = (scope: string): DailyFlowView => ({ status: 'ready', scope, dayKey
 const input = { libraryScope: 'a', reviewSession: { currentNodeId: null, queueNodeIds: [],
   totalNodeCount: 0, isAnswerRevealed: false }, reviewSessionMode: 'recommended' as const, nodesById: {},
   now: '2026-10-27T08:00:00.000Z', includeEntries: false, enabled: true };
-beforeEach(() => vi.resetAllMocks());
+let revision = 0;
+function changedNodes() {
+  const id = `changed-${++revision}`;
+  return { [id]: createQaNode(id, input.now) };
+}
+beforeEach(() => { vi.resetAllMocks(); revision = 0; });
 
 it('requests only a summary until a list consumer asks for entries and releases disabled demand', async () => {
   vi.mocked(loadDailyFlowViewRuntime).mockResolvedValue({ view: view('a'), nodes: undefined });
@@ -49,14 +55,14 @@ it('keeps summary availability during a node refresh and replaces a failure with
   await waitFor(() => expect(app.result.current?.view?.modeAvailability.recommended).toBe(true));
   let fail!: (error: Error) => void;
   vi.mocked(loadDailyFlowViewRuntime).mockReturnValueOnce(new Promise((_, reject) => { fail = reject; }));
-  app.rerender({ ...input, nodesById: {} });
+  app.rerender({ ...input, nodesById: changedNodes() });
   expect(app.result.current?.view?.modeAvailability.recommended).toBe(true);
   await act(async () => { fail(new Error('read failed')); });
   expect(app.result.current?.error).toContain('read failed');
   expect(app.result.current?.view).toBeUndefined();
   let finish!: (value: { view: DailyFlowView; nodes: undefined }) => void;
   vi.mocked(loadDailyFlowViewRuntime).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
-  app.rerender({ ...input, nodesById: {} });
+  app.rerender({ ...input, nodesById: changedNodes() });
   expect(app.result.current).toBeNull();
   await act(async () => { finish({ view: view('a'), nodes: undefined }); });
   expect(app.result.current?.view?.scope).toBe('a');
@@ -69,7 +75,7 @@ it.each(['libraryScope', 'reviewSessionMode', 'now', 'includeEntries', 'reviewSe
     await waitFor(() => expect(app.result.current?.view?.scope).toBe('a'));
     let finish!: (value: { view: DailyFlowView; nodes: undefined }) => void;
     vi.mocked(loadDailyFlowViewRuntime).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
-    app.rerender({ ...input, nodesById: {} });
+    app.rerender({ ...input, nodesById: changedNodes() });
     expect(app.result.current?.view?.scope).toBe('a');
     vi.mocked(loadDailyFlowViewRuntime).mockReturnValueOnce(new Promise(() => {}));
     const changes = { libraryScope: 'b', reviewSessionMode: 'reading-only' as const,
@@ -88,9 +94,9 @@ it('ignores an older refresh after a newer refresh has completed in the same con
   await waitFor(() => expect(app.result.current?.view?.scope).toBe('a'));
   let finish!: (value: { view: DailyFlowView; nodes: undefined }) => void;
   vi.mocked(loadDailyFlowViewRuntime).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
-  app.rerender({ ...input, nodesById: {} });
+  app.rerender({ ...input, nodesById: changedNodes() });
   vi.mocked(loadDailyFlowViewRuntime).mockResolvedValueOnce({ view: { ...view('a'), revision: 2 }, nodes: undefined });
-  app.rerender({ ...input, nodesById: {} });
+  app.rerender({ ...input, nodesById: changedNodes() });
   await waitFor(() => expect(app.result.current?.view?.revision).toBe(2));
   await act(async () => { finish({ view: view('a'), nodes: undefined }); });
   expect(app.result.current?.view?.revision).toBe(2);

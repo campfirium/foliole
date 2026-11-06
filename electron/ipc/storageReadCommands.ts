@@ -1,7 +1,9 @@
+import type { BrowserWindow } from 'electron';
 import { z } from 'zod';
 
 import { loadWorkspaceListProjection } from '../../lib/core/database/workspaceListProjection.js';
 import { readWorkspaceNodeLearning } from '../../lib/core/database/workspaceNodeLearning.js';
+import type { WorkspaceRefreshScope } from '../../lib/core/database/workspaceSnapshotRefresh.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { foregroundTimeHistoryArgsSchema } from '../../lib/platform/nativeForegroundTimeContract.js';
 import { currentLibraryScope } from '../database/attachmentResourceDescription.js';
@@ -24,7 +26,6 @@ import { projectWorkspaceListRendererNode } from '../database/workspaceListRende
 import { loadWorkspaceListSnapshot } from '../database/workspaceListSnapshot.js';
 import { loadWorkspaceNodeDocument } from '../database/workspaceNodeDocument.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
-import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js';
 
 import {
   asNullableString,
@@ -35,9 +36,10 @@ import {
   parseNodeViewStatePayloadArray
 } from './commandParsers.js';
 import { parseApplyReviewGradeArgs } from './reviewCommandArgs.js';
+import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
-function completeHighValueWrite<T>(result: T) {
-  void requestDesktopHighValueSync();
+function completeHighValueWrite<T>(result: T, workspaceScope: WorkspaceRefreshScope, refreshingWindow: BrowserWindow | null) {
+  notifyWorkspaceContentChanged(null, { workspaceScope, refreshingWindow });
   return result;
 }
 
@@ -110,7 +112,7 @@ export function handleWorkspaceReadCommand(command: string, args: Record<string,
   return undefined;
 }
 
-export function handleReadingAndReviewCommand(command: string, args: Record<string, unknown>) {
+export function handleReadingAndReviewCommand(command: string, args: Record<string, unknown>, origin: BrowserWindow | null = null) {
   if (command === NATIVE_COMMANDS.loadReadingProgress) {
     return loadReadingProgress();
   }
@@ -144,7 +146,7 @@ export function handleReadingAndReviewCommand(command: string, args: Record<stri
         completedReviewDay: asString(args.completedReviewDay, 'completedReviewDay')
       }),
       updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
-    }));
+    }), { kind: 'nodes', nodeIds: [], readingNodeIds: [asString(args.nodeId, 'nodeId')] }, origin);
   }
   if (command === NATIVE_COMMANDS.saveNodeReviewState) {
     return completeHighValueWrite(saveNodeReviewState({
@@ -154,17 +156,15 @@ export function handleReadingAndReviewCommand(command: string, args: Record<stri
         mode: z.enum(['undo', 'redo']), targetOpId: z.string().min(1)
       }).strict().parse(args.history) }),
       updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
-    }));
+    }), { kind: 'nodes', nodeIds: [], reviewNodeIds: [asString(args.nodeId, 'nodeId')] }, origin);
   }
   if (command === NATIVE_COMMANDS.applyReviewGrade) {
     const card = applyReviewGrade(parseApplyReviewGradeArgs(args));
-    void requestDesktopHighValueSync();
-    return card;
+    return completeHighValueWrite(card, { kind: 'nodes', nodeIds: [], reviewNodeIds: [asString(args.nodeId, 'nodeId')] }, origin);
   }
   if (command === NATIVE_COMMANDS.relearnNode) {
     resetNodeReviewState(asString(args.nodeId, 'nodeId'));
-    void requestDesktopHighValueSync();
-    return null;
+    return completeHighValueWrite(null, { kind: 'nodes', nodeIds: [], reviewNodeIds: [asString(args.nodeId, 'nodeId')] }, origin);
   }
   return undefined;
 }

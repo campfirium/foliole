@@ -51,7 +51,7 @@ export function WorkspaceRightSidebarBacklinksPanel(props: WorkspaceRightSidebar
     return <BacklinksErrorState onRetry={backlinks.retry} />;
   }
 
-  if (backlinks.isLoading && backlinks.value.length === 0) {
+  if (backlinks.isLoading && !backlinks.hasLoaded && backlinks.value.length === 0) {
     return <AppLoadingState />;
   }
 

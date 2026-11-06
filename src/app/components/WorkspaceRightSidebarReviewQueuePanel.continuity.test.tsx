@@ -26,7 +26,7 @@ const response = { view, nodes: { first: projectedNode } };
 beforeEach(() => {
   vi.resetAllMocks();
   useWorkspaceStore.setState({ libraryScope: 'a', isHydrated: true, reviewSessionMode: 'recommended',
-    nodesById: Object.fromEntries(['first', 'second'].map(id => [id, createQaNode(id, now)])),
+    nodesById: Object.fromEntries(['first', 'second'].map(id => [id, { ...createQaNode(id, now), content: 'Original' }])),
     reviewSession: { currentNodeId: null, queueNodeIds: [], totalNodeCount: 0, isAnswerRevealed: false } });
 });
 afterEach(() => act(() => useWorkspaceStore.setState(initial, true)));
@@ -38,20 +38,17 @@ it('keeps the real subscribed panel usable through body and title refreshes, the
   const list = await screen.findByRole('list', { name: 'Flow items' });
   expect(screen.getByRole('button', { name: 'first' })).toBeInTheDocument();
   for (const patch of [{ content: 'Edited body' }, { title: 'Renamed first' }]) {
-    let finish!: (value: typeof response) => void;
-    vi.mocked(loadDailyFlowViewRuntime).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
     act(() => useWorkspaceStore.setState(state => ({ nodesById: { ...state.nodesById,
       first: { ...state.nodesById.first!, ...patch } } })));
     expect(list).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Flow items' })).toBe(list);
     expect(screen.getByRole('button', { name: patch.title ?? 'first' })).toBeInTheDocument();
-    await act(async () => { finish(response); });
-    expect(screen.getByRole('list', { name: 'Flow items' })).toBe(list);
+    expect(loadDailyFlowViewRuntime).toHaveBeenCalledTimes(1);
   }
   let finish!: (value: typeof response) => void;
   vi.mocked(loadDailyFlowViewRuntime).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
   act(() => useWorkspaceStore.setState(state => ({ nodesById: { ...state.nodesById,
-    second: { ...state.nodesById.second!, content: 'Changed eligibility' } } })));
+    second: { ...state.nodesById.second!, content: '', hasContent: false } } })));
   expect(list).toBeInTheDocument();
   await act(async () => { finish({ ...response, view: { ...view, revision: 2, nodeIds: ['first'] } }); });
   await waitFor(() => expect(screen.queryByRole('button', { name: 'second' })).not.toBeInTheDocument());
