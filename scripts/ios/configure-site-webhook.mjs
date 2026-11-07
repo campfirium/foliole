@@ -1,5 +1,6 @@
 /* global AbortSignal, console, fetch */
 import process from 'node:process';
+import { createHmac } from 'node:crypto';
 import { appleReadToken } from './testflight-publication.mjs';
 import { IOS_APP_ID } from './testflight-candidate.mjs';
 
@@ -13,6 +14,13 @@ async function main() {
   }
   const secret = process.env.FOLIOLE_APPLE_WEBHOOK_SECRET;
   if (!/^[a-f0-9]{64}$/u.test(secret ?? '')) throw new Error('Missing the generated webhook signing secret.');
+  const probe = JSON.stringify({ data: { type: 'buildBetaDetailExternalBuildStateUpdated' } });
+  const signature = createHmac('sha256', secret).update(probe).digest('hex');
+  const preflight = await fetch(url, {
+    method: 'POST', redirect: 'error', signal: AbortSignal.timeout(10000), body: probe,
+    headers: { 'content-type': 'application/json', 'x-apple-signature': `hmacsha256=${signature}` }
+  });
+  if (preflight.status !== 204) throw new Error(`Webhook dispatch preflight returned HTTP ${preflight.status}.`);
   const token = await appleReadToken();
   const request = async (route, method = 'GET', data) => {
     const response = await fetch(`https://api.appstoreconnect.apple.com/v1/${route}`, {
