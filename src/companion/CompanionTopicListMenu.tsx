@@ -6,6 +6,7 @@ import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionW
 
 import { CompanionBottomSheet } from './CompanionBottomSheet';
 import { useCompanionListInteraction } from './CompanionListViewport';
+import { CompanionNodePrioritySlider } from './CompanionNodePrioritySlider';
 import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 
 export function CompanionTopicListMenu(props: { inline?: boolean; nodeId?: string; title: string; metadata: string; onOpen(): void }) {
@@ -25,6 +26,7 @@ export function CompanionTopicListMenu(props: { inline?: boolean; nodeId?: strin
         <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
       </button>
       <CompanionBottomSheet onOpenChange={setOpen} open={open} title={t('companion.browse.more')}>
+        <CompanionNodePrioritySlider nodeId={props.nodeId} />
         <button className="block min-h-11 w-full border-b border-companion-divider py-3 text-left text-sm" onClick={() => { setOpen(false); props.onOpen(); }} type="button">
           {t('desktop.searchPreview.open')}
         </button>

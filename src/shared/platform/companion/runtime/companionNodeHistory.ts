@@ -51,8 +51,10 @@ export async function commitCompanionNodeHistoryWithDb(db: DbPort, records: Nati
     type: 'nodes.change', ...sessions, relatedReadings, orders: await completeCompanionHistoryOrders(db, orders), id: createCompanionUuid(), title, rootNodeId: records[0]!.object_id, subtreeNodeIds,
     changes: after.map((node, i) => {
       if (!node) throw new Error('workspace_mutation_not_applied');
-      return { nodeId: node.id, before: before[i] ? workspaceNodeMetadata(before[i]!) : null,
-        after: workspaceNodeMetadata(node), creationContent: before[i] ? null : hashTextBody(JSON.stringify([node.content, node.reveal])) };
+      const previous = before[i];
+      const priorityChanged = Boolean(previous && (previous.priority ?? null) !== (node.priority ?? null));
+      return { nodeId: node.id, before: previous ? workspaceNodeMetadata(previous, priorityChanged) : null,
+        after: workspaceNodeMetadata(node, priorityChanged), creationContent: before[i] ? null : hashTextBody(JSON.stringify([node.content, node.reveal])) };
     })
   };
   for (const node of records) await collectNodeVersionPayloads(db, node.object_id, Number.MAX_SAFE_INTEGER);
@@ -86,7 +88,7 @@ export async function createCompanionMetadataVersion(db: DbPort, node: Workspace
     return toWorkspaceNativeNodeVersion(node, host, versionId);
   }
   const snapshot = { ...current.snapshot, title: node.title, is_title_manual: node.isTitleManual,
-    parent_id: node.parentNodeId, deleted_at: node.deletedAt ?? null, shelved_at: node.shelvedAt ?? null,
+    parent_id: node.parentNodeId, priority: node.priority ?? null, deleted_at: node.deletedAt ?? null, shelved_at: node.shelvedAt ?? null,
     sequential_reading_enabled: node.sequentialReadingEnabled ?? null, updated_at: node.updatedAt };
   return { ...current, snapshot, content_hash: topicTextSnapshotHash(snapshot), host_name: host,
     version_id: versionId ?? `ver_${createCompanionUuid()}`, version_created_at: node.updatedAt, updated_at: node.updatedAt,

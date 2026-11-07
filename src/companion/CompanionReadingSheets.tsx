@@ -10,6 +10,7 @@ import { CompanionColorModeControl } from './CompanionColorModeControl';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { CompanionFlowOrEditHistoryActions } from './CompanionFlowHistorySurface';
 import { CompanionFlowModeControl } from './CompanionFlowModeControl';
+import { CompanionNodePrioritySlider } from './CompanionNodePrioritySlider';
 import { CompanionReadingColorControls } from './CompanionReadingColorControls';
 import { CompanionReadingDisplayControls } from './CompanionReadingDisplayControls';
 import { CompanionReadingModeControl } from './CompanionReadingModeControl';
@@ -61,6 +62,7 @@ function ReadingExitFlowHereAction(props: { onClose(): void }) {
 
 export function ReadingActionsSheet(props: {
   editHistory?: CompanionEditHistoryActionsProps;
+  priorityNodeId?: string;
   onFindInDocument(): void;
   onOpenOutline?: () => void;
   onOpenChange(open: boolean): void;
@@ -81,6 +83,7 @@ export function ReadingActionsSheet(props: {
         <CompanionFlowOrEditHistoryActions open={props.open} {...(props.editHistory ? { editHistory: props.editHistory } : {})} />
         <CompanionFlowModeControl onSelect={() => props.onOpenChange(false)} />
         <ReadingExitFlowHereAction onClose={() => props.onOpenChange(false)} />
+        <CompanionNodePrioritySlider nodeId={props.priorityNodeId} />
         <CompanionWorkspaceCurrentNodeAction onSelect={() => props.onOpenChange(false)} />
         <ReadingActionRow
           icon={<Search aria-hidden="true" className="h-5 w-5" />}

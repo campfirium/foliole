@@ -27,6 +27,7 @@ export function ReadingActionsLayer(props: {
       open={props.actionsOpen}
       {...definedProps({
         editHistory: props.editHistory,
+        priorityNodeId: props.readableArticle.isTrashed ? undefined : props.readableArticle.nodeId,
         onOpenOutline: props.onOpenOutline,
         onOpenClozeRemoval: props.onOpenClozeRemoval,
         onRestoreFromTrash: props.readableArticle.isTrashed && restoreFromTrash

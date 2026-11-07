@@ -135,3 +135,25 @@ it.each(['android', 'ios'] as const)('%s does not reuse another library prioriti
   second.owner.clearNodePriorities();
   expect(await generate(second)).toEqual(next);
 });
+
+it('uses saved topic and item priority in the next durable Android queues', async () => {
+  const library = await openLibrary('android', 9);
+  const sample = nodes(9).find(node => node.id === 'leaf')!;
+  await applyCompanionLocalNodeVersions(await Promise.all(['card-a', 'card-b'].map(id =>
+    toWorkspaceNativeNodeVersion({ ...sample, id, title: id, kind: 'item', reveal: 'Answer' }, 'fixture', `seed-${id}`))));
+  await refreshCompanionWorkspaceSnapshot();
+
+  const first = await openCompanionDailyFlow({ now, mode: 'reading-only' });
+  expect(first.session.currentNodeId).toBe('zero');
+  await mutateCompanionWorkspace({ type: 'set-priority', nodeId: 'zero', priority: 9 });
+  await mutateCompanionWorkspace({ type: 'set-priority', nodeId: 'leaf', priority: 0 });
+  await mutateCompanionWorkspace({ type: 'set-priority', nodeId: 'card-b', priority: 0 });
+  expect((await openCompanionDailyFlow({ now, mode: 'reading-only' })).session.currentNodeId).toBe('zero');
+
+  const tomorrow = '2026-10-29T08:00:00.000Z';
+  expect((await openCompanionDailyFlow({ now: tomorrow, mode: 'reading-only' })).session.currentNodeId).toBe('leaf');
+  expect((await openCompanionDailyFlow({ now: tomorrow, mode: 'review-first' })).session.currentNodeId).toBe('card-b');
+  const facts = await originalFacts(library);
+  expect(facts.reading).toEqual([]);
+  expect(facts.review).toEqual([]);
+});

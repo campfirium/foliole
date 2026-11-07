@@ -5,6 +5,7 @@ import { assertWorkspaceMetadataParent, collectWorkspaceMetadataSubtree } from '
 
 export type WorkspaceMetadataCommand =
   | { type: 'create'; kind: 'folder' | 'topic' | 'item'; title: string; parentNodeId: string | null; nodeId: string }
+  | { type: 'set-priority'; nodeId: string; priority: number }
   | { type: 'rename'; nodeId: string; title: string }
   | { type: 'move'; nodeId: string; parentNodeId: string | null }
   | { type: 'delete' | 'restore' | 'shelve' | 'unshelve'; nodeId: string };
@@ -27,6 +28,13 @@ export function buildWorkspaceMetadataMutation(command: WorkspaceMetadataCommand
     if (!command.title.trim()) throw new Error('node_title_required');
     next.title = command.title.trim();
     next.isTitleManual = true;
+  } else if (command.type === 'set-priority') {
+    if ((node.kind !== 'topic' && node.kind !== 'item') ||
+      !Number.isInteger(command.priority) || command.priority < 0 || command.priority > 9) {
+      throw new Error('node_priority_unavailable');
+    }
+    if (node.priority === command.priority) return { nodes: [], subtreeNodeIds: null, title: command.type };
+    next.priority = command.priority;
   } else if (command.type === 'move') {
     if (!canNodeBeMoved(node)) throw new Error('node_move_unavailable');
     assertWorkspaceMetadataParent(node, command.parentNodeId, nodes);

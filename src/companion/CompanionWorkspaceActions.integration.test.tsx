@@ -3,13 +3,16 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
 import { loadCompanionFlowHistory } from '../shared/platform/companion/runtime/companionFlowHistory';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
+import { applyCompanionLocalNodeVersions } from '../shared/platform/companionSyncObjects';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
+import { CompanionTopicListMenu } from './CompanionTopicListMenu';
 import { CompanionWorkspaceActionsProvider, CompanionWorkspaceCreateAction, CompanionWorkspaceHistoryActions,
   useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 
@@ -29,7 +32,10 @@ function Menu() {
   return <>
     <CompanionWorkspaceCreateAction /><CompanionWorkspaceHistoryActions />
     {Object.values(actions.snapshot?.nodesById ?? {}).filter(node => !node.id.startsWith('special-') && !node.deletedAt).map(node =>
-      <button key={node.id} onClick={() => actions.open({ mode: 'menu', nodeId: node.id, parentNodeId: null })}>{node.title}</button>)}
+      <div key={node.id}>
+        <button onClick={() => actions.open({ mode: 'menu', nodeId: node.id, parentNodeId: null })}>{node.title}</button>
+        <CompanionTopicListMenu nodeId={node.id} title={node.title} metadata="" onOpen={() => {}} />
+      </div>)}
   </>;
 }
 function Harness() {
@@ -75,4 +81,67 @@ it('retries refresh without creating a second object or recording a second actio
   fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Created folder' })).toBeInTheDocument());
   expect((await loadCompanionFlowHistory(companionFlowHistoryKey('Search'))).undoStack).toHaveLength(1);
+});
+
+it('saves only a committed slider adjustment, updates inherited values and can undo the override', async () => {
+  const now = '2026-10-03T00:00:00Z';
+  const shapes = [
+    { id: 'folder', kind: 'folder', parentNodeId: null, priority: 3 },
+    { id: 'topic', kind: 'topic', parentNodeId: 'folder' },
+    { id: 'item', kind: 'item', parentNodeId: 'topic' }
+  ] as const;
+  await applyCompanionLocalNodeVersions(await Promise.all(shapes.map(node => toWorkspaceNativeNodeVersion({
+    ...node, title: node.id, content: 'Body', reveal: node.kind === 'item' ? 'Answer' : null,
+    createdAt: now, updatedAt: now, isTitleManual: true, hideTitleHeading: false,
+    anchorLink: null, review: null, reading: null
+  }, 'Search', `base-${node.id}`))));
+  initial = await stored();
+  render(<Harness />);
+  const open = (name: string) => {
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`: ${name}$`) }));
+    return screen.getByRole('slider', { name: 'Priority' });
+  };
+  const close = () => fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  const facts = () => library.database.prepare('SELECT id, priority FROM nodes WHERE id IN (?, ?) ORDER BY id').all('topic', 'item');
+
+  const topic = open('topic');
+  expect(topic).toHaveValue('3');
+  fireEvent.input(topic, { target: { value: '0' } });
+  expect(facts()).toEqual([{ id: 'item', priority: null }, { id: 'topic', priority: null }]);
+  fireEvent.change(topic, { target: { value: '0' } });
+  await waitFor(() => expect(topic).toBeEnabled());
+  expect(topic).toHaveValue('0');
+  expect(facts()).toEqual([{ id: 'item', priority: null }, { id: 'topic', priority: 0 }]);
+
+  close();
+  const item = open('item');
+  expect(item).toHaveValue('0');
+  fireEvent.change(item, { target: { value: '7' } });
+  await waitFor(() => expect(item).toBeEnabled());
+  expect(item).toHaveValue('7');
+  close();
+  fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+  await waitFor(() => expect(facts()).toEqual([{ id: 'item', priority: null }, { id: 'topic', priority: 0 }]));
+  const restored = open('item');
+  expect(restored).toHaveValue('0');
+
+  library.database.exec(`CREATE TRIGGER reject_priority BEFORE UPDATE OF priority ON nodes
+    WHEN NEW.id = 'item' BEGIN SELECT RAISE(ABORT, 'priority rejected'); END`);
+  fireEvent.change(restored, { target: { value: '8' } });
+  await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
+  expect(restored).toHaveValue('0');
+  expect(facts()[0]).toEqual({ id: 'item', priority: null });
+  library.database.exec('DROP TRIGGER reject_priority');
+
+  failRefresh = true;
+  fireEvent.change(restored, { target: { value: '8' } });
+  const retry = await screen.findByRole('button', { name: 'Refresh' });
+  const historyKey = companionFlowHistoryKey('Search');
+  const historyBeforeRetry = await loadCompanionFlowHistory(historyKey);
+  expect(facts()[0]).toEqual({ id: 'item', priority: 8 });
+  failRefresh = false;
+  fireEvent.click(retry);
+  await waitFor(() => expect(restored).toBeEnabled());
+  expect(restored).toHaveValue('8');
+  expect(await loadCompanionFlowHistory(historyKey)).toEqual(historyBeforeRetry);
 });
