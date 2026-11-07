@@ -1,23 +1,35 @@
 /* global AbortSignal, console, fetch */
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
-import { readMobileStatus } from './mobile-candidate-phase.mjs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { appleReadToken } from '../ios/testflight-publication.mjs';
 import { IOS_APP_ID, IOS_GROUP_ID, IOS_INVITATION } from '../ios/testflight-candidate.mjs';
 import { createMobileGithubApi, verifyStoredMobileCandidate } from './mobile-candidate-store.mjs';
-import { createPlayApi, playAccessToken, PLAY_PACKAGE, PLAY_TRACK } from '../android/play-api.mjs';
-import { checkRegisteredPlayAvailability } from '../android/play-availability.mjs';
+import { createPlayApi, playAccessToken, readPlayReleases, PLAY_PACKAGE, PLAY_TRACK } from '../android/play-api.mjs';
+import { exactRelease } from '../android/play-availability.mjs';
 
-export function channelProjection(candidate, state, installation, url) {
-  const build = String(candidate.buildId ?? candidate.versionCode);
-  const confirmed = installation?.build === build && installation?.version === candidate.version &&
-    installation?.url === url;
+export function channelProjection(candidate, state, url) {
   return {
-    version: candidate.version, build,
-    status: state === 'available' ? (confirmed ? 'available' : 'verifying') : state,
-    ...(state === 'available' && confirmed ? { url } : {})
+    version: candidate.version,
+    build: String(candidate.buildId ?? candidate.versionCode),
+    status: state,
+    ...(state === 'available' ? { url } : {})
   };
+}
+
+export function playReviewStatus(releases, candidate) {
+  const release = exactRelease(releases, candidate);
+  switch (release?.releaseLifecycleState) {
+    case 'RELEASE_LIFECYCLE_STATE_APPROVED_NOT_PUBLISHED':
+    case 'RELEASE_LIFECYCLE_STATE_PUBLISHED':
+      return 'available';
+    case 'RELEASE_LIFECYCLE_STATE_IN_REVIEW':
+      return 'in-review';
+    case 'RELEASE_LIFECYCLE_STATE_NOT_APPROVED':
+      return 'rejected';
+    default:
+      return 'unavailable';
+  }
 }
 
 export function testflightStatus(result, group, candidate) {
@@ -35,8 +47,7 @@ export function testflightStatus(result, group, candidate) {
   if (state === 'BETA_REJECTED') return 'rejected';
   if (['WAITING_FOR_BETA_REVIEW', 'IN_BETA_REVIEW'].includes(state)) return 'in-review';
   if (build.attributes.expired || state === 'EXPIRED') return 'unavailable';
-  if (['BETA_APPROVED', 'READY_FOR_BETA_TESTING'].includes(state)) return 'verifying';
-  if (state !== 'IN_BETA_TESTING' || build.attributes.processingState !== 'VALID' ||
+  if (!['BETA_APPROVED', 'READY_FOR_BETA_TESTING', 'IN_BETA_TESTING'].includes(state) || build.attributes.processingState !== 'VALID' ||
       !build.relationships?.betaGroups?.data?.some(entry => entry.id === IOS_GROUP_ID)) return 'unavailable';
   const attrs = group.data.attributes;
   return attrs?.isInternalGroup === false && attrs.publicLinkEnabled === true &&
@@ -68,18 +79,15 @@ async function queryPlay(candidate) {
   if (exact.version !== candidate.version || exact.versionCode !== candidate.versionCode ||
       exact.track !== PLAY_TRACK || exact.packageName !== PLAY_PACKAGE) throw new Error('Play candidate differs.');
   const play = createPlayApi(await playAccessToken(process.env.ANDROID_PLAY_SERVICE_ACCOUNT_JSON));
-  const state = await checkRegisteredPlayAvailability({ play, github, registration: row });
-  if (state !== 'waiting') return state;
-  const { value } = await readMobileStatus(github, row.id, 'Play review: ');
-  return ['APPROVED_NOT_PUBLISHED', 'PUBLISHED'].includes(value) ? 'verifying' : 'in-review';
+  return playReviewStatus(await readPlayReleases(play), exact);
 }
 
 async function project(id, candidate, query, url) {
   try {
-    return [id, channelProjection(candidate, await query(candidate), candidate.installation, url)];
+    return [id, channelProjection(candidate, await query(candidate), url)];
   } catch (error) {
     console.error(`${id}: ${error.message}`);
-    return [id, channelProjection(candidate, 'unavailable', undefined, url)];
+    return [id, channelProjection(candidate, 'unavailable', url)];
   }
 }
 

@@ -5,7 +5,7 @@ import { readMobileCandidatePhase } from '../mobile/mobile-candidate-phase.mjs';
 import { readPlaySnapshot, writePlayCheckStatus, writePlayReviewStatus } from './play-availability-state.mjs';
 import { playEditPath, validPlayEditId } from './play-edit-id.mjs';
 
-function exactRelease(releases, candidate) {
+export function exactRelease(releases, candidate) {
   const matches = releases.filter(release => release.track === candidate.track &&
     release.activeArtifacts?.some(item => item.versionCode === candidate.versionCode));
   if (matches.length > 1) throw new Error('Ambiguous Play availability candidate');

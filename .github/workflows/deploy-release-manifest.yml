@@ -17,6 +17,8 @@ on:
       - ".github/workflows/deploy-release-manifest.yml"
       - "scripts/prepare-release-manifest-site.mjs"
       - "scripts/release-download-directory.mjs"
+      - "scripts/mobile/site-store-status.mjs"
+      - "scripts/android/play-availability.mjs"
 
 permissions:
   contents: read
@@ -32,11 +34,7 @@ jobs:
       source_sha: ${{ steps.source.outputs.sha }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    concurrency:
-      group: play-android-open-testing
-      cancel-in-progress: false
-      queue: max
-    permissions: { contents: read, deployments: write }
+    permissions: { contents: read, deployments: read }
     if: github.ref == 'refs/heads/dev' || github.event_name == 'release'
     steps:
       - uses: actions/checkout@v4
