@@ -11,6 +11,7 @@ const ANCHOR_REPAIR_FIELDS = ['anchor_link', 'image_regions', 'anchor_resolution
 
 interface LocalAnchorRow extends DbRow {
   current_version_id: string;
+  version_created_at: string;
   anchor_link: string | null;
   anchor_resolution_status: string | null;
   anchor_source_version_id: string | null;
@@ -32,7 +33,8 @@ export async function isIncomingLocalAnchorRepair(port: DbPort, record: NativeSy
       node.opening_text, node.virtual_filter, node.reveal, node.anchor_link, node.anchor_resolution_status,
       node.anchor_source_version_id, node.image_regions, node.image_sources, node.resource_references,
       node.import_source_fingerprint, node.import_content_fingerprint, node.position, node.created_at,
-      node.updated_at, node.deleted_at, node.current_version_id, version.snapshot_json, version.body_text
+      node.updated_at, node.deleted_at, node.current_version_id, version.created_at AS version_created_at,
+      version.snapshot_json, version.body_text
     FROM nodes node JOIN node_sync_versions version ON version.version_id = node.current_version_id
     WHERE node.id = ? AND node.sync_dirty = 1 AND node.deleted_at IS NULL`,
   [record.object_id]);
@@ -43,6 +45,10 @@ export async function isIncomingLocalAnchorRepair(port: DbPort, record: NativeSy
   if (local.body_text !== null && record.body_text !== null && local.body_text !== record.body_text) return false;
   if (!matchesLiveNode(local, record)) return false;
   const stored = JSON.parse(local.snapshot_json) as Record<string, unknown>;
+  // Older snapshots leave the text origin implicit: the base version itself.
+  if (stored.text_selection == null && record.snapshot.text_selection) {
+    stored.text_selection = { version_id: local.current_version_id, created_at: local.version_created_at };
+  }
   // Ordinary versions no longer carry alternatives; an empty historical list carries no extra fact.
   const matchesBase = isSyncNodeSnapshotIdentical(JSON.stringify({ resource_references: '[]', ...stored,
     text_alternatives: stored.text_alternatives ?? [] }),

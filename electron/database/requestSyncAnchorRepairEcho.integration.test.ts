@@ -26,7 +26,7 @@ function child(peer: Peer) {
     FROM nodes WHERE id = 'child'`).get();
 }
 
-async function repairOnBoth(emptyList = true) {
+async function repairOnBoth(emptyList = true, implicitTextSelection = false) {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
@@ -36,6 +36,7 @@ async function repairOnBoth(emptyList = true) {
     anchor_link: JSON.stringify({ id: 'anchor-1', kind: 'highlight', locator: { from: 6, originalText: 'Beta', to: 10 } })
   });
   if (!emptyList) delete highlight.snapshot.text_alternatives;
+  if (implicitTextSelection) delete highlight.snapshot.text_selection;
   // Both devices hold the same highlight, receive the parent's new text and move the highlight on their own.
   const second = node('parent', textBranch('parent-v2', 'Prefix Alpha Beta Gamma', first, '2026-09-30T01:00:00.000Z'));
   for (const peer of [source, target]) {
@@ -56,8 +57,8 @@ it('accepts the anchor repair another device published for the repair this devic
   expect(persisted(target)).toEqual(persisted(source));
 });
 
-it('accepts the latest equivalent anchor repair after both peers receive a parent deletion', async () => {
-  const { source, target } = await repairOnBoth(false);
+it('accepts the latest equivalent anchor repair for an older snapshot with implicit text selection', async () => {
+  const { source, target } = await repairOnBoth(false, true);
   for (const [version, body, time] of [
     ['parent-v3', 'New Prefix Alpha Beta Gamma', '2026-09-30T03:00:00.000Z'],
     ['parent-v4', 'Another New Prefix Alpha Beta Gamma', '2026-09-30T04:00:00.000Z']
@@ -75,6 +76,10 @@ it('accepts the latest equivalent anchor repair after both peers receive a paren
   await applyConvergentSyncNodesWithDbPort(target.port, [deletion]);
   expect(child(target)).toMatchObject({ current_version_id: 'child-v1', sync_dirty: 1,
     anchor_source_version_id: 'parent-v4' });
+  const base = (await loadCurrentSyncNodeRecord(target.port, 'child'))!;
+  const incoming = (await loadCurrentSyncNodeRecord(source.port, 'child'))!;
+  expect(base.snapshot.text_selection).toBeUndefined();
+  expect(incoming.snapshot.text_selection).toEqual({ version_id: 'child-v1', created_at: base.version_created_at });
   await withLibraryRequestSnapshot(source, target, replay => replay());
   expect(child(target)).toEqual(child(source));
   expect(persisted(target)).toEqual(persisted(source));
@@ -145,8 +150,8 @@ it('keeps a different local anchor at the repair timestamp', async () => {
   expect(persisted(target)).toEqual(before);
 });
 
-it('rejects a different parent version, anchor source or nonempty alternative fact', async () => {
-  const { source, target } = await repairOnBoth();
+it.each([false, true])('rejects a different parent version, anchor source or text fact (implicit selection: %s)', async implicitTextSelection => {
+  const { source, target } = await repairOnBoth(true, implicitTextSelection);
   const incoming = (await loadCurrentSyncNodeRecord(source.port, 'child'))!;
   expect(await isIncomingLocalAnchorRepair(target.port, incoming)).toBe(true);
   const before = persisted(target);
@@ -155,6 +160,12 @@ it('rejects a different parent version, anchor source or nonempty alternative fa
   for (const record of [
     { ...incoming, parent_version_id: 'another-parent-version' },
     { ...incoming, snapshot: { ...incoming.snapshot, anchor_source_version_id: 'parent-v1' } },
+    { ...incoming, snapshot: { ...incoming.snapshot, text_selection: {
+      ...incoming.snapshot.text_selection!, version_id: 'different-text-origin'
+    } } },
+    { ...incoming, snapshot: { ...incoming.snapshot, text_selection: {
+      ...incoming.snapshot.text_selection!, created_at: '2026-09-29T00:00:00.000Z'
+    } } },
     { ...incoming, snapshot: { ...incoming.snapshot, text_alternatives: nonempty } }
   ]) expect(await isIncomingLocalAnchorRepair(target.port, record)).toBe(false);
   expect(persisted(target)).toEqual(before);
