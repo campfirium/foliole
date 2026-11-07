@@ -121,6 +121,7 @@
   line-height: 20px;
 }
 .settings-touch-surface [role='switch'] {
+  position: relative;
   width: 44px;
   height: 26px;
 }
