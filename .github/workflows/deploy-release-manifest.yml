@@ -6,11 +6,6 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-    inputs:
-      store_notification:
-        description: Recheck the store builds and deploy only if the download directory changed
-        type: boolean
-        default: false
   push:
     branches:
       - dev
@@ -126,9 +121,8 @@ jobs:
         id: compare
         env:
           TRIGGER: ${{ github.event_name }}
-          STORE_NOTIFICATION: ${{ inputs.store_notification }}
         run: |
-          if [[ "$TRIGGER" == "schedule" || "$STORE_NOTIFICATION" == "true" ]]; then
+          if [[ "$TRIGGER" == "schedule" ]]; then
             if curl -fsS --max-time 30 https://campfirium.github.io/foliole/releases/downloads.json > .tmp/current-directory.json &&
                 cmp -s .tmp/current-directory.json _site/releases/downloads.json; then
               echo 'changed=false' >> "$GITHUB_OUTPUT"
