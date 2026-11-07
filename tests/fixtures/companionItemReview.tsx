@@ -28,11 +28,15 @@ function EditingReview({ content, answer }: { content: string; answer: string })
     </div></>;
 }
 
+const wideImage = 'data:image/svg+xml;base64,' + btoa(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900"><rect width="1600" height="900" fill="#457777"/></svg>'
+);
+
 function Review() {
   const params = new URLSearchParams(location.search);
   const long = Array.from({ length: 40 }, (_, i) => `Paragraph ${i + 1}. Content continues.`).join('\n\n');
-  const content = params.has('question') ? long : 'How do you check Flow history?';
-  const answer = params.has('answer') ? long : 'Process entries, then undo and redo and verify the displayed entry.';
+  const content = params.get('question') === 'image' ? `![Question illustration](${wideImage})` : params.has('question') ? long : 'How do you check Flow history?';
+  const answer = params.get('answer') === 'image' ? `![Answer illustration](${wideImage})` : params.has('answer') ? long : 'Process entries, then undo and redo and verify the displayed entry.';
   const [revealed, setRevealed] = useState(!params.has('hidden'));
   const [grade, setGrade] = useState<number | null>(null);
   return <LocalizationProvider initialLanguagePreference="en"><CompanionColorModeProvider><MouseGestureSettingsProvider><CompanionDraftProvider>

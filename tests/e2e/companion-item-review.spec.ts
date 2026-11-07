@@ -1,3 +1,5 @@
+import { readFile, readdir } from 'node:fs/promises';
+
 import { expect, test, type Page } from '@playwright/test';
 
 async function openReview(page: Page, query = '') {
@@ -73,4 +75,44 @@ test('revealed item editing scrolls each field independently inside its allocate
   await fields.nth(1).evaluate(element => { element.scrollTop = 80; });
   await expect.poll(() => fields.nth(1).evaluate(element => element.scrollTop)).toBeGreaterThan(0);
   await page.screenshot({ path: '.tmp/artifacts/T680/item-editor-independent-scroll.png' });
+});
+
+test('wide item images fit the reading width before and after reveal', async ({ page }) => {
+  const assets = 'dist/companion/assets';
+  const stylesheets = (await readdir(assets)).filter(file => file.endsWith('.css'));
+  expect(stylesheets.length).toBeGreaterThan(0);
+  const css = (await Promise.all(stylesheets.map(file => readFile(`${assets}/${file}`, 'utf8')))).join('\n');
+
+  await page.setViewportSize({ width: 320, height: 700 });
+  await openReview(page, 'hidden&question=image&answer=image');
+  await page.evaluate(() => document.querySelectorAll('style[data-vite-dev-id]').forEach(node => node.remove()));
+  await page.addStyleTag({ content: css });
+
+  const expectImageToFit = async (name: string) => {
+    const image = page.getByRole('img', { name, exact: true });
+    await expect(image).toBeVisible();
+    await expect.poll(() => image.evaluate((element: HTMLImageElement) => {
+      const box = element.getBoundingClientRect();
+      const surface = element.closest('.companion-review-surface')!;
+      const surfaceBox = surface.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      const width = box.width - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth);
+      const height = box.height - parseFloat(style.borderTopWidth) - parseFloat(style.borderBottomWidth);
+      return {
+        withinViewport: box.left >= surfaceBox.left && box.right <= surfaceBox.right,
+        pageFits: surface.scrollWidth <= surface.clientWidth &&
+          document.documentElement.scrollWidth <= window.innerWidth,
+        proportional: element.naturalWidth > 0 && Math.abs(width / height - element.naturalWidth / element.naturalHeight) < 0.02
+      };
+    })).toEqual({ withinViewport: true, pageFits: true, proportional: true });
+  };
+
+  await expectImageToFit('Question illustration');
+  await page.getByRole('button', { name: 'Show Answer', exact: true }).click();
+  for (const viewport of [{ width: 320, height: 700 }, { width: 700, height: 320 }]) {
+    await page.setViewportSize(viewport);
+    await expectImageToFit('Question illustration');
+    await expectImageToFit('Answer illustration');
+    await expect(page.getByRole('button', { name: 'Good', exact: true })).toBeInViewport();
+  }
 });

@@ -2,6 +2,7 @@
 
 .companion-item-review-layout[data-active='true'] {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto;
 }
 
