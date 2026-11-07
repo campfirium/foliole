@@ -210,8 +210,21 @@ Installation, `npm ls --all`, production audit (zero vulnerabilities), Electron
 native health, `quality:fast`, desktop and companion web builds pass. Logs:
 `.tmp/waits/T729-19-refresh.log`, `.tmp/waits/T729-19-local.log`.
 No product/runtime behavior changed and no new physical-device trial is needed.
-The owning maintenance task is continuing with registered full check QA including
-hosted dependency hardening; local success is not a hosted pass.
+Full [centralized QA 42322090713](https://github.com/campfirium/foliole/actions/runs/42322090713)
+passed for `bb98335b080fc5679bb8b9fe8e8729f5e673005c`, including hosted dependency
+hardening, Windows/Linux checks, Android host and iOS simulator coverage. Initial
+Mac preflight lacked `JAVA_HOME`; supplying the existing JDK21 resolved it without
+source changes or a preflight bypass. Integration checks passed on dev
+`a6cad9595a40d2cfc00a96d9a2c5da4baf227b7d`, remote dev contains the candidate,
+and the registered QA workspace is released. Published 0.8.0 artifacts are unchanged.
+
+The same full candidate contains `4c344a3e2` (knip 6.44.0), `d66bddbe6`
+and `b7fe04438` (FSRS6 integration). PR #208 was rechecked at unchanged head
+`72bb53e3c0370b218ab51d90cac10ebb636e2d49` and [closed after validation and delivery](https://github.com/campfirium/foliole/pull/208#issuecomment-6700712587).
+PR #202 is confirmed closed at unchanged head
+`cef38822a5969ddfe5eb0dc7ee3f172a464c12bf`; its implemented dependency/runtime
+changes are covered by this full QA and remote containment. Existing physical
+Windows provisioning trials remain independent and are not claimed passed here.
 
 ### Locally implemented updates awaiting centralized QA
 
@@ -221,10 +234,7 @@ Use repository `campfirium/foliole`, base `dev`, unless a row explicitly says
 otherwise. Record the verified author/head, implementation commit, local
 evidence and required QA coverage. Candidate containment alone is not a pass.
 
-| PR and reviewed proposal | Local implementation and evidence | Required QA and closure owner |
-| --- | --- | --- |
-| [#208](https://github.com/campfirium/foliole/pull/208); `app/renovate`; head `72bb53e3c0370b218ab51d90cac10ebb636e2d49`; knip 6.43.0 → 6.44.0 | `4c344a3e2`; 2026-11-06, T728: official release and npm provenance agree; npm published 2026-10-29T19:44:31Z, satisfying seven-day maturity. Node 26.13.0 satisfies unchanged engines; dependency declarations are unchanged. Local npm regeneration changes only knip, without the proposal's incidental lockfile churn. Baseline and upgraded `npm run deps:scan`, `npm ls knip --depth=0` and `npm run quality:fast` pass. Logs: `.tmp/waits/pr208-baseline-scan.log`, `pr208-install.log`, `pr208-validation.log`. Development analyzer only: no product/runtime behavior change or new device-trial gap; host acceptance skipped. | Next centralized check owner: desktop quality including dependency scan and hosted dependency hardening on a candidate containing this commit, then dev integration, remote containment and current-head review before closure. PR remains open; no QA dispatch or manual dev push in this task. Existing implementations remain with T726-1; newly reviewed #189 AGP 9.5.1 is unadopted and remains for the next small native increment. |
-| [#202](https://github.com/campfirium/foliole/pull/202); `app/renovate`; head `cef38822a5969ddfe5eb0dc7ee3f172a464c12bf`; ts-fsrs 5.4.2 → 6.0.0, srs-kit 1.0.0; Node 24.22.2 | `d66bddbe6` (runtime), `b7fe04438` (FSRS API); 2026-11-05: explicit FSRS6Model/UTC calendar-day policy, original weights and review facts retained. 34 migration contracts, real SQLite grade/replay/undo/concurrency, desktop/mobile-owner training and model sync, browser parity and scoped lint passed; desktop/companion builds, Electron native health, CLI SEA version smoke and Mac Hidden Native threshold training → trained grade → normal process restart passed. Logs: `.tmp/waits/t714-1-fsrs-*.log`, `.tmp/artifacts/T714-1/`. | Next centralized check owner: hosted dependency hardening plus full quality on a candidate containing both commits; Windows system Node24 provision/ABI/build remains unverified (trial registered). Existing T7 concurrency test fails on both Node22/24 because its empty inputs omit workflow defaults; independent seed recorded, not repaired here or counted green. Older training spec assumes Reading mode has Show Answer; comprehensive read-scope spec above covers the intended training/grade/restart contract. No QA dispatch, manual dev push, release or PR closure here. |
+No locally implemented entries remain pending after the centralized batch above.
 
 The #200 local blocker recorded in `a6257b5f6` is resolved. Electron virtualizes
 ASAR archives as directories; universal packaging needs raw files, as on Node.
