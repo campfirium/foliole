@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '23,53 * * * *'
   release:
-    types: [published]
+    types: [published, edited]
   workflow_dispatch:
   push:
     branches:

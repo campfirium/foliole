@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { createPlatformDownloadDirectory, findPublicAndroidApk, storeChannelsForRelease } from './release-download-directory.mjs';
+import { createPlatformDownloadDirectory, readPublicReleaseInventory, storeChannelsForRelease } from './release-download-directory.mjs';
 
 const registry = {
   platforms: [
@@ -69,7 +69,7 @@ it('selects the highest published version with the exact uploaded APK', async ()
     release('0.8.2', [asset('0.8.1')]), expected,
     release('0.8.0', [asset('0.8.0')])
   ] });
-  await expect(findPublicAndroidApk({ fetchImpl, repository: 'campfirium/foliole' })).resolves.toEqual(expected);
+  await expect(readPublicReleaseInventory({ fetchImpl, repository: 'campfirium/foliole' })).resolves.toMatchObject({ androidApk: expected });
 });
 
 it('hides an older store build when a newer independent APK is released', () => {
@@ -79,4 +79,15 @@ it('hides an older store build when a newer independent APK is released', () => 
     ios: { version: '0.8.0', build: 'old-build', status: 'update-pending' },
     'android-play': play
   });
+});
+
+it('changes the website revision when an existing public Release body changes', async () => {
+  const record = { tag_name: 'v0.8.1', draft: false, published_at: '2026-11-07', assets: [] };
+  const inventory = body => readPublicReleaseInventory({
+    repository: 'campfirium/foliole',
+    fetchImpl: async () => ({ ok: true, json: async () => [{ ...record, body }] })
+  });
+  const before = await inventory('In Review');
+  expect(await inventory('In Review')).toEqual(before);
+  expect((await inventory('Published')).changelogRevision).not.toBe(before.changelogRevision);
 });

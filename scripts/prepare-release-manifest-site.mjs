@@ -17,7 +17,7 @@ import { assertPublishedManifestScope } from './release-publication-contract.mjs
 import { assertPublishedReleaseAssets } from './release-public-assets.mjs';
 import {
   createPlatformDownloadDirectory,
-  findPublicAndroidApk,
+  readPublicReleaseInventory,
   listPlatformDownloadVersions,
   storeChannelsForRelease
 } from './release-download-directory.mjs';
@@ -102,7 +102,9 @@ export async function prepareReleaseManifestSite({
   const publication = validateReleaseManifestPublication({
     enNotes, intent, manifest, previousManifest, registry, release, repository: normalizedRepository, zhNotes
   });
-  const androidApk = await findPublicAndroidApk({ fetchImpl, repository: normalizedRepository, token });
+  const { androidApk, changelogRevision } = await readPublicReleaseInventory({
+    fetchImpl, repository: normalizedRepository, token
+  });
   const downloadManifest = androidApk ? {
     ...manifest,
     releases: [...manifest.releases, { version: androidApk.tag_name.slice(1), platforms: ['android'] }]
@@ -117,6 +119,7 @@ export async function prepareReleaseManifestSite({
   const downloads = createPlatformDownloadDirectory({
     manifest: downloadManifest, publishedReleases, registry, repository: normalizedRepository
   });
+  downloads.changelogRevision = changelogRevision;
   if (process.env.FOLIOLE_SITE_STORE_STATUS) {
     const channels = JSON.parse(await readFile(process.env.FOLIOLE_SITE_STORE_STATUS, 'utf8'));
     downloads.storeChannels = storeChannelsForRelease(channels, downloads.productVersion, downloads.platforms.android?.version);

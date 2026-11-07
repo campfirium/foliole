@@ -13,7 +13,7 @@ describe('deploy release manifest workflow contract', () => {
     expect(workflow.on.workflow_dispatch).toBeNull();
     expect(workflow.on.repository_dispatch).toBeUndefined();
     expect(workflow.on.schedule).toEqual([{ cron: '23,53 * * * *' }]);
-    expect(workflow.on.release.types).toEqual(['published']);
+    expect(workflow.on.release.types).toEqual(['published', 'edited']);
     expect(workflow.jobs.deploy.if).toBe("needs.build.outputs.changed == 'true'");
     expect(source).toContain('test "$DEPLOY_REF" = "refs/heads/dev"');
     expect(source).toContain('releases/tags/v${latest_version}');

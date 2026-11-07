@@ -1,4 +1,6 @@
 /* global fetch, AbortSignal */
+import { createHash } from 'node:crypto';
+
 const REPOSITORY = 'campfirium/foliole';
 
 function compareVersions(left, right) {
@@ -87,24 +89,32 @@ export function storeChannelsForRelease(channels, productVersion, apkVersion = p
   }));
 }
 
-export async function findPublicAndroidApk({ fetchImpl = fetch, repository, token }) {
-  let latest;
+export async function readPublicReleaseInventory({ fetchImpl = fetch, repository, token }) {
+  let androidApk;
+  const changelog = [];
   for (let page = 1; ; page += 1) {
     const response = await fetchImpl(`https://api.github.com/repos/${repository}/releases?per_page=100&page=${page}`, {
       headers: { Accept: 'application/vnd.github+json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       redirect: 'error', signal: AbortSignal.timeout(30000)
     });
-    if (!response.ok) throw new Error(`Public Android APK lookup failed with HTTP ${response.status}.`);
+    if (!response.ok) throw new Error(`Public Release lookup failed with HTTP ${response.status}.`);
     const releases = await response.json();
     if (!Array.isArray(releases)) throw new Error('Public Release inventory is invalid.');
     for (const release of releases) {
       const tag = release?.tag_name;
+      if (release?.draft === false && release.published_at && !release.prerelease && tag !== 'demo') {
+        changelog.push([tag, release.published_at, release.updated_at, release.body]);
+      }
       if (!/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u.test(tag) ||
           release.draft !== false || !release.published_at ||
           !(release.assets ?? []).some(asset => asset.name === `Foliole-Android-${tag.slice(1)}.apk` &&
             /^sha256:[0-9a-f]{64}$/u.test(asset.digest ?? '') && asset.state === 'uploaded')) continue;
-      if (!latest || compareVersions(tag.slice(1), latest.tag_name.slice(1)) > 0) latest = release;
+      if (!androidApk || compareVersions(tag.slice(1), androidApk.tag_name.slice(1)) > 0) androidApk = release;
     }
-    if (releases.length < 100) return latest;
+    if (releases.length < 100) {
+      changelog.sort(([left], [right]) => left.localeCompare(right));
+      const changelogRevision = createHash('sha256').update(JSON.stringify(changelog)).digest('hex');
+      return { androidApk, changelogRevision };
+    }
   }
 }
