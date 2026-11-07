@@ -190,6 +190,29 @@ physical Windows provisioning or a new mobile upload.
 | #205 | liquidjs 10.30.1; `a84623efb` |
 | #207 | Node 26.13.0 / Node types 26.6.6; `3bf3d290e`; physical Windows gap remains in the existing trial |
 
+### Post-release transitive maintenance
+
+2026-11-07: npm 12.2.1 lock-only resolution rejected the unchanged bundled
+`@tailwindcss/oxide-wasm32-wasi` registry tarball ([npm/cli#9800](https://github.com/npm/cli/issues/9800)).
+The maintenance entry now uses ordinary `npm update --no-save --ignore-scripts`
+under the existing exclusive resource gate; remote-source protection and the
+seven-day policy remain unchanged. A real npm fixture reproduces the old failure,
+updates through the repaired path, and verifies explicit URL rejection and skipped
+install scripts. Entry repair: `c800d219d`.
+
+The post-0.8.0 lockfile refresh updates only `@csstools/css-color-parser`
+4.2.6 → 4.2.7, `@csstools/css-syntax-patches-for-csstree` 1.1.15 → 1.1.16,
+and `tldts-core` 7.4.19 → 7.4.20. Registry publication dates are October 29,
+October 29 and October 28 respectively, all older than seven days. Direct
+versions, manifest, overrides and held `nwsapi` remain unchanged; the requested
+`electron-to-chromium` and `node-releases` did not change under existing policy.
+Installation, `npm ls --all`, production audit (zero vulnerabilities), Electron
+native health, `quality:fast`, desktop and companion web builds pass. Logs:
+`.tmp/waits/T729-19-refresh.log`, `.tmp/waits/T729-19-local.log`.
+No product/runtime behavior changed and no new physical-device trial is needed.
+The owning maintenance task is continuing with registered full check QA including
+hosted dependency hardening; local success is not a hosted pass.
+
 ### Locally implemented updates awaiting centralized QA
 
 These entries hand validation and closure to the next centralized check task;
