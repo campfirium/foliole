@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { createPlatformDownloadDirectory, findPublicAndroidApk } from './release-download-directory.mjs';
+import { createPlatformDownloadDirectory, findPublicAndroidApk, storeChannelsForRelease } from './release-download-directory.mjs';
 
 const registry = {
   platforms: [
@@ -70,4 +70,13 @@ it('selects the highest published version with the exact uploaded APK', async ()
     release('0.8.0', [asset('0.8.0')])
   ] });
   await expect(findPublicAndroidApk({ fetchImpl, repository: 'campfirium/foliole' })).resolves.toEqual(expected);
+});
+
+it('hides an older store build when a newer independent APK is released', () => {
+  const ios = { version: '0.8.0', build: 'old-build', status: 'available', url: 'https://testflight.apple.com/join/example' };
+  const play = { version: '0.8.1', build: '5', status: 'in-review' };
+  expect(storeChannelsForRelease({ ios, 'android-play': play }, '0.8.0', '0.8.1')).toEqual({
+    ios: { version: '0.8.0', build: 'old-build', status: 'update-pending' },
+    'android-play': play
+  });
 });

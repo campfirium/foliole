@@ -6,7 +6,7 @@ import { appleReadToken } from '../ios/testflight-publication.mjs';
 import { IOS_APP_ID, IOS_GROUP_ID, IOS_INVITATION } from '../ios/testflight-candidate.mjs';
 import { createMobileGithubApi, verifyStoredMobileCandidate } from './mobile-candidate-store.mjs';
 import { createPlayApi, playAccessToken, readPlayReleases, PLAY_PACKAGE, PLAY_TRACK } from '../android/play-api.mjs';
-import { exactRelease } from '../android/play-availability.mjs';
+import { checkRegisteredPlayAvailability, exactRelease } from '../android/play-availability.mjs';
 
 export function channelProjection(candidate, state, url) {
   return {
@@ -17,12 +17,13 @@ export function channelProjection(candidate, state, url) {
   };
 }
 
-export function playReviewStatus(releases, candidate) {
+export function playReviewStatus(releases, candidate, fullRollout = false) {
   const release = exactRelease(releases, candidate);
   switch (release?.releaseLifecycleState) {
     case 'RELEASE_LIFECYCLE_STATE_APPROVED_NOT_PUBLISHED':
+      return 'verifying';
     case 'RELEASE_LIFECYCLE_STATE_PUBLISHED':
-      return 'available';
+      return fullRollout ? 'available' : 'verifying';
     case 'RELEASE_LIFECYCLE_STATE_IN_REVIEW':
       return 'in-review';
     case 'RELEASE_LIFECYCLE_STATE_NOT_APPROVED':
@@ -47,7 +48,8 @@ export function testflightStatus(result, group, candidate) {
   if (state === 'BETA_REJECTED') return 'rejected';
   if (['WAITING_FOR_BETA_REVIEW', 'IN_BETA_REVIEW'].includes(state)) return 'in-review';
   if (build.attributes.expired || state === 'EXPIRED') return 'unavailable';
-  if (!['BETA_APPROVED', 'READY_FOR_BETA_TESTING', 'IN_BETA_TESTING'].includes(state) || build.attributes.processingState !== 'VALID' ||
+  if (['BETA_APPROVED', 'READY_FOR_BETA_TESTING'].includes(state)) return 'verifying';
+  if (state !== 'IN_BETA_TESTING' || build.attributes.processingState !== 'VALID' ||
       !build.relationships?.betaGroups?.data?.some(entry => entry.id === IOS_GROUP_ID)) return 'unavailable';
   const attrs = group.data.attributes;
   return attrs?.isInternalGroup === false && attrs.publicLinkEnabled === true &&
@@ -79,7 +81,11 @@ async function queryPlay(candidate) {
   if (exact.version !== candidate.version || exact.versionCode !== candidate.versionCode ||
       exact.track !== PLAY_TRACK || exact.packageName !== PLAY_PACKAGE) throw new Error('Play candidate differs.');
   const play = createPlayApi(await playAccessToken(process.env.ANDROID_PLAY_SERVICE_ACCOUNT_JSON));
-  return playReviewStatus(await readPlayReleases(play), exact);
+  const releases = await readPlayReleases(play);
+  const published = exactRelease(releases, exact)?.releaseLifecycleState === 'RELEASE_LIFECYCLE_STATE_PUBLISHED';
+  const rollout = published ? await checkRegisteredPlayAvailability({ play, github, registration: row }) : undefined;
+  if (rollout === 'rejected') return 'rejected';
+  return playReviewStatus(releases, exact, rollout === 'available');
 }
 
 async function project(id, candidate, query, url) {

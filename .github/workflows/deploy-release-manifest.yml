@@ -32,7 +32,11 @@ jobs:
       source_sha: ${{ steps.source.outputs.sha }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions: { contents: read, deployments: read }
+    concurrency:
+      group: play-android-open-testing
+      cancel-in-progress: false
+      queue: max
+    permissions: { contents: read, deployments: write }
     if: github.ref == 'refs/heads/dev' || github.event_name == 'release'
     steps:
       - uses: actions/checkout@v4
