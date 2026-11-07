@@ -28,3 +28,13 @@ it('restores editing inside immersive mode when temporary edit is enabled', () =
     readOnly: false
   });
 });
+
+it('shows quick priority without revealing the immersive document toolbar', () => {
+  renderSectionWithProps({
+    isImmersiveMode: true,
+    isPriorityQuickSetActive: true
+  });
+
+  expect(screen.getByRole('dialog', { name: 'Set priority' })).toBeVisible();
+  expect(screen.queryByLabelText('More editor options')).toBeNull();
+});

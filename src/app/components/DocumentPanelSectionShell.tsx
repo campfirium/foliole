@@ -4,7 +4,9 @@ import {
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
+import { resolveNodePrioritySetting } from '../../features/nodes/model/nodeReviewSettings';
 import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
+import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 
 import { DocumentPanelContentAssembly } from './DocumentPanelContentAssembly';
@@ -40,9 +42,20 @@ interface DocumentPanelShellProps {
   showSourceUpdateAction: boolean;
 }
 
-function resolvePriorityQuickSetValue(props: DocumentPanelSectionProps) {
-  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
-  return activeNode?.priority ?? 5;
+function ActivePriorityQuickSet({ props }: { props: DocumentPanelSectionProps }) {
+  const { reviewSchedulerSettings } = useReviewSchedulerSettings();
+  const { activeNodeId, nodesById, onNodePriorityChange } = props;
+  if (!activeNodeId || !nodesById[activeNodeId]) {
+    return null;
+  }
+  const { value } = resolveNodePrioritySetting(activeNodeId, nodesById, reviewSchedulerSettings.pushQueue.defaultPriority);
+  return (
+    <DocumentPriorityQuickSetHint
+      isActive
+      {...(onNodePriorityChange ? { onPriorityChange: (priority: number) => onNodePriorityChange(activeNodeId, priority) } : {})}
+      priority={value}
+    />
+  );
 }
 
 function renderDocumentPanelChrome(args: {
@@ -81,13 +94,6 @@ function renderDocumentPanelChrome(args: {
         textAlternativeCount: args.textAlternativeCount ?? 0,
         showSourceUpdateAction: args.showSourceUpdateAction
       })}
-      <DocumentPriorityQuickSetHint
-        isActive={!args.isFolderListView && Boolean(args.props.isPriorityQuickSetActive)}
-        {...(args.props.activeNodeId && args.props.onNodePriorityChange
-          ? { onPriorityChange: (priority: number) => args.props.onNodePriorityChange?.(args.props.activeNodeId!, priority) }
-          : {})}
-        priority={resolvePriorityQuickSetValue(args.props)}
-      />
       {renderDocumentSearchToolbar(
         args.props,
         args.onPreviewDocumentSelection,
@@ -189,7 +195,10 @@ export function DocumentPanelSectionShell({
       onCloseExternalLink={onCloseExternalLink}
       onLinkPanelStateChange={onLinkPanelStateChange}
       onOpenExternalLink={onOpenExternalLink}
-      overlay={overlay}
+      overlay={<>
+        {overlay}
+        {!isFolderListView && props.isPriorityQuickSetActive && <ActivePriorityQuickSet props={props} />}
+      </>}
       props={props}
     />
   );
