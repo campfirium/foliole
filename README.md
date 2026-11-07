@@ -21,7 +21,7 @@ Make reading actually complete.<br>
 An approachable incremental reading app.
 
 Foliole is in beta, available for macOS, Windows, Linux (experimental), iOS, and Android.<br>
-You can also try Foliole with the [online demo](https://foliole.app/en/demo/).
+You can also explore Foliole with the [online demo](https://foliole.app/en/demo/).
 
 <p align="center">
   <img src="assets/screenshots/foliole-desktop.png" alt="Foliole desktop app showing a document library, reading pane, and scheduling panel." width="900">

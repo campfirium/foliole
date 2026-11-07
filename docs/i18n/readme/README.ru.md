@@ -21,7 +21,7 @@
 Доступное приложение для инкрементального чтения.
 
 Foliole находится в стадии бета-тестирования и доступен для macOS, Windows, Linux (экспериментальная версия), iOS и Android.<br>
-Вы также можете попробовать Foliole в [онлайн-демо](https://foliole.app/en/demo/).
+Вы также можете познакомиться с Foliole в [онлайн-демо](https://foliole.app/en/demo/).
 
 <p align="center">
   <img src="../../../assets/screenshots/foliole-desktop.png" alt="Foliole desktop app showing a document library, reading pane, and scheduling panel." width="900">

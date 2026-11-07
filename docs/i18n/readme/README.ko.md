@@ -21,7 +21,7 @@
 접근하기 쉬운 점진적 읽기 앱입니다.
 
 Foliole은 베타 버전으로, macOS, Windows, Linux(실험 버전), iOS 및 Android에서 사용할 수 있습니다.<br>
-[온라인 데모](https://foliole.app/en/demo/)로도 Foliole을 사용해 볼 수 있습니다.
+[온라인 데모](https://foliole.app/en/demo/)로도 Foliole을 살펴볼 수 있습니다.
 
 <p align="center">
   <img src="../../../assets/screenshots/foliole-desktop.png" alt="Foliole desktop app showing a document library, reading pane, and scheduling panel." width="900">

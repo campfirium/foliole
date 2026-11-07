@@ -21,7 +21,7 @@
 親しみやすいインクリメンタルリーディングアプリです。
 
 Foliole はベータ版として、macOS、Windows、Linux（実験版）、iOS、Android で利用できます。<br>
-[オンラインデモ](https://foliole.app/en/demo/)でも Foliole を試せます。
+[オンラインデモ](https://foliole.app/en/demo/)では、Foliole の使い方を体験できます。
 
 <p align="center">
   <img src="../../../assets/screenshots/foliole-desktop.png" alt="Foliole desktop app showing a document library, reading pane, and scheduling panel." width="900">
