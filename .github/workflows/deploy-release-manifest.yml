@@ -1,6 +1,12 @@
 name: Deploy Release Manifest
 
 on:
+  schedule:
+    - cron: '23,53 * * * *'
+  repository_dispatch:
+    types: [foliole-testflight-state-changed]
+  release:
+    types: [published]
   workflow_dispatch:
   push:
     branches:
@@ -17,20 +23,60 @@ permissions:
 
 concurrency:
   group: pages-release-manifest
-  cancel-in-progress: true
+  cancel-in-progress: false
+  queue: max
 
 jobs:
+  stores:
+    outputs:
+      source_sha: ${{ steps.source.outputs.sha }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: play-android-open-testing
+      cancel-in-progress: false
+      queue: max
+    permissions: { contents: read, deployments: write }
+    if: github.ref == 'refs/heads/dev' || github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: dev, persist-credentials: false }
+      - name: Record the source for both jobs
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        with: { node-version: 26.13.0 }
+      - name: Check the registered store builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IOS_APP_STORE_API_ISSUER: ${{ secrets.IOS_APP_STORE_API_ISSUER }}
+          IOS_APP_STORE_API_KEY_ID: ${{ secrets.IOS_APP_STORE_API_KEY_ID }}
+          IOS_APP_STORE_API_KEY_BASE64: ${{ secrets.IOS_APP_STORE_API_KEY_BASE64 }}
+          ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: mkdir -p .tmp && node scripts/mobile/site-store-status.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site-store-status
+          path: .tmp/site-store-status.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
   build:
+    needs: stores
+    outputs:
+      changed: ${{ steps.compare.outputs.changed }}
     name: Package release manifest
     runs-on: ubuntu-latest
     steps:
       - name: Require merged dev metadata
         env:
-          DEPLOY_REF: ${{ github.ref }}
+          DEPLOY_REF: ${{ github.event_name == 'release' && 'refs/heads/dev' || github.ref }}
         run: test "$DEPLOY_REF" = "refs/heads/dev"
       - name: Check out repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ needs.stores.outputs.source_sha }}
           fetch-depth: 2
 
       - name: Verify public Release at the workflow boundary
@@ -63,18 +109,41 @@ jobs:
           node scripts/release-asset-contract.mjs verify-directory \
             --version="$latest_version" --directory="$root" --published-release=.tmp/public-release.json
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: site-store-status
+          path: .tmp
+
       - name: Prepare published release metadata
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REF: refs/heads/dev
+          FOLIOLE_SITE_STORE_STATUS: .tmp/site-store-status.json
         run: node scripts/prepare-release-manifest-site.mjs
 
+      - name: Compare the current directory for monitor runs
+        id: compare
+        env:
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          if [[ "$TRIGGER" == "schedule" || "$TRIGGER" == "repository_dispatch" ]]; then
+            if curl -fsS --max-time 30 https://campfirium.github.io/foliole/releases/downloads.json > .tmp/current-directory.json &&
+                cmp -s .tmp/current-directory.json _site/releases/downloads.json; then
+              echo 'changed=false' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo 'changed=true' >> "$GITHUB_OUTPUT"
+
       - name: Upload Pages artifact
+        if: steps.compare.outputs.changed == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
   deploy:
     name: Deploy to GitHub Pages
+    if: needs.build.outputs.changed == 'true'
     needs: build
     runs-on: ubuntu-latest
     permissions:

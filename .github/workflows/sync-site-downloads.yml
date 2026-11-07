@@ -7,20 +7,33 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   notify-site:
     if: >-
       github.repository == 'campfirium/foliole' &&
       github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'dev'
+      (github.event.workflow_run.head_branch == 'dev' || github.event.workflow_run.event == 'release')
     runs-on: ubuntu-latest
     steps:
+      - name: Check whether Pages deployed
+        id: deployed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          deployed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs" \
+            --jq 'any(.jobs[]; .name == "Deploy to GitHub Pages" and .conclusion == "success")')
+          echo "deployed=$deployed" >> "$GITHUB_OUTPUT"
       - name: Require site sync token
+        if: steps.deployed.outputs.deployed == 'true'
         env:
           SITE_SYNC_TOKEN: ${{ secrets.FOLIOLE_SITE_SYNC_TOKEN }}
         run: test -n "$SITE_SYNC_TOKEN"
       - name: Notify Foliole site
+        if: steps.deployed.outputs.deployed == 'true'
         env:
           GH_TOKEN: ${{ secrets.FOLIOLE_SITE_SYNC_TOKEN }}
         run: |

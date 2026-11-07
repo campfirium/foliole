@@ -17,6 +17,7 @@ import { assertPublishedManifestScope } from './release-publication-contract.mjs
 import { assertPublishedReleaseAssets } from './release-public-assets.mjs';
 import {
   createPlatformDownloadDirectory,
+  findPublicAndroidApk,
   listPlatformDownloadVersions
 } from './release-download-directory.mjs';
 import { assertLocalizedReleaseNotesScope } from './release-notes-contract.mjs';
@@ -80,13 +81,12 @@ export async function prepareReleaseManifestSite({
   }
   const normalizedRepository = required(repository, 'GitHub repository');
   if (!/^[^/\s]+\/[^/\s]+$/u.test(normalizedRepository)) throw new Error('GitHub repository must use owner/name.');
-  const [manifest, enNotes, zhNotes, registry, intent, androidApk] = await Promise.all([
+  const [manifest, enNotes, zhNotes, registry, intent] = await Promise.all([
     readFile(join(sourceRoot, 'update-manifest.json'), 'utf8').then(JSON.parse),
     readFile(join(sourceRoot, 'notes/en.json'), 'utf8').then(JSON.parse),
     readFile(join(sourceRoot, 'notes/zh-Hans.json'), 'utf8').then(JSON.parse),
     readFile('.github/release-platforms.json', 'utf8').then(JSON.parse),
-    readFile('.github/release-intent.json', 'utf8').then(JSON.parse),
-    readFile(join(sourceRoot, 'android-apk.json'), 'utf8').then(JSON.parse)
+    readFile('.github/release-intent.json', 'utf8').then(JSON.parse)
   ]);
   const previous = (path) => JSON.parse(execFileSync('git', ['show', `HEAD^:${path}`], { encoding: 'utf8' }));
   const previousManifest = previous('releases/update-manifest.json');
@@ -101,13 +101,11 @@ export async function prepareReleaseManifestSite({
   const publication = validateReleaseManifestPublication({
     enNotes, intent, manifest, previousManifest, registry, release, repository: normalizedRepository, zhNotes
   });
-  if (!VERSION.test(androidApk?.version ?? '') || !/^sha256:[0-9a-f]{64}$/u.test(androidApk?.digest ?? '')) {
-    throw new Error('Invalid independent Android APK identity.');
-  }
-  const downloadManifest = {
+  const androidApk = await findPublicAndroidApk({ fetchImpl, repository: normalizedRepository, token });
+  const downloadManifest = androidApk ? {
     ...manifest,
-    releases: [...manifest.releases, { version: androidApk.version, platforms: ['android'] }]
-  };
+    releases: [...manifest.releases, { version: androidApk.tag_name.slice(1), platforms: ['android'] }]
+  } : manifest;
   const versions = listPlatformDownloadVersions(downloadManifest, registry);
   const publishedReleases = Object.fromEntries(await Promise.all(versions.map(async (version) => [
     version,
@@ -115,14 +113,12 @@ export async function prepareReleaseManifestSite({
       fetchImpl, repository: normalizedRepository, token, version
     })
   ])));
-  const apkRelease = publishedReleases[androidApk.version];
-  if (apkRelease && !(apkRelease.assets ?? []).some(asset =>
-    asset.name === `Foliole-Android-${androidApk.version}.apk` && asset.digest === androidApk.digest)) {
-    throw new Error('Independent Android APK digest does not match the published asset.');
-  }
   const downloads = createPlatformDownloadDirectory({
     manifest: downloadManifest, publishedReleases, registry, repository: normalizedRepository
   });
+  if (process.env.FOLIOLE_SITE_STORE_STATUS) {
+    downloads.storeChannels = JSON.parse(await readFile(process.env.FOLIOLE_SITE_STORE_STATUS, 'utf8'));
+  }
   await mkdir(dirname(outputRoot), { recursive: true });
   await cp(sourceRoot, outputRoot, { force: true, recursive: true });
   await writeFile(join(outputRoot, 'downloads.json'), `${JSON.stringify(downloads, null, 2)}\n`);

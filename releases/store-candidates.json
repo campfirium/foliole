@@ -1,0 +1,12 @@
+{
+  "ios": {
+    "version": "0.8.0",
+    "buildId": "a70ee67f-93b1-4f49-8b98-98a8dac03a6a",
+    "buildNumber": "4.1"
+  },
+  "android-play": {
+    "version": "0.8.1",
+    "deploymentId": 7618023991,
+    "versionCode": 5
+  }
+}

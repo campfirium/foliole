@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { createPlatformDownloadDirectory } from './release-download-directory.mjs';
+import { createPlatformDownloadDirectory, findPublicAndroidApk } from './release-download-directory.mjs';
 
 const registry = {
   platforms: [
@@ -55,4 +55,19 @@ it('keeps the fixed TestFlight invitation outside exact GitHub download assets',
     { id: 'ios', status: 'active', deliveryChannel: 'testflight' }] };
   expect(createPlatformDownloadDirectory({ registry: withStore, manifest, publishedReleases }))
     .toEqual(createPlatformDownloadDirectory({ registry, manifest, publishedReleases }));
+});
+
+it('selects the highest published version with the exact uploaded APK', async () => {
+  const asset = version => ({ name: `Foliole-Android-${version}.apk`, state: 'uploaded',
+    digest: `sha256:${'a'.repeat(64)}` });
+  const release = (version, assets, draft = false) => ({
+    tag_name: `v${version}`, draft, published_at: '2026-11-07', assets
+  });
+  const expected = release('0.8.1', [asset('0.8.1')]);
+  const fetchImpl = async () => ({ ok: true, json: async () => [
+    release('0.8.3', [asset('0.8.3')], true),
+    release('0.8.2', [asset('0.8.1')]), expected,
+    release('0.8.0', [asset('0.8.0')])
+  ] });
+  await expect(findPublicAndroidApk({ fetchImpl, repository: 'campfirium/foliole' })).resolves.toEqual(expected);
 });

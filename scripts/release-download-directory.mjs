@@ -1,3 +1,4 @@
+/* global fetch, AbortSignal */
 const REPOSITORY = 'campfirium/foliole';
 
 function compareVersions(left, right) {
@@ -75,4 +76,27 @@ export function createPlatformDownloadDirectory({ manifest, publishedReleases, r
     schemaVersion: 1,
     platforms
   };
+}
+
+
+export async function findPublicAndroidApk({ fetchImpl = fetch, repository, token }) {
+  let latest;
+  for (let page = 1; ; page += 1) {
+    const response = await fetchImpl(`https://api.github.com/repos/${repository}/releases?per_page=100&page=${page}`, {
+      headers: { Accept: 'application/vnd.github+json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      redirect: 'error', signal: AbortSignal.timeout(30000)
+    });
+    if (!response.ok) throw new Error(`Public Android APK lookup failed with HTTP ${response.status}.`);
+    const releases = await response.json();
+    if (!Array.isArray(releases)) throw new Error('Public Release inventory is invalid.');
+    for (const release of releases) {
+      const tag = release?.tag_name;
+      if (!/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u.test(tag) ||
+          release.draft !== false || !release.published_at ||
+          !(release.assets ?? []).some(asset => asset.name === `Foliole-Android-${tag.slice(1)}.apk` &&
+            /^sha256:[0-9a-f]{64}$/u.test(asset.digest ?? '') && asset.state === 'uploaded')) continue;
+      if (!latest || compareVersions(tag.slice(1), latest.tag_name.slice(1)) > 0) latest = release;
+    }
+    if (releases.length < 100) return latest;
+  }
 }
