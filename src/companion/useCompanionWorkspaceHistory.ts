@@ -29,8 +29,9 @@ export function useCompanionWorkspaceTransaction(props: { flush(): Promise<unkno
   const [error, setError] = useState(false);
   const locked = useRef(false);
   const committed = useRef(false);
+  const onSaved = useRef<(() => void) | undefined>(undefined);
 
-  async function run(task: () => Promise<void>) {
+  async function run(task: () => Promise<void>, afterSave?: () => void) {
     if (locked.current) return;
     const scope = getCompanionReadingScope();
     locked.current = true;
@@ -41,13 +42,17 @@ export function useCompanionWorkspaceTransaction(props: { flush(): Promise<unkno
         await props.flush();
         if (scope !== getCompanionReadingScope()) return;
         await task();
+        onSaved.current = afterSave;
         committed.current = true;
       }
       if (scope !== getCompanionReadingScope()) return;
       if (!await props.refresh()) throw new Error('workspace_refresh_failed');
       committed.current = false;
       setPending(false);
+      const notifySaved = onSaved.current;
+      onSaved.current = undefined;
       props.afterRefresh();
+      notifySaved?.();
     } catch { setError(true); setPending(committed.current); }
     finally { locked.current = false; setBusy(false); }
   }

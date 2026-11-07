@@ -88,6 +88,8 @@ function previewPriorityChange(topic: HTMLElement) {
   expect(menu.getByText('3', { exact: true })).toBeVisible();
   expect(menu.queryByText('0', { exact: true })).toBeNull();
   expect(menu.queryByText('9', { exact: true })).toBeNull();
+  fireEvent.change(topic, { target: { value: '3' } });
+  expect(screen.getByRole('dialog')).toBeVisible();
   fireEvent.input(topic, { target: { value: '6' } });
   expect(menu.getByText('6', { exact: true })).toBeVisible();
   fireEvent.pointerCancel(topic);
@@ -114,24 +116,20 @@ it('saves only a committed slider adjustment, updates inherited values and can u
     fireEvent.click(screen.getByRole('button', { name: new RegExp(`: ${name}$`) }));
     return screen.getByRole('slider', { name: 'Priority' });
   };
-  const close = () => fireEvent.click(screen.getByRole('button', { name: 'Done' }));
   const facts = () => library.database.prepare('SELECT id, priority FROM nodes WHERE id IN (?, ?) ORDER BY id').all('topic', 'item');
 
   const topic = open('topic');
   previewPriorityChange(topic);
   expect(facts()).toEqual([{ id: 'item', priority: null }, { id: 'topic', priority: null }]);
   fireEvent.change(topic, { target: { value: '0' } });
-  await waitFor(() => expect(topic).toBeEnabled());
-  expect(topic).toHaveValue('0');
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(facts()).toEqual([{ id: 'item', priority: null }, { id: 'topic', priority: 0 }]);
 
-  close();
   const item = open('item');
   expect(item).toHaveValue('0');
   fireEvent.change(item, { target: { value: '7' } });
-  await waitFor(() => expect(item).toBeEnabled());
-  expect(item).toHaveValue('7');
-  close();
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(facts()[0]).toEqual({ id: 'item', priority: 7 });
   fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
   await waitFor(() => expect(facts()).toEqual([{ id: 'item', priority: null }, { id: 'topic', priority: 0 }]));
   const restored = open('item');
@@ -154,7 +152,7 @@ it('saves only a committed slider adjustment, updates inherited values and can u
   expect(facts()[0]).toEqual({ id: 'item', priority: 8 });
   failRefresh = false;
   fireEvent.click(retry);
-  await waitFor(() => expect(restored).toBeEnabled());
-  expect(restored).toHaveValue('8');
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(open('item')).toHaveValue('8');
   expect(await loadCompanionFlowHistory(historyKey)).toEqual(historyBeforeRetry);
 });

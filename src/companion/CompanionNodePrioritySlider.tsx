@@ -38,7 +38,10 @@ function PriorityRange(props: { value: number; disabled: boolean; onCommit(value
 
   return (
     <label className="flex min-h-11 items-center gap-3 border-b border-companion-divider py-2 text-sm">
-      <span>{t('desktop.nodeReview.priority')}</span>
+      <span className="inline-flex items-center gap-1.5">
+        <span>{t('desktop.nodeReview.priority')}</span>
+        <span ref={valueRef} className="w-3 shrink-0 tabular-nums" aria-hidden="true">{value}</span>
+      </span>
       <input
         aria-label={t('desktop.nodeReview.priority')}
         className="min-h-11 min-w-0 flex-1 accent-companion-accent"
@@ -57,15 +60,19 @@ function PriorityRange(props: { value: number; disabled: boolean; onCommit(value
         step={1}
         type="range"
       />
-      <span ref={valueRef} className="w-4 shrink-0 text-right tabular-nums" aria-hidden="true">{value}</span>
     </label>
   );
 }
 
-export function CompanionNodePrioritySlider({ nodeId }: { nodeId?: string | undefined }) {
+export function CompanionNodePrioritySlider({ nodeId, onSaved }: { nodeId?: string | undefined; onSaved(): void }) {
   const actions = useCompanionWorkspaceActions();
   const t = useTranslation();
   const settings = useSyncExternalStore(subscribeReviewSchedulerSettings, getCurrentReviewSchedulerSettings);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
   const nodes = actions?.snapshot?.nodesById;
   const node = nodeId ? nodes?.[nodeId] : undefined;
   if (!isAvailableNativeAndroidCompanionRuntime() || !actions || actions.flowActive || !nodes || !node || node.deletedAt ||
@@ -74,7 +81,9 @@ export function CompanionNodePrioritySlider({ nodeId }: { nodeId?: string | unde
 
   return <>
     <PriorityRange key={node.id} value={value} disabled={actions.busy || actions.pending}
-      onCommit={priority => void actions.execute({ type: 'set-priority', nodeId: node.id, priority })} />
+      onCommit={priority => void actions.execute({ type: 'set-priority', nodeId: node.id, priority }, () => {
+        if (mounted.current) onSaved();
+      })} />
     {actions.error && <p role="status" className="py-2 text-sm text-error">
       {t(actions.pending ? 'companion.workspace.savedRefreshError' : 'companion.reading.historyError')}
     </p>}

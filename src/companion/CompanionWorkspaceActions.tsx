@@ -17,7 +17,7 @@ import { useCompanionWorkspaceHistoryAvailability, useCompanionWorkspaceTransact
 type Mode = 'undo' | 'redo';
 type Actions = {
   snapshot: WorkspaceSnapshot | null; currentNodeId: string | null; flowActive: boolean; busy: boolean; pending: boolean; error: boolean; canUndo: boolean; canRedo: boolean;
-  open(state: WorkspaceNodeSheetState): void; execute(command: WorkspaceMetadataCommand): Promise<void>;
+  open(state: WorkspaceNodeSheetState): void; execute(command: WorkspaceMetadataCommand, onSaved?: () => void): Promise<void>;
   replay(mode: Mode): void;
   retryRefresh(): void;
 };
@@ -51,7 +51,9 @@ export function CompanionWorkspaceActionsProvider(props: {
   }
   const actions: Actions = { snapshot: props.snapshot, currentNodeId: props.currentNodeId ?? null, flowActive: props.flowActive, busy, pending, error, ...availability, open: setSheet,
     retryRefresh: () => void run(async () => {}),
-    execute: command => run(async () => { await mutateCompanionWorkspace(command, command.type === 'set-priority' ? undefined : props.captureFlow?.()); }), replay: mode => void replay(mode) };
+    execute: (command, onSaved) => run(async () => {
+      await mutateCompanionWorkspace(command, command.type === 'set-priority' ? undefined : props.captureFlow?.());
+    }, onSaved), replay: mode => void replay(mode) };
   return <Context.Provider value={actions}>
     {props.children}
     {error && !sheet && <div role="status" className="fixed bottom-24 left-3 right-3 z-[80] rounded-lg border bg-companion-base p-3 text-sm">
