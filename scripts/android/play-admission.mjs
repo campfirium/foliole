@@ -26,15 +26,6 @@ export async function registerAcceptedPlaySubmission({ github, play, env, regist
     blockers: pendingPlayBlockers(await readPlayReleases(play)) });
 }
 
-// The Console verified release 4 and that the only pending change is resuming beta.
-export function admitTrackResumeCandidate(row, context) {
-  const { predecessor, runId, sourceSha, version, blockers } = row.payload;
-  return row.id === 7617424538 && predecessor === 7607351460 && runId === '42342661860' &&
-    sourceSha === '2bc09f0065e54a3bcbba3ed5e067307ac1abe350' && version === '0.8.1' &&
-    blockers.length === 0 && context.states.get(row.id) === 'waiting' &&
-    context.states.get(predecessor) === 'submitted' && context.releases.length === 0;
-}
-
 export async function admitPlaySubmission({ github, play, env, registrarSha }) {
   const row = await registerAcceptedPlaySubmission({ github, play, env, registrarSha,
     prebuilt: env.PLAY_PREBUILT === 'true', upload: env.PLAY_PREBUILT === 'true' });
@@ -45,7 +36,7 @@ export async function admitPlaySubmission({ github, play, env, registrarSha }) {
   const previous = context.states.get(row.id);
   // Recovery of an admitted source belongs to its original checkpoint path.
   if (['submitted', 'published', 'admitted'].includes(previous)) return { proceed: true, state: previous, id: row.id, artifactName };
-  const ready = admitTrackResumeCandidate(row, context) ? 'ready' : playSubmissionReadiness(row, context);
+  const ready = playSubmissionReadiness(row, context);
   const state = previous === 'retired' ? 'retired' : ready === 'ready' ? 'admitted' : ready === 'blocked' ? 'blocked' : 'waiting';
   await writePlaySubmissionState(github, row, state);
   return { proceed: state === 'admitted', state, id: row.id, artifactName };

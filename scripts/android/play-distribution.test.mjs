@@ -157,18 +157,3 @@ it('uses authenticated fixed Play endpoints and sanitizes all error responses', 
   request.mockRejectedValue(new Error('secret-token'));
   await expect(api('POST', 'edits', {})).rejects.toThrow(/outcome is unknown/u);
 });
-
-it('merges the authorized track review only when committing the original signed 0.8.1 bundle', async () => {
-  const candidate = { ...state(), phase: 'uploaded', runId: '42342661860', version: '0.8.1', versionCode: 5,
-    sourceSha: '2bc09f0065e54a3bcbba3ed5e067307ac1abe350',
-    aabSha256: '02170627db412bca78bdd1bd8a480e41e9ca315e0c2b0b6e5eeae688034585e7' };
-  for (const runId of [candidate.runId, '42342661861']) {
-    const f = fixture();
-    f.setBundle({ versionCode: 5, sha256: candidate.aabSha256 });
-    await commitPlayCandidate({ api: f.api, state: { ...candidate, runId }, notes: 'Sync setup fix', save: vi.fn() });
-    const writes = f.calls.filter(call => call.method !== 'GET');
-    const behavior = runId === candidate.runId ? 'CANCEL_IN_REVIEW_AND_SUBMIT' : 'ERROR_IF_IN_REVIEW';
-    expect(writes.map(call => call.route)).toEqual(['edits/123/tracks/beta', 'edits/123:validate',
-      `edits/123:commit?changesNotSentForReview=false&changesInReviewBehavior=${behavior}`]);
-  }
-});
