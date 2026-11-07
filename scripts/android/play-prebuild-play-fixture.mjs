@@ -4,7 +4,9 @@ export function handlePrebuildPlayRequest(f, { request, response, route, body, s
   const reply = value => { send(value); return true; };
   if (request.method === 'POST' && route === 'edits') {
     if (f.createResponse) { response.statusCode = f.createResponse.status; response.end(f.createResponse.body); return true; }
-    const id = f.nextUploadEditId ?? String(++f.nextEdit); f.edits.add(id);
+    const id = f.nextUploadEditId ?? String(++f.nextEdit);
+    if (f.singleEditPerAccount) f.edits.clear();
+    f.edits.add(id);
     if (f.loseCreate) { f.loseCreate = false; response.destroy(); return true; }
     return reply({ id });
   }

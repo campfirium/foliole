@@ -11,7 +11,7 @@ async function unusedSignedCandidate(github, saved, phase) {
   return (await readMobileStatus(github, saved.id, 'Play upload edit: ')).value === undefined;
 }
 
-export async function readReservedPlayHistory(github, history = readPlayVersionHistory(), signedCandidate) {
+export async function readReservedPlayHistory(github, history = readPlayVersionHistory(), signedCandidate, rejectedPreparationId) {
   const rows = await listMobileCandidates(github);
   const codes = [];
   let foundSigned = false;
@@ -35,6 +35,7 @@ export async function readReservedPlayHistory(github, history = readPlayVersionH
   if (signedCandidate && !foundSigned) throw new Error('Original signed Play candidate is missing');
   for (const row of await listPlaySubmissions(github)) {
     const preparation = await readPlayPreparation(github, row);
+    if (row.id === rejectedPreparationId && preparation.phase === 'creating' && !preparation.versionCode) continue;
     if (preparation.phase !== 'cleared') throw new Error('An earlier Play preparation snapshot remains unresolved');
     if (preparation.versionCode) codes.push(preparation.versionCode);
   }
