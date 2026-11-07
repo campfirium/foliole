@@ -53,7 +53,11 @@ export function CompanionFlowHistorySurface(props: {
 export function CompanionFlowOrEditHistoryActions(props: { open: boolean; editHistory?: CompanionEditHistoryActionsProps }) {
   const controls = useContext(FlowHistoryContext);
   const t = useTranslation();
-  if (!controls) return <>{props.editHistory && <CompanionEditHistoryActions {...props.editHistory} open={props.open} />}<CompanionWorkspaceHistoryActions /></>;
+  if (!controls) {
+    return props.editHistory
+      ? <CompanionEditHistoryActions {...props.editHistory} open={props.open} />
+      : <CompanionWorkspaceHistoryActions />;
+  }
   if (controls.refreshPending) return <button type="button" disabled={controls.busy}
     className="min-h-11 w-full border-b border-companion-divider py-2 text-sm text-foreground"
     onClick={() => controls.apply('undo')}>{t('companion.selection.refresh')}</button>;

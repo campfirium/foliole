@@ -21,6 +21,7 @@ import { ReadingChrome } from './CompanionReadingChrome';
 import { ReadingActionsSheet } from './CompanionReadingSheets';
 import { DEFAULT_READING_TYPOGRAPHY_SETTINGS } from './companionReadingTypographySettings';
 import { createCompanionTopicContentSaveHandler } from './companionTopicEditingController';
+import { CompanionWorkspaceActionsProvider } from './CompanionWorkspaceActions';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 
@@ -68,8 +69,12 @@ function Reader({ editing = true }: { editing?: boolean }) {
 }
 
 it('undoes buffered real editor input from the editing overflow and redoes it in SQLite and the editor', async () => {
+  const snapshot = (await loadCompanionWorkspaceSyncState()).workspace_snapshot;
   render(<LocalizationProvider initialLanguagePreference="en"><MouseGestureSettingsProvider><CompanionDraftProvider>
-    <Reader />
+    <CompanionWorkspaceActionsProvider snapshot={snapshot} flowActive={false}
+      refresh={async () => snapshot} flush={async () => {}} restoreFlow={() => {}} applyFlow={async () => {}}>
+      <Reader />
+    </CompanionWorkspaceActionsProvider>
   </CompanionDraftProvider></MouseGestureSettingsProvider></LocalizationProvider>);
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'Topic body' })).toHaveAttribute('contenteditable', 'true'));
   act(() => editor!.replaceRange(0, 0, 'Typed '));
@@ -81,6 +86,8 @@ it('undoes buffered real editor input from the editing overflow and redoes it in
   }
   fireEvent.click(screen.getByRole('button', { name: 'More reading actions' }), { detail: 1 });
   await waitFor(() => expect(screen.getByRole('button', { name: 'Undo Edit Text' })).toBeEnabled());
+  expect(screen.getAllByRole('button', { name: /^Undo/ })).toHaveLength(1);
+  expect(screen.getAllByRole('button', { name: /^Redo/ })).toHaveLength(1);
   fireEvent.click(screen.getByRole('button', { name: 'Undo Edit Text' }));
   await waitFor(() => expect(editor!.getContent()).toBe('Original body'));
   expect(library.database.prepare("SELECT content FROM nodes WHERE id='topic'").get()).toEqual({ content: 'Original body' });
