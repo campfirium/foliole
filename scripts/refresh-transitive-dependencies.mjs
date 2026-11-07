@@ -3,6 +3,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { withResourceGate } from './lib/resource-gate.mjs';
 
 const DEPENDENCY_SECTIONS = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'];
 // nwsapi@2.2.27 caused repeatable UI test timeouts on 2026-09-25. Revisit after a newer version passes those tests.
@@ -69,7 +70,14 @@ function readLock() {
   return JSON.parse(readFileSync('package-lock.json', 'utf8'));
 }
 
-function main() {
+export function refreshTransitivePackages(names) {
+  // npm/cli#9800: lock-only resolution misclassifies bundled registry tarballs as remote URLs.
+  // Ordinary reification preserves npm's registry exemption and keeps allow-remote unchanged.
+  const result = run('npm', ['update', ...names, '--no-save', '--ignore-scripts']);
+  if (result.status !== 0) throw new Error(`npm update failed: ${result.stderr.trim()}`);
+}
+
+async function main() {
   if (process.argv.length > 3 || (process.argv[2] && process.argv[2] !== '--list')) {
     throw new Error('usage: npm run maintenance:transitive-lockfile [-- --list]');
   }
@@ -96,17 +104,15 @@ function main() {
     if (names.length) console.log(names.join('\n'));
     return;
   }
-  const result = run('npm', ['update', ...names, '--package-lock-only', '--no-save', '--ignore-scripts']);
-  if (result.status !== 0) throw new Error(`npm update failed: ${result.stderr.trim()}`);
+  await withResourceGate({ className: 'exclusive', commandLabel: 'transitive dependency refresh',
+    repoRoot: process.cwd(), fn: () => refreshTransitivePackages(names) });
   assertTransitiveOnly(beforeManifest, readFileSync('package.json', 'utf8'), beforeLock, readLock());
   console.log(`[transitive-refresh] lockfile refreshed; requested=${names.length}`);
 }
 
 if (process.argv[1]?.endsWith('/refresh-transitive-dependencies.mjs')) {
-  try {
-    main();
-  } catch (error) {
+  main().catch((error) => {
     console.error(`[transitive-refresh] ${error.message}`);
     process.exitCode = 1;
-  }
+  });
 }
