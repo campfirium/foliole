@@ -1,3 +1,6 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 async function openReader(page: Page, theme: string) {
@@ -28,6 +31,23 @@ async function expectFlatSurface(surface: Locator) {
 }
 
 test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+test('dark reading selection uses an RGB background that older WebViews can paint', async ({ page }) => {
+  await openReader(page, 'dark');
+  const directory = path.resolve('dist/companion/assets');
+  const stylesheet = readdirSync(directory).find(name => /^index-.*\.css$/.test(name));
+  if (!stylesheet) throw new Error('Run npm run android:web:build before this test.');
+  await page.locator('style').evaluateAll(styles => styles.forEach(style => style.remove()));
+  await page.addStyleTag({ content: readFileSync(path.join(directory, stylesheet), 'utf8') });
+
+  const selection = await page.evaluate(() => {
+    const selection = window.getSelection()!;
+    const element = selection.anchorNode!.parentElement!;
+    return { text: selection.toString(), background: getComputedStyle(element, '::selection').backgroundColor };
+  });
+  expect(selection.text).toBe('Select');
+  expect(selection.background).toBe('rgba(120, 166, 255, 0.5)');
+});
 
 for (const theme of ['light', 'dark']) {
   test(`selection surfaces stay readable without blurred shadows in ${theme} mode`, async ({ page }) => {
