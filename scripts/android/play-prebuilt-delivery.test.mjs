@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, expect, it } from 'vitest';
 import { preparePlaySubmission } from './play-preparation.mjs';
-import { admitPlaySubmission } from './play-admission.mjs';
+import { admitPlaySubmission, admitTrackResumeCandidate } from './play-admission.mjs';
 import { readPrebuiltPlayCandidate } from './play-prebuilt-candidate.mjs';
 import { resolvePlayDeliveryRegistration } from './play-deliver-runner.mjs';
 import { deliverRegisteredPlayCandidate } from './play-delivery.mjs';
@@ -65,4 +65,13 @@ it('refuses registration before upload when the signed source does not match its
     CANDIDATE_ARTIFACT: f.sources.get('42').signedArtifact.name }, 'e'.repeat(40))).rejects.toThrow(/reservation/u);
   expect(f.rows).toHaveLength(1);
   expect(f.uploads).toBeUndefined();
+});
+
+it('admits only the verified waiting candidate while Play omits the old release', () => {
+  const row = { id: 7617424538, payload: { predecessor: 7607351460, runId: '42342661860',
+    sourceSha: '2bc09f0065e54a3bcbba3ed5e067307ac1abe350', version: '0.8.1', blockers: [] } };
+  const context = { states: new Map([[row.id, 'waiting'], [row.payload.predecessor, 'submitted']]), releases: [] };
+  expect(admitTrackResumeCandidate(row, context)).toBe(true);
+  expect(admitTrackResumeCandidate({ ...row, id: row.id + 1 }, context)).toBe(false);
+  expect(admitTrackResumeCandidate(row, { ...context, releases: [{}] })).toBe(false);
 });

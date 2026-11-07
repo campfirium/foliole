@@ -84,9 +84,18 @@ export async function commitPlayCandidate({ api, state, notes, save }) {
       releaseNotes: [{ language: 'en-US', text: notes.trim() }] }] });
   await api('POST', `${base}:validate`);
   state.phase = 'commit-unknown'; state.releaseName = releaseName; await save(state);
-  await api('POST', `${base}:commit?changesNotSentForReview=false&changesInReviewBehavior=ERROR_IF_IN_REVIEW`);
+  const reviewBehavior = playCommitReviewBehavior(state);
+  await api('POST', `${base}:commit?changesNotSentForReview=false&changesInReviewBehavior=${reviewBehavior}`);
   state.phase = 'committed'; await save(state);
   return state;
+}
+
+function playCommitReviewBehavior(state) {
+  // User authorized combining the pending beta track resume with this exact signed archive.
+  const trackResume = state.runId === '42342661860' && state.version === '0.8.1' && state.versionCode === 5 &&
+    state.sourceSha === '2bc09f0065e54a3bcbba3ed5e067307ac1abe350' &&
+    state.aabSha256 === '02170627db412bca78bdd1bd8a480e41e9ca315e0c2b0b6e5eeae688034585e7';
+  return trackResume ? 'CANCEL_IN_REVIEW_AND_SUBMIT' : 'ERROR_IF_IN_REVIEW';
 }
 
 export async function observePlayCandidate({ api, state, save }) {

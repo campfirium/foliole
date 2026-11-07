@@ -4,10 +4,6 @@ on:
     - cron: '17,47 * * * *'
   workflow_dispatch:
     inputs:
-      inspect_inventory:
-        description: 'Read only the Play beta inventory shape'
-        type: boolean
-        default: false
       candidate_id:
         description: 'Optional exact durable Android candidate ID; empty checks pending candidates'
         required: false
@@ -25,37 +21,7 @@ jobs:
         with: { ref: dev, persist-credentials: false }
       - uses: actions/setup-node@v4
         with: { node-version: 26.13.0 }
-      - name: Inspect Play beta inventory shape
-        if: github.event_name == 'workflow_dispatch' && inputs.inspect_inventory
-        env:
-          ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}
-        run: |
-          node --input-type=module <<'JS'
-          import { playAccessToken, PLAY_PACKAGE } from './scripts/android/play-api.mjs';
-          const token = await playAccessToken(process.env.ANDROID_PLAY_SERVICE_ACCOUNT_JSON);
-          const url = 'https://androidpublisher.googleapis.com/androidpublisher/v3/applications/' + PLAY_PACKAGE + '/tracks/beta/releases';
-          const response = await fetch(url, { headers: { authorization: 'Bearer ' + token }, redirect: 'error' });
-          const result = await response.json();
-          if (!response.ok) {
-            const error = result.error ?? {};
-            const labels = [error.status, ...[...(error.errors ?? []), ...(error.details ?? [])].map(item => item.reason)]
-              .filter(value => typeof value === 'string' && /^[a-zA-Z_]{1,80}$/.test(value));
-            const known = ['permission', 'authentication', 'scope', 'quota', 'rate limit', 'access', 'disabled', 'not enabled', 'track', 'developer', 'package']
-              .filter(word => String(error.message).toLowerCase().includes(word));
-            throw new Error('Play beta inventory HTTP ' + response.status + ' ' + JSON.stringify({ labels, known }));
-          }
-          console.log(JSON.stringify({
-            keys: Object.keys(result),
-            releases: Array.isArray(result.releases) ? result.releases.map(row => ({
-              keys: Object.keys(row), beta: row.track === 'beta', named: Boolean(row.releaseName),
-              lifecycle: /^RELEASE_LIFECYCLE_STATE_[A-Z_]+$/.test(row.releaseLifecycleState ?? '') ? row.releaseLifecycleState : null,
-              knownVersion: ['0.8.0.4.b2e61cc21', '0.8.1.5.2bc09f006'].includes(row.releaseName) ? row.releaseName : null,
-              codes: (row.activeArtifacts ?? []).map(item => Number(item.versionCode))
-            })) : null
-          }));
-          JS
       - name: Check Play availability and resume the oldest eligible submission
-        if: github.event_name != 'workflow_dispatch' || !inputs.inspect_inventory
         env:
           GH_TOKEN: ${{ github.token }}
           ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}
