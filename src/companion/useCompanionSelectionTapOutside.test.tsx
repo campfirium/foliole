@@ -12,7 +12,7 @@ afterEach(() => {
 
 function selectedArticle() {
   const article = document.createElement('div');
-  article.dataset.companionReadableDocument = 'true';
+  article.dataset.companionArticleDocument = 'true';
   article.textContent = 'Selected text and unselected text';
   const outside = document.createElement('span');
   outside.textContent = 'Outside';
@@ -104,7 +104,7 @@ it.each(['a', '.cm-md-highlight'])('leaves %s targets to their existing action',
 
 it.each([true, false])('preserves editor ownership of selection when readOnly=%s', (readOnly) => {
   const article = document.createElement('section');
-  article.dataset.companionReadableDocument = 'true';
+  article.dataset.companionArticleDocument = 'true';
   const host = document.createElement('div');
   const outside = document.createElement('span');
   article.append(host, outside);

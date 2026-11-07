@@ -10,6 +10,9 @@ import {
 
 import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
 
+const ARTICLE_DOCUMENT = '[data-companion-article-document="true"]';
+const READING_SURFACE = '[data-companion-reading-surface="true"]';
+
 type SelectionAtTap = {
   anchorNode: Node | null;
   anchorOffset: number;
@@ -24,14 +27,14 @@ type SelectionAtTap = {
 
 function readSelectionAtTap(editor: EditorAdapter | null, event: PointerEvent): SelectionAtTap | null {
   const target = event.target;
-  if (!(target instanceof Element) || !target.closest('[data-companion-readable-document="true"]') ||
+  if (!(target instanceof Element) || !target.closest(`${ARTICLE_DOCUMENT}, ${READING_SURFACE}`) ||
     toolbarDom.isCompanionArticleInteractiveTarget(target) || isExistingHighlightTarget(target)) return null;
   const native = window.getSelection();
   const selection = editor?.getSelection();
   const hasEditorSelection = selection && selection.from !== selection.to;
   const nativeAnchor = native?.anchorNode instanceof Element ? native.anchorNode : native?.anchorNode?.parentElement;
   const hasArticleNativeSelection = Boolean(native && !native.isCollapsed && native.rangeCount > 0 &&
-    nativeAnchor?.closest('[data-companion-readable-document="true"]'));
+    nativeAnchor?.closest(ARTICLE_DOCUMENT));
   if (!hasEditorSelection && !hasArticleNativeSelection) return null;
   const rects = hasArticleNativeSelection && native
     ? Array.from({ length: native.rangeCount }, (_, index) => Array.from(native.getRangeAt(index).getClientRects())).flat()

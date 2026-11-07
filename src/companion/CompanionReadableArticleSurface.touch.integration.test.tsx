@@ -63,3 +63,39 @@ it.each(['item', 'topic'] as const)('only offers new selection annotations in a 
   expect(onCreate).not.toHaveBeenCalled();
   window.getSelection()!.removeAllRanges();
 });
+
+it.each([
+  { flow: false, target: 'Other passage' },
+  { flow: true, target: 'Other passage' },
+  { flow: true, target: 'Reading margin' }
+])('dismisses a Topic selection on $target with Flow=$flow', async ({ flow, target }) => {
+  const snapshot = createSnapshot('selection-source');
+  const onCreate = vi.fn();
+  renderWithLocalization(<MouseGestureSettingsProvider><CompanionDraftProvider>
+    <ImmersiveReadableArticle flow={flow} footer={<div aria-label="Reading margin" />} onExit={vi.fn()} onCreateSelectionAnnotation={onCreate} snapshot={snapshot}
+      readableArticle={{ content: '# Topic\n\nSelected passage\n\nOther passage', hideTitleHeading: false,
+        nodeId: 'selection-source', persistedNodeViewState: null, pdfAttachmentId: null,
+        textAnchorDecorations: [], title: 'Topic' }} />
+  </CompanionDraftProvider></MouseGestureSettingsProvider>);
+  const selected = await screen.findByText('Selected passage');
+  const outside = target === 'Reading margin' ? screen.getByLabelText(target) : screen.getByText(target);
+  const range = document.createRange();
+  range.selectNodeContents(selected);
+  Object.defineProperty(range, 'getClientRects', { value: () => [new DOMRect(20, 160, 100, 20)] });
+  Object.defineProperty(range, 'getBoundingClientRect', { value: () => new DOMRect(20, 160, 100, 20) });
+  const selection = window.getSelection()!;
+  try {
+    touch(selected, 'pointerdown');
+    selection.addRange(range);
+    touch(selected, 'pointerup');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Highlight' })).toBeVisible());
+
+    touch(outside, 'pointerdown');
+    touch(outside, 'pointerup');
+    expect(selection.toString()).toBe('');
+    expect(screen.queryByRole('button', { name: 'Highlight' })).toBeNull();
+    expect(onCreate).not.toHaveBeenCalled();
+  } finally {
+    selection.removeAllRanges();
+  }
+});

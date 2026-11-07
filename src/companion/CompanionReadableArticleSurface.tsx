@@ -203,6 +203,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   const pagedStyle = useCompanionPagedScroll(scrollPosition.surfaceRef, model.reading.isContentEditing);
   return (
     <section
+      data-companion-reading-surface="true"
       data-reading-chrome-visible={model.reading.isChromeVisible && !model.reading.isContentEditing}
       className={`${model.surfaceClassName}${itemEditing ? ' companion-item-editing' : ''}`}
       style={pagedStyle}
