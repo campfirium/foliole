@@ -248,6 +248,14 @@ passed (5 tests), followed by the debug APK build. Logs are under
 `.tmp/artifacts/T737/` and `.tmp/waits/T737-android.log`. This dependency batch
 does not add a physical-device trial.
 
+On 2026-11-08, [centralized full QA 42386297275](https://github.com/campfirium/foliole/actions/runs/42386297275)
+passed for `125c63e317950504828d098cdb43a448dc10cbb3`, including dependency
+hardening and Android host quality. The repair registered the companion priority
+sync integration test for the controlled Electron SQLite runner. The actual
+dev combination passed nine affected tests and integrated as `f58358211`.
+The registered QA workspace is released. The five rows await scheduled dev
+delivery and remote containment verification before PR closure.
+
 The #200 local blocker recorded in `a6257b5f6` is resolved. Electron virtualizes
 ASAR archives as directories; universal packaging needs raw files, as on Node.
 The existing merge test now scopes `process.noAsar` to that operation and restores
