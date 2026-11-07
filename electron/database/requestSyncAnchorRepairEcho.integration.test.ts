@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import type { UpsertNodeSnapshotInput } from '../../lib/core/database/nodeMutationPayloads.js';
-import { upsertNodeSnapshot, updateNodeAnchorLinks } from '../../lib/core/database/nodeMutations.js';
+import { softDeleteNodes, upsertNodeSnapshot, updateNodeAnchorLinks } from '../../lib/core/database/nodeMutations.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 import { isIncomingLocalAnchorRepair } from '../../lib/core/sync/syncNodeLocalAnchorRepair.js';
@@ -54,6 +54,33 @@ it('accepts the anchor repair another device published for the repair this devic
 
   expect(child(target)).toEqual({ ...child(source) as object, current_version_id: repaired, sync_dirty: 0 });
   expect(persisted(target)).toEqual(persisted(source));
+});
+
+it('accepts the latest equivalent anchor repair after both peers receive a parent deletion', async () => {
+  const { source, target } = await repairOnBoth(false);
+  for (const [version, body, time] of [
+    ['parent-v3', 'New Prefix Alpha Beta Gamma', '2026-09-30T03:00:00.000Z'],
+    ['parent-v4', 'Another New Prefix Alpha Beta Gamma', '2026-09-30T04:00:00.000Z']
+  ] as const) {
+    const parent = (await loadCurrentSyncNodeRecord(source.port, 'parent'))!;
+    const next = node('parent', textBranch(version, body, parent, time));
+    for (const peer of [source, target]) await applyConvergentSyncNodesWithDbPort(peer.port, [next]);
+    expect(flushNodeSyncVersionWithDriver(source.driver, 'child', 'source', time)).toBeTruthy();
+  }
+  const deletedAt = '2026-09-30T05:00:00.000Z';
+  softDeleteNodes(source.driver, { nodeIds: ['parent'], deletedAt });
+  source.db.prepare("UPDATE nodes SET sync_dirty = 1 WHERE id = 'parent'").run();
+  expect(flushNodeSyncVersionWithDriver(source.driver, 'parent', 'source', deletedAt)).toBeTruthy();
+  const deletion = (await loadCurrentSyncNodeRecord(source.port, 'parent'))!;
+  await applyConvergentSyncNodesWithDbPort(target.port, [deletion]);
+  expect(child(target)).toMatchObject({ current_version_id: 'child-v1', sync_dirty: 1,
+    anchor_source_version_id: 'parent-v4' });
+  await withLibraryRequestSnapshot(source, target, replay => replay());
+  expect(child(target)).toEqual(child(source));
+  expect(persisted(target)).toEqual(persisted(source));
+  for (const peer of [source, target]) {
+    expect(peer.db.prepare("SELECT deleted_at FROM nodes WHERE id = 'parent'").pluck().get()).toBe(deletedAt);
+  }
 });
 
 it('still keeps an unpublished local edit made beside the repair', async () => {

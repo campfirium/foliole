@@ -93,8 +93,20 @@ it.each([false, true])('converges stored concurrent heads after any local blocke
     target.prepare("UPDATE sync_object_state SET current_version_id = 'right-head', content_hash = ? WHERE object_id = 'node-1'")
       .run(versions[1]!.content_hash);
     if (dirty) {
+      await host.fixture.right.seed({ nodeId: 'independent-node', title: 'Independent', content: 'Still syncs' });
       for (const db of [host.sqlite, target]) db.prepare("UPDATE nodes SET sync_dirty = 1 WHERE id = 'node-1'").run();
-      await expect(host.sync()).rejects.toThrow('sync_node_apply_blocked');
+      const report = vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        expect((await host.sync()).remainingStructureChangeCount).toBeGreaterThan(0);
+        expect(report).toHaveBeenCalledWith('[request-sync] object rejected', expect.objectContaining({
+          objectId: 'node-1', error: expect.stringContaining('sync_node_apply_blocked')
+        }));
+        expect(host.sqlite.prepare("SELECT content FROM nodes WHERE id = 'independent-node'").pluck().get()).toBe('Still syncs');
+        expect(host.sqlite.prepare("SELECT content FROM nodes WHERE id = 'node-1'").pluck().get()).toBe('Left branch');
+        expect(target.prepare("SELECT content FROM nodes WHERE id = 'node-1'").pluck().get()).toBe('Right branch');
+      } finally {
+        report.mockRestore();
+      }
       for (const db of [host.sqlite, target]) db.prepare("UPDATE nodes SET sync_dirty = 0 WHERE id = 'node-1'").run();
     }
     expect(await host.sync()).toMatchObject({ remainingStructureChangeCount: 0 });

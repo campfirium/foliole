@@ -2,6 +2,7 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 import { hashTextBody } from '../database/textBodyHash.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
+import { isStoredAncestorVersion } from './syncNodeGraph.js';
 import { isSyncNodeSnapshotIdentical } from './syncNodeSnapshotIdentity.js';
 
 /** What a device rewrites on its own when an anchored parent's text changes. */
@@ -9,6 +10,7 @@ const ANCHOR_REPAIR_FIELDS = ['anchor_link', 'image_regions', 'anchor_resolution
   'updated_at'] as const;
 
 interface LocalAnchorRow extends DbRow {
+  current_version_id: string;
   anchor_link: string | null;
   anchor_resolution_status: string | null;
   anchor_source_version_id: string | null;
@@ -30,10 +32,10 @@ export async function isIncomingLocalAnchorRepair(port: DbPort, record: NativeSy
       node.opening_text, node.virtual_filter, node.reveal, node.anchor_link, node.anchor_resolution_status,
       node.anchor_source_version_id, node.image_regions, node.image_sources, node.resource_references,
       node.import_source_fingerprint, node.import_content_fingerprint, node.position, node.created_at,
-      node.updated_at, node.deleted_at, version.snapshot_json, version.body_text
+      node.updated_at, node.deleted_at, node.current_version_id, version.snapshot_json, version.body_text
     FROM nodes node JOIN node_sync_versions version ON version.version_id = node.current_version_id
-    WHERE node.id = ? AND node.current_version_id = ? AND node.sync_dirty = 1 AND node.deleted_at IS NULL`,
-  [record.object_id, record.parent_version_id]);
+    WHERE node.id = ? AND node.sync_dirty = 1 AND node.deleted_at IS NULL`,
+  [record.object_id]);
   if (!local) return false;
   const incoming: Record<string, unknown> = record.snapshot;
   const row: Record<string, unknown> = { ...local };
@@ -42,10 +44,12 @@ export async function isIncomingLocalAnchorRepair(port: DbPort, record: NativeSy
   if (!matchesLiveNode(local, record)) return false;
   const stored = JSON.parse(local.snapshot_json) as Record<string, unknown>;
   // Ordinary versions no longer carry alternatives; an empty historical list carries no extra fact.
-  return isSyncNodeSnapshotIdentical(JSON.stringify({ resource_references: '[]', ...stored,
+  const matchesBase = isSyncNodeSnapshotIdentical(JSON.stringify({ resource_references: '[]', ...stored,
     text_alternatives: stored.text_alternatives ?? [] }),
   { ...record.snapshot, resource_references: record.snapshot.resource_references ?? '[]',
     text_alternatives: record.snapshot.text_alternatives ?? [] }, ANCHOR_REPAIR_FIELDS);
+  return matchesBase && (local.current_version_id === record.parent_version_id
+    || await isStoredAncestorVersion(port, local.current_version_id, record.parent_version_id));
 }
 
 function matchesLiveNode(local: LocalAnchorRow, record: NativeSyncNodeRecord) {
