@@ -20,7 +20,11 @@ async function main() {
     method: 'POST', redirect: 'error', signal: AbortSignal.timeout(10000), body: probe,
     headers: { 'content-type': 'application/json', 'x-apple-signature': `hmacsha256=${signature}` }
   });
-  if (preflight.status !== 204) throw new Error(`Webhook dispatch preflight returned HTTP ${preflight.status}.`);
+  if (preflight.status !== 204) {
+    const status = preflight.headers.get('x-foliole-github-status') ?? '';
+    const detail = /^[1-5][0-9]{2}$/u.test(status) ? ` (GitHub HTTP ${status})` : '';
+    throw new Error(`Webhook dispatch preflight returned HTTP ${preflight.status}${detail}.`);
+  }
   const token = await appleReadToken();
   const request = async (route, method = 'GET', data) => {
     const response = await fetch(`https://api.appstoreconnect.apple.com/v1/${route}`, {
