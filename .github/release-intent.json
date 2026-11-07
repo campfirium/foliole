@@ -1,23 +1,15 @@
 {
   "schemaVersion": 1,
-  "version": "0.8.0",
+  "version": "0.8.1",
   "publicationMode": "scoped",
   "selectedPlatforms": [
-    "macos",
-    "windows",
-    "linux",
-    "android",
-    "ios"
+    "android"
   ],
   "scopeBasis": {
-    "macos": "Foliole 0.8.0 upgrades shared FSRS-7 review facts and text-alternative synchronization to descriptor 35 and framed protocol 29, rejecting older incompatible peers; all active desktop and mobile hosts require coordinated clients.",
-    "windows": "Foliole 0.8.0 upgrades shared FSRS-7 review facts and text-alternative synchronization to descriptor 35 and framed protocol 29, rejecting older incompatible peers; all active desktop and mobile hosts require coordinated clients.",
-    "linux": "Foliole 0.8.0 upgrades shared FSRS-7 review facts and text-alternative synchronization to descriptor 35 and framed protocol 29, rejecting older incompatible peers; all active desktop and mobile hosts require coordinated clients.",
-    "android": "Foliole 0.8.0 upgrades shared FSRS-7 review facts and text-alternative synchronization to descriptor 35 and framed protocol 29, rejecting older incompatible peers; all active desktop and mobile hosts require coordinated clients.",
-    "ios": "Foliole 0.8.0 upgrades shared FSRS-7 review facts and text-alternative synchronization to descriptor 35 and framed protocol 29, rejecting older incompatible peers; all active desktop and mobile hosts require coordinated clients."
+    "android": "This Android touch target repair changes only how Sync Group setup receives taps; the sync protocol, group identity, discovery transport and library schema remain compatible with 0.8.0."
   },
   "syncCompatibility": {
-    "mode": "coordinated",
-    "basis": "Foliole 0.8.0 upgrades shared FSRS-7 review facts and text-alternative synchronization to descriptor 35 and framed protocol 29, rejecting older incompatible peers; all active desktop and mobile hosts require coordinated clients."
+    "mode": "compatible",
+    "basis": "This Android touch target repair changes only how Sync Group setup receives taps; the sync protocol, group identity, discovery transport and library schema remain compatible with 0.8.0."
   }
 }
