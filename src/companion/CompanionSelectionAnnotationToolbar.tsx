@@ -58,10 +58,12 @@ export function CompanionSelectionAnnotationToolbar(props: CompanionSelectionAnn
 function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
   const [noteDraft, setNoteDraft] = useState('');
   const [isNoteOpen, setIsNoteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const session = useCompanionHighlightSession(props.state?.existingHighlight, props.loadExistingHighlight);
   const creation = useCompanionSelectionApply({ ...props, resolvePayload: () => resolveApplyPayload(props) });
   const state = props.state!;
   const isExistingHighlight = Boolean(state.existingHighlight);
+  const hideDeletedControls = deleting && (session.saving || !session.error || session.saved);
   const draft = isExistingHighlight ? session.draft : noteDraft;
   const disabled = isExistingHighlight ? session.loading || !session.ready || session.saving || session.saved : creation.saving || creation.saved || Boolean(creation.guardPayload);
   function applyExistingNote() {
@@ -72,13 +74,16 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
   function deleteExistingHighlight() {
     const target = state.existingHighlight;
     if (!target) return;
-    session.save(() => props.onDeleteExistingHighlight(target.nodeId, session.guard), props.onClose);
+    void session.save(() => {
+      setDeleting(true);
+      return props.onDeleteExistingHighlight(target.nodeId, session.guard);
+    }, props.onClose);
   }
   return (
     <div className="fixed z-floating select-none [--shadow-popover:none]" data-companion-selection-toolbar="true"
       onContextMenu={(event) => event.preventDefault()} onPointerDown={(event) => event.stopPropagation()}
       style={{ left: state.left, top: state.top }}>
-      {state.existingHighlight && props.onAdjustExistingHighlightRange ? <CompanionHighlightRangeHandles
+      {!hideDeletedControls && state.existingHighlight && props.onAdjustExistingHighlightRange ? <CompanionHighlightRangeHandles
         editor={props.editor ?? null} parentNodeId={props.parentNodeId} nodeId={state.existingHighlight.nodeId}
         snapshot={props.snapshot ?? null} disabled={disabled || isNoteOpen}
         onCommit={(nodeId, range) => session.save(async () => {
@@ -89,14 +94,14 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
       {creation.guardPayload ? <CompanionClozeGuardDialog
         disabled={creation.saving || creation.saved} onCancel={creation.cancelGuard} onChoose={creation.confirmGuard}
         status={creation.error ? <CreationStatus creation={creation} /> : null} /> : null}
-      <CompanionSelectionToolbarActions isExistingHighlight={isExistingHighlight} isCloze={state.existingHighlight?.kind === 'cloze'} disabled={disabled}
+      {!hideDeletedControls ? <CompanionSelectionToolbarActions isExistingHighlight={isExistingHighlight} isCloze={state.existingHighlight?.kind === 'cloze'} disabled={disabled}
         getCopyText={() => state.existingHighlight?.originalText ?? resolveApplyPayload(props)?.selectionText ?? ''}
         onCopied={props.onClose} onAddNote={() => setIsNoteOpen(true)} onApply={creation.apply} onDeleteExistingHighlight={deleteExistingHighlight}
         onOpenExistingHighlight={props.onOpenExistingHighlight ? () => {
           if (!state.existingHighlight || disabled) return;
           props.onOpenExistingHighlight?.(state.existingHighlight.nodeId);
           props.onClose();
-        } : undefined} />
+        } : undefined} /> : null}
       {!isNoteOpen && !isExistingHighlight && creation.error ? <div className={`${appFloatingSurfaceClassName('popover')} mt-2 w-64 rounded-md p-2 text-sm`}>
         <CreationStatus creation={creation} />
       </div> : null}

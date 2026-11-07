@@ -131,7 +131,7 @@ it.each(['note', 'delete', 'cloze'])('recovers saved %s without another write, i
 it.each(['note', 'delete', 'cloze'])('closes after a successful %s', async (kind) => {
   const nodeId = await openHighlight(kind);
   submit(kind);
-  await waitFor(() => expect(screen.queryByRole('toolbar')).toBeNull());
+  await waitFor(() => expect(document.querySelector('[data-companion-selection-toolbar]')).toBeNull());
   const saved = await loadCompanionWorkspaceNode(nodeId);
   if (kind === 'note') expect(saved?.content).toBe('Beta\n※ Reader note');
   else expect(saved?.deletedAt).toBeTruthy();
@@ -150,7 +150,7 @@ it.each(['note', 'delete', 'cloze'])('keeps an actual failed %s editable and ret
     fireEvent.change(screen.getByPlaceholderText('Add annotation...'), { target: { value: 'Revised' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   } else fireEvent.click(screen.getByRole('button', { name: kind === 'cloze' ? 'Delete cloze' : 'Close Highlight' }));
-  await waitFor(() => expect(screen.queryByRole('toolbar')).toBeNull());
+  await waitFor(() => expect(document.querySelector('[data-companion-selection-toolbar]')).toBeNull());
   const after = await loadCompanionWorkspaceNode(nodeId);
   if (kind === 'note') expect(after?.content).toBe('Beta\n※ Revised');
   else expect(after?.deletedAt).toBeTruthy();

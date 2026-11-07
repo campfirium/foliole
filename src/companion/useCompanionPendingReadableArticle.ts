@@ -110,13 +110,16 @@ export function createPendingAnnotationActions(
     pendingReadableArticle.stageSelectionAnnotation(kind, payload);
     return props.onCreateSelectionAnnotation?.(kind, payload, note) ?? null;
   }
-  function deleteExistingHighlight(nodeId: string, guard?: CompanionHighlightReadGuard) {
+  async function deleteExistingHighlight(nodeId: string, guard?: CompanionHighlightReadGuard) {
     pendingReadableArticle.stageDeletedHighlight(nodeId);
-    const result = props.onDeleteExistingHighlight?.(nodeId, guard) ?? null;
-    return Promise.resolve(result).catch((error) => {
+    try {
+      const result = await props.onDeleteExistingHighlight?.(nodeId, guard) ?? null;
+      if (!result) pendingReadableArticle.restoreDeletedHighlight(nodeId);
+      return result;
+    } catch (error) {
       if (!(error instanceof CompanionSelectionRefreshError)) pendingReadableArticle.restoreDeletedHighlight(nodeId);
       throw error;
-    });
+    }
   }
   const adjustExistingHighlightRange: CompanionHighlightRangeHandler = async (nodeId, range, content, guard) => {
     const pending = pendingReadableArticle.stageRange(nodeId, range);
