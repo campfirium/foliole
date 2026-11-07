@@ -13,6 +13,7 @@ import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import { beginSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadSyncGroupOverwriteProgress } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
 import { applySyncObjectInTransaction } from '../../../../../../lib/core/sync/syncObjectApplyExecutor.js';
+import { installCompanionWebViewCompatibilityPolyfills } from '../../../../../companion/companionWebViewCompatibility';
 import { createCompanionRequestFixture, native } from '../../../../../test/companionRequestSync.testSupport.js';
 
 let host: Awaited<ReturnType<typeof createCompanionRequestFixture>> | undefined;
@@ -135,4 +136,25 @@ it('keeps missing attachments pending without retransmitting converged database 
   await expect(fs.stat(path.join(fixture.leftSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', seeded.storageKey)))
     .rejects.toMatchObject({ code: 'ENOENT' });
   expect(host.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(before);
+});
+
+it('resumes pending reception on a WebView without native abort reasons or checks', async () => {
+  const host = await adopt();
+  const prototype = AbortSignal.prototype;
+  const reason = Object.getOwnPropertyDescriptor(prototype, 'reason')!;
+  const check = Object.getOwnPropertyDescriptor(prototype, 'throwIfAborted')!;
+  const abort = Object.getOwnPropertyDescriptor(AbortController.prototype, 'abort')!;
+  Reflect.deleteProperty(prototype, 'reason');
+  Reflect.deleteProperty(prototype, 'throwIfAborted');
+  try {
+    installCompanionWebViewCompatibilityPolyfills();
+    await host.sync();
+    expect(await loadSyncGroupLocalAdoption(host.db)).toBeNull();
+    expect(await loadSyncGroupOverwriteProgress(host.db)).toBeNull();
+    expect(await readFixtureInventory(host.fixture.left)).toEqual(await readFixtureInventory(host.fixture.right));
+  } finally {
+    Object.defineProperty(prototype, 'reason', reason);
+    Object.defineProperty(prototype, 'throwIfAborted', check);
+    Object.defineProperty(AbortController.prototype, 'abort', abort);
+  }
 });

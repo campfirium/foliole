@@ -60,3 +60,33 @@ it('installs WebView 74 runtime APIs before the companion app boots', async () =
   expect(URL.parse('/paper.pdf', 'https://example.com')?.href).toBe('https://example.com/paper.pdf');
   expect(URL.parse('not a valid origin')).toBeNull();
 });
+
+it('keeps the first cancellation reason available during abort notification on an older WebView', () => {
+  const signalPrototype = AbortSignal.prototype;
+  const controllerPrototype = AbortController.prototype;
+  const reason = Object.getOwnPropertyDescriptor(signalPrototype, 'reason')!;
+  const check = Object.getOwnPropertyDescriptor(signalPrototype, 'throwIfAborted')!;
+  const abort = Object.getOwnPropertyDescriptor(controllerPrototype, 'abort')!;
+  Reflect.deleteProperty(signalPrototype, 'reason');
+  Reflect.deleteProperty(signalPrototype, 'throwIfAborted');
+  try {
+    installCompanionWebViewCompatibilityPolyfills();
+    const controller = new AbortController();
+    const cause = new Error('request_sync_foreground_ended');
+    const seen: unknown[] = [];
+    controller.signal.addEventListener('abort', () => seen.push(controller.signal.reason));
+    expect(() => controller.signal.throwIfAborted()).not.toThrow();
+    controller.abort(cause);
+    controller.abort(new Error('ignored'));
+    expect(seen).toEqual([cause]);
+    expect(controller.signal.reason).toBe(cause);
+    expect(() => controller.signal.throwIfAborted()).toThrow(cause);
+    const defaultController = new AbortController();
+    defaultController.abort();
+    expect(defaultController.signal.reason).toMatchObject({ name: 'AbortError' });
+  } finally {
+    Object.defineProperty(signalPrototype, 'reason', reason);
+    Object.defineProperty(signalPrototype, 'throwIfAborted', check);
+    Object.defineProperty(controllerPrototype, 'abort', abort);
+  }
+});

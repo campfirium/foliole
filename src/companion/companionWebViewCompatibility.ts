@@ -131,7 +131,30 @@ function installStructuredCloneFallback() {
   defineMissingProperty(globalThis, 'structuredClone', cloneFallback);
 }
 
+function installAbortSignalPolyfills() {
+  if (!('reason' in AbortSignal.prototype)) {
+    const reasons = new WeakMap<AbortSignal, unknown>();
+    const abort = AbortController.prototype.abort;
+    Object.defineProperty(AbortSignal.prototype, 'reason', {
+      configurable: true,
+      get(this: AbortSignal) { return reasons.get(this); }
+    });
+    Object.defineProperty(AbortController.prototype, 'abort', {
+      configurable: true,
+      writable: true,
+      value(this: AbortController, reason: unknown = new DOMException('The operation was aborted.', 'AbortError')) {
+        if (!this.signal.aborted) reasons.set(this.signal, reason);
+        abort.call(this, reason);
+      }
+    });
+  }
+  defineMissingProperty(AbortSignal.prototype, 'throwIfAborted', function throwIfAborted(this: AbortSignal) {
+    if (this.aborted) throw this.reason;
+  });
+}
+
 export function installCompanionWebViewCompatibilityPolyfills() {
+  installAbortSignalPolyfills();
   installArrayAtPolyfill();
   installStringReplaceAllPolyfill();
   installObjectFromEntriesPolyfill();
