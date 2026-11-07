@@ -1,0 +1,25 @@
+name: Configure TestFlight site webhook
+
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: configure-testflight-site-webhook
+
+jobs:
+  configure:
+    if: github.repository == 'campfirium/foliole' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Register and ping the Foliole webhook
+        env:
+          IOS_APP_STORE_API_ISSUER: ${{ secrets.IOS_APP_STORE_API_ISSUER }}
+          IOS_APP_STORE_API_KEY_ID: ${{ secrets.IOS_APP_STORE_API_KEY_ID }}
+          IOS_APP_STORE_API_KEY_BASE64: ${{ secrets.IOS_APP_STORE_API_KEY_BASE64 }}
+          FOLIOLE_APPLE_WEBHOOK_SECRET: ${{ secrets.FOLIOLE_APPLE_WEBHOOK_SECRET }}
+        run: node scripts/ios/configure-site-webhook.mjs

@@ -10,9 +10,8 @@ const workflow = parse(source);
 describe('deploy release manifest workflow contract', () => {
   it('publishes only merged dev metadata for an already-public Release', () => {
     expect(workflow.on.push.branches).toEqual(['dev']);
-    expect(workflow.on.workflow_dispatch).toBeNull();
+    expect(workflow.on.workflow_dispatch.inputs.store_notification).toMatchObject({ type: 'boolean', default: false });
     expect(workflow.on.release.types).toEqual(['published']);
-    expect(workflow.on.repository_dispatch.types).toEqual(['foliole-testflight-state-changed']);
     expect(workflow.jobs.deploy.if).toBe("needs.build.outputs.changed == 'true'");
     expect(source).toContain('test "$DEPLOY_REF" = "refs/heads/dev"');
     expect(source).toContain('releases/tags/v${latest_version}');
