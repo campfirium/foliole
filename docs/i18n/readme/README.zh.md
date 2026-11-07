@@ -20,8 +20,7 @@
 让阅读真正完成。<br>
 一款现代的渐进阅读软件。
 
-Foliole 现处于 Beta 阶段，提供 macOS、Windows 和 Linux（实验版）的桌面版本。<br>
-Android 和 iOS 版本正在测试，iPhone 测试通过 TestFlight 进行。<br>
+Foliole 现处于 beta 阶段，支持 macOS、Windows、Linux（实验版）、iOS 和 Android。<br>
 也可以先通过[在线体验版](https://foliole.app/zh-hans/demo/)体验 Foliole。
 
 <p align="center">

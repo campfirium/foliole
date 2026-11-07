@@ -20,8 +20,7 @@
 Make reading actually complete.<br>
 An approachable incremental reading app.
 
-Foliole is in Beta. Desktop builds are available for macOS, Windows, and Linux (experimental).<br>
-Android and iOS versions are in testing; iPhone testing uses TestFlight.<br>
+Foliole is in beta, available for macOS, Windows, Linux (experimental), iOS, and Android.<br>
 You can also try Foliole with the [online demo](https://foliole.app/en/demo/).
 
 <p align="center">

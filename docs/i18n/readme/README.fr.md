@@ -20,8 +20,7 @@
 Faire que la lecture aille vraiment jusqu'au bout.<br>
 Une application accessible de lecture incrémentale.
 
-Foliole est en phase bêta. Des versions de bureau sont disponibles pour macOS, Windows et Linux (expérimental).<br>
-Les versions Android et iOS sont en cours de test ; les tests sur iPhone passent par TestFlight.<br>
+Foliole est en version bêta et disponible sur macOS, Windows, Linux (expérimental), iOS et Android.<br>
 Vous pouvez aussi essayer Foliole avec la [démo en ligne](https://foliole.app/en/demo/).
 
 <p align="center">

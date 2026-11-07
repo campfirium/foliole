@@ -20,8 +20,7 @@
 読書を本当に完了できるものにする。<br>
 親しみやすいインクリメンタルリーディングアプリです。
 
-Foliole はベータ段階です。macOS、Windows、Linux（実験版）向けのデスクトップ版を利用できます。<br>
-Android 版と iOS 版はテスト中です。iPhone でのテストには TestFlight を使用します。<br>
+Foliole はベータ版として、macOS、Windows、Linux（実験版）、iOS、Android で利用できます。<br>
 [オンラインデモ](https://foliole.app/en/demo/)でも Foliole を試せます。
 
 <p align="center">

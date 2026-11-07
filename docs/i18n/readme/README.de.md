@@ -20,8 +20,7 @@
 Lesen wirklich abschließen.<br>
 Eine zugängliche App für inkrementelles Lesen.
 
-Foliole befindet sich in der Beta-Phase. Desktop-Versionen sind für macOS, Windows und Linux (experimentell) verfügbar.<br>
-Die Android- und iOS-Versionen werden getestet; iPhone-Tests erfolgen über TestFlight.<br>
+Foliole befindet sich in der Betaphase und ist für macOS, Windows, Linux (experimentell), iOS und Android verfügbar.<br>
 Du kannst Foliole auch mit der [Online-Demo](https://foliole.app/en/demo/) ausprobieren.
 
 <p align="center">

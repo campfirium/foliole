@@ -20,8 +20,7 @@
 읽기를 정말로 끝까지 완성하게 합니다.<br>
 접근하기 쉬운 점진적 읽기 앱입니다.
 
-Foliole은 베타 단계입니다. macOS, Windows, Linux(실험 버전)용 데스크톱 버전을 사용할 수 있습니다.<br>
-Android 및 iOS 버전은 테스트 중이며, iPhone 테스트는 TestFlight를 통해 진행됩니다.<br>
+Foliole은 베타 버전으로, macOS, Windows, Linux(실험 버전), iOS 및 Android에서 사용할 수 있습니다.<br>
 [온라인 데모](https://foliole.app/en/demo/)로도 Foliole을 사용해 볼 수 있습니다.
 
 <p align="center">
