@@ -3,13 +3,15 @@
   "version": "0.8.1",
   "publicationMode": "scoped",
   "selectedPlatforms": [
-    "android"
+    "android",
+    "ios"
   ],
   "scopeBasis": {
-    "android": "This Android touch target repair changes only how Sync Group setup receives taps; the sync protocol, group identity, discovery transport and library schema remain compatible with 0.8.0."
+    "android": "Android and iPhone share the Sync Group setup and switch touch-target fix; the sync protocol, group identity, discovery transport and library schema remain compatible with 0.8.0.",
+    "ios": "Android and iPhone share the Sync Group setup and switch touch-target fix; the sync protocol, group identity, discovery transport and library schema remain compatible with 0.8.0."
   },
   "syncCompatibility": {
     "mode": "compatible",
-    "basis": "This Android touch target repair changes only how Sync Group setup receives taps; the sync protocol, group identity, discovery transport and library schema remain compatible with 0.8.0."
+    "basis": "Android and iPhone share the Sync Group setup and switch touch-target fix; the sync protocol, group identity, discovery transport and library schema remain compatible with 0.8.0."
   }
 }
