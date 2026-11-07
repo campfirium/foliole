@@ -6,20 +6,16 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { FlowExitHereContext } from '../shared/ui/FlowExitHereContext';
 
 import { CompanionBottomSheet as ReadingBottomSheet } from './CompanionBottomSheet';
-import { CompanionColorModeControl } from './CompanionColorModeControl';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { CompanionFlowOrEditHistoryActions } from './CompanionFlowHistorySurface';
 import { CompanionFlowModeControl } from './CompanionFlowModeControl';
 import { CompanionNodePrioritySlider } from './CompanionNodePrioritySlider';
-import { CompanionReadingColorControls } from './CompanionReadingColorControls';
 import { CompanionReadingDisplayControls } from './CompanionReadingDisplayControls';
 import { CompanionReadingModeControl } from './CompanionReadingModeControl';
 import { CompanionReadingTypographyControls } from './CompanionReadingTypographyControls';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 import { CompanionWorkspaceCurrentNodeAction } from './CompanionWorkspaceActions';
 import { useCompanionTrashRestoreAction } from './useCompanionTrashRestoreAction';
-
-import { SettingsTouchSurface } from '@/shared/ui/SettingsTouchSurface';
 
 export { ReadingBottomSheet };
 
@@ -144,8 +140,6 @@ export function ReadingFontSheet(props: {
   const t = useTranslation();
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.font')}>
-      <CompanionColorModeControl />
-      <SettingsTouchSurface><CompanionReadingColorControls /></SettingsTouchSurface>
       <CompanionReadingModeControl />
       <CompanionReadingDisplayControls />
       {props.fontLoadError ? <p className="py-3 text-sm text-error" role="alert">{t('companion.reading.font.loadError')}</p> : null}

@@ -4,8 +4,6 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { APP_SETTINGS_STORAGE_KEYS } from '../shared/config/appSettings';
 
 import { CompanionColorModeProvider } from './CompanionColorModeProvider';
-import { ReadingFontSheet } from './CompanionReadingSheets';
-import { DEFAULT_READING_TYPOGRAPHY_SETTINGS } from './companionReadingTypographySettings';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 
 let dark = false;
@@ -50,11 +48,9 @@ it('defaults to warm and applies all choices only in dark mode through system an
   expect(document.documentElement.dataset.pdfReadingMode).toBe('warm');
 });
 
-it('saves from the reading sheet and restores the same preference in settings after remount', () => {
+it('saves from Appearance settings and restores the preference after remount', () => {
   localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.baseColor, 'dark');
-  const view = render(<CompanionColorModeProvider>
-    <ReadingFontSheet open onOpenChange={vi.fn()} onChange={vi.fn()} settings={DEFAULT_READING_TYPOGRAPHY_SETTINGS} />
-  </CompanionColorModeProvider>);
+  const view = renderSettings();
   choose('inverted');
   expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.pdfReadingMode)).toBe('inverted');
   view.unmount();

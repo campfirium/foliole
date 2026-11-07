@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../shared/config/appSettings';
@@ -67,16 +67,18 @@ it('keeps an explicit choice when the system changes and restores it after remou
   expect(document.documentElement.dataset.resolvedBaseColor).toBe('dark');
 });
 
-it('changes the global preference from the real reading Appearance sheet without changing typography', () => {
+it('keeps global appearance controls in Settings and out of the reading sheet', () => {
   const onChange = vi.fn();
   render(<CompanionColorModeProvider>
     <ReadingFontSheet open onOpenChange={vi.fn()} onChange={onChange} settings={DEFAULT_READING_TYPOGRAPHY_SETTINGS} />
   </CompanionColorModeProvider>);
-  expect(screen.getByRole('dialog', { name: 'Appearance' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Dark' }));
-  expect(document.documentElement.dataset.resolvedBaseColor).toBe('dark');
-  expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.baseColor)).toBe('dark');
-  expect(onChange).not.toHaveBeenCalled();
+  const sheet = screen.getByRole('dialog', { name: 'Appearance' });
+  expect(within(sheet).queryByRole('button', { name: 'Dark' })).not.toBeInTheDocument();
+  expect(within(sheet).queryByRole('switch', { name: 'Dim images in dark mode' })).not.toBeInTheDocument();
+  expect(within(sheet).queryByRole('radiogroup', { name: 'PDF in dark mode' })).not.toBeInTheDocument();
+  expect(within(sheet).queryByLabelText('Accent color picker')).not.toBeInTheDocument();
+  fireEvent.click(within(sheet).getByRole('button', { name: 'Increase Size' }));
+  expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ fontSize: 17 }));
 });
 
 it('keeps the previous mode and reports a storage write failure', () => {
@@ -119,15 +121,6 @@ it('defaults image dimming on and preserves its choice across themes and remount
   fireEvent.click(screen.getByRole('switch', { name: 'Dim images in dark mode' }));
   expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('true');
   expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.dimImagesInDarkMode)).toBe('true');
-});
-
-it('offers the same image preference in the reading Appearance sheet', () => {
-  render(<CompanionColorModeProvider>
-    <ReadingFontSheet open onOpenChange={vi.fn()} onChange={vi.fn()} settings={DEFAULT_READING_TYPOGRAPHY_SETTINGS} />
-  </CompanionColorModeProvider>);
-  fireEvent.click(screen.getByRole('switch', { name: 'Dim images in dark mode' }));
-  expect(document.documentElement.dataset.dimImagesInDarkMode).toBe('false');
-  expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.dimImagesInDarkMode)).toBe('false');
 });
 
 it('keeps the saved image preference and reports failed writes without changing the theme', () => {

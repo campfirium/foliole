@@ -5,8 +5,6 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../shared/config/appSettings';
 import { DEFAULT_APPEARANCE_COLORS } from '../shared/config/defaultAppearanceColors';
 
 import { CompanionColorModeProvider } from './CompanionColorModeProvider';
-import { ReadingFontSheet } from './CompanionReadingSheets';
-import { DEFAULT_READING_TYPOGRAPHY_SETTINGS } from './companionReadingTypographySettings';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 
 const colors = [
@@ -31,15 +29,14 @@ beforeEach(() => {
 });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-function mount(sheet = false) {
-  return render(<CompanionColorModeProvider>{sheet
-    ? <ReadingFontSheet open onOpenChange={vi.fn()} onChange={vi.fn()} settings={DEFAULT_READING_TYPOGRAPHY_SETTINGS} />
-    : renderCompanionSettingsContent({ settingsPage: 'appearance', onBackToSettingsList: vi.fn(),
+function mount() {
+  return render(<CompanionColorModeProvider>
+    {renderCompanionSettingsContent({ settingsPage: 'appearance', onBackToSettingsList: vi.fn(),
       onOpenSyncSettings: vi.fn(), onOpenSyncSettingsPage: vi.fn(), workspaceSync: {} as never })}
   </CompanionColorModeProvider>);
 }
 
-it('edits all reading colors, retains separate themes and restores them through the reading sheet', () => {
+it('edits all reading colors, retains separate themes and restores them in Appearance settings', () => {
   const view = mount();
   for (const [label, key, css] of colors) {
     fireEvent.change(screen.getByLabelText(`${label} picker`), { target: { value: '#123456' } });
@@ -53,7 +50,7 @@ it('edits all reading colors, retains separate themes and restores them through 
     expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS[key])).toBe('#123456');
   }
   view.unmount();
-  mount(true);
+  mount();
   for (const [label] of colors) expect(screen.getByLabelText(`${label} picker`)).toHaveValue('#abcdef');
   fireEvent.click(screen.getByRole('button', { name: 'Light' }));
   for (const [label] of colors) expect(screen.getByLabelText(`${label} picker`)).toHaveValue('#123456');
@@ -93,8 +90,8 @@ it('keeps the confirmed color on write failure and allows retry', () => {
   expect(input).toHaveValue('#abcdef');
 });
 
-it.each([false, true])('keeps detailed color editing out of the mobile settings list (reading sheet=%s)', sheet => {
-  mount(sheet);
+it('keeps detailed color editing out of the mobile settings list', () => {
+  mount();
   expect(screen.queryAllByRole('textbox')).toHaveLength(0);
   for (const [label] of colors) {
     expect(screen.getByLabelText(`${label} picker`)).toBeInTheDocument();
