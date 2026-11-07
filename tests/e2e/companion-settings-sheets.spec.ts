@@ -3,30 +3,35 @@ import path from 'node:path';
 
 import { expect, test, type Page } from '@playwright/test';
 
+async function loadSettingsSheets(page: Page) {
+  await page.route('**/__settings-sheets', route => route.fulfill({ contentType: 'text/html', body: `
+    <html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+    <body><div id="root"></div><script type="module">
+    import RefreshRuntime from '/@react-refresh';
+    RefreshRuntime.injectIntoGlobalHook(window);
+    window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type;
+    window.__vite_plugin_react_preamble_installed__ = true;
+    await import('/@fs/${process.cwd()}/tests/fixtures/companionSettingsSheets.tsx');
+    </script></body></html>` }));
+  await page.goto('/__settings-sheets');
+  const directory = path.resolve('dist/companion/assets');
+  const stylesheet = readdirSync(directory).find(name => /^index-.*\.css$/.test(name));
+  if (!stylesheet) throw new Error('Run npm run android:web:build before this test.');
+  await expect(page.getByRole('button', { name: 'Days: 30', exact: true })).toBeVisible();
+  await page.locator('style').evaluateAll(styles => styles.forEach(style => style.remove()));
+  await page.addStyleTag({ content: readFileSync(path.join(directory, stylesheet), 'utf8') });
+}
+
 for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 812 }, { width: 812, height: 375 }]) {
   test(`keeps settings sheets and their actions inside ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
-    await page.route('**/__settings-sheets', route => route.fulfill({ contentType: 'text/html', body: `
-      <html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-      <body><div id="root"></div><script type="module">
-      import RefreshRuntime from '/@react-refresh';
-      RefreshRuntime.injectIntoGlobalHook(window);
-      window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type;
-      window.__vite_plugin_react_preamble_installed__ = true;
-      await import('/@fs/${process.cwd()}/tests/fixtures/companionSettingsSheets.tsx');
-      </script></body></html>` }));
-    await page.goto('/__settings-sheets');
-    const directory = path.resolve('dist/companion/assets');
-    const stylesheet = readdirSync(directory).find(name => /^index-.*\.css$/.test(name));
-    if (!stylesheet) throw new Error('Run npm run android:web:build before this test.');
-    await expect(page.getByRole('button', { name: 'Days: 30', exact: true })).toBeVisible();
-    await page.locator('style').evaluateAll(styles => styles.forEach(style => style.remove()));
-    await page.addStyleTag({ content: readFileSync(path.join(directory, stylesheet), 'utf8') });
+    await loadSettingsSheets(page);
     await page.getByRole('button', { name: 'Mark ready to clean', exact: true }).click();
-    for (const name of ['Days: 30', 'Backup location', 'Clean up', 'Clear App Data']) {
+    for (const name of ['Days: 30', 'Backup location', 'Clean up', 'Clear App Data', 'Join']) {
       await page.getByRole('button', { name, exact: true }).click();
       const dialog = page.getByRole('dialog');
       await expect(dialog).toBeVisible();
+      if (name === 'Join') await expect(dialog).toHaveAccessibleName('Join sync group');
       const box = await dialog.boundingBox();
       expect(box!.x).toBeGreaterThanOrEqual(0);
       expect(box!.y).toBeGreaterThanOrEqual(0);
@@ -51,6 +56,32 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 812 }
     await page.screenshot({ path: `.tmp/artifacts/T719/settings-${viewport.width}.png` });
   });
 }
+
+test.describe('joining a sync group', () => {
+  test.use({ hasTouch: true });
+
+  test('keeps the join dialog and its choices reachable in short landscape', async ({ page }) => {
+    await page.setViewportSize({ width: 568, height: 320 });
+    await loadSettingsSheets(page);
+    await page.getByRole('button', { name: 'Join', exact: true }).tap();
+    const dialog = page.getByRole('dialog', { name: 'Join sync group' });
+    const more = dialog.getByRole('button', { name: 'Other options' });
+    const primary = dialog.getByRole('button', { name: 'Use the sync group’s data to overwrite this device' });
+    const cancel = dialog.getByRole('button', { name: 'Cancel' });
+    await expect(dialog).toBeInViewport({ ratio: 1 });
+    await more.tap();
+    await expect(dialog).toBeInViewport({ ratio: 1 });
+    await expect(cancel).toBeInViewport({ ratio: 1 });
+    const overwrite = dialog.getByRole('button', { name: 'Use this device’s data to overwrite the entire group' });
+    await overwrite.scrollIntoViewIfNeeded();
+    await expect(overwrite).toBeInViewport({ ratio: 1 });
+    await cancel.tap();
+    await expect(dialog).toHaveCount(0);
+    await page.getByRole('button', { name: 'Join', exact: true }).tap();
+    await primary.tap();
+    await expect(dialog).toHaveCount(0);
+  });
+});
 
 async function routeImageDimming(page: Page) {
   await page.route('**/__image-dimming', route => route.fulfill({ contentType: 'text/html', body: `

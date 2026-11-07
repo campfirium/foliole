@@ -9,19 +9,23 @@ import { CompanionStorageSettingsContent } from '../../src/companion/CompanionSt
 import '../../src/companion/companionMinimal.css';
 import { AttachmentCleanupThresholdDialog } from '../../src/features/settings/components/sections/AttachmentCleanupThresholdDialog';
 import { SettingsAttachmentStorageSection } from '../../src/features/settings/components/sections/SettingsAttachmentStorageSection';
-import { LocalizationProvider } from '../../src/shared/localization/LocalizationProvider';
+import { LocalizationProvider, useTranslation } from '../../src/shared/localization/LocalizationProvider';
+import { AppConfirmationProvider } from '../../src/shared/ui/AppConfirmationProvider';
+import { chooseSyncGroupJoinMode } from '../../src/shared/ui/chooseSyncGroupJoinMode';
 import { SettingsTouchSurface } from '../../src/shared/ui/SettingsTouchSurface';
 
 const attachments = createCompanionSettingsPreview();
 Object.assign(window, { electronAPI: { invoke: (_command: string, request: AttachmentStatusRequest) => attachments.maintainAttachments(request) } });
 
 function SettingsSheets() {
+  const t = useTranslation();
   const [threshold, setThreshold] = useState(30);
   const [open, setOpen] = useState(false);
   const [backup, setBackup] = useState(false);
   return <SettingsTouchSurface>
     <button onClick={() => setOpen(true)}>Days: {threshold}</button>
     <button onClick={() => setBackup(true)}>Backup location</button>
+    <button onClick={() => void chooseSyncGroupJoinMode(t, 'Home Library')}>Join</button>
     <SettingsAttachmentStorageSection mobile />
     <CompanionStorageSettingsContent />
     <AttachmentCleanupThresholdDialog open={open} value={threshold} onOpenChange={setOpen}
@@ -32,5 +36,7 @@ function SettingsSheets() {
 }
 
 createRoot(document.getElementById('root')!).render(
-  <LocalizationProvider initialLanguagePreference="en"><SettingsSheets /></LocalizationProvider>
+  <LocalizationProvider initialLanguagePreference="en">
+    <AppConfirmationProvider><SettingsSheets /></AppConfirmationProvider>
+  </LocalizationProvider>
 );

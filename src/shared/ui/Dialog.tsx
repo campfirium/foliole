@@ -71,7 +71,10 @@ const AppDialogContent = React.forwardRef<
           '[&>[data-app-dialog-actions]]:items-center [&>[data-app-dialog-actions]]:justify-end [&>[data-app-dialog-actions]]:gap-2 [&>[data-app-dialog-actions]]:border-t',
           '[&>[data-app-dialog-actions]]:border-[var(--app-floating-divider-color)] [&>[data-app-dialog-actions]]:bg-canvas [&>[data-app-dialog-actions]]:px-6 [&>[data-app-dialog-actions]]:py-2'
         ],
-        layout === 'notice' && 'w-dialog-notice',
+        layout === 'notice' && [
+          'w-dialog-notice max-h-[calc(100vh-2rem)] supports-[height:100dvh]:max-h-[calc(100dvh-2rem)]',
+          '[&>[data-app-dialog-body]]:overflow-y-auto'
+        ],
         className
       )}
       onOpenAutoFocus={handleOpenAutoFocus}
