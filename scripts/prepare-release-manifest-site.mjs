@@ -14,7 +14,7 @@ import {
   resolveReleasePlatformIdentity
 } from './release-platform-contract.mjs';
 import { assertPublishedManifestScope } from './release-publication-contract.mjs';
-import { assertExactReleaseAssets } from './release-asset-contract.mjs';
+import { assertPublishedReleaseAssets } from './release-public-assets.mjs';
 import {
   createPlatformDownloadDirectory,
   listPlatformDownloadVersions
@@ -45,7 +45,7 @@ export function validateReleaseManifestPublication({ enNotes, intent, manifest, 
     registry, intent, packageVersion: version, sha: release.target_commitish ?? 'published-release'
   });
   assertPublishedManifestScope({ identity, manifest, previousManifest });
-  assertExactReleaseAssets(identity, (release.assets ?? []).map((asset) => asset?.name ?? ''));
+  assertPublishedReleaseAssets(identity, (release.assets ?? []).map((asset) => asset?.name ?? ''));
   assertLocalizedReleaseNotesScope({ en: enNotes, 'zh-Hans': zhNotes }, identity, version);
   if (previousManifest) assertPublishedReleaseHistoryImmutable(previousManifest, manifest);
   const pendingFirstBaseline = version === '0.7.1' &&

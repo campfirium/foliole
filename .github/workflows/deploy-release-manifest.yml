@@ -52,6 +52,7 @@ jobs:
           root=".tmp/public-update-assets"
           rm -rf "$root"
           mkdir -p "$root"
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/v${latest_version}" > .tmp/public-release.json
           mapfile -t selected_assets < <(node scripts/release-asset-contract.mjs list \
             --version="$latest_version")
           download_args=()
@@ -60,7 +61,7 @@ jobs:
           done
           gh release download "v${latest_version}" --dir "$root" "${download_args[@]}"
           node scripts/release-asset-contract.mjs verify-directory \
-            --version="$latest_version" --directory="$root"
+            --version="$latest_version" --directory="$root" --published-release=.tmp/public-release.json
 
       - name: Prepare published release metadata
         env:

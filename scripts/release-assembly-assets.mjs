@@ -6,7 +6,7 @@ import path from 'node:path';
 
 import { validateDesktopUpdateArtifacts } from './desktop-update-artifact-contract.mjs';
 import { verifyLinuxPackageDirectory } from './linux/linux-deb-contract.mjs';
-import { resolveReleasePlatformIdentity } from './release-platform-contract.mjs';
+import { publicAssetTemplates, resolveReleasePlatformIdentity } from './release-platform-contract.mjs';
 import { validateReleaseAssetDirectory } from './release-asset-contract.mjs';
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
 import { verifyTestflightReceiptFile } from './ios/testflight-candidate.mjs';
@@ -50,12 +50,12 @@ export async function assembleReleaseAssets({ identity, inputRoot, outputRoot })
   await mkdir(outputRoot, { recursive: true });
   const selected = new Set(identity.intent.selectedPlatforms);
   for (const platform of identity.registry.platforms.filter(({ id }) => selected.has(id))) {
-    for (const template of platform.managedAssets) {
+    for (const template of publicAssetTemplates(platform)) {
       const asset = template.replaceAll('{version}', identity.intent.version);
       await cp(path.join(inputRoot, platform.id, sourceName(platform, asset)), path.join(outputRoot, asset));
     }
   }
-  return validateReleaseAssetDirectory({ directory: outputRoot, identity });
+  return validateReleaseAssetDirectory({ directory: outputRoot, identity, producerRoot: inputRoot });
 }
 
 function arg(name) {

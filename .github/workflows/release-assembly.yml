@@ -137,7 +137,9 @@ jobs:
           for asset in "${selected_assets[@]}"; do
             upload_paths+=("release-assets/upload/${asset}")
           done
-          gh release upload "$tag" --clobber "${upload_paths[@]}"
+          if (( ${#upload_paths[@]} > 0 )); then
+            gh release upload "$tag" --clobber "${upload_paths[@]}"
+          fi
           gh release view "$tag" --json assets --jq '[.assets[].name]' > release-assets/actual-assets.json
           node scripts/release-asset-contract.mjs verify --version="$TARGET_VERSION" --sha="$TARGET_SHA" \
             --actual=release-assets/actual-assets.json

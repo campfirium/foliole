@@ -5,8 +5,8 @@ import { PLAY_PACKAGE } from './play-api.mjs';
 import { PLAY_APP_CERTIFICATE_SHA256 } from './play-generated-apk.mjs';
 import { readPlayDexIdentity, verifyPlayDexIdentity } from './play-dex-identity.mjs';
 
-export async function verifyPlayReleaseAssets(directory, version, sha) {
-  const receipt = JSON.parse(await readFile(path.join(directory, `Foliole-Android-${version}-Play.json`), 'utf8'));
+export async function verifyPlayReleaseAssets(directory, version, sha, receiptDirectory = directory) {
+  const receipt = JSON.parse(await readFile(path.join(receiptDirectory, `Foliole-Android-${version}-Play.json`), 'utf8'));
   const asset = `Foliole-Android-${version}.apk`;
   const lifecycle = ['IN_REVIEW', 'APPROVED_NOT_PUBLISHED', 'PUBLISHED'].map(state => `RELEASE_LIFECYCLE_STATE_${state}`);
   if (receipt.schemaVersion !== 1 || receipt.sourceSha !== sha || receipt.acceptedSha !== sha ||

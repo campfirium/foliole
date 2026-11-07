@@ -3,7 +3,7 @@ import { get } from 'node:https';
 import { join } from 'node:path';
 
 import { createCheck } from './release-doctor-core.mjs';
-import { assertExactReleaseAssets } from './release-asset-contract.mjs';
+import { assertPublishedReleaseAssets } from './release-public-assets.mjs';
 import { DOWNLOADS_URL } from './release-doctor-site.mjs';
 
 export { checkSiteSync } from './release-doctor-site.mjs';
@@ -58,7 +58,7 @@ function checkRemoteAssets(candidateJson, phase, identity) {
     ? candidateJson.assets.map((asset) => asset?.name ?? '')
     : [];
   try {
-    assertExactReleaseAssets(identity, assetNames);
+    assertPublishedReleaseAssets(identity, assetNames);
     return [createCheck('PASS', 'GitHub release scoped assets', 'remote assets exactly match release intent.')];
   } catch (error) {
     return [createCheck('FAIL', 'GitHub release scoped assets', error.message)];

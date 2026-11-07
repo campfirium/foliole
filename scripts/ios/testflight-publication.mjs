@@ -1,8 +1,8 @@
 /* global AbortSignal, fetch, process */
 import { Buffer } from 'node:buffer';
 import { createPrivateKey, sign } from 'node:crypto';
-import { mkdir, mkdtemp, readFile } from 'node:fs/promises';
-import path from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { readReleaseCiReceipt } from '../release-ci-receipt.mjs';
 import { verifyTestflightReceipt, IOS_APP_ID, IOS_GROUP_ID } from './testflight-candidate.mjs';
 
 function encode(value) { return Buffer.from(JSON.stringify(value)).toString('base64url'); }
@@ -44,16 +44,11 @@ export function assertApprovedTestflightBuild(result, receipt) {
   }
 }
 
-export async function assertIosReleaseAvailable({ identity, cwd, tag, run, fetchImpl = fetch }) {
+export async function assertIosReleaseAvailable({ identity, cwd, run, fetchImpl = fetch,
+  artifactId = process.env.FOLIOLE_IOS_RECEIPT_ARTIFACT_ID }) {
   if (!identity.intent.selectedPlatforms.includes('ios')) return;
-  await mkdir(path.join(cwd, '.tmp/artifacts'), { recursive: true });
-  const directory = await mkdtemp(path.join(cwd, '.tmp/artifacts/testflight-publication-'));
-  const name = `Foliole-iOS-${identity.intent.version}-TestFlight.json`;
-  run('gh', ['release', 'download', tag, '-R', 'campfirium/foliole', '--pattern', name, '--dir', directory],
-    { cwd, encoding: 'utf8' });
-  const sha = run('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).trim();
-  const receipt = verifyTestflightReceipt(JSON.parse(await readFile(path.join(directory, name), 'utf8')),
-    { version: identity.intent.version, sha });
+  const receipt = verifyTestflightReceipt(await readReleaseCiReceipt({ artifactId, platform: 'ios', identity, cwd, run }),
+    { version: identity.intent.version, sha: identity.sourceSha });
   const token = await appleReadToken();
   const url = `https://api.appstoreconnect.apple.com/v1/builds/${encodeURIComponent(receipt.buildId)}` +
     '?include=app,preReleaseVersion,buildBetaDetail,betaGroups';

@@ -134,6 +134,13 @@ export function createReleaseIntent({ registry: input, version, publicationMode,
   }, registry, version);
 }
 
+export function publicAssetTemplates(platform) {
+  // Keep frozen registry identities intact while retaining channel receipts only in CI.
+  const receipt = { 'play-universal-apk': 'Foliole-Android-{version}-Play.json',
+    'testflight-submission': 'Foliole-iOS-{version}-TestFlight.json' }[platform.artifactContract];
+  return platform.managedAssets.filter(asset => asset !== receipt);
+}
+
 export function resolveReleasePlatformIdentity({ registry: inputRegistry, intent: inputIntent, packageVersion, sha }) {
   const registry = validatePlatformRegistry(inputRegistry);
   const intent = validateReleaseIntent(inputIntent, registry, packageVersion);
@@ -145,7 +152,7 @@ export function resolveReleasePlatformIdentity({ registry: inputRegistry, intent
   ]));
   const managedAssets = registry.platforms
     .filter(({ id }) => intent.selectedPlatforms.includes(id))
-    .flatMap((platform) => platform.managedAssets.map((asset) => asset.replaceAll('{version}', intent.version)));
+    .flatMap((platform) => publicAssetTemplates(platform).map((asset) => asset.replaceAll('{version}', intent.version)));
   const digest = createHash('sha256').update(JSON.stringify({ intent, registry, sha })).digest('hex');
   return { sourceSha: sha, activePlatforms: activePlatforms.map(({ id }) => id), digest, hardGatePlatforms, intent, managedAssets, registry, updaterBaselines };
 }

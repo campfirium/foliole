@@ -10,6 +10,7 @@ import { prepareDefaultReleaseIntent } from './release-intent.mjs';
 import { assertT7Publication } from './release-publication-contract.mjs';
 import { createPlatformDownloadDirectory } from './release-download-directory.mjs';
 import { assembleReleaseAssets } from './release-assembly-assets.mjs';
+import { validateReleaseAssetDirectory } from './release-asset-contract.mjs';
 import { PLAY_APP_CERTIFICATE_SHA256 } from './android/play-generated-apk.mjs';
 
 const registry = JSON.parse(fs.readFileSync('.github/release-platforms.json'));
@@ -33,7 +34,7 @@ it('supports an explicitly coordinated release while preserving old scoped inten
   const selected = identity();
   expect(new Set(selected.intent.selectedPlatforms)).toEqual(new Set(['macos', 'windows', 'linux', 'ios', 'android']));
   expect(selected.hardGatePlatforms).toContain('android');
-  expect(selected.managedAssets).toEqual(expect.arrayContaining([`Foliole-Android-${version}.apk`, `Foliole-Android-${version}-Play.json`]));
+  expect(selected.managedAssets).toEqual(expect.arrayContaining([`Foliole-Android-${version}.apk`]));
   const before = JSON.stringify(history);
   expect(assertT7Publication(selected, history).mode).toBe('scoped');
   const oldIntent = { schemaVersion: 1, version: '0.7.17', publicationMode: 'scoped',
@@ -91,7 +92,7 @@ function producer() {
 
 it('assembles exact APK assets and refuses changed bytes without destroying the previous verified output', async () => {
   const f = producer(); const names = await assembleReleaseAssets(f);
-  expect(new Set(names)).toEqual(new Set([f.asset, `Foliole-Android-${version}-Play.json`]));
+  expect(new Set(names)).toEqual(new Set([f.asset]));
   const old = fs.readFileSync(path.join(f.outputRoot, f.asset));
   fs.writeFileSync(f.apk, 'corrupted');
   await expect(assembleReleaseAssets(f)).rejects.toThrow(/digest or size/u);
@@ -108,4 +109,18 @@ it('rejects wrong source, signature claims and code changes even when superficia
   const bytes = fs.readFileSync(f.apk);
   fs.writeFileSync(f.file, JSON.stringify({ ...f.receipt, apkSha256: createHash('sha256').update(bytes).digest('hex'), size: bytes.length }));
   await expect(assembleReleaseAssets(f)).rejects.toThrow(/executable code differs/u);
+});
+
+
+it('verifies published APK bytes after receipt attachments are removed, preserving CI evidence', async () => {
+  const f = producer(); await assembleReleaseAssets(f);
+  const publishedRelease = { tag_name: `v${version}`, target_commitish: sha, draft: false,
+    published_at: '2026-11-07T00:00:00Z', assets: [{ name: f.asset, size: f.receipt.size,
+      digest: `sha256:${f.receipt.apkSha256}` }] };
+  const args = { directory: f.outputRoot, identity: f.identity, publishedRelease };
+  await expect(validateReleaseAssetDirectory(args)).resolves.toEqual([f.asset]);
+  publishedRelease.assets.push({ name: `Foliole-Android-${version}-Play.json` });
+  await expect(validateReleaseAssetDirectory(args)).resolves.toEqual([f.asset]);
+  fs.writeFileSync(path.join(f.outputRoot, f.asset), 'corrupted');
+  await expect(validateReleaseAssetDirectory(args)).rejects.toThrow(/published asset/u);
 });

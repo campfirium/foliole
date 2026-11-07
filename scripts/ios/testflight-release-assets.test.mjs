@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { afterEach, expect, it } from 'vitest';
@@ -29,7 +29,8 @@ it.each([[['ios']], [['linux', 'ios']]])('assembles %s and rejects a different a
   await writeFile(path.join(inputRoot, 'ios', name), JSON.stringify(receipt));
   if (scope.includes('linux')) await writeLinux(inputRoot, version);
   expect(new Set(await assembleReleaseAssets({ identity, inputRoot, outputRoot }))).toEqual(new Set(identity.managedAssets));
-  expect(JSON.parse(await readFile(path.join(outputRoot, name), 'utf8'))).toEqual(receipt);
+  expect(await readdir(outputRoot)).not.toContain(name);
+  expect(JSON.parse(await readFile(path.join(inputRoot, 'ios', name), 'utf8'))).toEqual(receipt);
   const other = 'c'.repeat(40);
   await writeFile(path.join(inputRoot, 'ios', name), JSON.stringify({ ...receipt, sourceSha: other, acceptedSha: other }));
   await expect(assembleReleaseAssets({ identity, inputRoot, outputRoot })).rejects.toThrow(/selected candidate/);
