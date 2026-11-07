@@ -147,8 +147,10 @@ and head; review any changed proposal and confirm it is still covered. Comment
 with the superseding commit and passing QA evidence, verify closure and remove
 the pending row. Failed, uncovered or undelivered rows retain evidence and the
 next action under the QA owner; workspace release does not discard closure work.
-Check publication alone does not authorize a dev push. Do not use PR count to
-determine install, test, commit or task count.
+After the actual dev combination passes integration validation, the active QA
+owner pushes the validated dev tip and verifies remote containment before PR
+closure. Scheduled Dev Quality follows its own schedule. Do not use PR count
+to determine install, test, commit or task count.
 
 ### Completed Android/iPhone dependency batch
 
@@ -226,35 +228,23 @@ PR #202 is confirmed closed at unchanged head
 changes are covered by this full QA and remote containment. Existing physical
 Windows provisioning trials remain independent and are not claimed passed here.
 
-### Locally implemented updates awaiting centralized QA
+### Completed November 8 dependency batch
 
-These entries hand validation and closure to the next centralized check task;
-they are not upstream compatibility deferrals and do not start QA themselves.
-Use repository `campfirium/foliole`, base `dev`, unless a row explicitly says
-otherwise. Record the verified author/head, implementation commit, local
-evidence and required QA coverage. Candidate containment alone is not a pass.
-
-| PR | Verified author / reviewed head | Local adoption | Local evidence | Required QA |
-| --- | --- | --- | --- | --- |
-| #210 | `app/renovate` / `bd1bb58b10dfec49b3d0c4ee79c7d3995c6638ad` | lucide-react 1.66.0, `97eff8c57` | Icon catalog, desktop and companion builds | Full and dependency hardening |
-| #211 | `app/renovate` / `4bf66e46dd8966661f58bb0513f8adea19941305` | ESLint 10.14.0, `97eff8c57` | Lint routing tests, quality:fast, minimatch 11.0.3 / brace-expansion 5.0.12 resolved | Full and dependency hardening |
-| #212 | `app/renovate` / `28389f7d04d2cdc200351b6e54d73276408fc747` | @lezer/common 1.5.5, `97eff8c57` | Markdown parser and projection tests, desktop and companion builds | Full and dependency hardening |
-| #189 | `app/renovate` / `b99428c73ce733d8400434be01444fbaf21b791e` | AGP 9.5.1, `48036cc2e` | JDK 21 debug APK build with Gradle 9.9.0 | Android host within full, dependency hardening |
-| #213 | `app/renovate` / `370c222aa0ba4950bb91d2d2a1324babc1b81ab6` | Gradle 9.9.0, `48036cc2e` | Official distribution and regenerated Wrapper JAR checksums, tampered-download rejection, debug APK build | Android host within full, dependency hardening and Wrapper validation |
-
-Reviewed 2026-11-07. The npm install and 30 targeted tests, quality:fast,
-desktop build and production audit passed. Android wrapper and SQLCipher checks
-passed (5 tests), followed by the debug APK build. Logs are under
-`.tmp/artifacts/T737/` and `.tmp/waits/T737-android.log`. This dependency batch
-does not add a physical-device trial.
-
-On 2026-11-08, [centralized full QA 42386297275](https://github.com/campfirium/foliole/actions/runs/42386297275)
+[Centralized full QA 42386297275](https://github.com/campfirium/foliole/actions/runs/42386297275)
 passed for `125c63e317950504828d098cdb43a448dc10cbb3`, including dependency
 hardening and Android host quality. The repair registered the companion priority
 sync integration test for the controlled Electron SQLite runner. The actual
 dev combination passed nine affected tests and integrated as `f58358211`.
-The registered QA workspace is released. The five rows await scheduled dev
-delivery and remote containment verification before PR closure.
+The registered QA workspace was released. Remote dev `556f4f848` contains the
+implementations and repair, and all five proposals below were verified closed.
+
+| Closed PR | Verified author / reviewed head | Adoption | Local evidence | Hosted coverage |
+| --- | --- | --- | --- | --- |
+| [#210](https://github.com/campfirium/foliole/pull/210#issuecomment-6713895671) | `app/renovate` / `bd1bb58b10dfec49b3d0c4ee79c7d3995c6638ad` | lucide-react 1.66.0, `97eff8c57` | Icon catalog, desktop and companion builds | Full and dependency hardening |
+| [#211](https://github.com/campfirium/foliole/pull/211#issuecomment-6713895658) | `app/renovate` / `4bf66e46dd8966661f58bb0513f8adea19941305` | ESLint 10.14.0, `97eff8c57` | Lint routing tests, quality:fast, minimatch 11.0.3 / brace-expansion 5.0.12 resolved | Full and dependency hardening |
+| [#212](https://github.com/campfirium/foliole/pull/212#issuecomment-6713895690) | `app/renovate` / `28389f7d04d2cdc200351b6e54d73276408fc747` | @lezer/common 1.5.5, `97eff8c57` | Markdown parser and projection tests, desktop and companion builds | Full and dependency hardening |
+| [#189](https://github.com/campfirium/foliole/pull/189#issuecomment-6713895689) | `app/renovate` / `b99428c73ce733d8400434be01444fbaf21b791e` | AGP 9.5.1, `48036cc2e` | JDK 21 debug APK build with Gradle 9.9.0 | Android host within full, dependency hardening |
+| [#213](https://github.com/campfirium/foliole/pull/213#issuecomment-6713895649) | `app/renovate` / `370c222aa0ba4950bb91d2d2a1324babc1b81ab6` | Gradle 9.9.0, `48036cc2e` | Official distribution and regenerated Wrapper JAR checksums, tampered-download rejection, debug APK build | Android host within full, dependency hardening and Wrapper validation |
 
 The #200 local blocker recorded in `a6257b5f6` is resolved. Electron virtualizes
 ASAR archives as directories; universal packaging needs raw files, as on Node.
