@@ -59,7 +59,10 @@ const AppDialogContent = React.forwardRef<
       className={cn(
         appFloatingSurfaceClassName('panel'),
         'fixed z-modal text-foreground outline-none',
-        placement === 'center' && 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
+        placement === 'center' && [
+          'left-1/2 top-1/2',
+          layout === 'notice' ? '[transform:translate(-50%,-50%)]' : '-translate-x-1/2 -translate-y-1/2'
+        ],
         placement === 'bottom' && 'inset-x-0 bottom-0',
         placement === 'fullscreen' && 'inset-0',
         layout !== 'bare' && [

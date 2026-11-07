@@ -60,6 +60,18 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 812 }
 test.describe('joining a sync group', () => {
   test.use({ hasTouch: true });
 
+  test('centers the join dialog in portrait without individual CSS translation', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await loadSettingsSheets(page);
+    // Model a WebView that ignores the individual translate property.
+    await page.addStyleTag({ content: '[role="dialog"] { translate: none !important; }' });
+    await page.getByRole('button', { name: 'Join', exact: true }).tap();
+    const dialog = page.getByRole('dialog', { name: 'Join sync group' });
+    await expect(dialog).toBeInViewport({ ratio: 1 });
+    await dialog.getByRole('button', { name: 'Cancel' }).tap();
+    await expect(dialog).toHaveCount(0);
+  });
+
   test('keeps the join dialog and its choices reachable in short landscape', async ({ page }) => {
     await page.setViewportSize({ width: 568, height: 320 });
     await loadSettingsSheets(page);
