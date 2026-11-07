@@ -41,11 +41,13 @@ export async function availabilityFixture() {
         activeArtifacts: [{ versionCode: 4 }], releaseLifecycleState: `RELEASE_LIFECYCLE_STATE_${f.lifecycle}` }] }); return;
     }
     if (method === 'POST' && route.endsWith('/edits')) {
-      const id = String(++nextId); f.edits.add(id);
+      const id = f.nextEditId ?? String(nextId + 1);
+      nextId += 1; f.nextEditId = undefined; f.edits.add(id);
       if (f.loseCreate) { f.loseCreate = false; response.destroy(); return; }
       respond(response, { id }); return;
     }
-    const edit = /\/edits\/(\d+)/u.exec(route)?.[1];
+    const encodedEdit = /\/edits\/([^/:?]+)/u.exec(route)?.[1];
+    const edit = encodedEdit ? decodeURIComponent(encodedEdit) : null;
     if (method === 'DELETE' && edit) {
       const existed = f.edits.delete(edit);
       if (f.loseDelete) { f.loseDelete = false; response.destroy(); return; }

@@ -1,4 +1,5 @@
 import { readMobileStatus } from '../mobile/mobile-candidate-phase.mjs';
+import { openPlayEdit } from './play-edit-id.mjs';
 
 const SNAPSHOT = 'Play snapshot: ';
 const RESULT = 'Play availability: ';
@@ -6,7 +7,7 @@ const RESULTS = new Set(['checking', 'waiting', 'available', 'rejected', 'error'
 
 export async function readPlaySnapshot(github, id) {
   const { value = 'cleared' } = await readMobileStatus(github, id, SNAPSHOT);
-  if (!['creating', 'cleared'].includes(value) && !/^open:[1-9]\d*$/u.test(value)) {
+  if (!['creating', 'cleared'].includes(value) && !openPlayEdit(value)) {
     throw new Error('Unknown Play snapshot requires reconciliation');
   }
   return value;
@@ -20,7 +21,7 @@ export async function readPlayAvailability(github, id) {
 
 export async function writePlayCheckStatus(github, row, kind, value) {
   const description = `${kind === 'snapshot' ? SNAPSHOT : RESULT}${value}`;
-  if ((kind === 'snapshot' && !['creating', 'cleared'].includes(value) && !/^open:[1-9]\d*$/u.test(value)) ||
+  if ((kind === 'snapshot' && !['creating', 'cleared'].includes(value) && !openPlayEdit(value)) ||
       (kind === 'result' && !RESULTS.has(value)) || !['snapshot', 'result'].includes(kind)) {
     throw new Error('Invalid Play availability checkpoint');
   }

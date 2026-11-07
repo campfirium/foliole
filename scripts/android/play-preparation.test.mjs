@@ -39,13 +39,15 @@ it('never creates another inventory snapshot after losing its creation response'
   expect(creates(f)).toHaveLength(1);
 });
 
-it('recovers cleanup of the same snapshot after a lost deletion response and retains the reserved number', async () => {
-  const f = await fixture(); f.loseDelete = true;
+it.each(['901', 'inventory+opaque-901'])('recovers cleanup of snapshot %s after a lost deletion response', async editId => {
+  const f = await fixture(); f.nextUploadEditId = editId; f.loseDelete = true;
   await expect(prepare(f)).rejects.toThrow(/unknown/u);
-  expect(await readPlayPreparation(f.clients().github, f.rows[0])).toMatchObject({ phase: 'open', versionCode: 13 });
+  expect(await readPlayPreparation(f.clients().github, f.rows[0])).toEqual({ phase: 'open', editId, versionCode: 13 });
   expect(await prepare(f)).toMatchObject({ proceed: true, versionCode: 13 });
   expect(creates(f)).toHaveLength(1);
-  expect(f.calls.filter(call => call.method === 'DELETE').map(call => call.route)).toEqual(['edits/901', 'edits/901']);
+  const path = `edits/${encodeURIComponent(editId)}`;
+  expect(f.calls.filter(call => call.method === 'DELETE').map(call => call.route)).toEqual([path, path]);
+  expect(f.edits.size).toBe(0);
 });
 
 it('prepares a later source during review even when an older active legacy source has no allocated code', async () => {

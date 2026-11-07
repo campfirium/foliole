@@ -1,5 +1,6 @@
 import { listPlaySubmissions } from './play-submission-store.mjs';
 import { readMobileStatus } from '../mobile/mobile-candidate-phase.mjs';
+import { validPlayEditId } from './play-edit-id.mjs';
 
 const PREFIX = 'Play preparation: ';
 export async function readPlayPreparation(github, row) {
@@ -7,7 +8,7 @@ export async function readPlayPreparation(github, row) {
   if (value === undefined) return { phase: 'cleared' };
   const state = JSON.parse(value);
   if (!['creating', 'open', 'cleared'].includes(state.phase) ||
-      (state.phase === 'open' && !/^[1-9]\d*$/u.test(state.editId ?? '')) ||
+      (state.phase === 'open' && !validPlayEditId(state.editId)) ||
       (state.versionCode !== undefined && (!Number.isSafeInteger(state.versionCode) ||
         state.versionCode < 3 || state.versionCode > 2100000000))) {
     throw new Error('Unknown Play preparation requires reconciliation');

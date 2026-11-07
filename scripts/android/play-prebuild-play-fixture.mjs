@@ -11,7 +11,7 @@ export function handlePrebuildPlayRequest(f, { request, response, route, body, s
   const inventory = route.match(/^edits\/([^/:]+)(.*)$/u);
   if (!inventory) return false;
   if (request.method === 'DELETE') {
-    f.edits.delete(inventory[1]);
+    f.edits.delete(decodeURIComponent(inventory[1]));
     if (f.loseDelete) { f.loseDelete = false; response.destroy(); return true; }
     return reply({});
   }

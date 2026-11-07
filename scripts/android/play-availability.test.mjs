@@ -95,13 +95,14 @@ it('persists unknown creation before POST and never retries it after a lost HTTP
   expect(result(f)).toBe('Play availability: error');
 });
 
-it('recovers a lost deletion response by deleting the same ID and accepting only its confirmed absence', async () => {
-  const f = await fixture(); f.lifecycle = 'PUBLISHED'; f.loseDelete = true;
+it.each(['901', 'availability+opaque-901'])('recovers a lost deletion response for snapshot %s', async editId => {
+  const f = await fixture(); f.nextEditId = editId; f.lifecycle = 'PUBLISHED'; f.loseDelete = true;
   await expect(checkRegisteredPlayAvailability(f.clients())).rejects.toThrow(/outcome is unknown/u);
   expect(result(f)).toBe('Play availability: error');
   expect(await checkRegisteredPlayAvailability(f.clients())).toBe('available');
   const deletes = f.calls.filter(call => call.method === 'DELETE');
-  expect(deletes[0].route).toBe(deletes[1].route);
+  const originalPath = `/androidpublisher/v3/applications/com.campfirium.foliole.android/edits/${encodeURIComponent(editId)}`;
+  expect(deletes.slice(0, 2).map(call => call.route)).toEqual([originalPath, originalPath]);
   expect(f.edits.size).toBe(0);
 });
 

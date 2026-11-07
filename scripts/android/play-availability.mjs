@@ -3,6 +3,7 @@ import { readReservedPlayHistory } from './play-candidate-history.mjs';
 import { verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
 import { readMobileCandidatePhase } from '../mobile/mobile-candidate-phase.mjs';
 import { readPlaySnapshot, writePlayCheckStatus, writePlayReviewStatus } from './play-availability-state.mjs';
+import { playEditPath, validPlayEditId } from './play-edit-id.mjs';
 
 function exactRelease(releases, candidate) {
   const matches = releases.filter(release => release.track === candidate.track &&
@@ -28,7 +29,7 @@ export function isCompletePlayTrack(track, candidate) {
 }
 
 async function deleteSnapshot(play, github, row, editId) {
-  try { await play('DELETE', `edits/${editId}`); }
+  try { await play('DELETE', playEditPath(editId)); }
   catch (error) { if (error.status !== 404) throw error; }
   await writePlayCheckStatus(github, row, 'snapshot', 'cleared');
 }
@@ -36,10 +37,10 @@ async function deleteSnapshot(play, github, row, editId) {
 async function inspectSnapshot(play, github, row) {
   await writePlayCheckStatus(github, row, 'snapshot', 'creating');
   const edit = await play('POST', 'edits', {});
-  if (!/^[1-9]\d*$/u.test(edit?.id ?? '')) throw new Error('Play snapshot creation is uncertain; reconcile manually');
+  if (!validPlayEditId(edit?.id)) throw new Error('Play snapshot creation is uncertain; reconcile manually');
   try {
     await writePlayCheckStatus(github, row, 'snapshot', `open:${edit.id}`);
-    return isCompletePlayTrack(await play('GET', `edits/${edit.id}/tracks/${row.payload.candidate.track}`), row.payload.candidate);
+    return isCompletePlayTrack(await play('GET', `${playEditPath(edit.id)}/tracks/${row.payload.candidate.track}`), row.payload.candidate);
   } finally {
     await deleteSnapshot(play, github, row, edit.id);
   }

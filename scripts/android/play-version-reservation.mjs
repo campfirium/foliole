@@ -1,10 +1,11 @@
 import { allocatePlayVersion } from './play-distribution.mjs';
 import { readPlayReleases, PLAY_TRACK } from './play-api.mjs';
 import { readReservedPlayHistory } from './play-candidate-history.mjs';
+import { playEditPath, validPlayEditId } from './play-edit-id.mjs';
 import { readPlayPreparation, writePlayPreparation } from './play-preparation-state.mjs';
 
 async function clearSnapshot(github, play, row, state) {
-  try { await play('DELETE', `edits/${state.editId}`); }
+  try { await play('DELETE', playEditPath(state.editId)); }
   catch (error) { if (error.status !== 404) throw error; }
   const cleared = { phase: 'cleared', ...(state.versionCode ? { versionCode: state.versionCode } : {}) };
   await writePlayPreparation(github, row, cleared);
@@ -20,11 +21,11 @@ export async function reservePlayVersion({ github, play, row }) {
   const releases = await readPlayReleases(play);
   await writePlayPreparation(github, row, { phase: 'creating' });
   const edit = await play('POST', 'edits', {});
-  if (!/^[1-9]\d*$/u.test(edit?.id ?? '')) throw new Error('Play inventory snapshot outcome is unknown');
+  if (!validPlayEditId(edit?.id)) throw new Error('Play inventory snapshot outcome is unknown');
   state = { phase: 'open', editId: edit.id };
   try {
     await writePlayPreparation(github, row, state);
-    const base = `edits/${edit.id}`;
+    const base = playEditPath(edit.id);
     const [bundles, apks, tracks] = await Promise.all([
       play('GET', `${base}/bundles`), play('GET', `${base}/apks`), play('GET', `${base}/tracks`)
     ]);
