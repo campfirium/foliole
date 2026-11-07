@@ -27,6 +27,7 @@ it.each(modes)(
       const failed = largeOverwriteState(fixture.rightSnapshot.databasePath);
       expect(failed.nodes).toHaveLength(400); expect(failed.versions).toHaveLength(2400);
       expect(failed.parents).toHaveLength(2800);
+      expect(failed.alternatives).toHaveLength(800);
       expect(failed.retiredTables).toEqual([]);
       const progress = overwriteProgressRow(fixture.rightSnapshot.databasePath);
       expect(progress).toBeDefined();
@@ -47,9 +48,11 @@ it.each(modes)(
       const completed = await verifyLargeOverwriteBodies(restarted.snapshot.databasePath);
       expect(completed.nodes).toEqual(source.nodes); expect(completed.versions).toEqual(source.versions);
       expect(completed.parents).toEqual(source.parents);
+      expect(completed.alternatives).toEqual(source.alternatives);
       expect(completed.nodes.slice(0, 400)).toEqual(failed.nodes);
       expect(completed.versions.slice(0, 2400)).toEqual(failed.versions);
       expect(completed.parents.slice(0, 2800)).toEqual(failed.parents);
+      expect(completed.alternatives.slice(0, 800)).toEqual(failed.alternatives);
       await verifyLargeOverwriteAttachments(restarted.snapshot.stateRoot);
       expect(overwriteProgressRow(restarted.snapshot.databasePath)).toBeUndefined();
       assertFinished(restarted.snapshot.databasePath, restarted.snapshot.deviceId, mode);

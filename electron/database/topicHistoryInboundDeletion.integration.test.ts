@@ -5,6 +5,7 @@ import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { releaseLocalEditBase, retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { upsertRemoteVersion } from '../../lib/core/sync/syncNodeApplyAcceptedRemote.js';
 import { loadRetainedSyncNodeVersionFact } from '../../lib/core/sync/syncNodeGraph.js';
+import { readTopicAlternativeRecords, writeTopicAlternative } from '../../lib/core/sync/topicAlternativeStore.js';
 import { branch, receive } from '../sync/syncPackStoredVersionDependencies.testSupport.js';
 
 import { restoreFixture } from './requestSyncRestoreRecovery.testSupport.js';
@@ -47,26 +48,29 @@ it('preserves a local noncurrent branch on a real deleted-only request and retir
   } finally { await fixture.close(); }
 });
 
-it('preserves an uncarried baseline alternative payload on a real deleted-only request', async () => {
+it('preserves an uncarried independent alternative through a deleted-only request and reopen', async () => {
   const fixture = await restoreFixture();
   const source = fixture.peer('source');
   const target = fixture.peer('target');
   try {
     const hash = hashTextBody('Still needed baseline alternative');
     const base = branch('base', 'Original');
-    base.snapshot.text_alternatives = [{ id: 'alternative', body_blob_hash: hash, source_host_name: 'peer',
-      created_at: new Date().toISOString(), expires_at: '2099-01-01T00:00:00Z' }];
-    base.alternative_bodies = [{ hash, text: 'Still needed baseline alternative' }];
     await receive(source, target, [base]);
+    const now = new Date().toISOString();
+    const alternative = { alternative_id: 'alternative', node_id: 'node-1', source_version_id: 'base',
+      body_blob_hash: hash, body_text: 'Still needed baseline alternative', source_host_name: 'peer',
+      created_at: now, updated_at: now, expires_at: '2099-01-01T00:00:00.000Z',
+      resource_references: '[]', image_sources: null, status: 'available' as const };
+    await writeTopicAlternative(target.db, alternative, true);
     await retainLocalEditBase(target.db, { holdId: 'editor', nodeId: 'node-1', versionId: 'base' });
     const head = branch('head', 'Current', base);
-    head.snapshot.text_alternatives = []; delete head.alternative_bodies;
     await receive(source, target, [head]);
-    await receive(source, target, [{ ...base, body_text: null, alternative_bodies: [],
+    await receive(source, target, [{ ...base, body_text: null,
       snapshot: { ...base.snapshot, content: null, body_deleted: true } }]);
-    expect((await loadRetainedSyncNodeVersionFact(target.db, 'base'))!.alternative_bodies).toEqual(base.alternative_bodies);
+    expect(await readTopicAlternativeRecords(target.db, 'node-1')).toEqual([alternative]);
     await releaseLocalEditBase(target.db, 'editor', 'node-1');
     target.reopen();
     expect((await loadRetainedSyncNodeVersionFact(target.db, 'base'))!.snapshot.body_deleted).toBe(true);
+    expect(await readTopicAlternativeRecords(target.db, 'node-1')).toEqual([alternative]);
   } finally { await fixture.close(); }
 });

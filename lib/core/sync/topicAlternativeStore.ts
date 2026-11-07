@@ -73,6 +73,28 @@ export async function retireTopicAlternative(db: DbPort, record: TopicAlternativ
 export async function settleTopicAlternatives(db: DbPort, nodeId: string, mainHash: string, now: string) {
   const records = await db.query<TopicAlternativeMetadata>(`SELECT ${TOPIC_ALTERNATIVE_METADATA_COLUMNS}
     FROM node_text_alternatives WHERE node_id = ? AND status = 'available'`, [nodeId]);
+  return settleRecords(db, records, mainHash, now);
+}
+
+/** Read affected choices once after the batch's main bodies and independent choice facts are applied. */
+export async function settleTopicAlternativesForNodes(db: DbPort,
+  nodes: readonly { id: string; body_blob_hash: string }[], now: string) {
+  if (!nodes.length) return;
+  const records = await db.query<TopicAlternativeMetadata>(`SELECT ${TOPIC_ALTERNATIVE_METADATA_COLUMNS}
+    FROM node_text_alternatives WHERE node_id IN (SELECT value FROM json_each(?)) AND status = 'available'`,
+  [JSON.stringify(nodes.map(node => node.id))]);
+  const grouped = new Map<string, TopicAlternativeMetadata[]>();
+  for (const record of records) {
+    const group = grouped.get(record.node_id) ?? [];
+    group.push(record);
+    grouped.set(record.node_id, group);
+  }
+  for (const node of nodes) {
+    await settleRecords(db, grouped.get(node.id) ?? [], node.body_blob_hash, now);
+  }
+}
+
+async function settleRecords(db: DbPort, records: readonly TopicAlternativeMetadata[], mainHash: string, now: string) {
   const selected = normalizeTextAlternativesForHash(records.map(topicAlternativeEntry), mainHash, now);
   const retained = new Set(selected.map(entry => entry.id));
   for (const record of records) if (!retained.has(record.alternative_id)) {

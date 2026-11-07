@@ -212,7 +212,12 @@ it('keeps minute grades waiting, admits them when due, and respects a runtime sh
   session = (await openCompanionDailyFlow({ now: due, mode: 'recommended', preferredNodeId: target, refresh: true })).session;
   expect(session.currentNodeId).toBe(target);
   await grade(1, due);
-  expect((await snapshot()).nodesById[target]!.review!.scheduledDays).toBeGreaterThanOrEqual(1);
+  const review = (await snapshot()).nodesById[target]!.review!;
+  expect(review.stabilityFast).toBeGreaterThan(0);
+  expect(review.scheduledDays).toBeGreaterThan(0);
+  expect(review.scheduledDays).toBeLessThan(1 / 1440);
+  expect(Date.parse(review.due)).toBeGreaterThan(Date.parse(due));
+  expect(Date.parse(review.due)).toBeLessThan(Date.parse(due) + 60000);
   expect(session.queueNodeIds).not.toContain(target);
   expect((await openCompanionDailyFlow({ now: due, mode: 'recommended' })).session.queueNodeIds).toEqual(session.queueNodeIds);
 });

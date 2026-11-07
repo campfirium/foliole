@@ -11,6 +11,7 @@ import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries,
   type Peer } from './syncLibrary.testSupport.js';
 import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
+import { readPersistedTopicBodies } from './topicTextState.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
@@ -60,7 +61,7 @@ it('preserves offline bases and branches, merges across three production librari
   await sync(b, c);
   const selected = (await loadCurrentSyncNodeRecord(c.port, 'topic'))!;
   const mergedBody = selected.body_text!;
-  expect(new Set([mergedBody, ...(selected.alternative_bodies ?? []).map((entry) => entry.text)]))
+  expect(await readPersistedTopicBodies(c.port))
     .toEqual(new Set([onlineBody, offlineBody]));
   assertPersisted(c, mergedBody);
   await sync(c, b);
@@ -74,8 +75,7 @@ it('preserves offline bases and branches, merges across three production librari
     restart(peer);
     assertPersisted(peer, mergedBody);
     assertBody(peer, mergedBody);
-    const current = (await loadCurrentSyncNodeRecord(peer.port, 'topic'))!;
-    expect(new Set([current.body_text, ...(current.alternative_bodies ?? []).map(entry => entry.text)]))
+    expect(await readPersistedTopicBodies(peer.port))
       .toEqual(new Set([onlineBody, offlineBody]));
     expect(history(peer)).toEqual(before);
     expect(before.map((row) => row.version_id)).toEqual(expect.arrayContaining([base, online, offline]));

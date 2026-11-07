@@ -5,11 +5,14 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { currentParentOrderHash, currentParentOrderPayload } from '../../lib/core/sync/currentParentOrder.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { hashText } from '../../lib/core/sync/syncNodeResolution.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
+import { topicAlternativeDeletionHash } from '../../lib/core/sync/topicAlternativeApply.js';
+import { topicAlternativeHash, validateTopicAlternativeRecord } from '../../lib/core/sync/topicAlternativeRecord.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
@@ -24,14 +27,17 @@ const records = (): NativeSyncObjectRecord[] => [
   record('topic_daily_count', `2026-10-16:${nodeId}`, { day_key: '2026-10-16', node_id: nodeId }),
   record('import_source', 'source', { latest_node_id: nodeId, source_fingerprint: 'source' }),
   record('node_text_alternative', 'alternative', { node_id: nodeId, alternative_id: 'alternative',
-    body_text: 'Retained alternative', source_version_id: 'source-version', status: 'available' }),
+    body_text: 'Retained alternative', body_blob_hash: hashTextBody('Retained alternative'),
+    source_version_id: 'source-version', source_host_name: 'writer', created_at: timestamp, updated_at: timestamp,
+    expires_at: '2099-01-01T00:00:00.000Z', resource_references: '[]', image_sources: null, status: 'available' }),
   order(nodeId), order(ROOT_CHILD_ORDER_ID)
 ];
 
 function record(object_type: NativeSyncObjectRecord['object_type'], object_id: string,
   payload: Record<string, unknown>): NativeSyncObjectRecord {
   const payload_json = JSON.stringify(payload);
-  return { object_type, object_id, payload_json, content_hash: hashText(payload_json),
+  return { object_type, object_id, payload_json, content_hash: object_type === 'node_text_alternative'
+    ? topicAlternativeHash(validateTopicAlternativeRecord(payload)) : hashText(payload_json),
     updated_at: timestamp, deleted_at: null };
 }
 
@@ -91,7 +97,8 @@ it('transfers every child with its node, preserves concurrent text, and relays c
     expect(reset.review).toEqual([]);
     await withDb(b.databasePath, async db => {
       for (const state of records().filter(state => !['topic_daily_count', 'parent_child_order'].includes(state.object_type))) {
-        await applySyncObjectInTransaction(db, { ...state, content_hash: 'd'.repeat(64),
+        await applySyncObjectInTransaction(db, { ...state, content_hash: state.object_type === 'node_text_alternative'
+          ? topicAlternativeDeletionHash(state.object_id, '2026-10-16T04:00:00.000Z') : 'd'.repeat(64),
           updated_at: '2026-10-16T04:00:00.000Z', deleted_at: '2026-10-16T04:00:00.000Z', payload_json: null });
       }
     });
@@ -100,6 +107,7 @@ it('transfers every child with its node, preserves concurrent text, and relays c
       expect(readReviewFacts(device.databasePath)).toEqual(reset);
       expect(sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(nodeId)).toBe('Concurrent body');
       expect(sqlite.prepare('SELECT * FROM node_open_state WHERE node_id = ?').get(nodeId)).toBeUndefined();
+      expect(sqlite.prepare('SELECT * FROM node_text_alternatives WHERE alternative_id = ?').get('alternative')).toBeUndefined();
       expect(sqlite.prepare('SELECT * FROM import_sources WHERE source_fingerprint = ?').get('source')).toBeUndefined();
       const entries = await readFramedSyncInventory(db);
       expect(entries.filter(entry => ['node_open_state', 'node_reading', 'node_review', 'import_source',
@@ -180,6 +188,9 @@ async function relayDeletedChildren(fixture: Fixture, expected: ReturnType<typeo
       expect(sqlite.prepare("SELECT node_id FROM sync_node_child_owners WHERE object_type = 'import_source'").pluck().get())
         .toBe(nodeId);
       expect((await readFramedSyncInventory(db)).find(entry => entry.objectType === 'import_source')).toBeUndefined();
+      expect(sqlite.prepare('SELECT * FROM node_text_alternatives WHERE alternative_id = ?').get('alternative')).toBeUndefined();
+      expect(sqlite.prepare("SELECT deleted_at FROM sync_object_state WHERE object_type = 'node_text_alternative' AND object_id = 'alternative'").pluck().get())
+        .toBe('2026-10-16T04:00:00.000Z');
     });
   } finally { await third.process.close(); }
 }

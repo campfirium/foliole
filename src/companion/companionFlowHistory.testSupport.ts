@@ -9,8 +9,9 @@ export async function seedCompanionReviewHistory(profile: NodeReviewProfile, now
     isTitleManual: true, hideTitleHeading: false, reading: null, review: profile,
     createdAt: '2026-01-01T00:00:00Z', updatedAt: now }, 'remote', `base-${id}`)));
   await applyCompanionSyncNodeVersions(records);
+  // Two nearby real reviews keep every seeded card overdue at the October flow scenarios under FSRS7.
   for (const nodeId of nodeIds) {
-    for (const reviewedAt of ['2026-09-20T00:00:00.000Z', '2026-09-28T00:00:00.000Z']) {
+    for (const reviewedAt of ['2026-09-27T00:00:00.000Z', '2026-09-28T00:00:00.000Z']) {
       await saveCompanionSyncNodeReviewRecord({ nodeId, review: profile, reviewLog: {
         grade: 3, schedulerVersion: 'test', reviewedAt,
         cardBefore: { due: reviewedAt, stability: 0, difficulty: 0 },

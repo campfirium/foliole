@@ -134,7 +134,7 @@ it('preserves inherited settings through scoped reads and rejects a deleted pare
   expect(await app.actions.gradeReviewCard(3, now)).toBe(true);
   expect(reads.mock.calls[0]![1]).toContain('parent');
   expect(db.prepare('SELECT due, scheduled_days FROM node_review WHERE node_id=?').get(target)).toEqual({
-    due: '2026-10-26T08:10:00.000Z', scheduled_days: 0 });
+    due: '2026-10-26T08:10:00.000Z', scheduled_days: 10 / 1440 });
   const history = app.getState().appActionHistory.undoStack.at(-1)!;
   expect(app.history.undoWorkspaceAction(history.id)).toBe(true);
   await vi.waitFor(() => expect(app.getState().appActionHistory.applying).toBeNull());

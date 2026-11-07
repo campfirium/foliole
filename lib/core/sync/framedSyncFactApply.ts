@@ -21,7 +21,7 @@ import { applyConvergentSyncNodeSource } from './syncNodeConvergence.js';
 import { enqueueAppliedNodeBodySearchInvalidation } from './syncNodeSearchInvalidations.js';
 import type { DeferredVisibilityPruning } from './syncNodeVisibilityPruning.js';
 import type { ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
-import { settleTopicAlternatives } from './topicAlternativeStore.js';
+import { settleTopicAlternativesForNodes } from './topicAlternativeStore.js';
 
 export type FramedFactSource = (db: DbPort, kinds?: readonly number[]) => AsyncIterable<CanonicalFact>;
 
@@ -79,10 +79,9 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
         workspaceScope = joinWorkspaceScopes(workspaceScope, await appliedStateWorkspaceScope(tx, fact));
       }
     }
-    for (const row of await tx.query<{ id: string; body_blob_hash: string }>(`SELECT id, body_blob_hash FROM nodes
-      WHERE kind = 'topic' AND deleted_at IS NULL AND id IN (SELECT value FROM json_each(?))`, [JSON.stringify([...nodeIds])])) {
-      await settleTopicAlternatives(tx, row.id, row.body_blob_hash, new Date().toISOString());
-    }
+    const topics = await tx.query<{ id: string; body_blob_hash: string }>(`SELECT id, body_blob_hash FROM nodes
+      WHERE kind = 'topic' AND deleted_at IS NULL AND id IN (SELECT value FROM json_each(?))`, [JSON.stringify([...nodeIds])]);
+    await settleTopicAlternativesForNodes(tx, topics, new Date().toISOString());
     workspaceScope = await flushParentOrders(tx, workspaceScope, options.parentOrderFlush);
     return { generatedChanges, workspaceScope };
   });

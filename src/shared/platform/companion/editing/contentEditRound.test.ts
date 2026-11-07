@@ -2,6 +2,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { loadCurrentSyncNodeRecord } from '../../../../../lib/core/sync/syncNodeGraph';
+import { readTopicAlternativeRecords } from '../../../../../lib/core/sync/topicAlternativeStore';
 
 import { readCompanionContentSource, releaseCompanionContentBase, retainCompanionContentBase, saveCompanionContentEdit } from './companionContentEditing';
 import { editableNode, editBaseline, stableEditingHost } from './companionContentEditingStable.testSupport';
@@ -29,7 +30,10 @@ async function openRound(platform: 'android' | 'ios') {
   const draft = new ContentDraftSession('topic', { content: editBaseline, versionId: 'base' }, save);
   await draft.start();
   const current = () => host.owner.read(db => loadCurrentSyncNodeRecord(db, 'topic'));
-  const bodies = async () => { const saved = await current(); return [saved!.body_text, ...(saved!.alternative_bodies ?? []).map(body => body.text)]; };
+  const bodies = () => host.owner.read(async db => {
+    const saved = await loadCurrentSyncNodeRecord(db, 'topic');
+    return [saved!.body_text, ...(await readTopicAlternativeRecords(db, 'topic')).map(row => row.body_text)];
+  });
   const type = async (content: string, references: typeof image[] = []) => { draft.change(content, references); await draft.flush(); };
   return { host, draft, round: new ContentEditRound(draft), current, bodies, type };
 }

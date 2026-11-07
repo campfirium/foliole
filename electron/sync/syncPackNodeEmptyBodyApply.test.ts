@@ -5,7 +5,7 @@ import { expect, it } from 'vitest';
 
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 import { restoreFixture } from '../database/requestSyncRestoreRecovery.testSupport.js';
-import { wholeBodies } from '../database/topicTextState.testSupport.js';
+import { readPersistedTopicBodies } from '../database/topicTextState.testSupport.js';
 
 import { branch, identity, receive, retiredVersionRow } from './syncPackStoredVersionDependencies.testSupport.js';
 
@@ -69,7 +69,7 @@ it('preserves both branch texts when a returning branch supplies a stripped comm
     expect(target.sqlite.prepare(`SELECT body_text, json_extract(snapshot_json, '$.body_blob_hash') AS hash
       FROM node_sync_versions WHERE version_id = 'shared-base'`).get())
       .toEqual({ body_text: null, hash: createHash('sha256').update('Original body').digest('hex') });
-    expect(wholeBodies((await loadCurrentSyncNodeRecord(target.db, 'node-1'))!))
+    expect(await readPersistedTopicBodies(target.db, 'node-1'))
       .toEqual(new Set(['Local edit', 'Offline edit']));
   } finally { await fixture.close(); }
 });

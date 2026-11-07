@@ -169,7 +169,7 @@ it('commits and replays a grade before a future reset while retaining the author
 
 const gradeCases = ([1, 2, 3, 4] as const).flatMap(grade =>
   [true, false].map(sameReceipt => ({ grade, sameReceipt })));
-it.each(gradeCases)('calculates only grade $grade and stores its receipt with equal receipt=$sameReceipt', async ({ grade, sameReceipt }) => {
+it.each(gradeCases)('calculates only grade $grade and stores its receipt with matching day starts=$sameReceipt', async ({ grade, sameReceipt }) => {
   const hour = new Date(now).getHours();
   hydrateCurrentReviewSchedulerSettings({ ...originalSettings,
     newDayStartsAtHour: sameReceipt ? hour : (hour + 1) % 24 });
@@ -191,7 +191,10 @@ it.each(gradeCases)('calculates only grade $grade and stores its receipt with eq
   }));
   const predicted = toNodeReviewProfile(harness.persistReviewGrade.mock.calls[0]![0].cardAfter);
   const persisted = snapshot().nodesById[nodeId]!.review;
-  if (sameReceipt) expect(predicted).toEqual(persisted);
+  // Default FSRS7 Again/Hard intervals are sub-day and do not use the day-start setting.
+  if (grade < 3) expect(predicted.scheduledDays).toBeLessThan(1);
+  else expect(predicted.scheduledDays).toBeGreaterThanOrEqual(1);
+  if (sameReceipt || grade < 3) expect(predicted).toEqual(persisted);
   else expect(predicted).not.toEqual(persisted);
   const entry = harness.getState().appActionHistory.undoStack.at(-1)!;
   if (entry.type !== 'review.grade') throw new Error('expected grade history');

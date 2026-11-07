@@ -12,9 +12,10 @@ db.exec(`CREATE TABLE nodes (id TEXT PRIMARY KEY, content TEXT, body_blob_hash T
   CREATE TABLE content_blobs (hash TEXT PRIMARY KEY, compression TEXT);
   CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB);
   CREATE TABLE attachments (id TEXT PRIMARY KEY, mime_type TEXT, size_bytes INTEGER);
-  CREATE TABLE node_attachments (node_id TEXT, attachment_id TEXT, role TEXT);`);
+  CREATE TABLE node_attachments (node_id TEXT, attachment_id TEXT, role TEXT);
+  CREATE TABLE node_text_alternatives (node_id TEXT, status TEXT, resource_references TEXT);`);
 afterEach(() => {
-  for (const table of ['nodes', 'content_blobs', 'content_blob_data', 'attachments', 'node_attachments']) db.exec(`DELETE FROM ${table}`);
+  for (const table of ['nodes', 'content_blobs', 'content_blob_data', 'attachments', 'node_attachments', 'node_text_alternatives']) db.exec(`DELETE FROM ${table}`);
 });
 const image = `${'a'.repeat(64)}.png`;
 const pdf = 'b'.repeat(64);
@@ -51,4 +52,15 @@ it('does not use registry byte counts as file transfer truth', async () => {
   const result = await loadArticleAttachmentNeeds(port, ['one']);
   expect(result.needs).toEqual([{ attachmentId: 'a'.repeat(64), contentHash: 'a'.repeat(64),
     storageKey: image, mimeType: 'image/png' }]);
+});
+
+it('includes available independent alternative resources only for participating owners', async () => {
+  put('one', 'Current text');
+  put('other', 'Unrelated text');
+  const insert = db.prepare('INSERT INTO node_text_alternatives VALUES (?, ?, ?)');
+  const references = (key: string) => JSON.stringify([{ storage_key: key, role: 'image', original_name: 'Image.png' }]);
+  insert.run('one', 'available', references(image));
+  insert.run('one', 'dismissed', references(`${old}.png`));
+  insert.run('other', 'available', references(`${pdf}.png`));
+  expect((await loadArticleAttachmentNeeds(port, ['one'])).needs.map(need => need.storageKey)).toEqual([image]);
 });

@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 import { hashText } from '../../lib/core/sync/syncNodeResolution.js';
@@ -57,4 +58,11 @@ export function textBranch(id: string, body: string, parent?: NativeSyncNodeReco
 
 export function wholeBodies(record: NativeSyncNodeRecord) {
   return new Set([record.body_text, ...record.alternative_bodies?.map((entry) => entry.text) ?? []]);
+}
+
+/** Observe both durable owners; a main version deliberately carries no alternative payload. */
+export async function readPersistedTopicBodies(db: DbPort, nodeId = 'topic') {
+  const current = await loadCurrentSyncNodeRecord(db, nodeId);
+  if (!current) throw new Error(`fixture_current_topic_missing:${nodeId}`);
+  return new Set([current.body_text, ...(await readTopicAlternativeRecords(db, nodeId)).map(row => row.body_text)]);
 }

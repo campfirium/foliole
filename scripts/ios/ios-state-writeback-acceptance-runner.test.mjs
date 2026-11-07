@@ -12,9 +12,9 @@ import { parseStateWritebackSnapshot, readStateWritebackSnapshot,
 const reading = { interval_duration_ms: 60000, interval_growth_factor: 1.5,
   last_handled_at: '2026-07-21T00:01:00.000Z', next_at: '2026-07-21T00:02:00.000Z',
   priority: 2, repetition_count: 3, state: 'active' };
-const review = { difficulty: 2.11810397, due: '2026-07-24T00:01:00.000Z', elapsed_days: 0, lapses: 0,
-  last_review_at: '2026-07-21T00:01:00.000Z', reps: 1, scheduled_days: 3, stability: 2.3065, state: 2 };
-const log = { op_id: 'review-op', grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-6', reviewed_at: '2026-07-21T00:01:00.000Z',
+const review = { difficulty: 3.53072398, due: '2026-07-27T00:01:00.000Z', elapsed_days: 0, lapses: 0,
+  last_review_at: '2026-07-21T00:01:00.000Z', reps: 1, scheduled_days: 6, stability: 3.9221, stability_fast: 3.13768, state: 2 };
+const log = { op_id: 'review-op', grade: 3, kind: 'review', voids_op_id: null, scheduler_version: 'fsrs-7', reviewed_at: '2026-07-21T00:01:00.000Z',
 
      };
 const first = { phase: 'applied', status: 'passed' };
@@ -44,12 +44,14 @@ it('rejects an old review snapshot that does not match the single effective revi
     .toThrow('evidence is incomplete');
 });
 
-it.each(['reading', 'review', 'review_log', 'private-setting-leak', 'wrong-op', 'duplicate-op'])(
+it.each(['reading', 'review', 'fast-memory', 'legacy-algorithm', 'review_log', 'private-setting-leak', 'wrong-op', 'duplicate-op'])(
   'rejects incorrect persisted provider evidence: %s', failure => {
     const evidence = observations();
     const facts = evidence.state_writeback.persisted;
     if (failure === 'reading') facts.reading.priority = 9;
     if (failure === 'review') facts.review.stability = 0;
+    if (failure === 'fast-memory') delete facts.review.stability_fast;
+    if (failure === 'legacy-algorithm') facts.review_log[0].scheduler_version = 'fsrs-6';
     if (failure === 'review_log') facts.review_log = [];
     if (failure === 'private-setting-leak') facts.phone_private_setting_count = 1;
     if (failure === 'wrong-op') facts.review_log[0].op_id = 'another-op';

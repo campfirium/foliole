@@ -6,6 +6,7 @@ import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js'
 
 import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
 import { syncRequestLibrary as sync } from './syncRequestLibrary.testSupport.js';
+import { readPersistedTopicBodies } from './topicTextState.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
@@ -46,7 +47,7 @@ it('forwards original lineage and merges complete input from a third offline dev
   const offline = edit(c, 'left\nright-offline\n');
   await sync(b, c);
   const selected = (await loadCurrentSyncNodeRecord(c.port, 'topic'))!;
-  expect(new Set([selected.body_text, ...(selected.alternative_bodies ?? []).map((entry) => entry.text)]))
+  expect(await readPersistedTopicBodies(c.port))
     .toEqual(new Set(['left-online\nright\n', 'left\nright-offline\n']));
   assertPersisted(c, selected.body_text!);
   await sync(c, b);
@@ -57,8 +58,7 @@ it('forwards original lineage and merges complete input from a third offline dev
   await sync(b, c);
   for (const peer of [a, b, c]) {
     assertPersisted(peer, selected.body_text!);
-    const current = (await loadCurrentSyncNodeRecord(peer.port, 'topic'))!;
-    expect(new Set([current.body_text, ...(current.alternative_bodies ?? []).map((entry) => entry.text)]))
+    expect(await readPersistedTopicBodies(peer.port))
       .toEqual(new Set(['left-online\nright\n', 'left\nright-offline\n']));
     const versions = history(peer);
     expect(versions).toHaveLength(4);

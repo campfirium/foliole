@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
+import { readTopicAlternativeRecords } from '../../lib/core/sync/topicAlternativeStore.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { closeLibraries, createPeer, edit, joinPeers, startLibraries, type Peer } from './syncLibrary.testSupport.js';
@@ -18,7 +19,7 @@ beforeEach(async () => {
 afterEach(async () => { await closeLibraries(); vi.useRealTimers(); });
 
 const current = async (peer: Peer) => (await loadCurrentSyncNodeRecord(peer.port, 'topic'))!;
-const alternatives = async (peer: Peer) => ((await current(peer)).alternative_bodies ?? []).map(entry => entry.text).sort();
+const alternatives = async (peer: Peer) => (await readTopicAlternativeRecords(peer.port, 'topic')).map(entry => entry.body_text).sort();
 
 async function fork(equal = false, missingOnBoth = true) {
   const left = createPeer('left');

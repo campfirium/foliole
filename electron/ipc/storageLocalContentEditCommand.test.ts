@@ -78,10 +78,7 @@ it.each(['2026-07-25T04:32:00.000Z', '2026-07-25T04:36:00.000Z'])(
   const expectedBodies = new Set(['First\nMiddle\nRemote last\n', 'Local first\nMiddle\nLast\n']);
   const current = result.nodes[0]?.content;
   expect(current).toBeDefined();
-  expect(new Set(openDatabaseConnection().sqlite.prepare(`SELECT json_extract(body.value, '$.text') AS body_text FROM nodes n
-    JOIN node_sync_versions version ON version.version_id = n.current_version_id,
-    json_each(version.snapshot_json, '$.text_alternative_bodies') body
-    WHERE n.id = 'node-1'`).all()
+  expect(new Set(openDatabaseConnection().sqlite.prepare(`SELECT body_text FROM node_text_alternatives WHERE node_id = 'node-1' AND status = 'available'`).all()
     .map((row) => (row as { body_text: string }).body_text).concat(current!)))
     .toEqual(expectedBodies);
   expect(result.contentEdit.submittedVersionId).toBe('ver_local');
@@ -140,9 +137,7 @@ it('retains the persisted edit basis after reopening through the workspace list'
   await handleLocalContentEditCommand({ parent: nodeInput('Local', '2026-07-25T04:36:00.000Z'),
     affectedAnchors: [], edit: { baseVersionId: basis, versionId: 'ver_reopened' } }, null);
   const current = connection.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('node-1');
-  const alternatives = connection.sqlite.prepare(`SELECT json_extract(body.value, '$.text') FROM nodes n
-    JOIN node_sync_versions v ON v.version_id = n.current_version_id,
-    json_each(v.snapshot_json, '$.text_alternative_bodies') body WHERE n.id = ?`).pluck().all('node-1');
+  const alternatives = connection.sqlite.prepare(`SELECT body_text FROM node_text_alternatives WHERE node_id = ? AND status = 'available'`).pluck().all('node-1');
   expect(new Set([current, ...alternatives])).toEqual(new Set(['Remote', 'Local']));
   expect(connection.sqlite.prepare('SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?')
     .pluck().get('ver_reopened')).toBe(basis);

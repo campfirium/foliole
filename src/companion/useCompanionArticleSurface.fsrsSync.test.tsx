@@ -27,7 +27,7 @@ async function openCard() {
     } } };
   snapshot.nodeOrder = ['item-1'];
   const ui = await fixture.open(snapshot, async () => {
-    await applyCompanionSyncReviewLog(['2026-04-10', '2026-04-11', '2026-04-12'].map((day, index) => ({
+    await applyCompanionSyncReviewLog(['2026-03-10', '2026-03-11', '2026-03-12'].map((day, index) => ({
       id: `seed-${index}`, op_id: `seed-${index}`, host_name: 'remote', node_id: 'item-1',
       grade: 3, scheduler_version: getReviewSchedulerVersion(getCurrentReviewSchedulerSettings()),
       reviewed_at: `${day}T08:00:00.000Z`, kind: 'review' as const, voids_op_id: null

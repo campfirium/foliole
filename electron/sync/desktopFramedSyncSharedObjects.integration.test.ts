@@ -9,6 +9,7 @@ import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/da
 import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
 import { pruneLearningRowsWithoutVisibleNodes } from '../../lib/core/sync/syncNodeVisibilityPruning.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
+import { topicAlternativeHash, validateTopicAlternativeRecord } from '../../lib/core/sync/topicAlternativeRecord.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
@@ -30,7 +31,10 @@ const cases: { type: NativeSyncObjectRecord['object_type']; id: string; payload:
   { type: 'node_open_state', id: 'topic', payload: { node_id: 'topic', last_opened_at: now },
     query: "SELECT last_opened_at FROM node_open_state WHERE node_id = 'topic'", expected: now },
   { type: 'node_text_alternative', id: 'alternative', payload: { alternative_id: 'alternative', node_id: 'topic',
-    source_host_name: 'original-host', body_text: 'Original alternative body', created_at: now, updated_at: now, status: 'available' },
+    source_host_name: 'original-host', body_text: 'Original alternative body',
+    body_blob_hash: createHash('sha256').update('Original alternative body').digest('hex'),
+    expires_at: '2099-01-01T00:00:00.000Z', resource_references: '[]', image_sources: null,
+    created_at: now, updated_at: now, status: 'available' },
     query: "SELECT body_text FROM node_text_alternatives WHERE alternative_id = 'alternative'", expected: 'Original alternative body' },
   { type: 'watched_folder', id: 'watched', payload: { binding_id: 'watched', host_name: 'original-host', host_platform: 'darwin',
     source_ref: 'watched:original', owner_device_identity_key: null, reported_path: '/Original', connection_status: 'needs-folder',
@@ -55,7 +59,7 @@ it.each(cases)('discovers and persists the original $type payload through a norm
         payload.source_version_id = head;
       }
       await applySyncObjectInTransaction(createBetterSqliteDbPort(source), { object_type: sample.type,
-        object_id: sample.id, content_hash: sample.type === 'node_text_alternative' ? createHash('sha256').update(JSON.stringify(payload)).digest('hex')
+        object_id: sample.id, content_hash: sample.type === 'node_text_alternative' ? topicAlternativeHash(validateTopicAlternativeRecord(payload))
           : computeSyncContentHash(sample.type, payload),
         deleted_at: null, payload_json: JSON.stringify(payload), updated_at: now });
       expect(source.prepare(sample.query).pluck().get()).toEqual(sample.expected);
