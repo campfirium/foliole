@@ -23,8 +23,9 @@ vi.mock('@capacitor/core', async () => {
 let library: Awaited<ReturnType<typeof createSearchLibrary>>;
 let initial: WorkspaceSnapshot;
 let failRefresh = false;
+let refreshBarrier: Promise<void> | undefined;
 const stored = async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
-beforeEach(async () => { library = await createSearchLibrary(0); initial = await stored(); failRefresh = false; });
+beforeEach(async () => { library = await createSearchLibrary(0); initial = await stored(); failRefresh = false; refreshBarrier = undefined; });
 afterEach(async () => { cleanup(); await library.close(); });
 
 function Menu() {
@@ -42,7 +43,7 @@ function Harness() {
   const [snapshot, setSnapshot] = useState(initial);
   return <LocalizationProvider initialLanguagePreference="en"><CompanionWorkspaceActionsProvider snapshot={snapshot}
     flush={async () => {}} restoreFlow={() => {}} flowActive={false} applyFlow={async () => {}}
-    refresh={async () => { if (failRefresh) throw new Error('Refresh failed'); const next = await stored(); setSnapshot(next); return next; }}>
+    refresh={async () => { await refreshBarrier; if (failRefresh) throw new Error('Refresh failed'); const next = await stored(); setSnapshot(next); return next; }}>
     <Menu />
   </CompanionWorkspaceActionsProvider></LocalizationProvider>;
 }
@@ -98,7 +99,7 @@ function previewPriorityChange(topic: HTMLElement) {
   expect(menu.getByText('0', { exact: true })).toBeVisible();
 }
 
-it('saves only a committed slider adjustment, updates inherited values and can undo the override', async () => {
+async function seedPriorityHierarchy() {
   const now = '2026-10-03T00:00:00Z';
   const shapes = [
     { id: 'folder', kind: 'folder', parentNodeId: null, priority: 3 },
@@ -111,6 +112,10 @@ it('saves only a committed slider adjustment, updates inherited values and can u
     anchorLink: null, review: null, reading: null
   }, 'Search', `base-${node.id}`))));
   initial = await stored();
+}
+
+it('saves only a committed slider adjustment, updates inherited values and can undo the override', async () => {
+  await seedPriorityHierarchy();
   render(<Harness />);
   const open = (name: string) => {
     fireEvent.click(screen.getByRole('button', { name: new RegExp(`: ${name}$`) }));
@@ -126,13 +131,17 @@ it('saves only a committed slider adjustment, updates inherited values and can u
   expect(facts()).toEqual([{ id: 'item', priority: null }, { id: 'topic', priority: 0 }]);
 
   const item = open('item');
+  await waitFor(() => expect(item).toBeEnabled());
   expect(item).toHaveValue('0');
   fireEvent.change(item, { target: { value: '7' } });
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(facts()[0]).toEqual({ id: 'item', priority: 7 });
-  fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+  const undo = screen.getByRole('button', { name: 'Undo' });
+  await waitFor(() => expect(undo).toBeEnabled());
+  fireEvent.click(undo);
   await waitFor(() => expect(facts()).toEqual([{ id: 'item', priority: null }, { id: 'topic', priority: 0 }]));
   const restored = open('item');
+  await waitFor(() => expect(restored).toBeEnabled());
   expect(restored).toHaveValue('0');
 
   library.database.exec(`CREATE TRIGGER reject_priority BEFORE UPDATE OF priority ON nodes
@@ -145,14 +154,19 @@ it('saves only a committed slider adjustment, updates inherited values and can u
   library.database.exec('DROP TRIGGER reject_priority');
 
   failRefresh = true;
+  const blockedRefresh = Promise.withResolvers<void>();
+  refreshBarrier = blockedRefresh.promise;
   fireEvent.change(restored, { target: { value: '8' } });
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(facts()[0]).toEqual({ id: 'item', priority: 8 });
+  blockedRefresh.resolve();
   const retry = await screen.findByRole('button', { name: 'Refresh' });
   const historyKey = companionFlowHistoryKey('Search');
   const historyBeforeRetry = await loadCompanionFlowHistory(historyKey);
   expect(facts()[0]).toEqual({ id: 'item', priority: 8 });
   failRefresh = false;
   fireEvent.click(retry);
-  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull());
   expect(open('item')).toHaveValue('8');
   expect(await loadCompanionFlowHistory(historyKey)).toEqual(historyBeforeRetry);
 });
