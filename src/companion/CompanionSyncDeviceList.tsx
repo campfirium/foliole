@@ -3,8 +3,20 @@ import { AppSpinner } from '../shared/ui';
 
 import type { CompanionSyncGroupDiscovery } from './companionSyncGroupJoinModel';
 
+const DEFAULT_SYNC_PORT = '38641';
+
 function resolveGroupTitle(group: CompanionSyncGroupDiscovery, fallback: string) {
   return group.groupDisplayName || fallback;
+}
+
+function resolvePortLabel(endpointUrl: string) {
+  try {
+    const { port, protocol } = new URL(endpointUrl);
+    const endpointPort = port || (protocol === 'http:' ? '80' : protocol === 'https:' ? '443' : '');
+    return endpointPort === DEFAULT_SYNC_PORT ? '' : endpointPort;
+  } catch {
+    return '';
+  }
 }
 
 function JoinAction(props: {
@@ -45,13 +57,17 @@ function GroupRow(props: {
 }) {
   const t = useTranslation();
   const groupTitle = resolveGroupTitle(props.group, t('companion.sync.discovery.unknownGroup'));
+  const portLabel = resolvePortLabel(props.group.endpointUrl);
   const isCompatible = props.group.compatibility.status === 'compatible';
   return (
     <div className="px-1 py-2">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-base font-semibold leading-tight text-foreground">
-            {groupTitle}
+          <p className="flex items-baseline gap-2 text-base font-semibold leading-tight text-foreground">
+            <span className="truncate">{groupTitle}</span>
+            {portLabel && (
+              <span className="shrink-0 text-xs font-normal text-companion-text-tertiary">{portLabel}</span>
+            )}
           </p>
           {isCompatible ? null : (
             <p className="mt-1 text-xs leading-5 text-accent">
