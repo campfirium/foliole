@@ -13,10 +13,13 @@ import { useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
 function PriorityRange(props: { value: number; disabled: boolean; onCommit(value: number): void }) {
   const t = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
+  const valueRef = useRef<HTMLSpanElement>(null);
   const { value, disabled, onCommit } = props;
 
   useEffect(() => {
-    if (!disabled && inputRef.current) inputRef.current.value = String(value);
+    if (disabled) return;
+    if (inputRef.current) inputRef.current.value = String(value);
+    if (valueRef.current) valueRef.current.textContent = String(value);
   }, [value, disabled]);
 
   useEffect(() => {
@@ -25,7 +28,9 @@ function PriorityRange(props: { value: number; disabled: boolean; onCommit(value
     // Native change fires on release. Input events fire for every step of a drag.
     function commit(event: Event) {
       const next = (event.currentTarget as HTMLInputElement).valueAsNumber;
-      if (!disabled && next !== value) onCommit(next);
+      if (disabled || next === value) return;
+      if (valueRef.current) valueRef.current.textContent = String(next);
+      onCommit(next);
     }
     input.addEventListener('change', commit);
     return () => input.removeEventListener('change', commit);
@@ -34,7 +39,6 @@ function PriorityRange(props: { value: number; disabled: boolean; onCommit(value
   return (
     <label className="flex min-h-11 items-center gap-3 border-b border-companion-divider py-2 text-sm">
       <span>{t('desktop.nodeReview.priority')}</span>
-      <span className="text-companion-text-tertiary" aria-hidden="true">0</span>
       <input
         aria-label={t('desktop.nodeReview.priority')}
         className="min-h-11 min-w-0 flex-1 accent-companion-accent"
@@ -42,12 +46,18 @@ function PriorityRange(props: { value: number; disabled: boolean; onCommit(value
         disabled={disabled}
         max={9}
         min={0}
-        onPointerCancel={event => { event.currentTarget.value = String(value); }}
+        onInput={event => {
+          if (valueRef.current) valueRef.current.textContent = event.currentTarget.value;
+        }}
+        onPointerCancel={event => {
+          event.currentTarget.value = String(value);
+          if (valueRef.current) valueRef.current.textContent = String(value);
+        }}
         ref={inputRef}
         step={1}
         type="range"
       />
-      <span className="text-companion-text-tertiary" aria-hidden="true">9</span>
+      <span ref={valueRef} className="w-4 shrink-0 text-right tabular-nums" aria-hidden="true">{value}</span>
     </label>
   );
 }

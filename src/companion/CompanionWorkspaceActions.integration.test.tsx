@@ -83,6 +83,19 @@ it('retries refresh without creating a second object or recording a second actio
   expect((await loadCompanionFlowHistory(companionFlowHistoryKey('Search'))).undoStack).toHaveLength(1);
 });
 
+function previewPriorityChange(topic: HTMLElement) {
+  const menu = within(screen.getByRole('dialog'));
+  expect(menu.getByText('3', { exact: true })).toBeVisible();
+  expect(menu.queryByText('0', { exact: true })).toBeNull();
+  expect(menu.queryByText('9', { exact: true })).toBeNull();
+  fireEvent.input(topic, { target: { value: '6' } });
+  expect(menu.getByText('6', { exact: true })).toBeVisible();
+  fireEvent.pointerCancel(topic);
+  expect(menu.getByText('3', { exact: true })).toBeVisible();
+  fireEvent.input(topic, { target: { value: '0' } });
+  expect(menu.getByText('0', { exact: true })).toBeVisible();
+}
+
 it('saves only a committed slider adjustment, updates inherited values and can undo the override', async () => {
   const now = '2026-10-03T00:00:00Z';
   const shapes = [
@@ -105,8 +118,7 @@ it('saves only a committed slider adjustment, updates inherited values and can u
   const facts = () => library.database.prepare('SELECT id, priority FROM nodes WHERE id IN (?, ?) ORDER BY id').all('topic', 'item');
 
   const topic = open('topic');
-  expect(topic).toHaveValue('3');
-  fireEvent.input(topic, { target: { value: '0' } });
+  previewPriorityChange(topic);
   expect(facts()).toEqual([{ id: 'item', priority: null }, { id: 'topic', priority: null }]);
   fireEvent.change(topic, { target: { value: '0' } });
   await waitFor(() => expect(topic).toBeEnabled());
@@ -130,6 +142,7 @@ it('saves only a committed slider adjustment, updates inherited values and can u
   fireEvent.change(restored, { target: { value: '8' } });
   await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
   expect(restored).toHaveValue('0');
+  expect(within(screen.getByRole('dialog')).getByText('0', { exact: true })).toBeVisible();
   expect(facts()[0]).toEqual({ id: 'item', priority: null });
   library.database.exec('DROP TRIGGER reject_priority');
 
