@@ -1,6 +1,7 @@
 import { collectAllNodeVersionChains } from '../../../../../lib/core/database/dynamicNodeVersionChainMigration';
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
-import { beginSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
+import { beginSyncGroupLocalAdoption, SYNC_GROUP_LOCAL_ADOPTION_KEY } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
+import { SYNC_GROUP_OVERWRITE_PROGRESS_KEY } from '../../../../../lib/core/sync/syncGroupOverwriteProgress';
 import { publishSyncGroupRestoreEvent } from '../../../../../lib/core/sync/syncGroupRestorePublication';
 import type { SyncGroupLibraryFacts, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
 import { parseSyncGroupJoinMode, type SyncGroupJoinMode } from '../../../../../lib/platform/syncGroupJoinMode';
@@ -93,7 +94,11 @@ export function joinCompanionSyncGroup(args: {
 export function leaveCompanionSyncGroupDevice() {
   return owner().runWriter((db) => db.transaction(async (tx) => {
     const group = await loadGroup(tx);
-    if (!group) return;
+    if (!group) {
+      await tx.run('DELETE FROM sync_group_metadata WHERE key IN (?, ?)',
+        [SYNC_GROUP_LOCAL_ADOPTION_KEY, SYNC_GROUP_OVERWRITE_PROGRESS_KEY]);
+      return;
+    }
     const now = new Date().toISOString();
     await tx.run(
       `UPDATE sync_group_devices SET state = 'left', left_at = ?, updated_at = ?

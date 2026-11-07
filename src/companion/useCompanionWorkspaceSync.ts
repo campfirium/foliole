@@ -2,8 +2,8 @@ import { type Dispatch, type SetStateAction, useCallback, useEffect, useState } 
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import { leaveCompanionSyncGroupAfterAdoptionStops } from '../shared/platform/companion/sync/companionSyncGroupAdoptionRun';
 import { publishCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
-import { leaveCompanionSyncGroupDevice } from '../shared/platform/companion/sync/syncGroupStore';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { loadCompanionSyncNodeConflicts } from '../shared/platform/companionSyncObjects';
@@ -87,9 +87,11 @@ function useWorkspaceSyncBootstrap(
 }
 
 async function leaveCompanionWorkspaceSyncGroup(args: {
+  markLeft(): void;
   saveEndpoint: (endpointUrl: string) => Promise<unknown>;
 }) {
-  await leaveCompanionSyncGroupDevice();
+  await leaveCompanionSyncGroupAfterAdoptionStops();
+  args.markLeft();
   publishCompanionSyncMutationRevision({ kind: 'full' });
   await args.saveEndpoint('');
 }
@@ -176,8 +178,8 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
   });
   const participationActions = useCompanionWorkspaceParticipationActions({ join, setError, snapshotActions });
   const leaveSyncGroup = useCallback(() => leaveCompanionWorkspaceSyncGroup({
-    saveEndpoint: snapshotActions.saveEndpoint
-  }), [snapshotActions.saveEndpoint]);
+    markLeft: join.markLeft, saveEndpoint: snapshotActions.saveEndpoint
+  }), [join.markLeft, snapshotActions.saveEndpoint]);
   useWorkspaceSyncBootstrap(setIsWorkspaceSyncStateReady, setSyncConflictCount, setState, setStatus);
   useCompanionSyncAppliedRefresh(setState, setSyncConflictCount, setError);
   useCompanionAutoSync(

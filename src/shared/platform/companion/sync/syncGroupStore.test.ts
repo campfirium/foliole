@@ -5,6 +5,7 @@ import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../../../../lib/cor
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/syncGroupRestoreSchemaStatements';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/syncGroupSchemaStatements';
 import type { DbParams, DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
+import { loadSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import type { SyncGroupJoinMode } from '../../../../../lib/platform/syncGroupJoinMode';
 import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
 
@@ -17,6 +18,10 @@ vi.mock('../runtime/iosCompanionDatabaseBootstrap', () => ({
   })
 }));
 
+import {
+  hydrateCompanionSyncGroupAdoptionRun, leaveCompanionSyncGroupAfterAdoptionStops,
+  readCompanionSyncGroupAdoptionRun
+} from './companionSyncGroupAdoptionRun';
 import {
   joinCompanionSyncGroup, leaveCompanionSyncGroupDevice, loadCompanionSyncGroup
 } from './syncGroupStore';
@@ -110,4 +115,28 @@ it('rolls membership back if publishing the chosen overwrite fails', async () =>
   expect(await loadCompanionSyncGroup()).toBeNull();
   expect(sqlite.prepare('SELECT COUNT(*) FROM sync_groups').pluck().get()).toBe(0);
   expect(sqlite.prepare('SELECT COUNT(*) FROM sync_group_restore_events').pluck().get()).toBe(0);
+});
+
+it('leaves a pending first reception without deleting local nodes', async () => {
+  sqlite.prepare('INSERT INTO nodes VALUES (?, NULL), (?, NULL)').run('special-inbox', 'local-note');
+  await join();
+  expect(await loadSyncGroupLocalAdoption(database.driver)).not.toBeNull();
+
+  await leaveCompanionSyncGroupDevice();
+
+  expect(await loadCompanionSyncGroup()).toBeNull();
+  expect(await loadSyncGroupLocalAdoption(database.driver)).toBeNull();
+  expect(sqlite.prepare('SELECT id FROM nodes ORDER BY id').pluck().all())
+    .toEqual(['local-note', 'special-inbox']);
+});
+
+it('discards pending reception when the local membership has already been cleared', async () => {
+  await join();
+  sqlite.exec('DELETE FROM sync_group_local_state');
+  expect(await hydrateCompanionSyncGroupAdoptionRun()).toBe(true);
+
+  await leaveCompanionSyncGroupAfterAdoptionStops();
+
+  expect(readCompanionSyncGroupAdoptionRun()).toEqual({ phase: 'none' });
+  expect(await hydrateCompanionSyncGroupAdoptionRun()).toBe(false);
 });

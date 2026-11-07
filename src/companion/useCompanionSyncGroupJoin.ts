@@ -226,7 +226,8 @@ export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
   }, [args.bootstrapState.database_path]);
   useJoinAcceptancePolling(pendingRequest, complete);
   const adoption = useCompanionSyncGroupAdoptionRun();
+  const markLeft = useCallback(() => { setJoined(false); setStatus('idle'); }, []);
   const adopting = joined && adoption.phase !== 'none';
-  return { cancel, complete, discoveries, discover, joined: joined && !adopting, member: joined, pendingRequest, request,
+  return { cancel, complete, discoveries, discover, joined: joined && !adopting, member: joined, markLeft, pendingRequest, request,
     status: adopting ? 'adopting' as const : status };
 }

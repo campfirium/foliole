@@ -114,7 +114,7 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
         {!props.syncGroup && isNativeCompanionSyncParticipationRuntime()
           ? <CompanionSyncParticipationControls /> : null}
         {props.joinStatus === 'adopting' || adoptionRun.phase !== 'none'
-          ? <ReceivingGroupDataState run={adoptionRun}
+          ? <ReceivingGroupDataState run={adoptionRun} onLeave={props.onLeaveSyncGroup}
             onRetry={() => { void runPendingCompanionSyncGroupAdoption().catch(() => undefined); }} />
           : props.syncGroup ? <ConnectedContent {...props} endpointUrl={endpointUrl}
           onPull={(url) => { retryProtocolNotice(); return props.onPull(url); }}

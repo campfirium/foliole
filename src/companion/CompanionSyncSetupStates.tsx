@@ -4,6 +4,8 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionSyncGroupAdoptionRun } from '../shared/platform/companion/sync/companionSyncGroupAdoptionRun';
 import { AppSpinner } from '../shared/ui';
 
+import { CompanionLeaveSyncGroup } from './CompanionLeaveSyncGroup';
+
 function PrimaryAction(props: {
   children: string;
   disabled?: boolean;
@@ -114,7 +116,7 @@ function ReceivingProgress(props: { run: AdoptionRun }) {
   );
 }
 
-export function ReceivingGroupDataState(props: { run: CompanionSyncGroupAdoptionRun; onRetry(): void }) {
+export function ReceivingGroupDataState(props: { run: CompanionSyncGroupAdoptionRun; onRetry(): void; onLeave(): Promise<unknown> }) {
   const t = useTranslation();
   const run = props.run.phase === 'none' ? null : props.run;
   return <SyncStatusCard title={t('companion.syncSetup.receiving.title')}
@@ -128,6 +130,8 @@ export function ReceivingGroupDataState(props: { run: CompanionSyncGroupAdoption
           {t('companion.syncSetup.receiving.retry')}
         </PrimaryAction>
       </> : null}
+      {run?.phase === 'failed' || run?.phase === 'paused' ?
+        <CompanionLeaveSyncGroup onLeave={props.onLeave} /> : null}
     </div>
   </SyncStatusCard>;
 }

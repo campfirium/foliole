@@ -10,7 +10,7 @@ import { ReceivingGroupDataState } from './CompanionSyncSetupStates';
 const run = { completed: 1200, total: 6169, lastActivityAt: '2026-10-23T13:05:00.000Z', error: null };
 
 it('shows how much group data has arrived and when it last moved', () => {
-  render(<ReceivingGroupDataState onRetry={vi.fn()} run={{ ...run, phase: 'receiving' }} />);
+  render(<ReceivingGroupDataState onLeave={vi.fn()} onRetry={vi.fn()} run={{ ...run, phase: 'receiving' }} />);
   expect(screen.getByText('companion.syncSetup.receiving.progress {"completed":1200,"total":6169}')).toBeInTheDocument();
   expect(screen.getByText(/companion\.syncSetup\.receiving\.lastActivity/u)).toBeInTheDocument();
   expect(screen.queryByTestId('companion-sync-receiving-retry')).not.toBeInTheDocument();
@@ -18,12 +18,22 @@ it('shows how much group data has arrived and when it last moved', () => {
 
 it('explains a background pause and offers a retry after a failure', () => {
   const onRetry = vi.fn();
-  const { rerender } = render(<ReceivingGroupDataState onRetry={onRetry} run={{ ...run, phase: 'paused' }} />);
+  const { rerender } = render(<ReceivingGroupDataState onLeave={vi.fn()} onRetry={onRetry} run={{ ...run, phase: 'paused' }} />);
   expect(screen.getByText('companion.syncSetup.receiving.paused')).toBeInTheDocument();
-  rerender(<ReceivingGroupDataState onRetry={onRetry}
+  rerender(<ReceivingGroupDataState onLeave={vi.fn()} onRetry={onRetry}
     run={{ ...run, phase: 'failed', error: 'sync_group_local_adoption_source_unavailable' }} />);
   expect(screen.getByText('companion.syncSetup.receiving.failed'))
     .toHaveAttribute('data-error-code', 'sync_group_local_adoption_source_unavailable');
   fireEvent.click(screen.getByTestId('companion-sync-receiving-retry'));
   expect(onRetry).toHaveBeenCalledOnce();
+});
+
+it('allows a failed first reception to leave after confirmation', () => {
+  const onLeave = vi.fn().mockResolvedValue(undefined);
+  render(<ReceivingGroupDataState onLeave={onLeave} onRetry={vi.fn()}
+    run={{ ...run, phase: 'failed', error: 'sync_group_local_adoption_source_unavailable' }} />);
+  fireEvent.click(screen.getByRole('button', { name: 'companion.sync.leave.button' }));
+  expect(onLeave).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'companion.sync.leave.button' }));
+  expect(onLeave).toHaveBeenCalledOnce();
 });

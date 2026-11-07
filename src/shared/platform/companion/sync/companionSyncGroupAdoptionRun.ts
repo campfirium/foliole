@@ -5,6 +5,7 @@ import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBoo
 
 import { completeCompanionSyncGroupAdoption } from './completeCompanionSyncGroupAdoption';
 import { publishCompanionSyncMutationRevision } from './mutation/companionSyncMutationRevision';
+import { leaveCompanionSyncGroupDevice } from './syncGroupStore';
 
 type ActiveAdoptionRun = { phase: 'receiving' | 'paused' | 'failed'; completed: number; total: number | null;
   lastActivityAt: string | null; error: string | null };
@@ -12,6 +13,7 @@ export type CompanionSyncGroupAdoptionRun = { phase: 'none' } | ActiveAdoptionRu
 
 let current: CompanionSyncGroupAdoptionRun = { phase: 'none' };
 let running: Promise<boolean> | null = null;
+let leaving: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 
 function publish(next: CompanionSyncGroupAdoptionRun) {
@@ -57,6 +59,7 @@ function errorCode(error: unknown) {
 
 /** Continues a pending adoption; concurrent callers share one run. Resolves true when it finished. */
 export function runPendingCompanionSyncGroupAdoption() {
+  if (leaving) return leaving.then(() => false);
   running ??= (async () => {
     if (!await hydrateCompanionSyncGroupAdoptionRun()) return false;
     active('receiving');
@@ -84,4 +87,11 @@ export function runPendingCompanionSyncGroupAdoption() {
     return true;
   })().finally(() => { running = null; });
   return running;
+}
+
+export async function leaveCompanionSyncGroupAfterAdoptionStops() {
+  if (running) throw new Error('sync_group_local_adoption_running');
+  leaving ??= leaveCompanionSyncGroupDevice().then(() => publish({ phase: 'none' }))
+    .finally(() => { leaving = null; });
+  return leaving;
 }
