@@ -22,7 +22,13 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @PluginMethod public void postRequestSyncHttp(PluginCall call) {
         FolioleCompanionRequestSyncHttp.post(getContext(), call,
-            call.getObject("attachment_receive") == null ? framedSendExecutor : attachmentReceiveExecutor);
+            call.getObject("attachment_receive") != null || Boolean.TRUE.equals(call.getBoolean("stream_attachment_batch", false))
+                ? attachmentReceiveExecutor : framedSendExecutor);
+    }
+
+    @PluginMethod public void readRequestSyncAttachmentBatch(PluginCall call) {
+        try { FolioleCompanionRequestSyncHttp.readBatch(call); }
+        catch (Exception error) { call.reject(error.getMessage(), error); }
     }
 
     @PluginMethod public void cancelRequestSyncHttp(PluginCall call) {

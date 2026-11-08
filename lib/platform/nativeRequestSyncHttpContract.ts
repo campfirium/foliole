@@ -24,6 +24,7 @@ export interface NativeRequestSyncHttpRequest extends NativeCompanionFramedPaylo
   receiver_library_epoch: string;
   peer_round_id?: string;
   attachment_receive?: NativeAttachmentReceivePlan;
+  stream_attachment_batch?: true;
 }
 
 export interface NativeRequestSyncHttpPlugin {
@@ -31,6 +32,10 @@ export interface NativeRequestSyncHttpPlugin {
     response_chunk_count: number;
     response_byte_length: number;
     attachment_receive?: { offset: number; blocks: number; pending: boolean };
+    base64?: string;
+    done?: true;
   }>;
+  readRequestSyncAttachmentBatch(request: NativeCompanionFramedPayloadBudgetOwner & { request_id: string }):
+    Promise<{ base64?: string; done?: true }>;
   cancelRequestSyncHttp(request: NativeCompanionFramedPayloadBudgetOwner & { request_id: string }): Promise<void>;
 }

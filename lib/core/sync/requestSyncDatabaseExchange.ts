@@ -20,6 +20,7 @@ export interface PreparedAttachmentRequest {
 }
 
 export interface RequestSyncExchange {
+  batchAttachmentPull?: true;
   prepareAttachment?(query: AttachmentRequest): Promise<PreparedAttachmentRequest>;
   /** Native execution validates and writes one authorized range; shared code owns publication. */
   receiveAttachment?(query: AttachmentRequest): Promise<AttachmentReceiveWindow>;

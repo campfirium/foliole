@@ -13,7 +13,7 @@ import { withCompanionRequestSyncLifecycle } from './companionRequestSyncLifecyc
 import { requireCompanionRequestSyncPeerState } from './companionRequestSyncPeerState.js';
 
 type ResourceInput = NativeCompanionFramedSyncInventoryRequest & {
-  peerRound?: RequestSyncPeerRound; signal?: AbortSignal; boundedSlice?: boolean;
+  peerRound?: RequestSyncPeerRound; signal?: AbortSignal; boundedSlice?: boolean; batchAttachmentPull?: true;
 };
 
 export function continueCompanionRequestSyncResources(input: ResourceInput) {
@@ -45,6 +45,7 @@ function withResources<T>(input: ResourceInput,
       responderDeviceId: input.receiver_device_id, responderLibraryEpoch: input.receiver_library_epoch } as const;
     return run(await currentCompanionAttachmentHost(host),
       createCompanionRequestSyncExchange(host, { context, groupKey, endpointUrl: input.endpoint_url, signal,
-        ...(input.peerRound ? { peerRound: input.peerRound } : {}) }));
+        ...(input.peerRound ? { peerRound: input.peerRound } : {}),
+        ...(input.batchAttachmentPull ? { batchAttachmentPull: true } : {}) }));
   }, input.signal);
 }

@@ -7,6 +7,11 @@ import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
 
 /** Pull responses and push requests each carry at most this many consecutive blocks (16 MiB). */
 export const ATTACHMENT_WINDOW_BLOCKS = 32;
+export const ATTACHMENT_BATCH_DESCRIBE_OPERATION = 'attachment_batch_describe';
+export const ATTACHMENT_BATCH_PULL_OPERATION = 'attachment_batch_pull';
+export const ATTACHMENT_BATCH_MAX_FILES = 16;
+export const ATTACHMENT_BATCH_MEMBER_BYTES = 2 * 1024 * 1024;
+export const ATTACHMENT_BATCH_MAX_BYTES = 8 * 1024 * 1024;
 const integer = z.union([z.number(), z.string().regex(/^\d+$/u).transform(Number)])
   .pipe(z.number().int().nonnegative().max(FRAMED_SYNC_LIMITS.maxBlobBytes));
 const key = attachmentBlockResourceSchema.shape.storageKey;

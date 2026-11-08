@@ -2,7 +2,7 @@ import os from 'node:os';
 
 import { resolveLocalSyncGroupDevice } from '../../lib/platform/syncGroupContract.js';
 import { resolveDesktopSyncGroupPlatform } from '../../lib/platform/syncGroupPlatform.js';
-import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
+import { DESKTOP_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import type { WorkspaceSnapshot, WorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
 
@@ -61,7 +61,7 @@ export function buildDiscoveryPayload(appVersion: string) {
     group_display_name: group.display_name,
     group_id: group.group_id,
     group_tag: workgroup.group_tag,
-    protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+    protocol: DESKTOP_SYNC_PROTOCOL_DESCRIPTOR,
     provider_device_id: local.device_identity_key,
     provider_device_name: local.device_name,
     provider_platform: resolveDesktopPlatformLabel(),

@@ -97,6 +97,7 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     ...(args.framedPeer ? { framedPeer: args.framedPeer } : {}),
     ...(args.restoreId ? { restoreId: args.restoreId } : {}),
     runId: args.runId,
+    ...(args.triggerReason === 'initial' ? { initialAttachmentPull: true } : {}),
     ...(args.signal ? { signal: args.signal } : {}),
     waitForInbound: () => args.triggerReason === 'manual' || args.isManualRequested?.() === true,
     onProgress: args.setSyncProgress,

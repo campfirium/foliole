@@ -3,16 +3,17 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { readFramedSyncStream } from '../../../../../../lib/core/sync/framedSyncBinaryStream.js';
+import { encodeFramedSyncStream, readFramedSyncStream } from '../../../../../../lib/core/sync/framedSyncBinaryStream.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
 import { decodeRequestSyncInventory, iterateRequestSyncInventory } from '../../../../../../lib/core/sync/requestSyncInventoryWire.js';
 import { prepareRequestSyncWire, readRequestSyncWire } from '../../../../../../lib/core/sync/requestSyncWire.js';
 import type { NativeRequestSyncHttpRequest } from '../../../../../../lib/platform/nativeRequestSyncHttpContract.js';
 
-const native = vi.hoisted(() => ({ post: vi.fn(), sign: vi.fn(), cancel: vi.fn() }));
+const native = vi.hoisted(() => ({ post: vi.fn(), readBatch: vi.fn(), sign: vi.fn(), cancel: vi.fn() }));
 vi.mock('../../../companionWorkspaceRuntimeRepository.js', () => ({ FolioleCompanionSync: {
-  postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign, cancelRequestSyncHttp: native.cancel
+  postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign, cancelRequestSyncHttp: native.cancel,
+  readRequestSyncAttachmentBatch: native.readBatch
 } }));
 vi.mock('../../runtime/companionFramedPayloadBudget.js', () => ({
   companionFramedFileOwner: () => ({ library_key: 'test-library', generation_id: 'test-generation' })
@@ -151,4 +152,34 @@ it.each(['E_ABORT', 'ENOSPC'])('cancels a blocked attachment request for data wo
     attachmentRequestSchema.parse({ operation: 'pull', requestId: new Uint8Array(16), storageKey: `${'a'.repeat(64)}.pdf`, byteLength: 524288 }));
   await expect(receiving).rejects.toThrow(code === 'E_ABORT' ? 'attachment_receive_paused' : 'ENOSPC');
   expect(native.cancel).toHaveBeenCalledOnce(); expect(values.size).toBe(0);
+});
+
+it('consumes streamed Android bytes one demand at a time and cancels before removing request files', async () => {
+  const { files, values } = storage();
+  const encoded: string[] = [];
+  for await (const bytes of encodeFramedSyncStream(await body())) encoded.push(Buffer.from(bytes).toString('base64'));
+  native.post.mockImplementation(async (request: NativeRequestSyncHttpRequest) => {
+    expect(request.stream_attachment_batch).toBe(true);
+    return { base64: encoded.shift() };
+  });
+  native.readBatch.mockImplementation(async () => {
+    const next = encoded.shift();
+    return next ? { base64: next } : { done: true };
+  });
+  native.cancel.mockImplementation(async ({ request_id }) => {
+    expect(request_id).toBe(native.post.mock.calls[0]?.[0].request_id);
+    expect(values.size).toBeGreaterThan(0);
+  });
+  await withCompanionRequestSyncHttp(files, { context, endpointUrl: 'http://127.0.0.1:1',
+    pathWithQuery: '/companion/framed-sync?request=attachment_batch_pull', body: await body(), streamAttachmentBatch: true },
+  async stream => {
+    for await (const decoded of readRequestSyncWire({ context, groupKey, ...stream })) {
+      expect(decoded.message.payloadCase).toBe('round_receipt');
+      expect([...values.keys()].some(key => key.includes('/http-in-'))).toBe(false);
+      break;
+    }
+  });
+  expect(native.readBatch).toHaveBeenCalled();
+  expect(native.cancel).toHaveBeenCalledOnce();
+  expect(values.size).toBe(0);
 });

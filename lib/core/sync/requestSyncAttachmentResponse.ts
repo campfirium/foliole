@@ -99,7 +99,7 @@ async function* responseMessages(host: RequestSyncAttachmentHost, window: Attach
   yield attachmentMessage({ ...request, data: new Uint8Array(), state: result.kind, offset: result.offset });
 }
 
-async function* sourceMessages(request: AttachmentRequest,
+export async function* sourceMessages(request: AttachmentRequest,
   file: AttachmentSourceFile, signal?: AbortSignal, onProgress?: () => void) {
   if (request.operation === 'describe') {
     yield attachmentMessage({ ...request, ...file.resource, state: 'complete' });

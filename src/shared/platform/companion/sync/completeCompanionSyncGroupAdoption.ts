@@ -18,7 +18,7 @@ export async function completeCompanionSyncGroupAdoption(options: {
   if (state.localExited || state.peerRemoved || !state.normalSyncReady || !state.peerLibraryEpoch) {
     throw new Error('sync_group_local_adoption_source_unavailable');
   }
-  await syncCompanionIdentityObjects(adoption.endpointUrl, { framedPeer: {
+  await syncCompanionIdentityObjects(adoption.endpointUrl, { initialAttachmentPull: true, framedPeer: {
     deviceId: adoption.providerDeviceId, libraryEpoch: state.peerLibraryEpoch,
     protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version
   }, ...(options.onProgress ? { onProgress: options.onProgress } : {}) });

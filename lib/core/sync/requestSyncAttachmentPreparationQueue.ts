@@ -1,5 +1,6 @@
 import { AttachmentReceivePaused } from './attachmentBlockTransfer.js';
 import type { AttachmentReceiveSession } from './attachmentReceiveSession.js';
+import { runAttachmentBatchStage } from './requestSyncAttachmentBatchStage.js';
 import { prepareRequestSyncAttachment, pullRequestSyncAttachmentWindows } from './requestSyncAttachmentPull.js';
 import type { RequestSyncAttachmentHost } from './requestSyncAttachmentResponse.js';
 import { createAttachmentSegments, type AttachmentDemandSlice } from './requestSyncAttachmentSegments.js';
@@ -17,6 +18,18 @@ type PullInput = {
   failed: Set<string>; pendingKeys: Set<string>; shouldYield(): boolean;
   attempt(key: string, execute: () => Promise<Outcome>): Promise<void>;
 };
+
+export async function runAttachmentPullStage(input: PullInput) {
+  const { host, exchange, keys, failed, pendingKeys, shouldYield, attempt } = input;
+  if (exchange.batchAttachmentPull) return runAttachmentBatchStage(input, keys);
+  if (exchange.prepareAttachment) return runPreparedAttachmentPulls(input);
+  let attempted = false;
+  for (const key of keys) {
+    if (failed.has(key) || (attempted && shouldYield())) { pendingKeys.add(key); continue; }
+    attempted = true;
+    await attempt(key, () => pullRequestSyncAttachmentWindows(host, exchange, key, shouldYield));
+  }
+}
 
 /** Two disposable preparations, excluding the active send and including its next window. */
 export async function runPreparedAttachmentPulls(input: PullInput) {
