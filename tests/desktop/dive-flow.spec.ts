@@ -27,9 +27,7 @@ for (const kind of ['topic', 'item'] as const) {
       await empty.fill('Empty study');
       await empty.press('Enter');
     }
-    await page.getByRole('treeitem', { name: 'Dive source', exact: true }).click({ button: 'right' });
-    await page.getByRole('menuitem', { name: 'Add to Dive…' }).click();
-    await page.getByRole('dialog', { name: 'Add to Dive' }).getByRole('button', { name: 'Focused study' }).click();
+    await addSource(page, 'Dive source');
 
     const current = () => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId);
     await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
@@ -40,13 +38,17 @@ for (const kind of ['topic', 'item'] as const) {
 
     const id = kind === 'topic' ? 'dive-topic' : 'dive-item';
     await expect.poll(current).toBe(id);
-    const output = path.resolve('.tmp/artifacts/T745-0-3');
+    const output = path.resolve('.tmp/artifacts/T745-0-4');
     fs.mkdirSync(output, { recursive: true });
     await page.screenshot({ path: path.join(output, `${kind}-in-dive.png`) });
     if (kind === 'item') {
       await page.getByRole('button', { name: /^(Show Answer|Reveal Answer)$/ }).click();
       await page.getByRole('button', { name: 'Good', exact: true }).click();
     } else {
+      await addSource(page, 'Late source');
+      await expect.poll(current).toBe(id);
+      await page.getByRole('button', { name: 'Read', exact: true }).click();
+      await expect.poll(current).toBe('late-source');
       await page.getByRole('button', { name: 'Read', exact: true }).click();
     }
     await expect.poll(current).toBeNull();
@@ -62,6 +64,12 @@ for (const kind of ['topic', 'item'] as const) {
     }, { id, kind });
     expect(learned).toBe(1);
   });
+}
+
+async function addSource(page: import('@playwright/test').Page, title: string) {
+  await page.getByRole('treeitem', { name: title, exact: true }).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Add to Dive…' }).click();
+  await page.getByRole('dialog', { name: 'Add to Dive' }).getByRole('button', { name: 'Focused study' }).click();
 }
 
 async function finishDiveRounds(page: import('@playwright/test').Page, output: string) {
@@ -99,7 +107,9 @@ async function seedDiveCards(page: import('@playwright/test').Page, kind: 'topic
       { id: 'dive-topic', kind: 'topic', title: 'Dive topic', parentNodeId: 'dive-source',
         content: kind === 'topic' ? 'Dive reading body' : '' },
       ...(kind === 'item' ? [{ id: 'dive-item', kind: 'item' as const, title: 'Dive item',
-        parentNodeId: 'dive-topic', content: 'Dive question', reveal: 'Dive answer', review }] : [])
+        parentNodeId: 'dive-topic', content: 'Dive question', reveal: 'Dive answer', review }] :
+        [{ id: 'late-folder', kind: 'folder' as const, title: 'Late source', content: '' },
+          { id: 'late-source', kind: 'topic' as const, title: 'Late topic', parentNodeId: 'late-folder', content: 'Added during study' }])
     ], { persist: true });
   }, kind);
 }

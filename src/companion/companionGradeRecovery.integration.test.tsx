@@ -16,6 +16,7 @@ vi.mock('@capacitor/core', async () => {
   };
 });
 
+import { DIVE_NODE_FILTER } from '../../lib/core/nodes/dive';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import * as workspaceRepository from '../shared/platform/companion/companionWorkspaceRepository';
 import {
@@ -167,6 +168,10 @@ it('commits a Dive grade and Read across all three phases and resumes the global
   );
   insert.run('dive-topic', 'inbox', 'Dive Topic', 'topic', 'Body', null, now, now);
   insert.run('dive-item', 'dive-topic', 'Dive Item', 'item', 'Question', 'Answer', now, now);
+  const insertDive = database!.prepare(`INSERT INTO nodes (id, title, kind, virtual_filter, manual_child_order, created_at, updated_at)
+    VALUES (?, ?, 'folder', ?, ?, ?, ?)`);
+  insertDive.run('dive', 'Dive', JSON.stringify(DIVE_NODE_FILTER), JSON.stringify(['dive-topic']), now, now);
+  insertDive.run('empty', 'Empty Dive', JSON.stringify(DIVE_NODE_FILTER), null, now, now);
   const ui = renderSurface(await loadCompanionWorkspaceSyncState());
   await waitFor(() => expect(ui.result.current.session.currentCard).not.toBeNull());
   const global = ui.result.current.session.currentCard!.nodeId;

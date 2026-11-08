@@ -13,6 +13,7 @@ import { createFsrsReviewScheduler } from '../../lib/core/review/fsrsScheduler.j
 import { createReviewSchedulerParameters, DEFAULT_REVIEW_SCHEDULER_SETTINGS, getReviewSchedulerVersion } from '../../lib/core/review/settings.js';
 import { createInitialSchedulerCard } from '../../lib/core/review/types.js';
 
+import { createDive } from './diveRepository.js';
 import { closeLibraries, createPeer, startLibraries, type Peer } from './syncLibrary.testSupport.js';
 
 const now = '2026-10-28T08:00:00.000Z';
@@ -50,7 +51,8 @@ async function setup(kind: 'topic' | 'item') {
         history: { mode: value.mode, targetOpId: value.targetOpId } })
   };
   const mode = kind === 'item' ? 'review-first' : 'reading-only';
-  return { peer, mode, facts: () => persistence.learningSnapshot(peer.port),
+  return { peer, mode, scope: (topicIds: string[]) => ({ id: createDive(peer.db, 'Test Dive', topicIds).id, topicIds }),
+    facts: () => persistence.learningSnapshot(peer.port),
     open: (overrides: Partial<Parameters<typeof openDailyFlow>[1]> = {}) =>
       openDailyFlow(peer.port, { now, mode, ...overrides }, settings, persistence),
     commit: (command: DailyFlowCommitArgs) => commitDailyFlow(peer.port, command, settings, persistence) };
@@ -64,12 +66,13 @@ function readArgs(nodeId: string) {
 }
 
 it('reads and undoes/redoes within a dive without moving the global position', async () => {
-  const { peer, open, commit, facts } = await setup('topic');
+  const { peer, open, commit, facts, scope } = await setup('topic');
   const global = (await open()).session;
   expect(global.currentNodeId).toBe('a');
   const rows = await readCycleRows(peer.port);
   const [, first, middle, last] = rows.map(row => row.node_id) as [string, string, string, string];
-  const dive = (await open({ dive: { id: 'dive', topicIds: [last, first] } })).session;
+  const group = scope([last, first]);
+  const dive = (await open({ dive: group })).session;
   expect(dive.currentNodeId).toBe(first);
   expect((await readDailyFlow(peer.port))!.session).toEqual(global);
   const command: DailyFlowCommitArgs = { opId: 'read-b', now, token: dive.daily!, sourceSession: dive,
@@ -82,7 +85,7 @@ it('reads and undoes/redoes within a dive without moving the global position', a
     lapLimit: global.cycle!.lapLimit, clearedAt: null });
   expect((await readCycleRows(peer.port)).filter(row => row.node_id !== first)).toEqual(rows.filter(row => row.node_id !== first));
   expect(await commit(command)).toMatchObject({ replayed: true, session: { currentNodeId: last } });
-  expect((await open({ dive: { id: 'dive', topicIds: [last, first] }, seed: result.session })).session.currentNodeId).toBe(last);
+  expect((await open({ dive: group, seed: result.session })).session.currentNodeId).toBe(last);
   await expect(commit({ ...command, readings: [{ nodeId: first, before: null, after: null }] }))
     .rejects.toThrow('daily_flow_operation_mismatch');
   await expect(commit({ ...command, opId: 'duplicate-read' })).rejects.toThrow('daily_flow_changed');
@@ -113,10 +116,10 @@ it('reads and undoes/redoes within a dive without moving the global position', a
 });
 
 it('grades the global current item within a dive and revalidates that slot on return', async () => {
-  const { peer, open, commit, facts } = await setup('item');
+  const { peer, open, commit, facts, scope } = await setup('item');
   const global = (await open()).session;
   expect(global.currentNodeId).toBe('a');
-  const dive = (await open({ dive: { id: 'dive', topicIds: ['topic-c', 'topic-a'] } })).session;
+  const dive = (await open({ dive: scope(['topic-c', 'topic-a']) })).session;
   expect(dive.currentNodeId).toBe('a');
   const before = (await facts()).nodesById.a!.review ?? null;
   const cardBefore = createInitialSchedulerCard(now);
@@ -151,10 +154,10 @@ it('grades the global current item within a dive and revalidates that slot on re
 });
 
 it('returns to the next global slot when a still-ready Topic moved to the tail', async () => {
-  const { peer, open, commit } = await setup('topic');
+  const { peer, open, commit, scope } = await setup('topic');
   const global = (await open()).session;
   const next = (await readCycleRows(peer.port)).find(row => row.order_key > global.cycle!.scanAfter)!;
-  const dive = (await open({ dive: { id: 'dive', topicIds: ['a'] } })).session;
+  const dive = (await open({ dive: scope(['a']) })).session;
   await commit({ opId: 'read-ready', now, token: dive.daily!, sourceSession: dive,
     readingAction: 'read', readings: [{ nodeId: 'a', before: null, after: { ...reading, nextAt: now } }] });
   expect((await readCycleRows(peer.port)).find(row => row.node_id === 'a')).toMatchObject({ active: 1, initial_task: 0 });
@@ -162,25 +165,26 @@ it('returns to the next global slot when a still-ready Topic moved to the tail',
 });
 
 it('keeps the current Dive open when undoing and redoing another Dive’s Read', async () => {
-  const { open, commit, facts } = await setup('topic');
-  const first = (await open({ dive: { id: 'first', topicIds: ['b'] } })).session;
+  const { open, commit, facts, scope } = await setup('topic');
+  const first = (await open({ dive: scope(['b']) })).session;
   const read = await commit({ opId: 'read-first', now, token: first.daily!, sourceSession: first,
     readingAction: 'read', readings: [...readArgs('b').readings] });
-  const second = (await open({ dive: { id: 'second', topicIds: ['c'] } })).session;
+  const other = scope(['c']);
+  const second = (await open({ dive: other })).session;
   const undo = await commit({ opId: 'undo-first', now, token: second.daily!, sourceSession: second,
     historyMode: 'undo', historyTargetOpId: 'read-first', historySourceSession: read.session, nextSession: first,
     readings: [{ nodeId: 'b', before: reading, after: null }] });
-  expect(undo.session).toMatchObject({ dive: { id: 'second' }, currentNodeId: 'c' });
+  expect(undo.session).toMatchObject({ dive: { id: other.id }, currentNodeId: 'c' });
   expect((await facts()).nodesById.b!.reading).toBeNull();
   const redo = await commit({ opId: 'redo-first', now, token: undo.session.daily!, sourceSession: undo.session,
     historyMode: 'redo', historyTargetOpId: 'read-first', historySourceSession: first, nextSession: read.session,
     readings: [...readArgs('b').readings] });
-  expect(redo.session).toMatchObject({ dive: { id: 'second' }, currentNodeId: 'c' });
+  expect(redo.session).toMatchObject({ dive: { id: other.id }, currentNodeId: 'c' });
   expect((await facts()).nodesById.b!.reading).toMatchObject({ repetitionCount: 1 });
 });
 
 it('pauses at each choice and keeps the round boundary and scheduled Topic positions', async () => {
-  const { peer, open, commit, facts } = await setup('topic');
+  const { peer, open, commit, facts, scope } = await setup('topic');
   const later = '2026-10-28T09:00:00.000Z';
   const future = '2026-10-28T10:00:00.000Z';
   addNode(peer, 'item-b', 5, 'item', 'b');
@@ -190,7 +194,7 @@ it('pauses at each choice and keeps the round boundary and scheduled Topic posit
   const scheduled = { ...reading, nextAt: later };
   saveNodeReadingStateWithSync(peer.driver, { nodeId: 'c', reading: scheduled, updatedAt: now, hostName: peer.name });
   const global = (await open()).session;
-  const dive = { id: 'dive', topicIds: ['b', 'c'] };
+  const dive = scope(['b', 'c']);
   const mode = 'recommended';
   const start = (await open({ dive, mode })).session;
   expect(start).toMatchObject({ currentNodeId: 'b', dive: { phase: 'initial', stop: null } });
@@ -221,7 +225,8 @@ it('pauses at each choice and keeps the round boundary and scheduled Topic posit
   const finalStop = await read(nextRound, later, tomorrow);
   expect(finalStop).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'waiting' } });
   expect((await facts()).nodesById['item-b']!.review?.reps).toBe(1);
-  const switched = (await open({ dive: { id: 'empty', topicIds: [] }, seed: finalStop, now: later })).session;
-  expect(switched).toMatchObject({ currentNodeId: null, dive: { id: 'empty', phase: 'initial', stop: 'empty' } });
+  const empty = scope([]);
+  const switched = (await open({ dive: empty, seed: finalStop, now: later })).session;
+  expect(switched).toMatchObject({ currentNodeId: null, dive: { id: empty.id, phase: 'initial', stop: 'empty' } });
   expect((await open({ returnFromDive: true, now: later })).session.currentNodeId).toBe(global.currentNodeId);
 });

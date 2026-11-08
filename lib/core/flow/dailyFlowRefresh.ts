@@ -30,8 +30,11 @@ export function refreshDailyFlowAfterSync(db: DbPort, now: string, settings: Dai
     const hash = dailyFlowMembershipHash(ids);
     if (stored.session.candidateMembershipHash === hash) return false;
     const rows = await readCycleRows(tx);
-    // Installed lists have no baseline yet; compare their original membership without rebuilding them.
-    if (!stored.session.candidateMembershipHash && dailyFlowMembershipHash(rows.map(row => row.node_id)) === hash) {
+    // Local learning already changes active rows. Keep their positions when
+    // a sync round finds the same live membership.
+    const activeHash = dailyFlowMembershipHash(rows.filter(row => row.active).map(row => row.node_id));
+    const installedHash = stored.session.candidateMembershipHash ? undefined : dailyFlowMembershipHash(rows.map(row => row.node_id));
+    if (activeHash === hash || installedHash === hash) {
       await tx.run('UPDATE daily_flow_state SET session_json=? WHERE id=1',
         [JSON.stringify({ ...stored.session, daily: undefined, candidateMembershipHash: hash })]);
       return false;

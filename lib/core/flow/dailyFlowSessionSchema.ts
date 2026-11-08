@@ -10,6 +10,7 @@ import { cycleStateSchema } from './cycleFlowTypes.js';
 export const diveFlowScopeSchema = z.object({ id: z.string().min(1), topicIds: z.array(z.string().min(1)) }).strict();
 const queuePosition = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const diveCursor = diveFlowScopeSchema.extend({
+  memberIds: z.array(z.string().min(1)).optional(),
   mode: z.enum(['recommended', 'review-first', 'reading-only']),
   phase: z.enum(['initial', 'today', 'topics']),
   position: queuePosition,
@@ -17,7 +18,7 @@ const diveCursor = diveFlowScopeSchema.extend({
   hasWork: z.boolean(),
   waiting: z.boolean(),
   stop: z.enum(['empty', 'finished', 'waiting']).nullable()
-});
+}).transform(value => definedProps(value));
 
 export const dailyFlowSessionSchema = z.object({
   dive: diveCursor.optional(), candidateMembershipHash: z.string().optional(), rebuildSourceRevision: z.number().int().nonnegative().optional(), dayWindow: z.object({ start: z.string().datetime(), end: z.string().datetime() }).optional(), flowFormat: z.enum(['legacy-queue-v1', 'cycle-v1']).optional(), cycle: cycleStateSchema.optional(), daily: z.object({ scope: z.string(), dayKey: z.string(), revision: z.number().int().nonnegative() }).optional(), currentNodeId: z.string().nullable(), isAnswerRevealed: z.boolean(),

@@ -38,6 +38,7 @@ vi.mock('../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => asy
 
 import { closeDatabaseConnection, openDatabaseConnection } from '../../electron/database/connection';
 import { openDesktopDailyFlow } from '../../electron/database/dailyFlow';
+import { createDive } from '../../electron/database/diveRepository';
 import { initializeDatabase } from '../../electron/database/migrate';
 import { upsertNodeSnapshot } from '../../electron/database/nodeMutations';
 import { loadWorkspaceSnapshot } from '../../electron/database/workspaceSnapshot';
@@ -251,7 +252,12 @@ it('applies the native grade receipt to the scoped card before returning to glob
   await app.actions.startReviewSession(now);
   const global = app.getState().reviewSession.currentNodeId;
   const item = global === 'first' ? 'second' : 'first';
-  expect(await app.actions.startReviewSession(now, { dive: { id: 'dive', topicIds: [item] } })).toBe(true);
+  upsertNodeSnapshot({ nodeId: 'source', title: 'Source', kind: 'topic', parentNodeId: null,
+    content: '', isTitleManual: true, anchorLink: null, reveal: null, position: null, createdAt: now, updatedAt: now });
+  const { sqlite } = openDatabaseConnection();
+  sqlite.prepare('UPDATE nodes SET parent_id = ? WHERE id = ?').run('source', item);
+  const dive = createDive(sqlite, 'Test Dive', ['source']);
+  expect(await app.actions.startReviewSession(now, { dive: { id: dive.id, topicIds: ['source'] } })).toBe(true);
   app.actions.revealReviewAnswer();
   expect(await app.actions.gradeReviewCard(3, now)).toBe(true);
   expect(app.getState().reviewSession.currentNodeId).toBeNull();

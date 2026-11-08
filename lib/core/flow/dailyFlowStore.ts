@@ -18,6 +18,7 @@ export interface DailyFlowStore {
   readingPreservesPosition?: boolean;
   preparedNavigation?: PreparedFlowNavigation | undefined;
   readState(): Promise<CycleStored | null>;
+  readDiveMembers?(id: string): Promise<string[]>;
   readRows(ids?: readonly string[]): Promise<CycleRow[]>;
   scanRows(after: number, through: number, count: number): Promise<CycleRow[]>;
   writeRows(rows: CycleRow[]): Promise<void>;

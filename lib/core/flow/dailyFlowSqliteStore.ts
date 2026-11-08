@@ -5,6 +5,7 @@ import { createScopedDailyLearningReader } from './dailyFlowGrade.js';
 import type { DailyFlowPersistence } from './dailyFlowService.js';
 import { insertCycleRows, readCycleRows, readDailyFlow, saveCycleFlow, writeCycleRows } from './dailyFlowStorage.js';
 import type { DailyFlowOperation, DailyFlowStore } from './dailyFlowStore.js';
+import { readDiveFlowMembers } from './diveFlowMembership.js';
 
 export function createSqliteDailyFlowStore(db: DbPort, persistence: DailyFlowPersistence): DailyFlowStore {
   const rowsById = new Map<string, CycleRow | undefined>();
@@ -17,6 +18,7 @@ export function createSqliteDailyFlowStore(db: DbPort, persistence: DailyFlowPer
       initializing = !state;
       return state;
     },
+    readDiveMembers: id => readDiveFlowMembers(db, id),
     readRows: cycleRowsReader(db, rowsById),
     scanRows: (after, through, count) => db.query(`SELECT * FROM daily_flow_entries WHERE active=1
       AND order_key > ? AND order_key <= ? ORDER BY order_key LIMIT ?`, [after, through, count]),

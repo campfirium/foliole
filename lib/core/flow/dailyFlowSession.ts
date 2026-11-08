@@ -8,6 +8,7 @@ export interface DiveFlowScope {
 }
 
 export type DiveFlowCursor = DiveFlowScope & {
+  memberIds?: string[];
   mode: ReviewSessionMode;
   phase: 'initial' | 'today' | 'topics';
   position: number;
