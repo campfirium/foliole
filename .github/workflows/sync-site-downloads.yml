@@ -13,7 +13,7 @@ jobs:
   notify-site:
     if: >-
       github.repository == 'campfirium/foliole' &&
-      github.event.workflow_run.conclusion == 'success' &&
+      (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure') &&
       (github.event.workflow_run.head_branch == 'dev' || github.event.workflow_run.event == 'release')
     runs-on: ubuntu-latest
     steps:

@@ -102,7 +102,8 @@ export async function checkTestflightReviews(api, historicalCandidate, query = q
   const candidates = await listTestflightReviews(api, historicalCandidate);
   return Promise.all(candidates.map(async candidate => {
     const [, review] = await project(`ios ${candidate.version} (${candidate.buildNumber})`, candidate, query, IOS_INVITATION);
-    return { ...review, buildNumber: candidate.buildNumber };
+    const releaseSourceSha = candidate.executionLane === 'release-t7' ? candidate.sourceSha : undefined;
+    return { ...review, buildNumber: candidate.buildNumber, releaseSourceSha };
   }));
 }
 

@@ -110,6 +110,7 @@ export const HOSTED_ONLY_PACKAGES = [
 ];
 
 export const HOSTED_RUNNERS = [
+  ['runner:testflight-release-status', 'sync verified TestFlight availability to an existing public release'],
   ['runner:mobile-review-check', 'trusted default-branch mobile availability checks with controlled Play snapshots'],
   ['runner:mobile-candidate-register', 'trusted default-branch mobile registration and original-candidate delivery'],
   ['runner:quality-gate-target', 'quality-gate.sh and all quality-gate-target.sh targets'],

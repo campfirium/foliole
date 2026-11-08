@@ -2,7 +2,9 @@
   "ios": {
     "version": "0.8.1",
     "buildId": "18a23ba1-4d82-4cbc-be24-a40aa7dc6e80",
-    "buildNumber": "5.1"
+    "buildNumber": "5.1",
+    "sourceSha": "2bc09f0065e54a3bcbba3ed5e067307ac1abe350",
+    "executionLane": "release-t7"
   },
   "android-play": {
     "version": "0.8.1",

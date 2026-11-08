@@ -201,6 +201,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.target_version }}
+          EXECUTION_LANE: ${{ inputs.execution_lane }}
         run: |
           node --input-type=module <<'JS'
           import { createMobileGithubApi } from './scripts/mobile/mobile-candidate-store.mjs';
@@ -209,7 +210,8 @@ jobs:
           const receipt = await verifyTestflightReceiptFile('.tmp/artifacts/ios-testflight-receipt',
             process.env.VERSION, process.env.FOLIOLE_IOS_EXPECTED_SHA);
           if (receipt.runId !== process.env.GITHUB_RUN_ID) throw new Error('TestFlight receipt belongs to a different run');
-          await registerTestflightReview(createMobileGithubApi(process.env.GH_TOKEN), receipt);
+          await registerTestflightReview(createMobileGithubApi(process.env.GH_TOKEN),
+            { ...receipt, executionLane: process.env.EXECUTION_LANE });
           JS
       - name: Export producer identity
         id: receipt

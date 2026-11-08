@@ -69,7 +69,8 @@ function reviewReceipt(revision, version, buildNumber) {
   const sourceSha = revision.repeat(40);
   return { schemaVersion: 1, sourceSha, acceptedSha: sourceSha, version, buildNumber, runId: '123',
     buildId: `build-${revision}`, ipaSha256: revision.repeat(64), appId: IOS_APP_ID, groupId: IOS_GROUP_ID,
-    channel: 'testflight', invitationUrl: IOS_INVITATION, externalBuildState: 'WAITING_FOR_BETA_REVIEW' };
+    channel: 'testflight', invitationUrl: IOS_INVITATION, externalBuildState: 'WAITING_FOR_BETA_REVIEW',
+    executionLane: revision === 'b' ? 'qa-mobile-beta' : 'release-t7' };
 }
 
 it('resumes every independently submitted TestFlight build after the sending job exits', async () => {
@@ -90,7 +91,7 @@ it('resumes every independently submitted TestFlight build after the sending job
   states.set(second.buildId, 'BETA_REJECTED');
   expect(await check()).toMatchObject([
     { build: third.buildId, status: 'in-review' },
-    { build: second.buildId, status: 'rejected' },
-    { build: first.buildId, status: 'available', url: IOS_INVITATION }
+    { build: second.buildId, status: 'rejected', releaseSourceSha: undefined },
+    { build: first.buildId, status: 'available', url: IOS_INVITATION, releaseSourceSha: first.sourceSha }
   ]);
 });

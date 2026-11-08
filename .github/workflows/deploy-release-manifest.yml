@@ -17,6 +17,7 @@ on:
       - "scripts/release-download-directory.mjs"
       - "scripts/mobile/site-store-status.mjs"
       - "scripts/mobile/testflight-review-registry.mjs"
+      - "scripts/mobile/sync-testflight-release-status.mjs"
       - "releases/store-candidates.json"
       - "scripts/android/play-availability.mjs"
 
@@ -71,8 +72,29 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  build:
+  sync-testflight-release:
     needs: stores
+    if: github.repository == 'campfirium/foliole'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ needs.stores.outputs.source_sha }}', persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 26.13.0 }
+      - uses: actions/download-artifact@v4
+        with:
+          name: testflight-review-status
+          path: .tmp
+      - name: Clear confirmed TestFlight review markers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/mobile/sync-testflight-release-status.mjs
+
+  build:
+    needs: [stores, sync-testflight-release]
+    if: ${{ !cancelled() && needs.stores.result == 'success' }}
     outputs:
       changed: ${{ steps.compare.outputs.changed }}
     name: Package release manifest
