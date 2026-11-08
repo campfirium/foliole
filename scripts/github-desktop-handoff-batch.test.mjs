@@ -47,6 +47,21 @@ describe('Dependabot batch notifications', () => {
     expect(events.filter((event) => !event.prNumbers).map((event) => event.number)).toEqual(['4', '5']);
   });
 
+  it('leaves bot proposals for centralized QA and still delivers external PRs', () => {
+    github.prs = [bot(1), { ...bot(2), author: { login: 'app/renovate' } },
+      { ...bot(3), author: { login: 'octocat' } }];
+    const state = stateForScan();
+    deliver(scan(state).filter(event => event.prNumbers), state);
+    github.prs.push(bot(4));
+    const deferredConfig = { prs: { ...config.prs, deferDependencyPrs: true } };
+    const events = listGithubMonitorEvents(deferredConfig, state, false, [],
+      (template, data) => JSON.stringify({ template, ...data }));
+
+    expect(events.map(event => event.number)).toEqual(['3']);
+    expect(Object.keys(state.prs)).toEqual(['1', '2']);
+    expect(state.dependabotBatches).toEqual({});
+  });
+
   it('checkpoints each member only after submission and does not re-notify after rebase', () => {
     github.prs = [bot(1), bot(2)];
     const state = stateForScan();

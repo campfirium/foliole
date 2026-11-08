@@ -84,30 +84,29 @@ plan or configure self-hosted infrastructure for this repository.
 
 Record the first hosted job and its candidate inventory before switching updater
 ownership. Local schema validation and extraction are preparation evidence only.
-Verified Renovate and Dependabot proposals share the existing dependency batch
-notification path, including proposals with passing or absent checks. Their exact
-author identities are `app/renovate` and `app/dependabot`; other authors retain
-independent review. Later Renovate check failures retain their separate read-only
-reminders and do not acquire a second dependency writer.
 The retired dashboard Issue #185 is not a user support request.
 
 ## Local adoption
 
-The existing handoff groups newly observed proposals by repository and target
-branch across scans: five quiet minutes after the last arrival, capped at thirty
-minutes from the first. Delivery occurs on the next existing scan. Pending windows
-and delivered checkpoints survive restarts; old individual review notifications
-are not replayed when changing the route. A successful inbox submission is not
-proof that a maintainer viewed or continued the paused task.
+The Foliole Desktop monitor leaves verified bot proposals in GitHub for the next
+centralized check (`deferDependencyPrs: true` in its personal PR declaration).
+Independent PRs retain their review route. The separate Dependabot alert monitor
+only pages for high or critical runtime alerts (`urgentRuntimeOnly: true`). Confirm
+affected shipped versions and urgency before handling an alert ahead of check.
 
-Dependency batches use a compact source-controlled handoff instead of copying
-personal workflow templates. They carry proposal identities and point to the
-existing skills; the handling task fetches current PR bodies, comments and diffs.
-The producer checks the configured prompt limit before enqueue, so an oversized
-event fails without consuming its batch or PR checkpoints. Enqueue still does not
-attest eventual Desktop delivery; inspect dead letters for downstream failures.
+At the start of a new centralized check, before freezing the candidate, list
+all open PRs with `gh pr list --repo campfirium/foliole --state open --limit 1000
+--json number,title,author,baseRefName,headRefOid,isDraft,url`. Use that inventory
+as the batch boundary. Review non-draft proposals targeting `dev` from exactly
+`app/dependabot` or `app/renovate` using the dependency review workflow. List
+other PRs separately for independent review. Recheck existing deferrals, reuse
+recorded implementations where the current proposal is covered, and defer
+blocked groups with a reason and next action. Report inventory failures as
+unknown and continue the authorized QA scope. Later arrivals go to the next
+check. An explicitly requested standalone dependency batch uses the same
+inventory and local workflow.
 
-When the maintainer continues an authorized handling batch, one agent reviews
+For centralized check preparation or an authorized standalone batch, one agent reviews
 the current proposals from both verified bots and implements eligible updates on
 the direct local `dev` checkout. An explicit review-only or single-PR instruction
 takes precedence. A proposal for another base stays read-only. Inspect the full
@@ -125,7 +124,8 @@ Do not merge or check out the bot's branch.
 Run focused behavior checks and necessary builds per group, then share applicable
 checks for the final combination. Builds alone do not prove runtime or data
 behavior. After local checks and scoped commits, record the pending-QA handoff
-below and finish the dependency task. Do not start a check workspace, remote run
+below. The centralized check owner then freezes its candidate. A standalone
+batch finishes here. Do not start a check workspace, remote run
 or another chat solely to close its PR. Use normal scheduled dev delivery unless
 a manual push is separately authorized; an explicit QA request can start a batch.
 On later dependency batches, recognize implementations already present in dev
@@ -295,7 +295,7 @@ For a deferral, record the package and exact proposed version, evidence, upstrea
 condition to resume, review date and reviewing owner here. The dependency-batch
 handler rechecks these conditions before selecting upgrades, including when a
 related package changes while the deferred target stays the same. Renovate owns
-version discovery and the existing PR notification path triggers dependency batches;
+version discovery. Centralized check preparation and explicitly requested batches trigger review;
 no separate model timer is required. Renovate does not evaluate arbitrary application
 compatibility conditions. If no batch or explicit review occurs, no condition
 review is claimed. Unchanged blockers stay quiet. When a condition clears, adopt

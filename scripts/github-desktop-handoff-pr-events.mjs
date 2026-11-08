@@ -89,6 +89,7 @@ function collectPrEvents(config, state, prs, errors, renderTemplate) {
   for (const pr of prs) {
     if (pr.isDraft && !config.includeDrafts) continue;
     const dependencyBot = ['app/dependabot', 'app/renovate'].includes(pr.author?.login);
+    if (dependencyBot && config.deferDependencyPrs) continue;
     if (dependencyBot && !wasNotified(config, state, pr)) {
       const members = batches.get(pr.baseRefName) ?? [];
       members.push(pr);

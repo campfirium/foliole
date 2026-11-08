@@ -65,6 +65,12 @@ export function listDependabotAlertEvents(config, state, errors, renderTemplate)
     recordMonitorError(errors, 'github-dependabot-alerts', 'list', error);
     return [];
   }
+  if (config.urgentRuntimeOnly) {
+    alerts = alerts.filter(alert => {
+      const severity = alert.security_vulnerability?.severity ?? alert.security_advisory?.severity;
+      return alert.dependency?.scope === 'runtime' && ['high', 'critical'].includes(severity);
+    });
+  }
   if (!alerts.length) return [];
   try {
     return [buildAlertEvent(config, alerts, renderTemplate)];

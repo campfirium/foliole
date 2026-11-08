@@ -91,6 +91,17 @@ describe('Dependabot alert handoff events', () => {
     expect(event.prompt).toContain('#34 |');
   });
 
+  it('limits immediate alerts to high or critical runtime vulnerabilities when configured', () => {
+    github.alerts = [
+      alert(34), alert(35, { scope: 'runtime', severity: 'medium' }),
+      alert(36, { scope: 'runtime' }), alert(37, { scope: 'runtime', severity: 'critical' })
+    ];
+
+    const [event] = listDependabotAlertEvents(config({ urgentRuntimeOnly: true }), {}, [], renderTemplate);
+
+    expect(event.alertNumbers).toEqual(['36', '37']);
+  });
+
   it('records API failures without advancing alert state', () => {
     github.error = new Error('HTTP 403: Dependabot alerts read permission required');
     const errors = [];
