@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 
+import { VIRTUAL_PUBLISHED_NODE_ID, VIRTUAL_REMOVED_NODE_ID, VIRTUAL_SHELVED_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { FolderListSortDirection, FolderListSortKey } from '../features/nodes/model/folderListOrdering';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -71,20 +72,39 @@ function isDirectoryContainer(
   return false;
 }
 
+const virtualEmptyCopy = {
+  [VIRTUAL_PUBLISHED_NODE_ID]: {
+    title: 'desktop.virtualSearch.published.empty.title',
+    description: 'desktop.virtualSearch.published.empty.description'
+  },
+  [VIRTUAL_SHELVED_NODE_ID]: {
+    title: 'desktop.virtualSearch.shelved.empty.title',
+    description: 'desktop.virtualSearch.shelved.empty.description'
+  },
+  [VIRTUAL_REMOVED_NODE_ID]: {
+    title: 'desktop.virtualSearch.removed.empty.title',
+    description: 'desktop.virtualSearch.removed.empty.description'
+  }
+} as const;
+
 function CompanionDirectoryListContent(props: {
   directory: ReturnType<typeof useCompanionExternalDirectory>;
   handleSelectItem(item: DirectoryListItem): void;
   viewKey: string;
+  selection: CompanionDirectorySelection;
   sections: ReturnType<typeof useCompanionDirectorySections>['sections'];
   snapshot: WorkspaceSnapshot | null;
 }) {
   const t = useTranslation();
+  const id = props.selection.kind === 'virtual' ? props.selection.nodeId : null;
+  const copy = id === VIRTUAL_PUBLISHED_NODE_ID || id === VIRTUAL_SHELVED_NODE_ID || id === VIRTUAL_REMOVED_NODE_ID ? virtualEmptyCopy[id] : null;
   return (
     <section className="companion-page-start">
       <CompanionDirectoryList
         directory={props.directory}
         viewKey={props.viewKey}
-        emptyLabel={t('companion.directory.emptyFolder')}
+        emptyLabel={t(copy?.title ?? 'companion.directory.emptyFolder')}
+        emptyDescription={t(copy?.description ?? 'companion.directory.emptyDescription')}
         onSelectItem={props.handleSelectItem}
         sections={props.sections}
         snapshot={props.snapshot}
@@ -120,7 +140,7 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
     const isContainer = isDirectoryContainer(item, props);
     if (
       item.source === 'internal' ||
-      item.source === 'virtual' ||
+      (item.source === 'virtual' && Boolean(props.snapshot?.nodesById[item.nodeId])) ||
       item.source === 'trash'
     ) {
       props.onSelectNode(item.nodeId);
@@ -151,6 +171,7 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
     viewKey={`directory:${JSON.stringify(props.selection)}`}
     handleSelectItem={handleSelectItem}
     sections={sections}
+    selection={props.selection}
     snapshot={props.snapshot}
   />;
 }

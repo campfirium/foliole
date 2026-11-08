@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 
 import {
   readFolioleWebBinding,
+  removeFolioleWebBinding,
   readFolioleWebMarkdown,
   readFolioleWebYamlCandidates,
   writeFolioleWebBinding
@@ -37,4 +38,13 @@ it('rejects duplicate and invalid field keys', () => {
 it('removes the opening Topic title from published Markdown', () => {
   const content = '---\r\ncategory: essay\r\n---\r\n# Publish once\r\n\r\nBody\r\n\r\n# Keep this section';
   expect(readFolioleWebMarkdown(content)).toBe('Body\r\n\r\n# Keep this section');
+});
+
+it('removes only the Web binding and preserves other metadata and the body', () => {
+  const input = '---\r\ntitle: Existing # keep\r\nfoliole:\r\n  publish:\r\n    schemaVersion: 1\r\n    wordpress: { postId: 42 }\r\n---\r\nBody';
+  const published = writeFolioleWebBinding(input, {
+    fields: [], lastPublishedAt: 'now', pageId: '1', site: 'https://example.com', url: 'https://example.com/topics/1/'
+  });
+  expect(removeFolioleWebBinding(published)).toBe(input);
+  expect(removeFolioleWebBinding(input)).toBe(input);
 });

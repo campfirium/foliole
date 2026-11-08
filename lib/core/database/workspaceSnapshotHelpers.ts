@@ -42,6 +42,7 @@ export interface WorkspaceNodeSnapshot {
   bodyBlobHash?: string | null;
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   collections?: string[];
+  webPublishedAt?: string;
   id: string;
   parentNodeId: string | null;
   position?: number | null;

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { VIRTUAL_ROOT_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { FolderListSortDirection, FolderListSortKey } from '../features/nodes/model/folderListOrdering';
 import { useLocalization } from '../shared/localization/LocalizationProvider';
@@ -27,7 +28,9 @@ export function useCompanionDirectorySections(args: {
   const { directory, selection, sortKey, sortDirection } = args;
   const selectionKey = JSON.stringify(selection);
   const sections = useMemo(() => {
-    const current = JSON.parse(selectionKey) as CompanionDirectorySelection;
+    const selected = JSON.parse(selectionKey) as CompanionDirectorySelection;
+    const current = selected.kind === 'virtual' && selected.nodeId === VIRTUAL_ROOT_NODE_ID
+      ? { kind: 'root' } as const : selected;
     const folderView = current.kind === 'internal' || current.kind === 'virtual'
       ? resolveCompanionFolderViewByNodeId(snapshot, current.nodeId, sortKey, sortDirection) : null;
     const trashView = current.kind === 'trashFolder'
@@ -36,6 +39,8 @@ export function useCompanionDirectorySections(args: {
     const needsRoot = current.kind === 'root' || (!folderView && (current.kind === 'internal' || current.kind === 'virtual'));
     return resolveDirectorySections({ directory, selection: current, snapshot,
       folderView: viewHideDismissedTopics ? applyCompanionFolderTopicFocus(snapshot, folderView) : folderView,
+      virtualRootView: needsRoot && snapshot?.nodesById[VIRTUAL_ROOT_NODE_ID]
+        ? resolveCompanionFolderViewByNodeId(snapshot, VIRTUAL_ROOT_NODE_ID, sortKey, sortDirection) : null,
       rootView: needsRoot ? resolveCompanionRootDirectoryView(snapshot, sortKey, sortDirection) : { items: [] },
       ...(trashView ? { trashView } : {}) });
   }, [directory, selectionKey, snapshot, sortDirection, sortKey, locale, viewHideDismissedTopics]);

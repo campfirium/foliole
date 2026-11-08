@@ -13,6 +13,9 @@ import {
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import { AppButton, requestAppConfirmation } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
+import { useWorkspaceStore } from '../../store/workspaceStore';
+
+import { clearFoliolePublishedTopicMeta } from './clearFoliolePublishedTopicMeta';
 
 export function FoliolePublishedHeaderActions({ nodeId }: { nodeId: string }) {
   const [topic, setTopic] = useState<NativeFoliolePublishedTopic | null>(null);
@@ -39,6 +42,7 @@ export function FoliolePublishedHeaderActions({ nodeId }: { nodeId: string }) {
       title: t('desktop.foliolePublish.unpublishConfirm.title')
     });
     if (!confirmed) return;
+    const libraryScope = useWorkspaceStore.getState().libraryScope;
     setIsSubmitting(true);
     try {
       const result = await unpublishFolioleTopicsFromRuntime([topic.source_key]);
@@ -46,6 +50,7 @@ export function FoliolePublishedHeaderActions({ nodeId }: { nodeId: string }) {
         showAppRuntimeNotice(result.warning);
         return;
       }
+      await clearFoliolePublishedTopicMeta([nodeId], libraryScope, t('desktop.foliolePublish.localSaveError'));
       notifyFoliolePublishedTopicsChanged();
     } catch (reason) {
       showAppRuntimeNotice(reason instanceof Error ? reason.message : t('desktop.foliolePublish.delete.failed'));

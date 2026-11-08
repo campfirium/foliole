@@ -1,3 +1,4 @@
+import { collectRemovedTopicIds, collectShelvedTopicIds } from '../../features/nodes/model/builtinVirtualTopicIds';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
   VIRTUAL_REMOVED_NODE_ID,
@@ -29,34 +30,6 @@ function collectSavedSearchTopicIds(
     return [];
   }
   return virtualResultIndex.resultIdsByVirtualId.get(activeVirtualNodeId) ?? [];
-}
-
-export function collectShelvedTopicIds(args: VirtualContentSnapshot) {
-  const trashedNodeIds = new Set(args.trashedNodeIds);
-  return args.nodeOrder.filter((nodeId) => {
-    const node = args.nodesById[nodeId];
-    return Boolean(
-      node?.shelvedAt &&
-        node.kind === 'topic' &&
-        !node.anchorLink &&
-        !node.specialKind &&
-        !trashedNodeIds.has(nodeId)
-    );
-  });
-}
-
-export function collectRemovedTopicIds(args: VirtualContentSnapshot) {
-  const trashedNodeIds = new Set(args.trashedNodeIds);
-  return args.nodeOrder.filter((nodeId) => {
-    const node = args.nodesById[nodeId];
-    return Boolean(
-      node &&
-        node.kind === 'topic' &&
-        !node.anchorLink &&
-        !node.specialKind &&
-        trashedNodeIds.has(nodeId)
-    );
-  });
 }
 
 export function resolveVirtualContentItemIds(

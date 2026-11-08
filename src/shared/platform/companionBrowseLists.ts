@@ -1,7 +1,9 @@
+import { VIRTUAL_PUBLISHED_NODE_ID, VIRTUAL_REMOVED_NODE_ID, VIRTUAL_SHELVED_NODE_ID } from '../../../lib/core/database/specialNodeIds';
 import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
 import { normalizeWorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshotContract';
 import { resolveNodeOpeningText } from '../../../lib/core/nodes/nodeOpeningPreview';
 import { resolveVirtualNodeResultIds } from '../../../lib/core/nodes/virtualNodeResults';
+import { collectRemovedTopicIds, collectShelvedTopicIds } from '../../features/nodes/model/builtinVirtualTopicIds';
 import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,
   DEFAULT_FOLDER_LIST_SORT_KEY,
@@ -147,6 +149,19 @@ export function resolveCompanionFolderViewByNodeId(
 ): CompanionFolderView | null {
   if (!snapshot || !nodeId) return null;
   const normalizedSnapshot = normalizeWorkspaceSnapshot(snapshot);
+  if (nodeId === VIRTUAL_PUBLISHED_NODE_ID) {
+    const nodes = selectCanonicalVisibleNodeIds(normalizedSnapshot).map((id) => normalizedSnapshot.nodesById[id]!)
+      .filter((node) => node.kind === 'topic' && node.webPublishedAt)
+      .sort((a, b) => b.webPublishedAt!.localeCompare(a.webPublishedAt!));
+    return { nodeId, title: 'Published', items: nodes.map(buildCompanionFolderListEntry) };
+  }
+  if (nodeId === VIRTUAL_SHELVED_NODE_ID || nodeId === VIRTUAL_REMOVED_NODE_ID) {
+    const removed = nodeId === VIRTUAL_REMOVED_NODE_ID;
+    const ids = removed
+      ? collectRemovedTopicIds({ ...normalizedSnapshot, nodeOrder: normalizedSnapshot.trashedNodeIds })
+      : collectShelvedTopicIds(normalizedSnapshot);
+    return { nodeId, title: removed ? 'Removed' : 'Shelved', items: ids.map((id) => buildCompanionFolderListEntry(normalizedSnapshot.nodesById[id]!)) };
+  }
   if (!isCanonicalVisibleNodeId(normalizedSnapshot, nodeId)) return null;
   const folderNode = normalizedSnapshot.nodesById[nodeId];
   if (!isBrowseContainerNode(folderNode)) return null;

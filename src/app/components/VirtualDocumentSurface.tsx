@@ -1,6 +1,7 @@
 import type { JSX } from 'react';
 import { useState } from 'react';
 
+import { collectRemovedTopicIds, collectShelvedTopicIds } from '../../features/nodes/model/builtinVirtualTopicIds';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import {
   VIRTUAL_REMOVED_NODE_ID,
@@ -20,7 +21,6 @@ import { AppButton } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { FolderListView } from './FolderListView';
-import { collectRemovedTopicIds, collectShelvedTopicIds } from './workspaceVirtualContentModel';
 
 interface VirtualDocumentSurfaceProps {
   activeNode: Node;

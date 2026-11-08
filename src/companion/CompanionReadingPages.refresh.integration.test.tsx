@@ -8,6 +8,7 @@ vi.mock('@capacitor/core', async () => {
   }) };
 });
 
+import { removeFolioleWebBinding, writeFolioleWebBinding } from '../../lib/core/foliolePublish/folioleWebPublishFrontmatter';
 import { listCompanionOpenVirtualFolders } from '../shared/platform/companion/browse/companionOpenVirtualFolders';
 import { refreshCompanionWorkspaceSnapshot } from '../shared/platform/companion/companionWorkspaceSnapshotRefresh';
 import { registerCompanionSyncAppliedRefresh } from '../shared/platform/companion/companionWorkspaceSnapshotStore';
@@ -76,7 +77,7 @@ it.each(['virtual', 'internal'])('keeps database text membership fresh from a %s
   library.database.exec("UPDATE nodes SET content = 'needle original' WHERE id = 'article'");
   await start();
   fireEvent.click(await screen.findByTestId('companion-tab-shortcut'));
-  if (location === 'virtual') fireEvent.click(await screen.findByTestId('companion-directory-node-special-virtual-root'));
+  if (location === 'virtual') expect(screen.queryByTestId('companion-directory-node-special-virtual-root')).toBeNull();
   else fireEvent.click(await screen.findByRole('button', { name: 'Open folder Folder' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Open folder Filtered' }));
   const row = await screen.findByRole('button', { name: 'Open topic Article' });
@@ -93,4 +94,63 @@ it.each(['virtual', 'internal'])('keeps database text membership fresh from a %s
   expect(screen.getByTestId('companion-scroll-container')).toBe(page);
   fireEvent.click(screen.getByTestId('companion-top-bar-back'));
   await waitFor(() => expect(listCompanionOpenVirtualFolders()).not.toContain('filtered'));
+});
+
+it('opens desktop Shelved and Removed views directly from the mobile directory', async () => {
+  library.database.exec(`INSERT INTO nodes (id,parent_id,title,kind,content,created_at,updated_at)
+    VALUES ('special-virtual-root',NULL,'Virtual','folder','','2026-01-01','2026-01-01'),
+    ('removed','folder','Removed topic','topic','Removed body','2026-01-01','2026-01-01')`);
+  library.database.exec("UPDATE nodes SET shelved_at = '2026-11-08' WHERE id IN ('article', 'removed')");
+  library.database.exec("UPDATE nodes SET deleted_at = '2026-11-08' WHERE id = 'removed'");
+
+  await start();
+  fireEvent.click(await screen.findByTestId('companion-tab-shortcut'));
+  expect(screen.getByRole('heading', { name: 'Home' })).toBeVisible();
+  expect(screen.queryByTestId('companion-directory-node-special-virtual-root')).toBeNull();
+  fireEvent.click(await screen.findByRole('button', { name: 'Open folder Shelved' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Open topic Article' }));
+  await screen.findByTestId('companion-article-document');
+  await exitReader();
+  expect(await screen.findByRole('button', { name: 'Open topic Article' })).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Open topic Removed topic' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Open folder Removed' }));
+  const removed = await screen.findByRole('button', { name: 'Open topic Removed topic' });
+  expect(screen.queryByRole('button', { name: 'Open topic Article' })).toBeNull();
+  fireEvent.click(removed);
+  await screen.findByTestId('companion-article-document');
+  await exitReader();
+  expect(await screen.findByRole('button', { name: 'Open topic Removed topic' })).toBeVisible();
+});
+
+it('describes empty built-in virtual views using their desktop labels', async () => {
+  library.database.exec(`INSERT INTO nodes (id,parent_id,title,kind,content,created_at,updated_at)
+    VALUES ('special-virtual-root',NULL,'Virtual','folder','','2026-01-01','2026-01-01')`);
+
+  await start();
+  fireEvent.click(await screen.findByTestId('companion-tab-shortcut'));
+  fireEvent.click(await screen.findByRole('button', { name: 'Open folder Shelved' }));
+  expect(await screen.findByText('No shelved topics')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Open folder Removed' }));
+  expect(await screen.findByText('No removed topics')).toBeVisible();
+});
+
+it('shows synced Web metadata in Published and removes a withdrawn topic in the same view', async () => {
+  const published = writeFolioleWebBinding('Article body', {
+    fields: [], lastPublishedAt: '2026-11-08T00:00:00.000Z', pageId: '1',
+    site: 'https://example.com', url: 'https://example.com/topics/1/'
+  });
+  library.database.exec(`INSERT INTO nodes (id,parent_id,title,kind,content,created_at,updated_at)
+    VALUES ('special-virtual-root',NULL,'Virtual','folder','','2026-01-01','2026-01-01')`);
+  const saveBody = library.database.prepare("UPDATE nodes SET content = ?, updated_at = ? WHERE id = 'article'");
+  saveBody.run(published, '2026-11-08');
+  await start();
+  fireEvent.click(await screen.findByTestId('companion-tab-shortcut'));
+  fireEvent.click(await screen.findByRole('button', { name: 'Open folder Published' }));
+  expect(await screen.findByRole('button', { name: 'Open topic Article' })).toBeVisible();
+  saveBody.run(removeFolioleWebBinding(published), '2026-11-09');
+  await publishCommittedFacts(['article']);
+  expect(await screen.findByText('Nothing is published')).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Open topic Article' })).toBeNull();
 });

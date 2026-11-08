@@ -121,6 +121,22 @@ export function readPublishProviderRecord(
   return value.toJSON() as Record<string, unknown>;
 }
 
+export function removePublishProviderRecord(content: string, provider: string, createError: ErrorFactory) {
+  const parts = splitMarkdownFrontmatter(content, createError);
+  if (parts.frontmatter === null) return content;
+  const { root } = parseRoot(parts.frontmatter, createError);
+  const foliole = root && getMapValue(root, 'foliole', createError);
+  const publish = foliole && getMapValue(foliole, 'publish', createError);
+  if (!publish) return content;
+  validatePublishVersion(publish, createError);
+  const pair = findPair(publish, provider);
+  if (!pair) return content;
+  const [, end] = pairRange(pair, createError);
+  const updated = replacePair(parts.frontmatter, pair, '', parts.newline, createError);
+  return joinMarkdownFrontmatter(parts, end === parts.frontmatter.length && updated.endsWith(parts.newline)
+    ? updated.slice(0, -parts.newline.length) : updated);
+}
+
 export function writePublishProviderRecord(
   content: string,
   provider: string,
@@ -171,7 +187,7 @@ function replacePair(
     throw createError('Foliole publish frontmatter cannot be safely updated.');
   }
   const replaced = frontmatter.slice(start, end);
-  const suffix = replaced.endsWith(newline) ? newline : '';
+  const suffix = source && replaced.endsWith(newline) ? newline : '';
   return `${frontmatter.slice(0, start)}${source}${suffix}${frontmatter.slice(end)}`;
 }
 

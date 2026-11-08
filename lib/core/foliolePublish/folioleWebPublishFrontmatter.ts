@@ -2,6 +2,7 @@ import { isMap, isScalar, parseDocument } from 'yaml';
 
 import {
   readPublishProviderRecord,
+  removePublishProviderRecord,
   serializeYamlString,
   splitMarkdownFrontmatter,
   stripOpeningPublishTitle,
@@ -65,6 +66,15 @@ export function readFolioleWebBinding(content: string): FolioleWebBinding | null
     site: record.site,
     url: record.url
   };
+}
+
+export function removeFolioleWebBinding(content: string) {
+  return removePublishProviderRecord(content, 'web', createError);
+}
+
+export function readFolioleWebPublishedAt(frontmatter: unknown): string | undefined {
+  if (typeof frontmatter !== 'string' || !frontmatter.includes('lastPublishedAt')) return undefined;
+  try { return readFolioleWebBinding(frontmatter)?.lastPublishedAt; } catch { return undefined; }
 }
 
 function serializeFields(fields: FolioleWebField[]) {

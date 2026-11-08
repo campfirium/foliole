@@ -2,9 +2,12 @@
 import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
+import { VIRTUAL_PUBLISHED_NODE_ID } from '../../../../../../lib/core/database/specialNodeIds.js';
+import { removeFolioleWebBinding, writeFolioleWebBinding } from '../../../../../../lib/core/foliolePublish/folioleWebPublishFrontmatter.js';
 import type { DbParams, DbRow } from '../../../../../../lib/core/sync/dbPort.js';
 import { COMPANION_DATABASE_VERSION } from '../../../../../../lib/platform/nativeCompanionContract.js';
 import { createCompanionRequestFixture } from '../../../../../test/companionRequestSync.testSupport.js';
+import { resolveCompanionFolderViewByNodeId } from '../../../companionBrowseLists.js';
 import { saveCompanionSyncNodeViewState } from '../../../companionSyncStateWriters.js';
 import * as companionRuntime from '../../../companionWorkspaceRuntimeRepository.js';
 import { refreshCompanionWorkspaceSnapshot } from '../../companionWorkspaceSnapshotRefresh.js';
@@ -105,4 +108,37 @@ it('finishes a real HTTP update when its snapshot interrupts attachment observat
       expect((await readCompanionAttachmentReferences(library.owner)).storageKeys).toEqual([]);
     } finally { writer.mockRestore(); reading.mockRestore(); snapshots.mockRestore(); }
   } finally { await library.close(); await host.close(); }
+});
+
+
+it('syncs a desktop publication and its withdrawal to a separate mobile database', async () => {
+  invalidateCompanionReadingScope();
+  const host = await createCompanionRequestFixture();
+  const nodeId = 'publication-topic';
+  const title = 'Published topic';
+  const published = writeFolioleWebBinding('Body', {
+    fields: [], lastPublishedAt: '2026-11-08T00:00:00.000Z', pageId: '1',
+    site: 'https://example.com', url: 'https://example.com/topics/1/'
+  });
+  try {
+    await host.fixture.right.seed({ nodeId, title, content: published });
+    await host.sync();
+    const before = await refreshCompanionWorkspaceSnapshot({ kind: 'full' });
+    expect(resolveCompanionFolderViewByNodeId(before, VIRTUAL_PUBLISHED_NODE_ID)?.items.map(item => item.nodeId))
+      .toEqual([nodeId]);
+
+    const withdrawn = removeFolioleWebBinding(published);
+    await host.fixture.right.seed({ nodeId, title, content: withdrawn });
+    await host.sync();
+    const after = await refreshCompanionWorkspaceSnapshot();
+    expect(resolveCompanionFolderViewByNodeId(after, VIRTUAL_PUBLISHED_NODE_ID)?.items).toEqual([]);
+    const reloaded = await loadIosCompanionWorkspaceSnapshot(host.db);
+    expect(resolveCompanionFolderViewByNodeId(reloaded, VIRTUAL_PUBLISHED_NODE_ID)?.items).toEqual([]);
+    const sql = 'SELECT content FROM nodes WHERE id = ?';
+    const desktop = new Database(host.fixture.rightSnapshot.databasePath, { readonly: true });
+    try {
+      expect(desktop.prepare(sql).pluck().get(nodeId)).toBe(withdrawn);
+      expect(host.sqlite.prepare(sql).pluck().get(nodeId)).toBe(withdrawn);
+    } finally { desktop.close(); }
+  } finally { await host.close(); }
 });

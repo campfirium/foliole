@@ -1,3 +1,4 @@
+import { VIRTUAL_PUBLISHED_NODE_ID, VIRTUAL_REMOVED_NODE_ID, VIRTUAL_ROOT_NODE_ID, VIRTUAL_SHELVED_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { TranslationKey } from '../shared/localization/translations';
 import {
@@ -16,7 +17,6 @@ import {
 import { toTrashItem, toTrashRootItem, type TrashDirectoryListItem } from './CompanionDirectoryTrashModel';
 
 export const INBOX_NODE_ID = 'special-inbox';
-const VIRTUAL_ROOT_NODE_ID = 'special-virtual-root';
 
 export type CompanionDirectorySelection =
   | { kind: 'root' }
@@ -164,16 +164,21 @@ function isVirtualChild(snapshot: WorkspaceSnapshot | null, item: CompanionFolde
   return snapshot?.nodesById[item.nodeId]?.parentNodeId === VIRTUAL_ROOT_NODE_ID;
 }
 
-function resolveVirtualItems(snapshot: WorkspaceSnapshot | null, rootItems: CompanionFolderListEntry[]) {
-  return rootItems
-    .filter((item) => isVirtualRootItem(item) || isVirtualChild(snapshot, item))
-    .map(toVirtualItem);
+function resolveVirtualItems(snapshot: WorkspaceSnapshot | null, virtualRootView: FolderView) {
+  if (!snapshot?.nodesById[VIRTUAL_ROOT_NODE_ID]) return [];
+  return [
+    { nodeId: VIRTUAL_PUBLISHED_NODE_ID, title: 'Published', kind: 'folder' as const, preview: null },
+    { nodeId: VIRTUAL_SHELVED_NODE_ID, title: 'Shelved', kind: 'folder' as const, preview: null },
+    { nodeId: VIRTUAL_REMOVED_NODE_ID, title: 'Removed', kind: 'folder' as const, preview: null },
+    ...(virtualRootView?.items ?? [])
+  ].map(toVirtualItem);
 }
 
 export function resolveDirectorySections(args: {
   directory: CompanionExternalDirectory;
   folderView: FolderView;
   rootView: RootView;
+  virtualRootView?: FolderView;
   selection: CompanionDirectorySelection;
   snapshot: WorkspaceSnapshot | null;
   trashView?: TrashView;
@@ -194,13 +199,13 @@ export function resolveDirectorySections(args: {
   const internalItems = rootItems
     .filter((item) => !isInboxItem(item) && !isVirtualRootItem(item) && !isVirtualChild(args.snapshot, item))
     .map(toInternalItem);
-  const virtualItems = resolveVirtualItems(args.snapshot, rootItems);
+  const virtualItems = resolveVirtualItems(args.snapshot, args.virtualRootView ?? null);
   const externalFolders = [...args.directory.folders]
     .map(toExternalFolderItem);
   const sections: DirectorySection[] = [
     { id: 'home', items: [...inboxItems, ...internalItems] },
-    { id: 'external', items: externalFolders, titleKey: 'companion.directory.section.external' },
     { id: 'virtual', items: virtualItems, titleKey: 'companion.directory.section.virtual' },
+    { id: 'external', items: externalFolders, titleKey: 'companion.directory.section.external' },
     { id: 'trash', items: [toTrashRootItem()], titleKey: 'companion.directory.section.trash' }
   ];
   return sections.filter((section) => section.items.length > 0);

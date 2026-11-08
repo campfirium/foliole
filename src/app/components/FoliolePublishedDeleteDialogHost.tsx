@@ -23,10 +23,13 @@ import {
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { clearFoliolePublishedTopicMeta } from './clearFoliolePublishedTopicMeta';
+
 interface PendingPublishedDelete {
   deleteAfterUnpublish: () => void;
   nodeIds: string[];
   sourceKeys: string[];
+  publishedNodeIds: string[];
 }
 
 function usePublishedDeleteRegistration(
@@ -41,6 +44,7 @@ function usePublishedDeleteRegistration(
         setPending({
           deleteAfterUnpublish: onAllowed ?? (() => useWorkspaceStore.getState().deleteNodes(nodeIds)),
           nodeIds,
+          publishedNodeIds: result.published_node_ids,
           sourceKeys: result.source_keys
         });
       }
@@ -59,6 +63,7 @@ export function FoliolePublishedDeleteDialogHost() {
 
   const deletePublishedTopics = async () => {
     if (!pending || isSubmitting) return;
+    const libraryScope = useWorkspaceStore.getState().libraryScope;
     setIsSubmitting(true);
     try {
       const result = await unpublishFolioleTopicsFromRuntime(pending.sourceKeys);
@@ -66,6 +71,7 @@ export function FoliolePublishedDeleteDialogHost() {
         showAppRuntimeNotice(result.warning || t('desktop.foliolePublish.delete.failed'));
         return;
       }
+      await clearFoliolePublishedTopicMeta(pending.publishedNodeIds, libraryScope, t('desktop.foliolePublish.localSaveError'));
       pending.deleteAfterUnpublish();
       notifyFoliolePublishedTopicsChanged();
       setPending(null);

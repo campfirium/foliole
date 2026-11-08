@@ -80,6 +80,7 @@ function DirectoryRow(props: DirectoryRowProps) {
 
 export function CompanionDirectoryList(props: {
   directory: ReturnType<typeof useCompanionExternalDirectory>;
+  emptyDescription?: string;
   emptyLabel: string;
   onSelectItem(item: DirectoryListItem): void;
   sections: DirectorySection[];
@@ -93,7 +94,7 @@ export function CompanionDirectoryList(props: {
       <div className="px-1 py-6">
         <AppEmptyState
           className="min-h-0 items-start text-left text-companion-text-secondary"
-          description={t('companion.directory.emptyDescription')}
+          description={props.emptyDescription ?? t('companion.directory.emptyDescription')}
           title={props.emptyLabel}
         />
       </div>

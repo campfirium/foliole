@@ -79,8 +79,8 @@ describe('CompanionDirectoryModel', () => {
 
     expect(sectionTitles(sections)).toEqual([
       { id: 'home', titleKey: undefined, titles: ['Inbox', '1Untitled Folder'] },
+      { id: 'virtual', titleKey: 'companion.directory.section.virtual', titles: ['Published', 'Shelved', 'Removed'] },
       { id: 'external', titleKey: 'companion.directory.section.external', titles: ['2think', '1act'] },
-      { id: 'virtual', titleKey: 'companion.directory.section.virtual', titles: ['Virtual'] },
       { id: 'trash', titleKey: 'companion.directory.section.trash', titles: [''] }
     ]);
   });
@@ -107,7 +107,8 @@ describe('CompanionDirectoryModel', () => {
     const collection = resolveDirectorySections({
       directory: externalDirectory,
       folderView: null,
-      rootView: { items: [{ kind: 'folder', nodeId: 'collection-1', preview: null, title: 'Guides' }] },
+      rootView: { items: [] },
+      virtualRootView: { nodeId: 'special-virtual-root', title: 'Virtual', items: [{ kind: 'folder', nodeId: 'collection-1', preview: null, title: 'Guides' }] },
       selection: { kind: 'root' },
       snapshot: collectionSnapshot
     }).flatMap((section) => section.items).find((item) => item.nodeId === 'collection-1');

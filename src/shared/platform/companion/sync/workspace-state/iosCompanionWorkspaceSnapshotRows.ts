@@ -3,6 +3,7 @@ import {
   type WorkspaceNodeRowShape,
   type WorkspaceNodeSnapshot
 } from '../../../../../../lib/core/database/workspaceSnapshotHelpers';
+import { readFolioleWebPublishedAt } from '../../../../../../lib/core/foliolePublish/folioleWebPublishFrontmatter';
 import { readTopicCollections } from '../../../../../../lib/core/nodes/topicCollectionsFrontmatter';
 import type { PersistedNodeViewState } from '../../../../../../lib/platform/persistedNodeViewState';
 import { normalizeNodeViewStateWriteSource } from '../../../../../../lib/platform/persistedNodeViewState';
@@ -17,6 +18,8 @@ export function buildIosWorkspaceNodes(rows: SqlRow[]) {
     node.hasContent = row.has_content === 1;
     node.hasReveal = row.has_reveal === 1;
     node.collections = readCollections(row.collection_source_content);
+    const publishedAt = readFolioleWebPublishedAt(row.collection_source_content);
+    if (publishedAt) node.webPublishedAt = publishedAt;
     if (typeof row.position === 'number') node.position = row.position;
     nodesById[node.id] = node;
     if (node.deletedAt) trashedNodeIds.push(node.id);
