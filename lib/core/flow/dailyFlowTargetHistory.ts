@@ -2,6 +2,7 @@ import { hashTextBody } from '../database/textBodyHash.js';
 import { hasDeletedAncestor } from '../review/queue/reviewQueuePlannerHelpers.js';
 import type { DbPort } from '../sync/dbPort.js';
 
+import { replayCycleHistory } from './cycleFlowHistory.js';
 import { sameLearningProfile } from './cycleFlowLearning.js';
 import { openCycleFlow } from './cycleFlowOpen.js';
 import { dailyFlowCommitSchema, type DailyFlowCommitArgs, type DailyFlowSettings, type DailyFlowResult } from './dailyFlowContract.js';
@@ -75,12 +76,16 @@ export async function commitTargetedFlowHistory(db: DbPort, args: DailyFlowCommi
   const facts = await readLocalDailyFlowFacts(db, stored.session.dayWindow!.start, stored.session.dayWindow!.end);
   if (!facts.some(fact => fact.id === target.id)) throw new Error('flow_history_changed');
   const changed = await persistTargetLearning(db, args, facts, target, persistence);
-  const desired = { ...stored.session, currentNodeId: args.historyMode === 'undo' ? nodeId : target.session.currentNodeId, isAnswerRevealed: false };
+  const orderChange = target.session.cycle?.change;
+  const reordered = orderChange?.before.some(before => before.node_id === nodeId &&
+    target.rows.some(after => after.node_id !== nodeId && after.order_key === before.order_key));
+  const restored = reordered ? await replayCycleHistory(store, stored.session, args) : null;
+  const desired = restored ?? { ...stored.session, currentNodeId: args.historyMode === 'undo' ? nodeId : target.session.currentNodeId, isAnswerRevealed: false };
   delete desired.rebuildSourceRevision;
   await saveCycleFlow(db, { dayKey: stored.day_key, mode: stored.mode, settingsKey: stored.settings_key,
     now: args.now, revision: stored.revision + 1, session: desired });
   await recordDailyFlowSync(db, { session: desired, sourceSession: stored.session }, settings, args.now, args);
-  await applyLocalDailyFlowOperations(db, args.now);
+  await applyLocalDailyFlowOperations(db, args.now, undefined, restored ? new Set([nodeId]) : undefined);
   const historyNow = new Date(Math.min(Date.parse(args.now), Date.parse(settings.dayWindow!.end) - 1)).toISOString();
   const result = await openCycleFlow(db, { now: historyNow, mode: stored.mode as NonNullable<DailyFlowResult['mode']> }, settings, persistence);
   await store.saveOperation(args.opId, { input_hash: hash, revision: result.session.daily!.revision,

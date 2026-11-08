@@ -45,6 +45,7 @@ export interface ImmersiveReadableArticleProps {
   answer?: string | null;
   isReviewItem?: boolean;
   footer?: ReactNode;
+  endOfArticleAction?: ReactNode;
   header?: ReactNode;
   searchMatch?: CompanionSearchMatch | null | undefined;
   onAttachmentResourceSynced?: () => void;
@@ -204,6 +205,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   return (
     <section
       data-companion-reading-surface="true"
+      data-reading-end-action={Boolean(props.endOfArticleAction) && !model.reading.isContentEditing || undefined}
       data-reading-chrome-visible={model.reading.isChromeVisible && !model.reading.isContentEditing}
       className={`${model.surfaceClassName}${itemEditing ? ' companion-item-editing' : ''}`}
       style={pagedStyle}
@@ -233,7 +235,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
           syncEndpointUrl: props.syncEndpointUrl
         })}
       />
-      <>{model.reading.isContentEditing ? null : props.footer}</>
+      <>{model.reading.isContentEditing ? null : <>{props.endOfArticleAction}{props.footer}</>}</>
       <CompanionArticleSelectionLayer articleProps={props} toolbar={model.toolbar} pending={pendingReadableArticle} />
     </section>
   );

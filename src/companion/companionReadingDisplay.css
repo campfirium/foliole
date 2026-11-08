@@ -12,6 +12,8 @@ section.companion-reading-overlay:has(> .companion-review-footer)::after {
 }
 /* Outer scrolling must include the document's natural height before the end runway. */
 .companion-reading-overlay [data-companion-article-document] > div,
+[data-reading-end-action] [data-companion-article-document] > div,
+[data-reading-end-action] .markdown-editor-host[data-scroll-container='outer'],
 .companion-reading-overlay .markdown-editor-host[data-scroll-container='outer'] {
   height: auto;
 }

@@ -17,7 +17,7 @@ import { correctReadIntent } from './companionReadIntentCommand';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
 type ReadAdmission = { session: DailyFlowSession; now: string; mode: ReadIntent['mode']; historyKey: string;
-  snapshot?: WorkspaceSnapshot; releaseSequentialReading?: boolean };
+  snapshot?: WorkspaceSnapshot; releaseSequentialReading?: boolean; nextTopicId?: string };
 
 const owners = new WeakMap<CapacitorCompanionDatabaseOwner, Promise<CompanionReadIntents>>();
 export function getCompanionReadIntents() {
@@ -99,10 +99,10 @@ export class CompanionReadIntents {
       this.applied = this.applied.filter(value => value.revision > projection.observedRevision);
       return projection.session;
     };
-    if (args.releaseSequentialReading && this.pending) await this.drain();
-    const releaseSnapshot = args.releaseSequentialReading ? companionWorkspaceSnapshots.getSnapshot() ?? args.snapshot : undefined;
+    if ((args.releaseSequentialReading || args.nextTopicId) && this.pending) await this.drain();
+    const releaseSnapshot = args.releaseSequentialReading || args.nextTopicId ? companionWorkspaceSnapshots.getSnapshot() ?? args.snapshot : undefined;
     const prepared = await prepareAdmittedRead(this.owner, intent, session,
-      releaseSnapshot ?? args.snapshot ?? this.displayPreparation.snapshot({ session, now, mode }), releaseSnapshot);
+      releaseSnapshot ?? args.snapshot ?? this.displayPreparation.snapshot({ session, now, mode }), releaseSnapshot, args.nextTopicId);
     // A precomputed successor cannot account for queue membership changed by a release.
     const releasesTopics = (prepared.command.readings?.length ?? 0) > 1;
     await this.journal.accept(intent, prepared);

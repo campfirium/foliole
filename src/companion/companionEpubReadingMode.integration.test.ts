@@ -97,3 +97,32 @@ it('keeps source settings outside node-edit undo history, as desktop does', asyn
   await result.choice.apply('sequential');
   expect(history()).toEqual(before);
 });
+
+it.each(['sequential', 'free'] as const)('continues through the imported chapter tree in %s mode', async readingMode => {
+  const result = await importBook();
+  await result.choice.apply(readingMode);
+  const { findNextSequentialReadingTopic } = await import('../../lib/core/review/sequentialReadingNextTopic');
+  const { openCompanionDailyFlow } = await import('../shared/platform/companion/runtime/companionDailyFlow');
+  const { getCompanionReadIntents } = await import('../shared/platform/companion/runtime/companionReadIntents');
+  const now = new Date().toISOString();
+  const mode = 'reading-only' as const;
+  const historyKey = 'flow_history:epub-continue';
+  const readSnapshot = async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot!;
+  const initial = await readSnapshot();
+  const part = findNextSequentialReadingTopic({ ...initial, currentNodeId: result.nodeId })!;
+  expect(initial.nodesById[part]!.title).toBe('Part One');
+  let { session } = await openCompanionDailyFlow({ now, mode, preferredNodeId: part });
+  expect(session.currentNodeId).toBe(part);
+  const engine = await getCompanionReadIntents();
+  for (const title of ['First section', 'Second section']) {
+    const before = await readSnapshot();
+    const nextTopicId = findNextSequentialReadingTopic({ ...before, currentNodeId: session.currentNodeId! })!;
+    expect(before.nodesById[nextTopicId]!.title).toBe(title);
+    expect(before.nodesById[nextTopicId]!.reading?.state).toBe(readingMode === 'sequential' ? 'locked' : 'active');
+    ({ session } = await engine.accept({ session, now, mode, historyKey, snapshot: before, nextTopicId }));
+    expect(session.currentNodeId).toBe(nextTopicId);
+  }
+  const saved = await readSnapshot();
+  expect(saved.nodesById[session.currentNodeId!]!.reading?.state).toBe('active');
+  expect(findNextSequentialReadingTopic({ ...saved, currentNodeId: session.currentNodeId! })).toBeNull();
+});

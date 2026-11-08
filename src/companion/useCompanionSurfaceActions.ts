@@ -40,7 +40,7 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
 
   const admitRead = useCompanionReadAdmission(args, latest, setReadingError);
 
-  async function submit(action: FlowAction, grade?: ReviewGrade, atContentEnd = false) {
+  async function submit(action: FlowAction, grade?: ReviewGrade, atContentEnd = false, nextTopicId?: string) {
     if (locked.current || !args.active || historyReplay.refreshPending) return;
     let token = args.flow.capture();
     if (!pending.current && !canSubmitFlowAction(args, token, action)) return;
@@ -52,7 +52,7 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
     setReadingError(null);
     setReviewError(null);
     try {
-      if (action === 'read' && !pending.current && await admitRead(token, releaseSequentialReading)) return;
+      if (action === 'read' && !pending.current && (await admitRead(token, releaseSequentialReading, nextTopicId) || nextTopicId)) return;
       await args.flow.readIntents?.drain();
       if (pending.current) { await finishPending(args, pending, setReadingError); return; }
       const prepared = await prepareSurfaceAction(args, token, action, () => latest.current.active);
@@ -83,7 +83,7 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
     handleFlowHistory: historyReplay.replay,
     historyRefreshPending: historyReplay.refreshPending,
     handleGradeReview: (grade: ReviewGrade) => submit('grade', grade),
-    handleReadReviewTopic: (atContentEnd = false) => submit('read', undefined, atContentEnd),
+    handleReadReviewTopic: (atContentEnd = false, nextTopicId?: string) => submit('read', undefined, atContentEnd, nextTopicId),
     handlePostponeReviewTopic: () => submit('later'),
     handleDismissReviewTopic: () => submit('dismiss'),
     handleSoonReviewTopic: () => submit('soon'),

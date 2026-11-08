@@ -1,10 +1,13 @@
+import { useMemo } from 'react';
+
+import { findNextSequentialReadingTopic } from '../../lib/core/review/sequentialReadingNextTopic';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { canCreateSelectionAnnotation } from '../shared/selectionAnnotationEligibility';
 import { FlowExitHereContext } from '../shared/ui/FlowExitHereContext';
 
 import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 import { CompanionImageClozeLayer } from './CompanionImageClozeLayer';
-import { CompanionNextTopicFooter } from './CompanionNextTopicFooter';
+import { CompanionFlowNextTopicFooter, CompanionNextTopicFooter } from './CompanionNextTopicFooter';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import { ReviewBreadcrumb } from './CompanionReviewBreadcrumb';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
@@ -23,7 +26,7 @@ import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionReadingNavigation, type CompanionReadingNavigation, type CompanionReadingNavigationControls } from './useCompanionReadingNavigation';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
-import { supportsCompanionNodeMutationSurface } from '@/shared/platform/companionWorkspaceRuntimeRepository';
+import { isAvailableNativeCompanionRuntime, supportsCompanionNodeMutationSurface } from '@/shared/platform/companionWorkspaceRuntimeRepository';
 
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
 type WorkspaceSync = ReturnType<typeof useCompanionWorkspaceSync>;
@@ -105,6 +108,12 @@ function FlowFooter({ surface }: { surface: Surface }) {
 }
 
 export function CompanionShellReadableArticle(props: { flow?: boolean; searchMatch?: CompanionSearchMatch | null | undefined; navigation?: CompanionReadingNavigation | undefined; onExit: () => void; surface: Surface; workspaceSync: WorkspaceSync }) {
+  const snapshot = props.workspaceSync.state.workspace_snapshot;
+  const current = props.surface.effectiveReviewSession.currentCard;
+  const flowTopicId = props.flow && current?.itemKind === 'reading' && isAvailableNativeCompanionRuntime()
+    ? current.nodeId : null;
+  const nextTopicId = useMemo(() => snapshot && flowTopicId
+    ? findNextSequentialReadingTopic({ ...snapshot, currentNodeId: flowTopicId }) : null, [snapshot, flowTopicId]);
   const breadcrumbItems = useReviewBreadcrumbItems(props.workspaceSync.state.workspace_snapshot,
     props.flow ? props.surface.effectiveReviewSession.currentCard?.nodeId ?? null
       : props.surface.isFlowBrowsing ? props.surface.selectedBrowseNodeId : null);
@@ -136,6 +145,11 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
       isReviewItem={node?.kind === 'item'}
       answer={answer}
       footer={footer}
+      endOfArticleAction={nextTopicId && nodeId === flowTopicId && canContinueToNext(props.surface.readableArticle) ? (
+        <CompanionFlowNextTopicFooter nodeId={nodeId}
+          disabled={props.surface.isSubmittingReadingAction || props.surface.historyRefreshPending}
+          onContinue={() => void props.surface.handleReadReviewTopic(true, nextTopicId)} />
+      ) : null}
       onAttachmentResourceSynced={() => continueCompanionAttachmentResourceSync(props.workspaceSync)}
       onExit={props.flow || props.surface.isFlowBrowsing ? () => props.surface.handleTabAction('recent') : props.onExit}
       onBack={props.flow ? props.surface.handleResumeFlow : props.onExit}

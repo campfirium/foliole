@@ -186,3 +186,42 @@ it('Dismiss releases the related sequential topic and restores both facts with p
   expect((await snapshot()).nodesById[first]!.reading!.state).toBe('dismissed');
   expect((await snapshot()).nodesById[second]!.reading!.state).toBe('active');
 });
+
+it.each(['locked', 'active', 'new'] as const)('puts the %s next chapter before the existing queue and resumes its order', async state => {
+  const first = session.currentNodeId!;
+  const originalNext = nextPersistedTopic();
+  if (state === 'active') {
+    library.database.prepare("UPDATE nodes SET kind='item', reveal='Answer' WHERE id=?").run(originalNext);
+    library.database.exec("UPDATE daily_flow_state SET session_json=json_set(session_json, '$.cycle.reviewRemaining', 1)");
+  }
+  const second = ['node-7', 'node-6', 'node-5'].find(id => id !== first && id !== originalNext)!;
+  const source = await toWorkspaceNativeNodeVersion({ id: 'book', title: 'Book', content: '', kind: 'folder',
+    parentNodeId: null, reveal: null, anchorLink: null, isTitleManual: true, hideTitleHeading: false,
+    reading: null, review: null, sequentialReadingEnabled: true, createdAt: now, updatedAt: now }, 'remote', 'book');
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [source], { enqueueSearchInvalidations: false }));
+  library.database.prepare('UPDATE nodes SET parent_id=?, title=? WHERE id=?').run('book', '1', first);
+  library.database.prepare('UPDATE nodes SET parent_id=?, title=? WHERE id=?').run('book', '2', second);
+  if (state !== 'active') {
+    const reading = { intervalDurationMs: 60000, intervalGrowthFactor: 2, lastHandledAt: now,
+      nextAt: '2026-11-26T08:00:00.000Z', priority: 9, readingPosition: 0, repetitionCount: 0,
+      state: state === 'locked' ? 'locked' as const : 'active' as const };
+    await writeIosCompanionDatabase(db => saveIosReadingWithDb(db, { node_id: second, reading_json: JSON.stringify(toReadingPayload(reading)) }));
+  }
+  if (state === 'new') library.database.prepare('DELETE FROM daily_flow_entries WHERE node_id=?').run(second);
+  session = (await openCompanionDailyFlow({ now, mode: 'recommended', preferredNodeId: first })).session;
+  const { getCompanionReadIntents } = await import('../shared/platform/companion/runtime/companionReadIntents');
+  const engine = await getCompanionReadIntents();
+  const accepted = await engine.accept({ session, now, mode: 'recommended', historyKey: key,
+    snapshot: await snapshot(), nextTopicId: second });
+  expect(accepted.session.currentNodeId).toBe(second);
+  expect((await snapshot()).nodesById[second]!.reading?.state).toBe('active');
+  await reopen();
+  session = (await openCompanionDailyFlow({ now, mode: 'recommended' })).session;
+  expect(session.currentNodeId).toBe(second);
+  session = (await replayCompanionFlowHistory(key, 'undo', session))!;
+  expect(session.currentNodeId).toBe(first);
+  session = (await replayCompanionFlowHistory(key, 'redo', session))!;
+  expect(session.currentNodeId).toBe(second);
+  session = (await act('read')).session!;
+  expect(session.currentNodeId).toBe(originalNext);
+});

@@ -2,8 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 
 test.use({ hasTouch: true });
 
-async function openReader(page: Page, flow: boolean, answer = false) {
-  await page.setViewportSize({ width: 375, height: 812 });
+async function openReader(page: Page, flow: boolean, answer = false, nextTopic = false) {
+  await page.setViewportSize(nextTopic ? page.viewportSize()! : { width: 375, height: 812 });
   await page.route('**/__reading-display?*', route => route.fulfill({ contentType: 'text/html', body: `
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
     <body><div id="root"></div><script type="module">
@@ -13,7 +13,7 @@ async function openReader(page: Page, flow: boolean, answer = false) {
     window.__vite_plugin_react_preamble_installed__ = true;
     await import('/@fs/${process.cwd()}/tests/fixtures/companionReadingDisplay.tsx');
     </script></body></html>` }));
-  await page.goto(`/__reading-display?${flow ? 'flow' : 'article'}${answer ? '&answer' : ''}`);
+  await page.goto(`/__reading-display?${flow ? 'flow' : 'article'}${answer ? '&answer' : ''}${nextTopic ? '&next-topic' : ''}`);
   await expect(page.locator('.cm-content').first()).toContainText('Paragraph 1.');
 }
 async function done(page: Page) {
@@ -113,3 +113,20 @@ test('revealed Flow answers gain the toolbar area and can scroll clear of the an
     return answer.evaluate(element => element.getBoundingClientRect().bottom);
   }).toBeLessThanOrEqual(footerTop);
 });
+
+for (const viewport of [{ width: 375, height: 812 }, { width: 640, height: 360 }]) {
+  test(`reaches the next topic after the Flow body at ${viewport.width}×${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await openReader(page, true, false, true);
+    const next = page.getByRole('button', { name: 'Next topic' });
+    await expect(next).not.toBeInViewport();
+    const surface = page.locator('[data-companion-reading-surface]');
+    await expect.poll(async () => {
+      await surface.evaluate(element => { element.scrollTop = element.scrollHeight; });
+      const box = await next.boundingBox();
+      return Boolean(box && box.y >= 0 && box.y + box.height < viewport.height);
+    }).toBe(true);
+    await next.tap();
+    await expect(page.locator('.cm-content')).toContainText('Chapter two begins here.');
+  });
+}

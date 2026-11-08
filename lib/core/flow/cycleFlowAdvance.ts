@@ -20,15 +20,28 @@ export async function advanceCycleFlow(db: DailyFlowStore, source: DailyFlowSess
   const rows = new Map((await db.readRows(ids)).map(row => [row.node_id, row]));
   const eligible = new Set(fullDayCandidates(snapshot, args.now, settings));
   const current = source.currentNodeId!;
+  const nextReading = args.nextReadingNodeId;
+  const currentRow = rows.get(current);
+  if (nextReading && (!currentRow?.active || currentRow.order_key !== cycle.scanAfter ||
+    !eligible.has(nextReading) || mode === 'review-first')) throw new Error('daily_flow_learning_changed');
   for (const id of ids) {
     const before = rows.get(id);
     const active = eligible.has(id) || (id === current && args.readingAction === 'soon');
+    if (id === nextReading) {
+      // The current slot is consumed by this Read. Reusing it leaves every other queued position in place.
+      changes.set(before, { node_id: id, order_key: currentRow!.order_key, active: 1,
+        handled: before?.handled ?? 0, cohort: before?.cohort ?? 'none', initial_task: before?.initial_task ?? 0 });
+      continue;
+    }
     if (before?.initial_task && before.active) {
       cycle.remaining -= 1;
       if (isFsrsReviewItemNode(snapshot.nodesById[id])) cycle.reviewRemaining -= 1;
     }
     if (!before && !active) continue;
-    changes.set(before, { node_id: id, order_key: active ? allocateCycleKey(cycle) : before!.order_key,
+    const orderKey = id === current && nextReading
+      ? (!active && rows.get(nextReading)?.order_key) || allocateCycleKey(cycle)
+      : active ? allocateCycleKey(cycle) : before!.order_key;
+    changes.set(before, { node_id: id, order_key: orderKey,
       active: active ? 1 : 0, handled: id === current ? 1 : before?.handled ?? 0, cohort: id === current && args.readingAction === 'soon' ? 'soon' : 'none', initial_task: 0 });
   }
   await db.writeRows(changes.rows());
@@ -42,7 +55,13 @@ export async function advanceCycleFlow(db: DailyFlowStore, source: DailyFlowSess
     ...(args.grade ? { nextReviewDueAt: resolveEarliestReviewDueAt(source.nextReviewDueAt, snapshot.nodesById[current]?.review?.due) } : {}) };
   const preserveCurrent = args.readings?.length && !args.readingAction && !args.grade &&
     (!source.currentNodeId || await isCycleCurrentReady(db, session, mode, args.now, settings));
-  if (!preserveCurrent && !applyPreparedNavigation(db, source, session, eligible, args.now)) {
+  if (nextReading) {
+    session.currentNodeId = nextReading;
+    session.currentItemStartedAt = args.now;
+    session.isAnswerRevealed = false;
+    session.continueNodeId = null;
+    session.completedAt = null;
+  } else if (!preserveCurrent && !applyPreparedNavigation(db, source, session, eligible, args.now)) {
     await chooseCycleCurrent(db, session, mode, args.now, settings);
   }
   cycle.change = changes.change();

@@ -75,7 +75,7 @@ export function CompanionBottomReviewBar(props: {
   );
 }
 
-function isFlowArticleEndVisible(actions: HTMLElement | null, nodeId: string | null) {
+export function isFlowArticleEndVisible(actions: HTMLElement | null, nodeId: string | null) {
   const surface = actions?.closest<HTMLElement>('[data-companion-reading-surface]');
   const article = surface?.querySelector<HTMLElement>('[data-companion-article-document]');
   if (!surface?.clientHeight || !article?.scrollHeight || article.dataset.nodeId !== nodeId) return false;

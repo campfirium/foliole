@@ -12,7 +12,7 @@ export { isSequentialReadingSourceFolder, isSequentialReadingSourceTopic, findEn
 
 export type { SequentialReadingChange } from './sequentialReadingTypes.js';
 
-function createReadingWithState(args: {
+export function createReadingWithState(args: {
   defaultPriority: SequentialReadingArgs['defaultPriority'];
   node: Node;
   now: string;

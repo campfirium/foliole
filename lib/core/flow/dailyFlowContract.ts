@@ -38,6 +38,7 @@ export const dailyFlowCommitSchema = z.object({ opId: z.string().min(1), now: z.
   historySourceSession: flowHistorySessionSchema.optional(),
   nextSession: flowHistorySessionSchema.optional(),
   readingAction: z.enum(['read', 'later', 'dismiss', 'soon']).optional(),
+  nextReadingNodeId: z.string().min(1).optional(),
   historyMode: z.enum(['undo', 'redo']).optional(),
   historyTargetOpId: z.string().min(1).optional(),
   cycleReplay: cycleChangeSchema.optional(),
@@ -52,7 +53,10 @@ export const dailyFlowCommitSchema = z.object({ opId: z.string().min(1), now: z.
   !value.sourceSession && !value.historySourceSession && !value.cycleReplay && !value.nextSession && !value.grade && !value.readings && !value.readingAction &&
   !value.historyMode && !value.reviewHistory) : !value.expectedContinueNodeId,
   'Continue navigation requires only its target and cursor identity').refine(value => !value.readingAction || Boolean(value.readings?.length && value.readings[0]?.nodeId === value.sourceSession?.currentNodeId),
-  'Reading advancement requires the current topic mutation').refine(value => value.readingAction !== 'soon' || Boolean(
+  'Reading advancement requires the current topic mutation').refine(value => !value.nextReadingNodeId ||
+    (value.readingAction === 'read' && value.nextReadingNodeId !== value.readings?.[0]?.nodeId &&
+      value.readings?.some(reading => reading.nodeId === value.nextReadingNodeId && reading.after?.state === 'active')),
+  'Continuing reading requires an active target in the same Read').refine(value => value.readingAction !== 'soon' || Boolean(
     !value.nextSession && value.readings?.length === 1 && value.readings[0]?.completedReviewDay === undefined &&
     JSON.stringify(value.readings[0]?.before) === JSON.stringify(value.readings[0]?.after)),
   'Soon advances only the current topic without changing its reading facts').refine(value => !value.historyMode || Boolean(value.sourceSession && value.nextSession &&
