@@ -104,6 +104,11 @@ function createCaptureTextSaver(props: CaptureDraftProps, state: ReturnType<type
     attempt.current.controller = controller;
     setIsSaving(true);
     setError(null);
+    let reopenForRecovery = !clipboard && !retryRefresh;
+    if (reopenForRecovery) {
+      preserveOnClose.current = true;
+      props.onOpenChange(false);
+    }
     try {
       let result: CompanionCaptureTextSaveResult | null = null;
       if (retryRefresh) { await retryRefresh(); return; }
@@ -117,13 +122,17 @@ function createCaptureTextSaver(props: CaptureDraftProps, state: ReturnType<type
         const warning = result.importWarning;
         const choice = result.epubReadingMode;
         setRetryRefresh(() => async () => { await retry(); complete(nodeId, warning, choice); });
-      } else if (result && 'nodeId' in result) complete(result.nodeId, result.importWarning, result.epubReadingMode);
+      } else if (result && 'nodeId' in result) {
+        reopenForRecovery = false;
+        complete(result.nodeId, result.importWarning, result.epubReadingMode);
+      }
     } catch {
       if (session === attempt.current.session && !retryRefresh) setError('save-failed');
     } finally {
       if (session === attempt.current.session) {
         attempt.current.busy = false;
         setIsSaving(false);
+        if (reopenForRecovery) props.onOpenChange(true);
       }
     }
   };

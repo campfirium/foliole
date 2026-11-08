@@ -8,11 +8,11 @@ import { CompanionCaptureSheet } from './CompanionCaptureSheet';
 
 beforeEach(() => window.localStorage.clear());
 
-function CaptureLauncher() {
+function CaptureLauncher({ onSave = vi.fn() }: { onSave?: React.ComponentProps<typeof CompanionCaptureSheet>['onSave'] }) {
   const [open, setOpen] = useState(false);
   return <>
     <button onClick={() => setOpen(true)}>Add text</button>
-    <CompanionCaptureSheet draftScope="focus-test" onOpenChange={setOpen} onSave={vi.fn()} open={open} />
+    <CompanionCaptureSheet draftScope="focus-test" onOpenChange={setOpen} onSave={onSave} open={open} />
   </>;
 }
 
@@ -36,19 +36,14 @@ it('does not steal focus back after the user moves to another action', () => {
   expect(cancel).toHaveFocus();
 });
 
-it('keeps the editor focused when tapping Save while the write is pending', () => {
+it('returns to the workspace on Save while the write is pending', () => {
   const onSave = vi.fn(() => new Promise<never>(() => {}));
-  renderWithLocalization(
-    <CompanionCaptureSheet draftScope="focus-test" onOpenChange={vi.fn()} onSave={onSave} open />
-  );
-  const editor = screen.getByRole('textbox');
-  fireEvent.change(editor, { target: { value: 'New topic' } });
-  const save = screen.getByRole('button', { name: 'Save' });
-
-  // Emulate the browser's focus transfer if the compatibility mouse event allows it.
-  if (fireEvent.mouseDown(save)) save.focus();
-  fireEvent.click(save);
+  renderWithLocalization(<CaptureLauncher onSave={onSave} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Add text' }));
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'New topic' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
   expect(onSave).toHaveBeenCalledWith('New topic');
-  expect(editor).toHaveFocus();
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Add text' })).toBeVisible();
 });

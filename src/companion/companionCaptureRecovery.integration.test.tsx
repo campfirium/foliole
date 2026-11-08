@@ -131,8 +131,10 @@ it('keeps a new capture independent when an earlier save finishes after closing 
   fireEvent.change(screen.getByLabelText('Capture text'), { target: { value: 'First topic' } });
   const save = screen.getByRole('button', { name: 'Save' });
   fireEvent.click(save);
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   fireEvent.click(save);
   await waitFor(() => expect(storedTopics()).toHaveLength(1));
+  fireEvent.click(screen.getByRole('button', { name: 'Open capture' }));
   expect(screen.getByLabelText('Capture text')).toHaveAttribute('readonly');
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   fireEvent.click(screen.getByRole('button', { name: 'Open capture' }));
