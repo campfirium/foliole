@@ -1,12 +1,11 @@
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../lib/core/sync/framedSyncContract';
 import type { FramedSyncInventoryDifference } from '../../../../../lib/core/sync/framedSyncInventory.js';
 import type { RequestSyncPeerRound } from '../../../../../lib/core/sync/requestSyncPeerRound.js';
-import { ATTACHMENT_BATCH_PULL_CAPABILITY, CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract';
 import type {
   CompanionDesktopSyncOptions,
   CompanionDesktopSyncResult
 } from '../../companionDesktopSyncTypes';
-import { isNativeAndroidCompanionRuntime } from '../../companionWorkspaceRuntimeRepository';
 
 import { collectCompanionSyncHistory, recordCompanionCompletedSyncRound } from './companionSyncHistoryCollection';
 import { createEmptyResourceStages,
@@ -70,9 +69,6 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
   const resourcesStartedAt = Date.now();
   const resources = await runAttachmentStage({ endpoint_url: endpointUrl, boundedSlice: round.pending > 0 && round.madeProgress,
     peerRound, signal,
-    ...(options.initialAttachmentPull && !options.restoreId &&
-      peerState.protocol?.capabilities.includes(ATTACHMENT_BATCH_PULL_CAPABILITY) && isNativeAndroidCompanionRuntime()
-      ? { batchAttachmentPull: true } : {}),
     sync_group_id: group.group_id, receiver_device_id: framedPeer.deviceId,
     receiver_library_epoch: framedPeer.libraryEpoch });
   return {

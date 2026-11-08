@@ -54,12 +54,6 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
   version: 36
 } as const satisfies SyncProtocolDescriptor);
 
-export const ATTACHMENT_BATCH_PULL_CAPABILITY = 'attachment-batch-pull-v1';
-export const DESKTOP_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
-  ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
-  capabilities: Object.freeze([...CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities, ATTACHMENT_BATCH_PULL_CAPABILITY].sort())
-});
-
 export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities;
 
 export const PREPARED_COMPLETE_MEMBER_PROTOCOL_DESCRIPTOR = CURRENT_SYNC_PROTOCOL_DESCRIPTOR;

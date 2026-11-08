@@ -36,18 +36,11 @@ public final class FramedSyncStreamReader {
     }
 
     public FramedSyncWireFrame readFrame() throws Exception {
-        return readFrame(FramedSyncWireHeader.MAX_CIPHERTEXT_BYTES);
-    }
-
-    public FramedSyncWireFrame readFrame(int maximumCiphertextBytes) throws Exception {
         if (!preambleRead) throw new IllegalStateException("framed_sync_preamble_required");
         byte[] headerBytes = readExact(
             FramedSyncWireHeader.BYTES, "framed_sync_frame_header_truncated", true);
         if (headerBytes == null) return null;
         FramedSyncWireHeader header = FramedSyncWireHeader.decode(headerBytes);
-        if (header.ciphertextBytes() > maximumCiphertextBytes) {
-            throw new IllegalArgumentException("wire_frame_limit_exceeded");
-        }
         if (lane == FramedSyncPayloadBudget.Lane.RECEIPT &&
             (header.ciphertextBytes() > FramedSyncPayloadBudget.RECEIPT_BYTES ||
                 header.frameType() != FramedSyncFrameType.TRANSFER_RECEIPT.wireValue())) {

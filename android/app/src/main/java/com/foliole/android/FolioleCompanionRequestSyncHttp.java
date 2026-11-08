@@ -1,7 +1,6 @@
 package com.foliole.android;
 
 import android.content.Context;
-import android.net.Uri;
 import com.foliole.android.framed.FramedSyncFiles;
 import com.foliole.android.framed.FramedSyncHttpTransport;
 import com.foliole.android.framed.FramedSyncPayloadBudget;
@@ -13,7 +12,6 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -50,41 +48,21 @@ final class FolioleCompanionRequestSyncHttp {
             FramedSyncPayloadBudget owner = owner(call);
             String id = requestId(call);
             Operation operation = new Operation(owner);
-            if (call.getObject("attachment_batch_receive") != null) {
-                operation.batch = new FolioleAttachmentBatchHttpStream(call);
-            }
             if (ACTIVE.putIfAbsent(id, operation) != null) throw new IllegalStateException("request_sync_http_duplicate");
             try { executor.execute(() -> {
-                try (var lifetime = owner.operation(operation::cancel)) {
-                    JSObject result = execute(context, call, operation);
-                    if (operation.batch == null) call.resolve(result); else operation.batch.deliver(result);
-                }
+                try (var lifetime = owner.operation(operation::cancel)) { call.resolve(execute(context, call, operation)); }
                 catch (Exception error) {
                     if (operation.cancelled.get() && !(error instanceof FolioleAttachmentReceiveFile.StorageFailure) &&
-                        (com.foliole.android.framed.FramedSyncStreamReader.isTransportInterruption(error) || error instanceof InterruptedException)) reject(call, operation, "request_sync_http_cancelled", "E_ABORT", error);
-                    else if (error instanceof java.net.SocketTimeoutException) reject(call, operation, error.getMessage(), "ETIMEDOUT", error);
-                    else reject(call, operation, error.getMessage(), null, error);
+                        (com.foliole.android.framed.FramedSyncStreamReader.isTransportInterruption(error) || error instanceof InterruptedException)) call.reject("request_sync_http_cancelled", "E_ABORT", error);
+                    else if (error instanceof java.net.SocketTimeoutException) call.reject(error.getMessage(), "ETIMEDOUT", error);
+                    else call.reject(error.getMessage(), error);
                 }
-                finally { ACTIVE.remove(id, operation); operation.stopped.complete(null); }
+                finally { ACTIVE.remove(id, operation); }
             }); } catch (RuntimeException error) {
                 ACTIVE.remove(id, operation);
                 throw error;
             }
         } catch (Exception error) { call.reject(error.getMessage(), error); }
-    }
-
-    private static void reject(PluginCall call, Operation operation, String message, String code, Exception error) {
-        if (operation.batch == null) call.reject(message, code, error);
-        else operation.batch.reject(message, code, error);
-    }
-
-    static void readBatch(PluginCall call) throws Exception {
-        FramedSyncPayloadBudget owner = owner(call);
-        Operation operation = ACTIVE.get(requestId(call));
-        if (operation == null || operation.owner != owner || operation.batch == null) {
-            throw new IllegalStateException("attachment_batch_read_unavailable");
-        }
-        operation.batch.next(call);
     }
 
     static void cancelOwner(FramedSyncPayloadBudget owner) {
@@ -94,13 +72,7 @@ final class FolioleCompanionRequestSyncHttp {
     static void cancel(PluginCall call) throws Exception {
         FramedSyncPayloadBudget owner = owner(call);
         Operation operation = ACTIVE.get(requestId(call));
-        if (operation != null && operation.owner == owner) {
-            operation.cancel();
-            if (operation.batch != null) {
-                operation.stopped.thenRun(() -> call.resolve());
-                return;
-            }
-        }
+        if (operation != null && operation.owner == owner) operation.cancel();
         call.resolve();
     }
 
@@ -122,17 +94,12 @@ final class FolioleCompanionRequestSyncHttp {
         };
         operation.check();
         URL url = new URL(call.getString("url"));
-        if (operation.batch != null && (call.getObject("attachment_receive") != null ||
-            !"/companion/framed-sync".equals(url.getPath()) ||
-            !"attachment_batch_pull".equals(Uri.parse(url.toString()).getQueryParameter("request")))) {
-            throw new IllegalArgumentException("attachment_batch_http_request_invalid");
-        }
         var timing = new FolioleRequestSyncTiming(requestId(call), url);
         return FramedSyncHttpTransport.postRawStream(url, call.getString("sync_group_id"),
             call.getString("receiver_device_id"), call.getString("receiver_library_epoch"), headers,
             FolioleRequestSyncHttpChunks.request(files, directory, count, operation::check, progress, timing::chunk),
-            input -> operation.batch != null ? operation.batch.read(context, call, input, operation::check, progress, operation.owner)
-                : call.getObject("attachment_receive") == null ? FolioleRequestSyncHttpChunks.read(files, directory, input, operation::check, progress)
+            input -> call.getObject("attachment_receive") == null
+                ? FolioleRequestSyncHttpChunks.read(files, directory, input, operation::check, progress)
                 : FolioleRequestSyncAttachmentResponse.read(context, call, input, operation::check, progress, operation.owner),
             operation::opened, timing::phase);
     }
@@ -156,8 +123,6 @@ final class FolioleCompanionRequestSyncHttp {
 
     private static final class Operation {
         final FramedSyncPayloadBudget owner;
-        final CompletableFuture<Void> stopped = new CompletableFuture<>();
-        FolioleAttachmentBatchHttpStream batch;
         final AtomicBoolean cancelled = new AtomicBoolean();
         final AtomicReference<HttpURLConnection> connection = new AtomicReference<>();
         Operation(FramedSyncPayloadBudget owner) { this.owner = owner; }
@@ -167,7 +132,6 @@ final class FolioleCompanionRequestSyncHttp {
         void opened(HttpURLConnection value) throws InterruptedException { connection.set(value); check(); }
         void cancel() {
             cancelled.set(true);
-            if (batch != null) batch.cancel();
             HttpURLConnection value = connection.get();
             if (value != null) value.disconnect();
         }

@@ -30,14 +30,12 @@ public final class AttachmentReceiveAuthorization {
     public boolean pending() { return pending; }
     public void finish() { if (!ended) throw new IllegalArgumentException("attachment_response_incomplete"); }
 
-    public boolean accept(RequestAttachment value) { return accept(value, false); }
-
-    boolean accept(RequestAttachment value, boolean allowMissing) {
+    public boolean accept(RequestAttachment value) {
         if (ended || !Arrays.equals(requestId, value.getRequestId().toByteArray()) ||
             !storageKey.equals(value.getStorageKey()) || !value.getOperation().equals("pull") ||
             value.getByteLength() != byteLength || value.getOffset() != offset) throw invalid();
         if (value.getState().equals("end")) {
-            if (!value.getData().isEmpty() || (!allowMissing && blocks == 0 && !value.getPending() && offset != byteLength)) throw invalid();
+            if (!value.getData().isEmpty() || (blocks == 0 && !value.getPending() && offset != byteLength)) throw invalid();
             ended = true; pending = value.getPending(); return false;
         }
         if (!value.getState().equals("block") || blocks >= maxBlocks || offset >= byteLength ||

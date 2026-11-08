@@ -1,17 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { RequestSyncPeerRound } from '../../../../../lib/core/sync/requestSyncPeerRound.js';
-import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR, DESKTOP_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract.js';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract.js';
 
-const runtime = vi.hoisted(() => ({ database: vi.fn(), resources: vi.fn(), android: vi.fn(), protocol: undefined as unknown }));
-vi.mock('../../companionWorkspaceRuntimeRepository', async importOriginal => ({
-  ...await importOriginal<typeof import('../../companionWorkspaceRuntimeRepository')>(),
-  isNativeAndroidCompanionRuntime: runtime.android
-}));
+const runtime = vi.hoisted(() => ({ database: vi.fn(), resources: vi.fn() }));
 vi.mock('./framed/companionRequestSyncDatabaseRound.js', () => ({ runCompanionRequestSyncDatabaseRound: runtime.database }));
 vi.mock('./framed/companionRequestSyncResources.js', () => ({ continueCompanionRequestSyncResources: runtime.resources }));
 vi.mock('./framed/companionRequestSyncPeerState.js', () => ({ requireCompanionRequestSyncPeerState:
-  (_group: string, device: string, epoch: string) => ({ sender_device_identity_key: device, library_epoch: epoch, ...(runtime.protocol ? { protocol: runtime.protocol } : {}) }) }));
+  (_group: string, device: string, epoch: string) => ({ sender_device_identity_key: device, library_epoch: epoch }) }));
 vi.mock('./syncGroupMemberStateStore.js', () => ({ loadCompanionSyncGroupMemberState: async () => ({ library_epoch: 'local-epoch' }) }));
 vi.mock('./companionSyncHistoryCollection', () => ({ collectCompanionSyncHistory: vi.fn(), recordCompanionCompletedSyncRound: vi.fn() }));
 vi.mock('./syncGroupStore', () => ({ loadCompanionSyncGroup: async () => ({ group_id: 'group', local_device_identity_key: 'local' }) }));
@@ -29,8 +25,6 @@ import { syncCompanionIdentityObjects } from './syncGroupIdentityCompanionResult
 const framedPeer = { deviceId: 'desktop', libraryEpoch: 'desktop-epoch', protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version };
 beforeEach(() => {
   vi.clearAllMocks();
-  runtime.protocol = undefined;
-  runtime.android.mockReturnValue(true);
   runtime.database.mockResolvedValue({ pending: 1, received: ['pulled'], sent: ['pushed'], madeProgress: true });
   runtime.resources.mockResolvedValue({ pending: 3, transferred: 1 });
 });
@@ -142,18 +136,4 @@ it('retries unfinished attachment scanning without treating an idle scan as tran
   const result = await syncCompanionIdentityObjects('http://peer', { framedPeer });
   expect(hasRetryWork(result)).toBe(true);
   expect(hasFastRetryWork(result)).toBe(false);
-});
-
-it.each([
-  { initial: true, supported: true, android: true, batch: true },
-  { initial: true, supported: false, android: true, batch: false },
-  { initial: true, supported: true, android: false, batch: false },
-  { initial: false, supported: true, android: true, batch: false }
-])('negotiates small-attachment batches only for the supported first sync: %j', async scenario => {
-  runtime.protocol = scenario.supported ? DESKTOP_SYNC_PROTOCOL_DESCRIPTOR : CURRENT_SYNC_PROTOCOL_DESCRIPTOR;
-  runtime.android.mockReturnValue(scenario.android);
-  await syncCompanionIdentityObjects('http://peer', {
-    framedPeer, ...(scenario.initial ? { initialAttachmentPull: true } : {})
-  });
-  expect(runtime.resources.mock.calls[0]?.[0].batchAttachmentPull).toBe(scenario.batch ? true : undefined);
 });

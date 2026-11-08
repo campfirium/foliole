@@ -1,6 +1,4 @@
 import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
-import { respondAttachmentBatchDescriptions, respondAttachmentBatchPull } from '../../lib/core/sync/requestSyncAttachmentBatch.js';
-import { ATTACHMENT_BATCH_DESCRIBE_OPERATION, ATTACHMENT_BATCH_PULL_OPERATION } from '../../lib/core/sync/requestSyncAttachmentContract.js';
 import { respondRequestSyncAttachments } from '../../lib/core/sync/requestSyncAttachmentResponse.js';
 import { respondRequestSyncDatabase } from '../../lib/core/sync/requestSyncDatabaseResponse.js';
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
@@ -29,13 +27,6 @@ export async function respondDesktopRequestSyncHttp(host: RequestSyncDatabaseHos
   switch (input.url.searchParams.get('request')) {
     case 'round_finish': return respondRequestSyncRoundControl({ ...input,
       onCompleted: host.databaseRoundCompleted, roundId: input.url.searchParams.get('peer_round_id') ?? '' });
-    case ATTACHMENT_BATCH_DESCRIBE_OPERATION: return respondAttachmentBatchDescriptions(
-      await createDesktopRequestSyncAttachmentHost(host), input, prepareDesktopRequestSyncBody);
-    case ATTACHMENT_BATCH_PULL_OPERATION: {
-      if (!input.consumePull) throw new Error('attachment_batch_stream_required');
-      const signal = input.payloadBudget ? AbortSignal.any([input.signal, input.payloadBudget.signal]) : input.signal;
-      return respondAttachmentBatchPull(await createDesktopRequestSyncAttachmentHost(host), { ...input, signal }, input.consumePull);
-    }
     case 'attachments': return respondRequestSyncAttachments<FramedSyncStreamBody | void>(
       await createDesktopRequestSyncAttachmentHost(host), { ...input,
         signal: input.payloadBudget ? AbortSignal.any([input.signal, input.payloadBudget.signal]) : input.signal

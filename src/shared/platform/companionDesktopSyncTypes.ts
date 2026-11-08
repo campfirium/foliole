@@ -5,7 +5,6 @@ export interface CompanionDesktopSyncOptions {
     protocolVersion: number;
   };
   includeResources?: boolean;
-  initialAttachmentPull?: true;
   waitForInbound?: () => boolean;
   signal?: AbortSignal;
   onProgress?: (progress: CompanionDesktopSyncProgress) => void;

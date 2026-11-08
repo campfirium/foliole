@@ -1,7 +1,7 @@
 import { AttachmentVerificationPending } from './attachmentSourceVerification.js';
 import { attachmentDataYield, attachmentWorkBudget } from './attachmentWorkBudget.js';
 import { PDF_TEXT_EXTRACTOR_VERSION } from './pdfTextArtifact.js';
-import { runAttachmentPullStage } from './requestSyncAttachmentPreparationQueue.js';
+import { runPreparedAttachmentPulls } from './requestSyncAttachmentPreparationQueue.js';
 import { attachmentRequest, pullRequestSyncAttachmentWindows, singleAttachmentRequest as single } from './requestSyncAttachmentPull.js';
 import { pushRequestSyncAttachmentWindows } from './requestSyncAttachmentPush.js';
 import type { RequestSyncAttachmentHost } from './requestSyncAttachmentResponse.js';
@@ -57,7 +57,8 @@ async function exchangeAttachmentPass(host: RequestSyncAttachmentHost, exchange:
   const { result, pendingKeys, attempt, verificationPending } = createAttachmentProgress(host, exchange, report, failed);
   const text = createAttachmentTextProgress(host, exchange, shouldYield, report, result);
   const stages = [
-    { name: 'pull' as const, defer: () => { local.keys.forEach(key => pendingKeys.add(key)); }, run: () => runAttachmentPullStage({ host, exchange, keys: local.keys,
+    { name: 'pull' as const, defer: () => { local.keys.forEach(key => pendingKeys.add(key)); }, run: async () => {
+      if (exchange.prepareAttachment) return runPreparedAttachmentPulls({ host, exchange, keys: local.keys,
         failed, pendingKeys, shouldYield, attempt, ...(local.pending ? {
           nextSlice: async (excluded: readonly string[]) => {
             if (shouldYield()) return { keys: [], pending: true };
@@ -65,7 +66,14 @@ async function exchangeAttachmentPass(host: RequestSyncAttachmentHost, exchange:
             return { ...next, keys: prioritizeRetryPairs(next.keys, retryFirst) };
           },
           prepareSlice: (slice, receiver) => text.run(prioritizeRetryPairs(slice.pdfTextKeys ?? [], retryFirst), receiver)
-        } : {}) }) },
+        } : {}) });
+      let attempted = false;
+      for (const key of local.keys) {
+        if (failed.has(key) || (attempted && shouldYield())) { pendingKeys.add(key); continue; }
+        attempted = true;
+        await attempt(key, () => pullRequestSyncAttachmentWindows(host, exchange, key, shouldYield));
+      }
+    } },
     { name: 'text' as const, defer: () => { text.pending += local.pdfTextKeys?.length ?? 0; }, run: async () => {
       await text.run(local.pdfTextKeys);
     } },

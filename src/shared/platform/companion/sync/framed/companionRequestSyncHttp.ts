@@ -26,23 +26,20 @@ export interface CompanionRequestSyncHttpInput {
   signal?: AbortSignal;
   peerRound?: RequestSyncPeerRound;
   attachmentReceive?: NativeRequestSyncHttpRequest['attachment_receive'];
-  attachmentBatchReceive?: NativeRequestSyncHttpRequest['attachment_batch_receive'];
 }
 
 export async function withCompanionRequestSyncHttp<T>(files: RequestSyncFilePort, input: CompanionRequestSyncHttpInput,
   consume: (body: Awaited<ReturnType<typeof readFramedSyncStream>>) => Promise<T>) {
-  return withCompanionRequestSyncHttpResponse(files, input, async (response, { directory }) => {
-    const chunks = companionRequestSyncHttpChunks(files, directory, response, input.signal);
-    const stream = await readFramedSyncStream(touchRequestSyncStream(chunks, input.peerRound?.lease));
+  return withCompanionRequestSyncHttpResponse(files, input, async (response, directory) => {
+    const stream = await readFramedSyncStream(touchRequestSyncStream(
+      companionRequestSyncHttpChunks(files, directory, response, input.signal), input.peerRound?.lease));
     try { return await consume(stream); }
     finally { await stream.frames[Symbol.asyncIterator]().return?.(); }
   });
 }
 
-type NativeResponse = Awaited<ReturnType<typeof FolioleCompanionSync.postRequestSyncHttp>>;
 export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSyncFilePort, input: CompanionRequestSyncHttpInput,
-  consume: (response: NativeResponse, source: { directory: string; library_key: string; generation_id: string; request_id: string }) => Promise<T>,
-  receiveFirst?: (post: () => Promise<NativeResponse>) => Promise<NativeResponse>) {
+  consume: (response: Awaited<ReturnType<typeof FolioleCompanionSync.postRequestSyncHttp>>, directory: string) => Promise<T>) {
   const shouldYield = attachmentDataYield();
   return withRequestSyncFiles(files, async temporary => {
     const { owner, requestId, request, sign, signedAt } = await prepareHttpRequest(temporary, input);
@@ -52,24 +49,19 @@ export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSync
       Object.assign(request.headers, (await sign()).headers);
       input.signal?.throwIfAborted();
     }
-    const attachment = input.attachmentReceive || input.attachmentBatchReceive;
-    if (attachment && shouldYield()) throw new AttachmentReceivePaused();
-    const post = () => {
-      input.signal?.throwIfAborted();
-      if (attachment && shouldYield()) throw new AttachmentReceivePaused();
-      return FolioleCompanionSync.postRequestSyncHttp(request);
-    };
+    if (input.attachmentReceive && shouldYield()) throw new AttachmentReceivePaused();
+    const operation = FolioleCompanionSync.postRequestSyncHttp(request);
     let cancellation: Promise<void> | undefined;
     const cancel = () => { cancellation = FolioleCompanionSync.cancelRequestSyncHttp({ ...owner, request_id: requestId });
       void cancellation.catch(() => undefined); };
     input.signal?.addEventListener('abort', cancel, { once: true });
     let yielded = false;
-    const stopYield = attachment ? onAttachmentWorkYield(() => { yielded = true; cancel(); }) : () => {};
+    const stopYield = input.attachmentReceive ? onAttachmentWorkYield(() => { yielded = true; cancel(); }) : () => {};
     try {
-      const response = await (receiveFirst ? receiveFirst(post) : post());
+      const response = await operation;
       input.signal?.throwIfAborted();
       if (input.peerRound) input.peerRound.admitted = true;
-      return await consume(response, { ...owner, request_id: requestId, directory: temporary.directory });
+      return await consume(response, temporary.directory);
     } catch (error) {
       if (yielded && error && typeof error === 'object' && 'code' in error && error.code === 'E_ABORT') {
         input.signal?.throwIfAborted();
@@ -79,7 +71,6 @@ export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSync
     } finally {
       stopYield();
       input.signal?.removeEventListener('abort', cancel);
-      if (input.attachmentBatchReceive && !cancellation) cancel();
       await cancellation;
     }
   }, input.signal);
@@ -108,7 +99,6 @@ async function prepareHttpRequest(temporary: RequestSyncFiles, input: CompanionR
     }, sync_group_id: input.context.groupId, receiver_device_id: input.context.responderDeviceId,
     receiver_library_epoch: input.context.responderLibraryEpoch };
   if (input.attachmentReceive) request.attachment_receive = input.attachmentReceive;
-  if (input.attachmentBatchReceive) request.attachment_batch_receive = input.attachmentBatchReceive;
   if (input.peerRound) request.peer_round_id = input.peerRound.id;
   return { owner, requestId, request, sign, signedAt };
 }

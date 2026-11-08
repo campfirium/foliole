@@ -10,10 +10,9 @@ import { decodeRequestSyncInventory, iterateRequestSyncInventory } from '../../.
 import { prepareRequestSyncWire, readRequestSyncWire } from '../../../../../../lib/core/sync/requestSyncWire.js';
 import type { NativeRequestSyncHttpRequest } from '../../../../../../lib/platform/nativeRequestSyncHttpContract.js';
 
-const native = vi.hoisted(() => ({ post: vi.fn(), readBatch: vi.fn(), sign: vi.fn(), cancel: vi.fn() }));
+const native = vi.hoisted(() => ({ post: vi.fn(), sign: vi.fn(), cancel: vi.fn() }));
 vi.mock('../../../companionWorkspaceRuntimeRepository.js', () => ({ FolioleCompanionSync: {
-  postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign, cancelRequestSyncHttp: native.cancel,
-  readRequestSyncAttachmentBatch: native.readBatch
+  postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign, cancelRequestSyncHttp: native.cancel
 } }));
 vi.mock('../../runtime/companionFramedPayloadBudget.js', () => ({
   companionFramedFileOwner: () => ({ library_key: 'test-library', generation_id: 'test-generation' })
@@ -152,34 +151,4 @@ it.each(['E_ABORT', 'ENOSPC'])('cancels a blocked attachment request for data wo
     attachmentRequestSchema.parse({ operation: 'pull', requestId: new Uint8Array(16), storageKey: `${'a'.repeat(64)}.pdf`, byteLength: 524288 }));
   await expect(receiving).rejects.toThrow(code === 'E_ABORT' ? 'attachment_receive_paused' : 'ENOSPC');
   expect(native.cancel).toHaveBeenCalledOnce(); expect(values.size).toBe(0);
-});
-
-it('consumes only native member metadata and settles cancellation before removing request files', async () => {
-  const { files, values } = storage();
-  const { companionReceiveAttachmentBatch } = await import('./companionAttachmentHttp.js');
-  const { attachmentRequestSchema } = await import('../../../../../../lib/core/sync/requestSyncAttachmentContract.js');
-  const queries = ['a', 'b'].map(key => attachmentRequestSchema.parse({
-    operation: 'pull', requestId: new Uint8Array(16), storageKey: `${key.repeat(64)}.png`, byteLength: 32
-  }));
-  native.post.mockImplementation(async (request: NativeRequestSyncHttpRequest) => {
-    expect(request.attachment_batch_receive?.members.map(member => member.storage_key))
-      .toEqual(queries.map(query => query.storageKey));
-    return { attachment_batch_member: { index: 0, offset: 32, blocks: 1, pending: false } };
-  });
-  native.readBatch.mockRejectedValue(new Error('interrupted'));
-  native.cancel.mockImplementation(async ({ request_id }) => {
-    expect(request_id).toBe(native.post.mock.calls[0]?.[0].request_id);
-    expect(values.size).toBeGreaterThan(0);
-  });
-  const completed: number[] = [];
-  const run = companionReceiveAttachmentBatch({ ...files, read: async () => { throw new Error('file_payload_crossed_bridge'); } },
-    { context, groupKey, endpointUrl: 'http://127.0.0.1:1' });
-  await expect(run(queries, async (index, receive) => {
-    expect(await receive()).toEqual({ offset: 32, blocks: 1, pending: false });
-    completed.push(index);
-  })).rejects.toThrow('interrupted');
-  expect(completed).toEqual([0]);
-  expect(native.readBatch).toHaveBeenCalledOnce();
-  expect(native.cancel).toHaveBeenCalledOnce();
-  expect(values.size).toBe(0);
 });
