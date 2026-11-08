@@ -95,6 +95,8 @@ export const EN_DESKTOP_NODES_TRANSLATIONS = {
   'desktop.nodeList.menu.addToVirtualFolder': 'Add to Virtual Folder…',
   'desktop.nodeList.menu.removeFromCurrentVirtualFolder': 'Remove from This Virtual Folder',
   'desktop.nodeList.menu.addToDive': 'Add to Dive…',
+  'desktop.nodeList.dive.empty': 'No topics in this Dive',
+  'desktop.nodeList.dive.emptyDescription': 'Add topics or folders from the library.',
   'desktop.nodeList.dive.tree': 'Dives',
   'desktop.nodeList.dive.create': 'Create Dive',
   'desktop.nodeList.dive.untitled': 'Untitled Dive',

@@ -15,7 +15,9 @@ import { PanelScaleSurface } from '../../shared/ui';
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { TrashResultListPanel } from './TrashResultListPanel';
 import { useVirtualNodeResultIndex } from './useVirtualNodeResultIndex';
+import { useWorkspaceDiveNavigation } from './useWorkspaceDiveRows';
 import { WorkspaceCollectionSurface } from './WorkspaceCollectionSurface';
+import { WorkspaceDiveContent } from './WorkspaceDiveContent';
 import { renderExternalContentColumn } from './workspaceDualListExternalContent';
 import { WorkspaceDualListFolderColumn } from './WorkspaceDualListFolderColumn';
 import { useWorkspaceDualListState } from './workspaceDualListState';
@@ -145,6 +147,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
     trashedNodeIds: props.trashedNodeIds
   });
   const viewRoot = useWorkspaceDualListViewRoot(props);
+  const dive = useWorkspaceDiveNavigation(props);
   const dualListState = useWorkspaceDualListState({
     ...props,
     preferredFolderColumnId: viewRoot.preferredFolderColumnId
@@ -153,7 +156,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
   const topicCallbacks = useWorkspaceTopicTreeCallbacks(props);
   const virtualResultIndex = useVirtualNodeResultIndex(props);
 
-  if (!topicRootId && !props.isVirtualViewOpen && !props.isExternalViewOpen) {
+  if (!dive.activeDive && !topicRootId && !props.isVirtualViewOpen && !props.isExternalViewOpen) {
     return renderSingleListFallback(props);
   }
 
@@ -161,14 +164,24 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
     <WorkspaceCollectionSurface
       folderColumn={
         <WorkspaceDualListFolderColumn
+          diveNavigation={dive.navigation}
           dualListState={dualListState}
-          onSelectFolderColumnNode={viewRoot.selectFolderColumnNode}
+          onSelectFolderColumnNode={(id) => { dive.closeDive(); viewRoot.selectFolderColumnNode(id); }}
           props={props}
           virtualResultCountById={virtualResultIndex.countById}
         />
       }
       contentColumn={
-        props.isVirtualViewOpen
+        dive.activeDive ? (
+          <WorkspaceDiveContent
+            activeNodeId={props.activeNodeId}
+            childrenByParent={dualListState.topicChildrenByParent}
+            dive={dive.activeDive}
+            nodesById={props.listNodesById}
+            onSelectNode={topicCallbacks.onSelectNode}
+            visibleNodeIds={dualListState.visibleNodeIds}
+          />
+        ) : props.isVirtualViewOpen
           ? renderVirtualContentColumn(props, virtualResultIndex, t, locale)
             : props.isExternalViewOpen
               ? renderExternalContentColumn(props)

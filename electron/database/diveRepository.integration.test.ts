@@ -7,7 +7,6 @@ import BetterSqlite3 from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { resolveDiveTopicIds } from '../../lib/core/nodes/dive.js';
-import { createWorkspaceNodePaths } from '../../lib/core/nodes/workspaceNodePaths.js';
 
 import { addDiveSources, createDive, listDives } from './diveRepository.js';
 
@@ -37,13 +36,14 @@ it('persists direct sources and resolves descendants from the current library tr
       const nodes = db.prepare<[], { id: string; kind: string; parentNodeId: string | null }>(
         'SELECT id, kind, parent_id AS parentNodeId FROM nodes'
       ).all();
-      const paths = createWorkspaceNodePaths(nodes);
-      return resolveDiveTopicIds(saved!, nodes.filter((node) => node.kind === 'topic')
-        .map((node) => ({ id: node.id, ancestorFolderIds: paths.get(node.id) ?? [] })));
+      return resolveDiveTopicIds(saved!, {
+        kindOf: (id) => nodes.find((node) => node.id === id)?.kind,
+        childrenOf: (id) => nodes.filter((node) => node.parentNodeId === id).map((node) => node.id)
+      });
     };
-    expect(members()).toEqual(new Set(['overlap', 'inherited', 'outside']));
+    expect(members()).toEqual(['overlap', 'inherited', 'outside']);
     db.prepare('UPDATE nodes SET parent_id = NULL WHERE id = ?').run('nested');
-    expect(members()).toEqual(new Set(['overlap', 'outside']));
+    expect(members()).toEqual(['overlap', 'outside']);
   } finally {
     if (db.open) db.close();
     rmSync(root, { recursive: true, force: true });

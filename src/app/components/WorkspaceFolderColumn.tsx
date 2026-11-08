@@ -1,3 +1,4 @@
+import type { Dive } from '../../../lib/core/nodes/dive';
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import { TRASH_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
@@ -14,6 +15,9 @@ import { WorkspaceDiveSection } from './WorkspaceDiveSection';
 import { WorkspaceVirtualSection } from './WorkspaceVirtualSection';
 
 interface WorkspaceFolderColumnProps {
+  dives: readonly Dive[];
+  activeDiveId: string | null;
+  onSelectDive: (id: string) => void;
   activeFolderId: string | null;
   activeVirtualNodeId?: string | null;
   hideVirtualSectionInDemo?: boolean;
@@ -68,13 +72,53 @@ function selectRegularNode(props: WorkspaceFolderColumnProps, nodeId: string) {
   props.onSelectNode(nodeId);
 }
 
+function renderFolderSections(props: WorkspaceFolderColumnProps) {
+  return (
+    <>
+      <WorkspaceVirtualSection
+        isVirtualViewOpen={props.isVirtualViewOpen}
+        nodeOrder={props.nodeOrder}
+        nodesById={props.nodesById}
+        onSelectNodeInVirtualView={props.onSelectNodeInVirtualView}
+        virtualResultCountById={props.virtualResultCountById}
+        {...definedProps({
+          activeVirtualNodeId: props.activeVirtualNodeId,
+          hideInDemo: props.hideVirtualSectionInDemo,
+          onOpenVirtualView: props.onOpenVirtualView
+        })}
+      />
+      <WorkspaceDiveSection
+        activeDiveId={props.activeDiveId}
+        dives={props.dives}
+        onSelectDive={props.onSelectDive}
+        activeNodeId={props.activeFolderId}
+        nodesById={props.nodesById}
+        onSelectNode={(id) => selectRegularNode(props, id)}
+      />
+      <ExternalLibrarySection
+        entriesByFolderId={props.externalEntriesByFolderId}
+        folders={props.externalFolders}
+        isExternalViewOpen={props.isExternalViewOpen}
+        onOpenExternalSelection={props.onOpenExternalSelection}
+        selection={props.externalSelection}
+        {...definedProps({
+          onChangeExternalFolder: props.onChangeExternalFolder,
+          onOpenExternalLibrarySettings: props.onOpenExternalLibrarySettings,
+          onRemoveExternalFolder: props.onRemoveExternalFolder,
+          onRescanExternalFolder: props.onRescanExternalFolder
+        })}
+      />
+    </>
+  );
+}
+
 function renderRegularSection(
   props: WorkspaceFolderColumnProps,
   onAddToDive: ReturnType<typeof useWorkspaceAddToDive>['open']
 ) {
   return (
     <NodeListTree
-      activeNodeId={getActiveFolderSelectionId(props)}
+      activeNodeId={props.activeDiveId ? null : getActiveFolderSelectionId(props)}
       forceExpandedNodeId={props.forceExpandedFolderId ?? null}
       highlightedNodeId={props.highlightedFolderId ?? null}
       isSelectionScopeActive={!props.isVirtualViewOpen && !props.isExternalViewOpen}
@@ -91,40 +135,7 @@ function renderRegularSection(
       selectedTrashNodeId={props.selectedTrashNodeId}
       scrollTargetNodeId={props.highlightedFolderId ?? getActiveFolderSelectionId(props)}
       showTitleSearch={false}
-      bodyAppendContent={
-        <>
-          <WorkspaceVirtualSection
-            isVirtualViewOpen={props.isVirtualViewOpen}
-            nodeOrder={props.nodeOrder}
-            nodesById={props.nodesById}
-            onSelectNodeInVirtualView={props.onSelectNodeInVirtualView}
-            virtualResultCountById={props.virtualResultCountById}
-            {...definedProps({
-              activeVirtualNodeId: props.activeVirtualNodeId,
-              hideInDemo: props.hideVirtualSectionInDemo,
-              onOpenVirtualView: props.onOpenVirtualView
-            })}
-          />
-          <WorkspaceDiveSection
-            activeNodeId={props.activeFolderId}
-            nodesById={props.nodesById}
-            onSelectNode={(id) => selectRegularNode(props, id)}
-          />
-          <ExternalLibrarySection
-            entriesByFolderId={props.externalEntriesByFolderId}
-            folders={props.externalFolders}
-            isExternalViewOpen={props.isExternalViewOpen}
-            onOpenExternalSelection={props.onOpenExternalSelection}
-            selection={props.externalSelection}
-            {...definedProps({
-              onChangeExternalFolder: props.onChangeExternalFolder,
-              onOpenExternalLibrarySettings: props.onOpenExternalLibrarySettings,
-              onRemoveExternalFolder: props.onRemoveExternalFolder,
-              onRescanExternalFolder: props.onRescanExternalFolder
-            })}
-          />
-        </>
-      }
+      bodyAppendContent={renderFolderSections(props)}
     />
   );
 }

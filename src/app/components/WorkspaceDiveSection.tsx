@@ -9,7 +9,7 @@ import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import { requestNodeRename } from '../../features/nodes/components/NodeTreeRowRename';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { getDiveRepository, subscribeToDiveChanges } from '../../shared/platform/desktop/diveRepository';
+import { getDiveRepository } from '../../shared/platform/desktop/diveRepository';
 import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuTrigger } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 
@@ -18,29 +18,6 @@ import { toggleCollapsed } from './WorkspaceVirtualSectionRows';
 const rootId = 'workspace-dives';
 const rowId = (id: string) => `dive:${id}`;
 type Context = { id: string; left: number; top: number };
-
-function useDiveRows() {
-  const [dives, setDives] = useState<Dive[]>([]);
-  useEffect(() => {
-    const repository = getDiveRepository();
-    if (!repository) return;
-    let active = true;
-    const changes = new Map<string, Dive>();
-    const unsubscribe = subscribeToDiveChanges((dive) => {
-      changes.set(dive.id, dive);
-      setDives((current) => [...current.filter((entry) => entry.id !== dive.id), dive]);
-    });
-    void repository.list().then((result) => {
-      if (!active) return;
-      for (const dive of result) if (!changes.has(dive.id)) changes.set(dive.id, dive);
-      setDives([...changes.values()]);
-    }).catch(() => {
-      if (active) setDives([...changes.values()]);
-    });
-    return () => { active = false; unsubscribe(); };
-  }, []);
-  return [...dives].sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
-}
 
 function DiveContextMenu(props: { context: Context; onClose: () => void; onCreate: () => void }) {
   const t = useTranslation();
@@ -65,9 +42,8 @@ function DiveContextMenu(props: { context: Context; onClose: () => void; onCreat
   );
 }
 
-function useDiveSection() {
+function useDiveSection(dives: readonly Dive[], selectDive: (id: string) => void) {
   const t = useTranslation();
-  const dives = useDiveRows();
   const [collapsed, setCollapsed] = useState(new Set<string>());
   const [context, setContext] = useState<Context | null>(null);
   const [pendingRename, setPendingRename] = useState<string | null>(null);
@@ -90,6 +66,7 @@ function useDiveSection() {
     create: () => {
       void getDiveRepository()?.create(untitled).then((dive) => {
         setCollapsed((current) => new Set([...current].filter((id) => id !== rootId)));
+        selectDive(dive.id);
         setPendingRename(dive.id);
       }).catch(failed);
     },
@@ -112,17 +89,20 @@ function DiveRows(props: {
   onSelectNode: (id: string) => void;
   section: DiveSectionState;
   activeNodeId: string | null;
+  activeDiveId: string | null;
+  onSelectDive: (id: string) => void;
 }) {
   const { dive, section } = props;
   const id = rowId(dive.id);
   const collapsed = section.collapsed.has(id);
+  const active = props.activeDiveId === dive.id;
   const sources = dive.directSourceIds.flatMap((id) => props.nodesById[id] ?? []);
   return (
     <>
-      <NodeTreeRow depth={1} hasChildren={sources.length > 0} isActive={false} isCollapsed={collapsed}
-        isSelected={false} label={dive.title} nodeId={id} rowSpacing={getNodeListRowSpacing()} showIcon={false}
+      <NodeTreeRow depth={1} hasChildren={sources.length > 0} isActive={active} isCollapsed={collapsed}
+        isSelected={active} label={dive.title} nodeId={id} rowSpacing={getNodeListRowSpacing()} showIcon={false}
         showLeafChevronPlaceholder={false} onContextMenu={section.openMenu} onRename={section.rename}
-        onSelect={() => { if (collapsed) section.toggle(id); }} onToggleCollapse={section.toggle} />
+        onSelect={() => props.onSelectDive(dive.id)} onToggleCollapse={section.toggle} />
       {!collapsed ? sources.map((source) => (
         <NodeTreeRow key={source.id} depth={2} hasChildren={false} isActive={props.activeNodeId === source.id}
           isCollapsed={false} isSelected={props.activeNodeId === source.id} label={source.title}
@@ -135,12 +115,15 @@ function DiveRows(props: {
 }
 
 export function WorkspaceDiveSection(props: {
+  dives: readonly Dive[];
+  activeDiveId: string | null;
+  onSelectDive: (id: string) => void;
   nodesById: WorkspaceListNodesById;
   onSelectNode: (id: string) => void;
   activeNodeId: string | null;
 }) {
   const t = useTranslation();
-  const section = useDiveSection();
+  const section = useDiveSection(props.dives, props.onSelectDive);
   if (!getDiveRepository()) return null;
   const title = t('desktop.nodeList.dive.tree');
   const collapsed = section.collapsed.has(rootId);

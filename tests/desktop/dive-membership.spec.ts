@@ -8,7 +8,10 @@ test('creates a Dive in the tree and shows sources added from library menus', as
   await desktopWindow.evaluate(async () => {
     await window.__folioleWorkspaceDebug?.seedNodes([
       { content: '', id: 'dive-folder', kind: 'folder', title: 'Probability sources' },
-      { content: 'Independent notes', id: 'dive-topic', kind: 'topic', title: 'Independent notes' }
+      { content: '', id: 'dive-subfolder', kind: 'folder', parentNodeId: 'dive-folder', title: 'Nested sources' },
+      { content: 'Conditional probability body', id: 'dive-nested-topic', kind: 'topic', parentNodeId: 'dive-subfolder', title: 'Conditional probability' },
+      { content: 'Independent notes', id: 'dive-topic', kind: 'topic', title: 'Independent notes' },
+      { content: 'Unrelated notes', id: 'unrelated-topic', kind: 'topic', title: 'Unrelated notes' }
     ]);
   });
   const diveTree = desktopWindow.getByRole('tree', { name: /^(Dives|专题)$/ });
@@ -41,6 +44,20 @@ test('creates a Dive in the tree and shows sources added from library menus', as
   await expect(picker).toBeHidden();
 
   await expect(diveTree.getByRole('treeitem', { name: 'Independent notes' })).toBeVisible();
+  const diveRow = diveTree.getByRole('treeitem', { name: 'Probability review' });
+  await diveRow.click();
+  await expect(diveRow).toHaveAttribute('aria-selected', 'true');
+  await expect(topicPanel.getByRole('treeitem', { name: 'Unrelated notes' })).toHaveCount(0);
+  const nested = topicPanel.getByRole('treeitem', { name: 'Conditional probability' });
+  await expect(nested).toBeVisible();
+  await expect(topicPanel.getByRole('treeitem', { name: 'Independent notes' })).toBeVisible();
+  await nested.click();
+  await expect(desktopWindow.getByText('Conditional probability body', { exact: true })).toBeVisible();
+  await expect(diveRow).toHaveAttribute('aria-selected', 'true');
+  await expect(topicPanel.getByRole('treeitem', { name: 'Independent notes' })).toBeVisible();
+  await desktopWindow.getByRole('treeitem', { name: 'Home', exact: true }).click();
+  await expect(topicPanel.getByRole('treeitem', { name: 'Unrelated notes' })).toBeVisible();
+
   const dives = await desktopWindow.evaluate(async () => window.electronAPI?.invoke('list_dives'));
   expect(dives).toEqual([expect.objectContaining({
     title: 'Probability review', directSourceIds: ['dive-folder', 'dive-topic']

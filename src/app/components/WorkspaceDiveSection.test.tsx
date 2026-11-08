@@ -7,10 +7,7 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 import { WorkspaceDiveSection } from './WorkspaceDiveSection';
 
 vi.mock('../../shared/platform/desktop/diveRepository', () => ({
-  getDiveRepository: () => ({
-    list: async () => [{ id: 'probability', title: 'Probability', directSourceIds: ['folder', 'topic'] }]
-  }),
-  subscribeToDiveChanges: () => () => undefined
+  getDiveRepository: () => ({})
 }));
 
 function source(id: string, kind: 'folder' | 'topic', title: string): WorkspaceListNode {
@@ -22,7 +19,8 @@ function source(id: string, kind: 'folder' | 'topic', title: string): WorkspaceL
 
 it('shows direct sources without icons or leaf chevrons, like Virtual rows', async () => {
   renderWithLocalization(
-    <WorkspaceDiveSection activeNodeId={null} onSelectNode={vi.fn()} nodesById={{
+    <WorkspaceDiveSection activeNodeId={null} activeDiveId={null} onSelectDive={vi.fn()} onSelectNode={vi.fn()}
+      dives={[{ id: 'probability', title: 'Probability', directSourceIds: ['folder', 'topic'] }]} nodesById={{
       folder: source('folder', 'folder', 'Probability notes'),
       topic: source('topic', 'topic', 'Bayes’ theorem')
     }} />

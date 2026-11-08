@@ -120,6 +120,7 @@ export function useWorkspaceDualListState(args: WorkspaceDualListStateArgs) {
       folderNodesById,
       folderTopicCountById: structureData.folderTopicCountById,
       revealFolderId: activeColumns.revealFolderId,
+      visibleNodeIds: structureData.listIndex.visibleNodeIdSet,
       topicChildrenByParent: structureData.listIndex.visibleChildrenByParent,
       topicNodeOrder,
       topicNodesById: args.listNodesById

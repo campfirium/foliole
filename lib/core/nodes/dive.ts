@@ -6,14 +6,28 @@ export interface Dive {
 
 export function resolveDiveTopicIds(
   dive: Dive,
-  topics: Iterable<{ id: string; ancestorFolderIds: readonly string[] }>
-): Set<string> {
-  const sources = new Set(dive.directSourceIds);
+  tree: {
+    kindOf: (id: string) => string | undefined;
+    childrenOf: (id: string) => readonly string[];
+  }
+): string[] {
   const members = new Set<string>();
-  for (const topic of topics) {
-    if (sources.has(topic.id) || topic.ancestorFolderIds.some((id) => sources.has(id))) {
-      members.add(topic.id);
+  const visited = new Set<string>();
+  for (const id of dive.directSourceIds) {
+    const kind = tree.kindOf(id);
+    if (kind === 'topic') members.add(id);
+    if (kind !== 'folder') continue;
+    const pending = [id];
+    while (pending.length) {
+      const descendant = pending.pop()!;
+      if (visited.has(descendant)) continue;
+      visited.add(descendant);
+      const descendantKind = tree.kindOf(descendant);
+      if (!descendantKind) continue;
+      if (descendantKind === 'topic') members.add(descendant);
+      const children = tree.childrenOf(descendant);
+      for (let index = children.length - 1; index >= 0; index -= 1) pending.push(children[index]!);
     }
   }
-  return members;
+  return [...members];
 }

@@ -7,11 +7,13 @@ import { WorkspaceFolderColumn } from './WorkspaceFolderColumn';
 import { useWorkspaceRenderDiagnostic } from './workspaceInputLagRenderDiagnostic';
 
 export function WorkspaceDualListFolderColumn({
+  diveNavigation,
   dualListState,
   onSelectFolderColumnNode,
   props,
   virtualResultCountById
 }: {
+  diveNavigation: Pick<Parameters<typeof WorkspaceFolderColumn>[0], 'activeDiveId' | 'dives' | 'onSelectDive'>;
   dualListState: ReturnType<typeof useWorkspaceDualListState>;
   onSelectFolderColumnNode: (nodeId: string) => void;
   props: WorkspaceDualListContentProps;
@@ -27,6 +29,7 @@ export function WorkspaceDualListFolderColumn({
   });
   return (
     <WorkspaceFolderColumn
+      {...diveNavigation}
       activeFolderId={dualListState.activeFolderId}
       externalEntriesByFolderId={props.externalEntriesByFolderId}
       externalFolders={props.externalFolders}
