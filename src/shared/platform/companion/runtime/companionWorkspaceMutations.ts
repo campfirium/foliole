@@ -1,3 +1,4 @@
+import { loadCompanionWorkspaceNodeFromDb } from '../../../../../lib/core/database/companionWorkspaceNodeRead';
 import type { ReviewSessionMode } from '../../../../features/review/model/reviewSessionMode';
 import { buildWorkspaceMetadataMutation, type WorkspaceMetadataCommand } from '../../../../store/workspaceNodeMetadataMutation';
 import { maintainWorkspaceSnapshotSequentialReading } from '../../../../store/workspaceSnapshotSequentialReading';
@@ -9,6 +10,7 @@ import { commitCompanionNodeHistoryWithDb, createCompanionMetadataVersion } from
 import { iosCompanionHostName } from './iosCompanionMutationState';
 
 export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow?: { session: ReviewSessionState; mode: ReviewSessionMode }) {
+  if (command.type === 'set-priority') return setCompanionPriority(command);
   return runCompanionHistoryMutation(async db => {
     const host = await iosCompanionHostName(db);
     const snapshot = await loadIosCompanionWorkspaceSnapshot(db);
@@ -17,7 +19,7 @@ export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow
     const now = new Date().toISOString();
     const mutation = buildWorkspaceMetadataMutation(command, nodes, now);
     const after = { ...nodes, ...Object.fromEntries(mutation.nodes.map(node => [node.id, node])) };
-    const readings = command.type === 'rename' || command.type === 'set-priority' ? [] : maintainWorkspaceSnapshotSequentialReading({ before: nodes, after,
+    const readings = command.type === 'rename' ? [] : maintainWorkspaceSnapshotSequentialReading({ before: nodes, after,
       changedNodeIds: [command.nodeId], nodeOrder: [...new Set([...snapshot.nodeOrder, command.nodeId])], now });
     for (const change of readings) if (after[change.nodeId]) after[change.nodeId] = { ...after[change.nodeId]!, reading: change.afterReading };
     const sessions = flow ? { beforeSession: flow.session, afterSession: flow.session } : undefined;
@@ -25,5 +27,20 @@ export function mutateCompanionWorkspace(command: WorkspaceMetadataCommand, flow
     await commitCompanionNodeHistoryWithDb(db, records, mutation.title,
       command.type === 'restore' ? 'local_restore' : 'local_mutation', mutation.subtreeNodeIds, readings, sessions);
     return command.nodeId;
-  }, { kind: 'nodes', nodeIds: [command.nodeId], structure: command.type !== 'set-priority' });
+  }, { kind: 'nodes', nodeIds: [command.nodeId], structure: true });
+}
+
+function setCompanionPriority(command: Extract<WorkspaceMetadataCommand, { type: 'set-priority' }>) {
+  return runCompanionHistoryMutation(async db => {
+    const node = await loadCompanionWorkspaceNodeFromDb(db, command.nodeId);
+    const nodes = node ? { [node.id]: node } : {};
+    const mutation = buildWorkspaceMetadataMutation(command, nodes, new Date().toISOString());
+    const next = mutation.nodes[0];
+    if (next) {
+      const host = await iosCompanionHostName(db);
+      const record = await createCompanionMetadataVersion(db, next, host);
+      await commitCompanionNodeHistoryWithDb(db, [record], mutation.title);
+    }
+    return command.nodeId;
+  }, { kind: 'nodes', nodeIds: [command.nodeId] });
 }

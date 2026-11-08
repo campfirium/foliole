@@ -145,9 +145,11 @@ it('uses saved topic and item priority in the next durable Android queues', asyn
 
   const first = await openCompanionDailyFlow({ now, mode: 'reading-only' });
   expect(first.session.currentNodeId).toBe('zero');
+  const fullDirectoryQueries = library.fullDirectoryQueries();
   await mutateCompanionWorkspace({ type: 'set-priority', nodeId: 'zero', priority: 9 });
   await mutateCompanionWorkspace({ type: 'set-priority', nodeId: 'leaf', priority: 0 });
   await mutateCompanionWorkspace({ type: 'set-priority', nodeId: 'card-b', priority: 0 });
+  expect(library.fullDirectoryQueries()).toBe(fullDirectoryQueries);
   expect((await openCompanionDailyFlow({ now, mode: 'reading-only' })).session.currentNodeId).toBe('zero');
 
   const tomorrow = '2026-10-29T08:00:00.000Z';
