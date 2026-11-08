@@ -1,4 +1,4 @@
-import { DELETED_NODE_SQL, releaseDeletedNodeBodiesWithPort } from '../database/deletedNodeBodyRelease.js';
+import { DELETED_NODE_SQL, releaseDeletedNodeBodiesForBatch } from '../database/deletedNodeBodyRelease.js';
 import { collectTextBodyBlobCandidatesWithPort } from '../database/textBodyBlobCollection.js';
 
 import { reconcileCurrentNodeBodies, reconcileCurrentNodeBody } from './currentNodeBodyProjection.js';
@@ -66,17 +66,17 @@ export async function finishReceivedNodes(tx: DbPort, inputs: readonly ReceivedO
   const deleted = ids.length ? await tx.query<{ node_id: string }>(`SELECT tomb.node_id FROM node_sync_tombstones tomb
     WHERE tomb.node_id IN (SELECT value FROM json_each(?)) AND NOT EXISTS (SELECT 1 FROM nodes WHERE id = tomb.node_id)`,
   [JSON.stringify(ids)]) : [];
-  for (const { node_id: nodeId } of deleted) await releaseDeletedNodeBodies(tx, nodeId);
+  await releaseDeletedNodeBodies(tx, deleted.map(row => row.node_id));
   await collectRequestSyncBodiesForNodes(tx, ids.filter(id => collect.get(id)), Number.MAX_SAFE_INTEGER);
 }
 
 /** A received permanent deletion leaves no copy of the note's text on this device either. */
 async function releaseReceivedDeletionBodies(tx: DbPort, nodeId: string) {
   if (!(await tx.query(DELETED_NODE_SQL, [nodeId])).length) return;
-  await releaseDeletedNodeBodies(tx, nodeId);
+  await releaseDeletedNodeBodies(tx, [nodeId]);
 }
 
-async function releaseDeletedNodeBodies(tx: DbPort, nodeId: string) {
-  const hashes = await releaseDeletedNodeBodiesWithPort(tx, nodeId);
+async function releaseDeletedNodeBodies(tx: DbPort, nodeIds: readonly string[]) {
+  const hashes = await releaseDeletedNodeBodiesForBatch(tx, nodeIds);
   if (hashes.length) await collectTextBodyBlobCandidatesWithPort(tx, hashes);
 }

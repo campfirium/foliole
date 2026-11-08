@@ -1,7 +1,12 @@
 // @vitest-environment node
+import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { createBetterSqlite3Driver } from '../../../../../../electron/database/betterSqlite3Driver.js';
+import { prepareImportedNodeDeletionVersions } from '../../../../../../electron/database/importedNodeDeletionVersions.js';
 import { readDesktopFramedSyncLibraryEvidence } from '../../../../../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
+import { deleteNodesPermanently } from '../../../../../../lib/core/database/nodePermanentDeleteMutations.js';
+import { initializeWorkspaceSearchSidecar } from '../../../../../../lib/core/database/workspaceSearchSidecar.js';
 import type { DbParams, DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import { beginSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { createCompanionRequestFixture, native } from '../../../../../test/companionRequestSync.testSupport.js';
@@ -54,6 +59,68 @@ function receivedIds(adoption: NonNullable<typeof host>) {
   return readDesktopFramedSyncLibraryEvidence(adoption.fixture.leftSnapshot.databasePath).nodes
     .map(node => (node as { id: string }).id).filter(id => id.startsWith('t326-complete-'));
 }
+
+function permanentlyDeleteSourceNodes(adoption: NonNullable<typeof host>, nodeIds: string[]) {
+  const source = new Database(adoption.fixture.rightSnapshot.databasePath);
+  try {
+    const driver = createBetterSqlite3Driver(source);
+    source.exec("ATTACH DATABASE ':memory:' AS search");
+    initializeWorkspaceSearchSidecar({ sqlite: source, driver });
+    const deletedAt = '2026-10-07T00:00:00.000Z';
+    prepareImportedNodeDeletionVersions(driver, nodeIds, deletedAt);
+    deleteNodesPermanently(driver, { nodeIds, deletedAt });
+    return source.prepare('SELECT node_id, version_id, content_hash FROM node_sync_tombstones ORDER BY node_id').all();
+  } finally { source.close(); }
+}
+
+it('bounds deletion follow-up calls while completing a mixed first adoption', async () => {
+  const adoption = await adopt(1);
+  const nodeIds = Array.from({ length: 24 }, (_, index) => `deleted-${index}`);
+  for (const nodeId of nodeIds) {
+    await adoption.fixture.right.seed({ nodeId, title: 'Deleted', content: 'Original body' });
+  }
+  const expected = permanentlyDeleteSourceNodes(adoption, nodeIds);
+  const original = native.db!;
+  let calls = 0;
+  const count = (port: DbPort): DbPort => ({
+    run: (sql, params) => { calls++; return port.run(sql, params); },
+    query: (sql, params) => { calls++; return port.query(sql, params) as never; },
+    transaction: execute => port.transaction(tx => execute(count(tx)))
+  });
+  native.db = count(original);
+  try { await adoption.sync(); }
+  finally { native.db = original; }
+  expect(await loadSyncGroupLocalAdoption(adoption.db)).toBeNull();
+  expect(receivedIds(adoption)).toHaveLength(1);
+  expect(expected).toHaveLength(nodeIds.length);
+  expect(adoption.sqlite.prepare('SELECT node_id, version_id, content_hash FROM node_sync_tombstones ORDER BY node_id').all())
+    .toEqual(expected);
+  expect(adoption.sqlite.prepare(`SELECT count(*) AS count FROM node_sync_versions
+    WHERE object_id IN (SELECT value FROM json_each(?)) AND body_text IS NOT NULL`).get(JSON.stringify(nodeIds)))
+    .toEqual({ count: 0 });
+  expect(calls).toBeLessThanOrEqual(890); // The unbatched release takes 938 calls for these facts.
+});
+
+it('preserves shared text while releasing a batch of deletions after adoption', async () => {
+  const adoption = await adopt(1);
+  const deletedIds = ['delete-first', 'delete-second'];
+  for (const nodeId of [...deletedIds, 'keep-shared']) {
+    await adoption.fixture.right.seed({ nodeId, title: 'Shared', content: 'Shared body' });
+  }
+  await adoption.sync();
+  expect(await loadSyncGroupLocalAdoption(adoption.db)).toBeNull();
+  const expected = permanentlyDeleteSourceNodes(adoption, deletedIds);
+  await adoption.sync();
+  await adoption.restart();
+  await adoption.sync();
+
+  expect(adoption.sqlite.prepare('SELECT node_id, version_id, content_hash FROM node_sync_tombstones ORDER BY node_id').all())
+    .toEqual(expected);
+  expect(adoption.sqlite.prepare(`SELECT id, content FROM nodes WHERE id IN ('delete-first', 'delete-second', 'keep-shared')`).all())
+    .toEqual([{ id: 'keep-shared', content: 'Shared body' }]);
+  expect(adoption.sqlite.prepare(`SELECT version_id FROM node_sync_versions
+    WHERE object_id IN ('delete-first', 'delete-second') AND body_text IS NOT NULL`).all()).toEqual([]);
+});
 
 it('applies each pulled batch in one transaction and prunes visibility once per batch', { meta: { calibratedMs: 20000 } }, async () => {
   const adoption = await adopt();
