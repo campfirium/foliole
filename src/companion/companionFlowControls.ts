@@ -6,6 +6,7 @@ import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionW
 import { hasFlowDayChanged } from '../store/workspaceFlowDay';
 import { cloneWorkspaceReviewSession } from '../store/workspaceHistoryContext';
 
+import { companionFlowOpenArgs } from './companionDiveFlowControls';
 import type { FlowAction } from './companionFlowHistoryEntry';
 import type { CompanionFlowHistoryContext } from './companionFlowHistoryEntry';
 import type { FlowOwner } from './useCompanionFlowSession';
@@ -29,7 +30,7 @@ export function createCompanionFlowControls(args: {
   function capture() { return { owner: current, scope, generation: current.generation,
     nodeId: current.session.currentNodeId, epoch: current.epoch, session: cloneWorkspaceReviewSession(current.session) }; }
   function historyContext(token: ReturnType<typeof capture>): CompanionFlowHistoryContext | undefined {
-    return isAvailableNativeCompanionRuntime() ? { key: historyKey, mode, session: token.session } : undefined;
+    return isAvailableNativeCompanionRuntime() ? { key: historyKey, mode: token.session.dive?.mode ?? mode, session: token.session } : undefined;
   }
   function restore(token: ReturnType<typeof capture>, restored: FlowOwner['session']) {
     if (getCompanionReadingScope() !== token.scope || owner.current !== token.owner || current.epoch !== token.epoch) return;
@@ -51,7 +52,7 @@ export function createCompanionFlowControls(args: {
   async function resume(token: ReturnType<typeof capture>) {
     if (!matches(token)) return;
     const now = new Date().toISOString();
-    const session = (await openCompanionDailyFlow({ now, mode, refresh: true })).session;
+    const session = (await openCompanionDailyFlow({ ...companionFlowOpenArgs(token.session, mode, now), refresh: true })).session;
     if (!matches(token)) return;
     current.session = session;
     current.generation += 1;
@@ -65,7 +66,7 @@ export function createCompanionFlowControls(args: {
       token = capture();
     }
     if (!hasFlowDayChanged(current.session, now) && !isAvailableNativeCompanionRuntime()) return token;
-    const saved = await openCompanionDailyFlow({ now, mode });
+    const saved = await openCompanionDailyFlow(companionFlowOpenArgs(token.session, mode, now));
     if (!matches(token) || !active()) return null;
     current.session = { ...saved.session, isAnswerRevealed:
       saved.session.currentNodeId === token.nodeId && token.session.isAnswerRevealed };

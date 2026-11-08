@@ -15,7 +15,7 @@ import type { CycleStored, PreparedFlowNavigation } from './dailyFlowStore.js';
 import { recordDailyFlowSync } from './dailyFlowSyncRecord.js';
 import { commitTargetedFlowHistory } from './dailyFlowTargetHistory.js';
 import { transactionDailyFlowPersistence } from './dailyFlowTransactionFacts.js';
-import { selectDiveCurrent } from './diveCycleFlow.js';
+import { openDiveCurrent } from './diveCycleFlow.js';
 
 export interface DailyFlowPersistence {
   readingPreservesPosition?: boolean;
@@ -38,11 +38,7 @@ export function openDailyFlow(db: DbPort, args: DailyFlowOpenArgs, settings: Dai
         : (await openGlobalDailyFlow(tx, { now: args.now, mode: 'recommended', prepareOnly: true },
           config, persistence, previous)).session;
       const store = createSqliteDailyFlowStore(tx, persistence);
-      const seed = args.seed;
-      const cursor = seed?.daily?.dayKey === global.daily?.dayKey && seed?.dive?.id === args.dive.id
-        ? seed.dive.position : 0;
-      const position = seed?.currentNodeId ? Math.max(0, cursor - 1) : cursor;
-      const session = await selectDiveCurrent(store, global, { ...args.dive, mode: args.mode, position }, args.now, config);
+      const session = await openDiveCurrent(store, global, args, config);
       return { mode: args.mode, session, learning: await readCurrentFlowLearning(store, session.currentNodeId) };
     }
     return openGlobalDailyFlow(tx, args, config, persistence, previous);

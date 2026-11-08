@@ -20,9 +20,9 @@ function node(id: string, title: string, parentNodeId: string | null = null): Wo
   };
 }
 
-function Directory({ snapshot }: { snapshot: WorkspaceSnapshot }) {
+function Directory({ snapshot, onStartDive }: { snapshot: WorkspaceSnapshot; onStartDive: (id: string) => void }) {
   const [selection, setSelection] = useState<CompanionDirectorySelection>({ kind: 'root' });
-  return <CompanionDirectoryContent selection={selection} onChangeSelection={setSelection}
+  return <CompanionDirectoryContent onStartDive={onStartDive} selection={selection} onChangeSelection={setSelection}
     onExitArticle={setSelection} onSelectNode={() => undefined} snapshot={snapshot}
     sortDirection="asc" sortKey="name" />;
 }
@@ -36,7 +36,8 @@ it('opens the received Dive under Dives and shows its sources and derived topics
   const snapshot: WorkspaceSnapshot = {
     nodesById, nodeOrder: Object.keys(nodesById), trashedNodeIds: [], activeNodeId: null, untitledSequenceByParent: {}
   };
-  const view = renderWithLocalization(<Directory snapshot={snapshot} />);
+  const start = vi.fn();
+  const view = renderWithLocalization(<Directory snapshot={snapshot} onStartDive={start} />);
   expect(screen.getByRole('heading', { name: 'Dives' })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Open folder Probability' }));
   expect(screen.getByRole('heading', { name: 'Sources' })).toBeVisible();
@@ -44,7 +45,10 @@ it('opens the received Dive under Dives and shows its sources and derived topics
   expect(screen.getByRole('heading', { name: 'Topics' })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Open topic Statistics primer' })).toBeVisible();
 
-  view.rerender(<Directory snapshot={{ ...snapshot, nodesById: {
+  fireEvent.click(screen.getByRole('button', { name: 'Start Dive' }));
+  expect(start).toHaveBeenCalledWith('dive');
+
+  view.rerender(<Directory onStartDive={start} snapshot={{ ...snapshot, nodesById: {
     ...nodesById, member: { ...nodesById.member, parentNodeId: null }
   } }} />);
   expect(screen.getByRole('button', { name: 'Open folder Reference shelf' })).toBeVisible();

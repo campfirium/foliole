@@ -56,9 +56,9 @@ function createSessionActions(args: BuildLayoutPropsArgs) {
       startStudyMode: args.startStudyMode
     });
   return {
-    ...definedProps({ onOpenDiveFlow: hasTargetedDailyFlowRuntime() ? async (scope: Parameters<NonNullable<WorkspaceLayoutReviewProps['onOpenDiveFlow']>>[0]) => {
+    ...definedProps({ onOpenDiveFlow: hasTargetedDailyFlowRuntime() ? async (scope: Parameters<NonNullable<WorkspaceLayoutReviewProps['onOpenDiveFlow']>>[0], step?: Parameters<NonNullable<WorkspaceLayoutReviewProps['onOpenDiveFlow']>>[1]) => {
       if (!args.reviewSettings.isReviewSchedulerSettingsReady) return false;
-      const started = await args.startReviewSession(getDemoRuntimeNowIso(), scope ? { dive: scope } : { returnFromDive: true });
+      const started = await args.startReviewSession(getDemoRuntimeNowIso(), scope ? { dive: scope, ...definedProps({ diveStep: step }) } : { returnFromDive: true });
       if (started) {
         args.onOpenReviewView();
         args.startStudyMode({ force: true });

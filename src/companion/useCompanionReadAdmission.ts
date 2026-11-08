@@ -16,7 +16,7 @@ export function useCompanionReadAdmission(args: CompanionSurfaceActionArgs,
   return async (token: Token, releaseSequentialReading: boolean, nextTopicId?: string) => {
     const engine = args.flow.readIntents;
     const now = new Date().toISOString();
-    if (!engine || hasFlowDayChanged(token.session, now)) return false;
+    if (token.session.dive || !engine || hasFlowDayChanged(token.session, now)) return false;
     if (engine.error) { await engine.retry(); return true; }
     await args.activity.flush(undefined, { position: false });
     if (!latest.current.active || !args.flow.matches(token)) return true;

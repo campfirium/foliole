@@ -9,9 +9,10 @@ type WorkspaceSet = (partial: Partial<WorkspaceState> | ((state: WorkspaceState)
 function open(set: WorkspaceSet, get: () => WorkspaceState, now: string, options: ReviewSessionResumeOptions & ReviewSessionStartOptions) {
   const state = get();
   const preference = resolveReviewSessionModePreference(state.reviewSessionMode, state.reviewSessionModeExpiresAt, now);
-  return openWorkspaceDailyFlow(set, get, { now, mode: preference.reviewSessionMode,
-    ...(state.reviewSession.dive ? { returnFromDive: !options.dive } : { seed: state.reviewSession }),
-    ...options, startup: !options.dive }, preference);
+  return openWorkspaceDailyFlow(set, get, { now, mode: options.dive ? state.reviewSession.dive?.mode ?? preference.reviewSessionMode : preference.reviewSessionMode,
+    ...(options.diveStep || !state.reviewSession.dive ? { seed: state.reviewSession } : {}),
+    ...(state.reviewSession.dive && !options.dive ? { returnFromDive: true } : {}),
+    ...options, startup: !options.dive && !state.reviewSession.dive }, options.dive ? undefined : preference);
 }
 
 export function createStartReviewSessionAction(set: WorkspaceSet, defaultOptions: ReviewSessionStartOptions = {},

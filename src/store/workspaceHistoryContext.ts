@@ -55,7 +55,8 @@ export function isSameWorkspaceReviewSession(
   keys.delete('hiddenSoonNodeIds');
   const sameWindow = left.dayWindow?.start === right.dayWindow?.start && left.dayWindow?.end === right.dayWindow?.end;
   const sameDive = left.dive?.id === right.dive?.id && left.dive?.position === right.dive?.position &&
-    left.dive?.mode === right.dive?.mode;
+    left.dive?.mode === right.dive?.mode && left.dive?.phase === right.dive?.phase &&
+    left.dive?.limit === right.dive?.limit && left.dive?.stop === right.dive?.stop;
   return sameWindow && sameDive && [...keys].every((key) => left[key as keyof typeof left] === right[key as keyof typeof right]) &&
     (left.flowFormat === 'cycle-v1' || right.flowFormat === 'cycle-v1'
       ? left.flowFormat === right.flowFormat && sameCycleProgress(left, right)

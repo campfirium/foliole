@@ -22,5 +22,5 @@ export function useCompanionFlowDocumentPrefetch(snapshot: WorkspaceSnapshot | n
     const result = await engine.displayPreparation.prepare({ session, mode, now: args.now }, signal);
     return signal.aborted ? null : result.session.currentNodeId;
   }, [snapshot?.nodesById, session, engine, mode]);
-  return useFlowDocumentPrefetch(snapshot ? session : { ...session, currentNodeId: null }, predict, prepare);
+  return useFlowDocumentPrefetch(snapshot && !session.dive ? session : { ...session, currentNodeId: null }, predict, prepare);
 }

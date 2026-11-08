@@ -149,3 +149,79 @@ it('grades the global current item within a dive and revalidates that slot on re
     expect(reopened.prepare("SELECT COUNT(*) AS count FROM review_log WHERE op_id='grade-a'").get()).toEqual({ count: 1 });
   } finally { reopened.close(); }
 });
+
+it('returns to the next global slot when a still-ready Topic moved to the tail', async () => {
+  const { peer, open, commit } = await setup('topic');
+  const global = (await open()).session;
+  const next = (await readCycleRows(peer.port)).find(row => row.order_key > global.cycle!.scanAfter)!;
+  const dive = (await open({ dive: { id: 'dive', topicIds: ['a'] } })).session;
+  await commit({ opId: 'read-ready', now, token: dive.daily!, sourceSession: dive,
+    readingAction: 'read', readings: [{ nodeId: 'a', before: null, after: { ...reading, nextAt: now } }] });
+  expect((await readCycleRows(peer.port)).find(row => row.node_id === 'a')).toMatchObject({ active: 1, initial_task: 0 });
+  expect((await open({ returnFromDive: true })).session.currentNodeId).toBe(next.node_id);
+});
+
+it('keeps the current Dive open when undoing and redoing another Dive’s Read', async () => {
+  const { open, commit, facts } = await setup('topic');
+  const first = (await open({ dive: { id: 'first', topicIds: ['b'] } })).session;
+  const read = await commit({ opId: 'read-first', now, token: first.daily!, sourceSession: first,
+    readingAction: 'read', readings: [...readArgs('b').readings] });
+  const second = (await open({ dive: { id: 'second', topicIds: ['c'] } })).session;
+  const undo = await commit({ opId: 'undo-first', now, token: second.daily!, sourceSession: second,
+    historyMode: 'undo', historyTargetOpId: 'read-first', historySourceSession: read.session, nextSession: first,
+    readings: [{ nodeId: 'b', before: reading, after: null }] });
+  expect(undo.session).toMatchObject({ dive: { id: 'second' }, currentNodeId: 'c' });
+  expect((await facts()).nodesById.b!.reading).toBeNull();
+  const redo = await commit({ opId: 'redo-first', now, token: undo.session.daily!, sourceSession: undo.session,
+    historyMode: 'redo', historyTargetOpId: 'read-first', historySourceSession: first, nextSession: read.session,
+    readings: [...readArgs('b').readings] });
+  expect(redo.session).toMatchObject({ dive: { id: 'second' }, currentNodeId: 'c' });
+  expect((await facts()).nodesById.b!.reading).toMatchObject({ repetitionCount: 1 });
+});
+
+it('pauses at each choice and keeps the round boundary and scheduled Topic positions', async () => {
+  const { peer, open, commit, facts } = await setup('topic');
+  const later = '2026-10-28T09:00:00.000Z';
+  const future = '2026-10-28T10:00:00.000Z';
+  addNode(peer, 'item-b', 5, 'item', 'b');
+  saveNodeReviewStateWithSync(peer.driver, { nodeId: 'item-b', updatedAt: now, hostName: peer.name, review: {
+    due: later, lastReviewAt: now, state: 1, stability: 1, difficulty: 5, elapsedDays: 0, scheduledDays: 0, reps: 1, lapses: 0
+  } });
+  const scheduled = { ...reading, nextAt: later };
+  saveNodeReadingStateWithSync(peer.driver, { nodeId: 'c', reading: scheduled, updatedAt: now, hostName: peer.name });
+  const global = (await open()).session;
+  const dive = { id: 'dive', topicIds: ['b', 'c'] };
+  const mode = 'recommended';
+  const start = (await open({ dive, mode })).session;
+  expect(start).toMatchObject({ currentNodeId: 'b', dive: { phase: 'initial', stop: null } });
+  const read = async (source: typeof start, at: string, nextAt: string) => {
+    const nodeId = source.currentNodeId!;
+    return (await commit({ opId: `read-${source.dive!.phase}-${source.daily!.revision}`, now: at, token: source.daily!,
+      sourceSession: source, readingAction: 'read', readings: [{ nodeId,
+        before: (await facts()).nodesById[nodeId]!.reading ?? null, after: { ...reading, nextAt, lastHandledAt: at } }] })).session;
+  };
+  const advance = async (seed: typeof start, at = now) =>
+    (await open({ dive, mode, seed, now: at, diveStep: 'continue' })).session;
+  const initialStop = await read(start, now, now);
+  expect(initialStop).toMatchObject({ currentNodeId: null, dive: { phase: 'initial', stop: 'finished' } });
+  const today = await advance(initialStop);
+  expect(today).toMatchObject({ currentNodeId: 'b', dive: { phase: 'today' } });
+  const todayStop = await read(today, now, now);
+  expect(todayStop).toMatchObject({ currentNodeId: null, dive: { phase: 'today', stop: 'waiting', limit: today.dive!.limit } });
+  expect(todayStop.cycle!.tailKey).toBeGreaterThan(today.dive!.limit);
+  const cPosition = (await readCycleRows(peer.port)).find(row => row.node_id === 'c')!.order_key;
+  const topics = await advance(todayStop);
+  expect(topics).toMatchObject({ currentNodeId: 'b', dive: { phase: 'topics' } });
+  const topicsStop = await read(topics, now, future);
+  expect(topicsStop).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'waiting' } });
+  expect((await readCycleRows(peer.port)).find(row => row.node_id === 'c')!.order_key).toBe(cPosition);
+  const nextRound = await advance(topicsStop, later);
+  expect(nextRound).toMatchObject({ currentNodeId: 'c', dive: { phase: 'topics', position: cPosition } });
+  expect((await facts()).nodesById.b!.reading?.nextAt).toBe(future);
+  const finalStop = await read(nextRound, later, tomorrow);
+  expect(finalStop).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'waiting' } });
+  expect((await facts()).nodesById['item-b']!.review?.reps).toBe(1);
+  const switched = (await open({ dive: { id: 'empty', topicIds: [] }, seed: finalStop, now: later })).session;
+  expect(switched).toMatchObject({ currentNodeId: null, dive: { id: 'empty', phase: 'initial', stop: 'empty' } });
+  expect((await open({ returnFromDive: true, now: later })).session.currentNodeId).toBe(global.currentNodeId);
+});

@@ -28,6 +28,7 @@ export type { CompanionDirectorySelection } from './CompanionDirectoryModel';
 
 interface CompanionDirectoryContentProps {
   articleOnly?: boolean;
+  onStartDive?: ((id: string) => void) | undefined;
   selection: CompanionDirectorySelection;
   onChangeSelection(selection: CompanionDirectorySelection): void;
   onExitArticle(selection: CompanionDirectorySelection): void;
@@ -89,6 +90,7 @@ const virtualEmptyCopy = {
 } as const;
 
 function CompanionDirectoryListContent(props: {
+  onStartDive?: ((id: string) => void) | undefined;
   directory: ReturnType<typeof useCompanionExternalDirectory>;
   handleSelectItem(item: DirectoryListItem): void;
   viewKey: string;
@@ -102,6 +104,9 @@ function CompanionDirectoryListContent(props: {
   const copy = id === VIRTUAL_PUBLISHED_NODE_ID || id === VIRTUAL_SHELVED_NODE_ID || id === VIRTUAL_REMOVED_NODE_ID ? virtualEmptyCopy[id] : null;
   return (
     <section className="companion-page-start">
+      {dive && props.onStartDive ? <AppButton className="mb-3 min-h-11" onClick={() => props.onStartDive?.(dive.id)}>
+        {t('desktop.nodeList.dive.startFlow')}
+      </AppButton> : null}
       <CompanionDirectoryList
         directory={props.directory}
         viewKey={props.viewKey}
@@ -170,7 +175,7 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
   </section>;
 
   return <CompanionDirectoryListContent
-    directory={directory}
+    directory={directory} onStartDive={props.onStartDive}
     viewKey={`directory:${JSON.stringify(props.selection)}`}
     handleSelectItem={handleSelectItem}
     sections={sections}

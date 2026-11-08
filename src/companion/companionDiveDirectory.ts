@@ -1,6 +1,6 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { readDiveNode } from '../../lib/core/nodes/dive';
-import { resolveCompanionDiveMembership } from '../shared/platform/companion/browse/companionDiveMembership';
+import { resolveDiveMembership } from '../shared/diveMembership';
 import { isCanonicalVisibleNodeId } from '../shared/workspaceCanonicalSelectors';
 
 import type { CompanionDirectorySelection, DirectoryListItem, DirectorySection } from './CompanionDirectoryModel';
@@ -14,7 +14,7 @@ export function resolveCompanionDiveSections(
   if (!dive) return null;
 
   if (!isCanonicalVisibleNodeId(snapshot, dive.id)) return null;
-  const { sources, topics } = resolveCompanionDiveMembership(snapshot, dive);
+  const { sources, topics } = resolveDiveMembership(snapshot, dive);
   const toItem = (section: string, id: string): DirectoryListItem => {
     const node = snapshot.nodesById[id]!;
     return { id: `${section}:${id}`, nodeId: id, source: 'internal', kind: node.kind,

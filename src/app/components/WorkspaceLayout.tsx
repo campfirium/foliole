@@ -1,6 +1,7 @@
 import { FlowExitHereContext } from '../../shared/ui/FlowExitHereContext';
 
 import { DiveFlowActionContext } from './diveFlowActionContext';
+import { WorkspaceDiveFlowChoice } from './WorkspaceDiveFlowChoice';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceLayoutMain } from './WorkspaceLayoutMain';
 export type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
@@ -13,6 +14,7 @@ export function WorkspaceLayout(props: WorkspaceLayoutProps) {
   return <FlowExitHereContext.Provider value={canExitHere ? props.review.onExitFlowHere ?? null : null}>
     <DiveFlowActionContext.Provider value={props.review.onOpenDiveFlow}>
       <WorkspaceLayoutMain {...props} />
+      <WorkspaceDiveFlowChoice review={props.review} nodeList={props.nodeList} trash={props.trash} />
     </DiveFlowActionContext.Provider>
   </FlowExitHereContext.Provider>;
 }

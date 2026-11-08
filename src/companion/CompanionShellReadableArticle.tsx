@@ -145,7 +145,7 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
       isReviewItem={node?.kind === 'item'}
       answer={answer}
       footer={footer}
-      endOfArticleAction={nextTopicId && nodeId === flowTopicId && canContinueToNext(props.surface.readableArticle) ? (
+      endOfArticleAction={!props.surface.diveFlow && nextTopicId && nodeId === flowTopicId && canContinueToNext(props.surface.readableArticle) ? (
         <CompanionFlowNextTopicFooter nodeId={nodeId}
           disabled={props.surface.isSubmittingReadingAction || props.surface.historyRefreshPending}
           onContinue={() => void props.surface.handleReadReviewTopic(true, nextTopicId)} />

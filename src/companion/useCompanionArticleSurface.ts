@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useReducer, useRef } from 'react';
 
+import { createCompanionDiveEntry } from './companionDiveFlowControls';
 import type { CompanionTabAction } from './CompanionFloatingBars';
 import { useCompanionNavigationField, useCompanionNavigationFlush, useHasCompanionNavigation } from './CompanionNavigationProvider';
 import { CompanionReadingActivity } from './companionReadingActivity';
@@ -182,6 +183,8 @@ export function useCompanionArticleSurface(
     effectiveReviewSession,
     reviewSession: effectiveReviewSession,
     readingActivity,
+    diveFlow: flow.dive,
+    openDiveFlow: createCompanionDiveEntry(flow.openDive, readingActivity, interactionState),
     flowSessionMode: flow.mode,
     setFlowSessionMode: flow.setMode,
     flowSummary: flow.summary,

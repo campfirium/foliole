@@ -7,8 +7,18 @@ export interface DiveFlowScope {
   topicIds: string[];
 }
 
+export type DiveFlowCursor = DiveFlowScope & {
+  mode: ReviewSessionMode;
+  phase: 'initial' | 'today' | 'topics';
+  position: number;
+  limit: number;
+  hasWork: boolean;
+  waiting: boolean;
+  stop: 'empty' | 'finished' | 'waiting' | null;
+};
+
 export interface DailyFlowSession {
-  dive?: DiveFlowScope & { mode: ReviewSessionMode; position: number };
+  dive?: DiveFlowCursor;
   candidateMembershipHash?: string;
   rebuildSourceRevision?: number;
   dayWindow?: { start: string; end: string };

@@ -1,9 +1,21 @@
-import { VIRTUAL_ROOT_NODE_ID } from '../../../../../lib/core/database/specialNodeIds';
-import type { WorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshot';
-import { resolveDiveTopicIds, type Dive } from '../../../../../lib/core/nodes/dive';
-import { selectCanonicalVisibleNodeIds } from '../../../workspaceCanonicalSelectors';
+import { VIRTUAL_ROOT_NODE_ID } from '../../lib/core/database/specialNodeIds';
+import { readDiveNode, resolveDiveTopicIds, type Dive } from '../../lib/core/nodes/dive';
 
-export function resolveCompanionDiveMembership(snapshot: WorkspaceSnapshot, dive: Dive) {
+import { selectCanonicalVisibleNodeIds, type WorkspaceCanonicalSource } from './workspaceCanonicalSelectors';
+
+type DiveCatalog = WorkspaceCanonicalSource<NonNullable<Parameters<typeof readDiveNode>[0]> & {
+  deletedAt?: string | null;
+  anchorLink?: unknown;
+}>;
+
+export function listVisibleDives(snapshot: DiveCatalog) {
+  return selectCanonicalVisibleNodeIds(snapshot).flatMap(id => {
+    const dive = readDiveNode(snapshot.nodesById[id]);
+    return dive ? [dive] : [];
+  });
+}
+
+export function resolveDiveMembership(snapshot: DiveCatalog, dive: Dive) {
   const visible = new Set(selectCanonicalVisibleNodeIds(snapshot));
   const children = new Map<string, string[]>();
   for (const id of visible) {

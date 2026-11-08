@@ -12,6 +12,7 @@ import {
   type FolderListSortKey
 } from '../../features/nodes/model/folderListOrdering';
 import { getWorkspaceListNodeAuthor } from '../../features/nodes/model/workspaceListNode';
+import { resolveDiveMembership } from '../diveMembership';
 import {
   isCanonicalTrashedNodeId,
   isCanonicalVisibleNodeId,
@@ -19,7 +20,6 @@ import {
   selectCanonicalVisibleNodeIds
 } from '../workspaceCanonicalSelectors';
 
-import { resolveCompanionDiveMembership } from './companion/browse/companionDiveMembership';
 import { sortCompanionBrowseNodes, sortCompanionDirectoryNodes } from './companionBrowseOrdering';
 import { resolveCompanionArticleTitle, resolveCompanionUntitledLabel } from './companionReadableArticle';
 import { isCompanionArticleNode } from './companionReadableArticleTitleSlot';
@@ -112,7 +112,7 @@ function isVirtualFolderNode(node: CompanionReadableNode | undefined): node is C
 
 function resolveCompanionVirtualFolderItems(snapshot: WorkspaceSnapshot, folderNode: CompanionReadableNode) {
   const dive = readDiveNode(folderNode);
-  const resultIds = dive ? resolveCompanionDiveMembership(snapshot, dive).topics
+  const resultIds = dive ? resolveDiveMembership(snapshot, dive).topics
     : snapshot.virtualResultIdsByNodeId?.[folderNode.id] ?? resolveVirtualNodeResultIds({
     activeNodeId: folderNode.id,
     filter: folderNode.virtualFilter,

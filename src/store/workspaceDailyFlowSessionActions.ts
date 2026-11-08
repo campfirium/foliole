@@ -30,7 +30,7 @@ export function openWorkspaceDailyFlow(set: Set, get: () => WorkspaceState,
         ? buildReviewActiveNodeContext(state, session.currentNodeId) : {}),
       ...(onlyIfNewer ? { appActionHistory: reconcileShelveHistory(state.appActionHistory, source, session) } : {}),
       reviewSession: { ...session, isAnswerRevealed: onlyIfNewer && session.currentNodeId === source.currentNodeId && source.isAnswerRevealed }, ...preference, ...(preference && session.daily && args.startup ? createReviewSessionModePreference(mode ?? args.mode, args.now) : {}) }));
-    return session.currentNodeId ?? false;
+    return session.currentNodeId ?? session.dive?.id ?? false;
   }).catch(error => {
     logRuntimeError('could not open daily Flow', { area: 'persistence', action: 'open_daily_flow',
       fallback: 'keep_previous_session', error });
@@ -76,7 +76,7 @@ export async function recoverWorkspaceDailyFlow(set: Set, get: () => WorkspaceSt
   if (!source.daily) return;
   if (source.dive) {
     const { id, topicIds, mode } = source.dive;
-    await openWorkspaceDailyFlow(set, get, { now, mode, dive: { id, topicIds } });
+    await openWorkspaceDailyFlow(set, get, { now, mode, dive: { id, topicIds }, seed: source });
     return;
   }
   await openWorkspaceDailyFlow(set, get, { now, mode: get().reviewSessionMode,

@@ -91,7 +91,7 @@ function createGradeReviewCardAction(
     if (!isActionableSessionNode(currentNode, now)) {
       const dive = snapshot.reviewSession.dive;
       await openWorkspaceDailyFlow(set, get, dive
-        ? { now, mode: dive.mode, dive: { id: dive.id, topicIds: dive.topicIds } }
+        ? { now, mode: dive.mode, dive: { id: dive.id, topicIds: dive.topicIds }, seed: snapshot.reviewSession }
         : { now, mode: snapshot.reviewSessionMode, seed: snapshot.reviewSession, refresh: true });
       return true;
     }

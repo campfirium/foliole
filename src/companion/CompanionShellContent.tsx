@@ -1,14 +1,19 @@
 import type { ReactNode } from 'react';
 
+
+import { readDiveNode } from '../../lib/core/nodes/dive';
 import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,
   DEFAULT_FOLDER_LIST_SORT_KEY,
   type FolderListSortDirection,
   type FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
+import { resolveDiveMembership } from '../shared/diveMembership';
+import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 import * as DirectoryArticle from './CompanionDirectoryReadableArticleModel';
+import { CompanionDiveFlowChoice } from './CompanionDiveFlowChoice';
 import { CompanionFolderArticleList } from './CompanionFolderArticleList';
 import { ReadableArticleOrFallback } from './CompanionReadableArticleFallback';
 import { resolveCompanionReadingNeighbors } from './companionReadingNeighbors';
@@ -132,6 +137,11 @@ function renderRecentContent(props: CompanionShellContentProps) {
           props.onChangeDirectorySelection(selection);
         }}
         onSelectNode={props.surface.handleSelectBrowseNode}
+        onStartDive={isAvailableNativeCompanionRuntime() ? id => {
+          const snapshot = props.workspaceSync.state.workspace_snapshot;
+          const dive = readDiveNode(snapshot?.nodesById[id]);
+          if (snapshot && dive) void props.surface.openDiveFlow({ id, topicIds: resolveDiveMembership(snapshot, dive).topics });
+        } : undefined}
         selection={props.directorySelection}
         snapshot={props.workspaceSync.state.workspace_snapshot}
         sortDirection={props.browseSortDirection ?? DEFAULT_FOLDER_LIST_SORT_DIRECTION}
@@ -173,6 +183,10 @@ function renderContent(props: CompanionShellContentProps) {
     if (props.surface.effectiveReviewSession.currentCard) {
       return <CompanionShellReadableArticle surface={props.surface} workspaceSync={props.workspaceSync}
         onExit={() => props.surface.handleTabAction('recent')} flow />;
+    }
+    const snapshot = props.workspaceSync.state.workspace_snapshot;
+    if (snapshot && props.surface.diveFlow?.stop) {
+      return <CompanionDiveFlowChoice dive={props.surface.diveFlow} snapshot={snapshot} surface={props.surface} />;
     }
     return <CompanionReviewFallback mode={props.surface.flowSessionMode} error={props.surface.flowError ?? props.workspaceError} hasSnapshot={props.hasSnapshot}
       hasTopics={props.surface.flowHasTopics}

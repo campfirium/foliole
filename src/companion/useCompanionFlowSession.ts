@@ -14,6 +14,7 @@ import { isCanonicalVisibleNodeId } from '../shared/workspaceCanonicalSelectors'
 import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 
 import { continueCompanionDailyFlow } from './companionDailyNavigation';
+import { companionDiveModeControls, createCompanionDiveFlowControls } from './companionDiveFlowControls';
 import { createCompanionFlowControls, trackCompanionFlowRefresh } from './companionFlowControls';
 import { useCompanionNavigationField } from './CompanionNavigationProvider';
 import { buildCurrentCard, emptyCompanionReviewSession, resolveScheduledReviewSummary } from './companionReviewSession';
@@ -23,7 +24,7 @@ import { useCompanionFlowReadView } from './useCompanionFlowReadView';
 
 export type FlowOwner = { identity: string; scope: object; session: ReturnType<typeof createEmptyReviewSession>;
   reconciledSession?: ReturnType<typeof createEmptyReviewSession>;
-  refresh?: Promise<void>; readIntents?: CompanionReadIntents; readEpoch?: number;
+  diveOpening?: boolean; refresh?: Promise<void>; readIntents?: CompanionReadIntents; readEpoch?: number;
   generation: number; epoch: number; hydrated: boolean; error: string | null; kind: string | null;
   snapshot: WorkspaceSnapshot | null };
 
@@ -47,16 +48,9 @@ export function useCompanionFlowSession(args: {
   reconcileCurrentFlow(args.snapshot, current);
   useFlowHydration(args, current, owner, latest, identity, scope, mode, render);
   useFlowReentry(args, current, owner, latest, mode, render);
+  useGlobalFlowResume(current, owner, args.libraryScope, identity, render);
   useEffect(() => {
-    if (!current.hydrated) return;
-    void saveCompanionFlowResume(args.libraryScope, current.session.currentNodeId).catch((error: unknown) => {
-      if (owner.current !== current) return;
-      current.error = error instanceof Error ? error.message : 'Could not save the Flow position.';
-      render();
-    });
-  }, [identity, current.hydrated, current.session.currentNodeId]);
-  useEffect(() => {
-    if (!args.active || !current.hydrated || !current.session.daily || current.readIntents?.pending ||
+    if (!args.active || current.diveOpening || current.session.dive || !current.hydrated || !current.session.daily || current.readIntents?.pending ||
       isCompanionReadReceiptSnapshot(args.snapshot?.nodesById)) return;
     const source = current.session;
     const generation = current.generation;
@@ -80,12 +74,26 @@ export function useCompanionFlowSession(args: {
   const historyKey = companionFlowHistoryKey(args.libraryScope);
   const controls = createCompanionFlowControls({ current, owner, scope, mode, historyKey, render });
   function continueReading() { cancelDocumentPreparation(); if (owner.current === current) void continueCompanionDailyFlow(latest.current, current, owner, mode, render).catch(error => { current.error = String(error); render(); }); }
-  return { view, mode, setMode, ...controls, historyKey, cancelDocumentPreparation, continueReading, canContinueReading, hasTopics,
+  const dive = session.dive;
+  const openDive = createCompanionDiveFlowControls(current, owner, mode, render);
+  return { view, ...companionDiveModeControls(openDive, dive, mode, setMode), dive, openDive,
+    ...controls, historyKey, cancelDocumentPreparation, continueReading, canContinueReading: !dive && canContinueReading, hasTopics,
     readIntents: current.readIntents,
     summary: { ...(session.cycle ? { queueCleared: Boolean(session.cycle.clearedAt) } : {}), completedAt: session.completedAt ?? null, sessionStartedAt: session.sessionStartedAt ?? null,
       readTopicCount: session.readTopicCount ?? 0, readingElapsedMs: session.readingElapsedMs ?? 0,
       reviewedItemCount: session.reviewedItemCount ?? 0, reviewElapsedMs: session.reviewElapsedMs ?? 0 },
     isAnswerRevealed: session.isAnswerRevealed, error: current.error ?? dailyView?.error ?? null, ready: current.hydrated };
+}
+
+function useGlobalFlowResume(current: FlowOwner, owner: { current: FlowOwner }, libraryScope: string, identity: string, render: () => void) {
+  useEffect(() => {
+    if (!current.hydrated || current.session.dive) return;
+    void saveCompanionFlowResume(libraryScope, current.session.currentNodeId).catch((error: unknown) => {
+      if (owner.current !== current) return;
+      current.error = error instanceof Error ? error.message : 'Could not save the Flow position.';
+      render();
+    });
+  }, [identity, current.hydrated, current.session.currentNodeId, Boolean(current.session.dive)]);
 }
 
 function useFlowCatalogSummary(snapshot: WorkspaceSnapshot | null, hasCurrent: boolean) {
@@ -115,7 +123,7 @@ function useFlowReentry(args: Parameters<typeof useCompanionFlowSession>[0],
   const wasActive = useRef(args.active);
   useEffect(() => {
     if (args.active && !wasActive.current && current.hydrated && args.snapshot) {
-      if (isAvailableNativeCompanionRuntime()) {
+      if (isAvailableNativeCompanionRuntime() && !current.session.dive) {
         const source = current.session;
         trackCompanionFlowRefresh(current, openCompanionDailyFlow({ now: new Date().toISOString(), mode }).then(saved => {
           if (owner.current !== current || !latest.current.active || current.session !== source) return;

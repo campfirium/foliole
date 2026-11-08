@@ -87,7 +87,7 @@ function renderSurface(initial: NativeCompanionWorkspaceSyncState) {
       floatingBar: createFloatingBar(), flow, activity, active: true, snapshot,
       workspaceSync: { ...actions, state } as ReturnType<typeof useCompanionWorkspaceSync>
     });
-    return { ...handlers, state, session, reveal: flow.reveal };
+    return { ...handlers, state, session, reveal: flow.reveal, openDive: flow.openDive, dive: flow.dive };
   });
 }
 
@@ -157,5 +157,39 @@ it('rolls back a failed log insert and permits a fresh grade retry', async () =>
   expect(storedGrade().logs).toHaveLength(1);
   expect(ui.result.current.state.workspace_snapshot).toEqual((await loadCompanionWorkspaceSyncState()).workspace_snapshot);
   expect(ui.result.current.session.currentCard).toBeNull();
+  ui.unmount();
+});
+
+it('commits a Dive grade and Read across all three phases and resumes the global Item', async () => {
+  const now = '2026-05-01T00:00:00.000Z';
+  const insert = database!.prepare(
+    'INSERT INTO nodes (id, parent_id, title, kind, content, reveal, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  );
+  insert.run('dive-topic', 'inbox', 'Dive Topic', 'topic', 'Body', null, now, now);
+  insert.run('dive-item', 'dive-topic', 'Dive Item', 'item', 'Question', 'Answer', now, now);
+  const ui = renderSurface(await loadCompanionWorkspaceSyncState());
+  await waitFor(() => expect(ui.result.current.session.currentCard).not.toBeNull());
+  const global = ui.result.current.session.currentCard!.nodeId;
+  const scope = { id: 'dive', topicIds: ['dive-topic'] };
+  await act(async () => { await ui.result.current.openDive(scope, undefined, 'review-first'); });
+  expect(ui.result.current.session.currentCard?.nodeId).toBe('dive-item');
+  act(() => ui.result.current.reveal());
+  await act(() => ui.result.current.handleGradeReview(3));
+  expect(ui.result.current.reviewError).toBeNull();
+  expect(ui.result.current.dive).toMatchObject({ phase: 'initial', stop: 'finished' });
+  await act(async () => { await ui.result.current.openDive(scope, 'continue'); });
+  expect(ui.result.current.dive).toMatchObject({ phase: 'today', stop: expect.any(String) });
+  await act(async () => { await ui.result.current.openDive(scope, 'continue'); });
+  expect(ui.result.current.session.currentCard?.nodeId).toBe('dive-topic');
+  await act(() => ui.result.current.handleReadReviewTopic());
+  expect(ui.result.current.readingError).toBeNull();
+  expect(ui.result.current.dive).toMatchObject({ phase: 'topics', stop: 'finished' });
+  expect(database!.prepare("SELECT COUNT(*) AS count FROM review_log WHERE node_id='dive-item'").get()).toEqual({ count: 1 });
+  expect(database!.prepare("SELECT repetition_count FROM node_reading WHERE node_id='dive-topic'").get()).toEqual({ repetition_count: 1 });
+  await act(async () => { await ui.result.current.openDive({ id: 'empty', topicIds: [] }, undefined, 'reading-only'); });
+  expect(ui.result.current.dive).toMatchObject({ id: 'empty', phase: 'initial', mode: 'reading-only', stop: 'empty' });
+  await act(async () => { await ui.result.current.openDive(null); });
+  expect(ui.result.current.session.currentCard?.nodeId).toBe(global);
+  expect(ui.result.current.dive).toBeUndefined();
   ui.unmount();
 });

@@ -124,7 +124,11 @@ async function historyDisplay(store: ReturnType<typeof createSqliteDailyFlowStor
   global: import('./dailyFlowSession.js').DailyFlowSession, settings: DailyFlowSettings, now = args.now) {
   const current = args.sourceSession?.dive;
   const before = (args.historyMode === 'undo' ? args.nextSession : args.historySourceSession)?.dive;
-  if (!current || !before || current.id !== before.id) return global;
-  return selectDiveCurrent(store, global, { ...current,
+  if (!current) return global;
+  if (!before || current.id !== before.id || current.phase !== before.phase || current.limit !== before.limit) {
+    const position = args.sourceSession?.currentNodeId ? Math.max(0, current.position - 1) : current.position;
+    return selectDiveCurrent(store, global, { ...current, position }, now, settings);
+  }
+  return selectDiveCurrent(store, global, { ...before, stop: null,
     position: args.historyMode === 'undo' ? Math.max(0, before.position - 1) : before.position }, now, settings);
 }
