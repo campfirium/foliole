@@ -12,8 +12,6 @@
   --companion-list-meta: var(--companion-text-tertiary);
 }
 :root[data-resolved-base-color='dark'] {
-  /* Use RGB alpha so native text selection also paints on older Android WebViews. */
-  --role-text-selection-bg: rgb(var(--role-selection-rgb) / 0.5);
   --companion-divider: #444541;
   --companion-list-title: rgb(var(--color-foreground));
   --companion-list-body: var(--companion-text-secondary);

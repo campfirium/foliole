@@ -5,6 +5,7 @@ import {
   getClozeSurfaceAlpha,
   getHighlightSurfaceAlpha,
   getSelectionSurfaceAlpha,
+  getTextSelectionBackgroundColor,
   hexColorToRgbChannels
 } from '../../../shared/config/defaultAppearanceColors';
 import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
@@ -90,12 +91,6 @@ function getDefaultHighlightColor(mode: AppearanceResolvedColorMode) {
 
 function getDefaultClozeColor(mode: AppearanceResolvedColorMode) {
   return mode === 'dark' ? DEFAULT_DARK_CLOZE_COLOR_PRESET : DEFAULT_CLOZE_COLOR_PRESET;
-}
-
-function getTextSelectionBackgroundColor(selectionColor: string, mode: AppearanceResolvedColorMode) {
-  return mode === 'dark'
-    ? `color-mix(in srgb, ${selectionColor} 50%, rgb(var(--color-canvas)) 50%)`
-    : `rgb(var(--app-selection-color-rgb) / ${getSelectionSurfaceAlpha(mode)})`;
 }
 
 function getSelectionForegroundColor(mode: AppearanceResolvedColorMode) {
@@ -205,7 +200,7 @@ export function applyAppearanceColorSettings(root: HTMLElement, input: ApplyAppe
   root.style.setProperty('--app-accent-color-rgb', accentRgb);
   root.style.setProperty('--app-selection-color', normalizedSelectionColor);
   root.style.setProperty('--app-selection-color-rgb', selectionRgb);
-  root.style.setProperty('--app-text-selection-bg-color', getTextSelectionBackgroundColor(normalizedSelectionColor, input.mode));
+  root.style.setProperty('--app-text-selection-bg-color', getTextSelectionBackgroundColor(selectionRgb, input.mode));
   root.style.setProperty('--app-text-selection-fg-color', getSelectionForegroundColor(input.mode));
   root.style.setProperty('--app-selection-foreground-color', getSelectionForegroundColor(input.mode));
   root.style.setProperty('--app-selection-surface-color', `rgb(${selectionRgb} / ${getSelectionSurfaceAlpha(input.mode)})`);

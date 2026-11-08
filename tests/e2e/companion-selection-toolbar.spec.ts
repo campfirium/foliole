@@ -46,7 +46,7 @@ test('dark reading selection uses an RGB background that older WebViews can pain
     return { text: selection.toString(), background: getComputedStyle(element, '::selection').backgroundColor };
   });
   expect(selection.text).toBe('Select');
-  expect(selection.background).toBe('rgba(120, 166, 255, 0.5)');
+  expect(selection.background).toBe('rgb(83, 112, 167)');
 });
 
 for (const theme of ['light', 'dark']) {

@@ -27,6 +27,7 @@ export const DEFAULT_APPEARANCE_COLORS: Record<AppearanceDefaultColorMode, Appea
 
 export const DEFAULT_NODE_ICON_COLOR = DEFAULT_APPEARANCE_COLORS.light.font;
 export const DEFAULT_EDITOR_MOUSE_GESTURE_TRAIL_COLOR = '#2f3b4d';
+const DARK_CANVAS_RGB = '22 25 24';
 
 export function hexColorToRgbChannels(value: string): string {
   const red = Number.parseInt(value.slice(1, 3), 16);
@@ -46,12 +47,18 @@ function blendRgbChannels(sourceRgb: string, targetRgb: string, sourceWeight: nu
 }
 
 export function deriveMutedForegroundRgb(fontRgb: string, mode: AppearanceDefaultColorMode) {
-  const canvasRgb = mode === 'dark' ? '22 25 24' : '255 255 255';
+  const canvasRgb = mode === 'dark' ? DARK_CANVAS_RGB : '255 255 255';
   return blendRgbChannels(fontRgb, canvasRgb, mode === 'dark' ? 0.68 : 0.72);
 }
 
 export function getSelectionSurfaceAlpha(mode: AppearanceDefaultColorMode) {
   return mode === 'dark' ? 0.42 : 0.2;
+}
+
+export function getTextSelectionBackgroundColor(selectionRgb: string, mode: AppearanceDefaultColorMode) {
+  return mode === 'dark'
+    ? `rgb(${blendRgbChannels(selectionRgb, DARK_CANVAS_RGB, 0.62)})`
+    : `rgb(var(--app-selection-color-rgb) / ${getSelectionSurfaceAlpha(mode)})`;
 }
 
 export function getHighlightSurfaceAlpha(mode: AppearanceDefaultColorMode) {

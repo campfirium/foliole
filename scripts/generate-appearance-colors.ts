@@ -8,6 +8,7 @@ import {
   getClozeSurfaceAlpha,
   getHighlightSurfaceAlpha,
   getSelectionSurfaceAlpha,
+  getTextSelectionBackgroundColor,
   hexColorToRgbChannels,
   type AppearanceDefaultColorMode
 } from '../src/shared/config/defaultAppearanceColors.ts';
@@ -17,12 +18,6 @@ const outputPath = path.join(repoRoot, 'src/app/generated/appearance-colors.css'
 
 function selectionForegroundColor(mode: AppearanceDefaultColorMode) {
   return mode === 'dark' ? '#ffffff' : 'rgb(var(--color-foreground))';
-}
-
-function textSelectionBackgroundColor(mode: AppearanceDefaultColorMode) {
-  return mode === 'dark'
-    ? 'color-mix(in srgb, var(--app-selection-color) 50%, rgb(var(--color-canvas)) 50%)'
-    : `rgb(var(--app-selection-color-rgb) / ${getSelectionSurfaceAlpha(mode)})`;
 }
 
 function renderColorVariables(mode: AppearanceDefaultColorMode) {
@@ -40,7 +35,7 @@ function renderColorVariables(mode: AppearanceDefaultColorMode) {
     `  --app-accent-color-rgb: ${accentRgb};`,
     `  --app-selection-color: ${colors.selection};`,
     `  --app-selection-color-rgb: ${selectionRgb};`,
-    `  --app-text-selection-bg-color: ${textSelectionBackgroundColor(mode)};`,
+    `  --app-text-selection-bg-color: ${getTextSelectionBackgroundColor(selectionRgb, mode)};`,
     `  --app-text-selection-fg-color: ${selectionForegroundColor(mode)};`,
     `  --app-selection-foreground-color: ${selectionForegroundColor(mode)};`,
     `  --app-selection-surface-color: rgb(var(--app-selection-color-rgb) / ${getSelectionSurfaceAlpha(mode)});`,
