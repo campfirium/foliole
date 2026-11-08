@@ -6,6 +6,7 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { FlowExitHereContext } from '../shared/ui/FlowExitHereContext';
 
 import { CompanionBottomSheet as ReadingBottomSheet } from './CompanionBottomSheet';
+import { CompanionColorModeControl } from './CompanionColorModeControl';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
 import { CompanionFlowCaptureEntry } from './CompanionFlowCaptureEntry';
 import { CompanionFlowOrEditHistoryActions } from './CompanionFlowHistorySurface';
@@ -142,6 +143,7 @@ export function ReadingFontSheet(props: {
   const t = useTranslation();
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.font')}>
+      <CompanionColorModeControl modeOnly />
       <CompanionReadingModeControl />
       <CompanionReadingDisplayControls />
       {props.fontLoadError ? <p className="py-3 text-sm text-error" role="alert">{t('companion.reading.font.loadError')}</p> : null}

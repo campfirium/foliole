@@ -38,8 +38,7 @@ function SettingsListSection(props: { children: ReactNode; first?: boolean; titl
   return <CompanionListSection isFirst={Boolean(props.first)} title={props.title}>{props.children}</CompanionListSection>;
 }
 
-function DataAppearanceSettingsSection(props: {
-  onOpenAppearance(): void;
+function DataSettingsSection(props: {
   onOpenBackup(): void;
   onOpenAttachments(): void;
   showStorage: boolean;
@@ -47,8 +46,7 @@ function DataAppearanceSettingsSection(props: {
   const t = useTranslation();
   const backup = useCompanionFolderBackupState(supportsCompanionFolderDatabaseBackup());
   const attachments = useAttachmentStorageSettings();
-  return <>
-    {props.showStorage ? <SettingsListSection title={t('companion.settings.section.data')}>
+  return props.showStorage ? <SettingsListSection title={t('companion.settings.section.data')}>
       {supportsCompanionFolderDatabaseBackup() || getCompanionRuntimeCapability().kind === 'browser-preview' ? <SettingsListItem Icon={Database} title={t('companion.settings.storage.databaseBackup')}
         detail={companionBackupSummary(backup.state, backup.automatic, backup.error, t)}
         onClick={props.onOpenBackup} testId="companion-settings-backup" /> : null}
@@ -57,12 +55,7 @@ function DataAppearanceSettingsSection(props: {
           used: formatBytes(attachments.status.usedBytes), trash: formatBytes(attachments.status.trashBytes)
         }) : ''} onClick={props.onOpenAttachments} testId="companion-settings-attachments" />
       <CompanionStorageSettingsContent />
-    </SettingsListSection> : null}
-    <SettingsListSection title="">
-      <SettingsListItem Icon={Palette} detail={t('companion.settings.appearance.detail')}
-        onClick={props.onOpenAppearance} testId="companion-settings-appearance" title={t('companion.settings.appearance.title')} />
-    </SettingsListSection>
-  </>;
+    </SettingsListSection> : null;
 }
 
 function formatBytes(value: number) {
@@ -85,7 +78,11 @@ export function CompanionSettingsList(props: {
   return (
     <section className="pb-4" data-settings-home>
       <div>
-        <SettingsListSection first title={t('companion.settings.section.syncDevice')}>
+        <SettingsListSection first title="">
+          <SettingsListItem Icon={Palette} detail={t('companion.settings.appearance.detail')}
+            onClick={props.onOpenAppearance} testId="companion-settings-appearance" title={t('companion.settings.appearance.title')} />
+        </SettingsListSection>
+        <SettingsListSection title={t('companion.settings.section.syncDevice')}>
           <SettingsListItem
             Icon={RefreshCw}
             detail=""
@@ -103,8 +100,7 @@ export function CompanionSettingsList(props: {
           {props.onOpenReviewStatistics ? <SettingsListItem Icon={CalendarDays} detail="" onClick={props.onOpenReviewStatistics}
             title={t('desktop.reviewCalendar.title')} /> : null}
         </SettingsListSection> : null}
-        <DataAppearanceSettingsSection
-          onOpenAppearance={props.onOpenAppearance}
+        <DataSettingsSection
           onOpenBackup={props.onOpenBackup}
           onOpenAttachments={props.onOpenAttachments}
           showStorage={props.showStorage}

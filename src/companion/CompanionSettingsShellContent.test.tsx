@@ -46,9 +46,10 @@ describe('CompanionSettingsShellContent', () => {
   });
   afterEach(() => { delete window.__folioleSettingsPreview; });
 
-  it('keeps the settings entry focused on Sync and omits unavailable Device details', () => {
+  it('puts Appearance first and omits unavailable Device details', () => {
     render(<SettingsHarness />);
 
+    expect(screen.getAllByRole('button')[0]).toHaveAccessibleName('Appearance Language and display');
     expect(screen.getByText('Sync and device')).toBeInTheDocument();
     expect(screen.getByText('Data')).toBeInTheDocument();
     expect(screen.getByText('Development')).toBeInTheDocument();

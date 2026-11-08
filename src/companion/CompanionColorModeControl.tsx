@@ -8,7 +8,7 @@ import { CompanionPdfReadingModeControl } from './CompanionPdfReadingModeControl
 
 const OPTIONS: readonly BaseColorMode[] = ['system', 'light', 'dark'];
 
-export function CompanionColorModeControl() {
+export function CompanionColorModeControl({ modeOnly = false }: { modeOnly?: boolean } = {}) {
   const colorMode = useCompanionColorMode();
   const t = useTranslation();
   if (!colorMode) return null;
@@ -21,16 +21,18 @@ export function CompanionColorModeControl() {
         {t(`settings.appearance.colorMode.${mode}`)}
       </button>)}
     </div>
-    <div className="mt-4 flex min-h-12 items-center justify-between gap-4 text-sm text-foreground">
-      <span>{t('settings.appearance.dimImages.title')}</span>
-      <button aria-checked={colorMode.dimImages} aria-label={t('settings.appearance.dimImages.title')}
-        className={settingsSwitchClassName(colorMode.dimImages, "before:absolute before:-inset-y-3 before:inset-x-0 before:content-['']")}
-        onClick={() => colorMode.updateDimImages(!colorMode.dimImages)} role="switch" type="button">
-        <span aria-hidden="true" className={settingsSwitchKnobClassName(colorMode.dimImages)} />
-      </button>
-    </div>
-    <CompanionPdfReadingModeControl />
-    {colorMode.dimImagesSaveError ? <p className="mt-3 text-sm text-error" role="alert">{t('companion.reading.font.saveError')}</p> : null}
+    {!modeOnly && <>
+      <div className="mt-4 flex min-h-12 items-center justify-between gap-4 text-sm text-foreground">
+        <span>{t('settings.appearance.dimImages.title')}</span>
+        <button aria-checked={colorMode.dimImages} aria-label={t('settings.appearance.dimImages.title')}
+          className={settingsSwitchClassName(colorMode.dimImages, "before:absolute before:-inset-y-3 before:inset-x-0 before:content-['']")}
+          onClick={() => colorMode.updateDimImages(!colorMode.dimImages)} role="switch" type="button">
+          <span aria-hidden="true" className={settingsSwitchKnobClassName(colorMode.dimImages)} />
+        </button>
+      </div>
+      <CompanionPdfReadingModeControl />
+      {colorMode.dimImagesSaveError ? <p className="mt-3 text-sm text-error" role="alert">{t('companion.reading.font.saveError')}</p> : null}
+    </>}
     {colorMode.saveError ? <p className="mt-3 text-sm text-error" role="alert">{t('companion.settings.colorMode.saveError')}</p> : null}
     {colorMode.hostError ? <p className="mt-3 text-sm text-error" role="alert">{t('companion.settings.colorMode.hostError')}</p> : null}
   </fieldset>;

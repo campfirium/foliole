@@ -28,14 +28,18 @@ function setSystemDark(dark: boolean) {
   act(() => { systemDark = dark; listeners.forEach((handler) => handler()); });
 }
 
-function renderSettings() {
-  return render(<CompanionColorModeProvider>{renderCompanionSettingsContent({
+function settingsContent() {
+  return renderCompanionSettingsContent({
     settingsPage: 'appearance',
     onBackToSettingsList: vi.fn(),
     onOpenSyncSettings: vi.fn(),
     onOpenSyncSettingsPage: vi.fn(),
     workspaceSync: {} as never
-  })}</CompanionColorModeProvider>);
+  });
+}
+
+function renderSettings() {
+  return render(<CompanionColorModeProvider>{settingsContent()}</CompanionColorModeProvider>);
 }
 
 it('offers system, light and dark in Appearance and follows live system changes by default', () => {
@@ -67,18 +71,26 @@ it('keeps an explicit choice when the system changes and restores it after remou
   expect(document.documentElement.dataset.resolvedBaseColor).toBe('dark');
 });
 
-it('keeps global appearance controls in Settings and out of the reading sheet', () => {
+it('changes the persisted global color mode from Reading Appearance', () => {
   const onChange = vi.fn();
-  render(<CompanionColorModeProvider>
-    <ReadingFontSheet open onOpenChange={vi.fn()} onChange={onChange} settings={DEFAULT_READING_TYPOGRAPHY_SETTINGS} />
-  </CompanionColorModeProvider>);
+  const reading = <ReadingFontSheet open onOpenChange={vi.fn()} onChange={onChange}
+    settings={DEFAULT_READING_TYPOGRAPHY_SETTINGS} />;
+  const view = render(<CompanionColorModeProvider>{reading}</CompanionColorModeProvider>);
   const sheet = screen.getByRole('dialog', { name: 'Appearance' });
-  expect(within(sheet).queryByRole('button', { name: 'Dark' })).not.toBeInTheDocument();
+  expect(within(sheet).getByRole('button', { name: 'System' })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(within(sheet).getByRole('button', { name: 'Dark' }));
+  expect(document.documentElement.dataset.resolvedBaseColor).toBe('dark');
+  expect(localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.baseColor)).toBe('dark');
   expect(within(sheet).queryByRole('switch', { name: 'Dim images in dark mode' })).not.toBeInTheDocument();
   expect(within(sheet).queryByRole('radiogroup', { name: 'PDF in dark mode' })).not.toBeInTheDocument();
   expect(within(sheet).queryByLabelText('Accent color picker')).not.toBeInTheDocument();
   fireEvent.click(within(sheet).getByRole('button', { name: 'Increase Size' }));
   expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ fontSize: 17 }));
+  view.rerender(<CompanionColorModeProvider>{settingsContent()}</CompanionColorModeProvider>);
+  expect(screen.getByRole('button', { name: 'Dark' })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(screen.getByRole('button', { name: 'Light' }));
+  view.rerender(<CompanionColorModeProvider>{reading}</CompanionColorModeProvider>);
+  expect(screen.getByRole('button', { name: 'Light' })).toHaveAttribute('aria-pressed', 'true');
 });
 
 it('keeps the previous mode and reports a storage write failure', () => {
