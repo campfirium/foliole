@@ -5,7 +5,7 @@ import { useLocalization, useTranslation } from '../shared/localization/Localiza
 import { resolveCompanionBrowseSnapshot } from '../shared/platform/companion/browse/companionBrowseSnapshot';
 import { applyCompanionRecentTopicFocus } from '../shared/platform/companion/browse/companionTopicFocus';
 import type { CompanionRecentArticle } from '../shared/platform/companionReadableArticle';
-import { useDismissedTopicVisibility } from '../shared/platform/useDismissedTopicVisibility';
+import { useDismissedTopicVisibility } from '../shared/platform/runtime/useDismissedTopicVisibility';
 import { AppEmptyState } from '../shared/ui';
 
 import { CompanionListViewport } from './CompanionListViewport';

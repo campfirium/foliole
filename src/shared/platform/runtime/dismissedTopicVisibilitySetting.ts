@@ -1,6 +1,5 @@
-import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
-
-import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from './storage';
+import { APP_SETTINGS_STORAGE_KEYS } from '../../config/appSettings';
+import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../storage';
 
 const TRUE_VALUE = 'true';
 const DISMISSED_TOPIC_VISIBILITY_EVENT = 'foliole:dismissed-topic-visibility-changed';

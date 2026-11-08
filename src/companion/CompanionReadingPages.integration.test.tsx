@@ -198,7 +198,7 @@ it('applies the browse-menu topic focus to recent articles and the directory', a
     const article = () => screen.queryByRole('button', { name: 'Open topic Article' });
     await waitFor(() => expect(article()).toBeVisible());
 
-    fireEvent.click(screen.getByRole('button', { name: 'More', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: /^More$/ }));
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Hide dismissed and shelved topics' }));
     expect(article()).toBeNull();
 

@@ -15,7 +15,7 @@ import {
   resolveReadableCompanionArticleByNodeId,
   resolveReadableCompanionTrashArticleByNodeId
 } from '../shared/platform/companionReadableArticle';
-import { useDismissedTopicVisibility } from '../shared/platform/useDismissedTopicVisibility';
+import { useDismissedTopicVisibility } from '../shared/platform/runtime/useDismissedTopicVisibility';
 
 import { useCompanionNavigationField } from './CompanionNavigationProvider';
 import type { CompanionBrowseSortState } from './useCompanionBrowseState';

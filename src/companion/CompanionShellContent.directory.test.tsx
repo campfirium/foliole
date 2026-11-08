@@ -57,7 +57,7 @@ describe('CompanionShellContent directory navigation', () => {
     const topBar = createTopBarProps({ directorySelection: { kind: 'virtual', nodeId: VIRTUAL_SHELVED_NODE_ID } });
     renderWithLocalization(<>{'rightSlot' in topBar ? topBar.rightSlot : null}</>);
     expect(screen.getByRole('button', { name: 'Hide dismissed and shelved topics' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'More', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: /^More$/ }));
     expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Hide dismissed and shelved topics' })).toBeDisabled();
   });
 

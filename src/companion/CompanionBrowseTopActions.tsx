@@ -6,7 +6,7 @@ import type { FolderListSortDirection, FolderListSortKey } from '../features/nod
 import { definedProps } from '../shared/lib/definedProps';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { supportsCompanionNodeMutationSurface } from '../shared/platform/companionWorkspaceRuntimeRepository';
-import { useDismissedTopicVisibility } from '../shared/platform/useDismissedTopicVisibility';
+import { useDismissedTopicVisibility } from '../shared/platform/runtime/useDismissedTopicVisibility';
 
 import { CompanionBrowseMenuSheet } from './CompanionBrowseMenuSheet';
 import { CompanionTopActionButton } from './CompanionTopActionButton';

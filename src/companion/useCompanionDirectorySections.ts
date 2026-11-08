@@ -10,7 +10,7 @@ import {
   resolveCompanionTrashFolderViewByNodeId, resolveCompanionTrashView
 } from '../shared/platform/companionBrowseLists';
 import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
-import { useDismissedTopicVisibility } from '../shared/platform/useDismissedTopicVisibility';
+import { useDismissedTopicVisibility } from '../shared/platform/runtime/useDismissedTopicVisibility';
 
 import { resolveDirectorySections, type CompanionDirectorySelection } from './CompanionDirectoryModel';
 

@@ -5,7 +5,7 @@ import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { useDismissedTopicVisibility } from '../../shared/platform/useDismissedTopicVisibility';
+import { useDismissedTopicVisibility } from '../../shared/platform/runtime/useDismissedTopicVisibility';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { useWorkspaceTopicTreeContentSort } from './useWorkspaceTopicTreeContentSort';
