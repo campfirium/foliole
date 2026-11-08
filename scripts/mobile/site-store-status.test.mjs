@@ -1,7 +1,10 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 import { URLSearchParams } from 'node:url';
-import { channelProjection, checkTestflightReviews, playReviewStatus, testflightStatus } from './site-store-status.mjs';
+import { channelProjection, checkPlayChannel, checkTestflightReviews, playReviewStatus, storeChannelForWebsite, testflightStatus } from './site-store-status.mjs';
+import { availabilityFixture } from '../android/play-availability-test-fixture.mjs';
+import { createPlayRegistration } from './mobile-candidate-provenance.mjs';
+import { registrationFixture } from './mobile-candidate-test-fixtures.mjs';
 import { registerTestflightReview } from './testflight-review-registry.mjs';
 import { IOS_APP_ID, IOS_GROUP_ID, IOS_INVITATION } from '../ios/testflight-candidate.mjs';
 
@@ -94,4 +97,52 @@ it('resumes every independently submitted TestFlight build after the sending job
     { build: second.buildId, status: 'rejected', releaseSourceSha: undefined },
     { build: first.buildId, status: 'available', url: IOS_INVITATION, releaseSourceSha: first.sourceSha }
   ]);
+});
+
+it('keeps a verified TestFlight build linked as the next build moves through review', async () => {
+  const older = reviewReceipt('a', '0.8.1', '5.1');
+  const newer = reviewReceipt('b', '0.8.2', '6.1');
+  const api = deploymentApi([]);
+  await registerTestflightReview(api, newer);
+  const states = new Map([[older.buildId, 'IN_BETA_TESTING'], [newer.buildId, 'IN_BETA_REVIEW']]);
+  const channel = async () => storeChannelForWebsite(await checkTestflightReviews(api, older,
+    candidate => observedTestflightStatus(candidate, states.get(candidate.buildId))));
+  expect(await channel()).toEqual({
+    version: older.version, build: older.buildId, status: 'update-in-review', url: IOS_INVITATION
+  });
+  states.set(older.buildId, 'EXPIRED');
+  expect(await channel()).toEqual({ version: newer.version, build: newer.buildId, status: 'in-review' });
+  states.set(newer.buildId, 'IN_BETA_TESTING');
+  expect(await channel()).toEqual({
+    version: newer.version, build: newer.buildId, status: 'available', url: IOS_INVITATION
+  });
+});
+
+it('keeps a fully published Play build linked while the registered update is in review', async () => {
+  const f = await availabilityFixture();
+  try {
+    const fixture = registrationFixture();
+    fixture.candidate.version = '0.8.1';
+    fixture.candidate.versionCode = 5;
+    const newer = { ...f.row, id: 72, payload: createPlayRegistration(fixture) };
+    f.rows.push(newer);
+    f.histories.set(72, [f.status('Play candidate: observed')]);
+    const update = { track: 'beta', releaseName: '0.8.1.5.aaaaaaaaa', activeArtifacts: [{ versionCode: 5 }],
+      releaseLifecycleState: 'RELEASE_LIFECYCLE_STATE_IN_REVIEW' };
+    f.extraReleases = [update];
+    f.lifecycle = 'PUBLISHED';
+    const channel = () => checkPlayChannel({ ...f.clients(), registration: newer });
+    const url = 'https://play.google.com/apps/testing/com.campfirium.foliole.android';
+    expect(await channel()).toEqual({ version: '0.7.17', build: '4', status: 'update-in-review', url });
+
+    f.track.releases[0].status = 'halted';
+    expect(await channel()).toEqual({ version: '0.8.1', build: '5', status: 'in-review' });
+
+    update.releaseLifecycleState = 'RELEASE_LIFECYCLE_STATE_PUBLISHED';
+    f.track.releases = [{ name: update.releaseName, versionCodes: ['5'], status: 'completed' }];
+    expect(await channel()).toEqual({ version: '0.8.1', build: '5', status: 'available', url });
+    expect(f.edits.size).toBe(0);
+  } finally {
+    await f.close();
+  }
 });

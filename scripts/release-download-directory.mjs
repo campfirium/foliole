@@ -80,15 +80,6 @@ export function createPlatformDownloadDirectory({ manifest, publishedReleases, r
   };
 }
 
-
-export function storeChannelsForRelease(channels, productVersion, apkVersion = productVersion) {
-  const minimum = compareVersions(apkVersion, productVersion) > 0 ? apkVersion : productVersion;
-  return Object.fromEntries(Object.entries(channels).map(([id, entry]) => {
-    if (compareVersions(entry.version, minimum) >= 0) return [id, entry];
-    return [id, { version: entry.version, build: entry.build, status: 'update-pending' }];
-  }));
-}
-
 export async function readPublicReleaseInventory({ fetchImpl = fetch, repository, token }) {
   let androidApk;
   const changelog = [];

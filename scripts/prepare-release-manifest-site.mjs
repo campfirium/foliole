@@ -18,8 +18,7 @@ import { assertPublishedReleaseAssets } from './release-public-assets.mjs';
 import {
   createPlatformDownloadDirectory,
   readPublicReleaseInventory,
-  listPlatformDownloadVersions,
-  storeChannelsForRelease
+  listPlatformDownloadVersions
 } from './release-download-directory.mjs';
 import { assertLocalizedReleaseNotesScope } from './release-notes-contract.mjs';
 
@@ -121,8 +120,7 @@ export async function prepareReleaseManifestSite({
   });
   downloads.changelogRevision = changelogRevision;
   if (process.env.FOLIOLE_SITE_STORE_STATUS) {
-    const channels = JSON.parse(await readFile(process.env.FOLIOLE_SITE_STORE_STATUS, 'utf8'));
-    downloads.storeChannels = storeChannelsForRelease(channels, downloads.productVersion, downloads.platforms.android?.version);
+    downloads.storeChannels = JSON.parse(await readFile(process.env.FOLIOLE_SITE_STORE_STATUS, 'utf8'));
   }
   await mkdir(dirname(outputRoot), { recursive: true });
   await cp(sourceRoot, outputRoot, { force: true, recursive: true });

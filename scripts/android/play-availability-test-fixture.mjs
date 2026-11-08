@@ -38,7 +38,7 @@ export async function availabilityFixture() {
     }
     if (route.endsWith('/tracks/beta/releases')) {
       respond(response, { releases: f.absent ? [] : [{ track: 'beta', releaseName: f.releaseName,
-        activeArtifacts: [{ versionCode: 4 }], releaseLifecycleState: `RELEASE_LIFECYCLE_STATE_${f.lifecycle}` }] }); return;
+        activeArtifacts: [{ versionCode: 4 }], releaseLifecycleState: `RELEASE_LIFECYCLE_STATE_${f.lifecycle}` }, ...(f.extraReleases ?? [])] }); return;
     }
     if (method === 'POST' && route.endsWith('/edits')) {
       const id = f.nextEditId ?? String(nextId + 1);
