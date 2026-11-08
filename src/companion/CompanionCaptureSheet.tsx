@@ -92,6 +92,7 @@ function CaptureSheetHeader(props: {
         className={`inline-flex items-center justify-center gap-2 rounded-md px-2 py-1 text-sm font-semibold text-primary transition hover:bg-companion-subtle ${props.isSaving ? 'disabled:text-primary' : 'disabled:text-companion-text-tertiary'}`}
         data-testid="companion-capture-save"
         disabled={!props.canSave}
+        onMouseDown={(event) => event.preventDefault()}
         onClick={props.onSave}
         type="button"
       >
@@ -168,7 +169,7 @@ export function CompanionCaptureSheet(props: {
   return (
     <>
     <AppDialog onOpenChange={handleOpenChange} open={props.open}>
-      <AppDialogPortal>
+      {props.open && <AppDialogPortal>
         <AppDialogOverlay className="companion-sheet-overlay" />
         <CaptureSheetViewport onOpenAutoFocus={(event) => {
           event.preventDefault();
@@ -187,7 +188,7 @@ export function CompanionCaptureSheet(props: {
             </div>
           </div>
         </CaptureSheetViewport>
-      </AppDialogPortal>
+      </AppDialogPortal>}
     </AppDialog>
     {state.epubMode.choice && !state.importWarning ? <EpubImportReleaseModeChoice fileName={state.epubMode.choice.fileName} mobile
       description={t('companion.capture.import.readingModeDescription')}
