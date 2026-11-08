@@ -14,7 +14,7 @@ vi.mock('../../shared/platform/desktop/diveRepository', () => ({
   getDiveRepository: () => ({})
 }));
 
-function createContent(nodesById: Record<string, Node>) {
+function createContent(nodesById: Record<string, Node>, trashedNodeIds: string[] = []) {
   return <WorkspaceDualListContent
     activeNodeId={HOME_NODE_ID}
     externalEntriesByFolderId={{}}
@@ -36,7 +36,7 @@ function createContent(nodesById: Record<string, Node>) {
     onSelectTrashNode={vi.fn()}
     reviewCurrentNodeId={null}
     selectedTrashNodeId={null}
-    trashedNodeIds={[]}
+    trashedNodeIds={trashedNodeIds}
   />;
 }
 
@@ -62,6 +62,13 @@ it('keeps the selected Dive live as a subfolder moves out of a source', async ()
   expect(dive).toHaveAttribute('aria-selected', 'true');
   expect(panel.getByRole('treeitem', { name: 'Included through folder' })).toBeVisible();
   expect(panel.getAllByRole('treeitem', { name: 'Also added directly' })).toHaveLength(1);
+
+  view.rerender(createContent(nodes, ['source', 'nested', 'derived', 'direct']));
+  expect(dives.queryByRole('treeitem', { name: 'Source' })).toBeNull();
+  expect(panel.queryByRole('treeitem', { name: 'Included through folder' })).toBeNull();
+  view.rerender(createContent(nodes));
+  expect(dives.getByRole('treeitem', { name: 'Source' })).toBeVisible();
+  expect(panel.getByRole('treeitem', { name: 'Included through folder' })).toBeVisible();
 
   view.rerender(createContent({ ...nodes, nested: { ...nodes.nested, parentNodeId: null } }));
   expect(dive).toHaveAttribute('aria-selected', 'true');

@@ -15,8 +15,10 @@ export function useWorkspaceDiveNavigation(props: {
   const { nodeOrder, nodesById, trashedNodeIds } = props;
   const dives = useMemo(() => {
     const trashed = new Set(trashedNodeIds);
-    return nodeOrder.flatMap(id => trashed.has(id) ? [] : readDiveNode(nodesById[id]) ?? [])
-      .sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
+    return nodeOrder.flatMap(id => {
+      const dive = trashed.has(id) ? null : readDiveNode(nodesById[id]);
+      return dive ? [{ ...dive, directSourceIds: dive.directSourceIds.filter(sourceId => !trashed.has(sourceId)) }] : [];
+    }).sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
   }, [nodeOrder, nodesById, trashedNodeIds]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const isOtherView = props.isVirtualViewOpen || props.isTrashViewOpen || props.isExternalViewOpen;

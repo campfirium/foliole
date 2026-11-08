@@ -41,4 +41,11 @@ test('creates a Dive, adds a folder and browses its topics after reload', async 
   const output = path.resolve('.tmp/artifacts/T745-0-1');
   fs.mkdirSync(output, { recursive: true });
   await page.screenshot({ path: path.join(output, 'desktop-dive.png') });
+
+  await page.evaluate(() => window.__folioleWorkspaceDebug!.deleteNode('dive-source-folder'));
+  await expect(dives.getByRole('treeitem', { name: 'Reference shelf' })).toHaveCount(0);
+  await expect(panel.getByRole('treeitem', { name: 'Statistics primer' })).toHaveCount(0);
+  await page.evaluate(() => window.__folioleWorkspaceDebug!.restoreNode('dive-source-folder'));
+  await expect(dives.getByRole('treeitem', { name: 'Reference shelf' })).toBeVisible();
+  await expect(panel.getByRole('treeitem', { name: 'Statistics primer' })).toBeVisible();
 });
