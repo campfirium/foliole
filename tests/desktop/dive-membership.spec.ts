@@ -3,7 +3,7 @@ import path from 'node:path';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-test('creates a Dive from the folder menu and adds a Topic from its menu', async ({ desktopWindow }, testInfo) => {
+test('creates a Dive in the tree and shows sources added from library menus', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
   await desktopWindow.evaluate(async () => {
     await window.__folioleWorkspaceDebug?.seedNodes([
@@ -11,15 +11,21 @@ test('creates a Dive from the folder menu and adds a Topic from its menu', async
       { content: 'Independent notes', id: 'dive-topic', kind: 'topic', title: 'Independent notes' }
     ]);
   });
+  const diveTree = desktopWindow.getByRole('tree', { name: /^(Dives|专题)$/ });
+  await diveTree.getByRole('treeitem', { name: /^(Dives|专题)$/ }).click({ button: 'right' });
+  await desktopWindow.getByRole('menuitem', { name: /^(Create Dive|创建专题)$/ }).click();
+  const name = diveTree.getByRole('textbox');
+  await name.fill('Probability review');
+  await name.press('Enter');
+  await expect(diveTree.getByRole('treeitem', { name: 'Probability review' })).toBeVisible();
+
   const menu = desktopWindow.getByRole('menuitem', { name: /^(Add to Dive…|添加到专题…)$/ });
+  const picker = desktopWindow.getByRole('dialog', { name: /^(Add to Dive|添加到专题)$/ });
   await desktopWindow.getByRole('treeitem', { name: 'Probability sources' }).click({ button: 'right' });
   await menu.click();
-  const picker = desktopWindow.getByRole('dialog', { name: /^(Add to Dive|添加到专题)$/ });
-  await picker.getByRole('button', { name: /^(New Dive|新建专题)$/ }).click();
-  const name = desktopWindow.getByRole('textbox', { name: /^(Dive name|专题名称)$/ });
-  await name.fill('Probability review');
-  await desktopWindow.getByRole('button', { name: /^(Create and add|创建并添加)$/ }).click();
-  await expect(desktopWindow.getByText(/^(Added to Probability review\.|已添加到「Probability review」。)$/)).toBeVisible();
+  await expect(picker.getByRole('button', { name: /^(New Dive|Create Dive|新建专题|创建专题)$/ })).toHaveCount(0);
+  await picker.getByRole('button', { name: 'Probability review' }).click();
+  await expect(diveTree.getByRole('treeitem', { name: 'Probability sources' })).toBeVisible();
 
   await desktopWindow.getByRole('treeitem', { name: 'Home', exact: true }).click();
   const topicPanel = desktopWindow.getByRole('complementary', { name: /^(Current folder contents|当前文件夹内容)$/ });
@@ -34,6 +40,7 @@ test('creates a Dive from the folder menu and adds a Topic from its menu', async
   await search.press('Enter');
   await expect(picker).toBeHidden();
 
+  await expect(diveTree.getByRole('treeitem', { name: 'Independent notes' })).toBeVisible();
   const dives = await desktopWindow.evaluate(async () => window.electronAPI?.invoke('list_dives'));
   expect(dives).toEqual([expect.objectContaining({
     title: 'Probability review', directSourceIds: ['dive-folder', 'dive-topic']

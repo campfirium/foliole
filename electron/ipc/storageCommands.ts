@@ -2,7 +2,7 @@ import { type WebContents } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { addDiveSources, createDive, listDives } from '../database/diveRepository.js';
+import { addDiveSources, createDive, listDives, renameDive } from '../database/diveRepository.js';
 import { resetImportData } from '../database/importMaintenance.js';
 import {
   dismissNodeTextAlternative,
@@ -103,6 +103,9 @@ export async function handleStorageCommand(
 }
 
 function handleDiveCommand(command: string, args: Record<string, unknown>) {
+  if (command === NATIVE_COMMANDS.renameDive) {
+    return renameDive(openDatabaseConnection().sqlite, asString(args.diveId, 'diveId'), asString(args.title, 'title'));
+  }
   if (command === NATIVE_COMMANDS.listDives) return listDives(openDatabaseConnection().sqlite);
   if (command === NATIVE_COMMANDS.createDive || command === NATIVE_COMMANDS.addDiveSources) {
     const ids = asStringArray(args.sourceIds, 'sourceIds');

@@ -33,7 +33,6 @@ function MembershipResults(props: {
   activeIndex: number;
   copy: MembershipPaletteCopy;
   onCreate?: () => void;
-  showCreateWithResults?: boolean;
   onSelect: (targetId: string) => void;
   query: string;
   targets: readonly MembershipTarget[];
@@ -47,7 +46,7 @@ function MembershipResults(props: {
               ? props.copy.noResults
               : props.copy.empty}
           </span>
-          {(!props.query.trim() || props.showCreateWithResults) && props.onCreate ? (
+          {!props.query.trim() && props.onCreate ? (
             <AppButton onClick={props.onCreate} size="sm" variant="subtle">
               {props.copy.create}
             </AppButton>
@@ -71,11 +70,6 @@ function MembershipResults(props: {
           </button>
         </li>
       ))}
-      {props.onCreate && props.showCreateWithResults ? (
-        <li className="px-3 py-2">
-          <AppButton onClick={props.onCreate} size="sm" variant="subtle">{props.copy.create}</AppButton>
-        </li>
-      ) : null}
     </ul>
   );
 }
@@ -86,7 +80,6 @@ export function MembershipDestinationPalette(props: {
   onCreate?: () => void;
   onSelect: (id: string) => void;
   targets: readonly MembershipTarget[];
-  showCreateWithResults?: boolean;
 }) {
   const focusTrap = useFloatingDialogFocusTrap(true);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -133,7 +126,6 @@ export function MembershipDestinationPalette(props: {
           onSelect={props.onSelect}
           copy={props.copy}
           {...(props.onCreate ? { onCreate: props.onCreate } : {})}
-          {...(props.showCreateWithResults ? { showCreateWithResults: true } : {})}
           query={query}
           targets={targets}
         />

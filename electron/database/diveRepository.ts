@@ -41,24 +41,37 @@ export function createDive(db: SqliteDatabase, name: string, ids: readonly strin
   const title = name.trim();
   if (!title || title.length > 120) throw new Error('Invalid Dive name');
   return db.transaction(() => {
-    const dive = { id: randomUUID(), title, directSourceIds: validateSources(db, ids) };
+    const dive = { id: randomUUID(), title, directSourceIds: ids.length ? validateSources(db, ids) : [] };
     db.prepare('INSERT INTO workspace_meta (key, value, updated_at) VALUES (?, ?, ?)')
       .run(prefix + dive.id, encodeDive(dive), new Date().toISOString());
     return dive;
   }).immediate();
 }
 
+export function renameDive(db: SqliteDatabase, diveId: string, name: string): Dive {
+  const title = name.trim();
+  if (!title || title.length > 120) throw new Error('Invalid Dive name');
+  return updateDive(db, diveId, (dive) => dive.title === title ? dive : { ...dive, title });
+}
+
 export function addDiveSources(db: SqliteDatabase, diveId: string, ids: readonly string[]): Dive {
+  return updateDive(db, diveId, (dive) => {
+    const directSourceIds = [...new Set([...dive.directSourceIds, ...validateSources(db, ids)])];
+    return directSourceIds.length === dive.directSourceIds.length ? dive : { ...dive, directSourceIds };
+  });
+}
+
+function updateDive(db: SqliteDatabase, diveId: string, update: (dive: Dive) => Dive): Dive {
   return db.transaction(() => {
     const key = prefix + diveId;
     const row = db.prepare('SELECT value FROM workspace_meta WHERE key = ?').get(key) as { value: string } | undefined;
     if (!row) throw new Error('Dive is unavailable');
     const dive = decodeDive(key, row.value);
-    const directSourceIds = [...new Set([...dive.directSourceIds, ...validateSources(db, ids)])];
-    if (directSourceIds.length === dive.directSourceIds.length) return dive;
-    const updated = { ...dive, directSourceIds };
-    db.prepare('UPDATE workspace_meta SET value = ?, updated_at = ? WHERE key = ?')
-      .run(encodeDive(updated), new Date().toISOString(), key);
+    const updated = update(dive);
+    if (updated !== dive) {
+      db.prepare('UPDATE workspace_meta SET value = ?, updated_at = ? WHERE key = ?')
+        .run(encodeDive(updated), new Date().toISOString(), key);
+    }
     return updated;
   }).immediate();
 }

@@ -10,6 +10,7 @@ import type {
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { ExternalLibrarySection } from './ExternalLibrarySection';
 import { useWorkspaceAddToDive } from './WorkspaceAddToDive';
+import { WorkspaceDiveSection } from './WorkspaceDiveSection';
 import { WorkspaceVirtualSection } from './WorkspaceVirtualSection';
 
 interface WorkspaceFolderColumnProps {
@@ -103,6 +104,11 @@ function renderRegularSection(
               hideInDemo: props.hideVirtualSectionInDemo,
               onOpenVirtualView: props.onOpenVirtualView
             })}
+          />
+          <WorkspaceDiveSection
+            activeNodeId={props.activeFolderId}
+            nodesById={props.nodesById}
+            onSelectNode={(id) => selectRegularNode(props, id)}
           />
           <ExternalLibrarySection
             entriesByFolderId={props.externalEntriesByFolderId}
