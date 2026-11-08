@@ -3,6 +3,7 @@ import { expect } from 'vitest';
 
 import { deleteNodesPermanently } from '../../lib/core/database/nodePermanentDeleteMutations.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
+import { deletedVersionMetadataDigest } from '../../lib/core/sync/syncNodeSnapshotIdentity.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -30,4 +31,14 @@ export function restartDeletedPeer(peer: Peer) {
   peer.db.pragma('foreign_keys = ON');
   peer.driver = createBetterSqlite3Driver(peer.db);
   peer.port = createBetterSqliteDbPort(peer.db);
+}
+
+export function captureVersionIdentity(peer: Peer, versionId: string) {
+  const row = peer.db.prepare<[string], { snapshot_json: string; content_hash: string }>(
+    'SELECT snapshot_json, content_hash FROM node_sync_versions WHERE version_id = ?'
+  ).get(versionId)!;
+  return {
+    contentHash: row.content_hash,
+    metadataDigest: deletedVersionMetadataDigest(JSON.parse(row.snapshot_json))
+  };
 }
