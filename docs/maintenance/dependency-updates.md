@@ -152,6 +152,20 @@ owner pushes the validated dev tip and verifies remote containment before PR
 closure. Scheduled Dev Quality follows its own schedule. Do not use PR count
 to determine install, test, commit or task count.
 
+### Pending centralized QA
+
+The local npm batch is committed as `0f0d4f6d3` on `dev`. npm resolved all
+four updated packages under the seven-day policy. The production audit found
+zero vulnerabilities, the nine-case Mac desktop suite passed (including the
+large-folder virtual list), and local lint and type checks passed. The next
+check must include dependency hardening and full quality before PR closure.
+
+| PR | Verified author / reviewed head | Adopted version |
+| --- | --- | --- |
+| #216 | `app/renovate` / `5b5d2baabcd6f18776ccb5d105cf1a780a170ec6` | knip 6.44.1 |
+| #218 | `app/renovate` / `de21a9a3d0fa6ac73bf4d9bbf834d37800c185e0` | react-virtual 3.14.25 and virtual-core 3.19.10 |
+| #219 | `app/renovate` / `de513dec72a0931784f3e2d49e2d9eb7086ce08c` | globals 17.14.0 |
+
 ### Completed Android/iPhone dependency batch
 
 T726 completed full QA for `7e5abc6426417cbe9616748cceaef8e9cca0c226`:
