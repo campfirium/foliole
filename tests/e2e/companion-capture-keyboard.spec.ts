@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-async function openCapture(page: Page) {
+async function openCaptureFixture(page: Page) {
   await page.addInitScript(() => {
     // Model iOS: keyboard changes the visible region without resizing the layout viewport.
     const viewport = Object.assign(new EventTarget(), { height: 812, offsetTop: 0 });
@@ -16,6 +16,10 @@ async function openCapture(page: Page) {
     await import('/@fs/${process.cwd()}/tests/fixtures/companionCaptureKeyboard.tsx');
     </script></body></html>` }));
   await page.goto('/__capture-keyboard');
+}
+
+async function openCapture(page: Page) {
+  await openCaptureFixture(page);
   await page.getByRole('button', { name: 'Open capture' }).click();
   await expect(page.getByRole('textbox')).toBeFocused();
 }
@@ -96,3 +100,24 @@ test('Capture remains usable when a landscape keyboard leaves only one input row
   await expect(input).toHaveValue('');
   await expect(page.getByRole('button', { name: 'Paste from Clipboard' })).toBeVisible();
 });
+
+for (const viewport of [{ width: 375, height: 812 }, { width: 839, height: 343 }]) {
+  test(`Flow Capture expands and keeps focus at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await openCaptureFixture(page);
+    await setVisibleRegion(page, viewport.height, 0);
+    await page.getByRole('button', { name: 'Actions' }).click();
+    const entry = page.getByRole('button', { name: 'Type a new topic' });
+    await expect(entry).toBeInViewport();
+    await expect(page.getByRole('textbox')).toHaveCount(0);
+    await entry.click();
+    await expect(page.getByRole('textbox')).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Reading only' })).not.toBeVisible();
+    await expectCaptureInsideVisibleRegion(page, 0, viewport.height);
+    await page.keyboard.type('Captured during Flow');
+    await expect(page.getByRole('textbox')).toHaveValue('Captured during Flow');
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page.getByLabel('Saved text')).toHaveText('Captured during Flow');
+    await expect(page.getByRole('textbox')).not.toBeVisible();
+  });
+}

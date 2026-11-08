@@ -157,3 +157,36 @@ it.each(['review', 'recent'])('keeps navigation hidden while a breadcrumb articl
   refresh();
   expect(screen.getByRole('heading', { name: 'Inbox' })).toBeInTheDocument();
 });
+
+it('opens the Capture editor from the Flow reading menu in a single tap and returns to the same article', async () => {
+  const { surface, container } = await renderBreadcrumbShell();
+  fireEvent.click(container.querySelector('article')!);
+  fireEvent.click(screen.getByRole('button', { name: 'More reading actions' }));
+  expect(screen.queryByRole('textbox', { name: 'Capture text' })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Type a new topic' }));
+
+  expect(screen.getByRole('textbox', { name: 'Capture text' })).toHaveFocus();
+  expect(screen.queryByRole('button', { name: 'Find in document' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(screen.getByText('Topi')).toBeInTheDocument();
+  expect(surface.handleTabAction).not.toHaveBeenCalled();
+});
+
+
+it.each(['folder', 'finished'])('opens the Capture editor from the Flow %s menu', async state => {
+  const { surface, refresh } = await renderBreadcrumbShell();
+  useCompanionArticleSurface.mockReturnValue({
+    ...surface,
+    isFlowBrowsing: state === 'folder',
+    browsedFolder: state === 'folder' ? { nodeId: 'folder-1', title: 'Inbox', items: [] } : null,
+    effectiveReviewSession: { ...surface.effectiveReviewSession, currentCard: null },
+    readableArticle: null
+  });
+  refresh();
+
+  expect(screen.queryByRole('button', { name: 'Type a new topic' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Type a new topic' }));
+  expect(screen.getByRole('textbox', { name: 'Capture text' })).toHaveFocus();
+});

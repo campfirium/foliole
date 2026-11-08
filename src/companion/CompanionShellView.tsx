@@ -6,6 +6,7 @@ import {
 } from './companionCssCompatibility';
 import { canRenderCompanionDirectoryArticle } from './CompanionDirectoryReadableArticleModel';
 import { CompanionFlowBrowseBar } from './CompanionFlowBrowseBar';
+import { CompanionFlowCaptureContext } from './CompanionFlowCaptureEntry';
 import { CompanionFlowHistorySurface } from './CompanionFlowHistorySurface';
 import { CompanionPageStack } from './CompanionPageStack';
 import { CompanionPreviewLifecycle } from './CompanionPreviewLifecycle';
@@ -113,6 +114,8 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
   const { model } = props;
   const page = resolveMainPage(model);
   return (
+    <CompanionFlowCaptureContext.Provider value={model.surface.activeAction === 'review' || model.surface.isFlowBrowsing
+      ? () => model.setIsCaptureSheetOpen(true) : null}>
     <FlowHistorySurface model={model}>
       {import.meta.env.DEV && window.__FOLIOLE_COMPANION_PREVIEW_HOST__ !== undefined ? (
         <CompanionPreviewLifecycle activity={model.surface.readingActivity}
@@ -153,5 +156,6 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
         onSecondaryDestination={model.handleSecondaryDestination}
       />
     </FlowHistorySurface>
+    </CompanionFlowCaptureContext.Provider>
   );
 }

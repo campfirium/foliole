@@ -24,7 +24,7 @@ it('does not expose Flow modes from ordinary browsing', () => {
 
 it('keeps mode switching available without a current article and respects pending work', () => {
   const onChange = vi.fn();
-  render(<CompanionFlowModeMenu mode="reading-only" onChange={onChange} disabled />);
+  render(<CompanionFlowModeMenu controls={{ mode: 'reading-only', onChange, disabled: true }} />);
   fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
   expect(screen.getByRole('button', { name: 'Reading only' })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByRole('button', { name: 'Review first' })).toBeDisabled();

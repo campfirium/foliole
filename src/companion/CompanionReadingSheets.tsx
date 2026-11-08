@@ -7,6 +7,7 @@ import { FlowExitHereContext } from '../shared/ui/FlowExitHereContext';
 
 import { CompanionBottomSheet as ReadingBottomSheet } from './CompanionBottomSheet';
 import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryActions';
+import { CompanionFlowCaptureEntry } from './CompanionFlowCaptureEntry';
 import { CompanionFlowOrEditHistoryActions } from './CompanionFlowHistorySurface';
 import { CompanionFlowModeControl } from './CompanionFlowModeControl';
 import { CompanionNodePrioritySlider } from './CompanionNodePrioritySlider';
@@ -76,6 +77,7 @@ export function ReadingActionsSheet(props: {
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.actions')}>
       <div className="border-t border-companion-divider">
+        <CompanionFlowCaptureEntry onClose={() => props.onOpenChange(false)} />
         <CompanionFlowOrEditHistoryActions open={props.open} {...(props.editHistory ? { editHistory: props.editHistory } : {})} />
         <CompanionFlowModeControl onSelect={() => props.onOpenChange(false)} />
         <ReadingExitFlowHereAction onClose={() => props.onOpenChange(false)} />

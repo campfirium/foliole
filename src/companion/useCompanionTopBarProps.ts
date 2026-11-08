@@ -62,6 +62,7 @@ export function useCompanionTopBarProps(args: {
 
   if (args.surface.isFlowBrowsing) return {
     title: args.surface.browsedFolder?.title ?? 'Flow',
+    rightSlot: createElement(CompanionFlowModeMenu, { key: 'flow-browse' }),
     leftAction: { icon: X, label: t('companion.review.exit'), onClick: () => args.surface.handleTabAction('recent') }
   };
 
@@ -99,8 +100,7 @@ function withEmptyFlowMenu(resolved: Omit<ComponentProps<typeof CompanionTopBar>
   surface: ReturnType<typeof useCompanionArticleSurface>) {
   if (surface.activeAction === 'review' && !surface.effectiveReviewSession.currentCard) {
     return { ...resolved, rightSlot: createElement(CompanionFlowModeMenu, {
-        mode: surface.flowSessionMode, onChange: surface.setFlowSessionMode,
-        disabled: !surface.flowReady
+        controls: { mode: surface.flowSessionMode, onChange: surface.setFlowSessionMode, disabled: !surface.flowReady }
       }) };
   }
   return resolved;
