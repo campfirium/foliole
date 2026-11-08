@@ -34,6 +34,13 @@ export function companionAttachmentNativeFiles(root: string) {
       case 'append': await appendFile(partial, Buffer.from(input.base64!, 'base64')); return {};
       case 'hash': return { hash: digest(await readFile(file)) };
       case 'discard': await rm(partial, { force: true }); return {};
+      case 'publish-received': {
+        const bytes = await readFile(partial);
+        if (bytes.length !== input.length) throw new Error('attachment_partial_length_changed');
+        if (digest(bytes) !== input.key.slice(0, 64)) return { verified: false };
+        await rename(partial, file);
+        return { verified: true };
+      }
       case 'publish': await rename(partial, file); return {};
       default: throw new Error(`Unexpected attachment action: ${input.action}`);
     }

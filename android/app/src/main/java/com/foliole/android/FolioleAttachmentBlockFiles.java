@@ -39,7 +39,7 @@ public final class FolioleAttachmentBlockFiles {
             owner.onAttachmentClose(() -> close(owner));
         }
         if (owner.isClosed()) throw new IllegalStateException("attachment_owner_closed");
-        return files.execute(call);
+        return files.execute(owner, call);
     }
 
     public static void close(FramedSyncPayloadBudget owner) {
@@ -88,7 +88,7 @@ public final class FolioleAttachmentBlockFiles {
         } finally { if (carrier != candidate) candidate.close(); }
     }
 
-    private JSObject execute(PluginCall call) throws Exception {
+    private JSObject execute(FramedSyncPayloadBudget owner, PluginCall call) throws Exception {
         String action = call.getString("action", "");
         String key = call.getString("key", "");
         if (action.equals("source-stat-batch")) return sourceStatBatch(call);
@@ -98,7 +98,7 @@ public final class FolioleAttachmentBlockFiles {
         if (action.equals("stat")) return info(resolve(key, partial), !partial);
         if (action.equals("hash")) return new JSObject().put("hash", digest(resolve(key, partial)));
         acquire();
-        return mutate(call, action, key);
+        return mutate(owner, call, action, key);
     }
 
     private JSObject sourceStatBatch(PluginCall call) throws Exception {
@@ -116,9 +116,16 @@ public final class FolioleAttachmentBlockFiles {
         return new JSObject().put("presence", presence);
     }
 
-    private JSObject mutate(PluginCall call, String action, String key) throws Exception {
+    private JSObject mutate(FramedSyncPayloadBudget owner, PluginCall call, String action, String key) throws Exception {
         if (receiving.contains(key.substring(0, 64))) throw new IllegalStateException("attachment_receive_busy");
         File file = resolve(key, true);
+        if (action.equals("publish-received")) {
+            boolean verified = FolioleCompanionAttachmentFileStage.publishReceived(file, resolve(key, false),
+                key.substring(0, 64), number(call, "length"), () -> {
+                    if (owner.isClosed()) throw new IllegalStateException("attachment_owner_closed");
+                });
+            return new JSObject().put("verified", verified);
+        }
         if (action.equals("discard")) Files.deleteIfExists(file.toPath());
         else if (action.equals("publish")) {
             publish(context, file, resolve(key, false), key.substring(0, 64));

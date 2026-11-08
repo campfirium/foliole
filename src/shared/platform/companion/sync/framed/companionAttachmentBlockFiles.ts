@@ -76,19 +76,14 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
   return host;
 }
 
-async function notifyComplete<T extends AttachmentBlockResult>(storageKey: string, pending: Promise<T>) {
-  const result = await pending;
-  if (result.kind === 'complete') notifyAttachmentResourceAvailable(storageKey);
-  return result;
-}
-
 async function completeReceived<T extends AttachmentBlockResult>(db: RequestSyncDatabaseHost, key: string,
   pending: Promise<T>, recorder?: CompanionFolderAttachmentRecorder) {
-  const result = await notifyComplete(key, pending);
+  const result = await pending;
   if (result.kind === 'complete') await db.write(port => port.transaction(async tx => {
     await recorder?.complete(tx, key);
     if (!key.endsWith('.pdf')) await completeAttachmentDemand(tx, key);
   }));
+  if (result.kind === 'complete') notifyAttachmentResourceAvailable(key);
   return result;
 }
 

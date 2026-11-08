@@ -22,6 +22,7 @@ export interface AttachmentBlockFiles {
   verifyPartial(hash: string): Promise<boolean>;
   discardPartial(hash: string): Promise<void>;
   publish(resource: AttachmentBlockResource, options?: { notify: boolean }): Promise<void>;
+  publishReceived?(resource: AttachmentBlockResource, check: () => void): Promise<boolean>;
   notifyPublished?(resource: AttachmentBlockResource): void;
   availability(hash: string, available: boolean): Promise<void>;
 }

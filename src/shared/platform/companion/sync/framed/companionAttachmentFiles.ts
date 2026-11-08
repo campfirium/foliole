@@ -1,6 +1,7 @@
+import { Capacitor } from '@capacitor/core';
 import { z } from 'zod';
 
-import type { AttachmentBlockFiles } from '../../../../../../lib/core/sync/attachmentBlockReceiver.js';
+import type { AttachmentBlockFiles, AttachmentBlockResource } from '../../../../../../lib/core/sync/attachmentBlockReceiver.js';
 import { attachmentSourceVerification } from '../../../../../../lib/core/sync/attachmentSourceVerification.js';
 import type { NativeCompanionFramedFileRequest } from '../../../../../../lib/platform/nativeCompanionFramedFilesContract.js';
 import type { NativeCompanionFramedPayloadBudgetOwner } from '../../../../../../lib/platform/nativeCompanionFramedPayloadBudgetContract.js';
@@ -38,6 +39,15 @@ export function createCompanionAttachmentFiles(owner: NativeCompanionFramedPaylo
       attachmentSourceVerification.invalidate(resource.storageKey);
       await call({ key: resource.storageKey, action: 'publish' });
     },
+    ...(Capacitor.getPlatform() === 'android' ? {
+      async publishReceived(resource: AttachmentBlockResource, check: () => void) {
+        await beforePublish?.(resource.storageKey);
+        check();
+        attachmentSourceVerification.invalidate(resource.storageKey);
+        const result = await call({ key: resource.storageKey, length: resource.byteLength, action: 'publish-received' });
+        return z.boolean().parse(result.verified);
+      }
+    } : {}),
     availability
   };
 }

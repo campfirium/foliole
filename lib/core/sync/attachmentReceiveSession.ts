@@ -68,15 +68,21 @@ async function finish(files: AttachmentBlockFiles, resource: AttachmentBlockReso
   commit: (resource: AttachmentBlockResource) => Promise<void>) {
   const hash = resource.storageKey.slice(0, 64);
   check();
-  const valid = await files.verifyPartial(hash);
-  check();
-  if (!valid) {
-    await files.discardPartial(hash);
-    throw new Error('attachment_checksum_mismatch');
+  if (files.publishReceived) {
+    if (!await files.publishReceived(resource, check)) await discardInvalid(files, hash);
+  } else {
+    const valid = await files.verifyPartial(hash);
+    check();
+    if (!valid) await discardInvalid(files, hash);
+    await files.publish(resource, { notify: false });
   }
-  await files.publish(resource, { notify: false });
   await commit(resource);
   files.notifyPublished?.(resource);
+}
+
+async function discardInvalid(files: AttachmentBlockFiles, hash: string): Promise<never> {
+  await files.discardPartial(hash);
+  throw new Error('attachment_checksum_mismatch');
 }
 
 function gate<T>() {
