@@ -13,7 +13,7 @@ export function useCompanionReadAdmission(args: CompanionSurfaceActionArgs,
     setError(engine.error);
   }), [args.flow.readIntents]);
 
-  return async (token: Token) => {
+  return async (token: Token, releaseSequentialReading: boolean) => {
     const engine = args.flow.readIntents;
     const now = new Date().toISOString();
     if (!engine || hasFlowDayChanged(token.session, now)) return false;
@@ -22,7 +22,7 @@ export function useCompanionReadAdmission(args: CompanionSurfaceActionArgs,
     if (!latest.current.active || !args.flow.matches(token)) return true;
     token.owner.readEpoch = token.epoch;
     const history = args.flow.historyContext(token)!;
-    const accepted = await engine.accept({ session: token.session, now, mode: history.mode, historyKey: history.key, snapshot: args.snapshot! });
+    const accepted = await engine.accept({ session: token.session, now, mode: history.mode, historyKey: history.key, snapshot: args.snapshot!, releaseSequentialReading });
     args.flow.advance(token, 'read', args.snapshot!, now, accepted.session);
     args.floatingBar.revealBar();
     return true;

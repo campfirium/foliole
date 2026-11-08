@@ -13,7 +13,7 @@ async function openReview(page: Page, query = '') {
     await import('/@fs/${process.cwd()}/tests/fixtures/companionItemReview.tsx');
     </script></body></html>` }));
   await page.goto(`/__item-review?${query}`);
-  await expect(page.getByRole('document', { name: 'Question', exact: true })).toBeVisible();
+  await expect(page.getByRole('document', { name: new URLSearchParams(query).has('reading') ? 'Topic body' : 'Question', exact: true })).toBeVisible();
 }
 
 async function layout(page: Page) {
@@ -170,4 +170,21 @@ async function checkImagePreview(page: Page, name: string) {
   await expect(dialog).toHaveCount(0);
   expect(await surface.evaluate(element => element.scrollTop)).toBe(scrollTop);
   await expect(page.getByRole('img', { name, exact: true })).toBeVisible();
+}
+
+for (const viewport of [{ width: 375, height: 812 }, { width: 700, height: 360 }]) {
+  test(`Flow Read measures the visible topic end at ${viewport.width}×${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await openReview(page, 'reading&question=long');
+    const read = page.getByRole('button', { name: 'Read', exact: true });
+    const result = page.getByLabel('Read position');
+    await expect(read).toBeInViewport({ ratio: 1 });
+    await read.click();
+    await expect(result).toHaveText('Before end');
+    await page.locator('[data-companion-reading-surface]').evaluate(surface => {
+      surface.scrollTop = surface.scrollHeight;
+    });
+    await read.click();
+    await expect(result).toHaveText('End');
+  });
 }

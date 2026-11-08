@@ -1,4 +1,5 @@
-import type { DailyFlowResult, DailyFlowLearningSnapshot } from '../../../../../lib/core/flow/dailyFlowContract';
+import type { WorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshot';
+import type { DailyFlowResult } from '../../../../../lib/core/flow/dailyFlowContract';
 import { advanceDailyFlowDisplay } from '../../../../../lib/core/flow/dailyFlowDisplayAdvance';
 import type { DailyFlowSession } from '../../../../../lib/core/flow/dailyFlowSession';
 import type { ReadIntent, ReadIntentJournal, ReadIntentRow } from '../../../../../lib/core/flow/readIntentJournal';
@@ -14,6 +15,9 @@ import { CompanionReadDisplayPreparation } from './companionReadDisplayPreparati
 import { applyReadIntent } from './companionReadIntentApply';
 import { correctReadIntent } from './companionReadIntentCommand';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
+
+type ReadAdmission = { session: DailyFlowSession; now: string; mode: ReadIntent['mode']; historyKey: string;
+  snapshot?: WorkspaceSnapshot; releaseSequentialReading?: boolean };
 
 const owners = new WeakMap<CapacitorCompanionDatabaseOwner, Promise<CompanionReadIntents>>();
 export function getCompanionReadIntents() {
@@ -75,13 +79,13 @@ export class CompanionReadIntents {
     if (!this.failure) this.start();
   }
 
-  accept(args: { session: DailyFlowSession; now: string; mode: ReadIntent['mode']; historyKey: string; snapshot?: DailyFlowLearningSnapshot }) {
+  accept(args: ReadAdmission) {
     const accepted = this.admitting.then(() => this.acceptOne(args));
     this.admitting = accepted.catch(() => undefined);
     return accepted;
   }
 
-  private async acceptOne(args: { session: DailyFlowSession; now: string; mode: ReadIntent['mode']; historyKey: string; snapshot?: DailyFlowLearningSnapshot }) {
+  private async acceptOne(args: ReadAdmission) {
     if (this.closed) throw new Error('read_intent_owner_closed');
     if (this.failure) throw new Error(this.failure);
     const { session, now, mode, historyKey } = args;
@@ -95,13 +99,22 @@ export class CompanionReadIntents {
       this.applied = this.applied.filter(value => value.revision > projection.observedRevision);
       return projection.session;
     };
-    const prepared = await prepareAdmittedRead(this.owner, intent, session, args.snapshot ?? this.displayPreparation.snapshot({ session, now, mode }));
+    if (args.releaseSequentialReading && this.pending) await this.drain();
+    const releaseSnapshot = args.releaseSequentialReading ? companionWorkspaceSnapshots.getSnapshot() ?? args.snapshot : undefined;
+    const prepared = await prepareAdmittedRead(this.owner, intent, session,
+      releaseSnapshot ?? args.snapshot ?? this.displayPreparation.snapshot({ session, now, mode }), releaseSnapshot);
+    // A precomputed successor cannot account for queue membership changed by a release.
+    const releasesTopics = (prepared.command.readings?.length ?? 0) > 1;
     await this.journal.accept(intent, prepared);
-    this.jobs.set(intent.id, this.displayPreparation.claim({ session, now, mode }));
+    if (!releasesTopics) this.jobs.set(intent.id, this.displayPreparation.claim({ session, now, mode }));
     this.predecessor = intent.id;
     this.rows.push({ ordinal: 0, intent, ...prepared, state: 'pending', error: null });
     this.publish();
     this.start();
+    if (releasesTopics) {
+      await this.drain();
+      return { id: intent.id, session: this.receipt!.session };
+    }
     try { return { id: intent.id, session: await project() }; }
     catch (error) {
       this.jobs.delete(intent.id);
@@ -158,14 +171,14 @@ export class CompanionReadIntents {
           this.applyingNodeId = row.intent.nodeId;
           return this.owner.runWriterSequence((db, commit) => applyReadIntent(db, this.journal,
             row.intent.admittedCommand ? row : row.intent.id, preparedNavigation, commit));
-        }, { kind: 'nodes', nodeIds: [], readingNodeIds: [row.intent.nodeId] })
+        }, { kind: 'nodes', nodeIds: [], readingNodeIds: row.command?.readings?.map(value => value.nodeId) ?? [row.intent.nodeId] })
           .finally(() => { this.applyingNodeId = null; });
         await this.journal.settle(row.intent.id, outcome.state,
           outcome.state === 'superseded' ? 'The clicked topic changed before it could be saved.' : null);
         acknowledged = true;
         this.rows.shift();
         this.jobs.delete(row.intent.id);
-        this.correction ||= outcome.state === 'superseded';
+        this.correction ||= outcome.state === 'superseded' || (row.command?.readings?.length ?? 0) > 1;
         if (outcome.result) {
           this.receipt = outcome.result;
           if (outcome.state === 'applied' && outcome.result.session.daily?.dayKey === row.intent.dayKey) this.applied.push({

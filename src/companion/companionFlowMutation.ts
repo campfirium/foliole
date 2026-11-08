@@ -34,6 +34,7 @@ export async function persistFlowMutation(args: {
   action: Exclude<FlowAction, 'soon'>; snapshot: WorkspaceSnapshot;
   nodeId: string; now: string; grade?: ReviewGrade;
   history?: CompanionFlowHistoryContext;
+  releaseSequentialReading?: boolean;
 }): Promise<FlowMutation> {
   if (args.action === 'grade') {
     const result = await gradeCompanionReviewCard({ ...args, grade: args.grade! });
@@ -51,7 +52,7 @@ export async function persistFlowMutation(args: {
   }
   const apply = args.action === 'read' ? readCompanionReviewTopic
     : args.action === 'later' ? postponeCompanionReviewTopic : dismissCompanionReviewTopic;
-  const snapshot = args.history?.session.daily && args.action !== 'dismiss'
+  const snapshot = args.history?.session.daily && args.action !== 'dismiss' && !args.releaseSequentialReading
     ? scopeReadingCalculation(args.snapshot, args.nodeId) : args.snapshot;
   const result = apply({ ...args, snapshot });
   if (!result) throw new Error('The current topic is no longer available.');

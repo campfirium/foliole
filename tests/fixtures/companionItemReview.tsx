@@ -37,17 +37,20 @@ function Review() {
   const long = Array.from({ length: 40 }, (_, i) => `Paragraph ${i + 1}. Content continues.`).join('\n\n');
   const content = params.get('question') === 'image' ? `![Question illustration](${wideImage})` : params.has('question') ? long : 'How do you check Flow history?';
   const answer = params.get('answer') === 'image' ? `![Answer illustration](${wideImage})` : params.has('answer') ? long : 'Process entries, then undo and redo and verify the displayed entry.';
+  const reading = params.has('reading');
+  const [atEnd, setAtEnd] = useState<boolean | null>(null);
   const [revealed, setRevealed] = useState(!params.has('hidden'));
   const [grade, setGrade] = useState<number | null>(null);
   return <LocalizationProvider initialLanguagePreference="en"><CompanionColorModeProvider><MouseGestureSettingsProvider><CompanionDraftProvider>
     {params.has('editing') ? <EditingReview content={content} answer={answer} /> : <>
-    <ImmersiveReadableArticle flow isReviewItem answer={revealed ? answer : null} header={<span>Flow practice</span>}
+    <ImmersiveReadableArticle flow isReviewItem={!reading} answer={!reading && revealed ? answer : null} header={<span>Flow practice</span>}
       onExit={() => {}} snapshot={null}
       readableArticle={{ nodeId: 'review-item', content, title: 'Question', hideTitleHeading: false,
         persistedNodeViewState: null, pdfAttachmentId: null, textAnchorDecorations: [] }}
-      footer={<CompanionBottomReviewBar visible hasAnswer itemKind="fsrs" isAnswerRevealed={revealed}
-        onRevealAnswer={() => setRevealed(true)} onGrade={setGrade} onReadReviewTopic={() => {}}
+      footer={<CompanionBottomReviewBar visible hasAnswer itemKind={reading ? 'reading' : 'fsrs'} isAnswerRevealed={revealed}
+        onRevealAnswer={() => setRevealed(true)} onGrade={setGrade} onReadReviewTopic={setAtEnd}
         onPostponeReviewTopic={() => {}} onDismissReviewTopic={() => {}} reviewCardKey="review-item" />} />
+    {reading ? <output aria-label="Read position">{atEnd === null ? 'None' : atEnd ? 'End' : 'Before end'}</output> : null}
     <output aria-label="Submitted grade">{grade ?? 'None'}</output>
     </>}
   </CompanionDraftProvider></MouseGestureSettingsProvider></CompanionColorModeProvider></LocalizationProvider>;

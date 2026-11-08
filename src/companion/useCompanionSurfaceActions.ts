@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { findEnabledSequentialReadingSourceId } from '../../lib/core/review/sequentialReadingSources';
 import type { ReviewGrade } from '../features/review/model/reviewTypes';
 import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { applyCompanionFlowReceipt } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
@@ -39,17 +40,19 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
 
   const admitRead = useCompanionReadAdmission(args, latest, setReadingError);
 
-  async function submit(action: FlowAction, grade?: ReviewGrade) {
+  async function submit(action: FlowAction, grade?: ReviewGrade, atContentEnd = false) {
     if (locked.current || !args.active || historyReplay.refreshPending) return;
     let token = args.flow.capture();
     if (!pending.current && !canSubmitFlowAction(args, token, action)) return;
+    const releaseSequentialReading = action === 'read' && atContentEnd === true && Boolean(token.nodeId && args.snapshot &&
+      findEnabledSequentialReadingSourceId(token.nodeId, args.snapshot.nodesById));
     if (action !== 'read') args.flow.cancelDocumentPreparation();
     locked.current = true;
     setBusy(true);
     setReadingError(null);
     setReviewError(null);
     try {
-      if (action === 'read' && !pending.current && await admitRead(token)) return;
+      if (action === 'read' && !pending.current && await admitRead(token, releaseSequentialReading)) return;
       await args.flow.readIntents?.drain();
       if (pending.current) { await finishPending(args, pending, setReadingError); return; }
       const prepared = await prepareSurfaceAction(args, token, action, () => latest.current.active);
@@ -62,7 +65,7 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
         await commitSoonAction(args, token, snapshot, now);
         return;
       }
-      const mutation = await persistFlowMutation({ action, snapshot, nodeId: token.nodeId, now,
+      const mutation = await persistFlowMutation({ action, snapshot, nodeId: token.nodeId, now, releaseSequentialReading,
         ...(grade ? { grade } : {}), ...(history ? { history } : {}) });
       pending.current = { token, mutation };
       await finishPending(args, pending, setReadingError);
@@ -80,7 +83,7 @@ export function useCompanionSurfaceActions(args: CompanionSurfaceActionArgs) {
     handleFlowHistory: historyReplay.replay,
     historyRefreshPending: historyReplay.refreshPending,
     handleGradeReview: (grade: ReviewGrade) => submit('grade', grade),
-    handleReadReviewTopic: () => submit('read'),
+    handleReadReviewTopic: (atContentEnd = false) => submit('read', undefined, atContentEnd),
     handlePostponeReviewTopic: () => submit('later'),
     handleDismissReviewTopic: () => submit('dismiss'),
     handleSoonReviewTopic: () => submit('soon'),

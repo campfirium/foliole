@@ -1,3 +1,6 @@
+import { useRef } from 'react';
+
+import { isReadActionAdvanceReadyFromMetrics } from '../features/review/model/readActionAdvanceReady';
 import { FsrsRevealAction, ReadingReviewActions, ReviewGradeActions } from '../shared/ui';
 import type { ReviewActionButtonPresentation } from '../shared/ui/reviewActionPresentation';
 
@@ -21,7 +24,7 @@ export function CompanionBottomReviewBar(props: {
   isAnswerRevealed: boolean;
   itemKind: 'fsrs' | 'reading';
   onSoonReviewTopic?: () => void;
-  onReadReviewTopic: () => void;
+  onReadReviewTopic: (atContentEnd: boolean) => void;
   onPostponeReviewTopic: () => void;
   onDismissReviewTopic: () => void;
   onGrade: (grade: BottomBarGrade) => void;
@@ -30,6 +33,7 @@ export function CompanionBottomReviewBar(props: {
   statusLabel?: string | null;
   visible: boolean;
 }) {
+  const actionsRef = useRef<HTMLDivElement>(null);
   if (!props.visible) {
     return null;
   }
@@ -37,6 +41,7 @@ export function CompanionBottomReviewBar(props: {
 
   return (
     <CompanionReviewActionFooter
+      actionsRef={actionsRef}
       reviewCardKey={props.reviewCardKey}
       reviewItemKind={props.itemKind}
       statusLabel={props.statusLabel ?? null}
@@ -48,7 +53,7 @@ export function CompanionBottomReviewBar(props: {
             {...(props.onSoonReviewTopic ? { onRevisitReviewTopicSoon: props.onSoonReviewTopic } : {})}
             actionButtonClassName="companion-bottom-action min-w-0 flex-1 px-0"
             groupClassName={actionGroupClassName}
-            onReadReviewTopic={props.onReadReviewTopic}
+            onReadReviewTopic={() => props.onReadReviewTopic(isFlowArticleEndVisible(actionsRef.current, props.reviewCardKey))}
             onPostponeReviewTopic={props.onPostponeReviewTopic}
             onDismissReviewTopic={props.onDismissReviewTopic}
           />
@@ -68,4 +73,17 @@ export function CompanionBottomReviewBar(props: {
       }
     />
   );
+}
+
+function isFlowArticleEndVisible(actions: HTMLElement | null, nodeId: string | null) {
+  const surface = actions?.closest<HTMLElement>('[data-companion-reading-surface]');
+  const article = surface?.querySelector<HTMLElement>('[data-companion-article-document]');
+  if (!surface?.clientHeight || !article?.scrollHeight || article.dataset.nodeId !== nodeId) return false;
+  const viewportTop = surface.getBoundingClientRect().top + surface.clientTop;
+  return isReadActionAdvanceReadyFromMetrics({
+    clientHeight: surface.clientHeight,
+    scrollTop: 0,
+    // In Flow the editor can overflow the article box and scroll on the outer surface.
+    scrollHeight: article.getBoundingClientRect().top + article.clientTop + article.scrollHeight - viewportTop
+  });
 }

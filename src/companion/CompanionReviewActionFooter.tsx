@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { ReviewActionBar } from '../shared/ui';
@@ -7,6 +7,7 @@ import { CompanionBottomBar } from './CompanionBottomBar';
 
 export function CompanionReviewActionFooter(props: {
   primary: ReactNode;
+  actionsRef?: Ref<HTMLDivElement>;
   reviewCardKey?: string | null;
   reviewItemKind?: 'fsrs' | 'reading';
   statusLabel?: string | null;
@@ -14,7 +15,7 @@ export function CompanionReviewActionFooter(props: {
   const t = useTranslation();
   return (
     <CompanionBottomBar className="companion-review-footer">
-      <div className="h-full w-full">
+      <div className="h-full w-full" ref={props.actionsRef}>
         <ReviewActionBar ariaLabel={t('companion.review.toolbar')}
           className="h-full border-0 bg-transparent px-0" key={props.reviewCardKey} layout="full-width"
           mode="study" primary={props.primary} reviewInputMode="hotkeys"

@@ -6,6 +6,7 @@ import type { DailyFlowSession } from '../../../../../lib/core/flow/dailyFlowSes
 import { readDailyFlow } from '../../../../../lib/core/flow/dailyFlowStorage';
 import type { ReadIntent, ReadIntentRow } from '../../../../../lib/core/flow/readIntentJournal';
 import { reviewCalendarDayKey } from '../../../../../lib/core/review/reviewCalendarDates';
+import type { SequentialReadingChange } from '../../../../../lib/core/review/sequentialReadingTypes';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import type { Node } from '../../../../features/nodes/model/nodeTypes';
 import { buildNextReadingProfile } from '../../../../store/workspaceReviewReading';
@@ -33,7 +34,7 @@ export async function prepareReadIntentCommand(db: DbPort, intent: ReadIntent) {
   return buildReadIntentCommand(intent, opened.session, snapshot);
 }
 
-export function buildReadIntentCommand(intent: ReadIntent, session: DailyFlowSession, snapshot: DailyFlowLearningSnapshot) {
+export function buildReadIntentCommand(intent: ReadIntent, session: DailyFlowSession, snapshot: DailyFlowLearningSnapshot, relatedReadings: SequentialReadingChange[] = []) {
   const currentNode = snapshot.nodesById[intent.nodeId];
   if (!currentNode) return null;
   const before = currentNode.reading ?? null;
@@ -42,11 +43,12 @@ export function buildReadIntentCommand(intent: ReadIntent, session: DailyFlowSes
   }), before);
   const command: DailyFlowCommitArgs = { opId: intent.id, now: intent.now, token: session.daily!,
     sourceSession: session, readingAction: 'read', readings: [{ nodeId: intent.nodeId,
-      before, after, completedReviewDay: reviewCalendarDayKey(new Date(intent.now), intent.settings.newDayStartsAtHour) }] };
+      before, after, completedReviewDay: reviewCalendarDayKey(new Date(intent.now), intent.settings.newDayStartsAtHour) },
+    ...relatedReadings.map(change => ({ nodeId: change.nodeId, before: change.beforeReading, after: change.afterReading }))] };
   const context = { activeNodeId: intent.nodeId, browseRootNodeId: '', reviewSession: session };
   const entry = createTopicDismissHistoryEntry({ id: intent.id, nodeId: intent.nodeId,
     mutationTimestamp: intent.now, title: 'Read Topic', beforeContext: context, afterContext: context,
-    beforeReading: before, afterReading: after });
+    beforeReading: before, afterReading: after, relatedReadings });
   return { command, entry };
 }
 
