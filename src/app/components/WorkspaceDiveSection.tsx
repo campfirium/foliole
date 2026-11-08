@@ -126,7 +126,7 @@ function DiveRows(props: {
       {!collapsed ? sources.map((source) => (
         <NodeTreeRow key={source.id} depth={2} hasChildren={false} isActive={props.activeNodeId === source.id}
           isCollapsed={false} isSelected={props.activeNodeId === source.id} label={source.title}
-          nodeIconKind={source.kind === 'folder' ? 'folder-closed' : 'reading'} nodeId={`${id}:${source.id}`}
+          nodeId={`${id}:${source.id}`} showIcon={false} showLeafChevronPlaceholder={false}
           rowSpacing={getNodeListRowSpacing()} onSelect={() => props.onSelectNode(source.id)}
           onToggleCollapse={() => undefined} />
       )) : null}
