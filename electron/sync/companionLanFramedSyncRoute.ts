@@ -64,7 +64,7 @@ export async function handleProductionCompanionFramedSyncPost(args: {
         const host = createDesktopRequestSyncDatabaseHost(runtime.databasePath, runtime.sessionId, () => relayInboundCommit(runtime.auth), timing);
         const reply = await respondInbound(host, {
           context, consumePull, stream: { ...stream, frames: touchRequestSyncStream(stream.frames, lease) },
-          url, groupKey: runtime.groupKey, signal: AbortSignal.any([controller.signal, lease.signal]),
+          url, groupKey: runtime.groupKey, payloadBudget: runtime.payloadBudget, signal: AbortSignal.any([controller.signal, lease.signal]),
           onProgress: () => lease?.touch()
         }, lease, round.mode === 'single');
         return reply ? { ...reply, frames: touchRequestSyncStream(reply.frames, lease) } : undefined;

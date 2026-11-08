@@ -35,9 +35,13 @@ export class FramedSyncPayloadBudget {
     inbound: { activeBytes: 0, capacity: FRAMED_SYNC_RECEIPT_SLOT_BYTES, waiting: [] },
     outbound: { activeBytes: 0, capacity: FRAMED_SYNC_RECEIPT_SLOT_BYTES, waiting: [] }
   };
+  private snapshotBytes = 0;
+  private readonly lifetime = new AbortController();
   private closed = false;
   private resolveDrained!: () => void;
   readonly drained: Promise<void>;
+
+  get signal() { return this.lifetime.signal; }
 
   constructor() {
     this.drained = new Promise<void>((resolve) => { this.resolveDrained = resolve; });
@@ -45,6 +49,25 @@ export class FramedSyncPayloadBudget {
 
   async acquire(input: AcquireInput): Promise<FramedSyncPayloadLease> {
     return this.enqueue(input, this.directions);
+  }
+
+  /** Reserve the snapshot and its HTTP frame together, without joining the frame queue. */
+  tryAcquireAttachmentSnapshot(bytes: number): FramedSyncPayloadLease | undefined {
+    const state = this.directions.outbound;
+    const reserved = bytes + FRAMED_SYNC_PAYLOAD_SLOT_BYTES;
+    if (this.closed || !Number.isSafeInteger(bytes) || bytes <= 0 || this.snapshotBytes + bytes > FRAMED_SYNC_PAYLOAD_SLOT_BYTES ||
+        state.waiting.length || state.activeBytes + reserved > state.capacity) return undefined;
+    state.activeBytes += reserved;
+    this.snapshotBytes += bytes;
+    let released = false;
+    return { release: () => {
+      if (released) return;
+      released = true;
+      this.snapshotBytes -= bytes;
+      state.activeBytes -= reserved;
+      this.grant(state);
+      this.finishDrain();
+    } };
   }
 
   /** Only transfer receipts may use this bounded lane, never inventory or business payloads. */
@@ -72,6 +95,7 @@ export class FramedSyncPayloadBudget {
   close() {
     if (this.closed) return;
     this.closed = true;
+    this.lifetime.abort();
     for (const state of this.states()) {
       for (const waiter of state.waiting.splice(0)) {
         waiter.signal?.removeEventListener('abort', waiter.abort);

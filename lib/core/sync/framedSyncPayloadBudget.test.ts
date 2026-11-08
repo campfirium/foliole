@@ -163,3 +163,26 @@ it('rejects invalid sizes and already aborted requests, and drains an empty clos
   budget.dispose();
   await budget.drained;
 });
+
+it('charges concurrent snapshots and their frames to the library outbound budget', async () => {
+  const budget = new FramedSyncPayloadBudget();
+  const block = FRAMED_SYNC_PAYLOAD_SLOT_BYTES / 4;
+  const snapshots = Array.from({ length: 4 }, () => budget.tryAcquireAttachmentSnapshot(block));
+  expect(snapshots.every(Boolean)).toBe(true);
+  expect(budget.tryAcquireAttachmentSnapshot(block)).toBeUndefined();
+
+  const frame = await budget.acquire({ direction: 'outbound', bytes: FRAMED_SYNC_PAYLOAD_SLOT_BYTES });
+  const remaining = await budget.acquire({ direction: 'outbound', bytes: 2 * FRAMED_SYNC_PAYLOAD_SLOT_BYTES });
+  const waiter = budget.acquire({ direction: 'outbound', bytes: 1 });
+  const rejected = expect(waiter).rejects.toMatchObject({ name: 'AbortError' });
+  let drained = false;
+  void budget.drained.then(() => { drained = true; });
+  budget.close();
+  expect(budget.signal.aborted).toBe(true);
+  await rejected;
+  expect(drained).toBe(false);
+  for (const snapshot of snapshots) snapshot?.release();
+  frame.release();
+  remaining.release();
+  await budget.drained;
+});

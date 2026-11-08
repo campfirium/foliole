@@ -1,9 +1,10 @@
 import { ATTACHMENT_BLOCK_BYTES, attachmentBlockResourceSchema, type AttachmentBlockResult } from './attachmentBlockReceiver.js';
-import type { AttachmentBlockDestination, AttachmentBlockSource } from './attachmentBlockTransfer.js';
+import type { AttachmentBlockDestination, AttachmentBlockSource, AttachmentSourceFile, AttachmentSourceOptions } from './attachmentBlockTransfer.js';
 import type { AttachmentReceiveSession, AttachmentReceiveSessionOptions } from './attachmentReceiveSession.js';
 import { AttachmentVerificationPending } from './attachmentSourceVerification.js';
 import { attachmentDataYield, attachmentWorkBudget } from './attachmentWorkBudget.js';
 import type { FramedSyncStreamBody } from './framedSyncBinaryStream.js';
+import type { FramedSyncPayloadBudget } from './framedSyncPayloadBudget.js';
 import { ATTACHMENT_WINDOW_BLOCKS, assertAttachmentPushWindow, attachmentMessage, attachmentRequestSchema,
   type AttachmentRequest } from './requestSyncAttachmentContract.js';
 import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
@@ -21,7 +22,8 @@ export interface RequestSyncAttachmentHost extends AttachmentBlockDestination, A
 export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachmentHost, input: {
   context: RequestSyncAuthenticatedContext; groupKey: Uint8Array; stream: FramedSyncStreamBody; signal?: AbortSignal;
   onProgress?: () => void;
-  consumePull?: (stream: FramedSyncStreamBody, signal?: AbortSignal) => Promise<T>;
+  payloadBudget?: FramedSyncPayloadBudget;
+  consumePull?: (stream: FramedSyncStreamBody, signal?: AbortSignal, snapshot?: true) => Promise<T>;
 }, consume: (stream: FramedSyncStreamBody) => Promise<T>) {
   const window: AttachmentRequest[] = [];
   for await (const decoded of readRequestSyncWire({ ...input, ...input.stream })) {
@@ -31,15 +33,16 @@ export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachme
   const [request] = window;
   if (!request || request.state !== '') throw new Error('attachment_request_missing');
   assertAttachmentPushWindow(window);
-  const reply = async (messages: AsyncIterable<RequestSyncMessage>) => {
+  const reply = async (messages: AsyncIterable<RequestSyncMessage>, snapshot?: true) => {
     const stream = await prepareRequestSyncWire({ ...input, messages: () => messages });
     try { return await (request.operation === 'pull' && input.consumePull
-      ? input.consumePull(stream, input.signal) : consume(stream)); }
+      ? input.consumePull(stream, input.signal, snapshot) : consume(stream)); }
     finally { await stream.frames.return(undefined); }
   };
-  const withSource: AttachmentBlockSource['withFile'] = (key, action) => {
+  const withSource = <R>(key: string, action: (file: AttachmentSourceFile) => Promise<R>,
+    options?: Omit<AttachmentSourceOptions, 'shouldYield'>) => {
     const budget = attachmentWorkBudget(250);
-    return host.withFile(key, action, { shouldYield: () => { input.signal?.throwIfAborted(); return budget(); } });
+    return host.withFile(key, action, { ...options, shouldYield: () => { input.signal?.throwIfAborted(); return budget(); } });
   };
   if (request.derive) {
     if (request.operation !== 'describe' || !request.storageKey.endsWith('.pdf')) throw new Error('attachment_derivation_invalid');
@@ -52,8 +55,12 @@ export async function respondRequestSyncAttachments<T>(host: RequestSyncAttachme
   }
   if (request.operation === 'pull' || request.operation === 'describe') {
     const selected = request;
+    const budget = input.consumePull && input.payloadBudget;
+    const options: Omit<AttachmentSourceOptions, 'shouldYield'> = budget && selected.operation === 'describe' ? { describeSmallFile: true }
+      : budget && selected.offset === 0 ? { snapshot: { byteLength: selected.byteLength, budget } } : {};
     return withPendingReply(() => withSource(selected.storageKey,
-      file => reply(sourceMessages(selected, file, input.signal, input.onProgress))), selected, reply);
+      file => reply(sourceMessages(selected, file, input.signal, input.onProgress), file.snapshot),
+      options), selected, reply);
   }
   return reply(responseMessages(host, window));
 }
@@ -93,7 +100,7 @@ async function* responseMessages(host: RequestSyncAttachmentHost, window: Attach
 }
 
 async function* sourceMessages(request: AttachmentRequest,
-  file: Parameters<Parameters<AttachmentBlockSource['withFile']>[1]>[0], signal?: AbortSignal, onProgress?: () => void) {
+  file: AttachmentSourceFile, signal?: AbortSignal, onProgress?: () => void) {
   if (request.operation === 'describe') {
     yield attachmentMessage({ ...request, ...file.resource, state: 'complete' });
     return;

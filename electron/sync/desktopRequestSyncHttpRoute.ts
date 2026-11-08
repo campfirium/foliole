@@ -1,3 +1,4 @@
+import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
 import { respondRequestSyncAttachments } from '../../lib/core/sync/requestSyncAttachmentResponse.js';
 import { respondRequestSyncDatabase } from '../../lib/core/sync/requestSyncDatabaseResponse.js';
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
@@ -19,13 +20,17 @@ export async function respondDesktopRequestSyncHttp(host: RequestSyncDatabaseHos
   groupKey: Uint8Array;
   signal: AbortSignal;
   onProgress?: () => void;
-  consumePull?: (stream: FramedSyncStreamBody, signal?: AbortSignal) => Promise<void>;
+  payloadBudget?: FramedSyncPayloadBudget;
+  consumePull?: (stream: FramedSyncStreamBody, signal?: AbortSignal, snapshot?: true) => Promise<void>;
 }) {
   input.signal.throwIfAborted();
   switch (input.url.searchParams.get('request')) {
     case 'round_finish': return respondRequestSyncRoundControl({ ...input,
       onCompleted: host.databaseRoundCompleted, roundId: input.url.searchParams.get('peer_round_id') ?? '' });
-    case 'attachments': return respondRequestSyncAttachments<FramedSyncStreamBody | void>(await createDesktopRequestSyncAttachmentHost(host), input, prepareDesktopRequestSyncBody);
+    case 'attachments': return respondRequestSyncAttachments<FramedSyncStreamBody | void>(
+      await createDesktopRequestSyncAttachmentHost(host), { ...input,
+        signal: input.payloadBudget ? AbortSignal.any([input.signal, input.payloadBudget.signal]) : input.signal
+      }, prepareDesktopRequestSyncBody);
     case 'inventory': return respondDesktopRequestSyncInventory(host, input);
     case 'pull': return respondDesktopRequestSyncPull(host, input);
     case 'pulls': return respondRequestSyncDatabase(host, { ...input, mode: 'pulls' }, prepareDesktopRequestSyncBody);

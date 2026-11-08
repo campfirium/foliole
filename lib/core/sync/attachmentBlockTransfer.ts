@@ -1,6 +1,7 @@
 import { ATTACHMENT_BLOCK_BYTES, type AttachmentBlockResource, type AttachmentBlockResult,
   type AttachmentBlockStatus } from './attachmentBlockReceiver.js';
 import { attachmentWorkBudget } from './attachmentWorkBudget.js';
+import type { FramedSyncPayloadBudget } from './framedSyncPayloadBudget.js';
 
 export interface AttachmentReceiveWindow { offset: number; blocks: number; pending: boolean }
 export type AttachmentReceiveOperation = () => Promise<AttachmentReceiveWindow>;
@@ -14,12 +15,23 @@ export interface AttachmentBlockDestination {
   receive(resource: AttachmentBlockResource, offset: number, bytes: Uint8Array): Promise<AttachmentBlockResult>;
 }
 
+export interface AttachmentSourceFile {
+  resource: AttachmentBlockResource;
+  read(offset: number, length: number): Promise<Uint8Array>;
+  /** The source already owns the HTTP frame reservation for this snapshot. */
+  snapshot?: true;
+}
+
+export interface AttachmentSourceOptions {
+  shouldYield: () => boolean;
+  describeSmallFile?: true;
+  snapshot?: { byteLength: number; budget: FramedSyncPayloadBudget };
+}
+
 /** Sources keep their send lease until this callback and its network writes settle. */
 export interface AttachmentBlockSource {
-  withFile<T>(storageKey: string, consume: (file: {
-    resource: AttachmentBlockResource;
-    read(offset: number, length: number): Promise<Uint8Array>;
-  }) => Promise<T>, options?: { shouldYield: () => boolean }): Promise<T>;
+  withFile<T>(storageKey: string, consume: (file: AttachmentSourceFile) => Promise<T>,
+    options?: AttachmentSourceOptions): Promise<T>;
 }
 
 export async function transferAttachmentSlice(input: {
