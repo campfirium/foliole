@@ -195,6 +195,9 @@ export const NATIVE_COMMANDS = {
   loadSyncNodeConflicts: 'load_sync_node_conflicts',
   applySyncNodes: 'apply_sync_nodes',
   recordSyncNodeConflicts: 'record_sync_node_conflicts',
+  listDives: 'list_dives',
+  createDive: 'create_dive',
+  addDiveSources: 'add_dive_sources',
   loadAppSettingsState: 'load_app_settings_state',
   loadSystemColorMode: 'load_system_color_mode',
   saveAppSettingsState: 'save_app_settings_state',
@@ -255,8 +258,6 @@ export const NATIVE_COMMANDS = {
 
 export type NativeCommandName = (typeof NATIVE_COMMANDS)[keyof typeof NATIVE_COMMANDS];
 
-const NATIVE_COMMAND_SET = new Set<string>(Object.values(NATIVE_COMMANDS));
-
 export function isTypedNativeCommand(command: string): command is NativeCommandName {
-  return NATIVE_COMMAND_SET.has(command);
+  return Object.values(NATIVE_COMMANDS).some((value) => value === command);
 }

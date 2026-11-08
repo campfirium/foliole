@@ -10,6 +10,8 @@ export type RuntimeInvoke = NativeInvoke;
 
 const WORKSPACE_WRITE_COMMANDS = new Set<string>([
   NATIVE_COMMANDS.saveDailyFlowSourceSettings,
+  NATIVE_COMMANDS.createDive,
+  NATIVE_COMMANDS.addDiveSources,
   NATIVE_COMMANDS.openDailyFlow,
   NATIVE_COMMANDS.commitDailyFlow,
   NATIVE_COMMANDS.importRemoteImageAttachment,

@@ -28,6 +28,7 @@ interface NodeListTreeMenuProps {
   dismissNodes: (targets: NodeDismissTargets, now?: string) => boolean;
   isVirtualViewOpen: boolean;
   nodesById: WorkspaceListNodesById;
+  onAddToDive?: (nodeIds: string[]) => void;
   onAddToVirtualFolder?: (nodeIds: string[]) => void;
   onOpenMoveToNode: () => void;
   onOpenPostponeTopic?: (nodeId: string) => void;
@@ -176,7 +177,17 @@ function buildNodeListContextMenuProps(
   menuPosition: NonNullable<NodeListContextMenuController['menuPosition']>,
   menuState: ReturnType<typeof buildMenuState>
 ) {
+  const onAddToDive = props.onAddToDive;
+  const diveTargets = menuState.contextTargets;
+  const canAddToDive = !props.isVirtualViewOpen && diveTargets.length > 0 && diveTargets.every((id) => {
+    const node = props.nodesById[id];
+    return (node?.kind === 'folder' || node?.kind === 'topic') && !isProtectedRootNode(node) && !isVirtualNode(node);
+  });
   return {
+    ...(onAddToDive && canAddToDive ? { onAddToDive: () => {
+      onAddToDive(diveTargets);
+      props.contextMenu.closeContextMenu();
+    } } : {}),
     createCommands: resolveCreateCommands(menuState),
     isTrashMenu: props.contextMenu.contextMenuMode === 'trash',
     left: menuPosition.left,

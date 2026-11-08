@@ -11,6 +11,7 @@ import { useWorkspaceStore } from '../../store/workspaceStore';
 import { AddToVirtualFolderDialog } from './AddToVirtualFolderDialog';
 import { requestClipboardImport } from './importActivityRequests';
 import type { useWorkspaceTopicTreeInteraction } from './useWorkspaceTopicTreeInteraction';
+import { useWorkspaceAddToDive } from './WorkspaceAddToDive';
 import type { WorkspaceTopicTreeProps } from './WorkspaceTopicTree';
 import type { useWorkspaceTopicTreeActions } from './workspaceTopicTreeActions';
 import { listAvailableManualVirtualFolders } from './workspaceVirtualFolderMembership';
@@ -51,6 +52,7 @@ function createRemoveFromCurrentVirtualFolder(props: WorkspaceTopicTreeMenuProps
 export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
   const [reviewSchedulingNodeId, setReviewSchedulingNodeId] = useState<string | null>(null);
   const [addToVirtualFolderTopicIds, setAddToVirtualFolderTopicIds] = useState<string[] | null>(null);
+  const addToDive = useWorkspaceAddToDive();
   const canAddToVirtualFolder = hasAvailableVirtualFolder(props.contextMenu.getContextTargets());
   const onRemoveFromCurrentVirtualFolder = createRemoveFromCurrentVirtualFolder(props);
   return (
@@ -71,6 +73,7 @@ export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
           requestClipboardImport({ targetParentNodeId: parentNodeId ?? props.activeFolderId })
         }
         onOpenMoveToNode={props.onOpenMoveToNode}
+        {...(addToDive.open ? { onAddToDive: addToDive.open } : {})}
         {...(canAddToVirtualFolder ? { onAddToVirtualFolder: setAddToVirtualFolderTopicIds } : {})}
         {...(onRemoveFromCurrentVirtualFolder ? { onRemoveFromCurrentVirtualFolder } : {})}
         {...(props.onOpenPostponeTopicPanel ? { onOpenPostponeTopic: props.onOpenPostponeTopicPanel } : {})}
@@ -93,6 +96,7 @@ export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
         onPriorityChange={props.actions.updateNodePriority}
         onShortTermChange={props.actions.updateNodeShortTerm}
       />
+      {addToDive.dialog}
       {addToVirtualFolderTopicIds ? (
         <AddToVirtualFolderDialog
           onClose={() => setAddToVirtualFolderTopicIds(null)}

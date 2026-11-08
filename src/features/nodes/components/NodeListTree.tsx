@@ -42,6 +42,7 @@ interface NodeListTreeContentPropsArgs {
   model: ReturnType<typeof useNodeListTreeModel>;
   nodeOrder: NodeListTreeProps['nodeOrder'];
   nodesById: NodeListTreeProps['nodesById'];
+  onAddToDive?: NodeListTreeProps['onAddToDive'];
   onOpenMoveToNode: NodeListTreeProps['onOpenMoveToNode'];
   onOpenNotesView: NodeListTreeProps['onOpenNotesView'];
   rowCountByNodeId?: NodeListTreeProps['rowCountByNodeId'] | undefined;
@@ -76,6 +77,7 @@ function buildNodeListTreeContentProps(args: NodeListTreeContentPropsArgs) {
     moveNodes: args.model.moveNodes,
     nodeOrder: args.nodeOrder,
     nodesById: args.nodesById,
+    ...(args.onAddToDive ? { onAddToDive: args.onAddToDive } : {}),
     onOpenMoveToNode: args.onOpenMoveToNode,
     onOpenNotesView: args.onOpenNotesView,
     onSelect: args.model.handleSelectNode,
@@ -149,6 +151,7 @@ function usePreparedNodeListTreeContentProps(props: NodeListTreeProps) {
     model,
     nodeOrder: props.nodeOrder,
     nodesById: props.nodesById,
+    onAddToDive: props.onAddToDive,
     onOpenMoveToNode: props.onOpenMoveToNode,
     onOpenNotesView: props.onOpenNotesView,
     rowSpacing,

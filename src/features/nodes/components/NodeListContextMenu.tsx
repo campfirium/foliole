@@ -13,6 +13,7 @@ export interface NodeListContextMenuProps {
   pdfExportTargetId?: string | null;
   onCreateCommand: (commandId: string) => void;
   onCreateTopicFromClipboard?: () => void;
+  onAddToDive?: () => void;
   onAddToVirtualFolder?: () => void;
   onDeleteNode: () => void;
   onDeleteNodePermanently: () => void;

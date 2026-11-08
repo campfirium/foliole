@@ -22,6 +22,7 @@ export interface NodeListTreeProps {
   isVirtualViewOpen: boolean;
   nodeOrder: string[];
   nodesById: WorkspaceListNodesById;
+  onAddToDive?: (nodeIds: string[]) => void;
   onOpenMoveToNode: () => void;
   onOpenNotesView: () => void;
   onSelectNode: (nodeId: string) => void;

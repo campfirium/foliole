@@ -1,6 +1,8 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 
 const commands = new Set<string>([
+  NATIVE_COMMANDS.createDive,
+  NATIVE_COMMANDS.addDiveSources,
   NATIVE_COMMANDS.openDailyFlow,
   NATIVE_COMMANDS.commitDailyFlow,
   NATIVE_COMMANDS.createFolder,

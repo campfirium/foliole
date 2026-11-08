@@ -9,6 +9,7 @@ import type {
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { ExternalLibrarySection } from './ExternalLibrarySection';
+import { useWorkspaceAddToDive } from './WorkspaceAddToDive';
 import { WorkspaceVirtualSection } from './WorkspaceVirtualSection';
 
 interface WorkspaceFolderColumnProps {
@@ -66,7 +67,10 @@ function selectRegularNode(props: WorkspaceFolderColumnProps, nodeId: string) {
   props.onSelectNode(nodeId);
 }
 
-function renderRegularSection(props: WorkspaceFolderColumnProps) {
+function renderRegularSection(
+  props: WorkspaceFolderColumnProps,
+  onAddToDive: ReturnType<typeof useWorkspaceAddToDive>['open']
+) {
   return (
     <NodeListTree
       activeNodeId={getActiveFolderSelectionId(props)}
@@ -78,6 +82,7 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
       nodeOrder={props.folderNodeOrder}
       nodesById={props.folderNodesById}
       rowCountByNodeId={props.folderTopicCountById}
+      {...(onAddToDive ? { onAddToDive } : {})}
       onOpenMoveToNode={props.onOpenMoveToNode}
       onOpenNotesView={props.onOpenNotesView}
       onSelectNode={(nodeId) => selectRegularNode(props, nodeId)}
@@ -119,9 +124,11 @@ function renderRegularSection(props: WorkspaceFolderColumnProps) {
 }
 
 export function WorkspaceFolderColumn(props: WorkspaceFolderColumnProps) {
+  const addToDive = useWorkspaceAddToDive();
   return (
     <div className="workspace-region-main-folder flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">{renderRegularSection(props)}</div>
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">{renderRegularSection(props, addToDive.open)}</div>
+      {addToDive.dialog}
     </div>
   );
 }

@@ -58,6 +58,7 @@ function shouldShowEditGroup(props: NoteMenuItemsProps) {
     (!props.showRootCreateOnly && (
     (props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic) ||
     (props.showPasteIntoNodeAction && props.onPasteIntoNode) ||
+    props.onAddToDive ||
     (props.showAddToVirtualFolderAction && props.onAddToVirtualFolder) ||
     (props.showMoveToNodeAction && props.onMoveToNode)
     ))
@@ -109,6 +110,9 @@ function renderEditItems(t: Translate, props: NoteMenuItemsProps, helpEnabled: b
       {!props.showRootCreateOnly && props.showMergeHighlightsIntoTopicAction && props.onMergeHighlightsIntoTopic ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.mergeHighlights)} icon={GitMerge} onSelect={props.onMergeHighlightsIntoTopic}>{t('desktop.nodeList.menu.mergeHighlights')}</NodeContextMenuItem> : null}
       {!props.showRootCreateOnly && props.showPasteIntoNodeAction && props.onPasteIntoNode ? <NodeContextMenuItem {...helpProps(NODE_LIST_CONTEXT_ACTION_HELP.pasteClipboardTopic)} icon={Clipboard} onSelect={props.onPasteIntoNode}>{t('desktop.nodeList.menu.pasteAsTopic')}</NodeContextMenuItem> : null}
       {!props.showRootCreateOnly && props.showMoveToNodeAction && props.onMoveToNode ? <NodeContextMenuItem icon={MoveRight} onSelect={props.onMoveToNode}>{t('desktop.nodeList.menu.moveTo')}</NodeContextMenuItem> : null}
+      {!props.showRootCreateOnly && props.onAddToDive ? (
+        <NodeContextMenuItem icon={ListPlus} onSelect={props.onAddToDive}>{t('desktop.nodeList.menu.addToDive')}</NodeContextMenuItem>
+      ) : null}
       {!props.showRootCreateOnly && props.showAddToVirtualFolderAction && props.onAddToVirtualFolder ? <NodeContextMenuItem icon={ListPlus} onSelect={props.onAddToVirtualFolder}>{t('desktop.nodeList.menu.addToVirtualFolder')}</NodeContextMenuItem> : null}
     </>
   );
@@ -189,6 +193,7 @@ export function NodeListContextMenuItems(props: NodeListContextMenuProps) {
   return (
     <NoteMenuItems
       createCommands={props.createCommands}
+      {...(props.onAddToDive ? { onAddToDive: props.onAddToDive } : {})}
       {...(props.onAddToVirtualFolder ? { onAddToVirtualFolder: props.onAddToVirtualFolder } : {})}
       {...(props.onCreateTopicFromClipboard ? { onCreateTopicFromClipboard: props.onCreateTopicFromClipboard } : {})}
       onCreateCommand={props.onCreateCommand}

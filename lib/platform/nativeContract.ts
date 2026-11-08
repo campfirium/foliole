@@ -1,4 +1,5 @@
 import type { WorkspaceListProjection } from '../core/database/workspaceListProjection.js';
+import type { Dive } from '../core/nodes/dive.js';
 import type { SchedulerCard } from '../core/review/types.js';
 
 import type { NativeAideStorageCommandMap } from './nativeAideStorageContract.js';
@@ -144,6 +145,9 @@ export type NativeCommandMap = NativeDailyFlowCommandMap & NativeReviewTrainingC
     args: undefined;
     result: NativeWorkspaceSnapshot;
   };
+  [NATIVE_COMMANDS.listDives]: { args: undefined; result: Dive[] };
+  [NATIVE_COMMANDS.createDive]: { args: { title: string; sourceIds: readonly string[] }; result: Dive };
+  [NATIVE_COMMANDS.addDiveSources]: { args: { diveId: string; sourceIds: readonly string[] }; result: Dive };
   [NATIVE_COMMANDS.loadAppSettingsState]: {
     args: undefined;
     result: Record<string, string>;

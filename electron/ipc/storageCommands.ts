@@ -1,6 +1,8 @@
 import { type WebContents } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { openDatabaseConnection } from '../database/connection.js';
+import { addDiveSources, createDive, listDives } from '../database/diveRepository.js';
 import { resetImportData } from '../database/importMaintenance.js';
 import {
   dismissNodeTextAlternative,
@@ -20,7 +22,7 @@ import { loadNodeSourceUpdatePreview } from '../import/nodeSourceUpdatePreview.j
 import { mergeReadwiseTopicHighlights } from '../import/readwiseTopicMerge.js';
 import { restoreRemovedSource } from '../import/removedSourceRestore.js';
 
-import { asString } from './commandParsers.js';
+import { asString, asStringArray } from './commandParsers.js';
 import { handleDailyFlowCommand } from './dailyFlowCommands.js';
 import { toNativeImportOverview } from './importOverviewPayload.js';
 import { toNativeNodeSourceDetails } from './nodeSourceDetailsPayload.js';
@@ -45,6 +47,8 @@ export async function handleStorageCommand(
   window: Parameters<typeof handleStorageAttachmentCommand>[2] = null,
   owner?: WebContents
 ): Promise<unknown> {
+  const diveResult = handleDiveCommand(command, args);
+  if (diveResult !== undefined) return diveResult;
   if (command === NATIVE_COMMANDS.setNodeContentEditingSession) return handleContentEditingSession(args);
   if (command === NATIVE_COMMANDS.retainNodeEditorBase ||
       command === NATIVE_COMMANDS.releaseNodeEditorBase) {
@@ -96,6 +100,17 @@ export async function handleStorageCommand(
     return readingAndReviewResult;
   }
   return undefined;
+}
+
+function handleDiveCommand(command: string, args: Record<string, unknown>) {
+  if (command === NATIVE_COMMANDS.listDives) return listDives(openDatabaseConnection().sqlite);
+  if (command === NATIVE_COMMANDS.createDive || command === NATIVE_COMMANDS.addDiveSources) {
+    const ids = asStringArray(args.sourceIds, 'sourceIds');
+    const { sqlite } = openDatabaseConnection();
+    return command === NATIVE_COMMANDS.createDive
+      ? createDive(sqlite, asString(args.title, 'title'), ids)
+      : addDiveSources(sqlite, asString(args.diveId, 'diveId'), ids);
+  }
 }
 
 async function handleStorageReadCommand(command: string, args: Record<string, unknown>) {
