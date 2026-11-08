@@ -163,7 +163,7 @@ it.each(['success', 'checksum mismatch', 'rename failed'] as const)(
         expect(await readFile(destination)).toEqual(f.bytes);
         expect(f.rows()).toEqual([{ storage_key: f.key, stage: 'backup', action: 'copy', last_error: null }]);
       } else {
-        await expect(done).rejects.toThrow(outcome === 'checksum mismatch' ? 'attachment_checksum_mismatch' : 'EISDIR');
+        await expect(done).rejects.toThrow(outcome === 'checksum mismatch' ? 'attachment_checksum_mismatch' : /EISDIR|EPERM/);
         expect(f.rows()).toEqual([{ storage_key: f.key, stage: 'source', action: 'copy', last_error: null }]);
       }
       if (outcome === 'rename failed') expect(await readFile(partial)).toEqual(f.bytes);

@@ -94,7 +94,7 @@ it('reuses an existing identical original for a second independent PDF import', 
   expect(await readFile(path.join(directory, storageKey))).toEqual(bytes);
 });
 
-it.each(['append', 'publish'])('does not create a topic or import record when original %s fails', async action => {
+it.each(['append', 'publish-received'])('does not create a topic or import record when original %s fails', async action => {
   native.fail = action;
   expect(await importPdf()).toEqual({ error: 'save-failed' });
   expect(library.database.prepare('SELECT * FROM import_runs').all()).toEqual([]);

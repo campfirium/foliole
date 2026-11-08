@@ -24,7 +24,7 @@ vi.mock('@capacitor/core', async () => {
   return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: () => ({
     ...createCompanionNativeSyncStub(), accessFramedSyncFile: async (input: NativeCompanionFramedFileRequest) => {
       if (input.operation === 'remove') return {};
-      if (native.fail && input.operation === 'attachment' && input.action === 'publish') throw new Error('Unavailable');
+      if (native.fail && input.operation === 'attachment' && input.action === 'publish-received') throw new Error('Unavailable');
       return native.access!(input);
     }
   }) };
