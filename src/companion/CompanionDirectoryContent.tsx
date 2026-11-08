@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 
 import { VIRTUAL_PUBLISHED_NODE_ID, VIRTUAL_REMOVED_NODE_ID, VIRTUAL_SHELVED_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { readDiveNode } from '../../lib/core/nodes/dive';
 import type { FolderListSortDirection, FolderListSortKey } from '../features/nodes/model/folderListOrdering';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { retainCompanionOpenVirtualFolder } from '../shared/platform/companion/browse/companionOpenVirtualFolders';
@@ -97,14 +98,15 @@ function CompanionDirectoryListContent(props: {
 }) {
   const t = useTranslation();
   const id = props.selection.kind === 'virtual' ? props.selection.nodeId : null;
+  const dive = id ? readDiveNode(props.snapshot?.nodesById[id]) : null;
   const copy = id === VIRTUAL_PUBLISHED_NODE_ID || id === VIRTUAL_SHELVED_NODE_ID || id === VIRTUAL_REMOVED_NODE_ID ? virtualEmptyCopy[id] : null;
   return (
     <section className="companion-page-start">
       <CompanionDirectoryList
         directory={props.directory}
         viewKey={props.viewKey}
-        emptyLabel={t(copy?.title ?? 'companion.directory.emptyFolder')}
-        emptyDescription={t(copy?.description ?? 'companion.directory.emptyDescription')}
+        emptyLabel={t(dive ? 'desktop.nodeList.dive.empty' : copy?.title ?? 'companion.directory.emptyFolder')}
+        emptyDescription={t(dive ? 'desktop.nodeList.dive.emptyDescription' : copy?.description ?? 'companion.directory.emptyDescription')}
         onSelectItem={props.handleSelectItem}
         sections={props.sections}
         snapshot={props.snapshot}
@@ -115,8 +117,9 @@ function CompanionDirectoryListContent(props: {
 
 export function CompanionDirectoryContent(props: CompanionDirectoryContentProps) {
   const t = useTranslation();
-  const folderId = (props.selection.kind === 'virtual' || props.selection.kind === 'internal')
-    && props.snapshot?.nodesById[props.selection.nodeId]?.virtualFilter ? props.selection.nodeId : null;
+  const selectedNode = (props.selection.kind === 'virtual' || props.selection.kind === 'internal')
+    ? props.snapshot?.nodesById[props.selection.nodeId] : undefined;
+  const folderId = selectedNode?.virtualFilter && !readDiveNode(selectedNode) ? selectedNode.id : null;
   useEffect(() => folderId ? retainCompanionOpenVirtualFolder(folderId) : undefined, [folderId]);
   const directory = useCompanionExternalDirectory();
   const externalDocument = useCompanionExternalDocument(props.selection);
@@ -140,7 +143,7 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
     const isContainer = isDirectoryContainer(item, props);
     if (
       item.source === 'internal' ||
-      (item.source === 'virtual' && Boolean(props.snapshot?.nodesById[item.nodeId])) ||
+      (item.source === 'virtual' && Boolean(props.snapshot?.nodesById[item.nodeId]) && !readDiveNode(props.snapshot?.nodesById[item.nodeId])) ||
       item.source === 'trash'
     ) {
       props.onSelectNode(item.nodeId);

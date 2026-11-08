@@ -1,6 +1,7 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { DIVE_NODE_FILTER } from '../../../lib/core/nodes/dive';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { HOME_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { projectWorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
@@ -10,10 +11,7 @@ import { WorkspaceDualListContent } from './WorkspaceDualListContent';
 import { createWorkspaceContentNode } from './WorkspaceDualListContent.testUtils';
 
 vi.mock('../../shared/platform/desktop/diveRepository', () => ({
-  getDiveRepository: () => ({
-    list: async () => [{ id: 'dive', title: 'Probability', directSourceIds: ['source', 'direct'] }]
-  }),
-  subscribeToDiveChanges: () => () => undefined
+  getDiveRepository: () => ({})
 }));
 
 function createContent(nodesById: Record<string, Node>) {
@@ -45,6 +43,11 @@ function createContent(nodesById: Record<string, Node>) {
 it('keeps the selected Dive live as a subfolder moves out of a source', async () => {
   const nodes = {
     [HOME_NODE_ID]: createWorkspaceContentNode({ id: HOME_NODE_ID, kind: 'folder', specialKind: 'home', title: 'Home' }),
+    dive: {
+      ...createWorkspaceContentNode({ id: 'dive', kind: 'folder', specialKind: 'virtual', title: 'Probability' }),
+      virtualFilter: DIVE_NODE_FILTER,
+      manualChildOrder: ['source', 'direct']
+    },
     source: createWorkspaceContentNode({ id: 'source', kind: 'folder', title: 'Source' }),
     nested: createWorkspaceContentNode({ id: 'nested', kind: 'folder', title: 'Nested', parentNodeId: 'source' }),
     derived: createWorkspaceContentNode({ id: 'derived', kind: 'topic', title: 'Included through folder', parentNodeId: 'nested' }),
@@ -53,6 +56,8 @@ it('keeps the selected Dive live as a subfolder moves out of a source', async ()
   const view = renderWithLocalization(createContent(nodes));
   const dive = await screen.findByRole('treeitem', { name: 'Probability' });
   fireEvent.click(dive);
+  const dives = within(screen.getByRole('tree', { name: 'Dives' }));
+  expect(dives.getByRole('treeitem', { name: 'Source' })).toBeVisible();
   const panel = within(screen.getByRole('complementary', { name: 'Current folder contents' }));
   expect(dive).toHaveAttribute('aria-selected', 'true');
   expect(panel.getByRole('treeitem', { name: 'Included through folder' })).toBeVisible();

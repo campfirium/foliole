@@ -1,39 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import type { Dive } from '../../../lib/core/nodes/dive';
-import { getDiveRepository, subscribeToDiveChanges } from '../../shared/platform/desktop/diveRepository';
-
-export function useWorkspaceDiveRows() {
-  const [dives, setDives] = useState<Dive[]>([]);
-  useEffect(() => {
-    const repository = getDiveRepository();
-    if (!repository) return;
-    let active = true;
-    const changes = new Map<string, Dive>();
-    const unsubscribe = subscribeToDiveChanges((dive) => {
-      changes.set(dive.id, dive);
-      setDives((current) => [...current.filter((entry) => entry.id !== dive.id), dive]);
-    });
-    void repository.list().then((result) => {
-      if (!active) return;
-      for (const dive of result) if (!changes.has(dive.id)) changes.set(dive.id, dive);
-      setDives([...changes.values()]);
-    }).catch(() => {
-      if (active) setDives([...changes.values()]);
-    });
-    return () => { active = false; unsubscribe(); };
-  }, []);
-  return useMemo(() => [...dives].sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id)), [dives]);
-}
-
+import { readDiveNode } from '../../../lib/core/nodes/dive';
+import type { Node } from '../../features/nodes/model/nodeTypes';
 
 export function useWorkspaceDiveNavigation(props: {
+  nodesById: Record<string, Node | undefined>;
+  nodeOrder: readonly string[];
+  trashedNodeIds: readonly string[];
   isVirtualViewOpen: boolean;
   isTrashViewOpen: boolean;
   isExternalViewOpen: boolean;
   onOpenNotesView: () => void;
 }) {
-  const dives = useWorkspaceDiveRows();
+  const { nodeOrder, nodesById, trashedNodeIds } = props;
+  const dives = useMemo(() => {
+    const trashed = new Set(trashedNodeIds);
+    return nodeOrder.flatMap(id => trashed.has(id) ? [] : readDiveNode(nodesById[id]) ?? [])
+      .sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
+  }, [nodeOrder, nodesById, trashedNodeIds]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const isOtherView = props.isVirtualViewOpen || props.isTrashViewOpen || props.isExternalViewOpen;
   useEffect(() => {

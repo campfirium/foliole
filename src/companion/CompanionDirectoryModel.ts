@@ -1,5 +1,6 @@
 import { VIRTUAL_PUBLISHED_NODE_ID, VIRTUAL_REMOVED_NODE_ID, VIRTUAL_ROOT_NODE_ID, VIRTUAL_SHELVED_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { readDiveNode } from '../../lib/core/nodes/dive';
 import type { TranslationKey } from '../shared/localization/translations';
 import {
   type CompanionFolderListEntry,
@@ -29,7 +30,7 @@ export type CompanionDirectorySelection =
   | { documentId: string; kind: 'externalDocument' };
 
 export interface DirectorySection {
-  id: 'home' | 'virtual' | 'external' | 'current' | 'trash';
+  id: 'home' | 'virtual' | 'external' | 'current' | 'trash' | 'dives' | 'diveSources' | 'diveTopics';
   items: DirectoryListItem[];
   titleKey?: TranslationKey;
 }
@@ -196,14 +197,16 @@ export function resolveDirectorySections(args: {
   const inboxItems = rootItems
     .filter(isInboxItem)
     .map(toInternalItem);
+  const isDiveItem = (item: CompanionFolderListEntry) => Boolean(readDiveNode(args.snapshot?.nodesById[item.nodeId]));
   const internalItems = rootItems
-    .filter((item) => !isInboxItem(item) && !isVirtualRootItem(item) && !isVirtualChild(args.snapshot, item))
+    .filter((item) => !isInboxItem(item) && !isVirtualRootItem(item) && !isVirtualChild(args.snapshot, item) && !isDiveItem(item))
     .map(toInternalItem);
   const virtualItems = resolveVirtualItems(args.snapshot, args.virtualRootView ?? null);
   const externalFolders = [...args.directory.folders]
     .map(toExternalFolderItem);
   const sections: DirectorySection[] = [
     { id: 'home', items: [...inboxItems, ...internalItems] },
+    { id: 'dives', items: rootItems.filter(isDiveItem).map(toVirtualItem), titleKey: 'desktop.nodeList.dive.tree' },
     { id: 'virtual', items: virtualItems, titleKey: 'companion.directory.section.virtual' },
     { id: 'external', items: externalFolders, titleKey: 'companion.directory.section.external' },
     { id: 'trash', items: [toTrashRootItem()], titleKey: 'companion.directory.section.trash' }

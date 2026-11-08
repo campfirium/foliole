@@ -51,7 +51,7 @@ function DirectoryRow(props: DirectoryRowProps) {
           : 'companion.directory.openTopic',
         { title }
       )}
-      className="flex min-h-16 w-full items-center gap-2.5 border-b border-companion-divider bg-transparent py-3 text-left transition-colors focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-companion-accent"
+      className="flex min-h-16 min-w-0 flex-1 items-center gap-2.5 border-b border-companion-divider bg-transparent py-3 text-left transition-colors focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-companion-accent"
       data-testid={`companion-directory-node-${props.item.nodeId}`}
       onClick={() => props.onSelectItem(props.item)}
       type="button"

@@ -4,11 +4,13 @@ import path from 'node:path';
 
 import Database from 'better-sqlite3';
 
+import { createCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import type { CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import type { FramedSyncInventoryDifference } from '../../lib/core/sync/framedSyncInventory.js';
-import { readFramedSyncOverwriteInventory, readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { readFramedSyncInventory, readFramedSyncOverwriteInventory, readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
 import { withRequestSyncFiles } from '../../lib/core/sync/requestSyncFiles.js';
 import { applyRequestSyncObject } from '../../lib/core/sync/requestSyncObjectApply.js';
 import { runRequestSyncOverwriteRound } from '../../lib/core/sync/requestSyncOverwriteRound.js';
@@ -16,6 +18,7 @@ import { writeRequestSyncSnapshot } from '../../lib/core/sync/requestSyncSnapsho
 import { prepareSyncGroupOverwrite, type SyncGroupOverwriteProgress } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
 import { receiveSyncGroupRestoreEvent } from '../../lib/core/sync/syncGroupRestoreEvents.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
+import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 import { createDesktopFramedSyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -26,16 +29,30 @@ export async function restoreFixture() {
   const root = await mkdtemp(path.join(os.tmpdir(), 'foliole-request-restore-'));
   const peers: RestorePeer[] = [];
   return { root, peer(id: string) { const peer = new RestorePeer(root, id); peers.push(peer); return peer; },
+    async companionPeer(id: string) {
+      const peer = new RestorePeer(root, id, false);
+      peers.push(peer);
+      await peer.db.transaction(db => createCompanionDatabase(db, COMPANION_DATABASE_VERSION));
+      peer.join();
+      peer.sqlite.prepare("INSERT OR REPLACE INTO companion_meta (key, value, updated_at) VALUES ('host_name', ?, 'now')").run(id);
+      return peer;
+    },
     async close() { for (const peer of peers) peer.sqlite.close(); await rm(root, { recursive: true, force: true }); } };
 }
 
 export class RestorePeer {
   sqlite: Database.Database;
   readonly file: string;
-  constructor(readonly root: string, readonly id: string) {
+  constructor(readonly root: string, readonly id: string, readonly desktop = true) {
     this.file = path.join(root, `${id}.db`);
     this.sqlite = new Database(this.file);
-    initializeDatabaseSchema(this.sqlite);
+    if (desktop) {
+      initializeDatabaseSchema(this.sqlite);
+      this.join();
+    }
+  }
+  join() {
+    const { id } = this;
     this.sqlite.exec(`INSERT INTO sync_groups VALUES ('group', 'Group', 'secret', 'now', 'now');
       INSERT INTO sync_group_local_state VALUES (1, 'group', '${id}', 'active', 'now');
       UPDATE node_version_local_proof_state SET library_epoch = '${id}-epoch';`);
@@ -110,4 +127,29 @@ export function originals(peer: RestorePeer) {
 }
 export function ids(peer: RestorePeer) {
   return peer.sqlite.prepare("SELECT id FROM nodes WHERE id NOT LIKE 'special-%' ORDER BY id").all();
+}
+
+export async function requestNodeRound(source: RestorePeer, target: RestorePeer, errors?: string[]) {
+  const progress = { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
+    providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch };
+  return runRequestSyncDatabaseRound({
+    exchangeInventory: async () => ({
+      local: (await readFramedSyncInventory(source.db)).filter(entry => entry.objectType === 'node'),
+      remote: (await readFramedSyncInventory(target.db)).filter(entry => entry.objectType === 'node')
+    }),
+    transferObjects: async differences => {
+      const results = [];
+      for (const difference of differences) {
+        let error = '';
+        try { await transfer(source, target, progress, difference, target.desktop); }
+        catch (failure) { error = failure instanceof Error ? failure.message : String(failure); }
+        results.push({ requestId: new Uint8Array(16), objectType: difference.objectType, globalId: difference.globalId, error });
+      }
+      return results;
+    },
+    reportObjectError: (_difference, error) => {
+      if (errors) errors.push(error instanceof Error ? error.message : String(error));
+      else throw error;
+    }
+  });
 }

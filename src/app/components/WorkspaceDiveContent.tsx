@@ -22,7 +22,7 @@ export function WorkspaceDiveContent(props: {
   const ids = useMemo(() => resolveDiveTopicIds(dive, {
     kindOf: (id) => {
       const node = nodesById[id];
-      return visibleNodeIds.has(id) && !isVirtualNode(node) && !isVirtualRootNode(node) ? node?.kind : undefined;
+      return visibleNodeIds.has(id) && !node?.anchorLink && !isVirtualNode(node) && !isVirtualRootNode(node) ? node?.kind : undefined;
     },
     childrenOf: (id) => childrenByParent.get(id) ?? []
   }), [childrenByParent, dive, nodesById, visibleNodeIds]);

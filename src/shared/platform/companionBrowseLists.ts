@@ -1,6 +1,7 @@
 import { VIRTUAL_PUBLISHED_NODE_ID, VIRTUAL_REMOVED_NODE_ID, VIRTUAL_SHELVED_NODE_ID } from '../../../lib/core/database/specialNodeIds';
 import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
 import { normalizeWorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshotContract';
+import { readDiveNode } from '../../../lib/core/nodes/dive';
 import { resolveNodeOpeningText } from '../../../lib/core/nodes/nodeOpeningPreview';
 import { resolveVirtualNodeResultIds } from '../../../lib/core/nodes/virtualNodeResults';
 import { collectRemovedTopicIds, collectShelvedTopicIds } from '../../features/nodes/model/builtinVirtualTopicIds';
@@ -18,6 +19,7 @@ import {
   selectCanonicalVisibleNodeIds
 } from '../workspaceCanonicalSelectors';
 
+import { resolveCompanionDiveMembership } from './companion/browse/companionDiveMembership';
 import { sortCompanionBrowseNodes, sortCompanionDirectoryNodes } from './companionBrowseOrdering';
 import { resolveCompanionArticleTitle, resolveCompanionUntitledLabel } from './companionReadableArticle';
 import { isCompanionArticleNode } from './companionReadableArticleTitleSlot';
@@ -109,7 +111,9 @@ function isVirtualFolderNode(node: CompanionReadableNode | undefined): node is C
 }
 
 function resolveCompanionVirtualFolderItems(snapshot: WorkspaceSnapshot, folderNode: CompanionReadableNode) {
-  const resultIds = snapshot.virtualResultIdsByNodeId?.[folderNode.id] ?? resolveVirtualNodeResultIds({
+  const dive = readDiveNode(folderNode);
+  const resultIds = dive ? resolveCompanionDiveMembership(snapshot, dive).topics
+    : snapshot.virtualResultIdsByNodeId?.[folderNode.id] ?? resolveVirtualNodeResultIds({
     activeNodeId: folderNode.id,
     filter: folderNode.virtualFilter,
     manualChildOrder: folderNode.manualChildOrder,

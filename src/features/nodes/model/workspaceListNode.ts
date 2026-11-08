@@ -1,4 +1,5 @@
 import { projectImageOnlyMarkdownLabel } from '../../../../lib/core/import/markdownImageLabel';
+import { readDiveNode } from '../../../../lib/core/nodes/dive';
 import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
 import { nodeReadingSummary, nodeReviewSummary } from '../../../../lib/core/nodes/nodeLearningSummary';
 import { readWorkspaceRecordPatch } from '../../../shared/workspaceRecordPatch';
@@ -39,6 +40,7 @@ export interface WorkspaceListNode {
   hasReveal: boolean;
   id: string;
   kind?: NodeKind;
+  isDive?: boolean;
   parentNodeId: string | null;
   priority?: number | null;
   reading?: WorkspaceListReading | null;
@@ -72,6 +74,7 @@ export function toWorkspaceListNode(node: Node): WorkspaceListNode {
     hasReveal: hasNodeReveal(node),
     id: node.id,
     kind: node.kind,
+    ...(readDiveNode(node) ? { isDive: true } : {}),
     parentNodeId: node.parentNodeId,
     priority: node.priority ?? null,
     reading: projectWorkspaceListReading(nodeReadingSummary(node)),
@@ -118,6 +121,7 @@ function isWorkspaceListProjectionReusable(
     projectedNode.hasReveal === hasNodeReveal(sourceNode) &&
     projectedNode.id === sourceNode.id &&
     projectedNode.kind === sourceNode.kind &&
+    Boolean(projectedNode.isDive) === Boolean(readDiveNode(sourceNode)) &&
     projectedNode.parentNodeId === sourceNode.parentNodeId &&
     projectedNode.priority === (sourceNode.priority ?? null) &&
     isWorkspaceListReadingEqual(projectedNode.reading, nodeReadingSummary(sourceNode)) &&

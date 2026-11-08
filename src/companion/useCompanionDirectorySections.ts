@@ -14,6 +14,7 @@ import type { CompanionExternalDirectory } from '../shared/platform/companionExt
 import { useDismissedTopicVisibility } from '../shared/platform/runtime/useDismissedTopicVisibility';
 
 import { resolveDirectorySections, type CompanionDirectorySelection } from './CompanionDirectoryModel';
+import { resolveCompanionDiveSections } from './companionDiveDirectory';
 
 export function useCompanionDirectorySections(args: {
   directory: CompanionExternalDirectory;
@@ -31,6 +32,8 @@ export function useCompanionDirectorySections(args: {
     const selected = JSON.parse(selectionKey) as CompanionDirectorySelection;
     const current = selected.kind === 'virtual' && selected.nodeId === VIRTUAL_ROOT_NODE_ID
       ? { kind: 'root' } as const : selected;
+    const diveSections = resolveCompanionDiveSections(snapshot, current);
+    if (diveSections) return diveSections;
     const folderView = current.kind === 'internal' || current.kind === 'virtual'
       ? resolveCompanionFolderViewByNodeId(snapshot, current.nodeId, sortKey, sortDirection) : null;
     const trashView = current.kind === 'trashFolder'

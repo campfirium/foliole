@@ -104,15 +104,19 @@ export async function handleStorageCommand(
 
 function handleDiveCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.renameDive) {
-    return renameDive(openDatabaseConnection().sqlite, asString(args.diveId, 'diveId'), asString(args.title, 'title'));
+    const dive = renameDive(openDatabaseConnection().sqlite, asString(args.diveId, 'diveId'), asString(args.title, 'title'));
+    notifyWorkspaceContentChanged();
+    return dive;
   }
   if (command === NATIVE_COMMANDS.listDives) return listDives(openDatabaseConnection().sqlite);
   if (command === NATIVE_COMMANDS.createDive || command === NATIVE_COMMANDS.addDiveSources) {
     const ids = asStringArray(args.sourceIds, 'sourceIds');
     const { sqlite } = openDatabaseConnection();
-    return command === NATIVE_COMMANDS.createDive
+    const dive = command === NATIVE_COMMANDS.createDive
       ? createDive(sqlite, asString(args.title, 'title'), ids)
       : addDiveSources(sqlite, asString(args.diveId, 'diveId'), ids);
+    notifyWorkspaceContentChanged();
+    return dive;
   }
 }
 

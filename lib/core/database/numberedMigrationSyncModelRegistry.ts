@@ -68,5 +68,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 182, migrate: migrateParentOrderInvalidation },
   { version: 183, migrate: migrateMaterialFlowInvalidation },
   { version: 184, migrate: migrateFsrs7 },
-  { version: 185, migrate: migrateIndependentTopicAlternatives }
+  { version: 185, migrate: migrateIndependentTopicAlternatives },
+  { version: 186, migrate: db => db.exec("DELETE FROM workspace_meta WHERE key >= 'dive:' AND key < 'dive;'") }
 ];

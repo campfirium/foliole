@@ -181,7 +181,9 @@ function buildNodeListContextMenuProps(
   const diveTargets = menuState.contextTargets;
   const canAddToDive = !props.isVirtualViewOpen && diveTargets.length > 0 && diveTargets.every((id) => {
     const node = props.nodesById[id];
-    return (node?.kind === 'folder' || node?.kind === 'topic') && !isProtectedRootNode(node) && !isVirtualNode(node);
+    const parent = node?.parentNodeId ? props.nodesById[node.parentNodeId] : undefined;
+    const eligibleTopic = node?.kind === 'topic' && !node.anchorLink && (!parent || parent.kind === 'folder');
+    return (node?.kind === 'folder' || eligibleTopic) && !isProtectedRootNode(node) && !isVirtualNode(node);
   });
   return {
     ...(onAddToDive && canAddToDive ? { onAddToDive: () => {

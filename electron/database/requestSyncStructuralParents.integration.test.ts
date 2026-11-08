@@ -1,13 +1,11 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
-import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
-import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
-import { originals, restoreFixture, transfer, type RestorePeer } from './requestSyncRestoreRecovery.testSupport.js';
+import { originals, requestNodeRound as round, restoreFixture } from './requestSyncRestoreRecovery.testSupport.js';
 import { textBranch } from './topicTextState.testSupport.js';
 
 function record(id: string, version: string, parentId: string | null, prior?: NativeSyncNodeRecord) {
@@ -15,30 +13,39 @@ function record(id: string, version: string, parentId: string | null, prior?: Na
   return { ...value, object_id: id, snapshot: { ...value.snapshot, id, parent_id: parentId } };
 }
 
-async function round(source: RestorePeer, target: RestorePeer, errors?: string[]) {
-  const progress = { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
-    providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch };
-  return runRequestSyncDatabaseRound({
-    exchangeInventory: async () => ({
-      local: (await readFramedSyncInventory(source.db)).filter(entry => entry.objectType === 'node'),
-      remote: (await readFramedSyncInventory(target.db)).filter(entry => entry.objectType === 'node')
-    }),
-    transferObjects: async differences => {
-      const results = [];
-      for (const difference of differences) {
-        let error = '';
-        try { await transfer(source, target, progress, difference); }
-        catch (failure) { error = failure instanceof Error ? failure.message : String(failure); }
-        results.push({ requestId: new Uint8Array(16), objectType: difference.objectType, globalId: difference.globalId, error });
-      }
-      return results;
-    },
-    reportObjectError: (_difference, error) => {
-      if (errors) errors.push(error instanceof Error ? error.message : String(error));
-      else throw error;
-    }
-  });
-}
+it('carries a flat folder marker and direct references through ordinary node sync before the referenced nodes arrive', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source');
+  const target = fixture.peer('target');
+  try {
+    const marker = JSON.stringify({
+      version: 1, match: 'all', conditions: [{ field: 'manual', operator: 'equals', value: 'dive-sources' }]
+    });
+    const refs = JSON.stringify(['later-folder', 'later-topic']);
+    const draft = record('dive', 'dive-first-version', null);
+    const dive: NativeSyncNodeRecord = {
+      ...draft, body_text: '',
+      snapshot: { ...draft.snapshot, kind: 'folder', content: '', title: 'Probability',
+        virtual_filter: marker, manual_child_order: refs }
+    };
+    await applySyncNodesWithDbPort(source.db, [dive]);
+    expect(await round(source, target)).toMatchObject({ complete: true, pending: 0 });
+    target.reopen();
+    expect(target.sqlite.prepare(`SELECT kind, parent_id, title, virtual_filter, manual_child_order
+      FROM nodes WHERE id = 'dive'`).get())
+      .toEqual({ kind: 'folder', parent_id: null, title: 'Probability', virtual_filter: marker, manual_child_order: refs });
+    expect(target.sqlite.prepare("SELECT id FROM nodes WHERE id IN ('later-folder', 'later-topic')").all()).toEqual([]);
+    const folder = record('later-folder', 'later-folder-first', null);
+    await applySyncNodesWithDbPort(source.db, [
+      { ...folder, body_text: '', snapshot: { ...folder.snapshot, kind: 'folder', content: '' } },
+      record('later-topic', 'later-topic-first', 'later-folder')
+    ]);
+    expect(await round(source, target)).toMatchObject({ complete: true, pending: 0 });
+    expect(target.sqlite.prepare("SELECT manual_child_order FROM nodes WHERE id = 'dive'").pluck().get()).toBe(refs);
+    expect(target.sqlite.prepare("SELECT id FROM nodes WHERE id IN ('later-folder', 'later-topic') ORDER BY id").pluck().all())
+      .toEqual(['later-folder', 'later-topic']);
+  } finally { await fixture.close(); }
+});
 
 it('moves an existing child beneath a new parent through normal request dependency recovery', async () => {
   const fixture = await restoreFixture();

@@ -67,7 +67,7 @@ function buildWorkspaceVirtualRows(
 ) {
   const virtualNodeIds = props.nodeOrder.filter((nodeId) => {
     const node = props.nodesById[nodeId];
-    return isVirtualRootNode(node) || isVirtualNode(node);
+    return isVirtualRootNode(node) || (isVirtualNode(node) && !node?.isDive);
   }).sort((leftId, rightId) => compareVirtualNodeTitle(leftId, rightId, props.nodesById));
   return buildVisibleNodeTreeRows(buildNodeTree(virtualNodeIds, props.nodesById).rows, collapsedIds);
 }
