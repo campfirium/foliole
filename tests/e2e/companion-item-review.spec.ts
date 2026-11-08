@@ -108,6 +108,10 @@ test('wide item images fit the reading width before and after reveal', async ({ 
   };
 
   await expectImageToFit('Question illustration');
+  const question = page.getByRole('img', { name: 'Question illustration', exact: true });
+  await question.click({ position: { x: 20, y: 20 } });
+  await expect(page.locator('[data-companion-reading-surface]')).toHaveAttribute('data-reading-chrome-visible', 'true');
+  await expect(page.getByRole('button', { name: 'Open image preview', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Show Answer', exact: true }).click();
   for (const viewport of [{ width: 320, height: 700 }, { width: 700, height: 320 }]) {
     await page.setViewportSize(viewport);

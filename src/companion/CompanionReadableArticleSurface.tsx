@@ -204,6 +204,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   return (
     <section
       data-companion-reading-surface="true"
+      data-companion-item={props.isReviewItem ? 'true' : undefined}
       data-reading-chrome-visible={model.reading.isChromeVisible && !model.reading.isContentEditing}
       className={`${model.surfaceClassName}${itemEditing ? ' companion-item-editing' : ''}`}
       style={pagedStyle}

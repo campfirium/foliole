@@ -12,3 +12,7 @@ section[data-reading-chrome-visible='true'] .cm-md-image-surface .cm-md-image-pr
   opacity: 1;
   pointer-events: auto;
 }
+
+section[data-companion-item='true'] .cm-md-image-surface .cm-md-image-preview-trigger {
+  display: none;
+}
