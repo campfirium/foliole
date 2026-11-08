@@ -200,7 +200,7 @@ export function applyAppearanceColorSettings(root: HTMLElement, input: ApplyAppe
   root.style.setProperty('--app-accent-color-rgb', accentRgb);
   root.style.setProperty('--app-selection-color', normalizedSelectionColor);
   root.style.setProperty('--app-selection-color-rgb', selectionRgb);
-  root.style.setProperty('--app-text-selection-bg-color', getTextSelectionBackgroundColor(selectionRgb, input.mode));
+  root.style.setProperty('--app-text-selection-bg-color', getTextSelectionBackgroundColor(input.mode));
   root.style.setProperty('--app-text-selection-fg-color', getSelectionForegroundColor(input.mode));
   root.style.setProperty('--app-selection-foreground-color', getSelectionForegroundColor(input.mode));
   root.style.setProperty('--app-selection-surface-color', `rgb(${selectionRgb} / ${getSelectionSurfaceAlpha(input.mode)})`);

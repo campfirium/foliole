@@ -35,7 +35,7 @@ function renderColorVariables(mode: AppearanceDefaultColorMode) {
     `  --app-accent-color-rgb: ${accentRgb};`,
     `  --app-selection-color: ${colors.selection};`,
     `  --app-selection-color-rgb: ${selectionRgb};`,
-    `  --app-text-selection-bg-color: ${getTextSelectionBackgroundColor(selectionRgb, mode)};`,
+    `  --app-text-selection-bg-color: ${getTextSelectionBackgroundColor(mode)};`,
     `  --app-text-selection-fg-color: ${selectionForegroundColor(mode)};`,
     `  --app-selection-foreground-color: ${selectionForegroundColor(mode)};`,
     `  --app-selection-surface-color: rgb(var(--app-selection-color-rgb) / ${getSelectionSurfaceAlpha(mode)});`,
