@@ -30,7 +30,7 @@ function article(content = body) {
 it('carries a topic match through navigation into the reader restore command', () => {
   const result = { ...createCompanionSearchResultsFixture().topics[0]!, matchStart: 30 };
   const select = vi.fn();
-  const surface = { handleSelectBrowseNode: select, selectedBrowseNodeId: 'topic-1', readableArticle: article() } as never;
+  const surface = { effectiveReviewSession: { currentCard: null }, handleSelectBrowseNode: select, selectedBrowseNodeId: 'topic-1', readableArticle: article() } as never;
   const navigation = renderHook(() => useCompanionSearchNavigation(surface));
   act(() => navigation.result.current.openTopic(result, 'alpha'));
   expect(select).toHaveBeenCalledWith('topic-1');

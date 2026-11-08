@@ -7,6 +7,7 @@ import { renderCompanionShellContent } from './CompanionShellContent';
 function createSurface(bodyStatus: 'empty' | 'failed' | 'missing', title: string) {
   return {
     activeAction: 'recent',
+    effectiveReviewSession: { currentCard: null },
     browseReturnNodeId: null,
     readingActivity: new CompanionReadingActivity('topic-1', () => {}),
     browsedFolder: null,
