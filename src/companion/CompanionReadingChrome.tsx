@@ -1,9 +1,10 @@
-import { ArrowDown, ArrowUp, ChevronLeft, EllipsisVertical, ListTree, Pen, RefreshCw, Redo2, Undo2, type LucideIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { ArrowDown, ArrowUp, ChevronLeft, EllipsisVertical, ListTree, Pen, Plus, RefreshCw, Redo2, Undo2, type LucideIcon } from 'lucide-react';
+import { useContext, type ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { companionFlexRowGap2ClassName, companionMobileChromeHitRailClassName } from './companionCssCompatibility';
+import { CompanionFlowCaptureContext } from './CompanionFlowCaptureButton';
 import { useCompanionFlowHistoryControls } from './CompanionFlowHistoryContext';
 import { useCompanionReadingDisplay } from './companionReadingDisplay';
 import type { CompanionReadingNavigationControls } from './useCompanionReadingNavigation';
@@ -93,7 +94,7 @@ function ReadingTopChrome(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className={`companion-reading-top-chrome fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} pt-0 supports-[padding-top:max(0px)]:pt-[env(safe-area-inset-top)]`}>
+    <div className={`companion-reading-top-chrome fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} ${props.review ? 'companion-flow-top-chrome' : ''} pt-0 supports-[padding-top:max(0px)]:pt-[env(safe-area-inset-top)]`}>
       <div className="relative mx-auto flex max-w-[760px] items-center">
         {props.controlsVisible ? (
           <>
@@ -167,9 +168,12 @@ export function ReadingChrome(props: {
   );
 }
 
-function ReadingActionsControls(props: { canEditContent?: boolean; onToggleContentEditing?: () => void; onOpenActions(): void }) {
+function ReadingActionsControls(props: { actionsAtTop?: boolean; canEditContent?: boolean; onToggleContentEditing?: () => void; onOpenActions(): void }) {
   const t = useTranslation();
+  const openCapture = useContext(CompanionFlowCaptureContext);
   return <>
+    {props.actionsAtTop && openCapture ? <ReadingChromeButton icon={Plus} label={t('companion.capture.title')}
+      onClick={openCapture} /> : null}
     {props.canEditContent ? <ReadingChromeButton icon={Pen} label={t('companion.reading.editContent')}
       onClick={props.onToggleContentEditing} testId="companion-reading-edit" /> : null}
     <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />

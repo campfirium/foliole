@@ -6,7 +6,6 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { reviewSessionModeOptions } from '../shared/ui/reviewSessionModeOptions';
 
 import { CompanionBottomSheet } from './CompanionBottomSheet';
-import { CompanionFlowCaptureEntry } from './CompanionFlowCaptureEntry';
 
 export type CompanionFlowModeControls = {
   mode: ReviewSessionMode;
@@ -33,16 +32,15 @@ export function CompanionFlowModeControl(props: { onSelect(): void }) {
   </div>;
 }
 
-export function CompanionFlowModeMenu({ controls }: { controls?: CompanionFlowModeControls }) {
+export function CompanionFlowModeMenu({ controls }: { controls: CompanionFlowModeControls }) {
   const [open, setOpen] = useState(false);
   const t = useTranslation();
-  return <CompanionFlowModeContext.Provider value={controls ?? null}>
+  return <CompanionFlowModeContext.Provider value={controls}>
     <button type="button" aria-label={t('companion.reading.actions')} onClick={() => setOpen(true)}
       className="inline-flex h-11 w-10 items-center justify-center text-companion-text-secondary">
       <EllipsisVertical aria-hidden="true" className="h-5 w-5" />
     </button>
     <CompanionBottomSheet open={open} onOpenChange={setOpen} title={t('companion.reading.actions')}>
-      <CompanionFlowCaptureEntry onClose={() => setOpen(false)} />
       <CompanionFlowModeControl onSelect={() => setOpen(false)} />
     </CompanionBottomSheet>
   </CompanionFlowModeContext.Provider>;

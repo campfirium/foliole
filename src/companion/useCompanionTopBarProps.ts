@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { createElement, type ComponentProps } from 'react';
+import { createElement, Fragment, type ComponentProps } from 'react';
 
 import type {
   FolderListSortDirection,
@@ -10,6 +10,7 @@ import type { CompanionExternalDirectory } from '../shared/platform/companionExt
 
 import type { CompanionDirectorySelection } from './CompanionDirectoryContent';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
+import { CompanionFlowCaptureButton } from './CompanionFlowCaptureButton';
 import { CompanionFlowModeMenu } from './CompanionFlowModeControl';
 import { CompanionTopBar } from './CompanionTopBar';
 import { resolveCompanionTopBarProps } from './CompanionTopBarPropsModel';
@@ -62,7 +63,7 @@ export function useCompanionTopBarProps(args: {
 
   if (args.surface.isFlowBrowsing) return {
     title: args.surface.browsedFolder?.title ?? 'Flow',
-    rightSlot: createElement(CompanionFlowModeMenu, { key: 'flow-browse' }),
+    rightSlot: createElement(CompanionFlowCaptureButton),
     leftAction: { icon: X, label: t('companion.review.exit'), onClick: () => args.surface.handleTabAction('recent') }
   };
 
@@ -99,9 +100,11 @@ export function useCompanionTopBarProps(args: {
 function withEmptyFlowMenu(resolved: Omit<ComponentProps<typeof CompanionTopBar>, 'visible'>,
   surface: ReturnType<typeof useCompanionArticleSurface>) {
   if (surface.activeAction === 'review' && !surface.effectiveReviewSession.currentCard) {
-    return { ...resolved, rightSlot: createElement(CompanionFlowModeMenu, {
+    return { ...resolved, rightSlot: createElement(Fragment, null,
+      createElement(CompanionFlowCaptureButton),
+      createElement(CompanionFlowModeMenu, {
         controls: { mode: surface.flowSessionMode, onChange: surface.setFlowSessionMode, disabled: !surface.flowReady }
-      }) };
+      })) };
   }
   return resolved;
 }

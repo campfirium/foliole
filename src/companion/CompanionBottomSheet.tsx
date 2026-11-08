@@ -37,11 +37,6 @@ export function CompanionBottomSheet(props: {
         <AppDialogContent placement="bottom"
           onOpenAutoFocus={() => { opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; }}
           onCloseAutoFocus={event => {
-            const activeDialog = document.activeElement?.closest('[role="dialog"]');
-            if (activeDialog?.getAttribute('data-state') === 'open') {
-              event.preventDefault();
-              return;
-            }
             if (!opener.current?.isConnected) return;
             event.preventDefault();
             opener.current.focus({ preventScroll: true });

@@ -1,3 +1,5 @@
+import { flushSync } from 'react-dom';
+
 import {
   companionMainBottomInsetClassName,
   companionMobileRailClassName,
@@ -6,7 +8,7 @@ import {
 } from './companionCssCompatibility';
 import { canRenderCompanionDirectoryArticle } from './CompanionDirectoryReadableArticleModel';
 import { CompanionFlowBrowseBar } from './CompanionFlowBrowseBar';
-import { CompanionFlowCaptureContext } from './CompanionFlowCaptureEntry';
+import { CompanionFlowCaptureContext } from './CompanionFlowCaptureButton';
 import { CompanionFlowHistorySurface } from './CompanionFlowHistorySurface';
 import { CompanionPageStack } from './CompanionPageStack';
 import { CompanionPreviewLifecycle } from './CompanionPreviewLifecycle';
@@ -113,9 +115,11 @@ function FlowHistorySurface(props: { children: React.ReactNode; model: Companion
 export function CompanionShellView(props: { model: CompanionShellModel }) {
   const { model } = props;
   const page = resolveMainPage(model);
+  // Mount and focus the editor during the tap so the WebView can open the keyboard.
+  const openFlowCapture = model.surface.activeAction === 'review' || model.surface.isFlowBrowsing
+    ? () => flushSync(() => model.setIsCaptureSheetOpen(true)) : null;
   return (
-    <CompanionFlowCaptureContext.Provider value={model.surface.activeAction === 'review' || model.surface.isFlowBrowsing
-      ? () => model.setIsCaptureSheetOpen(true) : null}>
+    <CompanionFlowCaptureContext.Provider value={openFlowCapture}>
     <FlowHistorySurface model={model}>
       {import.meta.env.DEV && window.__FOLIOLE_COMPANION_PREVIEW_HOST__ !== undefined ? (
         <CompanionPreviewLifecycle activity={model.surface.readingActivity}

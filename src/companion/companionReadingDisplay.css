@@ -24,3 +24,13 @@ body:has(.companion-reading-display-controls) .companion-reading-system-bar-bann
 section > .companion-reading-top-chrome {
   padding-top: max(env(safe-area-inset-top, 0px), var(--companion-system-chrome-top, 0px));
 }
+
+@media (max-width: 359px) {
+  .companion-reading-top-chrome.companion-flow-top-chrome {
+    padding-inline: 6px;
+  }
+
+  .companion-flow-top-chrome button {
+    width: 44px;
+  }
+}

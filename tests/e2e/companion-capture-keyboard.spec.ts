@@ -101,18 +101,22 @@ test('Capture remains usable when a landscape keyboard leaves only one input row
   await expect(page.getByRole('button', { name: 'Paste from Clipboard' })).toBeVisible();
 });
 
-for (const viewport of [{ width: 375, height: 812 }, { width: 839, height: 343 }]) {
+for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 812 }, { width: 839, height: 343 }]) {
   test(`Flow Capture expands and keeps focus at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await openCaptureFixture(page);
     await setVisibleRegion(page, viewport.height, 0);
-    await page.getByRole('button', { name: 'Actions' }).click();
-    const entry = page.getByRole('button', { name: 'Type a new topic' });
+    const entry = page.getByRole('button', { name: 'Capture', exact: true });
+    const edit = page.getByTestId('companion-reading-edit');
     await expect(entry).toBeInViewport();
+    await expect(edit).toBeInViewport();
+    await expect(page.getByRole('button', { name: 'More reading actions' })).toBeInViewport({ ratio: 1 });
+    const captureBounds = (await entry.boundingBox())!;
+    const editBounds = (await edit.boundingBox())!;
+    expect(captureBounds.x + captureBounds.width).toBeLessThanOrEqual(editBounds.x);
     await expect(page.getByRole('textbox')).toHaveCount(0);
     await entry.click();
     await expect(page.getByRole('textbox')).toBeFocused();
-    await expect(page.getByRole('button', { name: 'Reading only' })).not.toBeVisible();
     await expectCaptureInsideVisibleRegion(page, 0, viewport.height);
     await page.keyboard.type('Captured during Flow');
     await expect(page.getByRole('textbox')).toHaveValue('Captured during Flow');

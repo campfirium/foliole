@@ -158,13 +158,11 @@ it.each(['review', 'recent'])('keeps navigation hidden while a breadcrumb articl
   expect(screen.getByRole('heading', { name: 'Inbox' })).toBeInTheDocument();
 });
 
-it('opens the Capture editor from the Flow reading menu in a single tap and returns to the same article', async () => {
+it('opens the Capture editor from the Flow reading toolbar in a single tap and returns to the same article', async () => {
   const { surface, container } = await renderBreadcrumbShell();
   fireEvent.click(container.querySelector('article')!);
-  fireEvent.click(screen.getByRole('button', { name: 'More reading actions' }));
   expect(screen.queryByRole('textbox', { name: 'Capture text' })).not.toBeInTheDocument();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Type a new topic' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Capture' }));
 
   expect(screen.getByRole('textbox', { name: 'Capture text' })).toHaveFocus();
   expect(screen.queryByRole('button', { name: 'Find in document' })).not.toBeInTheDocument();
@@ -174,7 +172,7 @@ it('opens the Capture editor from the Flow reading menu in a single tap and retu
 });
 
 
-it.each(['folder', 'finished'])('opens the Capture editor from the Flow %s menu', async state => {
+it.each(['folder', 'finished'])('opens the Capture editor directly from the Flow %s toolbar', async state => {
   const { surface, refresh } = await renderBreadcrumbShell();
   useCompanionArticleSurface.mockReturnValue({
     ...surface,
@@ -185,8 +183,7 @@ it.each(['folder', 'finished'])('opens the Capture editor from the Flow %s menu'
   });
   refresh();
 
-  expect(screen.queryByRole('button', { name: 'Type a new topic' })).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Actions' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Type a new topic' }));
+  expect(screen.queryByRole('textbox', { name: 'Capture text' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Capture' }));
   expect(screen.getByRole('textbox', { name: 'Capture text' })).toHaveFocus();
 });
