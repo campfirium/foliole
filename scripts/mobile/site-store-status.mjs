@@ -7,6 +7,7 @@ import { IOS_APP_ID, IOS_GROUP_ID, IOS_INVITATION } from '../ios/testflight-cand
 import { createMobileGithubApi, verifyStoredMobileCandidate } from './mobile-candidate-store.mjs';
 import { createPlayApi, playAccessToken, readPlayReleases, PLAY_PACKAGE, PLAY_TRACK } from '../android/play-api.mjs';
 import { checkRegisteredPlayAvailability, exactRelease } from '../android/play-availability.mjs';
+import { listTestflightReviews } from './testflight-review-registry.mjs';
 
 export function channelProjection(candidate, state, url) {
   return {
@@ -97,14 +98,24 @@ async function project(id, candidate, query, url) {
   }
 }
 
+export async function checkTestflightReviews(api, historicalCandidate, query = queryApple) {
+  const candidates = await listTestflightReviews(api, historicalCandidate);
+  return Promise.all(candidates.map(async candidate => {
+    const [, review] = await project(`ios ${candidate.version} (${candidate.buildNumber})`, candidate, query, IOS_INVITATION);
+    return { ...review, buildNumber: candidate.buildNumber };
+  }));
+}
+
 async function main() {
   const candidates = JSON.parse(await readFile('releases/store-candidates.json', 'utf8'));
-  const channels = Object.fromEntries(await Promise.all([
-    project('ios', candidates.ios, queryApple, IOS_INVITATION),
-    project('android-play', candidates['android-play'], queryPlay,
-      `https://play.google.com/apps/testing/${PLAY_PACKAGE}`)
-  ]));
+  const [reviews, [, play]] = await Promise.all([
+    checkTestflightReviews(createMobileGithubApi(process.env.GH_TOKEN), candidates.ios),
+    project('android-play', candidates['android-play'], queryPlay, `https://play.google.com/apps/testing/${PLAY_PACKAGE}`)
+  ]);
+  const { version, build, status, url } = reviews[0];
+  const channels = { ios: { version, build, status, url }, 'android-play': play };
   await writeFile('.tmp/site-store-status.json', JSON.stringify(channels));
+  await writeFile('.tmp/testflight-review-status.json', JSON.stringify(reviews));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

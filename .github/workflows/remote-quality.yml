@@ -183,6 +183,7 @@ jobs:
   mobile-ios:
     if: always() && inputs.mobile_distribution == 'ios' && needs.mobile-context.result == 'success'
     needs: [full-quality, mobile-reuse, mobile-context]
+    permissions: { contents: read, actions: read, deployments: write }
     uses: ./.github/workflows/release-ios.yml
     with:
       target_sha: ${{ needs.full-quality.outputs.accepted_sha || needs.mobile-reuse.outputs.accepted_sha }}

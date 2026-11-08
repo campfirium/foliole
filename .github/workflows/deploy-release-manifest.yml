@@ -16,6 +16,8 @@ on:
       - "scripts/prepare-release-manifest-site.mjs"
       - "scripts/release-download-directory.mjs"
       - "scripts/mobile/site-store-status.mjs"
+      - "scripts/mobile/testflight-review-registry.mjs"
+      - "releases/store-candidates.json"
       - "scripts/android/play-availability.mjs"
 
 permissions:
@@ -61,6 +63,13 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: testflight-review-status
+          path: .tmp/testflight-review-status.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
 
   build:
     needs: stores

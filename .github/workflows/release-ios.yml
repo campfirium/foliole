@@ -153,11 +153,13 @@ jobs:
   external-review:
     name: Submit iPhone external review on Linux
     needs: signed-upload
+    permissions: { contents: read, actions: read, deployments: write }
     runs-on: ubuntu-latest
     timeout-minutes: 75
     concurrency:
       group: testflight-ios-external-review
       cancel-in-progress: false
+      queue: max
     outputs:
       artifact_name: ${{ steps.receipt.outputs.artifact_name }}
       packaged_sha: ${{ steps.receipt.outputs.packaged_sha }}
@@ -195,6 +197,20 @@ jobs:
           path: .tmp/artifacts/ios-testflight-receipt
           if-no-files-found: error
           retention-days: 14
+      - name: Register the submitted build for ongoing review checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.target_version }}
+        run: |
+          node --input-type=module <<'JS'
+          import { createMobileGithubApi } from './scripts/mobile/mobile-candidate-store.mjs';
+          import { registerTestflightReview } from './scripts/mobile/testflight-review-registry.mjs';
+          import { verifyTestflightReceiptFile } from './scripts/ios/testflight-candidate.mjs';
+          const receipt = await verifyTestflightReceiptFile('.tmp/artifacts/ios-testflight-receipt',
+            process.env.VERSION, process.env.FOLIOLE_IOS_EXPECTED_SHA);
+          if (receipt.runId !== process.env.GITHUB_RUN_ID) throw new Error('TestFlight receipt belongs to a different run');
+          await registerTestflightReview(createMobileGithubApi(process.env.GH_TOKEN), receipt);
+          JS
       - name: Export producer identity
         id: receipt
         run: |
