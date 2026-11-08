@@ -25,12 +25,20 @@ export async function runAttachmentBatchStage(stage: Stage, keys: readonly strin
     stage.pendingKeys.add(key);
     return false;
   });
-  for (let index = 0; index < eligible.length; index += ATTACHMENT_BATCH_MAX_FILES) {
+  for (let index = 0; index < eligible.length;) {
     if (stage.shouldYield()) {
       eligible.slice(index).forEach(key => stage.pendingKeys.add(key));
       break;
     }
-    const group = eligible.slice(index, index + ATTACHMENT_BATCH_MAX_FILES);
+    const hashes = new Set<string>();
+    const group: string[] = [];
+    for (const key of eligible.slice(index, index + ATTACHMENT_BATCH_MAX_FILES)) {
+      const hash = key.slice(0, 64);
+      if (hashes.has(hash)) break;
+      hashes.add(hash);
+      group.push(key);
+    }
+    index += group.length;
     await describeAndPull(stage, group);
   }
 }

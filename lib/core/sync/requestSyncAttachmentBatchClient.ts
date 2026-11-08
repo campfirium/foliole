@@ -32,6 +32,20 @@ export async function pullAttachmentBatch(exchange: RequestSyncExchange, receive
   requests: readonly AttachmentRequest[], shouldYield: () => boolean,
   onMember: (request: AttachmentRequest, result: AttachmentBatchMemberResult) => void) {
   if (!requests.length || shouldYield()) return;
+  if (exchange.receiveAttachmentBatch) {
+    const receiveWindow = receiver.receiveWindow;
+    if (!receiveWindow) throw new Error('attachment_window_receiver_missing');
+    return exchange.receiveAttachmentBatch(requests, async (index, receive) => {
+      const request = requests[index]!;
+      let missing = false;
+      const result = await receiveWindow(request, request.offset, async () => {
+        const result = await receive();
+        missing = !result.blocks && !result.pending && result.offset !== request.byteLength;
+        return missing ? { ...result, pending: true } : result;
+      });
+      onMember(request, { ...result, pending: result.pending && !missing, complete: result.offset === request.byteLength });
+    });
+  }
   return withControlRequest(exchange, `/companion/framed-sync?request=${ATTACHMENT_BATCH_PULL_OPERATION}`,
     requests.map(attachmentMessage), async body => {
       let index = 0;

@@ -13,10 +13,7 @@ import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeReposito
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
-import { decodeCompanionFileBytes } from './companionFileBytes.js';
-
 const CHUNK_BYTES = 512 * 1024;
-const MAX_BATCH_CHUNK_BYTES = CHUNK_BYTES + 32 * 1024;
 const chunkKey = (directory: string, direction: 'in' | 'out', index: number) =>
   `${directory}/http-${direction}-${index}`;
 
@@ -29,24 +26,23 @@ export interface CompanionRequestSyncHttpInput {
   signal?: AbortSignal;
   peerRound?: RequestSyncPeerRound;
   attachmentReceive?: NativeRequestSyncHttpRequest['attachment_receive'];
-  streamAttachmentBatch?: true;
+  attachmentBatchReceive?: NativeRequestSyncHttpRequest['attachment_batch_receive'];
 }
 
 export async function withCompanionRequestSyncHttp<T>(files: RequestSyncFilePort, input: CompanionRequestSyncHttpInput,
   consume: (body: Awaited<ReturnType<typeof readFramedSyncStream>>) => Promise<T>) {
-  return withCompanionRequestSyncHttpResponse(files, input, async (response, { directory, ...owner }) => {
-    const chunks = input.streamAttachmentBatch
-      ? companionAttachmentBatchChunks(response, owner, input.signal)
-      : companionRequestSyncHttpChunks(files, directory, response, input.signal);
+  return withCompanionRequestSyncHttpResponse(files, input, async (response, { directory }) => {
+    const chunks = companionRequestSyncHttpChunks(files, directory, response, input.signal);
     const stream = await readFramedSyncStream(touchRequestSyncStream(chunks, input.peerRound?.lease));
     try { return await consume(stream); }
     finally { await stream.frames[Symbol.asyncIterator]().return?.(); }
   });
 }
 
+type NativeResponse = Awaited<ReturnType<typeof FolioleCompanionSync.postRequestSyncHttp>>;
 export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSyncFilePort, input: CompanionRequestSyncHttpInput,
-  consume: (response: Awaited<ReturnType<typeof FolioleCompanionSync.postRequestSyncHttp>>,
-    source: { directory: string; library_key: string; generation_id: string; request_id: string }) => Promise<T>) {
+  consume: (response: NativeResponse, source: { directory: string; library_key: string; generation_id: string; request_id: string }) => Promise<T>,
+  receiveFirst?: (post: () => Promise<NativeResponse>) => Promise<NativeResponse>) {
   const shouldYield = attachmentDataYield();
   return withRequestSyncFiles(files, async temporary => {
     const { owner, requestId, request, sign, signedAt } = await prepareHttpRequest(temporary, input);
@@ -56,9 +52,13 @@ export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSync
       Object.assign(request.headers, (await sign()).headers);
       input.signal?.throwIfAborted();
     }
-    const attachment = input.attachmentReceive || input.streamAttachmentBatch;
+    const attachment = input.attachmentReceive || input.attachmentBatchReceive;
     if (attachment && shouldYield()) throw new AttachmentReceivePaused();
-    const operation = FolioleCompanionSync.postRequestSyncHttp(request);
+    const post = () => {
+      input.signal?.throwIfAborted();
+      if (attachment && shouldYield()) throw new AttachmentReceivePaused();
+      return FolioleCompanionSync.postRequestSyncHttp(request);
+    };
     let cancellation: Promise<void> | undefined;
     const cancel = () => { cancellation = FolioleCompanionSync.cancelRequestSyncHttp({ ...owner, request_id: requestId });
       void cancellation.catch(() => undefined); };
@@ -66,10 +66,9 @@ export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSync
     let yielded = false;
     const stopYield = attachment ? onAttachmentWorkYield(() => { yielded = true; cancel(); }) : () => {};
     try {
-      const response = await operation;
+      const response = await (receiveFirst ? receiveFirst(post) : post());
       input.signal?.throwIfAborted();
       if (input.peerRound) input.peerRound.admitted = true;
-      if (input.streamAttachmentBatch && yielded) throw new AttachmentReceivePaused();
       return await consume(response, { ...owner, request_id: requestId, directory: temporary.directory });
     } catch (error) {
       if (yielded && error && typeof error === 'object' && 'code' in error && error.code === 'E_ABORT') {
@@ -80,7 +79,7 @@ export async function withCompanionRequestSyncHttpResponse<T>(files: RequestSync
     } finally {
       stopYield();
       input.signal?.removeEventListener('abort', cancel);
-      if (input.streamAttachmentBatch && !cancellation) cancel();
+      if (input.attachmentBatchReceive && !cancellation) cancel();
       await cancellation;
     }
   }, input.signal);
@@ -109,7 +108,7 @@ async function prepareHttpRequest(temporary: RequestSyncFiles, input: CompanionR
     }, sync_group_id: input.context.groupId, receiver_device_id: input.context.responderDeviceId,
     receiver_library_epoch: input.context.responderLibraryEpoch };
   if (input.attachmentReceive) request.attachment_receive = input.attachmentReceive;
-  if (input.streamAttachmentBatch) request.stream_attachment_batch = true;
+  if (input.attachmentBatchReceive) request.attachment_batch_receive = input.attachmentBatchReceive;
   if (input.peerRound) request.peer_round_id = input.peerRound.id;
   return { owner, requestId, request, sign, signedAt };
 }
@@ -168,23 +167,4 @@ async function waitForDispatch(gate: NonNullable<CompanionRequestSyncHttpInput['
   gate.ready();
   try { await Promise.race([gate.dispatch, aborted]); signal?.throwIfAborted(); }
   finally { signal?.removeEventListener('abort', abort); }
-}
-
-async function* companionAttachmentBatchChunks(
-  first: { base64?: string; done?: true },
-  owner: Parameters<typeof FolioleCompanionSync.readRequestSyncAttachmentBatch>[0],
-  signal?: AbortSignal
-) {
-  const shouldYield = attachmentDataYield();
-  let chunk = first;
-  while (!chunk.done) {
-    signal?.throwIfAborted();
-    if (!chunk.base64 || chunk.base64.length > Math.ceil(MAX_BATCH_CHUNK_BYTES / 3) * 4) {
-      throw new Error('attachment_batch_chunk_invalid');
-    }
-    yield decodeCompanionFileBytes(chunk.base64);
-    signal?.throwIfAborted();
-    if (shouldYield()) throw new AttachmentReceivePaused();
-    chunk = await FolioleCompanionSync.readRequestSyncAttachmentBatch(owner);
-  }
 }

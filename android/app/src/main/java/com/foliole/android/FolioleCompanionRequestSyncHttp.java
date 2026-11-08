@@ -50,7 +50,7 @@ final class FolioleCompanionRequestSyncHttp {
             FramedSyncPayloadBudget owner = owner(call);
             String id = requestId(call);
             Operation operation = new Operation(owner);
-            if (Boolean.TRUE.equals(call.getBoolean("stream_attachment_batch", false))) {
+            if (call.getObject("attachment_batch_receive") != null) {
                 operation.batch = new FolioleAttachmentBatchHttpStream(call);
             }
             if (ACTIVE.putIfAbsent(id, operation) != null) throw new IllegalStateException("request_sync_http_duplicate");
@@ -131,7 +131,7 @@ final class FolioleCompanionRequestSyncHttp {
         return FramedSyncHttpTransport.postRawStream(url, call.getString("sync_group_id"),
             call.getString("receiver_device_id"), call.getString("receiver_library_epoch"), headers,
             FolioleRequestSyncHttpChunks.request(files, directory, count, operation::check, progress, timing::chunk),
-            input -> operation.batch != null ? operation.batch.read(input, operation::check, progress)
+            input -> operation.batch != null ? operation.batch.read(context, call, input, operation::check, progress, operation.owner)
                 : call.getObject("attachment_receive") == null ? FolioleRequestSyncHttpChunks.read(files, directory, input, operation::check, progress)
                 : FolioleRequestSyncAttachmentResponse.read(context, call, input, operation::check, progress, operation.owner),
             operation::opened, timing::phase);

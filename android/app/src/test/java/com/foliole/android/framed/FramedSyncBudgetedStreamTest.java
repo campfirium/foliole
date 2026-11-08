@@ -17,7 +17,7 @@ public final class FramedSyncBudgetedStreamTest {
         var second = reader(owner, INBOUND, PAYLOAD, wire(3, 16, new byte[16]));
         var worker = Executors.newSingleThreadExecutor();
         try (var consumed = first.readFrame()) {
-            var next = worker.submit(second::readFrame);
+            var next = worker.submit(() -> { return second.readFrame(); });
             try { next.get(100, TimeUnit.MILLISECONDS); fail("incoming loan must span consumption"); }
             catch (TimeoutException expected) {}
             try (var outbound = owner.acquire(OUTBOUND, PAYLOAD);

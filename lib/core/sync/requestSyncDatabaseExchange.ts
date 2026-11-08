@@ -1,4 +1,4 @@
-import type { AttachmentReceiveWindow } from './attachmentBlockTransfer.js';
+import type { AttachmentReceiveOperation, AttachmentReceiveWindow } from './attachmentBlockTransfer.js';
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './framedSyncBinaryStream.js';
 import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import type { FramedSyncInventoryDifference, FramedSyncInventoryEntry } from './framedSyncInventory.js';
@@ -21,6 +21,8 @@ export interface PreparedAttachmentRequest {
 
 export interface RequestSyncExchange {
   batchAttachmentPull?: true;
+  receiveAttachmentBatch?(queries: readonly AttachmentRequest[],
+    consume: (index: number, receive: AttachmentReceiveOperation) => Promise<void>): Promise<void>;
   prepareAttachment?(query: AttachmentRequest): Promise<PreparedAttachmentRequest>;
   /** Native execution validates and writes one authorized range; shared code owns publication. */
   receiveAttachment?(query: AttachmentRequest): Promise<AttachmentReceiveWindow>;

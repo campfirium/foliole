@@ -3,7 +3,7 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-import { encodeFramedSyncStream, readFramedSyncStream } from '../../../../../../lib/core/sync/framedSyncBinaryStream.js';
+import { readFramedSyncStream } from '../../../../../../lib/core/sync/framedSyncBinaryStream.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
 import { decodeRequestSyncInventory, iterateRequestSyncInventory } from '../../../../../../lib/core/sync/requestSyncInventoryWire.js';
@@ -154,32 +154,32 @@ it.each(['E_ABORT', 'ENOSPC'])('cancels a blocked attachment request for data wo
   expect(native.cancel).toHaveBeenCalledOnce(); expect(values.size).toBe(0);
 });
 
-it('consumes streamed Android bytes one demand at a time and cancels before removing request files', async () => {
+it('consumes only native member metadata and settles cancellation before removing request files', async () => {
   const { files, values } = storage();
-  const encoded: string[] = [];
-  for await (const bytes of encodeFramedSyncStream(await body())) encoded.push(Buffer.from(bytes).toString('base64'));
+  const { companionReceiveAttachmentBatch } = await import('./companionAttachmentHttp.js');
+  const { attachmentRequestSchema } = await import('../../../../../../lib/core/sync/requestSyncAttachmentContract.js');
+  const queries = ['a', 'b'].map(key => attachmentRequestSchema.parse({
+    operation: 'pull', requestId: new Uint8Array(16), storageKey: `${key.repeat(64)}.png`, byteLength: 32
+  }));
   native.post.mockImplementation(async (request: NativeRequestSyncHttpRequest) => {
-    expect(request.stream_attachment_batch).toBe(true);
-    return { base64: encoded.shift() };
+    expect(request.attachment_batch_receive?.members.map(member => member.storage_key))
+      .toEqual(queries.map(query => query.storageKey));
+    return { attachment_batch_member: { index: 0, offset: 32, blocks: 1, pending: false } };
   });
-  native.readBatch.mockImplementation(async () => {
-    const next = encoded.shift();
-    return next ? { base64: next } : { done: true };
-  });
+  native.readBatch.mockRejectedValue(new Error('interrupted'));
   native.cancel.mockImplementation(async ({ request_id }) => {
     expect(request_id).toBe(native.post.mock.calls[0]?.[0].request_id);
     expect(values.size).toBeGreaterThan(0);
   });
-  await withCompanionRequestSyncHttp(files, { context, endpointUrl: 'http://127.0.0.1:1',
-    pathWithQuery: '/companion/framed-sync?request=attachment_batch_pull', body: await body(), streamAttachmentBatch: true },
-  async stream => {
-    for await (const decoded of readRequestSyncWire({ context, groupKey, ...stream })) {
-      expect(decoded.message.payloadCase).toBe('round_receipt');
-      expect([...values.keys()].some(key => key.includes('/http-in-'))).toBe(false);
-      break;
-    }
-  });
-  expect(native.readBatch).toHaveBeenCalled();
+  const completed: number[] = [];
+  const run = companionReceiveAttachmentBatch({ ...files, read: async () => { throw new Error('file_payload_crossed_bridge'); } },
+    { context, groupKey, endpointUrl: 'http://127.0.0.1:1' });
+  await expect(run(queries, async (index, receive) => {
+    expect(await receive()).toEqual({ offset: 32, blocks: 1, pending: false });
+    completed.push(index);
+  })).rejects.toThrow('interrupted');
+  expect(completed).toEqual([0]);
+  expect(native.readBatch).toHaveBeenCalledOnce();
   expect(native.cancel).toHaveBeenCalledOnce();
   expect(values.size).toBe(0);
 });
