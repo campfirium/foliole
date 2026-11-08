@@ -66,6 +66,8 @@ function createSchedulerSettingActions(saveSettings: (patch: ReviewSchedulerSett
       if (!Number.isInteger(value) || value < 1 || value > 99) return;
       saveSettings({ newItemLoadBalancingDays: value });
     },
+    onRecencyWeightingChange: (value: boolean) => saveSettings({ recencyWeighting: value }),
+    onReviewIntervalPenaltiesChange: (value: boolean) => saveSettings({ reviewIntervalPenalties: value }),
     onEnableShortTermChange: (value: boolean) => {
       saveSettings({ enableShortTerm: value });
     }

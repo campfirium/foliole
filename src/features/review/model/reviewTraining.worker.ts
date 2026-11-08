@@ -1,9 +1,8 @@
-import wasmUrl from '@open-spaced-repetition/binding-wasm32-wasip1/wasm.wasm?url';
-
 import type { ReviewTrainingInput } from '../../../../lib/core/review/trainingModel.js';
 
 import { hasReviewTrainingBinding, initializeReviewTrainingBinding } from './reviewTrainingBinding.js';
 import { trainFolderReviewModel } from './trainFolderReviewModel.js';
+import wasmUrl from './vendor/fsrs-training/fsrs-training.wasm?url';
 
 self.onmessage = async (event: MessageEvent<ReviewTrainingInput>) => {
   try {

@@ -24,6 +24,8 @@ export interface ReviewSchedulerSettings {
   newDayStartsAtHour: number;
   newItemLoadBalancingDays: number;
   enableShortTerm: boolean;
+  recencyWeighting?: boolean;
+  reviewIntervalPenalties?: boolean;
   pushQueue: UnifiedPushQueueRules;
   updatedAt: string;
 }
@@ -34,6 +36,8 @@ export interface ReviewSchedulerSettingsSavePatch {
   newDayStartsAtHour?: number;
   newItemLoadBalancingDays?: number;
   enableShortTerm?: boolean;
+  recencyWeighting?: boolean;
+  reviewIntervalPenalties?: boolean;
   pushQueue?: UnifiedPushQueueRulesPatch;
 }
 
@@ -51,6 +55,8 @@ export const PUSH_QUEUE_SETTINGS_SCOPE = Object.freeze({
   readingIntervalGrowthFactorRange: 'global'
 });
 
+export const DEFAULT_REVIEW_TRAINING_OPTIONS = Object.freeze({ recencyWeighting: true, reviewIntervalPenalties: false });
+
 export const DEFAULT_REVIEW_SCHEDULER_SETTINGS: ReviewSchedulerSettings = {
   algorithm: REVIEW_SCHEDULER_ALGORITHM,
   desiredRetention: 0.9,
@@ -58,6 +64,7 @@ export const DEFAULT_REVIEW_SCHEDULER_SETTINGS: ReviewSchedulerSettings = {
   newDayStartsAtHour: DEFAULT_NEW_DAY_STARTS_AT_HOUR,
   newItemLoadBalancingDays: 7,
   enableShortTerm: false,
+  ...DEFAULT_REVIEW_TRAINING_OPTIONS,
   pushQueue: DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
   updatedAt: '1970-01-01T00:00:00.000Z'
 };
@@ -129,6 +136,10 @@ export function normalizeReviewSchedulerSettings(payload: unknown): ReviewSchedu
       typeof value.enableShortTerm === 'boolean'
         ? value.enableShortTerm
         : DEFAULT_REVIEW_SCHEDULER_SETTINGS.enableShortTerm,
+    recencyWeighting: typeof value.recencyWeighting === 'boolean'
+      ? value.recencyWeighting : DEFAULT_REVIEW_TRAINING_OPTIONS.recencyWeighting,
+    reviewIntervalPenalties: typeof value.reviewIntervalPenalties === 'boolean'
+      ? value.reviewIntervalPenalties : DEFAULT_REVIEW_TRAINING_OPTIONS.reviewIntervalPenalties,
     pushQueue: mergeReviewSchedulerPushQueueSettings(
       DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue,
       value.pushQueue

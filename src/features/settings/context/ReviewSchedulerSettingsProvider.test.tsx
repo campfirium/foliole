@@ -39,23 +39,15 @@ beforeEach(() => {
 });
 
 it('hydrates saved review scheduler settings and persists updates through the shared provider', async () => {
-  const invoke = vi
-    .fn()
-    .mockResolvedValueOnce({
-      desiredRetention: 0.91,
-      newDayStartsAtHour: 5,
-      pushQueue: { defaultPriority: 6 }
-    })
-    .mockResolvedValueOnce({
-      desiredRetention: 0.82,
-      newDayStartsAtHour: 5,
-      pushQueue: { defaultPriority: 6 }
-    })
-    .mockResolvedValueOnce({
-      desiredRetention: 0.82,
-      newDayStartsAtHour: 6,
-      pushQueue: { defaultPriority: 4 }
-    });
+  let persisted: unknown = {
+    desiredRetention: 0.91,
+    newDayStartsAtHour: 5,
+    pushQueue: { defaultPriority: 6 }
+  };
+  const invoke = vi.fn().mockImplementation(async (command: string, args?: Record<string, unknown>) => {
+    if (command === 'save_review_scheduler_settings') persisted = args?.settings;
+    return persisted;
+  });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
   render(
@@ -82,14 +74,14 @@ it('hydrates saved review scheduler settings and persists updates through the sh
     expect(screen.getByText('4')).toBeInTheDocument();
   });
 
-  expect(invoke).toHaveBeenLastCalledWith('save_review_scheduler_settings', {
-    settings: expect.objectContaining({
-      desiredRetention: 0.82,
-      newDayStartsAtHour: 6,
-      pushQueue: expect.objectContaining({
-        defaultPriority: 4
+  await waitFor(() => {
+    expect(invoke).toHaveBeenLastCalledWith('save_review_scheduler_settings', {
+      settings: expect.objectContaining({
+        desiredRetention: 0.82,
+        newDayStartsAtHour: 6,
+        pushQueue: expect.objectContaining({ defaultPriority: 4 })
       })
-    })
+    });
   });
 });
 

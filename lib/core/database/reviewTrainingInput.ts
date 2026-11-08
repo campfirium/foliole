@@ -7,6 +7,7 @@ import type { DbPort } from '../sync/dbPort.js';
 import type { DatabaseDriver } from './driver.js';
 import { isSpecialRootNode } from './nodeMutationSpecialRoots.js';
 import { EFFECTIVE_REVIEW_PREDICATE } from './reviewLogRecord.js';
+import { parseReviewSchedulerSettingsRow, REVIEW_SCHEDULER_SETTINGS_SQL } from './reviewProjection.js';
 import { parseReviewModels, readReviewModels, reviewTrainingHistory, REVIEW_MODELS_SQL, REVIEW_TRAINING_NODES_SQL } from './reviewTrainingModels.js';
 
 const COUNTS_SQL = `SELECT r.node_id, COUNT(*) AS count FROM review_log r WHERE ${EFFECTIVE_REVIEW_PREDICATE} GROUP BY r.node_id`;
@@ -70,7 +71,7 @@ export function readReviewTrainingInput(driver: DatabaseDriver, folderId: string
   }
   return createInput(group, nodes, models,
     driver.queryAll<ReviewTrainingInput['events'][number] & Record<string, unknown>>(eventsSql(), [folderId]),
-    driver.queryAll<SettingNode>(SETTINGS_SQL), libraryScope);
+    driver.queryAll<SettingNode>(SETTINGS_SQL), driver.queryAll(REVIEW_SCHEDULER_SETTINGS_SQL)[0], libraryScope);
 }
 
 function eventsSql() {
@@ -84,11 +85,13 @@ function eventsSql() {
 }
 
 function createInput(group: { folderId: string; reviewCount: number }, nodes: ReviewTrainingNode[],
-  models: ReviewTrainingModel[], events: ReviewTrainingInput['events'], settings: SettingNode[], libraryScope: string): ReviewTrainingInput {
+  models: ReviewTrainingModel[], events: ReviewTrainingInput['events'], settings: SettingNode[], schedulerSetting: unknown, libraryScope: string): ReviewTrainingInput {
   const { folderId } = group;
   const settingNodes = Object.fromEntries(settings.map(node =>
     [node.id, { ...node, enableShortTerm: node.enableShortTerm === null ? null : node.enableShortTerm === 1 }]));
+  const { recencyWeighting, reviewIntervalPenalties } = parseReviewSchedulerSettingsRow(schedulerSetting);
   return { ...group, libraryScope, events,
+    recencyWeighting: recencyWeighting !== false, reviewIntervalPenalties: reviewIntervalPenalties === true,
     baselineWeights: resolveReviewWeights(folderId, nodes, models, false) ?? null,
     enableShortTerm: resolveNodeShortTermSetting(folderId, settingNodes).value };
 }
@@ -108,5 +111,6 @@ export async function readReviewTrainingInputWithDb(db: DbPort, folderId: string
   if (!group) throw new Error('review_training_threshold_not_reached');
   const events = await db.query<ReviewTrainingInput['events'][number] & Record<string, unknown>>(
     eventsSql(), [folderId]);
-  return createInput(group, nodes, models, events, await db.query<SettingNode>(SETTINGS_SQL), libraryScope);
+  return createInput(group, nodes, models, events, await db.query<SettingNode>(SETTINGS_SQL),
+    (await db.query(REVIEW_SCHEDULER_SETTINGS_SQL))[0], libraryScope);
 }

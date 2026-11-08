@@ -32,6 +32,8 @@ export interface ReviewTrainingInput {
   baselineWeights: number[] | null;
   enableShortTerm: boolean;
   libraryScope: string;
+  recencyWeighting?: boolean;
+  reviewIntervalPenalties?: boolean;
 }
 
 export function reviewModelKey(folderId: string | null) {

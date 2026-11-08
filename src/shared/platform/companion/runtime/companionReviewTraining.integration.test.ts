@@ -47,7 +47,7 @@ beforeAll(async () => {
   vi.stubGlobal('self', new EventTarget());
   const { initializeReviewTrainingBinding } = await import('../../../../features/review/model/reviewTrainingBinding');
   await initializeReviewTrainingBinding(await WebAssembly.compile(readFileSync(
-    'node_modules/@open-spaced-repetition/binding-wasm32-wasip1/fsrs-binding.wasm32-wasip1.wasm')));
+    'src/features/review/model/vendor/fsrs-training/fsrs-training.wasm')));
   train = (await import('../../../../features/review/model/trainFolderReviewModel')).trainFolderReviewModel;
   await import('../../../../features/review/model/reviewTraining.worker');
 });

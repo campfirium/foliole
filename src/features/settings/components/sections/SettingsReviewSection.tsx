@@ -2,6 +2,7 @@ import { useTranslation } from '../../../../shared/localization/LocalizationProv
 import { SettingsSection } from '../../../../shared/ui';
 import { useReviewSchedulerSettings } from '../../context/ReviewSchedulerSettingsProvider';
 
+import { AdvancedReviewTrainingSettings } from './AdvancedReviewTrainingSettings';
 import { ReviewOptimizationRow } from './ReviewOptimizationRow';
 import { PushQueueRows, SchedulerCoreRows } from './SettingsReviewRows';
 
@@ -39,6 +40,7 @@ export function SettingsReviewSection() {
         readingIntervalGrowthFactorMax={reviewSchedulerSettings.pushQueue.readingIntervalGrowthFactorRange.max}
         readingIntervalGrowthFactorMin={reviewSchedulerSettings.pushQueue.readingIntervalGrowthFactorRange.min}
       />
+      <AdvancedReviewTrainingSettings />
     </SettingsSection>
   );
 }

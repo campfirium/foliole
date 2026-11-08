@@ -1,0 +1,33 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index b397ba7d..b05f8957 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -136 +135,0 @@ version = "6.6.2"
+-source = "git+https://github.com/ishiko732/fsrs-rs?branch=wasm32-wasip1-progress-fsrs7#d7f337b7c3d4f85aff4b523baa077b529cee1005"
+diff --git a/packages/binding/src/evaluate.rs b/packages/binding/src/evaluate.rs
+index f3c33f44..12bdac72 100644
+--- a/packages/binding/src/evaluate.rs
++++ b/packages/binding/src/evaluate.rs
+@@ -53,0 +54 @@ pub fn evaluate_with_time_series_splits<'env>(
++      disable_recency_weighting: resolved.disable_recency_weighting,
+@@ -158,0 +160 @@ impl EvaluateParametersTask {
++      disable_recency_weighting: self.options.disable_recency_weighting,
+diff --git a/packages/binding/src/model.rs b/packages/binding/src/model.rs
+index c6eaf09f..44638128 100644
+--- a/packages/binding/src/model.rs
++++ b/packages/binding/src/model.rs
+@@ -332,0 +333,2 @@ pub struct ComputeParametersOptions<'env> {
++  /// Use equal sample weights during training. Defaults to false.
++  pub disable_recency_weighting: Option<bool>,
+@@ -348,0 +351 @@ pub(crate) struct ResolvedOptions {
++  pub(crate) disable_recency_weighting: bool,
+@@ -376,0 +380 @@ impl ComputeParametersOptions<'_> {
++      disable_recency_weighting: options.and_then(|x| x.disable_recency_weighting).unwrap_or(false),
+diff --git a/packages/binding/src/train.rs b/packages/binding/src/train.rs
+index 58b11c5d..d00f5316 100644
+--- a/packages/binding/src/train.rs
++++ b/packages/binding/src/train.rs
+@@ -74,0 +75 @@ impl Task for ComputeParametersTask {
++      disable_recency_weighting: self.options.disable_recency_weighting,
+@@ -141,0 +143 @@ pub fn compute_parameters<'env>(
++      disable_recency_weighting: resolved.disable_recency_weighting,

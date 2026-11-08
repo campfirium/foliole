@@ -100,6 +100,32 @@ it('updates desired retention from review settings slider', async () => {
   });
 });
 
+it('toggles and resets each advanced training option independently', async () => {
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+  openReviewSettings();
+
+  const disclosure = screen.getByText('Advanced training settings');
+  expect(disclosure.closest('details')).not.toHaveAttribute('open');
+  fireEvent.click(disclosure);
+  const recency = screen.getByRole('switch', { name: 'Recent review weighting' });
+  const penalties = screen.getByRole('switch', { name: 'Review interval penalties' });
+  await waitFor(() => expect(recency).toBeEnabled());
+  expect(recency).toHaveAttribute('aria-checked', 'true');
+  expect(penalties).toHaveAttribute('aria-checked', 'false');
+
+  fireEvent.click(recency);
+  fireEvent.click(penalties);
+  await waitFor(() => {
+    expect(recency).toHaveAttribute('aria-checked', 'false');
+    expect(penalties).toHaveAttribute('aria-checked', 'true');
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Reset Recent review weighting' }));
+  await waitFor(() => expect(recency).toHaveAttribute('aria-checked', 'true'));
+  expect(penalties).toHaveAttribute('aria-checked', 'true');
+  fireEvent.click(screen.getByRole('button', { name: 'Reset Review interval penalties' }));
+  await waitFor(() => expect(penalties).toHaveAttribute('aria-checked', 'false'));
+});
+
 it('updates remaining review scheduler controls from review settings section', async () => {
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
 

@@ -7,6 +7,8 @@ export interface ReviewSchedulerSettingsContextValue {
   reviewSchedulerSettings: ReviewSchedulerSettings;
   onDefaultPriorityChange: (value: number) => void;
   onDesiredRetentionChange: (value: number) => void;
+  onRecencyWeightingChange: (value: boolean) => void;
+  onReviewIntervalPenaltiesChange: (value: boolean) => void;
   onEnableShortTermChange: (value: boolean) => void;
   onMaximumIntervalDaysChange: (value: number) => void;
   onNewDayStartsAtHourChange: (value: number) => void;

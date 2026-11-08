@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 
 import { beforeAll, expect, it, vi } from 'vitest';
 
-import { readReviewTrainingInput, readReviewTrainingPlan, readReviewTrainingPlanWithDb } from '../../lib/core/database/reviewTrainingInput.js';
+import { readReviewTrainingInput, readReviewTrainingInputWithDb, readReviewTrainingPlan, readReviewTrainingPlanWithDb } from '../../lib/core/database/reviewTrainingInput.js';
 import { readNodeReviewWeights, readReviewModels } from '../../lib/core/database/reviewTrainingModels.js';
 import { readStoredReviewCard } from '../../lib/core/database/storedReviewCard.js';
 import { recomputeReview } from '../../lib/core/review/recomputeReview.js';
@@ -25,7 +25,7 @@ beforeAll(async () => {
   vi.stubGlobal('self', new EventTarget());
   const { initializeReviewTrainingBinding } = await import('../../src/features/review/model/reviewTrainingBinding.js');
   await initializeReviewTrainingBinding(await WebAssembly.compile(readFileSync(
-    'node_modules/@open-spaced-repetition/binding-wasm32-wasip1/fsrs-binding.wasm32-wasip1.wasm')));
+    'src/features/review/model/vendor/fsrs-training/fsrs-training.wasm')));
   train = (await import('../../src/features/review/model/trainFolderReviewModel.js')).trainFolderReviewModel;
 });
 
@@ -140,4 +140,29 @@ it('never trains on held-out answers and preserves input when review events arri
     const unchanged = await train({ ...input, baselineWeights: original.weights });
     expect(unchanged.enabled).toBe(false);
   } finally { await fixture.close(); }
+});
+
+it('uses persisted training options for the next optimization after reopening', async () => {
+  const fixture = await restoreFixture();
+  const peer = fixture.peer('source');
+  try {
+    const driver = await seedTrainingPeer(peer);
+    const original = await train(readReviewTrainingInput(driver, 'folder', 'scope'));
+    writeSettingRecord(driver, {
+      key: 'review_scheduler_settings',
+      valueJson: JSON.stringify({ recencyWeighting: false, reviewIntervalPenalties: true }),
+      updatedAt: '2026-11-08T00:00:00.000Z'
+    });
+    peer.reopen();
+    const reopened = createBetterSqlite3Driver(peer.sqlite);
+    const input = readReviewTrainingInput(reopened, 'folder', 'scope');
+    expect(input).toMatchObject({ recencyWeighting: false, reviewIntervalPenalties: true });
+    expect(await readReviewTrainingInputWithDb(peer.db, 'folder', 'scope')).toEqual(input);
+    const changed = await train(input);
+    expect(changed.weights).not.toEqual(original.weights);
+    expect((await train({ ...input, reviewIntervalPenalties: false })).weights).not.toEqual(changed.weights);
+    expect((await train({ ...input, recencyWeighting: true })).weights).not.toEqual(changed.weights);
+  } finally {
+    await fixture.close();
+  }
 });

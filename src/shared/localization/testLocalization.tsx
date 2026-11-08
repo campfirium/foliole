@@ -14,6 +14,8 @@ const reviewSettings = {
   onDefaultPriorityChange: ignoreSettingChange,
   onDesiredRetentionChange: ignoreSettingChange,
   onEnableShortTermChange: ignoreSettingChange,
+  onRecencyWeightingChange: ignoreSettingChange,
+  onReviewIntervalPenaltiesChange: ignoreSettingChange,
   onMaximumIntervalDaysChange: ignoreSettingChange,
   onNewDayStartsAtHourChange: ignoreSettingChange,
   onNewItemLoadBalancingDaysChange: ignoreSettingChange,

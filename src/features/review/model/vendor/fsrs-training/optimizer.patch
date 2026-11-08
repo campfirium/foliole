@@ -1,0 +1,37 @@
+diff --git a/src/inference.rs b/src/inference.rs
+index e4f8a5f..d79d731 100644
+--- a/src/inference.rs
++++ b/src/inference.rs
+@@ -114,0 +115 @@ fn evaluate_time_series_split(
++    disable_recency_weighting: bool,
+@@ -131,0 +133 @@ fn evaluate_time_series_split(
++        disable_recency_weighting,
+@@ -821,0 +824 @@ pub fn evaluate_with_time_series_splits<F>(
++        disable_recency_weighting,
+@@ -914,0 +918 @@ where
++                    disable_recency_weighting,
+diff --git a/src/training.rs b/src/training.rs
+index 58bdc21..93f7b60 100644
+--- a/src/training.rs
++++ b/src/training.rs
+@@ -386,0 +387,2 @@ pub struct ComputeParametersInput {
++    /// Use equal sample weights instead of weighting by recency.
++    pub disable_recency_weighting: bool,
+@@ -410,0 +413 @@ impl Default for ComputeParametersInput {
++            disable_recency_weighting: false,
+@@ -541,0 +545 @@ fn recency_weighted_training_items(
++    disable_recency_weighting: bool,
+@@ -549,0 +554 @@ fn recency_weighted_training_items(
++                _ if disable_recency_weighting => 1.0,
+@@ -620,0 +626 @@ fn compute_parameters_inner(
++        disable_recency_weighting,
+@@ -751 +757 @@ fn compute_parameters_inner(
+-    let mut weighted_train_set = recency_weighted_training_items(train_set, model_version);
++    let mut weighted_train_set = recency_weighted_training_items(train_set, model_version, disable_recency_weighting);
+@@ -805,0 +812 @@ pub fn benchmark(
++        disable_recency_weighting,
+@@ -857,0 +865 @@ pub fn benchmark(
++        disable_recency_weighting,
+@@ -1487 +1495 @@ mod tests {
+-        let weights = recency_weighted_training_items(items, ComputeParametersVersion::Fsrs7)
++        let weights = recency_weighted_training_items(items, ComputeParametersVersion::Fsrs7, false)

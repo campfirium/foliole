@@ -15,7 +15,7 @@ import { createUpsertNodeReviewStatement, UPSERT_NODE_REVIEW_SQL } from './nodeR
 import { parseReviewModels, readNodeReviewWeights, REVIEW_MODELS_SQL, REVIEW_TRAINING_ANCESTORS_SQL } from './reviewTrainingModels.js';
 
 const EVENTS = `SELECT ${REVIEW_FACT_COLUMNS.join(', ')} FROM review_log WHERE node_id = ?`;
-const SETTINGS = `SELECT value_json FROM setting_records WHERE key = 'review_scheduler_settings'
+export const REVIEW_SCHEDULER_SETTINGS_SQL = `SELECT value_json FROM setting_records WHERE key = 'review_scheduler_settings'
   AND scope = 'user_space' ORDER BY updated_at DESC, content_hash DESC LIMIT 1`;
 const ANCESTORS = `WITH RECURSIVE ancestors AS (
   SELECT id, parent_id, desired_retention, enable_short_term FROM nodes WHERE id = ?
@@ -24,10 +24,13 @@ const ANCESTORS = `WITH RECURSIVE ancestors AS (
 const settingRow = z.object({ value_json: z.string() });
 const nodeRow = z.object({ id: z.string(), parent_id: z.string().nullable(), desired_retention: z.number().nullable(), enable_short_term: z.number().nullable() });
 
+export function parseReviewSchedulerSettingsRow(row: unknown) {
+  return normalizeReviewSchedulerSettings(row ? JSON.parse(settingRow.parse(row).value_json) : null);
+}
+
 /** Node-scoped parameter boundary. Retention inherits from the nearest explicit ancestor; trained weights resolve independently from folder ownership. */
 export function parametersForNode(nodeId: string, settings: unknown[], ancestors: unknown[]) {
-  const row = settings[0];
-  const global = normalizeReviewSchedulerSettings(row ? JSON.parse(settingRow.parse(row).value_json) : null);
+  const global = parseReviewSchedulerSettingsRow(settings[0]);
   const nodesById = Object.fromEntries(ancestors.map(value => {
     const node = nodeRow.parse(value);
     return [node.id, { parentNodeId: node.parent_id, desiredRetention: node.desired_retention, enableShortTerm: node.enable_short_term === null
@@ -38,7 +41,7 @@ export function parametersForNode(nodeId: string, settings: unknown[], ancestors
 }
 
 export function readNodeReviewParameters(driver: DatabaseDriver, nodeId: string) {
-  return { ...parametersForNode(nodeId, driver.queryAll(SETTINGS), driver.queryAll(ANCESTORS, [nodeId])),
+  return { ...parametersForNode(nodeId, driver.queryAll(REVIEW_SCHEDULER_SETTINGS_SQL), driver.queryAll(ANCESTORS, [nodeId])),
     weights: readNodeReviewWeights(driver, nodeId) };
 }
 
@@ -74,7 +77,7 @@ export async function readNodeReviewHistoryWithDb(db: DbPort, nodeId: string) {
   const models = parseReviewModels(await db.query<{ key: string; value_json: string }>(REVIEW_MODELS_SQL));
   const modelNodes = await db.query<ReviewTrainingNode & Record<string, unknown>>(REVIEW_TRAINING_ANCESTORS_SQL, [nodeId]);
   return { events, parameters: {
-    ...parametersForNode(nodeId, await db.query(SETTINGS), await db.query(ANCESTORS, [nodeId])),
+    ...parametersForNode(nodeId, await db.query(REVIEW_SCHEDULER_SETTINGS_SQL), await db.query(ANCESTORS, [nodeId])),
     weights: resolveReviewWeights(nodeId, modelNodes, models)
   } };
 }

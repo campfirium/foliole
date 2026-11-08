@@ -54,6 +54,8 @@ function isReviewSchedulerSettingsPayload(payload: unknown) {
     'newDayStartsAtHour',
     'newItemLoadBalancingDays',
     'enableShortTerm',
+    'recencyWeighting',
+    'reviewIntervalPenalties',
     'pushQueue',
     'updatedAt'
   ].some((key) => Object.hasOwn(payload, key));
@@ -79,7 +81,7 @@ export async function loadReviewSchedulerSettings(): Promise<ReviewSchedulerSett
   }
 }
 
-export async function saveReviewSchedulerSettings(
+async function persistReviewSchedulerSettings(
   settings: ReviewSchedulerSettingsSavePatch
 ): Promise<ReviewSchedulerSettings> {
   const hasRuntime = hasReviewSchedulerSettingsRuntimeRepository();
@@ -98,6 +100,14 @@ export async function saveReviewSchedulerSettings(
   } catch {
     return syncCurrentReviewSchedulerSettings(normalizeReviewSchedulerSettings(payload));
   }
+}
+
+let pendingReviewSettingsWrite: Promise<unknown> = Promise.resolve();
+
+export function saveReviewSchedulerSettings(settings: ReviewSchedulerSettingsSavePatch) {
+  const write = pendingReviewSettingsWrite.then(() => persistReviewSchedulerSettings(settings));
+  pendingReviewSettingsWrite = write.catch(() => undefined);
+  return write;
 }
 
 export {
