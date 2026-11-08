@@ -48,7 +48,9 @@ it('persists official findings and unknown scopes, then delivers only changed re
   importSecurityObservation(owner, { ...f.input, rawReport: JSON.stringify(report) });
   expect(findings(projectSecurityOwner(owner, now))[0]).toMatchObject({ provider: 'official-review', severity: 'high', versions: ['8.14.3'] });
   const notifications = notifySecurityOwner(owner, f.root, { codexHome, now, batchQuietMs: 0 });
-  expect(notifications.every(notification => notification.delivery.status === 'queued')).toBe(true);
+  expect(notifications.filter(notification => notification.route === 'urgent-investigation')
+    .every(notification => notification.delivery.status === 'queued')).toBe(true);
+  expect(notifications.some(notification => notification.delivery.status === 'deferred-to-check')).toBe(true);
   expect(notifySecurityOwner(owner, f.root, { codexHome, now, batchQuietMs: 0 })).toEqual(notifications);
   row.status = 'clean'; row.findings = []; row.versions = { gradle: '8.14.6' };
   f.review.checkedAt = new Date(now + 1000).toISOString();

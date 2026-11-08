@@ -39,7 +39,7 @@ it.each([
   expect(rows.map(row => row.status)).toEqual(['error', 'error']);
 });
 
-it('persists actual vendor results through failure, restart, recovery and repeated failure to the existing inbox', async () => {
+it('retains vendor results through faults and restart while only urgent findings reach the inbox', async () => {
   const base = path.resolve('.tmp/artifacts/T674-2/tests');
   mkdirSync(base, { recursive: true });
   const root = mkdtempSync(path.join(base, 'run-'));
@@ -76,7 +76,8 @@ it('persists actual vendor results through failure, restart, recovery and repeat
   expect(await observe(5000, fetchSource, inventory('8.14.6', '4.20.0'))).toHaveLength(5);
   expect(projectSecurityOwner(owner).findings.filter(row => row.active)).toHaveLength(0);
   const history = securityNotificationStatus(owner, codexHome);
-  expect(history.every(row => row.delivery.status === 'queued')).toBe(true);
+  expect(history[0].delivery.status).toBe('queued');
+  expect(history.slice(1).every(row => row.delivery.status === 'deferred-to-check' && row.enqueue === null)).toBe(true);
   expect(new Set(history.map(row => row.id)).size).toBe(5);
   expect(JSON.parse(readFileSync(history[0].enqueue.receipt.eventFile)).prompt).toContain('investigation only');
 });

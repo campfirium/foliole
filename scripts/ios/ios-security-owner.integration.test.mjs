@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { expect, it } from 'vitest';
@@ -56,15 +56,16 @@ async function setupOwnerFixture() {
   return { now, root, publisher, owner, codexHome, observe, notifications, vendor };
 }
 
-it('carries vendor discovery through source faults, process restart, recovery and recurrence using the existing owner/inbox', async () => {
+it('retains vendor discovery, faults, restart and recovery for centralized check without opening chats', async () => {
   const { now, root, publisher, owner, codexHome, observe, notifications, vendor } = await setupOwnerFixture();
   try {
     await observe();
     expect(vendor()).toMatchObject({ active: true, versions: ['4.17.0'], severity: 'low' });
     expect(notifications()).toHaveLength(1);
     const delivery = securityNotificationStatus(owner, codexHome).find(row => row.id === notifications()[0].id);
-    expect(delivery.delivery.status).toBe('queued');
-    expect(JSON.parse(readFileSync(delivery.enqueue.receipt.eventFile, 'utf8')).prompt).toContain(delivery.id);
+    expect(delivery.delivery.status).toBe('deferred-to-check');
+    expect(delivery.enqueue).toBeNull();
+    expect(notifications()[0].event.prompt).toContain(delivery.id);
     expect(notifications()[0].signals).toEqual(expect.objectContaining({
       [Object.keys(notifications()[0].signals).find(key => notifications()[0].signals[key].advisory === 'sqlcipher-4.19.0-export-hexkey')]: expect.objectContaining({ package: 'sqlcipher/sqlcipher' }) }));
     await observe();

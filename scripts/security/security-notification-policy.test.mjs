@@ -9,6 +9,7 @@ import { notificationObservation } from './security-notification-fixture.mjs';
 import { readOwnerRecords, writeOwnerRecord } from './security-owner-files.mjs';
 import { importSecurityObservation, projectSecurityOwner } from './security-owner.mjs';
 import { notifySecurityOwner } from './security-notifications.mjs';
+import { securityNotificationSignals } from './security-notification-signals.mjs';
 
 const roots = [];
 const now = Date.now();
@@ -115,7 +116,7 @@ it('normalizes a previously delivered legacy baseline without inventing recovery
 
 it('keeps a legacy pending batch deadline and original intent across a separate process', () => {
   const options = { ...setup(), batchQuietMs: 300_000 };
-  const risk = finding('android', 'jdk', 'distrusted-root-1234');
+  const risk = { ...finding('android', 'jdk', 'distrusted-root-1234'), severity: 'high' };
   observe(options, 0, [routine, risk]);
   const signals = Object.fromEntries([legacyFinding(routine), legacyFinding(risk)]);
   const id = 'b'.repeat(64);
@@ -138,11 +139,12 @@ it('keeps a legacy pending batch deadline and original intent across a separate 
 
 it('retries an immutable legacy notification without replacing its event or inventing a recovery', () => {
   const options = setup();
-  observe(options, 0, [routine]);
+  observe(options, 0, [{ ...routine, severity: 'high' }]);
   const id = 'c'.repeat(64);
   const event = { id: `security-${id}`, dedupeKey: id, prompt: 'Original review intent', title: 'Original batch' };
   writeOwnerRecord(path.join(options.owner, 'notifications'), { schemaVersion: 1, id, sequence: 1,
-    signals: Object.fromEntries([legacyFinding(routine)]), changes: [{ key: 'original' }], event });
+    signals: securityNotificationSignals(projectSecurityOwner(options.owner, now)),
+    changes: [{ key: 'original', current: { kind: 'finding', severity: 'high' } }], event });
   const submitted = [];
   const submit = value => {
     submitted.push(value);

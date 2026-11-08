@@ -4,6 +4,36 @@ The local security owner is `.lab/internal/security-maintenance/`. It is private
 rebuild-independent state; raw reports and logs remain in `.tmp/artifacts/`.
 It consumes the existing coverage report without turning missing coverage into a pass.
 
+## Centralized check ownership
+
+Ordinary maintenance is reviewed with dependency PRs at the start of the next
+centralized check, before freezing its candidate. Run `status` in the maintainer
+checkout, where the private owner lives; the QA checkout does not inherit it.
+Review active findings, source failures, gaps, stale evidence and expired
+dispositions together. Verify current manifests, resolved native graphs and
+official evidence before adopting changes into the candidate. Record the review
+and remaining limits in that QA batch's existing evidence. Validate adopted
+changes with applicable checks; never expand an already frozen candidate or
+treat historical observations as current acceptance. Unresolved findings and
+unknown coverage stay visible, not silently cleared.
+
+Renovate owns ordinary version proposals, not complete security qualification.
+Its configured npm, Gradle and Swift managers overlap with release comparisons;
+review those alongside existing PRs rather than installing twice. Actual native
+graphs/artifacts, vendor notices, host/device toolchains and failed or unsupported
+checks still need the existing coverage report. Renovate vulnerability fix PRs
+are disabled here: GitHub remains the security-fix owner.
+
+New or changed high/critical findings retain a separate investigation alert.
+Other changes, including informational releases, disposition expiry, source
+failure and recovery, are durably batched for centralized check without opening
+chats. `status` labels these records `route: centralized-check` and unsubmitted
+delivery as `deferred-to-check`, never as delivered or resolved. This also applies
+to old unsubmitted intents; existing enqueue receipts and delivery history remain
+intact. No upstream alert, security setting or PR is changed. Disposition-only
+changes and recovery do not independently page, even for a previous high/critical
+finding. Renewed or changed high/critical risk still does.
+
 ```sh
 node scripts/security/security-owner-cli.mjs import REPORT ENVELOPE package-lock.json
 node scripts/security/security-owner-cli.mjs status
@@ -54,9 +84,10 @@ durable observation is the import checkpoint, so restart/duplicate scans do not
 download the same run again. This uses the existing Mac producer and system `unzip`;
 missing host extraction support is an explicit failure, not successful coverage.
 
-Imports and dispositions now enqueue changed findings and source states through the
-existing Desktop handoff inbox contract. The existing GitHub producer also refreshes
-source health and retries pending security notifications on its ordinary scan. No
+Imports and dispositions retain changed findings and source states; only urgent
+finding changes enqueue through the existing Desktop handoff inbox contract.
+The existing GitHub producer also refreshes source health and retries pending
+urgent security notifications on its ordinary scan. No
 additional daemon or polling loop is installed. Unchanged evidence stays quiet;
 recovery and recurrence create distinct episodes. Source freshness is checked on
 each invocation, including when the repository has no new commit.
@@ -73,11 +104,12 @@ Inspect their evidence and replay through the handoff skill after resolving the 
 Notification intent and enqueue/error records live under the same private durable
 owner. Raw report transport provenance remains the importer's responsibility.
 
-Security notifications use the same batching policy as Dependabot PR notifications:
+Security changes use the same debounce policy as Dependabot PR notifications:
 five quiet minutes after the last change, with a thirty-minute maximum wait from
-the first change. Android and iPhone changes form independent batches and open
-separately named tasks. Desktop/shared findings and transport health retain a
-separate shared batch; they are not discarded or assigned to a mobile platform.
+the first change. Android and iPhone changes form independent durable batches;
+only urgent finding changes open separately named tasks. Desktop/shared findings
+and transport health retain a separate shared batch; they are not discarded or
+assigned to a mobile platform.
 The existing producer checks the deadlines on its normal invocations; no additional
 timer, daemon or model wakeup is installed, so delivery occurs on the first scan
 after a deadline rather than exactly at the deadline.
@@ -96,19 +128,20 @@ Evidence age alone does not open investigation chats: expired observations stay
 visible in `status`, and qualification remains incomplete. The same rule applies
 to historical notification baselines, avoiding false recovery messages. Real
 source failures, missing or unsupported coverage, their recovery, and finding
-changes still notify; an unchanged failure becoming stale does not notify again.
+changes still enter durable batches; an unchanged failure becoming stale does
+not create another batch.
 Known informational Android SDK and embedded SQLite/LibTomCrypt version comparisons,
 and Android OS/WebView bulletin comparisons with the known `device-review` identity,
 remain visible in `status` without opening investigation chats. OS and WebView
 updates belong to device vendors and administrators, not the Foliole development
 queue. Foliole owns its minimum runtime requirements, compatibility and applicable
 application vulnerabilities. This notification routing does not mark a device safe
-or patched; concrete advisories, higher severity findings, unknown identities and
-source failures still notify. The four fixed iOS
-coverage-review placeholders also remain in `status`. SQLCipher vendor release
+or patched; only changed high/critical findings page independently. The four fixed
+iOS coverage-review placeholders also remain in `status`. SQLCipher vendor release
 notices, JDK trust changes, Apple security releases, unknown finding identities and
-source failures still notify, including informational findings. Ordinary package
-updates follow the staged handover in [dependency updates](dependency-updates.md).
+source failures remain available for centralized check, including informational
+findings. Ordinary package updates follow the staged handover in
+[dependency updates](dependency-updates.md).
 
 A missing source and a later source error share one notification identity per
 scope, so a transition is one change rather than a gap recovery plus a new error.

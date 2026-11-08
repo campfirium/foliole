@@ -5,6 +5,7 @@ import { projectSecurityOwner } from './security-owner.mjs';
 import { securityNotificationSignals } from './security-notification-signals.mjs';
 import { readySecurityBatch, SECURITY_NOTIFICATION_GROUPS } from './security-notification-batches.mjs';
 import { enqueueSecurityNotification, securityDeliveryStatus } from './security-notification-transport.mjs';
+import { securityNotificationRoute } from './security-notification-routing.mjs';
 
 const records = owner => readOwnerRecords(path.join(owner, 'notifications'))
   .sort((a, b) => a.sequence - b.sequence);
@@ -38,6 +39,7 @@ export function notifySecurityOwner(owner, workspace, options = {}) {
   const submit = options.submit ?? (event => enqueueSecurityNotification(event, options));
   for (const record of records(owner)) {
     if (receipts.has(record.id)) continue;
+    if (securityNotificationRoute(record) === 'centralized-check') continue;
     // An intent is durable before submit; retry uses exactly the same transport identity.
     let receipt;
     try { receipt = submit(record.event); }
@@ -59,7 +61,9 @@ export function securityNotificationStatus(owner, codexHome) {
   const receipts = new Map(readOwnerRecords(path.join(owner, 'notification-enqueues')).map(record => [record.id, record]));
   const errors = readOwnerRecords(path.join(owner, 'notification-errors')).sort((a, b) => a.checkedAt.localeCompare(b.checkedAt));
   return records(owner).map(record => ({ id: record.id, sequence: record.sequence,
+    route: securityNotificationRoute(record),
     changes: record.changes.length, enqueue: receipts.get(record.id) ?? null,
     enqueueError: receipts.has(record.id) ? null : errors.filter(error => error.notification === record.id).at(-1) ?? null,
-    delivery: securityDeliveryStatus(record.event, codexHome) }));
+    delivery: !receipts.has(record.id) && securityNotificationRoute(record) === 'centralized-check'
+      ? { status: 'deferred-to-check' } : securityDeliveryStatus(record.event, codexHome) }));
 }

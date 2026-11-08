@@ -7,7 +7,6 @@ import { afterEach, expect, it } from 'vitest';
 import { importSecurityObservation } from './security-owner.mjs';
 import { notifySecurityMonitor } from './security-monitor-notifications.mjs';
 import { notificationObservation } from './security-notification-fixture.mjs';
-import { recordOwnerHealth } from './security-owner-health.mjs';
 import { notifySecurityOwner, securityNotificationStatus } from './security-notifications.mjs';
 import { handoffRuntime } from './security-notification-transport.mjs';
 import { readOwnerRecords } from './security-owner-files.mjs';
@@ -27,8 +26,8 @@ function setup() {
   return { owner: path.join(root, 'owner'), codexHome, now, batchQuietMs: 0 };
 }
 function fault(owner, status = 'error', offset = 0) {
-  recordOwnerHealth(owner, { role: 'github-alerts', status, reason: status === 'error' ? 'permission unavailable' : undefined,
-    evidenceAt: new Date(now + offset).toISOString() }, now + offset);
+  importSecurityObservation(owner, notificationObservation(now + offset,
+    { id: offset + 1, status: status === 'error' ? 'findings' : 'clean' }));
 }
 function child(code, args, options) {
   return execFileSync(process.execPath, ['--input-type=module', '-e', code, ...args],
@@ -53,6 +52,8 @@ it('durably enqueues through the existing inbox contract, stays quiet on repeats
   notifySecurityOwner(options.owner, process.cwd(), options);
   const history = readOwnerRecords(path.join(options.owner, 'notifications')).sort((a, b) => a.sequence - b.sequence);
   expect(history.map(record => record.changes[0].state)).toEqual(['actionable', 'recovered', 'actionable']);
+  expect(securityNotificationStatus(options.owner, options.codexHome).map(row => row.delivery.status))
+    .toEqual(['queued', 'deferred-to-check', 'queued']);
   expect(new Set(history.map(record => record.event.dedupeKey)).size).toBe(3);
 });
 

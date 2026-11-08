@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { afterEach, expect, it } from 'vitest';
@@ -81,12 +81,13 @@ it('debounces real Android/iPhone owner imports independently and emits only fin
     const expected = record.group === 'android' ? ['1.1'] : ['1.2'];
     expect(record.changes).toHaveLength(1);
     expect(record.changes[0].current.versions).toEqual(expected);
-    const event = JSON.parse(readFileSync(path.join(options.codexHome,
-      'local-tools/desktop-handoff/inbox', `${record.event.id}.json`), 'utf8'));
+    const event = record.event;
     expect(event.title).toContain(record.group === 'android' ? 'Android' : 'iPhone');
     expect(event.prompt).toContain('investigation only');
     expect(event.prompt).toContain(record.group);
   }
+  expect(securityNotificationStatus(options.owner, options.codexHome)
+    .every(row => row.delivery.status === 'deferred-to-check' && row.enqueue === null)).toBe(true);
   expect(observe(options, 450_000, '1.1', '1.2')).toHaveLength(2);
   expect(pendingSecurityNotificationBatches(options.owner)).toEqual([]);
 });
@@ -100,7 +101,7 @@ it('keeps debounce state across a new process and cancels changes that recover b
     { env: { ...process.env, CODEX_HOME: options.codexHome, ELECTRON_RUN_AS_NODE: '1' } });
   expect(history(options)).toHaveLength(1);
   expect(history(options)[0].group).toBe('ios');
-  expect(securityNotificationStatus(options.owner, options.codexHome)[0].delivery.status).toBe('queued');
+  expect(securityNotificationStatus(options.owner, options.codexHome)[0].delivery.status).toBe('deferred-to-check');
 });
 
 it('flushes continuously changing groups at the PR maximum wait and starts a later distinct batch', () => {

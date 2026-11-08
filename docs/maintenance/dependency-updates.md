@@ -93,6 +93,8 @@ centralized check (`deferDependencyPrs: true` in its personal PR declaration).
 Independent PRs retain their review route. The separate Dependabot alert monitor
 only pages for high or critical runtime alerts (`urgentRuntimeOnly: true`). Confirm
 affected shipped versions and urgency before handling an alert ahead of check.
+Review [durable security maintenance](security-owner.md#centralized-check-ownership)
+in the same pre-freeze batch, including findings and failed or unknown coverage.
 
 At the start of a new centralized check, before freezing the candidate, list
 all open PRs with `gh pr list --repo campfirium/foliole --state open --limit 1000
