@@ -17,24 +17,28 @@ export class CompanionNodePriorityState {
   revision = 0;
   private readonly pending = new Set<string>();
   private fullRefresh = false;
+  private deferred = false;
 
   async read(db: DbPort, defaultPriority: RegularPushQueuePriority, initial?: Iterable<PriorityIndexNode>) {
     return (await this.readIndex(db, defaultPriority, initial)).priorities;
   }
 
   async readIndex(db: DbPort, defaultPriority: RegularPushQueuePriority, initial?: Iterable<PriorityIndexNode>) {
+    await this.flushDeferred(db);
     if (this.failure) throw this.failure;
     if (!this.state) this.state = new WorkspaceNodePriorityState(initial ?? await readNodes(db), defaultPriority);
     this.state.setDefaultPriority(defaultPriority);
     return { priorities: this.state.priorities, paths: this.state.paths };
   }
 
-  readMetadata() {
+  async readMetadata(db: DbPort) {
+    await this.flushDeferred(db);
     if (this.failure) throw this.failure;
     return this.state?.metadata ?? null;
   }
 
   async readOrder(db: DbPort, initial?: readonly string[]): Promise<readonly string[]> {
+    await this.flushDeferred(db);
     if (this.failure) throw this.failure;
     if (initial) this.nodeOrder = [...initial];
     if (!this.nodeOrder) {
@@ -44,15 +48,28 @@ export class CompanionNodePriorityState {
     return this.nodeOrder;
   }
 
-  async refresh(db: DbPort, scope: WorkspaceRefreshScope) {
+  async refresh(db: DbPort, scope: WorkspaceRefreshScope, defer = false) {
     const structure = scope.kind === 'full' || scope.structure;
     if (structure || (!this.state && scope.kind === 'nodes' && scope.nodeIds.length)) this.nodeOrder = null;
     if (scope.kind === 'full') this.fullRefresh = true;
     else for (const id of scope.nodeIds) this.pending.add(id);
-    if (!this.fullRefresh && !this.pending.size && !structure) return;
-    this.revision += 1;
+    // Even a deferred commit makes previously prepared directory snapshots stale.
+    if (structure || (scope.kind === 'nodes' && scope.nodeIds.length)) {
+      this.revision += 1;
+      if (defer && (this.fullRefresh || this.pending.size)) this.deferred = true;
+    }
+    if (!defer) await this.flush(db);
+  }
+
+  private async flushDeferred(db: DbPort) {
+    if (this.deferred) await this.flush(db);
+  }
+
+  private async flush(db: DbPort) {
+    this.deferred = false;
+    if (!this.fullRefresh && !this.pending.size) return;
     try {
-      if (this.state && (this.fullRefresh || this.pending.size)) {
+      if (this.state) {
         const ids = this.fullRefresh ? undefined : [...this.pending];
         const rows = await readNodes(db, ids);
         const existing = new Set(rows.map(node => node.id));
@@ -72,6 +89,7 @@ export class CompanionNodePriorityState {
     this.nodeOrder = null;
     this.state = null;
     this.failure = null;
+    this.deferred = false;
     this.revision += 1;
     this.pending.clear();
     this.fullRefresh = false;

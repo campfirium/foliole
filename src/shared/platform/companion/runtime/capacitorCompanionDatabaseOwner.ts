@@ -169,7 +169,7 @@ export class CapacitorCompanionDatabaseOwner {
 
   readNodeMetadata(db: DbPort) {
     if (db !== this.requireDb()) throw new Error('node_metadata_index_requires_owned_connection');
-    return this.nodePriorities.readMetadata();
+    return this.nodePriorities.readMetadata(db);
   }
 
   readNodeOrder(db: DbPort, initial?: readonly string[]) {
@@ -177,10 +177,10 @@ export class CapacitorCompanionDatabaseOwner {
     return this.nodePriorities.readOrder(db, initial);
   }
 
-  refreshNodePriorities(scope: WorkspaceRefreshScope, db?: DbPort) {
+  refreshNodePriorities(scope: WorkspaceRefreshScope, db?: DbPort, defer = false) {
     if (db) {
       if (db !== this.requireDb()) throw new Error('node_priority_index_requires_owned_connection');
-      return this.nodePriorities.refresh(db, scope);
+      return this.nodePriorities.refresh(db, scope, defer);
     }
     return this.enqueue(() => this.nodePriorities.refresh(this.requireDb(), scope));
   }

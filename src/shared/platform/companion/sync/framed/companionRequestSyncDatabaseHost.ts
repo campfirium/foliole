@@ -13,7 +13,7 @@ import { currentCompanionFramedSyncFiles } from './companionFramedSyncFiles.js';
 /** The owner serializes writes while its independent readonly connection produces request files. */
 export async function currentCompanionRequestSyncDatabaseHost(
   objectApplied: RequestSyncDatabaseHost['objectApplied'] = () => undefined
-): Promise<RequestSyncDatabaseHost> {
+) {
   const owner = getIosCompanionDatabaseOwner();
   const session = getCompanionReadingScope();
   const databasePath = owner.databasePath;
@@ -23,6 +23,7 @@ export async function currentCompanionRequestSyncDatabaseHost(
     if (owner !== getIosCompanionDatabaseOwner() || owner.databasePath !== databasePath ||
         generation !== companionFramedFileOwner(owner).generation_id) throw new Error('request_sync_library_changed');
   };
+  let deferNodePriorities = false;
   const host: RequestSyncDatabaseHost = {
     databaseRoundCompleted: async () => {
       const current = await host.write(async db => await refreshCompanionDailyFlowAfterSync(db)
@@ -31,7 +32,9 @@ export async function currentCompanionRequestSyncDatabaseHost(
     },
     enqueueSearchInvalidations: false,
     refreshNodeIndex: async (db, scope) => {
-      if (session === getCompanionReadingScope()) await updateCommittedCompanionWorkspace(scope, db);
+      if (session === getCompanionReadingScope()) {
+        await updateCommittedCompanionWorkspace(scope, db, deferNodePriorities);
+      }
     },
     objectApplied: async object => {
       if (session !== getCompanionReadingScope()) return;
@@ -49,5 +52,22 @@ export async function currentCompanionRequestSyncDatabaseHost(
       return write(db);
     }))
   };
-  return host;
+  async function withDeferredNodePriorities<T>(run: () => Promise<T>) {
+    deferNodePriorities = true;
+    try { return await run(); }
+    finally {
+      deferNodePriorities = false;
+      // A cancelled or failed round may already have committed some batches.
+      await runCompanionSyncWriterTask(async () => {
+        if (session !== getCompanionReadingScope()) return;
+        await owner.runWriter(async db => {
+          if (session === getCompanionReadingScope()) {
+            await updateCommittedCompanionWorkspace({ kind: 'nodes', nodeIds: [] }, db);
+          }
+        }, false);
+      });
+    }
+  }
+
+  return { ...host, withDeferredNodePriorities };
 }

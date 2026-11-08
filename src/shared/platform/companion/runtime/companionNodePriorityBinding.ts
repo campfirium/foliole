@@ -5,13 +5,13 @@ import { subscribeCompanionReadingScope } from '../reading/companionReadingScope
 import type { CapacitorCompanionDatabaseOwner } from './capacitorCompanionDatabaseOwner';
 
 export function bindCompanionNodePriorities(owner: CapacitorCompanionDatabaseOwner) {
-  const committed = subscribeCommittedCompanionWorkspace((scope, db) => owner.refreshNodePriorities(scope, db));
+  const committed = subscribeCommittedCompanionWorkspace((scope, db, defer) => owner.refreshNodePriorities(scope, db, defer));
   const prepared = subscribePreparedCompanionWorkspace(async (source, snapshot, revision, orderedNodeIds, anchorKinds) => {
     if (source !== owner) return;
     await owner.read(async db => {
       const current = owner.nodePriorityRevision === revision;
       await owner.readNodePriorities(db, getCurrentReviewSchedulerSettings().pushQueue.defaultPriority,
-        current && anchorKinds && !owner.readNodeMetadata(db) ? Object.values(snapshot.nodesById).map(node => {
+        current && anchorKinds && !await owner.readNodeMetadata(db) ? Object.values(snapshot.nodesById).map(node => {
           const anchorKind = anchorKinds.get(node.id);
           if (anchorKind === undefined) throw new Error('workspace_node_anchor_metadata_missing');
           return {

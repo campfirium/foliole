@@ -19,7 +19,7 @@ type Library = ReturnType<typeof createDisplayLibrary>;
 
 async function generate(library: Library) {
   const reads = library.flowNodeReads.length;
-  const prepared = await library.owner.read(async db => library.owner.readNodeMetadata(db) !== null);
+  const prepared = await library.owner.read(async db => (await library.owner.readNodeMetadata(db)) !== null);
   await library.owner.runWriter(async db => {
     await db.run('DELETE FROM daily_flow_state');
     await db.run('DELETE FROM daily_flow_entries');
@@ -62,7 +62,7 @@ it.each(['android', 'ios'] as const)('%s keeps complete membership after same-co
       "UPDATE node_reading SET repetition_count=8 WHERE node_id='keep'")),
     { kind: 'nodes', nodeIds: [], readingNodeIds: ['keep'] });
     await library.owner.read(async db => {
-      expect(library.owner.readNodeMetadata(db)).toBe(index);
+      expect(await library.owner.readNodeMetadata(db)).toBe(index);
       const snapshot = await loadDailyFlowLearningFromNodeIndex(db, 'display-fixture', index!);
       expect(snapshot.nodesById.keep?.reading?.repetitionCount).toBe(8);
       expect(snapshot.nodesById.old).toBeUndefined();

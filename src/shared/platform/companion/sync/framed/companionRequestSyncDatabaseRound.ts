@@ -43,11 +43,14 @@ export function runCompanionRequestSyncDatabaseRound(input: RoundInput) {
 }
 
 async function runRound(input: RoundInput) {
-  return withRequestSyncAttachmentPreparation(await currentCompanionRequestSyncDatabaseHost(), input.signal,
-    host => runPreparedRound(host, input));
+  const host = await currentCompanionRequestSyncDatabaseHost();
+  return withRequestSyncAttachmentPreparation(host, input.signal,
+    prepared => runPreparedRound(prepared, input, host.withDeferredNodePriorities));
 }
 
-async function runPreparedRound(host: RequestSyncDatabaseHost, input: RoundInput) {
+type WithDeferredNodePriorities = <T>(run: () => Promise<T>) => Promise<T>;
+
+async function runPreparedRound(host: RequestSyncDatabaseHost, input: RoundInput, withDeferredNodePriorities: WithDeferredNodePriorities) {
   const credential = await loadCurrentCredential({ group_id: input.groupId });
   const adoption = await host.readSnapshot(loadSyncGroupLocalAdoption, input.signal);
   const peerDeviceId = input.peerState.sender_device_identity_key;
@@ -92,7 +95,8 @@ async function runPreparedRound(host: RequestSyncDatabaseHost, input: RoundInput
     reportObjectError: input.reportObjectError,
     watchLocalChanges: watchSyncPriorityRequests
   };
-  if (!overwriteId) return completeDatabaseRound(host, port, input.signal, { received, sent, workspaceChanged: () => workspaceChanged, peerRound: input.peerRound });
+  if (!overwriteId) return completeDatabaseRound(host, port, input.signal, withDeferredNodePriorities,
+    { received, sent, workspaceChanged: () => workspaceChanged, peerRound: input.peerRound });
   let result = await withCompanionForegroundTimeMaintenance(async () => {
     await host.write(db => prepareSyncGroupOverwrite(db, progress));
     return runRequestSyncOverwriteRound(host, progress, port, input.signal);
@@ -106,9 +110,10 @@ async function runPreparedRound(host: RequestSyncDatabaseHost, input: RoundInput
   return { ...result, received: [...received], sent: [...sent], workspaceChanged };
 }
 
-async function completeDatabaseRound(host: RequestSyncDatabaseHost, port: RequestSyncDatabaseRoundPort, signal: AbortSignal | undefined,
+async function completeDatabaseRound(host: RequestSyncDatabaseHost, port: RequestSyncDatabaseRoundPort,
+  signal: AbortSignal | undefined, withDeferredNodePriorities: WithDeferredNodePriorities,
   scope: { received: Set<string>; sent: Set<string>; workspaceChanged(): boolean; peerRound: RequestSyncPeerRound | undefined }) {
-  const result = await runRequestSyncDatabaseRound(port, signal);
+  const result = await withDeferredNodePriorities(() => runRequestSyncDatabaseRound(port, signal));
   if (result.complete) {
     if (scope.peerRound) scope.peerRound.databaseConfirmed = true;
     await host.databaseRoundCompleted?.();

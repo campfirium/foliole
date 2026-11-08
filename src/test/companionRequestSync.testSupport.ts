@@ -50,7 +50,7 @@ vi.mock('../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap', as
     readNodeIndex: priorities.readIndex.bind(priorities),
     readNodeOrder: priorities.readOrder.bind(priorities),
     readNodeMetadata: priorities.readMetadata.bind(priorities),
-    refreshNodePriorities: (scope: Parameters<typeof priorities.refresh>[1], db = native.db!) => priorities.refresh(db, scope),
+    refreshNodePriorities: (scope: Parameters<typeof priorities.refresh>[1], db = native.db!, defer = false) => priorities.refresh(db, scope, defer),
     clearNodePriorities: () => priorities.clear(),
     databasePath: '/fixture',
     read: (task: (db: DbPort) => unknown) => task(native.db!),

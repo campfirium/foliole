@@ -63,7 +63,7 @@ export function companionDailyFlowSettings() {
 export function ownedCompanionDailyFlowPersistence(settings: DailyFlowSettings): DailyFlowPersistence {
   return { ...companionDailyFlowPersistence,
     learningSnapshot: async (tx, ids) => {
-      const metadata = ids ? undefined : getIosCompanionDatabaseOwner().readNodeMetadata(tx) ?? undefined;
+      const metadata = ids ? undefined : (await getIosCompanionDatabaseOwner().readNodeMetadata(tx)) ?? undefined;
       const hostName = await iosCompanionHostName(tx);
       const snapshot = metadata ? await loadDailyFlowLearningFromNodeIndex(tx, hostName, metadata)
         : await loadDailyFlowLearningSnapshot(tx, hostName, ids);

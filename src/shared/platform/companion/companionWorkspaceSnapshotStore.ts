@@ -42,7 +42,7 @@ export function holdCompanionSyncAppliedRefresh() {
   };
 }
 
-type CommittedWorkspaceListener = (scope: WorkspaceRefreshScope, db?: DbPort) => Promise<void>;
+type CommittedWorkspaceListener = (scope: WorkspaceRefreshScope, db?: DbPort, deferNodePriorities?: boolean) => Promise<void>;
 const committedListeners = new Set<CommittedWorkspaceListener>();
 
 export function subscribeCommittedCompanionWorkspace(listener: CommittedWorkspaceListener) {
@@ -50,9 +50,9 @@ export function subscribeCommittedCompanionWorkspace(listener: CommittedWorkspac
   return () => { committedListeners.delete(listener); };
 }
 
-export async function updateCommittedCompanionWorkspace(scope: WorkspaceRefreshScope, db?: DbPort) {
+export async function updateCommittedCompanionWorkspace(scope: WorkspaceRefreshScope, db?: DbPort, deferNodePriorities = false) {
   for (const listener of committedListeners) {
-    try { await listener(scope, db); }
+    try { await listener(scope, db, deferNodePriorities); }
     catch { /* The owner marks its index unavailable; a committed write still succeeded. */ }
   }
 }

@@ -24,7 +24,7 @@ type Library = ReturnType<typeof createDisplayLibrary>;
 async function snapshots(library: Library) {
   return library.owner.read(async db => {
     const cold = await loadDailyFlowLearningSnapshot(db, 'display-fixture');
-    const warm = await loadDailyFlowLearningSnapshot(db, 'display-fixture', undefined, library.owner.readNodeMetadata(db)!);
+    const warm = await loadDailyFlowLearningSnapshot(db, 'display-fixture', undefined, (await library.owner.readNodeMetadata(db))!);
     expect(warm.nodesById).toEqual(cold.nodesById);
     expect([...warm.nodeOrder].sort()).toEqual([...cold.nodeOrder].sort());
     expect([...warm.trashedNodeIds].sort()).toEqual([...cold.trashedNodeIds].sort());
