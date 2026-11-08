@@ -58,7 +58,8 @@ export function entryToWire(entry: FramedSyncInventoryEntry) {
     sharedStateHash: entry.sharedStateHash, stateFactIds: entry.stateFactIds ?? [],
     versionStates: entry.versionStates ?? [], currentVersionId: entry.currentVersionId ?? '', unready: entry.unready ?? false,
     dailyFlowRootId: entry.dailyFlowRootId ?? '', dailyFlowComplete: entry.dailyFlowComplete ?? false,
-    dailyFlowCurrent: entry.dailyFlowCurrent ?? false, dailyFlowNodeIds: entry.dailyFlowNodeIds ?? []
+    dailyFlowCurrent: entry.dailyFlowCurrent ?? false, dailyFlowNodeIds: entry.dailyFlowNodeIds ?? [],
+    ...(entry.adoptionParentId ? { adoptionParentId: entry.adoptionParentId } : {})
   };
 }
 
@@ -81,6 +82,7 @@ export function entriesFromWire(value: unknown): readonly FramedSyncInventoryEnt
         currentVersionId: String(entry.currentVersionId ?? ''), unready: entry.unready === true,
         versionStates: list(entry.versionStates).map(value => text(value, 'version_state'))
       } : {}),
+      ...(entry.adoptionParentId ? { adoptionParentId: text(entry.adoptionParentId, 'adoption_parent_id') } : {}),
       ...(stateFactIds.length ? { stateFactIds } : {})
     };
   });

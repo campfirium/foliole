@@ -1,9 +1,11 @@
 import { sha256 } from '@noble/hashes/sha2.js';
+import protobuf from 'protobufjs';
 import { expect, it } from 'vitest';
 
 import { FRAMED_SYNC_FRAME_TYPES, FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { decodeAndValidateProtocolMessage, encodeValidatedProtocolMessage } from './framedSyncProtocolCodec.js';
+import schema from './generated/framed-sync-v29-schema.json' with { type: 'json' };
 import { decodeRequestSyncInventory, iterateRequestSyncInventory } from './requestSyncInventoryWire.js';
 import type { RequestSyncMessage } from './requestSyncObjectMessages.js';
 
@@ -91,4 +93,42 @@ it('carries every required node identity for a 14241-member list through bounded
   expect(messages.length).toBeGreaterThan(3);
   const result = await decodeRequestSyncInventory(decode(messages));
   expect(result.entries[0]).toMatchObject({ dailyFlowRootId: 'list', dailyFlowCurrent: true, dailyFlowComplete: true, dailyFlowNodeIds });
+});
+
+it('carries the selected version parent across fragmented inventory details', async () => {
+  const original = { ...entry(Array.from({ length: 4000 }, (_, index) => `v${index}`)), adoptionParentId: 'parent' };
+  const messages = [...iterateRequestSyncInventory({ entries: [original], roundId: new Uint8Array(16) })];
+  expect(messages.length).toBeGreaterThan(3);
+  const received = await decodeRequestSyncInventory(decode(messages));
+  expect(received.entries).toEqual([original]);
+});
+
+it('keeps old and new inventory payloads interoperable', async () => {
+  const root = protobuf.Root.fromJSON(schema as protobuf.INamespace);
+  const begin = root.lookupType('foliole.sync.v22.InventoryBegin');
+  const entryType = root.lookupType('foliole.sync.v22.InventoryEntry');
+  begin.remove(begin.fields.includeAdoptionParents!);
+  entryType.remove(entryType.fields.adoptionParentId!);
+  const legacy = root.lookupType('foliole.sync.v22.ProtocolMessage');
+  const roundId = new Uint8Array(16);
+  const original = entry([]);
+  const messages = [...iterateRequestSyncInventory({ entries: [{ ...original, adoptionParentId: 'parent' }],
+    roundId, includeAdoptionParents: true })];
+  const [request, chunk, end] = messages.map(message => encodeValidatedProtocolMessage(message.payloadCase, message.payload));
+  expect(legacy.toObject(legacy.decode(request!)).inventoryBegin).not.toHaveProperty('includeAdoptionParents');
+  const legacyChunk = legacy.decode(chunk!);
+  expect(legacy.toObject(legacyChunk).inventoryChunk.entries[0]).not.toHaveProperty('adoptionParentId');
+  expect(Uint8Array.from(legacy.toObject(legacy.decode(end!)).inventoryEnd.inventoryHash))
+    .toEqual(sha256(Uint8Array.from(chunk!)));
+
+  const encoded = legacy.encode(legacy.fromObject({ inventoryBegin: { roundId, entryCount: 1 } })).finish();
+  const oldChunk = legacy.encode(legacyChunk).finish();
+  const received = (async function* () {
+    yield decodeAndValidateProtocolMessage(encoded, FRAMED_SYNC_FRAME_TYPES.sessionControl);
+    yield decodeAndValidateProtocolMessage(oldChunk, FRAMED_SYNC_FRAME_TYPES.sessionControl);
+    yield decodeAndValidateProtocolMessage(encodeValidatedProtocolMessage('inventory_end', {
+      roundId, inventoryHash: sha256(Uint8Array.from(oldChunk))
+    }), FRAMED_SYNC_FRAME_TYPES.sessionControl);
+  })();
+  expect(await decodeRequestSyncInventory(received)).toMatchObject({ includeAdoptionParents: false, entries: [original] });
 });

@@ -13,7 +13,7 @@ export type RequestSyncInventories = {
 };
 
 export interface RequestSyncDatabaseRoundPort {
-  exchangeInventory(): Promise<RequestSyncInventories>;
+  exchangeInventory(includeAdoptionParents?: boolean): Promise<RequestSyncInventories>;
   transferObjects(differences: readonly FramedSyncInventoryDifference[]): Promise<readonly RequestSyncObjectResult[]>;
   reportObjectError(difference: FramedSyncInventoryDifference, error: unknown): void;
   /** Starts watching for local changes; when one arrives, the pass stops pulling so it can go out first. */

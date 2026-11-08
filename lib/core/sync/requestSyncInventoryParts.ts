@@ -27,6 +27,7 @@ export function* requestSyncInventoryParts(entry: FramedSyncInventoryEntry): Gen
 
 export function mergeRequestSyncInventoryPart(previous: FramedSyncInventoryEntry, next: FramedSyncInventoryEntry) {
   if (previous.objectType !== next.objectType || previous.globalId !== next.globalId ||
+      previous.adoptionParentId !== next.adoptionParentId ||
       previous.currentVersionId !== next.currentVersionId || previous.unready !== next.unready ||
       previous.dailyFlowRootId !== next.dailyFlowRootId || previous.dailyFlowComplete !== next.dailyFlowComplete ||
       previous.dailyFlowCurrent !== next.dailyFlowCurrent ||

@@ -78,6 +78,7 @@ message InventoryEntry {
   string daily_flow_root_id = 13;
   bool daily_flow_current = 14;
   repeated string daily_flow_node_ids = 15;
+  string adoption_parent_id = 16;
   string current_version_id = 10;
   bool unready = 11;
 }
@@ -136,6 +137,7 @@ message InventoryBegin {
   bytes bucket_hashes = 6;
   repeated uint32 unready_buckets = 7;
   repeated uint32 selected_buckets = 8;
+  bool include_adoption_parents = 9;
 }
 message InventoryChunk {
   bytes round_id = 1;

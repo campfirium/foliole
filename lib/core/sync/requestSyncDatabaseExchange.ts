@@ -46,7 +46,7 @@ async function* decodedMessages(exchange: RequestSyncExchange, body: FramedSyncS
 }
 
 export async function exchangeRequestSyncInventory(host: RequestSyncDatabaseHost, exchange: RequestSyncExchange,
-  localInventory?: readonly FramedSyncInventoryEntry[]) {
+  localInventory?: readonly FramedSyncInventoryEntry[], includeAdoptionParents = false) {
   exchange.signal?.throwIfAborted();
   if (!localInventory) await host.write(db => db.transaction(flushRequestSyncInventoryDigests));
   let local = localInventory ?? await host.readSnapshot(readRequestSyncInventorySummaries, exchange.signal);
@@ -71,7 +71,7 @@ export async function exchangeRequestSyncInventory(host: RequestSyncDatabaseHost
   }
   const remoteDetails: FramedSyncInventoryEntry[] = [];
   for (const batch of detailBatches(ids)) {
-    const details = await inventoryRequest(exchange, batch);
+    const details = await inventoryRequest(exchange, batch, { includeAdoptionParents });
     if (details.entries.some(entry => entry.objectType !== 'node' || !batch.includes(entry.globalId))) {
       throw new Error('inventory_node_detail_identity_invalid');
     }
@@ -98,7 +98,7 @@ function* detailBatches(ids: readonly string[]) {
 }
 
 async function inventoryRequest(exchange: RequestSyncExchange, detailGlobalIds: readonly string[],
-  selection: { bucketSummary?: boolean; selectedBuckets?: number[] } = {}) {
+  selection: { bucketSummary?: boolean; selectedBuckets?: number[]; includeAdoptionParents?: boolean } = {}) {
   const roundId = crypto.getRandomValues(new Uint8Array(16));
   const messages = iterateRequestSyncInventory({ entries: [], roundId,
     ...selection, detailGlobalIds, summaryOnly: detailGlobalIds.length === 0 });

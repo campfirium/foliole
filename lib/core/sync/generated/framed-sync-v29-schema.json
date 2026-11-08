@@ -292,6 +292,11 @@
                       "id": 15,
                       "protoName": "daily_flow_node_ids"
                     },
+                    "adoptionParentId": {
+                      "type": "string",
+                      "id": 16,
+                      "protoName": "adoption_parent_id"
+                    },
                     "currentVersionId": {
                       "type": "string",
                       "id": 10,
@@ -449,6 +454,11 @@
                       "type": "uint32",
                       "id": 8,
                       "protoName": "selected_buckets"
+                    },
+                    "includeAdoptionParents": {
+                      "type": "bool",
+                      "id": 9,
+                      "protoName": "include_adoption_parents"
                     }
                   }
                 },

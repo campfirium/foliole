@@ -14,6 +14,7 @@ export type FramedSyncInventoryEntry = Readonly<{
   reviewFactIds: readonly string[];
   sharedStateHash: Uint8Array;
   stateFactIds?: readonly string[];
+  adoptionParentId?: string;
   currentVersionId?: string | undefined;
   versionStates?: readonly string[] | undefined;
   unready?: boolean | undefined;

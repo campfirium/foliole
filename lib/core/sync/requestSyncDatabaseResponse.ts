@@ -56,7 +56,8 @@ async function respondPrepared<T>(host: RequestSyncDatabaseHost, input: RequestS
     await host.write(db => db.transaction(tx => flushRequestSyncInventoryDigests(tx, nodeIds)));
     const entries = await host.readSnapshot(async db => {
       const summaries = await readRequestSyncInventorySummaries(db, nodeIds);
-      return request.detailGlobalIds.length ? expandRequestSyncNodeSummaries(db, summaries, request.detailGlobalIds) : summaries;
+      return request.detailGlobalIds.length ? expandRequestSyncNodeSummaries(
+        db, summaries, request.detailGlobalIds, request.includeAdoptionParents) : summaries;
     }, input.signal);
     if (request.bucketSummary) {
       const summary = summarizeInventoryBuckets(entries);

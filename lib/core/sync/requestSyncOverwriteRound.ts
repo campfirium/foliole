@@ -2,6 +2,7 @@ import { FRAMED_SYNC_PROTOCOL_VERSION } from './framedSyncContract.js';
 import { compareFramedSyncDatabaseInventories, unreadyFramedSyncDatabaseObjectCount } from './framedSyncDatabaseDifference.js';
 import { readFramedSyncOverwriteInventory } from './framedSyncInventoryRead.js';
 import { pendingFramedSyncOverwriteDifferences } from './framedSyncOverwriteCompletion.js';
+import { orderAdoptionPulls } from './requestSyncAdoptionOrder.js';
 import { deliverRequestSyncDatabaseDifferences, type RequestSyncDatabaseRoundPort } from './requestSyncDatabaseRound.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import { coverAdoptedSyncGroupLibrary } from './syncGroupCoverageStore.js';
@@ -16,15 +17,16 @@ export async function runRequestSyncOverwriteRound(host: RequestSyncDatabaseHost
   const context = { groupId: progress.groupId, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
     senderDeviceId: progress.providerDeviceId, senderLibraryEpoch: progress.providerLibraryEpoch,
     receiverDeviceId: progress.receiverDeviceId, receiverLibraryEpoch: progress.receiverLibraryEpoch } as const;
-  await host.readSnapshot(async db => {
+  const isAdoption = await host.readSnapshot(async db => {
     if (!await assertSyncGroupOverwriteInbound(db, context)) throw new Error('sync_group_overwrite_missing');
+    return Boolean(await loadSyncGroupLocalAdoption(db));
   }, signal);
-  const inventories = await port.exchangeInventory();
+  const inventories = await port.exchangeInventory(isAdoption);
   const differences = compareFramedSyncDatabaseInventories(inventories)
     .filter(difference => difference.direction === 'remote_to_local');
   // Recovery dependencies are also restricted to the chosen source.
   const round = await deliverRequestSyncDatabaseDifferences(port,
-    { local: [], remote: inventories.remote }, differences, signal);
+    { local: [], remote: inventories.remote }, isAdoption ? orderAdoptionPulls(differences) : differences, signal);
   const confirmed = await port.exchangeInventory();
   const transferred = round.delivered.length;
   const pending = (confirmed.inventoryDeferred ?? 0) + Math.max(round.deferred.length, unreadyFramedSyncDatabaseObjectCount(confirmed),

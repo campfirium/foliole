@@ -52,7 +52,8 @@ async function runPreparedRound(host: import('../../lib/core/sync/requestSyncObj
     ...(input.peerRound ? { peerRound: input.peerRound } : {}),
     ...(input.signal ? { signal: input.signal } : {}) };
   const port: import('../../lib/core/sync/requestSyncDatabaseRound.js').RequestSyncDatabaseRoundPort = {
-    exchangeInventory: async () => exchangeDesktopRequestSyncInventory(host, { ...exchange,
+    exchangeInventory: async (includeAdoptionParents) => exchangeDesktopRequestSyncInventory(host, { ...exchange,
+      ...(includeAdoptionParents ? { includeAdoptionParents } : {}),
       ...(overwriteId ? { localInventory: await host.readSnapshot(db => readFramedSyncOverwriteInventory(db, {
         groupId: context.groupId, protocolVersion: context.protocolVersion, senderDeviceId: context.responderDeviceId,
         senderLibraryEpoch: context.responderLibraryEpoch, receiverDeviceId: context.initiatorDeviceId,

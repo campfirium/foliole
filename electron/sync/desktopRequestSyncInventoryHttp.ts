@@ -11,9 +11,10 @@ import type { postDesktopRequestSyncObject } from './desktopRequestSyncObjectHtt
 
 export async function exchangeDesktopRequestSyncInventory(host: RequestSyncDatabaseHost,
   input: Omit<Parameters<typeof postDesktopRequestSyncObject>[1], 'difference'> & {
+    includeAdoptionParents?: boolean;
     localInventory?: readonly FramedSyncInventoryEntry[];
   }) {
-  return exchangeRequestSyncInventory(host, createDesktopRequestSyncExchange(input), input.localInventory);
+  return exchangeRequestSyncInventory(host, createDesktopRequestSyncExchange(input), input.localInventory, input.includeAdoptionParents);
 }
 
 export async function respondDesktopRequestSyncInventory(host: RequestSyncDatabaseHost, input: {

@@ -170,6 +170,7 @@ function validateInventoryEntries(value: unknown) {
   unique(entries.map((item) => {
     const entry = row(item); text(entry.objectType, 'object_type'); text(entry.globalId, 'global_id');
     digest(entry.sharedStateHash, 'shared_state_hash');
+    if (entry.adoptionParentId) text(entry.adoptionParentId, 'adoption_parent_id');
     for (const key of [
       'frontierFactIds', 'requiredRelationIds', 'reviewFactIds', 'stateFactIds', 'versionStates', 'dailyFlowNodeIds'
     ]) {

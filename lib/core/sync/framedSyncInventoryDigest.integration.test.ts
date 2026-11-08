@@ -85,7 +85,8 @@ it('expands 500 requested details with one query in the caller transaction', asy
     const records = Array.from({ length: 500 }, (_, index) => {
       const id = `node-${index}`;
       const record = textBranch(`version-${index}`, `Body ${index}`);
-      return { ...record, object_id: id, snapshot: { ...record.snapshot, id } };
+      return { ...record, object_id: id, snapshot: { ...record.snapshot, id,
+        parent_id: index === 1 ? 'node-0' : record.snapshot.parent_id } };
     });
     await applyConvergentSyncNodesWithDbPort(host.db, records);
     const full = await readFramedSyncInventory(host.db);
@@ -100,6 +101,11 @@ it('expands 500 requested details with one query in the caller transaction', asy
       });
       const expanded = await expandRequestSyncNodeSummaries(counted(db), summaries, [...ids, ids[0]!]);
       expect(expanded).toEqual(full);
+      expect(queries).toBe(1);
+      queries = 0;
+      const hinted = await expandRequestSyncNodeSummaries(counted(db), summaries, ids, true);
+      expect(hinted).toEqual(full.map(entry => entry.globalId === 'node-1'
+        ? { ...entry, adoptionParentId: 'node-0' } : entry));
       expect(queries).toBe(1);
       queries = 0;
       expect(await expandRequestSyncNodeSummaries(counted(db), summaries, [])).toEqual(summaries);

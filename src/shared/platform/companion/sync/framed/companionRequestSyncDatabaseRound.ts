@@ -75,11 +75,11 @@ async function runPreparedRound(host: RequestSyncDatabaseHost, input: RoundInput
   const receiveProgress = createOverwriteReceiveProgress(overwriteId ? input.onProgress : undefined, () => receivingOverwrite);
   let workspaceChanged = Boolean(overwriteId);
   const port: RequestSyncDatabaseRoundPort = {
-    exchangeInventory: async () => input.large!.inventory(receiveProgress.inventory(await exchangeRequestSyncInventory(host, exchange, receivingOverwrite
+    exchangeInventory: async (includeAdoptionParents) => input.large!.inventory(receiveProgress.inventory(await exchangeRequestSyncInventory(host, exchange, receivingOverwrite
       ? await host.readSnapshot(db => readFramedSyncOverwriteInventory(db, { groupId: context.groupId,
         protocolVersion: context.protocolVersion, senderDeviceId: peerDeviceId,
         senderLibraryEpoch: context.responderLibraryEpoch, receiverDeviceId: context.initiatorDeviceId,
-        receiverLibraryEpoch: context.initiatorLibraryEpoch }), input.signal) : undefined))),
+        receiverLibraryEpoch: context.initiatorLibraryEpoch }), input.signal) : undefined, includeAdoptionParents))),
     transferObjects: async differences => {
       const results = await transferRequestSyncBatch(host, exchange, differences, { peerState: input.peerState });
       for (const [index, result] of results.entries()) if (!result.error) {

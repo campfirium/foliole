@@ -47,7 +47,14 @@ function syncServer(source: Peer, target: Peer) {
     });
 }
 
-async function advance(peer: Peer, first: NativeSyncNodeRecord, equal: NativeSyncNodeRecord, burst: boolean) {
+async function advance(peer: Peer, first: NativeSyncNodeRecord, equal: NativeSyncNodeRecord,
+  burst: boolean, move = false) {
+  if (move) {
+    const moved = record('hot', 'hot-v2', first);
+    moved.snapshot.parent_id = 'new-parent';
+    await applyConvergentSyncNodesWithDbPort(peer.db, [moved]);
+    return;
+  }
   let parent = first;
   for (let index = 2; index <= (burst ? 5 : 2); index++) {
     const next = record('hot', `hot-v${index}`, parent);
@@ -61,11 +68,27 @@ async function advance(peer: Peer, first: NativeSyncNodeRecord, equal: NativeSyn
   await applyConvergentSyncNodesWithDbPort(peer.db, [record('equal', 'equal-v2', equal)]);
 }
 
-it.each(['remote-bucket', 'remote-detail', 'local-detail', 'selected-pull', 'selected-burst-1875ms'] as const)(
+async function verifyChangingSource(peer: Peer, boundary: string) {
+  peer.reopen();
+  const burst = boundary === 'selected-burst-1875ms';
+  const moving = boundary === 'selected-move';
+  if (burst) expect(await peer.db.query("SELECT version_id FROM node_sync_versions WHERE object_id = 'hot' ORDER BY version_id"))
+    .toEqual([1, 2, 3, 4, 5].map(index => ({ version_id: `hot-v${index}` })));
+  const nodes = moving ? "WHERE id IN ('equal', 'hot')" : '';
+  expect(await peer.db.query(`SELECT id, current_version_id FROM nodes ${nodes} ORDER BY id`))
+    .toEqual([{ id: 'equal', current_version_id: moving ? 'equal-v1' : 'equal-v2' },
+      { id: 'hot', current_version_id: burst ? 'hot-v5' : 'hot-v2' }]);
+  if (moving) expect(await peer.db.query("SELECT parent_id FROM nodes WHERE id = 'hot'"))
+    .toEqual([{ parent_id: 'new-parent' }]);
+}
+
+it.each(['remote-bucket', 'remote-detail', 'local-detail', 'selected-pull', 'selected-burst-1875ms', 'selected-move'] as const)(
   'converges through production HTTP when edits occur at %s, including an initially equal object', async boundary => {
     const fixture = await restoreFixture();
     const source = fixture.peer('source'); const target = fixture.peer('target');
     const hot = record('hot', 'hot-v1'); const equal = record('equal', 'equal-v1');
+    const moving = boundary === 'selected-move';
+    if (moving) hot.snapshot.parent_id = 'old-parent';
     expect(inventoryBucket({ objectType: 'node', globalId: 'hot' }))
       .not.toBe(inventoryBucket({ objectType: 'node', globalId: 'equal' }));
     const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
@@ -73,7 +96,8 @@ it.each(['remote-bucket', 'remote-detail', 'local-detail', 'selected-pull', 'sel
       responderDeviceId: target.id, responderLibraryEpoch: target.epoch } as const;
     const server = syncServer(source, target);
     try {
-      for (const peer of [source, target]) await applyConvergentSyncNodesWithDbPort(peer.db, [equal]);
+      const shared = moving ? [equal, record('old-parent', 'old-parent-v1'), record('new-parent', 'new-parent-v1')] : [equal];
+      for (const peer of [source, target]) await applyConvergentSyncNodesWithDbPort(peer.db, shared);
       const changing = boundary === 'local-detail' ? source : target;
       await applyConvergentSyncNodesWithDbPort(changing.db, [hot]);
       await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -89,32 +113,28 @@ it.each(['remote-bucket', 'remote-detail', 'local-detail', 'selected-pull', 'sel
         const selectedPull = boundary.startsWith('selected-') && route.includes('request=pulls') && !selectedPullDelivered;
         if (selectedPull || (!boundary.startsWith('selected-') && inventoryRequest &&
             requests === (boundary === 'remote-detail' ? 3 : 2))) {
-          await advance(changing, hot, equal, boundary === 'selected-burst-1875ms');
+          await advance(changing, hot, equal, boundary === 'selected-burst-1875ms', moving);
         }
         const response = await transport.request(route, body, consume);
-        if (selectedPull) {
-          expect(await source.db.query("SELECT current_version_id FROM nodes WHERE id = 'hot'"))
-            .toEqual([{ current_version_id: 'hot-v1' }]);
-          selectedPullDelivered = true;
-        }
+        if (selectedPull) expect(await source.db.query("SELECT current_version_id FROM nodes WHERE id = 'hot'"))
+          .toEqual(moving ? [] : [{ current_version_id: 'hot-v1' }]);
+        selectedPullDelivered ||= selectedPull;
         return response;
       }) satisfies typeof transport.request };
       const result = await runRequestSyncDatabaseRound({
-        exchangeInventory: () => exchangeRequestSyncInventory(source.host, exchange),
-        transferObjects: differences => transferRequestSyncBatch(source.host, exchange, differences,
-          { peerState: state(target.id) }),
+        exchangeInventory: async () => {
+          const inventories = await exchangeRequestSyncInventory(source.host, exchange, undefined, moving);
+          if (moving && !selectedPullDelivered) expect(inventories.remote.find(item => item.globalId === 'hot'))
+            .toMatchObject({ currentVersionId: 'hot-v1', adoptionParentId: 'old-parent' });
+          return inventories;
+        },
+        transferObjects: differences => transferRequestSyncBatch(source.host, exchange, differences, { peerState: state(target.id) }),
         reportObjectError: (_difference, error) => { throw error; }
       });
       expect(result.complete).toBe(true);
       if (boundary.startsWith('selected-')) expect(selectedPullDelivered).toBe(true);
       expect(requests).toBeGreaterThan(3);
-      for (const peer of [source, target]) {
-        peer.reopen();
-        if (boundary === 'selected-burst-1875ms') expect(await peer.db.query("SELECT version_id FROM node_sync_versions WHERE object_id = 'hot' ORDER BY version_id"))
-          .toEqual([1, 2, 3, 4, 5].map(index => ({ version_id: `hot-v${index}` })));
-        expect(await peer.db.query('SELECT id, current_version_id FROM nodes ORDER BY id'))
-          .toEqual([{ id: 'equal', current_version_id: 'equal-v2' }, { id: 'hot', current_version_id: boundary === 'selected-burst-1875ms' ? 'hot-v5' : 'hot-v2' }]);
-      }
+      for (const peer of [source, target]) await verifyChangingSource(peer, boundary);
     } finally {
       await new Promise<void>(resolve => server.close(() => resolve()));
       await fixture.close();

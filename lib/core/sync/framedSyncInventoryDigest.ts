@@ -65,14 +65,25 @@ export async function readRequestSyncInventorySummaries(db: DbPort, nodeIds?: re
   return entries.sort(compareInventoryEntry);
 }
 
-export async function expandRequestSyncNodeSummaries(db: DbPort, entries: readonly FramedSyncInventoryEntry[], ids: readonly string[]) {
+const adoptionParentColumn = `, (SELECT json_extract(version.snapshot_json, '$.parent_id')
+  FROM node_sync_versions version
+  WHERE version.version_id = CASE WHEN json_valid(inventory.content_hash)
+    THEN json_extract(inventory.content_hash, '$[1]') END
+    AND version.object_id = inventory.object_id
+    AND NOT EXISTS (SELECT 1 FROM node_sync_tombstones tomb WHERE tomb.version_id = version.version_id)
+  ) AS adoption_parent_id`;
+
+export async function expandRequestSyncNodeSummaries(db: DbPort, entries: readonly FramedSyncInventoryEntry[], ids: readonly string[], includeAdoptionParents = false) {
   if (ids.length === 0) return [...entries];
   const requested = new Set(ids);
-  const rows = await db.query<InventoryRow>(`SELECT ${inventoryColumns} FROM framed_sync_inventory inventory
+  const parentColumn = includeAdoptionParents ? adoptionParentColumn : '';
+  const rows = await db.query<InventoryRow & { adoption_parent_id?: string | null }>(
+    `SELECT ${inventoryColumns}${parentColumn} FROM framed_sync_inventory inventory
     WHERE object_type = 'node' AND object_id IN (SELECT value FROM json_each(?))`, [JSON.stringify([...requested])]);
   const byId = new Map(rows.map(row => {
     const entry = inventoryEntryFromRow(row);
-    return [entry.globalId, entry] as const;
+    const parent = row.adoption_parent_id;
+    return [entry.globalId, typeof parent === 'string' && parent ? { ...entry, adoptionParentId: parent } : entry] as const;
   }));
   return entries.map(entry => {
     if (entry.objectType !== 'node' || !requested.has(entry.globalId)) return entry;

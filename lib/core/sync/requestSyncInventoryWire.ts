@@ -12,6 +12,7 @@ export function* iterateRequestSyncInventory(input: {
   entries: readonly FramedSyncInventoryEntry[];
   roundId: Uint8Array;
   detailGlobalIds?: readonly string[];
+  includeAdoptionParents?: boolean;
   summaryOnly?: boolean;
   bucketSummary?: boolean;
   bucketHashes?: Uint8Array;
@@ -20,6 +21,7 @@ export function* iterateRequestSyncInventory(input: {
 }): Generator<RequestSyncMessage> {
   yield { payloadCase: 'inventory_begin', payload: { entryCount: input.entries.length, roundId: input.roundId,
     detailGlobalIds: input.detailGlobalIds ?? [], summaryOnly: input.summaryOnly ?? false,
+    ...(input.includeAdoptionParents ? { includeAdoptionParents: true } : {}),
     bucketSummary: input.bucketSummary ?? false, bucketHashes: input.bucketHashes ?? new Uint8Array(),
     unreadyBuckets: input.unreadyBuckets ?? [], selectedBuckets: input.selectedBuckets ?? [] } };
   const hash = sha256.create();
@@ -41,7 +43,7 @@ export async function decodeRequestSyncInventory(messages: AsyncIterable<Validat
   const hash = sha256.create();
   const identities = new Set<string>();
   let begin: { roundId: Uint8Array; expected: bigint; detailGlobalIds: string[]; summaryOnly: boolean; bucketSummary: boolean; bucketHashes: Uint8Array;
-    unreadyBuckets: number[]; selectedBuckets: number[] } | undefined;
+    unreadyBuckets: number[]; selectedBuckets: number[]; includeAdoptionParents: boolean } | undefined;
   let part: FramedSyncInventoryEntry | undefined;
   let partIndex = 0;
   let chunkIndex = 0;
@@ -54,6 +56,7 @@ export async function decodeRequestSyncInventory(messages: AsyncIterable<Validat
       begin = { roundId: bytes(payload.roundId, 'round_id'), expected: unsigned(payload.entryCount, 'entry_count'),
         detailGlobalIds: list(payload.detailGlobalIds ?? []).map(String), summaryOnly: payload.summaryOnly === true,
         bucketSummary: payload.bucketSummary === true, bucketHashes: bytes(payload.bucketHashes, 'bucket_hashes'),
+        includeAdoptionParents: payload.includeAdoptionParents === true,
         unreadyBuckets: list(payload.unreadyBuckets).map(Number), selectedBuckets: list(payload.selectedBuckets).map(Number) };
       if (begin.bucketHashes.length) hash.update(begin.bucketHashes);
       continue;
