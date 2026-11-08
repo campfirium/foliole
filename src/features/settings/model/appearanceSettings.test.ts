@@ -116,7 +116,7 @@ it('applies mode-specific reading mark surface tokens', () => {
     selectionColor: DEFAULT_DARK_SELECTION_COLOR_PRESET
   });
 
-  expect(root.style.getPropertyValue('--app-text-selection-bg-color')).toBe('rgb(var(--app-selection-color-rgb) / 0.6)');
+  expect(root.style.getPropertyValue('--app-text-selection-bg-color')).toBe('rgb(var(--app-selection-color-rgb) / 0.48)');
   expect(root.style.getPropertyValue('--app-text-selection-fg-color')).toBe('#ffffff');
   expect(root.style.getPropertyValue('--app-selection-foreground-color')).toBe('#ffffff');
   expect(root.style.getPropertyValue('--app-selection-surface-color')).toBe('rgb(120 166 255 / 0.42)');

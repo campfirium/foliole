@@ -55,7 +55,7 @@ export function getSelectionSurfaceAlpha(mode: AppearanceDefaultColorMode) {
 }
 
 export function getTextSelectionBackgroundColor(mode: AppearanceDefaultColorMode) {
-  const alpha = mode === 'dark' ? 0.6 : getSelectionSurfaceAlpha(mode);
+  const alpha = mode === 'dark' ? 0.48 : getSelectionSurfaceAlpha(mode);
   return `rgb(var(--app-selection-color-rgb) / ${alpha})`;
 }
 
