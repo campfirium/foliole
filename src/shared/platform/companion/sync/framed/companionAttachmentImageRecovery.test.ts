@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { writeFile, appendFile, mkdtemp, readFile, rename, rm, stat, truncate } from 'node:fs/promises';
+import { writeFile, appendFile, mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 import { waitFor } from '@testing-library/react';
@@ -28,6 +28,7 @@ vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({ getIosCompanionD
 } }));
 
 import { createCompanionAttachmentHost } from './companionAttachmentBlockFiles';
+import { companionAttachmentNativeFiles } from './companionAttachmentNativeFiles.testSupport';
 
 it.each([[false, false, false], [true, false, false], [false, true, false], [true, true, false],
   [false, true, true], [true, true, true]])('refreshes an open missing image after complete bytes and index commit (retry=%s, nativeWindow=%s, asyncFinalization=%s)', async (retry, nativeWindow, asyncFinalization) => {
@@ -37,7 +38,7 @@ it.each([[false, false, false], [true, false, false], [false, true, false], [tru
   const port = createBetterSqliteDbPort(sqlite);
   const bytes = Buffer.alloc(BLOCK + 19, 0x78);
   const hash = digest(bytes), key = `${hash}.png`, final = path.join(root, key);
-  native.access.mockImplementation(fileOperations(root));
+  native.access.mockImplementation(companionAttachmentNativeFiles(root));
   native.resolve.mockImplementation(async () => {
     try { await readFile(final); return { status: 'ready', resource_url: `file://${final}`, mime_type: 'image/png' }; }
     catch { return { status: 'missing_file' }; }
@@ -84,31 +85,6 @@ it.each([[false, false, false], [true, false, false], [false, true, false], [tru
 
 function digest(bytes: Uint8Array) { return createHash('sha256').update(bytes).digest('hex'); }
 
-/** Only native file calls are substituted; the production receiver, adapter, SQLite and image widget run unchanged. */
-function fileOperations(root: string) {
-  return async (input: NativeCompanionFramedFileRequest) => {
-    if (input.operation !== 'attachment') throw new Error('Unexpected native operation');
-    const partial = path.join(root, `.attachment-${input.key.slice(0, 64)}.partial`);
-    const file = input.partial ? partial : path.join(root, input.key);
-    switch (input.action) {
-      case 'acquire': case 'source-close': return {};
-      case 'source-open': return { present: true, length: (await stat(file)).size, hash: '' };
-      case 'source-read': return { base64: (await readFile(file)).subarray(input.offset, input.offset! + input.length!).toString('base64') };
-      case 'stat': {
-        try { const info = await stat(file); return { present: true, length: info.size,
-          hash: input.partial ? '' : digest(await readFile(file)) }; }
-        catch { return { present: false, length: 0, hash: '' }; }
-      }
-      case 'truncate': await appendFile(partial, ''); await truncate(partial, input.length); return {};
-      case 'append': await appendFile(partial, Buffer.from(input.base64!, 'base64')); return {};
-      case 'hash': return { hash: digest(await readFile(file)) };
-      case 'discard': await rm(partial, { force: true }); return {};
-      case 'publish': await rename(partial, file); return {};
-      default: throw new Error(`Unexpected attachment action: ${input.action}`);
-    }
-  };
-}
-
 it('checks only pending needs without opening or hashing present attachments', async () => {
   const root = await mkdtemp(path.resolve('.tmp/artifacts/companion-needs-'));
   const sqlite = new Database(path.join(root, 'library.db'));
@@ -146,7 +122,7 @@ it('retains corrupt published bytes through failed replacement and marks only ve
   const bytes = Buffer.alloc(BLOCK + 19, 0x63), corrupt = Buffer.alloc(bytes.length, 0x64);
   const key = `${digest(bytes)}.png`, final = path.join(root, key);
   const resource = { storageKey: key, byteLength: bytes.length };
-  native.access.mockImplementation(fileOperations(root));
+  native.access.mockImplementation(companionAttachmentNativeFiles(root));
   try {
     await writeFile(final, corrupt);
     const host = await createCompanionAttachmentHost({ files: createDesktopFramedSyncFiles(path.join(root, 'transport')),
@@ -172,7 +148,7 @@ it('verifies companion source bytes in the shared core and rejects corruption af
   const port = createBetterSqliteDbPort(sqlite);
   const bytes = Buffer.alloc(4 * BLOCK + 19, 0x63), key = `${digest(bytes)}.png`;
   let reads = 0;
-  const operations = fileOperations(root);
+  const operations = companionAttachmentNativeFiles(root);
   native.access.mockImplementation(async input => {
     if (input.action === 'source-read') reads += input.length;
     return operations(input);
@@ -206,13 +182,13 @@ it('receives a prepared next file while the native file executor is occupied by 
   let release = () => {}, entered = false;
   const blocked = new Promise<void>(resolve => { release = resolve; });
   let tail: Promise<unknown> = Promise.resolve();
-  const execute = fileOperations(root);
+  const execute = companionAttachmentNativeFiles(root);
   native.access.mockImplementation((input: NativeCompanionFramedFileRequest) => {
     const operation = tail.then(async () => {
       if (input.operation === 'attachment' && input.action === 'source-stat-batch') {
         return { presence: resources.map(() => false) };
       }
-      if (input.operation === 'attachment' && input.action === 'hash' && input.key === resources[0]!.storageKey.slice(0, 64)) {
+      if (input.operation === 'attachment' && input.action === 'publish-received' && input.key === resources[0]!.storageKey) {
         entered = true; await blocked;
       }
       return execute(input);

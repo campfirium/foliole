@@ -33,6 +33,7 @@ import { createCompanionArticleSnapshot } from './useCompanionArticleSurfaceTest
 
 const readableArticle = { nodeId: 'article-1', title: 'Topic' };
 const surface = {
+  effectiveReviewSession: { currentCard: null },
   handleViewScroll: vi.fn(),
   readableArticle
 } as never;

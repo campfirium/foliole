@@ -1,11 +1,9 @@
 // @vitest-environment node
-import { createHash } from 'node:crypto';
-
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { releaseLocalEditBase, retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 
-import { permanentlyDelete } from './dynamicNodeVersionChains.delete.testSupport.js';
+import { captureVersionIdentity, permanentlyDelete } from './dynamicNodeVersionChains.delete.testSupport.js';
 import { closeLibraries, createPeer, edit, history, joinPeers, startLibraries,
   type Peer } from './syncLibrary.testSupport.js';
 
@@ -13,6 +11,7 @@ beforeEach(startLibraries);
 afterEach(closeLibraries);
 
 function expectDeletion(peer: Peer, previous: string) {
+  const identity = captureVersionIdentity(peer, previous);
   const tombstone = permanentlyDelete(peer);
   const versions = history(peer);
   expect(tombstone.version_id).not.toBe(previous);
@@ -21,10 +20,14 @@ function expectDeletion(peer: Peer, previous: string) {
   // Permanent deletion keeps the deletion's identity and hash but none of the note's text.
   expect(versions.find(row => row.version_id === tombstone.version_id)?.body_text).toBeNull();
   expect(JSON.parse(tombstone.snapshot_json)).toMatchObject({ content: null, body_deleted: true });
-  expect(versions.find(row => row.version_id === previous)?.body_text).toBeNull();
-  expect(JSON.parse(versions.find(row => row.version_id === previous)!.snapshot_json))
-    .toMatchObject({ id: 'topic', content: null, body_deleted: true,
-      body_blob_hash: createHash('sha256').update('body').digest('hex') });
+  const compact = versions.find(row => row.version_id === previous)!;
+  expect(compact.body_text).toBeNull();
+  expect(peer.db.prepare('SELECT content_hash FROM node_sync_versions WHERE version_id = ?')
+    .pluck().get(previous)).toBe(identity.contentHash);
+  expect(JSON.parse(compact.snapshot_json)).toEqual({
+    id: 'topic', updated_at: expect.any(String), content: null, body_deleted: true,
+    deleted_version_metadata_digest: identity.metadataDigest
+  });
   expect(peer.db.prepare("SELECT id FROM nodes WHERE id = 'topic'").get()).toBeUndefined();
   expect(peer.db.prepare("SELECT current_version_id, deleted_at FROM sync_object_state WHERE object_type = 'node' AND object_id = 'topic'").get())
     .toEqual({ current_version_id: tombstone.version_id, deleted_at: '2026-10-01T00:00:00.000Z' });

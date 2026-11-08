@@ -1,6 +1,4 @@
 // @vitest-environment node
-import { createHash } from 'node:crypto';
-
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { collectAllNodeVersionChains } from '../../lib/core/database/dynamicNodeVersionChainMigration.js';
@@ -47,12 +45,12 @@ function expectBody(peer: Peer, versionId: string, body: string | null) {
   const row = peer.db.prepare(`SELECT body_text,
     json_extract(snapshot_json, '$.content') AS snapshot_body,
     json_extract(snapshot_json, '$.body_deleted') AS retired,
-    json_extract(snapshot_json, '$.body_blob_hash') AS hash,
+    json_extract(snapshot_json, '$.deleted_version_metadata_digest') AS digest,
     json_type(snapshot_json, '$.content') AS snapshot_type
     FROM node_sync_versions WHERE version_id = ?`).get(versionId);
   expect(row).toMatchObject({ body_text: body });
   if (body === null) expect(row).toMatchObject({ snapshot_body: null, snapshot_type: 'null', retired: 1,
-    hash: createHash('sha256').update('body').digest('hex') });
+    digest: expect.stringMatching(/^[a-f0-9]{64}$/u) });
 }
 
 /** A permanent deletion keeps its identity, as a version or only as the tombstone, but none of the text. */

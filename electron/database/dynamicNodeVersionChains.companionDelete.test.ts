@@ -1,12 +1,10 @@
 // @vitest-environment node
-import { createHash } from 'node:crypto';
-
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 
-import { permanentlyDelete } from './dynamicNodeVersionChains.delete.testSupport.js';
+import { captureVersionIdentity, permanentlyDelete } from './dynamicNodeVersionChains.delete.testSupport.js';
 import { closeLibraries, createPeer, edit, joinPeers, startLibraries } from './syncLibrary.testSupport.js';
 import { withLibraryRequestSnapshot } from './syncRequestSnapshot.testSupport.js';
 
@@ -32,11 +30,13 @@ it('receives a deleted object complete chain through current requests with FK en
   const target = createPeer('target');
   joinPeers(source, target);
   const base = edit(source, 'body');
+  const identity = captureVersionIdentity(source, base);
   const tomb = permanentlyDelete(source);
   const original = originalFacts(source.db);
-  expect(source.db.prepare(`SELECT body_text, json_extract(snapshot_json, '$.body_blob_hash') AS hash,
+  expect(source.db.prepare(`SELECT body_text, content_hash,
+    json_extract(snapshot_json, '$.deleted_version_metadata_digest') AS digest,
     json_extract(snapshot_json, '$.body_deleted') AS retired FROM node_sync_versions WHERE version_id = ?`).get(base))
-    .toEqual({ body_text: null, hash: createHash('sha256').update('body').digest('hex'), retired: 1 });
+    .toEqual({ body_text: null, content_hash: identity.contentHash, digest: identity.metadataDigest, retired: 1 });
   expect(source.db.prepare("SELECT id FROM nodes WHERE id = 'topic'").all()).toEqual([]);
   expect(source.db.prepare('SELECT version_id FROM node_sync_versions ORDER BY created_at').pluck().all())
     .toEqual([base, tomb.version_id]);

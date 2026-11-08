@@ -39,6 +39,7 @@ vi.mock('@/shared/platform/companionSyncObjects', () => syncObjectMock);
 function createPdfReadableSurface() {
   return {
     activeAction: 'recent',
+    effectiveReviewSession: { currentCard: null },
     readingActivity: new CompanionReadingActivity('topic-1', vi.fn()),
     browsedFolder: null,
     handleSelectBrowseNode: vi.fn(),
