@@ -52,6 +52,7 @@ export function CompanionArticleDocument(props: {
         blockImageWidthOverride="min(100%, 40rem)"
         className="h-full"
         hideScrollbar
+        fullscreenImagePreview
         nodeId={props.nodeId}
         onChange={(content, meta) => props.onChange?.(content, meta)}
         readOnly={!props.onChange}

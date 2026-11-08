@@ -174,7 +174,7 @@ function MarkdownEditorContent(props: MarkdownEditorProps) {
         rootRef={rootRef}
         scrollContainer={props.scrollContainer ?? 'editor'}
       />
-      <MarkdownImagePreviewDialog image={previewImage} onOpenChange={(open) => !open && closePreview()} />
+      <MarkdownImagePreviewDialog fullscreen={props.fullscreenImagePreview === true} image={previewImage} onOpenChange={(open) => !open && closePreview()} />
       <MarkdownMermaidPreviewDialog diagram={previewMermaid} onOpenChange={(open) => !open && closeMermaidPreview()} />
       <MarkdownTablePreviewDialog table={previewTable} onOpenChange={(open) => !open && closeTablePreview()} />
     </>

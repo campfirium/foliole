@@ -34,6 +34,7 @@ export interface MarkdownEditorProps {
   contentPaddingTop?: string;
   contentPaddingBottom?: string;
   fitBlockImagesToViewport?: boolean;
+  fullscreenImagePreview?: boolean;
   textAnchorDecorations?: readonly EditorTextAnchorDecoration[];
   debugId?: string;
   hideTitleHeading?: boolean;

@@ -111,7 +111,8 @@ test('wide item images fit the reading width before and after reveal', async ({ 
   const question = page.getByRole('img', { name: 'Question illustration', exact: true });
   await question.click({ position: { x: 20, y: 20 } });
   await expect(page.locator('[data-companion-reading-surface]')).toHaveAttribute('data-reading-chrome-visible', 'true');
-  await expect(page.getByRole('button', { name: 'Open image preview', exact: true })).toHaveCount(0);
+  await checkImagePreview(page, 'Question illustration');
+  await expect(page.getByRole('button', { name: 'Show Answer', exact: true })).toBeInViewport();
   await page.getByRole('button', { name: 'Show Answer', exact: true }).click();
   for (const viewport of [{ width: 320, height: 700 }, { width: 700, height: 320 }]) {
     await page.setViewportSize(viewport);
@@ -119,4 +120,54 @@ test('wide item images fit the reading width before and after reveal', async ({ 
     await expectImageToFit('Answer illustration');
     await expect(page.getByRole('button', { name: 'Good', exact: true })).toBeInViewport();
   }
+  const answer = page.getByRole('img', { name: 'Answer illustration', exact: true });
+  await answer.scrollIntoViewIfNeeded();
+  const surface = page.locator('.companion-review-surface');
+  if (await surface.getAttribute('data-reading-chrome-visible') !== 'true') {
+    await answer.click({ position: { x: 20, y: 20 } });
+  }
+  await checkImagePreview(page, 'Answer illustration');
+  await expect(page.getByRole('button', { name: 'Good', exact: true })).toBeInViewport();
 });
+
+async function checkImagePreview(page: Page, name: string) {
+  const trigger = page.locator('.cm-md-image-surface')
+    .filter({ has: page.getByRole('img', { name, exact: true }) })
+    .getByRole('button', { name: 'Open image preview', exact: true });
+  await trigger.evaluate(element => element.scrollIntoView({ block: 'center' }));
+  await expect(trigger).toBeInViewport({ ratio: 1 });
+  const surface = page.locator('.companion-review-surface');
+  const scrollTop = await surface.evaluate(element => element.scrollTop);
+  await trigger.click();
+
+  const dialog = page.getByRole('dialog', { name: 'Image preview', exact: true });
+  const image = dialog.getByRole('img', { name, exact: true });
+  const viewport = page.viewportSize()!;
+  await expect(dialog).toBeVisible();
+  expect(await dialog.boundingBox()).toEqual({ x: 0, y: 0, ...viewport });
+  expect(await dialog.evaluate(element => getComputedStyle(element).backgroundColor)).toMatch(/^rgb\(/);
+  const initial = (await image.boundingBox())!;
+  expect(initial.x).toBeGreaterThanOrEqual(0);
+  expect(initial.x + initial.width).toBeLessThanOrEqual(viewport.width);
+  const x = initial.x + initial.width / 2;
+  const y = initial.y + initial.height / 2;
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', offsets: number[]) =>
+    cdp.send('Input.dispatchTouchEvent', { type, touchPoints: offsets.map((offset, id) => ({ x: x + offset, y, id })) });
+  await touch('touchStart', [-30, 30]);
+  await touch('touchMove', [-85, 85]);
+  await touch('touchEnd', []);
+  await expect.poll(async () => (await image.boundingBox())!.width).toBeGreaterThan(initial.width * 2);
+  const zoomed = (await image.boundingBox())!;
+  await touch('touchStart', [0]);
+  await touch('touchMove', [55]);
+  await touch('touchEnd', []);
+  await expect.poll(async () => (await image.boundingBox())!.x).toBeGreaterThan(zoomed.x + 20);
+  await cdp.detach();
+  const close = dialog.getByRole('button', { name: 'Close image preview', exact: true });
+  await expect(close).toBeInViewport();
+  await close.click();
+  await expect(dialog).toHaveCount(0);
+  expect(await surface.evaluate(element => element.scrollTop)).toBe(scrollTop);
+  await expect(page.getByRole('img', { name, exact: true })).toBeVisible();
+}
