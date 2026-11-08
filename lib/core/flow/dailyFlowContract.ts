@@ -9,7 +9,7 @@ import type { PushQueuePriority } from '../review/unifiedPushQueueRules.js';
 
 import { cycleChangeSchema } from './cycleFlowTypes.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
-import { dailyFlowSessionSchema } from './dailyFlowSessionSchema.js';
+import { dailyFlowSessionSchema, diveFlowScopeSchema } from './dailyFlowSessionSchema.js';
 import { flowHistorySessionSchema } from './flowHistorySession.js';
 
 export type DailyFlowSnapshot = { nodeOrder: string[]; nodesById: Record<string, WorkspaceNodeSnapshot>; trashedNodeIds: string[] };
@@ -18,6 +18,7 @@ export type DailyFlowLearningSnapshot = { nodePaths?: WorkspaceNodePaths; nodePr
 export type DailyFlowSettings = Pick<ReviewSchedulerSettings, 'newDayStartsAtHour' | 'pushQueue'> & { scope?: string; dayWindow?: { start: string; end: string } };
 export const dailyFlowOpenSchema = z.object({ now: z.string().datetime(),
   mode: z.enum(['recommended', 'review-first', 'reading-only']),
+  dive: diveFlowScopeSchema.optional(), returnFromDive: z.boolean().optional(),
   seed: dailyFlowSessionSchema.optional(), preferredNodeId: z.string().nullable().optional(),
   preserveCurrent: z.boolean().optional(), prepareOnly: z.boolean().optional(), startup: z.boolean().optional(), refresh: z.boolean().optional() }).strict();
 export type DailyFlowOpenArgs = z.infer<typeof dailyFlowOpenSchema>;

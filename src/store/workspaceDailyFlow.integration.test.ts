@@ -245,3 +245,16 @@ it('hydrates a missing current display node when reopening an unchanged daily cu
   expect(app.getState().nodesById[id]).toMatchObject({ id, title: id, kind: 'topic' });
   expect(bridgeCommands.filter(command => command === 'load_workspace_list_projection')).toHaveLength(1);
 });
+
+it('applies the native grade receipt to the scoped card before returning to global Flow', async () => {
+  const app = setup();
+  await app.actions.startReviewSession(now);
+  const global = app.getState().reviewSession.currentNodeId;
+  const item = global === 'first' ? 'second' : 'first';
+  expect(await app.actions.startReviewSession(now, { dive: { id: 'dive', topicIds: [item] } })).toBe(true);
+  app.actions.revealReviewAnswer();
+  expect(await app.actions.gradeReviewCard(3, now)).toBe(true);
+  expect(app.getState().reviewSession.currentNodeId).toBeNull();
+  expect(await app.actions.startReviewSession(now, { returnFromDive: true })).toBe(true);
+  expect(app.getState().reviewSession.currentNodeId).toBe(global);
+});

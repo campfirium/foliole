@@ -10,6 +10,7 @@ export async function prepareWorkspaceFlowDay(set: Set, get: () => WorkspaceStat
   const before = get();
   if (!hasDailyFlowRuntime()) return false;
   if (before.reviewSession.daily && !hasFlowDayChanged(before.reviewSession, now)) return true;
+  if (before.reviewSession.dive) return false;
   const target = before.reviewSession.currentNodeId;
   const node = target ? before.nodesById[target] : undefined;
   const opened = await openWorkspaceDailyFlow(set, get, { now, mode: before.reviewSessionMode }, undefined, true);

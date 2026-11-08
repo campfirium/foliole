@@ -15,8 +15,8 @@ export function cycleReadyNodeIds(snapshot: DailyFlowLearningSnapshot, mode: Rev
     ? plan.readingQueueNodeIds : [...plan.fsrsQueueNodeIds, ...plan.readingQueueNodeIds];
 }
 
-async function scanRange(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSnapshot'>, meta: CycleMeta, args: { mode: ReviewSessionMode; now: string;
-  settings: DailyFlowSettings; excluded?: string | readonly string[]; onSkipped?: (row: CycleRow, snapshot: DailyFlowLearningSnapshot) => void }) {
+export async function scanCycleRange(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSnapshot'>, meta: CycleMeta, args: { mode: ReviewSessionMode; now: string;
+  settings: DailyFlowSettings; matches?: (row: CycleRow, snapshot: DailyFlowLearningSnapshot) => boolean; excluded?: string | readonly string[]; onSkipped?: (row: CycleRow, snapshot: DailyFlowLearningSnapshot) => void }) {
   while (meta.scanAfter < meta.lapLimit) {
     const rows = await db.scanRows(meta.scanAfter, meta.lapLimit, BATCH_SIZE);
     const ids = rows.map(row => row.node_id);
@@ -26,7 +26,7 @@ async function scanRange(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSn
       crossClear(meta, row.order_key, args.now);
       meta.scanAfter = row.order_key;
       const excluded = typeof args.excluded === 'string' ? row.node_id === args.excluded : args.excluded?.includes(row.node_id);
-      if (!excluded && ready.has(row.node_id)) return row;
+      if (!excluded && ready.has(row.node_id) && (!args.matches || args.matches(row, snapshot!))) return row;
       if (!ready.has(row.node_id)) args.onSkipped?.(row, snapshot!);
     }
     if (!rows.length || rows.length < BATCH_SIZE) {
@@ -43,12 +43,12 @@ function crossClear(meta: CycleMeta, position: number, now: string) {
 }
 
 export async function selectCycleSuccessor(db: Pick<DailyFlowStore, 'scanRows' | 'scopedLearningSnapshot'>, meta: CycleMeta,
-  args: Parameters<typeof scanRange>[2]) {
-  const currentLap = await scanRange(db, meta, args);
+  args: Parameters<typeof scanCycleRange>[2]) {
+  const currentLap = await scanCycleRange(db, meta, args);
   if (currentLap) return currentLap;
   meta.scanAfter = 0;
   meta.lapLimit = meta.tailKey;
-  return scanRange(db, meta, args);
+  return scanCycleRange(db, meta, args);
 }
 
 // The persisted window describes the committed current item, never speculative work.

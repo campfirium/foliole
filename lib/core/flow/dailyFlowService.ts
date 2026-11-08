@@ -6,6 +6,8 @@ import { openCycleFlow } from './cycleFlowOpen.js';
 import type { DailyFlowCommitArgs, DailyFlowOpenArgs, DailyFlowResult, DailyFlowSettings, DailyFlowSnapshot, DailyFlowLearningSnapshot } from './dailyFlowContract.js';
 import { dailyFlowSettingsForInstant } from './dailyFlowDayWindow.js';
 import { applyLocalDailyFlowOperations } from './dailyFlowLocalApplication.js';
+import { flowDay } from './dailyFlowPlanning.js';
+import { readCurrentFlowLearning } from './dailyFlowReceipt.js';
 import type { DailyFlowSession } from './dailyFlowSession.js';
 import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
 import { readDailyFlow, saveCycleFlow } from './dailyFlowStorage.js';
@@ -13,6 +15,7 @@ import type { CycleStored, PreparedFlowNavigation } from './dailyFlowStore.js';
 import { recordDailyFlowSync } from './dailyFlowSyncRecord.js';
 import { commitTargetedFlowHistory } from './dailyFlowTargetHistory.js';
 import { transactionDailyFlowPersistence } from './dailyFlowTransactionFacts.js';
+import { selectDiveCurrent } from './diveCycleFlow.js';
 
 export interface DailyFlowPersistence {
   readingPreservesPosition?: boolean;
@@ -29,19 +32,37 @@ export function openDailyFlow(db: DbPort, args: DailyFlowOpenArgs, settings: Dai
     const previous = await readDailyFlow(tx);
     await applyLocalDailyFlowOperations(tx, args.now);
     const config = await dailyFlowSettingsForInstant(tx, settings, args.now);
-    let result = await openCycleFlow(tx, args, config, persistence);
-    await recordDailyFlowSync(tx, result, config, args.now);
-    if (await applyLocalDailyFlowOperations(tx, args.now)) {
-      if (previous?.day_key !== result.session.daily!.dayKey) {
-        const stored = (await readDailyFlow(tx))!;
-        await saveCycleFlow(tx, { dayKey: stored.day_key, mode: stored.mode, settingsKey: stored.settings_key,
-          now: args.now, revision: stored.revision, session: { ...stored.session, currentNodeId: null,
-            cycle: { ...stored.session.cycle!, scanAfter: 0 } } });
-      }
-      result = await openCycleFlow(tx, args, config, persistence);
+    if (args.dive) {
+      const stored = await readDailyFlow(tx);
+      const global = stored?.day_key === flowDay(args.now, config) ? stored.session
+        : (await openGlobalDailyFlow(tx, { now: args.now, mode: 'recommended', prepareOnly: true },
+          config, persistence, previous)).session;
+      const store = createSqliteDailyFlowStore(tx, persistence);
+      const seed = args.seed;
+      const cursor = seed?.daily?.dayKey === global.daily?.dayKey && seed?.dive?.id === args.dive.id
+        ? seed.dive.position : 0;
+      const position = seed?.currentNodeId ? Math.max(0, cursor - 1) : cursor;
+      const session = await selectDiveCurrent(store, global, { ...args.dive, mode: args.mode, position }, args.now, config);
+      return { mode: args.mode, session, learning: await readCurrentFlowLearning(store, session.currentNodeId) };
     }
-    return result;
+    return openGlobalDailyFlow(tx, args, config, persistence, previous);
   });
+}
+
+async function openGlobalDailyFlow(tx: DbPort, args: DailyFlowOpenArgs, config: DailyFlowSettings,
+  persistence: DailyFlowPersistence, previous: CycleStored | null) {
+  let result = await openCycleFlow(tx, args, config, persistence);
+  await recordDailyFlowSync(tx, result, config, args.now);
+  if (await applyLocalDailyFlowOperations(tx, args.now)) {
+    if (previous?.day_key !== result.session.daily!.dayKey) {
+      const stored = (await readDailyFlow(tx))!;
+      await saveCycleFlow(tx, { dayKey: stored.day_key, mode: stored.mode, settingsKey: stored.settings_key,
+        now: args.now, revision: stored.revision, session: { ...stored.session, currentNodeId: null,
+          cycle: { ...stored.session.cycle!, scanAfter: 0 } } });
+    }
+    result = await openCycleFlow(tx, args, config, persistence);
+  }
+  return result;
 }
 
 export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings: DailyFlowSettings,
@@ -56,8 +77,11 @@ export function commitDailyFlow(db: DbPort, args: DailyFlowCommitArgs, settings:
     store.preparedNavigation = !changed && stored && !stored.invalidated && stored.settings_key === JSON.stringify(config)
       ? preparedNavigation : undefined;
     if (!changed) store.readState = async () => stored;
-    const result = await commitCycleFlow(store, args, config);
-    await recordDailyFlowSync(tx, result, config, args.now, args);
+    const result: DailyFlowResult = await commitCycleFlow(store, args, config);
+    // Sync records learning and shared row changes from the durable global state.
+    const syncResult = result.session.dive && !result.replayed
+      ? { ...result, mode: stored!.mode as DailyFlowOpenArgs['mode'], session: (await readDailyFlow(tx))!.session } : result;
+    await recordDailyFlowSync(tx, syncResult, config, args.now, args);
     return result;
   });
 }

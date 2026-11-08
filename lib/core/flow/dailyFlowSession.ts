@@ -1,6 +1,14 @@
+import type { ReviewSessionMode } from '../review/queue/reviewQueueTypes.js';
+
 import type { CycleState } from './cycleFlowTypes.js';
 
+export interface DiveFlowScope {
+  id: string;
+  topicIds: string[];
+}
+
 export interface DailyFlowSession {
+  dive?: DiveFlowScope & { mode: ReviewSessionMode; position: number };
   candidateMembershipHash?: string;
   rebuildSourceRevision?: number;
   dayWindow?: { start: string; end: string };

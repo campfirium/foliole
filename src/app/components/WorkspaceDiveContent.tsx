@@ -1,10 +1,13 @@
-import { useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 
 import { resolveDiveTopicIds, type Dive } from '../../../lib/core/nodes/dive';
 import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { AppButton } from '../../shared/ui';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { DiveFlowActionContext } from './diveFlowActionContext';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 
 const flatChildren = new Map<string | null, string[]>();
@@ -19,6 +22,9 @@ export function WorkspaceDiveContent(props: {
 }) {
   const { childrenByParent, dive, nodesById, visibleNodeIds } = props;
   const t = useTranslation();
+  const openFlow = useContext(DiveFlowActionContext);
+  const activeDiveId = useWorkspaceStore(state => state.reviewSession.dive?.id);
+  const inThisDive = activeDiveId === dive.id;
   const ids = useMemo(() => resolveDiveTopicIds(dive, {
     kindOf: (id) => {
       const node = nodesById[id];
@@ -28,19 +34,28 @@ export function WorkspaceDiveContent(props: {
   }), [childrenByParent, dive, nodesById, visibleNodeIds]);
 
   return (
-    <WorkspaceTopicTree
-      activeFolderId={`dive:${dive.id}`}
-      activeNodeId={props.activeNodeId}
-      childrenByParent={flatChildren}
-      emptyState={{ title: t('desktop.nodeList.dive.empty'), description: t('desktop.nodeList.dive.emptyDescription') }}
-      headerDescription={dive.title}
-      itemIds={ids}
-      nodesById={nodesById}
-      onOpenMoveToNode={() => undefined}
-      onSelectNode={props.onSelectNode}
-      showCreateTopic={false}
-      topicFocusAvailable={false}
-      virtualFolderView="readonly"
-    />
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {openFlow ? (
+        <div className="px-4 py-1">
+          <AppButton size="sm" onClick={() => void openFlow(inThisDive ? null : { id: dive.id, topicIds: ids })}>
+            {t(inThisDive ? 'desktop.nodeList.dive.returnToFlow' : 'desktop.nodeList.dive.startFlow')}
+          </AppButton>
+        </div>
+      ) : null}
+      <WorkspaceTopicTree
+        activeFolderId={`dive:${dive.id}`}
+        activeNodeId={props.activeNodeId}
+        childrenByParent={flatChildren}
+        emptyState={{ title: t('desktop.nodeList.dive.empty'), description: t('desktop.nodeList.dive.emptyDescription') }}
+        headerDescription={dive.title}
+        itemIds={ids}
+        nodesById={nodesById}
+        onOpenMoveToNode={() => undefined}
+        onSelectNode={props.onSelectNode}
+        showCreateTopic={false}
+        topicFocusAvailable={false}
+        virtualFolderView="readonly"
+      />
+    </div>
   );
 }

@@ -8,6 +8,7 @@ import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { appliedWorkspaceHistory, type WorkspaceHistoryApplyResult, type WorkspaceHistoryExecution } from './workspaceHistoryApplyResult';
 import { applyWorkspaceHistoryContext } from './workspaceHistoryContext';
 import { getWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
+import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import type { WorkspaceReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
 import { resolveWorkspaceReviewHistoryTarget } from './workspaceReviewHistoryTarget';
 import { resolveEarliestReviewDueAt } from './workspaceReviewSessionProgress';
@@ -60,6 +61,9 @@ export async function applyWorkspaceReviewGradeHistory(args: {
     ...(reviewResult ? args.mode === 'undo' ? { beforeReview: reviewResult.review } : { afterReview: reviewResult.review } : {}),
     mutationTimestamp: args.mutationTimestamp,
     ...(args.mode === 'redo' ? { reviewOpId: reviewHistoryOpId(args.entry.reviewOpId ?? args.entry.id, args.mutationTimestamp, 'redo') } : {}) }, {
-    ...applyWorkspaceHistoryContext(context), ...(dailySession ? { reviewSession: dailySession } : {}), nodesById: mergeDailyFlowReceiptNodes(nodesById, beforeNodes, displayNodes, learning)
+    ...applyWorkspaceHistoryContext(context),
+    ...(dailySession ? { reviewSession: dailySession,
+      ...(context.reviewSession.dive ? buildReviewActiveNodeContext(args.get(), dailySession.currentNodeId) : {}) } : {}),
+    nodesById: mergeDailyFlowReceiptNodes(nodesById, beforeNodes, displayNodes, learning)
   });
 }

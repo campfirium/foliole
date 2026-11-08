@@ -11,7 +11,7 @@ import { calculateReviewStepElapsedMs, resolveEarliestReviewDueAt } from './flow
 
 export async function advanceCycleFlow(db: DailyFlowStore, source: DailyFlowSession, args: DailyFlowCommitArgs,
   snapshot: DailyFlowLearningSnapshot, settings: DailyFlowSettings,
-  mode: Parameters<typeof chooseCycleCurrent>[2]) {
+  mode: Parameters<typeof chooseCycleCurrent>[2], globalNavigation?: DailyFlowSession) {
   const cycle = { ...source.cycle! };
   delete cycle.change;
   const changes = cycleChanges(cycle);
@@ -22,7 +22,7 @@ export async function advanceCycleFlow(db: DailyFlowStore, source: DailyFlowSess
   const current = source.currentNodeId!;
   const nextReading = args.nextReadingNodeId;
   const currentRow = rows.get(current);
-  if (nextReading && (!currentRow?.active || currentRow.order_key !== cycle.scanAfter ||
+  if (nextReading && (!currentRow?.active || currentRow.order_key !== (source.dive?.position ?? cycle.scanAfter) ||
     !eligible.has(nextReading) || mode === 'review-first')) throw new Error('daily_flow_learning_changed');
   for (const id of ids) {
     const before = rows.get(id);
@@ -47,12 +47,21 @@ export async function advanceCycleFlow(db: DailyFlowStore, source: DailyFlowSess
   await db.writeRows(changes.rows());
   const initial = rows.get(current)?.handled === 0;
   const elapsed = calculateReviewStepElapsedMs(source, args.now);
-  const session = { ...source, cycle,
+  const session = { ...(globalNavigation ?? source), cycle,
     readingElapsedMs: (source.readingElapsedMs ?? 0) + (args.readingAction ? elapsed : 0),
     reviewElapsedMs: (source.reviewElapsedMs ?? 0) + (args.grade ? elapsed : 0),
     readTopicCount: (source.readTopicCount ?? 0) + (initial && args.readingAction ? 1 : 0),
     reviewedItemCount: (source.reviewedItemCount ?? 0) + (initial && args.grade ? 1 : 0),
     ...(args.grade ? { nextReviewDueAt: resolveEarliestReviewDueAt(source.nextReviewDueAt, snapshot.nodesById[current]?.review?.due) } : {}) };
+  if (!globalNavigation) await advanceCycleNavigation(db, source, session, args, eligible, settings, mode);
+  cycle.change = changes.change();
+  return session;
+}
+
+async function advanceCycleNavigation(db: DailyFlowStore, source: DailyFlowSession, session: DailyFlowSession,
+  args: DailyFlowCommitArgs, eligible: Set<string>, settings: DailyFlowSettings,
+  mode: Parameters<typeof chooseCycleCurrent>[2]) {
+  const nextReading = args.nextReadingNodeId;
   const preserveCurrent = args.readings?.length && !args.readingAction && !args.grade &&
     (!source.currentNodeId || await isCycleCurrentReady(db, session, mode, args.now, settings));
   if (nextReading) {
@@ -64,8 +73,6 @@ export async function advanceCycleFlow(db: DailyFlowStore, source: DailyFlowSess
   } else if (!preserveCurrent && !applyPreparedNavigation(db, source, session, eligible, args.now)) {
     await chooseCycleCurrent(db, session, mode, args.now, settings);
   }
-  cycle.change = changes.change();
-  return session;
 }
 
 function applyPreparedNavigation(db: DailyFlowStore, source: DailyFlowSession, session: DailyFlowSession,

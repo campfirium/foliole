@@ -47,13 +47,16 @@ export function isSameWorkspaceReviewSession(
   keys.delete('daily');
   keys.delete('dayWindow');
   keys.delete('cycle');
+  keys.delete('dive');
   keys.delete('flowFormat');
   keys.delete('queueNodeIds');
   keys.delete('soonNodeIds');
   keys.delete('queueHistory');
   keys.delete('hiddenSoonNodeIds');
   const sameWindow = left.dayWindow?.start === right.dayWindow?.start && left.dayWindow?.end === right.dayWindow?.end;
-  return sameWindow && [...keys].every((key) => left[key as keyof typeof left] === right[key as keyof typeof right]) &&
+  const sameDive = left.dive?.id === right.dive?.id && left.dive?.position === right.dive?.position &&
+    left.dive?.mode === right.dive?.mode;
+  return sameWindow && sameDive && [...keys].every((key) => left[key as keyof typeof left] === right[key as keyof typeof right]) &&
     (left.flowFormat === 'cycle-v1' || right.flowFormat === 'cycle-v1'
       ? left.flowFormat === right.flowFormat && sameCycleProgress(left, right)
       : matchesFlowHistoryQueues(right, left)) &&

@@ -100,6 +100,7 @@ export type WorkspaceLayoutReviewProps = Pick<WorkspaceLayoutFieldTypes,
   | 'reviewSummary'
   | 'reviewSessionMode'
   | 'reviewSessionModeAvailability'
+  | 'onOpenDiveFlow'
   | 'onStartStudyMode'
   | 'onToggleReviewSession'
   | 'onRevealAnswer'

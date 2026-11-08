@@ -95,6 +95,28 @@ export async function chooseCycleCurrent(db: Pick<DailyFlowStore, 'scanRows' | '
   return selected;
 }
 
+async function resumeStoredCycle(db: DailyFlowStore, session: DailyFlowSession, args: DailyFlowOpenArgs,
+  settings: DailyFlowSettings, invalidated: boolean, changes?: ReturnType<typeof cycleChanges>) {
+  if (args.preferredNodeId && args.preferredNodeId !== session.currentNodeId) {
+    const preferred = { ...session, currentNodeId: args.preferredNodeId };
+    if (await isCycleCurrentReady(db, preferred, args.mode, args.now, settings)) {
+      const [row] = await db.readRows([args.preferredNodeId]);
+      session = { ...preferred, completedAt: null, currentItemStartedAt: args.now, isAnswerRevealed: false,
+        cycle: { ...session.cycle!, scanAfter: row!.order_key } };
+    }
+  }
+  const keepCurrent = args.preserveCurrent && await canKeepDisplayedCurrent(db, session);
+  const displaced = args.returnFromDive && session.currentNodeId &&
+    (await db.readRows([session.currentNodeId]))[0]?.order_key !== session.cycle!.scanAfter;
+  if (displaced || (!keepCurrent && !await isCycleCurrentReady(db, session, args.mode, args.now, settings))) {
+    await chooseCycleCurrent(db, session, args.mode, args.now, settings, changes);
+  } else if (invalidated && session.currentNodeId) {
+    const [current] = await db.readRows([session.currentNodeId]);
+    if (current) session.cycle!.scanAfter = current.order_key;
+  }
+  return session;
+}
+
 export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpenArgs, settings: DailyFlowSettings, captureChanges = false, createdRows?: (rows: CycleRow[]) => void) {
   let stored = await db.readState();
   const dayKey = flowDay(args.now, settings);
@@ -121,21 +143,7 @@ export async function openStoredDailyFlow(db: DailyFlowStore, args: DailyFlowOpe
     const changes = captureChanges && !reconcile ? cycleChanges(stored.session.cycle!) : undefined;
     session = reconcile
       ? await reconcileCycle(db, stored, args.now, settings, captureChanges) : { ...stored.session, cycle: { ...stored.session.cycle! } };
-    if (args.preferredNodeId && args.preferredNodeId !== session.currentNodeId) {
-      const preferred = { ...session, currentNodeId: args.preferredNodeId };
-      if (await isCycleCurrentReady(db, preferred, args.mode, args.now, settings)) {
-        const [row] = await db.readRows([args.preferredNodeId]);
-        session = { ...preferred, completedAt: null, currentItemStartedAt: args.now, isAnswerRevealed: false,
-          cycle: { ...session.cycle!, scanAfter: row!.order_key } };
-      }
-    }
-    const keepCurrent = args.preserveCurrent && await canKeepDisplayedCurrent(db, session);
-    if (!keepCurrent && !await isCycleCurrentReady(db, session, args.mode, args.now, settings)) {
-      await chooseCycleCurrent(db, session, args.mode, args.now, settings, changes);
-    } else if (stored.invalidated && session.currentNodeId) {
-      const [current] = await db.readRows([session.currentNodeId]);
-      if (current) session.cycle!.scanAfter = current.order_key;
-    }
+    session = await resumeStoredCycle(db, session, args, settings, Boolean(stored.invalidated), changes);
     if (changes) session.cycle!.change = changes.change();
   }
   if (args.prepareOnly && !session.sessionStartedAt) {

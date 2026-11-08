@@ -89,7 +89,10 @@ function createGradeReviewCardAction(
     const currentNode = snapshot.nodesById[currentNodeId];
     if (!currentNode || !isFsrsReviewItemNode(currentNode)) return false;
     if (!isActionableSessionNode(currentNode, now)) {
-      await openWorkspaceDailyFlow(set, get, { now, mode: snapshot.reviewSessionMode, seed: snapshot.reviewSession, refresh: true });
+      const dive = snapshot.reviewSession.dive;
+      await openWorkspaceDailyFlow(set, get, dive
+        ? { now, mode: dive.mode, dive: { id: dive.id, topicIds: dive.topicIds } }
+        : { now, mode: snapshot.reviewSessionMode, seed: snapshot.reviewSession, refresh: true });
       return true;
     }
     const result = await gradeSharedFsrsReviewNode({

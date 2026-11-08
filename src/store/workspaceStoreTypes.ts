@@ -114,7 +114,7 @@ export interface EditorOperationApplyContext {
   nodeId: string;
 }
 
-export type ReviewSessionStartOptions = Record<string, never>;
+export type ReviewSessionStartOptions = Pick<import('../../lib/core/flow/dailyFlowContract').DailyFlowOpenArgs, 'dive' | 'returnFromDive'>;
 
 export interface ReviewSessionResumeOptions {
   preferredNodeId?: string | null;

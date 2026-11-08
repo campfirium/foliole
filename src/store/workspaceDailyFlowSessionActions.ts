@@ -59,7 +59,7 @@ export function installDailyFlowExternalRefresh(store: { getState(): WorkspaceSt
   setState: Set; subscribe(handler: (state: WorkspaceState, previous: WorkspaceState) => void): () => void }) {
   store.subscribe((state, previous) => {
     if (hasWorkspaceBrowserCommit() && !state.browserDailyFlow?.state?.invalidated) return;
-    if (!hasDailyFlowRuntime() || !state.reviewSession.daily || (state.nodesById === previous.nodesById && !previous.appActionHistory.pendingAction) ||
+    if (!hasDailyFlowRuntime() || state.reviewSession.dive || !state.reviewSession.daily || (state.nodesById === previous.nodesById && !previous.appActionHistory.pendingAction) ||
       state.appActionHistory.applying || state.appActionHistory.pendingAction) return;
     const token = state.reviewSession.daily;
     const prior = previous.reviewSession.daily;
@@ -74,6 +74,11 @@ export async function recoverWorkspaceDailyFlow(set: Set, get: () => WorkspaceSt
   if (!/daily_flow_(changed|learning_changed|ack_superseded)/.test(message)) return;
   const source = get().reviewSession;
   if (!source.daily) return;
+  if (source.dive) {
+    const { id, topicIds, mode } = source.dive;
+    await openWorkspaceDailyFlow(set, get, { now, mode, dive: { id, topicIds } });
+    return;
+  }
   await openWorkspaceDailyFlow(set, get, { now, mode: get().reviewSessionMode,
     preferredNodeId: source.currentNodeId, seed: source, refresh: true }, undefined, true);
 }

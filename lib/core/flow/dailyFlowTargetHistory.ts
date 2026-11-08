@@ -4,7 +4,7 @@ import type { DbPort } from '../sync/dbPort.js';
 
 import { replayCycleHistory } from './cycleFlowHistory.js';
 import { sameLearningProfile } from './cycleFlowLearning.js';
-import { openCycleFlow } from './cycleFlowOpen.js';
+import { openCycleFlow, reconcileCycle } from './cycleFlowOpen.js';
 import { dailyFlowCommitSchema, type DailyFlowCommitArgs, type DailyFlowSettings, type DailyFlowResult } from './dailyFlowContract.js';
 import { readDailyFlowFact } from './dailyFlowFactStorage.js';
 import { applyLocalDailyFlowOperations, readLocalDailyFlowFacts } from './dailyFlowLocalApplication.js';
@@ -14,6 +14,7 @@ import { readDailyFlow, saveCycleFlow } from './dailyFlowStorage.js';
 import type { DailyFlowSyncFact } from './dailyFlowSyncFact.js';
 import { effectiveFlowActions } from './dailyFlowSyncMerge.js';
 import { recordDailyFlowSync } from './dailyFlowSyncRecord.js';
+import { selectDiveCurrent } from './diveCycleFlow.js';
 
 async function persistTargetLearning(db: DbPort, args: DailyFlowCommitArgs, facts: DailyFlowSyncFact[],
   target: DailyFlowSyncFact, persistence: DailyFlowPersistence) {
@@ -64,13 +65,14 @@ export async function commitTargetedFlowHistory(db: DbPort, args: DailyFlowCommi
   if (!nodeId || (target.nodeId ? target.nodeId !== nodeId : !target.rows.some(value => value.node_id === nodeId))) {
     throw new Error('flow_history_changed');
   }
+  const diveAction = args.historySourceSession?.dive && args.nextSession?.dive;
   const store = createSqliteDailyFlowStore(db, persistence);
   const hash = hashTextBody(JSON.stringify(args));
   const previous = await store.readOperation(args.opId);
   if (previous) {
     if (previous.input_hash !== hash) throw new Error('daily_flow_operation_mismatch');
     if (stored.invalidated || previous.revision !== stored.revision) throw new Error('daily_flow_ack_superseded');
-    return historyReceipt(db, persistence, args, { session: stored.session, replayed: true,
+    return historyReceipt(db, persistence, args, { session: await historyDisplay(store, args, stored.session, settings), replayed: true,
       ...(previous.card_json === null ? {} : { card: JSON.parse(previous.card_json) }) });
   }
   const facts = await readLocalDailyFlowFacts(db, stored.session.dayWindow!.start, stored.session.dayWindow!.end);
@@ -80,14 +82,17 @@ export async function commitTargetedFlowHistory(db: DbPort, args: DailyFlowCommi
   const reordered = orderChange?.before.some(before => before.node_id === nodeId &&
     target.rows.some(after => after.node_id !== nodeId && after.order_key === before.order_key));
   const restored = reordered ? await replayCycleHistory(store, stored.session, args) : null;
-  const desired = restored ?? { ...stored.session, currentNodeId: args.historyMode === 'undo' ? nodeId : target.session.currentNodeId, isAnswerRevealed: false };
+  const desired = restored ?? (diveAction ? { ...stored.session } : { ...stored.session, currentNodeId: args.historyMode === 'undo' ? nodeId : target.session.currentNodeId, isAnswerRevealed: false });
   delete desired.rebuildSourceRevision;
   await saveCycleFlow(db, { dayKey: stored.day_key, mode: stored.mode, settingsKey: stored.settings_key,
     now: args.now, revision: stored.revision + 1, session: desired });
   await recordDailyFlowSync(db, { session: desired, sourceSession: stored.session }, settings, args.now, args);
   await applyLocalDailyFlowOperations(db, args.now, undefined, restored ? new Set([nodeId]) : undefined);
   const historyNow = new Date(Math.min(Date.parse(args.now), Date.parse(settings.dayWindow!.end) - 1)).toISOString();
-  const result = await openCycleFlow(db, { now: historyNow, mode: stored.mode as NonNullable<DailyFlowResult['mode']> }, settings, persistence);
+  const result = diveAction && args.sourceSession?.dive
+    ? await reconcileDiveHistory(db, args, historyNow, settings, persistence)
+    : await openCycleFlow(db, { now: historyNow, mode: stored.mode as NonNullable<DailyFlowResult['mode']>,
+      ...(diveAction ? { returnFromDive: true } : {}) }, settings, persistence);
   await store.saveOperation(args.opId, { input_hash: hash, revision: result.session.daily!.revision,
     card_json: changed.card === undefined ? null : JSON.stringify(changed.card), source_session_json: JSON.stringify(stored.session) });
   return historyReceipt(db, persistence, args, { ...result, ...changed, sourceSession: stored.session });
@@ -103,4 +108,23 @@ async function historyReceipt(db: DbPort, persistence: DailyFlowPersistence, arg
   })), mutationTimestamp: args.now,
     ...(args.readings ? { readings: args.readings.map(value => ({ nodeId: value.nodeId,
       reading: learning.nodesById[value.nodeId]?.reading ?? null })) } : {}) };
+}
+
+async function reconcileDiveHistory(db: DbPort, args: DailyFlowCommitArgs, now: string,
+  settings: DailyFlowSettings, persistence: DailyFlowPersistence) {
+  const store = createSqliteDailyFlowStore(db, persistence);
+  const stored = (await store.readState())!;
+  const reconciled = await reconcileCycle(store, stored, now, settings);
+  const global = await store.saveState({ dayKey: stored.day_key, mode: stored.mode, settingsKey: JSON.stringify(settings),
+    now, revision: stored.revision, session: reconciled });
+  return { session: await historyDisplay(store, args, global, settings, now) };
+}
+
+async function historyDisplay(store: ReturnType<typeof createSqliteDailyFlowStore>, args: DailyFlowCommitArgs,
+  global: import('./dailyFlowSession.js').DailyFlowSession, settings: DailyFlowSettings, now = args.now) {
+  const current = args.sourceSession?.dive;
+  const before = (args.historyMode === 'undo' ? args.nextSession : args.historySourceSession)?.dive;
+  if (!current || !before || current.id !== before.id) return global;
+  return selectDiveCurrent(store, global, { ...current,
+    position: args.historyMode === 'undo' ? Math.max(0, before.position - 1) : before.position }, now, settings);
 }

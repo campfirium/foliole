@@ -19,6 +19,7 @@ import {
 import { getWorkspaceHistoryPersistence } from './workspaceHistoryPersistence';
 import { isSameNodeReading } from './workspaceNodeLearningComparison';
 import { isWorkspacePartialPersistenceError } from './workspacePersistenceFailure';
+import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import type { WorkspaceState } from './workspaceStore';
 import {
   resolveTopicReadingHistoryApply,
@@ -113,7 +114,8 @@ export async function applyWorkspaceReadingHistory(args: {
   const context = args.mode === 'undo' ? args.entry.beforeContext : args.entry.afterContext;
   return appliedWorkspaceHistory({ ...args.entry, mutationTimestamp: args.mutationTimestamp }, {
     ...applyWorkspaceHistoryContext(context),
-    ...(dailySession ? { reviewSession: dailySession } : {}),
+    ...(dailySession ? { reviewSession: dailySession,
+      ...(context.reviewSession.dive ? buildReviewActiveNodeContext(latest, dailySession.currentNodeId) : {}) } : {}),
     nodesById: mergeDailyFlowReceiptNodes(applied.nextNodesById, beforeNodes, displayNodes, learning)
   });
 }
