@@ -44,6 +44,10 @@ const stringList = (values: readonly string[]): CanonicalValue => ({
 const field = (name: string, value: CanonicalValue): CanonicalField => ({ name, value });
 
 function snapshotFields(snapshot: NativeSyncNodeRecord['snapshot'], bodyHash: string | null) {
+  if (snapshot.deleted_version_metadata_digest) return [
+    field('id', scalarValue(snapshot.id)),
+    field('deleted_version_metadata_digest', scalarValue(snapshot.deleted_version_metadata_digest))
+  ];
   return [
     ...(snapshot.initial_review_due ? [field('initial_review_due', scalarValue(snapshot.initial_review_due))] : []),
     field('anchor_link', scalarValue(snapshot.anchor_link)),

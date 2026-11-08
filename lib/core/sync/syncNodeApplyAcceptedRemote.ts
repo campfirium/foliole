@@ -15,7 +15,7 @@ import {
   buildRemoteNodeVersionUpsert
 } from './syncNodeApplyStatements.js';
 import { enqueueAppliedNodeSearchInvalidations, type LocalSyncNodeSearchInvalidationState } from './syncNodeSearchInvalidations.js';
-import { isSyncNodeSnapshotIdentical } from './syncNodeSnapshotIdentity.js';
+import { compactDeletedVersionIdentity, deletedVersionMetadataDigest, isSyncNodeSnapshotIdentical } from './syncNodeSnapshotIdentity.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
 import { assertSyncNodeTextWithinBudget } from './syncNodeTextBudget.js';
 import { applyStoredNodeVersionBodyState, repairStoredRetiredNodeBodyHash } from './syncNodeVersionBodyState.js';
@@ -63,14 +63,23 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord, d
   const incomingBody = record.body_text ?? record.snapshot.content ?? null;
   const existing = await storedVersion(port, record, incomingBody, known);
   if (existing) {
+    const digest = typeof existing.snapshot_json === 'string' ? compactDeletedVersionIdentity(existing.snapshot_json) : null;
+    const [deleted] = digest ? await port.query(`SELECT 1 FROM node_sync_tombstones WHERE node_id = ?
+      AND NOT EXISTS (SELECT 1 FROM nodes WHERE id = ?)`, [record.object_id, record.object_id]) : [];
+    const incomingDigest = record.snapshot.deleted_version_metadata_digest;
+    const compactMatches = digest
+      ? Boolean(deleted && digest === (incomingDigest ?? deletedVersionMetadataDigest(record.snapshot)))
+      : Boolean(incomingDigest && typeof existing.snapshot_json === 'string' &&
+        incomingDigest === deletedVersionMetadataDigest(JSON.parse(existing.snapshot_json)));
     if (record.body_text !== null) validateTopicTextBodies(
       textAlternativesSchema.parse(record.snapshot.text_alternatives ?? []), record.alternative_bodies ?? []);
     if (existing.object_id !== record.object_id || existing.content_hash !== record.content_hash ||
         existing.host_name !== record.host_name || existing.created_at !== record.version_created_at ||
         Number(existing.body_mismatch) !== 0 || typeof existing.snapshot_json !== 'string' ||
-        !isSyncNodeSnapshotIdentical(existing.snapshot_json, record.snapshot)) {
+        !((digest || incomingDigest) ? compactMatches : isSyncNodeSnapshotIdentical(existing.snapshot_json, record.snapshot))) {
       throw new Error(`sync_pack_node_version_immutable_mismatch:${record.version_id}`);
     }
+    if (compactMatches) return retainVersionParents(port, record);
     await repairStoredRetiredNodeBodyHash(port, record);
     if (!deferBodyRetirement || record.snapshot.kind !== 'topic' || record.snapshot.body_deleted !== true) await applyStoredNodeVersionBodyState(port, record);
     await retainVersionParents(port, record);

@@ -102,10 +102,13 @@ it('allows the restore source to supply a new member with no restore state', () 
   expect(mocks.revokeReady).not.toHaveBeenCalled();
 });
 
-it.each(['missing', 'legacy'] as const)('rejects %s protocol before applying or marking ready', kind => {
+it.each(['missing', 'legacy', 'version-35'] as const)('rejects %s protocol before applying or marking ready', kind => {
   const incoming = memberState();
   if (kind === 'missing') delete incoming.protocol;
-  else {
+  else if (kind === 'version-35') {
+    incoming.protocol = { ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+      version: 35, min_supported_version: 35, max_supported_version: 35 };
+  } else {
     const transportCapability = `framed-sync-v${FRAMED_SYNC_PROTOCOL_VERSION}`;
     expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities).toContain(transportCapability);
     incoming.protocol = { ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
@@ -114,7 +117,8 @@ it.each(['missing', 'legacy'] as const)('rejects %s protocol before applying or 
     expect(incoming.protocol.capabilities).toHaveLength(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.length - 1);
   }
   expect(() => acceptDesktopSyncGroupMemberState(JSON.stringify(incoming), receiverDeviceId))
-    .toThrow('sync_group_peer_incompatible');
+    .toThrow(kind === 'version-35' ? 'sync_group_peer_incompatible:protocol_version_unsupported'
+      : 'sync_group_peer_incompatible');
   expect(mocks.apply).not.toHaveBeenCalled();
   expect(mocks.markReady).not.toHaveBeenCalled();
   expect(mocks.revokeReady).toHaveBeenCalledWith(receiverDeviceId);

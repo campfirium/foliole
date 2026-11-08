@@ -182,7 +182,13 @@ function restoreNodeFields(fact: CanonicalFact, body: string | null, bodyHash: s
   const get = (name: string) => requiredValue(values, name);
   const contentHash = readString(get('content_hash'))!;
   if (bytesToHex(fact.sharedStateHash) !== contentHash) throw new Error('node_version_shared_state_hash_mismatch');
-  const snapshot = readSnapshot(get('snapshot'));
+  const snapshotValue = get('snapshot');
+  const compact = snapshotValue.kind === 'object'
+    ? snapshotValue.value.find(field => field.name === 'deleted_version_metadata_digest') : undefined;
+  const snapshot = compact ? {
+    id: fact.globalId, updated_at: readString(get('updated_at'))!,
+    deleted_version_metadata_digest: readString(compact.value)!
+  } as NativeSyncNodeRecord['snapshot'] : readSnapshot(snapshotValue);
   if (snapshot.id !== fact.globalId || (bodyHash !== null && snapshot.body_blob_hash !== bodyHash)) {
     throw new Error('node_version_projection_identity_invalid');
   }

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
+import { hashTextBody } from '../database/textBodyHash.js';
 
 import { FRAMED_SYNC_NODE_VERSION_FACT } from './framedSyncNodeFactContract.js';
 
@@ -35,4 +36,14 @@ export function isSyncNodeSnapshotIdentical(stored: string, incoming: NativeSync
   const skipped = new Set([...ignored, ...withoutText ? [...TEXT_DERIVED_FIELDS]
     .filter(name => isCleared(left[name]) || isCleared(right[name])) : []]);
   return metadata(left, skipped) === metadata(right, skipped);
+}
+
+export function deletedVersionMetadataDigest(snapshot: Record<string, unknown>) {
+  return hashTextBody(metadata(snapshot, TEXT_DERIVED_FIELDS));
+}
+
+export function compactDeletedVersionIdentity(snapshotJson: string): string | null {
+  if (!snapshotJson.includes('"deleted_version_metadata_digest"')) return null;
+  const value = snapshotObject.parse(JSON.parse(snapshotJson)).deleted_version_metadata_digest;
+  return typeof value === 'string' && /^[a-f0-9]{64}$/.test(value) ? value : null;
 }

@@ -167,6 +167,7 @@ export function assertNodeVersionFactShape(fact: CanonicalFact) {
       contentHash !== bytesToHex(fact.sharedStateHash)) {
     throw new Error('node_version_fact_shared_state_hash_mismatch');
   }
+  if (isValidatedCompactSnapshot(snapshot.value, fact.globalId, retired, fields.get('body_deleted'))) return;
   const references = readFramedSyncNodeResources(
     assertSnapshot(get('snapshot'), fact.globalId, retired ? null : bytesToHex(bodyBlobs[0]!.sha256))
   );
@@ -187,6 +188,20 @@ export function assertNodeVersionFactShape(fact: CanonicalFact) {
       blob.role === reference.role)))) {
     throw new Error('node_version_fact_resource_blobs_invalid');
   }
+}
+
+function isValidatedCompactSnapshot(fields: readonly CanonicalField[], globalId: string,
+  retired: boolean, deleted: CanonicalValue | undefined) {
+  const compact = fields.find(field => field.name === 'deleted_version_metadata_digest');
+  if (!compact) return false;
+  const compactFields = exactFields(fields, ['id', 'deleted_version_metadata_digest'],
+    'node_version_fact_snapshot_shape_invalid');
+  const digest = stringValue(compact.value);
+  if (!retired || deleted?.kind !== 'bool' || !deleted.value || !digest || !/^[a-f0-9]{64}$/.test(digest) ||
+      stringValue(required(compactFields, 'id')) !== globalId) {
+    throw new Error('node_version_compact_identity_invalid');
+  }
+  return true;
 }
 
 /** Body descriptors share the text role; the snapshot identifies the main one. */

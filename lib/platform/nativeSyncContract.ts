@@ -128,6 +128,7 @@ export interface NativeSyncNodeRecord {
     resource_references?: string;
     body_blob_hash?: string | null;
     body_deleted?: boolean;
+    deleted_version_metadata_digest?: string;
     content?: string | null;
     created_at: string;
     deleted_at: string | null;

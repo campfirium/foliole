@@ -67,6 +67,7 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
         }
       }
     }
+    await assertCompactHistoryHasDeletion(tx, restoredSource.records);
     for (const source of sources) for await (const fact of source(tx, [3, 4])) {
       if (fact.kind === 3 || fact.kind === 4) await applyFramedSyncRelationReviewFactsWithDbPort(tx, [fact]);
       if (fact.kind === 4) workspaceScope = joinWorkspaceScopes(workspaceScope, { kind: 'nodes', nodeIds: [fact.globalId] });
@@ -133,4 +134,15 @@ async function applyFramedStateFact(db: DbPort, fact: CanonicalFact, loadBody: F
     record = withFramedExternalDocumentBody(record, bodies);
   }
   return applyFramedSyncObjectStateRecord(db, record, options);
+}
+
+async function assertCompactHistoryHasDeletion(db: DbPort,
+  records: ReturnType<typeof framedSyncNodeRecordSource>['records']) {
+  const ids = [...new Set(records.filter(record => record.snapshot.deleted_version_metadata_digest)
+    .map(record => record.object_id))];
+  if (!ids.length) return;
+  const [invalid] = await db.query(`SELECT 1 FROM json_each(?) compact
+    WHERE NOT EXISTS (SELECT 1 FROM node_sync_tombstones WHERE node_id = compact.value)
+       OR EXISTS (SELECT 1 FROM nodes WHERE id = compact.value) LIMIT 1`, [JSON.stringify(ids)]);
+  if (invalid) throw new Error('node_version_compact_without_deletion');
 }

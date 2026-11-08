@@ -1,4 +1,5 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
+import { markCompactDeletionSnapshot } from '../database/deletedNodeBodyRelease.js';
 
 
 import type { DbPort, DbRow } from './dbPort.js';
@@ -73,7 +74,7 @@ export async function applyRemoteNodeTombstone(
       record.parent_version_id,
       record.host_name,
       record.content_hash,
-      serializeTopicTextSnapshot(record),
+      markCompactDeletionSnapshot(JSON.parse(serializeTopicTextSnapshot(record))),
       record.snapshot.deleted_at,
       createdAt
     ]

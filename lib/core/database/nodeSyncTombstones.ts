@@ -1,6 +1,6 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
-import { releaseDeletedNodeBodiesWithDriver } from './deletedNodeBodyRelease.js';
+import { markCompactDeletionSnapshot, releaseDeletedNodeBodiesWithDriver } from './deletedNodeBodyRelease.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { computeNodeSyncHash } from './nodeSyncHash.js';
 import { upsertSyncObjectState } from './syncState.js';
@@ -103,8 +103,15 @@ function writeNodeSyncTombstoneRow(
   row: TombstoneSourceRow,
   deletedAt: string
 ) {
-  const snapshot = forceDeletedSnapshot(row.snapshot_json, deletedAt);
   const sourceSnapshot = JSON.parse(row.snapshot_json) as NativeSyncNodeRecord['snapshot'];
+  if (sourceSnapshot.deleted_version_metadata_digest) {
+    const existing = driver.queryOne(`SELECT 1 AS present FROM node_sync_tombstones
+      WHERE node_id = ? AND version_id = ? AND host_name = ? AND parent_version_id IS ? AND deleted_at = ?`,
+    [nodeId, row.version_id, row.host_name, row.parent_version_id, deletedAt]);
+    if (!existing) throw new Error(`sync_node_version_body_unavailable:${row.version_id}`);
+    return;
+  }
+  const snapshot = forceDeletedSnapshot(row.snapshot_json, deletedAt);
   const sameDeletion = sourceSnapshot.deleted_at === deletedAt && sourceSnapshot.updated_at === deletedAt;
   if (typeof row.body_text === 'string') snapshot.content = row.body_text;
   if (!sameDeletion && snapshot.content === null) {
@@ -117,7 +124,7 @@ function writeNodeSyncTombstoneRow(
     row.parent_version_id,
     row.host_name,
     contentHash,
-    JSON.stringify(snapshot),
+    markCompactDeletionSnapshot(snapshot),
     deletedAt,
     deletedAt
   ]);
