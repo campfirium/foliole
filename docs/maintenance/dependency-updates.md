@@ -152,19 +152,26 @@ owner pushes the validated dev tip and verifies remote containment before PR
 closure. Scheduled Dev Quality follows its own schedule. Do not use PR count
 to determine install, test, commit or task count.
 
-### Pending centralized QA
+### Completed November 9 npm batch
 
-The local npm batch is committed as `0f0d4f6d3` on `dev`. npm resolved all
+The local npm batch was committed as `0f0d4f6d3` on `dev`. npm resolved all
 four updated packages under the seven-day policy. The production audit found
-zero vulnerabilities, the nine-case Mac desktop suite passed (including the
-large-folder virtual list), and local lint and type checks passed. The next
-check must include dependency hardening and full quality before PR closure.
+zero vulnerabilities, and nine Mac desktop scenarios passed, including the
+large-folder virtual list.
 
-| PR | Verified author / reviewed head | Adopted version |
+[Centralized full QA 42494591393, attempt 2](https://github.com/campfirium/foliole/actions/runs/42494591393/attempts/2)
+passed for `e94c172d6cfbfd7628bb6aa3e652db70471fb558`, including dependency
+hardening. The first attempt on that candidate hit the Ubuntu lint memory cap.
+The failed-job rerun passed on the same commit. The actual dev combination
+passed 134 affected tests and was delivered as `086d53f83`. The registered QA
+workspace was released, and the three unchanged reviewed proposals were
+verified closed.
+
+| Closed PR | Verified author / reviewed head | Adopted version |
 | --- | --- | --- |
-| #216 | `app/renovate` / `5b5d2baabcd6f18776ccb5d105cf1a780a170ec6` | knip 6.44.1 |
-| #218 | `app/renovate` / `de21a9a3d0fa6ac73bf4d9bbf834d37800c185e0` | react-virtual 3.14.25 and virtual-core 3.19.10 |
-| #219 | `app/renovate` / `de513dec72a0931784f3e2d49e2d9eb7086ce08c` | globals 17.14.0 |
+| [#216](https://github.com/campfirium/foliole/pull/216) | `app/renovate` / `5b5d2baabcd6f18776ccb5d105cf1a780a170ec6` | knip 6.44.1 |
+| [#218](https://github.com/campfirium/foliole/pull/218) | `app/renovate` / `de21a9a3d0fa6ac73bf4d9bbf834d37800c185e0` | react-virtual 3.14.25 and virtual-core 3.19.10 |
+| [#219](https://github.com/campfirium/foliole/pull/219) | `app/renovate` / `de513dec72a0931784f3e2d49e2d9eb7086ce08c` | globals 17.14.0 |
 
 ### Completed Android/iPhone dependency batch
 
