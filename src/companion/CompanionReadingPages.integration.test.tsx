@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', async () => {
@@ -6,6 +6,7 @@ vi.mock('@capacitor/core', async () => {
   return { Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => false }, registerPlugin: () => ({ ...createCompanionNativeSyncStub(), stopSyncGroupProvider: async () => {}, addListener: async () => ({ remove: async () => {} }) }) };
 });
 
+import { APP_SETTINGS_STORAGE_KEYS } from '../shared/config/appSettings';
 import { saveCompanionNavigationResume } from '../shared/platform/companion/runtime/companionNavigationResume';
 import * as browseApi from '../shared/platform/companionBrowseLists';
 import * as externalApi from '../shared/platform/companionExternalDocuments';
@@ -185,4 +186,28 @@ it('releases retained pages when a replacement SQLite library reuses the same no
   expect(oldRow).not.toBeInTheDocument();
   expect(oldPage).not.toBeInTheDocument();
   expect(oldSearch).not.toBeInTheDocument();
+});
+
+it('applies the browse-menu topic focus to recent articles and the directory', async () => {
+  const storageKey = APP_SETTINGS_STORAGE_KEYS.viewHideDismissedTopics;
+  window.localStorage.removeItem(storageKey);
+  try {
+    library.database.exec(`INSERT INTO node_reading (node_id, last_handled_at, next_at, state)
+      VALUES ('article', '2026-10-25', '2026-10-26', 'dismissed')`);
+    render(<ReadingLibraryShell snapshot={await library.snapshot()} />);
+    const article = () => screen.queryByRole('button', { name: 'Open topic Article' });
+    await waitFor(() => expect(article()).toBeVisible());
+
+    fireEvent.click(screen.getByRole('button', { name: 'More', exact: true }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Hide dismissed and shelved topics' }));
+    expect(article()).toBeNull();
+
+    fireEvent.click(screen.getByTestId('companion-tab-shortcut'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Open folder Folder' }));
+    expect(article()).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Show all topics' }));
+    expect(await screen.findByRole('button', { name: 'Open topic Article' })).toBeVisible();
+  } finally {
+    window.localStorage.removeItem(storageKey);
+  }
 });

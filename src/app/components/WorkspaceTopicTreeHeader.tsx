@@ -1,7 +1,8 @@
-import { ChevronsDownUp, ChevronsUpDown, Focus, Scan, SquarePen } from 'lucide-react';
+import { ChevronsDownUp, ChevronsUpDown, SquarePen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
+import { resolveTopicFocusPresentation } from '../../features/nodes/components/topicFocusPresentation';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppIconButton, AppToolbar, AppTooltip, AppTooltipContent, AppTooltipTrigger, ToolbarActionGroup } from '../../shared/ui';
 
@@ -117,6 +118,8 @@ function WorkspaceTopicTreeHeaderLead({
 function WorkspaceTopicTreeHeaderActions(props: Omit<WorkspaceTopicTreeHeaderProps, 'onSearchQueryChange' | 'searchQuery'>) {
   const t = useTranslation();
   const topicFocusActive = props.topicFocusAvailable !== false && props.viewHideDismissedTopics;
+  const { icon: TopicFocusIcon, labelKey } = resolveTopicFocusPresentation(Boolean(topicFocusActive));
+  const topicFocusLabel = t(labelKey);
   return (
     <ToolbarActionGroup ariaLabel={t('desktop.nodeList.currentFolderTopicActions')}>
       <WorkspaceContentSortControls
@@ -146,20 +149,14 @@ function WorkspaceTopicTreeHeaderActions(props: Omit<WorkspaceTopicTreeHeaderPro
               aria-pressed={topicFocusActive}
               className="size-8 text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground aria-pressed:text-foreground"
               disabled={props.topicFocusAvailable === false}
-              icon={
-                topicFocusActive
-                  ? <Focus size={16} strokeWidth={1.9} />
-                  : <Scan size={16} strokeWidth={1.9} />
-              }
-              label={topicFocusActive ? t('desktop.nodeList.showAllTopics') : t('desktop.nodeList.hideDismissedAndShelvedTopics')}
+              icon={<TopicFocusIcon size={16} strokeWidth={1.9} />}
+              label={topicFocusLabel}
               onClick={props.onToggleDismissedTopicsVisibility}
             />
           </span>
         </AppTooltipTrigger>
         <AppTooltipContent align="center" avoidCollisions={false} side="top" sideOffset={8}>
-          {topicFocusActive
-            ? t('desktop.nodeList.showAllTopics')
-            : t('desktop.nodeList.hideDismissedAndShelvedTopics')}
+          {topicFocusLabel}
         </AppTooltipContent>
       </AppTooltip>
       {props.showCreateTopic !== false ? (

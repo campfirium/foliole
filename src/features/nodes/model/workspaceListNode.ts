@@ -213,15 +213,17 @@ export function isInactiveWorkspaceListReadingTopic(node: WorkspaceListNode | nu
   return Boolean(node?.kind === 'topic' && (node.reading?.state === 'dismissed' || node.shelvedAt));
 }
 
+export type TopicFocusNode = Pick<WorkspaceListNode, 'id' | 'kind' | 'parentNodeId' | 'reading' | 'shelvedAt'>;
+
 function hasShelvedWorkspaceListTopicAncestor(
-  node: WorkspaceListNode | null | undefined,
-  nodesById: WorkspaceListNodesById
+  node: TopicFocusNode | null | undefined,
+  nodesById: Record<string, TopicFocusNode | undefined>
 ) {
   if (node?.kind !== 'topic') {
     return false;
   }
   const visitedNodeIds = new Set<string>();
-  let currentNode: WorkspaceListNode | undefined = node;
+  let currentNode: TopicFocusNode | undefined = node;
   while (currentNode && !visitedNodeIds.has(currentNode.id)) {
     if (currentNode.kind === 'topic' && currentNode.shelvedAt) {
       return true;
@@ -233,8 +235,8 @@ function hasShelvedWorkspaceListTopicAncestor(
 }
 
 export function isVisuallyInactiveWorkspaceListReadingTopic(
-  node: WorkspaceListNode | null | undefined,
-  nodesById: WorkspaceListNodesById
+  node: TopicFocusNode | null | undefined,
+  nodesById: Record<string, TopicFocusNode | undefined>
 ) {
   return Boolean(node?.kind === 'topic' && (node.reading?.state === 'dismissed' || hasShelvedWorkspaceListTopicAncestor(node, nodesById)));
 }

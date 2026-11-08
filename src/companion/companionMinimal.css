@@ -40,11 +40,9 @@ html, body, #root, #root * { scrollbar-width: none; }
   pointer-events: none;
 }
 .companion-toolbar-title {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  min-width: 0;
   max-width: 45%;
+  text-align: center;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;

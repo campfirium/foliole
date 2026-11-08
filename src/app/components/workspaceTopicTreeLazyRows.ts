@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 
+import { collectInactiveTopicBranchIds } from '../../features/nodes/model/inactiveTopicBranches';
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
-import { isVisuallyInactiveWorkspaceListReadingTopic, type WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 
 export type TopicChildrenByParent = Map<string | null, string[]>;
 
@@ -83,7 +84,8 @@ function collectRows(args: TopicRowsArgs) {
   const rows: NodeTreeRow[] = [];
   const countDirectDerivedMaterials = createDerivedMaterialDirectChildCounter(args.childrenByParent, args.nodesById);
   const fullyDismissedBranchIds = args.hideDismissedTopics
-    ? collectFullyDismissedTopicBranchIds(args)
+    ? collectInactiveTopicBranchIds(args.rootIds, args.nodesById,
+      (nodeId) => getTopicChildren(nodeId, args.childrenByParent, args.nodesById))
     : null;
   const walk = (parentId: string | null, ids: string[], depth: number) => {
     args.sortIds(parentId, ids).forEach((nodeId) => {
@@ -135,10 +137,6 @@ interface TopicRowsArgs {
   sortIds: (parentId: string | null, ids: string[]) => string[];
 }
 
-function isInactiveReadingTopic(nodeId: string, nodesById: WorkspaceListNodesById) {
-  return isVisuallyInactiveWorkspaceListReadingTopic(nodesById[nodeId], nodesById);
-}
-
 function buildParentIdByNodeId(childrenByParent: TopicChildrenByParent) {
   const parentIdByNodeId = new Map<string, string | null>();
   childrenByParent.forEach((nodeIds, parentId) => {
@@ -159,20 +157,6 @@ function collectReviewContextNodeIds(args: Pick<TopicRowsArgs, 'childrenByParent
     currentNodeId = parentIdByNodeId.get(currentNodeId) ?? null;
   }
   return contextNodeIds;
-}
-
-function collectFullyDismissedTopicBranchIds(args: Pick<TopicRowsArgs, 'childrenByParent' | 'nodesById' | 'rootIds'>) {
-  const branchIds = new Set<string>();
-  const visit = (nodeId: string): boolean => {
-    if (!isInactiveReadingTopic(nodeId, args.nodesById)) return false;
-    const childIds = getTopicChildren(nodeId, args.childrenByParent, args.nodesById);
-    const childDismissedStates = childIds.map(visit);
-    const allChildrenDismissed = childDismissedStates.every(Boolean);
-    if (allChildrenDismissed) branchIds.add(nodeId);
-    return allChildrenDismissed;
-  };
-  args.rootIds.forEach(visit);
-  return branchIds;
 }
 
 function shouldCollectNode(

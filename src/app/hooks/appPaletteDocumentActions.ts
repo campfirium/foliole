@@ -1,4 +1,4 @@
-import { requestToggleDismissedTopicVisibility } from '../components/dismissedTopicVisibilitySetting';
+import { requestToggleDismissedTopicVisibility } from '../../shared/platform/dismissedTopicVisibilitySetting';
 import { requestDocumentComparisonViewToggle, requestSourceUpdateReview } from '../components/documentComparisonView';
 import { requestDocumentTopicSearchOpen } from '../components/documentTopicSearchEvents';
 

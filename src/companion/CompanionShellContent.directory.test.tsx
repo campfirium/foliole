@@ -1,5 +1,8 @@
+import { fireEvent, screen, within } from '@testing-library/react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { VIRTUAL_SHELVED_NODE_ID } from '../../lib/core/database/specialNodeIds';
+import { renderWithLocalization } from '../shared/localization/testLocalization';
 import { preloadTranslationCatalog, translate } from '../shared/localization/translations';
 
 import { resolveCompanionTopBarProps } from './CompanionTopBarPropsModel';
@@ -48,6 +51,14 @@ describe('CompanionShellContent directory navigation', () => {
 
     expect('onBack' in root ? root.onBack : undefined).toBeUndefined();
     expect('rightSlot' in root ? root.rightSlot : null).toBeTruthy();
+  });
+
+  it('keeps both focus actions unavailable while browsing Shelved', () => {
+    const topBar = createTopBarProps({ directorySelection: { kind: 'virtual', nodeId: VIRTUAL_SHELVED_NODE_ID } });
+    renderWithLocalization(<>{'rightSlot' in topBar ? topBar.rightSlot : null}</>);
+    expect(screen.getByRole('button', { name: 'Hide dismissed and shelved topics' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'More', exact: true }));
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Hide dismissed and shelved topics' })).toBeDisabled();
   });
 
   it('returns nested directory pages to their parent', () => {

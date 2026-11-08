@@ -4,11 +4,13 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import type { FolderListSortDirection, FolderListSortKey } from '../features/nodes/model/folderListOrdering';
 import { useLocalization } from '../shared/localization/LocalizationProvider';
 import { resolveCompanionBrowseSnapshot } from '../shared/platform/companion/browse/companionBrowseSnapshot';
+import { applyCompanionFolderTopicFocus } from '../shared/platform/companion/browse/companionTopicFocus';
 import {
   resolveCompanionFolderViewByNodeId, resolveCompanionRootDirectoryView,
   resolveCompanionTrashFolderViewByNodeId, resolveCompanionTrashView
 } from '../shared/platform/companionBrowseLists';
 import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
+import { useDismissedTopicVisibility } from '../shared/platform/useDismissedTopicVisibility';
 
 import { resolveDirectorySections, type CompanionDirectorySelection } from './CompanionDirectoryModel';
 
@@ -19,6 +21,7 @@ export function useCompanionDirectorySections(args: {
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
 }) {
+  const { viewHideDismissedTopics } = useDismissedTopicVisibility();
   const { locale } = useLocalization();
   const snapshot = resolveCompanionBrowseSnapshot(args.snapshot);
   const { directory, selection, sortKey, sortDirection } = args;
@@ -31,9 +34,10 @@ export function useCompanionDirectorySections(args: {
       ? resolveCompanionTrashFolderViewByNodeId(snapshot, current.nodeId, sortKey, sortDirection)
       : current.kind === 'trash' ? resolveCompanionTrashView(snapshot, sortKey, sortDirection) : null;
     const needsRoot = current.kind === 'root' || (!folderView && (current.kind === 'internal' || current.kind === 'virtual'));
-    return resolveDirectorySections({ directory, selection: current, snapshot, folderView,
+    return resolveDirectorySections({ directory, selection: current, snapshot,
+      folderView: viewHideDismissedTopics ? applyCompanionFolderTopicFocus(snapshot, folderView) : folderView,
       rootView: needsRoot ? resolveCompanionRootDirectoryView(snapshot, sortKey, sortDirection) : { items: [] },
       ...(trashView ? { trashView } : {}) });
-  }, [directory, selectionKey, snapshot, sortDirection, sortKey, locale]);
+  }, [directory, selectionKey, snapshot, sortDirection, sortKey, locale, viewHideDismissedTopics]);
   return { sections };
 }

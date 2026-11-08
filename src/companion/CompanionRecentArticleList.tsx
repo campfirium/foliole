@@ -1,7 +1,11 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { useLocalization, useTranslation } from '../shared/localization/LocalizationProvider';
+import { resolveCompanionBrowseSnapshot } from '../shared/platform/companion/browse/companionBrowseSnapshot';
+import { applyCompanionRecentTopicFocus } from '../shared/platform/companion/browse/companionTopicFocus';
 import type { CompanionRecentArticle } from '../shared/platform/companionReadableArticle';
+import { useDismissedTopicVisibility } from '../shared/platform/useDismissedTopicVisibility';
 import { AppEmptyState } from '../shared/ui';
 
 import { CompanionListViewport } from './CompanionListViewport';
@@ -111,9 +115,15 @@ export function RecentArticleList(props: {
   currentArticleId: string | null;
   onSelectArticle(nodeId: string): void;
   recentArticles: CompanionRecentArticle[];
+  snapshot?: WorkspaceSnapshot | null;
 }) {
   const t = useTranslation();
-  if (props.recentArticles.length === 0) {
+  const { viewHideDismissedTopics } = useDismissedTopicVisibility();
+  const snapshot = resolveCompanionBrowseSnapshot(props.snapshot ?? null);
+  const articles = useMemo(() => viewHideDismissedTopics
+    ? applyCompanionRecentTopicFocus(snapshot, props.recentArticles) : props.recentArticles,
+  [props.recentArticles, snapshot, viewHideDismissedTopics]);
+  if (articles.length === 0) {
     return (
       <section className="border-t border-companion-divider py-6">
         <AppEmptyState
@@ -127,9 +137,9 @@ export function RecentArticleList(props: {
 
   return (
     <section>
-      <CompanionListViewport viewKey="recent" items={props.recentArticles}
+      <CompanionListViewport viewKey="recent" items={articles}
         getItemKey={(article) => article.nodeId} estimateSize={() => 124}
-        renderItem={(article) => <RecentArticleRow first={article === props.recentArticles[0]} article={article}
+        renderItem={(article) => <RecentArticleRow first={article === articles[0]} article={article}
           currentArticleId={props.currentArticleId} onSelectArticle={props.onSelectArticle} />} />
     </section>
   );

@@ -6,6 +6,7 @@ import {
 } from '../features/nodes/model/folderListOrdering';
 import { resolveCompanionBrowseSnapshot } from '../shared/platform/companion/browse/companionBrowseSnapshot';
 import { retainCompanionOpenVirtualFolder } from '../shared/platform/companion/browse/companionOpenVirtualFolders';
+import { applyCompanionFolderTopicFocus } from '../shared/platform/companion/browse/companionTopicFocus';
 import {
   resolveCompanionFolderViewByNodeId,
   resolveCompanionTrashFolderViewByNodeId
@@ -14,6 +15,7 @@ import {
   resolveReadableCompanionArticleByNodeId,
   resolveReadableCompanionTrashArticleByNodeId
 } from '../shared/platform/companionReadableArticle';
+import { useDismissedTopicVisibility } from '../shared/platform/useDismissedTopicVisibility';
 
 import { useCompanionNavigationField } from './CompanionNavigationProvider';
 import type { CompanionBrowseSortState } from './useCompanionBrowseState';
@@ -29,6 +31,7 @@ export function useCompanionBrowseSelection(
     sortKey: DEFAULT_FOLDER_LIST_SORT_KEY
   }
 ) {
+  const { viewHideDismissedTopics } = useDismissedTopicVisibility();
   const browseSnapshot = resolveCompanionBrowseSnapshot(snapshot);
   const [selectedBrowseNodeId, setSelectedBrowseNodeId] = useCompanionNavigationField('selectedBrowseNodeId', null);
   const resolvedReadableArticle = useMemo(
@@ -45,9 +48,12 @@ export function useCompanionBrowseSelection(
     [readableArticle, selectedBrowseNodeId, snapshot]
   );
   const browsedFolder = useMemo(
-    () => resolveCompanionFolderViewByNodeId(browseSnapshot, selectedBrowseNodeId, sort.sortKey, sort.sortDirection) ??
-      resolveCompanionTrashFolderViewByNodeId(browseSnapshot, selectedBrowseNodeId, sort.sortKey, sort.sortDirection),
-    [selectedBrowseNodeId, browseSnapshot, sort.sortDirection, sort.sortKey]
+    () => {
+      const folder = resolveCompanionFolderViewByNodeId(browseSnapshot, selectedBrowseNodeId, sort.sortKey, sort.sortDirection);
+      if (folder) return viewHideDismissedTopics ? applyCompanionFolderTopicFocus(browseSnapshot, folder) : folder;
+      return resolveCompanionTrashFolderViewByNodeId(browseSnapshot, selectedBrowseNodeId, sort.sortKey, sort.sortDirection);
+    },
+    [selectedBrowseNodeId, browseSnapshot, sort.sortDirection, sort.sortKey, viewHideDismissedTopics]
   );
 
   useEffect(() => selectedBrowseNodeId ? retainCompanionOpenVirtualFolder(selectedBrowseNodeId) : undefined,

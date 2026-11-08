@@ -83,6 +83,7 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
         currentArticleId={props.surface.readableArticle?.nodeId ?? null}
         onSelectArticle={props.surface.handleSelectRecentArticle}
         recentArticles={props.surface.recentArticles}
+        snapshot={props.workspaceSync.state.workspace_snapshot}
       />
     </>
   );
