@@ -1,11 +1,13 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import autoprefixer from 'autoprefixer';
 import postcss from 'postcss';
 import type { Plugin } from 'vite';
 import { defineConfig, mergeConfig } from 'vite';
 
 import { companionPreviewServerPlugin } from './scripts/vite/companionPreviewServer';
+import { companionTextScaleCss } from './scripts/vite/companionTextScaleCss';
 import { createSharedViteConfig } from './vite.shared';
 
 const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -52,6 +54,7 @@ export default mergeConfig(
   defineConfig({
     root: path.resolve(PROJECT_ROOT, 'src/companion'),
     plugins: [companionLegacyWebViewCssPlugin(), companionPreviewServerPlugin(PROJECT_ROOT)],
+    css: { postcss: { plugins: [companionTextScaleCss(), autoprefixer()] } },
     build: {
       emptyOutDir: true,
       outDir: path.resolve(PROJECT_ROOT, 'dist/companion'),

@@ -35,7 +35,7 @@ it('finely adjusts the rendered text and restores exact values after remounting'
     fontWeight: 400, fontSize: 17, fontFamily: 'serif', lineHeight: 1.7, contrast: 'high', paragraphSpacing: 0.35, textWidth: 100
   });
   const document = view.container.querySelector('[data-reading-font-size]') as HTMLElement;
-  expect(document.style.getPropertyValue('--content-panel-font-size')).toBe('17px');
+  expect(document.style.getPropertyValue('--companion-reading-base-font-size')).toBe('17px');
   expect(document.style.getPropertyValue('--content-panel-line-height')).toBe('1.7');
   view.unmount();
   mountArticle();

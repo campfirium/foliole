@@ -1,9 +1,9 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
-async function loadSettingsSheets(page: Page) {
+async function loadBuiltCompanionFixture(page: Page, fixture: string, ready: Locator) {
   await page.route('**/__settings-sheets', route => route.fulfill({ contentType: 'text/html', body: `
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
     <body><div id="root"></div><script type="module">
@@ -11,15 +11,19 @@ async function loadSettingsSheets(page: Page) {
     RefreshRuntime.injectIntoGlobalHook(window);
     window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => type => type;
     window.__vite_plugin_react_preamble_installed__ = true;
-    await import('/@fs/${process.cwd()}/tests/fixtures/companionSettingsSheets.tsx');
+    await import('/@fs/${process.cwd()}/tests/fixtures/${fixture}.tsx');
     </script></body></html>` }));
   await page.goto('/__settings-sheets');
   const directory = path.resolve('dist/companion/assets');
   const stylesheet = readdirSync(directory).find(name => /^index-.*\.css$/.test(name));
   if (!stylesheet) throw new Error('Run npm run android:web:build before this test.');
-  await expect(page.getByRole('button', { name: 'Days: 30', exact: true })).toBeVisible();
+  await expect(ready).toBeVisible();
   await page.locator('style').evaluateAll(styles => styles.forEach(style => style.remove()));
   await page.addStyleTag({ content: readFileSync(path.join(directory, stylesheet), 'utf8') });
+}
+
+async function loadSettingsSheets(page: Page) {
+  await loadBuiltCompanionFixture(page, 'companionSettingsSheets', page.getByRole('button', { name: 'Days: 30', exact: true }));
 }
 
 for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 812 }, { width: 812, height: 375 }]) {
@@ -164,3 +168,37 @@ test('matches desktop image dimming across reading surfaces, themes, preview and
 });
 
 import "./companion-pdf-colors";
+
+for (const viewport of [{ width: 320, height: 568 }, { width: 568, height: 320 }]) {
+  test(`scales settings and reading text at ${viewport.width}×${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    const appearance = page.getByRole('button', { name: /Appearance/ });
+    const load = () => loadBuiltCompanionFixture(page, 'companionTextScale', appearance);
+    await load();
+    await page.evaluate(() => localStorage.setItem(
+      'foliole-companion-reading-typography-settings', JSON.stringify({ fontSize: 20 })
+    ));
+
+    const title = appearance.locator('[data-companion-list-title]');
+    const icon = appearance.locator('svg').first();
+    await expect(title).toHaveCSS('font-size', '16px');
+    const iconWidth = await icon.evaluate(el => el.getBoundingClientRect().width);
+    await appearance.click();
+    const scale = page.getByRole('combobox', { name: 'Text scale' });
+    await expect(scale).toHaveValue('100');
+    await scale.selectOption('150');
+    await expect(scale).toHaveCSS('font-size', '21px');
+    await expect(scale).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
+
+    await load();
+    await expect(title).toHaveCSS('font-size', '24px');
+    expect(await icon.evaluate(el => el.getBoundingClientRect().width)).toBe(iconWidth);
+    await appearance.click();
+    await expect(scale).toHaveValue('150');
+    await page.getByRole('button', { name: /Back/ }).click();
+    await page.getByRole('button', { name: 'Open reading passage' }).click();
+    await expect(page.locator('.cm-content')).toHaveCSS('font-size', '30px');
+    await expect(page.locator('.cm-md-inline-code')).toHaveCSS('font-size', '20.64px');
+  });
+}

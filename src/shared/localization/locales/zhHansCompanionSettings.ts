@@ -70,6 +70,7 @@ export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<Translation
     '这会永久清除这台设备上的 Foliole 数据并断开连接。仅存于本机或尚未同步的内容也会丢失。其他设备上已有的数据不会被删除。此操作无法撤销。',
   'companion.settings.storage.description': '永久清除这台设备上的 Foliole 数据，包括仅存于本机或尚未同步的内容。',
   'companion.settings.storage.error': '清除应用数据失败。',
+  'companion.settings.appearance.textScale': '文字缩放',
   'companion.settings.appearance.title': '外观',
   'companion.settings.appearance.detail': '语言与显示',
   'companion.settings.appearance.css.title': '自定义 CSS 片段',

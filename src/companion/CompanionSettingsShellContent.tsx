@@ -20,6 +20,7 @@ import {
 } from './CompanionSettingsContent';
 import { CompanionSyncContent } from './CompanionSyncContent';
 import { CompanionTestReviewReset } from './CompanionTestReviewReset';
+import { CompanionTextScaleControl } from './CompanionTextScale';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -60,6 +61,7 @@ function CompanionAppearanceSettingsDetail(props: Pick<CompanionSettingsContentP
   const t = useTranslation();
   const customCss = useOptionalCompanionCustomCss();
   return <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="appearance" title={t('companion.settings.appearance.title')}>
+    <CompanionTextScaleControl />
     <CompanionLanguageControl />
     <CompanionColorModeControl />
     <CompanionReadingColorControls />

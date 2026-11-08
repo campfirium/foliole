@@ -69,6 +69,7 @@ export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
   'companion.settings.storage.description':
     'Permanently clear Foliole data on this device, including content stored only here or not yet synced.',
   'companion.settings.storage.error': 'Failed to clear app data.',
+  'companion.settings.appearance.textScale': 'Text scale',
   'companion.settings.appearance.title': 'Appearance',
   'companion.settings.appearance.detail': 'Language and display',
   'companion.settings.appearance.css.title': 'Custom CSS snippets',

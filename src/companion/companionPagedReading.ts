@@ -13,7 +13,8 @@ export function turnCompanionReadingPage(surface: HTMLElement, direction: number
   const style = getComputedStyle(surface);
   const body = surface.querySelector('[data-reading-font-size]') ?? surface;
   const bodyStyle = getComputedStyle(body);
-  const readingLineHeight = parseFloat(bodyStyle.getPropertyValue('--content-panel-font-size')) *
+  const scale = parseFloat(bodyStyle.getPropertyValue('--companion-text-scale')) || 1;
+  const readingLineHeight = parseFloat(bodyStyle.getPropertyValue('--companion-reading-base-font-size')) * scale *
     parseFloat(bodyStyle.getPropertyValue('--content-panel-line-height'));
   const lineHeight = readingLineHeight || parseFloat(bodyStyle.lineHeight) || parseFloat(bodyStyle.fontSize) * 1.62 || 28;
   const viewport = surface.clientHeight - (parseFloat(style.paddingTop) || 0) - (parseFloat(style.paddingBottom) || 0);

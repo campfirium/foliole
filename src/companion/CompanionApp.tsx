@@ -15,6 +15,7 @@ import {
 import { CompanionColorModeProvider } from './CompanionColorModeProvider';
 import { CompanionShell } from './CompanionShell';
 import { hydrateCompanionSystemEntryDisplayNames } from './companionSystemEntryDisplayNamesHydration';
+import { CompanionTextScaleProvider } from './CompanionTextScale';
 import { useCompanionBootstrap } from './useCompanionBootstrap';
 
 function reloadCompanionRuntime() {
@@ -67,7 +68,9 @@ export function CompanionApp() {
     <LocalizationProvider>
       <CompanionColorModeProvider>
         <AppConfirmationProvider>
-          <CompanionAppContent />
+          <CompanionTextScaleProvider>
+            <CompanionAppContent />
+          </CompanionTextScaleProvider>
         </AppConfirmationProvider>
       </CompanionColorModeProvider>
     </LocalizationProvider>
