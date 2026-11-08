@@ -1,7 +1,7 @@
 import { useEffect, useMemo, type Dispatch, type SetStateAction } from 'react';
 
 import type { NodeTreeRow } from '../model/nodeTree';
-import { isHomeNode } from '../model/specialNodes';
+import { HOME_NODE_ID, isHomeNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import {
@@ -33,6 +33,7 @@ export interface CollapsedNodeState {
 
 interface UseCollapsedNodeStateInput {
   activeNodeId: string | null;
+  collapsibleHome?: boolean;
   forceExpandedNodeId?: string | null;
   nodesById: WorkspaceListNodesById;
   noteParentById: Record<string, string | null>;
@@ -41,13 +42,14 @@ interface UseCollapsedNodeStateInput {
 }
 
 export function useCollapsedNodeState({
+  collapsibleHome = false,
   forceExpandedNodeId,
   noteParentById,
   noteRowsAll,
   trashRowsAll
 }: UseCollapsedNodeStateInput): CollapsedNodeState {
   const [collapsedTrashNodeIdList, setCollapsedTrashNodeIdList] = useSessionCollapsedTrashNodeIds();
-  const noteState = useNoteCollapsedState({ forceExpandedNodeId: forceExpandedNodeId ?? null, noteParentById, noteRowsAll });
+  const noteState = useNoteCollapsedState({ collapsibleHome, forceExpandedNodeId: forceExpandedNodeId ?? null, noteParentById, noteRowsAll });
   const collapsedTrashNodeIds = useMemo(
     () => new Set(collapsedTrashNodeIdList),
     [collapsedTrashNodeIdList]
@@ -86,11 +88,12 @@ export function useCollapsedNodeState({
 }
 
 function useNoteCollapsedState({
+  collapsibleHome,
   forceExpandedNodeId,
   noteParentById,
   noteRowsAll
-}: Pick<UseCollapsedNodeStateInput, 'forceExpandedNodeId' | 'noteParentById' | 'noteRowsAll'>) {
-  const noteCollapsibleNodeIds = useNoteCollapsibleNodeIds(noteRowsAll);
+}: Pick<UseCollapsedNodeStateInput, 'forceExpandedNodeId' | 'noteParentById' | 'noteRowsAll'> & { collapsibleHome: boolean }) {
+  const noteCollapsibleNodeIds = useNoteCollapsibleNodeIds(noteRowsAll, collapsibleHome);
   const {
     collapseAllNotes,
     expandAllNotes,
@@ -100,16 +103,15 @@ function useNoteCollapsedState({
     setManualExpandedNoteNodeIdList
   } = useNoteManualCollapseState(noteCollapsibleNodeIds);
   const collapsedNoteNodeIds = useMemo(
-    () =>
-      removeForcedExpandedNodeIds(
-        mergeCollapsedNodeIds(
-          noteCollapsibleNodeIds,
-          manualCollapsedNoteNodeIdList,
-          manualExpandedNoteNodeIdList
-        ),
-        noteParentById,
-        forceExpandedNodeId
-      ),
+    () => {
+      const collapsed = mergeCollapsedNodeIds(
+        noteCollapsibleNodeIds,
+        manualCollapsedNoteNodeIdList,
+        manualExpandedNoteNodeIdList
+      );
+      if (!manualCollapsedNoteNodeIdList.includes(HOME_NODE_ID)) collapsed.delete(HOME_NODE_ID);
+      return removeForcedExpandedNodeIds(collapsed, noteParentById, forceExpandedNodeId);
+    },
     [
       forceExpandedNodeId,
       noteCollapsibleNodeIds,
@@ -131,10 +133,10 @@ function useNoteCollapsedState({
   };
 }
 
-function useNoteCollapsibleNodeIds(noteRowsAll: NodeTreeRow[]) {
+function useNoteCollapsibleNodeIds(noteRowsAll: NodeTreeRow[], collapsibleHome: boolean) {
   return useMemo(
-    () => new Set(noteRowsAll.filter((row) => row.hasChildren && !isHomeNode(row.node)).map((row) => row.node.id)),
-    [noteRowsAll]
+    () => new Set(noteRowsAll.filter((row) => row.hasChildren && (collapsibleHome || !isHomeNode(row.node))).map((row) => row.node.id)),
+    [noteRowsAll, collapsibleHome]
   );
 }
 

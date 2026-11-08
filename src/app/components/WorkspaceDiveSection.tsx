@@ -129,7 +129,6 @@ export function WorkspaceDiveSection(props: {
   const collapsed = section.collapsed.has(rootId);
   return (
     <div className="mt-1 flex min-w-0 flex-col">
-      <div aria-hidden="true" className="mx-4 border-t border-border/15" />
       <section aria-label={title} className="flex flex-col pt-1" role="tree">
         <NodeTreeRow depth={0} hasChildren isActive={false} isCollapsed={collapsed} isSelected={false}
           label={title} nodeId={rootId} rowSpacing={getNodeListRowSpacing()} showIcon={false}

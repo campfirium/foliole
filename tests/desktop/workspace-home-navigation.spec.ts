@@ -62,7 +62,7 @@ test('workspace navigation keeps root folders under Home after renderer patch se
     'special-virtual-root'
   ]);
 
-  await folderPanel.getByRole('treeitem', { name: /^(Virtual folders|虚拟文件夹)$/ }).click();
+  await folderPanel.getByRole('treeitem', { name: /^(Virtual|虚拟)$/ }).press('Enter');
   await expect(desktopWindow.getByRole('region', { name: /^(Virtual search|虚拟搜索)$/ })).toBeVisible();
   expect(await desktopWindow.evaluate(() =>
     window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null)).toBeNull();

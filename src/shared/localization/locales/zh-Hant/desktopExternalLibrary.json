@@ -20,7 +20,7 @@
   "desktop.externalLibrary.directoryEmpty.description": "所選目錄中沒有可用的文件。",
   "desktop.externalLibrary.folderListView": "資料夾清單視圖",
   "desktop.externalLibrary.folderTree": "外部資料夾樹",
-  "desktop.externalLibrary.setupLabel": "External folders",
+  "desktop.externalLibrary.setupLabel": "External",
   "desktop.externalLibrary.setup.title": "連接外部資料夾",
   "desktop.externalLibrary.setup.description": "此演示簡化了外部資料夾存取。桌面應用程式包括完整的體驗：它將連接的資料夾保留為外部文件庫以供搜尋、預覽和匯入，而原始文件則保留在 Foliole 之外。",
   "desktop.externalLibrary.folderIcon": "外部資料夾",

@@ -23,7 +23,7 @@ const SYSTEM_ENTRY_NAMES: Record<AppLocale, Record<SystemEntryId, string>> = {
     home: 'Home',
     inbox: 'Inbox',
     trash: 'Trash',
-    'virtual-root': 'Virtual folders',
+    'virtual-root': 'Virtual',
     published: 'Published',
     shelved: 'Shelved',
     removed: 'Removed'
@@ -113,7 +113,7 @@ const SYSTEM_ENTRY_NAMES: Record<AppLocale, Record<SystemEntryId, string>> = {
     home: 'Home',
     inbox: '收件箱',
     trash: '回收站',
-    'virtual-root': '虚拟文件夹',
+    'virtual-root': '虚拟',
     published: '发布',
     shelved: '搁置',
     removed: '移除'
@@ -122,7 +122,7 @@ const SYSTEM_ENTRY_NAMES: Record<AppLocale, Record<SystemEntryId, string>> = {
     home: 'Home',
     inbox: '收件匣',
     trash: '垃圾桶',
-    'virtual-root': '虛擬資料夾',
+    'virtual-root': '虛擬',
     published: '發佈',
     shelved: '擱置',
     removed: '移除'

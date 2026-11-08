@@ -68,7 +68,6 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
 
   return (
     <div className="mt-1 flex min-w-0 flex-col">
-      <div aria-hidden="true" className="mx-4 border-t border-border/15" />
       {props.folders.length === 0 ? (
         <ExternalLibrarySetupRow
           isSelected={props.isExternalViewOpen && props.selection.kind === 'root'}

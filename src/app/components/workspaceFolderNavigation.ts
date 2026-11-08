@@ -12,7 +12,7 @@ import { isCanonicalVisibleNodeId } from '../../shared/workspaceCanonicalSelecto
 
 export { collectTopicColumnNodeIds } from './workspaceTopicColumnNavigation';
 
-function createNavigationTrashNode(): WorkspaceListNode {
+function createNavigationTrashNode(parentNodeId: string | null): WorkspaceListNode {
   const timestamp = new Date().toISOString();
   return {
     createdAt: timestamp,
@@ -20,7 +20,7 @@ function createNavigationTrashNode(): WorkspaceListNode {
     hasReveal: false,
     id: TRASH_NODE_ID,
     kind: 'folder',
-    parentNodeId: null,
+    parentNodeId,
     reading: null,
     review: null,
     specialKind: 'trash',
@@ -89,8 +89,11 @@ export function buildFolderNavigationNodesByIdFromOrder(
   const hasHome = folderNodeOrder.includes(HOME_NODE_ID);
   const folderNodeIds = new Set(folderNodeOrder);
   const folderEntries: Array<[string, WorkspaceListNode | undefined]> = folderNodeOrder.map((nodeId) => {
-    const node = nodeId === TRASH_NODE_ID ? createNavigationTrashNode() : nodesById[nodeId];
-    if (!node || nodeId === TRASH_NODE_ID) {
+    if (nodeId === TRASH_NODE_ID) {
+      return [nodeId, createNavigationTrashNode(hasHome ? HOME_NODE_ID : null)];
+    }
+    const node = nodesById[nodeId];
+    if (!node) {
       return [nodeId, node];
     }
     return [nodeId, { ...node, parentNodeId: resolveNavigationFolderParentId(node, folderNodeIds, hasHome) }];

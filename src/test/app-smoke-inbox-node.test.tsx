@@ -42,14 +42,18 @@ it('shows Inbox in the node tree and opens the folder list surface', async () =>
   expect(screen.queryByLabelText('Prompt editor')).not.toBeInTheDocument();
 });
 
-it('keeps virtual folders out of the main tree and shows a separate lower Virtual folders section', async () => {
+it('opens Virtual search from the separate section and collapses its branch with the arrow key', async () => {
   render(<App />);
 
-  fireEvent.click(within(await getNodeListPanel()).getByRole('treeitem', { name: 'Virtual folders' }));
-
-  expect(within(await getNodeListPanel()).getByRole('treeitem', { name: 'Virtual folders' })).toBeInTheDocument();
+  const virtual = within(await getNodeListPanel()).getByRole('treeitem', { name: 'Virtual' });
+  expect(virtual).toHaveAttribute('aria-expanded', 'true');
+  fireEvent.click(virtual);
   expect(screen.getByRole('region', { name: 'Virtual search' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Create Folder' })).not.toBeInTheDocument();
+
+  fireEvent.keyDown(virtual, { key: 'ArrowLeft' });
+  expect(virtual).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.getByRole('region', { name: 'Virtual search' })).toBeInTheDocument();
 });
 
 it('shows import and clipboard import actions in the left toolbar without Watch Manager', () => {

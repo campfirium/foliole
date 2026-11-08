@@ -34,7 +34,7 @@ async function createAndOpenSavedSearch(
     ]);
   }, { id: TOPIC_ID, query: QUERY, title: TOPIC_TITLE });
 
-  await virtualFolderTree(page).getByRole('treeitem', { name: /^(Virtual|虚拟文件夹)$/ }).click();
+  await virtualFolderTree(page).getByRole('treeitem', { name: /^(Virtual|虚拟)$/ }).click();
   const search = page.getByRole('searchbox', { name: /^(Search topics to save as list|搜索主题并保存为列表)$/ });
   await search.fill(QUERY);
   await page.getByRole('button', { name: /^(Save search|保存搜索)$/ }).click();

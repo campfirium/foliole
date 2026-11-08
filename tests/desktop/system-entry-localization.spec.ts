@@ -11,7 +11,7 @@ const SCREENSHOT = path.resolve('.tmp/artifacts/system-entry-localization-hidden
 const EXPECTED = {
   en: {
     commandPalette: 'Command Palette',
-    entries: ['Home', 'Inbox', 'Trash', 'Virtual folders', 'Published', 'Shelved', 'Removed'],
+    entries: ['Home', 'Inbox', 'Trash', 'Virtual', 'Published', 'Shelved', 'Removed'],
     openTrash: 'Open Trash',
     search: 'Search'
   },
@@ -23,7 +23,7 @@ const EXPECTED = {
   },
   'zh-Hans': {
     commandPalette: '命令面板',
-    entries: ['Home', '收件箱', '回收站', '虚拟文件夹', '发布', '搁置', '移除'],
+    entries: ['Home', '收件箱', '回收站', '虚拟', '发布', '搁置', '移除'],
     openTrash: '打开回收站',
     search: '搜索'
   }

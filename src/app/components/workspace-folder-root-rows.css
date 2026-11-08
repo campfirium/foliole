@@ -1,0 +1,57 @@
+.workspace-folder-column {
+  container-type: inline-size;
+  --folder-column-indent: clamp(8px, 8cqi, 1rem);
+  --folder-column-content-gap: clamp(2px, 2cqi, 0.5rem);
+  --folder-column-edge: clamp(12px, 7.5cqi, 24px);
+  --folder-column-scroll-inset: 4px;
+  --folder-column-row-start: calc(var(--folder-column-edge) - var(--folder-column-scroll-inset) - 6px);
+  --folder-column-chevron-slot: calc(1.125rem + 0.1875rem + var(--folder-column-content-gap));
+}
+
+.workspace-folder-column .app-scrollbar {
+  padding-inline: var(--folder-column-scroll-inset);
+}
+
+.workspace-folder-column [data-node-id][role="treeitem"] {
+  padding-inline-start: calc(var(--folder-column-row-start) + max(0, var(--node-depth, 0) - 1) * var(--folder-column-indent));
+}
+
+.workspace-folder-column [role="treeitem"] > span:has(> .node-tree-row-content) {
+  flex: 1;
+  gap: var(--folder-column-content-gap);
+}
+
+.workspace-folder-column .node-tree-row-content .node-tree-row-text[aria-hidden="true"] {
+  margin-inline-end: calc(var(--folder-column-edge) - var(--folder-column-scroll-inset) - 0.4rem);
+}
+
+.workspace-folder-column :is(
+  #node-treeitem-special-home,
+  #node-treeitem-special-virtual-root,
+  #node-treeitem-workspace-dives,
+  #node-treeitem-external-library-setup
+) .node-tree-row-text:not([aria-hidden="true"]) {
+  color: var(--role-text-secondary);
+  font-weight: 600;
+}
+
+.workspace-folder-column .app-scrollbar > div:has(> [role="tree"]) {
+  margin-block-start: 12px;
+}
+
+.workspace-folder-column #node-treeitem-workspace-dives {
+  /* Match the first-level label, including the chevron slot and button content gap. */
+  padding-inline-start: calc(var(--folder-column-row-start) + var(--folder-column-chevron-slot));
+}
+
+.workspace-folder-column #node-treeitem-workspace-dives [data-node-tree-chevron] {
+  display: none;
+}
+
+.workspace-folder-column [role="tree"]:not(:has(
+  #node-treeitem-special-home,
+  #node-treeitem-special-virtual-root,
+  #node-treeitem-workspace-dives
+)) [data-node-id][role="treeitem"] {
+  padding-inline-start: calc(var(--folder-column-row-start) + var(--node-depth, 0) * var(--folder-column-indent));
+}

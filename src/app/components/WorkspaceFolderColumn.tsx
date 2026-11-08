@@ -14,6 +14,8 @@ import { useWorkspaceAddToDive } from './WorkspaceAddToDive';
 import { WorkspaceDiveSection } from './WorkspaceDiveSection';
 import { WorkspaceVirtualSection } from './WorkspaceVirtualSection';
 
+import './workspace-folder-root-rows.css';
+
 interface WorkspaceFolderColumnProps {
   dives: readonly Dive[];
   activeDiveId: string | null;
@@ -143,7 +145,7 @@ function renderRegularSection(
 export function WorkspaceFolderColumn(props: WorkspaceFolderColumnProps) {
   const addToDive = useWorkspaceAddToDive();
   return (
-    <div className="workspace-region-main-folder flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+    <div className="workspace-folder-column workspace-region-main-folder flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">{renderRegularSection(props, addToDive.open)}</div>
       {addToDive.dialog}
     </div>

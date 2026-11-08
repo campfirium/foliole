@@ -38,6 +38,7 @@ export function ExternalLibrarySetupRow(props: {
         nodeId={EXTERNAL_SETUP_ROW_ID}
         rowSpacing={rowSpacing}
         showIcon={false}
+        showLeafChevronPlaceholder={false}
         onKeyDown={onRowKeyDown}
         {...(props.onContextMenu ? { onContextMenu: (_nodeId, event) => props.onContextMenu?.(event) } : {})}
         onSelect={props.onOpenRoot}

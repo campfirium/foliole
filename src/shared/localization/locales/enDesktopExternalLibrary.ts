@@ -20,7 +20,7 @@ export const EN_DESKTOP_EXTERNAL_LIBRARY_TRANSLATIONS = {
   'desktop.externalLibrary.directoryEmpty.description': 'No documents are available in the selected directory.',
   'desktop.externalLibrary.folderListView': 'Folder list view',
   'desktop.externalLibrary.folderTree': 'External folder tree',
-  'desktop.externalLibrary.setupLabel': 'External folders',
+  'desktop.externalLibrary.setupLabel': 'External',
   'desktop.externalLibrary.setup.title': 'Connect an external folder',
   'desktop.externalLibrary.setup.description': 'External folder access is simplified in this demo. The desktop app includes the full experience: it keeps connected folders as an external document library for search, preview, and import, while original files stay outside Foliole.',
   'desktop.externalLibrary.folderIcon': 'External folder',

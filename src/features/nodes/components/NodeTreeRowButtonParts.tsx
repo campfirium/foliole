@@ -7,6 +7,7 @@ import type {
 
 import { definedProps } from '../../../shared/lib/definedProps';
 import { AppButton } from '../../../shared/ui';
+import { HOME_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../model/specialNodes';
 
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import { renderNodeTreeRowContent } from './NodeTreeRowContent';
@@ -56,7 +57,12 @@ export function createNodeTreeRowButtonHandlers(
       onSelect(nodeId, modifiers);
     },
     onContextMenu: onContextMenu ? (event: ReactMouseEvent<HTMLButtonElement>) => onContextMenu(nodeId, event) : undefined,
-    onDoubleClick: (event: ReactMouseEvent<HTMLButtonElement>) => (event.stopPropagation(), rename.beginRename()),
+    onDoubleClick: (event: ReactMouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      if (nodeId !== HOME_NODE_ID && nodeId !== VIRTUAL_ROOT_NODE_ID) {
+        rename.beginRename();
+      }
+    },
     onKeyDown: (event: ReactKeyboardEvent<HTMLButtonElement>) => {
       onKeyDown?.(nodeId, event);
     }

@@ -72,7 +72,7 @@ function renderNodeListRow(
       hasChildren={props.isTrashViewOpen ? false : row.hasChildren}
       isActive={(props.isTrashViewOpen ? props.selectedTrashNodeId : props.activeNodeId) === row.node.id}
       isBulkSelectionActive={props.selectedNodeIds.length > 1}
-      isCollapsed={props.isTrashViewOpen || rowModel.isHome ? false : props.collapsedNodeIds.has(row.node.id)}
+      isCollapsed={!props.isTrashViewOpen && props.collapsedNodeIds.has(row.node.id)}
       isDerived={rowModel.isDerivedNode}
       isHighlighted={!props.isTrashViewOpen && props.highlightedNodeId === row.node.id}
       isDragDisabled={props.isTrashViewOpen || rowModel.isTrashRoot || !canNodeBeMoved(props.nodesById[row.node.id])}

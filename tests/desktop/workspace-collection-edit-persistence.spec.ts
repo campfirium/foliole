@@ -32,7 +32,7 @@ async function seedCollectionWorkspace(page: Page) {
     plainBody: PLAIN_BODY, headerBody: HEADER_BODY, bomBody: BOM_BODY });
   await page.reload();
   await expectWorkspaceShell(page);
-  await virtualTree(page).getByRole('treeitem', { name: /^(Virtual|虚拟文件夹)$/ }).click();
+  await virtualTree(page).getByRole('treeitem', { name: /^(Virtual|虚拟)$/ }).click();
   await page.getByRole('searchbox', { name: /^(Search topics to save as list|搜索主题并保存为列表)$/ }).fill(SAVED_TITLE);
   await page.getByRole('button', { name: /^(Save search|保存搜索)$/ }).click();
   await expect(virtualTree(page).getByRole('treeitem', { name: SAVED_TITLE, exact: true })).toBeVisible();

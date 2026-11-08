@@ -123,6 +123,7 @@ function useNodeListTreeSelectionDiagnostics(args: {
 
 function usePreparedNodeListTreeContentProps(props: NodeListTreeProps) {
   const model = useNodeListTreeModel({
+    bodyAppendContent: props.bodyAppendContent,
     activeNodeId: props.activeNodeId,
     forceExpandedNodeId: props.forceExpandedNodeId ?? null,
     isSelectionScopeActive: props.isSelectionScopeActive ?? true,

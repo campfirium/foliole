@@ -1,4 +1,3 @@
-import { Layers2 } from 'lucide-react';
 import type { Dispatch, DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, SetStateAction } from 'react';
 
 import { createNodeListRowKeydownHandler } from '../../features/nodes/components/NodeListTreeKeyboard';
@@ -119,7 +118,6 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
       rowSpacing={args.rowSpacing}
       showIcon={false}
       showLeafChevronPlaceholder={false}
-      {...(args.isVirtualRoot ? { trailingLabelContent: <VirtualRootMarker /> } : {})}
       {...(args.isVirtualRoot || args.isSavedSearch ? { onRename: args.props.onRenameVirtualNode } : {})}
       {...(args.isVirtualRoot || args.isSavedSearch
         ? { onContextMenu: args.props.onContextMenuVirtualNode }
@@ -145,15 +143,6 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
   );
   return row;
 }
-
-function VirtualRootMarker() {
-  return (
-    <span className="inline-flex size-3.5 items-center justify-center align-middle text-foreground/45" data-virtual-root-marker="true">
-      <Layers2 aria-hidden="true" className="-translate-y-[1px]" size={14} strokeWidth={1.7} />
-    </span>
-  );
-}
-
 
 function renderShelvedRow(args: Parameters<typeof renderVirtualRows>[0]) {
   return renderBuiltinVirtualRow({ ...args.props, label: args.props.resolveSystemTitle(VIRTUAL_SHELVED_NODE_ID, 'Shelved'), nodeId: VIRTUAL_SHELVED_NODE_ID, onRowKeyDown: args.onRowKeyDown, rowSpacing: args.rowSpacing });

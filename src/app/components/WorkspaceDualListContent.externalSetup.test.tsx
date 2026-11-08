@@ -23,7 +23,7 @@ it('opens a simplified external folder setup dialog before connecting a folder',
     onOpenExternalSelection
   });
 
-  const setupRow = screen.getByRole('treeitem', { name: 'External folders' });
+  const setupRow = screen.getByRole('treeitem', { name: 'External' });
   expect(setupRow).toHaveAttribute('aria-selected', 'true');
   expect(screen.queryByRole('dialog', { name: 'Connect an external folder' })).toBeNull();
 
@@ -45,6 +45,6 @@ it('keeps the simplified external folder setup row in English for the Chinese de
     isExternalViewOpen: true
   });
 
-  expect(screen.getByRole('treeitem', { name: 'External folders' })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: 'External' })).toBeInTheDocument();
   expect(screen.queryByRole('treeitem', { name: '外部文件夹' })).toBeNull();
 });

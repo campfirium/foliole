@@ -113,6 +113,7 @@ function useNodeListTreeControllers(args: {
 
 export function useNodeListTreeModel({
   activeNodeId,
+  bodyAppendContent,
   forceExpandedNodeId,
   isSelectionScopeActive = true,
   nodeOrder,
@@ -124,6 +125,7 @@ export function useNodeListTreeModel({
   const workspace = useNodeWorkspaceActions();
   const treeData = useNodeListTreeData(nodeOrder, nodesById, workspace.trashedNodeIds);
   const collapsedState = useCollapsedNodeState({
+    collapsibleHome: Boolean(bodyAppendContent),
     activeNodeId,
     forceExpandedNodeId: forceExpandedNodeId ?? null,
     nodesById,

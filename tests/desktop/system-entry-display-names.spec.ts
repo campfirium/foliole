@@ -14,7 +14,7 @@ const ENTRIES = [
   ['special-home', 'Home', 'Start here'],
   ['special-inbox', 'Inbox', 'Incoming'],
   ['special-trash', 'Trash', 'Bin'],
-  ['special-virtual-root', 'Virtual folders', 'Smart views'],
+  ['special-virtual-root', 'Virtual', 'Smart views'],
   ['special-virtual-published', 'Published', 'Shared'],
   ['special-virtual-shelved', 'Shelved', 'Later'],
   ['special-virtual-removed', 'Removed', 'Hidden']
@@ -69,7 +69,13 @@ async function expectEntryNames(page: Page, names: readonly string[]) {
 }
 
 async function renameEntry(page: Page, nodeId: string, currentName: string, nextName: string) {
-  await page.locator(`[data-node-id="${nodeId}"]`).first().dblclick();
+  const row = page.locator(`[data-node-id="${nodeId}"]`).first();
+  if (nodeId === 'special-home' || nodeId === 'special-virtual-root') {
+    await row.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Rename', exact: true }).click();
+  } else {
+    await row.dblclick();
+  }
   const input = page.getByRole('textbox', { name: `Rename ${currentName}` });
   await input.fill(nextName);
   await input.press('Enter');

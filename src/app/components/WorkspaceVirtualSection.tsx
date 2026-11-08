@@ -173,7 +173,6 @@ export function WorkspaceVirtualSection(props: WorkspaceVirtualSectionProps) {
 
   return (
     <div className="mt-1 flex min-w-0 flex-col">
-      <div aria-hidden="true" className="mx-4 border-t border-border/15" />
       <section aria-label={t('desktop.workspace.virtualFolderTree')} className="flex flex-col pt-1" role="tree">
         {renderVirtualRows({
           collapsedIds,

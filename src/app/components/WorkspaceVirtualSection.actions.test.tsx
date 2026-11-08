@@ -84,7 +84,7 @@ it('uses the shared localized rename action for a built-in Virtual folder', asyn
   window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'zh-Hans');
   renderSavedSearchTree();
 
-  fireEvent.contextMenu(await screen.findByRole('treeitem', { name: '虚拟文件夹' }));
+  fireEvent.contextMenu(await screen.findByRole('treeitem', { name: '虚拟' }));
 
   expect(await screen.findByRole('menuitem', { name: '重命名' })).toBeInTheDocument();
   expect(screen.queryByRole('menuitem', { name: 'Rename' })).toBeNull();
@@ -93,9 +93,9 @@ it('uses the shared localized rename action for a built-in Virtual folder', asyn
 it('renames the built-in Virtual folder through the ordinary row action', async () => {
   renderSavedSearchTree();
 
-  fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'Virtual folders' }));
+  fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'Virtual' }));
   fireEvent.click(await screen.findByRole('menuitem', { name: 'Rename' }));
-  const input = await screen.findByRole('textbox', { name: 'Rename Virtual folders' });
+  const input = await screen.findByRole('textbox', { name: 'Rename Virtual' });
   fireEvent.change(input, { target: { value: 'Smart views' } });
   fireEvent.keyDown(input, { key: 'Enter' });
 
@@ -105,10 +105,10 @@ it('renames the built-in Virtual folder through the ordinary row action', async 
   });
 });
 
-it('marks the virtual root with the layers icon', () => {
+it('shows the Virtual group title without the layers icon', () => {
   renderSavedSearchTree();
 
-  expect(screen.getByRole('treeitem', { name: 'Virtual folders' }).querySelector('.lucide-layers-2')).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: 'Virtual' }).querySelector('.lucide-layers-2')).toBeNull();
 });
 
 it('creates a manual virtual folder from the Virtual root context menu', async () => {
@@ -117,7 +117,7 @@ it('creates a manual virtual folder from the Virtual root context menu', async (
   renderSavedSearchTree({ onOpenVirtualView, onSelectNodeInVirtualView });
 
   expect(screen.queryByRole('button', { name: 'Create Virtual Folder' })).toBeNull();
-  fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'Virtual folders' }));
+  fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'Virtual' }));
   fireEvent.click(await screen.findByRole('menuitem', { name: 'Create Virtual Folder' }));
 
   await waitFor(() => expect(useWorkspaceStore.getState().createVirtualNode).toHaveBeenCalledWith({ mode: 'manual' }));
@@ -159,4 +159,14 @@ it('deletes only saved searches from the virtual directory row actions', async (
   fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete' }));
 
   expect(useWorkspaceStore.getState().deleteNode).toHaveBeenCalledWith('virtual-custom');
+});
+
+it('opens Virtual search when selecting the Virtual root', () => {
+  const onOpenVirtualView = vi.fn();
+  renderSavedSearchTree({ onOpenVirtualView });
+  const root = screen.getByRole('treeitem', { name: 'Virtual' });
+
+  fireEvent.click(root);
+  expect(onOpenVirtualView).toHaveBeenCalledWith(VIRTUAL_ROOT_NODE_ID);
+
 });
