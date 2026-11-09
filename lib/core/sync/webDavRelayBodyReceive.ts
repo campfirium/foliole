@@ -1,15 +1,19 @@
+import type { AttachmentBlockDestination } from './attachmentBlockTransfer.js';
 import { readFramedSyncStream } from './framedSyncBinaryStream.js';
 import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import { readFramedSyncMissingDependency } from './framedSyncInventoryRoundDelivery.js';
 import { receiveRequestSyncBatch } from './requestSyncBatchReceiver.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
+import { markWebDavRelayAttachment } from './webDavRelayAttachments.js';
+import { receiveWebDavAttachment, WEB_DAV_ATTACHMENT_SUFFIX } from './webDavRelayAttachmentWire.js';
 import { webDavRelayPeerState, type WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 import { webDavRelayStatus, type WebDavRelayRequest } from './webDavRelayPublication.js';
 
-const packetName = /^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}\.bin$/u;
+const packetName = /^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}(?:\.asset)?\.bin$/u;
 
 type Input = {
   host: RequestSyncDatabaseHost;
+  attachments?: AttachmentBlockDestination;
   request: WebDavRelayRequest;
   scope: WebDavRelayBodyScope;
   groupKey: Uint8Array;
@@ -35,7 +39,7 @@ export async function receiveWebDavRelayBodyPackets(input: Input) {
     const applied = new Set(rows.map(row => row.key.slice(prefix.length)));
     return names.filter(name => !applied.has(name));
   }, input.signal);
-  let remaining = pending;
+  let remaining = pending.filter(name => !name.endsWith(WEB_DAV_ATTACHMENT_SUFFIX));
   while (remaining.length) {
     const deferred = [];
     for (const name of remaining) {
@@ -48,6 +52,9 @@ export async function receiveWebDavRelayBodyPackets(input: Input) {
     if (deferred.length === remaining.length) throw new Error('webdav_relay_body_dependency_pending');
     input.retry(deferred.length);
     remaining = deferred;
+  }
+  if (input.attachments) for (const name of pending) {
+    if (name.endsWith(WEB_DAV_ATTACHMENT_SUFFIX)) await receiveAttachment(input, input.attachments, name);
   }
 }
 
@@ -96,4 +103,22 @@ async function receivePacket(input: Input, name: string) {
   await host.write(db => db.run('INSERT OR IGNORE INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
     [`${scope.key}:applied:${name}`, 'true', new Date().toISOString()]));
   input.applied(count);
+}
+
+async function receiveAttachment(input: Input, attachments: AttachmentBlockDestination, name: string) {
+  await input.assertScope();
+  const { host, scope, signal, groupKey } = input;
+  const key = await input.request(new URL(name, scope.incoming), { method: 'GET' }, async (status, body) => {
+    if (status !== 200) {
+      await webDavRelayStatus(status, body);
+      throw new Error(`webdav_relay_download_failed:${status}`);
+    }
+    return receiveWebDavAttachment(attachments, body, { context: scope.receive, groupKey, signal }, input.assertScope);
+  });
+  await host.write(db => db.transaction(async tx => {
+    await markWebDavRelayAttachment(tx, scope, key, 'done');
+    await tx.run('INSERT OR IGNORE INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
+      [`${scope.key}:applied:${name}`, 'true', new Date().toISOString()]);
+  }));
+  input.applied(1);
 }

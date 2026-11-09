@@ -14,7 +14,8 @@ const positionSchema = z.object({
 
 const baselineSchema = positionSchema.extend({
   localEpoch: z.string().min(1),
-  peerEpoch: z.string().min(1)
+  peerEpoch: z.string().min(1),
+  capturedAt: z.number().int().positive().optional()
 });
 
 type Baseline = z.infer<typeof baselineSchema>;
@@ -41,9 +42,11 @@ function baselineKey(scope: Scope) {
   return `webdav_relay_baseline:${scope.binding.id}`;
 }
 
-async function readStoredBaseline(db: DbPort, scope: Scope): Promise<Baseline | null> {
-  const [row] = await db.query<{ value: string }>('SELECT value FROM sync_group_metadata WHERE key = ?', [baselineKey(scope)]);
-  return row ? baselineSchema.parse(JSON.parse(row.value)) : null;
+async function readStoredBaseline(db: DbPort, scope: Scope) {
+  const [row] = await db.query<{ value: string; updated_at: string }>('SELECT value, updated_at FROM sync_group_metadata WHERE key = ?', [baselineKey(scope)]);
+  if (!row) return null;
+  const baseline = baselineSchema.parse(JSON.parse(row.value));
+  return { ...baseline, capturedAt: baseline.capturedAt ?? Date.parse(row.updated_at) };
 }
 
 function sameEpochs(left: Baseline, right: Baseline) {
@@ -69,7 +72,7 @@ export async function captureWebDavRelayLanBaseline(host: RequestSyncDatabaseHos
   const captured = await host.readSnapshot(async db => {
     const position = await readPosition(db, scope);
     if (!position) return null;
-    const candidate = { localEpoch: scope.localEpoch, peerEpoch: scope.peerEpoch, ...position };
+    const candidate = { localEpoch: scope.localEpoch, peerEpoch: scope.peerEpoch, ...position, capturedAt: Date.now() };
     const previous = await readStoredBaseline(db, scope);
     return previous && sameEpochs(previous, candidate) ? null : candidate;
   }, signal);

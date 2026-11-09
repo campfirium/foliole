@@ -1,24 +1,28 @@
 import { z } from 'zod';
 
+import { attachmentBlockResourceSchema } from './attachmentBlockReceiver.js';
 import type { DbPort } from './dbPort.js';
-import { encodeFramedSyncStream } from './framedSyncBinaryStream.js';
+import { encodeFramedSyncStream, type FramedSyncStreamBody } from './framedSyncBinaryStream.js';
 import type { FramedSyncFilePort } from './framedSyncFilePort.js';
 import { compareFramedSyncInventories } from './framedSyncInventory.js';
 import { readFramedSyncInventoryEntry } from './framedSyncInventoryRead.js';
+import { loadNodeOwnedArticleResourceNeeds } from './nodeOwnedArticleResourceNeeds.js';
 import { REQUEST_SYNC_BATCH_OBJECTS } from './requestSyncBatchContract.js';
 import { requestSyncBatchMessages, withRequestSyncBatchSnapshot } from './requestSyncBatchSnapshot.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import { prepareRequestSyncWire } from './requestSyncWire.js';
+import { WEB_DAV_ATTACHMENT_SUFFIX } from './webDavRelayAttachmentWire.js';
 import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 
-const packetSchema = z.object({
-  name: z.string().regex(/^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}\.bin$/u),
+export const webDavRelayPacketSchema = z.object({
+  name: z.string().regex(/^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}(?:\.asset)?\.bin$/u),
   chunks: z.number().int().positive(),
   bytes: z.number().int().positive(),
-  through: z.number().int().positive()
+  through: z.number().int().positive(),
+  attachments: z.array(attachmentBlockResourceSchema.shape.storageKey).optional()
 });
-const outboxSchema = z.object({ sequence: z.number().int().nonnegative(), packet: packetSchema.nullable() });
-type Packet = z.infer<typeof packetSchema>;
+const outboxSchema = z.object({ sequence: z.number().int().nonnegative(), packet: webDavRelayPacketSchema.nullable() });
+type Packet = z.infer<typeof webDavRelayPacketSchema>;
 type Outbox = z.infer<typeof outboxSchema>;
 
 function metadataKey(scope: WebDavRelayBodyScope) { return `${scope.key}:outbox`; }
@@ -45,6 +49,7 @@ type FreezeInput = {
   scope: WebDavRelayBodyScope;
   sequence: number;
   upper: number;
+  includeAttachments?: boolean;
   signal?: AbortSignal;
 };
 
@@ -69,7 +74,11 @@ export function freezeWebDavRelayBodyPacket(input: FreezeInput) {
         // A group can contain later rows. Stop before the first group that did not fit.
         const next = candidates[objects.length];
         const through = next ? next.firstSequence - 1 : rows[rows.length - 1]!.state_seq;
-        return writePacket(input, through, objects);
+        const ids = candidates.slice(0, objects.length).filter(candidate => candidate.body).map(candidate => candidate.nodeId);
+        const attachments = input.includeAttachments && ids.length
+          ? (await loadNodeOwnedArticleResourceNeeds(db, ids)).needs.map(need => need.storageKey) : [];
+        const packet = await writePacket(input, objects);
+        return { ...packet, through, ...(attachments.length ? { attachments } : {}) };
       });
   }, input.signal);
 }
@@ -103,24 +112,29 @@ async function selectChanges(db: DbPort, candidate: Candidate) {
       ? need.stateFactIds?.filter(value => value.startsWith('["node_text_alternative",')) ?? [] : [] } };
 }
 
-async function writePacket(input: FreezeInput, through: number, objects: Parameters<typeof requestSyncBatchMessages>[0]) {
+async function writePacket(input: FreezeInput, objects: Parameters<typeof requestSyncBatchMessages>[0]) {
   const requestId = crypto.getRandomValues(new Uint8Array(16));
   const wire = await prepareRequestSyncWire({ context: input.scope.send, groupKey: input.groupKey,
     ...(input.signal ? { signal: input.signal } : {}), messages: id => requestSyncBatchMessages(objects, id, requestId) });
-  const directory = webDavRelayPacketDirectory(input.scope);
+  return stageWebDavRelayPacket(input.files, input.scope, wire);
+}
+
+export async function stageWebDavRelayPacket(files: FramedSyncFilePort, scope: WebDavRelayBodyScope,
+  wire: FramedSyncStreamBody, suffix: '.bin' | typeof WEB_DAV_ATTACHMENT_SUFFIX = '.bin') {
+  const directory = webDavRelayPacketDirectory(scope);
   // The caller holds the slot exclusively, and has checked that no pending packet references it.
-  await input.files.remove(directory);
+  await files.remove(directory);
   let bytes = 0;
   let chunks = 0;
   for await (const chunk of encodeFramedSyncStream(wire)) {
-    await input.files.write(`${directory}/${chunks++}`, chunk);
+    await files.write(`${directory}/${chunks++}`, chunk);
     bytes += chunk.length;
   }
   const time = new Date().toISOString().replace(/[:-]/gu, '');
-  return { name: `${time}-${crypto.randomUUID()}.bin`, through, chunks, bytes };
+  return { name: `${time}-${crypto.randomUUID()}${suffix}`, chunks, bytes };
 }
 
-export function webDavRelayPacketBytes(files: FramedSyncFilePort, scope: WebDavRelayBodyScope, packet: Packet) {
+export function webDavRelayPacketBytes(files: FramedSyncFilePort, scope: WebDavRelayBodyScope, packet: Pick<Packet, 'bytes' | 'chunks'>) {
   const directory = webDavRelayPacketDirectory(scope);
   return { bytes: packet.bytes, fileRange: { directory, count: packet.chunks }, async *chunks() {
     for (let index = 0; index < packet.chunks; index++) {

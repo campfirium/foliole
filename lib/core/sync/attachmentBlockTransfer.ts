@@ -20,6 +20,7 @@ export interface AttachmentSourceFile {
   read(offset: number, length: number): Promise<Uint8Array>;
   /** The source already owns the HTTP frame reservation for this snapshot. */
   snapshot?: true;
+  modifiedAt?: number;
 }
 
 export interface AttachmentSourceOptions {

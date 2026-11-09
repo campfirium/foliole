@@ -4,6 +4,7 @@ import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../datab
 
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { createDesktopLibrarySyncFiles } from './desktopFramedSyncFiles.js';
+import { createDesktopRequestSyncAttachmentHost } from './desktopRequestSyncAttachmentHost.js';
 import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDatabaseHost.js';
 import { recordDesktopSyncActivity, type DesktopSyncActivityContext } from './desktopSyncActivityStore.js';
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
@@ -34,7 +35,7 @@ export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityCo
     const lanConnected = () => desktopSyncChangeSessions().hasSessions(binding.phone_device_id);
     if (lanConnected()) return false;
     await runWebDavRelayBodyRound({
-      host, scope, groupKey, progress, lanConnected, files: createDesktopLibrarySyncFiles(databasePath),
+      host, scope, groupKey, progress, lanConnected, attachments: await createDesktopRequestSyncAttachmentHost(host), files: createDesktopLibrarySyncFiles(databasePath),
       request: createDesktopWebDavRelayHttp(stats),
       assertScope: async () => {
         const active = await runWithDatabaseConnectionOwner(() => isDesktopCompanionSyncParticipating() &&

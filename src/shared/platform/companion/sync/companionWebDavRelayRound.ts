@@ -7,6 +7,7 @@ import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBoo
 
 import { createCompanionWebDavRelayHttp, type CompanionWebDavHttpStats } from './companionWebDavRelayHttp.js';
 import { loadCompanionWebDavRelay } from './companionWebDavRelayStore.js';
+import { currentCompanionAttachmentHost } from './framed/companionAttachmentBlockFiles.js';
 import { currentCompanionFramedSyncFiles } from './framed/companionFramedSyncFiles.js';
 import { currentCompanionRequestSyncDatabaseHost } from './framed/companionRequestSyncDatabaseHost.js';
 import { withCompanionRequestSyncLifecycle } from './framed/companionRequestSyncLifecycle.js';
@@ -30,7 +31,7 @@ export function runCompanionWebDavRelayRound(binding: WebDavRelayBinding, stats:
     const encoded = credential.workgroup_key.replaceAll('-', '+').replaceAll('_', '/');
     const groupKey = Uint8Array.from(atob(encoded), value => value.charCodeAt(0));
     return runWebDavRelayBodyRound({
-      host, files, scope, groupKey, progress, signal,
+      host, files, scope, groupKey, progress, signal, attachments: await currentCompanionAttachmentHost(host),
       request: createCompanionWebDavRelayHttp(binding.directory_url, files, owner, stats, signal),
       lanConnected: () => companionWebDavRelayLanConnected(binding),
       assertScope: async () => {

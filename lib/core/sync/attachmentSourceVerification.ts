@@ -66,7 +66,7 @@ export class AttachmentSourceVerification {
     current.busy = true;
     try {
       await scan(file, current, identity.contentHash, createDigest, shouldYield, assertCurrent);
-      return { resource: file.resource, read: async (offset, length) => {
+      return { ...file, read: async (offset, length) => {
         try { return await readVerified(file, current, offset, length, createDigest, () => {
           if (this.proofs.get(key) !== current) throw new Error('attachment_source_proof_invalidated');
         }); }

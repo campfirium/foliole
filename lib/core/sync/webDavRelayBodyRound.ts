@@ -1,5 +1,7 @@
+import type { AttachmentBlockDestination, AttachmentBlockSource } from './attachmentBlockTransfer.js';
 import type { FramedSyncFilePort } from './framedSyncFilePort.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
+import { enqueueWebDavRelayAttachments, publishWebDavRelayAttachments, resumeWebDavRelayAttachment } from './webDavRelayAttachments.js';
 import { freezeWebDavRelayBodyPacket, readWebDavRelayBodyOutbox, webDavRelayPacketBytes,
   webDavRelayPacketDirectory, writeWebDavRelayBodyOutbox } from './webDavRelayBodyOutbox.js';
 import { receiveWebDavRelayBodyPackets } from './webDavRelayBodyReceive.js';
@@ -8,6 +10,7 @@ import { publishWebDavRelayFile, webDavRelayStatus, type WebDavRelayRequest } fr
 
 type Input = {
   host: RequestSyncDatabaseHost;
+  attachments?: AttachmentBlockSource & AttachmentBlockDestination;
   files: FramedSyncFilePort;
   request: WebDavRelayRequest;
   scope: WebDavRelayBodyScope;
@@ -24,7 +27,10 @@ export function runWebDavRelayBodyRound(input: Input) {
     await input.assertScope();
     await receiveWebDavRelayBodyPackets({ ...input, applied: count => { input.progress.applied += count; },
       retry: count => { input.progress.retries += count; } });
-    await publishChanges(input);
+    const attachments = input.attachments && { ...input, attachments: input.attachments };
+    if (attachments && !await resumeWebDavRelayAttachment(attachments)) return input.progress;
+    const slotFree = await publishChanges(input);
+    if (slotFree && attachments) await publishWebDavRelayAttachments(attachments);
     return input.progress;
   });
 }
@@ -42,8 +48,8 @@ async function publishChanges(input: Input) {
     if (input.lanConnected()) return;
     await input.assertScope();
     const state = await host.readSnapshot(db => readWebDavRelayBodyOutbox(db, scope), signal);
-    const packet = state.packet ?? await freezeWebDavRelayBodyPacket({ ...input, sequence: state.sequence, upper });
-    if (!packet) return;
+    const packet = state.packet ?? await freezeWebDavRelayBodyPacket({ ...input, sequence: state.sequence, upper, includeAttachments: Boolean(input.attachments) });
+    if (!packet) return true;
     if (!state.packet) await host.write(db => writeWebDavRelayBodyOutbox(db, scope, { sequence: state.sequence, packet }));
     if (input.lanConnected()) return;
     if (!collectionReady) {
@@ -54,7 +60,10 @@ async function publishChanges(input: Input) {
     if (input.lanConnected()) return;
     if (state.packet) input.progress.retries++;
     await publishWebDavRelayFile(request, new URL(packet.name, scope.outgoing), webDavRelayPacketBytes(files, scope, packet));
-    await host.write(db => writeWebDavRelayBodyOutbox(db, scope, { sequence: packet.through, packet: null }));
+    await host.write(db => db.transaction(async tx => {
+      await writeWebDavRelayBodyOutbox(tx, scope, { sequence: packet.through, packet: null });
+      await enqueueWebDavRelayAttachments(tx, scope, packet.attachments ?? []);
+    }));
     input.progress.published++;
     await files.remove(webDavRelayPacketDirectory(scope));
   }

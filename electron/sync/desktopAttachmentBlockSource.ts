@@ -23,7 +23,7 @@ export function createDesktopAttachmentBlockSource(assetsDir: string, libraryIde
         if (!stat.isFile()) {
           throw new Error('attachment_source_invalid');
         }
-        const file = { resource: { storageKey, byteLength: stat.size }, async read(offset: number, length: number) {
+        const file = { modifiedAt: stat.mtimeMs, resource: { storageKey, byteLength: stat.size }, async read(offset: number, length: number) {
           if (!Number.isSafeInteger(offset) || !Number.isSafeInteger(length) || offset < 0 ||
               length < 0 || length > ATTACHMENT_BLOCK_BYTES || offset + length > stat.size) {
             throw new Error('attachment_source_range_invalid');

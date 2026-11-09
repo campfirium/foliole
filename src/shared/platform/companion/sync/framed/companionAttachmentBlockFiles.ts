@@ -21,7 +21,7 @@ import { createCompanionFramedSyncFiles } from './companionFramedSyncFiles.js';
 import { importCompanionPdfTextArtifact } from './companionPdfTextArtifact.js';
 
 const hosts = new WeakMap<object, { generation: string; host: Promise<RequestSyncAttachmentHost> }>();
-const statSchema = z.object({ present: z.boolean(), length: z.number().int().nonnegative(), hash: z.string() });
+const statSchema = z.object({ present: z.boolean(), length: z.number().int().nonnegative(), hash: z.string(), modified_at: z.number().nonnegative().optional() });
 type Operation = Omit<Extract<NativeCompanionFramedFileRequest, { operation: 'attachment' }>, 'operation' | 'library_key' | 'generation_id'>;
 
 export function currentCompanionAttachmentHost(db: RequestSyncDatabaseHost): Promise<RequestSyncAttachmentHost> {
@@ -62,7 +62,7 @@ export async function createCompanionAttachmentHost(db: RequestSyncDatabaseHost,
       const info = statSchema.parse(await call({ key, action: 'source-open' }));
       if (!info.present) throw new Error('attachment_source_missing');
       try {
-        const file = { resource: { storageKey: key, byteLength: info.length }, async read(offset: number, length: number) {
+        const file = { ...(info.modified_at ? { modifiedAt: info.modified_at } : {}), resource: { storageKey: key, byteLength: info.length }, async read(offset: number, length: number) {
           const result = await call({ key, action: 'source-read', offset, length });
           if (typeof result.base64 !== 'string') throw new Error('attachment_source_response_invalid');
           return decodeCompanionFileBytes(result.base64);

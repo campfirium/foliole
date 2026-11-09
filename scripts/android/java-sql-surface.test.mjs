@@ -35,6 +35,7 @@ describe('Android Java SQL surface', () => {
       'beginSyncBackgroundWork', 'updateSyncBackgroundWork', 'endSyncBackgroundWork',
       'accessFramedSyncFile',
       'cancelRequestSyncHttp', 'postRequestSyncHttp',
+      'cancelWebDavRelay', 'requestWebDavRelay',
       'configureFramedSyncPayloadBudget', 'closeFramedSyncPayloadBudget',
       'validateFramedSyncPayloadLoan', 'releaseFramedSyncPayloadLoan',
       'loadDiscoveryCandidates', 'loadSyncGroupDeviceIdentity', 'loadSyncGroupProviderState', 'loadSyncParticipationState',

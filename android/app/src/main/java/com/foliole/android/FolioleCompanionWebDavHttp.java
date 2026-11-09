@@ -29,7 +29,7 @@ final class FolioleCompanionWebDavHttp {
     private static final int CHUNK_BYTES = 64 * 1024;
     private static final int MAX_CHUNKS = 1_000_000;
     private static final String DIRECTORY = "foliole-[a-f0-9]{64}-(desktop|phone)/";
-    private static final String PACKET = "[0-9]{8}T[0-9]{6}\\.[0-9]{3}Z-[a-f0-9-]{36}\\.bin";
+    private static final String PACKET = "[0-9]{8}T[0-9]{6}\\.[0-9]{3}Z-[a-f0-9-]{36}(?:\\.asset)?\\.bin";
     private static final Set<String> METHODS = Set.of("GET", "MKCOL", "MOVE", "PROPFIND", "PUT");
     private static final ConcurrentHashMap<String, Operation> ACTIVE = new ConcurrentHashMap<>();
     private static final OkHttpClient CLIENT = new OkHttpClient.Builder()
