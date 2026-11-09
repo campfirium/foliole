@@ -50,28 +50,57 @@ type FreezeInput = {
 
 export function freezeWebDavRelayBodyPacket(input: FreezeInput) {
   return input.host.readSnapshot(async db => {
-    const candidates = await db.query<{ object_id: string; state_seq: number }>(`SELECT object_id, state_seq
+    const rows = await db.query<{ node_id: string; state_seq: number; op_id: string | null }>(`
+      SELECT object_id AS node_id, state_seq, NULL AS op_id
       FROM sync_object_state WHERE object_type = 'node' AND state_seq > ? AND state_seq <= ?
-      ORDER BY state_seq LIMIT ?`, [input.sequence, input.upper, REQUEST_SYNC_BATCH_OBJECTS]);
-    if (!candidates.length) return null;
-    const selections = candidates.map(row => ({ objectType: 'node', globalId: row.object_id,
+      UNION ALL
+      SELECT review.node_id, position.state_seq, review.op_id
+      FROM webdav_relay_review_sequence position JOIN review_log review ON review.op_id = position.op_id
+      WHERE position.state_seq > ? AND position.state_seq <= ?
+      ORDER BY state_seq LIMIT ?`, [input.sequence, input.upper, input.sequence, input.upper, REQUEST_SYNC_BATCH_OBJECTS]);
+    if (!rows.length) return null;
+    const candidates = collectCandidates(rows);
+    const selections = candidates.map(candidate => ({ objectType: 'node', globalId: candidate.nodeId,
       requestId: crypto.getRandomValues(new Uint8Array(16)),
-      resolve: () => selectBody(db, row.object_id) }));
+      resolve: () => selectChanges(db, candidate) }));
     return withRequestSyncBatchSnapshot({ ...input.host, readSnapshot: read => read(db) }, selections,
       input.signal, async objects => {
         for (const object of objects) if (object.kind === 'error') throw new Error(object.result.error);
-        return writePacket(input, candidates[objects.length - 1]!.state_seq, objects);
+        // A group can contain later rows. Stop before the first group that did not fit.
+        const next = candidates[objects.length];
+        const through = next ? next.firstSequence - 1 : rows[rows.length - 1]!.state_seq;
+        return writePacket(input, through, objects);
       });
   }, input.signal);
 }
 
-async function selectBody(db: DbPort, id: string) {
-  const entry = await readFramedSyncInventoryEntry(db, { objectType: 'node', globalId: id });
+type Candidate = { nodeId: string; firstSequence: number; body: boolean; reviewIds: string[] };
+
+function collectCandidates(rows: readonly { node_id: string; state_seq: number; op_id: string | null }[]) {
+  const candidates = new Map<string, Candidate>();
+  for (const row of rows) {
+    const candidate = candidates.get(row.node_id) ?? {
+      nodeId: row.node_id, firstSequence: row.state_seq, body: false, reviewIds: []
+    };
+    if (row.op_id === null) candidate.body = true;
+    else candidate.reviewIds.push(row.op_id);
+    candidates.set(row.node_id, candidate);
+  }
+  return [...candidates.values()];
+}
+
+async function selectChanges(db: DbPort, candidate: Candidate) {
+  const entry = await readFramedSyncInventoryEntry(db, { objectType: 'node', globalId: candidate.nodeId });
   if (!entry || entry.unready) throw new Error('webdav_relay_body_unavailable');
   const [difference] = compareFramedSyncInventories({ local: [entry], remote: [] });
   if (!difference) throw new Error('webdav_relay_body_unavailable');
-  return { ...difference, need: { ...difference.need, reviewFactIds: [], resourceHashes: [],
-    stateFactIds: difference.need.stateFactIds?.filter(value => value.startsWith('["node_text_alternative",')) ?? [] } };
+  const need = difference.need;
+  return { ...difference, need: { ...need, reviewFactIds: candidate.reviewIds, resourceHashes: [],
+    sharedState: candidate.body && need.sharedState,
+    frontierFactIds: candidate.body ? need.frontierFactIds : [],
+    requiredRelationIds: candidate.body ? need.requiredRelationIds : [],
+    stateFactIds: candidate.body
+      ? need.stateFactIds?.filter(value => value.startsWith('["node_text_alternative",')) ?? [] : [] } };
 }
 
 async function writePacket(input: FreezeInput, through: number, objects: Parameters<typeof requestSyncBatchMessages>[0]) {

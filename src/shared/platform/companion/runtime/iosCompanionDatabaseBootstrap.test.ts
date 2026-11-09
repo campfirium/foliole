@@ -101,21 +101,21 @@ function updateMeta(sql: string, values: unknown[], meta: Map<string, string>) {
 describe('iosCompanionDatabaseBootstrap version contract', () => {
   it('tracks the latest shared companion migration independently of the desktop schema', async () => {
     expect(COMPANION_DATABASE_VERSION).toBe(
-      // Independent alternatives migrate at 114 outside the historical beforeVersion plan.
-      Math.max(114, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
+      // Review relay sequencing migrates at 115 outside the historical beforeVersion plan.
+      Math.max(115, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
         ...ANDROID_COMPANION_MIGRATION_PLAN.map((migration) => migration.beforeVersion))
     );
     const { connection, manager } = harness({ existed: true, storedId: 'ios-device', version: 113 });
     await initializeIosCompanionDatabase(nativeState(), manager);
 
-    expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', 114, false);
+    expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', COMPANION_DATABASE_VERSION, false);
     for (const column of ['body_blob_hash', 'expires_at', 'resource_references', 'image_sources']) {
       expect(connection.run).toHaveBeenCalledWith(
         expect.stringContaining(`ALTER TABLE node_text_alternatives ADD COLUMN ${column} `), [], false
       );
     }
     expect(connection.run).toHaveBeenCalledWith('DROP INDEX IF EXISTS idx_node_text_alternatives_available_source', [], false);
-    expect(connection.run).toHaveBeenCalledWith('PRAGMA user_version = 114', [], false);
+    expect(connection.run).toHaveBeenCalledWith(`PRAGMA user_version = ${COMPANION_DATABASE_VERSION}`, [], false);
   });
 });
 

@@ -64,6 +64,7 @@ import { repairCompanionSyncStateEntities } from './syncStateEntityRepair.js';
 import { migrateCompanionTextBodyOwnership } from './textBodyOwnershipMigration.js';
 import { migrateCompanionTopicHistoryRetirement } from './topicHistoryRetirementMigration.js';
 import { migrateCompanionTopicTextState } from './topicTextStateMigration.js';
+import { installRelayReviewSequence } from './webDavRelayReviewSequence.js';
 
 type MigrationAction = (typeof ANDROID_COMPANION_MIGRATION_PLAN)[number]['actions'][number];
 type RepairName = keyof typeof REPAIRS;
@@ -171,6 +172,7 @@ async function migrateCompanionLatestVersions(db: DbPort, currentVersion: number
   if (currentVersion < 111 && targetVersion >= 111) await migrateCompanionMaterialFlowInvalidation(db);
   if (currentVersion < 113 && targetVersion >= 113) await migrateCompanionFsrs7(db);
   if (currentVersion < 114 && targetVersion >= 114) await migrateCompanionIndependentTopicAlternatives(db);
+  if (currentVersion < 115 && targetVersion >= 115) await installRelayReviewSequence(db);
 }
 
 async function migrateCompanionWatchedDisplayPath(db: DbPort) {
@@ -196,6 +198,7 @@ export async function createCompanionDatabase(
   if (targetVersion >= 87) await migrateCompanionForegroundSources(db);
   if (targetVersion >= 88) await migrateCompanionPdfTextArtifacts(db);
   if (targetVersion >= 96) await migrateCompanionFramedSyncInventoryLookups(db);
+  if (targetVersion >= 115) await installRelayReviewSequence(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

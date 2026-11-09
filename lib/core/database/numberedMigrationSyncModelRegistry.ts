@@ -29,6 +29,7 @@ import { migrateReviewLog } from './reviewLogMigration.js';
 import { retireReviewStateSync } from './reviewStateSyncRetirement.js';
 import { migrateTextBodyOwnership } from './textBodyOwnershipMigration.js';
 import { migrateTopicHistoryRetirement } from './topicHistoryRetirementMigration.js';
+import { WEB_DAV_RELAY_REVIEW_SEQUENCE_SCHEMA } from './webDavRelayReviewSequence.js';
 
 export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 150, migrate: migrateTextBodyOwnership },
@@ -69,5 +70,8 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 183, migrate: migrateMaterialFlowInvalidation },
   { version: 184, migrate: migrateFsrs7 },
   { version: 185, migrate: migrateIndependentTopicAlternatives },
-  { version: 186, migrate: db => db.exec("DELETE FROM workspace_meta WHERE key >= 'dive:' AND key < 'dive;'") }
+  { version: 186, migrate: db => db.exec("DELETE FROM workspace_meta WHERE key >= 'dive:' AND key < 'dive;'") },
+  { version: 187, migrate: db => {
+    for (const sql of WEB_DAV_RELAY_REVIEW_SEQUENCE_SCHEMA) db.exec(sql);
+  } }
 ];

@@ -87,7 +87,7 @@ async function receivePacket(input: Input, name: string) {
     }
     const stream = await readFramedSyncStream(body);
     const result = await receiveRequestSyncBatch(host, { ...stream, context: scope.receive,
-      groupKey: input.groupKey, peerState: webDavRelayPeerState(scope), author: 'initiator',
+      groupKey: input.groupKey, peerState: webDavRelayPeerState(scope), author: 'initiator', receiveReviewsIndependently: true,
       ...(signal ? { signal } : {}) });
     const failure = result.results.find(value => value.error);
     if (failure) throw new Error(failure.error);

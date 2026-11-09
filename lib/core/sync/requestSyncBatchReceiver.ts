@@ -15,6 +15,7 @@ import { readRequestSyncWire } from './requestSyncWire.js';
 type ReceiveInput = Omit<Parameters<typeof receiveRequestSyncObject>[1], 'expectedObject'> & {
   expected?: readonly (RequestSyncObjectIdentity & { sourceSnapshot?: FramedSyncInventoryEntry; need?: FramedSyncInventoryNeed })[];
   requestId?: Uint8Array;
+  receiveReviewsIndependently?: boolean;
 };
 
 export async function receiveRequestSyncBatch(host: RequestSyncDatabaseHost, input: ReceiveInput) {
@@ -78,7 +79,7 @@ async function receiveRest(batch: ReceivingBatch): Promise<{ requestId: Uint8Arr
     }
     return withRequestSyncFiles(batch.host.files, async files => {
       const header = await receiveRequestSyncObjectMessages(objectMessages(next.value, messages),
-        decodeFramedSyncPreamble(input.preamble).contextId, files);
+        decodeFramedSyncPreamble(input.preamble).contextId, files, input.receiveReviewsIndependently);
       assertRequestSyncObjectSource(header, expected?.sourceSnapshot);
       if (expected?.need) await assertReceivedRequestFacts(files, expected.need);
       batch.staged.push({ header, files, index: results.length });

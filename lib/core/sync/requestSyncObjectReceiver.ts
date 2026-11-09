@@ -62,7 +62,7 @@ function same(a: Uint8Array, b: Uint8Array) {
 export type RequestSyncDecodedMessage = Readonly<{ message: ValidatedProtocolMessage; encoded: Uint8Array }>;
 
 export async function receiveRequestSyncObjectMessages(messages: AsyncIterable<RequestSyncDecodedMessage>,
-  contextId: Uint8Array, files: RequestSyncFiles) {
+  contextId: Uint8Array, files: RequestSyncFiles, receiveReviewsIndependently = false) {
   const digest = sha256.create();
   const bodies = new RequestBodies(files, contextId);
   const facts = new Set<string>();
@@ -70,6 +70,7 @@ export async function receiveRequestSyncObjectMessages(messages: AsyncIterable<R
   let fragment: FramedSyncFactFragmentDecoder | undefined;
   let sequence = 0n;
   let ended = false;
+  let reviewsOnly = true;
   for await (const { message, encoded } of messages) {
     if (ended) throw new Error('request_sync_object_trailing_data');
     if (!header) {
@@ -101,6 +102,7 @@ export async function receiveRequestSyncObjectMessages(messages: AsyncIterable<R
         if (fact.objectType !== header.objectType || fact.globalId !== header.globalId) {
           throw new Error('request_sync_object_identity_mismatch');
         }
+        reviewsOnly &&= fact.kind === 4;
         const identity = `${fact.kind}:${fact.factId}`;
         if (facts.has(identity)) throw new Error('request_sync_fact_duplicate');
         facts.add(identity);
@@ -114,7 +116,9 @@ export async function receiveRequestSyncObjectMessages(messages: AsyncIterable<R
     sequence++;
   }
   if (!header || !ended || (header.objectType === 'daily_flow' && !files.dailyFlow.complete)) throw new Error('request_sync_object_incomplete');
-  return header;
+  // DAV has no live peer inventory. A review-only object needs the node, but does not need this body version.
+  return receiveReviewsIndependently && header.objectType === 'node' && facts.size && reviewsOnly
+    ? { ...header, currentVersionId: '' } : header;
 }
 
 function readHeader(message: ValidatedProtocolMessage): RequestSyncObjectHeader {
