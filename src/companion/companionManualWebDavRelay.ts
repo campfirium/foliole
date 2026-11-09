@@ -52,7 +52,9 @@ async function runRelay(args: TryForegroundAutoSyncArgs, binding: WebDavRelayBin
   }
   if (progress.applied) await refreshCompanionSyncDisplay(args).catch(() => args.setError('sync_display_unavailable'));
   const result = args.cancelled() ? 'cancelled' : failure ? 'failed' : 'completed';
-  const message = `WebDAV relay ${JSON.stringify({ ...stats, ...progress, elapsedMs: Math.round(performance.now() - started) })}`;
+  const errorCode = failure && /^webdav_relay_[a-z0-9_:]+$/iu.test(failure) ? failure : undefined;
+  const message = `WebDAV relay ${JSON.stringify({ ...stats, ...progress,
+    elapsedMs: Math.round(performance.now() - started), errorCode })}`;
   const state = await writeCompanionSyncActivity({ ...activity, kind: 'run_finished', result, message,
     status: result === 'cancelled' ? 'skipped' : result }, args.setError);
   if (state) args.setState(current => ({ ...current, ...state }));

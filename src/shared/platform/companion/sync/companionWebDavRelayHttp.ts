@@ -33,7 +33,11 @@ export function createCompanionWebDavRelayHttp(root: string, files: FramedSyncFi
       stats.uploadedBytes += response.uploaded_bytes;
       stats.downloadedBytes += response.downloaded_bytes;
       signal.throwIfAborted();
-      if (response.failed) throw new Error('webdav_relay_transport_failed');
+      if (response.failed) {
+        const code = response.failure_code;
+        throw new Error(code && /^[a-z_]+$/iu.test(code)
+          ? `webdav_relay_transport_failed:${code}` : 'webdav_relay_transport_failed');
+      }
       return await consume(response.status, responseChunks(files, directory, response.chunks, signal));
     } finally {
       signal.removeEventListener('abort', cancel);

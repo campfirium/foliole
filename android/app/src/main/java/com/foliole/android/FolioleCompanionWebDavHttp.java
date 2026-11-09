@@ -85,10 +85,16 @@ final class FolioleCompanionWebDavHttp {
                     storeResponse(files, id, body, progress);
                 }
             }
-            return progress.result(false);
+            return progress.result(null);
         } catch (IOException failure) {
-            return progress.result(true);
+            return progress.result(failureCode(failure));
         }
+    }
+
+    private static String failureCode(IOException failure) {
+        String message = failure.getMessage();
+        if (message != null && message.contains("CLEARTEXT")) return "cleartext_policy";
+        return failure.getClass().getSimpleName();
     }
 
     static void cancel(PluginCall input) {
@@ -213,9 +219,9 @@ final class FolioleCompanionWebDavHttp {
         long uploaded;
         long downloaded;
 
-        JSObject result(boolean failed) {
+        JSObject result(String failure) {
             return new JSObject().put("status", status).put("chunks", chunks)
-                .put("uploaded_bytes", uploaded).put("downloaded_bytes", downloaded).put("failed", failed);
+                .put("uploaded_bytes", uploaded).put("downloaded_bytes", downloaded).put("failed", failure != null).put("failure_code", failure);
         }
     }
 }
