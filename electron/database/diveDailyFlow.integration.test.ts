@@ -4,66 +4,15 @@ import { afterEach, expect, it } from 'vitest';
 
 import { saveNodeReadingStateWithSync } from '../../lib/core/database/nodeReadingSyncState.js';
 import { saveNodeReviewStateWithSync } from '../../lib/core/database/nodeReviewSyncState.js';
-import { applyReviewGrade } from '../../lib/core/database/reviewMutations.js';
 import type { DailyFlowCommitArgs } from '../../lib/core/flow/dailyFlowContract.js';
-import { loadDailyFlowLearningSnapshot } from '../../lib/core/flow/dailyFlowLearningSnapshot.js';
-import { commitDailyFlow, openDailyFlow, type DailyFlowPersistence } from '../../lib/core/flow/dailyFlowService.js';
 import { readCycleRows, readDailyFlow } from '../../lib/core/flow/dailyFlowStorage.js';
-import { createFsrsReviewScheduler } from '../../lib/core/review/fsrsScheduler.js';
-import { createReviewSchedulerParameters, DEFAULT_REVIEW_SCHEDULER_SETTINGS, getReviewSchedulerVersion } from '../../lib/core/review/settings.js';
 import { createInitialSchedulerCard } from '../../lib/core/review/types.js';
 
-import { createDive } from './diveRepository.js';
-import { closeLibraries, createPeer, startLibraries, type Peer } from './syncLibrary.testSupport.js';
-
-const now = '2026-10-28T08:00:00.000Z';
-const tomorrow = '2026-10-29T08:00:00.000Z';
-const schedulerSettings = DEFAULT_REVIEW_SCHEDULER_SETTINGS;
-const scheduler = createFsrsReviewScheduler({ loadSettings: () => schedulerSettings,
-  getSettingsVersion: getReviewSchedulerVersion, createParameters: createReviewSchedulerParameters });
+import { addNode, now, readArgs, reading, scheduler, setup, tomorrow } from './diveDailyFlow.testSupport.js';
+import { addDiveSources } from './diveRepository.js';
+import { closeLibraries } from './syncLibrary.testSupport.js';
 
 afterEach(closeLibraries);
-
-function addNode(peer: Peer, id: string, priority: number, kind: 'topic' | 'item', parent: string | null = null) {
-  peer.db.prepare(`INSERT INTO nodes (id, parent_id, kind, priority, title, content, reveal, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, '2026-01-01T00:00:00.000Z', ?)`)
-    .run(id, parent, kind, priority, id, `Prompt ${id}`, kind === 'item' ? 'Answer' : null, now);
-
-}
-
-async function setup(kind: 'topic' | 'item') {
-  await startLibraries();
-  const peer = createPeer('desktop');
-  for (const [index, id] of ['a', 'b', 'c', 'd'].entries()) {
-    if (kind === 'item') addNode(peer, `topic-${id}`, index, 'topic');
-    addNode(peer, id, index, kind, kind === 'item' ? `topic-${id}` : null);
-  }
-  const settings = { scope: peer.file, newDayStartsAtHour: 4, pushQueue: schedulerSettings.pushQueue };
-  const persistence: DailyFlowPersistence = {
-    learningSnapshot: (db, ids) => loadDailyFlowLearningSnapshot(db, 'desktop', ids),
-    snapshot: async () => { throw new Error('Expected scoped learning facts'); },
-    grade: async (_db, value, opId) => applyReviewGrade(peer.driver, { ...value, opId },
-      { hostName: peer.name, createId: () => `${opId}-log` }),
-    reading: async (_db, value, updatedAt) => { saveNodeReadingStateWithSync(peer.driver,
-      { nodeId: value.nodeId, reading: value.after, updatedAt, hostName: peer.name }); },
-    reviewHistory: async (_db, value, updatedAt) => saveNodeReviewStateWithSync(peer.driver,
-      { nodeId: value.nodeId, review: value.after, updatedAt, hostName: peer.name,
-        history: { mode: value.mode, targetOpId: value.targetOpId } })
-  };
-  const mode = kind === 'item' ? 'review-first' : 'reading-only';
-  return { peer, mode, scope: (topicIds: string[]) => ({ id: createDive(peer.db, 'Test Dive', topicIds).id, topicIds }),
-    facts: () => persistence.learningSnapshot(peer.port),
-    open: (overrides: Partial<Parameters<typeof openDailyFlow>[1]> = {}) =>
-      openDailyFlow(peer.port, { now, mode, ...overrides }, settings, persistence),
-    commit: (command: DailyFlowCommitArgs) => commitDailyFlow(peer.port, command, settings, persistence) };
-}
-
-const reading = { intervalDurationMs: 86400000, intervalGrowthFactor: 2, lastHandledAt: now,
-  nextAt: tomorrow, priority: 1, readingPosition: 0, repetitionCount: 1, state: 'active' } as const;
-
-function readArgs(nodeId: string) {
-  return { readingAction: 'read', readings: [{ nodeId, before: null, after: reading }] } as const;
-}
 
 it('reads and undoes/redoes within a dive without moving the global position', async () => {
   const { peer, open, commit, facts, scope } = await setup('topic');
@@ -229,4 +178,47 @@ it('pauses at each choice and keeps the round boundary and scheduled Topic posit
   const switched = (await open({ dive: empty, seed: finalStop, now: later })).session;
   expect(switched).toMatchObject({ currentNodeId: null, dive: { id: empty.id, phase: 'initial', stop: 'empty' } });
   expect((await open({ returnFromDive: true, now: later })).session.currentNodeId).toBe(global.currentNodeId);
+});
+
+it('admits an earlier new member without revisiting an old Topic skipped in the same round', async () => {
+  const { peer, open, commit, facts, scope } = await setup('topic');
+  const later = '2026-10-28T09:00:00.000Z';
+  saveNodeReadingStateWithSync(peer.driver, { nodeId: 'c', reading: { ...reading, nextAt: later },
+    updatedAt: now, hostName: peer.name });
+  const global = (await open()).session;
+  const dive = scope(['b', 'c']);
+  const advance = async (seed: DailyFlowCommitArgs['sourceSession'], at = now) =>
+    (await open({ dive, seed, now: at, diveStep: 'continue' })).session;
+  const read = async (source: NonNullable<DailyFlowCommitArgs['sourceSession']>, at: string, nextAt: string) => {
+    const nodeId = source.currentNodeId!;
+    return (await commit({ opId: `read-${source.daily!.revision}`, now: at, token: source.daily!,
+      sourceSession: source, readingAction: 'read', readings: [{ nodeId,
+        before: (await facts()).nodesById[nodeId]!.reading ?? null, after: { ...reading, nextAt, lastHandledAt: at } }] })).session;
+  };
+  const initial = (await open({ dive })).session;
+  const today = await advance(await read(initial, now, now));
+  const topics = await advance(await read(today, now, now));
+  expect(topics).toMatchObject({ currentNodeId: 'b', dive: { phase: 'topics' } });
+  const positions = new Map((await readCycleRows(peer.port)).map(row => [row.node_id, row.order_key]));
+  expect(positions.get('c')).toBeLessThan(positions.get('b')!);
+  expect(positions.get('d')).toBeLessThan(positions.get('b')!);
+  addDiveSources(peer.db, dive.id, ['d']);
+  const added = await read(topics, later, tomorrow);
+  expect(added.currentNodeId).toBe('d');
+  const stop = await read(added, later, tomorrow);
+  expect(stop).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'finished' } });
+  const target = `read-${added.daily!.revision}`;
+  const saved = { ...reading, nextAt: tomorrow, lastHandledAt: later };
+  const undo = await commit({ opId: 'undo-earlier', now: later, token: stop.daily!, sourceSession: stop,
+    historyMode: 'undo', historyTargetOpId: target, historySourceSession: stop, nextSession: added,
+    readings: [{ nodeId: 'd', before: saved, after: null }] });
+  expect(undo.session.currentNodeId).toBe('d');
+  const redo = await commit({ opId: 'redo-earlier', now: later, token: undo.session.daily!, sourceSession: undo.session,
+    historyMode: 'redo', historyTargetOpId: target, historySourceSession: added, nextSession: stop,
+    readings: [{ nodeId: 'd', before: null, after: saved }] });
+  expect(redo.session).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'finished' } });
+  const nextRound = await advance(redo.session, later);
+  expect(nextRound).toMatchObject({ currentNodeId: 'c', dive: { position: positions.get('c') } });
+  expect((await open({ returnFromDive: true, now: later })).session.currentNodeId).toBe(global.currentNodeId);
+  expect((await facts()).nodesById.d!.reading?.nextAt).toBe(tomorrow);
 });

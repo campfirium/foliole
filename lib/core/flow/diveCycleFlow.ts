@@ -1,6 +1,7 @@
 import type { ReviewQueueNode } from '../review/queue/reviewQueuePlanner.js';
 
 import { cycleReadyNodeIds, cycleWindow, scanCycleRange } from './cycleFlowSelection.js';
+import type { CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowLearningSnapshot, DailyFlowOpenArgs, DailyFlowSettings } from './dailyFlowContract.js';
 import type { DailyFlowSession, DiveFlowCursor } from './dailyFlowSession.js';
 import type { DailyFlowStore } from './dailyFlowStore.js';
@@ -58,11 +59,17 @@ export async function openDiveCurrent(db: DailyFlowStore, global: DailyFlowSessi
   }
   const restart = !previous || (previous.stop && args.diveStep);
   const dive: DiveFlowCursor = restart
-    ? { ...scope, mode: args.mode, phase, position: 0, hasWork: false, waiting: false, stop: null,
+    ? { ...scope, mode: args.mode, phase, position: 0, hasWork: false, stop: null,
       limit: phase === 'initial' ? global.cycle!.clearKey
         : args.diveStep === 'retry' && previous ? previous.limit : global.cycle!.tailKey }
-    : { ...previous, position: seed?.currentNodeId ? Math.max(0, previous.position - 1) : previous.position };
+    : rewindDiveCurrent(previous, seed?.currentNodeId);
   return selectDiveCurrent(db, global, dive, args.now, settings);
+}
+
+export function rewindDiveCurrent(dive: DiveFlowCursor, nodeId?: string | null): DiveFlowCursor {
+  if (!nodeId) return dive;
+  if (dive.resumeAfter === undefined) return { ...dive, position: Math.max(0, dive.position - 1) };
+  return { ...dive, revisitIds: [nodeId, ...(dive.revisitIds ?? [])] };
 }
 
 export async function selectDiveCurrent(db: DailyFlowStore, global: DailyFlowSession, dive: DiveFlowCursor,
@@ -70,29 +77,72 @@ export async function selectDiveCurrent(db: DailyFlowStore, global: DailyFlowSes
   if (dive.stop) return displayDiveSession(global, dive, null, null);
   if (!db.readDiveMembers) throw new Error('daily_flow_dive_unavailable');
   const memberIds = await db.readDiveMembers(dive.id);
-  if (dive.memberIds?.length !== memberIds.length || memberIds.some((id, index) => id !== dive.memberIds?.[index])) {
-    // A new member may precede the cursor. The shared row's schedule and this round's limit still apply.
-    dive = { ...dive, memberIds, position: 0, waiting: false };
-  }
-  // Traverse shared rows with a private cursor and the boundary captured at entry.
-  const cycle = { ...global.cycle!, scanAfter: dive.position, lapLimit: dive.limit };
   const members = new Set(memberIds);
-  const matches = (row: { node_id: string; initial_task: number }, snapshot: DailyFlowLearningSnapshot) =>
+  const resumeAfter = dive.resumeAfter ?? dive.position;
+  const revisit = resumeAfter ? earlierMemberIds(dive, members) : [];
+  const waiting = new Set(dive.waitingIds?.filter(id => members.has(id)));
+  const matches = (row: CycleRow, snapshot: DailyFlowLearningSnapshot) =>
     members.has(row.node_id) && matchesPhase(dive, row, snapshot);
   const mode = selectionMode(dive);
   const dayEnd = global.dayWindow && new Date(Date.parse(global.dayWindow.end) - 1).toISOString();
-  let waiting = dive.waiting;
-  const row = members.size ? await scanCycleRange(db, cycle, { mode, now, settings, matches,
-    onSkipped: (candidate, snapshot) => {
-      if (!waiting && dayEnd && dive.phase !== 'initial' && matches(candidate, snapshot)) {
-        waiting = cycleReadyNodeIds({ ...snapshot, nodeOrder: [candidate.node_id] }, mode, dayEnd, settings)
-          .includes(candidate.node_id);
-      }
+  const onSkipped = (row: CycleRow, snapshot: DailyFlowLearningSnapshot) => {
+    if (dayEnd && dive.phase !== 'initial' && matches(row, snapshot)) waiting.add(row.node_id);
+  };
+  const args = { mode, now, settings, matches, onSkipped };
+  const earlier = resumeAfter && revisit.length ? await selectEarlierMember(db, revisit, resumeAfter, args) : null;
+  const cycle = { ...global.cycle!, scanAfter: resumeAfter, lapLimit: dive.limit };
+  const row = earlier?.row ?? (members.size ? await scanCycleRange(db, cycle, args) : null);
+  if (row) waiting.delete(row.node_id);
+  const stillWaiting = !row && dayEnd && await hasWaitingMember(db, [...waiting], args, dayEnd);
+  const stop = row ? null : stillWaiting ? 'waiting' : dive.hasWork ? 'finished' : 'empty';
+  const next: DiveFlowCursor = { ...dive, memberIds, position: row?.order_key ?? dive.limit, waitingIds: [...waiting],
+    hasWork: dive.hasWork || Boolean(row), stop };
+  if (earlier) {
+    next.resumeAfter = resumeAfter;
+    next.revisitIds = earlier.remaining;
+  } else {
+    delete next.resumeAfter;
+    delete next.revisitIds;
+  }
+  return displayDiveSession(global, next, row?.node_id ?? null, row ? now : null);
+}
+
+function earlierMemberIds(dive: DiveFlowCursor, members: ReadonlySet<string>) {
+  const previous = new Set(dive.memberIds);
+  const revisit = new Set(dive.revisitIds?.filter(id => members.has(id)));
+  for (const id of members) {
+    if (!previous.has(id)) revisit.add(id);
+  }
+  return [...revisit];
+}
+
+type DiveSelection = Parameters<typeof scanCycleRange>[2];
+
+async function selectEarlierMember(db: DailyFlowStore, ids: string[], through: number, args: DiveSelection) {
+  // Only newly admitted members can use positions this round has already passed.
+  const rows = (await db.readRows(ids)).filter(row => row.active && row.order_key <= through)
+    .sort((a, b) => a.order_key - b.order_key);
+  if (!rows.length) return null;
+  const nodeOrder = rows.map(row => row.node_id);
+  const snapshot = await db.scopedLearningSnapshot(nodeOrder);
+  const ready = new Set(cycleReadyNodeIds({ ...snapshot, nodeOrder }, args.mode, args.now, args.settings));
+  for (const [index, row] of rows.entries()) {
+    if (ready.has(row.node_id) && args.matches!(row, snapshot)) {
+      return { row, remaining: nodeOrder.slice(index + 1) };
     }
-  }) : null;
-  const stop = row ? null : waiting ? 'waiting' : dive.hasWork ? 'finished' : 'empty';
-  return displayDiveSession(global, { ...dive, position: row?.order_key ?? dive.limit,
-    hasWork: dive.hasWork || Boolean(row), waiting, stop }, row?.node_id ?? null, row ? now : null);
+    if (!ready.has(row.node_id)) args.onSkipped?.(row, snapshot);
+  }
+  return null;
+}
+
+async function hasWaitingMember(db: DailyFlowStore, ids: string[], args: DiveSelection, dayEnd: string) {
+  if (!ids.length) return false;
+  const rows = (await db.readRows(ids)).filter(row => row.active);
+  const nodeOrder = rows.map(row => row.node_id);
+  const snapshot = { ...await db.scopedLearningSnapshot(nodeOrder), nodeOrder };
+  const ready = new Set(cycleReadyNodeIds(snapshot, args.mode, args.now, args.settings));
+  const later = new Set(cycleReadyNodeIds(snapshot, args.mode, dayEnd, args.settings));
+  return rows.some(row => args.matches!(row, snapshot) && !ready.has(row.node_id) && later.has(row.node_id));
 }
 
 export function displayDiveSession(global: DailyFlowSession, dive: DiveFlowCursor, currentNodeId: string | null,

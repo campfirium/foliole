@@ -14,7 +14,7 @@ import { readDailyFlow, saveCycleFlow } from './dailyFlowStorage.js';
 import type { DailyFlowSyncFact } from './dailyFlowSyncFact.js';
 import { effectiveFlowActions } from './dailyFlowSyncMerge.js';
 import { recordDailyFlowSync } from './dailyFlowSyncRecord.js';
-import { selectDiveCurrent } from './diveCycleFlow.js';
+import { rewindDiveCurrent, selectDiveCurrent } from './diveCycleFlow.js';
 
 async function persistTargetLearning(db: DbPort, args: DailyFlowCommitArgs, facts: DailyFlowSyncFact[],
   target: DailyFlowSyncFact, persistence: DailyFlowPersistence) {
@@ -123,12 +123,12 @@ async function reconcileDiveHistory(db: DbPort, args: DailyFlowCommitArgs, now: 
 async function historyDisplay(store: ReturnType<typeof createSqliteDailyFlowStore>, args: DailyFlowCommitArgs,
   global: import('./dailyFlowSession.js').DailyFlowSession, settings: DailyFlowSettings, now = args.now) {
   const current = args.sourceSession?.dive;
-  const before = (args.historyMode === 'undo' ? args.nextSession : args.historySourceSession)?.dive;
+  const prior = args.historyMode === 'undo' ? args.nextSession : args.historySourceSession;
+  const before = prior?.dive;
   if (!current) return global;
   if (!before || current.id !== before.id || current.phase !== before.phase || current.limit !== before.limit) {
-    const position = args.sourceSession?.currentNodeId ? Math.max(0, current.position - 1) : current.position;
-    return selectDiveCurrent(store, global, { ...current, position }, now, settings);
+    return selectDiveCurrent(store, global, rewindDiveCurrent(current, args.sourceSession?.currentNodeId), now, settings);
   }
-  return selectDiveCurrent(store, global, { ...before, stop: null,
-    position: args.historyMode === 'undo' ? Math.max(0, before.position - 1) : before.position }, now, settings);
+  const cursor = args.historyMode === 'undo' ? rewindDiveCurrent(before, prior?.currentNodeId) : before;
+  return selectDiveCurrent(store, global, { ...cursor, stop: null }, now, settings);
 }

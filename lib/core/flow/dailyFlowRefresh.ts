@@ -56,40 +56,40 @@ function keepDisplayed(stored: CycleStored, snapshot: DailyFlowLearningSnapshot)
 async function replaceList(db: DbPort, stored: CycleStored, snapshot: DailyFlowLearningSnapshot,
   oldRows: CycleRow[], now: string, settings: DailyFlowSettings, plans: ReturnType<typeof prepareDailyFlowPlans>) {
   const mode = stored.mode as ReviewSessionMode;
-  const soon = oldRows.filter(row => row.cohort === 'soon').map(row => row.node_id);
   const built = buildCycle(snapshot, { now, mode }, settings, plans);
   const old = new Map(oldRows.map(row => [row.node_id, row]));
-  const retained = oldRows.filter(row => row.handled && row.cohort !== 'soon')
-    .map(row => ({ ...row, active: 0 as const, initial_task: 0 as const }));
-  const handled = new Set(retained.map(row => row.node_id));
-  const planned = built.rows.filter(row => !handled.has(row.node_id)).map(row => ({ ...row,
-    ...(old.get(row.node_id)?.cohort === 'soon' ? { cohort: 'soon' as const,
-      handled: old.get(row.node_id)!.handled, initial_task: 0 as const } : {}) }));
-  const byId = new Map(planned.map(row => [row.node_id, row]));
-  const deferred = soon.flatMap(id => byId.has(id) ? [byId.get(id)!] : []);
-  const fresh = [...planned.filter(row => row.initial_task), ...deferred,
-    ...planned.filter(row => !row.initial_task && row.cohort !== 'soon')];
   const current = keepDisplayed(stored, snapshot) ? stored.session.currentNodeId : null;
-  if (current) {
-    const existing = fresh.find(row => row.node_id === current) ?? retained.find(row => row.node_id === current);
-    const pinned: CycleRow = { ...(existing ?? { node_id: current, cohort: 'none', initial_task: 0, handled: 0, order_key: 1 }), active: 1 };
-    fresh.splice(0, fresh.length, pinned, ...fresh.filter(row => row.node_id !== current));
-  }
-  // New positions cannot collide with pre-refresh positions retained by targeted undo/redo.
-  const offset = oldRows.reduce((tail, row) => Math.max(tail, row.order_key), stored.session.cycle!.tailKey);
-  if (!Number.isSafeInteger(offset + fresh.length)) throw new Error('daily_flow_order_exhausted');
-  fresh.forEach((row, index) => { row.order_key = offset + index + 1; });
-  const rows = [...retained.filter(row => row.node_id !== current), ...fresh];
-  const pending = fresh.filter(row => row.active && row.initial_task);
+  const previous = stored.session.cycle!;
+  const tail = oldRows.reduce((key, row) => Math.max(key, row.order_key), previous.tailKey);
+  const { rows, tailKey } = refreshRows(built.rows, old, current, tail);
+  const pending = rows.filter(row => row.active && row.initial_task);
   const session = { ...built.session, ...stored.session, candidateMembershipHash: built.session.candidateMembershipHash,
     rebuildSourceRevision: stored.session.rebuildSourceRevision ?? stored.revision,
     currentNodeId: current, cycle: { ...built.session.cycle!,
-      clearKey: pending.at(-1)?.order_key ?? offset, clearedAt: pending.length ? null : stored.session.cycle!.clearedAt,
-      scanAfter: current ? fresh[0]!.order_key : offset, lapLimit: offset + fresh.length, tailKey: offset + fresh.length,
+      clearKey: pending.reduce((key, row) => Math.max(key, row.order_key), previous.clearKey), clearedAt: pending.length ? null : stored.session.cycle!.clearedAt,
+      scanAfter: previous.scanAfter, lapLimit: tailKey, tailKey,
       remaining: pending.length, reviewRemaining: pending.filter(row => isFsrsReviewItemNode(snapshot.nodesById[row.node_id])).length },
     totalNodeCount: (stored.session.readTopicCount ?? 0) + (stored.session.reviewedItemCount ?? 0) + pending.length };
   await db.run('DELETE FROM daily_flow_entries');
   await insertCycleRows(db, rows);
   await saveCycleFlow(db, { dayKey: stored.day_key, mode, settingsKey: JSON.stringify(settings), now,
     revision: stored.revision + 1, session: cycleWindow(session) });
+}
+
+function refreshRows(planned: CycleRow[], old: Map<string, CycleRow>, current: string | null, tailKey: number) {
+  const rows = new Map<string, CycleRow>();
+  for (const candidate of planned) {
+    const before = old.get(candidate.node_id);
+    // A surviving row keeps its slot and round flags. New work joins after open round boundaries.
+    if (before?.active) rows.set(candidate.node_id, before);
+    else if (before?.handled && before.cohort !== 'soon') rows.set(candidate.node_id, before);
+    else rows.set(candidate.node_id, { ...candidate, order_key: ++tailKey });
+  }
+  for (const before of old.values()) {
+    if (rows.has(before.node_id)) continue;
+    if (before.node_id === current) rows.set(before.node_id, { ...before, active: 1, initial_task: 0 });
+    else if (before.handled) rows.set(before.node_id, { ...before, active: 0, initial_task: 0 });
+  }
+  if (!Number.isSafeInteger(tailKey)) throw new Error('daily_flow_order_exhausted');
+  return { rows: [...rows.values()], tailKey };
 }

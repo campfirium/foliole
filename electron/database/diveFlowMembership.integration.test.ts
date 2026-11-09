@@ -109,3 +109,42 @@ it('uses committed local and synced membership for the next card in one open Div
       [currentId, joinedId, movedId, receivedId].sort().map(node_id => ({ node_id, repetition_count: 1 })));
   } finally { await fixture.close(); }
 });
+
+it('finishes an open Dive card when the same sync also adds unrelated daily work', async () => {
+  const fixture = await restoreFixture();
+  const local = fixture.peer('source');
+  const remote = fixture.peer('target');
+  try {
+    for (const peer of [local, remote]) {
+      peer.sqlite.prepare("INSERT INTO settings VALUES ('host_name', ?, 'now')").run(peer.id);
+      bindParentOrderWriter(createBetterSqlite3Driver(peer.sqlite), { deviceAnchor: peer.id, libraryPath: peer.file });
+    }
+    for (const [priority, id] of ['global', 'join', 'current', 'remaining'].entries()) seed(local, id, 'topic', priority);
+    const { open, read, finishSync } = bindFlow(local);
+    const global = await open();
+    const [, joinedId, currentId, remainingId] = (await readCycleRows(local.db)).map(row => row.node_id) as
+      [string, string, string, string];
+    const dive = createDive(local.sqlite, 'Open during refresh', [currentId, remainingId]);
+    const scope = { id: dive.id, topicIds: [currentId, remainingId] };
+    const current = await open({ dive: scope });
+    expect(current.currentNodeId).toBe(currentId);
+    expect(await requestNodeRound(local, remote)).toMatchObject({ complete: true, pending: 0 });
+
+    addDiveSources(remote.sqlite, dive.id, [joinedId]);
+    seed(remote, 'unrelated-new', 'topic', 5);
+    expect(await requestNodeRound(remote, local)).toMatchObject({ complete: true, pending: 0 });
+    expect(await finishSync()).toBe(true);
+    expect((await open({ seed: current, dive: scope })).currentNodeId).toBe(currentId);
+    const joined = await read(current);
+    expect(joined.currentNodeId).toBe(joinedId);
+    const remaining = await read(joined);
+    expect(remaining.currentNodeId).toBe(remainingId);
+    expect(await read(remaining)).toMatchObject({ currentNodeId: null, dive: { stop: 'finished' } });
+    const resumed = await open({ returnFromDive: true });
+    expect(resumed.currentNodeId).toBe(global.currentNodeId);
+    expect((await read(resumed)).currentNodeId).toBe('unrelated-new');
+    local.reopen();
+    expect(local.sqlite.prepare('SELECT node_id, repetition_count FROM node_reading ORDER BY node_id').all()).toEqual(
+      [global.currentNodeId, currentId, joinedId, remainingId].sort().map(node_id => ({ node_id, repetition_count: 1 })));
+  } finally { await fixture.close(); }
+});

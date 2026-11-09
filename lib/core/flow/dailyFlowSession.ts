@@ -14,7 +14,9 @@ export type DiveFlowCursor = DiveFlowScope & {
   position: number;
   limit: number;
   hasWork: boolean;
-  waiting: boolean;
+  waitingIds?: string[];
+  resumeAfter?: number;
+  revisitIds?: string[];
   stop: 'empty' | 'finished' | 'waiting' | null;
 };
 
