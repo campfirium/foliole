@@ -1,4 +1,16 @@
 {
+  "0.8.1": {
+    "platformNotes": {
+      "android": [
+        "Fixed",
+        "The Connect to Sync Group button now responds to taps."
+      ],
+      "ios": [
+        "Fixed",
+        "The Connect to Sync Group button now responds to taps."
+      ]
+    }
+  },
   "0.8.0": {
     "notes": [
       "New",
