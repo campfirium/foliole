@@ -6,6 +6,7 @@ import { getDiveRepository } from '../../shared/platform/desktop/diveRepository'
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 
 import { AddToDiveDialog } from './AddToDiveDialog';
+import { saveWorkspaceDive } from './workspaceDiveMutation';
 
 export function useWorkspaceAddToDive() {
   const [sourceIds, setSourceIds] = useState<string[] | null>(null);
@@ -40,7 +41,7 @@ function WorkspaceAddToDive(props: { sourceIds: readonly string[]; onClose: () =
     if (!repository || busy.current) return;
     busy.current = true;
     try {
-      const dive = await action(repository);
+      const dive = await saveWorkspaceDive(() => action(repository));
       showAppRuntimeNotice(t('desktop.nodeList.addToDive.added', { title: dive.title }));
       onClose();
     } catch {

@@ -27,14 +27,15 @@ for (const kind of ['topic', 'item'] as const) {
       await empty.fill('Empty study');
       await empty.press('Enter');
     }
-    await addSource(page, 'Dive source');
+    const renamedDive = await verifyDiveBrowsing(page, dives);
 
     const current = () => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId);
     await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
     await expect.poll(current).toBe('global-first');
-    await dives.getByRole('treeitem', { name: 'Focused study' }).click();
+    await renamedDive.click();
     await expect(page.getByRole('treeitem', { name: 'Dive topic', exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Start Dive', exact: true }).click();
+    await renamedDive.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Start Dive', exact: true }).click();
 
     const id = kind === 'topic' ? 'dive-topic' : 'dive-item';
     await expect.poll(current).toBe(id);
@@ -45,7 +46,7 @@ for (const kind of ['topic', 'item'] as const) {
       await page.getByRole('button', { name: /^(Show Answer|Reveal Answer)$/ }).click();
       await page.getByRole('button', { name: 'Good', exact: true }).click();
     } else {
-      await addSource(page, 'Late source');
+      await addSource(page, 'Late source', 'Renamed study');
       await expect.poll(current).toBe(id);
       await page.getByRole('button', { name: 'Read', exact: true }).click();
       await expect.poll(current).toBe('late-source');
@@ -66,10 +67,40 @@ for (const kind of ['topic', 'item'] as const) {
   });
 }
 
-async function addSource(page: import('@playwright/test').Page, title: string) {
+async function verifyDiveBrowsing(page: import('@playwright/test').Page, dives: import('@playwright/test').Locator) {
+  const diveRow = dives.getByRole('treeitem', { name: 'Focused study', exact: true });
+  const source = dives.getByRole('treeitem', { name: 'Dive source', exact: true });
+  await expect(source).toHaveCount(0);
+  await diveRow.click();
+  await addSource(page, 'Dive source');
+  await expect(page.getByRole('dialog', { name: 'Add to Dive' })).toBeHidden();
+  expect(await source.isVisible()).toBe(true);
+  await expect(page.getByRole('treeitem', { name: 'Dive topic', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start Dive', exact: true })).toHaveCount(0);
+
+  await diveRow.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Rename', exact: true }).click();
+  const rename = page.getByRole('textbox', { name: 'Rename Focused study' });
+  await rename.fill('Renamed study');
+  await rename.press('Enter');
+  const renamedDive = dives.getByRole('treeitem', { name: 'Renamed study', exact: true });
+  await expect(rename).toBeHidden();
+  expect(await renamedDive.getAttribute('aria-selected', { timeout: 200 })).toBe('true');
+  await expect(source).toBeVisible();
+  await expect(page.getByRole('treeitem', { name: 'Dive topic', exact: true })).toBeVisible();
+  const output = path.resolve('.tmp/artifacts/T747-dive');
+  fs.mkdirSync(output, { recursive: true });
+  await page.screenshot({ path: path.join(output, 'dive-browsing.png') });
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await expect(source).toBeVisible();
+  return renamedDive;
+}
+
+async function addSource(page: import('@playwright/test').Page, title: string, dive = 'Focused study') {
   await page.getByRole('treeitem', { name: title, exact: true }).click({ button: 'right' });
   await page.getByRole('menuitem', { name: 'Add to Dive…' }).click();
-  await page.getByRole('dialog', { name: 'Add to Dive' }).getByRole('button', { name: 'Focused study' }).click();
+  await page.getByRole('dialog', { name: 'Add to Dive' }).getByRole('button', { name: dive, exact: true }).click();
 }
 
 async function finishDiveRounds(page: import('@playwright/test').Page, output: string) {

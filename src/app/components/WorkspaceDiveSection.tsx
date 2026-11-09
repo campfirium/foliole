@@ -1,5 +1,5 @@
-import { FolderPlus } from 'lucide-react';
-import { useEffect, useState, type MouseEvent } from 'react';
+import { FolderPlus, Play } from 'lucide-react';
+import { useContext, useEffect, useState, type MouseEvent } from 'react';
 
 import type { Dive } from '../../../lib/core/nodes/dive';
 import { NodeContextMenuItem } from '../../features/nodes/components/nodeListContextMenuPresentation';
@@ -8,18 +8,41 @@ import { NodeRenameContextMenuItem } from '../../features/nodes/components/NodeR
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import { requestNodeRename } from '../../features/nodes/components/NodeTreeRowRename';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { resolveDiveMembership } from '../../shared/diveMembership';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { getDiveRepository } from '../../shared/platform/desktop/diveRepository';
 import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuTrigger } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { DiveFlowActionContext } from './diveFlowActionContext';
+import { saveWorkspaceDive } from './workspaceDiveMutation';
 import { toggleCollapsed } from './WorkspaceVirtualSectionRows';
 
 const rootId = 'workspace-dives';
 const rowId = (id: string) => `dive:${id}`;
 type Context = { id: string; left: number; top: number };
 
-function DiveContextMenu(props: { context: Context; onClose: () => void; onCreate: () => void }) {
+function DiveFlowMenuItem({ dive, onClose }: { dive: Dive; onClose: () => void }) {
+  const t = useTranslation();
+  const openFlow = useContext(DiveFlowActionContext);
+  const inThisDive = useWorkspaceStore(state => state.reviewSession.dive?.id === dive.id);
+  if (!openFlow) return null;
+  return (
+    <NodeContextMenuItem icon={Play} onSelect={() => {
+      onClose();
+      const scope = inThisDive ? null : {
+        id: dive.id,
+        topicIds: resolveDiveMembership(useWorkspaceStore.getState(), dive).topics
+      };
+      void openFlow(scope);
+    }}>
+      {t(inThisDive ? 'desktop.nodeList.dive.returnToFlow' : 'desktop.nodeList.dive.startFlow')}
+    </NodeContextMenuItem>
+  );
+}
+
+function DiveContextMenu(props: { context: Context; dive: Dive | undefined; onClose: () => void; onCreate: () => void }) {
   const t = useTranslation();
   const { context, onClose } = props;
   return (
@@ -35,7 +58,10 @@ function DiveContextMenu(props: { context: Context; onClose: () => void; onCreat
             {t('desktop.nodeList.dive.create')}
           </NodeContextMenuItem>
         ) : (
-          <NodeRenameContextMenuItem onSelect={() => { onClose(); requestNodeRename(context.id); }} />
+          <>
+            {props.dive ? <DiveFlowMenuItem dive={props.dive} onClose={onClose} /> : null}
+            <NodeRenameContextMenuItem onSelect={() => { onClose(); requestNodeRename(context.id); }} />
+          </>
         )}
       </AppDropdownMenuContent>
     </AppDropdownMenu>
@@ -64,15 +90,20 @@ function useDiveSection(dives: readonly Dive[], selectDive: (id: string) => void
     },
     toggle: (id: string) => toggleCollapsed(id, setCollapsed),
     create: () => {
-      void getDiveRepository()?.create(untitled).then((dive) => {
+      const repository = getDiveRepository();
+      if (!repository) return;
+      void saveWorkspaceDive(() => repository.create(untitled)).then((dive) => {
         setCollapsed((current) => new Set([...current].filter((id) => id !== rootId)));
         selectDive(dive.id);
         setPendingRename(dive.id);
       }).catch(failed);
     },
     rename: async (id: string, title: string) => {
+      const repository = getDiveRepository();
+      if (!repository) return false;
       try {
-        return Boolean(await getDiveRepository()?.rename(id.slice('dive:'.length), title.trim() || untitled));
+        await saveWorkspaceDive(() => repository.rename(id.slice('dive:'.length), title.trim() || untitled));
+        return true;
       } catch {
         failed();
         return false;
@@ -135,7 +166,9 @@ export function WorkspaceDiveSection(props: {
           onContextMenu={section.openMenu} onSelect={section.toggle} onToggleCollapse={section.toggle} />
         {!collapsed ? section.dives.map((dive) => <DiveRows key={dive.id} {...props} dive={dive} section={section} />) : null}
         {section.context ? (
-          <DiveContextMenu context={section.context} onClose={section.closeMenu} onCreate={section.create} />
+          <DiveContextMenu context={section.context}
+            dive={section.dives.find(dive => rowId(dive.id) === section.context?.id)}
+            onClose={section.closeMenu} onCreate={section.create} />
         ) : null}
       </section>
     </div>
