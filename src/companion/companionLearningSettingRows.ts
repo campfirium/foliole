@@ -40,6 +40,6 @@ export function formatLearningRowValue(row: CompanionLearningSettingRow, setting
   if (row.key === 'defaultPriority') return `P${values[0]}`;
   if (row.key === 'queueMix') return values.join(' : ');
   if (row.key === 'readingGrowth') return values.join(` ${t('settings.review.rangeTo')} `);
-  if (row.key === 'readingLaterDays' && !values[0]) return t('settings.review.later.automatic');
+  if (row.key === 'readingLaterDays' && !values[0]) return t('settings.review.later.default');
   return String(values[0]);
 }

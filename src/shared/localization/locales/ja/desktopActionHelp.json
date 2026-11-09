@@ -27,7 +27,7 @@
   "desktop.actionHelp.review.soon.sourceLabel": "フローリボン",
   "desktop.actionHelp.review.later.title": "Later",
   "desktop.actionHelp.review.later.body": "一定間隔の前に再度表示されます。",
-  "desktop.actionHelp.review.later.detail": "今は読み飛ばし、通常より短い間隔で読む。",
+  "desktop.actionHelp.review.later.detail": "トピックを途中まで読み、早めに続きを読みたいときに使います。",
   "desktop.actionHelp.review.later.sourceLabel": "フローリボン",
   "desktop.actionHelp.review.read.title": "Read",
   "desktop.actionHelp.review.read.body": "一定間隔後に再び表示されます。",

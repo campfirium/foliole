@@ -24,7 +24,7 @@ const values = [
   ['Desired retention', '0.82'], ['Maximum interval days', '120'], ['New day starts at', '7'],
   ['New item load balancing', '14'], ['Default topic priority', '6'], ['Priority weight', '3'],
   ['Reading queue mix ratio', '2'], ['Review item queue mix ratio', '3'], ['Reading initial interval days', '1.5'],
-  ['Reading growth factor min', '1.2'], ['Reading growth factor max', '1.8'], ['Later delay (days)', '3']
+  ['Reading growth factor min', '1.2'], ['Reading growth factor max', '1.8'], ['Custom Later interval', '3']
 ] as const;
 let root = '';
 let sqlite: Database.Database | null = null;

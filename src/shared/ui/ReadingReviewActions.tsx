@@ -1,6 +1,5 @@
-import { useSyncExternalStore, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
-import { getCurrentReviewSchedulerSettings, subscribeReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { useTranslation } from '../localization/LocalizationProvider';
 
 import { ActionHelpCard, type ActionHelpCardCopy } from './ActionHelpCard';
@@ -11,6 +10,7 @@ import { overlayDividerClass, type ReviewActionSurface } from './reviewActionLay
 import type { RenderReviewActionButton } from './reviewActionPresentation';
 import { renderOverlayDividedActions, ReviewOverlayActionButton } from './ReviewOverlayActionButton';
 import { ToolbarActionGroup } from './ToolbarActionGroup';
+import { useFixedLaterHint } from './useFixedLaterHint';
 
 import { cn } from '@/shared/lib/utils';
 
@@ -26,8 +26,9 @@ function ReadingReviewButton(props: {
   onClick: () => void;
   surface: ReviewActionSurface;
   testId: string;
+  title?: string | undefined;
 }) {
-  if (props.renderButton && props.surface === 'panel') return props.renderButton({ label: props.label, icon: props.icon, disabled: props.disabled, onClick: props.onClick, testId: props.testId });
+  if (props.renderButton && props.surface === 'panel') return props.renderButton({ label: props.label, icon: props.icon, disabled: props.disabled, onClick: props.onClick, testId: props.testId, title: props.title });
   if (props.surface === 'overlay') {
     return (
       <ReviewOverlayActionButton
@@ -36,6 +37,7 @@ function ReadingReviewButton(props: {
         disabled={props.disabled}
         label={props.label}
         onClick={props.onClick}
+        title={props.title}
       />
     );
   }
@@ -48,6 +50,7 @@ function ReadingReviewButton(props: {
       data-testid={props.testId}
       disabled={props.disabled}
       onClick={props.onClick}
+      title={props.title}
       size="md"
       variant="default"
     >
@@ -87,12 +90,9 @@ type ResolvedReadingReviewActionsProps = Required<
 
 function useReadingReviewActionItems(props: ResolvedReadingReviewActionsProps) {
   const t = useTranslation();
-  const { readingLaterDays } = useSyncExternalStore(subscribeReviewSchedulerSettings, getCurrentReviewSchedulerSettings);
-  const laterLabel = readingLaterDays ? t('desktop.reviewActions.reading.laterDays', { days: readingLaterDays })
-    : t('desktop.reviewActions.reading.later');
-  const laterHelp = readingLaterDays
-    ? { title: laterLabel, body: t('desktop.reviewActions.reading.laterDaysHelp') }
-    : READING_REVIEW_ACTION_HELP.later;
+  const laterLabel = t('desktop.reviewActions.reading.later');
+  const fixedLaterHint = useFixedLaterHint();
+  const laterHelp = fixedLaterHint ? { title: laterLabel, body: fixedLaterHint } : READING_REVIEW_ACTION_HELP.later;
   const wrapWithHelpCard = (button: ReactNode, help: ActionHelpCardCopy) =>
     props.showActionHelp ? (
       <ActionHelpCard help={help} placement="above">
@@ -112,7 +112,7 @@ function useReadingReviewActionItems(props: ResolvedReadingReviewActionsProps) {
     {
       key: 'later',
       node: wrapWithHelpCard(
-        <ReadingReviewButton renderButton={props.renderButton} className={props.buttonClassName} disabled={props.isSubmitting} icon={props.icons?.later} label={laterLabel} onClick={props.onPostponeReviewTopic} surface={props.surface} testId="companion-review-action-later" />,
+        <ReadingReviewButton renderButton={props.renderButton} className={props.buttonClassName} disabled={props.isSubmitting} icon={props.icons?.later} label={laterLabel} title={props.showActionHelp ? undefined : fixedLaterHint ?? undefined} onClick={props.onPostponeReviewTopic} surface={props.surface} testId="companion-review-action-later" />,
         laterHelp
       )
     },

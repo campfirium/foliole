@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import { isReadActionAdvanceReadyFromMetrics } from '../features/review/model/readActionAdvanceReady';
 import { FsrsRevealAction, ReadingReviewActions, ReviewGradeActions } from '../shared/ui';
 import type { ReviewActionButtonPresentation } from '../shared/ui/reviewActionPresentation';
+import { useFixedLaterHint } from '../shared/ui/useFixedLaterHint';
 
 import type { BottomBarGrade } from './CompanionFloatingBars';
 import { CompanionReviewActionFooter } from './CompanionReviewActionFooter';
@@ -34,6 +35,8 @@ export function CompanionBottomReviewBar(props: {
   visible: boolean;
 }) {
   const actionsRef = useRef<HTMLDivElement>(null);
+  const fixedLaterHint = useFixedLaterHint();
+  const laterStatus = props.itemKind === 'reading' && fixedLaterHint ? `Later · ${fixedLaterHint}` : null;
   if (!props.visible) {
     return null;
   }
@@ -44,7 +47,7 @@ export function CompanionBottomReviewBar(props: {
       actionsRef={actionsRef}
       reviewCardKey={props.reviewCardKey}
       reviewItemKind={props.itemKind}
-      statusLabel={props.statusLabel ?? null}
+      statusLabel={props.statusLabel ?? laterStatus}
       primary={
         props.itemKind === 'reading' ? (
           <ReadingReviewActions

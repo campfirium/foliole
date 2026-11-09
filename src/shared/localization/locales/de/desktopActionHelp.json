@@ -27,7 +27,7 @@
   "desktop.actionHelp.review.soon.sourceLabel": "Flussband",
   "desktop.actionHelp.review.later.title": "Later",
   "desktop.actionHelp.review.later.body": "Erscheint erneut vor dem regulären Intervall.",
-  "desktop.actionHelp.review.later.detail": "Überspringen Sie es vorerst und lesen Sie es nach einem kürzeren Intervall.",
+  "desktop.actionHelp.review.later.detail": "Wählen Sie dies, wenn Sie einen Teil gelesen haben und früher weiterlesen möchten.",
   "desktop.actionHelp.review.later.sourceLabel": "Flussband",
   "desktop.actionHelp.review.read.title": "Read",
   "desktop.actionHelp.review.read.body": "Erscheint nach dem regulären Intervall erneut.",

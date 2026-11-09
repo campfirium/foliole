@@ -7,7 +7,7 @@ import { resetSeededDailyFlow } from './dailyFlowFixture.test-support';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsDialog } from './harness/settings';
 
-const delayName = /Later delay \(days\)|Later 推迟天数/;
+const delayName = /Custom Later interval|Later 自定义间隔/;
 const output = path.resolve('.tmp/artifacts/T749');
 
 async function seedDueTopic(page: Page, topicId: string, createdAt: string) {
@@ -53,8 +53,10 @@ test('saves a fixed Later delay and applies it once from the Flow toolbar', asyn
   await expectWorkspaceShell(page);
   await page.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated());
   await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
-  const later = page.getByRole('button', { name: 'Later · 3d', exact: true });
+  const later = page.getByRole('button', { name: 'Later', exact: true });
   await expect(later).toBeVisible();
+  await later.hover();
+  await expect(page.getByRole('tooltip')).toContainText('Scheduled for 3 days from now.');
   await page.screenshot({ path: path.join(output, 'fixed-later-action.png') });
   await later.click();
   const savedReading = () => page.evaluate(async id => {

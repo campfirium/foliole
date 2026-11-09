@@ -136,19 +136,23 @@ it('keeps Later automatic by default and shows the saved delay before a single t
       onPostponeReviewTopic={postpone} onReadReviewTopic={vi.fn()} onDismissReviewTopic={vi.fn()}
       onGrade={vi.fn()} onRevealAnswer={vi.fn()} />
   </>);
-  expect(await screen.findByRole('button', { name: /^Later delay \(days\)\s*Automatic$/ })).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: /^Custom Later interval\s*Default$/ })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /^Later$/ })).toBeInTheDocument();
-  const field = 'Later delay (days)';
-  fireEvent.click(screen.getByRole('button', { name: /^Later delay \(days\)\s*Automatic$/ }));
+  const field = 'Custom Later interval';
+  fireEvent.click(screen.getByRole('button', { name: /^Custom Later interval\s*Default$/ }));
   const input = screen.getByRole('spinbutton', { name: field });
   fireEvent.change(input, { target: { value: '2.5' } });
   expect(input).toBeInvalid();
   fireEvent.submit(input.closest('form')!);
   expect(screen.getByRole('dialog')).toBeInTheDocument();
-  for (const days of ['1', '2', '3', '17']) await changeLearningSetting(field, days);
-  fireEvent.click(screen.getByRole('button', { name: 'Later · 17d' }));
+  await changeLearningSetting(field, '1');
+  expect(screen.getByText('Later · Scheduled for 1 day from now.')).toBeVisible();
+  for (const days of ['2', '3', '17']) await changeLearningSetting(field, days);
+  expect(screen.getByText('Later · Scheduled for 17 days from now.')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: /^Later$/ }));
   expect(postpone).toHaveBeenCalledTimes(1);
   await changeLearningSetting(field, '0');
   expect(screen.getByRole('button', { name: /^Later$/ })).toBeInTheDocument();
+  expect(screen.queryByText('Later · Scheduled for 17 days from now.')).not.toBeInTheDocument();
   expect((await loadCompanionReviewSettings()).readingLaterDays).toBe(0);
 });

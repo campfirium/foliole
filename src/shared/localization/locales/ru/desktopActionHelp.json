@@ -27,7 +27,7 @@
   "desktop.actionHelp.review.soon.sourceLabel": "Лента потока",
   "desktop.actionHelp.review.later.title": "Later",
   "desktop.actionHelp.review.later.body": "Появляется снова раньше обычного интервала.",
-  "desktop.actionHelp.review.later.detail": "Пока пропустите и прочитайте через более короткий интервал.",
+  "desktop.actionHelp.review.later.detail": "Используйте, если вы прочитали часть темы и хотите вернуться к ней раньше.",
   "desktop.actionHelp.review.later.sourceLabel": "Лента потока",
   "desktop.actionHelp.review.read.title": "Read",
   "desktop.actionHelp.review.read.body": "Появляется снова через регулярный интервал.",

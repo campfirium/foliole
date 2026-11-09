@@ -27,7 +27,7 @@
   "desktop.actionHelp.review.soon.sourceLabel": "Ruban de flux",
   "desktop.actionHelp.review.later.title": "Later",
   "desktop.actionHelp.review.later.body": "Réapparaît avant son intervalle régulier.",
-  "desktop.actionHelp.review.later.detail": "Passez pour le moment et lisez après un intervalle plus court.",
+  "desktop.actionHelp.review.later.detail": "Choisissez cette option après une lecture partielle pour reprendre plus tôt.",
   "desktop.actionHelp.review.later.sourceLabel": "Ruban de flux",
   "desktop.actionHelp.review.read.title": "Read",
   "desktop.actionHelp.review.read.body": "Réapparaît après son intervalle régulier.",
