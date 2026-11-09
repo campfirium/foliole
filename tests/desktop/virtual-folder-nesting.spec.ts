@@ -8,6 +8,7 @@ const PARENT_TITLE = 'Parent Virtual Folder';
 const DRAGGED_TITLE = 'Dragged Virtual Folder';
 const CHILD_TITLE = 'Created Child Folder';
 const TOPIC_TITLE = 'Nested Folder Topic';
+const LIBRARY_FOLDER_TITLE = 'Nested Topic Source';
 const SCREENSHOT_PATH = path.resolve('.tmp/artifacts/desktop-acceptance/virtual-folder-nesting.png');
 
 async function createFolder(
@@ -38,7 +39,7 @@ async function dragFolder(
   await page.mouse.down();
   await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y - 8, { steps: 4 });
   await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 8 });
-  await expect(target).toHaveClass(/border-border-strong/);
+  await expect(target).toHaveAttribute('data-drop-intent', 'child');
   await page.mouse.up();
 }
 
@@ -46,17 +47,18 @@ async function createRootFolder(
   page: Parameters<typeof expectWorkspaceShell>[0],
   title: string
 ) {
-  await page.getByRole('treeitem', { name: 'Virtual', exact: true }).click({ button: 'right' });
+  await page.getByRole('treeitem', { name: /^(Virtual|虚拟)$/ }).click({ button: 'right' });
   return createFolder(page, /^(Create Virtual Folder|创建虚拟文件夹)$/, title, 'menuitem');
 }
 
 test('creates and nests virtual folders without aggregating child Topics', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
-  await desktopWindow.evaluate(async (topicTitle) => {
+  await desktopWindow.evaluate(async ({ topicTitle, folderTitle }) => {
     await globalThis.window.__folioleWorkspaceDebug?.seedNodes([
-      { content: 'Nested body', id: 'nested-folder-topic', kind: 'topic', title: topicTitle }
+      { content: '', id: 'nested-topic-source', kind: 'folder', title: folderTitle },
+      { content: 'Nested body', id: 'nested-folder-topic', kind: 'topic', title: topicTitle, parentNodeId: 'nested-topic-source' }
     ]);
-  }, TOPIC_TITLE);
+  }, { topicTitle: TOPIC_TITLE, folderTitle: LIBRARY_FOLDER_TITLE });
   const parent = await createRootFolder(desktopWindow, PARENT_TITLE);
   const dragged = await createRootFolder(desktopWindow, DRAGGED_TITLE);
   await dragFolder(desktopWindow, dragged.locator('..'), parent.locator('..'));
@@ -70,7 +72,7 @@ test('creates and nests virtual folders without aggregating child Topics', async
     'menuitem'
   );
   await expect(child).toHaveAttribute('aria-level', '3');
-  await desktopWindow.getByRole('treeitem', { name: 'Home', exact: true }).click();
+  await desktopWindow.getByRole('treeitem', { name: LIBRARY_FOLDER_TITLE, exact: true }).click();
   await desktopWindow.getByRole('treeitem', { name: TOPIC_TITLE }).click({ button: 'right' });
   await desktopWindow.getByRole('menuitem', { name: /^(Add to Virtual Folder…|添加到虚拟文件夹\.\.\.)$/ }).click();
   const dialog = desktopWindow.getByRole('dialog', { name: /^(Add to Virtual Folder|添加到虚拟文件夹)$/ });

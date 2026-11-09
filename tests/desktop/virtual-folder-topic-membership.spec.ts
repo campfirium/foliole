@@ -25,7 +25,7 @@ async function dragBetweenRows(
   await page.mouse.down();
   await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y - 8, { steps: 4 });
   await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height * targetYRatio, { steps: 8 });
-  await expect(target).toHaveClass(targetYRatio > 0.75 ? /border-b-2/ : /border-border-strong/);
+  await expect(target).toHaveAttribute('data-drop-intent', targetYRatio > 0.75 ? 'after' : 'child');
   await page.mouse.up();
 }
 

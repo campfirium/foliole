@@ -20,9 +20,11 @@ interface NodeTreeRowFrameProps {
 function resolveNodeRowFrameClassName(isDropTarget: boolean, dropIntent: NodeTreeRowFrameProps['dropIntent']) {
   return cn(
     'relative',
-    isDropTarget && dropIntent === 'child' && 'border border-border-strong bg-foreground/[0.06]',
-    isDropTarget && dropIntent === 'before' && 'border-t-2 border-border-strong',
-    isDropTarget && dropIntent === 'after' && 'border-b-2 border-border-strong'
+    isDropTarget && dropIntent === 'child' && 'outline outline-1 -outline-offset-1 outline-border-strong bg-foreground/[0.06]',
+    isDropTarget && (dropIntent === 'before' || dropIntent === 'after') &&
+      'after:pointer-events-none after:absolute after:inset-x-0 after:h-0.5 after:bg-border-strong',
+    isDropTarget && dropIntent === 'before' && 'after:top-0',
+    isDropTarget && dropIntent === 'after' && 'after:bottom-0'
   );
 }
 
