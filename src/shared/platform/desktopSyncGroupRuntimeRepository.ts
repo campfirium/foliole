@@ -7,6 +7,7 @@ import type { SyncGroupDiscoverySnapshot } from '../../../lib/platform/syncGroup
 import type { SyncGroupJoinMode } from '../../../lib/platform/syncGroupJoinMode';
 import { parseSyncGroupRemovingEntries } from '../../../lib/platform/syncGroupRemovalModel';
 import type { WatchedFolderConflict } from '../../../lib/platform/watchedFolderConflictContract';
+import { webDavRelayOverviewSchema } from '../../../lib/platform/webDavRelayContract';
 
 import { normalizeJoinCandidates, normalizeJoinRequest } from './desktop/syncGroupJoinNormalization';
 import { normalizeSyncGroup } from './desktop/syncGroupNormalization';
@@ -30,7 +31,9 @@ function normalizeOverview(value: unknown): DesktopSyncGroupOverviewPayload {
     ? raw.current_device as Record<string, unknown> : null;
   const currentDevice = current && typeof current.device_name === 'string' && typeof current.platform === 'string'
     ? { device_name: current.device_name, platform: current.platform } : null;
+  const relay = webDavRelayOverviewSchema.safeParse(raw.webdav_relay);
   return {
+    ...(relay.success ? { webdav_relay: relay.data } : {}),
     discovery_error: raw.discovery_error === 'permission_required' || raw.discovery_error === 'unavailable'
       ? raw.discovery_error : null,
     host_platform: typeof raw.host_platform === 'string' ? raw.host_platform : null,
