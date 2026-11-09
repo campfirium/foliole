@@ -166,7 +166,7 @@ it('keeps the due boundary for today and reads an unread Topic ahead of schedule
   const finalStop = await read(topics, now, tomorrow);
   expect(finalStop).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'finished' } });
   const nextRound = await advance(finalStop, later);
-  expect(nextRound).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'empty' } });
+  expect(nextRound).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'finished' } });
   expect((await facts()).nodesById.c!.reading?.repetitionCount).toBe(1);
   expect((await facts()).nodesById.b!.reading?.nextAt).toBe(now);
   expect((await facts()).nodesById['item-b']!.review?.reps).toBe(1);
@@ -214,7 +214,7 @@ it('admits newly added unread Topics without repeating previously read Topics', 
     readings: [{ nodeId: 'd', before: null, after: saved }] });
   expect(redo.session).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'finished' } });
   const nextRound = await advance(redo.session, later);
-  expect(nextRound).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'empty' } });
+  expect(nextRound).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'finished' } });
   expect((await open({ returnFromDive: true, now: later })).session.currentNodeId).toBe(global.currentNodeId);
   expect((await facts()).nodesById.d!.reading?.nextAt).toBe(tomorrow);
 });

@@ -83,6 +83,8 @@ async function finishToday(page: Page, start: Date) {
   const waiting = await checkpoint(page, 'today', 'Dive Clear for Now');
   const retry = waiting.toolbar.getByRole('button', { name: 'Recheck' });
   await expect(retry).toBeEnabled();
+  await retry.click();
+  await expect(page.getByRole('status').filter({ hasText: 'Nothing is ready in this Dive yet.' })).toBeVisible();
   await page.clock.setFixedTime(hoursAfter(start, 1));
   await retry.click();
   await expect.poll(() => currentCard(page)).toBe('physics-later-card');
@@ -97,9 +99,9 @@ async function finishReadingRounds(page: Page) {
   await readTopic(page, 'physics-reading-2');
   const complete = await checkpoint(page, 'topics', 'Dive Reading Complete');
   await complete.next.click();
-  const notice = page.getByRole('status').filter({ hasText: 'All clear for now.' });
+  const notice = page.getByRole('status').filter({ hasText: 'No new unread material in this Dive.' });
   await expect(notice).toBeVisible();
-  await page.screenshot({ path: '.tmp/artifacts/dive-continue-all-clear.png' });
+  await page.screenshot({ path: '.tmp/artifacts/dive-continue-no-unread.png' });
   const empty = await checkpoint(page, 'topics', 'Dive Reading Complete');
   await empty.toolbar.getByRole('button', { name: 'Global', exact: true }).click();
 }

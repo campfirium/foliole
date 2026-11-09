@@ -22,8 +22,21 @@ export function useDiveCheckpointTitle() {
   if (!checkpoint) return undefined;
   const { phase } = checkpoint.dive;
   if (phase === 'initial') return t('desktop.diveCheckpoint.queueClear');
-  if (phase === 'topics') return t('desktop.diveCheckpoint.readingComplete');
+  if (phase === 'topics') return t(checkpoint.dive.stop === 'finished'
+    ? 'desktop.diveCheckpoint.readingComplete' : 'desktop.diveCheckpoint.noUnread');
   return t('desktop.diveCheckpoint.clearForNow');
+}
+
+async function stepDiveCheckpoint({ dive, open }: Checkpoint, next: 'continue' | 'retry',
+  t: ReturnType<typeof useTranslation>) {
+  const opened = await open({ id: dive.id, topicIds: dive.topicIds }, next);
+  const session = useWorkspaceStore.getState().reviewSession;
+  if (!opened || session.dive?.id !== dive.id || session.currentNodeId) return;
+  if (next === 'retry') {
+    showAppRuntimeNotice(t('desktop.diveCheckpoint.nothingReady'), 'info');
+  } else if (dive.phase === 'topics') {
+    showAppRuntimeNotice(t('desktop.diveCheckpoint.noNewUnread'), 'info');
+  }
 }
 
 export function WorkspaceDiveFlowChoice({ checkpoint, className, immersive, onExit }: {
@@ -32,14 +45,7 @@ export function WorkspaceDiveFlowChoice({ checkpoint, className, immersive, onEx
   const { dive, open, snapshot } = checkpoint;
   const t = useTranslation();
   const showHelp = useActionHelpCardsEnabled();
-  const step = (next: 'continue' | 'retry') => {
-    void open({ id: dive.id, topicIds: dive.topicIds }, next).then(opened => {
-      const session = useWorkspaceStore.getState().reviewSession;
-      if (opened && session.dive?.id === dive.id && !session.currentNodeId) {
-        showAppRuntimeNotice(t('desktop.reviewSession.allClear.notice'), 'success');
-      }
-    });
-  };
+  const step = (next: 'continue' | 'retry') => void stepDiveCheckpoint(checkpoint, next, t);
   const advance = () => step('continue');
   useReadingReadShortcut(advance);
   const alternatives = listVisibleDives(snapshot).filter(target => target.id !== dive.id);

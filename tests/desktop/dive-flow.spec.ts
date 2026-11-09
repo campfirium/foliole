@@ -132,8 +132,10 @@ async function finishDiveRounds(page: import('@playwright/test').Page, output: s
   const toolbar = page.getByRole('group', { name: 'Flow toolbar' });
   await toolbar.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'All clear for now.' })).toHaveCount(0);
   await toolbar.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'No Unread Material in This Dive' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'All clear for now.' })).toHaveCount(0);
   await page.screenshot({ path: path.join(output, 'topics-choice.png') });
   await toolbar.getByRole('button', { name: 'Switch', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Empty study' }).click();

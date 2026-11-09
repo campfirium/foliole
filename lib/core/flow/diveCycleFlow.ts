@@ -61,7 +61,8 @@ export async function openDiveCurrent(db: DailyFlowStore, global: DailyFlowSessi
   }
   const restart = !previous || (previous.stop && args.diveStep);
   const dive: DiveFlowCursor = restart
-    ? { ...scope, mode: args.mode, phase, position: 0, hasWork: false, stop: null,
+    ? { ...scope, mode: args.mode, phase, position: 0, stop: null,
+      hasWork: previous?.phase === 'topics' && previous.stop === 'finished',
       limit: phase === 'initial' ? global.cycle!.clearKey
         : args.diveStep === 'retry' && previous ? previous.limit : global.cycle!.tailKey }
     : rewindDiveCurrent(previous, seed?.currentNodeId);
