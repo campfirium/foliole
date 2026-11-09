@@ -6,6 +6,7 @@ import type { NodeSelectModifiers } from '../../features/nodes/components/NodeLi
 import { NodeReviewSchedulingDialog } from '../../features/nodes/components/NodeReviewSchedulingDialog';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { getCurrentReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { AddToVirtualFolderDialog } from './AddToVirtualFolderDialog';
@@ -52,13 +53,52 @@ function createRemoveFromCurrentVirtualFolder(props: WorkspaceTopicTreeMenuProps
   };
 }
 
+function resolveReferencedFolderNames(props: WorkspaceTopicTreeMenuProps, targets: string[]) {
+  if (props.virtualFolderView !== 'manual' || targets.length !== 1) return [];
+  const directIds = new Set(props.nodesById[props.activeFolderId]?.manualChildOrder ?? []);
+  const folders: string[] = [];
+  const visited = new Set<string>();
+  let parentId = props.nodesById[targets[0]!]?.parentNodeId;
+  while (parentId && !visited.has(parentId)) {
+    visited.add(parentId);
+    const parent = props.nodesById[parentId];
+    if (parent?.kind !== 'folder' || parent.specialKind) break;
+    if (directIds.has(parentId)) folders.push(parent.title);
+    parentId = parent.parentNodeId;
+  }
+  return folders;
+}
+
+function resolveMembershipMenuProps(
+  props: WorkspaceTopicTreeMenuProps,
+  targets: string[],
+  t: ReturnType<typeof useTranslation>
+) {
+  const removeFromDive = props.getDiveTopicRemoval?.(targets);
+  if (removeFromDive) return {
+    removeMembershipLabel: 'desktop.nodeList.menu.removeFromDive' as const,
+    onRemoveFromCurrentVirtualFolder: removeFromDive
+  };
+  const remove = createRemoveFromCurrentVirtualFolder(props);
+  const folders = resolveReferencedFolderNames(props, targets);
+  return {
+    ...(remove ? { onRemoveFromCurrentVirtualFolder: remove } : {}),
+    ...(folders.length ? {
+      removeMembershipLabel: 'desktop.nodeList.menu.removeDirectVirtualReference' as const,
+      membershipSourceLabel: t('desktop.nodeList.menu.virtualFolderSources', {
+        folders: folders.join(t('desktop.nodeList.menu.virtualFolderSourceSeparator'))
+      })
+    } : {})
+  };
+}
+
 export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
   const [reviewSchedulingNodeId, setReviewSchedulingNodeId] = useState<string | null>(null);
   const [addToVirtualFolderTopicIds, setAddToVirtualFolderTopicIds] = useState<string[] | null>(null);
+  const t = useTranslation();
   const addToDive = useWorkspaceAddToDive();
-  const canAddToVirtualFolder = hasAvailableVirtualFolder(props.contextMenu.getContextTargets());
-  const removeFromDive = props.getDiveTopicRemoval?.(props.contextMenu.getContextTargets());
-  const onRemoveFromCurrentVirtualFolder = removeFromDive ?? createRemoveFromCurrentVirtualFolder(props);
+  const targets = props.contextMenu.getContextTargets();
+  const canAddToVirtualFolder = hasAvailableVirtualFolder(targets);
   return (
     <>
       <NodeListTreeMenu
@@ -79,8 +119,7 @@ export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
         onOpenMoveToNode={props.onOpenMoveToNode}
         {...(addToDive.open ? { onAddToDive: addToDive.open } : {})}
         {...(canAddToVirtualFolder ? { onAddToVirtualFolder: setAddToVirtualFolderTopicIds } : {})}
-        {...(removeFromDive ? { removeMembershipLabel: 'desktop.nodeList.menu.removeFromDive' as const } : {})}
-        {...(onRemoveFromCurrentVirtualFolder ? { onRemoveFromCurrentVirtualFolder } : {})}
+        {...resolveMembershipMenuProps(props, targets, t)}
         {...(props.onOpenPostponeTopicPanel ? { onOpenPostponeTopic: props.onOpenPostponeTopicPanel } : {})}
         onOpenReviewScheduling={setReviewSchedulingNodeId}
         onSelect={props.handleSelectNode}

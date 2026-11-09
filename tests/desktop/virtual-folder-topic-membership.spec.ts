@@ -127,6 +127,20 @@ test('references a real folder and shows its Topic tree in a virtual folder', as
   await expectWorkspaceShell(page);
   await virtual.click();
   await expect(topic).toBeVisible();
+
+  await topic.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: /^(Add to Virtual Folder|添加到虚拟文件夹)/ }).click();
+  await page.getByRole('dialog', { name: /^(Add to Virtual Folder|添加到虚拟文件夹)$/ })
+    .getByRole('button', { name: FOLDER_TITLE }).click();
+  await expect(topic).toHaveCount(1);
+  await topic.click({ button: 'right' });
+  await expect(page.getByText(/^(From |来自)Reference source$/)).toBeVisible();
+  await page.getByRole('menuitem', { name: /^(Remove Direct Reference|移除单独添加)$/ }).click();
+  await expect(topic).toHaveCount(1);
+  await topic.click({ button: 'right' });
+  await expect(page.getByText(/^(From |来自)Reference source$/)).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: /^(Remove Direct Reference|移除单独添加)$/ })).toHaveCount(0);
+  await page.keyboard.press('Escape');
   await virtual.click({ button: 'right' });
   await page.getByRole('menuitem', { name: /Remove from This Virtual Folder.*Reference source|从此虚拟文件夹中移除.*Reference source/ }).click();
   await expect(topic).toHaveCount(0);

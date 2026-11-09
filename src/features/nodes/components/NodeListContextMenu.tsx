@@ -2,7 +2,7 @@ import type { FolderTopicItemCommandDefinition } from '../../../../lib/core/node
 
 import { NodeListContextMenuItems } from './NodeListContextMenuItems';
 
-import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuTrigger } from '@/shared/ui';
+import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuLabel, AppDropdownMenuTrigger } from '@/shared/ui';
 
 export interface NodeListContextMenuProps {
   createCommands: readonly FolderTopicItemCommandDefinition[];
@@ -24,7 +24,8 @@ export interface NodeListContextMenuProps {
   onOpenReviewScheduling?: () => void;
   onOpenPostponeTopic?: () => void;
   onPasteIntoNode?: () => void;
-  removeMembershipLabel?: 'desktop.nodeList.menu.removeFromDive';
+  membershipSourceLabel?: string;
+  removeMembershipLabel?: 'desktop.nodeList.menu.removeFromDive' | 'desktop.nodeList.menu.removeDirectVirtualReference';
   onRemoveFromCurrentVirtualFolder?: () => void;
   onRenameNode?: () => void;
   onReturnNode?: () => void;
@@ -72,6 +73,7 @@ export function NodeListContextMenu(props: NodeListContextMenuProps) {
         onContextMenu={(event) => event.preventDefault()}
         sideOffset={0}
       >
+        {props.membershipSourceLabel ? <AppDropdownMenuLabel>{props.membershipSourceLabel}</AppDropdownMenuLabel> : null}
         <NodeListContextMenuItems {...props} />
       </AppDropdownMenuContent>
     </AppDropdownMenu>
