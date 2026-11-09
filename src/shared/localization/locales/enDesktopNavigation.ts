@@ -98,6 +98,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.links.backlinks': 'Backlinks',
   'desktop.links.mentionedTimes': 'Mentioned {count} times',
   'desktop.rightPanel.flow': 'Flow',
+  'desktop.rightPanel.flow.libraryScope': 'Library',
   'desktop.rightPanel.outline': 'Outline',
   'desktop.rightPanel.highlights': 'Highlights',
   'desktop.rightPanel.backlinks': 'Backlinks',

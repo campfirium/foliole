@@ -32,13 +32,13 @@ for (const kind of ['topic', 'item'] as const) {
     const current = () => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().currentNodeId);
     await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
     await expect.poll(current).toBe('global-first');
-    await renamedDive.click();
-    await expect(page.getByRole('treeitem', { name: 'Dive topic', exact: true })).toBeVisible();
+    await expect(renamedDive).toHaveAttribute('aria-selected', 'false');
     await renamedDive.click({ button: 'right' });
     await page.getByRole('menuitem', { name: 'Start Dive', exact: true }).click();
 
     const id = kind === 'topic' ? 'dive-topic' : 'dive-item';
     await expect.poll(current).toBe(id);
+    await expectDiveScope(page, renamedDive, kind);
     const output = path.resolve('.tmp/artifacts/T745-0-4');
     fs.mkdirSync(output, { recursive: true });
     await page.screenshot({ path: path.join(output, `${kind}-in-dive.png`) });
@@ -55,16 +55,32 @@ for (const kind of ['topic', 'item'] as const) {
     await expect.poll(current).toBeNull();
     const initial = page.getByRole('dialog', { name: 'Dive queue complete' });
     await expect(initial).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(1);
     if (kind === 'topic') await finishDiveRounds(page, output);
     await page.getByRole('dialog').getByRole('button', { name: 'Return to Flow', exact: true }).click();
     await expect.poll(current).toBe('global-first');
+    await expect(page.getByRole('complementary', { name: 'Inspector' }).getByText('Library', { exact: true })).toBeVisible();
 
     const learned = await page.evaluate(async ({ id, kind }) => {
       const node = (await window.electronAPI.invoke('load_workspace_snapshot', {})).nodesById[id];
       return kind === 'topic' ? node?.reading?.repetitionCount : node?.review?.reps;
     }, { id, kind });
     expect(learned).toBe(1);
+    const global = await page.evaluate(async () =>
+      (await window.electronAPI.invoke('load_workspace_snapshot', {})).nodesById['global-first']);
+    expect(global?.review?.reps ?? global?.reading?.repetitionCount ?? 0).toBe(0);
   });
+}
+
+async function expectDiveScope(page: import('@playwright/test').Page, dive: import('@playwright/test').Locator, kind: 'topic' | 'item') {
+  await expect(dive).toHaveAttribute('aria-selected', 'true');
+  const panel = page.getByRole('complementary', { name: 'Current folder contents' });
+  await expect(panel.getByRole('treeitem', { name: kind === 'item' ? /Dive item/ : /Dive topic/ })).toBeVisible();
+  const inspector = page.getByRole('complementary', { name: 'Inspector' });
+  await expect(inspector.getByText('Renamed study', { exact: true })).toBeVisible();
+  const queue = inspector.getByRole('list', { name: 'Flow items' });
+  await expect(queue.getByRole('button', { name: kind === 'item' ? 'Dive item' : 'Dive topic' })).toBeVisible();
+  await expect(queue.getByRole('button', { name: 'Global first' })).toHaveCount(0);
 }
 
 async function verifyDiveBrowsing(page: import('@playwright/test').Page, dives: import('@playwright/test').Locator) {

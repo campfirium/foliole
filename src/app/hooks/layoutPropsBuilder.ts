@@ -104,17 +104,20 @@ function getReviewSessionSummary(
   reviewSession: WorkspaceState['reviewSession'],
   nodesById: WorkspaceState['nodesById']
 ) {
-  const { reviewCompletedCount, reviewQueueCount } = resolveReviewSessionProgress(reviewSession);
+  const isDive = Boolean(reviewSession.dive);
+  const { reviewCompletedCount, reviewQueueCount } = isDive
+    ? { reviewCompletedCount: 0, reviewQueueCount: 0 }
+    : resolveReviewSessionProgress(reviewSession);
   const createdCounts = countCreatedNodesDuringSession(reviewSession, nodesById);
   const reviewStatus: WorkspaceLayoutReviewProps['reviewStatus'] = reviewSession.currentNodeId
     ? reviewSession.isAnswerRevealed
       ? 'answer-revealed'
       : 'awaiting-answer'
-    : isReviewSessionCompleted(reviewSession)
+    : !isDive && isReviewSessionCompleted(reviewSession)
       ? 'completed'
       : 'idle';
   const reviewSummary: WorkspaceLayoutReviewProps['reviewSummary'] = {
-    ...(reviewSession.cycle ? { queueCleared: Boolean(reviewSession.cycle.clearedAt),
+    ...(!isDive && reviewSession.cycle ? { queueCleared: Boolean(reviewSession.cycle.clearedAt),
       remainingCount: reviewSession.cycle.remaining, remainingReviewCount: reviewSession.cycle.reviewRemaining } : {}),
     canContinueReading: false,
     completedAt: reviewSession.completedAt ?? null,
@@ -152,7 +155,7 @@ export function buildLayoutProps(args: BuildLayoutPropsArgs): WorkspaceLayoutPro
   const editorContent = args.editorNodeId ? args.nodesById[args.editorNodeId]?.content ?? '' : args.documentNode?.content ?? '';
   const reviewSummaryWithContinuation = {
     ...reviewSummary,
-    canContinueReading: args.dailyFlowView?.canContinueReading ?? false
+    canContinueReading: !args.reviewSession.dive && (args.dailyFlowView?.canContinueReading ?? false)
   };
 
   const flatProps: WorkspaceLayoutFlatProps = {

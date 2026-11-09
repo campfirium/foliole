@@ -11,6 +11,7 @@ import type {
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
 import { PanelScaleSurface } from '../../shared/ui';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { TrashResultListPanel } from './TrashResultListPanel';
@@ -147,7 +148,10 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
     trashedNodeIds: props.trashedNodeIds
   });
   const viewRoot = useWorkspaceDualListViewRoot(props);
-  const dive = useWorkspaceDiveNavigation(props);
+  const studyDiveId = useWorkspaceStore(state => state.reviewSession.dive?.id);
+  const followsStudyCursor = props.isStudyMode &&
+    (!props.reviewCurrentNodeId || props.activeNodeId === props.reviewCurrentNodeId);
+  const dive = useWorkspaceDiveNavigation(props, followsStudyCursor ? studyDiveId : undefined);
   const dualListState = useWorkspaceDualListState({
     ...props,
     preferredFolderColumnId: viewRoot.preferredFolderColumnId
@@ -177,6 +181,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
             activeNodeId={props.activeNodeId}
             childrenByParent={dualListState.topicChildrenByParent}
             dive={dive.activeDive}
+            {...definedProps({ forceVisibleNodeId: followsStudyCursor && studyDiveId ? props.reviewCurrentNodeId : undefined })}
             nodesById={props.listNodesById}
             onSelectNode={topicCallbacks.onSelectNode}
             visibleNodeIds={dualListState.visibleNodeIds}

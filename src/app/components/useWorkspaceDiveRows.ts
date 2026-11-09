@@ -11,7 +11,7 @@ export function useWorkspaceDiveNavigation(props: {
   isTrashViewOpen: boolean;
   isExternalViewOpen: boolean;
   onOpenNotesView: () => void;
-}) {
+}, studyDiveId?: string) {
   const { nodeOrder, nodesById, trashedNodeIds } = props;
   const dives = useMemo(() => {
     const trashed = new Set(trashedNodeIds);
@@ -25,7 +25,7 @@ export function useWorkspaceDiveNavigation(props: {
   useEffect(() => {
     if (isOtherView) setSelectedId(null);
   }, [isOtherView]);
-  const activeDive = isOtherView ? undefined : dives.find((dive) => dive.id === selectedId);
+  const activeDive = isOtherView ? undefined : dives.find((dive) => dive.id === (studyDiveId ?? selectedId));
   return {
     activeDive,
     closeDive: () => setSelectedId(null),

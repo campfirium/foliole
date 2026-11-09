@@ -196,3 +196,19 @@ it.each([true, false])('keeps daily continuation under the save owner when navig
   expect(onSelectNode).not.toHaveBeenCalled();
   expect(onOpenNotesView).toHaveBeenCalledTimes(saved ? 1 : 0);
 });
+
+it('keeps a finished Dive separate from a completed library Flow', () => {
+  const reviewSession = {
+    currentNodeId: null, queueNodeIds: [], isAnswerRevealed: false, totalNodeCount: 3,
+    completedAt: '2026-06-21T12:00:00.000Z'
+  };
+  const buildReview = (session: ReviewSessionState) => buildLayoutProps({
+    ...reviewGateLayoutArgs, isStudyMode: true, reviewSession: session
+  } as unknown as BuildLayoutPropsArgs).review;
+  expect(buildReview(reviewSession).reviewStatus).toBe('completed');
+  const dive = buildReview({ ...reviewSession, dive: { id: 'dive-1', topicIds: ['topic-1'],
+    mode: 'recommended', phase: 'initial', position: 2, limit: 2, hasWork: true, stop: 'finished' } });
+  expect(dive.reviewStatus).toBe('idle');
+  expect(dive.reviewQueueCount).toBe(0);
+  expect(dive.reviewSummary.canContinueReading).toBe(false);
+});

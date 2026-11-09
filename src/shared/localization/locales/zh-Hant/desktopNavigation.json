@@ -94,6 +94,7 @@
   "desktop.links.backlinks": "反向連結",
   "desktop.links.mentionedTimes": "被提及 {count} 次",
   "desktop.rightPanel.flow": "Flow",
+  "desktop.rightPanel.flow.libraryScope": "全庫",
   "desktop.rightPanel.outline": "概要",
   "desktop.rightPanel.highlights": "亮點",
   "desktop.rightPanel.backlinks": "反向連結",

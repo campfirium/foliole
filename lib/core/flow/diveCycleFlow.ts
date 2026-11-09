@@ -17,7 +17,7 @@ function belongsToDive(id: string, topics: ReadonlySet<string>, nodes: Record<st
   return false;
 }
 
-function matchesPhase(dive: DiveFlowCursor, row: { node_id: string; initial_task: number }, snapshot: DailyFlowLearningSnapshot) {
+export function matchesDivePhase(dive: Pick<DiveFlowCursor, 'phase'>, row: { node_id: string; initial_task: number }, snapshot: DailyFlowLearningSnapshot) {
   return (dive.phase !== 'initial' || Boolean(row.initial_task)) &&
     (dive.phase !== 'topics' || snapshot.nodesById[row.node_id]?.kind === 'topic');
 }
@@ -33,7 +33,7 @@ async function isDiveCurrentReady(db: DailyFlowStore, source: DailyFlowSession, 
   // The displayed scope admits the current card. The committed scope is read for its successor.
   const admitted = dive.memberIds ? dive.memberIds.includes(id) : belongsToDive(id, new Set(dive.topicIds), snapshot.nodesById);
   return Boolean(admitted && row?.active && row.order_key === dive.position && row.order_key <= dive.limit &&
-    matchesPhase(dive, row, snapshot) &&
+    matchesDivePhase(dive, row, snapshot) &&
     cycleReadyNodeIds(snapshot, selectionMode(dive), now, settings).includes(id));
 }
 
@@ -82,7 +82,7 @@ export async function selectDiveCurrent(db: DailyFlowStore, global: DailyFlowSes
   const revisit = resumeAfter ? earlierMemberIds(dive, members) : [];
   const waiting = new Set(dive.waitingIds?.filter(id => members.has(id)));
   const matches = (row: CycleRow, snapshot: DailyFlowLearningSnapshot) =>
-    members.has(row.node_id) && matchesPhase(dive, row, snapshot);
+    members.has(row.node_id) && matchesDivePhase(dive, row, snapshot);
   const mode = selectionMode(dive);
   const dayEnd = global.dayWindow && new Date(Date.parse(global.dayWindow.end) - 1).toISOString();
   const onSkipped = (row: CycleRow, snapshot: DailyFlowLearningSnapshot) => {

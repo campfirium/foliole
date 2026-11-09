@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { resolveDiveTopicIds, type Dive } from '../../../lib/core/nodes/dive';
 import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 import { removeWorkspaceDiveSource } from './workspaceDiveMutation';
@@ -11,6 +12,7 @@ import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 export function WorkspaceDiveContent(props: {
   dive: Dive;
   activeNodeId: string | null;
+  forceVisibleNodeId?: string | null;
   childrenByParent: Map<string | null, string[]>;
   nodesById: WorkspaceListNodesById;
   visibleNodeIds: ReadonlySet<string>;
@@ -32,6 +34,7 @@ export function WorkspaceDiveContent(props: {
       activeNodeId={props.activeNodeId}
       childrenByParent={childrenByParent}
       emptyState={{ title: t('desktop.nodeList.dive.empty'), description: t('desktop.nodeList.dive.emptyDescription') }}
+      {...definedProps({ forceVisibleNodeId: props.forceVisibleNodeId })}
       getDiveTopicRemoval={([topicId, ...otherIds]) => {
         if (!topicId || otherIds.length || !dive.directSourceIds.includes(topicId)) return undefined;
         return () => void removeWorkspaceDiveSource(dive.id, topicId, t('desktop.nodeList.addToDive.saveFailed'));

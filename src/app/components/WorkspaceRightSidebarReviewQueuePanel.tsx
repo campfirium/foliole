@@ -18,12 +18,13 @@ import { buildDisplayQueueNodeIds, FlowSection } from './WorkspaceRightSidebarRe
 
 interface WorkspaceRightSidebarReviewQueuePanelProps {
   currentNodeId: string | null;
+  scopeLabel?: string | undefined;
   flowWindow: ReviewFlowWindow;
   nodesById: Record<string, Node>;
   onSelectNode: (nodeId: string) => void;
 }
 
-function QueueHeader({ demoDay }: { demoDay?: number }) {
+function QueueHeader({ demoDay, scopeLabel }: { demoDay?: number; scopeLabel?: string | undefined }) {
   const t = useTranslation();
   return (
     <header className={`${inspectorListInsetPaddingClassName} pb-2 pt-3`}>
@@ -31,15 +32,16 @@ function QueueHeader({ demoDay }: { demoDay?: number }) {
         <h2 className={`m-0 shrink-0 whitespace-nowrap px-0 pb-0 text-left ${inspectorListHeadingClassName}`}>{t('desktop.rightPanel.flow')}</h2>
         {demoDay ? <DemoDayLabel day={demoDay} /> : null}
       </div>
+      {scopeLabel ? <p className={inspectorListMetaClassName}>{scopeLabel}</p> : null}
     </header>
   );
 }
 
-function EmptyQueueState() {
+function EmptyQueueState({ scopeLabel }: { scopeLabel?: string | undefined }) {
   const t = useTranslation();
   return (
     <section className="min-h-0">
-      <QueueHeader />
+      <QueueHeader scopeLabel={scopeLabel} />
       <p className={`${inspectorListInsetPaddingClassName} py-3 ${inspectorListMetaClassName}`}>{t('desktop.rightPanel.flow.empty')}</p>
     </section>
   );
@@ -109,24 +111,27 @@ export function WorkspaceRightSidebarReviewQueuePanel(props: WorkspaceRightSideb
 }
 
 function DailyFlowQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps) {
+  const t = useTranslation();
   const libraryScope = useWorkspaceStore(state => state.libraryScope);
   const reviewSession = useWorkspaceStore(state => state.reviewSession);
   const reviewSessionMode = useWorkspaceStore(state => state.reviewSessionMode);
   const isHydrated = useWorkspaceStore(state => state.isHydrated);
   const now = props.flowWindow.queriedAt ?? '';
   const demo = useDemoRuntimeState();
-  const future = useDailyFlowFuture(now, demo.isDemo && isHydrated, true);
+  const future = useDailyFlowFuture(now, demo.isDemo && isHydrated && !reviewSession.dive, true);
   const nodesById = useWorkspaceStore(state => state.nodesById);
   const nodeOrder = useWorkspaceStore(state => state.nodeOrder);
   const trashedNodeIds = useWorkspaceStore(state => state.trashedNodeIds);
   const result = useDailyFlowView({ libraryScope, reviewSession, reviewSessionMode, nodesById, nodeOrder, trashedNodeIds,
-    now, includeEntries: true, enabled: isHydrated && Boolean(now) });
+    now, includeEntries: true, followDive: true, enabled: isHydrated && Boolean(now) });
   if (result?.error || future?.error) return <p role="alert">Could not load Flow.</p>;
   if (!result?.view) return null;
   const nodeIds = result.view.nodeIds ?? [];
-  const dayBuckets = future?.view?.dayBuckets ?? [];
+  const dive = reviewSession.dive;
+  const scopeLabel = dive ? nodesById[dive.id]?.title ?? t('desktop.nodeList.dive.tree') : t('desktop.rightPanel.flow.libraryScope');
+  const dayBuckets = dive ? [] : future?.view?.dayBuckets ?? [];
   const dayOffsetByNodeId = Object.fromEntries(dayBuckets.flatMap(bucket => bucket.nodeIds.map(id => [id, bucket.dayOffset])));
-  return <FlowQueuePanel {...props} currentNodeId={result.view.currentNodeId}
+  return <FlowQueuePanel {...props} scopeLabel={scopeLabel} currentNodeId={result.view.currentNodeId}
     nodesById={result.nodes ? { ...result.nodes, ...nodesById } : nodesById}
     flowWindow={{ queueNodeIds: nodeIds, readyNodeIds: [], upcomingNodeIds: dayBuckets.flatMap(bucket => bucket.nodeIds), dayBuckets, dayOffsetByNodeId }} />;
 }
@@ -137,7 +142,7 @@ export function FlowQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps
   const { isDemo } = demoState;
   const flowNodeIds = isDemo ? collectDemoFlowNodeIds(props.flowWindow) : collectFlowNodeIds(props.flowWindow);
   if (flowNodeIds.length === 0) {
-    return <EmptyQueueState />;
+    return <EmptyQueueState scopeLabel={props.scopeLabel} />;
   }
 
   const missingQueueNodeId = flowNodeIds.find((nodeId) => !props.nodesById[nodeId]);
@@ -147,7 +152,7 @@ export function FlowQueuePanel(props: WorkspaceRightSidebarReviewQueuePanelProps
 
   return (
     <section className="flex min-h-0 flex-col">
-      <QueueHeader {...(isDemo ? { demoDay: getDemoPreviewDisplayDay(demoState.previewDay) } : {})} />
+      <QueueHeader scopeLabel={props.scopeLabel} {...(isDemo ? { demoDay: getDemoPreviewDisplayDay(demoState.previewDay) } : {})} />
       <FlowPanelContent {...props} currentDemoDayIndex={demoState.previewDay} isDemo={isDemo} t={t} />
     </section>
   );

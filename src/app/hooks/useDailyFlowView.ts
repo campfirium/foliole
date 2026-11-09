@@ -12,7 +12,7 @@ import { useDailyFlowNodeInput } from './useDailyFlowNodeInput';
 
 type ViewContext = Pick<WorkspaceState, 'reviewSession' | 'reviewSessionMode' | 'nodesById'> & {
   trashedNodeIds?: string[] | undefined; nodeOrder?: string[] | undefined;
-  libraryScope?: string | undefined; now: string; includeEntries: boolean; enabled: boolean;
+  libraryScope?: string | undefined; now: string; includeEntries: boolean; enabled: boolean; followDive?: boolean;
 };
 
 export function useDailyFlowView(args: ViewContext) {
@@ -38,7 +38,7 @@ export function useDailyFlowView(args: ViewContext) {
   const learningNodes = useDailyFlowNodeInput(args.nodesById);
   // Node updates refresh the read without withdrawing a valid view in this context.
   const context = useMemo(() => ({}), [args.libraryScope, args.reviewSession, args.reviewSessionMode,
-    args.now, args.includeEntries, args.enabled]);
+    args.now, args.includeEntries, args.enabled, args.followDive]);
   const membership = JSON.stringify([args.nodeOrder, args.trashedNodeIds]);
   const request = useMemo(() => ({}), [context, learningNodes, membership, refresh]);
   const [result, setResult] = useState<{ request: object; context: object; view?: DailyFlowView; nodes?: Record<string, Node>;
@@ -46,8 +46,12 @@ export function useDailyFlowView(args: ViewContext) {
   useEffect(() => {
     if (!args.enabled || !hasDailyFlowRuntime()) return;
     let live = true;
+    const dive = args.followDive ? args.reviewSession.dive : undefined;
     void loadDailyFlowViewRuntime({ now: args.now, mode: args.reviewSessionMode,
-      includeEntries: args.includeEntries, continueNodeId: args.reviewSession.continueNodeId ?? null },
+      includeEntries: args.includeEntries, continueNodeId: args.reviewSession.continueNodeId ?? null,
+      ...(dive ? { dive: { id: dive.id, mode: dive.mode, phase: dive.phase, position: dive.resumeAfter ?? dive.position,
+        limit: dive.limit, currentNodeId: args.reviewSession.currentNodeId, revisitIds: dive.revisitIds ?? [],
+        stopped: Boolean(dive.stop) } } : {}) },
     args.reviewSession, args.nodesById).then(({ view, nodes }) => {
       if (args.libraryScope && args.libraryScope !== view.scope) return;
       if (live) setResult({ request, context, view, ...(nodes ? { nodes: nodes as Record<string, Node> } : {}) });
