@@ -51,6 +51,7 @@ it('keeps the selected Dive live as a subfolder moves out of a source', async ()
     source: createWorkspaceContentNode({ id: 'source', kind: 'folder', title: 'Source' }),
     nested: createWorkspaceContentNode({ id: 'nested', kind: 'folder', title: 'Nested', parentNodeId: 'source' }),
     derived: createWorkspaceContentNode({ id: 'derived', kind: 'topic', title: 'Included through folder', parentNodeId: 'nested' }),
+    item: createWorkspaceContentNode({ id: 'item', kind: 'item', title: 'Derived card', parentNodeId: 'derived' }),
     direct: createWorkspaceContentNode({ id: 'direct', kind: 'topic', title: 'Also added directly', parentNodeId: 'nested' })
   };
   const view = renderWithLocalization(createContent(nodes));
@@ -60,18 +61,25 @@ it('keeps the selected Dive live as a subfolder moves out of a source', async ()
   expect(dives.getByRole('treeitem', { name: 'Source' })).toBeVisible();
   const panel = within(screen.getByRole('complementary', { name: 'Current folder contents' }));
   expect(dive).toHaveAttribute('aria-selected', 'true');
-  expect(panel.getByRole('treeitem', { name: 'Included through folder' })).toBeVisible();
+  const topic = panel.getByRole('treeitem', { name: /Included through folder/ });
+  expect(topic).toBeVisible();
+  expect(panel.queryByText('Probability')).toBeNull();
+  const chevron = topic.querySelector('[data-node-tree-chevron]');
+  expect(chevron).not.toBeNull();
+  if (topic.getAttribute('aria-expanded') === 'false') fireEvent.click(chevron!);
+  expect(panel.getByRole('treeitem', { name: 'Derived card' })).toHaveAttribute('aria-level', '2');
+
   expect(panel.getAllByRole('treeitem', { name: 'Also added directly' })).toHaveLength(1);
 
-  view.rerender(createContent(nodes, ['source', 'nested', 'derived', 'direct']));
+  view.rerender(createContent(nodes, ['source', 'nested', 'derived', 'direct', 'item']));
   expect(dives.queryByRole('treeitem', { name: 'Source' })).toBeNull();
-  expect(panel.queryByRole('treeitem', { name: 'Included through folder' })).toBeNull();
+  expect(panel.queryByRole('treeitem', { name: /Included through folder/ })).toBeNull();
   view.rerender(createContent(nodes));
   expect(dives.getByRole('treeitem', { name: 'Source' })).toBeVisible();
-  expect(panel.getByRole('treeitem', { name: 'Included through folder' })).toBeVisible();
+  expect(panel.getByRole('treeitem', { name: /Included through folder/ })).toBeVisible();
 
   view.rerender(createContent({ ...nodes, nested: { ...nodes.nested, parentNodeId: null } }));
   expect(dive).toHaveAttribute('aria-selected', 'true');
-  expect(panel.queryByRole('treeitem', { name: 'Included through folder' })).not.toBeInTheDocument();
+  expect(panel.queryByRole('treeitem', { name: /Included through folder/ })).not.toBeInTheDocument();
   expect(panel.getByRole('treeitem', { name: 'Also added directly' })).toBeVisible();
 });

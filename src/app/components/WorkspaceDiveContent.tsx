@@ -8,12 +8,10 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { removeWorkspaceDiveSource } from './workspaceDiveMutation';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 
-const flatChildren = new Map<string | null, string[]>();
-
 export function WorkspaceDiveContent(props: {
   dive: Dive;
   activeNodeId: string | null;
-  childrenByParent: ReadonlyMap<string | null, readonly string[]>;
+  childrenByParent: Map<string | null, string[]>;
   nodesById: WorkspaceListNodesById;
   visibleNodeIds: ReadonlySet<string>;
   onSelectNode: (id: string) => void;
@@ -32,13 +30,12 @@ export function WorkspaceDiveContent(props: {
     <WorkspaceTopicTree
       activeFolderId={`dive:${dive.id}`}
       activeNodeId={props.activeNodeId}
-      childrenByParent={flatChildren}
+      childrenByParent={childrenByParent}
       emptyState={{ title: t('desktop.nodeList.dive.empty'), description: t('desktop.nodeList.dive.emptyDescription') }}
       getDiveTopicRemoval={([topicId, ...otherIds]) => {
         if (!topicId || otherIds.length || !dive.directSourceIds.includes(topicId)) return undefined;
         return () => void removeWorkspaceDiveSource(dive.id, topicId, t('desktop.nodeList.addToDive.saveFailed'));
       }}
-      headerDescription={dive.title}
       itemIds={ids}
       nodesById={nodesById}
       onOpenMoveToNode={() => undefined}
