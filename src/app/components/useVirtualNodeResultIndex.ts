@@ -12,7 +12,7 @@ function sameSearchNode(left: Node | undefined, right: Node | undefined) {
   return left.id === right.id && left.kind === right.kind && left.specialKind === right.specialKind &&
     left.anchorLink === right.anchorLink && left.title === right.title && left.content === right.content &&
     left.collections === right.collections && left.virtualFilter === right.virtualFilter &&
-    left.manualChildOrder === right.manualChildOrder && left.parentNodeId === right.parentNodeId;
+    left.deletedAt === right.deletedAt && left.manualChildOrder === right.manualChildOrder && left.parentNodeId === right.parentNodeId;
 }
 
 function sameSearchInputs(previous: ResultInputs, next: ResultInputs) {

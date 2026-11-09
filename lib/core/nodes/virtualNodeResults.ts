@@ -1,3 +1,4 @@
+import { resolveFolderSourceTopicIds } from './folderSourceTopics.js';
 import { readTopicCollections } from './topicCollectionsFrontmatter.js';
 import { isManualVirtualNodeFilter, type VirtualNodeFilter } from './virtualNodeFilter.js';
 
@@ -7,6 +8,9 @@ export interface VirtualNodeResultCandidate {
   content?: string;
   id: string;
   kind: string;
+  parentNodeId?: string | null;
+  deletedAt?: string | null;
+  virtualFilter?: VirtualNodeFilter | null;
   specialKind?: string;
   title: string;
 }
@@ -58,8 +62,25 @@ export function applyVirtualNodeManualOrder(resultIds: readonly string[], manual
 export function createVirtualNodeResultResolver(args: {
   nodeOrder: readonly string[];
   nodesById: Record<string, VirtualNodeResultCandidate | undefined>;
+  trashedNodeIds?: ReadonlySet<string>;
 }) {
   const candidateIds = args.nodeOrder.filter((nodeId) => isVirtualResultCandidate(args.nodesById[nodeId]));
+  const available = new Set(args.nodeOrder);
+  let childrenByParent: Map<string, string[]> | undefined;
+  function getChildren(id: string) {
+    if (!childrenByParent) {
+      childrenByParent = new Map();
+      for (const nodeId of available) {
+        const node = args.nodesById[nodeId];
+        const parent = node?.parentNodeId;
+        if (!parent || node.deletedAt || args.trashedNodeIds?.has(nodeId)) continue;
+        const siblings = childrenByParent.get(parent);
+        if (siblings) siblings.push(nodeId);
+        else childrenByParent.set(parent, [nodeId]);
+      }
+    }
+    return childrenByParent.get(id) ?? [];
+  }
   let searchableTextById: Map<string, string> | null = null;
 
   function getSearchableTextById() {
@@ -75,18 +96,25 @@ export function createVirtualNodeResultResolver(args: {
     filter: VirtualNodeFilter | null | undefined;
     manualChildOrder?: readonly string[] | null | undefined;
   }) => {
-    const availableIds = candidateIds.filter((nodeId) => nodeId !== request.activeNodeId);
+    if (isManualVirtualNodeFilter(request.filter)) {
+      return resolveFolderSourceTopicIds(request.manualChildOrder ?? [], {
+        childrenOf: getChildren,
+        kindOf: (id) => {
+          const node = args.nodesById[id];
+          if (!node || id === request.activeNodeId || !available.has(id)) return undefined;
+          if (node.kind === 'folder' && !node.specialKind && !node.virtualFilter &&
+            !node.deletedAt && !args.trashedNodeIds?.has(id)) return 'folder';
+          return isVirtualResultCandidate(node) ? 'topic' : undefined;
+        }
+      });
+    }
     const conditions = getRunnableConditions(request.filter);
-    const matchedIds = isManualVirtualNodeFilter(request.filter)
-      ? (request.manualChildOrder ?? []).filter((nodeId) => availableIds.includes(nodeId))
-      : conditions.length === 0
-        ? []
-        : availableIds.filter((nodeId) => {
-          const preparedTextById = getSearchableTextById();
-          const node = args.nodesById[nodeId];
-          const searchableText = preparedTextById.get(nodeId);
-          return Boolean(node && searchableText && matchesVirtualNodeFilter(node, searchableText, conditions));
-        });
+    const matchedIds = conditions.length === 0 ? [] : candidateIds.filter((nodeId) => {
+      if (nodeId === request.activeNodeId) return false;
+      const node = args.nodesById[nodeId];
+      const searchableText = getSearchableTextById().get(nodeId);
+      return Boolean(node && searchableText && matchesVirtualNodeFilter(node, searchableText, conditions));
+    });
     return applyVirtualNodeManualOrder(matchedIds, request.manualChildOrder);
   };
 }

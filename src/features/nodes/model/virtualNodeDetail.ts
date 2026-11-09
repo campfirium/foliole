@@ -56,6 +56,7 @@ export function buildVirtualNodeResultIndex(args: {
   const rootResultIdSet = new Set<string>();
   const resolveResultIds = createVirtualNodeResultResolver({
     nodeOrder: args.nodeOrder,
+    trashedNodeIds: trashedNodeIdSet,
     nodesById: args.nodesById
   });
   for (const nodeId of args.nodeOrder) {

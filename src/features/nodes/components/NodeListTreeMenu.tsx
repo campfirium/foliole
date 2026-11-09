@@ -70,7 +70,11 @@ function buildMenuState(props: NodeListTreeMenuProps) {
     primaryTargetId,
     showDeleteAction: isSingleNodeTarget ? !isProtectedRootNode(primaryTarget) : contextTargets.length > 0,
     showMergeHighlightsIntoTopicAction: showNodeImportActions,
-    showAddToVirtualFolderAction: contextTargets.length > 0 && contextTargets.every((nodeId) => props.nodesById[nodeId]?.kind === 'topic'),
+    showAddToVirtualFolderAction: contextTargets.length > 0 && contextTargets.every((nodeId) => {
+      const node = props.nodesById[nodeId];
+      return node?.kind === 'topic' ||
+        (node?.kind === 'folder' && !isProtectedRootNode(node) && !isVirtualNode(node));
+    }),
     showMoveToNodeAction: props.createMenuSurface !== 'virtual-topics' && isSingleNodeTarget && canNodeBeMoved(primaryTarget),
     showReviewSchedulingAction: isSingleNodeTarget && !isProtectedRootNode(primaryTarget) && !isVirtualRootNode(primaryTarget) && !isVirtualNode(primaryTarget),
     showPostponeTopicAction: isSingleNodeTarget && canPostponeTopic(primaryTarget),

@@ -68,7 +68,8 @@ export function renderVirtualContentColumn(
   props: WorkspaceDualListContentProps,
   virtualResultIndex: ReturnType<typeof buildVirtualNodeResultIndex>,
   t: Translate,
-  locale: AppLocale
+  locale: AppLocale,
+  childrenByParent: Map<string | null, string[]>
 ) {
   const activeVirtualNodeId = props.activeVirtualNodeId ?? VIRTUAL_ROOT_NODE_ID;
   if (activeVirtualNodeId === VIRTUAL_ROOT_NODE_ID) {
@@ -92,6 +93,7 @@ export function renderVirtualContentColumn(
   return (
     <VirtualResultListPanel
       activeNodeId={props.activeNodeId}
+      childrenByParent={childrenByParent}
       emptyState={{
         description: isRemovedView
           ? t('desktop.virtualSearch.removed.empty.description')

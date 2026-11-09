@@ -182,7 +182,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
             visibleNodeIds={dualListState.visibleNodeIds}
           />
         ) : props.isVirtualViewOpen
-          ? renderVirtualContentColumn(props, virtualResultIndex, t, locale)
+          ? renderVirtualContentColumn(props, virtualResultIndex, t, locale, dualListState.topicChildrenByParent)
             : props.isExternalViewOpen
               ? renderExternalContentColumn(props)
               : topicRootId

@@ -43,6 +43,7 @@ interface NodeListTreeContentPropsArgs {
   nodeOrder: NodeListTreeProps['nodeOrder'];
   nodesById: NodeListTreeProps['nodesById'];
   onAddToDive?: NodeListTreeProps['onAddToDive'];
+  onAddToVirtualFolder?: NodeListTreeProps['onAddToVirtualFolder'];
   onOpenMoveToNode: NodeListTreeProps['onOpenMoveToNode'];
   onOpenNotesView: NodeListTreeProps['onOpenNotesView'];
   rowCountByNodeId?: NodeListTreeProps['rowCountByNodeId'] | undefined;
@@ -77,6 +78,7 @@ function buildNodeListTreeContentProps(args: NodeListTreeContentPropsArgs) {
     moveNodes: args.model.moveNodes,
     nodeOrder: args.nodeOrder,
     nodesById: args.nodesById,
+    ...(args.onAddToVirtualFolder ? { onAddToVirtualFolder: args.onAddToVirtualFolder } : {}),
     ...(args.onAddToDive ? { onAddToDive: args.onAddToDive } : {}),
     onOpenMoveToNode: args.onOpenMoveToNode,
     onOpenNotesView: args.onOpenNotesView,
@@ -153,6 +155,7 @@ function usePreparedNodeListTreeContentProps(props: NodeListTreeProps) {
     nodeOrder: props.nodeOrder,
     nodesById: props.nodesById,
     onAddToDive: props.onAddToDive,
+    onAddToVirtualFolder: props.onAddToVirtualFolder,
     onOpenMoveToNode: props.onOpenMoveToNode,
     onOpenNotesView: props.onOpenNotesView,
     rowSpacing,

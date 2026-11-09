@@ -160,7 +160,9 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
     activeFolderId: props.creationParentNodeId ?? props.activeFolderId,
     activeNodeId: props.activeNodeId,
     isManualSort: contentSort.sort.key === 'manual',
-    manualOrderIds: lazyModel.sortedItemIds,
+    manualOrderIds: props.virtualFolderView === 'manual'
+      ? props.nodesById[props.activeFolderId]?.manualChildOrder ?? []
+      : lazyModel.sortedItemIds,
     ...definedProps({ virtualFolderView: props.virtualFolderView, getDiveTopicRemoval: props.getDiveTopicRemoval }),
     nodesById: props.nodesById,
     onOpenMoveToNode: props.onOpenMoveToNode,

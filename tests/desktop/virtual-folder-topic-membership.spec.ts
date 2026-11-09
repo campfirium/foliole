@@ -7,6 +7,7 @@ import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
 const FOLDER_TITLE = 'Topic Membership Folder';
+const LIBRARY_FOLDER_TITLE = 'Membership topic source';
 const MENU_TOPIC_TITLE = 'Menu Membership Topic';
 const DRAG_TOPIC_TITLE = 'Drag Membership Topic';
 const SCREENSHOT_PATH = path.resolve('.tmp/artifacts/desktop-acceptance/virtual-folder-topic-membership.png');
@@ -33,8 +34,11 @@ test('adds Topics to a manual virtual folder from the menu and by drag without m
   await expectWorkspaceShell(desktopWindow);
   await desktopWindow.evaluate(async () => {
     await globalThis.window.__folioleWorkspaceDebug?.seedNodes([
-      { content: 'Menu membership body', id: 'menu-membership-topic', kind: 'topic', title: 'Menu Membership Topic' },
-      { content: 'Drag membership body', id: 'drag-membership-topic', kind: 'topic', title: 'Drag Membership Topic' }
+      { content: '', id: 'membership-topic-source', kind: 'folder', title: 'Membership topic source' },
+      { content: 'Menu membership body', id: 'menu-membership-topic', kind: 'topic', title: 'Menu Membership Topic',
+        parentNodeId: 'membership-topic-source' },
+      { content: 'Drag membership body', id: 'drag-membership-topic', kind: 'topic', title: 'Drag Membership Topic',
+        parentNodeId: 'membership-topic-source' }
     ]);
   });
   const userDataPath = await desktopApp.evaluate(({ app }) => app.getPath('userData'));
@@ -44,7 +48,7 @@ test('adds Topics to a manual virtual folder from the menu and by drag without m
 
   const virtualFolderRow = desktopWindow.getByRole('treeitem', { name: FOLDER_TITLE });
   await expect(virtualFolderRow).toBeVisible({ timeout: 10_000 });
-  await desktopWindow.getByRole('treeitem', { name: 'Home', exact: true }).click();
+  await desktopWindow.getByRole('treeitem', { name: LIBRARY_FOLDER_TITLE, exact: true }).click();
   const topicPanel = desktopWindow.getByRole('complementary', { name: /^(Current folder contents|当前文件夹内容)$/ });
   const menuTopic = topicPanel.getByRole('treeitem', { name: MENU_TOPIC_TITLE });
   const dragTopic = topicPanel.getByRole('treeitem', { name: DRAG_TOPIC_TITLE });
@@ -74,7 +78,7 @@ test('adds Topics to a manual virtual folder from the menu and by drag without m
   await expect.poll(() => topicPanel.getByRole('treeitem').allTextContents()).toEqual([
     DRAG_TOPIC_TITLE, MENU_TOPIC_TITLE
   ]);
-  await desktopWindow.getByRole('treeitem', { name: 'Home', exact: true }).click();
+  await desktopWindow.getByRole('treeitem', { name: LIBRARY_FOLDER_TITLE, exact: true }).click();
   await virtualFolderRow.click();
   await expect.poll(() => topicPanel.getByRole('treeitem').allTextContents()).toEqual([
     DRAG_TOPIC_TITLE, MENU_TOPIC_TITLE
@@ -87,4 +91,48 @@ test('adds Topics to a manual virtual folder from the menu and by drag without m
   await mkdir(path.dirname(SCREENSHOT_PATH), { recursive: true });
   await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
   await testInfo.attach('virtual-folder-topic-membership', { contentType: 'image/png', path: SCREENSHOT_PATH });
+});
+
+test('references a real folder and shows its Topic tree in a virtual folder', async ({ desktopApp, desktopWindow: page }) => {
+  await expectWorkspaceShell(page);
+  await page.evaluate(async () => {
+    await window.__folioleWorkspaceDebug!.seedNodes([
+      { id: 'virtual-source', kind: 'folder', title: 'Reference source', content: '' },
+      { id: 'virtual-nested', kind: 'folder', title: 'Nested source', parentNodeId: 'virtual-source', content: '' },
+      { id: 'virtual-source-topic', kind: 'topic', title: 'Referenced Topic', parentNodeId: 'virtual-nested', content: 'Source body' },
+      { id: 'virtual-source-item', kind: 'item', title: 'Referenced card', parentNodeId: 'virtual-source-topic', content: 'Question', reveal: 'Answer' }
+    ], { persist: true });
+  });
+  const userDataPath = await desktopApp.evaluate(({ app }) => app.getPath('userData'));
+  const descriptorPath = path.join(userDataPath, 'cache', 'agent-control-session.json');
+  const created = await runAgentCli(['virtual-folders/create', '--descriptor', descriptorPath, '--title', FOLDER_TITLE]);
+  expect(created.status).toBe(0);
+
+  const source = page.getByRole('treeitem', { name: 'Reference source', exact: true });
+  const virtual = page.getByRole('treeitem', { name: FOLDER_TITLE });
+  await expect(virtual).toBeVisible();
+  await source.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: /^(Add to Virtual Folder|添加到虚拟文件夹)/ }).click();
+  await page.getByRole('dialog', { name: /^(Add to Virtual Folder|添加到虚拟文件夹)$/ })
+    .getByRole('button', { name: FOLDER_TITLE }).click();
+  await virtual.click();
+  const topics = page.getByRole('complementary', { name: /^(Current folder contents|当前文件夹内容)$/ });
+  const topic = topics.getByRole('treeitem', { name: /Referenced Topic/ });
+  await expect(topic).toHaveAttribute('aria-expanded', /true|false/);
+  if (await topic.getAttribute('aria-expanded') === 'false') {
+    await topic.locator('[data-node-tree-chevron]').click();
+  }
+  await expect(topics.getByRole('treeitem', { name: 'Referenced card' })).toBeVisible();
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await virtual.click();
+  await expect(topic).toBeVisible();
+  await virtual.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: /Remove from This Virtual Folder.*Reference source|从此虚拟文件夹中移除.*Reference source/ }).click();
+  await expect(topic).toHaveCount(0);
+  const snapshot = await page.evaluate(() => window.electronAPI.invoke('load_workspace_snapshot', {}));
+  expect(snapshot.nodesById['virtual-source-topic']?.parentNodeId).toBe('virtual-nested');
+  expect(snapshot.nodesById['virtual-source-item']?.parentNodeId).toBe('virtual-source-topic');
+  await dragBetweenRows(page, source.locator('..'), virtual.locator('..'));
+  await expect(topic).toBeVisible();
 });

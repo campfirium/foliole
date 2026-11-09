@@ -4,20 +4,20 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { MembershipDestinationPalette } from './MembershipDestinationPalette';
-import { appendMissingTopicIds, listAvailableManualVirtualFolders } from './workspaceVirtualFolderMembership';
+import { appendMissingSourceIds, listAvailableManualVirtualFolders } from './workspaceVirtualFolderMembership';
 
-export function AddToVirtualFolderDialog(props: { onClose: () => void; topicIds: string[] }) {
+export function AddToVirtualFolderDialog(props: { onClose: () => void; sourceIds: string[] }) {
   const t = useTranslation();
   const nodeOrder = useWorkspaceStore((state) => state.nodeOrder);
   const nodesById = useWorkspaceStore((state) => state.nodesById);
-  const targets = useMemo(() => listAvailableManualVirtualFolders({ nodeOrder, nodesById, topicIds: props.topicIds }),
-    [nodeOrder, nodesById, props.topicIds]);
+  const targets = useMemo(() => listAvailableManualVirtualFolders({ nodeOrder, nodesById, sourceIds: props.sourceIds }),
+    [nodeOrder, nodesById, props.sourceIds]);
 
   function addToFolder(folderId: string) {
     const { nodesById, setFolderManualChildOrder } = useWorkspaceStore.getState();
     const folder = nodesById[folderId];
     if (!folder || !setFolderManualChildOrder) return;
-    setFolderManualChildOrder(folderId, appendMissingTopicIds(folder.manualChildOrder ?? [], props.topicIds));
+    setFolderManualChildOrder(folderId, appendMissingSourceIds(folder.manualChildOrder ?? [], props.sourceIds));
     props.onClose();
   }
 

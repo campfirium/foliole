@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import type { Dive } from '../../../lib/core/nodes/dive';
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import { TRASH_NODE_ID } from '../../features/nodes/model/specialNodes';
@@ -8,6 +10,7 @@ import type {
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
 
+import { AddToVirtualFolderDialog } from './AddToVirtualFolderDialog';
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { ExternalLibrarySection } from './ExternalLibrarySection';
 import { useWorkspaceAddToDive } from './WorkspaceAddToDive';
@@ -116,7 +119,8 @@ function renderFolderSections(props: WorkspaceFolderColumnProps) {
 
 function renderRegularSection(
   props: WorkspaceFolderColumnProps,
-  onAddToDive: ReturnType<typeof useWorkspaceAddToDive>['open']
+  onAddToDive: ReturnType<typeof useWorkspaceAddToDive>['open'],
+  onAddToVirtualFolder: (ids: string[]) => void
 ) {
   return (
     <NodeListTree
@@ -129,6 +133,7 @@ function renderRegularSection(
       nodeOrder={props.folderNodeOrder}
       nodesById={props.folderNodesById}
       rowCountByNodeId={props.folderTopicCountById}
+      onAddToVirtualFolder={onAddToVirtualFolder}
       {...(onAddToDive ? { onAddToDive } : {})}
       onOpenMoveToNode={props.onOpenMoveToNode}
       onOpenNotesView={props.onOpenNotesView}
@@ -144,10 +149,12 @@ function renderRegularSection(
 
 export function WorkspaceFolderColumn(props: WorkspaceFolderColumnProps) {
   const addToDive = useWorkspaceAddToDive();
+  const [virtualSourceIds, setVirtualSourceIds] = useState<string[] | null>(null);
   return (
     <div className="workspace-folder-column workspace-region-main-folder flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">{renderRegularSection(props, addToDive.open)}</div>
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">{renderRegularSection(props, addToDive.open, setVirtualSourceIds)}</div>
       {addToDive.dialog}
+      {virtualSourceIds ? <AddToVirtualFolderDialog sourceIds={virtualSourceIds} onClose={() => setVirtualSourceIds(null)} /> : null}
     </div>
   );
 }

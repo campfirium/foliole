@@ -23,6 +23,7 @@ export interface NodeListTreeProps {
   nodeOrder: string[];
   nodesById: WorkspaceListNodesById;
   onAddToDive?: (nodeIds: string[]) => void;
+  onAddToVirtualFolder?: (nodeIds: string[]) => void;
   onOpenMoveToNode: () => void;
   onOpenNotesView: () => void;
   onSelectNode: (nodeId: string) => void;

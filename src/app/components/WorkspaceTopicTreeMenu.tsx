@@ -22,7 +22,7 @@ interface WorkspaceTopicTreeMenuProps {
   contextMenu: NodeListContextMenuController;
   handleSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   virtualFolderView?: 'manual' | 'readonly';
-  getDiveTopicRemoval?: (topicIds: string[]) => (() => void) | undefined;
+  getDiveTopicRemoval?: (sourceIds: string[]) => (() => void) | undefined;
   nodesById: WorkspaceListNodesById;
   onCreateChildNode: ReturnType<typeof useWorkspaceTopicTreeActions>['createChildNode'];
   onOpenMoveToNode: WorkspaceTopicTreeProps['onOpenMoveToNode'];
@@ -30,17 +30,19 @@ interface WorkspaceTopicTreeMenuProps {
   topicTreeState: ReturnType<typeof useWorkspaceTopicTreeInteraction>['topicTreeState'];
 }
 
-function hasAvailableVirtualFolder(topicIds: string[]) {
+function hasAvailableVirtualFolder(sourceIds: string[]) {
   const workspace = useWorkspaceStore.getState();
   return listAvailableManualVirtualFolders({
     nodeOrder: workspace.nodeOrder,
     nodesById: workspace.nodesById,
-    topicIds
+    sourceIds
   }).length > 0;
 }
 
 function createRemoveFromCurrentVirtualFolder(props: WorkspaceTopicTreeMenuProps) {
   if (props.virtualFolderView !== 'manual') return undefined;
+  const directIds = props.nodesById[props.activeFolderId]?.manualChildOrder ?? [];
+  if (!props.contextMenu.getContextTargets().some(id => directIds.includes(id))) return undefined;
   return (nodeIds: string[]) => {
     const removedIds = new Set(nodeIds);
     props.actions.setFolderManualChildOrder?.(
@@ -103,7 +105,7 @@ export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
       {addToVirtualFolderTopicIds ? (
         <AddToVirtualFolderDialog
           onClose={() => setAddToVirtualFolderTopicIds(null)}
-          topicIds={addToVirtualFolderTopicIds}
+          sourceIds={addToVirtualFolderTopicIds}
         />
       ) : null}
     </>

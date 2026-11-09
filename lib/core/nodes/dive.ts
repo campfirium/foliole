@@ -1,3 +1,4 @@
+import { resolveFolderSourceTopicIds } from './folderSourceTopics.js';
 import { VIRTUAL_NODE_FILTER_VERSION, type VirtualNodeFilter } from './virtualNodeFilter.js';
 
 export const DIVE_NODE_FILTER: VirtualNodeFilter = {
@@ -29,30 +30,6 @@ export function readDiveNode(node: {
   return { id: node.id, title: node.title, directSourceIds: node.manualChildOrder ?? [] };
 }
 
-export function resolveDiveTopicIds(
-  dive: Dive,
-  tree: {
-    kindOf: (id: string) => string | undefined;
-    childrenOf: (id: string) => readonly string[];
-  }
-): string[] {
-  const members = new Set<string>();
-  const visited = new Set<string>();
-  for (const id of dive.directSourceIds) {
-    const kind = tree.kindOf(id);
-    if (kind === 'topic') members.add(id);
-    if (kind !== 'folder') continue;
-    const pending = [id];
-    while (pending.length) {
-      const descendant = pending.pop()!;
-      if (visited.has(descendant)) continue;
-      visited.add(descendant);
-      const descendantKind = tree.kindOf(descendant);
-      if (descendantKind === 'topic') members.add(descendant);
-      if (descendantKind !== 'folder') continue;
-      const children = tree.childrenOf(descendant);
-      for (let index = children.length - 1; index >= 0; index -= 1) pending.push(children[index]!);
-    }
-  }
-  return [...members];
+export function resolveDiveTopicIds(dive: Dive, tree: Parameters<typeof resolveFolderSourceTopicIds>[1]) {
+  return resolveFolderSourceTopicIds(dive.directSourceIds, tree);
 }

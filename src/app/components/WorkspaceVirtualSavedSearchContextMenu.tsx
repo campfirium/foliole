@@ -1,10 +1,12 @@
-import { FileCode2, FolderPlus, Trash2 } from 'lucide-react';
+import { FileCode2, FolderPlus, ListMinus, Trash2 } from 'lucide-react';
 
+import { isManualVirtualNodeFilter } from '../../../lib/core/nodes/virtualNodeFilter';
 import { NodeContextMenuItem, NodeContextMenuSeparator } from '../../features/nodes/components/nodeListContextMenuPresentation';
 import { NodeRenameContextMenuItem } from '../../features/nodes/components/NodeRenameContextMenuItem';
 import { requestNodeRename } from '../../features/nodes/components/NodeTreeRowRename';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuTrigger } from '../../shared/ui';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 interface WorkspaceVirtualSavedSearchContextMenuProps {
   left: number;
@@ -48,6 +50,28 @@ function CreateChildMenuItem(props: { nodeId?: string; onClose: () => void; onCr
   );
 }
 
+function RemoveFolderSourceItems({ nodeId, onClose }: { nodeId: string; onClose: () => void }) {
+  const t = useTranslation();
+  const nodesById = useWorkspaceStore(state => state.nodesById);
+  const folder = nodesById[nodeId];
+  if (!isManualVirtualNodeFilter(folder?.virtualFilter)) return null;
+  const sourceIds = folder?.manualChildOrder ?? [];
+  return sourceIds.map(id => {
+    const source = nodesById[id];
+    if (source?.kind !== 'folder') return null;
+    return (
+      <NodeContextMenuItem key={id} icon={ListMinus} onSelect={() => {
+        const state = useWorkspaceStore.getState();
+        const current = state.nodesById[nodeId]?.manualChildOrder ?? [];
+        void state.setFolderManualChildOrder?.(nodeId, current.filter(sourceId => sourceId !== id));
+        onClose();
+      }}>
+        {t('desktop.nodeList.menu.removeFromCurrentVirtualFolder')} · {source.title}
+      </NodeContextMenuItem>
+    );
+  });
+}
+
 export function WorkspaceVirtualSavedSearchContextMenu({
   left,
   isVirtualRoot = false,
@@ -87,6 +111,7 @@ export function WorkspaceVirtualSavedSearchContextMenu({
         }} />
         {isSavedSearch ? (
           <>
+            <RemoveFolderSourceItems nodeId={nodeId} onClose={onClose} />
             {onWriteTopicYaml ? (
               <WriteTopicYamlMenuItem nodeId={nodeId} onClose={onClose} onWrite={onWriteTopicYaml} />
             ) : null}

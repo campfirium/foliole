@@ -43,6 +43,7 @@ interface NodeListTreeContentProps {
   nodeOrder: string[];
   nodesById: WorkspaceListNodesById;
   onAddToDive?: (nodeIds: string[]) => void;
+  onAddToVirtualFolder?: (nodeIds: string[]) => void;
   onOpenMoveToNode: () => void;
   onOpenNotesView: () => void;
   onSelect: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
