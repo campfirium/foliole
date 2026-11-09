@@ -46,11 +46,12 @@ export async function advanceCycleFlow(db: DailyFlowStore, source: DailyFlowSess
   }
   await db.writeRows(changes.rows());
   const initial = rows.get(current)?.handled === 0;
+  const readTopic = source.dive?.phase === 'topics' ? args.readingAction === 'read' : initial && Boolean(args.readingAction);
   const elapsed = calculateReviewStepElapsedMs(source, args.now);
   const session = { ...(globalNavigation ?? source), cycle,
     readingElapsedMs: (source.readingElapsedMs ?? 0) + (args.readingAction ? elapsed : 0),
     reviewElapsedMs: (source.reviewElapsedMs ?? 0) + (args.grade ? elapsed : 0),
-    readTopicCount: (source.readTopicCount ?? 0) + (initial && args.readingAction ? 1 : 0),
+    readTopicCount: (source.readTopicCount ?? 0) + (readTopic ? 1 : 0),
     reviewedItemCount: (source.reviewedItemCount ?? 0) + (initial && args.grade ? 1 : 0),
     ...(args.grade ? { nextReviewDueAt: resolveEarliestReviewDueAt(source.nextReviewDueAt, snapshot.nodesById[current]?.review?.due) } : {}) };
   if (!globalNavigation) await advanceCycleNavigation(db, source, session, args, eligible, settings, mode);

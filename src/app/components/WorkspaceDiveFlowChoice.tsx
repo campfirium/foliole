@@ -20,8 +20,8 @@ export function useDiveCheckpointTitle() {
   if (!checkpoint) return undefined;
   const { phase, stop } = checkpoint.dive;
   if (stop === 'finished' && phase === 'initial') return t('desktop.diveCheckpoint.queueClear');
-  if (phase === 'topics' && checkpoint.dive.hasWork) return t('desktop.diveCheckpoint.readingComplete');
-  return t('desktop.diveCheckpoint.clearForNow');
+  if (phase === 'topics') return t('desktop.diveCheckpoint.readingComplete');
+  return '';
 }
 
 export function WorkspaceDiveFlowChoice({ checkpoint, className, immersive, onExit }: {

@@ -167,7 +167,7 @@ export const WorkspaceDocumentArea = memo(function WorkspaceDocumentArea({
   const checkpoint = useContext(DiveFlowCheckpointContext);
   return (
     <section data-workspace-document-focus-target tabIndex={-1} aria-label={t('desktop.workspace.documentAndReviewArea')} className="flex min-h-0 min-w-0 flex-1 flex-col gap-0" data-undo-history-owner="content">
-      {diveTitle && checkpoint ? (
+      {diveTitle !== undefined && checkpoint ? (
         <StudySessionCompleteSummary title={diveTitle} completedAt={null} sessionStartedAt={null}
           createdItemCount={0} createdTopicCount={0} reviewSessionMode={checkpoint.dive.mode} {...checkpoint.totals} />
       ) : studySessionCompleteSummaryProps ? (

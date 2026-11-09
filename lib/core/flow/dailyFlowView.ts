@@ -10,6 +10,7 @@ import { createSqliteDailyFlowStore } from './dailyFlowSqliteStore.js';
 import type { CycleStored, DailyFlowStore } from './dailyFlowStore.js';
 import type { DailyFlowView, DailyFlowViewArgs, DailyFlowViewResult } from './dailyFlowViewContract.js';
 import { matchesDivePhase } from './diveCycleFlow.js';
+import { readDiveUnreadRound } from './diveUnreadTopics.js';
 
 export function readDailyFlowView(db: DbPort, args: DailyFlowViewArgs, settings: DailyFlowSettings,
   persistence: DailyFlowPersistence): Promise<DailyFlowViewResult> {
@@ -51,6 +52,15 @@ async function readDiveView(store: DailyFlowStore, stored: CycleStored, args: Da
   if (!store.readDiveMembers) throw new Error('daily_flow_dive_unavailable');
   const current = dive.stopped ? null : dive.currentNodeId;
   const members = dive.stopped ? [] : await store.readDiveMembers(dive.id);
+  if (dive.phase === 'topics') {
+    const { unread } = await readDiveUnreadRound(store, members, dive.memberIds ?? [], dive.position);
+    const entries = current ? [current, ...unread] : unread;
+    return { status: 'ready', scope: settings.scope ?? '', dayKey: stored.day_key, revision: stored.revision,
+      now: args.now, mode: 'reading-only', currentNodeId: current,
+      nodeIds: args.includeEntries ? entries : null, complete: args.includeEntries,
+      modeAvailability: { recommended: false, 'review-first': false, 'reading-only': entries.length > 0 },
+      canContinueReading: false };
+  }
   const revisit = new Set(dive.revisitIds);
   const rows = members.length ? (await store.readRows(members)).filter(row => row.active &&
     row.order_key <= dive.limit && (row.order_key > dive.position || revisit.has(row.node_id)))
@@ -58,7 +68,7 @@ async function readDiveView(store: DailyFlowStore, stored: CycleStored, args: Da
   const snapshot = await store.scopedLearningSnapshot(rows.map(row => row.node_id));
   const nodeOrder = rows.filter(row => matchesDivePhase(dive, row, snapshot)).map(row => row.node_id);
   const scoped = { ...snapshot, nodeOrder };
-  const mode = dive.phase === 'topics' ? 'reading-only' : dive.mode;
+  const mode = dive.mode;
   const ready = new Set(cycleReadyNodeIds(scoped, mode, args.now, settings));
   const available = (candidate: ReviewSessionMode) => cycleReadyNodeIds(scoped, candidate, args.now, settings).length > 0;
   const nodeIds = args.includeEntries ? [...new Set([...(current ? [current] : []), ...nodeOrder.filter(id => ready.has(id))])] : null;

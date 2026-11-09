@@ -132,15 +132,14 @@ it('keeps the current Dive open when undoing and redoing another Dive’s Read',
   expect((await facts()).nodesById.b!.reading).toMatchObject({ repetitionCount: 1 });
 });
 
-it('pauses at each choice and keeps the round boundary and scheduled Topic positions', async () => {
+it('keeps the due boundary for today and reads an unread Topic ahead of schedule', async () => {
   const { peer, open, commit, facts, scope } = await setup('topic');
   const later = '2026-10-28T09:00:00.000Z';
-  const future = '2026-10-28T10:00:00.000Z';
   addNode(peer, 'item-b', 5, 'item', 'b');
   saveNodeReviewStateWithSync(peer.driver, { nodeId: 'item-b', updatedAt: now, hostName: peer.name, review: {
     due: later, lastReviewAt: now, state: 1, stability: 1, difficulty: 5, elapsedDays: 0, scheduledDays: 0, reps: 1, lapses: 0
   } });
-  const scheduled = { ...reading, nextAt: later };
+  const scheduled = { ...reading, nextAt: tomorrow, repetitionCount: 0 };
   saveNodeReadingStateWithSync(peer.driver, { nodeId: 'c', reading: scheduled, updatedAt: now, hostName: peer.name });
   const global = (await open()).session;
   const dive = scope(['b', 'c']);
@@ -162,17 +161,14 @@ it('pauses at each choice and keeps the round boundary and scheduled Topic posit
   const todayStop = await read(today, now, now);
   expect(todayStop).toMatchObject({ currentNodeId: null, dive: { phase: 'today', stop: 'waiting', limit: today.dive!.limit } });
   expect(todayStop.cycle!.tailKey).toBeGreaterThan(today.dive!.limit);
-  const cPosition = (await readCycleRows(peer.port)).find(row => row.node_id === 'c')!.order_key;
   const topics = await advance(todayStop);
-  expect(topics).toMatchObject({ currentNodeId: 'b', dive: { phase: 'topics' } });
-  const topicsStop = await read(topics, now, future);
-  expect(topicsStop).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'waiting' } });
-  expect((await readCycleRows(peer.port)).find(row => row.node_id === 'c')!.order_key).toBe(cPosition);
-  const nextRound = await advance(topicsStop, later);
-  expect(nextRound).toMatchObject({ currentNodeId: 'c', dive: { phase: 'topics', position: cPosition } });
-  expect((await facts()).nodesById.b!.reading?.nextAt).toBe(future);
-  const finalStop = await read(nextRound, later, tomorrow);
-  expect(finalStop).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'waiting' } });
+  expect(topics).toMatchObject({ currentNodeId: 'c', dive: { phase: 'topics' } });
+  const finalStop = await read(topics, now, tomorrow);
+  expect(finalStop).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'finished' } });
+  const nextRound = await advance(finalStop, later);
+  expect(nextRound).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'empty' } });
+  expect((await facts()).nodesById.c!.reading?.repetitionCount).toBe(1);
+  expect((await facts()).nodesById.b!.reading?.nextAt).toBe(now);
   expect((await facts()).nodesById['item-b']!.review?.reps).toBe(1);
   const empty = scope([]);
   const switched = (await open({ dive: empty, seed: finalStop, now: later })).session;
@@ -180,13 +176,16 @@ it('pauses at each choice and keeps the round boundary and scheduled Topic posit
   expect((await open({ returnFromDive: true, now: later })).session.currentNodeId).toBe(global.currentNodeId);
 });
 
-it('admits an earlier new member without revisiting an old Topic skipped in the same round', async () => {
+it('admits newly added unread Topics without repeating previously read Topics', async () => {
   const { peer, open, commit, facts, scope } = await setup('topic');
   const later = '2026-10-28T09:00:00.000Z';
   saveNodeReadingStateWithSync(peer.driver, { nodeId: 'c', reading: { ...reading, nextAt: later },
     updatedAt: now, hostName: peer.name });
+  addNode(peer, 'e', 5, 'topic');
+  saveNodeReadingStateWithSync(peer.driver, { nodeId: 'e', reading: { ...reading, nextAt: tomorrow, repetitionCount: 0 },
+    updatedAt: now, hostName: peer.name });
   const global = (await open()).session;
-  const dive = scope(['b', 'c']);
+  const dive = scope(['b', 'c', 'e']);
   const advance = async (seed: DailyFlowCommitArgs['sourceSession'], at = now) =>
     (await open({ dive, seed, now: at, diveStep: 'continue' })).session;
   const read = async (source: NonNullable<DailyFlowCommitArgs['sourceSession']>, at: string, nextAt: string) => {
@@ -198,10 +197,7 @@ it('admits an earlier new member without revisiting an old Topic skipped in the 
   const initial = (await open({ dive })).session;
   const today = await advance(await read(initial, now, now));
   const topics = await advance(await read(today, now, now));
-  expect(topics).toMatchObject({ currentNodeId: 'b', dive: { phase: 'topics' } });
-  const positions = new Map((await readCycleRows(peer.port)).map(row => [row.node_id, row.order_key]));
-  expect(positions.get('c')).toBeLessThan(positions.get('b')!);
-  expect(positions.get('d')).toBeLessThan(positions.get('b')!);
+  expect(topics).toMatchObject({ currentNodeId: 'e', dive: { phase: 'topics' } });
   addDiveSources(peer.db, dive.id, ['d']);
   const added = await read(topics, later, tomorrow);
   expect(added.currentNodeId).toBe('d');
@@ -218,7 +214,7 @@ it('admits an earlier new member without revisiting an old Topic skipped in the 
     readings: [{ nodeId: 'd', before: null, after: saved }] });
   expect(redo.session).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'finished' } });
   const nextRound = await advance(redo.session, later);
-  expect(nextRound).toMatchObject({ currentNodeId: 'c', dive: { position: positions.get('c') } });
+  expect(nextRound).toMatchObject({ currentNodeId: null, dive: { phase: 'topics', stop: 'empty' } });
   expect((await open({ returnFromDive: true, now: later })).session.currentNodeId).toBe(global.currentNodeId);
   expect((await facts()).nodesById.d!.reading?.nextAt).toBe(tomorrow);
 });

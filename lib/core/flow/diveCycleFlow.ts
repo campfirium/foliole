@@ -5,6 +5,7 @@ import type { CycleRow } from './cycleFlowTypes.js';
 import type { DailyFlowLearningSnapshot, DailyFlowOpenArgs, DailyFlowSettings } from './dailyFlowContract.js';
 import type { DailyFlowSession, DiveFlowCursor } from './dailyFlowSession.js';
 import type { DailyFlowStore } from './dailyFlowStore.js';
+import { isUnreadDiveTopic, readDiveUnreadRound } from './diveUnreadTopics.js';
 
 function belongsToDive(id: string, topics: ReadonlySet<string>, nodes: Record<string, ReviewQueueNode>) {
   const seen = new Set<string>();
@@ -22,19 +23,20 @@ export function matchesDivePhase(dive: Pick<DiveFlowCursor, 'phase'>, row: { nod
     (dive.phase !== 'topics' || snapshot.nodesById[row.node_id]?.kind === 'topic');
 }
 
-const selectionMode = (dive: DiveFlowCursor) => dive.phase === 'topics' ? 'reading-only' : dive.mode;
-
 async function isDiveCurrentReady(db: DailyFlowStore, source: DailyFlowSession, snapshot: DailyFlowLearningSnapshot,
   now: string, settings: DailyFlowSettings) {
   const dive = source.dive!;
   const id = source.currentNodeId;
   if (!id || dive.stop) return false;
+  if (dive.phase === 'topics') {
+    return dive.memberIds?.[dive.position - 1] === id && isUnreadDiveTopic(id, snapshot);
+  }
   const [row] = await db.readRows([id]);
   // The displayed scope admits the current card. The committed scope is read for its successor.
   const admitted = dive.memberIds ? dive.memberIds.includes(id) : belongsToDive(id, new Set(dive.topicIds), snapshot.nodesById);
   return Boolean(admitted && row?.active && row.order_key === dive.position && row.order_key <= dive.limit &&
     matchesDivePhase(dive, row, snapshot) &&
-    cycleReadyNodeIds(snapshot, selectionMode(dive), now, settings).includes(id));
+    cycleReadyNodeIds(snapshot, dive.mode, now, settings).includes(id));
 }
 
 export async function assertDiveCurrent(db: DailyFlowStore, source: DailyFlowSession, snapshot: DailyFlowLearningSnapshot,
@@ -77,13 +79,22 @@ export async function selectDiveCurrent(db: DailyFlowStore, global: DailyFlowSes
   if (dive.stop) return displayDiveSession(global, dive, null, null);
   if (!db.readDiveMembers) throw new Error('daily_flow_dive_unavailable');
   const memberIds = await db.readDiveMembers(dive.id);
+  if (dive.phase === 'topics') {
+    const { order, unread } = await readDiveUnreadRound(db, memberIds, dive.memberIds ?? [], dive.position);
+    const current = unread[0] ?? null;
+    return displayDiveSession(global, {
+      ...dive, memberIds: order, position: current ? order.indexOf(current) + 1 : order.length,
+      limit: order.length, hasWork: dive.hasWork || Boolean(current),
+      stop: current ? null : dive.hasWork ? 'finished' : 'empty'
+    }, current, current ? now : null);
+  }
   const members = new Set(memberIds);
   const resumeAfter = dive.resumeAfter ?? dive.position;
   const revisit = resumeAfter ? earlierMemberIds(dive, members) : [];
   const waiting = new Set(dive.waitingIds?.filter(id => members.has(id)));
   const matches = (row: CycleRow, snapshot: DailyFlowLearningSnapshot) =>
     members.has(row.node_id) && matchesDivePhase(dive, row, snapshot);
-  const mode = selectionMode(dive);
+  const mode = dive.mode;
   const dayEnd = global.dayWindow && new Date(Date.parse(global.dayWindow.end) - 1).toISOString();
   const onSkipped = (row: CycleRow, snapshot: DailyFlowLearningSnapshot) => {
     if (dayEnd && dive.phase !== 'initial' && matches(row, snapshot)) waiting.add(row.node_id);

@@ -68,16 +68,17 @@ for (const kind of ['topic', 'item'] as const) {
     const global = await page.evaluate(async () =>
       (await window.electronAPI.invoke('load_workspace_snapshot', {})).nodesById['global-first']);
     expect(global?.review?.reps ?? global?.reading?.repetitionCount ?? 0).toBe(0);
-    if (kind === 'item') {
-      await renamedDive.click({ button: 'right' });
-      await page.getByRole('menuitem', { name: 'Start Dive', exact: true }).click();
-      await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toBeVisible();
-      const toolbar = page.getByRole('group', { name: 'Flow toolbar' });
-      await toolbar.getByRole('button', { name: 'Exit', exact: true }).click();
-      await expect(toolbar).toHaveCount(0);
-      await expect(page.getByRole('button', { name: 'Enter Flow', exact: true })).toBeVisible();
-    }
+    if (kind === 'item') await expectExitDive(page, renamedDive);
   });
+}
+
+async function expectExitDive(page: import('@playwright/test').Page, dive: import('@playwright/test').Locator) {
+  await dive.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Start Dive', exact: true }).click();
+  const toolbar = page.getByRole('group', { name: 'Flow toolbar' });
+  await toolbar.getByRole('button', { name: 'Exit', exact: true }).click();
+  await expect(toolbar).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Enter Flow', exact: true })).toBeVisible();
 }
 
 async function expectDiveScope(page: import('@playwright/test').Page, dive: import('@playwright/test').Locator, kind: 'topic' | 'item') {
@@ -130,14 +131,14 @@ async function addSource(page: import('@playwright/test').Page, title: string, d
 async function finishDiveRounds(page: import('@playwright/test').Page, output: string) {
   const toolbar = page.getByRole('group', { name: 'Flow toolbar' });
   await toolbar.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toHaveCount(0);
   await toolbar.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toHaveCount(0);
   await page.screenshot({ path: path.join(output, 'topics-choice.png') });
   await toolbar.getByRole('button', { name: 'Switch', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Empty study' }).click();
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().dive?.phase)).toBe('initial');
-  await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toHaveCount(0);
 }
 
 async function seedDiveCards(page: import('@playwright/test').Page, kind: 'topic' | 'item') {

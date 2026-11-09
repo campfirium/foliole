@@ -28,7 +28,7 @@ test('runs all three Dive stages before opening library Flow', async ({ desktopA
 
   await finishInitialQueue(page);
   await finishToday(page, start);
-  await finishReadingRounds(page, start);
+  await finishReadingRounds(page);
 
   await expect.poll(() => currentCard(page)).toMatch(/^(math|history)-(card|topic)$/);
   const queue = page.getByRole('list', { name: 'Flow items' });
@@ -51,7 +51,8 @@ async function checkpoint(page: Page, phase: 'initial' | 'today' | 'topics', tit
     const session = window.__folioleWorkspaceDebug!.getReviewSession();
     return { phase: session.dive?.phase, current: session.currentNodeId };
   })).toEqual({ phase, current: null });
-  await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
+  if (title) await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dive Clear for Now', exact: true })).toHaveCount(0);
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const toolbar = page.getByRole('group', { name: 'Flow toolbar' });
   const next = toolbar.getByRole('button', { name: 'Continue', exact: true });
@@ -80,26 +81,24 @@ async function finishInitialQueue(page: Page) {
 
 async function finishToday(page: Page, start: Date) {
   await readTopic(page, 'physics-topic');
-  const waiting = await checkpoint(page, 'today', 'Dive Clear for Now');
+  const waiting = await checkpoint(page, 'today', '');
   const retry = waiting.toolbar.getByRole('button', { name: 'Recheck' });
   await expect(retry).toBeEnabled();
   await page.clock.setFixedTime(hoursAfter(start, 1));
   await retry.click();
   await expect.poll(() => currentCard(page)).toBe('physics-later-card');
   await gradeGood(page);
-  const today = await checkpoint(page, 'today', 'Dive Clear for Now');
-  await page.clock.setFixedTime(hoursAfter(start, 2));
+  const today = await checkpoint(page, 'today', '');
   await today.next.click();
 }
 
-async function finishReadingRounds(page: Page, start: Date) {
+async function finishReadingRounds(page: Page) {
   await readTopic(page, 'physics-reading-1');
-  const first = await checkpoint(page, 'topics', 'Dive Reading Complete');
-  await page.clock.setFixedTime(hoursAfter(start, 3));
-  await first.next.click();
   await readTopic(page, 'physics-reading-2');
-  const second = await checkpoint(page, 'topics', 'Dive Reading Complete');
-  await second.toolbar.getByRole('button', { name: 'Global', exact: true }).click();
+  const complete = await checkpoint(page, 'topics', 'Dive Reading Complete');
+  await complete.next.click();
+  const empty = await checkpoint(page, 'topics', 'Dive Reading Complete');
+  await empty.toolbar.getByRole('button', { name: 'Global', exact: true }).click();
 }
 
 async function readTopic(page: Page, id: string) {
@@ -160,7 +159,7 @@ async function seedDueFolders(page: Page, start: Date) {
       id: 'physics-reading-' + (index + 1), kind: 'topic' as const, parentNodeId: 'physics-folder',
       title: 'Physics reading ' + (index + 1), content: 'Scheduled reading', reading: {
         intervalDurationMs: 86400000, intervalGrowthFactor: 1.3, lastHandledAt: scheduledAt, nextAt,
-        priority: 5, readingPosition: 0, repetitionCount: 1, state: 'active' as const
+        priority: 5, readingPosition: 0, repetitionCount: 0, state: 'active' as const
       }
     }))], { persist: true });
   }, { subjects, initial: hoursAfter(start, -24).toISOString(), later: hoursAfter(start, 1).toISOString(),

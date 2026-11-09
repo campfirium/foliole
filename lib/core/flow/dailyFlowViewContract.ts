@@ -11,6 +11,7 @@ const diveViewScope = z.object({
   position: queuePosition,
   limit: queuePosition,
   currentNodeId: z.string().nullable(),
+  memberIds: z.array(z.string()).optional(),
   revisitIds: z.array(z.string()),
   stopped: z.boolean()
 }).strict();

@@ -51,6 +51,7 @@ export function useDailyFlowView(args: ViewContext) {
       includeEntries: args.includeEntries, continueNodeId: args.reviewSession.continueNodeId ?? null,
       ...(dive ? { dive: { id: dive.id, mode: dive.mode, phase: dive.phase, position: dive.resumeAfter ?? dive.position,
         limit: dive.limit, currentNodeId: args.reviewSession.currentNodeId, revisitIds: dive.revisitIds ?? [],
+        ...(dive.phase === 'topics' && dive.memberIds ? { memberIds: dive.memberIds } : {}),
         stopped: Boolean(dive.stop) } } : {}) },
     args.reviewSession, args.nodesById).then(({ view, nodes }) => {
       if (args.libraryScope && args.libraryScope !== view.scope) return;
