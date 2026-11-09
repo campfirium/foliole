@@ -22,6 +22,7 @@ interface WorkspaceTopicTreeMenuProps {
   contextMenu: NodeListContextMenuController;
   handleSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
   virtualFolderView?: 'manual' | 'readonly';
+  getDiveTopicRemoval?: (topicIds: string[]) => (() => void) | undefined;
   nodesById: WorkspaceListNodesById;
   onCreateChildNode: ReturnType<typeof useWorkspaceTopicTreeActions>['createChildNode'];
   onOpenMoveToNode: WorkspaceTopicTreeProps['onOpenMoveToNode'];
@@ -54,7 +55,8 @@ export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
   const [addToVirtualFolderTopicIds, setAddToVirtualFolderTopicIds] = useState<string[] | null>(null);
   const addToDive = useWorkspaceAddToDive();
   const canAddToVirtualFolder = hasAvailableVirtualFolder(props.contextMenu.getContextTargets());
-  const onRemoveFromCurrentVirtualFolder = createRemoveFromCurrentVirtualFolder(props);
+  const removeFromDive = props.getDiveTopicRemoval?.(props.contextMenu.getContextTargets());
+  const onRemoveFromCurrentVirtualFolder = removeFromDive ?? createRemoveFromCurrentVirtualFolder(props);
   return (
     <>
       <NodeListTreeMenu
@@ -75,6 +77,7 @@ export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
         onOpenMoveToNode={props.onOpenMoveToNode}
         {...(addToDive.open ? { onAddToDive: addToDive.open } : {})}
         {...(canAddToVirtualFolder ? { onAddToVirtualFolder: setAddToVirtualFolderTopicIds } : {})}
+        {...(removeFromDive ? { removeMembershipLabel: 'desktop.nodeList.menu.removeFromDive' as const } : {})}
         {...(onRemoveFromCurrentVirtualFolder ? { onRemoveFromCurrentVirtualFolder } : {})}
         {...(props.onOpenPostponeTopicPanel ? { onOpenPostponeTopic: props.onOpenPostponeTopicPanel } : {})}
         onOpenReviewScheduling={setReviewSchedulingNodeId}

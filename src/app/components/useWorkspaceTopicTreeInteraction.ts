@@ -18,6 +18,7 @@ interface WorkspaceTopicTreeInteractionArgs {
   isManualSort: boolean;
   manualOrderIds: string[];
   virtualFolderView?: 'manual' | 'readonly';
+  getDiveTopicRemoval?: (topicIds: string[]) => (() => void) | undefined;
   nodesById: WorkspaceListNodesById;
   onCreateChildNode?: CreateTopicTreeNode;
   onOpenMoveToNode: () => void;
@@ -77,7 +78,7 @@ export function useWorkspaceTopicTreeInteraction(args: WorkspaceTopicTreeInterac
       contextMenu,
       handleSelectNode: selection.handleSelectNode,
       nodesById: args.nodesById,
-      ...definedProps({ virtualFolderView: args.virtualFolderView }),
+      ...definedProps({ virtualFolderView: args.virtualFolderView, getDiveTopicRemoval: args.getDiveTopicRemoval }),
       onCreateChildNode: createChildNode,
       onOpenMoveToNode: args.onOpenMoveToNode,
       ...definedProps({ onOpenPostponeTopicPanel: args.onOpenPostponeTopicPanel }),

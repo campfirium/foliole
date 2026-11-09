@@ -1,5 +1,7 @@
 import type { Dive } from '../../../lib/core/nodes/dive';
+import { getDiveRepository } from '../../shared/platform/desktop/diveRepository';
 import { logRuntimeError } from '../../shared/platform/runtimeLogging';
+import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { refreshWorkspaceStateWithScope } from '../../store/workspaceRefreshScheduler';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -14,4 +16,14 @@ export async function saveWorkspaceDive(save: () => Promise<Dive>): Promise<Dive
     }
   }
   return dive;
+}
+
+export async function removeWorkspaceDiveSource(diveId: string, sourceId: string, failureMessage: string) {
+  const repository = getDiveRepository();
+  if (!repository) return;
+  try {
+    await saveWorkspaceDive(() => repository.remove(diveId, sourceId));
+  } catch {
+    showAppRuntimeNotice(failureMessage);
+  }
 }

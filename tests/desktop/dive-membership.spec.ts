@@ -45,7 +45,7 @@ test('creates a Dive in the tree and shows sources added from library menus', as
   await search.press('Enter');
   await expect(picker).toBeHidden();
 
-  await expect(diveTree.getByRole('treeitem', { name: 'Independent notes' })).toBeVisible();
+  await expect(diveTree.getByRole('treeitem', { name: 'Independent notes' })).toHaveCount(0);
   const diveRow = diveTree.getByRole('treeitem', { name: 'Probability review' });
   await diveRow.click();
   await expect(diveRow).toHaveAttribute('aria-selected', 'true');
@@ -74,7 +74,7 @@ test('adds one Topic from a folder without including its siblings', async ({ des
   await library.click();
   await addSource(page, topics.getByRole('treeitem', { name: 'Chosen topic' }));
   await dives.getByRole('treeitem', { name: 'Study set' }).click();
-  await expect(dives.getByRole('treeitem', { name: 'Chosen topic' })).toBeVisible();
+  await expect(dives.getByRole('treeitem', { name: 'Chosen topic' })).toHaveCount(0);
   await expect(dives.getByRole('treeitem', { name: 'Source folder' })).toHaveCount(0);
   await expect(topics.getByRole('treeitem', { name: 'Chosen topic' })).toBeVisible();
   await expect(topics.getByRole('treeitem', { name: 'Sibling topic' })).toHaveCount(0);
@@ -90,7 +90,11 @@ test('removes a folder source while retaining an overlapping direct Topic', asyn
   await addSource(page, topics.getByRole('treeitem', { name: 'Chosen topic' }));
   await addSource(page, library);
   await study.click();
-  await expect(topics.getByRole('treeitem', { name: 'Sibling topic' })).toBeVisible();
+  const inheritedTopic = topics.getByRole('treeitem', { name: 'Sibling topic' });
+  await expect(inheritedTopic).toBeVisible();
+  await inheritedTopic.click({ button: 'right' });
+  await expect(page.getByRole('menuitem', { name: 'Remove from This Dive' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
 
   await dives.getByRole('treeitem', { name: 'Source folder' }).click({ button: 'right' });
   const remove = page.getByRole('menuitem', { name: 'Remove from This Dive' });
@@ -106,7 +110,7 @@ test('removes a folder source while retaining an overlapping direct Topic', asyn
   await expectWorkspaceShell(page);
   await study.click();
   await expect(dives.getByRole('treeitem', { name: 'Source folder' })).toHaveCount(0);
-  await removeSource(page, dives.getByRole('treeitem', { name: 'Chosen topic' }));
+  await removeSource(page, topics.getByRole('treeitem', { name: 'Chosen topic' }));
   await expect(topics.getByRole('treeitem')).toHaveCount(0);
   await library.click();
   await expect(topics.getByRole('treeitem', { name: 'Chosen topic' })).toBeVisible();

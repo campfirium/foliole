@@ -16,7 +16,7 @@ import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { DiveFlowActionContext } from './diveFlowActionContext';
-import { saveWorkspaceDive } from './workspaceDiveMutation';
+import { removeWorkspaceDiveSource, saveWorkspaceDive } from './workspaceDiveMutation';
 import { toggleCollapsed } from './WorkspaceVirtualSectionRows';
 
 const rootId = 'workspace-dives';
@@ -48,11 +48,7 @@ function RemoveDiveSourceMenuItem({ source, onClose }: { source: DiveSourceSelec
   return (
     <NodeContextMenuItem icon={ListMinus} onSelect={() => {
       onClose();
-      const repository = getDiveRepository();
-      if (!repository) return;
-      void saveWorkspaceDive(() => repository.remove(source.diveId, source.nodeId)).catch(() => {
-        showAppRuntimeNotice(t('desktop.nodeList.addToDive.saveFailed'));
-      });
+      void removeWorkspaceDiveSource(source.diveId, source.nodeId, t('desktop.nodeList.addToDive.saveFailed'));
     }}>
       {t('desktop.nodeList.menu.removeFromDive')}
     </NodeContextMenuItem>
@@ -150,7 +146,10 @@ function DiveRows(props: {
   const id = rowId(dive.id);
   const collapsed = section.collapsed.has(id);
   const active = props.activeDiveId === dive.id;
-  const sources = dive.directSourceIds.flatMap((id) => props.nodesById[id] ?? []);
+  const sources = dive.directSourceIds.flatMap((id) => {
+    const node = props.nodesById[id];
+    return node?.kind === 'folder' ? [node] : [];
+  });
   return (
     <>
       <NodeTreeRow depth={1} hasChildren={sources.length > 0} isActive={active} isCollapsed={collapsed}

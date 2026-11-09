@@ -5,6 +5,7 @@ import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/spe
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
+import { removeWorkspaceDiveSource } from './workspaceDiveMutation';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
 
 const flatChildren = new Map<string | null, string[]>();
@@ -33,6 +34,10 @@ export function WorkspaceDiveContent(props: {
       activeNodeId={props.activeNodeId}
       childrenByParent={flatChildren}
       emptyState={{ title: t('desktop.nodeList.dive.empty'), description: t('desktop.nodeList.dive.emptyDescription') }}
+      getDiveTopicRemoval={([topicId, ...otherIds]) => {
+        if (!topicId || otherIds.length || !dive.directSourceIds.includes(topicId)) return undefined;
+        return () => void removeWorkspaceDiveSource(dive.id, topicId, t('desktop.nodeList.addToDive.saveFailed'));
+      }}
       headerDescription={dive.title}
       itemIds={ids}
       nodesById={nodesById}

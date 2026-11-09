@@ -32,6 +32,7 @@ interface NodeListTreeMenuProps {
   onAddToVirtualFolder?: (nodeIds: string[]) => void;
   onOpenMoveToNode: () => void;
   onOpenPostponeTopic?: (nodeId: string) => void;
+  removeMembershipLabel?: 'desktop.nodeList.menu.removeFromDive';
   onRemoveFromCurrentVirtualFolder?: (nodeIds: string[]) => void;
   onCreateTopicFromClipboard?: (parentNodeId: string | null) => void;
   onOpenReviewScheduling?: (nodeId: string) => void;
@@ -212,6 +213,7 @@ function buildNodeListContextMenuProps(
     },
     onDeleteNodePermanently: () => (props.deleteNodesPermanently(menuState.contextTargets), props.contextMenu.closeContextMenu()),
     onAddToVirtualFolder: () => (props.onAddToVirtualFolder?.(menuState.contextTargets), props.contextMenu.closeContextMenu()),
+    ...(props.removeMembershipLabel ? { removeMembershipLabel: props.removeMembershipLabel } : {}),
     onRemoveFromCurrentVirtualFolder: () => (props.onRemoveFromCurrentVirtualFolder?.(menuState.contextTargets), props.contextMenu.closeContextMenu()),
     ...buildNodeListActionHandlers(props, menuState),
     onRenameNode: () => (requestNodeRename(menuState.primaryTargetId), props.contextMenu.closeContextMenu()),

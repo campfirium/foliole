@@ -17,7 +17,7 @@ function source(id: string, kind: 'folder' | 'topic', title: string): WorkspaceL
   };
 }
 
-it('shows direct sources without icons or leaf chevrons, like Virtual rows', async () => {
+it('shows only folder sources in the Dive directory', async () => {
   renderWithLocalization(
     <WorkspaceDiveSection activeNodeId={null} activeDiveId={null} onSelectDive={vi.fn()} onSelectNode={vi.fn()}
       dives={[{ id: 'probability', title: 'Probability', directSourceIds: ['folder', 'topic'] }]} nodesById={{
@@ -26,8 +26,7 @@ it('shows direct sources without icons or leaf chevrons, like Virtual rows', asy
     }} />
   );
   const tree = within(screen.getByRole('tree', { name: 'Dives' }));
-  for (const title of ['Probability notes', 'Bayes’ theorem']) {
-    const row = await tree.findByRole('treeitem', { name: title });
-    expect(row.querySelector('[data-node-icon], [data-node-tree-chevron-placeholder]')).toBeNull();
-  }
+  const folder = await tree.findByRole('treeitem', { name: 'Probability notes' });
+  expect(folder.querySelector('[data-node-icon], [data-node-tree-chevron-placeholder]')).toBeNull();
+  expect(tree.queryByRole('treeitem', { name: 'Bayes’ theorem' })).toBeNull();
 });

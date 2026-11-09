@@ -24,6 +24,7 @@ export interface NodeListContextMenuProps {
   onOpenReviewScheduling?: () => void;
   onOpenPostponeTopic?: () => void;
   onPasteIntoNode?: () => void;
+  removeMembershipLabel?: 'desktop.nodeList.menu.removeFromDive';
   onRemoveFromCurrentVirtualFolder?: () => void;
   onRenameNode?: () => void;
   onReturnNode?: () => void;

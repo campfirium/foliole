@@ -39,6 +39,7 @@ export interface WorkspaceTopicTreeProps {
   headerDescription?: string;
   itemIds: string[];
   virtualFolderView?: 'manual' | 'readonly';
+  getDiveTopicRemoval?: (topicIds: string[]) => (() => void) | undefined;
   preserveItemOrder?: boolean;
   nodesById: WorkspaceListNodesById;
   onCreateChildNode?: CreateTopicTreeNode;
@@ -160,7 +161,7 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
     activeNodeId: props.activeNodeId,
     isManualSort: contentSort.sort.key === 'manual',
     manualOrderIds: lazyModel.sortedItemIds,
-    ...definedProps({ virtualFolderView: props.virtualFolderView }),
+    ...definedProps({ virtualFolderView: props.virtualFolderView, getDiveTopicRemoval: props.getDiveTopicRemoval }),
     nodesById: props.nodesById,
     onOpenMoveToNode: props.onOpenMoveToNode,
     ...definedProps({ onCreateChildNode: props.onCreateChildNode }),

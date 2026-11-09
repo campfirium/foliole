@@ -154,7 +154,7 @@ function renderRemovalItems(t: Translate, props: NoteMenuItemsProps, hasPrevious
   return (
     <>
       {hasPreviousGroup ? <NodeContextMenuSeparator /> : null}
-      {removeFromCurrentVirtualFolder ? <NodeContextMenuItem icon={ListMinus} onSelect={removeFromCurrentVirtualFolder}>{t('desktop.nodeList.menu.removeFromCurrentVirtualFolder')}</NodeContextMenuItem> : null}
+      {removeFromCurrentVirtualFolder ? <NodeContextMenuItem icon={ListMinus} onSelect={removeFromCurrentVirtualFolder}>{t(props.removeMembershipLabel ?? 'desktop.nodeList.menu.removeFromCurrentVirtualFolder')}</NodeContextMenuItem> : null}
       {removeFromCurrentVirtualFolder && props.showDeleteAction ? <NodeContextMenuSeparator /> : null}
       {props.showDeleteAction ? <NodeContextMenuItem icon={Trash2} onSelect={props.onDeleteNode} tone="destructive">{t('desktop.nodeList.menu.delete')}</NodeContextMenuItem> : null}
     </>
@@ -207,6 +207,7 @@ export function NodeListContextMenuItems(props: NodeListContextMenuProps) {
       {...(props.onOpenReviewScheduling ? { onOpenReviewScheduling: props.onOpenReviewScheduling } : {})}
       {...(props.onOpenPostponeTopic ? { onOpenPostponeTopic: props.onOpenPostponeTopic } : {})}
       {...(props.onPasteIntoNode ? { onPasteIntoNode: props.onPasteIntoNode } : {})}
+      {...(props.removeMembershipLabel ? { removeMembershipLabel: props.removeMembershipLabel } : {})}
       {...(props.onRemoveFromCurrentVirtualFolder ? { onRemoveFromCurrentVirtualFolder: props.onRemoveFromCurrentVirtualFolder } : {})}
       {...(props.onRenameNode ? { onRenameNode: props.onRenameNode } : {})}
       {...(props.onReturnNode ? { onReturnNode: props.onReturnNode } : {})}
