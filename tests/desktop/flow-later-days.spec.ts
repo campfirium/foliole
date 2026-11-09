@@ -57,7 +57,7 @@ test('saves a fixed Later delay and applies it once from the Flow toolbar', asyn
   await expect(later).toBeVisible();
   await later.hover();
   await expect(page.getByRole('tooltip')).toContainText('Appears again after the specified interval.');
-  await expect(page.getByRole('tooltip')).toContainText('You have read part of it and want to continue in 3 days.');
+  await expect(page.getByRole('tooltip')).toContainText('You have read part of it and want to continue in 3 days (custom).');
   await page.screenshot({ path: path.join(output, 'fixed-later-action.png') });
   await later.click();
   const savedReading = () => page.evaluate(async id => {

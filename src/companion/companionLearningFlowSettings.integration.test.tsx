@@ -146,13 +146,13 @@ it('keeps Later automatic by default and shows the saved delay before a single t
   fireEvent.submit(input.closest('form')!);
   expect(screen.getByRole('dialog')).toBeInTheDocument();
   await changeLearningSetting(field, '1');
-  expect(screen.getByText('Later · You have read part of it and want to continue in 1 day.')).toBeVisible();
+  expect(screen.getByText('Later · You have read part of it and want to continue in 1 day (custom).')).toBeVisible();
   for (const days of ['2', '3', '17']) await changeLearningSetting(field, days);
-  expect(screen.getByText('Later · You have read part of it and want to continue in 17 days.')).toBeVisible();
+  expect(screen.getByText('Later · You have read part of it and want to continue in 17 days (custom).')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: /^Later$/ }));
   expect(postpone).toHaveBeenCalledTimes(1);
   await changeLearningSetting(field, '0');
   expect(screen.getByRole('button', { name: /^Later$/ })).toBeInTheDocument();
-  expect(screen.queryByText('Later · You have read part of it and want to continue in 17 days.')).not.toBeInTheDocument();
+  expect(screen.queryByText('Later · You have read part of it and want to continue in 17 days (custom).')).not.toBeInTheDocument();
   expect((await loadCompanionReviewSettings()).readingLaterDays).toBe(0);
 });

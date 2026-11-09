@@ -167,7 +167,7 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.search.reviewInitialInterval.title': '阅读初始间隔',
   'settings.search.reviewInitialInterval.description': '阅读卡片处理后再次进入阅读队列前的等待时间。',
   'settings.review.later.title': 'Later 自定义间隔',
-  'settings.review.later.description': '以天为单位。0 为默认值，沿用较短的阅读间隔。',
+  'settings.review.later.description': '指定主题再次出现的间隔（天）。默认值为 0，使用短间隔。',
   'settings.review.later.default': '默认',
   'settings.search.reviewIntervalGrowth.title': '阅读间隔增长',
   'settings.search.reviewIntervalGrowth.description': '每次通过后阅读间隔增长的速度。',

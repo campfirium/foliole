@@ -242,7 +242,7 @@ test('keeps the Later delay sheet and Flow label usable in portrait and short la
     const entry = page.getByRole('button', { name: /^Custom Later interval\s*36500$/ });
     await loadBuiltCompanionFixture(page, 'companionLaterDays', entry);
     await expect(page.getByRole('button', { name: 'Later', exact: true })).toBeInViewport({ ratio: 1 });
-    await expect(page.getByText('Later · You have read part of it and want to continue in 36500 days.')).toBeInViewport({ ratio: 1 });
+    await expect(page.getByText('Later · You have read part of it and want to continue in 36500 days (custom).')).toBeInViewport({ ratio: 1 });
     await page.screenshot({ path: `.tmp/artifacts/T749/mobile-flow-${viewport.width}.png` });
     await entry.click();
     const dialog = page.getByRole('dialog', { name: 'Custom Later interval' });
