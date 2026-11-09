@@ -97,6 +97,9 @@ async function finishReadingRounds(page: Page) {
   await readTopic(page, 'physics-reading-2');
   const complete = await checkpoint(page, 'topics', 'Dive Reading Complete');
   await complete.next.click();
+  const notice = page.getByRole('status').filter({ hasText: 'All clear for now.' });
+  await expect(notice).toBeVisible();
+  await page.screenshot({ path: '.tmp/artifacts/dive-continue-all-clear.png' });
   const empty = await checkpoint(page, 'topics', 'Dive Reading Complete');
   await empty.toolbar.getByRole('button', { name: 'Global', exact: true }).click();
 }

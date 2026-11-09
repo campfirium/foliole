@@ -7,6 +7,8 @@ import {
   ActionHelpCard, AppButton, AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem,
   AppDropdownMenuTrigger, ReviewActionBar, ToolbarActionGroup
 } from '../../shared/ui';
+import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
+import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { DiveFlowCheckpointContext } from './diveFlowActionContext';
 import { ReviewToolbarSessionActions } from './ReviewToolbarSessionFrame';
@@ -30,7 +32,14 @@ export function WorkspaceDiveFlowChoice({ checkpoint, className, immersive, onEx
   const { dive, open, snapshot } = checkpoint;
   const t = useTranslation();
   const showHelp = useActionHelpCardsEnabled();
-  const step = (next: 'continue' | 'retry') => void open({ id: dive.id, topicIds: dive.topicIds }, next);
+  const step = (next: 'continue' | 'retry') => {
+    void open({ id: dive.id, topicIds: dive.topicIds }, next).then(opened => {
+      const session = useWorkspaceStore.getState().reviewSession;
+      if (opened && session.dive?.id === dive.id && !session.currentNodeId) {
+        showAppRuntimeNotice(t('desktop.reviewSession.allClear.notice'), 'success');
+      }
+    });
+  };
   const advance = () => step('continue');
   useReadingReadShortcut(advance);
   const alternatives = listVisibleDives(snapshot).filter(target => target.id !== dive.id);
