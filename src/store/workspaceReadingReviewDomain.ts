@@ -1,7 +1,7 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
-import { buildNextReadingProfile, buildDismissedReadingProfile } from './workspaceReviewReading';
+import { buildNextReadingProfile, buildDismissedReadingProfile, buildFixedLaterReadingProfile } from './workspaceReviewReading';
 import type { SequentialReadingChange } from './workspaceSequentialReading';
 import {
   buildSequentialReadingDismissPatch,
@@ -30,19 +30,23 @@ function buildReadOrLaterPatch(args: {
   snapshot: Pick<WorkspaceState, 'nodesById'>;
   state: Pick<WorkspaceState, 'nodeOrder' | 'nodesById'>;
 }): ReadingReviewDomainPatch {
-  const nextReading = buildNextReadingReviewState({
-    currentNode: args.currentNode,
-    currentNodeId: args.currentNodeId,
-    ...(args.action === 'later' ? { growthFactorExponent: 0.5 } : {}),
-    now: args.now,
-    snapshot: args.snapshot
-  });
-  const afterReading = buildNextReadingProfile(nextReading, args.currentNode.reading);
+  const settings = getCurrentReviewSchedulerSettings();
+  const laterDays = args.action === 'later' ? settings.readingLaterDays : undefined;
+  const afterReading = laterDays
+    ? buildFixedLaterReadingProfile(args, laterDays, settings.pushQueue.defaultPriority)
+    : buildNextReadingProfile(buildNextReadingReviewState({
+        currentNode: args.currentNode,
+        currentNodeId: args.currentNodeId,
+        ...(args.action === 'later' ? { growthFactorExponent: 0.5 } : {}),
+        now: args.now,
+        pushQueue: settings.pushQueue,
+        snapshot: args.snapshot
+      }), args.currentNode.reading);
   const nextNode: Node = { ...args.currentNode, reading: afterReading };
   const nextNodesById = { ...args.state.nodesById, [args.currentNodeId]: nextNode };
   const sequentialPatch = args.action === 'read' && args.releaseSequentialReading
     ? buildSequentialReadingReadPatch({
-        defaultPriority: getCurrentReviewSchedulerSettings().pushQueue.defaultPriority,
+        defaultPriority: settings.pushQueue.defaultPriority,
         nodeOrder: args.state.nodeOrder,
         nodesById: nextNodesById,
         now: args.now,

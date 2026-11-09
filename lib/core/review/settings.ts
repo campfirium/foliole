@@ -16,6 +16,12 @@ import {
 
 const REVIEW_SCHEDULER_ALGORITHM = `ts-fsrs@${FSRSVersion.replace(/^v/, '')} using FSRS-7.0`;
 
+export const MAX_READING_LATER_DAYS = 36_500;
+
+export function isReadingLaterDays(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= MAX_READING_LATER_DAYS;
+}
+
 export interface ReviewSchedulerSettings {
   weights?: number[] | undefined;
   algorithm: string;
@@ -26,6 +32,7 @@ export interface ReviewSchedulerSettings {
   enableShortTerm: boolean;
   recencyWeighting?: boolean;
   reviewIntervalPenalties?: boolean;
+  readingLaterDays?: number;
   pushQueue: UnifiedPushQueueRules;
   updatedAt: string;
 }
@@ -38,6 +45,7 @@ export interface ReviewSchedulerSettingsSavePatch {
   enableShortTerm?: boolean;
   recencyWeighting?: boolean;
   reviewIntervalPenalties?: boolean;
+  readingLaterDays?: number;
   pushQueue?: UnifiedPushQueueRulesPatch;
 }
 
@@ -140,6 +148,7 @@ export function normalizeReviewSchedulerSettings(payload: unknown): ReviewSchedu
       ? value.recencyWeighting : DEFAULT_REVIEW_TRAINING_OPTIONS.recencyWeighting,
     reviewIntervalPenalties: typeof value.reviewIntervalPenalties === 'boolean'
       ? value.reviewIntervalPenalties : DEFAULT_REVIEW_TRAINING_OPTIONS.reviewIntervalPenalties,
+    ...(isReadingLaterDays(value.readingLaterDays) ? { readingLaterDays: value.readingLaterDays } : {}),
     pushQueue: mergeReviewSchedulerPushQueueSettings(
       DEFAULT_REVIEW_SCHEDULER_SETTINGS.pushQueue,
       value.pushQueue

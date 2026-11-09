@@ -1,7 +1,8 @@
-import type { NodeReadingProfile } from '../features/nodes/model/nodeTypes';
+import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes';
 import {
   DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
   PUSH_QUEUE_PRIORITIES,
+  resolveReadingNextAt,
   type PushQueuePriority
 } from '../features/review/model/unifiedPushQueueRules';
 import type { ReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
@@ -95,4 +96,23 @@ export function buildDismissedReadingProfile(args: {
     repetitionCount: args.currentReading?.repetitionCount ?? 0,
     state: 'dismissed'
   };
+}
+
+export function buildFixedLaterReadingProfile(args: {
+  currentNode: Node;
+  currentNodeId: string;
+  now: string;
+  snapshot: { nodesById: Record<string, PriorityChainNode | undefined> };
+}, days: number, defaultPriority: PushQueuePriority): NodeReadingProfile {
+  const reading = args.currentNode.reading ?? {
+    ...buildDismissedReadingProfile({
+      currentNodeId: args.currentNodeId,
+      currentReading: null,
+      defaultPriority,
+      nodesById: args.snapshot.nodesById,
+      now: args.currentNode.createdAt
+    }),
+    state: 'active' as const
+  };
+  return { ...reading, nextAt: resolveReadingNextAt(args.now, days * 86_400_000) };
 }

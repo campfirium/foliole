@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react';
 
+import { isReadingLaterDays } from '../../lib/core/review/settings';
 import { getCurrentReviewSchedulerSettings, type ReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { saveCompanionReviewSettings } from '../shared/platform/companion/settings/companionReviewSchedulerSettingsRepository';
@@ -29,6 +30,7 @@ function useLearningSettingDraft(row: CompanionLearningSettingRow, settings: Rev
   async function save(values: number[]) {
     if (pending.current || values.some((value, index) => !Number.isFinite(value) || value < fields[index]!.min
       || value > (fields[index]!.max ?? Infinity))) return;
+    if (row.key === 'readingLaterDays' && !isReadingLaterDays(values[0])) return;
     pending.current = true;
     setSaving(true);
     setFailed(false);

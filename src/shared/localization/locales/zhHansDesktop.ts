@@ -159,6 +159,8 @@ export const ZH_HANS_DESKTOP_TRANSLATIONS: Partial<Record<TranslationKey, string
   'desktop.reviewActions.reading.group': '阅读复习操作',
   'desktop.reviewActions.reading.soon': 'Soon',
   'desktop.reviewActions.reading.later': 'Later',
+  'desktop.reviewActions.reading.laterDays': 'Later · {days}天',
+  'desktop.reviewActions.reading.laterDaysHelp': '主题将在所显示的天数后再次到期。',
   'desktop.reviewActions.reading.read': 'Read',
   'desktop.reviewActions.reading.dismiss': 'Dismiss',
   'desktop.readwiseBooks.empty.title': 'Readwise Books 为空',

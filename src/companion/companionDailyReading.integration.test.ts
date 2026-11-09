@@ -13,6 +13,7 @@ import { createSearchLibrary } from '../shared/platform/companion/runtime/compan
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import { saveIosReadingWithDb } from '../shared/platform/companion/runtime/iosCompanionActiveDatabaseWrites';
 import { closeIosCompanionDatabase, initializeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
+import { loadCompanionReviewSettings, saveCompanionReviewSettings } from '../shared/platform/companion/settings/companionReviewSchedulerSettingsRepository';
 import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 import { toReadingPayload } from '../shared/platform/companionSyncStateWriters';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
@@ -224,4 +225,33 @@ it.each(['locked', 'active', 'new'] as const)('puts the %s next chapter before t
   expect(session.currentNodeId).toBe(second);
   session = (await act('read')).session!;
   expect(session.currentNodeId).toBe(originalNext);
+});
+
+it('keeps only the new due time from fixed Later and resumes the regular Read interval', async () => {
+  const target = session.currentNodeId!;
+  const previous = { intervalDurationMs: 60000, intervalGrowthFactor: 4, lastHandledAt: '2026-10-26T07:00:00.000Z',
+    nextAt: now, priority: 9, readingPosition: 0, repetitionCount: 1, state: 'active' as const };
+  await writeIosCompanionDatabase(db => saveIosReadingWithDb(db, { node_id: target, reading_json: JSON.stringify(toReadingPayload(previous)) }));
+  await saveCompanionReviewSettings({ readingLaterDays: 3, pushQueue: {
+    readingInitialIntervalMs: 60000, readingIntervalGrowthFactorRange: { min: 4, max: 4 }
+  } });
+  await reopen();
+  expect((await loadCompanionReviewSettings()).readingLaterDays).toBe(3);
+  session = (await openCompanionDailyFlow({ now, mode: 'recommended', preserveCurrent: true })).session;
+  expect(session.currentNodeId).toBe(target);
+  session = (await act('later')).session!;
+  expect(session.currentNodeId).not.toBe(target);
+  const due = '2026-10-29T08:00:00.000Z';
+  const reading = async () => (await snapshot()).nodesById[target]!.reading;
+  expect(await reading()).toEqual({ ...previous, nextAt: due });
+  session = (await openCompanionDailyFlow({ now: due, mode: 'recommended' })).session;
+  for (let remaining = session.cycle!.remaining; remaining > 0; remaining--) {
+    if (session.currentNodeId === target) break;
+    session = (await act('read', due)).session!;
+  }
+  expect(session.currentNodeId).toBe(target);
+  await act('read', due);
+  expect(await reading()).toMatchObject({
+    intervalDurationMs: 240000, intervalGrowthFactor: 4, repetitionCount: 2, nextAt: '2026-10-29T08:04:00.000Z'
+  });
 });

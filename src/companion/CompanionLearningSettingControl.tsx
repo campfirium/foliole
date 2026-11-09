@@ -17,7 +17,7 @@ export function CompanionLearningSettingControl(props: { row: CompanionLearningS
         type="button">
         <span data-settings-value-title className="text-ui-lg font-normal text-foreground">{t(props.row.title)}</span>
         <span className="flex shrink-0 items-center gap-2 text-base tabular-nums text-companion-text-secondary">
-          {formatLearningRowValue(props.row, props.settings, t('settings.review.rangeTo'))}
+          {formatLearningRowValue(props.row, props.settings, t)}
           <ChevronRight aria-hidden="true" size={16} />
         </span>
       </button>

@@ -57,6 +57,7 @@ function isReviewSchedulerSettingsPayload(payload: unknown) {
     'recencyWeighting',
     'reviewIntervalPenalties',
     'pushQueue',
+    'readingLaterDays',
     'updatedAt'
   ].some((key) => Object.hasOwn(payload, key));
 }

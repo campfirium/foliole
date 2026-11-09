@@ -24,7 +24,7 @@ const values = [
   ['Desired retention', '0.82'], ['Maximum interval days', '120'], ['New day starts at', '7'],
   ['New item load balancing', '14'], ['Default topic priority', '6'], ['Priority weight', '3'],
   ['Reading queue mix ratio', '2'], ['Review item queue mix ratio', '3'], ['Reading initial interval days', '1.5'],
-  ['Reading growth factor min', '1.2'], ['Reading growth factor max', '1.8']
+  ['Reading growth factor min', '1.2'], ['Reading growth factor max', '1.8'], ['Later delay (days)', '3']
 ] as const;
 let root = '';
 let sqlite: Database.Database | null = null;
@@ -43,7 +43,7 @@ afterEach(async () => {
   if (root) rmSync(root, { recursive: true, force: true });
 });
 
-it.each(['android', 'ios'] as const)('saves all nine settings through the %s owner and restores every control after reopening', async platform => {
+it.each(['android', 'ios'] as const)('saves the learning settings through the %s owner and restores every control after reopening', async platform => {
   runtime.platform = platform;
   root = mkdtempSync(path.join(os.tmpdir(), 'mobile-learning-'));
   await open(platform);
@@ -52,7 +52,7 @@ it.each(['android', 'ios'] as const)('saves all nine settings through the %s own
   for (const [label, value] of values) await changeLearningSetting(label, value);
   const expected = getCurrentReviewSchedulerSettings();
   expect(expected).toMatchObject({ desiredRetention: 0.82, maximumIntervalDays: 120,
-    newDayStartsAtHour: 7, newItemLoadBalancingDays: 14,
+    newDayStartsAtHour: 7, newItemLoadBalancingDays: 14, readingLaterDays: 3,
     pushQueue: { defaultPriority: 6, priorityRatio: 3, queueMixRatio: { reading: 2, fsrs: 3 },
       readingInitialIntervalMs: 129_600_000, readingIntervalGrowthFactorRange: { min: 1.2, max: 1.8 } } });
   expect(sqlite!.prepare('SELECT scope,platform,host_name FROM setting_records').all())

@@ -1,4 +1,5 @@
 import type { ReviewSchedulerSettings, ReviewSchedulerSettingsSavePatch } from '../../lib/core/review/settings';
+import type { Translate } from '../shared/localization/LocalizationProvider';
 import type { TranslationKey } from '../shared/localization/translations';
 
 import { COMPANION_LEARNING_SETTING_FIELDS } from './companionLearningSettingFields';
@@ -19,6 +20,7 @@ export const COMPANION_LEARNING_SETTING_ROWS: readonly CompanionLearningSettingR
   { key: 'queueMix', title: 'settings.search.reviewMix.title', description: 'settings.search.reviewMix.description', fields: ['queueMixReading', 'queueMixFsrs'] },
   { key: 'priorityRatio', title: 'settings.search.reviewPriorityWeight.title', description: 'settings.search.reviewPriorityWeight.description', fields: ['priorityRatio'] },
   { key: 'readingInitialIntervalDays', title: 'settings.search.reviewInitialInterval.title', description: 'settings.search.reviewInitialInterval.description', fields: ['readingInitialIntervalDays'] },
+  { key: 'readingLaterDays', title: 'settings.review.later.title', description: 'settings.review.later.description', fields: ['readingLaterDays'] },
   { key: 'readingGrowth', title: 'settings.search.reviewIntervalGrowth.title', description: 'settings.search.reviewIntervalGrowth.description', fields: ['readingGrowthMin', 'readingGrowthMax'] }
 ];
 
@@ -32,11 +34,12 @@ export function getLearningRowPatch(row: CompanionLearningSettingRow, values: nu
   return getLearningRowFields(row)[0]!.patch(values[0]!, settings);
 }
 
-export function formatLearningRowValue(row: CompanionLearningSettingRow, settings: ReviewSchedulerSettings, rangeTo: string) {
+export function formatLearningRowValue(row: CompanionLearningSettingRow, settings: ReviewSchedulerSettings, t: Translate) {
   const values = getLearningRowFields(row).map(field => field.read(settings));
   if (row.key === 'newDayStartsAtHour') return `${String(values[0]).padStart(2, '0')}:00`;
   if (row.key === 'defaultPriority') return `P${values[0]}`;
   if (row.key === 'queueMix') return values.join(' : ');
-  if (row.key === 'readingGrowth') return values.join(` ${rangeTo} `);
+  if (row.key === 'readingGrowth') return values.join(` ${t('settings.review.rangeTo')} `);
+  if (row.key === 'readingLaterDays' && !values[0]) return t('settings.review.later.automatic');
   return String(values[0]);
 }

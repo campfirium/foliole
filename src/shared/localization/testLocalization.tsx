@@ -22,6 +22,7 @@ const reviewSettings = {
   onPriorityRatioChange: ignoreSettingChange,
   onQueueMixRatioFsrsChange: ignoreSettingChange,
   onQueueMixRatioReadingChange: ignoreSettingChange,
+  onReadingLaterDaysChange: ignoreSettingChange,
   onReadingInitialIntervalDaysChange: ignoreSettingChange,
   onReadingIntervalGrowthFactorMaxChange: ignoreSettingChange,
   onReadingIntervalGrowthFactorMinChange: ignoreSettingChange

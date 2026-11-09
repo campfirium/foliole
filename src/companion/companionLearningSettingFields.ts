@@ -1,6 +1,7 @@
-import type {
-  ReviewSchedulerSettings,
-  ReviewSchedulerSettingsSavePatch
+import {
+  MAX_READING_LATER_DAYS,
+  type ReviewSchedulerSettings,
+  type ReviewSchedulerSettingsSavePatch
 } from '../../lib/core/review/settings';
 import type { TranslationKey } from '../shared/localization/translations';
 
@@ -36,6 +37,8 @@ export const COMPANION_LEARNING_SETTING_FIELDS: readonly CompanionLearningSettin
   { key: 'readingInitialIntervalDays', label: 'settings.review.readingInitialInterval.aria', min: 0.01, step: 0.01,
     read: value => value.pushQueue.readingInitialIntervalMs / 86_400_000,
     patch: days => ({ pushQueue: { readingInitialIntervalMs: Math.round(days * 86_400_000) } }) },
+  { key: 'readingLaterDays', label: 'settings.review.later.title', min: 0, max: MAX_READING_LATER_DAYS, step: 1,
+    read: value => value.readingLaterDays ?? 0, patch: readingLaterDays => ({ readingLaterDays }) },
   { key: 'readingGrowthMin', label: 'settings.review.readingGrowthMin.aria', min: 1, step: 0.01,
     read: value => value.pushQueue.readingIntervalGrowthFactorRange.min,
     patch: (min, settings) => ({ pushQueue: { readingIntervalGrowthFactorRange: {

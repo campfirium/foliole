@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { createDailyFlowDayWindow } from '../../lib/core/flow/dailyFlowDayWindow';
@@ -8,8 +8,10 @@ import { DEFAULT_REVIEW_SCHEDULER_SETTINGS, hydrateCurrentReviewSchedulerSetting
 import { companionDailyFlowSettings, openCompanionDailyFlow, ownedCompanionDailyFlowPersistence } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
+import { loadCompanionReviewSettings } from '../shared/platform/companion/settings/companionReviewSchedulerSettingsRepository';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
+import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 import { persistFlowMutation } from './companionFlowMutation';
 import { changeLearningSetting } from './companionLearningSettings.testSupport';
 import { CompanionLearningSettingsContent } from './CompanionLearningSettingsContent';
@@ -124,4 +126,29 @@ it('uses the saved reading interval and growth on consecutive real Read actions 
   expect(library.database.prepare("SELECT interval_duration_ms,repetition_count,next_at FROM node_reading WHERE node_id='000000'").get()).toEqual(first);
   const second = await read(first.next_at);
   expect(second).toEqual({ interval_duration_ms: 6 * 86_400_000, repetition_count: 2, next_at: '2026-11-11T08:00:00.000Z' });
+});
+
+it('keeps Later automatic by default and shows the saved delay before a single touch', async () => {
+  const postpone = vi.fn();
+  render(<>
+    <CompanionLearningSettingsContent />
+    <CompanionBottomReviewBar hasAnswer={false} isAnswerRevealed={false} itemKind="reading" visible reviewCardKey="000000"
+      onPostponeReviewTopic={postpone} onReadReviewTopic={vi.fn()} onDismissReviewTopic={vi.fn()}
+      onGrade={vi.fn()} onRevealAnswer={vi.fn()} />
+  </>);
+  expect(await screen.findByRole('button', { name: /^Later delay \(days\)\s*Automatic$/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^Later$/ })).toBeInTheDocument();
+  const field = 'Later delay (days)';
+  fireEvent.click(screen.getByRole('button', { name: /^Later delay \(days\)\s*Automatic$/ }));
+  const input = screen.getByRole('spinbutton', { name: field });
+  fireEvent.change(input, { target: { value: '2.5' } });
+  expect(input).toBeInvalid();
+  fireEvent.submit(input.closest('form')!);
+  expect(screen.getByRole('dialog')).toBeInTheDocument();
+  for (const days of ['1', '2', '3', '17']) await changeLearningSetting(field, days);
+  fireEvent.click(screen.getByRole('button', { name: 'Later · 17d' }));
+  expect(postpone).toHaveBeenCalledTimes(1);
+  await changeLearningSetting(field, '0');
+  expect(screen.getByRole('button', { name: /^Later$/ })).toBeInTheDocument();
+  expect((await loadCompanionReviewSettings()).readingLaterDays).toBe(0);
 });

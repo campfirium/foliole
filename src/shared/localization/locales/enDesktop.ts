@@ -157,6 +157,8 @@ export const EN_DESKTOP_TRANSLATIONS = {
   'desktop.reviewActions.reading.group': 'Reading review actions',
   'desktop.reviewActions.reading.soon': 'Soon',
   'desktop.reviewActions.reading.later': 'Later',
+  'desktop.reviewActions.reading.laterDays': 'Later · {days}d',
+  'desktop.reviewActions.reading.laterDaysHelp': 'The topic becomes due after the displayed delay.',
   'desktop.reviewActions.reading.read': 'Read',
   'desktop.reviewActions.reading.dismiss': 'Dismiss',
   'desktop.readwiseBooks.empty.title': 'Readwise Books is empty',

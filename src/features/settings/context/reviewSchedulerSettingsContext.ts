@@ -16,6 +16,7 @@ export interface ReviewSchedulerSettingsContextValue {
   onPriorityRatioChange: (value: number) => void;
   onQueueMixRatioFsrsChange: (value: number) => void;
   onQueueMixRatioReadingChange: (value: number) => void;
+  onReadingLaterDaysChange: (value: number) => void;
   onReadingInitialIntervalDaysChange: (value: number) => void;
   onReadingIntervalGrowthFactorMaxChange: (value: number) => void;
   onReadingIntervalGrowthFactorMinChange: (value: number) => void;

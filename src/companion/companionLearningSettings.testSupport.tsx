@@ -9,6 +9,7 @@ const rowTitles: Record<string, string> = {
   'Maximum interval days': 'Maximum interval',
   'Reading queue mix ratio': 'Reading vs review mix',
   'Review item queue mix ratio': 'Reading vs review mix',
+  'Later delay (days)': 'Later delay',
   'Reading initial interval days': 'Reading initial interval',
   'Reading growth factor min': 'Reading interval growth',
   'Reading growth factor max': 'Reading interval growth'

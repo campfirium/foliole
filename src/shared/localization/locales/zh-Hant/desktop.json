@@ -157,6 +157,8 @@
   "desktop.reviewActions.reading.group": "閱讀評論動作",
   "desktop.reviewActions.reading.soon": "Soon",
   "desktop.reviewActions.reading.later": "Later",
+  "desktop.reviewActions.reading.laterDays": "Later · {days}天",
+  "desktop.reviewActions.reading.laterDaysHelp": "主題將在所顯示的天數後再次到期。",
   "desktop.reviewActions.reading.read": "Read",
   "desktop.reviewActions.reading.dismiss": "Dismiss",
   "desktop.readwiseBooks.empty.title": "Readwise 書籍為空",

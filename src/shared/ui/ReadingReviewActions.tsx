@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { useSyncExternalStore, type ReactNode } from 'react';
 
+import { getCurrentReviewSchedulerSettings, subscribeReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { useTranslation } from '../localization/LocalizationProvider';
 
 import { ActionHelpCard, type ActionHelpCardCopy } from './ActionHelpCard';
@@ -84,8 +85,14 @@ type ResolvedReadingReviewActionsProps = Required<
   readActionAdvanceReady: boolean;
 };
 
-function createReadingReviewActionItems(props: ResolvedReadingReviewActionsProps) {
+function useReadingReviewActionItems(props: ResolvedReadingReviewActionsProps) {
   const t = useTranslation();
+  const { readingLaterDays } = useSyncExternalStore(subscribeReviewSchedulerSettings, getCurrentReviewSchedulerSettings);
+  const laterLabel = readingLaterDays ? t('desktop.reviewActions.reading.laterDays', { days: readingLaterDays })
+    : t('desktop.reviewActions.reading.later');
+  const laterHelp = readingLaterDays
+    ? { title: laterLabel, body: t('desktop.reviewActions.reading.laterDaysHelp') }
+    : READING_REVIEW_ACTION_HELP.later;
   const wrapWithHelpCard = (button: ReactNode, help: ActionHelpCardCopy) =>
     props.showActionHelp ? (
       <ActionHelpCard help={help} placement="above">
@@ -105,8 +112,8 @@ function createReadingReviewActionItems(props: ResolvedReadingReviewActionsProps
     {
       key: 'later',
       node: wrapWithHelpCard(
-        <ReadingReviewButton renderButton={props.renderButton} className={props.buttonClassName} disabled={props.isSubmitting} icon={props.icons?.later} label={t('desktop.reviewActions.reading.later')} onClick={props.onPostponeReviewTopic} surface={props.surface} testId="companion-review-action-later" />,
-        READING_REVIEW_ACTION_HELP.later
+        <ReadingReviewButton renderButton={props.renderButton} className={props.buttonClassName} disabled={props.isSubmitting} icon={props.icons?.later} label={laterLabel} onClick={props.onPostponeReviewTopic} surface={props.surface} testId="companion-review-action-later" />,
+        laterHelp
       )
     },
     {
@@ -130,7 +137,7 @@ function createReadingReviewActionItems(props: ResolvedReadingReviewActionsProps
 export function ReadingReviewActions(props: ReadingReviewActionsProps) {
   const t = useTranslation();
   const surface = props.surface ?? 'panel';
-  const readingActions = createReadingReviewActionItems({
+  const readingActions = useReadingReviewActionItems({
     buttonClassName: props.actionButtonClassName ?? 'min-w-20 border-border px-4',
     isSubmitting: props.isSubmitting ?? false,
     icons: props.icons,

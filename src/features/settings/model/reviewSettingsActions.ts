@@ -1,3 +1,4 @@
+import { isReadingLaterDays } from '../../../../lib/core/review/settings';
 import { normalizeUnifiedPushQueueRules } from '../../review/model/unifiedPushQueueRules';
 
 import {
@@ -139,6 +140,9 @@ function createPushQueueActions(
         return;
       }
       saveSettings({ pushQueue: { queueMixRatio: { fsrs: Math.round(value) } } });
+    },
+    onReadingLaterDaysChange: (value: number) => {
+      if (isReadingLaterDays(value)) saveSettings({ readingLaterDays: value });
     },
     onReadingInitialIntervalDaysChange: (value: number) => {
       if (!Number.isFinite(value) || value <= 0) {
