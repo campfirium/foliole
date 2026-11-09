@@ -53,11 +53,10 @@ for (const kind of ['topic', 'item'] as const) {
       await page.getByRole('button', { name: 'Read', exact: true }).click();
     }
     await expect.poll(current).toBeNull();
-    const initial = page.getByRole('dialog', { name: 'Dive queue complete' });
-    await expect(initial).toBeVisible();
-    await expect(page.getByRole('dialog')).toHaveCount(1);
+    await expect(page.getByRole('heading', { name: 'Dive Queue Clear' })).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     if (kind === 'topic') await finishDiveRounds(page, output);
-    await page.getByRole('dialog').getByRole('button', { name: 'Return to Flow', exact: true }).click();
+    await page.getByRole('group', { name: 'Flow toolbar' }).getByRole('button', { name: 'Global', exact: true }).click();
     await expect.poll(current).toBe('global-first');
     await expect(page.getByRole('complementary', { name: 'Inspector' }).getByText('Library', { exact: true })).toBeVisible();
 
@@ -69,6 +68,15 @@ for (const kind of ['topic', 'item'] as const) {
     const global = await page.evaluate(async () =>
       (await window.electronAPI.invoke('load_workspace_snapshot', {})).nodesById['global-first']);
     expect(global?.review?.reps ?? global?.reading?.repetitionCount ?? 0).toBe(0);
+    if (kind === 'item') {
+      await renamedDive.click({ button: 'right' });
+      await page.getByRole('menuitem', { name: 'Start Dive', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toBeVisible();
+      const toolbar = page.getByRole('group', { name: 'Flow toolbar' });
+      await toolbar.getByRole('button', { name: 'Exit', exact: true }).click();
+      await expect(toolbar).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Enter Flow', exact: true })).toBeVisible();
+    }
   });
 }
 
@@ -120,21 +128,16 @@ async function addSource(page: import('@playwright/test').Page, title: string, d
 }
 
 async function finishDiveRounds(page: import('@playwright/test').Page, output: string) {
-  const initial = page.getByRole('dialog', { name: 'Dive queue complete' });
-  await initial.getByRole('button', { name: 'Continue today’s Dive tasks' }).click();
-  const today = page.getByRole('dialog', { name: 'No more Dive tasks today' });
-  await expect(today).toBeVisible();
-  await today.getByRole('button', { name: 'Continue Dive study' }).click();
-  const topics = page.getByRole('dialog', { name: 'No Dive topics to read right now' });
-  await expect(topics).toBeVisible();
+  const toolbar = page.getByRole('group', { name: 'Flow toolbar' });
+  await toolbar.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toBeVisible();
+  await toolbar.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toBeVisible();
   await page.screenshot({ path: path.join(output, 'topics-choice.png') });
-  await topics.getByLabel('Switch Dive').selectOption({ label: 'Empty study' });
-  const empty = page.getByRole('dialog', { name: 'No tasks in the Dive queue' });
-  await expect(empty).toBeVisible();
-  await empty.getByLabel('Flow mode').selectOption('review-first');
-  await expect(empty.getByLabel('Flow mode')).toHaveValue('review-first');
-  await empty.getByLabel('Flow mode').selectOption('reading-only');
-  await expect(empty.getByLabel('Flow mode')).toHaveValue('reading-only');
+  await toolbar.getByRole('button', { name: 'Switch', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Empty study' }).click();
+  await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().dive?.phase)).toBe('initial');
+  await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toBeVisible();
 }
 
 async function seedDiveCards(page: import('@playwright/test').Page, kind: 'topic' | 'item') {

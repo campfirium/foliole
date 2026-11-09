@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useContext } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../features/nodes/model/specialNodes';
@@ -12,7 +12,9 @@ import type {
   ExternalLibraryFolder
 } from '../../shared/platform/externalLibraryBrowseRepository';
 
+import { DiveFlowCheckpointContext } from './diveFlowActionContext';
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
+import { useDiveCheckpointTitle } from './WorkspaceDiveFlowChoice';
 import { WorkspaceDocumentSurface } from './WorkspaceDocumentSurface';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 import { WorkspaceDualListContent } from './WorkspaceDualListContent';
@@ -161,9 +163,14 @@ export const WorkspaceDocumentArea = memo(function WorkspaceDocumentArea({
   studySessionCompleteSummaryProps: StudySessionCompleteSummaryProps | null;
 }) {
   const t = useTranslation();
+  const diveTitle = useDiveCheckpointTitle();
+  const checkpoint = useContext(DiveFlowCheckpointContext);
   return (
     <section data-workspace-document-focus-target tabIndex={-1} aria-label={t('desktop.workspace.documentAndReviewArea')} className="flex min-h-0 min-w-0 flex-1 flex-col gap-0" data-undo-history-owner="content">
-      {studySessionCompleteSummaryProps ? (
+      {diveTitle && checkpoint ? (
+        <StudySessionCompleteSummary title={diveTitle} completedAt={null} sessionStartedAt={null}
+          createdItemCount={0} createdTopicCount={0} reviewSessionMode={checkpoint.dive.mode} {...checkpoint.totals} />
+      ) : studySessionCompleteSummaryProps ? (
         <StudySessionCompleteSummary {...studySessionCompleteSummaryProps} />
       ) : (
         <WorkspaceDocumentSurface {...documentSurfaceProps} />

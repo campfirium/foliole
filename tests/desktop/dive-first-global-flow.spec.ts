@@ -46,51 +46,60 @@ async function createDive(page: Page, title: string) {
   await name.press('Enter');
 }
 
-async function checkpoint(page: Page, phase: 'initial' | 'today' | 'topics', nextAction: string) {
+async function checkpoint(page: Page, phase: 'initial' | 'today' | 'topics', title: string) {
   await expect.poll(() => page.evaluate(() => {
     const session = window.__folioleWorkspaceDebug!.getReviewSession();
     return { phase: session.dive?.phase, current: session.currentNodeId };
   })).toEqual({ phase, current: null });
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toHaveCount(1);
-  const next = dialog.getByRole('button', { name: nextAction, exact: true });
+  await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const toolbar = page.getByRole('group', { name: 'Flow toolbar' });
+  const next = toolbar.getByRole('button', { name: 'Continue', exact: true });
   await expect(next).toBeEnabled();
-  await expect(dialog.getByRole('button', { name: 'Return to Flow', exact: true })).toBeEnabled();
-  await expect(dialog.getByLabel('Flow mode')).toHaveValue('recommended');
-  await expect(dialog.getByLabel('Switch Dive').getByRole('option', { name: 'Study History' })).toBeAttached();
-  return { dialog, next };
+  await expect(toolbar.getByRole('button', { name: 'Global', exact: true })).toBeEnabled();
+  await expect(toolbar.getByRole('button', { name: 'Exit', exact: true })).toBeEnabled();
+  return { toolbar, next };
 }
 
 async function finishInitialQueue(page: Page) {
   await expect.poll(() => currentCard(page)).toBe('physics-card');
   await gradeGood(page);
-  await expect(page.getByRole('heading', { name: 'Dive queue complete' })).toBeVisible();
-  const initial = await checkpoint(page, 'initial', 'Continue today’s Dive tasks');
-  await initial.next.click();
+  const initial = await checkpoint(page, 'initial', 'Dive Queue Clear');
+  await expect(page.getByText('Reviewed', { exact: true })).toBeVisible();
+  const global = initial.toolbar.getByRole('button', { name: 'Global', exact: true });
+  await global.hover();
+  await expect(page.getByRole('tooltip')).toContainText('Continue learning across the whole library.');
+  const switchDive = initial.toolbar.getByRole('button', { name: 'Switch', exact: true });
+  await switchDive.hover();
+  await expect(page.getByRole('tooltip')).toContainText('Choose another Dive to study.');
+  await switchDive.click();
+  await expect(page.getByRole('menuitem', { name: 'Study History' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('f');
 }
 
 async function finishToday(page: Page, start: Date) {
   await readTopic(page, 'physics-topic');
-  const waiting = await checkpoint(page, 'today', 'Continue Dive study');
-  const retry = waiting.dialog.getByRole('button', { name: 'Check today’s tasks again' });
+  const waiting = await checkpoint(page, 'today', 'Dive Clear for Now');
+  const retry = waiting.toolbar.getByRole('button', { name: 'Recheck' });
   await expect(retry).toBeEnabled();
   await page.clock.setFixedTime(hoursAfter(start, 1));
   await retry.click();
   await expect.poll(() => currentCard(page)).toBe('physics-later-card');
   await gradeGood(page);
-  const today = await checkpoint(page, 'today', 'Continue Dive study');
+  const today = await checkpoint(page, 'today', 'Dive Clear for Now');
   await page.clock.setFixedTime(hoursAfter(start, 2));
   await today.next.click();
 }
 
 async function finishReadingRounds(page: Page, start: Date) {
   await readTopic(page, 'physics-reading-1');
-  const first = await checkpoint(page, 'topics', 'Keep reading Dive topics');
+  const first = await checkpoint(page, 'topics', 'Dive Reading Complete');
   await page.clock.setFixedTime(hoursAfter(start, 3));
   await first.next.click();
   await readTopic(page, 'physics-reading-2');
-  const second = await checkpoint(page, 'topics', 'Keep reading Dive topics');
-  await second.dialog.getByRole('button', { name: 'Return to Flow', exact: true }).click();
+  const second = await checkpoint(page, 'topics', 'Dive Reading Complete');
+  await second.toolbar.getByRole('button', { name: 'Global', exact: true }).click();
 }
 
 async function readTopic(page: Page, id: string) {

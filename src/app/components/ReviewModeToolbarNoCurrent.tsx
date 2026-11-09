@@ -1,16 +1,12 @@
-import { useEffect, type CSSProperties } from 'react';
+import type { CSSProperties } from 'react';
 
-import { getPlatformDefaultCommandShortcuts } from '../../shared/commands/defaultShortcuts';
-import { APP_COMMAND_IDS } from '../../shared/commands/ids';
-import { getCommandShortcutOverrides, resolveCommandShortcutMap } from '../../shared/commands/keymap';
-import { matchesShortcutSet } from '../../shared/commands/shortcuts';
 import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
-import { isEditableKeyboardTarget } from '../hooks/workspaceKeyboardTarget';
 
 import { ContinueReadingAction, ResumeReviewAction } from './ReviewModeToolbarActions';
 import { QueueClearFlowControl } from './ReviewSessionModeControl';
 import { ReviewToolbarSessionActions, type ReviewToolbarSessionSummary } from './ReviewToolbarSessionFrame';
+import { useReadingReadShortcut } from './useReadingReadShortcut';
 
 interface ReviewNoCurrentItemBarProps {
   className?: string;
@@ -23,39 +19,6 @@ interface ReviewNoCurrentItemBarProps {
   showSummary?: boolean;
   surface?: 'panel' | 'overlay';
   style?: CSSProperties;
-}
-
-function getReadingReadShortcuts() {
-  return resolveCommandShortcutMap({
-    commandIds: [APP_COMMAND_IDS.readingReviewRead],
-    defaults: getPlatformDefaultCommandShortcuts(),
-    overrides: getCommandShortcutOverrides()
-  })[APP_COMMAND_IDS.readingReviewRead];
-}
-
-function useReadingReadShortcut(action: () => void) {
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.defaultPrevented ||
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.shiftKey ||
-        event.isComposing ||
-        event.repeat ||
-        isEditableKeyboardTarget(event.target) ||
-        isEditableKeyboardTarget(document.activeElement) ||
-        !matchesShortcutSet(event, getReadingReadShortcuts())
-      ) {
-        return;
-      }
-      event.preventDefault();
-      action();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [action]);
 }
 
 function ReviewCompleteBar({

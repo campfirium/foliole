@@ -1,8 +1,11 @@
+import { useContext } from 'react';
+
 import type { ReviewSessionMode, ReviewSessionModeAvailability } from '../../features/review/model/reviewSessionMode';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { findEnabledSequentialReadingSourceId } from '../../store/workspaceSequentialReading';
 
+import { DiveFlowCheckpointContext } from './diveFlowActionContext';
 import { useReadActionAdvanceState } from './readActionAdvanceState';
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 import type { ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
@@ -12,6 +15,7 @@ import {
   getReviewProgressCounts,
   getReviewSessionModeAvailability
 } from './workspaceBottomReviewToolbarModel';
+import { WorkspaceDiveFlowChoice } from './WorkspaceDiveFlowChoice';
 import { getWorkspaceGridColumns } from './workspaceGridColumns';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceStudyDockTrigger } from './WorkspaceStudyDock';
@@ -61,9 +65,13 @@ type WorkspaceBottomReviewToolbarRenderProps = WorkspaceBottomReviewToolbarProps
 };
 
 function BottomReviewModeToolbar(props: WorkspaceBottomReviewToolbarRenderProps) {
+  const checkpoint = useContext(DiveFlowCheckpointContext);
+  const className = `${props.isImmersiveMode ? 'col-start-1 pointer-events-auto' : 'col-start-3 bg-transparent pl-4 pr-0 max-[1080px]:pl-2'} row-start-1 h-full max-[1080px]:col-start-1`;
+  if (checkpoint) return <WorkspaceDiveFlowChoice checkpoint={checkpoint} className={className}
+    immersive={props.isImmersiveMode} onExit={props.onExitReviewMode} />;
   return (
     <ReviewModeToolbar
-      className={`${props.isImmersiveMode ? 'col-start-1 pointer-events-auto' : 'col-start-3 bg-transparent pl-4 pr-0 max-[1080px]:pl-2'} row-start-1 h-full max-[1080px]:col-start-1`}
+      className={className}
       showProgress={false}
       showSessionModeControl
       showSummary={false}

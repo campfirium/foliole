@@ -5,6 +5,7 @@ import type { ReviewSessionMode } from '../model/reviewSessionMode';
 
 export interface StudySessionCompleteSummaryProps {
   action?: ReactNode;
+  title?: string;
   layout?: 'desktop' | 'companion';
   completedAt: string | null;
   createdItemCount: number;
@@ -73,6 +74,7 @@ function getCompletionTitle(mode: ReviewSessionMode, t: Translate) {
 
 export function StudySessionCompleteSummary({
   action,
+  title,
   layout = 'desktop',
   createdItemCount,
   createdTopicCount,
@@ -88,7 +90,7 @@ export function StudySessionCompleteSummary({
   return (
     <div className={layout === 'companion' ? 'companion-flow-complete' : "flex min-h-0 flex-1 items-start justify-center bg-[var(--role-content-bg)] px-8 pt-[18vh] text-foreground"}>
       <div className="w-full max-w-[520px]">
-        <Heading className="text-[30px] font-medium leading-tight text-foreground/90">{getCompletionTitle(reviewSessionMode, t)}</Heading>
+        <Heading className="text-[30px] font-medium leading-tight text-foreground/90">{title ?? getCompletionTitle(reviewSessionMode, t)}</Heading>
         <div className="study-session-summary-results mt-8 space-y-3">
           {reviewedItemCount > 0 || showEmptyCounts ? (
             <SummaryRow count={reviewedItemCount} elapsedMs={reviewedItemCount > 0 ? reviewElapsedMs : undefined} label={t('desktop.reviewComplete.reviewed')} unit="item" />
