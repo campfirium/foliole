@@ -7,5 +7,9 @@ export function useFixedLaterHint() {
   const t = useTranslation();
   const { readingLaterDays: days } = useSyncExternalStore(subscribeReviewSchedulerSettings, getCurrentReviewSchedulerSettings);
   if (!days) return null;
-  return t(days === 1 ? 'desktop.reviewActions.reading.laterOneDay' : 'desktop.reviewActions.reading.laterDays', { days });
+  return {
+    title: t('desktop.reviewActions.reading.laterCustomTitle'),
+    body: t('desktop.reviewActions.reading.laterCustomBody'),
+    detail: t(days === 1 ? 'desktop.reviewActions.reading.laterOneDay' : 'desktop.reviewActions.reading.laterDays', { days })
+  };
 }

@@ -92,7 +92,7 @@ function useReadingReviewActionItems(props: ResolvedReadingReviewActionsProps) {
   const t = useTranslation();
   const laterLabel = t('desktop.reviewActions.reading.later');
   const fixedLaterHint = useFixedLaterHint();
-  const laterHelp = fixedLaterHint ? { title: laterLabel, body: fixedLaterHint } : READING_REVIEW_ACTION_HELP.later;
+  const laterHelp = fixedLaterHint ?? READING_REVIEW_ACTION_HELP.later;
   const wrapWithHelpCard = (button: ReactNode, help: ActionHelpCardCopy) =>
     props.showActionHelp ? (
       <ActionHelpCard help={help} placement="above">
@@ -112,7 +112,7 @@ function useReadingReviewActionItems(props: ResolvedReadingReviewActionsProps) {
     {
       key: 'later',
       node: wrapWithHelpCard(
-        <ReadingReviewButton renderButton={props.renderButton} className={props.buttonClassName} disabled={props.isSubmitting} icon={props.icons?.later} label={laterLabel} title={props.showActionHelp ? undefined : fixedLaterHint ?? undefined} onClick={props.onPostponeReviewTopic} surface={props.surface} testId="companion-review-action-later" />,
+        <ReadingReviewButton renderButton={props.renderButton} className={props.buttonClassName} disabled={props.isSubmitting} icon={props.icons?.later} label={laterLabel} title={props.showActionHelp ? undefined : fixedLaterHint?.detail} onClick={props.onPostponeReviewTopic} surface={props.surface} testId="companion-review-action-later" />,
         laterHelp
       )
     },

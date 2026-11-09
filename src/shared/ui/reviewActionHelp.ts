@@ -51,8 +51,8 @@ export const READING_REVIEW_ACTION_HELP = {
     title: 'Soon'
   },
   later: {
-    body: 'Appears again after a shorter reading interval.',
-    detail: 'Use this after reading part of the topic when you want to continue sooner.',
+    body: 'Appears again after a slightly shorter interval.',
+    detail: 'You have read part of it and want to continue after a slightly shorter interval.',
     id: 'actionHelp.review.later',
     keywords: ['later', 'topic'],
     sourceLabel: 'Flow action bar',

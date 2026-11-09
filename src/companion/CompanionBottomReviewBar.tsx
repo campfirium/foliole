@@ -36,7 +36,7 @@ export function CompanionBottomReviewBar(props: {
 }) {
   const actionsRef = useRef<HTMLDivElement>(null);
   const fixedLaterHint = useFixedLaterHint();
-  const laterStatus = props.itemKind === 'reading' && fixedLaterHint ? `Later · ${fixedLaterHint}` : null;
+  const laterStatus = props.itemKind === 'reading' && fixedLaterHint ? `Later · ${fixedLaterHint.detail}` : null;
   if (!props.visible) {
     return null;
   }
