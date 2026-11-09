@@ -61,6 +61,18 @@ export type NativeSyncCommandMap = {
     args: { peers: NativeSyncPeer[] };
     result: NativeSyncPeer[];
   };
+  [NATIVE_COMMANDS.enableWebDavRelay]: {
+    args: { group_id: string; device_id: string };
+    result: void;
+  };
+  [NATIVE_COMMANDS.loadWebDavRelayDirectory]: {
+    args: { group_id: string };
+    result: string | null;
+  };
+  [NATIVE_COMMANDS.saveWebDavRelayDirectory]: {
+    args: { group_id: string; directory_url: string };
+    result: string;
+  };
   [NATIVE_COMMANDS.loadSyncGroupOverview]: {
     args: undefined;
     result: DesktopSyncGroupOverviewPayload;

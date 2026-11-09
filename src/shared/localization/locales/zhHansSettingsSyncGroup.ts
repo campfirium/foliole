@@ -1,6 +1,16 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'settings.companionSync.webdav.enable': '为此设备启用 WebDAV',
+  'settings.companionSync.webdav.waiting': '等待设备接收',
+  'settings.companionSync.webdav.enabled': 'WebDAV 已启用',
+  'settings.companionSync.webdav.deviceUnavailable': '请在同一网络下打开这台手机上的 Foliole，再重试。',
+  'settings.companionSync.webdav.title': 'WebDAV 中继',
+  'settings.companionSync.webdav.directory': 'WebDAV 目录地址',
+  'settings.companionSync.webdav.test': '测试并保存',
+  'settings.companionSync.webdav.passed': 'WebDAV 目录已保存。',
+  'settings.companionSync.webdav.loadFailed': '无法读取已保存的 WebDAV 目录。',
+  'settings.companionSync.webdav.failed': '无法读写 WebDAV 目录。请检查地址和目录权限。',
   'settings.companionSync.group.removing.progress': '移除中 {confirmed}/{total}',
   'settings.companionSync.group.removing.confirmed': '已确认设备',
   'settings.companionSync.group.title': '同步组',

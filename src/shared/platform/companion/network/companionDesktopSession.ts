@@ -1,4 +1,5 @@
 import { syncSessionReplySchema, type SyncSessionReply } from '../../../../../lib/platform/syncSessionContract.js';
+import { receiveCompanionWebDavRelay } from '../sync/companionWebDavRelayStore.js';
 
 import { requestCompanionSyncSession } from './companionSyncSessionHttp.js';
 import type { CompanionWorkspaceSyncTarget } from './companionWorkspaceEndpoint.js';
@@ -6,7 +7,7 @@ import type { CompanionWorkspaceSyncTarget } from './companionWorkspaceEndpoint.
 type Binding = { target: CompanionWorkspaceSyncTarget; libraryEpoch: string };
 
 type Session = { endpoint: string; peer: string; reply: SyncSessionReply; waiting: boolean; active: boolean;
-  controller: AbortController; binding?: Binding };
+  controller: AbortController; binding?: Binding; webDavRelayId?: string | undefined };
 let current: Session | null = null;
 let opening: Promise<Session> | null = null;
 let generation = 0;
@@ -42,7 +43,8 @@ export function captureCompanionDesktopRound(endpoint: string) {
   const marker = session.reply.marker;
   return async () => {
     if (!session.active || current !== session) return;
-    await requestCompanionSyncSession(endpoint, { operation: 'complete', session: session.reply.session, marker },
+    await requestCompanionSyncSession(endpoint, { operation: 'complete', session: session.reply.session, marker,
+      ...(session.webDavRelayId ? { webdav_relay_id: session.webDavRelayId } : {}) },
       session.controller.signal);
   };
 }
@@ -73,7 +75,8 @@ async function open(endpoint: string, peer: string, expected: number): Promise<S
     await requestCompanionSyncSession(endpoint, { operation: 'close', session: reply.session }).catch(() => undefined);
     throw new Error('sync_session_cancelled');
   }
-  return { endpoint, peer, reply, waiting: false, active: true, controller: new AbortController() };
+  const webDavRelayId = await receiveCompanionWebDavRelay(reply.webdav_relay, peer).catch(() => undefined);
+  return { endpoint, peer, reply, webDavRelayId, waiting: false, active: true, controller: new AbortController() };
 }
 
 export function waitForCompanionDesktopChanges() {
@@ -92,6 +95,10 @@ async function wait(session: Session) {
       }, session.controller.signal));
       if (!session.active || current !== session) return;
       session.reply = reply;
+      if (reply.webdav_relay && reply.webdav_relay.id !== session.webDavRelayId) {
+        session.webDavRelayId = await receiveCompanionWebDavRelay(reply.webdav_relay, session.peer).catch(() => undefined);
+        if (!session.active || current !== session) return;
+      }
       const better = reply.best?.device_id;
       if (better && better !== session.peer && better !== followedHint) {
         followedHint = better;

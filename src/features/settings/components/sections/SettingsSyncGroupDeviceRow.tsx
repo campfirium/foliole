@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import type { SyncGroupDevicePayload, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
 import { displaySyncGroupPlatform } from '../../../../../lib/platform/syncGroupPlatform';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
@@ -11,6 +13,7 @@ export function SettingsSyncGroupDeviceRow(props: {
   displayName: string;
   syncEnabled: boolean;
   syncPaused: boolean;
+  relayAction?: ReactNode;
 }) {
   const t = useTranslation();
   const local = props.device.device_identity_key === props.group.local_device_identity_key;
@@ -38,6 +41,8 @@ export function SettingsSyncGroupDeviceRow(props: {
           {displaySyncGroupPlatform(props.device.platform)}
         </span>
       </div>
+      <div className="flex shrink-0 items-center gap-2">
+      {props.relayAction}
       <button
         className="shrink-0 rounded-sm px-2 py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-45"
         disabled={props.disabled}
@@ -46,6 +51,7 @@ export function SettingsSyncGroupDeviceRow(props: {
       >
         {label}
       </button>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { webDavRelayBindingSchema } from './webDavRelayContract.js';
+
 export const SYNC_SESSION_PATH = '/companion/sync-session';
 export const SYNC_SESSION_WAIT_MS = 20_000;
 export const syncChangeMarkerSchema = z.object({
@@ -11,6 +13,7 @@ const tierSchema = z.number().int().min(0).max(2);
 /** `tier` is the server's own sync priority tier; `best` is the highest-priority device it knows of. */
 export const syncSessionReplySchema = z.object({
   session: z.string().uuid(), marker: syncChangeMarkerSchema, changed: z.boolean(),
+  webdav_relay: webDavRelayBindingSchema.optional(),
   tier: tierSchema.optional(), best: z.object({ device_id: z.string().min(1), tier: tierSchema }).optional()
 });
 export type SyncSessionReply = z.infer<typeof syncSessionReplySchema>;
@@ -18,7 +21,7 @@ export type SyncSessionReply = z.infer<typeof syncSessionReplySchema>;
 export const syncSessionRequestSchema = z.discriminatedUnion('operation', [
   z.object({ operation: z.literal('open'), tier: tierSchema.optional() }),
   z.object({ operation: z.literal('wait'), session: z.string().uuid(), marker: syncChangeMarkerSchema, tier: tierSchema.optional() }),
-  z.object({ operation: z.literal('complete'), session: z.string().uuid(), marker: syncChangeMarkerSchema, tier: tierSchema.optional() }),
+  z.object({ operation: z.literal('complete'), webdav_relay_id: z.string().uuid().optional(), session: z.string().uuid(), marker: syncChangeMarkerSchema, tier: tierSchema.optional() }),
   z.object({ operation: z.literal('close'), session: z.string().uuid(), tier: tierSchema.optional() })
 ]);
 export type SyncSessionRequest = z.infer<typeof syncSessionRequestSchema>;

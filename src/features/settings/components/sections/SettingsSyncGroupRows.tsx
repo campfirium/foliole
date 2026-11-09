@@ -1,4 +1,5 @@
 import type {
+  DesktopSyncGroupOverviewPayload,
   DesktopSyncGroupJoinRequestSummaryPayload,
   DesktopSyncGroupJoinCandidatePayload,
   DesktopSyncGroupJoinRequestPayload
@@ -24,6 +25,7 @@ import { SyncGroupRemovingDevices } from '../../../../shared/ui/SyncGroupRemovin
 import { SettingsSyncGroupDeviceRow } from './SettingsSyncGroupDeviceRow';
 import { ActiveDiscoveryErrorRow, DiscoveryStatusRow } from './SettingsSyncGroupDiscoveryStatus';
 import { SettingsSyncGroupJoinRequests } from './SettingsSyncGroupJoinRequests';
+import { SettingsWebDavRelayDeviceAction } from './SettingsWebDavRelayDeviceAction';
 
 function discoveryMessageKey(status: Exclude<SyncGroupDiscoverySnapshot['status'], 'stopped'>) {
   return `settings.companionSync.group.discovery.${status}` as const;
@@ -137,6 +139,7 @@ type SettingsSyncGroupRowsProps = {
   syncEnabled: boolean;
   syncPaused: boolean;
   removingDevices: SyncGroupRemovingEntry[];
+  webDavRelay?: DesktopSyncGroupOverviewPayload['webdav_relay'];
 };
 
 export function SettingsSyncGroupRows(props: SettingsSyncGroupRowsProps) {
@@ -168,6 +171,9 @@ export function SettingsSyncGroupRows(props: SettingsSyncGroupRowsProps) {
             {activeDevices.map((device) => (
               <SettingsSyncGroupDeviceRow device={device} disabled={props.isBusy} group={group}
                 key={device.device_identity_key} onRemove={props.onRemove}
+                relayAction={props.webDavRelay?.configured && device.platform.toLowerCase().startsWith('android')
+                  ? <SettingsWebDavRelayDeviceAction groupId={group.group_id} deviceId={device.device_identity_key}
+                    disabled={props.isBusy} relay={props.webDavRelay} /> : null}
                 onTogglePause={props.onTogglePause} syncPaused={props.syncPaused}
                 syncEnabled={props.syncEnabled}
                 displayName={group.device_display_names?.[device.device_identity_key] ?? syncGroupDeviceDisplayName(device, group.devices)} />

@@ -19,6 +19,7 @@ import { isSyncProtocolIncompatibleError, useSyncProtocolIncompatibleNotice } fr
 
 import { SettingsSyncDiagnosticsRow } from './SettingsSyncDiagnosticsRow';
 import { SettingsSyncGroupRows } from './SettingsSyncGroupRows';
+import { SettingsWebDavRelayRow } from './SettingsWebDavRelayRow';
 
 function SyncAvailabilityRow(props: { disabled: boolean; enabled: boolean; onToggle(): void }) {
   const t = useTranslation();
@@ -136,12 +137,11 @@ export function SettingsCompanionSyncSection() {
         joinRequest={state.overview.join_request ?? null}
         syncEnabled={state.overview.sync_enabled}
         discoveryError={state.overview.discovery_error}
-        syncPaused={state.overview.sync_paused}
+        syncPaused={state.overview.sync_paused} webDavRelay={state.overview.webdav_relay}
         removingDevices={state.overview.removing_devices}
       />
-      {state.error ? (
-        <SettingsErrorState description={state.error} title={t('settings.companionSync.error.devicesUnavailable')} />
-      ) : null}
+      {group && state.isDesktopRuntime ? <SettingsWebDavRelayRow key={group.group_id} groupId={group.group_id} bound={Boolean(state.overview.webdav_relay?.device_id)} /> : null}
+      {state.error && <SettingsErrorState description={state.error} title={t('settings.companionSync.error.devicesUnavailable')} />}
     </SettingsSection>
   );
 }

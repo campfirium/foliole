@@ -9,6 +9,7 @@ import { writeJson } from './companionLanResponses.js';
 import { authenticateCompanionRequestContext, revalidateCompanionRequestAuthorization } from './companionRequestAuth.js';
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { bestKnownDesktopSyncPriority, localDesktopSyncTier, rememberDesktopPeerTier } from './desktopSyncUpstream.js';
+import { confirmDesktopWebDavRelayDelivery, desktopWebDavRelayForPeer } from './desktopWebDavRelaySettings.js';
 
 export async function handleCompanionSyncSession(request: http.IncomingMessage, response: http.ServerResponse) {
   const url = new URL(request.url ?? '/', 'http://localhost');
@@ -49,8 +50,12 @@ export async function handleCompanionSyncSession(request: http.IncomingMessage, 
         if ('session' in reply) sessions.close(peer, reply.session);
         writeJson(request, response, auth.status_code, { error: auth.error });
       } else {
-        if (input.operation === 'complete') sessions.complete(peer, input.session, input.marker);
-        writeJson(request, response, 200, 'session' in reply ? withLocalPriority(reply) : reply);
+        if (input.operation === 'complete') {
+          sessions.complete(peer, input.session, input.marker);
+          if (input.webdav_relay_id) confirmDesktopWebDavRelayDelivery(context.groupId, peer, input.webdav_relay_id);
+        }
+        const binding = 'session' in reply ? desktopWebDavRelayForPeer(context.groupId, peer) : undefined;
+        writeJson(request, response, 200, 'session' in reply ? { ...withLocalPriority(reply), webdav_relay: binding } : reply);
       }
     });
   } catch (error) {

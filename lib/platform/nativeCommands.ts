@@ -2,12 +2,14 @@ import { NATIVE_ASSISTANT_COMMANDS } from './nativeAssistantCommands.js';
 import { NATIVE_DATABASE_UPGRADE_COMMANDS } from './nativeDatabaseUpgradeContract.js';
 import { NATIVE_DIVE_COMMANDS } from './nativeDiveCommands.js';
 import { NATIVE_SOURCE_CONNECTION_COMMANDS } from './nativeSourceConnectionCommands.js';
+import { NATIVE_WEBDAV_RELAY_COMMANDS } from './nativeWebDavRelayCommands.js';
 
 export const NATIVE_COMMANDS = {
   loadReviewTrainingPlan: 'load_review_training_plan',
   loadReviewTrainingInput: 'load_review_training_input',
   saveReviewTrainingModel: 'save_review_training_model',
   ...NATIVE_SOURCE_CONNECTION_COMMANDS,
+  ...NATIVE_WEBDAV_RELAY_COMMANDS,
   ...NATIVE_ASSISTANT_COMMANDS,
   ...NATIVE_DATABASE_UPGRADE_COMMANDS,
   maintainAttachments: 'maintain_attachments',

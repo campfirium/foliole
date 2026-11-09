@@ -14,6 +14,7 @@ import { CompanionSyncParticipationControls } from './CompanionSyncParticipation
 import { useCompanionSyncProtocolNoticeRetry } from './CompanionSyncProtocolNotice';
 import { AwaitingApprovalState, EmptyDiscoveryState, ReceivingGroupDataState } from './CompanionSyncSetupStates';
 import { CompanionSyncStatusDetails } from './CompanionSyncStatusDetails';
+import { CompanionWebDavRelayStatus } from './CompanionWebDavRelayStatus';
 import { useCompanionSyncGroupAdoptionRun } from './useCompanionSyncGroupAdoptionRun';
 import type { CompanionSyncGroupJoinStatus } from './useCompanionSyncGroupJoin';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -87,6 +88,7 @@ function ConnectedContent(props: CompanionSyncPanelProps & {
   return (
     <>
       {syncAction}
+      {props.page === 'sync' ? <CompanionWebDavRelayStatus key={props.syncGroup.group_id} /> : null}
       {props.page === 'sync' && isNativeCompanionSyncParticipationRuntime()
         ? <CompanionSyncParticipationControls /> : null}
       <CompanionSyncStatusDetails endpointUrl={props.endpointUrl} lastSyncedAt={props.lastSyncedAt}
