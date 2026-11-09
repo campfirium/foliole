@@ -1,5 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (
+        element: HTMLElement,
+        options: {
+          callback: (token: string) => void;
+          'error-callback': () => void;
+          sitekey: string;
+        }
+      ) => string;
+    };
+  }
+}
+
 export function useTurnstileToken(siteKey?: string) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [token, setToken] = useState('');

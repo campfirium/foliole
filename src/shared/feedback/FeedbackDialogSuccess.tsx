@@ -1,7 +1,7 @@
 import { CheckCircle2 } from 'lucide-react';
 
-import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { AppButton, AppDialogTitle } from '../../shared/ui';
+import { useTranslation } from '../localization/LocalizationProvider';
+import { AppButton, AppDialogTitle } from '../ui';
 
 export function FeedbackSuccessContent(props: {
   attachmentWarning: boolean;

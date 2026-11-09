@@ -1,28 +1,26 @@
 import { useRef, type RefObject } from 'react';
 
+import type { AppLocale } from '../localization/appLanguage';
+import { useTranslation } from '../localization/LocalizationProvider';
+import { resolveRuntimeUpdateTarget } from '../platform/updateTarget';
+import {
+  AppDialogContent,
+  AppDialogTitle,
+  appShelllessInputClassName,
+  appShelllessSurfaceClassName
+} from '../ui';
+
 import {
   FEEDBACK_LIMITS,
   type FeedbackAttachmentPayload,
   type FeedbackSubmissionPayload
-} from '../../shared/feedback/feedbackContract';
-import type { AppLocale } from '../../shared/localization/appLanguage';
-import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { resolveRuntimeUpdateTarget } from '../../shared/platform/updateTarget';
-import {
-  AppDialogContent,
-  AppSpinner,
-  appShelllessActionBarClassName,
-  appShelllessControlClassName,
-  appShelllessInputClassName,
-  appShelllessSurfaceClassName
-} from '../../shared/ui';
-
+} from './feedbackContract';
+import { FeedbackActions } from './FeedbackDialogActions';
 import { FeedbackAttachmentPicker } from './FeedbackDialogAttachments';
 import { FeedbackContactFields } from './FeedbackDialogContactFields';
 import { FeedbackSuccessContent } from './FeedbackDialogSuccess';
-import { useFeedbackUpdateNotice } from './FeedbackDialogUpdateNotice';
 
-type SubmitState = 'idle' | 'sending' | 'sent' | 'failed';
+export type SubmitState = 'idle' | 'sending' | 'sent' | 'failed';
 
 export interface FeedbackDraft {
   appLanguage: AppLocale;
@@ -30,6 +28,7 @@ export interface FeedbackDraft {
   attachments: FeedbackAttachmentPayload[];
   contact: string;
   isDemo: boolean;
+  companionPlatform?: string | undefined;
   message: string;
 }
 
@@ -43,6 +42,7 @@ type FeedbackDialogContentProps = {
   error: string;
   isTurnstileError: boolean;
   message: string;
+  mobile: boolean;
   onAppendFiles: (files: File[]) => Promise<void>;
   onClose: () => void;
   onContactChange: (value: string) => void;
@@ -59,9 +59,8 @@ export function FeedbackDialogContent(props: FeedbackDialogContentProps) {
   const sourceRef = useRef<HTMLElement | null>(null);
   return (
     <AppDialogContent
-      className={props.state === 'sent'
-        ? 'flex w-[min(92vw,22rem)] flex-col gap-4 p-5'
-        : appShelllessSurfaceClassName('flex w-[min(92vw,41.25rem)] flex-col overflow-hidden p-0')}
+      className={feedbackDialogClassName(props)}
+      aria-describedby={props.mobile && props.state !== 'sent' ? 'feedback-privacy' : undefined}
       onOpenAutoFocus={() => {
         sourceRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       }}
@@ -86,14 +85,25 @@ export function FeedbackDialogContent(props: FeedbackDialogContentProps) {
   );
 }
 
+function feedbackDialogClassName({ mobile, state }: FeedbackDialogContentProps) {
+  const mobileHeight = mobile ? 'max-h-[82dvh]' : '';
+  if (state === 'sent') {
+    return `flex w-[min(92vw,22rem)] flex-col gap-4 p-5 ${mobile ? 'overflow-auto' : ''} ${mobileHeight}`;
+  }
+  return appShelllessSurfaceClassName(`flex w-[min(92vw,41.25rem)] flex-col overflow-hidden p-0 ${mobileHeight}`);
+}
+
 function FeedbackFormContent(props: FeedbackDialogContentProps) {
+  const t = useTranslation();
   return (
     <>
-      <div className="px-[var(--app-shellless-content-inline-padding)]">
+      <div className={`px-[var(--app-shellless-content-inline-padding)] ${props.mobile ? 'min-h-0 overflow-y-auto pt-4' : ''}`}>
+        {props.mobile ? <AppDialogTitle>{t('feedback.title')}</AppDialogTitle> : null}
         <FeedbackTextField message={props.message} onMessageChange={props.onMessageChange} />
         <FeedbackContactFields contact={props.contact} onContactChange={props.onContactChange} />
         <FeedbackAttachmentPicker attachments={props.attachments} onAppendFiles={props.onAppendFiles} onRemoveAttachment={props.onRemoveAttachment} />
         {props.turnstileSiteKey ? <div ref={props.turnstileContainerRef} /> : null}
+        {props.mobile ? <p id="feedback-privacy" className="my-3 text-xs text-shellless-muted">{t('feedback.privacy')}</p> : null}
         <FeedbackStatus
           attachmentWarning={props.attachmentWarning}
           endpoint={props.endpoint}
@@ -102,7 +112,8 @@ function FeedbackFormContent(props: FeedbackDialogContentProps) {
           state={props.state}
         />
       </div>
-      <FeedbackActions appVersion={props.appVersion} canSubmit={props.canSubmit} onSubmit={props.onSubmit} state={props.state} />
+      <FeedbackActions appVersion={props.appVersion} canSubmit={props.canSubmit}
+        onCancel={props.mobile ? props.onClose : undefined} onSubmit={props.onSubmit} state={props.state} />
     </>
   );
 }
@@ -115,7 +126,7 @@ export function createFeedbackPayload(draft: FeedbackDraft, turnstileToken: stri
     metadata: {
       appVersion: draft.appVersion,
       language: draft.appLanguage,
-      platform: draft.isDemo ? 'demo' : resolveRuntimeUpdateTarget().platform
+      platform: draft.isDemo ? 'demo' : (draft.companionPlatform ?? resolveRuntimeUpdateTarget().platform)
     },
     turnstileToken
   };
@@ -132,6 +143,7 @@ export function buildFeedbackContentProps(args: {
   error: string;
   isTurnstileError: boolean;
   message: string;
+  mobile: boolean;
   setContact: (value: string) => void;
   setMessage: (value: string) => void;
   removeAttachment: (index: number) => void;
@@ -150,6 +162,7 @@ export function buildFeedbackContentProps(args: {
     error: args.error,
     isTurnstileError: args.isTurnstileError,
     message: args.message,
+    mobile: args.mobile,
     onAppendFiles: args.appendFiles,
     onContactChange: args.setContact,
     onMessageChange: args.setMessage,
@@ -201,28 +214,5 @@ export function FeedbackStatus(props: {
     <>
       {props.error || !props.endpoint || props.isTurnstileError ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
     </>
-  );
-}
-
-export function FeedbackActions(props: {
-  appVersion: string;
-  canSubmit: boolean;
-  onSubmit: () => Promise<void>;
-  state: SubmitState;
-}) {
-  const t = useTranslation();
-  const showUpdateNotice = useFeedbackUpdateNotice(props.appVersion);
-  return (
-    <div className={appShelllessActionBarClassName()}>
-      {showUpdateNotice ? (
-        <p className="mr-auto min-w-0 truncate pr-3 text-xs text-shellless-muted">
-          {t('feedback.updateBeforeSubmit')}
-        </p>
-      ) : null}
-      <button aria-busy={props.state === 'sending' || undefined} className={appShelllessControlClassName(`gap-2 ${props.state === 'sending' ? 'disabled:opacity-100' : ''}`)} disabled={!props.canSubmit} onClick={() => void props.onSubmit()} type="button">
-        {props.state === 'sending' ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
-        <span>{t(props.state === 'sending' ? 'feedback.sending' : 'feedback.submit')}</span>
-      </button>
-    </div>
   );
 }

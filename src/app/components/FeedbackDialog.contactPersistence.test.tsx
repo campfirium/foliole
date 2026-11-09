@@ -4,6 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { getRuntimeAppSettingsKeys } from '../../shared/config/appSettingsClassification';
+import { FeedbackDialog } from '../../shared/feedback/FeedbackDialog';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { preloadTranslationCatalog } from '../../shared/localization/translations';
 
@@ -22,7 +23,6 @@ vi.mock('../../shared/ui', async (importOriginal) => {
   };
 });
 
-import { FeedbackDialog } from './FeedbackDialog';
 
 const STORAGE_KEY = APP_SETTINGS_STORAGE_KEYS.feedbackRememberedContact;
 

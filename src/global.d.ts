@@ -11,16 +11,3 @@ declare namespace JSX {
     };
   }
 }
-
-interface Window {
-  turnstile?: {
-    render: (
-      element: HTMLElement,
-      options: {
-        callback: (token: string) => void;
-        'error-callback': () => void;
-        sitekey: string;
-      }
-    ) => string;
-  };
-}

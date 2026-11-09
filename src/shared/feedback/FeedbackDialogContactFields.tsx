@@ -1,5 +1,5 @@
-import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { AppInput } from '../../shared/ui';
+import { useTranslation } from '../localization/LocalizationProvider';
+import { AppInput } from '../ui';
 
 export function FeedbackContactFields(props: {
   contact: string;

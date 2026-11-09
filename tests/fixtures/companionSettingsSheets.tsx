@@ -5,6 +5,7 @@ import type { AttachmentStatusRequest } from '../../lib/platform/attachmentMaint
 import { createCompanionSettingsPreview } from '../../scripts/vite/companionSettingsPreview';
 import '../../src/app/styles.css';
 import { CompanionBackupLocationDialog } from '../../src/companion/CompanionBackupLocationDialog';
+import { CompanionFeedbackSettingsRow } from '../../src/companion/CompanionFeedbackSettingsRow';
 import { CompanionStorageSettingsContent } from '../../src/companion/CompanionStorageSettingsContent';
 import '../../src/companion/companionMinimal.css';
 import { AttachmentCleanupThresholdDialog } from '../../src/features/settings/components/sections/AttachmentCleanupThresholdDialog';
@@ -28,6 +29,7 @@ function SettingsSheets() {
     <button onClick={() => void chooseSyncGroupJoinMode(t, 'Home Library')}>Join</button>
     <SettingsAttachmentStorageSection mobile />
     <CompanionStorageSettingsContent />
+    <CompanionFeedbackSettingsRow />
     <AttachmentCleanupThresholdDialog open={open} value={threshold} onOpenChange={setOpen}
       onSave={value => { setThreshold(value); setOpen(false); }} />
     <CompanionBackupLocationDialog open={backup} working={false} label={'/Backups/'.repeat(30)}

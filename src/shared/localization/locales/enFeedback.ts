@@ -14,7 +14,7 @@ export const EN_FEEDBACK_TRANSLATIONS = {
   'feedback.attachments.count': '{count}',
   'feedback.attachments.limit': 'PNG, JPG, or WebP, up to 3 MB each.',
   'feedback.attachments.remove': 'Remove {name}',
-  'feedback.privacy': 'Your message, email if provided, selected images, language, and platform will be sent.',
+  'feedback.privacy': 'Your message, email if provided, selected images, app version, language, and platform will be sent.',
   'feedback.cancel': 'Cancel',
   'feedback.done': 'Done',
   'feedback.submit': 'Send',

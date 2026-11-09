@@ -4,10 +4,10 @@ import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 
 import { DEFAULT_WORKSPACE_RAIL_ITEMS } from '../../features/settings/model/workspaceRailSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import { FeedbackDialog } from '../../shared/feedback/FeedbackDialog';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { preloadTranslationCatalog } from '../../shared/localization/translations';
 
-import { FeedbackDialog } from './FeedbackDialog';
 import { WorkspaceDemoRailBottomActions } from './WorkspaceDemoRailBottomActions';
 import { RailActionGroup } from './WorkspaceRailActions';
 

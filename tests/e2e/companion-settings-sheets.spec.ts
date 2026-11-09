@@ -61,6 +61,39 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 812 }
   });
 }
 
+test.describe('sending feedback from settings', () => {
+  test.use({ hasTouch: true });
+
+  for (const viewport of [{ width: 320, height: 568 }, { width: 568, height: 320 }]) {
+    test(`keeps the feedback form usable at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      await loadSettingsSheets(page);
+      await page.addStyleTag({ content: 'html { font-size: 125%; }' });
+      await page.route('https://feedback.foliole.app/submit', route => route.fulfill({ json: { ok: true } }));
+      const entry = page.getByRole('button', { name: 'Send Feedback' });
+      await entry.tap();
+      const dialog = page.getByRole('dialog', { name: 'Send Feedback' });
+      await expect(dialog).toBeInViewport({ ratio: 1 });
+      const cancel = dialog.getByRole('button', { name: 'Cancel' });
+      const send = dialog.getByRole('button', { name: 'Send' });
+      const images = dialog.getByText('Add or paste images');
+      await images.scrollIntoViewIfNeeded();
+      await expect(cancel).toBeInViewport({ ratio: 1 });
+      await expect(send).toBeInViewport({ ratio: 1 });
+      expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+      await cancel.tap();
+      await expect(dialog).toHaveCount(0);
+      await entry.tap();
+      await dialog.getByRole('textbox', { name: 'Feedback' }).fill('Feedback from mobile settings');
+      await send.tap();
+      const success = page.getByRole('dialog', { name: 'Feedback sent' });
+      await expect(success).toBeInViewport({ ratio: 1 });
+      await success.getByRole('button', { name: 'Done' }).tap();
+      await expect(success).toHaveCount(0);
+    });
+  }
+});
+
 test.describe('joining a sync group', () => {
   test.use({ hasTouch: true });
 

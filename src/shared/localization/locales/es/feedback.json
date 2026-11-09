@@ -14,7 +14,7 @@
   "feedback.attachments.count": "{count}",
   "feedback.attachments.limit": "PNG, JPG o WebP, hasta 3 MB cada uno.",
   "feedback.attachments.remove": "Eliminar {name}",
-  "feedback.privacy": "Se enviarán tu mensaje, el correo que indiques, las imágenes seleccionadas, el idioma y la plataforma.",
+  "feedback.privacy": "Se enviarán tu mensaje, el correo que indiques, las imágenes seleccionadas, la versión de la aplicación, el idioma y la plataforma.",
   "feedback.cancel": "Cancelar",
   "feedback.done": "Hecho",
   "feedback.submit": "Enviar",

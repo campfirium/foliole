@@ -60,7 +60,7 @@ vi.mock('./ReviewSourceTopicDeleteDialog', () => {
   };
 });
 
-vi.mock('./FeedbackDialog', () => {
+vi.mock('../../shared/feedback/FeedbackDialog', () => {
   overlayPrewarmMocks.loadFeedbackDialogModule();
   return {
     FeedbackDialog: () => null

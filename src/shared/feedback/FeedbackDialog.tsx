@@ -1,24 +1,24 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import {
-  FEEDBACK_IMAGE_TYPES,
-  FEEDBACK_LIMITS,
-  type FeedbackAttachmentPayload
-} from '../../shared/feedback/feedbackContract';
-import { useLocalization, useTranslation } from '../../shared/localization/LocalizationProvider';
-import { useAppVersion } from '../../shared/platform/appVersion';
-import { onWindowEscape } from '../../shared/platform/keyboard';
-import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
+import { useLocalization, useTranslation } from '../localization/LocalizationProvider';
+import { useAppVersion } from '../platform/appVersion';
+import { onWindowEscape } from '../platform/keyboard';
+import { useDemoRuntimeState } from '../platform/runtime/demoRuntime';
 import {
   AppDialog,
   AppDialogOverlay,
   AppDialogPortal
-} from '../../shared/ui';
+} from '../ui';
 
 import {
   readRememberedFeedbackContact,
   updateRememberedFeedbackContact
 } from './feedbackContactPreference';
+import {
+  FEEDBACK_IMAGE_TYPES,
+  FEEDBACK_LIMITS,
+  type FeedbackAttachmentPayload
+} from './feedbackContract';
 import {
   buildFeedbackContentProps,
   createFeedbackPayload,
@@ -27,6 +27,7 @@ import {
 import { useTurnstileToken } from './FeedbackDialogTurnstile';
 
 interface FeedbackDialogProps {
+  companionPlatform?: string | undefined;
   endpoint?: string | undefined;
   onClose: () => void;
   open: boolean;
@@ -66,8 +67,8 @@ function validateFile(file: File) {
   return null;
 }
 
-export function FeedbackDialog({ endpoint, onClose, open, turnstileSiteKey }: FeedbackDialogProps) {
-  const controller = useFeedbackDialogController({ endpoint, open, turnstileSiteKey });
+export function FeedbackDialog({ companionPlatform, endpoint, onClose, open, turnstileSiteKey }: FeedbackDialogProps) {
+  const controller = useFeedbackDialogController({ companionPlatform, endpoint, open, turnstileSiteKey });
   useEffect(() => {
     if (!open) return undefined;
     return onWindowEscape(() => {
@@ -89,10 +90,11 @@ export function FeedbackDialog({ endpoint, onClose, open, turnstileSiteKey }: Fe
 }
 
 function useFeedbackDialogController({
+  companionPlatform,
   endpoint,
   open,
   turnstileSiteKey
-}: Pick<FeedbackDialogProps, 'endpoint' | 'open' | 'turnstileSiteKey'>) {
+}: Pick<FeedbackDialogProps, 'companionPlatform' | 'endpoint' | 'open' | 'turnstileSiteKey'>) {
   const attachmentState = useFeedbackAttachmentState();
   const [attachmentWarning, setAttachmentWarning] = useState(false);
   const [contact, setContact] = useState('');
@@ -105,7 +107,7 @@ function useFeedbackDialogController({
   const turnstile = useTurnstileToken(turnstileSiteKey);
   const canSubmit = Boolean(endpoint && message.trim()) && state !== 'sending' && (!turnstileSiteKey || Boolean(turnstile.token));
   const submit = useFeedbackSubmitAction({
-    draft: { appLanguage: locale, appVersion, attachments: attachmentState.attachments, contact, isDemo, message },
+    draft: { appLanguage: locale, appVersion, attachments: attachmentState.attachments, contact, isDemo, message, companionPlatform },
     endpoint,
     setError,
     setAttachmentWarning,
@@ -129,6 +131,7 @@ function useFeedbackDialogController({
       attachments: attachmentState.attachments,
       canSubmit,
       contact,
+      mobile: companionPlatform !== undefined,
       endpoint,
       error,
       attachmentWarning,

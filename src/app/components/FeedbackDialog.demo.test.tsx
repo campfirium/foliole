@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import type { HTMLAttributes, ReactNode } from 'react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { FeedbackDialog } from '../../shared/feedback/FeedbackDialog';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { preloadTranslationCatalog } from '../../shared/localization/translations';
 import { installDemoRuntimeController } from '../../shared/platform/runtime/demoRuntime';
@@ -20,8 +21,6 @@ vi.mock('../../shared/ui', async (importOriginal) => {
     AppDialogTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>
   };
 });
-
-import { FeedbackDialog } from './FeedbackDialog';
 
 afterEach(() => {
   installDemoState(false);

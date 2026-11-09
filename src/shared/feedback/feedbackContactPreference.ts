@@ -1,9 +1,9 @@
-import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
+import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
 import {
   getWhitelistedLocalStorageItem,
   removeWhitelistedLocalStorageItem,
   setWhitelistedLocalStorageItem
-} from '../../shared/platform/storage';
+} from '../platform/storage';
 
 const STORAGE_KEY = APP_SETTINGS_STORAGE_KEYS.feedbackRememberedContact;
 

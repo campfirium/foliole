@@ -14,7 +14,7 @@
   "feedback.attachments.count": "{count}",
   "feedback.attachments.limit": "PNG, JPG 또는 WebP(각각 최대 3MB)",
   "feedback.attachments.remove": "{name} 제거",
-  "feedback.privacy": "메시지, 입력한 이메일, 선택한 이미지, 언어 및 플랫폼이 전송됩니다.",
+  "feedback.privacy": "메시지, 입력한 이메일, 선택한 이미지, 앱 버전, 언어 및 플랫폼이 전송됩니다.",
   "feedback.cancel": "취소",
   "feedback.done": "완료",
   "feedback.submit": "보내기",

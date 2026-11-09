@@ -1,10 +1,11 @@
 import { X } from 'lucide-react';
 
+import { useTranslation } from '../localization/LocalizationProvider';
+
 import {
   FEEDBACK_IMAGE_TYPES,
   type FeedbackAttachmentPayload
-} from '../../shared/feedback/feedbackContract';
-import { useTranslation } from '../../shared/localization/LocalizationProvider';
+} from './feedbackContract';
 
 export function FeedbackAttachmentPicker(props: {
   attachments: FeedbackAttachmentPayload[];

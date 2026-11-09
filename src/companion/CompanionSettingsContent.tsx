@@ -7,6 +7,7 @@ import { supportsCompanionFolderDatabaseBackup } from '../shared/platform/compan
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
 
 import { companionBackupSummary } from './companionBackupSummary';
+import { CompanionFeedbackSettingsRow } from './CompanionFeedbackSettingsRow';
 import { CompanionHighlightPrefixSetting } from './CompanionHighlightPrefixSetting';
 import { CompanionListRow, CompanionListSection } from './CompanionListSurface';
 import { CompanionStorageSettingsContent } from './CompanionStorageSettingsContent';
@@ -105,6 +106,7 @@ export function CompanionSettingsList(props: {
           onOpenAttachments={props.onOpenAttachments}
           showStorage={props.showStorage}
         />
+        <CompanionFeedbackSettingsRow />
         <SettingsListSection title={t('companion.settings.section.development')}>
           <SettingsListItem
             Icon={Bug}

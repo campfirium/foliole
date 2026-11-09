@@ -16,7 +16,7 @@ export const ZH_HANS_FEEDBACK_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'feedback.attachments.count': '{count}',
   'feedback.attachments.limit': 'PNG、JPG 或 WebP，单张不超过 3 MB。',
   'feedback.attachments.remove': '移除 {name}',
-  'feedback.privacy': '你的反馈、填写的邮箱、所选图片、语言和平台会一起发送。',
+  'feedback.privacy': '你的反馈、填写的邮箱、所选图片、应用版本、语言和平台会一起发送。',
   'feedback.cancel': '取消',
   'feedback.done': '完成',
   'feedback.submit': '发送',

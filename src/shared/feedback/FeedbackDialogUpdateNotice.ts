@@ -5,7 +5,7 @@ import {
   readUpdateCheckState,
   subscribeUpdateCheckState,
   type UpdateCheckState
-} from '../../shared/platform/updateCheck';
+} from '../platform/updateCheck';
 
 function shouldShowFeedbackUpdateNotice(state: UpdateCheckState, appVersion: string) {
   return Boolean(

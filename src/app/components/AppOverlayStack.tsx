@@ -1,5 +1,6 @@
 import { Suspense, lazy } from 'react';
 
+import { APP_FEEDBACK_ENDPOINT } from '../../shared/feedback/feedbackEndpoint';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { useAppController } from '../hooks/useAppController';
 
@@ -11,8 +12,6 @@ import type { WorkspaceSearchResult } from './workspaceSearch';
 
 type AppController = ReturnType<typeof useAppController>;
 
-const DEFAULT_FEEDBACK_ENDPOINT = 'https://feedback.foliole.app/submit';
-
 function loadCommandPalette() {
   return import('./CommandPalette');
 }
@@ -22,7 +21,7 @@ function loadSearchPalette() {
 }
 
 function loadFeedbackDialog() {
-  return import('./FeedbackDialog');
+  return import('../../shared/feedback/FeedbackDialog');
 }
 
 function loadGoToNodePalette() {
@@ -133,7 +132,7 @@ export function AppOverlayStack({
 function FeedbackOverlay({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   return isOpen ? (
     <FeedbackDialog
-      endpoint={import.meta.env.VITE_FOLIOLE_FEEDBACK_ENDPOINT || DEFAULT_FEEDBACK_ENDPOINT}
+      endpoint={APP_FEEDBACK_ENDPOINT}
       onClose={onClose}
       open={isOpen}
       turnstileSiteKey={import.meta.env.VITE_FOLIOLE_TURNSTILE_SITE_KEY}

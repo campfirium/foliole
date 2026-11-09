@@ -14,7 +14,7 @@
   "feedback.attachments.count": "{count}",
   "feedback.attachments.limit": "PNG、JPG 或 WebP，每個最大 3 MB。",
   "feedback.attachments.remove": "刪除{name}",
-  "feedback.privacy": "您的訊息、填寫的電子郵件、選定的圖像、語言和平台將被發送。",
+  "feedback.privacy": "您的訊息、填寫的電子郵件、選定的圖像、應用程式版本、語言和平台將被發送。",
   "feedback.cancel": "取消",
   "feedback.done": "完成",
   "feedback.submit": "傳送",

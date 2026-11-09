@@ -14,7 +14,7 @@
   "feedback.attachments.count": "{count}",
   "feedback.attachments.limit": "PNG、JPG、または WebP、それぞれ最大 3 MB。",
   "feedback.attachments.remove": "{name} を削除",
-  "feedback.privacy": "メッセージ、入力したメールアドレス、選択した画像、言語、プラットフォームが送信されます。",
+  "feedback.privacy": "メッセージ、入力したメールアドレス、選択した画像、アプリのバージョン、言語、プラットフォームが送信されます。",
   "feedback.cancel": "キャンセル",
   "feedback.done": "完了",
   "feedback.submit": "送信",
