@@ -131,14 +131,14 @@ async function addSource(page: import('@playwright/test').Page, title: string, d
 async function finishDiveRounds(page: import('@playwright/test').Page, output: string) {
   const toolbar = page.getByRole('group', { name: 'Flow toolbar' });
   await toolbar.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toBeVisible();
   await toolbar.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toHaveCount(0);
   await page.screenshot({ path: path.join(output, 'topics-choice.png') });
   await toolbar.getByRole('button', { name: 'Switch', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Empty study' }).click();
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().dive?.phase)).toBe('initial');
-  await expect(page.getByRole('heading', { name: 'Dive Clear for Now' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Dive Queue Clear' })).toBeVisible();
 }
 
 async function seedDiveCards(page: import('@playwright/test').Page, kind: 'topic' | 'item') {

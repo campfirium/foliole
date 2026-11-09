@@ -49,6 +49,7 @@ export const EN_DESKTOP_SEARCH_TRANSLATIONS = {
   'desktop.clozeGuard.highlight': 'Highlight',
   'desktop.clozeGuard.cloze': 'Cloze',
   'desktop.diveCheckpoint.queueClear': 'Dive Queue Clear',
+  'desktop.diveCheckpoint.clearForNow': 'Dive Clear for Now',
   'desktop.diveCheckpoint.readingComplete': 'Dive Reading Complete',
   'desktop.diveCheckpoint.global': 'Global',
   'desktop.diveCheckpoint.switch': 'Switch',

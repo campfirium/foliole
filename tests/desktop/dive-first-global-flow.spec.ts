@@ -51,8 +51,7 @@ async function checkpoint(page: Page, phase: 'initial' | 'today' | 'topics', tit
     const session = window.__folioleWorkspaceDebug!.getReviewSession();
     return { phase: session.dive?.phase, current: session.currentNodeId };
   })).toEqual({ phase, current: null });
-  if (title) await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Dive Clear for Now', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const toolbar = page.getByRole('group', { name: 'Flow toolbar' });
   const next = toolbar.getByRole('button', { name: 'Continue', exact: true });
@@ -81,14 +80,15 @@ async function finishInitialQueue(page: Page) {
 
 async function finishToday(page: Page, start: Date) {
   await readTopic(page, 'physics-topic');
-  const waiting = await checkpoint(page, 'today', '');
+  const waiting = await checkpoint(page, 'today', 'Dive Clear for Now');
   const retry = waiting.toolbar.getByRole('button', { name: 'Recheck' });
   await expect(retry).toBeEnabled();
   await page.clock.setFixedTime(hoursAfter(start, 1));
   await retry.click();
   await expect.poll(() => currentCard(page)).toBe('physics-later-card');
   await gradeGood(page);
-  const today = await checkpoint(page, 'today', '');
+  const today = await checkpoint(page, 'today', 'Dive Clear for Now');
+  await page.screenshot({ path: '.tmp/artifacts/dive-today-checkpoint-title.png' });
   await today.next.click();
 }
 
