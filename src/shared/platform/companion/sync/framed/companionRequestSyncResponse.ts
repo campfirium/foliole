@@ -5,9 +5,11 @@ import { respondRequestSyncAttachments } from '../../../../../../lib/core/sync/r
 import { respondRequestSyncDatabase } from '../../../../../../lib/core/sync/requestSyncDatabaseResponse.js';
 import { withInboundAttachmentPreparation } from '../../../../../../lib/core/sync/requestSyncInboundAttachmentPreparation.js';
 import { parseRequestSyncPeerRound, respondRequestSyncRoundControl, touchRequestSyncStream } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
+import { captureWebDavRelayLanBaseline, createWebDavRelayInboundBaselines } from '../../../../../../lib/core/sync/webDavRelayLanBaseline.js';
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 import { publishCompanionSyncApplied } from '../companionSyncApplied.js';
+import { loadCompanionWebDavRelay } from '../companionWebDavRelayStore.js';
 import { loadCurrentCredential } from '../syncGroupProviderCredentialStore.js';
 
 import { currentCompanionAttachmentHost } from './companionAttachmentBlockFiles.js';
@@ -18,6 +20,8 @@ import { requireCompanionRequestSyncPeerState } from './companionRequestSyncPeer
 import { companionSyncPeerRoundOwner } from './companionSyncPeerRounds.js';
 
 /** Native authenticates the HTTP envelope; the shared receiver authenticates every encrypted frame. */
+const relayBaselines = createWebDavRelayInboundBaselines();
+
 type Response = { response_chunk_count: number };
 
 export function respondCompanionRequestSync(payload: Record<string, unknown>, acknowledge?: (result: Response) => Promise<void>) {
@@ -51,10 +55,18 @@ async function respond(payload: Record<string, unknown>, parentSignal: AbortSign
       return receipt;
     };
     const receivedStream = stream;
+    if (mode === 'inventory' && round.mode !== 'single') {
+      const database = host;
+      await relayBaselines.capture(lease.signal, async () => captureWebDavRelayLanBaseline(
+        database, await loadCompanionWebDavRelay(), context, 'responder', lease.signal));
+    }
     return await withInboundAttachmentPreparation(host, { lifecycle: lease.signal, signal, mode,
       single: round.mode === 'single' }, async prepared => {
       if (mode === 'round_finish') return await consume(
-        await respondRequestSyncRoundControl({ context, groupKey, stream: receivedStream, signal, roundId: round.id, onCompleted: prepared.databaseRoundCompleted }));
+        await respondRequestSyncRoundControl({ context, groupKey, stream: receivedStream, signal, roundId: round.id, onCompleted: async () => {
+          await relayBaselines.confirm(lease.signal);
+          await prepared.databaseRoundCompleted?.();
+        } }));
       if (mode === 'attachments') return await respondRequestSyncAttachments(await currentCompanionAttachmentHost(prepared),
         { context, groupKey, stream: receivedStream, signal, onProgress: () => lease.touch() }, consume);
       return await respondRequestSyncDatabase(prepared, { context, groupKey, mode, stream: receivedStream, signal,

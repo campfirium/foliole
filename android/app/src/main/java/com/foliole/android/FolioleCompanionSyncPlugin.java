@@ -55,6 +55,14 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         });
     }
 
+    @PluginMethod public void requestWebDavRelay(PluginCall call) {
+        FolioleCompanionWebDavHttp.start(getContext(), call, framedSendExecutor);
+    }
+
+    @PluginMethod public void cancelWebDavRelay(PluginCall call) {
+        FolioleCompanionWebDavHttp.cancel(call);
+    }
+
     @PluginMethod public void desktopHttpRequest(PluginCall call) {
         FolioleCompanionNetworkPluginActions.desktopHttpRequest(getContext(), call);
     }

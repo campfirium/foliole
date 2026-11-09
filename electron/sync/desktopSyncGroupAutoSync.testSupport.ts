@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({
   coordinator: vi.fn(async () => ({ status: 'completed' })),
+  canAttemptRelay: vi.fn(() => false),
   recordNoPeer: vi.fn(async () => undefined),
   discovery: vi.fn(),
   freshness: vi.fn(),
@@ -37,6 +38,8 @@ const runtime = vi.hoisted(() => ({
 }));
 
 export function getRuntime() { return runtime; }
+
+vi.mock('./desktopWebDavRelaySettings.js', () => ({ loadDesktopBoundWebDavRelay: runtime.canAttemptRelay }));
 
 vi.mock('./desktopSyncActivityStore.js', () => ({ recordDesktopSyncNoPeer: runtime.recordNoPeer }));
 

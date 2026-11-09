@@ -1,9 +1,8 @@
 import { useState } from 'react';
 
-import { NATIVE_COMMANDS } from '../../../../../lib/platform/nativeCommands';
 import type { DesktopSyncGroupOverviewPayload } from '../../../../../lib/platform/nativeCompanionSyncContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { getRuntimeInvoke } from '../../../../shared/platform/runtimeInvoke';
+import { enableDesktopWebDavRelay } from '../../../../shared/platform/desktopSyncGroupRuntimeRepository';
 import { SettingsButton } from '../../../../shared/ui';
 
 export function SettingsWebDavRelayDeviceAction(props: {
@@ -22,11 +21,11 @@ export function SettingsWebDavRelayDeviceAction(props: {
   }
 
   async function enable() {
-    const invoke = getRuntimeInvoke();
-    if (!invoke) return;
-    setStatus('running');
     try {
-      await invoke(NATIVE_COMMANDS.enableWebDavRelay, { group_id: props.groupId, device_id: props.deviceId });
+      const pending = enableDesktopWebDavRelay(props.groupId, props.deviceId);
+      if (!pending) return;
+      setStatus('running');
+      await pending;
       setStatus('idle');
     } catch {
       setStatus('error');

@@ -3,6 +3,7 @@ import type http from 'node:http';
 import { withInboundAttachmentPreparation } from '../../lib/core/sync/requestSyncInboundAttachmentPreparation.js';
 import { parseRequestSyncPeerRound, touchRequestSyncStream } from '../../lib/core/sync/requestSyncPeerRound.js';
 import type { SyncPeerRoundLease } from '../../lib/core/sync/syncPeerRoundOwnership.js';
+import { captureWebDavRelayLanBaseline, createWebDavRelayInboundBaselines } from '../../lib/core/sync/webDavRelayLanBaseline.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopLocalNodeProof } from '../database/nodeVersionPeerProof.js';
 import { loadDesktopSyncGroupInfo } from '../database/syncGroupStore.js';
@@ -20,6 +21,9 @@ import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDataba
 import { respondDesktopRequestSyncHttp } from './desktopRequestSyncHttpRoute.js';
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { desktopSyncPeerRoundOwner } from './desktopSyncPeerRoundOwner.js';
+import { desktopWebDavRelayForPeer } from './desktopWebDavRelaySettings.js';
+
+const relayBaselines = createWebDavRelayInboundBaselines();
 
 export async function handleProductionCompanionFramedSyncPost(args: {
   deviceId: string;
@@ -86,9 +90,32 @@ export async function handleProductionCompanionFramedSyncPost(args: {
 
 function respondInbound(host: ReturnType<typeof createDesktopRequestSyncDatabaseHost>,
   input: Parameters<typeof respondDesktopRequestSyncHttp>[1], lease: SyncPeerRoundLease, single: boolean) {
-  return withInboundAttachmentPreparation(host, { lifecycle: lease.signal, signal: input.signal,
+  return withInboundAttachmentPreparation(withRelayBaseline(host, input, lease, single), { lifecycle: lease.signal, signal: input.signal,
     mode: input.url.searchParams.get('request') ?? '', single },
   prepared => respondDesktopRequestSyncHttp(prepared, input));
+}
+
+function withRelayBaseline(host: ReturnType<typeof createDesktopRequestSyncDatabaseHost>,
+  input: Parameters<typeof respondDesktopRequestSyncHttp>[1], lease: SyncPeerRoundLease, single: boolean) {
+  if (single || process.platform !== 'darwin') return host;
+  const { context } = input;
+  return {
+    ...host,
+    readSnapshot: async (read, signal) => {
+      if (input.url.searchParams.get('request') === 'inventory') {
+        await relayBaselines.capture(lease.signal, async () => {
+          const binding = await runWithDatabaseConnectionOwner(() =>
+            desktopWebDavRelayForPeer(context.groupId, context.initiatorDeviceId));
+          return captureWebDavRelayLanBaseline(host, binding, context, 'responder', lease.signal);
+        });
+      }
+      return host.readSnapshot(read, signal);
+    },
+    databaseRoundCompleted: async () => {
+      await relayBaselines.confirm(lease.signal);
+      await host.databaseRoundCompleted?.();
+    }
+  } satisfies ReturnType<typeof createDesktopRequestSyncDatabaseHost>;
 }
 
 function relayInboundCommit(auth: { ok: true; device_id: string } | { ok: false }) {

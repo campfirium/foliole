@@ -168,3 +168,15 @@ export function onDesktopSyncGroupOverviewChanged(handler: () => void) {
 export function onDesktopSyncGroupDiscoveryChanged(handler: (payload: SyncGroupDiscoverySnapshot) => void) {
   return getElectronAPI()?.onSyncGroupDiscoveryChanged?.(handler) ?? null;
 }
+
+export function loadDesktopWebDavRelayDirectory(groupId: string) {
+  return getRuntimeInvoke()?.(NATIVE_COMMANDS.loadWebDavRelayDirectory, { group_id: groupId });
+}
+
+export function saveDesktopWebDavRelayDirectory(groupId: string, directory: string) {
+  return getRuntimeInvoke()?.(NATIVE_COMMANDS.saveWebDavRelayDirectory, { group_id: groupId, directory_url: directory });
+}
+
+export function enableDesktopWebDavRelay(groupId: string, deviceId: string) {
+  return getRuntimeInvoke()?.(NATIVE_COMMANDS.enableWebDavRelay, { group_id: groupId, device_id: deviceId });
+}

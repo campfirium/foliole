@@ -7,6 +7,18 @@ import {
   syncPlatformMock
 } from './companionWorkspaceSyncFlow.testHarness';
 
+const relay = vi.hoisted(() => ({
+  load: vi.fn(async () => null as null | { id: string }),
+  connected: vi.fn(() => false),
+  sync: vi.fn(async (_binding, _stats, progress: { published: number }) => { progress.published = 1; })
+}));
+
+vi.mock('../shared/platform/companion/sync/companionWebDavRelayStore', () => ({ loadCompanionWebDavRelay: relay.load }));
+vi.mock('../shared/platform/companion/sync/companionWebDavRelayRound', () => ({
+  companionWebDavRelayLanConnected: relay.connected,
+  runCompanionWebDavRelayRound: relay.sync
+}));
+
 async function testKeepsUnreachableDesktopQuiet() {
   syncObjectsMock.syncCompanionObjectsFromDesktop.mockRejectedValue(new Error('Desktop unreachable.'));
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
@@ -146,6 +158,25 @@ describe('tryForegroundAutoSync failures', () => {
   it('records native bridge failure causes in sync activity', testRecordsNativeBridgeFailureCause);
 
   it('records when a failed sync returns no error details', testRecordsMissingFailureDetails);
+
+  it('uses the bound relay for manual sync after the LAN lookup cannot reach a desktop', async () => {
+    relay.load.mockResolvedValueOnce({ id: 'bound-test-relay' });
+    syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints
+      .mockRejectedValueOnce(new Error('discovery_no_devices'));
+    const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+    const setStatus = vi.fn();
+    const outcome = await tryForegroundAutoSync({
+      cancelled: () => false, setError: vi.fn(), setState: vi.fn(), setSyncProgress: vi.fn(),
+      setStatus, state: createSyncState(), triggerReason: 'manual', runId: 'relay-run'
+    });
+    expect(outcome).toBe('completed');
+    expect(relay.sync).toHaveBeenCalledOnce();
+    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).not.toHaveBeenCalled();
+    expect(setStatus).toHaveBeenLastCalledWith('idle');
+    expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+      endpointUrl: null, runId: 'relay-run', result: 'completed', message: expect.stringContaining('"published":1')
+    }));
+  });
 
   it('surfaces a missing desktop anchor before sync starts', testSurfacesMissingAnchorBeforeSyncStarts);
 });

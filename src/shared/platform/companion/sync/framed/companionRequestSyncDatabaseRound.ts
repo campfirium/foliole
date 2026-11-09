@@ -10,9 +10,11 @@ import { runRequestSyncOverwriteRound } from '../../../../../../lib/core/sync/re
 import type { RequestSyncPeerRound } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
+import { captureWebDavRelayLanBaseline } from '../../../../../../lib/core/sync/webDavRelayLanBaseline.js';
 import type { SyncGroupMemberStatePayload } from '../../../../../../lib/platform/syncGroupMemberStateContract.js';
 import type { CompanionDesktopSyncProgress } from '../../../companionDesktopSyncTypes.js';
 import { withCompanionForegroundTimeMaintenance } from '../../runtime/companionForegroundTime.js';
+import { loadCompanionWebDavRelay } from '../companionWebDavRelayStore.js';
 import { loadCurrentCredential } from '../syncGroupProviderCredentialStore.js';
 
 import { createLargeRoundBackgroundWork } from './companionLargeRoundBackgroundWork.js';
@@ -95,8 +97,8 @@ async function runPreparedRound(host: RequestSyncDatabaseHost, input: RoundInput
     reportObjectError: input.reportObjectError,
     watchLocalChanges: watchSyncPriorityRequests
   };
-  if (!overwriteId) return completeDatabaseRound(host, port, input.signal, withDeferredNodePriorities,
-    { received, sent, workspaceChanged: () => workspaceChanged, peerRound: input.peerRound });
+  if (!overwriteId) return completeDatabaseRound(host, port, input, context, withDeferredNodePriorities,
+    { received, sent, workspaceChanged: () => workspaceChanged });
   let result = await withCompanionForegroundTimeMaintenance(async () => {
     await host.write(db => prepareSyncGroupOverwrite(db, progress));
     return runRequestSyncOverwriteRound(host, progress, port, input.signal);
@@ -111,11 +113,15 @@ async function runPreparedRound(host: RequestSyncDatabaseHost, input: RoundInput
 }
 
 async function completeDatabaseRound(host: RequestSyncDatabaseHost, port: RequestSyncDatabaseRoundPort,
-  signal: AbortSignal | undefined, withDeferredNodePriorities: WithDeferredNodePriorities,
-  scope: { received: Set<string>; sent: Set<string>; workspaceChanged(): boolean; peerRound: RequestSyncPeerRound | undefined }) {
+  input: RoundInput, context: Parameters<typeof captureWebDavRelayLanBaseline>[2],
+  withDeferredNodePriorities: WithDeferredNodePriorities,
+  scope: { received: Set<string>; sent: Set<string>; workspaceChanged(): boolean }) {
+  const { signal, peerRound } = input;
+  const confirmBaseline = await captureWebDavRelayLanBaseline(host, await loadCompanionWebDavRelay(), context, 'initiator', signal);
   const result = await withDeferredNodePriorities(() => runRequestSyncDatabaseRound(port, signal));
   if (result.complete) {
-    if (scope.peerRound) scope.peerRound.databaseConfirmed = true;
+    await confirmBaseline?.();
+    if (peerRound) peerRound.databaseConfirmed = true;
     await host.databaseRoundCompleted?.();
   }
   return { ...result, received: [...scope.received], sent: [...scope.sent], workspaceChanged: scope.workspaceChanged() };

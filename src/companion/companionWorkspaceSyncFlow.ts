@@ -17,6 +17,7 @@ import {
 } from '../shared/platform/companionWorkspaceSync';
 
 import type { ForegroundAutoSyncOutcome } from './companionForegroundSyncRunner';
+import { tryCompanionManualWebDavRelay } from './companionManualWebDavRelay';
 import { scheduleCompanionMobilePeerSync } from './companionMobilePeerSync';
 import { writeCompanionSyncActivity } from './companionSyncActivityWrite';
 import {
@@ -176,6 +177,10 @@ export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Pr
       onDiscoveryShortened: () => { shortenedDiscovery = true; }
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'discovery_no_devices') {
+      const relayed = await tryCompanionManualWebDavRelay(args);
+      if (relayed) return relayed;
+    }
     args.setError(error instanceof Error ? error.message : 'discovery_no_devices');
     if (!loadActiveCompanionSyncRun()) args.setStatus('idle');
     return 'failed';

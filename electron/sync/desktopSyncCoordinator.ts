@@ -118,16 +118,7 @@ async function runOwnedSync(request: SyncRequest, continuations: DesktopSyncGrou
       return await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
         run_id: runId, started_at: startedAt, status: 'skipped' });
     }
-    if (peers.length === 0) {
-      if (reason === 'manual' && desktopSyncChangeSessions().hasSessions()) {
-        const complete = await desktopSyncChangeSessions().requestSync();
-        return await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
-          run_id: runId, started_at: startedAt, status: complete ? 'completed' : 'pending' }, complete ? undefined : 'mobile');
-      }
-      if (reason === 'manual') throw new Error('sync_group_peer_unavailable');
-      return await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
-        run_id: runId, started_at: startedAt, status: 'skipped' });
-    }
+    if (peers.length === 0) return await syncWithoutUpstream(activity, reason);
     let complete = true;
     for (const peer of peers) {
       try {
@@ -155,6 +146,20 @@ async function runOwnedSync(request: SyncRequest, continuations: DesktopSyncGrou
       run_id: runId, started_at: startedAt, status: 'failed' });
     throw error;
   }
+}
+
+async function syncWithoutUpstream(activity: DesktopSyncActivityContext, reason: SyncTriggerReason) {
+  const result = { error: null, reason, run_id: activity.runId, started_at: activity.startedAt };
+  if (reason !== 'manual') return persistResult({ ...result, finished_at: new Date().toISOString(), status: 'skipped' });
+  const sessions = desktopSyncChangeSessions();
+  if (sessions.hasSessions()) {
+    const complete = await sessions.requestSync();
+    return persistResult({ ...result, finished_at: new Date().toISOString(),
+      status: complete ? 'completed' : 'pending' }, complete ? undefined : 'mobile');
+  }
+  const { runDesktopWebDavRelayRound } = await import('./desktopWebDavRelayRound.js');
+  if (!await runDesktopWebDavRelayRound(activity)) throw new Error('sync_group_peer_unavailable');
+  return persistResult({ ...result, finished_at: new Date().toISOString(), status: 'completed' });
 }
 
 async function persistResult(result: SyncTriggerResult, waitingFor?: 'mobile') {

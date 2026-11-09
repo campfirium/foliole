@@ -12,6 +12,7 @@ import {
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
 
+import { runCompanionManualWebDavAfterLanFailure } from './companionManualWebDavRelay';
 import { writeCompanionSyncActivity } from './companionSyncActivityWrite';
 import { formatCompanionSyncDiagnosticMessage, formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
 import { loadActiveCompanionSyncRun, runCompanionSyncAsOwner } from './companionSyncRunOwner';
@@ -77,6 +78,7 @@ async function runOwnedTarget(args: OwnedTargetArgs): Promise<ForegroundAutoSync
   let triggerReason = args.syncArgs.triggerReason
     ?? (args.syncArgs.state.last_synced_at ? 'automatic' : 'initial');
   const startedAt = args.syncArgs.triggeredAt ?? new Date().toISOString();
+  let establishingLan = false;
   try {
     args.syncArgs.setStatus('syncing');
     await beginNativeCompanionSyncRun(triggerReason, runId);
@@ -84,9 +86,11 @@ async function runOwnedTarget(args: OwnedTargetArgs): Promise<ForegroundAutoSync
     args.syncArgs.setSyncProgress(STARTING_STRUCTURE_PROGRESS);
     if (args.target.protocolIncompatible) throw new Error('sync_group_peer_incompatible');
     await bindCompanionWorkspaceSyncTarget(args.target);
+    establishingLan = true;
     const memberState = await validateTargetMembership(args.target);
     if (!memberState) return 'skipped';
     await ensureTargetSession(args.target, memberState.peerLibraryEpoch);
+    establishingLan = false;
     await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
     if (args.isManualRequested()) triggerReason = 'manual';
     await writeCompanionSyncActivity({
@@ -114,6 +118,10 @@ async function runOwnedTarget(args: OwnedTargetArgs): Promise<ForegroundAutoSync
     return outcome;
   } catch (syncError) {
     if (args.syncArgs.cancelled()) return 'skipped';
+    if (establishingLan) {
+      const outcome = await runCompanionManualWebDavAfterLanFailure(args.syncArgs, runId, args.target.deviceId, syncError);
+      if (outcome) return outcome;
+    }
     if (isSyncPeerRoundRetryableError(syncError)) {
       return recordRetryableTarget({
         endpointUrl, runId, startedAt, syncArgs: args.syncArgs, syncError, triggerReason

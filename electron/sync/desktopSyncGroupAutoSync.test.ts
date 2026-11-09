@@ -168,6 +168,14 @@ it('queues recovery eligibility behind an existing database owner', async () => 
   await vi.waitFor(() => expect(runtime.recoverMembers).toHaveBeenCalledOnce());
 });
 
+it('routes a manual run to the coordinator when the bound relay is available and LAN is absent', async () => {
+  runtime.canAttemptRelay.mockReturnValueOnce(true);
+  await runDesktopManualSyncWithDiscovery();
+  expect(runtime.discovery).toHaveBeenCalledOnce();
+  expect(runtime.coordinator).toHaveBeenCalledWith('manual');
+  expect(runtime.recordNoPeer).not.toHaveBeenCalled();
+});
+
 it('keeps manual synchronization available when automatic participation is disabled', async () => {
   runtime.participating = false;
   runtime.memberEndpoints = [desktop];

@@ -3,6 +3,7 @@ import type { NativeCompanionFramedFilesPlugin } from '../../../lib/platform/nat
 import type { NativeCompanionFramedPayloadBudgetPlugin } from '../../../lib/platform/nativeCompanionFramedPayloadBudgetContract';
 import type { NativeCompanionSignedRequestHeaders } from '../../../lib/platform/nativeCompanionSyncContract';
 import type { NativeHttpCancellation, NativeRequestSyncHttpPlugin } from '../../../lib/platform/nativeRequestSyncHttpContract';
+import type { NativeWebDavRelayHttpPlugin } from '../../../lib/platform/nativeWebDavRelayHttpContract';
 import type { RemoteImageResourcePlugin } from '../../../lib/platform/remoteImageResourceContract';
 import type { SyncParticipationSnapshot } from '../../../lib/platform/syncParticipationContract';
 import type { SyncTriggerReason } from '../../../lib/platform/syncTriggerContract';
@@ -38,7 +39,7 @@ export type CompanionSyncParticipationState = SyncParticipationSnapshot;
 
 export interface CompanionWorkspaceSyncPlugin
   extends AttachmentMaintenanceHostPlugin, RemoteImageResourcePlugin,
-  NativeCompanionFramedPayloadBudgetPlugin, NativeCompanionFramedFilesPlugin, NativeRequestSyncHttpPlugin {
+  NativeCompanionFramedPayloadBudgetPlugin, NativeCompanionFramedFilesPlugin, NativeRequestSyncHttpPlugin, NativeWebDavRelayHttpPlugin {
   desktopHttpRequest(args: {
     body?: string;
     headers?: Record<string, string>;

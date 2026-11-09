@@ -24,6 +24,7 @@ import { clearDesktopSyncGroupRoutes, loadDesktopSyncGroupRoutes, removeDesktopS
 import { closeDesktopSyncPeerRounds } from './desktopSyncPeerRoundOwner.js';
 import { markDesktopSyncPeerReachable, resetDesktopSyncUpstreamReachability, subscribeDesktopPeerTiers } from './desktopSyncUpstream.js';
 import { closeDesktopUpstreamSession, refreshDesktopUpstreamSession } from './desktopUpstreamSession.js';
+import { loadDesktopBoundWebDavRelay } from './desktopWebDavRelaySettings.js';
 import { lanPeerHttp } from './lanPeerHttp.js';
 import { continuePendingReadwiseHandoff } from './readwiseOwnerHandoff.js';
 
@@ -183,6 +184,7 @@ async function runDesktopManualSync() {
     }
   }
   if (!loadDesktopSyncGroupRoutes(group.group_id).length) {
+    if (await runWithDatabaseConnectionOwner(() => isDesktopCompanionSyncParticipating() && loadDesktopBoundWebDavRelay())) return runDesktopSyncCoordinator('manual');
     await recordDesktopSyncNoPeer('manual');
     return null;
   }

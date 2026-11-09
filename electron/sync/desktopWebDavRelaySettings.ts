@@ -95,3 +95,12 @@ export function confirmDesktopWebDavRelayDelivery(groupId: string, peerId: strin
   saveJsonSetting(`${key}:binding`, { ...saved.binding, delivered: true });
   notifyDesktopSyncGroupOverviewChanged();
 }
+
+export function loadDesktopBoundWebDavRelay() {
+  if (process.platform !== 'darwin') return null;
+  const group = loadDesktopSyncGroup();
+  if (!group) return null;
+  const saved = loadBinding(requireActiveGroupKey(group.group_id));
+  if (!saved?.delivered || saved.binding.desktop_device_id !== group.local_device_identity_key) return null;
+  return saved.binding;
+}

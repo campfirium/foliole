@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 
-import { NATIVE_COMMANDS } from '../../../../../lib/platform/nativeCommands';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { getRuntimeInvoke } from '../../../../shared/platform/runtimeInvoke';
+import { loadDesktopWebDavRelayDirectory, saveDesktopWebDavRelayDirectory } from '../../../../shared/platform/desktopSyncGroupRuntimeRepository';
 import { SettingsButton, SettingsRow, settingsFieldClassName } from '../../../../shared/ui';
 
 function useWebDavRelayDirectory(groupId: string) {
@@ -10,10 +9,10 @@ function useWebDavRelayDirectory(groupId: string) {
   const [status, setStatus] = useState<'loading' | 'loadFailed' | 'idle' | 'running' | 'passed' | 'failed'>('loading');
 
   useEffect(() => {
-    const invoke = getRuntimeInvoke();
-    if (!invoke) return;
+    const pending = loadDesktopWebDavRelayDirectory(groupId);
+    if (!pending) return;
     let current = true;
-    void invoke(NATIVE_COMMANDS.loadWebDavRelayDirectory, { group_id: groupId }).then(value => {
+    void pending.then(value => {
       if (!current) return;
       setDirectory(value ?? '');
       setStatus('idle');
@@ -24,13 +23,11 @@ function useWebDavRelayDirectory(groupId: string) {
   }, [groupId]);
 
   async function testAndSave() {
-    const invoke = getRuntimeInvoke();
-    if (!invoke) return;
-    setStatus('running');
     try {
-      const saved = await invoke(NATIVE_COMMANDS.saveWebDavRelayDirectory, {
-        group_id: groupId, directory_url: directory.trim()
-      });
+      const pending = saveDesktopWebDavRelayDirectory(groupId, directory.trim());
+      if (!pending) return;
+      setStatus('running');
+      const saved = await pending;
       setDirectory(saved);
       setStatus('passed');
     } catch {
