@@ -47,12 +47,12 @@ function readFile(repoRoot, relativePath) {
 }
 
 function collectCommandDefinitions(repoRoot) {
-  const source = readFile(repoRoot, 'lib/platform/nativeCommands.ts');
-  const commands = [];
-  for (const match of source.matchAll(/^\s*([A-Za-z0-9_]+):\s*'([^']+)'/gm)) {
-    commands.push({ key: match[1], value: match[2] });
-  }
-  return commands;
+  const sources = [readFile(repoRoot, 'lib/platform/nativeCommands.ts')];
+  const diveCommands = 'lib/platform/nativeDiveCommands.ts';
+  if (fs.existsSync(path.join(repoRoot, diveCommands))) sources.push(readFile(repoRoot, diveCommands));
+  return sources.flatMap(source =>
+    [...source.matchAll(/^\s*([A-Za-z0-9_]+):\s*'([^']+)'/gm)]
+      .map(match => ({ key: match[1], value: match[2] })));
 }
 
 function collectNativeCommandKeys(source) {

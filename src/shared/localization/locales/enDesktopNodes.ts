@@ -95,6 +95,7 @@ export const EN_DESKTOP_NODES_TRANSLATIONS = {
   'desktop.nodeList.menu.addToVirtualFolder': 'Add to Virtual Folder…',
   'desktop.nodeList.menu.removeFromCurrentVirtualFolder': 'Remove from This Virtual Folder',
   'desktop.nodeList.menu.addToDive': 'Add to Dive…',
+  'desktop.nodeList.menu.removeFromDive': 'Remove from This Dive',
   'desktop.nodeList.dive.waiting': 'No Dive tasks are ready right now',
   'desktop.nodeList.dive.initialEmpty': 'No tasks in the Dive queue',
   'desktop.nodeList.dive.initialDone': 'Dive queue complete',

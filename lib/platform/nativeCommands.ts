@@ -1,5 +1,6 @@
 import { NATIVE_ASSISTANT_COMMANDS } from './nativeAssistantCommands.js';
 import { NATIVE_DATABASE_UPGRADE_COMMANDS } from './nativeDatabaseUpgradeContract.js';
+import { NATIVE_DIVE_COMMANDS } from './nativeDiveCommands.js';
 import { NATIVE_SOURCE_CONNECTION_COMMANDS } from './nativeSourceConnectionCommands.js';
 
 export const NATIVE_COMMANDS = {
@@ -195,10 +196,7 @@ export const NATIVE_COMMANDS = {
   loadSyncNodeConflicts: 'load_sync_node_conflicts',
   applySyncNodes: 'apply_sync_nodes',
   recordSyncNodeConflicts: 'record_sync_node_conflicts',
-  listDives: 'list_dives',
-  createDive: 'create_dive',
-  renameDive: 'rename_dive',
-  addDiveSources: 'add_dive_sources',
+  ...NATIVE_DIVE_COMMANDS,
   loadAppSettingsState: 'load_app_settings_state',
   loadSystemColorMode: 'load_system_color_mode',
   saveAppSettingsState: 'save_app_settings_state',

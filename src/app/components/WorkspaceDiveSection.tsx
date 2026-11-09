@@ -1,4 +1,4 @@
-import { FolderPlus, Play } from 'lucide-react';
+import { FolderPlus, ListMinus, Play } from 'lucide-react';
 import { useContext, useEffect, useState, type MouseEvent } from 'react';
 
 import type { Dive } from '../../../lib/core/nodes/dive';
@@ -21,7 +21,8 @@ import { toggleCollapsed } from './WorkspaceVirtualSectionRows';
 
 const rootId = 'workspace-dives';
 const rowId = (id: string) => `dive:${id}`;
-type Context = { id: string; left: number; top: number };
+type DiveSourceSelection = { diveId: string; nodeId: string };
+type Context = { id: string; left: number; top: number; source?: DiveSourceSelection };
 
 function DiveFlowMenuItem({ dive, onClose }: { dive: Dive; onClose: () => void }) {
   const t = useTranslation();
@@ -42,6 +43,22 @@ function DiveFlowMenuItem({ dive, onClose }: { dive: Dive; onClose: () => void }
   );
 }
 
+function RemoveDiveSourceMenuItem({ source, onClose }: { source: DiveSourceSelection; onClose: () => void }) {
+  const t = useTranslation();
+  return (
+    <NodeContextMenuItem icon={ListMinus} onSelect={() => {
+      onClose();
+      const repository = getDiveRepository();
+      if (!repository) return;
+      void saveWorkspaceDive(() => repository.remove(source.diveId, source.nodeId)).catch(() => {
+        showAppRuntimeNotice(t('desktop.nodeList.addToDive.saveFailed'));
+      });
+    }}>
+      {t('desktop.nodeList.menu.removeFromDive')}
+    </NodeContextMenuItem>
+  );
+}
+
 function DiveContextMenu(props: { context: Context; dive: Dive | undefined; onClose: () => void; onCreate: () => void }) {
   const t = useTranslation();
   const { context, onClose } = props;
@@ -53,14 +70,20 @@ function DiveContextMenu(props: { context: Context; dive: Dive | undefined; onCl
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="start" className="min-w-[224px] p-2"
         onCloseAutoFocus={(event) => event.preventDefault()} sideOffset={0}>
-        {context.id === rootId ? (
-          <NodeContextMenuItem icon={FolderPlus} onSelect={() => { onClose(); props.onCreate(); }}>
-            {t('desktop.nodeList.dive.create')}
-          </NodeContextMenuItem>
+        {context.source ? (
+          <RemoveDiveSourceMenuItem source={context.source} onClose={onClose} />
         ) : (
           <>
-            {props.dive ? <DiveFlowMenuItem dive={props.dive} onClose={onClose} /> : null}
-            <NodeRenameContextMenuItem onSelect={() => { onClose(); requestNodeRename(context.id); }} />
+            {context.id === rootId ? (
+              <NodeContextMenuItem icon={FolderPlus} onSelect={() => { onClose(); props.onCreate(); }}>
+                {t('desktop.nodeList.dive.create')}
+              </NodeContextMenuItem>
+            ) : (
+              <>
+                {props.dive ? <DiveFlowMenuItem dive={props.dive} onClose={onClose} /> : null}
+                <NodeRenameContextMenuItem onSelect={() => { onClose(); requestNodeRename(context.id); }} />
+              </>
+            )}
           </>
         )}
       </AppDropdownMenuContent>
@@ -83,10 +106,10 @@ function useDiveSection(dives: readonly Dive[], selectDive: (id: string) => void
   return {
     collapsed, context, dives,
     closeMenu: () => setContext(null),
-    openMenu: (id: string, event: MouseEvent<HTMLButtonElement>) => {
+    openMenu: (id: string, event: MouseEvent<HTMLButtonElement>, source?: DiveSourceSelection) => {
       event.preventDefault();
       event.stopPropagation();
-      setContext({ id, left: event.clientX, top: event.clientY });
+      setContext({ id, left: event.clientX, top: event.clientY, ...(source ? { source } : {}) });
     },
     toggle: (id: string) => toggleCollapsed(id, setCollapsed),
     create: () => {
@@ -139,6 +162,7 @@ function DiveRows(props: {
           isCollapsed={false} isSelected={props.activeNodeId === source.id} label={source.title}
           nodeId={`${id}:${source.id}`} showIcon={false} showLeafChevronPlaceholder={false}
           rowSpacing={getNodeListRowSpacing()} onSelect={() => props.onSelectNode(source.id)}
+          onContextMenu={(id, event) => section.openMenu(id, event, { diveId: dive.id, nodeId: source.id })}
           onToggleCollapse={() => undefined} />
       )) : null}
     </>

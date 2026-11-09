@@ -211,6 +211,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.createDive, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.renameDive, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.addDiveSources, route: 'storage', capability: 'dataMutation' },
+  { command: NATIVE_COMMANDS.removeDiveSource, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.loadAppSettingsState, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadSystemColorMode, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.saveAppSettingsState, route: 'storage', capability: 'settingsMutation' },

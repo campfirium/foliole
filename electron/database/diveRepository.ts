@@ -88,6 +88,12 @@ export function addDiveSources(db: SqliteDatabase, diveId: string, ids: readonly
   });
 }
 
+export function removeDiveSource(db: SqliteDatabase, diveId: string, sourceId: string): Dive {
+  return updateDive(db, diveId, dive => dive.directSourceIds.includes(sourceId)
+    ? { ...dive, directSourceIds: dive.directSourceIds.filter(id => id !== sourceId) }
+    : dive);
+}
+
 function updateDive(db: SqliteDatabase, diveId: string, update: (dive: Dive) => Dive): Dive {
   return db.transaction(() => {
     const row = db.prepare(`${diveRows} AND id = ?`).get(diveId) as DiveRow | undefined;

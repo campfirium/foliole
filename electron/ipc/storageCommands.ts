@@ -2,7 +2,7 @@ import { type WebContents } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { addDiveSources, createDive, listDives, renameDive } from '../database/diveRepository.js';
+import { addDiveSources, createDive, listDives, removeDiveSource, renameDive } from '../database/diveRepository.js';
 import { resetImportData } from '../database/importMaintenance.js';
 import {
   dismissNodeTextAlternative,
@@ -103,8 +103,12 @@ export async function handleStorageCommand(
 }
 
 function handleDiveCommand(command: string, args: Record<string, unknown>) {
-  if (command === NATIVE_COMMANDS.renameDive) {
-    const dive = renameDive(openDatabaseConnection().sqlite, asString(args.diveId, 'diveId'), asString(args.title, 'title'));
+  if (command === NATIVE_COMMANDS.renameDive || command === NATIVE_COMMANDS.removeDiveSource) {
+    const { sqlite } = openDatabaseConnection();
+    const diveId = asString(args.diveId, 'diveId');
+    const dive = command === NATIVE_COMMANDS.renameDive
+      ? renameDive(sqlite, diveId, asString(args.title, 'title'))
+      : removeDiveSource(sqlite, diveId, asString(args.sourceId, 'sourceId'));
     notifyWorkspaceContentChanged(null, { workspaceScope: { kind: 'nodes', nodeIds: [dive.id] } });
     return dive;
   }

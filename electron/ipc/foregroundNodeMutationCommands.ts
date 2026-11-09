@@ -4,6 +4,7 @@ const commands = new Set<string>([
   NATIVE_COMMANDS.createDive,
   NATIVE_COMMANDS.renameDive,
   NATIVE_COMMANDS.addDiveSources,
+  NATIVE_COMMANDS.removeDiveSource,
   NATIVE_COMMANDS.openDailyFlow,
   NATIVE_COMMANDS.commitDailyFlow,
   NATIVE_COMMANDS.createFolder,
