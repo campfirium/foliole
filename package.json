@@ -322,7 +322,7 @@
     },
     "electron-winstaller": "$electron-winstaller",
     "@napi-rs/wasm-runtime": {
-      "@emnapi/core": "2.0.0-beta.2",
+      "@emnapi/core": "2.0.0-beta.3",
       "@emnapi/runtime": "2.0.0-beta.2"
     }
   },
