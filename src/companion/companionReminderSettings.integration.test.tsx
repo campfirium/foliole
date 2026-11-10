@@ -181,3 +181,20 @@ it('shows both presets off and schedules only when enabled', async () => {
   await enable('🌱');
   expect(pendingTimes()).toEqual([['🌱', { hour: 20, minute: 0, second: 0 }, false]]);
 });
+
+it('creates a separate disabled reminder and keeps it after reopen', async () => {
+  await open('ios', 'foliole-reminder-create-');
+  const view = render(<CompanionReminderSettingsContent onBack={() => undefined} />);
+  const add = await screen.findByRole('button', { name: 'New reminder' });
+  await waitFor(() => expect(add).toBeEnabled());
+  fireEvent.click(add);
+  expect(screen.getByLabelText('Message')).toHaveValue('');
+  await setDraft('Custom reminder', '21:10');
+  await save();
+  expect(host.pending.size).toBe(0);
+  view.unmount();
+  render(<CompanionReminderSettingsContent onBack={() => undefined} />);
+  expect(await screen.findByRole('switch', { name: 'Enabled: Custom reminder' })).not.toBeChecked();
+  expect(screen.getByRole('switch', { name: 'Enabled: 🌱' })).not.toBeChecked();
+  expect(screen.getByRole('switch', { name: 'Enabled: ☕' })).not.toBeChecked();
+});

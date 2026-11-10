@@ -23,6 +23,7 @@ export const EN_REMINDER_TRANSLATIONS = {
   'settings.reminders.thisDevice': 'This device',
   'settings.reminders.enabled': 'Enabled',
   'settings.reminders.save': 'Save',
+  'settings.reminders.add': 'New reminder',
   'settings.reminders.edit': 'Edit reminder',
   'settings.reminders.permission': 'Reminder saved. Allow notifications in system settings to receive it.',
   'settings.reminders.exactPermission': 'Reminder saved. Allow Alarms & reminders, then save the reminder again.',

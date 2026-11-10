@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 
 import {
@@ -9,7 +10,7 @@ import {
   loadCompanionReminderDevice, loadCompanionReminderRules, saveCompanionReminderRule
 } from '../shared/platform/companion/settings/companionReminderRepository';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
-import { AppSwitch } from '../shared/ui';
+import { AppIconButton, AppSwitch } from '../shared/ui';
 
 import { CompanionListSection } from './CompanionListSurface';
 import { CompanionReminderEditor, type ReminderDraft } from './CompanionReminderEditor';
@@ -66,9 +67,10 @@ function useReminderSettings() {
     event.preventDefault();
     if (!device || !draft?.message.trim() || isReminderTriggerPast(draft.trigger)) return;
     const current = rules.find(rule => rule.id === draft.id);
-    if (!current) return;
+    if (draft.id && !current) return;
     await persist({
-      ...current, revision: createCompanionUuid(), message: draft.message.trim(),
+      id: current?.id ?? createCompanionUuid(), preset: current?.preset, enabled: current?.enabled ?? false,
+      revision: createCompanionUuid(), message: draft.message.trim(),
       trigger: draft.trigger, destination: draft.destination, device
     }, true);
   }
@@ -92,9 +94,14 @@ export function CompanionReminderSettingsContent(props: { onBack(): void }) {
   </p>;
   return (
     <CompanionSettingsDetail onBack={props.onBack} page="reminders" title={t('settings.reminders.title')}>
-      <div className="space-y-5 py-4">
+      <div className="space-y-2 py-2">
         {draft ? <CompanionReminderEditor busy={busy} draft={draft} onChange={setDraft}
           onCancel={() => setDraft(null)} onSave={save} /> : <>
+          <div className="flex justify-end">
+            <AppIconButton label={t('settings.reminders.add')} icon={<Plus size={20} aria-hidden="true" />}
+              className="min-h-11 min-w-11" disabled={busy || !device}
+              onClick={() => setDraft({ message: '', trigger: { kind: 'daily', time: '20:00' } })} />
+          </div>
           {device && localRules.length > 0 && <CompanionListSection isFirst>
             {localRules.map(rule => {
               const expired = isReminderTriggerPast(rule.trigger);

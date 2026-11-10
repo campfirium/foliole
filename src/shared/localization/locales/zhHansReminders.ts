@@ -23,6 +23,7 @@ export const ZH_HANS_REMINDER_TRANSLATIONS = {
   'settings.reminders.thisDevice': '此设备',
   'settings.reminders.enabled': '启用',
   'settings.reminders.save': '保存',
+  'settings.reminders.add': '新建提醒',
   'settings.reminders.edit': '编辑提醒',
   'settings.reminders.permission': '提醒已保存。请在系统设置中允许通知。',
   'settings.reminders.exactPermission': '提醒已保存。请允许「闹钟和提醒」，然后重新保存这条提醒。',
