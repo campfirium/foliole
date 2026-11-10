@@ -83,12 +83,6 @@ export function createMarkdownHeadingPrefixRange(
 export function resolveMarkdownHeadingLineClass(node: MarkdownSyntaxNode, source: string) {
   const level = node.name === 'LenientStrongATXHeading'
     ? resolveLenientStrongATXLevel(node, source)
-    : node.name === 'ATXHeading1'
-      ? 1
-      : node.name === 'ATXHeading2'
-        ? 2
-        : node.name === 'ATXHeading3'
-          ? 3
-          : null;
-  return level === 1 ? 'cm-line-h1' : level === 2 ? 'cm-line-h2' : level === 3 ? 'cm-line-h3' : null;
+    : /^ATXHeading([1-6])$/.exec(node.name)?.[1];
+  return level ? `cm-line-h${level}` : null;
 }

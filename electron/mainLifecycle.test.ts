@@ -1,5 +1,9 @@
 // @vitest-environment node
-import { afterEach, expect, it, vi } from 'vitest';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
+import { afterEach, expect, it, onTestFinished, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   appendBootEvent: vi.fn().mockResolvedValue(undefined),
   appendMainProcessDiagnosticLog: vi.fn(),
@@ -120,6 +124,7 @@ vi.mock('./sync/lanWorkspaceSyncServer.js', () => ({
 }));
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.clearAllMocks();
   mocks.initializeDatabase.mockReset();
   mocks.ensureLanWorkspaceSyncServer.mockReset();
@@ -131,12 +136,20 @@ afterEach(() => {
 });
 
 it('loads the static workspace shell before runtime services and activates React after services are ready', async () => {
+  const startupLibrary = await mkdtemp(path.join(os.tmpdir(), 'foliole-css-startup-'));
+  onTestFinished(() => rm(startupLibrary, { recursive: true, force: true }));
+  const libraryPaths = await import('./ipc/libraryPaths.js');
+  vi.spyOn(libraryPaths, 'loadLibraryPathSettingsSync')
+    .mockReturnValue({ library_home: startupLibrary } as ReturnType<typeof libraryPaths.loadLibraryPathSettingsSync>);
+  const starter = path.join(startupLibrary, 'Widgets', 'CSS Snippets', 'CSS Example.css');
   const window = {
     isDestroyed: vi.fn(() => false),
     isVisible: vi.fn(() => true),
     show: vi.fn()
   };
-  const activateMainWindow = vi.fn().mockResolvedValue(undefined);
+  const activateMainWindow = vi.fn(async () => {
+    expect(await readFile(starter, 'utf8')).toContain('.cm-line-h1');
+  });
   const createMainWindow = vi.fn().mockResolvedValue(window);
   const installInvokeHandler = vi.fn();
   const loadMainWindow = vi.fn().mockResolvedValue(undefined);

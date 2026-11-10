@@ -1,16 +1,20 @@
 import { constants } from 'node:fs';
-import { lstat, mkdir, open, readdir } from 'node:fs/promises';
+import { lstat, mkdir, open, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { NativeCssSnippetDirectory } from '../../lib/platform/nativeCssSnippetCommandMap.js';
+
+import { CSS_SNIPPET_STARTER_NAME, CSS_SNIPPET_STARTER_SOURCE } from './cssSnippetStarter.js';
 
 const MAX_FILE_BYTES = 16 * 1024;
 const MAX_FILES = 128;
 
 async function ensureDirectory(directory: string, create: boolean) {
+  let created = false;
   if (create) {
     try {
       await mkdir(directory);
+      created = true;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
     }
@@ -19,16 +23,36 @@ async function ensureDirectory(directory: string, create: boolean) {
     if (error.code === 'ENOENT') return null;
     throw error;
   });
-  if (!info) return false;
+  if (!info) return 'missing';
   if (!info.isDirectory()) throw new Error('CSS snippet location must be a directory.');
-  return true;
+  return created ? 'created' : 'existing';
+}
+
+async function writeStarterSnippet(directory: string) {
+  try {
+    await writeFile(path.join(directory, CSS_SNIPPET_STARTER_NAME), CSS_SNIPPET_STARTER_SOURCE, { flag: 'wx' });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+  }
+}
+
+async function prepareCssSnippetDirectory(libraryHome: string, create: boolean) {
+  const widgets = path.join(libraryHome, 'Widgets');
+  const directory = path.join(widgets, 'CSS Snippets');
+  const status = await ensureDirectory(widgets, create) === 'missing'
+    ? 'missing'
+    : await ensureDirectory(directory, create);
+  return { directory, status };
+}
+
+export async function initializeCssSnippetDirectory(libraryHome: string) {
+  const { directory, status } = await prepareCssSnippetDirectory(libraryHome, true);
+  if (status === 'created') await writeStarterSnippet(directory);
 }
 
 export async function resolveCssSnippetDirectory(libraryHome: string, create = false) {
-  const widgets = path.join(libraryHome, 'Widgets');
-  const directory = path.join(widgets, 'CSS Snippets');
-  const exists = await ensureDirectory(widgets, create) && await ensureDirectory(directory, create);
-  return { directory, exists };
+  const { directory, status } = await prepareCssSnippetDirectory(libraryHome, create);
+  return { directory, exists: status !== 'missing' };
 }
 
 async function readCssSnippet(directory: string, name: string) {

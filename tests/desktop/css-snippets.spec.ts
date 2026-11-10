@@ -1,4 +1,4 @@
-import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { expect, test } from './harness/fixtures';
@@ -11,6 +11,7 @@ test('opens the library snippet directory and applies external CSS files', async
   });
   const folder = path.join(library, 'Widgets', 'CSS Snippets');
   const snippet = path.join(folder, 'acceptance.css');
+  expect(await readFile(path.join(folder, 'CSS Example.css'), 'utf8')).toContain('.cm-line-h1');
   const settings = await openSettingsCategory(desktopWindow, 'Appearance');
 
   const snippets = settings.getByRole('region', { name: /^(Custom CSS snippets|自定义 CSS 片段)$/ });
@@ -18,10 +19,10 @@ test('opens the library snippet directory and applies external CSS files', async
   await expect(refresh).toBeEnabled();
   await refresh.scrollIntoViewIfNeeded();
   await expect(snippets.getByText(/No snippets yet|还没有 CSS 片段/)).toHaveCount(0);
-  await expect(snippets.getByRole('textbox')).toHaveCount(0);
+  await expect(snippets.getByRole('switch', { name: 'CSS Example.css' })).toHaveAttribute('aria-checked', 'false');
   const evidence = path.resolve('.tmp/artifacts/desktop-acceptance');
   await mkdir(evidence, { recursive: true });
-  await desktopWindow.screenshot({ path: path.join(evidence, 'css-snippets-empty.png') });
+  await desktopWindow.screenshot({ path: path.join(evidence, 'css-snippets-starter.png') });
   await snippets.getByRole('button', { name: /^(Open snippets folder|打开片段文件夹)$/ }).click();
   await expect.poll(async () => (await stat(folder).catch(() => null))?.isDirectory()).toBe(true);
   await writeFile(snippet, ':root { --foliole-css-acceptance: enabled; }', { flag: 'wx' });

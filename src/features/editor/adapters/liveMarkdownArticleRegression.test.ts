@@ -27,6 +27,27 @@ function createAdapterHost(initialContent: string) {
   return { adapter, host };
 }
 
+it('lets custom CSS style each heading level independently in Live Preview', () => {
+  const levels = [1, 2, 3, 4, 5, 6];
+  const { adapter, host } = createAdapterHost(
+    levels.map((level) => `${'#'.repeat(level)} Heading ${level}`).join('\n\n')
+  );
+  const style = document.createElement('style');
+  style.textContent = levels.map((level) => `.cm-line-h${level} { color: rgb(${level * 20}, 0, 0); }`).join('\n');
+  document.head.append(style);
+
+  try {
+    for (const level of levels) {
+      const heading = host.querySelector(`.cm-line-h${level}`);
+      expect(heading).toHaveTextContent(`Heading ${level}`);
+      expect(getComputedStyle(heading!).color).toBe(`rgb(${level * 20}, 0, 0)`);
+    }
+  } finally {
+    style.remove();
+    adapter.destroy();
+  }
+});
+
 describe('live markdown imported article regressions', () => {
   beforeEach(() => {
     window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.markdownSyntaxVisibility, 'hidden');

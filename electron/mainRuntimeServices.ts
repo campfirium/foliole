@@ -7,6 +7,8 @@ import { startDesktopForegroundTime } from './foregroundTimeRuntime.js';
 import { refreshGlobalClipShortcutFromSettings } from './globalClipShortcut.js';
 import { seedStartupGuidedSample } from './guidedSampleStartupSeed.js';
 import { appendBootEvent } from './ipc/boot.js';
+import { initializeCssSnippetDirectory } from './ipc/cssSnippetFiles.js';
+import { loadLibraryPathSettingsSync } from './ipc/libraryPaths.js';
 import { installAppMenu } from './ipc/menu.js';
 import { startDesktopReminders } from './reminders/desktopReminderRuntime.js';
 
@@ -22,6 +24,11 @@ export async function initializeRuntimeServices() {
       }));
     }, { deferSearchIndex: true, rebindMemberIdentity: true });
     await appendBootEvent('database_initialize_call_complete');
+    try {
+      await initializeCssSnippetDirectory(loadLibraryPathSettingsSync().library_home);
+    } catch (error) {
+      appendMainProcessDiagnosticLog('css_snippet_directory_init_failed', { error });
+    }
     // A new library gets its guided sample before any window can read or edit it.
     await seedStartupGuidedSample();
     await startSearchAliasMirror();

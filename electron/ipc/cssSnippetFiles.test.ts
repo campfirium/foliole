@@ -1,10 +1,10 @@
-import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
-import { listCssSnippetFiles, resolveCssSnippetDirectory } from './cssSnippetFiles.js';
+import { initializeCssSnippetDirectory, listCssSnippetFiles, resolveCssSnippetDirectory } from './cssSnippetFiles.js';
 
 let library: string;
 
@@ -35,6 +35,23 @@ it('creates the folder on request and reads only regular CSS files on each refre
 
   await rm(snippet);
   expect((await listCssSnippetFiles(library)).files).toEqual([{ name: 'large.css', sourceCss: null }]);
+});
+
+it('creates an editable starter once and respects later edits and deletion', async () => {
+  await initializeCssSnippetDirectory(library);
+  const { path: directory, files } = await listCssSnippetFiles(library);
+  expect(files).toEqual([{ name: 'CSS Example.css', sourceCss: expect.stringContaining('.cm-line-h1') }]);
+  const starter = path.join(directory, 'CSS Example.css');
+  expect(await readFile(starter, 'utf8')).toContain('Help > Developer Tools');
+
+  const edited = '.cm-line-h1 { color: purple; }';
+  await writeFile(starter, edited);
+  await initializeCssSnippetDirectory(library);
+  expect(await readFile(starter, 'utf8')).toBe(edited);
+
+  await rm(starter);
+  await initializeCssSnippetDirectory(library);
+  expect((await listCssSnippetFiles(library)).files).toEqual([]);
 });
 
 it('rejects a symlinked snippet directory', async () => {
