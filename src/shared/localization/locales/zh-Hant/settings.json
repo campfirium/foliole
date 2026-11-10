@@ -145,7 +145,7 @@
   "settings.search.reviewInitialInterval.title": "讀取初始間隔",
   "settings.search.reviewInitialInterval.description": "讀卡處理完成後傳回讀卡佇列的等待時間。",
   "settings.review.later.title": "Later 自訂間隔",
-  "settings.review.later.description": "指定主題再次出現的間隔（天）。預設值為 0，使用短間隔。",
+  "settings.review.later.description": "指定材料再次出現間隔（預設 0 為短間隔）",
   "settings.review.later.default": "預設",
   "settings.search.reviewIntervalGrowth.title": "閱讀間隔增長",
   "settings.search.reviewIntervalGrowth.description": "每次通過後讀取間隔增長的速度。",

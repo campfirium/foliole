@@ -165,7 +165,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.search.reviewInitialInterval.title': 'Reading initial interval',
   'settings.search.reviewInitialInterval.description': 'Wait time after a reading card is handled before it can return to the reading queue.',
   'settings.review.later.title': 'Custom Later interval',
-  'settings.review.later.description': 'Set when the topic appears again, in days. The default is 0 for the short interval.',
+  'settings.review.later.description': 'Set the interval before the material reappears (0 for the default short interval).',
   'settings.review.later.default': 'Default',
   'settings.search.reviewIntervalGrowth.title': 'Reading interval growth',
   'settings.search.reviewIntervalGrowth.description': 'How quickly the reading interval grows after each pass.',
