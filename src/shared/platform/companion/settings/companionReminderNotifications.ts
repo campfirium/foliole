@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { isReminderForDevice, isReminderTriggerPast, type ReminderDevice, type ReminderRule } from '../../../../../lib/core/reminders/reminderRule';
+import { getCompanionRuntimeCapability } from '../../companionRuntimeCapabilities';
 
 export const COMPANION_REMINDER_NOTIFICATION_OWNER = 'foliole-reminder-v1';
 
@@ -10,6 +11,7 @@ type SchedulingResult = 'scheduled' | 'inactive' | 'permission-denied' | 'exact-
 export async function reconcileCompanionReminders(
   rules: ReminderRule[], device: ReminderDevice, requestPermission = false
 ): Promise<SchedulingResult> {
+  if (getCompanionRuntimeCapability().kind === 'browser-preview') return 'inactive';
   const exact = Capacitor.getPlatform() === 'android';
   const localRules = rules.filter(rule => rule.trigger.kind !== 'foreground' && rule.enabled && isReminderForDevice(rule, device) && !isReminderTriggerPast(rule.trigger));
   const { notifications } = await LocalNotifications.getPending();

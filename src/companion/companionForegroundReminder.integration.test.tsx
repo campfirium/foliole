@@ -24,7 +24,7 @@ it('starts a fresh foreground countdown after leaving the app and fires once', a
   expect(toggle).not.toBeChecked();
   fireEvent.click(toggle);
   await waitFor(() => expect(toggle).toBeChecked());
-  await screen.findByText('Reminder saved.');
+  await waitFor(() => expect(toggle).toBeEnabled());
   expect(host.pending.size).toBe(0);
 
   const timers = vi.spyOn(globalThis, 'setTimeout');

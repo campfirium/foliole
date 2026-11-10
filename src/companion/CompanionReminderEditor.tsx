@@ -6,7 +6,7 @@ import { AppButton, AppInput } from '../shared/ui';
 
 import { CompanionReminderChoice } from './CompanionReminderChoice';
 
-export type ReminderDraft = { id?: string; message: string; trigger: ReminderRule['trigger']; destination?: ReminderRule['destination'] };
+export type ReminderDraft = { id: string; message: string; trigger: ReminderRule['trigger']; destination?: ReminderRule['destination'] };
 
 export function CompanionReminderEditor(props: {
   busy: boolean;
@@ -22,7 +22,7 @@ export function CompanionReminderEditor(props: {
   return <form className="space-y-5" aria-labelledby="companion-reminder-editor-title"
     onSubmit={event => void props.onSave(event)}>
     <h2 id="companion-reminder-editor-title" className="text-lg font-semibold text-foreground">
-      {t(draft.id ? 'settings.reminders.edit' : 'settings.reminders.add')}
+      {t('settings.reminders.edit')}
     </h2>
     <div className="space-y-4">
       <label className="block space-y-1.5 text-base font-medium">

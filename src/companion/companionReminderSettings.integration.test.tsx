@@ -9,11 +9,11 @@ import { listenForCompanionReminderFlow } from '../shared/platform/companion/set
 
 import { CompanionReminderSettingsContent } from './CompanionReminderSettingsContent';
 
-async function save(expected = 'Reminder saved.') {
+async function save() {
   const button = screen.getByRole('button', { name: 'Save' });
   await waitFor(() => expect(button).toBeEnabled());
   fireEvent.click(button);
-  expect(await screen.findByText(expected)).toBeVisible();
+  await waitFor(() => expect(screen.queryByRole('form')).not.toBeInTheDocument());
 }
 
 async function edit(message: string) {
@@ -22,13 +22,14 @@ async function edit(message: string) {
   fireEvent.click(row);
 }
 
-async function enable(message: string, expected = 'Reminder saved.') {
+async function enable(message: string, expected?: string) {
   const toggle = screen.getByRole('switch', { name: 'Enabled: ' + message });
   await waitFor(() => expect(toggle).toBeEnabled());
   expect(toggle).not.toBeChecked();
   fireEvent.click(toggle);
   await waitFor(() => expect(toggle).toBeChecked());
-  expect(await screen.findByText(expected)).toBeVisible();
+  await waitFor(() => expect(toggle).toBeEnabled());
+  if (expected) expect(await screen.findByText(expected)).toBeVisible();
 }
 
 async function setDraft(message: string, time: string) {
@@ -175,6 +176,7 @@ it('shows both presets off and schedules only when enabled', async () => {
   await edit('🌱');
   expect(screen.getByRole('button', { name: 'On notification tap Open Flow' })).toBeVisible();
   await save();
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
   expect(host.pending.size).toBe(0);
   await enable('🌱');
   expect(pendingTimes()).toEqual([['🌱', { hour: 20, minute: 0, second: 0 }, false]]);

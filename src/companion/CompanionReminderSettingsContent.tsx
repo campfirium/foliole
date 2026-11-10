@@ -32,7 +32,7 @@ function useReminderSettings() {
   const [device, setDevice] = useState<ReminderDevice>();
   const [draft, setDraft] = useState<ReminderDraft | null>(null);
   const [busy, setBusy] = useState(false);
-  const [feedback, setFeedback] = useState<'failed' | 'permission' | 'exactPermission' | 'saved' | 'unavailable'>();
+  const [feedback, setFeedback] = useState<'failed' | 'permission' | 'exactPermission' | 'unavailable'>();
 
   useEffect(() => {
     let active = true;
@@ -50,11 +50,11 @@ function useReminderSettings() {
       await saveCompanionReminderRule(rule);
       const updated = await loadCompanionReminderRules();
       setRules(withDefaultRules(updated, device));
-      if (closeEditor) setDraft(null);
       const result = await reconcileCompanionReminders(updated, device, rule.enabled).catch(() => 'failed' as const);
       if (result === 'permission-denied') setFeedback('permission');
       else if (result === 'exact-permission-denied') setFeedback('exactPermission');
-      else setFeedback(result === 'failed' ? 'failed' : 'saved');
+      else if (result === 'failed') setFeedback('failed');
+      if (closeEditor) setDraft(null);
     } catch {
       setFeedback('unavailable');
     } finally {
@@ -66,9 +66,10 @@ function useReminderSettings() {
     event.preventDefault();
     if (!device || !draft?.message.trim() || isReminderTriggerPast(draft.trigger)) return;
     const current = rules.find(rule => rule.id === draft.id);
+    if (!current) return;
     await persist({
-      id: draft.id ?? createCompanionUuid(), revision: createCompanionUuid(), message: draft.message.trim(),
-      trigger: draft.trigger, destination: draft.destination, device, preset: current?.preset, enabled: current?.enabled ?? false
+      ...current, revision: createCompanionUuid(), message: draft.message.trim(),
+      trigger: draft.trigger, destination: draft.destination, device
     }, true);
   }
 
