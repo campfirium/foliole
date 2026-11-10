@@ -156,6 +156,9 @@ to determine install, test, commit or task count.
 
 ## Pending centralized QA
 
+The separately authorized [Gradle security patch](gradle-security-update.md) is
+outside the already frozen November 11 full-QA candidate.
+
 The November 10 npm batch was implemented in `c6525a361`. Local validation passed
 65 tests covering HTML paste, Mermaid rendering, review scheduling and Windows
 installer matching. Desktop and companion web builds passed. The production npm
