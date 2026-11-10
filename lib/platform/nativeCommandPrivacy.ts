@@ -2,6 +2,7 @@ import { NATIVE_COMMANDS } from './nativeCommands.js';
 
 const SENSITIVE_NATIVE_COMMAND_ARGS = new Set<string>([
   NATIVE_COMMANDS.saveWebDavRelayDirectory,
+  NATIVE_COMMANDS.convertDiveDirectory,
   NATIVE_COMMANDS.assistantSaveByokSettings,
   NATIVE_COMMANDS.assistantSaveModelDraft,
   NATIVE_COMMANDS.assistantTestModel,

@@ -1,9 +1,13 @@
-import { useRef } from 'react';
+import { createContext, useRef } from 'react';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { buildVirtualNodeResultIndex, type VirtualNodeResultIndex } from '../../features/nodes/model/virtualNodeDetail';
 
 type ResultInputs = Parameters<typeof buildVirtualNodeResultIndex>[0];
+export const VirtualNodeConversionResults = createContext<{
+  resultIdsByVirtualId: VirtualNodeResultIndex['resultIdsByVirtualId'];
+  nodesById: ResultInputs['nodesById'];
+} | null>(null);
 const EMPTY_TRASHED_NODE_IDS: readonly string[] = [];
 
 function sameSearchNode(left: Node | undefined, right: Node | undefined) {

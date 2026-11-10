@@ -172,7 +172,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
           dualListState={dualListState}
           onSelectFolderColumnNode={(id) => { dive.closeDive(); viewRoot.selectFolderColumnNode(id); }}
           props={props}
-          virtualResultCountById={virtualResultIndex.countById}
+          virtualResultIndex={virtualResultIndex}
         />
       }
       contentColumn={

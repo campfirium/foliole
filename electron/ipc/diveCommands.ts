@@ -10,7 +10,13 @@ export function handleDiveCommand(command: string, args: Record<string, unknown>
   if (command === NATIVE_COMMANDS.convertDiveDirectory) {
     const target = args.target;
     if (target !== 'dive' && target !== 'index') throw new Error('Invalid directory conversion target');
-    const nodeId = convertDiveDirectory(openDatabaseConnection().sqlite, asString(args.nodeId, 'nodeId'), target);
+    const matched = args.matchedTopics;
+    if (matched !== undefined && (typeof matched !== 'object' || matched === null || !('filter' in matched) || !('ids' in matched))) {
+      throw new Error('Invalid index results');
+    }
+    const matchedTopics = matched === undefined ? undefined
+      : { filter: asString(matched.filter, 'filter'), ids: asStringArray(matched.ids, 'ids') };
+    const nodeId = convertDiveDirectory(openDatabaseConnection().sqlite, asString(args.nodeId, 'nodeId'), target, matchedTopics);
     notifyWorkspaceContentChanged(null, { workspaceScope: { kind: 'nodes', nodeIds: [nodeId], structure: true } });
     return nodeId;
   }

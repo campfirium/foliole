@@ -28,15 +28,23 @@ export async function removeWorkspaceDiveSource(diveId: string, sourceId: string
   }
 }
 
-export async function convertWorkspaceDiveDirectory(nodeId: string, target: 'dive' | 'index', failureMessage: string) {
+export async function convertWorkspaceDiveDirectory(nodeId: string, target: 'dive' | 'index', failureMessage: string,
+  matchedTopics?: { filter: string; ids: readonly string[] }) {
   const repository = getDiveRepository();
   const { libraryScope } = useWorkspaceStore.getState();
   if (!repository) return;
   try {
-    await repository.convert(nodeId, target);
-    if (libraryScope) await refreshWorkspaceStateWithScope(
-      { kind: 'nodes', nodeIds: [nodeId], structure: true }, libraryScope, 'content-changed');
+    await repository.convert(nodeId, target, matchedTopics);
   } catch {
     showAppRuntimeNotice(failureMessage);
+    return;
+  }
+  if (libraryScope) {
+    try {
+      await refreshWorkspaceStateWithScope(
+        { kind: 'nodes', nodeIds: [nodeId], structure: true }, libraryScope, 'content-changed');
+    } catch (error) {
+      logRuntimeError('workspace Dive refresh failed', { area: 'persistence', action: 'refresh_workspace', error });
+    }
   }
 }
