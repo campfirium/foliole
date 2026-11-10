@@ -13,6 +13,7 @@ const ELECTRON_HANDLER_FILES = [
   'electron/ipc/assistantLocalHistoryCommands.ts',
   'electron/ipc/assistantStorageCommands.ts',
   'electron/ipc/displayScaleCommands.ts',
+  'electron/ipc/diveCommands.ts',
   'electron/ipc/importCommands.ts',
   'electron/ipc/initialLibrarySetupCommands.ts',
   'electron/ipc/readwiseBookActionCommands.ts',
@@ -35,7 +36,8 @@ const ELECTRON_HANDLER_FILES = [
 ];
 const REGISTRY_FILES = [
   'electron/ipc/nativeCommandRegistry.ts',
-  'electron/ipc/nativeBackupCommandRegistry.ts'
+  'electron/ipc/nativeBackupCommandRegistry.ts',
+  'electron/ipc/nativeDiveCommandRegistry.ts'
 ];
 
 function resolveRepoRoot() {

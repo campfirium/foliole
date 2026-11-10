@@ -15,6 +15,7 @@ import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuTrigger } from 
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { ConvertDiveDirectoryMenuItem } from './ConvertDiveDirectoryMenuItem';
 import { DiveFlowActionContext } from './diveFlowActionContext';
 import { removeWorkspaceDiveSource, saveWorkspaceDive } from './workspaceDiveMutation';
 import { toggleCollapsed } from './WorkspaceVirtualSectionRows';
@@ -77,6 +78,7 @@ function DiveContextMenu(props: { context: Context; dive: Dive | undefined; onCl
             ) : (
               <>
                 {props.dive ? <DiveFlowMenuItem dive={props.dive} onClose={onClose} /> : null}
+                {props.dive ? <ConvertDiveDirectoryMenuItem nodeId={props.dive.id} target="index" onClose={onClose} /> : null}
                 <NodeRenameContextMenuItem onSelect={() => { onClose(); requestNodeRename(context.id); }} />
               </>
             )}

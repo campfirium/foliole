@@ -12,6 +12,7 @@ const WORKSPACE_WRITE_COMMANDS = new Set<string>([
   NATIVE_COMMANDS.saveDailyFlowSourceSettings,
   NATIVE_COMMANDS.createDive,
   NATIVE_COMMANDS.renameDive,
+  NATIVE_COMMANDS.convertDiveDirectory,
   NATIVE_COMMANDS.addDiveSources,
   NATIVE_COMMANDS.removeDiveSource,
   NATIVE_COMMANDS.openDailyFlow,

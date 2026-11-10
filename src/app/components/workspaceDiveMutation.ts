@@ -27,3 +27,16 @@ export async function removeWorkspaceDiveSource(diveId: string, sourceId: string
     showAppRuntimeNotice(failureMessage);
   }
 }
+
+export async function convertWorkspaceDiveDirectory(nodeId: string, target: 'dive' | 'index', failureMessage: string) {
+  const repository = getDiveRepository();
+  const { libraryScope } = useWorkspaceStore.getState();
+  if (!repository) return;
+  try {
+    await repository.convert(nodeId, target);
+    if (libraryScope) await refreshWorkspaceStateWithScope(
+      { kind: 'nodes', nodeIds: [nodeId], structure: true }, libraryScope, 'content-changed');
+  } catch {
+    showAppRuntimeNotice(failureMessage);
+  }
+}

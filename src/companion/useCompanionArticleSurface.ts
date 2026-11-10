@@ -10,6 +10,7 @@ import type { CompanionBrowseSortState } from './useCompanionBrowseState';
 import { useCompanionBrowseState } from './useCompanionBrowseState';
 import { useCompanionFlowSession } from './useCompanionFlowSession';
 import { useCompanionSurfaceActions } from './useCompanionSurfaceActions';
+import { useExitUnavailableDive } from './useCompanionUnavailableDive';
 import { useCompanionViewStateSync } from './useCompanionViewStateSync';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 import type { useFloatingBarVisibility } from './useFloatingBarVisibility';
@@ -173,6 +174,7 @@ export function useCompanionArticleSurface(
     browseState.snapshot,
     workspaceSync
   );
+  useExitUnavailableDive(flow, activeAction, workspaceSync, interactionState);
 
   return {
     activeAction,

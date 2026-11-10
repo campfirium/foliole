@@ -5,21 +5,68 @@ import { readMoveParentOrder } from '../../lib/core/database/nodeMoveStructure.j
 import { moveNodes, upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { saveNodeReadingStateWithSync } from '../../lib/core/database/nodeReadingSyncState.js';
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
+import { VIRTUAL_ROOT_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
 import { loadDailyFlowLearningSnapshot } from '../../lib/core/flow/dailyFlowLearningSnapshot.js';
 import { refreshDailyFlowAfterSync } from '../../lib/core/flow/dailyFlowRefresh.js';
 import { commitDailyFlow, openDailyFlow, type DailyFlowPersistence } from '../../lib/core/flow/dailyFlowService.js';
 import type { DailyFlowSession } from '../../lib/core/flow/dailyFlowSession.js';
 import { readCycleRows, readDailyFlow } from '../../lib/core/flow/dailyFlowStorage.js';
 import { DIVE_NODE_FILTER } from '../../lib/core/nodes/dive.js';
+import { createManualVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../lib/core/review/settings.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
-import { addDiveSources, createDive } from './diveRepository.js';
+import { convertDiveDirectory } from './diveConversion.js';
+import { addDiveSources, createDive, listDives } from './diveRepository.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { requestNodeRound, restoreFixture, type RestorePeer } from './requestSyncRestoreRecovery.testSupport.js';
 
 const now = '2026-10-28T08:00:00.000Z';
 const nextAt = '2026-10-29T08:00:00.000Z';
+
+it('moves one directory between sections across sync without losing an open card or its sources', async () => {
+  const fixture = await restoreFixture();
+  const local = fixture.peer('source');
+  const remote = fixture.peer('target');
+  try {
+    for (const peer of [local, remote]) {
+      peer.sqlite.prepare("INSERT OR REPLACE INTO settings VALUES ('host_name', ?, 'now')").run(peer.id);
+      bindParentOrderWriter(createBetterSqlite3Driver(peer.sqlite), { deviceAnchor: peer.id, libraryPath: peer.file });
+    }
+    seed(local, 'first', 'topic', 9);
+    seed(local, 'next', 'topic', 8);
+    seed(local, 'joined', 'topic', 7);
+    const { open, read } = bindFlow(local);
+    const dive = createDive(local.sqlite, 'One directory', ['first', 'next']);
+    const current = await open({ dive: { id: dive.id, topicIds: ['first', 'next'] } });
+    expect(current.currentNodeId).not.toBeNull();
+    expect(await requestNodeRound(local, remote)).toMatchObject({ complete: true, pending: 0 });
+
+    const edited = addDiveSources(local.sqlite, dive.id, ['joined']);
+    convertDiveDirectory(remote.sqlite, dive.id, 'index');
+    expect(await requestNodeRound(remote, local)).toMatchObject({ complete: true, pending: 0 });
+    expect(await requestNodeRound(local, remote)).toMatchObject({ complete: true, pending: 0 });
+    expect(listDives(local.sqlite)).toEqual([]);
+    expect(await read(current)).toMatchObject({ currentNodeId: null });
+
+    for (const peer of [local, remote]) {
+      peer.reopen();
+      expect(peer.sqlite.prepare(`SELECT id, parent_id, virtual_filter, manual_child_order FROM nodes
+        WHERE title = ? AND deleted_at IS NULL`).all(dive.title)).toEqual([{
+        id: dive.id, parent_id: VIRTUAL_ROOT_NODE_ID,
+        virtual_filter: JSON.stringify(createManualVirtualNodeFilter()),
+        manual_child_order: JSON.stringify(edited.directSourceIds)
+      }]);
+    }
+    expect(local.sqlite.prepare('SELECT node_id, repetition_count FROM node_reading').all())
+      .toEqual([{ node_id: current.currentNodeId, repetition_count: 1 }]);
+    bindParentOrderWriter(createBetterSqlite3Driver(local.sqlite), { deviceAnchor: local.id, libraryPath: local.file });
+    convertDiveDirectory(local.sqlite, dive.id, 'dive');
+    expect(await requestNodeRound(local, remote)).toMatchObject({ complete: true, pending: 0 });
+    expect(listDives(local.sqlite)).toEqual([edited]);
+    expect(listDives(remote.sqlite)).toEqual([edited]);
+  } finally { await fixture.close(); }
+});
 
 function seed(peer: RestorePeer, id: string, kind: 'folder' | 'topic', priority: number, parentNodeId: string | null = null) {
   const driver = createBetterSqlite3Driver(peer.sqlite);

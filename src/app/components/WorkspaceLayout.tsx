@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import { readDiveNode } from '../../../lib/core/nodes/dive';
 import { FlowExitHereContext } from '../../shared/ui/FlowExitHereContext';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -25,7 +26,15 @@ export function WorkspaceLayout(props: WorkspaceLayoutProps) {
   const dive = useWorkspaceStore(state => state.reviewSession.dive);
   const open = props.review.onOpenDiveFlow;
   const totals = useDiveTotals(dive?.id, props.review.reviewSummary);
-  const checkpoint = props.review.isStudyMode && dive?.stop && !props.review.reviewCurrentNodeId && open
+  const diveExists = useWorkspaceStore(state => Boolean(dive && readDiveNode(state.nodesById[dive.id]) &&
+    !state.trashedNodeIds.includes(dive.id)));
+  const unavailable = props.layoutChrome.isWorkspaceHydrated && props.review.isStudyMode && Boolean(dive && !diveExists);
+  const shouldExit = unavailable && !props.review.reviewCurrentNodeId;
+  const exitReview = props.review.onExitReviewMode;
+  useEffect(() => {
+    if (shouldExit) exitReview();
+  }, [shouldExit, exitReview]);
+  const checkpoint = !unavailable && props.review.isStudyMode && dive?.stop && !props.review.reviewCurrentNodeId && open
     ? { dive, open, totals, snapshot: { nodesById: props.nodeList.nodesById, nodeOrder: props.nodeList.nodeOrder,
       trashedNodeIds: props.trash.trashedNodeIds } } : null;
   const canExitHere = props.review.isStudyMode && props.navigation.activeNodeId

@@ -8,6 +8,7 @@ export function getDiveRepository() {
     list: () => invoke(NATIVE_COMMANDS.listDives),
     create: (title: string) => invoke(NATIVE_COMMANDS.createDive, { title, sourceIds: [] }),
     rename: (diveId: string, title: string) => invoke(NATIVE_COMMANDS.renameDive, { diveId, title }),
+    convert: (nodeId: string, target: 'dive' | 'index') => invoke(NATIVE_COMMANDS.convertDiveDirectory, { nodeId, target }),
     add: (diveId: string, sourceIds: readonly string[]) => invoke(NATIVE_COMMANDS.addDiveSources, { diveId, sourceIds }),
     remove: (diveId: string, sourceId: string) => invoke(NATIVE_COMMANDS.removeDiveSource, { diveId, sourceId })
   };

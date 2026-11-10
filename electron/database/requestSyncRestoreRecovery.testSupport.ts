@@ -130,8 +130,6 @@ export function ids(peer: RestorePeer) {
 }
 
 export async function requestNodeRound(source: RestorePeer, target: RestorePeer, errors?: string[]) {
-  const progress = { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
-    providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch };
   return runRequestSyncDatabaseRound({
     exchangeInventory: async () => ({
       local: (await readFramedSyncInventory(source.db)).filter(entry => entry.objectType === 'node'),
@@ -140,8 +138,11 @@ export async function requestNodeRound(source: RestorePeer, target: RestorePeer,
     transferObjects: async differences => {
       const results = [];
       for (const difference of differences) {
+        const [sender, receiver] = difference.direction === 'local_to_remote' ? [source, target] : [target, source];
+        const progress = { groupId: 'group', overwriteId: 'unused', providerDeviceId: sender.id,
+          providerLibraryEpoch: sender.epoch, receiverDeviceId: receiver.id, receiverLibraryEpoch: receiver.epoch };
         let error = '';
-        try { await transfer(source, target, progress, difference, target.desktop); }
+        try { await transfer(sender, receiver, progress, difference, receiver.desktop); }
         catch (failure) { error = failure instanceof Error ? failure.message : String(failure); }
         results.push({ requestId: new Uint8Array(16), objectType: difference.objectType, globalId: difference.globalId, error });
       }

@@ -8,6 +8,8 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuTrigger } from '../../shared/ui';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
+import { ConvertDiveDirectoryMenuItem } from './ConvertDiveDirectoryMenuItem';
+
 interface WorkspaceVirtualSavedSearchContextMenuProps {
   left: number;
   isVirtualRoot?: boolean;
@@ -72,6 +74,12 @@ function RemoveFolderSourceItems({ nodeId, onClose }: { nodeId: string; onClose:
   });
 }
 
+function DeleteVirtualFolderMenuItem(props: { onDelete: () => void }) {
+  return <NodeContextMenuItem icon={Trash2} onSelect={props.onDelete} tone="destructive">
+    Delete
+  </NodeContextMenuItem>;
+}
+
 export function WorkspaceVirtualSavedSearchContextMenu({
   left,
   isVirtualRoot = false,
@@ -111,21 +119,16 @@ export function WorkspaceVirtualSavedSearchContextMenu({
         }} />
         {isSavedSearch ? (
           <>
+            <ConvertDiveDirectoryMenuItem nodeId={nodeId} target="dive" onClose={onClose} />
             <RemoveFolderSourceItems nodeId={nodeId} onClose={onClose} />
             {onWriteTopicYaml ? (
               <WriteTopicYamlMenuItem nodeId={nodeId} onClose={onClose} onWrite={onWriteTopicYaml} />
             ) : null}
             <NodeContextMenuSeparator />
-            <NodeContextMenuItem
-              icon={Trash2}
-              onSelect={() => {
-                onDelete(nodeId);
-                onClose();
-              }}
-              tone="destructive"
-            >
-              Delete
-            </NodeContextMenuItem>
+            <DeleteVirtualFolderMenuItem onDelete={() => {
+              onDelete(nodeId);
+              onClose();
+            }} />
           </>
         ) : null}
       </AppDropdownMenuContent>

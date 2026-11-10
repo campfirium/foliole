@@ -3,6 +3,7 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 const commands = new Set<string>([
   NATIVE_COMMANDS.createDive,
   NATIVE_COMMANDS.renameDive,
+  NATIVE_COMMANDS.convertDiveDirectory,
   NATIVE_COMMANDS.addDiveSources,
   NATIVE_COMMANDS.removeDiveSource,
   NATIVE_COMMANDS.openDailyFlow,

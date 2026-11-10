@@ -2,14 +2,20 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { VIRTUAL_ROOT_NODE_ID } from '../../lib/core/database/specialNodeIds';
+import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { DIVE_NODE_FILTER } from '../../lib/core/nodes/dive';
+import { createManualVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
 import { hydrateCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
+import { registerCompanionWorkspaceRefresh } from '../shared/platform/companion/companionWorkspaceSnapshotStore';
 import * as dailyRuntime from '../shared/platform/companion/runtime/companionDailyFlow';
 import { loadCompanionDailySession, predictCompanionFlowDocument } from '../shared/platform/companion/runtime/companionDailyFlow';
 import { createSearchLibrary } from '../shared/platform/companion/runtime/companionSearchSnapshot.testSupport';
 import { getIosCompanionDatabaseOwner } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
+import { applyCompanionLocalNodeVersions } from '../shared/platform/companionSyncObjects';
 import { saveCompanionSyncNodeViewState } from '../shared/platform/companionSyncStateWriters';
 
 import { persistFlowMutation } from './companionFlowMutation';
@@ -47,6 +53,40 @@ function useNativeSurface(initial: WorkspaceSnapshot) {
   return { surface: useCompanionArticleSurface(workspace, createFloatingBar()), snapshot, workspace };
 }
 
+it('leaves a converted Dive after Read and keeps the just-read material open', async () => {
+  const initial = (await refreshCompanionWorkspaceAfterMutation())!;
+  const dive = {
+    ...initial.nodesById['000000']!, id: 'conversion-dive', kind: 'folder' as const, parentNodeId: null,
+    title: 'Conversion Dive', content: '', virtualFilter: DIVE_NODE_FILTER, manualChildOrder: ['000000', '000001']
+  };
+  const diveVersion = await toWorkspaceNativeNodeVersion(dive, 'remote');
+  const rootVersion = await toWorkspaceNativeNodeVersion({
+    ...dive, id: VIRTUAL_ROOT_NODE_ID, title: 'Virtual', virtualFilter: null, manualChildOrder: null
+  }, 'remote');
+  await applyCompanionLocalNodeVersions([rootVersion, diveVersion]);
+  registerCompanionWorkspaceRefresh({ kind: 'full' });
+  const ui = renderHook(() => useNativeSurface(initial));
+  await act(() => ui.result.current.workspace.refreshAfterMutation());
+  await waitFor(() => expect(ui.result.current.surface.flowReady).toBe(true));
+  await act(async () => {
+    await ui.result.current.surface.openDiveFlow({ id: dive.id, topicIds: dive.manualChildOrder });
+  });
+  await waitFor(() => expect(ui.result.current.surface.effectiveReviewSession.currentCard).not.toBeNull());
+  const card = ui.result.current.surface.effectiveReviewSession.currentCard!.nodeId;
+  const index = { ...dive, currentVersionId: diveVersion.version_id, parentNodeId: VIRTUAL_ROOT_NODE_ID,
+    virtualFilter: createManualVirtualNodeFilter(), updatedAt: new Date().toISOString() };
+  await applyCompanionLocalNodeVersions([await toWorkspaceNativeNodeVersion(index, 'remote')]);
+  registerCompanionWorkspaceRefresh({ kind: 'full' });
+  await act(() => ui.result.current.workspace.refreshAfterMutation());
+  expect(ui.result.current.surface.effectiveReviewSession.currentCard?.nodeId).toBe(card);
+  await act(() => ui.result.current.surface.handleReadReviewTopic());
+  await waitFor(() => expect(ui.result.current.surface.activeAction).toBe('recent'));
+  expect(ui.result.current.surface.diveFlow).toBeUndefined();
+  expect(ui.result.current.surface.selectedBrowseNodeId).toBe(card);
+  expect(library.database.prepare('SELECT repetition_count FROM node_reading WHERE node_id=?').get(card))
+    .toEqual({ repetition_count: 1 });
+});
+
 it('keeps the reading session untouched when only its scroll position changes', async () => {
   const initial = (await refreshCompanionWorkspaceAfterMutation())!;
   const ui = renderHook(() => useNativeSurface(initial));
@@ -72,9 +112,6 @@ it.each(['read', 'grade'] as const)('commits %s once when incoming content chang
   const ui = renderHook(() => useNativeSurface(initial));
   await waitFor(() => expect(ui.result.current.surface.readableArticle?.content).toContain('prefix alpha'));
   const before = ui.result.current.surface.readableArticle!.nodeId;
-  const { toWorkspaceNativeNodeVersion } = await import('../../lib/core/database/workspaceNodeSyncVersion');
-  const { applyCompanionLocalNodeVersions } = await import('../shared/platform/companionSyncObjects');
-  const { registerCompanionWorkspaceRefresh } = await import('../shared/platform/companion/companionWorkspaceSnapshotStore');
   const incoming = { ...initial.nodesById[before]!, id: 'incoming-topic', title: 'Incoming topic',
     content: 'Incoming complete body', reading: null };
   await applyCompanionLocalNodeVersions([await toWorkspaceNativeNodeVersion(incoming, 'remote')]);

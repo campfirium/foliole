@@ -1,8 +1,6 @@
 import { type WebContents } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
-import { openDatabaseConnection } from '../database/connection.js';
-import { addDiveSources, createDive, listDives, removeDiveSource, renameDive } from '../database/diveRepository.js';
 import { resetImportData } from '../database/importMaintenance.js';
 import {
   dismissNodeTextAlternative,
@@ -22,8 +20,9 @@ import { loadNodeSourceUpdatePreview } from '../import/nodeSourceUpdatePreview.j
 import { mergeReadwiseTopicHighlights } from '../import/readwiseTopicMerge.js';
 import { restoreRemovedSource } from '../import/removedSourceRestore.js';
 
-import { asString, asStringArray } from './commandParsers.js';
+import { asString } from './commandParsers.js';
 import { handleDailyFlowCommand } from './dailyFlowCommands.js';
+import { handleDiveCommand } from './diveCommands.js';
 import { toNativeImportOverview } from './importOverviewPayload.js';
 import { toNativeNodeSourceDetails } from './nodeSourceDetailsPayload.js';
 import { toNativePdfImportsInventory } from './pdfImportsInventoryPayload.js';
@@ -100,28 +99,6 @@ export async function handleStorageCommand(
     return readingAndReviewResult;
   }
   return undefined;
-}
-
-function handleDiveCommand(command: string, args: Record<string, unknown>) {
-  if (command === NATIVE_COMMANDS.renameDive || command === NATIVE_COMMANDS.removeDiveSource) {
-    const { sqlite } = openDatabaseConnection();
-    const diveId = asString(args.diveId, 'diveId');
-    const dive = command === NATIVE_COMMANDS.renameDive
-      ? renameDive(sqlite, diveId, asString(args.title, 'title'))
-      : removeDiveSource(sqlite, diveId, asString(args.sourceId, 'sourceId'));
-    notifyWorkspaceContentChanged(null, { workspaceScope: { kind: 'nodes', nodeIds: [dive.id] } });
-    return dive;
-  }
-  if (command === NATIVE_COMMANDS.listDives) return listDives(openDatabaseConnection().sqlite);
-  if (command === NATIVE_COMMANDS.createDive || command === NATIVE_COMMANDS.addDiveSources) {
-    const ids = asStringArray(args.sourceIds, 'sourceIds');
-    const { sqlite } = openDatabaseConnection();
-    const dive = command === NATIVE_COMMANDS.createDive
-      ? createDive(sqlite, asString(args.title, 'title'), ids)
-      : addDiveSources(sqlite, asString(args.diveId, 'diveId'), ids);
-    notifyWorkspaceContentChanged(null, { workspaceScope: { kind: 'nodes', nodeIds: [dive.id] } });
-    return dive;
-  }
 }
 
 async function handleStorageReadCommand(command: string, args: Record<string, unknown>) {

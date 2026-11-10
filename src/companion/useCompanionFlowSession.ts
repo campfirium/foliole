@@ -77,6 +77,7 @@ export function useCompanionFlowSession(args: {
   const dive = session.dive;
   const openDive = createCompanionDiveFlowControls(current, owner, mode, render);
   return { view, ...companionDiveModeControls(openDive, dive, mode, setMode), dive, openDive,
+    exitUnavailableDive: () => exitUnavailableDive(current, owner, render),
     ...controls, historyKey, cancelDocumentPreparation, continueReading, canContinueReading: !dive && canContinueReading, hasTopics,
     readIntents: current.readIntents,
     summary: { ...(session.cycle ? { queueCleared: Boolean(session.cycle.clearedAt) } : {}), completedAt: session.completedAt ?? null, sessionStartedAt: session.sessionStartedAt ?? null,
@@ -85,9 +86,17 @@ export function useCompanionFlowSession(args: {
     isAnswerRevealed: session.isAnswerRevealed, error: current.error ?? dailyView?.error ?? null, ready: current.hydrated };
 }
 
+function exitUnavailableDive(current: FlowOwner, owner: { current: FlowOwner }, render: () => void) {
+  if (owner.current !== current || !current.session.dive || current.session.currentNodeId) return;
+  current.session = createEmptyReviewSession();
+  current.generation += 1;
+  current.epoch += 1;
+  render();
+}
+
 function useGlobalFlowResume(current: FlowOwner, owner: { current: FlowOwner }, libraryScope: string, identity: string, render: () => void) {
   useEffect(() => {
-    if (!current.hydrated || current.session.dive) return;
+    if (!current.hydrated || !current.session.daily || current.session.dive) return;
     void saveCompanionFlowResume(libraryScope, current.session.currentNodeId).catch((error: unknown) => {
       if (owner.current !== current) return;
       current.error = error instanceof Error ? error.message : 'Could not save the Flow position.';

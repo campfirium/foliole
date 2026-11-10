@@ -150,6 +150,7 @@ export type NativeCommandMap = NativeDailyFlowCommandMap & NativeReviewTrainingC
   [NATIVE_COMMANDS.renameDive]: { args: { diveId: string; title: string }; result: Dive };
   [NATIVE_COMMANDS.addDiveSources]: { args: { diveId: string; sourceIds: readonly string[] }; result: Dive };
   [NATIVE_COMMANDS.removeDiveSource]: { args: { diveId: string; sourceId: string }; result: Dive };
+  [NATIVE_COMMANDS.convertDiveDirectory]: { args: { nodeId: string; target: 'dive' | 'index' }; result: string };
   [NATIVE_COMMANDS.loadAppSettingsState]: {
     args: undefined;
     result: Record<string, string>;

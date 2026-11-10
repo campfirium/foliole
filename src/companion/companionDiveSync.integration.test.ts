@@ -2,12 +2,14 @@
 import { expect, it } from 'vitest';
 
 import { createBetterSqlite3Driver } from '../../electron/database/betterSqlite3Driver.js';
+import { convertDiveDirectory } from '../../electron/database/diveConversion.js';
 import { addDiveSources, createDive, listDives, renameDive } from '../../electron/database/diveRepository.js';
 import { requestNodeRound as round, restoreFixture } from '../../electron/database/requestSyncRestoreRecovery.testSupport.js';
 import { textBranch } from '../../electron/database/topicTextState.testSupport.js';
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 import { loadWorkspaceListSnapshot } from '../../lib/core/database/workspaceListSnapshot.js';
 import { readDiveNode } from '../../lib/core/nodes/dive.js';
+import { isManualVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 import { loadIosCompanionWorkspaceSnapshot } from '../shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
@@ -54,6 +56,17 @@ it('creates, joins and opens the same Dive after sync and receiver reopen', asyn
       ['diveTopics', ['member', 'direct']]
     ]);
     expect(target.sqlite.prepare("SELECT parent_id FROM nodes WHERE id = 'child-topic'").pluck().get()).toBe('member');
+
+    convertDiveDirectory(source.sqlite, dive.id, 'index');
+    expect(await round(source, target)).toMatchObject({ complete: true, pending: 0 });
+    target.reopen();
+    const index = (await loadIosCompanionWorkspaceSnapshot(target.db))?.nodesById[dive.id];
+    expect(readDiveNode(index)).toBeNull();
+    expect(isManualVirtualNodeFilter(index?.virtualFilter)).toBe(true);
+    expect(index?.manualChildOrder).toEqual(saved.directSourceIds);
+    convertDiveDirectory(source.sqlite, dive.id, 'dive');
+    expect(await round(source, target)).toMatchObject({ complete: true, pending: 0 });
+    expect(listDives(target.sqlite)).toEqual([saved]);
   } finally { await fixture.close(); }
 });
 
