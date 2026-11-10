@@ -11,7 +11,10 @@ export const reminderRuleSchema = z.object({
   id: reminderId,
   revision: reminderId,
   message: z.string().trim().min(1),
-  trigger: z.object({ kind: z.literal('daily'), time: dailyTime }),
+  trigger: z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('daily'), time: dailyTime }),
+    z.object({ kind: z.literal('once'), at: z.iso.datetime() })
+  ]),
   device,
   enabled: z.boolean()
 });
@@ -30,4 +33,8 @@ export function reminderSettingKey(id: string) {
 
 export function isReminderForDevice(rule: ReminderRule, current: ReminderDevice) {
   return rule.device.kind === current.kind && rule.device.id === current.id;
+}
+
+export function isReminderTriggerPast(trigger: ReminderRule['trigger'], now = Date.now()) {
+  return trigger.kind === 'once' && Date.parse(trigger.at) <= now;
 }

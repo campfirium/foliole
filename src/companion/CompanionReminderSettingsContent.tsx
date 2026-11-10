@@ -2,7 +2,7 @@ import { Bell, Plus } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 
 import {
-  isReminderForDevice, type ReminderDevice, type ReminderRule
+  isReminderForDevice, isReminderTriggerPast, type ReminderDevice, type ReminderRule
 } from '../../lib/core/reminders/reminderRule';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { reconcileCompanionReminders } from '../shared/platform/companion/settings/companionReminderNotifications';
@@ -55,7 +55,7 @@ function useReminderSettings() {
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!device || !draft?.message.trim()) return;
+    if (!device || !draft?.message.trim() || isReminderTriggerPast(draft.trigger)) return;
     const current = rules.find(rule => rule.id === draft.id);
     await persist({
       id: draft.id ?? createCompanionUuid(), revision: createCompanionUuid(), message: draft.message.trim(),
@@ -92,16 +92,20 @@ export function CompanionReminderSettingsContent(props: { onBack(): void }) {
           </div>
           {device && (localRules.length ? <CompanionListSection isFirst>
             {localRules.map(rule => {
-              const schedule = t('settings.reminders.dailyAt', { time: rule.trigger.time });
+              const expired = isReminderTriggerPast(rule.trigger);
+              const schedule = rule.trigger.kind === 'daily'
+                ? t('settings.reminders.dailyAt', { time: rule.trigger.time })
+                : t('settings.reminders.onceAt', { time: new Date(rule.trigger.at).toLocaleString() });
+              const detail = expired ? t('settings.reminders.timePassed') : t('settings.reminders.thisDevice');
               return <div key={rule.id} className="flex min-h-16 items-center gap-3 border-b border-companion-divider last:border-b-0">
                 <div className="min-w-0 flex-1">
                   <CompanionListRow Icon={Bell} title={rule.message} titleClassName="break-words"
-                    subtitle={`${schedule} · ${t('settings.reminders.thisDevice')}`}
+                    subtitle={`${schedule} · ${detail}`}
                     ariaLabel={`${t('settings.reminders.edit')}: ${rule.message}`}
                     onClick={() => { if (!busy) edit(rule); }} />
                 </div>
                 <AppSwitch className="shrink-0" aria-label={`${t('settings.reminders.enabled')}: ${rule.message}`}
-                  checked={rule.enabled} disabled={busy} onCheckedChange={enabled => void toggle(rule, enabled)} />
+                  checked={rule.enabled && !expired} disabled={busy || expired} onCheckedChange={enabled => void toggle(rule, enabled)} />
               </div>;
             })}
           </CompanionListSection> : <div className="border-y border-companion-divider py-8 text-center">

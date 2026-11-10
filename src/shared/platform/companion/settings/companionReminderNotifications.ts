@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
-import { isReminderForDevice, type ReminderDevice, type ReminderRule } from '../../../../../lib/core/reminders/reminderRule';
+import { isReminderForDevice, isReminderTriggerPast, type ReminderDevice, type ReminderRule } from '../../../../../lib/core/reminders/reminderRule';
 
 const owner = 'foliole-reminder-v1';
 
@@ -11,7 +11,7 @@ export async function reconcileCompanionReminders(
   rules: ReminderRule[], device: ReminderDevice, requestPermission = false
 ): Promise<SchedulingResult> {
   const exact = Capacitor.getPlatform() === 'android';
-  const localRules = rules.filter(rule => rule.enabled && isReminderForDevice(rule, device));
+  const localRules = rules.filter(rule => rule.enabled && isReminderForDevice(rule, device) && !isReminderTriggerPast(rule.trigger));
   const { notifications } = await LocalNotifications.getPending();
   const desired = new Map(localRules.map(rule => [rule.id, rule]));
   const occupied = new Set(notifications.map(notification => notification.id));
@@ -34,7 +34,7 @@ export async function reconcileCompanionReminders(
   if (!desired.size) return 'scheduled';
 
   for (const rule of desired.values()) {
-    await scheduleDailyReminder(rule, availableId(occupied), exact);
+    await scheduleReminder(rule, availableId(occupied), exact);
   }
   return 'scheduled';
 }
@@ -45,13 +45,15 @@ async function allowExactReminders(requestPermission: boolean) {
   return requestPermission && (await LocalNotifications.changeExactNotificationSetting()).exact_alarm === 'granted';
 }
 
-function scheduleDailyReminder(rule: ReminderRule, id: number, exact: boolean) {
-  const hour = Number(rule.trigger.time.slice(0, 2));
-  const minute = Number(rule.trigger.time.slice(3));
+function scheduleReminder(rule: ReminderRule, id: number, exact: boolean) {
+  const trigger = rule.trigger;
+  const schedule = trigger.kind === 'once'
+    ? { at: new Date(trigger.at), repeats: false }
+    : { on: { hour: Number(trigger.time.slice(0, 2)), minute: Number(trigger.time.slice(3)), second: 0 } };
   return LocalNotifications.schedule({ notifications: [{
     id, title: 'Foliole', body: rule.message,
     extra: { owner, ruleId: rule.id, revision: rule.revision, exact },
-    schedule: { on: { hour, minute, second: 0 }, allowWhileIdle: true },
+    schedule: { ...schedule, allowWhileIdle: true },
     isExactNotification: exact, isExactMandatory: exact
   }] });
 }

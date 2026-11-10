@@ -80,7 +80,7 @@ async function setDraft(message: string, time: string) {
     await waitFor(() => expect(add).toBeEnabled());
     fireEvent.click(add);
   }
-  expect(screen.getByRole('group', { name: 'Trigger' })).toHaveTextContent('Daily schedule');
+  expect(screen.getByRole('group', { name: 'Trigger' })).toBeVisible();
   expect(screen.getByText('Delivery device')).toBeVisible();
   expect(screen.getByText('This device')).toBeVisible();
   fireEvent.change(screen.getByLabelText('Message'), { target: { value: message } });
@@ -157,4 +157,28 @@ it('keeps the Android rule without silently scheduling an approximate alarm when
   fireEvent.click(screen.getByRole('button', { name: 'Edit reminder: Open Foliole' }));
   await save();
   expect(pendingTimes()).toEqual([['Open Foliole', { hour: 20, minute: 0, second: 0 }, true]]);
+});
+
+it.each(['android', 'ios'] as const)('schedules a single %s notification and restores its trigger after reopen', async platform => {
+  root = mkdtempSync(path.join(os.tmpdir(), 'foliole-reminder-once-'));
+  await open(platform);
+  const view = render(<CompanionReminderSettingsContent onBack={() => undefined} />);
+  const add = await screen.findByRole('button', { name: 'Add reminder' });
+  await waitFor(() => expect(add).toBeEnabled());
+  fireEvent.click(add);
+  fireEvent.change(screen.getByRole('combobox', { name: 'Trigger' }), { target: { value: 'once' } });
+  fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'One appointment' } });
+  const when = `${new Date().getFullYear() + 1}-04-03T10:45`;
+  fireEvent.change(screen.getByLabelText('Date and time'), { target: { value: when } });
+  await save();
+  const schedule = [...host.pending.values()][0]?.schedule;
+  expect(schedule).toEqual({ at: new Date(when), repeats: false, allowWhileIdle: true });
+
+  view.unmount();
+  await closeIosCompanionDatabase();
+  await open(platform);
+  render(<CompanionReminderSettingsContent onBack={() => undefined} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit reminder: One appointment' }));
+  expect(screen.getByRole('combobox', { name: 'Trigger' })).toHaveValue('once');
+  expect(screen.getByLabelText('Date and time')).toHaveValue(when);
 });
