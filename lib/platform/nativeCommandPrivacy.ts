@@ -9,6 +9,7 @@ const SENSITIVE_NATIVE_COMMAND_ARGS = new Set<string>([
   NATIVE_COMMANDS.connectFoliolePublishSettings,
   NATIVE_COMMANDS.saveEditorOperationHistory,
   NATIVE_COMMANDS.saveSystemEntryDisplayNames,
+  NATIVE_COMMANDS.saveDesktopReminder,
   NATIVE_COMMANDS.saveDiscoursePublishSettings,
   NATIVE_COMMANDS.saveWordPressPublishDraft,
   NATIVE_COMMANDS.connectWordPressPublishSettings

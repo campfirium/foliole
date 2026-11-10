@@ -22,6 +22,7 @@ export type SettingsCategoryId =
   | 'import'
   | 'readwise-reader'
   | 'review'
+  | 'reminders'
   | 'hotkeys';
 
 type Translate = (key: TranslationKey) => string;
@@ -37,6 +38,7 @@ const SETTINGS_CATEGORY_DEFINITIONS: Array<{
   { id: 'typography', labelKey: 'settings.category.typography.label', descriptionKey: 'settings.category.typography.description' },
   { id: 'editor', labelKey: 'settings.category.editor.label', descriptionKey: 'settings.category.editor.description' },
   { id: 'web-lookup', labelKey: 'settings.category.webLookup.label', descriptionKey: 'settings.category.webLookup.description' },
+  { id: 'reminders', labelKey: 'settings.reminders.title', descriptionKey: 'settings.reminders.thisDevice' },
   { id: 'review', labelKey: 'settings.category.review.label', descriptionKey: 'settings.category.review.description' },
   { id: 'publishing', labelKey: 'settings.category.publishing.label', descriptionKey: 'settings.category.publishing.description' },
   { id: 'rail', labelKey: 'settings.category.rail.label', descriptionKey: 'settings.category.rail.description' },
@@ -64,7 +66,7 @@ export function getSettingsCategories(t: Translate): SettingsCategoryOption[] {
 const SETTINGS_CATEGORY_GROUP_DEFINITIONS: Array<{ categoryIds: SettingsCategoryId[]; labelKey: TranslationKey }> = [
   {
     labelKey: 'settings.group.workspace',
-    categoryIds: ['general', 'appearance', 'typography', 'editor', 'review', 'publishing']
+    categoryIds: ['general', 'appearance', 'typography', 'editor', 'review', 'reminders', 'publishing']
   },
   {
     labelKey: 'settings.group.controls',

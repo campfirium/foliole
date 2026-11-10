@@ -8,6 +8,7 @@ import { refreshGlobalClipShortcutFromSettings } from './globalClipShortcut.js';
 import { seedStartupGuidedSample } from './guidedSampleStartupSeed.js';
 import { appendBootEvent } from './ipc/boot.js';
 import { installAppMenu } from './ipc/menu.js';
+import { startDesktopReminders } from './reminders/desktopReminderRuntime.js';
 
 export async function initializeRuntimeServices() {
   try {
@@ -27,6 +28,7 @@ export async function initializeRuntimeServices() {
     refreshGlobalClipShortcutFromSettings();
     await appendBootEvent('database_init_complete');
     startDesktopForegroundTime();
+    startDesktopReminders();
     installAppMenu();
     markDatabaseReady();
   } catch (error) {

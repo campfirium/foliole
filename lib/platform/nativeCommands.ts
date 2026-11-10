@@ -1,6 +1,8 @@
 import { NATIVE_ASSISTANT_COMMANDS } from './nativeAssistantCommands.js';
+import { NATIVE_DAILY_FLOW_COMMANDS } from './nativeDailyFlowCommands.js';
 import { NATIVE_DATABASE_UPGRADE_COMMANDS } from './nativeDatabaseUpgradeContract.js';
 import { NATIVE_DIVE_COMMANDS } from './nativeDiveCommands.js';
+import { NATIVE_REMINDER_COMMANDS } from './nativeReminderContract.js';
 import { NATIVE_SOURCE_CONNECTION_COMMANDS } from './nativeSourceConnectionCommands.js';
 import { NATIVE_WEBDAV_RELAY_COMMANDS } from './nativeWebDavRelayCommands.js';
 
@@ -250,10 +252,8 @@ export const NATIVE_COMMANDS = {
   softDeleteNodes: 'soft_delete_nodes',
   restoreNodes: 'restore_nodes',
   deleteNodesPermanently: 'delete_nodes_permanently',
-  saveDailyFlowSourceSettings: 'save_daily_flow_source_settings',
-  readDailyFlowView: 'read_daily_flow_view',
-  openDailyFlow: 'open_daily_flow',
-  commitDailyFlow: 'commit_daily_flow',
+  ...NATIVE_DAILY_FLOW_COMMANDS,
+  ...NATIVE_REMINDER_COMMANDS,
   applyReviewGrade: 'apply_review_grade'
 } as const;
 

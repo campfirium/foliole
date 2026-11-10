@@ -5,6 +5,7 @@ import type { CommandSecurityCapability } from './commandSecurityCapabilities.js
 import { NATIVE_ASSISTANT_COMMAND_REGISTRY } from './nativeAssistantCommandRegistry.js';
 import { NATIVE_BACKUP_COMMAND_REGISTRY } from './nativeBackupCommandRegistry.js';
 import { NATIVE_DIVE_COMMAND_REGISTRY } from './nativeDiveCommandRegistry.js';
+import { NATIVE_SCHEDULED_COMMAND_REGISTRY } from './nativeScheduledCommandRegistry.js';
 import { NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY } from './nativeSourceConnectionCommandRegistry.js';
 
 export interface NativeCommandRegistryEntry {
@@ -14,10 +15,7 @@ export interface NativeCommandRegistryEntry {
 }
 
 export const NATIVE_COMMAND_REGISTRY = [
-  { command: NATIVE_COMMANDS.saveDailyFlowSourceSettings, route: 'storage', capability: 'dataMutation' },
-  { command: NATIVE_COMMANDS.readDailyFlowView, route: 'storage', capability: 'read' },
-  { command: NATIVE_COMMANDS.openDailyFlow, route: 'storage', capability: 'dataMutation' },
-  { command: NATIVE_COMMANDS.commitDailyFlow, route: 'storage', capability: 'dataMutation' },
+  ...NATIVE_SCHEDULED_COMMAND_REGISTRY,
   ...NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY,
   ...NATIVE_ASSISTANT_COMMAND_REGISTRY,
   ...NATIVE_BACKUP_COMMAND_REGISTRY,

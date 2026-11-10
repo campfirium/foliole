@@ -25,6 +25,7 @@ import { SettingsImportSection } from './sections/SettingsImportSection';
 import { SettingsMouseGesturesSection } from './sections/SettingsMouseGesturesSection';
 import { SettingsPublishingSection } from './sections/SettingsPublishingSection';
 import { SettingsRailSection } from './sections/SettingsRailSection';
+import { SettingsRemindersSection } from './sections/SettingsRemindersSection';
 import { SettingsReviewSection } from './sections/SettingsReviewSection';
 import { SettingsTypographySection } from './sections/SettingsTypographySection';
 import { SettingsWebLookupSection } from './sections/SettingsWebLookupSection';
@@ -179,6 +180,8 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
   const t = useTranslation();
   const localizedProps = { ...props, t };
   switch (props.activeCategory) {
+    case 'reminders':
+      return <SettingsRemindersSection />;
     case 'editor':
       return <SettingsEditorSection />;
     case 'general':

@@ -48,6 +48,7 @@ import {
 import { setMainWindow } from './mainWindowRegistry.js';
 import { flushMirrorSync } from './mirror/mirrorSyncScheduler.js';
 import { flushReadingProgressForWindows } from './readingProgressWindowFlush.js';
+import { stopDesktopReminders } from './reminders/desktopReminderRuntime.js';
 import type { StartupRendererView } from './rendererLoader.js';
 import { bindEmbeddedLinkPanelContents, installMainRuntimeDiagnostics } from './runtimeMainSupport.js';
 import type { RuntimeMode } from './runtimeMode.js';
@@ -92,6 +93,7 @@ function installBeforeQuitLifecycle() {
       stopSearchIndexInvalidationScheduler();
       stopSearchAliasMirror();
       stopReadwiseBackgroundServices();
+      stopDesktopReminders();
       stopDesktopSecurityScopedAccess();
       disposeAssistantCommandAdapter();
       void stopDevScreenshotServer().catch((error) => appendMainProcessDiagnosticLog('dev_screenshot_stop_failed', { error }));

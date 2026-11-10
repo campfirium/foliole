@@ -1,5 +1,6 @@
 import {
   Archive,
+  Bell,
   BookOpenText,
   FolderOpen,
   FolderSearch,
@@ -42,6 +43,7 @@ const CATEGORY_ICONS: Record<SettingsCategoryId, LucideIcon> = {
   'web-lookup': Globe2,
   publishing: Send,
   review: ListChecks,
+  reminders: Bell,
   rail: PanelLeft,
   'document-menu': MoreHorizontal,
   hotkeys: Keyboard,

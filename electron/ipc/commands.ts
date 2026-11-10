@@ -15,6 +15,7 @@ import {
   IPC_RESPONSE_PAYLOAD_WARNING_BYTES,
   recordIpcPayloadBudget
 } from './ipcPayloadBudget.js';
+import { handleReminderCommand } from './reminderCommands.js';
 import { handleReviewCommand } from './reviewCommands.js';
 import { handleStorageCommand } from './storageCommands.js';
 import { handleDesktopUpdateCommand } from './updateCommands.js';
@@ -91,7 +92,7 @@ function dispatchRoutedCommand(
     return handleAssistantCommand(request.command, args, context?.sender);
   }
   if (route === 'storage') {
-    const execute = () => handleStorageCommand(
+    const execute = () => handleReminderCommand(request.command, args) ?? handleStorageCommand(
       request.command, args, resolveTargetWindow(context), context?.sender
     );
     if (isForegroundNodeMutationCommand(request.command)) {
