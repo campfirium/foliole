@@ -53,7 +53,7 @@ function useNativeSurface(initial: WorkspaceSnapshot) {
   return { surface: useCompanionArticleSurface(workspace, createFloatingBar()), snapshot, workspace };
 }
 
-it('leaves a converted Dive after Read and keeps the just-read material open', async () => {
+it.each(['converted', 'trashed'] as const)('leaves a %s Dive after Read and keeps the material open', async action => {
   const initial = (await refreshCompanionWorkspaceAfterMutation())!;
   const dive = {
     ...initial.nodesById['000000']!, id: 'conversion-dive', kind: 'folder' as const, parentNodeId: null,
@@ -73,9 +73,10 @@ it('leaves a converted Dive after Read and keeps the just-read material open', a
   });
   await waitFor(() => expect(ui.result.current.surface.effectiveReviewSession.currentCard).not.toBeNull());
   const card = ui.result.current.surface.effectiveReviewSession.currentCard!.nodeId;
-  const index = { ...dive, currentVersionId: diveVersion.version_id, parentNodeId: VIRTUAL_ROOT_NODE_ID,
-    virtualFilter: createManualVirtualNodeFilter(), updatedAt: new Date().toISOString() };
-  await applyCompanionLocalNodeVersions([await toWorkspaceNativeNodeVersion(index, 'remote')]);
+  const updatedAt = new Date().toISOString();
+  const moved = { ...dive, currentVersionId: diveVersion.version_id, updatedAt, ...(action === 'converted'
+    ? { parentNodeId: VIRTUAL_ROOT_NODE_ID, virtualFilter: createManualVirtualNodeFilter() } : { deletedAt: updatedAt }) };
+  await applyCompanionLocalNodeVersions([await toWorkspaceNativeNodeVersion(moved, 'remote')]);
   registerCompanionWorkspaceRefresh({ kind: 'full' });
   await act(() => ui.result.current.workspace.refreshAfterMutation());
   expect(ui.result.current.surface.effectiveReviewSession.currentCard?.nodeId).toBe(card);

@@ -1,4 +1,4 @@
-import { FolderPlus, ListMinus, Play } from 'lucide-react';
+import { FolderPlus, ListMinus, Play, Trash2 } from 'lucide-react';
 import { useContext, useEffect, useState, type MouseEvent } from 'react';
 
 import type { Dive } from '../../../lib/core/nodes/dive';
@@ -80,6 +80,7 @@ function DiveContextMenu(props: { context: Context; dive: Dive | undefined; onCl
                 {props.dive ? <DiveFlowMenuItem dive={props.dive} onClose={onClose} /> : null}
                 {props.dive ? <ConvertDiveDirectoryMenuItem nodeId={props.dive.id} target="index" onClose={onClose} /> : null}
                 <NodeRenameContextMenuItem onSelect={() => { onClose(); requestNodeRename(context.id); }} />
+                {props.dive ? <DeleteDiveMenuItem diveId={props.dive.id} onClose={onClose} /> : null}
               </>
             )}
           </>
@@ -87,6 +88,16 @@ function DiveContextMenu(props: { context: Context; dive: Dive | undefined; onCl
       </AppDropdownMenuContent>
     </AppDropdownMenu>
   );
+}
+
+function DeleteDiveMenuItem(props: { diveId: string; onClose: () => void }) {
+  const t = useTranslation();
+  return <NodeContextMenuItem icon={Trash2} tone="destructive" onSelect={() => {
+    props.onClose();
+    useWorkspaceStore.getState().deleteNode(props.diveId);
+  }}>
+    {t('desktop.nodeList.menu.delete')}
+  </NodeContextMenuItem>;
 }
 
 function useDiveSection(dives: readonly Dive[], selectDive: (id: string) => void) {
