@@ -80,8 +80,11 @@ async function setDraft(message: string, time: string) {
     await waitFor(() => expect(add).toBeEnabled());
     fireEvent.click(add);
   }
+  expect(screen.getByRole('group', { name: 'Trigger' })).toHaveTextContent('Daily schedule');
+  expect(screen.getByText('Delivery device')).toBeVisible();
+  expect(screen.getByText('This device')).toBeVisible();
   fireEvent.change(screen.getByLabelText('Message'), { target: { value: message } });
-  fireEvent.change(screen.getByLabelText('Time each day'), { target: { value: time } });
+  fireEvent.change(screen.getByLabelText('Time'), { target: { value: time } });
 }
 
 function pendingTimes() {
@@ -104,18 +107,27 @@ it.each(['android', 'ios'] as const)('keeps independent %s reminders across reop
   await closeIosCompanionDatabase();
   await open(platform);
   render(<CompanionReminderSettingsContent onBack={() => undefined} />);
-  fireEvent.click(await screen.findByRole('button', { name: '20:00 · Open Foliole' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit reminder: Open Foliole' }));
   await setDraft('Open Foliole', '20:30');
   await save();
   expect(pendingTimes()).toEqual([
     ['Start reading', { hour: 21, minute: 15, second: 0 }, platform === 'android'],
     ['Open Foliole', { hour: 20, minute: 30, second: 0 }, platform === 'android']
   ]);
-  fireEvent.click(screen.getByRole('button', { name: '20:30 · Open Foliole' }));
-  fireEvent.click(screen.getByRole('switch', { name: 'Enabled' }));
-  await save();
-  expect(pendingTimes()).toEqual([['Start reading', { hour: 21, minute: 15, second: 0 }, platform === 'android']]);
-  expect(screen.getByRole('button', { name: '20:30 · Open Foliole · Off' })).toBeVisible();
+  const toggle = screen.getByRole('switch', { name: 'Enabled: Open Foliole' });
+  expect(toggle).toBeChecked();
+  fireEvent.click(toggle);
+  await waitFor(() => expect(toggle).not.toBeChecked());
+  await waitFor(() => expect(pendingTimes()).toEqual([
+    ['Start reading', { hour: 21, minute: 15, second: 0 }, platform === 'android']
+  ]));
+  expect(screen.queryByRole('form')).not.toBeInTheDocument();
+  await waitFor(() => expect(toggle).toBeEnabled());
+  fireEvent.click(toggle);
+  await waitFor(() => expect(toggle).toBeChecked());
+  await waitFor(() => expect(pendingTimes()).toContainEqual(
+    ['Open Foliole', { hour: 20, minute: 30, second: 0 }, platform === 'android']
+  ));
 });
 
 it('keeps the rule when notification permission is denied and schedules after permission is restored', async () => {
@@ -127,7 +139,7 @@ it('keeps the rule when notification permission is denied and schedules after pe
   await save('Reminder saved. Allow notifications in system settings to receive it.');
   expect(pendingTimes()).toEqual([]);
   host.granted = true;
-  fireEvent.click(screen.getByRole('button', { name: '20:00 · Open Foliole' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Edit reminder: Open Foliole' }));
   await save();
   expect(pendingTimes()).toEqual([['Open Foliole', { hour: 20, minute: 0, second: 0 }, true]]);
 });
@@ -142,7 +154,7 @@ it('keeps the Android rule without silently scheduling an approximate alarm when
   expect(pendingTimes()).toEqual([]);
 
   host.exactGranted = true;
-  fireEvent.click(screen.getByRole('button', { name: '20:00 · Open Foliole' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Edit reminder: Open Foliole' }));
   await save();
   expect(pendingTimes()).toEqual([['Open Foliole', { hour: 20, minute: 0, second: 0 }, true]]);
 });

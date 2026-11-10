@@ -10,13 +10,13 @@ import {
   loadCompanionReminderDevice, loadCompanionReminderRules, saveCompanionReminderRule
 } from '../shared/platform/companion/settings/companionReminderRepository';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
-import { AppButton } from '../shared/ui';
+import { AppButton, AppSwitch } from '../shared/ui';
 
 import { CompanionListRow, CompanionListSection } from './CompanionListSurface';
 import { CompanionReminderEditor, type ReminderDraft } from './CompanionReminderEditor';
 import { CompanionSettingsDetail } from './CompanionSettingsContent';
 
-const emptyDraft: ReminderDraft = { message: '', time: '20:00', enabled: true };
+const emptyDraft: ReminderDraft = { message: '', trigger: { kind: 'daily', time: '20:00' } };
 
 function useReminderSettings() {
   const [rules, setRules] = useState<ReminderRule[]>([]);
@@ -33,20 +33,15 @@ function useReminderSettings() {
     return () => { active = false; };
   }, []);
 
-  async function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!device || busy || !draft?.message.trim()) return;
+  async function persist(rule: ReminderRule, closeEditor = false) {
+    if (!device || busy) return;
     setBusy(true);
     setFeedback(undefined);
-    const rule: ReminderRule = {
-      id: draft.id ?? createCompanionUuid(), revision: createCompanionUuid(), message: draft.message.trim(),
-      trigger: { kind: 'daily', time: draft.time }, device, enabled: draft.enabled
-    };
     try {
       await saveCompanionReminderRule(rule);
       const updated = await loadCompanionReminderRules();
       setRules(updated);
-      setDraft(null);
+      if (closeEditor) setDraft(null);
       const result = await reconcileCompanionReminders(updated, device, rule.enabled).catch(() => 'failed' as const);
       if (result === 'permission-denied') setFeedback('permission');
       else if (result === 'exact-permission-denied') setFeedback('exactPermission');
@@ -58,15 +53,29 @@ function useReminderSettings() {
     }
   }
 
-  return { busy, device, draft, feedback, rules, save, setDraft };
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!device || !draft?.message.trim()) return;
+    const current = rules.find(rule => rule.id === draft.id);
+    await persist({
+      id: draft.id ?? createCompanionUuid(), revision: createCompanionUuid(), message: draft.message.trim(),
+      trigger: draft.trigger, device, enabled: current?.enabled ?? true
+    }, true);
+  }
+
+  function toggle(rule: ReminderRule, enabled: boolean) {
+    return persist({ ...rule, revision: createCompanionUuid(), enabled });
+  }
+
+  return { busy, device, draft, feedback, rules, save, setDraft, toggle };
 }
 
 export function CompanionReminderSettingsContent(props: { onBack(): void }) {
   const t = useTranslation();
-  const { busy, device, draft, feedback, rules, save, setDraft } = useReminderSettings();
+  const { busy, device, draft, feedback, rules, save, setDraft, toggle } = useReminderSettings();
   const localRules = device ? rules.filter(rule => isReminderForDevice(rule, device)) : [];
   const edit = (rule: ReminderRule) => setDraft({
-    id: rule.id, message: rule.message, time: rule.trigger.time, enabled: rule.enabled
+    id: rule.id, message: rule.message, trigger: rule.trigger
   });
   const status = feedback && <p role="status" className="text-sm leading-5 text-companion-text-secondary">
     {t(`settings.reminders.${feedback}`)}
@@ -76,21 +85,24 @@ export function CompanionReminderSettingsContent(props: { onBack(): void }) {
       <div className="space-y-5 py-4">
         {draft ? <CompanionReminderEditor busy={busy} draft={draft} onChange={setDraft}
           onCancel={() => setDraft(null)} onSave={save} /> : <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-companion-text-secondary">{t('settings.reminders.thisDevice')}</p>
+          <div className="flex justify-end">
             <AppButton className="min-h-11" disabled={busy || !device} onClick={() => setDraft(emptyDraft)}>
               <Plus size={16} aria-hidden="true" />{t('settings.reminders.add')}
             </AppButton>
           </div>
           {device && (localRules.length ? <CompanionListSection isFirst>
             {localRules.map(rule => {
-              const off = rule.enabled ? '' : ` · ${t('settings.reminders.disabled')}`;
-              return <CompanionListRow key={rule.id} Icon={Bell}
-                title={rule.message} titleClassName="break-words"
-                subtitle={rule.enabled ? t('settings.reminders.dailyTime') : t('settings.reminders.disabled')}
-                meta={<span className="tabular-nums">{rule.trigger.time}</span>}
-                ariaLabel={`${rule.trigger.time} · ${rule.message}${off}`}
-                onClick={() => { if (!busy) edit(rule); }} />;
+              const schedule = t('settings.reminders.dailyAt', { time: rule.trigger.time });
+              return <div key={rule.id} className="flex min-h-16 items-center gap-3 border-b border-companion-divider last:border-b-0">
+                <div className="min-w-0 flex-1">
+                  <CompanionListRow Icon={Bell} title={rule.message} titleClassName="break-words"
+                    subtitle={`${schedule} · ${t('settings.reminders.thisDevice')}`}
+                    ariaLabel={`${t('settings.reminders.edit')}: ${rule.message}`}
+                    onClick={() => { if (!busy) edit(rule); }} />
+                </div>
+                <AppSwitch className="shrink-0" aria-label={`${t('settings.reminders.enabled')}: ${rule.message}`}
+                  checked={rule.enabled} disabled={busy} onCheckedChange={enabled => void toggle(rule, enabled)} />
+              </div>;
             })}
           </CompanionListSection> : <div className="border-y border-companion-divider py-8 text-center">
             <Bell aria-hidden="true" className="mx-auto mb-3 size-5 text-companion-text-tertiary" />

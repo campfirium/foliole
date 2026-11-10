@@ -1,9 +1,10 @@
 import type { FormEvent } from 'react';
 
+import type { ReminderRule } from '../../lib/core/reminders/reminderRule';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { AppButton, AppInput, AppSwitch } from '../shared/ui';
+import { AppButton, AppInput } from '../shared/ui';
 
-export type ReminderDraft = { id?: string; message: string; time: string; enabled: boolean };
+export type ReminderDraft = { id?: string; message: string; trigger: ReminderRule['trigger'] };
 
 export function CompanionReminderEditor(props: {
   busy: boolean;
@@ -25,17 +26,20 @@ export function CompanionReminderEditor(props: {
         <AppInput required className="min-h-11 text-base" disabled={busy} value={draft.message}
           onChange={event => onChange({ ...draft, message: event.currentTarget.value })} />
       </label>
-      <label className="flex min-h-14 flex-wrap items-center justify-between gap-2 border-y border-companion-divider py-2 text-sm">
-        <span>{t('settings.reminders.dailyTime')}</span>
-        <AppInput required type="time" className="min-h-11 w-auto max-w-full text-base tabular-nums"
-          disabled={busy} value={draft.time}
-          onChange={event => onChange({ ...draft, time: event.currentTarget.value })} />
-      </label>
-      <div className="flex min-h-11 items-center justify-between gap-3 text-sm">
-        <span>{t('settings.reminders.enabled')}</span>
-        <AppSwitch aria-label={t('settings.reminders.enabled')} checked={draft.enabled} disabled={busy}
-          onCheckedChange={enabled => onChange({ ...draft, enabled })} />
-      </div>
+      <fieldset className="space-y-1.5 border-t border-companion-divider pt-2">
+        <legend className="text-sm font-medium">{t('settings.reminders.trigger')}</legend>
+        <p className="text-sm text-companion-text-secondary">{t('settings.reminders.daily')}</p>
+        <label className="flex min-h-14 flex-wrap items-center justify-between gap-2 text-sm">
+          <span>{t('settings.reminders.time')}</span>
+          <AppInput required type="time" className="min-h-11 w-auto max-w-full text-base tabular-nums"
+            disabled={busy} value={draft.trigger.time}
+            onChange={event => onChange({ ...draft, trigger: { ...draft.trigger, time: event.currentTarget.value } })} />
+        </label>
+      </fieldset>
+      <dl className="flex min-h-11 items-center justify-between gap-3 border-t border-companion-divider pt-2 text-sm">
+        <dt className="font-medium">{t('settings.reminders.device')}</dt>
+        <dd className="text-companion-text-secondary">{t('settings.reminders.thisDevice')}</dd>
+      </dl>
     </div>
     <div className="flex flex-wrap justify-end gap-2 border-t border-companion-divider pt-4">
       <AppButton variant="ghost" className="min-h-11" disabled={busy} onClick={props.onCancel}>{t('common.cancel')}</AppButton>
