@@ -1,14 +1,16 @@
+import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { isReminderForDevice, type ReminderDevice, type ReminderRule } from '../../../../../lib/core/reminders/reminderRule';
 
 const owner = 'foliole-reminder-v1';
 
-type SchedulingResult = 'scheduled' | 'inactive' | 'permission-denied';
+type SchedulingResult = 'scheduled' | 'inactive' | 'permission-denied' | 'exact-permission-denied';
 
 export async function reconcileCompanionReminders(
   rules: ReminderRule[], device: ReminderDevice, requestPermission = false
 ): Promise<SchedulingResult> {
+  const exact = Capacitor.getPlatform() === 'android';
   const localRules = rules.filter(rule => rule.enabled && isReminderForDevice(rule, device));
   const { notifications } = await LocalNotifications.getPending();
   const desired = new Map(localRules.map(rule => [rule.id, rule]));
@@ -16,7 +18,7 @@ export async function reconcileCompanionReminders(
   const cancel = notifications.filter(notification => {
     if (notification.extra?.owner !== owner) return false;
     const rule = desired.get(notification.extra.ruleId);
-    if (rule && rule.revision === notification.extra.revision) {
+    if (rule && rule.revision === notification.extra.revision && (!exact || notification.extra.exact === true)) {
       desired.delete(rule.id);
       return false;
     }
@@ -28,22 +30,29 @@ export async function reconcileCompanionReminders(
   let permission = await LocalNotifications.checkPermissions();
   if (requestPermission && permission.display !== 'granted') permission = await LocalNotifications.requestPermissions();
   if (permission.display !== 'granted') return 'permission-denied';
+  if (exact && !await allowExactReminders(requestPermission)) return 'exact-permission-denied';
   if (!desired.size) return 'scheduled';
 
   for (const rule of desired.values()) {
-    await scheduleDailyReminder(rule, availableId(occupied));
+    await scheduleDailyReminder(rule, availableId(occupied), exact);
   }
   return 'scheduled';
 }
 
-function scheduleDailyReminder(rule: ReminderRule, id: number) {
+async function allowExactReminders(requestPermission: boolean) {
+  const state = await LocalNotifications.checkExactNotificationSetting();
+  if (state.exact_alarm === 'granted') return true;
+  return requestPermission && (await LocalNotifications.changeExactNotificationSetting()).exact_alarm === 'granted';
+}
+
+function scheduleDailyReminder(rule: ReminderRule, id: number, exact: boolean) {
   const hour = Number(rule.trigger.time.slice(0, 2));
   const minute = Number(rule.trigger.time.slice(3));
   return LocalNotifications.schedule({ notifications: [{
     id, title: 'Foliole', body: rule.message,
-    extra: { owner, ruleId: rule.id, revision: rule.revision },
+    extra: { owner, ruleId: rule.id, revision: rule.revision, exact },
     schedule: { on: { hour, minute, second: 0 }, allowWhileIdle: true },
-    isExactNotification: false
+    isExactNotification: exact, isExactMandatory: exact
   }] });
 }
 

@@ -9,6 +9,7 @@ export const ZH_HANS_REMINDER_TRANSLATIONS = {
   'settings.reminders.add': '添加提醒',
   'settings.reminders.saved': '提醒已保存。',
   'settings.reminders.permission': '提醒已保存。请在系统设置中允许通知。',
+  'settings.reminders.exactPermission': '提醒已保存。请允许「闹钟和提醒」，然后重新保存这条提醒。',
   'settings.reminders.failed': '提醒已保存，但系统未能安排通知。',
   'settings.reminders.unavailable': '无法访问提醒。',
 } as const;

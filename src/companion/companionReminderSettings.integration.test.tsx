@@ -16,7 +16,7 @@ import { createFakeCapacitorDatabaseManager } from '../shared/platform/companion
 import { CompanionReminderSettingsContent } from './CompanionReminderSettingsContent';
 
 const host = vi.hoisted(() => ({
-  platform: 'android', bootstrap: null as NativeCompanionBootstrapState | null, granted: true,
+  platform: 'android', bootstrap: null as NativeCompanionBootstrapState | null, granted: true, exactGranted: true,
   pending: new Map<number, LocalNotificationSchema>()
 }));
 
@@ -34,6 +34,8 @@ vi.mock('@capacitor/local-notifications', () => ({
     getPending: async () => ({ notifications: [...host.pending.values()] }),
     checkPermissions: async () => ({ display: host.granted ? 'granted' : 'denied' }),
     requestPermissions: async () => ({ display: host.granted ? 'granted' : 'denied' }),
+    checkExactNotificationSetting: async () => ({ exact_alarm: host.exactGranted ? 'granted' : 'denied' }),
+    changeExactNotificationSetting: async () => ({ exact_alarm: host.exactGranted ? 'granted' : 'denied' }),
     schedule: async ({ notifications }: { notifications: LocalNotificationSchema[] }) => {
       for (const item of notifications) host.pending.set(item.id, item);
     },
@@ -62,6 +64,7 @@ afterEach(async () => {
   if (root) rmSync(root, { recursive: true, force: true });
   host.pending.clear();
   host.granted = true;
+  host.exactGranted = true;
 });
 
 async function save(expected = 'Reminder saved.') {
@@ -89,8 +92,8 @@ it.each(['android', 'ios'] as const)('keeps independent %s reminders across reop
   setDraft('Start reading', '21:15');
   await save();
   expect(pendingTimes()).toEqual([
-    ['Open Foliole', { hour: 20, minute: 0, second: 0 }, false],
-    ['Start reading', { hour: 21, minute: 15, second: 0 }, false]
+    ['Open Foliole', { hour: 20, minute: 0, second: 0 }, platform === 'android'],
+    ['Start reading', { hour: 21, minute: 15, second: 0 }, platform === 'android']
   ]);
   view.unmount();
   await closeIosCompanionDatabase();
@@ -100,13 +103,13 @@ it.each(['android', 'ios'] as const)('keeps independent %s reminders across reop
   setDraft('Open Foliole', '20:30');
   await save();
   expect(pendingTimes()).toEqual([
-    ['Start reading', { hour: 21, minute: 15, second: 0 }, false],
-    ['Open Foliole', { hour: 20, minute: 30, second: 0 }, false]
+    ['Start reading', { hour: 21, minute: 15, second: 0 }, platform === 'android'],
+    ['Open Foliole', { hour: 20, minute: 30, second: 0 }, platform === 'android']
   ]);
   fireEvent.click(screen.getByRole('button', { name: '20:30 · Open Foliole' }));
   fireEvent.click(screen.getByRole('checkbox', { name: 'Enabled' }));
   await save();
-  expect(pendingTimes()).toEqual([['Start reading', { hour: 21, minute: 15, second: 0 }, false]]);
+  expect(pendingTimes()).toEqual([['Start reading', { hour: 21, minute: 15, second: 0 }, platform === 'android']]);
   expect(screen.getByRole('button', { name: '20:30 · Open Foliole · Off' })).toBeVisible();
 });
 
@@ -121,5 +124,20 @@ it('keeps the rule when notification permission is denied and schedules after pe
   host.granted = true;
   fireEvent.click(screen.getByRole('button', { name: '20:00 · Open Foliole' }));
   await save();
-  expect(pendingTimes()).toEqual([['Open Foliole', { hour: 20, minute: 0, second: 0 }, false]]);
+  expect(pendingTimes()).toEqual([['Open Foliole', { hour: 20, minute: 0, second: 0 }, true]]);
+});
+
+it('keeps the Android rule without silently scheduling an approximate alarm when exact access is denied', async () => {
+  root = mkdtempSync(path.join(os.tmpdir(), 'foliole-reminder-exact-'));
+  await open('android');
+  host.exactGranted = false;
+  render(<CompanionReminderSettingsContent onBack={() => undefined} />);
+  setDraft('Open Foliole', '20:00');
+  await save('Reminder saved. Allow Alarms & reminders, then save the reminder again.');
+  expect(pendingTimes()).toEqual([]);
+
+  host.exactGranted = true;
+  fireEvent.click(screen.getByRole('button', { name: '20:00 · Open Foliole' }));
+  await save();
+  expect(pendingTimes()).toEqual([['Open Foliole', { hour: 20, minute: 0, second: 0 }, true]]);
 });

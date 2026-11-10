@@ -20,7 +20,7 @@ function useReminderSettings() {
   const [device, setDevice] = useState<ReminderDevice>();
   const [draft, setDraft] = useState<ReminderDraft>(emptyDraft);
   const [busy, setBusy] = useState(false);
-  const [feedback, setFeedback] = useState<'failed' | 'permission' | 'saved' | 'unavailable'>();
+  const [feedback, setFeedback] = useState<'failed' | 'permission' | 'exactPermission' | 'saved' | 'unavailable'>();
 
   useEffect(() => {
     let active = true;
@@ -45,7 +45,9 @@ function useReminderSettings() {
       setRules(updated);
       setDraft(emptyDraft);
       const result = await reconcileCompanionReminders(updated, device, rule.enabled).catch(() => 'failed' as const);
-      setFeedback(result === 'permission-denied' ? 'permission' : result === 'failed' ? 'failed' : 'saved');
+      if (result === 'permission-denied') setFeedback('permission');
+      else if (result === 'exact-permission-denied') setFeedback('exactPermission');
+      else setFeedback(result === 'failed' ? 'failed' : 'saved');
     } catch {
       setFeedback('unavailable');
     } finally {

@@ -9,6 +9,7 @@ export const EN_REMINDER_TRANSLATIONS = {
   'settings.reminders.add': 'Add reminder',
   'settings.reminders.saved': 'Reminder saved.',
   'settings.reminders.permission': 'Reminder saved. Allow notifications in system settings to receive it.',
+  'settings.reminders.exactPermission': 'Reminder saved. Allow Alarms & reminders, then save the reminder again.',
   'settings.reminders.failed': 'Reminder saved, but the system could not schedule it.',
   'settings.reminders.unavailable': 'Could not access reminders.',
 } as const;
