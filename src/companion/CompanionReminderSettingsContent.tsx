@@ -1,4 +1,4 @@
-import { Bell, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 
 import {
@@ -10,9 +10,9 @@ import {
   loadCompanionReminderDevice, loadCompanionReminderRules, saveCompanionReminderRule
 } from '../shared/platform/companion/settings/companionReminderRepository';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
-import { AppButton, AppSwitch } from '../shared/ui';
+import { AppSwitch } from '../shared/ui';
 
-import { CompanionListRow, CompanionListSection } from './CompanionListSurface';
+import { CompanionListSection } from './CompanionListSurface';
 import { CompanionReminderEditor, type ReminderDraft } from './CompanionReminderEditor';
 import { CompanionSettingsDetail } from './CompanionSettingsContent';
 
@@ -85,12 +85,7 @@ export function CompanionReminderSettingsContent(props: { onBack(): void }) {
       <div className="space-y-5 py-4">
         {draft ? <CompanionReminderEditor busy={busy} draft={draft} onChange={setDraft}
           onCancel={() => setDraft(null)} onSave={save} /> : <>
-          <div className="flex justify-end">
-            <AppButton className="min-h-11" disabled={busy || !device} onClick={() => setDraft(emptyDraft)}>
-              <Plus size={16} aria-hidden="true" />{t('settings.reminders.add')}
-            </AppButton>
-          </div>
-          {device && (localRules.length ? <CompanionListSection isFirst>
+          {device && localRules.length > 0 && <CompanionListSection isFirst>
             {localRules.map(rule => {
               const expired = isReminderTriggerPast(rule.trigger);
               const schedule = rule.trigger.kind === 'daily'
@@ -98,23 +93,47 @@ export function CompanionReminderSettingsContent(props: { onBack(): void }) {
                 : t('settings.reminders.onceAt', { time: new Date(rule.trigger.at).toLocaleString() });
               const detail = expired ? t('settings.reminders.timePassed') : t('settings.reminders.thisDevice');
               return <div key={rule.id} className="flex min-h-16 items-center gap-3 border-b border-companion-divider last:border-b-0">
-                <div className="min-w-0 flex-1">
-                  <CompanionListRow Icon={Bell} title={rule.message} titleClassName="break-words"
-                    subtitle={`${schedule} · ${detail}`}
-                    ariaLabel={`${t('settings.reminders.edit')}: ${rule.message}`}
-                    onClick={() => { if (!busy) edit(rule); }} />
-                </div>
+                <button type="button" disabled={busy} className="min-h-16 min-w-0 flex-1 py-3 text-left"
+                  aria-label={`${t('settings.reminders.edit')}: ${rule.message}`} onClick={() => edit(rule)}>
+                  <span className="block break-words text-lg font-medium">{rule.message}</span>
+                  <span className="mt-1 block text-base text-companion-text-secondary">
+                    {[schedule, detail, rule.destination === 'flow' && t('settings.reminders.openFlow')].filter(Boolean).join(' · ')}
+                  </span>
+                </button>
                 <AppSwitch className="shrink-0" aria-label={`${t('settings.reminders.enabled')}: ${rule.message}`}
                   checked={rule.enabled && !expired} disabled={busy || expired} onCheckedChange={enabled => void toggle(rule, enabled)} />
               </div>;
             })}
-          </CompanionListSection> : <div className="border-y border-companion-divider py-8 text-center">
-            <Bell aria-hidden="true" className="mx-auto mb-3 size-5 text-companion-text-tertiary" />
-            <p className="font-medium text-foreground">{t('settings.reminders.empty')}</p>
-          </div>)}
+          </CompanionListSection>}
+          <ReminderExamples disabled={busy || !device}
+            onUse={() => setDraft({ ...emptyDraft, message: '🌱', destination: 'flow' })} />
+          <button type="button" disabled={busy || !device} onClick={() => setDraft(emptyDraft)}
+            className="flex min-h-12 w-full items-center gap-2 border-t border-companion-divider text-left text-base text-companion-accent disabled:opacity-50">
+            <Plus size={18} aria-hidden="true" />{t('settings.reminders.add')}
+          </button>
         </>}
         {status}
       </div>
     </CompanionSettingsDetail>
   );
+}
+
+function ReminderExamples(props: { disabled: boolean; onUse(): void }) {
+  const t = useTranslation();
+  return <section aria-label={t('settings.reminders.examples')}>
+    <h2 className="pb-2 text-base font-medium">{t('settings.reminders.examples')}</h2>
+    <button type="button" disabled={props.disabled} onClick={props.onUse}
+      className="block min-h-16 w-full border-b border-companion-divider py-3 text-left disabled:opacity-50">
+      <span className="block text-lg">🌱</span>
+      <span className="mt-1 block text-base text-companion-text-secondary">
+        {t('settings.reminders.dailyAt', { time: '20:00' })} · {t('settings.reminders.openFlow')}
+      </span>
+    </button>
+    <div className="min-h-16 py-3">
+      <span className="block text-lg">☕</span>
+      <span className="mt-1 block text-base text-companion-text-secondary">
+        {t('settings.reminders.foregroundExample')} · {t('settings.reminders.notAvailableYet')}
+      </span>
+    </div>
+  </section>;
 }

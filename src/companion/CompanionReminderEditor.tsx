@@ -25,7 +25,7 @@ export function CompanionReminderEditor(props: {
       {t(draft.id ? 'settings.reminders.edit' : 'settings.reminders.add')}
     </h2>
     <div className="space-y-4">
-      <label className="block space-y-1.5 text-sm font-medium">
+      <label className="block space-y-1.5 text-base font-medium">
         <span>{t('settings.reminders.message')}</span>
         <AppInput required className="min-h-11 text-base" disabled={busy} value={draft.message}
           onChange={event => onChange({ ...draft, message: event.currentTarget.value })} />
@@ -36,7 +36,7 @@ export function CompanionReminderEditor(props: {
           onChange={kind => {
             if (kind !== trigger.kind) onChange({ ...draft, trigger: changeRepeat(trigger) });
           }} />
-        <label className="flex min-h-14 flex-wrap items-center justify-between gap-2 text-sm">
+        <label className="flex min-h-14 flex-wrap items-center justify-between gap-2 text-base">
           <span>{t(trigger.kind === 'once' ? 'settings.reminders.dateTime' : 'settings.reminders.time')}</span>
           {trigger.kind === 'once'
             ? <AppInput key="once" required type="datetime-local" className="min-h-11 w-auto max-w-full text-base"
@@ -56,7 +56,7 @@ export function CompanionReminderEditor(props: {
           options={{ none: t('settings.reminders.noDestination'), flow: t('settings.reminders.openFlow') }}
           disabled={busy} onChange={value => onChange({ ...draft, destination: value === 'flow' ? value : undefined })} />
       </div>
-      <dl className="flex min-h-11 items-center justify-between gap-3 border-t border-companion-divider pt-2 text-sm">
+      <dl className="flex min-h-11 items-center justify-between gap-3 border-t border-companion-divider pt-2 text-base">
         <dt className="font-medium">{t('settings.reminders.device')}</dt>
         <dd className="text-companion-text-secondary">{t('settings.reminders.thisDevice')}</dd>
       </dl>

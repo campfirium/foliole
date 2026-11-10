@@ -73,7 +73,7 @@ afterEach(async () => {
 });
 
 async function save(expected = 'Reminder saved.') {
-  const button = screen.getByRole('button', { name: 'Save reminder' });
+  const button = screen.getByRole('button', { name: 'Save' });
   await waitFor(() => expect(button).toBeEnabled());
   fireEvent.click(button);
   expect(await screen.findByText(expected)).toBeVisible();
@@ -220,4 +220,18 @@ it.each(['android', 'ios'] as const)('opens Flow from a current %s reminder and 
   } finally {
     await listener.dispose();
   }
+});
+
+it('shows both examples and schedules the Flow template only after saving', async () => {
+  root = mkdtempSync(path.join(os.tmpdir(), 'foliole-reminder-examples-'));
+  await open('ios');
+  render(<CompanionReminderSettingsContent onBack={() => undefined} />);
+  const seedling = screen.getByRole('button', { name: /🌱/ });
+  expect(screen.getByText('☕')).toBeVisible();
+  expect(host.pending.size).toBe(0);
+  await waitFor(() => expect(seedling).toBeEnabled());
+  fireEvent.click(seedling);
+  expect(screen.getByRole('button', { name: 'On notification tap Open Flow' })).toBeVisible();
+  await save();
+  expect(pendingTimes()).toEqual([['🌱', { hour: 20, minute: 0, second: 0 }, false]]);
 });

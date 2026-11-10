@@ -14,7 +14,7 @@ export function CompanionReminderChoice<Value extends string>(props: {
   return <>
     <button type="button" aria-haspopup="dialog" aria-label={`${props.label} ${props.options[props.value]}`}
       disabled={props.disabled}
-      className="flex min-h-11 w-full items-center justify-between gap-3 text-left text-sm"
+      className="flex min-h-11 w-full items-center justify-between gap-3 text-left text-base"
       onClick={() => setOpen(true)}>
       <span>{props.label}</span>
       <span className="flex items-center gap-2 text-companion-text-secondary">
@@ -24,7 +24,7 @@ export function CompanionReminderChoice<Value extends string>(props: {
     <CompanionBottomSheet open={open} onOpenChange={setOpen} title={props.label}>
       {(Object.keys(props.options) as Value[]).map(value => (
         <button type="button" key={value} aria-current={value === props.value ? 'true' : undefined}
-          className="block min-h-11 w-full border-b border-companion-divider text-left last:border-0"
+          className="block min-h-11 w-full border-b border-companion-divider text-left text-base last:border-0"
           onClick={() => { props.onChange(value); setOpen(false); }}>
           {props.options[value]}
         </button>
