@@ -138,7 +138,14 @@ async function finishDiveRounds(page: import('@playwright/test').Page, output: s
   await expect(page.getByRole('status').filter({ hasText: 'All clear for now.' })).toHaveCount(0);
   await page.screenshot({ path: path.join(output, 'topics-choice.png') });
   await toolbar.getByRole('button', { name: 'Switch', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Empty study' }).click();
+  const picker = page.getByRole('dialog', { name: 'Switch Dive' });
+  await expect(picker.getByRole('button', { name: 'Renamed study' })).toHaveAttribute('aria-current', 'true');
+  const target = picker.getByRole('button', { name: 'Empty study' });
+  await expect(target).toHaveAttribute('aria-keyshortcuts', '2');
+  await expect(target.getByText('2', { exact: true })).toBeVisible();
+  await expect(picker.getByRole('button', { name: 'Cancel' })).toHaveCount(0);
+  await page.keyboard.press('2');
+  await expect(picker).toBeHidden();
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug!.getReviewSession().dive?.phase)).toBe('initial');
   await expect(page.getByRole('heading', { name: 'Dive Queue Clear' })).toBeVisible();
 }

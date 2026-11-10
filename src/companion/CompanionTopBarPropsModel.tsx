@@ -60,6 +60,9 @@ export function resolveCompanionTopBarProps(
     });
   }
   if (surface.activeAction === 'search') return { title: t('companion.tabs.search') };
+  if (surface.diveFlow?.stop && !surface.effectiveReviewSession.currentCard) {
+    return { title: 'Flow', density: 'compact' as const };
+  }
   return resolveReviewTopBar(t, onExitReview);
 }
 

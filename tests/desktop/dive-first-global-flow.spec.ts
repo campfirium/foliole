@@ -73,8 +73,10 @@ async function finishInitialQueue(page: Page) {
   await switchDive.hover();
   await expect(page.getByRole('tooltip')).toContainText('Choose another Dive to study.');
   await switchDive.click();
-  await expect(page.getByRole('menuitem', { name: 'Study History' })).toBeVisible();
+  const picker = page.getByRole('dialog', { name: 'Switch Dive' });
+  await expect(picker.getByRole('button', { name: 'Study History' })).toBeVisible();
   await page.keyboard.press('Escape');
+  await expect(picker).toBeHidden();
   await page.keyboard.press('f');
 }
 

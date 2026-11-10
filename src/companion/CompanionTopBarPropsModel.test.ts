@@ -8,10 +8,10 @@ beforeAll(async () => {
   await preloadTranslationCatalog('en');
 });
 
-function buildTopBarProps(settingsPage = 'list') {
+function buildTopBarProps(settingsPage = 'list', surface: unknown = { activeAction: 'more' }) {
   return resolveCompanionTopBarProps(
     (key, params) => translate('en', key, params),
-    { activeAction: 'more' } as never,
+    surface as never,
     settingsPage as never,
     false,
     { kind: 'root' } as never,
@@ -95,4 +95,13 @@ describe('CompanionTopBarPropsModel', () => {
 
     expect(resolveCompanionTopBarProps(...args)).toMatchObject({ title: 'Inbox' });
   });
+});
+
+it('leaves checkpoint exit in the bottom action bar', () => {
+  const props = buildTopBarProps('list', {
+    activeAction: 'review', diveFlow: { stop: 'waiting' }, effectiveReviewSession: { currentCard: null }
+  });
+  expect(props).toMatchObject({ title: 'Flow' });
+  expect(props).not.toHaveProperty('leftAction');
+  expect(props).not.toHaveProperty('onBack');
 });
