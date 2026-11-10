@@ -12,7 +12,7 @@ import { requestReadingPositionApply } from './readingPositionRequests';
 import type { useAppRuntime } from './useAppRuntime';
 
 function hasRestorableNodeViewState(viewState: NodeViewState | undefined) {
-  return Boolean(viewState?.selection || (typeof viewState?.scrollTop === 'number' && viewState.scrollTop > 0));
+  return Boolean(viewState?.readingOffset !== undefined || viewState?.selection || (typeof viewState?.scrollTop === 'number' && viewState.scrollTop > 0));
 }
 
 function toCollapsedSelection(viewState: NodeViewState) {
@@ -22,6 +22,18 @@ function toCollapsedSelection(viewState: NodeViewState) {
         to: viewState.selection.from
       }
     : null;
+}
+
+function resolveViewRestore(viewState: NodeViewState, targetViewportMode?: 'center') {
+  if (!targetViewportMode && viewState.readingOffset !== undefined) {
+    const position = viewState.readingOffset;
+    return { selection: { from: position, to: position }, targetViewportMode: 'reading-position' as const };
+  }
+  return {
+    scrollTop: viewState.scrollTop,
+    selection: toCollapsedSelection(viewState),
+    ...definedProps({ targetViewportMode })
+  };
 }
 
 export function useNavigationReadingPosition(
@@ -55,14 +67,7 @@ export function useNavigationReadingPosition(
         nodeId: result.nodeId,
         reason: focusAnchor ? 'anchor-navigation' : 'node-navigation',
         runtime,
-        scrollTop: nextViewState.scrollTop,
-        selection: nextViewState.selection
-          ? {
-              from: nextViewState.selection.from,
-              to: nextViewState.selection.from
-            }
-          : null,
-        ...definedProps({ targetViewportMode: focusAnchor ? ('center' as const) : undefined })
+        ...resolveViewRestore(nextViewState, focusAnchor ? 'center' : undefined)
       });
       return true;
     },
@@ -103,8 +108,7 @@ export function useActiveNodeReadingPositionRestore(
       nodeId: activeNodeId,
       reason: 'active-node-restore',
       runtime,
-      scrollTop: viewState.scrollTop,
-      selection: toCollapsedSelection(viewState)
+      ...resolveViewRestore(viewState)
     });
   }, [activeNodeId, isWorkspaceHydrated, nodeViewById, runtime]);
 }

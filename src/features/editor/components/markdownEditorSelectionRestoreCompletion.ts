@@ -102,6 +102,10 @@ export function beginRestoreSelection(args: {
     applyRestoreScrollTop(args.adapter, args.restoreScrollTop);
     return;
   }
+  if (args.targetViewportMode === 'reading-position') {
+    args.adapter.revealReadingPosition(args.selection.from);
+    return;
+  }
   if (args.targetViewportMode === 'center' && args.adapter.revealSelectionCentered) {
     args.adapter.setSelection(args.selection);
     args.adapter.revealSelectionCentered(args.selection);
@@ -192,6 +196,7 @@ function tryCompleteRestoreSelection(
     restoreScrollTop: number | undefined;
     selection: RestoreSelection;
     selectionKey: string;
+    targetViewportMode: EditorViewportMode | null | undefined;
     targetViewportRatio: number | null | undefined;
   },
   reason: string
@@ -205,7 +210,9 @@ function tryCompleteRestoreSelection(
   ) {
     return false;
   }
-  const collapsedSelection = args.selection ? shouldCollapseSelectionAfterRestore(args.selection) : undefined;
+  const collapsedSelection = args.selection && args.targetViewportMode !== 'reading-position'
+    ? shouldCollapseSelectionAfterRestore(args.selection)
+    : undefined;
   if (collapsedSelection) {
     args.adapter.setSelection(collapsedSelection);
   }

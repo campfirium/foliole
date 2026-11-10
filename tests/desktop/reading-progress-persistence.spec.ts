@@ -1,6 +1,9 @@
+import process from 'node:process';
+
+import { closeDesktopApplication } from '../../scripts/desktop/playwright-desktop-close.mjs';
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
-import { expect, test, type DesktopSession } from './harness/fixtures';
+import { expect, normalizeDesktopWindow, test, type DesktopSession } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
 const TARGET_ID = 'playwright-reading-progress-relaunch';
@@ -35,20 +38,20 @@ async function openScrollableDocument(windowPage: DesktopSession['firstWindow'])
 }
 
 async function scrollAndCollect(windowPage: DesktopSession['firstWindow'], nodeId: string) {
-  return windowPage.evaluate(async (targetNodeId) => {
+  await windowPage.locator('.prompt-editor-host .cm-scroller').hover();
+  await windowPage.mouse.wheel(0, 3500);
+  await expect.poll(() => windowPage.evaluate(id =>
+    window.__folioleWorkspaceDebug?.getNodeViewState?.(id)?.readingOffset ?? 0, nodeId
+  )).toBeGreaterThan(0);
+
+  return windowPage.evaluate((targetNodeId) => {
     const api = globalThis.window?.__folioleWorkspaceDebug;
     const scroller = document.querySelector('.prompt-editor-host .cm-scroller') as HTMLElement | null;
-    if (!(scroller instanceof HTMLElement)) {
-      return { reason: 'missing-scroller' };
-    }
-    scroller.scrollTop = Math.max(0, scroller.scrollHeight * 0.68);
-    scroller.dispatchEvent(new Event('scroll'));
-    await new Promise((resolve) => globalThis.setTimeout(resolve, 1800));
     return {
       activeNodeId: api?.getActiveNodeId?.() ?? null,
       nodeViewState: api?.getNodeViewState?.(targetNodeId) ?? null,
-      scrollHeight: scroller.scrollHeight,
-      scrollTop: scroller.scrollTop
+      scrollHeight: scroller?.scrollHeight,
+      scrollTop: scroller?.scrollTop
     };
   }, nodeId);
 }
@@ -85,9 +88,12 @@ test('persists normal reading scroll position across relaunch', async ({ desktop
     expect(beforeRestart.scrollTop).toBeGreaterThan(0);
     expect(beforeRestart.nodeViewState?.scrollTop).toBeGreaterThan(0);
 
-    await desktopSession.close();
+    await closeDesktopApplication(desktopSession.electronApp);
 
-    secondSession = await launchDesktopSession();
+    secondSession = await launchDesktopSession({
+      env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: desktopSession.target.runtimeStateRoot }
+    });
+    await normalizeDesktopWindow(secondSession as DesktopSession);
     await expectWorkspaceShell(secondSession.firstWindow);
     const afterRelaunch = await collectRestoredState(secondSession.firstWindow, nodeId as string);
     await testInfo.attach('reading-progress-after-relaunch', {
@@ -97,6 +103,7 @@ test('persists normal reading scroll position across relaunch', async ({ desktop
 
     expect(afterRelaunch.activeNodeId).toBe(nodeId);
     expect(afterRelaunch.nodeViewState?.scrollTop).toBeGreaterThan(0);
+    expect(afterRelaunch.nodeViewState?.readingOffset).toBe(beforeRestart.nodeViewState?.readingOffset);
     expect(afterRelaunch.scrollTop).toBeGreaterThan(0);
   } finally {
     await secondSession?.close();

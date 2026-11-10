@@ -189,6 +189,7 @@ it('prefers the current visible position over a stale shared reading position ou
 
   expect(setNodeViewState).toHaveBeenCalledWith('node-2', {
     scrollTop: 5400,
+    readingOffset: 3200,
     selection: { from: 3200, to: 3200 }
   });
 });

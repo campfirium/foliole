@@ -54,6 +54,7 @@ it('persists and loads active node and per-node view state from sqlite', () => {
       {
         nodeId: 'node-1',
         scrollTop: 124,
+        readingOffset: 250,
         selectionFrom: 10,
         selectionTo: 18
       },
@@ -73,6 +74,7 @@ it('persists and loads active node and per-node view state from sqlite', () => {
     nodeViewStateById: {
       'node-1': {
         scrollTop: 124,
+        readingOffset: 250,
         selectionFrom: 10,
         selectionTo: 18,
         source: 'user-scroll',
@@ -189,6 +191,7 @@ it('writes sync object state for active node and node view states', () => {
       {
         nodeId: 'node-1',
         scrollTop: 124,
+        readingOffset: 250,
         selectionFrom: 10,
         selectionTo: 18
       },

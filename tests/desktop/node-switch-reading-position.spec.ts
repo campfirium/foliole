@@ -88,3 +88,41 @@ test('restores reading position after switching away and back', async ({ desktop
     to: expect.any(Number)
   });
 });
+
+async function readingLine(page: Page) {
+  return page.locator('.prompt-editor-host .cm-scroller').evaluate(scroller => {
+    const viewport = scroller.getBoundingClientRect();
+    const readingY = viewport.top + viewport.height * 0.15;
+    const line = Array.from(scroller.querySelectorAll('.cm-line')).find(element => {
+      const rect = element.getBoundingClientRect();
+      return rect.top <= readingY && readingY < rect.bottom;
+    });
+    return Number(line?.textContent?.match(/^Line (\d+)/)?.[1] ?? 0);
+  });
+}
+
+test('restores the same passage after reflow and keeps the last position after scrolling back', async ({ desktopWindow }) => {
+  await expectWorkspaceShell(desktopWindow);
+  await seedNodeSwitchWorkspace(desktopWindow);
+  const nodeA = desktopWindow.getByRole('treeitem', { name: 'Playwright Switch Node A', exact: true });
+  const nodeB = desktopWindow.getByRole('treeitem', { name: 'Playwright Switch Node B', exact: true });
+  const scroller = desktopWindow.locator('.prompt-editor-host .cm-scroller');
+
+  await scroller.hover();
+  await desktopWindow.mouse.wheel(0, 3500);
+  await expect.poll(() => readingLine(desktopWindow)).toBeGreaterThan(80);
+  const originalLine = await readingLine(desktopWindow);
+  await nodeB.click();
+  await desktopWindow.addStyleTag({ content: '.prompt-editor-host .cm-content { max-width: 240px; }' });
+  await nodeA.click();
+  await expect.poll(async () => Math.abs(await readingLine(desktopWindow) - originalLine)).toBeLessThanOrEqual(1);
+
+  await scroller.hover();
+  await desktopWindow.mouse.wheel(0, -1800);
+  await expect.poll(() => readingLine(desktopWindow)).toBeLessThan(originalLine - 5);
+  const earlierLine = await readingLine(desktopWindow);
+  expect(earlierLine).toBeGreaterThan(0);
+  await nodeB.click();
+  await nodeA.click();
+  await expect.poll(async () => Math.abs(await readingLine(desktopWindow) - earlierLine)).toBeLessThanOrEqual(1);
+});

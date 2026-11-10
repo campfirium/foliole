@@ -15,6 +15,7 @@ import { writeActiveNodeViewStateSync, writeNodeViewStateSync } from './viewStat
 interface NodeViewStateInput {
   nodeId: string;
   scrollTop: number;
+  readingOffset?: number;
   selectionFrom: number | null;
   selectionTo: number | null;
   updatedAt?: string | null;
@@ -30,6 +31,7 @@ export interface SaveReadingProgressInput {
 
 interface NodeViewStateSnapshot {
   scrollTop: number;
+  readingOffset?: number;
   selectionFrom: number | null;
   selectionTo: number | null;
   source: NodeViewStateWriteSource;
@@ -49,6 +51,7 @@ interface MetaRow extends DatabaseRow {
 interface NodeViewStateRow extends DatabaseRow {
   node_id: string;
   scroll_top: number;
+  reading_offset: number | null;
   selection_from: number | null;
   selection_to: number | null;
   source?: string | null;
@@ -75,13 +78,15 @@ export function saveReadingProgress(input: SaveReadingProgressInput): void {
        node_id,
        host_name,
        scroll_top,
+       reading_offset,
        selection_from,
        selection_to,
        source,
        updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?)
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(node_id, host_name) DO UPDATE SET
        scroll_top = excluded.scroll_top,
+       reading_offset = excluded.reading_offset,
        selection_from = excluded.selection_from,
        selection_to = excluded.selection_to,
        source = excluded.source,
@@ -157,6 +162,7 @@ function saveNodeViewStates(
       state.nodeId,
       hostName,
       state.scrollTop,
+      state.readingOffset ?? null,
       state.selectionFrom,
       state.selectionTo,
       source,
@@ -181,6 +187,7 @@ export function loadReadingProgress(): ReadingProgressSnapshot {
     `SELECT
        node_id,
        scroll_top,
+       reading_offset,
        selection_from,
        selection_to,
        source,
@@ -194,6 +201,7 @@ export function loadReadingProgress(): ReadingProgressSnapshot {
   for (const row of nodeRows) {
     nodeViewStateById[row.node_id] = {
       scrollTop: row.scroll_top,
+      ...(row.reading_offset != null ? { readingOffset: row.reading_offset } : {}),
       selectionFrom: row.selection_from,
       selectionTo: row.selection_to,
       source: normalizeNodeViewStateWriteSource(row.source),
@@ -227,6 +235,7 @@ function loadExistingNodeViewState(
     `SELECT
        node_id,
        scroll_top,
+       reading_offset,
        selection_from,
        selection_to,
        source,
@@ -241,6 +250,7 @@ function loadExistingNodeViewState(
   return {
     nodeId: row.node_id,
     scrollTop: row.scroll_top,
+    ...(row.reading_offset != null ? { readingOffset: row.reading_offset } : {}),
     selectionFrom: row.selection_from,
     selectionTo: row.selection_to,
     source: normalizeNodeViewStateWriteSource(row.source),

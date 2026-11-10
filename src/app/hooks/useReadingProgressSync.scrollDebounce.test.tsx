@@ -53,6 +53,7 @@ function renderVisiblePositionHarness(
       current: {
         getScrollTop: () => 5400,
         getSelection: () => options.selection,
+        getPrimaryVisiblePosition: () => 1400,
         onScroll: (listener: (event: EditorScrollEvent) => void) => {
           listeners.add(listener);
           return () => {
@@ -201,7 +202,7 @@ function registerVisiblePositionPreferenceTests() {
     runRuntimeReadingPositionPersistenceTest();
   });
 
-  it('does not move the reading selection during normal scroll persistence', () => {
+  it('saves the visible reading offset independently of an old selection', () => {
     const listeners = new Set<(event: EditorScrollEvent) => void>();
     const setNodeViewState = vi.fn();
     renderVisiblePositionHarness(listeners, setNodeViewState, {
@@ -216,7 +217,7 @@ function registerVisiblePositionPreferenceTests() {
     });
     expect(syncReadingProgressToRuntime).toHaveBeenLastCalledWith({
       activeNodeId: 'node-2',
-      nodeViewStates: [{ nodeId: 'node-2', scrollTop: 5400, selectionFrom: null, selectionTo: null }],
+      nodeViewStates: [{ nodeId: 'node-2', scrollTop: 5400, readingOffset: 1400, selectionFrom: null, selectionTo: null }],
       source: 'user-scroll',
       updatedAt: expect.any(String)
     });

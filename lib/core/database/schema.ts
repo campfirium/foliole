@@ -109,6 +109,7 @@ export const nodeViewState = sqliteTable('node_view_state', {
   nodeId: text('node_id').notNull(),
   hostName: text('host_name').notNull(),
   scrollTop: integer('scroll_top').notNull().default(0),
+  readingOffset: integer('reading_offset'),
   selectionFrom: integer('selection_from'),
   selectionTo: integer('selection_to'),
   source: text('source').notNull().default('user-scroll'),

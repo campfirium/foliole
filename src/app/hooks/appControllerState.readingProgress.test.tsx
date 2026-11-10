@@ -164,6 +164,7 @@ function runSaveSharedReadingPositionTest() {
 
   expect(ws.setNodeViewState).toHaveBeenCalledWith('node-1', {
     scrollTop: 4321,
+    readingOffset: 999,
     selection: { from: 999, to: 999 }
   });
 }
@@ -188,6 +189,7 @@ function runVisiblePositionFallbackTest() {
 
   expect(ws.setNodeViewState).toHaveBeenCalledWith('node-1', {
     scrollTop: 4321,
+    readingOffset: 4567,
     selection: { from: 4567, to: 4567 }
   });
 }
@@ -212,6 +214,7 @@ function runCurrentSelectionPriorityTest() {
 
   expect(ws.setNodeViewState).toHaveBeenCalledWith('node-1', {
     scrollTop: 4321,
+    readingOffset: 4567,
     selection: { from: 3200, to: 3200 }
   });
 }

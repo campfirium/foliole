@@ -3,6 +3,7 @@ import type { NodeViewStateWriteSource } from './persistedNodeViewState.js';
 export interface NativeReadingProgressNodeViewState {
   nodeId: string;
   scrollTop: number;
+  readingOffset?: number;
   selectionFrom: number | null;
   selectionTo: number | null;
   updatedAt?: string | null;
@@ -13,7 +14,7 @@ export interface NativeReadingProgressSnapshot {
   browseRootNodeId?: string | null;
   nodeViewStateById: Record<
     string,
-    { scrollTop: number; selectionFrom: number | null; selectionTo: number | null; updatedAt: string }
+    { scrollTop: number; readingOffset?: number; selectionFrom: number | null; selectionTo: number | null; updatedAt: string }
   >;
 }
 

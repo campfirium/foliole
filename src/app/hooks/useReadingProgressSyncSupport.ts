@@ -28,6 +28,7 @@ export type ReadingProgressCaptureMode = 'snapshot' | 'user-scroll';
 function normalizeNodeViewState(viewState: NodeViewState): NodeViewState {
   return {
     scrollTop: Math.max(0, Math.trunc(viewState.scrollTop)),
+    ...(viewState.readingOffset !== undefined ? { readingOffset: viewState.readingOffset } : {}),
     selection: viewState.selection
       ? {
           from: Math.max(0, Math.trunc(viewState.selection.from)),
@@ -37,12 +38,13 @@ function normalizeNodeViewState(viewState: NodeViewState): NodeViewState {
   };
 }
 
-function isSameNodeViewState(left: NodeViewState | undefined, right: NodeViewState): boolean {
+export function isSameNodeViewState(left: NodeViewState | undefined, right: NodeViewState): boolean {
   if (!left) {
     return false;
   }
   return (
     left.scrollTop === right.scrollTop &&
+    left.readingOffset === right.readingOffset &&
     left.selection?.from === right.selection?.from &&
     left.selection?.to === right.selection?.to
   );
@@ -76,10 +78,12 @@ export function captureEditorNodeViewState(
     return null;
   }
   const sharedReadingSelection = getReadingPositionSelection?.() ?? null;
+  const readingOffset = isImmersiveMode ? undefined : editorRef.current.getPrimaryVisiblePosition?.();
   return {
     nodeId,
     viewState: normalizeNodeViewState({
       scrollTop: editorRef.current.getScrollTop(),
+      ...(readingOffset != null ? { readingOffset } : {}),
       selection:
         mode === 'user-scroll' && !isImmersiveMode
           ? null

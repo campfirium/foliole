@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
-import type { EditorSearchDecorations, EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import type { EditorSearchDecorations, EditorSelection, EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import { resolveInternalLinkTargetId } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -49,7 +49,7 @@ export function useDocumentPanelInteractions(props: DocumentPanelSectionProps) {
         props.onSelectNode(targetNodeId);
       }
     },
-    handlePreviewDocumentSelection: (selection: EditorSelection, targetViewportMode?: 'center' | 'nearest') => {
+    handlePreviewDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => {
       if (targetViewportMode === 'center' && editorAdapterRef.current?.revealSelectionCentered) {
         editorAdapterRef.current.revealSelectionCentered(selection, { preserveFocus: true });
         return;

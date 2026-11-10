@@ -146,6 +146,7 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
     node_id TEXT NOT NULL,
     host_name TEXT NOT NULL,
     scroll_top INTEGER NOT NULL DEFAULT 0,
+    reading_offset INTEGER,
     selection_from INTEGER,
     selection_to INTEGER,
     source TEXT NOT NULL DEFAULT 'user-scroll',

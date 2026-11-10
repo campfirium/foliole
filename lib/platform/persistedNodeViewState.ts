@@ -2,6 +2,7 @@ export type NodeViewStateWriteSource = 'user-scroll' | 'restore' | 'close-flush'
 
 export interface PersistedNodeViewState {
   nodeId: string;
+  readingOffset?: number;
   scrollTop: number;
   selectionFrom: number | null;
   selectionTo: number | null;

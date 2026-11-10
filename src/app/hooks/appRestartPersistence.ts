@@ -9,9 +9,10 @@ import {
   hasWorkspaceRuntimeRepository,
   saveWorkspaceReadingProgressNow
 } from '../../shared/platform/workspaceRuntimeRepository';
+import { toRuntimeNodeViewStates } from '../../store/workspaceReadingProgress';
 import type { NodeViewState } from '../../store/workspaceStore';
 
-import { resolvePersistedViewStateSelection } from './persistedViewStateSelection';
+import { captureEditorNodeViewState, isSameNodeViewState } from './useReadingProgressSyncSupport';
 
 interface RestartWithReadingProgressArgs {
   activeNodeId: string | null;
@@ -23,48 +24,15 @@ interface RestartWithReadingProgressArgs {
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
 }
 
-function normalizeViewState(viewState: NodeViewState): NodeViewState {
-  return {
-    scrollTop: Math.max(0, Math.trunc(viewState.scrollTop)),
-    selection: viewState.selection
-      ? {
-          from: Math.max(0, Math.trunc(viewState.selection.from)),
-          to: Math.max(0, Math.trunc(viewState.selection.to))
-        }
-      : null
-  };
-}
-
 function captureReadingProgressForRestart(args: RestartWithReadingProgressArgs) {
-  if (args.isViewingTrashNode || !args.activeNodeId || !args.editorRef.current) {
-    return null;
+  const captured = captureEditorNodeViewState(
+    args.activeNodeId, args.getReadingPositionSelection, args.isImmersiveMode,
+    args.isViewingTrashNode, args.editorRef
+  );
+  if (captured && !isSameNodeViewState(args.nodeViewById[captured.nodeId], captured.viewState)) {
+    args.setNodeViewState(captured.nodeId, captured.viewState);
   }
-  const existingViewState = args.nodeViewById[args.activeNodeId];
-  const selection = resolvePersistedViewStateSelection({
-    editor: args.editorRef.current,
-    isImmersiveMode: args.isImmersiveMode,
-    sharedReadingSelection: args.getReadingPositionSelection()
-  });
-  const viewState = normalizeViewState({
-    scrollTop: args.editorRef.current.getScrollTop(),
-    selection
-  });
-  if (
-    existingViewState &&
-    existingViewState.scrollTop === viewState.scrollTop &&
-    existingViewState.selection?.from === viewState.selection?.from &&
-    existingViewState.selection?.to === viewState.selection?.to
-  ) {
-    return {
-      nodeId: args.activeNodeId,
-      viewState
-    };
-  }
-  args.setNodeViewState(args.activeNodeId, viewState);
-  return {
-    nodeId: args.activeNodeId,
-    viewState
-  };
+  return captured;
 }
 
 export async function restartAppWithReadingProgress(args: RestartWithReadingProgressArgs) {
@@ -79,14 +47,7 @@ export async function restartAppWithReadingProgress(args: RestartWithReadingProg
     try {
       await saveWorkspaceReadingProgressNow({
         activeNodeId: captured.nodeId,
-        nodeViewStates: [
-          {
-            nodeId: captured.nodeId,
-            scrollTop: captured.viewState.scrollTop,
-            selectionFrom: captured.viewState.selection?.from ?? null,
-            selectionTo: captured.viewState.selection?.to ?? null
-          }
-        ],
+        nodeViewStates: toRuntimeNodeViewStates({ [captured.nodeId]: captured.viewState }),
         source: 'close-flush',
         updatedAt: new Date().toISOString()
       });

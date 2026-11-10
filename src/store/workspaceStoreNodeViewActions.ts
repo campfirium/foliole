@@ -16,6 +16,7 @@ function normalizeNodeViewState(
   }
   return {
     scrollTop: Math.max(0, viewState.scrollTop),
+    ...(viewState.readingOffset !== undefined ? { readingOffset: viewState.readingOffset } : {}),
     selection: viewState.selection
       ? {
           from: Math.max(0, viewState.selection.from),
@@ -38,6 +39,7 @@ function hasSameNodeViewState(
   }
   return (
     previousViewState.scrollTop === nextViewState.scrollTop &&
+    previousViewState.readingOffset === nextViewState.readingOffset &&
     previousViewState.selection?.from === nextViewState.selection?.from &&
     previousViewState.selection?.to === nextViewState.selection?.to
   );

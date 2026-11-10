@@ -3,7 +3,7 @@ export interface EditorSelection {
   to: number;
 }
 
-export type EditorViewportMode = 'center' | 'nearest';
+export type EditorViewportMode = 'center' | 'nearest' | 'reading-position';
 
 export interface EditorRevealOptions {
   preserveFocus?: boolean;

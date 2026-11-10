@@ -173,6 +173,7 @@ export type { DailyFlowSession as ReviewSessionState } from '../../lib/core/flow
 
 export interface NodeViewState {
   scrollTop: number;
+  readingOffset?: number;
   selection: {
     from: number;
     to: number;

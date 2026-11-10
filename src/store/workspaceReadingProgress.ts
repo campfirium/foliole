@@ -11,6 +11,7 @@ interface WorkspaceSnapshotLike {
 
 interface RuntimeNodeViewState {
   scrollTop: number;
+  readingOffset?: number;
   selectionFrom: number | null;
   selectionTo: number | null;
   updatedAt?: string | null;
@@ -24,6 +25,7 @@ interface RuntimeReadingProgressSnapshot {
 
 interface NodeViewState {
   scrollTop: number;
+  readingOffset?: number;
   selection: {
     from: number;
     to: number;
@@ -86,6 +88,8 @@ function toRuntimeReadingProgressSnapshot(value: unknown): RuntimeReadingProgres
     }
     normalizedNodeViewStateById[nodeId] = {
       scrollTop,
+      ...(typeof rawState.readingOffset === 'number' && Number.isSafeInteger(rawState.readingOffset) && rawState.readingOffset >= 0
+        ? { readingOffset: rawState.readingOffset } : {}),
       selectionFrom: selectionFrom === null ? null : Math.max(0, Math.trunc(selectionFrom)),
       selectionTo: selectionTo === null ? null : Math.max(0, Math.trunc(selectionTo)),
       updatedAt: typeof updatedAt === 'string' && updatedAt.trim().length > 0 ? updatedAt : null
@@ -111,6 +115,7 @@ function toLocalNodeViewById(nodeViewStateById: Record<string, RuntimeNodeViewSt
           };
     localNodeViewById[nodeId] = {
       scrollTop: Math.max(0, Math.trunc(state.scrollTop)),
+      ...(state.readingOffset !== undefined ? { readingOffset: state.readingOffset } : {}),
       selection,
       updatedAt: state.updatedAt ?? null
     };
@@ -154,6 +159,7 @@ export function toRuntimeNodeViewStates(nodeViewById: Record<string, NodeViewSta
   const nodeViewStates: Array<{
     nodeId: string;
     scrollTop: number;
+    readingOffset?: number;
     selectionFrom: number | null;
     selectionTo: number | null;
     updatedAt?: string;
@@ -166,6 +172,7 @@ export function toRuntimeNodeViewStates(nodeViewById: Record<string, NodeViewSta
     const payload = {
       nodeId,
       scrollTop: Math.max(0, Math.trunc(viewState.scrollTop)),
+      ...(viewState.readingOffset !== undefined ? { readingOffset: viewState.readingOffset } : {}),
       selectionFrom: viewState.selection ? Math.max(0, Math.trunc(viewState.selection.from)) : null,
       selectionTo: viewState.selection ? Math.max(0, Math.trunc(viewState.selection.to)) : null
     };

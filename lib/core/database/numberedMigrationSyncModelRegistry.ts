@@ -73,5 +73,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 186, migrate: db => db.exec("DELETE FROM workspace_meta WHERE key >= 'dive:' AND key < 'dive;'") },
   { version: 187, migrate: db => {
     for (const sql of WEB_DAV_RELAY_REVIEW_SEQUENCE_SCHEMA) db.exec(sql);
-  } }
+  } },
+  { version: 188, migrate: db => addColumnIfMissing(db, 'node_view_state', 'reading_offset', 'INTEGER') }
 ];

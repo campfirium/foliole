@@ -7,6 +7,7 @@ import { loadDatabaseHostName } from './syncHostIdentity.js';
 interface NodeViewStateSnapshotRow extends DatabaseRow {
   node_id: string;
   scroll_top: number;
+  reading_offset: number | null;
   selection_from: number | null;
   selection_to: number | null;
   source?: string | null;
@@ -22,6 +23,7 @@ function queryPersistedNodeViewRows(driver: DatabaseDriver): NodeViewStateSnapsh
     `SELECT
        node_id,
        scroll_top,
+       reading_offset,
        selection_from,
        selection_to,
        source,
@@ -38,6 +40,7 @@ export function loadPersistedNodeViewById(driver: DatabaseDriver) {
     persistedNodeViewById[row.node_id] = {
       nodeId: row.node_id,
       scrollTop: row.scroll_top,
+      ...(row.reading_offset != null ? { readingOffset: row.reading_offset } : {}),
       selectionFrom: row.selection_from,
       selectionTo: row.selection_to,
       source: normalizeNodeViewStateWriteSource(row.source),

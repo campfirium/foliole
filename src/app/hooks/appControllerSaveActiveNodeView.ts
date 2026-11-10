@@ -31,8 +31,10 @@ export function useSaveActiveNodeView(
     if (runtime.isViewingTrashNode || !nodeId || !runtime.editorRef.current) {
       return;
     }
+    const readingOffset = runtime.isImmersiveMode ? undefined : runtime.editorRef.current.getPrimaryVisiblePosition?.();
     ws.setNodeViewState(nodeId, {
       scrollTop: runtime.editorRef.current.getScrollTop(),
+      ...(readingOffset != null ? { readingOffset } : {}),
       selection: resolveSelectionToPersist(runtime, nodeId)
     });
   }, [runtime.editorRef, runtime.isImmersiveMode, runtime.isViewingTrashNode, runtime.readingPositionRef, ws]);

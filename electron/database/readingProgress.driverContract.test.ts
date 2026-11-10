@@ -66,6 +66,7 @@ it('saves reading progress through prepared driver statements only', () => {
       {
         nodeId: 'node-1',
         scrollTop: 124,
+        readingOffset: 225,
         selectionFrom: 10,
         selectionTo: 18,
         updatedAt: '2026-03-14T00:00:00.000Z'
@@ -81,6 +82,7 @@ it('saves reading progress through prepared driver statements only', () => {
     'node-1',
     'desktop-test',
     124,
+    225,
     10,
     18,
     'user-scroll',
@@ -96,6 +98,7 @@ it('loads reading progress through query helpers only', () => {
     {
       node_id: 'node-1',
       scroll_top: 124,
+      reading_offset: 225,
       selection_from: 10,
       selection_to: 18,
       source: 'user-scroll',
@@ -109,6 +112,7 @@ it('loads reading progress through query helpers only', () => {
     nodeViewStateById: {
       'node-1': {
         scrollTop: 124,
+        readingOffset: 225,
         selectionFrom: 10,
         selectionTo: 18,
         source: 'user-scroll',
@@ -127,6 +131,7 @@ it('loads reading progress through query helpers only', () => {
     `SELECT
        node_id,
        scroll_top,
+       reading_offset,
        selection_from,
        selection_to,
        source,

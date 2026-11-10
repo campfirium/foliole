@@ -68,17 +68,17 @@ function importTopic(body: string) {
   }));
   const nodeId = imported.nodeId!;
   saveReadingProgress({ activeNodeId: nodeId, updatedAt: timestamp,
-    nodeViewStates: [{ nodeId, scrollTop: 18, selectionFrom: 2, selectionTo: 4 }] });
+    nodeViewStates: [{ nodeId, scrollTop: 18, readingOffset: 6, selectionFrom: 2, selectionTo: 4 }] });
   return nodeId;
 }
 
 it('restores SQLite content, reading position and library scope through the object storage and production merge', async () => {
   const nodeId = importTopic('Durable body');
-  expect(loadReadingProgress().nodeViewStateById[nodeId]).toMatchObject({ scrollTop: 18 });
+  expect(loadReadingProgress().nodeViewStateById[nodeId]).toMatchObject({ scrollTop: 18, readingOffset: 6 });
   expect(await loadReadingProgressFromRuntime()).toEqual(loadReadingProgress());
   const stringify = vi.spyOn(JSON, 'stringify');
   const value = await workspacePersistStoreStorage.getItem(key);
-  expect(value?.state.nodeViewById?.[nodeId]).toMatchObject({ scrollTop: 18 });
+  expect(value?.state.nodeViewById?.[nodeId]).toMatchObject({ scrollTop: 18, readingOffset: 6 });
   expect(stringify.mock.calls.filter(([input]) => input?.state?.nodesById)).toHaveLength(0);
   const initial = createInitialWorkspaceState();
   const config = createWorkspaceStorePersistConfig(() => undefined);
@@ -88,7 +88,7 @@ it('restores SQLite content, reading position and library scope through the obje
   expect(merged.activeNodeId).toBe(nodeId);
   expect(merged.nodesById[nodeId]?.content).toContain('Durable body');
   expect(merged.libraryScope).toBe(currentLibraryScope());
-  expect(merged.nodeViewById[nodeId]).toMatchObject({ scrollTop: 18, selection: { from: 2, to: 4 } });
+  expect(merged.nodeViewById[nodeId]).toMatchObject({ scrollTop: 18, readingOffset: 6, selection: { from: 2, to: 4 } });
   closeDatabaseConnection();
   const reopened = await workspacePersistStoreStorage.getItem(key);
   expect(reopened?.state.nodesById[nodeId]?.content).toBe(merged.nodesById[nodeId]?.content);

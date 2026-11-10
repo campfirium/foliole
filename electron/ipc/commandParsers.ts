@@ -22,6 +22,7 @@ export { normalizeNodeViewStateWriteSource };
 interface NodeViewStatePayload {
   nodeId: string;
   scrollTop: number;
+  readingOffset?: number;
   selectionFrom: number | null;
   selectionTo: number | null;
   updatedAt?: string | null;
@@ -32,7 +33,9 @@ function parseNodeViewStatePayload(value: unknown, field: string): NodeViewState
     throw new Error(`invalid argument: ${field}`);
   }
   const payload = value as Record<string, unknown>;
+  const readingOffset = asNullableInteger(payload.readingOffset, `${field}.readingOffset`);
   return {
+    ...(readingOffset !== null ? { readingOffset } : {}),
     nodeId: asString(payload.nodeId, `${field}.nodeId`),
     scrollTop: asNullableInteger(payload.scrollTop, `${field}.scrollTop`) ?? 0,
     selectionFrom: asNullableInteger(payload.selectionFrom, `${field}.selectionFrom`),

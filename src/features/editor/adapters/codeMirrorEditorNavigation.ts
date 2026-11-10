@@ -1,4 +1,4 @@
-import type { EditorView } from '@codemirror/view';
+import { EditorView } from '@codemirror/view';
 
 import { setCodeMirrorSelectionRanges } from './codeMirrorEditorAdapterActions';
 import { isPositionNearViewportRatio, readEditorScrollMetrics, resolveDocumentPositionAtViewportY,
@@ -9,7 +9,7 @@ import { resolvePositionClientRect } from './codeMirrorPositionClientRect';
 import { restoreEditorSelection, revealEditorSelection, revealEditorSelectionCentered,
   revealEditorSelectionNearest } from './codeMirrorSelectionActions';
 import { toEditorPrimarySelection, toEditorSelectionRanges } from './codeMirrorSelectionRanges';
-import { resolvePrimaryVisiblePosition } from './codeMirrorVisiblePosition';
+import { READING_VIEWPORT_RATIO, resolvePrimaryVisiblePosition } from './codeMirrorVisiblePosition';
 import type { EditorRevealOptions, EditorScrollMetrics, EditorSelection } from './EditorAdapter';
 
 export abstract class CodeMirrorEditorNavigation {
@@ -27,6 +27,11 @@ export abstract class CodeMirrorEditorNavigation {
   }
   getViewportRect() { return this.view.scrollDOM.getBoundingClientRect(); }
   revealPosition(position: number) { revealEditorPosition(this.view, this.clampPosition(position)); }
+  revealReadingPosition(position: number) {
+    this.view.dispatch({ effects: EditorView.scrollIntoView(this.clampPosition(position), {
+      y: 'start', yMargin: this.view.scrollDOM.clientHeight * READING_VIEWPORT_RATIO
+    }) });
+  }
   getSelection(): EditorSelection { return toEditorPrimarySelection(this.view.state.selection); }
   getSelectionRanges(): EditorSelection[] { return toEditorSelectionRanges(this.view.state.selection); }
   setSelection(selection: EditorSelection) { this.setSelectionRanges([selection]); }
