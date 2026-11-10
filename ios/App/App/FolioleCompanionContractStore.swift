@@ -27,6 +27,12 @@ struct FolioleCompanionAttachmentResourceContract {
     let sql: [String: String]
 }
 
+struct FolioleReminderBackgroundActionContract {
+    let category: String
+    let owner: String
+    let minutes: [String: Int]
+}
+
 final class FolioleCompanionContractStore {
     private let bridge: [String: Any]
     private let sync: [String: Any]

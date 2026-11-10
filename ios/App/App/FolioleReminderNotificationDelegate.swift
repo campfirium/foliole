@@ -93,9 +93,3 @@ final class FolioleReminderNotificationDelegate: NSObject, UNUserNotificationCen
         center.removeDeliveredNotifications(withIdentifiers: [request.identifier])
     }
 }
-
-struct FolioleReminderBackgroundActionContract {
-    let category: String
-    let owner: String
-    let minutes: [String: Int]
-}
