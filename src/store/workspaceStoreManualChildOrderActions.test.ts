@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
+import { createManualVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
 import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes';
 import { installBrowserDailyFlowRuntime } from '../shared/platform/runtime/dailyFlowBrowserRuntime';
 
-import { installBrowserWorkspace } from './installBrowserWorkspace';
+import { installBrowserWorkspace, replaceBrowserWorkspace } from './installBrowserWorkspace';
 import { installWorkspaceBrowserCommit } from './workspaceBrowserCommit';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
@@ -82,6 +83,25 @@ beforeEach(async () => {
   await useWorkspaceStore.getState().resumeReviewSession(now, { preferredNodeId: useWorkspaceStore.getState().reviewSession.currentNodeId });
 });
 afterEach(() => { installWorkspaceBrowserCommit(null); installBrowserDailyFlowRuntime(null); });
+
+it('rejects derived topics when adding to a manual index and accepts native top-level topics', async () => {
+  const state = useWorkspaceStore.getState();
+  replaceBrowserWorkspace(useWorkspaceStore, localStorage, {
+    ...state,
+    nodeOrder: [...state.nodeOrder, 'index', 'derived'],
+    nodesById: {
+      ...state.nodesById,
+      index: { ...folder(['topic-a']), id: 'index', sequentialReadingEnabled: false,
+        virtualFilter: createManualVirtualNodeFilter() },
+      derived: { ...topic('derived', 'active'), parentNodeId: 'topic-a' }
+    }
+  });
+  const add = useWorkspaceStore.getState().setFolderManualChildOrder!;
+  expect(await add('index', ['topic-a', 'derived'], now)).toBe(false);
+  expect(useWorkspaceStore.getState().nodesById.index?.manualChildOrder).toEqual(['topic-a']);
+  expect(await add('index', ['topic-a', 'topic-b'], now)).toBe(true);
+  expect(useWorkspaceStore.getState().nodesById.index?.manualChildOrder).toEqual(['topic-a', 'topic-b']);
+});
 
 it('releases the first non-dismissed topic and refreshes the current queue after sequential folder manual ordering changes', async () => {
   await useWorkspaceStore.getState().setFolderManualChildOrder?.('folder', ['topic-c', 'topic-b', 'topic-a'], now);

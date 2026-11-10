@@ -1,3 +1,4 @@
+import { isManualVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter';
 import { planSequentialReadingSourceStates } from '../../lib/core/review/sequentialReadingSourceStates';
 import { normalizeManualChildOrder, updateFolderManualChildOrder } from '../features/nodes/model/manualChildOrder';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
@@ -12,10 +13,25 @@ type WorkspaceSet = (
   partial: WorkspaceState | Partial<WorkspaceState> | ((state: WorkspaceState) => WorkspaceState | Partial<WorkspaceState>)
 ) => void;
 
+function acceptsManualIndexSources(state: WorkspaceState, folderNodeId: string, ids: readonly string[]) {
+  const folder = state.nodesById[folderNodeId];
+  if (!isManualVirtualNodeFilter(folder?.virtualFilter)) return true;
+  const existing = new Set(folder?.manualChildOrder);
+  const trashed = new Set(state.trashedNodeIds);
+  return ids.every(id => {
+    if (existing.has(id)) return true;
+    const source = state.nodesById[id];
+    if (!source || source.deletedAt || trashed.has(id) || source.anchorLink ||
+        source.virtualFilter || source.specialKind) return false;
+    if (source.kind === 'folder') return true;
+    return source.kind === 'topic' &&
+      (source.parentNodeId === null || state.nodesById[source.parentNodeId]?.kind === 'folder');
+  });
+}
 
 function buildManualOrderSourcePatch(state: WorkspaceState, folderNodeId: string, manualChildOrder: string[], now: string) {
       const folder = state.nodesById[folderNodeId];
-      if (!folder || folder.kind !== 'folder') {
+      if (!folder || folder.kind !== 'folder' || !acceptsManualIndexSources(state, folderNodeId, manualChildOrder)) {
         return null;
       }
       const nextNode = updateFolderManualChildOrder(folder, normalizeManualChildOrder(manualChildOrder), now);
@@ -47,7 +63,7 @@ export function createSetFolderManualChildOrderAction(set: WorkspaceSet, get?: (
     if (get && hasDailyFlowRuntime()) {
       const before = get();
       const folder = before.nodesById[folderNodeId];
-      if (!folder || folder.kind !== 'folder') return false;
+      if (!folder || folder.kind !== 'folder' || !acceptsManualIndexSources(before, folderNodeId, manualChildOrder)) return false;
       const after = updateFolderManualChildOrder(folder, normalizeManualChildOrder(manualChildOrder), now);
       if (after === folder) return false;
       const plan = after.sequentialReadingEnabled ? planSequentialReadingSourceStates({ enabled: true,
