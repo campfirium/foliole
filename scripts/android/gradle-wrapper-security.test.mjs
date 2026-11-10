@@ -17,7 +17,7 @@ describe('Android Gradle distribution security', () => {
     expect(version, 'The Android build must select an explicit Gradle distribution').not.toBeNull();
     const [, major, minor, patch] = version.map(Number);
     expect(major).toBe(9);
-    expect(minor > 8 || (minor === 8 && patch >= 1)).toBe(true);
+    expect(minor > 9 || (minor === 9 && patch >= 1)).toBe(true);
     expect(properties).toMatch(/^distributionUrl=https\\:\/\/services\.gradle\.org\//mu);
     expect(properties).toMatch(/^distributionSha256Sum=[a-f0-9]{64}$/mu);
   });
