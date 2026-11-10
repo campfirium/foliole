@@ -1,4 +1,4 @@
-import { BookOpen, Bug, CalendarDays, Database, HardDrive, Palette, RefreshCw, RectangleEllipsis, type LucideIcon } from 'lucide-react';
+import { Bell, BookOpen, Bug, CalendarDays, Database, HardDrive, Palette, RefreshCw, RectangleEllipsis, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { useAttachmentStorageSettings } from '../features/settings/components/sections/useAttachmentStorageSettings';
@@ -68,6 +68,7 @@ export function CompanionSettingsList(props: {
   onOpenAppearance(): void;
   onOpenDebug(): void;
   onOpenLearning?(): void;
+  onOpenReminders?(): void;
   onOpenClozeGuard?(): void;
   onOpenReviewStatistics?(): void;
   onOpenBackup(): void;
@@ -83,6 +84,9 @@ export function CompanionSettingsList(props: {
           <SettingsListItem Icon={Palette} detail={t('companion.settings.appearance.detail')}
             onClick={props.onOpenAppearance} testId="companion-settings-appearance" title={t('companion.settings.appearance.title')} />
         </SettingsListSection>
+        {props.onOpenReminders && <SettingsListSection title="">
+          <SettingsListItem Icon={Bell} detail="" onClick={props.onOpenReminders} title={t('settings.reminders.title')} />
+        </SettingsListSection>}
         <SettingsListSection title={t('companion.settings.section.syncDevice')}>
           <SettingsListItem
             Icon={RefreshCw}

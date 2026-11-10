@@ -1,11 +1,13 @@
 import type { TranslationKey } from '../translations';
 
+import { ZH_HANS_REMINDER_TRANSLATIONS } from './zhHansReminders';
 import { ZH_HANS_SETTINGS_BACKUP_SEARCH_TRANSLATIONS } from './zhHansSettingsBackups';
 import { ZH_HANS_SETTINGS_PUBLISHING_TRANSLATIONS } from './zhHansSettingsPublishing';
 import { ZH_HANS_SETTINGS_STORAGE_TRANSLATIONS } from './zhHansSettingsStorage';
 import { ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS } from './zhHansSettingsSyncGroup';
 
 export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  ...ZH_HANS_REMINDER_TRANSLATIONS,
   'settings.title': '设置',
   'settings.description': '调整 Foliole 的外观和使用方式。',
   'settings.search.placeholder': '搜索设置',

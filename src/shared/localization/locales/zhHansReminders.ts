@@ -1,0 +1,14 @@
+export const ZH_HANS_REMINDER_TRANSLATIONS = {
+  'settings.reminders.title': '提醒',
+  'settings.reminders.message': '文案',
+  'settings.reminders.dailyTime': '每天时间',
+  'settings.reminders.thisDevice': '设备：本机',
+  'settings.reminders.enabled': '启用',
+  'settings.reminders.disabled': '已停用',
+  'settings.reminders.save': '保存提醒',
+  'settings.reminders.add': '添加提醒',
+  'settings.reminders.saved': '提醒已保存。',
+  'settings.reminders.permission': '提醒已保存。请在系统设置中允许通知。',
+  'settings.reminders.failed': '提醒已保存，但系统未能安排通知。',
+  'settings.reminders.unavailable': '无法访问提醒。',
+} as const;

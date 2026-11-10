@@ -1,9 +1,11 @@
+import { EN_REMINDER_TRANSLATIONS } from './enReminders';
 import { EN_SETTINGS_BACKUP_SEARCH_TRANSLATIONS } from './enSettingsBackups';
 import { EN_SETTINGS_PUBLISHING_TRANSLATIONS } from './enSettingsPublishing';
 import { EN_SETTINGS_STORAGE_TRANSLATIONS } from './enSettingsStorage';
 import { EN_SETTINGS_SYNC_GROUP_TRANSLATIONS } from './enSettingsSyncGroup';
 
 export const EN_SETTINGS_TRANSLATIONS = {
+  ...EN_REMINDER_TRANSLATIONS,
   'settings.title': 'Settings',
   'settings.description': 'Adjust how Foliole looks and behaves.',
   'settings.search.placeholder': 'Search settings',

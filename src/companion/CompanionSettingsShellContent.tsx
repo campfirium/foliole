@@ -12,6 +12,7 @@ import { CompanionFolderDatabaseBackupSection } from './CompanionFolderDatabaseB
 import { CompanionLanguageControl } from './CompanionLanguageControl';
 import { CompanionLearningSettingsContent } from './CompanionLearningSettingsContent';
 import { CompanionReadingColorControls } from './CompanionReadingColorControls';
+import { CompanionReminderSettingsContent } from './CompanionReminderSettingsContent';
 import { CompanionReviewStatisticsContent } from './CompanionReviewStatisticsContent';
 import {
   CompanionPlaceholderSettingsContent,
@@ -81,6 +82,8 @@ function CompanionSettingsHome(props: CompanionSettingsContentProps) {
     <CompanionSettingsList
       onOpenAppearance={() => props.onOpenSyncSettingsPage('appearance')}
       onOpenClozeGuard={() => props.onOpenSyncSettingsPage('clozeGuard')}
+      {...(['ios-native', 'android-native'].includes(getCompanionRuntimeCapability().kind)
+        ? { onOpenReminders: () => props.onOpenSyncSettingsPage('reminders') } : {})}
       onOpenLearning={() => props.onOpenSyncSettingsPage('learning')}
       onOpenReviewStatistics={() => props.onOpenSyncSettingsPage('reviewStatistics')}
       onOpenDebug={() => props.onOpenSyncSettingsPage('debug')}
@@ -98,6 +101,7 @@ function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
   if (props.settingsPage === 'backup') return <CompanionFolderDatabaseBackupSection />;
   if (props.settingsPage === 'attachments') return <SettingsAttachmentStorageSection mobile unavailable={getCompanionRuntimeCapability().kind === 'browser-preview'} />;
   if (props.settingsPage === 'clozeGuard') return <CompanionClozeGuardSettingsContent />;
+  if (props.settingsPage === 'reminders') return <CompanionReminderSettingsContent onBack={props.onBackToSettingsList} />;
   if (props.settingsPage === 'learning') return <CompanionLearningSettingsContent />;
   if (props.settingsPage === 'reviewStatistics' || props.settingsPage === 'foregroundTime') return <CompanionReviewStatisticsContent
     libraryScope={props.workspaceSync.state.workspace_snapshot?.libraryScope ?? ''} />;

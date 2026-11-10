@@ -5,6 +5,7 @@ import { useCompanionNavigationField } from './CompanionNavigationProvider';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 export type CompanionSettingsPage =
+  | 'reminders'
   | 'learning'
   | 'clozeGuard'
   | 'foregroundTime'
