@@ -73,7 +73,7 @@ dependencies {
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     implementation 'net.zetetic:sqlcipher-android'
-    compileOnly 'androidx.sqlite:sqlite:2.4.0'
+    compileOnly 'androidx.sqlite:sqlite:2.7.1'
     implementation 'com.squareup.okhttp3:okhttp:5.4.0'
     implementation "com.google.protobuf:protobuf-javalite:$framedSyncProtobufVersion"
     testImplementation "junit:junit:$junitVersion"
