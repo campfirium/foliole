@@ -1,0 +1,55 @@
+/*
+ * Foliole desktop CSS snippet: Markdown editor
+ *
+ * Copy this file to Widgets/CSS Snippets inside your Foliole library.
+ * In Settings > Appearance > Custom CSS snippets, refresh the list and
+ * enable this file. After saving changes in your editor, refresh again.
+ * Open a Markdown document in Live Preview to see the result. Turn off
+ * this snippet to compare it with your usual appearance.
+ *
+ * Desktop snippets can style the Foliole window, including the sidebar
+ * and toolbars. These examples target the central Markdown editor.
+ * Native menus and dialogs are outside the window's CSS.
+ *
+ * To style another area, open Help > Developer Tools in a desktop build
+ * that offers it. In Elements, use the element picker, then try a change
+ * in Styles. Copy the selector and declarations you want into this file.
+ * Selectors reflect the current desktop version and may change.
+ * Use plain CSS rules. Imports, URL resources, and nested rules are
+ * unsupported.
+ */
+
+/* Edit these values first. The color mixes follow your current theme. */
+[data-workspace-document-focus-target] .markdown-editor-host {
+  --example-editor-font-size: 1.1rem;
+  --example-editor-line-height: 1.8;
+  --example-editor-tint: color-mix(in srgb, var(--role-accent) 4%, transparent);
+  --example-h1-color: var(--role-accent);
+  --example-h2-color: color-mix(in srgb, var(--role-accent) 75%, var(--role-text));
+  --example-h3-color: color-mix(in srgb, var(--role-accent) 50%, var(--role-text));
+}
+
+[data-workspace-document-focus-target] .markdown-editor-host .cm-editor {
+  background-color: var(--example-editor-tint);
+}
+
+[data-workspace-document-focus-target] .markdown-editor-host .cm-scroller {
+  line-height: var(--example-editor-line-height);
+}
+
+[data-workspace-document-focus-target] .markdown-editor-host .cm-content {
+  font-size: var(--example-editor-font-size);
+}
+
+/* Colors for the three heading levels styled separately in Live Preview. */
+[data-workspace-document-focus-target] .markdown-editor-host .cm-line-h1 {
+  color: var(--example-h1-color);
+}
+
+[data-workspace-document-focus-target] .markdown-editor-host .cm-line-h2 {
+  color: var(--example-h2-color);
+}
+
+[data-workspace-document-focus-target] .markdown-editor-host .cm-line-h3 {
+  color: var(--example-h3-color);
+}
