@@ -1,4 +1,5 @@
 import { SettingsAttachmentStorageSection } from '../features/settings/components/sections/SettingsAttachmentStorageSection';
+import { CompanionCustomCssSettingsContent } from '../shared/customCss/CompanionCustomCssSettingsContent';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDataRuntimeRepository';
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
@@ -7,7 +8,6 @@ import { SettingsTouchSurface } from '../shared/ui/SettingsTouchSurface';
 import { CompanionClozeGuardSettingsContent } from './CompanionClozeGuardSettingsContent';
 import { CompanionColorModeControl } from './CompanionColorModeControl';
 import { useOptionalCompanionCustomCss } from './CompanionCustomCssProvider';
-import { CompanionCustomCssSettingsContent } from './CompanionCustomCssSettingsContent';
 import { CompanionFolderDatabaseBackupSection } from './CompanionFolderDatabaseBackupSection';
 import { CompanionLanguageControl } from './CompanionLanguageControl';
 import { CompanionLearningSettingsContent } from './CompanionLearningSettingsContent';
@@ -66,7 +66,7 @@ function CompanionAppearanceSettingsDetail(props: Pick<CompanionSettingsContentP
     <CompanionLanguageControl />
     <CompanionColorModeControl />
     <CompanionReadingColorControls />
-    {customCss?.isSupported ? <CompanionCustomCssSettingsContent /> : <CompanionPlaceholderSettingsContent
+    {customCss?.isSupported ? <CompanionCustomCssSettingsContent controller={customCss} /> : <CompanionPlaceholderSettingsContent
       detail={t('companion.settings.appearance.placeholderDetail')}
       title={resolvePlaceholderTitle('appearance', t)} />}
   </CompanionSettingsDetail>;

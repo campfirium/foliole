@@ -4,7 +4,7 @@ import {
   compileCompanionCustomCssCollection,
   compileCompanionCustomCssSource,
   COMPANION_CUSTOM_CSS_SCOPE_SELECTOR
-} from './companionCustomCssCompiler';
+} from '../shared/customCss/companionCustomCssCompiler';
 
 function collection(snippets: Array<{ enabled?: boolean; id: string; name: string; sourceCss: string }>) {
   return {

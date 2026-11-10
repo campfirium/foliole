@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { CustomCopyDialogHost } from '../features/settings/components/CustomCopyDialogHost';
 import { AppearanceSettingsProvider } from '../features/settings/context/AppearanceSettingsProvider';
+import { DesktopCustomCssProvider } from '../features/settings/context/DesktopCustomCssProvider';
 import { DisplayScaleProvider } from '../features/settings/context/DisplayScaleProvider';
 import { DocumentHeaderMenuSettingsProvider } from '../features/settings/context/DocumentHeaderMenuSettingsProvider';
 import { ExternalFoldersSettingsProvider } from '../features/settings/context/ExternalFoldersSettingsProvider';
@@ -30,7 +31,7 @@ export function AppProviders({ children, initialLanguagePreference }: AppProvide
               <WorkspaceRailSettingsProvider>
                 <DocumentHeaderMenuSettingsProvider>
                   <AppConfirmationProvider>
-                    {children}
+                    <DesktopCustomCssProvider>{children}</DesktopCustomCssProvider>
                     <CustomCopyDialogHost />
                     <BackupSearchDialogHost />
                   </AppConfirmationProvider>

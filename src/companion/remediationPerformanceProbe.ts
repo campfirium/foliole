@@ -2,6 +2,7 @@ import type { DbPort } from '../../lib/core/sync/dbPort';
 import { expandRequestSyncNodeSummaries, flushRequestSyncInventoryDigests } from '../../lib/core/sync/framedSyncInventoryDigest';
 import { readRequestSyncInventorySnapshot } from '../../lib/core/sync/framedSyncInventoryRead';
 import { framedSyncInventorySummary } from '../../lib/core/sync/framedSyncInventorySummary';
+import { COMPANION_CUSTOM_CSS_SETTING_KEY, createEmptyCompanionCustomCssCollection } from '../shared/customCss/companionCustomCssModel';
 import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import { readCompanionAttachmentReferences } from '../shared/platform/companion/runtime/companionAttachmentReferenceSnapshot';
 import { loadIosCompanionWorkspaceSnapshot } from '../shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
@@ -11,7 +12,6 @@ import {
 } from '../shared/platform/companionSyncStateWriters';
 
 import { requireValue } from './capacityAcceptanceSafety';
-import { COMPANION_CUSTOM_CSS_SETTING_KEY, createEmptyCompanionCustomCssCollection } from './companionCustomCssModel';
 import { runExternalMembershipAcceptance } from './externalMembershipAcceptanceProbe';
 import { openRemediationPerformanceFixture, remediationImage } from './remediationPerformanceFixture';
 

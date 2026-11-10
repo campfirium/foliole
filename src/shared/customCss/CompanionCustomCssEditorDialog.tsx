@@ -1,5 +1,5 @@
-import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { AppButton, AppInput, AppTextarea } from '../shared/ui';
+import { useTranslation } from '../localization/LocalizationProvider';
+import { AppButton, AppInput, AppTextarea } from '../ui';
 import {
   AppDialog,
   AppDialogContent,
@@ -7,7 +7,7 @@ import {
   AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle
-} from '../shared/ui/Dialog';
+} from '../ui/Dialog';
 
 import type { CompanionCustomCssSnippet } from './companionCustomCssModel';
 

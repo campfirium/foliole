@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState, type RefObject } from 'react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
+import { useDesktopCustomCss } from '../context/DesktopCustomCssProvider';
 import { getSettingsCategories, type SettingsCategoryId } from '../model/settingsPanelOptions';
 import {
   querySettingsSearch,
   type SettingsSearchResult
 } from '../model/settingsSearch';
-import { createSettingsSearchRows } from '../model/settingsSearchRowCatalog';
+import { createSettingsSearchRows, SETTINGS_CUSTOM_CSS_ROW_ID } from '../model/settingsSearchRowCatalog';
 
 const SETTINGS_SEARCH_HIGHLIGHT_CLASSES = [
   'bg-[rgb(var(--role-accent-rgb)_/_0.12)]',
@@ -25,7 +26,10 @@ export function useSettingsSearchState(
   const [targetBlock, setTargetBlock] = useState<ScrollLogicalPosition>('center');
   const [targetRowId, setTargetRowId] = useState<string | null>(null);
   const categories = getSettingsCategories(t);
-  const rows = useMemo(() => createSettingsSearchRows(t), [t]);
+  const hasCustomCss = Boolean(useDesktopCustomCss());
+  const rows = useMemo(() => createSettingsSearchRows(t).filter(
+    (row) => hasCustomCss || row.id !== SETTINGS_CUSTOM_CSS_ROW_ID
+  ), [hasCustomCss, t]);
   const results = querySettingsSearch(categories, rows, query);
 
   useEffect(() => setActiveResultIndex(0), [query]);

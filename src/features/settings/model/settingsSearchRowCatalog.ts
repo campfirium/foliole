@@ -15,6 +15,8 @@ interface SearchRowDefinition {
 
 export const SETTINGS_MODELS_SEARCH_ROW_ID = 'general-models';
 
+export const SETTINGS_CUSTOM_CSS_ROW_ID = 'appearance-css-snippets';
+
 const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('about', 'about-foliole-desktop', 'settings.search.aboutVersion.title', 'settings.search.aboutVersion.description', 'settings.search.aboutVersion.terms'),
   row('about', 'about-cli', 'settings.search.aboutCli.title', 'settings.search.aboutCli.description', 'settings.search.aboutCli.terms'),
@@ -36,6 +38,7 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('typography', 'typography-paragraph-spacing', 'settings.appearance.paragraphSpacing.title', 'settings.appearance.paragraphSpacing.description'),
   row('typography', 'typography-reading-width', 'settings.appearance.readingWidth.title', 'settings.appearance.readingWidth.description'),
   row('typography', 'typography-navigation-row-spacing', 'settings.appearance.topicList.rowSpacing.title', 'settings.appearance.topicList.rowSpacing.description'),
+  row('appearance', SETTINGS_CUSTOM_CSS_ROW_ID, 'companion.settings.appearance.css.title', 'companion.settings.appearance.css.globalDescription'),
   row('appearance', 'appearance-folder-section-gap', 'settings.appearance.folderSections.gap', 'settings.appearance.folderSections.gapDescription'),
   row('editor', 'editor-immersive-double-click-edit', 'settings.search.editorImmersiveDoubleClick.title', 'settings.search.editorImmersiveDoubleClick.description'),
   row('editor', 'editor-save-remote-images-locally', 'settings.search.editorRemoteImages.title', 'settings.search.editorRemoteImages.description', 'settings.search.editorRemoteImages.terms'),

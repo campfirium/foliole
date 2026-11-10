@@ -6,6 +6,7 @@ import type { NativeAideStorageCommandMap } from './nativeAideStorageContract.js
 import type { NativeAssistantCommandMap } from './nativeAssistantContract.js';
 import type { NativeBackupSearchCommandMap } from './nativeBackupSearchContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
+import type { NativeCssSnippetCommandMap } from './nativeCssSnippetCommandMap.js';
 import type { NativeDailyFlowCommandMap } from './nativeDailyFlowContract.js';
 import type { NativeDatabaseUpgradeCommandMap } from './nativeDatabaseUpgradeContract.js';
 import type { NativeDiscoursePublishCommandMap } from './nativeDiscoursePublishContract.js';
@@ -64,7 +65,7 @@ export type * from './nativeAssistantImageContract.js';
 export type * from './nativeAssistantModelSettingsContract.js';
 export type * from './nativeBackupSearchContract.js';
 
-export type NativeCommandMap = NativeReminderCommandMap & NativeDailyFlowCommandMap & NativeReviewTrainingCommandMap & NativeAssistantCommandMap & NativeAideStorageCommandMap & NativeBackupSearchCommandMap & NativeDesktopUpdateCommandMap & NativeDisplayScaleCommandMap & NativeEditorOperationHistoryCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeFoliolePublishCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeGuidedSampleCommandMap & NativeInitialLibrarySetupCommandMap & NativeDatabaseUpgradeCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & NativeSplitTopicPreferencesCommandMap & NativePdfDocumentSearchCommandMap & {
+export type NativeCommandMap = NativeReminderCommandMap & NativeDailyFlowCommandMap & NativeReviewTrainingCommandMap & NativeAssistantCommandMap & NativeAideStorageCommandMap & NativeBackupSearchCommandMap & NativeDesktopUpdateCommandMap & NativeDisplayScaleCommandMap & NativeEditorOperationHistoryCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeFoliolePublishCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeCssSnippetCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeGuidedSampleCommandMap & NativeInitialLibrarySetupCommandMap & NativeDatabaseUpgradeCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & NativeSplitTopicPreferencesCommandMap & NativePdfDocumentSearchCommandMap & {
   [NATIVE_COMMANDS.bootReport]: {
     args: {
       stage: string;

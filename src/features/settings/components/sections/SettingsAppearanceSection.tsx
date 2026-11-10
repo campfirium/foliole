@@ -12,6 +12,7 @@ import {
   DEFAULT_SELECTION_COLOR_PRESET
 } from '../../model/appearanceSettings';
 
+import { DesktopCssSnippetsSection } from './DesktopCssSnippetsSection';
 import { FolderSectionSettings } from './FolderSectionSettings';
 import { NodeIconSettingsSection } from './NodeIconSettingsSection';
 import {
@@ -98,6 +99,7 @@ export function SettingsAppearanceSection(props: {
       />
       <NodeIconSettingsSection onSettingsBackdropTransparentChange={props.onSettingsBackdropTransparentChange} />
       <AppearanceDarkModeContentSection appearance={state.appearance} />
+      <DesktopCssSnippetsSection />
     </>
   );
 }

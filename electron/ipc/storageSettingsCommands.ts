@@ -43,9 +43,11 @@ import { resolveReadwiseJoinDecision, selectReadwiseImportDevice } from '../sync
 import { activateReadwiseWithHandoff } from '../sync/readwiseOwnerHandoff.js';
 
 import { asBoolean, asLiteralUnion, asNullableString, asString } from './commandParsers.js';
+import { listCssSnippetFiles, resolveCssSnippetDirectory } from './cssSnippetFiles.js';
 import { loadDatabaseMaintenanceStatus } from './databaseMaintenanceStatus.js';
 import {
   loadLibraryPathSettings,
+  loadLibraryPathSettingsSync,
   openImportRoot,
   updateLibraryPathSetting
 } from './libraryPaths.js';
@@ -164,6 +166,12 @@ async function handleReadwiseHostCommand(command: string, args: Record<string, u
   return undefined;
 }
 
+async function openCssSnippetFolder() {
+  const { directory } = await resolveCssSnippetDirectory(loadLibraryPathSettingsSync().library_home, true);
+  if (await shell.openPath(directory)) throw new Error('Could not open the CSS snippet folder.');
+  return null;
+}
+
 async function handleSearchAliasCommand(command: string) {
   if (command === NATIVE_COMMANDS.loadSearchAliasFileStatus) return searchAliasMirrorStatus();
   if (command !== NATIVE_COMMANDS.openSearchAliasFile) return undefined;
@@ -178,6 +186,8 @@ export async function handleSettingsStorageCommand(
   args: Record<string, unknown>,
   window: BrowserWindow | null = null
 ) {
+  if (command === NATIVE_COMMANDS.listCssSnippetFiles) return listCssSnippetFiles(loadLibraryPathSettingsSync().library_home);
+  if (command === NATIVE_COMMANDS.openCssSnippetFolder) return openCssSnippetFolder();
   const externalSearchResult = handleSourceSettingsCommand(command, args);
   if (externalSearchResult !== undefined) return externalSearchResult;
   const syncGroupResult = handleSyncGroupCommand(command, args);

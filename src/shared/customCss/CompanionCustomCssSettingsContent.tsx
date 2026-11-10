@@ -1,23 +1,31 @@
 import { useCallback, useState, type Dispatch, type SetStateAction } from 'react';
 
-import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { createCompanionUuid } from '../shared/platform/companionUuid';
+import { useTranslation } from '../localization/LocalizationProvider';
+import { createCompanionUuid } from '../platform/companionUuid';
 
 import { CompanionCustomCssConfirmDialog } from './CompanionCustomCssConfirmDialog';
 import { CompanionCustomCssEditorDialog } from './CompanionCustomCssEditorDialog';
-import type { CompanionCustomCssSnippet } from './companionCustomCssModel';
-import {
-  useCompanionCustomCss,
-  type CompanionCustomCssSaveResult
-} from './CompanionCustomCssProvider';
+import type { CompanionCustomCssCollection, CompanionCustomCssSnippet } from './companionCustomCssModel';
 import { CompanionCustomCssSettingsSurface } from './CompanionCustomCssSettingsSurface';
+
+export type CustomCssSaveResult =
+  | { ok: true }
+  | { kind: 'invalid' | 'save' | 'unavailable'; ok: false };
+
+export interface CustomCssSettingsController {
+  collection: CompanionCustomCssCollection;
+  issue: 'invalid' | 'save' | 'sync' | null;
+  markDraftEdited(): void;
+  resetCollection(): Promise<CustomCssSaveResult>;
+  saveCollection(collection: CompanionCustomCssCollection): Promise<CustomCssSaveResult>;
+}
 
 function createDraft(): CompanionCustomCssSnippet {
   return { enabled: true, id: createCompanionUuid(), name: '', sourceCss: '' };
 }
 
 function useSnippetCollectionSave(
-  customCss: ReturnType<typeof useCompanionCustomCss>,
+  customCss: CustomCssSettingsController,
   setIsBusy: Dispatch<SetStateAction<boolean>>
 ) {
   return useCallback(async (snippets: CompanionCustomCssSnippet[]) => {
@@ -30,9 +38,9 @@ function useSnippetCollectionSave(
 
 async function finishConfirmedAction(args: {
   action: 'delete' | 'reset' | null;
-  customCss: ReturnType<typeof useCompanionCustomCss>;
+  customCss: CustomCssSettingsController;
   draft: CompanionCustomCssSnippet | null;
-  saveCollection(snippets: CompanionCustomCssSnippet[]): Promise<CompanionCustomCssSaveResult>;
+  saveCollection(snippets: CompanionCustomCssSnippet[]): Promise<CustomCssSaveResult>;
   saveError: string;
   setActionError: Dispatch<SetStateAction<string | null>>;
   setConfirmAction: Dispatch<SetStateAction<'delete' | 'reset' | null>>;
@@ -57,16 +65,15 @@ async function finishConfirmedAction(args: {
   args.setActionError(null);
 }
 
-function resolveProviderError(issue: ReturnType<typeof useCompanionCustomCss>['issue'], t: ReturnType<typeof useTranslation>) {
+function resolveProviderError(issue: CustomCssSettingsController['issue'], t: ReturnType<typeof useTranslation>) {
   if (!issue) return null;
   if (issue === 'invalid') return t('companion.settings.appearance.css.invalidError');
   if (issue === 'sync') return t('companion.settings.appearance.css.syncError');
   return t('companion.settings.appearance.css.saveError');
 }
 
-function useCustomCssSettingsModel() {
+function useCustomCssSettingsModel(customCss: CustomCssSettingsController) {
   const t = useTranslation();
-  const customCss = useCompanionCustomCss();
   const [draft, setDraft] = useState<CompanionCustomCssSnippet | null>(null);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -123,8 +130,8 @@ function useCustomCssSettingsModel() {
   };
 }
 
-export function CompanionCustomCssSettingsContent() {
-  const model = useCustomCssSettingsModel();
+export function CompanionCustomCssSettingsContent({ controller }: { controller: CustomCssSettingsController }) {
+  const model = useCustomCssSettingsModel(controller);
   return (
     <>
       <CompanionCustomCssSettingsSurface

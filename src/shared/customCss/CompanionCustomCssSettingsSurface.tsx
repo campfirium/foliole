@@ -1,5 +1,5 @@
-import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { AppButton } from '../shared/ui';
+import { useTranslation } from '../localization/LocalizationProvider';
+import { AppButton } from '../ui';
 
 import {
   MAX_COMPANION_CUSTOM_CSS_SNIPPETS,

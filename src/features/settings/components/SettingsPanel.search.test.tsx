@@ -4,6 +4,7 @@ import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import type { NativeInvoke } from '../../../../lib/platform/nativeContract';
 import { APP_LANGUAGE_STORAGE_KEY } from '../../../shared/localization/appLanguage';
 import { preloadTranslationCatalog } from '../../../shared/localization/translations';
+import { DesktopCustomCssProvider } from '../context/DesktopCustomCssProvider';
 
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
@@ -213,7 +214,9 @@ it('keeps registered row anchors renderable in their categories', async () => {
 
   for (const category of categories) {
     const { unmount } = renderWithMouseGestureProvider(
-      <SettingsPanel {...createProps()} requestedCategory={category} />
+      <DesktopCustomCssProvider>
+        <SettingsPanel {...createProps()} requestedCategory={category} />
+      </DesktopCustomCssProvider>
     );
     await waitFor(() => {
       const missing: string[] = [];

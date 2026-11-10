@@ -13,7 +13,8 @@ vi.mock('../shared/platform/companionSyncObjects', () => ({
   saveCompanionSyncSettingRecord: syncObjects.save
 }));
 
-import type { CompanionCustomCssCollection } from './companionCustomCssModel';
+import type { CompanionCustomCssCollection } from '../shared/customCss/companionCustomCssModel';
+
 import { CompanionCustomCssProvider, useCompanionCustomCss } from './CompanionCustomCssProvider';
 import { COMPANION_CUSTOM_CSS_STORAGE_KEY } from './companionCustomCssStorage';
 

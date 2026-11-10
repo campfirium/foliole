@@ -1,14 +1,19 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { CompanionCustomCssProvider } from './CompanionCustomCssProvider';
-import { CompanionCustomCssSettingsContent } from './CompanionCustomCssSettingsContent';
+import { CompanionCustomCssSettingsContent } from '../shared/customCss/CompanionCustomCssSettingsContent';
+
+import { CompanionCustomCssProvider, useCompanionCustomCss } from './CompanionCustomCssProvider';
 import { COMPANION_CUSTOM_CSS_STORAGE_KEY } from './companionCustomCssStorage';
+
+function SnippetSettings() {
+  return <CompanionCustomCssSettingsContent controller={useCompanionCustomCss()} />;
+}
 
 function renderSettings(runtimeKind: 'android-capacitor' | 'web-preview' = 'web-preview') {
   return render(
     <CompanionCustomCssProvider runtimeKind={runtimeKind}>
-      <CompanionCustomCssSettingsContent />
+      <SnippetSettings />
     </CompanionCustomCssProvider>
   );
 }

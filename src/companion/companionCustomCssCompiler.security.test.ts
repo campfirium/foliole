@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { compileCompanionCustomCssCollection, compileCompanionCustomCssSource } from './companionCustomCssCompiler';
+import { compileCompanionCustomCssCollection, compileCompanionCustomCssSource } from '../shared/customCss/companionCustomCssCompiler';
 import {
   MAX_COMPANION_CUSTOM_CSS_SNIPPETS,
   MAX_COMPANION_CUSTOM_CSS_SOURCE_BYTES
-} from './companionCustomCssModel';
+} from '../shared/customCss/companionCustomCssModel';
 
 function uuid(index: number) {
   return `00000000-0000-4000-8000-${index.toString().padStart(12, '0')}`;

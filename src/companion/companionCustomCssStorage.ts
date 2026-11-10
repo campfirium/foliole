@@ -1,5 +1,5 @@
-import { compileCompanionCustomCssCollection } from './companionCustomCssCompiler';
-import type { CompanionCustomCssCollection } from './companionCustomCssModel';
+import { compileCompanionCustomCssCollection } from '../shared/customCss/companionCustomCssCompiler';
+import type { CompanionCustomCssCollection } from '../shared/customCss/companionCustomCssModel';
 
 export const COMPANION_CUSTOM_CSS_STORAGE_KEY = 'foliole-companion-custom-css-snippets-v1';
 

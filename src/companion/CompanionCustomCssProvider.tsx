@@ -14,19 +14,19 @@ import {
 
 import type { NativeCompanionRuntimeKind } from '../../lib/platform/nativeCompanionContract';
 import {
-  loadCompanionSyncSettingValueJson,
-  saveCompanionSyncSettingRecord
-} from '../shared/platform/companionSyncObjects';
-
-import {
   compileCompanionCustomCssCollection,
   type CompiledCompanionCustomCssCollection
-} from './companionCustomCssCompiler';
+} from '../shared/customCss/companionCustomCssCompiler';
 import {
   COMPANION_CUSTOM_CSS_SETTING_KEY,
   createEmptyCompanionCustomCssCollection,
   type CompanionCustomCssCollection
-} from './companionCustomCssModel';
+} from '../shared/customCss/companionCustomCssModel';
+import {
+  loadCompanionSyncSettingValueJson,
+  saveCompanionSyncSettingRecord
+} from '../shared/platform/companionSyncObjects';
+
 import {
   loadCompanionCustomCssCache,
   saveCompanionCustomCssCache

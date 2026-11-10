@@ -42,9 +42,10 @@ function rejectUnsafeText(value: string, code: CompanionCustomCssCompilerCode) {
   }
 }
 
-function compileSelector(selector: string) {
+function compileSelector(selector: string, scope: 'topic' | 'global') {
   const normalized = selector.trim();
   rejectUnsafeText(normalized, 'selector');
+  if (scope === 'global' && normalized && !normalized.includes('&')) return normalized;
   if (
     !normalized
     || normalized.includes('&')
@@ -76,7 +77,7 @@ function validateDeclaration(declaration: Declaration) {
   }
 }
 
-function validateRule(rule: Rule) {
+function validateRule(rule: Rule, scope: 'topic' | 'global') {
   rejectUnsafeText(rule.raws.between ?? '', 'selector');
   let selectors: string[];
   try {
@@ -84,7 +85,7 @@ function validateRule(rule: Rule) {
   } catch {
     throw new CompanionCustomCssCompilerError('selector', 'This CSS selector is invalid.');
   }
-  rule.selectors = selectors.map(compileSelector);
+  rule.selectors = selectors.map((selector) => compileSelector(selector, scope));
   for (const child of rule.nodes ?? []) {
     if (child.type === 'comment') continue;
     if (child.type !== 'decl') {
@@ -94,7 +95,7 @@ function validateRule(rule: Rule) {
   }
 }
 
-export function compileCompanionCustomCssSource(sourceCss: string) {
+export function compileCompanionCustomCssSource(sourceCss: string, scope: 'topic' | 'global' = 'topic') {
   let root: ReturnType<typeof postcss.parse>;
   try {
     root = postcss.parse(sourceCss, { from: undefined });
@@ -106,16 +107,16 @@ export function compileCompanionCustomCssSource(sourceCss: string) {
     if (node.type !== 'rule') {
       throw new CompanionCustomCssCompilerError('structure', 'Only standard style rules are supported.');
     }
-    validateRule(node);
+    validateRule(node, scope);
   }
   root.walkComments((comment) => { comment.remove(); });
   return root.toString().trim();
 }
 
-export function compileCompanionCustomCssCollection(raw: unknown): CompiledCompanionCustomCssCollection {
+export function compileCompanionCustomCssCollection(raw: unknown, scope: 'topic' | 'global' = 'topic'): CompiledCompanionCustomCssCollection {
   const collection = normalizeCompanionCustomCssCollection(raw);
   const compiledSnippets = collection.snippets.map((snippet) => ({
-    compiledCss: compileCompanionCustomCssSource(snippet.sourceCss),
+    compiledCss: compileCompanionCustomCssSource(snippet.sourceCss, scope),
     enabled: snippet.enabled,
     id: snippet.id
   }));

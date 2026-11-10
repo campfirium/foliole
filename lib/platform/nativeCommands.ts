@@ -2,6 +2,7 @@ import { NATIVE_ASSISTANT_COMMANDS } from './nativeAssistantCommands.js';
 import { NATIVE_DAILY_FLOW_COMMANDS } from './nativeDailyFlowCommands.js';
 import { NATIVE_DATABASE_UPGRADE_COMMANDS } from './nativeDatabaseUpgradeContract.js';
 import { NATIVE_DIVE_COMMANDS } from './nativeDiveCommands.js';
+import { NATIVE_LOCAL_FILE_COMMANDS } from './nativeLocalFileCommands.js';
 import { NATIVE_REMINDER_COMMANDS } from './nativeReminderContract.js';
 import { NATIVE_SOURCE_CONNECTION_COMMANDS } from './nativeSourceConnectionCommands.js';
 import { NATIVE_WEBDAV_RELAY_COMMANDS } from './nativeWebDavRelayCommands.js';
@@ -13,6 +14,7 @@ export const NATIVE_COMMANDS = {
   ...NATIVE_SOURCE_CONNECTION_COMMANDS,
   ...NATIVE_WEBDAV_RELAY_COMMANDS,
   ...NATIVE_ASSISTANT_COMMANDS,
+  ...NATIVE_LOCAL_FILE_COMMANDS,
   ...NATIVE_DATABASE_UPGRADE_COMMANDS,
   maintainAttachments: 'maintain_attachments',
   appGetVersion: 'app_get_version',
@@ -60,10 +62,6 @@ export const NATIVE_COMMANDS = {
   loadExternalSearchBrowseEntries: 'load_external_search_browse_entries',
   loadExternalSearchPreview: 'load_external_search_preview',
   openExternalDocumentFile: 'open_external_document_file',
-  selectLocalFileToOpen: 'select_local_file_to_open',
-  listLocalFiles: 'list_local_files',
-  readLocalFile: 'read_local_file',
-  saveLocalFile: 'save_local_file',
   importExternalSearchDocument: 'import_external_search_document',
   loadNodeSourceDetails: 'load_node_source_details',
   loadNodeSourceUpdatePreview: 'load_node_source_update_preview',

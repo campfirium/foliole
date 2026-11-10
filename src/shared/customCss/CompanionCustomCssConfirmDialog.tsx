@@ -1,5 +1,5 @@
-import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { AppButton } from '../shared/ui';
+import { useTranslation } from '../localization/LocalizationProvider';
+import { AppButton } from '../ui';
 import {
   AppDialog,
   AppDialogContent,
@@ -7,7 +7,7 @@ import {
   AppDialogOverlay,
   AppDialogPortal,
   AppDialogTitle
-} from '../shared/ui/Dialog';
+} from '../ui/Dialog';
 
 export function CompanionCustomCssConfirmDialog(props: {
   action: 'delete' | 'reset' | null;
