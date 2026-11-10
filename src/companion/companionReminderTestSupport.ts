@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import type { ActionPerformed, LocalNotificationSchema } from '@capacitor/local-notifications';
+import type { ActionPerformed, LocalNotificationSchema, RegisterActionTypesOptions } from '@capacitor/local-notifications';
 import Database from 'better-sqlite3';
 import { afterEach, vi } from 'vitest';
 
@@ -12,6 +12,7 @@ import { createFakeCapacitorDatabaseManager } from '../shared/platform/companion
 
 const host = vi.hoisted(() => ({
   platform: 'android', bootstrap: null as NativeCompanionBootstrapState | null, granted: true, exactGranted: true,
+  actions: [] as RegisterActionTypesOptions['types'],
   pending: new Map<number, LocalNotificationSchema>(), tap: undefined as ((event: ActionPerformed) => Promise<void>) | undefined
 }));
 
@@ -30,6 +31,7 @@ vi.mock('@capacitor/local-notifications', () => ({
       host.tap = callback;
       return { remove: async () => { host.tap = undefined; } };
     },
+    registerActionTypes: async ({ types }: RegisterActionTypesOptions) => { host.actions = types; },
     getPending: async () => ({ notifications: [...host.pending.values()] }),
     checkPermissions: async () => ({ display: host.granted ? 'granted' : 'denied' }),
     requestPermissions: async () => ({ display: host.granted ? 'granted' : 'denied' }),
@@ -63,6 +65,8 @@ afterEach(async () => {
   if (sqlite?.open) sqlite.close();
   if (root) rmSync(root, { recursive: true, force: true });
   host.pending.clear();
+  host.actions = [];
+  window.localStorage.clear();
   host.granted = true;
   host.exactGranted = true;
 });

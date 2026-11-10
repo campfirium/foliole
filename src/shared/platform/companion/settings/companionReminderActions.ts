@@ -1,21 +1,32 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { isReminderForDevice } from '../../../../../lib/core/reminders/reminderRule';
+import { logRuntimeError } from '../../runtimeLogging';
 
-import { COMPANION_REMINDER_NOTIFICATION_OWNER } from './companionReminderNotifications';
+import {
+  COMPANION_REMINDER_NOTIFICATION_OWNER, REMINDER_SNOOZE_ACTIONS, runCompanionReminderNotificationTask
+} from './companionReminderNotifications';
 import { loadCompanionReminderDevice, loadCompanionReminderRules } from './companionReminderRepository';
+import { snoozeCompanionReminder } from './companionReminderSnooze';
 
 export function listenForCompanionReminderFlow(onOpenFlow: () => void) {
   let active = true;
   const subscription = LocalNotifications.addListener('localNotificationActionPerformed', async event => {
     const extra = event.notification?.extra;
-    if (!active || event.actionId !== 'tap' || extra?.owner !== COMPANION_REMINDER_NOTIFICATION_OWNER) return;
+    const actionAt = Date.now();
+    const minutes = event.actionId === 'snooze-30' || event.actionId === 'snooze-60'
+      ? REMINDER_SNOOZE_ACTIONS[event.actionId] : undefined;
+    if (!active || extra?.owner !== COMPANION_REMINDER_NOTIFICATION_OWNER || (!minutes && event.actionId !== 'tap')) return;
     try {
-      const [rules, device] = await Promise.all([loadCompanionReminderRules(), loadCompanionReminderDevice()]);
-      const rule = rules.find(candidate => candidate.id === extra.ruleId && candidate.revision === extra.revision);
-      if (active && rule?.enabled && rule.destination === 'flow' && isReminderForDevice(rule, device)) onOpenFlow();
-    } catch {
-      // The notification can outlive the library that created it.
+      await runCompanionReminderNotificationTask(async () => {
+        const [rules, device] = await Promise.all([loadCompanionReminderRules(), loadCompanionReminderDevice()]);
+        const rule = rules.find(candidate => candidate.id === extra.ruleId && candidate.revision === extra.revision);
+        if (!active || !rule?.enabled || !isReminderForDevice(rule, device)) return;
+        if (minutes) await snoozeCompanionReminder(rule, event.notification, minutes, actionAt);
+        else if (rule.destination === 'flow') onOpenFlow();
+      });
+    } catch (error) {
+      logRuntimeError('Reminder notification action failed', { area: 'native', action: event.actionId, error });
     }
   });
   return {
