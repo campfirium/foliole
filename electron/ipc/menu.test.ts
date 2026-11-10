@@ -114,15 +114,6 @@ describe('native app menu command state', () => {
     expect(findMenuItem(items, 'navigation.goToLastChild')?.label).toBe('Go Down');
   });
 
-  it('omits the DevTools menu entry from packaged app menus', () => {
-    appMock.isPackaged = true;
-
-    installAppMenu();
-
-    const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
-    expect(findMenuItem(items, 'workspace.toggleDevTools')).toBeNull();
-  });
-
   it('exposes undo and redo as app commands instead of Electron native roles', () => {
     syncAppMenuState(
       ['app.undo'],
@@ -138,6 +129,25 @@ describe('native app menu command state', () => {
     expect(findMenuItem(items, 'app.redo')).toMatchObject({ enabled: true });
     expect(findMenuItem(items, 'app.redo')).not.toHaveProperty('role');
   });
+});
+
+it('opens DevTools from packaged Help without a renderer command or accelerator', () => {
+  resetMenuMock();
+  appMock.isPackaged = true;
+
+  syncAppMenuState([], [{ commandId: 'support.openDeveloperTools', accelerator: 'Control+Shift+I' }]);
+
+  const items = (menuMock.applicationMenu?.items ?? []) as MockMenuItem[];
+  const helpItems = items.find((item) => item.label === 'Help')?.submenu?.items ?? [];
+  const entry = findMenuItem(helpItems, 'support.openDeveloperTools');
+  const webContents = { openDevTools: vi.fn(), send: vi.fn() };
+  expect(entry).toMatchObject({ label: 'Developer Tools', enabled: true });
+  expect(entry).not.toHaveProperty('accelerator');
+  expect(findMenuItem(items, 'workspace.toggleDevTools')).toBeNull();
+
+  entry?.click?.(entry, { isDestroyed: () => false, webContents });
+  expect(webContents.openDevTools).toHaveBeenCalledOnce();
+  expect(webContents.send).not.toHaveBeenCalled();
 });
 
 describe('native annotation menu projection', () => {

@@ -40,7 +40,7 @@ export function createMainWindowOptions(preloadPath: string): BrowserWindowConst
     title: windowTitle,
     webPreferences: {
       backgroundThrottling: false,
-      devTools: !app.isPackaged,
+      devTools: true,
       preload: preloadPath,
       contextIsolation: true,
       sandbox: true,

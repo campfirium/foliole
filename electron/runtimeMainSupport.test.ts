@@ -24,13 +24,15 @@ it('keeps the startup renderer unthrottled while the hidden window is loading', 
   expect(createMainWindowOptions('/tmp/preload.cjs').webPreferences?.backgroundThrottling).toBe(false);
 });
 
-it('disables DevTools in packaged main window options', () => {
+it('allows the packaged main window to open DevTools without relaxing renderer isolation', () => {
   appMock.isPackaged = true;
-
-  expect(createMainWindowOptions('/tmp/preload.cjs').webPreferences?.devTools).toBe(false);
-
-  appMock.isPackaged = false;
-  expect(createMainWindowOptions('/tmp/preload.cjs').webPreferences?.devTools).toBe(true);
+  try {
+    expect(createMainWindowOptions('/tmp/preload.cjs').webPreferences).toMatchObject({
+      devTools: true, contextIsolation: true, sandbox: true, nodeIntegration: false
+    });
+  } finally {
+    appMock.isPackaged = false;
+  }
 });
 
 it('uses the branded runtime window icon next to the electron preload source', () => {

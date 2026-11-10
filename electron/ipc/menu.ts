@@ -96,7 +96,16 @@ function buildHelpMenu(state: MenuState): MenuItemConstructorOptions {
       commandItem('Send Feedback', 'support.sendFeedback', state),
       commandItem('Email', 'support.email', state),
       commandItem('Report an Issue', 'support.openIssues', state),
-      commandItem('Discussions', 'support.openDiscussions', state)
+      commandItem('Discussions', 'support.openDiscussions', state),
+      ...(app.isPackaged ? [
+        { type: 'separator' as const },
+        {
+          id: 'support.openDeveloperTools',
+          label: 'Developer Tools',
+          enabled: true,
+          click: (_item, candidate) => resolveMenuCommandWindow(candidate)?.webContents.openDevTools()
+        }
+      ] satisfies MenuItemConstructorOptions[] : [])
     ]
   };
 }
