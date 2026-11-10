@@ -19,11 +19,11 @@ export function CompanionReminderEditor(props: {
   const { busy, draft, onChange } = props;
   const trigger = draft.trigger;
   const expired = isReminderTriggerPast(trigger);
-  return <form className="space-y-5" aria-labelledby="companion-reminder-editor-title"
+  return <form className="space-y-5" aria-label={t(draft.id ? 'settings.reminders.edit' : 'settings.reminders.add')}
     onSubmit={event => void props.onSave(event)}>
-    <h2 id="companion-reminder-editor-title" className="text-lg font-semibold text-foreground">
-      {t(draft.id ? 'settings.reminders.edit' : 'settings.reminders.add')}
-    </h2>
+    {draft.id && <h2 className="text-lg font-semibold text-foreground">
+      {t('settings.reminders.edit')}
+    </h2>}
     <div className="space-y-4">
       <label className="block space-y-1.5 text-base font-medium">
         <span>{t('settings.reminders.message')}</span>
