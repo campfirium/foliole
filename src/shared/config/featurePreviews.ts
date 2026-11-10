@@ -2,7 +2,7 @@ import type { TranslationKey } from '../localization/translations';
 import {
   isExperimentalFeatureEnabled,
   useFeaturePreviewPreferences
-} from '../platform/featurePreviewPreferences';
+} from '../platform/runtime/featurePreviewPreferences';
 
 import featurePreviews from './featurePreviews.json';
 

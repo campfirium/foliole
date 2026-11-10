@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/order -- Load native test mocks before modules that register plugins.
-import { host, open } from './companionReminderTestSupport';
+import { host, open } from '../test/companionReminderTestSupport';
 
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { useState, type ReactNode } from 'react';
