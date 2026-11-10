@@ -58,7 +58,6 @@ describe('reading typography guards', () => {
     const styles = readWorkspaceFile('src/app/styles.css');
 
     expect(styles).not.toContain('-webkit-font-smoothing:');
-    expect(styles).toContain('font-synthesis-weight: none;');
     expect(styles).toContain('text-rendering: optimizeLegibility;');
     expect(styles).toContain('strong,\nb {\n  font-weight: 600;');
   });

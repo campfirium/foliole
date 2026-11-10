@@ -424,7 +424,6 @@ body {
   font-size: var(--app-font-size, 15px);
   line-height: 1.5;
   -moz-osx-font-smoothing: grayscale;
-  font-synthesis-weight: none;
   text-rendering: optimizeLegibility;
   overflow: hidden;
 }
