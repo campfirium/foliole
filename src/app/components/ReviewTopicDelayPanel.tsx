@@ -1,10 +1,15 @@
-import { useEffect, useRef } from 'react';
+import { ChevronDown } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
-import { getTopicPostponeDelayOption, TOPIC_POSTPONE_DELAY_OPTIONS } from '../../../lib/core/review/topicPostponeDelay';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { onWindowEscape, onWindowKeydown } from '../../shared/platform/keyboard';
-import { AppButton, appFloatingSurfaceClassName } from '../../shared/ui';
+import {
+  AppButton, AppDropdownMenu, AppDropdownMenuCheckItem, AppDropdownMenuContent,
+  AppDropdownMenuTrigger, appFloatingSurfaceClassName
+} from '../../shared/ui';
 import type { useReviewTopicDelayPanel } from '../hooks/useReviewTopicDelayPanel';
+
+import { ReviewTopicPostponeForm } from './ReviewTopicPostponeForm';
 
 type ReviewTopicDelayPanelProps = ReturnType<typeof useReviewTopicDelayPanel>;
 
@@ -12,7 +17,9 @@ function isDigitKey(value: string) {
   return /^[0-9]$/.test(value);
 }
 
-function useReviewTopicDelayPanelKeys(props: ReviewTopicDelayPanelProps) {
+function useReviewTopicDelayPanelKeys(
+  props: ReviewTopicDelayPanelProps, menuOpen: boolean, closeMenu: () => void
+) {
   const isOpenRef = useRef(props.isOpen);
   isOpenRef.current = props.isOpen;
   useEffect(() => {
@@ -21,11 +28,12 @@ function useReviewTopicDelayPanelKeys(props: ReviewTopicDelayPanelProps) {
       if (!isOpenRef.current) {
         return false;
       }
-      props.close();
+      if (menuOpen) closeMenu();
+      else props.close();
       return undefined;
     };
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (isDigitKey(event.key)) {
+      if (!menuOpen && props.unit === 'weeks' && isDigitKey(event.key)) {
         event.preventDefault();
         void props.submit(Number(event.key));
       }
@@ -36,52 +44,48 @@ function useReviewTopicDelayPanelKeys(props: ReviewTopicDelayPanelProps) {
       unlistenEscape();
       unlistenKeydown();
     };
-  }, [props]);
+  }, [closeMenu, menuOpen, props]);
 }
 
-function DelayTickLabels() {
-  return (
-    <div className="mt-2 flex justify-between text-[11px] font-medium text-muted-foreground/75">
-      {TOPIC_POSTPONE_DELAY_OPTIONS.filter((option) => option.level === 0 || option.level === 9).map((option) => (
-        <span key={option.level}>{option.shortLabel}</span>
-      ))}
-    </div>
-  );
-}
-
-function ReviewTopicDelaySlider(props: Pick<ReviewTopicDelayPanelProps, 'selectedLevel' | 'setSelectedLevel'>) {
+function PostponeUnitMenu({ unit, changeUnit, open, onOpenChange }: Pick<ReviewTopicDelayPanelProps, 'unit' | 'changeUnit'> & {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const t = useTranslation();
-  const progress = `${(props.selectedLevel / 9) * 100}%`;
+  const skipTriggerFocus = useRef(false);
   return (
-    <div className="w-full">
-      <div className="relative h-5">
-        <div className="absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-foreground/16" />
-        <div className="absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-foreground/32" style={{ width: progress }} />
-        <div
-          aria-hidden="true"
-          className="absolute top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--app-control-border-color)] bg-[var(--app-surface-control-bg)] shadow-control"
-          style={{ left: progress }}
-        />
-        <input
-          aria-label={t('desktop.reviewDelay.slider')}
-          className="absolute inset-0 h-5 w-full cursor-pointer opacity-0"
-          max={9}
-          min={0}
-          onChange={(event) => props.setSelectedLevel(Number(event.currentTarget.value))}
-          step={1}
-          type="range"
-          value={props.selectedLevel}
-        />
-      </div>
-      <DelayTickLabels />
-    </div>
+    <AppDropdownMenu open={open} onOpenChange={onOpenChange}>
+      <AppDropdownMenuTrigger asChild>
+        <AppButton className="gap-1 pl-2 pr-0 text-xs text-foreground/65" size="sm" type="button" variant="ghost">
+          {t(`desktop.reviewDelay.mode.${unit}`)}
+          <ChevronDown aria-hidden="true" size={13} />
+        </AppButton>
+      </AppDropdownMenuTrigger>
+      <AppDropdownMenuContent align="end" className="min-w-28"
+        onCloseAutoFocus={event => {
+          if (skipTriggerFocus.current) event.preventDefault();
+          skipTriggerFocus.current = false;
+        }}>
+        {(['weeks', 'days'] as const).map(option => (
+          <AppDropdownMenuCheckItem key={option} checked={unit === option} role="menuitemradio"
+            onClick={event => { skipTriggerFocus.current = event.detail > 0; }}
+            onSelect={() => {
+              if (option === unit) return;
+              if (option === 'days') skipTriggerFocus.current = true;
+              changeUnit(option);
+            }}>
+            {t(`desktop.reviewDelay.mode.${option}`)}
+          </AppDropdownMenuCheckItem>
+        ))}
+      </AppDropdownMenuContent>
+    </AppDropdownMenu>
   );
 }
 
 export function ReviewTopicDelayPanel(props: ReviewTopicDelayPanelProps) {
   const t = useTranslation();
-  const selectedOption = getTopicPostponeDelayOption(props.selectedLevel);
-  useReviewTopicDelayPanelKeys(props);
+  const [menuOpen, setMenuOpen] = useState(false);
+  useReviewTopicDelayPanelKeys(props, menuOpen, () => setMenuOpen(false));
   if (!props.isOpen) return null;
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center px-4" role="presentation">
@@ -95,34 +99,10 @@ export function ReviewTopicDelayPanel(props: ReviewTopicDelayPanelProps) {
             <span className="size-2 rounded-full bg-foreground/32" aria-hidden="true" />
             {t('desktop.reviewDelay.title')}
           </div>
+          <PostponeUnitMenu unit={props.unit} changeUnit={props.changeUnit} open={menuOpen} onOpenChange={setMenuOpen} />
         </div>
 
-        <div className="grid grid-cols-[1fr_auto] items-end gap-5">
-          <div className="flex items-baseline gap-3">
-            <span className="text-3xl font-semibold leading-none tabular-nums text-foreground/72">{props.selectedLevel}</span>
-            <span className="text-sm font-semibold text-foreground/65">{selectedOption.label.replace(String(props.selectedLevel), '').trim()}</span>
-            <span className="pl-1 text-lg text-foreground/48" aria-hidden="true">-&gt;</span>
-          </div>
-          <div className="text-right">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/50">{t('desktop.reviewDelay.nextDue')}</div>
-            <div className="mt-1 text-sm font-semibold text-foreground/72">{props.dueDateLabel}</div>
-          </div>
-        </div>
-
-        <ReviewTopicDelaySlider selectedLevel={props.selectedLevel} setSelectedLevel={props.setSelectedLevel} />
-
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-foreground/62">
-            <kbd className="rounded-md border border-border px-2 py-0.5 text-xs font-semibold">0-9</kbd>
-            <span>{t('desktop.reviewDelay.keyboardHint')}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <AppButton className="text-foreground/62 hover:text-foreground/78" onClick={props.close} size="sm" variant="ghost">{t('desktop.reviewDelay.cancel')}</AppButton>
-            <AppButton className="text-foreground/72 hover:text-foreground/86" disabled={props.isSubmitting} onClick={() => void props.submit(props.selectedLevel)} size="sm" variant="default">
-              {t('desktop.reviewDelay.confirm')}
-            </AppButton>
-          </div>
-        </div>
+        <ReviewTopicPostponeForm key={props.unit} {...props} />
       </section>
       {props.errorMessage ? <p className="sr-only">{props.errorMessage}</p> : null}
     </div>

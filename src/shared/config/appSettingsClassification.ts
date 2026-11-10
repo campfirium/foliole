@@ -173,6 +173,7 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
 ] as const satisfies readonly AppSettingsStorageName[];
 
 const RENDERER_PREFERENCE_APP_SETTING_NAMES = [
+  'topicPostponeUnit',
   'feedbackRememberedContact'
 ] as const satisfies readonly AppSettingsStorageName[];
 const DESKTOP_RUNTIME_APP_SETTING_NAMES = [

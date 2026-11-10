@@ -1,5 +1,5 @@
 import { nodeReadingSummary } from '../../lib/core/nodes/nodeLearningSummary';
-import { resolveTopicPostponeDelayNextAt } from '../../lib/core/review/topicPostponeDelay';
+import { resolveTopicPostponeDaysNextAt, resolveTopicPostponeDelayNextAt } from '../../lib/core/review/topicPostponeDelay';
 import type { Node, NodeReadingProfile } from '../features/nodes/model/nodeTypes';
 import { buildReadingScheduleCoreFields } from '../features/review/model/unifiedPushQueueRules';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
@@ -50,6 +50,7 @@ function buildInitialReadingProfile(args: {
 
 function buildTopicDelayPatch(args: {
   level: number;
+  unit: 'weeks' | 'days';
   nodeId: string;
   now: string;
   snapshot: WorkspaceState;
@@ -58,7 +59,10 @@ function buildTopicDelayPatch(args: {
   const node = args.state.nodesById[args.nodeId];
   if (args.state.trashedNodeIds.includes(args.nodeId) || !canDelayTopic(node)) return null;
   const baseReading = node.reading ?? buildInitialReadingProfile({ node, nodeId: args.nodeId, now: args.now, state: args.state });
-  const nextAt = resolveTopicPostponeDelayNextAt({ level: args.level, now: args.now, reading: baseReading });
+  const nextAt = args.unit === 'days'
+    ? resolveTopicPostponeDaysNextAt(args.level, args.now, baseReading)
+    : resolveTopicPostponeDelayNextAt({ level: args.level, now: args.now, reading: baseReading });
+  if (!nextAt) return null;
   const nextReading = { ...baseReading, nextAt, state: 'active' as const };
   const nextNode = { ...node, reading: nextReading };
   const nextNodesById = { ...args.state.nodesById, [args.nodeId]: nextNode };
@@ -91,7 +95,7 @@ export function createSetReviewTopicDelayActionWithPending(
   pendingNodeIds: ReadingReviewPendingNodeIds,
   persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence
 ): WorkspaceState['setReviewTopicDelay'] {
-  return async (nodeId, level, now = new Date().toISOString(), expectedReading) => {
+  return async (nodeId, level, now = new Date().toISOString(), expectedReading, unit = 'weeks') => {
     const snapshot = get();
     if (!canDelayTopic(snapshot.nodesById[nodeId]) || pendingNodeIds.has(nodeId)) return false;
     const committed = await persistAndApplyReadingReviewPatch({ currentNodeId: nodeId, get, set, pendingNodeIds, persistence,
@@ -99,7 +103,7 @@ export function createSetReviewTopicDelayActionWithPending(
         const nodesById = await readWorkspaceOperationLearning(state.nodesById, [nodeId],
           state.libraryScope ?? state.reviewSession.daily?.scope);
         if (!nodesById || (expectedReading !== undefined && !isSameReadingProfile(nodesById[nodeId]?.reading, expectedReading))) return null;
-        return buildTopicDelayPatch({ level, nodeId, now, snapshot, state: { ...state, nodesById } });
+        return buildTopicDelayPatch({ level, unit, nodeId, now, snapshot, state: { ...state, nodesById } });
       } });
     if (committed && committed.nextActiveNodeId) void persistNodeOpened(set, committed.nextActiveNodeId, now);
     return Boolean(committed);

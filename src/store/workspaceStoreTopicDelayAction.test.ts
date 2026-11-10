@@ -123,3 +123,31 @@ it('does not postpone dismissed topics', async () => {
   expect(saveNodeReadingStateToRuntime).not.toHaveBeenCalled();
   expect(harness.getState().nodesById[topic.id]?.reading?.state).toBe('dismissed');
 });
+
+it('postpones by the full day count without changing the reading history or interval', async () => {
+  const now = '2026-03-03T00:00:00.000Z';
+  const topic = createReadingNode('topic-1', now);
+  const store = browserFlow([topic]);
+  await expect(store.getState().setReviewTopicDelay(topic.id, 14, now, topic.reading, 'days')).resolves.toBe(true);
+  expect(store.getState().nodesById[topic.id]?.reading).toEqual({
+    ...topic.reading,
+    nextAt: '2026-03-17T00:00:00.000Z'
+  });
+});
+
+it('restores the natural due date after a day-based postponement is reset to zero', async () => {
+  const now = '2026-03-03T00:00:00.000Z';
+  const original = createReadingNode('topic-1', now);
+  const reading = { ...original.reading!, intervalDurationMs: 3 * 86_400_000 };
+  const topic = { ...original, reading };
+  const store = browserFlow([topic]);
+  await expect(store.getState().setReviewTopicDelay(topic.id, 14, now, reading, 'days')).resolves.toBe(true);
+  const postponed = store.getState().nodesById[topic.id]?.reading;
+  expect(postponed?.nextAt).toBe('2026-03-17T00:00:00.000Z');
+
+  await expect(store.getState().setReviewTopicDelay(topic.id, 0, now, postponed, 'days')).resolves.toBe(true);
+  expect(store.getState().nodesById[topic.id]?.reading).toEqual({
+    ...reading,
+    nextAt: '2026-03-05T00:00:00.000Z'
+  });
+});

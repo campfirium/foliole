@@ -1,4 +1,14 @@
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const WEEK_MS = 7 * DAY_MS;
+
+type TopicPostponeReading = { intervalDurationMs: number; lastHandledAt: string | null };
+
+export function resolveTopicPostponeDaysNextAt(days: number, now: string, reading: TopicPostponeReading) {
+  if (!Number.isSafeInteger(days) || days < 0) return null;
+  if (days === 0) return resolveTopicPostponeDelayNextAt({ level: 0, now, reading });
+  const due = new Date(Date.parse(now) + days * DAY_MS);
+  return Number.isFinite(due.getTime()) ? due.toISOString() : null;
+}
 
 export const TOPIC_POSTPONE_DELAY_OPTIONS = [
   { level: 0, label: '0 weeks', shortLabel: '0W', delayMs: 0 },
@@ -34,10 +44,7 @@ export function getTopicPostponeDelayOption(level: number) {
 export function resolveTopicPostponeDelayNextAt(args: {
   level: number;
   now: string;
-  reading: {
-    intervalDurationMs: number;
-    lastHandledAt: string | null;
-  };
+  reading: TopicPostponeReading;
 }) {
   const nowMs = parseTime(args.now) ?? Date.now();
   const option = getTopicPostponeDelayOption(args.level);

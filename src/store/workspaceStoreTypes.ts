@@ -85,7 +85,7 @@ export interface WorkspaceState {
   gradeReviewCard: (grade: ReviewGrade, now?: string) => Promise<boolean>;
   readReviewTopic: (now?: string, options?: ReadReviewTopicOptions) => Promise<boolean>;
   postponeReviewTopic: (now?: string) => Promise<boolean>;
-  setReviewTopicDelay: (nodeId: string, delayLevel: number, now?: string, expectedReading?: Node['reading']) => Promise<boolean>;
+  setReviewTopicDelay: (nodeId: string, delayLevel: number, now?: string, expectedReading?: Node['reading'], unit?: 'weeks' | 'days') => Promise<boolean>;
   revisitReviewTopicSoon: (now?: string) => Promise<boolean>;
   dismissReviewTopic: (now?: string) => Promise<boolean>;
   exitReviewSession: () => void;
