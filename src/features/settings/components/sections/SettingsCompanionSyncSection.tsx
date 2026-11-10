@@ -20,11 +20,11 @@ import { isSyncProtocolIncompatibleError, useSyncProtocolIncompatibleNotice } fr
 
 import { SettingsSyncDiagnosticsRow } from './SettingsSyncDiagnosticsRow';
 import { SettingsSyncGroupRows } from './SettingsSyncGroupRows';
-import { SettingsWebDavRelayRow } from './SettingsWebDavRelayRow';
 
 function SyncAvailabilityRow(props: { disabled: boolean; enabled: boolean; onToggle(): void }) {
   const t = useTranslation();
-  const title = t('settings.companionSync.group.sync.title');
+  const title = t(isFeaturePreviewVisible('webdavSyncSettings')
+    ? 'settings.companionSync.webdav.participation' : 'settings.companionSync.group.sync.title');
   return (
     <SettingsRow
       description={t('settings.companionSync.group.sync.description')}
@@ -51,7 +51,8 @@ function SyncNowRow(props: { disabled: boolean; onSync(): void }) {
   const t = useTranslation();
   return (
     <SettingsRow
-      description={t('settings.companionSync.group.syncNow.description')}
+      description={t(isFeaturePreviewVisible('webdavSyncSettings')
+        ? 'settings.companionSync.webdav.syncNow' : 'settings.companionSync.group.syncNow.description')}
       title={t('settings.companionSync.group.syncNow.title')}
     >
       <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
@@ -95,7 +96,6 @@ export function SettingsCompanionSyncSection() {
   );
   const syncError = localizeSyncError(state.overview.server_status.last_error, t);
   const group = state.overview.sync_group;
-  const showWebDav = isFeaturePreviewVisible('webdavSyncSettings');
   const groupName = group ? t('settings.companionSync.group.named', { name: group.display_name }) : '';
   const { confirmLeave, confirmRemove } = useSyncGroupConfirmationActions(state, groupName);
   return (
@@ -139,10 +139,9 @@ export function SettingsCompanionSyncSection() {
         joinRequest={state.overview.join_request ?? null}
         syncEnabled={state.overview.sync_enabled}
         discoveryError={state.overview.discovery_error}
-        syncPaused={state.overview.sync_paused} webDavRelay={showWebDav ? state.overview.webdav_relay : undefined}
+        syncPaused={state.overview.sync_paused}
         removingDevices={state.overview.removing_devices}
       />
-      {showWebDav && group && state.isDesktopRuntime ? <SettingsWebDavRelayRow key={group.group_id} groupId={group.group_id} bound={Boolean(state.overview.webdav_relay?.device_id)} /> : null}
       {state.error && <SettingsErrorState description={state.error} title={t('settings.companionSync.error.devicesUnavailable')} />}
     </SettingsSection>
   );

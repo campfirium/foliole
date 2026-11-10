@@ -28,6 +28,7 @@ import { SettingsRailSection } from './sections/SettingsRailSection';
 import { SettingsRemindersSection } from './sections/SettingsRemindersSection';
 import { SettingsReviewSection } from './sections/SettingsReviewSection';
 import { SettingsTypographySection } from './sections/SettingsTypographySection';
+import { SettingsWebDavSyncSection } from './sections/SettingsWebDavSyncSection';
 import { SettingsWebLookupSection } from './sections/SettingsWebLookupSection';
 
 import { definedProps } from '@/shared/lib/definedProps';
@@ -160,6 +161,9 @@ function renderFallbackCategory(props: LocalizedSettingsCategoryContentProps) {
         {...definedProps({ previewDesktopSettings: props.previewDesktopSettings })}
       />
     );
+  }
+  if (props.activeCategory === 'webdav-sync') {
+    return <SettingsWebDavSyncSection />;
   }
   if (props.activeCategory === 'companion-sync') {
     return <SettingsCompanionSyncSection />;

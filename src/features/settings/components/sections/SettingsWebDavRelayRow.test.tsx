@@ -17,7 +17,7 @@ it('reports a failed connection, then accepts a corrected WebDAV folder', async 
     .mockResolvedValueOnce('http://127.0.0.1:1234/relay/');
   renderWithLocalization(<SettingsWebDavRelayRow groupId="group-1" />);
   const address = screen.getByRole('textbox', { name: 'WebDAV folder URL' });
-  const test = screen.getByRole('button', { name: 'Test and save' });
+  const test = screen.getByRole('button', { name: 'Connect' });
   await waitFor(() => expect(address).toHaveValue('http://127.0.0.1:1234/original/'));
 
   fireEvent.change(address, { target: { value: 'http://127.0.0.1:1234/missing' } });

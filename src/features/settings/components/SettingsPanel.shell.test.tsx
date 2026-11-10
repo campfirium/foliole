@@ -1,5 +1,5 @@
-import { screen, within } from '@testing-library/react';
-import { beforeEach, expect, it } from 'vitest';
+import { fireEvent, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import packageJson from '../../../../package.json';
 
@@ -60,15 +60,30 @@ it('keeps settings dividers aligned without title extension lines', () => {
   expect(desiredRetentionRow?.className).toContain('before:right-settings-panel-x');
 });
 
-it('opens Sync settings without an obsolete development warning', () => {
+it('keeps the experimental WebDAV category hidden in a production build', () => {
+  vi.stubEnv('MODE', 'production');
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="companion-sync" />);
 
   const sidebar = screen.getByLabelText('Settings categories');
   expect(within(sidebar).getByRole('button', { name: 'Sync' })).toBeVisible();
-  expect(within(sidebar).queryByText('In development · Not yet available')).not.toBeInTheDocument();
+  expect(within(sidebar).queryByRole('button', { name: 'Sync (WebDAV)' })).not.toBeInTheDocument();
   expect(screen.getByRole('heading', { level: 2, name: 'Sync' })).toBeVisible();
   expect(screen.queryByText('In development · Not yet available')).not.toBeInTheDocument();
   expect(screen.getByText('Manage this device and its Sync Group.')).toBeVisible();
+});
+
+afterEach(() => vi.unstubAllEnvs());
+
+it('opens WebDAV as a peer of LAN sync in an internal build', async () => {
+  vi.stubEnv('MODE', 'internal');
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="companion-sync" />);
+  const sidebar = within(screen.getByLabelText('Settings categories'));
+
+  expect(sidebar.getByRole('button', { name: 'Sync (LAN)' })).toHaveAttribute('aria-current', 'page');
+  fireEvent.click(sidebar.getByRole('button', { name: 'Sync (WebDAV)' }));
+  expect(await screen.findByRole('heading', { name: 'Sync (WebDAV)' })).toBeVisible();
+  expect(screen.getByText('Experiment')).toBeVisible();
+  expect(sidebar.getByRole('button', { name: 'Sync (WebDAV)' })).toHaveAttribute('aria-current', 'page');
 });
 
 it('places the mouse gesture switch in the category header', () => {

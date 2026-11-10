@@ -1,4 +1,5 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { isFeaturePreviewVisible } from '../../../shared/config/featurePreviews';
 import type { TranslationKey } from '../../../shared/localization/translations';
 import { getWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
@@ -8,6 +9,7 @@ export type SettingsCategoryId =
   | 'about'
   | 'backups'
   | 'companion-sync'
+  | 'webdav-sync'
   | 'editor'
   | 'external-search'
   | 'general'
@@ -47,6 +49,7 @@ const SETTINGS_CATEGORY_DEFINITIONS: Array<{
   { id: 'mouse-gestures', labelKey: 'settings.category.mouseGestures.label', descriptionKey: 'settings.category.mouseGestures.description' },
   { id: 'library', labelKey: 'settings.category.library.label', descriptionKey: 'settings.category.library.description' },
   { id: 'companion-sync', labelKey: 'settings.category.companionSync.label', descriptionKey: 'settings.category.companionSync.description' },
+  { id: 'webdav-sync', labelKey: 'settings.companionSync.webdav.category', descriptionKey: 'settings.companionSync.webdav.description' },
   { id: 'backups', labelKey: 'settings.category.backups.label', descriptionKey: 'settings.category.backups.description' },
   { id: 'import', labelKey: 'settings.category.import.label', descriptionKey: 'settings.category.import.description' },
   { id: 'external-search', labelKey: 'settings.category.externalSearch.label', descriptionKey: 'settings.category.externalSearch.description' },
@@ -56,10 +59,11 @@ const SETTINGS_CATEGORY_DEFINITIONS: Array<{
 export type SettingsCategoryOption = { description: string; id: SettingsCategoryId; label: string };
 
 export function getSettingsCategories(t: Translate): SettingsCategoryOption[] {
-  return SETTINGS_CATEGORY_DEFINITIONS.map((category) => ({
+  return SETTINGS_CATEGORY_DEFINITIONS.filter(category => isVisibleCategory(category.id)).map((category) => ({
     description: t(category.descriptionKey),
     id: category.id,
-    label: t(category.labelKey)
+    label: t(category.id === 'companion-sync' && isVisibleCategory('webdav-sync')
+      ? 'settings.companionSync.webdav.lanCategory' : category.labelKey)
   }));
 }
 
@@ -74,7 +78,7 @@ const SETTINGS_CATEGORY_GROUP_DEFINITIONS: Array<{ categoryIds: SettingsCategory
   },
   {
     labelKey: 'settings.group.storage',
-    categoryIds: ['library', 'companion-sync', 'backups']
+    categoryIds: ['library', 'companion-sync', 'webdav-sync', 'backups']
   },
   {
     labelKey: 'settings.group.sources',
@@ -84,7 +88,7 @@ const SETTINGS_CATEGORY_GROUP_DEFINITIONS: Array<{ categoryIds: SettingsCategory
 
 export function getSettingsCategoryGroups(t: Translate) {
   return SETTINGS_CATEGORY_GROUP_DEFINITIONS.map((group) => ({
-    categoryIds: group.categoryIds,
+    categoryIds: group.categoryIds.filter(isVisibleCategory),
     label: t(group.labelKey)
   }));
 }
@@ -104,8 +108,12 @@ export const MONOSPACE_PRESET_OPTION_VALUES: MonospaceFontPreset[] = [
   'sarasa'
 ];
 
+function isVisibleCategory(id: SettingsCategoryId) {
+  return id !== 'webdav-sync' || isFeaturePreviewVisible('webdavSyncSettings');
+}
+
 function isSettingsCategoryId(value: string): value is SettingsCategoryId {
-  return SETTINGS_CATEGORY_DEFINITIONS.some((category) => category.id === value);
+  return SETTINGS_CATEGORY_DEFINITIONS.some((category) => category.id === value && isVisibleCategory(category.id));
 }
 
 export function getSettingsCategoryOption(id: SettingsCategoryId, t: Translate) {

@@ -221,10 +221,8 @@ it('explains in the notice when no current device can provide the overwrite', as
 
 afterEach(() => vi.unstubAllEnvs());
 
-it.each([
-  ['development', true], ['internal', true], ['production', false]
-])('uses the %s build channel to show or hide WebDAV settings', (mode, visible) => {
-  vi.stubEnv('MODE', mode);
+it('keeps WebDAV controls out of the LAN settings while retaining group members', () => {
+  vi.stubEnv('MODE', 'development');
   renderSyncSection(true, STOPPED_SYNC_GROUP_DISCOVERY, {
     created_at: '', display_name: 'Studio', group_id: 'group-1', local_device_identity_key: 'local',
     devices: [{
@@ -234,14 +232,7 @@ it.each([
     }]
   }, { webdav_relay: { configured: true, delivered: false, device_id: null } });
 
-  const input = screen.queryByRole('textbox', { name: 'WebDAV folder URL' });
-  const enable = screen.queryByRole('button', { name: 'Enable WebDAV for this device' });
-  if (visible) {
-    expect(input).toBeVisible();
-    expect(enable).toBeVisible();
-  } else {
-    expect(input).not.toBeInTheDocument();
-    expect(enable).not.toBeInTheDocument();
-  }
+  expect(screen.queryByRole('textbox', { name: 'WebDAV folder URL' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Enable WebDAV for this device' })).not.toBeInTheDocument();
   expect(screen.getByText('Phone')).toBeVisible();
 });
