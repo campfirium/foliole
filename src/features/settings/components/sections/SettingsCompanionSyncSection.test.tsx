@@ -1,5 +1,5 @@
 import { fireEvent, screen } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import type { DesktopSyncGroupOverviewPayload } from '../../../../../lib/platform/nativeCompanionSyncContract';
 import type { SyncGroupDevicePayload, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
@@ -217,4 +217,31 @@ it('explains in the notice when no current device can provide the overwrite', as
     expect(await screen.findByText(/No other device in the sync group is reachable right now. Bring one online and try again./))
       .toBeTruthy();
   } finally { unregister(); }
+});
+
+afterEach(() => vi.unstubAllEnvs());
+
+it.each([
+  ['development', true], ['internal', true], ['production', false]
+])('uses the %s build channel to show or hide WebDAV settings', (mode, visible) => {
+  vi.stubEnv('MODE', mode);
+  renderSyncSection(true, STOPPED_SYNC_GROUP_DISCOVERY, {
+    created_at: '', display_name: 'Studio', group_id: 'group-1', local_device_identity_key: 'local',
+    devices: [{
+      device_name: 'Phone', device_identity_key: 'phone', canonical_library_path: '/phone',
+      device_anchor: 'phone', contract_version: 1, joined_at: 'now', last_seen_at: null,
+      left_at: null, platform: 'android', state: 'active', updated_at: 'now'
+    }]
+  }, { webdav_relay: { configured: true, delivered: false, device_id: null } });
+
+  const input = screen.queryByRole('textbox', { name: 'WebDAV folder URL' });
+  const enable = screen.queryByRole('button', { name: 'Enable WebDAV for this device' });
+  if (visible) {
+    expect(input).toBeVisible();
+    expect(enable).toBeVisible();
+  } else {
+    expect(input).not.toBeInTheDocument();
+    expect(enable).not.toBeInTheDocument();
+  }
+  expect(screen.getByText('Phone')).toBeVisible();
 });

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* global console, process */
 
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const REQUIRED_BUILT_ARTIFACTS = [
@@ -73,5 +73,13 @@ if (process.argv[1] && process.argv[1].endsWith('package-built-artifacts.mjs')) 
   } catch (error) {
     console.error(`[windows-package] ${error.message}`);
     process.exitCode = 1;
+  }
+}
+
+export function assertBuiltRendererMode(internal, rootDir = process.cwd()) {
+  const index = readFileSync(resolve(rootDir, 'dist/desktop/index.html'), 'utf8');
+  const expectedMode = internal ? 'internal' : 'production';
+  if (!index.includes(`<meta name="foliole-build-mode" content="${expectedMode}"`)) {
+    throw new Error(`Existing renderer is not built in ${expectedMode} mode. Rebuild before packaging.`);
   }
 }

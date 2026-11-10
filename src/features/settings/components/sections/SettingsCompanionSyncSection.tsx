@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import type { SyncGroupDevicePayload } from '../../../../../lib/platform/syncGroupContract';
+import { isFeaturePreviewVisible } from '../../../../shared/config/featurePreviews';
 import { useTranslation, type Translate } from '../../../../shared/localization/LocalizationProvider';
 import { useDesktopSyncGroup } from '../../../../shared/platform/useDesktopSyncGroup';
 import {
@@ -94,6 +95,7 @@ export function SettingsCompanionSyncSection() {
   );
   const syncError = localizeSyncError(state.overview.server_status.last_error, t);
   const group = state.overview.sync_group;
+  const showWebDav = isFeaturePreviewVisible('webdavSyncSettings');
   const groupName = group ? t('settings.companionSync.group.named', { name: group.display_name }) : '';
   const { confirmLeave, confirmRemove } = useSyncGroupConfirmationActions(state, groupName);
   return (
@@ -137,10 +139,10 @@ export function SettingsCompanionSyncSection() {
         joinRequest={state.overview.join_request ?? null}
         syncEnabled={state.overview.sync_enabled}
         discoveryError={state.overview.discovery_error}
-        syncPaused={state.overview.sync_paused} webDavRelay={state.overview.webdav_relay}
+        syncPaused={state.overview.sync_paused} webDavRelay={showWebDav ? state.overview.webdav_relay : undefined}
         removingDevices={state.overview.removing_devices}
       />
-      {group && state.isDesktopRuntime ? <SettingsWebDavRelayRow key={group.group_id} groupId={group.group_id} bound={Boolean(state.overview.webdav_relay?.device_id)} /> : null}
+      {showWebDav && group && state.isDesktopRuntime ? <SettingsWebDavRelayRow key={group.group_id} groupId={group.group_id} bound={Boolean(state.overview.webdav_relay?.device_id)} /> : null}
       {state.error && <SettingsErrorState description={state.error} title={t('settings.companionSync.error.devicesUnavailable')} />}
     </SettingsSection>
   );

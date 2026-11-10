@@ -1,0 +1,6 @@
+{
+  "webdavSyncSettings": {
+    "name": "WebDAV sync settings",
+    "visibility": "internal"
+  }
+}

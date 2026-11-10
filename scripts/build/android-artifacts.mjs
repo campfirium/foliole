@@ -12,14 +12,16 @@ function runCommand(command, args, options) {
 }
 
 export function buildAndroidArtifacts({
-  root, env = process.env, includeTests = false, useBuildCache = false,
+  root, env = process.env, includeTests = false, useBuildCache = false, internal = false,
   cap, gradle = process.platform === 'win32' ? 'gradlew.bat' : './gradlew',
   apk = path.join(root, 'android/app/build/outputs/apk/debug/app-debug.apk'),
   androidTestApk = path.join(root, 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk'),
   onStage = () => {}, run = runCommand
 }) {
   onStage('web-build');
-  run('npm', ['run', 'android:web:build'], { cwd: root, env });
+  const webBuildArgs = ['run', 'android:web:build'];
+  if (internal) webBuildArgs.push('--', '--mode', 'internal');
+  run('npm', webBuildArgs, { cwd: root, env });
   onStage('capacitor-sync');
   run(cap ?? 'npx', [...(cap ? [] : ['cap']), 'sync', 'android'], { cwd: root, env });
   onStage('gradle-build');

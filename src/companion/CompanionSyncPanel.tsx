@@ -1,6 +1,7 @@
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
 import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract';
+import { isFeaturePreviewVisible } from '../shared/config/featurePreviews';
 import { useTranslation, type Translate } from '../shared/localization/LocalizationProvider';
 import { runPendingCompanionSyncGroupAdoption } from '../shared/platform/companion/sync/companionSyncGroupAdoptionRun';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
@@ -88,7 +89,8 @@ function ConnectedContent(props: CompanionSyncPanelProps & {
   return (
     <>
       {syncAction}
-      {props.page === 'sync' ? <CompanionWebDavRelayStatus key={props.syncGroup.group_id} /> : null}
+      {props.page === 'sync' && isFeaturePreviewVisible('webdavSyncSettings')
+        ? <CompanionWebDavRelayStatus key={props.syncGroup.group_id} /> : null}
       {props.page === 'sync' && isNativeCompanionSyncParticipationRuntime()
         ? <CompanionSyncParticipationControls /> : null}
       <CompanionSyncStatusDetails endpointUrl={props.endpointUrl} lastSyncedAt={props.lastSyncedAt}

@@ -1,12 +1,22 @@
 import { fireEvent, screen } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
 import { CompanionSyncPanel } from './CompanionSyncPanel';
 import { CompanionSyncProtocolNotice } from './CompanionSyncProtocolNotice';
 
-it('uses the action-local terminal result instead of a waiting discovery message', () => {
+vi.mock('../shared/platform/companion/sync/companionWebDavRelayStore', () => ({
+  loadCompanionWebDavRelay: vi.fn().mockResolvedValue({ id: 'relay' }),
+  subscribeCompanionWebDavRelay: () => () => undefined
+}));
+
+afterEach(() => vi.unstubAllEnvs());
+
+it.each([
+  ['internal', true], ['production', false]
+])('shows the sync result and applies %s visibility to WebDAV status', async (mode, visible) => {
+  vi.stubEnv('MODE', mode);
   renderWithLocalization(
     <CompanionSyncPanel
       bootstrapState={{
@@ -46,6 +56,8 @@ it('uses the action-local terminal result instead of a waiting discovery message
 
   expect(screen.queryByRole('button', { name: /handoff/i })).not.toBeInTheDocument();
   expect(screen.getByRole('alert')).toHaveTextContent('Sync failed.');
+  if (visible) expect(await screen.findByText('WebDAV enabled')).toBeVisible();
+  else expect(screen.queryByText('WebDAV enabled')).not.toBeInTheDocument();
   expect(screen.queryByText('Waiting for a desktop Sync anchor.')).not.toBeInTheDocument();
   expect(screen.queryByTestId('companion-sync-error')).not.toBeInTheDocument();
 });

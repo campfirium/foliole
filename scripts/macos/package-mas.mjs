@@ -181,7 +181,7 @@ async function main() {
     const configPath = path.join(outputDirectory, `electron-builder-${mode}.json`);
     await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
     for (const [label, command, args] of [
-      ['build', 'npm', ['run', 'build']],
+      ['build', 'npm', mode === 'development' ? ['run', 'build', '--', '--mode', 'internal'] : ['run', 'build']],
       ['security bookmark addon', 'npm', ['run', 'macos:security-bookmarks:build']],
       ['electron compile', 'npm', ['run', 'electron:compile']],
       ['electron-builder', 'npm', ['exec', '--', 'electron-builder', '--config', configPath, '--mac', mode === 'development' ? 'mas-dev' : 'mas', '--arm64', '--publish', 'never']]

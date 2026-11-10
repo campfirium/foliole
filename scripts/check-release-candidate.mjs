@@ -69,6 +69,14 @@ export async function validateCurrentReleaseCandidate(rootDir = process.cwd()) {
 async function main() {
   assertQualityCommandAllowed('check:release-candidate');
   const result = await validateCurrentReleaseCandidate();
+  const previews = await readJson(process.cwd(), 'src/shared/config/featurePreviews.json');
+  const internal = Object.values(previews)
+    .filter(preview => preview.visibility !== 'public')
+    .map(preview => preview.name);
+  if (internal.length > 0) {
+    console.log('[release-candidate] Feature previews that will stay hidden in public builds:');
+    for (const name of internal) console.log(`  - ${name}`);
+  }
   console.log(
     `[release-candidate] status: OK version=${result.version} ` +
     `mode=${result.publicationMode} platforms=${result.selectedPlatforms.join(',')}`

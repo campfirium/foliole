@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { assertBuiltArtifactsFresh } from './package-built-artifacts.mjs';
+import { assertBuiltArtifactsFresh, assertBuiltRendererMode } from './package-built-artifacts.mjs';
 import {
   cleanReleaseArtifacts,
   collectArtifactSummary as collectPackageArtifactSummary,
@@ -77,7 +77,7 @@ export function createNativePackageSteps(
   builderConfig = resolveBuilderConfig(internal)
 ) {
   const buildSteps = fromBuilt ? [] : [
-    createCmdStep('renderer build', 'npm run build'),
+    createCmdStep('renderer build', internal ? 'npm run build -- --mode internal' : 'npm run build'),
     createCmdStep('electron compile', 'npm run electron:compile')
   ];
   return [
@@ -184,6 +184,7 @@ async function main() {
   } else {
     cleanReleaseArtifacts(repoRoot, packageVersion);
   }
+  if (fromBuilt) assertBuiltRendererMode(internal, repoRoot);
   if (fromBuilt && !process.argv.includes('--skip-built-artifact-check')) {
     assertBuiltArtifactsFresh();
   }
