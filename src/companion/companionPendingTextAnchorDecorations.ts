@@ -14,10 +14,10 @@ export function createCompanionPendingTextAnchorDecorations(
   const anchorKind: EditorTextAnchorDecoration['kind'] = kind === 'cloze' ? 'cloze' : 'highlight';
   return payload.entries
     .map((entry, index) => ({
-      from: Math.min(entry.range.from, entry.range.to),
+      from: entry.locator.from,
       kind: anchorKind,
       nodeId: 'pending-' + payload.anchorId + '-' + index,
-      to: Math.max(entry.range.from, entry.range.to)
+      to: entry.locator.to
     }))
     .filter((decoration) => decoration.from < decoration.to);
 }

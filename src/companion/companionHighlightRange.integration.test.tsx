@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, renderHook, screen, waitFor } from '@testing-library/react';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -18,13 +18,14 @@ import { readCompanionHighlight } from '../shared/platform/companion/reading/com
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { closeIosCompanionDatabase, initializeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
-import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
-import type { SelectionCommandPayload } from '../shared/selectionCommandPayload';
+import { loadCompanionReadableArticle, loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
+import { getSelectionCommandPayloadForContentRanges, type SelectionCommandPayload } from '../shared/selectionCommandPayload';
 
-import { addNoteToCompanionExistingHighlight } from './companionExistingHighlightPersistence';
+import { addNoteToCompanionExistingHighlight, deleteCompanionExistingHighlight } from './companionExistingHighlightPersistence';
 import { HighlightRangeSurface } from './companionHighlightRange.testSupport';
 import { persistCompanionHighlightRange } from './companionHighlightRangePersistence';
 import { persistCompanionSelectionAnnotation } from './companionSelectionAnnotationActions';
+import { createPendingAnnotationActions, useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
 
 const body = 'Alpha Beta Gamma';
 const payload: SelectionCommandPayload = {
@@ -191,4 +192,39 @@ it.each(['highlight', 'cloze'] as const)('dismisses the %s handles and actions b
   }
   await waitFor(() => expect(screen.queryByRole('toolbar')).toBeNull());
   expect(screen.getByTestId('displayed-range')).toHaveTextContent('[]');
+});
+
+it.each(['Beta', '中文'])('removes a new highlight for %s without reopening the reader', async word => {
+  const content = `Alpha ${word} Gamma`;
+  database!.prepare("UPDATE nodes SET content = ? WHERE id = 'source'").run(content);
+  const snapshot = async () => (await loadCompanionWorkspaceSyncState()).workspace_snapshot;
+  const readArticle = async () => (await loadCompanionReadableArticle(await snapshot(), 'source'))!;
+  const initial = await readArticle();
+  expect(initial.content).toBe(content);
+  const { result, rerender } = renderHook(({ article }) => useCompanionPendingReadableArticle(article),
+    { initialProps: { article: initial } });
+  const from = content.indexOf(word);
+  const to = from + word.length;
+  const selection = getSelectionCommandPayloadForContentRanges('source', content, [{ from, to: to + 1 }])!;
+  const actions = createPendingAnnotationActions({
+    onCreateSelectionAnnotation: async (kind, payload) => (await persistCompanionSelectionAnnotation({
+      deviceId: 'fixture', kind, payload, snapshot: await snapshot()
+    }))?.nodeId ?? null,
+    onDeleteExistingHighlight: async (nodeId, guard) => (await deleteCompanionExistingHighlight({
+      deviceId: 'fixture', nodeId, ...(guard ? { guard } : {}), snapshot: await snapshot()
+    }))?.nodeId ?? null
+  }, result.current);
+  let nodeId = '';
+  await act(async () => {
+    nodeId = (await actions.createSelectionAnnotation('highlight', selection)) ?? '';
+  });
+  expect(nodeId).toBeTruthy();
+  rerender({ article: await readArticle() });
+  expect(result.current.readableArticle.textAnchorDecorations).toContainEqual({ from, to, kind: 'highlight', nodeId });
+
+  const { guard } = await readCompanionHighlight(await snapshot(), nodeId);
+  await act(async () => { await actions.deleteExistingHighlight(nodeId, guard); });
+  expect((await loadCompanionWorkspaceNode(nodeId))?.deletedAt).toBeTruthy();
+  rerender({ article: await readArticle() });
+  expect(result.current.readableArticle.textAnchorDecorations).toEqual([]);
 });
