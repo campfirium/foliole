@@ -1,76 +1,13 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
+// eslint-disable-next-line import/order -- Load native test mocks before modules that register plugins.
+import { host, open } from './companionReminderTestSupport';
 
-import type { ActionPerformed, LocalNotificationSchema } from '@capacitor/local-notifications';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import Database from 'better-sqlite3';
-import { afterEach, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
-import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
-import {
-  closeIosCompanionDatabase, initializeIosCompanionDatabase
-} from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
+import { closeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
 import { listenForCompanionReminderFlow } from '../shared/platform/companion/settings/companionReminderActions';
-import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 
 import { CompanionReminderSettingsContent } from './CompanionReminderSettingsContent';
-
-const host = vi.hoisted(() => ({
-  platform: 'android', bootstrap: null as NativeCompanionBootstrapState | null, granted: true, exactGranted: true,
-  pending: new Map<number, LocalNotificationSchema>(), tap: undefined as ((event: ActionPerformed) => Promise<void>) | undefined
-}));
-
-vi.mock('@capacitor/core', async () => {
-  const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
-  return { Capacitor: { getPlatform: () => host.platform, isNativePlatform: () => true, isPluginAvailable: () => false },
-    registerPlugin: createCompanionNativeSyncStub };
-});
-vi.mock('../shared/platform/companionBootstrap', async importOriginal => ({
-  ...await importOriginal<typeof import('../shared/platform/companionBootstrap')>(),
-  loadCompanionBootstrapState: () => Promise.resolve(host.bootstrap)
-}));
-vi.mock('@capacitor/local-notifications', () => ({
-  LocalNotifications: {
-    addListener: async (_name: string, callback: typeof host.tap) => {
-      host.tap = callback;
-      return { remove: async () => { host.tap = undefined; } };
-    },
-    getPending: async () => ({ notifications: [...host.pending.values()] }),
-    checkPermissions: async () => ({ display: host.granted ? 'granted' : 'denied' }),
-    requestPermissions: async () => ({ display: host.granted ? 'granted' : 'denied' }),
-    checkExactNotificationSetting: async () => ({ exact_alarm: host.exactGranted ? 'granted' : 'denied' }),
-    changeExactNotificationSetting: async () => ({ exact_alarm: host.exactGranted ? 'granted' : 'denied' }),
-    schedule: async ({ notifications }: { notifications: LocalNotificationSchema[] }) => {
-      for (const item of notifications) host.pending.set(item.id, item);
-    },
-    cancel: async ({ notifications }: { notifications: { id: number }[] }) => {
-      for (const item of notifications) host.pending.delete(item.id);
-    }
-  }
-}));
-
-let root = '';
-let sqlite: Database.Database | null = null;
-async function open(platform: 'android' | 'ios') {
-  const file = path.join(root, 'library.db');
-  const existed = existsSync(file);
-  const db = sqlite = new Database(file);
-  host.platform = platform;
-  host.bootstrap = await initializeIosCompanionDatabase({
-    booted_at: '2026-11-10T00:00:00Z', database_path: null, database_ready: false,
-    host_name: 'Reminder fixture', runtime_kind: `${platform}-capacitor`
-  }, createFakeCapacitorDatabaseManager(db, existed, () => { sqlite = null; }));
-}
-
-afterEach(async () => {
-  await closeIosCompanionDatabase();
-  if (sqlite?.open) sqlite.close();
-  if (root) rmSync(root, { recursive: true, force: true });
-  host.pending.clear();
-  host.granted = true;
-  host.exactGranted = true;
-});
 
 async function save(expected = 'Reminder saved.') {
   const button = screen.getByRole('button', { name: 'Save' });
@@ -79,17 +16,34 @@ async function save(expected = 'Reminder saved.') {
   expect(await screen.findByText(expected)).toBeVisible();
 }
 
+async function edit(message: string) {
+  const row = await screen.findByRole('button', { name: 'Edit reminder: ' + message });
+  await waitFor(() => expect(row).toBeEnabled());
+  fireEvent.click(row);
+}
+
+async function enable(message: string, expected = 'Reminder saved.') {
+  const toggle = screen.getByRole('switch', { name: 'Enabled: ' + message });
+  await waitFor(() => expect(toggle).toBeEnabled());
+  expect(toggle).not.toBeChecked();
+  fireEvent.click(toggle);
+  await waitFor(() => expect(toggle).toBeChecked());
+  expect(await screen.findByText(expected)).toBeVisible();
+}
+
 async function setDraft(message: string, time: string) {
-  const add = screen.queryByRole('button', { name: 'Add reminder' });
-  if (add) {
-    await waitFor(() => expect(add).toBeEnabled());
-    fireEvent.click(add);
+  if (screen.queryByRole('button', { name: 'Trigger Foreground duration' })) {
+    fireEvent.click(screen.getByRole('button', { name: 'Trigger Foreground duration' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Scheduled' }));
   }
-  expect(screen.getByRole('button', { name: /^Repeat / })).toBeVisible();
-  expect(screen.getByText('Delivery device')).toBeVisible();
-  expect(screen.getByText('This device')).toBeVisible();
   fireEvent.change(screen.getByLabelText('Message'), { target: { value: message } });
   fireEvent.change(screen.getByLabelText('Time'), { target: { value: time } });
+}
+
+async function savePreset(preset: string, message: string, time: string) {
+  await edit(preset);
+  await setDraft(message, time);
+  await save();
 }
 
 function pendingTimes() {
@@ -97,13 +51,12 @@ function pendingTimes() {
 }
 
 it.each(['android', 'ios'] as const)('keeps independent %s reminders across reopen and replaces or cancels the old schedule', async platform => {
-  root = mkdtempSync(path.join(os.tmpdir(), 'foliole-reminder-'));
-  await open(platform);
+  await open(platform, 'foliole-reminder-');
   const view = render(<CompanionReminderSettingsContent onBack={() => undefined} />);
-  await setDraft('Open Foliole', '20:00');
-  await save();
-  await setDraft('Start reading', '21:15');
-  await save();
+  await savePreset('🌱', 'Open Foliole', '20:00');
+  await enable('Open Foliole');
+  await savePreset('☕', 'Start reading', '21:15');
+  await enable('Start reading');
   expect(pendingTimes()).toEqual([
     ['Open Foliole', { hour: 20, minute: 0, second: 0 }, platform === 'android'],
     ['Start reading', { hour: 21, minute: 15, second: 0 }, platform === 'android']
@@ -136,12 +89,11 @@ it.each(['android', 'ios'] as const)('keeps independent %s reminders across reop
 });
 
 it('keeps the rule when notification permission is denied and schedules after permission is restored', async () => {
-  root = mkdtempSync(path.join(os.tmpdir(), 'foliole-reminder-permission-'));
-  await open('android');
+  await open('android', 'foliole-reminder-permission-');
   host.granted = false;
   render(<CompanionReminderSettingsContent onBack={() => undefined} />);
-  await setDraft('Open Foliole', '20:00');
-  await save('Reminder saved. Allow notifications in system settings to receive it.');
+  await savePreset('🌱', 'Open Foliole', '20:00');
+  await enable('Open Foliole', 'Reminder saved. Allow notifications in system settings to receive it.');
   expect(pendingTimes()).toEqual([]);
   host.granted = true;
   fireEvent.click(screen.getByRole('button', { name: 'Edit reminder: Open Foliole' }));
@@ -150,12 +102,11 @@ it('keeps the rule when notification permission is denied and schedules after pe
 });
 
 it('keeps the Android rule without silently scheduling an approximate alarm when exact access is denied', async () => {
-  root = mkdtempSync(path.join(os.tmpdir(), 'foliole-reminder-exact-'));
-  await open('android');
+  await open('android', 'foliole-reminder-exact-');
   host.exactGranted = false;
   render(<CompanionReminderSettingsContent onBack={() => undefined} />);
-  await setDraft('Open Foliole', '20:00');
-  await save('Reminder saved. Allow Alarms & reminders, then save the reminder again.');
+  await savePreset('🌱', 'Open Foliole', '20:00');
+  await enable('Open Foliole', 'Reminder saved. Allow Alarms & reminders, then save the reminder again.');
   expect(pendingTimes()).toEqual([]);
 
   host.exactGranted = true;
@@ -165,18 +116,16 @@ it('keeps the Android rule without silently scheduling an approximate alarm when
 });
 
 it.each(['android', 'ios'] as const)('schedules a single %s notification and restores its trigger after reopen', async platform => {
-  root = mkdtempSync(path.join(os.tmpdir(), 'foliole-reminder-once-'));
-  await open(platform);
+  await open(platform, 'foliole-reminder-once-');
   const view = render(<CompanionReminderSettingsContent onBack={() => undefined} />);
-  const add = await screen.findByRole('button', { name: 'Add reminder' });
-  await waitFor(() => expect(add).toBeEnabled());
-  fireEvent.click(add);
+  await edit('🌱');
   fireEvent.click(screen.getByRole('button', { name: 'Repeat Every day' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Never' }));
   fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'One appointment' } });
   const when = `${new Date().getFullYear() + 1}-04-03T10:45`;
   fireEvent.change(screen.getByLabelText('Date and time'), { target: { value: when } });
   await save();
+  await enable('One appointment');
   const schedule = [...host.pending.values()][0]?.schedule;
   expect(schedule).toEqual({ at: new Date(when), repeats: false, allowWhileIdle: true });
 
@@ -190,15 +139,12 @@ it.each(['android', 'ios'] as const)('schedules a single %s notification and res
 });
 
 it.each(['android', 'ios'] as const)('opens Flow from a current %s reminder and ignores stale notifications', async platform => {
-  root = mkdtempSync(path.join(os.tmpdir(), 'foliole-reminder-flow-'));
-  await open(platform);
+  await open(platform, 'foliole-reminder-flow-');
   const view = render(<CompanionReminderSettingsContent onBack={() => undefined} />);
-  await setDraft('Flow time', '20:00');
-  fireEvent.click(screen.getByRole('button', { name: 'On notification tap None' }));
-  fireEvent.click(await screen.findByRole('button', { name: 'Open Flow' }));
-  await save();
-  await setDraft('Just a reminder', '21:00');
-  await save();
+  await savePreset('🌱', 'Flow time', '20:00');
+  await enable('Flow time');
+  await savePreset('☕', 'Just a reminder', '21:00');
+  await enable('Just a reminder');
   const [notification, plainNotification] = host.pending.values();
   if (!notification || !plainNotification) throw new Error('Expected both reminders to be scheduled.');
   view.unmount();
@@ -222,16 +168,14 @@ it.each(['android', 'ios'] as const)('opens Flow from a current %s reminder and 
   }
 });
 
-it('shows both examples and schedules the Flow template only after saving', async () => {
-  root = mkdtempSync(path.join(os.tmpdir(), 'foliole-reminder-examples-'));
-  await open('ios');
+it('shows both presets off and schedules only when enabled', async () => {
+  await open('ios', 'foliole-reminder-presets-');
   render(<CompanionReminderSettingsContent onBack={() => undefined} />);
-  const seedling = screen.getByRole('button', { name: /🌱/ });
-  expect(screen.getByText('☕')).toBeVisible();
-  expect(host.pending.size).toBe(0);
-  await waitFor(() => expect(seedling).toBeEnabled());
-  fireEvent.click(seedling);
+  expect(await screen.findByRole('switch', { name: 'Enabled: ☕' })).not.toBeChecked();
+  await edit('🌱');
   expect(screen.getByRole('button', { name: 'On notification tap Open Flow' })).toBeVisible();
   await save();
+  expect(host.pending.size).toBe(0);
+  await enable('🌱');
   expect(pendingTimes()).toEqual([['🌱', { hour: 20, minute: 0, second: 0 }, false]]);
 });

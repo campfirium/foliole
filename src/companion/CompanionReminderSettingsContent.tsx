@@ -1,4 +1,3 @@
-import { Plus } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 
 import {
@@ -16,7 +15,17 @@ import { CompanionListSection } from './CompanionListSurface';
 import { CompanionReminderEditor, type ReminderDraft } from './CompanionReminderEditor';
 import { CompanionSettingsDetail } from './CompanionSettingsContent';
 
-const emptyDraft: ReminderDraft = { message: '', trigger: { kind: 'daily', time: '20:00' } };
+function withDefaultRules(rules: ReminderRule[], device: ReminderDevice) {
+  const defaults = [
+    { preset: 'seedling', message: '🌱', trigger: { kind: 'daily', time: '20:00' }, destination: 'flow' },
+    { preset: 'coffee', message: '☕', trigger: { kind: 'foreground', minutes: 20 } }
+  ] as const;
+  return [...rules, ...defaults.filter(defaultRule => !rules.some(rule =>
+    rule.preset === defaultRule.preset && isReminderForDevice(rule, device)
+  )).map(rule => ({
+    ...rule, id: createCompanionUuid(), revision: createCompanionUuid(), device, enabled: false
+  }))];
+}
 
 function useReminderSettings() {
   const [rules, setRules] = useState<ReminderRule[]>([]);
@@ -28,7 +37,7 @@ function useReminderSettings() {
   useEffect(() => {
     let active = true;
     void Promise.all([loadCompanionReminderRules(), loadCompanionReminderDevice()]).then(([loaded, current]) => {
-      if (active) { setRules(loaded); setDevice(current); }
+      if (active) { setRules(withDefaultRules(loaded, current)); setDevice(current); }
     }).catch(() => { if (active) setFeedback('unavailable'); });
     return () => { active = false; };
   }, []);
@@ -40,7 +49,7 @@ function useReminderSettings() {
     try {
       await saveCompanionReminderRule(rule);
       const updated = await loadCompanionReminderRules();
-      setRules(updated);
+      setRules(withDefaultRules(updated, device));
       if (closeEditor) setDraft(null);
       const result = await reconcileCompanionReminders(updated, device, rule.enabled).catch(() => 'failed' as const);
       if (result === 'permission-denied') setFeedback('permission');
@@ -59,7 +68,7 @@ function useReminderSettings() {
     const current = rules.find(rule => rule.id === draft.id);
     await persist({
       id: draft.id ?? createCompanionUuid(), revision: createCompanionUuid(), message: draft.message.trim(),
-      trigger: draft.trigger, destination: draft.destination, device, enabled: current?.enabled ?? true
+      trigger: draft.trigger, destination: draft.destination, device, preset: current?.preset, enabled: current?.enabled ?? false
     }, true);
   }
 
@@ -90,7 +99,9 @@ export function CompanionReminderSettingsContent(props: { onBack(): void }) {
               const expired = isReminderTriggerPast(rule.trigger);
               const schedule = rule.trigger.kind === 'daily'
                 ? t('settings.reminders.dailyAt', { time: rule.trigger.time })
-                : t('settings.reminders.onceAt', { time: new Date(rule.trigger.at).toLocaleString() });
+                : rule.trigger.kind === 'foreground'
+                  ? t('settings.reminders.foregroundAt', { minutes: rule.trigger.minutes })
+                  : t('settings.reminders.onceAt', { time: new Date(rule.trigger.at).toLocaleString() });
               const detail = expired ? t('settings.reminders.timePassed') : t('settings.reminders.thisDevice');
               return <div key={rule.id} className="flex min-h-16 items-center gap-3 border-b border-companion-divider last:border-b-0">
                 <button type="button" disabled={busy} className="min-h-16 min-w-0 flex-1 py-3 text-left"
@@ -105,35 +116,9 @@ export function CompanionReminderSettingsContent(props: { onBack(): void }) {
               </div>;
             })}
           </CompanionListSection>}
-          <ReminderExamples disabled={busy || !device}
-            onUse={() => setDraft({ ...emptyDraft, message: '🌱', destination: 'flow' })} />
-          <button type="button" disabled={busy || !device} onClick={() => setDraft(emptyDraft)}
-            className="flex min-h-12 w-full items-center gap-2 border-t border-companion-divider text-left text-base text-companion-accent disabled:opacity-50">
-            <Plus size={18} aria-hidden="true" />{t('settings.reminders.add')}
-          </button>
         </>}
         {status}
       </div>
     </CompanionSettingsDetail>
   );
-}
-
-function ReminderExamples(props: { disabled: boolean; onUse(): void }) {
-  const t = useTranslation();
-  return <section aria-label={t('settings.reminders.examples')}>
-    <h2 className="pb-2 text-base font-medium">{t('settings.reminders.examples')}</h2>
-    <button type="button" disabled={props.disabled} onClick={props.onUse}
-      className="block min-h-16 w-full border-b border-companion-divider py-3 text-left disabled:opacity-50">
-      <span className="block text-lg">🌱</span>
-      <span className="mt-1 block text-base text-companion-text-secondary">
-        {t('settings.reminders.dailyAt', { time: '20:00' })} · {t('settings.reminders.openFlow')}
-      </span>
-    </button>
-    <div className="min-h-16 py-3">
-      <span className="block text-lg">☕</span>
-      <span className="mt-1 block text-base text-companion-text-secondary">
-        {t('settings.reminders.foregroundExample')} · {t('settings.reminders.notAvailableYet')}
-      </span>
-    </div>
-  </section>;
 }

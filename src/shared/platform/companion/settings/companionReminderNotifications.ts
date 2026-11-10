@@ -11,7 +11,7 @@ export async function reconcileCompanionReminders(
   rules: ReminderRule[], device: ReminderDevice, requestPermission = false
 ): Promise<SchedulingResult> {
   const exact = Capacitor.getPlatform() === 'android';
-  const localRules = rules.filter(rule => rule.enabled && isReminderForDevice(rule, device) && !isReminderTriggerPast(rule.trigger));
+  const localRules = rules.filter(rule => rule.trigger.kind !== 'foreground' && rule.enabled && isReminderForDevice(rule, device) && !isReminderTriggerPast(rule.trigger));
   const { notifications } = await LocalNotifications.getPending();
   const desired = new Map(localRules.map(rule => [rule.id, rule]));
   const occupied = new Set(notifications.map(notification => notification.id));
@@ -25,12 +25,13 @@ export async function reconcileCompanionReminders(
     return true;
   });
   if (cancel.length) await LocalNotifications.cancel({ notifications: cancel.map(({ id }) => ({ id })) });
-  if (!localRules.length) return 'inactive';
+  const hasForeground = rules.some(rule => rule.trigger.kind === 'foreground' && rule.enabled && isReminderForDevice(rule, device));
+  if (!localRules.length && !hasForeground) return 'inactive';
 
   let permission = await LocalNotifications.checkPermissions();
   if (requestPermission && permission.display !== 'granted') permission = await LocalNotifications.requestPermissions();
   if (permission.display !== 'granted') return 'permission-denied';
-  if (exact && !await allowExactReminders(requestPermission)) return 'exact-permission-denied';
+  if (localRules.length && exact && !await allowExactReminders(requestPermission)) return 'exact-permission-denied';
   if (!desired.size) return 'scheduled';
 
   for (const rule of desired.values()) {
@@ -47,6 +48,7 @@ async function allowExactReminders(requestPermission: boolean) {
 
 function scheduleReminder(rule: ReminderRule, id: number, exact: boolean) {
   const trigger = rule.trigger;
+  if (trigger.kind === 'foreground') return;
   const schedule = trigger.kind === 'once'
     ? { at: new Date(trigger.at), repeats: false }
     : { on: { hour: Number(trigger.time.slice(0, 2)), minute: Number(trigger.time.slice(3)), second: 0 } };

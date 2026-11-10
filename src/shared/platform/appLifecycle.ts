@@ -88,3 +88,7 @@ export async function subscribeNativeAppEnteredBackground(handler: () => void): 
     }
   }));
 }
+
+export function subscribeNativeAppActiveState(handler: (active: boolean) => void): Promise<Unsubscribe> {
+  return toUnsubscribe(App.addListener('appStateChange', state => handler(state.isActive)));
+}

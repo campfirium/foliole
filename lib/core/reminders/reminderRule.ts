@@ -13,8 +13,10 @@ export const reminderRuleSchema = z.object({
   message: z.string().trim().min(1),
   trigger: z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('daily'), time: dailyTime }),
+    z.object({ kind: z.literal('foreground'), minutes: z.number().int().min(1).max(1440) }),
     z.object({ kind: z.literal('once'), at: z.iso.datetime() })
   ]),
+  preset: z.enum(['seedling', 'coffee']).optional(),
   destination: z.literal('flow').optional(),
   device,
   enabled: z.boolean()

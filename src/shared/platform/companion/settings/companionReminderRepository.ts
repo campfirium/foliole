@@ -7,6 +7,13 @@ import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { readIosCompanionDatabase, writeIosCompanionDatabase } from '../runtime/iosCompanionActiveDatabase';
 import { iosCompanionContentHash } from '../runtime/iosCompanionMutationState';
 
+const reminderChanges = new EventTarget();
+
+export function onCompanionReminderChange(handler: () => void) {
+  reminderChanges.addEventListener('change', handler);
+  return () => reminderChanges.removeEventListener('change', handler);
+}
+
 export async function loadCompanionReminderDevice(): Promise<ReminderDevice> {
   const bootstrap = await loadCompanionBootstrapState();
   const [member] = await readIosCompanionDatabase(db => db.query<{ local_device_identity_key: string }>(
@@ -40,7 +47,7 @@ export async function saveCompanionReminderRule(value: ReminderRule) {
     value_json: JSON.stringify(rule) };
   const hash = await iosCompanionContentHash(payload);
   // Rules use their eventual shared identity; publication starts with the sync integration.
-  return runCompanionSyncWriterTask(() => writeIosCompanionDatabase(db => db.run(
+  await runCompanionSyncWriterTask(() => writeIosCompanionDatabase(db => db.run(
     `INSERT INTO setting_records (key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(key, scope, platform, form_factor, host_name) DO UPDATE SET
@@ -48,4 +55,5 @@ export async function saveCompanionReminderRule(value: ReminderRule) {
     [payload.key, payload.scope, payload.platform, payload.form_factor, payload.host_name,
       payload.value_json, hash, new Date().toISOString()]
   )));
+  reminderChanges.dispatchEvent(new Event('change'));
 }

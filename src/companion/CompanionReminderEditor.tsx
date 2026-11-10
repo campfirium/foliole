@@ -30,27 +30,21 @@ export function CompanionReminderEditor(props: {
         <AppInput required className="min-h-11 text-base" disabled={busy} value={draft.message}
           onChange={event => onChange({ ...draft, message: event.currentTarget.value })} />
       </label>
-      <div className="space-y-1.5 border-t border-companion-divider pt-2">
-        <CompanionReminderChoice label={t('settings.reminders.repeat')} value={trigger.kind} disabled={busy}
-          options={{ daily: t('settings.reminders.daily'), once: t('settings.reminders.noRepeat') }}
-          onChange={kind => {
-            if (kind !== trigger.kind) onChange({ ...draft, trigger: changeRepeat(trigger) });
-          }} />
-        <label className="flex min-h-14 flex-wrap items-center justify-between gap-2 text-base">
-          <span>{t(trigger.kind === 'once' ? 'settings.reminders.dateTime' : 'settings.reminders.time')}</span>
-          {trigger.kind === 'once'
-            ? <AppInput key="once" required type="datetime-local" className="min-h-11 w-auto max-w-full text-base"
-              disabled={busy} value={toLocalDateTime(trigger.at)}
-              onChange={event => {
-                const date = new Date(event.currentTarget.value);
-                onChange({ ...draft, trigger: { kind: 'once', at: Number.isFinite(date.getTime()) ? date.toISOString() : '' } });
-              }} />
-            : <AppInput key="daily" required type="time" className="min-h-11 w-auto max-w-full text-base"
-              disabled={busy} value={trigger.time}
-              onChange={event => onChange({ ...draft, trigger: { kind: 'daily', time: event.currentTarget.value } })} />}
+      <CompanionReminderChoice label={t('settings.reminders.trigger')} disabled={busy}
+        value={trigger.kind === 'foreground' ? 'foreground' : 'scheduled'}
+        options={{ scheduled: t('settings.reminders.scheduled'), foreground: t('settings.reminders.foreground') }}
+        onChange={kind => {
+          if (kind === 'foreground' && trigger.kind !== 'foreground') onChange({ ...draft, trigger: { kind, minutes: 20 } });
+          if (kind === 'scheduled' && trigger.kind === 'foreground') onChange({ ...draft, trigger: { kind: 'daily', time: '20:00' } });
+        }} />
+      {trigger.kind === 'foreground'
+        ? <label className="flex min-h-14 flex-wrap items-center justify-between gap-2 text-base">
+          <span>{t('settings.reminders.foregroundMinutes')}</span>
+          <AppInput type="number" required min={1} max={1440} disabled={busy}
+            className="min-h-11 w-24 text-base" value={trigger.minutes || ''}
+            onChange={event => onChange({ ...draft, trigger: { kind: 'foreground', minutes: Number(event.currentTarget.value) } })} />
         </label>
-        {expired && <p className="text-sm">{t('settings.reminders.futureTime')}</p>}
-      </div>
+        : <ScheduledFields busy={busy} trigger={trigger} onChange={next => onChange({ ...draft, trigger: next })} />}
       <div className="border-t border-companion-divider pt-2">
         <CompanionReminderChoice label={t('settings.reminders.onTap')} value={draft.destination ?? 'none'}
           options={{ none: t('settings.reminders.noDestination'), flow: t('settings.reminders.openFlow') }}
@@ -68,7 +62,41 @@ export function CompanionReminderEditor(props: {
   </form>;
 }
 
-function changeRepeat(trigger: ReminderRule['trigger']): ReminderRule['trigger'] {
+type ScheduledTrigger = Exclude<ReminderRule['trigger'], { kind: 'foreground' }>;
+
+function ScheduledFields({ busy, trigger, onChange }: {
+  busy: boolean;
+  trigger: ScheduledTrigger;
+  onChange(trigger: ScheduledTrigger): void;
+}) {
+  const t = useTranslation();
+  const expired = isReminderTriggerPast(trigger);
+  return (
+      <div className="space-y-1.5 border-t border-companion-divider pt-2">
+        <CompanionReminderChoice label={t('settings.reminders.repeat')} value={trigger.kind} disabled={busy}
+          options={{ daily: t('settings.reminders.daily'), once: t('settings.reminders.noRepeat') }}
+          onChange={kind => {
+            if (kind !== trigger.kind) onChange(changeRepeat(trigger));
+          }} />
+        <label className="flex min-h-14 flex-wrap items-center justify-between gap-2 text-base">
+          <span>{t(trigger.kind === 'once' ? 'settings.reminders.dateTime' : 'settings.reminders.time')}</span>
+          {trigger.kind === 'once'
+            ? <AppInput key="once" required type="datetime-local" className="min-h-11 w-auto max-w-full text-base"
+              disabled={busy} value={toLocalDateTime(trigger.at)}
+              onChange={event => {
+                const date = new Date(event.currentTarget.value);
+                onChange({ kind: 'once', at: Number.isFinite(date.getTime()) ? date.toISOString() : '' });
+              }} />
+            : <AppInput key="daily" required type="time" className="min-h-11 w-auto max-w-full text-base"
+              disabled={busy} value={trigger.time}
+              onChange={event => onChange({ kind: 'daily', time: event.currentTarget.value })} />}
+        </label>
+        {expired && <p className="text-sm">{t('settings.reminders.futureTime')}</p>}
+      </div>
+  );
+}
+
+function changeRepeat(trigger: ScheduledTrigger): ScheduledTrigger {
   if (trigger.kind === 'once') {
     return { kind: 'daily', time: toLocalDateTime(trigger.at).slice(11) || '20:00' };
   }

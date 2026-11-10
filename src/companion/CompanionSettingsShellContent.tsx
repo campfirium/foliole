@@ -82,7 +82,7 @@ function CompanionSettingsHome(props: CompanionSettingsContentProps) {
     <CompanionSettingsList
       onOpenAppearance={() => props.onOpenSyncSettingsPage('appearance')}
       onOpenClozeGuard={() => props.onOpenSyncSettingsPage('clozeGuard')}
-      {...(['ios-native', 'android-native'].includes(getCompanionRuntimeCapability().kind)
+      {...(['ios-native', 'android-native', 'browser-preview'].includes(getCompanionRuntimeCapability().kind)
         ? { onOpenReminders: () => props.onOpenSyncSettingsPage('reminders') } : {})}
       onOpenLearning={() => props.onOpenSyncSettingsPage('learning')}
       onOpenReviewStatistics={() => props.onOpenSyncSettingsPage('reviewStatistics')}
