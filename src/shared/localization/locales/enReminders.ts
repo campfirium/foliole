@@ -1,5 +1,6 @@
 export const EN_REMINDER_TRANSLATIONS = {
-  'settings.reminders.title': 'Reminders · Experiment',
+  'settings.reminders.title': 'Reminders',
+  'settings.reminders.experiment': 'Experiment',
   'settings.reminders.repeat': 'Repeat',
   'settings.reminders.noRepeat': 'Never',
   'settings.reminders.onTap': 'On notification tap',

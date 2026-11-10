@@ -1,4 +1,3 @@
-import { Plus } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 
 import {
@@ -10,7 +9,7 @@ import {
   loadCompanionReminderDevice, loadCompanionReminderRules, saveCompanionReminderRule
 } from '../shared/platform/companion/settings/companionReminderRepository';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
-import { AppIconButton, AppSwitch } from '../shared/ui';
+import { AppSwitch } from '../shared/ui';
 
 import { CompanionListSection } from './CompanionListSurface';
 import { CompanionReminderEditor, type ReminderDraft } from './CompanionReminderEditor';
@@ -97,11 +96,6 @@ export function CompanionReminderSettingsContent(props: { onBack(): void }) {
       <div className="space-y-2 py-2">
         {draft ? <CompanionReminderEditor busy={busy} draft={draft} onChange={setDraft}
           onCancel={() => setDraft(null)} onSave={save} /> : <>
-          <div className="flex justify-end">
-            <AppIconButton label={t('settings.reminders.add')} icon={<Plus size={20} aria-hidden="true" />}
-              className="min-h-11 min-w-11" disabled={busy || !device}
-              onClick={() => setDraft({ message: '', trigger: { kind: 'daily', time: '20:00' } })} />
-          </div>
           {device && localRules.length > 0 && <CompanionListSection isFirst>
             {localRules.map(rule => {
               const expired = isReminderTriggerPast(rule.trigger);
@@ -124,6 +118,11 @@ export function CompanionReminderSettingsContent(props: { onBack(): void }) {
               </div>;
             })}
           </CompanionListSection>}
+          <button type="button" disabled={busy || !device}
+            className="mt-2 min-h-12 w-full rounded-md border border-dashed border-companion-divider-strong px-3 text-base text-companion-text-secondary hover:bg-companion-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-companion-accent disabled:opacity-50"
+            onClick={() => setDraft({ message: '', trigger: { kind: 'daily', time: '20:00' } })}>
+            {t('settings.reminders.add')}
+          </button>
         </>}
         {status}
       </div>

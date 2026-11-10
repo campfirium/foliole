@@ -85,7 +85,7 @@ export function CompanionSettingsList(props: {
             onClick={props.onOpenAppearance} testId="companion-settings-appearance" title={t('companion.settings.appearance.title')} />
         </SettingsListSection>
         {props.onOpenReminders && <SettingsListSection title="">
-          <SettingsListItem Icon={Bell} detail="" onClick={props.onOpenReminders} title={t('settings.reminders.title')} />
+          <SettingsListItem Icon={Bell} detail={t('settings.reminders.experiment')} onClick={props.onOpenReminders} title={t('settings.reminders.title')} />
         </SettingsListSection>}
         <SettingsListSection title={t('companion.settings.section.syncDevice')}>
           <SettingsListItem

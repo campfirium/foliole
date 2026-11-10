@@ -1,5 +1,6 @@
 export const ZH_HANS_REMINDER_TRANSLATIONS = {
-  'settings.reminders.title': '提醒 · Experiment',
+  'settings.reminders.title': '提醒',
+  'settings.reminders.experiment': 'Experiment',
   'settings.reminders.repeat': '重复',
   'settings.reminders.noRepeat': '无',
   'settings.reminders.onTap': '点通知后',
