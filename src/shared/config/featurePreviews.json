@@ -1,6 +1,7 @@
 {
   "webdavSyncSettings": {
     "name": "WebDAV sync settings",
+    "labelKey": "settings.companionSync.webdav.title",
     "visibility": "internal"
   }
 }

@@ -9,6 +9,8 @@
   "settings.overlay.aria": "Ustawienia",
   "settings.sidebar.aria": "Kategorie ustawień",
   "settings.navigation.aria": "Ustawienia nawigacji",
+  "settings.experimentalFeatures.title": "Funkcje eksperymentalne",
+  "settings.experimentalFeatures.description": "Wypróbuj nowe funkcje wcześniej na tym urządzeniu.",
   "settings.group.workspace": "Obszar roboczy",
   "settings.group.controls": "Sterowanie",
   "settings.group.storage": "Dane",

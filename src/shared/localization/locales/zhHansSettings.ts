@@ -18,6 +18,8 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.overlay.aria': '设置',
   'settings.sidebar.aria': '设置分类',
   'settings.navigation.aria': '设置导航',
+  'settings.experimentalFeatures.title': '实验功能',
+  'settings.experimentalFeatures.description': '在这台设备上提前试用新功能。',
   'settings.group.workspace': '工作区',
   'settings.group.controls': '操作',
   'settings.group.storage': '数据',

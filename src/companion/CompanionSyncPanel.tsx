@@ -1,7 +1,7 @@
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import type { NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanionSyncContract';
 import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract';
-import { isFeaturePreviewVisible } from '../shared/config/featurePreviews';
+import { useFeaturePreviewVisible } from '../shared/config/featurePreviews';
 import { useTranslation, type Translate } from '../shared/localization/LocalizationProvider';
 import { runPendingCompanionSyncGroupAdoption } from '../shared/platform/companion/sync/companionSyncGroupAdoptionRun';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
@@ -79,6 +79,7 @@ function ConnectedContent(props: CompanionSyncPanelProps & {
   endpointUrl: string;
   manualSyncFailureDetail: string;
 }) {
+  const showWebDav = useFeaturePreviewVisible('webdavSyncSettings');
   if (!props.syncGroup) return null;
   const syncAction = props.page === 'sync' ? (
     <CompanionSyncNowButton failureDetail={props.manualSyncFailureDetail}
@@ -89,7 +90,7 @@ function ConnectedContent(props: CompanionSyncPanelProps & {
   return (
     <>
       {syncAction}
-      {props.page === 'sync' && isFeaturePreviewVisible('webdavSyncSettings')
+      {props.page === 'sync' && showWebDav
         ? <CompanionWebDavRelayStatus key={props.syncGroup.group_id} /> : null}
       {props.page === 'sync' && isNativeCompanionSyncParticipationRuntime()
         ? <CompanionSyncParticipationControls /> : null}

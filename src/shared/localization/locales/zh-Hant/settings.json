@@ -9,6 +9,8 @@
   "settings.overlay.aria": "設定",
   "settings.sidebar.aria": "設定類別",
   "settings.navigation.aria": "設定導航",
+  "settings.experimentalFeatures.title": "實驗功能",
+  "settings.experimentalFeatures.description": "在這台裝置上提前試用新功能。",
   "settings.group.workspace": "工作空間",
   "settings.group.controls": "控制",
   "settings.group.storage": "數據",

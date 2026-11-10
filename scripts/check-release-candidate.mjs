@@ -66,17 +66,30 @@ export async function validateCurrentReleaseCandidate(rootDir = process.cwd()) {
   });
 }
 
+const FEATURE_PREVIEW_HEADINGS = {
+  internal: 'Hidden in public builds',
+  experimental: 'Available to opt in on public builds',
+  public: 'Available by default in public builds'
+};
+
+export function formatFeaturePreviewReport(previews) {
+  const entries = Object.values(previews);
+  for (const preview of entries) {
+    if (!Object.hasOwn(FEATURE_PREVIEW_HEADINGS, preview.visibility)) {
+      throw new Error(`Invalid visibility for feature preview: ${preview.name}`);
+    }
+  }
+  return Object.entries(FEATURE_PREVIEW_HEADINGS).flatMap(([visibility, heading]) => {
+    const names = entries.filter(preview => preview.visibility === visibility).map(preview => `  - ${preview.name}`);
+    return names.length ? [`[release-candidate] ${heading}:`, ...names] : [];
+  });
+}
+
 async function main() {
   assertQualityCommandAllowed('check:release-candidate');
   const result = await validateCurrentReleaseCandidate();
   const previews = await readJson(process.cwd(), 'src/shared/config/featurePreviews.json');
-  const internal = Object.values(previews)
-    .filter(preview => preview.visibility !== 'public')
-    .map(preview => preview.name);
-  if (internal.length > 0) {
-    console.log('[release-candidate] Feature previews that will stay hidden in public builds:');
-    for (const name of internal) console.log(`  - ${name}`);
-  }
+  for (const line of formatFeaturePreviewReport(previews)) console.log(line);
   console.log(
     `[release-candidate] status: OK version=${result.version} ` +
     `mode=${result.publicationMode} platforms=${result.selectedPlatforms.join(',')}`

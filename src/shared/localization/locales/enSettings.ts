@@ -16,6 +16,8 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.overlay.aria': 'Settings',
   'settings.sidebar.aria': 'Settings categories',
   'settings.navigation.aria': 'Settings navigation',
+  'settings.experimentalFeatures.title': 'Experimental features',
+  'settings.experimentalFeatures.description': 'Try features early on this device.',
   'settings.group.workspace': 'Workspace',
   'settings.group.controls': 'Controls',
   'settings.group.storage': 'Data',

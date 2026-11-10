@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { validateReleaseCandidateFiles } from './check-release-candidate.mjs';
+import { formatFeaturePreviewReport, validateReleaseCandidateFiles } from './check-release-candidate.mjs';
 
 const VERSION = '0.9.0';
 const PLATFORM = (id, update) => ({
@@ -61,4 +61,18 @@ describe('release candidate preflight', () => {
       }
     })).toThrow('compatibility bridge is already frozen at 0.8.0');
   });
+});
+
+it('reports each registered feature under its public availability', () => {
+  expect(formatFeaturePreviewReport({
+    lab: { name: 'Lab feature', visibility: 'internal' },
+    optIn: { name: 'Opt-in feature', visibility: 'experimental' },
+    shipped: { name: 'Shipped feature', visibility: 'public' }
+  })).toEqual([
+    '[release-candidate] Hidden in public builds:', '  - Lab feature',
+    '[release-candidate] Available to opt in on public builds:', '  - Opt-in feature',
+    '[release-candidate] Available by default in public builds:', '  - Shipped feature'
+  ]);
+  expect(() => formatFeaturePreviewReport({ typo: { name: 'Typo', visibility: 'preview' } }))
+    .toThrow('Invalid visibility for feature preview: Typo');
 });

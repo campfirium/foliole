@@ -20,6 +20,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   selectionToolbarOpacityPercent: 'foliole-selection-toolbar-opacity-percent',
   editorDisplayMode: 'foliole-editor-display-mode',
   topicPostponeUnit: 'foliole-topic-postpone-unit',
+  experimentalFeatures: 'foliole-experimental-features',
   settingsActiveCategory: 'foliole-settings-active-category',
   publishingExpandedSections: 'foliole-publishing-expanded-sections',
   workspaceRailItems: 'foliole-workspace-rail-items',

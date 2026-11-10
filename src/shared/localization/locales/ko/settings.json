@@ -9,6 +9,8 @@
   "settings.overlay.aria": "설정",
   "settings.sidebar.aria": "설정 카테고리",
   "settings.navigation.aria": "설정 탐색",
+  "settings.experimentalFeatures.title": "실험 기능",
+  "settings.experimentalFeatures.description": "이 기기에서 새 기능을 미리 사용해 보세요.",
   "settings.group.workspace": "작업공간",
   "settings.group.controls": "컨트롤",
   "settings.group.storage": "데이터",

@@ -20,9 +20,13 @@ Use the focused validation command that matches your change. For broad desktop, 
 
 ## Feature Previews
 
-Register new user-facing features in `src/shared/config/featurePreviews.json` with `"visibility": "internal"` while they are under development. Use `isFeaturePreviewVisible` at each entry point. Development and internal builds show registered previews automatically.
+Register new user-facing features in `src/shared/config/featurePreviews.json` with `"visibility": "internal"`. Set `labelKey` to the localized feature name. Use `useFeaturePreviewVisible` in reactive entry points and `isFeaturePreviewVisible` in synchronous routing. Development and internal builds can access features at every stage.
 
-Review the hidden-feature list from `npm run check:release-candidate` during release confirmation. Keep previews internal by default. To ship a preview, change its visibility to `"public"` and rebuild and verify the release candidate.
+- `internal` keeps the feature in development and internal builds.
+- `experimental` offers an off-by-default switch in Experimental features on public builds. Each device remembers its own choice.
+- `public` enables the feature for everyone and removes the switch.
+
+Review all three groups from `npm run check:release-candidate` during release confirmation. Rebuild and verify the release candidate after changing a feature's visibility.
 
 ## Pull Requests
 

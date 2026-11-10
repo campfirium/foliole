@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
+import { useFeaturePreviewPreferences } from '../../../shared/platform/featurePreviewPreferences';
 import { setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 import { useHotkeySettings } from '../context/HotkeySettingsProvider';
 import type { SettingsDesktopAdapters } from '../model/settingsDesktopAdapters';
@@ -55,6 +56,7 @@ function SettingsPanelContent(props: SettingsPanelProps) {
 
 function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null) {
   const t = useTranslation();
+  useFeaturePreviewPreferences();
   const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>(() =>
     requestedCategory ?? getInitialSettingsCategory() ?? 'general'
   );
@@ -71,11 +73,12 @@ function useSettingsPanelViewState(requestedCategory: SettingsCategoryId | null)
     }
   }, [requestedCategory]);
   const category = getSettingsCategoryOption(activeCategory, t);
-  const title = category?.label ?? t('settings.title');
-  const description = category?.description ?? t('settings.description');
+  const visibleCategory = category ?? getSettingsCategoryOption('general', t);
+  const title = visibleCategory?.label ?? t('settings.title');
+  const description = visibleCategory?.description ?? t('settings.description');
 
   return {
-    activeCategory,
+    activeCategory: visibleCategory?.id ?? 'general',
     description,
     setActiveCategory: selectActiveCategory,
     title,

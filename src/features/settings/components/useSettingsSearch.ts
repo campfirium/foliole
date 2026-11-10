@@ -24,9 +24,9 @@ export function useSettingsSearchState(
   const [activeResultIndex, setActiveResultIndex] = useState(0);
   const [targetBlock, setTargetBlock] = useState<ScrollLogicalPosition>('center');
   const [targetRowId, setTargetRowId] = useState<string | null>(null);
-  const categories = useMemo(() => getSettingsCategories(t), [t]);
+  const categories = getSettingsCategories(t);
   const rows = useMemo(() => createSettingsSearchRows(t), [t]);
-  const results = useMemo(() => querySettingsSearch(categories, rows, query), [categories, query, rows]);
+  const results = querySettingsSearch(categories, rows, query);
 
   useEffect(() => setActiveResultIndex(0), [query]);
   useEffect(() => {

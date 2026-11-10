@@ -1,6 +1,7 @@
 import { Bell, BookOpen, Bug, CalendarDays, Database, HardDrive, Palette, RefreshCw, RectangleEllipsis, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { SettingsExperimentalFeaturesSection } from '../features/settings/components/sections/SettingsExperimentalFeaturesSection';
 import { useAttachmentStorageSettings } from '../features/settings/components/sections/useAttachmentStorageSettings';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { supportsCompanionFolderDatabaseBackup } from '../shared/platform/companion/folderBackup/companionFolderBackupRuntimeRepository';
@@ -110,6 +111,7 @@ export function CompanionSettingsList(props: {
           onOpenAttachments={props.onOpenAttachments}
           showStorage={props.showStorage}
         />
+        <SettingsExperimentalFeaturesSection />
         <CompanionFeedbackSettingsRow />
         <SettingsListSection title={t('companion.settings.section.development')}>
           <SettingsListItem

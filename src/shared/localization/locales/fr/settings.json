@@ -9,6 +9,8 @@
   "settings.overlay.aria": "Paramètres",
   "settings.sidebar.aria": "Catégories de paramètres",
   "settings.navigation.aria": "Navigation dans les paramètres",
+  "settings.experimentalFeatures.title": "Fonctionnalités expérimentales",
+  "settings.experimentalFeatures.description": "Essayez de nouvelles fonctionnalités en avant-première sur cet appareil.",
   "settings.group.workspace": "Espace de travail",
   "settings.group.controls": "Contrôles",
   "settings.group.storage": "Données",

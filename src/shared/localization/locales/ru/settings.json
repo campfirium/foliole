@@ -9,6 +9,8 @@
   "settings.overlay.aria": "Настройки",
   "settings.sidebar.aria": "Категории настроек",
   "settings.navigation.aria": "Навигация по настройкам",
+  "settings.experimentalFeatures.title": "Экспериментальные функции",
+  "settings.experimentalFeatures.description": "Попробуйте новые функции заранее на этом устройстве.",
   "settings.group.workspace": "Рабочая область",
   "settings.group.controls": "Элементы управления",
   "settings.group.storage": "Данные",

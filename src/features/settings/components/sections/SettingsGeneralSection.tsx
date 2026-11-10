@@ -28,6 +28,7 @@ import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows
 
 import { SettingsAideStorageSection } from './SettingsAideStorageSection';
 import { SettingsCaptureSection } from './SettingsCaptureSection';
+import { SettingsExperimentalFeaturesSection } from './SettingsExperimentalFeaturesSection';
 import { SettingsGeneralSystemSection } from './SettingsGeneralSystemSection';
 import { SettingsLanguageSection } from './SettingsLanguageSection';
 import { SettingsModelsSection } from './SettingsModelsSection';
@@ -168,6 +169,7 @@ export function SettingsGeneralSection({
         <SearchEnhancementRow />
         <SettingsSearchAliasRow preview={previewDesktopSettings} />
       </SettingsSection>
+      {previewDesktopSettings ? null : <SettingsExperimentalFeaturesSection />}
       <SettingsCaptureSection />
       <SettingsAideStorageSection preview={previewDesktopSettings} />
     </>
