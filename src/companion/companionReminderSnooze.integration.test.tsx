@@ -78,6 +78,9 @@ async function verifyActions(platform: string, notification: NonNullable<ReturnT
     { id: 'background-snooze-30', title: platform === 'android' ? '30 min later' : 'Snooze 30 minutes' },
     { id: 'background-snooze-60', title: platform === 'android' ? '1 hr later' : 'Snooze 1 hour' }
   ]);
+  if (platform === 'android') {
+    expect(host.androidJobs.get(notification.id)?.snoozeConfirmation).toBe('Snoozed until {time}');
+  }
   expect(await authorized(notification)).toHaveLength(1);
 }
 

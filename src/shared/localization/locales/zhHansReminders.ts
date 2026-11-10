@@ -4,6 +4,7 @@ export const ZH_HANS_REMINDER_TRANSLATIONS = {
   'settings.reminders.snoozeShort15': '延后 15 分',
   'settings.reminders.snoozeShort30': '延后 30 分',
   'settings.reminders.snoozeShort60': '延后 1 小时',
+  'settings.reminders.snoozeConfirmation': '已延后至 {time}',
   'settings.reminders.snooze15': '延后 15 分钟',
   'settings.reminders.snooze30': '延后 30 分钟',
   'settings.reminders.snooze60': '延后 1 小时',

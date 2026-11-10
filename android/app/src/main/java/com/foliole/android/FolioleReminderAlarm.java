@@ -9,6 +9,7 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.text.format.DateFormat;
 
 import androidx.core.app.NotificationCompat;
 
@@ -19,6 +20,7 @@ import net.zetetic.database.sqlcipher.SQLiteDatabase;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.Date;
 import java.util.Map;
 
 final class FolioleReminderAlarm {
@@ -138,7 +140,7 @@ final class FolioleReminderAlarm {
         job.put("at", actionAt + minutes * 60_000L);
         job.put("delivered", false);
         schedule(context, job);
-        context.getSystemService(NotificationManager.class).cancel(id);
+        postSnoozeConfirmation(context, job);
     }
 
     private static boolean authorizes(Context context, JSONObject job) throws Exception {
@@ -163,6 +165,21 @@ final class FolioleReminderAlarm {
         return PendingIntent.getBroadcast(context, id, intent, PendingIntent.FLAG_IMMUTABLE);
     }
 
+    private static NotificationCompat.Builder reminderNotification(Context context) {
+        return new NotificationCompat.Builder(context, LocalNotificationManager.DEFAULT_NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("Foliole")
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE);
+    }
+
+    private static void postSnoozeConfirmation(Context context, JSONObject job) throws Exception {
+        String time = DateFormat.getTimeFormat(context).format(new Date(job.getLong("at")));
+        String confirmation = job.optString("snoozeConfirmation", "Snoozed until {time}").replace("{time}", time);
+        var notification = reminderNotification(context).setContentTitle(confirmation)
+            .setContentText(job.getString("body")).setShowWhen(false).setSilent(true).build();
+        context.getSystemService(NotificationManager.class).notify(job.getInt("id"), notification);
+    }
+
     private static void post(Context context, JSONObject job) throws Exception {
         int id = job.getInt("id");
         JSONObject extra = new JSONObject().put("owner", job.getString("owner"))
@@ -173,9 +190,8 @@ final class FolioleReminderAlarm {
             .putExtra(LocalNotificationManager.NOTIFICATION_INTENT_KEY, id)
             .putExtra(LocalNotificationManager.ACTION_INTENT_KEY, "tap")
             .putExtra(LocalNotificationManager.NOTIFICATION_OBJ_INTENT_KEY, payload.toString());
-        NotificationCompat.Builder notification = new NotificationCompat.Builder(context, LocalNotificationManager.DEFAULT_NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle("Foliole")
-            .setContentText(job.getString("body")).setAutoCancel(true).setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+        NotificationCompat.Builder notification = reminderNotification(context)
+            .setContentText(job.getString("body")).setAutoCancel(true)
             .setContentIntent(PendingIntent.getActivity(context, id, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE))
             .setDeleteIntent(action(context, job, DISMISS, "dismiss"));
         JSONArray actions = job.getJSONArray("actions");

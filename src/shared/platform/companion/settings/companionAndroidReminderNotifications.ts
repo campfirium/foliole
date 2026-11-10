@@ -16,6 +16,7 @@ export type AndroidReminderJob = {
   owner: string;
   delivered?: boolean;
   snoozedFrom?: number;
+  snoozeConfirmation: string;
   actions: ReminderAction[];
 };
 
@@ -51,6 +52,7 @@ export function scheduleAndroidReminderJob(rule: ReminderRule, at: string, occup
   occupied.add(id);
   return native.schedule({
     id, at: Date.parse(at), body: rule.message, ruleId: rule.id, revision: rule.revision,
-    owner: COMPANION_REMINDER_BACKGROUND_ACTION.owner, actions: getReminderBackgroundActions(true)
+    owner: COMPANION_REMINDER_BACKGROUND_ACTION.owner, actions: getReminderBackgroundActions(true),
+    snoozeConfirmation: translate(getStoredAppLocale(), 'settings.reminders.snoozeConfirmation', { time: '{time}' })
   });
 }
