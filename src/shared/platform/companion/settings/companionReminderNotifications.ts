@@ -1,6 +1,6 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
 
-import { isReminderForDevice, type ReminderDevice, type ReminderRule } from '../../../lib/core/reminders/reminderRule';
+import { isReminderForDevice, type ReminderDevice, type ReminderRule } from '../../../../../lib/core/reminders/reminderRule';
 
 const owner = 'foliole-reminder-v1';
 

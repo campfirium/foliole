@@ -1,12 +1,11 @@
 import {
   REMINDER_SETTING_OWNER, REMINDER_SETTING_PREFIX, reminderRuleSchema, reminderSettingKey,
   type ReminderDevice, type ReminderRule
-} from '../../../lib/core/reminders/reminderRule';
-
-import { readIosCompanionDatabase, writeIosCompanionDatabase } from './companion/runtime/iosCompanionActiveDatabase';
-import { iosCompanionContentHash } from './companion/runtime/iosCompanionMutationState';
-import { loadCompanionBootstrapState } from './companionBootstrap';
-import { runCompanionSyncWriterTask } from './companionSyncWriterQueue';
+} from '../../../../../lib/core/reminders/reminderRule';
+import { loadCompanionBootstrapState } from '../../companionBootstrap';
+import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
+import { readIosCompanionDatabase, writeIosCompanionDatabase } from '../runtime/iosCompanionActiveDatabase';
+import { iosCompanionContentHash } from '../runtime/iosCompanionMutationState';
 
 export async function loadCompanionReminderDevice(): Promise<ReminderDevice> {
   const bootstrap = await loadCompanionBootstrapState();

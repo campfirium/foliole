@@ -4,10 +4,10 @@ import {
   isReminderForDevice, type ReminderDevice, type ReminderRule
 } from '../../lib/core/reminders/reminderRule';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { reconcileCompanionReminders } from '../shared/platform/companionReminderNotifications';
+import { reconcileCompanionReminders } from '../shared/platform/companion/settings/companionReminderNotifications';
 import {
   loadCompanionReminderDevice, loadCompanionReminderRules, saveCompanionReminderRule
-} from '../shared/platform/companionReminderRepository';
+} from '../shared/platform/companion/settings/companionReminderRepository';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
 
 import { CompanionSettingsDetail } from './CompanionSettingsContent';
