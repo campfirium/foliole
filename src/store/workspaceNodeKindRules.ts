@@ -44,7 +44,7 @@ export function canMoveRootsIntoTarget(
   const movingVirtualNode = rootNodeIds.some((rootNodeId) => state.nodesById[rootNodeId]?.specialKind === 'virtual');
   if (movingVirtualNode) {
     return rootNodeIds.every((rootNodeId) => isVirtualNode(state.nodesById[rootNodeId])) &&
-      (nextParentNodeId === VIRTUAL_ROOT_NODE_ID || isVirtualNode(state.nodesById[nextParentNodeId ?? '']));
+      nextParentNodeId === VIRTUAL_ROOT_NODE_ID;
   }
   if (nextParentNodeId === HOME_NODE_ID || nextParentNodeId === VIRTUAL_ROOT_NODE_ID) {
     return false;

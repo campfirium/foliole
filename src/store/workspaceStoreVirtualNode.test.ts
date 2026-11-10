@@ -63,21 +63,14 @@ it('creates a persistent manual virtual folder without a follow-up conversion', 
   });
 });
 
-it('creates and safely moves nested virtual folders without changing membership semantics', async () => {
+it('rejects nested index creation and movement while keeping both indexes top-level', async () => {
   const parentId = expectCreatedNodeId(
     await useWorkspaceStore.getState().createVirtualNode({ mode: 'manual' })
   );
-  const childId = expectCreatedNodeId(
-    await useWorkspaceStore.getState().createVirtualNode({ mode: 'manual', parentNodeId: parentId })
-  );
-
-  expect(useWorkspaceStore.getState().nodesById[childId]).toMatchObject({
-    parentNodeId: parentId,
-    specialKind: 'virtual'
-  });
-  expect(useWorkspaceStore.getState().nodesById[childId]?.manualChildOrder).toBeUndefined();
-  expect(await useWorkspaceStore.getState().moveNodes([parentId], childId, 'child')).toBe(false);
-  expect(await useWorkspaceStore.getState().moveNodes([childId], VIRTUAL_ROOT_NODE_ID, 'child')).toBe(true);
+  expect(await useWorkspaceStore.getState().createVirtualNode({ mode: 'manual', parentNodeId: parentId })).toBeNull();
+  const childId = expectCreatedNodeId(await useWorkspaceStore.getState().createVirtualNode({ mode: 'manual' }));
+  expect(await useWorkspaceStore.getState().moveNodes([childId], parentId, 'child')).toBe(false);
+  expect(useWorkspaceStore.getState().nodesById[parentId]?.parentNodeId).toBe(VIRTUAL_ROOT_NODE_ID);
   expect(useWorkspaceStore.getState().nodesById[childId]?.parentNodeId).toBe(VIRTUAL_ROOT_NODE_ID);
 });
 

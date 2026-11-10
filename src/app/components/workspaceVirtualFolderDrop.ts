@@ -25,7 +25,7 @@ function resolveVirtualFolderDrop(folderId: string, event: ReactDragEvent<HTMLEl
   if (
     virtualFolderIds.length === sourceIds.length &&
     virtualFolderIds.length > 0 &&
-    (isVirtualRootNode(folder) || isVirtualNode(folder)) &&
+    isVirtualRootNode(folder) &&
     !isInvalidNodeListDropTarget(folderId, virtualFolderIds, state.nodesById)
   ) {
     return { effect: 'move' as const, sourceIds: virtualFolderIds };

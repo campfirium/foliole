@@ -84,7 +84,7 @@ it('uses the shared localized rename action for a built-in Virtual folder', asyn
   window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'zh-Hans');
   renderSavedSearchTree();
 
-  fireEvent.contextMenu(await screen.findByRole('treeitem', { name: '虚拟' }));
+  fireEvent.contextMenu(await screen.findByRole('treeitem', { name: /^(虚拟|索引)$/ }));
 
   expect(await screen.findByRole('menuitem', { name: '重命名' })).toBeInTheDocument();
   expect(screen.queryByRole('menuitem', { name: 'Rename' })).toBeNull();
@@ -125,17 +125,13 @@ it('creates a manual virtual folder from the Virtual root context menu', async (
   expect(onSelectNodeInVirtualView).toHaveBeenCalledWith('virtual-new');
 });
 
-it('creates a child virtual folder from the virtual folder context menu', async () => {
+it('omits child creation from an index context menu', async () => {
   renderSavedSearchTree();
 
   expect(screen.queryByRole('button', { name: 'Create Virtual Folder' })).toBeNull();
   fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'Custom virtual' }));
-  fireEvent.click(await screen.findByRole('menuitem', { name: 'Create Virtual Folder' }));
-
-  await waitFor(() => expect(useWorkspaceStore.getState().createVirtualNode).toHaveBeenCalledWith({
-    mode: 'manual',
-    parentNodeId: 'virtual-custom'
-  }));
+  await screen.findByRole('menuitem', { name: 'Rename' });
+  expect(screen.queryByRole('menuitem', { name: 'Create Virtual Folder' })).toBeNull();
 });
 
 it('renames a saved search from the virtual directory row', async () => {

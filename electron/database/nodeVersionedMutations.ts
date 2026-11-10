@@ -7,7 +7,7 @@ import type {
 } from '../../lib/core/database/nodeMutations.js';
 import { serializeNodeResourceReferences } from '../../lib/core/database/nodeResourceReferences.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
-import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
+import { INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
 import { collectArticleImageStorageKeys } from '../../lib/core/import/replaceArticleImageSource.js';
 import type { ContentImageReference } from '../../lib/core/sync/localContentEditResources.js';
 
@@ -24,6 +24,14 @@ function flushVersion(driver: ReturnType<typeof openDatabaseConnection>['driver'
   return flushNodeSyncVersionWithDriver(driver, nodeId, hostName, now, versionId);
 }
 
+function assertIndexPlacement(driver: ReturnType<typeof openDatabaseConnection>['driver'], input: UpsertNodeSnapshotInput) {
+  if (!input.virtualFilter || input.parentNodeId === VIRTUAL_ROOT_NODE_ID) return;
+  const existing = driver.queryOne<{ parent_id: string | null; virtual_filter: string | null }>(
+    'SELECT parent_id, virtual_filter FROM nodes WHERE id = ?', [input.nodeId]);
+  if (existing?.virtual_filter && existing.parent_id === input.parentNodeId) return;
+  throw new Error('Index directories must be top-level');
+}
+
 export function upsertVersionedNodeSnapshot(
   input: UpsertNodeSnapshotInput,
   options: UpsertNodeSnapshotOptions = {}
@@ -31,6 +39,7 @@ export function upsertVersionedNodeSnapshot(
   const driver = openDatabaseConnection().driver;
   const hostName = loadOrCreateDesktopHostName(input.updatedAt);
   return withTransaction(driver, () => {
+    assertIndexPlacement(driver, input);
     upsertNodeSnapshot(input, options);
     return flushVersion(driver, input.nodeId, hostName, input.updatedAt);
   });
@@ -43,6 +52,7 @@ export function createVersionedNodeSnapshot(input: UpsertNodeSnapshotInput, opti
   const driver = openDatabaseConnection().driver;
   const hostName = loadOrCreateDesktopHostName(input.updatedAt);
   return withTransaction(driver, () => {
+    assertIndexPlacement(driver, input);
     upsertNodeSnapshot(input, input.parentNodeId === INBOX_NODE_ID ? { parentMembership: 'first' } : {});
     if (options.newImageReferences?.length) {
       const keys = new Set(collectArticleImageStorageKeys(input.content));
@@ -61,6 +71,7 @@ export function upsertVersionedNodeContentWithAnchors(
   const driver = openDatabaseConnection().driver;
   const hostName = loadOrCreateDesktopHostName(parent.updatedAt);
   return withTransaction(driver, () => {
+    assertIndexPlacement(driver, parent);
     const contentChange = applyParentContentChange({
       driver,
       nextContent: parent.content,

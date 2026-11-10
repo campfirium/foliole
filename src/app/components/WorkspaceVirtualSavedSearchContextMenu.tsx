@@ -109,10 +109,10 @@ export function WorkspaceVirtualSavedSearchContextMenu({
         onContextMenu={(event) => event.preventDefault()}
         sideOffset={0}
       >
-        {isVirtualRoot || isSavedSearch
-          ? <CreateChildMenuItem {...(!isVirtualRoot ? { nodeId } : {})} onClose={onClose} onCreate={onCreateChild} />
+        {isVirtualRoot
+          ? <CreateChildMenuItem onClose={onClose} onCreate={onCreateChild} />
           : null}
-        {isVirtualRoot || isSavedSearch ? <NodeContextMenuSeparator /> : null}
+        {isVirtualRoot ? <NodeContextMenuSeparator /> : null}
         <NodeRenameContextMenuItem onSelect={() => {
           requestNodeRename(nodeId);
           onClose();

@@ -70,7 +70,7 @@ it('allows virtual folders to nest only under Virtual or another virtual folder'
   const regular = createNode({ id: 'folder', title: 'Folder', content: '', kind: 'folder' });
 
   expect(canNodeAcceptMovedNode(virtualRoot, child)).toBe(true);
-  expect(canNodeAcceptMovedNode(parent, child)).toBe(true);
+  expect(canNodeAcceptMovedNode(parent, child)).toBe(false);
   expect(canNodeAcceptMovedNode(regular, child)).toBe(false);
 });
 

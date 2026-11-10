@@ -37,8 +37,8 @@ export function readMoveParentOrder(driver: DatabaseDriver, parentNodeId: string
 }
 
 function requireMoveNode(driver: DatabaseDriver, id: string) {
-  const node = driver.queryOne<MoveStructureNode>(
-    'SELECT id, parent_id, kind, deleted_at, updated_at FROM nodes WHERE id = ?', [id]);
+  const node = driver.queryOne<MoveStructureNode & { virtual_filter: string | null }>(
+    'SELECT id, parent_id, kind, deleted_at, updated_at, virtual_filter FROM nodes WHERE id = ?', [id]);
   if (!node || node.deleted_at) throw new Error('move_node_unavailable');
   return node;
 }
@@ -54,6 +54,8 @@ export function validateMoveStructure(driver: DatabaseDriver, input: NativeMoveN
         node.parent_id !== patch.expectedParentNodeId) throw new Error('move_structure_conflict');
     const parent = patch.parentNodeId ? requireMoveNode(driver, patch.parentNodeId) : null;
     if (parent?.id === HOME_NODE_ID || parent?.id === TRASH_NODE_ID ||
+        (patch.parentNodeId !== node.parent_id && (parent?.virtual_filter ||
+          (node.virtual_filter && patch.parentNodeId !== VIRTUAL_ROOT_NODE_ID))) ||
         !canCreateChildNodeKind(parent?.kind ?? null, node.kind)) {
       throw new Error('invalid_move_parent');
     }

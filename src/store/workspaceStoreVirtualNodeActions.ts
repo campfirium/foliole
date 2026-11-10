@@ -4,7 +4,7 @@ import {
   type VirtualNodeFilter
 } from '../../lib/core/nodes/virtualNodeFilter';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
-import { VIRTUAL_ROOT_NODE_ID, isVirtualNode } from '../features/nodes/model/specialNodes';
+import { VIRTUAL_ROOT_NODE_ID } from '../features/nodes/model/specialNodes';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
 
 import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
@@ -98,7 +98,7 @@ function prepareVirtualNodeCreation(args: {
   state: WorkspaceState;
   timestamp: string;
 }) {
-  if (args.parentNodeId !== VIRTUAL_ROOT_NODE_ID && !isVirtualNode(args.state.nodesById[args.parentNodeId])) {
+  if (args.parentNodeId !== VIRTUAL_ROOT_NODE_ID) {
     return null;
   }
   const untitledState = resolveCreatedNodeTitleState(deriveNodeTitleFromContent(''), args.parentNodeId, args.state);
