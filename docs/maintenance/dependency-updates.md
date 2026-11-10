@@ -154,6 +154,42 @@ owner pushes the validated dev tip and verifies remote containment before PR
 closure. Scheduled Dev Quality follows its own schedule. Do not use PR count
 to determine install, test, commit or task count.
 
+## Pending centralized QA
+
+The November 10 npm batch was implemented in `c6525a361`. Local validation passed
+65 tests covering HTML paste, Mermaid rendering, review scheduling and Windows
+installer matching. Desktop and companion web builds passed. The production npm
+audit reported zero vulnerabilities. Full hosted quality and dependency hardening
+are required before closure.
+
+| Proposal | Verified author / reviewed head | Local target |
+| --- | --- | --- |
+| [#220](https://github.com/campfirium/foliole/pull/220) | `app/renovate` / `cd839d7dc0c42ba14e8ad359735b2f02156f9976` | parse5 8.1.0 |
+| [#221](https://github.com/campfirium/foliole/pull/221) | `app/renovate` / `b853e76511d1647fc32c966477d15fde673f1eff` | minimatch 11.0.4 |
+| [#223](https://github.com/campfirium/foliole/pull/223) | `app/renovate` / `8a864cf32ad6b17e4d622f9bc2d7a5431e55284e` | @emnapi/core 2.0.0-beta.3 in the existing WASM runtime override |
+| [#224](https://github.com/campfirium/foliole/pull/224) | `app/renovate` / `5bf7f48ce3bccbe79395b074d650f129f9ceb323` | @emnapi/runtime 2.0.0-beta.3 in the existing WASM runtime override |
+| [#225](https://github.com/campfirium/foliole/pull/225) | `app/renovate` / `1ad7e695ed5231d303cb2e7826c2785948a9da6c` | @vitejs/plugin-react 6.2.1 |
+| [#230](https://github.com/campfirium/foliole/pull/230) | `app/renovate` / `66d50d104efc0110de47e4d7e65b82ad696421c3` | Tailwind CSS and its Vite plugin 4.3.4 |
+| [#231](https://github.com/campfirium/foliole/pull/231) | `app/renovate` / `47708b878a8e94528287bc8400a98a4460a823f9` | lucide-react 1.67.0 |
+| [#232](https://github.com/campfirium/foliole/pull/232) | `app/renovate` / `24db1fca5f71487fda3ba81c9d31f12d6499ec6f` | Vitest 5.1.0 |
+| [#234](https://github.com/campfirium/foliole/pull/234) | `app/renovate` / `05de307ebca650615c1902240fff8ce0ec0ca499` | Mermaid 12.3.0 |
+
+The proposals target `campfirium/foliole:dev`. The paired WASM overrides retain
+the required FSRS binding that the proposed lockfiles removed.
+
+November 10 deferrals for the next centralized dependency review:
+
+- [#222](https://github.com/campfirium/foliole/pull/222) remains open. React-PDF
+  11.0.0 still requires PDF.js 6.3.289. Adopt PDF.js 6.5.438 when React-PDF
+  supports a matching worker, and validate the pair.
+- [#226](https://github.com/campfirium/foliole/pull/226) remains open. The local
+  AAR metadata check confirmed OkHttp 5.5.1 requires compile SDK 37 while
+  Foliole builds against 36. Recheck after the SDK 37 build lane is established.
+- [#233](https://github.com/campfirium/foliole/pull/233) remains open. The local
+  Android test APK could not compile references to the image-file bridge.
+  Establish a clean native baseline and verify the resolved compile and runtime
+  SQLite versions together before adopting 2.7.1.
+
 ### Completed November 9 npm batch
 
 The local npm batch was committed as `0f0d4f6d3` on `dev`. npm resolved all
