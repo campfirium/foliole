@@ -50,6 +50,16 @@
       "databaseName": "foliole-companion",
       "databaseFileName": "Foliole.sqlite"
     },
+    "reminderBackgroundAction": {
+      "category": "foliole-reminder-background-snooze",
+      "owner": "foliole-reminder-v1",
+      "minutes": {
+        "background-snooze-15": 15,
+        "background-snooze-30": 30,
+        "background-snooze-60": 60
+      },
+      "authorizeSql": "\n    WITH member AS (\n      SELECT local_device_identity_key AS id\n      FROM sync_group_local_state WHERE singleton_id = 1 AND state = 'active'\n    )\n    SELECT 1\n    FROM setting_records\n    WHERE key = 'reminder-rule-' || ? AND scope = 'user_space'\n      AND platform = 'windows' AND form_factor = 'desktop'\n      AND host_name = '*' AND deleted_at IS NULL\n      AND json_extract(value_json, '$.revision') = ?\n      AND json_extract(value_json, '$.enabled') = 1\n      AND json_extract(value_json, '$.trigger.kind') = 'once'\n      AND json_extract(value_json, '$.device.kind') = CASE\n        WHEN EXISTS (SELECT 1 FROM member) THEN 'sync-member' ELSE 'standalone' END\n      AND json_extract(value_json, '$.device.id') = COALESCE(\n        (SELECT id FROM member), (SELECT value FROM companion_meta WHERE key = 'device_id'))\n  "
+    },
     "bootstrap": {
       "hostNameDefaults": {
         "defaultHostName": "Android device",

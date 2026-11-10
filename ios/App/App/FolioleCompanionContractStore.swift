@@ -61,6 +61,21 @@ final class FolioleCompanionContractStore {
         )
     }
 
+    func reminderBackgroundActionContract() throws -> FolioleReminderBackgroundActionContract {
+        let path = ["hostApi", "reminderBackgroundAction"]
+        let options = try object(path: path, root: bridge)
+        guard let minutes = options["minutes"] as? [String: Int] else {
+            throw NSError(domain: "FolioleReminder", code: 1)
+        }
+        return FolioleReminderBackgroundActionContract(
+            category: try string(path: path + ["category"], root: bridge),
+            owner: try string(path: path + ["owner"], root: bridge),
+            minutes: minutes,
+            authorizeSql: try string(path: path + ["authorizeSql"], root: bridge),
+            databaseName: try string(path: ["hostApi", "folderBackup", "databaseName"], root: bridge)
+        )
+    }
+
     func folderBackupContract() throws -> [String: String] {
         try stringMap(path: ["hostApi", "folderBackup"], root: bridge)
     }

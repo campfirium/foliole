@@ -1,12 +1,17 @@
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications, type LocalNotificationSchema } from '@capacitor/local-notifications';
 
+import { COMPANION_REMINDER_BACKGROUND_ACTION } from '../../../../../lib/core/database/companionReminderActionContract';
 import { isReminderForDevice, isReminderTriggerPast, type ReminderDevice, type ReminderRule } from '../../../../../lib/core/reminders/reminderRule';
 import { getStoredAppLocale } from '../../../localization/appLanguage';
 import { translate } from '../../../localization/translations';
 import { getCompanionRuntimeCapability } from '../../companionRuntimeCapabilities';
 
-export const COMPANION_REMINDER_NOTIFICATION_OWNER = 'foliole-reminder-v1';
+import {
+  getReminderBackgroundActions, reconcileAndroidReminderJobs, scheduleAndroidReminderJob
+} from './companionAndroidReminderNotifications';
+
+export const COMPANION_REMINDER_NOTIFICATION_OWNER = COMPANION_REMINDER_BACKGROUND_ACTION.owner;
 
 type SchedulingResult = 'scheduled' | 'inactive' | 'permission-denied' | 'exact-permission-denied';
 
@@ -36,6 +41,7 @@ async function reconcile(
   const localRules = [...enabled.values()].filter(rule => rule.trigger.kind !== 'foreground' && !isReminderTriggerPast(rule.trigger));
   const { notifications } = await LocalNotifications.getPending();
   const desired = new Map(localRules.map(rule => [rule.id, rule]));
+  const androidOccupied = exact ? await reconcileAndroidReminderJobs(enabled, desired) : new Set<number>();
   const occupied = new Set(notifications.map(notification => notification.id));
   const cancel = notifications.filter(notification => {
     if (notification.extra?.owner !== COMPANION_REMINDER_NOTIFICATION_OWNER) return false;
@@ -43,7 +49,7 @@ async function reconcile(
       return enabled.get(notification.extra.ruleId)?.revision !== notification.extra.revision;
     }
     const rule = desired.get(notification.extra.ruleId);
-    if (rule && rule.revision === notification.extra.revision && (!exact || notification.extra.exact === true)) {
+    if (rule && !(exact && rule.trigger.kind === 'once') && rule.revision === notification.extra.revision && (!exact || notification.extra.exact === true)) {
       desired.delete(rule.id);
       return false;
     }
@@ -60,7 +66,11 @@ async function reconcile(
   if (!desired.size) return 'scheduled';
 
   for (const rule of desired.values()) {
-    await scheduleReminder(rule, availableId(occupied), exact);
+    if (exact && rule.trigger.kind === 'once') {
+      await scheduleAndroidReminderJob(rule, rule.trigger.at, androidOccupied);
+    } else {
+      await scheduleReminder(rule, availableId(occupied), exact);
+    }
   }
   return 'scheduled';
 }
@@ -71,14 +81,15 @@ async function allowExactReminders(requestPermission: boolean) {
   return requestPermission && (await LocalNotifications.changeExactNotificationSetting()).exact_alarm === 'granted';
 }
 
-async function registerSnoozeActions() {
+async function registerSnoozeActions(category: string, foreground: boolean) {
   const locale = getStoredAppLocale();
   await LocalNotifications.registerActionTypes({ types: [{
-    id: SNOOZE_ACTION_TYPE,
-    actions: [
-      { id: 'snooze-30', title: translate(locale, 'settings.reminders.snooze30'), foreground: true },
-      { id: 'snooze-60', title: translate(locale, 'settings.reminders.snooze60'), foreground: true }
-    ]
+    id: category,
+    actions: foreground
+      ? Object.entries(REMINDER_SNOOZE_ACTIONS).map(([id, minutes]) => ({
+        id, title: translate(locale, `settings.reminders.snooze${minutes}`), foreground: true
+      }))
+      : getReminderBackgroundActions()
   }] });
 }
 
@@ -95,18 +106,19 @@ async function scheduleReminder(rule: ReminderRule, id: number, exact: boolean) 
 export async function scheduleSingleOccurrence(
   rule: ReminderRule, id: number, at: Date, exact: boolean, snoozedFrom?: number
 ) {
-  await registerSnoozeActions();
+  const category = exact ? SNOOZE_ACTION_TYPE : COMPANION_REMINDER_BACKGROUND_ACTION.category;
+  await registerSnoozeActions(category, exact);
   return scheduleNotification(rule, id, { at, repeats: false }, exact, {
-    occurrenceAt: at.getTime(), ...(snoozedFrom === undefined ? {} : { snoozedFrom })
+    category, occurrenceAt: at.getTime(), ...(snoozedFrom === undefined ? {} : { snoozedFrom })
   });
 }
 
 function scheduleNotification(
   rule: ReminderRule, id: number, schedule: NonNullable<LocalNotificationSchema['schedule']>,
-  exact: boolean, occurrence?: { occurrenceAt: number; snoozedFrom?: number }
+  exact: boolean, occurrence?: { category: string; occurrenceAt: number; snoozedFrom?: number }
 ) {
   return LocalNotifications.schedule({ notifications: [{
-    id, title: 'Foliole', body: rule.message, ...(occurrence ? { actionTypeId: SNOOZE_ACTION_TYPE } : {}),
+    id, title: 'Foliole', body: rule.message, ...(occurrence ? { actionTypeId: occurrence.category } : {}),
     extra: { owner: COMPANION_REMINDER_NOTIFICATION_OWNER, ruleId: rule.id, revision: rule.revision, exact, ...occurrence },
     schedule: { ...schedule, allowWhileIdle: true },
     isExactNotification: exact, isExactMandatory: exact

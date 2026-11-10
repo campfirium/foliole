@@ -10,6 +10,7 @@ import {
 import {
   COMPANION_ATTACHMENT_RESOURCE_HOST_CONTRACT_DEFINITIONS
 } from './companionAttachmentResourceHostContractDefinitions.js';
+import { COMPANION_REMINDER_BACKGROUND_ACTION } from './companionReminderActionContract.js';
 import {
   COMPANION_RESOURCE_PLUGIN_DEFAULTS,
   COMPANION_RESOURCE_PLUGIN_REQUEST_KEYS
@@ -20,6 +21,7 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
   hostApi: {
     attachmentResourceSync: COMPANION_ATTACHMENT_RESOURCE_HOST_CONTRACT_DEFINITIONS,
     folderBackup: COMPANION_FOLDER_BACKUP_FILES,
+    reminderBackgroundAction: COMPANION_REMINDER_BACKGROUND_ACTION,
     bootstrap: {
       hostNameDefaults: {
         defaultHostName: 'Android device',

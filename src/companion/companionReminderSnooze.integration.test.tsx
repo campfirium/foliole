@@ -4,6 +4,8 @@ import { host, open } from './companionReminderTestSupport';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { COMPANION_REMINDER_BACKGROUND_ACTION } from '../../lib/core/database/companionReminderActionContract';
+import { readIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import { listenForCompanionReminderFlow } from '../shared/platform/companion/settings/companionReminderActions';
 
 import { edit, enable, save, savePreset } from './companionReminderSettings.testUtils';
@@ -28,8 +30,8 @@ it.each([
   await enable('🌱');
   const [regular, notification] = [...host.pending.values()];
   if (!regular || !notification) throw new Error('Expected both schedules.');
-  expect(host.actions.find(type => type.id === notification.actionTypeId)?.actions?.map(action => action.id))
-    .toEqual(['snooze-30', 'snooze-60']);
+  await verifyActions(platform, notification);
+  const legacyNotification = { ...notification, actionTypeId: 'foliole-reminder-snooze' };
 
   const now = date.getTime() + 2 * 60_000;
   const clock = vi.spyOn(Date, 'now').mockReturnValue(now);
@@ -38,7 +40,11 @@ it.each([
   await listener.ready;
   try {
     host.pending.delete(notification.id);
-    await Promise.all([host.tap?.({ actionId, notification }), host.tap?.({ actionId, notification })]);
+    await host.tap?.({ actionId: 'background-' + actionId, notification });
+    expect([...host.pending.values()]).toEqual([regular]);
+    await Promise.all([
+      host.tap?.({ actionId, notification: legacyNotification }), host.tap?.({ actionId, notification: legacyNotification })
+    ]);
     const [kept, delayed] = [...host.pending.values()];
     expect(kept).toBe(regular);
     expect(delayed?.schedule?.at).toEqual(new Date(now + minutes * 60_000));
@@ -48,11 +54,12 @@ it.each([
     await listener.dispose();
     listener = listenForCompanionReminderFlow(openFlow);
     await listener.ready;
-    await host.tap?.({ actionId, notification });
+    await host.tap?.({ actionId, notification: legacyNotification });
     expect([...host.pending.values()]).toEqual([regular, delayed]);
 
     fireEvent.click(screen.getByRole('switch', { name: 'Enabled: 🌱' }));
     await waitFor(() => expect([...host.pending.values()]).toEqual([regular]));
+    expect(await authorized(notification)).toEqual([]);
     if (!delayed) throw new Error('Expected a delayed notification.');
     await host.tap?.({ actionId, notification: delayed });
     expect([...host.pending.values()]).toEqual([regular]);
@@ -61,3 +68,20 @@ it.each([
     await listener.dispose();
   }
 });
+
+async function verifyActions(platform: string, notification: NonNullable<ReturnType<typeof host.pending.get>>) {
+  const actions = platform === 'android'
+    ? host.androidJobs.get(notification.id)?.actions
+    : host.actions.find(type => type.id === notification.actionTypeId)?.actions;
+  expect(actions).toEqual([
+    { id: 'background-snooze-15', title: platform === 'android' ? '15 min later' : 'Snooze 15 minutes' },
+    { id: 'background-snooze-30', title: platform === 'android' ? '30 min later' : 'Snooze 30 minutes' },
+    { id: 'background-snooze-60', title: platform === 'android' ? '1 hr later' : 'Snooze 1 hour' }
+  ]);
+  expect(await authorized(notification)).toHaveLength(1);
+}
+
+function authorized(notification: NonNullable<ReturnType<typeof host.pending.get>>) {
+  return readIosCompanionDatabase(db => db.query(COMPANION_REMINDER_BACKGROUND_ACTION.authorizeSql,
+    [notification.extra?.ruleId, notification.extra?.revision]));
+}

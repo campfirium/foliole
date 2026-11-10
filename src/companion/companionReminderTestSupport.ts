@@ -8,10 +8,12 @@ import { afterEach, vi } from 'vitest';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import { closeIosCompanionDatabase, initializeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
+import type { AndroidReminderJob } from '../shared/platform/companion/settings/companionAndroidReminderNotifications';
 import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 
 const host = vi.hoisted(() => ({
   platform: 'android', bootstrap: null as NativeCompanionBootstrapState | null, granted: true, exactGranted: true,
+  androidJobs: new Map<number, AndroidReminderJob>(),
   actions: [] as RegisterActionTypesOptions['types'],
   pending: new Map<number, LocalNotificationSchema>(), tap: undefined as ((event: ActionPerformed) => Promise<void>) | undefined
 }));
@@ -19,7 +21,16 @@ const host = vi.hoisted(() => ({
 vi.mock('@capacitor/core', async () => {
   const { createCompanionNativeSyncStub } = await import('../shared/platform/companion/runtime/companionNativeSync.testSupport');
   return { Capacitor: { getPlatform: () => host.platform, isNativePlatform: () => true, isPluginAvailable: () => false },
-    registerPlugin: createCompanionNativeSyncStub };
+    registerPlugin: (name: string) => name === 'FolioleReminderNotifications' ? {
+      list: async () => ({ jobs: [...host.androidJobs.values()] }),
+      cancel: async ({ id }: { id: number }) => { host.androidJobs.delete(id); host.pending.delete(id); },
+      schedule: async (job: AndroidReminderJob) => {
+        host.androidJobs.set(job.id, job);
+        host.pending.set(job.id, { id: job.id, title: 'Foliole', body: job.body, isExactNotification: true,
+          actionTypeId: 'native-android', schedule: { at: new Date(job.at), repeats: false, allowWhileIdle: true },
+          extra: { owner: job.owner, ruleId: job.ruleId, revision: job.revision, occurrenceAt: job.at } });
+      }
+    } : createCompanionNativeSyncStub() };
 });
 vi.mock('../shared/platform/companionBootstrap', async importOriginal => ({
   ...await importOriginal<typeof import('../shared/platform/companionBootstrap')>(),
@@ -32,7 +43,7 @@ vi.mock('@capacitor/local-notifications', () => ({
       return { remove: async () => { host.tap = undefined; } };
     },
     registerActionTypes: async ({ types }: RegisterActionTypesOptions) => { host.actions = types; },
-    getPending: async () => ({ notifications: [...host.pending.values()] }),
+    getPending: async () => ({ notifications: [...host.pending.values()].filter(item => !host.androidJobs.has(item.id)) }),
     checkPermissions: async () => ({ display: host.granted ? 'granted' : 'denied' }),
     requestPermissions: async () => ({ display: host.granted ? 'granted' : 'denied' }),
     checkExactNotificationSetting: async () => ({ exact_alarm: host.exactGranted ? 'granted' : 'denied' }),
@@ -65,6 +76,7 @@ afterEach(async () => {
   if (sqlite?.open) sqlite.close();
   if (root) rmSync(root, { recursive: true, force: true });
   host.pending.clear();
+  host.androidJobs.clear();
   host.actions = [];
   window.localStorage.clear();
   host.granted = true;

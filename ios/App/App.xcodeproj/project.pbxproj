@@ -29,6 +29,7 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		50F010011FED79650016851F /* FolioleBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F010031FED79650016851F /* FolioleBridgeViewController.swift */; };
 		50F010021FED79650016851F /* FolioleCompanionBootstrapPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F010041FED79650016851F /* FolioleCompanionBootstrapPlugin.swift */; };
+		D2A94637071A4D0AA6B24D01 /* FolioleReminderNotificationDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2A94637071A4D0AA6B24D02 /* FolioleReminderNotificationDelegate.swift */; };
 		326B00000000000000000001 /* FolioleFramedSyncRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 326D00000000000000000001 /* FolioleFramedSyncRuntime */; };
 		326B00000000000000000002 /* FolioleFramedSyncHTTPTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000002 /* FolioleFramedSyncHTTPTransport.swift */; };
 		326B00000000000000000003 /* FolioleFramedSyncHTTPReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000003 /* FolioleFramedSyncHTTPReceiver.swift */; };
@@ -175,6 +176,7 @@
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		50F010031FED79650016851F /* FolioleBridgeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleBridgeViewController.swift; sourceTree = "<group>"; };
 		50F010041FED79650016851F /* FolioleCompanionBootstrapPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionBootstrapPlugin.swift; sourceTree = "<group>"; };
+		D2A94637071A4D0AA6B24D02 /* FolioleReminderNotificationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleReminderNotificationDelegate.swift; sourceTree = "<group>"; };
 		50F020061FED79650016851F /* companion-bridge-contract-definitions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "companion-bridge-contract-definitions.json"; sourceTree = "<group>"; };
 		50F020071FED79650016851F /* companion-sync-protocol-definitions.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "companion-sync-protocol-definitions.json"; sourceTree = "<group>"; };
 		50F021011FED79650016851F /* FolioleCompanionContractStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionContractStore.swift; sourceTree = "<group>"; };
@@ -328,6 +330,7 @@
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				50F010031FED79650016851F /* FolioleBridgeViewController.swift */,
 				50F010041FED79650016851F /* FolioleCompanionBootstrapPlugin.swift */,
+				D2A94637071A4D0AA6B24D02 /* FolioleReminderNotificationDelegate.swift */,
 				688100000000000000000002 /* FolioleCompanionAppDataFiles.swift */,
 				672DC90B7CFB246FC0F3B997 /* FolioleFolderBackupAttachmentPlugin.swift */,
 				7BAF75796B7B72FBA061C320 /* FolioleFolderBackupAttachments.swift */,
@@ -637,6 +640,7 @@
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				50F010011FED79650016851F /* FolioleBridgeViewController.swift in Sources */,
 				50F010021FED79650016851F /* FolioleCompanionBootstrapPlugin.swift in Sources */,
+				D2A94637071A4D0AA6B24D01 /* FolioleReminderNotificationDelegate.swift in Sources */,
 				688100000000000000000001 /* FolioleCompanionAppDataFiles.swift in Sources */,
 				0086CE83A4F2F2D01D990BF7 /* FolioleFolderBackupAttachmentPlugin.swift in Sources */,
 				C70EA252CA7C1F3B2F497ABA /* FolioleFolderBackupAttachments.swift in Sources */,

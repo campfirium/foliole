@@ -12,6 +12,7 @@ export function createCapacitorConfig(env: NodeJS.ProcessEnv = process.env): Cap
       // Native bridge logs serialize complete SQLite results on the WebView thread.
       loggingBehavior: env.FOLIOLE_DEV_LIVE_RELOAD === '1' ? 'debug' : 'none'
     },
+    ios: { handleApplicationNotifications: false },
     experimental: { ios: { spm: { swiftToolsVersion: '6.0' } } },
     plugins: {
       // MainActivity owns window insets so reading chrome can overlay a stable full-height canvas.

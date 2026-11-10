@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -10,7 +11,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         if ProcessInfo.processInfo.arguments.contains("--foliole-physical-acceptance") {
             application.isIdleTimerDisabled = true
         }
-        // Override point for customization after application launch.
+        UNUserNotificationCenter.current().delegate = FolioleReminderNotificationDelegate.shared
         return true
     }
 
