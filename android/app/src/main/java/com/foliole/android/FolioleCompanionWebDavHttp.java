@@ -28,9 +28,12 @@ import okio.BufferedSink;
 final class FolioleCompanionWebDavHttp {
     private static final int CHUNK_BYTES = 64 * 1024;
     private static final int MAX_CHUNKS = 1_000_000;
-    private static final String DIRECTORY = "foliole-[a-f0-9]{64}-(desktop|phone)/";
+    private static final String DIRECTION = "foliole-[a-f0-9]{64}-(desktop|phone)";
+    private static final String COLLECTIONS = DIRECTION + "-collections/";
+    private static final String DIRECTORY = "(?:" + DIRECTION + "/|" + COLLECTIONS
+        + "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/)";
     private static final String PACKET = "[0-9]{8}T[0-9]{6}\\.[0-9]{3}Z-[a-f0-9-]{36}(?:\\.asset)?\\.bin";
-    private static final Set<String> METHODS = Set.of("GET", "MKCOL", "MOVE", "PROPFIND", "PUT");
+    private static final Set<String> METHODS = Set.of("DELETE", "GET", "MKCOL", "MOVE", "PROPFIND", "PUT");
     private static final ConcurrentHashMap<String, Operation> ACTIVE = new ConcurrentHashMap<>();
     private static final OkHttpClient CLIENT = new OkHttpClient.Builder()
         .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
@@ -126,6 +129,10 @@ final class FolioleCompanionWebDavHttp {
         }
     }
 
+    static boolean isDeletableCollection(String path) {
+        return path.matches(DIRECTORY);
+    }
+
     private static Request buildRequest(PluginCall input, FramedSyncFiles files, Progress progress) {
         HttpUrl root = HttpUrl.get(input.getString("root", ""));
         HttpUrl url = HttpUrl.get(input.getString("url", ""));
@@ -138,13 +145,16 @@ final class FolioleCompanionWebDavHttp {
         Request.Builder builder = new Request.Builder().url(url).header("Accept-Encoding", "identity");
         switch (method) {
             case "PROPFIND":
-                if (!path.isEmpty() && !path.matches(DIRECTORY)) throw invalidPath();
+                if (!path.isEmpty() && !path.matches(DIRECTORY) && !path.matches(COLLECTIONS)) throw invalidPath();
                 String depth = input.getString("depth", "0");
                 if (!depth.equals("0") && !depth.equals("1")) throw invalidPath();
                 builder.header("Depth", depth);
                 break;
+            case "DELETE":
+                if (!isDeletableCollection(path)) throw invalidPath();
+                break;
             case "MKCOL":
-                if (!path.matches(DIRECTORY)) throw invalidPath();
+                if (!path.matches(DIRECTORY) && !path.matches(COLLECTIONS)) throw invalidPath();
                 break;
             case "GET":
                 if (!path.matches(DIRECTORY + PACKET + "(\\.partial)?")) throw invalidPath();

@@ -5,10 +5,12 @@ import { respondRequestSyncAttachments } from '../../../../../../lib/core/sync/r
 import { respondRequestSyncDatabase } from '../../../../../../lib/core/sync/requestSyncDatabaseResponse.js';
 import { withInboundAttachmentPreparation } from '../../../../../../lib/core/sync/requestSyncInboundAttachmentPreparation.js';
 import { parseRequestSyncPeerRound, respondRequestSyncRoundControl, touchRequestSyncStream } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
+import { createWebDavRelayInboundCleanup } from '../../../../../../lib/core/sync/webDavRelayCollectionCleanup.js';
 import { captureWebDavRelayLanBaseline, createWebDavRelayInboundBaselines } from '../../../../../../lib/core/sync/webDavRelayLanBaseline.js';
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 import { publishCompanionSyncApplied } from '../companionSyncApplied.js';
+import { captureCompanionWebDavRelayCleanup } from '../companionWebDavRelayCleanup.js';
 import { loadCompanionWebDavRelay } from '../companionWebDavRelayStore.js';
 import { loadCurrentCredential } from '../syncGroupProviderCredentialStore.js';
 
@@ -21,6 +23,7 @@ import { companionSyncPeerRoundOwner } from './companionSyncPeerRounds.js';
 
 /** Native authenticates the HTTP envelope; the shared receiver authenticates every encrypted frame. */
 const relayBaselines = createWebDavRelayInboundBaselines();
+const relayCleanup = createWebDavRelayInboundCleanup();
 
 type Response = { response_chunk_count: number };
 
@@ -55,15 +58,12 @@ async function respond(payload: Record<string, unknown>, parentSignal: AbortSign
       return receipt;
     };
     const receivedStream = stream;
-    if (mode === 'inventory' && round.mode !== 'single') {
-      const database = host;
-      await relayBaselines.capture(lease.signal, async () => captureWebDavRelayLanBaseline(
-        database, await loadCompanionWebDavRelay(), context, 'responder', lease.signal));
-    }
+    if (mode === 'inventory' && round.mode !== 'single') await captureRelayState(host, context, lease.signal);
     return await withInboundAttachmentPreparation(host, { lifecycle: lease.signal, signal, mode,
       single: round.mode === 'single' }, async prepared => {
       if (mode === 'round_finish') return await consume(
-        await respondRequestSyncRoundControl({ context, groupKey, stream: receivedStream, signal, roundId: round.id, onCompleted: async () => {
+        await respondRequestSyncRoundControl({ context, groupKey, stream: receivedStream, signal, roundId: round.id,
+          relayCleanup: await relayCleanup.read(lease.signal), onCompleted: async () => {
           await relayBaselines.confirm(lease.signal);
           await prepared.databaseRoundCompleted?.();
         } }));
@@ -85,6 +85,13 @@ async function respond(payload: Record<string, unknown>, parentSignal: AbortSign
     if (signal.aborted) rounds.finishInbound(context.initiatorDeviceId, round.id);
     await stream?.frames[Symbol.asyncIterator]().return?.();
   }
+}
+
+async function captureRelayState(host: Awaited<ReturnType<typeof currentCompanionRequestSyncDatabaseHost>>,
+  context: ReturnType<typeof readInboundRequest>['context'], signal: AbortSignal) {
+  await relayCleanup.capture(signal, () => captureCompanionWebDavRelayCleanup(host, context, 'responder', signal));
+  await relayBaselines.capture(signal, async () => captureWebDavRelayLanBaseline(
+    host, await loadCompanionWebDavRelay(), context, 'responder', signal));
 }
 
 function readInboundRequest(payload: Record<string, unknown>) {

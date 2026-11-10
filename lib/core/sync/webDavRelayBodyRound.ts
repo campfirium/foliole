@@ -6,7 +6,8 @@ import { freezeWebDavRelayBodyPacket, readWebDavRelayBodyOutbox, webDavRelayPack
   webDavRelayPacketDirectory, writeWebDavRelayBodyOutbox } from './webDavRelayBodyOutbox.js';
 import { receiveWebDavRelayBodyPackets } from './webDavRelayBodyReceive.js';
 import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
-import { publishWebDavRelayFile, webDavRelayStatus, type WebDavRelayRequest } from './webDavRelayPublication.js';
+import { ensureWebDavCollection } from './webDavRelayCollections.js';
+import { publishWebDavRelayFile, type WebDavRelayRequest } from './webDavRelayPublication.js';
 
 type Input = {
   host: RequestSyncDatabaseHost;
@@ -53,7 +54,7 @@ async function publishChanges(input: Input) {
     if (!state.packet) await host.write(db => writeWebDavRelayBodyOutbox(db, scope, { sequence: state.sequence, packet }));
     if (input.lanConnected()) return;
     if (!collectionReady) {
-      await ensureCollection(request, scope.outgoing);
+      await ensureWebDavCollection(request, scope.outgoing);
       collectionReady = true;
     }
     await input.assertScope();
@@ -67,14 +68,4 @@ async function publishChanges(input: Input) {
     input.progress.published++;
     await files.remove(webDavRelayPacketDirectory(scope));
   }
-}
-
-async function ensureCollection(request: WebDavRelayRequest, directory: URL) {
-  const probe = () => request(directory, { method: 'PROPFIND', headers: { Depth: '0' } }, webDavRelayStatus);
-  const existing = await probe();
-  if (existing === 207) return;
-  if (existing !== 404) throw new Error(`webdav_relay_collection_failed:${existing}`);
-  const created = await request(directory, { method: 'MKCOL' }, webDavRelayStatus);
-  if (created === 201 || (created === 405 && await probe() === 207)) return;
-  throw new Error(`webdav_relay_collection_failed:${created}`);
 }

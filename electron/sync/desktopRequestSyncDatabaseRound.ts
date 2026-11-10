@@ -7,6 +7,7 @@ import { runRequestSyncOverwriteRound } from '../../lib/core/sync/requestSyncOve
 import type { RequestSyncPeerRound } from '../../lib/core/sync/requestSyncPeerRound.js';
 import { loadSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadSyncGroupOverwriteProgress } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
+import { tryCaptureWebDavRelayCleanup } from '../../lib/core/sync/webDavRelayCollectionCleanup.js';
 import { captureWebDavRelayLanBaseline } from '../../lib/core/sync/webDavRelayLanBaseline.js';
 import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -18,6 +19,7 @@ import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.j
 import { exchangeDesktopRequestSyncInventory } from './desktopRequestSyncInventoryHttp.js';
 import { prepareDesktopRequestSyncOverwrite } from './desktopRequestSyncOverwrite.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
+import { captureDesktopWebDavRelayCleanup } from './desktopWebDavRelayCleanup.js';
 import { desktopWebDavRelayForPeer } from './desktopWebDavRelaySettings.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
@@ -73,6 +75,12 @@ async function runPreparedRound(host: import('../../lib/core/sync/requestSyncObj
     const binding = process.platform === 'darwin' ? await runWithDatabaseConnectionOwner(() =>
       desktopWebDavRelayForPeer(context.groupId, context.responderDeviceId)) : undefined;
     const confirmBaseline = await captureWebDavRelayLanBaseline(host, binding, context, 'initiator', input.signal);
+    const { peerRound } = input;
+    if (binding && peerRound) {
+      const cleanup = await tryCaptureWebDavRelayCleanup(() =>
+        captureDesktopWebDavRelayCleanup(host, context, 'initiator', peerRound.lease.signal));
+      if (cleanup) peerRound.relayCleanup = cleanup;
+    }
     const result = await runRequestSyncDatabaseRound(port, input.signal);
     if (result.complete) {
       await confirmBaseline?.();

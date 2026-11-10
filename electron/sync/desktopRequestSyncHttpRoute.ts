@@ -4,6 +4,7 @@ import { respondRequestSyncDatabase } from '../../lib/core/sync/requestSyncDatab
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import { respondRequestSyncRoundControl } from '../../lib/core/sync/requestSyncPeerRound.js';
 import type { RequestSyncAuthenticatedContext } from '../../lib/core/sync/requestSyncWire.js';
+import type { WebDavRelayCleanup } from '../../lib/core/sync/webDavRelayCollectionCleanup.js';
 
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
 import { createDesktopRequestSyncAttachmentHost } from './desktopRequestSyncAttachmentHost.js';
@@ -20,6 +21,7 @@ export async function respondDesktopRequestSyncHttp(host: RequestSyncDatabaseHos
   groupKey: Uint8Array;
   signal: AbortSignal;
   onProgress?: () => void;
+  relayCleanup?: WebDavRelayCleanup | undefined;
   payloadBudget?: FramedSyncPayloadBudget;
   consumePull?: (stream: FramedSyncStreamBody, signal?: AbortSignal, snapshot?: true) => Promise<void>;
 }) {

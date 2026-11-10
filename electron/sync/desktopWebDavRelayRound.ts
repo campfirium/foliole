@@ -38,9 +38,10 @@ export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityCo
       host, scope, groupKey, progress, lanConnected, attachments: await createDesktopRequestSyncAttachmentHost(host), files: createDesktopLibrarySyncFiles(databasePath),
       request: createDesktopWebDavRelayHttp(stats),
       assertScope: async () => {
+        const current = await loadScope();
         const active = await runWithDatabaseConnectionOwner(() => isDesktopCompanionSyncParticipating() &&
           loadDesktopBoundWebDavRelay()?.id === binding.id);
-        if (!active || (await loadScope())?.key !== scope.key) throw new Error('webdav_relay_scope_changed');
+        if (!active || current?.key !== scope.key || current.outgoing.href !== scope.outgoing.href) throw new Error('webdav_relay_scope_changed');
       }
     });
     completed = true;

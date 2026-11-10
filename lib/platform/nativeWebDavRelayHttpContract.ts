@@ -4,7 +4,7 @@ export type NativeWebDavRelayHttpRequest = NativeCompanionFramedPayloadBudgetOwn
   request_id: string;
   root: string;
   url: string;
-  method: 'GET' | 'MKCOL' | 'MOVE' | 'PROPFIND' | 'PUT';
+  method: 'DELETE' | 'GET' | 'MKCOL' | 'MOVE' | 'PROPFIND' | 'PUT';
   depth?: string;
   upload_directory?: string;
   upload_chunks?: number;

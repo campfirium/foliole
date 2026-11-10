@@ -1,4 +1,4 @@
-export type WebDavRelayMethod = 'GET' | 'MKCOL' | 'MOVE' | 'PROPFIND' | 'PUT';
+export type WebDavRelayMethod = 'DELETE' | 'GET' | 'MKCOL' | 'MOVE' | 'PROPFIND' | 'PUT';
 export type WebDavRelayRequest = <T>(url: URL, input: {
   method: WebDavRelayMethod;
   headers?: Record<string, string>;

@@ -10,10 +10,12 @@ import { runRequestSyncOverwriteRound } from '../../../../../../lib/core/sync/re
 import type { RequestSyncPeerRound } from '../../../../../../lib/core/sync/requestSyncPeerRound.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
+import { tryCaptureWebDavRelayCleanup } from '../../../../../../lib/core/sync/webDavRelayCollectionCleanup.js';
 import { captureWebDavRelayLanBaseline } from '../../../../../../lib/core/sync/webDavRelayLanBaseline.js';
 import type { SyncGroupMemberStatePayload } from '../../../../../../lib/platform/syncGroupMemberStateContract.js';
 import type { CompanionDesktopSyncProgress } from '../../../companionDesktopSyncTypes.js';
 import { withCompanionForegroundTimeMaintenance } from '../../runtime/companionForegroundTime.js';
+import { captureCompanionWebDavRelayCleanup } from '../companionWebDavRelayCleanup.js';
 import { loadCompanionWebDavRelay } from '../companionWebDavRelayStore.js';
 import { loadCurrentCredential } from '../syncGroupProviderCredentialStore.js';
 
@@ -118,6 +120,11 @@ async function completeDatabaseRound(host: RequestSyncDatabaseHost, port: Reques
   scope: { received: Set<string>; sent: Set<string>; workspaceChanged(): boolean }) {
   const { signal, peerRound } = input;
   const confirmBaseline = await captureWebDavRelayLanBaseline(host, await loadCompanionWebDavRelay(), context, 'initiator', signal);
+  if (peerRound) {
+    const cleanup = await tryCaptureWebDavRelayCleanup(() =>
+      captureCompanionWebDavRelayCleanup(host, context, 'initiator', peerRound.lease.signal));
+    if (cleanup) peerRound.relayCleanup = cleanup;
+  }
   const result = await withDeferredNodePriorities(() => runRequestSyncDatabaseRound(port, signal));
   if (result.complete) {
     await confirmBaseline?.();

@@ -35,7 +35,8 @@ export function runCompanionWebDavRelayRound(binding: WebDavRelayBinding, stats:
       request: createCompanionWebDavRelayHttp(binding.directory_url, files, owner, stats, signal),
       lanConnected: () => companionWebDavRelayLanConnected(binding),
       assertScope: async () => {
-        if ((await loadCompanionWebDavRelay())?.id !== binding.id || (await loadScope())?.key !== scope.key) {
+        const current = await loadScope();
+        if ((await loadCompanionWebDavRelay())?.id !== binding.id || current?.key !== scope.key || current.outgoing.href !== scope.outgoing.href) {
           throw new Error('webdav_relay_scope_changed');
         }
       }

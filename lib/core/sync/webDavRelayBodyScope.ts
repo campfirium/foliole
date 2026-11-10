@@ -7,6 +7,7 @@ import type { WebDavRelayBinding } from '../../platform/webDavRelayContract.js';
 import type { DbPort } from './dbPort.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from './framedSyncContract.js';
 import type { RequestSyncAuthenticatedContext } from './requestSyncWire.js';
+import { readRelayCollections, relayCollectionUrl } from './webDavRelayCollections.js';
 import { readWebDavRelayLanBaseline } from './webDavRelayLanBaseline.js';
 
 export async function readWebDavRelayBodyScope(db: DbPort, binding: WebDavRelayBinding, localDevice: string) {
@@ -35,7 +36,10 @@ export async function readWebDavRelayBodyScope(db: DbPort, binding: WebDavRelayB
   const outgoing = new URL(`foliole-${digest}-${desktop ? 'desktop' : 'phone'}/`, folder);
   const incoming = new URL(`foliole-${digest}-${desktop ? 'phone' : 'desktop'}/`, folder);
   const source = bytesToHex(sha256(new TextEncoder().encode(baseline.sourceEpoch)));
-  return { baseline, key: `webdav_relay_body:${digest}:${source}`, outgoing, incoming,
+  const key = `webdav_relay_body:${digest}:${source}`;
+  const collections = await readRelayCollections(db, key);
+  return { baseline, key, outgoing: relayCollectionUrl(outgoing, collections?.active ?? 'legacy'),
+    outgoingDirection: outgoing, incoming,
     send: context(binding.group_id, localDevice, epochs.localEpoch, peerDevice, epochs.peerEpoch),
     receive: context(binding.group_id, peerDevice, epochs.peerEpoch, localDevice, epochs.localEpoch) };
 }

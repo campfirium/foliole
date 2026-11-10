@@ -3,6 +3,7 @@ import { createServer, request as forward, type IncomingMessage, type OutgoingHt
 export function setupDav(upstream: string | undefined) {
   const files = new Map<string, Uint8Array>();
   const collections = new Set(['/']);
+  const deletions: string[] = [];
   let loseMove = false;
   const loseResponse = () => {
     const drop = loseMove;
@@ -17,6 +18,7 @@ export function setupDav(upstream: string | undefined) {
   };
   const server = createServer(async (req, res) => {
     const path = req.url!;
+    if (req.method === 'DELETE') deletions.push(path);
     if (upstream) {
       await forwardDav(upstream, req, res, size => { uploaded += size; }, size => { downloaded += size; }, loseResponse);
       return;
@@ -25,9 +27,12 @@ export function setupDav(upstream: string | undefined) {
       collections.add(path);
       return send(res, 201);
     }
+    if (req.method === 'DELETE') {
+      return send(res, deleteCollection(collections, files, path));
+    }
     if (req.method === 'PROPFIND') {
       if (!collections.has(path)) return send(res, 404);
-      const listed = [...files.keys()].filter(name => name.startsWith(path));
+      const listed = [...collections, ...files.keys()].filter(name => name.startsWith(path));
       return send(res, 207, `<D:multistatus xmlns:D="DAV:">${listed.map(name =>
         `<D:response><D:href>${name}</D:href></D:response>`).join('')}</D:multistatus>`);
     }
@@ -52,7 +57,14 @@ export function setupDav(upstream: string | undefined) {
     send(res, body ? 200 : 404, body);
   });
   const sandboxPath = upstream ? new URL(upstream).pathname : '/';
-  return { server, sandboxPath, dropNextMove: () => { loseMove = true; }, uploaded: () => uploaded, downloaded: () => downloaded };
+  return { server, sandboxPath, deletions, dropNextMove: () => { loseMove = true; }, uploaded: () => uploaded, downloaded: () => downloaded };
+}
+
+function deleteCollection(collections: Set<string>, files: Map<string, Uint8Array>, path: string) {
+  if (!collections.has(path)) return 404;
+  for (const name of collections) if (name.startsWith(path)) collections.delete(name);
+  for (const name of files.keys()) if (name.startsWith(path)) files.delete(name);
+  return 204;
 }
 
 async function forwardDav(upstream: string, req: IncomingMessage, res: ServerResponse,

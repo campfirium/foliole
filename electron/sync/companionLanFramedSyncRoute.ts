@@ -3,6 +3,7 @@ import type http from 'node:http';
 import { withInboundAttachmentPreparation } from '../../lib/core/sync/requestSyncInboundAttachmentPreparation.js';
 import { parseRequestSyncPeerRound, touchRequestSyncStream } from '../../lib/core/sync/requestSyncPeerRound.js';
 import type { SyncPeerRoundLease } from '../../lib/core/sync/syncPeerRoundOwnership.js';
+import { createWebDavRelayInboundCleanup } from '../../lib/core/sync/webDavRelayCollectionCleanup.js';
 import { captureWebDavRelayLanBaseline, createWebDavRelayInboundBaselines } from '../../lib/core/sync/webDavRelayLanBaseline.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopLocalNodeProof } from '../database/nodeVersionPeerProof.js';
@@ -21,9 +22,11 @@ import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDataba
 import { respondDesktopRequestSyncHttp } from './desktopRequestSyncHttpRoute.js';
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { desktopSyncPeerRoundOwner } from './desktopSyncPeerRoundOwner.js';
+import { captureDesktopWebDavRelayCleanup } from './desktopWebDavRelayCleanup.js';
 import { desktopWebDavRelayForPeer } from './desktopWebDavRelaySettings.js';
 
 const relayBaselines = createWebDavRelayInboundBaselines();
+const relayCleanup = createWebDavRelayInboundCleanup();
 
 export async function handleProductionCompanionFramedSyncPost(args: {
   deviceId: string;
@@ -92,7 +95,8 @@ function respondInbound(host: ReturnType<typeof createDesktopRequestSyncDatabase
   input: Parameters<typeof respondDesktopRequestSyncHttp>[1], lease: SyncPeerRoundLease, single: boolean) {
   return withInboundAttachmentPreparation(withRelayBaseline(host, input, lease, single), { lifecycle: lease.signal, signal: input.signal,
     mode: input.url.searchParams.get('request') ?? '', single },
-  prepared => respondDesktopRequestSyncHttp(prepared, input));
+  async prepared => respondDesktopRequestSyncHttp(prepared, { ...input,
+    relayCleanup: await relayCleanup.read(lease.signal) }));
 }
 
 function withRelayBaseline(host: ReturnType<typeof createDesktopRequestSyncDatabaseHost>,
@@ -103,6 +107,8 @@ function withRelayBaseline(host: ReturnType<typeof createDesktopRequestSyncDatab
     ...host,
     readSnapshot: async (read, signal) => {
       if (input.url.searchParams.get('request') === 'inventory') {
+        await relayCleanup.capture(lease.signal, () =>
+          captureDesktopWebDavRelayCleanup(host, context, 'responder', lease.signal));
         await relayBaselines.capture(lease.signal, async () => {
           const binding = await runWithDatabaseConnectionOwner(() =>
             desktopWebDavRelayForPeer(context.groupId, context.initiatorDeviceId));

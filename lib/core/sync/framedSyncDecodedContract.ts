@@ -156,6 +156,7 @@ function validateRemainingPayload(payloadCase: ProtocolPayloadCase, payload: Rec
     fixedBytes(payload.roundId, 16, 'round_id'); enumValue(payload.result, 2, 'round_result');
     if (payload.databaseConfirmed !== undefined && typeof payload.databaseConfirmed !== 'boolean') throw new Error('protocol_database_confirmed_invalid');
     if (payload.attachmentsConfirmed !== undefined && typeof payload.attachmentsConfirmed !== 'boolean') throw new Error('protocol_attachments_confirmed_invalid');
+    if (payload.relayCleanup !== undefined && typeof payload.relayCleanup !== 'string') throw new Error('protocol_relay_cleanup_invalid');
     validateIdentityList(payload.deferredFacts);
   } else if (payloadCase === 'transfer_termination') {
     digest(payload.transferId, 'transfer_id'); text(payload.memberId, 'member_id');

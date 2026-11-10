@@ -8,6 +8,7 @@ import { prepareWebDavAttachment, WEB_DAV_ATTACHMENT_SUFFIX } from './webDavRela
 import { stageWebDavRelayPacket, webDavRelayPacketBytes, webDavRelayPacketDirectory,
   webDavRelayPacketSchema } from './webDavRelayBodyOutbox.js';
 import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
+import { recordRelayCollectionAttachment } from './webDavRelayCollections.js';
 import { publishWebDavRelayFile, type WebDavRelayRequest } from './webDavRelayPublication.js';
 
 const pendingSchema = webDavRelayPacketSchema.pick({ name: true, chunks: true, bytes: true })
@@ -28,7 +29,7 @@ type Input = {
 };
 
 const prefix = (scope: WebDavRelayBodyScope) => `${scope.key}:attachment:`;
-const pendingKey = (scope: WebDavRelayBodyScope) => `${scope.key}:attachment-outbox`;
+export const webDavRelayAttachmentOutboxKey = (scope: WebDavRelayBodyScope) => `${scope.key}:attachment-outbox`;
 
 export async function enqueueWebDavRelayAttachments(db: DbPort, scope: WebDavRelayBodyScope, keys: readonly string[]) {
   if (!keys.length) return;
@@ -44,7 +45,7 @@ export async function markWebDavRelayAttachment(db: DbPort, scope: WebDavRelayBo
 
 export async function resumeWebDavRelayAttachment(input: Input) {
   const [row] = await input.host.readSnapshot(db => db.query<{ value: string }>(
-    'SELECT value FROM sync_group_metadata WHERE key = ?', [pendingKey(input.scope)]), input.signal);
+    'SELECT value FROM sync_group_metadata WHERE key = ?', [webDavRelayAttachmentOutboxKey(input.scope)]), input.signal);
   if (!row) return true;
   if (input.lanConnected()) return false;
   input.progress.retries++;
@@ -78,7 +79,7 @@ async function freeze(input: Input, key: string) {
       return { key, ...await stageWebDavRelayPacket(input.files, scope, wire, WEB_DAV_ATTACHMENT_SUFFIX) };
     }, { shouldYield: () => { signal?.throwIfAborted(); return input.lanConnected(); } });
     if (pending) await host.write(db => db.run('INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
-      [pendingKey(scope), JSON.stringify(pending), new Date().toISOString()]));
+      [webDavRelayAttachmentOutboxKey(scope), JSON.stringify(pending), new Date().toISOString()]));
     else await host.write(db => markWebDavRelayAttachment(db, scope, key, 'done'));
     return pending;
   } catch (error) {
@@ -96,7 +97,8 @@ async function publish(input: Input, pending: Pending) {
   await publishWebDavRelayFile(request, new URL(pending.name, scope.outgoing), webDavRelayPacketBytes(files, scope, pending));
   await host.write(db => db.transaction(async tx => {
     await markWebDavRelayAttachment(tx, scope, pending.key, 'done');
-    await tx.run('DELETE FROM sync_group_metadata WHERE key = ?', [pendingKey(scope)]);
+    await recordRelayCollectionAttachment(tx, scope.key, pending.key);
+    await tx.run('DELETE FROM sync_group_metadata WHERE key = ?', [webDavRelayAttachmentOutboxKey(scope)]);
   }));
   input.progress.published++;
   await files.remove(webDavRelayPacketDirectory(scope));
