@@ -8,6 +8,7 @@ export function CompanionReminderChoice<Value extends string>(props: {
   value: Value;
   options: Readonly<Record<Value, string>>;
   disabled: boolean;
+  disabledValues?: readonly Value[];
   onChange(value: Value): void;
 }) {
   const [open, setOpen] = useState(false);
@@ -24,7 +25,8 @@ export function CompanionReminderChoice<Value extends string>(props: {
     <CompanionBottomSheet open={open} onOpenChange={setOpen} title={props.label}>
       {(Object.keys(props.options) as Value[]).map(value => (
         <button type="button" key={value} aria-current={value === props.value ? 'true' : undefined}
-          className="block min-h-11 w-full border-b border-companion-divider text-left text-base last:border-0"
+          disabled={props.disabledValues?.includes(value)}
+          className="block min-h-11 w-full border-b border-companion-divider text-left text-base last:border-0 disabled:opacity-50"
           onClick={() => { props.onChange(value); setOpen(false); }}>
           {props.options[value]}
         </button>

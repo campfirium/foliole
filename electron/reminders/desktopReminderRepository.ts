@@ -46,12 +46,16 @@ export function saveDesktopReminder(draft: DesktopReminderDraft): ReminderRule {
   const device = loadDesktopReminderDevice();
   const previous = draft.previous && loadDesktopReminder(draft.previous.id);
   if (draft.previous && (!previous || !isReminderForDevice(previous, device) ||
-    previous.revision !== draft.previous.revision || previous.trigger.kind !== 'daily')) {
+    previous.revision !== draft.previous.revision || previous.trigger.kind === 'once')) {
+    throw new Error('Reminder changed or is unavailable on this device.');
+  }
+  if (!draft.previous && draft.preset && loadDesktopReminders().some(rule => rule.preset === draft.preset)) {
     throw new Error('Reminder changed or is unavailable on this device.');
   }
   const rule = reminderRuleSchema.parse({
     id: previous?.id ?? randomUUID(), revision: randomUUID(), device,
-    trigger: { kind: 'daily', time: draft.time }, message: draft.message, enabled: draft.enabled
+    trigger: draft.trigger, message: draft.message, enabled: draft.enabled, destination: draft.destination,
+    preset: previous ? previous.preset : draft.preset
   });
   const key = reminderSettingKey(rule.id);
   const valueJson = JSON.stringify(rule);

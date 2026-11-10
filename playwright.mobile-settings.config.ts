@@ -6,7 +6,7 @@ const baseURL = 'http://127.0.0.1:4184';
 
 export default defineConfig({
   ...baseConfig,
-  testMatch: 'companion-settings-sheets.spec.ts',
+  testMatch: ['companion-settings-sheets.spec.ts', 'companion-dive-reminder.spec.ts'],
   workers: 1,
   use: { ...baseConfig.use, baseURL },
   webServer: {

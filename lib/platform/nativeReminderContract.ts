@@ -5,8 +5,11 @@ export const NATIVE_REMINDER_COMMANDS = {
   saveDesktopReminder: 'save_desktop_reminder'
 } as const;
 
-export type DesktopReminderDraft = Pick<ReminderRule, 'message' | 'enabled'> & {
-  time: string;
+export const DESKTOP_REMINDER_OPEN_DIVE_PREFIX = '__reminder_open_dive__:';
+export const DESKTOP_REMINDER_OPEN_FLOW = '__reminder_open_flow__';
+
+export type DesktopReminderDraft = Pick<ReminderRule, 'message' | 'enabled' | 'destination' | 'preset'> & {
+  trigger: Exclude<ReminderRule['trigger'], { kind: 'once' }>;
   previous?: Pick<ReminderRule, 'id' | 'revision'>;
 };
 

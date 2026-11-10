@@ -9,7 +9,7 @@ import {
 import { loadCompanionReminderDevice, loadCompanionReminderRules } from './companionReminderRepository';
 import { snoozeCompanionReminder } from './companionReminderSnooze';
 
-export function listenForCompanionReminderFlow(onOpenFlow: () => void) {
+export function listenForCompanionReminderFlow(onOpenFlow: () => void, onOpenDive?: (diveId: string) => void) {
   let active = true;
   const subscription = LocalNotifications.addListener('localNotificationActionPerformed', async event => {
     const extra = event.notification?.extra;
@@ -24,6 +24,7 @@ export function listenForCompanionReminderFlow(onOpenFlow: () => void) {
         if (!active || !rule?.enabled || !isReminderForDevice(rule, device)) return;
         if (minutes) await snoozeCompanionReminder(rule, event.notification, minutes, actionAt);
         else if (rule.destination === 'flow') onOpenFlow();
+        else if (rule.destination) onOpenDive?.(rule.destination.diveId);
       });
     } catch (error) {
       logRuntimeError('Reminder notification action failed', { area: 'native', action: event.actionId, error });

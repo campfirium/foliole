@@ -20,6 +20,7 @@ import {
   type DirectoryListItem
 } from './CompanionDirectoryModel';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
+import { CompanionDiveReminderMenu } from './CompanionDiveReminderMenu';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import { useCompanionDirectorySections } from './useCompanionDirectorySections';
 import { useCompanionExternalDirectory, useCompanionExternalDocument } from './useCompanionExternalDirectory';
@@ -104,9 +105,12 @@ function CompanionDirectoryListContent(props: {
   const copy = id === VIRTUAL_PUBLISHED_NODE_ID || id === VIRTUAL_SHELVED_NODE_ID || id === VIRTUAL_REMOVED_NODE_ID ? virtualEmptyCopy[id] : null;
   return (
     <section className="companion-page-start">
-      {dive && props.onStartDive ? <AppButton className="mb-3 min-h-11" onClick={() => props.onStartDive?.(dive.id)}>
-        {t('desktop.nodeList.dive.startFlow')}
-      </AppButton> : null}
+      {dive && <div className="mb-3 flex flex-wrap items-center justify-between gap-2 empty:hidden">
+        {props.onStartDive && <AppButton className="min-h-11" onClick={() => props.onStartDive?.(dive.id)}>
+          {t('desktop.nodeList.dive.startFlow')}
+        </AppButton>}
+        <CompanionDiveReminderMenu dive={dive} />
+      </div>}
       <CompanionDirectoryList
         directory={props.directory}
         viewKey={props.viewKey}

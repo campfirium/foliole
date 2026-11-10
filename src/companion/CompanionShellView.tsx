@@ -1,4 +1,7 @@
+import { useCallback } from 'react';
 import { flushSync } from 'react-dom';
+
+import { ReminderDraftProvider } from '../features/settings/context/ReminderDraftRequest';
 
 import {
   companionMainBottomInsetClassName,
@@ -115,10 +118,16 @@ function FlowHistorySurface(props: { children: React.ReactNode; model: Companion
 export function CompanionShellView(props: { model: CompanionShellModel }) {
   const { model } = props;
   const page = resolveMainPage(model);
+  const { setSettingsPage, surface: { handleTabAction } } = model;
+  const openReminders = useCallback(() => {
+    handleTabAction('more');
+    setSettingsPage('reminders');
+  }, [handleTabAction, setSettingsPage]);
   // Mount and focus the editor during the tap so the WebView can open the keyboard.
   const openFlowCapture = model.surface.activeAction === 'review' || model.surface.isFlowBrowsing
     ? () => flushSync(() => model.setIsCaptureSheetOpen(true)) : null;
   return (
+    <ReminderDraftProvider openReminders={openReminders}>
     <CompanionFlowCaptureContext.Provider value={openFlowCapture}>
     <FlowHistorySurface model={model}>
       {import.meta.env.DEV && window.__FOLIOLE_COMPANION_PREVIEW_HOST__ !== undefined ? (
@@ -161,5 +170,6 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
       />
     </FlowHistorySurface>
     </CompanionFlowCaptureContext.Provider>
+    </ReminderDraftProvider>
   );
 }

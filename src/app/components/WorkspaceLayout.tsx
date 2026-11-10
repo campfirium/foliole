@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { readDiveNode } from '../../../lib/core/nodes/dive';
+import { ReminderDraftProvider } from '../../features/settings/context/ReminderDraftRequest';
 import { FlowExitHereContext } from '../../shared/ui/FlowExitHereContext';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
@@ -40,10 +41,14 @@ export function WorkspaceLayout(props: WorkspaceLayoutProps) {
   const canExitHere = props.review.isStudyMode && props.navigation.activeNodeId
     && props.navigation.activeNodeId !== props.review.reviewCurrentNodeId
     && !props.externalLibrary.isExternalViewOpen && !props.trash.isTrashViewOpen;
+  const { onOpenSettings } = props.settings;
+  const openReminders = useCallback(() => onOpenSettings('reminders'), [onOpenSettings]);
   return <FlowExitHereContext.Provider value={canExitHere ? props.review.onExitFlowHere ?? null : null}>
     <DiveFlowActionContext.Provider value={props.review.onOpenDiveFlow}>
       <DiveFlowCheckpointContext.Provider value={checkpoint}>
-        <WorkspaceLayoutMain {...props} />
+        <ReminderDraftProvider openReminders={openReminders}>
+          <WorkspaceLayoutMain {...props} />
+        </ReminderDraftProvider>
       </DiveFlowCheckpointContext.Provider>
     </DiveFlowActionContext.Provider>
   </FlowExitHereContext.Provider>;

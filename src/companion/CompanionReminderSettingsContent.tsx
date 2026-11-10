@@ -1,8 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
 
+import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { DEFAULT_REMINDER_PRESETS } from '../../lib/core/reminders/reminderPresets';
 import {
   isReminderForDevice, isReminderTriggerPast, type ReminderDevice, type ReminderRule
 } from '../../lib/core/reminders/reminderRule';
+import { useReminderDraftRequest } from '../features/settings/context/ReminderDraftRequest';
+import { listVisibleDives } from '../shared/diveMembership';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { reconcileCompanionReminders } from '../shared/platform/companion/settings/companionReminderNotifications';
 import {
@@ -16,14 +20,10 @@ import { CompanionReminderEditor, type ReminderDraft } from './CompanionReminder
 import { CompanionSettingsDetail } from './CompanionSettingsContent';
 
 function withDefaultRules(rules: ReminderRule[], device: ReminderDevice) {
-  const defaults = [
-    { preset: 'seedling', message: '🌱', trigger: { kind: 'daily', time: '20:00' }, destination: 'flow' },
-    { preset: 'coffee', message: '☕', trigger: { kind: 'foreground', minutes: 20 } }
-  ] as const;
-  return [...rules, ...defaults.filter(defaultRule => !rules.some(rule =>
+  return [...rules, ...DEFAULT_REMINDER_PRESETS.filter(defaultRule => !rules.some(rule =>
     rule.preset === defaultRule.preset && isReminderForDevice(rule, device)
   )).map(rule => ({
-    ...rule, id: createCompanionUuid(), revision: createCompanionUuid(), device, enabled: false
+    ...rule, id: createCompanionUuid(), revision: createCompanionUuid(), device
   }))];
 }
 
@@ -81,9 +81,16 @@ function useReminderSettings() {
   return { busy, device, draft, feedback, rules, save, setDraft, toggle };
 }
 
-export function CompanionReminderSettingsContent(props: { onBack(): void }) {
+export function CompanionReminderSettingsContent(props: { onBack(): void; snapshot?: WorkspaceSnapshot | null }) {
   const t = useTranslation();
   const { busy, device, draft, feedback, rules, save, setDraft, toggle } = useReminderSettings();
+  const takeDive = useReminderDraftRequest()?.takeDive;
+  useEffect(() => {
+    const dive = takeDive?.();
+    if (dive) setDraft({ message: dive.title, trigger: { kind: 'daily', time: '20:00' },
+      destination: { kind: 'dive', diveId: dive.id } });
+  }, [setDraft, takeDive]);
+  const dives = props.snapshot ? listVisibleDives(props.snapshot) : [];
   const localRules = device ? rules.filter(rule => isReminderForDevice(rule, device)) : [];
   const edit = (rule: ReminderRule) => setDraft({
     id: rule.id, message: rule.message, trigger: rule.trigger, destination: rule.destination
@@ -94,7 +101,7 @@ export function CompanionReminderSettingsContent(props: { onBack(): void }) {
   return (
     <CompanionSettingsDetail onBack={props.onBack} page="reminders" title={t('settings.reminders.title')}>
       <div className="space-y-2 py-2">
-        {draft ? <CompanionReminderEditor busy={busy} draft={draft} onChange={setDraft}
+        {draft ? <CompanionReminderEditor busy={busy} draft={draft} dives={dives} onChange={setDraft}
           onCancel={() => setDraft(null)} onSave={save} /> : <>
           {device && localRules.length > 0 && <CompanionListSection isFirst>
             {localRules.map(rule => {
@@ -104,13 +111,16 @@ export function CompanionReminderSettingsContent(props: { onBack(): void }) {
                 : rule.trigger.kind === 'foreground'
                   ? t('settings.reminders.foregroundAt', { minutes: rule.trigger.minutes })
                   : t('settings.reminders.onceAt', { time: new Date(rule.trigger.at).toLocaleString() });
+              const target = rule.destination;
+              const destination = target === 'flow' ? t('settings.reminders.openFlow') : target &&
+                (dives.find(dive => dive.id === target.diveId)?.title ?? t('settings.reminders.diveUnavailable'));
               const detail = expired ? t('settings.reminders.timePassed') : t('settings.reminders.thisDevice');
               return <div key={rule.id} className="flex min-h-16 items-center gap-3 border-b border-companion-divider last:border-b-0">
                 <button type="button" disabled={busy} className="min-h-16 min-w-0 flex-1 py-3 text-left"
                   aria-label={`${t('settings.reminders.edit')}: ${rule.message}`} onClick={() => edit(rule)}>
                   <span className="block break-words text-lg font-medium">{rule.message}</span>
                   <span className="mt-1 block text-base text-companion-text-secondary">
-                    {[schedule, detail, rule.destination === 'flow' && t('settings.reminders.openFlow')].filter(Boolean).join(' · ')}
+                    {[schedule, detail, destination].filter(Boolean).join(' · ')}
                   </span>
                 </button>
                 <AppSwitch className="shrink-0" aria-label={`${t('settings.reminders.enabled')}: ${rule.message}`}

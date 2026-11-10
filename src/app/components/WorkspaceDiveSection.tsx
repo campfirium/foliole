@@ -1,4 +1,4 @@
-import { FolderPlus, ListMinus, Play, Trash2 } from 'lucide-react';
+import { Bell, FolderPlus, ListMinus, Play, Trash2 } from 'lucide-react';
 import { useContext, useEffect, useState, type MouseEvent } from 'react';
 
 import { DIVE_SECTION_ROW_ID, type Dive } from '../../../lib/core/nodes/dive';
@@ -9,6 +9,7 @@ import { NodeRenameContextMenuItem } from '../../features/nodes/components/NodeR
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import { requestNodeRename } from '../../features/nodes/components/NodeTreeRowRename';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { useReminderDraftRequest } from '../../features/settings/context/ReminderDraftRequest';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { resolveDiveMembership } from '../../shared/diveMembership';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -62,6 +63,7 @@ function RemoveDiveSourceMenuItem({ source, onClose }: { source: DiveSourceSelec
 function DiveContextMenu(props: { context: Context; dive: Dive | undefined; onClose: () => void; onCreate: () => void }) {
   const t = useTranslation();
   const { context, dive, onClose } = props;
+  const reminderDraft = useReminderDraftRequest();
   return (
     <AppDropdownMenu onOpenChange={(open) => { if (!open) onClose(); }} open>
       <AppDropdownMenuTrigger asChild>
@@ -78,6 +80,10 @@ function DiveContextMenu(props: { context: Context; dive: Dive | undefined; onCl
               </NodeContextMenuItem>
             ) : null}
             {dive ? <DiveFlowMenuItem dive={dive} onClose={onClose} /> : null}
+            {dive && reminderDraft && <NodeContextMenuItem icon={Bell} onSelect={() => {
+              onClose();
+              reminderDraft.createForDive(dive);
+            }}>{t('settings.reminders.createForDive')}</NodeContextMenuItem>}
             {props.dive ? <ConvertDiveDirectoryMenuItem nodeId={props.dive.id} target="index" onClose={onClose} /> : null}
             <NodeRenameContextMenuItem onSelect={() => { onClose(); requestNodeRename(context.id); }} />
             {props.dive ? <DeleteDiveMenuItem diveId={props.dive.id} onClose={onClose} /> : null}

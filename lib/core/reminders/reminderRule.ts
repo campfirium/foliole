@@ -17,7 +17,7 @@ export const reminderRuleSchema = z.object({
     z.object({ kind: z.literal('once'), at: z.iso.datetime() })
   ]),
   preset: z.enum(['seedling', 'coffee']).optional(),
-  destination: z.literal('flow').optional(),
+  destination: z.union([z.literal('flow'), z.object({ kind: z.literal('dive'), diveId: z.string().min(1) })]).optional(),
   device,
   enabled: z.boolean()
 });

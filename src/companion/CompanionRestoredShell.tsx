@@ -195,7 +195,10 @@ export function CompanionRestoredShell(props: {
   const model = useCompanionShellModel(props.workspaceSync);
   useCompanionAndroidBack(model);
   useCompanionReminderNavigation(props.bootstrapState.database_ready && props.workspaceSync.isWorkspaceSyncStateReady,
-    props.workspaceSync.state.workspace_snapshot?.libraryScope, () => model.handleNavigationAction('review'));
+    props.workspaceSync.state.workspace_snapshot, {
+      openFlow: () => model.handleNavigationAction('review'),
+      openDive: scope => { void model.surface.openDiveFlow(scope); }
+    });
   useCompanionReviewTraining(props.bootstrapState.database_ready && model.workspaceSync.isWorkspaceSyncStateReady,
     model.surface.activeAction === 'review' && !model.surface.isFlowBrowsing, model.workspaceSync.state.workspace_snapshot);
 

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffectEvent, useMemo } from 'react';
 
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import type { CommandPaletteItem } from '../../shared/commands/types';
@@ -12,6 +12,7 @@ import { buildControllerGoToNodeState } from './appGoToNodeState';
 import { buildHotkeySettings } from './appHotkeySettings';
 import { buildControllerMoveToNodeState } from './appMoveToNodeState';
 import { buildControllerSearchState } from './appSearchState';
+import { runReminderDiveCommand } from './reminderDiveNavigation';
 import { useCommandShortcutState } from './reviewHotkeysState';
 import { useAppCommandShortcutDispatcher } from './useAppCommandShortcutDispatcher';
 import { useAppCommandSurfaceShortcuts } from './useAppCommandSurfaceShortcuts';
@@ -23,6 +24,7 @@ function useAppCommandShortcuts(args: {
   controller: ReturnType<typeof useWorkspaceControllerState>;
   hotkeys: ReturnType<typeof useCommandShortcutState>;
   paletteState: ReturnType<typeof buildControllerPaletteState>;
+  openDiveFlow: WorkspaceLayoutProps['review']['onOpenDiveFlow'];
 }) {
   const isCommandSurfaceOpen =
     args.controller.runtime.isCommandPaletteOpen ||
@@ -35,7 +37,11 @@ function useAppCommandShortcuts(args: {
     isCommandSurfaceOpen,
     runCommand: args.paletteState.onRunCommand
   });
-  useNativeCommandMenu(args.paletteState.items, runGuardedCommand);
+  const t = useTranslation();
+  const runNativeCommand = useEffectEvent((id: string) => {
+    if (!runReminderDiveCommand(id, args.openDiveFlow, t)) runGuardedCommand(id);
+  });
+  useNativeCommandMenu(args.paletteState.items, runNativeCommand);
   useAppCommandSurfaceShortcuts({
     isCommandPaletteOpen: args.controller.runtime.isCommandPaletteOpen,
     isSearchPaletteOpen: args.controller.runtime.isSearchPaletteOpen,
@@ -118,7 +124,8 @@ export function useControllerAuxiliaryState(args: {
   const moveToNodeState = buildControllerMoveToNodeState({ runtime: args.controller.runtime, ws: args.ws });
   const searchState = buildAuxiliarySearchState(args);
 
-  useAppCommandShortcuts({ controller: args.controller, hotkeys: args.hotkeys, paletteState });
+  useAppCommandShortcuts({ controller: args.controller, hotkeys: args.hotkeys, paletteState,
+    openDiveFlow: args.layoutProps.review.onOpenDiveFlow });
   const hotkeySettings = useMemo(
     () => buildHotkeySettings(args.paletteItems, args.hotkeys),
     [args.paletteItems, args.hotkeys]

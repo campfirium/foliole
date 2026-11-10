@@ -1,16 +1,19 @@
 import type { FormEvent } from 'react';
 
+import type { Dive } from '../../lib/core/nodes/dive';
 import { isReminderTriggerPast, type ReminderRule } from '../../lib/core/reminders/reminderRule';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppButton, AppInput } from '../shared/ui';
 
 import { CompanionReminderChoice } from './CompanionReminderChoice';
+import { CompanionReminderDestinationFields } from './CompanionReminderDestinationFields';
 
 export type ReminderDraft = { id?: string; message: string; trigger: ReminderRule['trigger']; destination?: ReminderRule['destination'] };
 
 export function CompanionReminderEditor(props: {
   busy: boolean;
   draft: ReminderDraft;
+  dives: readonly Dive[];
   onCancel(): void;
   onChange(value: ReminderDraft): void;
   onSave(event: FormEvent<HTMLFormElement>): Promise<void>;
@@ -45,11 +48,8 @@ export function CompanionReminderEditor(props: {
             onChange={event => onChange({ ...draft, trigger: { kind: 'foreground', minutes: Number(event.currentTarget.value) } })} />
         </label>
         : <ScheduledFields busy={busy} trigger={trigger} onChange={next => onChange({ ...draft, trigger: next })} />}
-      <div className="border-t border-companion-divider pt-2">
-        <CompanionReminderChoice label={t('settings.reminders.onTap')} value={draft.destination ?? 'none'}
-          options={{ none: t('settings.reminders.noDestination'), flow: t('settings.reminders.openFlow') }}
-          disabled={busy} onChange={value => onChange({ ...draft, destination: value === 'flow' ? value : undefined })} />
-      </div>
+      <CompanionReminderDestinationFields destination={draft.destination} dives={props.dives} disabled={busy}
+        onChange={destination => onChange({ ...draft, destination })} />
       <dl className="flex min-h-11 items-center justify-between gap-3 border-t border-companion-divider pt-2 text-base">
         <dt className="font-medium">{t('settings.reminders.device')}</dt>
         <dd className="text-companion-text-secondary">{t('settings.reminders.thisDevice')}</dd>
@@ -57,7 +57,7 @@ export function CompanionReminderEditor(props: {
     </div>
     <div className="flex flex-wrap justify-end gap-2 border-t border-companion-divider pt-4">
       <AppButton variant="ghost" className="min-h-11" disabled={busy} onClick={props.onCancel}>{t('common.cancel')}</AppButton>
-      <AppButton variant="emphasis" className="min-h-11" type="submit" loading={busy} disabled={expired}>{t('settings.reminders.save')}</AppButton>
+      <AppButton variant="emphasis" className="min-h-11" type="submit" loading={busy} disabled={expired || (typeof draft.destination === 'object' && !draft.destination.diveId)}>{t('settings.reminders.save')}</AppButton>
     </div>
   </form>;
 }

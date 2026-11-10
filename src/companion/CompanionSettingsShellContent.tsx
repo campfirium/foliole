@@ -101,7 +101,8 @@ function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
   if (props.settingsPage === 'backup') return <CompanionFolderDatabaseBackupSection />;
   if (props.settingsPage === 'attachments') return <SettingsAttachmentStorageSection mobile unavailable={getCompanionRuntimeCapability().kind === 'browser-preview'} />;
   if (props.settingsPage === 'clozeGuard') return <CompanionClozeGuardSettingsContent />;
-  if (props.settingsPage === 'reminders') return <CompanionReminderSettingsContent onBack={props.onBackToSettingsList} />;
+  if (props.settingsPage === 'reminders') return <CompanionReminderSettingsContent onBack={props.onBackToSettingsList}
+    snapshot={props.workspaceSync.state.workspace_snapshot} />;
   if (props.settingsPage === 'learning') return <CompanionLearningSettingsContent />;
   if (props.settingsPage === 'reviewStatistics' || props.settingsPage === 'foregroundTime') return <CompanionReviewStatisticsContent
     libraryScope={props.workspaceSync.state.workspace_snapshot?.libraryScope ?? ''} />;

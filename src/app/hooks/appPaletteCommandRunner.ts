@@ -1,3 +1,4 @@
+import { DESKTOP_REMINDER_OPEN_FLOW } from '../../../lib/platform/nativeReminderContract';
 import type { PdfReadingMode } from '../../features/settings/model/appearanceSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import type { CommandPaletteItem } from '../../shared/commands/types';
@@ -204,14 +205,14 @@ function createDocumentScrollActions(args: PaletteCommandRunnerArgs) {
 }
 
 export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
+  const enterReviewMode = () => enterReviewModeSession({
+    onReviewSessionStarted: args.openNotesView,
+    startReviewSession: args.startReviewSession,
+    startStudyMode: args.startStudyMode
+  });
   const toggleReviewMode = () =>
     runReviewModeToggle(args.isReviewMode, {
-      enterReviewMode: () =>
-        enterReviewModeSession({
-          onReviewSessionStarted: args.openNotesView,
-          startReviewSession: args.startReviewSession,
-          startStudyMode: args.startStudyMode
-        }),
+      enterReviewMode,
       exitReviewMode: () => {
         args.exitReviewSession();
         args.exitStudyMode();
@@ -219,6 +220,10 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
     });
 
   return (id: string) => {
+    if (id === DESKTOP_REMINDER_OPEN_FLOW) {
+      void enterReviewMode();
+      return;
+    }
     const canRun =
       FRESH_STATE_COMMAND_IDS.has(id) ||
       CONTEXTUAL_COMMAND_IDS.has(id) ||

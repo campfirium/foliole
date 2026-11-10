@@ -9,6 +9,7 @@ import { installGlobalCaptureToastOpenHandler } from './globalClipToastNavigatio
 import { runGlobalClipToInbox } from './globalClipToInbox.js';
 import { installGlobalClipToInboxTestHook } from './globalClipToInboxTestHook.js';
 import { getMainWindow } from './mainWindowRegistry.js';
+import { installDesktopReminderNavigation } from './reminders/desktopReminderNavigation.js';
 
 function startAgentControlApiLifecycle() {
   void (async () => {
@@ -29,6 +30,7 @@ export function installDatabaseBackedEntryPoints(
   installGlobalClipShortcut({ captureToInbox: runGlobalClipToInbox });
   installGlobalClipToInboxTestHook(runGlobalClipToInbox);
   installGlobalCaptureToastOpenHandler({ openMainWindow });
+  installDesktopReminderNavigation(openMainWindow);
   installBackgroundTray({
     captureToInbox: runGlobalClipToInbox,
     getMainWindow,
