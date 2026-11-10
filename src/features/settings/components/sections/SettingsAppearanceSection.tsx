@@ -99,7 +99,7 @@ export function SettingsAppearanceSection(props: {
       />
       <NodeIconSettingsSection onSettingsBackdropTransparentChange={props.onSettingsBackdropTransparentChange} />
       <AppearanceDarkModeContentSection appearance={state.appearance} />
-      <DesktopCssSnippetsSection />
+      <DesktopCssSnippetsSection onEnterPreview={props.onEnterPreview} />
     </>
   );
 }

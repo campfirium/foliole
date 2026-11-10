@@ -1,4 +1,4 @@
-import { FolderOpen, RefreshCw, Search } from 'lucide-react';
+import { FolderOpen, MonitorPlay, RefreshCw, Search } from 'lucide-react';
 import { useState } from 'react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
@@ -44,7 +44,7 @@ function CssSnippetList({ snippets, query }: { snippets: Snippets; query: string
   ));
 }
 
-export function DesktopCssSnippetsSection() {
+export function DesktopCssSnippetsSection({ onEnterPreview }: { onEnterPreview: () => void }) {
   const t = useTranslation();
   const snippets = useDesktopCustomCss();
   const [query, setQuery] = useState('');
@@ -61,12 +61,19 @@ export function DesktopCssSnippetsSection() {
   }
 
   const refreshLabel = t('companion.settings.appearance.css.reload');
+  const previewLabel = t('settings.appearance.surface.preview');
   const folderLabel = t('companion.settings.appearance.css.openFolder');
   const searchLabel = t('companion.settings.appearance.css.search');
   const title = t('companion.settings.appearance.css.title');
   return (
     <SettingsSection
       actions={<div className="flex items-center gap-1">
+        {snippets.files.length > 0 && (
+          <button aria-label={previewLabel} className={settingsUtilityIconButtonClassName()} title={previewLabel}
+            onClick={onEnterPreview} type="button">
+            <MonitorPlay aria-hidden="true" size={16} />
+          </button>
+        )}
         <button aria-label={refreshLabel} className={settingsUtilityIconButtonClassName()} title={refreshLabel}
           disabled={snippets.busy} onClick={() => { setOpenError(false); void snippets.refresh(); }} type="button">
           <RefreshCw aria-hidden="true" size={16} />
