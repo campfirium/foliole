@@ -7,6 +7,8 @@ export const EN_REMINDER_TRANSLATIONS = {
   'settings.reminders.disabled': 'Off',
   'settings.reminders.save': 'Save reminder',
   'settings.reminders.add': 'Add reminder',
+  'settings.reminders.empty': 'No reminders yet',
+  'settings.reminders.edit': 'Edit reminder',
   'settings.reminders.saved': 'Reminder saved.',
   'settings.reminders.permission': 'Reminder saved. Allow notifications in system settings to receive it.',
   'settings.reminders.exactPermission': 'Reminder saved. Allow Alarms & reminders, then save the reminder again.',
