@@ -130,16 +130,18 @@ async function closeCompletedPeerSync(target: DesktopSyncGroupPeer, activity: De
 async function continueDatabaseAndResources(input: Parameters<typeof runDesktopRequestSyncDatabaseRound>[0]):
 Promise<{ complete: boolean; attachmentProgress?: number; attachmentYielded?: boolean; dynamicBacklog?: boolean }> {
   const key = await runWithDatabaseConnectionOwner(() => loadDesktopWorkgroupKey(input.peer.group_id));
-  if (!key || !input.peerRound) throw new Error('sync_round_context_missing');
+  const { peerRound } = input;
+  if (!key || !peerRound) throw new Error('sync_round_context_missing');
   const context = { groupId: input.peer.group_id, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
     initiatorDeviceId: input.peer.local_device_id, initiatorLibraryEpoch: input.localLibraryEpoch,
     responderDeviceId: input.peer.peer_device_id, responderLibraryEpoch: input.remoteLibraryEpoch } as const;
   const exchange = createDesktopRequestSyncExchange({ context, groupSecret: key.group_key,
     groupKey: new Uint8Array(Buffer.from(key.group_key, 'base64url')), endpointUrl: input.peer.endpoint_url,
-    peerRound: input.peerRound, ...(input.signal ? { signal: input.signal } : {}) });
-  return withRequestSyncPeerRound(exchange, input.peerRound, async () => {
+    peerRound, ...(input.signal ? { signal: input.signal } : {}) });
+  return withRequestSyncPeerRound(exchange, peerRound, async () => {
     const database = await runDesktopRequestSyncDatabaseRound(input);
     const resources = await continueDesktopRequestSyncResources({ ...input, boundedSlice: !database.complete && database.madeProgress });
+    peerRound.attachmentsConfirmed = resources.pending === 0 && !resources.yielded;
     return { ...database, complete: database.complete && resources.pending === 0, attachmentProgress: resources.blocks ?? 0, attachmentYielded: resources.yielded };
   });
 }

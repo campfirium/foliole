@@ -824,6 +824,11 @@
                       "type": "bool",
                       "id": 4,
                       "protoName": "database_confirmed"
+                    },
+                    "attachmentsConfirmed": {
+                      "type": "bool",
+                      "id": 5,
+                      "protoName": "attachments_confirmed"
                     }
                   }
                 },

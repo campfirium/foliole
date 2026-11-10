@@ -71,6 +71,7 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
     peerRound, signal,
     sync_group_id: group.group_id, receiver_device_id: framedPeer.deviceId,
     receiver_library_epoch: framedPeer.libraryEpoch });
+  peerRound.attachmentsConfirmed = resources.pending === 0 && !resources.yielded;
   return {
     ...(databaseConfirmedAt ? { databaseConfirmedAt } : {}),
     syncMetadataUnavailable,

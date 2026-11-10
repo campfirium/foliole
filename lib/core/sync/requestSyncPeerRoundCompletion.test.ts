@@ -38,12 +38,34 @@ it('keeps a new completion receipt decodable by the deployed schema and its resu
   const legacySchema = structuredClone(schema);
   const fields = legacySchema.nested.foliole.nested.sync.nested.v22.nested.RoundReceipt.fields;
   Reflect.deleteProperty(fields, 'databaseConfirmed');
+  Reflect.deleteProperty(fields, 'attachmentsConfirmed');
   const legacy = protobuf.Root.fromJSON(legacySchema as protobuf.INamespace).lookupType('foliole.sync.v22.ProtocolMessage');
   const current = protobuf.Root.fromJSON(schema as protobuf.INamespace).lookupType('foliole.sync.v22.ProtocolMessage');
   const wire = current.encode(current.create({ roundReceipt: { roundId, result: 1,
-    deferredFacts: [], databaseConfirmed: true } })).finish();
+    deferredFacts: [], databaseConfirmed: true, attachmentsConfirmed: true } })).finish();
   const receipt = legacy.toObject(legacy.decode(wire)).roundReceipt;
   expect(receipt.result).toBe(1);
   expect(Uint8Array.from(receipt.roundId)).toEqual(roundId);
   expect(receipt.databaseConfirmed).toBeUndefined();
+  expect(receipt.attachmentsConfirmed).toBeUndefined();
+});
+
+it.each([false, true])('echoes attachment coverage independently from database completion (%s)', async attachmentsConfirmed => {
+  const stream = await prepareRequestSyncWire({ context, groupKey, messages: async function* () {
+    yield { payloadCase: 'round_receipt', payload: { roundId, result: 1, deferredFacts: [],
+      databaseConfirmed: true, attachmentsConfirmed } };
+  } });
+  const response = await respondRequestSyncRoundControl({ context, groupKey, stream, roundId: id });
+  const replies = [];
+  for await (const message of readRequestSyncWire({ context, groupKey, ...response })) replies.push(message);
+  expect(replies.map(reply => reply.message.payload.attachmentsConfirmed === true)).toEqual([attachmentsConfirmed]);
+});
+
+it('rejects attachment confirmation without explicit database confirmation', async () => {
+  const stream = await prepareRequestSyncWire({ context, groupKey, messages: async function* () {
+    yield { payloadCase: 'round_receipt', payload: { roundId, result: 2, deferredFacts: [],
+      attachmentsConfirmed: true } };
+  } });
+  await expect(respondRequestSyncRoundControl({ context, groupKey, stream, roundId: id }))
+    .rejects.toThrow('sync_round_control_invalid');
 });

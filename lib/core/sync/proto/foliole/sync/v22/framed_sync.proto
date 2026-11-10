@@ -228,6 +228,7 @@ message RoundReceipt {
   RoundResult result = 2;
   repeated FactIdentity deferred_facts = 3;
   bool database_confirmed = 4;
+  bool attachments_confirmed = 5;
 }
 message TransferTermination {
   bytes transfer_id = 1;
