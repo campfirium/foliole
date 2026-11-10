@@ -1,8 +1,6 @@
 export const ZH_HANS_REMINDER_TRANSLATIONS = {
   'settings.reminders.title': '提醒',
   'settings.reminders.experiment': 'Experiment',
-  'settings.reminders.snooze': '延后',
-  'settings.reminders.snoozeFailed': '未能延后这条提醒。',
   'settings.reminders.snooze30': '延后 30 分钟',
   'settings.reminders.snooze60': '延后 1 小时',
   'settings.reminders.repeat': '重复',

@@ -1,8 +1,6 @@
 export const EN_REMINDER_TRANSLATIONS = {
   'settings.reminders.title': 'Reminders',
   'settings.reminders.experiment': 'Experiment',
-  'settings.reminders.snooze': 'Snooze',
-  'settings.reminders.snoozeFailed': 'Could not snooze this reminder.',
   'settings.reminders.snooze30': 'Snooze 30 minutes',
   'settings.reminders.snooze60': 'Snooze 1 hour',
   'settings.reminders.repeat': 'Repeat',

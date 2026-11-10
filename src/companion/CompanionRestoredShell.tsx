@@ -7,7 +7,6 @@ import { CompanionDraftProvider } from './CompanionDraftProvider';
 import type { CompanionTabAction } from './CompanionFloatingBars';
 import { useCompanionNavigationField } from './CompanionNavigationProvider';
 import { CompanionNodeLinkRuntime } from './CompanionNodeLinkRuntime';
-import { CompanionReminderNotificationActions } from './CompanionReminderNotificationActions';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionShareInboxNotice } from './CompanionShareInboxNotice';
 import { CompanionShellView } from './CompanionShellView';
@@ -19,6 +18,7 @@ import { useCompanionBrowseSortState } from './useCompanionBrowseSortState';
 import { useCompanionCaptureController } from './useCompanionCaptureController';
 import { useCompanionDirectorySelectionState } from './useCompanionDirectorySelectionState';
 import { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
+import { useCompanionReminderNavigation } from './useCompanionReminderNavigation';
 import { useCompanionReviewTraining } from './useCompanionReviewTraining';
 import { useCompanionSearchNavigation } from './useCompanionSearchNavigation';
 import { useCompanionShellActions } from './useCompanionShellActions';
@@ -194,6 +194,8 @@ export function CompanionRestoredShell(props: {
 }) {
   const model = useCompanionShellModel(props.workspaceSync);
   useCompanionAndroidBack(model);
+  useCompanionReminderNavigation(props.bootstrapState.database_ready && props.workspaceSync.isWorkspaceSyncStateReady,
+    props.workspaceSync.state.workspace_snapshot?.libraryScope, () => model.handleNavigationAction('review'));
   useCompanionReviewTraining(props.bootstrapState.database_ready && model.workspaceSync.isWorkspaceSyncStateReady,
     model.surface.activeAction === 'review' && !model.surface.isFlowBrowsing, model.workspaceSync.state.workspace_snapshot);
 
@@ -208,8 +210,6 @@ export function CompanionRestoredShell(props: {
             <CompanionShareInboxNotice workspaceSync={model.workspaceSync}>
               <CompanionDraftProvider key={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? props.bootstrapState.database_path}>
                 <CompanionShellView model={model} />
-                {props.bootstrapState.database_ready && props.workspaceSync.isWorkspaceSyncStateReady
-                  && <CompanionReminderNotificationActions openFlow={() => model.handleNavigationAction('review')} />}
               </CompanionDraftProvider>
             </CompanionShareInboxNotice>
           </CompanionSyncProtocolNotice>
