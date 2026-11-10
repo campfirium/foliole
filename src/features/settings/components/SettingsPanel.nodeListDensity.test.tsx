@@ -88,3 +88,19 @@ it('does not expose separate navigation font-size controls', () => {
   expect(screen.queryByLabelText('Navigation title font size')).toBeNull();
   expect(screen.queryByLabelText('Navigation secondary text font size')).toBeNull();
 });
+
+it('stores folder panel spacing and restores them when settings reopen', () => {
+  const view = renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  const gapLabel = 'Spacing between sections';
+  fireEvent.click(screen.getByRole('button', { name: 'Typography' }));
+  expect(screen.queryByLabelText(gapLabel)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  expect(screen.getByLabelText(gapLabel)).toHaveValue(8);
+  fireEvent.change(screen.getByLabelText(gapLabel), { target: { value: '12' } });
+  view.unmount();
+
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+  expect(screen.getByLabelText(gapLabel)).toHaveValue(12);
+});

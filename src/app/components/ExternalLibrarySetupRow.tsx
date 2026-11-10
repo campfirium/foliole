@@ -9,7 +9,9 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 const EXTERNAL_SETUP_ROW_ID = 'external-library-setup';
 
 export function ExternalLibrarySetupRow(props: {
+  depth?: number;
   isSelected: boolean;
+  label?: string;
   onContextMenu?: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   onOpenRoot: () => void;
 }) {
@@ -21,20 +23,19 @@ export function ExternalLibrarySetupRow(props: {
         collapsedNodeIds: new Set(),
         onSelect: props.onOpenRoot,
         onToggleCollapse: () => undefined,
-        rows: [{ depth: 0, hasChildren: false, id: EXTERNAL_SETUP_ROW_ID }]
+        rows: [{ depth: props.depth ?? 0, hasChildren: false, id: EXTERNAL_SETUP_ROW_ID }]
       }),
-    [props.onOpenRoot]
+    [props.depth, props.onOpenRoot]
   );
 
   return (
-    <section aria-label={t('desktop.externalLibrary.folderTree')} className="flex flex-col pb-2 pt-1" role="tree">
       <NodeTreeRow
-        depth={0}
+        depth={props.depth ?? 0}
         hasChildren={false}
         isActive={props.isSelected}
         isCollapsed={false}
         isSelected={props.isSelected}
-        label={t('desktop.externalLibrary.setupLabel')}
+        label={props.label ?? t('desktop.externalLibrary.setupLabel')}
         nodeId={EXTERNAL_SETUP_ROW_ID}
         rowSpacing={rowSpacing}
         showIcon={false}
@@ -44,6 +45,5 @@ export function ExternalLibrarySetupRow(props: {
         onSelect={props.onOpenRoot}
         onToggleCollapse={() => undefined}
       />
-    </section>
   );
 }

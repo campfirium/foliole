@@ -16,8 +16,8 @@ test('creates a Dive in the tree and shows sources added from library menus', as
       { content: 'Unrelated notes', id: 'unrelated-topic', kind: 'topic', title: 'Unrelated notes' }
     ]);
   });
-  const diveTree = desktopWindow.getByRole('tree', { name: /^(Dives|专题)$/ });
-  await diveTree.getByRole('treeitem', { name: /^(Dives|专题)$/ }).click({ button: 'right' });
+  const diveTree = desktopWindow.getByRole('tree', { name: /^(Dive|专题)$/ });
+  await diveTree.getByRole('treeitem', { name: /^(Dive|专题)$/ }).click({ button: 'right' });
   await desktopWindow.getByRole('menuitem', { name: /^(Create Dive|创建专题)$/ }).click();
   const name = diveTree.getByRole('textbox');
   await name.fill('Probability review');
@@ -70,7 +70,7 @@ test('adds one Topic from a folder without including its siblings', async ({ des
   await prepareMembership(page);
   const library = page.getByRole('treeitem', { name: 'Source folder', exact: true });
   const topics = page.getByRole('complementary', { name: 'Current folder contents' });
-  const dives = page.getByRole('tree', { name: 'Dives' });
+  const dives = page.getByRole('tree', { name: 'Dive' });
   await library.click();
   await addSource(page, topics.getByRole('treeitem', { name: 'Chosen topic' }));
   await dives.getByRole('treeitem', { name: 'Study set' }).click();
@@ -84,7 +84,7 @@ test('removes a folder source while retaining an overlapping direct Topic', asyn
   await prepareMembership(page);
   const library = page.getByRole('treeitem', { name: 'Source folder', exact: true });
   const topics = page.getByRole('complementary', { name: 'Current folder contents' });
-  const dives = page.getByRole('tree', { name: 'Dives' });
+  const dives = page.getByRole('tree', { name: 'Dive' });
   const study = dives.getByRole('treeitem', { name: 'Study set' });
   await library.click();
   await addSource(page, topics.getByRole('treeitem', { name: 'Chosen topic' }));
@@ -135,8 +135,8 @@ async function prepareMembership(page: Page) {
   });
   await page.reload();
   await expectWorkspaceShell(page);
-  const dives = page.getByRole('tree', { name: 'Dives' });
-  await dives.getByRole('treeitem', { name: 'Dives', exact: true }).click({ button: 'right' });
+  const dives = page.getByRole('tree', { name: 'Dive' });
+  await dives.getByRole('treeitem', { name: 'Dive', exact: true }).click({ button: 'right' });
   await page.getByRole('menuitem', { name: 'Create Dive' }).click();
   const rename = page.getByRole('textbox', { name: 'Rename Untitled Dive' });
   await rename.fill('Study set');

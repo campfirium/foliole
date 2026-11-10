@@ -1,6 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { FolderSectionStack } from '../../features/nodes/components/FolderSectionStack';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
@@ -213,4 +214,27 @@ it('opens external folder context menu actions for regular folders only', () => 
 
   fireEvent.contextMenu(screen.getByRole('treeitem', { name: /Books/i }), { clientX: 24, clientY: 32 });
   expect(screen.queryByRole('menuitem', { name: 'Remove folder' })).toBeNull();
+});
+
+it.each([
+  { folders: [], child: /connect.*folder/i },
+  { folders, child: /1act/i }
+])('nests and folds the reference section entries', ({ folders, child }) => {
+  renderWithLocalization(
+    <FolderSectionStack>
+      <ExternalLibrarySection entriesByFolderId={{}} folders={folders} isExternalViewOpen={false}
+        onOpenExternalSelection={vi.fn()} selection={{ kind: 'root' }} />
+    </FolderSectionStack>
+  );
+
+  const heading = screen.getByRole('treeitem', { name: 'External' });
+  expect(heading).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByRole('treeitem', { name: child })).toHaveAttribute('aria-level', '2');
+
+  fireEvent.click(heading);
+  expect(heading).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.queryByRole('treeitem', { name: child })).toBeNull();
+
+  fireEvent.keyDown(heading, { key: 'ArrowRight' });
+  expect(screen.getByRole('treeitem', { name: child })).toBeVisible();
 });

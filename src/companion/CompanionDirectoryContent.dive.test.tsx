@@ -27,7 +27,7 @@ function Directory({ snapshot, onStartDive }: { snapshot: WorkspaceSnapshot; onS
     sortDirection="asc" sortKey="name" />;
 }
 
-it('opens the received Dive under Dives and shows its sources and derived topics', () => {
+it('opens the received Dive under Dive and shows its sources and derived topics', () => {
   const nodesById = {
     dive: { ...node('dive', 'Probability'), virtualFilter: DIVE_NODE_FILTER, manualChildOrder: ['source'] },
     source: node('source', 'Reference shelf'),
@@ -38,7 +38,7 @@ it('opens the received Dive under Dives and shows its sources and derived topics
   };
   const start = vi.fn();
   const view = renderWithLocalization(<Directory snapshot={snapshot} onStartDive={start} />);
-  expect(screen.getByRole('heading', { name: 'Dives' })).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'Dive' })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Open folder Probability' }));
   expect(screen.getByRole('heading', { name: 'Sources' })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Open folder Reference shelf' })).toBeVisible();

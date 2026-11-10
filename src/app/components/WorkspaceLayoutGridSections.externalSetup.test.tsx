@@ -43,7 +43,7 @@ function createNode(args: {
   };
 }
 
-it('opens the simplified external folder setup dialog from the empty External row in the real list area', () => {
+it('opens the simplified external folder setup dialog from the Connect folder row in the real list area', () => {
   const onOpenExternalLibrarySettings = vi.fn();
   const onOpenExternalSelection = vi.fn();
   const nodesById: Record<string, Node> = {
@@ -87,7 +87,7 @@ it('opens the simplified external folder setup dialog from the empty External ro
     />
   );
 
-  fireEvent.click(screen.getByRole('treeitem', { name: 'External' }));
+  fireEvent.click(screen.getByRole('treeitem', { name: 'Connect folder' }));
 
   expect(onOpenExternalSelection).toHaveBeenCalledWith({ kind: 'root' });
   expect(screen.getByRole('dialog', { name: 'Connect an external folder' })).toBeInTheDocument();
@@ -150,7 +150,7 @@ it('keeps external folders visible when the legacy enabled flag is false', () =>
     />
   );
 
-  expect(screen.queryByRole('treeitem', { name: 'External' })).toBeNull();
+  expect(screen.getByRole('treeitem', { name: /^External$/ })).toBeVisible();
   expect(screen.getByRole('treeitem', { name: /1act/i })).toBeInTheDocument();
   expect(onOpenExternalLibrarySettings).not.toHaveBeenCalled();
 });

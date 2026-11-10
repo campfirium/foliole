@@ -2,6 +2,7 @@
   "desktop.nodeList.dive.convertToDive": "轉為專題",
   "desktop.nodeList.dive.convertToIndex": "轉為索引",
   "desktop.nodeList.dive.convertFailed": "無法轉換此目錄。",
+  "desktop.nodeList.dive.tree": "專題",
   "desktop.nodeList.dive.switchFlow": "切換專題",
   "desktop.nodeList.createVirtualFolder": "建立虛擬資料夾",
   "desktop.nodeList.createVirtualFolderFailed": "無法建立虛擬資料夾。",

@@ -14,14 +14,14 @@ for (const kind of ['topic', 'item'] as const) {
     await expectWorkspaceShell(page);
     await page.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated());
 
-    const dives = page.getByRole('tree', { name: 'Dives', exact: true });
-    await dives.getByRole('treeitem', { name: 'Dives', exact: true }).click({ button: 'right' });
+    const dives = page.getByRole('tree', { name: 'Dive', exact: true });
+    await dives.getByRole('treeitem', { name: 'Dive', exact: true }).click({ button: 'right' });
     await page.getByRole('menuitem', { name: 'Create Dive' }).click();
     const input = page.getByRole('textbox', { name: 'Rename Untitled Dive' });
     await input.fill('Focused study');
     await input.press('Enter');
     if (kind === 'topic') {
-      await dives.getByRole('treeitem', { name: 'Dives', exact: true }).click({ button: 'right' });
+      await dives.getByRole('treeitem', { name: 'Dive', exact: true }).click({ button: 'right' });
       await page.getByRole('menuitem', { name: 'Create Dive' }).click();
       const empty = page.getByRole('textbox', { name: 'Rename Untitled Dive' });
       await empty.fill('Empty study');

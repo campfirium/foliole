@@ -7,6 +7,8 @@ export const DIVE_NODE_FILTER: VirtualNodeFilter = {
   conditions: [{ field: 'manual', operator: 'equals', value: 'dive-sources' }]
 };
 
+export const DIVE_SECTION_ROW_ID = 'workspace-dives';
+
 export interface Dive {
   id: string;
   title: string;

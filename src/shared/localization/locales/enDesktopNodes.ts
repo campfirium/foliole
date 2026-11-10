@@ -122,7 +122,7 @@ export const EN_DESKTOP_NODES_TRANSLATIONS = {
   'desktop.nodeList.dive.convertToDive': 'Convert to Dive',
   'desktop.nodeList.dive.convertToIndex': 'Convert to Virtual Folder',
   'desktop.nodeList.dive.convertFailed': 'Could not convert this folder.',
-  'desktop.nodeList.dive.tree': 'Dives',
+  'desktop.nodeList.dive.tree': 'Dive',
   'desktop.nodeList.dive.create': 'Create Dive',
   'desktop.nodeList.dive.untitled': 'Untitled Dive',
   'desktop.nodeList.addToDive.saveFailed': 'Could not save the Dive.',

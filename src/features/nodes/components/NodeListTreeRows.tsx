@@ -14,6 +14,7 @@ import {
   type WorkspaceListNodesById
 } from '../model/workspaceListNode';
 
+import { FolderSectionHeading, useFolderSectionStack } from './FolderSectionStack';
 import { getNavigationTitleFontSize } from './navigationTypographySettings';
 import { getDismissedFadeTextOpacity, shouldFadeDismissedRowText } from './nodeIconAppearanceSettings';
 import { resolveNodeListRowGap, resolveNodeTreeRowVirtualSize } from './nodeListRowSpacingSettings';
@@ -54,10 +55,11 @@ function renderNodeListRow(
   row: NodeTreeRow,
   onRowKeyDown: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void,
   locale: ReturnType<typeof useLocalization>['locale'],
-  meta?: VirtualListRenderMeta
+  meta?: VirtualListRenderMeta,
+  toggleHome?: (nodeId: string) => void
 ) {
   const rowModel = resolveNodeListRowModel(props, row);
-  const onSelect = createNodeListRowSelectHandler(props, row);
+  const onSelect = isHomeNode(row.node) && toggleHome ? toggleHome : createNodeListRowSelectHandler(props, row);
   const onDragOver = (nodeId: string, event: Parameters<typeof props.drag.onDragOverNode>[1]) => {
     props.drag.onDragOverNode(nodeId, event);
     if (shouldExpandFolderOnDragOver(row, props.collapsedNodeIds)) {
@@ -69,7 +71,7 @@ function renderNodeListRow(
     <NodeTreeRowItem
       descendantCount={resolveNodeListRowCount(props, row)}
       depth={props.isTrashViewOpen ? 0 : row.depth}
-      hasChildren={props.isTrashViewOpen ? false : row.hasChildren}
+      hasChildren={!props.isTrashViewOpen && row.hasChildren}
       isActive={(props.isTrashViewOpen ? props.selectedTrashNodeId : props.activeNodeId) === row.node.id}
       isBulkSelectionActive={props.selectedNodeIds.length > 1}
       isCollapsed={!props.isTrashViewOpen && props.collapsedNodeIds.has(row.node.id)}
@@ -109,19 +111,15 @@ function renderNodeListRow(
 function createNodeListRowSelectHandler(props: NodeListRowsProps, row: NodeTreeRow) {
   return (nodeId: string, modifiers?: NodeSelectModifiers) => {
     props.onSelect(nodeId, modifiers);
-    if (shouldExpandFolderOnSelect(row, nodeId, props.collapsedNodeIds, modifiers)) {
+    if (shouldToggleFolderOnSelect(props, row, modifiers)) {
       props.onToggleCollapse(nodeId);
     }
   };
 }
 
-function shouldExpandFolderOnSelect(
-  row: NodeTreeRow,
-  nodeId: string,
-  collapsedNodeIds: ReadonlySet<string>,
-  modifiers?: NodeSelectModifiers
-) {
-  return !modifiers?.ctrlKey && !modifiers?.metaKey && !modifiers?.shiftKey && shouldExpandFolder(row, nodeId, collapsedNodeIds);
+function shouldToggleFolderOnSelect(props: NodeListRowsProps, row: NodeTreeRow, modifiers?: NodeSelectModifiers) {
+  if (modifiers?.ctrlKey || modifiers?.metaKey || modifiers?.shiftKey) return false;
+  return shouldExpandFolder(row, row.node.id, props.collapsedNodeIds);
 }
 
 function shouldExpandFolderOnDragOver(row: NodeTreeRow, collapsedNodeIds: ReadonlySet<string>) {
@@ -188,6 +186,7 @@ function resolveNodeListEmptyState(
 
 export function NodeListRows(props: NodeListRowsProps) {
   const { locale, t } = useLocalization();
+  const stack = useFolderSectionStack();
   const navigationTitleFontSize = getNavigationTitleFontSize();
   const rowGap = resolveNodeListRowGap(props.rowSpacing);
   const onRowKeyDown = useMemo(
@@ -232,16 +231,39 @@ export function NodeListRows(props: NodeListRowsProps) {
     );
   }
 
+  return renderFolderOrNodeRows(props, onRowKeyDown, locale, navigationTitleFontSize, rowGap, stack);
+}
+
+function renderFolderOrNodeRows(
+  props: NodeListRowsProps,
+  onRowKeyDown: ReturnType<typeof createNodeListRowKeydownHandler>,
+  locale: ReturnType<typeof useLocalization>['locale'],
+  navigationTitleFontSize: number,
+  rowGap: number,
+  stack: ReturnType<typeof useFolderSectionStack>
+) {
+  const headingCount = stack && isHomeNode(props.rows[0]?.node) ? 1 : 0;
+  const rows = headingCount ? props.rows.slice(headingCount) : props.rows;
   return (
-    <VirtualListSurface
-      autoScroll={props.virtualizeRows}
-      enabled={props.virtualizeRows}
-      estimateSize={(index) => resolveNodeTreeRowVirtualSize(props.rowSpacing, index === props.rows.length - 1 ? 0 : rowGap, navigationTitleFontSize)}
-      getItemKey={(row) => row.node.id}
-      items={props.rows}
-      renderItem={(row, meta) => renderNodeListRow(props, row, onRowKeyDown, locale, meta)}
-      scrollElementRef={props.scrollContainerRef}
-      scrollToIndex={resolveActiveRowIndex(props.rows, props.scrollTargetNodeId ?? props.activeNodeId)}
-    />
+    <>
+      {headingCount && stack ? (
+        <FolderSectionHeading first>
+          {props.rows.slice(0, headingCount).map(row =>
+            renderNodeListRow(props, row, onRowKeyDown, locale, undefined, props.onToggleCollapse))}
+        </FolderSectionHeading>
+      ) : null}
+      <VirtualListSurface
+        className={headingCount ? 'shrink-0' : ''}
+        accountForOffset={headingCount > 0}
+        autoScroll={props.virtualizeRows}
+        enabled={props.virtualizeRows}
+        estimateSize={(index) => resolveNodeTreeRowVirtualSize(props.rowSpacing, index === rows.length - 1 ? 0 : rowGap, navigationTitleFontSize)}
+        getItemKey={(row) => row.node.id}
+        items={rows}
+        renderItem={(row, meta) => renderNodeListRow(props, row, onRowKeyDown, locale, meta)}
+        scrollElementRef={props.scrollContainerRef}
+        scrollToIndex={resolveActiveRowIndex(rows, props.scrollTargetNodeId ?? props.activeNodeId)}
+      />
+    </>
   );
 }

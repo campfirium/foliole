@@ -12,6 +12,7 @@ import {
   DEFAULT_SELECTION_COLOR_PRESET
 } from '../../model/appearanceSettings';
 
+import { FolderSectionSettings } from './FolderSectionSettings';
 import { NodeIconSettingsSection } from './NodeIconSettingsSection';
 import {
   AppearanceDarkModeContentSection,
@@ -86,6 +87,7 @@ export function SettingsAppearanceSection(props: {
       <SettingsDisplayScaleSection />
       <WorkspaceSurfaceColorSection onEnterPreview={props.onEnterPreview} />
       <WorkspaceDividerSettingsSection />
+      <FolderSectionSettings />
       <AppearanceReadingColorSection
         appearance={state.appearance}
         safeAccentColor={state.safeAccentColor}

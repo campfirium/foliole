@@ -9,7 +9,7 @@ import { WorkspaceFolderColumn } from './WorkspaceFolderColumn';
 import { useWorkspaceRenderDiagnostic } from './workspaceInputLagRenderDiagnostic';
 
 interface WorkspaceDualListFolderColumnProps {
-  diveNavigation: Pick<Parameters<typeof WorkspaceFolderColumn>[0], 'activeDiveId' | 'dives' | 'onSelectDive'>;
+  diveNavigation: Pick<Parameters<typeof WorkspaceFolderColumn>[0], 'activeDiveId' | 'activeDiveSource' | 'dives' | 'onSelectDive' | 'onSelectDiveSource'>;
   dualListState: ReturnType<typeof useWorkspaceDualListState>;
   onSelectFolderColumnNode: (nodeId: string) => void;
   props: WorkspaceDualListContentProps;

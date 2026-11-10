@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import { vi } from 'vitest';
 
-import type { NodeSpecialKind } from '../../features/nodes/model/nodeTypes';
+import type { Node, NodeSpecialKind } from '../../features/nodes/model/nodeTypes';
 import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -15,11 +15,8 @@ export function createWorkspaceContentNode(args: {
   title: string;
   content?: string;
   specialKind?: NodeSpecialKind;
-  virtualFilter?: {
-    conditions: Array<{ field: 'text'; operator: 'contains'; value: string }>;
-    match: 'all';
-    version: 1;
-  } | null;
+  virtualFilter?: Node['virtualFilter'];
+  manualChildOrder?: string[];
 }) {
   return {
     anchorLink: null,
@@ -36,6 +33,7 @@ export function createWorkspaceContentNode(args: {
     title: args.title,
     updatedAt: '2026-04-20T00:00:00.000Z',
     ...definedProps({
+      manualChildOrder: args.manualChildOrder,
       specialKind: args.specialKind,
       virtualFilter: args.virtualFilter
     })

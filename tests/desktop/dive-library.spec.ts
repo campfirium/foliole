@@ -19,8 +19,8 @@ test('creates a Dive, adds a folder and browses its topics after reload', async 
   await page.reload();
   await expectWorkspaceShell(page);
 
-  const dives = page.getByRole('tree', { name: 'Dives', exact: true });
-  await dives.getByRole('treeitem', { name: 'Dives', exact: true }).click({ button: 'right' });
+  const dives = page.getByRole('tree', { name: 'Dive', exact: true });
+  await dives.getByRole('treeitem', { name: 'Dive', exact: true }).click({ button: 'right' });
   await page.getByRole('menuitem', { name: 'Create Dive' }).click();
   const input = page.getByRole('textbox', { name: 'Rename Untitled Dive' });
   await input.fill('Probability');

@@ -1,28 +1,31 @@
 import { FolderPlus, ListMinus, Play, Trash2 } from 'lucide-react';
 import { useContext, useEffect, useState, type MouseEvent } from 'react';
 
-import type { Dive } from '../../../lib/core/nodes/dive';
+import { DIVE_SECTION_ROW_ID, type Dive } from '../../../lib/core/nodes/dive';
+import { FolderSectionRows, useFolderSectionControl } from '../../features/nodes/components/FolderSectionStack';
 import { NodeContextMenuItem } from '../../features/nodes/components/nodeListContextMenuPresentation';
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
 import { NodeRenameContextMenuItem } from '../../features/nodes/components/NodeRenameContextMenuItem';
 import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import { requestNodeRename } from '../../features/nodes/components/NodeTreeRowRename';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { resolveDiveMembership } from '../../shared/diveMembership';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { getDiveRepository } from '../../shared/platform/desktop/diveRepository';
+import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../../shared/platform/storage';
 import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuTrigger } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { ConvertDiveDirectoryMenuItem } from './ConvertDiveDirectoryMenuItem';
 import { DiveFlowActionContext } from './diveFlowActionContext';
+import type { DiveSourceSelection } from './useWorkspaceDiveRows';
 import { removeWorkspaceDiveSource, saveWorkspaceDive } from './workspaceDiveMutation';
 import { toggleCollapsed } from './WorkspaceVirtualSectionRows';
 
-const rootId = 'workspace-dives';
+const rootId = DIVE_SECTION_ROW_ID;
 const rowId = (id: string) => `dive:${id}`;
-type DiveSourceSelection = { diveId: string; nodeId: string };
 type Context = { id: string; left: number; top: number; source?: DiveSourceSelection };
 
 function DiveFlowMenuItem({ dive, onClose }: { dive: Dive; onClose: () => void }) {
@@ -58,7 +61,7 @@ function RemoveDiveSourceMenuItem({ source, onClose }: { source: DiveSourceSelec
 
 function DiveContextMenu(props: { context: Context; dive: Dive | undefined; onClose: () => void; onCreate: () => void }) {
   const t = useTranslation();
-  const { context, onClose } = props;
+  const { context, dive, onClose } = props;
   return (
     <AppDropdownMenu onOpenChange={(open) => { if (!open) onClose(); }} open>
       <AppDropdownMenuTrigger asChild>
@@ -67,22 +70,17 @@ function DiveContextMenu(props: { context: Context; dive: Dive | undefined; onCl
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="start" className="min-w-[224px] p-2"
         onCloseAutoFocus={(event) => event.preventDefault()} sideOffset={0}>
-        {context.source ? (
-          <RemoveDiveSourceMenuItem source={context.source} onClose={onClose} />
-        ) : (
+        {context.source ? <RemoveDiveSourceMenuItem source={context.source} onClose={onClose} /> : (
           <>
             {context.id === rootId ? (
               <NodeContextMenuItem icon={FolderPlus} onSelect={() => { onClose(); props.onCreate(); }}>
                 {t('desktop.nodeList.dive.create')}
               </NodeContextMenuItem>
-            ) : (
-              <>
-                {props.dive ? <DiveFlowMenuItem dive={props.dive} onClose={onClose} /> : null}
-                {props.dive ? <ConvertDiveDirectoryMenuItem nodeId={props.dive.id} target="index" onClose={onClose} /> : null}
-                <NodeRenameContextMenuItem onSelect={() => { onClose(); requestNodeRename(context.id); }} />
-                {props.dive ? <DeleteDiveMenuItem diveId={props.dive.id} onClose={onClose} /> : null}
-              </>
-            )}
+            ) : null}
+            {dive ? <DiveFlowMenuItem dive={dive} onClose={onClose} /> : null}
+            {props.dive ? <ConvertDiveDirectoryMenuItem nodeId={props.dive.id} target="index" onClose={onClose} /> : null}
+            <NodeRenameContextMenuItem onSelect={() => { onClose(); requestNodeRename(context.id); }} />
+            {props.dive ? <DeleteDiveMenuItem diveId={props.dive.id} onClose={onClose} /> : null}
           </>
         )}
       </AppDropdownMenuContent>
@@ -146,12 +144,12 @@ function useDiveSection(dives: readonly Dive[], selectDive: (id: string) => void
 
 type DiveSectionState = ReturnType<typeof useDiveSection>;
 
-function DiveRows(props: {
+function renderDiveRows(props: {
   dive: Dive;
   nodesById: WorkspaceListNodesById;
-  onSelectNode: (id: string) => void;
+  onSelectNode: (diveId: string, nodeId: string) => void;
   section: DiveSectionState;
-  activeNodeId: string | null;
+  activeSource: DiveSourceSelection | null;
   activeDiveId: string | null;
   onSelectDive: (id: string) => void;
 }) {
@@ -159,26 +157,27 @@ function DiveRows(props: {
   const id = rowId(dive.id);
   const collapsed = section.collapsed.has(id);
   const active = props.activeDiveId === dive.id;
-  const sources = dive.directSourceIds.flatMap((id) => {
-    const node = props.nodesById[id];
-    return node?.kind === 'folder' ? [node] : [];
+  const sources = dive.directSourceIds.flatMap(sourceId => {
+    const source = props.nodesById[sourceId];
+    return source?.kind === 'folder' ? [source] : [];
   });
-  return (
-    <>
-      <NodeTreeRow depth={1} hasChildren={sources.length > 0} isActive={active} isCollapsed={collapsed}
+  return [
+      <NodeTreeRow key={id} depth={1} hasChildren={sources.length > 0} isActive={active} isCollapsed={collapsed}
         isSelected={active} label={dive.title} nodeId={id} rowSpacing={getNodeListRowSpacing()} showIcon={false}
         showLeafChevronPlaceholder={false} onContextMenu={section.openMenu} onRename={section.rename}
-        onSelect={() => props.onSelectDive(dive.id)} onToggleCollapse={section.toggle} />
-      {!collapsed ? sources.map((source) => (
-        <NodeTreeRow key={source.id} depth={2} hasChildren={false} isActive={props.activeNodeId === source.id}
-          isCollapsed={false} isSelected={props.activeNodeId === source.id} label={source.title}
-          nodeId={`${id}:${source.id}`} showIcon={false} showLeafChevronPlaceholder={false}
-          rowSpacing={getNodeListRowSpacing()} onSelect={() => props.onSelectNode(source.id)}
-          onContextMenu={(id, event) => section.openMenu(id, event, { diveId: dive.id, nodeId: source.id })}
-          onToggleCollapse={() => undefined} />
-      )) : null}
-    </>
-  );
+        onSelect={() => props.onSelectDive(dive.id)} onToggleCollapse={section.toggle} />,
+      ...(!collapsed ? sources.map((source) => {
+        const selected = props.activeSource?.diveId === dive.id && props.activeSource.nodeId === source.id;
+        return (
+          <NodeTreeRow key={`${id}:${source.id}`} depth={2} hasChildren={false} isActive={selected}
+            isCollapsed={false} isSelected={selected} label={source.title}
+            nodeId={`${id}:${source.id}`} showIcon={false} showLeafChevronPlaceholder={false}
+            rowSpacing={getNodeListRowSpacing()} onSelect={() => props.onSelectNode(dive.id, source.id)}
+            onContextMenu={(id, event) => section.openMenu(id, event, { diveId: dive.id, nodeId: source.id })}
+            onToggleCollapse={() => undefined} />
+        );
+      }) : [])
+  ];
 }
 
 export function WorkspaceDiveSection(props: {
@@ -186,21 +185,39 @@ export function WorkspaceDiveSection(props: {
   activeDiveId: string | null;
   onSelectDive: (id: string) => void;
   nodesById: WorkspaceListNodesById;
-  onSelectNode: (id: string) => void;
-  activeNodeId: string | null;
+  onSelectNode: (diveId: string, nodeId: string) => void;
+  activeSource: DiveSourceSelection | null;
 }) {
   const t = useTranslation();
   const section = useDiveSection(props.dives, props.onSelectDive);
-  if (!getDiveRepository()) return null;
-  const title = t('desktop.nodeList.dive.tree');
+  const titleKey = APP_SETTINGS_STORAGE_KEYS.workspaceDiveSectionTitle;
+  const [customTitle, setCustomTitle] = useState(() => getWhitelistedLocalStorageItem(titleKey));
+  const renameSection = (_id: string, name: string) => {
+    setWhitelistedLocalStorageItem(titleKey, name);
+    setCustomTitle(name);
+    return true;
+  };
+  const available = Boolean(getDiveRepository());
   const collapsed = section.collapsed.has(rootId);
+  useFolderSectionControl(available, collapsed, () => section.toggle(rootId));
+  if (!available) return null;
+  const title = customTitle || t('desktop.nodeList.dive.tree');
   return (
     <div className="mt-1 flex min-w-0 flex-col">
       <section aria-label={title} className="flex flex-col pt-1" role="tree">
-        <NodeTreeRow depth={0} hasChildren isActive={false} isCollapsed={collapsed} isSelected={false}
+        <FolderSectionRows rows={[
+          <NodeTreeRow key={rootId} depth={0} hasChildren isActive={false} isCollapsed={collapsed} isSelected={false}
           label={title} nodeId={rootId} rowSpacing={getNodeListRowSpacing()} showIcon={false}
-          onContextMenu={section.openMenu} onSelect={section.toggle} onToggleCollapse={section.toggle} />
-        {!collapsed ? section.dives.map((dive) => <DiveRows key={dive.id} {...props} dive={dive} section={section} />) : null}
+          showLeafChevronPlaceholder={false}
+          onContextMenu={section.openMenu} onRename={renameSection} onSelect={section.toggle}
+          onKeyDown={(id, event) => {
+            if (event.key !== (collapsed ? 'ArrowRight' : 'ArrowLeft')) return;
+            event.preventDefault();
+            section.toggle(id);
+          }}
+          onToggleCollapse={section.toggle} />,
+          ...(!collapsed ? section.dives.flatMap(dive => renderDiveRows({ ...props, dive, section })) : [])
+        ]} />
         {section.context ? (
           <DiveContextMenu context={section.context}
             dive={section.dives.find(dive => rowId(dive.id) === section.context?.id)}

@@ -3,8 +3,10 @@ import { useEffect } from 'react';
 
 import { onWindowEscape } from '../../../shared/platform/keyboard';
 import { useWorkspaceStore, type ReviewSessionState } from '../../../store/workspaceStore';
+import { HOME_NODE_ID } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
+import { useFolderSectionControl } from './FolderSectionStack';
 import { useCollapsedNodeState } from './NodeListCollapseState';
 import { useNodeSelectionHandler } from './NodeListSelection';
 import { useNodeListTreeData, type NodeListTreeData } from './NodeListTreeData';
@@ -126,14 +128,19 @@ export function useNodeListTreeModel({
   const workspace = useNodeWorkspaceActions();
   const treeData = useNodeListTreeData(nodeOrder, nodesById, workspace.trashedNodeIds);
   const collapsedState = useCollapsedNodeState({
-    collapsibleHome: Boolean(bodyAppendContent),
     activeNodeId,
+    collapsibleHome: Boolean(bodyAppendContent),
     forceExpandedNodeId: forceExpandedNodeId ?? null,
     nodesById,
     noteParentById: treeData.noteParentById,
     noteRowsAll: treeData.noteRowsAll,
     trashRowsAll: treeData.trashRowsAll
   });
+  useFolderSectionControl(
+    Boolean(bodyAppendContent) && treeData.noteRowsAll.some((row) => row.node.id === HOME_NODE_ID && row.hasChildren),
+    collapsedState.collapsedNoteNodeIds.has(HOME_NODE_ID),
+    () => collapsedState.toggleNoteCollapse(HOME_NODE_ID)
+  );
   const state = useNodeListStateFromTreeData({
     activeNodeId,
     collapsedNoteNodeIds: collapsedState.collapsedNoteNodeIds,

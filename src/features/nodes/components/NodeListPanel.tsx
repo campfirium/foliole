@@ -7,6 +7,7 @@ import type { ReviewSessionState } from '../../../store/workspaceStore';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
+import { useFolderSectionToolbar } from './FolderSectionStack';
 import { renderDeleteStatusOverlay } from './NodeListFeedbackSurface';
 import { NodeListHeader } from './NodeListHeader';
 import { resolveNodeListRowGap } from './nodeListRowSpacingSettings';
@@ -157,6 +158,7 @@ function useNodeListPanelEffects(
 
 export function NodeListPanel(props: NodeListPanelProps) {
   const t = useTranslation();
+  const sectionToolbar = useFolderSectionToolbar();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const drag = useNodeListDragController({
     disableRootDrop: props.isTrashViewOpen || props.isVirtualViewOpen,
@@ -174,8 +176,8 @@ export function NodeListPanel(props: NodeListPanelProps) {
       className={`${resolveNodeListPanelSurfaceClassName(props.isTrashViewOpen)} flex min-h-0 min-w-0 flex-1 flex-col text-foreground`}
     >
       <NodeListHeader
-        hasCollapsibleNodes={props.collapse.hasCollapsibleNotes}
-        hasCollapsedNodes={props.collapse.hasCollapsedNotes}
+        hasCollapsibleNodes={sectionToolbar?.hasCollapsibleNodes ?? props.collapse.hasCollapsibleNotes}
+        hasCollapsedNodes={sectionToolbar?.hasCollapsedNodes ?? props.collapse.hasCollapsedNotes}
         isTrashViewOpen={props.isTrashViewOpen}
         isVirtualViewOpen={props.isVirtualViewOpen}
         showVirtualCreateAction={props.showVirtualCreateAction}
@@ -188,9 +190,9 @@ export function NodeListPanel(props: NodeListPanelProps) {
         onEmptyTrash={() => (props.deleteNodesPermanently(props.trashRowIds), props.contextMenu.closeContextMenu())}
         onOpenNotesView={props.onOpenNotesView}
         onSearchQueryChange={props.onSearchQueryChange}
-        onToggleCollapseAll={() =>
-          props.collapse.hasCollapsedNotes ? props.collapse.expandAllNotes() : props.collapse.collapseAllNotes()
-        }
+        onToggleCollapseAll={sectionToolbar?.toggleAll ?? (
+          props.collapse.hasCollapsedNotes ? props.collapse.expandAllNotes : props.collapse.collapseAllNotes
+        )}
         searchQuery={props.searchQuery}
         showTitleSearch={props.showTitleSearch}
         trashCount={props.trashRowsLength}

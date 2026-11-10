@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import type { Dive } from '../../../lib/core/nodes/dive';
+import { FolderSectionStack } from '../../features/nodes/components/FolderSectionStack';
 import { NodeListTree } from '../../features/nodes/components/NodeListTree';
 import { TRASH_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
@@ -13,6 +14,7 @@ import type {
 import { AddToVirtualFolderDialog } from './AddToVirtualFolderDialog';
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { ExternalLibrarySection } from './ExternalLibrarySection';
+import type { DiveSourceSelection } from './useWorkspaceDiveRows';
 import { useWorkspaceAddToDive } from './WorkspaceAddToDive';
 import { WorkspaceDiveSection } from './WorkspaceDiveSection';
 import { WorkspaceVirtualSection } from './WorkspaceVirtualSection';
@@ -22,6 +24,8 @@ import './workspace-folder-root-rows.css';
 interface WorkspaceFolderColumnProps {
   dives: readonly Dive[];
   activeDiveId: string | null;
+  activeDiveSource: DiveSourceSelection | null;
+  onSelectDiveSource: (diveId: string, nodeId: string) => void;
   onSelectDive: (id: string) => void;
   activeFolderId: string | null;
   activeVirtualNodeId?: string | null;
@@ -80,6 +84,14 @@ function selectRegularNode(props: WorkspaceFolderColumnProps, nodeId: string) {
 function renderFolderSections(props: WorkspaceFolderColumnProps) {
   return (
     <>
+      <WorkspaceDiveSection
+        activeDiveId={props.activeDiveId}
+        dives={props.dives}
+        onSelectDive={props.onSelectDive}
+        activeSource={props.activeDiveSource}
+        nodesById={props.nodesById}
+        onSelectNode={props.onSelectDiveSource}
+      />
       <WorkspaceVirtualSection
         isVirtualViewOpen={props.isVirtualViewOpen}
         nodeOrder={props.nodeOrder}
@@ -91,14 +103,6 @@ function renderFolderSections(props: WorkspaceFolderColumnProps) {
           hideInDemo: props.hideVirtualSectionInDemo,
           onOpenVirtualView: props.onOpenVirtualView
         })}
-      />
-      <WorkspaceDiveSection
-        activeDiveId={props.activeDiveId}
-        dives={props.dives}
-        onSelectDive={props.onSelectDive}
-        activeNodeId={props.activeFolderId}
-        nodesById={props.nodesById}
-        onSelectNode={(id) => selectRegularNode(props, id)}
       />
       <ExternalLibrarySection
         entriesByFolderId={props.externalEntriesByFolderId}
@@ -122,12 +126,15 @@ function renderRegularSection(
   onAddToDive: ReturnType<typeof useWorkspaceAddToDive>['open'],
   onAddToVirtualFolder: (ids: string[]) => void
 ) {
+  const isDiveEntryActive = Boolean(props.activeDiveId || props.activeDiveSource);
+  const activeNodeId = isDiveEntryActive ? null : getActiveFolderSelectionId(props);
+  const highlightedNodeId = isDiveEntryActive ? null : (props.highlightedFolderId ?? null);
   return (
     <NodeListTree
-      activeNodeId={props.activeDiveId ? null : getActiveFolderSelectionId(props)}
-      forceExpandedNodeId={props.forceExpandedFolderId ?? null}
-      highlightedNodeId={props.highlightedFolderId ?? null}
-      isSelectionScopeActive={!props.isVirtualViewOpen && !props.isExternalViewOpen}
+      activeNodeId={activeNodeId}
+      forceExpandedNodeId={isDiveEntryActive ? null : (props.forceExpandedFolderId ?? null)}
+      highlightedNodeId={highlightedNodeId}
+      isSelectionScopeActive={!isDiveEntryActive && !props.isVirtualViewOpen && !props.isExternalViewOpen}
       isTrashViewOpen={false}
       isVirtualViewOpen={false}
       nodeOrder={props.folderNodeOrder}
@@ -140,7 +147,7 @@ function renderRegularSection(
       onSelectNode={(nodeId) => selectRegularNode(props, nodeId)}
       onSelectTrashNode={props.onSelectTrashNode}
       selectedTrashNodeId={props.selectedTrashNodeId}
-      scrollTargetNodeId={props.highlightedFolderId ?? getActiveFolderSelectionId(props)}
+      scrollTargetNodeId={highlightedNodeId ?? activeNodeId}
       showTitleSearch={false}
       bodyAppendContent={renderFolderSections(props)}
     />
@@ -150,9 +157,10 @@ function renderRegularSection(
 export function WorkspaceFolderColumn(props: WorkspaceFolderColumnProps) {
   const addToDive = useWorkspaceAddToDive();
   const [virtualSourceIds, setVirtualSourceIds] = useState<string[] | null>(null);
+  const tree = renderRegularSection(props, addToDive.open, setVirtualSourceIds);
   return (
     <div className="workspace-folder-column workspace-region-main-folder flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">{renderRegularSection(props, addToDive.open, setVirtualSourceIds)}</div>
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">{props.hideVirtualSectionInDemo ? tree : <FolderSectionStack>{tree}</FolderSectionStack>}</div>
       {addToDive.dialog}
       {virtualSourceIds ? <AddToVirtualFolderDialog sourceIds={virtualSourceIds} onClose={() => setVirtualSourceIds(null)} /> : null}
     </div>

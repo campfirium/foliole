@@ -5,6 +5,7 @@ import type {
   ReactNode
 } from 'react';
 
+import { DIVE_SECTION_ROW_ID } from '../../../../lib/core/nodes/dive';
 import { definedProps } from '../../../shared/lib/definedProps';
 import { AppButton } from '../../../shared/ui';
 import { HOME_NODE_ID, VIRTUAL_ROOT_NODE_ID } from '../model/specialNodes';
@@ -59,7 +60,7 @@ export function createNodeTreeRowButtonHandlers(
     onContextMenu: onContextMenu ? (event: ReactMouseEvent<HTMLButtonElement>) => onContextMenu(nodeId, event) : undefined,
     onDoubleClick: (event: ReactMouseEvent<HTMLButtonElement>) => {
       event.stopPropagation();
-      if (nodeId !== HOME_NODE_ID && nodeId !== VIRTUAL_ROOT_NODE_ID) {
+      if (nodeId !== HOME_NODE_ID && nodeId !== VIRTUAL_ROOT_NODE_ID && nodeId !== DIVE_SECTION_ROW_ID) {
         rename.beginRename();
       }
     },

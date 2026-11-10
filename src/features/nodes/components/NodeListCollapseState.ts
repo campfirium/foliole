@@ -109,8 +109,11 @@ function useNoteCollapsedState({
         manualCollapsedNoteNodeIdList,
         manualExpandedNoteNodeIdList
       );
-      if (!manualCollapsedNoteNodeIdList.includes(HOME_NODE_ID)) collapsed.delete(HOME_NODE_ID);
-      return removeForcedExpandedNodeIds(collapsed, noteParentById, forceExpandedNodeId);
+      const homeManuallyCollapsed = collapsed.has(HOME_NODE_ID) && manualCollapsedNoteNodeIdList.includes(HOME_NODE_ID);
+      collapsed.delete(HOME_NODE_ID);
+      const revealed = removeForcedExpandedNodeIds(collapsed, noteParentById, forceExpandedNodeId);
+      if (!homeManuallyCollapsed) return revealed;
+      return new Set([...revealed, HOME_NODE_ID]);
     },
     [
       forceExpandedNodeId,

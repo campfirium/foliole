@@ -110,19 +110,19 @@ const SYSTEM_ENTRY_NAMES: Record<AppLocale, Record<SystemEntryId, string>> = {
     removed: 'Удалённые'
   },
   'zh-Hans': {
-    home: 'Home',
+    home: '材料',
     inbox: '收件箱',
     trash: '回收站',
-    'virtual-root': '虚拟',
+    'virtual-root': '索引',
     published: '发布',
     shelved: '搁置',
     removed: '移除'
   },
   'zh-Hant': {
-    home: 'Home',
+    home: '材料',
     inbox: '收件匣',
     trash: '垃圾桶',
-    'virtual-root': '虛擬',
+    'virtual-root': '索引',
     published: '發佈',
     shelved: '擱置',
     removed: '移除'

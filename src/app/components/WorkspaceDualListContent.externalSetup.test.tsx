@@ -23,7 +23,7 @@ it('opens a simplified external folder setup dialog before connecting a folder',
     onOpenExternalSelection
   });
 
-  const setupRow = screen.getByRole('treeitem', { name: 'External' });
+  const setupRow = screen.getByRole('treeitem', { name: 'Connect folder' });
   expect(setupRow).toHaveAttribute('aria-selected', 'true');
   expect(screen.queryByRole('dialog', { name: 'Connect an external folder' })).toBeNull();
 
@@ -38,13 +38,14 @@ it('opens a simplified external folder setup dialog before connecting a folder',
   expect(onOpenExternalLibrarySettings).toHaveBeenCalledTimes(1);
 });
 
-it('keeps the simplified external folder setup row in English for the Chinese demo navigation', () => {
+it('shows the localized reference section and setup action in Chinese', () => {
   window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'zh-Hans');
 
   renderWorkspaceContent({
     isExternalViewOpen: true
   });
 
-  expect(screen.getByRole('treeitem', { name: 'External' })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: '参考' })).toBeInTheDocument();
+  expect(screen.getByRole('treeitem', { name: '连接文件夹' })).toBeVisible();
   expect(screen.queryByRole('treeitem', { name: '外部文件夹' })).toBeNull();
 });

@@ -57,7 +57,7 @@ it('keeps the selected Dive live as a subfolder moves out of a source', async ()
   const view = renderWithLocalization(createContent(nodes));
   const dive = await screen.findByRole('treeitem', { name: 'Probability' });
   fireEvent.click(dive);
-  const dives = within(screen.getByRole('tree', { name: 'Dives' }));
+  const dives = within(screen.getByRole('tree', { name: 'Dive' }));
   expect(dives.getByRole('treeitem', { name: 'Source' })).toBeVisible();
   const panel = within(screen.getByRole('complementary', { name: 'Current folder contents' }));
   expect(dive).toHaveAttribute('aria-selected', 'true');
@@ -82,4 +82,26 @@ it('keeps the selected Dive live as a subfolder moves out of a source', async ()
   expect(dive).toHaveAttribute('aria-selected', 'true');
   expect(panel.queryByRole('treeitem', { name: /Included through folder/ })).not.toBeInTheDocument();
   expect(panel.getByRole('treeitem', { name: 'Also added directly' })).toBeVisible();
+});
+
+it('renames the Dive section from its menu and restores the name after remount', async () => {
+  const nodes = {
+    [HOME_NODE_ID]: createWorkspaceContentNode({ id: HOME_NODE_ID, kind: 'folder', specialKind: 'home', title: 'Home' })
+  };
+  const view = renderWithLocalization(createContent(nodes));
+  const heading = screen.getByRole('treeitem', { name: 'Dive' });
+
+  fireEvent.doubleClick(heading);
+  expect(screen.queryByRole('textbox', { name: 'Rename Dive' })).toBeNull();
+  fireEvent.contextMenu(heading);
+  expect(screen.getByRole('menuitem', { name: 'Create Dive' })).toBeVisible();
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }));
+  const input = await screen.findByRole('textbox', { name: 'Rename Dive' });
+  fireEvent.change(input, { target: { value: 'Reading projects' } });
+  fireEvent.keyDown(input, { key: 'Enter' });
+  expect(await screen.findByRole('treeitem', { name: 'Reading projects' })).toBeVisible();
+
+  view.unmount();
+  renderWithLocalization(createContent(nodes));
+  expect(screen.getByRole('treeitem', { name: 'Reading projects' })).toBeVisible();
 });

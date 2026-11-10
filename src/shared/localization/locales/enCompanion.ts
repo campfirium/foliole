@@ -50,7 +50,7 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.directory.row.trash': 'Removed topics and folders',
   'companion.directory.row.virtual': 'Smart view',
   'companion.directory.section.external': 'External',
-  'companion.directory.section.virtual': 'Virtual folders',
+  'companion.directory.section.virtual': 'Virtual',
   'companion.directory.section.trash': 'Trash',
   'companion.directory.title': 'Directory',
   'companion.browse.header.count': '{count} ready',

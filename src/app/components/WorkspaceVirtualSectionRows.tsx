@@ -14,6 +14,7 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 interface WorkspaceVirtualRowsProps {
   resolveSystemTitle: (nodeId: string, storedTitle: string) => string;
   activeVirtualNodeId?: string | null;
+  onToggleRoot?: () => void;
   isVirtualViewOpen: boolean;
   nodesById: WorkspaceListNodesById;
   onContextMenuVirtualNode: (nodeId: string, event: ReactMouseEvent<HTMLButtonElement>) => void;
@@ -105,13 +106,13 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
   const row = (
     <NodeTreeRow
       depth={args.row.depth}
-      hasChildren={args.isVirtualRoot ? true : args.row.hasChildren}
+      hasChildren={args.isVirtualRoot || args.row.hasChildren}
       isActive={args.isSelected}
       isCollapsed={args.collapsedIds.has(args.row.node.id)}
       isDragDisabled={args.isVirtualRoot}
       isDropTarget={args.dropTargetNodeId === args.row.node.id}
       isSelected={args.isSelected}
-      key={undefined}
+      key={args.row.node.id}
       label={args.props.resolveSystemTitle(args.row.node.id, args.row.node.title)}
       nodeId={args.row.node.id}
       descendantCount={args.isVirtualRoot ? 0 : (args.props.virtualResultCountById?.get(args.row.node.id) ?? 0)}
@@ -135,6 +136,11 @@ function renderMainVirtualRow(args: Parameters<typeof renderVirtualRow>[0] & {
       } : {})}
       onKeyDown={args.onRowKeyDown}
       onSelect={(nodeId) => {
+        if (args.isVirtualRoot && args.props.onToggleRoot) {
+          args.props.onToggleRoot();
+          return;
+        }
+        if (args.isVirtualRoot) toggleCollapsed(nodeId, args.setCollapsedIds);
         args.props.onOpenVirtualView?.(nodeId);
         args.props.onSelectNodeInVirtualView(nodeId);
       }}

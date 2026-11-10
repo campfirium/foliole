@@ -213,18 +213,19 @@ it('lists only directly shelved ordinary topics in the Shelved virtual view', ()
   expect(screen.queryByText('Trashed Topic')).toBeNull();
 });
 
-it('collapses virtual descendants without removing the virtual section itself', () => {
+it('toggles saved searches from the Virtual section title', () => {
   renderVirtualRootAggregate();
-
-  expect(screen.getByRole('treeitem', { name: 'Saved Search A' })).toBeInTheDocument();
-  expect(screen.getByRole('treeitem', { name: 'Saved Search B' })).toBeInTheDocument();
-
   const root = screen.getByRole('treeitem', { name: 'Virtual' });
-  fireEvent.doubleClick(root);
-  expect(screen.queryByRole('textbox', { name: 'Rename Virtual' })).toBeNull();
-  fireEvent.keyDown(root, { key: 'ArrowLeft' });
 
+  fireEvent.doubleClick(root);
+  fireEvent.click(root);
+
+  expect(screen.queryByRole('textbox', { name: 'Rename Virtual' })).toBeNull();
+  expect(root).toHaveAttribute('aria-expanded', 'false');
   expect(screen.queryByRole('treeitem', { name: 'Saved Search A' })).toBeNull();
-  expect(screen.queryByRole('treeitem', { name: 'Saved Search B' })).toBeNull();
-  expect(screen.getByRole('treeitem', { name: 'Virtual' })).toBeInTheDocument();
+
+  fireEvent.click(root);
+  expect(root).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByRole('treeitem', { name: 'Saved Search A' })).toBeVisible();
+  expect(screen.getByRole('treeitem', { name: 'Saved Search B' })).toBeVisible();
 });

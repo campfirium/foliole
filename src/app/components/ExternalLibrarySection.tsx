@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { FolderSectionRows, useFolderSectionControl, useFolderSectionStack } from '../../features/nodes/components/FolderSectionStack';
 import { getNodeListRowSpacing } from '../../features/nodes/components/nodeListRowSpacingSettings';
+import { NodeTreeRow } from '../../features/nodes/components/NodeTreeRow';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type {
   ExternalLibraryBrowseEntry,
@@ -30,6 +32,8 @@ import {
 } from './ExternalLibrarySectionModel';
 import { ExternalLibrarySetupRow } from './ExternalLibrarySetupRow';
 
+const EXTERNAL_HEADING_ID = 'external-library-heading';
+
 interface ExternalLibrarySectionProps {
   entriesByFolderId: Record<string, ExternalLibraryBrowseEntry[] | undefined>;
   folders: ExternalLibraryFolder[];
@@ -54,32 +58,65 @@ function toggleCollapsed(nextId: string, setCollapsedIds: React.Dispatch<React.S
   });
 }
 
+function renderExternalHeading(
+  stack: ReturnType<typeof useFolderSectionStack>,
+  title: string,
+  rowSpacing: number,
+  collapsed: boolean,
+  setCollapsed: React.Dispatch<React.SetStateAction<boolean>>
+) {
+  if (!stack) return [];
+  const toggle = () => setCollapsed((value) => !value);
+  return [
+    <NodeTreeRow key="heading" depth={0} hasChildren isActive={false} isCollapsed={collapsed}
+      isSelected={false} label={title} nodeId={EXTERNAL_HEADING_ID}
+      rowSpacing={rowSpacing} showIcon={false} showLeafChevronPlaceholder={false}
+      onKeyDown={(_id, event) => {
+        if (event.key !== (collapsed ? 'ArrowRight' : 'ArrowLeft')) return;
+        event.preventDefault();
+        toggle();
+      }}
+      onSelect={toggle} onToggleCollapse={toggle} />
+  ];
+}
+
+function useExternalSectionCollapse() {
+  const [collapsed, setCollapsed] = useState(false);
+  useFolderSectionControl(true, collapsed, () => setCollapsed((value) => !value));
+  return [collapsed, setCollapsed] as const;
+}
+
 export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
   const t = useTranslation();
   const rowSpacing = getNodeListRowSpacing();
+  const stack = useFolderSectionStack();
   const [folderOrder, setFolderOrder] = useState<ExternalLibraryFolderOrderItem[]>(loadExternalLibraryFolderOrder);
   const orderedFolders = useMemo(() => sortExternalLibraryFolders(props.folders, folderOrder), [folderOrder, props.folders]);
   const [collapsedIds, setCollapsedIds] = useExternalCollapsedIds(orderedFolders);
   const [contextMenu, setContextMenu] = useState<ExternalFolderContextMenuState | null>(null);
   const [isSetupDialogOpen, setIsSetupDialogOpen] = useState(false);
-  const rows = useExternalTreeRows({ ...props, folders: orderedFolders }, collapsedIds);
+  const [sectionCollapsed, setSectionCollapsed] = useExternalSectionCollapse();
+  const rows = useExternalTreeRows({ ...props, folders: orderedFolders }, collapsedIds, Boolean(stack));
   const onRowKeyDown = useExternalRowKeyDown(collapsedIds, rows, props.onOpenExternalSelection, setCollapsedIds);
   const drag = useExternalFolderDrag(orderedFolders, setFolderOrder);
-
   return (
     <div className="mt-1 flex min-w-0 flex-col">
-      {props.folders.length === 0 ? (
-        <ExternalLibrarySetupRow
-          isSelected={props.isExternalViewOpen && props.selection.kind === 'root'}
-          onContextMenu={(event) => openExternalSetupContextMenu(event, setContextMenu)}
-          onOpenRoot={() => {
-            props.onOpenExternalSelection({ kind: 'root' });
-            setIsSetupDialogOpen(true);
-          }}
-        />
-      ) : (
-        <section aria-label={t('desktop.externalLibrary.folderTree')} className="flex flex-col pb-2 pt-1" role="tree">
-          {rows.map((row) => (
+      <section aria-label={t('desktop.externalLibrary.folderTree')} className="flex flex-col pb-2 pt-1" role="tree">
+        <FolderSectionRows rows={[
+          ...renderExternalHeading(stack, t('desktop.externalLibrary.setupLabel'), rowSpacing, sectionCollapsed, setSectionCollapsed),
+          ...(sectionCollapsed ? [] : props.folders.length === 0 ? [
+            <ExternalLibrarySetupRow
+              key="setup"
+              depth={stack ? 1 : 0}
+              label={stack ? t('desktop.externalLibrary.menu.connectFolder') : t('desktop.externalLibrary.setupLabel')}
+              isSelected={props.isExternalViewOpen && props.selection.kind === 'root'}
+              onContextMenu={(event) => openExternalSetupContextMenu(event, setContextMenu)}
+              onOpenRoot={() => {
+                props.onOpenExternalSelection({ kind: 'root' });
+                setIsSetupDialogOpen(true);
+              }}
+            />
+          ] : rows.map((row) => (
             <ExternalLibraryRow
               collapsedIds={collapsedIds}
               drag={drag}
@@ -93,9 +130,9 @@ export function ExternalLibrarySection(props: ExternalLibrarySectionProps) {
               rowSpacing={rowSpacing}
               setContextMenu={setContextMenu}
             />
-          ))}
-        </section>
-      )}
+          )))
+        ]} />
+      </section>
       <ExternalFolderContextMenu
         menu={contextMenu}
         onClose={() => setContextMenu(null)}
@@ -155,12 +192,13 @@ function useExternalCollapsedIds(folders: ExternalLibraryFolder[]) {
 
 function useExternalTreeRows(
   props: ExternalLibrarySectionProps,
-  collapsedIds: Set<string>
+  collapsedIds: Set<string>,
+  hasHeading: boolean
 ) {
-  return useMemo(
-    () => buildExternalTreeRows(props.folders, props.entriesByFolderId, props.selection, props.isExternalViewOpen, collapsedIds),
-    [collapsedIds, props.entriesByFolderId, props.folders, props.isExternalViewOpen, props.selection]
-  );
+  return useMemo(() => {
+    const rows = buildExternalTreeRows(props.folders, props.entriesByFolderId, props.selection, props.isExternalViewOpen, collapsedIds);
+    return hasHeading ? rows.map((row) => ({ ...row, depth: row.depth + 1 })) : rows;
+  }, [collapsedIds, hasHeading, props.entriesByFolderId, props.folders, props.isExternalViewOpen, props.selection]);
 }
 
 function useExternalRowKeyDown(
