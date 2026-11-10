@@ -18,6 +18,7 @@ import { useCompanionBrowseSortState } from './useCompanionBrowseSortState';
 import { useCompanionCaptureController } from './useCompanionCaptureController';
 import { useCompanionDirectorySelectionState } from './useCompanionDirectorySelectionState';
 import { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
+import { useCompanionReminderNavigation } from './useCompanionReminderNavigation';
 import { useCompanionReviewTraining } from './useCompanionReviewTraining';
 import { useCompanionSearchNavigation } from './useCompanionSearchNavigation';
 import { useCompanionShellActions } from './useCompanionShellActions';
@@ -193,6 +194,8 @@ export function CompanionRestoredShell(props: {
 }) {
   const model = useCompanionShellModel(props.workspaceSync);
   useCompanionAndroidBack(model);
+  useCompanionReminderNavigation(props.bootstrapState.database_ready && props.workspaceSync.isWorkspaceSyncStateReady,
+    props.workspaceSync.state.workspace_snapshot?.libraryScope, () => model.handleNavigationAction('review'));
   useCompanionReviewTraining(props.bootstrapState.database_ready && model.workspaceSync.isWorkspaceSyncStateReady,
     model.surface.activeAction === 'review' && !model.surface.isFlowBrowsing, model.workspaceSync.state.workspace_snapshot);
 

@@ -15,6 +15,7 @@ export const reminderRuleSchema = z.object({
     z.object({ kind: z.literal('daily'), time: dailyTime }),
     z.object({ kind: z.literal('once'), at: z.iso.datetime() })
   ]),
+  destination: z.literal('flow').optional(),
   device,
   enabled: z.boolean()
 });

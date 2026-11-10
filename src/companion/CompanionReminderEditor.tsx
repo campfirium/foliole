@@ -4,7 +4,9 @@ import { isReminderTriggerPast, type ReminderRule } from '../../lib/core/reminde
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { AppButton, AppInput } from '../shared/ui';
 
-export type ReminderDraft = { id?: string; message: string; trigger: ReminderRule['trigger'] };
+import { CompanionReminderChoice } from './CompanionReminderChoice';
+
+export type ReminderDraft = { id?: string; message: string; trigger: ReminderRule['trigger']; destination?: ReminderRule['destination'] };
 
 export function CompanionReminderEditor(props: {
   busy: boolean;
@@ -28,16 +30,12 @@ export function CompanionReminderEditor(props: {
         <AppInput required className="min-h-11 text-base" disabled={busy} value={draft.message}
           onChange={event => onChange({ ...draft, message: event.currentTarget.value })} />
       </label>
-      <fieldset className="space-y-1.5 border-t border-companion-divider pt-2">
-        <legend className="text-sm font-medium">{t('settings.reminders.trigger')}</legend>
-        <select aria-label={t('settings.reminders.trigger')} value={trigger.kind} disabled={busy}
-          className="min-h-11 w-full rounded-md border border-companion-divider bg-canvas px-3 text-base"
-          onChange={event => onChange({ ...draft, trigger: event.currentTarget.value === 'once'
-            ? { kind: 'once', at: new Date(Math.floor(Date.now() / 60_000) * 60_000 + 5 * 60_000).toISOString() }
-            : { kind: 'daily', time: '20:00' } })}>
-          <option value="daily">{t('settings.reminders.daily')}</option>
-          <option value="once">{t('settings.reminders.once')}</option>
-        </select>
+      <div className="space-y-1.5 border-t border-companion-divider pt-2">
+        <CompanionReminderChoice label={t('settings.reminders.repeat')} value={trigger.kind} disabled={busy}
+          options={{ daily: t('settings.reminders.daily'), once: t('settings.reminders.noRepeat') }}
+          onChange={kind => {
+            if (kind !== trigger.kind) onChange({ ...draft, trigger: changeRepeat(trigger) });
+          }} />
         <label className="flex min-h-14 flex-wrap items-center justify-between gap-2 text-sm">
           <span>{t(trigger.kind === 'once' ? 'settings.reminders.dateTime' : 'settings.reminders.time')}</span>
           {trigger.kind === 'once'
@@ -52,7 +50,12 @@ export function CompanionReminderEditor(props: {
               onChange={event => onChange({ ...draft, trigger: { kind: 'daily', time: event.currentTarget.value } })} />}
         </label>
         {expired && <p className="text-sm">{t('settings.reminders.futureTime')}</p>}
-      </fieldset>
+      </div>
+      <div className="border-t border-companion-divider pt-2">
+        <CompanionReminderChoice label={t('settings.reminders.onTap')} value={draft.destination ?? 'none'}
+          options={{ none: t('settings.reminders.noDestination'), flow: t('settings.reminders.openFlow') }}
+          disabled={busy} onChange={value => onChange({ ...draft, destination: value === 'flow' ? value : undefined })} />
+      </div>
       <dl className="flex min-h-11 items-center justify-between gap-3 border-t border-companion-divider pt-2 text-sm">
         <dt className="font-medium">{t('settings.reminders.device')}</dt>
         <dd className="text-companion-text-secondary">{t('settings.reminders.thisDevice')}</dd>
@@ -63,6 +66,17 @@ export function CompanionReminderEditor(props: {
       <AppButton variant="emphasis" className="min-h-11" type="submit" loading={busy} disabled={expired}>{t('settings.reminders.save')}</AppButton>
     </div>
   </form>;
+}
+
+function changeRepeat(trigger: ReminderRule['trigger']): ReminderRule['trigger'] {
+  if (trigger.kind === 'once') {
+    return { kind: 'daily', time: toLocalDateTime(trigger.at).slice(11) || '20:00' };
+  }
+  const date = new Date();
+  const [hour = 20, minute = 0] = (trigger.time || '20:00').split(':').map(Number);
+  date.setHours(hour, minute, 0, 0);
+  if (date.getTime() <= Date.now()) date.setDate(date.getDate() + 1);
+  return { kind: 'once', at: date.toISOString() };
 }
 
 function toLocalDateTime(at: string) {

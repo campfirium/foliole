@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import type { LocalNotificationSchema } from '@capacitor/local-notifications';
+import type { ActionPerformed, LocalNotificationSchema } from '@capacitor/local-notifications';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -11,13 +11,14 @@ import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCom
 import {
   closeIosCompanionDatabase, initializeIosCompanionDatabase
 } from '../shared/platform/companion/runtime/iosCompanionDatabaseBootstrap';
+import { listenForCompanionReminderFlow } from '../shared/platform/companion/settings/companionReminderActions';
 import { createFakeCapacitorDatabaseManager } from '../shared/platform/companionSyncNodeVersionsTestSupport';
 
 import { CompanionReminderSettingsContent } from './CompanionReminderSettingsContent';
 
 const host = vi.hoisted(() => ({
   platform: 'android', bootstrap: null as NativeCompanionBootstrapState | null, granted: true, exactGranted: true,
-  pending: new Map<number, LocalNotificationSchema>()
+  pending: new Map<number, LocalNotificationSchema>(), tap: undefined as ((event: ActionPerformed) => Promise<void>) | undefined
 }));
 
 vi.mock('@capacitor/core', async () => {
@@ -31,6 +32,10 @@ vi.mock('../shared/platform/companionBootstrap', async importOriginal => ({
 }));
 vi.mock('@capacitor/local-notifications', () => ({
   LocalNotifications: {
+    addListener: async (_name: string, callback: typeof host.tap) => {
+      host.tap = callback;
+      return { remove: async () => { host.tap = undefined; } };
+    },
     getPending: async () => ({ notifications: [...host.pending.values()] }),
     checkPermissions: async () => ({ display: host.granted ? 'granted' : 'denied' }),
     requestPermissions: async () => ({ display: host.granted ? 'granted' : 'denied' }),
@@ -80,7 +85,7 @@ async function setDraft(message: string, time: string) {
     await waitFor(() => expect(add).toBeEnabled());
     fireEvent.click(add);
   }
-  expect(screen.getByRole('group', { name: 'Trigger' })).toBeVisible();
+  expect(screen.getByRole('button', { name: /^Repeat / })).toBeVisible();
   expect(screen.getByText('Delivery device')).toBeVisible();
   expect(screen.getByText('This device')).toBeVisible();
   fireEvent.change(screen.getByLabelText('Message'), { target: { value: message } });
@@ -166,7 +171,8 @@ it.each(['android', 'ios'] as const)('schedules a single %s notification and res
   const add = await screen.findByRole('button', { name: 'Add reminder' });
   await waitFor(() => expect(add).toBeEnabled());
   fireEvent.click(add);
-  fireEvent.change(screen.getByRole('combobox', { name: 'Trigger' }), { target: { value: 'once' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Repeat Every day' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Never' }));
   fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'One appointment' } });
   const when = `${new Date().getFullYear() + 1}-04-03T10:45`;
   fireEvent.change(screen.getByLabelText('Date and time'), { target: { value: when } });
@@ -179,6 +185,39 @@ it.each(['android', 'ios'] as const)('schedules a single %s notification and res
   await open(platform);
   render(<CompanionReminderSettingsContent onBack={() => undefined} />);
   fireEvent.click(await screen.findByRole('button', { name: 'Edit reminder: One appointment' }));
-  expect(screen.getByRole('combobox', { name: 'Trigger' })).toHaveValue('once');
+  expect(screen.getByRole('button', { name: 'Repeat Never' })).toBeVisible();
   expect(screen.getByLabelText('Date and time')).toHaveValue(when);
+});
+
+it.each(['android', 'ios'] as const)('opens Flow from a current %s reminder and ignores stale notifications', async platform => {
+  root = mkdtempSync(path.join(os.tmpdir(), 'foliole-reminder-flow-'));
+  await open(platform);
+  const view = render(<CompanionReminderSettingsContent onBack={() => undefined} />);
+  await setDraft('Flow time', '20:00');
+  fireEvent.click(screen.getByRole('button', { name: 'On notification tap None' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Open Flow' }));
+  await save();
+  await setDraft('Just a reminder', '21:00');
+  await save();
+  const [notification, plainNotification] = host.pending.values();
+  if (!notification || !plainNotification) throw new Error('Expected both reminders to be scheduled.');
+  view.unmount();
+  await closeIosCompanionDatabase();
+  await open(platform);
+  const openFlow = vi.fn();
+  const listener = listenForCompanionReminderFlow(openFlow);
+  await listener.ready;
+  try {
+    await host.tap?.({ actionId: 'tap', notification: plainNotification });
+    expect(openFlow).not.toHaveBeenCalled();
+    await host.tap?.({ actionId: 'tap', notification });
+    expect(openFlow).toHaveBeenCalledTimes(1);
+    render(<CompanionReminderSettingsContent onBack={() => undefined} />);
+    fireEvent.click(await screen.findByRole('switch', { name: 'Enabled: Flow time' }));
+    await waitFor(() => expect([...host.pending.values()].map(item => item.body)).toEqual(['Just a reminder']));
+    await host.tap?.({ actionId: 'tap', notification });
+    expect(openFlow).toHaveBeenCalledTimes(1);
+  } finally {
+    await listener.dispose();
+  }
 });

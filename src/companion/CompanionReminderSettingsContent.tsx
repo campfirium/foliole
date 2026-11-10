@@ -59,7 +59,7 @@ function useReminderSettings() {
     const current = rules.find(rule => rule.id === draft.id);
     await persist({
       id: draft.id ?? createCompanionUuid(), revision: createCompanionUuid(), message: draft.message.trim(),
-      trigger: draft.trigger, device, enabled: current?.enabled ?? true
+      trigger: draft.trigger, destination: draft.destination, device, enabled: current?.enabled ?? true
     }, true);
   }
 
@@ -75,7 +75,7 @@ export function CompanionReminderSettingsContent(props: { onBack(): void }) {
   const { busy, device, draft, feedback, rules, save, setDraft, toggle } = useReminderSettings();
   const localRules = device ? rules.filter(rule => isReminderForDevice(rule, device)) : [];
   const edit = (rule: ReminderRule) => setDraft({
-    id: rule.id, message: rule.message, trigger: rule.trigger
+    id: rule.id, message: rule.message, trigger: rule.trigger, destination: rule.destination
   });
   const status = feedback && <p role="status" className="text-sm leading-5 text-companion-text-secondary">
     {t(`settings.reminders.${feedback}`)}

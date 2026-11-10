@@ -3,7 +3,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { isReminderForDevice, isReminderTriggerPast, type ReminderDevice, type ReminderRule } from '../../../../../lib/core/reminders/reminderRule';
 
-const owner = 'foliole-reminder-v1';
+export const COMPANION_REMINDER_NOTIFICATION_OWNER = 'foliole-reminder-v1';
 
 type SchedulingResult = 'scheduled' | 'inactive' | 'permission-denied' | 'exact-permission-denied';
 
@@ -16,7 +16,7 @@ export async function reconcileCompanionReminders(
   const desired = new Map(localRules.map(rule => [rule.id, rule]));
   const occupied = new Set(notifications.map(notification => notification.id));
   const cancel = notifications.filter(notification => {
-    if (notification.extra?.owner !== owner) return false;
+    if (notification.extra?.owner !== COMPANION_REMINDER_NOTIFICATION_OWNER) return false;
     const rule = desired.get(notification.extra.ruleId);
     if (rule && rule.revision === notification.extra.revision && (!exact || notification.extra.exact === true)) {
       desired.delete(rule.id);
@@ -52,7 +52,7 @@ function scheduleReminder(rule: ReminderRule, id: number, exact: boolean) {
     : { on: { hour: Number(trigger.time.slice(0, 2)), minute: Number(trigger.time.slice(3)), second: 0 } };
   return LocalNotifications.schedule({ notifications: [{
     id, title: 'Foliole', body: rule.message,
-    extra: { owner, ruleId: rule.id, revision: rule.revision, exact },
+    extra: { owner: COMPANION_REMINDER_NOTIFICATION_OWNER, ruleId: rule.id, revision: rule.revision, exact },
     schedule: { ...schedule, allowWhileIdle: true },
     isExactNotification: exact, isExactMandatory: exact
   }] });
