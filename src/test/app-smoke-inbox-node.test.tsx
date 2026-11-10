@@ -42,18 +42,22 @@ it('shows Inbox in the node tree and opens the folder list surface', async () =>
   expect(screen.queryByLabelText('Prompt editor')).not.toBeInTheDocument();
 });
 
-it('opens Virtual search from the separate section and collapses its branch with the arrow key', async () => {
+it('toggles the Virtual section without leaving the current folder', async () => {
   render(<App />);
 
-  const virtual = within(await getNodeListPanel()).getByRole('treeitem', { name: 'Virtual' });
+  const panel = within(await getNodeListPanel());
+  const virtual = panel.getByRole('treeitem', { name: 'Virtual' });
   expect(virtual).toHaveAttribute('aria-expanded', 'true');
-  fireEvent.click(virtual);
-  expect(screen.getByRole('region', { name: 'Virtual search' })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Create Folder' })).not.toBeInTheDocument();
 
+  fireEvent.click(virtual);
+  expect(virtual).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.queryByRole('region', { name: 'Virtual search' })).not.toBeInTheDocument();
+
+  fireEvent.keyDown(virtual, { key: 'ArrowRight' });
+  expect(virtual).toHaveAttribute('aria-expanded', 'true');
   fireEvent.keyDown(virtual, { key: 'ArrowLeft' });
   expect(virtual).toHaveAttribute('aria-expanded', 'false');
-  expect(screen.getByRole('region', { name: 'Virtual search' })).toBeInTheDocument();
+  expect(screen.queryByRole('region', { name: 'Virtual search' })).not.toBeInTheDocument();
 });
 
 it('shows import and clipboard import actions in the left toolbar without Watch Manager', () => {

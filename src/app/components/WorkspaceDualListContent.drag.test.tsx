@@ -179,7 +179,7 @@ it('moves a current-folder topic when dropped onto a directory folder', async ()
   fireEvent.dragStart(topicRow, { dataTransfer: transfer });
   fireEvent.dragOver(targetFolderRow, { clientY: 50, dataTransfer: transfer });
   await waitFor(() => {
-    expect(targetFolderRow.parentElement).toHaveClass('border');
+    expect(targetFolderRow.parentElement).toHaveAttribute('data-drop-intent', 'child');
   });
   fireEvent.drop(targetFolderRow, { clientY: 50, dataTransfer: transfer });
 
@@ -198,7 +198,7 @@ it('drops current-folder topics into directory folders even near row edges', asy
   fireEvent.dragStart(topicRow, { dataTransfer: transfer });
   fireEvent.dragOver(targetFolderRow, { clientY: 0, dataTransfer: transfer });
   await waitFor(() => {
-    expect(targetFolderRow.parentElement).toHaveClass('border');
+    expect(targetFolderRow.parentElement).toHaveAttribute('data-drop-intent', 'child');
   });
   fireEvent.drop(targetFolderRow, { clientY: 0, dataTransfer: transfer });
 
