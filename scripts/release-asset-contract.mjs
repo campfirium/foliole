@@ -9,7 +9,6 @@ import { verifyLinuxPackageDirectory } from './linux/linux-deb-contract.mjs';
 import { resolveReleasePlatformIdentity } from './release-platform-contract.mjs';
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
 import { verifyTestflightReceiptFile } from './ios/testflight-candidate.mjs';
-import { verifyPublishedAssetBytes } from './release-public-assets.mjs';
 import { verifyPlayReleaseAssets } from './android/play-release-assets.mjs';
 
 function sorted(values) {
@@ -36,12 +35,10 @@ function selectedPlatforms(identity) {
   return identity.registry.platforms.filter((platform) => selected.has(platform.id));
 }
 
-export async function validateReleaseAssetDirectory({ directory, identity, producerRoot, publishedRelease }) {
+export async function validateReleaseAssetDirectory({ directory, identity, producerRoot }) {
   const names = await readdir(directory);
   assertExactReleaseAssets(identity, names);
-  if (publishedRelease) await verifyPublishedAssetBytes({ directory, identity, release: publishedRelease });
   for (const platform of selectedPlatforms(identity)) {
-    if (publishedRelease && ['play-universal-apk', 'testflight-submission'].includes(platform.artifactContract)) continue;
     if (platform.artifactContract === 'play-universal-apk') {
       if (!producerRoot) throw new Error('Android producer evidence directory is required.');
       await verifyPlayReleaseAssets(directory, identity.intent.version, identity.sourceSha, path.join(producerRoot, platform.id));
@@ -82,8 +79,7 @@ function arg(name) {
 async function main() {
   assertQualityCommandAllowed('runner:release-draft-assets');
   const command = process.argv[2];
-  const publishedRelease = arg('published-release') && JSON.parse(await readFile(path.resolve(arg('published-release')), 'utf8'));
-  const identity = await readIdentity(arg('version'), arg('sha') ?? publishedRelease?.target_commitish);
+  const identity = await readIdentity(arg('version'), arg('sha'));
   if (command === 'list') {
     console.log(identity.managedAssets.join('\n'));
     return;
@@ -97,11 +93,7 @@ async function main() {
     assertExactReleaseAssets(identity, actual);
     return;
   }
-  if (command === 'verify-directory') {
-    await validateReleaseAssetDirectory({ directory: path.resolve(arg('directory')), identity, producerRoot: arg('input-root') && path.resolve(arg('input-root')), publishedRelease });
-    return;
-  }
-  throw new Error('release asset command must be list, managed, verify, or verify-directory.');
+  throw new Error('release asset command must be list, managed, or verify.');
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {

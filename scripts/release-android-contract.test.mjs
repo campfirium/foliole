@@ -10,7 +10,6 @@ import { prepareDefaultReleaseIntent } from './release-intent.mjs';
 import { assertT7Publication } from './release-publication-contract.mjs';
 import { createPlatformDownloadDirectory } from './release-download-directory.mjs';
 import { assembleReleaseAssets } from './release-assembly-assets.mjs';
-import { validateReleaseAssetDirectory } from './release-asset-contract.mjs';
 import { PLAY_APP_CERTIFICATE_SHA256 } from './android/play-generated-apk.mjs';
 
 const registry = JSON.parse(fs.readFileSync('.github/release-platforms.json'));
@@ -109,18 +108,4 @@ it('rejects wrong source, signature claims and code changes even when superficia
   const bytes = fs.readFileSync(f.apk);
   fs.writeFileSync(f.file, JSON.stringify({ ...f.receipt, apkSha256: createHash('sha256').update(bytes).digest('hex'), size: bytes.length }));
   await expect(assembleReleaseAssets(f)).rejects.toThrow(/executable code differs/u);
-});
-
-
-it('verifies published APK bytes after receipt attachments are removed, preserving CI evidence', async () => {
-  const f = producer(); await assembleReleaseAssets(f);
-  const publishedRelease = { tag_name: `v${version}`, target_commitish: sha, draft: false,
-    published_at: '2026-11-07T00:00:00Z', assets: [{ name: f.asset, size: f.receipt.size,
-      digest: `sha256:${f.receipt.apkSha256}` }] };
-  const args = { directory: f.outputRoot, identity: f.identity, publishedRelease };
-  await expect(validateReleaseAssetDirectory(args)).resolves.toEqual([f.asset]);
-  publishedRelease.assets.push({ name: `Foliole-Android-${version}-Play.json` });
-  await expect(validateReleaseAssetDirectory(args)).resolves.toEqual([f.asset]);
-  fs.writeFileSync(path.join(f.outputRoot, f.asset), 'corrupted');
-  await expect(validateReleaseAssetDirectory(args)).rejects.toThrow(/published asset/u);
 });

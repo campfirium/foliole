@@ -137,26 +137,6 @@ jobs:
             --jq 'select(.draft == false and .published_at != null) | .tag_name')"
           test "$published_tag" = "v${latest_version}"
 
-      - name: Download and verify public updater assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          latest_version="$(node -p "require('./releases/update-manifest.json').latest")"
-          root=".tmp/public-update-assets"
-          rm -rf "$root"
-          mkdir -p "$root"
-          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/v${latest_version}" > .tmp/public-release.json
-          mapfile -t selected_assets < <(node scripts/release-asset-contract.mjs list \
-            --version="$latest_version")
-          download_args=()
-          for asset in "${selected_assets[@]}"; do
-            download_args+=(--pattern "$asset")
-          done
-          gh release download "v${latest_version}" --dir "$root" "${download_args[@]}"
-          node scripts/release-asset-contract.mjs verify-directory \
-            --version="$latest_version" --directory="$root" --published-release=.tmp/public-release.json
-
       - uses: actions/download-artifact@v4
         with:
           name: site-store-status

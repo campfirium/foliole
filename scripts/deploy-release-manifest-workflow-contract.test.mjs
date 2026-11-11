@@ -18,6 +18,10 @@ describe('deploy release manifest workflow contract', () => {
     expect(workflow.jobs.build.needs).toContain('sync-testflight-release');
   });
 
+  it('does not download public release attachments while refreshing metadata', () => {
+    expect(source).not.toMatch(/\bgh\s+release\s+download\b/u);
+  });
+
   it('publishes only merged dev metadata for an already-public Release', () => {
     expect(workflow.on.push.branches).toEqual(['dev']);
     expect(workflow.on.workflow_dispatch.inputs.monitor).toMatchObject({ type: 'boolean', default: false });
@@ -28,9 +32,6 @@ describe('deploy release manifest workflow contract', () => {
     expect(source).toContain('test "$DEPLOY_REF" = "refs/heads/dev"');
     expect(source).toContain('releases/tags/v${latest_version}');
     expect(source).toContain('select(.draft == false and .published_at != null)');
-    expect(source).toContain('gh release download "v${latest_version}"');
-    expect(source).toContain('node scripts/release-asset-contract.mjs list');
-    expect(source).toContain('node scripts/release-asset-contract.mjs verify-directory');
     expect(source).toContain('node scripts/prepare-release-manifest-site.mjs');
     expect(workflow.jobs.build.steps.find((step) => step.uses === 'actions/checkout@v4').with['fetch-depth']).toBe(2);
     expect(source).not.toContain('- main');
