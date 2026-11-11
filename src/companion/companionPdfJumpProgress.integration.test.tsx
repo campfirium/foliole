@@ -1,3 +1,4 @@
+import { EditorView } from '@codemirror/view';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
@@ -108,6 +109,30 @@ it('keeps an in-document search match as the new PDF position when the reader cl
     expect(currentOffset(library)).toBeUndefined();
     fireEvent.click(screen.getByRole('button', { name: 'Close document search' }));
     await waitFor(() => expect(currentOffset(library)).toBe(encodePdfReadingPosition(5, 0)), { timeout: 2500 });
+  } finally {
+    cleanup();
+    restoreGeometry();
+    await library.close();
+  }
+});
+
+it('saves an applied PDF jump when the reader leaves before the completion callback', async () => {
+  const library = await createResumeLibrary();
+  const restoreGeometry = installReadingRangeGeometry();
+  try {
+    seedPdf(library);
+    const reader = await renderReader(library);
+    const body = await screen.findByRole('document', { name: 'Topic body' });
+    const editor = EditorView.findFromDOM(body)!;
+    fireEvent.click(body);
+    fireEvent.click(screen.getByRole('button', { name: 'Outline' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Fifth chapter' }));
+    await waitFor(() => expect(editor.state.selection.main.from).toBe(editor.state.doc.toString().indexOf('Fifth chapter')));
+    expect(currentOffset(library)).toBeUndefined();
+    reader.unmount();
+    await waitFor(() => expect(currentOffset(library)).toBe(encodePdfReadingPosition(5, 0)), { timeout: 2500 });
+    await library.reopen();
+    expect(currentOffset(library)).toBe(encodePdfReadingPosition(5, 0));
   } finally {
     cleanup();
     restoreGeometry();
