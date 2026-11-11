@@ -28,9 +28,10 @@ export abstract class CodeMirrorEditorNavigation {
   getViewportRect() { return this.view.scrollDOM.getBoundingClientRect(); }
   revealPosition(position: number) { revealEditorPosition(this.view, this.clampPosition(position)); }
   revealReadingPosition(position: number) {
-    this.view.dispatch({ effects: EditorView.scrollIntoView(this.clampPosition(position), {
-      y: 'start', yMargin: this.view.scrollDOM.clientHeight * READING_VIEWPORT_RATIO
-    }) });
+    // With outer scrolling, CodeMirror's scroller spans the document rather than the viewport.
+    const scrollsOutsideEditor = this.view.dom.closest('[data-scroll-container="outer"]') !== null;
+    const yMargin = scrollsOutsideEditor ? 0 : this.view.scrollDOM.clientHeight * READING_VIEWPORT_RATIO;
+    this.view.dispatch({ effects: EditorView.scrollIntoView(this.clampPosition(position), { y: 'start', yMargin }) });
   }
   getSelection(): EditorSelection { return toEditorPrimarySelection(this.view.state.selection); }
   getSelectionRanges(): EditorSelection[] { return toEditorSelectionRanges(this.view.state.selection); }

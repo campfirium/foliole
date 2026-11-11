@@ -54,6 +54,18 @@ test('long review content retains outer page scrolling and accessible grade butt
   }
 });
 
+test('PDF text resume puts the restored passage at the start of the outer reading viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await openReview(page, 'reading&question=long&pdfResume');
+  const target = page.getByText('Paragraph 25. Content continues.', { exact: true });
+  await expect.poll(() => target.evaluate(line => {
+    const surface = line.closest('[data-companion-reading-surface]')!;
+    const viewport = surface.getBoundingClientRect();
+    return (line.getBoundingClientRect().top - viewport.top) / viewport.height;
+  })).toBeLessThanOrEqual(0.12);
+  await expect(target).toBeInViewport();
+});
+
 test('revealed item editing scrolls each field independently inside its allocated space', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await openReview(page, 'editing&question=long&answer=long');

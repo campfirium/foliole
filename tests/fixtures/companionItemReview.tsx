@@ -38,6 +38,7 @@ function Review() {
   const content = params.get('question') === 'image' ? `![Question illustration](${wideImage})` : params.has('question') ? long : 'How do you check Flow history?';
   const answer = params.get('answer') === 'image' ? `![Answer illustration](${wideImage})` : params.has('answer') ? long : 'Process entries, then undo and redo and verify the displayed entry.';
   const reading = params.has('reading');
+  const pdfResumeTextOffset = params.has('pdfResume') ? content.indexOf('Paragraph 25.') : undefined;
   const [atEnd, setAtEnd] = useState<boolean | null>(null);
   const [revealed, setRevealed] = useState(!params.has('hidden'));
   const [grade, setGrade] = useState<number | null>(null);
@@ -46,7 +47,8 @@ function Review() {
     <ImmersiveReadableArticle flow isReviewItem={!reading} answer={!reading && revealed ? answer : null} header={<span>Flow practice</span>}
       onExit={() => {}} snapshot={null}
       readableArticle={{ nodeId: 'review-item', content, title: 'Question', hideTitleHeading: false,
-        persistedNodeViewState: null, pdfAttachmentId: null, textAnchorDecorations: [] }}
+        persistedNodeViewState: null, pdfAttachmentId: null, textAnchorDecorations: [],
+        ...(pdfResumeTextOffset === undefined ? {} : { pdfResumeTextOffset }) }}
       footer={<CompanionBottomReviewBar visible hasAnswer itemKind={reading ? 'reading' : 'fsrs'} isAnswerRevealed={revealed}
         onRevealAnswer={() => setRevealed(true)} onGrade={setGrade} onReadReviewTopic={setAtEnd}
         onPostponeReviewTopic={() => {}} onDismissReviewTopic={() => {}} reviewCardKey="review-item" />} />
