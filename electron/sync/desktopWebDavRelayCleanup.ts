@@ -8,6 +8,7 @@ import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagno
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import { createDesktopLibrarySyncFiles } from './desktopFramedSyncFiles.js';
 import { createDesktopRequestSyncAttachmentHost } from './desktopRequestSyncAttachmentHost.js';
+import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import { createDesktopWebDavRelayHttp, type DesktopWebDavRelayHttpStats } from './desktopWebDavRelayHttp.js';
 import { loadDesktopBoundWebDavRelay } from './desktopWebDavRelaySettings.js';
 
@@ -23,7 +24,7 @@ export async function captureDesktopWebDavRelayCleanup(host: RequestSyncDatabase
   const { binding, owner } = runtime;
   const stats: DesktopWebDavRelayHttpStats = { requests: {}, responses: 0, uploadedBytes: 0, downloadedBytes: 0 };
   const http = createDesktopWebDavRelayHttp(stats, signal);
-  return captureWebDavRelayCleanup({
+  const cleanup = await captureWebDavRelayCleanup({
     host, signal, attachments: await createDesktopRequestSyncAttachmentHost(host),
     files: createDesktopLibrarySyncFiles(owner.dbPath),
     loadScope: db => readWebDavRelayBodyScope(db, binding, binding.desktop_device_id),
@@ -36,4 +37,13 @@ export async function captureDesktopWebDavRelayCleanup(host: RequestSyncDatabase
       }
     }
   }, context, role);
+  if (!cleanup) return;
+  return {
+    ...cleanup,
+    async retire() {
+      const result = await cleanup.retire();
+      if (result) notifyDesktopSyncGroupOverviewChanged();
+      return result;
+    }
+  };
 }

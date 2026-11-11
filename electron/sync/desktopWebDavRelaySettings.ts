@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
-import { readWebDavRelayBaselineScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
+import { hasWebDavRelayPublishedChanges } from '../../lib/core/sync/webDavRelayBodyOutbox.js';
+import { readWebDavRelayBodyScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
 import { webDavRelayBindingSchema, type WebDavRelayBinding } from '../../lib/platform/webDavRelayContract.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -113,9 +114,12 @@ export function loadDesktopBoundWebDavRelay() {
   return saved.binding;
 }
 
-export async function loadDesktopWebDavLanBaselineRequired() {
+export async function loadDesktopWebDavRelayStatus() {
   const binding = loadDesktopBoundWebDavRelay();
-  if (!binding) return false;
+  if (!binding) return { lan_baseline_required: false, published_via_relay: false };
   const db = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
-  return !await readWebDavRelayBaselineScope(db, binding, binding.desktop_device_id);
+  const scope = await readWebDavRelayBodyScope(db, binding, binding.desktop_device_id);
+  const published = scope && await hasWebDavRelayPublishedChanges(db, scope);
+  return { lan_baseline_required: !scope, published_via_relay: Boolean(published) &&
+    !desktopSyncChangeSessions().hasSessions(binding.phone_device_id) };
 }

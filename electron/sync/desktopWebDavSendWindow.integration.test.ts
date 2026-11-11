@@ -5,6 +5,7 @@ import { expect, it, vi } from 'vitest';
 
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
+import { hasWebDavRelayPublishedChanges } from '../../lib/core/sync/webDavRelayBodyOutbox.js';
 import { runWebDavRelayBodyRound } from '../../lib/core/sync/webDavRelayBodyRound.js';
 import { readWebDavRelayBodyScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
 import { captureWebDavRelayLanBaseline } from '../../lib/core/sync/webDavRelayLanBaseline.js';
@@ -145,15 +146,23 @@ it('automatically confirms a durable packet after the DAV connection drops durin
     clock.start(send);
     await write(source, 'retry-without-edit');
     clock.request();
+    const hasPublished = async () => {
+      const scope = (await readWebDavRelayBodyScope(source.db, binding, source.id))!;
+      return hasWebDavRelayPublishedChanges(source.db, scope);
+    };
+    expect(await hasPublished()).toBe(false);
     dropNextMove();
     await tick(60_000);
     await expect(runs[0]).rejects.toMatchObject({ code: 'ECONNRESET' });
+    expect(await hasPublished()).toBe(false);
     const failedAt = requestCount();
     await tick(59_999);
     expect(requestCount()).toBe(failedAt);
     await tick(1);
     expect(runs).toHaveLength(2);
     await expect(runs[1]).resolves.toBe(true);
+    source.reopen();
+    expect(await hasPublished()).toBe(true);
     expect((await receive(target, binding)).applied).toBe(1);
     target.reopen();
     expect(body(target, 'retry-without-edit')).toBe('retry-without-edit');

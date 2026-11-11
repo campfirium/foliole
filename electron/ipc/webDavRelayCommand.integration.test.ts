@@ -8,9 +8,11 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
+import { readWebDavRelayBodyScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
 import { captureWebDavRelayLanBaseline } from '../../lib/core/sync/webDavRelayLanBaseline.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { saveJsonSetting } from '../database/settingsStore.js';
@@ -143,7 +145,24 @@ it('reports when a delivered binding needs LAN sync again after a library epoch 
   updatePhoneEpoch.run(groupId, phone, 'original');
   await confirmLanRound('original');
   await expectBaselineRequired(false);
+  const expectPublished = (published: boolean) => expect(overview()).resolves.toMatchObject({
+    webdav_relay: { published_via_relay: published }
+  });
+  await expectPublished(false);
+  const db = createBetterSqliteDbPort(connection.sqlite);
+  const scope = (await readWebDavRelayBodyScope(db, binding, binding.desktop_device_id))!;
+  await db.run('INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
+    [`${scope.key}:outbox`, JSON.stringify({ sequence: scope.baseline.sequence + 1, packet: null }), 'now']);
+  await expectPublished(true);
+  const active = sessions.open(phone);
+  try {
+    await expectPublished(false);
+  } finally {
+    sessions.close(phone, active.session);
+  }
+  await expectPublished(true);
   updatePhoneEpoch.run(groupId, phone, 'restored');
+  await expectPublished(false);
   await expectBaselineRequired(true);
   await confirmLanRound('restored');
   await expectBaselineRequired(false);

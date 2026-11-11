@@ -95,3 +95,12 @@ it('clears the LAN sync instruction when the delivered binding is ready again', 
   expect(screen.queryByText(instruction)).not.toBeInTheDocument();
   expect(screen.getByText('A5 · WebDAV enabled')).toBeVisible();
 });
+
+it('reports an upload with device receipt still unconfirmed', async () => {
+  useDesktopSyncGroup.mockReturnValue({ isLoading: false, overview: {
+    sync_group: group, webdav_relay: { configured: true, device_id: 'phone', delivered: true, published_via_relay: true }
+  } });
+  invoke.mockResolvedValue('https://dav.example.net/relay/');
+  renderWithLocalization(<SettingsWebDavSyncSection />);
+  expect(await screen.findByText('A5 · Updates uploaded to WebDAV. Device receipt unconfirmed.')).toBeVisible();
+});

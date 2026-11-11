@@ -51,7 +51,7 @@ import {
 } from '../sync/desktopSyncGroupMemberStateSession.js';
 import { notifyDesktopSyncGroupOverviewChanged } from '../sync/desktopSyncGroupOverviewNotifier.js';
 import { removeDesktopSyncGroupRoute } from '../sync/desktopSyncGroupRoutes.js';
-import { desktopWebDavRelayOverview, loadDesktopWebDavLanBaselineRequired, enableDesktopWebDavRelay, loadDesktopWebDavRelayDirectory, saveDesktopWebDavRelayDirectory } from '../sync/desktopWebDavRelaySettings.js';
+import { desktopWebDavRelayOverview, enableDesktopWebDavRelay, loadDesktopWebDavRelayDirectory, loadDesktopWebDavRelayStatus, saveDesktopWebDavRelayDirectory } from '../sync/desktopWebDavRelaySettings.js';
 import { getLanWorkspaceSyncServerStatus, stopLanWorkspaceSyncServer } from '../sync/lanWorkspaceSyncServer.js';
 import { ensureWindowsSyncNetworkPermission } from '../sync/windowsSyncNetworkPermission.js';
 
@@ -104,7 +104,7 @@ async function overview() {
     sync_group: group ? { ...group, device_display_names: presentation.device_display_names } : null,
     pending_backup_restore: loadBackupRestorePendingSync()?.restoreId ?? null,
     ...(group && process.platform === 'darwin' ? { webdav_relay: { ...desktopWebDavRelayOverview(group.group_id),
-      lan_baseline_required: await loadDesktopWebDavLanBaselineRequired() } } : {}),
+      ...await loadDesktopWebDavRelayStatus() } } : {}),
     expired_member: group ? loadDesktopLocalSyncGroupMemberExpired(group.group_id) : false,
     removing_devices: presentation.removing_devices,
     ...loadDesktopCompanionSyncParticipation()

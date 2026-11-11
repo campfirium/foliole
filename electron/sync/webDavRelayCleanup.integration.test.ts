@@ -5,6 +5,7 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import { beginSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
+import { hasWebDavRelayPublishedChanges } from '../../lib/core/sync/webDavRelayBodyOutbox.js';
 import { webDavRelayStatus } from '../../lib/core/sync/webDavRelayPublication.js';
 import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { resetSyncGeneration } from '../database/syncGroupBackupRestore.js';
@@ -35,6 +36,7 @@ it('keeps both directions until LAN verifies the attachment and switches subsequ
     const [mac, phone] = fixture.peers;
     const reverse = await publishAttachment(fixture, 1, 'phone-original');
     const first = await publishAttachment(fixture, 0, 'mac-original');
+    expect(await hasWebDavRelayPublishedChanges(mac.peer.db, first.scope)).toBe(true);
     await rename(first.file, first.file + '.offline');
 
     expect(await fixture.lan(true, undefined, 1)).toMatchObject({ complete: true, attachments: { pending: 1 } });
@@ -49,6 +51,7 @@ it('keeps both directions until LAN verifies the attachment and switches subsequ
     expect(await status(fixture, reverse.scope.outgoing)).toBe(404);
     await mac.reopen();
     await phone.reopen();
+    expect(await hasWebDavRelayPublishedChanges(mac.peer.db, (await fixture.scope(mac.peer))!)).toBe(false);
     expect(await readFile(path.join(phone.assets, first.key))).toEqual(first.bytes);
     expect(await readFile(path.join(mac.assets, reverse.key))).toEqual(reverse.bytes);
 

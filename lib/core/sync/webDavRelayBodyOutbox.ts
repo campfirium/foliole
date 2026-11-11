@@ -32,6 +32,11 @@ export async function readWebDavRelayBodyOutbox(db: DbPort, scope: WebDavRelayBo
   return row ? outboxSchema.parse(JSON.parse(row.value)) : { sequence: scope.baseline.sequence, packet: null };
 }
 
+export async function hasWebDavRelayPublishedChanges(db: DbPort, scope: WebDavRelayBodyScope) {
+  const state = await readWebDavRelayBodyOutbox(db, scope);
+  return state.sequence > scope.outgoingStartSequence || scope.outgoingHasAttachments;
+}
+
 export async function writeWebDavRelayBodyOutbox(db: DbPort, scope: WebDavRelayBodyScope, state: Outbox) {
   await db.run(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)
     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,

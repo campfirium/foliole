@@ -37,6 +37,7 @@ export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
   'settings.companionSync.webdav.enable': 'Enable WebDAV for this device',
   'settings.companionSync.webdav.waiting': 'Waiting for device',
   'settings.companionSync.webdav.lanBaselineRequired': 'Connect both devices to the same local network and sync once to use WebDAV',
+  'settings.companionSync.webdav.relayUploaded': 'Updates uploaded to WebDAV. Device receipt unconfirmed.',
   'settings.companionSync.webdav.enabled': 'WebDAV enabled',
   'settings.companionSync.webdav.deviceUnavailable': 'Open Foliole on this phone on the same network, then try again.',
   'settings.companionSync.webdav.title': 'WebDAV relay',

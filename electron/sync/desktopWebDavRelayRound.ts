@@ -11,6 +11,7 @@ import { createDesktopRequestSyncAttachmentHost } from './desktopRequestSyncAtta
 import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDatabaseHost.js';
 import { recordDesktopSyncActivity, type DesktopSyncActivityContext } from './desktopSyncActivityStore.js';
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
+import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import { createDesktopWebDavRelayHttp, type DesktopWebDavRelayHttpStats } from './desktopWebDavRelayHttp.js';
 import { loadDesktopBoundWebDavRelay } from './desktopWebDavRelaySettings.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
@@ -63,6 +64,7 @@ export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityCo
     completed = true;
     return true;
   } finally {
+    if (progress.published > 0) notifyDesktopSyncGroupOverviewChanged();
     if (attempted) {
       const metrics = JSON.stringify({ ...stats, ...progress, elapsedMs: Math.round(performance.now() - started) });
       await recordDesktopSyncActivity(activity, { direction: 'exchange', kind: 'stage_finished',

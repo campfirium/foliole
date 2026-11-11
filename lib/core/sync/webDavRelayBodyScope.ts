@@ -45,7 +45,9 @@ export async function readWebDavRelayBodyScope(db: DbPort, binding: WebDavRelayB
   const source = bytesToHex(sha256(new TextEncoder().encode(baseline.sourceEpoch)));
   const key = `webdav_relay_body:${digest}:${source}`;
   const collections = await readRelayCollections(db, key);
-  return { baseline, key, receiveScope: { bindingId: binding.id, ...epochs, sourceEpoch: baseline.sourceEpoch },
+  return { baseline, key, outgoingStartSequence: collections?.startSequence ?? baseline.sequence,
+    outgoingHasAttachments: Boolean(collections?.keys.length),
+    receiveScope: { bindingId: binding.id, ...epochs, sourceEpoch: baseline.sourceEpoch },
     outgoing: relayCollectionUrl(outgoing, collections?.active ?? 'legacy'),
     outgoingDirection: outgoing, incoming,
     send: context(binding.group_id, localDevice, epochs.localEpoch, peerDevice, epochs.peerEpoch),

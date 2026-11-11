@@ -49,7 +49,8 @@ function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Rel
   const [failed, setFailed] = useState(false);
   const devices = group.devices.filter(device => device.state === 'active'
     && device.device_identity_key !== group.local_device_identity_key && device.platform.toLowerCase().startsWith('android'));
-  const statusKey = `${PREFIX}.${!relay.delivered ? 'waiting' : relay.lan_baseline_required ? 'lanBaselineRequired' : 'enabled'}` as const;
+  const status = !relay.delivered ? 'waiting' : relay.lan_baseline_required ? 'lanBaselineRequired'
+    : relay.published_via_relay ? 'relayUploaded' : 'enabled';
   const available = new Set(relay.available_device_ids);
   const bound = group.devices.find(device => device.device_identity_key === relay.device_id);
   const nameOf = (device: SyncGroupDevicePayload) => group.device_display_names?.[device.device_identity_key]
@@ -75,7 +76,7 @@ function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Rel
     description={relay.device_id ? undefined : <span role={failed ? 'alert' : undefined}>{t(`${PREFIX}.deviceHint`)}</span>}>
     <SettingsControlSlot>
       {relay.device_id ? <span role="status" className="text-ui-sm text-muted-foreground">
-        {bound ? `${nameOf(bound)} · ` : ''}{t(statusKey)}
+        {bound ? `${nameOf(bound)} · ` : ''}{t(`${PREFIX}.${status}`)}
       </span> : <AppDropdownMenu>
         <AppDropdownMenuTrigger asChild>
           <button type="button" disabled={busy || !devices.length}

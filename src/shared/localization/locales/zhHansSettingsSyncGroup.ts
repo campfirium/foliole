@@ -39,6 +39,7 @@ export const ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS: Partial<Record<Translatio
   'settings.companionSync.webdav.enable': '为此设备启用 WebDAV',
   'settings.companionSync.webdav.waiting': '等待设备接收',
   'settings.companionSync.webdav.lanBaselineRequired': '请将两台设备连到同一局域网并同步一次，再使用 WebDAV',
+  'settings.companionSync.webdav.relayUploaded': '更新已上传到 WebDAV，尚未确认设备收取。',
   'settings.companionSync.webdav.enabled': 'WebDAV 已启用',
   'settings.companionSync.webdav.deviceUnavailable': '请在同一网络下打开这台手机上的 Foliole，再重试。',
   'settings.companionSync.webdav.title': 'WebDAV 中继',
