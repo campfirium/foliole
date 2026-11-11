@@ -36,6 +36,7 @@ describe('Android Java SQL surface', () => {
       'accessFramedSyncFile',
       'cancelRequestSyncHttp', 'postRequestSyncHttp',
       'cancelWebDavRelay', 'requestWebDavRelay',
+      'prepareWebDavCredentialDelivery', 'confirmWebDavCredentialDelivery', 'installWebDavCredentialDelivery',
       'configureFramedSyncPayloadBudget', 'closeFramedSyncPayloadBudget',
       'validateFramedSyncPayloadLoan', 'releaseFramedSyncPayloadLoan',
       'loadDiscoveryCandidates', 'loadSyncGroupDeviceIdentity', 'loadSyncGroupProviderState', 'loadSyncParticipationState',

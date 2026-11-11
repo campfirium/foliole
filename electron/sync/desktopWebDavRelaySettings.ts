@@ -6,41 +6,19 @@ import { DEFAULT_WEB_DAV_ATTACHMENT_POLICY, webDavAttachmentPolicySchema, webDav
   type WebDavRelayBinding } from '../../lib/platform/webDavRelayContract.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
-import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
+import { loadJsonSetting, saveJsonSetting, writeJsonSetting } from '../database/settingsStore.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import {
   decryptDesktopWebDavCredentialDraft, encryptDesktopWebDavCredentialDraft,
-  readDesktopWebDavCredentialCiphertext, replaceDesktopWebDavCredentialCiphertext
+  replaceDesktopWebDavCredentialCiphertext
 } from '../security/desktopWebDavCredentialStore.js';
 
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
+import { hasDesktopWebDavCredentialDraft, readCredentialOwner, requireActiveGroupKey,
+  verifyCredentialOwner } from './desktopWebDavCredentialSettings.js';
 import { recordDesktopWebDavUsage } from './desktopWebDavUsage.js';
 import { testWebDavRelayConnection } from './testWebDavRelayConnection.js';
-
-function requireActiveGroupKey(groupId: unknown) {
-  const group = loadDesktopSyncGroup();
-  if (!group || group.group_id !== groupId) throw new Error('sync_group_not_available');
-  return `webdav_relay_directory:${group.group_id}:${group.local_device_identity_key}`;
-}
-
-function readCredentialOwner(key: string) {
-  const connection = openDatabaseConnection();
-  const row = connection.driver.queryOne<{ library_epoch: string }>(
-    'SELECT library_epoch FROM node_version_local_proof_state WHERE singleton_id = 1'
-  );
-  if (!row?.library_epoch) throw new Error('request_sync_local_epoch_missing');
-  const scope = JSON.stringify([connection.dbPath, row.library_epoch, key]);
-  return { connection, scope, ciphertext: readDesktopWebDavCredentialCiphertext(scope) };
-}
-
-function verifyCredentialOwner(previous: ReturnType<typeof readCredentialOwner>, groupId: unknown) {
-  const current = readCredentialOwner(requireActiveGroupKey(groupId));
-  if (current.connection !== previous.connection || current.scope !== previous.scope ||
-    (current.ciphertext ? !previous.ciphertext?.equals(current.ciphertext) : previous.ciphertext !== null)) {
-    throw new Error('webdav_relay_settings_changed');
-  }
-}
 
 export async function loadDesktopWebDavRelayDirectory(groupId: unknown) {
   const state = await runWithDatabaseConnectionOwner(() => {
@@ -53,6 +31,51 @@ export async function loadDesktopWebDavRelayDirectory(groupId: unknown) {
   const draft = owner?.ciphertext ? await decryptDesktopWebDavCredentialDraft(owner.scope, owner.ciphertext) : null;
   if (draft && owner) await runWithDatabaseConnectionOwner(() => verifyCredentialOwner(owner, groupId));
   return { directory: state.directory, credential_directory: draft?.directory ?? null };
+}
+
+export function prepareAuthenticatedWebDavBinding(groupId: string, phoneId: string, directory: string, reserve = false) {
+  const key = requireActiveGroupKey(groupId);
+  const group = loadDesktopSyncGroup()!;
+  const saved = loadBinding(key);
+  const phone = group.devices.find(device => device.device_identity_key === phoneId);
+  const epoch = openDatabaseConnection().driver.queryOne<{ library_epoch: string }>(
+    'SELECT library_epoch FROM node_version_device_revisions WHERE group_id = ? AND device_identity_key = ? AND blocked_reason IS NULL',
+    [groupId, phoneId]
+  )?.library_epoch;
+  if (process.platform !== 'darwin' || !epoch || phone?.state !== 'active' ||
+    !phone.platform.toLowerCase().startsWith('android') || !desktopSyncChangeSessions().hasSessions(phoneId)) {
+    throw new Error('webdav_relay_device_unavailable');
+  }
+  if (saved && (saved.binding.phone_device_id !== phoneId || saved.binding.directory_url !== directory ||
+    saved.binding.credential_version !== undefined)) throw new Error('webdav_relay_bound');
+  const candidateKey = `${key}:credential-candidate`;
+  const candidate = webDavRelayBindingSchema.safeParse(loadJsonSetting(candidateKey)).data;
+  const matching = candidate?.phone_device_id === phoneId && candidate.directory_url === directory;
+  const version = Math.max(Date.now(), (candidate?.credential_version ?? 0) + 1);
+  const binding = { id: saved?.binding.id ?? (matching ? candidate.id : randomUUID()), group_id: groupId,
+    desktop_device_id: group.local_device_identity_key, phone_device_id: phoneId, directory_url: directory,
+    attachment_policy: loadAttachmentPolicy(key) } satisfies WebDavRelayBinding;
+  if (reserve) saveJsonSetting(candidateKey, { ...binding, credential_version: version });
+  return { epoch, binding, version };
+}
+
+export function activateAuthenticatedWebDavBinding(binding: WebDavRelayBinding, version: number,
+  owner: ReturnType<typeof readCredentialOwner>, expectedEpoch: string) {
+  verifyCredentialOwner(owner, binding.group_id);
+  const { epoch, binding: current } = prepareAuthenticatedWebDavBinding(
+    binding.group_id, binding.phone_device_id, binding.directory_url
+  );
+  if (epoch !== expectedEpoch || current.desktop_device_id !== binding.desktop_device_id || current.id !== binding.id) {
+    throw new Error('webdav_relay_scope_changed');
+  }
+  const key = requireActiveGroupKey(binding.group_id);
+  const saved = loadBinding(key);
+  if (saved && saved.binding.id !== binding.id) throw new Error('webdav_relay_scope_changed');
+  openDatabaseConnection().driver.transaction(driver => {
+    writeJsonSetting(driver, key, binding.directory_url);
+    writeJsonSetting(driver, `${key}:binding`, { ...current, delivered: true, credential_version: version });
+    writeJsonSetting(driver, `${key}:credential-candidate`, null);
+  });
 }
 
 export async function saveDesktopWebDavRelayCredentials(groupId: unknown, input: unknown, credentials: unknown) {
@@ -69,6 +92,10 @@ export async function saveDesktopWebDavRelayCredentials(groupId: unknown, input:
     const encrypted = await encryptDesktopWebDavCredentialDraft({ scope: previous.scope, directory, username, password });
     return await runWithDatabaseConnectionOwner(() => {
       verifyCredentialOwner(previous, groupId);
+      const saved = loadBinding(requireActiveGroupKey(groupId))?.binding;
+      if (saved && (saved.credential_version !== undefined || saved.directory_url !== directory)) {
+        throw new Error('webdav_relay_bound');
+      }
       replaceDesktopWebDavCredentialCiphertext(previous.scope, encrypted);
       return directory;
     });
@@ -135,6 +162,8 @@ export function desktopWebDavRelayOverview(groupId: string) {
     sessions.hasSessions(device.device_identity_key)).map(device => device.device_identity_key);
   return {
     attachment_policy: loadAttachmentPolicy(key),
+    credential_draft_available: process.platform === 'darwin' && hasDesktopWebDavCredentialDraft(key),
+    credential_active: saved?.binding.credential_version !== undefined,
     available_device_ids: availableDeviceIds,
     configured: typeof loadJsonSetting(key) === 'string',
     device_id: saved?.binding.phone_device_id ?? null,
@@ -167,8 +196,15 @@ export function enableDesktopWebDavRelay(groupId: unknown, phoneId: unknown) {
 export function desktopWebDavRelayForPeer(groupId: string, peerId: string) {
   const key = requireActiveGroupKey(groupId);
   const saved = loadBinding(key);
-  return saved?.binding.phone_device_id === peerId
+  return saved?.binding.phone_device_id === peerId && saved.binding.credential_version === undefined
     ? { ...saved.binding, attachment_policy: loadAttachmentPolicy(key) } : undefined;
+}
+
+export function desktopWebDavAuthenticatedPolicyForPeer(groupId: string, peerId: string) {
+  const key = requireActiveGroupKey(groupId);
+  const saved = loadBinding(key)?.binding;
+  return saved?.phone_device_id === peerId && saved.credential_version !== undefined
+    ? { binding_id: saved.id, policy: loadAttachmentPolicy(key) } : undefined;
 }
 
 export function confirmDesktopWebDavRelayDelivery(groupId: string, peerId: string, bindingId: string) {

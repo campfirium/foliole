@@ -15,6 +15,7 @@ import {
 } from '../../../../shared/ui';
 
 import { SettingsWebDavAttachmentRow } from './SettingsWebDavAttachmentRow';
+import { SettingsWebDavCredentialDelivery } from './SettingsWebDavCredentialDelivery';
 import { SettingsWebDavLogButton } from './SettingsWebDavLogButton';
 import { SettingsWebDavRelayRow } from './SettingsWebDavRelayRow';
 
@@ -81,7 +82,8 @@ function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Rel
         title: t(`${PREFIX}.bindTitle`, { name: nameOf(device) }),
         description: t(`${PREFIX}.bindDescription`),
         confirmLabel: t(`${PREFIX}.bindConfirm`)
-      })) await enableDesktopWebDavRelay(group.group_id, device.device_identity_key);
+      })) await enableDesktopWebDavRelay(group.group_id, device.device_identity_key,
+        relay.credential_draft_available ? true : undefined);
     } catch {
       setFailed(true);
     } finally {
@@ -92,9 +94,12 @@ function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Rel
   return <SettingsRow title={t(`${PREFIX}.connectDevice`)}
     description={relay.device_id ? undefined : <span role={failed ? 'alert' : undefined}>{t(`${PREFIX}.deviceHint`)}</span>}>
     <SettingsControlSlot>
-      {relay.device_id ? <span role="status" className="text-ui-sm text-muted-foreground">
+      {relay.device_id ? <><span role="status" className="text-ui-sm text-muted-foreground">
         {bound ? `${nameOf(bound)} · ` : ''}{t(`${PREFIX}.${status}`)}
-      </span> : <AppDropdownMenu>
+      </span>{bound && relay.credential_draft_available && !relay.credential_active && !relay.credential_delivery
+        ? <SettingsButton disabled={busy || !available.has(bound.device_identity_key)} onClick={() => void bind(bound)}>
+          {t(`${PREFIX}.credentialVerifyDevice`)}
+        </SettingsButton> : null}</> : <AppDropdownMenu>
         <AppDropdownMenuTrigger asChild>
           <button type="button" disabled={busy || !devices.length}
             className={settingsFieldClassName('inline-flex items-center gap-2')}>
@@ -124,8 +129,11 @@ export function SettingsWebDavSyncSection() {
     <WebDavUsage relay={relay} refresh={refresh} />
     <SettingsSection title={t(`${PREFIX}.configuration`)} key={group.group_id}>
       <SettingsWebDavAttachmentRow groupId={group.group_id} policy={relay.attachment_policy} />
-      <SettingsWebDavRelayRow groupId={group.group_id} bound={Boolean(relay.device_id)} configured={relay.configured} />
-      {relay.configured ? <WebDavDeviceRow group={group} relay={relay} /> : null}
+      <SettingsWebDavRelayRow groupId={group.group_id} bound={Boolean(relay.device_id)} configured={relay.configured}
+        credentialActive={Boolean(relay.credential_active)} />
+      {relay.configured || relay.credential_draft_available ? <WebDavDeviceRow group={group} relay={relay} /> : null}
+      {relay.credential_delivery ? <SettingsWebDavCredentialDelivery key={relay.credential_delivery.id}
+        groupId={group.group_id} delivery={relay.credential_delivery} /> : null}
     </SettingsSection>
   </>;
 }

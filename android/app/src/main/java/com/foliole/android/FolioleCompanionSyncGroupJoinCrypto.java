@@ -48,7 +48,7 @@ final class FolioleCompanionSyncGroupJoinCrypto {
             .put("server_public_key", encodePublic((java.security.interfaces.ECPublicKey) server.getPublic()));
     }
 
-    private static byte[] hkdf(byte[] ikm, byte[] salt, byte[] info, int length) throws Exception {
+    static byte[] hkdf(byte[] ikm, byte[] salt, byte[] info, int length) throws Exception {
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(salt, "HmacSHA256"));
         byte[] prk = mac.doFinal(ikm);

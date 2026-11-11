@@ -9,7 +9,10 @@ import { writeJson } from './companionLanResponses.js';
 import { authenticateCompanionRequestContext, revalidateCompanionRequestAuthorization } from './companionRequestAuth.js';
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { bestKnownDesktopSyncPriority, localDesktopSyncTier, rememberDesktopPeerTier } from './desktopSyncUpstream.js';
-import { confirmDesktopWebDavRelayDelivery, desktopWebDavRelayForPeer } from './desktopWebDavRelaySettings.js';
+import { desktopWebDavCredentialDeliveryForPeer, handleDesktopWebDavCredentialReply } from './desktopWebDavCredentialDelivery.js';
+import {
+  confirmDesktopWebDavRelayDelivery, desktopWebDavAuthenticatedPolicyForPeer, desktopWebDavRelayForPeer
+} from './desktopWebDavRelaySettings.js';
 
 export async function handleCompanionSyncSession(request: http.IncomingMessage, response: http.ServerResponse) {
   const url = new URL(request.url ?? '/', 'http://localhost');
@@ -37,7 +40,7 @@ export async function handleCompanionSyncSession(request: http.IncomingMessage, 
     const waitStarted = performance.now();
     const reply = input.operation === 'open' ? sessions.open(peer)
       : input.operation === 'close' ? (sessions.close(peer, input.session), { closed: true })
-        : input.operation === 'complete' ? { completed: true }
+        : input.operation === 'complete' || input.operation === 'webdavCredential' ? { completed: true }
         : await sessions.wait(peer, input.session, input.marker, controller.signal);
     if (input.operation === 'wait' && 'changed' in reply) recordSyncSessionWaitTiming(response, {
       waitStartedAt, waitEndedAt: Date.now(), waitDurationMs: performance.now() - waitStarted,
@@ -54,8 +57,11 @@ export async function handleCompanionSyncSession(request: http.IncomingMessage, 
           sessions.complete(peer, input.session, input.marker);
           if (input.webdav_relay_id) confirmDesktopWebDavRelayDelivery(context.groupId, peer, input.webdav_relay_id);
         }
-        const binding = 'session' in reply ? desktopWebDavRelayForPeer(context.groupId, peer) : undefined;
-        writeJson(request, response, 200, 'session' in reply ? { ...withLocalPriority(reply), webdav_relay: binding } : reply);
+        if (input.operation === 'webdavCredential') {
+          sessions.signal(peer, input.session).throwIfAborted();
+          handleDesktopWebDavCredentialReply(context.groupId, peer, input.credential);
+        }
+        writeJson(request, response, 200, 'session' in reply ? sessionReply(reply, context.groupId, peer) : reply);
       }
     });
   } catch (error) {
@@ -64,6 +70,14 @@ export async function handleCompanionSyncSession(request: http.IncomingMessage, 
     });
   } finally { response.off('close', disconnected); }
   return true;
+}
+
+function sessionReply(reply: object, groupId: string, peer: string) {
+  const delivery = desktopWebDavCredentialDeliveryForPeer(groupId, peer);
+  const policy = desktopWebDavAuthenticatedPolicyForPeer(groupId, peer);
+  return { ...withLocalPriority(reply), webdav_relay: desktopWebDavRelayForPeer(groupId, peer),
+    ...(delivery ? { webdav_credential_delivery: delivery } : {}),
+    ...(policy ? { webdav_authenticated_policy: policy } : {}) };
 }
 
 /** Requires the DB owner; tells the waiting device this desktop's tier and the best device it knows. */

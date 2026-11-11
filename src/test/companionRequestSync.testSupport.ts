@@ -28,12 +28,15 @@ import type { CompanionDesktopSyncOptions } from '../shared/platform/companionDe
 
 const native = vi.hoisted(() => ({ db: null as DbPort | null,
   files: null as FramedSyncFilePort | null, post: vi.fn(), sign: vi.fn(), accessFile: vi.fn(), http: vi.fn(), cancelHttp: vi.fn(async () => {}),
+  webDavRequest: vi.fn(), webDavPrepare: vi.fn(), webDavConfirm: vi.fn(), webDavInstall: vi.fn(),
   active: true, leftScreen: new Set<() => void>(), backgroundEnded: new Set<() => void>(),
   beginBackground: vi.fn(async () => {}), updateBackground: vi.fn(async () => {}), endBackground: vi.fn(async () => {}) }));
 vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', async original => ({
   ...await original<typeof import('../shared/platform/companionWorkspaceRuntimeRepository')>(), FolioleCompanionSync: {
   postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign, accessFramedSyncFile: native.accessFile,
   desktopHttpRequest: native.http, cancelRequestSyncHttp: native.cancelHttp,
+  requestWebDavRelay: native.webDavRequest, prepareWebDavCredentialDelivery: native.webDavPrepare,
+  confirmWebDavCredentialDelivery: native.webDavConfirm, installWebDavCredentialDelivery: native.webDavInstall,
   beginSyncBackgroundWork: native.beginBackground, updateSyncBackgroundWork: native.updateBackground,
   endSyncBackgroundWork: native.endBackground,
   addListener: async (event: string, listener: () => void) => {

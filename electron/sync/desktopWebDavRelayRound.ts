@@ -13,6 +13,7 @@ import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDataba
 import { recordDesktopSyncActivity, type DesktopSyncActivityContext } from './desktopSyncActivityStore.js';
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
+import { authorizeDesktopWebDavRelay } from './desktopWebDavRelayAuthorization.js';
 import { createDesktopWebDavRelayHttp, type DesktopWebDavRelayHttpStats } from './desktopWebDavRelayHttp.js';
 import { recordDesktopWebDavRelayLog } from './desktopWebDavRelayLog.js';
 import { loadDesktopBoundWebDavRelay } from './desktopWebDavRelaySettings.js';
@@ -57,7 +58,8 @@ export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityCo
       host, scope, groupKey, progress, lanConnected, attachments, ...(foregroundReceive ? { foregroundReceive } : {}),
       files: createDesktopLibrarySyncFiles(databasePath),
       ...(automaticSignal ? { signal: automaticSignal } : {}),
-      request: createDesktopWebDavRelayHttp(stats, automaticSignal, { recordUsage: recordDesktopWebDavUsage }),
+      request: authorizeDesktopWebDavRelay(binding,
+        createDesktopWebDavRelayHttp(stats, automaticSignal, { recordUsage: recordDesktopWebDavUsage })),
       assertScope: async () => {
         const current = await loadScope();
         const active = await runWithDatabaseConnectionOwner(() => isDesktopCompanionSyncParticipating() &&

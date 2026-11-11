@@ -9,6 +9,7 @@ import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPrefe
 import { createDesktopLibrarySyncFiles } from './desktopFramedSyncFiles.js';
 import { createDesktopRequestSyncAttachmentHost } from './desktopRequestSyncAttachmentHost.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
+import { authorizeDesktopWebDavRelay } from './desktopWebDavRelayAuthorization.js';
 import { createDesktopWebDavRelayHttp, type DesktopWebDavRelayHttpStats } from './desktopWebDavRelayHttp.js';
 import { loadDesktopBoundWebDavRelay } from './desktopWebDavRelaySettings.js';
 import { recordDesktopWebDavUsage } from './desktopWebDavUsage.js';
@@ -24,7 +25,7 @@ export async function captureDesktopWebDavRelayCleanup(host: RequestSyncDatabase
   if (!runtime || runtime.binding.phone_device_id !== peer || runtime.binding.group_id !== context.groupId) return;
   const { binding, owner } = runtime;
   const stats: DesktopWebDavRelayHttpStats = { requests: {}, responses: 0, uploadedBytes: 0, downloadedBytes: 0 };
-  const http = createDesktopWebDavRelayHttp(stats, signal, { recordUsage: recordDesktopWebDavUsage });
+  const http = authorizeDesktopWebDavRelay(binding, createDesktopWebDavRelayHttp(stats, signal, { recordUsage: recordDesktopWebDavUsage }));
   const cleanup = await captureWebDavRelayCleanup({
     host, signal, attachments: await createDesktopRequestSyncAttachmentHost(host),
     files: createDesktopLibrarySyncFiles(owner.dbPath),

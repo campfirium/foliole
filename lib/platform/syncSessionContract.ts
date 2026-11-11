@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-import { webDavRelayLanBindingSchema } from './webDavRelayContract.js';
+import { webDavCredentialDeliverySchema, webDavCredentialReplySchema } from './webDavCredentialDeliveryContract.js';
+import { webDavAttachmentPolicySchema, webDavRelayLanBindingSchema } from './webDavRelayContract.js';
 
 export const SYNC_SESSION_PATH = '/companion/sync-session';
 export const SYNC_SESSION_WAIT_MS = 20_000;
@@ -15,6 +16,8 @@ export const syncSessionReplySchema = z.object({
   session: z.string().uuid(), marker: syncChangeMarkerSchema, changed: z.boolean(),
   // The ordinary group session carries relay configuration. Credential activation is local to the trusted delivery path.
   webdav_relay: webDavRelayLanBindingSchema.optional(),
+  webdav_credential_delivery: webDavCredentialDeliverySchema.optional(),
+  webdav_authenticated_policy: z.object({ binding_id: z.string().uuid(), policy: webDavAttachmentPolicySchema }).optional(),
   tier: tierSchema.optional(), best: z.object({ device_id: z.string().min(1), tier: tierSchema }).optional()
 });
 export type SyncSessionReply = z.infer<typeof syncSessionReplySchema>;
@@ -23,6 +26,7 @@ export const syncSessionRequestSchema = z.discriminatedUnion('operation', [
   z.object({ operation: z.literal('open'), tier: tierSchema.optional() }),
   z.object({ operation: z.literal('wait'), session: z.string().uuid(), marker: syncChangeMarkerSchema, tier: tierSchema.optional() }),
   z.object({ operation: z.literal('complete'), webdav_relay_id: z.string().uuid().optional(), session: z.string().uuid(), marker: syncChangeMarkerSchema, tier: tierSchema.optional() }),
+  z.object({ operation: z.literal('webdavCredential'), session: z.string().uuid(), credential: webDavCredentialReplySchema, tier: tierSchema.optional() }),
   z.object({ operation: z.literal('close'), session: z.string().uuid(), tier: tierSchema.optional() })
 ]);
 export type SyncSessionRequest = z.infer<typeof syncSessionRequestSchema>;

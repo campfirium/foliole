@@ -64,12 +64,16 @@ export type NativeSyncCommandMap = {
   };
   [NATIVE_COMMANDS.openWebDavRelayLog]: { args: undefined; result: null };
   [NATIVE_COMMANDS.enableWebDavRelay]: {
-    args: { group_id: string; device_id: string };
+    args: { group_id: string; device_id: string; authenticated?: true };
     result: void;
   };
   [NATIVE_COMMANDS.loadWebDavRelayDirectory]: {
     args: { group_id: string };
     result: { directory: string | null; credential_directory: string | null };
+  };
+  [NATIVE_COMMANDS.confirmWebDavCredentialDelivery]: {
+    args: { group_id: string; id: string; fingerprint: string; username: string; password: string };
+    result: null;
   };
   [NATIVE_COMMANDS.saveWebDavRelayDirectory]: {
     args: { group_id: string; directory_url: string; credentials?: { username: string; password: string } };

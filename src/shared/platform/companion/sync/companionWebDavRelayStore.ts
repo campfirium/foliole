@@ -3,6 +3,8 @@ import { hasWebDavRelayAttachmentsToSend } from '../../../../../lib/core/sync/we
 import { hasWebDavRelayBodyToSend } from '../../../../../lib/core/sync/webDavRelayBodyOutbox';
 import { readWebDavRelayBodyScope } from '../../../../../lib/core/sync/webDavRelayBodyScope';
 import { isWebDavRelayReceiveDue } from '../../../../../lib/core/sync/webDavRelayReceiveFreshness';
+import type { SyncSessionReply } from '../../../../../lib/platform/syncSessionContract';
+import type { WebDavCredentialOffer } from '../../../../../lib/platform/webDavCredentialDeliveryContract';
 import { sameWebDavAttachmentPolicy, webDavRelayBindingSchema, type WebDavRelayBinding } from '../../../../../lib/platform/webDavRelayContract';
 import { getCompanionRuntimeCapability } from '../../companionRuntimeCapabilities';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
@@ -28,6 +30,50 @@ async function readBinding(db: DbPort) {
 export function subscribeCompanionWebDavRelay(listener: () => void) {
   listeners.add(listener);
   return () => { listeners.delete(listener); };
+}
+
+async function matchesCredentialOffer(db: DbPort, offer: WebDavCredentialOffer, peer: string) {
+  const local = await identity(db);
+  if (offer.binding.desktop_device_id !== peer || !matches(offer.binding, local)) return false;
+  const [proof] = await db.query<DbRow & { library_epoch: string }>(
+    'SELECT library_epoch FROM node_version_local_proof_state WHERE singleton_id = 1');
+  const previous = await readBinding(db);
+  return proof?.library_epoch === offer.library_epoch && (!previous || !matches(previous, local) ||
+    (previous.id === offer.binding.id && previous.desktop_device_id === peer &&
+      previous.directory_url === offer.binding.directory_url && (previous.credential_version ?? 0) <= offer.version));
+}
+
+export function canInstallCompanionWebDavCredential(offer: WebDavCredentialOffer, peer: string) {
+  if (getCompanionRuntimeCapability().kind !== 'android-native') return Promise.resolve(false);
+  return getIosCompanionDatabaseOwner().read(db => matchesCredentialOffer(db, offer, peer));
+}
+
+export async function activateCompanionWebDavCredential(offer: WebDavCredentialOffer, peer: string) {
+  await getIosCompanionDatabaseOwner().runWriter(db => db.transaction(async tx => {
+    if (!await matchesCredentialOffer(tx, offer, peer)) throw new Error('webdav_relay_scope_changed');
+    await saveBinding(tx, { ...offer.binding, credential_version: offer.version });
+  }));
+  for (const listener of listeners) listener();
+}
+
+function saveBinding(db: DbPort, binding: WebDavRelayBinding) {
+  return db.run(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+  [KEY, JSON.stringify(binding), new Date().toISOString()]);
+}
+
+export async function receiveCompanionWebDavAuthenticatedPolicy(update: SyncSessionReply['webdav_authenticated_policy'],
+  peer: string) {
+  if (!update || getCompanionRuntimeCapability().kind !== 'android-native') return;
+  const changed = await getIosCompanionDatabaseOwner().runWriter(db => db.transaction(async tx => {
+    const binding = await readBinding(tx);
+    if (!binding || binding.id !== update.binding_id || binding.desktop_device_id !== peer ||
+      binding.credential_version === undefined || !matches(binding, await identity(tx)) ||
+      sameWebDavAttachmentPolicy(binding.attachment_policy, update.policy)) return false;
+    await saveBinding(tx, { ...binding, attachment_policy: update.policy });
+    return true;
+  }));
+  if (changed) for (const listener of listeners) listener();
 }
 
 export async function loadCompanionWebDavRelay(pendingOnly = false, foregroundReceive?: true) {
@@ -57,9 +103,7 @@ export async function receiveCompanionWebDavRelay(binding: WebDavRelayBinding | 
       }
     }
     const credentialVersion = previous && matches(previous, local) ? previous.credential_version : undefined;
-    await tx.run(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)
-      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-    [KEY, JSON.stringify({ ...binding, credential_version: credentialVersion }), new Date().toISOString()]);
+    await saveBinding(tx, { ...binding, credential_version: credentialVersion });
     return { id: binding.id, changed: true };
   }));
   if (result?.changed) for (const listener of listeners) listener();

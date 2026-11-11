@@ -54,6 +54,12 @@ export const webDavRelayOverviewSchema = z.object({
   configured: z.boolean(),
   device_id: z.string().min(1).nullable(),
   delivered: z.boolean(),
+  credential_draft_available: z.boolean().optional(),
+  credential_active: z.boolean().optional(),
+  credential_delivery: z.object({
+    id: z.string().uuid(), device_id: z.string(), fingerprint: z.string().optional(),
+    desktop_confirmed: z.boolean(), phone_confirmed: z.boolean()
+  }).optional(),
   attachment_policy: webDavAttachmentPolicySchema.optional(),
   published_via_relay: z.boolean().optional(),
   lan_baseline_required: z.boolean().optional(),

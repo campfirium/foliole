@@ -51,10 +51,8 @@ import {
 } from '../sync/desktopSyncGroupMemberStateSession.js';
 import { notifyDesktopSyncGroupOverviewChanged } from '../sync/desktopSyncGroupOverviewNotifier.js';
 import { removeDesktopSyncGroupRoute } from '../sync/desktopSyncGroupRoutes.js';
-import { openDesktopWebDavRelayLog } from '../sync/desktopWebDavRelayLog.js';
-import { desktopWebDavRelayOverview, enableDesktopWebDavRelay, loadDesktopWebDavRelayDirectory, loadDesktopWebDavRelayStatus,
-  saveDesktopWebDavRelayCredentials,
-  saveDesktopWebDavAttachmentPolicy, saveDesktopWebDavRelayDirectory } from '../sync/desktopWebDavRelaySettings.js';
+import { desktopWebDavCredentialDeliveryStatus } from '../sync/desktopWebDavCredentialDelivery.js';
+import { desktopWebDavRelayOverview, loadDesktopWebDavRelayStatus } from '../sync/desktopWebDavRelaySettings.js';
 import { loadDesktopWebDavUsage } from '../sync/desktopWebDavUsage.js';
 import { getLanWorkspaceSyncServerStatus, stopLanWorkspaceSyncServer } from '../sync/lanWorkspaceSyncServer.js';
 import { ensureWindowsSyncNetworkPermission } from '../sync/windowsSyncNetworkPermission.js';
@@ -64,6 +62,7 @@ import {
   IPC_SYNC_GROUP_DISCOVERY_CHANGED_CHANNEL,
   IPC_SYNC_GROUP_JOIN_REQUESTS_CHANGED_CHANNEL
 } from './contracts.js';
+import { handleWebDavSyncCommand } from './webDavSyncCommands.js';
 
 const discovery = new DesktopSyncGroupDiscoverySession((snapshot) => {
   saveDesktopSyncGroupCandidates(snapshot.candidates);
@@ -71,9 +70,6 @@ const discovery = new DesktopSyncGroupDiscoverySession((snapshot) => {
 });
 
 const COMMANDS = new Set<string>([
-  NATIVE_COMMANDS.openWebDavRelayLog,
-  NATIVE_COMMANDS.enableWebDavRelay, NATIVE_COMMANDS.loadWebDavRelayDirectory, NATIVE_COMMANDS.saveWebDavRelayDirectory,
-  NATIVE_COMMANDS.saveWebDavAttachmentPolicy,
   NATIVE_COMMANDS.loadSyncGroupOverview, NATIVE_COMMANDS.loadDesktopSyncDiagnostics, NATIVE_COMMANDS.createSyncGroup,
   NATIVE_COMMANDS.saveWatchedFolderConflict,
   NATIVE_COMMANDS.leaveSyncGroup, NATIVE_COMMANDS.removeSyncGroupDevice, NATIVE_COMMANDS.overwriteExpiredSyncGroupMember,
@@ -110,6 +106,7 @@ async function overview() {
     sync_group: group ? { ...group, device_display_names: presentation.device_display_names } : null,
     pending_backup_restore: loadBackupRestorePendingSync()?.restoreId ?? null,
     ...(group && process.platform === 'darwin' ? { webdav_relay: { ...desktopWebDavRelayOverview(group.group_id),
+      credential_delivery: desktopWebDavCredentialDeliveryStatus(group.group_id),
       ...await loadDesktopWebDavRelayStatus(), usage: await loadDesktopWebDavUsage() } } : {}),
     expired_member: group ? loadDesktopLocalSyncGroupMemberExpired(group.group_id) : false,
     removing_devices: presentation.removing_devices,
@@ -238,21 +235,9 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
 }
 
 export function handleSyncGroupCommand(command: string, args: Record<string, unknown>) {
+  const webdav = handleWebDavSyncCommand(command, args);
+  if (webdav !== undefined) return webdav;
   if (!COMMANDS.has(command)) return undefined;
-  if (command === NATIVE_COMMANDS.openWebDavRelayLog) return openDesktopWebDavRelayLog();
-  if (command === NATIVE_COMMANDS.enableWebDavRelay) {
-    return enableDesktopWebDavRelay(args.group_id, args.device_id).then(() => null);
-  }
-  if (command === NATIVE_COMMANDS.loadWebDavRelayDirectory) return loadDesktopWebDavRelayDirectory(args.group_id);
-  if (command === NATIVE_COMMANDS.saveWebDavRelayDirectory) {
-    if (args.credentials !== undefined) {
-      return saveDesktopWebDavRelayCredentials(args.group_id, args.directory_url, args.credentials);
-    }
-    return saveDesktopWebDavRelayDirectory(args.group_id, args.directory_url);
-  }
-  if (command === NATIVE_COMMANDS.saveWebDavAttachmentPolicy) {
-    return saveDesktopWebDavAttachmentPolicy(args.group_id, args.policy);
-  }
   if (command === NATIVE_COMMANDS.loadDesktopSyncDiagnostics) return runWithDatabaseConnectionOwner(async () =>
     buildDesktopSyncDiagnostics(await overview(), resolveFolioleAppVersion(app)));
   if (([NATIVE_COMMANDS.enableCompanionSync, NATIVE_COMMANDS.resumeCompanionSync,

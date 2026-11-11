@@ -2,9 +2,13 @@
 import { expect, it, vi } from 'vitest';
 
 import { withWebDavFixture } from '../../../../../electron/sync/webDavRelay.testSupport.js';
+import type { WebDavCredentialOffer, WebDavCredentialReply } from '../../../../../lib/platform/webDavCredentialDeliveryContract.js';
 import type { WebDavAttachmentPolicy } from '../../../../../lib/platform/webDavRelayContract.js';
 import { createCompanionRequestFixture, native } from '../../../../test/companionRequestSync.testSupport.js';
 import { installSessionHttpBoundary } from '../../../../test/companionSessionHttp.testSupport.js';
+import {
+  clearCompanionWebDavCredentialDelivery, confirmCompanionWebDavCredential, receiveCompanionWebDavCredentialDelivery
+} from '../sync/companionWebDavCredentialDelivery.js';
 import { loadCompanionWebDavRelay, receiveCompanionWebDavRelay } from '../sync/companionWebDavRelayStore.js';
 
 import { captureCompanionDesktopRound, closeCompanionDesktopSession, ensureCompanionDesktopSession,
@@ -84,6 +88,45 @@ it.skipIf(process.platform !== 'darwin')('keeps the installed credential version
       ...binding, attachment_policy: { mode: 'off' }, credential_version: 3
     });
   } finally {
+    await mobile.close();
+  }
+});
+
+it.skipIf(process.platform !== 'darwin')('activates the installed binding only after the phone verifies WebDAV access', async () => {
+  const mobile = await createCompanionRequestFixture();
+  const { fixture } = mobile;
+  const phone = fixture.leftSnapshot.deviceId;
+  const peer = fixture.rightSnapshot.deviceId;
+  const offer: WebDavCredentialOffer = {
+    id: '94235b46-54e9-43a3-a03d-d291004bdf89', desktop_key: 'desktop-key',
+    version: 3, library_epoch: `${phone}-epoch`,
+    binding: { id: 'b79b3dbc-f46b-490c-8aab-ab5e09c0562b', group_id: 't326-group',
+      desktop_device_id: peer, phone_device_id: phone, directory_url: 'https://dav.example.test/relay/' }
+  };
+  const envelope = { iv: 'fixture-iv', ciphertext: 'fixture-ciphertext' };
+  const signal = new AbortController().signal;
+  const send = vi.fn(async (reply: WebDavCredentialReply) => {
+    if (reply.receipt) expect(await loadCompanionWebDavRelay()).toMatchObject({ credential_version: 3 });
+  });
+  native.webDavPrepare.mockResolvedValue({ phone_key: 'phone-key', fingerprint: 'compared-fingerprint' });
+  native.webDavConfirm.mockResolvedValue({ confirmation: 'confirmed' });
+  native.webDavInstall.mockResolvedValue({ receipt: 'installed' });
+  const response = { chunks: 0, uploaded_bytes: 0, downloaded_bytes: 0, failed: false };
+  native.webDavRequest.mockResolvedValueOnce({ ...response, status: 401 }).mockResolvedValueOnce({ ...response, status: 207 });
+  try {
+    await receiveCompanionWebDavCredentialDelivery({ offer, envelope }, peer, send, signal);
+    expect(native.webDavInstall).not.toHaveBeenCalled();
+    await confirmCompanionWebDavCredential('compared-fingerprint');
+    await receiveCompanionWebDavCredentialDelivery({ offer, envelope }, peer, send, signal);
+    expect(await loadCompanionWebDavRelay()).toBeNull();
+    expect(send.mock.calls.some(([reply]) => reply.receipt)).toBe(false);
+    await confirmCompanionWebDavCredential('compared-fingerprint');
+    await receiveCompanionWebDavCredentialDelivery({ offer, envelope }, peer, send, signal);
+    expect(send).toHaveBeenLastCalledWith({ id: offer.id, phone_key: 'phone-key', receipt: 'installed' });
+    await mobile.restart();
+    expect(await loadCompanionWebDavRelay()).toMatchObject({ ...offer.binding, credential_version: 3 });
+  } finally {
+    clearCompanionWebDavCredentialDelivery();
     await mobile.close();
   }
 });

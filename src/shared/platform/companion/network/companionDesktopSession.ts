@@ -1,6 +1,9 @@
 import { syncSessionReplySchema, type SyncSessionReply } from '../../../../../lib/platform/syncSessionContract.js';
 import { sameWebDavAttachmentPolicy } from '../../../../../lib/platform/webDavRelayContract.js';
-import { receiveCompanionWebDavRelay } from '../sync/companionWebDavRelayStore.js';
+import {
+  clearCompanionWebDavCredentialDelivery, receiveCompanionWebDavCredentialDelivery
+} from '../sync/companionWebDavCredentialDelivery.js';
+import { receiveCompanionWebDavAuthenticatedPolicy, receiveCompanionWebDavRelay } from '../sync/companionWebDavRelayStore.js';
 
 import { requestCompanionSyncSession } from './companionSyncSessionHttp.js';
 import type { CompanionWorkspaceSyncTarget } from './companionWorkspaceEndpoint.js';
@@ -77,7 +80,21 @@ async function open(endpoint: string, peer: string, expected: number): Promise<S
     throw new Error('sync_session_cancelled');
   }
   const webDavRelayId = await receiveCompanionWebDavRelay(reply.webdav_relay, peer).catch(() => undefined);
-  return { endpoint, peer, reply, webDavRelayId, waiting: false, active: true, controller: new AbortController() };
+  const session = { endpoint, peer, reply, webDavRelayId, waiting: false, active: true, controller: new AbortController() };
+  await receiveCredentialDelivery(session).catch(() => undefined);
+  if (expected !== generation) {
+    clearCompanionWebDavCredentialDelivery();
+    throw new Error('sync_session_cancelled');
+  }
+  return session;
+}
+
+async function receiveCredentialDelivery(session: Session) {
+  await receiveCompanionWebDavCredentialDelivery(session.reply.webdav_credential_delivery, session.peer,
+    credential => requestCompanionSyncSession(session.endpoint,
+      { operation: 'webdavCredential', session: session.reply.session, credential }, session.controller.signal),
+    session.controller.signal);
+  await receiveCompanionWebDavAuthenticatedPolicy(session.reply.webdav_authenticated_policy, session.peer);
 }
 
 export function waitForCompanionDesktopChanges() {
@@ -97,6 +114,7 @@ async function wait(session: Session) {
       if (!session.active || current !== session) return;
       const previousPolicy = session.reply.webdav_relay?.attachment_policy;
       session.reply = reply;
+      await receiveCredentialDelivery(session).catch(() => undefined);
       if (reply.webdav_relay && (reply.webdav_relay.id !== session.webDavRelayId ||
           !sameWebDavAttachmentPolicy(previousPolicy, reply.webdav_relay.attachment_policy))) {
         session.webDavRelayId = await receiveCompanionWebDavRelay(reply.webdav_relay, session.peer).catch(() => undefined);
@@ -121,6 +139,7 @@ async function wait(session: Session) {
 
 export async function closeCompanionDesktopSession() {
   generation += 1;
+  clearCompanionWebDavCredentialDelivery();
   const previous = current;
   current = null;
   if (!previous) return;

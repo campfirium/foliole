@@ -1,4 +1,5 @@
 import type { NativeCompanionFramedPayloadBudgetOwner } from './nativeCompanionFramedPayloadBudgetContract.js';
+import type { WebDavCredentialEnvelope, WebDavCredentialOffer } from './webDavCredentialDeliveryContract.js';
 import type { WebDavRelayBinding } from './webDavRelayContract.js';
 
 export type NativeWebDavRelayCredentialReference = {
@@ -32,6 +33,12 @@ export type NativeWebDavRelayHttpRequest = NativeCompanionFramedPayloadBudgetOwn
 };
 
 export interface NativeWebDavRelayHttpPlugin {
+  prepareWebDavCredentialDelivery(args: NativeCompanionFramedPayloadBudgetOwner & { offer: WebDavCredentialOffer }):
+    Promise<{ phone_key: string; fingerprint: string }>;
+  confirmWebDavCredentialDelivery(args: NativeCompanionFramedPayloadBudgetOwner & { id: string; fingerprint: string }):
+    Promise<{ confirmation: string }>;
+  installWebDavCredentialDelivery(args: NativeCompanionFramedPayloadBudgetOwner & { id: string; envelope: WebDavCredentialEnvelope }):
+    Promise<{ receipt: string }>;
   requestWebDavRelay(request: NativeWebDavRelayHttpRequest): Promise<{
     status: number; chunks: number; uploaded_bytes: number; downloaded_bytes: number; failed: boolean; failure_code?: string; retry_after?: string;
   }>;

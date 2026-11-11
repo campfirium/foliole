@@ -57,20 +57,22 @@ function isSecureStorageError(error: unknown) {
   return error instanceof Error && error.message.includes('webdav_relay_secure_storage_unavailable');
 }
 
-export function SettingsWebDavRelayRow({ groupId, bound, configured }: {
+export function SettingsWebDavRelayRow({ groupId, bound, configured, credentialActive }: {
   groupId: string;
   bound?: boolean;
   configured?: boolean;
+  credentialActive?: boolean;
 }) {
   const t = useTranslation();
   const [editing, setEditing] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const { directory, credentialDirectory, status, connect, changeDirectory, clearResult } = useWebDavRelayDirectory(groupId);
-  const busy = Boolean(bound) || status === 'loading' || status === 'running';
+  const busy = Boolean(credentialActive) || status === 'loading' || status === 'running';
   const showForm = !configured || editing || status === 'loadFailed';
   const credentialInput = Boolean(username || password || (credentialDirectory && directory.trim() === credentialDirectory));
-  const canConnect = !busy && Boolean(directory.trim()) && (!credentialInput || Boolean(username.trim() && password));
+  const canConnect = !busy && Boolean(directory.trim()) &&
+    (credentialInput ? Boolean(username.trim() && password) : !bound);
   const submit = async () => {
     if (!canConnect) return;
     const pending = connect(credentialInput ? { username, password } : undefined);
@@ -96,7 +98,7 @@ export function SettingsWebDavRelayRow({ groupId, bound, configured }: {
     <SettingsFlow>
       <PublishingTextRow title={t('settings.companionSync.webdav.directory')}
         label={t('settings.companionSync.webdav.directory')} description={null}
-        disabled={busy} type="url" value={directory} placeholder="https://" onChange={changeDirectory}
+        disabled={busy || Boolean(bound)} type="url" value={directory} placeholder="https://" onChange={changeDirectory}
         onEnter={() => void submit()} />
       <PublishingTextRow title={t('settings.companionSync.webdav.username')}
         label={t('settings.companionSync.webdav.username')} description={null}

@@ -59,6 +59,21 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         FolioleCompanionWebDavHttp.start(getContext(), call, framedSendExecutor);
     }
 
+    @PluginMethod public void prepareWebDavCredentialDelivery(PluginCall call) {
+        FolioleCompanionSyncAsync.run(signingExecutor, call, "WebDAV credential setup failed.",
+            () -> FolioleWebDavCredentialDelivery.prepare(call));
+    }
+
+    @PluginMethod public void confirmWebDavCredentialDelivery(PluginCall call) {
+        FolioleCompanionSyncAsync.run(signingExecutor, call, "WebDAV credential confirmation failed.",
+            () -> FolioleWebDavCredentialDelivery.confirm(call));
+    }
+
+    @PluginMethod public void installWebDavCredentialDelivery(PluginCall call) {
+        FolioleCompanionSyncAsync.run(signingExecutor, call, "WebDAV credential installation failed.",
+            () -> FolioleWebDavCredentialDelivery.install(getContext(), call));
+    }
+
     @PluginMethod public void cancelWebDavRelay(PluginCall call) {
         FolioleCompanionWebDavHttp.cancel(call);
     }

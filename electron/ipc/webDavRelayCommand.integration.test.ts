@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { randomUUID } from 'node:crypto';
+import { createHash, createPublicKey, diffieHellman, hkdfSync, randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -12,14 +12,19 @@ import { readWebDavRelayBodyScope } from '../../lib/core/sync/webDavRelayBodySco
 import { captureWebDavRelayLanBaseline } from '../../lib/core/sync/webDavRelayLanBaseline.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
+import { webDavCredentialTranscript } from '../../lib/platform/webDavCredentialDeliveryContract.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { saveJsonSetting } from '../database/settingsStore.js';
 import { createDesktopSyncGroup, registerSyncGroupDevice } from '../database/syncGroupStore.js';
+import * as credentialStore from '../security/desktopWebDavCredentialStore.js';
 import { createDesktopRequestSyncDatabaseHost } from '../sync/desktopRequestSyncDatabaseHost.js';
 import { desktopSyncChangeSessions } from '../sync/desktopSyncChangeSessions.js';
-import { confirmDesktopWebDavRelayDelivery, desktopWebDavRelayForPeer } from '../sync/desktopWebDavRelaySettings.js';
+import { createWebDavCredentialKey, webDavCredentialProof } from '../sync/desktopWebDavCredentialCrypto.js';
+import { desktopWebDavCredentialDeliveryForPeer, handleDesktopWebDavCredentialReply } from '../sync/desktopWebDavCredentialDelivery.js';
+import { confirmDesktopWebDavRelayDelivery, desktopWebDavRelayForPeer, loadDesktopBoundWebDavRelay } from '../sync/desktopWebDavRelaySettings.js';
+import * as webDavProbe from '../sync/testWebDavRelayConnection.js';
 import { withWebDavFixture } from '../sync/webDavRelay.testSupport.js';
 
 import { handleInvokeRequest } from './commands.js';
@@ -70,9 +75,56 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   closeDatabaseConnection();
   Object.defineProperty(process, 'platform', platform);
   await fs.rm(root, { recursive: true, force: true });
+});
+
+it('enables authenticated relay only after both fingerprints and the phone installation receipt', async () => {
+  const phone = registerPhone('Android phone');
+  const other = registerPhone('Other phone');
+  openDatabaseConnection().sqlite.prepare(`INSERT INTO node_version_device_revisions
+    (group_id, device_identity_key, library_epoch, proof_revision, pack_id, updated_at)
+    VALUES (?, ?, 'phone-epoch', 1, 'pack', 'now')`).run(groupId, phone);
+  desktopSyncChangeSessions().open(phone);
+  desktopSyncChangeSessions().open(other);
+  vi.spyOn(webDavProbe, 'testWebDavRelayConnection').mockResolvedValue(directory);
+  vi.spyOn(credentialStore, 'encryptDesktopWebDavCredentialDraft').mockResolvedValue(Buffer.from('protected fixture'));
+  vi.spyOn(credentialStore, 'decryptDesktopWebDavCredentialDraft').mockImplementation(async scope =>
+    ({ scope, directory, username: 'mac-user', password: 'mac-password' }));
+  await handleInvokeRequest({ command: NATIVE_COMMANDS.saveWebDavRelayDirectory,
+    args: { group_id: groupId, directory_url: directory, credentials: { username: 'mac-user', password: 'mac-password' } } });
+  await handleInvokeRequest({ command: NATIVE_COMMANDS.enableWebDavRelay,
+    args: { group_id: groupId, device_id: phone, authenticated: true } });
+  expect(desktopWebDavCredentialDeliveryForPeer(groupId, other)).toBeUndefined();
+  const { offer } = desktopWebDavCredentialDeliveryForPeer(groupId, phone)!;
+  const receiver = createWebDavCredentialKey();
+  const send = (proof: { confirmation?: string; receipt?: string } = {}) => runWithDatabaseConnectionOwner(() =>
+    handleDesktopWebDavCredentialReply(groupId, phone, { id: offer.id, phone_key: receiver.publicKey, ...proof }));
+  await send();
+  const overview = await handleInvokeRequest({ command: NATIVE_COMMANDS.loadSyncGroupOverview, args: {} }) as {
+    webdav_relay: { credential_delivery: { fingerprint: string } }
+  };
+  const fingerprint = overview.webdav_relay.credential_delivery.fingerprint;
+  const confirm = (code: string) => handleInvokeRequest({ command: NATIVE_COMMANDS.confirmWebDavCredentialDelivery,
+    args: { group_id: groupId, id: offer.id, fingerprint: code, username: 'phone-user', password: 'phone-password' } });
+  await expect(confirm('wrong')).rejects.toThrow('webdav_credential_delivery_invalid');
+  await confirm(fingerprint);
+  expect(desktopWebDavCredentialDeliveryForPeer(groupId, phone)?.envelope).toBeUndefined();
+  const transcript = createHash('sha256').update(webDavCredentialTranscript(offer, receiver.publicKey)).digest();
+  const desktop = createPublicKey({ key: Buffer.from(offer.desktop_key, 'base64url'), format: 'der', type: 'spki' });
+  const secret = diffieHellman({ privateKey: receiver.privateKey, publicKey: desktop });
+  const proofKey = (label: string) => Buffer.from(hkdfSync('sha256', secret, transcript, `WebDAV credential ${label}`, 32));
+  expect(fingerprint).toBe(transcript.subarray(0, 16).toString('hex'));
+  await send({ confirmation: webDavCredentialProof(proofKey('confirmation'), 'confirmed') });
+  expect(desktopWebDavCredentialDeliveryForPeer(groupId, phone)?.envelope).toBeDefined();
+  expect(loadDesktopBoundWebDavRelay()).toBeNull();
+  await expect(send({ receipt: 'forged' })).rejects.toThrow('webdav_credential_delivery_invalid');
+  await send({ receipt: webDavCredentialProof(proofKey('receipt'), 'installed') });
+  closeDatabaseConnection();
+  expect(loadDesktopBoundWebDavRelay()).toMatchObject({ phone_device_id: phone, credential_version: offer.version });
+  expect(desktopWebDavRelayForPeer(groupId, phone)).toBeUndefined();
 });
 
 it('acknowledges enable through native IPC and persists the binding without replacing it', async () => {
