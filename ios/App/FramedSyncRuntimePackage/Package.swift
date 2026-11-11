@@ -8,7 +8,7 @@ let package = Package(
         .library(name: "FolioleFramedSyncRuntime", targets: ["FolioleFramedSyncRuntime"])
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-protobuf.git", exact: "1.39.0")
+        .package(url: "https://github.com/apple/swift-protobuf.git", exact: "1.40.0")
     ],
     targets: [
         .target(

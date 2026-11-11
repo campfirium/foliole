@@ -6,7 +6,7 @@ let package = Package(
     platforms: [.macOS(.v13)],
     dependencies: [
         .package(path: "FramedSyncRuntimePackage"),
-        .package(url: "https://github.com/apple/swift-protobuf.git", exact: "1.39.0"),
+        .package(url: "https://github.com/apple/swift-protobuf.git", exact: "1.40.0"),
     ],
     targets: [
         .target(
