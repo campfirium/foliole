@@ -69,10 +69,10 @@ export type NativeSyncCommandMap = {
   };
   [NATIVE_COMMANDS.loadWebDavRelayDirectory]: {
     args: { group_id: string };
-    result: string | null;
+    result: { directory: string | null; credential_directory: string | null };
   };
   [NATIVE_COMMANDS.saveWebDavRelayDirectory]: {
-    args: { group_id: string; directory_url: string; credential_test?: { username: string; password: string } };
+    args: { group_id: string; directory_url: string; credentials?: { username: string; password: string } };
     result: string;
   };
   [NATIVE_COMMANDS.saveWebDavAttachmentPolicy]: {

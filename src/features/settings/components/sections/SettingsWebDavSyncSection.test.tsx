@@ -58,7 +58,7 @@ it('opens the host log even before configuration and lets the user retry an open
 
 it('requires confirmation and reports host rejection before rendering a delivered binding', async () => {
   setRelay(true);
-  invoke.mockResolvedValueOnce('https://dav.example.net/relay/').mockRejectedValueOnce(new Error('unreachable'));
+  invoke.mockResolvedValueOnce({ directory: 'https://dav.example.net/relay/', credential_directory: null }).mockRejectedValueOnce(new Error('unreachable'));
   const confirm = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
   const unregister = registerAppConfirmationHandler(confirm);
   try {
@@ -89,7 +89,7 @@ it('requires confirmation and reports host rejection before rendering a delivere
 
 it('keeps the phone visible and updates whether it can be selected when LAN availability changes', async () => {
   setRelay(true, null, false, []);
-  invoke.mockResolvedValue('https://dav.example.net/relay/');
+  invoke.mockResolvedValue({ directory: 'https://dav.example.net/relay/', credential_directory: null });
   const { rerender } = renderWithLocalization(<SettingsWebDavSyncSection />);
   await screen.findByText('https://dav.example.net/relay/');
   fireEvent.keyDown(screen.getByRole('button', { name: 'Choose device' }), { key: 'ArrowDown' });
@@ -101,7 +101,7 @@ it('keeps the phone visible and updates whether it can be selected when LAN avai
 
 it('clears the LAN sync instruction when the delivered binding is ready again', async () => {
   setRelay(true, 'phone', true, [], true);
-  invoke.mockResolvedValue('https://dav.example.net/relay/');
+  invoke.mockResolvedValue({ directory: 'https://dav.example.net/relay/', credential_directory: null });
   const { rerender } = renderWithLocalization(<SettingsWebDavSyncSection />);
   const instruction = 'A5 · Connect both devices to the same local network and sync once to use WebDAV';
   expect(await screen.findByText(instruction)).toBeVisible();
@@ -115,7 +115,7 @@ it('reports an upload with device receipt still unconfirmed', async () => {
   useDesktopSyncGroup.mockReturnValue({ isLoading: false, overview: {
     sync_group: group, webdav_relay: { configured: true, device_id: 'phone', delivered: true, published_via_relay: true }
   } });
-  invoke.mockResolvedValue('https://dav.example.net/relay/');
+  invoke.mockResolvedValue({ directory: 'https://dav.example.net/relay/', credential_directory: null });
   renderWithLocalization(<SettingsWebDavSyncSection />);
   expect(await screen.findByText('A5 · Updates uploaded to WebDAV. Device receipt unconfirmed.')).toBeVisible();
 });

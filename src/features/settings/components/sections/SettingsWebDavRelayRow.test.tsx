@@ -12,7 +12,7 @@ vi.mock('../../../../shared/platform/runtimeInvoke', () => ({
 }));
 
 it('reports a failed connection, then accepts a corrected WebDAV folder', async () => {
-  invoke.mockResolvedValueOnce('http://127.0.0.1:1234/original/')
+  invoke.mockResolvedValueOnce({ directory: 'http://127.0.0.1:1234/original/', credential_directory: null })
     .mockRejectedValueOnce(new Error('Not writable'))
     .mockResolvedValueOnce('http://127.0.0.1:1234/relay/');
   renderWithLocalization(<SettingsWebDavRelayRow groupId="group-1" />);
@@ -33,23 +33,23 @@ it('reports a failed connection, then accepts a corrected WebDAV folder', async 
   });
 });
 
-it('tests sign-in, clears the password and distinguishes verification from saving', async () => {
+it('saves credentials without configuring the anonymous relay and clears the password', async () => {
   invoke.mockClear();
-  invoke.mockResolvedValueOnce('https://dav.example.test/relay/')
+  invoke.mockResolvedValueOnce({ directory: null, credential_directory: 'https://dav.example.test/relay/' })
     .mockResolvedValueOnce('https://dav.example.test/relay/');
   renderWithLocalization(<SettingsWebDavRelayRow groupId="group-1" />);
   const username = await screen.findByRole('textbox', { name: 'Username' });
   const password = screen.getByLabelText('App password');
   await waitFor(() => expect(username).toBeEnabled());
   fireEvent.change(username, { target: { value: 'test-user' } });
-  expect(screen.getByRole('button', { name: 'Test credentials' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Test and save credentials' })).toBeDisabled();
   fireEvent.change(password, { target: { value: 'test-password' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Test credentials' }));
-  await screen.findByText('WebDAV sign-in and folder access verified.');
+  fireEvent.click(screen.getByRole('button', { name: 'Test and save credentials' }));
+  await screen.findByText('WebDAV credentials saved securely on this Mac.');
   expect(password).toHaveValue('');
   expect(invoke).toHaveBeenLastCalledWith('save_webdav_relay_directory', {
     group_id: 'group-1', directory_url: 'https://dav.example.test/relay/',
-    credential_test: { username: 'test-user', password: 'test-password' }
+    credentials: { username: 'test-user', password: 'test-password' }
   });
   expect(screen.queryByText('WebDAV folder saved.')).not.toBeInTheDocument();
 });

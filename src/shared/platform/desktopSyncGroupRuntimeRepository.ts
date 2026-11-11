@@ -183,9 +183,9 @@ export function saveDesktopWebDavRelayDirectory(groupId: string, directory: stri
   return getRuntimeInvoke()?.(NATIVE_COMMANDS.saveWebDavRelayDirectory, { group_id: groupId, directory_url: directory });
 }
 
-export function testDesktopWebDavRelayCredentials(groupId: string, directory: string, username: string, password: string) {
+export function saveDesktopWebDavRelayCredentials(groupId: string, directory: string, username: string, password: string) {
   return getRuntimeInvoke()?.(NATIVE_COMMANDS.saveWebDavRelayDirectory, {
-    group_id: groupId, directory_url: directory, credential_test: { username, password }
+    group_id: groupId, directory_url: directory, credentials: { username, password }
   });
 }
 

@@ -8,6 +8,10 @@ import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
+import {
+  decryptDesktopWebDavCredentialDraft, encryptDesktopWebDavCredentialDraft,
+  readDesktopWebDavCredentialCiphertext, replaceDesktopWebDavCredentialCiphertext
+} from '../security/desktopWebDavCredentialStore.js';
 
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
@@ -20,25 +24,53 @@ function requireActiveGroupKey(groupId: unknown) {
   return `webdav_relay_directory:${group.group_id}:${group.local_device_identity_key}`;
 }
 
-export function loadDesktopWebDavRelayDirectory(groupId: unknown) {
-  return runWithDatabaseConnectionOwner(() => {
-    const value = loadJsonSetting(requireActiveGroupKey(groupId));
-    return typeof value === 'string' ? value : null;
-  });
+function readCredentialOwner(key: string) {
+  const connection = openDatabaseConnection();
+  const row = connection.driver.queryOne<{ library_epoch: string }>(
+    'SELECT library_epoch FROM node_version_local_proof_state WHERE singleton_id = 1'
+  );
+  if (!row?.library_epoch) throw new Error('request_sync_local_epoch_missing');
+  const scope = JSON.stringify([connection.dbPath, row.library_epoch, key]);
+  return { connection, scope, ciphertext: readDesktopWebDavCredentialCiphertext(scope) };
 }
 
-export async function testDesktopWebDavRelayCredentials(groupId: unknown, input: unknown, credentials: unknown) {
+function verifyCredentialOwner(previous: ReturnType<typeof readCredentialOwner>, groupId: unknown) {
+  const current = readCredentialOwner(requireActiveGroupKey(groupId));
+  if (current.connection !== previous.connection || current.scope !== previous.scope ||
+    (current.ciphertext ? !previous.ciphertext?.equals(current.ciphertext) : previous.ciphertext !== null)) {
+    throw new Error('webdav_relay_settings_changed');
+  }
+}
+
+export async function loadDesktopWebDavRelayDirectory(groupId: unknown) {
+  const state = await runWithDatabaseConnectionOwner(() => {
+    const key = requireActiveGroupKey(groupId);
+    const value = loadJsonSetting(key);
+    return { directory: typeof value === 'string' ? value : null,
+      owner: process.platform === 'darwin' ? readCredentialOwner(key) : null };
+  });
+  const { owner } = state;
+  const draft = owner?.ciphertext ? await decryptDesktopWebDavCredentialDraft(owner.scope, owner.ciphertext) : null;
+  if (draft && owner) await runWithDatabaseConnectionOwner(() => verifyCredentialOwner(owner, groupId));
+  return { directory: state.directory, credential_directory: draft?.directory ?? null };
+}
+
+export async function saveDesktopWebDavRelayCredentials(groupId: unknown, input: unknown, credentials: unknown) {
   if (process.platform !== 'darwin') throw new Error('webdav_relay_host_unavailable');
   if (!credentials || typeof credentials !== 'object' ||
     !('username' in credentials) || typeof credentials.username !== 'string' ||
     !('password' in credentials) || typeof credentials.password !== 'string') {
     throw new Error('webdav_relay_invalid_credentials');
   }
-  await runWithDatabaseConnectionOwner(() => requireActiveGroupKey(groupId));
+  const previous = await runWithDatabaseConnectionOwner(() => readCredentialOwner(requireActiveGroupKey(groupId)));
+  const { username, password } = credentials;
   try {
-    return await testWebDavRelayConnection(input, {
-      recordUsage: recordDesktopWebDavUsage,
-      credentials: { username: credentials.username, password: credentials.password }
+    const directory = await testWebDavRelayConnection(input, { recordUsage: recordDesktopWebDavUsage, credentials: { username, password } });
+    const encrypted = await encryptDesktopWebDavCredentialDraft({ scope: previous.scope, directory, username, password });
+    return await runWithDatabaseConnectionOwner(() => {
+      verifyCredentialOwner(previous, groupId);
+      replaceDesktopWebDavCredentialCiphertext(previous.scope, encrypted);
+      return directory;
     });
   } finally {
     notifyDesktopSyncGroupOverviewChanged();
