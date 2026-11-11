@@ -100,6 +100,8 @@ function ReadableArticleTextDocument(props: {
   syncMissingAttachmentResource(attachmentId: string): Promise<void>;
 }) {
   const t = useTranslation();
+  const offset = props.readableArticle.pdfResumeTextOffset;
+  const usePdfResume = !props.canEdit && props.readingSelection == null && offset !== undefined;
   return (
     <div
       data-reading-contrast={props.readingTypographySettings.contrast}
@@ -118,14 +120,14 @@ function ReadableArticleTextDocument(props: {
         onBlurCapture={() => void props.editorState.flushPendingSave().catch(() => undefined)}
         onDocumentInput={props.editorState.markBufferedInput}
         onMissingAttachmentResource={props.syncMissingAttachmentResource}
-        readingTargetViewportMode="center"
+        readingTargetViewportMode={usePdfResume ? 'reading-position' : 'center'}
         textAnchorDecorations={props.readableArticle.textAnchorDecorations}
         {...definedProps({
           nodeViewState: toEditorViewState(props.readableArticle),
           onChange: props.canEdit ? props.editorState.handleChange : undefined,
           onEditorReady: props.onEditorReady,
-          readingRestoreCommandId: props.readingRestoreCommandId,
-          readingSelection: props.readingSelection,
+          readingRestoreCommandId: usePdfResume ? `pdf-resume:${props.readableArticle.nodeId}` : props.readingRestoreCommandId,
+          readingSelection: usePdfResume ? { from: offset, to: offset } : props.readingSelection,
           scrollContainer: props.scrollContainer
         })}
       />

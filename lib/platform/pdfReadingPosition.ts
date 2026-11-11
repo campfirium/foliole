@@ -1,3 +1,6 @@
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
+
 export const PDF_READING_POSITION_PRECISION = 1000;
 
 const PAGE_SPAN = PDF_READING_POSITION_PRECISION + 1;
@@ -8,4 +11,7 @@ export function encodePdfReadingPosition(page: number, positionY: number) {
 
 export function decodePdfReadingPosition(offset: number) {
   return { page: Math.floor(offset / PAGE_SPAN) + 1, positionY: (offset % PAGE_SPAN) / PDF_READING_POSITION_PRECISION };
+}
+export function pdfReadingContentHash(attachmentId: string) {
+  return bytesToHex(sha256(new TextEncoder().encode(`pdf:${attachmentId}`)));
 }

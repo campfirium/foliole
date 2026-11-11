@@ -29,6 +29,7 @@ export interface CompanionReadableArticle {
   nodeId: string;
   persistedNodeViewState: PersistedNodeViewState | null;
   pdfAttachmentId: string | null;
+  pdfResumeTextOffset?: number;
   readwiseRemoteLifecycle?: ReadwiseRemoteLifecycleState | null;
   reveal?: string | null;
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];

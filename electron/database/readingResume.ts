@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { loadStandaloneDeviceUuid } from '../../lib/core/database/standaloneDeviceIdentity.js';
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
@@ -11,7 +9,7 @@ import {
   readReadingResumeOffset
 } from '../../lib/core/sync/readingResumeState.js';
 import type { NativeReadingResumeContext } from '../../lib/platform/nativeReadingProgressContract.js';
-import { encodePdfReadingPosition, PDF_READING_POSITION_PRECISION } from '../../lib/platform/pdfReadingPosition.js';
+import { encodePdfReadingPosition, pdfReadingContentHash, PDF_READING_POSITION_PRECISION } from '../../lib/platform/pdfReadingPosition.js';
 
 export function pdfResumeOffset(state: { selectionFrom: number | null; scrollTop: number }) {
   if (state.selectionFrom === null || state.selectionFrom < 1 ||
@@ -34,7 +32,7 @@ function readContentHash(driver: DatabaseDriver, nodeId: string, pdfAttachmentId
         AND json_extract(resource.value, '$.role') = 'reference'
         AND json_extract(resource.value, '$.storage_key') = ?`,
     [nodeId, `${pdfAttachmentId}.pdf`]
-  ) ? createHash('sha256').update(`pdf:${pdfAttachmentId}`).digest('hex') : null;
+  ) ? pdfReadingContentHash(pdfAttachmentId) : null;
 }
 
 function readLibraryEpoch(driver: DatabaseDriver) {

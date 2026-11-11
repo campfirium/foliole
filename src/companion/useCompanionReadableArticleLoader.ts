@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, type MutableRefObject 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
 import { loadPreparedCompanionArticle } from '../shared/platform/companion/reading/companionArticlePreparation';
+import { loadCompanionPdfTextResume } from '../shared/platform/companion/reading/companionPdfTextResume';
 import { companionReadingDemandKey, CompanionReadingSnapshotChanged, hasCompanionReadingDemand } from '../shared/platform/companion/reading/companionReadingDemand';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
@@ -68,6 +69,11 @@ function useReadingLifetime(
   return mounted;
 }
 
+async function withPdfTextResume(article: CompanionReadableArticle) {
+  const offset = await loadCompanionPdfTextResume(article);
+  return offset === undefined ? article : { ...article, pdfResumeTextOffset: offset };
+}
+
 export function useCompanionReadableArticleLoader(
   snapshot: WorkspaceSnapshot | null,
   setReadableArticle: (article: Article) => void,
@@ -103,7 +109,8 @@ export function useCompanionReadableArticleLoader(
       scope === getCompanionReadingScope() && key === companionReadingDemandKey(latestSnapshot.current, nodeId);
     request.promise = Promise.resolve().then(() => isCurrent()
       ? snapshot ? loadPreparedCompanionArticle(snapshot, nodeId, isCurrent) : null : null
-    ).then((article) => {
+    ).then(article => article?.pdfAttachmentId && isCurrent() && displayed.current?.nodeId !== nodeId
+      ? withPdfTextResume(article) : article).then((article) => {
       if (!isCurrent()) return null;
       request.article = article;
       displayed.current = article ? { article, libraryScope: snapshot?.libraryScope, nodeId, scope } : null;
