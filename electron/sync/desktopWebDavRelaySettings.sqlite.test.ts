@@ -2,13 +2,16 @@
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { getCACertificates, setDefaultCACertificates } from 'node:tls';
 
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { createDesktopSyncGroup } from '../database/syncGroupStore.js';
+import { handleWebDavSyncCommand } from '../ipc/webDavSyncCommands.js';
 import * as credentialStore from '../security/desktopWebDavCredentialStore.js';
 
 import {
@@ -16,6 +19,7 @@ import {
 } from './desktopWebDavRelaySettings.js';
 import * as probe from './testWebDavRelayConnection.js';
 import { withWebDavFixture } from './webDavRelay.testSupport.js';
+import { fixtureCredentials, startWebDavSetupFixture } from './webDavSetupTls.testSupport.js';
 
 let root = '';
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
@@ -85,4 +89,69 @@ it.skipIf(process.platform !== 'darwin')('rejects a credential save that crosses
   await outcome;
   expect(await loadDesktopWebDavRelayDirectory(groupId)).toEqual({ directory: null, credential_directory: null });
   await expect(fs.readdir(path.join(root, 'config', 'webdav-credentials'))).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+function mockFixtureEncryption() {
+  vi.spyOn(credentialStore, 'encryptDesktopWebDavCredentialDraft').mockImplementation(async draft =>
+    Buffer.from(JSON.stringify(draft)));
+  vi.spyOn(credentialStore, 'decryptDesktopWebDavCredentialDraft').mockImplementation(async (_, ciphertext) =>
+    JSON.parse(ciphertext.toString()) as credentialStore.DesktopWebDavCredentialDraft);
+}
+
+async function withSetupFixture(run: (fixture: Awaited<ReturnType<typeof startWebDavSetupFixture>>) => Promise<void>) {
+  const fixture = await startWebDavSetupFixture(root);
+  const trust = getCACertificates('default');
+  setDefaultCACertificates([fixture.cert, ...trust]);
+  try {
+    await run(fixture);
+  } finally {
+    setDefaultCACertificates(trust);
+    await fixture.close();
+  }
+}
+
+// SKIP: macOS WebDAV credential flow | 2026-11-11 | revive: another host supports DAV credentials
+it.skipIf(process.platform !== 'darwin')('creates one scoped folder and reopens the verified credential draft', async () => {
+  const groupId = await createGroup();
+  mockFixtureEncryption();
+  await withSetupFixture(async fixture => {
+    const save = (name: string) => handleWebDavSyncCommand(NATIVE_COMMANDS.saveWebDavRelayDirectory, {
+      group_id: groupId, directory_url: fixture.parent, credentials: fixtureCredentials, new_folder_name: name
+    });
+    const name = 'Foliole 测试';
+    const target = `${fixture.parent}${encodeURIComponent(name)}/`;
+    await expect(save(name)).resolves.toBe(target);
+    expect(fixture.requests.map(request => request.split(' ')[0])).toEqual(['PROPFIND', 'MKCOL', 'PROPFIND', 'PUT', 'MOVE', 'GET', 'DELETE']);
+    expect(fixture.requests.slice(0, 2)).toEqual(['PROPFIND /storage/', `MKCOL ${new URL(target).pathname}`]);
+    expect([...fixture.files]).toEqual([['/storage/keep.bin', 'parent file'], ['/storage/occupied/keep.bin', 'existing file']]);
+    closeDatabaseConnection();
+    expect(await loadDesktopWebDavRelayDirectory(groupId)).toEqual({ directory: null, credential_directory: target });
+  });
+});
+
+// SKIP: macOS WebDAV credential flow | 2026-11-11 | revive: another host supports DAV credentials
+it.skipIf(process.platform !== 'darwin')('preserves a saved connection and remote files when folder creation fails', async () => {
+  const groupId = await createGroup();
+  mockFixtureEncryption();
+  await withSetupFixture(async fixture => {
+    const saved = `${fixture.parent}occupied/`;
+    await saveDesktopWebDavRelayCredentials(groupId, saved, fixtureCredentials);
+    fixture.requests.length = 0;
+    const save = (name: string, url = fixture.parent, credentials = fixtureCredentials) =>
+      saveDesktopWebDavRelayCredentials(groupId, url, credentials, name);
+    await expect(save('..')).rejects.toThrow('webdav_relay_invalid_folder_name');
+    await expect(save('escaped%2fpath')).rejects.toThrow('webdav_relay_invalid_folder_name');
+    expect(fixture.requests).toEqual([]);
+    await expect(save('new', `${fixture.parent}missing/`)).rejects.toThrow('webdav_relay_parent_unavailable');
+    await expect(save('new', fixture.parent, { ...fixtureCredentials, password: 'incorrect' })).rejects.toThrow('webdav_relay_folder_auth_failed');
+    await expect(save('occupied')).rejects.toThrow('webdav_relay_folder_name_unavailable');
+    await expect(save('denied')).rejects.toThrow('webdav_relay_folder_creation_failed');
+    expect(fixture.requests.filter(request => request.startsWith('MKCOL'))).toEqual(['MKCOL /storage/occupied/', 'MKCOL /storage/denied/']);
+    expect(fixture.requests.every(request => /^(MKCOL|PROPFIND) /.test(request))).toBe(true);
+    await expect(save('read-only')).rejects.toThrow('webdav_relay_created_but_unverified');
+    expect(fixture.directories.has('/storage/read-only/')).toBe(true);
+    expect([...fixture.files]).toEqual([['/storage/keep.bin', 'parent file'], ['/storage/occupied/keep.bin', 'existing file']]);
+    closeDatabaseConnection();
+    expect(await loadDesktopWebDavRelayDirectory(groupId)).toEqual({ directory: null, credential_directory: saved });
+  });
 });

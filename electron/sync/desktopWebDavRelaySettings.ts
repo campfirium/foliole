@@ -92,17 +92,23 @@ export function activateAuthenticatedWebDavBinding(binding: WebDavRelayBinding, 
   });
 }
 
-export async function saveDesktopWebDavRelayCredentials(groupId: unknown, input: unknown, credentials: unknown) {
+export async function saveDesktopWebDavRelayCredentials(groupId: unknown, input: unknown, credentials: unknown, newFolderName?: unknown) {
   if (process.platform !== 'darwin') throw new Error('webdav_relay_host_unavailable');
   if (!credentials || typeof credentials !== 'object' ||
     !('username' in credentials) || typeof credentials.username !== 'string' ||
     !('password' in credentials) || typeof credentials.password !== 'string') {
     throw new Error('webdav_relay_invalid_credentials');
   }
-  const previous = await runWithDatabaseConnectionOwner(() => readCredentialOwner(requireActiveGroupKey(groupId)));
+  const previous = await runWithDatabaseConnectionOwner(() => {
+    const key = requireActiveGroupKey(groupId);
+    if (newFolderName !== undefined && loadBinding(key)) throw new Error('webdav_relay_bound');
+    return readCredentialOwner(key);
+  });
   const { username, password } = credentials;
   try {
-    const directory = await testWebDavRelayConnection(input, { recordUsage: recordDesktopWebDavUsage, credentials: { username, password } });
+    const directory = await testWebDavRelayConnection(input, {
+      recordUsage: recordDesktopWebDavUsage, credentials: { username, password }, newFolderName
+    });
     const encrypted = await encryptDesktopWebDavCredentialDraft({ scope: previous.scope, directory, username, password });
     return await runWithDatabaseConnectionOwner(() => {
       verifyCredentialOwner(previous, groupId);

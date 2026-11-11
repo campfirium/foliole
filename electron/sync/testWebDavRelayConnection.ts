@@ -36,23 +36,49 @@ function probeRequest(http: WebDavRelayRequest): WebDavRelayRequest {
 export async function testWebDavRelayConnection(input: unknown, options?: {
   recordUsage?: (record: WebDavUsageRecord) => Promise<void>;
   credentials?: DesktopWebDavCredentials;
+  newFolderName?: unknown;
 }): Promise<string> {
   const stats: DesktopWebDavRelayHttpStats = { requests: {}, responses: 0, uploadedBytes: 0, downloadedBytes: 0, httpStatuses: {} };
   const started = performance.now();
   let completed = false;
   try {
     const directory = relayDirectory(input);
-    const { recordUsage, credentials } = options ?? {};
+    const { recordUsage, credentials, newFolderName } = options ?? {};
     const http = createDesktopWebDavRelayHttp(stats, undefined, { timeoutMs: 4000, ...(recordUsage ? { recordUsage } : {}) });
-    await probeDirectory(directory, probeRequest(credentials ? withDesktopWebDavBasicAuth(http, directory, credentials) : http));
+    const request = credentials ? withDesktopWebDavBasicAuth(http, directory, credentials) : http;
+    if (newFolderName !== undefined && !credentials) throw new Error('webdav_relay_invalid_credentials');
+    const target = newFolderName === undefined ? directory : await createRelayFolder(directory, newFolderName, request);
+    try {
+      await probeDirectory(target, probeRequest(request));
+    } catch (error) {
+      if (newFolderName !== undefined) throw new Error('webdav_relay_created_but_unverified', { cause: error });
+      throw error;
+    }
     completed = true;
-    return directory.href;
+    return target.href;
   } finally {
     await recordDesktopWebDavRelayLog('connection_test', stats, {
       status: completed ? 'completed' : 'failed', elapsedMs: Math.round(performance.now() - started),
       published: 0, applied: 0, retries: 0, retryable: false
     });
   }
+}
+
+async function createRelayFolder(parent: URL, input: unknown, request: WebDavRelayRequest) {
+  const name = typeof input === 'string' ? input.trim() : '';
+  if (!name || name === '.' || name === '..' || /[\\/%\p{Cc}\p{Cs}]/u.test(name)) {
+    throw new Error('webdav_relay_invalid_folder_name');
+  }
+  if (/%(?:2f|5c|25)/iu.test(parent.pathname)) throw new Error('webdav_relay_parent_unavailable');
+  const target = new URL(`${encodeURIComponent(name)}/`, parent);
+  const parentStatus = await request(parent, { method: 'PROPFIND', headers: { Depth: '0' } }, webDavRelayStatus);
+  if (parentStatus === 401) throw new Error('webdav_relay_folder_auth_failed');
+  if (parentStatus !== 207) throw new Error('webdav_relay_parent_unavailable');
+  const status = await request(target, { method: 'MKCOL' }, webDavRelayStatus);
+  if (status === 405) throw new Error('webdav_relay_folder_name_unavailable');
+  if (status === 401) throw new Error('webdav_relay_folder_auth_failed');
+  if (status !== 201) throw new Error('webdav_relay_folder_creation_failed');
+  return target;
 }
 
 async function probeDirectory(directory: URL, request: WebDavRelayRequest) {

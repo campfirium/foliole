@@ -71,7 +71,7 @@ it('requires confirmation and reports host rejection before rendering a delivere
     const { rerender } = renderWithLocalization(<SettingsWebDavSyncSection />);
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'WebDAV folder URL' })).toHaveValue('https://dav.example.net/relay/'));
     expect(screen.getByRole('textbox', { name: 'Username' })).toBeVisible();
-    expect(screen.getByLabelText('App password')).toBeVisible();
+    expect(screen.getByLabelText('WebDAV password')).toBeVisible();
     const choose = screen.getByRole('button', { name: 'Choose device' });
     fireEvent.keyDown(choose, { key: 'ArrowDown' });
     expect(screen.queryByRole('menuitem', { name: 'Desktop' })).not.toBeInTheDocument();

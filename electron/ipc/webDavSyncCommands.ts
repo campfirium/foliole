@@ -24,8 +24,9 @@ export function handleWebDavSyncCommand(command: string, args: Record<string, un
   if (command === NATIVE_COMMANDS.loadWebDavRelayDirectory) return loadDesktopWebDavRelayDirectory(args.group_id);
   if (command === NATIVE_COMMANDS.saveWebDavRelayDirectory) {
     if (args.credentials !== undefined) {
-      return saveDesktopWebDavRelayCredentials(args.group_id, args.directory_url, args.credentials);
+      return saveDesktopWebDavRelayCredentials(args.group_id, args.directory_url, args.credentials, args.new_folder_name);
     }
+    if (args.new_folder_name !== undefined) throw new Error('webdav_relay_invalid_credentials');
     return saveDesktopWebDavRelayDirectory(args.group_id, args.directory_url);
   }
   if (command === NATIVE_COMMANDS.saveWebDavAttachmentPolicy) {
