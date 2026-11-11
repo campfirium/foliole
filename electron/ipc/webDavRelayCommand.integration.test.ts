@@ -87,3 +87,18 @@ it('acknowledges enable through native IPC and persists the binding without repl
   expect(desktopWebDavRelayForPeer(groupId, phone)).toEqual(binding);
   expect(desktopWebDavRelayForPeer(groupId, otherPhone)).toBeUndefined();
 });
+
+it('reports current authenticated phone availability through the desktop overview IPC', async () => {
+  const phone = registerPhone('Android phone');
+  const otherPhone = registerPhone('Offline Android phone');
+  const overview = () => handleInvokeRequest({ command: NATIVE_COMMANDS.loadSyncGroupOverview, args: {} });
+  await expect(overview()).resolves.toMatchObject({ webdav_relay: { available_device_ids: [] } });
+
+  const sessions = desktopSyncChangeSessions();
+  const connected = sessions.open(phone);
+  await expect(overview()).resolves.toMatchObject({ webdav_relay: { available_device_ids: [phone] } });
+  await expect(enableRelay(otherPhone)).rejects.toThrow('webdav_relay_device_unavailable');
+
+  sessions.close(phone, connected.session);
+  await expect(overview()).resolves.toMatchObject({ webdav_relay: { available_device_ids: [] } });
+});

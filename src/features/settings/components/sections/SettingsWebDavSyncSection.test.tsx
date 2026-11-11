@@ -21,9 +21,9 @@ const group = {
   ]
 };
 
-function setRelay(configured: boolean, deviceId: string | null = null, delivered = false) {
+function setRelay(configured: boolean, deviceId: string | null = null, delivered = false, available = ['phone']) {
   useDesktopSyncGroup.mockReturnValue({ isLoading: false, overview: {
-    sync_group: group, webdav_relay: { configured, device_id: deviceId, delivered }
+    sync_group: group, webdav_relay: { configured, device_id: deviceId, delivered, available_device_ids: available }
   } });
 }
 
@@ -70,4 +70,16 @@ it('requires confirmation and reports host rejection before rendering a delivere
   } finally {
     unregister();
   }
+});
+
+it('keeps the phone visible and updates whether it can be selected when LAN availability changes', async () => {
+  setRelay(true, null, false, []);
+  invoke.mockResolvedValue('https://dav.example.net/relay/');
+  const { rerender } = renderWithLocalization(<SettingsWebDavSyncSection />);
+  await screen.findByText('https://dav.example.net/relay/');
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Choose device' }), { key: 'ArrowDown' });
+  expect(await screen.findByRole('menuitem', { name: 'A5' })).toHaveAttribute('aria-disabled', 'true');
+  setRelay(true);
+  rerender(<SettingsWebDavSyncSection />);
+  expect(screen.getByRole('menuitem', { name: 'A5' })).not.toHaveAttribute('aria-disabled', 'true');
 });

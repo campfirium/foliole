@@ -13,5 +13,6 @@ export type WebDavRelayBinding = z.infer<typeof webDavRelayBindingSchema>;
 export const webDavRelayOverviewSchema = z.object({
   configured: z.boolean(),
   device_id: z.string().min(1).nullable(),
-  delivered: z.boolean()
+  delivered: z.boolean(),
+  available_device_ids: z.array(z.string().min(1)).optional()
 });

@@ -3,7 +3,7 @@ import { createServer, type Server } from 'node:http';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-const runtime = vi.hoisted(() => ({ allowed: true, depth: 0, entered: () => {} }));
+const runtime = vi.hoisted(() => ({ allowed: true, depth: 0, entered: () => {}, notify: vi.fn() }));
 vi.mock('../diagnostics/diagnosticLog.js', () => ({ appendDiagnosticLog: vi.fn(async () => undefined) }));
 vi.mock('../database/connection.js', () => ({ registerDatabaseConnectionCleanup: () => {},
   openDatabaseConnection: () => ({ driver: { queryOne: () => undefined } }),
@@ -17,8 +17,11 @@ vi.mock('./companionRequestAuth.js', () => ({
     : { ok: false, status_code: 401, error: 'sync_group_device_not_active' }
 }));
 vi.mock('../database/syncGroupStore.js', () => ({
-  loadDesktopSyncGroup: () => ({ group_id: 'group-1', local_device_identity_key: 'desktop' })
+  loadDesktopSyncGroup: () => ({ group_id: 'group-1', local_device_identity_key: 'desktop',
+    devices: [{device_identity_key:'phone',platform:'android',state:'active'}] })
 }));
+vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({ notifyDesktopSyncGroupOverviewChanged: runtime.notify }));
+vi.mock('../database/settingsStore.js', () => ({ loadJsonSetting: () => null }));
 vi.mock('./companionLanResponses.js', () => ({ writeJson: (_request: unknown,
   response: import('node:http').ServerResponse, status: number, body: unknown) => {
   response.writeHead(status, { 'Content-Type': 'application/json' });
@@ -31,6 +34,7 @@ import { appendDiagnosticLog } from '../diagnostics/diagnosticLog.js';
 import { observeSlowRequest } from './companionLanRequestTiming.js';
 import { handleCompanionSyncSession } from './companionLanSyncSession.js';
 import { closeDesktopSyncChangeSessions, desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
+import { desktopWebDavRelayOverview } from './desktopWebDavRelaySettings.js';
 
 let server: Server;
 let endpoint: string;
@@ -105,4 +109,15 @@ it('logs notification wake times through the actual HTTP session route', async (
 it('learns the waiting device tier and replies with this desktop priority', async () => {
   const opened = await (await request({ operation: 'open', tier: 2 })).json();
   expect(opened).toMatchObject({ tier: 1, best: { device_id: 'phone', tier: 2 } });
+});
+
+it('exposes the phone to the WebDAV picker only while its LAN session is open', async () => {
+  const available = () => desktopWebDavRelayOverview('group-1').available_device_ids;
+  expect(available()).toEqual([]);
+  const opened = syncSessionReplySchema.parse(await (await request({ operation: 'open' })).json());
+  expect(available()).toEqual(['phone']);
+  expect(runtime.notify).toHaveBeenCalledOnce();
+  expect((await request({ operation: 'close', session: opened.session })).status).toBe(200);
+  expect(available()).toEqual([]);
+  expect(runtime.notify).toHaveBeenCalledTimes(2);
 });

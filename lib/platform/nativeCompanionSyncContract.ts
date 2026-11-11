@@ -240,7 +240,7 @@ export interface DesktopSyncGroupJoinRequestPayload {
 }
 
 export interface DesktopSyncGroupOverviewPayload {
-  webdav_relay?: { configured: boolean; device_id: string | null; delivered: boolean };
+  webdav_relay?: { configured: boolean; device_id: string | null; delivered: boolean; available_device_ids?: string[] };
   pending_backup_restore?: string | null;
   /** This device has not completed a sync for longer than the group keeps history for it. */
   expired_member?: boolean;

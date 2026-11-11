@@ -52,7 +52,13 @@ function loadBinding(directoryKey: string) {
 export function desktopWebDavRelayOverview(groupId: string) {
   const key = requireActiveGroupKey(groupId);
   const saved = loadBinding(key);
+  const group = loadDesktopSyncGroup()!;
+  const sessions = desktopSyncChangeSessions();
+  const availableDeviceIds = group.devices.filter(device => device.state === 'active' &&
+    device.device_identity_key !== group.local_device_identity_key && device.platform.toLowerCase().startsWith('android') &&
+    sessions.hasSessions(device.device_identity_key)).map(device => device.device_identity_key);
   return {
+    available_device_ids: availableDeviceIds,
     configured: typeof loadJsonSetting(key) === 'string',
     device_id: saved?.binding.phone_device_id ?? null,
     delivered: saved?.delivered ?? false
@@ -66,7 +72,7 @@ export function enableDesktopWebDavRelay(groupId: unknown, phoneId: unknown) {
     const phone = group.devices.find(device => device.device_identity_key === phoneId);
     const directory = loadJsonSetting(key);
     const sessions = desktopSyncChangeSessions();
-    if (process.platform !== 'darwin' || !phone?.platform.toLowerCase().startsWith('android') ||
+    if (process.platform !== 'darwin' || phone?.state !== 'active' || !phone.platform.toLowerCase().startsWith('android') ||
       typeof directory !== 'string' || !sessions.hasSessions(phone.device_identity_key)) {
       throw new Error('webdav_relay_device_unavailable');
     }

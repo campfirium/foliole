@@ -11,31 +11,41 @@ type Session = {
   completed: Set<(marker: SyncChangeMarker) => void>;
 };
 
+function closeSyncChangeSession(session: Session) {
+  if (session.expires) clearTimeout(session.expires);
+  session.controller.abort(new Error('sync_session_expired'));
+}
+
+function scheduleSessionExpiration(session: Session, expire: () => void) {
+  if (session.expires) clearTimeout(session.expires);
+  session.expires = setTimeout(expire, 60_000);
+}
+
 /** Notification state belongs to one server lifetime, never to a durable data cursor. */
-export function createSyncChangeSessions(instance: string, newId: () => string) {
+export function createSyncChangeSessions(instance: string, newId: () => string, onMembershipChanged?: () => void) {
   let sequence = 0;
   const sessions = new Map<string, Session>();
   const marker = (): SyncChangeMarker => ({ instance, sequence });
   function requireSession(peer: string, id: string) {
     const session = sessions.get(peer);
     if (!session || session.id !== id) throw new Error('sync_session_expired');
-    if (session.expires) clearTimeout(session.expires);
-    session.expires = setTimeout(() => close(peer, id), 60_000);
+    scheduleSessionExpiration(session, () => close(peer, id));
     return session;
   }
   function close(peer: string, id: string) {
     const session = requireSession(peer, id);
     sessions.delete(peer);
-    if (session.expires) clearTimeout(session.expires);
-    session.controller.abort(new Error('sync_session_expired'));
+    closeSyncChangeSession(session);
+    onMembershipChanged?.();
   }
   function open(peer: string) {
     const previous = sessions.get(peer);
-    if (previous) close(peer, previous.id);
+    if (previous) closeSyncChangeSession(previous);
     const session: Session = { id: newId(), controller: new AbortController(), foreignSequence: sequence,
       wake: null, expires: null, completed: new Set() };
     sessions.set(peer, session);
     requireSession(peer, session.id);
+    if (!previous) onMembershipChanged?.();
     return { session: session.id, marker: marker(), changed: true };
   }
   function changed(sourceSession?: string) {

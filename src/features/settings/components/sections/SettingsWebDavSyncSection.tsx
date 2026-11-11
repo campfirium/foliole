@@ -49,6 +49,7 @@ function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Rel
   const [failed, setFailed] = useState(false);
   const devices = group.devices.filter(device => device.state === 'active'
     && device.device_identity_key !== group.local_device_identity_key && device.platform.toLowerCase().startsWith('android'));
+  const available = new Set(relay.available_device_ids);
   const bound = group.devices.find(device => device.device_identity_key === relay.device_id);
   const nameOf = (device: SyncGroupDevicePayload) => group.device_display_names?.[device.device_identity_key]
     ?? syncGroupDeviceDisplayName(device, group.devices);
@@ -83,7 +84,9 @@ function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Rel
         </AppDropdownMenuTrigger>
         <AppDropdownMenuContent align="end">
           {devices.map(device => <AppDropdownMenuItem key={device.device_identity_key}
-            onSelect={() => void bind(device)}>{nameOf(device)}</AppDropdownMenuItem>)}
+            disabled={!available.has(device.device_identity_key)} onSelect={() => void bind(device)}>
+            {nameOf(device)}
+          </AppDropdownMenuItem>)}
         </AppDropdownMenuContent>
       </AppDropdownMenu>}
     </SettingsControlSlot>
