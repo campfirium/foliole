@@ -20,7 +20,7 @@ describe('deploy release manifest workflow contract', () => {
 
   it('publishes only merged dev metadata for an already-public Release', () => {
     expect(workflow.on.push.branches).toEqual(['dev']);
-    expect(workflow.on.workflow_dispatch).toBeNull();
+    expect(workflow.on.workflow_dispatch.inputs.monitor).toMatchObject({ type: 'boolean', default: false });
     expect(workflow.on.repository_dispatch).toBeUndefined();
     expect(workflow.on.schedule).toEqual([{ cron: '23,53 * * * *' }]);
     expect(workflow.on.release.types).toEqual(['published', 'edited']);

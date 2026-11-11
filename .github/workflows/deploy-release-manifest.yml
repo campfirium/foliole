@@ -6,6 +6,12 @@ on:
   release:
     types: [published, edited]
   workflow_dispatch:
+    inputs:
+      monitor:
+        description: Skip deployment when the published download directory is unchanged
+        required: false
+        type: boolean
+        default: false
   push:
     branches:
       - dev
@@ -167,8 +173,9 @@ jobs:
         id: compare
         env:
           TRIGGER: ${{ github.event_name }}
+          MONITOR: ${{ inputs.monitor }}
         run: |
-          if [[ "$TRIGGER" == "schedule" ]]; then
+          if [[ "$TRIGGER" == "schedule" || "$MONITOR" == "true" ]]; then
             if curl -fsS --max-time 30 https://campfirium.github.io/foliole/releases/downloads.json > .tmp/current-directory.json &&
                 cmp -s .tmp/current-directory.json _site/releases/downloads.json; then
               echo 'changed=false' >> "$GITHUB_OUTPUT"
