@@ -38,9 +38,13 @@ async function openInTarget(target: LaunchTarget, path: string) {
 export async function sendArticleToEdge(article: EdgeReadingArticle) {
   const target = await resolveSelectedArticleTarget();
   if (!target) throw new Error('article_target_unavailable');
-  const root = join(app.getPath('temp'), 'Foliole', 'edge-read-aloud');
+  const folioleTemp = join(app.getPath('temp'), 'Foliole');
+  const root = join(folioleTemp, 'browser-reading');
   await mkdir(root, { recursive: true, mode: 0o700 });
-  await removeExpiredPages(root).catch(() => undefined);
+  await Promise.allSettled([
+    removeExpiredPages(root),
+    removeExpiredPages(join(folioleTemp, 'edge-read-aloud'))
+  ]);
   const directory = await mkdtemp(join(root, 'article-'));
   const path = join(directory, 'index.html');
   try {
