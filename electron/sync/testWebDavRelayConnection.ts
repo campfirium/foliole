@@ -6,6 +6,7 @@ import { WebDavServiceBusyError } from '../../lib/core/sync/webDavRetryAfter.js'
 import { withDesktopWebDavBasicAuth, type DesktopWebDavCredentials } from './desktopWebDavBasicAuth.js';
 import { createDesktopWebDavRelayHttp, type DesktopWebDavRelayHttpStats } from './desktopWebDavRelayHttp.js';
 import { recordDesktopWebDavRelayLog } from './desktopWebDavRelayLog.js';
+import type { WebDavUsageRecord } from './desktopWebDavUsage.js';
 
 function relayDirectory(input: unknown): URL {
   if (typeof input !== 'string') throw new Error('Invalid WebDAV folder URL.');
@@ -33,6 +34,7 @@ function probeRequest(http: WebDavRelayRequest): WebDavRelayRequest {
 }
 
 export async function testWebDavRelayConnection(input: unknown, options?: {
+  recordUsage?: (record: WebDavUsageRecord) => Promise<void>;
   credentials?: DesktopWebDavCredentials;
 }): Promise<string> {
   const stats: DesktopWebDavRelayHttpStats = { requests: {}, responses: 0, uploadedBytes: 0, downloadedBytes: 0, httpStatuses: {} };
@@ -40,8 +42,8 @@ export async function testWebDavRelayConnection(input: unknown, options?: {
   let completed = false;
   try {
     const directory = relayDirectory(input);
-    const http = createDesktopWebDavRelayHttp(stats, undefined, { timeoutMs: 4000 });
-    const { credentials } = options ?? {};
+    const { recordUsage, credentials } = options ?? {};
+    const http = createDesktopWebDavRelayHttp(stats, undefined, { timeoutMs: 4000, ...(recordUsage ? { recordUsage } : {}) });
     await probeDirectory(directory, probeRequest(credentials ? withDesktopWebDavBasicAuth(http, directory, credentials) : http));
     completed = true;
     return directory.href;
@@ -61,7 +63,7 @@ async function probeDirectory(directory: URL, request: WebDavRelayRequest) {
   await request(directory, { method: 'PROPFIND', headers: { Depth: '0' } }, webDavRelayStatus);
 
   try {
-    await request(staging, { method: 'PUT', headers: { 'If-None-Match': '*' },
+    await request(staging, { method: 'PUT', headers: { 'If-None-Match': '*', 'Content-Type': 'text/plain;charset=UTF-8' },
       body: { bytes: probe.length, async *chunks() { yield probe; } } }, webDavRelayStatus);
     await request(staging, { method: 'MOVE', headers: { Destination: published.href, Overwrite: 'F' } }, webDavRelayStatus);
     await request(published, { method: 'GET', headers: { Range: 'bytes=0-36' } },

@@ -55,6 +55,7 @@ import { openDesktopWebDavRelayLog } from '../sync/desktopWebDavRelayLog.js';
 import { desktopWebDavRelayOverview, enableDesktopWebDavRelay, loadDesktopWebDavRelayDirectory, loadDesktopWebDavRelayStatus,
   testDesktopWebDavRelayCredentials,
   saveDesktopWebDavAttachmentPolicy, saveDesktopWebDavRelayDirectory } from '../sync/desktopWebDavRelaySettings.js';
+import { loadDesktopWebDavUsage } from '../sync/desktopWebDavUsage.js';
 import { getLanWorkspaceSyncServerStatus, stopLanWorkspaceSyncServer } from '../sync/lanWorkspaceSyncServer.js';
 import { ensureWindowsSyncNetworkPermission } from '../sync/windowsSyncNetworkPermission.js';
 
@@ -109,7 +110,7 @@ async function overview() {
     sync_group: group ? { ...group, device_display_names: presentation.device_display_names } : null,
     pending_backup_restore: loadBackupRestorePendingSync()?.restoreId ?? null,
     ...(group && process.platform === 'darwin' ? { webdav_relay: { ...desktopWebDavRelayOverview(group.group_id),
-      ...await loadDesktopWebDavRelayStatus() } } : {}),
+      ...await loadDesktopWebDavRelayStatus(), usage: await loadDesktopWebDavUsage() } } : {}),
     expired_member: group ? loadDesktopLocalSyncGroupMemberExpired(group.group_id) : false,
     removing_devices: presentation.removing_devices,
     ...loadDesktopCompanionSyncParticipation()

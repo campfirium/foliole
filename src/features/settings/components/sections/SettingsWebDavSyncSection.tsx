@@ -4,12 +4,13 @@ import { useState } from 'react';
 import type { DesktopSyncGroupOverviewPayload } from '../../../../../lib/platform/nativeCompanionSyncContract';
 import type { SyncGroupDevicePayload, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
 import { syncGroupDeviceDisplayName } from '../../../../../lib/platform/syncGroupRemovalModel';
-import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { WEB_DAV_USAGE_PERIOD_MINUTES, type WebDavUsagePeriod } from '../../../../../lib/platform/webDavRelayContract';
+import { useLocalization, useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { enableDesktopWebDavRelay } from '../../../../shared/platform/desktopSyncGroupRuntimeRepository';
 import { useDesktopSyncGroup } from '../../../../shared/platform/useDesktopSyncGroup';
 import {
   AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger,
-  SettingsControlSlot, SettingsRow, SettingsSection, SettingsSegmentedControl,
+  SettingsButton, SettingsControlSlot, SettingsRow, SettingsSection, SettingsSegmentedControl,
   requestAppConfirmation, settingsFieldClassName
 } from '../../../../shared/ui';
 
@@ -20,15 +21,40 @@ import { SettingsWebDavRelayRow } from './SettingsWebDavRelayRow';
 const PREFIX = 'settings.companionSync.webdav' as const;
 type Relay = NonNullable<DesktopSyncGroupOverviewPayload['webdav_relay']>;
 
-function WebDavUsage({ relay }: { relay: Relay }) {
-  const t = useTranslation();
+function WebDavUsage({ relay, refresh }: { relay: Relay; refresh: () => Promise<unknown> }) {
+  const { locale, t } = useLocalization();
+  const [period, setPeriod] = useState<WebDavUsagePeriod>('tenMinutes');
+  const [refreshing, setRefreshing] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const usage = failed ? null : relay.usage;
+  const totals = usage?.[period];
+  const format = new Intl.NumberFormat(locale);
+  const time = usage && new Intl.DateTimeFormat(locale, { timeStyle: 'medium' }).format(usage.measuredAt);
+
+  async function refreshUsage() {
+    setRefreshing(true);
+    setFailed(false);
+    try { await refresh(); }
+    catch { setFailed(true); }
+    finally { setRefreshing(false); }
+  }
+
   return <SettingsSection title={t(`${PREFIX}.usage`)} description={t(`${PREFIX}.usageDescription`)}
-    actions={<SettingsWebDavLogButton />}>
-    <SettingsRow title={t(`${PREFIX}.usagePending`)}
-      description={t(relay.configured ? `${PREFIX}.configured` : `${PREFIX}.unconfigured`)}>
+    actions={<div className="flex items-center gap-2">
+      <SettingsButton disabled={refreshing} onClick={() => void refreshUsage()}>{t(`${PREFIX}.refreshUsage`)}</SettingsButton>
+      <SettingsWebDavLogButton />
+    </div>}>
+    <SettingsRow title={t(relay.configured ? `${PREFIX}.configured` : `${PREFIX}.unconfigured`)}
+      description={<span aria-live="polite">{totals && time ? <>
+        {t(`${PREFIX}.usageTotals`, { requests: format.format(totals.requests),
+          uploaded: format.format(totals.uploadedBytes), downloaded: format.format(totals.downloadedBytes) })}
+        <br />{t(`${PREFIX}.usageMeasuredAt`, { time })}
+      </> : t(`${PREFIX}.usageUnavailable`)}</span>}>
       <SettingsControlSlot>
-        <SettingsSegmentedControl ariaLabel={t(`${PREFIX}.period`)} disabled value="" onChange={() => {}}
-          options={(['hour', 'halfHour', 'tenMinutes'] as const).map(value => ({ value, label: t(`${PREFIX}.${value}`) }))} />
+        <SettingsSegmentedControl ariaLabel={t(`${PREFIX}.period`)} value={period}
+          onChange={value => setPeriod(value as WebDavUsagePeriod)}
+          options={(Object.keys(WEB_DAV_USAGE_PERIOD_MINUTES) as WebDavUsagePeriod[])
+            .map(value => ({ value, label: t(`${PREFIX}.${value}`) }))} />
       </SettingsControlSlot>
     </SettingsRow>
   </SettingsSection>;
@@ -88,14 +114,14 @@ function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Rel
 
 export function SettingsWebDavSyncSection() {
   const t = useTranslation();
-  const { overview, isLoading } = useDesktopSyncGroup();
+  const { overview, isLoading, refresh } = useDesktopSyncGroup();
   const { sync_group: group, webdav_relay: relay } = overview;
   if (isLoading) return null;
   if (!group || !relay) return <SettingsSection>
     <SettingsRow title={t(group ? `${PREFIX}.hostUnavailable` : `${PREFIX}.groupRequired`)} />
   </SettingsSection>;
   return <>
-    <WebDavUsage relay={relay} />
+    <WebDavUsage relay={relay} refresh={refresh} />
     <SettingsSection title={t(`${PREFIX}.configuration`)} key={group.group_id}>
       <SettingsWebDavAttachmentRow groupId={group.group_id} policy={relay.attachment_policy} />
       <SettingsWebDavRelayRow groupId={group.group_id} bound={Boolean(relay.device_id)} configured={relay.configured} />

@@ -16,6 +16,7 @@ import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOvervie
 import { createDesktopWebDavRelayHttp, type DesktopWebDavRelayHttpStats } from './desktopWebDavRelayHttp.js';
 import { recordDesktopWebDavRelayLog } from './desktopWebDavRelayLog.js';
 import { loadDesktopBoundWebDavRelay } from './desktopWebDavRelaySettings.js';
+import { recordDesktopWebDavUsage } from './desktopWebDavUsage.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityContext, automaticSignal?: AbortSignal, foregroundReceive?: true) {
@@ -56,7 +57,7 @@ export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityCo
       host, scope, groupKey, progress, lanConnected, attachments, ...(foregroundReceive ? { foregroundReceive } : {}),
       files: createDesktopLibrarySyncFiles(databasePath),
       ...(automaticSignal ? { signal: automaticSignal } : {}),
-      request: createDesktopWebDavRelayHttp(stats, automaticSignal),
+      request: createDesktopWebDavRelayHttp(stats, automaticSignal, { recordUsage: recordDesktopWebDavUsage }),
       assertScope: async () => {
         const current = await loadScope();
         const active = await runWithDatabaseConnectionOwner(() => isDesktopCompanionSyncParticipating() &&
@@ -70,7 +71,7 @@ export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityCo
     retryable = isRetryableWebDavSendError(error);
     throw error;
   } finally {
-    if (progress.published > 0) notifyDesktopSyncGroupOverviewChanged();
+    if (Object.keys(stats.requests).length > 0) notifyDesktopSyncGroupOverviewChanged();
     if (attempted) await recordRound(activity, stats, {
       ...progress, elapsedMs: Math.round(performance.now() - started), retryable,
       status: completed ? 'completed' : automaticSignal?.aborted ? 'cancelled' : 'failed'

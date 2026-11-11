@@ -11,6 +11,7 @@ import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
+import { recordDesktopWebDavUsage } from './desktopWebDavUsage.js';
 import { testWebDavRelayConnection } from './testWebDavRelayConnection.js';
 
 function requireActiveGroupKey(groupId: unknown) {
@@ -36,6 +37,7 @@ export async function testDesktopWebDavRelayCredentials(groupId: unknown, input:
   await runWithDatabaseConnectionOwner(() => requireActiveGroupKey(groupId));
   try {
     return await testWebDavRelayConnection(input, {
+      recordUsage: recordDesktopWebDavUsage,
       credentials: { username: credentials.username, password: credentials.password }
     });
   } finally {
@@ -48,7 +50,11 @@ export async function saveDesktopWebDavRelayDirectory(groupId: unknown, input: u
     const key = requireActiveGroupKey(groupId);
     return { key, connection: openDatabaseConnection(), directory: loadJsonSetting(key) };
   });
-  const directory = await testWebDavRelayConnection(input);
+  const directory = await testWebDavRelayConnection(input, { recordUsage: recordDesktopWebDavUsage })
+    .catch(error => {
+      notifyDesktopSyncGroupOverviewChanged();
+      throw error;
+    });
   return runWithDatabaseConnectionOwner(() => {
     const key = requireActiveGroupKey(groupId);
     if (previous.key !== key || previous.connection !== openDatabaseConnection() ||

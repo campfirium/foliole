@@ -11,6 +11,7 @@ import { createDesktopRequestSyncAttachmentHost } from './desktopRequestSyncAtta
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import { createDesktopWebDavRelayHttp, type DesktopWebDavRelayHttpStats } from './desktopWebDavRelayHttp.js';
 import { loadDesktopBoundWebDavRelay } from './desktopWebDavRelaySettings.js';
+import { recordDesktopWebDavUsage } from './desktopWebDavUsage.js';
 
 export async function captureDesktopWebDavRelayCleanup(host: RequestSyncDatabaseHost,
   context: RequestSyncAuthenticatedContext, role: 'initiator' | 'responder', signal: AbortSignal) {
@@ -23,7 +24,7 @@ export async function captureDesktopWebDavRelayCleanup(host: RequestSyncDatabase
   if (!runtime || runtime.binding.phone_device_id !== peer || runtime.binding.group_id !== context.groupId) return;
   const { binding, owner } = runtime;
   const stats: DesktopWebDavRelayHttpStats = { requests: {}, responses: 0, uploadedBytes: 0, downloadedBytes: 0 };
-  const http = createDesktopWebDavRelayHttp(stats, signal);
+  const http = createDesktopWebDavRelayHttp(stats, signal, { recordUsage: recordDesktopWebDavUsage });
   const cleanup = await captureWebDavRelayCleanup({
     host, signal, attachments: await createDesktopRequestSyncAttachmentHost(host),
     files: createDesktopLibrarySyncFiles(owner.dbPath),

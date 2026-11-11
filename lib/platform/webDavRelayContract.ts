@@ -27,6 +27,25 @@ export const webDavRelayBindingSchema = z.object({
 
 export type WebDavRelayBinding = z.infer<typeof webDavRelayBindingSchema>;
 
+export const WEB_DAV_USAGE_PERIOD_MINUTES = { tenMinutes: 10, halfHour: 30, hour: 60 } as const;
+
+export type WebDavUsagePeriod = keyof typeof WEB_DAV_USAGE_PERIOD_MINUTES;
+
+const webDavUsageTotalsSchema = z.object({
+  requests: z.number().int().nonnegative(),
+  uploadedBytes: z.number().int().nonnegative(),
+  downloadedBytes: z.number().int().nonnegative()
+});
+
+const webDavUsageSchema = z.object({
+  measuredAt: z.number().int().nonnegative(),
+  tenMinutes: webDavUsageTotalsSchema,
+  halfHour: webDavUsageTotalsSchema,
+  hour: webDavUsageTotalsSchema
+});
+
+export type WebDavUsage = z.infer<typeof webDavUsageSchema>;
+
 export const webDavRelayOverviewSchema = z.object({
   configured: z.boolean(),
   device_id: z.string().min(1).nullable(),
@@ -34,7 +53,8 @@ export const webDavRelayOverviewSchema = z.object({
   attachment_policy: webDavAttachmentPolicySchema.optional(),
   published_via_relay: z.boolean().optional(),
   lan_baseline_required: z.boolean().optional(),
-  available_device_ids: z.array(z.string().min(1)).optional()
+  available_device_ids: z.array(z.string().min(1)).optional(),
+  usage: webDavUsageSchema.nullish()
 });
 
 export type WebDavRelayOverview = z.infer<typeof webDavRelayOverviewSchema>;

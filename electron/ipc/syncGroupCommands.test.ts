@@ -28,6 +28,7 @@ vi.mock('../database/connection.js', async () => {
   runtime.read = execute => coordinator.runExclusive(execute);
   return {
     openDatabaseConnection: () => ({ driver: { queryOne: () => undefined } }),
+    registerDatabaseConnectionCleanup: vi.fn(),
     runWithDatabaseConnectionOwner: runtime.read
   };
 });
