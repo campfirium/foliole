@@ -65,9 +65,9 @@ function buildLineDecorations(view: EditorView, parsedPreviewMarkdown: PreviewMa
   return decorations;
 }
 
-function buildAtomicRanges(view: EditorView, parsedPreviewMarkdown: PreviewMarkdownParse): DecorationSet {
+function buildAtomicRanges(view: EditorView, parsedPreviewMarkdown: PreviewMarkdownParse, decorations: DecorationSet): DecorationSet {
   const startedAt = readEditorInputDiagnosticTime();
-  const ranges = buildPreviewAtomicRangeSet(parsedPreviewMarkdown, getEditedMathRange(view.state));
+  const ranges = buildPreviewAtomicRangeSet(parsedPreviewMarkdown, getEditedMathRange(view.state), decorations);
   logEditorInputDiagnostic('live-markdown-atomic-ranges', {
     totalMs: readEditorInputDiagnosticTime() - startedAt
   });
@@ -152,9 +152,9 @@ export const markdownLinePlugin = ViewPlugin.fromClass(
 
     constructor(view: EditorView) {
       this.parsedPreviewMarkdown = parsePreviewMarkdown(view);
-      this.atomicRanges = buildAtomicRanges(view, this.parsedPreviewMarkdown);
       this.cursorLineNumber = getCursorLineNumber(view);
       this.decorations = buildLineDecorations(view, this.parsedPreviewMarkdown);
+      this.atomicRanges = buildAtomicRanges(view, this.parsedPreviewMarkdown, this.decorations);
     }
 
     update(update: ViewUpdate) {
@@ -208,8 +208,8 @@ export const markdownLinePlugin = ViewPlugin.fromClass(
           this.parsedPreviewMarkdown = parsePreviewMarkdown(update.view);
           this.previewParseDirty = false;
         }
-        this.atomicRanges = buildAtomicRanges(update.view, this.parsedPreviewMarkdown);
         this.decorations = buildLineDecorations(update.view, this.parsedPreviewMarkdown);
+        this.atomicRanges = buildAtomicRanges(update.view, this.parsedPreviewMarkdown, this.decorations);
       }
 
       this.cursorLineNumber = nextCursorLineNumber;

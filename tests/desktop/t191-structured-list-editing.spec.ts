@@ -86,3 +86,25 @@ test('promotes then exits an empty nested list item one Enter at a time', async 
   await desktopWindow.keyboard.press('Enter');
   await expect.poll(() => getContent(desktopWindow)).toBe('- parent\n');
 });
+
+test('moves past a rendered list marker and deletes its prefix in one step', async ({ desktopWindow }) => {
+  await expectWorkspaceShell(desktopWindow);
+  const initial = '-  parent\n- child';
+  await seedTopic(desktopWindow, initial);
+  const editor = desktopWindow.locator('.prompt-editor-host .cm-content');
+  await expect(editor.locator('.cm-md-prefix-unordered-list')).toHaveCount(2);
+  const selection = () => desktopWindow.evaluate(() =>
+    window.__folioleDebug?.getEditorSelection?.('prompt-editor') ?? null);
+
+  await setSelection(desktopWindow, initial.indexOf('child'));
+  await desktopWindow.keyboard.press('ArrowLeft');
+  const childLineStart = initial.indexOf('\n') + 1;
+  await expect.poll(selection).toEqual({ from: childLineStart, to: childLineStart });
+  await desktopWindow.keyboard.press('Delete');
+  await expect.poll(() => getContent(desktopWindow)).toBe('-  parent\nchild');
+  await expect(editor.locator('.cm-md-prefix-unordered-list')).toHaveCount(1);
+  await setSelection(desktopWindow, initial.indexOf('parent'));
+  await desktopWindow.keyboard.press('Backspace');
+  await expect.poll(() => getContent(desktopWindow)).toBe('parent\nchild');
+  await expect(editor.locator('.cm-md-prefix-unordered-list')).toHaveCount(0);
+});

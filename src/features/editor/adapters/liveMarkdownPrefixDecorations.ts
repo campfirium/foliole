@@ -144,7 +144,11 @@ class PrefixWidget extends WidgetType {
 
 function addPrefixWidget(ranges: Range<Decoration>[], match: PrefixWidgetMatch) {
   const widget = new PrefixWidget(match.kind, match.markerText, match.checked, match.listDepth, match.taskMarkerFrom, match.taskMarkerTo);
-  ranges.push(Decoration.replace({ widget, inclusive: false }).range(match.from, match.to));
+  ranges.push(Decoration.replace({
+    widget,
+    inclusive: false,
+    atomicListPrefix: match.kind !== 'callout'
+  }).range(match.from, match.to));
 }
 
 function createTaskCheckboxElement(view: import('@codemirror/view').EditorView, checked: boolean, from?: number, to?: number) {

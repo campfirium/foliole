@@ -1,4 +1,4 @@
-import { EditorView } from '@codemirror/view';
+import { Decoration, EditorView } from '@codemirror/view';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { setEditorDisplayMode } from '../model/editorDisplayMode';
@@ -26,7 +26,7 @@ describe('live Markdown parse reuse', () => {
     const parsed = { markdownTree: folioleMarkdownParser.parse(source), source };
     parseSpy.mockClear();
 
-    buildPreviewAtomicRangeSet(parsed, null);
+    buildPreviewAtomicRangeSet(parsed, null, Decoration.none);
 
     expect(parseSpy).not.toHaveBeenCalled();
   });

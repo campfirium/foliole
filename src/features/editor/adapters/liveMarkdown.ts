@@ -1,3 +1,4 @@
+import { renderedListPrefixKeymap } from './liveMarkdownAtomicRanges';
 import { markdownFrontmatterDecorations } from './liveMarkdownFrontmatter';
 import { markdownInteractionHandlers } from './liveMarkdownInteractions';
 import { markdownLinePlugin } from './liveMarkdownLinePlugin';
@@ -12,6 +13,7 @@ export function createLiveMarkdownExtensions() {
     protectCollapsedMathDeletion,
     markdownFrontmatterDecorations,
     markdownLinePlugin,
+    renderedListPrefixKeymap,
     markdownInteractionHandlers
   ];
 }
