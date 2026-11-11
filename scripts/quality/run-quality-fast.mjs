@@ -6,17 +6,27 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
-const ALLOWED_ARGS = new Set(['--route', '--route-json']);
+const ALLOWED_ARGS = new Set(['--route', '--route-json', '--agent']);
 
 export function validateQualityFastArgs(args) {
   if (args.length > 1 || args.some((arg) => !ALLOWED_ARGS.has(arg))) {
-    throw new Error('quality:fast accepts only --route or --route-json; aggregate quality is hosted-only');
+    throw new Error('quality:fast accepts only --route, --route-json, or --agent; aggregate quality is hosted-only');
   }
   return args;
 }
 
 export function resolveQualityFastCommand(platform, args) {
   validateQualityFastArgs(args);
+  if (args[0] === '--agent') {
+    if (platform !== 'darwin') throw new Error('quality:fast --agent requires macOS');
+    return {
+      command: process.execPath,
+      args: [
+        path.resolve(SCRIPT_DIR, '../with-resource-gate.mjs'), 'node-heavy', '--',
+        'bash', path.resolve(SCRIPT_DIR, 'quality-fast-agent.sh')
+      ]
+    };
+  }
   if (platform === 'win32') {
     return { args: [path.resolve(SCRIPT_DIR, '../windows/quality-fast-native.mjs'), ...args], command: process.execPath };
   }
