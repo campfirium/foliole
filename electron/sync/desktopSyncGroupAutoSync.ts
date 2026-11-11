@@ -7,7 +7,7 @@ import { recoverCompanionMdnsAdvertisement } from './companionMdnsAdvertisement.
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import type { RecoverableDesktopDnsSdSession } from './desktopDnsSdRecoverySession.js';
 import { subscribeDesktopForeground } from './desktopForegroundPresence.js';
-import { installDesktopForegroundPresence } from './desktopForegroundPresenceRuntime.js';
+import { installDesktopForegroundPresence, subscribeDesktopApplicationForeground } from './desktopForegroundPresenceRuntime.js';
 import { updateDesktopSyncFreshness } from './desktopMemberSyncCadence.js';
 import { recordDesktopSyncNoPeer } from './desktopSyncActivityStore.js';
 import { closeDesktopSyncChangeSessions, desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
@@ -32,6 +32,7 @@ import { continuePendingReadwiseHandoff } from './readwiseOwnerHandoff.js';
 let runtime: RecoverableDesktopDnsSdSession | null = null;
 let stopReadwiseContinuation: (() => void) | null = null;
 let stopPeerScheduling: (() => void) | null = null;
+let stopWebDavForeground: (() => void) | null = null;
 let manualRun: Promise<unknown> | null = null;
 let startRun: Promise<void> | null = null;
 let generation = 0;
@@ -59,6 +60,8 @@ export function startDesktopSyncGroupAutoSync() {
     }, error => setDesktopSyncGroupDiscoveryError('member', error));
     if (process.platform === 'darwin') {
       desktopWebDavSendWindow.start(runDesktopScheduledWebDav);
+      stopWebDavForeground = subscribeDesktopApplicationForeground(desktopWebDavSendWindow.foreground);
+      queueMicrotask(desktopWebDavSendWindow.foreground);
     }
   }).finally(() => { if (startRun === work) startRun = null; });
   startRun = work;
@@ -66,6 +69,8 @@ export function startDesktopSyncGroupAutoSync() {
 }
 
 export function stopDesktopSyncGroupAutoSync() {
+  stopWebDavForeground?.();
+  stopWebDavForeground = null;
   desktopWebDavSendWindow.stop();
   closeDesktopSyncChangeSessions();
   generation += 1;

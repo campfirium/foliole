@@ -18,7 +18,7 @@ export function companionWebDavRelayLanConnected(binding: WebDavRelayBinding) {
 }
 
 export function runCompanionWebDavRelayRound(binding: WebDavRelayBinding, stats: CompanionWebDavHttpStats,
-  progress: { published: number; applied: number; retries: number }, parent?: AbortSignal) {
+  progress: { published: number; applied: number; retries: number }, parent?: AbortSignal, foregroundReceive?: true) {
   return withCompanionRequestSyncLifecycle(async signal => {
     const host = await currentCompanionRequestSyncDatabaseHost();
     const owner = companionFramedFileOwner(getIosCompanionDatabaseOwner());
@@ -31,7 +31,8 @@ export function runCompanionWebDavRelayRound(binding: WebDavRelayBinding, stats:
     const encoded = credential.workgroup_key.replaceAll('-', '+').replaceAll('_', '/');
     const groupKey = Uint8Array.from(atob(encoded), value => value.charCodeAt(0));
     return runWebDavRelayBodyRound({
-      host, files, scope, groupKey, progress, signal, attachments: await currentCompanionAttachmentHost(host),
+      host, files, scope, groupKey, progress, signal, ...(foregroundReceive ? { foregroundReceive } : {}),
+      attachments: await currentCompanionAttachmentHost(host),
       request: createCompanionWebDavRelayHttp(binding.directory_url, files, owner, stats, signal),
       lanConnected: () => companionWebDavRelayLanConnected(binding),
       assertScope: async () => {

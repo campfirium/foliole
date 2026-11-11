@@ -6,7 +6,7 @@ import { subscribeCompanionWebDavRelay } from '../shared/platform/companion/sync
 import { subscribeCompanionHighValueMutation } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
 
-export function useCompanionWebDavSendWindow(enabled: boolean, send: (signal: AbortSignal) => Promise<unknown>) {
+export function useCompanionWebDavSendWindow(enabled: boolean, send: (signal: AbortSignal, foregroundReceive?: true) => Promise<unknown>, receiveOnForeground = false) {
   const sendRef = useRef(send);
   useEffect(() => { sendRef.current = send; }, [send]);
   useEffect(() => {
@@ -15,17 +15,23 @@ export function useCompanionWebDavSendWindow(enabled: boolean, send: (signal: Ab
     let disposed = false;
     let observedLifecycle = false;
     let unsubscribe: (() => void) | undefined;
-    window.start(signal => sendRef.current(signal), false);
+    window.start((signal, receive) => receive ? sendRef.current(signal, receive) : sendRef.current(signal), false);
+    let wasActive = false;
+    const updateActive = (active: boolean) => {
+      window.setActive(active);
+      if (active && !wasActive && receiveOnForeground) window.foreground();
+      wasActive = active;
+    };
     const offMutation = subscribeCompanionHighValueMutation(window.request);
     const offBinding = subscribeCompanionWebDavRelay(window.request);
     void subscribeNativeAppActiveState(active => {
       observedLifecycle = true;
-      window.setActive(active);
+      updateActive(active);
     }).then(async off => {
       if (disposed) return off();
       unsubscribe = off;
       const active = await readNativeAppActiveState();
-      if (!observedLifecycle && !disposed) window.setActive(active);
+      if (!observedLifecycle && !disposed) updateActive(active);
     }).catch(() => undefined);
     return () => {
       disposed = true;
@@ -34,5 +40,5 @@ export function useCompanionWebDavSendWindow(enabled: boolean, send: (signal: Ab
       offBinding();
       unsubscribe?.();
     };
-  }, [enabled]);
+  }, [enabled, receiveOnForeground]);
 }

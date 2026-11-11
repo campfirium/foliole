@@ -32,6 +32,7 @@ interface SyncRequest {
   peer: DesktopSyncGroupPeer | undefined;
   skippedPeerId: string | undefined;
   webDavSignal: AbortSignal | undefined;
+  foregroundWebDavReceive?: true;
   promise: Promise<SyncTriggerResult>;
   resolve: (result: SyncTriggerResult) => void;
   reject: (error: unknown) => void;
@@ -61,12 +62,12 @@ export function runDesktopSyncCoordinator(
   return enqueueDesktopSync({ reason, peer: preferredPeer, continuation, skippedPeerId, webDavSignal: undefined });
 }
 
-export function runDesktopScheduledWebDav(signal: AbortSignal) {
+export function runDesktopScheduledWebDav(signal: AbortSignal, foregroundWebDavReceive?: true) {
   return enqueueDesktopSync({ reason: 'automatic', peer: undefined, continuation: false,
-    skippedPeerId: undefined, webDavSignal: signal });
+    skippedPeerId: undefined, webDavSignal: signal, ...(foregroundWebDavReceive ? { foregroundWebDavReceive } : {}) });
 }
 
-function enqueueDesktopSync(intent: Pick<SyncRequest, 'reason' | 'peer' | 'continuation' | 'skippedPeerId' | 'webDavSignal'>) {
+function enqueueDesktopSync(intent: Pick<SyncRequest, 'reason' | 'peer' | 'continuation' | 'skippedPeerId' | 'webDavSignal' | 'foregroundWebDavReceive'>) {
   const { peer: preferredPeer, continuation, skippedPeerId, webDavSignal } = intent;
   if (activeRun && !continuation && !webDavSignal) requestAttachmentWorkYield();
   if (activeRun && !webDavSignal && !activeWebDavSignal &&
@@ -115,18 +116,20 @@ function startNextRun() {
 }
 
 async function runOwnedSync(request: SyncRequest, continuations: DesktopSyncGroupPeer[]) {
-  const { reason, peer: preferredPeer, continuation, skippedPeerId, webDavSignal } = request;
+  const { reason, peer: preferredPeer, continuation, skippedPeerId, webDavSignal, foregroundWebDavReceive } = request;
   const startedAt = new Date().toISOString();
   const runId = randomUUID();
   const peers = (preferredPeer ? [preferredPeer] : await runWithDatabaseConnectionOwner(() => loadDesktopSyncUpstreamPeers()))
     .filter(peer => peer.peer_device_id !== skippedPeerId);
   // A root serves its downstream sessions; only a manual request waits for them.
   const serving = reason !== 'manual' && peers.length === 0 && desktopSyncChangeSessions().hasSessions();
-  if (serving || (skippedPeerId && peers.length === 0) || (webDavSignal && (webDavSignal.aborted || peers.length))) {
+  if (serving && foregroundWebDavReceive && !webDavSignal?.aborted) desktopSyncChangeSessions().changed();
+  if (serving || (skippedPeerId && peers.length === 0) ||
+      (webDavSignal && (webDavSignal.aborted || (peers.length && !foregroundWebDavReceive)))) {
     return { error: null, finished_at: startedAt, reason, run_id: runId, started_at: startedAt, status: 'skipped' } as const;
   }
   const activity = { runId, reason, startedAt };
-  if (webDavSignal) return runAutomaticWebDav(activity, webDavSignal);
+  if (webDavSignal && !peers.length) return runAutomaticWebDav(activity, webDavSignal, foregroundWebDavReceive);
   await recordDesktopSyncActivity(activity, { direction: 'local', kind: 'run_started',
     message: 'Sync started', stage: 'run', status: 'started' });
   const acknowledgements = peers.map(peer => captureDesktopPeerRoundCompletion(peer.peer_device_id));
@@ -165,11 +168,11 @@ async function runOwnedSync(request: SyncRequest, continuations: DesktopSyncGrou
   }
 }
 
-async function runAutomaticWebDav(activity: DesktopSyncActivityContext, signal: AbortSignal) {
+async function runAutomaticWebDav(activity: DesktopSyncActivityContext, signal: AbortSignal, foregroundReceive?: true) {
   const result = { reason: 'automatic', run_id: activity.runId, started_at: activity.startedAt } as const;
   try {
     const { runDesktopWebDavRelayRound } = await import('./desktopWebDavRelayRound.js');
-    const ran = await runDesktopWebDavRelayRound(activity, signal);
+    const ran = await (foregroundReceive ? runDesktopWebDavRelayRound(activity, signal, true) : runDesktopWebDavRelayRound(activity, signal));
     const status = ran ? 'completed' : 'skipped';
     const outcome = { ...result, error: null, finished_at: new Date().toISOString(), status } as const;
     return ran ? await persistResult(outcome) : outcome;

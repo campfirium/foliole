@@ -102,6 +102,27 @@ it('backs off native transport failures without letting later saves accelerate r
   } finally { hook.unmount(); }
 });
 
+it('requests a receive check on real foreground entries without moving the pending send deadline', async () => {
+  const send = vi.fn(async () => {});
+  const hook = renderHook(() => useCompanionWebDavSendWindow(true, send, true));
+  try {
+    await tick(1);
+    expect(send).toHaveBeenCalledWith(expect.any(AbortSignal), true);
+    act(() => events.mutation());
+    await tick(10_000);
+    act(() => events.lifecycle(false));
+    act(() => { events.lifecycle(true); events.lifecycle(true); });
+    await tick(1);
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenLastCalledWith(expect.any(AbortSignal), true);
+    await tick(49_998);
+    expect(send).toHaveBeenCalledTimes(2);
+    await tick(1);
+    expect(send).toHaveBeenCalledTimes(3);
+    expect(send).toHaveBeenLastCalledWith(expect.any(AbortSignal));
+  } finally { hook.unmount(); }
+});
+
 it('does not schedule automatic WebDAV when paused or on iOS', async () => {
   const send = vi.fn(async () => {});
   const paused = renderHook(() => useCompanionWebDavSendWindow(false, send));

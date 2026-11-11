@@ -65,6 +65,7 @@ export interface RunCompanionStreamSyncArgs {
 export interface TryForegroundAutoSyncArgs {
   discoverMobilePeers?: boolean;
   scheduledWebDav?: boolean;
+  foregroundWebDavReceive?: true;
   onRetryableWebDavFailure?(error: Error): void;
   triggeredAt?: string;
   cancelled: () => boolean;
@@ -166,7 +167,7 @@ function resetSharedContinuation(args: TryForegroundAutoSyncArgs) {
 }
 
 export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Promise<ForegroundAutoSyncOutcome> {
-  if (args.scheduledWebDav && (args.cancelled() || !await loadCompanionWebDavRelay(true) || args.cancelled())) return 'skipped';
+  if (args.scheduledWebDav && (args.cancelled() || !await (args.foregroundWebDavReceive ? loadCompanionWebDavRelay(true, true) : loadCompanionWebDavRelay(true)) || args.cancelled())) return 'skipped';
   const triggeredAt = args.triggeredAt ?? new Date().toISOString();
   const storedEndpointUrl = resolveCompanionWorkspaceSyncEndpoint(args.state);
   if (!storedEndpointUrl) return args.scheduledWebDav ? await tryCompanionWebDavRelay(args) ?? 'skipped' : 'skipped';

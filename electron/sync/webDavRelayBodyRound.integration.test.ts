@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
@@ -48,6 +48,34 @@ it('recovers the same publication after reopening, exchanges bodies both ways an
     source.reopen();
     expect(await text(source, 'phone')).toBe('first phone body');
     expect(await runWebDavTestLanRound(source, target)).toMatchObject({ complete: true, transferred: 0 });
+  });
+});
+
+it('checks DAV after six hours, keeps local edits queued, and persists received content across reopen', async () => {
+  await withRelayPeers(async ({ source, target, sync }) => {
+    const start = Date.now();
+    const sixHours = 6 * 60 * 60 * 1000;
+    const now = vi.spyOn(Date, 'now').mockReturnValue(start + sixHours - 10_000);
+    try {
+      await edit(source, 'desktop-update', 'Desktop update');
+      await sync(source);
+      await edit(target, 'local-pending', 'Pending local update');
+      target.reopen();
+
+      const tooSoon = stats();
+      await sync(target, tooSoon, false, true);
+      expect(tooSoon.requests).toEqual({});
+      expect(await text(target, 'desktop-update')).toBeUndefined();
+
+      now.mockReturnValue(start + sixHours + 1);
+      expect(await sync(target, stats(), false, true)).toMatchObject({ applied: 1, published: 0 });
+      target.reopen();
+      expect(await text(target, 'desktop-update')).toBe('Desktop update');
+      const fresh = stats();
+      await sync(target, fresh, false, true);
+      expect(fresh.requests).toEqual({});
+      expect(await sync(target)).toMatchObject({ published: 1 });
+    } finally { now.mockRestore(); }
   });
 });
 
@@ -125,7 +153,7 @@ async function gradeBothPeers(source: RestorePeer, target: RestorePeer) {
 
 async function withRelayPeers(run: (fixture: { source: RestorePeer; target: RestorePeer; dav: ReturnType<typeof setupDav>;
   scope(peer: RestorePeer): Promise<NonNullable<Awaited<ReturnType<typeof readWebDavRelayBodyScope>>>>;
-  sync(peer: RestorePeer, http?: DesktopWebDavRelayHttpStats, lanConnected?: boolean):
+  sync(peer: RestorePeer, http?: DesktopWebDavRelayHttpStats, lanConnected?: boolean, foregroundReceive?: boolean):
     ReturnType<typeof runWebDavRelayBodyRound>;
 }) => Promise<void>) {
   const fixture = await restoreFixture();
@@ -148,10 +176,10 @@ async function withRelayPeers(run: (fixture: { source: RestorePeer; target: Rest
       if (!result) throw new Error('test_baseline_missing');
       return result;
     };
-    const sync = async (peer: RestorePeer, http = stats(), lanConnected = false) => runWebDavRelayBodyRound({
+    const sync = async (peer: RestorePeer, http = stats(), lanConnected = false, foregroundReceive = false) => runWebDavRelayBodyRound({
       host: { ...peer.host, enqueueSearchInvalidations: peer.desktop }, files: peer.host.files,
       request: createDesktopWebDavRelayHttp(http), scope: await scope(peer), groupKey: webDavTestGroupKey,
-      lanConnected: () => lanConnected, assertScope: async () => { await scope(peer); },
+      foregroundReceive, lanConnected: () => lanConnected, assertScope: async () => { await scope(peer); },
       progress: { published: 0, applied: 0, retries: 0 }
     });
 

@@ -22,81 +22,126 @@ function createWebDavTimer() {
   };
 }
 
+type WebDavWork = (signal: AbortSignal, foregroundReceive?: true) => Promise<unknown>;
+type ActiveWork = { send: WebDavWork; signal: AbortSignal };
+
 function createWebDavFlight() {
-  let running = false;
+  let mode: 'receive' | 'send' | undefined;
+  let checkAfterSend: (() => void) | undefined;
   return {
-    get running() { return running; },
-    run(send: (signal: AbortSignal) => Promise<unknown>, signal: AbortSignal,
+    get running() { return mode !== undefined; },
+    get sending() { return mode === 'send'; },
+    afterSend(check: () => void) { if (mode !== 'receive') checkAfterSend = check; },
+    clearCheck() { checkAfterSend = undefined; },
+    run({ send, signal }: ActiveWork, foregroundReceive: true | undefined,
       update: (error?: unknown) => void, complete: () => void) {
-      running = true;
+      mode = foregroundReceive ? 'receive' : 'send';
       const finish = (error?: unknown) => { if (!signal.aborted) update(error); };
       void Promise.resolve().then(() => {
-        if (!signal.aborted) return send(signal);
+        if (!signal.aborted) return foregroundReceive ? send(signal, true) : send(signal);
       }).then(() => finish(), finish).finally(() => {
-        running = false;
+        mode = undefined;
+        const check = checkAfterSend;
+        checkAfterSend = undefined;
+        check?.();
         complete();
       });
     }
   };
 }
 
-/** One window from the first saved mutation, with an initial check for durable pending work. */
-export function createWebDavSendWindow() {
-  let send: ((signal: AbortSignal) => Promise<unknown>) | undefined;
-  let controller: AbortController | undefined;
+function createWebDavSchedule(readActiveWork: () => ActiveWork | undefined) {
   const flight = createWebDavFlight();
   const timer = createWebDavTimer();
+  const backoff = createWebDavTransportBackoff(SEND_WINDOW_MS);
   let dueAt: number | undefined;
   let checkingOnStartup = false;
-  const backoff = createWebDavTransportBackoff(SEND_WINDOW_MS);
 
-  function schedule() {
-    if (!send || !controller || timer.scheduled || flight.running || dueAt === undefined) return;
-    const { signal } = controller;
-    const attempt = send;
-    timer.schedule(Math.max(dueAt, backoff.deadline ?? 0), () => {
-      dueAt = undefined;
-      checkingOnStartup = false;
-      flight.run(attempt, signal, error => {
-        backoff.update(error);
-        dueAt ??= backoff.deadline;
-      }, schedule);
+  function run(work: ActiveWork, foregroundReceive?: true) {
+    flight.run(work, foregroundReceive, error => {
+      backoff.update(error);
+      if (!foregroundReceive) dueAt ??= backoff.deadline;
     }, schedule);
   }
 
+  function schedule() {
+    const work = readActiveWork();
+    if (!work || timer.scheduled || flight.running || dueAt === undefined) return;
+    timer.schedule(Math.max(dueAt, backoff.deadline ?? 0), () => {
+      dueAt = undefined;
+      checkingOnStartup = false;
+      run(work);
+    }, schedule);
+  }
+
+  function checkForeground() {
+    const work = readActiveWork();
+    const now = Date.now();
+    if (!work || (backoff.deadline ?? 0) > now) return;
+    if (flight.running || (dueAt !== undefined && dueAt <= now)) {
+      flight.afterSend(checkForeground);
+      return;
+    }
+    timer.clear();
+    run(work, true);
+  }
+
   return {
-    start(work: (signal: AbortSignal) => Promise<unknown>, active = true) {
-      if (send) return;
-      send = work;
-      controller = active ? new AbortController() : undefined;
+    schedule,
+    start() {
       checkingOnStartup = true;
       dueAt = Date.now() + SEND_WINDOW_MS;
       schedule();
     },
     request() {
-      if (!send) return;
       if (checkingOnStartup) timer.clear();
       if (checkingOnStartup || dueAt === undefined) dueAt = Date.now() + SEND_WINDOW_MS;
       checkingOnStartup = false;
       schedule();
     },
+    foreground: checkForeground,
+    suspend() {
+      flight.clearCheck();
+      timer.clear();
+      if (flight.sending) dueAt = Date.now();
+    },
+    stop() {
+      flight.clearCheck();
+      timer.clear();
+      dueAt = undefined;
+      backoff.update();
+    }
+  };
+}
+
+export function createWebDavSendWindow() {
+  let send: WebDavWork | undefined;
+  let controller: AbortController | undefined;
+  const schedule = createWebDavSchedule(() => send && controller ? { send, signal: controller.signal } : undefined);
+
+  return {
+    start(work: WebDavWork, active = true) {
+      if (send) return;
+      send = work;
+      controller = active ? new AbortController() : undefined;
+      schedule.start();
+    },
+    request() { if (send) schedule.request(); },
+    foreground: schedule.foreground,
     setActive(active: boolean) {
       if (!send || active === Boolean(controller)) return;
       if (active) {
         controller = new AbortController();
-        schedule();
+        schedule.schedule();
       } else {
-        timer.clear();
-        if (flight.running) dueAt = Date.now();
+        schedule.suspend();
         controller?.abort();
         controller = undefined;
       }
     },
     stop() {
-      timer.clear();
+      schedule.stop();
       send = undefined;
-      dueAt = undefined;
-      backoff.update();
       controller?.abort();
       controller = undefined;
     }

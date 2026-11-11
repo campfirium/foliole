@@ -87,7 +87,8 @@ vi.mock('./desktopSyncCoordinator.js', () => ({ runDesktopSyncCoordinator: runti
 vi.mock('./desktopUpstreamSession.js', () => ({
   closeDesktopUpstreamSession: vi.fn(), refreshDesktopUpstreamSession: runtime.refreshUpstream
 }));
-vi.mock('./desktopForegroundPresenceRuntime.js', () => ({ installDesktopForegroundPresence: vi.fn() }));
+vi.mock('./desktopForegroundPresenceRuntime.js', () => ({ installDesktopForegroundPresence: vi.fn(),
+  subscribeDesktopApplicationForeground: () => () => {} }));
 vi.mock('./desktopSyncGroupDiscovery.js', () => ({ discoverDesktopSyncGroups: runtime.discovery }));
 vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({
   notifyDesktopSyncGroupOverviewChanged: runtime.notifyOverviewChanged

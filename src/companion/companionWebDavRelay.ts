@@ -14,7 +14,7 @@ import type { ForegroundAutoSyncOutcome, TryForegroundAutoSyncArgs } from './com
 
 export async function tryCompanionWebDavRelay(args: TryForegroundAutoSyncArgs): Promise<ForegroundAutoSyncOutcome | null> {
   if ((args.triggerReason !== 'manual' && !args.scheduledWebDav) || args.cancelled()) return null;
-  const binding = await loadCompanionWebDavRelay(args.scheduledWebDav);
+  const binding = await (args.foregroundWebDavReceive ? loadCompanionWebDavRelay(true, true) : loadCompanionWebDavRelay(args.scheduledWebDav));
   if (!binding || args.cancelled() || companionWebDavRelayLanConnected(binding)) return null;
   const runId = args.runId ?? createCompanionSyncRunId();
   const run = runCompanionSyncAsOwner('webdav-relay', runId, () => runRelay(args, binding, runId), args.triggerReason === 'manual');
@@ -29,7 +29,7 @@ export async function runCompanionWebDavAfterLanFailure(args: TryForegroundAutoS
   if (!/\b(?:ECONNREFUSED|ECONNRESET|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH|ConnectException|SocketTimeoutException)\b|failed to connect|network is unreachable/iu.test(detail)) {
     return null;
   }
-  const binding = await loadCompanionWebDavRelay(args.scheduledWebDav);
+  const binding = await (args.foregroundWebDavReceive ? loadCompanionWebDavRelay(true, true) : loadCompanionWebDavRelay(args.scheduledWebDav));
   if (binding?.desktop_device_id !== peerId || args.cancelled() || companionWebDavRelayLanConnected(binding)) return null;
   return runRelay(args, binding, runId);
 }
@@ -49,7 +49,8 @@ async function runRelay(args: TryForegroundAutoSyncArgs, binding: WebDavRelayBin
   try {
     await beginNativeCompanionSyncRun(triggerReason, runId);
     await writeCompanionSyncActivity({ ...activity, kind: 'run_started', status: 'started', message: 'WebDAV relay started.' }, args.setError);
-    await runCompanionWebDavRelayRound(binding, stats, progress, args.signal);
+    if (args.foregroundWebDavReceive) await runCompanionWebDavRelayRound(binding, stats, progress, args.signal, true);
+    else await runCompanionWebDavRelayRound(binding, stats, progress, args.signal);
   } catch (error) {
     failure = formatCompanionSyncFailureMessage(error);
     if (!args.cancelled() && error instanceof Error && isRetryableWebDavSendError(error)) {

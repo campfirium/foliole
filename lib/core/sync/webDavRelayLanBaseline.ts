@@ -6,6 +6,7 @@ import type { DbPort } from './dbPort.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import type { RequestSyncAuthenticatedContext } from './requestSyncWire.js';
 import { syncGroupLocalPublicationBlockReason } from './syncGroupLocalAdoption.js';
+import { recordWebDavRelayReceive } from './webDavRelayReceiveFreshness.js';
 
 const positionSchema = z.object({
   sourceEpoch: z.string().min(1),
@@ -71,10 +72,7 @@ export async function captureWebDavRelayLanBaseline(host: RequestSyncDatabaseHos
     peerEpoch: initiator ? context.responderLibraryEpoch : context.initiatorLibraryEpoch };
   const captured = await host.readSnapshot(async db => {
     const position = await readPosition(db, scope);
-    if (!position) return null;
-    const candidate = { localEpoch: scope.localEpoch, peerEpoch: scope.peerEpoch, ...position, capturedAt: Date.now() };
-    const previous = await readStoredBaseline(db, scope);
-    return previous && sameEpochs(previous, candidate) ? null : candidate;
+    return position && { localEpoch: scope.localEpoch, peerEpoch: scope.peerEpoch, ...position, capturedAt: Date.now() };
   }, signal);
   if (!captured) return;
 
@@ -85,6 +83,7 @@ export async function captureWebDavRelayLanBaseline(host: RequestSyncDatabaseHos
       const current = await readPosition(tx, scope);
       if (!current || !sameEpochs(captured, { ...scope, ...current }) || current.sequence < captured.sequence) return;
       const previous = await readStoredBaseline(tx, scope);
+      await recordWebDavRelayReceive(tx, { bindingId: binding.id, ...captured });
       if (previous && sameEpochs(previous, captured)) return;
       await tx.run(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)
         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,

@@ -8,6 +8,7 @@ import { receiveWebDavRelayBodyPackets } from './webDavRelayBodyReceive.js';
 import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 import { ensureWebDavCollection } from './webDavRelayCollections.js';
 import { publishWebDavRelayFile, type WebDavRelayRequest } from './webDavRelayPublication.js';
+import { isWebDavRelayReceiveDue, recordWebDavRelayReceive } from './webDavRelayReceiveFreshness.js';
 import { runWithWebDavRetryAfter } from './webDavRetryAfterStore.js';
 
 type Input = {
@@ -18,6 +19,7 @@ type Input = {
   scope: WebDavRelayBodyScope;
   groupKey: Uint8Array;
   signal?: AbortSignal;
+  foregroundReceive?: boolean;
   lanConnected(): boolean;
   assertScope(): Promise<void>;
   progress: { published: number; applied: number; retries: number };
@@ -27,6 +29,8 @@ export function runWebDavRelayBodyRound(input: Input) {
   return input.files.exclusive(webDavRelayPacketDirectory(input.scope), async () => {
     input.signal?.throwIfAborted();
     await input.assertScope();
+    if (input.foregroundReceive && (input.lanConnected() || !await input.host.readSnapshot(
+      db => isWebDavRelayReceiveDue(db, input.scope.receiveScope), input.signal))) return input.progress;
     return runWithWebDavRetryAfter(input.host, input.scope.key, input.signal, () => exchange(input));
   });
 }
@@ -34,6 +38,10 @@ export function runWebDavRelayBodyRound(input: Input) {
 async function exchange(input: Input) {
   await receiveWebDavRelayBodyPackets({ ...input, applied: count => { input.progress.applied += count; },
     retry: count => { input.progress.retries += count; } });
+  input.signal?.throwIfAborted();
+  await input.assertScope();
+  await input.host.write(db => recordWebDavRelayReceive(db, input.scope.receiveScope));
+  if (input.foregroundReceive) return input.progress;
   const attachments = input.attachments && { ...input, attachments: input.attachments };
   if (attachments && !await resumeWebDavRelayAttachment(attachments)) return input.progress;
   const slotFree = await publishChanges(input);

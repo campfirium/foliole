@@ -25,7 +25,7 @@ vi.mock('../database/watchedConflictSyncMarker.js', () => ({
 }));
 vi.mock('../import/keepImportMonitor.js', () => ({ refreshKeepImportMonitorFromSettings: vi.fn() }));
 vi.mock('./desktopSyncGroupTransport.js', () => transport);
-const runRelay = vi.hoisted(() => vi.fn<(activity: unknown, signal?: AbortSignal) => Promise<boolean>>(async () => true));
+const runRelay = vi.hoisted(() => vi.fn<(activity: unknown, signal?: AbortSignal, foregroundReceive?: true) => Promise<boolean>>(async () => true));
 vi.mock('./desktopWebDavRelayRound.js', () => ({ runDesktopWebDavRelayRound: runRelay }));
 
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
@@ -74,6 +74,17 @@ it('leaves a scheduled DAV send to LAN when a desktop upstream is available', as
   await expect(runDesktopScheduledWebDav(signal))
     .resolves.toMatchObject({ status: 'skipped' });
   expect(runRelay).not.toHaveBeenCalled();
+});
+
+it('prefers LAN on foreground and falls back to a receive-only DAV round without an upstream', async () => {
+  const { signal } = new AbortController();
+  await expect(runDesktopScheduledWebDav(signal, true)).resolves.toMatchObject({ status: 'completed' });
+  expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledOnce();
+  expect(runRelay).not.toHaveBeenCalled();
+
+  transport.loadDesktopSyncGroupPeers.mockReturnValue([]);
+  await expect(runDesktopScheduledWebDav(signal, true)).resolves.toMatchObject({ status: 'completed' });
+  expect(runRelay).toHaveBeenCalledWith(expect.any(Object), signal, true);
 });
 
 it('keeps the manual receive and a later scheduled send after a running scheduled send', async () => {

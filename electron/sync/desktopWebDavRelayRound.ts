@@ -2,6 +2,7 @@ import { hasWebDavRelayAttachmentsToSend } from '../../lib/core/sync/webDavRelay
 import { hasWebDavRelayBodyToSend } from '../../lib/core/sync/webDavRelayBodyOutbox.js';
 import { runWebDavRelayBodyRound } from '../../lib/core/sync/webDavRelayBodyRound.js';
 import { readWebDavRelayBodyScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
+import { isWebDavRelayReceiveDue } from '../../lib/core/sync/webDavRelayReceiveFreshness.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
@@ -14,7 +15,7 @@ import { createDesktopWebDavRelayHttp, type DesktopWebDavRelayHttpStats } from '
 import { loadDesktopBoundWebDavRelay } from './desktopWebDavRelaySettings.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
-export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityContext, automaticSignal?: AbortSignal) {
+export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityContext, automaticSignal?: AbortSignal, foregroundReceive?: true) {
   const runtime = await runWithDatabaseConnectionOwner(() => {
     if (automaticSignal?.aborted || !isDesktopCompanionSyncParticipating()) return null;
     const binding = loadDesktopBoundWebDavRelay();
@@ -39,14 +40,17 @@ export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityCo
       if (automaticSignal) return false;
       throw new Error('webdav_relay_lan_baseline_required');
     }
-    if (automaticSignal && !await host.readSnapshot(async db =>
+    if (foregroundReceive && !await host.readSnapshot(
+      db => isWebDavRelayReceiveDue(db, scope.receiveScope), automaticSignal)) return false;
+    if (automaticSignal && !foregroundReceive && !await host.readSnapshot(async db =>
       await hasWebDavRelayBodyToSend(db, scope) || await hasWebDavRelayAttachmentsToSend(db, scope), automaticSignal)) return false;
     if (lanConnected() || automaticSignal?.aborted) return false;
     const attachments = await createDesktopRequestSyncAttachmentHost(host);
     if (lanConnected() || automaticSignal?.aborted) return false;
     attempted = true;
     await runWebDavRelayBodyRound({
-      host, scope, groupKey, progress, lanConnected, attachments, files: createDesktopLibrarySyncFiles(databasePath),
+      host, scope, groupKey, progress, lanConnected, attachments, ...(foregroundReceive ? { foregroundReceive } : {}),
+      files: createDesktopLibrarySyncFiles(databasePath),
       ...(automaticSignal ? { signal: automaticSignal } : {}),
       request: createDesktopWebDavRelayHttp(stats, automaticSignal),
       assertScope: async () => {

@@ -91,15 +91,16 @@ function subscribeForegroundSyncEvents(
 
 function useScheduledWebDav(enabled: boolean, trySync: TryForegroundAutoSync,
   args: Pick<Parameters<TryForegroundAutoSync>[0], 'setError' | 'setState' | 'setSyncProgress' | 'setStatus' | 'state'>) {
-  useCompanionWebDavSendWindow(enabled, async signal => {
+  useCompanionWebDavSendWindow(enabled, async (signal, foregroundWebDavReceive) => {
     const active = loadActiveCompanionSyncRun();
     if (active) await active.completion.catch(() => undefined);
     if (signal.aborted || !await readNativeAppActiveState() || signal.aborted) return;
     let retryableFailure: Error | undefined;
     await trySync({ ...args, cancelled: () => signal.aborted, scheduledWebDav: true, signal, triggerReason: 'automatic',
+      ...(foregroundWebDavReceive ? { foregroundWebDavReceive } : {}),
       onRetryableWebDavFailure: error => { retryableFailure = error; } });
     if (retryableFailure) throw retryableFailure;
-  });
+  }, true);
 }
 
 function actualSyncTime(syncedAt: string | null) {
