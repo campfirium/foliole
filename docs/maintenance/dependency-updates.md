@@ -159,11 +159,18 @@ to determine install, test, commit or task count.
 The separately authorized [Gradle security patch](gradle-security-update.md) is
 outside the already frozen November 11 full-QA candidate.
 
+### Completed November 10 npm batch
+
 The November 10 npm batch was implemented in `c6525a361`. Local validation passed
 65 tests covering HTML paste, Mermaid rendering, review scheduling and Windows
 installer matching. Desktop and companion web builds passed. The production npm
-audit reported zero vulnerabilities. Full hosted quality and dependency hardening
-are required before closure.
+audit reported zero vulnerabilities.
+
+[Full QA 42924886618](https://github.com/campfirium/foliole/actions/runs/42924886618)
+passed for `5004b5eea`, including dependency hardening. The integrated dev
+commit `14727bd25` passed 149 local tests and was verified on origin/dev.
+The QA workspace was released and all nine reviewed proposals below were
+verified closed.
 
 | Proposal | Verified author / reviewed head | Local target |
 | --- | --- | --- |
@@ -180,7 +187,7 @@ are required before closure.
 The proposals target `campfirium/foliole:dev`. The paired WASM overrides retain
 the required FSRS binding that the proposed lockfiles removed.
 
-November 10 deferrals for the next centralized dependency review:
+### November 10 deferrals for the next centralized dependency review
 
 - [#222](https://github.com/campfirium/foliole/pull/222) remains open. React-PDF
   11.0.0 still requires PDF.js 6.3.289. Adopt PDF.js 6.5.438 when React-PDF
