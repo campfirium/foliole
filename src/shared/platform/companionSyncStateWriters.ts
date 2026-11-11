@@ -4,6 +4,7 @@ import type {
 } from '../../../lib/platform/nativeStorageContract';
 import type { NativeSyncReviewLogDraft } from '../../../lib/platform/nativeSyncContract';
 
+import type { CompanionPdfPageUpdate } from './companion/reading/saveCompanionPdfTextPosition';
 import {
   saveIosActiveViewState,
   saveIosNodeViewState,
@@ -126,12 +127,13 @@ export async function saveCompanionSyncActiveViewState(nodeId: string | null) {
 export async function saveCompanionSyncNodeViewState(args: {
   nodeId: string;
   scrollTop: number;
+  pdf?: CompanionPdfPageUpdate;
 }) {
   if (!isNativeCompanionViewStateWriteRuntime()) {
     return null;
   }
   return runCompanionSyncMutationTask(
-    () => saveIosNodeViewState({ node_id: args.nodeId, scroll_top: args.scrollTop }),
+    () => saveIosNodeViewState({ node_id: args.nodeId, scroll_top: args.scrollTop, ...(args.pdf ? { pdf: args.pdf } : {}) }),
     { kind: 'nodes', nodeIds: [], viewStateNodeIds: [args.nodeId] }
   );
 }

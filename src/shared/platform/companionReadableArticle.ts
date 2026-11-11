@@ -15,6 +15,7 @@ import {
 } from '../workspaceCanonicalSelectors';
 
 import { scopeCompanionArticleSnapshot } from './companion/reading/companionArticleSnapshot';
+import type { CompanionPdfReadingContext } from './companion/reading/companionPdfTextResume';
 
 export type { CompanionRecentArticle } from './companionBrowseLists';
 
@@ -30,6 +31,7 @@ export interface CompanionReadableArticle {
   persistedNodeViewState: PersistedNodeViewState | null;
   pdfAttachmentId: string | null;
   pdfResumeTextOffset?: number;
+  pdfTextReading?: { context: CompanionPdfReadingContext; starts: { page: number; start: number }[] };
   readwiseRemoteLifecycle?: ReadwiseRemoteLifecycleState | null;
   reveal?: string | null;
   textAnchorDecorations: readonly EditorTextAnchorDecoration[];

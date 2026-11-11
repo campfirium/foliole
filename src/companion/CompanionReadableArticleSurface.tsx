@@ -25,6 +25,7 @@ import { useCompanionContentEditingActions } from './useCompanionContentEditingA
 import { useCompanionItemEditViewport } from './useCompanionItemEditViewport';
 import { useCompanionNodeTextAlternative } from './useCompanionNodeTextAlternative';
 import { useCompanionPagedScroll } from './useCompanionPagedScroll';
+import { useCompanionPdfTextScroll } from './useCompanionPdfTextScroll';
 import { useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
 import { useCompanionReadableAndroidBack } from './useCompanionReadableAndroidBack';
 import type { CompanionReadingNavigationControls } from './useCompanionReadingNavigation';
@@ -62,7 +63,7 @@ export interface ImmersiveReadableArticleProps {
   onExit(): void;
   onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
   onSaveArticleContent?: CompanionContentSaveHandler;
-  onScrollTopChange?: (scrollTop: number) => void;
+  onScrollTopChange?: (scrollTop: number, pdf?: import('../shared/platform/companion/reading/saveCompanionPdfTextPosition').CompanionPdfPageUpdate) => void;
   readableArticle: ReadableArticle;
   snapshot: WorkspaceSnapshot | null;
   syncEndpointUrl?: string | null;
@@ -202,6 +203,9 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   const itemEditing = model.reading.isContentEditing && props.isReviewItem === true && props.answer != null;
   useCompanionItemEditViewport(scrollPosition.surfaceRef, itemEditing);
   const pagedStyle = useCompanionPagedScroll(scrollPosition.surfaceRef, model.reading.isContentEditing);
+  const pdfScroll = useCompanionPdfTextScroll({ article: pendingReadableArticle.readableArticle,
+    editing: model.reading.isContentEditing, onEditorReady: model.toolbar.handleEditorReady,
+    onScrollTopChange: props.onScrollTopChange });
   return (
     <section
       data-companion-reading-surface="true"
@@ -210,11 +214,16 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       className={`${model.surfaceClassName}${itemEditing ? ' companion-item-editing' : ''}`}
       style={pagedStyle}
       onClick={model.reading.handleSurfaceClick}
-      onPointerDown={model.handleSurfacePointerDown}
+      onPointerDown={event => {
+        if (event.pointerType === 'touch') pdfScroll.markInput();
+        model.handleSurfacePointerDown(event);
+      }}
       onPointerMove={model.handleSurfacePointerMove}
       onPointerUp={model.openToolbarFromArticlePointer}
       onPointerCancel={model.reading.handleSurfacePointerCancel}
-      onScroll={scrollPosition.handleScroll}
+      onScroll={event => { if (!pdfScroll.onScroll(event)) scrollPosition.handleScroll(event); }}
+      onWheelCapture={pdfScroll.markInput}
+      onTouchMoveCapture={pdfScroll.markInput}
       onTouchMove={model.closeToolbarFromArticleTouch}
       ref={scrollPosition.surfaceRef}
     >
@@ -223,7 +232,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       <ImmersiveArticleContent
         layout={props.flow ? 'review' : 'article'}
         isContentEditing={model.reading.isContentEditing}
-        onEditorReady={model.toolbar.handleEditorReady}
+        onEditorReady={pdfScroll.onEditorReady}
         readableArticle={pendingReadableArticle.readableArticle}
         readingTypographySettings={readingTypography.settings}
         readingRestoreCommandId={model.reading.readingRestoreCommandId}

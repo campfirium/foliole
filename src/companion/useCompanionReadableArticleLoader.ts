@@ -70,8 +70,7 @@ function useReadingLifetime(
 }
 
 async function withPdfTextResume(article: CompanionReadableArticle) {
-  const offset = await loadCompanionPdfTextResume(article);
-  return offset === undefined ? article : { ...article, pdfResumeTextOffset: offset };
+  return await loadCompanionPdfTextResume(article) ?? article;
 }
 
 export function useCompanionReadableArticleLoader(

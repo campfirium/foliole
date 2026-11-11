@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { subscribeNativeAppBackground } from '../shared/platform/appLifecycle';
+import type { CompanionPdfPageUpdate } from '../shared/platform/companion/reading/saveCompanionPdfTextPosition';
 import {
   saveCompanionSyncActiveViewState,
   saveCompanionSyncNodeViewState
@@ -11,7 +12,7 @@ import type { CompanionTabAction } from './CompanionFloatingBars';
 function useCompanionScrollSave(currentViewNodeId: string | null) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlight = useRef<Promise<unknown>>(Promise.resolve());
-  const pending = useRef<{ nodeId: string; scrollTop: number } | null>(null);
+  const pending = useRef<{ nodeId: string; scrollTop: number; pdf?: CompanionPdfPageUpdate } | null>(null);
   const flush = useCallback(() => {
     if (timer.current !== null) clearTimeout(timer.current);
     timer.current = null;
@@ -45,10 +46,12 @@ function useCompanionScrollSave(currentViewNodeId: string | null) {
     return () => { disposed = true; unsubscribe?.(); };
   }, [flush]);
 
-  const handleScroll = useCallback((scrollTop: number) => {
+  const handleScroll = useCallback((scrollTop: number, pdf?: CompanionPdfPageUpdate) => {
     if (!currentViewNodeId) return;
     if (timer.current !== null) clearTimeout(timer.current);
-    pending.current = { nodeId: currentViewNodeId, scrollTop };
+    const previous = pending.current?.nodeId === currentViewNodeId ? pending.current.pdf : undefined;
+    const position = pdf ?? previous;
+    pending.current = { nodeId: currentViewNodeId, scrollTop, ...(position ? { pdf: position } : {}) };
     timer.current = setTimeout(() => { void flush().catch(() => undefined); }, 800);
   }, [currentViewNodeId, flush]);
   return Object.assign(handleScroll, { flush });

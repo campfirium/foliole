@@ -6,6 +6,7 @@ import { identityReviewRowSchema, REVIEW_FACT_COLUMNS } from '../../../../../lib
 import { writeNodeReadingObject, writeNodeReviewObject } from '../../../../../lib/core/sync/syncObjectLearningPayloadExecutor';
 import { applyNodeOpenStateObject } from '../../../../../lib/core/sync/syncObjectOpenStatePayloadExecutor';
 import { createCompanionUuid } from '../../companionUuid';
+import { writeCompanionPdfTextPosition, type CompanionPdfPageUpdate } from '../reading/saveCompanionPdfTextPosition';
 
 import { recordCompanionTopicDailyCount } from './companionTopicDailyCounts';
 import { writeIosCompanionDatabase } from './iosCompanionActiveDatabase';
@@ -92,12 +93,13 @@ export function saveIosActiveViewState(args: { node_id: string | null }) {
   });
 }
 
-export function saveIosNodeViewState(args: { node_id: string; scroll_top: number; source?: string }) {
+export function saveIosNodeViewState(args: { node_id: string; scroll_top: number; source?: string; pdf?: CompanionPdfPageUpdate }) {
   const payload = { node_id: args.node_id, scroll_top: Math.max(0, Math.trunc(args.scroll_top)), selection_from: null, selection_to: null, source: 'user-scroll' };
-  return writeViewState(`node:${args.node_id}`, payload, (db, hostName, now) => db.run(
-    'INSERT OR REPLACE INTO node_view_state (node_id, host_name, scroll_top, selection_from, selection_to, source, updated_at) VALUES (?, ?, ?, NULL, NULL, ?, ?)',
-    [args.node_id, hostName, payload.scroll_top, payload.source, now]
-  ));
+  return writeViewState(`node:${args.node_id}`, payload, async (db, hostName, now) => {
+    await db.run('INSERT OR REPLACE INTO node_view_state (node_id, host_name, scroll_top, selection_from, selection_to, source, updated_at) VALUES (?, ?, ?, NULL, NULL, ?, ?)',
+      [args.node_id, hostName, payload.scroll_top, payload.source, now]);
+    if (args.pdf) await writeCompanionPdfTextPosition(db, args.node_id, args.pdf, hostName, now);
+  });
 }
 
 async function writeObject(
