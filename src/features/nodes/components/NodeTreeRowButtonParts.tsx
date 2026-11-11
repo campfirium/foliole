@@ -111,6 +111,7 @@ export function renderNodeTreeRowButtonSurface(props: {
       aria-setsize={props.ariaSetSize}
       {...props.treeItemState}
       className={props.buttonClassName}
+      contentClassName="flex-1"
       {...resolveNodeTreeRowDataAttributes(props)}
       id={`node-treeitem-${props.nodeId}`}
       onClick={props.handlers.onClick}
