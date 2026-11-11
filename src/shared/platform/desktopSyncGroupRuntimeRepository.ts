@@ -183,6 +183,12 @@ export function saveDesktopWebDavRelayDirectory(groupId: string, directory: stri
   return getRuntimeInvoke()?.(NATIVE_COMMANDS.saveWebDavRelayDirectory, { group_id: groupId, directory_url: directory });
 }
 
+export function testDesktopWebDavRelayCredentials(groupId: string, directory: string, username: string, password: string) {
+  return getRuntimeInvoke()?.(NATIVE_COMMANDS.saveWebDavRelayDirectory, {
+    group_id: groupId, directory_url: directory, credential_test: { username, password }
+  });
+}
+
 export function enableDesktopWebDavRelay(groupId: string, deviceId: string) {
   return getRuntimeInvoke()?.(NATIVE_COMMANDS.enableWebDavRelay, { group_id: groupId, device_id: deviceId });
 }

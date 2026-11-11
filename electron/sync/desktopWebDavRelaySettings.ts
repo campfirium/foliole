@@ -26,6 +26,23 @@ export function loadDesktopWebDavRelayDirectory(groupId: unknown) {
   });
 }
 
+export async function testDesktopWebDavRelayCredentials(groupId: unknown, input: unknown, credentials: unknown) {
+  if (process.platform !== 'darwin') throw new Error('webdav_relay_host_unavailable');
+  if (!credentials || typeof credentials !== 'object' ||
+    !('username' in credentials) || typeof credentials.username !== 'string' ||
+    !('password' in credentials) || typeof credentials.password !== 'string') {
+    throw new Error('webdav_relay_invalid_credentials');
+  }
+  await runWithDatabaseConnectionOwner(() => requireActiveGroupKey(groupId));
+  try {
+    return await testWebDavRelayConnection(input, {
+      credentials: { username: credentials.username, password: credentials.password }
+    });
+  } finally {
+    notifyDesktopSyncGroupOverviewChanged();
+  }
+}
+
 export async function saveDesktopWebDavRelayDirectory(groupId: unknown, input: unknown) {
   const previous = await runWithDatabaseConnectionOwner(() => {
     const key = requireActiveGroupKey(groupId);

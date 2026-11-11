@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { webDavRelayStatus, type WebDavRelayRequest } from '../../lib/core/sync/webDavRelayPublication.js';
 import { WebDavServiceBusyError } from '../../lib/core/sync/webDavRetryAfter.js';
 
+import { withDesktopWebDavBasicAuth, type DesktopWebDavCredentials } from './desktopWebDavBasicAuth.js';
 import { createDesktopWebDavRelayHttp, type DesktopWebDavRelayHttpStats } from './desktopWebDavRelayHttp.js';
 import { recordDesktopWebDavRelayLog } from './desktopWebDavRelayLog.js';
 
@@ -31,14 +32,17 @@ function probeRequest(http: WebDavRelayRequest): WebDavRelayRequest {
   };
 }
 
-export async function testWebDavRelayConnection(input: unknown): Promise<string> {
+export async function testWebDavRelayConnection(input: unknown, options?: {
+  credentials?: DesktopWebDavCredentials;
+}): Promise<string> {
   const stats: DesktopWebDavRelayHttpStats = { requests: {}, responses: 0, uploadedBytes: 0, downloadedBytes: 0, httpStatuses: {} };
   const started = performance.now();
   let completed = false;
   try {
     const directory = relayDirectory(input);
     const http = createDesktopWebDavRelayHttp(stats, undefined, { timeoutMs: 4000 });
-    await probeDirectory(directory, probeRequest(http));
+    const { credentials } = options ?? {};
+    await probeDirectory(directory, probeRequest(credentials ? withDesktopWebDavBasicAuth(http, directory, credentials) : http));
     completed = true;
     return directory.href;
   } finally {

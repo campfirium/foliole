@@ -17,3 +17,11 @@ it('fails the test and removes its file when the server returns incorrect data',
     expect([...files]).toEqual([['/relay/keep.bin', 'existing']]);
   });
 });
+
+it('refuses to send credentials to a cleartext WebDAV service', async () => {
+  await withWebDavFixture(false, async (url, files) => {
+    await expect(testWebDavRelayConnection(url, { credentials: { username: 'test-user', password: 'test-password' } }))
+      .rejects.toThrow('webdav_relay_https_required');
+    expect([...files]).toEqual([['/relay/keep.bin', 'existing']]);
+  });
+});

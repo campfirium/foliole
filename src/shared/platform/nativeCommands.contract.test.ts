@@ -63,6 +63,7 @@ describe('native command contracts', () => {
     expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.assistantTestModel)).toBe(false);
     expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.assistantSaveModelDraft)).toBe(false);
     expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.saveWordPressPublishDraft)).toBe(false);
+    expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.saveWebDavRelayDirectory)).toBe(false);
     expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.connectWordPressPublishSettings)).toBe(false);
     expect(canRecordNativeCommandArgs(NATIVE_COMMANDS.saveSystemEntryDisplayNames)).toBe(false);
   });

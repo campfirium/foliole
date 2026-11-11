@@ -53,6 +53,7 @@ import { notifyDesktopSyncGroupOverviewChanged } from '../sync/desktopSyncGroupO
 import { removeDesktopSyncGroupRoute } from '../sync/desktopSyncGroupRoutes.js';
 import { openDesktopWebDavRelayLog } from '../sync/desktopWebDavRelayLog.js';
 import { desktopWebDavRelayOverview, enableDesktopWebDavRelay, loadDesktopWebDavRelayDirectory, loadDesktopWebDavRelayStatus,
+  testDesktopWebDavRelayCredentials,
   saveDesktopWebDavAttachmentPolicy, saveDesktopWebDavRelayDirectory } from '../sync/desktopWebDavRelaySettings.js';
 import { getLanWorkspaceSyncServerStatus, stopLanWorkspaceSyncServer } from '../sync/lanWorkspaceSyncServer.js';
 import { ensureWindowsSyncNetworkPermission } from '../sync/windowsSyncNetworkPermission.js';
@@ -243,6 +244,9 @@ export function handleSyncGroupCommand(command: string, args: Record<string, unk
   }
   if (command === NATIVE_COMMANDS.loadWebDavRelayDirectory) return loadDesktopWebDavRelayDirectory(args.group_id);
   if (command === NATIVE_COMMANDS.saveWebDavRelayDirectory) {
+    if (args.credential_test !== undefined) {
+      return testDesktopWebDavRelayCredentials(args.group_id, args.directory_url, args.credential_test);
+    }
     return saveDesktopWebDavRelayDirectory(args.group_id, args.directory_url);
   }
   if (command === NATIVE_COMMANDS.saveWebDavAttachmentPolicy) {
