@@ -1,4 +1,4 @@
-import { Eraser, Table } from 'lucide-react';
+import { Eraser, Table, Volume2 } from 'lucide-react';
 import { Fragment } from 'react';
 
 import type { DocumentHeaderMenuItemConfig } from '../../features/settings/model/documentHeaderMenuSettings';
@@ -52,6 +52,7 @@ export function EditorContextCommandItem({ item, ...props }: { item: DocumentHea
   return <AppSelectionDropdownMenuItem onClick={() => runItem(item, { ...props, source: item.source })}>
         {item.commandId === APP_COMMAND_IDS.repairTable ? <Table aria-hidden="true" className="mr-2 shrink-0 text-foreground/62" size={15} strokeWidth={1.9} /> : null}
         {item.commandId === APP_COMMAND_IDS.configureCleanFormatting ? <Eraser aria-hidden="true" className="mr-2 shrink-0 text-foreground/62" size={15} strokeWidth={1.9} /> : null}
+        {item.commandId === APP_COMMAND_IDS.sendToEdge ? <Volume2 aria-hidden="true" className="mr-2 shrink-0 text-foreground/62" size={15} strokeWidth={1.9} /> : null}
         <span className="min-w-0 truncate">{labelFor(item, t)}</span>
       </AppSelectionDropdownMenuItem>;
 }

@@ -16,15 +16,12 @@ function Header() {
     toggleEditorDisplayMode: vi.fn(), t });
 }
 
-it('offers exit in place in the desktop right-click menu', () => {
-  const close = vi.fn();
-  const exit = vi.fn();
-  renderWithLocalization(<FlowExitHereContext.Provider value={exit}>
-    <WebLookupSelectionMenu left={20} top={20} onClose={close} />
+it('keeps article actions available without offering to exit Flow in the right-click menu', () => {
+  renderWithLocalization(<FlowExitHereContext.Provider value={vi.fn()}>
+    <WebLookupSelectionMenu left={20} top={20} onClose={vi.fn()} onConfigureFormatCleanup={vi.fn()} />
   </FlowExitHereContext.Provider>);
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Exit Flow' }));
-  expect(close).toHaveBeenCalledOnce();
-  expect(exit).toHaveBeenCalledOnce();
+  expect(screen.getByRole('menuitem', { name: 'Clean formatting...' })).toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Exit Flow' })).not.toBeInTheDocument();
 });
 
 it('offers the same action in the desktop document overflow', async () => {
