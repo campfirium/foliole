@@ -32,15 +32,13 @@ export function setupDav(upstream: string | undefined, intercept?: (response: Se
       return send(res, deleteCollection(collections, files, path));
     }
     if (req.method === 'PROPFIND') {
-      if (!collections.has(path)) return send(res, 404);
-      const listed = [...collections, ...files.keys()].filter(name => name.startsWith(path));
-      return send(res, 207, `<D:multistatus xmlns:D="DAV:">${listed.map(name =>
-        `<D:response><D:href>${name}</D:href></D:response>`).join('')}</D:multistatus>`);
+      const result = propfind(collections, files, path, req.headers.depth === '0');
+      return send(res, result.status, result.body);
     }
     if (req.method === 'PUT') {
-      const chunks: Buffer[] = [];
-      for await (const chunk of req) { uploaded += chunk.length; chunks.push(chunk); }
-      files.set(path, Buffer.concat(chunks));
+      const body = await readPutBody(req, size => { uploaded += size; });
+      if (!body) return;
+      files.set(path, body);
       return send(res, 201);
     }
     if (req.method === 'MOVE') {
@@ -59,6 +57,31 @@ export function setupDav(upstream: string | undefined, intercept?: (response: Se
   });
   const sandboxPath = upstream ? new URL(upstream).pathname : '/';
   return { server, sandboxPath, deletions, dropNextMove: () => { loseMove = true; }, uploaded: () => uploaded, downloaded: () => downloaded };
+}
+
+async function readPutBody(req: IncomingMessage, uploaded: (size: number) => void) {
+  const chunks: Buffer[] = [];
+  try {
+    for await (const chunk of req) { uploaded(chunk.length); chunks.push(chunk); }
+  } catch (error) {
+    if (req.aborted) return null;
+    throw error;
+  }
+  return Buffer.concat(chunks);
+}
+
+function propfind(collections: Set<string>, files: Map<string, Uint8Array>, path: string, depthZero: boolean) {
+  const properties = (body: string) => ({ status: 207, body });
+  const file = files.get(path);
+  if (file && depthZero) {
+    return properties(`<D:multistatus xmlns:D="DAV:"><D:response><D:href>${path}</D:href>` +
+      `<D:propstat><D:prop><D:getcontentlength>${file.byteLength}</D:getcontentlength></D:prop>` +
+      '<D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response></D:multistatus>');
+  }
+  if (!collections.has(path)) return { status: 404 };
+  const listed = [...collections, ...files.keys()].filter(name => name.startsWith(path));
+  return properties(`<D:multistatus xmlns:D="DAV:">${listed.map(name =>
+    `<D:response><D:href>${name}</D:href></D:response>`).join('')}</D:multistatus>`);
 }
 
 function deleteCollection(collections: Set<string>, files: Map<string, Uint8Array>, path: string) {
@@ -90,6 +113,7 @@ async function forwardDav(upstream: string, req: IncomingMessage, res: ServerRes
       } finally { resolve(); }
     });
     proxy.on('error', () => { res.destroy(); resolve(); });
+    req.on('aborted', () => proxy.destroy());
     req.on('data', chunk => uploaded(chunk.length));
     req.pipe(proxy);
   });

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import { ATTACHMENT_BLOCK_BYTES } from '../../lib/core/sync/attachmentBlockReceiver.js';
+import { webDavRelayStatus } from '../../lib/core/sync/webDavRelayPublication.js';
 import { WEB_DAV_ATTACHMENT_MIB, type WebDavAttachmentPolicy } from '../../lib/platform/webDavRelayContract.js';
 
 import { edit, relayFixture, storageKey } from './webDavRelayAttachmentFixture.testSupport.js';
@@ -29,6 +30,7 @@ function describeAttachmentPolicy(sender: 0 | 1) {
       for (const { key, bytes } of files) await writeFile(path.join(source.assets, key), bytes);
       await edit(source.peer, files.map(file => file.key), 'changed');
       await fixture.sync(source);
+      expect(fixture.attachmentReads).toEqual([]);
       await fixture.sync(target);
       expect(fixture.uploads).toHaveLength(files.filter(file => file.relayed).length);
       const content = target.peer.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('changed');
@@ -73,6 +75,7 @@ it.each(['desktop', 'phone'])('relays a new attachment from %s with an interrupt
     source.peer.reopen();
     await fixture.sync(source);
     expect(fixture.uploads).toHaveLength(1);
+    expect(fixture.attachmentReads).toEqual([]);
     await expect(fixture.sync(target, interruptAttachment)).rejects.toThrow('interrupted_attachment');
     await expect(stat(asset)).rejects.toMatchObject({ code: 'ENOENT' });
     await target.reopen();
@@ -84,6 +87,58 @@ it.each(['desktop', 'phone'])('relays a new attachment from %s with an interrupt
     expect(await readFile(asset)).toEqual(bytes);
     expect(await readFile(path.join(target.assets, fixture.old))).toEqual(original);
     expect(await fixture.sync(target)).toMatchObject({ applied: 0, published: 0 });
+  } finally { await fixture.close(); }
+});
+
+it.each([
+  ['interrupt', 'test_attachment_put_interrupted'],
+  ['short', 'webdav_relay_stage_mismatch']
+] as const)('retains the attachment after a %s PUT and delivers it after reopening', async (fault, error) => {
+  const fixture = await relayFixture();
+  try {
+    const [source, target] = fixture.peers;
+    const bytes = Buffer.alloc(ATTACHMENT_BLOCK_BYTES + 13, 0x74);
+    const key = storageKey(bytes);
+    await writeFile(path.join(source.assets, key), bytes);
+    await edit(source.peer, [key], 'changed');
+    fixture.faultNextAttachmentPut(fault);
+    await expect(fixture.sync(source)).rejects.toThrow(error);
+    await fixture.sync(target);
+    const asset = path.join(target.assets, key);
+    await expect(stat(asset)).rejects.toMatchObject({ code: 'ENOENT' });
+    await source.reopen();
+    await fixture.sync(source);
+    expect(fixture.uploads).toHaveLength(2);
+    expect(new Set(fixture.uploads).size).toBe(1);
+    expect(fixture.attachmentReads).toEqual([]);
+    await fixture.sync(target);
+    expect(await readFile(asset)).toEqual(bytes);
+  } finally { await fixture.close(); }
+});
+
+it('preserves a conflicting final packet and leaves its attachment eligible for LAN recovery', async () => {
+  const fixture = await relayFixture();
+  try {
+    const [source, target] = fixture.peers;
+    const bytes = Buffer.alloc(ATTACHMENT_BLOCK_BYTES + 13, 0x76);
+    const key = storageKey(bytes);
+    await writeFile(path.join(source.assets, key), bytes);
+    await edit(source.peer, [key], 'changed');
+    fixture.loseAttachmentPublicationResponse();
+    await expect(fixture.sync(source)).rejects.toThrow('lost_attachment_publication_response');
+    const final = new URL(fixture.uploads[0]!.replace(/\.partial$/u, ''));
+    const broken = Buffer.from('truncated ciphertext');
+    await fixture.request(final, { method: 'PUT', body: { bytes: broken.length, async *chunks() { yield broken; } } }, webDavRelayStatus);
+    await source.reopen();
+    await expect(fixture.sync(source)).rejects.toThrow('webdav_relay_destination_conflict');
+    expect(fixture.uploads).toHaveLength(1);
+    expect(fixture.attachmentReads).toEqual([]);
+    await expect(fixture.sync(target)).rejects.toThrow();
+    const asset = path.join(target.assets, key);
+    await expect(stat(asset)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await fixture.lan()).toMatchObject({ complete: true });
+    await target.reopen();
+    expect(await readFile(asset)).toEqual(bytes);
   } finally { await fixture.close(); }
 });
 

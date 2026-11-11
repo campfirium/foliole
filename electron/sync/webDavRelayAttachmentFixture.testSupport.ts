@@ -108,15 +108,35 @@ export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy) {
 
 function testTransport() {
   const uploads: string[] = [];
+  const attachmentReads: string[] = [];
   let loseAttachmentPublicationResponse = false;
   let rejectNextDelete = false;
+  let attachmentPutFault: 'interrupt' | 'short' | undefined;
   const http = createDesktopWebDavRelayHttp({ requests: {}, responses: 0, downloadedBytes: 0, uploadedBytes: 0 });
   const request: WebDavRelayRequest = (url, input, consume) => {
     if (input.method === 'DELETE' && rejectNextDelete) {
       rejectNextDelete = false;
       throw new Error('test_delete_connection_reset');
     }
-    if (input.method === 'PUT' && url.pathname.endsWith(`${WEB_DAV_ATTACHMENT_SUFFIX}.partial`)) uploads.push(url.href);
+    if (input.method === 'PUT' && url.pathname.endsWith(`${WEB_DAV_ATTACHMENT_SUFFIX}.partial`)) {
+      uploads.push(url.href);
+      const fault = attachmentPutFault;
+      attachmentPutFault = undefined;
+      if (input.body && fault) {
+        const body = input.body;
+        input = { ...input, body: { bytes: fault === 'short' ? body.bytes - 1 : body.bytes,
+          async *chunks() {
+            let first = true;
+            for await (const chunk of body.chunks()) {
+              yield first ? chunk.subarray(1) : chunk;
+              first = false;
+              if (fault === 'interrupt') throw new Error('test_attachment_put_interrupted');
+            }
+          } } };
+      }
+    }
+    if (input.method === 'GET' && (url.pathname.endsWith(WEB_DAV_ATTACHMENT_SUFFIX) ||
+        url.pathname.endsWith(`${WEB_DAV_ATTACHMENT_SUFFIX}.partial`))) attachmentReads.push(url.href);
     return http(url, input, async (status, body) => {
       if (loseAttachmentPublicationResponse && input.method === 'MOVE' && status === 201 &&
           url.pathname.endsWith(`${WEB_DAV_ATTACHMENT_SUFFIX}.partial`)) {
@@ -127,7 +147,8 @@ function testTransport() {
       return consume(status, body);
     });
   };
-  return { uploads, request, rejectNextDelete: () => { rejectNextDelete = true; },
+  return { uploads, attachmentReads, request, faultNextAttachmentPut: (fault: typeof attachmentPutFault) => { attachmentPutFault = fault; },
+    rejectNextDelete: () => { rejectNextDelete = true; },
     loseAttachmentPublicationResponse: () => { loseAttachmentPublicationResponse = true; } };
 }
 

@@ -11,7 +11,7 @@ import { stageWebDavRelayPacket, webDavRelayPacketBytes, webDavRelayPacketDirect
   webDavRelayPacketSchema } from './webDavRelayBodyOutbox.js';
 import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 import { recordRelayCollectionAttachment } from './webDavRelayCollections.js';
-import { publishWebDavRelayFile, type WebDavRelayRequest } from './webDavRelayPublication.js';
+import { publishWebDavRelayAttachment, type WebDavRelayRequest } from './webDavRelayPublication.js';
 
 const pendingSchema = webDavRelayPacketSchema.pick({ name: true, chunks: true, bytes: true })
   .extend({ key: attachmentBlockResourceSchema.shape.storageKey });
@@ -111,7 +111,9 @@ async function publish(input: Input, pending: Pending) {
   const { host, scope, files, request } = input;
   await input.assertScope();
   if (input.lanConnected()) return false;
-  await publishWebDavRelayFile(request, new URL(pending.name, scope.outgoing), webDavRelayPacketBytes(files, scope, pending));
+  await publishWebDavRelayAttachment(request, new URL(pending.name, scope.outgoing),
+    webDavRelayPacketBytes(files, scope, pending), input.assertScope);
+  await input.assertScope();
   await host.write(db => db.transaction(async tx => {
     await markWebDavRelayAttachment(tx, scope, pending.key, 'done');
     await recordRelayCollectionAttachment(tx, scope.key, pending.key);
