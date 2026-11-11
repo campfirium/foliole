@@ -98,7 +98,7 @@ function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Rel
       {relay.device_id ? <><span role="status" className="text-ui-sm text-muted-foreground">
         {bound ? `${nameOf(bound)} · ` : ''}{t(`${PREFIX}.${status}`)}
       </span>{bound && relay.credential_draft_available && !relay.credential_delivery
-        ? <SettingsButton disabled={busy || !available.has(bound.device_identity_key)} onClick={() => void bind(bound)}>
+        ? <SettingsButton disabled={busy || (!relay.credential_offline_rotation_available && !available.has(bound.device_identity_key))} onClick={() => void bind(bound)}>
           {t(`${PREFIX}.${relay.credential_active ? 'credentialReplacePhone' : 'credentialVerifyDevice'}`)}
         </SettingsButton> : null}</> : <AppDropdownMenu>
         <AppDropdownMenuTrigger asChild>
@@ -134,7 +134,8 @@ export function SettingsWebDavSyncSection() {
         credentialActive={Boolean(relay.credential_active)} />
       {relay.configured || relay.credential_draft_available ? <WebDavDeviceRow group={group} relay={relay} /> : null}
       {relay.credential_delivery ? <SettingsWebDavCredentialDelivery key={relay.credential_delivery.id}
-        groupId={group.group_id} delivery={relay.credential_delivery} /> : null}
+        groupId={group.group_id} delivery={relay.credential_delivery}
+        phoneConnected={Boolean(relay.available_device_ids?.includes(relay.credential_delivery.device_id))} /> : null}
     </SettingsSection>
   </>;
 }

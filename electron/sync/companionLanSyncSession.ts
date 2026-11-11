@@ -6,10 +6,10 @@ import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { recordSyncSessionWaitTiming } from './companionLanRequestTiming.js';
 import { writeJson } from './companionLanResponses.js';
-import { authenticateCompanionRequestContext, revalidateCompanionRequestAuthorization } from './companionRequestAuth.js';
+import { authenticateCompanionRequestContext, revalidateCompanionRequestAuthorization, type CompanionRequestAuthContext } from './companionRequestAuth.js';
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { bestKnownDesktopSyncPriority, localDesktopSyncTier, rememberDesktopPeerTier } from './desktopSyncUpstream.js';
-import { desktopWebDavCredentialDeliveryForPeer, handleDesktopWebDavCredentialReply } from './desktopWebDavCredentialDelivery.js';
+import { desktopWebDavCredentialDeliveryForPeer, handleDesktopWebDavCredentialReply, prepareQueuedDesktopWebDavRotation } from './desktopWebDavCredentialDelivery.js';
 import {
   confirmDesktopWebDavRelayDelivery, desktopWebDavAuthenticatedPolicyForPeer, desktopWebDavRelayForPeer
 } from './desktopWebDavRelaySettings.js';
@@ -46,7 +46,7 @@ export async function handleCompanionSyncSession(request: http.IncomingMessage, 
       waitStartedAt, waitEndedAt: Date.now(), waitDurationMs: performance.now() - waitStarted,
       changed: reply.changed
     });
-    await runWithDatabaseConnectionOwner(() => {
+    await runWithDatabaseConnectionOwner(async () => {
       if (response.destroyed) return;
       const auth = revalidateCompanionRequestAuthorization(context);
       if (!auth.ok) {
@@ -61,7 +61,8 @@ export async function handleCompanionSyncSession(request: http.IncomingMessage, 
           sessions.signal(peer, input.session).throwIfAborted();
           handleDesktopWebDavCredentialReply(context.groupId, peer, input.credential);
         }
-        writeJson(request, response, 200, 'session' in reply ? sessionReply(reply, context.groupId, peer) : reply);
+        if ('session' in reply) await writeSessionReply(request, response, context, reply, input.operation === 'open');
+        else writeJson(request, response, 200, reply);
       }
     });
   } catch (error) {
@@ -72,8 +73,23 @@ export async function handleCompanionSyncSession(request: http.IncomingMessage, 
   return true;
 }
 
-function sessionReply(reply: object, groupId: string, peer: string) {
-  const delivery = desktopWebDavCredentialDeliveryForPeer(groupId, peer);
+async function writeSessionReply(request: http.IncomingMessage, response: http.ServerResponse,
+  context: CompanionRequestAuthContext, reply: { session: string }, opening: boolean) {
+  const peer = context.auth.device_id;
+  const delivery = await prepareQueuedDesktopWebDavRotation(context.groupId, peer, opening)
+    .then(() => desktopWebDavCredentialDeliveryForPeer(context.groupId, peer), () => undefined);
+  if (response.destroyed) return;
+  const current = revalidateCompanionRequestAuthorization(context);
+  if (!current.ok) {
+    desktopSyncChangeSessions().close(peer, reply.session);
+    writeJson(request, response, current.status_code, { error: current.error });
+    return;
+  }
+  writeJson(request, response, 200, sessionReply(reply, context.groupId, peer, delivery));
+}
+
+function sessionReply(reply: object, groupId: string, peer: string,
+  delivery: ReturnType<typeof desktopWebDavCredentialDeliveryForPeer>) {
   const policy = desktopWebDavAuthenticatedPolicyForPeer(groupId, peer);
   return { ...withLocalPriority(reply), webdav_relay: desktopWebDavRelayForPeer(groupId, peer),
     ...(delivery ? { webdav_credential_delivery: delivery } : {}),

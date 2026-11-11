@@ -33,17 +33,23 @@ export async function loadDesktopWebDavRelayDirectory(groupId: unknown) {
   return { directory: state.directory, credential_directory: draft?.directory ?? null };
 }
 
-export function prepareAuthenticatedWebDavBinding(groupId: string, phoneId: string, directory: string, reserve = false) {
-  const key = requireActiveGroupKey(groupId);
-  const group = loadDesktopSyncGroup()!;
-  const saved = loadBinding(key);
-  const phone = group.devices.find(device => device.device_identity_key === phoneId);
-  const epoch = openDatabaseConnection().driver.queryOne<{ library_epoch: string }>(
+export function desktopWebDavAuthenticatedPhoneEpoch(groupId: string, phoneId: string) {
+  const group = loadDesktopSyncGroup();
+  const phone = group?.devices.find(device => device.device_identity_key === phoneId);
+  if (process.platform !== 'darwin' || group?.group_id !== groupId || phone?.state !== 'active' ||
+    !phone.platform.toLowerCase().startsWith('android')) return undefined;
+  return openDatabaseConnection().driver.queryOne<{ library_epoch: string }>(
     'SELECT library_epoch FROM node_version_device_revisions WHERE group_id = ? AND device_identity_key = ? AND blocked_reason IS NULL',
     [groupId, phoneId]
   )?.library_epoch;
-  if (process.platform !== 'darwin' || !epoch || phone?.state !== 'active' ||
-    !phone.platform.toLowerCase().startsWith('android') || !desktopSyncChangeSessions().hasSessions(phoneId)) {
+}
+
+export function prepareAuthenticatedWebDavBinding(groupId: string, phoneId: string, directory: string, reserve = false, allowOffline = false) {
+  const key = requireActiveGroupKey(groupId);
+  const group = loadDesktopSyncGroup()!;
+  const saved = loadBinding(key);
+  const epoch = desktopWebDavAuthenticatedPhoneEpoch(groupId, phoneId);
+  if (!epoch || (!allowOffline && !desktopSyncChangeSessions().hasSessions(phoneId))) {
     throw new Error('webdav_relay_device_unavailable');
   }
   if (saved && (saved.binding.phone_device_id !== phoneId || saved.binding.directory_url !== directory)) {
@@ -84,6 +90,7 @@ export function activateAuthenticatedWebDavBinding(binding: WebDavRelayBinding, 
       binding_id: binding.id, library_epoch: owner.libraryEpoch, peer_library_epoch: epoch, public_key: phoneIdentityKey
     } : null);
     writeJsonSetting(driver, `${key}:credential-candidate`, null);
+    writeJsonSetting(driver, `${key}:credential-queued`, null);
   });
 }
 

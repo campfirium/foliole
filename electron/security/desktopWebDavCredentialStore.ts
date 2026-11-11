@@ -66,3 +66,8 @@ export function replaceDesktopWebDavCredentialCiphertext(scope: string, cipherte
     throw new Error('webdav_relay_secure_storage_unavailable');
   }
 }
+
+export function removeDesktopWebDavCredentialCiphertext(scope: string) {
+  try { rmSync(draftPath(scope), { force: true }); }
+  catch { /* The inactive ciphertext is isolated and replaced by the next rotation. */ }
+}

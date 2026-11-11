@@ -18,8 +18,25 @@ async function loadIdentity(scope: string) {
   return null;
 }
 
+function identityScope(credentialScope: string) {
+  return JSON.stringify(['webdav-device-identity-v1', credentialScope]);
+}
+
+export function hasDesktopWebDavIdentity(credentialScope: string) {
+  return readDesktopWebDavCredentialCiphertext(identityScope(credentialScope)) !== null;
+}
+
+export async function loadExistingDesktopWebDavIdentity(credentialScope: string) {
+  try {
+    const privateKey = await loadIdentity(identityScope(credentialScope));
+    return privateKey ? { privateKey, publicKey: exportPublicKey(privateKey) } : null;
+  } catch {
+    throw new Error('webdav_relay_secure_storage_unavailable');
+  }
+}
+
 export async function loadOrCreateDesktopWebDavIdentity(credentialScope: string) {
-  const scope = JSON.stringify(['webdav-device-identity-v1', credentialScope]);
+  const scope = identityScope(credentialScope);
   try {
     let privateKey = await loadIdentity(scope);
     if (!privateKey) {

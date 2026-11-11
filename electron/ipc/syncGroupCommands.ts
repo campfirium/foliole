@@ -51,7 +51,7 @@ import {
 } from '../sync/desktopSyncGroupMemberStateSession.js';
 import { notifyDesktopSyncGroupOverviewChanged } from '../sync/desktopSyncGroupOverviewNotifier.js';
 import { removeDesktopSyncGroupRoute } from '../sync/desktopSyncGroupRoutes.js';
-import { desktopWebDavCredentialDeliveryStatus } from '../sync/desktopWebDavCredentialDelivery.js';
+import { canQueueDesktopWebDavRotation, desktopWebDavCredentialDeliveryStatus } from '../sync/desktopWebDavCredentialDelivery.js';
 import { desktopWebDavRelayOverview, loadDesktopWebDavRelayStatus } from '../sync/desktopWebDavRelaySettings.js';
 import { loadDesktopWebDavUsage } from '../sync/desktopWebDavUsage.js';
 import { getLanWorkspaceSyncServerStatus, stopLanWorkspaceSyncServer } from '../sync/lanWorkspaceSyncServer.js';
@@ -107,6 +107,7 @@ async function overview() {
     pending_backup_restore: loadBackupRestorePendingSync()?.restoreId ?? null,
     ...(group && process.platform === 'darwin' ? { webdav_relay: { ...desktopWebDavRelayOverview(group.group_id),
       credential_delivery: desktopWebDavCredentialDeliveryStatus(group.group_id),
+      credential_offline_rotation_available: canQueueDesktopWebDavRotation(group.group_id),
       ...await loadDesktopWebDavRelayStatus(), usage: await loadDesktopWebDavUsage() } } : {}),
     expired_member: group ? loadDesktopLocalSyncGroupMemberExpired(group.group_id) : false,
     removing_devices: presentation.removing_devices,
