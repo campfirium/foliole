@@ -95,3 +95,66 @@ it('shows the two disabled presets on an empty device and replaces a preset when
   expect(screen.getByRole('switch', { name: 'Enabled: ☕' })).not.toBeChecked();
   expect(screen.queryByRole('switch', { name: 'Enabled: 🌱' })).not.toBeInTheDocument();
 });
+
+it('explains disabled notifications, opens system settings, and refreshes on return', async () => {
+  let status = 'denied';
+  invoke.mockImplementation(async (command: string) => {
+    if (command === NATIVE_COMMANDS.desktopReminderNotificationStatus) return status;
+    if (command === NATIVE_COMMANDS.loadDesktopReminders) return [];
+    return null;
+  });
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Reminders' }));
+  const openSettings = await screen.findByRole('button', { name: 'Open System Notification Settings' });
+  expect(screen.getByText('Notifications are off on this device. Reminders won’t appear.')).toBeVisible();
+  fireEvent.click(openSettings);
+  expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.openDesktopReminderNotificationSettings);
+
+  status = 'allowed';
+  fireEvent.focus(window);
+  await waitFor(() => expect(openSettings).not.toBeInTheDocument());
+
+  status = 'denied';
+  fireEvent.focus(window);
+  expect(await screen.findByRole('button', { name: 'Open System Notification Settings' })).toBeVisible();
+});
+
+it.each(['save', 'enable'] as const)('requests permission after the first %s and keeps the saved rule on denial', async action => {
+  let persisted: ReminderRule | undefined;
+  let ruleAtPermissionRequest: ReminderRule | undefined;
+  let resolvePermission: (status: string) => void = () => {};
+  const permission = new Promise<string>(resolve => { resolvePermission = resolve; });
+  invoke.mockImplementation(async (command: string, draft: DesktopReminderDraft) => {
+    if (command === NATIVE_COMMANDS.loadDesktopReminders) return [];
+    if (command === NATIVE_COMMANDS.desktopReminderNotificationStatus) return 'notDetermined';
+    if (command === NATIVE_COMMANDS.requestDesktopReminderNotificationPermission) {
+      ruleAtPermissionRequest = persisted;
+      return permission;
+    }
+    if (command !== NATIVE_COMMANDS.saveDesktopReminder) return null;
+    persisted = {
+      id: crypto.randomUUID(), revision: crypto.randomUUID(),
+      device: { kind: 'standalone', id: 'desktop' }, ...draft
+    };
+    return persisted;
+  });
+
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Reminders' }));
+  await screen.findByRole('button', { name: 'Allow Notifications' });
+  expect(invoke).not.toHaveBeenCalledWith(NATIVE_COMMANDS.requestDesktopReminderNotificationPermission);
+
+  if (action === 'save') {
+    fireEvent.click(await screen.findByRole('button', { name: 'New reminder' }));
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Read notes' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  } else {
+    fireEvent.click(await screen.findByRole('switch', { name: 'Enabled: 🌱' }));
+  }
+  const name = action === 'save' ? 'Enabled: Read notes' : 'Enabled: 🌱';
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.requestDesktopReminderNotificationPermission));
+  expect(ruleAtPermissionRequest).toMatchObject({ enabled: action === 'enable' });
+  resolvePermission('denied');
+  expect(await screen.findByText('Notifications are off on this device. Reminders won’t appear.')).toBeVisible();
+  expect(screen.getByRole('switch', { name })).toHaveAttribute('aria-checked', String(action === 'enable'));
+});

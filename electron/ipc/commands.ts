@@ -16,6 +16,7 @@ import {
   recordIpcPayloadBudget
 } from './ipcPayloadBudget.js';
 import { handleReminderCommand } from './reminderCommands.js';
+import { handleReminderNotificationCommand } from './reminderNotificationCommands.js';
 import { handleReviewCommand } from './reviewCommands.js';
 import { handleStorageCommand } from './storageCommands.js';
 import { handleDesktopUpdateCommand } from './updateCommands.js';
@@ -103,7 +104,7 @@ function dispatchRoutedCommand(
       : execute();
   }
   if (route === 'windowAndUtility') {
-    return handleWindowAndUtilityCommand(request, context);
+    return handleReminderNotificationCommand(request.command) ?? handleWindowAndUtilityCommand(request, context);
   }
   if (route === 'update') {
     return handleDesktopUpdateCommand(request, context);

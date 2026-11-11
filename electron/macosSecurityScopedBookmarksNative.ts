@@ -1,5 +1,7 @@
 import { createRequire } from 'node:module';
 
+import type { DesktopReminderNotificationStatus } from '../lib/platform/nativeReminderContract.js';
+
 export interface NativeBookmarkSuccess {
   bookmark: string;
   handle: number;
@@ -27,6 +29,8 @@ export interface MacosSecurityScopedBookmarkAdapter {
   createAndStart: (filePath: string) => NativeBookmarkResult;
   decryptLegacyMasSafeStorage: (encrypted: Buffer) => NativeLegacySafeStorageResult;
   resolveAndStart: (bookmark: string) => NativeBookmarkResult;
+  notificationStatus: () => Promise<DesktopReminderNotificationStatus>;
+  requestNotificationPermission: () => Promise<DesktopReminderNotificationStatus>;
   stop: (handle: number) => boolean;
 }
 

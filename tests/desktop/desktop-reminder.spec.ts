@@ -1,3 +1,4 @@
+import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
 import { DESKTOP_REMINDER_OPEN_DIVE_PREFIX } from '../../lib/platform/nativeReminderContract';
 
 import { expect, test } from './harness/fixtures';
@@ -125,6 +126,19 @@ test('the reminder list and editor follow both desktop appearances', async ({ de
   await reminderTab.click();
   const edit = dialog.getByRole('button', { name: /^(Edit reminder|编辑提醒): 🌱$/ });
   await expect(edit).toBeVisible();
+
+  if (process.platform === 'darwin') {
+    const permission = await desktopWindow.evaluate(command => window.electronAPI.invoke(command),
+      NATIVE_COMMANDS.desktopReminderNotificationStatus);
+    expect(['notDetermined', 'denied', 'allowed']).toContain(permission);
+    if (permission === 'notDetermined') {
+      await expect(dialog.getByRole('button', { name: /^(Allow Notifications|允许通知)$/ })).toBeVisible();
+    } else if (permission === 'denied') {
+      await expect(dialog.getByRole('button', {
+        name: /^(Open System Notification Settings|打开系统通知设置)$/
+      })).toBeVisible();
+    }
+  }
 
   for (const [mode, label] of [['light', /^(Light|浅色)$/], ['dark', /^(Dark|深色)$/]] as const) {
     await dialog.getByRole('button', { name: /^(Appearance|外观)$/ }).click();

@@ -13,11 +13,12 @@ import { useWorkspaceStore } from '../../../../store/workspaceStore';
 import { useReminderDraftRequest } from '../../context/ReminderDraftRequest';
 
 import { DesktopReminderDestinationFields } from './DesktopReminderDestinationFields';
+import { DesktopReminderNotificationNotice, useDesktopReminderNotificationPermission } from './DesktopReminderNotificationNotice';
 
 const initialDraft: DesktopReminderDraft = { message: '', trigger: { kind: 'daily', time: '20:00' }, enabled: false };
 const inlineRow = 'items-center gap-3 max-[1080px]:flex-row max-[1080px]:items-center';
 
-function useDesktopReminders() {
+function useDesktopReminders(requestPermission: () => void) {
   const [rules, setRules] = useState<ReminderRule[] | null>(null);
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -42,6 +43,7 @@ function useDesktopReminders() {
       setRules(items => items?.some(rule => rule.id === saved.id)
         ? items.map(rule => rule.id === saved.id ? saved : rule)
         : [...(items ?? []), saved]);
+      if (saved.enabled || !draft.previous) requestPermission();
       return true;
     } catch {
       setFailed(true);
@@ -131,7 +133,8 @@ function desktopReminderDrafts(rules: ReminderRule[]): DesktopReminderDraft[] {
 
 export function SettingsRemindersSection() {
   const t = useTranslation();
-  const { rules, pending, failed, save } = useDesktopReminders();
+  const { status, requestPermission, requesting } = useDesktopReminderNotificationPermission();
+  const { rules, pending, failed, save } = useDesktopReminders(requestPermission);
   const [draft, setDraft] = useState<DesktopReminderDraft | null>(null);
   const takeDive = useReminderDraftRequest()?.takeDive;
   useEffect(() => {
@@ -150,6 +153,7 @@ export function SettingsRemindersSection() {
 
   return (
     <SettingsSection ariaLabel={t('settings.reminders.title')}>
+      <DesktopReminderNotificationNotice status={status} requesting={requesting} requestPermission={requestPermission} />
       {failed && <p role="alert" className="px-settings-panel-x pb-3 text-ui-md">{t('settings.reminders.unavailable')}</p>}
       {draft ? <ReminderForm draft={draft} dives={dives} pending={pending} onChange={setDraft}
         onSubmit={event => void submit(event)} onCancel={() => setDraft(null)} /> : <>

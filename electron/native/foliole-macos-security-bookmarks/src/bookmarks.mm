@@ -1,6 +1,7 @@
 #include <node_api.h>
 
 #include "legacy_safe_storage.h"
+#include "notification_permissions.h"
 
 #import <Foundation/Foundation.h>
 
@@ -168,7 +169,8 @@ static napi_value Initialize(napi_env env, napi_value exports) {
     { "resolveAndStart", nullptr, ResolveAndStart, nullptr, nullptr, nullptr, napi_default, nullptr },
     { "stop", nullptr, StopHandle, nullptr, nullptr, nullptr, napi_default, nullptr }
   };
-  napi_define_properties(env, exports, 5, properties);
+  napi_define_properties(env, exports, sizeof(properties) / sizeof(properties[0]), properties);
+  RegisterNotificationPermissions(env, exports);
   return exports;
 }
 

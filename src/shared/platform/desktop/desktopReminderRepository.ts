@@ -5,6 +5,9 @@ import { getRuntimeInvoke } from '../runtimeInvoke';
 export function getDesktopReminderRepository() {
   const invoke = getRuntimeInvoke();
   return invoke ? {
+    notificationStatus: () => invoke(NATIVE_COMMANDS.desktopReminderNotificationStatus),
+    requestNotificationPermission: () => invoke(NATIVE_COMMANDS.requestDesktopReminderNotificationPermission),
+    openNotificationSettings: () => invoke(NATIVE_COMMANDS.openDesktopReminderNotificationSettings),
     load: () => invoke(NATIVE_COMMANDS.loadDesktopReminders),
     save: (draft: DesktopReminderDraft) => invoke(NATIVE_COMMANDS.saveDesktopReminder, draft)
   } : null;
