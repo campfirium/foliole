@@ -24,6 +24,7 @@ import {
 export interface BuildAppPaletteItemsOptions extends ReviewPaletteCommandOptions {
   canRedoWorkspaceAction: boolean;
   canUndoWorkspaceAction: boolean;
+  canSendToEdge?: boolean;
   canExportCurrentArticle: boolean;
   canPublishToFoliole?: boolean;
   canPublishToDiscourse?: boolean;
@@ -124,6 +125,7 @@ function isImportCommandEnabled(id: string) {
 }
 
 function isEditorCommandEnabled(id: string, options: BuildAppPaletteItemsOptions) {
+  if (id === APP_COMMAND_IDS.sendToEdge) return Boolean(options.canSendToEdge);
   if (id === APP_COMMAND_IDS.exportCurrentArticle) {
     return options.canExportCurrentArticle;
   }

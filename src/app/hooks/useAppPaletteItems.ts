@@ -10,6 +10,7 @@ import {
 import { useContentRegionScaleCommandRevision } from '../../shared/commands/contentRegionScaleCommands';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
+import { useArticleTargets } from '../../shared/platform/runtime/articleTargets';
 import { getHistoryCommandState } from '../../store/historyCommands';
 import { isNodeInSubtree } from '../../store/workspaceNodeTreeOrder';
 import { resolveUndoCommandTarget } from '../../store/workspaceUndoRouter';
@@ -144,6 +145,7 @@ export function useAppPaletteItems(args: {
   isEditorReadOnly: boolean;
   isExternalViewOpen: boolean;
   isFoliolePublishedContext: boolean;
+  isVirtualViewOpen?: boolean;
   isViewingTrashNode: boolean;
   isReviewOnly: boolean;
   isCurrentReviewItemGradable: boolean;
@@ -153,6 +155,7 @@ export function useAppPaletteItems(args: {
   study: ReturnType<typeof useWorkspaceControllerState>['study'];
   ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'appActionHistory' | 'editorOperationHistory' | 'nodeOrder' | 'nodesById' | 'trashedNodeIds'>;
 }) {
+  const articleTargets = useArticleTargets();
   const contentScaleRevision = useContentRegionScaleCommandRevision();
   const undoRouterOwner = useUndoRouterOwner();
   const undoRouterContentDocumentId = useUndoRouterContentDocumentId();
@@ -179,6 +182,6 @@ export function useAppPaletteItems(args: {
         ...item,
         ...definedProps({ shortcuts: args.hotkeys.shortcutMap[item.id] ?? item.shortcuts })
       })),
-    [args, canMoveToNode, contentScaleRevision, hasNavigableNodes, t, undoRouterContentDocumentId, undoRouterOwner]
+    [args, articleTargets, canMoveToNode, contentScaleRevision, hasNavigableNodes, t, undoRouterContentDocumentId, undoRouterOwner]
   );
 }

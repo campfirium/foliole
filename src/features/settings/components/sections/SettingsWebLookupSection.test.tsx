@@ -30,8 +30,8 @@ it('shows built-in right-click menu items with DuckDuckGo disabled by default', 
     .toContain('{title}');
 });
 
-it('defaults to Clean formatting as the only right-click action', () => {
-  expect(loadEditorContextMenuItems().map((item) => item.commandId)).toEqual([APP_COMMAND_IDS.configureCleanFormatting]);
+it('places the article send command before Clean formatting by default', () => {
+  expect(loadEditorContextMenuItems().map((item) => item.commandId)).toEqual([APP_COMMAND_IDS.sendToEdge, APP_COMMAND_IDS.configureCleanFormatting]);
 });
 
 it('drops the former Repair Table default from saved right-click settings', () => {
@@ -39,7 +39,7 @@ it('drops the former Repair Table default from saved right-click settings', () =
     { id: 'system.repair-table', commandId: APP_COMMAND_IDS.repairTable, order: 0, source: 'system', visible: true },
     { id: 'system.clean-formatting', commandId: APP_COMMAND_IDS.configureCleanFormatting, order: 1, source: 'system', visible: true }
   ]));
-  expect(loadEditorContextMenuItems().map((item) => item.commandId)).toEqual([APP_COMMAND_IDS.configureCleanFormatting]);
+  expect(loadEditorContextMenuItems().map((item) => item.commandId)).toEqual([APP_COMMAND_IDS.sendToEdge, APP_COMMAND_IDS.configureCleanFormatting]);
 });
 
 it('toggles whether an entry appears in the context menu', () => {
@@ -100,7 +100,7 @@ it('restores the protected ChatGPT row when an earlier saved order omitted it', 
   renderWithLocalization(<SettingsWebLookupSection />);
   expect(screen.getByTestId('web-lookup-row-chatgpt')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Remove Chat with ChatGPT' })).toBeNull();
-  expect(loadEditorContextMenuOrder(getWebLookupEntries(), loadEditorContextMenuItems())).toEqual(['lookup:chatgpt', 'lookup:google']);
+  expect(loadEditorContextMenuOrder(getWebLookupEntries(), loadEditorContextMenuItems())).toEqual(['lookup:chatgpt', 'lookup:google', 'command:system.send-to-edge']);
 });
 
 it('reorders menu items by dragging the handle', () => {

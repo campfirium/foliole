@@ -5,6 +5,8 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
 import { loadDatabaseUpgradeStatus } from '../database/databaseUpgradeStatus.js';
 import { copyDiagnosticReport } from '../diagnostics/diagnosticBundle.js';
+import { loadArticleTargets, selectArticleTarget } from '../edgeReading/articleTargetSettings.js';
+import { sendArticleToEdge } from '../edgeReading/sendArticleToEdge.js';
 import { runFolioleCliInstallAction } from '../folioleCliInstallation.js';
 import { getGlobalClipShortcutStatus } from '../globalClipShortcut.js';
 import { clearLinkPanelBrowsingData } from '../linkPanelBrowsingData.js';
@@ -156,6 +158,21 @@ export async function handleWindowAndUtilityCommand(request: InvokeRequest, cont
   if (setupResult !== undefined) return setupResult;
   const cliInstallResult = handleCliInstallCommand(request, context);
   if (cliInstallResult !== undefined) return cliInstallResult;
+  if (request.command === NATIVE_COMMANDS.loadArticleTargets) return loadArticleTargets();
+  if (request.command === NATIVE_COMMANDS.selectArticleTarget) {
+    const args = (request.args ?? {}) as Record<string, unknown>;
+    return selectArticleTarget(asString(args.id, 'id'));
+  }
+  if (request.command === NATIVE_COMMANDS.sendArticleToEdge) {
+    const args = (request.args ?? {}) as Record<string, unknown>;
+    return sendArticleToEdge({
+      title: asString(args.title, 'title'),
+      markdown: asString(args.markdown, 'markdown'),
+      leafSvg: asString(args.leafSvg, 'leafSvg'),
+      language: asString(args.language, 'language'),
+      contentsLabel: asString(args.contentsLabel, 'contentsLabel')
+    });
+  }
   const utilityResult = handleUtilityCommand(request);
   if (utilityResult !== undefined) {
     return utilityResult;

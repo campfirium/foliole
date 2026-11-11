@@ -6,6 +6,7 @@ import { EditorContextMenu } from './EditorContextMenu';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
 interface DocumentPanelContextMenuProps {
+  canSendToEdge?: boolean;
   contextMenu: WorkspaceEditorContextMenu | null;
   onCloseContextMenu: () => void;
   onCopyImage: () => void;
@@ -25,6 +26,7 @@ interface DocumentPanelContextMenuProps {
 }
 
 export function DocumentPanelContextMenu({
+  canSendToEdge,
   contextMenu,
   onCloseContextMenu,
   onCopyImage,
@@ -51,6 +53,7 @@ export function DocumentPanelContextMenu({
       kind={contextMenu.kind}
       left={contextMenu.left}
       {...definedProps({
+        canSendToEdge,
         mode: contextMenu.mode,
         existingNote: contextMenu.existingHighlight?.note,
         initialNoteOpen: contextMenu.initialNoteOpen,

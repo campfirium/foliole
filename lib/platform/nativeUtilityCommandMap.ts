@@ -1,3 +1,4 @@
+import type { ArticleTargetSettings } from './articleTarget.js';
 import type { AttachmentMaintenanceRequest, AttachmentMaintenanceResult } from './attachmentMaintenanceContract.js';
 import type { BackupRestoreSyncChoice, BackupRestoreSyncPreview } from './backupRestoreSyncContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
@@ -67,6 +68,12 @@ export type NativeUtilityCommandMap = {
       effective: boolean;
       supported: boolean;
     };
+  };
+  [NATIVE_COMMANDS.loadArticleTargets]: { args: undefined; result: ArticleTargetSettings };
+  [NATIVE_COMMANDS.selectArticleTarget]: { args: { id: string }; result: ArticleTargetSettings };
+  [NATIVE_COMMANDS.sendArticleToEdge]: {
+    args: { title: string; markdown: string; leafSvg: string; language: string; contentsLabel: string };
+    result: null;
   };
   [NATIVE_COMMANDS.openExternalUrl]: {
     args: { url: string };

@@ -4,6 +4,7 @@ import { Fragment, useContext, useState, type MouseEvent, type PointerEvent } fr
 import { commandMenuKey, loadEditorContextMenuOrder, webLookupMenuKey } from '../../features/settings/model/editorContextMenuOrder';
 import { loadEditorContextMenuItems } from '../../features/settings/model/editorContextMenuSettings';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { useArticleTargets } from '../../shared/platform/runtime/articleTargets';
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import {
   getWebLookupEntries,
@@ -20,6 +21,7 @@ type WebLookupActionEntry = NonNullable<ReturnType<typeof resolveWebLookupAction
 type Translate = ReturnType<typeof useTranslation>;
 
 interface WebLookupSelectionMenuProps {
+  canSendToEdge?: boolean;
   documentText?: string | null | undefined;
   left: number;
   onClose: () => void;
@@ -166,6 +168,7 @@ function WebLookupActionItems(props: {
 
 export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
   const t = useTranslation();
+  useArticleTargets();
   const exitHere = useContext(FlowExitHereContext);
   const [confirmation, setConfirmation] = useState<WebLookupConfirmationState | null>(null);
   const [notice, setNotice] = useState<{ message: string; tone: 'error' | 'success' } | null>(null);

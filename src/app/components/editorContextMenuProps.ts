@@ -2,6 +2,7 @@ import type { SelectionCommandPayload } from '../contextCommands';
 import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
 
 export interface EditorContextMenuProps {
+  canSendToEdge?: boolean;
   existingNote?: string | null;
   kind: 'image' | 'selection';
   left: number;

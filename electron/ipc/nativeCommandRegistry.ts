@@ -2,6 +2,7 @@ import { NATIVE_COMMANDS, type NativeCommandName } from '../../lib/platform/nati
 
 import type { CommandRouteFamily } from './commandRoutes.js';
 import type { CommandSecurityCapability } from './commandSecurityCapabilities.js';
+import { NATIVE_ARTICLE_TARGET_COMMAND_REGISTRY } from './nativeArticleTargetCommandRegistry.js';
 import { NATIVE_ASSISTANT_COMMAND_REGISTRY } from './nativeAssistantCommandRegistry.js';
 import { NATIVE_BACKUP_COMMAND_REGISTRY } from './nativeBackupCommandRegistry.js';
 import { NATIVE_DIVE_COMMAND_REGISTRY } from './nativeDiveCommandRegistry.js';
@@ -17,6 +18,7 @@ export interface NativeCommandRegistryEntry {
 export const NATIVE_COMMAND_REGISTRY = [
   ...NATIVE_SCHEDULED_COMMAND_REGISTRY,
   ...NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY,
+  ...NATIVE_ARTICLE_TARGET_COMMAND_REGISTRY,
   ...NATIVE_ASSISTANT_COMMAND_REGISTRY,
   ...NATIVE_BACKUP_COMMAND_REGISTRY,
   { command: NATIVE_COMMANDS.loadReviewTrainingPlan, route: 'review', capability: 'read' },
@@ -38,7 +40,6 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.loadSplitTopicPreferences, route: 'windowAndUtility', capability: 'read' },
   { command: NATIVE_COMMANDS.loadPerformanceMemorySnapshot, route: 'windowAndUtility', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.openExternalUrl, route: 'windowAndUtility', capability: 'externalOpen' },
-  { command: NATIVE_COMMANDS.openLocalPath, route: 'windowAndUtility', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.openSyncGroupLocalNetworkSettings, route: 'windowAndUtility', capability: 'externalOpen' },
   { command: NATIVE_COMMANDS.openImportRoot, route: 'storage', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.listCssSnippetFiles, route: 'storage', capability: 'read' },

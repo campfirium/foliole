@@ -41,6 +41,7 @@ export const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.openWorkspaceSearch, title: 'Search', section: 'Workspace', keywords: ['search', 'find', 'topics', 'workspace'] },
   { id: APP_COMMAND_IDS.openCommandPalette, title: 'Command Palette', section: 'Workspace', keywords: ['command', 'palette', 'actions'] },
   { id: APP_COMMAND_IDS.renameNode, title: 'Rename', section: 'Workspace', keywords: ['rename', 'topic', 'folder'] },
+  { id: APP_COMMAND_IDS.sendToEdge, title: 'Send Article to Edge', section: 'Editor', keywords: ['send', 'article', 'html'] },
   { id: APP_COMMAND_IDS.exportCurrentArticle, title: 'Export Current Topic', section: 'Editor', keywords: ['export', 'topic', 'article', 'mirror', 'markdown', 'save'] },
   { id: APP_COMMAND_IDS.publishToFoliole, title: 'Publish to the site', section: 'Editor', keywords: ['publish', 'foliole', 'site', 'cloudflare', 'web'] },
   { id: APP_COMMAND_IDS.publishToDiscourse, title: 'Publish to Discourse', section: 'Editor', keywords: ['publish', 'discourse', 'topic', 'forum'] },

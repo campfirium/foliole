@@ -1,7 +1,9 @@
 import { Plus, RotateCcw } from 'lucide-react';
 import { useContext, useRef, useState } from 'react';
 
+import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { getSendArticleTitle, useArticleTargets } from '../../../../shared/platform/runtime/articleTargets';
 import { addWebLookupEntry, getWebLookupEntries, removeWebLookupEntry, updateWebLookupEntry, type WebLookupEntry } from '../../../../shared/platform/webLookupEntries';
 import { AppIconButton, settingsActionTableAddButtonClassName, settingsActionTableClassName, settingsResetButtonClassName, SettingsSection } from '../../../../shared/ui';
 import { DocumentHeaderMenuSettingsContext } from '../../context/documentHeaderMenuSettingsContext';
@@ -72,6 +74,7 @@ export function SettingsWebLookupSection(props: {
   resolveDocumentMenuLabel?: SettingsDesktopAdapters['resolveDocumentMenuLabel'];
 } = {}) {
   const t = useTranslation();
+  useArticleTargets();
   const rows = useContextMenuRows();
   const links = new Map(rows.links.map((entry) => [webLookupMenuKey(entry.id), entry]));
   const commands = new Map(rows.menu?.contextItems.map((item) => [commandMenuKey(item.id), item]) ?? []);
@@ -89,7 +92,9 @@ export function SettingsWebLookupSection(props: {
         if (link) return <LinkMenuRow drag={rows.drag} entry={link} itemKey={key} key={key} onRemove={rows.removeLink} onUpdate={rows.updateLink} />;
         const item = commands.get(key);
         if (!item || !rows.menu) return null;
-        const label = props.resolveDocumentMenuLabel?.(item, t) ?? item.labelOverride ?? item.commandId;
+        const label = item.commandId === APP_COMMAND_IDS.sendToEdge
+          ? getSendArticleTitle(t)
+          : props.resolveDocumentMenuLabel?.(item, t) ?? item.labelOverride ?? item.commandId;
         return <CommandMenuRow drag={rows.drag} item={item} itemKey={key} key={key} label={label} onRemove={rows.removeCommand} onToggle={rows.menu.onToggleContextItem} />;
       })}
       <div className="grid grid-cols-2 gap-3 px-4 pb-3 pt-1">

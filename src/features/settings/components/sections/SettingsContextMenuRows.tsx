@@ -1,11 +1,13 @@
 import { Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import type { WebLookupEntry } from '../../../../shared/platform/webLookupEntries';
 import { settingsActionTableRowClassName, settingsFieldClassName, settingsSwitchClassName, settingsSwitchKnobClassName, settingsUtilityIconButtonClassName } from '../../../../shared/ui';
 import type { DocumentHeaderMenuItemConfig } from '../../model/documentHeaderMenuSettings';
 
+import { ArticleTargetSelect } from './ArticleTargetSelect';
 import { DragHandle, MENU_ITEM_COLUMNS, MenuItemRemoveAction, WebLookupToggle } from './SettingsWebLookupSectionParts';
 
 export interface ContextRowDrag {
@@ -57,11 +59,12 @@ export function CommandMenuRow(props: {
   onToggle: (id: string, visible: boolean) => void;
 }) {
   const t = useTranslation();
+  const isSendArticle = props.item.commandId === APP_COMMAND_IDS.sendToEdge;
   return <RowFrame drag={props.drag} itemKey={props.itemKey} testId={`context-command-row-${props.item.id}`}>
     <DragHandle id={props.itemKey} label={props.label} onDragEnd={props.drag.onDragEnd} onDragStart={props.drag.onDragStart} />
     <span className="min-w-0 truncate text-ui-md text-foreground">{props.label}</span>
-    <span aria-hidden="true" />
+    {isSendArticle ? <ArticleTargetSelect /> : <span aria-hidden="true" />}
     <div className="flex justify-center"><button aria-checked={props.item.visible} aria-label={t(props.item.visible ? 'settings.webLookup.hideMenuItem' : 'settings.webLookup.showMenuItem', { label: props.label })} className={settingsSwitchClassName(props.item.visible)} onClick={() => props.onToggle(props.item.id, !props.item.visible)} role="switch" type="button"><span aria-hidden="true" className={settingsSwitchKnobClassName(props.item.visible)} /></button></div>
-    <div className="flex justify-end"><button aria-label={t('settings.webLookup.remove', { label: props.label })} className={settingsUtilityIconButtonClassName(false)} onClick={() => props.onRemove(props.item.id)} type="button"><Trash2 aria-hidden="true" size={15} /></button></div>
+    <div className="flex justify-end">{!isSendArticle ? <button aria-label={t('settings.webLookup.remove', { label: props.label })} className={settingsUtilityIconButtonClassName(false)} onClick={() => props.onRemove(props.item.id)} type="button"><Trash2 aria-hidden="true" size={15} /></button> : null}</div>
   </RowFrame>;
 }

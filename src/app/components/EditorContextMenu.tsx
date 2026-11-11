@@ -201,6 +201,7 @@ export function EditorContextMenu(props: EditorContextMenuProps) {
         titleText={props.webLookupTitle}
         top={props.top}
         {...definedProps({
+          canSendToEdge: props.canSendToEdge,
           onRepairTable: props.onRepairTable,
           onConfigureFormatCleanup: props.onConfigureFormatCleanup,
           onRunCommand: props.onRunCommand,

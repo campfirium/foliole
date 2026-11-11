@@ -34,6 +34,7 @@ export const DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.importSingleFile]: { primary: { key: 'o', ctrlKey: true } },
   [APP_COMMAND_IDS.clipboardImport]: { primary: { key: 'v', ctrlKey: true, altKey: true } },
   [APP_COMMAND_IDS.globalCaptureToInbox]: { primary: { key: 'c', altKey: true, shiftKey: true } },
+  [APP_COMMAND_IDS.sendToEdge]: { primary: { key: 'e', ctrlKey: true, shiftKey: true } },
   [APP_COMMAND_IDS.findInTopic]: { primary: { key: 'f', ctrlKey: true }, secondary: { key: 'f', metaKey: true } },
   [APP_COMMAND_IDS.createSelectionHighlight]: { primary: { key: 'z', altKey: true } },
   [APP_COMMAND_IDS.createSelectionCloze]: { primary: { key: 'x', altKey: true } },

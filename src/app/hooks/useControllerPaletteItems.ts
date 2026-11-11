@@ -29,6 +29,7 @@ export function useControllerPaletteItems(args: {
     isFoliolePublishedContext:
       args.controller.virtualView.isVirtualViewOpen &&
       args.controller.virtualView.activeVirtualNodeId === VIRTUAL_PUBLISHED_NODE_ID,
+    isVirtualViewOpen: args.controller.virtualView.isVirtualViewOpen,
     isReviewOnly: args.isStudyMode && !args.isReviewEditing,
     isViewingTrashNode: args.controller.runtime.isViewingTrashNode,
     isCurrentReviewItemGradable: args.isCurrentReviewItemGradable,

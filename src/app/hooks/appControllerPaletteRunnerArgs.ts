@@ -33,6 +33,7 @@ import { createSplitTopicCommand } from './appPaletteSplitTopicCommand';
 import { createPaletteSurfaceActions } from './appPaletteSurfaceActions';
 import { restartAppWithReadingProgress } from './appRestartPersistence';
 import { repairEditorTable } from './editorRepairTableCommand';
+import { createSendToEdgeCommand } from './sendToEdgeCommand';
 import { clearSettingsRequest } from './settingsOverlayRequest';
 import type { useFormalImport } from './useFormalImport';
 
@@ -183,6 +184,7 @@ export function createPaletteRunnerArgs(args: PaletteRunnerArgs) {
     }),
     ...createPaletteStudyActions(args),
     enterPriorityMode: args.layoutProps.document.onEnterPriorityQuickSet,
+    sendToEdge: createSendToEdgeCommand(args),
     exportCurrentArticle: createExportCurrentArticleCommand(args),
     ...createPublishingPaletteActions(args),
     ...createPaletteDocumentActions(),

@@ -4,6 +4,7 @@ import { getStoredAppLocale } from '../../shared/localization/appLanguage';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 import { resolveSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 import type { TranslationKey } from '../../shared/localization/translations';
+import { getSendArticleTitle } from '../../shared/platform/runtime/articleTargets';
 
 const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.createFolder]: 'desktop.command.createFolder',
@@ -114,6 +115,7 @@ const SECTION_KEYS: Record<string, TranslationKey> = {
 };
 
 export function localizePaletteCommandTitle(id: string, fallback: string, t: Translate) {
+  if (id === APP_COMMAND_IDS.sendToEdge) return getSendArticleTitle(t);
   const key = COMMAND_TITLE_KEYS[id as AppCommandId];
   if (id === APP_COMMAND_IDS.openTrash && key) {
     return t(key, { trash: resolveSystemEntryDisplayName(getStoredAppLocale(), 'trash') });

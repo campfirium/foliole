@@ -7,6 +7,7 @@ export interface PaletteEditorCommandRunnerArgs {
   createSelectionCloze: () => void;
   createSelectionHighlight: () => void;
   enterPriorityMode: () => void;
+  sendToEdge: () => Promise<boolean>;
   exportCurrentArticle: () => Promise<boolean>;
   findInTopic: () => void;
   mergeHighlightsIntoTopic: () => Promise<boolean>;
@@ -26,6 +27,7 @@ export function createPaletteEditorCommandActions(args: PaletteEditorCommandRunn
     createSelectionCloze: args.createSelectionCloze,
     createSelectionHighlight: args.createSelectionHighlight,
     enterPriorityMode: args.enterPriorityMode,
+    sendToEdge: () => void args.sendToEdge(),
     exportCurrentArticle: () => void args.exportCurrentArticle(),
     findInTopic: args.findInTopic,
     mergeHighlightsIntoTopic: () => runWorkspaceContentCommand(() => args.mergeHighlightsIntoTopic()),

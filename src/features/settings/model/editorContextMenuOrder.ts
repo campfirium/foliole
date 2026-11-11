@@ -19,6 +19,11 @@ export function loadEditorContextMenuOrder(links: WebLookupEntry[], commands: Do
     seen.add(key);
     return true;
   });
+  const sendKey = commandMenuKey('system.send-to-edge');
+  if (available.includes(sendKey) && !seen.has(sendKey)) {
+    const before = ordered.indexOf(commandMenuKey('system.clean-formatting'));
+    ordered.splice(before < 0 ? ordered.length : before, 0, sendKey);
+  }
   const chatGptKey = webLookupMenuKey('chatgpt');
   return available.includes(chatGptKey) && !seen.has(chatGptKey) ? [chatGptKey, ...ordered] : ordered;
 }

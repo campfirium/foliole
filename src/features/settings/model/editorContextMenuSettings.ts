@@ -9,6 +9,7 @@ import {
 } from './documentHeaderMenuSettings';
 
 export const DEFAULT_EDITOR_CONTEXT_MENU_ITEMS: DocumentHeaderMenuItemConfig[] = [
+  { id: 'system.send-to-edge', commandId: APP_COMMAND_IDS.sendToEdge, order: -1, source: 'system', visible: true },
   { id: 'system.clean-formatting', commandId: APP_COMMAND_IDS.configureCleanFormatting, order: 0, source: 'system', visible: true }
 ];
 

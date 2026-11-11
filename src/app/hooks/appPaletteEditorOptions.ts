@@ -2,6 +2,7 @@ import { canCreateSelectionAnnotation } from '../../shared/selectionAnnotationEl
 import { canOpenDocumentComparisonView } from '../components/documentComparisonView';
 
 import type { useWorkspaceSelectors } from './appControllerState';
+import { canSendCurrentTopicToEdge } from './sendToEdgeEligibility';
 
 interface EditorPaletteSource {
   activeNodeId: string | null;
@@ -12,6 +13,8 @@ interface EditorPaletteSource {
   isFoliolePublishedContext?: boolean;
   isImmersiveMode?: boolean;
   isReviewOnly?: boolean;
+  isStudyMode?: boolean;
+  isVirtualViewOpen?: boolean;
   ws: Pick<ReturnType<typeof useWorkspaceSelectors>, 'nodesById' | 'trashedNodeIds'>;
 }
 
@@ -54,6 +57,7 @@ export function buildEditorPaletteOptions(args: EditorPaletteSource) {
   const activeNode = args.activeNodeId ? args.ws.nodesById[args.activeNodeId] : undefined;
   return {
     canAnnotateSelection: canAnnotateSelection(args) && canCreateSelectionAnnotation(activeNode),
+    canSendToEdge: canSendCurrentTopicToEdge({ ...args, isReviewOnly: args.isStudyMode ?? false }),
     canExportCurrentArticle: canExportCurrentArticle(args),
     canFindInCurrentTopic: canUseCurrentTopic,
     canOpenComparisonView: canOpenDocumentComparisonView({

@@ -34,6 +34,13 @@ export interface DocumentPanelSectionOverlaysProps {
   selectTextAlternative?: (id: string) => void;
 }
 
+function canSendCurrentTopicToEdge(props: DocumentPanelSectionProps) {
+  const id = props.activeNodeId;
+  const node = id ? props.nodesById[id] : null;
+  return node?.kind === 'topic' && !node.anchorLink && props.editorNodeId === id &&
+    !props.isTrashViewOpen && !props.isFoliolePublishedContext;
+}
+
 export function resolveAdjustableHighlight(props: DocumentPanelSectionProps) {
   const existingHighlight = props.contextMenu?.existingHighlight;
   if (
@@ -104,6 +111,7 @@ export function DocumentPanelSectionOverlays(args: DocumentPanelSectionOverlaysP
         editorNodeId={props.editorNodeId}
       /> : null}
       <DocumentPanelContextMenu
+        canSendToEdge={canSendCurrentTopicToEdge(props)}
         contextMenu={props.contextMenu}
         onCloseContextMenu={props.onCloseContextMenu}
         onCopyImage={props.onCopyImage}

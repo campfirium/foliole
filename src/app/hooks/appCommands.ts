@@ -26,6 +26,7 @@ interface RunAppCommandActions {
   createTopic: () => void;
   createVirtualFolder: () => void;
   enterPriorityMode: () => void;
+  sendToEdge?: () => void | Promise<void>;
   exportCurrentArticle: () => void | Promise<void>;
   publishToFoliole?: () => void | Promise<void>;
   publishToDiscourse?: () => void | Promise<void>;
@@ -181,6 +182,7 @@ function createWorkspaceCommandHandlers(
 function createOptionalWorkspaceCommandHandlers(actions: RunAppCommandActions) {
   return {
     [APP_COMMAND_IDS.openReviewCalendar]: requestReviewCalendarOpen,
+    [APP_COMMAND_IDS.sendToEdge]: actions.sendToEdge ?? (() => false),
     [APP_COMMAND_IDS.publishToFoliole]: actions.publishToFoliole ?? (() => false),
     [APP_COMMAND_IDS.publishToDiscourse]: actions.publishToDiscourse ?? (() => false),
     [APP_COMMAND_IDS.publishToWordPress]: actions.publishToWordPress ?? (() => false),

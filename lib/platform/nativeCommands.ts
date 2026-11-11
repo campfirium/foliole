@@ -1,3 +1,4 @@
+import { NATIVE_ARTICLE_TARGET_COMMANDS } from './articleTarget.js';
 import { NATIVE_ASSISTANT_COMMANDS } from './nativeAssistantCommands.js';
 import { NATIVE_DAILY_FLOW_COMMANDS } from './nativeDailyFlowCommands.js';
 import { NATIVE_DATABASE_UPGRADE_COMMANDS } from './nativeDatabaseUpgradeContract.js';
@@ -11,6 +12,7 @@ export const NATIVE_COMMANDS = {
   loadReviewTrainingPlan: 'load_review_training_plan',
   loadReviewTrainingInput: 'load_review_training_input',
   saveReviewTrainingModel: 'save_review_training_model',
+  ...NATIVE_ARTICLE_TARGET_COMMANDS,
   ...NATIVE_SOURCE_CONNECTION_COMMANDS,
   ...NATIVE_WEBDAV_RELAY_COMMANDS,
   ...NATIVE_ASSISTANT_COMMANDS,
@@ -32,7 +34,6 @@ export const NATIVE_COMMANDS = {
   loadSplitTopicPreferences: 'load_split_topic_preferences',
   loadPerformanceMemorySnapshot: 'load_performance_memory_snapshot',
   openExternalUrl: 'open_external_url',
-  openLocalPath: 'open_local_path',
   openSyncGroupLocalNetworkSettings: 'open_sync_group_local_network_settings',
   openImportRoot: 'open_import_root',
   inspectReadwiseReaderSetup: 'inspect_readwise_reader_setup',

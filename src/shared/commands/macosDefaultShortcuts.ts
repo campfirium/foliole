@@ -30,6 +30,7 @@ export const MACOS_DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.createItem]: { primary: { key: 'n', metaKey: true, altKey: true } },
   [APP_COMMAND_IDS.openLocalFile]: { primary: { key: 'o', metaKey: true } },
   [APP_COMMAND_IDS.globalCaptureToInbox]: { primary: globalCaptureShortcut },
+  [APP_COMMAND_IDS.sendToEdge]: { primary: { key: 'e', metaKey: true, shiftKey: true } },
   [APP_COMMAND_IDS.findInTopic]: { primary: { key: 'f', metaKey: true } },
   [APP_COMMAND_IDS.createSelectionHighlight]: { primary: { key: 'z', altKey: true } },
   [APP_COMMAND_IDS.createSelectionCloze]: { primary: { key: 'x', altKey: true } },

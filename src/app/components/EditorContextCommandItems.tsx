@@ -5,11 +5,13 @@ import type { DocumentHeaderMenuItemConfig } from '../../features/settings/model
 import { loadEditorContextMenuItems } from '../../features/settings/model/editorContextMenuSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { isDesktopRuntime } from '../../shared/platform/runtime';
 import { AppSelectionDropdownMenuItem } from '../../shared/ui';
 import { APP_PALETTE_COMMANDS } from '../hooks/appPaletteCommandList';
 import { localizePaletteCommandTitle } from '../hooks/appPaletteCommandLocalization';
 
 interface EditorContextCommandItemsProps {
+  canSendToEdge?: boolean;
   source: DocumentHeaderMenuItemConfig['source'];
   onClose: () => void;
   onConfigureFormatCleanup?: () => void;
@@ -20,6 +22,7 @@ interface EditorContextCommandItemsProps {
 
 export function isEditorContextCommandShown(item: DocumentHeaderMenuItemConfig, props: Omit<EditorContextCommandItemsProps, 'source'>) {
   if (!item.visible) return false;
+  if (item.commandId === APP_COMMAND_IDS.sendToEdge) return Boolean(props.canSendToEdge && props.onRunCommand && isDesktopRuntime());
   if (item.commandId === APP_COMMAND_IDS.repairTable) return Boolean(props.repairTableAvailable && props.onRepairTable);
   if (item.commandId === APP_COMMAND_IDS.configureCleanFormatting) return Boolean(props.onConfigureFormatCleanup);
   return Boolean(props.onRunCommand);

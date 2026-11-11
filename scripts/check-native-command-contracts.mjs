@@ -37,6 +37,7 @@ const ELECTRON_HANDLER_FILES = [
 const REGISTRY_FILES = [
   'electron/ipc/nativeCommandRegistry.ts',
   'electron/ipc/nativeBackupCommandRegistry.ts',
+  'electron/ipc/nativeArticleTargetCommandRegistry.ts',
   'electron/ipc/nativeDiveCommandRegistry.ts'
 ];
 
@@ -50,8 +51,9 @@ function readFile(repoRoot, relativePath) {
 
 function collectCommandDefinitions(repoRoot) {
   const sources = [readFile(repoRoot, 'lib/platform/nativeCommands.ts')];
-  const diveCommands = 'lib/platform/nativeDiveCommands.ts';
-  if (fs.existsSync(path.join(repoRoot, diveCommands))) sources.push(readFile(repoRoot, diveCommands));
+  for (const file of ['lib/platform/nativeDiveCommands.ts', 'lib/platform/articleTarget.ts']) {
+    if (fs.existsSync(path.join(repoRoot, file))) sources.push(readFile(repoRoot, file));
+  }
   return sources.flatMap(source =>
     [...source.matchAll(/^\s*([A-Za-z0-9_]+):\s*'([^']+)'/gm)]
       .map(match => ({ key: match[1], value: match[2] })));
