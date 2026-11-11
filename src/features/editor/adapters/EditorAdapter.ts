@@ -80,6 +80,7 @@ export interface EditorAdapter {
   applyTextHistory?(entry: import('../model/editorOperationHistory').EditorTextEditOperationEntry, mode: 'redo' | 'undo', save?: import('../model/editorTextReplaySave').EditorTextReplaySave): boolean | import('../model/editorOperationHistory').EditorTextHistoryReplayResult;
   getViewportRect?(): DOMRect | null;
   revealPosition(position: number): void;
+  revealReadingPosition?(position: number): void;
   revealSelectionCentered?(selection: EditorSelection, options?: EditorRevealOptions): void;
   revealSelectionNearest?(selection: EditorSelection, options?: EditorRevealOptions): void;
   revealSelectionAtViewportRatio?(selection: EditorSelection, ratio: number, options?: EditorRevealOptions): void;

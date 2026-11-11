@@ -15,3 +15,17 @@ export function publishCompanionSyncApplied(scope: WorkspaceRefreshScope = { kin
     catch { /* A view observer cannot invalidate an already committed object. */ }
   }
 }
+
+const readingResumeListeners = new Set<(nodeId: string) => void>();
+
+export function subscribeCompanionReadingResumeApplied(listener: (nodeId: string) => void) {
+  readingResumeListeners.add(listener);
+  return () => { readingResumeListeners.delete(listener); };
+}
+
+export function publishCompanionReadingResumeApplied(nodeId: string) {
+  for (const listener of readingResumeListeners) {
+    try { listener(nodeId); }
+    catch { /* An observer cannot invalidate an already committed reading position. */ }
+  }
+}

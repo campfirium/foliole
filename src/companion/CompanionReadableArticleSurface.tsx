@@ -11,6 +11,7 @@ import type { CompanionEditHistoryActionsProps } from './CompanionEditHistoryAct
 import { findCompanionClozeTarget } from './companionExistingHighlightActions';
 import type { CompanionHighlightRangeHandler } from './companionHighlightRangePersistence';
 import { ImmersiveArticleContent } from './CompanionImmersiveArticleContent';
+import { CompanionPdfResumeNotice } from './CompanionPdfResumeNotice';
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
 import type { CompanionReadingActivity } from './companionReadingActivity';
 import { useCompanionReadingDisplayLayout } from './companionReadingDisplayLayout';
@@ -204,7 +205,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   useCompanionItemEditViewport(scrollPosition.surfaceRef, itemEditing);
   const pagedStyle = useCompanionPagedScroll(scrollPosition.surfaceRef, model.reading.isContentEditing);
   const pdfScroll = useCompanionPdfTextScroll({ article: pendingReadableArticle.readableArticle,
-    editing: model.reading.isContentEditing, onEditorReady: model.toolbar.handleEditorReady,
+    editing: model.reading.isContentEditing, onEditorReady: model.toolbar.handleEditorReady, surface: scrollPosition.surfaceRef,
     onScrollTopChange: props.onScrollTopChange });
   return (
     <section
@@ -221,7 +222,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       onPointerMove={model.handleSurfacePointerMove}
       onPointerUp={model.openToolbarFromArticlePointer}
       onPointerCancel={model.reading.handleSurfacePointerCancel}
-      onScroll={event => { if (!pdfScroll.onScroll(event) && props.readableArticle.pdfResumeTextOffset === undefined) scrollPosition.handleScroll(event); }}
+      onScroll={event => { if (!pdfScroll.onScroll(event) && !pdfScroll.hasAccepted() && props.readableArticle.pdfResumeTextOffset === undefined) scrollPosition.handleScroll(event); }}
       onWheelCapture={pdfScroll.markInput}
       onTouchMoveCapture={pdfScroll.markInput}
       onTouchMove={model.closeToolbarFromArticleTouch}
@@ -244,7 +245,8 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
           syncEndpointUrl: props.syncEndpointUrl
         })}
       />
-      <>{model.reading.isContentEditing ? null : <>{props.endOfArticleAction}{props.footer}</>}</>
+      {pdfScroll.offer && <CompanionPdfResumeNotice {...pdfScroll.offer} />}
+      {model.reading.isContentEditing ? null : <>{props.endOfArticleAction}{props.footer}</>}
       <CompanionArticleSelectionLayer articleProps={props} toolbar={model.toolbar} pending={pendingReadableArticle} />
     </section>
   );

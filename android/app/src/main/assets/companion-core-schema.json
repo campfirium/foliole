@@ -18,7 +18,7 @@
     "CREATE INDEX IF NOT EXISTS idx_node_text_alternatives_active\n    ON node_text_alternatives(node_id, status, created_at)",
     "CREATE TABLE IF NOT EXISTS parent_child_order (\n    parent_id TEXT PRIMARY KEY,\n    child_ids_json TEXT NOT NULL,\n    updated_at TEXT NOT NULL\n  )",
     "CREATE TABLE IF NOT EXISTS workspace_meta (\n    key TEXT PRIMARY KEY,\n    value TEXT NOT NULL,\n    updated_at TEXT NOT NULL\n  )",
-    "CREATE TABLE IF NOT EXISTS node_view_state (\n    node_id TEXT NOT NULL REFERENCES nodes(id),\n    host_name TEXT NOT NULL,\n    scroll_top INTEGER NOT NULL DEFAULT 0,\n    selection_from INTEGER,\n    selection_to INTEGER,\n    source TEXT NOT NULL DEFAULT 'user-scroll',\n    updated_at TEXT NOT NULL,\n    PRIMARY KEY (node_id, host_name)\n  )",
+    "CREATE TABLE IF NOT EXISTS node_view_state (\n    node_id TEXT NOT NULL REFERENCES nodes(id),\n    host_name TEXT NOT NULL,\n    scroll_top INTEGER NOT NULL DEFAULT 0,\n    reading_offset INTEGER,\n    selection_from INTEGER,\n    selection_to INTEGER,\n    source TEXT NOT NULL DEFAULT 'user-scroll',\n    updated_at TEXT NOT NULL,\n    PRIMARY KEY (node_id, host_name)\n  )",
     "CREATE INDEX IF NOT EXISTS idx_nodes_parent_id ON nodes (parent_id)",
     "CREATE INDEX IF NOT EXISTS idx_nodes_dirty_or_unversioned_updated\n    ON nodes (updated_at)\n    WHERE sync_dirty = 1 OR current_version_id IS NULL",
     "CREATE INDEX IF NOT EXISTS idx_nodes_deleted_at ON nodes (deleted_at)",

@@ -7,6 +7,7 @@ import { refreshCompanionDailyFlowAfterSync } from '../../runtime/companionDaily
 import { companionFramedFileOwner } from '../../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 import { iosCompanionHostName } from '../../runtime/iosCompanionMutationState.js';
+import { publishCompanionReadingResumeApplied } from '../companionSyncApplied.js';
 
 import { currentCompanionFramedSyncFiles } from './companionFramedSyncFiles.js';
 
@@ -39,6 +40,7 @@ export async function currentCompanionRequestSyncDatabaseHost(
     objectApplied: async object => {
       if (session !== getCompanionReadingScope()) return;
       registerCompanionSyncAppliedRefresh(object.workspaceScope);
+      if (object.objectType === 'node_reading_resume') publishCompanionReadingResumeApplied(object.globalId);
       await objectApplied?.(object);
     },
     objectOptions: async db => ({ hostName: await iosCompanionHostName(db) }),

@@ -78,7 +78,6 @@ const FIELD_CLASSIFICATIONS = new Map([
   ['import_sources.columns.watched_binding_id', 'desktop-only-column'],
   ['import_sources.columns.watched_relative_path', 'desktop-only-column'],
   ['import_sources.createSql', 'desktop-only-column'],
-  ['node_view_state.columns.reading_offset', 'desktop-only-column'],
   ['node_view_state.createSql', 'android-missing-constraint'],
   ['pdf_page_text.createSql', 'android-missing-constraint'],
   ['setting_records.columns.host_name', 'android-missing-default'],
