@@ -1,6 +1,7 @@
 import { webDavRelayStatus } from '../../../../../lib/core/sync/webDavRelayPublication.js';
 import { webDavRelayCredentialReference } from '../../../../../lib/platform/nativeWebDavRelayHttpContract.js';
-import type { WebDavCredentialDelivery, WebDavCredentialReply } from '../../../../../lib/platform/webDavCredentialDeliveryContract.js';
+import { webDavCredentialTranscript, type WebDavCredentialDelivery, type WebDavCredentialReply }
+  from '../../../../../lib/platform/webDavCredentialDeliveryContract.js';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository.js';
 import { companionFramedFileOwner } from '../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap.js';
@@ -13,6 +14,8 @@ type Delivery = {
   id: string;
   fingerprint: string;
   phoneKey: string;
+  phoneIdentityKey: string | undefined;
+  offer: WebDavCredentialDelivery['offer'];
   peer: string;
   confirmed: boolean;
   failed?: boolean;
@@ -47,7 +50,8 @@ export async function confirmCompanionWebDavCredential(fingerprint: string) {
   const confirmed = { ...delivery, confirmed: true, failed: false };
   setDelivery(confirmed);
   try {
-    await delivery.send({ id: delivery.id, phone_key: delivery.phoneKey, confirmation });
+    await delivery.send({ id: delivery.id, phone_key: delivery.phoneKey, phone_identity_key: delivery.phoneIdentityKey,
+      confirmation });
   } catch (error) {
     if (current === confirmed) setDelivery(delivery);
     throw error;
@@ -64,16 +68,20 @@ export async function receiveCompanionWebDavCredentialDelivery(payload: WebDavCr
   const { offer } = payload;
   if (current?.id !== offer.id) {
     const owner = companionFramedFileOwner(getIosCompanionDatabaseOwner());
-    const { phone_key: phoneKey, fingerprint } = await FolioleCompanionSync.prepareWebDavCredentialDelivery({ ...owner, offer });
+    const { phone_key: phoneKey, fingerprint, phone_identity_key: phoneIdentityKey, phone_identity_proof: phoneIdentityProof } =
+      await FolioleCompanionSync.prepareWebDavCredentialDelivery({ ...owner, offer });
     signal.throwIfAborted();
-    await send({ id: offer.id, phone_key: phoneKey });
+    await send({ id: offer.id, phone_key: phoneKey, phone_identity_key: phoneIdentityKey,
+      phone_identity_proof: phoneIdentityProof });
     signal.throwIfAborted();
-    setDelivery({ id: offer.id, fingerprint, phoneKey, peer, send, confirmed: false });
+    setDelivery({ id: offer.id, fingerprint, phoneKey, phoneIdentityKey, offer, peer, send, confirmed: false });
   }
   if (payload.envelope && current?.id === offer.id && current.confirmed) {
     const delivery = current;
     try {
-      await install(payload.offer, payload.envelope, delivery, signal);
+      if (webDavCredentialTranscript(offer, delivery.phoneKey, delivery.phoneIdentityKey) !==
+        webDavCredentialTranscript(delivery.offer, delivery.phoneKey, delivery.phoneIdentityKey)) return;
+      await install(delivery.offer, payload.envelope, delivery, signal);
     } catch {
       if (current === delivery && !signal.aborted) setDelivery({ ...delivery, confirmed: false, failed: true });
     }
@@ -93,8 +101,8 @@ async function install(offer: WebDavCredentialDelivery['offer'], envelope: NonNu
   const status = await request(new URL(root), { method: 'PROPFIND', headers: { Depth: '0' } }, webDavRelayStatus);
   if (status !== 207) throw new Error('webdav_relay_credentials_unavailable');
   signal.throwIfAborted();
-  await activateCompanionWebDavCredential(offer, delivery.peer);
-  await delivery.send({ id: offer.id, phone_key: delivery.phoneKey, receipt });
+  await activateCompanionWebDavCredential(offer, delivery.peer, Boolean(delivery.phoneIdentityKey));
+  await delivery.send({ id: offer.id, phone_key: delivery.phoneKey, phone_identity_key: delivery.phoneIdentityKey, receipt });
   if (current === delivery) setDelivery(null);
 }
 

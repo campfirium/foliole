@@ -4,11 +4,13 @@ import type {
   WebDavCredentialDelivery, WebDavCredentialEnvelope, WebDavCredentialOffer, WebDavCredentialReply
 } from '../../lib/platform/webDavCredentialDeliveryContract.js';
 import { registerDatabaseConnectionCleanup, runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { loadOrCreateDesktopWebDavIdentity } from '../security/desktopWebDavIdentityStore.js';
 
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import {
-  createWebDavCredentialKey, matchesWebDavCredentialProof, sealWebDavCredentials, webDavCredentialKeys, webDavCredentialProof
+  createWebDavCredentialKey, matchesWebDavCredentialProof, sealWebDavCredentials, verifyWebDavDeviceIdentity,
+  webDavCredentialKeys, webDavCredentialProof
 } from './desktopWebDavCredentialCrypto.js';
 import { loadDesktopWebDavCredentialDraft, verifyCredentialOwner } from './desktopWebDavCredentialSettings.js';
 import { activateAuthenticatedWebDavBinding, prepareAuthenticatedWebDavBinding } from './desktopWebDavRelaySettings.js';
@@ -20,6 +22,7 @@ type Pending = {
   owner: Awaited<ReturnType<typeof loadDesktopWebDavCredentialDraft>>['owner'];
   expiresAt: number;
   phoneKey?: string;
+  phoneIdentityKey?: string | undefined;
   keys?: ReturnType<typeof webDavCredentialKeys>;
   phoneConfirmed?: boolean;
   envelope?: WebDavCredentialEnvelope;
@@ -46,11 +49,13 @@ function reset() {
 
 export async function beginDesktopWebDavCredentialDelivery(groupId: string, phoneId: string) {
   const { draft, owner } = await loadDesktopWebDavCredentialDraft(groupId);
+  const identity = await loadOrCreateDesktopWebDavIdentity(owner.scope);
   await runWithDatabaseConnectionOwner(() => {
     verifyCredentialOwner(owner, groupId);
     const { binding, epoch, version } = prepareAuthenticatedWebDavBinding(groupId, phoneId, draft.directory, true);
     const key = createWebDavCredentialKey();
-    pending = { offer: { id: randomUUID(), binding, library_epoch: epoch, version, desktop_key: key.publicKey },
+    pending = { offer: { id: randomUUID(), binding, library_epoch: epoch, version, desktop_key: key.publicKey,
+      desktop_identity: { public_key: identity.publicKey, library_epoch: owner.libraryEpoch } },
       key, owner, expiresAt: Date.now() + lifetimeMs };
     registerDatabaseConnectionCleanup(reset);
     wake();
@@ -88,11 +93,15 @@ export async function confirmDesktopWebDavCredentialFingerprint(groupId: string,
 export function handleDesktopWebDavCredentialReply(groupId: string, phoneId: string, reply: WebDavCredentialReply) {
   const value = current(groupId, phoneId);
   if (!value || value.offer.id !== reply.id || (value.phoneKey && value.phoneKey !== reply.phone_key)) throw invalid();
-  const keys = value.keys ?? webDavCredentialKeys(value.offer, reply.phone_key, value.key.privateKey);
+  if (value.keys && value.phoneIdentityKey !== reply.phone_identity_key) throw invalid();
+  const keys = value.keys ?? webDavCredentialKeys(value.offer, reply.phone_key, value.key.privateKey, reply.phone_identity_key);
+  if (!value.keys && reply.phone_identity_key && (!reply.phone_identity_proof ||
+    !verifyWebDavDeviceIdentity(reply.phone_identity_key, keys.transcript, reply.phone_identity_proof))) throw invalid();
   if (reply.receipt) {
     if (!value.phoneConfirmed || !value.envelope ||
       !matchesWebDavCredentialProof(webDavCredentialProof(keys.receipt, 'installed'), reply.receipt)) throw invalid();
-    activateAuthenticatedWebDavBinding(value.offer.binding, value.offer.version, value.owner, value.offer.library_epoch);
+    activateAuthenticatedWebDavBinding(value.offer.binding, value.offer.version, value.owner, value.offer.library_epoch,
+      value.phoneIdentityKey);
     reset();
     wake();
     return;
@@ -103,6 +112,7 @@ export function handleDesktopWebDavCredentialReply(groupId: string, phoneId: str
   const changed = !value.keys || (reply.confirmation && !value.phoneConfirmed);
   value.keys = keys;
   value.phoneKey = reply.phone_key;
+  value.phoneIdentityKey = reply.phone_identity_key;
   if (reply.confirmation) value.phoneConfirmed = true;
   if (changed) wake();
 }

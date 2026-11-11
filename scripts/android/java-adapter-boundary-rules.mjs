@@ -113,6 +113,7 @@ export const CLASSIFICATIONS = {
       'FolioleFolderBackupProfile.java',
       'FolioleWebDavCredentialDelivery.java',
       'FolioleWebDavCredentialStore.java',
+      'FolioleWebDavDeviceIdentity.java',
       'FolioleWebDavRequestAuthorization.java',
       'MainActivity.java'
     ]

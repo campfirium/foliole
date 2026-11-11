@@ -92,16 +92,28 @@ it.skipIf(process.platform !== 'darwin')('keeps the installed credential version
   }
 });
 
-it.skipIf(process.platform !== 'darwin').each([false, true])(
-  'activates a credential only after the phone verifies DAV access (existing binding: %s)',
-  async hasExisting => {
+function mockPhoneCredentialDelivery(enroll: boolean) {
+  const phoneIdentity = enroll ? { phone_identity_key: 'phone-identity' } : {};
+  native.webDavPrepare.mockResolvedValue({ phone_key: 'phone-key', fingerprint: 'compared-fingerprint', ...phoneIdentity });
+  native.webDavConfirm.mockResolvedValue({ confirmation: 'confirmed' });
+  native.webDavInstall.mockResolvedValue({ receipt: 'installed' });
+  const response = { chunks: 0, uploaded_bytes: 0, downloaded_bytes: 0, failed: false };
+  native.webDavRequest.mockResolvedValueOnce({ ...response, status: 401 }).mockResolvedValueOnce({ ...response, status: 207 });
+  return phoneIdentity;
+}
+
+it.skipIf(process.platform !== 'darwin').each(['legacy', 'before LAN baseline', 'replacement'] as const)(
+  'activates a credential only after the phone verifies DAV access during %s',
+  async mode => {
     const mobile = await createCompanionRequestFixture();
     const { fixture } = mobile;
     const phone = fixture.leftSnapshot.deviceId;
     const peer = fixture.rightSnapshot.deviceId;
+    const enroll = mode !== 'legacy';
     const offer: WebDavCredentialOffer = {
       id: '94235b46-54e9-43a3-a03d-d291004bdf89', desktop_key: 'desktop-key',
       version: 3, library_epoch: `${phone}-epoch`,
+      ...(enroll ? { desktop_identity: { library_epoch: `${peer}-epoch`, public_key: 'mac-identity' } } : {}),
       binding: { id: 'b79b3dbc-f46b-490c-8aab-ab5e09c0562b', group_id: 't326-group',
         desktop_device_id: peer, phone_device_id: phone, directory_url: 'https://dav.example.test/relay/' }
     };
@@ -110,26 +122,41 @@ it.skipIf(process.platform !== 'darwin').each([false, true])(
     const send = vi.fn(async (reply: WebDavCredentialReply) => {
       if (reply.receipt) expect(await loadCompanionWebDavRelay()).toMatchObject({ credential_version: 3 });
     });
-    native.webDavPrepare.mockResolvedValue({ phone_key: 'phone-key', fingerprint: 'compared-fingerprint' });
-    native.webDavConfirm.mockResolvedValue({ confirmation: 'confirmed' });
-    native.webDavInstall.mockResolvedValue({ receipt: 'installed' });
-    const response = { chunks: 0, uploaded_bytes: 0, downloaded_bytes: 0, failed: false };
-    native.webDavRequest.mockResolvedValueOnce({ ...response, status: 401 }).mockResolvedValueOnce({ ...response, status: 207 });
+    const phoneIdentity = mockPhoneCredentialDelivery(enroll);
     try {
-      const previous = hasExisting ? { ...offer.binding, credential_version: 2 } : null;
+      const previous = mode === 'replacement' ? { ...offer.binding, credential_version: 2 } : null;
       if (previous) await mobile.db.run('INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
         ['webdav_relay_binding', JSON.stringify(previous), new Date().toISOString()]);
+      if (offer.desktop_identity) {
+        await receiveCompanionWebDavCredentialDelivery({ offer: { ...offer,
+          desktop_identity: { ...offer.desktop_identity, library_epoch: 'old-epoch' } }, envelope }, peer, send, signal);
+        expect(native.webDavPrepare).not.toHaveBeenCalled();
+        if (mode === 'before LAN baseline') await mobile.db.run(
+          'DELETE FROM node_version_device_revisions WHERE group_id = ? AND device_identity_key = ?',
+          [offer.binding.group_id, peer]);
+      }
       await receiveCompanionWebDavCredentialDelivery({ offer, envelope }, peer, send, signal);
       expect(native.webDavInstall).not.toHaveBeenCalled();
       await confirmCompanionWebDavCredential('compared-fingerprint');
+      if (offer.desktop_identity) {
+        await receiveCompanionWebDavCredentialDelivery({ offer: { ...offer,
+          desktop_identity: { ...offer.desktop_identity, public_key: 'replaced-identity' } }, envelope }, peer, send, signal);
+        expect(native.webDavInstall).not.toHaveBeenCalled();
+      }
       await receiveCompanionWebDavCredentialDelivery({ offer, envelope }, peer, send, signal);
       expect(await loadCompanionWebDavRelay()).toEqual(previous);
+      const readPin = () => mobile.db.query<{ value: string }>(
+        "SELECT value FROM sync_group_metadata WHERE key = 'webdav_relay_credential_peer_identity'");
+      expect(await readPin()).toEqual([]);
       expect(send.mock.calls.some(([reply]) => reply.receipt)).toBe(false);
       await confirmCompanionWebDavCredential('compared-fingerprint');
       await receiveCompanionWebDavCredentialDelivery({ offer, envelope }, peer, send, signal);
-      expect(send).toHaveBeenLastCalledWith({ id: offer.id, phone_key: 'phone-key', receipt: 'installed' });
+      expect(send).toHaveBeenLastCalledWith({ id: offer.id, phone_key: 'phone-key', receipt: 'installed', ...phoneIdentity });
       await mobile.restart();
       expect(await loadCompanionWebDavRelay()).toMatchObject({ ...offer.binding, credential_version: 3 });
+      const pins = (await readPin()).map(row => JSON.parse(row.value));
+      expect(pins).toEqual(offer.desktop_identity ? [{ binding_id: offer.binding.id, library_epoch: offer.library_epoch,
+        peer_library_epoch: offer.desktop_identity.library_epoch, public_key: offer.desktop_identity.public_key }] : []);
     } finally {
       clearCompanionWebDavCredentialDelivery();
       await mobile.close();

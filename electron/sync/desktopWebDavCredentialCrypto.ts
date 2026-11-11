@@ -1,6 +1,6 @@
 import {
   createCipheriv, createHash, createHmac, createPublicKey, diffieHellman, generateKeyPairSync, hkdfSync, randomBytes,
-  timingSafeEqual, type KeyObject
+  timingSafeEqual, verify, type KeyObject
 } from 'node:crypto';
 
 import {
@@ -12,10 +12,21 @@ export function createWebDavCredentialKey() {
   return { privateKey, publicKey: publicKey.export({ type: 'spki', format: 'der' }).toString('base64url') };
 }
 
-export function webDavCredentialKeys(offer: WebDavCredentialOffer, phoneKey: string, privateKey: KeyObject) {
-  const transcript = Buffer.from(webDavCredentialTranscript(offer, phoneKey));
-  const peer = createPublicKey({ key: Buffer.from(phoneKey, 'base64url'), format: 'der', type: 'spki' });
-  if (peer.asymmetricKeyDetails?.namedCurve !== 'prime256v1') throw new Error('webdav_credential_offer_invalid');
+function readWebDavPublicKey(encoded: string) {
+  const key = createPublicKey({ key: Buffer.from(encoded, 'base64url'), format: 'der', type: 'spki' });
+  if (key.asymmetricKeyDetails?.namedCurve !== 'prime256v1') throw new Error('webdav_credential_offer_invalid');
+  return key;
+}
+
+export function verifyWebDavDeviceIdentity(publicKey: string, transcript: Buffer, proof: string) {
+  return verify('sha256', transcript, readWebDavPublicKey(publicKey), Buffer.from(proof, 'base64url'));
+}
+
+export function webDavCredentialKeys(offer: WebDavCredentialOffer, phoneKey: string, privateKey: KeyObject,
+  phoneIdentityKey?: string) {
+  const transcript = Buffer.from(webDavCredentialTranscript(offer, phoneKey, phoneIdentityKey));
+  const peer = readWebDavPublicKey(phoneKey);
+  if (phoneIdentityKey) readWebDavPublicKey(phoneIdentityKey);
   const digest = createHash('sha256').update(transcript).digest();
   const secret = diffieHellman({ privateKey, publicKey: peer });
   try {

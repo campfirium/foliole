@@ -112,16 +112,33 @@ async function confirmTestPhone(app: ElectronApplication, groupId: string, phone
     return runWithDatabaseConnectionOwner(() => {
       const { offer } = desktopWebDavCredentialDeliveryForPeer(groupId, phoneId);
       const phone = createWebDavCredentialKey();
-      const transcript = crypto.createHash('sha256').update(webDavCredentialTranscript(offer, phone.publicKey)).digest();
+      const identity = createWebDavCredentialKey();
+      const transcriptBytes = Buffer.from(webDavCredentialTranscript(offer, phone.publicKey, identity.publicKey));
+      const transcript = crypto.createHash('sha256').update(transcriptBytes).digest();
       const publicKey = crypto.createPublicKey({ key: Buffer.from(offer.desktop_key, 'base64url'), format: 'der', type: 'spki' });
       const secret = crypto.diffieHellman({ privateKey: phone.privateKey, publicKey });
       const key = (purpose: string) => Buffer.from(crypto.hkdfSync('sha256', secret, transcript, purpose, 32));
       const confirmation = webDavCredentialProof(key('WebDAV credential confirmation'), 'confirmed');
-      const reply = { id: offer.id, phone_key: phone.publicKey };
-      handleDesktopWebDavCredentialReply(groupId, phoneId, { ...reply, confirmation });
+      const reply = { id: offer.id, phone_key: phone.publicKey, phone_identity_key: identity.publicKey };
+      const phoneIdentityProof = crypto.sign('sha256', transcriptBytes, identity.privateKey).toString('base64url');
+      handleDesktopWebDavCredentialReply(groupId, phoneId, { ...reply, phone_identity_proof: phoneIdentityProof, confirmation });
       return { offer, reply: { ...reply, receipt: webDavCredentialProof(key('WebDAV credential receipt'), 'installed') } };
     });
   }, { groupId, phoneId });
+}
+
+async function expectRestoredDeviceIdentity(stateRoot: string, groupId: string, publicKey: string) {
+  const reopened = await createT178ApiAcceptanceSession(stateRoot);
+  try {
+    const restored = await reopened.electronApp.evaluate(async (_electron, group) => {
+      const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
+      const { loadDesktopWebDavCredentialDraft } = require('./dist/electron/sync/desktopWebDavCredentialSettings.js');
+      const { loadOrCreateDesktopWebDavIdentity } = require('./dist/electron/security/desktopWebDavIdentityStore.js');
+      const { owner } = await loadDesktopWebDavCredentialDraft(group);
+      return (await loadOrCreateDesktopWebDavIdentity(owner.scope)).publicKey;
+    }, groupId);
+    expect(restored).toBe(publicKey);
+  } finally { await reopened.close(); }
 }
 
 test('keeps encrypted WebDAV credentials across relaunch and a failed replacement', async ({ browserName }, testInfo) => {
@@ -158,6 +175,7 @@ test('replaces phone credentials for the same authenticated relay from Mac setti
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-webdav-replace-phone-'));
   try {
     const session = await createT178ApiAcceptanceSession(stateRoot);
+    let identity: { groupId: string; publicKey: string };
     try {
       const { electronApp, firstWindow } = session;
       await saveAndRejectReplacement(firstWindow, url, password, () => readSavedCiphertext(electronApp, stateRoot));
@@ -169,6 +187,7 @@ test('replaces phone credentials for the same authenticated relay from Mac setti
       await replace.click();
       const { offer, reply } = await confirmTestPhone(electronApp, original.group_id, original.phone_device_id);
       expect(offer.binding.id).toBe(original.id);
+      identity = { groupId: original.group_id, publicKey: offer.desktop_identity.public_key };
       expect(offer.version).toBeGreaterThan(original.credential_version);
       await settings.getByRole('textbox', { name: /^(Phone WebDAV username|手机 WebDAV 用户名)$/ }).fill('foliole-test-phone');
       const secret = settings.getByLabel(/^(Phone app password|手机应用密码)$/);
@@ -189,5 +208,6 @@ test('replaces phone credentials for the same authenticated relay from Mac setti
       expect(current).toMatchObject({ id: original.id, credential_version: offer.version });
       await expect(replace).toBeVisible();
     } finally { await session.close(); }
+    await expectRestoredDeviceIdentity(stateRoot, identity.groupId, identity.publicKey);
   } finally { await rm(stateRoot, { force: true, recursive: true }); }
 });

@@ -67,7 +67,7 @@ export function prepareAuthenticatedWebDavBinding(groupId: string, phoneId: stri
 }
 
 export function activateAuthenticatedWebDavBinding(binding: WebDavRelayBinding, version: number,
-  owner: ReturnType<typeof readCredentialOwner>, expectedEpoch: string) {
+  owner: ReturnType<typeof readCredentialOwner>, expectedEpoch: string, phoneIdentityKey?: string) {
   verifyCredentialOwner(owner, binding.group_id);
   const { epoch, binding: current, version: reservedVersion } = prepareAuthenticatedWebDavBinding(
     binding.group_id, binding.phone_device_id, binding.directory_url
@@ -80,6 +80,9 @@ export function activateAuthenticatedWebDavBinding(binding: WebDavRelayBinding, 
   openDatabaseConnection().driver.transaction(driver => {
     writeJsonSetting(driver, key, binding.directory_url);
     writeJsonSetting(driver, `${key}:binding`, { ...current, delivered: true, credential_version: version });
+    writeJsonSetting(driver, `${key}:credential-peer-identity`, phoneIdentityKey ? {
+      binding_id: binding.id, library_epoch: owner.libraryEpoch, peer_library_epoch: epoch, public_key: phoneIdentityKey
+    } : null);
     writeJsonSetting(driver, `${key}:credential-candidate`, null);
   });
 }

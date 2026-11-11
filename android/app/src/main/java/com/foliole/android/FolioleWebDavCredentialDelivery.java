@@ -34,15 +34,15 @@ final class FolioleWebDavCredentialDelivery {
 
     private FolioleWebDavCredentialDelivery() {}
 
-    static synchronized JSObject prepare(PluginCall call) throws Exception {
+    static synchronized JSObject prepare(Context context, PluginCall call) throws Exception {
         var owner = owner(call);
         JSONObject offer = call.getObject("offer");
         String id = offer.getString("id");
         if (pending != null && pending.live(owner) && pending.id.equals(id)) {
-            if (!Arrays.equals(pending.transcript, transcript(offer, pending.phoneKey))) throw invalid();
+            if (!Arrays.equals(pending.transcript, transcript(offer, pending.phoneKey, pending.identityKey))) throw invalid();
             return pending.view();
         }
-        var generated = create(offer, owner);
+        var generated = create(context, offer, owner);
         pending = generated;
         return generated.view();
     }
@@ -62,7 +62,7 @@ final class FolioleWebDavCredentialDelivery {
         return new JSObject().put("receipt", proof(current.receipt, "installed"));
     }
 
-    private static Pending create(JSONObject offer, FramedSyncPayloadBudget owner) throws Exception {
+    private static Pending create(Context context, JSONObject offer, FramedSyncPayloadBudget owner) throws Exception {
         var generator = KeyPairGenerator.getInstance("EC");
         generator.initialize(new ECGenParameterSpec("secp256r1"));
         var pair = generator.generateKeyPair();
@@ -73,11 +73,14 @@ final class FolioleWebDavCredentialDelivery {
         var agreement = KeyAgreement.getInstance("ECDH");
         agreement.init(pair.getPrivate());
         agreement.doPhase(desktopKey, true);
-        byte[] transcript = transcript(offer, phoneKey);
+        var identity = offer.has("desktop_identity") ? FolioleWebDavDeviceIdentity.loadOrCreate(context) : null;
+        String identityKey = identity == null ? null : identity.publicKey();
+        byte[] transcript = transcript(offer, phoneKey, identityKey);
         byte[] digest = MessageDigest.getInstance("SHA-256").digest(transcript);
         byte[] shared = agreement.generateSecret();
         try {
-            return new Pending(offer.getString("id"), owner, scope(offer, owner), phoneKey, transcript, digest, shared);
+            return new Pending(offer.getString("id"), owner, scope(offer, owner), phoneKey, transcript, digest, shared,
+                identityKey, identity == null ? null : identity.sign(transcript));
         } finally {
             Arrays.fill(shared, (byte) 0);
         }
@@ -99,14 +102,29 @@ final class FolioleWebDavCredentialDelivery {
         }
     }
 
-    private static byte[] transcript(JSONObject offer, String phoneKey) throws Exception {
+    private static byte[] transcript(JSONObject offer, String phoneKey, String identityKey) throws Exception {
         JSONObject binding = offer.getJSONObject("binding");
-        String[] fields = { "Foliole WebDAV credential delivery v1", offer.getString("id"), binding.getString("id"),
+        var identity = offer.optJSONObject("desktop_identity");
+        boolean paired = identity != null && identityKey != null;
+        if ((identity != null) != (identityKey != null)) throw invalid();
+        String protocol = paired ? "Foliole WebDAV credential delivery v2" : "Foliole WebDAV credential delivery v1";
+        String[] fields = { protocol, offer.getString("id"), binding.getString("id"),
             binding.getString("group_id"), binding.getString("desktop_device_id"), binding.getString("phone_device_id"),
             binding.getString("directory_url"), offer.getString("library_epoch"), Long.toString(offer.getLong("version")),
             offer.getString("desktop_key"), phoneKey };
-        for (String field : fields) if (field.contains("\n") || field.contains("\r")) throw invalid();
-        return String.join("\n", fields).getBytes(StandardCharsets.UTF_8);
+        var transcript = new java.util.StringJoiner("\n");
+        for (String field : fields) appendField(transcript, field);
+        if (paired) {
+            appendField(transcript, identity.getString("library_epoch"));
+            appendField(transcript, identity.getString("public_key"));
+            appendField(transcript, identityKey);
+        }
+        return transcript.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static void appendField(java.util.StringJoiner transcript, String field) {
+        if (field.contains("\n") || field.contains("\r")) throw invalid();
+        transcript.add(field);
     }
 
     private static FolioleWebDavCredentialStore.Scope scope(JSONObject offer, FramedSyncPayloadBudget owner) throws Exception {
@@ -139,7 +157,7 @@ final class FolioleWebDavCredentialDelivery {
     }
 
     private static final class Pending {
-        final String id, phoneKey, fingerprint;
+        final String id, phoneKey, fingerprint, identityKey, identityProof;
         final FramedSyncPayloadBudget owner;
         final FolioleWebDavCredentialStore.Scope scope;
         final byte[] transcript, encryption, confirmation, receipt;
@@ -147,11 +165,13 @@ final class FolioleWebDavCredentialDelivery {
         boolean approved;
 
         Pending(String id, FramedSyncPayloadBudget owner, FolioleWebDavCredentialStore.Scope scope, String phoneKey,
-                byte[] transcript, byte[] digest, byte[] shared) throws Exception {
+                byte[] transcript, byte[] digest, byte[] shared, String identityKey, String identityProof) throws Exception {
             this.id = id;
             this.owner = owner;
             this.scope = scope;
             this.phoneKey = phoneKey;
+            this.identityKey = identityKey;
+            this.identityProof = identityProof;
             this.transcript = transcript;
             StringBuilder value = new StringBuilder();
             for (int i = 0; i < 16; i++) value.append(String.format(Locale.ROOT, "%02x", digest[i] & 255));
@@ -166,7 +186,9 @@ final class FolioleWebDavCredentialDelivery {
         }
 
         JSObject view() {
-            return new JSObject().put("phone_key", phoneKey).put("fingerprint", fingerprint);
+            var view = new JSObject().put("phone_key", phoneKey).put("fingerprint", fingerprint);
+            if (identityKey != null) view.put("phone_identity_key", identityKey).put("phone_identity_proof", identityProof);
+            return view;
         }
 
         private static byte[] derive(byte[] shared, byte[] digest, String purpose) throws Exception {

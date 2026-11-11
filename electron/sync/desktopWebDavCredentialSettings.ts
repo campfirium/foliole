@@ -15,7 +15,7 @@ export function readCredentialOwner(key: string) {
   );
   if (!row?.library_epoch) throw new Error('request_sync_local_epoch_missing');
   const scope = JSON.stringify([connection.dbPath, row.library_epoch, key]);
-  return { connection, scope, ciphertext: readDesktopWebDavCredentialCiphertext(scope) };
+  return { connection, scope, libraryEpoch: row.library_epoch, ciphertext: readDesktopWebDavCredentialCiphertext(scope) };
 }
 
 export function verifyCredentialOwner(previous: ReturnType<typeof readCredentialOwner>, groupId: unknown) {

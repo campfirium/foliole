@@ -10,6 +10,7 @@ import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.util.Base64;
 
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -25,6 +26,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.KeyStore;
+import java.security.Signature;
 import java.util.UUID;
 
 import okhttp3.Credentials;
@@ -51,6 +53,7 @@ public final class FolioleWebDavCredentialStoreTest {
     @After
     public void removeTestRecordsAndKey() throws Exception {
         deleteTestKey();
+        testKeyStore().deleteEntry(testIdentity + ".webdav-device-identity.v1");
         File[] children = directory.listFiles();
         if (children != null) {
             for (File child : children) Files.delete(child.toPath());
@@ -124,6 +127,25 @@ public final class FolioleWebDavCredentialStoreTest {
         reference.put("version", "2");
         assertThrows(IOException.class, () -> FolioleWebDavRequestAuthorization.authorize(
             context, request, HttpUrl.get(ROOT), "library-a", reference));
+    }
+
+    @Test
+    public void reopensTheNonExportableDeviceIdentityAndSignsOnlyTheComparedTranscript() throws Exception {
+        var first = FolioleWebDavDeviceIdentity.loadOrCreate(context);
+        var reopened = FolioleWebDavDeviceIdentity.loadOrCreate(context);
+        assertEquals(first.publicKey(), reopened.publicKey());
+
+        String alias = testIdentity + ".webdav-device-identity.v1";
+        var store = testKeyStore();
+        assertNull(store.getKey(alias, null).getEncoded());
+        byte[] transcript = "compared credential session".getBytes(StandardCharsets.UTF_8);
+        byte[] signed = Base64.decode(reopened.sign(transcript), Base64.URL_SAFE);
+        Signature verifier = Signature.getInstance("SHA256withECDSA");
+        verifier.initVerify(store.getCertificate(alias));
+        verifier.update(transcript);
+        assertTrue(verifier.verify(signed));
+        verifier.update("another session".getBytes(StandardCharsets.UTF_8));
+        assertFalse(verifier.verify(signed));
     }
 
     private File singleRecord() {

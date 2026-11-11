@@ -11,6 +11,7 @@ import { getCompanionRuntimeCapability } from '../../companionRuntimeCapabilitie
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 const KEY = 'webdav_relay_binding';
+const PEER_IDENTITY_KEY = 'webdav_relay_credential_peer_identity';
 const listeners = new Set<() => void>();
 
 async function identity(db: DbPort) {
@@ -42,6 +43,13 @@ async function matchesCredentialOffer(db: DbPort, offer: WebDavCredentialOffer, 
   if (offer.binding.desktop_device_id !== peer || !matches(offer.binding, local)) return false;
   const [proof] = await db.query<DbRow & { library_epoch: string }>(
     'SELECT library_epoch FROM node_version_local_proof_state WHERE singleton_id = 1');
+  if (offer.desktop_identity) {
+    const [desktop] = await db.query<DbRow & { library_epoch: string; blocked_reason: string | null }>(
+      'SELECT library_epoch, blocked_reason FROM node_version_device_revisions WHERE group_id = ? AND device_identity_key = ?',
+      [offer.binding.group_id, peer]);
+    // A manually compared offer can arrive before the first LAN baseline.
+    if (desktop && (desktop.blocked_reason || desktop.library_epoch !== offer.desktop_identity.library_epoch)) return false;
+  }
   const previous = await readBinding(db);
   return proof?.library_epoch === offer.library_epoch && (!previous || !matches(previous, local) ||
     (previous.id === offer.binding.id && previous.desktop_device_id === peer &&
@@ -53,18 +61,31 @@ export function canInstallCompanionWebDavCredential(offer: WebDavCredentialOffer
   return getIosCompanionDatabaseOwner().read(db => matchesCredentialOffer(db, offer, peer));
 }
 
-export async function activateCompanionWebDavCredential(offer: WebDavCredentialOffer, peer: string) {
+export async function activateCompanionWebDavCredential(offer: WebDavCredentialOffer, peer: string, enrolledIdentity: boolean) {
   await getIosCompanionDatabaseOwner().runWriter(db => db.transaction(async tx => {
     if (!await matchesCredentialOffer(tx, offer, peer)) throw new Error('webdav_relay_scope_changed');
     await saveBinding(tx, { ...offer.binding, credential_version: offer.version });
+    const identity = enrolledIdentity && offer.desktop_identity;
+    if (identity) {
+      await writeRelayMetadata(tx, PEER_IDENTITY_KEY, {
+        binding_id: offer.binding.id, library_epoch: offer.library_epoch, peer_library_epoch: identity.library_epoch,
+        public_key: identity.public_key
+      });
+    } else {
+      await tx.run('DELETE FROM sync_group_metadata WHERE key = ?', [PEER_IDENTITY_KEY]);
+    }
   }));
   for (const listener of listeners) listener();
 }
 
 function saveBinding(db: DbPort, binding: WebDavRelayBinding) {
+  return writeRelayMetadata(db, KEY, binding);
+}
+
+function writeRelayMetadata(db: DbPort, key: string, value: unknown) {
   return db.run(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)
     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-  [KEY, JSON.stringify(binding), new Date().toISOString()]);
+  [key, JSON.stringify(value), new Date().toISOString()]);
 }
 
 export async function receiveCompanionWebDavAuthenticatedPolicy(update: SyncSessionReply['webdav_authenticated_policy'],

@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { createHash, createPublicKey, diffieHellman, hkdfSync, randomUUID } from 'node:crypto';
+import { createHash, createPublicKey, diffieHellman, hkdfSync, randomUUID, sign } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -16,18 +16,17 @@ import { webDavCredentialTranscript } from '../../lib/platform/webDavCredentialD
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
-import { saveJsonSetting } from '../database/settingsStore.js';
+import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { createDesktopSyncGroup, registerSyncGroupDevice } from '../database/syncGroupStore.js';
-import * as credentialStore from '../security/desktopWebDavCredentialStore.js';
 import { createDesktopRequestSyncDatabaseHost } from '../sync/desktopRequestSyncDatabaseHost.js';
 import { desktopSyncChangeSessions } from '../sync/desktopSyncChangeSessions.js';
 import { createWebDavCredentialKey, webDavCredentialProof } from '../sync/desktopWebDavCredentialCrypto.js';
 import { desktopWebDavCredentialDeliveryForPeer, handleDesktopWebDavCredentialReply } from '../sync/desktopWebDavCredentialDelivery.js';
 import { confirmDesktopWebDavRelayDelivery, desktopWebDavRelayForPeer, loadDesktopBoundWebDavRelay } from '../sync/desktopWebDavRelaySettings.js';
-import * as webDavProbe from '../sync/testWebDavRelayConnection.js';
 import { withWebDavFixture } from '../sync/webDavRelay.testSupport.js';
 
 import { handleInvokeRequest } from './commands.js';
+import { prepareCredentialCommandFixture } from './webDavRelayCredentialCommand.testSupport.js';
 
 let root = '';
 const openPath = vi.hoisted(() => vi.fn());
@@ -40,6 +39,9 @@ vi.mock('./paths.js', () => ({
 vi.mock('electron', () => ({
   BrowserWindow: { getFocusedWindow: () => null, getAllWindows: () => [] },
   app: { getName: () => 'Foliole', getVersion: () => 'test', getPath: () => root },
+  safeStorage: { isAsyncEncryptionAvailable: async () => true,
+    encryptStringAsync: async (plain: string) => Buffer.from(plain),
+    decryptStringAsync: async (cipher: Buffer) => ({ result: cipher.toString() }) },
   shell: { openPath }, dialog: {}, ipcMain: {}, nativeImage: {}, clipboard: {}, Menu: {},
   systemPreferences: {}, screen: {}
 }));
@@ -86,22 +88,9 @@ it.each(['initial setup', 'replacement'] as const)(
   async mode => {
     const phone = registerPhone('Android phone');
     const other = registerPhone('Other phone');
-    openDatabaseConnection().sqlite.prepare(`INSERT INTO node_version_device_revisions
-      (group_id, device_identity_key, library_epoch, proof_revision, pack_id, updated_at)
-      VALUES (?, ?, 'phone-epoch', 1, 'pack', 'now')`).run(groupId, phone);
-    desktopSyncChangeSessions().open(phone);
-    desktopSyncChangeSessions().open(other);
-    vi.spyOn(webDavProbe, 'testWebDavRelayConnection').mockResolvedValue(directory);
-    vi.spyOn(credentialStore, 'encryptDesktopWebDavCredentialDraft').mockResolvedValue(Buffer.from('protected fixture'));
-    vi.spyOn(credentialStore, 'decryptDesktopWebDavCredentialDraft').mockImplementation(async scope =>
-      ({ scope, directory, username: 'mac-user', password: 'mac-password' }));
-    await handleInvokeRequest({ command: NATIVE_COMMANDS.saveWebDavRelayDirectory,
-      args: { group_id: groupId, directory_url: directory, credentials: { username: 'mac-user', password: 'mac-password' } } });
-    const group = await handleInvokeRequest({ command: NATIVE_COMMANDS.loadSyncGroupOverview, args: {} }) as {
-      sync_group: { local_device_identity_key: string }
-    };
-    const mac = group.sync_group.local_device_identity_key;
-    const bindingKey = `webdav_relay_directory:${groupId}:${mac}:binding`;
+    const mac = await prepareCredentialCommandFixture(groupId, directory, phone, other);
+    const scopeKey = `webdav_relay_directory:${groupId}:${mac}`;
+    const bindingKey = `${scopeKey}:binding`;
     const existing = mode === 'replacement' ? { id: randomUUID(), group_id: groupId, desktop_device_id: mac,
       phone_device_id: phone, directory_url: directory, credential_version: Date.now() + 60_000, delivered: true } : null;
     if (existing) saveJsonSetting(bindingKey, existing);
@@ -115,9 +104,15 @@ it.each(['initial setup', 'replacement'] as const)(
       expect(offer.version).toBeGreaterThan(existing.credential_version);
     }
     const receiver = createWebDavCredentialKey();
-    const send = (proof: { confirmation?: string; receipt?: string } = {}) => runWithDatabaseConnectionOwner(() =>
-      handleDesktopWebDavCredentialReply(groupId, phone, { id: offer.id, phone_key: receiver.publicKey, ...proof }));
-    await send();
+    const identity = existing ? createWebDavCredentialKey() : undefined;
+    const transcriptBytes = Buffer.from(webDavCredentialTranscript(offer, receiver.publicKey, identity?.publicKey));
+    const signature = identity && sign('sha256', transcriptBytes, identity.privateKey).toString('base64url');
+    const send = (proof: { confirmation?: string; receipt?: string; phone_identity_proof?: string } = {}) =>
+      runWithDatabaseConnectionOwner(() => handleDesktopWebDavCredentialReply(groupId, phone, {
+        id: offer.id, phone_key: receiver.publicKey, phone_identity_key: identity?.publicKey, ...proof
+      }));
+    if (identity) await expect(send({ phone_identity_proof: 'invalid' })).rejects.toThrow('webdav_credential_delivery_invalid');
+    await send(signature ? { phone_identity_proof: signature } : {});
     const overview = await handleInvokeRequest({ command: NATIVE_COMMANDS.loadSyncGroupOverview, args: {} }) as {
       webdav_relay: { credential_delivery: { fingerprint: string } }
     };
@@ -127,7 +122,7 @@ it.each(['initial setup', 'replacement'] as const)(
     await expect(confirm('wrong')).rejects.toThrow('webdav_credential_delivery_invalid');
     await confirm(fingerprint);
     expect(desktopWebDavCredentialDeliveryForPeer(groupId, phone)?.envelope).toBeUndefined();
-    const transcript = createHash('sha256').update(webDavCredentialTranscript(offer, receiver.publicKey)).digest();
+    const transcript = createHash('sha256').update(transcriptBytes).digest();
     const desktop = createPublicKey({ key: Buffer.from(offer.desktop_key, 'base64url'), format: 'der', type: 'spki' });
     const secret = diffieHellman({ privateKey: receiver.privateKey, publicKey: desktop });
     const proofKey = (label: string) => Buffer.from(hkdfSync('sha256', secret, transcript, `WebDAV credential ${label}`, 32));
@@ -142,6 +137,10 @@ it.each(['initial setup', 'replacement'] as const)(
     expect(loadDesktopBoundWebDavRelay()).toMatchObject({ id: offer.binding.id,
       phone_device_id: phone, credential_version: offer.version });
     expect(desktopWebDavRelayForPeer(groupId, phone)).toBeUndefined();
+    expect(loadJsonSetting(`${scopeKey}:credential-peer-identity`)).toEqual(identity ? {
+      binding_id: offer.binding.id, library_epoch: offer.desktop_identity!.library_epoch,
+      peer_library_epoch: offer.library_epoch, public_key: identity.publicKey
+    } : null);
   }
 );
 
