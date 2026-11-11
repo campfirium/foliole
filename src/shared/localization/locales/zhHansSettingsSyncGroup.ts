@@ -14,6 +14,7 @@ export const ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS: Partial<Record<Translatio
   'settings.companionSync.webdav.halfHour': "30 分钟",
   'settings.companionSync.webdav.tenMinutes': "10 分钟",
   'settings.companionSync.webdav.openLog': "打开日志文件",
+  'settings.companionSync.webdav.openLogFailed': "无法打开 WebDAV 日志文件。",
   'settings.companionSync.webdav.configuration': "配置",
   'settings.companionSync.webdav.attachments': "附件同步",
   'settings.companionSync.webdav.attachmentsHint': "跳过的附件仍可通过局域网同步。手机连回局域网后应用此设置。",

@@ -8,6 +8,7 @@ import { NATIVE_BACKUP_COMMAND_REGISTRY } from './nativeBackupCommandRegistry.js
 import { NATIVE_DIVE_COMMAND_REGISTRY } from './nativeDiveCommandRegistry.js';
 import { NATIVE_SCHEDULED_COMMAND_REGISTRY } from './nativeScheduledCommandRegistry.js';
 import { NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY } from './nativeSourceConnectionCommandRegistry.js';
+import { NATIVE_WEBDAV_COMMAND_REGISTRY } from './nativeWebDavCommandRegistry.js';
 
 export interface NativeCommandRegistryEntry {
   command: NativeCommandName;
@@ -182,9 +183,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.consumeGuidedSampleStartup, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.loadEditorOperationHistory, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadDesktopSyncDiagnostics, route: 'storage', capability: 'read' },
-  { command: NATIVE_COMMANDS.enableWebDavRelay, route: 'storage', capability: 'settingsMutation' },
-  { command: NATIVE_COMMANDS.loadWebDavRelayDirectory, route: 'storage', capability: 'read' },
-  { command: NATIVE_COMMANDS.saveWebDavRelayDirectory, route: 'storage', capability: 'settingsMutation' },
+  ...NATIVE_WEBDAV_COMMAND_REGISTRY,
   { command: NATIVE_COMMANDS.saveWebDavAttachmentPolicy, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.loadSyncGroupOverview, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.saveWatchedFolderConflict, route: 'storage', capability: 'dataMutation' },

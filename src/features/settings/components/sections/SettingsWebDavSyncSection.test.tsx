@@ -35,10 +35,25 @@ it('shows only available actions until a server has been configured', async () =
   renderWithLocalization(<SettingsWebDavSyncSection />);
 
   expect(screen.getByText('Service not configured')).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Open log file' })).toBeDisabled();
-  expect(screen.getByRole('radio', { name: 'Limit size' })).toBeDisabled();
+  expect(screen.getByRole('radio', { name: 'Limit size' })).toBeEnabled();
   expect(screen.queryByRole('button', { name: 'Choose device' })).not.toBeInTheDocument();
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'WebDAV folder URL' })).toBeEnabled());
+});
+
+it('opens the host log even before configuration and lets the user retry an open failure', async () => {
+  setRelay(false);
+  invoke.mockImplementation((command: string) => command === 'open_webdav_relay_log'
+    ? Promise.reject(new Error('system open failed')) : Promise.resolve(null));
+  renderWithLocalization(<SettingsWebDavSyncSection />);
+  const button = screen.getByRole('button', { name: 'Open log file' });
+  fireEvent.click(button);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not open the WebDAV log file.');
+  expect(invoke).toHaveBeenCalledWith('open_webdav_relay_log');
+
+  invoke.mockResolvedValue(null);
+  fireEvent.click(button);
+  await waitFor(() => expect(button).toBeEnabled());
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
 
 it('requires confirmation and reports host rejection before rendering a delivered binding', async () => {

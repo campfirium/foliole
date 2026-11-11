@@ -1,4 +1,5 @@
 export const NATIVE_WEBDAV_RELAY_COMMANDS = {
+  openWebDavRelayLog: 'open_webdav_relay_log',
   enableWebDavRelay: 'enable_webdav_relay',
   loadWebDavRelayDirectory: 'load_webdav_relay_directory',
   saveWebDavRelayDirectory: 'save_webdav_relay_directory',

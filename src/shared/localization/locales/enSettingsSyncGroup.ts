@@ -12,6 +12,7 @@ export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
   'settings.companionSync.webdav.halfHour': "30 minutes",
   'settings.companionSync.webdav.tenMinutes': "10 minutes",
   'settings.companionSync.webdav.openLog': "Open log file",
+  'settings.companionSync.webdav.openLogFailed': "Could not open the WebDAV log file.",
   'settings.companionSync.webdav.configuration': "Configuration",
   'settings.companionSync.webdav.attachments': "Attachment sync",
   'settings.companionSync.webdav.attachmentsHint': "Skipped attachments can still sync over LAN. The phone applies changes when it reconnects over LAN.",

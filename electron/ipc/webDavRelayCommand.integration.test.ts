@@ -20,10 +20,12 @@ import { createDesktopSyncGroup, registerSyncGroupDevice } from '../database/syn
 import { createDesktopRequestSyncDatabaseHost } from '../sync/desktopRequestSyncDatabaseHost.js';
 import { desktopSyncChangeSessions } from '../sync/desktopSyncChangeSessions.js';
 import { confirmDesktopWebDavRelayDelivery, desktopWebDavRelayForPeer } from '../sync/desktopWebDavRelaySettings.js';
+import { withWebDavFixture } from '../sync/webDavRelay.testSupport.js';
 
 import { handleInvokeRequest } from './commands.js';
 
 let root = '';
+const openPath = vi.hoisted(() => vi.fn());
 vi.mock('./paths.js', () => ({
   resolveAppPaths: () => ({
     app_data_dir: root, app_cache_dir: path.join(root, 'cache'),
@@ -33,7 +35,7 @@ vi.mock('./paths.js', () => ({
 vi.mock('electron', () => ({
   BrowserWindow: { getFocusedWindow: () => null, getAllWindows: () => [] },
   app: { getName: () => 'Foliole', getVersion: () => 'test', getPath: () => root },
-  shell: {}, dialog: {}, ipcMain: {}, nativeImage: {}, clipboard: {}, Menu: {},
+  shell: { openPath }, dialog: {}, ipcMain: {}, nativeImage: {}, clipboard: {}, Menu: {},
   systemPreferences: {}, screen: {}
 }));
 
@@ -166,4 +168,30 @@ it('reports when a delivered binding needs LAN sync again after a library epoch 
   await expectBaselineRequired(true);
   await confirmLanRound('restored');
   await expectBaselineRequired(false);
+});
+
+it('opens only the local WebDAV log through IPC and keeps failed probe details private', async () => {
+  openPath.mockResolvedValue('');
+  const file = path.join(root, 'logs', 'webdav-sync.txt');
+  const openLog = () => handleInvokeRequest({ command: NATIVE_COMMANDS.openWebDavRelayLog, args: { path: '/untrusted.txt' } });
+  await expect(openLog()).resolves.toBeNull();
+  expect(openPath).toHaveBeenLastCalledWith(file);
+  expect(await fs.readFile(file, 'utf8')).toBe('');
+
+  await withWebDavFixture(true, async url => {
+    const save = (directoryUrl: string) => handleInvokeRequest({
+      command: NATIVE_COMMANDS.saveWebDavRelayDirectory, args: { group_id: groupId, directory_url: directoryUrl }
+    });
+    await expect(save(url.replace('://', '://hidden-user:hidden-password@'))).rejects.toThrow('Invalid WebDAV folder URL');
+    await expect(save(url)).rejects.toThrow('different test data');
+    const log = await fs.readFile(file, 'utf8');
+    const [invalid, failed] = log.trim().split('\n').map(line => JSON.parse(line));
+    expect(invalid).toMatchObject({ status: 'failed', requests: {}, uploadedBytes: 0, downloadedBytes: 0 });
+    expect(failed).toMatchObject({ status: 'failed', requests: { PROPFIND: 1, PUT: 1, MOVE: 1, GET: 1, DELETE: 2 },
+      responses: 6, httpStatuses: { PROPFIND: { 207: 1 }, GET: { 200: 1 }, DELETE: { 204: 1, 404: 1 } }, uploadedBytes: 36 });
+    expect(failed.downloadedBytes).toBeGreaterThan(0);
+    for (const secret of [url, 'hidden-user', 'hidden-password', 'different test data']) expect(log).not.toContain(secret);
+  });
+  openPath.mockResolvedValueOnce('private system error');
+  await expect(openLog()).rejects.toThrow('webdav_log_open_failed');
 });

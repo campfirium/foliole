@@ -1,5 +1,7 @@
 // @vitest-environment node
 import { once } from 'node:events';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
@@ -21,10 +23,15 @@ import { busyDavGate, setupDav } from './webDavRelayTransport.testSupport.js';
 
 const shell = vi.hoisted(() => ({
   binding: null as WebDavRelayBinding | null,
+  root: '',
   source: null as RestorePeer | null,
   connected: false,
   participating: true,
   key: Buffer.alloc(32, 7)
+}));
+
+vi.mock('../ipc/paths.js', () => ({
+  resolveAppPaths: () => ({ app_log_dir: shell.root, app_config_dir: shell.root })
 }));
 
 vi.mock('../database/connection.js', () => ({
@@ -66,6 +73,7 @@ async function withAutomaticRelay(run: (args: Awaited<ReturnType<typeof prepare>
   const clock = createWebDavSendWindow();
   try {
     const { source, target, binding } = await prepare(fixture, dav);
+    shell.root = path.dirname(source.file);
     const runs: Promise<boolean>[] = [];
     const send = (signal: AbortSignal) => {
       const result = runDesktopWebDavRelayRound(activity, signal);
@@ -161,6 +169,17 @@ it('automatically confirms a durable packet after the DAV connection drops durin
     await tick(1);
     expect(runs).toHaveLength(2);
     await expect(runs[1]).resolves.toBe(true);
+    if (process.platform === 'darwin') {
+      const log = await readFile(path.join(shell.root, 'webdav-sync.txt'), 'utf8');
+      const [failed, retried] = log.trim().split('\n').map(line => JSON.parse(line));
+      expect(failed).toMatchObject({ operation: 'sync', status: 'failed', retryable: true, requests: { MOVE: 1, PUT: 1 } });
+      expect(failed.uploadedBytes).toBeGreaterThan(0);
+      expect(failed.responses).toBe(Object.values(failed.requests as Record<string, number>).reduce((a, b) => a + b, 0) - 1);
+      expect(retried).toMatchObject({ operation: 'sync', status: 'completed', published: 1, retries: 1 });
+      expect(retried.downloadedBytes).toBeGreaterThan(0);
+      expect(log).not.toContain(binding.directory_url);
+      expect(log).not.toContain('retry-without-edit');
+    }
     source.reopen();
     expect(await hasPublished()).toBe(true);
     expect((await receive(target, binding)).applied).toBe(1);

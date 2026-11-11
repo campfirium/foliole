@@ -9,11 +9,12 @@ import { enableDesktopWebDavRelay } from '../../../../shared/platform/desktopSyn
 import { useDesktopSyncGroup } from '../../../../shared/platform/useDesktopSyncGroup';
 import {
   AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger,
-  SettingsButton, SettingsControlSlot, SettingsRow, SettingsSection, SettingsSegmentedControl,
+  SettingsControlSlot, SettingsRow, SettingsSection, SettingsSegmentedControl,
   requestAppConfirmation, settingsFieldClassName
 } from '../../../../shared/ui';
 
 import { SettingsWebDavAttachmentRow } from './SettingsWebDavAttachmentRow';
+import { SettingsWebDavLogButton } from './SettingsWebDavLogButton';
 import { SettingsWebDavRelayRow } from './SettingsWebDavRelayRow';
 
 const PREFIX = 'settings.companionSync.webdav' as const;
@@ -22,7 +23,7 @@ type Relay = NonNullable<DesktopSyncGroupOverviewPayload['webdav_relay']>;
 function WebDavUsage({ relay }: { relay: Relay }) {
   const t = useTranslation();
   return <SettingsSection title={t(`${PREFIX}.usage`)} description={t(`${PREFIX}.usageDescription`)}
-    actions={<SettingsButton disabled>{t(`${PREFIX}.openLog`)}</SettingsButton>}>
+    actions={<SettingsWebDavLogButton />}>
     <SettingsRow title={t(`${PREFIX}.usagePending`)}
       description={t(relay.configured ? `${PREFIX}.configured` : `${PREFIX}.unconfigured`)}>
       <SettingsControlSlot>

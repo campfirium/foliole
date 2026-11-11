@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
+import { webDavRelayStatus, type WebDavRelayRequest } from '../../lib/core/sync/webDavRelayPublication.js';
+import { WebDavServiceBusyError } from '../../lib/core/sync/webDavRetryAfter.js';
+
+import { createDesktopWebDavRelayHttp, type DesktopWebDavRelayHttpStats } from './desktopWebDavRelayHttp.js';
+import { recordDesktopWebDavRelayLog } from './desktopWebDavRelayLog.js';
+
 function relayDirectory(input: unknown): URL {
   if (typeof input !== 'string') throw new Error('Invalid WebDAV folder URL.');
   const url = URL.parse(input);
@@ -10,59 +16,62 @@ function relayDirectory(input: unknown): URL {
   return url;
 }
 
-async function request(url: URL, method: string, options: RequestInit = {}) {
-  const response = await fetch(url, {
-    ...options,
-    method,
-    redirect: 'error',
-    signal: AbortSignal.timeout(4000)
-  });
-  if (!response.ok) {
-    await response.body?.cancel();
-    throw new Error(`WebDAV ${method} returned HTTP ${response.status}.`);
-  }
-  return response;
-}
-
-async function removeProbe(url: URL) {
-  const response = await fetch(url, {
-    method: 'DELETE',
-    redirect: 'error',
-    signal: AbortSignal.timeout(4000)
-  });
-  await response.body?.cancel();
-  if (!response.ok && response.status !== 404) {
-    throw new Error(`WebDAV DELETE returned HTTP ${response.status}.`);
-  }
+function probeRequest(http: WebDavRelayRequest): WebDavRelayRequest {
+  return async (url, input, receive) => {
+    try {
+      return await http(url, input, async (status, body) => {
+        if ((status >= 200 && status < 300) || (input.method === 'DELETE' && status === 404)) return receive(status, body);
+        await webDavRelayStatus(status, body);
+        throw new Error(`WebDAV ${input.method} returned HTTP ${status}.`);
+      });
+    } catch (error) {
+      if (error instanceof WebDavServiceBusyError) throw new Error(`WebDAV ${input.method} returned HTTP ${error.status}.`, { cause: error });
+      throw error;
+    }
+  };
 }
 
 export async function testWebDavRelayConnection(input: unknown): Promise<string> {
-  const directory = relayDirectory(input);
-  const probe = randomUUID();
+  const stats: DesktopWebDavRelayHttpStats = { requests: {}, responses: 0, uploadedBytes: 0, downloadedBytes: 0, httpStatuses: {} };
+  const started = performance.now();
+  let completed = false;
+  try {
+    const directory = relayDirectory(input);
+    const http = createDesktopWebDavRelayHttp(stats, undefined, { timeoutMs: 4000 });
+    await probeDirectory(directory, probeRequest(http));
+    completed = true;
+    return directory.href;
+  } finally {
+    await recordDesktopWebDavRelayLog('connection_test', stats, {
+      status: completed ? 'completed' : 'failed', elapsedMs: Math.round(performance.now() - started),
+      published: 0, applied: 0, retries: 0, retryable: false
+    });
+  }
+}
+
+async function probeDirectory(directory: URL, request: WebDavRelayRequest) {
+  const probe = Buffer.from(randomUUID());
   const staging = new URL(`.foliole-test-${probe}.tmp`, directory);
   const published = new URL(`.foliole-test-${probe}.bin`, directory);
-  const listing = await request(directory, 'PROPFIND', { headers: { Depth: '0' } });
-  await listing.body?.cancel();
+  const removeProbe = (url: URL) => request(url, { method: 'DELETE' }, webDavRelayStatus);
+  await request(directory, { method: 'PROPFIND', headers: { Depth: '0' } }, webDavRelayStatus);
 
   try {
-    const upload = await request(staging, 'PUT', { body: probe, headers: { 'If-None-Match': '*' } });
-    await upload.body?.cancel();
-    const move = await request(staging, 'MOVE', { headers: { Destination: published.href, Overwrite: 'F' } });
-    await move.body?.cancel();
-    const download = await request(published, 'GET', { headers: { Range: 'bytes=0-36' } });
-    await verifyProbe(download, probe);
+    await request(staging, { method: 'PUT', headers: { 'If-None-Match': '*' },
+      body: { bytes: probe.length, async *chunks() { yield probe; } } }, webDavRelayStatus);
+    await request(staging, { method: 'MOVE', headers: { Destination: published.href, Overwrite: 'F' } }, webDavRelayStatus);
+    await request(published, { method: 'GET', headers: { Range: 'bytes=0-36' } },
+      (_status, body) => verifyProbe(body, probe));
   } catch (error) {
     await Promise.allSettled([removeProbe(staging), removeProbe(published)]);
     throw error;
   }
   await removeProbe(published);
-  return directory.href;
 }
 
-async function verifyProbe(response: Response, probe: string) {
-  const expected = new TextEncoder().encode(probe);
+async function verifyProbe(body: AsyncIterable<Uint8Array>, expected: Uint8Array) {
   let offset = 0;
-  for await (const chunk of response.body ?? []) {
+  for await (const chunk of body) {
     for (const byte of chunk) {
       if (byte !== expected[offset++]) throw new Error('WebDAV returned different test data.');
     }

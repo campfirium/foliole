@@ -3,6 +3,7 @@ import { hasWebDavRelayBodyToSend } from '../../lib/core/sync/webDavRelayBodyOut
 import { runWebDavRelayBodyRound } from '../../lib/core/sync/webDavRelayBodyRound.js';
 import { readWebDavRelayBodyScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
 import { isWebDavRelayReceiveDue } from '../../lib/core/sync/webDavRelayReceiveFreshness.js';
+import { isRetryableWebDavSendError } from '../../lib/core/sync/webDavTransportRetry.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
@@ -13,6 +14,7 @@ import { recordDesktopSyncActivity, type DesktopSyncActivityContext } from './de
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import { createDesktopWebDavRelayHttp, type DesktopWebDavRelayHttpStats } from './desktopWebDavRelayHttp.js';
+import { recordDesktopWebDavRelayLog } from './desktopWebDavRelayLog.js';
 import { loadDesktopBoundWebDavRelay } from './desktopWebDavRelaySettings.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
@@ -30,11 +32,12 @@ export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityCo
   const host = createDesktopRequestSyncDatabaseHost(databasePath);
   const loadScope = () => host.readSnapshot(db => readWebDavRelayBodyScope(db, binding, binding.desktop_device_id));
   const lanConnected = () => desktopSyncChangeSessions().hasSessions(binding.phone_device_id);
-  const stats: DesktopWebDavRelayHttpStats = { requests: {}, responses: 0, uploadedBytes: 0, downloadedBytes: 0 };
+  const stats: DesktopWebDavRelayHttpStats = { requests: {}, responses: 0, uploadedBytes: 0, downloadedBytes: 0, httpStatuses: {} };
   const progress = { published: 0, applied: 0, retries: 0 };
   const started = performance.now();
   let attempted = !automaticSignal;
   let completed = false;
+  let retryable = false;
   try {
     const scope = await loadScope();
     if (!scope) {
@@ -63,12 +66,23 @@ export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityCo
     });
     completed = true;
     return true;
+  } catch (error) {
+    retryable = isRetryableWebDavSendError(error);
+    throw error;
   } finally {
     if (progress.published > 0) notifyDesktopSyncGroupOverviewChanged();
-    if (attempted) {
-      const metrics = JSON.stringify({ ...stats, ...progress, elapsedMs: Math.round(performance.now() - started) });
-      await recordDesktopSyncActivity(activity, { direction: 'exchange', kind: 'stage_finished',
-        stage: 'sync_pack', status: completed ? 'completed' : 'failed', message: `WebDAV relay ${metrics}` });
-    }
+    if (attempted) await recordRound(activity, stats, {
+      ...progress, elapsedMs: Math.round(performance.now() - started), retryable,
+      status: completed ? 'completed' : automaticSignal?.aborted ? 'cancelled' : 'failed'
+    });
   }
+}
+
+async function recordRound(activity: DesktopSyncActivityContext, stats: DesktopWebDavRelayHttpStats,
+  result: Parameters<typeof recordDesktopWebDavRelayLog>[2]) {
+  await recordDesktopWebDavRelayLog('sync', stats, result);
+  const { published, applied, retries, elapsedMs } = result;
+  const metrics = JSON.stringify({ ...stats, published, applied, retries, elapsedMs });
+  await recordDesktopSyncActivity(activity, { direction: 'exchange', kind: 'stage_finished',
+    stage: 'sync_pack', status: result.status === 'completed' ? 'completed' : 'failed', message: `WebDAV relay ${metrics}` });
 }

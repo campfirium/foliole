@@ -7,15 +7,16 @@ import { consumeWebDavResponse } from '../../lib/core/sync/webDavRetryAfter.js';
 export type DesktopWebDavRelayHttpStats = {
   requests: Partial<Record<WebDavRelayMethod, number>>;
   responses: number;
+  httpStatuses?: Partial<Record<WebDavRelayMethod, Partial<Record<number, number>>>>;
   uploadedBytes: number;
   downloadedBytes: number;
 };
 
-export function createDesktopWebDavRelayHttp(stats: DesktopWebDavRelayHttpStats, signal?: AbortSignal): WebDavRelayRequest {
+export function createDesktopWebDavRelayHttp(stats: DesktopWebDavRelayHttpStats, signal?: AbortSignal, options?: { timeoutMs?: number }): WebDavRelayRequest {
   return (url, input, receive) => {
     if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('webdav_relay_invalid_url');
     const send = url.protocol === 'https:' ? httpsRequest : httpRequest;
-    const timeout = AbortSignal.timeout(30_000);
+    const timeout = AbortSignal.timeout(options?.timeoutMs ?? 30_000);
     const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
     requestSignal.throwIfAborted();
     return new Promise((resolve, reject) => {
@@ -25,7 +26,12 @@ export function createDesktopWebDavRelayHttp(stats: DesktopWebDavRelayHttpStats,
           ...(input.body ? { 'Content-Length': String(input.body.bytes) } : {}) }
       }, response => {
         stats.responses++;
-        void consumeWebDavResponse(response.statusCode ?? 0, response.headers['retry-after'], counted(response, stats), receive).then(resolve, error => {
+        const status = response.statusCode ?? 0;
+        if (stats.httpStatuses) {
+          const statuses = stats.httpStatuses[input.method] ??= {};
+          statuses[status] = (statuses[status] ?? 0) + 1;
+        }
+        void consumeWebDavResponse(status, response.headers['retry-after'], counted(response, stats), receive).then(resolve, error => {
           response.destroy();
           reject(error);
         });

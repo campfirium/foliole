@@ -51,6 +51,7 @@ import {
 } from '../sync/desktopSyncGroupMemberStateSession.js';
 import { notifyDesktopSyncGroupOverviewChanged } from '../sync/desktopSyncGroupOverviewNotifier.js';
 import { removeDesktopSyncGroupRoute } from '../sync/desktopSyncGroupRoutes.js';
+import { openDesktopWebDavRelayLog } from '../sync/desktopWebDavRelayLog.js';
 import { desktopWebDavRelayOverview, enableDesktopWebDavRelay, loadDesktopWebDavRelayDirectory, loadDesktopWebDavRelayStatus,
   saveDesktopWebDavAttachmentPolicy, saveDesktopWebDavRelayDirectory } from '../sync/desktopWebDavRelaySettings.js';
 import { getLanWorkspaceSyncServerStatus, stopLanWorkspaceSyncServer } from '../sync/lanWorkspaceSyncServer.js';
@@ -68,6 +69,7 @@ const discovery = new DesktopSyncGroupDiscoverySession((snapshot) => {
 });
 
 const COMMANDS = new Set<string>([
+  NATIVE_COMMANDS.openWebDavRelayLog,
   NATIVE_COMMANDS.enableWebDavRelay, NATIVE_COMMANDS.loadWebDavRelayDirectory, NATIVE_COMMANDS.saveWebDavRelayDirectory,
   NATIVE_COMMANDS.saveWebDavAttachmentPolicy,
   NATIVE_COMMANDS.loadSyncGroupOverview, NATIVE_COMMANDS.loadDesktopSyncDiagnostics, NATIVE_COMMANDS.createSyncGroup,
@@ -235,6 +237,7 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
 
 export function handleSyncGroupCommand(command: string, args: Record<string, unknown>) {
   if (!COMMANDS.has(command)) return undefined;
+  if (command === NATIVE_COMMANDS.openWebDavRelayLog) return openDesktopWebDavRelayLog();
   if (command === NATIVE_COMMANDS.enableWebDavRelay) {
     return enableDesktopWebDavRelay(args.group_id, args.device_id).then(() => null);
   }

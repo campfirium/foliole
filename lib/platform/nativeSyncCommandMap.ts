@@ -62,6 +62,7 @@ export type NativeSyncCommandMap = {
     args: { peers: NativeSyncPeer[] };
     result: NativeSyncPeer[];
   };
+  [NATIVE_COMMANDS.openWebDavRelayLog]: { args: undefined; result: null };
   [NATIVE_COMMANDS.enableWebDavRelay]: {
     args: { group_id: string; device_id: string };
     result: void;

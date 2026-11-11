@@ -169,6 +169,12 @@ export function onDesktopSyncGroupDiscoveryChanged(handler: (payload: SyncGroupD
   return getElectronAPI()?.onSyncGroupDiscoveryChanged?.(handler) ?? null;
 }
 
+export async function openDesktopWebDavRelayLog() {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) throw new Error('webdav_log_unavailable');
+  await invoke(NATIVE_COMMANDS.openWebDavRelayLog);
+}
+
 export function loadDesktopWebDavRelayDirectory(groupId: string) {
   return getRuntimeInvoke()?.(NATIVE_COMMANDS.loadWebDavRelayDirectory, { group_id: groupId });
 }
