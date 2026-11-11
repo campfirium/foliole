@@ -57,7 +57,7 @@ export function buildEditorPaletteOptions(args: EditorPaletteSource) {
   const activeNode = args.activeNodeId ? args.ws.nodesById[args.activeNodeId] : undefined;
   return {
     canAnnotateSelection: canAnnotateSelection(args) && canCreateSelectionAnnotation(activeNode),
-    canSendToEdge: canSendCurrentTopicToEdge({ ...args, isReviewOnly: args.isStudyMode ?? false }),
+    canSendToEdge: canSendCurrentTopicToEdge(args),
     canExportCurrentArticle: canExportCurrentArticle(args),
     canFindInCurrentTopic: canUseCurrentTopic,
     canOpenComparisonView: canOpenDocumentComparisonView({

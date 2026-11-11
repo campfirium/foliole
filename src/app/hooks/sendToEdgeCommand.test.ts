@@ -9,7 +9,7 @@ vi.mock('../../shared/platform/runtime', () => ({ isDesktopRuntime: () => true }
 vi.mock('../../shared/platform/runtime/edgeReading', () => ({ sendTopicToEdge: vi.fn().mockResolvedValue(true) }));
 vi.mock('../../store/workspaceNodePreparation', () => ({ ensureWorkspaceNodeDocumentReady: vi.fn() }));
 
-it('flushes the editor before sending the whole article once across overlapping requests', async () => {
+it.each([false, true])('sends the whole topic once after flushing (study mode: %s)', async (isStudyMode) => {
   let finishFlush: (value: boolean) => void = () => undefined;
   const pendingFlush = new Promise<boolean>((resolve) => { finishFlush = resolve; });
   const args = {
@@ -17,9 +17,10 @@ it('flushes the editor before sending the whole article once across overlapping 
     ws: { activeNodeId: 'topic', nodesById: { topic: { kind: 'topic', title: 'Current topic' } }, trashedNodeIds: [] },
     externalView: { isExternalViewOpen: false },
     virtualView: { isVirtualViewOpen: false },
-    isStudyMode: false,
+    isStudyMode,
     demoOperationTranslate: () => 'Contents'
   } as unknown as Parameters<typeof createSendToEdgeCommand>[0];
+  vi.clearAllMocks();
   const markdown = 'First paragraph.\n\nLast edited paragraph.';
   vi.mocked(ensureWorkspaceNodeDocumentReady).mockResolvedValue({
     content: markdown, hideTitleHeading: false, kind: 'topic', reveal: null

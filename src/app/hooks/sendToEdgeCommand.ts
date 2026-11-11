@@ -14,7 +14,6 @@ export function createSendToEdgeCommand(args: {
   ws: ReturnType<typeof useWorkspaceSelectors>;
   externalView: ReturnType<typeof useWorkspaceControllerState>['externalView'];
   virtualView: ReturnType<typeof useWorkspaceControllerState>['virtualView'];
-  isStudyMode: boolean;
   demoOperationTranslate: Translate;
 }) {
   return async () => {
@@ -25,7 +24,6 @@ export function createSendToEdgeCommand(args: {
       isViewingTrashNode: runtime.isViewingTrashNode,
       isExternalViewOpen: args.externalView.isExternalViewOpen,
       isVirtualViewOpen: args.virtualView.isVirtualViewOpen,
-      isReviewOnly: args.isStudyMode,
       ws
     })) return false;
     isSendingToEdge = true;

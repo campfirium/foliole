@@ -1,15 +1,20 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { createInitialWorkspaceState } from '../../store/workspaceStore';
 
 import { buildEditorPaletteOptions } from './appPaletteEditorOptions';
 
-function options(kind: 'topic' | 'item' | 'folder', trashed = false) {
+vi.mock('../../shared/platform/runtime', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../shared/platform/runtime')>(),
+  isDesktopRuntime: () => true
+}));
+
+function options(kind: 'topic' | 'item' | 'folder', trashed = false, isStudyMode = false) {
   const initial = createInitialWorkspaceState(new Date('2026-10-27T00:00:00.000Z'));
   const base = Object.values(initial.nodesById).find((node) => node.kind === 'topic')!;
   const node = { ...base, id: 'manual', kind, anchorLink: null, parentNodeId: null, content: 'Question body.', reveal: null,
     bodyStatus: 'ready' as const, hasContent: true, hasReveal: false };
-  return buildEditorPaletteOptions({ activeNodeId: node.id, isViewingTrashNode: trashed,
+  return buildEditorPaletteOptions({ activeNodeId: node.id, isViewingTrashNode: trashed, isStudyMode,
     ws: { nodesById: { [node.id]: node }, trashedNodeIds: trashed ? [node.id] : [] } });
 }
 
@@ -26,4 +31,9 @@ it('disables annotation commands in Items while retaining editing and export cap
   expect(options('item')).toMatchObject({ canAnnotateSelection: false, canExportCurrentArticle: true,
     canRepairTable: true, canCleanFormatting: true });
   expect(options('topic').canAnnotateSelection).toBe(true);
+});
+
+it('enables sending the review topic to Edge while keeping review Items ineligible', () => {
+  expect(options('topic', false, true).canSendToEdge).toBe(true);
+  expect(options('item', false, true).canSendToEdge).toBe(false);
 });
