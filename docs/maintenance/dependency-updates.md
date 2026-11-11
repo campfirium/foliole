@@ -156,6 +156,23 @@ to determine install, test, commit or task count.
 
 ## Pending centralized QA
 
+### November 12 Node.js security assessment
+
+Foliole 0.8.1 ships Electron 45.2.3 with Node.js 24.22.2. Electron 45.3.0
+still embeds 24.22.2. Desktop LAN sync serves cleartext HTTP/1, and the
+WebDAV HTTPS client uses default certificate trust. The reviewed sync paths
+do not use Node HTTP/2 or TLS server hooks, or switch CA policies on a
+shared HTTPS agent. This does not clear the bundled parser and other Node
+components included in the upstream security release.
+
+Recheck the official Electron stable notes in the next dependency batch.
+Adopt the stable build that includes Node 24.22.3 or the equivalent
+backports. The standalone Node 26.13.1 patch applies separately to the
+development and CI toolchain.
+
+[Node security release](https://github.com/nodejs/node/releases/tag/v24.22.3)
+and [Electron runtime table](https://releases.electronjs.org/release?channel=stable).
+
 The separately authorized [Gradle security patch](gradle-security-update.md) is
 outside the already frozen November 11 full-QA candidate.
 
@@ -189,12 +206,6 @@ the required FSRS binding that the proposed lockfiles removed.
 
 ### November 10 deferrals for the next centralized dependency review
 
-- [#222](https://github.com/campfirium/foliole/pull/222) remains open. React-PDF
-  11.0.0 still requires PDF.js 6.3.289. Adopt PDF.js 6.5.438 when React-PDF
-  supports a matching worker, and validate the pair.
-- [#226](https://github.com/campfirium/foliole/pull/226) remains open. The local
-  AAR metadata check confirmed OkHttp 5.5.1 requires compile SDK 37 while
-  Foliole builds against 36. Recheck after the SDK 37 build lane is established.
 - [#233](https://github.com/campfirium/foliole/pull/233) remains open. The local
   Android test APK could not compile references to the image-file bridge.
   Establish a clean native baseline and verify the resolved compile and runtime
@@ -383,6 +394,8 @@ batch review also covers support changes without a new target version.
 
 | Proposal | Deferred target and evidence | Resume condition | Reviewed | Owner |
 | --- | --- | --- | --- | --- |
+| [#222](https://github.com/campfirium/foliole/pull/222) | pdfjs-dist 6.5.438; React-PDF 11.0.0 still pins 6.3.289, so the proposal installs two incompatible PDF.js versions. | At the next dependency review, check the latest React-PDF dependency and verify the matching viewer and worker together. | 2026-11-12 | Dependency batch handler |
+| [#226](https://github.com/campfirium/foliole/pull/226) | OkHttp 5.5.1; the published Android AAR requires compile SDK 37, while Foliole and the Mac build environment use 36. | At the next dependency review, check SDK 37 availability and a working Android build lane, then validate OkHttp and the WebDAV client. | 2026-11-12 | Dependency batch handler |
 | [#191](https://github.com/campfirium/foliole/pull/191) | pdfjs-dist 6.4.299; React-PDF 11.0.0 pins 6.3.289, creating mismatched main and worker runtimes. | Official React-PDF supports a matching newer PDF.js; adopt and validate the pair. | 2026-11-03 | Dependency batch handler |
 | [#192](https://github.com/campfirium/foliole/pull/192) | minimatch 10.2.6; actual glob7 escaped-name regression, plus GHSA-g3hv-75wg-m249 still affects this target. | Upstream installer/temp/rimraf/glob chain supports a patched matcher, or a reviewed alternative passes the existing installer behavior tests; advisory repair remains separate. | 2026-11-03 | Dependency batch handler |
 | [#193](https://github.com/campfirium/foliole/pull/193) | TypeScript 7.0.2; typescript-eslint 8.72.1 requires TypeScript <6.1 and the new compiler API is not stable. | Official lint tooling supports TS7 and the production compiler-API consumers have a supported migration path. | 2026-11-03 | Dependency batch handler |
