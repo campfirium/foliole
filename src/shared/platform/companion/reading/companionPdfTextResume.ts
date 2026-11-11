@@ -42,10 +42,14 @@ export async function loadCompanionPdfTextResume(article: CompanionReadableArtic
         [attachmentId]);
       const starts = projectedPageStarts(article.content, pages);
       if (!starts.length) return undefined;
-      const local = article.persistedNodeViewState;
-      const hasLocalPosition = local && (local.scrollTop > 0 || (local.selectionFrom ?? 0) > 0);
-      const start = offset !== null && !hasLocalPosition
-        ? starts.find(row => row.page === decodePdfReadingPosition(offset).page)?.start : undefined;
+      const [local] = await db.query<{ reading_offset: number | null }>(
+        `SELECT reading_offset FROM node_view_state WHERE node_id = ?
+         AND host_name = (SELECT value FROM companion_meta WHERE key = 'host_name')`, [article.nodeId]);
+      const localOffset = local?.reading_offset;
+      const localPage = localOffset == null ? undefined
+        : (starts.findLast(row => row.start <= localOffset) ?? starts[0])?.page;
+      const sharedPage = offset === null ? undefined : decodePdfReadingPosition(offset).page;
+      const start = sharedPage !== localPage ? starts.find(row => row.page === sharedPage)?.start : undefined;
       const context: CompanionPdfReadingContext = { attachmentId, versionId: article.currentVersionId ?? null,
         epoch: epoch.source_epoch, clock: readReadingResumeClock(state), offset };
       return { ...article, pdfTextReading: { context, starts },

@@ -221,7 +221,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       onPointerMove={model.handleSurfacePointerMove}
       onPointerUp={model.openToolbarFromArticlePointer}
       onPointerCancel={model.reading.handleSurfacePointerCancel}
-      onScroll={event => { if (!pdfScroll.onScroll(event)) scrollPosition.handleScroll(event); }}
+      onScroll={event => { if (!pdfScroll.onScroll(event) && props.readableArticle.pdfResumeTextOffset === undefined) scrollPosition.handleScroll(event); }}
       onWheelCapture={pdfScroll.markInput}
       onTouchMoveCapture={pdfScroll.markInput}
       onTouchMove={model.closeToolbarFromArticleTouch}

@@ -7,7 +7,7 @@ import { iosCompanionDeviceId, markIosCompanionMutation } from '../runtime/iosCo
 
 import type { CompanionPdfReadingContext } from './companionPdfTextResume';
 
-export type CompanionPdfPageUpdate = { nodeId: string; context: CompanionPdfReadingContext; page: number };
+export type CompanionPdfPageUpdate = { nodeId: string; context: CompanionPdfReadingContext; page: number; textOffset: number };
 
 export async function writeCompanionPdfTextPosition(tx: DbPort, nodeId: string, update: CompanionPdfPageUpdate,
   hostName: string, updatedAt: string) {

@@ -22,7 +22,9 @@ it('upgrades an existing companion atomically without changing original attachme
       .run('original', 'Preserved', '![image](asset://original.png)', 'now', 'now');
     const original = sqlite.prepare('SELECT * FROM nodes').all();
     const demands = sqlite.prepare('SELECT * FROM attachment_parse_queue').all();
-    sqlite.exec('DROP TABLE folder_attachment_work; PRAGMA user_version=111');
+    sqlite.exec('DROP TABLE folder_attachment_work; ALTER TABLE node_view_state DROP COLUMN reading_offset; PRAGMA user_version=111');
+    sqlite.prepare('INSERT INTO node_view_state(node_id,host_name,scroll_top,updated_at) VALUES (?,?,?,?)')
+      .run('original', 'phone', 680, 'now');
     await expect(db.transaction(tx => migrateCompanionDatabase(tx, 111, COMPANION_DATABASE_VERSION,
       () => { throw new Error('interrupted upgrade'); }))).rejects.toThrow('interrupted upgrade');
     expect(sqlite.pragma('user_version', { simple: true })).toBe(111);
@@ -32,6 +34,9 @@ it('upgrades an existing companion atomically without changing original attachme
     sqlite.close(); sqlite = new Database(databasePath); db = createBetterSqliteDbPort(sqlite);
     expect(sqlite.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
     expect(await db.query('SELECT * FROM folder_attachment_work')).toEqual([]);
+    expect(await db.query('SELECT scroll_top, reading_offset FROM node_view_state')).toEqual([
+      { scroll_top: 680, reading_offset: null }
+    ]);
     expect(sqlite.prepare('SELECT * FROM nodes').all()).toEqual(original);
     expect(sqlite.prepare('SELECT * FROM attachment_parse_queue').all()).toEqual(demands);
   } finally { if (sqlite.open) sqlite.close(); await rm(root, { recursive: true, force: true }); }

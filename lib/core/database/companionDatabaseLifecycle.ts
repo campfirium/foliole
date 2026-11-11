@@ -149,8 +149,8 @@ async function transferCompanionHostState(db: DbPort, previous: string, current:
     await db.run(`INSERT OR REPLACE INTO node_reading_host_state (node_id, host_name, reading_position, updated_at)
       SELECT node_id, ?, reading_position, updated_at FROM node_reading_host_state WHERE host_name = ?`, [current, previous]);
     await db.run(`INSERT OR REPLACE INTO node_view_state
-      (node_id, host_name, scroll_top, selection_from, selection_to, source, updated_at)
-      SELECT node_id, ?, scroll_top, selection_from, selection_to, source, updated_at
+      (node_id, host_name, scroll_top, reading_offset, selection_from, selection_to, source, updated_at)
+      SELECT node_id, ?, scroll_top, reading_offset, selection_from, selection_to, source, updated_at
       FROM node_view_state WHERE host_name = ?`, [current, previous]);
     await db.run(`INSERT OR REPLACE INTO setting_records
       (key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at, deleted_at)

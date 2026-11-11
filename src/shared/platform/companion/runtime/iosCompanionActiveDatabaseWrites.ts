@@ -96,8 +96,12 @@ export function saveIosActiveViewState(args: { node_id: string | null }) {
 export function saveIosNodeViewState(args: { node_id: string; scroll_top: number; source?: string; pdf?: CompanionPdfPageUpdate }) {
   const payload = { node_id: args.node_id, scroll_top: Math.max(0, Math.trunc(args.scroll_top)), selection_from: null, selection_to: null, source: 'user-scroll' };
   return writeViewState(`node:${args.node_id}`, payload, async (db, hostName, now) => {
-    await db.run('INSERT OR REPLACE INTO node_view_state (node_id, host_name, scroll_top, selection_from, selection_to, source, updated_at) VALUES (?, ?, ?, NULL, NULL, ?, ?)',
-      [args.node_id, hostName, payload.scroll_top, payload.source, now]);
+    const readingOffset = args.pdf?.nodeId === args.node_id ? args.pdf.textOffset : null;
+    await db.run(`INSERT INTO node_view_state (node_id, host_name, scroll_top, reading_offset, source, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(node_id, host_name) DO UPDATE SET
+      scroll_top = excluded.scroll_top, reading_offset = COALESCE(excluded.reading_offset, node_view_state.reading_offset),
+      selection_from = NULL, selection_to = NULL, source = excluded.source, updated_at = excluded.updated_at`,
+      [args.node_id, hostName, payload.scroll_top, readingOffset, payload.source, now]);
     if (args.pdf) await writeCompanionPdfTextPosition(db, args.node_id, args.pdf, hostName, now);
   });
 }

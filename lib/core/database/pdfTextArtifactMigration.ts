@@ -13,3 +13,10 @@ export function migratePdfTextArtifacts(sqlite: DatabaseMigrationTarget) {
 export async function migrateCompanionPdfTextArtifacts(db: DbPort) {
   for (const sql of statements) await db.run(sql);
 }
+
+export async function migrateCompanionPdfTextReadingOffset(db: DbPort) {
+  const columns = await db.query<{ name: string }>('PRAGMA table_info(node_view_state)');
+  if (!columns.some(column => column.name === 'reading_offset')) {
+    await db.run('ALTER TABLE node_view_state ADD COLUMN reading_offset INTEGER');
+  }
+}

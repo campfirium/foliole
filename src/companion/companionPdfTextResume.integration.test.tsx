@@ -44,8 +44,8 @@ function seedPdf(library: Awaited<ReturnType<typeof createResumeLibrary>>, body:
   addPage.run(attachment, 3, thirdPage);
 }
 
-async function receivePosition(page: number, attachmentId = attachment) {
-  const payload = advanceReadingResume(null, pdfReadingContentHash(attachmentId), 'desktop', encodePdfReadingPosition(page, 0.75));
+async function receivePosition(page: number, attachmentId = attachment, observed: ReturnType<typeof parseReadingResumeState> | null = null) {
+  const payload = advanceReadingResume(observed, pdfReadingContentHash(attachmentId), 'desktop', encodePdfReadingPosition(page, 0.75));
   await getIosCompanionDatabaseOwner().runWriter(db => applyReadingResumeRecord(db, {
     content_hash: computeSyncContentHash('node_reading_resume', payload), object_id: 'article',
     deleted_at: null, object_type: 'node_reading_resume', payload_json: JSON.stringify(payload),
@@ -61,7 +61,7 @@ it.each([
   { body: '# Article\n\nLinked PDF source ready for the reader surface.', page: 3, matches: true },
   { body: '# Article\n\nLinked PDF source ready for the reader surface.', page: 2, matches: false },
   { body: '# Article\n\nLinked PDF source ready for the reader surface.', page: 3, attachmentId: 'b'.repeat(64), matches: false },
-  { body: '# Article\n\nLinked PDF source ready for the reader surface.', page: 3, localScroll: 680, matches: false },
+  { body: '# Article\n\nLinked PDF source ready for the reader surface.', page: 3, localScroll: 680, matches: true },
   { body: '# Article\n\nIndependently edited reading version', page: 3, matches: false }
 ])('opens only the exact projected PDF page in the mobile text ($page, $matches)', async scenario => {
   const library = await createResumeLibrary();
@@ -97,17 +97,31 @@ it.each([
   }
 });
 
+async function mountPdfReader(library: Awaited<ReturnType<typeof createResumeLibrary>>) {
+  const snapshot = await library.reopen();
+  const view = renderHook(current => {
+    const [, setArticle] = useState<CompanionReadableArticle | null>(null);
+    return useCompanionReadableArticleLoader(current, setArticle);
+  }, { initialProps: snapshot });
+  await act(async () => { await view.result.current.openReadableArticle('article'); });
+  const reopen = async () => {
+    const current = await library.reopen();
+    view.rerender(current);
+    await act(async () => {
+      await view.result.current.openReadableArticle(null);
+      await view.result.current.openReadableArticle('article');
+    });
+    return view.result.current.readableArticle!;
+  };
+  return { view, reopen };
+}
+
 it('publishes the mobile page through the scroll flush and preserves the desktop fraction on the same page', async () => {
   const library = await createResumeLibrary();
   try {
     seedPdf(library, '# Article\n\nLinked PDF source ready for the reader surface.');
     await receivePosition(1);
-    const snapshot = await library.reopen();
-    const view = renderHook(() => {
-      const [, setArticle] = useState<CompanionReadableArticle | null>(null);
-      return useCompanionReadableArticleLoader(snapshot, setArticle);
-    });
-    await act(async () => { await view.result.current.openReadableArticle('article'); });
+    const { view, reopen } = await mountPdfReader(library);
     const article = view.result.current.readableArticle!;
     const text = article.pdfTextReading!;
     let offset = text.starts[0]!.start;
@@ -124,10 +138,11 @@ it('publishes the mobile page through the scroll flush and preserves the desktop
     }
     const { getByTestId } = render(<Surface />);
     const scroller = getByTestId('scroller');
-    const read = () => {
+    const state = () => {
       const { payload_json } = library.database.prepare("SELECT payload_json FROM node_reading_resume WHERE node_id='article'").get() as { payload_json: string };
-      return decodePdfReadingPosition(readReadingResumeOffset(parseReadingResumeState(payload_json), pdfReadingContentHash(attachment))!);
+      return parseReadingResumeState(payload_json);
     };
+    const read = () => decodePdfReadingPosition(readReadingResumeOffset(state(), pdfReadingContentHash(attachment))!);
     const scroll = async () => {
       fireEvent.wheel(scroller, { deltaY: 40 });
       fireEvent.scroll(scroller, { target: { scrollTop: 600 } });
@@ -144,6 +159,14 @@ it('publishes the mobile page through the scroll flush and preserves the desktop
     offset = text.starts[0]!.start;
     await scroll();
     expect(read()).toEqual({ page: 1, positionY: 0 });
+
+    expect((await reopen()).pdfResumeTextOffset).toBeUndefined();
+    await receivePosition(3, attachment, state());
+    expect(view.result.current.readableArticle?.pdfResumeTextOffset).toBeUndefined();
+    expect((await reopen()).pdfResumeTextOffset).toBe(text.starts[1]!.start);
+    await receivePosition(1, attachment, state());
+    expect((await reopen()).pdfResumeTextOffset).toBeUndefined();
+    expect(view.result.current.readableArticle?.persistedNodeViewState?.scrollTop).toBe(600);
   } finally {
     cleanup();
     await library.close();

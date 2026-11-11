@@ -57,7 +57,7 @@ import { migrateCompanionNodeHistoryState } from './nodeHistoryStateMigration.js
 import { migrateCompanionMaterialFlowInvalidation, migrateCompanionParentOrderInvalidation } from './nodeInvalidationMigration.js';
 import { retireCompanionNodePositions } from './nodePositionRetirementMigration.js';
 import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
-import { migrateCompanionPdfTextArtifacts } from './pdfTextArtifactMigration.js';
+import { migrateCompanionPdfTextArtifacts, migrateCompanionPdfTextReadingOffset } from './pdfTextArtifactMigration.js';
 import { migrateCompanionReviewLog } from './reviewLogMigration.js';
 import { retireCompanionReviewStateSync } from './reviewStateSyncRetirement.js';
 import { repairCompanionSyncStateEntities } from './syncStateEntityRepair.js';
@@ -173,6 +173,7 @@ async function migrateCompanionLatestVersions(db: DbPort, currentVersion: number
   if (currentVersion < 113 && targetVersion >= 113) await migrateCompanionFsrs7(db);
   if (currentVersion < 114 && targetVersion >= 114) await migrateCompanionIndependentTopicAlternatives(db);
   if (currentVersion < 115 && targetVersion >= 115) await installRelayReviewSequence(db);
+  if (currentVersion < 117 && targetVersion >= 117) await migrateCompanionPdfTextReadingOffset(db);
 }
 
 async function migrateCompanionWatchedDisplayPath(db: DbPort) {

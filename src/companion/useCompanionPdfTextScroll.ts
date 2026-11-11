@@ -35,7 +35,7 @@ export function useCompanionPdfTextScroll(args: {
       if (row.start > offset) break;
       page = row.page;
     }
-    onScrollTopChange(surface.scrollTop, { nodeId: article.nodeId, context: position.context, page });
+    onScrollTopChange(surface.scrollTop, { nodeId: article.nodeId, context: position.context, page, textOffset: offset });
     return true;
   };
   return { markInput, onEditorReady, onScroll };
