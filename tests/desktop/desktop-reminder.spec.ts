@@ -8,6 +8,8 @@ const reminders = /^(Reminders|提醒)$/;
 const messageLabel = /^(Message|提醒内容|内容)$/;
 const timeLabel = /^(Time|时间)$/;
 const addLabel = /^(New reminder|新建提醒|新增提醒)$/;
+const destinationLabel = /^(On notification tap|点通知后)$/;
+const triggerLabel = /^(Trigger|触发条件)$/;
 const saveLabel = /^(Save|保存)$/;
 
 function nextTestTime() {
@@ -37,12 +39,10 @@ test('a daily rule created in Settings reaches macOS Notification Center and ope
   await dialog.getByRole('button', { name: addLabel }).click();
   await dialog.getByRole('textbox', { name: messageLabel }).fill(message);
   await dialog.getByLabel(timeLabel, { exact: true }).fill(nextTestTime());
-  await dialog.getByRole('radio', { name: /^(Open Flow|打开 Flow)$/ }).click();
+  await dialog.getByRole('combobox', { name: destinationLabel }).selectOption('flow');
   await dialog.getByRole('button', { name: saveLabel }).click();
 
   const enabled = dialog.getByRole('switch', { name: message });
-  await expect(enabled).not.toBeChecked();
-  await enabled.click();
   await expect(enabled).toBeChecked();
   await desktopWindow.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
@@ -78,7 +78,7 @@ test('a foreground rule delivers after the Foliole window stays focused', async 
   await dialog.getByRole('button', { name: reminders }).click();
   await dialog.getByRole('button', { name: addLabel }).click();
   await dialog.getByRole('textbox', { name: messageLabel }).fill(message);
-  await dialog.getByRole('radio', { name: /^(Foreground duration|前台持续)$/ }).click();
+  await dialog.getByRole('combobox', { name: triggerLabel }).selectOption('foreground');
   await dialog.getByRole('spinbutton', { name: /^(Minutes in foreground|前台时长（分钟）)$/ }).fill('1');
   await dialog.getByRole('button', { name: saveLabel }).click();
 
@@ -98,7 +98,6 @@ test('a foreground rule delivers after the Foliole window stays focused', async 
     };
   });
   try {
-    await enabled.click();
     await expect(enabled).toBeChecked();
     await expect.poll(() => desktopApp.evaluate(({ BrowserWindow }) => Boolean(BrowserWindow.getFocusedWindow())))
       .toBe(true);
@@ -168,14 +167,20 @@ test('a reminder can target a specific Dive and keeps the target after rename', 
   const dialog = await openSettingsDialog(desktopWindow);
   await dialog.getByRole('button', { name: reminders }).click();
   await dialog.getByRole('button', { name: addLabel }).click();
+  await expect(dialog.getByRole('switch', { name: /^(Enabled|启用): 🌱$/ })).toBeVisible();
   await dialog.getByRole('textbox', { name: messageLabel }).fill('Review Physics');
-  await dialog.getByRole('radio', { name: /^(Open Dive Flow|打开专题 Flow)$/ }).click();
+  const time = dialog.getByRole('textbox', { name: timeLabel });
+  await time.fill('24:00');
+  await dialog.getByRole('button', { name: saveLabel }).click();
+  await expect(time).toBeFocused();
+  await expect(dialog.getByRole('switch', { name: /Review Physics/ })).toHaveCount(0);
+  await time.fill('19:30');
+  await dialog.getByRole('combobox', { name: destinationLabel }).selectOption('dive');
   const save = dialog.getByRole('button', { name: saveLabel });
   await expect(save).toBeDisabled();
-  await dialog.getByRole('button', { name: /Choose a Dive|选择专题/ }).click();
-  await desktopWindow.getByRole('menuitem', { name: 'Physics' }).click();
+  await dialog.getByRole('combobox', { name: /^(Dive|专题)$/ }).selectOption({ label: 'Physics' });
   await save.click();
-  await expect(dialog.getByText(/^(Daily at|每天) .* · Physics$/)).toBeVisible();
+  await expect(dialog.getByText(/^(Daily at|每天) 19:30 · Physics$/)).toBeVisible();
 
   await desktopWindow.evaluate(async id => {
     await window.electronAPI.invoke('rename_dive', { diveId: id, title: 'Physics II' });
@@ -209,8 +214,8 @@ test('the Dive context menu prefills the shared reminder editor without saving o
   await desktopWindow.getByRole('menuitem', { name: /^(Create reminder…|创建提醒…)$/ }).click();
   const dialog = getSettingsDialog(desktopWindow);
   await expect(dialog.getByRole('textbox', { name: messageLabel })).toHaveValue('Physics');
-  await expect(dialog.getByRole('radio', { name: /^(Open Dive Flow|打开专题 Flow)$/ })).toBeChecked();
-  await expect(dialog.getByRole('button', { name: /^(Dive|专题) Physics$/ })).toBeVisible();
+  await expect(dialog.getByRole('combobox', { name: destinationLabel })).toHaveValue('dive');
+  await expect(dialog.getByRole('combobox', { name: /^(Dive|专题)$/ }).locator('option:checked')).toHaveText('Physics');
   await dialog.getByRole('button', { name: /^(Cancel|取消)$/ }).click();
   await expect(dialog.getByRole('switch', { name: /^(Enabled|启用): Physics$/ })).toHaveCount(0);
 
@@ -220,6 +225,6 @@ test('the Dive context menu prefills the shared reminder editor without saving o
   await desktopWindow.getByRole('menuitem', { name: /^(Create reminder…|创建提醒…)$/ }).click();
   await expect(dialog.getByRole('textbox', { name: messageLabel })).toHaveValue('Physics');
   await dialog.getByRole('button', { name: saveLabel }).click();
-  await expect(dialog.getByRole('switch', { name: /^(Enabled|启用): Physics$/ })).not.toBeChecked();
+  await expect(dialog.getByRole('switch', { name: /^(Enabled|启用): Physics$/ })).toBeChecked();
   await expect(dialog.getByText(/^(Daily at|每天) .* · Physics$/)).toBeVisible();
 });

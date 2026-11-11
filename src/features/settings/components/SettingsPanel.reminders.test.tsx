@@ -20,7 +20,7 @@ beforeEach(() => {
   invoke.mockReset();
 });
 
-it('creates, enables, reopens, and disables a daily reminder from Settings', async () => {
+it('creates an enabled daily reminder inline, reopens, and disables it from Settings', async () => {
   let rule: ReminderRule | null = null;
   invoke.mockImplementation(async (command: string, draft: DesktopReminderDraft) => {
     if (command === NATIVE_COMMANDS.loadDesktopReminders) return rule ? [rule] : [];
@@ -37,20 +37,20 @@ it('creates, enables, reopens, and disables a daily reminder from Settings', asy
   const add = await screen.findByRole('button', { name: 'New reminder' });
   await waitFor(() => expect(add).toBeEnabled());
   fireEvent.click(add);
+  expect(screen.getByRole('switch', { name: 'Enabled: 🌱' })).toBeVisible();
+  expect(screen.getByLabelText('Time')).toHaveAttribute('type', 'text');
   fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Read notes' } });
   fireEvent.change(screen.getByLabelText('Time'), { target: { value: '19:30' } });
-  fireEvent.click(screen.getByRole('radio', { name: 'Open Flow' }));
+  fireEvent.change(screen.getByRole('combobox', { name: 'On notification tap' }), { target: { value: 'flow' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   expect(await screen.findByText('Daily at 19:30 · Open Flow')).toBeVisible();
   const toggle = await screen.findByRole('switch', { name: 'Enabled: Read notes' });
-  expect(toggle).not.toBeChecked();
-  fireEvent.click(toggle);
-  await waitFor(() => expect(toggle).toBeChecked());
+  expect(toggle).toBeChecked();
 
   fireEvent.click(screen.getByRole('button', { name: 'Edit reminder: Read notes' }));
   expect(screen.getByRole('form', { name: 'Edit reminder' })).toBeVisible();
   expect(screen.getByLabelText('Message')).toHaveValue('Read notes');
-  expect(screen.getByRole('radio', { name: 'Open Flow' })).toBeChecked();
+  expect(screen.getByRole('combobox', { name: 'On notification tap' })).toHaveValue('flow');
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(screen.getByRole('switch', { name: 'Enabled: Read notes' })).toBeChecked();
 
@@ -153,8 +153,8 @@ it.each(['save', 'enable'] as const)('requests permission after the first %s and
   }
   const name = action === 'save' ? 'Enabled: Read notes' : 'Enabled: 🌱';
   await waitFor(() => expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.requestDesktopReminderNotificationPermission));
-  expect(ruleAtPermissionRequest).toMatchObject({ enabled: action === 'enable' });
+  expect(ruleAtPermissionRequest).toMatchObject({ enabled: true });
   resolvePermission('denied');
   expect(await screen.findByText('Notifications are off on this device. Reminders won’t appear.')).toBeVisible();
-  expect(screen.getByRole('switch', { name })).toHaveAttribute('aria-checked', String(action === 'enable'));
+  expect(screen.getByRole('switch', { name })).toHaveAttribute('aria-checked', 'true');
 });

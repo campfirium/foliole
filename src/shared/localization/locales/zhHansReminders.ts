@@ -9,6 +9,8 @@ export const ZH_HANS_REMINDER_TRANSLATIONS = {
   'settings.reminders.repeat': '重复',
   'settings.reminders.noRepeat': '无',
   'settings.reminders.onTap': '点通知后',
+  'settings.reminders.notifyOnly': '仅提醒',
+  'settings.reminders.minuteUnit': '分钟',
   'settings.reminders.noDestination': '无',
   'settings.reminders.openFlow': '打开 Flow',
   'settings.reminders.openDiveFlow': '打开专题 Flow',

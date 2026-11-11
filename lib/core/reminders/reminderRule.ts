@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 const reminderId = z.string().uuid();
-const dailyTime = z.string().regex(/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/u);
+export const DAILY_REMINDER_TIME_PATTERN = /^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/u;
+const dailyTime = z.string().regex(DAILY_REMINDER_TIME_PATTERN);
 const device = z.object({
   kind: z.enum(['standalone', 'sync-member']),
   id: z.string().min(1)

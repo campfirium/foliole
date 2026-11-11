@@ -9,6 +9,8 @@ export const EN_REMINDER_TRANSLATIONS = {
   'settings.reminders.repeat': 'Repeat',
   'settings.reminders.noRepeat': 'Never',
   'settings.reminders.onTap': 'On notification tap',
+  'settings.reminders.notifyOnly': 'Notify only',
+  'settings.reminders.minuteUnit': 'min',
   'settings.reminders.noDestination': 'None',
   'settings.reminders.openFlow': 'Open Flow',
   'settings.reminders.openDiveFlow': 'Open Dive Flow',
