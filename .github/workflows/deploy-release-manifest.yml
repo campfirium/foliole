@@ -71,6 +71,13 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: play-release-status
+          path: .tmp/play-release-status.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
 
   sync-testflight-release:
     needs: stores
@@ -87,7 +94,11 @@ jobs:
         with:
           name: testflight-review-status
           path: .tmp
-      - name: Clear confirmed TestFlight review markers
+      - uses: actions/download-artifact@v4
+        with:
+          name: play-release-status
+          path: .tmp
+      - name: Update verified mobile download links in GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/mobile/sync-testflight-release-status.mjs

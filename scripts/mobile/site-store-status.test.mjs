@@ -131,16 +131,22 @@ it('keeps a fully published Play build linked while the registered update is in 
       releaseLifecycleState: 'RELEASE_LIFECYCLE_STATE_IN_REVIEW' };
     f.extraReleases = [update];
     f.lifecycle = 'PUBLISHED';
-    const channel = () => checkPlayChannel({ ...f.clients(), registration: newer });
+    const verified = [];
+    const channel = () => checkPlayChannel({ ...f.clients(), registration: newer, recordAvailable: entry => verified.push(entry) });
     const url = 'https://play.google.com/apps/testing/com.campfirium.foliole.android';
     expect(await channel()).toEqual({ version: '0.7.17', build: '4', status: 'update-in-review', url });
+    expect(verified.map(entry => entry.build)).toEqual(['4']);
 
     f.track.releases[0].status = 'halted';
     expect(await channel()).toEqual({ version: '0.8.1', build: '5', status: 'in-review' });
+    expect(verified.map(entry => entry.build)).toEqual(['4']);
 
     update.releaseLifecycleState = 'RELEASE_LIFECYCLE_STATE_PUBLISHED';
     f.track.releases = [{ name: update.releaseName, versionCodes: ['5'], status: 'completed' }];
     expect(await channel()).toEqual({ version: '0.8.1', build: '5', status: 'available', url });
+    expect(verified[1]).toEqual({
+      version: '0.8.1', build: '5', status: 'available', url, releaseSourceSha: fixture.candidate.sourceSha
+    });
     expect(f.edits.size).toBe(0);
   } finally {
     await f.close();

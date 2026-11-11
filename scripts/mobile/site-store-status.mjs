@@ -81,7 +81,7 @@ function publishedOlderPlayCodes(releases, latest) {
     .filter(code => code < latest.versionCode));
 }
 
-export async function checkPlayChannel({ play, github, registration }) {
+export async function checkPlayChannel({ play, github, registration, recordAvailable = () => {} }) {
   const row = verifyStoredMobileCandidate(registration);
   const latest = row.payload.candidate;
   const releases = await readPlayReleases(play);
@@ -90,7 +90,10 @@ export async function checkPlayChannel({ play, github, registration }) {
   const rollout = published ? await checkRegisteredPlayAvailability({ play, github, registration: row }) : undefined;
   const status = rollout === 'rejected' ? 'rejected' : playReviewStatus(releases, latest, rollout === 'available');
   const current = channelProjection(latest, status, url);
-  if (status === 'available') return current;
+  if (status === 'available') {
+    recordAvailable({ ...current, releaseSourceSha: latest.sourceSha });
+    return current;
+  }
 
   const olderCodes = publishedOlderPlayCodes(releases, latest);
   if (!olderCodes.size) return current;
@@ -99,10 +102,12 @@ export async function checkPlayChannel({ play, github, registration }) {
       olderCodes.has(candidate.versionCode))
     .sort((left, right) => right.payload.candidate.versionCode - left.payload.candidate.versionCode)[0];
   if (!older || await checkRegisteredPlayAvailability({ play, github, registration: older }) !== 'available') return current;
-  return storeChannelForWebsite([current, channelProjection(older.payload.candidate, 'available', url)]);
+  const previous = channelProjection(older.payload.candidate, 'available', url);
+  recordAvailable({ ...previous, releaseSourceSha: older.payload.candidate.sourceSha });
+  return storeChannelForWebsite([current, previous]);
 }
 
-async function queryPlay(candidate) {
+async function queryPlay(candidate, recordAvailable) {
   if (!Number.isSafeInteger(candidate.deploymentId)) throw new Error('Invalid Play deployment identity.');
   const github = createMobileGithubApi(process.env.GH_TOKEN);
   const row = verifyStoredMobileCandidate(await github('GET', `deployments/${candidate.deploymentId}`));
@@ -110,7 +115,7 @@ async function queryPlay(candidate) {
   if (exact.version !== candidate.version || exact.versionCode !== candidate.versionCode ||
       exact.track !== PLAY_TRACK || exact.packageName !== PLAY_PACKAGE) throw new Error('Play candidate differs.');
   const play = createPlayApi(await playAccessToken(process.env.ANDROID_PLAY_SERVICE_ACCOUNT_JSON));
-  return checkPlayChannel({ play, github, registration: row });
+  return checkPlayChannel({ play, github, registration: row, recordAvailable });
 }
 
 async function observeChannel(id, candidate, query) {
@@ -142,13 +147,16 @@ export async function checkTestflightReviews(api, historicalCandidate, query = q
 
 async function main() {
   const candidates = JSON.parse(await readFile('releases/store-candidates.json', 'utf8'));
+  const playReviews = [];
   const [reviews, play] = await Promise.all([
     checkTestflightReviews(createMobileGithubApi(process.env.GH_TOKEN), candidates.ios),
-    observeChannel('android-play', candidates['android-play'], queryPlay)
+    observeChannel('android-play', candidates['android-play'],
+      candidate => queryPlay(candidate, review => playReviews.push(review)))
   ]);
   const channels = { ios: storeChannelForWebsite(reviews), 'android-play': play };
   await writeFile('.tmp/site-store-status.json', JSON.stringify(channels));
   await writeFile('.tmp/testflight-review-status.json', JSON.stringify(reviews));
+  await writeFile('.tmp/play-release-status.json', JSON.stringify(playReviews));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

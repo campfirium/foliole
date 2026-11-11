@@ -8,6 +8,16 @@ const source = fs.readFileSync('.github/workflows/deploy-release-manifest.yml', 
 const workflow = parse(source);
 
 describe('deploy release manifest workflow contract', () => {
+  it('passes the verified Play result into the Release update before building the site directory', () => {
+    const stores = workflow.jobs.stores;
+    const sync = workflow.jobs['sync-testflight-release'];
+    expect(stores.steps.find(step => step.with?.name === 'play-release-status')?.with.path)
+      .toBe('.tmp/play-release-status.json');
+    expect(sync.needs).toBe('stores');
+    expect(sync.steps.find(step => step.with?.name === 'play-release-status')?.with.path).toBe('.tmp');
+    expect(workflow.jobs.build.needs).toContain('sync-testflight-release');
+  });
+
   it('publishes only merged dev metadata for an already-public Release', () => {
     expect(workflow.on.push.branches).toEqual(['dev']);
     expect(workflow.on.workflow_dispatch).toBeNull();
