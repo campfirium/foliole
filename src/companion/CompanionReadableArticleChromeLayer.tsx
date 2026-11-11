@@ -137,6 +137,7 @@ function ReadingSheetsLayer(props: ReadingSheetsLayerProps) {
         content={props.readableArticle.content}
         editor={props.editor}
         onOpenChange={props.onOpenSearchSheet}
+        onKeepMatch={props.readableArticle.pdfTextReading ? props.onSelectOutlineItem : undefined}
         open={props.searchOpen}
       />
       <TextAlternativeLayer currentBody={props.readableArticle.content} state={props.textAlternative} />

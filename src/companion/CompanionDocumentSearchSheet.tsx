@@ -5,7 +5,7 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { ReadingBottomSheet } from './CompanionReadingSheets';
 
-import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
+import type { EditorAdapter, EditorSelection } from '@/features/editor/adapters/EditorAdapter';
 import {
   buildTopicSearchDecorations,
   buildTopicSearchMatches,
@@ -17,6 +17,7 @@ interface CompanionDocumentSearchSheetProps {
   content: string;
   editor: EditorAdapter | null;
   onOpenChange(open: boolean): void;
+  onKeepMatch?: ((match: EditorSelection) => void) | undefined;
   open: boolean;
 }
 
@@ -104,13 +105,19 @@ export function CompanionDocumentSearchSheet(props: CompanionDocumentSearchSheet
     state.setCurrentIndex((value) => (value + direction + state.matches.length) % state.matches.length);
   }
 
+  function changeOpen(open: boolean) {
+    const match = state.matches[state.currentIndex];
+    if (!open && match && props.editor) props.onKeepMatch?.(match);
+    props.onOpenChange(open);
+  }
+
   return (
-    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.find')}>
+    <ReadingBottomSheet onOpenChange={changeOpen} open={props.open} title={t('companion.reading.find')}>
       <div className="border-t border-companion-divider pt-4">
         <DocumentSearchControls
           inputRef={state.inputRef}
           hasMatches={hasMatches}
-          onClose={() => props.onOpenChange(false)}
+          onClose={() => changeOpen(false)}
           onQueryChange={state.setQuery}
           onStep={step}
           query={state.query}

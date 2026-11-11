@@ -9,7 +9,7 @@ import type {
   EditorViewportMode
 } from '../features/editor/adapters/EditorAdapter';
 import { MarkdownEditor } from '../features/editor/components/MarkdownEditor';
-import type { EditorViewState } from '../features/editor/components/markdownEditorTypes';
+import type { EditorViewState, MarkdownEditorProps } from '../features/editor/components/markdownEditorTypes';
 
 import './companionReadableArticleAnchors.css';
 
@@ -29,6 +29,7 @@ export function CompanionArticleDocument(props: {
   onDocumentInput?: (meta?: import('../features/editor/adapters/EditorAdapter').EditorContentChangeMeta) => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler;
+  onCompleteApplyingReadingPosition?: MarkdownEditorProps['onCompleteApplyingReadingPosition'];
   readingRestoreCommandId?: string | null;
   readingSelection?: EditorSelection | null;
   readingTargetViewportMode?: EditorViewportMode | null;
@@ -65,6 +66,7 @@ export function CompanionArticleDocument(props: {
           onDocumentInput: props.onDocumentInput,
           onMissingAttachmentResource: props.onMissingAttachmentResource,
           onReady: props.onEditorReady,
+          onCompleteApplyingReadingPosition: props.onCompleteApplyingReadingPosition,
           readingRestoreCommandId: props.readingRestoreCommandId,
           readingSelection: props.readingSelection,
           readingTargetViewportMode: props.readingTargetViewportMode,

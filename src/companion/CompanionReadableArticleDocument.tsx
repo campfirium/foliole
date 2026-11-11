@@ -21,7 +21,7 @@ import { useCompanionEditorDraftFlush } from './useCompanionEditorDraftFlush';
 import { useCompanionTopicEditAutosave } from './useCompanionTopicEditAutosave';
 
 import type { EditorAdapter, EditorSelection } from '@/features/editor/adapters/EditorAdapter';
-import type { EditorViewState } from '@/features/editor/components/markdownEditorTypes';
+import type { EditorViewState, MarkdownEditorProps } from '@/features/editor/components/markdownEditorTypes';
 import { definedProps } from '@/shared/lib/definedProps';
 import { syncCompanionAttachmentResourceFromDesktop } from '@/shared/platform/companionDesktopAttachmentResources';
 import { saveCompanionSyncActiveViewState } from '@/shared/platform/companionSyncObjects';
@@ -93,6 +93,7 @@ function ReadableArticleTextDocument(props: {
   editorState: ReturnType<typeof useCompanionTopicEditAutosave>;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   readableArticle: ReadableArticle;
+  onCompleteApplyingReadingPosition?: MarkdownEditorProps['onCompleteApplyingReadingPosition'];
   readingRestoreCommandId?: string | null;
   readingSelection?: EditorSelection | null;
   readingTypographySettings: CompanionReadingTypographySettings;
@@ -126,6 +127,7 @@ function ReadableArticleTextDocument(props: {
           nodeViewState: toEditorViewState(props.readableArticle),
           onChange: props.canEdit ? props.editorState.handleChange : undefined,
           onEditorReady: props.onEditorReady,
+          onCompleteApplyingReadingPosition: props.onCompleteApplyingReadingPosition,
           readingRestoreCommandId: usePdfResume ? `pdf-resume:${props.readableArticle.nodeId}` : props.readingRestoreCommandId,
           readingSelection: usePdfResume ? { from: offset, to: offset } : props.readingSelection,
           scrollContainer: props.scrollContainer
@@ -146,6 +148,7 @@ type ReadableArticleDocumentProps = {
   onSaveContent?: CompanionContentSaveHandler;
   readableArticle: ReadableArticle;
   readingTypographySettings: CompanionReadingTypographySettings;
+  onCompleteApplyingReadingPosition?: MarkdownEditorProps['onCompleteApplyingReadingPosition'];
   readingRestoreCommandId?: string | null;
   readingSelection?: EditorSelection | null;
   scrollContainer?: 'editor' | 'outer';
@@ -197,6 +200,7 @@ export function ReadableArticleDocument(props: ReadableArticleDocumentProps) {
         readingTypographySettings={props.readingTypographySettings}
         syncMissingAttachmentResource={syncMissingAttachmentResource}
         {...definedProps({
+          onCompleteApplyingReadingPosition: props.onCompleteApplyingReadingPosition,
           readingRestoreCommandId: props.readingRestoreCommandId,
           readingSelection: props.readingSelection,
           scrollContainer: canEditAnswer ? 'editor' : props.scrollContainer

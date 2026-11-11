@@ -1,4 +1,5 @@
 import type { EditorAdapter, EditorSelection } from '../features/editor/adapters/EditorAdapter';
+import type { MarkdownEditorProps } from '../features/editor/components/markdownEditorTypes';
 import { definedProps } from '../shared/lib/definedProps';
 import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
 import type { CompanionReadableArticle as ReadableArticle } from '../shared/platform/companionReadableArticle';
@@ -18,6 +19,7 @@ export function ImmersiveArticleContent(props: {
   onSaveArticleContent?: CompanionContentSaveHandler;
   readableArticle: ReadableArticle;
   readingTypographySettings: CompanionReadingTypographySettings;
+  onCompleteApplyingReadingPosition?: MarkdownEditorProps['onCompleteApplyingReadingPosition'];
   readingRestoreCommandId: string | null;
   readingSelection: EditorSelection | null;
   syncEndpointUrl?: string | null;
@@ -36,6 +38,7 @@ export function ImmersiveArticleContent(props: {
         {...definedProps({
           activity: props.activity, answer: props.answer, isReviewItem: props.isReviewItem,
           onAttachmentResourceSynced: props.onAttachmentResourceSynced,
+          onCompleteApplyingReadingPosition: props.onCompleteApplyingReadingPosition,
           onSaveContent: props.onSaveArticleContent,
           syncEndpointUrl: props.syncEndpointUrl
         })}

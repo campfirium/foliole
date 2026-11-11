@@ -206,7 +206,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   const pagedStyle = useCompanionPagedScroll(scrollPosition.surfaceRef, model.reading.isContentEditing);
   const pdfScroll = useCompanionPdfTextScroll({ article: pendingReadableArticle.readableArticle,
     editing: model.reading.isContentEditing, onEditorReady: model.toolbar.handleEditorReady, surface: scrollPosition.surfaceRef,
-    onScrollTopChange: props.onScrollTopChange });
+    onScrollTopChange: props.onScrollTopChange, jump: { commandId: model.reading.readingRestoreCommandId, selection: model.reading.readingSelection } });
   return (
     <section
       data-companion-reading-surface="true"
@@ -233,7 +233,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       <ImmersiveArticleContent
         layout={props.flow ? 'review' : 'article'}
         isContentEditing={model.reading.isContentEditing}
-        onEditorReady={pdfScroll.onEditorReady}
+        onEditorReady={pdfScroll.onEditorReady} onCompleteApplyingReadingPosition={pdfScroll.onJumpSettled}
         readableArticle={pendingReadableArticle.readableArticle}
         readingTypographySettings={readingTypography.settings}
         readingRestoreCommandId={model.reading.readingRestoreCommandId}
