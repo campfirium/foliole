@@ -9,7 +9,6 @@ export async function replaceRejectedMacCredential(app: ElectronApplication, set
   });
   const notice = settings.getByText(/WebDAV rejected this Mac|WebDAV 拒绝了此 Mac 的凭据/);
   await expect(notice).toBeVisible();
-  await settings.getByRole('button', { name: /^(Replace Mac credentials|更换 Mac 凭据)$/ }).click();
   await expect(settings.getByRole('textbox', { name: /^(WebDAV folder URL|WebDAV 目录地址)$/ })).toBeDisabled();
   await settings.getByRole('textbox', { name: /^(Username|用户名)$/ }).fill('foliole-test-mac-new');
   const secret = settings.getByLabel(/^(App password|应用密码)$/);

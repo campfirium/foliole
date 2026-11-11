@@ -43,7 +43,9 @@ test('configures WebDAV from its experimental settings page and reloads the save
     await folder.fill(url);
     await connect.click();
     await expect(settings.getByText(/^(Service configured|服务已配置)$/)).toBeVisible();
-    await expect(settings.getByText(`${url}/`, { exact: true })).toBeVisible();
+    await expect(folder).toHaveValue(`${url}/`);
+    await expect(settings.getByRole('textbox', { name: /^(Username|用户名)$/ })).toBeVisible();
+    await expect(settings.getByLabel(/^(App password|应用密码)$/)).toBeVisible();
     await logButton.click();
     const logPath = path.join(logsDir, 'webdav-sync.txt');
     await expect.poll(() => desktopApp.evaluate(({ shell }) => Reflect.get(shell, 'webDavTestOpenedPath'))).toBe(logPath);
@@ -56,7 +58,7 @@ test('configures WebDAV from its experimental settings page and reloads the save
     await lan.click();
     await expect(folder).toHaveCount(0);
     await webdav.click();
-    await expect(settings.getByText(`${url}/`, { exact: true })).toBeVisible();
+    await expect(folder).toHaveValue(`${url}/`);
   });
   await testInfo.attach('webdav-settings', { body: await settings.screenshot(), contentType: 'image/png' });
 });

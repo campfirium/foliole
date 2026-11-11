@@ -9,9 +9,9 @@ import { useLocalization, useTranslation } from '../../../../shared/localization
 import { enableDesktopWebDavRelay } from '../../../../shared/platform/desktopSyncGroupRuntimeRepository';
 import { useDesktopSyncGroup } from '../../../../shared/platform/useDesktopSyncGroup';
 import {
-  AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger,
+  AppSpinner, AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger,
   SettingsButton, SettingsControlSlot, SettingsRow, SettingsSection, SettingsSegmentedControl,
-  requestAppConfirmation, settingsFieldClassName
+  requestAppConfirmation, settingsFieldClassName, settingsUtilityIconButtonClassName
 } from '../../../../shared/ui';
 
 import { SettingsWebDavAttachmentRow } from './SettingsWebDavAttachmentRow';
@@ -47,10 +47,10 @@ function WebDavUsage({ relay, refresh }: { relay: Relay; refresh: () => Promise<
           uploaded: format.format(totals.uploadedBytes), downloaded: format.format(totals.downloadedBytes) })
        : t(`${PREFIX}.usageUnavailable`)}</span>}>
       <SettingsControlSlot>
-        <SettingsButton aria-label={t(`${PREFIX}.refreshUsage`)} title={t(`${PREFIX}.refreshUsage`)}
-          className="size-9 px-0" loading={refreshing} loadingLabel={null} onClick={() => void refreshUsage()}>
-          {!refreshing && <RefreshCw size={16} aria-hidden="true" />}
-        </SettingsButton>
+        <button type="button" aria-label={t(`${PREFIX}.refreshUsage`)} title={t(`${PREFIX}.refreshUsage`)}
+          className={settingsUtilityIconButtonClassName()} disabled={refreshing} aria-busy={refreshing} onClick={() => void refreshUsage()}>
+          {refreshing ? <AppSpinner size="sm" decorative /> : <RefreshCw size={16} aria-hidden="true" />}
+        </button>
         <SettingsSegmentedControl ariaLabel={t(`${PREFIX}.period`)} value={period}
           onChange={value => setPeriod(value as WebDavUsagePeriod)}
           options={(Object.keys(WEB_DAV_USAGE_PERIOD_MINUTES) as WebDavUsagePeriod[])
@@ -140,7 +140,7 @@ export function SettingsWebDavSyncSection() {
       <SettingsWebDavAttachmentRow groupId={group.group_id} policy={relay.attachment_policy} />
       <ol role="list" className="mx-settings-panel-x border-t border-settings-divider/70">
         <WebDavSetupStep>
-          <SettingsWebDavRelayRow groupId={group.group_id} bound={Boolean(relay.device_id)} configured={relay.configured}
+          <SettingsWebDavRelayRow groupId={group.group_id} bound={Boolean(relay.device_id)}
             credentialActive={Boolean(relay.credential_active)} />
         </WebDavSetupStep>
         <WebDavSetupStep>

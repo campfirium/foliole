@@ -42,7 +42,6 @@ function useWebDavRelayDirectory(groupId: string) {
       setDirectory(saved);
       if (credentials) setCredentialDirectory(saved);
       setStatus(credentials ? 'credentialPassed' : 'passed');
-      return !credentials;
     } catch (error) {
       setStatus(isSecureStorageError(error) ? 'credentialStorageUnavailable' : credentials ? 'credentialFailed' : 'failed');
     }
@@ -57,19 +56,16 @@ function isSecureStorageError(error: unknown) {
   return error instanceof Error && error.message.includes('webdav_relay_secure_storage_unavailable');
 }
 
-export function SettingsWebDavRelayRow({ groupId, bound, configured, credentialActive }: {
+export function SettingsWebDavRelayRow({ groupId, bound, credentialActive }: {
   groupId: string;
   bound?: boolean;
-  configured?: boolean;
   credentialActive?: boolean;
 }) {
   const t = useTranslation();
-  const [editing, setEditing] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const { directory, credentialDirectory, status, connect, changeDirectory, clearResult } = useWebDavRelayDirectory(groupId);
   const busy = status === 'loading' || status === 'running';
-  const showForm = !configured || editing || status === 'loadFailed';
   const credentialInput = Boolean(credentialActive || username || password || (credentialDirectory && directory.trim() === credentialDirectory));
   const canConnect = !busy && Boolean(directory.trim()) &&
     (credentialInput ? Boolean(username.trim() && password) : !bound);
@@ -77,21 +73,12 @@ export function SettingsWebDavRelayRow({ groupId, bound, configured, credentialA
     if (!canConnect) return;
     const pending = connect(credentialInput ? { username, password } : undefined);
     setPassword('');
-    if (await pending) setEditing(false);
+    await pending;
   };
   const result = status === 'passed' || status === 'failed' || status === 'loadFailed' ||
     status === 'credentialPassed' || status === 'credentialFailed' || status === 'credentialStorageUnavailable'
     ? <span role="status">{t(`settings.companionSync.webdav.${status}`)}</span> : null;
   const savedCredentials = credentialDirectory && <span>{t('settings.companionSync.webdav.credentialsSaved', { directory: credentialDirectory })}</span>;
-  if (!showForm) return <SettingsRow title={t('settings.companionSync.webdav.service')}
-    description={<><span>{directory}</span>{savedCredentials ? <><br />{savedCredentials}</> : null}{result ? <><br />{result}</> : null}</>}>
-    <SettingsControlSlot>
-      <SettingsButton disabled={busy} onClick={() => setEditing(true)}>
-        {t(credentialActive ? 'settings.companionSync.webdav.credentialReplaceMac' : 'settings.companionSync.webdav.configure')}
-      </SettingsButton>
-    </SettingsControlSlot>
-  </SettingsRow>;
-
   return <>
     <SettingsRow title={t('settings.companionSync.webdav.service')}
       description={result && savedCredentials ? <>{result}<br />{savedCredentials}</> : result || savedCredentials}>

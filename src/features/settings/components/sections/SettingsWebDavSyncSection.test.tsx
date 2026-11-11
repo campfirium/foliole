@@ -69,7 +69,9 @@ it('requires confirmation and reports host rejection before rendering a delivere
   const unregister = registerAppConfirmationHandler(confirm);
   try {
     const { rerender } = renderWithLocalization(<SettingsWebDavSyncSection />);
-    await screen.findByText('https://dav.example.net/relay/');
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'WebDAV folder URL' })).toHaveValue('https://dav.example.net/relay/'));
+    expect(screen.getByRole('textbox', { name: 'Username' })).toBeVisible();
+    expect(screen.getByLabelText('App password')).toBeVisible();
     const choose = screen.getByRole('button', { name: 'Choose device' });
     fireEvent.keyDown(choose, { key: 'ArrowDown' });
     expect(screen.queryByRole('menuitem', { name: 'Desktop' })).not.toBeInTheDocument();
@@ -97,7 +99,7 @@ it('keeps the phone visible and updates whether it can be selected when LAN avai
   setRelay(true, null, false, []);
   invoke.mockResolvedValue({ directory: 'https://dav.example.net/relay/', credential_directory: null });
   const { rerender } = renderWithLocalization(<SettingsWebDavSyncSection />);
-  await screen.findByText('https://dav.example.net/relay/');
+  await waitFor(() => expect(screen.getByRole('textbox', { name: 'WebDAV folder URL' })).toHaveValue('https://dav.example.net/relay/'));
   fireEvent.keyDown(screen.getByRole('button', { name: 'Choose device' }), { key: 'ArrowDown' });
   expect(await screen.findByRole('menuitem', { name: 'A5' })).toHaveAttribute('aria-disabled', 'true');
   setRelay(true);
