@@ -42,7 +42,7 @@ it.each(['android', 'ios'] as const)('%s hands off the whole saved body and keep
   const start = '沿河走到旧码头。';
   const middle = '经过石桥，继续向前。'.repeat(3500);
   const end = '这是编辑后新保存的最后一句。';
-  const savedContent = `---\nprivate: metadata\n---\n# 沿河走\n\n${start}\n\n${middle}\n\n${end}`;
+  const savedContent = `---\nprivate: metadata\n---\n# 沿河走\n\n## 河岸\n\n${start}\n\n${middle}\n\n## 河岸\n\n${end}`;
   const activity = new CompanionReadingActivity('topic', () => {});
   const close = vi.fn();
   await host.seed(editableNode({ title: '沿河走', content: '旧正文' }), 'base');
@@ -65,7 +65,16 @@ it.each(['android', 'ios'] as const)('%s hands off the whole saved body and keep
     expect(nativeOpen).toHaveBeenCalledTimes(1);
     const html = nativeOpen.mock.calls[0]?.[0].html as string;
     expect(html).toContain('<html lang="zh-CN">');
-    expect(html).toContain(`<h1>沿河走</h1><p>${start}</p>\n<p>${middle}</p>\n<p>${end}</p>`);
+    const page = new DOMParser().parseFromString(html, 'text/html');
+    const contents = page.querySelector('nav')!;
+    const article = page.querySelector('article')!;
+    expect(contents).not.toBeNull();
+    expect(contents.compareDocumentPosition(article) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const links = [...contents.querySelectorAll('a')];
+    expect(links.map(link => link.textContent)).toEqual(['河岸', '河岸']);
+    const destinations = links.map(link => page.getElementById(link.hash.slice(1)));
+    expect(destinations).toEqual([...article.querySelectorAll('h3')]);
+    expect([...article.querySelectorAll('p')].map(paragraph => paragraph.textContent)).toEqual([start, middle, end]);
     expect(html).not.toMatch(/旧正文|private: metadata/u);
     expect(screen.queryByRole('status')).toBeNull();
     expect(close).not.toHaveBeenCalled();

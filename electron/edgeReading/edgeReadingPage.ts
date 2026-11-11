@@ -1,4 +1,4 @@
-import { escapeArticleHtml as escapeHtml, renderArticleBodyBlocks } from '../../lib/core/articleHandoff/articleHtml.js';
+import { escapeArticleHtml as escapeHtml, renderArticleBodyWithSections } from '../../lib/core/articleHandoff/articleHtml.js';
 import type { ArticleBody } from '../../lib/platform/articleTarget.js';
 
 export interface EdgeReadingArticle extends ArticleBody {
@@ -22,21 +22,11 @@ a:hover, a:focus-visible { color:#111; text-decoration:underline; text-underline
 <img src="data:image/svg+xml;base64,${logo}" alt="">${navigation}</html>`;
 }
 
-function renderArticle(article: EdgeReadingArticle) {
-  const blocks = renderArticleBodyBlocks(article);
-  const links: string[] = [];
-  const body = blocks.map((block, index) => {
-    if (!/^ATXHeading[1-6]$/u.test(block.kind) || !block.text) return block.html;
-    const anchor = `section-${index}`;
-    links.push(`<a href="index.html#${anchor}" target="_parent">${escapeHtml(block.text)}</a>`);
-    return block.html.replace(/^<h[2-6]/u, (tag) => `${tag} id="${anchor}"`);
-  });
-  return { body: body.join('\n'), links };
-}
-
 export function renderEdgeReadingPage(article: EdgeReadingArticle) {
   const title = escapeHtml(article.title);
-  const { body, links } = renderArticle(article);
+  const { body, sections } = renderArticleBodyWithSections(article);
+  const links = sections.map(({ anchor, title }) =>
+    `<a href="index.html#${anchor}" target="_parent">${escapeHtml(title)}</a>`);
   const sidebar = escapeHtml(renderSidebar(article, links));
   return `<!doctype html><html lang="${escapeHtml(article.language)}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
