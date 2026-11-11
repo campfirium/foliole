@@ -29,15 +29,19 @@ function setRelay(configured: boolean, deviceId: string | null = null, delivered
 
 afterEach(() => vi.resetAllMocks());
 
-it('shows only available actions until a server has been configured', async () => {
+it('shows device setup but keeps it disabled until WebDAV is configured', async () => {
   setRelay(false);
   invoke.mockResolvedValue(null);
-  renderWithLocalization(<SettingsWebDavSyncSection />);
+  const view = renderWithLocalization(<SettingsWebDavSyncSection />);
 
   expect(screen.getByText('Service not configured')).toBeVisible();
   expect(screen.getByRole('radio', { name: 'Limit size' })).toBeEnabled();
-  expect(screen.queryByRole('button', { name: 'Choose device' })).not.toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Connect another device' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Choose device' })).toBeDisabled();
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'WebDAV folder URL' })).toBeEnabled());
+  setRelay(true);
+  view.rerender(<SettingsWebDavSyncSection />);
+  expect(screen.getByRole('button', { name: 'Choose device' })).toBeEnabled();
 });
 
 it('opens the host log even before configuration and lets the user retry an open failure', async () => {
@@ -50,7 +54,9 @@ it('opens the host log even before configuration and lets the user retry an open
   expect(await screen.findByRole('alert')).toHaveTextContent('Could not open the WebDAV log file.');
   expect(invoke).toHaveBeenCalledWith('open_webdav_relay_log');
 
-  invoke.mockResolvedValue(null);
+  invoke.mockResolvedValueOnce('empty').mockResolvedValue(null);
+  fireEvent.click(button);
+  expect(await screen.findByText('No WebDAV logs yet.')).toBeVisible();
   fireEvent.click(button);
   await waitFor(() => expect(button).toBeEnabled());
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();

@@ -1,5 +1,5 @@
-import { ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronDown, RefreshCw } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 
 import type { DesktopSyncGroupOverviewPayload } from '../../../../../lib/platform/nativeCompanionSyncContract';
 import type { SyncGroupDevicePayload, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
@@ -30,7 +30,6 @@ function WebDavUsage({ relay, refresh }: { relay: Relay; refresh: () => Promise<
   const usage = failed ? null : relay.usage;
   const totals = usage?.[period];
   const format = new Intl.NumberFormat(locale);
-  const time = usage && new Intl.DateTimeFormat(locale, { timeStyle: 'medium' }).format(usage.measuredAt);
 
   async function refreshUsage() {
     setRefreshing(true);
@@ -41,17 +40,17 @@ function WebDavUsage({ relay, refresh }: { relay: Relay; refresh: () => Promise<
   }
 
   return <SettingsSection title={t(`${PREFIX}.usage`)} description={t(`${PREFIX}.usageDescription`)}
-    actions={<div className="flex items-center gap-2">
-      <SettingsButton disabled={refreshing} onClick={() => void refreshUsage()}>{t(`${PREFIX}.refreshUsage`)}</SettingsButton>
-      <SettingsWebDavLogButton />
-    </div>}>
+    actions={<SettingsWebDavLogButton />}>
     <SettingsRow title={t(relay.configured ? `${PREFIX}.configured` : `${PREFIX}.unconfigured`)}
-      description={<span aria-live="polite">{totals && time ? <>
-        {t(`${PREFIX}.usageTotals`, { requests: format.format(totals.requests),
-          uploaded: format.format(totals.uploadedBytes), downloaded: format.format(totals.downloadedBytes) })}
-        <br />{t(`${PREFIX}.usageMeasuredAt`, { time })}
-      </> : t(`${PREFIX}.usageUnavailable`)}</span>}>
+      description={<span aria-live="polite">{totals ?
+        t(`${PREFIX}.usageTotals`, { requests: format.format(totals.requests),
+          uploaded: format.format(totals.uploadedBytes), downloaded: format.format(totals.downloadedBytes) })
+       : t(`${PREFIX}.usageUnavailable`)}</span>}>
       <SettingsControlSlot>
+        <SettingsButton aria-label={t(`${PREFIX}.refreshUsage`)} title={t(`${PREFIX}.refreshUsage`)}
+          className="size-9 px-0" loading={refreshing} loadingLabel={null} onClick={() => void refreshUsage()}>
+          {!refreshing && <RefreshCw size={16} aria-hidden="true" />}
+        </SettingsButton>
         <SettingsSegmentedControl ariaLabel={t(`${PREFIX}.period`)} value={period}
           onChange={value => setPeriod(value as WebDavUsagePeriod)}
           options={(Object.keys(WEB_DAV_USAGE_PERIOD_MINUTES) as WebDavUsagePeriod[])
@@ -67,6 +66,7 @@ function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Rel
   const [failed, setFailed] = useState(false);
   const devices = group.devices.filter(device => device.state === 'active'
     && device.device_identity_key !== group.local_device_identity_key && device.platform.toLowerCase().startsWith('android'));
+  const ready = relay.configured || relay.credential_draft_available;
   const status = !relay.delivered ? 'waiting' : relay.lan_baseline_required ? 'lanBaselineRequired'
     : relay.published_via_relay ? 'relayUploaded' : 'enabled';
   const available = new Set(relay.available_device_ids);
@@ -93,7 +93,7 @@ function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Rel
 
   return <SettingsRow title={t(`${PREFIX}.connectDevice`)}
     description={failed ? <span role="alert">{t(`${PREFIX}.credentialDeliveryFailed`)}</span>
-      : relay.device_id ? undefined : t(`${PREFIX}.deviceHint`)}>
+      : relay.device_id ? undefined : t(`${PREFIX}.${ready ? 'deviceHint' : 'deviceSetupRequired'}`)}>
     <SettingsControlSlot>
       {relay.device_id ? <><span role="status" className="text-ui-sm text-muted-foreground">
         {bound ? `${nameOf(bound)} · ` : ''}{t(`${PREFIX}.${status}`)}
@@ -102,7 +102,7 @@ function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Rel
           {t(`${PREFIX}.${relay.credential_active ? 'credentialReplacePhone' : 'credentialVerifyDevice'}`)}
         </SettingsButton> : null}</> : <AppDropdownMenu>
         <AppDropdownMenuTrigger asChild>
-          <button type="button" disabled={busy || !devices.length}
+          <button type="button" disabled={busy || !ready || !devices.length}
             className={settingsFieldClassName('inline-flex items-center gap-2')}>
             {t(`${PREFIX}.chooseDevice`)} <ChevronDown size={15} aria-hidden />
           </button>
@@ -118,6 +118,12 @@ function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Rel
   </SettingsRow>;
 }
 
+function WebDavSetupStep({ children }: { children: ReactNode }) {
+  return <li className="relative pl-7 before:absolute before:left-1 before:top-7 before:z-10 before:size-1.5 before:rounded-full before:bg-muted-foreground after:absolute after:left-[6px] after:top-7 after:-bottom-7 after:border-l after:border-dotted after:border-muted-foreground/65 last:after:hidden">
+    {children}
+  </li>;
+}
+
 export function SettingsWebDavSyncSection() {
   const t = useTranslation();
   const { overview, isLoading, refresh } = useDesktopSyncGroup();
@@ -130,12 +136,18 @@ export function SettingsWebDavSyncSection() {
     <WebDavUsage relay={relay} refresh={refresh} />
     <SettingsSection title={t(`${PREFIX}.configuration`)} key={group.group_id}>
       <SettingsWebDavAttachmentRow groupId={group.group_id} policy={relay.attachment_policy} />
-      <SettingsWebDavRelayRow groupId={group.group_id} bound={Boolean(relay.device_id)} configured={relay.configured}
-        credentialActive={Boolean(relay.credential_active)} />
-      {relay.configured || relay.credential_draft_available ? <WebDavDeviceRow group={group} relay={relay} /> : null}
-      {relay.credential_delivery ? <SettingsWebDavCredentialDelivery key={relay.credential_delivery.id}
-        groupId={group.group_id} delivery={relay.credential_delivery}
-        phoneConnected={Boolean(relay.available_device_ids?.includes(relay.credential_delivery.device_id))} /> : null}
+      <ol role="list" className="mx-settings-panel-x border-t border-settings-divider/70">
+        <WebDavSetupStep>
+          <SettingsWebDavRelayRow groupId={group.group_id} bound={Boolean(relay.device_id)} configured={relay.configured}
+            credentialActive={Boolean(relay.credential_active)} />
+        </WebDavSetupStep>
+        <WebDavSetupStep>
+          <WebDavDeviceRow group={group} relay={relay} />
+          {relay.credential_delivery ? <SettingsWebDavCredentialDelivery key={relay.credential_delivery.id}
+            groupId={group.group_id} delivery={relay.credential_delivery}
+            phoneConnected={Boolean(relay.available_device_ids?.includes(relay.credential_delivery.device_id))} /> : null}
+        </WebDavSetupStep>
+      </ol>
     </SettingsSection>
   </>;
 }

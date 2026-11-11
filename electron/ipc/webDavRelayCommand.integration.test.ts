@@ -243,9 +243,13 @@ it('opens only the local WebDAV log through IPC and keeps failed probe details p
   openPath.mockResolvedValue('');
   const file = path.join(root, 'logs', 'webdav-sync.txt');
   const openLog = () => handleInvokeRequest({ command: NATIVE_COMMANDS.openWebDavRelayLog, args: { path: '/untrusted.txt' } });
-  await expect(openLog()).resolves.toBeNull();
-  expect(openPath).toHaveBeenLastCalledWith(file);
-  expect(await fs.readFile(file, 'utf8')).toBe('');
+  await expect(openLog()).resolves.toBe('empty');
+  expect(openPath).not.toHaveBeenCalled();
+  await expect(fs.stat(file)).rejects.toMatchObject({ code: 'ENOENT' });
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, '');
+  await expect(openLog()).resolves.toBe('empty');
+  expect(openPath).not.toHaveBeenCalled();
 
   await withWebDavFixture(true, async url => {
     const save = (directoryUrl: string) => handleInvokeRequest({
@@ -261,6 +265,8 @@ it('opens only the local WebDAV log through IPC and keeps failed probe details p
     expect(failed.downloadedBytes).toBeGreaterThan(0);
     for (const secret of [url, 'hidden-user', 'hidden-password', 'different test data']) expect(log).not.toContain(secret);
   });
+  await expect(openLog()).resolves.toBeNull();
+  expect(openPath).toHaveBeenLastCalledWith(file);
   openPath.mockResolvedValueOnce('private system error');
   await expect(openLog()).rejects.toThrow('webdav_log_open_failed');
 });

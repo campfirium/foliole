@@ -172,7 +172,7 @@ export function onDesktopSyncGroupDiscoveryChanged(handler: (payload: SyncGroupD
 export async function openDesktopWebDavRelayLog() {
   const invoke = getRuntimeInvoke();
   if (!invoke) throw new Error('webdav_log_unavailable');
-  await invoke(NATIVE_COMMANDS.openWebDavRelayLog);
+  return invoke(NATIVE_COMMANDS.openWebDavRelayLog);
 }
 
 export function loadDesktopWebDavRelayDirectory(groupId: string) {

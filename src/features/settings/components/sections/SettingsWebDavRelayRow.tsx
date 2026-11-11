@@ -4,7 +4,7 @@ import { useTranslation } from '../../../../shared/localization/LocalizationProv
 import {
   loadDesktopWebDavRelayDirectory, saveDesktopWebDavRelayDirectory, saveDesktopWebDavRelayCredentials
 } from '../../../../shared/platform/desktopSyncGroupRuntimeRepository';
-import { SettingsButton, SettingsControlSlot, SettingsFlow, SettingsRow } from '../../../../shared/ui';
+import { SettingsButton, SettingsControlSlot, SettingsRow } from '../../../../shared/ui';
 
 import { PublishingTextRow } from './PublishingTextRow';
 
@@ -94,26 +94,25 @@ export function SettingsWebDavRelayRow({ groupId, bound, configured, credentialA
 
   return <>
     <SettingsRow title={t('settings.companionSync.webdav.service')}
-      description={<>{t('settings.companionSync.webdav.credentialSaveDescription')}{savedCredentials ? <><br />{savedCredentials}</> : null}</>} />
-    <SettingsFlow>
-      <PublishingTextRow title={t('settings.companionSync.webdav.directory')}
-        label={t('settings.companionSync.webdav.directory')} description={null}
-        disabled={busy || Boolean(bound)} type="url" value={directory} placeholder="https://" onChange={changeDirectory}
-        onEnter={() => void submit()} />
-      <PublishingTextRow title={t('settings.companionSync.webdav.username')}
-        label={t('settings.companionSync.webdav.username')} description={null}
-        disabled={busy} value={username} onChange={value => { setUsername(value); clearResult(); }} />
-      <PublishingTextRow title={t('settings.companionSync.webdav.password')}
-        label={t('settings.companionSync.webdav.password')} description={null}
-        disabled={busy} type="password" value={password}
-        onChange={value => { setPassword(value); clearResult(); }} onEnter={() => void submit()} />
-    </SettingsFlow>
-    <SettingsRow description={result}>
+      description={result && savedCredentials ? <>{result}<br />{savedCredentials}</> : result || savedCredentials}>
       <SettingsControlSlot>
         <SettingsButton disabled={!canConnect} onClick={() => void submit()}>
           {t(credentialInput ? 'settings.companionSync.webdav.credentialSave' : 'settings.companionSync.webdav.connect')}
         </SettingsButton>
       </SettingsControlSlot>
     </SettingsRow>
+    <div className="[&>[data-settings-row]+[data-settings-row]]:before:block">
+      <PublishingTextRow plain title={t('settings.companionSync.webdav.directory')}
+        label={t('settings.companionSync.webdav.directory')} description={null}
+        disabled={busy || Boolean(bound)} type="url" value={directory} placeholder="https://" onChange={changeDirectory}
+        onEnter={() => void submit()} />
+      <PublishingTextRow plain title={t('settings.companionSync.webdav.username')}
+        label={t('settings.companionSync.webdav.username')} description={null}
+        disabled={busy} value={username} onChange={value => { setUsername(value); clearResult(); }} />
+      <PublishingTextRow plain title={t('settings.companionSync.webdav.password')}
+        label={t('settings.companionSync.webdav.password')} description={null}
+        disabled={busy} type="password" value={password}
+        onChange={value => { setPassword(value); clearResult(); }} onEnter={() => void submit()} />
+    </div>
   </>;
 }

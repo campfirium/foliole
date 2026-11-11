@@ -1,4 +1,4 @@
-import { appendFile, mkdir } from 'node:fs/promises';
+import { appendFile, mkdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 import { shell } from 'electron';
@@ -16,16 +16,25 @@ type RoundResult = {
   retryable: boolean;
 };
 
+function logPath() {
+  return path.join(resolveAppPaths().app_log_dir, 'webdav-sync.txt');
+}
+
 async function prepareLogPath() {
-  const directory = resolveAppPaths().app_log_dir;
-  await mkdir(directory, { recursive: true });
-  return path.join(directory, 'webdav-sync.txt');
+  const file = logPath();
+  await mkdir(path.dirname(file), { recursive: true });
+  return file;
 }
 
 export async function openDesktopWebDavRelayLog() {
   if (process.platform !== 'darwin') throw new Error('webdav_log_unavailable');
-  const file = await prepareLogPath();
-  await appendFile(file, '', { mode: 0o600 });
+  const file = logPath();
+  try {
+    if ((await stat(file)).size === 0) return 'empty' as const;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 'empty' as const;
+    throw error;
+  }
   if (await shell.openPath(file)) throw new Error('webdav_log_open_failed');
   return null;
 }

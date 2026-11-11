@@ -7,26 +7,29 @@ import { SettingsButton } from '../../../../shared/ui';
 export function SettingsWebDavLogButton() {
   const t = useTranslation();
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [result, setResult] = useState<'empty' | 'failed' | null>(null);
 
   async function openLog() {
     setBusy(true);
-    setFailed(false);
+    setResult(null);
     try {
-      await openDesktopWebDavRelayLog();
+      if (await openDesktopWebDavRelayLog() === 'empty') setResult('empty');
     } catch {
-      setFailed(true);
+      setResult('failed');
     } finally {
       setBusy(false);
     }
   }
 
-  return <>
-    {failed && <span role="alert" className="text-ui-sm text-muted-foreground">
+  return <div className="flex flex-col items-end gap-1">
+    {result === 'empty' && <span role="status" className="text-ui-sm text-muted-foreground">
+      {t('settings.companionSync.webdav.logEmpty')}
+    </span>}
+    {result === 'failed' && <span role="alert" className="text-ui-sm text-muted-foreground">
       {t('settings.companionSync.webdav.openLogFailed')}
     </span>}
     <SettingsButton disabled={busy} onClick={() => void openLog()}>
       {t('settings.companionSync.webdav.openLog')}
     </SettingsButton>
-  </>;
+  </div>;
 }

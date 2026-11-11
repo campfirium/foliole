@@ -28,6 +28,15 @@ test('configures WebDAV from its experimental settings page and reloads the save
 
   await webdav.click();
   await expect(settings.getByText('Experiment', { exact: true })).toBeVisible();
+  const chooseDevice = settings.getByRole('button', { name: /^(Choose device|选择设备)$/ });
+  await expect(settings.getByRole('heading', { name: /^(Set up WebDAV|设置 WebDAV)$/ })).toBeVisible();
+  await expect(settings.getByRole('heading', { name: /^(Connect another device|连接其他设备)$/ })).toBeVisible();
+  await expect(chooseDevice).toBeDisabled();
+  const logButton = settings.getByRole('button', { name: /^(Open log file|打开日志文件)$/ });
+  await logButton.click();
+  await expect(settings.getByText(/^(No WebDAV logs yet\.|暂无 WebDAV 日志。)$/)).toBeVisible();
+  expect(await desktopApp.evaluate(({ shell }) => Reflect.has(shell, 'webDavTestOpenedPath'))).toBe(false);
+  await testInfo.attach('webdav-before-setup', { body: await settings.screenshot(), contentType: 'image/png' });
   const folder = settings.getByRole('textbox', { name: /^(WebDAV folder URL|WebDAV 目录地址)$/ });
   const connect = settings.getByRole('button', { name: /^(Connect|连接)$/ });
   await withWebDavFixture(false, async (url, files) => {
@@ -35,7 +44,7 @@ test('configures WebDAV from its experimental settings page and reloads the save
     await connect.click();
     await expect(settings.getByText(/^(Service configured|服务已配置)$/)).toBeVisible();
     await expect(settings.getByText(`${url}/`, { exact: true })).toBeVisible();
-    await settings.getByRole('button', { name: /^(Open log file|打开日志文件)$/ }).click();
+    await logButton.click();
     const logPath = path.join(logsDir, 'webdav-sync.txt');
     await expect.poll(() => desktopApp.evaluate(({ shell }) => Reflect.get(shell, 'webDavTestOpenedPath'))).toBe(logPath);
     const log = await readFile(logPath, 'utf8');
