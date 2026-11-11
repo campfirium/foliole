@@ -29,7 +29,7 @@ export function SettingsWebDavCredentialDelivery({ groupId, delivery, phoneConne
     finally { setBusy(false); }
   }
 
-  async function confirm() {
+  async function submitPhoneCredentials() {
     if (busy || !username.trim() || !password) return;
     setBusy(true);
     setFailed(false);
@@ -64,7 +64,7 @@ export function SettingsWebDavCredentialDelivery({ groupId, delivery, phoneConne
       </SettingsFlow>
       <SettingsRow description={failed ? <span role="alert">{t(`${PREFIX}.credentialDeliveryFailed`)}</span> : undefined}>
         <SettingsControlSlot>
-          <SettingsButton disabled={busy || !username.trim() || !password} onClick={() => void confirm()}>
+          <SettingsButton disabled={busy || !username.trim() || !password} onClick={() => void submitPhoneCredentials()}>
             {t(`${PREFIX}.${delivery.automatic ? 'credentialSaveReplacement' : 'credentialConfirmFingerprint'}`)}
           </SettingsButton>
         </SettingsControlSlot>
