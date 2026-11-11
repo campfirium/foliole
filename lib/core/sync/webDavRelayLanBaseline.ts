@@ -79,7 +79,7 @@ export async function captureWebDavRelayLanBaseline(host: RequestSyncDatabaseHos
   // Confirmation may follow more local commits. Only the pre-inventory position is covered here.
   return async () => {
     signal?.throwIfAborted();
-    await host.write(db => db.transaction(async tx => {
+    return host.write(db => db.transaction(async tx => {
       const current = await readPosition(tx, scope);
       if (!current || !sameEpochs(captured, { ...scope, ...current }) || current.sequence < captured.sequence) return;
       const previous = await readStoredBaseline(tx, scope);
@@ -88,6 +88,7 @@ export async function captureWebDavRelayLanBaseline(host: RequestSyncDatabaseHos
       await tx.run(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)
         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
       [baselineKey(scope), JSON.stringify(captured), new Date().toISOString()]);
+      return true;
     }));
   };
 }
@@ -102,7 +103,7 @@ export function createWebDavRelayInboundBaselines() {
     },
     async confirm(round: AbortSignal) {
       const confirm = await byRound.get(round);
-      await confirm?.();
+      return confirm?.();
     }
   };
 }

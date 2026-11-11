@@ -7,14 +7,17 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
+import { captureWebDavRelayLanBaseline } from '../../lib/core/sync/webDavRelayLanBaseline.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
-import { closeDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { saveJsonSetting } from '../database/settingsStore.js';
 import { createDesktopSyncGroup, registerSyncGroupDevice } from '../database/syncGroupStore.js';
+import { createDesktopRequestSyncDatabaseHost } from '../sync/desktopRequestSyncDatabaseHost.js';
 import { desktopSyncChangeSessions } from '../sync/desktopSyncChangeSessions.js';
-import { desktopWebDavRelayForPeer } from '../sync/desktopWebDavRelaySettings.js';
+import { confirmDesktopWebDavRelayDelivery, desktopWebDavRelayForPeer } from '../sync/desktopWebDavRelaySettings.js';
 
 import { handleInvokeRequest } from './commands.js';
 
@@ -101,4 +104,47 @@ it('reports current authenticated phone availability through the desktop overvie
 
   sessions.close(phone, connected.session);
   await expect(overview()).resolves.toMatchObject({ webdav_relay: { available_device_ids: [] } });
+});
+
+it('reports when a delivered binding needs LAN sync again after a library epoch changes', async () => {
+  const phone = registerPhone('Android phone');
+  const sessions = desktopSyncChangeSessions();
+  const connected = sessions.open(phone);
+  try {
+    await enableRelay(phone);
+  } finally {
+    sessions.close(phone, connected.session);
+  }
+  const binding = desktopWebDavRelayForPeer(groupId, phone)!;
+  const overview = () => handleInvokeRequest({ command: NATIVE_COMMANDS.loadSyncGroupOverview, args: {} });
+  const expectBaselineRequired = (required: boolean) => expect(overview()).resolves.toMatchObject({
+    webdav_relay: { lan_baseline_required: required }
+  });
+  await expectBaselineRequired(false);
+  confirmDesktopWebDavRelayDelivery(groupId, phone, binding.id);
+  await expectBaselineRequired(true);
+
+  const connection = openDatabaseConnection();
+  const host = createDesktopRequestSyncDatabaseHost(connection.dbPath);
+  const updatePhoneEpoch = connection.sqlite.prepare(`INSERT INTO node_version_device_revisions
+    (group_id, device_identity_key, library_epoch, proof_revision, pack_id, updated_at)
+    VALUES (?, ?, ?, 1, 'pack', 'now')
+    ON CONFLICT(group_id, device_identity_key) DO UPDATE SET library_epoch = excluded.library_epoch`);
+  const localEpoch = connection.sqlite.prepare('SELECT library_epoch FROM node_version_local_proof_state').pluck().get() as string;
+  const confirmLanRound = async (phoneEpoch: string) => {
+    const confirm = await captureWebDavRelayLanBaseline(host, binding, {
+      groupId, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+      initiatorDeviceId: binding.desktop_device_id, initiatorLibraryEpoch: localEpoch,
+      responderDeviceId: phone, responderLibraryEpoch: phoneEpoch
+    }, 'initiator');
+    expect(await confirm?.()).toBe(true);
+  };
+
+  updatePhoneEpoch.run(groupId, phone, 'original');
+  await confirmLanRound('original');
+  await expectBaselineRequired(false);
+  updatePhoneEpoch.run(groupId, phone, 'restored');
+  await expectBaselineRequired(true);
+  await confirmLanRound('restored');
+  await expectBaselineRequired(false);
 });

@@ -21,9 +21,9 @@ const group = {
   ]
 };
 
-function setRelay(configured: boolean, deviceId: string | null = null, delivered = false, available = ['phone']) {
+function setRelay(configured: boolean, deviceId: string | null = null, delivered = false, available = ['phone'], baselineRequired = false) {
   useDesktopSyncGroup.mockReturnValue({ isLoading: false, overview: {
-    sync_group: group, webdav_relay: { configured, device_id: deviceId, delivered, available_device_ids: available }
+    sync_group: group, webdav_relay: { configured, device_id: deviceId, delivered, available_device_ids: available, lan_baseline_required: baselineRequired }
   } });
 }
 
@@ -82,4 +82,16 @@ it('keeps the phone visible and updates whether it can be selected when LAN avai
   setRelay(true);
   rerender(<SettingsWebDavSyncSection />);
   expect(screen.getByRole('menuitem', { name: 'A5' })).not.toHaveAttribute('aria-disabled', 'true');
+});
+
+it('clears the LAN sync instruction when the delivered binding is ready again', async () => {
+  setRelay(true, 'phone', true, [], true);
+  invoke.mockResolvedValue('https://dav.example.net/relay/');
+  const { rerender } = renderWithLocalization(<SettingsWebDavSyncSection />);
+  const instruction = 'A5 · Connect both devices to the same local network and sync once to use WebDAV';
+  expect(await screen.findByText(instruction)).toBeVisible();
+  setRelay(true, 'phone', true, []);
+  rerender(<SettingsWebDavSyncSection />);
+  expect(screen.queryByText(instruction)).not.toBeInTheDocument();
+  expect(screen.getByText('A5 · WebDAV enabled')).toBeVisible();
 });

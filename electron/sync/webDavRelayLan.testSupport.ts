@@ -40,7 +40,8 @@ export async function runWebDavTestLanRound(source: RestorePeer, target: Restore
   const remoteCleanup = options?.remote.cleanup && await captureWebDavRelayCleanup(
     { ...options.remote.cleanup, signal: lease.signal }, context, 'responder');
   if (localCleanup) round.relayCleanup = localCleanup;
-  const server = lanServer(source, target, { id, confirmTarget, remoteCleanup, attachments: options?.remote.attachments });
+  const server = lanServer(source, target, { id, confirmTarget: confirmTarget ? async () => { await confirmTarget(); } : undefined,
+    remoteCleanup, attachments: options?.remote.attachments });
   try {
     await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
     const address = server.address();

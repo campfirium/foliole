@@ -3,6 +3,7 @@ import type { WorkspaceSnapshot } from '../core/database/workspaceSnapshot.js';
 import type { SyncGroupPayload } from './syncGroupContract.js';
 import type { SyncProtocolDescriptor } from './syncProtocolContract.js';
 import type { SyncTriggerReason } from './syncTriggerContract.js';
+import type { WebDavRelayOverview } from './webDavRelayContract.js';
 
 export type { NativeCompanionSignedRequestHeaders } from './nativeCompanionSignedRequestContract.js';
 
@@ -240,7 +241,7 @@ export interface DesktopSyncGroupJoinRequestPayload {
 }
 
 export interface DesktopSyncGroupOverviewPayload {
-  webdav_relay?: { configured: boolean; device_id: string | null; delivered: boolean; available_device_ids?: string[] };
+  webdav_relay?: WebDavRelayOverview;
   pending_backup_restore?: string | null;
   /** This device has not completed a sync for longer than the group keeps history for it. */
   expired_member?: boolean;

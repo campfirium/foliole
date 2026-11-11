@@ -10,7 +10,7 @@ import type { RequestSyncAuthenticatedContext } from './requestSyncWire.js';
 import { readRelayCollections, relayCollectionUrl } from './webDavRelayCollections.js';
 import { readWebDavRelayLanBaseline } from './webDavRelayLanBaseline.js';
 
-export async function readWebDavRelayBodyScope(db: DbPort, binding: WebDavRelayBinding, localDevice: string) {
+export async function readWebDavRelayBaselineScope(db: DbPort, binding: WebDavRelayBinding, localDevice: string) {
   const desktop = localDevice === binding.desktop_device_id;
   if (!desktop && localDevice !== binding.phone_device_id) return null;
   const peerDevice = desktop ? binding.phone_device_id : binding.desktop_device_id;
@@ -26,6 +26,13 @@ export async function readWebDavRelayBodyScope(db: DbPort, binding: WebDavRelayB
   if (!epochs) return null;
   const baseline = await readWebDavRelayLanBaseline(db, { binding, localDevice, ...epochs });
   if (!baseline) return null;
+  return { desktop, peerDevice, epochs, baseline };
+}
+
+export async function readWebDavRelayBodyScope(db: DbPort, binding: WebDavRelayBinding, localDevice: string) {
+  const ready = await readWebDavRelayBaselineScope(db, binding, localDevice);
+  if (!ready) return null;
+  const { desktop, peerDevice, epochs, baseline } = ready;
   const folder = new URL(binding.directory_url);
   if (folder.username || folder.password || folder.search || folder.hash || !folder.pathname.endsWith('/')) {
     throw new Error('webdav_relay_invalid_url');

@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
+import { readWebDavRelayBaselineScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
 import { webDavRelayBindingSchema, type WebDavRelayBinding } from '../../lib/platform/webDavRelayContract.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
@@ -109,4 +111,11 @@ export function loadDesktopBoundWebDavRelay() {
   const saved = loadBinding(requireActiveGroupKey(group.group_id));
   if (!saved?.delivered || saved.binding.desktop_device_id !== group.local_device_identity_key) return null;
   return saved.binding;
+}
+
+export async function loadDesktopWebDavLanBaselineRequired() {
+  const binding = loadDesktopBoundWebDavRelay();
+  if (!binding) return false;
+  const db = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
+  return !await readWebDavRelayBaselineScope(db, binding, binding.desktop_device_id);
 }

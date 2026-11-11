@@ -18,6 +18,7 @@ import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDataba
 import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
 import { exchangeDesktopRequestSyncInventory } from './desktopRequestSyncInventoryHttp.js';
 import { prepareDesktopRequestSyncOverwrite } from './desktopRequestSyncOverwrite.js';
+import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 import { captureDesktopWebDavRelayCleanup } from './desktopWebDavRelayCleanup.js';
 import { desktopWebDavRelayForPeer } from './desktopWebDavRelaySettings.js';
@@ -83,7 +84,7 @@ async function runPreparedRound(host: import('../../lib/core/sync/requestSyncObj
     }
     const result = await runRequestSyncDatabaseRound(port, input.signal);
     if (result.complete) {
-      await confirmBaseline?.();
+      if (await confirmBaseline?.()) notifyDesktopSyncGroupOverviewChanged();
       if (input.peerRound) input.peerRound.databaseConfirmed = true;
       await host.databaseRoundCompleted?.();
     }

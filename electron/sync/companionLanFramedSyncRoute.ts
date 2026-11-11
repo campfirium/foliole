@@ -21,6 +21,7 @@ import { requestDesktopRelaySync } from './desktopMemberSyncCadence.js';
 import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDatabaseHost.js';
 import { respondDesktopRequestSyncHttp } from './desktopRequestSyncHttpRoute.js';
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
+import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import { desktopSyncPeerRoundOwner } from './desktopSyncPeerRoundOwner.js';
 import { captureDesktopWebDavRelayCleanup } from './desktopWebDavRelayCleanup.js';
 import { desktopWebDavRelayForPeer } from './desktopWebDavRelaySettings.js';
@@ -118,7 +119,7 @@ function withRelayBaseline(host: ReturnType<typeof createDesktopRequestSyncDatab
       return host.readSnapshot(read, signal);
     },
     databaseRoundCompleted: async () => {
-      await relayBaselines.confirm(lease.signal);
+      if (await relayBaselines.confirm(lease.signal)) notifyDesktopSyncGroupOverviewChanged();
       await host.databaseRoundCompleted?.();
     }
   } satisfies ReturnType<typeof createDesktopRequestSyncDatabaseHost>;

@@ -51,7 +51,7 @@ import {
 } from '../sync/desktopSyncGroupMemberStateSession.js';
 import { notifyDesktopSyncGroupOverviewChanged } from '../sync/desktopSyncGroupOverviewNotifier.js';
 import { removeDesktopSyncGroupRoute } from '../sync/desktopSyncGroupRoutes.js';
-import { desktopWebDavRelayOverview, enableDesktopWebDavRelay, loadDesktopWebDavRelayDirectory, saveDesktopWebDavRelayDirectory } from '../sync/desktopWebDavRelaySettings.js';
+import { desktopWebDavRelayOverview, loadDesktopWebDavLanBaselineRequired, enableDesktopWebDavRelay, loadDesktopWebDavRelayDirectory, saveDesktopWebDavRelayDirectory } from '../sync/desktopWebDavRelaySettings.js';
 import { getLanWorkspaceSyncServerStatus, stopLanWorkspaceSyncServer } from '../sync/lanWorkspaceSyncServer.js';
 import { ensureWindowsSyncNetworkPermission } from '../sync/windowsSyncNetworkPermission.js';
 
@@ -86,7 +86,7 @@ function runtimeIdentity() {
   return { appVersion: resolveFolioleAppVersion(app), deviceId: local?.device_identity_key ?? 'unavailable' };
 }
 
-function overview() {
+async function overview() {
   const group = loadDesktopSyncGroup();
   const presentation = group ? loadDesktopSyncGroupRemovalPresentation(group.group_id)
     : { device_display_names: {}, removing_devices: [] };
@@ -103,7 +103,8 @@ function overview() {
     server_status: getLanWorkspaceSyncServerStatus(),
     sync_group: group ? { ...group, device_display_names: presentation.device_display_names } : null,
     pending_backup_restore: loadBackupRestorePendingSync()?.restoreId ?? null,
-    ...(group && process.platform === 'darwin' ? { webdav_relay: desktopWebDavRelayOverview(group.group_id) } : {}),
+    ...(group && process.platform === 'darwin' ? { webdav_relay: { ...desktopWebDavRelayOverview(group.group_id),
+      lan_baseline_required: await loadDesktopWebDavLanBaselineRequired() } } : {}),
     expired_member: group ? loadDesktopLocalSyncGroupMemberExpired(group.group_id) : false,
     removing_devices: presentation.removing_devices,
     ...loadDesktopCompanionSyncParticipation()
@@ -145,7 +146,7 @@ async function leaveGroup() {
   } finally {
     await stopLanWorkspaceSyncServer();
   }
-  return overview();
+  return runWithDatabaseConnectionOwner(overview);
 }
 
 async function removeGroupDevice(args: Record<string, unknown>) {
@@ -239,8 +240,8 @@ export function handleSyncGroupCommand(command: string, args: Record<string, unk
   if (command === NATIVE_COMMANDS.saveWebDavRelayDirectory) {
     return saveDesktopWebDavRelayDirectory(args.group_id, args.directory_url);
   }
-  if (command === NATIVE_COMMANDS.loadDesktopSyncDiagnostics) return runWithDatabaseConnectionOwner(() =>
-    buildDesktopSyncDiagnostics(overview(), resolveFolioleAppVersion(app)));
+  if (command === NATIVE_COMMANDS.loadDesktopSyncDiagnostics) return runWithDatabaseConnectionOwner(async () =>
+    buildDesktopSyncDiagnostics(await overview(), resolveFolioleAppVersion(app)));
   if (([NATIVE_COMMANDS.enableCompanionSync, NATIVE_COMMANDS.resumeCompanionSync,
     NATIVE_COMMANDS.createSyncGroup, NATIVE_COMMANDS.completeSyncGroupJoin] as string[]).includes(command)) {
     return ensureWindowsSyncNetworkPermission().then((allowed) => {
