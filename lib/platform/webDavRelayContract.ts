@@ -56,6 +56,7 @@ export const webDavRelayOverviewSchema = z.object({
   delivered: z.boolean(),
   credential_draft_available: z.boolean().optional(),
   credential_active: z.boolean().optional(),
+  authentication_status: z.union([z.literal(401), z.literal(403)]).optional(),
   credential_offline_rotation_available: z.boolean().optional(),
   credential_delivery: z.object({
     id: z.string().uuid(), device_id: z.string(), fingerprint: z.string().optional(),

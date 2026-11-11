@@ -8,7 +8,7 @@ import { CompanionSyncPanel } from './CompanionSyncPanel';
 import { CompanionSyncProtocolNotice } from './CompanionSyncProtocolNotice';
 
 vi.mock('../shared/platform/companion/sync/companionWebDavRelayStore', () => ({
-  loadCompanionWebDavRelay: vi.fn().mockResolvedValue({ id: 'relay' }),
+  loadCompanionWebDavStatus: vi.fn().mockResolvedValue({ enabled: true, authenticationStatus: undefined }),
   subscribeCompanionWebDavRelay: () => () => undefined
 }));
 

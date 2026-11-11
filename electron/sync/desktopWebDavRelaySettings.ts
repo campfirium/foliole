@@ -1,10 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
-import { hasWebDavRelayPublishedChanges } from '../../lib/core/sync/webDavRelayBodyOutbox.js';
-import { readWebDavRelayBodyScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
 import { DEFAULT_WEB_DAV_ATTACHMENT_POLICY, webDavAttachmentPolicySchema, webDavRelayBindingSchema,
   type WebDavRelayBinding } from '../../lib/platform/webDavRelayContract.js';
-import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadJsonSetting, saveJsonSetting, writeJsonSetting } from '../database/settingsStore.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
@@ -17,6 +14,7 @@ import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import { hasDesktopWebDavCredentialDraft, readCredentialOwner, requireActiveGroupKey,
   verifyCredentialOwner } from './desktopWebDavCredentialSettings.js';
+import { desktopWebDavSendWindow } from './desktopWebDavSendWindow.js';
 import { recordDesktopWebDavUsage } from './desktopWebDavUsage.js';
 import { testWebDavRelayConnection } from './testWebDavRelayConnection.js';
 
@@ -109,10 +107,14 @@ export async function saveDesktopWebDavRelayCredentials(groupId: unknown, input:
     return await runWithDatabaseConnectionOwner(() => {
       verifyCredentialOwner(previous, groupId);
       const saved = loadBinding(requireActiveGroupKey(groupId))?.binding;
-      if (saved && (saved.credential_version !== undefined || saved.directory_url !== directory)) {
+      if (saved && saved.directory_url !== directory) {
         throw new Error('webdav_relay_bound');
       }
       replaceDesktopWebDavCredentialCiphertext(previous.scope, encrypted);
+      if (saved?.credential_version !== undefined) {
+        desktopWebDavSendWindow.request();
+        desktopSyncChangeSessions().changed();
+      }
       return directory;
     });
   } finally {
@@ -246,14 +248,4 @@ export function loadDesktopBoundWebDavRelay() {
   const saved = loadBinding(key);
   if (!saved?.delivered || saved.binding.desktop_device_id !== group.local_device_identity_key) return null;
   return { ...saved.binding, attachment_policy: loadAttachmentPolicy(key) };
-}
-
-export async function loadDesktopWebDavRelayStatus() {
-  const binding = loadDesktopBoundWebDavRelay();
-  if (!binding) return { lan_baseline_required: false, published_via_relay: false };
-  const db = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
-  const scope = await readWebDavRelayBodyScope(db, binding, binding.desktop_device_id);
-  const published = scope && await hasWebDavRelayPublishedChanges(db, scope);
-  return { lan_baseline_required: !scope, published_via_relay: Boolean(published) &&
-    !desktopSyncChangeSessions().hasSessions(binding.phone_device_id) };
 }

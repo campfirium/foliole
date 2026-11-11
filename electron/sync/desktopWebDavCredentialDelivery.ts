@@ -196,7 +196,8 @@ export async function prepareQueuedDesktopWebDavRotation(groupId: string, phoneI
   if (owner.libraryEpoch !== queue.libraryEpoch || !hasDesktopWebDavIdentity(owner.scope)) throw invalid();
   const candidate = validateQueuedRotation(key, queue);
   let value = current(groupId, phoneId);
-  if (value?.queue?.id !== queue.id || (newSession && value.phoneKey)) {
+  if (value?.queue?.id !== queue.id || (newSession && value.phoneKey) ||
+    !value.owner.ciphertext?.equals(owner.ciphertext ?? Buffer.alloc(0))) {
     const identity = await loadExistingDesktopWebDavIdentity(owner.scope);
     if (!identity) throw invalid();
     verifyCredentialOwner(owner, groupId);

@@ -113,3 +113,33 @@ export function installQueuedRotationWithTestPhone(groupId: string, phoneId: str
       resumedVersion: resumed.offer.version, resumedWithNewChallenge: resumed.offer.id !== interrupted.offer.id };
   });
 }
+
+export async function rejectMacCredentialsWithTestRequest() {
+  const { openDatabaseConnection } = await import('../database/connection.js');
+  const { withWebDavAuthenticationPause, WebDavAuthenticationError } = await import('../../lib/core/sync/webDavAuthenticationPause.js');
+  const { webDavRelayStatus } = await import('../../lib/core/sync/webDavRelayPublication.js');
+  const { createDesktopRequestSyncDatabaseHost } = await import('./desktopRequestSyncDatabaseHost.js');
+  const { desktopWebDavAuthenticationKey } = await import('./desktopWebDavRelayAuthorization.js');
+  const { withDesktopWebDavBasicAuth } = await import('./desktopWebDavBasicAuth.js');
+  const { createDesktopWebDavRelayHttp } = await import('./desktopWebDavRelayHttp.js');
+  const { notifyDesktopSyncGroupOverviewChanged } = await import('./desktopSyncGroupOverviewNotifier.js');
+  const runtime = await runWithDatabaseConnectionOwner(() => {
+    const binding = loadDesktopBoundWebDavRelay();
+    if (!binding) throw new Error('Expected authenticated binding');
+    const key = desktopWebDavAuthenticationKey(binding);
+    if (!key) throw new Error('Expected Mac credential revision');
+    return { binding, key, databasePath: openDatabaseConnection().dbPath };
+  });
+  const root = new URL(runtime.binding.directory_url);
+  const host = createDesktopRequestSyncDatabaseHost(runtime.databasePath);
+  const transport = createDesktopWebDavRelayHttp({ requests: {}, responses: 0, uploadedBytes: 0, downloadedBytes: 0 });
+  const request = withDesktopWebDavBasicAuth(transport, root, { username: 'foliole-test-mac', password: 'wrong-password' });
+  try {
+    await withWebDavAuthenticationPause(host, { key: runtime.key, changed: notifyDesktopSyncGroupOverviewChanged },
+      request, undefined, send => send(root, { method: 'PROPFIND', headers: { Depth: '0' } }, webDavRelayStatus));
+  } catch (error) {
+    if (error instanceof WebDavAuthenticationError && error.status === 401) return runtime.binding.credential_version;
+    throw error;
+  }
+  throw new Error('Test request should receive HTTP 401');
+}

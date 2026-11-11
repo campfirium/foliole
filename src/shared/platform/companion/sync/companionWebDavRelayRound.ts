@@ -1,3 +1,4 @@
+import { webDavAuthenticationKey } from '../../../../../lib/core/sync/webDavAuthenticationPause.js';
 import { runWebDavRelayBodyRound } from '../../../../../lib/core/sync/webDavRelayBodyRound.js';
 import { readWebDavRelayBodyScope } from '../../../../../lib/core/sync/webDavRelayBodyScope.js';
 import { webDavRelayCredentialReference } from '../../../../../lib/platform/nativeWebDavRelayHttpContract.js';
@@ -19,7 +20,7 @@ export function companionWebDavRelayLanConnected(binding: WebDavRelayBinding) {
 }
 
 export function runCompanionWebDavRelayRound(binding: WebDavRelayBinding, stats: CompanionWebDavHttpStats,
-  progress: { published: number; applied: number; retries: number }, parent?: AbortSignal, foregroundReceive?: true) {
+  progress: { published: number; applied: number; retries: number }, parent?: AbortSignal, foregroundReceive?: true, manual = false) {
   return withCompanionRequestSyncLifecycle(async signal => {
     const host = await currentCompanionRequestSyncDatabaseHost();
     const owner = companionFramedFileOwner(getIosCompanionDatabaseOwner());
@@ -31,9 +32,11 @@ export function runCompanionWebDavRelayRound(binding: WebDavRelayBinding, stats:
     if (!scope) throw new Error('webdav_relay_lan_baseline_required');
     const encoded = credential.workgroup_key.replaceAll('-', '+').replaceAll('_', '/');
     const groupKey = Uint8Array.from(atob(encoded), value => value.charCodeAt(0));
+    const authKey = webDavAuthenticationKey(binding, credential.device_id, scope.receiveScope.localEpoch);
     return runWebDavRelayBodyRound({
       host, files, scope, groupKey, progress, signal, requestSend: notifyCompanionWebDavWork, ...(foregroundReceive ? { foregroundReceive } : {}),
       attachments: await currentCompanionAttachmentHost(host),
+      ...(authKey ? { authentication: { key: authKey, manual, changed: notifyCompanionWebDavWork } } : {}),
       request: createCompanionWebDavRelayHttp(binding.directory_url, files, owner, stats, signal,
         webDavRelayCredentialReference(binding, scope.receiveScope.localEpoch)),
       lanConnected: () => companionWebDavRelayLanConnected(binding),

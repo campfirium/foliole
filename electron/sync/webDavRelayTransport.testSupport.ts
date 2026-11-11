@@ -1,6 +1,6 @@
 import { createServer, request as forward, type IncomingMessage, type OutgoingHttpHeaders, type ServerResponse } from 'node:http';
 
-export function setupDav(upstream: string | undefined, intercept?: (response: ServerResponse) => boolean) {
+export function setupDav(upstream: string | undefined, intercept?: (response: ServerResponse, request: IncomingMessage) => boolean) {
   const files = new Map<string, Uint8Array>();
   const collections = new Set(['/']);
   const deletions: string[] = [];
@@ -18,7 +18,7 @@ export function setupDav(upstream: string | undefined, intercept?: (response: Se
   };
   const server = createServer(async (req, res) => {
     const path = req.url!;
-    if (intercept?.(res)) return;
+    if (intercept?.(res, req)) return;
     if (req.method === 'DELETE') deletions.push(path);
     if (upstream) {
       await forwardDav(upstream, req, res, size => { uploaded += size; }, size => { downloaded += size; }, loseResponse);

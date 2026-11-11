@@ -135,6 +135,8 @@ export function SettingsWebDavSyncSection() {
   return <>
     <WebDavUsage relay={relay} refresh={refresh} />
     <SettingsSection title={t(`${PREFIX}.configuration`)} key={group.group_id}>
+      {relay.authentication_status && <SettingsRow description={t(relay.authentication_status === 401
+        ? `${PREFIX}.credentialMacRejected` : `${PREFIX}.credentialPermissionDenied`)} />}
       <SettingsWebDavAttachmentRow groupId={group.group_id} policy={relay.attachment_policy} />
       <ol role="list" className="mx-settings-panel-x border-t border-settings-divider/70">
         <WebDavSetupStep>

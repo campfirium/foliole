@@ -1,3 +1,4 @@
+import { WebDavAuthenticationError } from '../../lib/core/sync/webDavAuthenticationPause';
 import { isRetryableWebDavSendError } from '../../lib/core/sync/webDavTransportRetry';
 import type { WebDavRelayBinding } from '../../lib/platform/webDavRelayContract';
 import type { CompanionWebDavHttpStats } from '../shared/platform/companion/sync/companionWebDavRelayHttp';
@@ -44,21 +45,23 @@ async function runRelay(args: TryForegroundAutoSyncArgs, binding: WebDavRelayBin
   const progress = { published: 0, applied: 0, retries: 0 };
   const started = performance.now();
   let failure: string | undefined;
+  let deferred = false;
   args.setStatus('syncing');
   args.setError(null);
   try {
     await beginNativeCompanionSyncRun(triggerReason, runId);
     await writeCompanionSyncActivity({ ...activity, kind: 'run_started', status: 'started', message: 'WebDAV relay started.' }, args.setError);
-    if (args.foregroundWebDavReceive) await runCompanionWebDavRelayRound(binding, stats, progress, args.signal, true);
-    else await runCompanionWebDavRelayRound(binding, stats, progress, args.signal);
+    await runCompanionWebDavRelayRound(binding, stats, progress, args.signal, args.foregroundWebDavReceive || undefined,
+      triggerReason === 'manual');
   } catch (error) {
-    failure = formatCompanionSyncFailureMessage(error);
+    deferred = triggerReason !== 'manual' && error instanceof WebDavAuthenticationError && error.deferred;
+    if (!deferred) failure = formatCompanionSyncFailureMessage(error);
     if (!args.cancelled() && error instanceof Error && isRetryableWebDavSendError(error)) {
       args.onRetryableWebDavFailure?.(error);
     }
   }
   if (progress.applied) await refreshCompanionSyncDisplay(args).catch(() => args.setError('sync_display_unavailable'));
-  const result = args.cancelled() ? 'cancelled' : failure ? 'failed' : 'completed';
+  const result = args.cancelled() || deferred ? 'cancelled' : failure ? 'failed' : 'completed';
   const errorCode = failure && /^webdav_relay_[a-z0-9_:]+$/iu.test(failure) ? failure : undefined;
   const message = `WebDAV relay ${JSON.stringify({ ...stats, ...progress,
     elapsedMs: Math.round(performance.now() - started), errorCode })}`;

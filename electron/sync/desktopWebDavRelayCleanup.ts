@@ -1,5 +1,6 @@
 import type { RequestSyncDatabaseHost } from '../../lib/core/sync/requestSyncObjectEndpoint.js';
 import type { RequestSyncAuthenticatedContext } from '../../lib/core/sync/requestSyncWire.js';
+import { readWebDavAuthenticationPause, withWebDavAuthenticationPause } from '../../lib/core/sync/webDavAuthenticationPause.js';
 import { readWebDavRelayBodyScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
 import { captureWebDavRelayCleanup } from '../../lib/core/sync/webDavRelayCollectionCleanup.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -9,7 +10,7 @@ import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPrefe
 import { createDesktopLibrarySyncFiles } from './desktopFramedSyncFiles.js';
 import { createDesktopRequestSyncAttachmentHost } from './desktopRequestSyncAttachmentHost.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
-import { authorizeDesktopWebDavRelay } from './desktopWebDavRelayAuthorization.js';
+import { authorizeDesktopWebDavRelay, desktopWebDavAuthenticationKey } from './desktopWebDavRelayAuthorization.js';
 import { createDesktopWebDavRelayHttp, type DesktopWebDavRelayHttpStats } from './desktopWebDavRelayHttp.js';
 import { loadDesktopBoundWebDavRelay } from './desktopWebDavRelaySettings.js';
 import { recordDesktopWebDavUsage } from './desktopWebDavUsage.js';
@@ -18,22 +19,25 @@ export async function captureDesktopWebDavRelayCleanup(host: RequestSyncDatabase
   context: RequestSyncAuthenticatedContext, role: 'initiator' | 'responder', signal: AbortSignal) {
   const current = () => runWithDatabaseConnectionOwner(() => {
     const binding = isDesktopCompanionSyncParticipating() && loadDesktopBoundWebDavRelay();
-    return binding ? { binding, owner: openDatabaseConnection() } : undefined;
+    return binding ? { binding, owner: openDatabaseConnection(), authKey: desktopWebDavAuthenticationKey(binding) } : undefined;
   });
   const runtime = await current();
   const peer = role === 'initiator' ? context.responderDeviceId : context.initiatorDeviceId;
   if (!runtime || runtime.binding.phone_device_id !== peer || runtime.binding.group_id !== context.groupId) return;
-  const { binding, owner } = runtime;
+  const { binding, owner, authKey } = runtime;
+  if (authKey && await host.readSnapshot(db => readWebDavAuthenticationPause(db, authKey), signal)) return;
+  const pause = authKey ? { key: authKey, changed: notifyDesktopSyncGroupOverviewChanged } : undefined;
   const stats: DesktopWebDavRelayHttpStats = { requests: {}, responses: 0, uploadedBytes: 0, downloadedBytes: 0 };
-  const http = authorizeDesktopWebDavRelay(binding, createDesktopWebDavRelayHttp(stats, signal, { recordUsage: recordDesktopWebDavUsage }));
+  const http = authorizeDesktopWebDavRelay(binding, createDesktopWebDavRelayHttp(stats, signal, { recordUsage: recordDesktopWebDavUsage }), authKey);
   const cleanup = await captureWebDavRelayCleanup({
     host, signal, attachments: await createDesktopRequestSyncAttachmentHost(host),
     files: createDesktopLibrarySyncFiles(owner.dbPath),
     loadScope: db => readWebDavRelayBodyScope(db, binding, binding.desktop_device_id),
     request: async (url, input, receive) => {
       const active = await current();
-      if (active?.owner !== owner || active.binding.id !== binding.id) throw new Error('webdav_relay_scope_changed');
-      try { return await http(url, input, receive); }
+      if (active?.owner !== owner || active.binding.id !== binding.id || active.authKey !== authKey ||
+        active.binding.credential_version !== binding.credential_version) throw new Error('webdav_relay_scope_changed');
+      try { return await withWebDavAuthenticationPause(host, pause, http, signal, request => request(url, input, receive)); }
       finally {
         if (input.method === 'DELETE') appendMainProcessDiagnosticLog('webdav_relay_cleanup', stats);
       }

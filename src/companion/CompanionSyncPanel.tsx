@@ -50,6 +50,8 @@ type CompanionSyncPanelProps = {
 const EMULATOR_DEFAULT_ENDPOINT = 'http://10.0.2.2:38641';
 
 function formatSyncPanelError(message: string, t: Translate) {
+  if (message === 'webdav_relay_authentication_required') return t('settings.companionSync.webdav.credentialPhoneRejected');
+  if (message === 'webdav_relay_permission_denied') return t('settings.companionSync.webdav.credentialPermissionDenied');
   if (message === 'sync_group_local_adoption_failed') return t('companion.syncSetup.receiving.failed');
   if (message === 'discovery_permission_required') return t('companion.sync.discovery.permissionRequired');
   if (message === 'sync_display_unavailable') return t('companion.sync.displayUnavailable');

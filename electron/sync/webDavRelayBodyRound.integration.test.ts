@@ -6,19 +6,14 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { INSERT_REVIEW_EVENT_SQL } from '../../lib/core/database/reviewLogRecord.js';
 import { applyReviewGrade } from '../../lib/core/database/reviewMutations.js';
 import { recomputeNodeReviewWithDb } from '../../lib/core/database/reviewProjection.js';
-import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { readWebDavRelayBodyOutbox } from '../../lib/core/sync/webDavRelayBodyOutbox.js';
-import { runWebDavRelayBodyRound } from '../../lib/core/sync/webDavRelayBodyRound.js';
-import { readWebDavRelayBodyScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
-import { webDavRelayStatus } from '../../lib/core/sync/webDavRelayPublication.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
-import { restoreFixture, type RestorePeer } from '../database/requestSyncRestoreRecovery.testSupport.js';
-import { textBranch } from '../database/topicTextState.testSupport.js';
+import type { RestorePeer } from '../database/requestSyncRestoreRecovery.testSupport.js';
 
-import { createDesktopWebDavRelayHttp, type DesktopWebDavRelayHttpStats } from './desktopWebDavRelayHttp.js';
-import { runWebDavTestLanRound, webDavTestGroupKey } from './webDavRelayLan.testSupport.js';
-import { setupDav } from './webDavRelayTransport.testSupport.js';
+import { edit, stats, text, withRelayPeers } from './webDavRelayBodyRound.testSupport.js';
+import { runWebDavTestLanRound } from './webDavRelayLan.testSupport.js';
+
 
 it('recovers the same publication after reopening, exchanges bodies both ways and resumes LAN', async () => {
   await withRelayPeers(async ({ source, target, scope, sync, dav }) => {
@@ -151,67 +146,54 @@ async function gradeBothPeers(source: RestorePeer, target: RestorePeer) {
   });
 }
 
-async function withRelayPeers(run: (fixture: { source: RestorePeer; target: RestorePeer; dav: ReturnType<typeof setupDav>;
-  scope(peer: RestorePeer): Promise<NonNullable<Awaited<ReturnType<typeof readWebDavRelayBodyScope>>>>;
-  sync(peer: RestorePeer, http?: DesktopWebDavRelayHttpStats, lanConnected?: boolean, foregroundReceive?: boolean):
-    ReturnType<typeof runWebDavRelayBodyRound>;
-}) => Promise<void>) {
-  const fixture = await restoreFixture();
-  const upstream = process.env.FOLIOLE_TEST_WEBDAV_URL;
-  const dav = setupDav(upstream);
-  await new Promise<void>(resolve => dav.server.listen(0, '127.0.0.1', resolve));
-  try {
-    const source = fixture.peer('source');
-    const target = await fixture.companionPeer('target');
-    const address = dav.server.address();
-    if (!address || typeof address === 'string') throw new Error('webdav_fixture_address_missing');
-    const directory = new URL(`http://127.0.0.1:${address.port}${dav.sandboxPath}${crypto.randomUUID()}/`);
-    await createDesktopWebDavRelayHttp(stats())(directory, { method: 'MKCOL' }, webDavRelayStatus);
-    const binding = { id: crypto.randomUUID(), group_id: 'group', desktop_device_id: source.id,
-      phone_device_id: target.id, directory_url: directory.href };
-    await establishBaseline(source, target, binding);
+it.each([401, 403] as const)('pauses HTTP %s across restart and resumes the same pending body', async status => {
+  let denyPut = true;
+  let phoneId = '';
+  let originalName = '';
+  let originalPublications = 0;
+  await withRelayPeers(async ({ source, target, sync, scope }) => {
+    phoneId = target.id;
+    await edit(target, 'phone-pending', 'Pending phone body');
+    const version = { revision: 1 };
+    const receiveKey = `webdav_relay_last_receive:${(await scope(target)).receiveScope.bindingId}`;
+    const readReceive = () => target.db.query('SELECT value FROM sync_group_metadata WHERE key = ?', [receiveKey]);
+    const lastReceive = await readReceive();
+    await expect(sync(target, stats(), false, false, version)).rejects.toMatchObject({ status, deferred: false });
+    const pending = await readWebDavRelayBodyOutbox(target.db, await scope(target));
+    expect(pending.packet).not.toBeNull();
+    originalName = pending.packet!.name;
+    expect(await readReceive()).toEqual(lastReceive);
+    target.reopen();
+    const blocked = stats();
+    await expect(sync(target, blocked, false, false, version)).rejects.toMatchObject({ status, deferred: true });
+    expect(blocked.requests).toEqual({});
+    expect(await readWebDavRelayBodyOutbox(target.db, await scope(target))).toEqual(pending);
 
-    const scope = async (peer: RestorePeer) => {
-      const result = await readWebDavRelayBodyScope(peer.db, binding, peer.id);
-      if (!result) throw new Error('test_baseline_missing');
-      return result;
-    };
-    const sync = async (peer: RestorePeer, http = stats(), lanConnected = false, foregroundReceive = false) => runWebDavRelayBodyRound({
-      host: { ...peer.host, enqueueSearchInvalidations: peer.desktop }, files: peer.host.files,
-      request: createDesktopWebDavRelayHttp(http), scope: await scope(peer), groupKey: webDavTestGroupKey,
-      foregroundReceive, lanConnected: () => lanConnected, assertScope: async () => { await scope(peer); },
-      progress: { published: 0, applied: 0, retries: 0 }
-    });
+    await edit(source, 'mac-available', 'Mac can still sync');
+    expect(await sync(source, stats(), false, false, version)).toMatchObject({ published: 1 });
 
-    await run({ source, target, scope, sync, dav });
-  } finally {
-    await new Promise<void>(resolve => dav.server.close(() => resolve()));
-    await fixture.close();
-  }
-}
-
-async function establishBaseline(source: RestorePeer, target: RestorePeer,
-  binding: Parameters<typeof readWebDavRelayBodyScope>[1]) {
-  const shared = textBranch('shared-head', 'Shared review material');
-  await applySyncNodesWithDbPort(source.db, [{ ...shared, object_id: 'shared',
-    snapshot: { ...shared.snapshot, id: 'shared', kind: 'item' } }]);
-  expect(await runWebDavTestLanRound(source, target, binding)).toMatchObject({ complete: true });
-  for (const [local, remote] of [[source, target], [target, source]] as const) {
-    await local.db.run('INSERT OR IGNORE INTO node_version_device_revisions VALUES (?, ?, ?, 0, ?, NULL, ?)',
-      ['group', remote.id, remote.epoch, 'baseline', new Date().toISOString()]);
-  }
-}
-
-function stats(): DesktopWebDavRelayHttpStats {
-  return { requests: {}, responses: 0, uploadedBytes: 0, downloadedBytes: 0 };
-}
-
-async function edit(peer: RestorePeer, id: string, body: string) {
-  const branch = textBranch(`${id}-version`, body);
-  await applySyncNodesWithDbPort(peer.db, [{ ...branch, object_id: id, snapshot: { ...branch.snapshot, id } }],
-    { enqueueSearchInvalidations: peer.desktop, operation: 'local_mutation' });
-}
-
-async function text(peer: RestorePeer, id: string) {
-  return (await peer.db.query<{ content: string }>('SELECT content FROM nodes WHERE id = ?', [id]))[0]?.content;
-}
+    await expect(sync(target, stats(), false, false, { ...version, manual: true }))
+      .rejects.toMatchObject({ status, deferred: false });
+    denyPut = false;
+    const recovery = status === 401 ? { revision: 2 } : { ...version, manual: true };
+    expect(await sync(target, stats(), false, false, recovery)).toMatchObject({ retries: 1 });
+    expect(originalPublications).toBe(1);
+    await sync(source, stats(), false, false, version);
+    expect(await sync(source, stats(), false, false, version)).toMatchObject({ applied: 0 });
+    source.reopen();
+    target.reopen();
+    expect(await text(source, 'phone-pending')).toBe('Pending phone body');
+    expect(await text(target, 'mac-available')).toBe('Mac can still sync');
+    const resumed = stats();
+    await sync(target, resumed, false, false, { revision: recovery.revision });
+    expect(resumed.responses).toBeGreaterThan(0);
+    expect(originalPublications).toBe(1);
+  }, (response, request) => {
+    const destination = request.headers.destination;
+    if (originalName && request.method === 'MOVE' && request.headers['x-test-dav-device'] === phoneId &&
+      typeof destination === 'string' && destination.endsWith(`/${originalName}`)) originalPublications++;
+    if (!denyPut || request.method !== 'PUT' || request.headers['x-test-dav-device'] !== phoneId) return false;
+    response.writeHead(status).end();
+    return true;
+  });
+});

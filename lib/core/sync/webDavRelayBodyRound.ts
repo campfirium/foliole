@@ -1,6 +1,7 @@
 import type { FramedSyncFilePort } from './framedSyncFilePort.js';
 import type { RequestSyncAttachmentHost } from './requestSyncAttachmentResponse.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
+import { WebDavAuthenticationError, withWebDavAuthenticationPause, type WebDavAuthenticationPause } from './webDavAuthenticationPause.js';
 import { enqueueWebDavRelayAttachments, publishWebDavRelayAttachments, resumeWebDavRelayAttachment } from './webDavRelayAttachments.js';
 import { freezeWebDavRelayBodyPacket, readWebDavRelayBodyOutbox, webDavRelayPacketBytes,
   webDavRelayPacketDirectory, writeWebDavRelayBodyOutbox } from './webDavRelayBodyOutbox.js';
@@ -17,6 +18,7 @@ type Input = {
   attachments?: RequestSyncAttachmentHost;
   files: FramedSyncFilePort;
   request: WebDavRelayRequest;
+  authentication?: WebDavAuthenticationPause;
   scope: WebDavRelayBodyScope;
   groupKey: Uint8Array;
   signal?: AbortSignal;
@@ -33,7 +35,8 @@ export function runWebDavRelayBodyRound(input: Input) {
     await input.assertScope();
     if (input.foregroundReceive && (input.lanConnected() || !await input.host.readSnapshot(
       db => isWebDavRelayReceiveDue(db, input.scope.receiveScope), input.signal))) return input.progress;
-    return runWithWebDavRetryAfter(input.host, input.scope.key, input.signal, () => exchange(input));
+    return withWebDavAuthenticationPause(input.host, input.authentication, input.request, input.signal,
+      request => runWithWebDavRetryAfter(input.host, input.scope.key, input.signal, () => exchange({ ...input, request })));
   });
 }
 
@@ -44,22 +47,32 @@ async function exchange(input: Input) {
   await input.assertScope();
   const attachments = input.attachments && { ...input, attachments: input.attachments };
   if (attachments) await refreshWebDavRelayRepair(attachments);
-  await input.host.write(db => recordWebDavRelayReceive(db, input.scope.receiveScope));
+  const recordReceive = () => input.host.write(db => recordWebDavRelayReceive(db, input.scope.receiveScope));
+  if (!input.authentication || input.foregroundReceive) await recordReceive();
   if (input.foregroundReceive) {
     if (repairQueued || await input.host.readSnapshot(db => hasWebDavRelayRepairToSend(db, input.scope), input.signal)) {
       input.requestSend?.();
     }
     return input.progress;
   }
+  try { await publishPending(input, attachments); }
+  catch (error) {
+    if (input.authentication && !(error instanceof WebDavAuthenticationError)) await recordReceive();
+    throw error;
+  }
+  if (input.authentication) await recordReceive();
+  return input.progress;
+}
+
+async function publishPending(input: Input, attachments: (Input & { attachments: RequestSyncAttachmentHost }) | undefined) {
   if (attachments) {
     if (await publishWebDavRelayRepair(attachments)) input.progress.published++;
     if (await input.host.readSnapshot(db => hasWebDavRelayRepairToSend(db, input.scope), input.signal)) input.requestSend?.();
   }
   // Settle an existing publication before applying the policy to new attachment packets.
-  if (attachments && !await resumeWebDavRelayAttachment(attachments)) return input.progress;
+  if (attachments && !await resumeWebDavRelayAttachment(attachments)) return;
   const slotFree = await publishChanges(input);
   if (slotFree && attachments) await publishWebDavRelayAttachments(attachments);
-  return input.progress;
 }
 
 async function publishChanges(input: Input) {

@@ -4,19 +4,21 @@ import { useTranslation } from '../shared/localization/LocalizationProvider';
 import {
   companionWebDavCredentialDelivery, confirmCompanionWebDavCredential, subscribeCompanionWebDavCredentialDelivery
 } from '../shared/platform/companion/sync/companionWebDavCredentialDelivery';
-import { loadCompanionWebDavRelay, subscribeCompanionWebDavRelay } from '../shared/platform/companion/sync/companionWebDavRelayStore';
+import { loadCompanionWebDavStatus, subscribeCompanionWebDavRelay } from '../shared/platform/companion/sync/companionWebDavRelayStore';
 import { AppButton } from '../shared/ui';
 
 export function CompanionWebDavRelayStatus() {
   const t = useTranslation();
-  const [enabled, setEnabled] = useState(false);
+  const [status, setStatus] = useState<Awaited<ReturnType<typeof loadCompanionWebDavStatus>>>({
+    enabled: false, authenticationStatus: undefined
+  });
   const [failed, setFailed] = useState(false);
   const delivery = useSyncExternalStore(subscribeCompanionWebDavCredentialDelivery, companionWebDavCredentialDelivery);
   useEffect(() => {
     let active = true;
     const refresh = () => {
-      void loadCompanionWebDavRelay().then(binding => {
-        if (active) setEnabled(Boolean(binding));
+      void loadCompanionWebDavStatus().then(value => {
+        if (active) setStatus(value);
       }).catch(() => undefined);
     };
     const stop = subscribeCompanionWebDavRelay(refresh);
@@ -33,7 +35,9 @@ export function CompanionWebDavRelayStatus() {
       }}>{t('settings.companionSync.webdav.credentialConfirmFingerprint')}</AppButton>}
     {failed || delivery.failed ? <p role="alert">{t('settings.companionSync.webdav.credentialDeliveryFailed')}</p> : null}
   </div>;
-  return enabled ? <p role="status" className="text-sm text-muted-foreground">
-    {t('settings.companionSync.webdav.enabled')}
+  return status.enabled ? <p role="status" className="text-sm text-muted-foreground">
+    {t(status.authenticationStatus === 401 ? 'settings.companionSync.webdav.credentialPhoneRejected'
+      : status.authenticationStatus === 403 ? 'settings.companionSync.webdav.credentialPermissionDenied'
+        : 'settings.companionSync.webdav.enabled')}
   </p> : null;
 }

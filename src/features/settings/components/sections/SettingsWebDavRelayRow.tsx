@@ -68,9 +68,9 @@ export function SettingsWebDavRelayRow({ groupId, bound, configured, credentialA
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const { directory, credentialDirectory, status, connect, changeDirectory, clearResult } = useWebDavRelayDirectory(groupId);
-  const busy = Boolean(credentialActive) || status === 'loading' || status === 'running';
+  const busy = status === 'loading' || status === 'running';
   const showForm = !configured || editing || status === 'loadFailed';
-  const credentialInput = Boolean(username || password || (credentialDirectory && directory.trim() === credentialDirectory));
+  const credentialInput = Boolean(credentialActive || username || password || (credentialDirectory && directory.trim() === credentialDirectory));
   const canConnect = !busy && Boolean(directory.trim()) &&
     (credentialInput ? Boolean(username.trim() && password) : !bound);
   const submit = async () => {
@@ -87,7 +87,7 @@ export function SettingsWebDavRelayRow({ groupId, bound, configured, credentialA
     description={<><span>{directory}</span>{savedCredentials ? <><br />{savedCredentials}</> : null}{result ? <><br />{result}</> : null}</>}>
     <SettingsControlSlot>
       <SettingsButton disabled={busy} onClick={() => setEditing(true)}>
-        {t('settings.companionSync.webdav.configure')}
+        {t(credentialActive ? 'settings.companionSync.webdav.credentialReplaceMac' : 'settings.companionSync.webdav.configure')}
       </SettingsButton>
     </SettingsControlSlot>
   </SettingsRow>;

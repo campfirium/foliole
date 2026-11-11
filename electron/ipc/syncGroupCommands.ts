@@ -52,7 +52,8 @@ import {
 import { notifyDesktopSyncGroupOverviewChanged } from '../sync/desktopSyncGroupOverviewNotifier.js';
 import { removeDesktopSyncGroupRoute } from '../sync/desktopSyncGroupRoutes.js';
 import { canQueueDesktopWebDavRotation, desktopWebDavCredentialDeliveryStatus } from '../sync/desktopWebDavCredentialDelivery.js';
-import { desktopWebDavRelayOverview, loadDesktopWebDavRelayStatus } from '../sync/desktopWebDavRelaySettings.js';
+import { desktopWebDavRelayOverview } from '../sync/desktopWebDavRelaySettings.js';
+import { loadDesktopWebDavRelayStatus } from '../sync/desktopWebDavRelayStatus.js';
 import { loadDesktopWebDavUsage } from '../sync/desktopWebDavUsage.js';
 import { getLanWorkspaceSyncServerStatus, stopLanWorkspaceSyncServer } from '../sync/lanWorkspaceSyncServer.js';
 import { ensureWindowsSyncNetworkPermission } from '../sync/windowsSyncNetworkPermission.js';

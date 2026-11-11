@@ -1,3 +1,4 @@
+import { WebDavAuthenticationError } from '../../lib/core/sync/webDavAuthenticationPause.js';
 import { hasWebDavRelayAttachmentsToSend } from '../../lib/core/sync/webDavRelayAttachments.js';
 import { hasWebDavRelayBodyToSend } from '../../lib/core/sync/webDavRelayBodyOutbox.js';
 import { runWebDavRelayBodyRound } from '../../lib/core/sync/webDavRelayBodyRound.js';
@@ -15,7 +16,7 @@ import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDataba
 import { recordDesktopSyncActivity, type DesktopSyncActivityContext } from './desktopSyncActivityStore.js';
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
-import { authorizeDesktopWebDavRelay } from './desktopWebDavRelayAuthorization.js';
+import { authorizeDesktopWebDavRelay, desktopWebDavAuthenticationKey } from './desktopWebDavRelayAuthorization.js';
 import { createDesktopWebDavRelayHttp, type DesktopWebDavRelayHttpStats } from './desktopWebDavRelayHttp.js';
 import { recordDesktopWebDavRelayLog } from './desktopWebDavRelayLog.js';
 import { loadDesktopBoundWebDavRelay } from './desktopWebDavRelaySettings.js';
@@ -24,16 +25,9 @@ import { recordDesktopWebDavUsage } from './desktopWebDavUsage.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityContext, automaticSignal?: AbortSignal, foregroundReceive?: true) {
-  const runtime = await runWithDatabaseConnectionOwner(() => {
-    if (automaticSignal?.aborted || !isDesktopCompanionSyncParticipating()) return null;
-    const binding = loadDesktopBoundWebDavRelay();
-    if (!binding || desktopSyncChangeSessions().hasSessions(binding.phone_device_id)) return null;
-    const key = loadDesktopWorkgroupKey(binding.group_id);
-    if (!key) throw new Error('sync_group_workgroup_key_missing');
-    return { binding, databasePath: openDatabaseConnection().dbPath, groupKey: Buffer.from(key.group_key, 'base64url') };
-  });
+  const runtime = await loadRoundRuntime(automaticSignal);
   if (!runtime) return false;
-  const { binding, databasePath, groupKey } = runtime;
+  const { binding, databasePath, groupKey, authenticationKey } = runtime;
   const host = createDesktopRequestSyncDatabaseHost(databasePath);
   const loadScope = () => host.readSnapshot(db => readWebDavRelayBodyScope(db, binding, binding.desktop_device_id));
   const lanConnected = () => desktopSyncChangeSessions().hasSessions(binding.phone_device_id);
@@ -62,12 +56,18 @@ export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityCo
       files: createDesktopLibrarySyncFiles(databasePath),
       ...(automaticSignal ? { signal: automaticSignal } : {}),
       request: authorizeDesktopWebDavRelay(binding,
-        createDesktopWebDavRelayHttp(stats, automaticSignal, { recordUsage: recordDesktopWebDavUsage })),
-      assertScope: async () => assertDesktopRelayScope(binding, scope, await loadScope())
+        createDesktopWebDavRelayHttp(stats, automaticSignal, { recordUsage: recordDesktopWebDavUsage }), authenticationKey),
+      ...(authenticationKey ? { authentication: { key: authenticationKey, manual: !automaticSignal,
+        changed: notifyDesktopSyncGroupOverviewChanged } } : {}),
+      assertScope: async () => assertDesktopRelayScope(binding, scope, await loadScope(), authenticationKey)
     });
     completed = true;
     return true;
   } catch (error) {
+    if (automaticSignal && error instanceof WebDavAuthenticationError && error.deferred) {
+      attempted = false;
+      return false;
+    }
     retryable = isRetryableWebDavSendError(error);
     throw error;
   } finally {
@@ -79,9 +79,24 @@ export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityCo
   }
 }
 
+function loadRoundRuntime(automaticSignal?: AbortSignal) {
+  return runWithDatabaseConnectionOwner(() => {
+    if (automaticSignal?.aborted || !isDesktopCompanionSyncParticipating()) return null;
+    const binding = loadDesktopBoundWebDavRelay();
+    if (!binding || desktopSyncChangeSessions().hasSessions(binding.phone_device_id)) return null;
+    const key = loadDesktopWorkgroupKey(binding.group_id);
+    if (!key) throw new Error('sync_group_workgroup_key_missing');
+    return { binding, databasePath: openDatabaseConnection().dbPath, groupKey: Buffer.from(key.group_key, 'base64url'),
+      authenticationKey: desktopWebDavAuthenticationKey(binding) };
+  });
+}
+
 async function assertDesktopRelayScope(binding: WebDavRelayBinding,
-  scope: WebDavRelayBodyScope, current: WebDavRelayBodyScope | null) {
-  const active = await runWithDatabaseConnectionOwner(() => isDesktopCompanionSyncParticipating() && loadDesktopBoundWebDavRelay());
+  scope: WebDavRelayBodyScope, current: WebDavRelayBodyScope | null, authenticationKey?: string) {
+  const active = await runWithDatabaseConnectionOwner(() => {
+    const binding = isDesktopCompanionSyncParticipating() && loadDesktopBoundWebDavRelay();
+    return binding && desktopWebDavAuthenticationKey(binding) === authenticationKey ? binding : null;
+  });
   if (!active || active.id !== binding.id || active.directory_url !== binding.directory_url ||
       active.credential_version !== binding.credential_version ||
       !sameWebDavAttachmentPolicy(active.attachment_policy, binding.attachment_policy) ||

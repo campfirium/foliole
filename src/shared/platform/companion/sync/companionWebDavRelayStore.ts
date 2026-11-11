@@ -1,4 +1,5 @@
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
+import { readWebDavAuthenticationPause, webDavAuthenticationKey } from '../../../../../lib/core/sync/webDavAuthenticationPause';
 import { hasWebDavRelayAttachmentsToSend } from '../../../../../lib/core/sync/webDavRelayAttachments';
 import { hasWebDavRelayBodyToSend } from '../../../../../lib/core/sync/webDavRelayBodyOutbox';
 import { readWebDavRelayBodyScope } from '../../../../../lib/core/sync/webDavRelayBodyScope';
@@ -118,10 +119,24 @@ export async function loadCompanionWebDavRelay(pendingOnly = false, foregroundRe
     if (!binding || !matches(binding, await identity(db))) return null;
     if (!pendingOnly && !foregroundReceive) return binding;
     const scope = await readWebDavRelayBodyScope(db, binding, binding.phone_device_id);
-    if (foregroundReceive) return scope && await isWebDavRelayReceiveDue(db, scope.receiveScope) ? binding : null;
-    return scope && (await hasWebDavRelayBodyToSend(db, scope) || await hasWebDavRelayAttachmentsToSend(db, scope) ||
+    if (!scope || await readWebDavAuthenticationPause(db,
+      webDavAuthenticationKey(binding, binding.phone_device_id, scope.receiveScope.localEpoch))) return null;
+    if (foregroundReceive) return await isWebDavRelayReceiveDue(db, scope.receiveScope) ? binding : null;
+    return (await hasWebDavRelayBodyToSend(db, scope) || await hasWebDavRelayAttachmentsToSend(db, scope) ||
       await hasWebDavRelayRepairToSend(db, scope))
       ? binding : null;
+  });
+}
+
+export async function loadCompanionWebDavStatus() {
+  if (getCompanionRuntimeCapability().kind !== 'android-native') return { enabled: false, authenticationStatus: undefined };
+  return getIosCompanionDatabaseOwner().read(async db => {
+    const binding = await readBinding(db);
+    if (!binding || !matches(binding, await identity(db))) return { enabled: false, authenticationStatus: undefined };
+    const [local] = await db.query<{ library_epoch: string }>(
+      'SELECT library_epoch FROM node_version_local_proof_state WHERE singleton_id = 1');
+    const key = local && webDavAuthenticationKey(binding, binding.phone_device_id, local.library_epoch);
+    return { enabled: true, authenticationStatus: await readWebDavAuthenticationPause(db, key) };
   });
 }
 

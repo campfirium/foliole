@@ -7,6 +7,7 @@ import type { ElectronApplication, Page, TestInfo } from '@playwright/test';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsDialog } from './harness/settings';
 import { createT178ApiAcceptanceSession } from './harness/t178ApiAcceptanceSession';
+import { replaceRejectedMacCredential } from './harness/webDavMacAuthentication';
 
 async function openWebDavSettings(page: Page, createGroup = false) {
   await expectWorkspaceShell(page);
@@ -171,7 +172,7 @@ async function assertQueuedCredentialCiphertext(app: ElectronApplication, passwo
 }
 
 async function replaceAfterReopen(stateRoot: string, initial: Awaited<ReturnType<typeof confirmTestPhone>>, password: string,
-  testInfo: TestInfo) {
+  testInfo: TestInfo, newMacPassword: string) {
   const offline = await createT178ApiAcceptanceSession(stateRoot);
   try {
     const settings = await openWebDavSettings(offline.firstWindow);
@@ -199,6 +200,8 @@ async function replaceAfterReopen(stateRoot: string, initial: Awaited<ReturnType
     expect(result.resumedVersion).toBeGreaterThan(initial.offer.version);
     await expect(settings.getByRole('button', { name: replaceButton })).toBeVisible();
     await assertQueuedCredentialCiphertext(reopened.electronApp, password, false);
+    await replaceRejectedMacCredential(reopened.electronApp, settings, newMacPassword);
+    await testInfo.attach('webdav-mac-credentials-replaced', { body: await settings.screenshot(), contentType: 'image/png' });
   } finally { await reopened.close(); }
 }
 
@@ -231,9 +234,10 @@ test('queues phone credentials offline and resumes authenticated delivery after 
   const password = process.env.FOLIOLE_TEST_AUTHENTICATED_WEBDAV_PASSWORD;
   const phonePassword = process.env.FOLIOLE_TEST_PHONE_WEBDAV_PASSWORD;
   const replacementPassword = process.env.FOLIOLE_TEST_PHONE_REPLACEMENT_WEBDAV_PASSWORD;
+  const newMacPassword = process.env.FOLIOLE_TEST_MAC_REPLACEMENT_WEBDAV_PASSWORD;
   // SKIP: requires an isolated HTTPS DAV sandbox with independent Mac and phone accounts | 2026-11-11 | revive: the native lane provisions both accounts
-  test.skip(process.platform !== 'darwin' || !url || !password || !phonePassword || !replacementPassword);
-  if (!url || !password || !phonePassword || !replacementPassword) throw new Error('Test DAV accounts are unavailable.');
+  test.skip(process.platform !== 'darwin' || !url || !password || !phonePassword || !replacementPassword || !newMacPassword);
+  if (!url || !password || !phonePassword || !replacementPassword || !newMacPassword) throw new Error('Test DAV accounts are unavailable.');
   const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-webdav-replace-phone-'));
   try {
     const session = await createT178ApiAcceptanceSession(stateRoot);
@@ -257,6 +261,6 @@ test('queues phone credentials offline and resumes authenticated delivery after 
       });
       await expect(replace).toBeVisible();
     } finally { await session.close(); }
-    await replaceAfterReopen(stateRoot, initial, replacementPassword, testInfo);
+    await replaceAfterReopen(stateRoot, initial, replacementPassword, testInfo, newMacPassword);
   } finally { await rm(stateRoot, { force: true, recursive: true }); }
 });
