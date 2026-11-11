@@ -5,6 +5,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { PdfReadingViewProvider, usePdfReadingView } from '../../features/pdf/components/PdfReadingViewContext';
 import { loadPdfReadingView, savePdfReadingView } from '../../features/pdf/model/pdfReadingViewRepository';
+import { usePdfSystemController } from '../../features/pdf/model/usePdfSystemController';
 
 import { usePdfHeightFitView } from './usePdfHeightFitView';
 
@@ -88,6 +89,23 @@ it('fits and aligns the target page content after an ordinary page jump', async 
   rerender({ pageJumpRequest: null });
   await waitFor(() => expect(base.scrollContainerRef.current.scrollTop).toBe(272));
 });
+it('does not realign the previous page after reopening at a synced position in height-fit mode', async () => {
+  const base = makeProps();
+  const shell = document.createElement('div');
+  shell.getBoundingClientRect = () => ({ top: 200 - base.scrollContainerRef.current.scrollTop, left: 0 }) as DOMRect;
+  const props = { ...base, pageElementsRef: { current: { 2: shell } },
+    persistedPageDimensions: { ...base.persistedPageDimensions, 2: { width: 600, height: 1000 } } };
+  const { result } = renderHook(() => {
+    const controller = usePdfSystemController(undefined, vi.fn(), '', true, 2);
+    return { controller, view: usePdfHeightFitView({ ...props, pageJumpRequest: controller.state.pageJumpRequest }, true) };
+  }, { wrapper: Wrapper });
+  await waitFor(() => expect(result.current.view.props.zoom).toBe(100));
+  act(() => result.current.controller.actions.requestReadingPosition(2, 0));
+  await waitFor(() => expect(result.current.view.props.zoom).toBe(80));
+  act(() => result.current.controller.actions.clearPageJumpRequest(result.current.controller.state.pageJumpRequest!.id));
+  await waitFor(() => expect(base.scrollContainerRef.current.scrollTop).toBe(272));
+});
+
 it('pages with Space and Shift Space while keeping editing and free zoom untouched', async () => {
   const props = makeProps();
   const { result } = renderHook(() => usePdfHeightFitView(props, false), { wrapper: Wrapper });

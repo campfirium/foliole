@@ -45,7 +45,7 @@ function createPdfSystemActions(args: CreatePdfSystemActionArgs) {
     const nextPage = clampInteger(page, PDF_PAGE_MIN, args.maxPage);
     args.setPage(nextPage);
     args.setPositionY(positionY);
-    queuePageJump(nextPage, positionY);
+    args.setPageJumpRequest({ ...createJumpRequest(args.jumpRequestIdRef, nextPage, positionY), fitPage: true });
   };
 
   return {

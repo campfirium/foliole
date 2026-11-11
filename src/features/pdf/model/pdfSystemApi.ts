@@ -4,6 +4,7 @@ export interface PdfJumpRequest {
   id: number;
   page: number;
   positionY?: number;
+  fitPage?: boolean;
 }
 
 interface PdfSystemState {
