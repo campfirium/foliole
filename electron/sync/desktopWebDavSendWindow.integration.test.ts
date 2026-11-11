@@ -50,6 +50,7 @@ async function withAutomaticRelay(run: (args: Awaited<ReturnType<typeof prepare>
   runs: Promise<boolean>[];
   tick: (ms: number) => Promise<void>;
   requestCount: () => number;
+  dropNextMove: () => void;
   send: (signal: AbortSignal) => Promise<boolean>;
 }) => Promise<void>) {
   const fixture = await restoreFixture();
@@ -70,7 +71,7 @@ async function withAutomaticRelay(run: (args: Awaited<ReturnType<typeof prepare>
     };
     const tick = async (ms: number) => { await vi.advanceTimersByTimeAsync(ms); };
     vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
-    await run({ source, target, binding, clock, runs, tick, requestCount: () => requests, send });
+    await run({ source, target, binding, clock, runs, tick, requestCount: () => requests, dropNextMove: dav.dropNextMove, send });
   } finally {
     clock.stop();
     vi.useRealTimers();
@@ -134,6 +135,30 @@ it('keeps saved changes for a later startup when LAN or shutdown prevents DAV se
     target.reopen();
     expect(body(target, 'later')).toBe('later');
     expect((await receive(target, binding)).applied).toBe(0);
+  });
+});
+
+it('automatically confirms a durable packet after the DAV connection drops during publication', async () => {
+  await withAutomaticRelay(async ({ source, target, binding, clock, runs, tick, requestCount, dropNextMove, send }) => {
+    clock.start(send);
+    await write(source, 'retry-without-edit');
+    clock.request();
+    dropNextMove();
+    await tick(60_000);
+    await expect(runs[0]).rejects.toMatchObject({ code: 'ECONNRESET' });
+    const failedAt = requestCount();
+    await tick(59_999);
+    expect(requestCount()).toBe(failedAt);
+    await tick(1);
+    expect(runs).toHaveLength(2);
+    await expect(runs[1]).resolves.toBe(true);
+    expect((await receive(target, binding)).applied).toBe(1);
+    target.reopen();
+    expect(body(target, 'retry-without-edit')).toBe('retry-without-edit');
+    expect((await receive(target, binding)).applied).toBe(0);
+    const completeAt = requestCount();
+    await tick(300_000);
+    expect(requestCount()).toBe(completeAt);
   });
 });
 

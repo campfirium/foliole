@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { requestAttachmentWorkYield, waitForAttachmentWorkYield } from '../../lib/core/sync/attachmentWorkBudget.js';
 import { isSyncPeerRoundRetryableError } from '../../lib/core/sync/runSyncPeerRound.js';
+import { isRetryableWebDavTransportError } from '../../lib/core/sync/webDavTransportRetry.js';
 import type { SyncTriggerReason, SyncTriggerResult } from '../../lib/platform/syncTriggerContract.js';
 import { syncTriggerError } from '../../lib/platform/syncTriggerContract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -174,7 +175,10 @@ async function runAutomaticWebDav(activity: DesktopSyncActivityContext, signal: 
     return ran ? await persistResult(outcome) : outcome;
   } catch (error) {
     if (signal.aborted) return { ...result, error: null, finished_at: new Date().toISOString(), status: 'skipped' } as const;
-    return persistResult({ ...result, error: syncTriggerError(error), finished_at: new Date().toISOString(), status: 'failed' });
+    const outcome = await persistResult({ ...result, error: syncTriggerError(error),
+      finished_at: new Date().toISOString(), status: 'failed' });
+    if (isRetryableWebDavTransportError(error)) throw error;
+    return outcome;
   }
 }
 

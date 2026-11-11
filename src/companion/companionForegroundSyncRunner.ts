@@ -25,6 +25,7 @@ export type TryForegroundAutoSync = (args: {
   discoverMobilePeers?: boolean;
   cancelled: () => boolean;
   scheduledWebDav?: boolean;
+  onWebDavTransportFailure?(error: Error): void;
   signal?: AbortSignal;
   continuationMode?: CompanionSyncContinuationMode;
   onContinuationModeChange?(mode: CompanionSyncContinuationMode): void;

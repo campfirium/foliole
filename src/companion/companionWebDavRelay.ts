@@ -1,3 +1,4 @@
+import { isRetryableWebDavTransportError } from '../../lib/core/sync/webDavTransportRetry';
 import type { WebDavRelayBinding } from '../../lib/platform/webDavRelayContract';
 import type { CompanionWebDavHttpStats } from '../shared/platform/companion/sync/companionWebDavRelayHttp';
 import { companionWebDavRelayLanConnected, runCompanionWebDavRelayRound } from '../shared/platform/companion/sync/companionWebDavRelayRound';
@@ -51,6 +52,9 @@ async function runRelay(args: TryForegroundAutoSyncArgs, binding: WebDavRelayBin
     await runCompanionWebDavRelayRound(binding, stats, progress, args.signal);
   } catch (error) {
     failure = formatCompanionSyncFailureMessage(error);
+    if (!args.cancelled() && error instanceof Error && isRetryableWebDavTransportError(error)) {
+      args.onWebDavTransportFailure?.(error);
+    }
   }
   if (progress.applied) await refreshCompanionSyncDisplay(args).catch(() => args.setError('sync_display_unavailable'));
   const result = args.cancelled() ? 'cancelled' : failure ? 'failed' : 'completed';

@@ -65,6 +65,7 @@ export interface RunCompanionStreamSyncArgs {
 export interface TryForegroundAutoSyncArgs {
   discoverMobilePeers?: boolean;
   scheduledWebDav?: boolean;
+  onWebDavTransportFailure?(error: Error): void;
   triggeredAt?: string;
   cancelled: () => boolean;
   signal?: AbortSignal;

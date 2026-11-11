@@ -199,6 +199,23 @@ describe('scheduled WebDAV sends', () => {
     expect(relay.sync).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['webdav_relay_transport_failed:SocketTimeoutException', true],
+    ['webdav_relay_list_failed:401', false]
+  ])('only schedules transport recovery for %s when eligible', async (message, shouldRetry) => {
+    relay.load.mockResolvedValueOnce({ id: 'bound-test-relay' }).mockResolvedValueOnce({ id: 'bound-test-relay' });
+    syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockRejectedValueOnce(new Error('discovery_no_devices'));
+    const failure = new Error(message);
+    relay.sync.mockRejectedValueOnce(failure);
+    const onWebDavTransportFailure = vi.fn();
+    const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+    await expect(tryForegroundAutoSync({ ...scheduledSend(), onWebDavTransportFailure })).resolves.toBe('failed');
+    expect(onWebDavTransportFailure.mock.calls).toEqual(shouldRetry ? [[failure]] : []);
+    expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+      endpointUrl: null, triggerReason: 'automatic', result: 'failed'
+    }));
+  });
+
   it('publishes a scheduled send through DAV only after LAN discovery fails', async () => {
     relay.load.mockResolvedValueOnce({ id: 'bound-test-relay' }).mockResolvedValueOnce({ id: 'bound-test-relay' });
     syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockRejectedValueOnce(new Error('discovery_no_devices'));

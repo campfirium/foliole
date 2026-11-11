@@ -93,6 +93,8 @@ it('retains Android edits while away and sends once after foreground recovery, i
     expect(publications).toBe(1);
     await expect(readDesktop(desktop, binding, 'foreground-edit')).resolves.toBe(1);
 
+    await recoverAfterDisconnect({ phone, desktop, binding, clock, dav, attempts, counts: () => ({ requests, publications }) });
+
     await save(phone, 'cold-start-edit');
     clock.request();
     clock.stop();
@@ -100,8 +102,8 @@ it('retains Android edits while away and sends once after foreground recovery, i
     expect(await loadCompanionWebDavRelay(true)).toEqual(binding);
     clock.start(send);
     await vi.advanceTimersByTimeAsync(60_000);
-    await attempts[2];
-    expect(publications).toBe(2);
+    await attempts[4];
+    expect(publications).toBe(3);
     await expect(readDesktop(desktop, binding, 'cold-start-edit')).resolves.toBe(1);
     desktop.reopen();
     await expect(readDesktop(desktop, binding, 'cold-start-edit')).resolves.toBe(0);
@@ -114,6 +116,31 @@ it('retains Android edits while away and sends once after foreground recovery, i
     mobile.phone = undefined;
   }
 });
+
+async function recoverAfterDisconnect({ phone, desktop, binding, clock, dav, attempts, counts }: {
+  phone: RestorePeer;
+  desktop: RestorePeer;
+  binding: WebDavRelayBinding;
+  clock: ReturnType<typeof createWebDavSendWindow>;
+  dav: ReturnType<typeof setupDav>;
+  attempts: Promise<unknown>[];
+  counts: () => { requests: number; publications: number };
+}) {
+  await save(phone, 'recover-after-disconnect');
+  clock.request();
+  dav.dropNextMove();
+  await vi.advanceTimersByTimeAsync(60_000);
+  await expect(attempts[2]).rejects.toMatchObject({ code: 'ECONNRESET' });
+  const afterFailure = counts().requests;
+  clock.setActive(false);
+  await vi.advanceTimersByTimeAsync(120_000);
+  expect(counts().requests).toBe(afterFailure);
+  clock.setActive(true);
+  await vi.advanceTimersByTimeAsync(1);
+  await attempts[3];
+  expect(counts().publications).toBe(2);
+  await expect(readDesktop(desktop, binding, 'recover-after-disconnect')).resolves.toBe(1);
+}
 
 async function prepareBinding(desktop: RestorePeer, phone: RestorePeer, dav: ReturnType<typeof setupDav>) {
   const address = dav.server.address();

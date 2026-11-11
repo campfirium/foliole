@@ -1,37 +1,64 @@
+import { createWebDavTransportBackoff } from './webDavTransportRetry.js';
+
 const SEND_WINDOW_MS = 60_000;
 
-function scheduleWebDavTimer(dueAt: number, send: (signal: AbortSignal) => Promise<unknown>,
-  signal: AbortSignal, onStart: (work: Promise<unknown>) => void) {
-  const timer = setTimeout(() => onStart(Promise.resolve().then(() => { if (!signal.aborted) return send(signal); })
-    .catch(() => undefined)), Math.max(0, dueAt - Date.now()));
-  timer.unref?.();
-  return timer;
+function createWebDavTimer() {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return {
+    get scheduled() { return timer !== undefined; },
+    clear() {
+      clearTimeout(timer);
+      timer = undefined;
+    },
+    schedule(dueAt: number, run: () => void) {
+      timer = setTimeout(() => {
+        timer = undefined;
+        run();
+      }, Math.max(0, dueAt - Date.now()));
+      timer.unref?.();
+    }
+  };
+}
+
+function createWebDavFlight() {
+  let running = false;
+  return {
+    get running() { return running; },
+    run(send: (signal: AbortSignal) => Promise<unknown>, signal: AbortSignal,
+      update: (error?: unknown) => void, complete: () => void) {
+      running = true;
+      const finish = (error?: unknown) => { if (!signal.aborted) update(error); };
+      void Promise.resolve().then(() => {
+        if (!signal.aborted) return send(signal);
+      }).then(() => finish(), finish).finally(() => {
+        running = false;
+        complete();
+      });
+    }
+  };
 }
 
 /** One window from the first saved mutation, with an initial check for durable pending work. */
 export function createWebDavSendWindow() {
   let send: ((signal: AbortSignal) => Promise<unknown>) | undefined;
   let controller: AbortController | undefined;
-  let running: Promise<unknown> | undefined;
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  const flight = createWebDavFlight();
+  const timer = createWebDavTimer();
   let dueAt: number | undefined;
   let checkingOnStartup = false;
-
-  function clearTimer() {
-    clearTimeout(timer);
-    timer = undefined;
-  }
+  const backoff = createWebDavTransportBackoff(SEND_WINDOW_MS);
 
   function schedule() {
-    if (!send || !controller || timer || running || dueAt === undefined) return;
-    timer = scheduleWebDavTimer(dueAt, send, controller.signal, work => {
-      timer = undefined;
+    if (!send || !controller || timer.scheduled || flight.running || dueAt === undefined) return;
+    const { signal } = controller;
+    const attempt = send;
+    timer.schedule(Math.max(dueAt, backoff.deadline ?? 0), () => {
       dueAt = undefined;
       checkingOnStartup = false;
-      running = work.finally(() => {
-        running = undefined;
-        schedule();
-      });
+      flight.run(attempt, signal, error => {
+        backoff.update(error);
+        dueAt ??= backoff.deadline;
+      }, schedule);
     });
   }
 
@@ -46,7 +73,7 @@ export function createWebDavSendWindow() {
     },
     request() {
       if (!send) return;
-      if (checkingOnStartup) clearTimer();
+      if (checkingOnStartup) timer.clear();
       if (checkingOnStartup || dueAt === undefined) dueAt = Date.now() + SEND_WINDOW_MS;
       checkingOnStartup = false;
       schedule();
@@ -57,16 +84,17 @@ export function createWebDavSendWindow() {
         controller = new AbortController();
         schedule();
       } else {
-        clearTimer();
-        if (running) dueAt = Date.now();
+        timer.clear();
+        if (flight.running) dueAt = Date.now();
         controller?.abort();
         controller = undefined;
       }
     },
     stop() {
-      clearTimer();
+      timer.clear();
       send = undefined;
       dueAt = undefined;
+      backoff.update();
       controller?.abort();
       controller = undefined;
     }

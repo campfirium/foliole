@@ -82,6 +82,26 @@ it('cancels a send on background and waits for it to release before resuming', a
   } finally { hook.unmount(); }
 });
 
+it('backs off native transport failures without letting later saves accelerate retries', async () => {
+  const unavailable = new Error('webdav_relay_transport_failed:ConnectException');
+  const send = vi.fn<() => Promise<void>>().mockRejectedValueOnce(unavailable)
+    .mockRejectedValueOnce(unavailable).mockRejectedValueOnce(new Error('webdav_relay_list_failed:401'));
+  const hook = renderHook(() => useCompanionWebDavSendWindow(true, send));
+  try {
+    await tick(60_000);
+    expect(send).toHaveBeenCalledTimes(1);
+    await tick(60_000);
+    expect(send).toHaveBeenCalledTimes(2);
+    act(() => events.mutation());
+    await tick(119_999);
+    expect(send).toHaveBeenCalledTimes(2);
+    await tick(1);
+    expect(send).toHaveBeenCalledTimes(3);
+    await tick(600_000);
+    expect(send).toHaveBeenCalledTimes(3);
+  } finally { hook.unmount(); }
+});
+
 it('does not schedule automatic WebDAV when paused or on iOS', async () => {
   const send = vi.fn(async () => {});
   const paused = renderHook(() => useCompanionWebDavSendWindow(false, send));
