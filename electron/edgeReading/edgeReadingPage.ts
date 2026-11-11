@@ -1,17 +1,10 @@
-import { splitMarkdownFrontmatter } from '../../lib/core/publishing/publishFrontmatter.js';
-import { convertWordPressMarkdownToBlocks } from '../../lib/core/wordpress/wordpressMarkdownHtml.js';
+import { escapeArticleHtml as escapeHtml, renderArticleBodyBlocks } from '../../lib/core/articleHandoff/articleHtml.js';
+import type { ArticleBody } from '../../lib/platform/articleTarget.js';
 
-export interface EdgeReadingArticle {
-  title: string;
-  markdown: string;
+export interface EdgeReadingArticle extends ArticleBody {
   leafSvg: string;
   language: string;
   contentsLabel: string;
-}
-
-function escapeHtml(value: string) {
-  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 }
 
 function renderSidebar(article: EdgeReadingArticle, links: string[]) {
@@ -30,16 +23,7 @@ a:hover, a:focus-visible { color:#111; text-decoration:underline; text-underline
 }
 
 function renderArticle(article: EdgeReadingArticle) {
-  let markdown = article.markdown;
-  try {
-    markdown = splitMarkdownFrontmatter(markdown, (message) => new Error(message)).body;
-  } catch {
-    // An unmatched opening rule can be part of an ordinary article.
-  }
-  const blocks = convertWordPressMarkdownToBlocks(markdown, 1, { preserveSoftBreaks: true });
-  if (/^ATXHeading1$/u.test(blocks[0]?.kind ?? '') && blocks[0]?.text === article.title.trim()) {
-    blocks.shift();
-  }
+  const blocks = renderArticleBodyBlocks(article);
   const links: string[] = [];
   const body = blocks.map((block, index) => {
     if (!/^ATXHeading[1-6]$/u.test(block.kind) || !block.text) return block.html;

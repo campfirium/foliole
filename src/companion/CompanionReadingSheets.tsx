@@ -1,4 +1,4 @@
-import { ListTree, Info, RotateCcw, Search, X, SlidersHorizontal } from 'lucide-react';
+import { ListTree, Info, RotateCcw, Search, Share2, X, SlidersHorizontal } from 'lucide-react';
 import { useContext } from 'react';
 import type { ReactNode } from 'react';
 
@@ -65,6 +65,7 @@ export function ReadingActionsSheet(props: {
   onOpenChange(open: boolean): void;
   onOpenReadingSheet(sheet: 'font' | 'info'): void;
   onOpenClozeRemoval?: () => void;
+  articleHandoff?: { run(): void; error: string | null };
   onRestoreFromTrash?: () => Promise<void> | void;
   open: boolean;
 }) {
@@ -102,6 +103,7 @@ export function ReadingActionsSheet(props: {
           label={t('companion.reading.info')}
           onClick={() => openReadingSheet('info')}
         />
+        {props.articleHandoff && <ReadingArticleHandoff {...props.articleHandoff} />}
         {props.onOpenClozeRemoval ? <ReadingActionRow
           icon={<X aria-hidden="true" className="h-5 w-5" />}
           label={t('companion.selection.deleteCloze')}
@@ -110,6 +112,17 @@ export function ReadingActionsSheet(props: {
         {props.onRestoreFromTrash && <ReadingTrashRestoreAction restore={restore} />}
       </div>
     </ReadingBottomSheet>
+  );
+}
+
+function ReadingArticleHandoff(props: { run(): void; error: string | null }) {
+  const t = useTranslation();
+  return (
+    <>
+      <ReadingActionRow icon={<Share2 aria-hidden="true" className="h-5 w-5" />}
+        label={t('companion.reading.shareArticle')} onClick={props.run} />
+      {props.error && <p role="status" className="py-2 text-sm text-error">{props.error}</p>}
+    </>
   );
 }
 

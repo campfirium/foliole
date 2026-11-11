@@ -188,6 +188,7 @@ export function ImmersiveChromeLayer(props: ImmersiveChromeLayerProps) {
         {...definedProps({ onOpenOutline: props.isReviewItem ? () => props.onOpenOutline(true) : undefined })}
         {...definedProps({ editHistory: props.editHistory })}
         actionsOpen={props.actionsOpen}
+        handoffContext={props}
         onFindInDocument={props.onFindInDocument}
         onOpenActions={props.onOpenActions}
         onOpenReadingSheet={props.onOpenReadingSheet}

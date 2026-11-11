@@ -14,3 +14,8 @@ export interface ArticleTargetSettings {
   selected: ArticleTarget | null;
   available: ArticleTarget[];
 }
+
+export interface ArticleBody {
+  title: string;
+  markdown: string;
+}

@@ -18,6 +18,7 @@ final class FolioleBridgeViewController: CAPBridgeViewController {
             webView?.navigationDelegate = observer
         }
         bridge?.registerPluginInstance(FolioleCompanionShareInboxPlugin())
+        bridge?.registerPluginInstance(FolioleArticleHandoffPlugin())
         if let bridge { FolioleReminderNotificationDelegate.shared.attach(bridge) }
 #if FOLIOLE_IOS_BRIDGE_ACCEPTANCE && targetEnvironment(simulator)
         webView?.configuration.userContentController.add(self, name: Self.acceptanceHandler)
