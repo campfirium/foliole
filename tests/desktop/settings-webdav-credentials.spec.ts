@@ -70,6 +70,60 @@ async function expectRestoredCredentials(stateRoot: string, url: string, testInf
   }
 }
 
+async function seedAuthenticatedPhone(app: ElectronApplication, directory: string) {
+  return app.evaluate(async (_electron, directoryUrl) => {
+    const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
+    const crypto = process.getBuiltinModule('crypto')!;
+    const { runWithDatabaseConnectionOwner, openDatabaseConnection } =
+      require('./dist/electron/database/connection.js');
+    const { loadDesktopSyncGroup, registerSyncGroupDevice } = require('./dist/electron/database/syncGroupStore.js');
+    const { saveJsonSetting } = require('./dist/electron/database/settingsStore.js');
+    const { createSyncGroupDeviceIdentity } = require('./dist/lib/platform/syncGroupUnifiedContract.js');
+    const { desktopSyncChangeSessions } = require('./dist/electron/sync/desktopSyncChangeSessions.js');
+    return runWithDatabaseConnectionOwner(() => {
+      const group = loadDesktopSyncGroup();
+      const device = createSyncGroupDeviceIdentity({ device_anchor: crypto.randomUUID(), group_id: group.group_id,
+        library_path: '/test/phone', path_flavor: 'posix' });
+      registerSyncGroupDevice({ device, deviceName: 'Test Android', platform: 'android' });
+      openDatabaseConnection().sqlite.prepare(`INSERT INTO node_version_device_revisions
+        (group_id, device_identity_key, library_epoch, proof_revision, pack_id, updated_at)
+        VALUES (?, ?, 'phone-epoch', 1, 'pack', 'now')`).run(group.group_id, device.identity_key);
+      const key = `webdav_relay_directory:${group.group_id}:${group.local_device_identity_key}`;
+      const binding = { id: crypto.randomUUID(), group_id: group.group_id, desktop_device_id: group.local_device_identity_key,
+        phone_device_id: device.identity_key, directory_url: directoryUrl, delivered: true, credential_version: 1 };
+      saveJsonSetting(key, directoryUrl);
+      saveJsonSetting(`${key}:binding`, binding);
+      desktopSyncChangeSessions().open(device.identity_key);
+      require('./dist/electron/sync/desktopSyncGroupOverviewNotifier.js').notifyDesktopSyncGroupOverviewChanged();
+      return binding;
+    });
+  }, directory);
+}
+
+async function confirmTestPhone(app: ElectronApplication, groupId: string, phoneId: string) {
+  return app.evaluate((_electron, { groupId, phoneId }) => {
+    const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
+    const crypto = process.getBuiltinModule('crypto')!;
+    const { runWithDatabaseConnectionOwner } = require('./dist/electron/database/connection.js');
+    const { webDavCredentialTranscript } = require('./dist/lib/platform/webDavCredentialDeliveryContract.js');
+    const { createWebDavCredentialKey, webDavCredentialProof } = require('./dist/electron/sync/desktopWebDavCredentialCrypto.js');
+    const { desktopWebDavCredentialDeliveryForPeer, handleDesktopWebDavCredentialReply } =
+      require('./dist/electron/sync/desktopWebDavCredentialDelivery.js');
+    return runWithDatabaseConnectionOwner(() => {
+      const { offer } = desktopWebDavCredentialDeliveryForPeer(groupId, phoneId);
+      const phone = createWebDavCredentialKey();
+      const transcript = crypto.createHash('sha256').update(webDavCredentialTranscript(offer, phone.publicKey)).digest();
+      const publicKey = crypto.createPublicKey({ key: Buffer.from(offer.desktop_key, 'base64url'), format: 'der', type: 'spki' });
+      const secret = crypto.diffieHellman({ privateKey: phone.privateKey, publicKey });
+      const key = (purpose: string) => Buffer.from(crypto.hkdfSync('sha256', secret, transcript, purpose, 32));
+      const confirmation = webDavCredentialProof(key('WebDAV credential confirmation'), 'confirmed');
+      const reply = { id: offer.id, phone_key: phone.publicKey };
+      handleDesktopWebDavCredentialReply(groupId, phoneId, { ...reply, confirmation });
+      return { offer, reply: { ...reply, receipt: webDavCredentialProof(key('WebDAV credential receipt'), 'installed') } };
+    });
+  }, { groupId, phoneId });
+}
+
 test('keeps encrypted WebDAV credentials across relaunch and a failed replacement', async ({ browserName }, testInfo) => {
   void browserName;
   const url = process.env.FOLIOLE_TEST_AUTHENTICATED_WEBDAV_URL;
@@ -91,4 +145,49 @@ test('keeps encrypted WebDAV credentials across relaunch and a failed replacemen
   } finally {
     await rm(stateRoot, { force: true, recursive: true });
   }
+});
+
+test('replaces phone credentials for the same authenticated relay from Mac settings', async ({ browserName }, testInfo) => {
+  void browserName;
+  const url = process.env.FOLIOLE_TEST_AUTHENTICATED_WEBDAV_URL;
+  const password = process.env.FOLIOLE_TEST_AUTHENTICATED_WEBDAV_PASSWORD;
+  const phonePassword = process.env.FOLIOLE_TEST_PHONE_WEBDAV_PASSWORD;
+  // SKIP: requires an isolated HTTPS DAV sandbox with independent Mac and phone accounts | 2026-11-11 | revive: the native lane provisions both accounts
+  test.skip(process.platform !== 'darwin' || !url || !password || !phonePassword);
+  if (!url || !password || !phonePassword) throw new Error('Test DAV accounts are unavailable.');
+  const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-webdav-replace-phone-'));
+  try {
+    const session = await createT178ApiAcceptanceSession(stateRoot);
+    try {
+      const { electronApp, firstWindow } = session;
+      await saveAndRejectReplacement(firstWindow, url, password, () => readSavedCiphertext(electronApp, stateRoot));
+      const original = await seedAuthenticatedPhone(electronApp, url);
+      const settings = await openSettingsDialog(firstWindow);
+      await settings.getByRole('button', { name: /^(Sync \(LAN\)|同步（局域网）)$/ }).click();
+      await settings.getByRole('button', { name: /^(Sync \(WebDAV\)|同步（WebDAV）)$/ }).click();
+      const replace = settings.getByRole('button', { name: /^(Replace phone credentials|更换手机凭据)$/ });
+      await replace.click();
+      const { offer, reply } = await confirmTestPhone(electronApp, original.group_id, original.phone_device_id);
+      expect(offer.binding.id).toBe(original.id);
+      expect(offer.version).toBeGreaterThan(original.credential_version);
+      await settings.getByRole('textbox', { name: /^(Phone WebDAV username|手机 WebDAV 用户名)$/ }).fill('foliole-test-phone');
+      const secret = settings.getByLabel(/^(Phone app password|手机应用密码)$/);
+      await secret.fill(phonePassword);
+      await settings.getByRole('button', { name: /^(Fingerprints match|指纹一致)$/ }).click();
+      await expect(settings.getByText(/Waiting for both devices|正在等待双端确认/)).toBeVisible();
+      await testInfo.attach('webdav-replacement', { body: await settings.screenshot(), contentType: 'image/png' });
+      const current = await electronApp.evaluate((_electron, { offer, reply }) => {
+        const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
+        const { runWithDatabaseConnectionOwner } = require('./dist/electron/database/connection.js');
+        const { handleDesktopWebDavCredentialReply } = require('./dist/electron/sync/desktopWebDavCredentialDelivery.js');
+        const { loadDesktopBoundWebDavRelay } = require('./dist/electron/sync/desktopWebDavRelaySettings.js');
+        return runWithDatabaseConnectionOwner(() => {
+          handleDesktopWebDavCredentialReply(offer.binding.group_id, offer.binding.phone_device_id, reply);
+          return loadDesktopBoundWebDavRelay();
+        });
+      }, { offer, reply });
+      expect(current).toMatchObject({ id: original.id, credential_version: offer.version });
+      await expect(replace).toBeVisible();
+    } finally { await session.close(); }
+  } finally { await rm(stateRoot, { force: true, recursive: true }); }
 });

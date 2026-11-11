@@ -37,6 +37,7 @@ export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
   'settings.companionSync.webdav.credentialFailed': 'Could not verify or save WebDAV credentials. Check the HTTPS address, credentials, and permissions.',
   'settings.companionSync.webdav.credentialStorageUnavailable': 'Could not access secure storage. Check access to the macOS Keychain and try again.',
   'settings.companionSync.webdav.credentialVerifyDevice': 'Verify device',
+  'settings.companionSync.webdav.credentialReplacePhone': 'Replace phone credentials',
   'settings.companionSync.webdav.credentialCompareFingerprint': 'Compare this fingerprint on both devices. Confirm only if they match.',
   'settings.companionSync.webdav.credentialWaitPhone': 'Open Sync settings on your phone to verify the device.',
   'settings.companionSync.webdav.credentialWaitInstall': 'Waiting for both devices to confirm and the phone to connect to WebDAV.',

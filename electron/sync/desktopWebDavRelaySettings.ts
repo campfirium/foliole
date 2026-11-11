@@ -46,12 +46,19 @@ export function prepareAuthenticatedWebDavBinding(groupId: string, phoneId: stri
     !phone.platform.toLowerCase().startsWith('android') || !desktopSyncChangeSessions().hasSessions(phoneId)) {
     throw new Error('webdav_relay_device_unavailable');
   }
-  if (saved && (saved.binding.phone_device_id !== phoneId || saved.binding.directory_url !== directory ||
-    saved.binding.credential_version !== undefined)) throw new Error('webdav_relay_bound');
+  if (saved && (saved.binding.phone_device_id !== phoneId || saved.binding.directory_url !== directory)) {
+    throw new Error('webdav_relay_bound');
+  }
   const candidateKey = `${key}:credential-candidate`;
   const candidate = webDavRelayBindingSchema.safeParse(loadJsonSetting(candidateKey)).data;
   const matching = candidate?.phone_device_id === phoneId && candidate.directory_url === directory;
-  const version = Math.max(Date.now(), (candidate?.credential_version ?? 0) + 1);
+  const reservedVersion = matching ? candidate.credential_version : undefined;
+  const activeVersion = saved?.binding.credential_version ?? 0;
+  const version = reserve ? Math.max(Date.now(), (candidate?.credential_version ?? 0) + 1, activeVersion + 1)
+    : reservedVersion;
+  if (version === undefined || !Number.isSafeInteger(version) || version <= activeVersion) {
+    throw new Error('webdav_relay_scope_changed');
+  }
   const binding = { id: saved?.binding.id ?? (matching ? candidate.id : randomUUID()), group_id: groupId,
     desktop_device_id: group.local_device_identity_key, phone_device_id: phoneId, directory_url: directory,
     attachment_policy: loadAttachmentPolicy(key) } satisfies WebDavRelayBinding;
@@ -62,15 +69,14 @@ export function prepareAuthenticatedWebDavBinding(groupId: string, phoneId: stri
 export function activateAuthenticatedWebDavBinding(binding: WebDavRelayBinding, version: number,
   owner: ReturnType<typeof readCredentialOwner>, expectedEpoch: string) {
   verifyCredentialOwner(owner, binding.group_id);
-  const { epoch, binding: current } = prepareAuthenticatedWebDavBinding(
+  const { epoch, binding: current, version: reservedVersion } = prepareAuthenticatedWebDavBinding(
     binding.group_id, binding.phone_device_id, binding.directory_url
   );
-  if (epoch !== expectedEpoch || current.desktop_device_id !== binding.desktop_device_id || current.id !== binding.id) {
+  if (version !== reservedVersion || epoch !== expectedEpoch || current.desktop_device_id !== binding.desktop_device_id ||
+    current.id !== binding.id) {
     throw new Error('webdav_relay_scope_changed');
   }
   const key = requireActiveGroupKey(binding.group_id);
-  const saved = loadBinding(key);
-  if (saved && saved.binding.id !== binding.id) throw new Error('webdav_relay_scope_changed');
   openDatabaseConnection().driver.transaction(driver => {
     writeJsonSetting(driver, key, binding.directory_url);
     writeJsonSetting(driver, `${key}:binding`, { ...current, delivered: true, credential_version: version });

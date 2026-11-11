@@ -39,6 +39,7 @@ export const ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS: Partial<Record<Translatio
   'settings.companionSync.webdav.credentialFailed': '无法验证或保存 WebDAV 凭据。请检查 HTTPS 地址、凭据和访问权限。',
   'settings.companionSync.webdav.credentialStorageUnavailable': '无法访问安全存储。请检查 macOS 钥匙串访问权限后重试。',
   'settings.companionSync.webdav.credentialVerifyDevice': '验证设备',
+  'settings.companionSync.webdav.credentialReplacePhone': '更换手机凭据',
   'settings.companionSync.webdav.credentialCompareFingerprint': '核对两台设备上的指纹，完全一致时再确认。',
   'settings.companionSync.webdav.credentialWaitPhone': '请在手机上打开同步设置以验证设备。',
   'settings.companionSync.webdav.credentialWaitInstall': '正在等待双端确认和手机连接 WebDAV。',

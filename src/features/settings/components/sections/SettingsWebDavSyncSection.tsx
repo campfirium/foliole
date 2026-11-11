@@ -78,7 +78,7 @@ function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Rel
     setBusy(true);
     setFailed(false);
     try {
-      if (await requestAppConfirmation({
+      if (relay.credential_active || await requestAppConfirmation({
         title: t(`${PREFIX}.bindTitle`, { name: nameOf(device) }),
         description: t(`${PREFIX}.bindDescription`),
         confirmLabel: t(`${PREFIX}.bindConfirm`)
@@ -92,13 +92,14 @@ function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Rel
   }
 
   return <SettingsRow title={t(`${PREFIX}.connectDevice`)}
-    description={relay.device_id ? undefined : <span role={failed ? 'alert' : undefined}>{t(`${PREFIX}.deviceHint`)}</span>}>
+    description={failed ? <span role="alert">{t(`${PREFIX}.credentialDeliveryFailed`)}</span>
+      : relay.device_id ? undefined : t(`${PREFIX}.deviceHint`)}>
     <SettingsControlSlot>
       {relay.device_id ? <><span role="status" className="text-ui-sm text-muted-foreground">
         {bound ? `${nameOf(bound)} · ` : ''}{t(`${PREFIX}.${status}`)}
-      </span>{bound && relay.credential_draft_available && !relay.credential_active && !relay.credential_delivery
+      </span>{bound && relay.credential_draft_available && !relay.credential_delivery
         ? <SettingsButton disabled={busy || !available.has(bound.device_identity_key)} onClick={() => void bind(bound)}>
-          {t(`${PREFIX}.credentialVerifyDevice`)}
+          {t(`${PREFIX}.${relay.credential_active ? 'credentialReplacePhone' : 'credentialVerifyDevice'}`)}
         </SettingsButton> : null}</> : <AppDropdownMenu>
         <AppDropdownMenuTrigger asChild>
           <button type="button" disabled={busy || !devices.length}

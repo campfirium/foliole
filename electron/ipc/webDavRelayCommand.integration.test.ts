@@ -81,51 +81,69 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true });
 });
 
-it('enables authenticated relay only after both fingerprints and the phone installation receipt', async () => {
-  const phone = registerPhone('Android phone');
-  const other = registerPhone('Other phone');
-  openDatabaseConnection().sqlite.prepare(`INSERT INTO node_version_device_revisions
-    (group_id, device_identity_key, library_epoch, proof_revision, pack_id, updated_at)
-    VALUES (?, ?, 'phone-epoch', 1, 'pack', 'now')`).run(groupId, phone);
-  desktopSyncChangeSessions().open(phone);
-  desktopSyncChangeSessions().open(other);
-  vi.spyOn(webDavProbe, 'testWebDavRelayConnection').mockResolvedValue(directory);
-  vi.spyOn(credentialStore, 'encryptDesktopWebDavCredentialDraft').mockResolvedValue(Buffer.from('protected fixture'));
-  vi.spyOn(credentialStore, 'decryptDesktopWebDavCredentialDraft').mockImplementation(async scope =>
-    ({ scope, directory, username: 'mac-user', password: 'mac-password' }));
-  await handleInvokeRequest({ command: NATIVE_COMMANDS.saveWebDavRelayDirectory,
-    args: { group_id: groupId, directory_url: directory, credentials: { username: 'mac-user', password: 'mac-password' } } });
-  await handleInvokeRequest({ command: NATIVE_COMMANDS.enableWebDavRelay,
-    args: { group_id: groupId, device_id: phone, authenticated: true } });
-  expect(desktopWebDavCredentialDeliveryForPeer(groupId, other)).toBeUndefined();
-  const { offer } = desktopWebDavCredentialDeliveryForPeer(groupId, phone)!;
-  const receiver = createWebDavCredentialKey();
-  const send = (proof: { confirmation?: string; receipt?: string } = {}) => runWithDatabaseConnectionOwner(() =>
-    handleDesktopWebDavCredentialReply(groupId, phone, { id: offer.id, phone_key: receiver.publicKey, ...proof }));
-  await send();
-  const overview = await handleInvokeRequest({ command: NATIVE_COMMANDS.loadSyncGroupOverview, args: {} }) as {
-    webdav_relay: { credential_delivery: { fingerprint: string } }
-  };
-  const fingerprint = overview.webdav_relay.credential_delivery.fingerprint;
-  const confirm = (code: string) => handleInvokeRequest({ command: NATIVE_COMMANDS.confirmWebDavCredentialDelivery,
-    args: { group_id: groupId, id: offer.id, fingerprint: code, username: 'phone-user', password: 'phone-password' } });
-  await expect(confirm('wrong')).rejects.toThrow('webdav_credential_delivery_invalid');
-  await confirm(fingerprint);
-  expect(desktopWebDavCredentialDeliveryForPeer(groupId, phone)?.envelope).toBeUndefined();
-  const transcript = createHash('sha256').update(webDavCredentialTranscript(offer, receiver.publicKey)).digest();
-  const desktop = createPublicKey({ key: Buffer.from(offer.desktop_key, 'base64url'), format: 'der', type: 'spki' });
-  const secret = diffieHellman({ privateKey: receiver.privateKey, publicKey: desktop });
-  const proofKey = (label: string) => Buffer.from(hkdfSync('sha256', secret, transcript, `WebDAV credential ${label}`, 32));
-  expect(fingerprint).toBe(transcript.subarray(0, 16).toString('hex'));
-  await send({ confirmation: webDavCredentialProof(proofKey('confirmation'), 'confirmed') });
-  expect(desktopWebDavCredentialDeliveryForPeer(groupId, phone)?.envelope).toBeDefined();
-  expect(loadDesktopBoundWebDavRelay()).toBeNull();
-  await expect(send({ receipt: 'forged' })).rejects.toThrow('webdav_credential_delivery_invalid');
-  await send({ receipt: webDavCredentialProof(proofKey('receipt'), 'installed') });
-  closeDatabaseConnection();
-  expect(loadDesktopBoundWebDavRelay()).toMatchObject({ phone_device_id: phone, credential_version: offer.version });
-  expect(desktopWebDavRelayForPeer(groupId, phone)).toBeUndefined();
-});
+it.each(['initial setup', 'replacement'] as const)(
+  'activates credentials only after both fingerprints and the phone installation receipt during %s',
+  async mode => {
+    const phone = registerPhone('Android phone');
+    const other = registerPhone('Other phone');
+    openDatabaseConnection().sqlite.prepare(`INSERT INTO node_version_device_revisions
+      (group_id, device_identity_key, library_epoch, proof_revision, pack_id, updated_at)
+      VALUES (?, ?, 'phone-epoch', 1, 'pack', 'now')`).run(groupId, phone);
+    desktopSyncChangeSessions().open(phone);
+    desktopSyncChangeSessions().open(other);
+    vi.spyOn(webDavProbe, 'testWebDavRelayConnection').mockResolvedValue(directory);
+    vi.spyOn(credentialStore, 'encryptDesktopWebDavCredentialDraft').mockResolvedValue(Buffer.from('protected fixture'));
+    vi.spyOn(credentialStore, 'decryptDesktopWebDavCredentialDraft').mockImplementation(async scope =>
+      ({ scope, directory, username: 'mac-user', password: 'mac-password' }));
+    await handleInvokeRequest({ command: NATIVE_COMMANDS.saveWebDavRelayDirectory,
+      args: { group_id: groupId, directory_url: directory, credentials: { username: 'mac-user', password: 'mac-password' } } });
+    const group = await handleInvokeRequest({ command: NATIVE_COMMANDS.loadSyncGroupOverview, args: {} }) as {
+      sync_group: { local_device_identity_key: string }
+    };
+    const mac = group.sync_group.local_device_identity_key;
+    const bindingKey = `webdav_relay_directory:${groupId}:${mac}:binding`;
+    const existing = mode === 'replacement' ? { id: randomUUID(), group_id: groupId, desktop_device_id: mac,
+      phone_device_id: phone, directory_url: directory, credential_version: Date.now() + 60_000, delivered: true } : null;
+    if (existing) saveJsonSetting(bindingKey, existing);
+    const previous = loadDesktopBoundWebDavRelay();
+    await handleInvokeRequest({ command: NATIVE_COMMANDS.enableWebDavRelay,
+      args: { group_id: groupId, device_id: phone, authenticated: true } });
+    expect(desktopWebDavCredentialDeliveryForPeer(groupId, other)).toBeUndefined();
+    const { offer } = desktopWebDavCredentialDeliveryForPeer(groupId, phone)!;
+    if (existing) {
+      expect(offer.binding.id).toBe(existing.id);
+      expect(offer.version).toBeGreaterThan(existing.credential_version);
+    }
+    const receiver = createWebDavCredentialKey();
+    const send = (proof: { confirmation?: string; receipt?: string } = {}) => runWithDatabaseConnectionOwner(() =>
+      handleDesktopWebDavCredentialReply(groupId, phone, { id: offer.id, phone_key: receiver.publicKey, ...proof }));
+    await send();
+    const overview = await handleInvokeRequest({ command: NATIVE_COMMANDS.loadSyncGroupOverview, args: {} }) as {
+      webdav_relay: { credential_delivery: { fingerprint: string } }
+    };
+    const fingerprint = overview.webdav_relay.credential_delivery.fingerprint;
+    const confirm = (code: string) => handleInvokeRequest({ command: NATIVE_COMMANDS.confirmWebDavCredentialDelivery,
+      args: { group_id: groupId, id: offer.id, fingerprint: code, username: 'phone-user', password: 'phone-password' } });
+    await expect(confirm('wrong')).rejects.toThrow('webdav_credential_delivery_invalid');
+    await confirm(fingerprint);
+    expect(desktopWebDavCredentialDeliveryForPeer(groupId, phone)?.envelope).toBeUndefined();
+    const transcript = createHash('sha256').update(webDavCredentialTranscript(offer, receiver.publicKey)).digest();
+    const desktop = createPublicKey({ key: Buffer.from(offer.desktop_key, 'base64url'), format: 'der', type: 'spki' });
+    const secret = diffieHellman({ privateKey: receiver.privateKey, publicKey: desktop });
+    const proofKey = (label: string) => Buffer.from(hkdfSync('sha256', secret, transcript, `WebDAV credential ${label}`, 32));
+    expect(fingerprint).toBe(transcript.subarray(0, 16).toString('hex'));
+    await send({ confirmation: webDavCredentialProof(proofKey('confirmation'), 'confirmed') });
+    expect(desktopWebDavCredentialDeliveryForPeer(groupId, phone)?.envelope).toBeDefined();
+    expect(loadDesktopBoundWebDavRelay()).toEqual(previous);
+    await expect(send({ receipt: 'forged' })).rejects.toThrow('webdav_credential_delivery_invalid');
+    expect(loadDesktopBoundWebDavRelay()).toEqual(previous);
+    await send({ receipt: webDavCredentialProof(proofKey('receipt'), 'installed') });
+    closeDatabaseConnection();
+    expect(loadDesktopBoundWebDavRelay()).toMatchObject({ id: offer.binding.id,
+      phone_device_id: phone, credential_version: offer.version });
+    expect(desktopWebDavRelayForPeer(groupId, phone)).toBeUndefined();
+  }
+);
 
 it('acknowledges enable through native IPC and persists the binding without replacing it', async () => {
   const phone = registerPhone('Android phone');
