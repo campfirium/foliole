@@ -74,11 +74,12 @@ async function verifyActions(platform: string, notification: NonNullable<ReturnT
     ? host.androidJobs.get(notification.id)?.actions
     : host.actions.find(type => type.id === notification.actionTypeId)?.actions;
   expect(actions).toEqual([
-    { id: 'background-snooze-15', title: platform === 'android' ? '15 min later' : 'Snooze 15 minutes' },
-    { id: 'background-snooze-30', title: platform === 'android' ? '30 min later' : 'Snooze 30 minutes' },
-    { id: 'background-snooze-60', title: platform === 'android' ? '1 hr later' : 'Snooze 1 hour' }
+    { id: 'background-snooze-15', title: 'Snooze 15 minutes' },
+    { id: 'background-snooze-30', title: 'Snooze 30 minutes' },
+    { id: 'background-snooze-60', title: 'Snooze 1 hour' }
   ]);
   if (platform === 'android') {
+    expect(host.androidJobs.get(notification.id)?.snoozeTitle).toBe('Remind me later');
     expect(host.androidJobs.get(notification.id)?.snoozeConfirmation).toBe('Snoozed until {time}');
   }
   expect(await authorized(notification)).toHaveLength(1);

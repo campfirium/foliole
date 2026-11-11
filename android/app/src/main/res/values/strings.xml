@@ -2,4 +2,5 @@
 <resources>
     <string name="package_name">com.campfirium.foliole.android</string>
     <string name="custom_url_scheme">com.campfirium.foliole.android</string>
+    <string name="reminder_snooze">Remind me later</string>
 </resources>

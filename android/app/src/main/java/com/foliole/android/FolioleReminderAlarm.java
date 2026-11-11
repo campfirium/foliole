@@ -20,6 +20,7 @@ import net.zetetic.database.sqlcipher.SQLiteDatabase;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Map;
 
@@ -161,8 +162,13 @@ final class FolioleReminderAlarm {
         long at = job.getLong("at");
         String revision = job.getString("revision");
         Intent intent = intent(context, id, action).putExtra("at", at).putExtra("choice", choice).putExtra("revision", revision);
-        intent.setData(Uri.parse("foliole-reminder:" + id + "/" + revision + "/" + at + "/" + choice));
+        intent.setData(occurrenceUri(job, choice));
         return PendingIntent.getBroadcast(context, id, intent, PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private static Uri occurrenceUri(JSONObject job, String action) throws Exception {
+        return Uri.parse("foliole-reminder:" + job.getInt("id") + "/" + job.getString("revision")
+            + "/" + job.getLong("at") + "/" + action);
     }
 
     private static NotificationCompat.Builder reminderNotification(Context context) {
@@ -194,11 +200,20 @@ final class FolioleReminderAlarm {
             .setContentText(job.getString("body")).setAutoCancel(true)
             .setContentIntent(PendingIntent.getActivity(context, id, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE))
             .setDeleteIntent(action(context, job, DISMISS, "dismiss"));
-        JSONArray actions = job.getJSONArray("actions");
-        for (int i = 0; i < actions.length(); i++) {
-            JSONObject action = actions.getJSONObject(i);
-            notification.addAction(0, action.getString("title"), action(context, job, SNOOZE, action.getString("id")));
-        }
+        String title = job.optString("snoozeTitle", context.getString(R.string.reminder_snooze));
+        notification.addAction(0, title, snoozePicker(context, job, title));
         context.getSystemService(NotificationManager.class).notify(id, notification.build());
+    }
+
+    private static PendingIntent snoozePicker(Context context, JSONObject job, String title) throws Exception {
+        JSONArray actions = job.getJSONArray("actions");
+        var labels = new ArrayList<String>();
+        var choices = new ArrayList<PendingIntent>();
+        for (int i = 0; i < actions.length(); i++) {
+            JSONObject choice = actions.getJSONObject(i);
+            labels.add(choice.getString("title"));
+            choices.add(action(context, job, SNOOZE, choice.getString("id")));
+        }
+        return FolioleReminderSnoozeActivity.open(context, job.getInt("id"), occurrenceUri(job, "picker"), title, labels, choices);
     }
 }

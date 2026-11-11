@@ -1,9 +1,7 @@
 export const EN_REMINDER_TRANSLATIONS = {
   'settings.reminders.title': 'Reminders',
   'settings.reminders.experiment': 'Experiment',
-  'settings.reminders.snoozeShort15': '15 min later',
-  'settings.reminders.snoozeShort30': '30 min later',
-  'settings.reminders.snoozeShort60': '1 hr later',
+  'settings.reminders.snoozeTitle': 'Remind me later',
   'settings.reminders.snoozeConfirmation': 'Snoozed until {time}',
   'settings.reminders.snooze15': 'Snooze 15 minutes',
   'settings.reminders.snooze30': 'Snooze 30 minutes',

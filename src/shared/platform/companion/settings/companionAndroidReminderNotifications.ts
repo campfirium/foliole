@@ -16,6 +16,7 @@ export type AndroidReminderJob = {
   owner: string;
   delivered?: boolean;
   snoozedFrom?: number;
+  snoozeTitle: string;
   snoozeConfirmation: string;
   actions: ReminderAction[];
 };
@@ -26,10 +27,10 @@ const native = registerPlugin<{
   schedule(job: AndroidReminderJob): Promise<void>;
 }>('FolioleReminderNotifications');
 
-export function getReminderBackgroundActions(compact = false): ReminderAction[] {
+export function getReminderBackgroundActions(): ReminderAction[] {
   const locale = getStoredAppLocale();
   return Object.entries(COMPANION_REMINDER_BACKGROUND_ACTION.minutes).map(([id, minutes]) => ({
-    id, title: translate(locale, compact ? `settings.reminders.snoozeShort${minutes}` : `settings.reminders.snooze${minutes}`)
+    id, title: translate(locale, `settings.reminders.snooze${minutes}`)
   }));
 }
 
@@ -50,9 +51,11 @@ export function scheduleAndroidReminderJob(rule: ReminderRule, at: string, occup
   let id = 650_000_000;
   while (occupied.has(id)) id += 1;
   occupied.add(id);
+  const locale = getStoredAppLocale();
   return native.schedule({
     id, at: Date.parse(at), body: rule.message, ruleId: rule.id, revision: rule.revision,
-    owner: COMPANION_REMINDER_BACKGROUND_ACTION.owner, actions: getReminderBackgroundActions(true),
-    snoozeConfirmation: translate(getStoredAppLocale(), 'settings.reminders.snoozeConfirmation', { time: '{time}' })
+    owner: COMPANION_REMINDER_BACKGROUND_ACTION.owner, actions: getReminderBackgroundActions(),
+    snoozeTitle: translate(locale, 'settings.reminders.snoozeTitle'),
+    snoozeConfirmation: translate(locale, 'settings.reminders.snoozeConfirmation', { time: '{time}' })
   });
 }
