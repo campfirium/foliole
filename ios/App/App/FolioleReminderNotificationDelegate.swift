@@ -1,6 +1,5 @@
 import Capacitor
 import OSLog
-import SQLCipher
 import UserNotifications
 
 final class FolioleReminderNotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
@@ -63,8 +62,7 @@ final class FolioleReminderNotificationDelegate: NSObject, UNUserNotificationCen
               let ruleID = extra["ruleId"] as? String, let revision = extra["revision"] as? String,
               UUID(uuidString: ruleID) != nil, UUID(uuidString: revision) != nil,
               let occurrence = extra["occurrenceAt"] as? NSNumber,
-              occurrence.doubleValue > 0, occurrence.doubleValue <= actionAt.timeIntervalSince1970 * 1000,
-              contract.authorizes(ruleID: ruleID, revision: revision) else { return }
+              occurrence.doubleValue > 0, occurrence.doubleValue <= actionAt.timeIntervalSince1970 * 1000 else { return }
         let receiptKey = "foliole-reminder-snooze." + ruleID
         let receipt = store.dictionary(forKey: receiptKey)
         if receipt?["revision"] as? String == revision,
@@ -91,36 +89,7 @@ final class FolioleReminderNotificationDelegate: NSObject, UNUserNotificationCen
         content.userInfo["cap_schedule"] = ["at": ISO8601DateFormatter().string(from: at), "repeats": false]
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, at.timeIntervalSinceNow), repeats: false)
         try await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
-        if !contract.authorizes(ruleID: ruleID, revision: revision) {
-            center.removePendingNotificationRequests(withIdentifiers: [identifier])
-            return
-        }
         store.set(["revision": revision, "occurrenceAt": occurrence], forKey: receiptKey)
         center.removeDeliveredNotifications(withIdentifiers: [request.identifier])
-    }
-}
-
-struct FolioleReminderBackgroundActionContract {
-    let category: String
-    let owner: String
-    let minutes: [String: Int]
-    let authorizeSql: String
-    let databaseName: String
-
-    func authorizes(ruleID: String, revision: String) -> Bool {
-        let path = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("CapacitorDatabase/" + databaseName + "SQLite.db").path
-        var db: OpaquePointer?
-        let open = sqlite3_open_v2(path, &db, SQLITE_OPEN_READONLY, nil)
-        defer { if let db { sqlite3_close(db) } }
-        guard open == SQLITE_OK, let db else { return false }
-        var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(db, authorizeSql, -1, &statement, nil) == SQLITE_OK,
-              let statement else { return false }
-        defer { sqlite3_finalize(statement) }
-        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
-        return sqlite3_bind_text(statement, 1, ruleID, -1, transient) == SQLITE_OK
-            && sqlite3_bind_text(statement, 2, revision, -1, transient) == SQLITE_OK
-            && sqlite3_step(statement) == SQLITE_ROW
     }
 }

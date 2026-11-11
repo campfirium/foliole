@@ -4,7 +4,7 @@ import {
   isExperimentalFeatureEnabled,
   setExperimentalFeatureEnabled,
   useFeaturePreviewPreferences
-} from '../../../../shared/platform/featurePreviewPreferences';
+} from '../../../../shared/platform/runtime/featurePreviewPreferences';
 import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../../../shared/ui';
 import { AppSwitch } from '../../../../shared/ui/AppSwitch';
 

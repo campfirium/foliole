@@ -83,6 +83,7 @@ it('groups workspace and control settings in product order', () => {
     'Typography',
     'Editor',
     'Review',
+    'Reminders',
     'Publish'
   ]);
   expect(screen.queryByRole('button', { name: 'Models' })).not.toBeInTheDocument();

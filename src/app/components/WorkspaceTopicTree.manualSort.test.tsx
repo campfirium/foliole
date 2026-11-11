@@ -210,7 +210,7 @@ it('writes manual topic order when dragging within the current folder', async ()
   fireEvent.dragStart(screen.getByRole('treeitem', { name: 'Alpha' }), { dataTransfer: transfer });
   dispatchDragOverBefore(targetFrame, transfer);
   await waitFor(() => {
-    expect(screen.getByRole('treeitem', { name: 'Beta' }).parentElement).toHaveClass('border-t-2');
+    expect(screen.getByRole('treeitem', { name: 'Beta' }).parentElement).toHaveAttribute('data-drop-intent', 'before');
   });
   dispatchDropBefore(targetFrame, transfer);
 
@@ -235,11 +235,11 @@ it('clears the drop marker when a dragged topic leaves the target row', async ()
   fireEvent.dragStart(screen.getByRole('treeitem', { name: 'Alpha' }), { dataTransfer: transfer });
   dispatchDragOverBefore(targetFrame, transfer);
   await waitFor(() => {
-    expect(screen.getByRole('treeitem', { name: 'Beta' }).parentElement).toHaveClass('border-t-2');
+    expect(screen.getByRole('treeitem', { name: 'Beta' }).parentElement).toHaveAttribute('data-drop-intent', 'before');
   });
   dispatchDragLeave(targetFrame, transfer);
 
   await waitFor(() => {
-    expect(screen.getByRole('treeitem', { name: 'Beta' }).parentElement).not.toHaveClass('border-t-2');
+    expect(screen.getByRole('treeitem', { name: 'Beta' }).parentElement).not.toHaveAttribute('data-drop-intent', 'before');
   });
 });

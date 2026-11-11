@@ -13,6 +13,7 @@ const TYPES_FILES = [
   '../../../lib/platform/nativeCompanionFramedPayloadBudgetContract.ts',
   '../../../lib/platform/nativeCompanionFramedFilesContract.ts',
   '../../../lib/platform/nativeRequestSyncHttpContract.ts',
+  '../../../lib/platform/nativeWebDavRelayHttpContract.ts',
   'companionWorkspaceSyncPluginTypes.ts',
 ];
 

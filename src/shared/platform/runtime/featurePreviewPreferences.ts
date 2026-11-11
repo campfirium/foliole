@@ -1,8 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
-import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
-
-import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from './storage';
+import { APP_SETTINGS_STORAGE_KEYS } from '../../config/appSettings';
+import { getWhitelistedLocalStorageItem, setWhitelistedLocalStorageItem } from '../storage';
 
 const KEY = APP_SETTINGS_STORAGE_KEYS.experimentalFeatures;
 const CHANGED = 'foliole:experimental-features-changed';

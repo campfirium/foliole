@@ -26,7 +26,10 @@ vi.mock('../database/connection.js', async () => {
   const { SqliteConnectionCoordinator } = await import('../database/sqliteConnectionCoordinator.js');
   const coordinator = new SqliteConnectionCoordinator();
   runtime.read = execute => coordinator.runExclusive(execute);
-  return { openDatabaseConnection: vi.fn(), runWithDatabaseConnectionOwner: runtime.read };
+  return {
+    openDatabaseConnection: () => ({ driver: { queryOne: () => undefined } }),
+    runWithDatabaseConnectionOwner: runtime.read
+  };
 });
 vi.mock('../database/syncGroupCoverageDesktop.js', () => ({ loadDesktopLocalSyncGroupMemberExpired: () => false }));
 vi.mock('../sync/desktopSyncGroupExpiredOverwrite.js', () => ({ beginDesktopExpiredMemberOverwrite: vi.fn() }));

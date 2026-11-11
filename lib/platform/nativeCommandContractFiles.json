@@ -8,6 +8,8 @@
   "lib/platform/nativeBackupSearchContract.ts",
   "lib/platform/nativeContract.ts",
   "lib/platform/nativeDiscoursePublishContract.ts",
+  "lib/platform/nativeCssSnippetCommandMap.ts",
+  "lib/platform/nativeReminderContract.ts",
   "lib/platform/nativeDisplayScaleContract.ts",
   "lib/platform/nativeEditorOperationHistoryContract.ts",
   "lib/platform/nativeExternalSearchCommandMap.ts",

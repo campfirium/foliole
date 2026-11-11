@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
-import { useFeaturePreviewPreferences } from '../../../shared/platform/featurePreviewPreferences';
+import { useFeaturePreviewPreferences } from '../../../shared/platform/runtime/featurePreviewPreferences';
 import { setWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 import { useHotkeySettings } from '../context/HotkeySettingsProvider';
 import type { SettingsDesktopAdapters } from '../model/settingsDesktopAdapters';

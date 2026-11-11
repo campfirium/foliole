@@ -25,7 +25,7 @@ function collectNativeCommandReferences(fileName: string) {
   function visit(node: ts.Node) {
     if (
       ts.isPropertyAccessExpression(node) &&
-      node.expression.getText(source) === 'NATIVE_COMMANDS'
+      ['NATIVE_COMMANDS', 'NATIVE_REMINDER_COMMANDS'].includes(node.expression.getText(source))
     ) {
       references.add(node.name.text);
     }

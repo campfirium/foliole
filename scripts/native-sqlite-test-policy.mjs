@@ -12,6 +12,8 @@ const controlledElectronSqliteTests = [
   'src/shared/platform/companion/companionWorkspaceSnapshotStore.integration.test.ts',
   'electron/database/workspaceTestDatabaseLifecycle.test.ts',
   'electron/database/diveRepository.integration.test.ts',
+  'electron/database/diveDailyFlow.integration.test.ts',
+  'electron/database/diveTrash.integration.test.ts',
   'electron/database/reviewEventHistory.integration.test.ts',
   'electron/database/reviewProjection.integration.test.ts',
   'electron/database/nodeRetention.integration.test.ts',

@@ -6,16 +6,19 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const runtime = vi.hoisted(() => ({ allowed: true, depth: 0, entered: () => {} }));
 vi.mock('../diagnostics/diagnosticLog.js', () => ({ appendDiagnosticLog: vi.fn(async () => undefined) }));
 vi.mock('../database/connection.js', () => ({ registerDatabaseConnectionCleanup: () => {},
+  openDatabaseConnection: () => ({ driver: { queryOne: () => undefined } }),
   runWithDatabaseConnectionOwner: async (run: () => unknown) => {
     runtime.depth += 1;
     try { return await run(); } finally { runtime.depth -= 1; }
   } }));
 vi.mock('./companionRequestAuth.js', () => ({
-  authenticateCompanionRequestContext: () => { runtime.entered(); return { auth: { device_id: 'phone', ok: true } }; },
+  authenticateCompanionRequestContext: () => { runtime.entered(); return { groupId: 'group-1', auth: { device_id: 'phone', ok: true } }; },
   revalidateCompanionRequestAuthorization: () => runtime.allowed ? { ok: true }
     : { ok: false, status_code: 401, error: 'sync_group_device_not_active' }
 }));
-vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => ({ local_device_identity_key: 'desktop' }) }));
+vi.mock('../database/syncGroupStore.js', () => ({
+  loadDesktopSyncGroup: () => ({ group_id: 'group-1', local_device_identity_key: 'desktop' })
+}));
 vi.mock('./companionLanResponses.js', () => ({ writeJson: (_request: unknown,
   response: import('node:http').ServerResponse, status: number, body: unknown) => {
   response.writeHead(status, { 'Content-Type': 'application/json' });

@@ -27,6 +27,12 @@ struct FolioleCompanionAttachmentResourceContract {
     let sql: [String: String]
 }
 
+struct FolioleReminderBackgroundActionContract {
+    let category: String
+    let owner: String
+    let minutes: [String: Int]
+}
+
 final class FolioleCompanionContractStore {
     private let bridge: [String: Any]
     private let sync: [String: Any]
@@ -70,9 +76,7 @@ final class FolioleCompanionContractStore {
         return FolioleReminderBackgroundActionContract(
             category: try string(path: path + ["category"], root: bridge),
             owner: try string(path: path + ["owner"], root: bridge),
-            minutes: minutes,
-            authorizeSql: try string(path: path + ["authorizeSql"], root: bridge),
-            databaseName: try string(path: ["hostApi", "folderBackup", "databaseName"], root: bridge)
+            minutes: minutes
         )
     }
 

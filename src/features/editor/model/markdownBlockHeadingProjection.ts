@@ -80,9 +80,16 @@ export function createMarkdownHeadingPrefixRange(
   return null;
 }
 
+function readAtxHeadingLevel(name: string) {
+  const prefix = 'ATXHeading';
+  if (!name.startsWith(prefix) || name.length !== prefix.length + 1) return null;
+  const level = Number(name.slice(prefix.length));
+  return level >= 1 && level <= 6 ? level : null;
+}
+
 export function resolveMarkdownHeadingLineClass(node: MarkdownSyntaxNode, source: string) {
   const level = node.name === 'LenientStrongATXHeading'
     ? resolveLenientStrongATXLevel(node, source)
-    : /^ATXHeading([1-6])$/.exec(node.name)?.[1];
+    : readAtxHeadingLevel(node.name);
   return level ? `cm-line-h${level}` : null;
 }
