@@ -7,7 +7,7 @@ import type { SyncGroupDiscoverySnapshot } from '../../../lib/platform/syncGroup
 import type { SyncGroupJoinMode } from '../../../lib/platform/syncGroupJoinMode';
 import { parseSyncGroupRemovingEntries } from '../../../lib/platform/syncGroupRemovalModel';
 import type { WatchedFolderConflict } from '../../../lib/platform/watchedFolderConflictContract';
-import { webDavRelayOverviewSchema } from '../../../lib/platform/webDavRelayContract';
+import { webDavRelayOverviewSchema, type WebDavAttachmentPolicy } from '../../../lib/platform/webDavRelayContract';
 
 import { normalizeJoinCandidates, normalizeJoinRequest } from './desktop/syncGroupJoinNormalization';
 import { normalizeSyncGroup } from './desktop/syncGroupNormalization';
@@ -179,4 +179,8 @@ export function saveDesktopWebDavRelayDirectory(groupId: string, directory: stri
 
 export function enableDesktopWebDavRelay(groupId: string, deviceId: string) {
   return getRuntimeInvoke()?.(NATIVE_COMMANDS.enableWebDavRelay, { group_id: groupId, device_id: deviceId });
+}
+
+export function saveDesktopWebDavAttachmentPolicy(groupId: string, policy: WebDavAttachmentPolicy) {
+  return getRuntimeInvoke()?.(NATIVE_COMMANDS.saveWebDavAttachmentPolicy, { group_id: groupId, policy });
 }

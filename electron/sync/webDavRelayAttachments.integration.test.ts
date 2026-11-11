@@ -5,8 +5,49 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 
 import { ATTACHMENT_BLOCK_BYTES } from '../../lib/core/sync/attachmentBlockReceiver.js';
+import { WEB_DAV_ATTACHMENT_MIB, type WebDavAttachmentPolicy } from '../../lib/platform/webDavRelayContract.js';
 
 import { edit, relayFixture, storageKey } from './webDavRelayAttachmentFixture.testSupport.js';
+
+const policies = [
+  { mode: 'off' }, { mode: 'limited', max_mib: 1 }, { mode: 'unlimited' }
+] as const satisfies readonly WebDavAttachmentPolicy[];
+
+describeAttachmentPolicy(0);
+describeAttachmentPolicy(1);
+
+function describeAttachmentPolicy(sender: 0 | 1) {
+  it.each(policies)('applies $mode to WebDAV attachments from peer ' + sender + ' and delivers skipped files over LAN', async policy => {
+    const fixture = await relayFixture(policy);
+    try {
+      const source = fixture.peers[sender];
+      const target = fixture.peers[sender === 0 ? 1 : 0];
+      const files = [
+        { bytes: Buffer.alloc(WEB_DAV_ATTACHMENT_MIB, 0x71), relayed: policy.mode !== 'off' },
+        { bytes: Buffer.alloc(WEB_DAV_ATTACHMENT_MIB + 1, 0x72), relayed: policy.mode === 'unlimited' }
+      ].map(file => ({ ...file, key: storageKey(file.bytes) }));
+      for (const { key, bytes } of files) await writeFile(path.join(source.assets, key), bytes);
+      await edit(source.peer, files.map(file => file.key), 'changed');
+      await fixture.sync(source);
+      await fixture.sync(target);
+      expect(fixture.uploads).toHaveLength(files.filter(file => file.relayed).length);
+      const content = target.peer.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('changed');
+      for (const { key, bytes, relayed } of files) {
+        expect(content).toContain(key);
+        const asset = path.join(target.assets, key);
+        if (relayed) expect(await readFile(asset)).toEqual(bytes);
+        else await expect(stat(asset)).rejects.toMatchObject({ code: 'ENOENT' });
+      }
+
+      expect(await fixture.lan()).toMatchObject({ complete: true });
+      await target.reopen();
+      for (const { key, bytes } of files) {
+        expect(await readFile(path.join(target.assets, key))).toEqual(bytes);
+        expect(await readFile(path.join(source.assets, key))).toEqual(bytes);
+      }
+    } finally { await fixture.close(); }
+  });
+}
 
 it.each(['desktop', 'phone'])('relays a new attachment from %s with an interrupted download and a verified restart', async sender => {
   const fixture = await relayFixture();

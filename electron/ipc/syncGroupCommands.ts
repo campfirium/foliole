@@ -51,7 +51,8 @@ import {
 } from '../sync/desktopSyncGroupMemberStateSession.js';
 import { notifyDesktopSyncGroupOverviewChanged } from '../sync/desktopSyncGroupOverviewNotifier.js';
 import { removeDesktopSyncGroupRoute } from '../sync/desktopSyncGroupRoutes.js';
-import { desktopWebDavRelayOverview, enableDesktopWebDavRelay, loadDesktopWebDavRelayDirectory, loadDesktopWebDavRelayStatus, saveDesktopWebDavRelayDirectory } from '../sync/desktopWebDavRelaySettings.js';
+import { desktopWebDavRelayOverview, enableDesktopWebDavRelay, loadDesktopWebDavRelayDirectory, loadDesktopWebDavRelayStatus,
+  saveDesktopWebDavAttachmentPolicy, saveDesktopWebDavRelayDirectory } from '../sync/desktopWebDavRelaySettings.js';
 import { getLanWorkspaceSyncServerStatus, stopLanWorkspaceSyncServer } from '../sync/lanWorkspaceSyncServer.js';
 import { ensureWindowsSyncNetworkPermission } from '../sync/windowsSyncNetworkPermission.js';
 
@@ -68,6 +69,7 @@ const discovery = new DesktopSyncGroupDiscoverySession((snapshot) => {
 
 const COMMANDS = new Set<string>([
   NATIVE_COMMANDS.enableWebDavRelay, NATIVE_COMMANDS.loadWebDavRelayDirectory, NATIVE_COMMANDS.saveWebDavRelayDirectory,
+  NATIVE_COMMANDS.saveWebDavAttachmentPolicy,
   NATIVE_COMMANDS.loadSyncGroupOverview, NATIVE_COMMANDS.loadDesktopSyncDiagnostics, NATIVE_COMMANDS.createSyncGroup,
   NATIVE_COMMANDS.saveWatchedFolderConflict,
   NATIVE_COMMANDS.leaveSyncGroup, NATIVE_COMMANDS.removeSyncGroupDevice, NATIVE_COMMANDS.overwriteExpiredSyncGroupMember,
@@ -239,6 +241,9 @@ export function handleSyncGroupCommand(command: string, args: Record<string, unk
   if (command === NATIVE_COMMANDS.loadWebDavRelayDirectory) return loadDesktopWebDavRelayDirectory(args.group_id);
   if (command === NATIVE_COMMANDS.saveWebDavRelayDirectory) {
     return saveDesktopWebDavRelayDirectory(args.group_id, args.directory_url);
+  }
+  if (command === NATIVE_COMMANDS.saveWebDavAttachmentPolicy) {
+    return saveDesktopWebDavAttachmentPolicy(args.group_id, args.policy);
   }
   if (command === NATIVE_COMMANDS.loadDesktopSyncDiagnostics) return runWithDatabaseConnectionOwner(async () =>
     buildDesktopSyncDiagnostics(await overview(), resolveFolioleAppVersion(app)));

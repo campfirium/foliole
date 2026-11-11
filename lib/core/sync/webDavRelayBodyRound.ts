@@ -43,6 +43,7 @@ async function exchange(input: Input) {
   await input.host.write(db => recordWebDavRelayReceive(db, input.scope.receiveScope));
   if (input.foregroundReceive) return input.progress;
   const attachments = input.attachments && { ...input, attachments: input.attachments };
+  // Settle an existing publication before applying the policy to new attachment packets.
   if (attachments && !await resumeWebDavRelayAttachment(attachments)) return input.progress;
   const slotFree = await publishChanges(input);
   if (slotFree && attachments) await publishWebDavRelayAttachments(attachments);

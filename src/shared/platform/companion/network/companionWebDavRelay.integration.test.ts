@@ -2,11 +2,13 @@
 import { expect, it, vi } from 'vitest';
 
 import { withWebDavFixture } from '../../../../../electron/sync/webDavRelay.testSupport.js';
+import type { WebDavAttachmentPolicy } from '../../../../../lib/platform/webDavRelayContract.js';
 import { createCompanionRequestFixture, native } from '../../../../test/companionRequestSync.testSupport.js';
 import { installSessionHttpBoundary } from '../../../../test/companionSessionHttp.testSupport.js';
 import { loadCompanionWebDavRelay } from '../sync/companionWebDavRelayStore.js';
 
-import { captureCompanionDesktopRound, closeCompanionDesktopSession, ensureCompanionDesktopSession } from './companionDesktopSession.js';
+import { captureCompanionDesktopRound, closeCompanionDesktopSession, ensureCompanionDesktopSession,
+  subscribeCompanionDesktopChanges, waitForCompanionDesktopChanges } from './companionDesktopSession.js';
 
 vi.mock('../../companionRuntimeCapabilities', async original => ({
   ...await original<typeof import('../../companionRuntimeCapabilities')>(),
@@ -36,14 +38,27 @@ it.skipIf(process.platform !== 'darwin')('receives the Mac-selected binding afte
       expect(await fixture.right.invoke('webdav_overview')).toMatchObject({ device_id: phoneId, delivered: false });
       await ensureCompanionDesktopSession(origin, deviceId);
       const binding = await loadCompanionWebDavRelay();
-      expect(binding).toMatchObject({ phone_device_id: phoneId, directory_url: `${directory}/` });
+      expect(binding).toMatchObject({ phone_device_id: phoneId, directory_url: `${directory}/`,
+        attachment_policy: { mode: 'unlimited' } });
       await mobile.sync({ onDatabaseConfirmed: captureCompanionDesktopRound(origin) });
       expect(await fixture.right.invoke('webdav_overview')).toMatchObject({ device_id: phoneId, delivered: true });
-      await closeCompanionDesktopSession();
+      const stop = subscribeCompanionDesktopChanges(async () => {});
+      const limited = { mode: 'limited', max_mib: 2 } as const;
+      try {
+        waitForCompanionDesktopChanges();
+        const updates: WebDavAttachmentPolicy[] = [{ mode: 'off' }, { mode: 'unlimited' },
+          { mode: 'limited', max_mib: 1 }, limited];
+        for (const policy of updates) {
+          await fixture.right.invoke('webdav_attachment_policy', { policy });
+          await vi.waitFor(async () => expect(await loadCompanionWebDavRelay()).toEqual({ ...binding, attachment_policy: policy }));
+        }
+      } finally { stop(); }
       await mobile.restart();
-      expect(await loadCompanionWebDavRelay()).toEqual(binding);
+      expect(await loadCompanionWebDavRelay()).toEqual({ ...binding, attachment_policy: limited });
       const restarted = await fixture.restartRight();
-      expect(await restarted.process.invoke('webdav_overview')).toMatchObject({ device_id: phoneId, delivered: true });
+      expect(await restarted.process.invoke('webdav_overview')).toMatchObject({
+        device_id: phoneId, delivered: true, attachment_policy: limited
+      });
     });
   } finally {
     await closeCompanionDesktopSession();

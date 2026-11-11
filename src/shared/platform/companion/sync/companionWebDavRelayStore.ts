@@ -3,7 +3,7 @@ import { hasWebDavRelayAttachmentsToSend } from '../../../../../lib/core/sync/we
 import { hasWebDavRelayBodyToSend } from '../../../../../lib/core/sync/webDavRelayBodyOutbox';
 import { readWebDavRelayBodyScope } from '../../../../../lib/core/sync/webDavRelayBodyScope';
 import { isWebDavRelayReceiveDue } from '../../../../../lib/core/sync/webDavRelayReceiveFreshness';
-import { webDavRelayBindingSchema, type WebDavRelayBinding } from '../../../../../lib/platform/webDavRelayContract';
+import { sameWebDavAttachmentPolicy, webDavRelayBindingSchema, type WebDavRelayBinding } from '../../../../../lib/platform/webDavRelayContract';
 import { getCompanionRuntimeCapability } from '../../companionRuntimeCapabilities';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
@@ -49,7 +49,13 @@ export async function receiveCompanionWebDavRelay(binding: WebDavRelayBinding | 
     const local = await identity(tx);
     if (!matches(binding, local)) return null;
     const previous = await readBinding(tx);
-    if (previous && matches(previous, local)) return { id: previous.id, changed: false };
+    if (previous && matches(previous, local)) {
+      if (previous.id !== binding.id || previous.desktop_device_id !== binding.desktop_device_id ||
+          previous.directory_url !== binding.directory_url ||
+          sameWebDavAttachmentPolicy(previous.attachment_policy, binding.attachment_policy)) {
+        return { id: previous.id, changed: false };
+      }
+    }
     await tx.run(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
     [KEY, JSON.stringify(binding), new Date().toISOString()]);

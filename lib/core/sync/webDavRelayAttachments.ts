@@ -1,3 +1,5 @@
+import { WEB_DAV_ATTACHMENT_MIB } from '../../platform/webDavRelayContract.js';
+
 import { attachmentBlockResourceSchema } from './attachmentBlockReceiver.js';
 import type { AttachmentBlockSource } from './attachmentBlockTransfer.js';
 import { AttachmentVerificationPending } from './attachmentSourceVerification.js';
@@ -44,7 +46,7 @@ export async function enqueueWebDavRelayAttachments(db: DbPort, scope: WebDavRel
     SELECT ? || value, 'pending', ? FROM json_each(?)`, [prefix(scope), new Date().toISOString(), JSON.stringify(keys)]);
 }
 
-export async function markWebDavRelayAttachment(db: DbPort, scope: WebDavRelayBodyScope, key: string, state: 'done' | 'pending') {
+export async function markWebDavRelayAttachment(db: DbPort, scope: WebDavRelayBodyScope, key: string, state: 'done' | 'pending' | 'lan') {
   await db.run(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)
     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
   [prefix(scope) + key, state, new Date().toISOString()]);
@@ -61,6 +63,12 @@ export async function resumeWebDavRelayAttachment(input: Input) {
 
 export async function publishWebDavRelayAttachments(input: Input) {
   const { host, scope } = input;
+  if (scope.attachmentPolicy.mode === 'off') {
+    await host.write(db => db.run(`UPDATE sync_group_metadata SET value = 'lan', updated_at = ?
+      WHERE key >= ? AND key < ? AND value = 'pending'`,
+    [new Date().toISOString(), prefix(scope), `${scope.key}:attachment;`]));
+    return;
+  }
   const keys = await host.readSnapshot(db => db.query<{ key: string }>(`SELECT key FROM sync_group_metadata
     WHERE key >= ? AND key < ? AND value = 'pending' ORDER BY updated_at, key LIMIT 64`,
   [prefix(scope), `${scope.key}:attachment;`]), input.signal);
@@ -82,13 +90,15 @@ async function freeze(input: Input, key: string) {
         throw new Error('webdav_relay_attachment_time_unavailable');
       }
       if (file.modifiedAt < scope.baseline.capturedAt) return null;
+      const policy = scope.attachmentPolicy;
+      if (policy.mode === 'limited' && file.resource.byteLength > policy.max_mib * WEB_DAV_ATTACHMENT_MIB) return 'lan';
       const wire = await prepareWebDavAttachment(file, { context: scope.send, groupKey: input.groupKey, signal });
       return { key, ...await stageWebDavRelayPacket(input.files, scope, wire, WEB_DAV_ATTACHMENT_SUFFIX) };
     }, { shouldYield: () => { signal?.throwIfAborted(); return input.lanConnected(); } });
-    if (pending) await host.write(db => db.run('INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
+    if (pending && pending !== 'lan') await host.write(db => db.run('INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
       [webDavRelayAttachmentOutboxKey(scope), JSON.stringify(pending), new Date().toISOString()]));
-    else await host.write(db => markWebDavRelayAttachment(db, scope, key, 'done'));
-    return pending;
+    else await host.write(db => markWebDavRelayAttachment(db, scope, key, pending ?? 'done'));
+    return pending === 'lan' ? null : pending;
   } catch (error) {
     if (!(error instanceof AttachmentVerificationPending) &&
         !(error instanceof Error && error.message === 'attachment_source_missing')) throw error;

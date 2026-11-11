@@ -13,6 +13,7 @@ import {
   requestAppConfirmation, settingsFieldClassName
 } from '../../../../shared/ui';
 
+import { SettingsWebDavAttachmentRow } from './SettingsWebDavAttachmentRow';
 import { SettingsWebDavRelayRow } from './SettingsWebDavRelayRow';
 
 const PREFIX = 'settings.companionSync.webdav' as const;
@@ -30,17 +31,6 @@ function WebDavUsage({ relay }: { relay: Relay }) {
       </SettingsControlSlot>
     </SettingsRow>
   </SettingsSection>;
-}
-
-function WebDavAttachmentRow() {
-  const t = useTranslation();
-  return <SettingsRow title={t(`${PREFIX}.attachments`)} description={t(`${PREFIX}.attachmentsPending`)}>
-    <SettingsControlSlot>
-      <SettingsSegmentedControl ariaLabel={t(`${PREFIX}.attachments`)} disabled value="" onChange={() => {}}
-        options={(['attachmentsOff', 'attachmentsUnlimited', 'attachmentsLimited'] as const)
-          .map(value => ({ value, label: t(`${PREFIX}.${value}`) }))} />
-    </SettingsControlSlot>
-  </SettingsRow>;
 }
 
 function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Relay }) {
@@ -106,7 +96,7 @@ export function SettingsWebDavSyncSection() {
   return <>
     <WebDavUsage relay={relay} />
     <SettingsSection title={t(`${PREFIX}.configuration`)} key={group.group_id}>
-      <WebDavAttachmentRow />
+      <SettingsWebDavAttachmentRow groupId={group.group_id} policy={relay.attachment_policy} />
       <SettingsWebDavRelayRow groupId={group.group_id} bound={Boolean(relay.device_id)} configured={relay.configured} />
       {relay.configured ? <WebDavDeviceRow group={group} relay={relay} /> : null}
     </SettingsSection>

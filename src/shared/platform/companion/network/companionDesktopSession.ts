@@ -1,4 +1,5 @@
 import { syncSessionReplySchema, type SyncSessionReply } from '../../../../../lib/platform/syncSessionContract.js';
+import { sameWebDavAttachmentPolicy } from '../../../../../lib/platform/webDavRelayContract.js';
 import { receiveCompanionWebDavRelay } from '../sync/companionWebDavRelayStore.js';
 
 import { requestCompanionSyncSession } from './companionSyncSessionHttp.js';
@@ -94,8 +95,10 @@ async function wait(session: Session) {
         operation: 'wait', session: session.reply.session, marker: session.reply.marker
       }, session.controller.signal));
       if (!session.active || current !== session) return;
+      const previousPolicy = session.reply.webdav_relay?.attachment_policy;
       session.reply = reply;
-      if (reply.webdav_relay && reply.webdav_relay.id !== session.webDavRelayId) {
+      if (reply.webdav_relay && (reply.webdav_relay.id !== session.webDavRelayId ||
+          !sameWebDavAttachmentPolicy(previousPolicy, reply.webdav_relay.attachment_policy))) {
         session.webDavRelayId = await receiveCompanionWebDavRelay(reply.webdav_relay, session.peer).catch(() => undefined);
         if (!session.active || current !== session) return;
       }

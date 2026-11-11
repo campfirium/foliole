@@ -185,6 +185,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.enableWebDavRelay, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.loadWebDavRelayDirectory, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.saveWebDavRelayDirectory, route: 'storage', capability: 'settingsMutation' },
+  { command: NATIVE_COMMANDS.saveWebDavAttachmentPolicy, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.loadSyncGroupOverview, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.saveWatchedFolderConflict, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.resolveReadwiseJoinDecision, route: 'storage', capability: 'settingsMutation' },

@@ -11,6 +11,7 @@ import type {
 import type { SyncGroupDiscoverySnapshot } from './syncGroupDiscoveryContract.js';
 import type { SyncGroupJoinMode } from './syncGroupJoinMode.js';
 import type { SystemEntryDisplayNamesPayload } from './systemEntryDisplayNameContract.js';
+import type { WebDavAttachmentPolicy } from './webDavRelayContract.js';
 
 export type NativeSyncCommandMap = {
   [NATIVE_COMMANDS.loadDesktopSyncDiagnostics]: {
@@ -72,6 +73,10 @@ export type NativeSyncCommandMap = {
   [NATIVE_COMMANDS.saveWebDavRelayDirectory]: {
     args: { group_id: string; directory_url: string };
     result: string;
+  };
+  [NATIVE_COMMANDS.saveWebDavAttachmentPolicy]: {
+    args: { group_id: string; policy: WebDavAttachmentPolicy };
+    result: WebDavAttachmentPolicy;
   };
   [NATIVE_COMMANDS.loadSyncGroupOverview]: {
     args: undefined;

@@ -11,6 +11,7 @@ import { WEB_DAV_ATTACHMENT_SUFFIX } from '../../lib/core/sync/webDavRelayAttach
 import { runWebDavRelayBodyRound } from '../../lib/core/sync/webDavRelayBodyRound.js';
 import { readWebDavRelayBodyScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
 import { webDavRelayStatus, type WebDavRelayRequest } from '../../lib/core/sync/webDavRelayPublication.js';
+import type { WebDavAttachmentPolicy } from '../../lib/platform/webDavRelayContract.js';
 import { restoreFixture, type RestorePeer } from '../database/requestSyncRestoreRecovery.testSupport.js';
 import { textBranch } from '../database/topicTextState.testSupport.js';
 
@@ -45,7 +46,7 @@ async function attachmentPeer(peer: RestorePeer) {
   }, get attachments() { return { ...source, ...receiver, needsSlice, needs: async () => (await needsSlice(() => false)).keys }; } };
 }
 
-export async function relayFixture() {
+export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy) {
   const fixture = await restoreFixture();
   const dav = setupDav(process.env.FOLIOLE_TEST_WEBDAV_URL);
   await new Promise<void>(resolve => dav.server.listen(0, '127.0.0.1', resolve));
@@ -64,7 +65,7 @@ export async function relayFixture() {
     await request(url, { method: 'MKCOL' }, webDavRelayStatus);
     const [mac, phone] = peers;
     const binding = { id: crypto.randomUUID(), group_id: 'group', desktop_device_id: mac.peer.id,
-      phone_device_id: phone.peer.id, directory_url: url.href };
+      phone_device_id: phone.peer.id, directory_url: url.href, attachment_policy: attachmentPolicy };
     const previous = Buffer.from('Already synchronized image');
     const old = storageKey(previous);
     for (const { assets } of peers) {

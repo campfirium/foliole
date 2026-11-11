@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 
 import { hasWebDavRelayPublishedChanges } from '../../lib/core/sync/webDavRelayBodyOutbox.js';
 import { readWebDavRelayBodyScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
-import { webDavRelayBindingSchema, type WebDavRelayBinding } from '../../lib/platform/webDavRelayContract.js';
+import { DEFAULT_WEB_DAV_ATTACHMENT_POLICY, webDavAttachmentPolicySchema, webDavRelayBindingSchema,
+  type WebDavRelayBinding } from '../../lib/platform/webDavRelayContract.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
@@ -52,6 +53,23 @@ function loadBinding(directoryKey: string) {
   return { binding: parsed.data, delivered: 'delivered' in stored && stored.delivered === true };
 }
 
+function loadAttachmentPolicy(directoryKey: string) {
+  return webDavAttachmentPolicySchema.safeParse(loadJsonSetting(`${directoryKey}:attachment-policy`)).data
+    ?? DEFAULT_WEB_DAV_ATTACHMENT_POLICY;
+}
+
+export function saveDesktopWebDavAttachmentPolicy(groupId: unknown, input: unknown) {
+  return runWithDatabaseConnectionOwner(() => {
+    if (process.platform !== 'darwin') throw new Error('webdav_relay_host_unavailable');
+    const key = requireActiveGroupKey(groupId);
+    const policy = webDavAttachmentPolicySchema.parse(input);
+    saveJsonSetting(`${key}:attachment-policy`, policy);
+    desktopSyncChangeSessions().changed();
+    notifyDesktopSyncGroupOverviewChanged();
+    return policy;
+  });
+}
+
 export function desktopWebDavRelayOverview(groupId: string) {
   const key = requireActiveGroupKey(groupId);
   const saved = loadBinding(key);
@@ -61,6 +79,7 @@ export function desktopWebDavRelayOverview(groupId: string) {
     device.device_identity_key !== group.local_device_identity_key && device.platform.toLowerCase().startsWith('android') &&
     sessions.hasSessions(device.device_identity_key)).map(device => device.device_identity_key);
   return {
+    attachment_policy: loadAttachmentPolicy(key),
     available_device_ids: availableDeviceIds,
     configured: typeof loadJsonSetting(key) === 'string',
     device_id: saved?.binding.phone_device_id ?? null,
@@ -93,7 +112,8 @@ export function enableDesktopWebDavRelay(groupId: unknown, phoneId: unknown) {
 export function desktopWebDavRelayForPeer(groupId: string, peerId: string) {
   const key = requireActiveGroupKey(groupId);
   const saved = loadBinding(key);
-  return saved?.binding.phone_device_id === peerId ? saved.binding : undefined;
+  return saved?.binding.phone_device_id === peerId
+    ? { ...saved.binding, attachment_policy: loadAttachmentPolicy(key) } : undefined;
 }
 
 export function confirmDesktopWebDavRelayDelivery(groupId: string, peerId: string, bindingId: string) {
@@ -109,9 +129,10 @@ export function loadDesktopBoundWebDavRelay() {
   if (process.platform !== 'darwin') return null;
   const group = loadDesktopSyncGroup();
   if (!group) return null;
-  const saved = loadBinding(requireActiveGroupKey(group.group_id));
+  const key = requireActiveGroupKey(group.group_id);
+  const saved = loadBinding(key);
   if (!saved?.delivered || saved.binding.desktop_device_id !== group.local_device_identity_key) return null;
-  return saved.binding;
+  return { ...saved.binding, attachment_policy: loadAttachmentPolicy(key) };
 }
 
 export async function loadDesktopWebDavRelayStatus() {

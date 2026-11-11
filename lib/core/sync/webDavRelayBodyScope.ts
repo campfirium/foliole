@@ -2,7 +2,7 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
 import { SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION, type SyncGroupMemberStatePayload } from '../../platform/syncGroupMemberStateContract.js';
-import type { WebDavRelayBinding } from '../../platform/webDavRelayContract.js';
+import { DEFAULT_WEB_DAV_ATTACHMENT_POLICY, type WebDavRelayBinding } from '../../platform/webDavRelayContract.js';
 
 import type { DbPort } from './dbPort.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from './framedSyncContract.js';
@@ -45,7 +45,8 @@ export async function readWebDavRelayBodyScope(db: DbPort, binding: WebDavRelayB
   const source = bytesToHex(sha256(new TextEncoder().encode(baseline.sourceEpoch)));
   const key = `webdav_relay_body:${digest}:${source}`;
   const collections = await readRelayCollections(db, key);
-  return { baseline, key, outgoingStartSequence: collections?.startSequence ?? baseline.sequence,
+  return { baseline, key, attachmentPolicy: binding.attachment_policy ?? DEFAULT_WEB_DAV_ATTACHMENT_POLICY,
+    outgoingStartSequence: collections?.startSequence ?? baseline.sequence,
     outgoingHasAttachments: Boolean(collections?.keys.length),
     receiveScope: { bindingId: binding.id, ...epochs, sourceEpoch: baseline.sourceEpoch },
     outgoing: relayCollectionUrl(outgoing, collections?.active ?? 'legacy'),
