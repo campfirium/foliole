@@ -156,6 +156,40 @@ to determine install, test, commit or task count.
 
 ## Pending centralized QA
 
+### November 12 iOS dependency batch
+
+[#237](https://github.com/campfirium/foliole/pull/237) targets
+`campfirium/foliole:dev`, verified `app/renovate` head
+`9eb4eb7a5d041375562e454e7b478adedbaf1ec2`. Adoption commit `07fa653f2`
+updates SwiftProtobuf to 1.40.0. Both graphs resolved the official tag, 100
+Swift host tests passed, and the unsigned iOS simulator build succeeded.
+Run iOS host and dependency hardening coverage in the next centralized QA.
+
+### November 12 UI dependency batch
+
+The proposals target `campfirium/foliole:dev`. Adoption commit `18e991ba7`
+passed 16 icon and virtual-list tests, the desktop and companion web builds,
+and the production npm audit. Run desktop/shared coverage and dependency
+hardening in the next centralized QA.
+
+| Proposal | Verified author / reviewed head | Local target |
+| --- | --- | --- |
+| [#235](https://github.com/campfirium/foliole/pull/235) | `app/renovate` / `84ef2a9998e73f890ef6469da988601e32216ce9` | TanStack React Virtual 3.14.26 and Virtual Core 3.19.11 |
+| [#236](https://github.com/campfirium/foliole/pull/236) | `app/renovate` / `82eb5acf7f17782045f40e7e6d474e11cf6f578c` | Lucide React 1.68.0 |
+
+### November 12 Android dependency batch
+
+The proposals target `campfirium/foliole:dev`. Adoption commit `737910d5c`
+passed the Android debug APK and instrumentation APK builds and JVM tests.
+Both debug dependency graphs resolve AndroidX SQLite 2.7.1. The local build
+had no Firebase configuration, so the actual push flow remains unverified.
+Run Android host checks and dependency hardening in the next centralized QA.
+
+| Proposal | Verified author / reviewed head | Local target |
+| --- | --- | --- |
+| [#233](https://github.com/campfirium/foliole/pull/233) | `app/renovate` / `349da626bb8bed03c3e7a6a741b1cb605a03092b` | AndroidX SQLite 2.7.1 in both compile and runtime graphs |
+| [#238](https://github.com/campfirium/foliole/pull/238) | `app/renovate` / `687838fa13ca1ee0bc11bac4db191044fe237aa8` | Google Services Gradle plugin 4.6.0 |
+
 ### November 12 Node.js security assessment
 
 Foliole 0.8.1 ships Electron 45.2.3 with Node.js 24.22.2. Electron 45.3.0
@@ -203,13 +237,6 @@ verified closed.
 
 The proposals target `campfirium/foliole:dev`. The paired WASM overrides retain
 the required FSRS binding that the proposed lockfiles removed.
-
-### November 10 deferrals for the next centralized dependency review
-
-- [#233](https://github.com/campfirium/foliole/pull/233) remains open. The local
-  Android test APK could not compile references to the image-file bridge.
-  Establish a clean native baseline and verify the resolved compile and runtime
-  SQLite versions together before adopting 2.7.1.
 
 ### Completed November 9 npm batch
 
