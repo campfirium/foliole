@@ -1,3 +1,4 @@
+import { readDiveNode } from '../../../lib/core/nodes/dive';
 import {
   VIRTUAL_REMOVED_NODE_ID,
   VIRTUAL_ROOT_NODE_ID,
@@ -8,6 +9,7 @@ import { buildVirtualNodeResultIndex } from '../../features/nodes/model/virtualN
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { PanelScaleSurface } from '../../shared/ui';
 
+import { DiveDocumentSurface } from './DiveDocumentSurface';
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { ExternalLibraryDocumentSurface } from './ExternalLibraryDocumentSurface';
 import type { ExternalDocumentPreviewLoadState } from './externalSearchPreviewState';
@@ -100,6 +102,13 @@ export function WorkspaceDocumentSurface(props: WorkspaceDocumentSurfaceProps) {
         />
       </PanelScaleSurface>
     );
+  }
+
+  const dive = !props.isTrashViewOpen && !props.isVirtualViewOpen && documentNodeId
+    ? readDiveNode(props.nodesById[documentNodeId])
+    : null;
+  if (dive) {
+    return <DiveDocumentSurface key={dive.id} dive={dive} workspace={props} />;
   }
 
   return (

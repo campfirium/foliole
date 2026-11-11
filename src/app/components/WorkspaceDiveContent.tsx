@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 
-import { resolveDiveTopicIds, type Dive } from '../../../lib/core/nodes/dive';
-import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
+import type { Dive } from '../../../lib/core/nodes/dive';
+import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
+import { resolveDiveMembership } from '../../shared/diveMembership';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import type { WorkspaceCanonicalSource } from '../../shared/workspaceCanonicalSelectors';
 
 import { removeWorkspaceDiveSource } from './workspaceDiveMutation';
 import { WorkspaceTopicTree } from './WorkspaceTopicTree';
@@ -15,18 +17,16 @@ export function WorkspaceDiveContent(props: {
   forceVisibleNodeId?: string | null;
   childrenByParent: Map<string | null, string[]>;
   nodesById: WorkspaceListNodesById;
-  visibleNodeIds: ReadonlySet<string>;
+  workspace: WorkspaceCanonicalSource<Node> & { trashedNodeIds: readonly string[] };
   onSelectNode: (id: string) => void;
 }) {
-  const { childrenByParent, dive, nodesById, visibleNodeIds } = props;
+  const { childrenByParent, dive, nodesById } = props;
+  const { nodeOrder, nodesById: workspaceNodes, trashedNodeIds } = props.workspace;
   const t = useTranslation();
-  const ids = useMemo(() => resolveDiveTopicIds(dive, {
-    kindOf: (id) => {
-      const node = nodesById[id];
-      return visibleNodeIds.has(id) && !node?.anchorLink && !isVirtualNode(node) && !isVirtualRootNode(node) ? node?.kind : undefined;
-    },
-    childrenOf: (id) => childrenByParent.get(id) ?? []
-  }), [childrenByParent, dive, nodesById, visibleNodeIds]);
+  const ids = useMemo(
+    () => resolveDiveMembership({ nodeOrder, nodesById: workspaceNodes, trashedNodeIds }, dive).topics,
+    [dive, nodeOrder, workspaceNodes, trashedNodeIds]
+  );
 
   return (
     <WorkspaceTopicTree

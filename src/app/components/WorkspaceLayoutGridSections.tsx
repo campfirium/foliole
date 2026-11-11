@@ -109,6 +109,7 @@ function renderWorkspaceListBody(
     WorkspaceListAreaProps,
     | 'activeNodeId'
     | 'activeVirtualNodeId'
+    | 'browseRootNodeId'
     | 'externalEntriesByFolderId'
     | 'externalFolders'
     | 'externalSelection'

@@ -5,10 +5,6 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 
 export type DiveSourceSelection = { diveId: string; nodeId: string };
 
-type DiveSelection =
-  | { kind: 'dive'; diveId: string }
-  | ({ kind: 'source' } & DiveSourceSelection);
-
 export function useWorkspaceDiveNavigation(props: {
   nodesById: Record<string, Node | undefined>;
   nodeOrder: readonly string[];
@@ -29,34 +25,33 @@ export function useWorkspaceDiveNavigation(props: {
       return dive ? [{ ...dive, directSourceIds: dive.directSourceIds.filter(sourceId => !trashed.has(sourceId)) }] : [];
     }).sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
   }, [nodeOrder, nodesById, trashedNodeIds]);
-  const [selection, setSelection] = useState<DiveSelection | null>(null);
+  const [source, setSource] = useState<DiveSourceSelection | null>(null);
   const isOtherView = props.isVirtualViewOpen || props.isTrashViewOpen || props.isExternalViewOpen;
-  const sourceIsCurrent = selection?.kind !== 'source' ||
-    props.activeNodeId === selection.nodeId || props.browseRootNodeId === selection.nodeId;
+  const sourceIsCurrent = !source ||
+    props.activeNodeId === source.nodeId || props.browseRootNodeId === source.nodeId;
   useEffect(() => {
-    if (isOtherView || !sourceIsCurrent) setSelection(null);
+    if (isOtherView || !sourceIsCurrent) setSource(null);
   }, [isOtherView, sourceIsCurrent]);
-  const selectedDive = isOtherView ? undefined : dives.find((dive) => dive.id === selection?.diveId);
-  const activeDive = studyDiveId === undefined
-    ? selection?.kind === 'dive' ? selectedDive : undefined
-    : !isOtherView ? dives.find(dive => dive.id === studyDiveId) : undefined;
-  const activeDiveSource = studyDiveId === undefined && selection?.kind === 'source' && sourceIsCurrent &&
-    selectedDive?.directSourceIds.includes(selection.nodeId) ? selection : null;
+  const browseDiveId = props.browseRootNodeId ?? props.activeNodeId;
+  const activeDive = isOtherView ? undefined : dives.find(dive => dive.id === (studyDiveId ?? browseDiveId));
+  const sourceDive = source && dives.find(dive => dive.id === source.diveId);
+  const activeDiveSource = !isOtherView && studyDiveId === undefined && source && sourceIsCurrent &&
+    sourceDive?.directSourceIds.includes(source.nodeId) ? source : null;
   return {
     activeDive,
-    closeDive: () => setSelection(null),
+    closeDiveSource: () => setSource(null),
     navigation: {
       dives,
       activeDiveId: activeDive?.id ?? null,
       activeDiveSource,
       onSelectDiveSource: (diveId: string, nodeId: string) => {
         if (isOtherView) props.onOpenNotesView();
-        setSelection({ kind: 'source', diveId, nodeId });
+        setSource({ diveId, nodeId });
         props.onSelectNode(nodeId);
       },
       onSelectDive: (id: string) => {
-        if (isOtherView) props.onOpenNotesView();
-        setSelection({ kind: 'dive', diveId: id });
+        setSource(null);
+        props.onSelectNode(id);
       }
     }
   };

@@ -12,6 +12,7 @@ export function areWorkspaceListAreaPropsEqual(
   const changed = {
     activeNodeId: previous.activeNodeId !== next.activeNodeId,
     activeVirtualNodeId: previous.activeVirtualNodeId !== next.activeVirtualNodeId,
+    browseRootNodeId: previous.browseRootNodeId !== next.browseRootNodeId,
     externalEntriesByFolderId: previous.externalEntriesByFolderId !== next.externalEntriesByFolderId,
     externalFolders: previous.externalFolders !== next.externalFolders,
     externalSelection: previous.externalSelection !== next.externalSelection,

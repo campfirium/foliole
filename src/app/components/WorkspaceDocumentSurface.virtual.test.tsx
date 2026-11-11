@@ -2,12 +2,15 @@ import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { expect, it, vi } from 'vitest';
 
+import { DIVE_NODE_FILTER } from '../../../lib/core/nodes/dive';
 import {
   INBOX_NODE_ID,
   VIRTUAL_REMOVED_NODE_ID,
   VIRTUAL_ROOT_NODE_ID,
   VIRTUAL_SHELVED_NODE_ID
 } from '../../features/nodes/model/specialNodes';
+import { MouseGestureSettingsProvider } from '../../features/settings/context/MouseGestureSettingsProvider';
+import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   useAppearanceSettings: () => ({ editorAppearanceKey: 'default', readingContentWidth: 720 })
@@ -29,7 +32,8 @@ vi.mock('./workspaceDocumentSectionProps', () => ({
   buildDocumentSectionProps: (activeNodeId: string | null) => ({ activeNodeId })
 }));
 
-vi.mock('../../shared/ui', () => ({
+vi.mock('../../shared/ui', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../shared/ui')>(),
   PanelScaleSurface: ({ children }: { children: ReactNode }) => <>{children}</>
 }));
 
@@ -139,4 +143,28 @@ it('opens a Topic selected from a saved search result list', () => {
   );
 
   expect(screen.getByText('document stale-topic')).toBeInTheDocument();
+});
+
+it('shows the selected Dive contents in the document column instead of opening the Dive as a document', () => {
+  const dive = createWorkspaceContentNode({
+    id: 'dive',
+    kind: 'folder',
+    specialKind: 'virtual',
+    title: 'Study set',
+    virtualFilter: DIVE_NODE_FILTER,
+    manualChildOrder: ['member']
+  });
+  const member = createWorkspaceContentNode({ id: 'member', kind: 'topic', title: 'Member topic' });
+  renderWithLocalization(
+    <MouseGestureSettingsProvider>
+      <WorkspaceDocumentSurface {...createProps({
+        documentNodeId: dive.id,
+        isVirtualViewOpen: false,
+        nodeOrder: [dive.id, member.id],
+        nodesById: { dive, member }
+      })} />
+    </MouseGestureSettingsProvider>
+  );
+
+  expect(screen.getByRole('button', { name: 'Open Member topic' })).toBeVisible();
 });

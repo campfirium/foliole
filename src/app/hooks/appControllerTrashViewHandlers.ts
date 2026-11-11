@@ -1,3 +1,4 @@
+import { readDiveNode } from '../../../lib/core/nodes/dive';
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 
@@ -53,7 +54,8 @@ export function createSelectNode(args: BuildControllerLayoutPropsArgs) {
     if (selectedNode?.kind === 'folder') {
       args.ws.setBrowseRootNode(nodeId);
     }
-    if (selectedNode?.specialKind === 'virtual' || selectedNode?.specialKind === 'virtual-root') {
+    if (!readDiveNode(selectedNode) &&
+        (selectedNode?.specialKind === 'virtual' || selectedNode?.specialKind === 'virtual-root')) {
       args.virtualView.openVirtualView(nodeId);
     } else if (selectedNode?.kind === 'folder') {
       args.virtualView.closeVirtualView();

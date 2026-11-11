@@ -1,4 +1,5 @@
 import { fireEvent, screen, within } from '@testing-library/react';
+import { useState } from 'react';
 import { expect, it, vi } from 'vitest';
 
 import { DIVE_NODE_FILTER } from '../../../lib/core/nodes/dive';
@@ -14,9 +15,10 @@ vi.mock('../../shared/platform/desktop/diveRepository', () => ({
   getDiveRepository: () => ({})
 }));
 
-function createContent(nodesById: Record<string, Node>, trashedNodeIds: string[] = []) {
+function Workspace({ nodesById, trashedNodeIds = [] }: { nodesById: Record<string, Node>; trashedNodeIds?: string[] }) {
+  const [activeNodeId, setActiveNodeId] = useState(HOME_NODE_ID);
   return <WorkspaceDualListContent
-    activeNodeId={HOME_NODE_ID}
+    activeNodeId={activeNodeId}
     externalEntriesByFolderId={{}}
     externalFolders={[]}
     externalSelection={{ kind: 'root' }}
@@ -31,7 +33,7 @@ function createContent(nodesById: Record<string, Node>, trashedNodeIds: string[]
     onOpenMoveToNode={vi.fn()}
     onOpenNotesView={vi.fn()}
     onOpenTrashView={vi.fn()}
-    onSelectNode={vi.fn()}
+    onSelectNode={setActiveNodeId}
     onSelectNodeInVirtualView={vi.fn()}
     onSelectTrashNode={vi.fn()}
     reviewCurrentNodeId={null}
@@ -54,7 +56,7 @@ it('keeps the selected Dive live as a subfolder moves out of a source', async ()
     item: createWorkspaceContentNode({ id: 'item', kind: 'item', title: 'Derived card', parentNodeId: 'derived' }),
     direct: createWorkspaceContentNode({ id: 'direct', kind: 'topic', title: 'Also added directly', parentNodeId: 'nested' })
   };
-  const view = renderWithLocalization(createContent(nodes));
+  const view = renderWithLocalization(<Workspace nodesById={nodes} />);
   const dive = await screen.findByRole('treeitem', { name: 'Probability' });
   fireEvent.click(dive);
   const dives = within(screen.getByRole('tree', { name: 'Dive' }));
@@ -71,14 +73,14 @@ it('keeps the selected Dive live as a subfolder moves out of a source', async ()
 
   expect(panel.getAllByRole('treeitem', { name: 'Also added directly' })).toHaveLength(1);
 
-  view.rerender(createContent(nodes, ['source', 'nested', 'derived', 'direct', 'item']));
+  view.rerender(<Workspace nodesById={nodes} trashedNodeIds={['source', 'nested', 'derived', 'direct', 'item']} />);
   expect(dives.queryByRole('treeitem', { name: 'Source' })).toBeNull();
   expect(panel.queryByRole('treeitem', { name: /Included through folder/ })).toBeNull();
-  view.rerender(createContent(nodes));
+  view.rerender(<Workspace nodesById={nodes} />);
   expect(dives.getByRole('treeitem', { name: 'Source' })).toBeVisible();
   expect(panel.getByRole('treeitem', { name: /Included through folder/ })).toBeVisible();
 
-  view.rerender(createContent({ ...nodes, nested: { ...nodes.nested, parentNodeId: null } }));
+  view.rerender(<Workspace nodesById={{ ...nodes, nested: { ...nodes.nested, parentNodeId: null } }} />);
   expect(dive).toHaveAttribute('aria-selected', 'true');
   expect(panel.queryByRole('treeitem', { name: /Included through folder/ })).not.toBeInTheDocument();
   expect(panel.getByRole('treeitem', { name: 'Also added directly' })).toBeVisible();
@@ -88,7 +90,7 @@ it('renames the Dive section from its menu and restores the name after remount',
   const nodes = {
     [HOME_NODE_ID]: createWorkspaceContentNode({ id: HOME_NODE_ID, kind: 'folder', specialKind: 'home', title: 'Home' })
   };
-  const view = renderWithLocalization(createContent(nodes));
+  const view = renderWithLocalization(<Workspace nodesById={nodes} />);
   const heading = screen.getByRole('treeitem', { name: 'Dive' });
 
   fireEvent.doubleClick(heading);
@@ -102,6 +104,6 @@ it('renames the Dive section from its menu and restores the name after remount',
   expect(await screen.findByRole('treeitem', { name: 'Reading projects' })).toBeVisible();
 
   view.unmount();
-  renderWithLocalization(createContent(nodes));
+  renderWithLocalization(<Workspace nodesById={nodes} />);
   expect(screen.getByRole('treeitem', { name: 'Reading projects' })).toBeVisible();
 });

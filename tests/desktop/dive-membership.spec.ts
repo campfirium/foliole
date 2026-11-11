@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import type { Locator, Page } from '@playwright/test';
+import type { Locator, Page, TestInfo } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
@@ -12,8 +12,9 @@ test('creates a Dive in the tree and shows sources added from library menus', as
       { content: '', id: 'dive-folder', kind: 'folder', title: 'Probability sources' },
       { content: '', id: 'dive-subfolder', kind: 'folder', parentNodeId: 'dive-folder', title: 'Nested sources' },
       { content: 'Conditional probability body', id: 'dive-nested-topic', kind: 'topic', parentNodeId: 'dive-subfolder', title: 'Conditional probability' },
-      { content: 'Independent notes', id: 'dive-topic', kind: 'topic', title: 'Independent notes' },
-      { content: 'Unrelated notes', id: 'unrelated-topic', kind: 'topic', title: 'Unrelated notes' }
+      { content: '', id: 'other-folder', kind: 'folder', title: 'Other sources' },
+      { content: 'Independent notes', id: 'dive-topic', kind: 'topic', parentNodeId: 'other-folder', title: 'Independent notes' },
+      { content: 'Unrelated notes', id: 'unrelated-topic', kind: 'topic', parentNodeId: 'other-folder', title: 'Unrelated notes' }
     ]);
   });
   const diveTree = desktopWindow.getByRole('tree', { name: /^(Dive|专题)$/ });
@@ -32,7 +33,7 @@ test('creates a Dive in the tree and shows sources added from library menus', as
   await picker.getByRole('button', { name: 'Probability review' }).click();
   await expect(diveTree.getByRole('treeitem', { name: 'Probability sources' })).toBeVisible();
 
-  await desktopWindow.getByRole('treeitem', { name: 'Home', exact: true }).click();
+  await desktopWindow.getByRole('treeitem', { name: 'Other sources', exact: true }).click();
   const topicPanel = desktopWindow.getByRole('complementary', { name: /^(Current folder contents|当前文件夹内容)$/ });
   await topicPanel.getByRole('treeitem', { name: 'Independent notes' }).click({ button: 'right' });
   await menu.click();
@@ -47,17 +48,8 @@ test('creates a Dive in the tree and shows sources added from library menus', as
 
   await expect(diveTree.getByRole('treeitem', { name: 'Independent notes' })).toHaveCount(0);
   const diveRow = diveTree.getByRole('treeitem', { name: 'Probability review' });
-  await diveRow.click();
-  await expect(diveRow).toHaveAttribute('aria-selected', 'true');
-  await expect(topicPanel.getByRole('treeitem', { name: 'Unrelated notes' })).toHaveCount(0);
-  const nested = topicPanel.getByRole('treeitem', { name: 'Conditional probability' });
-  await expect(nested).toBeVisible();
-  await expect(topicPanel.getByRole('treeitem', { name: 'Independent notes' })).toBeVisible();
-  await nested.click();
-  await expect(desktopWindow.getByText('Conditional probability body', { exact: true })).toBeVisible();
-  await expect(diveRow).toHaveAttribute('aria-selected', 'true');
-  await expect(topicPanel.getByRole('treeitem', { name: 'Independent notes' })).toBeVisible();
-  await desktopWindow.getByRole('treeitem', { name: 'Home', exact: true }).click();
+  await expectDiveContentNavigation(desktopWindow, diveRow, topicPanel, testInfo);
+  await desktopWindow.getByRole('treeitem', { name: 'Other sources', exact: true }).click();
   await expect(topicPanel.getByRole('treeitem', { name: 'Unrelated notes' })).toBeVisible();
 
   const dives = await desktopWindow.evaluate(async () => window.electronAPI?.invoke('list_dives'));
@@ -65,6 +57,33 @@ test('creates a Dive in the tree and shows sources added from library menus', as
     title: 'Probability review', directSourceIds: ['dive-folder', 'dive-topic']
   })]);
 });
+
+async function expectDiveContentNavigation(page: Page, diveRow: Locator, topicPanel: Locator, testInfo: TestInfo) {
+  await diveRow.click();
+  await expect(diveRow).toHaveAttribute('aria-selected', 'true');
+  await expect(topicPanel.getByRole('treeitem', { name: 'Unrelated notes' })).toHaveCount(0);
+  const nested = topicPanel.getByRole('treeitem', { name: 'Conditional probability' });
+  await expect(nested).toBeVisible();
+  await expect(topicPanel.getByRole('treeitem', { name: 'Independent notes' })).toBeVisible();
+  const contents = page.getByRole('region', { name: /^(Folder list view|文件夹列表视图)$/ });
+  await expect(contents.getByRole('button', { name: 'Open Conditional probability', exact: true })).toBeVisible();
+  await expect(contents.getByRole('button', { name: 'Open Independent notes', exact: true })).toBeVisible();
+  await expect(contents.getByRole('button', { name: 'Open Unrelated notes', exact: true })).toHaveCount(0);
+  const diveScreenshot = path.resolve('.tmp/artifacts/desktop-acceptance/dive-content-list.png');
+  await page.screenshot({ path: diveScreenshot });
+  await testInfo.attach('dive-content-list', { path: diveScreenshot, contentType: 'image/png' });
+
+  await contents.getByRole('button', { name: 'Open Conditional probability', exact: true }).click();
+  await expect(page.getByText('Conditional probability body', { exact: true })).toBeVisible();
+  await expect(diveRow).toHaveAttribute('aria-selected', 'true');
+  await expect(topicPanel.getByRole('treeitem', { name: 'Independent notes' })).toBeVisible();
+  await expect(contents).toHaveCount(0);
+  const documentArea = page.getByRole('region', { name: /^(Document and review area|文档和复习区域)$/ });
+  await documentArea.getByRole('button', { name: /^(Go back|后退)$/ }).click();
+  await expect(contents.getByRole('button', { name: 'Open Conditional probability', exact: true })).toBeVisible();
+  await nested.click();
+  await expect(page.getByText('Conditional probability body', { exact: true })).toBeVisible();
+}
 
 test('adds one Topic from a folder without including its siblings', async ({ desktopWindow: page }) => {
   await prepareMembership(page);
@@ -92,6 +111,8 @@ test('removes a folder source while retaining an overlapping direct Topic', asyn
   await study.click();
   const inheritedTopic = topics.getByRole('treeitem', { name: 'Sibling topic' });
   await expect(inheritedTopic).toBeVisible();
+  const contents = page.getByRole('region', { name: 'Folder list view' });
+  await expect(contents.getByRole('button', { name: 'Open Sibling topic', exact: true })).toBeVisible();
   await inheritedTopic.click({ button: 'right' });
   await expect(page.getByRole('menuitem', { name: 'Remove from This Dive' })).toHaveCount(0);
   await page.keyboard.press('Escape');
@@ -106,6 +127,8 @@ test('removes a folder source while retaining an overlapping direct Topic', asyn
   await expect(dives.getByRole('treeitem', { name: 'Source folder' })).toHaveCount(0);
   await expect(topics.getByRole('treeitem', { name: 'Sibling topic' })).toHaveCount(0);
   await expect(topics.getByRole('treeitem', { name: 'Chosen topic' })).toBeVisible();
+  await expect(contents.getByRole('button', { name: 'Open Sibling topic', exact: true })).toHaveCount(0);
+  await expect(contents.getByRole('button', { name: 'Open Chosen topic', exact: true })).toBeVisible();
   await page.reload();
   await expectWorkspaceShell(page);
   await study.click();

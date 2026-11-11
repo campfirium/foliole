@@ -170,7 +170,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
         <WorkspaceDualListFolderColumn
           diveNavigation={dive.navigation}
           dualListState={dualListState}
-          onSelectFolderColumnNode={(id) => { dive.closeDive(); viewRoot.selectFolderColumnNode(id); }}
+          onSelectFolderColumnNode={(id) => { dive.closeDiveSource(); viewRoot.selectFolderColumnNode(id); }}
           props={props}
           virtualResultIndex={virtualResultIndex}
         />
@@ -184,7 +184,7 @@ export function WorkspaceDualListContent(props: WorkspaceDualListContentProps) {
             {...definedProps({ forceVisibleNodeId: followsStudyCursor && studyDiveId ? props.reviewCurrentNodeId : undefined })}
             nodesById={props.listNodesById}
             onSelectNode={topicCallbacks.onSelectNode}
-            visibleNodeIds={dualListState.visibleNodeIds}
+            workspace={props}
           />
         ) : props.isVirtualViewOpen
           ? renderVirtualContentColumn(props, virtualResultIndex, t, locale, dualListState.topicChildrenByParent)

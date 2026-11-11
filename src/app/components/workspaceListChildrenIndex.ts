@@ -5,7 +5,6 @@ export interface WorkspaceListChildrenIndex {
   orderIndexById: Map<string, number>;
   visibleChildrenByParent: Map<string | null, string[]>;
   visibleNodeIds: string[];
-  visibleNodeIdSet: Set<string>;
 }
 
 export function buildWorkspaceListChildrenIndex(
@@ -37,7 +36,6 @@ export function buildWorkspaceListChildrenIndex(
   return {
     orderIndexById,
     visibleChildrenByParent,
-    visibleNodeIds,
-    visibleNodeIdSet: new Set(visibleNodeIds)
+    visibleNodeIds
   };
 }
