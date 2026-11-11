@@ -5,6 +5,8 @@ import { selectCanonicalWorkspaceMembershipView } from '../../store/workspaceCan
 import { useWorkspaceLayoutState } from '../../store/workspaceLayoutDomain';
 import { useWorkspaceStore, type WorkspaceState } from '../../store/workspaceStore';
 
+import { readReviewTopicAfterFlush } from './readReviewTopicAfterFlush';
+
 function selectWorkspaceCreationActions(state: WorkspaceState) {
   return {
     createChildNode: state.createChildNode,
@@ -21,7 +23,7 @@ function selectWorkspaceReviewActions(state: WorkspaceState) {
   return {
     continueReviewSessionReading: state.continueReviewSessionReading,
     dismissReviewTopic: state.dismissReviewTopic,
-    readReviewTopic: state.readReviewTopic,
+    readReviewTopic: readReviewTopicAfterFlush,
     postponeReviewTopic: state.postponeReviewTopic,
     setReviewTopicDelay: state.setReviewTopicDelay,
     revisitReviewTopicSoon: state.revisitReviewTopicSoon,

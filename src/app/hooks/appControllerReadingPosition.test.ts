@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createReadingPositionHandlers } from './appControllerReadingPosition';
 
-function createHarness() {
+function createHarness(isTargetVisible = false) {
   const readingPositionRef = {
     current: {
       nodeId: 'node-1',
@@ -41,6 +41,9 @@ function createHarness() {
   const handlers = createReadingPositionHandlers({
     runtime: {
       bumpReadingPositionRequest: vi.fn(),
+      editorRef: { current: { isPositionNearViewportRatio: () => isTargetVisible } },
+      readingResumeContextRef: { current: { nodeId: 'node-1' } },
+      readingResumeMovedNodeIdRef: { current: null },
       readingPositionRef,
       readingPositionRestoreCommandRef,
       readingPositionRestoreCommandSeqRef: { current: 0 },
@@ -76,6 +79,18 @@ function runUncommandedCompletionGuardTest() {
 describe('createReadingPositionHandlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+  afterEach(() => {
+    delete window.__folioleFlushReadingProgressBeforeClose;
+  });
+
+  it.each([false, true])('saves a cancelled jump only if its target is visible (%s)', visible => {
+    const { handlers } = createHarness(visible);
+    const flush = vi.fn(async () => true);
+    window.__folioleFlushReadingProgressBeforeClose = flush;
+    handlers.beginAnchorNavigationRestore('node-1', { from: 42, to: 42 });
+    handlers.completeApplyingReadingPosition('editor-restore-selection-cancelled', { from: 42, to: 42 }, 'reading-position-1');
+    expect(flush).toHaveBeenCalledTimes(visible ? 1 : 0);
   });
 
   it('clears an anchor-navigation request after the matching restore completes', () => {

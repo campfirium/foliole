@@ -124,6 +124,8 @@ export const EN_DESKTOP_TRANSLATIONS = {
   'desktop.linkPreview.empty.title': 'Empty linked topic',
   'desktop.linkPreview.empty.description': 'This linked topic is empty.',
   'desktop.linkPreview.subtitle': 'Previewing linked topic content',
+  'desktop.document.readingResume.available': 'Another device read farther.',
+  'desktop.document.readingResume.jump': 'Jump to position',
   'desktop.document.area': 'Document area',
   'desktop.document.progress': 'Document progress',
   'desktop.document.retry': 'Retry',

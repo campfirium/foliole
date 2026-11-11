@@ -11,7 +11,7 @@ import {
   useActiveNodeReadingPositionRestore,
   useNavigationReadingPosition
 } from './appControllerNavigationReadingPosition';
-import { useSaveActiveNodeView } from './appControllerSaveActiveNodeView';
+import { flushVisibleReadingJump, useSaveActiveNodeView } from './appControllerSaveActiveNodeView';
 import { useWorkspaceSelectors } from './appWorkspaceSelectors';
 import { useAppRuntime } from './useAppRuntime';
 import { useEditorContextCommands } from './useEditorContextCommands';
@@ -50,9 +50,11 @@ function useWorkspaceReadingProgressPersistence(args: {
   isViewingTrashNode: boolean;
   isWorkspaceHydrated: boolean;
   nodeViewById: ReturnType<typeof useWorkspaceSelectors>['nodeViewById'];
+  onProgrammaticScroll: (nodeId: string) => void;
   readingPositionRef: ReturnType<typeof useAppRuntime>['readingPositionRef'];
   readingPositionSyncRef: ReturnType<typeof useAppRuntime>['readingPositionSyncRef'];
   readingResumeContextRef: ReturnType<typeof useAppRuntime>['readingResumeContextRef'];
+  readingResumeMovedNodeIdRef: ReturnType<typeof useAppRuntime>['readingResumeMovedNodeIdRef'];
   setNodeViewState: ReturnType<typeof useWorkspaceSelectors>['setNodeViewState'];
 }) {
   useReadingProgressSync({
@@ -64,10 +66,16 @@ function useWorkspaceReadingProgressPersistence(args: {
     getReadingPositionSyncState: () =>
       args.readingPositionSyncRef.current.nodeId === args.activeNodeId ? args.readingPositionSyncRef.current.state : null,
     getReadingResumeContext: () => args.readingResumeContextRef?.current ?? null,
+    takeReadingResumeMovement: nodeId => {
+      if (args.readingResumeMovedNodeIdRef?.current !== nodeId) return false;
+      args.readingResumeMovedNodeIdRef.current = null;
+      return true;
+    },
     isImmersiveMode: args.isImmersiveMode,
     isViewingTrashNode: args.isViewingTrashNode,
     isWorkspaceHydrated: args.isWorkspaceHydrated,
     nodeViewById: args.nodeViewById,
+    onProgrammaticScroll: args.onProgrammaticScroll,
     setNodeViewState: args.setNodeViewState
   });
 }
@@ -196,9 +204,11 @@ export function useWorkspaceControllerState(
     isViewingTrashNode: runtime.isViewingTrashNode,
     isWorkspaceHydrated,
     nodeViewById: ws.nodeViewById,
+    onProgrammaticScroll: nodeId => flushVisibleReadingJump(runtime, nodeId),
     readingPositionRef: runtime.readingPositionRef,
     readingPositionSyncRef: runtime.readingPositionSyncRef,
     readingResumeContextRef: runtime.readingResumeContextRef,
+    readingResumeMovedNodeIdRef: runtime.readingResumeMovedNodeIdRef,
     setNodeViewState: ws.setNodeViewState
   });
   return {

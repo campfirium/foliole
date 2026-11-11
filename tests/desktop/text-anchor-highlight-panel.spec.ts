@@ -31,7 +31,7 @@ async function seedLongChildDocumentWorkspace(desktopWindow: Page) {
     await api?.seedNodes?.([
       { content: 'Parent container', id: 'playwright-long-child-parent', kind: 'topic', title: 'Playwright Long Child Parent' },
       { content: lines.join('\n'), id: 'playwright-long-child-document', kind: 'topic', parentNodeId: 'playwright-long-child-parent', title: 'Playwright Long Child Document' }
-    ]);
+    ], { persist: true });
     await api?.openNode?.('playwright-long-child-document');
   });
 }
@@ -139,6 +139,10 @@ test('scrolls to a deep selection-created highlight from the highlights panel wh
   await expect.poll(async () => collectPromptEditorSelection(desktopWindow), {
     message: 'waiting for long child-document highlight panel jump to reveal the text range'
   }).toMatchObject({ selectedText: '', selection: { from: needlePosition, to: needlePosition } });
+
+  await expect.poll(() => desktopWindow.evaluate(async () =>
+    (await window.electronAPI.invoke('load_reading_resume', { nodeId: 'playwright-long-child-document' }))?.offset ?? 0
+  )).toBeGreaterThan(needlePosition / 2);
 
   await testInfo.attach('long-child-document-highlight-panel-selection', {
     body: JSON.stringify(await collectPromptEditorSelection(desktopWindow), null, 2),

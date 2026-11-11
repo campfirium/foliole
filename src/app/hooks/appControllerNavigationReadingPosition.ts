@@ -9,6 +9,7 @@ import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import { buildAnchorViewState } from './anchorViewState';
+import { flushVisibleReadingJump } from './appControllerSaveActiveNodeView';
 import type { useWorkspaceSelectors } from './appControllerState';
 import { requestReadingPositionApply } from './readingPositionRequests';
 import type { useAppRuntime } from './useAppRuntime';
@@ -96,6 +97,9 @@ export function useActiveNodeReadingPositionRestore(
   useEffect(() => {
     const refs = latestRuntime.current;
     if (refs.readingResumeContextRef) refs.readingResumeContextRef.current = null;
+    if (refs.readingResumeMovedNodeIdRef && refs.readingResumeMovedNodeIdRef.current !== activeNodeId) {
+      refs.readingResumeMovedNodeIdRef.current = null;
+    }
     if (!isWorkspaceHydrated || !activeNodeId) return;
 
     function restore(viewState: NodeViewState | undefined, nodeId: string) {
@@ -121,6 +125,7 @@ export function useActiveNodeReadingPositionRestore(
     void loadReadingResumeFromRuntime(activeNodeId).then(result => {
       if (!current) return;
       if (refs.readingResumeContextRef) refs.readingResumeContextRef.current = result ?? null;
+      if (!refs.readingPositionSyncRef.current.state) flushVisibleReadingJump(refs, activeNodeId);
       if (!canRestore()) return;
       const local = latestViews.current[activeNodeId];
       restore(result?.offset != null ? { scrollTop: 0, selection: null, readingOffset: result.offset } : local, activeNodeId);

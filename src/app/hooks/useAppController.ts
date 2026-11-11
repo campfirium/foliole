@@ -22,6 +22,7 @@ import { useControllerPaletteItems } from './useControllerPaletteItems';
 import { useControllerPriorityQuickSet } from './useControllerPriorityQuickSet';
 import { useCurrentNodeKeyboardShortcuts } from './useCurrentNodeKeyboardShortcuts';
 import { useFormalImport } from './useFormalImport';
+import { useReadingResumeOffer } from './useReadingResumeOffer';
 import { useReviewSessionRuntime } from './useReviewSessionRuntime';
 import { useReviewTopicDelayPanel } from './useReviewTopicDelayPanel';
 
@@ -187,6 +188,9 @@ export function useAppController(args: {
   const core = useControllerCoreState();
   const { appearance, controller, formalImport, hotkeys, isWorkspaceHydrated, nowIso, reviewSettings, ws } = core;
   const { exitStudyMode, isStudyMode, startStudyMode } = core.controller.study;
+  const canOfferReadingResume = !controller.trash.isTrashViewOpen && !controller.externalView.isExternalViewOpen &&
+    !controller.virtualView.isVirtualViewOpen;
+  useReadingResumeOffer(canOfferReadingResume ? ws.activeNodeId : null, controller.runtime);
   const { priorityQuickSet, reviewTopicDelayPanel } = useControllerQuickEntryState({ controller, hotkeys, isStudyMode, ws });
   const reviewPreview = useReviewSessionRuntime({ isStudyMode, nowIso, reviewSettings, ws });
   useControllerStartupEffects({ controller, isReviewSchedulerSettingsReady: reviewSettings.isReviewSchedulerSettingsReady, isStudyMode, isWorkspaceHydrated, startStudyMode, ws });

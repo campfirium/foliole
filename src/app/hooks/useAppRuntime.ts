@@ -68,6 +68,7 @@ function createRuntimeRefs(initialListWidth: number, initialRightSidebarWidth: n
     }),
     readingPositionRestoreCommandSeqRef: useRef(0),
     readingResumeContextRef: useRef<NativeReadingResumeContext | null>(null),
+    readingResumeMovedNodeIdRef: useRef<string | null>(null),
     readingPositionSyncRef: useRef<{
       nodeId: string | null;
       state: ReadingPositionSyncState | null;

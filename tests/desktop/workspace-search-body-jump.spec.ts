@@ -193,6 +193,9 @@ test('clicking a workspace search body hit jumps to the matched text', async ({ 
   expect(finalState.scrollTop).toBeGreaterThan(0);
   expect(finalState.viewportRatio).toBeGreaterThan(0.2);
   expect(finalState.viewportRatio).toBeLessThan(0.8);
+  await expect.poll(() => desktopWindow.evaluate(async nodeId =>
+    (await window.electronAPI.invoke('load_reading_resume', { nodeId }))?.offset ?? 0, TARGET_NODE_ID
+  )).toBeGreaterThan(finalState.expectedIndex / 2);
 
   const itemPanel = desktopWindow.getByRole('complementary', {
     name: /^(Current folder contents|当前文件夹内容)$/

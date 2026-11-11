@@ -18,6 +18,8 @@ import { receiveRequestSyncObject, sendRequestSyncObject, type RequestSyncDataba
 import { upsertRemoteVersion } from '../../lib/core/sync/syncNodeApplyAcceptedRemote.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { applyRemoteNodeTombstone } from '../../lib/core/sync/syncNodeTombstoneApply.js';
+import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
+import { loadDesktopReadingResume, saveDesktopReadingResume } from '../database/readingResume.js';
 import { restoreFixture, type RestorePeer } from '../database/requestSyncRestoreRecovery.testSupport.js';
 import { textBranch } from '../database/topicTextState.testSupport.js';
 
@@ -120,6 +122,35 @@ function notification() {
   return expect.objectContaining({ appliedNodeIds: ['topic'], appliedObjectIds: ['topic'], appliedReviewOpIds: [],
     libraryScope: expect.any(String), workspaceScope: expect.objectContaining({ kind: expect.stringMatching(/^(nodes|full)$/u) }) });
 }
+
+it('notifies the open reader after a shared reading position commits and does not notify again on replay', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source');
+  const target = fixture.peer('target');
+  const targetHost = { ...createDesktopRequestSyncDatabaseHost(target.file), ...target.host };
+  const sourceDriver = createBetterSqlite3Driver(source.sqlite);
+  const targetDriver = createBetterSqlite3Driver(target.sqlite);
+  const notified = vi.fn();
+  osBoundary.send = (channel, payload) => {
+    const event = payload as import('../ipc/contracts.js').WorkspaceSyncAppliedEvent;
+    if (!event.appliedObjectIds.includes('node_reading_resume:topic')) return;
+    expect(channel).toBe('foliole:workspace-sync-applied');
+    expect(loadDesktopReadingResume(targetDriver, 'topic')?.offset).toBe(250);
+    notified();
+  };
+  try {
+    await applySyncNodesWithDbPort(source.db, [textBranch('original-version', 'Original body. '.repeat(80))]);
+    await round(source, target, targetHost);
+    const context = loadDesktopReadingResume(sourceDriver, 'topic');
+    expect(context).not.toBeNull();
+    saveDesktopReadingResume(sourceDriver, { context: context!, offset: 250, hostName: 'source',
+      updatedAt: '2026-11-11T00:00:00Z' });
+    expect(await round(source, target, targetHost)).toMatchObject({ complete: true, pending: 0 });
+    expect(notified).toHaveBeenCalledOnce();
+    expect(await round(source, target, targetHost)).toMatchObject({ transferred: 0 });
+    expect(notified).toHaveBeenCalledOnce();
+  } finally { osBoundary.send = () => {}; await fixture.close(); }
+});
 
 function round(source: RestorePeer, target: RestorePeer, targetHost: RequestSyncDatabaseHost, signal?: AbortSignal) {
   const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,

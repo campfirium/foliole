@@ -3,6 +3,7 @@ import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 import { definedProps } from '../../shared/lib/definedProps';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
+import { flushMovedReadingResume, flushVisibleReadingJump } from './appControllerSaveActiveNodeView';
 import { requestReadingPositionApply } from './readingPositionRequests';
 
 function isSameSelection(left: EditorSelection, right: EditorSelection) {
@@ -64,6 +65,10 @@ function completeReadingSyncState(args: {
     nodeId: args.activeNodeId,
     state: null
   };
+  if (args.activeNodeId && targetSelection) {
+    if (args.reason === 'editor-restore-selection-settled') flushMovedReadingResume(args.runtime, args.activeNodeId);
+    else flushVisibleReadingJump(args.runtime, args.activeNodeId);
+  }
   pushDebugTrace('runtime.reading-position.applying-complete', {
     activeNodeId: args.activeNodeId,
     commandId: args.currentState.state.commandId ?? null,

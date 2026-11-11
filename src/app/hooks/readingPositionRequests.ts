@@ -11,6 +11,7 @@ import type { ReadingPositionSyncState } from './useAppRuntime';
 
 interface ReadingPositionRuntimeLike {
   bumpReadingPositionRequest: () => void;
+  readingResumeMovedNodeIdRef?: { current: string | null };
   readingPositionRef: {
     current: {
       nodeId: string | null;
@@ -34,6 +35,8 @@ interface ReadingPositionRuntimeLike {
   };
 }
 
+const USER_READING_JUMPS = new Set(['anchor-navigation', 'workspace-search-result', 'reveal-anchor', 'reveal-selection', 'reveal-position']);
+
 export function requestReadingPositionApply(args: {
   nodeId: string | null;
   reason: string;
@@ -45,6 +48,9 @@ export function requestReadingPositionApply(args: {
   targetViewportRatio?: number;
 }) {
   const command = createReadingPositionRestoreCommand(args);
+  if (args.selection && USER_READING_JUMPS.has(args.reason) && args.runtime.readingResumeMovedNodeIdRef) {
+    args.runtime.readingResumeMovedNodeIdRef.current = args.nodeId;
+  }
   pushDebugTrace('runtime.reading-position.requested', {
     commandId: command.commandId,
     nodeId: args.nodeId,

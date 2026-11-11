@@ -38,10 +38,13 @@ export function createDesktopRequestSyncDatabaseHost(databasePath: string, sourc
       return { ...(hostName ? { hostName } : {}), onPayloadAppliedInTransaction: materializeDesktopSettingRecord };
     },
     objectApplied: async object => {
+      const resumeChanged = object.objectType === 'node_reading_resume' &&
+        (object.workspaceScope.kind === 'full' || object.workspaceScope.nodeIds.includes(object.globalId));
       notifyWorkspaceSyncApplied({
         workspaceScope: object.workspaceScope, libraryScope: libraryScopeForDatabasePath(databasePath),
         appliedNodeIds: object.objectType === 'node' ? [object.globalId] : [],
-        appliedObjectIds: [object.globalId], appliedReviewOpIds: [] }, sourceSession);
+        appliedObjectIds: [resumeChanged ? `node_reading_resume:${object.globalId}` : object.globalId],
+        appliedReviewOpIds: [] }, sourceSession);
       await reportDesktopSyncGroupObjectCommitted(object);
       onInboundCommitted?.();
     },

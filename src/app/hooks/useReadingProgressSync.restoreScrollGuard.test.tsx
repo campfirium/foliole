@@ -32,6 +32,7 @@ function RuntimeRestoreHarness(props: {
   const editorRef = {
     current: createMockEditorAdapter({
       getScrollTop: () => 0,
+      getPrimaryVisiblePosition: () => null,
       getSelection: () => ({ from: 0, to: 0 }),
       onScroll: (listener: (event: EditorScrollEvent) => void) => {
         props.listeners.add(listener);

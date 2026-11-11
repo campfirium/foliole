@@ -24,6 +24,7 @@ export interface ReadingProgressPersistenceArgs {
   browseRootNodeIdRef?: MutableRefObject<string | undefined>;
   getReadingPositionSyncState?: () => ReadingPositionSyncState | null;
   getReadingResumeContext?: () => NativeReadingResumeContext | null;
+  takeReadingResumeMovement?: (nodeId: string) => boolean;
   isWorkspaceHydrated?: boolean;
   nodeViewById: Record<string, NodeViewState | undefined>;
   pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
@@ -34,6 +35,13 @@ export interface ReadingProgressPersistenceArgs {
     captureMode?: ReadingProgressCaptureMode
   ) => ResolvedReadingProgressState | null;
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
+}
+
+function resumeForUserScroll(persistence: ReadingProgressPersistenceArgs, nodeId: string | undefined) {
+  const resume = persistence.getReadingResumeContext?.();
+  if (!resume || resume.nodeId !== nodeId) return null;
+  persistence.takeReadingResumeMovement?.(resume.nodeId);
+  return resume;
 }
 
 export function flushReadingProgressToRuntime(args: {
@@ -82,7 +90,8 @@ export function flushReadingProgressToRuntime(args: {
     return;
   }
   args.lastSyncedSignatureRef.current = signature;
-  const readingResume = args.captureMode === 'user-scroll' ? args.persistence.getReadingResumeContext?.() : null;
+  const readingResume = args.captureMode === 'user-scroll'
+    ? resumeForUserScroll(args.persistence, resolved.captured?.nodeId) : null;
   syncReadingProgressToRuntime({
     ...createReadingProgressPayload(
       resolved.resolvedActiveNodeId,
@@ -91,7 +100,7 @@ export function flushReadingProgressToRuntime(args: {
       'user-scroll',
       args.persistence.browseRootNodeIdRef?.current
     ),
-    ...(readingResume && resolved.captured?.nodeId === readingResume.nodeId ? { readingResume } : {})
+    ...(readingResume ? { readingResume } : {})
   });
 }
 
@@ -112,8 +121,9 @@ export async function flushReadingProgressBeforeClose(args: {
     return false;
   }
   const readingResume = args.persistence.getReadingResumeContext?.();
+  const explicitMove = resolved.captured && args.persistence.takeReadingResumeMovement?.(resolved.captured.nodeId);
   const publish = readingResume && resolved.captured?.nodeId === readingResume.nodeId &&
-    Boolean(args.persistence.pendingNodeViewByIdRef.current[readingResume.nodeId]);
+    (explicitMove || Boolean(args.persistence.pendingNodeViewByIdRef.current[readingResume.nodeId]));
   updateCapturedNodeViewState({
     captured: resolved.captured,
     nodeViewById: args.persistence.nodeViewById,

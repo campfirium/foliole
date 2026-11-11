@@ -38,6 +38,7 @@ type ImmediateReadingProgressCaptureArgs = {
   isViewingTrashNode: boolean;
   isWorkspaceHydrated: boolean;
   nodeViewById: Record<string, NodeViewState | undefined>;
+  onProgrammaticScroll?: (nodeId: string) => void;
   pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
   shouldSuppressReadingProgressCapture?: ShouldSuppressReadingProgressCapture;
 };
@@ -124,8 +125,10 @@ export function useImmediateReadingProgressCapture(args: ImmediateReadingProgres
       return;
     }
 
+    const nodeId = args.activeNodeId;
     const unsubscribe = args.editorRef.current.onScroll((event) => {
-      captureImmediateReadingProgress(args, event);
+      if (event.userInitiated) captureImmediateReadingProgress(args);
+      else if (!isReadingPositionRestoreActive(args.getReadingPositionSyncState)) args.onProgrammaticScroll?.(nodeId);
     });
 
     return unsubscribe;
@@ -138,6 +141,7 @@ export function useImmediateReadingProgressCapture(args: ImmediateReadingProgres
     args.isViewingTrashNode,
     args.isWorkspaceHydrated,
     args.nodeViewById,
+    args.onProgrammaticScroll,
     args.pendingNodeViewByIdRef,
     args.shouldSuppressReadingProgressCapture
   ]);
@@ -147,9 +151,8 @@ function isUserInitiatedEditorScroll(event: EditorScrollEvent) {
   return event.userInitiated;
 }
 
-function captureImmediateReadingProgress(args: ImmediateReadingProgressCaptureArgs, event: EditorScrollEvent) {
+function captureImmediateReadingProgress(args: ImmediateReadingProgressCaptureArgs) {
   if (
-    !isUserInitiatedEditorScroll(event) ||
     isReadingPositionRestoreActive(args.getReadingPositionSyncState) ||
     args.shouldSuppressReadingProgressCapture?.()
   ) {

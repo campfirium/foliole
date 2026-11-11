@@ -25,6 +25,7 @@ export function useReadingProgressCaptureHooks(args: {
   isViewingTrashNode: boolean;
   isWorkspaceHydrated: boolean;
   nodeViewById: Record<string, NodeViewState | undefined>;
+  onProgrammaticScroll?: (nodeId: string) => void;
   pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
 }) {
   useImmediateReadingProgressCapture(args);

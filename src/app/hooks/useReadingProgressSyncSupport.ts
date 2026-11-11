@@ -78,7 +78,7 @@ export function captureEditorNodeViewState(
     return null;
   }
   const sharedReadingSelection = getReadingPositionSelection?.() ?? null;
-  const readingOffset = isImmersiveMode ? undefined : editorRef.current.getPrimaryVisiblePosition?.();
+  const readingOffset = editorRef.current.getPrimaryVisiblePosition?.();
   return {
     nodeId,
     viewState: normalizeNodeViewState({

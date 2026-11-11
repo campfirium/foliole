@@ -235,6 +235,7 @@ function runImmersiveReadingSelectionPriorityTest() {
 
   expect(ws.setNodeViewState).toHaveBeenCalledWith('node-1', {
     scrollTop: 4321,
+    readingOffset: 4567,
     selection: { from: 12, to: 12 }
   });
 }

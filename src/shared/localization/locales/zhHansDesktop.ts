@@ -126,6 +126,8 @@ export const ZH_HANS_DESKTOP_TRANSLATIONS: Partial<Record<TranslationKey, string
   'desktop.linkPreview.empty.title': '链接主题为空',
   'desktop.linkPreview.empty.description': '这个链接主题没有内容。',
   'desktop.linkPreview.subtitle': '正在预览链接主题内容',
+  'desktop.document.readingResume.available': '另一台设备读到了更后面。',
+  'desktop.document.readingResume.jump': '跳到该位置',
   'desktop.document.area': '文档区域',
   'desktop.document.progress': '文档进度',
   'desktop.document.retry': '重试',

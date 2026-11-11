@@ -27,10 +27,12 @@ export interface ReadingProgressSyncOptions {
   getReadingPositionSelection?: () => { from: number; to: number } | null;
   getReadingPositionSyncState?: () => ReadingPositionSyncState | null;
   getReadingResumeContext?: () => NativeReadingResumeContext | null;
+  takeReadingResumeMovement?: (nodeId: string) => boolean;
   isImmersiveMode: boolean;
   isViewingTrashNode: boolean;
   isWorkspaceHydrated: boolean;
   nodeViewById: Record<string, NodeViewState | undefined>;
+  onProgrammaticScroll?: (nodeId: string) => void;
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
 }
 
@@ -91,6 +93,7 @@ function useReadingProgressFlushCallbacks(args: {
   browseRootNodeIdRef?: MutableRefObject<string | undefined>;
   getReadingPositionSyncState?: () => ReadingPositionSyncState | null;
   getReadingResumeContext?: () => NativeReadingResumeContext | null;
+  takeReadingResumeMovement?: (nodeId: string) => boolean;
   isWorkspaceHydrated: boolean;
   nodeViewById: Record<string, NodeViewState | undefined>;
   pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
@@ -160,7 +163,7 @@ export function useReadingProgressSync(args: ReadingProgressSyncOptions) {
     setNodeViewState: args.setNodeViewState,
     pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef,
     ...definedProps({ getReadingPositionSyncState: args.getReadingPositionSyncState,
-      getReadingResumeContext: args.getReadingResumeContext })
+      getReadingResumeContext: args.getReadingResumeContext, takeReadingResumeMovement: args.takeReadingResumeMovement })
   });
   useReadingProgressCloseFlushRegistration(args.isWorkspaceHydrated, flushReadingProgressImmediately);
   useReadingProgressLifecycle({
@@ -182,7 +185,8 @@ export function useReadingProgressSync(args: ReadingProgressSyncOptions) {
     pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef,
     ...definedProps({
       getReadingPositionSelection: args.getReadingPositionSelection,
-      getReadingPositionSyncState: args.getReadingPositionSyncState
+      getReadingPositionSyncState: args.getReadingPositionSyncState,
+      onProgrammaticScroll: args.onProgrammaticScroll
     })
   });
 }
