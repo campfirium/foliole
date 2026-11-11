@@ -7,7 +7,6 @@ import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes'
 import { isVirtualNode } from '../../features/nodes/model/specialNodes';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
-import type { NodeViewState } from '../../store/workspaceStore';
 import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
@@ -20,6 +19,7 @@ import { FolderListPositionProvider } from './FolderListPosition';
 import type { LinkPanelRecord } from './linkPanelState';
 import { collectPdfHighlightLocators, type PdfHighlightLocator } from './pdfHighlightLocators';
 import { useNodeSourceDetails } from './useNodeSourceDetails';
+import type { PersistPdfViewState } from './usePdfReadingResume';
 
 interface DocumentPanelContentProps {
   activeNodeId: string | null;
@@ -38,7 +38,7 @@ interface DocumentPanelContentProps {
   onNodeContentChange: (nodeId: string, content: string) => void;
   onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
   onOpenMoveToNode?: (sourceSnapshot?: CurrentViewTopicSnapshot[]) => void;
-  onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
+  onPersistPdfViewState: PersistPdfViewState;
   onSelectNode: (nodeId: string) => void;
   onSelectNodeInVirtualView?: (nodeId: string) => void;
   onSelectTrashNode?: ((nodeId: string) => void) | undefined;

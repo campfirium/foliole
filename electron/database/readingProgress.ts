@@ -10,7 +10,7 @@ import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js'
 
 import { openDatabaseConnection, type DatabaseConnection } from './connection.js';
 import { loadDesktopHostName, loadOrCreateDesktopHostName } from './hostProfile.js';
-import { saveDesktopReadingResume } from './readingResume.js';
+import { pdfResumeOffset, saveDesktopReadingResume } from './readingResume.js';
 import { withTransaction } from './transaction.js';
 import { writeActiveNodeViewStateSync, writeNodeViewStateSync } from './viewStateSync.js';
 
@@ -173,8 +173,9 @@ function saveNodeViewStates(
       updatedAt
     ]);
     writeNodeViewStateSync(connection, { ...state, source, updatedAt });
-    if (context && state.readingOffset !== undefined) {
-      saveDesktopReadingResume(connection.driver, { context, offset: state.readingOffset, hostName, updatedAt });
+    if (context) {
+      const offset = context.pdfAttachmentId ? pdfResumeOffset(state) : state.readingOffset;
+      if (offset !== undefined) saveDesktopReadingResume(connection.driver, { context, offset, hostName, updatedAt });
     }
   }
 }

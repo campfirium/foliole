@@ -14,13 +14,14 @@ export async function seedDesktopFramedSyncResourceScenario(input: Readonly<{
   bytes?: Uint8Array;
   filePath?: string;
   includeImageInBody?: boolean;
+  pdf?: boolean;
   nodeId: string;
 }>) {
   const now = '2026-10-05T00:00:00.000Z';
   if ((input.bytes === undefined) === (input.filePath === undefined)) throw new Error('fixture_resource_source_invalid');
   const hash = input.filePath === undefined
     ? createHash('sha256').update(input.bytes!).digest('hex') : await hashResourceFile(input.filePath);
-  const storageKey = buildCanonicalAttachmentStorageKey(hash, 'image/png');
+  const storageKey = buildCanonicalAttachmentStorageKey(hash, input.pdf ? 'application/pdf' : 'image/png');
   if (!storageKey) throw new Error('fixture_resource_storage_key_invalid');
   const assetsDir = resolveRuntimeDataPaths().assetsDir;
   await fs.mkdir(assetsDir, { recursive: true });
@@ -40,7 +41,7 @@ export async function seedDesktopFramedSyncResourceScenario(input: Readonly<{
     updatedAt: now
   });
   persistNodeResourceReference(input.nodeId, {
-    original_name: 'Cover.png', role: 'image', storage_key: storageKey
+    original_name: input.pdf ? 'Original.pdf' : 'Cover.png', role: input.pdf ? 'reference' : 'image', storage_key: storageKey
   });
   flushDirtyNodeSyncVersions();
   return { hash, storageKey };
@@ -51,5 +52,5 @@ export function seedDesktopFramedSyncResourceCommand(args: Readonly<Record<strin
     : args.bytes instanceof Uint8Array ? { bytes: args.bytes } : null;
   if (!source) throw new Error('fixture_resource_bytes_invalid');
   return seedDesktopFramedSyncResourceScenario({ ...source,
-    includeImageInBody: args.includeImageInBody === true, nodeId: String(args.nodeId) });
+    includeImageInBody: args.includeImageInBody === true, pdf: args.pdf === true, nodeId: String(args.nodeId) });
 }

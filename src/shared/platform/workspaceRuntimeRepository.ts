@@ -74,9 +74,9 @@ export async function loadReadingProgressFromRuntime(): Promise<WorkspaceReading
   return runtimeInvoke(NATIVE_COMMANDS.loadReadingProgress);
 }
 
-export async function loadReadingResumeFromRuntime(nodeId: string) {
+export async function loadReadingResumeFromRuntime(nodeId: string, pdfAttachmentId?: string) {
   const runtimeInvoke = getRuntimeInvoke();
-  return runtimeInvoke?.(NATIVE_COMMANDS.loadReadingResume, { nodeId }) ?? null;
+  return runtimeInvoke?.(NATIVE_COMMANDS.loadReadingResume, { nodeId, ...(pdfAttachmentId ? { pdfAttachmentId } : {}) }) ?? null;
 }
 
 export async function moveWorkspaceNodes(payload: WorkspaceMoveNodesPayload): Promise<WorkspaceMoveNodesResult | undefined> {

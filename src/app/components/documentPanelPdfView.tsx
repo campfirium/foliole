@@ -6,12 +6,12 @@ import type { Translate } from '../../shared/localization/LocalizationProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import { AppEmptyState, AppSpinner } from '../../shared/ui';
-import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
 import type { PdfPageDimensions } from './pdfPageDimensions';
 import { ReadwisePdfOriginalMissingState } from './ReadwisePdfOriginalMissingState';
+import type { PersistPdfViewState } from './usePdfReadingResume';
 
 export type PdfDocumentSurfaceState =
   'empty' | 'failed' | 'loading' | 'readwise-original-missing' | 'readwise-original-unavailable' | 'ready';
@@ -136,7 +136,7 @@ export function renderPdfDocumentSurface(
   },
   highlightLocators: PdfHighlightLocator[],
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean | Promise<boolean>,
-  onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void,
+  onPersistPdfViewState: PersistPdfViewState,
   onOpenExternalLink: (request: ExternalLinkOpenRequest) => void,
   t: Translate
 ) {
@@ -148,9 +148,9 @@ export function renderPdfDocumentSurface(
           isVisible
           onCreateHighlightFromSelection={onCreatePdfHighlight}
           onOpenExternalLink={onOpenExternalLink}
-          onPersistViewState={(viewState) => {
+          onPersistViewState={(viewState, resume) => {
             if (pdfViewContext.editorNodeId) {
-              onPersistPdfViewState(pdfViewContext.editorNodeId, viewState);
+              onPersistPdfViewState(pdfViewContext.editorNodeId, viewState, ...(resume ? [resume] as const : []));
             }
           }}
           nodeId={pdfViewContext.editorNodeId}

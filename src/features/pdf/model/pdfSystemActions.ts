@@ -41,6 +41,12 @@ function createPdfSystemActions(args: CreatePdfSystemActionArgs) {
   const queuePageJump = (jumpPage: number, positionY?: number) => {
     args.setPageJumpRequest(createJumpRequest(args.jumpRequestIdRef, jumpPage, positionY));
   };
+  const requestReadingPosition = (page: number, positionY: number) => {
+    const nextPage = clampInteger(page, PDF_PAGE_MIN, args.maxPage);
+    args.setPage(nextPage);
+    args.setPositionY(positionY);
+    queuePageJump(nextPage, positionY);
+  };
 
   return {
     ...createPdfCoreActions(args),
@@ -60,6 +66,7 @@ function createPdfSystemActions(args: CreatePdfSystemActionArgs) {
       args.setPositionY(0);
       queuePageJump(nextPage);
     },
+    requestReadingPosition,
     setVisibleLocation: (visiblePage: number, positionY: number) => {
       const nextPage = clampInteger(visiblePage, PDF_PAGE_MIN, args.maxPage);
       args.setPage(nextPage);

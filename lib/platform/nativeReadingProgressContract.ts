@@ -6,6 +6,7 @@ export interface NativeReadingResumeContext {
   clock: Record<string, number>;
   libraryEpoch: string;
   offset: number | null;
+  pdfAttachmentId?: string | undefined;
 }
 
 export interface NativeReadingProgressNodeViewState {

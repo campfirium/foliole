@@ -190,7 +190,7 @@ export type NativeCommandMap = NativeReminderCommandMap & NativeDailyFlowCommand
     result: NativeReadingProgressSnapshot;
   };
   [NATIVE_COMMANDS.loadReadingResume]: {
-    args: { nodeId: string };
+    args: { nodeId: string; pdfAttachmentId?: string };
     result: NativeReadingResumeContext | null;
   };
   [NATIVE_COMMANDS.saveReadingProgress]: {

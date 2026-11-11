@@ -1,3 +1,4 @@
+import type { NativeReadingResumeContext } from '../../../lib/platform/nativeReadingProgressContract';
 import type { EditorSelection, EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
 import { getPdfAnchorLocators, type Node } from '../../features/nodes/model/nodeTypes';
@@ -202,14 +203,15 @@ export function createRevealDocumentPosition(args: BuildControllerLayoutPropsArg
 }
 
 export function createPersistPdfViewState(args: BuildControllerLayoutPropsArgs) {
-  return (nodeId: string, viewState: NodeViewState) => {
+  return (nodeId: string, viewState: NodeViewState, readingResume?: NativeReadingResumeContext) => {
     if (args.runtime.isViewingTrashNode || !nodeId) {
       return;
     }
     args.ws.setNodeViewState(nodeId, viewState);
-    syncReadingProgressToRuntime(createReadingProgressPayload(
-      args.ws.activeNodeId, { [nodeId]: viewState }, [nodeId]
-    ));
+    syncReadingProgressToRuntime({
+      ...createReadingProgressPayload(args.ws.activeNodeId, { [nodeId]: viewState }, [nodeId]),
+      ...(readingResume ? { readingResume } : {})
+    });
   };
 }
 

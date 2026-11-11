@@ -13,6 +13,7 @@ import type { SelectionCommandPayload } from '../contextCommands';
 import type { CurrentViewTopicSnapshot } from '../currentViewTopicSnapshot';
 import type { LongClozeGuardOptions } from '../hooks/editorClozeGuardrail';
 
+import type { PersistPdfViewState } from './usePdfReadingResume';
 import type { WorkspaceEditorContextMenu } from './WorkspaceLayout';
 
 export interface DocumentPanelSectionProps {
@@ -89,7 +90,7 @@ export interface DocumentPanelSectionProps {
   onGoParent: () => void;
   onOpenMoveToNode?: (sourceSnapshot?: CurrentViewTopicSnapshot[]) => void;
   onSelectBreadcrumbNode: (nodeId: string) => void;
-  onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
+  onPersistPdfViewState: PersistPdfViewState;
   onRevealDocumentPosition: (position: number) => void;
   onRevealDocumentSelection: (selection: EditorSelection, targetViewportMode?: EditorViewportMode) => void;
   onRunDocumentCommand?: (commandId: string) => void;

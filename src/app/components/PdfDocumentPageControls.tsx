@@ -131,7 +131,10 @@ function usePdfPageInputState(args: {
   };
 
   return {
-    handlePageInputBlur: commitPageInputValue,
+    handlePageInputBlur: () => {
+      if (isEditingPageInput && pageInputValue !== String(args.displayPage)) commitPageInputValue();
+      else setIsEditingPageInput(false);
+    },
     handlePageInputChange: (value: string) => {
       setIsEditingPageInput(true);
       setPendingCommittedPageValue(null);

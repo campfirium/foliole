@@ -118,15 +118,21 @@ const readingResumeContext = z.object({
   contentHash: z.string().regex(/^[a-f0-9]{64}$/u),
   clock: z.record(z.string().min(1), z.number().int().positive()),
   libraryEpoch: z.string().min(1),
-  offset: z.number().int().nonnegative().nullable()
+  offset: z.number().int().nonnegative().nullable(),
+  pdfAttachmentId: z.string().regex(/^[a-f0-9]{64}$/u).optional()
 });
+
+function loadReadingResume(args: Record<string, unknown>) {
+  const attachment = readingResumeContext.shape.pdfAttachmentId.parse(args.pdfAttachmentId);
+  return loadDesktopReadingResume(openDatabaseConnection().driver, asString(args.nodeId, 'nodeId'), attachment);
+}
 
 export function handleReadingAndReviewCommand(command: string, args: Record<string, unknown>, origin: BrowserWindow | null = null) {
   if (command === NATIVE_COMMANDS.loadReadingProgress) {
     return loadReadingProgress();
   }
   if (command === NATIVE_COMMANDS.loadReadingResume) {
-    return loadDesktopReadingResume(openDatabaseConnection().driver, asString(args.nodeId, 'nodeId'));
+    return loadReadingResume(args);
   }
   if (command === NATIVE_COMMANDS.saveReadingProgress) {
     saveReadingProgress({

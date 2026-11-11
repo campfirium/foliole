@@ -25,6 +25,7 @@ export interface PdfSystemExternalApi {
   reportLoadError: (message: string | null) => void;
   reportLoadSuccess: (numPages: number) => void;
   requestPageChange: (value: number) => void;
+  requestReadingPosition: (page: number, positionY: number) => void;
   rotateClockwise: () => void;
   setFitWidth: () => void;
   setZoom: (value: number) => void;

@@ -1,18 +1,18 @@
 import type { ComponentProps } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { resolvePdfDocumentSurface } from './documentPanelPdfView';
 import { PdfDocumentSurfaceCache } from './PdfDocumentSurfaceCache';
 import type { collectPdfHighlightLocators } from './pdfHighlightLocators';
+import type { PersistPdfViewState } from './usePdfReadingResume';
 
 export function createDocumentPanelPdfCache(args: {
   activeNodeId: string | null;
   bodyProps: ComponentProps<typeof DocumentPanelBody>;
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean | Promise<boolean>;
-  onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
+  onPersistPdfViewState: PersistPdfViewState;
   pdfDocumentSurface: ReturnType<typeof resolvePdfDocumentSurface>;
   pdfHighlightLocators: ReturnType<typeof collectPdfHighlightLocators>;
   setIsActivePdfCachedVisible: (visible: boolean) => void;

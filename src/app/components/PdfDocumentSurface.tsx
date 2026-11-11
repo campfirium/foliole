@@ -2,6 +2,7 @@ import { useEffect, type ComponentProps, type RefObject } from 'react';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
+import type { NativeReadingResumeContext } from '../../../lib/platform/nativeReadingProgressContract';
 import type { PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';
 import { PdfReadingViewProvider } from '../../features/pdf/components/PdfReadingViewContext';
 import { PdfTopBarsDocument } from '../../features/pdf/components/PdfTopBarsDocument';
@@ -21,6 +22,7 @@ import { PdfSelectionContextMenu, usePdfSelectionContextMenu } from './PdfSelect
 import { useRegisterPdfSurface } from './pdfSurfaceRegistration';
 import { usePdfSearchControls } from './pdfSurfaceSearchControls';
 import { PdfVisualExcerptRuntimeProvider } from './PdfVisualExcerptRuntime';
+import { usePdfReadingResume } from './usePdfReadingResume';
 
 configurePdfWorker();
 
@@ -41,7 +43,7 @@ interface PdfDocumentSurfaceProps {
   nodeId: string | null;
   onCreateHighlightFromSelection?: (selectionText: string, locator: PdfSelectionLocator) => boolean | Promise<boolean>;
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void;
-  onPersistViewState: (viewState: NodeViewState) => void;
+  onPersistViewState: (viewState: NodeViewState, resume?: NativeReadingResumeContext) => void;
   persistedPageCount: number | null;
   persistedPageDimensions: Record<number, PdfPageDimensions>;
   pdfIndexStatus: 'failed' | 'indexing' | 'pending' | 'ready' | null;
@@ -51,32 +53,38 @@ interface PdfDocumentSurfaceProps {
 
 type PdfSurfaceLayoutProps = ComponentProps<typeof PdfDocumentSurfaceLayout>;
 
-export function PdfDocumentSurface({
-  highlightLocators,
-  isVisible = true,
-  nodeId,
-  nodeViewState,
-  onCreateHighlightFromSelection,
-  onOpenExternalLink,
-  onPersistViewState,
-  persistedPageCount,
-  persistedPageDimensions,
-  pdfIndexStatus,
-  sourceHint
-}: PdfDocumentSurfaceProps) {
+function usePdfDocumentReader(props: PdfDocumentSurfaceProps, surfaceRef: RefObject<HTMLElement | null>) {
+  const { nodeViewState, sourceHint, isVisible = true, persistedPageCount } = props;
+  const pdfSystem = usePdfSystemController(nodeViewState, viewState => reading.persist(viewState), sourceHint, isVisible, persistedPageCount);
+  const reading = usePdfReadingResume({ ...props, isVisible, pdfSystem, surfaceRef });
+  return { reader: { ...pdfSystem, actions: reading.actions }, markSearchMovement: reading.markSearchMovement };
+}
+
+export function PdfDocumentSurface(props: PdfDocumentSurfaceProps) {
+  const {
+    highlightLocators,
+    isVisible = true,
+    nodeId,
+    onCreateHighlightFromSelection,
+    onOpenExternalLink,
+    persistedPageCount,
+    persistedPageDimensions,
+    pdfIndexStatus,
+    sourceHint
+  } = props;
   const t = useTranslation();
-  const pdfSystem = usePdfSystemController(nodeViewState, onPersistViewState, sourceHint, isVisible, persistedPageCount);
   const selectionState = usePdfSelectionContextMenu({
     nodeId,
     onCreateHighlightFromSelection
   });
   const searchState = usePdfSearchControls();
+  const { reader, markSearchMovement } = usePdfDocumentReader(props, selectionState.surfaceRef);
   usePdfFindCommand(selectionState.surfaceRef, isVisible);
   useRegisterPdfSurface(
     nodeId,
-    pdfSystem.actions.requestAnchorJump,
+    reader.actions.requestAnchorJump,
     (request) => {
-      pdfSystem.actions.requestPageChange(request.page);
+      reader.actions.requestPageChange(request.page);
       searchState.applyExternalSearch(request);
     },
     selectionState.requestAnnotation,
@@ -89,20 +97,24 @@ export function PdfDocumentSurface({
 
   const textHighlightLocators = highlightLocators.filter((locator) => locator.kind === 'highlight');
   const layoutProps = {
-    ...buildPdfSurfaceLayoutProps(nodeId, pdfIndexStatus, textHighlightLocators, pdfSystem, selectionState, searchState, searchIndexingHint, onOpenExternalLink),
+    ...buildPdfSurfaceLayoutProps(nodeId, pdfIndexStatus, textHighlightLocators, reader, selectionState, searchState, searchIndexingHint, onOpenExternalLink),
+    handleSearchRequestHandled: (id: number) => {
+      markSearchMovement();
+      searchState.handleSearchRequestHandled(id);
+    },
     persistedPageCount,
     persistedPageDimensions
   };
 
   return (
-    <PdfReadingViewProvider key={sourceHint} page={pdfSystem.state.page}>
+    <PdfReadingViewProvider key={sourceHint} page={reader.state.page}>
       <PdfTopBarsDocument isVisible={isVisible}>
         <PdfVisualExcerptRuntimeProvider
-          currentPage={pdfSystem.state.page}
+          currentPage={reader.state.page}
           locators={highlightLocators}
           nodeId={nodeId}
-          rotation={pdfSystem.state.rotation}
-          source={pdfSystem.state.pdfSource}
+          rotation={reader.state.rotation}
+          source={reader.state.pdfSource}
         >
           <PdfDocumentSurfaceLayout {...layoutProps} />
         </PdfVisualExcerptRuntimeProvider>

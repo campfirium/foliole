@@ -8,7 +8,6 @@ import { getStoredAppLocale } from '../../shared/localization/appLanguage';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 import { resolveNodeDisplayTitle, resolveSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
-import type { NodeViewState } from '../../store/workspaceStore';
 
 import { DocumentPanelBody } from './DocumentPanelBody';
 import { renderFolderSpecialContent } from './DocumentPanelFolderSpecialContent';
@@ -18,6 +17,7 @@ import { DocumentPanelTrashContent } from './DocumentPanelTrashContent';
 import type { LinkPanelRecord } from './linkPanelState';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
 import { PublishedVirtualDocumentSurface } from './PublishedVirtualDocumentSurface';
+import type { PersistPdfViewState } from './usePdfReadingResume';
 import { VirtualDocumentSurface } from './VirtualDocumentSurface';
 
 export function resolveDocumentPanelContentBody(args: {
@@ -45,7 +45,7 @@ export function resolveDocumentPanelContentBody(args: {
   onNodeContentChange: (nodeId: string, content: string) => void;
   onOpenExternalLink: (request: ExternalLinkOpenRequest) => void;
   onOpenMoveToNode?: Parameters<typeof renderFolderSpecialContent>[0]['onOpenMoveToNode'];
-  onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
+  onPersistPdfViewState: PersistPdfViewState;
   onSelectNode: (nodeId: string) => void;
   onSelectNodeInVirtualView: (nodeId: string) => void;
   onSelectTrashNode?: ((nodeId: string) => void) | undefined;

@@ -8,6 +8,7 @@ import type { NodeViewState } from '../../store/workspaceStore';
 import type { PdfDocumentSurfaceState } from './documentPanelPdfView';
 import type { PdfHighlightLocator } from './pdfHighlightLocators';
 import type { PdfPageDimensions } from './pdfPageDimensions';
+import type { PersistPdfViewState } from './usePdfReadingResume';
 
 const MAX_CACHED_SURFACES = 3;
 const PdfDocumentSurface = lazy(() =>
@@ -68,7 +69,7 @@ export function PdfDocumentSurfaceCache(props: {
   highlightLocators: PdfHighlightLocator[];
   onCreatePdfHighlight: (selectionText: string, locator: NodeAnchorLink['locator']) => boolean | Promise<boolean>;
   onActiveCacheVisibilityChange: (visible: boolean) => void;
-  onPersistPdfViewState: (nodeId: string, viewState: NodeViewState) => void;
+  onPersistPdfViewState: PersistPdfViewState;
 }) {
   const [cachedSurfaces, setCachedSurfaces] = useState<CachedPdfSurface[]>([]);
 
@@ -137,9 +138,9 @@ function renderCachedSurfaceEntry(
           nodeId={entry.nodeId}
           {...definedProps({ nodeViewState: isActiveNode ? props.editorNodeViewState : undefined })}
           onCreateHighlightFromSelection={props.onCreatePdfHighlight}
-          onPersistViewState={(viewState) => {
+          onPersistViewState={(viewState, resume) => {
             if (isActiveNode) {
-              props.onPersistPdfViewState(entry.nodeId, viewState);
+              props.onPersistPdfViewState(entry.nodeId, viewState, ...(resume ? [resume] as const : []));
             }
           }}
           persistedPageCount={entry.persistedPageCount}
