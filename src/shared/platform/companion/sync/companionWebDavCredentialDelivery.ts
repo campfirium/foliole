@@ -25,7 +25,7 @@ type Delivery = {
 let current: Delivery | null = null;
 const listeners = new Set<() => void>();
 
-export function companionWebDavCredentialDelivery() { return current; }
+export function companionWebDavCredentialDelivery() { return current?.offer.desktop_identity_proof ? null : current; }
 
 export function subscribeCompanionWebDavCredentialDelivery(listener: () => void) {
   listeners.add(listener);
@@ -40,7 +40,7 @@ function setDelivery(value: Delivery | null) {
 
 export async function confirmCompanionWebDavCredential(fingerprint: string) {
   const delivery = current;
-  if (!delivery || delivery.confirmed || delivery.fingerprint !== fingerprint) return;
+  if (!delivery || delivery.offer.desktop_identity_proof || delivery.confirmed || delivery.fingerprint !== fingerprint) return;
   const owner = companionFramedFileOwner(getIosCompanionDatabaseOwner());
   const { confirmation } = await FolioleCompanionSync.confirmWebDavCredentialDelivery({
     ...owner, id: delivery.id, fingerprint
@@ -60,7 +60,8 @@ export async function confirmCompanionWebDavCredential(fingerprint: string) {
 
 export async function receiveCompanionWebDavCredentialDelivery(payload: WebDavCredentialDelivery | undefined, peer: string,
   send: Delivery['send'], signal: AbortSignal) {
-  if (!payload || !await canInstallCompanionWebDavCredential(payload.offer, peer)) {
+  const accepted = payload && await canInstallCompanionWebDavCredential(payload.offer, peer);
+  if (!payload || !accepted) {
     if (current?.peer === peer) setDelivery(null);
     return;
   }
@@ -68,13 +69,16 @@ export async function receiveCompanionWebDavCredentialDelivery(payload: WebDavCr
   const { offer } = payload;
   if (current?.id !== offer.id) {
     const owner = companionFramedFileOwner(getIosCompanionDatabaseOwner());
-    const { phone_key: phoneKey, fingerprint, phone_identity_key: phoneIdentityKey, phone_identity_proof: phoneIdentityProof } =
-      await FolioleCompanionSync.prepareWebDavCredentialDelivery({ ...owner, offer });
+    const { phone_key: phoneKey, fingerprint, phone_identity_key: phoneIdentityKey, phone_identity_proof: phoneIdentityProof,
+      confirmation } = await FolioleCompanionSync.prepareWebDavCredentialDelivery({
+      ...owner, offer, ...(accepted.trustedDesktopKey ? { trusted_desktop_key: accepted.trustedDesktopKey } : {})
+    });
+    if (Boolean(offer.desktop_identity_proof) !== Boolean(confirmation)) return;
     signal.throwIfAborted();
     await send({ id: offer.id, phone_key: phoneKey, phone_identity_key: phoneIdentityKey,
-      phone_identity_proof: phoneIdentityProof });
+      phone_identity_proof: phoneIdentityProof, confirmation });
     signal.throwIfAborted();
-    setDelivery({ id: offer.id, fingerprint, phoneKey, phoneIdentityKey, offer, peer, send, confirmed: false });
+    setDelivery({ id: offer.id, fingerprint, phoneKey, phoneIdentityKey, offer, peer, send, confirmed: Boolean(confirmation) });
   }
   if (payload.envelope && current?.id === offer.id && current.confirmed) {
     const delivery = current;
@@ -83,7 +87,9 @@ export async function receiveCompanionWebDavCredentialDelivery(payload: WebDavCr
         webDavCredentialTranscript(delivery.offer, delivery.phoneKey, delivery.phoneIdentityKey)) return;
       await install(delivery.offer, payload.envelope, delivery, signal);
     } catch {
-      if (current === delivery && !signal.aborted) setDelivery({ ...delivery, confirmed: false, failed: true });
+      if (current === delivery && !signal.aborted) {
+        setDelivery(delivery.offer.desktop_identity_proof ? null : { ...delivery, confirmed: false, failed: true });
+      }
     }
   }
 }

@@ -12,12 +12,13 @@ export function handleWebDavSyncCommand(command: string, args: Record<string, un
   if (command === NATIVE_COMMANDS.openWebDavRelayLog) return openDesktopWebDavRelayLog();
   if (command === NATIVE_COMMANDS.enableWebDavRelay) {
     if (args.authenticated === true) return beginDesktopWebDavCredentialDelivery(
-      asString(args.group_id, 'group_id'), asString(args.device_id, 'device_id')
+      asString(args.group_id, 'group_id'), asString(args.device_id, 'device_id'), args.verify_device === true
     );
     return enableDesktopWebDavRelay(args.group_id, args.device_id).then(() => null);
   }
   if (command === NATIVE_COMMANDS.confirmWebDavCredentialDelivery) return confirmDesktopWebDavCredentialFingerprint(
-    asString(args.group_id, 'group_id'), asString(args.id, 'id'), asString(args.fingerprint, 'fingerprint'),
+    asString(args.group_id, 'group_id'), asString(args.id, 'id'),
+    args.fingerprint === undefined ? undefined : asString(args.fingerprint, 'fingerprint'),
     { username: asString(args.username, 'username'), password: asString(args.password, 'password') }
   );
   if (command === NATIVE_COMMANDS.loadWebDavRelayDirectory) return loadDesktopWebDavRelayDirectory(args.group_id);

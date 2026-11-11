@@ -189,13 +189,13 @@ export function saveDesktopWebDavRelayCredentials(groupId: string, directory: st
   });
 }
 
-export function enableDesktopWebDavRelay(groupId: string, deviceId: string, authenticated?: true) {
+export function enableDesktopWebDavRelay(groupId: string, deviceId: string, authenticated?: true, verifyDevice?: true) {
   return getRuntimeInvoke()?.(NATIVE_COMMANDS.enableWebDavRelay, {
-    group_id: groupId, device_id: deviceId, ...(authenticated ? { authenticated } : {})
+    group_id: groupId, device_id: deviceId, ...(authenticated ? { authenticated } : {}), ...(verifyDevice ? { verify_device: true } : {})
   });
 }
 
-export function confirmDesktopWebDavCredentialDelivery(groupId: string, id: string, fingerprint: string,
+export function confirmDesktopWebDavCredentialDelivery(groupId: string, id: string, fingerprint: string | undefined,
   username: string, password: string) {
   return getRuntimeInvoke()?.(NATIVE_COMMANDS.confirmWebDavCredentialDelivery, {
     group_id: groupId, id, fingerprint, username, password

@@ -1,9 +1,11 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID, sign } from 'node:crypto';
 
-import type {
-  WebDavCredentialDelivery, WebDavCredentialEnvelope, WebDavCredentialOffer, WebDavCredentialReply
+import {
+  matchingWebDavCredentialPeerKey, webDavCredentialRotationChallenge, type WebDavCredentialDelivery,
+  type WebDavCredentialEnvelope, type WebDavCredentialOffer, type WebDavCredentialReply
 } from '../../lib/platform/webDavCredentialDeliveryContract.js';
 import { registerDatabaseConnectionCleanup, runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { loadJsonSetting } from '../database/settingsStore.js';
 import { loadOrCreateDesktopWebDavIdentity } from '../security/desktopWebDavIdentityStore.js';
 
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
@@ -12,7 +14,7 @@ import {
   createWebDavCredentialKey, matchesWebDavCredentialProof, sealWebDavCredentials, verifyWebDavDeviceIdentity,
   webDavCredentialKeys, webDavCredentialProof
 } from './desktopWebDavCredentialCrypto.js';
-import { loadDesktopWebDavCredentialDraft, verifyCredentialOwner } from './desktopWebDavCredentialSettings.js';
+import { loadDesktopWebDavCredentialDraft, requireActiveGroupKey, verifyCredentialOwner } from './desktopWebDavCredentialSettings.js';
 import { activateAuthenticatedWebDavBinding, prepareAuthenticatedWebDavBinding } from './desktopWebDavRelaySettings.js';
 import { testWebDavRelayConnection } from './testWebDavRelayConnection.js';
 
@@ -21,6 +23,7 @@ type Pending = {
   key: ReturnType<typeof createWebDavCredentialKey>;
   owner: Awaited<ReturnType<typeof loadDesktopWebDavCredentialDraft>>['owner'];
   expiresAt: number;
+  trustedPhoneKey: string | undefined;
   phoneKey?: string;
   phoneIdentityKey?: string | undefined;
   keys?: ReturnType<typeof webDavCredentialKeys>;
@@ -47,16 +50,23 @@ function reset() {
   pending = undefined;
 }
 
-export async function beginDesktopWebDavCredentialDelivery(groupId: string, phoneId: string) {
+export async function beginDesktopWebDavCredentialDelivery(groupId: string, phoneId: string, verifyDevice = false) {
   const { draft, owner } = await loadDesktopWebDavCredentialDraft(groupId);
   const identity = await loadOrCreateDesktopWebDavIdentity(owner.scope);
   await runWithDatabaseConnectionOwner(() => {
     verifyCredentialOwner(owner, groupId);
     const { binding, epoch, version } = prepareAuthenticatedWebDavBinding(groupId, phoneId, draft.directory, true);
     const key = createWebDavCredentialKey();
-    pending = { offer: { id: randomUUID(), binding, library_epoch: epoch, version, desktop_key: key.publicKey,
-      desktop_identity: { public_key: identity.publicKey, library_epoch: owner.libraryEpoch } },
-      key, owner, expiresAt: Date.now() + lifetimeMs };
+    const offer: WebDavCredentialOffer = { id: randomUUID(), binding, library_epoch: epoch, version, desktop_key: key.publicKey,
+      desktop_identity: { public_key: identity.publicKey, library_epoch: owner.libraryEpoch } };
+    const savedPin = loadJsonSetting(`${requireActiveGroupKey(groupId)}:credential-peer-identity`);
+    const trustedPhoneKey = verifyDevice ? undefined
+      : matchingWebDavCredentialPeerKey(savedPin, binding.id, owner.libraryEpoch, epoch);
+    if (trustedPhoneKey) {
+      offer.desktop_identity_proof = sign('sha256', Buffer.from(webDavCredentialRotationChallenge(offer, trustedPhoneKey)),
+        identity.privateKey).toString('base64url');
+    }
+    pending = { offer, key, owner, trustedPhoneKey, expiresAt: Date.now() + lifetimeMs };
     registerDatabaseConnectionCleanup(reset);
     wake();
   });
@@ -66,7 +76,8 @@ export async function beginDesktopWebDavCredentialDelivery(groupId: string, phon
 export function desktopWebDavCredentialDeliveryStatus(groupId: string) {
   const value = current(groupId);
   if (!value) return undefined;
-  return { id: value.offer.id, device_id: value.offer.binding.phone_device_id, fingerprint: value.keys?.fingerprint,
+  return { id: value.offer.id, device_id: value.offer.binding.phone_device_id, fingerprint: value.trustedPhoneKey ? undefined : value.keys?.fingerprint,
+    automatic: Boolean(value.trustedPhoneKey),
     desktop_confirmed: Boolean(value.envelope), phone_confirmed: Boolean(value.phoneConfirmed) };
 }
 
@@ -76,10 +87,11 @@ export function desktopWebDavCredentialDeliveryForPeer(groupId: string, phoneId:
   return { offer: value.offer, ...(value.phoneConfirmed && value.envelope ? { envelope: value.envelope } : {}) };
 }
 
-export async function confirmDesktopWebDavCredentialFingerprint(groupId: string, id: string, fingerprint: string,
+export async function confirmDesktopWebDavCredentialFingerprint(groupId: string, id: string, fingerprint: string | undefined,
   credentials: { username: string; password: string }) {
   const value = current(groupId);
-  if (!value?.keys || value.offer.id !== id || value.keys.fingerprint !== fingerprint || value.envelope) throw invalid();
+  if (!value?.keys || value.offer.id !== id || value.envelope) throw invalid();
+  if (value.trustedPhoneKey ? fingerprint !== undefined || !value.phoneConfirmed : value.keys.fingerprint !== fingerprint) throw invalid();
   const { draft } = await loadDesktopWebDavCredentialDraft(groupId);
   if (draft.username === credentials.username && draft.password === credentials.password) throw invalid();
   await testWebDavRelayConnection(value.offer.binding.directory_url, { credentials });
@@ -93,7 +105,8 @@ export async function confirmDesktopWebDavCredentialFingerprint(groupId: string,
 export function handleDesktopWebDavCredentialReply(groupId: string, phoneId: string, reply: WebDavCredentialReply) {
   const value = current(groupId, phoneId);
   if (!value || value.offer.id !== reply.id || (value.phoneKey && value.phoneKey !== reply.phone_key)) throw invalid();
-  if (value.keys && value.phoneIdentityKey !== reply.phone_identity_key) throw invalid();
+  if ((value.trustedPhoneKey && value.trustedPhoneKey !== reply.phone_identity_key) ||
+    (value.keys && value.phoneIdentityKey !== reply.phone_identity_key)) throw invalid();
   const keys = value.keys ?? webDavCredentialKeys(value.offer, reply.phone_key, value.key.privateKey, reply.phone_identity_key);
   if (!value.keys && reply.phone_identity_key && (!reply.phone_identity_proof ||
     !verifyWebDavDeviceIdentity(reply.phone_identity_key, keys.transcript, reply.phone_identity_proof))) throw invalid();

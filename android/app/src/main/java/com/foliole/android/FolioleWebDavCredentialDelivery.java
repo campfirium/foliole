@@ -38,11 +38,12 @@ final class FolioleWebDavCredentialDelivery {
         var owner = owner(call);
         JSONObject offer = call.getObject("offer");
         String id = offer.getString("id");
+        boolean automatic = offer.has("desktop_identity_proof");
         if (pending != null && pending.live(owner) && pending.id.equals(id)) {
-            if (!Arrays.equals(pending.transcript, transcript(offer, pending.phoneKey, pending.identityKey))) throw invalid();
+            if (!Arrays.equals(pending.transcript, transcript(offer, pending.phoneKey, pending.identityKey, automatic))) throw invalid();
             return pending.view();
         }
-        var generated = create(context, offer, owner);
+        var generated = create(context, offer, owner, call.getString("trusted_desktop_key"), automatic);
         pending = generated;
         return generated.view();
     }
@@ -62,7 +63,8 @@ final class FolioleWebDavCredentialDelivery {
         return new JSObject().put("receipt", proof(current.receipt, "installed"));
     }
 
-    private static Pending create(Context context, JSONObject offer, FramedSyncPayloadBudget owner) throws Exception {
+    private static Pending create(Context context, JSONObject offer, FramedSyncPayloadBudget owner,
+                                  String trustedDesktopKey, boolean automatic) throws Exception {
         var generator = KeyPairGenerator.getInstance("EC");
         generator.initialize(new ECGenParameterSpec("secp256r1"));
         var pair = generator.generateKeyPair();
@@ -75,12 +77,13 @@ final class FolioleWebDavCredentialDelivery {
         agreement.doPhase(desktopKey, true);
         var identity = offer.has("desktop_identity") ? FolioleWebDavDeviceIdentity.loadOrCreate(context) : null;
         String identityKey = identity == null ? null : identity.publicKey();
-        byte[] transcript = transcript(offer, phoneKey, identityKey);
+        if (automatic) verifyDesktop(offer, identityKey, trustedDesktopKey);
+        byte[] transcript = transcript(offer, phoneKey, identityKey, automatic);
         byte[] digest = MessageDigest.getInstance("SHA-256").digest(transcript);
         byte[] shared = agreement.generateSecret();
         try {
             return new Pending(offer.getString("id"), owner, scope(offer, owner), phoneKey, transcript, digest, shared,
-                identityKey, identity == null ? null : identity.sign(transcript));
+                identityKey, identity == null ? null : identity.sign(transcript), automatic);
         } finally {
             Arrays.fill(shared, (byte) 0);
         }
@@ -102,7 +105,7 @@ final class FolioleWebDavCredentialDelivery {
         }
     }
 
-    private static byte[] transcript(JSONObject offer, String phoneKey, String identityKey) throws Exception {
+    private static byte[] transcript(JSONObject offer, String phoneKey, String identityKey, boolean automatic) throws Exception {
         JSONObject binding = offer.getJSONObject("binding");
         var identity = offer.optJSONObject("desktop_identity");
         boolean paired = identity != null && identityKey != null;
@@ -119,7 +122,17 @@ final class FolioleWebDavCredentialDelivery {
             appendField(transcript, identity.getString("public_key"));
             appendField(transcript, identityKey);
         }
+        if (automatic) appendField(transcript, "automatic rotation");
         return transcript.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    static void verifyDesktop(JSONObject offer, String phoneIdentityKey, String trustedDesktopKey) throws Exception {
+        if (trustedDesktopKey == null || phoneIdentityKey == null ||
+            !trustedDesktopKey.equals(offer.getJSONObject("desktop_identity").getString("public_key"))) throw invalid();
+        byte[] base = transcript(offer, "", phoneIdentityKey, false);
+        String challenge = new String(base, StandardCharsets.UTF_8) + "\nverify desktop for automatic rotation";
+        if (!FolioleWebDavDeviceIdentity.verifies(trustedDesktopKey, challenge.getBytes(StandardCharsets.UTF_8),
+            offer.getString("desktop_identity_proof"))) throw invalid();
     }
 
     private static void appendField(java.util.StringJoiner transcript, String field) {
@@ -162,16 +175,20 @@ final class FolioleWebDavCredentialDelivery {
         final FolioleWebDavCredentialStore.Scope scope;
         final byte[] transcript, encryption, confirmation, receipt;
         final long expires = SystemClock.elapsedRealtime() + LIFETIME_MS;
+        final boolean automatic;
         boolean approved;
 
         Pending(String id, FramedSyncPayloadBudget owner, FolioleWebDavCredentialStore.Scope scope, String phoneKey,
-                byte[] transcript, byte[] digest, byte[] shared, String identityKey, String identityProof) throws Exception {
+                byte[] transcript, byte[] digest, byte[] shared, String identityKey, String identityProof,
+                boolean automatic) throws Exception {
             this.id = id;
             this.owner = owner;
             this.scope = scope;
             this.phoneKey = phoneKey;
             this.identityKey = identityKey;
             this.identityProof = identityProof;
+            this.automatic = automatic;
+            approved = automatic;
             this.transcript = transcript;
             StringBuilder value = new StringBuilder();
             for (int i = 0; i < 16; i++) value.append(String.format(Locale.ROOT, "%02x", digest[i] & 255));
@@ -185,9 +202,10 @@ final class FolioleWebDavCredentialDelivery {
             return owner == expected && !owner.isClosed() && SystemClock.elapsedRealtime() < expires;
         }
 
-        JSObject view() {
+        JSObject view() throws Exception {
             var view = new JSObject().put("phone_key", phoneKey).put("fingerprint", fingerprint);
             if (identityKey != null) view.put("phone_identity_key", identityKey).put("phone_identity_proof", identityProof);
+            if (automatic) view.put("confirmation", proof(confirmation, "confirmed"));
             return view;
         }
 

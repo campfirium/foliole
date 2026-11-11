@@ -148,6 +148,29 @@ public final class FolioleWebDavCredentialStoreTest {
         assertFalse(verifier.verify(signed));
     }
 
+    @Test
+    public void verifiesARotationOnlyWithThePinnedDesktopAndIntendedPhone() throws Exception {
+        var desktop = FolioleWebDavDeviceIdentity.loadOrCreate(context);
+        String phoneKey = "test-phone-identity";
+        var binding = new JSONObject().put("id", "binding").put("group_id", "group")
+            .put("desktop_device_id", "desktop").put("phone_device_id", "phone").put("directory_url", ROOT);
+        var offer = new JSONObject().put("id", "request").put("binding", binding)
+            .put("library_epoch", "phone-epoch").put("version", 2L).put("desktop_key", "ephemeral-key")
+            .put("desktop_identity", new JSONObject().put("public_key", desktop.publicKey()).put("library_epoch", "desktop-epoch"));
+        String challenge = String.join("\n", "Foliole WebDAV credential delivery v2", "request", "binding",
+            "group", "desktop", "phone", ROOT, "phone-epoch", "2", "ephemeral-key", "",
+            "desktop-epoch", desktop.publicKey(), phoneKey, "verify desktop for automatic rotation");
+        offer.put("desktop_identity_proof", desktop.sign(challenge.getBytes(StandardCharsets.UTF_8)));
+        FolioleWebDavCredentialDelivery.verifyDesktop(offer, phoneKey, desktop.publicKey());
+        assertThrows(IllegalArgumentException.class, () ->
+            FolioleWebDavCredentialDelivery.verifyDesktop(offer, "different-phone", desktop.publicKey()));
+        assertThrows(IllegalArgumentException.class, () ->
+            FolioleWebDavCredentialDelivery.verifyDesktop(offer, phoneKey, "different-desktop"));
+        offer.put("version", 3L);
+        assertThrows(IllegalArgumentException.class, () ->
+            FolioleWebDavCredentialDelivery.verifyDesktop(offer, phoneKey, desktop.publicKey()));
+    }
+
     private File singleRecord() {
         File[] files = directory.listFiles();
         assertNotNull(files);

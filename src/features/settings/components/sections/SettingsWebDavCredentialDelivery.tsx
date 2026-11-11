@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import type { WebDavRelayOverview } from '../../../../../lib/platform/webDavRelayContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { confirmDesktopWebDavCredentialDelivery } from '../../../../shared/platform/desktopSyncGroupRuntimeRepository';
+import { confirmDesktopWebDavCredentialDelivery, enableDesktopWebDavRelay } from '../../../../shared/platform/desktopSyncGroupRuntimeRepository';
 import { SettingsButton, SettingsControlSlot, SettingsFlow, SettingsRow } from '../../../../shared/ui';
 
 import { PublishingTextRow } from './PublishingTextRow';
@@ -19,9 +19,18 @@ export function SettingsWebDavCredentialDelivery({ groupId, delivery }: {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const fingerprint = delivery.fingerprint;
+  const ready = delivery.automatic ? delivery.phone_confirmed : Boolean(fingerprint);
+
+  async function reverify() {
+    setBusy(true);
+    setFailed(false);
+    try { await enableDesktopWebDavRelay(groupId, delivery.device_id, true, true); }
+    catch { setFailed(true); }
+    finally { setBusy(false); }
+  }
 
   async function confirm() {
-    if (!fingerprint || busy || !username.trim() || !password) return;
+    if (!ready || busy || !username.trim() || !password) return;
     setBusy(true);
     setFailed(false);
     try {
@@ -33,13 +42,19 @@ export function SettingsWebDavCredentialDelivery({ groupId, delivery }: {
     } finally { setBusy(false); }
   }
 
-  if (!fingerprint) return <SettingsRow description={t(`${PREFIX}.credentialWaitPhone`)} />;
+  if (!delivery.automatic && !fingerprint) return <SettingsRow description={t(`${PREFIX}.credentialWaitPhone`)} />;
   return <>
-    <SettingsRow title={t(`${PREFIX}.credentialVerifyDevice`)} description={<>
+    {delivery.automatic ? <SettingsRow description={ready ? undefined : t(`${PREFIX}.credentialWaitVerifiedPhone`)}>
+      <SettingsControlSlot>
+        <SettingsButton disabled={busy} onClick={() => void reverify()}>{t(`${PREFIX}.credentialVerifyAgain`)}</SettingsButton>
+      </SettingsControlSlot>
+    </SettingsRow> : <SettingsRow title={t(`${PREFIX}.credentialVerifyDevice`)} description={<>
       {t(`${PREFIX}.credentialCompareFingerprint`)}<br />
       <code className="break-all">{fingerprint}</code>
-    </>} />
-    {delivery.desktop_confirmed ? <SettingsRow description={t(`${PREFIX}.credentialWaitInstall`)} /> : <>
+    </>} />}
+    {failed && !ready ? <SettingsRow description={<span role="alert">{t(`${PREFIX}.credentialDeliveryFailed`)}</span>} /> : null}
+    {delivery.desktop_confirmed ? <SettingsRow
+      description={t(`${PREFIX}.${delivery.automatic ? 'credentialWaitAutomaticInstall' : 'credentialWaitInstall'}`)} /> : ready ? <>
       <SettingsFlow>
         <PublishingTextRow title={t(`${PREFIX}.credentialPhoneUsername`)} label={t(`${PREFIX}.credentialPhoneUsername`)}
           description={null} disabled={busy} value={username} onChange={setUsername} />
@@ -49,10 +64,10 @@ export function SettingsWebDavCredentialDelivery({ groupId, delivery }: {
       <SettingsRow description={failed ? <span role="alert">{t(`${PREFIX}.credentialDeliveryFailed`)}</span> : undefined}>
         <SettingsControlSlot>
           <SettingsButton disabled={busy || !username.trim() || !password} onClick={() => void confirm()}>
-            {t(`${PREFIX}.credentialConfirmFingerprint`)}
+            {t(`${PREFIX}.${delivery.automatic ? 'credentialSendReplacement' : 'credentialConfirmFingerprint'}`)}
           </SettingsButton>
         </SettingsControlSlot>
       </SettingsRow>
-    </>}
+    </> : null}
   </>;
 }

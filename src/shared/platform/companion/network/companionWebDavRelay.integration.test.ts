@@ -7,7 +7,8 @@ import type { WebDavAttachmentPolicy } from '../../../../../lib/platform/webDavR
 import { createCompanionRequestFixture, native } from '../../../../test/companionRequestSync.testSupport.js';
 import { installSessionHttpBoundary } from '../../../../test/companionSessionHttp.testSupport.js';
 import {
-  clearCompanionWebDavCredentialDelivery, confirmCompanionWebDavCredential, receiveCompanionWebDavCredentialDelivery
+  clearCompanionWebDavCredentialDelivery, companionWebDavCredentialDelivery, confirmCompanionWebDavCredential,
+  receiveCompanionWebDavCredentialDelivery
 } from '../sync/companionWebDavCredentialDelivery.js';
 import { loadCompanionWebDavRelay, receiveCompanionWebDavRelay } from '../sync/companionWebDavRelayStore.js';
 
@@ -163,3 +164,51 @@ it.skipIf(process.platform !== 'darwin').each(['legacy', 'before LAN baseline', 
     }
   }
 );
+
+it.skipIf(process.platform !== 'darwin')('installs an automatic rotation only from the pinned desktop after restart', async () => {
+  const mobile = await createCompanionRequestFixture();
+  const { leftSnapshot, rightSnapshot } = mobile.fixture;
+  const phone = leftSnapshot.deviceId;
+  const peer = rightSnapshot.deviceId;
+  const publicKey = 'A'.repeat(122);
+  const offer: WebDavCredentialOffer = {
+    id: '94235b46-54e9-43a3-a03d-d291004bdf89', desktop_key: 'desktop-session-key', version: 3,
+    library_epoch: `${phone}-epoch`, desktop_identity: { public_key: publicKey, library_epoch: `${peer}-epoch` },
+    desktop_identity_proof: 'fixture-signature',
+    binding: { id: 'b79b3dbc-f46b-490c-8aab-ab5e09c0562b', group_id: 't326-group',
+      desktop_device_id: peer, phone_device_id: phone, directory_url: 'https://dav.example.test/relay/' }
+  };
+  const send = vi.fn<(reply: WebDavCredentialReply) => Promise<void>>().mockResolvedValue(undefined);
+  const signal = new AbortController().signal;
+  const envelope = { iv: 'fixture-iv', ciphertext: 'fixture-ciphertext' };
+  try {
+    await mobile.db.run('INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
+      ['webdav_relay_binding', JSON.stringify({ ...offer.binding, credential_version: 2 }), 'now']);
+    await receiveCompanionWebDavCredentialDelivery({ offer }, peer, send, signal);
+    expect(send).not.toHaveBeenCalled();
+    await mobile.db.run('INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
+      ['webdav_relay_credential_peer_identity', JSON.stringify({ binding_id: offer.binding.id,
+        library_epoch: offer.library_epoch, peer_library_epoch: offer.desktop_identity!.library_epoch, public_key: publicKey }), 'now']);
+    await mobile.restart();
+    native.webDavPrepare.mockResolvedValue({ phone_key: 'session', fingerprint: 'fixture', phone_identity_key: 'identity',
+      phone_identity_proof: 'signed', confirmation: 'confirmed' });
+    native.webDavInstall.mockResolvedValue({ receipt: 'installed' });
+    native.webDavRequest.mockResolvedValue({ chunks: 0, uploaded_bytes: 0, downloaded_bytes: 0, failed: false, status: 207 });
+    await receiveCompanionWebDavCredentialDelivery({ offer: { ...offer,
+      desktop_identity: { ...offer.desktop_identity!, public_key: 'B'.repeat(122) } } }, peer, send, signal);
+    expect(native.webDavPrepare).not.toHaveBeenCalled();
+    await receiveCompanionWebDavCredentialDelivery({ offer }, peer, send, signal);
+    expect(native.webDavPrepare).toHaveBeenCalledWith(expect.objectContaining({ trusted_desktop_key: publicKey }));
+    expect(companionWebDavCredentialDelivery()).toBeNull();
+    expect(await loadCompanionWebDavRelay()).toMatchObject({ credential_version: 2 });
+    expect(native.webDavInstall).not.toHaveBeenCalled();
+    await receiveCompanionWebDavCredentialDelivery({ offer, envelope }, peer, send, signal);
+    expect(native.webDavConfirm).not.toHaveBeenCalled();
+    expect(send).toHaveBeenLastCalledWith({ id: offer.id, phone_key: 'session', phone_identity_key: 'identity', receipt: 'installed' });
+    await mobile.restart();
+    expect(await loadCompanionWebDavRelay()).toMatchObject({ id: offer.binding.id, credential_version: 3 });
+  } finally {
+    clearCompanionWebDavCredentialDelivery();
+    await mobile.close();
+  }
+});

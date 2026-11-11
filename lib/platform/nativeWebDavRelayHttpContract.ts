@@ -33,8 +33,8 @@ export type NativeWebDavRelayHttpRequest = NativeCompanionFramedPayloadBudgetOwn
 };
 
 export interface NativeWebDavRelayHttpPlugin {
-  prepareWebDavCredentialDelivery(args: NativeCompanionFramedPayloadBudgetOwner & { offer: WebDavCredentialOffer }):
-    Promise<{ phone_key: string; fingerprint: string; phone_identity_key?: string; phone_identity_proof?: string }>;
+  prepareWebDavCredentialDelivery(args: NativeCompanionFramedPayloadBudgetOwner & { offer: WebDavCredentialOffer; trusted_desktop_key?: string }):
+    Promise<{ phone_key: string; fingerprint: string; phone_identity_key?: string; phone_identity_proof?: string; confirmation?: string }>;
   confirmWebDavCredentialDelivery(args: NativeCompanionFramedPayloadBudgetOwner & { id: string; fingerprint: string }):
     Promise<{ confirmation: string }>;
   installWebDavCredentialDelivery(args: NativeCompanionFramedPayloadBudgetOwner & { id: string; envelope: WebDavCredentialEnvelope }):

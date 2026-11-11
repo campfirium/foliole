@@ -5,11 +5,13 @@ import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
 
+import java.security.KeyFactory;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.spec.ECGenParameterSpec;
+import java.security.spec.X509EncodedKeySpec;
 
 final class FolioleWebDavDeviceIdentity {
     private static final String KEYSTORE = "AndroidKeyStore";
@@ -37,6 +39,14 @@ final class FolioleWebDavDeviceIdentity {
             throw new IllegalStateException("webdav_relay_secure_storage_unavailable");
         }
         return new FolioleWebDavDeviceIdentity((KeyStore.PrivateKeyEntry) entry);
+    }
+
+    static boolean verifies(String key, byte[] transcript, String encodedSignature) throws Exception {
+        var publicKey = KeyFactory.getInstance("EC").generatePublic(new X509EncodedKeySpec(Base64.decode(key, BASE64)));
+        Signature verifier = Signature.getInstance("SHA256withECDSA");
+        verifier.initVerify(publicKey);
+        verifier.update(transcript);
+        return verifier.verify(Base64.decode(encodedSignature, BASE64));
     }
 
     String publicKey() {
