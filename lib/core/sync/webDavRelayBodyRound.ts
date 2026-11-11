@@ -1,5 +1,5 @@
-import type { AttachmentBlockDestination, AttachmentBlockSource } from './attachmentBlockTransfer.js';
 import type { FramedSyncFilePort } from './framedSyncFilePort.js';
+import type { RequestSyncAttachmentHost } from './requestSyncAttachmentResponse.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import { enqueueWebDavRelayAttachments, publishWebDavRelayAttachments, resumeWebDavRelayAttachment } from './webDavRelayAttachments.js';
 import { freezeWebDavRelayBodyPacket, readWebDavRelayBodyOutbox, webDavRelayPacketBytes,
@@ -9,11 +9,12 @@ import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 import { ensureWebDavCollection } from './webDavRelayCollections.js';
 import { publishWebDavRelayFile, type WebDavRelayRequest } from './webDavRelayPublication.js';
 import { isWebDavRelayReceiveDue, recordWebDavRelayReceive } from './webDavRelayReceiveFreshness.js';
+import { hasWebDavRelayRepairToSend, publishWebDavRelayRepair, refreshWebDavRelayRepair } from './webDavRelayRepairOutbox.js';
 import { runWithWebDavRetryAfter } from './webDavRetryAfterStore.js';
 
 type Input = {
   host: RequestSyncDatabaseHost;
-  attachments?: AttachmentBlockSource & AttachmentBlockDestination;
+  attachments?: RequestSyncAttachmentHost;
   files: FramedSyncFilePort;
   request: WebDavRelayRequest;
   scope: WebDavRelayBodyScope;
@@ -23,6 +24,7 @@ type Input = {
   lanConnected(): boolean;
   assertScope(): Promise<void>;
   progress: { published: number; applied: number; retries: number };
+  requestSend?(): void;
 };
 
 export function runWebDavRelayBodyRound(input: Input) {
@@ -36,13 +38,23 @@ export function runWebDavRelayBodyRound(input: Input) {
 }
 
 async function exchange(input: Input) {
-  await receiveWebDavRelayBodyPackets({ ...input, applied: count => { input.progress.applied += count; },
+  const repairQueued = await receiveWebDavRelayBodyPackets({ ...input, applied: count => { input.progress.applied += count; },
     retry: count => { input.progress.retries += count; } });
   input.signal?.throwIfAborted();
   await input.assertScope();
-  await input.host.write(db => recordWebDavRelayReceive(db, input.scope.receiveScope));
-  if (input.foregroundReceive) return input.progress;
   const attachments = input.attachments && { ...input, attachments: input.attachments };
+  if (attachments) await refreshWebDavRelayRepair(attachments);
+  await input.host.write(db => recordWebDavRelayReceive(db, input.scope.receiveScope));
+  if (input.foregroundReceive) {
+    if (repairQueued || await input.host.readSnapshot(db => hasWebDavRelayRepairToSend(db, input.scope), input.signal)) {
+      input.requestSend?.();
+    }
+    return input.progress;
+  }
+  if (attachments) {
+    if (await publishWebDavRelayRepair(attachments)) input.progress.published++;
+    if (await input.host.readSnapshot(db => hasWebDavRelayRepairToSend(db, input.scope), input.signal)) input.requestSend?.();
+  }
   // Settle an existing publication before applying the policy to new attachment packets.
   if (attachments && !await resumeWebDavRelayAttachment(attachments)) return input.progress;
   const slotFree = await publishChanges(input);

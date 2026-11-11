@@ -32,7 +32,7 @@ final class FolioleCompanionWebDavHttp {
     private static final String COLLECTIONS = DIRECTION + "-collections/";
     private static final String DIRECTORY = "(?:" + DIRECTION + "/|" + COLLECTIONS
         + "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/)";
-    private static final String PACKET = "[0-9]{8}T[0-9]{6}\\.[0-9]{3}Z-[a-f0-9-]{36}(?:\\.asset)?\\.bin";
+    private static final String PACKET = "[0-9]{8}T[0-9]{6}\\.[0-9]{3}Z-[a-f0-9-]{36}(?:\\.asset|\\.repair)?\\.bin";
     private static final Set<String> METHODS = Set.of("DELETE", "GET", "MKCOL", "MOVE", "PROPFIND", "PUT");
     private static final ConcurrentHashMap<String, Operation> ACTIVE = new ConcurrentHashMap<>();
     private static final OkHttpClient CLIENT = new OkHttpClient.Builder()
@@ -151,6 +151,10 @@ final class FolioleCompanionWebDavHttp {
         return path.matches(DIRECTORY);
     }
 
+    static boolean canReadPacketProperties(String path, String depth) {
+        return depth.equals("0") && path.matches(DIRECTORY + PACKET + "(\\.partial)?");
+    }
+
     private static Request buildRequest(PluginCall input, FramedSyncFiles files, Progress progress, HttpUrl root) {
         HttpUrl url = HttpUrl.get(input.getString("url", ""));
         String method = input.getString("method", "");
@@ -162,8 +166,9 @@ final class FolioleCompanionWebDavHttp {
         Request.Builder builder = new Request.Builder().url(url).tag(Progress.class, progress).header("Accept-Encoding", "identity");
         switch (method) {
             case "PROPFIND":
-                if (!path.isEmpty() && !path.matches(DIRECTORY) && !path.matches(COLLECTIONS)) throw invalidPath();
                 String depth = input.getString("depth", "0");
+                if (!path.isEmpty() && !path.matches(DIRECTORY) && !path.matches(COLLECTIONS) &&
+                        !canReadPacketProperties(path, depth)) throw invalidPath();
                 if (!depth.equals("0") && !depth.equals("1")) throw invalidPath();
                 builder.header("Depth", depth);
                 break;

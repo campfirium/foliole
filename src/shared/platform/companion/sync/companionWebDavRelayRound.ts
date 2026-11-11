@@ -1,13 +1,13 @@
 import { runWebDavRelayBodyRound } from '../../../../../lib/core/sync/webDavRelayBodyRound.js';
 import { readWebDavRelayBodyScope } from '../../../../../lib/core/sync/webDavRelayBodyScope.js';
 import { webDavRelayCredentialReference } from '../../../../../lib/platform/nativeWebDavRelayHttpContract.js';
-import type { WebDavRelayBinding } from '../../../../../lib/platform/webDavRelayContract.js';
+import { sameWebDavAttachmentPolicy, type WebDavRelayBinding } from '../../../../../lib/platform/webDavRelayContract.js';
 import { companionDesktopSessionId } from '../network/companionDesktopSession.js';
 import { companionFramedFileOwner } from '../runtime/companionFramedPayloadBudget.js';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap.js';
 
 import { createCompanionWebDavRelayHttp, type CompanionWebDavHttpStats } from './companionWebDavRelayHttp.js';
-import { loadCompanionWebDavRelay } from './companionWebDavRelayStore.js';
+import { loadCompanionWebDavRelay, notifyCompanionWebDavWork } from './companionWebDavRelayStore.js';
 import { currentCompanionAttachmentHost } from './framed/companionAttachmentBlockFiles.js';
 import { currentCompanionFramedSyncFiles } from './framed/companionFramedSyncFiles.js';
 import { currentCompanionRequestSyncDatabaseHost } from './framed/companionRequestSyncDatabaseHost.js';
@@ -32,7 +32,7 @@ export function runCompanionWebDavRelayRound(binding: WebDavRelayBinding, stats:
     const encoded = credential.workgroup_key.replaceAll('-', '+').replaceAll('_', '/');
     const groupKey = Uint8Array.from(atob(encoded), value => value.charCodeAt(0));
     return runWebDavRelayBodyRound({
-      host, files, scope, groupKey, progress, signal, ...(foregroundReceive ? { foregroundReceive } : {}),
+      host, files, scope, groupKey, progress, signal, requestSend: notifyCompanionWebDavWork, ...(foregroundReceive ? { foregroundReceive } : {}),
       attachments: await currentCompanionAttachmentHost(host),
       request: createCompanionWebDavRelayHttp(binding.directory_url, files, owner, stats, signal,
         webDavRelayCredentialReference(binding, scope.receiveScope.localEpoch)),
@@ -40,8 +40,8 @@ export function runCompanionWebDavRelayRound(binding: WebDavRelayBinding, stats:
       assertScope: async () => {
         const current = await loadScope();
         const active = await loadCompanionWebDavRelay();
-        if (active?.id !== binding.id || active.credential_version !== binding.credential_version ||
-          current?.key !== scope.key || current.outgoing.href !== scope.outgoing.href) {
+        if (active?.id !== binding.id || active.directory_url !== binding.directory_url || active.credential_version !== binding.credential_version ||
+          !sameWebDavAttachmentPolicy(active.attachment_policy, binding.attachment_policy) || current?.key !== scope.key || current.outgoing.href !== scope.outgoing.href) {
           throw new Error('webdav_relay_scope_changed');
         }
       }

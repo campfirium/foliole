@@ -1,9 +1,11 @@
 import { hasWebDavRelayAttachmentsToSend } from '../../lib/core/sync/webDavRelayAttachments.js';
 import { hasWebDavRelayBodyToSend } from '../../lib/core/sync/webDavRelayBodyOutbox.js';
 import { runWebDavRelayBodyRound } from '../../lib/core/sync/webDavRelayBodyRound.js';
-import { readWebDavRelayBodyScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
+import { readWebDavRelayBodyScope, type WebDavRelayBodyScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
 import { isWebDavRelayReceiveDue } from '../../lib/core/sync/webDavRelayReceiveFreshness.js';
+import { hasWebDavRelayRepairToSend } from '../../lib/core/sync/webDavRelayRepairOutbox.js';
 import { isRetryableWebDavSendError } from '../../lib/core/sync/webDavTransportRetry.js';
+import { sameWebDavAttachmentPolicy, type WebDavRelayBinding } from '../../lib/platform/webDavRelayContract.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
@@ -17,6 +19,7 @@ import { authorizeDesktopWebDavRelay } from './desktopWebDavRelayAuthorization.j
 import { createDesktopWebDavRelayHttp, type DesktopWebDavRelayHttpStats } from './desktopWebDavRelayHttp.js';
 import { recordDesktopWebDavRelayLog } from './desktopWebDavRelayLog.js';
 import { loadDesktopBoundWebDavRelay } from './desktopWebDavRelaySettings.js';
+import { desktopWebDavSendWindow } from './desktopWebDavSendWindow.js';
 import { recordDesktopWebDavUsage } from './desktopWebDavUsage.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
@@ -49,23 +52,18 @@ export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityCo
     if (foregroundReceive && !await host.readSnapshot(
       db => isWebDavRelayReceiveDue(db, scope.receiveScope), automaticSignal)) return false;
     if (automaticSignal && !foregroundReceive && !await host.readSnapshot(async db =>
-      await hasWebDavRelayBodyToSend(db, scope) || await hasWebDavRelayAttachmentsToSend(db, scope), automaticSignal)) return false;
+      await hasWebDavRelayBodyToSend(db, scope) || await hasWebDavRelayAttachmentsToSend(db, scope) || await hasWebDavRelayRepairToSend(db, scope), automaticSignal)) return false;
     if (lanConnected() || automaticSignal?.aborted) return false;
     const attachments = await createDesktopRequestSyncAttachmentHost(host);
     if (lanConnected() || automaticSignal?.aborted) return false;
     attempted = true;
     await runWebDavRelayBodyRound({
-      host, scope, groupKey, progress, lanConnected, attachments, ...(foregroundReceive ? { foregroundReceive } : {}),
+      host, scope, groupKey, progress, lanConnected, attachments, requestSend: desktopWebDavSendWindow.request, ...(foregroundReceive ? { foregroundReceive } : {}),
       files: createDesktopLibrarySyncFiles(databasePath),
       ...(automaticSignal ? { signal: automaticSignal } : {}),
       request: authorizeDesktopWebDavRelay(binding,
         createDesktopWebDavRelayHttp(stats, automaticSignal, { recordUsage: recordDesktopWebDavUsage })),
-      assertScope: async () => {
-        const current = await loadScope();
-        const active = await runWithDatabaseConnectionOwner(() => isDesktopCompanionSyncParticipating() &&
-          loadDesktopBoundWebDavRelay()?.id === binding.id);
-        if (!active || current?.key !== scope.key || current.outgoing.href !== scope.outgoing.href) throw new Error('webdav_relay_scope_changed');
-      }
+      assertScope: async () => assertDesktopRelayScope(binding, scope, await loadScope())
     });
     completed = true;
     return true;
@@ -79,6 +77,15 @@ export async function runDesktopWebDavRelayRound(activity: DesktopSyncActivityCo
       status: completed ? 'completed' : automaticSignal?.aborted ? 'cancelled' : 'failed'
     });
   }
+}
+
+async function assertDesktopRelayScope(binding: WebDavRelayBinding,
+  scope: WebDavRelayBodyScope, current: WebDavRelayBodyScope | null) {
+  const active = await runWithDatabaseConnectionOwner(() => isDesktopCompanionSyncParticipating() && loadDesktopBoundWebDavRelay());
+  if (!active || active.id !== binding.id || active.directory_url !== binding.directory_url ||
+      active.credential_version !== binding.credential_version ||
+      !sameWebDavAttachmentPolicy(active.attachment_policy, binding.attachment_policy) ||
+      current?.key !== scope.key || current.outgoing.href !== scope.outgoing.href) throw new Error('webdav_relay_scope_changed');
 }
 
 async function recordRound(activity: DesktopSyncActivityContext, stats: DesktopWebDavRelayHttpStats,

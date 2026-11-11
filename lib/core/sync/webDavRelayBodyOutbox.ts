@@ -135,8 +135,8 @@ async function writePacket(input: FreezeInput, objects: Parameters<typeof reques
 }
 
 export async function stageWebDavRelayPacket(files: FramedSyncFilePort, scope: WebDavRelayBodyScope,
-  wire: FramedSyncStreamBody, suffix: '.bin' | typeof WEB_DAV_ATTACHMENT_SUFFIX = '.bin') {
-  const directory = webDavRelayPacketDirectory(scope);
+  wire: FramedSyncStreamBody, suffix: '.bin' | typeof WEB_DAV_ATTACHMENT_SUFFIX | '.repair.bin' = '.bin',
+  directory = webDavRelayPacketDirectory(scope)) {
   // The caller holds the slot exclusively, and has checked that no pending packet references it.
   await files.remove(directory);
   let bytes = 0;
@@ -149,8 +149,8 @@ export async function stageWebDavRelayPacket(files: FramedSyncFilePort, scope: W
   return { name: `${time}-${crypto.randomUUID()}${suffix}`, chunks, bytes };
 }
 
-export function webDavRelayPacketBytes(files: FramedSyncFilePort, scope: WebDavRelayBodyScope, packet: Pick<Packet, 'bytes' | 'chunks'>) {
-  const directory = webDavRelayPacketDirectory(scope);
+export function webDavRelayPacketBytes(files: FramedSyncFilePort, scope: WebDavRelayBodyScope, packet: Pick<Packet, 'bytes' | 'chunks'>,
+  directory = webDavRelayPacketDirectory(scope)) {
   return { bytes: packet.bytes, fileRange: { directory, count: packet.chunks }, async *chunks() {
     for (let index = 0; index < packet.chunks; index++) {
       const chunk = await files.read(`${directory}/${index}`);

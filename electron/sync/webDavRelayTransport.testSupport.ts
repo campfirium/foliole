@@ -78,7 +78,7 @@ function propfind(collections: Set<string>, files: Map<string, Uint8Array>, path
       `<D:propstat><D:prop><D:getcontentlength>${file.byteLength}</D:getcontentlength></D:prop>` +
       '<D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response></D:multistatus>');
   }
-  if (!collections.has(path)) return { status: 404 };
+  if (!collections.has(path)) return { status: 404, body: '' };
   const listed = [...collections, ...files.keys()].filter(name => name.startsWith(path));
   return properties(`<D:multistatus xmlns:D="DAV:">${listed.map(name =>
     `<D:response><D:href>${name}</D:href></D:response>`).join('')}</D:multistatus>`);

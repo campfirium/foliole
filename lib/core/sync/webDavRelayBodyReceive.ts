@@ -4,13 +4,16 @@ import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import { readFramedSyncMissingDependency } from './framedSyncInventoryRoundDelivery.js';
 import { receiveRequestSyncBatch } from './requestSyncBatchReceiver.js';
 import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
-import { markWebDavRelayAttachment } from './webDavRelayAttachments.js';
+import { enqueueWebDavRelayAttachmentRepairs, markWebDavRelayAttachment } from './webDavRelayAttachments.js';
 import { receiveWebDavAttachment, WEB_DAV_ATTACHMENT_SUFFIX } from './webDavRelayAttachmentWire.js';
 import { webDavRelayPeerState, type WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 import { relayGeneration, relayGenerationRoot } from './webDavRelayCollections.js';
+import { readWebDavRelayPacket } from './webDavRelayPacketRead.js';
 import { webDavRelayStatus, type WebDavRelayRequest } from './webDavRelayPublication.js';
+import { rearmWebDavRelayRepair } from './webDavRelayRepairOutbox.js';
+import { readWebDavRelayRepair, WEB_DAV_REPAIR_SUFFIX } from './webDavRelayRepairWire.js';
 
-const packetName = /^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}(?:\.asset)?\.bin$/u;
+const packetName = /^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}(?:\.asset|\.repair)?\.bin$/u;
 
 type Input = {
   host: RequestSyncDatabaseHost;
@@ -33,7 +36,7 @@ export async function receiveWebDavRelayBodyPackets(input: Input) {
     const applied = new Set(rows.map(row => row.key.slice(prefix.length)));
     return names.filter(packet => !applied.has(packet.name));
   }, input.signal);
-  let remaining = pending.filter(packet => !packet.name.endsWith(WEB_DAV_ATTACHMENT_SUFFIX));
+  let remaining = pending.filter(packet => !packet.name.endsWith(WEB_DAV_ATTACHMENT_SUFFIX) && !packet.name.endsWith(WEB_DAV_REPAIR_SUFFIX));
   while (remaining.length) {
     const deferred = [];
     for (const name of remaining) {
@@ -47,9 +50,15 @@ export async function receiveWebDavRelayBodyPackets(input: Input) {
     input.retry(deferred.length);
     remaining = deferred;
   }
-  if (input.attachments) for (const name of pending) {
-    if (name.name.endsWith(WEB_DAV_ATTACHMENT_SUFFIX)) await receiveAttachment(input, input.attachments, name);
+  let repairQueued = false;
+  if (input.attachments) for (const packet of pending) {
+    if (packet.name.endsWith(WEB_DAV_ATTACHMENT_SUFFIX)) {
+      await receiveAttachment(input, input.attachments, packet);
+    } else if (packet.name.endsWith(WEB_DAV_REPAIR_SUFFIX)) {
+      if (await receiveRepair(input, packet)) repairQueued = true;
+    }
   }
+  return repairQueued;
 }
 
 type Packet = { name: string; url: URL };
@@ -125,17 +134,42 @@ async function receivePacket(input: Input, { name, url }: Packet) {
 async function receiveAttachment(input: Input, attachments: AttachmentBlockDestination, { name, url }: Packet) {
   await input.assertScope();
   const { host, scope, signal, groupKey } = input;
-  const key = await input.request(url, { method: 'GET' }, async (status, body) => {
+  const result = await readWebDavRelayPacket(() => input.request(url, { method: 'GET' }, async (status, body) => {
     if (status !== 200) {
       await webDavRelayStatus(status, body);
       throw new Error(`webdav_relay_download_failed:${status}`);
     }
     return receiveWebDavAttachment(attachments, body, { context: scope.receive, groupKey, signal }, input.assertScope);
-  });
+  }), input.retry, signal);
+  await input.assertScope();
   await host.write(db => db.transaction(async tx => {
-    await markWebDavRelayAttachment(tx, scope, key, 'done');
+    if (result.value) await markWebDavRelayAttachment(tx, scope, result.value, 'done');
+    if (result.damaged) await rearmWebDavRelayRepair(tx, scope);
     await tx.run('INSERT OR IGNORE INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
-      [`${scope.key}:applied:${name}`, 'true', new Date().toISOString()]);
+      [`${scope.key}:applied:${name}`, result.damaged ? 'damaged' : 'true', new Date().toISOString()]);
   }));
-  input.applied(1);
+  if (result.value) input.applied(1);
+}
+
+async function receiveRepair(input: Input, { name, url }: Packet) {
+  const { host, scope, signal, groupKey } = input;
+  await input.assertScope();
+  const result = await readWebDavRelayPacket(() => input.request(url, { method: 'GET' }, async (status, body) => {
+    if (status !== 200) {
+      await webDavRelayStatus(status, body);
+      throw new Error(`webdav_relay_download_failed:${status}`);
+    }
+    return readWebDavRelayRepair({ scope, signal, groupKey }, body);
+  }), input.retry, signal);
+  await input.assertScope();
+  await host.write(db => db.transaction(async tx => {
+    if (result.value) {
+      const receipt = await tx.run('INSERT OR IGNORE INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
+        [`${scope.key}:repair-received:${result.value.id}`, 'true', new Date().toISOString()]);
+      if (receipt.changes) await enqueueWebDavRelayAttachmentRepairs(tx, scope, result.value);
+    }
+    await tx.run('INSERT OR IGNORE INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
+      [`${scope.key}:applied:${name}`, result.damaged ? 'damaged' : 'true', new Date().toISOString()]);
+  }));
+  return Boolean(result.value);
 }

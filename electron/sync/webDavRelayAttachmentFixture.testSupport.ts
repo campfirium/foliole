@@ -66,13 +66,7 @@ export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy) {
     const [mac, phone] = peers;
     const binding = { id: crypto.randomUUID(), group_id: 'group', desktop_device_id: mac.peer.id,
       phone_device_id: phone.peer.id, directory_url: url.href, attachment_policy: attachmentPolicy };
-    const previous = Buffer.from('Already synchronized image');
-    const old = storageKey(previous);
-    for (const { assets } of peers) {
-      const file = path.join(assets, old);
-      await writeFile(file, previous);
-      await utimes(file, 100, 100);
-    }
+    const old = await writeBaselineAttachment(peers);
     await edit(mac.peer, [old], 'baseline');
     expect(await runWebDavTestLanRound(mac.peer, phone.peer, binding)).toMatchObject({ complete: true });
     for (const [local, remote] of [[mac.peer, phone.peer], [phone.peer, mac.peer]] as const) {
@@ -91,11 +85,13 @@ export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy) {
         return runWebDavTestLanRound(local.peer, remote.peer, binding, { local: lanSide(local, cleanup),
           remote: lanSide(remote, cleanup), ...(beforeFinish ? { beforeFinish } : {}) });
       },
-      async sync({ peer, attachments }: typeof peers[number], alter?: BodyTransform) {
+      async sync({ peer, attachments }: typeof peers[number], alter?: BodyTransform,
+        foreground?: { requestSend(): void }) {
         const current = await scope(peer);
         if (!current) throw new Error('webdav_test_baseline_missing');
         return runWebDavRelayBodyRound({ host: { ...peer.host, enqueueSearchInvalidations: peer.desktop },
           files: peer.host.files, attachments, scope: current, groupKey: webDavTestGroupKey,
+          ...(foreground ? { foregroundReceive: true, requestSend: foreground.requestSend } : {}),
           request: alter ? alterAttachmentDownload(request, alter) : request, lanConnected: () => false,
           assertScope: async () => {
             const active = await scope(peer);
@@ -106,8 +102,20 @@ export async function relayFixture(attachmentPolicy?: WebDavAttachmentPolicy) {
   } catch (error) { await close(); throw error; }
 }
 
+async function writeBaselineAttachment(peers: readonly { assets: string }[]) {
+  const bytes = Buffer.from('Already synchronized image');
+  const key = storageKey(bytes);
+  for (const { assets } of peers) {
+    const file = path.join(assets, key);
+    await writeFile(file, bytes);
+    await utimes(file, 100, 100);
+  }
+  return key;
+}
+
 function testTransport() {
   const uploads: string[] = [];
+  const repairUploads: string[] = [];
   const attachmentReads: string[] = [];
   let loseAttachmentPublicationResponse = false;
   let rejectNextDelete = false;
@@ -118,6 +126,7 @@ function testTransport() {
       rejectNextDelete = false;
       throw new Error('test_delete_connection_reset');
     }
+    if (input.method === 'PUT' && url.pathname.endsWith('.repair.bin.partial')) repairUploads.push(url.href);
     if (input.method === 'PUT' && url.pathname.endsWith(`${WEB_DAV_ATTACHMENT_SUFFIX}.partial`)) {
       uploads.push(url.href);
       const fault = attachmentPutFault;
@@ -147,7 +156,7 @@ function testTransport() {
       return consume(status, body);
     });
   };
-  return { uploads, attachmentReads, request, faultNextAttachmentPut: (fault: typeof attachmentPutFault) => { attachmentPutFault = fault; },
+  return { uploads, attachmentReads, repairUploads, request, faultNextAttachmentPut: (fault: typeof attachmentPutFault) => { attachmentPutFault = fault; },
     rejectNextDelete: () => { rejectNextDelete = true; },
     loseAttachmentPublicationResponse: () => { loseAttachmentPublicationResponse = true; } };
 }

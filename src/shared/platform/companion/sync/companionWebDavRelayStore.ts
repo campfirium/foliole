@@ -3,6 +3,7 @@ import { hasWebDavRelayAttachmentsToSend } from '../../../../../lib/core/sync/we
 import { hasWebDavRelayBodyToSend } from '../../../../../lib/core/sync/webDavRelayBodyOutbox';
 import { readWebDavRelayBodyScope } from '../../../../../lib/core/sync/webDavRelayBodyScope';
 import { isWebDavRelayReceiveDue } from '../../../../../lib/core/sync/webDavRelayReceiveFreshness';
+import { hasWebDavRelayRepairToSend } from '../../../../../lib/core/sync/webDavRelayRepairOutbox';
 import type { SyncSessionReply } from '../../../../../lib/platform/syncSessionContract';
 import type { WebDavCredentialOffer } from '../../../../../lib/platform/webDavCredentialDeliveryContract';
 import { sameWebDavAttachmentPolicy, webDavRelayBindingSchema, type WebDavRelayBinding } from '../../../../../lib/platform/webDavRelayContract';
@@ -30,6 +31,10 @@ async function readBinding(db: DbPort) {
 export function subscribeCompanionWebDavRelay(listener: () => void) {
   listeners.add(listener);
   return () => { listeners.delete(listener); };
+}
+
+export function notifyCompanionWebDavWork() {
+  for (const listener of listeners) listener();
 }
 
 async function matchesCredentialOffer(db: DbPort, offer: WebDavCredentialOffer, peer: string) {
@@ -84,7 +89,8 @@ export async function loadCompanionWebDavRelay(pendingOnly = false, foregroundRe
     if (!pendingOnly && !foregroundReceive) return binding;
     const scope = await readWebDavRelayBodyScope(db, binding, binding.phone_device_id);
     if (foregroundReceive) return scope && await isWebDavRelayReceiveDue(db, scope.receiveScope) ? binding : null;
-    return scope && (await hasWebDavRelayBodyToSend(db, scope) || await hasWebDavRelayAttachmentsToSend(db, scope))
+    return scope && (await hasWebDavRelayBodyToSend(db, scope) || await hasWebDavRelayAttachmentsToSend(db, scope) ||
+      await hasWebDavRelayRepairToSend(db, scope))
       ? binding : null;
   });
 }

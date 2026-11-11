@@ -41,6 +41,8 @@ function describeAttachmentPolicy(sender: 0 | 1) {
         else await expect(stat(asset)).rejects.toMatchObject({ code: 'ENOENT' });
       }
 
+      await fixture.sync(source);
+      expect(fixture.uploads).toHaveLength(files.filter(file => file.relayed).length);
       expect(await fixture.lan()).toMatchObject({ complete: true });
       await target.reopen();
       for (const { key, bytes } of files) {
@@ -79,9 +81,12 @@ it.each(['desktop', 'phone'])('relays a new attachment from %s with an interrupt
     await expect(fixture.sync(target, interruptAttachment)).rejects.toThrow('interrupted_attachment');
     await expect(stat(asset)).rejects.toMatchObject({ code: 'ENOENT' });
     await target.reopen();
-    await expect(fixture.sync(target, corruptAttachment)).rejects.toThrow();
-    await expect(stat(asset)).rejects.toMatchObject({ code: 'ENOENT' });
-    await fixture.sync(target);
+    let corrupt = true;
+    expect(await fixture.sync(target, body => {
+      if (!corrupt) return body;
+      corrupt = false;
+      return corruptAttachment(body);
+    })).toMatchObject({ retries: 1 });
     expect(fixture.uploads).toHaveLength(1);
     await target.reopen();
     expect(await readFile(asset)).toEqual(bytes);
@@ -133,12 +138,40 @@ it('preserves a conflicting final packet and leaves its attachment eligible for 
     await expect(fixture.sync(source)).rejects.toThrow('webdav_relay_destination_conflict');
     expect(fixture.uploads).toHaveLength(1);
     expect(fixture.attachmentReads).toEqual([]);
-    await expect(fixture.sync(target)).rejects.toThrow();
+    expect(await fixture.sync(target)).toMatchObject({ retries: 1 });
     const asset = path.join(target.assets, key);
     await expect(stat(asset)).rejects.toMatchObject({ code: 'ENOENT' });
     expect(await fixture.lan()).toMatchObject({ complete: true });
     await target.reopen();
     expect(await readFile(asset)).toEqual(bytes);
+  } finally { await fixture.close(); }
+});
+
+it('skips a persistently damaged packet and applies the following attachment', async () => {
+  const fixture = await relayFixture();
+  try {
+    const [source, target] = fixture.peers;
+    const bad = Buffer.from('damaged on the relay');
+    const good = Buffer.from('still arrives in the same round');
+    const badKey = storageKey(bad);
+    const goodKey = storageKey(good);
+    await writeFile(path.join(source.assets, badKey), bad);
+    await edit(source.peer, [badKey], 'first');
+    await fixture.sync(source);
+    await writeFile(path.join(source.assets, goodKey), good);
+    await edit(source.peer, [goodKey], 'second');
+    await fixture.sync(source);
+    const first = new URL(fixture.uploads[0]!.replace(/\.partial$/u, ''));
+    const broken = Buffer.from('truncated ciphertext');
+    await fixture.request(first, { method: 'PUT', body: { bytes: broken.length, async *chunks() { yield broken; } } }, webDavRelayStatus);
+    expect(await fixture.sync(target)).toMatchObject({ retries: 1 });
+    await target.reopen();
+    await expect(stat(path.join(target.assets, badKey))).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await readFile(path.join(target.assets, goodKey))).toEqual(good);
+    expect(target.peer.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('first')).toContain(badKey);
+    const reads = fixture.attachmentReads.length;
+    await fixture.sync(target);
+    expect(fixture.attachmentReads).toHaveLength(reads);
   } finally { await fixture.close(); }
 });
 
