@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { isEpubGeneratedNodeId } from '../../../lib/core/import/epubGeneratedNodeIdentity';
 import { collectInactiveTopicBranchIds } from '../../features/nodes/model/inactiveTopicBranches';
 import type { NodeTreeRow } from '../../features/nodes/model/nodeTree';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
@@ -52,14 +53,37 @@ function isDerivedMaterialNode(nodeId: string, nodesById: WorkspaceListNodesById
   return Boolean(node?.anchorLink) || node?.kind === 'item';
 }
 
-export function createDerivedMaterialDirectChildCounter(
+function countBookMaterials(
+  bookId: string,
+  children: (nodeId: string) => string[],
+  nodesById: WorkspaceListNodesById
+) {
+  const pending = children(bookId);
+  const visited = new Set([bookId]);
+  let count = 0;
+  while (pending.length > 0) {
+    const nodeId = pending.pop()!;
+    if (visited.has(nodeId)) continue;
+    visited.add(nodeId);
+    if (isDerivedMaterialNode(nodeId, nodesById)) count += 1;
+    for (const childId of children(nodeId)) pending.push(childId);
+  }
+  return count;
+}
+
+export function createTopicRowMaterialCounter(
   childrenByParent: TopicChildrenByParent,
   nodesById: WorkspaceListNodesById
 ) {
-  return (nodeId: string) =>
-    getTopicChildren(nodeId, childrenByParent, nodesById).filter((childId) =>
-      isDerivedMaterialNode(childId, nodesById)
-    ).length;
+  const children = (nodeId: string) => getTopicChildren(nodeId, childrenByParent, nodesById);
+  return (nodeId: string) => {
+    const childIds = children(nodeId);
+    const isBook = nodesById[nodeId]?.kind === 'topic' && !isEpubGeneratedNodeId(nodeId) &&
+      childIds.some(isEpubGeneratedNodeId);
+    return isBook
+      ? countBookMaterials(nodeId, children, nodesById)
+      : childIds.filter((childId) => isDerivedMaterialNode(childId, nodesById)).length;
+  };
 }
 
 function createRow(
@@ -67,13 +91,13 @@ function createRow(
   depth: number,
   childrenByParent: TopicChildrenByParent,
   nodesById: WorkspaceListNodesById,
-  countDirectDerivedMaterials: (nodeId: string) => number
+  countMaterials: (nodeId: string) => number
 ): NodeTreeRow | null {
   const node = nodesById[nodeId];
   if (!node || node.kind === 'folder') return null;
   const childIds = getTopicChildren(nodeId, childrenByParent, nodesById);
   return {
-    descendantCount: countDirectDerivedMaterials(nodeId),
+    descendantCount: countMaterials(nodeId),
     depth,
     hasChildren: childIds.length > 0,
     node
@@ -82,7 +106,7 @@ function createRow(
 
 function collectRows(args: TopicRowsArgs) {
   const rows: NodeTreeRow[] = [];
-  const countDirectDerivedMaterials = createDerivedMaterialDirectChildCounter(args.childrenByParent, args.nodesById);
+  const countMaterials = createTopicRowMaterialCounter(args.childrenByParent, args.nodesById);
   const fullyDismissedBranchIds = args.hideDismissedTopics
     ? collectInactiveTopicBranchIds(args.rootIds, args.nodesById,
       (nodeId) => getTopicChildren(nodeId, args.childrenByParent, args.nodesById))
@@ -90,7 +114,7 @@ function collectRows(args: TopicRowsArgs) {
   const walk = (parentId: string | null, ids: string[], depth: number) => {
     args.sortIds(parentId, ids).forEach((nodeId) => {
       if (!shouldCollectNode(args, nodeId, args.reviewContextNodeIds ?? null, fullyDismissedBranchIds)) return;
-      const row = createRow(nodeId, depth, args.childrenByParent, args.nodesById, countDirectDerivedMaterials);
+      const row = createRow(nodeId, depth, args.childrenByParent, args.nodesById, countMaterials);
       if (!row) return;
       rows.push(row);
       if (!args.collapsedNodeIds.has(nodeId)) {
@@ -106,7 +130,7 @@ function collectSearchRows(args: Omit<TopicRowsArgs, 'collapsedNodeIds'>) {
   const normalizedQuery = args.searchQuery.trim().toLocaleLowerCase();
   if (!normalizedQuery) return null;
   const rows: NodeTreeRow[] = [];
-  const countDirectDerivedMaterials = createDerivedMaterialDirectChildCounter(args.childrenByParent, args.nodesById);
+  const countMaterials = createTopicRowMaterialCounter(args.childrenByParent, args.nodesById);
   const walk = (parentId: string | null, ids: string[], depth: number): boolean => {
     let hasMatch = false;
     args.sortIds(parentId, ids).forEach((nodeId) => {
@@ -114,7 +138,7 @@ function collectSearchRows(args: Omit<TopicRowsArgs, 'collapsedNodeIds'>) {
       const childMatched = walk(nodeId, childIds, depth + 1);
       const nodeMatched = args.nodesById[nodeId]?.title.toLocaleLowerCase().includes(normalizedQuery) ?? false;
       if (!nodeMatched && !childMatched) return;
-      const row = createRow(nodeId, depth, args.childrenByParent, args.nodesById, countDirectDerivedMaterials);
+      const row = createRow(nodeId, depth, args.childrenByParent, args.nodesById, countMaterials);
       if (row) rows.push(row);
       hasMatch = true;
     });

@@ -4,7 +4,7 @@ import type { WorkspaceListNode, WorkspaceListNodesById } from '../../features/n
 
 import {
   buildTopicChildrenByParent,
-  createDerivedMaterialDirectChildCounter
+  createTopicRowMaterialCounter
 } from './workspaceTopicTreeLazyRows';
 
 function createTopic(id: string, parentNodeId: string | null = null, anchorLink = false): WorkspaceListNode {
@@ -41,10 +41,10 @@ it('counts direct derived materials without counting nested chapter materials', 
     nestedCard: createReviewItem('nestedCard', 'excerpt')
   };
   const childrenByParent = buildTopicChildrenByParent(Object.keys(nodesById), nodesById);
-  const countDirectDerivedMaterials = createDerivedMaterialDirectChildCounter(childrenByParent, nodesById);
+  const countMaterials = createTopicRowMaterialCounter(childrenByParent, nodesById);
 
-  expect(countDirectDerivedMaterials('book')).toBe(0);
-  expect(countDirectDerivedMaterials('chapter')).toBe(2);
-  expect(countDirectDerivedMaterials('excerpt')).toBe(1);
-  expect(countDirectDerivedMaterials('card')).toBe(0);
+  expect(countMaterials('book')).toBe(0);
+  expect(countMaterials('chapter')).toBe(2);
+  expect(countMaterials('excerpt')).toBe(1);
+  expect(countMaterials('card')).toBe(0);
 });

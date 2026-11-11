@@ -35,3 +35,39 @@ test('topic counts share a right edge while long titles truncate', async ({ desk
     element.scrollWidth > element.clientWidth && getComputedStyle(element).textOverflow === 'ellipsis'
   )).toBe(true);
 });
+
+test('an EPUB book shows its total even when its chapters are collapsed', async ({ desktopWindow: page }) => {
+  await expectWorkspaceShell(page);
+  await page.evaluate(async () => {
+    const chapter = 'node-epub-0123456789abcdef01234567';
+    const section = 'node-epub-1123456789abcdef01234567';
+    await window.__folioleWorkspaceDebug!.seedNodes([
+      { id: 'count-book', kind: 'topic', title: 'Counted book', content: '' },
+      { id: chapter, kind: 'topic', parentNodeId: 'count-book', title: 'Chapter', content: 'A marked passage.' },
+      { id: section, kind: 'topic', parentNodeId: chapter, title: 'Section', content: 'Section body.' },
+      { id: 'count-highlight', kind: 'topic', parentNodeId: chapter, title: 'Highlight', content: 'marked',
+        anchorLink: { id: 'book-highlight', kind: 'highlight', locator: { from: 2, to: 8, originalText: 'marked' } } },
+      { id: 'count-section-card', kind: 'item', parentNodeId: section, title: 'Card', content: 'Question', reveal: 'Answer' },
+      { id: 'count-nested-card', kind: 'item', parentNodeId: 'count-highlight', title: 'Nested card', content: 'Question', reveal: 'Answer' }
+    ]);
+  });
+
+  const book = page.getByRole('treeitem', { name: 'Counted book', exact: true });
+  const chapter = page.getByRole('treeitem', { name: 'Chapter', exact: true });
+  const total = book.getByText('3', { exact: true });
+  const toggle = book.locator('[data-node-tree-chevron]');
+  await expect(book).toHaveAttribute('aria-expanded', 'false');
+  await expect(total).toBeVisible();
+
+  await toggle.click();
+  const chapterCount = chapter.getByText('1', { exact: true });
+  await expect(chapterCount).toBeVisible();
+  const bookRight = await total.evaluate((element) => element.getBoundingClientRect().right);
+  const chapterRight = await chapterCount.evaluate((element) => element.getBoundingClientRect().right);
+  expect(chapterRight).toBeCloseTo(bookRight, 0);
+  await page.screenshot({ path: '.tmp/artifacts/book-material-count.png' });
+
+  await toggle.click();
+  await expect(chapter).toBeHidden();
+  await expect(total).toBeVisible();
+});
