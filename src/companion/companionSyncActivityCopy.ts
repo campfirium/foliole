@@ -7,6 +7,11 @@ import {
 
 type Translate = ReturnType<typeof useTranslation>;
 
+export function formatCompletedWebDavMessage(event: NativeCompanionSyncEvent, t: Translate) {
+  if (inferSyncRunResult(event) !== 'completed' || !event.message.startsWith('WebDAV relay {')) return null;
+  return t('companion.sync.activity.allStagesCompleted');
+}
+
 export function formatSyncResultMessage(message: string, t: Translate) {
   const displayMessage = stripDiagnosticSuffixes(message);
   if (isSyncCheckOnlyMessage(displayMessage)) {
@@ -55,6 +60,8 @@ export function isReportableSyncEvent(event: ReportableSyncEventInput) {
 
 export function formatSyncRunActivityMessage(event: NativeCompanionSyncEvent, laterEvents: NativeCompanionSyncEvent[], t: Translate) {
   if (!isSyncRunFinishedEvent(event)) return event.message;
+  const completedWebDav = formatCompletedWebDavMessage(event, t);
+  if (completedWebDav) return completedWebDav;
   if (!event.kind || event.kind === 'legacy_event') return formatLegacyActivityMessage(event, laterEvents, t);
   const summaryMessage = formatSummaryActivityMessage(event, t);
   if (summaryMessage) return summaryMessage;

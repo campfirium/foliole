@@ -2,7 +2,7 @@ import type { NativeCompanionSyncEvent } from '../../lib/platform/nativeCompanio
 import type { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 
-import { formatSyncResultMessage, isReportableSyncEvent } from './companionSyncActivityCopy';
+import { formatCompletedWebDavMessage, formatSyncResultMessage, isReportableSyncEvent } from './companionSyncActivityCopy';
 import { formatCompanionSyncProgressSummary } from './companionSyncProgressSummary';
 
 type Translate = ReturnType<typeof useTranslation>;
@@ -67,5 +67,5 @@ function formatLastSyncDetail(event: NativeCompanionSyncEvent | null, t: Transla
   if (!event) {
     return t('companion.sync.noSyncYet');
   }
-  return formatStatusDetail(formatSyncResultMessage(event.message, t), t);
+  return formatCompletedWebDavMessage(event, t) ?? formatStatusDetail(formatSyncResultMessage(event.message, t), t);
 }

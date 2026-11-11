@@ -6,14 +6,15 @@ import { renderWithLocalization } from '../shared/localization/testLocalization'
 
 import { CompanionSyncStatusDetails } from './CompanionSyncStatusDetails';
 
-function renderActivity(events: ComponentProps<typeof CompanionSyncStatusDetails>['syncEvents']) {
+function renderActivity(events: ComponentProps<typeof CompanionSyncStatusDetails>['syncEvents'],
+  page: ComponentProps<typeof CompanionSyncStatusDetails>['page'] = 'syncActivity') {
   renderWithLocalization(
     <CompanionSyncStatusDetails
       endpointUrl="http://10.0.2.2:38641"
       lastSyncedAt={null}
       onLeaveSyncGroup={vi.fn()}
       onOpenPage={vi.fn()}
-      page="syncActivity"
+      page={page}
       syncGroup={{ created_at: '', devices: [], display_name: 'Studio', group_id: 'group-1', local_device_identity_key: '' }}
       status="idle"
       syncConflictCount={0}
@@ -109,5 +110,33 @@ describe('CompanionSyncStatusDetails activity summaries', () => {
     })]);
 
     expect(screen.getByText('2 changes need desktop review')).toBeInTheDocument();
+  });
+});
+
+describe('CompanionSyncStatusDetails WebDAV results', () => {
+  it.each(['sync', 'syncActivity'] as const)('shows a completed WebDAV run as successful on %s', page => {
+    renderActivity([summaryEvent({
+      endpoint_url: null,
+      summary: undefined,
+      message: 'WebDAV relay {"requests":{"PROPFIND":3,"GET":4,"PUT":2,"MOVE":2},"responses":11,' +
+        '"uploadedBytes":3858,"downloadedBytes":10954,"published":2,"applied":0,"retries":0,"elapsedMs":10873}'
+    })], page);
+
+    expect(screen.getByText(/All sync stages completed/)).toBeInTheDocument();
+    expect(screen.queryByText(/Sync needs attention/)).not.toBeInTheDocument();
+  });
+
+  it('still reports a failed WebDAV run as an issue', () => {
+    renderActivity([summaryEvent({
+      endpoint_url: null,
+      summary: undefined,
+      status: 'failed',
+      result: 'failed',
+      message: 'WebDAV relay {"requests":{"PROPFIND":1},"responses":1,"uploadedBytes":0,"downloadedBytes":17,' +
+        '"published":0,"applied":0,"retries":0,"elapsedMs":1432,"errorCode":"webdav_relay_list_failed:530"}'
+    })], 'sync');
+
+    expect(screen.getByText(/Open Activity for details/)).toBeInTheDocument();
+    expect(screen.queryByText(/All sync stages completed/)).not.toBeInTheDocument();
   });
 });
