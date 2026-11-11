@@ -179,13 +179,23 @@ export function loadDesktopWebDavRelayDirectory(groupId: string) {
   return getRuntimeInvoke()?.(NATIVE_COMMANDS.loadWebDavRelayDirectory, { group_id: groupId });
 }
 
+export function loadDesktopWebDavSetupDraft(groupId: string) {
+  return getRuntimeInvoke()?.(NATIVE_COMMANDS.loadWebDavSetupDraft, { group_id: groupId });
+}
+
+export function saveDesktopWebDavSetupDraft(groupId: string,
+  draft: { address: string; folder: string; username: string; password?: string }) {
+  return getRuntimeInvoke()?.(NATIVE_COMMANDS.saveWebDavSetupDraft, { group_id: groupId, draft });
+}
+
 export function saveDesktopWebDavRelayDirectory(groupId: string, directory: string) {
   return getRuntimeInvoke()?.(NATIVE_COMMANDS.saveWebDavRelayDirectory, { group_id: groupId, directory_url: directory });
 }
 
-export function saveDesktopWebDavRelayCredentials(groupId: string, directory: string, username: string, password: string, newFolderName?: string) {
+export function saveDesktopWebDavRelayCredentials(groupId: string, directory: string, username: string, password: string, newFolderName?: string, useSetupPassword?: true) {
   return getRuntimeInvoke()?.(NATIVE_COMMANDS.saveWebDavRelayDirectory, {
     group_id: groupId, directory_url: directory, credentials: { username, password },
+    ...(useSetupPassword ? { use_setup_password: true as const } : {}),
     ...(newFolderName === undefined ? {} : { new_folder_name: newFolderName })
   });
 }

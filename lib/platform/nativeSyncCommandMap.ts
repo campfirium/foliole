@@ -75,8 +75,16 @@ export type NativeSyncCommandMap = {
     args: { group_id: string; id: string; fingerprint: string; username: string; password: string };
     result: null;
   };
+  [NATIVE_COMMANDS.loadWebDavSetupDraft]: {
+    args: { group_id: string };
+    result: { address: string; folder: string; username: string; has_password: boolean } | null;
+  };
+  [NATIVE_COMMANDS.saveWebDavSetupDraft]: {
+    args: { group_id: string; draft: { address: string; folder: string; username: string; password?: string } };
+    result: boolean;
+  };
   [NATIVE_COMMANDS.saveWebDavRelayDirectory]: {
-    args: { group_id: string; directory_url: string; credentials?: { username: string; password: string }; new_folder_name?: string };
+    args: { group_id: string; directory_url: string; credentials?: { username: string; password: string }; new_folder_name?: string; use_setup_password?: true };
     result: string;
   };
   [NATIVE_COMMANDS.saveWebDavAttachmentPolicy]: {

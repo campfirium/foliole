@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import {
-  loadDesktopWebDavRelayDirectory, saveDesktopWebDavRelayDirectory, saveDesktopWebDavRelayCredentials
+  loadDesktopWebDavRelayDirectory, loadDesktopWebDavSetupDraft, saveDesktopWebDavRelayDirectory,
+  saveDesktopWebDavRelayCredentials
 } from '../../../../shared/platform/desktopSyncGroupRuntimeRepository';
 import { SettingsButton, SettingsControlSlot, SettingsRow } from '../../../../shared/ui';
 
 import { PublishingTextRow } from './PublishingTextRow';
+import { useWebDavSetupFields } from './useWebDavSetupFields';
 
 const FOLDER_ERRORS = {
   webdav_relay_invalid_folder_name: 'invalidFolderName',
@@ -39,58 +41,62 @@ function splitDirectory(directory: string) {
   }
 }
 
-function useWebDavRelayDirectory(groupId: string) {
+function useWebDavRelayDirectory(groupId: string, bound?: boolean) {
   const [directory, setDirectory] = useState('');
-  const [fields, setFields] = useState(() => splitDirectory(''));
   const [credentialDirectory, setCredentialDirectory] = useState<string | null>(null);
   const [status, setStatus] = useState<
     'loading' | 'loadFailed' | 'idle' | 'running' | 'passed' | 'failed' | 'credentialPassed' | 'credentialFailed' |
     'credentialStorageUnavailable' | (typeof FOLDER_ERRORS)[keyof typeof FOLDER_ERRORS]
   >('loading');
+  const setup = useWebDavSetupFields(groupId, () => setStatus('idle'), () => {
+    setStatus(current => current === 'running' ? current : 'credentialStorageUnavailable');
+  });
+  const { hydrate, username, password, hasSavedPassword } = setup;
 
   useEffect(() => {
     const pending = loadDesktopWebDavRelayDirectory(groupId);
     if (!pending) return;
     let current = true;
-    void pending.then(value => {
+    void Promise.all([pending, loadDesktopWebDavSetupDraft(groupId)]).then(([value, draft]) => {
       if (!current) return;
       const saved = value?.directory ?? value?.credential_directory ?? '';
       setDirectory(saved);
-      setFields(splitDirectory(saved));
+      const verified = splitDirectory(saved);
+      const matchesDefault = draft?.folder === '' && URL.parse(draft.address)?.href === verified.address &&
+        verified.folder === DEFAULT_FOLDER_NAME;
+      hydrate(draft && !bound && !matchesDefault ? draft : verified, draft?.username ?? '', Boolean(draft?.has_password));
       setCredentialDirectory(value?.credential_directory ?? null);
       setStatus('idle');
     }, (error: unknown) => {
       if (current) setStatus(isSecureStorageError(error) ? 'credentialStorageUnavailable' : 'loadFailed');
     });
     return () => { current = false; };
-  }, [groupId]);
+  }, [bound, groupId, hydrate]);
 
-  async function connect(address: string, credentials?: { username: string; password: string }, newFolderName?: string) {
+  async function connect(address: string, authenticated: boolean, newFolderName?: string) {
     try {
-      const pending = credentials
-        ? saveDesktopWebDavRelayCredentials(groupId, address, credentials.username, credentials.password, newFolderName)
-        : saveDesktopWebDavRelayDirectory(groupId, address);
-      if (!pending) return;
       setStatus('running');
+      await setup.persist();
+      const credentials = authenticated ? { username: username.trim(), password } : undefined;
+      const pending = credentials
+        ? saveDesktopWebDavRelayCredentials(groupId, address, credentials.username, credentials.password, newFolderName,
+          !password && hasSavedPassword ? true : undefined)
+        : saveDesktopWebDavRelayDirectory(groupId, address);
+      if (!pending) { setStatus('loadFailed'); return; }
       const saved = await pending;
       setDirectory(saved);
-      setFields(splitDirectory(saved));
+      hydrate(splitDirectory(saved), username, Boolean(credentials));
       if (credentials) setCredentialDirectory(saved);
       setStatus(credentials ? 'credentialPassed' : 'passed');
       return true;
     } catch (error) {
       setStatus(isSecureStorageError(error) ? 'credentialStorageUnavailable'
-        : newFolderName !== undefined ? folderError(error) : credentials ? 'credentialFailed' : 'failed');
+        : newFolderName !== undefined ? folderError(error) : authenticated ? 'credentialFailed' : 'failed');
       return false;
     }
   }
 
-  const changeField = (field: keyof typeof fields, value: string) => {
-    setFields(current => ({ ...current, [field]: value }));
-    setStatus('idle');
-  };
-  const clearResult = () => setStatus('idle');
-  return { directory, fields, credentialDirectory, status, connect, changeField, clearResult };
+  return { ...setup, directory, credentialDirectory, status, connect };
 }
 
 function isSecureStorageError(error: unknown) {
@@ -103,20 +109,18 @@ export function SettingsWebDavRelayRow({ groupId, bound, credentialActive }: {
   credentialActive?: boolean;
 }) {
   const t = useTranslation();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const { directory, fields, credentialDirectory, status, connect, changeField, clearResult } = useWebDavRelayDirectory(groupId);
+  const { directory, fields, credentialDirectory, status, connect, changeField, username, password,
+    hasSavedPassword, changeUsername, changePassword, saveDraft } = useWebDavRelayDirectory(groupId, bound);
   const busy = status === 'loading' || status === 'running';
   const saved = splitDirectory(directory);
   const sameDirectory = Boolean(directory) && fields.address.trim() === saved.address && fields.folder === saved.folder;
   const credentialsRequired = !sameDirectory || credentialActive || credentialDirectory === directory || username || password;
   const canConnect = !busy && Boolean(fields.address.trim()) &&
-    (credentialsRequired ? Boolean(username.trim() && password) : !bound);
+    (credentialsRequired ? Boolean(username.trim() && (password || hasSavedPassword)) : !bound);
   const submit = () => {
     if (!canConnect) return;
-    void connect(sameDirectory ? directory : fields.address.trim(), credentialsRequired ? { username, password } : undefined,
+    void connect(sameDirectory ? directory : fields.address.trim(), Boolean(credentialsRequired),
       sameDirectory ? undefined : fields.folder.trim() || DEFAULT_FOLDER_NAME);
-    setPassword('');
   };
   const result = status !== 'idle' && status !== 'loading'
     ? <span role="status">{t(`settings.companionSync.webdav.${status}`)}</span> : null;
@@ -127,18 +131,19 @@ export function SettingsWebDavRelayRow({ groupId, bound, credentialActive }: {
       <PublishingTextRow plain title={addressLabel} label={addressLabel}
         description={t('settings.companionSync.webdav.parentFolderHint')}
         disabled={busy || Boolean(bound)} type="url" value={fields.address} placeholder="https://"
-        onChange={value => changeField('address', value)} />
+        onBlur={saveDraft} onEnter={saveDraft} onChange={value => changeField('address', value)} />
       <PublishingTextRow plain title={t('settings.companionSync.webdav.username')}
         label={t('settings.companionSync.webdav.username')} description={t('settings.companionSync.webdav.usernameHint')}
-        disabled={busy} value={username} onChange={value => { setUsername(value); clearResult(); }} />
+        disabled={busy} value={username} onBlur={saveDraft} onEnter={saveDraft} onChange={changeUsername} />
       <PublishingTextRow plain title={t('settings.companionSync.webdav.password')}
         label={t('settings.companionSync.webdav.password')} description={t('settings.companionSync.webdav.passwordHint')}
         disabled={busy} type="password" value={password}
-        onChange={value => { setPassword(value); clearResult(); }} onEnter={submit} />
+        placeholder={hasSavedPassword ? t('settings.companionSync.webdav.passwordSaved') : ''}
+        onBlur={saveDraft} onChange={changePassword} onEnter={submit} />
       <PublishingTextRow plain title={t('settings.companionSync.webdav.newFolder')}
         label={t('settings.companionSync.webdav.newFolder')} description={t('settings.companionSync.webdav.newFolderHint')}
         disabled={busy || Boolean(bound)} value={fields.folder} placeholder={DEFAULT_FOLDER_NAME}
-        onChange={value => changeField('folder', value)} onEnter={submit} />
+        onBlur={saveDraft} onChange={value => changeField('folder', value)} onEnter={submit} />
     </div>
     <SettingsRow title={t('settings.companionSync.webdav.service')}
       description={result && savedCredentials ? <>{result}<br />{savedCredentials}</> : result || savedCredentials || t('settings.companionSync.webdav.testHint')}>

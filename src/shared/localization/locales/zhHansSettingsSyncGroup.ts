@@ -70,6 +70,7 @@ export const ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS: Partial<Record<Translatio
   'settings.companionSync.webdav.deviceUnavailable': '请在同一网络下打开这台手机上的 Foliole，再重试。',
   'settings.companionSync.webdav.title': 'WebDAV 中继',
   'settings.companionSync.webdav.usernameHint': "填写服务商指定的 WebDAV 用户名，可能是登录邮箱，也可能是单独分配的用户名。",
+  'settings.companionSync.webdav.passwordSaved': '已保存密码',
   'settings.companionSync.webdav.passwordHint': "如果服务商要求应用专用密码，请在账号安全设置中为 Foliole 生成一个并粘贴到这里。其他情况下，使用服务商指定的 WebDAV 密码。",
   'settings.companionSync.webdav.testHint': "保存前，Foliole 会写入、移动、读回并删除一个测试文件。",
   'settings.companionSync.webdav.newFolder': "文件夹名",

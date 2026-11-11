@@ -68,6 +68,7 @@ export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
   'settings.companionSync.webdav.deviceUnavailable': 'Open Foliole on this phone on the same network, then try again.',
   'settings.companionSync.webdav.title': 'WebDAV relay',
   'settings.companionSync.webdav.usernameHint': "Use the WebDAV username listed by your provider. It may be your sign-in email address or a separate username.",
+  'settings.companionSync.webdav.passwordSaved': 'Password saved',
   'settings.companionSync.webdav.passwordHint': "If your provider requires an app-specific password, generate one for Foliole in your account security settings and paste it here. Otherwise, use the WebDAV password your provider specifies.",
   'settings.companionSync.webdav.testHint': "Foliole will write, move, read back, and remove a test file before saving.",
   'settings.companionSync.webdav.newFolder': "Folder name",

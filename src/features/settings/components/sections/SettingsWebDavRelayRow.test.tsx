@@ -5,12 +5,13 @@ import { renderWithLocalization } from '../../../../shared/localization/testLoca
 
 import { SettingsWebDavRelayRow } from './SettingsWebDavRelayRow';
 
-const invoke = vi.hoisted(() => vi.fn());
+const { invoke, draftInvoke } = vi.hoisted(() => ({ invoke: vi.fn(), draftInvoke: vi.fn() }));
 const parent = 'https://dav.example.test/storage/';
 const credentials = { username: 'fixture', password: 'test-password' };
 
 vi.mock('../../../../shared/platform/runtimeInvoke', () => ({
-  getRuntimeInvoke: () => invoke
+  getRuntimeInvoke: () => (command: string, args: unknown) =>
+    command.endsWith('_webdav_setup_draft') ? draftInvoke(command, args) : invoke(command, args)
 }));
 
 function fillCredentials() {
@@ -56,8 +57,8 @@ it('retains the URL and custom folder after a failed connection', async () => {
   await screen.findByText(/Enter a single folder name/);
   expect(address).toHaveValue(parent);
   expect(folder).toHaveValue('bad/name');
+  expect(screen.getByLabelText('App password')).toHaveValue(credentials.password);
   fireEvent.change(folder, { target: { value: 'custom' } });
-  fillCredentials();
   fireEvent.click(connect);
   await screen.findByText('Connection verified. WebDAV credentials saved securely on this Mac.');
   expect(invoke).toHaveBeenLastCalledWith('save_webdav_relay_directory', {
@@ -81,4 +82,45 @@ it('keeps a bound folder fixed and updates credentials at the original directory
   expect(invoke).toHaveBeenLastCalledWith('save_webdav_relay_directory', {
     group_id: 'group-1', directory_url: directory, credentials
   });
+});
+
+it('restores all four fields on reopening and retries with the saved password', async () => {
+  const folder = 'foliole-dev';
+  const address = parent;
+  let draft: { address: string; folder: string; username: string; password?: string } | null = null;
+  draftInvoke.mockImplementation(async (command, args) => {
+    if (command === 'save_webdav_setup_draft') {
+      draft = { ...draft, ...args.draft };
+      return true;
+    }
+    return draft && { address: draft.address, folder: draft.folder, username: draft.username,
+      has_password: Boolean(draft.password) };
+  });
+  invoke.mockResolvedValueOnce({ directory: null, credential_directory: null })
+    .mockRejectedValueOnce(new Error('upload failed'))
+    .mockResolvedValueOnce({ directory: null, credential_directory: null })
+    .mockResolvedValueOnce(`${address}${folder}/`);
+  const settings = renderWithLocalization(<SettingsWebDavRelayRow groupId="group-1" />);
+  const field = () => screen.getByRole('textbox', { name: 'WebDAV URL' });
+  await waitFor(() => expect(field()).toBeEnabled());
+  fireEvent.change(field(), { target: { value: address } });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Folder name' }), { target: { value: folder } });
+  fillCredentials();
+  fireEvent.blur(screen.getByLabelText('App password'));
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+  await screen.findByText(/could not verify or save/i);
+  settings.unmount();
+
+  renderWithLocalization(<SettingsWebDavRelayRow groupId="group-1" />);
+  await waitFor(() => expect(field()).toHaveValue(address));
+  expect(screen.getByRole('textbox', { name: 'Folder name' })).toHaveValue(folder);
+  expect(screen.getByRole('textbox', { name: 'Username' })).toHaveValue(credentials.username);
+  expect(screen.getByLabelText('App password')).toHaveAttribute('placeholder', 'Password saved');
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+  await screen.findByText('Connection verified. WebDAV credentials saved securely on this Mac.');
+  expect(invoke).toHaveBeenLastCalledWith('save_webdav_relay_directory', {
+    group_id: 'group-1', directory_url: address, new_folder_name: folder, use_setup_password: true,
+    credentials: { username: credentials.username, password: '' }
+  });
+  draftInvoke.mockReset();
 });

@@ -16,50 +16,78 @@ async function openWebDav(session: DesktopSession) {
   return settings;
 }
 
-test('uses the default folder on Connect and reopens it as separate fields', async ({ browserName }, info) => {
-  void browserName;
-  // SKIP: macOS WebDAV credential flow | 2026-11-11 | revive: another host supports DAV credentials
-  test.skip(process.platform !== 'darwin', 'Authenticated WebDAV setup is available on macOS.');
-  const server = await startWebDavSetupFixture(info.outputDir);
-  const session = await launchDesktopSession({ extraArgs: ['--use-mock-keychain'] }).catch(async (error: unknown) => {
-    await server.close();
-    throw error;
+async function launchSetupSession(cert: string, stateRoot: string) {
+  const session = await launchDesktopSession({
+    env: { ...process.env, FOLIOLE_ELECTRON_TEST_STATE_ROOT: stateRoot },
+    extraArgs: ['--use-mock-keychain']
   }) as DesktopSession;
   try {
     await normalizeDesktopWindow(session);
-    expect(await session.electronApp.evaluate(({ app }, cert) => {
+    expect(await session.electronApp.evaluate(({ app }, certificate) => {
       const tls = process.getBuiltinModule('node:tls') as typeof import('node:tls');
-      tls.setDefaultCACertificates([cert, ...tls.getCACertificates('default')]);
+      tls.setDefaultCACertificates([certificate, ...tls.getCACertificates('default')]);
       return app.commandLine.hasSwitch('use-mock-keychain');
-    }, server.cert)).toBe(true);
+    }, cert)).toBe(true);
+    return session;
+  } catch (error) {
+    await session.close();
+    throw error;
+  }
+}
+
+test('restores a failed four-field setup after restart and retries with the default folder', async ({ browserName }, info) => {
+  void browserName;
+  // SKIP: requires a macOS Internal renderer | 2026-11-11 | revive: WebDAV is available in the standard desktop acceptance build
+  test.skip(process.platform !== 'darwin' || process.env.FOLIOLE_ACCEPT_EXPERIMENTAL_WEBDAV !== '1',
+    'Requires a macOS Internal renderer.');
+  const server = await startWebDavSetupFixture(info.outputDir);
+  const stateRoot = path.join(info.outputDir, 'setup-state');
+  let session: DesktopSession | undefined;
+  try {
+    session = await launchSetupSession(server.cert, stateRoot);
     await session.firstWindow.evaluate(() => window.electronAPI.invoke('create_sync_group', {}));
-    const settings = await openWebDav(session);
-    const address = settings.getByRole('textbox', { name: /^(WebDAV URL|WebDAV 网址)$/ });
-    const folder = settings.getByRole('textbox', { name: /^(Folder name|文件夹名)$/ });
-    const password = settings.getByLabel(/^(App password|应用密码)$/);
-    const connect = settings.getByRole('button', { name: /^(Connect|连接)$/ });
-    await expect(folder).toBeEmpty();
-    await expect(folder).toHaveAttribute('placeholder', 'foliole');
-    await connect.scrollIntoViewIfNeeded();
+    let settings = await openWebDav(session);
+    const address = () => settings.getByRole('textbox', { name: /^(WebDAV URL|WebDAV 网址)$/ });
+    const folder = () => settings.getByRole('textbox', { name: /^(Folder name|文件夹名)$/ });
+    const password = () => settings.getByLabel(/^(App password|应用密码)$/);
+    const connect = () => settings.getByRole('button', { name: /^(Connect|连接)$/ });
+    await expect(folder()).toBeEmpty();
+    await expect(folder()).toHaveAttribute('placeholder', 'foliole');
+    await connect().scrollIntoViewIfNeeded();
     await settings.screenshot({ path: path.join(SCREENSHOT_ROOT, 'webdav-four-fields.png') });
 
-    await address.fill(server.parent);
-    await settings.getByRole('textbox', { name: /^(Username|用户名)$/ }).fill(fixtureCredentials.username);
-    await password.fill(fixtureCredentials.password);
-    await connect.click();
+    await address().fill(server.parent);
+    const username = () => settings.getByRole('textbox', { name: /^(Username|用户名)$/ });
+    await username().fill(fixtureCredentials.username);
+    await password().fill(fixtureCredentials.password);
+    await folder().fill('invalid/name');
+    await connect().click();
+    await expect(settings.getByText(/Enter a single folder name|请输入单个文件夹的名称/)).toBeVisible();
+    await expect(password()).toHaveValue(fixtureCredentials.password);
+
+    await session.close();
+    session = await launchSetupSession(server.cert, stateRoot);
+    settings = await openWebDav(session);
+    await expect(address()).toHaveValue(server.parent);
+    await expect(username()).toHaveValue(fixtureCredentials.username);
+    await expect(folder()).toHaveValue('invalid/name');
+    await expect(password()).toHaveAttribute('placeholder', /^(Password saved|已保存密码)$/);
+    await expect(password()).toBeEmpty();
+    await folder().clear();
+    await connect().click();
     await expect(settings.getByText(/Connection verified\. WebDAV credentials|连接验证通过。WebDAV 凭据/)).toBeVisible();
-    await expect(address).toHaveValue(server.parent);
-    await expect(folder).toHaveValue('foliole');
-    await expect(password).toBeEmpty();
+    await expect(address()).toHaveValue(server.parent);
+    await expect(folder()).toHaveValue('foliole');
+    await expect(password()).toBeEmpty();
     expect(server.requests.filter(request => request.startsWith('MKCOL'))).toEqual(['MKCOL /storage/foliole/']);
     expect(server.directories.has('/storage/foliole/')).toBe(true);
     expect(server.files.get('/storage/occupied/keep.bin')).toBe('existing file');
     await session.firstWindow.reload();
     await openWebDav(session);
-    await expect(address).toHaveValue(server.parent);
-    await expect(folder).toHaveValue('foliole');
+    await expect(address()).toHaveValue(server.parent);
+    await expect(folder()).toHaveValue('foliole');
   } finally {
-    await session.close();
+    await session?.close();
     await server.close();
   }
 });

@@ -11,7 +11,8 @@ const draftSchema = z.object({
   scope: z.string(),
   directory: z.string(),
   username: z.string(),
-  password: z.string()
+  password: z.string(),
+  folder: z.string().optional()
 });
 
 export type DesktopWebDavCredentialDraft = z.infer<typeof draftSchema>;

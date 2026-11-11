@@ -11,7 +11,8 @@ const { useDesktopSyncGroup, invoke } = vi.hoisted(() => ({
   invoke: vi.fn()
 }));
 vi.mock('../../../../shared/platform/useDesktopSyncGroup', () => ({ useDesktopSyncGroup }));
-vi.mock('../../../../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => invoke }));
+vi.mock('../../../../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: () => (command: string, ...args: unknown[]) =>
+  command.endsWith('_webdav_setup_draft') ? Promise.resolve(null) : invoke(command, ...args) }));
 
 const group = {
   group_id: 'group-1', local_device_identity_key: 'mac',

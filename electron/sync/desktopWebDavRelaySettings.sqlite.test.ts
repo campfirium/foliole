@@ -157,3 +157,32 @@ it.skipIf(process.platform !== 'darwin')('preserves a saved connection and remot
     expect(await loadDesktopWebDavRelayDirectory(groupId)).toEqual({ directory: null, credential_directory: saved });
   });
 });
+
+// SKIP: macOS WebDAV credential flow | 2026-11-11 | revive: another host supports DAV credentials
+it.skipIf(process.platform !== 'darwin')('reopens an unverified setup and retries with its saved password', async () => {
+  const groupId = await createGroup();
+  mockFixtureEncryption();
+  await withSetupFixture(async fixture => {
+    const folder = 'foliole-dev';
+    const group_id = groupId;
+    const args = { group_id, directory_url: fixture.parent, new_folder_name: 'bad/name',
+      credentials: { username: fixtureCredentials.username, password: '' }, use_setup_password: true };
+    const draft = { address: fixture.parent, folder, ...fixtureCredentials };
+
+    await expect(handleWebDavSyncCommand(NATIVE_COMMANDS.saveWebDavSetupDraft, { group_id, draft })).resolves.toBe(true);
+    await expect(handleWebDavSyncCommand(NATIVE_COMMANDS.saveWebDavRelayDirectory, args))
+      .rejects.toThrow('webdav_relay_invalid_folder_name');
+    closeDatabaseConnection();
+
+    await expect(handleWebDavSyncCommand(NATIVE_COMMANDS.loadWebDavSetupDraft, { group_id })).resolves.toEqual({
+      address: fixture.parent, folder, username: fixtureCredentials.username, has_password: true
+    });
+    expect(await loadDesktopWebDavRelayDirectory(groupId)).toEqual({ directory: null, credential_directory: null });
+    await expect(handleWebDavSyncCommand(NATIVE_COMMANDS.saveWebDavRelayDirectory, {
+      ...args, directory_url: 'https://another-provider.example/', new_folder_name: folder
+    })).rejects.toThrow('webdav_relay_credentials_unavailable');
+    await expect(handleWebDavSyncCommand(NATIVE_COMMANDS.saveWebDavRelayDirectory, {
+      ...args, new_folder_name: folder
+    })).resolves.toBe(`${fixture.parent}${folder}/`);
+  });
+});
