@@ -207,12 +207,13 @@ development and CI toolchain.
 [Node security release](https://github.com/nodejs/node/releases/tag/v24.22.3)
 and [Electron runtime table](https://releases.electronjs.org/release?channel=stable).
 
-[#200](https://github.com/campfirium/foliole/pull/200) proposes Electron 45.3.0
-at verified `app/renovate` head `fed175600e4bfcfd9c31b4628241db351f75213b`.
-The local candidate compiled and passed 21 Electron/SQLite, preload and
-WebDAV tests. The existing macOS DEV preview holds the resource needed for
-the full fast check and hidden desktop smoke. Finish those checks before
-committing the runtime update and registering it for centralized QA.
+[#200](https://github.com/campfirium/foliole/pull/200) targets
+`campfirium/foliole:dev` at verified `app/renovate` head
+`fed175600e4bfcfd9c31b4628241db351f75213b`. Adoption commit `8613a9fb7`
+updates Electron to 45.3.0. Electron compilation, 21 focused tests, the full
+local fast check, and the macOS hidden desktop smoke passed. The smoke passed
+after rebuilding the stale renderer assets. Run desktop quality and dependency
+hardening in the next centralized QA before closing the PR.
 
 The separately authorized [Gradle security patch](gradle-security-update.md) is
 outside the already frozen November 11 full-QA candidate.
