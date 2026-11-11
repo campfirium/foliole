@@ -92,6 +92,30 @@ describe('CompanionCustomCssProvider web preview', () => {
 });
 
 describe.each(['android-capacitor', 'ios-capacitor'] as const)('CompanionCustomCssProvider %s success paths', (runtimeKind) => {
+  it('offers the disabled example for missing settings and honors a saved reset without a cache', async () => {
+    let nativeValue: string | null = null;
+    syncObjects.load.mockImplementation(async () => nativeValue);
+    syncObjects.save.mockImplementation(async (record) => {
+      nativeValue = record.valueJson;
+      return { content_hash: 'hash', object_id: 'setting' };
+    });
+    const first = renderProvider(runtimeKind);
+    await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('CSS Example'));
+    expect(customStyleNode()?.textContent).toBe('');
+    expect(syncObjects.save).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset styles' }));
+    await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('empty'));
+    expect(nativeValue).toBe('{"snippets":[],"version":1}');
+    first.unmount();
+    window.localStorage.clear();
+
+    renderProvider(runtimeKind);
+    await waitFor(() => expect(window.localStorage.getItem(COMPANION_CUSTOM_CSS_STORAGE_KEY)).toBe(nativeValue));
+    expect(screen.getByTestId('name')).toHaveTextContent('empty');
+    expect(customStyleNode()?.textContent).toBe('');
+  });
+
   it('hydrates native state and saves it before replacing cache and runtime CSS', async () => {
     syncObjects.load.mockResolvedValue(JSON.stringify(collection('Native', 'blockquote { opacity: .8; }')));
     renderProvider(runtimeKind);
@@ -135,34 +159,6 @@ describe.each(['android-capacitor', 'ios-capacitor'] as const)('CompanionCustomC
     expect(customStyleNode()?.textContent).toBe('');
   });
 
-  it('persists disabled styles across a cache-free remount and can reset corrupted native state', async () => {
-    let nativeValue = JSON.stringify(collection('Native'));
-    syncObjects.load.mockImplementation(async () => nativeValue);
-    syncObjects.save.mockImplementation(async (record: { valueJson: string }) => {
-      nativeValue = record.valueJson;
-      return { content_hash: 'hash', object_id: 'setting' };
-    });
-    const first = renderProvider(runtimeKind);
-    await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('Native'));
-    fireEvent.click(screen.getByRole('button', { name: 'Disable styles' }));
-    await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('Disabled'));
-    expect(customStyleNode()?.textContent).toBe('');
-    first.unmount();
-    window.localStorage.clear();
-    const restarted = renderProvider(runtimeKind);
-    await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('Disabled'));
-    expect(customStyleNode()?.textContent).toBe('');
-    restarted.unmount();
-    nativeValue = '{"version":2,"snippets":[]}';
-    renderProvider(runtimeKind);
-    await waitFor(() => expect(screen.getByTestId('issue')).toHaveTextContent('invalid'));
-    fireEvent.click(screen.getByRole('button', { name: 'Reset styles' }));
-    await waitFor(() => expect(screen.getByTestId('issue')).toHaveTextContent('none'));
-    expect(JSON.parse(nativeValue)).toEqual({ snippets: [], version: 1 });
-    fireEvent.click(screen.getByRole('button', { name: 'Save styles' }));
-    await waitFor(() => expect(customStyleNode()?.textContent).toContain('h1'));
-  });
-
   it('keeps the last valid state on native load or save failure', async () => {
     window.localStorage.setItem(COMPANION_CUSTOM_CSS_STORAGE_KEY, JSON.stringify(collection('Local')));
     syncObjects.load.mockRejectedValue(new Error('offline'));
@@ -177,6 +173,41 @@ describe.each(['android-capacitor', 'ios-capacitor'] as const)('CompanionCustomC
     expect(customStyleNode()?.textContent).toContain('color: red');
   });
 });
+
+it.each(['android-capacitor', 'ios-capacitor'] as const)(
+  'persists disabled styles across a cache-free %s remount and can reset corrupted native state',
+  async (runtimeKind) => {
+    let nativeValue = JSON.stringify(collection('Native'));
+    syncObjects.load.mockImplementation(async () => nativeValue);
+    syncObjects.save.mockImplementation(async (record: { valueJson: string }) => {
+      nativeValue = record.valueJson;
+      return { content_hash: 'hash', object_id: 'setting' };
+    });
+    const first = renderProvider(runtimeKind);
+    await waitFor(() => expect(screen.getByTestId('name')).toHaveTextContent('Native'));
+    fireEvent.click(screen.getByRole('button', { name: 'Disable styles' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('name')).toHaveTextContent('Disabled');
+      expect(customStyleNode()?.textContent).toBe('');
+    });
+    first.unmount();
+    window.localStorage.clear();
+    const restarted = renderProvider(runtimeKind);
+    await waitFor(() => {
+      expect(screen.getByTestId('name')).toHaveTextContent('Disabled');
+      expect(customStyleNode()?.textContent).toBe('');
+    });
+    restarted.unmount();
+    nativeValue = '{"version":2,"snippets":[]}';
+    renderProvider(runtimeKind);
+    await waitFor(() => expect(screen.getByTestId('issue')).toHaveTextContent('invalid'));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset styles' }));
+    await waitFor(() => expect(screen.getByTestId('issue')).toHaveTextContent('none'));
+    expect(JSON.parse(nativeValue)).toEqual({ snippets: [], version: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Save styles' }));
+    await waitFor(() => expect(customStyleNode()?.textContent).toContain('h1'));
+  }
+);
 
 describe.each(['android-capacitor', 'ios-capacitor'] as const)('CompanionCustomCssProvider %s platform gates', (runtimeKind) => {
   it('retains verified local styles when the host has no native setting yet', async () => {

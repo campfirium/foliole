@@ -35,6 +35,36 @@ beforeEach(() => {
   document.head.querySelectorAll('style[data-companion-custom-css]').forEach((node) => node.remove());
 });
 
+it('opens a disabled example, applies its edited heading color, and remembers deletion', async () => {
+  const first = renderSettings();
+  expect(screen.getByText('CSS Example')).toBeInTheDocument();
+  expect(screen.getByRole('switch', { name: 'Enable' })).toHaveAttribute('aria-checked', 'false');
+  expect(customStyleNode()?.textContent).toBe('');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+  const css = screen.getByRole<HTMLTextAreaElement>('textbox', { name: 'CSS' });
+  expect(css.value).toContain('Level 1 heading (#)');
+  expect(css.value).toContain('.cm-line-h1');
+  fireEvent.change(css, { target: { value: css.value.replace('color: #4f7fd1', 'color: #336699') } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(customStyleNode()?.textContent).toBe('');
+
+  fireEvent.click(screen.getByRole('switch', { name: 'Enable' }));
+  await waitFor(() => expect(customStyleNode()?.textContent).toContain('.cm-line-h1'));
+  expect(customStyleNode()?.textContent).toContain('.cm-line-h1 { color: #336699; }');
+  fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+  const dialog = screen.getAllByRole('dialog').at(-1)!;
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Delete snippet' }));
+  await screen.findByText('No custom styles yet.');
+  first.unmount();
+
+  renderSettings();
+  expect(screen.getByText('No custom styles yet.')).toBeInTheDocument();
+  expect(customStyleNode()?.textContent).toBe('');
+});
+
 describe('CompanionCustomCssSettingsContent', () => {
   it('shows the management surface on Android', () => {
     renderSettings('android-capacitor');
@@ -44,6 +74,7 @@ describe('CompanionCustomCssSettingsContent', () => {
   });
 
   it('adds, edits, saves, toggles, rejects invalid drafts, and deletes snippets', async () => {
+    window.localStorage.setItem(COMPANION_CUSTOM_CSS_STORAGE_KEY, '{"snippets":[],"version":1}');
     renderSettings();
     await addSnippet();
 

@@ -18,6 +18,6 @@ export async function loadBuiltCompanionFixture(page: Page, fixture: string, rea
   const stylesheet = readdirSync(directory).find(name => /^index-.*\.css$/.test(name));
   if (!stylesheet) throw new Error('Run npm run android:web:build before this test.');
   await expect(ready).toBeVisible({ timeout: 10_000 });
-  await page.locator('style').evaluateAll(styles => styles.forEach(style => style.remove()));
+  await page.locator('style:not([data-companion-custom-css])').evaluateAll(styles => styles.forEach(style => style.remove()));
   await page.addStyleTag({ content: readFileSync(path.join(directory, stylesheet), 'utf8') });
 }

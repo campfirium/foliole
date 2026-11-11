@@ -22,6 +22,7 @@ import {
   createEmptyCompanionCustomCssCollection,
   type CompanionCustomCssCollection
 } from '../shared/customCss/companionCustomCssModel';
+import { createCompanionCustomCssStarterCollection } from '../shared/customCss/companionCustomCssStarter';
 import {
   loadCompanionSyncSettingValueJson,
   saveCompanionSyncSettingRecord
@@ -50,6 +51,7 @@ interface CompanionCustomCssContextValue {
 interface ProviderState {
   compiled: CompiledCompanionCustomCssCollection;
   issue: CompanionCustomCssIssue | null;
+  awaitingDefault?: true;
 }
 
 const CompanionCustomCssContext = createContext<CompanionCustomCssContextValue | null>(null);
@@ -58,10 +60,15 @@ function compileEmptyCollection() {
   return compileCompanionCustomCssCollection(createEmptyCompanionCustomCssCollection());
 }
 
-function createInitialState(): ProviderState {
+function createDefaultState(): ProviderState {
+  return { compiled: compileCompanionCustomCssCollection(createCompanionCustomCssStarterCollection()), issue: null };
+}
+
+function createInitialState(isNative: boolean): ProviderState {
   const cached = loadCompanionCustomCssCache();
   if (cached.kind === 'valid') return { compiled: cached.compiled, issue: null };
-  return { compiled: compileEmptyCollection(), issue: cached.kind === 'invalid' ? 'invalid' : null };
+  if (cached.kind === 'invalid') return { compiled: compileEmptyCollection(), issue: 'invalid' };
+  return isNative ? { compiled: compileEmptyCollection(), issue: null, awaitingDefault: true } : createDefaultState();
 }
 
 function parseNativeCollection(valueJson: string) {
@@ -115,7 +122,9 @@ function useNativeCustomCssHydration(args: {
     void loadCompanionSyncSettingValueJson(COMPANION_CUSTOM_CSS_SETTING_KEY).then((valueJson) => {
       if (cancelled || args.revisionRef.current !== hydrationRevision) return;
       if (valueJson === null) {
-        args.setState((current) => ({ ...current, issue: current.issue === 'sync' ? null : current.issue }));
+        args.setState((current) => current.awaitingDefault
+          ? createDefaultState()
+          : { ...current, issue: current.issue === 'sync' ? null : current.issue });
         return;
       }
       applyNativeCollection(valueJson, args.setState);
@@ -171,7 +180,7 @@ export function CompanionCustomCssProvider(props: {
 }) {
   const isSupported = true;
   const isNative = props.runtimeKind !== 'web-preview';
-  const [state, setState] = useState(createInitialState);
+  const [state, setState] = useState(() => createInitialState(isNative));
   const revisionRef = useRef(0);
   useCustomCssStyleNode(isSupported, state.compiled.compiledCss);
   useNativeCustomCssHydration({ isNative, refreshKey: props.refreshKey ?? null, revisionRef, setState });

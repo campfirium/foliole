@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import '../../src/app/styles.css';
+import { CompanionCustomCssProvider } from '../../src/companion/CompanionCustomCssProvider';
 import { ImmersiveReadableArticle } from '../../src/companion/CompanionReadableArticleSurface';
 import { renderCompanionSettingsContent } from '../../src/companion/CompanionSettingsShellContent';
 import { CompanionTextScaleProvider } from '../../src/companion/CompanionTextScale';
@@ -40,7 +41,9 @@ function Fixture() {
 createRoot(document.getElementById('root')!).render(
   <LocalizationProvider initialLanguagePreference="en">
     <MouseGestureSettingsProvider>
-      <CompanionTextScaleProvider><Fixture /></CompanionTextScaleProvider>
+      <CompanionCustomCssProvider runtimeKind="web-preview">
+        <CompanionTextScaleProvider><Fixture /></CompanionTextScaleProvider>
+      </CompanionCustomCssProvider>
     </MouseGestureSettingsProvider>
   </LocalizationProvider>
 );

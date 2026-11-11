@@ -4,6 +4,7 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 import { loadBuiltCompanionFixture } from './companionBuiltSettingsFixture';
+import './companion-css-starter';
 
 async function loadSettingsSheets(page: Page) {
   await loadBuiltCompanionFixture(page, 'companionSettingsSheets', page.getByRole('button', { name: 'Days: 30', exact: true }));
