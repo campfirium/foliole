@@ -24,7 +24,7 @@ import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import { desktopSyncPeerRoundOwner } from './desktopSyncPeerRoundOwner.js';
 import { captureDesktopWebDavRelayCleanup } from './desktopWebDavRelayCleanup.js';
-import { desktopWebDavRelayForPeer } from './desktopWebDavRelaySettings.js';
+import { loadDesktopWebDavRelayForLanRound } from './desktopWebDavRelaySettings.js';
 
 const relayBaselines = createWebDavRelayInboundBaselines();
 const relayCleanup = createWebDavRelayInboundCleanup();
@@ -112,7 +112,7 @@ function withRelayBaseline(host: ReturnType<typeof createDesktopRequestSyncDatab
           captureDesktopWebDavRelayCleanup(host, context, 'responder', lease.signal));
         await relayBaselines.capture(lease.signal, async () => {
           const binding = await runWithDatabaseConnectionOwner(() =>
-            desktopWebDavRelayForPeer(context.groupId, context.initiatorDeviceId));
+            loadDesktopWebDavRelayForLanRound(context.groupId, context.initiatorDeviceId));
           return captureWebDavRelayLanBaseline(host, binding, context, 'responder', lease.signal);
         });
       }

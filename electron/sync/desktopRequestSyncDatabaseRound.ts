@@ -21,7 +21,7 @@ import { prepareDesktopRequestSyncOverwrite } from './desktopRequestSyncOverwrit
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 import { captureDesktopWebDavRelayCleanup } from './desktopWebDavRelayCleanup.js';
-import { desktopWebDavRelayForPeer } from './desktopWebDavRelaySettings.js';
+import { loadDesktopWebDavRelayForLanRound } from './desktopWebDavRelaySettings.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 export async function runDesktopRequestSyncDatabaseRound(input: {
@@ -74,7 +74,7 @@ async function runPreparedRound(host: import('../../lib/core/sync/requestSyncObj
   };
   if (!overwriteId) {
     const binding = process.platform === 'darwin' ? await runWithDatabaseConnectionOwner(() =>
-      desktopWebDavRelayForPeer(context.groupId, context.responderDeviceId)) : undefined;
+      loadDesktopWebDavRelayForLanRound(context.groupId, context.responderDeviceId)) : undefined;
     const confirmBaseline = await captureWebDavRelayLanBaseline(host, binding, context, 'initiator', input.signal);
     const { peerRound } = input;
     if (binding && peerRound) {

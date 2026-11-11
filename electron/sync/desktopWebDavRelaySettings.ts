@@ -200,6 +200,12 @@ export function desktopWebDavRelayForPeer(groupId: string, peerId: string) {
     ? { ...saved.binding, attachment_policy: loadAttachmentPolicy(key) } : undefined;
 }
 
+export function loadDesktopWebDavRelayForLanRound(groupId: string, peerId: string) {
+  const saved = loadBinding(requireActiveGroupKey(groupId));
+  if (saved?.binding.phone_device_id !== peerId) return undefined;
+  return saved.delivered || saved.binding.credential_version === undefined ? saved.binding : undefined;
+}
+
 export function desktopWebDavAuthenticatedPolicyForPeer(groupId: string, peerId: string) {
   const key = requireActiveGroupKey(groupId);
   const saved = loadBinding(key)?.binding;
