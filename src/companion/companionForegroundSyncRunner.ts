@@ -24,6 +24,8 @@ type RunForegroundSyncCheck = (reason: ForegroundSyncReason, endpointUrl?: strin
 export type TryForegroundAutoSync = (args: {
   discoverMobilePeers?: boolean;
   cancelled: () => boolean;
+  scheduledWebDav?: boolean;
+  signal?: AbortSignal;
   continuationMode?: CompanionSyncContinuationMode;
   onContinuationModeChange?(mode: CompanionSyncContinuationMode): void;
   setError(error: string | null): void;

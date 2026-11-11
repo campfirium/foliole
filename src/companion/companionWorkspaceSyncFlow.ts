@@ -4,6 +4,7 @@ import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativ
 import { isMobileSyncPlatform } from '../../lib/platform/syncSchedulingPlatform';
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
 import { holdCompanionSyncAppliedRefresh } from '../shared/platform/companion/companionWorkspaceSnapshotStore';
+import { loadCompanionWebDavRelay } from '../shared/platform/companion/sync/companionWebDavRelayStore';
 import {
   syncCompanionObjectsFromDesktop,
   type CompanionDesktopSyncOptions,
@@ -17,7 +18,6 @@ import {
 } from '../shared/platform/companionWorkspaceSync';
 
 import type { ForegroundAutoSyncOutcome } from './companionForegroundSyncRunner';
-import { tryCompanionManualWebDavRelay } from './companionManualWebDavRelay';
 import { scheduleCompanionMobilePeerSync } from './companionMobilePeerSync';
 import { writeCompanionSyncActivity } from './companionSyncActivityWrite';
 import {
@@ -35,6 +35,7 @@ import {
 import { loadActiveCompanionSyncRun } from './companionSyncRunOwner';
 import { buildCompanionSyncRunSummary } from './companionSyncRunSummary';
 import { tryForegroundAutoSyncTarget } from './companionSyncTargetFlow';
+import { tryCompanionWebDavRelay } from './companionWebDavRelay';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
 
 export type CompanionWorkspaceSyncStatus = 'idle' | 'loading' | 'syncing';
@@ -63,6 +64,7 @@ export interface RunCompanionStreamSyncArgs {
 
 export interface TryForegroundAutoSyncArgs {
   discoverMobilePeers?: boolean;
+  scheduledWebDav?: boolean;
   triggeredAt?: string;
   cancelled: () => boolean;
   signal?: AbortSignal;
@@ -163,9 +165,10 @@ function resetSharedContinuation(args: TryForegroundAutoSyncArgs) {
 }
 
 export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Promise<ForegroundAutoSyncOutcome> {
+  if (args.scheduledWebDav && (args.cancelled() || !await loadCompanionWebDavRelay(true) || args.cancelled())) return 'skipped';
   const triggeredAt = args.triggeredAt ?? new Date().toISOString();
   const storedEndpointUrl = resolveCompanionWorkspaceSyncEndpoint(args.state);
-  if (!storedEndpointUrl) return 'skipped';
+  if (!storedEndpointUrl) return args.scheduledWebDav ? await tryCompanionWebDavRelay(args) ?? 'skipped' : 'skipped';
   let targets;
   let reusedSession = false;
   let shortenedDiscovery = false;
@@ -177,9 +180,11 @@ export async function tryForegroundAutoSync(args: TryForegroundAutoSyncArgs): Pr
       onDiscoveryShortened: () => { shortenedDiscovery = true; }
     });
   } catch (error) {
+    if (args.cancelled()) return 'skipped';
     if (error instanceof Error && error.message === 'discovery_no_devices') {
-      const relayed = await tryCompanionManualWebDavRelay(args);
+      const relayed = await tryCompanionWebDavRelay(args);
       if (relayed) return relayed;
+      if (args.scheduledWebDav) return 'skipped';
     }
     args.setError(error instanceof Error ? error.message : 'discovery_no_devices');
     if (!loadActiveCompanionSyncRun()) args.setStatus('idle');

@@ -9,13 +9,13 @@ import { runWebDavRelayBodyRound } from '../../lib/core/sync/webDavRelayBodyRoun
 import { readWebDavRelayBodyScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
 import { captureWebDavRelayLanBaseline } from '../../lib/core/sync/webDavRelayLanBaseline.js';
 import { webDavRelayStatus } from '../../lib/core/sync/webDavRelayPublication.js';
+import { createWebDavSendWindow } from '../../lib/core/sync/webDavSendWindow.js';
 import type { WebDavRelayBinding } from '../../lib/platform/webDavRelayContract.js';
 import { restoreFixture, type RestorePeer } from '../database/requestSyncRestoreRecovery.testSupport.js';
 import { textBranch } from '../database/topicTextState.testSupport.js';
 
 import { createDesktopWebDavRelayHttp } from './desktopWebDavRelayHttp.js';
 import { runDesktopWebDavRelayRound } from './desktopWebDavRelayRound.js';
-import { createDesktopWebDavSendWindow } from './desktopWebDavSendWindow.js';
 import { setupDav } from './webDavRelayTransport.testSupport.js';
 
 const shell = vi.hoisted(() => ({
@@ -46,7 +46,7 @@ const stats = () => ({ requests: {}, responses: 0, uploadedBytes: 0, downloadedB
 const activity = { runId: 'automatic-dav', reason: 'automatic' as const, startedAt: new Date().toISOString() };
 
 async function withAutomaticRelay(run: (args: Awaited<ReturnType<typeof prepare>> & {
-  clock: ReturnType<typeof createDesktopWebDavSendWindow>;
+  clock: ReturnType<typeof createWebDavSendWindow>;
   runs: Promise<boolean>[];
   tick: (ms: number) => Promise<void>;
   requestCount: () => number;
@@ -59,7 +59,7 @@ async function withAutomaticRelay(run: (args: Awaited<ReturnType<typeof prepare>
   const listening = once(dav.server, 'listening');
   dav.server.listen(0, '127.0.0.1');
   await listening;
-  const clock = createDesktopWebDavSendWindow();
+  const clock = createWebDavSendWindow();
   try {
     const { source, target, binding } = await prepare(fixture, dav);
     const runs: Promise<boolean>[] = [];
@@ -69,7 +69,7 @@ async function withAutomaticRelay(run: (args: Awaited<ReturnType<typeof prepare>
       return result;
     };
     const tick = async (ms: number) => { await vi.advanceTimersByTimeAsync(ms); };
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
     await run({ source, target, binding, clock, runs, tick, requestCount: () => requests, send });
   } finally {
     clock.stop();

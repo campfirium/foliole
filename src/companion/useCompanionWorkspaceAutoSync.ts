@@ -24,6 +24,7 @@ import {
 } from './companionForegroundSyncRunner';
 import { loadActiveCompanionSyncRun } from './companionSyncRunOwner';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
+import { useCompanionWebDavSendWindow } from './useCompanionWebDavSendWindow';
 
 function useForegroundSyncRefs(isSyncGroupReady: boolean, state: NativeCompanionWorkspaceSyncState) {
   const inFlightRef = useRef(false);
@@ -88,6 +89,21 @@ function subscribeForegroundSyncEvents(
   return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
 }
 
+function useScheduledWebDav(enabled: boolean, trySync: TryForegroundAutoSync,
+  args: Pick<Parameters<TryForegroundAutoSync>[0], 'setError' | 'setState' | 'setSyncProgress' | 'setStatus' | 'state'>) {
+  useCompanionWebDavSendWindow(enabled, async signal => {
+    const active = loadActiveCompanionSyncRun();
+    if (active) await active.completion.catch(() => undefined);
+    if (signal.aborted || !await readNativeAppActiveState() || signal.aborted) return;
+    await trySync({ ...args, cancelled: () => signal.aborted, scheduledWebDav: true, signal, triggerReason: 'automatic' });
+  });
+}
+
+function actualSyncTime(syncedAt: string | null) {
+  const timestamp = syncedAt ? Date.parse(syncedAt) : NaN;
+  return Number.isFinite(timestamp) ? { lastActualSyncAt: timestamp } : {};
+}
+
 export function useForegroundAutoSync(
   setError: (error: string | null) => void,
   setState: Dispatch<SetStateAction<NativeCompanionWorkspaceSyncState>>,
@@ -103,6 +119,7 @@ export function useForegroundAutoSync(
   >(() => undefined);
   const cadenceRef = useRef<MemberSyncCadence<ForegroundSyncReason> | null>(null);
   const endpointUrl = resolveCompanionWorkspaceSyncEndpoint(state);
+  useScheduledWebDav(isSyncGroupReady, tryForegroundAutoSync, { setError, setState, setSyncProgress, setStatus, state });
 
   useEffect(() => {
     runForegroundSyncCheckRef.current('endpoint-ready');
@@ -144,11 +161,10 @@ export function useForegroundAutoSync(
   }, [isSyncGroupReady, refs, setError, setState, setStatus, tryForegroundAutoSync]);
 
   useEffect(() => {
-    const lastActualSyncAt = state.last_synced_at ? Date.parse(state.last_synced_at) : undefined;
     cadenceRef.current?.updateFreshness({
       eligible: isSyncGroupReady && refs.isAppActiveRef.current && Boolean(endpointUrl),
       input: 'freshness',
-      ...(lastActualSyncAt !== undefined && Number.isFinite(lastActualSyncAt) ? { lastActualSyncAt } : {})
+      ...actualSyncTime(state.last_synced_at)
     });
   }, [endpointUrl, isSyncGroupReady, refs, state.last_synced_at]);
 }

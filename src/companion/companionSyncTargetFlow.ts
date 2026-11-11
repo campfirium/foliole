@@ -12,10 +12,10 @@ import {
   saveCompanionWorkspaceSyncEndpoint
 } from '../shared/platform/companionWorkspaceSync';
 
-import { runCompanionManualWebDavAfterLanFailure } from './companionManualWebDavRelay';
 import { writeCompanionSyncActivity } from './companionSyncActivityWrite';
 import { formatCompanionSyncDiagnosticMessage, formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
 import { loadActiveCompanionSyncRun, runCompanionSyncAsOwner } from './companionSyncRunOwner';
+import { runCompanionWebDavAfterLanFailure } from './companionWebDavRelay';
 import type {
   ForegroundAutoSyncOutcome,
   RunCompanionStreamSyncArgs,
@@ -119,7 +119,7 @@ async function runOwnedTarget(args: OwnedTargetArgs): Promise<ForegroundAutoSync
   } catch (syncError) {
     if (args.syncArgs.cancelled()) return 'skipped';
     if (establishingLan) {
-      const outcome = await runCompanionManualWebDavAfterLanFailure(args.syncArgs, runId, args.target.deviceId, syncError);
+      const outcome = await runCompanionWebDavAfterLanFailure(args.syncArgs, runId, args.target.deviceId, syncError);
       if (outcome) return outcome;
     }
     if (isSyncPeerRoundRetryableError(syncError)) {

@@ -1,4 +1,7 @@
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
+import { hasWebDavRelayAttachmentsToSend } from '../../../../../lib/core/sync/webDavRelayAttachments';
+import { hasWebDavRelayBodyToSend } from '../../../../../lib/core/sync/webDavRelayBodyOutbox';
+import { readWebDavRelayBodyScope } from '../../../../../lib/core/sync/webDavRelayBodyScope';
 import { webDavRelayBindingSchema, type WebDavRelayBinding } from '../../../../../lib/platform/webDavRelayContract';
 import { getCompanionRuntimeCapability } from '../../companionRuntimeCapabilities';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
@@ -26,11 +29,15 @@ export function subscribeCompanionWebDavRelay(listener: () => void) {
   return () => { listeners.delete(listener); };
 }
 
-export async function loadCompanionWebDavRelay() {
+export async function loadCompanionWebDavRelay(pendingOnly = false) {
   if (getCompanionRuntimeCapability().kind !== 'android-native') return null;
   return getIosCompanionDatabaseOwner().read(async db => {
     const binding = await readBinding(db);
-    return binding && matches(binding, await identity(db)) ? binding : null;
+    if (!binding || !matches(binding, await identity(db))) return null;
+    if (!pendingOnly) return binding;
+    const scope = await readWebDavRelayBodyScope(db, binding, binding.phone_device_id);
+    return scope && (await hasWebDavRelayBodyToSend(db, scope) || await hasWebDavRelayAttachmentsToSend(db, scope))
+      ? binding : null;
   });
 }
 

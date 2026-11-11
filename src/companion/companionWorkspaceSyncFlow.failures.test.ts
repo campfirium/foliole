@@ -180,3 +180,38 @@ describe('tryForegroundAutoSync failures', () => {
 
   it('surfaces a missing desktop anchor before sync starts', testSurfacesMissingAnchorBeforeSyncStarts);
 });
+
+describe('scheduled WebDAV sends', () => {
+  beforeEach(resetCompanionWorkspaceSyncFlowMocks);
+  it('does not check LAN or DAV for a scheduled send without durable pending changes', async () => {
+    const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+    await expect(tryForegroundAutoSync(scheduledSend())).resolves.toBe('skipped');
+    expect(relay.load).toHaveBeenCalledWith(true);
+    expect(syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints).not.toHaveBeenCalled();
+    expect(relay.sync).not.toHaveBeenCalled();
+  });
+
+  it('keeps LAN first for a scheduled send when the desktop is reachable', async () => {
+    relay.load.mockResolvedValueOnce({ id: 'bound-test-relay' });
+    const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+    await expect(tryForegroundAutoSync(scheduledSend())).resolves.toBe('completed');
+    expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledOnce();
+    expect(relay.sync).not.toHaveBeenCalled();
+  });
+
+  it('publishes a scheduled send through DAV only after LAN discovery fails', async () => {
+    relay.load.mockResolvedValueOnce({ id: 'bound-test-relay' }).mockResolvedValueOnce({ id: 'bound-test-relay' });
+    syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockRejectedValueOnce(new Error('discovery_no_devices'));
+    const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
+    await expect(tryForegroundAutoSync(scheduledSend())).resolves.toBe('completed');
+    expect(relay.sync).toHaveBeenCalledOnce();
+    expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+      endpointUrl: null, triggerReason: 'automatic', result: 'completed'
+    }));
+  });
+});
+
+function scheduledSend() {
+  return { cancelled: () => false, scheduledWebDav: true, triggerReason: 'automatic' as const,
+    setError: vi.fn(), setState: vi.fn(), setSyncProgress: vi.fn(), setStatus: vi.fn(), state: createSyncState() };
+}
