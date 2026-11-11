@@ -2,6 +2,7 @@ import type { FramedSyncFilePort } from '../../../../../lib/core/sync/framedSync
 import type { WebDavRelayMethod, WebDavRelayRequest } from '../../../../../lib/core/sync/webDavRelayPublication.js';
 import { consumeWebDavResponse } from '../../../../../lib/core/sync/webDavRetryAfter.js';
 import type { NativeCompanionFramedPayloadBudgetOwner } from '../../../../../lib/platform/nativeCompanionFramedPayloadBudgetContract.js';
+import type { NativeWebDavRelayCredentialReference } from '../../../../../lib/platform/nativeWebDavRelayHttpContract.js';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository.js';
 
 export type CompanionWebDavHttpStats = {
@@ -12,7 +13,8 @@ export type CompanionWebDavHttpStats = {
 };
 
 export function createCompanionWebDavRelayHttp(root: string, files: FramedSyncFilePort,
-  owner: NativeCompanionFramedPayloadBudgetOwner, stats: CompanionWebDavHttpStats, signal: AbortSignal): WebDavRelayRequest {
+  owner: NativeCompanionFramedPayloadBudgetOwner, stats: CompanionWebDavHttpStats, signal: AbortSignal,
+  credential?: NativeWebDavRelayCredentialReference): WebDavRelayRequest {
   return async (url, input, consume) => {
     signal.throwIfAborted();
     const requestId = crypto.randomUUID();
@@ -21,15 +23,17 @@ export function createCompanionWebDavRelayHttp(root: string, files: FramedSyncFi
     if (input.body && !range) throw new Error('webdav_relay_pending_bytes_missing');
     const pending = FolioleCompanionSync.requestWebDavRelay({
       ...owner, request_id: requestId, root, url: url.href, method: input.method,
+      ...(credential ? { credential } : {}),
       ...(input.headers?.Depth ? { depth: input.headers.Depth } : {}),
       ...(range ? { upload_directory: range.directory, upload_chunks: range.count, upload_bytes: String(input.body!.bytes) } : {})
     });
-    stats.requests[input.method] = (stats.requests[input.method] ?? 0) + 1;
     const cancel = () => { void FolioleCompanionSync.cancelWebDavRelay({ ...owner, request_id: requestId }).catch(() => undefined); };
     signal.addEventListener('abort', cancel, { once: true });
     if (signal.aborted) cancel();
     try {
       const response = await pending;
+      if (response.failure_code === 'credential_unavailable') throw new Error('webdav_relay_credentials_unavailable');
+      stats.requests[input.method] = (stats.requests[input.method] ?? 0) + 1;
       if (response.status) stats.responses++;
       stats.uploadedBytes += response.uploaded_bytes;
       stats.downloadedBytes += response.downloaded_bytes;

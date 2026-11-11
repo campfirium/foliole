@@ -18,6 +18,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,6 +26,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.KeyStore;
 import java.util.UUID;
+
+import okhttp3.Credentials;
+import okhttp3.HttpUrl;
+import okhttp3.Request;
 
 @RunWith(AndroidJUnit4.class)
 public final class FolioleWebDavCredentialStoreTest {
@@ -95,6 +100,30 @@ public final class FolioleWebDavCredentialStoreTest {
         assertThrows(IOException.class, () -> store.load(scope));
         assertThrows(IOException.class, () -> store.save(scope, credential));
         assertArrayEquals(bytes, Files.readAllBytes(record.toPath()));
+    }
+
+    @Test
+    public void preparesNativeAuthorizationOnlyForTheStoredHttpsScope() throws Exception {
+        var store = new FolioleWebDavCredentialStore(context);
+        store.save(scope("library-a", "epoch-a", ROOT, 1),
+            new FolioleWebDavCredentialStore.Credentials("fixture-user", PASSWORD));
+        JSONObject reference = new JSONObject().put("version", "1").put("library_epoch", "epoch-a")
+            .put("group_id", "fixture-group").put("desktop_device_id", "fixture-mac")
+            .put("phone_device_id", "fixture-phone").put("binding_id", "fixture-binding");
+        Request request = new Request.Builder().url(ROOT).method("PROPFIND", null).build();
+        var authorized = FolioleWebDavRequestAuthorization.authorize(context, request, HttpUrl.get(ROOT), "library-a", reference);
+        assertEquals(Credentials.basic("fixture-user", PASSWORD), authorized.header("Authorization"));
+        assertNull(request.header("Authorization"));
+        assertThrows(IOException.class, () -> FolioleWebDavRequestAuthorization.authorize(
+            context, request, HttpUrl.get(ROOT), "library-b", reference));
+        Request outside = request.newBuilder().url("https://other.example.test/relay/").build();
+        assertThrows(IOException.class, () -> FolioleWebDavRequestAuthorization.authorize(
+            context, outside, HttpUrl.get(ROOT), "library-a", reference));
+        assertThrows(IOException.class, () -> FolioleWebDavRequestAuthorization.authorize(
+            context, request, HttpUrl.get(ROOT.replace("https:", "http:")), "library-a", reference));
+        reference.put("version", "2");
+        assertThrows(IOException.class, () -> FolioleWebDavRequestAuthorization.authorize(
+            context, request, HttpUrl.get(ROOT), "library-a", reference));
     }
 
     private File singleRecord() {

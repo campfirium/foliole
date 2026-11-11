@@ -16,7 +16,7 @@ export function sameWebDavAttachmentPolicy(left?: WebDavAttachmentPolicy, right?
   return a.mode === b.mode && (a.mode !== 'limited' || (b.mode === 'limited' && a.max_mib === b.max_mib));
 }
 
-export const webDavRelayBindingSchema = z.object({
+export const webDavRelayLanBindingSchema = z.object({
   id: z.string().uuid(),
   group_id: z.string().min(1),
   desktop_device_id: z.string().min(1),
@@ -24,6 +24,10 @@ export const webDavRelayBindingSchema = z.object({
   directory_url: z.url({ protocol: /^https?$/ }),
   attachment_policy: webDavAttachmentPolicySchema.optional()
 });
+
+export const webDavRelayBindingSchema = webDavRelayLanBindingSchema.extend({
+  credential_version: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional()
+}).refine(binding => binding.credential_version === undefined || /^https:\/\//iu.test(binding.directory_url));
 
 export type WebDavRelayBinding = z.infer<typeof webDavRelayBindingSchema>;
 

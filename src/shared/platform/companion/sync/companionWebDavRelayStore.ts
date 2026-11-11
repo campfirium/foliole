@@ -56,9 +56,10 @@ export async function receiveCompanionWebDavRelay(binding: WebDavRelayBinding | 
         return { id: previous.id, changed: false };
       }
     }
+    const credentialVersion = previous && matches(previous, local) ? previous.credential_version : undefined;
     await tx.run(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-    [KEY, JSON.stringify(binding), new Date().toISOString()]);
+    [KEY, JSON.stringify({ ...binding, credential_version: credentialVersion }), new Date().toISOString()]);
     return { id: binding.id, changed: true };
   }));
   if (result?.changed) for (const listener of listeners) listener();

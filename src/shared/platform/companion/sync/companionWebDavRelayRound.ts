@@ -1,5 +1,6 @@
 import { runWebDavRelayBodyRound } from '../../../../../lib/core/sync/webDavRelayBodyRound.js';
 import { readWebDavRelayBodyScope } from '../../../../../lib/core/sync/webDavRelayBodyScope.js';
+import { webDavRelayCredentialReference } from '../../../../../lib/platform/nativeWebDavRelayHttpContract.js';
 import type { WebDavRelayBinding } from '../../../../../lib/platform/webDavRelayContract.js';
 import { companionDesktopSessionId } from '../network/companionDesktopSession.js';
 import { companionFramedFileOwner } from '../runtime/companionFramedPayloadBudget.js';
@@ -33,11 +34,14 @@ export function runCompanionWebDavRelayRound(binding: WebDavRelayBinding, stats:
     return runWebDavRelayBodyRound({
       host, files, scope, groupKey, progress, signal, ...(foregroundReceive ? { foregroundReceive } : {}),
       attachments: await currentCompanionAttachmentHost(host),
-      request: createCompanionWebDavRelayHttp(binding.directory_url, files, owner, stats, signal),
+      request: createCompanionWebDavRelayHttp(binding.directory_url, files, owner, stats, signal,
+        webDavRelayCredentialReference(binding, scope.receiveScope.localEpoch)),
       lanConnected: () => companionWebDavRelayLanConnected(binding),
       assertScope: async () => {
         const current = await loadScope();
-        if ((await loadCompanionWebDavRelay())?.id !== binding.id || current?.key !== scope.key || current.outgoing.href !== scope.outgoing.href) {
+        const active = await loadCompanionWebDavRelay();
+        if (active?.id !== binding.id || active.credential_version !== binding.credential_version ||
+          current?.key !== scope.key || current.outgoing.href !== scope.outgoing.href) {
           throw new Error('webdav_relay_scope_changed');
         }
       }

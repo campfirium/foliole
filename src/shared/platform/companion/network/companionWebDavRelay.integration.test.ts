@@ -5,7 +5,7 @@ import { withWebDavFixture } from '../../../../../electron/sync/webDavRelay.test
 import type { WebDavAttachmentPolicy } from '../../../../../lib/platform/webDavRelayContract.js';
 import { createCompanionRequestFixture, native } from '../../../../test/companionRequestSync.testSupport.js';
 import { installSessionHttpBoundary } from '../../../../test/companionSessionHttp.testSupport.js';
-import { loadCompanionWebDavRelay } from '../sync/companionWebDavRelayStore.js';
+import { loadCompanionWebDavRelay, receiveCompanionWebDavRelay } from '../sync/companionWebDavRelayStore.js';
 
 import { captureCompanionDesktopRound, closeCompanionDesktopSession, ensureCompanionDesktopSession,
   subscribeCompanionDesktopChanges, waitForCompanionDesktopChanges } from './companionDesktopSession.js';
@@ -62,6 +62,28 @@ it.skipIf(process.platform !== 'darwin')('receives the Mac-selected binding afte
     });
   } finally {
     await closeCompanionDesktopSession();
+    await mobile.close();
+  }
+});
+
+it.skipIf(process.platform !== 'darwin')('keeps the installed credential version when LAN updates attachment policy', async () => {
+  const mobile = await createCompanionRequestFixture();
+  const { fixture } = mobile;
+  const binding = {
+    id: 'b79b3dbc-f46b-490c-8aab-ab5e09c0562b', group_id: 't326-group',
+    desktop_device_id: fixture.rightSnapshot.deviceId, phone_device_id: fixture.leftSnapshot.deviceId,
+    directory_url: 'https://dav.example.test/relay/'
+  };
+  try {
+    // Establish the starting state owned by the future trusted installer.
+    await mobile.db.run('INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)',
+      ['webdav_relay_binding', JSON.stringify({ ...binding, credential_version: 3 }), new Date().toISOString()]);
+    await receiveCompanionWebDavRelay({ ...binding, attachment_policy: { mode: 'off' } }, binding.desktop_device_id);
+    await mobile.restart();
+    expect(await loadCompanionWebDavRelay()).toEqual({
+      ...binding, attachment_policy: { mode: 'off' }, credential_version: 3
+    });
+  } finally {
     await mobile.close();
   }
 });

@@ -87,7 +87,17 @@ final class FolioleCompanionWebDavHttp {
     private static JSObject request(Context context, PluginCall input, String id, Operation operation) throws Exception {
         FramedSyncFiles files = new FramedSyncFiles(context, operation.owner.libraryKey());
         Progress progress = new Progress();
-        Call call = CLIENT.newCall(buildRequest(input, files, progress));
+        HttpUrl root = HttpUrl.get(input.getString("root", ""));
+        Request request = buildRequest(input, files, progress, root);
+        if (input.getData().has("credential")) {
+            try {
+                request = FolioleWebDavRequestAuthorization.authorize(context, request, root,
+                    operation.owner.libraryKey(), input.getObject("credential"));
+            } catch (IOException failure) {
+                return progress.result("credential_unavailable");
+            }
+        }
+        Call call = CLIENT.newCall(request);
         operation.open(call);
         try (Response response = call.execute()) {
             progress.status = response.code();
@@ -141,8 +151,7 @@ final class FolioleCompanionWebDavHttp {
         return path.matches(DIRECTORY);
     }
 
-    private static Request buildRequest(PluginCall input, FramedSyncFiles files, Progress progress) {
-        HttpUrl root = HttpUrl.get(input.getString("root", ""));
+    private static Request buildRequest(PluginCall input, FramedSyncFiles files, Progress progress, HttpUrl root) {
         HttpUrl url = HttpUrl.get(input.getString("url", ""));
         String method = input.getString("method", "");
         if (!METHODS.contains(method) || !sameOrigin(root, url) || !validUrl(root) || !validUrl(url) ||

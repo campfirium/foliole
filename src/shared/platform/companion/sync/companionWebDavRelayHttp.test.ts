@@ -2,6 +2,9 @@ import { expect, it, vi } from 'vitest';
 
 import type { FramedSyncFilePort } from '../../../../../lib/core/sync/framedSyncFilePort.js';
 import { webDavRelayStatus } from '../../../../../lib/core/sync/webDavRelayPublication.js';
+import { webDavRelayCredentialReference } from '../../../../../lib/platform/nativeWebDavRelayHttpContract.js';
+import { syncSessionReplySchema } from '../../../../../lib/platform/syncSessionContract.js';
+import { webDavRelayBindingSchema } from '../../../../../lib/platform/webDavRelayContract.js';
 
 import { createCompanionWebDavRelayHttp } from './companionWebDavRelayHttp.js';
 
@@ -38,4 +41,38 @@ it('passes an Android Retry-After response to the shared retry policy', async ()
   expect(failure.retryAt).toBeGreaterThanOrEqual(earliest);
   expect(stats).toEqual({ requests: { PROPFIND: 1 }, responses: 1, uploadedBytes: 0, downloadedBytes: 0 });
   expect(files.remove).toHaveBeenCalledOnce();
+});
+
+it('sends only a credential reference to Android and reports unavailable storage without counting an HTTP request', async () => {
+  request.mockResolvedValue({ failed: true, status: 0, chunks: 0, uploaded_bytes: 0, downloaded_bytes: 0,
+    failure_code: 'credential_unavailable' });
+  const files = { remove: vi.fn(async () => {}) } as unknown as FramedSyncFilePort;
+  const stats = { requests: {}, responses: 0, uploadedBytes: 0, downloadedBytes: 0 };
+  const root = 'https://dav.example.test/relay/';
+  const credential = webDavRelayCredentialReference({
+    id: 'b79b3dbc-f46b-490c-8aab-ab5e09c0562b', group_id: 'group', desktop_device_id: 'desktop',
+    phone_device_id: 'phone', directory_url: root, credential_version: 3
+  }, 'library-epoch');
+  const transport = createCompanionWebDavRelayHttp(root, files, { library_key: 'test', generation_id: 'test' },
+    stats, new AbortController().signal, credential);
+
+  await expect(transport(new URL(root), { method: 'PROPFIND' }, webDavRelayStatus))
+    .rejects.toThrow('webdav_relay_credentials_unavailable');
+  expect(request.mock.lastCall?.[0].credential).toEqual({
+    binding_id: 'b79b3dbc-f46b-490c-8aab-ab5e09c0562b', group_id: 'group', desktop_device_id: 'desktop',
+    phone_device_id: 'phone', library_epoch: 'library-epoch', version: '3'
+  });
+  expect(stats).toEqual({ requests: {}, responses: 0, uploadedBytes: 0, downloadedBytes: 0 });
+  expect(files.remove).toHaveBeenCalledOnce();
+});
+
+it('does not activate a credential version from a normal LAN binding response', () => {
+  const binding = { id: crypto.randomUUID(), group_id: 'group', desktop_device_id: 'desktop', phone_device_id: 'phone',
+    directory_url: 'https://dav.example.test/relay/', credential_version: 3 };
+  const reply = syncSessionReplySchema.parse({
+    session: crypto.randomUUID(), marker: { instance: crypto.randomUUID(), sequence: 0 },
+    changed: false, webdav_relay: binding
+  });
+  expect(reply.webdav_relay).not.toHaveProperty('credential_version');
+  expect(webDavRelayBindingSchema.safeParse({ ...binding, directory_url: 'http://dav.example.test/relay/' }).success).toBe(false);
 });
