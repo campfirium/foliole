@@ -3,51 +3,51 @@ import { once } from 'node:events';
 
 import { expect, it, vi } from 'vitest';
 
-import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
-import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
-import { runWebDavRelayBodyRound } from '../../lib/core/sync/webDavRelayBodyRound.js';
-import { readWebDavRelayBodyScope } from '../../lib/core/sync/webDavRelayBodyScope.js';
-import { captureWebDavRelayLanBaseline } from '../../lib/core/sync/webDavRelayLanBaseline.js';
-import { webDavRelayStatus } from '../../lib/core/sync/webDavRelayPublication.js';
-import { createWebDavSendWindow } from '../../lib/core/sync/webDavSendWindow.js';
-import type { WebDavRelayBinding } from '../../lib/platform/webDavRelayContract.js';
-import { runCompanionWebDavRelayRound } from '../../src/shared/platform/companion/sync/companionWebDavRelayRound.js';
-import { loadCompanionWebDavRelay, receiveCompanionWebDavRelay } from '../../src/shared/platform/companion/sync/companionWebDavRelayStore.js';
-import { restoreFixture, type RestorePeer } from '../database/requestSyncRestoreRecovery.testSupport.js';
-import { textBranch } from '../database/topicTextState.testSupport.js';
+import { restoreFixture, type RestorePeer } from '../../../../../electron/database/requestSyncRestoreRecovery.testSupport.js';
+import { textBranch } from '../../../../../electron/database/topicTextState.testSupport.js';
+import { createDesktopWebDavRelayHttp } from '../../../../../electron/sync/desktopWebDavRelayHttp.js';
+import { setupDav } from '../../../../../electron/sync/webDavRelayTransport.testSupport.js';
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../lib/core/sync/framedSyncContract.js';
+import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor.js';
+import { runWebDavRelayBodyRound } from '../../../../../lib/core/sync/webDavRelayBodyRound.js';
+import { readWebDavRelayBodyScope } from '../../../../../lib/core/sync/webDavRelayBodyScope.js';
+import { captureWebDavRelayLanBaseline } from '../../../../../lib/core/sync/webDavRelayLanBaseline.js';
+import { webDavRelayStatus } from '../../../../../lib/core/sync/webDavRelayPublication.js';
+import { createWebDavSendWindow } from '../../../../../lib/core/sync/webDavSendWindow.js';
+import type { WebDavRelayBinding } from '../../../../../lib/platform/webDavRelayContract.js';
 
-import { createDesktopWebDavRelayHttp } from './desktopWebDavRelayHttp.js';
-import { setupDav } from './webDavRelayTransport.testSupport.js';
+import { runCompanionWebDavRelayRound } from './companionWebDavRelayRound.js';
+import { loadCompanionWebDavRelay, receiveCompanionWebDavRelay } from './companionWebDavRelayStore.js';
 
 const mobile = vi.hoisted(() => ({
   phone: undefined as RestorePeer | undefined,
   key: Buffer.alloc(32, 7)
 }));
-vi.mock('../../src/shared/platform/companionRuntimeCapabilities.js', () => ({ getCompanionRuntimeCapability: () => ({ kind: 'android-native' }) }));
-vi.mock('../../src/shared/platform/companion/network/companionDesktopSession.js', () => ({ companionDesktopSessionId: () => null }));
-vi.mock('../../src/shared/platform/companion/runtime/companionFramedPayloadBudget.js', () => ({ companionFramedFileOwner: () => ({}) }));
-vi.mock('../../src/shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.js', () => ({
+vi.mock('../../companionRuntimeCapabilities.js', () => ({ getCompanionRuntimeCapability: () => ({ kind: 'android-native' }) }));
+vi.mock('../network/companionDesktopSession.js', () => ({ companionDesktopSessionId: () => null }));
+vi.mock('../runtime/companionFramedPayloadBudget.js', () => ({ companionFramedFileOwner: () => ({}) }));
+vi.mock('../runtime/iosCompanionDatabaseBootstrap.js', () => ({
   getIosCompanionDatabaseOwner: () => ({
     read: (run: (db: RestorePeer['db']) => unknown) => run(mobile.phone!.db),
     runWriter: (run: (db: RestorePeer['db']) => unknown) => run(mobile.phone!.db)
   })
 }));
-vi.mock('../../src/shared/platform/companion/sync/framed/companionFramedSyncFiles.js', () => ({
+vi.mock('./framed/companionFramedSyncFiles.js', () => ({
   currentCompanionFramedSyncFiles: () => mobile.phone!.host.files
 }));
-vi.mock('../../src/shared/platform/companion/sync/framed/companionRequestSyncDatabaseHost.js', () => ({
+vi.mock('./framed/companionRequestSyncDatabaseHost.js', () => ({
   currentCompanionRequestSyncDatabaseHost: async () => ({ ...mobile.phone!.host, enqueueSearchInvalidations: false })
 }));
-vi.mock('../../src/shared/platform/companion/sync/framed/companionAttachmentBlockFiles.js', () => ({ currentCompanionAttachmentHost: async () => undefined }));
-vi.mock('../../src/shared/platform/companion/sync/framed/companionRequestSyncLifecycle.js', () => ({
+vi.mock('./framed/companionAttachmentBlockFiles.js', () => ({ currentCompanionAttachmentHost: async () => undefined }));
+vi.mock('./framed/companionRequestSyncLifecycle.js', () => ({
   withCompanionRequestSyncLifecycle: (run: (signal: AbortSignal) => unknown, signal: AbortSignal) => run(signal)
 }));
-vi.mock('../../src/shared/platform/companion/sync/companionWebDavRelayHttp.js', async () => {
-  const { createDesktopWebDavRelayHttp } = await import('./desktopWebDavRelayHttp.js');
+vi.mock('./companionWebDavRelayHttp.js', async () => {
+  const { createDesktopWebDavRelayHttp } = await import('../../../../../electron/sync/desktopWebDavRelayHttp.js');
   return { createCompanionWebDavRelayHttp: (_root: unknown, _files: unknown, _owner: unknown,
     metrics: ReturnType<typeof stats>, signal: AbortSignal) => createDesktopWebDavRelayHttp(metrics, signal) };
 });
-vi.mock('../../src/shared/platform/companion/sync/syncGroupProviderCredentialStore.js', () => ({ loadCurrentCredential: async () => ({
+vi.mock('./syncGroupProviderCredentialStore.js', () => ({ loadCurrentCredential: async () => ({
   device_id: mobile.phone!.id, workgroup_key: mobile.key.toString('base64url')
 }) }));
 
