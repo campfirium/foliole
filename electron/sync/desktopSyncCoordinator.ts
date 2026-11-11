@@ -22,6 +22,7 @@ import {
 const RESULT_SETTING_KEY = 'sync_group_last_trigger_result';
 let activeRun: Promise<SyncTriggerResult> | null = null;
 let activePeerId: string | null = null;
+let activeWebDavSignal: AbortSignal | undefined;
 const completedListeners = new Set<() => void>();
 interface SyncRequest {
   continuation: boolean;
@@ -29,6 +30,7 @@ interface SyncRequest {
   reason: SyncTriggerReason;
   peer: DesktopSyncGroupPeer | undefined;
   skippedPeerId: string | undefined;
+  webDavSignal: AbortSignal | undefined;
   promise: Promise<SyncTriggerResult>;
   resolve: (result: SyncTriggerResult) => void;
   reject: (error: unknown) => void;
@@ -55,10 +57,21 @@ export function runDesktopSyncCoordinator(
   continuation = false,
   skippedPeerId?: string
 ): Promise<SyncTriggerResult> {
-  if (activeRun && !continuation) requestAttachmentWorkYield();
-  if (activeRun && activePeerId === (preferredPeer?.peer_device_id ?? null)) return activeRun;
+  return enqueueDesktopSync({ reason, peer: preferredPeer, continuation, skippedPeerId, webDavSignal: undefined });
+}
+
+export function runDesktopScheduledWebDav(signal: AbortSignal) {
+  return enqueueDesktopSync({ reason: 'automatic', peer: undefined, continuation: false,
+    skippedPeerId: undefined, webDavSignal: signal });
+}
+
+function enqueueDesktopSync(intent: Pick<SyncRequest, 'reason' | 'peer' | 'continuation' | 'skippedPeerId' | 'webDavSignal'>) {
+  const { peer: preferredPeer, continuation, skippedPeerId, webDavSignal } = intent;
+  if (activeRun && !continuation && !webDavSignal) requestAttachmentWorkYield();
+  if (activeRun && !webDavSignal && !activeWebDavSignal &&
+      activePeerId === (preferredPeer?.peer_device_id ?? null)) return activeRun;
   const queued = preferredPeer ? queuedRuns.get(preferredPeer.peer_device_id)
-    : pendingRuns.find(request => !request.peer
+    : pendingRuns.find(request => !request.peer && request.webDavSignal === webDavSignal
       && (request.skippedPeerId === undefined || request.skippedPeerId === skippedPeerId))?.promise;
   if (queued) return queued;
   let resolve!: SyncRequest['resolve'];
@@ -67,8 +80,8 @@ export function runDesktopSyncCoordinator(
     resolve = accept;
     reject = decline;
   });
-  pendingRuns.push({ continuation, reason, peer: preferredPeer, skippedPeerId, promise, resolve, reject,
-    ...(activeRun && !continuation ? { releaseWaiter: waitForAttachmentWorkYield() } : {}) });
+  pendingRuns.push({ ...intent, promise, resolve, reject,
+    ...(activeRun && !continuation && !webDavSignal ? { releaseWaiter: waitForAttachmentWorkYield() } : {}) });
   if (preferredPeer) queuedRuns.set(preferredPeer.peer_device_id, promise);
   startNextRun();
   return promise;
@@ -81,11 +94,13 @@ function startNextRun() {
   request.releaseWaiter?.();
   activeRun = request.promise;
   activePeerId = request.peer?.peer_device_id ?? null;
+  activeWebDavSignal = request.webDavSignal;
   if (request.peer) queuedRuns.delete(request.peer.peer_device_id);
   const continuations: DesktopSyncGroupPeer[] = [];
   const finish = () => {
     activeRun = null;
     activePeerId = null;
+    activeWebDavSignal = undefined;
     startNextRun();
     for (const peer of continuations) void runDesktopSyncCoordinator('automatic', peer, true).catch(() => undefined);
   };
@@ -99,17 +114,18 @@ function startNextRun() {
 }
 
 async function runOwnedSync(request: SyncRequest, continuations: DesktopSyncGroupPeer[]) {
-  const { reason, peer: preferredPeer, continuation, skippedPeerId } = request;
+  const { reason, peer: preferredPeer, continuation, skippedPeerId, webDavSignal } = request;
   const startedAt = new Date().toISOString();
   const runId = randomUUID();
   const peers = (preferredPeer ? [preferredPeer] : await runWithDatabaseConnectionOwner(() => loadDesktopSyncUpstreamPeers()))
     .filter(peer => peer.peer_device_id !== skippedPeerId);
   // A root serves its downstream sessions; only a manual request waits for them.
   const serving = reason !== 'manual' && peers.length === 0 && desktopSyncChangeSessions().hasSessions();
-  if (serving || (skippedPeerId && peers.length === 0)) {
+  if (serving || (skippedPeerId && peers.length === 0) || (webDavSignal && (webDavSignal.aborted || peers.length))) {
     return { error: null, finished_at: startedAt, reason, run_id: runId, started_at: startedAt, status: 'skipped' } as const;
   }
   const activity = { runId, reason, startedAt };
+  if (webDavSignal) return runAutomaticWebDav(activity, webDavSignal);
   await recordDesktopSyncActivity(activity, { direction: 'local', kind: 'run_started',
     message: 'Sync started', stage: 'run', status: 'started' });
   const acknowledgements = peers.map(peer => captureDesktopPeerRoundCompletion(peer.peer_device_id));
@@ -145,6 +161,20 @@ async function runOwnedSync(request: SyncRequest, continuations: DesktopSyncGrou
     await persistResult({ error: syncTriggerError(error), finished_at: new Date().toISOString(), reason,
       run_id: runId, started_at: startedAt, status: 'failed' });
     throw error;
+  }
+}
+
+async function runAutomaticWebDav(activity: DesktopSyncActivityContext, signal: AbortSignal) {
+  const result = { reason: 'automatic', run_id: activity.runId, started_at: activity.startedAt } as const;
+  try {
+    const { runDesktopWebDavRelayRound } = await import('./desktopWebDavRelayRound.js');
+    const ran = await runDesktopWebDavRelayRound(activity, signal);
+    const status = ran ? 'completed' : 'skipped';
+    const outcome = { ...result, error: null, finished_at: new Date().toISOString(), status } as const;
+    return ran ? await persistResult(outcome) : outcome;
+  } catch (error) {
+    if (signal.aborted) return { ...result, error: null, finished_at: new Date().toISOString(), status: 'skipped' } as const;
+    return persistResult({ ...result, error: syncTriggerError(error), finished_at: new Date().toISOString(), status: 'failed' });
   }
 }
 

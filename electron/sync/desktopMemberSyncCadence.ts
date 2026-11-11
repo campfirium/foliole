@@ -7,6 +7,7 @@ import {
   runDesktopSyncCoordinator,
   subscribeDesktopSyncCompleted
 } from './desktopSyncCoordinator.js';
+import { desktopWebDavSendWindow } from './desktopWebDavSendWindow.js';
 
 /** The only peer a pending run may skip: it pushed every change that queued the run. */
 let relaySourceOnly: string | null | undefined;
@@ -25,6 +26,7 @@ subscribeDesktopSyncCompleted(() => cadence.markActualSync());
 
 export function requestDesktopHighValueSync() {
   desktopSyncChangeSessions().changed();
+  desktopWebDavSendWindow.request();
   return requestMutationRun(null);
 }
 

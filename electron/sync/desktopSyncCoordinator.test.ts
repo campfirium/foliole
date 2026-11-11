@@ -25,11 +25,14 @@ vi.mock('../database/watchedConflictSyncMarker.js', () => ({
 }));
 vi.mock('../import/keepImportMonitor.js', () => ({ refreshKeepImportMonitorFromSettings: vi.fn() }));
 vi.mock('./desktopSyncGroupTransport.js', () => transport);
+const runRelay = vi.hoisted(() => vi.fn<(activity: unknown, signal?: AbortSignal) => Promise<boolean>>(async () => true));
+vi.mock('./desktopWebDavRelayRound.js', () => ({ runDesktopWebDavRelayRound: runRelay }));
 
 import { desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
 import {
   loadActiveDesktopSyncRun,
   loadDesktopSyncTriggerResult,
+  runDesktopScheduledWebDav,
   runDesktopSyncCoordinator,
   subscribeDesktopSyncCompleted
 } from './desktopSyncCoordinator.js';
@@ -64,6 +67,29 @@ it('joins manual sync to an active automatic run and persists one owned result',
   ]);
   expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledOnce();
   expect(settings.saveJsonSetting.mock.calls.filter(([key]) => key === 'sync_group_last_trigger_result')).toHaveLength(1);
+});
+
+it('leaves a scheduled DAV send to LAN when a desktop upstream is available', async () => {
+  const { signal } = new AbortController();
+  await expect(runDesktopScheduledWebDav(signal))
+    .resolves.toMatchObject({ status: 'skipped' });
+  expect(runRelay).not.toHaveBeenCalled();
+});
+
+it('keeps the manual receive and a later scheduled send after a running scheduled send', async () => {
+  transport.loadDesktopSyncGroupPeers.mockReturnValue([]);
+  const work = deferred<boolean>();
+  runRelay.mockReturnValueOnce(work.promise);
+  const { signal } = new AbortController();
+  const first = runDesktopScheduledWebDav(signal);
+  await vi.waitFor(() => expect(runRelay).toHaveBeenCalledTimes(1));
+  const manual = runDesktopSyncCoordinator('manual');
+  const later = runDesktopScheduledWebDav(signal);
+  work.resolve(false);
+  await expect(first).resolves.toMatchObject({ status: 'skipped' });
+  await expect(manual).resolves.toMatchObject({ status: 'completed' });
+  await expect(later).resolves.toMatchObject({ status: 'completed' });
+  expect(runRelay.mock.calls.map(([, input]) => input)).toEqual([signal, undefined, signal]);
 });
 
 it('queues a different preferred Device behind the active run', async () => {

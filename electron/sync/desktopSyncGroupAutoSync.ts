@@ -11,7 +11,7 @@ import { installDesktopForegroundPresence } from './desktopForegroundPresenceRun
 import { updateDesktopSyncFreshness } from './desktopMemberSyncCadence.js';
 import { recordDesktopSyncNoPeer } from './desktopSyncActivityStore.js';
 import { closeDesktopSyncChangeSessions, desktopSyncChangeSessions } from './desktopSyncChangeSessions.js';
-import { loadActiveDesktopSyncRun, runDesktopSyncCoordinator, subscribeDesktopSyncCompleted } from './desktopSyncCoordinator.js';
+import { loadActiveDesktopSyncRun, runDesktopScheduledWebDav, runDesktopSyncCoordinator, subscribeDesktopSyncCompleted } from './desktopSyncCoordinator.js';
 import { discoverDesktopSyncGroups } from './desktopSyncGroupDiscovery.js';
 import { clearDesktopSyncGroupDiscoveryErrors, setDesktopSyncGroupDiscoveryError } from './desktopSyncGroupDiscoveryStatus.js';
 import { exchangeAllDesktopSyncGroupMemberStates, loadDesktopSyncGroupMemberEndpoints,
@@ -25,6 +25,7 @@ import { closeDesktopSyncPeerRounds } from './desktopSyncPeerRoundOwner.js';
 import { markDesktopSyncPeerReachable, resetDesktopSyncUpstreamReachability, subscribeDesktopPeerTiers } from './desktopSyncUpstream.js';
 import { closeDesktopUpstreamSession, refreshDesktopUpstreamSession } from './desktopUpstreamSession.js';
 import { loadDesktopBoundWebDavRelay } from './desktopWebDavRelaySettings.js';
+import { desktopWebDavSendWindow } from './desktopWebDavSendWindow.js';
 import { lanPeerHttp } from './lanPeerHttp.js';
 import { continuePendingReadwiseHandoff } from './readwiseOwnerHandoff.js';
 
@@ -56,12 +57,16 @@ export function startDesktopSyncGroupAutoSync() {
       refreshUpstream();
       void refreshEligibility(group.group_id, () => current === generation).catch(reportActivationError);
     }, error => setDesktopSyncGroupDiscoveryError('member', error));
+    if (process.platform === 'darwin') {
+      desktopWebDavSendWindow.start(runDesktopScheduledWebDav);
+    }
   }).finally(() => { if (startRun === work) startRun = null; });
   startRun = work;
   return work;
 }
 
 export function stopDesktopSyncGroupAutoSync() {
+  desktopWebDavSendWindow.stop();
   closeDesktopSyncChangeSessions();
   generation += 1;
   startRun = null;

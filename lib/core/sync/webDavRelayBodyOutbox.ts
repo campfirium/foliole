@@ -38,6 +38,16 @@ export async function writeWebDavRelayBodyOutbox(db: DbPort, scope: WebDavRelayB
   [metadataKey(scope), JSON.stringify(state), new Date().toISOString()]);
 }
 
+export async function hasWebDavRelayBodyToSend(db: DbPort, scope: WebDavRelayBodyScope) {
+  const state = await readWebDavRelayBodyOutbox(db, scope);
+  if (state.packet) return true;
+  const [row] = await db.query<{ pending: number }>(`SELECT (
+    EXISTS (SELECT 1 FROM sync_object_state WHERE object_type = 'node' AND state_seq > ?)
+    OR EXISTS (SELECT 1 FROM webdav_relay_review_sequence WHERE state_seq > ?)
+  ) AS pending`, [state.sequence, state.sequence]);
+  return row?.pending === 1;
+}
+
 export function webDavRelayPacketDirectory(scope: WebDavRelayBodyScope) {
   return `webdav-relay/${scope.key.split(':').slice(1).join('-')}`;
 }

@@ -78,6 +78,7 @@ vi.mock('./companionMdnsAdvertisement.js', () => ({
 const completedListeners = vi.hoisted(() => new Set<() => void>());
 vi.mock('./desktopMemberSyncCadence.js', () => ({ updateDesktopSyncFreshness: runtime.freshness }));
 vi.mock('./desktopSyncCoordinator.js', () => ({ runDesktopSyncCoordinator: runtime.coordinator,
+  runDesktopScheduledWebDav: vi.fn(async () => undefined),
   subscribeDesktopSyncCompleted: (callback: () => void) => {
     completedListeners.add(callback);
     runtime.syncCompleted = () => { for (const listener of completedListeners) listener(); };

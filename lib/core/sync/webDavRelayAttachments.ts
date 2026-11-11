@@ -31,6 +31,13 @@ type Input = {
 const prefix = (scope: WebDavRelayBodyScope) => `${scope.key}:attachment:`;
 export const webDavRelayAttachmentOutboxKey = (scope: WebDavRelayBodyScope) => `${scope.key}:attachment-outbox`;
 
+export async function hasWebDavRelayAttachmentsToSend(db: DbPort, scope: WebDavRelayBodyScope) {
+  const [row] = await db.query<{ pending: number }>(`SELECT EXISTS (SELECT 1 FROM sync_group_metadata
+    WHERE key = ? OR (key >= ? AND key < ? AND value = 'pending')) AS pending`,
+  [webDavRelayAttachmentOutboxKey(scope), prefix(scope), `${scope.key}:attachment;`]);
+  return row?.pending === 1;
+}
+
 export async function enqueueWebDavRelayAttachments(db: DbPort, scope: WebDavRelayBodyScope, keys: readonly string[]) {
   if (!keys.length) return;
   await db.run(`INSERT OR IGNORE INTO sync_group_metadata (key, value, updated_at)
