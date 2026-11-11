@@ -1,5 +1,6 @@
 import type { FramedSyncFilePort } from '../../../../../lib/core/sync/framedSyncFilePort.js';
 import type { WebDavRelayMethod, WebDavRelayRequest } from '../../../../../lib/core/sync/webDavRelayPublication.js';
+import { consumeWebDavResponse } from '../../../../../lib/core/sync/webDavRetryAfter.js';
 import type { NativeCompanionFramedPayloadBudgetOwner } from '../../../../../lib/platform/nativeCompanionFramedPayloadBudgetContract.js';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository.js';
 
@@ -33,12 +34,13 @@ export function createCompanionWebDavRelayHttp(root: string, files: FramedSyncFi
       stats.uploadedBytes += response.uploaded_bytes;
       stats.downloadedBytes += response.downloaded_bytes;
       signal.throwIfAborted();
-      if (response.failed) {
+      if (response.failed && response.status !== 429 && response.status !== 503) {
         const code = response.failure_code;
         throw new Error(code && /^[a-z_]+$/iu.test(code)
           ? `webdav_relay_transport_failed:${code}` : 'webdav_relay_transport_failed');
       }
-      return await consume(response.status, responseChunks(files, directory, response.chunks, signal));
+      return await consumeWebDavResponse(response.status, response.retry_after,
+        responseChunks(files, directory, response.chunks, signal), consume);
     } finally {
       signal.removeEventListener('abort', cancel);
       await files.remove(directory);

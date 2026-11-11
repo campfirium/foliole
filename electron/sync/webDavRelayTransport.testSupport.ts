@@ -1,6 +1,6 @@
 import { createServer, request as forward, type IncomingMessage, type OutgoingHttpHeaders, type ServerResponse } from 'node:http';
 
-export function setupDav(upstream: string | undefined) {
+export function setupDav(upstream: string | undefined, intercept?: (response: ServerResponse) => boolean) {
   const files = new Map<string, Uint8Array>();
   const collections = new Set(['/']);
   const deletions: string[] = [];
@@ -18,6 +18,7 @@ export function setupDav(upstream: string | undefined) {
   };
   const server = createServer(async (req, res) => {
     const path = req.url!;
+    if (intercept?.(res)) return;
     if (req.method === 'DELETE') deletions.push(path);
     if (upstream) {
       await forwardDav(upstream, req, res, size => { uploaded += size; }, size => { downloaded += size; }, loseResponse);
@@ -92,4 +93,17 @@ async function forwardDav(upstream: string, req: IncomingMessage, res: ServerRes
     req.on('data', chunk => uploaded(chunk.length));
     req.pipe(proxy);
   });
+}
+
+export function busyDavGate() {
+  let busy: { status: number; retryAfter: string } | undefined;
+  return {
+    next(status: number, retryAfter: string) { busy = { status, retryAfter }; },
+    respond(response: ServerResponse) {
+      if (!busy) return false;
+      response.writeHead(busy.status, { 'Retry-After': busy.retryAfter }).end();
+      busy = undefined;
+      return true;
+    }
+  };
 }

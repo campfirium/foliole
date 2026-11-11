@@ -13,7 +13,7 @@ export type NativeWebDavRelayHttpRequest = NativeCompanionFramedPayloadBudgetOwn
 
 export interface NativeWebDavRelayHttpPlugin {
   requestWebDavRelay(request: NativeWebDavRelayHttpRequest): Promise<{
-    status: number; chunks: number; uploaded_bytes: number; downloaded_bytes: number; failed: boolean; failure_code?: string;
+    status: number; chunks: number; uploaded_bytes: number; downloaded_bytes: number; failed: boolean; failure_code?: string; retry_after?: string;
   }>;
   cancelWebDavRelay(request: NativeCompanionFramedPayloadBudgetOwner & { request_id: string }): Promise<void>;
 }

@@ -1,6 +1,7 @@
 import { createWebDavTransportBackoff } from './webDavTransportRetry.js';
 
 const SEND_WINDOW_MS = 60_000;
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
 
 function createWebDavTimer() {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -10,11 +11,12 @@ function createWebDavTimer() {
       clearTimeout(timer);
       timer = undefined;
     },
-    schedule(dueAt: number, run: () => void) {
+    schedule(dueAt: number, run: () => void, recheck: () => void) {
       timer = setTimeout(() => {
         timer = undefined;
-        run();
-      }, Math.max(0, dueAt - Date.now()));
+        if (Date.now() < dueAt) recheck();
+        else run();
+      }, Math.min(MAX_TIMER_DELAY_MS, Math.max(0, dueAt - Date.now())));
       timer.unref?.();
     }
   };
@@ -59,7 +61,7 @@ export function createWebDavSendWindow() {
         backoff.update(error);
         dueAt ??= backoff.deadline;
       }, schedule);
-    });
+    }, schedule);
   }
 
   return {

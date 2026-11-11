@@ -2,6 +2,7 @@ import { request as httpRequest, type ClientRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 
 import type { WebDavRelayMethod, WebDavRelayRequest } from '../../lib/core/sync/webDavRelayPublication.js';
+import { consumeWebDavResponse } from '../../lib/core/sync/webDavRetryAfter.js';
 
 export type DesktopWebDavRelayHttpStats = {
   requests: Partial<Record<WebDavRelayMethod, number>>;
@@ -24,7 +25,7 @@ export function createDesktopWebDavRelayHttp(stats: DesktopWebDavRelayHttpStats,
           ...(input.body ? { 'Content-Length': String(input.body.bytes) } : {}) }
       }, response => {
         stats.responses++;
-        void receive(response.statusCode ?? 0, counted(response, stats)).then(resolve, error => {
+        void consumeWebDavResponse(response.statusCode ?? 0, response.headers['retry-after'], counted(response, stats), receive).then(resolve, error => {
           response.destroy();
           reject(error);
         });

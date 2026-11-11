@@ -37,7 +37,15 @@ final class FolioleCompanionWebDavHttp {
     private static final ConcurrentHashMap<String, Operation> ACTIVE = new ConcurrentHashMap<>();
     private static final OkHttpClient CLIENT = new OkHttpClient.Builder()
         .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
-        .callTimeout(30, TimeUnit.SECONDS).build();
+        .callTimeout(30, TimeUnit.SECONDS).addNetworkInterceptor(chain -> {
+            Response response = chain.proceed(chain.request());
+            Progress progress = chain.request().tag(Progress.class);
+            if (progress != null && (response.code() == 429 || response.code() == 503)) {
+                progress.retryAfter = response.header("Retry-After");
+            }
+            // Keep the retry decision in the shared scheduler, including Retry-After: 0.
+            return response.code() == 503 ? response.newBuilder().removeHeader("Retry-After").build() : response;
+        }).build();
 
     private FolioleCompanionWebDavHttp() {}
 
@@ -142,7 +150,7 @@ final class FolioleCompanionWebDavHttp {
             throw new IllegalArgumentException("webdav_relay_url_invalid");
         }
         String path = url.encodedPath().substring(root.encodedPath().length());
-        Request.Builder builder = new Request.Builder().url(url).header("Accept-Encoding", "identity");
+        Request.Builder builder = new Request.Builder().url(url).tag(Progress.class, progress).header("Accept-Encoding", "identity");
         switch (method) {
             case "PROPFIND":
                 if (!path.isEmpty() && !path.matches(DIRECTORY) && !path.matches(COLLECTIONS)) throw invalidPath();
@@ -225,13 +233,14 @@ final class FolioleCompanionWebDavHttp {
 
     private static final class Progress {
         int status;
+        String retryAfter;
         int chunks;
         long uploaded;
         long downloaded;
 
         JSObject result(String failure) {
             return new JSObject().put("status", status).put("chunks", chunks)
-                .put("uploaded_bytes", uploaded).put("downloaded_bytes", downloaded).put("failed", failure != null).put("failure_code", failure);
+                .put("uploaded_bytes", uploaded).put("downloaded_bytes", downloaded).put("failed", failure != null).put("failure_code", failure).put("retry_after", retryAfter);
         }
     }
 }

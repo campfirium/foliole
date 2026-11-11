@@ -8,6 +8,7 @@ import { receiveWebDavRelayBodyPackets } from './webDavRelayBodyReceive.js';
 import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 import { ensureWebDavCollection } from './webDavRelayCollections.js';
 import { publishWebDavRelayFile, type WebDavRelayRequest } from './webDavRelayPublication.js';
+import { runWithWebDavRetryAfter } from './webDavRetryAfterStore.js';
 
 type Input = {
   host: RequestSyncDatabaseHost;
@@ -26,14 +27,18 @@ export function runWebDavRelayBodyRound(input: Input) {
   return input.files.exclusive(webDavRelayPacketDirectory(input.scope), async () => {
     input.signal?.throwIfAborted();
     await input.assertScope();
-    await receiveWebDavRelayBodyPackets({ ...input, applied: count => { input.progress.applied += count; },
-      retry: count => { input.progress.retries += count; } });
-    const attachments = input.attachments && { ...input, attachments: input.attachments };
-    if (attachments && !await resumeWebDavRelayAttachment(attachments)) return input.progress;
-    const slotFree = await publishChanges(input);
-    if (slotFree && attachments) await publishWebDavRelayAttachments(attachments);
-    return input.progress;
+    return runWithWebDavRetryAfter(input.host, input.scope.key, input.signal, () => exchange(input));
   });
+}
+
+async function exchange(input: Input) {
+  await receiveWebDavRelayBodyPackets({ ...input, applied: count => { input.progress.applied += count; },
+    retry: count => { input.progress.retries += count; } });
+  const attachments = input.attachments && { ...input, attachments: input.attachments };
+  if (attachments && !await resumeWebDavRelayAttachment(attachments)) return input.progress;
+  const slotFree = await publishChanges(input);
+  if (slotFree && attachments) await publishWebDavRelayAttachments(attachments);
+  return input.progress;
 }
 
 async function publishChanges(input: Input) {

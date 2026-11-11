@@ -95,10 +95,10 @@ function useScheduledWebDav(enabled: boolean, trySync: TryForegroundAutoSync,
     const active = loadActiveCompanionSyncRun();
     if (active) await active.completion.catch(() => undefined);
     if (signal.aborted || !await readNativeAppActiveState() || signal.aborted) return;
-    let transportFailure: Error | undefined;
+    let retryableFailure: Error | undefined;
     await trySync({ ...args, cancelled: () => signal.aborted, scheduledWebDav: true, signal, triggerReason: 'automatic',
-      onWebDavTransportFailure: error => { transportFailure = error; } });
-    if (transportFailure) throw transportFailure;
+      onRetryableWebDavFailure: error => { retryableFailure = error; } });
+    if (retryableFailure) throw retryableFailure;
   });
 }
 

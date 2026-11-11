@@ -16,7 +16,7 @@ import { textBranch } from '../database/topicTextState.testSupport.js';
 
 import { createDesktopWebDavRelayHttp } from './desktopWebDavRelayHttp.js';
 import { runDesktopWebDavRelayRound } from './desktopWebDavRelayRound.js';
-import { setupDav } from './webDavRelayTransport.testSupport.js';
+import { busyDavGate, setupDav } from './webDavRelayTransport.testSupport.js';
 
 const shell = vi.hoisted(() => ({
   binding: null as WebDavRelayBinding | null,
@@ -51,10 +51,12 @@ async function withAutomaticRelay(run: (args: Awaited<ReturnType<typeof prepare>
   tick: (ms: number) => Promise<void>;
   requestCount: () => number;
   dropNextMove: () => void;
+  busyNext: (status: number, retryAfter: string) => void;
   send: (signal: AbortSignal) => Promise<boolean>;
 }) => Promise<void>) {
   const fixture = await restoreFixture();
-  const dav = setupDav(process.env.FOLIOLE_TEST_WEBDAV_URL);
+  const gate = busyDavGate();
+  const dav = setupDav(process.env.FOLIOLE_TEST_WEBDAV_URL, gate.respond);
   let requests = 0;
   dav.server.on('request', () => requests++);
   const listening = once(dav.server, 'listening');
@@ -71,7 +73,7 @@ async function withAutomaticRelay(run: (args: Awaited<ReturnType<typeof prepare>
     };
     const tick = async (ms: number) => { await vi.advanceTimersByTimeAsync(ms); };
     vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
-    await run({ source, target, binding, clock, runs, tick, requestCount: () => requests, dropNextMove: dav.dropNextMove, send });
+    await run({ source, target, binding, clock, runs, tick, requestCount: () => requests, dropNextMove: dav.dropNextMove, busyNext: gate.next, send });
   } finally {
     clock.stop();
     vi.useRealTimers();
@@ -159,6 +161,40 @@ it('automatically confirms a durable packet after the DAV connection drops durin
     const completeAt = requestCount();
     await tick(300_000);
     expect(requestCount()).toBe(completeAt);
+  });
+});
+
+it.each([429, 503])('waits for DAV %i Retry-After across a SQLite reopen', async status => {
+  await withAutomaticRelay(async ({ source, target, binding, clock, runs, tick, requestCount, busyNext, send }) => {
+    vi.setSystemTime(new Date('2026-11-11T00:00:00Z'));
+    clock.start(send);
+    await write(source, 'first-limited');
+    clock.request();
+    const initial = requestCount();
+    busyNext(status, status === 429 ? '165' : new Date(Date.now() + 225_000).toUTCString());
+    await tick(60_000);
+    await expect(runs[0]).rejects.toThrow(String(status));
+    expect(requestCount()).toBe(initial + 1);
+
+    await write(source, 'second-limited');
+    clock.request();
+    await tick(59_999);
+    expect(runs).toHaveLength(1);
+    clock.stop();
+    source.reopen();
+    clock.start(send);
+    await tick(60_000);
+    await expect(runs[1]).rejects.toThrow(String(status));
+    expect(requestCount()).toBe(initial + 1);
+
+    await tick(44_001);
+    expect(requestCount()).toBe(initial + 1);
+    await tick(1_000);
+    await expect(runs[2]).resolves.toBe(true);
+    expect((await receive(target, binding)).applied).toBe(2);
+    target.reopen();
+    expect(body(target, 'first-limited')).toBe('first-limited');
+    expect(body(target, 'second-limited')).toBe('second-limited');
   });
 });
 

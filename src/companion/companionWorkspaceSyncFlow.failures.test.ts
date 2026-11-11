@@ -207,10 +207,10 @@ describe('scheduled WebDAV sends', () => {
     syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockRejectedValueOnce(new Error('discovery_no_devices'));
     const failure = new Error(message);
     relay.sync.mockRejectedValueOnce(failure);
-    const onWebDavTransportFailure = vi.fn();
+    const onRetryableWebDavFailure = vi.fn();
     const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
-    await expect(tryForegroundAutoSync({ ...scheduledSend(), onWebDavTransportFailure })).resolves.toBe('failed');
-    expect(onWebDavTransportFailure.mock.calls).toEqual(shouldRetry ? [[failure]] : []);
+    await expect(tryForegroundAutoSync({ ...scheduledSend(), onRetryableWebDavFailure })).resolves.toBe('failed');
+    expect(onRetryableWebDavFailure.mock.calls).toEqual(shouldRetry ? [[failure]] : []);
     expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
       endpointUrl: null, triggerReason: 'automatic', result: 'failed'
     }));

@@ -1,3 +1,5 @@
+import { WebDavServiceBusyError } from './webDavRetryAfter.js';
+
 const retryableSocketCodes = new Set([
   'ECONNREFUSED', 'ECONNRESET', 'EHOSTUNREACH', 'ENETUNREACH', 'ENETDOWN', 'EPIPE',
   'ETIMEDOUT', 'EAI_AGAIN', 'ERR_STREAM_PREMATURE_CLOSE'
@@ -8,7 +10,8 @@ const retryableNativeErrors = new Set([
   'UnknownHostException', 'InterruptedIOException', 'EOFException'
 ]);
 
-export function isRetryableWebDavTransportError(error: unknown): boolean {
+export function isRetryableWebDavSendError(error: unknown): boolean {
+  if (error instanceof WebDavServiceBusyError) return true;
   if (!(error instanceof Error)) return false;
   const prefix = 'webdav_relay_transport_failed:';
   if (error.message.startsWith(prefix)) return retryableNativeErrors.has(error.message.slice(prefix.length));
@@ -25,8 +28,10 @@ export function createWebDavTransportBackoff(initialDelay: number) {
   return {
     get deadline() { return deadline; },
     update(error?: unknown) {
-      if (isRetryableWebDavTransportError(error)) {
-        deadline = Date.now() + delay;
+      if (error instanceof WebDavServiceBusyError && error.deferred) {
+        deadline = error.retryAt;
+      } else if (isRetryableWebDavSendError(error)) {
+        deadline = Math.max(Date.now() + delay, error instanceof WebDavServiceBusyError ? error.retryAt ?? 0 : 0);
         delay = Math.min(delay * 2, MAX_RETRY_DELAY_MS);
       } else {
         deadline = undefined;
