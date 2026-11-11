@@ -10,14 +10,13 @@ const SCREENSHOT_ROOT = path.resolve('.tmp/artifacts/T748-7');
 
 async function openWebDav(session: DesktopSession) {
   const page = session.firstWindow;
-  await page.evaluate(() => window.electronAPI.invoke('create_sync_group', {}));
   const settings = await openSettingsDialog(page);
   await settings.getByRole('button', { name: /^(Sync \(WebDAV\)|同步（WebDAV）)$/ }).click();
-  await expect(settings.getByText(/dav\.example\.com\/storage\/Foliole\//)).toBeVisible();
+  await expect(settings.getByText(/dav\.example\.com\/storage\//)).toBeVisible();
   return settings;
 }
 
-test('guides WebDAV folder setup and recovers from a name collision', async ({ browserName }, info) => {
+test('uses the default folder on Connect and reopens it as separate fields', async ({ browserName }, info) => {
   void browserName;
   // SKIP: macOS WebDAV credential flow | 2026-11-11 | revive: another host supports DAV credentials
   test.skip(process.platform !== 'darwin', 'Authenticated WebDAV setup is available on macOS.');
@@ -33,29 +32,32 @@ test('guides WebDAV folder setup and recovers from a name collision', async ({ b
       tls.setDefaultCACertificates([cert, ...tls.getCACertificates('default')]);
       return app.commandLine.hasSwitch('use-mock-keychain');
     }, server.cert)).toBe(true);
+    await session.firstWindow.evaluate(() => window.electronAPI.invoke('create_sync_group', {}));
     const settings = await openWebDav(session);
-    await settings.screenshot({ path: path.join(SCREENSHOT_ROOT, 'existing-folder.png') });
+    const address = settings.getByRole('textbox', { name: /^(WebDAV URL|WebDAV 网址)$/ });
+    const folder = settings.getByRole('textbox', { name: /^(Folder name|文件夹名)$/ });
+    const password = settings.getByLabel(/^(App password|应用密码)$/);
+    const connect = settings.getByRole('button', { name: /^(Connect|连接)$/ });
+    await expect(folder).toBeEmpty();
+    await expect(folder).toHaveAttribute('placeholder', 'foliole');
+    await connect.scrollIntoViewIfNeeded();
+    await settings.screenshot({ path: path.join(SCREENSHOT_ROOT, 'webdav-four-fields.png') });
 
-    const folder = settings.getByRole('textbox', { name: /New sync folder name|新同步文件夹名称/ });
-    const password = settings.getByLabel(/^(WebDAV password|WebDAV 密码)$/);
-    const create = settings.getByRole('button', { name: /^(Create, test, and save|创建、验证并保存)$/ });
-    await folder.fill('occupied');
-    await settings.getByRole('textbox', { name: /^(Parent WebDAV folder URL|上一级 WebDAV 文件夹地址)$/ }).fill(server.parent);
+    await address.fill(server.parent);
     await settings.getByRole('textbox', { name: /^(Username|用户名)$/ }).fill(fixtureCredentials.username);
     await password.fill(fixtureCredentials.password);
-    await create.click();
-    await expect(settings.getByText(/name may already be in use|该名称可能已被占用/)).toBeVisible();
-    await settings.screenshot({ path: path.join(SCREENSHOT_ROOT, 'name-collision.png') });
-    expect(server.requests).toEqual(['PROPFIND /storage/', 'MKCOL /storage/occupied/']);
-
-    await folder.fill('Foliole');
-    await password.fill(fixtureCredentials.password);
-    await create.click();
+    await connect.click();
     await expect(settings.getByText(/Connection verified\. WebDAV credentials|连接验证通过。WebDAV 凭据/)).toBeVisible();
-    await expect(settings.getByRole('textbox', { name: /^(WebDAV folder URL|WebDAV 目录地址)$/ })).toHaveValue(`${server.parent}Foliole/`);
+    await expect(address).toHaveValue(server.parent);
+    await expect(folder).toHaveValue('foliole');
     await expect(password).toBeEmpty();
-    expect(server.directories.has('/storage/Foliole/')).toBe(true);
+    expect(server.requests.filter(request => request.startsWith('MKCOL'))).toEqual(['MKCOL /storage/foliole/']);
+    expect(server.directories.has('/storage/foliole/')).toBe(true);
     expect(server.files.get('/storage/occupied/keep.bin')).toBe('existing file');
+    await session.firstWindow.reload();
+    await openWebDav(session);
+    await expect(address).toHaveValue(server.parent);
+    await expect(folder).toHaveValue('foliole');
   } finally {
     await session.close();
     await server.close();

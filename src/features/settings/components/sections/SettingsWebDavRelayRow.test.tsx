@@ -6,93 +6,79 @@ import { renderWithLocalization } from '../../../../shared/localization/testLoca
 import { SettingsWebDavRelayRow } from './SettingsWebDavRelayRow';
 
 const invoke = vi.hoisted(() => vi.fn());
+const parent = 'https://dav.example.test/storage/';
+const credentials = { username: 'fixture', password: 'test-password' };
 
 vi.mock('../../../../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: () => invoke
 }));
 
-it('reports a failed connection, then accepts a corrected WebDAV folder', async () => {
-  invoke.mockResolvedValueOnce({ directory: 'http://127.0.0.1:1234/original/', credential_directory: null })
-    .mockRejectedValueOnce(new Error('Not writable'))
-    .mockResolvedValueOnce('http://127.0.0.1:1234/relay/');
-  renderWithLocalization(<SettingsWebDavRelayRow groupId="group-1" />);
-  const address = screen.getByRole('textbox', { name: 'WebDAV folder URL' });
-  const test = screen.getByRole('button', { name: 'Connect' });
-  await waitFor(() => expect(address).toHaveValue('http://127.0.0.1:1234/original/'));
+function fillCredentials() {
+  fireEvent.change(screen.getByRole('textbox', { name: 'Username' }), { target: { value: credentials.username } });
+  fireEvent.change(screen.getByLabelText('App password'), { target: { value: credentials.password } });
+}
 
-  fireEvent.change(address, { target: { value: 'http://127.0.0.1:1234/missing' } });
-  fireEvent.click(test);
-  await screen.findByText(/could not read and write/i);
-
-  fireEvent.change(address, { target: { value: 'http://127.0.0.1:1234/relay' } });
-  fireEvent.click(test);
-  await screen.findByText('Connection verified. WebDAV folder saved.');
-  expect(invoke).toHaveBeenLastCalledWith('save_webdav_relay_directory', {
-    group_id: 'group-1',
-    directory_url: 'http://127.0.0.1:1234/relay'
-  });
-});
-
-it('saves credentials without configuring the anonymous relay and clears the password', async () => {
+it('connects with the default folder name when the user leaves it blank', async () => {
   invoke.mockClear();
-  invoke.mockResolvedValueOnce({ directory: null, credential_directory: 'https://dav.example.test/relay/' })
-    .mockResolvedValueOnce('https://dav.example.test/relay/');
+  invoke.mockResolvedValueOnce({ directory: null, credential_directory: null }).mockResolvedValueOnce(`${parent}foliole/`);
   renderWithLocalization(<SettingsWebDavRelayRow groupId="group-1" />);
-  const username = await screen.findByRole('textbox', { name: 'Username' });
-  const password = screen.getByLabelText('WebDAV password');
-  await waitFor(() => expect(username).toBeEnabled());
-  fireEvent.change(username, { target: { value: 'test-user' } });
-  expect(screen.getByRole('button', { name: 'Test and save credentials' })).toBeDisabled();
-  fireEvent.change(password, { target: { value: 'test-password' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Test and save credentials' }));
+  const address = screen.getByRole('textbox', { name: 'WebDAV URL' });
+  const folder = screen.getByRole('textbox', { name: 'Folder name' });
+  const connect = screen.getByRole('button', { name: 'Connect' });
+  await waitFor(() => expect(address).toBeEnabled());
+  expect(folder).toHaveValue('');
+  expect(folder).toHaveAttribute('placeholder', 'foliole');
+  fireEvent.change(address, { target: { value: parent } });
+  expect(connect).toBeDisabled();
+  fillCredentials();
+  fireEvent.click(connect);
   await screen.findByText('Connection verified. WebDAV credentials saved securely on this Mac.');
-  expect(password).toHaveValue('');
+  expect(address).toHaveValue(parent);
+  expect(folder).toHaveValue('foliole');
+  expect(screen.getByLabelText('App password')).toHaveValue('');
   expect(invoke).toHaveBeenLastCalledWith('save_webdav_relay_directory', {
-    group_id: 'group-1', directory_url: 'https://dav.example.test/relay/',
-    credentials: { username: 'test-user', password: 'test-password' }
+    group_id: 'group-1', directory_url: parent, new_folder_name: 'foliole', credentials
   });
-  expect(screen.queryByText('Connection verified. WebDAV folder saved.')).not.toBeInTheDocument();
 });
 
-it('creates only on explicit action and can switch to the full URL after a name collision', async () => {
-  invoke.mockClear();
-  const parent = 'https://dav.example.test/storage/';
-  const target = `${parent}Foliole/`;
+it('retains the URL and custom folder after a failed connection', async () => {
   invoke.mockResolvedValueOnce({ directory: null, credential_directory: null })
-    .mockRejectedValueOnce(new Error('webdav_relay_folder_name_unavailable'))
-    .mockResolvedValueOnce(target);
+    .mockRejectedValueOnce(new Error('webdav_relay_invalid_folder_name')).mockResolvedValueOnce(`${parent}custom/`);
   renderWithLocalization(<SettingsWebDavRelayRow groupId="group-1" />);
-  const folder = screen.getByRole('textbox', { name: 'New sync folder name (optional)' });
-  await waitFor(() => expect(folder).toBeEnabled());
-  fireEvent.change(folder, { target: { value: 'Foliole' } });
-  fireEvent.change(screen.getByRole('textbox', { name: 'Parent WebDAV folder URL' }), { target: { value: parent } });
-  fireEvent.change(screen.getByRole('textbox', { name: 'Username' }), { target: { value: 'fixture' } });
-  const password = screen.getByLabelText('WebDAV password');
-  fireEvent.change(password, { target: { value: 'test-password' } });
-  fireEvent.keyDown(password, { key: 'Enter' });
-  expect(invoke).toHaveBeenCalledTimes(1);
-  fireEvent.click(screen.getByRole('button', { name: 'Create, test, and save' }));
-  expect(invoke).toHaveBeenLastCalledWith('save_webdav_relay_directory', {
-    group_id: 'group-1', directory_url: parent, new_folder_name: 'Foliole',
-    credentials: { username: 'fixture', password: 'test-password' }
-  });
-  await screen.findByText(/name may already be in use/);
-  fireEvent.change(folder, { target: { value: '' } });
-  fireEvent.change(screen.getByRole('textbox', { name: 'WebDAV folder URL' }), { target: { value: target } });
-  fireEvent.change(password, { target: { value: 'test-password' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Test and save credentials' }));
+  const address = screen.getByRole('textbox', { name: 'WebDAV URL' });
+  const folder = screen.getByRole('textbox', { name: 'Folder name' });
+  const connect = screen.getByRole('button', { name: 'Connect' });
+  await waitFor(() => expect(address).toBeEnabled());
+  fireEvent.change(address, { target: { value: parent } });
+  fireEvent.change(folder, { target: { value: 'bad/name' } });
+  fillCredentials();
+  fireEvent.click(connect);
+  await screen.findByText(/Enter a single folder name/);
+  expect(address).toHaveValue(parent);
+  expect(folder).toHaveValue('bad/name');
+  fireEvent.change(folder, { target: { value: 'custom' } });
+  fillCredentials();
+  fireEvent.click(connect);
   await screen.findByText('Connection verified. WebDAV credentials saved securely on this Mac.');
   expect(invoke).toHaveBeenLastCalledWith('save_webdav_relay_directory', {
-    group_id: 'group-1', directory_url: target, credentials: { username: 'fixture', password: 'test-password' }
+    group_id: 'group-1', directory_url: parent, new_folder_name: 'custom', credentials
   });
 });
 
-it('keeps the bound folder fixed while allowing credential updates', async () => {
-  invoke.mockResolvedValueOnce({ directory: 'https://dav.example.test/relay/', credential_directory: null });
+it('keeps a bound folder fixed and updates credentials at the original directory', async () => {
+  const directory = `${parent}My%20Library/`;
+  invoke.mockResolvedValueOnce({ directory, credential_directory: directory }).mockResolvedValueOnce(directory);
   renderWithLocalization(<SettingsWebDavRelayRow groupId="group-1" bound credentialActive />);
-  const address = screen.getByRole('textbox', { name: 'WebDAV folder URL' });
-  await waitFor(() => expect(address).toHaveValue('https://dav.example.test/relay/'));
+  const address = screen.getByRole('textbox', { name: 'WebDAV URL' });
+  const folder = screen.getByRole('textbox', { name: 'Folder name' });
+  await waitFor(() => expect(address).toHaveValue(parent));
   expect(address).toBeDisabled();
-  expect(screen.queryByRole('textbox', { name: 'New sync folder name (optional)' })).toBeNull();
-  expect(screen.getByRole('textbox', { name: 'Username' })).toBeEnabled();
+  expect(folder).toHaveValue('My Library');
+  expect(folder).toBeDisabled();
+  fillCredentials();
+  fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+  await screen.findByText('Connection verified. WebDAV credentials saved securely on this Mac.');
+  expect(invoke).toHaveBeenLastCalledWith('save_webdav_relay_directory', {
+    group_id: 'group-1', directory_url: directory, credentials
+  });
 });

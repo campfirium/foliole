@@ -121,8 +121,10 @@ it.skipIf(process.platform !== 'darwin')('creates one scoped folder and reopens 
     const name = 'Foliole 测试';
     const target = `${fixture.parent}${encodeURIComponent(name)}/`;
     await expect(save(name)).resolves.toBe(target);
-    expect(fixture.requests.map(request => request.split(' ')[0])).toEqual(['PROPFIND', 'MKCOL', 'PROPFIND', 'PUT', 'MOVE', 'GET', 'DELETE']);
-    expect(fixture.requests.slice(0, 2)).toEqual(['PROPFIND /storage/', `MKCOL ${new URL(target).pathname}`]);
+    expect(fixture.requests.map(request => request.split(' ')[0])).toEqual(['PROPFIND', 'PROPFIND', 'MKCOL', 'PROPFIND', 'PUT', 'MOVE', 'GET', 'DELETE']);
+    expect(fixture.requests.slice(0, 3)).toEqual([
+      'PROPFIND /storage/', `PROPFIND ${new URL(target).pathname}`, `MKCOL ${new URL(target).pathname}`
+    ]);
     expect([...fixture.files]).toEqual([['/storage/keep.bin', 'parent file'], ['/storage/occupied/keep.bin', 'existing file']]);
     closeDatabaseConnection();
     expect(await loadDesktopWebDavRelayDirectory(groupId)).toEqual({ directory: null, credential_directory: target });
@@ -135,7 +137,8 @@ it.skipIf(process.platform !== 'darwin')('preserves a saved connection and remot
   mockFixtureEncryption();
   await withSetupFixture(async fixture => {
     const saved = `${fixture.parent}occupied/`;
-    await saveDesktopWebDavRelayCredentials(groupId, saved, fixtureCredentials);
+    await expect(saveDesktopWebDavRelayCredentials(groupId, fixture.parent, fixtureCredentials, 'occupied')).resolves.toBe(saved);
+    expect(fixture.requests.some(request => request.startsWith('MKCOL'))).toBe(false);
     fixture.requests.length = 0;
     const save = (name: string, url = fixture.parent, credentials = fixtureCredentials) =>
       saveDesktopWebDavRelayCredentials(groupId, url, credentials, name);
@@ -144,9 +147,8 @@ it.skipIf(process.platform !== 'darwin')('preserves a saved connection and remot
     expect(fixture.requests).toEqual([]);
     await expect(save('new', `${fixture.parent}missing/`)).rejects.toThrow('webdav_relay_parent_unavailable');
     await expect(save('new', fixture.parent, { ...fixtureCredentials, password: 'incorrect' })).rejects.toThrow('webdav_relay_folder_auth_failed');
-    await expect(save('occupied')).rejects.toThrow('webdav_relay_folder_name_unavailable');
     await expect(save('denied')).rejects.toThrow('webdav_relay_folder_creation_failed');
-    expect(fixture.requests.filter(request => request.startsWith('MKCOL'))).toEqual(['MKCOL /storage/occupied/', 'MKCOL /storage/denied/']);
+    expect(fixture.requests.filter(request => request.startsWith('MKCOL'))).toEqual(['MKCOL /storage/denied/']);
     expect(fixture.requests.every(request => /^(MKCOL|PROPFIND) /.test(request))).toBe(true);
     await expect(save('read-only')).rejects.toThrow('webdav_relay_created_but_unverified');
     expect(fixture.directories.has('/storage/read-only/')).toBe(true);

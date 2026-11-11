@@ -232,7 +232,7 @@ it('keeps WebDAV controls out of the LAN settings while retaining group members'
     }]
   }, { webdav_relay: { configured: true, delivered: false, device_id: null } });
 
-  expect(screen.queryByRole('textbox', { name: 'WebDAV folder URL' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('textbox', { name: 'WebDAV URL' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Enable WebDAV for this device' })).not.toBeInTheDocument();
   expect(screen.getByText('Phone')).toBeVisible();
 });

@@ -38,7 +38,7 @@ it('shows device setup but keeps it disabled until WebDAV is configured', async 
   expect(screen.getByRole('radio', { name: 'Limit size' })).toBeEnabled();
   expect(screen.getByRole('heading', { name: 'Connect another device' })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Choose device' })).toBeDisabled();
-  await waitFor(() => expect(screen.getByRole('textbox', { name: 'WebDAV folder URL' })).toBeEnabled());
+  await waitFor(() => expect(screen.getByRole('textbox', { name: 'WebDAV URL' })).toBeEnabled());
   setRelay(true);
   view.rerender(<SettingsWebDavSyncSection />);
   expect(screen.getByRole('button', { name: 'Choose device' })).toBeEnabled();
@@ -69,9 +69,10 @@ it('requires confirmation and reports host rejection before rendering a delivere
   const unregister = registerAppConfirmationHandler(confirm);
   try {
     const { rerender } = renderWithLocalization(<SettingsWebDavSyncSection />);
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'WebDAV folder URL' })).toHaveValue('https://dav.example.net/relay/'));
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'WebDAV URL' })).toHaveValue('https://dav.example.net/'));
+    expect(screen.getByRole('textbox', { name: 'Folder name' })).toHaveValue('relay');
     expect(screen.getByRole('textbox', { name: 'Username' })).toBeVisible();
-    expect(screen.getByLabelText('WebDAV password')).toBeVisible();
+    expect(screen.getByLabelText('App password')).toBeVisible();
     const choose = screen.getByRole('button', { name: 'Choose device' });
     fireEvent.keyDown(choose, { key: 'ArrowDown' });
     expect(screen.queryByRole('menuitem', { name: 'Desktop' })).not.toBeInTheDocument();
@@ -99,7 +100,7 @@ it('keeps the phone visible and updates whether it can be selected when LAN avai
   setRelay(true, null, false, []);
   invoke.mockResolvedValue({ directory: 'https://dav.example.net/relay/', credential_directory: null });
   const { rerender } = renderWithLocalization(<SettingsWebDavSyncSection />);
-  await waitFor(() => expect(screen.getByRole('textbox', { name: 'WebDAV folder URL' })).toHaveValue('https://dav.example.net/relay/'));
+  await waitFor(() => expect(screen.getByRole('textbox', { name: 'WebDAV URL' })).toHaveValue('https://dav.example.net/'));
   fireEvent.keyDown(screen.getByRole('button', { name: 'Choose device' }), { key: 'ArrowDown' });
   expect(await screen.findByRole('menuitem', { name: 'A5' })).toHaveAttribute('aria-disabled', 'true');
   setRelay(true);
