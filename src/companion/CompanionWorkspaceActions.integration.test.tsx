@@ -147,9 +147,11 @@ it('saves only a committed slider adjustment, updates inherited values and can u
   library.database.exec(`CREATE TRIGGER reject_priority BEFORE UPDATE OF priority ON nodes
     WHEN NEW.id = 'item' BEGIN SELECT RAISE(ABORT, 'priority rejected'); END`);
   fireEvent.change(restored, { target: { value: '8' } });
-  await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
-  expect(restored).toHaveValue('0');
-  expect(within(screen.getByRole('dialog')).getByText('0', { exact: true })).toBeVisible();
+  await waitFor(() => {
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(restored).toHaveValue('0');
+    expect(within(screen.getByRole('dialog')).getByText('0', { exact: true })).toBeVisible();
+  });
   expect(facts()[0]).toEqual({ id: 'item', priority: null });
   library.database.exec('DROP TRIGGER reject_priority');
 
