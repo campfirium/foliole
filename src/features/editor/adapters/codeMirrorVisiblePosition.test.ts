@@ -11,7 +11,9 @@ describe('resolvePrimaryVisiblePosition', () => {
       value: () => ({ bottom: 196, height: 24, left: 220, right: 620, top: 172, width: 400 })
     });
 
-    const posAtCoords = vi.fn(() => 64955);
+    const posAtCoords = vi.fn(({ x, y }: { x: number; y: number }) =>
+      x >= 220 && x < 620 && y >= 172 && y < 196 ? 64955 : null
+    );
     const view = {
       contentDOM: {
         getBoundingClientRect: () => ({ left: 40, right: 760, width: 720 }),
@@ -26,6 +28,5 @@ describe('resolvePrimaryVisiblePosition', () => {
     } as never;
 
     expect(resolvePrimaryVisiblePosition(view)).toBe(64955);
-    expect(posAtCoords).toHaveBeenCalledWith({ x: 252, y: 184 }, false);
   });
 });

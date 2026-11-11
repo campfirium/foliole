@@ -78,6 +78,7 @@ export function createSmokeRuntimeInvoke() {
     if (command === 'inspect_foliole_published_delete') return { status: 'allowed' };
     if (command === 'load_node_backlinks') return [];
     if (command === 'load_readwise_books_inventory') return { books: [] };
+    if (command === 'load_article_targets') return { selected: null, available: [] };
     return null;
   });
 }

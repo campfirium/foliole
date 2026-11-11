@@ -101,8 +101,8 @@ function updateMeta(sql: string, values: unknown[], meta: Map<string, string>) {
 describe('iosCompanionDatabaseBootstrap version contract', () => {
   it('tracks the latest shared companion migration independently of the desktop schema', async () => {
     expect(COMPANION_DATABASE_VERSION).toBe(
-      // Review relay sequencing migrates at 115 outside the historical beforeVersion plan.
-      Math.max(115, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
+      // PDF text reading offsets migrate at 117 outside the historical beforeVersion plan.
+      Math.max(117, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
         ...ANDROID_COMPANION_MIGRATION_PLAN.map((migration) => migration.beforeVersion))
     );
     const { connection, manager } = harness({ existed: true, storedId: 'ios-device', version: 113 });
@@ -115,6 +115,7 @@ describe('iosCompanionDatabaseBootstrap version contract', () => {
       );
     }
     expect(connection.run).toHaveBeenCalledWith('DROP INDEX IF EXISTS idx_node_text_alternatives_available_source', [], false);
+    expect(connection.run).toHaveBeenCalledWith('ALTER TABLE node_view_state ADD COLUMN reading_offset INTEGER', [], false);
     expect(connection.run).toHaveBeenCalledWith(`PRAGMA user_version = ${COMPANION_DATABASE_VERSION}`, [], false);
   });
 });
