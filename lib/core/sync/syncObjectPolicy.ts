@@ -14,7 +14,7 @@ export type SyncPolicyCategory =
 
 export interface SyncObjectPolicy {
   category: SyncPolicyCategory;
-  conflict: 'append_only_idempotent' | 'max_counter' | 'cache_refresh' | 'device_private' | 'host_private' | 'lww';
+  conflict: 'causal_position' | 'append_only_idempotent' | 'max_counter' | 'cache_refresh' | 'device_private' | 'host_private' | 'lww';
   scope: SyncScope;
   key: string;
   objectType: string | null;
@@ -42,6 +42,7 @@ export const SYNC_OBJECT_POLICIES: readonly SyncObjectPolicy[] = [
     'node_open_state', 'node_open_state', 'activity', 'workspace', 'lww',
     ['node_open_state'], true, 'diagnostic'
   ),
+  policy('node_reading_resume', 'node_reading_resume', 'reading', 'workspace', 'causal_position', ['node_reading_resume'], true, 'diagnostic'),
   policy('node_reading', 'node_reading', 'reading', 'workspace', 'lww', ['node_reading'], true),
   policy('node_reading.reading_position', 'node_reading', 'reading', 'host', 'host_private', ['node_reading_host_state'], true, 'diagnostic'),
   policy('node_reading_host_state', null, 'reading', 'host', 'host_private', ['node_reading_host_state'], true, 'diagnostic'),

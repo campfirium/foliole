@@ -6,6 +6,7 @@ import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import { asAnchorLink } from '../ipc/commandParserAnchorLink.js';
+import { handleReadingAndReviewCommand } from '../ipc/storageReadCommands.js';
 
 import { editParentOrderPerformance, seedParentOrderPerformance } from './currentParentOrderPerformance.fixture.js';
 import { seedCompleteInventoryFixture } from './desktopFramedSyncCompleteInventory.fixture.js';
@@ -152,6 +153,9 @@ function seedRelationReview(args: Readonly<Record<string, unknown>>) {
 
 async function run(command: Command) {
   if (command.action.startsWith('webdav_')) return runDesktopWebDavRelayFixture(command.action, command.args);
+  if (command.action === 'load_reading_resume' || command.action === 'save_reading_progress') {
+    return handleReadingAndReviewCommand(command.action, command.args);
+  }
   if (command.action === 'review_projection') return runReviewProjectionFixture(command.args);
   if (command.action === 'init') {
     return initializeProcessFixture();

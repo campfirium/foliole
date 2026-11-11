@@ -1,4 +1,5 @@
 import type { DatabaseRow, DatabaseStatement } from '../../lib/core/database/driver.js';
+import type { NativeReadingResumeContext } from '../../lib/platform/nativeReadingProgressContract.js';
 import {
   normalizeNodeViewStateWriteSource,
   shouldWritePersistedNodeViewState,
@@ -9,6 +10,7 @@ import { appendReadingPositionTraceRecord } from '../readingPositionTraceLog.js'
 
 import { openDatabaseConnection, type DatabaseConnection } from './connection.js';
 import { loadDesktopHostName, loadOrCreateDesktopHostName } from './hostProfile.js';
+import { saveDesktopReadingResume } from './readingResume.js';
 import { withTransaction } from './transaction.js';
 import { writeActiveNodeViewStateSync, writeNodeViewStateSync } from './viewStateSync.js';
 
@@ -26,6 +28,7 @@ export interface SaveReadingProgressInput {
   browseRootNodeId?: string;
   nodeViewStates: NodeViewStateInput[];
   source?: NodeViewStateWriteSource;
+  readingResume?: NativeReadingResumeContext;
   updatedAt: string;
 }
 
@@ -150,7 +153,8 @@ function saveNodeViewStates(
 ) {
   for (const state of input.nodeViewStates) {
     const existing = loadExistingNodeViewState(connection, hostName, state.nodeId);
-    const updatedAt = state.updatedAt?.trim() || existing?.updatedAt || input.updatedAt;
+    const context = input.readingResume?.nodeId === state.nodeId ? input.readingResume : undefined;
+    const updatedAt = context ? input.updatedAt : state.updatedAt?.trim() || existing?.updatedAt || input.updatedAt;
     if (!updatedAt) {
       continue;
     }
@@ -169,6 +173,9 @@ function saveNodeViewStates(
       updatedAt
     ]);
     writeNodeViewStateSync(connection, { ...state, source, updatedAt });
+    if (context && state.readingOffset !== undefined) {
+      saveDesktopReadingResume(connection.driver, { context, offset: state.readingOffset, hostName, updatedAt });
+    }
   }
 }
 

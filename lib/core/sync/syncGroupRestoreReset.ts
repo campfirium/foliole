@@ -11,7 +11,7 @@ const CLEAR_TABLES = [
   'sync_push_ack', 'sync_change_log', 'node_text_alternatives', 'sync_node_child_owners',
   'node_sync_conflicts', 'node_sync_version_parents', 'node_sync_versions',
   'node_sync_tombstones', 'node_review', 'node_reading', 'node_open_state',
-  'node_reading_host_state', 'node_view_state', 'review_log',
+  'node_reading_host_state', 'node_reading_resume', 'node_view_state', 'review_log',
   'parent_order_projection_pending', 'parent_order_sources', 'parent_child_order', 'pdf_page_text', 'pdf_text_artifact', 'external_documents',
   'external_search_folders', 'external_folder_host_preferences', 'import_sources', 'watched_folder_bindings',
   'keep_import_items', 'keep_import_item_cache', 'watched_folder_conflict_decisions',

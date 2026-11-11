@@ -1,5 +1,6 @@
 import { useCallback, useRef, type MutableRefObject } from 'react';
 
+import type { NativeReadingResumeContext } from '../../../lib/platform/nativeReadingProgressContract';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { definedProps } from '../../shared/lib/definedProps';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -25,6 +26,7 @@ export interface ReadingProgressSyncOptions {
   editorRef: MutableRefObject<EditorAdapter | null>;
   getReadingPositionSelection?: () => { from: number; to: number } | null;
   getReadingPositionSyncState?: () => ReadingPositionSyncState | null;
+  getReadingResumeContext?: () => NativeReadingResumeContext | null;
   isImmersiveMode: boolean;
   isViewingTrashNode: boolean;
   isWorkspaceHydrated: boolean;
@@ -88,6 +90,7 @@ function useResolvedReadingProgressState(
 function useReadingProgressFlushCallbacks(args: {
   browseRootNodeIdRef?: MutableRefObject<string | undefined>;
   getReadingPositionSyncState?: () => ReadingPositionSyncState | null;
+  getReadingResumeContext?: () => NativeReadingResumeContext | null;
   isWorkspaceHydrated: boolean;
   nodeViewById: Record<string, NodeViewState | undefined>;
   pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
@@ -156,7 +159,8 @@ export function useReadingProgressSync(args: ReadingProgressSyncOptions) {
     resolveCapturedReadingProgress,
     setNodeViewState: args.setNodeViewState,
     pendingNodeViewByIdRef: latest.pendingNodeViewByIdRef,
-    ...definedProps({ getReadingPositionSyncState: args.getReadingPositionSyncState })
+    ...definedProps({ getReadingPositionSyncState: args.getReadingPositionSyncState,
+      getReadingResumeContext: args.getReadingResumeContext })
   });
   useReadingProgressCloseFlushRegistration(args.isWorkspaceHydrated, flushReadingProgressImmediately);
   useReadingProgressLifecycle({

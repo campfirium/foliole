@@ -12,6 +12,7 @@ export const COMPLETE_MEMBER_SHARED_POLICY_KEYS = [
   'node_open_state',
   'parent_child_order',
   'node_reading',
+  'node_reading_resume',
   'node_text_alternative',
   'review_log',
   'topic_daily_count',

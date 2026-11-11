@@ -25,6 +25,7 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     'canonical-attachment-storage-key-v1',
     'device-sync-groups-v1',
     'framed-sync-v29',
+    'reading-resume-v1',
     'local-daily-flow-actions-v1',
     'fsrs7-review-projection-v1',
     'bucket-inventory-v1',

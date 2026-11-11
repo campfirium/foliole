@@ -52,6 +52,7 @@ function useWorkspaceReadingProgressPersistence(args: {
   nodeViewById: ReturnType<typeof useWorkspaceSelectors>['nodeViewById'];
   readingPositionRef: ReturnType<typeof useAppRuntime>['readingPositionRef'];
   readingPositionSyncRef: ReturnType<typeof useAppRuntime>['readingPositionSyncRef'];
+  readingResumeContextRef: ReturnType<typeof useAppRuntime>['readingResumeContextRef'];
   setNodeViewState: ReturnType<typeof useWorkspaceSelectors>['setNodeViewState'];
 }) {
   useReadingProgressSync({
@@ -62,6 +63,7 @@ function useWorkspaceReadingProgressPersistence(args: {
       args.readingPositionRef.current.nodeId === args.activeNodeId ? args.readingPositionRef.current.selection : null,
     getReadingPositionSyncState: () =>
       args.readingPositionSyncRef.current.nodeId === args.activeNodeId ? args.readingPositionSyncRef.current.state : null,
+    getReadingResumeContext: () => args.readingResumeContextRef?.current ?? null,
     isImmersiveMode: args.isImmersiveMode,
     isViewingTrashNode: args.isViewingTrashNode,
     isWorkspaceHydrated: args.isWorkspaceHydrated,
@@ -196,6 +198,7 @@ export function useWorkspaceControllerState(
     nodeViewById: ws.nodeViewById,
     readingPositionRef: runtime.readingPositionRef,
     readingPositionSyncRef: runtime.readingPositionSyncRef,
+    readingResumeContextRef: runtime.readingResumeContextRef,
     setNodeViewState: ws.setNodeViewState
   });
   return {

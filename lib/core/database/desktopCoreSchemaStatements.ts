@@ -2,8 +2,10 @@ import { CORE_INDEX_SCHEMA_STATEMENTS } from './coreIndexSchemaStatements.js';
 import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
 import { NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS } from './nodeSyncTombstoneSchemaStatements.js';
 import { PARENT_CHILD_ORDER_SCHEMA_SQL } from './numberedMigrationParentChildOrder.js';
+import { READING_RESUME_SCHEMA } from './readingResumeSchema.js';
 
 export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
+  READING_RESUME_SCHEMA,
   `CREATE TABLE IF NOT EXISTS nodes (
     id TEXT PRIMARY KEY,
     parent_id TEXT REFERENCES nodes(id),

@@ -16,6 +16,7 @@ import { saveNodeOpenState } from '../database/nodeOpenState.js';
 import { saveNodeReadingState } from '../database/nodeReadingState.js';
 import { saveNodeReviewState } from '../database/nodeReviewState.js';
 import { loadReadingProgress, saveReadingProgress } from '../database/readingProgress.js';
+import { loadDesktopReadingResume } from '../database/readingResume.js';
 import { loadReviewCalendarHistory } from '../database/reviewCalendar.js';
 import { applyReviewGrade, resetNodeReviewState } from '../database/reviewMutations.js';
 import { loadSyncNodeConflicts } from '../database/syncConflictReads.js';
@@ -112,9 +113,20 @@ export function handleWorkspaceReadCommand(command: string, args: Record<string,
   return undefined;
 }
 
+const readingResumeContext = z.object({
+  nodeId: z.string().min(1),
+  contentHash: z.string().regex(/^[a-f0-9]{64}$/u),
+  clock: z.record(z.string().min(1), z.number().int().positive()),
+  libraryEpoch: z.string().min(1),
+  offset: z.number().int().nonnegative().nullable()
+});
+
 export function handleReadingAndReviewCommand(command: string, args: Record<string, unknown>, origin: BrowserWindow | null = null) {
   if (command === NATIVE_COMMANDS.loadReadingProgress) {
     return loadReadingProgress();
+  }
+  if (command === NATIVE_COMMANDS.loadReadingResume) {
+    return loadDesktopReadingResume(openDatabaseConnection().driver, asString(args.nodeId, 'nodeId'));
   }
   if (command === NATIVE_COMMANDS.saveReadingProgress) {
     saveReadingProgress({
@@ -123,6 +135,7 @@ export function handleReadingAndReviewCommand(command: string, args: Record<stri
         ? {}
         : { browseRootNodeId: asString(args.browseRootNodeId, 'browseRootNodeId') }),
       nodeViewStates: parseNodeViewStatePayloadArray(args.nodeViewStates, 'nodeViewStates'),
+      ...(args.readingResume === undefined ? {} : { readingResume: readingResumeContext.parse(args.readingResume) }),
       source: normalizeNodeViewStateWriteSource(args.source),
       updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
     });

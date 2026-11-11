@@ -8,6 +8,7 @@ import { hasCanonicalExternalResourceContentHash } from './canonicalExternalReso
 import { applyCurrentParentOrderRecord } from './currentParentOrderStore.js';
 import type { DbPort, DbRow } from './dbPort.js';
 import { readForegroundSource, shouldApplyForegroundSource } from './foregroundSource.js';
+import { applyReadingResumeRecord } from './readingResumeApply.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 import { applySyncObjectPayloadWithDbPort } from './syncObjectPayloadExecutor.js';
 import { asObject, text } from './syncObjectPayloadValues.js';
@@ -24,6 +25,7 @@ const STATE_OBJECT_TYPES = new Set<NativeSyncObjectRecord['object_type']>([
   'external_folder',
   'import_source',
   'node_open_state',
+  'node_reading_resume',
   'node_reading',
   'node_review',
   'topic_daily_count',
@@ -134,6 +136,11 @@ async function applySingleSyncObjectInTransaction(
   if (record.object_type === 'parent_child_order') {
     const changed = await applyCurrentParentOrderRecord(port, record);
     return changed || options.includeAlreadyApplied ? `parent_child_order:${record.object_id}` : null;
+  }
+  if (record.object_type === 'node_reading_resume') {
+    const merged = await applyReadingResumeRecord(port, record);
+    if (merged) await upsertAppliedSyncObjectState(port, merged);
+    return merged || options.includeAlreadyApplied ? `node_reading_resume:${record.object_id}` : null;
   }
   const status = await getSyncObjectApplyStatus(port, record);
   if (status === 'already_applied') {

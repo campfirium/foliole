@@ -14,6 +14,7 @@ export type SyncObjectType =
   | 'parent_child_order'
   | 'node_text_alternative'
   | 'node_open_state'
+  | 'node_reading_resume'
   | 'node_reading'
   | 'node_review'
   | 'topic_daily_count'

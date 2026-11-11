@@ -141,7 +141,7 @@ public final class FramedSyncHttpTransport {
             }
             for (String dependency : new String[] { MISSING_PARENT,
                 "framed_sync_review_node_missing:", "sync_node_open_state_node_missing:",
-                "framed_sync_parent_relation_version_missing:" }) {
+                "framed_sync_parent_relation_version_missing:", "sync_reading_resume_node_missing:" }) {
                 if (!error.startsWith(dependency)) continue;
                 String identity = error.substring(dependency.length());
                 return identity.matches("[A-Za-z0-9_-]{1,128}") ? error : null;

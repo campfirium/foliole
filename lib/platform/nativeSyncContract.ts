@@ -7,6 +7,7 @@ export type NativeSyncObjectType =
   | 'node'
   | 'parent_child_order'
   | 'node_open_state'
+  | 'node_reading_resume'
   | 'node_reading'
   | 'node_review'
   | 'topic_daily_count'

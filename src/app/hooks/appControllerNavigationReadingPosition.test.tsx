@@ -1,5 +1,5 @@
-import { renderHook } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { renderHook, waitFor } from '@testing-library/react';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { NodeViewState } from '../../store/workspaceStore';
 
@@ -8,6 +8,18 @@ import {
   useNavigationReadingPosition
 } from './appControllerNavigationReadingPosition';
 import type { ReadingPositionSyncState } from './useAppRuntime';
+
+const runtimeRepository = vi.hoisted(() => ({
+  hasWorkspaceRuntimeRepository: vi.fn(() => false),
+  loadReadingResumeFromRuntime: vi.fn()
+}));
+
+vi.mock('../../shared/platform/workspaceRuntimeRepository', () => runtimeRepository);
+
+beforeEach(() => {
+  runtimeRepository.hasWorkspaceRuntimeRepository.mockReset().mockReturnValue(false);
+  runtimeRepository.loadReadingResumeFromRuntime.mockReset();
+});
 
 function createRuntime() {
   return {
@@ -130,4 +142,22 @@ it('creates one active-node restore command from persisted view state', () => {
     scrollTop: 5400,
     selection: { from: 48000, to: 48000 }
   });
+});
+
+it('resumes a newly opened article at the shared position even without a local view', async () => {
+  runtimeRepository.hasWorkspaceRuntimeRepository.mockReturnValue(true);
+  runtimeRepository.loadReadingResumeFromRuntime.mockResolvedValue({
+    nodeId: 'node-1', contentHash: 'a'.repeat(64), libraryEpoch: 'library', clock: { A: 1 }, offset: 12_000
+  });
+  const runtime = createRuntime();
+  const view = renderHook(({ views }) =>
+    useActiveNodeReadingPositionRestore(runtime as never, 'node-1', views, true),
+  { initialProps: { views: {} as Record<string, NodeViewState> } });
+
+  await waitFor(() => expect(runtime.readingPositionRestoreCommandRef.current.command).toMatchObject({
+    targetViewportMode: 'reading-position', selection: { from: 12_000, to: 12_000 }
+  }));
+  view.rerender({ views: { 'node-1': { scrollTop: 200, selection: null } } });
+  expect(runtimeRepository.loadReadingResumeFromRuntime).toHaveBeenCalledTimes(1);
+  expect(runtime.bumpReadingPositionRequest).toHaveBeenCalledTimes(1);
 });

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
+import type { NativeReadingResumeContext } from '../../../lib/platform/nativeReadingProgressContract';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorViewportMode } from '../../features/editor/adapters/EditorAdapter';
@@ -66,6 +67,7 @@ function createRuntimeRefs(initialListWidth: number, initialRightSidebarWidth: n
       nodeId: null
     }),
     readingPositionRestoreCommandSeqRef: useRef(0),
+    readingResumeContextRef: useRef<NativeReadingResumeContext | null>(null),
     readingPositionSyncRef: useRef<{
       nodeId: string | null;
       state: ReadingPositionSyncState | null;

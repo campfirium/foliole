@@ -2,6 +2,7 @@ import { act, render } from '@testing-library/react';
 import { useRef } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { NativeReadingResumeContext } from '../../../lib/platform/nativeReadingProgressContract';
 import type { EditorAdapter, EditorScrollEvent } from '../../features/editor/adapters/EditorAdapter';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 import { syncReadingProgressToRuntime } from '../../store/workspaceRuntimeSync';
@@ -78,9 +79,11 @@ function PollutedPendingHarness(props: {
   readingPositionSyncState: { reason: string; startedAt: number; targetSelection: { from: number; to: number } } | null;
   setNodeViewState: (nodeId: string, viewState: NodeViewState) => void;
   storedNodeViewById: Record<string, NodeViewState>;
+  readingResume?: NativeReadingResumeContext;
 }) {
   const editorRef = useRef<EditorAdapter | null>({
     getScrollTop: () => 0,
+    getPrimaryVisiblePosition: () => props.readingResume ? 2000 : null,
     getSelection: () => ({ from: 0, to: 0 }),
     onScroll: (listener: (event: EditorScrollEvent) => void) => {
       props.listeners.add(listener);
@@ -93,6 +96,7 @@ function PollutedPendingHarness(props: {
     activeNodeId: 'node-2',
     editorRef,
     getReadingPositionSyncState: () => props.readingPositionSyncState,
+    getReadingResumeContext: () => props.readingResume ?? null,
     isImmersiveMode: false,
     isViewingTrashNode: false,
     isWorkspaceHydrated: true,
@@ -208,6 +212,29 @@ function registerPollutedPendingCloseFlushTests() {
   });
 }
 
+function registerSharedCloseFlushTests() {
+  it('publishes only when closing with new user reading movement', async () => {
+    const invoke = vi.fn<(...args: unknown[]) => Promise<null>>().mockResolvedValue(null);
+    vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+    const args = createPollutedPendingHarnessArgs();
+    const readingResume = { nodeId: 'node-2', contentHash: 'a'.repeat(64), libraryEpoch: 'library',
+      clock: { A: 1 }, offset: 1000 };
+    render(<PollutedPendingHarness {...args} readingPositionSyncState={null} readingResume={readingResume} />);
+
+    await expect(window.__folioleFlushReadingProgressBeforeClose?.()).resolves.toBe(true);
+    expect(invoke.mock.lastCall?.[1]).not.toHaveProperty('readingResume');
+
+    act(() => {
+      for (const listener of args.listeners) listener({ userInitiated: true });
+    });
+    await expect(window.__folioleFlushReadingProgressBeforeClose?.()).resolves.toBe(true);
+    expect(invoke).toHaveBeenLastCalledWith('save_reading_progress', expect.objectContaining({
+      readingResume,
+      nodeViewStates: [expect.objectContaining({ readingOffset: 2000 })]
+    }));
+  });
+}
+
 function registerCloseFlushLifecycleTests() {
   it('does not flush again from effect cleanup during unmount', () => {
     const view = render(<HookHarness activeNodeId="node-2" isWorkspaceHydrated={true} />);
@@ -234,4 +261,5 @@ describe('useReadingProgressSync close flush', () => {
   registerRestoreGuardCloseFlushTests();
   registerPollutedPendingCloseFlushTests();
   registerCloseFlushLifecycleTests();
+  registerSharedCloseFlushTests();
 });

@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { getPdfAnchorLocators, type Node } from '../../features/nodes/model/nodeTypes';
 import { resolveTextAnchorLinkInContent } from '../../features/nodes/model/textAnchorResolution';
 import { definedProps } from '../../shared/lib/definedProps';
+import { logRuntimeWarning } from '../../shared/platform/runtimeLogging';
+import { hasWorkspaceRuntimeRepository, loadReadingResumeFromRuntime } from '../../shared/platform/workspaceRuntimeRepository';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
 import type { NodeViewState } from '../../store/workspaceStore';
 
@@ -54,6 +56,7 @@ export function useNavigationReadingPosition(
       const focusAnchor = result.focusAnchor && targetNode
         ? resolveTextAnchorLinkInContent(result.focusAnchor, targetNode.content)
         : result.focusAnchor;
+      if (!focusAnchor && hasWorkspaceRuntimeRepository()) return true;
       const nextViewState = focusAnchor
         ? buildAnchorViewState(focusAnchor, nodeViewById[result.nodeId], 0, true)
         : nodeViewById[result.nodeId] ?? {
@@ -85,30 +88,49 @@ export function useActiveNodeReadingPositionRestore(
   nodeViewById: ReturnType<typeof useWorkspaceSelectors>['nodeViewById'],
   isWorkspaceHydrated: boolean
 ) {
-  const restoredActiveNodeIdRef = useRef<string | null>(null);
+  const latestViews = useRef(nodeViewById);
+  latestViews.current = nodeViewById;
+  const latestRuntime = useRef(runtime);
+  latestRuntime.current = runtime;
 
   useEffect(() => {
-    if (!isWorkspaceHydrated || !activeNodeId) {
-      restoredActiveNodeIdRef.current = null;
+    const refs = latestRuntime.current;
+    if (refs.readingResumeContextRef) refs.readingResumeContextRef.current = null;
+    if (!isWorkspaceHydrated || !activeNodeId) return;
+
+    function restore(viewState: NodeViewState | undefined, nodeId: string) {
+      const currentCommand = refs.readingPositionRestoreCommandRef.current;
+      if (currentCommand.nodeId === nodeId && currentCommand.command) return;
+      if (!viewState || !hasRestorableNodeViewState(viewState)) return;
+      requestReadingPositionApply({
+        nodeId, reason: 'active-node-restore', runtime: refs, ...resolveViewRestore(viewState)
+      });
+    }
+
+    if (!hasWorkspaceRuntimeRepository()) {
+      restore(latestViews.current[activeNodeId], activeNodeId);
       return;
     }
-    if (restoredActiveNodeIdRef.current === activeNodeId) {
-      return;
-    }
-    restoredActiveNodeIdRef.current = activeNodeId;
-    const currentCommand = runtime.readingPositionRestoreCommandRef.current;
-    if (currentCommand.nodeId === activeNodeId && currentCommand.command) {
-      return;
-    }
-    const viewState = nodeViewById[activeNodeId];
-    if (!viewState || !hasRestorableNodeViewState(viewState)) {
-      return;
-    }
-    requestReadingPositionApply({
-      nodeId: activeNodeId,
-      reason: 'active-node-restore',
-      runtime,
-      ...resolveViewRestore(viewState)
+
+    let current = true;
+    const explicitRestore = refs.readingPositionRestoreCommandRef.current;
+    const hasExplicitRestore = explicitRestore.nodeId === activeNodeId && Boolean(explicitRestore.command);
+    const requestSequence = refs.readingPositionRestoreCommandSeqRef.current;
+    const canRestore = () => current && !hasExplicitRestore &&
+      requestSequence === refs.readingPositionRestoreCommandSeqRef.current;
+    void loadReadingResumeFromRuntime(activeNodeId).then(result => {
+      if (!current) return;
+      if (refs.readingResumeContextRef) refs.readingResumeContextRef.current = result ?? null;
+      if (!canRestore()) return;
+      const local = latestViews.current[activeNodeId];
+      restore(result?.offset != null ? { scrollTop: 0, selection: null, readingOffset: result.offset } : local, activeNodeId);
+    }).catch(error => {
+      if (!current) return;
+      logRuntimeWarning('reading position lookup failed', {
+        area: 'persistence', action: 'load_reading_resume', error
+      });
+      if (canRestore()) restore(latestViews.current[activeNodeId], activeNodeId);
     });
-  }, [activeNodeId, isWorkspaceHydrated, nodeViewById, runtime]);
+    return () => { current = false; };
+  }, [activeNodeId, isWorkspaceHydrated]);
 }

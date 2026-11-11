@@ -13,6 +13,7 @@ export async function appliedStateWorkspaceScope(db: DbPort, fact: CanonicalFact
   if (record.object_type === 'parent_child_order') {
     return { kind: 'nodes', nodeIds: record.object_id === ROOT_CHILD_ORDER_ID ? [] : [record.object_id], structure: true };
   }
+  if (record.object_type === 'node_reading_resume') return { kind: 'nodes', nodeIds: [record.object_id] };
   if (fact.objectType === 'node') return { kind: 'nodes', nodeIds: [fact.globalId] };
   if (NODE_CHILD_STATE_TYPES.some(type => type === record.object_type)) {
     const [owner] = await db.query<{ node_id: string | null }>(`SELECT ${nodeChildOwnerSql('state')} AS node_id

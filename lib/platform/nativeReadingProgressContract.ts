@@ -1,5 +1,13 @@
 import type { NodeViewStateWriteSource } from './persistedNodeViewState.js';
 
+export interface NativeReadingResumeContext {
+  nodeId: string;
+  contentHash: string;
+  clock: Record<string, number>;
+  libraryEpoch: string;
+  offset: number | null;
+}
+
 export interface NativeReadingProgressNodeViewState {
   nodeId: string;
   scrollTop: number;
@@ -23,5 +31,6 @@ export interface NativeSaveReadingProgressArgs {
   browseRootNodeId?: string;
   nodeViewStates: NativeReadingProgressNodeViewState[];
   source?: NodeViewStateWriteSource;
+  readingResume?: NativeReadingResumeContext;
   updatedAt: string;
 }

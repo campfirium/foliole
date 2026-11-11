@@ -34,7 +34,7 @@ export function deleteNodesPermanentlyDeferringBodies(
   const deleteNodeReadingHostStateStatement = driver.prepare('DELETE FROM node_reading_host_state WHERE node_id = ?');
   const deleteNodeTextAlternativesStatement = driver.prepare('DELETE FROM node_text_alternatives WHERE node_id = ?');
   const deleteNodeOpenSyncStateStatement = driver.prepare(
-    "DELETE FROM sync_object_state WHERE object_type = 'node_open_state' AND object_id = ?"
+    "DELETE FROM sync_object_state WHERE object_type IN ('node_open_state', 'node_reading_resume') AND object_id = ?"
   );
   const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
   return driver.transaction(() => {

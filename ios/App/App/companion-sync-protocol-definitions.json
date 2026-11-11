@@ -23,6 +23,7 @@
       "opaque-sync-refs-v1",
       "parent-child-order-v1",
       "pdf-cross-page-anchors-v1",
+      "reading-resume-v1",
       "readwise-library-source-mode-v1",
       "relayed-node-member-positions-v1",
       "resource-availability-v1",
@@ -418,6 +419,20 @@
         "pushIssue": "diagnostic",
         "storage": [
           "node_open_state"
+        ],
+        "userVisible": true,
+        "ownership": "workspace",
+        "recovery": "saved"
+      },
+      {
+        "category": "reading",
+        "conflict": "causal_position",
+        "scope": "workspace",
+        "key": "node_reading_resume",
+        "objectType": "node_reading_resume",
+        "pushIssue": "diagnostic",
+        "storage": [
+          "node_reading_resume"
         ],
         "userVisible": true,
         "ownership": "workspace",

@@ -116,10 +116,11 @@ function mergeNodeReadingState(driver: DatabaseDriver, previous: string, current
 
 function mergeNodeViewState(driver: DatabaseDriver, previous: string, current: string) {
   driver.execute(`INSERT INTO node_view_state
-    (node_id, host_name, scroll_top, selection_from, selection_to, source, updated_at)
-    SELECT node_id, ?, scroll_top, selection_from, selection_to, source, updated_at
+    (node_id, host_name, scroll_top, reading_offset, selection_from, selection_to, source, updated_at)
+    SELECT node_id, ?, scroll_top, reading_offset, selection_from, selection_to, source, updated_at
     FROM node_view_state WHERE host_name = ?
     ON CONFLICT(node_id, host_name) DO UPDATE SET scroll_top = excluded.scroll_top,
+      reading_offset = excluded.reading_offset,
       selection_from = excluded.selection_from, selection_to = excluded.selection_to,
       source = excluded.source, updated_at = excluded.updated_at`, [current, previous]);
 }

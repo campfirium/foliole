@@ -1,5 +1,6 @@
 import type { MutableRefObject } from 'react';
 
+import type { NativeReadingResumeContext } from '../../../lib/platform/nativeReadingProgressContract';
 import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 import {
   hasWorkspaceRuntimeRepository,
@@ -22,6 +23,7 @@ import {
 export interface ReadingProgressPersistenceArgs {
   browseRootNodeIdRef?: MutableRefObject<string | undefined>;
   getReadingPositionSyncState?: () => ReadingPositionSyncState | null;
+  getReadingResumeContext?: () => NativeReadingResumeContext | null;
   isWorkspaceHydrated?: boolean;
   nodeViewById: Record<string, NodeViewState | undefined>;
   pendingNodeViewByIdRef: MutableRefObject<PendingNodeViewStateMap>;
@@ -80,15 +82,17 @@ export function flushReadingProgressToRuntime(args: {
     return;
   }
   args.lastSyncedSignatureRef.current = signature;
-  syncReadingProgressToRuntime(
-    createReadingProgressPayload(
+  const readingResume = args.captureMode === 'user-scroll' ? args.persistence.getReadingResumeContext?.() : null;
+  syncReadingProgressToRuntime({
+    ...createReadingProgressPayload(
       resolved.resolvedActiveNodeId,
       resolved.mergedNodeViewById,
       resolved.nodeViewIdsToPersist,
       'user-scroll',
       args.persistence.browseRootNodeIdRef?.current
-    )
-  );
+    ),
+    ...(readingResume && resolved.captured?.nodeId === readingResume.nodeId ? { readingResume } : {})
+  });
 }
 
 export async function flushReadingProgressBeforeClose(args: {
@@ -107,6 +111,9 @@ export async function flushReadingProgressBeforeClose(args: {
   if (!resolved || !hasWorkspaceRuntimeRepository()) {
     return false;
   }
+  const readingResume = args.persistence.getReadingResumeContext?.();
+  const publish = readingResume && resolved.captured?.nodeId === readingResume.nodeId &&
+    Boolean(args.persistence.pendingNodeViewByIdRef.current[readingResume.nodeId]);
   updateCapturedNodeViewState({
     captured: resolved.captured,
     nodeViewById: args.persistence.nodeViewById,
@@ -118,15 +125,16 @@ export async function flushReadingProgressBeforeClose(args: {
     capturedNodeId: resolved.captured?.nodeId ?? null,
     nodeViewStateCount: resolved.nodeViewIdsToPersist.length
   });
-  await saveWorkspaceReadingProgressNow(
-    createReadingProgressPayload(
+  await saveWorkspaceReadingProgressNow({
+    ...createReadingProgressPayload(
       resolved.resolvedActiveNodeId,
       resolved.mergedNodeViewById,
       resolved.nodeViewIdsToPersist,
       'close-flush',
       args.persistence.browseRootNodeIdRef?.current
-    )
-  );
+    ),
+    ...(publish ? { readingResume } : {})
+  });
   args.lastSyncedSignatureRef.current = createReadingProgressSignature(
     resolved.resolvedActiveNodeId,
     resolved.mergedNodeViewById,

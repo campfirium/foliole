@@ -25,6 +25,7 @@ import { addColumnIfMissing } from './numberedMigrationHelpers.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateParentChildOrderMembers } from './parentChildOrderMembers.js';
 import { migratePdfTextArtifacts } from './pdfTextArtifactMigration.js';
+import { READING_RESUME_SCHEMA } from './readingResumeSchema.js';
 import { migrateReviewLog } from './reviewLogMigration.js';
 import { retireReviewStateSync } from './reviewStateSyncRetirement.js';
 import { migrateTextBodyOwnership } from './textBodyOwnershipMigration.js';
@@ -74,5 +75,6 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 187, migrate: db => {
     for (const sql of WEB_DAV_RELAY_REVIEW_SEQUENCE_SCHEMA) db.exec(sql);
   } },
-  { version: 188, migrate: db => addColumnIfMissing(db, 'node_view_state', 'reading_offset', 'INTEGER') }
+  { version: 188, migrate: db => addColumnIfMissing(db, 'node_view_state', 'reading_offset', 'INTEGER') },
+  { version: 189, migrate: db => db.exec(READING_RESUME_SCHEMA) }
 ];

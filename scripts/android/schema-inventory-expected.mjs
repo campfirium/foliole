@@ -11,7 +11,7 @@ export const EXPECTED_SHARED_SCHEMA_DRIFT = {
     'indexes.idx_import_sources_location',
     'indexes.idx_import_sources_watched_relative'
   ],
-  node_view_state: ['createSql'],
+  node_view_state: ['columns.reading_offset', 'createSql'],
   nodes: ['indexes.idx_nodes_current_version_id'],
   setting_records: [
     'columns.form_factor',

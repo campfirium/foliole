@@ -225,6 +225,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.loadReviewSchedulerSettings, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.saveReviewSchedulerSettings, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.loadReadingProgress, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.loadReadingResume, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadForegroundTimeHistory, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadReviewCalendarHistory, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadNodeLearning, route: 'storage', capability: 'read' },
