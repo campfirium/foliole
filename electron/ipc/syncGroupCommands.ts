@@ -232,7 +232,9 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
 
 export function handleSyncGroupCommand(command: string, args: Record<string, unknown>) {
   if (!COMMANDS.has(command)) return undefined;
-  if (command === NATIVE_COMMANDS.enableWebDavRelay) return enableDesktopWebDavRelay(args.group_id, args.device_id);
+  if (command === NATIVE_COMMANDS.enableWebDavRelay) {
+    return enableDesktopWebDavRelay(args.group_id, args.device_id).then(() => null);
+  }
   if (command === NATIVE_COMMANDS.loadWebDavRelayDirectory) return loadDesktopWebDavRelayDirectory(args.group_id);
   if (command === NATIVE_COMMANDS.saveWebDavRelayDirectory) {
     return saveDesktopWebDavRelayDirectory(args.group_id, args.directory_url);
