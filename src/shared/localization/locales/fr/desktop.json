@@ -219,5 +219,10 @@
   "desktop.readwise.parser.tagKeyword.description": "Le début du slogan, par exemple Tags:. Remplissez uniquement le texte de départ principal, pas les espaces de début ou le marqueur de liste.",
   "desktop.readwise.parser.noteKeyword.title": "Marqueur de notes",
   "desktop.readwise.parser.noteKeyword.description": "Le marqueur de ligne de note, par exemple Note :. Remplissez uniquement le texte du marqueur principal, pas les espaces de début ou le marqueur de liste.",
-  "desktop.readwise.cancel": "Annuler"
+  "desktop.readwise.cancel": "Annuler",
+  "desktop.document.readingResume.available": "Un autre appareil lit plus loin.",
+  "desktop.document.readingResume.jump": "Aller à la position",
+  "desktop.reviewActions.reading.laterDays": "Vous en avez lu une partie et souhaitez reprendre dans {days} jours (délai personnalisé).",
+  "desktop.reviewActions.reading.laterOneDay": "Vous en avez lu une partie et souhaitez reprendre dans 1 jour (délai personnalisé).",
+  "desktop.reviewActions.reading.laterCustomBody": "Réapparaît après l'intervalle spécifié."
 }

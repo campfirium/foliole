@@ -52,7 +52,7 @@
   "desktop.workspace.resizeTopicList": "Cambiar el tamaño de la lista de temas",
   "desktop.workspace.resizeFolderList": "Cambiar el tamaño de la lista de carpetas",
   "desktop.workspace.resizeVirtualSection": "Cambiar el tamaño de la sección virtual",
-  "desktop.workspace.resizeExternalSection": "Cambiar el tamaño de la sección externa",
+  "desktop.workspace.resizeExternalSection": "Cambiar tamaño externo",
   "desktop.workspace.resizeInspectorSidebar": "Cambiar el tamaño de la barra lateral del inspector",
   "desktop.workspace.inspector": "Inspector",
   "desktop.demo.narrow.aria": "Aviso de ancho del escritorio de demostración",
@@ -202,5 +202,6 @@
   "desktop.rightPanel.highlights.unavailableTitle": "Tema no disponible",
   "desktop.rightPanel.highlights.count": "DESTACADOS({count})",
   "desktop.rightPanel.highlights.list": "Documento destacado",
-  "desktop.workspace.leaveFlowHere": "Salir de Flow"
+  "desktop.workspace.leaveFlowHere": "Salir de Flow",
+  "desktop.rightPanel.flow.libraryScope": "Biblioteca"
 }

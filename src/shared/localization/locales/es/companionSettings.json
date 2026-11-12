@@ -115,5 +115,13 @@
   "companion.settings.storage.backupSaved": "Base de datos guardada:",
   "companion.settings.storage.backupAttachmentsUnchecked": "Solo se incluyen los adjuntos disponibles en este dispositivo.",
   "companion.settings.storage.backupAttachmentsPending": "Adjuntos en espera:",
-  "companion.settings.storage.clearAction": "Borrar…"
+  "companion.settings.storage.clearAction": "Borrar…",
+  "companion.settings.appearance.textScale": "Escala de texto",
+  "companion.settings.appearance.css.globalDescription": "Administre fragmentos de CSS que personalizan la apariencia de la aplicación.",
+  "companion.settings.appearance.css.openFolder": "Abrir carpeta de fragmentos",
+  "companion.settings.appearance.css.reload": "Actualizar fragmentos",
+  "companion.settings.appearance.css.fileError": "No se pudo acceder a los archivos de fragmentos de CSS ni guardar su configuración.",
+  "companion.settings.appearance.css.search": "Buscar fragmentos…",
+  "companion.settings.appearance.css.noMatches": "No hay fragmentos coincidentes.",
+  "companion.settings.appearance.css.globalValidationError": "Este archivo no se pudo leer o contiene CSS no compatible."
 }

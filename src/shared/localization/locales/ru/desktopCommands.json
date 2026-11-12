@@ -111,5 +111,9 @@
   "desktop.command.dev.disableReviewStatusMemory": "DEV Отключить просмотр строки состояния памяти",
   "desktop.command.openCustomCopy": "Открыть пользовательский текст",
   "desktop.command.scrollDocumentTop": "Прокрутить к началу документа",
-  "desktop.command.scrollDocumentBottom": "Прокрутить к концу документа"
+  "desktop.command.scrollDocumentBottom": "Прокрутить к концу документа",
+  "desktop.command.sendToEdge": "Отправить статью на {app}",
+  "desktop.command.chooseArticleTarget": "Отправить статью…",
+  "desktop.command.edgeContents": "Содержание",
+  "desktop.command.sendToEdgeFailed": "Не удалось открыть статью. Выберите установленное приложение в настройках контекстного меню."
 }

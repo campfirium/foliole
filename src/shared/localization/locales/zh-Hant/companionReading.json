@@ -76,5 +76,8 @@
   "companion.reading.outline.empty": "沒有標題或相關的主題與檢測項",
   "companion.reading.outline.emptyDescription": "標題和相關的主題、檢測項會顯示在這裡。",
   "companion.selection.copyText": "複製文字",
-  "companion.selection.copyError": "無法複製文字，請重試。"
+  "companion.selection.copyError": "無法複製文字，請重試。",
+  "companion.reading.shareArticle": "分享正文",
+  "companion.reading.articleHandoffUnavailable": "沒有應用程式能開啟正文，或正文無法使用。",
+  "companion.reading.articleHandoffFailed": "無法分享正文。"
 }

@@ -242,7 +242,7 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.review.training.recency': '近期记录加权',
   'settings.review.training.recencyDescription': '提高近期复习记录的权重，让模型更快适应记忆表现的变化，但也更容易受到短期波动的影响。',
   'settings.review.training.penalties': '复习间隔惩罚',
-  'settings.review.training.penaltiesDescription': '减少同日复习间隔过短和长期复习间隔突然大幅延长的情况，但可能略微降低记忆预测的准确度。',
+  'settings.review.training.penaltiesDescription': '训练时对过短的同日复习间隔和骤增的长期复习间隔施加惩罚。回忆预测可能略不准确。',
   'settings.review.training.resetOption': '重置{label}',
   'settings.review.optimization': '自动复习优化',
   'settings.review.optimizeNow': '立即优化',

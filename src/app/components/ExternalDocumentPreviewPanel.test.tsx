@@ -97,7 +97,7 @@ it('renders the external document preview panel as a floating window for a reque
   expect(screen.getByRole('button', { name: 'Full screen preview' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Close preview' })).not.toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Open in External library' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Open in External' }));
 
   expect(onOpenInExternalLibrary).toHaveBeenCalledWith({
     absolutePath: '/library/topic.md',

@@ -115,5 +115,13 @@
   "companion.settings.storage.backupSaved": "Base de données enregistrée :",
   "companion.settings.storage.backupAttachmentsUnchecked": "Seules les pièces jointes disponibles sur cet appareil sont incluses.",
   "companion.settings.storage.backupAttachmentsPending": "Pièces jointes en attente :",
-  "companion.settings.storage.clearAction": "Effacer…"
+  "companion.settings.storage.clearAction": "Effacer…",
+  "companion.settings.appearance.textScale": "Échelle du texte",
+  "companion.settings.appearance.css.globalDescription": "Gérez les extraits CSS qui personnalisent l'apparence de l'application.",
+  "companion.settings.appearance.css.openFolder": "Ouvrir le dossier des extraits",
+  "companion.settings.appearance.css.reload": "Actualiser les extraits",
+  "companion.settings.appearance.css.fileError": "Impossible d'accéder aux fichiers d'extraits de code CSS ou d'enregistrer leurs paramètres.",
+  "companion.settings.appearance.css.search": "Rechercher des extraits…",
+  "companion.settings.appearance.css.noMatches": "Aucun extrait correspondant.",
+  "companion.settings.appearance.css.globalValidationError": "Ce fichier n'a pas pu être lu ou contient du CSS non pris en charge."
 }

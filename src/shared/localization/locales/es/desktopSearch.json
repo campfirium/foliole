@@ -61,5 +61,22 @@
   "desktop.reviewComplete.item.many": "artículos",
   "desktop.reviewComplete.topic.one": "tema",
   "desktop.reviewComplete.topic.many": "temas",
-  "desktop.editor.image.resize": "Cambiar tamaño de la imagen"
+  "desktop.editor.image.resize": "Cambiar tamaño de la imagen",
+  "desktop.diveCheckpoint.queueClear": "Borrar cola Dive",
+  "desktop.diveCheckpoint.clearForNow": "Dive Claro por ahora",
+  "desktop.diveCheckpoint.readingComplete": "Lectura Dive completa",
+  "desktop.diveCheckpoint.noUnread": "No hay material no leído en este Dive",
+  "desktop.diveCheckpoint.nothingReady": "Aún no hay nada listo en este Dive.",
+  "desktop.diveCheckpoint.noNewUnread": "No hay material nuevo sin leer en esta inmersión.",
+  "desktop.diveCheckpoint.global": "Global",
+  "desktop.diveCheckpoint.switch": "Cambiar",
+  "desktop.diveCheckpoint.continue": "Continuar",
+  "desktop.diveCheckpoint.exit": "Salida",
+  "desktop.diveCheckpoint.recheck": "Vuelva a comprobar",
+  "desktop.diveCheckpoint.globalHelp": "Continúe aprendiendo en toda la biblioteca.",
+  "desktop.diveCheckpoint.switchHelp": "Elige otro Dive para estudiar.",
+  "desktop.diveCheckpoint.exitHelp": "Finaliza esta sesión y vuelve a navegar.",
+  "desktop.diveCheckpoint.checkTodayHelp": "Consulta lo que vence hoy en esta inmersión.",
+  "desktop.diveCheckpoint.startReadingHelp": "Empieza a leer en esta Inmersión.",
+  "desktop.diveCheckpoint.nextReadingHelp": "Busque más contenido no leído en esta inmersión."
 }

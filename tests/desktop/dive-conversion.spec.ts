@@ -32,7 +32,7 @@ for (const action of ['read', 'grade'] as const) {
     await page.getByRole('menuitem', { name: 'Start Dive', exact: true }).click();
     await expect.poll(current).toBe(expectedCard);
     await diveRow.click({ button: 'right' });
-    await page.getByRole('menuitem', { name: 'Convert to Virtual Folder', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Convert to Virtual', exact: true }).click();
     await expect(diveRow).toHaveCount(0);
     await expect(row).toHaveCount(1);
     await expect.poll(current).toBe(expectedCard);
@@ -79,7 +79,7 @@ test('exits a converted empty Dive without opening global Flow', async ({ deskto
   const toolbar = page.getByRole('group', { name: 'Flow toolbar' });
   await expect(toolbar).toBeVisible();
   await dive.click({ button: 'right' });
-  await page.getByRole('menuitem', { name: 'Convert to Virtual Folder', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Convert to Virtual', exact: true }).click();
   await expect(toolbar).toHaveCount(0);
   await expect(dive).toHaveCount(0);
   await expect(page.getByRole('treeitem', { name: 'Empty conversion', exact: true })).toHaveCount(1);

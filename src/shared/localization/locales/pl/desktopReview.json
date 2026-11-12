@@ -90,5 +90,9 @@
   "desktop.nodeReview.noLocalShortTerm": "Brak lokalnych ustawień krótkoterminowych",
   "desktop.nodeReview.priority.p0": "P0 – Po pierwsze, brak skalowania opóźnienia",
   "desktop.foregroundTime.monthTotal": "Łączny czas",
-  "desktop.foregroundTime.monthTotalShort": "Łącznie"
+  "desktop.foregroundTime.monthTotalShort": "Łącznie",
+  "desktop.reviewDelay.enterHint": "stosować",
+  "desktop.reviewDelay.mode.weeks": "Do tygodnia",
+  "desktop.reviewDelay.mode.days": "Za dnia",
+  "desktop.reviewDelay.daysInput": "Dni do następnego pojawienia się"
 }

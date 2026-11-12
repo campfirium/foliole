@@ -90,5 +90,9 @@
   "desktop.nodeReview.noLocalShortTerm": "Нет локальной краткосрочной настройки",
   "desktop.nodeReview.priority.p0": "P0 — во-первых, без масштабирования задержки",
   "desktop.foregroundTime.monthTotal": "Общее время",
-  "desktop.foregroundTime.monthTotalShort": "Всего"
+  "desktop.foregroundTime.monthTotalShort": "Всего",
+  "desktop.reviewDelay.enterHint": "применять",
+  "desktop.reviewDelay.mode.weeks": "По неделям",
+  "desktop.reviewDelay.mode.days": "Днем",
+  "desktop.reviewDelay.daysInput": "Дней до следующего выступления"
 }

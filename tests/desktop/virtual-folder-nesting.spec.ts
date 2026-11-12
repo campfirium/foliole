@@ -46,7 +46,7 @@ async function createRootFolder(
   title: string
 ) {
   await page.getByRole('treeitem', { name: /^(Virtual|虚拟|索引)$/ }).click({ button: 'right' });
-  return createFolder(page, /^(Create Virtual Folder|创建虚拟文件夹)$/, title, 'menuitem');
+  return createFolder(page, /^(Create in Virtual|创建索引)$/, title, 'menuitem');
 }
 
 async function expectNativeNestingRejected(page: Parameters<typeof expectWorkspaceShell>[0]) {
@@ -93,13 +93,13 @@ test('keeps indexes flat and preserves independent Topic references', async ({ d
   await dragFolder(desktopWindow, dragged.locator('..'), parent.locator('..'));
   await parent.click({ button: 'right' });
   await expect(desktopWindow.getByRole('menuitem', { name: /^(Rename|重命名)$/ })).toBeVisible();
-  await expect(desktopWindow.getByRole('menuitem', { name: /^(Create Virtual Folder|创建虚拟文件夹)$/ })).toHaveCount(0);
+  await expect(desktopWindow.getByRole('menuitem', { name: /^(Create in Virtual|创建索引)$/ })).toHaveCount(0);
   await desktopWindow.keyboard.press('Escape');
   await expectNativeNestingRejected(desktopWindow);
   await desktopWindow.getByRole('treeitem', { name: LIBRARY_FOLDER_TITLE, exact: true }).click();
   await desktopWindow.getByRole('treeitem', { name: TOPIC_TITLE }).click({ button: 'right' });
-  await desktopWindow.getByRole('menuitem', { name: /^(Add to Virtual Folder…|添加到虚拟文件夹\.\.\.)$/ }).click();
-  const dialog = desktopWindow.getByRole('dialog', { name: /^(Add to Virtual Folder|添加到虚拟文件夹)$/ });
+  await desktopWindow.getByRole('menuitem', { name: /^(Add to Virtual…|添加到索引\.\.\.)$/ }).click();
+  const dialog = desktopWindow.getByRole('dialog', { name: /^(Add to Virtual|添加到索引)$/ });
   await dialog.getByRole('button', { name: DRAGGED_TITLE }).click();
 
   const topicPanel = desktopWindow.getByRole('complementary', { name: /^(Current folder contents|当前文件夹内容)$/ });

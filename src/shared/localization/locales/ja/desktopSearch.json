@@ -61,5 +61,22 @@
   "desktop.reviewComplete.item.many": "アイテム",
   "desktop.reviewComplete.topic.one": "トピック",
   "desktop.reviewComplete.topic.many": "トピック",
-  "desktop.editor.image.resize": "画像のサイズを変更"
+  "desktop.editor.image.resize": "画像のサイズを変更",
+  "desktop.diveCheckpoint.queueClear": "Dive キュークリア",
+  "desktop.diveCheckpoint.clearForNow": "Dive とりあえずクリア",
+  "desktop.diveCheckpoint.readingComplete": "Dive 読み取り完了",
+  "desktop.diveCheckpoint.noUnread": "この Dive には未読の資料はありません",
+  "desktop.diveCheckpoint.nothingReady": "この Dive ではまだ何も準備ができていません。",
+  "desktop.diveCheckpoint.noNewUnread": "このダイブには新しい未読の資料はありません。",
+  "desktop.diveCheckpoint.global": "グローバル",
+  "desktop.diveCheckpoint.switch": "切り替え",
+  "desktop.diveCheckpoint.continue": "続く",
+  "desktop.diveCheckpoint.exit": "出口",
+  "desktop.diveCheckpoint.recheck": "再確認",
+  "desktop.diveCheckpoint.globalHelp": "図書館全体で学習を続けてください。",
+  "desktop.diveCheckpoint.switchHelp": "別の Dive を選択して学習してください。",
+  "desktop.diveCheckpoint.exitHelp": "このセッションを終了し、ブラウジングに戻ります。",
+  "desktop.diveCheckpoint.checkTodayHelp": "このダイブで今日の予定を確認してください。",
+  "desktop.diveCheckpoint.startReadingHelp": "このダイブから読み始めてください。",
+  "desktop.diveCheckpoint.nextReadingHelp": "この Dive でさらに未読のコンテンツがないか確認してください。"
 }

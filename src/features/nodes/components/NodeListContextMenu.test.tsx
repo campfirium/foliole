@@ -64,7 +64,7 @@ it('groups node context actions into create, edit, review, and destructive order
     'Merge highlights',
     'Paste as Topic',
     'Move to…',
-    'Add to Virtual Folder…',
+    'Add to Virtual…',
     'Relearn',
     'Review options…',
     'Dismiss',
@@ -78,7 +78,7 @@ it('opens virtual folder membership selection from a Topic action', () => {
   const props = noopProps();
   renderWithLocalization(<NodeListContextMenu {...props} />);
 
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Add to Virtual Folder…' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Add to Virtual…' }));
 
   expect(props.onAddToVirtualFolder).toHaveBeenCalledOnce();
 });
@@ -104,10 +104,10 @@ it('separates virtual folder removal from deleting the Topic', () => {
 
   const menu = screen.getByRole('menu');
   const labels = within(menu).getAllByRole('menuitem').map((item) => item.textContent);
-  expect(labels.slice(-2)).toEqual(['Remove from This Virtual Folder', 'Delete']);
-  expect(screen.getByRole('menuitem', { name: 'Remove from This Virtual Folder' }).className)
+  expect(labels.slice(-2)).toEqual(['Remove from This Virtual Entry', 'Delete']);
+  expect(screen.getByRole('menuitem', { name: 'Remove from This Virtual Entry' }).className)
     .not.toContain('text-error/90');
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Remove from This Virtual Folder' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Remove from This Virtual Entry' }));
   expect(onRemove).toHaveBeenCalledOnce();
 });
 

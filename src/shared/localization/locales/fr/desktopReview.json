@@ -90,5 +90,9 @@
   "desktop.nodeReview.noLocalShortTerm": "Pas de réglage local à court terme",
   "desktop.nodeReview.priority.p0": "P0 - Premièrement, pas de mise à l'échelle du délai",
   "desktop.foregroundTime.monthTotal": "Durée totale",
-  "desktop.foregroundTime.monthTotalShort": "Total"
+  "desktop.foregroundTime.monthTotalShort": "Total",
+  "desktop.reviewDelay.enterHint": "appliquer",
+  "desktop.reviewDelay.mode.weeks": "Par semaine",
+  "desktop.reviewDelay.mode.days": "De jour",
+  "desktop.reviewDelay.daysInput": "Jours avant la prochaine comparution"
 }

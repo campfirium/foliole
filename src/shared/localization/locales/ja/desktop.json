@@ -219,5 +219,10 @@
   "desktop.readwise.parser.tagKeyword.description": "タグラインスターター (Tags: など)。先頭のスペースやリスト マーカーではなく、中心となるスターター テキストのみを入力します。",
   "desktop.readwise.parser.noteKeyword.title": "ノートマーカー",
   "desktop.readwise.parser.noteKeyword.description": "注記行マーカー (Note: など)。先頭のスペースやリスト マーカーではなく、コア マーカー テキストのみを入力します。",
-  "desktop.readwise.cancel": "キャンセル"
+  "desktop.readwise.cancel": "キャンセル",
+  "desktop.document.readingResume.available": "別のデバイスがさらに読み進めます。",
+  "desktop.document.readingResume.jump": "位置にジャンプ",
+  "desktop.reviewActions.reading.laterDays": "一部を読み、{days} 日後に続きを読みたい（カスタム）。",
+  "desktop.reviewActions.reading.laterOneDay": "一部を読み、1 日後に続きを読みたい（カスタム）。",
+  "desktop.reviewActions.reading.laterCustomBody": "指定した間隔後に再度表示されます。"
 }

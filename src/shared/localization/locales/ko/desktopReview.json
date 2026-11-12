@@ -90,5 +90,9 @@
   "desktop.nodeReview.noLocalShortTerm": "로컬 단기 설정 없음",
   "desktop.nodeReview.priority.p0": "P0 - 첫째, 지연 스케일링 없음",
   "desktop.foregroundTime.monthTotal": "총 시간",
-  "desktop.foregroundTime.monthTotalShort": "합계"
+  "desktop.foregroundTime.monthTotalShort": "합계",
+  "desktop.reviewDelay.enterHint": "적용하다",
+  "desktop.reviewDelay.mode.weeks": "주별",
+  "desktop.reviewDelay.mode.days": "일별",
+  "desktop.reviewDelay.daysInput": "다음 등장까지 남은 일수"
 }

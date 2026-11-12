@@ -2,7 +2,7 @@ import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'settings.companionSync.webdav.participation': '在此设备上启用同步',
-  'settings.companionSync.webdav.syncNow': '优先通过局域网同步。已绑定的设备无法直连时，可以通过 WebDAV 同步。',
+  'settings.companionSync.webdav.syncNow': '优先通过局域网同步。已绑定的设备无法直连时，Foliole 可以通过 WebDAV 同步。',
   'settings.companionSync.webdav.category': "同步（WebDAV）",
   'settings.companionSync.webdav.lanCategory': "同步（局域网）",
   'settings.companionSync.webdav.description': "设备无法通过局域网直连时，Foliole 会通过你的 WebDAV 服务器同步：一台设备上传加密的更新，另一台设备下载。",
@@ -33,7 +33,7 @@ export const ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS: Partial<Record<Translatio
   'settings.companionSync.webdav.connect': "连接",
   'settings.companionSync.webdav.credentialsSaved': '已在此 Mac 保存 {directory} 的凭据',
   'settings.companionSync.webdav.credentialPassed': "连接验证通过。WebDAV 凭据已安全保存在此 Mac。",
-  'settings.companionSync.webdav.credentialFailed': "无法验证或保存连接。请核对 WebDAV 网址、用户名、应用密码和文件夹权限。",
+  'settings.companionSync.webdav.credentialFailed': "无法验证或保存连接。请核对 WebDAV URL、用户名、应用密码和文件夹权限。",
   'settings.companionSync.webdav.credentialStorageUnavailable': '无法访问安全存储。请检查 macOS 钥匙串访问权限后重试。',
   'settings.companionSync.webdav.credentialVerifyDevice': '验证设备',
   'settings.companionSync.webdav.credentialMacRejected': 'WebDAV 拒绝了此 Mac 的凭据。请检查凭据，再同步一次。',
@@ -75,8 +75,8 @@ export const ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS: Partial<Record<Translatio
   'settings.companionSync.webdav.testHint': "保存前，Foliole 会写入、移动、读回并删除一个测试文件。",
   'settings.companionSync.webdav.newFolder': "文件夹名",
   'settings.companionSync.webdav.newFolderHint': "留空时使用 foliole。文件夹不存在时，Foliole 会创建它。",
-  'settings.companionSync.webdav.parentFolder': "WebDAV 网址",
-  'settings.companionSync.webdav.parentFolderHint': "从服务商复制 HTTPS WebDAV 网址。网址里不要加同步文件夹名，例如 https://dav.example.com/storage/。",
+  'settings.companionSync.webdav.parentFolder': "WebDAV URL",
+  'settings.companionSync.webdav.parentFolderHint': "从服务商复制 HTTPS WebDAV URL。URL 中不要加入同步文件夹名。示例： https://dav.example.com/storage/.",
   'settings.companionSync.webdav.running': "正在验证 WebDAV 连接…",
   'settings.companionSync.webdav.invalidFolderName': "请输入单个文件夹的名称，避免使用斜杠、反斜杠或百分号，也请避开「.」和「..」。",
   'settings.companionSync.webdav.folderAuthFailed': "服务商拒绝了凭据。请核对 WebDAV 用户名。如果服务商要求应用密码，请生成新密码后重试。",

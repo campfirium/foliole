@@ -219,5 +219,10 @@
   "desktop.readwise.parser.tagKeyword.description": "Der Slogan-Starter, zum Beispiel Tags:. Füllen Sie nur den Hauptstarttext aus, nicht die führenden Leerzeichen oder Listenmarkierungen.",
   "desktop.readwise.parser.noteKeyword.title": "Notizmarkierung",
   "desktop.readwise.parser.noteKeyword.description": "Die Notizzeilenmarkierung, zum Beispiel Note:. Füllen Sie nur den Kernmarkierungstext aus, nicht die führenden Leerzeichen oder Listenmarkierungen.",
-  "desktop.readwise.cancel": "Abbrechen"
+  "desktop.readwise.cancel": "Abbrechen",
+  "desktop.document.readingResume.available": "Ein anderes Gerät liest weiter.",
+  "desktop.document.readingResume.jump": "Zur Position springen",
+  "desktop.reviewActions.reading.laterDays": "Sie haben einen Teil gelesen und möchten in {days} Tagen weiterlesen (benutzerdefiniert).",
+  "desktop.reviewActions.reading.laterOneDay": "Sie haben einen Teil gelesen und möchten in einem Tag weiterlesen (benutzerdefiniert).",
+  "desktop.reviewActions.reading.laterCustomBody": "Erscheint nach dem angegebenen Intervall erneut."
 }

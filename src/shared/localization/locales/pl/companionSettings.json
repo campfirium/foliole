@@ -115,5 +115,13 @@
   "companion.settings.storage.backupSaved": "Baza danych zapisana:",
   "companion.settings.storage.backupAttachmentsUnchecked": "Uwzględniane są tylko załączniki dostępne na tym urządzeniu.",
   "companion.settings.storage.backupAttachmentsPending": "Oczekujące załączniki:",
-  "companion.settings.storage.clearAction": "Wyczyść…"
+  "companion.settings.storage.clearAction": "Wyczyść…",
+  "companion.settings.appearance.textScale": "Skala tekstu",
+  "companion.settings.appearance.css.globalDescription": "Zarządzaj fragmentami CSS, które dostosowują wygląd aplikacji.",
+  "companion.settings.appearance.css.openFolder": "Otwórz folder fragmentów",
+  "companion.settings.appearance.css.reload": "Odśwież fragmenty",
+  "companion.settings.appearance.css.fileError": "Nie można uzyskać dostępu do plików fragmentów CSS lub zapisać ich ustawień.",
+  "companion.settings.appearance.css.search": "Wyszukaj fragmenty…",
+  "companion.settings.appearance.css.noMatches": "Brak pasujących fragmentów.",
+  "companion.settings.appearance.css.globalValidationError": "Nie można odczytać tego pliku lub zawiera nieobsługiwany CSS."
 }

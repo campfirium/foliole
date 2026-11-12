@@ -229,5 +229,18 @@
   "settings.review.trainingHistoryLoading": "Ładowanie historii treningu…",
   "settings.review.trainingHistoryFailed": "Nie udało się załadować historii treningu.",
   "settings.review.lastOptimization": "Ostatnia optymalizacja: {time}",
-  "settings.review.optimizationFailed": "Nie udało się zakończyć optymalizacji. Spróbuj ponownie."
+  "settings.review.optimizationFailed": "Nie udało się zakończyć optymalizacji. Spróbuj ponownie.",
+  "settings.review.later.title": "Niestandardowy interwał późniejszy",
+  "settings.review.later.description": "Ustaw odstęp czasu, po którym materiał pojawi się ponownie (0 dla domyślnego krótkiego odstępu).",
+  "settings.review.later.default": "Domyślny",
+  "settings.webLookup.articleTarget": "Miejsce przeznaczenia artykułu",
+  "settings.webLookup.chooseArticleTarget": "Wybierz aplikację",
+  "settings.webLookup.pickArticleTarget": "Wybierz inną aplikację…",
+  "settings.review.training.title": "Zaawansowane ustawienia treningu",
+  "settings.review.training.description": "Opcje te wpływają na uczenie parametrów FSRS. Zachowaj ustawienia domyślne, chyba że rozumiesz, jak działają opcje. Zmiany zaczną obowiązywać od następnego pociągu FSRS.",
+  "settings.review.training.recency": "Waga ostatnich powtórek",
+  "settings.review.training.recencyDescription": "Nowsze powtórki mają większą wagę, dzięki czemu model szybciej dostosowuje się do zmian w zapamiętywaniu. Staje się też bardziej wrażliwy na krótkotrwałe wahania.",
+  "settings.review.training.penalties": "Kary za odstępy między powtórkami",
+  "settings.review.training.penaltiesDescription": "Podczas treningu naliczane są kary za bardzo krótkie odstępy między powtórkami tego samego dnia oraz gwałtowne wydłużanie długich odstępów. Prognoza zapamiętania może stać się nieco mniej dokładna.",
+  "settings.review.training.resetOption": "Zresetuj {label}"
 }

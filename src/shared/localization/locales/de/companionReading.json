@@ -76,5 +76,8 @@
   "companion.reading.outline.emptyDescription": "Hier erscheinen Überschriften sowie zugehörige Themen und Lernelemente.",
   "companion.reading.previousTopic": "Vorheriges Thema",
   "companion.selection.copyText": "Text kopieren",
-  "companion.selection.copyError": "Text konnte nicht kopiert werden. Versuchen Sie es erneut."
+  "companion.selection.copyError": "Text konnte nicht kopiert werden. Versuchen Sie es erneut.",
+  "companion.reading.shareArticle": "Artikel teilen",
+  "companion.reading.articleHandoffUnavailable": "Der Artikel kann von keiner App geöffnet werden oder es ist kein Text für den Artikel verfügbar.",
+  "companion.reading.articleHandoffFailed": "Der Artikel konnte nicht geteilt werden."
 }

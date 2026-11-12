@@ -219,5 +219,10 @@
   "desktop.readwise.parser.tagKeyword.description": "Начальный тег, например Теги:. Заполняйте только основной начальный текст, а не начальные пробелы или маркер списка.",
   "desktop.readwise.parser.noteKeyword.title": "Примечание маркер",
   "desktop.readwise.parser.noteKeyword.description": "Маркер линии примечания, например Примечание:. Заполняйте только основной текст маркера, а не начальные пробелы или маркер списка.",
-  "desktop.readwise.cancel": "Отмена"
+  "desktop.readwise.cancel": "Отмена",
+  "desktop.document.readingResume.available": "Другое устройство читайте дальше.",
+  "desktop.document.readingResume.jump": "Перейти на позицию",
+  "desktop.reviewActions.reading.laterDays": "Вы прочитали часть материала и хотите продолжить через {days} дн. (свой интервал).",
+  "desktop.reviewActions.reading.laterOneDay": "Вы прочитали часть материала и хотите продолжить через 1 день (свой интервал).",
+  "desktop.reviewActions.reading.laterCustomBody": "Появляется снова через указанный интервал."
 }

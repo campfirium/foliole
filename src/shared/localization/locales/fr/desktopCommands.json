@@ -111,5 +111,9 @@
   "desktop.command.dev.disableReviewStatusMemory": "DEV Désactiver l'examen de la mémoire de la barre d'état",
   "desktop.command.openCustomCopy": "Ouvrir les textes personnalisés",
   "desktop.command.scrollDocumentTop": "Faire défiler jusqu’en haut du document",
-  "desktop.command.scrollDocumentBottom": "Faire défiler jusqu’en bas du document"
+  "desktop.command.scrollDocumentBottom": "Faire défiler jusqu’en bas du document",
+  "desktop.command.sendToEdge": "Envoyer l'article à {app}",
+  "desktop.command.chooseArticleTarget": "Envoyer l'article…",
+  "desktop.command.edgeContents": "Contenu",
+  "desktop.command.sendToEdgeFailed": "Impossible d'ouvrir l'article. Choisissez une application installée dans les paramètres du menu contextuel."
 }

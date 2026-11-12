@@ -159,5 +159,10 @@
   "settings.appearance.fontWeight.loading": "正在載入字型…",
   "settings.appearance.fontWeight.loadError": "無法檢查此字型。",
   "settings.appearance.fontWeight.saveError": "無法儲存字型粗細。",
-  "settings.appearance.fontWeight.retry": "重試"
+  "settings.appearance.fontWeight.retry": "重試",
+  "settings.appearance.folderSections.title": "資料夾面板",
+  "settings.appearance.folderSections.retainedRows": "隨區段標題固定的列數",
+  "settings.appearance.folderSections.retainedRowsDescription": "選擇捲動時隨每個區段標題保持可見的項目數量。",
+  "settings.appearance.folderSections.gapDescription": "以像素設定區段間距。",
+  "settings.appearance.folderSections.gap": "區段間距"
 }

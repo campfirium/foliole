@@ -49,7 +49,7 @@ it('renders the virtual section splitter as an inset shared divider', () => {
     />
   );
 
-  expect(screen.getByRole('separator', { name: 'Resize virtual section' })).toBeInTheDocument();
+  expect(screen.getByRole('separator', { name: 'Resize Virtual' })).toBeInTheDocument();
   expect(container.firstChild).toHaveClass('h-1');
   expect(container.querySelector('span')).toHaveClass('before:bg-divider/45', 'before:bottom-0', 'before:left-4', 'before:right-4');
 });

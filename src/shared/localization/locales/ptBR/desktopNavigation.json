@@ -52,7 +52,7 @@
   "desktop.workspace.resizeTopicList": "Redimensionar lista de tópicos",
   "desktop.workspace.resizeFolderList": "Redimensionar lista de pastas",
   "desktop.workspace.resizeVirtualSection": "Redimensionar seção virtual",
-  "desktop.workspace.resizeExternalSection": "Redimensionar seção externa",
+  "desktop.workspace.resizeExternalSection": "Redimensionar externo",
   "desktop.workspace.resizeInspectorSidebar": "Redimensionar a barra lateral do inspetor",
   "desktop.workspace.inspector": "Inspetor",
   "desktop.demo.narrow.aria": "Aviso de largura da área de trabalho de demonstração",
@@ -202,5 +202,6 @@
   "desktop.rightPanel.highlights.unavailableTitle": "Tópico indisponível",
   "desktop.rightPanel.highlights.count": "DESTAQUES({count})",
   "desktop.rightPanel.highlights.list": "Destaques do documento",
-  "desktop.workspace.leaveFlowHere": "Sair do Flow"
+  "desktop.workspace.leaveFlowHere": "Sair do Flow",
+  "desktop.rightPanel.flow.libraryScope": "Biblioteca"
 }

@@ -1,7 +1,9 @@
 import type { TranslationCatalog } from './catalogTypes';
+import backupRestoreSync from './de/backupRestoreSync.json';
 import d0 from './de/companion.json';
 import d1 from './de/companionApp.json';
 import d2 from './de/companionCapture.json';
+import companionImageCloze from './de/companionImageCloze.json';
 import d3 from './de/companionReading.json';
 import d4 from './de/companionReadingTypography.json';
 import d5 from './de/companionSettings.json';
@@ -16,22 +18,32 @@ import d12 from './de/desktopDiscourse.json';
 import d13 from './de/desktopExternalLibrary.json';
 import d14 from './de/desktopFolderList.json';
 import d15 from './de/desktopFoliolePublish.json';
+import desktopFormatCleanup from './de/desktopFormatCleanup.json';
 import d16 from './de/desktopImport.json';
 import d17 from './de/desktopImportDialogs.json';
 import d18 from './de/desktopNavigation.json';
 import d19 from './de/desktopNodes.json';
 import d20 from './de/desktopPdf.json';
+import desktopReadwiseConnection from './de/desktopReadwiseConnection.json';
+import desktopReadwisePolicy from './de/desktopReadwisePolicy.json';
 import d21 from './de/desktopReview.json';
 import d22 from './de/desktopSearch.json';
 import d23 from './de/desktopSort.json';
+import desktopSourceConnections from './de/desktopSourceConnections.json';
 import d24 from './de/desktopSourceUpdate.json';
 import d25 from './de/desktopWordPress.json';
 import d26 from './de/feedback.json';
+import reminders from './de/reminders.json';
 import d27 from './de/settings.json';
 import d28 from './de/settingsAbout.json';
+import settingsAide from './de/settingsAide.json';
 import d29 from './de/settingsAppearance.json';
+import settingsAttachments from './de/settingsAttachments.json';
+import settingsBackups from './de/settingsBackups.json';
 import d30 from './de/settingsCapture.json';
+import settingsDatabaseMaintenance from './de/settingsDatabaseMaintenance.json';
 import d31 from './de/settingsDemoPreview.json';
+import settingsEditor from './de/settingsEditor.json';
 import d32 from './de/settingsFallback.json';
 import d33 from './de/settingsHotkeys.json';
 import d34 from './de/settingsIcons.json';
@@ -84,5 +96,17 @@ export const TRANSLATIONS: TranslationCatalog = {
   ...d37,
   ...syncGroup,
   ...d38,
-  ...d39
+  ...d39,
+  ...backupRestoreSync,
+  ...companionImageCloze,
+  ...desktopFormatCleanup,
+  ...desktopReadwiseConnection,
+  ...desktopReadwisePolicy,
+  ...desktopSourceConnections,
+  ...reminders,
+  ...settingsAide,
+  ...settingsAttachments,
+  ...settingsBackups,
+  ...settingsDatabaseMaintenance,
+  ...settingsEditor
 };

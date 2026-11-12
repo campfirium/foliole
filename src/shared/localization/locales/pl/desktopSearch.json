@@ -61,5 +61,22 @@
   "desktop.reviewComplete.item.many": "przedmioty",
   "desktop.reviewComplete.topic.one": "temat",
   "desktop.reviewComplete.topic.many": "tematy",
-  "desktop.editor.image.resize": "Zmień rozmiar obrazu"
+  "desktop.editor.image.resize": "Zmień rozmiar obrazu",
+  "desktop.diveCheckpoint.queueClear": "Dive Kolejka wyczyszczona",
+  "desktop.diveCheckpoint.clearForNow": "Dive Na razie jasne",
+  "desktop.diveCheckpoint.readingComplete": "Dive Odczyt zakończony",
+  "desktop.diveCheckpoint.noUnread": "Brak nieprzeczytanych materiałów w tym Dive",
+  "desktop.diveCheckpoint.nothingReady": "W tym Dive nic nie jest jeszcze gotowe.",
+  "desktop.diveCheckpoint.noNewUnread": "Brak nowych, nieprzeczytanych materiałów w tym nurkowaniu.",
+  "desktop.diveCheckpoint.global": "Światowy",
+  "desktop.diveCheckpoint.switch": "Zmień",
+  "desktop.diveCheckpoint.continue": "Kontynuować",
+  "desktop.diveCheckpoint.exit": "Wyjście",
+  "desktop.diveCheckpoint.recheck": "Sprawdź ponownie",
+  "desktop.diveCheckpoint.globalHelp": "Kontynuuj naukę w całej bibliotece.",
+  "desktop.diveCheckpoint.switchHelp": "Wybierz inny Dive do nauki.",
+  "desktop.diveCheckpoint.exitHelp": "Zakończ tę sesję i wróć do przeglądania.",
+  "desktop.diveCheckpoint.checkTodayHelp": "Sprawdź, co jest dzisiaj w tym nurkowaniu.",
+  "desktop.diveCheckpoint.startReadingHelp": "Zacznij czytać w tym nurkowaniu.",
+  "desktop.diveCheckpoint.nextReadingHelp": "Sprawdź, czy w tym nurkowaniu nie ma więcej nieprzeczytanych treści."
 }

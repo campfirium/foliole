@@ -116,9 +116,9 @@ it('creates a manual virtual folder from the Virtual root context menu', async (
   const onSelectNodeInVirtualView = vi.fn();
   renderSavedSearchTree({ onOpenVirtualView, onSelectNodeInVirtualView });
 
-  expect(screen.queryByRole('button', { name: 'Create Virtual Folder' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Create in Virtual' })).toBeNull();
   fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'Virtual' }));
-  fireEvent.click(await screen.findByRole('menuitem', { name: 'Create Virtual Folder' }));
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Create in Virtual' }));
 
   await waitFor(() => expect(useWorkspaceStore.getState().createVirtualNode).toHaveBeenCalledWith({ mode: 'manual' }));
   expect(onOpenVirtualView).toHaveBeenCalledWith('virtual-new');
@@ -128,10 +128,10 @@ it('creates a manual virtual folder from the Virtual root context menu', async (
 it('omits child creation from an index context menu', async () => {
   renderSavedSearchTree();
 
-  expect(screen.queryByRole('button', { name: 'Create Virtual Folder' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Create in Virtual' })).toBeNull();
   fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'Custom virtual' }));
   await screen.findByRole('menuitem', { name: 'Rename' });
-  expect(screen.queryByRole('menuitem', { name: 'Create Virtual Folder' })).toBeNull();
+  expect(screen.queryByRole('menuitem', { name: 'Create in Virtual' })).toBeNull();
 });
 
 it('renames a saved search from the virtual directory row', async () => {

@@ -61,5 +61,22 @@
   "desktop.reviewComplete.item.many": "articles\nSujet",
   "desktop.reviewComplete.topic.one": "Sujets",
   "desktop.reviewComplete.topic.many": "thèmes",
-  "desktop.editor.image.resize": "Redimensionner l’image"
+  "desktop.editor.image.resize": "Redimensionner l’image",
+  "desktop.diveCheckpoint.queueClear": "Effacement de la file d'attente Dive",
+  "desktop.diveCheckpoint.clearForNow": "Dive Effacer pour l’instant",
+  "desktop.diveCheckpoint.readingComplete": "Lecture Dive terminée",
+  "desktop.diveCheckpoint.noUnread": "Aucun élément non lu dans ce Dive",
+  "desktop.diveCheckpoint.nothingReady": "Rien n'est encore prêt dans ce Dive.",
+  "desktop.diveCheckpoint.noNewUnread": "Aucun nouveau matériel non lu dans cette plongée.",
+  "desktop.diveCheckpoint.global": "Mondial",
+  "desktop.diveCheckpoint.switch": "Changer",
+  "desktop.diveCheckpoint.continue": "Continuer",
+  "desktop.diveCheckpoint.exit": "Sortie",
+  "desktop.diveCheckpoint.recheck": "Revérifier",
+  "desktop.diveCheckpoint.globalHelp": "Continuez à apprendre dans toute la bibliothèque.",
+  "desktop.diveCheckpoint.switchHelp": "Choisissez un autre Dive à étudier.",
+  "desktop.diveCheckpoint.exitHelp": "Terminez cette session et revenez à la navigation.",
+  "desktop.diveCheckpoint.checkTodayHelp": "Vérifiez ce qui est dû aujourd'hui dans cette plongée.",
+  "desktop.diveCheckpoint.startReadingHelp": "Commencez à lire dans cette plongée.",
+  "desktop.diveCheckpoint.nextReadingHelp": "Recherchez davantage de contenu non lu dans cette plongée."
 }

@@ -111,5 +111,9 @@
   "desktop.command.dev.disableReviewStatusMemory": "DEV 비활성화 검토 상태 표시줄 메모리",
   "desktop.command.openCustomCopy": "사용자 지정 문구 열기",
   "desktop.command.scrollDocumentTop": "문서 맨 위로 스크롤",
-  "desktop.command.scrollDocumentBottom": "문서 맨 아래로 스크롤"
+  "desktop.command.scrollDocumentBottom": "문서 맨 아래로 스크롤",
+  "desktop.command.sendToEdge": "{app}로 기사 보내기",
+  "desktop.command.chooseArticleTarget": "기사 보내기…",
+  "desktop.command.edgeContents": "내용물",
+  "desktop.command.sendToEdgeFailed": "기사를 열 수 없습니다. 마우스 오른쪽 버튼 클릭 메뉴 설정에서 설치된 앱을 선택하세요."
 }

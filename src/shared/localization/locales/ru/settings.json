@@ -229,5 +229,18 @@
   "settings.review.trainingHistoryLoading": "Загрузка истории обучения…",
   "settings.review.trainingHistoryFailed": "Не удалось загрузить историю обучения.",
   "settings.review.lastOptimization": "Последняя оптимизация: {time}",
-  "settings.review.optimizationFailed": "Не удалось завершить оптимизацию. Повторите попытку."
+  "settings.review.optimizationFailed": "Не удалось завершить оптимизацию. Повторите попытку.",
+  "settings.review.later.title": "Пользовательский интервал позже",
+  "settings.review.later.description": "Установите интервал перед повторным появлением материала (0 для короткого интервала по умолчанию).",
+  "settings.review.later.default": "По умолчанию",
+  "settings.webLookup.articleTarget": "Назначение статьи",
+  "settings.webLookup.chooseArticleTarget": "Выберите приложение",
+  "settings.webLookup.pickArticleTarget": "Выбрать другое приложение…",
+  "settings.review.training.title": "Расширенные настройки обучения",
+  "settings.review.training.description": "Эти параметры влияют на обучение параметров FSRS. Сохраняйте значения по умолчанию, если не понимаете, как работают параметры. Изменения вступят в силу при следующей тренировке FSRS.",
+  "settings.review.training.recency": "Вес недавних повторений",
+  "settings.review.training.recencyDescription": "Недавние повторения получают больший вес. Модель быстрее подстраивается под изменения памяти, но становится чувствительнее к кратковременным колебаниям.",
+  "settings.review.training.penalties": "Штрафы за интервалы повторения",
+  "settings.review.training.penaltiesDescription": "При обучении модель штрафуется за очень короткие интервалы повторения в тот же день и резкий рост длинных интервалов. Точность прогноза того, вспомните ли вы материал, может немного снизиться.",
+  "settings.review.training.resetOption": "Сброс {label}"
 }

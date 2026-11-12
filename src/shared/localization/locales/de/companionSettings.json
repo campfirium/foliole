@@ -115,5 +115,13 @@
   "companion.settings.storage.backupSaved": "Datenbank gespeichert:",
   "companion.settings.storage.backupAttachmentsUnchecked": "Nur auf diesem Gerät verfügbare Anhänge sind enthalten.",
   "companion.settings.storage.backupAttachmentsPending": "Wartende Anhänge:",
-  "companion.settings.storage.clearAction": "Löschen…"
+  "companion.settings.storage.clearAction": "Löschen…",
+  "companion.settings.appearance.textScale": "Textskalierung",
+  "companion.settings.appearance.css.globalDescription": "Verwalten Sie CSS-Snippets, die das Erscheinungsbild der App anpassen.",
+  "companion.settings.appearance.css.openFolder": "Snippets-Ordner öffnen",
+  "companion.settings.appearance.css.reload": "Snippets aktualisieren",
+  "companion.settings.appearance.css.fileError": "Auf CSS-Snippet-Dateien konnte nicht zugegriffen oder deren Einstellungen gespeichert werden.",
+  "companion.settings.appearance.css.search": "Snippets durchsuchen…",
+  "companion.settings.appearance.css.noMatches": "Keine passenden Snippets.",
+  "companion.settings.appearance.css.globalValidationError": "Diese Datei konnte nicht gelesen werden oder enthält nicht unterstütztes CSS."
 }
