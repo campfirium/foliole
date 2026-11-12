@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 /* global console, process */
 
+import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs, promisify } from 'node:util';
 
 import { validateMobilePlatformVersions } from './mobile-store-identity-contract.mjs';
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
@@ -44,26 +46,46 @@ export function validateReleaseCandidateFiles({
   };
 }
 
-async function readJson(rootDir, path) {
-  return readFile(join(rootDir, path), 'utf8').then(JSON.parse);
+const execFileAsync = promisify(execFile);
+
+function candidateReader(rootDir, commit) {
+  if (commit === undefined) {
+    return (path) => readFile(join(rootDir, path), 'utf8');
+  }
+  if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(commit)) {
+    throw new Error('Release candidate commit must be a full Git object ID.');
+  }
+  return async (path) => {
+    const { stdout } = await execFileAsync('git', ['cat-file', 'blob', `${commit}:${path}`], {
+      cwd: rootDir,
+      encoding: 'utf8',
+      maxBuffer: 16 * 1024 * 1024
+    });
+    return stdout;
+  };
 }
 
-export async function validateCurrentReleaseCandidate(rootDir = process.cwd()) {
+async function validateCandidate(read) {
+  const readJson = (path) => read(path).then(JSON.parse);
   const [
     androidGradle, intent, iosInfoPlist, iosProject, manifest, packageJson, packageLock, registry
   ] = await Promise.all([
-    readFile(join(rootDir, 'android/app/build.gradle'), 'utf8'),
-    readJson(rootDir, '.github/release-intent.json'),
-    readFile(join(rootDir, 'ios/App/App/Info.plist'), 'utf8'),
-    readFile(join(rootDir, 'ios/App/App.xcodeproj/project.pbxproj'), 'utf8'),
-    readJson(rootDir, 'releases/update-manifest.json'),
-    readJson(rootDir, 'package.json'),
-    readJson(rootDir, 'package-lock.json'),
-    readJson(rootDir, '.github/release-platforms.json')
+    read('android/app/build.gradle'),
+    readJson('.github/release-intent.json'),
+    read('ios/App/App/Info.plist'),
+    read('ios/App/App.xcodeproj/project.pbxproj'),
+    readJson('releases/update-manifest.json'),
+    readJson('package.json'),
+    readJson('package-lock.json'),
+    readJson('.github/release-platforms.json')
   ]);
   return validateReleaseCandidateFiles({
     androidGradle, intent, iosInfoPlist, iosProject, manifest, packageJson, packageLock, registry
   });
+}
+
+export function validateCurrentReleaseCandidate(rootDir = process.cwd()) {
+  return validateCandidate(candidateReader(rootDir));
 }
 
 const FEATURE_PREVIEW_HEADINGS = {
@@ -87,8 +109,10 @@ export function formatFeaturePreviewReport(previews) {
 
 async function main() {
   assertQualityCommandAllowed('check:release-candidate');
-  const result = await validateCurrentReleaseCandidate();
-  const previews = await readJson(process.cwd(), 'src/shared/config/featurePreviews.json');
+  const { values } = parseArgs({ options: { commit: { type: 'string' } } });
+  const read = candidateReader(process.cwd(), values.commit);
+  const result = await validateCandidate(read);
+  const previews = JSON.parse(await read('src/shared/config/featurePreviews.json'));
   for (const line of formatFeaturePreviewReport(previews)) console.log(line);
   console.log(
     `[release-candidate] status: OK version=${result.version} ` +

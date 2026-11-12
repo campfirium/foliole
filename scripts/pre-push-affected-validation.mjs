@@ -68,11 +68,11 @@ function affectedFiles(input) {
 }
 
 function runReleaseCandidateCheckIfNeeded(updates) {
-  const releaseUpdate = updates.some((update) =>
+  const releaseUpdate = updates.find((update) =>
     update.remoteRef === 'refs/heads/release' && !ZERO_SHA.test(update.localSha));
   if (!releaseUpdate) return;
   console.log('[pre-push-affected-validation] release branch update detected; running check:release-candidate');
-  run(npmCommand(), ['run', 'check:release-candidate'], {
+  run(npmCommand(), ['run', 'check:release-candidate', '--', '--commit', releaseUpdate.localSha], {
     shell: process.platform === 'win32', stdio: 'inherit'
   });
 }
