@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { CSS_SNIPPET_STARTER_NAME, CSS_SNIPPET_STARTER_SOURCE } from '../../../../electron/ipc/cssSnippetStarter';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from '../components/SettingsPanel.testUtils';
 
@@ -88,4 +89,17 @@ it('loads file snippets from Appearance, persists enablement, and recovers when 
   await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh snippets' })).toBeEnabled());
   expect(screen.queryByRole('switch', { name: 'sidebar.css' })).toBeNull();
   expect(sidebarColor()).not.toBe('rgb(0, 0, 255)');
+});
+
+it('leaves the workspace styles alone when the bundled example is enabled as shipped', async () => {
+  listCssSnippetFiles.mockResolvedValue({
+    path: folder,
+    files: [{ name: CSS_SNIPPET_STARTER_NAME, sourceCss: CSS_SNIPPET_STARTER_SOURCE }]
+  });
+  await openAppearance();
+  const toggle = await screen.findByRole('switch', { name: CSS_SNIPPET_STARTER_NAME });
+  expect(toggle).toHaveAttribute('aria-checked', 'false');
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute('aria-checked', 'true');
+  expect(document.head.querySelector('style[data-desktop-custom-css]')).toBeNull();
 });
