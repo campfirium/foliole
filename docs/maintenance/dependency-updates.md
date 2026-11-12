@@ -146,13 +146,27 @@ acceptance. A blocked group does not hold unrelated eligible updates. The QA own
 closes each eligible PR after required checks for the containing candidate, dev
 integration and remote dev containment, including repairs. Re-read author, base
 and head; review any changed proposal and confirm it is still covered. Comment
-with the superseding commit and passing QA evidence, verify closure and remove
-the pending row. Failed, uncovered or undelivered rows retain evidence and the
-next action under the QA owner; workspace release does not discard closure work.
+with the superseding commit and passing QA evidence, verify closure, and complete
+source branch cleanup before removing the pending row. Failed, uncovered or
+undelivered rows retain evidence and the next action under the QA owner;
+workspace release does not discard closure work.
 After the actual dev combination passes integration validation, the active QA
 owner pushes the validated dev tip and verifies remote containment before PR
 closure. Scheduled Dev Quality follows its own schedule. Do not use PR count
 to determine install, test, commit or task count.
+
+### Source branch cleanup
+
+The owner who closes an adopted or declined bot proposal also owns source branch
+cleanup. Apply the same check when the bot has already closed the proposal.
+After confirming closure, delete an eligible same-repository `renovate/*` or
+`dependabot/*` source branch only if its current remote tip matches the
+reviewed PR head and no open PR uses it as a source or target. Use an exact-SHA
+lease for the deletion, then verify the remote ref is absent. A ref already
+absent completes cleanup. A moved or reused ref needs a fresh review. Leave it
+in place and record the reason and next action if it is still in use, out of
+scope, or the deletion fails. The pending row or deferral record retains any
+cleanup still owed by its owner.
 
 ## Pending centralized QA
 
