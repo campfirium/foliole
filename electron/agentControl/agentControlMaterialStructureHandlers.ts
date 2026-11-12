@@ -1,5 +1,6 @@
 import type http from 'node:http';
 
+import { readAgentControlItemLearningImport, readAgentControlTopicLearningImport } from './agentControlLearningImport.js';
 import {
   AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT,
   AGENT_CONTROL_MATERIAL_WRITE_REVEAL_LIMIT,
@@ -18,7 +19,6 @@ import {
   sendAgentControlJson
 } from './agentControlMutationHandlerSupport.js';
 import type { AgentControlRequestHandlerOptions } from './agentControlRequestHandler.js';
-import { readAgentControlTopicLearningImport } from './agentControlTopicLearningImport.js';
 
 export async function handleMaterialCreate(
   request: http.IncomingMessage,
@@ -39,9 +39,11 @@ export async function handleMaterialCreate(
   }
   sendMutation(request, response, options, capability, () => {
     const reading = readAgentControlTopicLearningImport(kind, body.reading_schedule);
+    const reviewSchedule = readAgentControlItemLearningImport(kind, body.review_schedule);
     const material = kind === 'item'
       ? createAgentControlMaterial({
-          content: content as string, kind, parentId: parentId as string | null, reveal: reveal as string
+          content: content as string, kind, parentId: parentId as string | null, reveal: reveal as string,
+          ...(reviewSchedule ? { reviewSchedule } : {})
         })
       : createAgentControlMaterial({
           ...(typeof content === 'string' ? { content } : {}),

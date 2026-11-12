@@ -34,11 +34,12 @@ function buildMaterialCreateBody(flags) {
   const result = requireFields(flags, required, optional);
   if (!result.ok) return result;
   const body = { parent_id: null, ...result.body };
-  if (Object.hasOwn(flags, 'reading_schedule')) {
+  for (const field of ['reading_schedule', 'review_schedule']) {
+    if (!Object.hasOwn(flags, field)) continue;
     try {
-      body.reading_schedule = JSON.parse(flags.reading_schedule);
+      body[field] = JSON.parse(flags[field]);
     } catch {
-      return { error: 'invalid_reading_schedule', ok: false, statusCode: 2 };
+      return { error: `invalid_${field}`, ok: false, statusCode: 2 };
     }
   }
   return { body, ok: true };

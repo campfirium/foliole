@@ -19,6 +19,7 @@ import { openDatabaseConnection } from '../database/connection.js';
 import { moveNodes, replaceNodeOrder, restoreNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
+import type { AgentControlItemReviewSchedule } from './agentControlLearningImport.js';
 import { AgentMaterialMutationError } from './agentControlMaterialMutations.js';
 import { readAgentControlMaterial } from './agentControlMaterials.js';
 
@@ -32,10 +33,10 @@ interface NodeRow extends DatabaseRow {
 
 type CreateMaterialInput =
   | { content?: string; kind: 'folder' | 'topic'; parentId: string | null; reading?: NodeReadingPayload; title: string }
-  | { content: string; kind: 'item'; parentId: string | null; reveal: string };
+  | { content: string; kind: 'item'; parentId: string | null; reveal: string; reviewSchedule?: AgentControlItemReviewSchedule };
 
 export function createAgentControlMaterial(input: CreateMaterialInput) {
-  if (input.kind === 'topic' && input.reading) {
+  if (input.kind === 'item' ? input.reviewSchedule : input.kind === 'topic' && input.reading) {
     return openDatabaseConnection().driver.transaction(() => insertAgentControlMaterial(input));
   }
   return insertAgentControlMaterial(input);
@@ -47,12 +48,14 @@ function insertAgentControlMaterial(input: CreateMaterialInput) {
   ensureParent(nodes, parentId, input.kind);
   const now = new Date().toISOString();
   const id = randomUUID();
-  const itemState = input.kind === 'item' ? createItemState(nodes, now) : null;
+  const itemSchedule = input.kind === 'item' ? input.reviewSchedule : undefined;
+  const review = input.kind === 'item' ? createItemReview(nodes, now, itemSchedule?.due) : null;
   upsertNodeSnapshot({
     anchorLink: null, content: input.content ?? '', createdAt: now, isTitleManual: input.kind !== 'item',
     kind: input.kind, nodeId: id, parentNodeId: parentId, position: null,
     reveal: input.kind === 'item' ? input.reveal : null,
-    ...(itemState ? { review: itemState.review } : {}),
+    ...(review ? { review } : {}),
+    ...(itemSchedule ? { priority: itemSchedule.priority } : {}),
     ...(input.kind === 'topic' && input.reading ? { priority: input.reading.priority, reading: input.reading } : {}),
     title: input.kind === 'item' ? deriveNodeTitleFromContent(input.content) : input.title,
     updatedAt: now
@@ -162,8 +165,8 @@ function resolveParentId(kind: string, parentId: string | null) {
   return kind === 'item' && parentId === null ? INBOX_NODE_ID : parentId;
 }
 
-function createItemState(nodes: NodeRow[], now: string) {
-  const due = allocateNewItemReviewDueDates({
+function createItemReview(nodes: NodeRow[], now: string, importedDue?: string) {
+  const due = importedDue ?? allocateNewItemReviewDueDates({
     batchSize: 1,
     newDayStartsAtHour: loadReviewSchedulerSettings().newDayStartsAtHour,
     newItemLoadBalancingDays: loadReviewSchedulerSettings().newItemLoadBalancingDays,
@@ -173,7 +176,7 @@ function createItemState(nodes: NodeRow[], now: string) {
   if (!due) {
     throw new AgentMaterialMutationError('invalid_request', 400);
   }
-  return { review: createInitialNewItemReviewProfile(due) };
+  return createInitialNewItemReviewProfile(due);
 }
 
 function readItemReviewLoad(nodes: NodeRow[]) {

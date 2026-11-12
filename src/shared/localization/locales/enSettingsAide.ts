@@ -1,6 +1,6 @@
 export const EN_SETTINGS_AIDE_TRANSLATIONS = {
   'settings.general.agentControl.learningImport': 'Allow learning progress imports',
-  'settings.general.agentControl.learningImportDescription': 'Let local tools set reading schedules and priorities when creating Topics.',
+  'settings.general.agentControl.learningImportDescription': 'Let local tools set schedules and priorities when creating Topics and Items.',
   'settings.general.agentControl.learningImportError': 'Could not load or save the learning import permission.',
   'settings.models.section': 'Models',
   'settings.models.description': 'Connect and choose the models used by Foliole Aide.',

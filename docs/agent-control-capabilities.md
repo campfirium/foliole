@@ -8,19 +8,19 @@ The [route registry](../scripts/agent-control/foliole-agent-routes.mjs) defines 
 | Search | Material search can return node, PDF, and external matches, with location details when available. | — | — | Check search coverage per source when adding new material types. |
 | Folder | Read title and hierarchy. Search and list direct children. | Create with a title and parent. | Move, reorder children, trash, and restore. Rename is accepted by `materials/update`. | Align the command description with supported Folder renaming. |
 | Topic | Read title, complete body on request, parent path, and child summaries. Search readable Topics. | Create with body, title, and parent. Optionally import an active reading schedule and priority. | Update body and title. Move, trash, and restore. | Evaluate structured learning data for export. |
-| Item | Read the complete question and answer on request, plus identity hints for derived Items. | Create a question-and-answer Item with a parent. | Update question, answer, and title. Move, trash, and restore where supported. | Create with initial review progress and priority for #241. Evaluate structured learning data for export. |
+| Item | Read the complete question and answer on request, plus identity hints for derived Items. | Create a question-and-answer Item with a parent and optional first review date and priority. | Update question, answer, and title. Move, trash, and restore where supported. | Import existing review history and preserve the first due date alongside it for [Discussion #241](https://github.com/campfirium/foliole/discussions/241). Evaluate structured learning data for export. |
 | Parent and child | Read the parent path and list direct children. List every direct child at the root or under a parent with pagination. | Set a parent when creating a material. | Move a material and reorder a Folder's children. | Follow each page and repeat for each parent when exporting a tree. |
 | Manual virtual Folder | List Folders and read ordered Topic membership from the Folder. | Create a manual virtual Folder. | Rename, add or remove Topics, reorder, trash, and restore. | Evaluate looking up a Topic's memberships directly. |
 | Collection and filter rules | The manual virtual Folder API lists manual Folders. | Review whether external callers need structured access to collections or filter rules. | Review supported operations by virtual Folder type. | Check collection-based and rule-based membership separately from manually curated membership. |
 | Dive and source relationships | The desktop bridge has Dive operations. Agent Control has no Dive routes. | Evaluate creating a Dive and setting its sources. | Evaluate listing, adding, and removing sources. | Confirm external organization and migration scenarios before choosing a contract. |
 | Attachments and derived content | Material reads expose some highlight and cloze identity hints. | The material create route supports question-and-answer Items. | Review attachment transfer and source-link operations separately. | Confirm round-trip needs for attachments and derived content. |
-| Learning settings and state | Material reads omit structured priority, reading schedules, review history, desired retention, and shelving. | Import an active Topic reading schedule and priority with local permission. Item history and scheduling imports remain open. | Material update accepts content, title, and answer fields. | Determine which learning settings are valid per material type and which actions external tools need after creation. |
+| Learning settings and state | Material reads omit structured priority, reading schedules, review history, desired retention, and shelving. | Import an active Topic reading schedule and priority with local permission. Import an ungraded Item’s first review date and priority. Historical review imports remain open. | Material update accepts content, title, and answer fields. | Determine which learning settings are valid per material type and which actions external tools need after creation. |
 
 The HTTP create request takes an explicit `parent_id`, which can be null. The CLI supplies null when the parent flag is omitted. Material reads default to previews and report truncation. Request `content_mode: "full"` or `--content-mode full` to read complete content and answers with the same response revision. Collection tags can travel in Topic content, while the manual virtual Folder routes expose manual membership.
 
 ### Importing a Topic reading schedule
 
-In desktop **Settings → General → Agent Control**, enable **Allow learning progress imports** for the current library. The permission defaults to off and stays local. A request with a reading schedule while it is off returns HTTP 403 with `learning_import_disabled`. Ordinary creation uses the existing permission.
+In desktop **Settings → General → Agent Control**, enable **Allow learning progress imports** for the current library. The permission defaults to off and stays local. A request with a learning schedule while it is off returns HTTP 403 with `learning_import_disabled`. Ordinary creation uses the existing permission.
 
 Send `reading_schedule` on a Topic `materials/create` request. With the CLI, pass the same object as JSON in `--reading-schedule`.
 
@@ -36,6 +36,19 @@ Send `reading_schedule` on a Topic `materials/create` request. With the CLI, pas
 ```
 
 Priority is a Foliole integer from 0 to 9. Timestamps require an offset and are stored in UTC, with the next date at or after the last handled date. Interval milliseconds and repetition count are nonnegative safe integers. Growth factor is at least 1. All six fields are required. The Topic and its active schedule are committed together and use Foliole's existing queue and sync. A malformed schedule or a schedule on a Folder or Item returns HTTP 400 when the permission is on. As with ordinary creation, repeating a successful request creates another material.
+
+### Importing an Item first review date
+
+With the same local permission, send `review_schedule` on an Item `materials/create` request. The CLI takes the same JSON through `--review-schedule`.
+
+```json
+{
+  "due": "2027-02-01T00:00:00Z",
+  "priority": 2
+}
+```
+
+Supply both fields. The date requires a timezone offset and priority is a Foliole integer from 0 to 9. The Item enters the review queue at the imported date as an ungraded card. Its first grade starts native scheduling, and undoing that grade restores the imported date. Use this option for a schedule-only migration or an Item without a usable review history. Ordinary Item creation continues to assign a date through Foliole’s new-card scheduler.
 
 ### Traversing material children
 
