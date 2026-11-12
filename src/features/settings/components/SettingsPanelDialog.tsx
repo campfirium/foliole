@@ -12,6 +12,7 @@ import {
 } from './SettingsPanelSections';
 import { SettingsSearchBox } from './SettingsSearchBox';
 import { SettingsSidebar } from './SettingsSidebar';
+import { useSettingsPanelDrag } from './useSettingsPanelDrag';
 
 import { definedProps } from '@/shared/lib/definedProps';
 
@@ -51,7 +52,9 @@ type SettingsPanelDialogProps = {
   title: string;
 };
 
-function SettingsPanelDialogBody(props: SettingsPanelDialogProps) {
+function SettingsPanelDialogBody(props: SettingsPanelDialogProps & {
+  dragHandle: ReturnType<typeof useSettingsPanelDrag>['handle'] | undefined;
+}) {
   const t = useTranslation();
   return (
     <>
@@ -66,15 +69,20 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps) {
           {props.headerNotice ? (
             <div className="min-w-0 flex-1 px-5">{props.headerNotice}</div>
           ) : (
-            <SettingsSearchBox
-              activeResultIndex={props.activeResultIndex}
-              onActiveResultIndexChange={props.onActiveResultIndexChange}
-              onQueryChange={props.onSearchQueryChange}
-              onSelectResult={props.onSearchResultSelect}
-              placeholder={t('settings.search.placeholder')}
-              query={props.searchQuery}
-              results={props.searchResults}
-            />
+            <>
+              {props.dragHandle ? (
+                <div aria-hidden="true" className="h-full flex-1 cursor-grab touch-none select-none active:cursor-grabbing" {...props.dragHandle} />
+              ) : null}
+              <SettingsSearchBox
+                activeResultIndex={props.activeResultIndex}
+                onActiveResultIndexChange={props.onActiveResultIndexChange}
+                onQueryChange={props.onSearchQueryChange}
+                onSelectResult={props.onSearchResultSelect}
+                placeholder={t('settings.search.placeholder')}
+                query={props.searchQuery}
+                results={props.searchResults}
+              />
+            </>
           )}
         </div>
         <div className="app-scrollbar min-h-0 flex-1 scroll-pt-20 overflow-auto px-7 py-7" ref={props.scrollContainerRef}>
@@ -106,6 +114,8 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps) {
 
 export function SettingsPanelDialog(props: SettingsPanelDialogProps) {
   const t = useTranslation();
+  const drag = useSettingsPanelDrag();
+  const canDrag = !props.categoryProps.previewDesktopSettings;
   return (
     <AppDialog modal open onOpenChange={(open) => !open && props.onClose()}>
       <AppDialogPortal>
@@ -114,16 +124,17 @@ export function SettingsPanelDialog(props: SettingsPanelDialogProps) {
         <AppDialogContent
           aria-label={t('settings.dialog.aria')}
           aria-describedby={undefined}
-          className={settingsDialogSurfaceClassName(`grid h-[min(860px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[260px_minmax(0,1fr)] overflow-hidden ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`)}
+          className={settingsDialogSurfaceClassName(`grid h-[min(860px,calc(100dvh-36px))] w-[min(1240px,calc(100vw-36px))] max-w-none grid-cols-[260px_minmax(0,1fr)] overflow-hidden ${canDrag ? '[-webkit-app-region:no-drag]' : ''} ${props.isPreviewActive ? 'pointer-events-none opacity-0' : ''}`)}
           data-settings-root-dialog="true"
           inert={props.isPreviewActive}
+          ref={drag.panelRef}
           onEscapeKeyDown={(event) => {
             if (props.searchQuery.trim().length > 0) {
               event.preventDefault();
             }
           }}
         >
-          <SettingsPanelDialogBody {...props} />
+          <SettingsPanelDialogBody {...props} dragHandle={canDrag ? drag.handle : undefined} />
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>
