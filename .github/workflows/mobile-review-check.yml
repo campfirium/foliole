@@ -39,7 +39,7 @@ jobs:
     permissions: { contents: read }
     steps:
       - uses: actions/checkout@v4
-        with: { ref: ${{ github.sha }}, persist-credentials: false }
+        with: { ref: '${{ github.sha }}', persist-credentials: false }
       - uses: actions/setup-node@v4
         with: { node-version: 26.13.0 }
       - name: Classify access to the fixed Play beta release inventory
