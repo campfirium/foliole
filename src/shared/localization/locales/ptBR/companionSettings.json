@@ -115,5 +115,13 @@
   "companion.settings.storage.backupSaved": "Banco de dados salvo:",
   "companion.settings.storage.backupAttachmentsUnchecked": "Somente os anexos disponíveis neste dispositivo são incluídos.",
   "companion.settings.storage.backupAttachmentsPending": "Anexos aguardando:",
-  "companion.settings.storage.clearAction": "Limpar…"
+  "companion.settings.storage.clearAction": "Limpar…",
+  "companion.settings.appearance.textScale": "Escala de texto",
+  "companion.settings.appearance.css.globalDescription": "Gerencie trechos CSS que personalizam a aparência do aplicativo.",
+  "companion.settings.appearance.css.openFolder": "Abrir pasta de trechos",
+  "companion.settings.appearance.css.reload": "Atualizar trechos",
+  "companion.settings.appearance.css.fileError": "Não foi possível acessar os arquivos de snippet CSS ou salvar suas configurações.",
+  "companion.settings.appearance.css.search": "Trechos de pesquisa…",
+  "companion.settings.appearance.css.noMatches": "Nenhum trecho correspondente.",
+  "companion.settings.appearance.css.globalValidationError": "Este arquivo não pôde ser lido ou contém CSS não suportado."
 }

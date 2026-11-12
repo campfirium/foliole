@@ -83,7 +83,8 @@ it('transfers the unique desktop Host scope while preserving permanent state', (
     INSERT INTO settings VALUES ('host_name', '"Old Mac"', 'old');
     INSERT INTO nodes (id, title, created_at, updated_at) VALUES ('n', 'Node', 'old', 'old');
     INSERT INTO node_reading_host_state VALUES ('n', 'Old Mac', 44, 'old');
-    INSERT INTO node_view_state VALUES ('n', 'Old Mac', 120, 2, 5, 'close-flush', 'old');
+    INSERT INTO node_view_state (node_id, host_name, scroll_top, reading_offset, selection_from, selection_to, source, updated_at)
+    VALUES ('n', 'Old Mac', 120, 32, 2, 5, 'close-flush', 'old');
     INSERT INTO setting_records VALUES
       ('window_state','session_resume','windows','desktop','Old Mac','{"maximized":true}','old-hash','old',NULL),
       ('readwise_import_settings','host','windows','desktop','Old Mac','{"version":6,"readwiseRootPath":"/Readwise","autoImportPolicyVersion":3}','readwise-hash','old',NULL);
@@ -102,8 +103,8 @@ it('transfers the unique desktop Host scope while preserving permanent state', (
 
   expect(sqlite.prepare('SELECT host_name, reading_position FROM node_reading_host_state').get())
     .toEqual({ host_name: 'New Mac', reading_position: 44 });
-  expect(sqlite.prepare('SELECT host_name, scroll_top, selection_from, selection_to FROM node_view_state').get())
-    .toEqual({ host_name: 'New Mac', scroll_top: 120, selection_from: 2, selection_to: 5 });
+  expect(sqlite.prepare('SELECT host_name, scroll_top, reading_offset, selection_from, selection_to FROM node_view_state').get())
+    .toEqual({ host_name: 'New Mac', scroll_top: 120, reading_offset: 32, selection_from: 2, selection_to: 5 });
   expect(sqlite.prepare('SELECT key, host_name, value_json FROM setting_records ORDER BY key').all())
     .toEqual([
       { host_name: 'New Mac', key: 'readwise_import_settings', value_json: '{"version":6,"readwiseRootPath":"/Readwise","autoImportPolicyVersion":3}' },

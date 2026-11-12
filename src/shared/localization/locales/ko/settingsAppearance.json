@@ -159,5 +159,10 @@
   "settings.appearance.fontWeight.loading": "글꼴 불러오는 중…",
   "settings.appearance.fontWeight.loadError": "이 글꼴을 확인하지 못했습니다.",
   "settings.appearance.fontWeight.saveError": "글꼴 굵기를 저장하지 못했습니다.",
-  "settings.appearance.fontWeight.retry": "재시도"
+  "settings.appearance.fontWeight.retry": "재시도",
+  "settings.appearance.folderSections.title": "폴더 패널",
+  "settings.appearance.folderSections.retainedRows": "섹션 제목으로 고정된 행",
+  "settings.appearance.folderSections.retainedRowsDescription": "스크롤하는 동안 각 섹션 제목과 함께 표시되는 항목 수를 선택합니다.",
+  "settings.appearance.folderSections.gapDescription": "섹션 사이의 간격을 픽셀 단위로 설정합니다.",
+  "settings.appearance.folderSections.gap": "섹션 사이의 간격"
 }

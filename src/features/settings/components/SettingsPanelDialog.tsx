@@ -1,7 +1,7 @@
 import type { ReactNode, Ref } from 'react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
-import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, settingsDialogSurfaceClassName, settingsSidebarBadgeClassName } from '../../../shared/ui';
+import { AppDialog, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle, settingsDialogSurfaceClassName } from '../../../shared/ui';
 import { useHotkeySettings } from '../context/HotkeySettingsProvider';
 import type { SettingsCategoryId } from '../model/settingsPanelOptions';
 import type { SettingsSearchResult } from '../model/settingsSearch';
@@ -90,9 +90,6 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps & {
           <div className="mb-7 px-5 pb-6">
             <div className="flex items-center gap-3">
               <AppDialogTitle>{props.title}</AppDialogTitle>
-              {props.activeCategory === 'webdav-sync' ? <span className={settingsSidebarBadgeClassName()}>
-                Experiment
-              </span> : null}
               {props.headerActions ? (
                 <div
                   className={

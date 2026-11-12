@@ -46,7 +46,7 @@ export const ZH_HANS_DESKTOP_EXTERNAL_LIBRARY_TRANSLATIONS: Partial<Record<Trans
   'desktop.externalLibrary.preview.openSource': '打开原文',
   'desktop.externalLibrary.preview.panel': '外部文档预览面板',
   'desktop.externalLibrary.preview.documentFallback': '外部文档',
-  'desktop.externalLibrary.preview.openInLibrary': '在外部文档库中打开',
+  'desktop.externalLibrary.preview.openInLibrary': '在参考中打开',
   'desktop.externalLibrary.preview.restore': '还原预览窗口',
   'desktop.externalLibrary.preview.fullscreen': '全屏预览',
   'desktop.externalLibrary.preview.close': '关闭预览',

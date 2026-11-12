@@ -29,6 +29,7 @@ function legacyFixture() {
     ALTER TABLE node_reading_host_state RENAME TO node_reading_device_state;
     ALTER TABLE node_reading_device_state RENAME COLUMN host_name TO device_id;
     ALTER TABLE node_view_state RENAME COLUMN host_name TO device_id;
+    ALTER TABLE node_view_state DROP COLUMN reading_offset;
     ALTER TABLE setting_records RENAME COLUMN host_name TO device_id;
     DROP INDEX IF EXISTS idx_setting_records_host;
     CREATE INDEX idx_setting_records_device ON setting_records (device_id, updated_at);
@@ -37,7 +38,8 @@ function legacyFixture() {
     CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);
     INSERT INTO node_order (node_id, position) VALUES ('n', 0);
     INSERT INTO node_reading_device_state VALUES ('n', 'Old Phone', 22, 'old');
-    INSERT INTO node_view_state VALUES ('n', 'Old Phone', 80, 1, 3, 'close-flush', 'old');
+    INSERT INTO node_view_state (node_id, device_id, scroll_top, selection_from, selection_to, source, updated_at)
+    VALUES ('n', 'Old Phone', 80, 1, 3, 'close-flush', 'old');
     INSERT INTO setting_records VALUES
       ('window_state','device','ios','phone','Old Phone','{"page":"article"}','old-hash','old',NULL);
     INSERT INTO workspace_meta VALUES ('active_node_id', 'n', 'old');
@@ -63,8 +65,8 @@ describe.each(['android', 'ios'] as const)('%s companion Host cutover', () => {
     expect(result).toMatchObject({ deviceId: 'Old Phone', hostName: 'New Phone', version: COMPANION_DATABASE_VERSION });
     expect(sqlite.prepare('SELECT host_name, reading_position FROM node_reading_host_state').get())
       .toEqual({ host_name: 'New Phone', reading_position: 22 });
-    expect(sqlite.prepare('SELECT host_name, scroll_top, selection_from, selection_to FROM node_view_state').get())
-      .toEqual({ host_name: 'New Phone', scroll_top: 80, selection_from: 1, selection_to: 3 });
+    expect(sqlite.prepare('SELECT host_name, scroll_top, reading_offset, selection_from, selection_to FROM node_view_state').get())
+      .toEqual({ host_name: 'New Phone', scroll_top: 80, reading_offset: null, selection_from: 1, selection_to: 3 });
     expect(sqlite.prepare('SELECT scope, host_name, value_json FROM setting_records').get())
       .toEqual({ scope: 'host', host_name: 'New Phone', value_json: '{"page":"article"}' });
     expect(sqlite.prepare("SELECT value FROM companion_meta WHERE key = 'device_id'").pluck().get()).toBe('Old Phone');
@@ -86,6 +88,9 @@ describe.each(['android', 'ios'] as const)('%s companion Host cutover', () => {
     expect(sqlite.pragma('user_version', { simple: true })).toBe(26);
     expect(tableExists('node_reading_device_state')).toBe(true);
     expect(columns('setting_records')).toContain('device_id');
+    expect(columns('node_view_state')).not.toContain('reading_offset');
+    expect(sqlite.prepare('SELECT device_id, scroll_top FROM node_view_state').get())
+      .toEqual({ device_id: 'Old Phone', scroll_top: 80 });
     expect(sqlite.prepare("SELECT value FROM companion_meta WHERE key = 'host_name'").get()).toBeUndefined();
   });
 });

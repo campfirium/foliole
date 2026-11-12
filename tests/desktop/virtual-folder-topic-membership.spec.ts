@@ -54,9 +54,9 @@ test('adds Topics to a manual virtual folder from the menu and by drag without m
   const dragTopic = topicPanel.getByRole('treeitem', { name: DRAG_TOPIC_TITLE });
   await expect(menuTopic).toBeVisible();
   await menuTopic.click({ button: 'right' });
-  await desktopWindow.getByRole('menuitem', { name: /^(Add to Virtual Folder…|添加到虚拟文件夹\.\.\.)$/ }).click();
-  const membershipDialog = desktopWindow.getByRole('dialog', { name: /^(Add to Virtual Folder|添加到虚拟文件夹)$/ });
-  const membershipSearch = membershipDialog.getByRole('textbox', { name: /^(Add to virtual folder|添加到虚拟文件夹)$/ });
+  await desktopWindow.getByRole('menuitem', { name: /^(Add to Virtual…|添加到索引\.\.\.)$/ }).click();
+  const membershipDialog = desktopWindow.getByRole('dialog', { name: /^(Add to Virtual|添加到索引)$/ });
+  const membershipSearch = membershipDialog.getByRole('textbox', { name: /^(Add to Virtual|添加到索引)$/ });
   await expect(membershipSearch).toBeFocused();
   await membershipSearch.fill('Topic Membership');
   await expect(membershipDialog.getByRole('button', { name: FOLDER_TITLE })).toBeVisible();
@@ -112,8 +112,8 @@ test('references a real folder and shows its Topic tree in a virtual folder', as
   const virtual = page.getByRole('treeitem', { name: FOLDER_TITLE });
   await expect(virtual).toBeVisible();
   await source.click({ button: 'right' });
-  await page.getByRole('menuitem', { name: /^(Add to Virtual Folder|添加到虚拟文件夹)/ }).click();
-  await page.getByRole('dialog', { name: /^(Add to Virtual Folder|添加到虚拟文件夹)$/ })
+  await page.getByRole('menuitem', { name: /^(Add to Virtual|添加到索引)/ }).click();
+  await page.getByRole('dialog', { name: /^(Add to Virtual|添加到索引)$/ })
     .getByRole('button', { name: FOLDER_TITLE }).click();
   await virtual.click();
   const topics = page.getByRole('complementary', { name: /^(Current folder contents|当前文件夹内容)$/ });
@@ -129,8 +129,8 @@ test('references a real folder and shows its Topic tree in a virtual folder', as
   await expect(topic).toBeVisible();
 
   await topic.click({ button: 'right' });
-  await page.getByRole('menuitem', { name: /^(Add to Virtual Folder|添加到虚拟文件夹)/ }).click();
-  await page.getByRole('dialog', { name: /^(Add to Virtual Folder|添加到虚拟文件夹)$/ })
+  await page.getByRole('menuitem', { name: /^(Add to Virtual|添加到索引)/ }).click();
+  await page.getByRole('dialog', { name: /^(Add to Virtual|添加到索引)$/ })
     .getByRole('button', { name: FOLDER_TITLE }).click();
   await expect(topic).toHaveCount(1);
   await topic.click({ button: 'right' });
@@ -142,7 +142,9 @@ test('references a real folder and shows its Topic tree in a virtual folder', as
   await expect(page.getByRole('menuitem', { name: /^(Remove Direct Reference|移除单独添加)$/ })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await virtual.click({ button: 'right' });
-  await page.getByRole('menuitem', { name: /Remove from This Virtual Folder.*Reference source|从此虚拟文件夹中移除.*Reference source/ }).click();
+  await page.getByRole('menuitem', {
+    name: /^(Remove from This Virtual Entry|从此索引中移除) · Reference source$/
+  }).click();
   await expect(topic).toHaveCount(0);
   const snapshot = await page.evaluate(() => window.electronAPI.invoke('load_workspace_snapshot', {}));
   expect(snapshot.nodesById['virtual-source-topic']?.parentNodeId).toBe('virtual-nested');

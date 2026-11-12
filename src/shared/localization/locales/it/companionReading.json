@@ -76,5 +76,8 @@
   "companion.reading.outline.emptyDescription": "Qui compariranno i titoli e gli argomenti ed elementi correlati.",
   "companion.reading.previousTopic": "Argomento precedente",
   "companion.selection.copyText": "Copia testo",
-  "companion.selection.copyError": "Impossibile copiare il testo. Riprova."
+  "companion.selection.copyError": "Impossibile copiare il testo. Riprova.",
+  "companion.reading.shareArticle": "Condividi articolo",
+  "companion.reading.articleHandoffUnavailable": "Nessuna app può aprire l'articolo oppure l'articolo non ha testo disponibile.",
+  "companion.reading.articleHandoffFailed": "Impossibile condividere l'articolo."
 }

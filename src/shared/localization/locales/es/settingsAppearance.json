@@ -159,5 +159,10 @@
   "settings.appearance.fontWeight.loading": "Cargando fuente…",
   "settings.appearance.fontWeight.loadError": "No se pudo comprobar esta fuente.",
   "settings.appearance.fontWeight.saveError": "No se pudo guardar el grosor de la fuente.",
-  "settings.appearance.fontWeight.retry": "Reintentar"
+  "settings.appearance.fontWeight.retry": "Reintentar",
+  "settings.appearance.folderSections.title": "Panel de carpetas",
+  "settings.appearance.folderSections.retainedRows": "Filas fijadas con títulos de sección",
+  "settings.appearance.folderSections.retainedRowsDescription": "Elija cuántas entradas permanecen visibles con el título de cada sección mientras se desplaza.",
+  "settings.appearance.folderSections.gapDescription": "Establezca el espacio entre secciones en píxeles.",
+  "settings.appearance.folderSections.gap": "Espaciado entre secciones"
 }

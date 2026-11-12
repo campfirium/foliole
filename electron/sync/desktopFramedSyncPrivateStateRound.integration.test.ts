@@ -20,7 +20,9 @@ function privateState(file: string, nodeId: string, scroll: number) {
     if (typeof host !== 'string') throw new Error('original_host_invalid');
     db.transaction(() => {
       db.prepare("INSERT OR REPLACE INTO workspace_meta VALUES ('active_node_id', ?, ?)").run(nodeId, '2026-10-06');
-      db.prepare(`INSERT INTO node_view_state VALUES (?, ?, ?, 2, 4, 'user-scroll', ?)`)
+      db.prepare(`INSERT INTO node_view_state
+        (node_id, host_name, scroll_top, selection_from, selection_to, source, updated_at)
+        VALUES (?, ?, ?, 2, 4, 'user-scroll', ?)`)
         .run(nodeId, host, scroll, '2026-10-06');
       for (const view of [{ key: 'active_node', active_node_id: nodeId },
         { key: `node:${nodeId}`, node_id: nodeId, scroll_top: scroll, selection_from: 2, selection_to: 4 }]) {

@@ -219,5 +219,10 @@
   "desktop.readwise.parser.tagKeyword.description": "Starter linii sloganu, na przykład Tags:. Wypełnij tylko główny tekst początkowy, a nie spacje wiodące ani znacznik listy.",
   "desktop.readwise.parser.noteKeyword.title": "Znacznik notatki",
   "desktop.readwise.parser.noteKeyword.description": "Znacznik linii notatki, na przykład Uwaga:. Wypełnij tylko tekst znacznika podstawowego, a nie spacje wiodące lub znacznik listy.",
-  "desktop.readwise.cancel": "Anuluj"
+  "desktop.readwise.cancel": "Anuluj",
+  "desktop.document.readingResume.available": "Inne urządzenie czyta dalej.",
+  "desktop.document.readingResume.jump": "Skocz na pozycję",
+  "desktop.reviewActions.reading.laterDays": "Część materiału jest już przeczytana. Chcesz wrócić do niego za {days} dni (własny odstęp).",
+  "desktop.reviewActions.reading.laterOneDay": "Część materiału jest już przeczytana. Chcesz wrócić do niego za 1 dzień (własny odstęp).",
+  "desktop.reviewActions.reading.laterCustomBody": "Pojawia się ponownie po określonym czasie."
 }

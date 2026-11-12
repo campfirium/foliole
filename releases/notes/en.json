@@ -1,4 +1,49 @@
 {
+  "0.8.2": {
+    "notes": [
+      "New",
+      "Dive Flow: Read and review within a Dive, and switch between Flows while reading.",
+      "Custom reminders: Reminders can be triggered at specified times or under certain conditions on selected devices, with configurable notification destinations.",
+      "Custom CSS: CSS snippets can be used to customize the app’s appearance.",
+      "The current material can be converted to HTML and sent to a browser such as Edge to use TTS features like Read Aloud.",
+      "Improved",
+      "Local network sync is substantially faster.",
+      "Flow's Later action now supports a configurable fixed interval.",
+      "Topic postponement now supports days in addition to weeks.",
+      "Reading positions now sync across devices.",
+      "FSRS advanced settings allow adjustment of recent review weighting and the interval penalty.",
+      "Fixed",
+      "Sync continues for other entries when an individual entry temporarily cannot be applied.",
+      "Long articles reopen at the last reading position after the text reflows.",
+      "Fonts with a single weight display bold text correctly."
+    ],
+    "platformNotes": {
+      "macos": [
+        "New",
+        "WebDAV sync: Selected devices can relay encrypted sync changes through WebDAV between LAN sync sessions, extending LAN sync across networks."
+      ],
+      "android": [
+        "New",
+        "WebDAV sync: Selected devices can relay encrypted sync changes through WebDAV between LAN sync sessions, extending LAN sync across networks.",
+        "Improved",
+        "App-wide text size is now adjustable.",
+        "Dismissed and shelved topics can now be hidden in the directory and browse lists.",
+        "Images in Items can be enlarged during review.",
+        "The next chapter can be opened directly from the end of the current one.",
+        "Fixed",
+        "Deleting affected annotations with leading or trailing spaces clears the corresponding highlights right away."
+      ],
+      "ios": [
+        "Improved",
+        "App-wide text size is now adjustable.",
+        "Dismissed and shelved topics can now be hidden in the directory and browse lists.",
+        "Images in Items can be enlarged during review.",
+        "The next chapter can be opened directly from the end of the current one.",
+        "Fixed",
+        "Deleting affected annotations with leading or trailing spaces clears the corresponding highlights right away."
+      ]
+    }
+  },
   "0.8.1": {
     "platformNotes": {
       "android": [

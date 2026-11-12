@@ -52,7 +52,7 @@
   "desktop.workspace.resizeTopicList": "주제 목록 크기 조정",
   "desktop.workspace.resizeFolderList": "폴더 목록 크기 조정",
   "desktop.workspace.resizeVirtualSection": "가상 섹션 크기 조정",
-  "desktop.workspace.resizeExternalSection": "외부 섹션 크기 조정",
+  "desktop.workspace.resizeExternalSection": "외부 크기 조정",
   "desktop.workspace.resizeInspectorSidebar": "크기 조정 검사기 사이드바",
   "desktop.workspace.inspector": "검사관",
   "desktop.demo.narrow.aria": "데모 데스크탑 너비 공지",
@@ -202,5 +202,6 @@
   "desktop.rightPanel.highlights.unavailableTitle": "주제를 알 수 없음",
   "desktop.rightPanel.highlights.count": "하이라이트({count})",
   "desktop.rightPanel.highlights.list": "문서 하이라이트",
-  "desktop.workspace.leaveFlowHere": "Flow 나가기"
+  "desktop.workspace.leaveFlowHere": "Flow 나가기",
+  "desktop.rightPanel.flow.libraryScope": "도서관"
 }

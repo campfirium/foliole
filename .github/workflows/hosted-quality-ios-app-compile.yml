@@ -31,6 +31,7 @@ jobs:
     outputs:
       accepted_sha: ${{ steps.accepted.outputs.accepted_sha }}
     env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
       FOLIOLE_IOS_RESOURCE_MODE: full
       TARGET_SHA: ${{ inputs.target_sha }}
     steps:

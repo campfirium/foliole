@@ -2,6 +2,8 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import packageJson from '../../../../package.json';
+import * as desktopRuntime from '../../../shared/platform/runtime';
+import * as operatingSystem from '../../../shared/platform/runtime/operatingSystem';
 
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
@@ -60,7 +62,7 @@ it('keeps settings dividers aligned without title extension lines', () => {
   expect(desiredRetentionRow?.className).toContain('before:right-settings-panel-x');
 });
 
-it('keeps the experimental WebDAV category hidden in a production build', () => {
+it('keeps the WebDAV category hidden in a production browser renderer', () => {
   vi.stubEnv('MODE', 'production');
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="companion-sync" />);
 
@@ -72,17 +74,22 @@ it('keeps the experimental WebDAV category hidden in a production build', () => 
   expect(screen.getByText('Manage this device and its Sync Group.')).toBeVisible();
 });
 
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
 
-it('opens WebDAV as a peer of LAN sync in an internal build', async () => {
-  vi.stubEnv('MODE', 'internal');
+it('opens WebDAV as a peer of LAN sync in the public macOS build', async () => {
+  vi.stubEnv('MODE', 'production');
+  vi.spyOn(desktopRuntime, 'isDesktopRuntime').mockReturnValue(true);
+  vi.spyOn(operatingSystem, 'resolveRuntimeOperatingSystem').mockReturnValue('macos');
   renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="companion-sync" />);
   const sidebar = within(screen.getByLabelText('Settings categories'));
 
   expect(sidebar.getByRole('button', { name: 'Sync (LAN)' })).toHaveAttribute('aria-current', 'page');
   fireEvent.click(sidebar.getByRole('button', { name: 'Sync (WebDAV)' }));
   expect(await screen.findByRole('heading', { name: 'Sync (WebDAV)' })).toBeVisible();
-  expect(screen.getByText('Experiment')).toBeVisible();
+  expect(screen.queryByText('Experiment')).not.toBeInTheDocument();
   expect(sidebar.getByRole('button', { name: 'Sync (WebDAV)' })).toHaveAttribute('aria-current', 'page');
 });
 

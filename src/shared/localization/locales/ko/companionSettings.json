@@ -115,5 +115,13 @@
   "companion.settings.storage.backupSaved": "데이터베이스 저장됨:",
   "companion.settings.storage.backupAttachmentsUnchecked": "이 기기에서 사용할 수 있는 첨부 파일만 포함됩니다.",
   "companion.settings.storage.backupAttachmentsPending": "대기 중인 첨부 파일:",
-  "companion.settings.storage.clearAction": "지우기…"
+  "companion.settings.storage.clearAction": "지우기…",
+  "companion.settings.appearance.textScale": "텍스트 규모",
+  "companion.settings.appearance.css.globalDescription": "앱 모양을 맞춤설정하는 CSS 스니펫을 관리합니다.",
+  "companion.settings.appearance.css.openFolder": "스니펫 폴더 열기",
+  "companion.settings.appearance.css.reload": "스니펫 새로고침",
+  "companion.settings.appearance.css.fileError": "CSS 조각 파일에 액세스할 수 없거나 해당 설정을 저장할 수 없습니다.",
+  "companion.settings.appearance.css.search": "스니펫 검색…",
+  "companion.settings.appearance.css.noMatches": "일치하는 스니펫이 없습니다.",
+  "companion.settings.appearance.css.globalValidationError": "이 파일을 읽을 수 없거나 지원되지 않는 CSS가 포함되어 있습니다."
 }

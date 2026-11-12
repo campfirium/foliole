@@ -17,7 +17,7 @@ test('creates, recognizes, and persists a manual virtual folder', async ({ deskt
   }, TOPIC_TITLE);
 
   await desktopWindow.getByRole('treeitem', { name: 'Virtual', exact: true }).click({ button: 'right' });
-  await desktopWindow.getByRole('menuitem', { name: /^(Create Virtual Folder|创建虚拟文件夹)$/ }).click();
+  await desktopWindow.getByRole('menuitem', { name: /^(Create in Virtual|创建索引)$/ }).click();
   const renameInput = desktopWindow.getByRole('textbox', { name: /^(Rename|重命名) / });
   await expect(renameInput).toBeVisible();
   await renameInput.fill(FOLDER_TITLE);
@@ -26,8 +26,8 @@ test('creates, recognizes, and persists a manual virtual folder', async ({ deskt
 
   await desktopWindow.getByRole('treeitem', { name: 'Home', exact: true }).click();
   await desktopWindow.getByRole('treeitem', { name: TOPIC_TITLE }).click({ button: 'right' });
-  await desktopWindow.getByRole('menuitem', { name: /^(Add to Virtual Folder…|添加到虚拟文件夹\.\.\.)$/ }).click();
-  const dialog = desktopWindow.getByRole('dialog', { name: /^(Add to Virtual Folder|添加到虚拟文件夹)$/ });
+  await desktopWindow.getByRole('menuitem', { name: /^(Add to Virtual…|添加到索引\.\.\.)$/ }).click();
+  const dialog = desktopWindow.getByRole('dialog', { name: /^(Add to Virtual|添加到索引)$/ });
   await expect(dialog.getByRole('button', { name: FOLDER_TITLE })).toBeVisible();
   await desktopWindow.keyboard.press('Escape');
 

@@ -8,14 +8,14 @@ import { currentPlatformRelease } from './release-download-directory.mjs';
 import { createReleaseDownloadTable } from './release-download-table.mjs';
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
 
-export async function readReleaseDownloadPreview({ cwd, identity, manifest, run = execFileSync, candidate }) {
+export async function readReleaseDownloadPreview({ cwd, identity, manifest, run = execFileSync, candidate, review }) {
   const release = version => JSON.parse(run('gh', ['api', `repos/campfirium/foliole/releases/tags/v${version}`], { cwd, encoding: 'utf8' }));
   const selected = new Set(identity.intent.selectedPlatforms);
   const versions = [...new Set(identity.registry.platforms.filter(platform => platform.status === 'active' &&
     platform.deliveryChannel === 'github-release' && !selected.has(platform.id))
     .map(platform => currentPlatformRelease(manifest, platform.id)?.version).filter(Boolean))];
   const publishedReleases = Object.fromEntries(versions.map(version => [version, release(version)]));
-  return createReleaseDownloadTable({ identity, manifest, publishedReleases, candidate: candidate ?? release(identity.intent.version) });
+  return createReleaseDownloadTable({ identity, manifest, publishedReleases, review, candidate: candidate ?? release(identity.intent.version) });
 }
 
 export async function previewReleaseDownloads({ cwd = process.cwd(), run = execFileSync, output } = {}) {

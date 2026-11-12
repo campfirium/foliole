@@ -219,5 +219,10 @@
   "desktop.readwise.parser.tagKeyword.description": "O iniciador do slogan, por exemplo Tags:. Preencha apenas o texto inicial principal, não os espaços iniciais ou o marcador de lista.",
   "desktop.readwise.parser.noteKeyword.title": "Marcador de notas",
   "desktop.readwise.parser.noteKeyword.description": "O marcador de linha de nota, por exemplo Nota:. Preencha apenas o texto do marcador principal, não os espaços iniciais ou o marcador de lista.",
-  "desktop.readwise.cancel": "Cancelar"
+  "desktop.readwise.cancel": "Cancelar",
+  "desktop.document.readingResume.available": "Outro dispositivo leu mais adiante.",
+  "desktop.document.readingResume.jump": "Ir para a posição",
+  "desktop.reviewActions.reading.laterDays": "Você leu uma parte e quer continuar daqui a {days} dias (intervalo personalizado).",
+  "desktop.reviewActions.reading.laterOneDay": "Você leu uma parte e quer continuar daqui a 1 dia (intervalo personalizado).",
+  "desktop.reviewActions.reading.laterCustomBody": "Aparece novamente após o intervalo especificado."
 }

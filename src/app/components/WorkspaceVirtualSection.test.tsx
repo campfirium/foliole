@@ -187,7 +187,7 @@ it('shows Collection YAML action on a real virtual folder menu', () => {
   );
 
   fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'Reading queue' }));
-  expect(screen.getByText('Write virtual folder info to Topic YAML')).toBeInTheDocument();
+  expect(screen.getByText('Write Virtual entry details to Topic YAML')).toBeInTheDocument();
 });
 
 it('shows a visible message when virtual folder rename fails', async () => {
@@ -210,7 +210,7 @@ it('shows a visible message when virtual folder rename fails', async () => {
   fireEvent.change(input, { target: { value: 'Duplicate' } });
   fireEvent.keyDown(input, { key: 'Enter' });
 
-  expect(await screen.findByText(/Could not rename this virtual folder/)).toBeInTheDocument();
+  expect(await screen.findByText(/Could not rename this entry in Virtual/)).toBeInTheDocument();
 });
 
 it('can be hidden by the Demo shell without changing non-demo virtual rows', () => {

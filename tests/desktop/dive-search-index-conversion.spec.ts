@@ -23,7 +23,7 @@ test('converts the current index results into fixed Dive references', async ({ d
   await page.reload();
   await expectWorkspaceShell(page);
 
-  const indexes = page.getByRole('tree', { name: 'Virtual folder tree' });
+  const indexes = page.getByRole('tree', { name: 'Virtual tree' });
   const index = indexes.getByRole('treeitem', { name: query, exact: true });
   const dive = page.getByRole('tree', { name: /^Dives?$/ }).getByRole('treeitem', { name: query, exact: true });
   const list = page.getByRole('complementary', { name: 'Current folder contents' });
@@ -55,7 +55,7 @@ test('converts the current index results into fixed Dive references', async ({ d
   expect(await sources()).toEqual(['matching-a', 'matching-b']);
 
   await dive.click({ button: 'right' });
-  await page.getByRole('menuitem', { name: 'Convert to Virtual Folder' }).click();
+  await page.getByRole('menuitem', { name: 'Convert to Virtual' }).click();
   await expect(dive).toHaveCount(0);
   await index.click();
   await expect(list.getByRole('treeitem', { name: `${query} Alpha`, exact: true })).toBeVisible();

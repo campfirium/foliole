@@ -115,5 +115,13 @@
   "companion.settings.storage.backupSaved": "データベース保存済み：",
   "companion.settings.storage.backupAttachmentsUnchecked": "このデバイスで利用できる添付ファイルのみ含まれます。",
   "companion.settings.storage.backupAttachmentsPending": "待機中の添付ファイル：",
-  "companion.settings.storage.clearAction": "消去…"
+  "companion.settings.storage.clearAction": "消去…",
+  "companion.settings.appearance.textScale": "テキストスケール",
+  "companion.settings.appearance.css.globalDescription": "アプリの外観をカスタマイズする CSS スニペットを管理します。",
+  "companion.settings.appearance.css.openFolder": "スニペットフォルダーを開く",
+  "companion.settings.appearance.css.reload": "スニペットを更新する",
+  "companion.settings.appearance.css.fileError": "CSS スニペット ファイルにアクセスできなかったり、その設定を保存できませんでした。",
+  "companion.settings.appearance.css.search": "スニペットを検索…",
+  "companion.settings.appearance.css.noMatches": "一致するスニペットはありません。",
+  "companion.settings.appearance.css.globalValidationError": "このファイルは読み取れないか、サポートされていない CSS が含まれています。"
 }

@@ -40,9 +40,10 @@ export async function verifyVirtualFolderEntryMenu(args: {
 }) {
   const topicRow = args.contentPanel.getByRole('treeitem', { name: args.topicTitle });
   await topicRow.click({ button: 'right' });
-  await expect(args.desktopWindow.getByRole('menuitem', {
-    name: /^(Remove from This Virtual Folder|从此虚拟文件夹中移除)$/
-  })).toBeVisible();
+  const removeMembership = args.desktopWindow.getByRole('menuitem', {
+    name: /^(Remove from This Virtual Entry|从此索引中移除)$/
+  });
+  await expect(removeMembership).toBeVisible();
   await expect(args.desktopWindow.getByRole('menuitem', { name: /^(Move to…|移动到\.\.\.)$/ })).toHaveCount(0);
   await expect(args.desktopWindow.getByRole('menuitem', { name: /^(Create Topic|创建主题)$/ })).toHaveCount(0);
   await expect(args.desktopWindow.getByRole('menuitem', { name: /^(Paste as Topic|粘贴为主题)$/ })).toHaveCount(0);
@@ -51,9 +52,7 @@ export async function verifyVirtualFolderEntryMenu(args: {
   await fs.mkdir(path.dirname(screenshotPath), { recursive: true });
   await args.desktopWindow.screenshot({ path: screenshotPath });
   await args.testInfo.attach('virtual-folder-entry-menu', { contentType: 'image/png', path: screenshotPath });
-  await args.desktopWindow.getByRole('menuitem', {
-    name: /^(Remove from This Virtual Folder|从此虚拟文件夹中移除)$/
-  }).click();
+  await removeMembership.click();
   await expect(topicRow).toHaveCount(0);
   await runCli([
     'virtual-folders/add-items', '--descriptor', args.descriptorPath,

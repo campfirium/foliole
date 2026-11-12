@@ -52,7 +52,7 @@
   "desktop.workspace.resizeTopicList": "トピックリストのサイズを変更します",
   "desktop.workspace.resizeFolderList": "フォルダー リストのサイズを変更します",
   "desktop.workspace.resizeVirtualSection": "仮想セクションのサイズを変更します",
-  "desktop.workspace.resizeExternalSection": "外部セクションのサイズを変更します",
+  "desktop.workspace.resizeExternalSection": "外部サイズ変更",
   "desktop.workspace.resizeInspectorSidebar": "インスペクターのサイドバーのサイズを変更する",
   "desktop.workspace.inspector": "検査官",
   "desktop.demo.narrow.aria": "デモデスクトップの幅に関する注意事項",
@@ -202,5 +202,6 @@
   "desktop.rightPanel.highlights.unavailableTitle": "トピックは利用できません",
   "desktop.rightPanel.highlights.count": "ハイライト({count})",
   "desktop.rightPanel.highlights.list": "ドキュメントのハイライト",
-  "desktop.workspace.leaveFlowHere": "Flow を終了"
+  "desktop.workspace.leaveFlowHere": "Flow を終了",
+  "desktop.rightPanel.flow.libraryScope": "図書館"
 }

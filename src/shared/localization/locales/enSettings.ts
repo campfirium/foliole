@@ -240,7 +240,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.review.training.recency': 'Recent review weighting',
   'settings.review.training.recencyDescription': 'Give recent reviews more weight so the model adapts faster to changes in memory performance. This also makes the model more sensitive to short-term fluctuations.',
   'settings.review.training.penalties': 'Review interval penalties',
-  'settings.review.training.penaltiesDescription': 'Reduce very short same-day review intervals and sudden large increases in long-term intervals. This may slightly reduce recall prediction accuracy.',
+  'settings.review.training.penaltiesDescription': 'During training, penalize very short same-day review intervals and sharp increases in longer intervals. This may slightly reduce recall prediction accuracy.',
   'settings.review.training.resetOption': 'Reset {label}',
   'settings.review.optimization': 'Automatic review optimization',
   'settings.review.optimizeNow': 'Optimize now',

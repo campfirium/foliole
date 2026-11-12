@@ -1,7 +1,9 @@
 import type { TranslationCatalog } from './catalogTypes';
+import backupRestoreSync from './zh-Hant/backupRestoreSync.json';
 import d0 from './zh-Hant/companion.json';
 import d1 from './zh-Hant/companionApp.json';
 import d2 from './zh-Hant/companionCapture.json';
+import companionImageCloze from './zh-Hant/companionImageCloze.json';
 import d3 from './zh-Hant/companionReading.json';
 import d4 from './zh-Hant/companionReadingTypography.json';
 import d5 from './zh-Hant/companionSettings.json';
@@ -16,22 +18,32 @@ import d12 from './zh-Hant/desktopDiscourse.json';
 import d13 from './zh-Hant/desktopExternalLibrary.json';
 import d14 from './zh-Hant/desktopFolderList.json';
 import d15 from './zh-Hant/desktopFoliolePublish.json';
+import desktopFormatCleanup from './zh-Hant/desktopFormatCleanup.json';
 import d16 from './zh-Hant/desktopImport.json';
 import d17 from './zh-Hant/desktopImportDialogs.json';
 import d18 from './zh-Hant/desktopNavigation.json';
 import d19 from './zh-Hant/desktopNodes.json';
 import d20 from './zh-Hant/desktopPdf.json';
+import desktopReadwiseConnection from './zh-Hant/desktopReadwiseConnection.json';
+import desktopReadwisePolicy from './zh-Hant/desktopReadwisePolicy.json';
 import d21 from './zh-Hant/desktopReview.json';
 import d22 from './zh-Hant/desktopSearch.json';
 import d23 from './zh-Hant/desktopSort.json';
+import desktopSourceConnections from './zh-Hant/desktopSourceConnections.json';
 import d24 from './zh-Hant/desktopSourceUpdate.json';
 import d25 from './zh-Hant/desktopWordPress.json';
 import d26 from './zh-Hant/feedback.json';
+import reminders from './zh-Hant/reminders.json';
 import d27 from './zh-Hant/settings.json';
 import d28 from './zh-Hant/settingsAbout.json';
+import settingsAide from './zh-Hant/settingsAide.json';
 import d29 from './zh-Hant/settingsAppearance.json';
+import settingsAttachments from './zh-Hant/settingsAttachments.json';
+import settingsBackups from './zh-Hant/settingsBackups.json';
 import d30 from './zh-Hant/settingsCapture.json';
+import settingsDatabaseMaintenance from './zh-Hant/settingsDatabaseMaintenance.json';
 import d31 from './zh-Hant/settingsDemoPreview.json';
+import settingsEditor from './zh-Hant/settingsEditor.json';
 import d32 from './zh-Hant/settingsFallback.json';
 import d33 from './zh-Hant/settingsHotkeys.json';
 import d34 from './zh-Hant/settingsIcons.json';
@@ -84,5 +96,17 @@ export const TRANSLATIONS: TranslationCatalog = {
   ...d37,
   ...syncGroup,
   ...d38,
-  ...d39
+  ...d39,
+  ...backupRestoreSync,
+  ...companionImageCloze,
+  ...desktopFormatCleanup,
+  ...desktopReadwiseConnection,
+  ...desktopReadwisePolicy,
+  ...desktopSourceConnections,
+  ...reminders,
+  ...settingsAide,
+  ...settingsAttachments,
+  ...settingsBackups,
+  ...settingsDatabaseMaintenance,
+  ...settingsEditor
 };

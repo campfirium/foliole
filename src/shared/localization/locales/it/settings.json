@@ -229,5 +229,18 @@
   "settings.review.trainingHistoryLoading": "Caricamento cronologia addestramento…",
   "settings.review.trainingHistoryFailed": "Impossibile caricare la cronologia di addestramento.",
   "settings.review.lastOptimization": "Ultima ottimizzazione: {time}",
-  "settings.review.optimizationFailed": "Impossibile completare l’ottimizzazione. Riprova."
+  "settings.review.optimizationFailed": "Impossibile completare l’ottimizzazione. Riprova.",
+  "settings.review.later.title": "Intervallo successivo personalizzato",
+  "settings.review.later.description": "Imposta l'intervallo prima che il materiale ricompaia (0 per l'intervallo breve predefinito).",
+  "settings.review.later.default": "Predefinito",
+  "settings.webLookup.articleTarget": "Destinazione articolo",
+  "settings.webLookup.chooseArticleTarget": "Seleziona un'app",
+  "settings.webLookup.pickArticleTarget": "Scegli un'altra app...",
+  "settings.review.training.title": "Impostazioni di allenamento avanzate",
+  "settings.review.training.description": "Queste opzioni influiscono sull'addestramento dei parametri FSRS. Mantieni le impostazioni predefinite a meno che tu non capisca come funzionano le opzioni. Le modifiche avranno effetto al prossimo treno FSRS.",
+  "settings.review.training.recency": "Peso dei ripassi recenti",
+  "settings.review.training.recencyDescription": "Dà più peso ai ripassi recenti, così il modello si adatta più rapidamente ai cambiamenti della memoria e diventa più sensibile alle oscillazioni a breve termine.",
+  "settings.review.training.penalties": "Penalità sugli intervalli di ripasso",
+  "settings.review.training.penaltiesDescription": "L’addestramento penalizza gli intervalli di ripasso molto brevi nello stesso giorno e gli aumenti bruschi degli intervalli lunghi. La previsione della capacità di ricordare può diventare leggermente meno precisa.",
+  "settings.review.training.resetOption": "Reimposta {label}"
 }

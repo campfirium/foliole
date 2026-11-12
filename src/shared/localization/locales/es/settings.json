@@ -229,5 +229,18 @@
   "settings.review.trainingHistoryLoading": "Cargando historial de entrenamiento…",
   "settings.review.trainingHistoryFailed": "No se pudo cargar el historial de entrenamiento.",
   "settings.review.lastOptimization": "Última optimización: {time}",
-  "settings.review.optimizationFailed": "No se pudo completar la optimización. Inténtalo de nuevo."
+  "settings.review.optimizationFailed": "No se pudo completar la optimización. Inténtalo de nuevo.",
+  "settings.review.later.title": "Intervalo posterior personalizado",
+  "settings.review.later.description": "Establezca el intervalo antes de que reaparezca el material (0 para el intervalo corto predeterminado).",
+  "settings.review.later.default": "Por defecto",
+  "settings.webLookup.articleTarget": "Destino del artículo",
+  "settings.webLookup.chooseArticleTarget": "Seleccione una aplicación",
+  "settings.webLookup.pickArticleTarget": "Elija otra aplicación...",
+  "settings.review.training.title": "Configuraciones de entrenamiento avanzadas",
+  "settings.review.training.description": "Estas opciones afectan el entrenamiento de parámetros FSRS. Mantenga los valores predeterminados a menos que comprenda cómo funcionan las opciones. Los cambios entrarán en vigor la próxima vez que entrene FSRS.",
+  "settings.review.training.recency": "Peso de los repasos recientes",
+  "settings.review.training.recencyDescription": "Da más peso a los repasos recientes para que el modelo se adapte antes a los cambios en tu memoria. También será más sensible a las variaciones a corto plazo.",
+  "settings.review.training.penalties": "Penalizaciones de los intervalos de repaso",
+  "settings.review.training.penaltiesDescription": "Durante el entrenamiento, se penalizan los intervalos de repaso muy cortos en el mismo día y los saltos bruscos en los intervalos largos. Esto puede reducir ligeramente la precisión al predecir si recordarás el material.",
+  "settings.review.training.resetOption": "Restablecer {label}"
 }

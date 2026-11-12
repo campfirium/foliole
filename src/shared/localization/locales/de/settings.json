@@ -229,5 +229,18 @@
   "settings.review.trainingHistoryLoading": "Trainingsverlauf wird geladen…",
   "settings.review.trainingHistoryFailed": "Der Trainingsverlauf konnte nicht geladen werden.",
   "settings.review.lastOptimization": "Letzte Optimierung: {time}",
-  "settings.review.optimizationFailed": "Die Optimierung konnte nicht abgeschlossen werden. Versuchen Sie es erneut."
+  "settings.review.optimizationFailed": "Die Optimierung konnte nicht abgeschlossen werden. Versuchen Sie es erneut.",
+  "settings.review.later.title": "Benutzerdefiniertes späteres Intervall",
+  "settings.review.later.description": "Legen Sie das Intervall fest, bevor das Material wieder erscheint (0 für das standardmäßige kurze Intervall).",
+  "settings.review.later.default": "Standard",
+  "settings.webLookup.articleTarget": "Artikelziel",
+  "settings.webLookup.chooseArticleTarget": "Wählen Sie eine App aus",
+  "settings.webLookup.pickArticleTarget": "Wählen Sie eine andere App…",
+  "settings.review.training.title": "Erweiterte Trainingseinstellungen",
+  "settings.review.training.description": "Diese Optionen wirken sich auf das FSRS-Parametertraining aus. Behalten Sie die Standardeinstellungen bei, es sei denn, Sie verstehen, wie die Optionen funktionieren. Die Änderungen werden beim nächsten FSRS-Zug wirksam.",
+  "settings.review.training.recency": "Neuere Wiederholungen stärker gewichten",
+  "settings.review.training.recencyDescription": "Neuere Wiederholungen erhalten mehr Gewicht. Das Modell passt sich dadurch schneller an Veränderungen der Gedächtnisleistung an und reagiert empfindlicher auf kurzfristige Schwankungen.",
+  "settings.review.training.penalties": "Strafterme für Wiederholungsintervalle",
+  "settings.review.training.penaltiesDescription": "Beim Training werden sehr kurze Wiederholungsintervalle am selben Tag und sprunghaft steigende längere Intervalle bestraft. Das kann die Genauigkeit der Erinnerungsvorhersage etwas verringern.",
+  "settings.review.training.resetOption": "{label} zurücksetzen"
 }

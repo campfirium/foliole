@@ -229,5 +229,18 @@
   "settings.review.trainingHistoryLoading": "学習履歴を読み込み中…",
   "settings.review.trainingHistoryFailed": "学習履歴を読み込めませんでした。",
   "settings.review.lastOptimization": "前回の最適化：{time}",
-  "settings.review.optimizationFailed": "最適化を完了できませんでした。再試行してください。"
+  "settings.review.optimizationFailed": "最適化を完了できませんでした。再試行してください。",
+  "settings.review.later.title": "カスタム後の間隔",
+  "settings.review.later.description": "マテリアルが再表示されるまでの間隔を設定します (デフォルトの短い間隔の場合は 0)。",
+  "settings.review.later.default": "デフォルト",
+  "settings.webLookup.articleTarget": "記事の宛先",
+  "settings.webLookup.chooseArticleTarget": "アプリを選択してください",
+  "settings.webLookup.pickArticleTarget": "別のアプリを選択してください…",
+  "settings.review.training.title": "高度なトレーニング設定",
+  "settings.review.training.description": "これらのオプションは、FSRS パラメーターのトレーニングに影響します。オプションの動作を理解していない限り、デフォルトのままにしてください。変更は、次回 FSRS がトレーニングされるときに有効になります。",
+  "settings.review.training.recency": "最近の復習の重み付け",
+  "settings.review.training.recencyDescription": "最近の復習の重みを増やすと、モデルが記憶力の変化に早く適応します。一時的な変化にも敏感になります。",
+  "settings.review.training.penalties": "復習間隔のペナルティ",
+  "settings.review.training.penaltiesDescription": "学習時に、同日内の極端に短い復習間隔と長い復習間隔の急な伸びにペナルティを課します。思い出せるかどうかの予測精度がわずかに下がる場合があります。",
+  "settings.review.training.resetOption": "{label}をリセット"
 }

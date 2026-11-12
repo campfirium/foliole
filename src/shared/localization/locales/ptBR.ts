@@ -1,7 +1,9 @@
 import type { TranslationCatalog } from './catalogTypes';
+import backupRestoreSync from './ptBR/backupRestoreSync.json';
 import d0 from './ptBR/companion.json';
 import d1 from './ptBR/companionApp.json';
 import d2 from './ptBR/companionCapture.json';
+import companionImageCloze from './ptBR/companionImageCloze.json';
 import d3 from './ptBR/companionReading.json';
 import d4 from './ptBR/companionReadingTypography.json';
 import d5 from './ptBR/companionSettings.json';
@@ -16,22 +18,32 @@ import d12 from './ptBR/desktopDiscourse.json';
 import d13 from './ptBR/desktopExternalLibrary.json';
 import d14 from './ptBR/desktopFolderList.json';
 import d15 from './ptBR/desktopFoliolePublish.json';
+import desktopFormatCleanup from './ptBR/desktopFormatCleanup.json';
 import d16 from './ptBR/desktopImport.json';
 import d17 from './ptBR/desktopImportDialogs.json';
 import d18 from './ptBR/desktopNavigation.json';
 import d19 from './ptBR/desktopNodes.json';
 import d20 from './ptBR/desktopPdf.json';
+import desktopReadwiseConnection from './ptBR/desktopReadwiseConnection.json';
+import desktopReadwisePolicy from './ptBR/desktopReadwisePolicy.json';
 import d21 from './ptBR/desktopReview.json';
 import d22 from './ptBR/desktopSearch.json';
 import d23 from './ptBR/desktopSort.json';
+import desktopSourceConnections from './ptBR/desktopSourceConnections.json';
 import d24 from './ptBR/desktopSourceUpdate.json';
 import d25 from './ptBR/desktopWordPress.json';
 import d26 from './ptBR/feedback.json';
+import reminders from './ptBR/reminders.json';
 import d27 from './ptBR/settings.json';
 import d28 from './ptBR/settingsAbout.json';
+import settingsAide from './ptBR/settingsAide.json';
 import d29 from './ptBR/settingsAppearance.json';
+import settingsAttachments from './ptBR/settingsAttachments.json';
+import settingsBackups from './ptBR/settingsBackups.json';
 import d30 from './ptBR/settingsCapture.json';
+import settingsDatabaseMaintenance from './ptBR/settingsDatabaseMaintenance.json';
 import d31 from './ptBR/settingsDemoPreview.json';
+import settingsEditor from './ptBR/settingsEditor.json';
 import d32 from './ptBR/settingsFallback.json';
 import d33 from './ptBR/settingsHotkeys.json';
 import d34 from './ptBR/settingsIcons.json';
@@ -84,5 +96,17 @@ export const TRANSLATIONS: TranslationCatalog = {
   ...d37,
   ...syncGroup,
   ...d38,
-  ...d39
+  ...d39,
+  ...backupRestoreSync,
+  ...companionImageCloze,
+  ...desktopFormatCleanup,
+  ...desktopReadwiseConnection,
+  ...desktopReadwisePolicy,
+  ...desktopSourceConnections,
+  ...reminders,
+  ...settingsAide,
+  ...settingsAttachments,
+  ...settingsBackups,
+  ...settingsDatabaseMaintenance,
+  ...settingsEditor
 };

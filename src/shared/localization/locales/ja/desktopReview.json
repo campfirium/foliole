@@ -90,5 +90,9 @@
   "desktop.nodeReview.noLocalShortTerm": "ローカルの短期設定はありません",
   "desktop.nodeReview.priority.p0": "P0 - まず、遅延スケーリングなし",
   "desktop.foregroundTime.monthTotal": "合計時間",
-  "desktop.foregroundTime.monthTotalShort": "合計"
+  "desktop.foregroundTime.monthTotalShort": "合計",
+  "desktop.reviewDelay.enterHint": "適用する",
+  "desktop.reviewDelay.mode.weeks": "週ごと",
+  "desktop.reviewDelay.mode.days": "日によって",
+  "desktop.reviewDelay.daysInput": "次回登場までの日数"
 }

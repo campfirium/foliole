@@ -159,5 +159,10 @@
   "settings.appearance.fontWeight.loading": "Schrift wird geladen…",
   "settings.appearance.fontWeight.loadError": "Diese Schrift konnte nicht geprüft werden.",
   "settings.appearance.fontWeight.saveError": "Die Schriftstärke konnte nicht gespeichert werden.",
-  "settings.appearance.fontWeight.retry": "Wiederholen"
+  "settings.appearance.fontWeight.retry": "Wiederholen",
+  "settings.appearance.folderSections.title": "Ordnerbereich",
+  "settings.appearance.folderSections.retainedRows": "Mit Abschnittstiteln angeheftete Zeilen",
+  "settings.appearance.folderSections.retainedRowsDescription": "Wählen Sie aus, wie viele Einträge beim Scrollen mit jedem Abschnittstitel sichtbar bleiben.",
+  "settings.appearance.folderSections.gapDescription": "Legen Sie den Abstand zwischen Abschnitten in Pixel fest.",
+  "settings.appearance.folderSections.gap": "Abstand zwischen Abschnitten"
 }

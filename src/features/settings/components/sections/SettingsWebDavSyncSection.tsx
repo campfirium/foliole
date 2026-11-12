@@ -119,7 +119,7 @@ function WebDavDeviceRow({ group, relay }: { group: SyncGroupPayload; relay: Rel
 }
 
 function WebDavSetupStep({ children }: { children: ReactNode }) {
-  return <li className="relative pl-7 before:absolute before:left-1 before:top-7 before:z-10 before:size-1.5 before:rounded-full before:bg-muted-foreground after:absolute after:left-[6px] after:top-7 after:-bottom-7 after:border-l after:border-dotted after:border-muted-foreground/65 last:after:hidden">
+  return <li className="relative pl-7 before:absolute before:left-1 before:top-7 before:z-local-raised before:size-1.5 before:rounded-full before:bg-muted-foreground after:absolute after:left-[6px] after:top-7 after:-bottom-7 after:border-l after:border-dotted after:border-muted-foreground/65 last:after:hidden">
     {children}
   </li>;
 }

@@ -219,5 +219,10 @@
   "desktop.readwise.parser.tagKeyword.description": "Lo slogan iniziale, ad esempio Tags:. Compila solo il testo iniziale principale, non gli spazi iniziali o l'indicatore dell'elenco.",
   "desktop.readwise.parser.noteKeyword.title": "Segna nota",
   "desktop.readwise.parser.noteKeyword.description": "Il marcatore della linea della nota, ad esempio Nota:. Compila solo il testo dell'indicatore principale, non gli spazi iniziali o l'indicatore dell'elenco.",
-  "desktop.readwise.cancel": "Annulla"
+  "desktop.readwise.cancel": "Annulla",
+  "desktop.document.readingResume.available": "Un altro dispositivo leggi più lontano.",
+  "desktop.document.readingResume.jump": "Salta in posizione",
+  "desktop.reviewActions.reading.laterDays": "Hai letto una parte e vuoi continuare tra {days} giorni (intervallo personalizzato).",
+  "desktop.reviewActions.reading.laterOneDay": "Hai letto una parte e vuoi continuare tra 1 giorno (intervallo personalizzato).",
+  "desktop.reviewActions.reading.laterCustomBody": "Appare di nuovo dopo l'intervallo specificato."
 }

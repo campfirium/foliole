@@ -111,5 +111,9 @@
   "desktop.command.dev.disableReviewStatusMemory": "DEV Wyłącz pamięć paska stanu przeglądu",
   "desktop.command.openCustomCopy": "Otwórz tekst niestandardowy",
   "desktop.command.scrollDocumentTop": "Przewiń do początku dokumentu",
-  "desktop.command.scrollDocumentBottom": "Przewiń do końca dokumentu"
+  "desktop.command.scrollDocumentBottom": "Przewiń do końca dokumentu",
+  "desktop.command.sendToEdge": "Wyślij artykuł do {app}",
+  "desktop.command.chooseArticleTarget": "Wyślij artykuł…",
+  "desktop.command.edgeContents": "Zawartość",
+  "desktop.command.sendToEdgeFailed": "Nie można otworzyć artykułu. Wybierz zainstalowaną aplikację w ustawieniach menu prawego przycisku myszy."
 }

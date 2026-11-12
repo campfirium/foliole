@@ -180,7 +180,7 @@ test('Agent Control writes become visible in the desktop Virtual section', async
   await collectionRow.click();
   await collectionRow.click({ button: 'right' });
   const writeYamlAction = desktopWindow.getByText(
-    /^(Write virtual folder info to Topic YAML|将虚拟文件夹信息写入 Topic YAML)$/
+    /^(Write Virtual entry details to Topic YAML|将索引信息写入 Topic YAML)$/
   );
   await expect(writeYamlAction).toBeVisible();
   await writeYamlAction.click();

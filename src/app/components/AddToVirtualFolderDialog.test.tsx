@@ -45,11 +45,11 @@ it('searches eligible manual virtual folders in the shared floating palette styl
   const onClose = vi.fn();
   renderWithLocalization(<AddToVirtualFolderDialog onClose={onClose} sourceIds={['topic']} />);
 
-  expect(screen.getByRole('dialog', { name: 'Add to Virtual Folder' })).toBeInTheDocument();
+  expect(screen.getByRole('dialog', { name: 'Add to Virtual' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Filtered' })).toBeNull();
-  const input = screen.getByRole('textbox', { name: 'Add to virtual folder' });
+  const input = screen.getByRole('textbox', { name: 'Add to Virtual' });
   fireEvent.change(input, { target: { value: 'missing' } });
-  expect(screen.getByText('No matching virtual folders')).toBeInTheDocument();
+  expect(screen.getByText('No matches in Virtual')).toBeInTheDocument();
   fireEvent.change(input, { target: { value: 'man' } });
   fireEvent.keyDown(input, { key: 'Enter' });
 
@@ -67,7 +67,7 @@ it('offers to create a manual virtual folder when none are available', () => {
   });
 
   renderWithLocalization(<AddToVirtualFolderDialog onClose={vi.fn()} sourceIds={['topic']} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Create Virtual Folder' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Create in Virtual' }));
 
   expect(createVirtualNode).toHaveBeenCalledWith({ mode: 'manual' });
 });
