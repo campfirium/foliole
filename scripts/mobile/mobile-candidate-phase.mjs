@@ -3,14 +3,14 @@ import { openPlayEdit } from '../android/play-edit-id.mjs';
 const PHASES = new Set(['upload-unknown', 'uploaded', 'commit-unknown', 'committed', 'observed']);
 const PREFIX = 'Play candidate: ';
 
-export async function readMobileStatus(api, id, prefix) {
+export async function readMobileStatus(api, id, prefix, include = () => true) {
   if (!Number.isSafeInteger(id) || id < 1) throw new Error('A durable candidate ID is required');
   let hasHistory = false;
   for (let page = 1; ; page += 1) {
     const rows = await api('GET', `deployments/${id}/statuses?per_page=100&page=${page}`);
     if (!Array.isArray(rows)) throw new Error('Durable mobile operation history is unavailable');
     hasHistory ||= rows.length > 0;
-    const row = rows.find(item => item.description?.startsWith(prefix));
+    const row = rows.find(item => item.description?.startsWith(prefix) && include(item.description.slice(prefix.length)));
     if (row) {
       if (row.creator?.login !== 'github-actions[bot]') throw new Error('Durable mobile operation identity differs');
       return { value: row.description.slice(prefix.length), hasHistory };

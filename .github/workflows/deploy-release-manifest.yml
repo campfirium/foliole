@@ -25,7 +25,8 @@ on:
       - "scripts/mobile/testflight-review-registry.mjs"
       - "scripts/mobile/sync-testflight-release-status.mjs"
       - "releases/store-candidates.json"
-      - "scripts/android/play-availability.mjs"
+      - "scripts/mobile/play-public-downloads.mjs"
+      - "scripts/android/play-availability-state.mjs"
 
 permissions:
   contents: read
@@ -41,11 +42,6 @@ jobs:
       source_sha: ${{ steps.source.outputs.sha }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    concurrency:
-      group: play-android-open-testing
-      cancel-in-progress: false
-      queue: max
-    permissions: { contents: read, deployments: write }
     if: github.ref == 'refs/heads/dev' || github.event_name == 'release'
     steps:
       - uses: actions/checkout@v4
@@ -61,7 +57,6 @@ jobs:
           IOS_APP_STORE_API_ISSUER: ${{ secrets.IOS_APP_STORE_API_ISSUER }}
           IOS_APP_STORE_API_KEY_ID: ${{ secrets.IOS_APP_STORE_API_KEY_ID }}
           IOS_APP_STORE_API_KEY_BASE64: ${{ secrets.IOS_APP_STORE_API_KEY_BASE64 }}
-          ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}
         run: mkdir -p .tmp && node scripts/mobile/site-store-status.mjs
       - uses: actions/upload-artifact@v4
         with:

@@ -104,7 +104,7 @@ it('checks multiple in-review candidates with one live track inventory', async (
   f.extraReleases = [{ track: 'beta', releaseName: '0.7.17.5.aaaaaaaaa', activeArtifacts: [{ versionCode: 5 }],
     releaseLifecycleState: 'RELEASE_LIFECYCLE_STATE_IN_REVIEW' }];
   expect(await checkPendingPlayCandidates(f.clients())).toMatchObject([
-    { deploymentId: 71, state: 'waiting' }, { deploymentId: 72, state: 'waiting' }
+    { deploymentId: 72, state: 'waiting' }, { deploymentId: 71, state: 'waiting' }
   ]);
   expect(f.calls.filter(call => call.route.endsWith('/tracks/beta/releases'))).toHaveLength(1);
   expect(f.histories.get(72)[0].description).toBe('Play availability: waiting');
@@ -163,15 +163,13 @@ it('rejects duplicate exact releases and malformed version inventories while sti
   expect(f.edits.size).toBe(0);
 });
 
-it('ends scheduled waiting after readiness while allowing a manual exact-candidate refresh to revoke it', async () => {
+it('rechecks the available build on schedule and retains exact manual refresh', async () => {
   const f = await fixture();
   expect(await checkPendingPlayCandidates(f.clients())).toMatchObject([{ deploymentId: 71, state: 'waiting' }]);
   f.lifecycle = 'PUBLISHED';
   expect(await checkPendingPlayCandidates(f.clients())).toMatchObject([{ state: 'available' }]);
-  const count = f.calls.length;
-  expect(await checkPendingPlayCandidates(f.clients())).toEqual([]);
-  expect(f.calls.slice(count).some(call => !call.route.startsWith('/repos/'))).toBe(false);
   f.track.releases[0].status = 'halted';
+  expect(await checkPendingPlayCandidates(f.clients())).toMatchObject([{ state: 'waiting' }]);
   expect(await checkPendingPlayCandidates({ ...f.clients(), candidateId: '71' })).toMatchObject([{ state: 'waiting' }]);
   await expect(checkPendingPlayCandidates({ ...f.clients(), candidateId: '72' })).rejects.toThrow(/not found/u);
 });

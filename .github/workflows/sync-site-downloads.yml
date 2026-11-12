@@ -17,23 +17,41 @@ jobs:
       (github.event.workflow_run.head_branch == 'dev' || github.event.workflow_run.event == 'release')
     runs-on: ubuntu-latest
     steps:
-      - name: Check whether Pages deployed
-        id: deployed
+      - name: Check whether the published directory needs a site deployment
+        id: site
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
           RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
         run: |
-          deployed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs" \
-            --jq 'any(.jobs[]; .name == "Deploy to GitHub Pages" and .conclusion == "success")')
-          echo "deployed=$deployed" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          eligible=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs" \
+            --jq 'any(.jobs[]; .name == "Package release manifest" and .conclusion == "success") and
+              any(.jobs[]; .name == "Deploy to GitHub Pages" and (.conclusion == "success" or .conclusion == "skipped"))')
+          if [[ "$eligible" != "true" ]]; then
+            exit 0
+          fi
+          directory=$(curl -fsS --max-time 30 https://campfirium.github.io/foliole/releases/downloads.json |
+            jq -ceS 'if .schemaVersion != 1 or (.platforms | type) != "object" then error("Invalid download directory") else . end |
+              .storeChannels //= {} |
+              .platforms |= map_values(if .status == "available" then . else del(.url, .releaseUrl) end)')
+          status=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/site-downloads.json" -w '%{http_code}' \
+            https://foliole.app/downloads.json)
+          case "$status" in
+            200) deployed=$(jq -ceS . "$RUNNER_TEMP/site-downloads.json") ;;
+            404) deployed='' ;;
+            *) echo "Production download directory returned HTTP $status" >&2; exit 1 ;;
+          esac
+          if [[ "$directory" != "$deployed" ]]; then
+            echo 'dispatch=true' >> "$GITHUB_OUTPUT"
+          fi
       - name: Require site sync token
-        if: steps.deployed.outputs.deployed == 'true'
+        if: steps.site.outputs.dispatch == 'true'
         env:
           SITE_SYNC_TOKEN: ${{ secrets.FOLIOLE_SITE_SYNC_TOKEN }}
         run: test -n "$SITE_SYNC_TOKEN"
       - name: Notify Foliole site
-        if: steps.deployed.outputs.deployed == 'true'
+        if: steps.site.outputs.dispatch == 'true'
         env:
           GH_TOKEN: ${{ secrets.FOLIOLE_SITE_SYNC_TOKEN }}
         run: |

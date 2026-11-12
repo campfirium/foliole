@@ -5,10 +5,5 @@
     "buildNumber": "5.1",
     "sourceSha": "2bc09f0065e54a3bcbba3ed5e067307ac1abe350",
     "executionLane": "release-t7"
-  },
-  "android-play": {
-    "version": "0.8.1",
-    "deploymentId": 7618023991,
-    "versionCode": 5
   }
 }

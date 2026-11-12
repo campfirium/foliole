@@ -39,3 +39,34 @@ export async function writePlayReviewStatus(github, row, lifecycle) {
     description: `${prefix}${value}`, auto_inactive: false,
     log_url: `https://github.com/campfirium/foliole/actions/runs/${row.payload.runId}` });
 }
+
+const PUBLIC = 'Play public status: ';
+const PUBLIC_STATES = new Set(['available', 'in-review', 'verifying', 'rejected', 'unavailable']);
+
+export async function readPlayPublicStatus(github, id) {
+  const { value } = await readMobileStatus(github, id, PUBLIC);
+  if (value !== undefined) {
+    if (!PUBLIC_STATES.has(value)) throw new Error('Unknown Play public status');
+    return value;
+  }
+  // Older checks stored only the successful rollout proof, without a public observation.
+  const legacy = await readMobileStatus(github, id, RESULT, state => ['available', 'rejected'].includes(state));
+  return legacy.value;
+}
+
+export async function writePlayPublicStatus(github, row, value) {
+  if (!PUBLIC_STATES.has(value)) throw new Error('Unknown Play public status');
+  const { value: previous } = await readMobileStatus(github, row.id, PUBLIC);
+  if (previous === value) return;
+  return github('POST', `deployments/${row.id}/statuses`, {
+    state: 'pending', description: `${PUBLIC}${value}`, auto_inactive: false,
+    log_url: `https://github.com/campfirium/foliole/actions/runs/${row.payload.runId}`
+  });
+}
+
+export async function wasPlayPubliclyAvailable(github, id) {
+  const { value } = await readMobileStatus(github, id, PUBLIC, status => status === 'available');
+  if (value) return true;
+  const legacy = await readMobileStatus(github, id, RESULT, status => status === 'available');
+  return legacy.value === 'available';
+}

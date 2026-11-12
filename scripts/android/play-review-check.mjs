@@ -6,22 +6,27 @@ import { assertQualityCommandAllowed } from '../quality/quality-command-contract
 import { requireTrustedMobileRegistrar } from '../mobile/mobile-candidate-register.mjs';
 import { createMobileGithubApi, listMobileCandidates, verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
 import { playAccessToken, createPlayApi, createPlayInventoryReader } from './play-api.mjs';
-import { readPlayAvailability, readPlaySnapshot } from './play-availability-state.mjs';
+import { readPlayAvailability, readPlayPublicStatus, readPlaySnapshot } from './play-availability-state.mjs';
 import { resumePendingPlaySubmission } from './play-submission-queue.mjs';
 import { checkRegisteredPlayAvailability } from './play-availability.mjs';
 
 export async function checkPendingPlayCandidates({ github, play, candidateId, readInventory = createPlayInventoryReader(play) }) {
   if (candidateId && !/^[1-9]\d*$/u.test(candidateId)) throw new Error('An exact durable candidate ID is required');
   const rows = await listMobileCandidates(github);
-  const selected = rows.filter(row => !candidateId || String(row.id) === candidateId);
+  const selected = rows.filter(row => !candidateId || String(row.id) === candidateId)
+    .map(verifyStoredMobileCandidate)
+    .sort((left, right) => right.payload.candidate.versionCode - left.payload.candidate.versionCode);
   if (candidateId && selected.length !== 1) throw new Error('Durable candidate was not found');
   const results = [];
-  for (const entry of selected) {
-    const row = verifyStoredMobileCandidate(entry);
+  let checkedAvailable = false;
+  for (const row of selected) {
     const previous = await readPlayAvailability(github, row.id);
     const snapshot = await readPlaySnapshot(github, row.id);
-    if (!candidateId && snapshot === 'cleared' && ['available', 'rejected'].includes(previous)) continue;
+    const publicStatus = await readPlayPublicStatus(github, row.id);
+    if (!candidateId && snapshot === 'cleared' &&
+      (previous === 'rejected' || (checkedAvailable && publicStatus === 'available'))) continue;
     const state = await checkRegisteredPlayAvailability({ github, play, registration: row, readInventory });
+    checkedAvailable ||= state === 'available' || publicStatus === 'available';
     results.push({ deploymentId: row.id, sourceSha: row.payload.sourceSha, versionCode: row.payload.candidate.versionCode, state });
   }
   return results;

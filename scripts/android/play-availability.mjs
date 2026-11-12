@@ -2,7 +2,7 @@ import { readPlayReleases } from './play-api.mjs';
 import { readReservedPlayHistory } from './play-candidate-history.mjs';
 import { verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
 import { readMobileCandidatePhase } from '../mobile/mobile-candidate-phase.mjs';
-import { readPlaySnapshot, writePlayCheckStatus, writePlayReviewStatus } from './play-availability-state.mjs';
+import { readPlayPublicStatus, readPlaySnapshot, writePlayCheckStatus, writePlayPublicStatus, writePlayReviewStatus } from './play-availability-state.mjs';
 import { playEditPath, validPlayEditId } from './play-edit-id.mjs';
 
 export function exactRelease(releases, candidate) {
@@ -40,7 +40,13 @@ async function inspectSnapshot(play, github, row) {
   if (!validPlayEditId(edit?.id)) throw new Error('Play snapshot creation is uncertain; reconcile manually');
   try {
     await writePlayCheckStatus(github, row, 'snapshot', `open:${edit.id}`);
-    return isCompletePlayTrack(await play('GET', `${playEditPath(edit.id)}/tracks/${row.payload.candidate.track}`), row.payload.candidate);
+    const candidate = row.payload.candidate;
+    const track = await play('GET', `${playEditPath(edit.id)}/tracks/${candidate.track}`);
+    if (isCompletePlayTrack(track, candidate)) return 'available';
+    const halted = track.releases.some(release => release.status === 'halted' &&
+      release.name === `${candidate.version}.${candidate.versionCode}.${candidate.sourceSha.slice(0, 9)}` &&
+      release.versionCodes.includes(String(candidate.versionCode)));
+    return halted ? 'unavailable' : 'verifying';
   } finally {
     await deleteSnapshot(play, github, row, edit.id);
   }
@@ -53,16 +59,22 @@ async function checkCandidate(play, github, row, readInventory) {
   await readReservedPlayHistory(github);
   const candidate = row.payload.candidate;
   const release = exactRelease(await readInventory(), candidate);
-  if (!release) return 'waiting';
+  if (!release) return {};
   const state = release.releaseLifecycleState;
   await writePlayReviewStatus(github, row, state);
-  if (state === 'RELEASE_LIFECYCLE_STATE_NOT_APPROVED') return 'rejected';
-  if (['RELEASE_LIFECYCLE_STATE_IN_REVIEW', 'RELEASE_LIFECYCLE_STATE_APPROVED_NOT_PUBLISHED',
-    'RELEASE_LIFECYCLE_STATE_NOT_SENT_FOR_REVIEW', 'RELEASE_LIFECYCLE_STATE_DRAFT'].includes(state)) return 'waiting';
+  if (state === 'RELEASE_LIFECYCLE_STATE_NOT_APPROVED') return { publicStatus: 'rejected' };
+  if (state === 'RELEASE_LIFECYCLE_STATE_IN_REVIEW') return { publicStatus: 'in-review' };
+  if (['RELEASE_LIFECYCLE_STATE_APPROVED_NOT_PUBLISHED',
+    'RELEASE_LIFECYCLE_STATE_NOT_SENT_FOR_REVIEW', 'RELEASE_LIFECYCLE_STATE_DRAFT'].includes(state)) return { publicStatus: 'verifying' };
   if (state !== 'RELEASE_LIFECYCLE_STATE_PUBLISHED') throw new Error('Unknown Play publication state');
-  if (!await inspectSnapshot(play, github, row)) return 'waiting';
+  const publicStatus = await inspectSnapshot(play, github, row);
+  if (publicStatus === 'unavailable') return { publicStatus };
+  if (publicStatus === 'verifying') {
+    const previous = await readPlayPublicStatus(github, row.id);
+    return previous === 'available' ? {} : { publicStatus };
+  }
   const refreshed = exactRelease(await readInventory({ refresh: true }), candidate);
-  return refreshed?.releaseLifecycleState === 'RELEASE_LIFECYCLE_STATE_PUBLISHED' ? 'available' : 'waiting';
+  return refreshed?.releaseLifecycleState === 'RELEASE_LIFECYCLE_STATE_PUBLISHED' ? { publicStatus } : {};
 }
 
 export async function checkRegisteredPlayAvailability({ play, github, registration, readInventory = () => readPlayReleases(play) }) {
@@ -70,7 +82,9 @@ export async function checkRegisteredPlayAvailability({ play, github, registrati
   if (!['committed', 'observed'].includes(await readMobileCandidatePhase(github, row.id))) return 'waiting';
   await writePlayCheckStatus(github, row, 'result', 'checking');
   try {
-    const result = await checkCandidate(play, github, row, readInventory);
+    const { publicStatus } = await checkCandidate(play, github, row, readInventory);
+    const result = ['available', 'rejected'].includes(publicStatus) ? publicStatus : 'waiting';
+    if (publicStatus) await writePlayPublicStatus(github, row, publicStatus);
     await writePlayCheckStatus(github, row, 'result', result);
     return result;
   } catch (error) {

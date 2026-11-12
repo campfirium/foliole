@@ -1,28 +1,14 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 import { URLSearchParams } from 'node:url';
-import { channelProjection, checkPlayChannel, checkTestflightReviews, playReviewStatus, storeChannelForWebsite, testflightStatus } from './site-store-status.mjs';
+import { channelProjection, checkTestflightReviews, storeChannelForWebsite, testflightStatus } from './site-store-status.mjs';
+import { checkPendingPlayCandidates } from '../android/play-review-check.mjs';
+import { readPlayPublicDownloads } from './play-public-downloads.mjs';
 import { availabilityFixture } from '../android/play-availability-test-fixture.mjs';
 import { createPlayRegistration } from './mobile-candidate-provenance.mjs';
 import { registrationFixture } from './mobile-candidate-test-fixtures.mjs';
 import { registerTestflightReview } from './testflight-review-registry.mjs';
 import { IOS_APP_ID, IOS_GROUP_ID, IOS_INVITATION } from '../ios/testflight-candidate.mjs';
-
-it('opens the Play opt-in link only after the exact build is published', () => {
-  const candidate = { version: '0.8.1', versionCode: 5, track: 'beta', sourceSha: '2bc09f006' };
-  const url = 'https://play.google.com/apps/testing/com.campfirium.foliole.android';
-  const observe = (state, versionCode = 5, fullRollout = false) => channelProjection(candidate, playReviewStatus([{
-    track: 'beta', releaseName: '0.8.1.5.2bc09f006', activeArtifacts: [{ versionCode }],
-    releaseLifecycleState: `RELEASE_LIFECYCLE_STATE_${state}`
-  }], candidate, fullRollout), url);
-
-  expect(observe('IN_REVIEW')).not.toHaveProperty('url');
-  expect(observe('NOT_APPROVED')).not.toHaveProperty('url');
-  expect(observe('APPROVED_NOT_PUBLISHED', 4)).not.toHaveProperty('url');
-  expect(observe('APPROVED_NOT_PUBLISHED')).toMatchObject({ status: 'verifying' });
-  expect(observe('PUBLISHED')).not.toHaveProperty('url');
-  expect(observe('PUBLISHED', 5, true)).toMatchObject({ status: 'available', url, version: '0.8.1' });
-});
 
 function observedTestflightStatus(candidate, state) {
   const group = { data: { id: IOS_GROUP_ID, attributes: { isInternalGroup: false,
@@ -118,38 +104,51 @@ it('keeps a verified TestFlight build linked as the next build moves through rev
   });
 });
 
-it('keeps a fully published Play build linked while the registered update is in review', async () => {
+it('shares persisted Play availability through review, query failure, rollout and halt', async () => {
   const f = await availabilityFixture();
   try {
-    const fixture = registrationFixture();
+    const fixture = registrationFixture('release-t7');
     fixture.candidate.version = '0.8.1';
     fixture.candidate.versionCode = 5;
     const newer = { ...f.row, id: 72, payload: createPlayRegistration(fixture) };
-    f.rows.push(newer);
-    f.histories.set(72, [f.status('Play candidate: observed')]);
-    const update = { track: 'beta', releaseName: '0.8.1.5.aaaaaaaaa', activeArtifacts: [{ versionCode: 5 }],
-      releaseLifecycleState: 'RELEASE_LIFECYCLE_STATE_IN_REVIEW' };
-    f.extraReleases = [update];
+    const update = { track: 'beta',
+      releaseName: `0.8.1.5.${fixture.candidate.sourceSha.slice(0, 9)}`,
+      activeArtifacts: [{ versionCode: 5 }], releaseLifecycleState: 'RELEASE_LIFECYCLE_STATE_IN_REVIEW' };
     f.lifecycle = 'PUBLISHED';
-    const verified = [];
-    const channel = () => checkPlayChannel({ ...f.clients(), registration: newer, recordAvailable: entry => verified.push(entry) });
+    const check = () => checkPendingPlayCandidates(f.clients());
+    const reviews = () => readPlayPublicDownloads(f.clients().github);
+    const channel = async () => storeChannelForWebsite(await reviews());
     const url = 'https://play.google.com/apps/testing/com.campfirium.foliole.android';
-    expect(await channel()).toEqual({ version: '0.7.17', build: '4', status: 'update-in-review', url });
-    expect(f.calls.filter(call => call.route.endsWith('/tracks/beta/releases'))).toHaveLength(2);
-    expect(verified.map(entry => entry.build)).toEqual(['4']);
 
-    f.track.releases[0].status = 'halted';
-    expect(await channel()).toEqual({ version: '0.8.1', build: '5', status: 'in-review' });
-    expect(verified.map(entry => entry.build)).toEqual(['4']);
+    f.histories.get(71).unshift(f.status('Play availability: available'));
+    f.histories.get(71).unshift(...Array.from({ length: 101 }, () => f.status('Play availability: checking')));
+    expect(await channel()).toMatchObject({ build: '4', status: 'available', url });
+    f.rows.push(newer);
+    f.extraReleases = [update];
+    f.histories.set(72, [f.status('Play candidate: observed')]);
+    await check();
+    expect(await channel()).toMatchObject({ build: '4', status: 'update-in-review', url });
+    expect((await reviews())[0]).not.toHaveProperty('url');
+
+    const fail = () => checkPendingPlayCandidates({
+      ...f.clients(), readInventory: async () => { throw new Error('Play HTTP 403'); }
+    });
+    await expect(fail()).rejects.toThrow('Play HTTP 403');
+    expect(await channel()).toMatchObject({ build: '4', status: 'update-in-review', url });
 
     update.releaseLifecycleState = 'RELEASE_LIFECYCLE_STATE_PUBLISHED';
     f.track.releases = [{ name: update.releaseName, versionCodes: ['5'], status: 'completed' }];
-    expect(await channel()).toEqual({ version: '0.8.1', build: '5', status: 'available', url });
-    expect(f.calls.filter(call => call.route.endsWith('/tracks/beta/releases'))).toHaveLength(5);
-    expect(verified[1]).toEqual({
-      version: '0.8.1', build: '5', status: 'available', url, releaseSourceSha: fixture.candidate.sourceSha,
-      releaseLane: newer.payload.lane
-    });
+    await check();
+    expect(await channel()).toMatchObject({ build: '5', status: 'available', url });
+    expect(await reviews()).toEqual([{
+      version: '0.8.1', build: '5', status: 'available', url,
+      releaseSourceSha: fixture.candidate.sourceSha, releaseLane: 'release-t7'
+    }]);
+
+    f.track.releases[0].status = 'halted';
+    await check();
+    await expect(fail()).rejects.toThrow('Play HTTP 403');
+    expect(await channel()).toEqual({ version: '0.8.1', build: '5', status: 'unavailable' });
     expect(f.edits.size).toBe(0);
   } finally {
     await f.close();
