@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -22,7 +23,11 @@ function sortedUnique(values) {
 }
 
 function extractTypeScriptMethods(source) {
-  return [...source.matchAll(/^ {2}([A-Za-z][A-Za-z0-9_]*)\s*\(/gm)].map((match) => match[1]);
+  const file = ts.createSourceFile('plugin.ts', source, ts.ScriptTarget.Latest);
+  return file.statements
+    .filter(ts.isInterfaceDeclaration)
+    .flatMap(declaration => declaration.members.filter(ts.isMethodSignature))
+    .map(method => method.name.getText(file));
 }
 
 function extractJavaPluginMethods(source) {
