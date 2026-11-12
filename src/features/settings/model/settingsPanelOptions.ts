@@ -1,6 +1,8 @@
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 import { isFeaturePreviewVisible } from '../../../shared/config/featurePreviews';
 import type { TranslationKey } from '../../../shared/localization/translations';
+import { isDesktopRuntime } from '../../../shared/platform/runtime';
+import { resolveRuntimeOperatingSystem } from '../../../shared/platform/runtime/operatingSystem';
 import { getWhitelistedLocalStorageItem } from '../../../shared/platform/storage';
 
 import type { InterfaceFontPreset, MonospaceFontPreset } from './appearanceSettings';
@@ -108,8 +110,13 @@ export const MONOSPACE_PRESET_OPTION_VALUES: MonospaceFontPreset[] = [
   'sarasa'
 ];
 
+export function isDesktopWebDavSettingsVisible() {
+  return isDesktopRuntime() && resolveRuntimeOperatingSystem() === 'macos'
+    && isFeaturePreviewVisible('webdavSyncSettings');
+}
+
 function isVisibleCategory(id: SettingsCategoryId) {
-  return id !== 'webdav-sync' || isFeaturePreviewVisible('webdavSyncSettings');
+  return id !== 'webdav-sync' || isDesktopWebDavSettingsVisible();
 }
 
 function isSettingsCategoryId(value: string): value is SettingsCategoryId {

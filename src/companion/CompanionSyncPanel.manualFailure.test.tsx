@@ -22,7 +22,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 
-function renderConnectedSettings() {
+function renderConnectedSettings(runtimeKind: 'android-capacitor' | 'ios-capacitor' = 'android-capacitor') {
   return renderWithLocalization(
     <>
       <CompanionSettingsList
@@ -36,7 +36,7 @@ function renderConnectedSettings() {
       <CompanionSyncPanel
         bootstrapState={{
           booted_at: '', database_path: null, database_ready: true, device_id: 'device-1',
-          runtime_kind: 'ios-capacitor'
+          runtime_kind: runtimeKind
         }}
         discoveries={[]}
         endpointUrl="http://desktop:38641"
@@ -83,6 +83,17 @@ it.each([
   else expect(screen.queryByText('WebDAV enabled')).not.toBeInTheDocument();
   expect(screen.queryByText('Waiting for a desktop Sync anchor.')).not.toBeInTheDocument();
   expect(screen.queryByTestId('companion-sync-error')).not.toBeInTheDocument();
+});
+
+it.each([
+  ['android-capacitor', true], ['ios-capacitor', false]
+] as const)('shows the public WebDAV status only on Android (%s)', async (runtimeKind, visible) => {
+  vi.stubEnv('MODE', 'production');
+  preview.visibility = 'public';
+  renderConnectedSettings(runtimeKind);
+
+  if (visible) expect(await screen.findByText('WebDAV enabled')).toBeVisible();
+  else expect(screen.queryByText('WebDAV enabled')).not.toBeInTheDocument();
 });
 
 it('updates the companion Sync screen when an experiment is enabled or disabled', async () => {

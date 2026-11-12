@@ -81,7 +81,8 @@ function ConnectedContent(props: CompanionSyncPanelProps & {
   endpointUrl: string;
   manualSyncFailureDetail: string;
 }) {
-  const showWebDav = useFeaturePreviewVisible('webdavSyncSettings');
+  const webDavVisible = useFeaturePreviewVisible('webdavSyncSettings');
+  const showWebDav = webDavVisible && props.bootstrapState.runtime_kind === 'android-capacitor';
   if (!props.syncGroup) return null;
   const syncAction = props.page === 'sync' ? (
     <CompanionSyncNowButton failureDetail={props.manualSyncFailureDetail}

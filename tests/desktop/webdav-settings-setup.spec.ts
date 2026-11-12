@@ -37,9 +37,8 @@ async function launchSetupSession(cert: string, stateRoot: string) {
 
 test('restores a failed four-field setup after restart and retries with the default folder', async ({ browserName }, info) => {
   void browserName;
-  // SKIP: requires a macOS Internal renderer | 2026-11-11 | revive: WebDAV is available in the standard desktop acceptance build
-  test.skip(process.platform !== 'darwin' || process.env.FOLIOLE_ACCEPT_EXPERIMENTAL_WEBDAV !== '1',
-    'Requires a macOS Internal renderer.');
+  // SKIP: WebDAV setup uses the macOS credential store | 2026-11-12 | revive: another desktop host supports WebDAV credentials
+  test.skip(process.platform !== 'darwin', 'Requires the macOS credential store.');
   const server = await startWebDavSetupFixture(info.outputDir);
   const stateRoot = path.join(info.outputDir, 'setup-state');
   let session: DesktopSession | undefined;
@@ -47,6 +46,7 @@ test('restores a failed four-field setup after restart and retries with the defa
     session = await launchSetupSession(server.cert, stateRoot);
     await session.firstWindow.evaluate(() => window.electronAPI.invoke('create_sync_group', {}));
     let settings = await openWebDav(session);
+    await expect(settings.getByText('Experiment', { exact: true })).toHaveCount(0);
     const address = () => settings.getByRole('textbox', { name: /^(WebDAV URL|WebDAV 网址)$/ });
     const folder = () => settings.getByRole('textbox', { name: /^(Folder name|文件夹名)$/ });
     const password = () => settings.getByLabel(/^(App password|应用密码)$/);
