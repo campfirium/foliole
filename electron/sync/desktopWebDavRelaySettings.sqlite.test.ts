@@ -64,8 +64,8 @@ it('reopens the verified folder and keeps it when a replacement fails verificati
   });
 });
 
-// SKIP: macOS credential storage flow | 2026-11-11 | revive: another host supports DAV credentials
-it.skipIf(process.platform !== 'darwin')('rejects a credential save that crosses a library epoch change', async () => {
+// macOS credential storage flow. Extend coverage when another host supports DAV credentials.
+it.runIf(process.platform === 'darwin')('rejects a credential save that crosses a library epoch change', async () => {
   const groupId = await createGroup();
   const directory = 'https://dav.example.test/relay/';
   const release = deferred<Buffer>();
@@ -110,8 +110,8 @@ async function withSetupFixture(run: (fixture: Awaited<ReturnType<typeof startWe
   }
 }
 
-// SKIP: macOS WebDAV credential flow | 2026-11-11 | revive: another host supports DAV credentials
-it.skipIf(process.platform !== 'darwin')('creates one scoped folder and reopens the verified credential draft', async () => {
+// macOS WebDAV credential flow. Extend coverage when another host supports DAV credentials.
+it.runIf(process.platform === 'darwin')('creates one scoped folder and reopens the verified credential draft', async () => {
   const groupId = await createGroup();
   mockFixtureEncryption();
   await withSetupFixture(async fixture => {
@@ -131,8 +131,8 @@ it.skipIf(process.platform !== 'darwin')('creates one scoped folder and reopens 
   });
 });
 
-// SKIP: macOS WebDAV credential flow | 2026-11-11 | revive: another host supports DAV credentials
-it.skipIf(process.platform !== 'darwin')('preserves a saved connection and remote files when folder creation fails', async () => {
+// macOS WebDAV credential flow. Extend coverage when another host supports DAV credentials.
+it.runIf(process.platform === 'darwin')('preserves a saved connection and remote files when folder creation fails', async () => {
   const groupId = await createGroup();
   mockFixtureEncryption();
   await withSetupFixture(async fixture => {
@@ -158,8 +158,8 @@ it.skipIf(process.platform !== 'darwin')('preserves a saved connection and remot
   });
 });
 
-// SKIP: macOS WebDAV credential flow | 2026-11-11 | revive: another host supports DAV credentials
-it.skipIf(process.platform !== 'darwin')('reopens an unverified setup and retries with its saved password', async () => {
+// macOS WebDAV credential flow. Extend coverage when another host supports DAV credentials.
+it.runIf(process.platform === 'darwin')('reopens an unverified setup and retries with its saved password', async () => {
   const groupId = await createGroup();
   mockFixtureEncryption();
   await withSetupFixture(async fixture => {

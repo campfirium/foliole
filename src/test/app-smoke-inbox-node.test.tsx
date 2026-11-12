@@ -10,7 +10,8 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 import {
   createImportedNodeRuntimeInvoke,
   createImportedWorkspaceSnapshot,
-  createSuccessfulImportResult
+  createSuccessfulImportResult,
+  resolveInboxSmokeStartupCommand
 } from './app-smoke-inbox-node.support';
 
 async function getNodeListPanel() {
@@ -109,7 +110,7 @@ it('routes import from the left toolbar through the runtime bridge', async () =>
     if (command === 'load_readwise_books_inventory') {
       return { books: [] };
     }
-    return null;
+    return resolveInboxSmokeStartupCommand(command);
   });
   window.electronAPI = {
     invoke: invoke as ElectronAPI['invoke'],

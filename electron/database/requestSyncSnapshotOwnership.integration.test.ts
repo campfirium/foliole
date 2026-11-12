@@ -71,7 +71,9 @@ it('rejects an actual stale selection after a source edit and transfers the fres
 it('owns the original main and alternative bodies after source editing, collection and another snapshot release', async () => {
   const source = device(); const target = createPeer('frozen-target');
   const original = textBranch('original', '\ufeffOriginal\r\n😀\u0000end');
-  const alternative = alternativeForBody(textBranch('alternative', 'Complete alternative'), '2026-10-13T00:00:00Z');
+  const formedAt = new Date().toISOString();
+  const alternative = alternativeForBody(
+    textBranch('alternative', 'Complete alternative', undefined, formedAt), formedAt);
   await source.receive([original]);
   const { id, ...metadata } = alternative;
   await writeTopicAlternative(source.db, { ...metadata, alternative_id: id, node_id: 'topic',

@@ -1,6 +1,13 @@
 import { vi } from 'vitest';
 
+import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands';
 import type { ElectronAPI } from '../shared/platform/electronApi';
+
+export function resolveInboxSmokeStartupCommand(command: string) {
+  if (command === NATIVE_COMMANDS.loadArticleTargets) return { selected: null, available: [] };
+  if (command === NATIVE_COMMANDS.consumeGuidedSampleStartup) return { rootNodeId: null };
+  return null;
+}
 
 export function createImportedWorkspaceSnapshot(title = 'Imported note') {
   return {
@@ -108,6 +115,6 @@ export function createImportedNodeRuntimeInvoke(options?: {
     }
     if (command === 'run_text_file_import') return importResult;
     if (command === 'load_import_overview') return createSuccessfulImportOverview(importResult);
-    return null;
+    return resolveInboxSmokeStartupCommand(command);
   });
 }
