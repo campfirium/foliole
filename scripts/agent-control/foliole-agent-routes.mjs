@@ -13,7 +13,7 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   registryRoute('foundation', 'POST', 'auth/verify', 'foundation.auth.verify'),
   registryRoute('product', 'POST', 'materials/create', 'materials.create', {
     capabilityOrder: 3,
-    cli: cliRoute('materials/create', 'Create a Topic, Folder, or question-answer Item.', optionalAndRequired(['content', 'parent-id', 'reveal', 'title'], ['kind'])),
+    cli: cliRoute('materials/create', 'Create a Topic, Folder, or question-answer Item.', optionalAndRequired(['content', 'parent-id', 'reading-schedule', 'reveal', 'title'], ['kind'])),
     writeKind: 'material'
   }),
   registryRoute('product', 'POST', 'materials/delete-soft', 'materials.deleteSoft', {

@@ -3,11 +3,13 @@ import { fileURLToPath } from 'node:url';
 
 import { app } from 'electron';
 
+import { AGENT_CONTROL_LEARNING_IMPORT_KEY } from '../../lib/platform/agentControlLearningImport.js';
 import { APP_SETTINGS_STORAGE_KEYS, DEFAULT_BASE_COLOR_MODE } from '../../src/shared/config/appSettings.js';
 import {
   getLocalStorageAppSettingsKeys,
   getRuntimeAppSettingsKeys
 } from '../../src/shared/config/appSettingsClassification.js';
+import { isAgentControlLearningImportEnabled, saveAgentControlLearningImportPermission } from '../database/agentControlLearningImportPermission.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 import { applyNativeBaseColorMode } from '../nativeAppearance.js';
@@ -66,6 +68,7 @@ function syncNativeThemeSource(settings: Record<string, string>) {
 export async function loadAppSettingsState(): Promise<Record<string, string>> {
   const settings = normalizeAppSettingsPayload(loadJsonSetting(APP_SETTINGS_KEY));
   syncNativeThemeSource(settings);
+  if (isAgentControlLearningImportEnabled()) settings[AGENT_CONTROL_LEARNING_IMPORT_KEY] = 'true';
   return settings;
 }
 
@@ -82,7 +85,12 @@ export function hasStartupRendererSettingChange(
 }
 
 export async function saveAppSettingsState(settings: Record<string, unknown>): Promise<void> {
-  const incomingSettings = normalizeAppSettingsPayload(settings);
+  const { [AGENT_CONTROL_LEARNING_IMPORT_KEY]: learningImport, ...appSettings } = settings;
+  if (learningImport !== undefined) {
+    saveAgentControlLearningImportPermission(learningImport);
+    if (Object.keys(appSettings).length === 0) return;
+  }
+  const incomingSettings = normalizeAppSettingsPayload(appSettings);
   const previousSettings = normalizeAppSettingsPayload(loadJsonSetting(APP_SETTINGS_KEY));
   const preservedRuntimeSettings = Object.fromEntries(
     Object.entries(previousSettings).filter(([key]) =>

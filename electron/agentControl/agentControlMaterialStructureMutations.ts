@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import type { NodeReadingPayload } from '../../lib/core/database/nodeReadingPayload.js';
 import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import {
   HOME_NODE_ID,
@@ -30,10 +31,17 @@ interface NodeRow extends DatabaseRow {
 }
 
 type CreateMaterialInput =
-  | { content?: string; kind: 'folder' | 'topic'; parentId: string | null; title: string }
+  | { content?: string; kind: 'folder' | 'topic'; parentId: string | null; reading?: NodeReadingPayload; title: string }
   | { content: string; kind: 'item'; parentId: string | null; reveal: string };
 
 export function createAgentControlMaterial(input: CreateMaterialInput) {
+  if (input.kind === 'topic' && input.reading) {
+    return openDatabaseConnection().driver.transaction(() => insertAgentControlMaterial(input));
+  }
+  return insertAgentControlMaterial(input);
+}
+
+function insertAgentControlMaterial(input: CreateMaterialInput) {
   const nodes = readNodes();
   const parentId = resolveParentId(input.kind, input.parentId);
   ensureParent(nodes, parentId, input.kind);
@@ -45,6 +53,7 @@ export function createAgentControlMaterial(input: CreateMaterialInput) {
     kind: input.kind, nodeId: id, parentNodeId: parentId, position: null,
     reveal: input.kind === 'item' ? input.reveal : null,
     ...(itemState ? { review: itemState.review } : {}),
+    ...(input.kind === 'topic' && input.reading ? { priority: input.reading.priority, reading: input.reading } : {}),
     title: input.kind === 'item' ? deriveNodeTitleFromContent(input.content) : input.title,
     updatedAt: now
   });

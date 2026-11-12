@@ -1,6 +1,9 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_SETTINGS_AIDE_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'settings.general.agentControl.learningImport': '允许导入学习进度',
+  'settings.general.agentControl.learningImportDescription': '允许本机工具在创建文章时设置阅读排程和优先级。',
+  'settings.general.agentControl.learningImportError': '无法读取或保存学习进度导入权限。',
   'settings.models.section': '模型',
   'settings.models.description': '连接并选择 Foliole Aide 使用的模型。',
   'settings.models.searchTerms': '模型|ChatGPT|API|AI|Aide|连接',

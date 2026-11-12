@@ -1,0 +1,36 @@
+import { z } from 'zod';
+
+import type { NodeReadingPayload } from '../../lib/core/database/nodeReadingPayload.js';
+import { isAgentControlLearningImportEnabled } from '../database/agentControlLearningImportPermission.js';
+
+import { AgentMaterialMutationError } from './agentControlMaterialMutations.js';
+
+const timestamp = z.iso.datetime({ offset: true }).transform((value) => new Date(value).toISOString());
+const readingSchedule = z.strictObject({
+  interval_duration_ms: z.int().nonnegative(),
+  interval_growth_factor: z.number().min(1),
+  last_handled_at: timestamp,
+  next_at: timestamp,
+  priority: z.int().min(0).max(9),
+  repetition_count: z.int().nonnegative()
+}).refine((value) => value.next_at >= value.last_handled_at);
+
+export function readAgentControlTopicLearningImport(kind: string | null, value: unknown): NodeReadingPayload | undefined {
+  if (value === undefined) return undefined;
+  if (!isAgentControlLearningImportEnabled()) {
+    throw new AgentMaterialMutationError('learning_import_disabled', 403);
+  }
+  const parsed = readingSchedule.safeParse(value);
+  if (kind !== 'topic' || !parsed.success) throw new AgentMaterialMutationError('invalid_request', 400);
+  const schedule = parsed.data;
+  return {
+    intervalDurationMs: schedule.interval_duration_ms,
+    intervalGrowthFactor: schedule.interval_growth_factor,
+    lastHandledAt: schedule.last_handled_at,
+    nextAt: schedule.next_at,
+    priority: schedule.priority,
+    readingPosition: 0,
+    repetitionCount: schedule.repetition_count,
+    state: 'active'
+  };
+}

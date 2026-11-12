@@ -18,6 +18,7 @@ import {
   sendAgentControlJson
 } from './agentControlMutationHandlerSupport.js';
 import type { AgentControlRequestHandlerOptions } from './agentControlRequestHandler.js';
+import { readAgentControlTopicLearningImport } from './agentControlTopicLearningImport.js';
 
 export async function handleMaterialCreate(
   request: http.IncomingMessage,
@@ -36,16 +37,19 @@ export async function handleMaterialCreate(
     sendAgentControlInvalidRequest(request, response, options, capability);
     return;
   }
-  sendMutation(request, response, options, capability, () => ({
-    material: kind === 'item'
+  sendMutation(request, response, options, capability, () => {
+    const reading = readAgentControlTopicLearningImport(kind, body.reading_schedule);
+    const material = kind === 'item'
       ? createAgentControlMaterial({
           content: content as string, kind, parentId: parentId as string | null, reveal: reveal as string
         })
       : createAgentControlMaterial({
           ...(typeof content === 'string' ? { content } : {}),
+          ...(reading ? { reading } : {}),
           kind: kind as 'folder' | 'topic', parentId: parentId as string | null, title: title as string
-        })
-  }));
+        });
+    return { material };
+  });
 }
 
 function isValidCreateInput(args: {

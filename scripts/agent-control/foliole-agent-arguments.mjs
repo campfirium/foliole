@@ -32,7 +32,16 @@ function buildMaterialCreateBody(flags) {
   const required = flags.kind === 'item' ? ['kind', 'content', 'reveal'] : ['kind', 'title'];
   const optional = flags.kind === 'item' ? ['parent_id'] : ['content', 'parent_id'];
   const result = requireFields(flags, required, optional);
-  return result.ok ? { body: { parent_id: null, ...result.body }, ok: true } : result;
+  if (!result.ok) return result;
+  const body = { parent_id: null, ...result.body };
+  if (Object.hasOwn(flags, 'reading_schedule')) {
+    try {
+      body.reading_schedule = JSON.parse(flags.reading_schedule);
+    } catch {
+      return { error: 'invalid_reading_schedule', ok: false, statusCode: 2 };
+    }
+  }
+  return { body, ok: true };
 }
 
 function buildMaterialReorderBody(flags) {

@@ -51,8 +51,8 @@ interface MaterialSnapshotRow extends DatabaseRow, NodeBodyRow {
 
 export class AgentMaterialMutationError extends Error {
   constructor(
-    readonly category: 'conflict' | 'invalid_request' | 'not_found',
-    readonly statusCode: 400 | 404 | 409
+    readonly category: 'conflict' | 'invalid_request' | 'learning_import_disabled' | 'not_found',
+    readonly statusCode: 400 | 403 | 404 | 409
   ) {
     super(category);
   }

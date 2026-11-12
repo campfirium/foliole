@@ -23,7 +23,7 @@ const groups: readonly SettingPolicyGroup[] = [
   ] },
   { scope: 'session_resume', recovery: 'saved', keys: ['readwise_book_epub_picker_state', 'window_state'] },
   { scope: 'local_only', recovery: 'saved', keys: [
-    'host_name', 'device_id', 'desktop_device_id', 'foliole_aide_byok_settings',
+    'host_name', 'device_id', 'desktop_device_id', 'foliole_aide_byok_settings', 'agent_control_learning_import',
     'remote-image-learned-sources-v1', 'readwise_books_inventory_state', 'watch_import_cursor_state'
   ] },
   { scope: 'local_only', recovery: 'regenerated', keys: [
