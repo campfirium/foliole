@@ -5,7 +5,7 @@
   "author": "Foliole",
   "license": "Apache-2.0",
   "private": true,
-  "packageManager": "npm@12.2.1",
+  "packageManager": "npm@12.2.2",
   "type": "module",
   "main": "dist/electron/main.js",
   "scripts": {
