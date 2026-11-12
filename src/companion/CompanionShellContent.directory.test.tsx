@@ -53,12 +53,12 @@ describe('CompanionShellContent directory navigation', () => {
     expect('rightSlot' in root ? root.rightSlot : null).toBeTruthy();
   });
 
-  it('keeps both focus actions unavailable while browsing Shelved', () => {
+  it('disables the toolbar focus action while browsing Shelved', () => {
     const topBar = createTopBarProps({ directorySelection: { kind: 'virtual', nodeId: VIRTUAL_SHELVED_NODE_ID } });
     renderWithLocalization(<>{'rightSlot' in topBar ? topBar.rightSlot : null}</>);
     expect(screen.getByRole('button', { name: 'Hide dismissed and shelved topics' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: /^More$/ }));
-    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Hide dismissed and shelved topics' })).toBeDisabled();
+    expect(within(screen.getByRole('dialog')).queryByRole('button', { name: 'Hide dismissed and shelved topics' })).not.toBeInTheDocument();
   });
 
   it('returns nested directory pages to their parent', () => {

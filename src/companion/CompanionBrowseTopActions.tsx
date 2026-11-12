@@ -16,7 +16,6 @@ export function CompanionBrowseTopActions(props: {
   onChangeSortKey(sortKey: FolderListSortKey): void;
   onOpenAppearance(): void;
   onOpenCapture(): void;
-  showTopicFocusButton?: boolean;
   onSync?: () => void;
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
@@ -40,15 +39,13 @@ export function CompanionBrowseTopActions(props: {
           testId="companion-capture-open"
         />
       ) : null}
-      {props.showTopicFocusButton ? (
-        <CompanionTopActionButton
-          disabled={Boolean(props.topicFocusDisabled)}
-          icon={icon}
-          label={t(labelKey)}
-          onClick={toggleDismissedTopicsVisibility}
-          pressed={topicFocusActive}
-        />
-      ) : null}
+      <CompanionTopActionButton
+        disabled={Boolean(props.topicFocusDisabled)}
+        icon={icon}
+        label={t(labelKey)}
+        onClick={toggleDismissedTopicsVisibility}
+        pressed={topicFocusActive}
+      />
       <CompanionTopActionButton icon={MoreHorizontal} label={t('companion.browse.more')} onClick={() => setIsMenuOpen(true)} />
       <CompanionBrowseMenuSheet
         onChangeSortDirection={props.onChangeSortDirection}
@@ -56,8 +53,6 @@ export function CompanionBrowseTopActions(props: {
         onOpenAppearance={props.onOpenAppearance}
         onOpenChange={setIsMenuOpen}
         open={isMenuOpen}
-        onToggleTopicFocus={toggleDismissedTopicsVisibility}
-        topicFocus={{ active: topicFocusActive, disabled: Boolean(props.topicFocusDisabled) }}
         sortDirection={props.sortDirection}
         sortKey={props.sortKey}
         {...definedProps({

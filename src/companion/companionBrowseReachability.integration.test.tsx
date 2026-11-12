@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import Database from 'better-sqlite3';
 import { useRef, useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -218,7 +218,7 @@ function TopicFocusDirectory({ snapshot }: { snapshot: WorkspaceSnapshot | null 
   const scrollRef = useRef<HTMLDivElement>(null);
   return <>
     <CompanionBrowseTopActions onChangeSortDirection={() => {}} onChangeSortKey={() => {}}
-      onOpenCapture={() => {}} onOpenAppearance={() => {}} showTopicFocusButton sortDirection="asc" sortKey="name" />
+      onOpenCapture={() => {}} onOpenAppearance={() => {}} sortDirection="asc" sortKey="name" />
     <div ref={scrollRef}>
       <CompanionListViewportProvider scrollRef={scrollRef} sortIdentity="name:asc">
         <CompanionDirectoryContent selection={{ kind: 'internal', nodeId: 'other' }}
@@ -229,7 +229,7 @@ function TopicFocusDirectory({ snapshot }: { snapshot: WorkspaceSnapshot | null 
   </>;
 }
 
-it('shares topic focus between the directory toolbar and browse menu and remembers it on remount', async () => {
+it('remembers directory topic focus on remount and restores hidden topics from the toolbar', async () => {
   const storageKey = APP_SETTINGS_STORAGE_KEYS.viewHideDismissedTopics;
   window.localStorage.removeItem(storageKey);
   seedTopicFocusBranches();
@@ -245,8 +245,7 @@ it('shares topic focus between the directory toolbar and browse menu and remembe
   first.unmount();
   renderWithLocalization(directory);
   expect(screen.getByRole('button', { name: 'Show all topics' })).toHaveAttribute('aria-pressed', 'true');
-  fireEvent.click(screen.getByRole('button', { name: 'More' }));
-  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Show all topics' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Show all topics' }));
   expect(topicButton('Dismissed')).toBeVisible();
   expect(topicButton('Shelved topic')).toBeVisible();
   expect(window.localStorage.getItem(storageKey)).toBe('false');

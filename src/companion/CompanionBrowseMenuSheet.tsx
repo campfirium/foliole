@@ -1,7 +1,6 @@
 import { Check, ChevronRight, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 
-import { resolveTopicFocusPresentation } from '../features/nodes/components/topicFocusPresentation';
 import type {
   FolderListSortDirection,
   FolderListSortKey
@@ -69,8 +68,6 @@ function BrowseMainMenu(props: {
   activeSortLabel: string;
   onOpenAppearance(): void;
   onOpenSort(): void;
-  onToggleTopicFocus(): void;
-  topicFocus: { active: boolean; disabled: boolean };
   onSync?: () => void;
   syncDisabled?: boolean;
   syncStatus?: string;
@@ -88,18 +85,10 @@ function BrowseMainMenu(props: {
           status: props.syncStatus
         })}
       />
-      <BrowseTopicFocusRow active={props.topicFocus.active} disabled={props.topicFocus.disabled}
-        onSelect={props.onToggleTopicFocus} />
       <MenuRow label={t('companion.browse.sort')} onSelect={props.onOpenSort} status={props.activeSortLabel} trailingIcon={ChevronRight} />
       <MenuRow label={t('companion.settings.appearance.title')} onSelect={props.onOpenAppearance} trailingIcon={ChevronRight} />
     </>
   );
-}
-
-function BrowseTopicFocusRow(props: { active: boolean; disabled: boolean; onSelect(): void }) {
-  const t = useTranslation();
-  const { icon, labelKey } = resolveTopicFocusPresentation(props.active);
-  return <MenuRow disabled={props.disabled} label={t(labelKey)} onSelect={props.onSelect} trailingIcon={icon} />;
 }
 
 function BrowseSortMenu(props: {
@@ -139,8 +128,6 @@ export function CompanionBrowseMenuSheet(props: {
   onChangeSortKey(sortKey: FolderListSortKey): void;
   onOpenAppearance(): void;
   onOpenChange(open: boolean): void;
-  onToggleTopicFocus(): void;
-  topicFocus: { active: boolean; disabled: boolean };
   onSync?: () => void;
   open: boolean;
   sortDirection: FolderListSortDirection;
@@ -171,11 +158,6 @@ export function CompanionBrowseMenuSheet(props: {
               props.onOpenAppearance();
             }}
             onOpenSort={() => setView('sort')}
-            topicFocus={props.topicFocus}
-            onToggleTopicFocus={() => {
-              props.onToggleTopicFocus();
-              handleOpenChange(false);
-            }}
             {...definedProps({
               onSync: props.onSync,
               syncDisabled: props.syncDisabled,

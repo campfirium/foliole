@@ -114,7 +114,6 @@ function resolveBrowseTopBar(args: {
       onChangeSortKey={args.onChangeBrowseSortKey}
       onOpenCapture={args.onOpenAddSheet}
       onOpenAppearance={args.onOpenAppearance}
-      showTopicFocusButton={args.isBrowseDirectoryOpen}
       sortDirection={args.browseSortDirection}
       sortKey={args.browseSortKey}
       topicFocusDisabled={args.isBrowseDirectoryOpen && args.directorySelection.kind === 'virtual'

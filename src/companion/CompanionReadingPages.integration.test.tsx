@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', async () => {
@@ -188,7 +188,7 @@ it('releases retained pages when a replacement SQLite library reuses the same no
   expect(oldSearch).not.toBeInTheDocument();
 });
 
-it('applies the browse-menu topic focus to recent articles and the directory', async () => {
+it('applies topic focus from the Browse toolbar to recent articles and the directory', async () => {
   const storageKey = APP_SETTINGS_STORAGE_KEYS.viewHideDismissedTopics;
   window.localStorage.removeItem(storageKey);
   try {
@@ -198,8 +198,7 @@ it('applies the browse-menu topic focus to recent articles and the directory', a
     const article = () => screen.queryByRole('button', { name: 'Open topic Article' });
     await waitFor(() => expect(article()).toBeVisible());
 
-    fireEvent.click(screen.getByRole('button', { name: /^More$/ }));
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Hide dismissed and shelved topics' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hide dismissed and shelved topics' }));
     expect(article()).toBeNull();
 
     fireEvent.click(screen.getByTestId('companion-tab-shortcut'));
