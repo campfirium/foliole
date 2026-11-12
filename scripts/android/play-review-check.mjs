@@ -5,12 +5,12 @@ import { execFileSync } from 'node:child_process';
 import { assertQualityCommandAllowed } from '../quality/quality-command-contracts.mjs';
 import { requireTrustedMobileRegistrar } from '../mobile/mobile-candidate-register.mjs';
 import { createMobileGithubApi, listMobileCandidates, verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
-import { playAccessToken, createPlayApi } from './play-api.mjs';
+import { playAccessToken, createPlayApi, createPlayInventoryReader } from './play-api.mjs';
 import { readPlayAvailability, readPlaySnapshot } from './play-availability-state.mjs';
 import { resumePendingPlaySubmission } from './play-submission-queue.mjs';
 import { checkRegisteredPlayAvailability } from './play-availability.mjs';
 
-export async function checkPendingPlayCandidates({ github, play, candidateId }) {
+export async function checkPendingPlayCandidates({ github, play, candidateId, readInventory = createPlayInventoryReader(play) }) {
   if (candidateId && !/^[1-9]\d*$/u.test(candidateId)) throw new Error('An exact durable candidate ID is required');
   const rows = await listMobileCandidates(github);
   const selected = rows.filter(row => !candidateId || String(row.id) === candidateId);
@@ -21,7 +21,7 @@ export async function checkPendingPlayCandidates({ github, play, candidateId }) 
     const previous = await readPlayAvailability(github, row.id);
     const snapshot = await readPlaySnapshot(github, row.id);
     if (!candidateId && snapshot === 'cleared' && ['available', 'rejected'].includes(previous)) continue;
-    const state = await checkRegisteredPlayAvailability({ github, play, registration: row });
+    const state = await checkRegisteredPlayAvailability({ github, play, registration: row, readInventory });
     results.push({ deploymentId: row.id, sourceSha: row.payload.sourceSha, versionCode: row.payload.candidate.versionCode, state });
   }
   return results;
@@ -40,8 +40,10 @@ export async function runPlayReviewCheck(env = process.env) {
     api ??= createPlayApi(await playAccessToken(env.ANDROID_PLAY_SERVICE_ACCOUNT_JSON));
     return api(...args);
   };
-  const results = await checkPendingPlayCandidates({ github, play, candidateId: env.CANDIDATE_ID });
-  const queue = await resumePendingPlaySubmission({ github, play, candidateId: env.CANDIDATE_ID });
+  const readInventory = createPlayInventoryReader(play);
+  const review = { github, play, candidateId: env.CANDIDATE_ID, readInventory };
+  const results = await checkPendingPlayCandidates(review);
+  const queue = await resumePendingPlaySubmission(review);
   console.log(JSON.stringify({ platform: 'android', candidates: results, queue }));
   return results;
 }

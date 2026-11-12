@@ -84,6 +84,22 @@ it('performs no store calls when the durable candidate inventory is empty', asyn
   expect(f.calls.every(call => call.method === 'GET' && call.route.startsWith('/repos/'))).toBe(true);
 });
 
+it('checks multiple in-review candidates with one live track inventory', async () => {
+  const f = await fixture();
+  const other = structuredClone(f.row);
+  other.id = 72;
+  other.payload.candidate.versionCode = 5;
+  f.rows.push(other);
+  f.histories.set(72, [f.status('Play candidate: observed')]);
+  f.extraReleases = [{ track: 'beta', releaseName: '0.7.17.5.aaaaaaaaa', activeArtifacts: [{ versionCode: 5 }],
+    releaseLifecycleState: 'RELEASE_LIFECYCLE_STATE_IN_REVIEW' }];
+  expect(await checkPendingPlayCandidates(f.clients())).toMatchObject([
+    { deploymentId: 71, state: 'waiting' }, { deploymentId: 72, state: 'waiting' }
+  ]);
+  expect(f.calls.filter(call => call.route.endsWith('/tracks/beta/releases'))).toHaveLength(1);
+  expect(f.histories.get(72)[0].description).toBe('Play availability: waiting');
+});
+
 it('persists unknown creation before POST and never retries it after a lost HTTP response', async () => {
   const f = await fixture(); f.lifecycle = 'PUBLISHED'; f.loseCreate = true;
   await expect(checkRegisteredPlayAvailability(f.clients())).rejects.toThrow(/outcome is unknown/u);

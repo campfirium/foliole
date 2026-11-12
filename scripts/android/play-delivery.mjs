@@ -17,7 +17,7 @@ export async function deliverRegisteredPlayCandidate({ github, play, registratio
   const releases = await readPlayReleases(play);
   const exact = releases.filter(release => release.track === state.track && release.releaseName === state.releaseName &&
     release.activeArtifacts?.some(artifact => Number(artifact.versionCode) === state.versionCode));
-  if (exact.length) return observePlayCandidate({ api: play, state, save });
+  if (exact.length) return observePlayCandidate({ api: play, state, save, inventory: releases });
   if (['commit-unknown', 'committed', 'observed'].includes(state.phase)) {
     throw new Error('Original Play commit is not observable; preserve its durable candidate and never upload again');
   }

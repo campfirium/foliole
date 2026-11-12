@@ -5,7 +5,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { appleReadToken } from '../ios/testflight-publication.mjs';
 import { IOS_APP_ID, IOS_GROUP_ID, IOS_INVITATION } from '../ios/testflight-candidate.mjs';
 import { createMobileGithubApi, listMobileCandidates, verifyStoredMobileCandidate } from './mobile-candidate-store.mjs';
-import { createPlayApi, playAccessToken, readPlayReleases, PLAY_PACKAGE, PLAY_TRACK } from '../android/play-api.mjs';
+import { createPlayApi, playAccessToken, createPlayInventoryReader, PLAY_PACKAGE, PLAY_TRACK } from '../android/play-api.mjs';
 import { checkRegisteredPlayAvailability, exactRelease } from '../android/play-availability.mjs';
 import { listTestflightReviews } from './testflight-review-registry.mjs';
 
@@ -84,10 +84,11 @@ function publishedOlderPlayCodes(releases, latest) {
 export async function checkPlayChannel({ play, github, registration, recordAvailable = () => {} }) {
   const row = verifyStoredMobileCandidate(registration);
   const latest = row.payload.candidate;
-  const releases = await readPlayReleases(play);
+  const readInventory = createPlayInventoryReader(play);
+  const releases = await readInventory();
   const url = `https://play.google.com/apps/testing/${PLAY_PACKAGE}`;
   const published = exactRelease(releases, latest)?.releaseLifecycleState === 'RELEASE_LIFECYCLE_STATE_PUBLISHED';
-  const rollout = published ? await checkRegisteredPlayAvailability({ play, github, registration: row }) : undefined;
+  const rollout = published ? await checkRegisteredPlayAvailability({ play, github, registration: row, readInventory }) : undefined;
   const status = rollout === 'rejected' ? 'rejected' : playReviewStatus(releases, latest, rollout === 'available');
   const current = channelProjection(latest, status, url);
   if (status === 'available') {
@@ -95,13 +96,13 @@ export async function checkPlayChannel({ play, github, registration, recordAvail
     return current;
   }
 
-  const olderCodes = publishedOlderPlayCodes(releases, latest);
+  const olderCodes = publishedOlderPlayCodes(await readInventory(), latest);
   if (!olderCodes.size) return current;
   const older = (await listMobileCandidates(github)).map(verifyStoredMobileCandidate)
     .filter(({ payload: { candidate } }) => candidate.track === PLAY_TRACK && candidate.packageName === PLAY_PACKAGE &&
       olderCodes.has(candidate.versionCode))
     .sort((left, right) => right.payload.candidate.versionCode - left.payload.candidate.versionCode)[0];
-  if (!older || await checkRegisteredPlayAvailability({ play, github, registration: older }) !== 'available') return current;
+  if (!older || await checkRegisteredPlayAvailability({ play, github, registration: older, readInventory }) !== 'available') return current;
   const previous = channelProjection(older.payload.candidate, 'available', url);
   recordAvailable({ ...previous, releaseSourceSha: older.payload.candidate.sourceSha });
   return storeChannelForWebsite([current, previous]);

@@ -46,13 +46,13 @@ async function inspectSnapshot(play, github, row) {
   }
 }
 
-async function checkCandidate(play, github, row) {
+async function checkCandidate(play, github, row, readInventory) {
   const snapshot = await readPlaySnapshot(github, row.id);
   if (snapshot === 'creating') throw new Error('Play snapshot creation outcome is unknown; reconcile manually without creating another edit');
   if (snapshot.startsWith('open:')) await deleteSnapshot(play, github, row, snapshot.slice(5));
   await readReservedPlayHistory(github);
   const candidate = row.payload.candidate;
-  const release = exactRelease(await readPlayReleases(play), candidate);
+  const release = exactRelease(await readInventory(), candidate);
   if (!release) return 'waiting';
   const state = release.releaseLifecycleState;
   await writePlayReviewStatus(github, row, state);
@@ -61,16 +61,16 @@ async function checkCandidate(play, github, row) {
     'RELEASE_LIFECYCLE_STATE_NOT_SENT_FOR_REVIEW', 'RELEASE_LIFECYCLE_STATE_DRAFT'].includes(state)) return 'waiting';
   if (state !== 'RELEASE_LIFECYCLE_STATE_PUBLISHED') throw new Error('Unknown Play publication state');
   if (!await inspectSnapshot(play, github, row)) return 'waiting';
-  const refreshed = exactRelease(await readPlayReleases(play), candidate);
+  const refreshed = exactRelease(await readInventory({ refresh: true }), candidate);
   return refreshed?.releaseLifecycleState === 'RELEASE_LIFECYCLE_STATE_PUBLISHED' ? 'available' : 'waiting';
 }
 
-export async function checkRegisteredPlayAvailability({ play, github, registration }) {
+export async function checkRegisteredPlayAvailability({ play, github, registration, readInventory = () => readPlayReleases(play) }) {
   const row = verifyStoredMobileCandidate(registration);
   if (await readMobileCandidatePhase(github, row.id) !== 'observed') return 'waiting';
   await writePlayCheckStatus(github, row, 'result', 'checking');
   try {
-    const result = await checkCandidate(play, github, row);
+    const result = await checkCandidate(play, github, row, readInventory);
     await writePlayCheckStatus(github, row, 'result', result);
     return result;
   } catch (error) {

@@ -30,9 +30,9 @@ function predecessorResult(blocker, releases) {
   return found[0].releaseLifecycleState === PUBLISHED ? 'ready' : 'waiting';
 }
 
-export async function playSubmissionContext(github, play) {
+export async function playSubmissionContext(github, readInventory) {
   const rows = await listPlaySubmissions(github);
-  const releases = await readPlayReleases(play);
+  const releases = await readInventory();
   pendingPlayBlockers(releases);
   const candidates = (await listMobileCandidates(github)).map(verifyStoredMobileCandidate);
   const obsolete = await obsoletePlaySubmissions(github, { rows, releases, candidates });
@@ -90,10 +90,10 @@ function requireSubmissionAttention(row, reason) {
     `inspect https://github.com/campfirium/foliole/actions/runs/${row.payload.runId} before recovery`);
 }
 
-export async function resumePendingPlaySubmission({ github, play, candidateId }) {
+export async function resumePendingPlaySubmission({ github, play, candidateId, readInventory = () => readPlayReleases(play) }) {
   // An exact availability check must not resume an unrelated source run.
   if (candidateId) return 'inspection-only';
-  const context = await playSubmissionContext(github, play);
+  const context = await playSubmissionContext(github, readInventory);
   for (const row of context.rows) {
     if (context.obsolete.has(row.id)) continue;
     const state = context.states.get(row.id);

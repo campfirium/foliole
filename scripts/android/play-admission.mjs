@@ -22,17 +22,19 @@ export async function registerAcceptedPlaySubmission({ github, play, env, regist
       env.EXECUTION_LANE !== (branch === 'release' ? 'release-t7' : 'qa-mobile-beta')) {
     throw new Error('Actual queued run differs from the accepted Android lane');
   }
-  return registerPlaySubmission(github, { evidence, registrarSha, prebuilt,
-    blockers: pendingPlayBlockers(await readPlayReleases(play)) });
+  const releases = await readPlayReleases(play);
+  const row = await registerPlaySubmission(github, { evidence, registrarSha, prebuilt,
+    blockers: pendingPlayBlockers(releases) });
+  return { row, releases };
 }
 
 export async function admitPlaySubmission({ github, play, env, registrarSha }) {
-  const row = await registerAcceptedPlaySubmission({ github, play, env, registrarSha,
+  const { row, releases } = await registerAcceptedPlaySubmission({ github, play, env, registrarSha,
     prebuilt: env.PLAY_PREBUILT === 'true', upload: env.PLAY_PREBUILT === 'true' });
   if (env.PLAY_PREBUILT === 'true' && !row.payload.prebuilt) throw new Error('Legacy submission must retain its original workflow');
   const prebuilt = row.payload.prebuilt ? await readPrebuiltPlayCandidate(github, row) : undefined;
   const artifactName = prebuilt?.signedArtifact.name;
-  const context = await playSubmissionContext(github, play);
+  const context = await playSubmissionContext(github, () => releases);
   const previous = context.states.get(row.id);
   // Recovery of an admitted source belongs to its original checkpoint path.
   if (['submitted', 'published', 'admitted'].includes(previous)) return { proceed: true, state: previous, id: row.id, artifactName };

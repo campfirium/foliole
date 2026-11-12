@@ -100,6 +100,14 @@ export async function readPlayReleases(api) {
   return result.releases ?? [];
 }
 
+export function createPlayInventoryReader(play) {
+  let inventory;
+  return async ({ refresh = false } = {}) => {
+    if (refresh || inventory === undefined) inventory = await readPlayReleases(play);
+    return inventory;
+  };
+}
+
 function validPlayReleases(result) {
   if (!result || typeof result !== 'object' || Array.isArray(result)) return false;
   // ProtoJSON may omit an empty repeated field.

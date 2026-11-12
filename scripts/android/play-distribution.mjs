@@ -89,8 +89,8 @@ export async function commitPlayCandidate({ api, state, notes, save }) {
   return state;
 }
 
-export async function observePlayCandidate({ api, state, save }) {
-  const releases = await readPlayReleases(api);
+export async function observePlayCandidate({ api, state, save, inventory }) {
+  const releases = inventory ?? await readPlayReleases(api);
   const matches = releases.filter(release => release.track === PLAY_TRACK &&
     release.releaseName === state.releaseName && release.activeArtifacts?.some(item => Number(item.versionCode) === state.versionCode));
   if (matches.length !== 1) throw new Error('Exact Play release is not observable yet; preserve the original run');
