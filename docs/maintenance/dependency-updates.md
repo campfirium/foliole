@@ -221,13 +221,27 @@ development and CI toolchain.
 [Node security release](https://github.com/nodejs/node/releases/tag/v24.22.3)
 and [Electron runtime table](https://releases.electronjs.org/release?channel=stable).
 
-[#200](https://github.com/campfirium/foliole/pull/200) targets
-`campfirium/foliole:dev` at verified `app/renovate` head
-`fed175600e4bfcfd9c31b4628241db351f75213b`. Adoption commit `8613a9fb7`
-updates Electron to 45.3.0. Electron compilation, 21 focused tests, the full
-local fast check, and the macOS hidden desktop smoke passed. The smoke passed
-after rebuilding the stale renderer assets. Run desktop quality and dependency
-hardening in the next centralized QA before closing the PR.
+### November 12 Electron and build-tool patch batch
+
+The following `app/renovate` proposals target `campfirium/foliole:dev`.
+Adoption commit `ee27eb9aa` passed 53 targeted tests, six real Electron SQLite
+tests, macOS Electron native preflight, both desktop and companion web
+production builds, and the production npm audit. The complete local fast check
+could not acquire the resource held by the running Mac DEV preview.
+Run desktop and shared quality with dependency hardening in the next
+centralized QA.
+
+| Proposal | Verified head | Target |
+| --- | --- | --- |
+| [#200](https://github.com/campfirium/foliole/pull/200) | `504cd9196b48e5d778c2311cf4969651dd56f3f1` | Electron 45.3.1 |
+| [#239](https://github.com/campfirium/foliole/pull/239) | `9073ae21cffd9c678b148819d76cf2718aa962e8` | npm 12.2.2 |
+| [#240](https://github.com/campfirium/foliole/pull/240) | `5125f576d762456b0d426d809a629776bc8396c4` | Vite 8.3.6 |
+
+[Electron 45.3.1](https://github.com/electron/electron/releases/tag/v45.3.1)
+is the latest stable release at review time and stops trusting the revoked
+eMudhra RSA intermediates. Prioritize it for the next desktop patch release.
+It still embeds Node 24.22.2, so the separate Node backport check above
+remains open. No Electron major upgrade is outstanding.
 
 The separately authorized [Gradle security patch](gradle-security-update.md) is
 outside the already frozen November 11 full-QA candidate.
