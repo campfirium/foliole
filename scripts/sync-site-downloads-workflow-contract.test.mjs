@@ -13,6 +13,7 @@ describe('site download sync workflow contract', () => {
     expect(workflow).not.toContain('schedule:');
     expect(workflow).toContain('.conclusion == "success" or .conclusion == "skipped"');
     expect(workflow).toContain('https://foliole.app/downloads.json');
+    expect(workflow).toContain('403|404)');
     expect(workflow).toContain('[[ "$directory" != "$deployed" ]]');
   });
 

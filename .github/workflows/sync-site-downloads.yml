@@ -39,7 +39,10 @@ jobs:
             https://foliole.app/downloads.json)
           case "$status" in
             200) deployed=$(jq -ceS . "$RUNNER_TEMP/site-downloads.json") ;;
-            404) deployed='' ;;
+            403|404)
+              # A blocked or missing public probe cannot establish that production is current.
+              deployed=''
+              ;;
             *) echo "Production download directory returned HTTP $status" >&2; exit 1 ;;
           esac
           if [[ "$directory" != "$deployed" ]]; then
