@@ -104,7 +104,7 @@ export function normalizeOptionalLimit(value: unknown, fallback: number, max: nu
   return Math.max(1, Math.min(max, Math.floor(value)));
 }
 
-export function readAgentControlMaterial(nodeId: string): AgentMaterialReadPayload | null {
+export function readAgentControlMaterial(nodeId: string, contentMode: 'preview' | 'full' = 'preview'): AgentMaterialReadPayload | null {
   const rows = openDatabaseConnection().driver.queryAll<MaterialRow>(
     `WITH RECURSIVE ancestors AS (
        SELECT n.id, n.parent_id, n.kind, n.title, n.content, n.body_blob_hash, n.reveal, n.anchor_link, cbd.data AS body_blob_data,
@@ -125,14 +125,15 @@ export function readAgentControlMaterial(nodeId: string): AgentMaterialReadPaylo
   );
   const node = rows[0];
   if (!node) return null;
+  const contentLimit = contentMode === 'full' ? Infinity : AGENT_CONTROL_MATERIAL_CONTENT_LIMIT;
   const content = requireResolvedNodeBody(node).content;
-  const truncated = content.length > AGENT_CONTROL_MATERIAL_CONTENT_LIMIT;
+  const truncated = content.length > contentLimit;
   const children = readAgentControlMaterialChildren(node.id);
   return {
     child_count: children.count,
     children: children.items,
     children_truncated: children.truncated,
-    content: truncated ? content.slice(0, AGENT_CONTROL_MATERIAL_CONTENT_LIMIT) : content,
+    content: truncated ? content.slice(0, contentLimit) : content,
     content_char_count: content.length,
     content_truncated: truncated,
     deleted: rows.some((row) => row.deleted_at !== null),
@@ -141,7 +142,7 @@ export function readAgentControlMaterial(nodeId: string): AgentMaterialReadPaylo
     parent_id: node.parent_id,
     parent_titles: rows.slice(1).reverse().map((row) => row.title),
     parents: rows.slice(1).reverse().map((row) => ({ id: row.id, title: row.title })),
-    ...(node.kind === 'item' ? projectAgentMaterialReveal(node.reveal, AGENT_CONTROL_MATERIAL_CONTENT_LIMIT) : {}),
+    ...(node.kind === 'item' ? projectAgentMaterialReveal(node.reveal, contentLimit) : {}),
     ...projectAgentMaterialIdentity(node),
     title: node.title,
     updated_at: node.updated_at

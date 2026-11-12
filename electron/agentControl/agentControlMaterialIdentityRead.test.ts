@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { runAgentCli } from '../../scripts/agent-control/foliole-agent.mjs';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -67,6 +68,40 @@ it('includes material identity fields on the material read payload itself', asyn
         special_kind: 'virtual'
       }
     });
+  } finally {
+    await closeServer(server);
+  }
+});
+
+it('returns complete question and answer with their revision on explicit full reads', async () => {
+  const content = '问题😀'.repeat(3000);
+  const reveal = '答案🌱'.repeat(2000);
+  const revision = '2026-07-05T00:00:00.000Z';
+  upsertNodeSnapshot({
+    anchorLink: null, content, createdAt: revision, isTitleManual: true, kind: 'item',
+    nodeId: 'long-item', parentNodeId: null, position: null, reveal, title: 'Long Item', updatedAt: revision
+  });
+  const { endpoint, server } = await startServer();
+  try {
+    const read = (body: object) => fetch(`${endpoint}/agent-control/v1/materials/read`, {
+      body: JSON.stringify({ id: 'long-item', ...body }), headers: authHeaders(), method: 'POST'
+    });
+    const full = await read({ content_mode: 'full' });
+    expect(full.status).toBe(200);
+    expect(await full.json()).toMatchObject({ material: {
+      content, reveal, content_truncated: false, reveal_truncated: false, updated_at: revision
+    } });
+    expect(await (await read({})).json()).toMatchObject({ material: {
+      content: content.slice(0, 4000), reveal: reveal.slice(0, 4000),
+      content_truncated: true, reveal_truncated: true, updated_at: revision
+    } });
+    expect((await read({ content_mode: true })).status).toBe(400);
+    const descriptor = path.join(tempRoot, 'agent-control-session.json');
+    await fs.writeFile(descriptor, JSON.stringify({ endpoint, token: 'test-token', capabilities: ['materials.read'] }));
+    const cli = await runAgentCli([
+      'materials/read', '--descriptor', descriptor, '--id', 'long-item', '--content-mode', 'full'
+    ]);
+    expect(cli).toMatchObject({ status: 0, output: { material: { content, reveal, updated_at: revision } } });
   } finally {
     await closeServer(server);
   }

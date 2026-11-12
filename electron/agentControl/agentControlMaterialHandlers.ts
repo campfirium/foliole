@@ -91,12 +91,13 @@ export async function handleMaterialRead(
   const body = await readJsonBodyOrFail(request, response, options, capability);
   if (!body) return;
   const id = typeof body.id === 'string' ? body.id.trim() : '';
-  if (!id) {
+  const contentMode = body.content_mode;
+  if (!id || (contentMode !== undefined && contentMode !== 'preview' && contentMode !== 'full')) {
     recordRequest({ capability, errorCategory: 'invalid_request', options, request, result: 'failed' });
     sendJson(response, 400, { error: 'invalid_request' });
     return;
   }
-  const material = readAgentControlMaterial(id);
+  const material = readAgentControlMaterial(id, contentMode);
   if (!material) {
     recordRequest({ capability, errorCategory: 'not_found', options, request, result: 'failed', targetId: id });
     sendJson(response, 404, { error: 'not_found' });

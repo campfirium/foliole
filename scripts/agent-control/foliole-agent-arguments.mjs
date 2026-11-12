@@ -3,7 +3,7 @@ export function buildAgentCliBody(command, flags) {
   if (command === 'materials/create') return buildMaterialCreateBody(flags);
   if (command === 'materials/list-children') return requireFields(flags, [], ['parent_id', 'limit']);
   if (command === 'materials/move') return requireFields(flags, ['id', 'parent_id', 'expected_updated_at']);
-  if (command === 'materials/read') return requireFields(flags, ['id']);
+  if (command === 'materials/read') return buildMaterialReadBody(flags);
   if (command === 'materials/search') return requireFields(flags, ['query'], ['limit']);
   if (command === 'materials/reorder') return buildMaterialReorderBody(flags);
   if (command === 'materials/restore') return requireFields(flags, ['id', 'expected_updated_at']);
@@ -18,6 +18,14 @@ export function buildAgentCliBody(command, flags) {
   if (command === 'virtual-folders/reorder') return buildVirtualFolderReorderBody(flags);
   if (command === 'virtual-folders/update') return buildVirtualFolderUpdateBody(flags);
   return requireFields(flags, ['folder_id', 'material_ids']);
+}
+
+function buildMaterialReadBody(flags) {
+  const mode = flags.content_mode;
+  if (mode !== undefined && mode !== 'preview' && mode !== 'full') {
+    return { error: 'invalid_content_mode', ok: false, statusCode: 2 };
+  }
+  return requireFields(flags, ['id'], ['content_mode']);
 }
 
 function buildMaterialCreateBody(flags) {
