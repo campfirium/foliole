@@ -4,10 +4,6 @@ on:
     - cron: '17,47 * * * *'
   workflow_dispatch:
     inputs:
-      diagnose_beta_inventory:
-        description: 'Classify access to the fixed Play beta release inventory (read only)'
-        type: boolean
-        default: false
       candidate_id:
         description: 'Optional exact durable Android candidate ID; empty checks pending candidates'
         required: false
@@ -16,7 +12,7 @@ permissions: { contents: read }
 concurrency: { group: play-android-open-testing, cancel-in-progress: false, queue: max }
 jobs:
   android:
-    if: github.ref == 'refs/heads/dev' && (github.event_name != 'workflow_dispatch' || !inputs.diagnose_beta_inventory)
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions: { contents: read, actions: write, deployments: write }
@@ -31,19 +27,3 @@ jobs:
           ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}
           CANDIDATE_ID: ${{ inputs.candidate_id }}
         run: node scripts/android/play-review-check.mjs
-
-  diagnose-beta-inventory:
-    if: github.ref == 'refs/heads/dev' && github.event_name == 'workflow_dispatch' && inputs.diagnose_beta_inventory && inputs.candidate_id == ''
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    permissions: { contents: read }
-    steps:
-      - uses: actions/checkout@v4
-        with: { ref: '${{ github.sha }}', persist-credentials: false }
-      - uses: actions/setup-node@v4
-        with: { node-version: 26.13.0 }
-      - name: Classify access to the fixed Play beta release inventory
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ANDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON }}
-        run: node scripts/android/play-beta-inventory-diagnostic.mjs
