@@ -31,26 +31,15 @@ static BOOL configureRuntimeEnvironment(NSString *cliContentsDirectory) {
   NSString *sourceRoot = [supportUrl.path stringByAppendingPathComponent:@"foliole-source"];
   NSString *descriptor = [[sourceRoot stringByAppendingPathComponent:@"cache"]
     stringByAppendingPathComponent:@"agent-control-session.json"];
-  NSString *backup = [[sourceRoot stringByAppendingPathComponent:@"cli"]
-    stringByAppendingPathComponent:@"backups"];
 #else
   NSURL *groupUrl = [files containerURLForSecurityApplicationGroupIdentifier:kAgentControlGroup];
   if (groupUrl == nil) return NO;
-  NSURL *supportUrl = [files URLForDirectory:NSApplicationSupportDirectory
-                                    inDomain:NSUserDomainMask
-                           appropriateForURL:nil
-                                      create:YES
-                                       error:nil];
-  if (supportUrl == nil) return NO;
   NSString *descriptor = [groupUrl URLByAppendingPathComponent:@"agent-control-session.json"].path;
-  NSString *backup = [[supportUrl URLByAppendingPathComponent:@"Foliole CLI"]
-    URLByAppendingPathComponent:@"backups"].path;
 #endif
   NSString *metadata = [cliContentsDirectory stringByAppendingPathComponent:@"Resources/package.json"];
   NSString *agentScript = [cliContentsDirectory
     stringByAppendingPathComponent:@"Resources/scripts/agent-control/foliole-agent.mjs"];
   setenv("FOLIOLE_AGENT_DESCRIPTOR", descriptor.fileSystemRepresentation, 1);
-  setenv("FOLIOLE_AGENT_BACKUP_DIR", backup.fileSystemRepresentation, 1);
   setenv("FOLIOLE_AGENT_SCRIPT", agentScript.fileSystemRepresentation, 1);
   setenv("FOLIOLE_PRODUCT_METADATA_PATH", metadata.fileSystemRepresentation, 1);
   return YES;

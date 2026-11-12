@@ -97,7 +97,6 @@ async function verifyMaterialLifecycle(args: {
     'materials/update', '--descriptor', args.descriptorPath, '--id', args.firstTopicId,
     '--expected-updated-at', String(firstMaterial.updated_at), '--title', UPDATED_FIRST_TOPIC_TITLE,
     `--content=---\ncollections:\n  - "${COLLECTION_TITLE}"\n---\n# Agent Visible Memo A Updated\n\nUpdated body A`,
-    '--backup-dir', path.join('.tmp', 'artifacts', 'agent-control-visible-write-backups')
   ]);
   await expect(args.contentPanel.getByRole('treeitem', { name: UPDATED_FIRST_TOPIC_TITLE })).toBeVisible({ timeout: 10_000 });
   await expect(args.desktopWindow.locator('.prompt-editor-host')).toContainText('Updated body A', { timeout: 10_000 });
@@ -110,13 +109,11 @@ async function verifyMaterialLifecycle(args: {
   const deletedMaterial = await runCli([
     'materials/delete-soft', '--descriptor', args.descriptorPath, '--id', args.secondTopicId,
     '--expected-updated-at', String(secondMaterial.updated_at),
-    '--backup-dir', path.join('.tmp', 'artifacts', 'agent-control-visible-write-backups')
   ]);
   await expect(args.contentPanel.getByRole('treeitem', { name: SECOND_TOPIC_TITLE })).toHaveCount(0, { timeout: 10_000 });
   await runCli([
     'materials/restore', '--descriptor', args.descriptorPath, '--id', args.secondTopicId,
     '--expected-updated-at', String(deletedMaterial.deleted_at),
-    '--backup-dir', path.join('.tmp', 'artifacts', 'agent-control-visible-write-backups')
   ]);
   await expect(args.contentPanel.getByRole('treeitem', { name: SECOND_TOPIC_TITLE })).toBeVisible({ timeout: 10_000 });
 }
@@ -133,7 +130,6 @@ async function verifyVirtualFolderLifecycle(args: {
   const updatedFolder = await runCli([
     'virtual-folders/update', '--descriptor', args.descriptorPath, '--id', args.folderId,
     '--expected-updated-at', String(folder.updated_at), '--title', UPDATED_COLLECTION_TITLE,
-    '--backup-dir', path.join('.tmp', 'artifacts', 'agent-control-visible-write-backups')
   ]);
   const updatedRow = args.desktopWindow.getByRole('treeitem', { name: new RegExp(UPDATED_COLLECTION_TITLE) });
   await expect(updatedRow).toBeVisible({ timeout: 10_000 });
@@ -145,13 +141,11 @@ async function verifyVirtualFolderLifecycle(args: {
   const deletedFolder = await runCli([
     'virtual-folders/delete-soft', '--descriptor', args.descriptorPath, '--id', args.folderId,
     '--expected-updated-at', String(updatedFolder.updated_at),
-    '--backup-dir', path.join('.tmp', 'artifacts', 'agent-control-visible-write-backups')
   ]);
   await expect(updatedRow).toHaveCount(0, { timeout: 10_000 });
   await runCli([
     'virtual-folders/restore', '--descriptor', args.descriptorPath, '--id', args.folderId,
     '--expected-updated-at', String(deletedFolder.deleted_at),
-    '--backup-dir', path.join('.tmp', 'artifacts', 'agent-control-visible-write-backups')
   ]);
   await expect(updatedRow).toBeVisible({ timeout: 10_000 });
 }

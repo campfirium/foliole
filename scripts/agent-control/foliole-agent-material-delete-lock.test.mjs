@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -16,14 +16,12 @@ afterEach(async () => {
   await rm(tempRoot, { force: true, recursive: true });
 });
 
-it('uses the backed-up material updated_at as the soft delete optimistic lock', async () => {
+it('uses the material updated_at as the soft delete optimistic lock', async () => {
   const descriptor = await writeDescriptor();
-  const backupDir = path.join(tempRoot, 'backups');
   const calls = [];
   const result = await runAgentCli([
     'materials/delete-soft',
     '--descriptor', descriptor,
-    '--backup-dir', backupDir,
     '--id', 'node-1'
   ], {
     fetch: async (url, init) => {
@@ -32,7 +30,6 @@ it('uses the backed-up material updated_at as the soft delete optimistic lock', 
         ? response({ material: material() })
         : response({ deleted_at: '2026-07-05T00:02:00.000Z', id: 'node-1' });
     },
-    randomId: () => 'delete-run'
   });
 
   expect(result.status).toBe(0);
@@ -40,11 +37,7 @@ it('uses the backed-up material updated_at as the soft delete optimistic lock', 
     expected_updated_at: '2026-07-05T00:00:00.000Z',
     id: 'node-1'
   });
-  const backup = JSON.parse(await readFile(result.output.backup_path, 'utf8'));
-  expect(backup.request_patch).toEqual({
-    expected_updated_at: '2026-07-05T00:00:00.000Z',
-    id: 'node-1'
-  });
+
 });
 
 function material() {

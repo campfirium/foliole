@@ -25,22 +25,19 @@ const FLAG_DESCRIPTIONS = {
 
 const COMMON_OPTIONS = [
   { description: 'Show help without connecting to Foliole.', name: '--help, -h' },
-  { description: 'Override the current Agent Control session descriptor path.', name: '--descriptor <path>' },
-  { description: 'Override the automatic backup directory for a write command.', name: '--backup-dir <path>', writeOnly: true }
+  { description: 'Override the current Agent Control session descriptor path.', name: '--descriptor <path>' }
 ];
 
 const EXIT_CODES = [
   { code: 0, meaning: 'Success.' },
   { code: 1, meaning: 'Foliole rejected the request.' },
   { code: 2, meaning: 'Invalid command or arguments.' },
-  { code: 3, meaning: 'Foliole session or capability unavailable.' },
-  { code: 4, meaning: 'The required safety backup could not be created.' }
+  { code: 3, meaning: 'Foliole session or capability unavailable.' }
 ];
 
 const COMMAND_DETAILS = {
   'materials/create': details(
     [
-      'Creates a local backup record before writing.',
       'Topic and Folder require --title. Item requires --content and --reveal and does not accept --title.'
     ],
     [
@@ -60,14 +57,13 @@ const COMMAND_DETAILS = {
   'materials/restore': guardedWrite('Use the updated_at value returned for the trashed material.'),
   'materials/update': details([
     'Updates only the supplied title, content, or Item answer; it does not change Folder membership or ordering.',
-    'Run materials/read first and pass the latest materials/read updated_at value. The CLI backs up the current Topic or Item before writing.'
+    'Run materials/read first and pass the latest materials/read updated_at value.'
   ], [
     'foliole materials/update --id <id> --expected-updated-at <updated_at> --title "New title"'
   ]),
   'virtual-folders/add-items': details([
     'Adds the supplied Topics without removing existing Topics from the virtual Folder.'
   ]),
-  'virtual-folders/create': details(['Creates a local backup record before writing.']),
   'virtual-folders/delete-soft': guardedWrite('Moves the virtual Folder to trash; it does not permanently delete it.'),
   'virtual-folders/remove-items': details([
     'Removes only the supplied Topics; other Topics remain in the virtual Folder.'
@@ -136,7 +132,7 @@ function createHelpDocument(topic) {
 }
 
 function commandDocument(name, route) {
-  const detail = COMMAND_DETAILS[name] ?? (route.writeKind ? guardedWrite() : details());
+  const detail = COMMAND_DETAILS[name] ?? details();
   const flags = (access) => route.args[access].map((flag) => ({
     description: FLAG_DESCRIPTIONS[flag] ?? '',
     name: `--${flag}`
@@ -150,7 +146,7 @@ function commandDocument(name, route) {
     name,
     notes: detail.notes,
     options: { optional: flags('optional'), required: flags('required') },
-    common_options: COMMON_OPTIONS.filter((option) => !option.writeOnly || route.writeKind)
+    common_options: COMMON_OPTIONS
       .map((option) => ({ description: option.description, name: option.name })),
     usage: commandUsage(name, route.args)
   };
@@ -212,7 +208,7 @@ function details(notes = [], examples = []) {
   return { examples, notes };
 }
 
-function guardedWrite(note = 'Creates a local backup before writing.') {
+function guardedWrite(note) {
   return details([note, 'Use the latest read result to avoid overwriting a concurrent change.']);
 }
 

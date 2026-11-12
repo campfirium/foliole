@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -43,14 +43,13 @@ it('creates a question-answer Item through the existing materials route', async 
   const descriptor = await descriptorPath(['materials.create']);
   const calls = [];
   const result = await runAgentCli([
-    'materials/create', '--descriptor', descriptor, '--backup-dir', path.join(tempRoot, 'backups'),
+    'materials/create', '--descriptor', descriptor,
     '--kind', 'item', '--content', 'Question?', '--reveal', 'Answer.', '--parent-id', 'root'
   ], {
     fetch: async (url, init) => {
       calls.push({ body: JSON.parse(init.body), url });
       return response({ material: item({ reveal: 'Answer.' }) });
     },
-    randomId: () => 'item-create'
   });
 
   expect(result.status).toBe(0);
@@ -58,29 +57,27 @@ it('creates a question-answer Item through the existing materials route', async 
     body: { content: 'Question?', kind: 'item', parent_id: null, reveal: 'Answer.' },
     url: 'http://127.0.0.1:3456/agent-control/v1/materials/create'
   }]);
-  expect(result.output.backup_path).toContain('item-create');
   expect(await runAgentCli([
     'materials/create', '--descriptor', descriptor, '--kind', 'item', '--content', 'Question?'
   ])).toEqual({ output: { error: 'missing_reveal' }, status: 2 });
 });
 
-it('backs up the full Item answer before updating reveal', async () => {
-  const descriptor = await descriptorPath(['materials.read', 'materials.update']);
+it('updates the Item answer with the supplied revision', async () => {
+  const descriptor = await descriptorPath(['materials.update']);
   const previous = item();
   const result = await runAgentCli([
-    'materials/update', '--descriptor', descriptor, '--backup-dir', path.join(tempRoot, 'backups'),
+    'materials/update', '--descriptor', descriptor,
     '--id', 'node-1', '--expected-updated-at', previous.updated_at, '--reveal', 'New answer'
   ], {
-    fetch: async (url) => url.endsWith('/materials/read')
-      ? response({ material: previous })
-      : response({ material: item({ reveal: 'New answer' }) }),
-    randomId: () => 'item-update'
+    fetch: async (url, init) => {
+      expect(url).toMatch(/\/materials\/update$/u);
+      expect(JSON.parse(init.body)).toEqual({
+        id: 'node-1', expected_updated_at: previous.updated_at, reveal: 'New answer'
+      });
+      return response({ material: item({ reveal: 'New answer' }) });
+    }
   });
 
+  expect(result.output.material.reveal).toBe('New answer');
   expect(result.status).toBe(0);
-  const backup = JSON.parse(await readFile(result.output.backup_path, 'utf8'));
-  expect(backup).toMatchObject({
-    previous_material: { reveal: 'Original answer' },
-    request_patch: { reveal: 'New answer' }
-  });
 });

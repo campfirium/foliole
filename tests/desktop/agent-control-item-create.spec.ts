@@ -60,18 +60,26 @@ function expectQuestionAnswerItem(item: Record<string, unknown> | null) {
     kind: 'item',
     parentNodeId: 'special-inbox',
     reveal: ANSWER,
-    review: {
-      difficulty: 0,
-      elapsedDays: 0,
-      lapses: 0,
-      lastReviewAt: null,
-      reps: 0,
-      scheduledDays: 0,
-      stability: 0,
-      state: 0
-    },
     title: QUESTION
   });
+}
+
+async function readItemReview(page: Page, itemId: string) {
+  return page.evaluate(async (nodeId) => {
+    const { libraryScope } = await window.electronAPI.invoke('load_workspace_list_snapshot', {});
+    if (!libraryScope) throw new Error('Missing library scope');
+    const [learning] = await window.electronAPI.invoke('load_node_learning', { nodeIds: [nodeId], libraryScope });
+    return learning?.review ?? null;
+  }, itemId);
+}
+
+async function expectInitialItemReview(page: Page, itemId: string) {
+  const review = await readItemReview(page, itemId);
+  expect(review).toMatchObject({
+    difficulty: 0, due: expect.any(String), elapsedDays: 0, lapses: 0,
+    lastReviewAt: null, reps: 0, scheduledDays: 0, stability: 0, state: 0
+  });
+  return review;
 }
 
 test('creates and hydrates a real question-answer Item through the public CLI', async ({ browserName }, testInfo) => {
@@ -85,7 +93,6 @@ test('creates and hydrates a real question-answer Item through the public CLI', 
     const descriptorPath = await readDescriptorPath(desktopSession);
     const created = await runAgentCli([
       'materials/create', '--descriptor', descriptorPath,
-      '--backup-dir', path.join(process.cwd(), '.tmp/artifacts/agent-control-item-backups'),
       '--kind', 'item', '--content', QUESTION, '--reveal', ANSWER, '--parent-id', 'root'
     ]);
     expect(created.status).toBe(0);
@@ -102,6 +109,7 @@ test('creates and hydrates a real question-answer Item through the public CLI', 
       id: itemId, kind: 'item', parentNodeId: 'special-inbox', title: QUESTION
     });
     expectQuestionAnswerItem(await openRendererItem(desktopSession.firstWindow, itemId));
+    const initialReview = await expectInitialItemReview(desktopSession.firstWindow, itemId);
 
     await desktopSession.electronApp.close();
     secondSession = await launchDesktopSession({
@@ -113,6 +121,7 @@ test('creates and hydrates a real question-answer Item through the public CLI', 
     await expect.poll(() => readRendererItem(secondSession!.firstWindow, itemId)).not.toBeNull();
     const hydrated = await openRendererItem(secondSession.firstWindow, itemId);
     expectQuestionAnswerItem(hydrated);
+    expect(await readItemReview(secondSession.firstWindow, itemId)).toEqual(initialReview);
     const relaunchedDescriptorPath = await readDescriptorPath(secondSession);
     const relaunchedRead = await readCliItem(relaunchedDescriptorPath, itemId);
     expect(relaunchedRead).toMatchObject({

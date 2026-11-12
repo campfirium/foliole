@@ -58,7 +58,7 @@ describe('foliole agent cli discovery', () => {
     expect(human.status).toBe(0);
     expect(human.output).toContain('Updates only the supplied title, content, or Item answer');
     expect(human.output).toContain('--expected-updated-at');
-    expect(human.output).toContain('--backup-dir <path>');
+    expect(human.output).not.toContain('--backup-dir <path>');
     expect(human.output).toContain('latest materials/read');
 
     const createItem = await runAgentCli(['materials/create', '--help'], { env: {} });
