@@ -159,7 +159,7 @@ it('uploads the admitted original when a later candidate is only signed and owns
 });
 
 it.each(['Play upload edit: creating', 'Play upload edit: open:opaque/edit',
-  'Play candidate: upload-unknown', 'Play candidate: uploaded', 'Play candidate: commit-unknown', 'Play candidate: committed'])(
+  'Play candidate: upload-unknown', 'Play candidate: uploaded', 'Play candidate: commit-unknown'])(
   'keeps another signed candidate with %s from being invalidated by a new edit', async description => {
     const { f, registration, deliver, creates, status } = await prepared();
     const later = await laterSigned(f, registration.payload.candidate);
@@ -168,3 +168,12 @@ it.each(['Play upload edit: creating', 'Play upload edit: open:opaque/edit',
     await expect(deliver()).rejects.toThrow();
     expect(creates()).toBe(before); expect(f.uploads).toBeUndefined();
   });
+
+it('allows a new edit when the previous edit has already committed', async () => {
+  const { f, registration, deliver, creates, status } = await prepared();
+  const previous = await laterSigned(f, registration.payload.candidate);
+  f.histories.set(previous.id, [status('Play candidate: committed')]);
+  const before = creates();
+  expect(await deliver()).toMatchObject({ phase: 'observed' });
+  expect(creates()).toBe(before + 1);
+});

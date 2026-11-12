@@ -60,6 +60,8 @@ export async function runPlayDelivery(env = process.env) {
   await requireTrustedMobileRegistrar({ api: github, env, headSha });
   const registration = await resolvePlayDeliveryRegistration(github, env, headSha);
   const candidate = registration.payload.candidate;
+  const reservation = await requirePlayReservation(github, candidate);
+  const directUpload = reservation?.payload.directUpload === true;
   const notes = await github('GET', `contents/scripts/android/play-release-notes.txt?ref=${candidate.sourceSha}`);
   if (notes.encoding !== 'base64') throw new Error('Original release notes are unavailable');
   const token = await playAccessToken(env.ANDROID_PLAY_SERVICE_ACCOUNT_JSON);
@@ -67,14 +69,14 @@ export async function runPlayDelivery(env = process.env) {
   const directory = '.tmp/artifacts/android-play'; fs.mkdirSync(directory, { recursive: true });
   const saveCheckpoint = value => fs.writeFileSync(path.join(directory, 'candidate.json'), `${JSON.stringify(value, null, 2)}\n`);
   const state = await deliverRegisteredPlayCandidate({ github, play, registration,
-    loadBundle: () => originalBundle(github, registration), saveCheckpoint,
+    loadBundle: () => originalBundle(github, registration), saveCheckpoint, directUpload,
     notes: Buffer.from(notes.content, 'base64').toString('utf8') });
-  if (env.EXECUTION_LANE === 'release-t7') await collectReleaseApk({ env, play, token, state, registration });
-  console.log(`[android-play] ${state.version}/${state.versionCode}: ${state.releaseLifecycleState}; candidate=${registration.id}`);
+  if (env.EXECUTION_LANE === 'release-t7') await collectReleaseApk({ env, play, token, state, registration, directUpload });
+  console.log(`[android-play] ${state.version}/${state.versionCode}: ${state.releaseLifecycleState ?? state.phase}; candidate=${registration.id}`);
   return state;
 }
 
-async function collectReleaseApk({ env, play, token, state, registration }) {
+async function collectReleaseApk({ env, play, token, state, registration, directUpload }) {
   const directory = '.tmp/artifacts/android-play-release';
   const identity = { sourceSha: state.sourceSha, acceptedSha: state.acceptedSha, version: state.version, runId: state.runId };
   const receipt = await collectPlayUniversalApk({ api: play, download: createPlayApkDownloader(token), candidate: state,
@@ -82,7 +84,8 @@ async function collectReleaseApk({ env, play, token, state, registration }) {
     directory, inspect: file => inspectPlayApk(file, {
       buildTools: path.join(env.ANDROID_HOME, 'build-tools/35.0.0'), env }) });
   const exported = { ...receipt, channel: 'play-beta', deploymentId: registration.id,
-    releaseName: state.releaseName, releaseLifecycleState: state.releaseLifecycleState };
+    releaseName: state.releaseName, ...(directUpload ? { schemaVersion: 2, submissionState: 'committed' } :
+      { releaseLifecycleState: state.releaseLifecycleState }) };
   fs.writeFileSync(path.join(directory, `Foliole-Android-${state.version}-Play.json`), `${JSON.stringify(exported, null, 2)}\n`);
   fs.rmSync(path.join(directory, 'generated-apk.json'));
   if (env.GITHUB_OUTPUT) fs.appendFileSync(env.GITHUB_OUTPUT,

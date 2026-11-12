@@ -9,7 +9,7 @@ import { requireTrustedMobileRegistrar } from '../mobile/mobile-candidate-regist
 import { playAccessToken, createPlayApi, readPlayReleases } from './play-api.mjs';
 import { readPrebuiltPlayCandidate } from './play-prebuilt-candidate.mjs';
 import { readPlayQueueEvidence, PLAY_UPLOAD_ADMISSION_JOB } from './play-queue-evidence.mjs';
-import { registerPlaySubmission, writePlaySubmissionState } from './play-submission-store.mjs';
+import { readPlaySubmissionState, registerPlaySubmission, writePlaySubmissionState } from './play-submission-store.mjs';
 import { pendingPlayBlockers, playSubmissionContext, playSubmissionReadiness } from './play-submission-queue.mjs';
 
 export async function registerAcceptedPlaySubmission({ github, play, env, registrarSha, prebuilt = false, upload = false }) {
@@ -22,9 +22,11 @@ export async function registerAcceptedPlaySubmission({ github, play, env, regist
       env.EXECUTION_LANE !== (branch === 'release' ? 'release-t7' : 'qa-mobile-beta')) {
     throw new Error('Actual queued run differs from the accepted Android lane');
   }
-  const releases = prebuilt && !upload ? [] : await readPlayReleases(play);
+  const directUpload = prebuilt && env.PLAY_DIRECT_UPLOAD === 'true';
+  const releases = prebuilt && (!upload || directUpload) ? [] : await readPlayReleases(play);
   const row = await registerPlaySubmission(github, { evidence, registrarSha, prebuilt,
-    blockers: pendingPlayBlockers(releases) });
+    blockers: pendingPlayBlockers(releases), directUpload });
+  if (Boolean(row.payload.directUpload) !== directUpload) throw new Error('Original Play upload mode differs');
   return { row, releases };
 }
 
@@ -34,6 +36,12 @@ export async function admitPlaySubmission({ github, play, env, registrarSha }) {
   if (env.PLAY_PREBUILT === 'true' && !row.payload.prebuilt) throw new Error('Legacy submission must retain its original workflow');
   const prebuilt = row.payload.prebuilt ? await readPrebuiltPlayCandidate(github, row) : undefined;
   const artifactName = prebuilt?.signedArtifact.name;
+  if (row.payload.directUpload) {
+    const state = await readPlaySubmissionState(github, row);
+    if (state === 'waiting') await writePlaySubmissionState(github, row, 'admitted');
+    else if (!['admitted', 'submitted', 'published'].includes(state)) throw new Error('Original Play submission cannot proceed');
+    return { proceed: true, state: state === 'waiting' ? 'admitted' : state, id: row.id, artifactName };
+  }
   const context = await playSubmissionContext(github, () => releases);
   const previous = context.states.get(row.id);
   // Recovery of an admitted source belongs to its original checkpoint path.
@@ -49,11 +57,12 @@ export async function runPlayAdmission(env = process.env) {
   const github = createMobileGithubApi(env.GH_TOKEN);
   const registrarSha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   await requireTrustedMobileRegistrar({ api: github, env, headSha: registrarSha });
-  const play = createPlayApi(await playAccessToken(env.ANDROID_PLAY_SERVICE_ACCOUNT_JSON));
+  const play = env.PLAY_DIRECT_UPLOAD === 'true' ? undefined :
+    createPlayApi(await playAccessToken(env.ANDROID_PLAY_SERVICE_ACCOUNT_JSON));
   const result = await admitPlaySubmission({ github, play, env, registrarSha });
   if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, `proceed=${result.proceed}\nsubmission_state=${result.state}\nsigned_artifact=${result.artifactName ?? ''}\n`);
   if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY,
-    `Android submission: **${result.state}** (queue ${result.id}). Waiting preserves the previous review; no new upload has started.\n`);
+    `Android submission: **${result.state}** (record ${result.id}).\n`);
   console.log(JSON.stringify(result));
   return result;
 }

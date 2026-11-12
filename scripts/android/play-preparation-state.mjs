@@ -27,4 +27,5 @@ export async function requirePlayReservation(github, candidate) {
   if (rows.length !== 1) throw new Error('Exact prebuilt Play reservation is missing');
   const state = await readPlayPreparation(github, rows[0]);
   if (state.phase !== 'cleared' || state.versionCode !== candidate.versionCode) throw new Error('Prebuilt Play reservation differs');
+  return rows[0];
 }

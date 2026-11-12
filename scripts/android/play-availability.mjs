@@ -67,7 +67,7 @@ async function checkCandidate(play, github, row, readInventory) {
 
 export async function checkRegisteredPlayAvailability({ play, github, registration, readInventory = () => readPlayReleases(play) }) {
   const row = verifyStoredMobileCandidate(registration);
-  if (await readMobileCandidatePhase(github, row.id) !== 'observed') return 'waiting';
+  if (!['committed', 'observed'].includes(await readMobileCandidatePhase(github, row.id))) return 'waiting';
   await writePlayCheckStatus(github, row, 'result', 'checking');
   try {
     const result = await checkCandidate(play, github, row, readInventory);

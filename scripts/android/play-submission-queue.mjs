@@ -44,7 +44,7 @@ export async function playSubmissionContext(github, readInventory) {
     let state = await readPlaySubmissionState(github, row);
     const candidate = candidates.find(item => item.payload.runId === row.payload.runId);
     if (['admitted', 'submitted'].includes(state) && candidate &&
-        await readMobileCandidatePhase(github, candidate.id) === 'observed') {
+        ['committed', 'observed'].includes(await readMobileCandidatePhase(github, candidate.id))) {
       const original = candidate.payload.candidate;
       const result = predecessorResult({ releaseName: `${original.version}.${original.versionCode}.${original.sourceSha.slice(0, 9)}`,
         codes: [original.versionCode] }, releases);
@@ -95,7 +95,7 @@ export async function resumePendingPlaySubmission({ github, play, candidateId, r
   if (candidateId) return 'inspection-only';
   const context = await playSubmissionContext(github, readInventory);
   for (const row of context.rows) {
-    if (context.obsolete.has(row.id)) continue;
+    if (row.payload.directUpload || context.obsolete.has(row.id)) continue;
     const state = context.states.get(row.id);
     if (['published', 'retired'].includes(state)) continue;
     if (['blocked', 'cancelled'].includes(state)) requireSubmissionAttention(row, `submission is ${state}`);

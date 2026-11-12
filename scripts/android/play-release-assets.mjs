@@ -9,13 +9,15 @@ export async function verifyPlayReleaseAssets(directory, version, sha, receiptDi
   const receipt = JSON.parse(await readFile(path.join(receiptDirectory, `Foliole-Android-${version}-Play.json`), 'utf8'));
   const asset = `Foliole-Android-${version}.apk`;
   const lifecycle = ['IN_REVIEW', 'APPROVED_NOT_PUBLISHED', 'PUBLISHED'].map(state => `RELEASE_LIFECYCLE_STATE_${state}`);
-  if (receipt.schemaVersion !== 1 || receipt.sourceSha !== sha || receipt.acceptedSha !== sha ||
+  const submitted = (receipt.schemaVersion === 1 && lifecycle.includes(receipt.releaseLifecycleState)) ||
+    (receipt.schemaVersion === 2 && receipt.submissionState === 'committed');
+  if (!submitted || receipt.sourceSha !== sha || receipt.acceptedSha !== sha ||
       !/^[a-f\d]{40}$/u.test(sha ?? '') || receipt.version !== version || receipt.packageName !== PLAY_PACKAGE ||
       receipt.asset !== asset || receipt.channel !== 'play-beta' || receipt.certificateSha256 !== PLAY_APP_CERTIFICATE_SHA256 ||
       !Number.isSafeInteger(receipt.versionCode) || receipt.versionCode <= 2 ||
       !Number.isSafeInteger(receipt.deploymentId) || receipt.deploymentId < 1 || !/^[1-9]\d*$/u.test(receipt.runId ?? '') ||
       receipt.releaseName !== `${version}.${receipt.versionCode}.${sha.slice(0, 9)}` ||
-      !lifecycle.includes(receipt.releaseLifecycleState) || !/^[a-f\d]{64}$/u.test(receipt.aabSha256 ?? '')) {
+      !/^[a-f\d]{64}$/u.test(receipt.aabSha256 ?? '')) {
     throw new Error('Android release receipt does not match the exact Play candidate');
   }
   const file = path.join(directory, asset);

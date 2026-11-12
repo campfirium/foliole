@@ -27,7 +27,7 @@ export async function readReservedPlayHistory(github, history = readPlayVersionH
           saved.payload.candidate.schemaVersion !== 2 || saved.payload.candidate.phase !== 'signed' ||
           !isDeepStrictEqual(saved.payload, signedCandidate.payload)) throw new Error('Original signed Play candidate differs or has upload history');
       foundSigned = true;
-    } else if (phase !== 'observed' && !(signedCandidate && await unusedSignedCandidate(github, saved, phase))) {
+    } else if (!['committed', 'observed'].includes(phase) && !(signedCandidate && await unusedSignedCandidate(github, saved, phase))) {
       throw new Error('An earlier Play operation remains unresolved; recover its original run before creating another edit');
     }
     codes.push(saved.payload.candidate.versionCode);

@@ -98,6 +98,14 @@ it('assembles exact APK assets and refuses changed bytes without destroying the 
   expect(fs.readFileSync(path.join(f.outputRoot, f.asset))).toEqual(old);
 });
 
+it('assembles the Google-signed APK from a commit receipt without claiming a review status', async () => {
+  const f = producer();
+  const receipt = { ...f.receipt, schemaVersion: 2, submissionState: 'committed' };
+  delete receipt.releaseLifecycleState;
+  fs.writeFileSync(f.file, JSON.stringify(receipt));
+  expect(await assembleReleaseAssets(f)).toEqual([f.asset]);
+});
+
 it('rejects wrong source, signature claims and code changes even when superficial APK checksums are replaced', async () => {
   for (const patch of [{ sourceSha: 'c'.repeat(40) }, { certificateSha256: 'c'.repeat(64) }, { deploymentId: 0 }]) {
     const f = producer(); fs.writeFileSync(f.file, JSON.stringify({ ...f.receipt, ...patch }));

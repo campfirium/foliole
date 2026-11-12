@@ -10,23 +10,45 @@ import { submissionFixture } from './play-submission-test-fixture.mjs';
 const open = [];
 afterEach(async () => { for (const f of open.splice(0)) await f.close(); });
 const inventoryReads = f => f.calls.filter(call => call.method === 'GET' && call.route === 'tracks/beta/releases').length;
-async function prepared() {
+async function prepared(directUpload = false) {
   const f = await submissionFixture(); open.push(f); f.release('IN_REVIEW');
-  const args = () => ({ ...f.clients(), env: f.env(), registrarSha: 'e'.repeat(40) });
+  const env = { ...f.env(), ...(directUpload ? { PLAY_DIRECT_UPLOAD: 'true' } : {}) };
+  const args = () => ({ ...f.clients(), env, registrarSha: 'e'.repeat(40) });
   const preparation = await preparePlaySubmission(args());
   const bytes = f.saveSigned(42, preparation.versionCode);
-  expect(await admitPlaySubmission({ ...args(), env: { ...f.env(), PLAY_PREBUILT: 'true' } }))
-    .toMatchObject({ proceed: false });
+  const admit = () => admitPlaySubmission({ ...args(), env: { ...env, PLAY_PREBUILT: 'true' } });
+  if (!directUpload) expect(await admit()).toMatchObject({ proceed: false });
+  if (directUpload) f.releaseResponse = { status: 403, body: '{"error":{"message":"Listing releases quota exceeded."}}' };
   f.release('PUBLISHED');
-  expect(await admitPlaySubmission({ ...args(), env: { ...f.env(), PLAY_PREBUILT: 'true' } }))
-    .toMatchObject({ proceed: true });
+  expect(await admit()).toMatchObject({ proceed: true });
   const payload = await readPrebuiltPlayCandidate(f.clients().github, f.rows[0]);
   const deliveryEnv = { ...f.env(), CANDIDATE_ARTIFACT: payload.signedArtifact.name };
   const registration = await resolvePlayDeliveryRegistration(f.clients().github, deliveryEnv, 'e'.repeat(40));
   const deliver = (loadBundle = async () => bytes) => deliverRegisteredPlayCandidate({ ...f.clients(), registration,
-    loadBundle, notes: 'Prepared beta update' });
+    loadBundle, notes: 'Prepared beta update', directUpload: f.rows[0].payload.directUpload });
   return { f, bytes, registration, deliveryEnv, deliver };
 }
+
+it('prepares, uploads and resumes a confirmed commit with no release inventory requests', async () => {
+  const { f, registration, deliver } = await prepared(true);
+  expect(await deliver()).toMatchObject({ phase: 'committed', versionCode: registration.payload.candidate.versionCode });
+  expect(await deliver(() => { throw new Error('Must reuse the commit receipt'); })).toMatchObject({ phase: 'committed' });
+  expect(inventoryReads(f)).toBe(0);
+  expect(f.uploads).toBe(1);
+  expect(f.commits).toBe(1);
+});
+
+it('uses the release inventory only to recover an uncertain commit', async () => {
+  const { f, deliver } = await prepared(true);
+  f.loseCommit = true;
+  await expect(deliver()).rejects.toThrow(/unknown/u);
+  expect(inventoryReads(f)).toBe(0);
+  delete f.releaseResponse;
+  expect(await deliver(() => { throw new Error('Must reconcile the original commit'); })).toMatchObject({ phase: 'observed' });
+  expect(inventoryReads(f)).toBe(1);
+  expect(f.uploads).toBe(1);
+  expect(f.commits).toBe(1);
+});
 
 it('uploads the original prebuilt archive with a fresh edit after publication and never rebuilds on recovery', async () => {
   const { f, registration, deliver } = await prepared();

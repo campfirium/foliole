@@ -60,7 +60,7 @@ it('blocks a snapshot when another upload or commit outcome is unresolved', asyn
   expect(creates(f)).toHaveLength(0);
 });
 
-it.each([undefined, 'upload-unknown', 'uploaded', 'commit-unknown', 'committed'])(
+it.each([undefined, 'upload-unknown', 'uploaded', 'commit-unknown'])(
   'preserves an unfinished original delivery %s without adding misleading review history', async phase => {
     const f = await fixture(); f.lifecycle = 'PUBLISHED';
     f.histories.set(71, phase ? [f.status(`Play candidate: ${phase}`)] : []);
@@ -68,6 +68,16 @@ it.each([undefined, 'upload-unknown', 'uploaded', 'commit-unknown', 'committed']
     expect(await checkRegisteredPlayAvailability(f.clients())).toBe('waiting');
     expect(f.calls.some(call => call.method !== 'GET')).toBe(false);
   });
+
+it('checks actual review and availability independently after a confirmed commit', async () => {
+  const f = await fixture();
+  f.histories.set(71, [f.status('Play candidate: committed')]);
+  expect(await checkPendingPlayCandidates(f.clients())).toMatchObject([{ state: 'waiting' }]);
+  expect(creates(f)).toHaveLength(0);
+  f.lifecycle = 'PUBLISHED';
+  expect(await checkPendingPlayCandidates(f.clients())).toMatchObject([{ state: 'available' }]);
+  expect(result(f)).toBe('Play availability: available');
+});
 
 it('continues the same candidate after hundreds of persisted check results and refuses forged checkpoint ownership', async () => {
   const f = await fixture(); f.lifecycle = 'PUBLISHED';

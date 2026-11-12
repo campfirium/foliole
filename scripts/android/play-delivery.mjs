@@ -5,7 +5,7 @@ import { uploadPlayCandidate, commitPlayCandidate, observePlayCandidate, verifyP
 import { verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
 import { readMobileCandidatePhase, writeMobileCandidatePhase } from '../mobile/mobile-candidate-phase.mjs';
 
-export async function deliverRegisteredPlayCandidate({ github, play, registration, loadBundle, notes, saveCheckpoint }) {
+export async function deliverRegisteredPlayCandidate({ github, play, registration, loadBundle, notes, saveCheckpoint, directUpload = false }) {
   verifyStoredMobileCandidate(registration);
   const state = { ...registration.payload.candidate };
   state.phase = await readMobileCandidatePhase(github, registration.id);
@@ -14,14 +14,14 @@ export async function deliverRegisteredPlayCandidate({ github, play, registratio
     await writeMobileCandidatePhase(github, registration.id, candidate);
     if (saveCheckpoint) await saveCheckpoint(candidate);
   };
-  const releases = await readPlayReleases(play);
-  const exact = releases.filter(release => release.track === state.track && release.releaseName === state.releaseName &&
-    release.activeArtifacts?.some(artifact => Number(artifact.versionCode) === state.versionCode));
-  if (exact.length) return observePlayCandidate({ api: play, state, save, inventory: releases });
-  if (['commit-unknown', 'committed', 'observed'].includes(state.phase)) {
-    throw new Error('Original Play commit is not observable; preserve its durable candidate and never upload again');
+  if (directUpload && ['committed', 'observed'].includes(state.phase)) {
+    if (saveCheckpoint) await saveCheckpoint(state);
+    return state;
   }
-  requireNoPendingReview(releases);
+  if (!directUpload || state.phase === 'commit-unknown') {
+    const observed = await reconcilePlayRelease({ play, state, save });
+    if (observed) return observed;
+  }
   await resolvePlayUploadEdit({ github, play, registration, state });
   if (state.phase === 'upload-unknown') {
     const inventory = await play('GET', `${playEditPath(state.editId)}/bundles`);
@@ -34,5 +34,16 @@ export async function deliverRegisteredPlayCandidate({ github, play, registratio
     await uploadPlayCandidate({ api: play, state, bytes: await loadBundle(), restored: false, save });
   }
   await commitPlayCandidate({ api: play, state, notes, save });
-  return observePlayCandidate({ api: play, state, save });
+  return directUpload ? state : observePlayCandidate({ api: play, state, save });
+}
+
+async function reconcilePlayRelease({ play, state, save }) {
+  const releases = await readPlayReleases(play);
+  const exact = releases.filter(release => release.track === state.track && release.releaseName === state.releaseName &&
+    release.activeArtifacts?.some(artifact => Number(artifact.versionCode) === state.versionCode));
+  if (exact.length) return observePlayCandidate({ api: play, state, save, inventory: releases });
+  if (['commit-unknown', 'committed', 'observed'].includes(state.phase)) {
+    throw new Error('Original Play commit is not observable; preserve its durable candidate and never upload again');
+  }
+  requireNoPendingReview(releases);
 }
