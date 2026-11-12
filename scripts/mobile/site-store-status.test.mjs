@@ -147,7 +147,8 @@ it('keeps a fully published Play build linked while the registered update is in 
     expect(await channel()).toEqual({ version: '0.8.1', build: '5', status: 'available', url });
     expect(f.calls.filter(call => call.route.endsWith('/tracks/beta/releases'))).toHaveLength(5);
     expect(verified[1]).toEqual({
-      version: '0.8.1', build: '5', status: 'available', url, releaseSourceSha: fixture.candidate.sourceSha
+      version: '0.8.1', build: '5', status: 'available', url, releaseSourceSha: fixture.candidate.sourceSha,
+      releaseLane: newer.payload.lane
     });
     expect(f.edits.size).toBe(0);
   } finally {

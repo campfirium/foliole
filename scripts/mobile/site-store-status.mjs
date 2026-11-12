@@ -92,7 +92,7 @@ export async function checkPlayChannel({ play, github, registration, recordAvail
   const status = rollout === 'rejected' ? 'rejected' : playReviewStatus(releases, latest, rollout === 'available');
   const current = channelProjection(latest, status, url);
   if (status === 'available') {
-    recordAvailable({ ...current, releaseSourceSha: latest.sourceSha });
+    recordAvailable({ ...current, releaseSourceSha: latest.sourceSha, releaseLane: row.payload.lane });
     return current;
   }
 
@@ -104,7 +104,7 @@ export async function checkPlayChannel({ play, github, registration, recordAvail
     .sort((left, right) => right.payload.candidate.versionCode - left.payload.candidate.versionCode)[0];
   if (!older || await checkRegisteredPlayAvailability({ play, github, registration: older, readInventory }) !== 'available') return current;
   const previous = channelProjection(older.payload.candidate, 'available', url);
-  recordAvailable({ ...previous, releaseSourceSha: older.payload.candidate.sourceSha });
+  recordAvailable({ ...previous, releaseSourceSha: older.payload.candidate.sourceSha, releaseLane: older.payload.lane });
   return storeChannelForWebsite([current, previous]);
 }
 

@@ -1,3 +1,4 @@
+/* global console */
 import process from 'node:process';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
@@ -15,13 +16,6 @@ const testflight = {
   link: testflightLink,
   matches: cell => cell === `${testflightLink} (In Review)`
 };
-const play = {
-  columns: ['Android'],
-  url: playInvitation,
-  review: 'Play (In Review)',
-  link: `[Play](${playInvitation})`,
-  matches: cell => /^(?:\[APK\]\(https:\/\/github\.com\/campfirium\/foliole\/releases\/download\/[^)]+\) · )?Play \(In Review\)$/u.test(cell)
-};
 const table = /(?:^\|[^\r\n]*\|[ \t]*(?:\r?\n|$))+/gmu;
 
 function updateTable(block, version, channel) {
@@ -37,6 +31,39 @@ function updateTable(block, version, channel) {
   lines[row] = cells.join('|');
   return lines.join('');
 }
+
+function updatePlayTable(body, version, release) {
+  const asset = `Foliole-Android-${version}.apk`;
+  const url = `https://github.com/campfirium/foliole/releases/download/v${version}/${asset}`;
+  const pending = `[APK](${url}) · Play (In Review)`;
+  const linked = `[APK](${url}) · [Play](${playInvitation})`;
+  const matches = [];
+  for (const block of body.matchAll(table)) {
+    const lines = block[0].split(/(?<=\n)/u);
+    const headers = lines[0].split('|').map(cell => cell.trim());
+    for (const [column, header] of headers.entries()) {
+      if (!['Android', '**Android**'].includes(header)) continue;
+      for (const [row, line] of lines.entries()) {
+        const cell = line.split('|')[column]?.trim();
+        if (cell === pending || cell === linked) matches.push({ block, lines, row, column, cell });
+      }
+    }
+  }
+  const match = matches[0];
+  if (matches.length === 1 && match.cell === linked) return body;
+  if (matches.length !== 1 || !release.assets?.some(item => item.name === asset && item.state === 'uploaded' &&
+    /^sha256:[0-9a-f]{64}$/u.test(item.digest ?? ''))) {
+    console.warn(`Play link v${version}: expected one matching Android download cell and its uploaded APK`);
+    return body;
+  }
+  const cells = match.lines[match.row].split('|');
+  cells[match.column] = cells[match.column].replace(pending, linked);
+  match.lines[match.row] = cells.join('|');
+  const end = match.block.index + match.block[0].length;
+  return body.slice(0, match.block.index) + match.lines.join('') + body.slice(end);
+}
+
+const play = { url: playInvitation, review: 'Play (In Review)', update: updatePlayTable };
 
 async function releaseByTag(api, tag) {
   try {
@@ -64,7 +91,8 @@ async function syncReleaseStatus(api, reviews, channel) {
     if ((await api('GET', `commits/${tag}`)).sha !== releaseSourceSha) continue;
     const current = await api('GET', `releases/${release.id}`);
     if (current.tag_name !== tag || current.draft !== false || current.body !== release.body) continue;
-    const body = current.body.replace(table, block => updateTable(block, version, channel));
+    const body = channel.update ? channel.update(current.body, version, current) :
+      current.body.replace(table, block => updateTable(block, version, channel));
     if (body !== current.body) await api('PATCH', `releases/${release.id}`, { body });
   }
 }
@@ -74,7 +102,7 @@ export async function syncTestflightReleaseStatus(api, reviews) {
 }
 
 export async function syncPlayReleaseStatus(api, reviews) {
-  await syncReleaseStatus(api, reviews, play);
+  await syncReleaseStatus(api, reviews.filter(review => review.releaseLane === 'release-t7'), play);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
