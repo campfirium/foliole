@@ -6,7 +6,6 @@ import { usePdfViewportRuntime } from './pdfViewportRuntime';
 
 vi.mock('./PdfDocumentViewportParts', () => ({
   usePageJumpEffect: vi.fn(),
-  useViewportTransformAnchor: vi.fn(),
   useVisiblePageSync: () => vi.fn()
 }));
 
@@ -18,8 +17,8 @@ it('restores the active highlight after the same page text layer is rebuilt', ()
   const { result } = renderHook(() => {
     const runtime = usePdfViewportRuntime({
       clearPageJumpRequest: vi.fn(), page: 8, pageJumpRequest: null, pdfSource: 'pdf',
-      rotation: 0, searchQuery: 'needle', searchRequest: null, searchTarget: null,
-      setVisibleLocation: vi.fn(), totalPages: 40, zoom: 100
+      searchQuery: 'needle', searchRequest: null, searchTarget: null,
+      setVisibleLocation: vi.fn(), totalPages: 40
     });
     usePdfSearchEffect({
       ...runtime, matches: MATCHES, onSearchDebugChange: runtime.setSearchDebug,

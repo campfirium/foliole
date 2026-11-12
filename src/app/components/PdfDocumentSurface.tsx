@@ -205,6 +205,7 @@ function resolvePdfSurfaceHandlers(
     loadError: pdfSystem.state.loadError,
     maxPage: pdfSystem.state.maxPage,
     page: pdfSystem.state.page,
+    positionY: pdfSystem.state.positionY,
     pageJumpRequest: pdfSystem.state.pageJumpRequest,
     persistedPageCount: null,
     persistedPageDimensions: {},

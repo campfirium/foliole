@@ -144,6 +144,7 @@ export function ToolbarVisibilityHarness() {
         onZoomIn={createToolbarReplayAction(shouldReplayToolbarScrollRef, () => setZoom((current) => current + 10))}
         onZoomOut={createToolbarReplayAction(shouldReplayToolbarScrollRef, () => setZoom((current) => current - 10))}
         page={page}
+        positionY={0}
         searchQuery={searchQuery}
         searchStatus={searchStatus}
         visiblePage={page}

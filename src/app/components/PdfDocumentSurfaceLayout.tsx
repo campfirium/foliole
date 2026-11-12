@@ -21,6 +21,7 @@ interface PdfDocumentSurfaceLayoutProps {
   maxPage: number;
   nodeId: string | null;
   page: number;
+  positionY: number;
   pageJumpRequest: PdfJumpRequest | null;
   persistedPageCount: number | null;
   persistedPageDimensions: Record<number, PdfPageDimensions>;
@@ -81,6 +82,7 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
       onZoomOut={props.zoomOut}
       visiblePage={props.page}
       page={props.page}
+      positionY={props.positionY}
       pageJumpRequest={props.pageJumpRequest}
       persistedPageCount={props.persistedPageCount}
       persistedPageDimensions={props.persistedPageDimensions}

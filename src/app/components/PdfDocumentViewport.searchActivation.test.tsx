@@ -120,6 +120,7 @@ function PdfDocumentViewportSearchActivationHarness() {
           onZoomOut={() => undefined}
           visiblePage={1}
           page={1}
+          positionY={0}
           pageJumpRequest={null}
           persistedPageCount={1}
           persistedPageDimensions={persistedPageDimensions}

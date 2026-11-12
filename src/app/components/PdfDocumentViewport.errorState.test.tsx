@@ -67,6 +67,7 @@ function buildViewportProps(loadError: string | null, onRetryLoad: () => void) {
     onZoomOut: () => undefined,
     visiblePage: 1,
     page: 1,
+    positionY: 0,
     pageJumpRequest: null,
     persistedPageCount: 1,
     persistedPageDimensions: { 1: { height: 1131, width: 800 } },

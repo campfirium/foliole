@@ -12,6 +12,7 @@ import type { PdfPageDimensions } from './pdfPageDimensions';
 import type { PdfPageTextEntry } from './pdfPageText';
 import { PdfViewportToolbar } from './PdfViewportToolbar';
 import { usePdfHeightFitView } from './usePdfHeightFitView';
+import { usePdfViewportTransformAnchor } from './usePdfViewportTransformAnchor';
 
 interface PdfDocumentViewportContentBodyProps {
   handleContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
@@ -40,6 +41,7 @@ interface PdfDocumentViewportContentBodyProps {
   onZoomOut: () => void;
   visiblePage: number;
   page: number;
+  positionY: number;
   pageJumpRequest: PdfJumpRequest | null;
   pageElementsRef: PdfPageElementsRef;
   persistedPageCount: number | null;
@@ -125,6 +127,12 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
   const previousPdfSourceRef = useRef(props.pdfSource);
   const heightView = usePdfHeightFitView(props, isLayoutReady && isInitialRenderReady);
   const adapted = heightView.props;
+  const handleScroll = usePdfViewportTransformAnchor(props, {
+    ready: isLayoutReady && !props.pageJumpRequest,
+    transform: heightView.isHeightFit ? 'fit-height' :
+      `${adapted.rotation}:${adapted.zoomMode}:${adapted.zoomMode === 'fit-width' ? fitWidthTargetWidth : adapted.zoom}`,
+    heightFit: heightView.isHeightFit
+  });
   useEffect(() => {
     props.onPositionReadyChange?.(isLayoutReady && isInitialRenderReady);
   }, [isInitialRenderReady, isLayoutReady, props.onPositionReadyChange]);
@@ -138,7 +146,6 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
     handlePageLoadSuccess(page, dimensions);
     heightView.registerDimensions(page, dimensions);
   };
-
 
   useEffect(() => {
     if (previousPdfSourceRef.current === props.pdfSource) {
@@ -155,7 +162,7 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
       <div
         className={`pdf-document-scroll-container app-scrollbar flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-auto px-2 pb-5 ${isLayoutReady ? '' : 'overflow-hidden'}`}
         onContextMenu={props.handleContextMenu}
-        onScroll={props.handleScroll}
+        onScroll={handleScroll}
         data-testid="pdf-scroll-container"
         ref={props.scrollContainerRef}
       >

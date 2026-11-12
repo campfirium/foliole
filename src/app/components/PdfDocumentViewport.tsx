@@ -36,6 +36,7 @@ interface PdfDocumentViewportProps {
   onZoomOut: () => void;
   visiblePage: number;
   page: number;
+  positionY: number;
   pageJumpRequest: PdfJumpRequest | null;
   persistedPageCount: number | null;
   persistedPageDimensions: Record<number, PdfPageDimensions>;
@@ -106,6 +107,7 @@ function resolveViewportContentProps(
     onToolbarInteraction: args.onToolbarInteraction,
     visiblePage: args.visiblePage,
     page: args.page,
+    positionY: args.positionY,
     pageJumpRequest: args.pageJumpRequest,
     persistedPageCount: args.persistedPageCount,
     pageElementsRef: args.pageElementsRef,
@@ -180,13 +182,11 @@ export function PdfDocumentViewport(props: PdfDocumentViewportProps) {
       page: props.page,
       pageJumpRequest: props.pageJumpRequest,
       pdfSource: props.pdfSource,
-      rotation: props.rotation,
       searchQuery: props.searchQuery,
       searchRequest: props.searchRequest,
       searchTarget: props.searchTarget,
       setVisibleLocation: props.setVisibleLocation,
-      totalPages: props.totalPages,
-      zoom: props.zoom
+      totalPages: props.totalPages
     });
   const { handleSearchFocusChange, handleToolbarActiveChange, handleToolbarInteraction, handleToolbarScroll, isToolbarVisible } =
     usePdfToolbarVisibility(props.searchQuery, scrollContainerRef, handleScroll);

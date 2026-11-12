@@ -4,8 +4,12 @@ export function isReadyPageElement(element: HTMLDivElement | null) {
   return element?.dataset.pdfPageState === 'ready';
 }
 
-export function resolvePageJumpTop(container: HTMLDivElement, target: HTMLDivElement, positionY: number | null) {
-  const page = resolvePdfPagePositionGeometry(target);
+export function resolvePageJumpTop(
+  container: HTMLDivElement,
+  target: HTMLDivElement,
+  positionY: number | null,
+  page = resolvePdfPagePositionGeometry(target)
+) {
   return positionY === null
     ? Math.max(0, target.offsetTop - 8)
     : Math.max(0, Math.ceil(page.top + page.height * positionY - container.clientHeight * 0.35));

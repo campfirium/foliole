@@ -55,12 +55,14 @@ export function usePdfHeightFitView<T extends HeightFitProps>(props: T, ready: b
     else void view.chooseFree().then((saved) => { if (saved) action(); });
   };
   return {
+    isHeightFit: fit !== null,
     registerDimensions: (number: number, next: PdfPageDimensions) => setDimensions((current) =>
       current[number]?.width === next.width && current[number]?.height === next.height
         ? current : { ...current, [number]: next }),
     props: {
       ...props,
-      ...(fit ? { zoom: fit.zoom, zoomMode: 'custom' as const } : {}),
+      zoom: fit?.zoom ?? props.zoom,
+      zoomMode: fit ? 'custom' as const : props.zoomMode,
       onSetZoom: (zoom: number) => release(() => props.onSetZoom(zoom)),
       onSetFitWidth: () => release(props.onSetFitWidth),
       onZoomIn: () => release(() => fit ? props.onSetZoom(fit.zoom + 10) : props.onZoomIn()),

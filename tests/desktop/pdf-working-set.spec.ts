@@ -43,8 +43,7 @@ test('long PDF search stays complete while distant page resources are released',
   await expect.poll(() => desktopWindow.evaluate((id) =>
     window.__folioleWorkspaceDebug?.getNodeViewState?.(id), nodeId
   )).toMatchObject({ selection: { from: 19, to: 0 } });
-  await desktopWindow.getByRole('treeitem', { name: 'Home', exact: true }).click();
-  await desktopWindow.getByRole('treeitem', { name: 'Away from PDF', exact: true }).click();
+  expect(await desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.openNode?.('pdf-away'))).toBe(true);
   await expect(desktopWindow.locator('.cm-content')).toContainText('Ordinary text destination.');
   await expect(desktopWindow.getByTestId('pdf-document-surface')).toHaveCount(0);
   await expect(desktopWindow.locator('.react-pdf__Page')).toHaveCount(0);

@@ -4,7 +4,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 
 import type { PdfSearchDebugInfo, PdfSearchRequest, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
-import { usePageJumpEffect, useViewportTransformAnchor, useVisiblePageSync } from './PdfDocumentViewportParts';
+import { usePageJumpEffect, useVisiblePageSync } from './PdfDocumentViewportParts';
 import type { PdfPageTextEntry } from './pdfPageText';
 import { isPdfSearchRuntimeActive } from './pdfSearchRuntimeActive';
 import { resolveTextLayerRefreshSignature, shouldRefreshTextLayer } from './pdfTextLayerRefresh';
@@ -100,17 +100,14 @@ export function usePdfViewportRuntime(args: {
   page: number;
   pageJumpRequest: PdfJumpRequest | null;
   pdfSource: string;
-  rotation: number;
   searchQuery: string;
   searchRequest: PdfSearchRequest | null;
   searchTarget: PdfSearchTarget | null;
   setVisibleLocation: (page: number, positionY: number) => void;
   totalPages: number | null;
-  zoom: number;
 }) {
   const runtime = usePdfViewportRuntimeState(args.page, args.pdfSource);
   usePageJumpEffect(args.pageJumpRequest, runtime.pageElementsRef, runtime.scrollContainerRef, args.totalPages, args.clearPageJumpRequest);
-  useViewportTransformAnchor(args.rotation, runtime.scrollContainerRef, args.zoom);
   useRefreshSearchTextLayers(args, runtime);
   const handleScroll = useVisiblePageSync(
     args.pageJumpRequest,

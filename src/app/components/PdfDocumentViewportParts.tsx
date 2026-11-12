@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, MutableRefObject } from 'react';
 
 import { type PdfSelectionLocator } from '../../features/nodes/model/nodeTypes';
@@ -59,42 +59,6 @@ export function useVisiblePageSync(
   };
 }
 
-export function useViewportTransformAnchor(
-  rotation: number,
-  scrollContainerRef: MutableRefObject<HTMLDivElement | null>,
-  zoom: number
-) {
-  const previousZoomRef = useRef(zoom);
-  const previousRotationRef = useRef(rotation);
-
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) {
-      return;
-    }
-    const zoomChanged = previousZoomRef.current !== zoom;
-    const rotationChanged = previousRotationRef.current !== rotation;
-    if (!zoomChanged && !rotationChanged) {
-      return;
-    }
-    const previousScrollHeight = Math.max(container.scrollHeight, 1);
-    const centerRatio = (container.scrollTop + container.clientHeight / 2) / previousScrollHeight;
-
-    const frameId = window.requestAnimationFrame(() => {
-      const nextScrollHeight = container.scrollHeight;
-      const nextScrollTop = centerRatio * nextScrollHeight - container.clientHeight / 2;
-      const maxScrollTop = Math.max(0, nextScrollHeight - container.clientHeight);
-      container.scrollTop = Math.max(0, Math.min(nextScrollTop, maxScrollTop));
-    });
-
-    previousZoomRef.current = zoom;
-    previousRotationRef.current = rotation;
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
-  }, [rotation, scrollContainerRef, zoom]);
-}
 interface PdfDocumentViewportContentProps {
   handleContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   handleScroll: () => void;
@@ -127,6 +91,7 @@ interface PdfDocumentViewportContentProps {
   onZoomOut: () => void;
   visiblePage: number;
   page: number;
+  positionY: number;
   pageJumpRequest: PdfJumpRequest | null;
   pageElementsRef: PdfPageElementsRef;
   pageTextByNumberRef: MutableRefObject<Record<number, PdfPageTextEntry | string>>;
@@ -217,6 +182,7 @@ function resolveViewportContentBodyProps(
     onZoomOut: props.onZoomOut,
     visiblePage: props.visiblePage,
     page: props.page,
+    positionY: props.positionY,
     pageJumpRequest: props.pageJumpRequest,
     pageElementsRef: props.pageElementsRef,
     persistedPageCount: props.persistedPageCount,
