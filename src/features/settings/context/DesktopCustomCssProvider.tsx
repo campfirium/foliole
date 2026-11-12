@@ -9,7 +9,7 @@ const ENABLED_KEY_PREFIX = 'foliole-desktop-css-snippet-files:';
 function compileFile(sourceCss: string | null) {
   if (sourceCss === null) return null;
   try {
-    return compileCompanionCustomCssSource(sourceCss, 'global');
+    return compileCompanionCustomCssSource(sourceCss);
   } catch {
     return null;
   }

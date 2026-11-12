@@ -2,7 +2,7 @@ import { COMPANION_CUSTOM_CSS_VERSION, type CompanionCustomCssCollection } from 
 
 const sourceCss = `/* Foliole mobile CSS example
  * Change the values below, then save and enable this snippet.
- * These rules apply to the Topic reading body.
+ * These examples style text in reading and review.
  * Hex colors like #336699 work here. Use a unit such as em
  * for font size and a number without a unit for line height.
  */

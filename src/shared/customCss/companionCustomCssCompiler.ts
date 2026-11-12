@@ -1,16 +1,11 @@
 import postcss, { type Declaration, type Rule } from 'postcss';
 
 import {
-  getCompanionCustomCssUtf8Bytes,
-  MAX_COMPANION_CUSTOM_CSS_TOTAL_COMPILED_BYTES,
   normalizeCompanionCustomCssCollection,
   type CompanionCustomCssCollection
 } from './companionCustomCssModel';
 
-export const COMPANION_CUSTOM_CSS_SCOPE_SELECTOR = '[data-companion-readable-document="true"]';
-
 export type CompanionCustomCssCompilerCode =
-  | 'compiled-size'
   | 'declaration'
   | 'selector'
   | 'structure'
@@ -33,29 +28,19 @@ export interface CompiledCompanionCustomCssCollection {
 const SAFE_PROPERTY = /^(?:--[a-z_][a-z0-9_-]*|-?[a-z][a-z0-9-]*)$/i;
 const FORBIDDEN_PROPERTIES = new Set(['src', 'behavior', '-moz-binding']);
 const FORBIDDEN_FUNCTION = /(?:^|[^a-z0-9_-])(?:url|src|image|image-set|-webkit-image-set|expression|element|-moz-element|paint|cross-fade|-webkit-cross-fade)\s*\(/i;
-const FORBIDDEN_TAG_SELECTOR = /(^|[\s>+~,(])(?:html|body)(?![a-z0-9_-])/i;
-const FORBIDDEN_MARKER_SELECTOR = /\[\s*data-companion-(?:readable|article)-document\b/i;
-
 function rejectUnsafeText(value: string, code: CompanionCustomCssCompilerCode) {
   if (value.includes('\\') || value.includes('/*') || value.includes('*/')) {
     throw new CompanionCustomCssCompilerError(code, 'CSS escapes and embedded comments are not supported.');
   }
 }
 
-function compileSelector(selector: string, scope: 'topic' | 'global') {
+function compileSelector(selector: string) {
   const normalized = selector.trim();
   rejectUnsafeText(normalized, 'selector');
-  if (scope === 'global' && normalized && !normalized.includes('&')) return normalized;
-  if (
-    !normalized
-    || normalized.includes('&')
-    || /:root(?![a-z0-9_-])/i.test(normalized)
-    || FORBIDDEN_TAG_SELECTOR.test(normalized)
-    || FORBIDDEN_MARKER_SELECTOR.test(normalized)
-  ) {
-    throw new CompanionCustomCssCompilerError('selector', 'This selector cannot be limited to Topic reading.');
+  if (!normalized || normalized.includes('&')) {
+    throw new CompanionCustomCssCompilerError('selector', 'This CSS selector is invalid or unsupported.');
   }
-  return `${COMPANION_CUSTOM_CSS_SCOPE_SELECTOR} ${normalized}`;
+  return normalized;
 }
 
 function validateDeclaration(declaration: Declaration) {
@@ -77,7 +62,7 @@ function validateDeclaration(declaration: Declaration) {
   }
 }
 
-function validateRule(rule: Rule, scope: 'topic' | 'global') {
+function validateRule(rule: Rule) {
   rejectUnsafeText(rule.raws.between ?? '', 'selector');
   let selectors: string[];
   try {
@@ -85,7 +70,7 @@ function validateRule(rule: Rule, scope: 'topic' | 'global') {
   } catch {
     throw new CompanionCustomCssCompilerError('selector', 'This CSS selector is invalid.');
   }
-  rule.selectors = selectors.map((selector) => compileSelector(selector, scope));
+  rule.selectors = selectors.map(compileSelector);
   for (const child of rule.nodes ?? []) {
     if (child.type === 'comment') continue;
     if (child.type !== 'decl') {
@@ -95,7 +80,7 @@ function validateRule(rule: Rule, scope: 'topic' | 'global') {
   }
 }
 
-export function compileCompanionCustomCssSource(sourceCss: string, scope: 'topic' | 'global' = 'topic') {
+export function compileCompanionCustomCssSource(sourceCss: string) {
   let root: ReturnType<typeof postcss.parse>;
   try {
     root = postcss.parse(sourceCss, { from: undefined });
@@ -107,26 +92,19 @@ export function compileCompanionCustomCssSource(sourceCss: string, scope: 'topic
     if (node.type !== 'rule') {
       throw new CompanionCustomCssCompilerError('structure', 'Only standard style rules are supported.');
     }
-    validateRule(node, scope);
+    validateRule(node);
   }
   root.walkComments((comment) => { comment.remove(); });
   return root.toString().trim();
 }
 
-export function compileCompanionCustomCssCollection(raw: unknown, scope: 'topic' | 'global' = 'topic'): CompiledCompanionCustomCssCollection {
+export function compileCompanionCustomCssCollection(raw: unknown): CompiledCompanionCustomCssCollection {
   const collection = normalizeCompanionCustomCssCollection(raw);
   const compiledSnippets = collection.snippets.map((snippet) => ({
-    compiledCss: compileCompanionCustomCssSource(snippet.sourceCss, scope),
+    compiledCss: compileCompanionCustomCssSource(snippet.sourceCss),
     enabled: snippet.enabled,
     id: snippet.id
   }));
-  const totalCompiledBytes = compiledSnippets.reduce(
-    (sum, snippet) => sum + getCompanionCustomCssUtf8Bytes(snippet.compiledCss),
-    0
-  );
-  if (totalCompiledBytes > MAX_COMPANION_CUSTOM_CSS_TOTAL_COMPILED_BYTES) {
-    throw new CompanionCustomCssCompilerError('compiled-size', 'The compiled custom style collection is too large.');
-  }
   return {
     collection,
     compiledCss: compiledSnippets.filter((snippet) => snippet.enabled).map((snippet) => snippet.compiledCss).join('\n'),

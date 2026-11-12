@@ -17,16 +17,23 @@ const article = { content, hideTitleHeading: false, nodeId: 'topic', persistedNo
 
 function Fixture() {
   const [settingsPage, setSettingsPage] = useState<CompanionSettingsPage>('list');
-  const [reading, setReading] = useState(false);
+  const [reading, setReading] = useState<'topic' | 'flow' | 'review' | null>(null);
 
   if (reading) return <ImmersiveReadableArticle readableArticle={article} snapshot={null}
+    flow={reading !== 'topic'} isReviewItem={reading === 'review'}
+    answer={reading === 'review' ? 'A review answer.' : null}
+    header={<button type="button" onClick={() => setReading(null)}>Close passage</button>}
     onSaveArticleContent={Object.assign(async () => ({ content, currentVersionId: 'initial', submittedVersionId: 'initial' }),
       { readSource: async () => ({ content, versionId: 'initial' }) })}
-    onExit={() => setReading(false)} />;
+    onExit={() => setReading(null)} />;
 
   return <>
     {settingsPage === 'list'
-      ? <button type="button" onClick={() => setReading(true)}>Open reading passage</button>
+      ? <>
+        <button type="button" onClick={() => setReading('topic')}>Open reading passage</button>
+        <button type="button" onClick={() => setReading('flow')}>Open Flow passage</button>
+        <button type="button" onClick={() => setReading('review')}>Open review item</button>
+      </>
       : <button type="button" onClick={() => setSettingsPage('list')}>Back to settings</button>}
     {renderCompanionSettingsContent({
       onBackToSettingsList: () => setSettingsPage('list'),

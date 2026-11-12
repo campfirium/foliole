@@ -75,8 +75,7 @@ describe('CompanionCustomCssProvider web preview', () => {
     renderProvider('web-preview');
 
     expect(screen.getByTestId('name')).toHaveTextContent('Local');
-    await waitFor(() => expect(customStyleNode()?.textContent).toContain('[data-companion-readable-document="true"] p'));
-    expect(customStyleNode()?.textContent).not.toBe(sourceCss);
+    await waitFor(() => expect(customStyleNode()?.textContent).toBe(sourceCss));
     expect([...document.head.children].indexOf(styleMod)).toBeLessThan(
       [...document.head.children].indexOf(customStyleNode()!)
     );

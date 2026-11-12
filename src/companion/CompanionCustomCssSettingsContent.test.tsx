@@ -78,7 +78,7 @@ describe('CompanionCustomCssSettingsContent', () => {
     renderSettings();
     await addSnippet();
 
-    expect(customStyleNode()?.textContent).toContain('[data-companion-readable-document="true"] p');
+    expect(customStyleNode()?.textContent).toContain('p {');
     fireEvent.click(screen.getByRole('switch', { name: 'Disable' }));
     await waitFor(() => expect(screen.getByText('Off')).toBeInTheDocument());
     expect(customStyleNode()?.textContent).toBe('');

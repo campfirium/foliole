@@ -44,17 +44,6 @@ describe('companion custom CSS syntax and injection rejection boundary', () => {
   it.each(['src', 'behavior', '-moz-binding', '*color', '_color'])('rejects unsafe property %s', (property) => {
     expect(() => compileCompanionCustomCssSource(`p { ${property}: red; }`)).toThrow();
   });
-
-  it.each([
-    'html p',
-    'body > p',
-    ':root p',
-    ':is(body, p)',
-    '[data-companion-readable-document="true"] p',
-    '[data-companion-article-document] p'
-  ])('rejects selector outside the Topic descendant boundary: %s', (selector) => {
-    expect(() => compileCompanionCustomCssSource(`${selector} { color: red; }`)).toThrow();
-  });
 });
 
 describe('companion custom CSS collection rejection boundary', () => {
@@ -81,16 +70,11 @@ describe('companion custom CSS collection rejection boundary', () => {
     })).toThrow();
   });
 
-  it('rejects total source and expanded compiled byte limits', () => {
+  it('rejects the total source byte limit', () => {
     const largeSource = `/*${'x'.repeat(15_000)}*/p{color:red}`;
     expect(() => compileCompanionCustomCssCollection({
       snippets: Array.from({ length: 5 }, (_, index) => validSnippet({ id: uuid(index + 1), sourceCss: largeSource })),
       version: 1
-    })).toThrow();
-
-    const expandedSelectors = `${'a,'.repeat(4_000)}a{color:red}`;
-    expect(() => compileCompanionCustomCssCollection({
-      snippets: [validSnippet({ sourceCss: expandedSelectors })], version: 1
     })).toThrow();
   });
 });

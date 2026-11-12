@@ -4,7 +4,6 @@ export const MAX_COMPANION_CUSTOM_CSS_SNIPPETS = 16;
 export const MAX_COMPANION_CUSTOM_CSS_NAME_CODE_POINTS = 80;
 export const MAX_COMPANION_CUSTOM_CSS_SOURCE_BYTES = 16 * 1024;
 export const MAX_COMPANION_CUSTOM_CSS_TOTAL_SOURCE_BYTES = 64 * 1024;
-export const MAX_COMPANION_CUSTOM_CSS_TOTAL_COMPILED_BYTES = 128 * 1024;
 
 export interface CompanionCustomCssSnippet {
   enabled: boolean;

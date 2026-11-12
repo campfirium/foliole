@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   compileCompanionCustomCssCollection,
-  compileCompanionCustomCssSource,
-  COMPANION_CUSTOM_CSS_SCOPE_SELECTOR
+  compileCompanionCustomCssSource
 } from '../shared/customCss/companionCustomCssCompiler';
 
 function collection(snippets: Array<{ enabled?: boolean; id: string; name: string; sourceCss: string }>) {
@@ -17,15 +16,14 @@ const ID_ONE = '00000000-0000-4000-8000-000000000001';
 const ID_TWO = '00000000-0000-4000-8000-000000000002';
 
 describe('companion custom CSS compiler', () => {
-  it('prefixes every selector while preserving function commas, declarations, and order', () => {
+  it('preserves global selectors, function commas, declarations, and order', () => {
     const result = compileCompanionCustomCssCollection(collection([
-      { id: ID_ONE, name: ' Headings ', sourceCss: 'p, :is(h1, h2) { color: red !important; --topic-tone: #333; }' },
+      { id: ID_ONE, name: ' Headings ', sourceCss: ':root, body, :is(h1, h2) { color: red !important; --topic-tone: #333; }' },
       { id: ID_TWO, name: 'Links', sourceCss: 'a { text-decoration: underline; }' }
     ]));
 
     expect(result.collection.snippets[0]?.name).toBe('Headings');
-    expect(result.compiledCss).toContain(`${COMPANION_CUSTOM_CSS_SCOPE_SELECTOR} p`);
-    expect(result.compiledCss).toContain(`${COMPANION_CUSTOM_CSS_SCOPE_SELECTOR} :is(h1, h2)`);
+    expect(result.compiledCss).toContain(':root, body, :is(h1, h2) {');
     expect(result.compiledCss).toContain('color: red !important');
     expect(result.compiledCss).toContain('--topic-tone: #333');
     expect(result.compiledCss.indexOf('color: red')).toBeLessThan(result.compiledCss.indexOf('text-decoration'));
@@ -42,10 +40,8 @@ describe('companion custom CSS compiler', () => {
     expect(result.compiledCss).toContain('blockquote');
   });
 
-  it('accepts empty source and serializes only scoped descendants', () => {
+  it('accepts empty source and keeps universal selectors global', () => {
     expect(compileCompanionCustomCssSource('')).toBe('');
-    expect(compileCompanionCustomCssSource('* { font: inherit; }')).toBe(
-      `${COMPANION_CUSTOM_CSS_SCOPE_SELECTOR} * { font: inherit; }`
-    );
+    expect(compileCompanionCustomCssSource('* { font: inherit; }')).toBe('* { font: inherit; }');
   });
 });
