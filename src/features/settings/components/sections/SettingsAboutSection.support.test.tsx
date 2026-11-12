@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const updateCheckMock = vi.hoisted(() => ({
@@ -86,6 +86,21 @@ it('runs support commands from About settings', async () => {
   expect(onRunSupportCommand).toHaveBeenNthCalledWith(2, APP_COMMAND_IDS.openYouTubePlaylist);
   expect(onRunSupportCommand).toHaveBeenNthCalledWith(3, APP_COMMAND_IDS.sendFeedback);
   expect(onRunSupportCommand).toHaveBeenNthCalledWith(4, APP_COMMAND_IDS.openSupportEmail);
+});
+
+it('opens the Foliole homepage from the About community section', async () => {
+  window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'zh-Hans');
+  renderWithLocalization(<SettingsAboutSection />);
+
+  const community = within(screen.getByRole('region', { name: '社区入口区' }));
+  expect(community.getByRole('heading', { name: '社区' })).toBeInTheDocument();
+  expect(community.getByText('项目与社区入口。')).toBeInTheDocument();
+  fireEvent.click(community.getByRole('button', { name: 'Homepage' }));
+
+  await waitFor(() => expect(window.electronAPI?.invoke).toHaveBeenCalledWith(
+    NATIVE_COMMANDS.openExternalUrl,
+    { url: 'https://foliole.app/' }
+  ));
 });
 
 it('opens update details when a manual update check finds an available release', async () => {

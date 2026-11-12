@@ -1,5 +1,8 @@
+import { Globe } from 'lucide-react';
+
 import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { openFolioleReleaseLink } from '../../../../shared/platform/releaseLinks';
 import {
   SettingsControlSlot,
   SettingsRow,
@@ -23,9 +26,11 @@ function QuickLinksBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
     <SettingsRow
       {...settingsSearchRowProps(communityRow)}
       description={communityRow.description}
-      title={communityRow.title}
     >
       <SettingsControlSlot className="flex-wrap">
+        <SettingsSupportButton icon={Globe} onRunAction={() => void openFolioleReleaseLink('homepage')}>
+          Homepage
+        </SettingsSupportButton>
         <SettingsSupportButton
           commandId={APP_COMMAND_IDS.openGitHubRepository}
           icon={Github}

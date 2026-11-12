@@ -3,6 +3,7 @@ import { openExternalUrl } from './runtimeExternalNavigation';
 export const FOLIOLE_RELEASE_LINKS = {
   contactEmail: 'mailto:hello@foliole.app',
   discussions: 'https://github.com/campfirium/foliole/discussions',
+  homepage: 'https://foliole.app/',
   issues: 'https://github.com/campfirium/foliole/issues',
   releases: 'https://github.com/campfirium/foliole/releases',
   repository: 'https://github.com/campfirium/foliole',
