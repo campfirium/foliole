@@ -1,5 +1,4 @@
 import { readMobileStatus } from '../mobile/mobile-candidate-phase.mjs';
-import { requireNoPendingReview, readPlayReleases } from './play-api.mjs';
 import { openPlayEdit, validPlayEditId } from './play-edit-id.mjs';
 import { readReservedPlayHistory } from './play-candidate-history.mjs';
 import { requirePlayReservation } from './play-preparation-state.mjs';
@@ -15,7 +14,6 @@ export async function resolvePlayUploadEdit({ github, play, registration, state 
   if (state.phase !== 'signed') throw new Error('Original upload edit is missing; reconcile without uploading again');
   await requirePlayReservation(github, registration.payload.candidate);
   await readReservedPlayHistory(github, undefined, registration);
-  requireNoPendingReview(await readPlayReleases(play));
   const save = description => github('POST', `deployments/${registration.id}/statuses`, {
     state: 'pending', description: `${PREFIX}${description}`, auto_inactive: false });
   await save('creating');

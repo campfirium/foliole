@@ -12,7 +12,7 @@ async function clearSnapshot(github, play, row, state) {
   return cleared;
 }
 
-export async function reservePlayVersion({ github, play, row, releases }) {
+export async function reservePlayVersion({ github, play, row }) {
   let state = await readPlayPreparation(github, row);
   if (state.phase === 'creating') throw new Error('Play inventory snapshot outcome is unknown; reconcile before preparing another bundle');
   if (state.phase === 'open') state = await clearSnapshot(github, play, row, state);
@@ -30,7 +30,7 @@ export async function reservePlayVersion({ github, play, row, releases }) {
     ]);
     if (!tracks.tracks?.some(track => track.track === PLAY_TRACK)) throw new Error('Existing beta track was not found');
     state.versionCode = allocatePlayVersion({ bundles: bundles.bundles ?? [], apks: apks.apks ?? [],
-      tracks: tracks.tracks, releases, historyVersionCode: history.highestVersionCode });
+      tracks: tracks.tracks, releases: [], historyVersionCode: history.highestVersionCode });
     await writePlayPreparation(github, row, state);
   } finally { await clearSnapshot(github, play, row, state); }
   return state.versionCode;

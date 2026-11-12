@@ -58,7 +58,6 @@ export async function uploadPlayCandidate({ api, state, bytes, restored = false,
   if (existing) verifyPlayBundle(existing, state);
   else {
     if (restored) throw new Error('Prior upload is absent or uncertain; manual reconciliation is required, no automatic retry');
-    requireNoPendingReview(await readPlayReleases(api));
     state.phase = 'upload-unknown'; await save(state);
     const bundle = await api('POST', `${base}/bundles?uploadType=media`, bytes, true);
     verifyPlayBundle(bundle, state);
@@ -70,7 +69,6 @@ export async function uploadPlayCandidate({ api, state, bytes, restored = false,
 export async function commitPlayCandidate({ api, state, notes, save }) {
   if (state.phase !== 'uploaded') throw new Error('A confirmed upload is required');
   if (typeof notes !== 'string' || !notes.trim() || notes.length > 500) throw new Error('English release notes are required (maximum 500 characters)');
-  requireNoPendingReview(await readPlayReleases(api));
   const base = playEditPath(state.editId);
   const inventory = await api('GET', `${base}/bundles`);
   verifyPlayBundle(inventory.bundles?.find(bundle => Number(bundle.versionCode) === state.versionCode), state);
@@ -84,7 +82,14 @@ export async function commitPlayCandidate({ api, state, notes, save }) {
       releaseNotes: [{ language: 'en-US', text: notes.trim() }] }] });
   await api('POST', `${base}:validate`);
   state.phase = 'commit-unknown'; state.releaseName = releaseName; await save(state);
-  await api('POST', `${base}:commit?changesNotSentForReview=false&changesInReviewBehavior=ERROR_IF_IN_REVIEW`);
+  try {
+    await api('POST', `${base}:commit?changesNotSentForReview=false&changesInReviewBehavior=ERROR_IF_IN_REVIEW`);
+  } catch (error) {
+    if (error.code === 'CHANGES_ALREADY_IN_REVIEW') {
+      state.phase = 'uploaded'; await save(state);
+    }
+    throw error;
+  }
   state.phase = 'committed'; await save(state);
   return state;
 }

@@ -22,6 +22,7 @@ it('allows building while the old review remains intact and persists the code af
   expect(f.calls.filter(call => call.method === 'PUT' || call.route.includes(':commit') || call.route.includes('uploadType'))).toEqual([]);
   expect(await prepare(f)).toMatchObject({ versionCode: 13 });
   expect(creates(f)).toHaveLength(1);
+  expect(f.calls.some(call => call.route === 'tracks/beta/releases')).toBe(false);
 });
 
 it('reserves a different code for the next accepted source without reusing the earlier reservation', async () => {

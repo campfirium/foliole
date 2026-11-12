@@ -23,11 +23,18 @@ export function handlePrebuildPlayRequest(f, { request, response, route, body, s
   if (inventory[2].startsWith('/bundles?uploadType=')) {
     f.uploads = (f.uploads ?? 0) + 1;
     f.uploadedBundle = { versionCode: f.uploadCandidate.versionCode, sha256: createHash('sha256').update(body).digest('hex') };
+    if (f.reviewAfterUpload) f.release('IN_REVIEW');
     if (f.loseUpload) { f.loseUpload = false; response.destroy(); return true; }
     return reply(f.uploadedBundle);
   }
   if (inventory[2] === ':validate') return reply({});
   if (inventory[2].startsWith(':commit?')) {
+    if (f.reviewAfterUpload) {
+      response.statusCode = 400;
+      return reply({ error: { status: 'FAILED_PRECONDITION', details: [{
+        '@type': 'type.googleapis.com/google.rpc.ErrorInfo', domain: 'googleapis.com', reason: 'CHANGES_ALREADY_IN_REVIEW'
+      }] } });
+    }
     f.commits = (f.commits ?? 0) + 1;
     f.releases = [{ track: 'beta', releaseName: f.pendingRelease.name,
       activeArtifacts: [{ versionCode: f.uploadCandidate.versionCode }], releaseLifecycleState: 'RELEASE_LIFECYCLE_STATE_IN_REVIEW' }];

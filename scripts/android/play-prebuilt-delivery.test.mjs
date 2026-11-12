@@ -30,14 +30,14 @@ async function prepared() {
 
 it('uploads the original prebuilt archive with a fresh edit after publication and never rebuilds on recovery', async () => {
   const { f, registration, deliver } = await prepared();
-  expect(inventoryReads(f)).toBe(3);
+  expect(inventoryReads(f)).toBe(2);
   expect(registration.payload.candidate.editId).toBeUndefined();
   const result = await deliver();
-  expect(inventoryReads(f)).toBe(8);
+  expect(inventoryReads(f)).toBe(4);
   expect(result).toMatchObject({ schemaVersion: 2, phase: 'observed', releaseLifecycleState: 'RELEASE_LIFECYCLE_STATE_IN_REVIEW' });
   expect(result.aabSha256).toBe(registration.payload.candidate.aabSha256);
   expect(await deliver()).toMatchObject({ phase: 'observed' });
-  expect(inventoryReads(f)).toBe(9);
+  expect(inventoryReads(f)).toBe(5);
   expect(f.uploads).toBe(1); expect(f.commits).toBe(1);
   expect(f.calls.filter(call => call.method === 'POST' && call.route === 'edits')).toHaveLength(2);
   expect(f.calls.find(call => call.route.includes(':commit')).route).toContain('changesInReviewBehavior=ERROR_IF_IN_REVIEW');

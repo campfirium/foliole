@@ -92,6 +92,22 @@ it('preserves the signed candidate while review is pending and continues it afte
   expect(f.uploads).toBe(1);
 });
 
+it('keeps the uploaded edit when Play rejects commit because another review started during upload', async () => {
+  const { f, registration, deliver, creates } = await prepared();
+  const before = creates();
+  f.reviewAfterUpload = true;
+  await expect(deliver()).rejects.toMatchObject({ status: 400, code: 'CHANGES_ALREADY_IN_REVIEW' });
+  expect(f.histories.get(registration.id)[0].description).toBe('Play candidate: uploaded');
+  expect(f.releases[0].releaseLifecycleState).toBe('RELEASE_LIFECYCLE_STATE_IN_REVIEW');
+  expect(f.commits).toBeUndefined();
+  f.reviewAfterUpload = false;
+  f.release('PUBLISHED');
+  expect(await deliver(() => { throw new Error('Must reuse the uploaded bundle'); })).toMatchObject({ phase: 'observed' });
+  expect(creates()).toBe(before + 1);
+  expect(f.uploads).toBe(1);
+  expect(f.commits).toBe(1);
+});
+
 it.each(['upload-unknown', 'uploaded', 'commit-unknown', 'committed'])(
   'does not create or upload when a creating candidate has %s history', async phase => {
     const { f, registration, deliver, creates, status } = await prepared(); const before = creates();

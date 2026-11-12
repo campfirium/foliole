@@ -22,7 +22,7 @@ export async function registerAcceptedPlaySubmission({ github, play, env, regist
       env.EXECUTION_LANE !== (branch === 'release' ? 'release-t7' : 'qa-mobile-beta')) {
     throw new Error('Actual queued run differs from the accepted Android lane');
   }
-  const releases = await readPlayReleases(play);
+  const releases = prebuilt && !upload ? [] : await readPlayReleases(play);
   const row = await registerPlaySubmission(github, { evidence, registrarSha, prebuilt,
     blockers: pendingPlayBlockers(releases) });
   return { row, releases };

@@ -12,11 +12,11 @@ import { writePlaySubmissionState, readPlaySubmissionState } from './play-submis
 import { reservePlayVersion } from './play-version-reservation.mjs';
 
 export async function preparePlaySubmission({ github, play, env, registrarSha }) {
-  const { row, releases } = await registerAcceptedPlaySubmission({ github, play, env, registrarSha, prebuilt: true });
+  const { row } = await registerAcceptedPlaySubmission({ github, env, registrarSha, prebuilt: true });
   if (!row.payload.prebuilt) throw new Error('This original queued run uses the legacy build-after-review workflow');
   if (await readPlaySubmissionState(github, row) !== 'waiting') throw new Error('Original preparation is no longer waiting');
   await writePlaySubmissionState(github, row, 'waiting');
-  const versionCode = await reservePlayVersion({ github, play, row, releases });
+  const versionCode = await reservePlayVersion({ github, play, row });
   return { proceed: true, state: 'waiting', id: row.id, versionCode };
 }
 

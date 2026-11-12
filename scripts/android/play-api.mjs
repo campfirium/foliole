@@ -58,6 +58,9 @@ async function readPlayResponse(response, method, route) {
   const fail = reason => {
     const error = new Error(`Play ${method} ${reason} (${detail}); preserve the saved edit`);
     error.status = response.status;
+    if (response.status === 400 && method === 'POST' && route.includes(':commit?') && changesAlreadyInReview(bytes)) {
+      error.code = 'CHANGES_ALREADY_IN_REVIEW';
+    }
     throw error;
   };
   if (!response.ok) {
@@ -72,6 +75,16 @@ async function readPlayResponse(response, method, route) {
   if (method === 'POST' && route === 'edits' && !validPlayEditId(result.id)) fail('edit creation returned no valid identity');
   if (method === 'GET' && route === `tracks/${PLAY_TRACK}/releases` && !validPlayReleases(result)) fail('release inventory is unavailable');
   return result;
+}
+
+function changesAlreadyInReview(bytes) {
+  if (bytes.length > 8192) return false;
+  try {
+    const { error } = JSON.parse(bytes.toString('utf8'));
+    return error?.status === 'FAILED_PRECONDITION' && Array.isArray(error.details) && error.details.some(detail =>
+      detail?.['@type'] === 'type.googleapis.com/google.rpc.ErrorInfo' &&
+      detail.domain === 'googleapis.com' && detail.reason === 'CHANGES_ALREADY_IN_REVIEW');
+  } catch { return false; }
 }
 
 export function createPlayApkDownloader(token, fetchImpl = fetch) {

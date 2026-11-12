@@ -1,6 +1,6 @@
 import { resolvePlayUploadEdit } from './play-upload-edit.mjs';
 import { playEditPath } from './play-edit-id.mjs';
-import { readPlayReleases } from './play-api.mjs';
+import { readPlayReleases, requireNoPendingReview } from './play-api.mjs';
 import { uploadPlayCandidate, commitPlayCandidate, observePlayCandidate, verifyPlayBundle } from './play-distribution.mjs';
 import { verifyStoredMobileCandidate } from '../mobile/mobile-candidate-store.mjs';
 import { readMobileCandidatePhase, writeMobileCandidatePhase } from '../mobile/mobile-candidate-phase.mjs';
@@ -21,6 +21,7 @@ export async function deliverRegisteredPlayCandidate({ github, play, registratio
   if (['commit-unknown', 'committed', 'observed'].includes(state.phase)) {
     throw new Error('Original Play commit is not observable; preserve its durable candidate and never upload again');
   }
+  requireNoPendingReview(releases);
   await resolvePlayUploadEdit({ github, play, registration, state });
   if (state.phase === 'upload-unknown') {
     const inventory = await play('GET', `${playEditPath(state.editId)}/bundles`);
