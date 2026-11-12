@@ -142,7 +142,9 @@ test('references a real folder and shows its Topic tree in a virtual folder', as
   await expect(page.getByRole('menuitem', { name: /^(Remove Direct Reference|移除单独添加)$/ })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await virtual.click({ button: 'right' });
-  await page.getByRole('menuitem', { name: /Remove from This Virtual Entry.*Reference source|从此虚拟文件夹中移除.*Reference source/ }).click();
+  await page.getByRole('menuitem', {
+    name: /^(Remove from This Virtual Entry|从此索引中移除) · Reference source$/
+  }).click();
   await expect(topic).toHaveCount(0);
   const snapshot = await page.evaluate(() => window.electronAPI.invoke('load_workspace_snapshot', {}));
   expect(snapshot.nodesById['virtual-source-topic']?.parentNodeId).toBe('virtual-nested');
