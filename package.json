@@ -5,7 +5,7 @@
   "author": "Foliole",
   "license": "Apache-2.0",
   "private": true,
-  "packageManager": "npm@12.2.1",
+  "packageManager": "npm@12.2.2",
   "type": "module",
   "main": "dist/electron/main.js",
   "scripts": {
@@ -287,7 +287,7 @@
     "@typescript-eslint/parser": "8.72.1",
     "@vitejs/plugin-react": "6.2.1",
     "autoprefixer": "10.6.2",
-    "electron": "45.3.0",
+    "electron": "45.3.1",
     "electron-builder": "26.18.0",
     "electron-winstaller": "file:electron/vendor/winstaller-backport/electron-winstaller-5.4.4-foliole.1.tgz",
     "eslint": "10.14.0",
@@ -302,7 +302,7 @@
     "prettier": "3.9.10",
     "tailwindcss": "4.3.4",
     "typescript": "6.0.3",
-    "vite": "8.3.5",
+    "vite": "8.3.6",
     "vitest": "5.1.0"
   },
   "folioleBuildChannel": "mas",
