@@ -9,11 +9,10 @@ export const PLAY_CANDIDATE_ENVIRONMENT = 'foliole-play-beta';
 const fail = message => { throw new Error(`Mobile candidate registration refused: ${message}`); };
 const UPLOAD_CERTIFICATE = '3A:63:39:38:11:29:26:8C:65:1A:97:3F:A4:FF:A2:4F:F2:E3:E6:B3:32:F2:28:E4:E1:E0:AB:02:AF:BE:18:0B';
 
-export function verifyPlaySource(run) {
+export function verifyPlaySourceIdentity(run) {
   if (run?.head_repository?.full_name !== MOBILE_REPOSITORY ||
       !Number.isSafeInteger(run.id) || !Number.isSafeInteger(run.run_attempt) ||
       !['in_progress', 'completed'].includes(run.status)) fail('run or version identity differs');
-  if (run.status === 'completed' && !['success', 'failure'].includes(run.conclusion)) fail('source run was cancelled or expired');
   const release = run.head_branch === 'release' && run.path === '.github/workflows/t7-release.yml' &&
     ['push', 'workflow_dispatch'].includes(run.event);
   const remote = parseRemoteQualityRun(run);
@@ -22,6 +21,12 @@ export function verifyPlaySource(run) {
     remote.mobileDistribution === 'android' && remote.testedSha === run.head_sha;
   if (!release && !qa) fail('not an authorized release or explicit Android full QA');
   return release ? 'release-t7' : 'dev-remote';
+}
+
+export function verifyPlaySource(run) {
+  const lane = verifyPlaySourceIdentity(run);
+  if (run.status === 'completed' && !['success', 'failure'].includes(run.conclusion)) fail('source run was cancelled or expired');
+  return lane;
 }
 
 function artifactFact(artifact, name, run) {
