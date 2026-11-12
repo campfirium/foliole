@@ -91,6 +91,7 @@ export interface AgentMaterialChildrenPayload {
   children: AgentMaterialChildSummary[];
   children_truncated: boolean;
   limit: number;
+  next_offset?: number | null;
   parent: AgentMaterialListParentSummary | null;
   parent_id: string | null;
 }
@@ -149,14 +150,17 @@ export function readAgentControlMaterial(nodeId: string, contentMode: 'preview' 
   };
 }
 
-export function listAgentControlMaterialChildren(parentId: string | null, limit: number): AgentMaterialChildrenPayload {
+export function listAgentControlMaterialChildren(
+  parentId: string | null, limit: number, offset?: number
+): AgentMaterialChildrenPayload {
   const parent = readAgentControlMaterialListParent(parentId);
-  const children = readAgentControlMaterialChildrenWithLimit(parentId, limit);
+  const children = readAgentControlMaterialChildrenWithLimit(parentId, limit, offset);
   return {
     child_count: children.count,
     children: children.items,
     children_truncated: children.truncated,
     limit,
+    ...(offset !== undefined ? { next_offset: children.truncated ? offset + limit : null } : {}),
     parent,
     parent_id: parentId
   };
@@ -166,16 +170,18 @@ function readAgentControlMaterialChildren(nodeId: string) {
   return readAgentControlMaterialChildrenWithLimit(nodeId, AGENT_CONTROL_MATERIAL_CHILDREN_LIMIT);
 }
 
-function readAgentControlMaterialChildrenWithLimit(nodeId: string | null, limit: number) {
+function readAgentControlMaterialChildrenWithLimit(nodeId: string | null, limit: number, offset?: number) {
+  const params = nodeId === null ? [] : [nodeId];
+  const paginated = offset !== undefined;
   const rows = openDatabaseConnection().driver.queryAll<MaterialRow>(
     `SELECT n.id, n.parent_id, n.kind, n.title, n.content, n.body_blob_hash, n.anchor_link, cbd.data AS body_blob_data,
             n.deleted_at, n.updated_at, 0 AS depth
        FROM nodes n
        LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
        WHERE ${nodeId === null ? 'n.parent_id IS NULL' : 'n.parent_id = ?'} AND n.deleted_at IS NULL
-       ORDER BY COALESCE(n.position, 999999), lower(n.title), n.updated_at DESC
-       LIMIT ?`,
-    nodeId === null ? [limit + 1] : [nodeId, limit + 1]
+       ORDER BY COALESCE(n.position, 999999), lower(n.title), n.updated_at DESC${paginated ? ', n.id' : ''}
+       LIMIT ? ${paginated ? 'OFFSET ?' : ''}`,
+    [...params, limit + 1, ...(paginated ? [offset] : [])]
   );
   const visibleRows = rows.slice(0, limit);
   return {

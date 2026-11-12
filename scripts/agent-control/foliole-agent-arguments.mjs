@@ -1,7 +1,7 @@
 export function buildAgentCliBody(command, flags) {
   if (command === 'health' || command === 'capabilities') return { body: null, ok: true };
   if (command === 'materials/create') return buildMaterialCreateBody(flags);
-  if (command === 'materials/list-children') return requireFields(flags, [], ['parent_id', 'limit']);
+  if (command === 'materials/list-children') return requireFields(flags, [], ['parent_id', 'limit', 'offset']);
   if (command === 'materials/move') return requireFields(flags, ['id', 'parent_id', 'expected_updated_at']);
   if (command === 'materials/read') return buildMaterialReadBody(flags);
   if (command === 'materials/search') return requireFields(flags, ['query'], ['limit']);
@@ -72,6 +72,7 @@ function buildUpdateBody(flags) {
 
 function normalizeFieldValue(field, value) {
   if (field === 'limit') return Number(value);
+  if (field === 'offset') return /^\d+$/u.test(value) ? Number(value) : null;
   if (field === 'material_ids') return value.split(',').map((item) => item.trim()).filter(Boolean);
   if (field === 'parent_id' && value === 'root') return null;
   return value;

@@ -108,6 +108,10 @@ async function expectCliRoutes(descriptorPath: string, token: string) {
   expect(cliHealth.output).toMatchObject({ ok: true, service: 'foliole-agent-control' });
   expectWithoutToken(cliHealth.output, token);
 
+  const rootPage = await runAgentCli(['materials/list-children', '--descriptor', descriptorPath, '--offset', '0']);
+  expect(rootPage.status).toBe(0);
+  expect(rootPage.output).toMatchObject({ children: expect.any(Array), next_offset: null, parent_id: null });
+
   const cliCapabilities = await runAgentCli(['capabilities', '--descriptor', descriptorPath]);
   expect(cliCapabilities.status).toBe(0);
   expectCapabilitiesPayload(cliCapabilities.output);

@@ -23,7 +23,7 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   }),
   registryRoute('product', 'POST', 'materials/list-children', 'materials.listChildren', {
     capabilityOrder: 2,
-    cli: cliRoute('materials/list-children', 'List Topics and Folders directly inside a Folder.', optional('parent-id', 'limit'))
+    cli: cliRoute('materials/list-children', 'List direct materials at the root or under a parent. Pass --offset 0 to start paging.', optional('parent-id', 'limit', 'offset'))
   }),
   registryRoute('product', 'POST', 'materials/move', 'materials.move', {
     capabilityOrder: 4,

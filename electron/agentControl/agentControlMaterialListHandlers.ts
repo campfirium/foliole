@@ -74,13 +74,15 @@ export async function handleMaterialListChildren(
   const body = await readJsonBodyOrFail(request, response, options, capability);
   if (!body) return;
   const parentId = typeof body.parent_id === 'string' ? body.parent_id.trim() : null;
-  if (Object.hasOwn(body, 'parent_id') && !parentId) {
+  const offset = body.offset;
+  if ((Object.hasOwn(body, 'parent_id') && !parentId)
+    || (offset !== undefined && !isPageOffset(offset))) {
     recordRequest({ capability, errorCategory: 'invalid_request', options, request, result: 'failed' });
     sendJson(response, 400, { error: 'invalid_request' });
     return;
   }
   const limit = normalizeOptionalLimit(body.limit, AGENT_CONTROL_MATERIAL_CHILDREN_LIMIT, AGENT_CONTROL_MATERIAL_CHILDREN_LIMIT);
-  const payload = listAgentControlMaterialChildren(parentId, limit);
+  const payload = listAgentControlMaterialChildren(parentId, limit, offset);
   if (parentId && !payload.parent) {
     recordRequest({ capability, errorCategory: 'not_found', options, request, result: 'failed', targetId: parentId });
     sendJson(response, 404, { error: 'not_found' });
@@ -88,4 +90,8 @@ export async function handleMaterialListChildren(
   }
   recordRequest({ capability, options, request, result: 'success', ...(parentId ? { targetId: parentId } : {}) });
   sendJson(response, 200, payload as unknown as Record<string, unknown>);
+}
+
+function isPageOffset(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
