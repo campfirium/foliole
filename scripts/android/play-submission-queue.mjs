@@ -66,8 +66,9 @@ export async function playSubmissionContext(github, play) {
 export function playSubmissionReadiness(row, { rows, states, releases, clearedBlockers, obsolete }) {
   const own = states.get(row.id);
   if (['blocked', 'cancelled', 'retired'].includes(own)) return 'blocked';
-  const predecessor = row.payload.predecessor;
-  if (predecessor !== null && !obsolete.has(predecessor)) {
+  let predecessor = row.payload.predecessor;
+  while (obsolete.has(predecessor)) predecessor = obsolete.get(predecessor);
+  if (predecessor !== null) {
     if (!rows.some(item => item.id === predecessor)) throw new Error('Queued predecessor is missing');
     const state = states.get(predecessor);
     if (['blocked', 'cancelled'].includes(state)) return 'blocked';

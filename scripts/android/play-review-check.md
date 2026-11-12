@@ -169,6 +169,15 @@ quality, identity, reservation and signed-checkpoint checks. Current Google revi
 still gates upload. The checker skips that unexecuted older source without
 rerunning it or changing its history; reserved codes remain consumed.
 
+A later accepted source can also continue past a cancelled prebuild with no
+original Google blockers and a cleared version reservation. Across every run
+attempt, build/sign, upload admission and delivery must be cancelled or skipped
+with an explicit empty step list and no runner assigned. Signed artifacts,
+durable candidates and unresolved operations preserve the original queue turn.
+The successor still waits for the cancelled turn's queue predecessor and for any
+current Play review. The cancelled run and its reserved version code stay in
+history.
+
 Historical `retired` records are not publication or operation-reconciliation proof.
 This factual selection needs no retirement command or author authorization. It
 does not clear another blocked successor or bypass an unknown operation; missing
