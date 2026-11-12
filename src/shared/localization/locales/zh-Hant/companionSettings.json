@@ -115,5 +115,13 @@
   "companion.settings.storage.backupSaved": "資料庫已儲存：",
   "companion.settings.storage.backupAttachmentsUnchecked": "僅包含此裝置上可用的附件。",
   "companion.settings.storage.backupAttachmentsPending": "等待備份的附件：",
-  "companion.settings.storage.clearAction": "清除…"
+  "companion.settings.storage.clearAction": "清除…",
+  "companion.settings.appearance.textScale": "文字縮放",
+  "companion.settings.appearance.css.globalDescription": "管理用於調整應用程式外觀的 CSS 片段。",
+  "companion.settings.appearance.css.openFolder": "開啟片段資料夾",
+  "companion.settings.appearance.css.reload": "重新整理片段",
+  "companion.settings.appearance.css.fileError": "無法存取 CSS 片段檔案或儲存其設定。",
+  "companion.settings.appearance.css.search": "搜尋片段…",
+  "companion.settings.appearance.css.noMatches": "沒有符合的片段。",
+  "companion.settings.appearance.css.globalValidationError": "無法讀取此檔案，或其中包含不支援的 CSS。"
 }

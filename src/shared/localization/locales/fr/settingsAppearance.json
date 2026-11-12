@@ -159,5 +159,10 @@
   "settings.appearance.fontWeight.loading": "Chargement de la police…",
   "settings.appearance.fontWeight.loadError": "Impossible de vérifier cette police.",
   "settings.appearance.fontWeight.saveError": "Impossible d’enregistrer la graisse de la police.",
-  "settings.appearance.fontWeight.retry": "Réessayer"
+  "settings.appearance.fontWeight.retry": "Réessayer",
+  "settings.appearance.folderSections.title": "Panneau de dossiers",
+  "settings.appearance.folderSections.retainedRows": "Lignes épinglées avec les titres de section",
+  "settings.appearance.folderSections.retainedRowsDescription": "Choisissez combien d’entrées restent visibles avec chaque titre de section lors du défilement.",
+  "settings.appearance.folderSections.gapDescription": "Définissez l'espace entre les sections en pixels.",
+  "settings.appearance.folderSections.gap": "Espacement entre les sections"
 }

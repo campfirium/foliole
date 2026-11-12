@@ -114,7 +114,7 @@ it('renders external folders in the left section and only documents in the right
     isExternalViewOpen: true
   });
 
-  expect(screen.queryByRole('separator', { name: 'Resize external section' })).toBeNull();
+  expect(screen.queryByRole('separator', { name: 'Resize External' })).toBeNull();
   expect(screen.queryByRole('region', { name: 'External folders' })).toBeNull();
   expect(screen.getAllByRole('treeitem', { selected: true })).toHaveLength(1);
   expect(screen.getByRole('treeitem', { name: /two think/i })).toBeInTheDocument();

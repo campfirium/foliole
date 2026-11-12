@@ -159,5 +159,10 @@
   "settings.appearance.fontWeight.loading": "フォントを読み込み中…",
   "settings.appearance.fontWeight.loadError": "このフォントを確認できませんでした。",
   "settings.appearance.fontWeight.saveError": "フォントの太さを保存できませんでした。",
-  "settings.appearance.fontWeight.retry": "再試行"
+  "settings.appearance.fontWeight.retry": "再試行",
+  "settings.appearance.folderSections.title": "フォルダーパネル",
+  "settings.appearance.folderSections.retainedRows": "セクションタイトルで固定された行",
+  "settings.appearance.folderSections.retainedRowsDescription": "スクロール中に各セクション タイトルとともに表示されるエントリの数を選択します。",
+  "settings.appearance.folderSections.gapDescription": "セクション間のスペースをピクセル単位で設定します。",
+  "settings.appearance.folderSections.gap": "セクション間の間隔"
 }

@@ -80,13 +80,13 @@ it('removes Topics from a manual virtual folder without offering physical Move t
   );
 
   fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'First result' }));
-  expect(screen.getByRole('menuitem', { name: 'Remove from This Virtual Folder' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Remove from This Virtual Entry' })).toBeInTheDocument();
   expect(screen.queryByRole('menuitem', { name: 'Move to…' })).toBeNull();
   expect(screen.queryByRole('menuitem', { name: 'Create Topic' })).toBeNull();
   expect(screen.queryByRole('menuitem', { name: 'Paste as Topic' })).toBeNull();
   expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('menuitem', { name: 'Remove from This Virtual Folder' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Remove from This Virtual Entry' }));
   expect(useWorkspaceStore.getState().nodesById['virtual-manual']?.manualChildOrder).toEqual(['second']);
   expect(useWorkspaceStore.getState().nodesById.first).toBeDefined();
 });
@@ -106,7 +106,7 @@ it('does not offer manual removal in a filtered virtual folder', () => {
   );
 
   fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'First result' }));
-  expect(screen.queryByRole('menuitem', { name: 'Remove from This Virtual Folder' })).toBeNull();
+  expect(screen.queryByRole('menuitem', { name: 'Remove from This Virtual Entry' })).toBeNull();
   expect(screen.queryByRole('menuitem', { name: 'Move to…' })).toBeNull();
 });
 

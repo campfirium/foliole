@@ -159,5 +159,10 @@
   "settings.appearance.fontWeight.loading": "Ładowanie czcionki…",
   "settings.appearance.fontWeight.loadError": "Nie udało się sprawdzić tej czcionki.",
   "settings.appearance.fontWeight.saveError": "Nie udało się zapisać grubości czcionki.",
-  "settings.appearance.fontWeight.retry": "Spróbuj ponownie"
+  "settings.appearance.fontWeight.retry": "Spróbuj ponownie",
+  "settings.appearance.folderSections.title": "Panel folderów",
+  "settings.appearance.folderSections.retainedRows": "Wiersze przypięte z tytułami sekcji",
+  "settings.appearance.folderSections.retainedRowsDescription": "Wybierz, ile wpisów ma być widocznych z tytułem każdej sekcji podczas przewijania.",
+  "settings.appearance.folderSections.gapDescription": "Ustaw odstęp między sekcjami w pikselach.",
+  "settings.appearance.folderSections.gap": "Odstępy między sekcjami"
 }

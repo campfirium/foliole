@@ -111,5 +111,9 @@
   "desktop.command.dev.disableReviewStatusMemory": "DEV desabilita memória da barra de status de revisão",
   "desktop.command.openCustomCopy": "Abrir textos personalizados",
   "desktop.command.scrollDocumentTop": "Rolar até o início do documento",
-  "desktop.command.scrollDocumentBottom": "Rolar até o fim do documento"
+  "desktop.command.scrollDocumentBottom": "Rolar até o fim do documento",
+  "desktop.command.sendToEdge": "Enviar artigo para {app}",
+  "desktop.command.chooseArticleTarget": "Enviar artigo…",
+  "desktop.command.edgeContents": "Conteúdo",
+  "desktop.command.sendToEdgeFailed": "Não foi possível abrir o artigo. Escolha um aplicativo instalado nas configurações do menu do botão direito."
 }

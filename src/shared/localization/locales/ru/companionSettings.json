@@ -115,5 +115,13 @@
   "companion.settings.storage.backupSaved": "База данных сохранена:",
   "companion.settings.storage.backupAttachmentsUnchecked": "Включены только вложения, доступные на этом устройстве.",
   "companion.settings.storage.backupAttachmentsPending": "Ожидающие вложения:",
-  "companion.settings.storage.clearAction": "Очистить…"
+  "companion.settings.storage.clearAction": "Очистить…",
+  "companion.settings.appearance.textScale": "Текстовый масштаб",
+  "companion.settings.appearance.css.globalDescription": "Управляйте фрагментами CSS, которые настраивают внешний вид приложения.",
+  "companion.settings.appearance.css.openFolder": "Открыть папку с фрагментами",
+  "companion.settings.appearance.css.reload": "Обновить фрагменты",
+  "companion.settings.appearance.css.fileError": "Не удалось получить доступ к файлам фрагментов CSS или сохранить их настройки.",
+  "companion.settings.appearance.css.search": "Поиск фрагментов…",
+  "companion.settings.appearance.css.noMatches": "Нет подходящих фрагментов.",
+  "companion.settings.appearance.css.globalValidationError": "Этот файл не может быть прочитан или содержит неподдерживаемый CSS."
 }

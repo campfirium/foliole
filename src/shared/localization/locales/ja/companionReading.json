@@ -76,5 +76,8 @@
   "companion.reading.outline.empty": "見出しや関連するトピック・項目はありません",
   "companion.reading.outline.emptyDescription": "見出しと関連するトピック・項目がここに表示されます。",
   "companion.selection.copyText": "テキストをコピー",
-  "companion.selection.copyError": "テキストをコピーできませんでした。再試行してください。"
+  "companion.selection.copyError": "テキストをコピーできませんでした。再試行してください。",
+  "companion.reading.shareArticle": "記事をシェアする",
+  "companion.reading.articleHandoffUnavailable": "記事を開けるアプリがないか、記事に利用可能なテキストがありません。",
+  "companion.reading.articleHandoffFailed": "記事を共有できませんでした。"
 }

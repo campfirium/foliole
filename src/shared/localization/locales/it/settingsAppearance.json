@@ -159,5 +159,10 @@
   "settings.appearance.fontWeight.loading": "Caricamento carattere…",
   "settings.appearance.fontWeight.loadError": "Impossibile verificare questo carattere.",
   "settings.appearance.fontWeight.saveError": "Impossibile salvare lo spessore del carattere.",
-  "settings.appearance.fontWeight.retry": "Riprova"
+  "settings.appearance.fontWeight.retry": "Riprova",
+  "settings.appearance.folderSections.title": "Pannello delle cartelle",
+  "settings.appearance.folderSections.retainedRows": "Righe appuntate con titoli di sezione",
+  "settings.appearance.folderSections.retainedRowsDescription": "Scegli quante voci rimangono visibili con il titolo di ciascuna sezione durante lo scorrimento.",
+  "settings.appearance.folderSections.gapDescription": "Imposta lo spazio tra le sezioni in pixel.",
+  "settings.appearance.folderSections.gap": "Spaziatura tra le sezioni"
 }

@@ -2,6 +2,7 @@ import { controlledCompanionReadingSqliteTests } from './native-sqlite-companion
 import { controlledFlowSqliteTests } from './native-sqlite-flow-tests.mjs';
 
 export const controlledSyncSqliteTests = [
+  'electron/sync/desktopWebDavAuthenticatedBaseline.integration.test.ts',
   'electron/sync/attachmentPreparationHttp.integration.test.ts',
   'electron/sync/attachmentPreparationRaces.integration.test.ts',
   'electron/sync/attachmentPreparationRecovery.integration.test.ts',

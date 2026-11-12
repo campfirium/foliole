@@ -107,7 +107,7 @@ test('keeps section entries reachable in a long folder list', async ({ desktopWi
     const bounds = row.getBoundingClientRect();
     return row.contains(document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2));
   })).toBe(true);
-  await expect(desktopWindow.getByRole('region', { name: /^(Virtual search|虚拟搜索)$/ })).toHaveCount(0);
+  await expect(desktopWindow.getByRole('region', { name: /^(Virtual search|搜索索引)$/ })).toHaveCount(0);
   await desktopWindow.screenshot({ path: VIRTUAL_SCREENSHOT_PATH });
   await testInfo.attach('workspace-virtual-root-screenshot', {
     body: await desktopWindow.screenshot(),

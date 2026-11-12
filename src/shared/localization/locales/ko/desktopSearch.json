@@ -61,5 +61,22 @@
   "desktop.reviewComplete.item.many": "아이템",
   "desktop.reviewComplete.topic.one": "주제",
   "desktop.reviewComplete.topic.many": "주제",
-  "desktop.editor.image.resize": "이미지 크기 조절"
+  "desktop.editor.image.resize": "이미지 크기 조절",
+  "desktop.diveCheckpoint.queueClear": "Dive 대기열 지우기",
+  "desktop.diveCheckpoint.clearForNow": "Dive 지금은 클리어",
+  "desktop.diveCheckpoint.readingComplete": "Dive 읽기 완료",
+  "desktop.diveCheckpoint.noUnread": "이 Dive에는 읽지 않은 자료가 없습니다.",
+  "desktop.diveCheckpoint.nothingReady": "이 Dive에는 아직 아무것도 준비되지 않았습니다.",
+  "desktop.diveCheckpoint.noNewUnread": "이 다이빙에는 읽지 않은 새로운 자료가 없습니다.",
+  "desktop.diveCheckpoint.global": "글로벌",
+  "desktop.diveCheckpoint.switch": "전환",
+  "desktop.diveCheckpoint.continue": "계속하다",
+  "desktop.diveCheckpoint.exit": "출구",
+  "desktop.diveCheckpoint.recheck": "재확인",
+  "desktop.diveCheckpoint.globalHelp": "전체 도서관에서 계속해서 학습하세요.",
+  "desktop.diveCheckpoint.switchHelp": "연구할 다른 Dive를 선택하세요.",
+  "desktop.diveCheckpoint.exitHelp": "이 세션을 종료하고 탐색으로 돌아갑니다.",
+  "desktop.diveCheckpoint.checkTodayHelp": "이 다이브에서 오늘 예정된 내용을 확인하세요.",
+  "desktop.diveCheckpoint.startReadingHelp": "이 다이브에서 읽기를 시작하세요.",
+  "desktop.diveCheckpoint.nextReadingHelp": "이 다이브에서 읽지 않은 더 많은 콘텐츠를 확인하세요."
 }

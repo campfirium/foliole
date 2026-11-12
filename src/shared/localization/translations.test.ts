@@ -38,6 +38,25 @@ describe('translation catalog loading', () => {
     }
   });
 
+  it('uses the selected language for previously unloaded catalog domains', async () => {
+    await expect(preloadTranslationCatalog('de')).resolves.toBe(true);
+    expect(translate('de', 'settings.reminders.snoozeConfirmation', { time: '09:30' }))
+      .toBe('Verschoben bis 09:30');
+    expect(translate('de', 'settings.backups.restore.sync.noGroup')).toBe('Keine Synchronisierungsgruppe');
+    expect(translate('de', 'companion.imageCloze.confirm')).toBe('Bestätigen');
+    expect(translate('de', 'desktop.formatCleanup.title')).toBe('Formatierung bereinigen');
+    expect(translate('de', 'desktop.readwise.manual.title')).toBe('Manueller Import');
+    expect(translate('de', 'desktop.readwise.behavior.importTag.description'))
+      .toBe('Auch Inhalte mit diesem Reader-Dokument-Tag importieren.');
+    expect(translate('de', 'desktop.watchedFolder.connections.title')).toBe('Andere Geräte');
+    expect(translate('de', 'settings.models.section')).toBe('Modelle');
+    expect(translate('de', 'settings.attachments.daysUnit')).toBe('Tage');
+    expect(translate('de', 'settings.backups.search.sectionTitle')).toBe('Sicherungsinhalte durchsuchen');
+    expect(translate('de', 'settings.backups.database.sectionTitle')).toBe('Datenbank');
+    expect(translate('de', 'settings.search.editorImmersiveDoubleClick.title'))
+      .toBe('Doppelklick auf Text zum Bearbeiten');
+  });
+
   it('keeps a rejected catalog load recoverable', async () => {
     await expect(safelyLoadTranslationCatalog(() => Promise.reject(new Error('missing chunk'))))
       .resolves.toBeNull();

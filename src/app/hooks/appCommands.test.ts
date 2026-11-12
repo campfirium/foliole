@@ -86,7 +86,7 @@ function expectCorePaletteEntries() {
   expect(items.some((item) => item.id === APP_COMMAND_IDS.createItem)).toBe(true);
   expect(items.find((item) => item.id === APP_COMMAND_IDS.createVirtualFolder)).toMatchObject({
     enabled: true,
-    title: 'Create Virtual Folder'
+    title: 'Create in Virtual'
   });
   expect(items.find((item) => item.id === APP_COMMAND_IDS.undo)).toMatchObject({
     enabled: false,

@@ -115,5 +115,13 @@
   "companion.settings.storage.backupSaved": "Database salvato:",
   "companion.settings.storage.backupAttachmentsUnchecked": "Sono inclusi solo gli allegati disponibili su questo dispositivo.",
   "companion.settings.storage.backupAttachmentsPending": "Allegati in attesa:",
-  "companion.settings.storage.clearAction": "Cancella…"
+  "companion.settings.storage.clearAction": "Cancella…",
+  "companion.settings.appearance.textScale": "Scala del testo",
+  "companion.settings.appearance.css.globalDescription": "Gestisci gli snippet CSS che personalizzano l'aspetto dell'app.",
+  "companion.settings.appearance.css.openFolder": "Apri la cartella dei frammenti",
+  "companion.settings.appearance.css.reload": "Aggiorna i frammenti",
+  "companion.settings.appearance.css.fileError": "Impossibile accedere ai file snippet CSS o salvare le relative impostazioni.",
+  "companion.settings.appearance.css.search": "Cerca snippet...",
+  "companion.settings.appearance.css.noMatches": "Nessuno snippet corrispondente.",
+  "companion.settings.appearance.css.globalValidationError": "Impossibile leggere questo file o contiene CSS non supportato."
 }

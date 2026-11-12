@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
 import type { SyncGroupDevicePayload } from '../../../../../lib/platform/syncGroupContract';
-import { isFeaturePreviewVisible } from '../../../../shared/config/featurePreviews';
 import { useTranslation, type Translate } from '../../../../shared/localization/LocalizationProvider';
 import { useDesktopSyncGroup } from '../../../../shared/platform/useDesktopSyncGroup';
 import {
@@ -17,13 +16,14 @@ import {
 } from '../../../../shared/ui';
 import { SyncProtocolIncompatibleDialog } from '../../../../shared/ui/SyncProtocolIncompatibleDialog';
 import { isSyncProtocolIncompatibleError, useSyncProtocolIncompatibleNotice } from '../../../../shared/ui/useSyncProtocolIncompatibleNotice';
+import { isDesktopWebDavSettingsVisible } from '../../model/settingsPanelOptions';
 
 import { SettingsSyncDiagnosticsRow } from './SettingsSyncDiagnosticsRow';
 import { SettingsSyncGroupRows } from './SettingsSyncGroupRows';
 
 function SyncAvailabilityRow(props: { disabled: boolean; enabled: boolean; onToggle(): void }) {
   const t = useTranslation();
-  const title = t(isFeaturePreviewVisible('webdavSyncSettings')
+  const title = t(isDesktopWebDavSettingsVisible()
     ? 'settings.companionSync.webdav.participation' : 'settings.companionSync.group.sync.title');
   return (
     <SettingsRow
@@ -51,7 +51,7 @@ function SyncNowRow(props: { disabled: boolean; onSync(): void }) {
   const t = useTranslation();
   return (
     <SettingsRow
-      description={t(isFeaturePreviewVisible('webdavSyncSettings')
+      description={t(isDesktopWebDavSettingsVisible()
         ? 'settings.companionSync.webdav.syncNow' : 'settings.companionSync.group.syncNow.description')}
       title={t('settings.companionSync.group.syncNow.title')}
     >

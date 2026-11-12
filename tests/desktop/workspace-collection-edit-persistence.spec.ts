@@ -17,7 +17,7 @@ const TITLES = {
 };
 
 function virtualTree(page: Page) {
-  return page.getByRole('tree', { name: /^(Virtual folder tree|虚拟文件夹树)$/ });
+  return page.getByRole('tree', { name: /^(Virtual tree|索引树)$/ });
 }
 
 async function seedCollectionWorkspace(page: Page) {

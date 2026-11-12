@@ -229,5 +229,18 @@
   "settings.review.trainingHistoryLoading": "Chargement de l’historique d’entraînement…",
   "settings.review.trainingHistoryFailed": "Impossible de charger l’historique d’entraînement.",
   "settings.review.lastOptimization": "Dernière optimisation : {time}",
-  "settings.review.optimizationFailed": "L’optimisation n’a pas pu se terminer. Réessayez."
+  "settings.review.optimizationFailed": "L’optimisation n’a pas pu se terminer. Réessayez.",
+  "settings.review.later.title": "Intervalle ultérieur personnalisé",
+  "settings.review.later.description": "Définissez l'intervalle avant la réapparition du matériau (0 pour l'intervalle court par défaut).",
+  "settings.review.later.default": "Défaut",
+  "settings.webLookup.articleTarget": "Destination des articles",
+  "settings.webLookup.chooseArticleTarget": "Sélectionnez une application",
+  "settings.webLookup.pickArticleTarget": "Choisissez une autre application…",
+  "settings.review.training.title": "Paramètres de formation avancés",
+  "settings.review.training.description": "Ces options affectent la formation des paramètres FSRS. Conservez les valeurs par défaut, sauf si vous comprenez comment fonctionnent les options. Les modifications prendront effet lors du prochain train FSRS.",
+  "settings.review.training.recency": "Poids des révisions récentes",
+  "settings.review.training.recencyDescription": "Donne plus de poids aux révisions récentes pour que le modèle s’adapte plus vite aux changements de mémoire. Le modèle devient aussi plus sensible aux variations à court terme.",
+  "settings.review.training.penalties": "Pénalités sur les intervalles de révision",
+  "settings.review.training.penaltiesDescription": "L’entraînement pénalise les intervalles de révision très courts le même jour et les fortes hausses des intervalles longs. La prédiction du rappel peut devenir légèrement moins précise.",
+  "settings.review.training.resetOption": "Réinitialiser {label}"
 }

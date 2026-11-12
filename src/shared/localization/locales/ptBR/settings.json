@@ -229,5 +229,18 @@
   "settings.review.trainingHistoryLoading": "Carregando histórico de treinamento…",
   "settings.review.trainingHistoryFailed": "Não foi possível carregar o histórico de treinamento.",
   "settings.review.lastOptimization": "Última otimização: {time}",
-  "settings.review.optimizationFailed": "Não foi possível concluir a otimização. Tente novamente."
+  "settings.review.optimizationFailed": "Não foi possível concluir a otimização. Tente novamente.",
+  "settings.review.later.title": "Intervalo posterior personalizado",
+  "settings.review.later.description": "Defina o intervalo antes que o material reapareça (0 para o intervalo curto padrão).",
+  "settings.review.later.default": "Padrão",
+  "settings.webLookup.articleTarget": "Destino do artigo",
+  "settings.webLookup.chooseArticleTarget": "Selecione um aplicativo",
+  "settings.webLookup.pickArticleTarget": "Escolha outro aplicativo…",
+  "settings.review.training.title": "Configurações de treinamento avançado",
+  "settings.review.training.description": "Essas opções afetam o treinamento dos parâmetros FSRS. Mantenha os padrões, a menos que você entenda como as opções funcionam. As alterações entrarão em vigor na próxima vez que FSRS treinar.",
+  "settings.review.training.recency": "Peso das revisões recentes",
+  "settings.review.training.recencyDescription": "Dá mais peso às revisões recentes para o modelo se adaptar mais rápido às mudanças na sua memória. Ele também fica mais sensível a oscilações de curto prazo.",
+  "settings.review.training.penalties": "Penalidades nos intervalos de revisão",
+  "settings.review.training.penaltiesDescription": "Durante o treinamento, o modelo penaliza intervalos de revisão muito curtos no mesmo dia e aumentos bruscos nos intervalos longos. Isso pode reduzir ligeiramente a precisão da previsão de recordação.",
+  "settings.review.training.resetOption": "Redefinir {label}"
 }

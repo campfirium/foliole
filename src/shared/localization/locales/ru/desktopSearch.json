@@ -61,5 +61,22 @@
   "desktop.reviewComplete.item.many": "предметы",
   "desktop.reviewComplete.topic.one": "тема",
   "desktop.reviewComplete.topic.many": "темы",
-  "desktop.editor.image.resize": "Изменить размер изображения"
+  "desktop.editor.image.resize": "Изменить размер изображения",
+  "desktop.diveCheckpoint.queueClear": "Dive Очистить очередь",
+  "desktop.diveCheckpoint.clearForNow": "Dive На данный момент ясно",
+  "desktop.diveCheckpoint.readingComplete": "Dive Чтение завершено",
+  "desktop.diveCheckpoint.noUnread": "В этом Dive нет непрочитанных материалов",
+  "desktop.diveCheckpoint.nothingReady": "В этом Dive пока ничего не готово.",
+  "desktop.diveCheckpoint.noNewUnread": "В этом погружении нет нового непрочитанного материала.",
+  "desktop.diveCheckpoint.global": "Глобальный",
+  "desktop.diveCheckpoint.switch": "Сменить",
+  "desktop.diveCheckpoint.continue": "Продолжать",
+  "desktop.diveCheckpoint.exit": "Выход",
+  "desktop.diveCheckpoint.recheck": "Перепроверить",
+  "desktop.diveCheckpoint.globalHelp": "Продолжайте обучение по всей библиотеке.",
+  "desktop.diveCheckpoint.switchHelp": "Выберите другой Dive для изучения.",
+  "desktop.diveCheckpoint.exitHelp": "Завершите этот сеанс и вернитесь к просмотру.",
+  "desktop.diveCheckpoint.checkTodayHelp": "Проверьте, что произойдет сегодня в этом погружении.",
+  "desktop.diveCheckpoint.startReadingHelp": "Начните читать в этом погружении.",
+  "desktop.diveCheckpoint.nextReadingHelp": "Проверьте наличие еще непрочитанного контента в этом погружении."
 }

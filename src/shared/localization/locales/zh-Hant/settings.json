@@ -232,5 +232,15 @@
   "settings.review.trainingHistoryLoading": "正在載入訓練歷史…",
   "settings.review.trainingHistoryFailed": "無法載入訓練歷史。",
   "settings.review.lastOptimization": "上次最佳化：{time}",
-  "settings.review.optimizationFailed": "無法完成最佳化，請重試。"
+  "settings.review.optimizationFailed": "無法完成最佳化，請重試。",
+  "settings.webLookup.articleTarget": "正文傳送目標",
+  "settings.webLookup.chooseArticleTarget": "選擇應用程式",
+  "settings.webLookup.pickArticleTarget": "選擇其他應用程式…",
+  "settings.review.training.title": "進階訓練設定",
+  "settings.review.training.description": "這些選項會影響 FSRS 參數訓練。請保留預設值，除非你瞭解這些選項的作用。變更會在下次 FSRS 訓練時生效。",
+  "settings.review.training.recency": "近期複習加權",
+  "settings.review.training.recencyDescription": "提高近期複習記錄的權重，讓模型更快適應記憶表現的變化，也更容易受到短期波動影響。",
+  "settings.review.training.penalties": "複習間隔懲罰",
+  "settings.review.training.penaltiesDescription": "訓練時對過短的同日複習間隔和驟增的長期複習間隔施加懲罰。回憶預測可能略不準確。",
+  "settings.review.training.resetOption": "重設{label}"
 }

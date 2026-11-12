@@ -61,5 +61,22 @@
   "desktop.reviewComplete.item.many": "Elemente",
   "desktop.reviewComplete.topic.one": "Thema",
   "desktop.reviewComplete.topic.many": "Themen",
-  "desktop.editor.image.resize": "Bildgröße ändern"
+  "desktop.editor.image.resize": "Bildgröße ändern",
+  "desktop.diveCheckpoint.queueClear": "Dive Warteschlange gelöscht",
+  "desktop.diveCheckpoint.clearForNow": "Dive Vorerst frei",
+  "desktop.diveCheckpoint.readingComplete": "Dive Lesevorgang abgeschlossen",
+  "desktop.diveCheckpoint.noUnread": "Kein ungelesenes Material in diesem Dive",
+  "desktop.diveCheckpoint.nothingReady": "In diesem Dive ist noch nichts fertig.",
+  "desktop.diveCheckpoint.noNewUnread": "Kein neues ungelesenes Material in diesem Tauchgang.",
+  "desktop.diveCheckpoint.global": "Global",
+  "desktop.diveCheckpoint.switch": "Wechseln",
+  "desktop.diveCheckpoint.continue": "Weitermachen",
+  "desktop.diveCheckpoint.exit": "Ausfahrt",
+  "desktop.diveCheckpoint.recheck": "Überprüfen Sie es noch einmal",
+  "desktop.diveCheckpoint.globalHelp": "Lernen Sie in der gesamten Bibliothek weiter.",
+  "desktop.diveCheckpoint.switchHelp": "Wählen Sie einen anderen Dive zum Lernen.",
+  "desktop.diveCheckpoint.exitHelp": "Beenden Sie diese Sitzung und kehren Sie zum Surfen zurück.",
+  "desktop.diveCheckpoint.checkTodayHelp": "Überprüfen Sie in diesem Tauchgang, was heute fällig ist.",
+  "desktop.diveCheckpoint.startReadingHelp": "Beginnen Sie in diesem Tauchgang mit dem Lesen.",
+  "desktop.diveCheckpoint.nextReadingHelp": "Suchen Sie in diesem Tauchgang nach weiteren ungelesenen Inhalten."
 }

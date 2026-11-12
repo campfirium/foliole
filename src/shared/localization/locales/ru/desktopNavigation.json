@@ -52,7 +52,7 @@
   "desktop.workspace.resizeTopicList": "Изменить размер списка тем",
   "desktop.workspace.resizeFolderList": "Изменить размер списка папок",
   "desktop.workspace.resizeVirtualSection": "Изменить размер виртуального раздела",
-  "desktop.workspace.resizeExternalSection": "Изменить размер внешнего раздела",
+  "desktop.workspace.resizeExternalSection": "Изменить размер внешнего",
   "desktop.workspace.resizeInspectorSidebar": "Изменение размера боковой панели инспектора",
   "desktop.workspace.inspector": "инспектор",
   "desktop.demo.narrow.aria": "Уведомление о ширине демо-версии рабочего стола",
@@ -202,5 +202,6 @@
   "desktop.rightPanel.highlights.unavailableTitle": "Тема недоступна",
   "desktop.rightPanel.highlights.count": "ГЛАВНОЕ({count})",
   "desktop.rightPanel.highlights.list": "Основные моменты документа",
-  "desktop.workspace.leaveFlowHere": "Выйти из Flow"
+  "desktop.workspace.leaveFlowHere": "Выйти из Flow",
+  "desktop.rightPanel.flow.libraryScope": "Библиотека"
 }

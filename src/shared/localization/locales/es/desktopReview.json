@@ -90,5 +90,9 @@
   "desktop.nodeReview.noLocalShortTerm": "Sin configuración local a corto plazo",
   "desktop.nodeReview.priority.p0": "P0 - Primero, escalado sin demora",
   "desktop.foregroundTime.monthTotal": "Tiempo total",
-  "desktop.foregroundTime.monthTotalShort": "Total"
+  "desktop.foregroundTime.monthTotalShort": "Total",
+  "desktop.reviewDelay.enterHint": "aplicar",
+  "desktop.reviewDelay.mode.weeks": "Por semana",
+  "desktop.reviewDelay.mode.days": "de dia",
+  "desktop.reviewDelay.daysInput": "Días hasta la próxima aparición"
 }

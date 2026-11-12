@@ -61,5 +61,22 @@
   "desktop.reviewComplete.item.many": "itens",
   "desktop.reviewComplete.topic.one": "tópico",
   "desktop.reviewComplete.topic.many": "tópicos",
-  "desktop.editor.image.resize": "Redimensionar imagem"
+  "desktop.editor.image.resize": "Redimensionar imagem",
+  "desktop.diveCheckpoint.queueClear": "Fila Dive limpa",
+  "desktop.diveCheckpoint.clearForNow": "Dive claro por enquanto",
+  "desktop.diveCheckpoint.readingComplete": "Leitura Dive concluída",
+  "desktop.diveCheckpoint.noUnread": "Nenhum material não lido neste Dive",
+  "desktop.diveCheckpoint.nothingReady": "Nada está pronto neste Dive ainda.",
+  "desktop.diveCheckpoint.noNewUnread": "Nenhum novo material não lido neste mergulho.",
+  "desktop.diveCheckpoint.global": "Global",
+  "desktop.diveCheckpoint.switch": "Trocar",
+  "desktop.diveCheckpoint.continue": "Continuar",
+  "desktop.diveCheckpoint.exit": "Saída",
+  "desktop.diveCheckpoint.recheck": "Verifique novamente",
+  "desktop.diveCheckpoint.globalHelp": "Continue aprendendo em toda a biblioteca.",
+  "desktop.diveCheckpoint.switchHelp": "Escolha outro Dive para estudar.",
+  "desktop.diveCheckpoint.exitHelp": "Encerre esta sessão e retorne à navegação.",
+  "desktop.diveCheckpoint.checkTodayHelp": "Confira o que é devido hoje neste Dive.",
+  "desktop.diveCheckpoint.startReadingHelp": "Comece a ler neste mergulho.",
+  "desktop.diveCheckpoint.nextReadingHelp": "Verifique se há mais conteúdo não lido neste mergulho."
 }

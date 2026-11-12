@@ -219,5 +219,10 @@
   "desktop.readwise.parser.tagKeyword.description": "태그 라인 시작 문자(예: Tags:)입니다. 선행 공백이나 목록 표시자가 아닌 핵심 시작 텍스트만 채웁니다.",
   "desktop.readwise.parser.noteKeyword.title": "메모 마커",
   "desktop.readwise.parser.noteKeyword.description": "메모 라인 마커(예: 메모:)입니다. 선행 공백이나 목록 표시자가 아닌 핵심 표시자 텍스트만 채웁니다.",
-  "desktop.readwise.cancel": "취소"
+  "desktop.readwise.cancel": "취소",
+  "desktop.document.readingResume.available": "다른 장치는 더 자세히 읽습니다.",
+  "desktop.document.readingResume.jump": "위치로 점프",
+  "desktop.reviewActions.reading.laterDays": "일부를 읽었으며 {days}일 후에 이어 읽고 싶어요(사용자 지정).",
+  "desktop.reviewActions.reading.laterOneDay": "일부를 읽었으며 1일 후에 이어 읽고 싶어요(사용자 지정).",
+  "desktop.reviewActions.reading.laterCustomBody": "지정된 간격 후에 다시 나타납니다."
 }

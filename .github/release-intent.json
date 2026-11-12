@@ -1,17 +1,23 @@
 {
   "schemaVersion": 1,
-  "version": "0.8.1",
+  "version": "0.8.2",
   "publicationMode": "scoped",
   "selectedPlatforms": [
+    "macos",
+    "windows",
+    "linux",
     "android",
     "ios"
   ],
   "scopeBasis": {
-    "android": "Android and iPhone share the Sync Group setup and switch touch-target fix; the sync protocol, group identity, discovery transport and library schema remain compatible with 0.8.0.",
-    "ios": "Android and iPhone share the Sync Group setup and switch touch-target fix; the sync protocol, group identity, discovery transport and library schema remain compatible with 0.8.0."
+    "macos": "macOS, Windows and Linux use desktop sync protocol 36 for reading-position synchronization; Android and iPhone use the companion protocol 36 contract. All five hosts reject protocol 35 peers.",
+    "windows": "macOS, Windows and Linux use desktop sync protocol 36 for reading-position synchronization; Android and iPhone use the companion protocol 36 contract. All five hosts reject protocol 35 peers.",
+    "linux": "macOS, Windows and Linux use desktop sync protocol 36 for reading-position synchronization; Android and iPhone use the companion protocol 36 contract. All five hosts reject protocol 35 peers.",
+    "android": "macOS, Windows and Linux use desktop sync protocol 36 for reading-position synchronization; Android and iPhone use the companion protocol 36 contract. All five hosts reject protocol 35 peers.",
+    "ios": "macOS, Windows and Linux use desktop sync protocol 36 for reading-position synchronization; Android and iPhone use the companion protocol 36 contract. All five hosts reject protocol 35 peers."
   },
   "syncCompatibility": {
-    "mode": "compatible",
-    "basis": "Android and iPhone share the Sync Group setup and switch touch-target fix; the sync protocol, group identity, discovery transport and library schema remain compatible with 0.8.0."
+    "mode": "coordinated",
+    "basis": "macOS, Windows and Linux use desktop sync protocol 36 for reading-position synchronization; Android and iPhone use the companion protocol 36 contract. All five hosts reject protocol 35 peers."
   }
 }

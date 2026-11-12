@@ -14,7 +14,7 @@
   "desktop.command.createFolder": "建立資料夾",
   "desktop.command.createTopic": "創建主題",
   "desktop.command.createItem": "創建專案",
-  "desktop.command.createVirtualFolder": "建立虛擬資料夾",
+  "desktop.command.createVirtualFolder": "建立索引",
   "desktop.command.undo": "撤銷",
   "desktop.command.redo": "重做",
   "desktop.command.undoOperation": "撤銷 {operation}",
@@ -111,5 +111,9 @@
   "desktop.command.dev.disableReviewStatusMemory": "DEV 禁用查看狀態列內存",
   "desktop.command.openCustomCopy": "開啟自訂文案",
   "desktop.command.scrollDocumentTop": "捲動到文件頂端",
-  "desktop.command.scrollDocumentBottom": "捲動到文件底端"
+  "desktop.command.scrollDocumentBottom": "捲動到文件底端",
+  "desktop.command.sendToEdge": "將正文傳送至 {app}",
+  "desktop.command.chooseArticleTarget": "傳送正文…",
+  "desktop.command.edgeContents": "目錄",
+  "desktop.command.sendToEdgeFailed": "無法開啟正文。請在右鍵選單設定中選擇已安裝的應用程式。"
 }

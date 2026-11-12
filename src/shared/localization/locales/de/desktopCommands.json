@@ -111,5 +111,9 @@
   "desktop.command.dev.disableReviewStatusMemory": "DEV Speicher für Überprüfungsstatusleiste deaktivieren",
   "desktop.command.openCustomCopy": "Benutzerdefinierte Texte öffnen",
   "desktop.command.scrollDocumentTop": "Zum Anfang des Dokuments scrollen",
-  "desktop.command.scrollDocumentBottom": "Zum Ende des Dokuments scrollen"
+  "desktop.command.scrollDocumentBottom": "Zum Ende des Dokuments scrollen",
+  "desktop.command.sendToEdge": "Artikel an {app} senden",
+  "desktop.command.chooseArticleTarget": "Artikel senden…",
+  "desktop.command.edgeContents": "Inhalt",
+  "desktop.command.sendToEdgeFailed": "Der Artikel konnte nicht geöffnet werden. Wählen Sie in den Einstellungen des Rechtsklick-Menüs eine installierte App aus."
 }

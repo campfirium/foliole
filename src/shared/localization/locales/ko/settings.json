@@ -229,5 +229,18 @@
   "settings.review.trainingHistoryLoading": "학습 기록 불러오는 중…",
   "settings.review.trainingHistoryFailed": "학습 기록을 불러오지 못했습니다.",
   "settings.review.lastOptimization": "마지막 최적화: {time}",
-  "settings.review.optimizationFailed": "최적화를 완료하지 못했습니다. 다시 시도하세요."
+  "settings.review.optimizationFailed": "최적화를 완료하지 못했습니다. 다시 시도하세요.",
+  "settings.review.later.title": "사용자 정의 나중에 간격",
+  "settings.review.later.description": "재료가 다시 나타나기 전의 간격을 설정합니다(기본 짧은 간격의 경우 0).",
+  "settings.review.later.default": "기본",
+  "settings.webLookup.articleTarget": "기사 대상",
+  "settings.webLookup.chooseArticleTarget": "앱 선택",
+  "settings.webLookup.pickArticleTarget": "다른 앱을 선택하세요...",
+  "settings.review.training.title": "고급 훈련 설정",
+  "settings.review.training.description": "이러한 옵션은 FSRS 매개변수 교육에 영향을 미칩니다. 옵션 작동 방식을 이해하지 않는 한 기본값을 유지하십시오. 변경 사항은 다음에 FSRS가 열차를 탈 때 적용됩니다.",
+  "settings.review.training.recency": "최근 복습 가중치",
+  "settings.review.training.recencyDescription": "최근 복습에 더 높은 가중치를 주면 모델이 기억력 변화에 더 빨리 적응합니다. 단기 변동에도 더 민감해집니다.",
+  "settings.review.training.penalties": "복습 간격 페널티",
+  "settings.review.training.penaltiesDescription": "훈련 중 같은 날의 지나치게 짧은 복습 간격과 긴 간격의 급격한 증가에 페널티를 적용합니다. 기억해 낼 가능성의 예측 정확도가 약간 낮아질 수 있습니다.",
+  "settings.review.training.resetOption": "{label} 재설정"
 }
