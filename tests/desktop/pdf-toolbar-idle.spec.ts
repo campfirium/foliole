@@ -1,7 +1,21 @@
 import path from 'node:path';
 
+import type { Locator } from '@playwright/test';
+
 import { expect, test } from './harness/fixtures';
 import { revealPdfBars } from './pdf-top-bars-interaction';
+
+async function expectPdfToolbarTooltips(toolbar: Locator) {
+  const page = toolbar.page();
+  const zoomIn = toolbar.getByRole('button', { name: /Zoom in|放大/ });
+  await zoomIn.hover();
+  await expect(page.getByRole('tooltip')).toHaveText(/Zoom in|放大/);
+  await page.screenshot({ path: path.resolve('.tmp/artifacts/pdf-toolbar-idle/tooltip.png') });
+  const clearSearch = toolbar.getByRole('button', { name: /Clear search|清除搜索/ });
+  await expect(clearSearch).toBeDisabled();
+  await clearSearch.hover({ force: true });
+  await expect(page.getByRole('tooltip')).toHaveText(/Clear search|清除搜索/);
+}
 
 test('PDF toolbar @pdf idles, reveals, and protects focused controls and menus', async ({ desktopApp, desktopWindow }) => {
   await desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ }).click();
@@ -40,6 +54,7 @@ test('PDF toolbar @pdf idles, reveals, and protects focused controls and menus',
   await desktopWindow.screenshot({ path: path.resolve('.tmp/artifacts/pdf-toolbar-idle/hidden.png') });
   await revealPdfBars(desktopWindow);
   await expect(toolbar).toHaveAttribute('data-toolbar-visible', 'true');
+  await expectPdfToolbarTooltips(toolbar);
   const pageInput = desktopWindow.getByRole('textbox', { name: /PDF page|PDF 页码/ });
   await pageInput.click();
   await desktopWindow.mouse.move(20, 200);

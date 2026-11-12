@@ -158,3 +158,13 @@ it('replaces a stale automatic range without losing the saved manual range or mo
   expect(stored.manual).toEqual(manual);
   expect(stored.mode).toBe('manual');
 });
+
+it('shows a tooltip for the custom fit menu and still opens it from the keyboard', async () => {
+  render(reader);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Custom fit options' })).toBeEnabled());
+  const options = screen.getByRole('button', { name: 'Custom fit options' });
+  fireEvent.focus(options);
+  expect(await screen.findByRole('tooltip')).toHaveTextContent('Custom fit options');
+  fireEvent.keyDown(options, { key: 'ArrowDown' });
+  expect(await screen.findByRole('menuitem', { name: 'Adjust range' })).toBeVisible();
+});

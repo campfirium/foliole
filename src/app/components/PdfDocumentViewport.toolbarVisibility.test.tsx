@@ -80,3 +80,31 @@ describe('PdfDocumentViewport toolbar visibility', () => {
     expect(toolbar).toHaveAttribute('data-toolbar-visible', 'false');
   });
 });
+
+it('shows localized tooltips on focus for PDF zoom, page, and search controls', async () => {
+  collectTextSegmentsSpy.mockReturnValue([]);
+  await renderToolbarVisibilityHarness();
+
+  for (const label of [
+    'Zoom out', 'Set zoom level', 'Zoom in', 'Fit width', 'Rotate page clockwise',
+    'PDF page', 'Next page', 'PDF search'
+  ]) {
+    const control = screen.getByLabelText(label);
+    fireEvent.focus(control);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(label);
+    fireEvent.blur(control);
+  }
+});
+
+it.each(['Previous page', 'Previous match', 'Next match', 'Clear search'])(
+  'shows the %s tooltip on hover when the button is disabled',
+  async (label) => {
+    collectTextSegmentsSpy.mockReturnValue([]);
+    await renderToolbarVisibilityHarness();
+
+    const button = screen.getByRole('button', { name: label });
+    expect(button).toBeDisabled();
+    fireEvent.pointerMove(button.parentElement!, { pointerType: 'mouse' });
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(label);
+  }
+);

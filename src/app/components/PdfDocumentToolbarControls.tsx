@@ -2,12 +2,14 @@ import { ArrowDownToLine, ArrowUpToLine, Search, X } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { AppIconButton, AppInput } from '../../shared/ui';
+import { AppInput } from '../../shared/ui';
 
-export { PdfPageControls } from './PdfDocumentPageControls';
 import type { PdfSearchStatus } from './PdfDocumentSearch';
 import { PdfZoomControls as PdfZoomControlsInner } from './PdfDocumentZoomControls';
 import { usePdfSearchInputState } from './pdfSearchInputState';
+import { PdfToolbarIconButton, PdfToolbarTooltip } from './PdfToolbarTooltip';
+
+export { PdfPageControls } from './PdfDocumentPageControls';
 
 interface SearchControlsProps {
   onClearSearch: () => void;
@@ -95,23 +97,25 @@ function PdfSearchInput(props: SearchControlsProps & { canNavigateMatches: boole
   const { draftQuery, handleSearchCompositionEnd, handleSearchCompositionStart, handleSearchInputChange } = usePdfSearchInputState(props);
 
   return (
-    <AppInput
-      aria-label={t('desktop.pdf.search.aria')}
-      className="h-8 w-36 min-w-0 border-transparent bg-transparent px-2 text-xs focus-visible:ring-0"
-      data-pdf-search-input="true"
-      onKeyDown={(event) => handleSearchInputKeyDown(event, props.canNavigateMatches, props.onFindNext, props.onFindPrevious)}
-      onChange={handleSearchInputChange}
-      onBlur={() => props.onSearchFocusChange(false)}
-      onCompositionEnd={handleSearchCompositionEnd}
-      onCompositionStart={handleSearchCompositionStart}
-      onFocus={() => {
-        props.onToolbarInteraction();
-        props.onSearchFocusChange(true);
-      }}
-      placeholder={t('desktop.pdf.search.placeholder')}
-      type="text"
-      value={draftQuery}
-    />
+    <PdfToolbarTooltip label={t('desktop.pdf.search.aria')}>
+      <AppInput
+        aria-label={t('desktop.pdf.search.aria')}
+        className="h-8 w-36 min-w-0 border-transparent bg-transparent px-2 text-xs focus-visible:ring-0"
+        data-pdf-search-input="true"
+        onKeyDown={(event) => handleSearchInputKeyDown(event, props.canNavigateMatches, props.onFindNext, props.onFindPrevious)}
+        onChange={handleSearchInputChange}
+        onBlur={() => props.onSearchFocusChange(false)}
+        onCompositionEnd={handleSearchCompositionEnd}
+        onCompositionStart={handleSearchCompositionStart}
+        onFocus={() => {
+          props.onToolbarInteraction();
+          props.onSearchFocusChange(true);
+        }}
+        placeholder={t('desktop.pdf.search.placeholder')}
+        type="text"
+        value={draftQuery}
+      />
+    </PdfToolbarTooltip>
   );
 }
 
@@ -119,9 +123,9 @@ function PdfSearchActionButtons(props: SearchControlsProps & { canNavigateMatche
   const t = useTranslation();
   return (
     <>
-      <AppIconButton className="size-8" disabled={!props.canNavigateMatches} icon={<ArrowUpToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.search.previousMatch')} onClick={createToolbarAction(props.onFindPrevious, props.onToolbarInteraction)} />
-      <AppIconButton className="size-8" disabled={!props.canNavigateMatches} icon={<ArrowDownToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.search.nextMatch')} onClick={createToolbarAction(props.onFindNext, props.onToolbarInteraction)} />
-      <AppIconButton className="size-8" disabled={!props.hasSearchQuery} icon={<X aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.search.clear')} onClick={createToolbarAction(props.onClearSearch, props.onToolbarInteraction)} />
+      <PdfToolbarIconButton className="size-8" disabled={!props.canNavigateMatches} icon={<ArrowUpToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.search.previousMatch')} onClick={createToolbarAction(props.onFindPrevious, props.onToolbarInteraction)} />
+      <PdfToolbarIconButton className="size-8" disabled={!props.canNavigateMatches} icon={<ArrowDownToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.search.nextMatch')} onClick={createToolbarAction(props.onFindNext, props.onToolbarInteraction)} />
+      <PdfToolbarIconButton className="size-8" disabled={!props.hasSearchQuery} icon={<X aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.search.clear')} onClick={createToolbarAction(props.onClearSearch, props.onToolbarInteraction)} />
     </>
   );
 }

@@ -5,8 +5,10 @@ import { usePdfReadingView } from '../../features/pdf/components/PdfReadingViewC
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuItem, AppDropdownMenuTrigger,
-  AppIconButton, AppTooltip, AppTooltipContent, AppTooltipTrigger
+  AppIconButton
 } from '../../shared/ui';
+
+import { PdfToolbarTooltip } from './PdfToolbarTooltip';
 
 export function PdfReadingViewControls(props: {
   onInteraction: () => void;
@@ -30,11 +32,13 @@ export function PdfReadingViewControls(props: {
           hint={t('desktop.pdf.view.manualHint')} disabled={disabled} onClick={act(runtime.chooseManual)}
           icon={<Crop aria-hidden="true" size={15} strokeWidth={2.1} />} />
         <AppDropdownMenu onOpenChange={(open) => props.onMenuOpenChange?.(open)}>
-          <AppDropdownMenuTrigger asChild>
-            <AppIconButton label={t('desktop.pdf.view.manualOptions')} disabled={disabled}
-              className="w-4" onClick={props.onInteraction}
-              icon={<ChevronDown aria-hidden="true" size={11} strokeWidth={2.1} />} />
-          </AppDropdownMenuTrigger>
+          <PdfToolbarTooltip disabled={disabled} label={t('desktop.pdf.view.manualOptions')}>
+            <AppDropdownMenuTrigger asChild>
+              <AppIconButton label={t('desktop.pdf.view.manualOptions')} disabled={disabled}
+                className="w-4" onClick={props.onInteraction}
+                icon={<ChevronDown aria-hidden="true" size={11} strokeWidth={2.1} />} />
+            </AppDropdownMenuTrigger>
+          </PdfToolbarTooltip>
           <AppDropdownMenuContent align="end">
             <AppDropdownMenuItem onSelect={act(runtime.adjust)}>
               {t('desktop.pdf.view.adjust')}
@@ -58,13 +62,10 @@ function ViewIcon(props: {
   icon: ReactNode;
 }) {
   return (
-    <AppTooltip>
-      <AppTooltipTrigger asChild>
-        <AppIconButton label={props.label} aria-pressed={props.active} disabled={props.disabled}
-          className="aria-pressed:bg-foreground/[0.035] aria-pressed:text-foreground"
-          icon={props.icon} onClick={props.onClick} />
-      </AppTooltipTrigger>
-      <AppTooltipContent>{props.label}<br />{props.hint}</AppTooltipContent>
-    </AppTooltip>
+    <PdfToolbarTooltip disabled={props.disabled} label={<>{props.label}<br />{props.hint}</>}>
+      <AppIconButton label={props.label} aria-pressed={props.active} disabled={props.disabled}
+        className="aria-pressed:bg-foreground/[0.035] aria-pressed:text-foreground"
+        icon={props.icon} onClick={props.onClick} />
+    </PdfToolbarTooltip>
   );
 }

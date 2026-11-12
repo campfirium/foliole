@@ -2,7 +2,9 @@ import { ArrowDownToLine, ArrowUpToLine } from 'lucide-react';
 import { useEffect, useState, type KeyboardEvent } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { AppIconButton, AppInput } from '../../shared/ui';
+import { AppInput } from '../../shared/ui';
+
+import { PdfToolbarIconButton, PdfToolbarTooltip } from './PdfToolbarTooltip';
 
 interface PageControlsProps {
   displayPage: number;
@@ -39,8 +41,8 @@ function PdfPageButtons({ canGoNext, canGoPrevious, onNextPage, onPreviousPage, 
   const t = useTranslation();
   return (
     <div className="flex items-center gap-1">
-      <AppIconButton className="size-8" disabled={!canGoPrevious} icon={<ArrowUpToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.page.previous')} onClick={createToolbarAction(onPreviousPage, onToolbarInteraction)} />
-      <AppIconButton className="size-8" disabled={!canGoNext} icon={<ArrowDownToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.page.next')} onClick={createToolbarAction(onNextPage, onToolbarInteraction)} />
+      <PdfToolbarIconButton className="size-8" disabled={!canGoPrevious} icon={<ArrowUpToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.page.previous')} onClick={createToolbarAction(onPreviousPage, onToolbarInteraction)} />
+      <PdfToolbarIconButton className="size-8" disabled={!canGoNext} icon={<ArrowDownToLine aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.page.next')} onClick={createToolbarAction(onNextPage, onToolbarInteraction)} />
     </div>
   );
 }
@@ -62,19 +64,21 @@ export function PdfPageControls({ displayPage, maxPage, onNextPage, onPageChange
       <label className="sr-only" htmlFor="pdf-page-input">
         {t('desktop.pdf.page.input')}
       </label>
-      <AppInput
-        aria-label={t('desktop.pdf.page.input')}
-        className="h-8 w-10 appearance-none border-transparent bg-transparent px-1 text-center text-sm focus-visible:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-        id="pdf-page-input"
-        inputMode="numeric"
-        onBlur={handlePageInputBlur}
-        onChange={(event) => handlePageInputChange(event.target.value)}
-        onFocus={handlePageInputFocus}
-        onKeyDown={handlePageInputKeyDown}
-        pattern="[0-9]*"
-        type="text"
-        value={pageInputValue}
-      />
+      <PdfToolbarTooltip label={t('desktop.pdf.page.input')}>
+        <AppInput
+          aria-label={t('desktop.pdf.page.input')}
+          className="h-8 w-10 appearance-none border-transparent bg-transparent px-1 text-center text-sm focus-visible:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          id="pdf-page-input"
+          inputMode="numeric"
+          onBlur={handlePageInputBlur}
+          onChange={(event) => handlePageInputChange(event.target.value)}
+          onFocus={handlePageInputFocus}
+          onKeyDown={handlePageInputKeyDown}
+          pattern="[0-9]*"
+          type="text"
+          value={pageInputValue}
+        />
+      </PdfToolbarTooltip>
       <p className="whitespace-nowrap text-xs text-foreground/55" data-testid="pdf-page-count">
         / {pageCountLabel}
       </p>
