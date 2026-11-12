@@ -33,8 +33,8 @@ function persistFixture(f) {
 
 it('lists Windows 0.7.18 alongside each other platform own published version and the existing TestFlight invitation', () => {
   const expected = createReleaseDownloadTable(fixture());
-  expect(expected.table).toContain('[0.7.18 · x64](https://github.com/campfirium/foliole/releases/download/v0.7.18/Foliole-Windows-x64-0.7.18.exe)');
-  expect(expected.table).toContain('[0.7.17 · Apple Silicon](https://github.com/campfirium/foliole/releases/download/v0.7.17/Foliole-macOS-arm64-0.7.17.dmg)');
+  expect(expected.table).toContain('[EXE](https://github.com/campfirium/foliole/releases/download/v0.7.18/Foliole-Windows-x64-0.7.18.exe)');
+  expect(expected.table).toContain('[DMG](https://github.com/campfirium/foliole/releases/download/v0.7.17/Foliole-macOS-arm64-0.7.17.dmg)');
   expect(expected.table).toContain('/v0.7.17/Foliole-Linux-Experimental-amd64-0.7.17.AppImage');
   expect(expected.table).toContain('/v0.7.17/Foliole-Android-0.7.17.apk');
   expect(expected.table).toContain('[TestFlight](https://testflight.apple.com/join/PszuhyJA)');
@@ -45,6 +45,11 @@ it('lists Windows 0.7.18 alongside each other platform own published version and
 it('uses all selected new assets for a coordinated scope and keeps the public history untouched', () => {
   const f = fixture(registry.platforms.map(platform => platform.id)); const before = JSON.stringify(f.manifest);
   const table = createReleaseDownloadTable(f).table;
+  expect(table).toContain('| **macOS** | **Windows** | **Linux (Experimental)** | **iPhone** | **Android** |');
+  expect(table).toContain('| :---: | :---: | :---: | :---: | :---: |');
+  expect(table).toContain('| Apple Silicon | x64 | x64 | TestFlight | Open Testing |');
+  expect(table.split('\n').at(-1)).toMatch(/^\| \[DMG\].*\[EXE\].*\[DEB\].*\[AppImage\]/u);
+  expect(table).not.toContain('| 0.7.18 |');
   expect(table).not.toContain('/v0.7.17/');
   expect(table).toContain('/v0.7.18/Foliole-Android-0.7.18.apk');
   expect(JSON.stringify(f.manifest)).toBe(before);
@@ -71,12 +76,11 @@ it.each(['draft', 'asset', 'target', 'tag', 'appimage'])(
 
 it('rejects missing platforms, forged URLs, false visible versions and extra links before publication', () => {
   const preview = createReleaseDownloadTable(fixture());
-  for (const table of [preview.table.replace('| Android |', '| Other |'), preview.table.replace('/v0.7.17/Foliole-macOS', '/v0.7.18/Foliole-macOS'),
-    preview.table.replace('0.7.17 · Apple Silicon', '0.7.18 · Apple Silicon'), `${preview.table}\n[extra](https://example.com/)`, '### Download\n\nNo links']) {
+  for (const table of [preview.table.replace('| **Android** |', '| **Other** |'), preview.table.replace('/v0.7.17/Foliole-macOS', '/v0.7.18/Foliole-macOS'),
+    preview.table.replace('| 0.7.17 | 0.7.18 |', '| 0.7.18 | 0.7.18 |'), `${preview.table}\n[extra](https://example.com/)`, '### Download\n\nNo links']) {
     expect(() => assertReleaseDownloadTable(table, preview)).toThrow();
   }
-  // Formatting remains the copy author's choice when the visible versions and exact destinations agree.
-  expect(assertReleaseDownloadTable(preview.table.replace('0.7.17 · Apple Silicon', 'Apple Silicon (0.7.17)'), preview)).toBeTruthy();
+  expect(assertReleaseDownloadTable(preview.table.replaceAll(' | ', '  |  '), preview)).toBeTruthy();
 });
 
 it('reads only exact published carry-forward releases and never mutates GitHub while preparing the complete table', async () => {
@@ -86,7 +90,7 @@ it('reads only exact published carry-forward releases and never mutates GitHub w
     return JSON.stringify(args.at(-1).endsWith('v0.7.18') ? f.candidate : f.publishedReleases['0.7.17']);
   };
   const preview = await readReleaseDownloadPreview({ identity: f.identity, manifest: f.manifest, cwd: '.', run });
-  expect(preview.table).toContain('0.7.18 · x64');
+  expect(preview.table).toContain('| 0.7.17 | 0.7.18 | 0.7.17 | — | 0.7.17 |');
   expect(calls).toEqual([
     ['gh', 'api', 'repos/campfirium/foliole/releases/tags/v0.7.17'], ['gh', 'api', 'repos/campfirium/foliole/releases/tags/v0.7.18']
   ]);
@@ -127,7 +131,7 @@ it('publishes Windows-only without mobile credentials only after every carried p
 });
 
 it('retains Windows 0.7.18 when a subsequent macOS-only 0.7.19 becomes the next candidate', () => {
-  const f = fixture(); expect(createReleaseDownloadTable(f).table).toContain('0.7.18 · x64');
+  const f = fixture(); expect(createReleaseDownloadTable(f).table).toContain('| 0.7.17 | 0.7.18 | 0.7.17 | — | 0.7.17 |');
   f.manifest.releases.unshift({ version: '0.7.18', platforms: ['windows'] }); f.manifest.latest = '0.7.18';
   f.publishedReleases['0.7.18'] = { ...f.candidate, draft: false, published_at: '2026-11-05' };
   const intent = createReleaseIntent({ registry, version: '0.7.19', publicationMode: 'scoped', platforms: ['macos'],
