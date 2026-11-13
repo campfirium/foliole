@@ -93,7 +93,7 @@ function folderStatus(url: URL, request: WebDavRelayRequest) {
 async function probeDirectory(directory: URL, request: WebDavRelayRequest) {
   const probe = Buffer.from(randomUUID());
   const staging = new URL(`.foliole-test-${probe}.tmp`, directory);
-  const published = new URL(`.foliole-test-${probe}.bin`, directory);
+  const published = new URL(`.foliole-test-${probe}.dat`, directory);
   const removeProbe = (url: URL) => request(url, { method: 'DELETE' }, webDavRelayStatus);
   await request(directory, { method: 'PROPFIND', headers: { Depth: '0' } }, webDavRelayStatus);
 
@@ -101,7 +101,7 @@ async function probeDirectory(directory: URL, request: WebDavRelayRequest) {
     await request(staging, { method: 'PUT', headers: { 'If-None-Match': '*', 'Content-Type': 'text/plain;charset=UTF-8' },
       body: { bytes: probe.length, async *chunks() { yield probe; } } }, webDavRelayStatus);
     await request(staging, { method: 'MOVE', headers: { Destination: published.href, Overwrite: 'F' } }, webDavRelayStatus);
-    await request(published, { method: 'GET', headers: { Range: 'bytes=0-36' } },
+    await request(published, { method: 'GET' },
       (_status, body) => verifyProbe(body, probe));
   } catch (error) {
     await Promise.allSettled([removeProbe(staging), removeProbe(published)]);

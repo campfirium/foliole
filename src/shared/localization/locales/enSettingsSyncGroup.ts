@@ -48,7 +48,7 @@ export const EN_SETTINGS_SYNC_GROUP_TRANSLATIONS = {
   'settings.companionSync.webdav.credentialPhoneUsername': 'Phone WebDAV username',
   'settings.companionSync.webdav.credentialPhonePassword': 'Phone app password',
   'settings.companionSync.webdav.credentialConfirmFingerprint': 'Fingerprints match',
-  'settings.companionSync.webdav.credentialDeliveryFailed': 'Could not complete WebDAV setup. Check the device connection and use a separate app password for the phone.',
+  'settings.companionSync.webdav.credentialDeliveryFailed': 'Could not complete WebDAV setup. Check the device connection and the WebDAV credentials.',
   'settings.companionSync.webdav.username': "Username",
   'settings.companionSync.webdav.password': "App password",
   'settings.companionSync.webdav.chooseDevice': "Choose device",

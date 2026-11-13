@@ -81,7 +81,7 @@ export async function publishWebDavRelayFile(request: WebDavRelayRequest, destin
 
 function assertPublication(destination: URL, bytes: number) {
   if (!['http:', 'https:'].includes(destination.protocol) || destination.username || destination.password ||
-      destination.search || destination.hash || !destination.pathname.endsWith('.bin') || bytes <= 0) {
+      destination.search || destination.hash || !destination.pathname.endsWith('.dat') || bytes <= 0) {
     throw new Error('webdav_relay_invalid_publication');
   }
 }

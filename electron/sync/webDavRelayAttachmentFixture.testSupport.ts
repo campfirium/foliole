@@ -126,7 +126,7 @@ function testTransport() {
       rejectNextDelete = false;
       throw new Error('test_delete_connection_reset');
     }
-    if (input.method === 'PUT' && url.pathname.endsWith('.repair.bin.partial')) repairUploads.push(url.href);
+    if (input.method === 'PUT' && url.pathname.endsWith('.repair.dat.partial')) repairUploads.push(url.href);
     if (input.method === 'PUT' && url.pathname.endsWith(`${WEB_DAV_ATTACHMENT_SUFFIX}.partial`)) {
       uploads.push(url.href);
       const fault = attachmentPutFault;

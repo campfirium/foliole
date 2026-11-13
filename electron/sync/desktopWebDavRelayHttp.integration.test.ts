@@ -18,7 +18,7 @@ it('keeps the original ciphertext when MOVE commits but its response is lost', a
     const directory = new URL(`http://127.0.0.1:${address.port}${dav.sandboxPath}${crypto.randomUUID()}/`);
     if (upstream) expect(await createDesktopWebDavRelayHttp(newStats())(
       directory, { method: 'MKCOL' }, webDavRelayStatus)).toBe(201);
-    const destination = new URL('packet.bin', directory);
+    const destination = new URL('packet.dat', directory);
     const bytes = crypto.getRandomValues(new Uint8Array(1024));
     const ciphertext = { bytes: bytes.length, async *chunks() { yield bytes.subarray(0, 13); yield bytes.subarray(13); } };
 

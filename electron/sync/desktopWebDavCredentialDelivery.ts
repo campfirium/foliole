@@ -142,8 +142,6 @@ export async function confirmDesktopWebDavCredentialFingerprint(groupId: string,
   const value = current(groupId);
   if (!value || value.offer.id !== id || value.envelope || value.queue) throw invalid();
   if (value.trustedPhoneKey ? fingerprint !== undefined : !value.keys || value.keys.fingerprint !== fingerprint) throw invalid();
-  const { draft } = await loadDesktopWebDavCredentialDraft(groupId);
-  if (draft.username === credentials.username && draft.password === credentials.password) throw invalid();
   await testWebDavRelayConnection(value.offer.binding.directory_url, { credentials });
   if (value.trustedPhoneKey) await queueVerifiedRotation(value, value.trustedPhoneKey, credentials);
   else await runWithDatabaseConnectionOwner(() => {

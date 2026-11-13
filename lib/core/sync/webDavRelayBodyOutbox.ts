@@ -15,7 +15,7 @@ import { WEB_DAV_ATTACHMENT_SUFFIX } from './webDavRelayAttachmentWire.js';
 import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 
 export const webDavRelayPacketSchema = z.object({
-  name: z.string().regex(/^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}(?:\.asset)?\.bin$/u),
+  name: z.string().regex(/^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}(?:\.asset)?\.dat$/u),
   chunks: z.number().int().positive(),
   bytes: z.number().int().positive(),
   through: z.number().int().positive(),
@@ -135,7 +135,7 @@ async function writePacket(input: FreezeInput, objects: Parameters<typeof reques
 }
 
 export async function stageWebDavRelayPacket(files: FramedSyncFilePort, scope: WebDavRelayBodyScope,
-  wire: FramedSyncStreamBody, suffix: '.bin' | typeof WEB_DAV_ATTACHMENT_SUFFIX | '.repair.bin' = '.bin',
+  wire: FramedSyncStreamBody, suffix: '.dat' | typeof WEB_DAV_ATTACHMENT_SUFFIX | '.repair.dat' = '.dat',
   directory = webDavRelayPacketDirectory(scope)) {
   // The caller holds the slot exclusively, and has checked that no pending packet references it.
   await files.remove(directory);

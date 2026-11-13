@@ -10,11 +10,12 @@ public class FolioleCompanionWebDavHttpTest {
     public void readsPropertiesOnlyForOneNamedPacketAtDepthZero() {
         String direction = "foliole-" + "a".repeat(64) + "-desktop/";
         String name = "20261111T120000.000Z-bf2ff771-4a86-420c-a871-3077d7c4e9a4";
-        assertTrue(FolioleCompanionWebDavHttp.canReadPacketProperties(direction + name + ".asset.bin.partial", "0"));
-        assertTrue(FolioleCompanionWebDavHttp.canReadPacketProperties(direction + name + ".repair.bin", "0"));
-        assertFalse(FolioleCompanionWebDavHttp.canReadPacketProperties(direction + name + ".repair.bin", "1"));
-        assertFalse(FolioleCompanionWebDavHttp.canReadPacketProperties(direction + "../" + name + ".repair.bin", "0"));
-        assertFalse(FolioleCompanionWebDavHttp.canReadPacketProperties(direction + name + ".other.bin", "0"));
+        assertTrue(FolioleCompanionWebDavHttp.canReadPacketProperties(direction + name + ".asset.dat.partial", "0"));
+        assertTrue(FolioleCompanionWebDavHttp.canReadPacketProperties(direction + name + ".repair.dat", "0"));
+        assertFalse(FolioleCompanionWebDavHttp.canReadPacketProperties(direction + name + ".repair.bin", "0"));
+        assertFalse(FolioleCompanionWebDavHttp.canReadPacketProperties(direction + name + ".repair.dat", "1"));
+        assertFalse(FolioleCompanionWebDavHttp.canReadPacketProperties(direction + "../" + name + ".repair.dat", "0"));
+        assertFalse(FolioleCompanionWebDavHttp.canReadPacketProperties(direction + name + ".other.dat", "0"));
     }
 
     @Test
@@ -26,6 +27,6 @@ public class FolioleCompanionWebDavHttpTest {
         assertFalse(FolioleCompanionWebDavHttp.isDeletableCollection(""));
         assertFalse(FolioleCompanionWebDavHttp.isDeletableCollection(direction + "-collections/"));
         assertFalse(FolioleCompanionWebDavHttp.isDeletableCollection(direction + "-collections/../"));
-        assertFalse(FolioleCompanionWebDavHttp.isDeletableCollection(direction + "-collections/" + generation + "/file.bin"));
+        assertFalse(FolioleCompanionWebDavHttp.isDeletableCollection(direction + "-collections/" + generation + "/file.dat"));
     }
 }

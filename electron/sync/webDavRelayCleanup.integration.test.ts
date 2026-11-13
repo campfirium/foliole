@@ -30,9 +30,10 @@ async function publishAttachment(fixture: Fixture, index: 0 | 1, id: string) {
   return { bytes, key, file, scope };
 }
 
-it('keeps both directions until LAN verifies the attachment and switches subsequent delivery to fresh collections', async () => {
+it.each([true, false])('keeps both directions until LAN verifies the attachment and delivers from fresh collections (trailing slash: %s)', async trailingSlash => {
   const fixture = await relayFixture();
   try {
+    fixture.dav.listing.omitCollectionTrailingSlashes = !trailingSlash;
     const [mac, phone] = fixture.peers;
     const reverse = await publishAttachment(fixture, 1, 'phone-original');
     const first = await publishAttachment(fixture, 0, 'mac-original');

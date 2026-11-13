@@ -118,7 +118,7 @@ it.each(['initial setup', 'replacement'] as const)(
     };
     const fingerprint = overview.webdav_relay.credential_delivery.fingerprint;
     const confirm = (code: string) => handleInvokeRequest({ command: NATIVE_COMMANDS.confirmWebDavCredentialDelivery,
-      args: { group_id: groupId, id: offer.id, fingerprint: code, username: 'phone-user', password: 'phone-password' } });
+      args: { group_id: groupId, id: offer.id, fingerprint: code, username: 'mac-user', password: 'mac-password' } });
     await expect(confirm('wrong')).rejects.toThrow('webdav_credential_delivery_invalid');
     await confirm(fingerprint);
     expect(desktopWebDavCredentialDeliveryForPeer(groupId, phone)?.envelope).toBeUndefined();

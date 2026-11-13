@@ -50,7 +50,7 @@ export const ZH_HANS_SETTINGS_SYNC_GROUP_TRANSLATIONS: Partial<Record<Translatio
   'settings.companionSync.webdav.credentialPhoneUsername': '手机 WebDAV 用户名',
   'settings.companionSync.webdav.credentialPhonePassword': '手机应用密码',
   'settings.companionSync.webdav.credentialConfirmFingerprint': '指纹一致',
-  'settings.companionSync.webdav.credentialDeliveryFailed': '无法完成 WebDAV 设置。请检查设备连接，并为手机使用独立的应用密码。',
+  'settings.companionSync.webdav.credentialDeliveryFailed': '无法完成 WebDAV 设置。请检查设备连接和 WebDAV 凭据。',
   'settings.companionSync.webdav.username': "用户名",
   'settings.companionSync.webdav.password': "应用密码",
   'settings.companionSync.webdav.chooseDevice': "选择设备",

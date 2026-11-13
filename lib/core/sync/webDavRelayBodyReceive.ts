@@ -7,13 +7,13 @@ import type { RequestSyncDatabaseHost } from './requestSyncObjectEndpoint.js';
 import { enqueueWebDavRelayAttachmentRepairs, markWebDavRelayAttachment } from './webDavRelayAttachments.js';
 import { receiveWebDavAttachment, WEB_DAV_ATTACHMENT_SUFFIX } from './webDavRelayAttachmentWire.js';
 import { webDavRelayPeerState, type WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
-import { relayGeneration, relayGenerationRoot } from './webDavRelayCollections.js';
+import { relayCollectionUrl, relayGeneration, relayGenerationRoot } from './webDavRelayCollections.js';
 import { readWebDavRelayPacket } from './webDavRelayPacketRead.js';
 import { webDavRelayStatus, type WebDavRelayRequest } from './webDavRelayPublication.js';
 import { rearmWebDavRelayRepair } from './webDavRelayRepairOutbox.js';
 import { readWebDavRelayRepair, WEB_DAV_REPAIR_SUFFIX } from './webDavRelayRepairWire.js';
 
-const packetName = /^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}(?:\.asset|\.repair)?\.bin$/u;
+const packetName = /^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}(?:\.asset|\.repair)?\.dat$/u;
 
 type Input = {
   host: RequestSyncDatabaseHost;
@@ -77,8 +77,9 @@ async function listIncomingPackets(request: WebDavRelayRequest, direction: URL) 
     .map(name => ({ name, url: new URL(name, directory) }));
   const result = packets(direction, legacy ?? []);
   for (const name of generations ?? []) {
-    if (!name.endsWith('/') || !relayGeneration.safeParse(name.slice(0, -1)).success) continue;
-    const directory = new URL(name, root);
+    const generation = relayGeneration.safeParse(name.replace(/\/$/u, ''));
+    if (!generation.success) continue;
+    const directory = relayCollectionUrl(direction, generation.data);
     result.push(...packets(directory, await list(directory) ?? []));
   }
   return result.sort((a, b) => a.name.localeCompare(b.name));

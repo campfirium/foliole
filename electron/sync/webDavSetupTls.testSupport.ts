@@ -7,7 +7,7 @@ import path from 'node:path';
 export const fixtureCredentials = { username: 'fixture', password: 'test-password' };
 const AUTH = `Basic ${Buffer.from(`${fixtureCredentials.username}:${fixtureCredentials.password}`).toString('base64')}`;
 const PARENT = '/storage/';
-const PROBE = /^\/storage\/[^/]+\/\.foliole-test-[\w-]+\.(?:tmp|bin)$/;
+const PROBE = /^\/storage\/[^/]+\/\.foliole-test-[\w-]+\.(?:tmp|dat)$/;
 
 function createCertificate(root: string) {
   mkdirSync(root, { recursive: true });

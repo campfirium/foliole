@@ -5,7 +5,7 @@ import { readFramedSyncStream } from './framedSyncBinaryStream.js';
 import { prepareRequestSyncWire, readRequestSyncWire } from './requestSyncWire.js';
 import type { WebDavRelayBodyScope } from './webDavRelayBodyScope.js';
 
-export const WEB_DAV_REPAIR_SUFFIX = '.repair.bin';
+export const WEB_DAV_REPAIR_SUFFIX = '.repair.dat';
 export const repairDemandSchema = z.array(z.tuple([z.string().regex(/^[a-f0-9]{64}$/u), z.string().min(1)])).max(64);
 export type RepairDemand = z.infer<typeof repairDemandSchema>;
 export const repairRequestSchema = z.object({ id: z.string().regex(/^[a-f0-9]{32}$/u), demand: repairDemandSchema, replace: z.boolean() });
@@ -16,7 +16,8 @@ type Auth = { scope: WebDavRelayBodyScope; groupKey: Uint8Array; signal?: AbortS
 function context(scope: WebDavRelayBodyScope, outgoing: boolean) {
   const peer = outgoing ? scope.send : scope.receive;
   const url = outgoing ? scope.outgoingDirection : scope.incoming;
-  return { ...peer, groupId: JSON.stringify([peer.groupId, url.pathname, WEB_DAV_REPAIR_SUFFIX]) };
+  // Keep the authenticated context independent of the transport filename.
+  return { ...peer, groupId: JSON.stringify([peer.groupId, url.pathname, '.repair.bin']) };
 }
 
 export function prepareWebDavRelayRepair(input: Auth, demand: RepairDemand, replace: boolean) {

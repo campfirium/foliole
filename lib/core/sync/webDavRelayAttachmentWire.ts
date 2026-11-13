@@ -5,7 +5,7 @@ import { assertAttachmentResponse, attachmentMessage, attachmentRequestSchema,
   type AttachmentRequest } from './requestSyncAttachmentContract.js';
 import { prepareRequestSyncWire, readRequestSyncWire, type RequestSyncAuthenticatedContext } from './requestSyncWire.js';
 
-export const WEB_DAV_ATTACHMENT_SUFFIX = '.asset.bin';
+export const WEB_DAV_ATTACHMENT_SUFFIX = '.asset.dat';
 
 type Auth = { context: RequestSyncAuthenticatedContext; groupKey: Uint8Array; signal?: AbortSignal | undefined };
 

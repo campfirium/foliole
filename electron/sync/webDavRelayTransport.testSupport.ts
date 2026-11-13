@@ -4,6 +4,7 @@ export function setupDav(upstream: string | undefined, intercept?: (response: Se
   const files = new Map<string, Uint8Array>();
   const collections = new Set(['/']);
   const deletions: string[] = [];
+  const listing = { omitCollectionTrailingSlashes: false };
   let loseMove = false;
   const loseResponse = () => {
     const drop = loseMove;
@@ -32,7 +33,7 @@ export function setupDav(upstream: string | undefined, intercept?: (response: Se
       return send(res, deleteCollection(collections, files, path));
     }
     if (req.method === 'PROPFIND') {
-      const result = propfind(collections, files, path, req.headers.depth === '0');
+      const result = propfind(collections, files, path, req.headers.depth === '0', listing.omitCollectionTrailingSlashes);
       return send(res, result.status, result.body);
     }
     if (req.method === 'PUT') {
@@ -56,7 +57,8 @@ export function setupDav(upstream: string | undefined, intercept?: (response: Se
     send(res, body ? 200 : 404, body);
   });
   const sandboxPath = upstream ? new URL(upstream).pathname : '/';
-  return { server, sandboxPath, deletions, dropNextMove: () => { loseMove = true; }, uploaded: () => uploaded, downloaded: () => downloaded };
+  return { server, sandboxPath, deletions, listing, dropNextMove: () => { loseMove = true; },
+    uploaded: () => uploaded, downloaded: () => downloaded };
 }
 
 async function readPutBody(req: IncomingMessage, uploaded: (size: number) => void) {
@@ -70,7 +72,8 @@ async function readPutBody(req: IncomingMessage, uploaded: (size: number) => voi
   return Buffer.concat(chunks);
 }
 
-function propfind(collections: Set<string>, files: Map<string, Uint8Array>, path: string, depthZero: boolean) {
+function propfind(collections: Set<string>, files: Map<string, Uint8Array>, path: string, depthZero: boolean,
+  omitCollectionTrailingSlashes: boolean) {
   const properties = (body: string) => ({ status: 207, body });
   const file = files.get(path);
   if (file && depthZero) {
@@ -80,8 +83,10 @@ function propfind(collections: Set<string>, files: Map<string, Uint8Array>, path
   }
   if (!collections.has(path)) return { status: 404, body: '' };
   const listed = [...collections, ...files.keys()].filter(name => name.startsWith(path));
-  return properties(`<D:multistatus xmlns:D="DAV:">${listed.map(name =>
-    `<D:response><D:href>${name}</D:href></D:response>`).join('')}</D:multistatus>`);
+  return properties(`<D:multistatus xmlns:D="DAV:">${listed.map(name => {
+    const href = omitCollectionTrailingSlashes && name !== '/' ? name.replace(/\/$/u, '') : name;
+    return `<D:response><D:href>${href}</D:href></D:response>`;
+  }).join('')}</D:multistatus>`);
 }
 
 function deleteCollection(collections: Set<string>, files: Map<string, Uint8Array>, path: string) {

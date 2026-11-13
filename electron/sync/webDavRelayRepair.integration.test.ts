@@ -160,7 +160,7 @@ it('ignores attachment requests for unrelated files and packets from a different
       const parts: Uint8Array[] = [];
       for await (const chunk of encodeFramedSyncStream(wire)) parts.push(chunk);
       const packet = Buffer.concat(parts);
-      const url = new URL(`20261111T120000.000Z-${crypto.randomUUID()}.repair.bin`, scope.outgoing);
+      const url = new URL(`20261111T120000.000Z-${crypto.randomUUID()}.repair.dat`, scope.outgoing);
       await fixture.request(url, { method: 'PUT', body: { bytes: packet.length, async *chunks() { yield packet; } } }, webDavRelayStatus);
     }
     expect(await fixture.sync(source)).toMatchObject({ retries: 2, published: 0 });

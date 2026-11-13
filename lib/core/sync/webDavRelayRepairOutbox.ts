@@ -14,7 +14,7 @@ import { publishWebDavRelayFile, type WebDavRelayRequest } from './webDavRelayPu
 import { prepareWebDavRelayRepair, repairDemandSchema, WEB_DAV_REPAIR_SUFFIX } from './webDavRelayRepairWire.js';
 
 const packetSchema = z.object({
-  name: z.string().regex(/^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}\.repair\.bin$/u),
+  name: z.string().regex(/^\d{8}T\d{6}\.\d{3}Z-[a-f0-9-]{36}\.repair\.dat$/u),
   chunks: z.number().int().positive(),
   bytes: z.number().int().positive()
 });

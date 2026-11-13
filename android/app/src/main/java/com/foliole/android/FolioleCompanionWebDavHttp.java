@@ -32,7 +32,7 @@ final class FolioleCompanionWebDavHttp {
     private static final String COLLECTIONS = DIRECTION + "-collections/";
     private static final String DIRECTORY = "(?:" + DIRECTION + "/|" + COLLECTIONS
         + "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/)";
-    private static final String PACKET = "[0-9]{8}T[0-9]{6}\\.[0-9]{3}Z-[a-f0-9-]{36}(?:\\.asset|\\.repair)?\\.bin";
+    private static final String PACKET = "[0-9]{8}T[0-9]{6}\\.[0-9]{3}Z-[a-f0-9-]{36}(?:\\.asset|\\.repair)?\\.dat";
     private static final Set<String> METHODS = Set.of("DELETE", "GET", "MKCOL", "MOVE", "PROPFIND", "PUT");
     private static final ConcurrentHashMap<String, Operation> ACTIVE = new ConcurrentHashMap<>();
     private static final OkHttpClient CLIENT = new OkHttpClient.Builder()
