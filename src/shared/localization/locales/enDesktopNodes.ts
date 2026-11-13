@@ -22,6 +22,8 @@ export const EN_DESKTOP_NODES_TRANSLATIONS = {
   'desktop.nodeList.createVirtualFolder': 'Create in Virtual',
   'desktop.nodeList.createVirtualFolderFailed': 'Could not create an entry in Virtual.',
   'desktop.nodeList.emptyTrash': 'Empty trash',
+  'desktop.nodeList.emptyTrashDialog.title': 'Empty trash?',
+  'desktop.nodeList.emptyTrashDialog.description': 'This permanently deletes everything in Trash. You can’t undo this.',
   'desktop.nodeList.trashSection': 'Trash section',
   'desktop.nodeList.trash.folderList': 'Trash folder list',
   'desktop.nodeList.trash.currentViewActions': 'Current trash view actions',

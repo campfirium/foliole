@@ -31,7 +31,6 @@ interface NodeListPanelProps {
   contextMenu: NodeListContextMenuController;
   createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => Promise<string | null>;
   createVirtualNode: () => Promise<string | null>;
-  deleteNodesPermanently: (nodeIds: string[]) => void;
   deleteStatusLabel: string | null;
   highlightedNodeId: string | null;
   isTrashViewOpen: boolean;
@@ -43,6 +42,7 @@ interface NodeListPanelProps {
   ) => Promise<boolean>;
   nodesById: WorkspaceListNodesById;
   noteRowIds: string[];
+  onEmptyTrash: () => void;
   onOpenNotesView: () => void;
   onRenameNode: (nodeId: string, title: string) => void;
   onSearchQueryChange: (searchQuery: string) => void;
@@ -56,7 +56,6 @@ interface NodeListPanelProps {
   selectedTrashNodeId: string | null;
   showTitleSearch: boolean;
   showVirtualCreateAction: boolean;
-  trashRowIds: string[];
   trashRowsLength: number;
   virtualizeRows: boolean;
 }
@@ -187,7 +186,7 @@ export function NodeListPanel(props: NodeListPanelProps) {
             props.createGlobalNode('', command.kind);
           }
         }}
-        onEmptyTrash={() => (props.deleteNodesPermanently(props.trashRowIds), props.contextMenu.closeContextMenu())}
+        onEmptyTrash={props.onEmptyTrash}
         onOpenNotesView={props.onOpenNotesView}
         onSearchQueryChange={props.onSearchQueryChange}
         onToggleCollapseAll={sectionToolbar?.toggleAll ?? (

@@ -6,6 +6,7 @@ import type { NodeDismissTargets } from '../model/nodeDismissTargets';
 import type { NodeTreeRow } from '../model/nodeTree';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
+import { useEmptyTrashConfirmation } from './EmptyTrashDialog';
 import { NodeListPanel } from './NodeListPanel';
 import type {
   NodeListCollapseController,
@@ -69,6 +70,21 @@ interface NodeListTreeContentProps {
   virtualizeRows: boolean;
 }
 
+function renderReviewSchedulingDialog(props: NodeListTreeContentProps, nodeId: string | null, onClose: () => void) {
+  return (
+    <NodeReviewSchedulingDialog
+      defaultDesiredRetention={getCurrentReviewSchedulerSettings().desiredRetention}
+      defaultPriority={getCurrentReviewSchedulerSettings().pushQueue.defaultPriority}
+      node={nodeId ? (props.nodesById[nodeId] ?? null) : null}
+      nodesById={props.nodesById}
+      onClose={onClose}
+      onDesiredRetentionChange={props.updateNodeDesiredRetention}
+      onPriorityChange={props.updateNodePriority}
+      onShortTermChange={props.updateNodeShortTerm}
+    />
+  );
+}
+
 export function NodeListTreeContent(props: NodeListTreeContentProps) {
   const [reviewSchedulingNodeId, setReviewSchedulingNodeId] = useState<string | null>(null);
   const { filteredActiveRows, searchQuery, setSearchQuery } = useNodeListSearchRows({
@@ -76,6 +92,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
     noteRowsAll: props.state.noteRowsAll,
     trashedNodeIds: props.trashedNodeIds
   });
+  const emptyTrash = useEmptyTrashConfirmation();
   const renameNode = useNodeListRename(props.updateNodeTitle);
 
   return (
@@ -89,7 +106,6 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         contextMenu={props.contextMenu}
         createGlobalNode={props.createGlobalNode}
         createVirtualNode={props.createVirtualNode}
-        deleteNodesPermanently={props.deleteNodesPermanently}
         deleteStatusLabel={props.deleteStatusLabel}
         highlightedNodeId={props.highlightedNodeId}
         isTrashViewOpen={props.isTrashViewOpen}
@@ -97,6 +113,7 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         moveNodes={props.moveNodes}
         nodesById={props.nodesById}
         noteRowIds={props.state.noteRowIds}
+        onEmptyTrash={emptyTrash.request}
         onOpenNotesView={props.onOpenNotesView}
         onRenameNode={renameNode}
         onSearchQueryChange={setSearchQuery}
@@ -110,21 +127,16 @@ export function NodeListTreeContent(props: NodeListTreeContentProps) {
         selectedTrashNodeId={props.selectedTrashNodeId}
         showTitleSearch={props.showTitleSearch}
         showVirtualCreateAction={props.showVirtualCreateAction ?? true}
-        trashRowIds={props.state.trashRowIds}
-        trashRowsLength={props.state.trashRows.length}
+        trashRowsLength={props.trashedNodeIds.length}
         virtualizeRows={props.virtualizeRows}
       />
-      <NodeListTreeMenu {...props} onOpenReviewScheduling={setReviewSchedulingNodeId} />
-      <NodeReviewSchedulingDialog
-        defaultDesiredRetention={getCurrentReviewSchedulerSettings().desiredRetention}
-        defaultPriority={getCurrentReviewSchedulerSettings().pushQueue.defaultPriority}
-        node={reviewSchedulingNodeId ? (props.nodesById[reviewSchedulingNodeId] ?? null) : null}
-        nodesById={props.nodesById}
-        onClose={() => setReviewSchedulingNodeId(null)}
-        onDesiredRetentionChange={props.updateNodeDesiredRetention}
-        onPriorityChange={props.updateNodePriority}
-        onShortTermChange={props.updateNodeShortTerm}
+      <NodeListTreeMenu
+        {...props}
+        emptyTrashAction={{ disabled: props.trashedNodeIds.length === 0, onSelect: emptyTrash.request }}
+        onOpenReviewScheduling={setReviewSchedulingNodeId}
       />
+      {emptyTrash.dialog}
+      {renderReviewSchedulingDialog(props, reviewSchedulingNodeId, () => setReviewSchedulingNodeId(null))}
     </>
   );
 }

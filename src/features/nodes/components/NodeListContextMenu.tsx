@@ -1,10 +1,15 @@
+import { Trash2 } from 'lucide-react';
+
 import type { FolderTopicItemCommandDefinition } from '../../../../lib/core/nodes/folderTopicItemCommands';
+import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 
 import { NodeListContextMenuItems } from './NodeListContextMenuItems';
+import { NodeContextMenuItem, NodeContextMenuSeparator } from './nodeListContextMenuPresentation';
 
 import { AppDropdownMenu, AppDropdownMenuContent, AppDropdownMenuLabel, AppDropdownMenuTrigger } from '@/shared/ui';
 
 export interface NodeListContextMenuProps {
+  emptyTrashAction?: { disabled: boolean; onSelect: () => void };
   createCommands: readonly FolderTopicItemCommandDefinition[];
   isTrashMenu: boolean;
   left: number;
@@ -55,7 +60,8 @@ export interface NodeListContextMenuProps {
 }
 
 export function NodeListContextMenu(props: NodeListContextMenuProps) {
-  const { left, onClose, top } = props;
+  const t = useTranslation();
+  const { emptyTrashAction, left, onClose, top } = props;
   return (
     <AppDropdownMenu onOpenChange={(open) => (open ? undefined : onClose())} open>
       <AppDropdownMenuTrigger asChild>
@@ -75,6 +81,14 @@ export function NodeListContextMenu(props: NodeListContextMenuProps) {
       >
         {props.membershipSourceLabel ? <AppDropdownMenuLabel>{props.membershipSourceLabel}</AppDropdownMenuLabel> : null}
         <NodeListContextMenuItems {...props} />
+        {emptyTrashAction ? (
+          <>
+            <NodeContextMenuSeparator />
+            <NodeContextMenuItem {...emptyTrashAction} icon={Trash2} tone="destructive">
+              {t('desktop.nodeList.emptyTrash')}
+            </NodeContextMenuItem>
+          </>
+        ) : null}
       </AppDropdownMenuContent>
     </AppDropdownMenu>
   );

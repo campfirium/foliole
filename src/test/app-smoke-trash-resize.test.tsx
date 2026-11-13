@@ -190,7 +190,7 @@ it('relearns review cards from the node context menu after confirmation', async 
   ).toContain('node-2');
 });
 
-it('empties all trash items from trash header action', async () => {
+it.each(['toolbar', 'sidebar menu'])('confirms before emptying the trash from the %s', async (entry) => {
   useWorkspaceStore.setState((state) => ({
     activeNodeId: INBOX_NODE_ID,
     nodeOrder: [INBOX_NODE_ID, 'node-1', 'node-2'],
@@ -204,7 +204,18 @@ it('empties all trash items from trash header action', async () => {
   openCurrentFolderItemContextMenu('Node 2');
   fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
   await openTrashView();
-  fireEvent.click(screen.getByRole('button', { name: 'Empty trash' }));
+  const openConfirmation = async () => {
+    if (entry === 'toolbar') {
+      fireEvent.click(screen.getByRole('button', { name: 'Empty trash' }));
+    } else {
+      fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'Trash' }));
+      fireEvent.click(await screen.findByRole('menuitem', { name: 'Empty trash' }));
+    }
+    return within(await screen.findByRole('dialog', { name: 'Empty trash?' }));
+  };
+  fireEvent.click((await openConfirmation()).getByRole('button', { name: 'Cancel' }));
+  expect(useWorkspaceStore.getState().trashedNodeIds).toContain('node-2');
+  fireEvent.click((await openConfirmation()).getByRole('button', { name: 'Empty trash' }));
 
   await waitFor(() => {
     const workspace = useWorkspaceStore.getState();

@@ -1,9 +1,9 @@
 import { Trash2 } from 'lucide-react';
 
+import { useEmptyTrashConfirmation } from '../../features/nodes/components/EmptyTrashDialog';
 import { NodeListSearchOverlay, renderSearchLauncher } from '../../features/nodes/components/NodeListSearchOverlay';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppIconButton, AppToolbar, ToolbarActionGroup } from '../../shared/ui';
-import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useWorkspaceContentSort } from '../hooks/useWorkspaceContentSort';
 
 import { normalizeWorkspaceContentSort } from './workspaceContentSort';
@@ -20,7 +20,7 @@ export function TrashResultHeader(props: {
   trashedNodeIds: string[];
 }) {
   const t = useTranslation();
-  const deleteNodesPermanently = useWorkspaceStore((state) => state.deleteNodesPermanently);
+  const emptyTrash = useEmptyTrashConfirmation();
   return (
     <AppToolbar as="header" className="relative min-h-[var(--workspace-top-toolbar-height)] justify-between gap-3 px-4">
       {renderSearchLauncher(props.onOpenSearch)}
@@ -40,7 +40,7 @@ export function TrashResultHeader(props: {
           disabled={props.trashedNodeIds.length === 0}
           icon={<Trash2 size={16} strokeWidth={1.9} />}
           label={t('desktop.nodeList.emptyTrash')}
-          onClick={() => deleteNodesPermanently(props.trashedNodeIds)}
+          onClick={emptyTrash.request}
         />
       </ToolbarActionGroup>
       {props.isSearchOpen ? (
@@ -50,6 +50,7 @@ export function TrashResultHeader(props: {
           searchQuery={props.searchQuery}
         />
       ) : null}
+      {emptyTrash.dialog}
     </AppToolbar>
   );
 }

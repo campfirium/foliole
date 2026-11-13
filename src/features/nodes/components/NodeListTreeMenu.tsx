@@ -4,10 +4,10 @@ import { mergeRuntimeReadwiseTopicHighlights } from '../../../shared/platform/re
 import { showAppRuntimeNotice } from '../../../shared/ui/AppRuntimeNotice';
 import type { NodeDismissTargets } from '../model/nodeDismissTargets';
 import { canNodeBeMoved } from '../model/nodeMovementRules';
-import { isHomeNode, isProtectedRootNode, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
+import { isHomeNode, isProtectedRootNode, isTrashNode, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
-import { NodeListContextMenu } from './NodeListContextMenu';
+import { NodeListContextMenu, type NodeListContextMenuProps } from './NodeListContextMenu';
 import { canPostponeTopic, canToggleSequentialReading, hasDismissEntireTopicTargets, hasDismissTargets, hasReturnTargets, hasShelveTopicTarget, hasUnshelveTopicTarget } from './nodeListContextMenuReview';
 import { requestNodeListDelete } from './nodeListDeleteAction';
 import { createDismissEntireTopicAction, createDismissNodeAction, createReturnNodeAction, createShelveTopicAction, createToggleSequentialReadingAction, createUnshelveTopicAction } from './nodeListMenuActions';
@@ -19,6 +19,7 @@ import { requestNodeRename } from './NodeTreeRowRename';
 
 interface NodeListTreeMenuProps {
   contextMenu: NodeListContextMenuController;
+  emptyTrashAction?: NodeListContextMenuProps['emptyTrashAction'];
   createMenuSurface?: NodeListCreateMenuSurface;
   createChildNode: (parentNodeId: string, content?: string, kind?: 'folder' | 'topic' | 'item') => Promise<string | null>;
   createGlobalNode: (content?: string, kind?: 'folder' | 'topic' | 'item') => Promise<string | null>;
@@ -202,6 +203,7 @@ function buildNodeListContextMenuProps(
       props.contextMenu.closeContextMenu();
     } } : {}),
     createCommands: resolveCreateCommands(menuState),
+    ...(props.emptyTrashAction && isTrashNode(menuState.primaryTarget) ? { emptyTrashAction: props.emptyTrashAction } : {}),
     isTrashMenu: props.contextMenu.contextMenuMode === 'trash',
     left: menuPosition.left,
     onClose: props.contextMenu.closeContextMenu,
