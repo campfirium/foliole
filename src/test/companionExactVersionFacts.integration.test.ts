@@ -99,7 +99,7 @@ it.each([false, true])('converges stored concurrent heads after any local blocke
       try {
         expect((await host.sync()).remainingStructureChangeCount).toBeGreaterThan(0);
         expect(report).toHaveBeenCalledWith('[request-sync] object rejected', expect.objectContaining({
-          objectId: 'node-1', error: expect.stringContaining('sync_node_apply_blocked')
+          objectId: 'node-1', code: 'sync_node_apply_blocked'
         }));
         expect(host.sqlite.prepare("SELECT content FROM nodes WHERE id = 'independent-node'").pluck().get()).toBe('Still syncs');
         expect(host.sqlite.prepare("SELECT content FROM nodes WHERE id = 'node-1'").pluck().get()).toBe('Left branch');
