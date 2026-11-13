@@ -18,7 +18,7 @@ const EXPECTED_CAPABILITIES = [
   'virtualFolders.read', 'virtualFolders.create', 'virtualFolders.addItems',
   'virtualFolders.removeItems', 'virtualFolders.reorder', 'virtualFolders.update',
   'virtualFolders.deleteSoft', 'virtualFolders.restore', 'materials.update',
-  'materials.deleteSoft', 'materials.listTrash'
+  'materials.deleteSoft', 'materials.listTrash', 'materials.createTextExcerpt'
 ];
 
 describe('Agent Control contract registry', () => {

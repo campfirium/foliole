@@ -31,24 +31,24 @@ export function usePreparedOpenNodeAction(
       focusAnchor: NodeNavigationResult['focusAnchor'] = null,
       browseRootIntent: WorkspaceBrowseRootIntent = 'current-context'
     ) => {
+      const requestToken = ++requestTokenRef.current;
       markRequested(nodeId);
       if (!flushActiveEditorTransaction(useWorkspaceStore.getState().activeNodeId)) {
         flushPendingEditorDraft();
       }
       prepareForNavigation();
       const result = action(nodeId, browseRootIntent);
-      finalize(result ? { ...result, focusAnchor } : result);
+      const navigation = result ? { ...result, focusAnchor } : result;
+      const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
+      const needsDocument = targetNode && !isNodeDocumentLoaded(targetNode) && hasWorkspaceRuntimeRepository();
+      const deferAnchor = Boolean(navigation?.focusAnchor && needsDocument);
+      if (!deferAnchor) finalize(navigation);
       void flushPendingEditorDraftImmediately();
 
-      const targetNode = useWorkspaceStore.getState().nodesById[nodeId];
-      if (!targetNode || isNodeDocumentLoaded(targetNode) || !hasWorkspaceRuntimeRepository()) {
-        return;
-      }
+      if (!needsDocument) return;
+      const isCurrent = () => requestTokenRef.current === requestToken && useWorkspaceStore.getState().activeNodeId === nodeId;
 
-      const requestToken = requestTokenRef.current + 1;
-      requestTokenRef.current = requestToken;
-
-      await loadDesktopNodeDocument(nodeId, {
+      const document = await loadDesktopNodeDocument(nodeId, {
         onDocumentMerged: (document) => {
           if (requestTokenRef.current === requestToken) {
             markNodeDocumentMerged(nodeId, `content:${document.content.length}`);
@@ -64,7 +64,8 @@ export function usePreparedOpenNodeAction(
             markNodeDocumentLoadStarted(nodeId);
           }
         }
-      }, () => requestTokenRef.current === requestToken && useWorkspaceStore.getState().activeNodeId === nodeId);
+      }, isCurrent);
+      if (deferAnchor && document && isCurrent()) finalize(navigation);
     },
     [action, finalize, flushActiveEditorTransaction, flushPendingEditorDraft, flushPendingEditorDraftImmediately, markRequested, prepareForNavigation]
   );

@@ -6,7 +6,7 @@ import { definedProps } from '../../shared/lib/definedProps';
 import { logRuntimeWarning } from '../../shared/platform/runtimeLogging';
 import { hasWorkspaceRuntimeRepository, loadReadingResumeFromRuntime } from '../../shared/platform/workspaceRuntimeRepository';
 import type { NodeNavigationResult } from '../../store/workspaceNavigation';
-import type { NodeViewState } from '../../store/workspaceStore';
+import { useWorkspaceStore, type NodeViewState } from '../../store/workspaceStore';
 
 import { buildAnchorViewState } from './anchorViewState';
 import { flushVisibleReadingJump } from './appControllerSaveActiveNodeView';
@@ -53,7 +53,7 @@ export function useNavigationReadingPosition(
       if (result.focusAnchor && (getPdfAnchorLocators(result.focusAnchor.locator).length > 0)) {
         return false;
       }
-      const targetNode = nodesById[result.nodeId];
+      const targetNode = useWorkspaceStore.getState().nodesById[result.nodeId] ?? nodesById[result.nodeId];
       const focusAnchor = result.focusAnchor && targetNode
         ? resolveTextAnchorLinkInContent(result.focusAnchor, targetNode.content)
         : result.focusAnchor;

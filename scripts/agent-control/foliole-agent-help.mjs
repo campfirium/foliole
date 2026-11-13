@@ -17,6 +17,9 @@ const FLAG_DESCRIPTIONS = {
   'content-mode': 'Use full for complete content and answers. The default is preview.',
   'expected-updated-at': 'The updated_at value returned by the latest read.',
   'folder-id': 'Virtual Folder ID.',
+  from: 'Inclusive UTF-16 offset in the complete Topic body.',
+  'source-id': 'ID of the source Topic.',
+  to: 'Exclusive UTF-16 offset in the complete Topic body.',
   id: 'Topic, Folder, or Item ID.',
   kind: 'Type to create: topic, folder, or item.',
   limit: 'Maximum number of results to return.',
@@ -50,6 +53,10 @@ const COMMAND_DETAILS = {
       'foliole materials/create --kind item --content "Question" --reveal "Answer" --parent-id root'
     ]
   ),
+  'materials/create-text-excerpt': details([
+    'Read the source using materials/read --content-mode full. Use its updated_at and offsets in its body.',
+    'Creates a child Topic linked to the selected source text.'
+  ]),
   'materials/delete-soft': details([
     'Moves the Topic or Folder to trash; it does not permanently delete it.',
     'If --expected-updated-at is omitted, the CLI reads the latest value before writing.'

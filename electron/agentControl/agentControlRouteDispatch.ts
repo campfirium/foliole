@@ -9,6 +9,7 @@ import {
 import { handleMaterialListChildren, handleMaterialListTrash } from './agentControlMaterialListHandlers.js';
 import {
   handleMaterialCreate,
+  handleMaterialCreateTextExcerpt,
   handleMaterialMove,
   handleMaterialReorder,
   handleMaterialRestore
@@ -65,6 +66,7 @@ type Handler = (
 
 const MATERIAL_ROUTES: Record<string, Handler> = {
   '/agent-control/v1/materials/create': handleMaterialCreate,
+  '/agent-control/v1/materials/create-text-excerpt': handleMaterialCreateTextExcerpt,
   '/agent-control/v1/materials/delete-soft': handleMaterialDeleteSoft,
   '/agent-control/v1/materials/list-children': handleMaterialListChildren,
   '/agent-control/v1/materials/list-trash': handleMaterialListTrash,

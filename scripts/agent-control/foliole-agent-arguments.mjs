@@ -1,6 +1,7 @@
 export function buildAgentCliBody(command, flags) {
   if (command === 'health' || command === 'capabilities') return { body: null, ok: true };
   if (command === 'materials/create') return buildMaterialCreateBody(flags);
+  if (command === 'materials/create-text-excerpt') return requireFields(flags, ['source_id', 'expected_updated_at', 'from', 'to']);
   if (command === 'materials/list-children') return requireFields(flags, [], ['parent_id', 'limit', 'offset']);
   if (command === 'materials/list-trash') return requireFields(flags, [], ['query', 'limit', 'offset']);
   if (command === 'materials/move') return requireFields(flags, ['id', 'parent_id', 'expected_updated_at']);
@@ -90,7 +91,7 @@ function buildUpdateBody(flags) {
 function normalizeFieldValue(field, value) {
   if (field === 'include_learning' || field === 'include_relations') return value === 'true';
   if (field === 'limit') return Number(value);
-  if (field === 'offset') return /^\d+$/u.test(value) ? Number(value) : null;
+  if (['offset', 'from', 'to'].includes(field)) return /^\d+$/u.test(value) ? Number(value) : null;
   if (field === 'material_ids') return value.split(',').map((item) => item.trim()).filter(Boolean);
   if (field === 'parent_id' && value === 'root') return null;
   return value;

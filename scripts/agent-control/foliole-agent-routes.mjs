@@ -16,6 +16,11 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
     cli: cliRoute('materials/create', 'Create a Topic, Folder, or question-answer Item.', optionalAndRequired(['content', 'content-stdin', 'parent-id', 'reading-schedule', 'request-id', 'reveal', 'review-schedule', 'title'], ['kind'])),
     writeKind: 'material'
   }),
+  registryRoute('product', 'POST', 'materials/create-text-excerpt', 'materials.createTextExcerpt', {
+    capabilityOrder: 19,
+    cli: cliRoute('materials/create-text-excerpt', 'Create an anchored text excerpt from a Topic.', required('source-id', 'expected-updated-at', 'from', 'to')),
+    writeKind: 'material'
+  }),
   registryRoute('product', 'POST', 'materials/delete-soft', 'materials.deleteSoft', {
     capabilityOrder: 17,
     cli: cliRoute('materials/delete-soft', 'Move a Topic, Folder, or Item to trash.', optionalAndRequired(['expected-updated-at'], ['id'])),

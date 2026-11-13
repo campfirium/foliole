@@ -14,7 +14,7 @@ The [route registry](../scripts/agent-control/foliole-agent-routes.mjs) defines 
 | Manual virtual Folder | List Folders and read ordered Topic membership from the Folder. | Create a manual virtual Folder. | Rename, add or remove Topics, reorder, trash, and restore. | Evaluate looking up a Topic's memberships directly. |
 | Collection and filter rules | The manual virtual Folder API lists manual Folders. | Review whether external callers need structured access to collections or filter rules. | Review supported operations by virtual Folder type. | Check collection-based and rule-based membership separately from manually curated membership. |
 | Dive and source relationships | The desktop bridge has Dive operations. Agent Control has no Dive routes. | Evaluate creating a Dive and setting its sources. | Evaluate listing, adding, and removing sources. | Confirm external organization and migration scenarios before choosing a contract. |
-| Attachments and derived content | Material reads can include a derived material’s source anchor and desktop backlinks. | The material create route supports question-and-answer Items. | Review attachment transfer and source-link operations separately. | Confirm round-trip needs for attachments and derived content. |
+| Attachments and derived content | Material reads can include a derived material’s source anchor and desktop backlinks. | Create a question-and-answer Item or an anchored excerpt from one Topic text selection. | Review attachment transfer and source-link operations separately. | Confirm round-trip needs for attachments and derived content. |
 | Learning settings and state | Opt in on material reads for the current Topic or Item schedule, priority, and learning settings. Review history has no route. | Import an active Topic reading schedule and priority with local permission. Import an ungraded Item’s first review date and priority. Historical review imports remain open. | Material update accepts content, title, and answer fields. | Determine which learning settings are valid per material type and which actions external tools need after creation. |
 
 The HTTP create request takes an explicit `parent_id`, which can be null. The CLI supplies null when the parent flag is omitted. Material reads default to previews and report truncation. Request `content_mode: "full"` or `--content-mode full` to read complete content and answers with the same response revision. Collection tags can travel in Topic content, while the manual virtual Folder routes expose manual membership.
@@ -73,6 +73,27 @@ A missing schedule is null. A null setting override uses Foliole's normal inheri
 ### Reading source relationships
 
 Use `include_relations: true` with `materials/read`, or `--include-relations true` in the CLI. The `relations.source` field identifies the original Foliole material and includes the stored anchor kind and locator when available. An anchor marked unmapped has a null locator. The `relations.backlinks` array uses the desktop backlink lookup for wiki links and includes the referring material IDs and context. The existing material read permission applies.
+
+### Creating a text excerpt
+
+Read a Topic with `materials/read` and `content_mode: "full"`. Then send the returned ID and `updated_at` to `POST /agent-control/v1/materials/create-text-excerpt`:
+
+```json
+{
+  "source_id": "<topic ID>",
+  "expected_updated_at": "<updated_at from the read>",
+  "from": 0,
+  "to": 12
+}
+```
+
+```sh
+foliole materials create-text-excerpt --source-id <id> --expected-updated-at <updated_at> --from 0 --to 12
+```
+
+Offsets are zero-based UTF-16 code units into the complete stored Markdown body. `from` is inclusive and `to` is exclusive. The offsets distinguish repeated passages. Foliole trims surrounding whitespace, derives a title, and saves the excerpt as a child Topic with a highlight anchor. The response contains `material.id`. On desktop, open the child and click the source Topic in its breadcrumbs to jump to the original passage. To read the stored anchor, use `materials/read` with `include_relations: true`.
+
+The route uses the existing bearer token and advertises `materials.createTextExcerpt`. A changed revision or trashed source returns 409; a missing source returns 404. Empty or out-of-bounds ranges, split surrogate pairs, ranges crossing or following CR line endings, frontmatter, and image selections return 400. PDF, image and cloze excerpts and attachment transfer are outside this route. Repeating a successful request creates another excerpt.
 
 ### Writing long material content
 

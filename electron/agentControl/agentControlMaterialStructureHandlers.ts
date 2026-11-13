@@ -1,6 +1,7 @@
 import type http from 'node:http';
 
 import { utf8ByteLength } from '../../lib/core/nodes/textBodyBudget.js';
+import { scheduleMirrorSync } from '../mirror/mirrorSyncScheduler.js';
 
 import { readAgentControlItemLearningImport, readAgentControlTopicLearningImport } from './agentControlLearningImport.js';
 import {
@@ -21,6 +22,7 @@ import {
   sendAgentControlJson
 } from './agentControlMutationHandlerSupport.js';
 import type { AgentControlRequestHandlerOptions } from './agentControlRequestHandler.js';
+import { createAgentControlTextExcerpt } from './agentControlTextExcerpt.js';
 
 export async function handleMaterialCreate(
   request: http.IncomingMessage,
@@ -58,6 +60,28 @@ export async function handleMaterialCreate(
     return { material: result.material };
   });
   return !replayed;
+}
+
+export async function handleMaterialCreateTextExcerpt(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  options: AgentControlRequestHandlerOptions
+) {
+  const capability = 'materials.createTextExcerpt';
+  const body = await readAuthorizedAgentControlBody(request, response, options, capability);
+  if (!body) return;
+  const sourceId = readString(body.source_id);
+  const expectedUpdatedAt = readString(body.expected_updated_at);
+  const { from, to } = body;
+  if (!sourceId || !expectedUpdatedAt || typeof from !== 'number' || typeof to !== 'number' ||
+      !Number.isSafeInteger(from) || !Number.isSafeInteger(to)) {
+    return sendAgentControlInvalidRequest(request, response, options, capability);
+  }
+  sendMutation(request, response, options, capability, () => {
+    const material = createAgentControlTextExcerpt({ expectedUpdatedAt, from, sourceId, to });
+    scheduleMirrorSync([material.id]);
+    return { material };
+  }, sourceId);
 }
 
 function isValidRequestId(value: unknown): value is string | undefined {
