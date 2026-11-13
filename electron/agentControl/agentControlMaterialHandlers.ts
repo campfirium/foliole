@@ -1,6 +1,7 @@
 import type http from 'node:http';
 
 import { recordAgentControlAuditEvent } from './agentControlAudit.js';
+import { readAgentControlMaterialLearning } from './agentControlMaterialLearning.js';
 import {
   AgentMaterialMutationError,
   softDeleteAgentControlMaterial,
@@ -92,7 +93,9 @@ export async function handleMaterialRead(
   if (!body) return;
   const id = typeof body.id === 'string' ? body.id.trim() : '';
   const contentMode = body.content_mode;
-  if (!id || (contentMode !== undefined && contentMode !== 'preview' && contentMode !== 'full')) {
+  const includeLearning = body.include_learning;
+  if (!id || (includeLearning !== undefined && typeof includeLearning !== 'boolean')
+    || (contentMode !== undefined && contentMode !== 'preview' && contentMode !== 'full')) {
     recordRequest({ capability, errorCategory: 'invalid_request', options, request, result: 'failed' });
     sendJson(response, 400, { error: 'invalid_request' });
     return;
@@ -104,7 +107,9 @@ export async function handleMaterialRead(
     return;
   }
   recordRequest({ capability, options, request, result: 'success', targetId: id });
-  sendJson(response, 200, { material });
+  sendJson(response, 200, { material: includeLearning
+    ? { ...material, learning: readAgentControlMaterialLearning(id, material.kind) }
+    : material });
 }
 
 export async function handleMaterialSearch(

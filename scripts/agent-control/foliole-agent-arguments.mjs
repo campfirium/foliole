@@ -25,7 +25,10 @@ function buildMaterialReadBody(flags) {
   if (mode !== undefined && mode !== 'preview' && mode !== 'full') {
     return { error: 'invalid_content_mode', ok: false, statusCode: 2 };
   }
-  return requireFields(flags, ['id'], ['content_mode']);
+  if (flags.include_learning !== undefined && !['true', 'false'].includes(flags.include_learning)) {
+    return { error: 'invalid_include_learning', ok: false, statusCode: 2 };
+  }
+  return requireFields(flags, ['id'], ['content_mode', 'include_learning']);
 }
 
 function buildMaterialCreateBody(flags) {
@@ -81,6 +84,7 @@ function buildUpdateBody(flags) {
 }
 
 function normalizeFieldValue(field, value) {
+  if (field === 'include_learning') return value === 'true';
   if (field === 'limit') return Number(value);
   if (field === 'offset') return /^\d+$/u.test(value) ? Number(value) : null;
   if (field === 'material_ids') return value.split(',').map((item) => item.trim()).filter(Boolean);

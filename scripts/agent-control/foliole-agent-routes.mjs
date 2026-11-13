@@ -32,7 +32,7 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   }),
   registryRoute('product', 'POST', 'materials/read', 'materials.read', {
     capabilityOrder: 0,
-    cli: cliRoute('materials/read', 'Read one Topic, Folder, or Item.', optionalAndRequired(['content-mode'], ['id']))
+    cli: cliRoute('materials/read', 'Read one Topic, Folder, or Item.', optionalAndRequired(['content-mode', 'include-learning'], ['id']))
   }),
   registryRoute('product', 'POST', 'materials/search', 'materials.search', {
     capabilityOrder: 1,

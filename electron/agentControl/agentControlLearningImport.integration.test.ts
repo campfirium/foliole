@@ -61,6 +61,14 @@ async function create(input: Record<string, unknown>, token = 'test-token') {
   return { status: response.status, payload: await response.json() };
 }
 
+async function readLearning(id: string, includeLearning?: unknown, token = 'test-token') {
+  const response = await fetch(`${server.endpoint}/agent-control/v1/materials/read`, {
+    method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ id, include_learning: includeLearning })
+  });
+  return { status: response.status, payload: await response.json() };
+}
+
 function enableImport() {
   return saveAppSettingsState({ [AGENT_CONTROL_LEARNING_IMPORT_KEY]: 'true' });
 }
@@ -95,7 +103,7 @@ function sourcePeer() {
 it('imports via the CLI and preserves the active reading state on reopen and on a sync peer', async () => {
   await enableImport();
   const descriptor = path.join(root, 'agent-control-session.json');
-  await writeFile(descriptor, JSON.stringify({ endpoint: server.endpoint, token: 'test-token', capabilities: ['materials.create'] }));
+  await writeFile(descriptor, JSON.stringify({ endpoint: server.endpoint, token: 'test-token', capabilities: ['materials.create', 'materials.read'] }));
   const result = await runAgentCli(['materials/create', '--descriptor', descriptor, '--kind', 'topic', '--title', title,
     '--content', body.content, '--reading-schedule', JSON.stringify(schedule)]);
   expect(result.status).toBe(0);
@@ -104,6 +112,14 @@ it('imports via the CLI and preserves the active reading state on reopen and on 
 
   closeDatabaseConnection();
   expect(await loadAppSettingsState()).toMatchObject({ [AGENT_CONTROL_LEARNING_IMPORT_KEY]: 'true' });
+  await saveAppSettingsState({ [AGENT_CONTROL_LEARNING_IMPORT_KEY]: 'false' });
+  expect((await readLearning(id)).payload.material).not.toHaveProperty('learning');
+  expect((await readLearning(id, 'true')).status).toBe(400);
+  expect((await readLearning(id, true, 'wrong-token')).status).toBe(401);
+  expect(await readLearning(id, true)).toMatchObject({ status: 200, payload: { material: { learning: {
+    priority: 0, shelved_at: null, reading_schedule: { ...schedule,
+      last_handled_at: '2026-10-01T00:00:00.000Z', next_at: '2026-10-24T00:00:00.000Z', state: 'active' }
+  } } } });
   const source = sourcePeer();
   verifyQueue(source.driver, id);
   const target = createPeer('reading-target');
@@ -163,7 +179,7 @@ it('imports an ungraded Item due date, syncs it and resumes native scheduling af
   expect(folder.status).toBe(200);
   const parentId = folder.payload.material.id as string;
   const descriptor = path.join(root, 'agent-control-session.json');
-  await writeFile(descriptor, JSON.stringify({ endpoint: server.endpoint, token: 'test-token', capabilities: ['materials.create'] }));
+  await writeFile(descriptor, JSON.stringify({ endpoint: server.endpoint, token: 'test-token', capabilities: ['materials.create', 'materials.read'] }));
   const result = await runAgentCli(['materials/create', '--descriptor', descriptor, '--kind', 'item', '--parent-id', parentId,
     '--content', item.content, '--reveal', item.reveal, '--review-schedule', JSON.stringify(reviewSchedule)]);
   expect(result.status).toBe(0);
@@ -180,9 +196,17 @@ it('imports an ungraded Item due date, syncs it and resumes native scheduling af
   await syncRequestLibrary(source, target);
   verifyItem(target.driver, id);
 
+  expect(await runAgentCli(['materials/read', '--descriptor', descriptor, '--id', id, '--include-learning', 'true']))
+    .toMatchObject({ status: 0, output: { material: { learning: { priority: 2, desired_retention: null,
+      initial_review_due: itemDue, review_schedule: { due: itemDue, last_review_at: null, state: 0, reps: 0, lapses: 0 }
+    } } } });
   const graded = score({ id: source.name, sqlite: source.db }, 'first-score', '2031-01-02T10:00:00.000Z', 3, id);
   expect(graded).toMatchObject({ reps: 1 });
   expect(graded?.due).not.toBe(itemDue);
+  expect((await readLearning(id, true)).payload.material.learning.review_schedule).toMatchObject({
+    due: graded?.due, last_review_at: '2031-01-02T10:00:00.000Z', reps: 1,
+    difficulty: graded?.difficulty, stability: graded?.stability, scheduled_days: graded?.scheduled_days
+  });
   saveNodeReviewStateWithSync(source.driver, { nodeId: id, review: null, hostName: source.name,
     updatedAt: '2031-01-02T10:01:00.000Z', history: { mode: 'undo', targetOpId: 'first-score' } });
   expect(source.driver.queryOne('SELECT due, reps FROM node_review WHERE node_id = ?', [id]))

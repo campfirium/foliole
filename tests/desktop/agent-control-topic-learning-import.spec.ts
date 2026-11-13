@@ -26,11 +26,16 @@ test('requires local permission to import Topic and Item schedules', async ({ de
 
   await permission.click();
   await expect(permission).toBeChecked();
-  expect(await runAgentCli(args)).toMatchObject({ output: { material: { title: 'Migrated Topic' } }, status: 0 });
+  const topic = await runAgentCli(args);
+  expect(topic).toMatchObject({ output: { material: { title: 'Migrated Topic' } }, status: 0 });
 
   expect(await runAgentCli(itemArgs)).toMatchObject({ output: { material: { kind: 'item' } }, status: 0 });
 
   await permission.click();
   await expect(permission).not.toBeChecked();
   expect(await runAgentCli(args)).toMatchObject({ output: { error: 'learning_import_disabled' }, status: 1 });
+  expect(await runAgentCli(['materials/read', '--descriptor', args[2], '--id', topic.output.material.id,
+    '--include-learning', 'true'])).toMatchObject({ status: 0, output: { material: { learning: {
+      priority: 2, reading_schedule: { next_at: '2027-02-01T00:00:00.000Z', repetition_count: 6 }
+    } } } });
 });

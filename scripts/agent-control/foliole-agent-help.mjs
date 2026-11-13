@@ -11,6 +11,7 @@ const GROUP_LABELS = {
 
 const FLAG_DESCRIPTIONS = {
   content: 'Topic content or Item question. Pass an empty value with --content= to clear Topic content.',
+  'include-learning': 'Pass true to include the current Topic or Item schedule and learning settings.',
   'content-mode': 'Use full for complete content and answers. The default is preview.',
   'expected-updated-at': 'The updated_at value returned by the latest read.',
   'folder-id': 'Virtual Folder ID.',
