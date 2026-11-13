@@ -62,6 +62,8 @@ async function writeCollection(directory: string, includeTopic: boolean) {
   const tree = Buffer.alloc(2 * 37);
   tree[0] = includeTopic ? 0 : 1;
   const elements = Buffer.alloc(2 * 118);
+  elements[1] = 1;
+  elements[118 + 1] = 1;
   elements.writeUInt16LE(300, 118 + 16);
   elements.writeInt16LE(30, 118 + 18);
   const repetitions = Buffer.alloc(8);
@@ -111,13 +113,16 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
   }, directory);
   const xml = `<SuperMemoCollection><Count>2</Count>
     <SuperMemoElement><ID>1</ID><Type>Topic</Type><Title>Imported map topic</Title>
-    <Content><Question><![CDATA[Before <img alt="Map" src="map.png"> after.]]></Question></Content>
+    <Content><Question><![CDATA[Before <img alt="Map" src="map.png"> after. <img src="missing-map.png">]]></Question></Content>
     </SuperMemoElement>${card}</SuperMemoCollection>`;
   await dialog.locator('input[type="file"]').setInputFiles({
     name: 'Maps.xml', mimeType: 'application/xml', buffer: Buffer.from(xml)
   });
   await dialog.getByRole('button', { name: /^(Pair collection folder|配对资料库文件夹)$/ }).click();
   await expect(dialog.getByText(/Candidate dates and priority order come from|候选日期和优先顺序来自/)).toBeVisible();
+  await expect(dialog.getByText(/^(1 local image references cannot be imported|1 处本地图片引用无法导入)$/)).toBeVisible();
+  await dialog.getByText(/^(View 1 exceptions|查看 1 条明细)$/).click();
+  await expect(dialog.getByText('missing-map.png', { exact: true })).toBeVisible();
   await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
   await expect(dialog.getByRole('status')).toHaveText(/Imported 2|已导入 2 条/);
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
@@ -140,4 +145,28 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
   await expect(image).toBeVisible();
   await expect.poll(() => image.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBe(32);
 
+});
+
+test('updates the grade mapping in a live preview and remembers it when reopened', async ({ desktopWindow }, testInfo) => {
+  const dialog = await openPreview(desktopWindow);
+  await dialog.locator('input[type="file"]').setInputFiles({
+    name: 'Grades.xml', mimeType: 'application/xml', buffer: Buffer.from(secondExport)
+  });
+  await dialog.getByRole('slider').press('End');
+  const planned = dialog.getByRole('row').filter({ hasText: '200+' }).getByRole('cell').last();
+  const defaultDays = await planned.textContent();
+  await dialog.getByText(/^(Grade mapping|评分对应表)$/).click();
+  const gradeFour = dialog.getByLabel(/^SuperMemo (grade|评分) 4$/);
+  await expect(gradeFour).toHaveValue('3');
+  await gradeFour.selectOption('1');
+  await expect(gradeFour).toHaveValue('1');
+  await expect(planned).not.toHaveText(defaultDays!);
+  await dialog.screenshot({ path: testInfo.outputPath('supermemo-grade-mapping.png') });
+  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+
+  const reopened = await openPreview(desktopWindow);
+  await reopened.getByText(/^(Grade mapping|评分对应表)$/).click();
+  await expect(reopened.getByLabel(/^SuperMemo (grade|评分) 4$/)).toHaveValue('1');
+  await reopened.getByRole('button', { name: /^(Restore defaults|恢复默认)$/ }).click();
+  await expect(reopened.getByLabel(/^SuperMemo (grade|评分) 4$/)).toHaveValue('3');
 });

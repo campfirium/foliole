@@ -38,9 +38,13 @@ export function SuperMemoDraftTable({ preview, percent }: { preview: NativeSuper
         original: report.sourceDue, planned: report.totalDue, added: report.addedDue,
         deferred: report.deferred, unknown: report.unknownDates, noHistory: report.noHistory
       })}</p>
+      {report.pendingNewItems > 0 ? <p>{t('desktop.superMemoDrafts.pendingNewItems', { count: report.pendingNewItems })}</p> : null}
       <p>{t(preview.pairedCollection ? 'desktop.superMemoDrafts.pairedLimitations' : 'desktop.superMemoDrafts.xmlLimitations')}</p>
       {report.localImages || report.remoteImages || report.skippedAudio ? <p>{t('desktop.superMemoDrafts.media', {
         local: report.localImages, remote: report.remoteImages, audio: report.skippedAudio
+      })}</p> : null}
+      {report.unresolvedImages > 0 ? <p>{t('desktop.superMemoDrafts.unresolvedImages', {
+        count: report.unresolvedImages
       })}</p> : null}
       {report.details.length > 0 ? <details>
         <summary>{t('desktop.superMemoDrafts.details', { count: report.details.length })}</summary>
@@ -53,6 +57,9 @@ export function SuperMemoDraftTable({ preview, percent }: { preview: NativeSuper
             {row.localImages || row.remoteImages || row.skippedAudio ? <div>{t('desktop.superMemoDrafts.media', {
               local: row.localImages ?? 0, remote: row.remoteImages ?? 0, audio: row.skippedAudio ?? 0
             })}</div> : null}
+            {row.unresolvedImages?.length ? <ul className="list-disc break-all pl-5">
+              {row.unresolvedImages.map(({ source, count }) => <li key={source}>{source}{count > 1 ? ` × ${count}` : ''}</li>)}
+            </ul> : null}
           </li>
         ))}</ul>
       </details> : null}

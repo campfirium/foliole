@@ -184,6 +184,7 @@ const DESKTOP_RUNTIME_APP_SETTING_NAMES = [
   'manualComparisonDrafts',
   'pdfDocumentViews',
   'pdfAutoExpandWidth',
+  'superMemoGradeMap',
   'pdfTopBarsPreferences'
 ] as const satisfies readonly AppSettingsStorageName[];
 const CROSS_HOST_SYNC_APP_SETTING_NAMES = [

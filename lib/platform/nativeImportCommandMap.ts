@@ -36,7 +36,7 @@ export type NativeImportCommandMap = {
     result: { batchId: string; percent: number; updated: number; protectedItems: number };
   };
   [NATIVE_COMMANDS.runSuperMemoImport]: {
-    args: NativeSuperMemoPreviewArgs & { percent: number };
+    args: NativeSuperMemoPreviewArgs & { percent: number; previewSignature?: string };
     result: { batchId: string; imported: number; skipped: number; unresolvedImages: number };
   };
   [NATIVE_COMMANDS.previewSuperMemoImport]: {

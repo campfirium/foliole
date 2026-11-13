@@ -39,6 +39,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   pdfReadingMode: 'foliole-pdf-reading-mode',
   pdfDocumentViews: 'foliole-pdf-document-views',
   pdfAutoExpandWidth: 'foliole-pdf-auto-expand-width',
+  superMemoGradeMap: 'foliole-supermemo-grade-map',
   pdfTopBarsPreferences: 'foliole-pdf-top-bars-preferences',
   immersiveDoubleClickEditEnabled: 'foliole-immersive-double-click-edit-enabled',
   readingLineHeight: 'foliole-reading-line-height',

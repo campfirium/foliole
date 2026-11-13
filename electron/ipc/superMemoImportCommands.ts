@@ -1,11 +1,15 @@
+import { createHash } from 'node:crypto';
+
 import { z } from 'zod';
 
+import { DEFAULT_SUPER_MEMO_GRADE_MAP } from '../../lib/core/import/superMemoSchedulePreview.js';
 import { describeSuperMemoSource } from '../../lib/core/import/superMemoSourcePreview.js';
 import { calendarDateKey } from '../../lib/core/review/reviewCalendarDates.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import type { NativeSuperMemoPreview } from '../../lib/platform/nativeSuperMemoImportContract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { adjustSuperMemoImport, listSuperMemoImports } from '../import/adjustSuperMemoImport.js';
+import { inspectSuperMemoImageSources } from '../import/prepareSuperMemoTopicContent.js';
 import { runSuperMemoImport } from '../import/runSuperMemoImport.js';
 import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
@@ -32,7 +36,9 @@ const elementSchema = z.object({
       repetition: z.number().int().nonnegative(), lapses: z.number().int().nonnegative(), raw: z.string() }))
   }).nullable()
 });
-const previewSchema = z.object({ elements: z.array(elementSchema).min(1), collectionDirectory: z.string().optional() });
+const grade = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]);
+const previewSchema = z.object({ elements: z.array(elementSchema).min(1), collectionDirectory: z.string().optional(),
+  gradeMap: z.array(grade).length(6).optional(), previewSignature: z.string().regex(/^[a-f0-9]{64}$/).optional() });
 
 function sourceOffset(now: Date) {
   const offset = -now.getTimezoneOffset();
@@ -52,7 +58,7 @@ export async function handleSuperMemoImportCommand(command: string, args: unknow
   const write = command === NATIVE_COMMANDS.runSuperMemoImport;
   if (!write && command !== NATIVE_COMMANDS.previewSuperMemoImport) return undefined;
   const percent = write ? z.object({ percent: z.number().int().min(0).max(100) }).parse(args).percent : 0;
-  const { elements, collectionDirectory } = previewSchema.parse(args);
+  const { elements, collectionDirectory, gradeMap = DEFAULT_SUPER_MEMO_GRADE_MAP, previewSignature } = previewSchema.parse(args);
   const seen = new Set<number>();
   for (const { id, parentId } of elements) {
     if (seen.has(id) || (parentId !== null && !seen.has(parentId))) throw new Error('invalid_supermemo_element_tree');
@@ -62,13 +68,30 @@ export async function handleSuperMemoImportCommand(command: string, args: unknow
   return runWithDatabaseConnectionOwner(async () => {
     const now = new Date();
     const offset = sourceOffset(now);
-    const rows = describeSuperMemoSource(elements, offset, loadReviewSchedulerSettings());
+    const scheduler = loadReviewSchedulerSettings();
+    const rows = describeSuperMemoSource(elements, offset, scheduler, gradeMap);
+    const sources = new Set(rows.flatMap(row => row.localImageReferences.map(([source]) => source)));
+    const images = await inspectSuperMemoImageSources(sources, collectionDirectory);
     const preview: NativeSuperMemoPreview = {
-      referenceDay: calendarDateKey(now), pairedCollection: collection !== null, rows: rows.map(row => {
+      referenceDay: calendarDateKey(now), pairedCollection: collection !== null, rows: rows.map(({ localImageReferences, ...row }) => {
+        const missing = new Map<string, number>();
+        for (const [source, count] of localImageReferences) {
+          if (!images.get(source)) missing.set(source, (missing.get(source) ?? 0) + count);
+        }
+        row.unresolvedImages = [...missing].map(([source, count]) => ({ source, count }));
         const paired = collection?.get(row.id);
-        return paired ? { ...row, sourceDue: paired.due, sourceRank: paired.rank, sourceChildren: paired.children } : row;
+        if (!paired) return row;
+        const reset = paired.state === 'pending';
+        return { ...row, sourceState: paired.state, sourceDue: reset || paired.state === 'dismissed' ? null : paired.due,
+          sourceRank: paired.rank, sourceChildren: paired.children,
+          ...(reset ? { recalculatedDue: null, replayedCount: 0, historyNeedsReview: false } : {}) };
       })
     };
-    return write ? runSuperMemoImport({ elements, preview, percent, offset, collectionDirectory }) : preview;
+    preview.previewSignature = createHash('sha256')
+      .update(JSON.stringify({ elements, collectionDirectory, preview, offset, scheduler, gradeMap, images: [...images] })).digest('hex');
+    if (write && previewSignature && preview.previewSignature !== previewSignature) {
+      throw new Error('supermemo_preview_changed');
+    }
+    return write ? runSuperMemoImport({ elements, preview, percent, offset, collectionDirectory, gradeMap, scheduler, expectedImages: images }) : preview;
   });
 }

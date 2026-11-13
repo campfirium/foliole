@@ -1,3 +1,5 @@
+import type { NativeSuperMemoPreviewRow } from '../../platform/nativeSuperMemoImportContract.js';
+
 import { sourceDay } from './superMemoSchedulePreview.js';
 import type { SuperMemoXmlDraftElement } from './superMemoXmlDraft.js';
 
@@ -6,6 +8,7 @@ const DELPHI_EPOCH = Date.UTC(1899, 11, 30);
 
 export interface SuperMemoCollectionFields {
   due: string | null;
+  state: NonNullable<NativeSuperMemoPreviewRow['sourceState']> | null;
   rank: number | null;
   children: number[];
 }
@@ -111,10 +114,12 @@ export function matchSuperMemoCollection(elements: SuperMemoXmlDraftElement[], t
   const base = calendarBase(elements, binary);
   requirePair(base !== undefined);
   const ranks = priorityRanks(priorities, new Set(elements.map(element => element.id)));
-  return new Map(elements.map(({ id, children }) => {
+  const states = ['pending', 'active', 'dismissed'] as const;
+  return new Map<number, SuperMemoCollectionFields>(elements.map(({ id, children }) => {
+    const state = states[binary.getUint8((id - 1) * 118 + 1)] ?? null;
     const relative = repetitions.getInt32((id - 1) * 4, true);
     const due = relative > 0 && relative < 30_000
       ? new Date(base + relative * DAY_MS).toISOString().slice(0, 10) : null;
-    return [id, { children: childrenOf(tree, id, children), due, rank: ranks.get(id) ?? null }];
+    return [id, { children: childrenOf(tree, id, children), due, state, rank: ranks.get(id) ?? null }];
   }));
 }

@@ -24,6 +24,7 @@ const CANDIDATES_SQL = `WITH RECURSIVE candidates AS (
   SELECT n.id, n.parent_id, n.deleted_at, n.shelved_at, 'items',
     COALESCE(nr.due,n.created_at), NULL, COALESCE(nr.scheduled_days,0)
   FROM nodes n LEFT JOIN node_review nr ON nr.node_id=n.id WHERE n.kind='item'
+    AND NOT EXISTS (SELECT 1 FROM node_reading rd WHERE rd.node_id=n.id AND rd.state='dismissed')
     AND NOT(CASE WHEN n.anchor_resolution_status LIKE 'unmapped_%' THEN 0
       WHEN json_valid(n.anchor_link) THEN COALESCE(json_extract(n.anchor_link,'$.kind')='image-excerpt',0) ELSE 0 END)
 ), ancestors(target,id,parent_id,deleted_at,shelved_at) AS (

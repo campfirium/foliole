@@ -29,7 +29,7 @@ it('blends between the original and the independently replayed date', () => {
 
 it('preserves a known source date when an unknown event prevents replay', () => {
   const unknown = { ...item, learning: { ...item.learning!, history: [
-    ...item.learning!.history, { date: '11.11.2026', hour: '4', grade: 13, repetition: 2, lapses: 0, raw: '' }
+    ...item.learning!.history, { date: '11.11.2026', hour: '4', grade: 11, repetition: 2, lapses: 0, raw: '' }
   ] } };
   const report = previewSuperMemoSchedule(unknown, '+08:00', settings, true);
   expect(report).toMatchObject({ historyNeedsReview: true, recalculatedDue: null, replayedCount: 0 });
@@ -48,4 +48,16 @@ it.each([
   expect(full).toBe(calculated);
   expect(adjustSuperMemoDue(full, offset, 100, 0)).toBe(source);
   expect(adjustSuperMemoDue(source, null, 0, 100)).toBe(source);
+});
+
+it.each([12, 13])('replays only scores after learning boundary %i', (grade) => {
+  const history = item.learning!.history;
+  const restarted = { ...item, learning: { ...item.learning!, history: [
+    ...history,
+    { ...history[0]!, date: '11.11.2026', grade },
+    { ...history[0]!, date: '12.11.2026' },
+    { ...history[1]!, date: '13.11.2026', grade: 5 }
+  ] } };
+  expect(previewSuperMemoSchedule(restarted, '+08:00', settings, true))
+    .toMatchObject({ historyNeedsReview: false, replayedCount: 1 });
 });

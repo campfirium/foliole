@@ -5,7 +5,9 @@ import { adjustSuperMemoDue, superMemoFullOffset } from './superMemoScheduleOffs
 import type { SuperMemoXmlDraftElement } from './superMemoXmlDraft.js';
 
 export const DEFAULT_SUPER_MEMO_GRADE_MAP = [1, 1, 1, 2, 3, 4] as const;
-export const SUPER_MEMO_CONVERSION_RULE_VERSION = 1;
+export type SuperMemoGrade = 1 | 2 | 3 | 4;
+export type SuperMemoGradeMap = readonly SuperMemoGrade[];
+export const SUPER_MEMO_CONVERSION_RULE_VERSION = 3;
 
 const DAY_MS = 86_400_000;
 
@@ -35,15 +37,20 @@ export function sourceCandidate(learning: SuperMemoXmlDraftElement['learning']) 
   return asDate(last + days * DAY_MS);
 }
 
-export function readReviewEvents(element: SuperMemoXmlDraftElement, sourceOffset: string) {
+export function readReviewEvents(element: SuperMemoXmlDraftElement, sourceOffset: string, gradeMap: SuperMemoGradeMap = DEFAULT_SUPER_MEMO_GRADE_MAP) {
   const events: ReviewEvent[] = [];
   const offset = offsetMs(sourceOffset);
   const history = element.learning?.history ?? [];
+  let start = 0;
   for (const [index, event] of history.entries()) {
-    if (index === 0 && event.grade === 8 && event.repetition === 1 && event.lapses === 0) continue;
+    if (event.grade === 12 || event.grade === 13) start = index + 1;
+  }
+  for (let index = start; index < history.length; index++) {
+    const event = history[index]!;
+    if (index === start && event.grade === 8 && event.repetition === 1 && event.lapses === 0) continue;
     const day = sourceDay(event.date);
     const hour = event.hour === null ? NaN : Number(event.hour);
-    const grade = (DEFAULT_SUPER_MEMO_GRADE_MAP as readonly number[])[event.grade];
+    const grade = gradeMap[event.grade];
     if (day === null || !Number.isFinite(hour) || hour < 0 || hour >= 24 || grade === undefined) {
       return null;
     }
@@ -61,11 +68,12 @@ export function previewSuperMemoSchedule(
   element: SuperMemoXmlDraftElement,
   sourceOffset: string,
   scheduler: ReviewSchedulerSettings,
-  reviewable: boolean
+  reviewable: boolean,
+  gradeMap?: SuperMemoGradeMap
 ) {
   const item = element.sourceType === 'Item';
   const sourceDue = item || element.sourceType === 'Topic' ? sourceCandidate(element.learning) : null;
-  const events = item ? readReviewEvents(element, sourceOffset) : [];
+  const events = item ? readReviewEvents(element, sourceOffset, gradeMap) : [];
   const card = reviewable && events?.length ? recomputeReview(events, scheduler, String(element.id)) : null;
   return {
     sourceDue,

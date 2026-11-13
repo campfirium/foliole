@@ -23,6 +23,7 @@ export function makeSuperMemoPreviewReport({ rows, referenceDay }: NativeSuperMe
     { label: '200+', limit: Infinity, original: [] as number[], planned: [] as number[] }
   ];
   let addedDue = 0;
+  let pendingNewItems = 0;
   let deferred = 0;
   let unknownDates = 0;
   let noHistory = 0;
@@ -30,13 +31,20 @@ export function makeSuperMemoPreviewReport({ rows, referenceDay }: NativeSuperMe
   let totalDue = 0;
   let localImages = 0;
   let remoteImages = 0;
+  let unresolvedImages = 0;
   let skippedAudio = 0;
   for (const row of rows) {
     counts[row.outcome]++;
     localImages += row.localImages ?? 0;
+    unresolvedImages += (row.unresolvedImages ?? []).reduce((total, image) => total + image.count, 0);
     remoteImages += row.remoteImages ?? 0;
     skippedAudio += row.skippedAudio ?? 0;
-    if (row.outcome !== 'item' || row.issue) continue;
+    if (row.outcome !== 'item' || row.issue || row.sourceState === 'dismissed') continue;
+    if (row.sourceState === 'pending') {
+      pendingNewItems++;
+      totalDue++;
+      continue;
+    }
     if (!row.historyCount) noHistory++;
     const due = plannedDue(row, percent);
     if (row.sourceDue && row.sourceDue <= referenceDay) sourceDue++;
@@ -52,7 +60,7 @@ export function makeSuperMemoPreviewReport({ rows, referenceDay }: NativeSuperMe
     group.planned.push(Math.max(0, interval + (Date.parse(due) - Date.parse(row.sourceDue)) / 86_400_000));
   }
   return {
-    counts, sourceDue, totalDue, addedDue, deferred, unknownDates, noHistory, localImages, remoteImages, skippedAudio,
+    counts, sourceDue, totalDue, addedDue, pendingNewItems, deferred, unknownDates, noHistory, localImages, unresolvedImages, remoteImages, skippedAudio,
     groups: groups.filter(group => group.original.length).map(group => ({
       label: group.label, count: group.original.length, source: median(group.original), planned: median(group.planned)
     })),

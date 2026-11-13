@@ -33,7 +33,8 @@ it('persists the inline image in a reopened Topic and leaves unresolved source p
     initializeDatabaseSchema(sqlite);
     connection.driver = createBetterSqlite3Driver(sqlite);
     publishAttachmentLibraryPathSnapshot({ assetsDir: path.join(temp, 'assets'), libraryScope: temp });
-    await mkdir(source);
+    await mkdir(path.join(source, 'elements', '17'), { recursive: true });
+    await writeFile(path.join(source, 'elements', '17', '178.PNG'), png);
     await writeFile(path.join(source, 'map old.png'), png);
     await writeFile(path.join(temp, 'outside.png'), png);
     await symlink(path.join(temp, 'outside.png'), path.join(source, 'outside.png'));
@@ -45,8 +46,8 @@ it('persists the inline image in a reopened Topic and leaves unresolved source p
       nodeId: 'topic', parentNodeId: null, title: 'Maps', isTitleManual: true, anchorLink: null,
       position: null, createdAt: now, updatedAt: now
     }, [
-      '<p>Before <img alt="Map" src="map%20old.png"> after.</p>',
-      '<img src="outside.png"><img src="missing.png"><audio src="voice.mp3"></audio>'
+      '<p>Before <img alt="Map" src="file:///[PrimaryStorage]17/178.png"> after.</p>',
+      '<img src="map%20old.png"><img src="outside.png"><img src="file:///[PrimaryStorage]../outside.png"><img src="missing.png"><audio src="voice.mp3"></audio>'
     ], source);
     sqlite.exec(`CREATE TEMP TRIGGER fail_image_owner BEFORE UPDATE OF resource_references ON nodes
       BEGIN SELECT RAISE(ABORT, 'injected_attachment_failure'); END`);
@@ -54,7 +55,7 @@ it('persists the inline image in a reopened Topic and leaves unresolved source p
     expect(loadWorkspaceNodeDocument(connection.driver, 'topic')).toBeFalsy();
     sqlite.exec('DROP TRIGGER fail_image_owner');
     const result = await writeTopic();
-    expect(result.unresolvedImages).toEqual(['outside.png', 'missing.png']);
+    expect(result.unresolvedImages).toEqual(['outside.png', 'file:///[PrimaryStorage]../outside.png', 'missing.png']);
     sqlite.close();
     sqlite = new Database(dbPath);
     const document = loadWorkspaceNodeDocument(createBetterSqlite3Driver(sqlite), 'topic');

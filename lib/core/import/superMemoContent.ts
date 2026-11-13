@@ -4,7 +4,7 @@ import { convertHtmlToMarkdownCompatible } from './htmlToMarkdownCompatible.js';
 
 type HtmlParent = DefaultTreeAdapterTypes.ParentNode;
 type ImageDestinations = ReadonlyMap<string, string>;
-interface MediaCounts { localImages: number; remoteImages: number; audio: number; localSources: Set<string> }
+interface MediaCounts { localImages: number; remoteImages: number; audio: number; localSources: Map<string, number> }
 
 function inspectMedia(parent: HtmlParent, media: MediaCounts, imageDestinations?: ImageDestinations) {
   parent.childNodes = parent.childNodes.filter(node => {
@@ -32,7 +32,7 @@ function inspectImage(node: DefaultTreeAdapterTypes.Element, media: MediaCounts,
   }
   if (/^data:image\//i.test(original)) return;
   media.localImages++;
-  media.localSources.add(original);
+  media.localSources.set(original, (media.localSources.get(original) ?? 0) + 1);
   const destination = imageDestinations?.get(original);
   if (destination) {
     source.value = destination;
@@ -47,7 +47,7 @@ function inspectImage(node: DefaultTreeAdapterTypes.Element, media: MediaCounts,
 }
 
 export function convertSuperMemoContent(parts: string[], imageDestinations?: ImageDestinations) {
-  const media = { localImages: 0, remoteImages: 0, audio: 0, localSources: new Set<string>() };
+  const media = { localImages: 0, remoteImages: 0, audio: 0, localSources: new Map<string, number>() };
   const content = parts.map(part => {
     const fragment = parseFragment(part);
     inspectMedia(fragment, media, imageDestinations);

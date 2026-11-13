@@ -32,3 +32,17 @@ it('counts newly due and deferred cards separately and includes cards with only 
     });
   }
 });
+
+it('counts pending as fresh cards and excludes dismissed cards at every blend', () => {
+  const preview = {
+    referenceDay: '2026-11-12',
+    rows: [
+      { ...card(1, null, null), sourceState: 'pending' as const, historyCount: 3 },
+      { ...card(2, '2026-11-10', '2026-11-10'), sourceState: 'dismissed' as const }
+    ]
+  };
+  for (const percent of [0, 50, 100]) {
+    expect(makeSuperMemoPreviewReport(preview, percent))
+      .toMatchObject({ sourceDue: 0, totalDue: 1, pendingNewItems: 1, addedDue: 0, unknownDates: 0 });
+  }
+});

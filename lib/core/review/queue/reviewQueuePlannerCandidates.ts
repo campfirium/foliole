@@ -45,7 +45,7 @@ function isDueFsrsNode(
   now: string,
   time: ReviewQueueTimeInput
 ): node is ReviewQueueNode {
-  if (!node || !isFsrsReviewItemNode(node)) {
+  if (!node || !isFsrsReviewItemNode(node) || node.reading?.state === 'dismissed') {
     return false;
   }
   if (hasDeletedAncestor(node, nodesById)) {
@@ -58,7 +58,7 @@ function isSchedulableFsrsNode(
   node: ReviewQueueNode | undefined,
   nodesById: Record<string, ReviewQueueNode | undefined>
 ): node is ReviewQueueNode {
-  return Boolean(node && isFsrsReviewItemNode(node) && !hasDeletedAncestor(node, nodesById));
+  return Boolean(node && isFsrsReviewItemNode(node) && node.reading?.state !== 'dismissed' && !hasDeletedAncestor(node, nodesById));
 }
 
 export function collectReviewQueueCandidates(args: {

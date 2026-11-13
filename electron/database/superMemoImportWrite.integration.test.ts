@@ -147,3 +147,40 @@ it('keeps nested Topics and moves a Folder to the nearest Folder ancestor', asyn
     await fixture.close();
   }
 });
+
+it('uses the previewed grade map for the imported history and preserves it in the batch', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source');
+  try {
+    const now = new Date().toISOString();
+    source.sqlite.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
+      .run('host_name', JSON.stringify(source.id), now);
+    connection.driver = createBetterSqlite3Driver(source.sqlite);
+    bindParentOrderWriter(connection.driver, { deviceAnchor: source.id, libraryPath: source.file });
+    const input = { elements: [element] };
+    const defaults = await handleSuperMemoImportCommand(NATIVE_COMMANDS.previewSuperMemoImport, input);
+    const gradeMap = [1, 1, 1, 2, 1, 4];
+    const args = { ...input, gradeMap };
+    const preview = await handleSuperMemoImportCommand(NATIVE_COMMANDS.previewSuperMemoImport, args);
+    if (!preview || !('rows' in preview) || !defaults || !('rows' in defaults)) throw new Error('missing preview');
+    expect(preview.rows[0]?.recalculatedDue).not.toBe(defaults.rows[0]?.recalculatedDue);
+    await expect(handleSuperMemoImportCommand(NATIVE_COMMANDS.runSuperMemoImport,
+      { ...args, percent: 100, previewSignature: defaults.previewSignature })).rejects.toThrow('supermemo_preview_changed');
+    expect(reviewFacts(source)).toHaveLength(0);
+    const write = { ...args, percent: 100, previewSignature: preview.previewSignature };
+    const result = await handleSuperMemoImportCommand(NATIVE_COMMANDS.runSuperMemoImport, write);
+    if (!result || !('batchId' in result)) throw new Error('missing import result');
+    expect(reviewFacts(source)).toEqual([expect.objectContaining({ grade: 1 })]);
+    const batch = () => JSON.parse(source.sqlite.prepare('SELECT value FROM workspace_meta WHERE key = ?').pluck()
+      .get(`supermemo-import:${result.batchId}`) as string);
+    expect(batch()).toMatchObject({ gradeMap, percent: 100 });
+    await expect(handleSuperMemoImportCommand(NATIVE_COMMANDS.runSuperMemoImport,
+      { ...input, percent: 0, previewSignature: defaults.previewSignature }))
+      .rejects.toThrow('supermemo_existing_batch_grade_mapping');
+    await handleSuperMemoImportCommand(NATIVE_COMMANDS.adjustSuperMemoImport, { batchId: result.batchId, percent: 0 });
+    expect(batch()).toMatchObject({ gradeMap, percent: 0 });
+    expect(reviewFacts(source)).toEqual([expect.objectContaining({ grade: 1 })]);
+  } finally {
+    await fixture.close();
+  }
+});

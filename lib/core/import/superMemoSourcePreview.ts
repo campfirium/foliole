@@ -3,7 +3,7 @@ import type { ReviewSchedulerSettings } from '../review/settings.js';
 
 import { convertHtmlToMarkdownCompatible } from './htmlToMarkdownCompatible.js';
 import { convertSuperMemoContent } from './superMemoContent.js';
-import { previewSuperMemoSchedule, sourceCandidate } from './superMemoSchedulePreview.js';
+import { previewSuperMemoSchedule, sourceCandidate, type SuperMemoGradeMap } from './superMemoSchedulePreview.js';
 import type { SuperMemoXmlDraftElement } from './superMemoXmlDraft.js';
 
 function usableText(parts: string[]) {
@@ -29,7 +29,7 @@ Pick<NativeSuperMemoPreviewRow, 'outcome' | 'issue'> {
 }
 
 export function describeSuperMemoSource(elements: SuperMemoXmlDraftElement[], offset: string,
-  settings: ReviewSchedulerSettings): NativeSuperMemoPreviewRow[] {
+  settings: ReviewSchedulerSettings, gradeMap?: SuperMemoGradeMap): (NativeSuperMemoPreviewRow & { localImageReferences: [string, number][] })[] {
   return elements.map(element => {
     const sourceBody = convertSuperMemoContent(element.bodyOrQuestionHtml);
     const sourceAnswer = convertSuperMemoContent(element.answerHtml);
@@ -39,12 +39,16 @@ export function describeSuperMemoSource(elements: SuperMemoXmlDraftElement[], of
     const interval = Number(element.learning?.intervalDays);
     const reviewable = result.outcome === 'item' && result.issue === null;
     return {
-      ...result, ...previewSuperMemoSchedule(element, offset, settings, reviewable),
+      ...result, ...previewSuperMemoSchedule(element, offset, settings, reviewable, gradeMap),
       id: element.id, parentId: element.parentId, sourceType: element.sourceType,
       title: element.title ? usableText([element.title]) : (content || answer).slice(0, 140),
       intervalDays: Number.isSafeInteger(interval) && interval > 0 ? interval : null,
       lastRepetition: element.learning?.lastRepetition ?? null,
       historyCount: element.learning?.history.length ?? 0,
+      localImageReferences: [
+        ...(result.outcome === 'topic' || result.outcome === 'item' ? sourceBody.localSources : []),
+        ...(result.outcome === 'item' ? sourceAnswer.localSources : [])
+      ],
       localImages: sourceBody.localImages + sourceAnswer.localImages,
       remoteImages: sourceBody.remoteImages + sourceAnswer.remoteImages,
       skippedAudio: element.skippedAudioComponents + sourceBody.audio + sourceAnswer.audio

@@ -97,8 +97,10 @@ export async function saveAppSettingsState(settings: Record<string, unknown>): P
       RUNTIME_ONLY_APP_SETTINGS_KEYS.has(key)
     )
   );
+  const gradeMappingOnly = Object.keys(incomingSettings).length === 1
+    && APP_SETTINGS_STORAGE_KEYS.superMemoGradeMap in incomingSettings;
   const nextSettings = {
-    ...preservedRuntimeSettings,
+    ...(gradeMappingOnly ? previousSettings : preservedRuntimeSettings),
     ...incomingSettings
   };
   saveJsonSetting(APP_SETTINGS_KEY, nextSettings);
