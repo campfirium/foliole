@@ -41,8 +41,6 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
     ...pendingRoundState(analysis, pending, rejected, sourceChanged && committed && pending >= initialPending) });
   let yielded = false;
   let prioritize = true;
-  // Retry rejected nodes on the next incremental round, after the local state may have changed.
-  const blockedNodes = new Set<string>();
   for (let pass = 0; pass < REQUEST_SYNC_MAX_PASSES; pass++) {
     signal?.throwIfAborted();
     const all = analysis.differences;
@@ -51,7 +49,7 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
     if (!differences.length && !inventories.inventoryDeferred) {
       return result(analysis.pending);
     }
-    const round = await deliverRequestSyncDatabaseDifferences(port, inventories, differences, signal, localChanged, blockedNodes, rejected);
+    const round = await deliverRequestSyncDatabaseDifferences(port, inventories, differences, signal, localChanged, rejected);
     transferred += round.delivered.length;
     yielded = round.yielded;
     localChanged = port.watchLocalChanges?.();
@@ -78,7 +76,7 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
     inventories = next;
     analysis = nextAnalysis;
   }
-  const sent = yielded ? await sendLocalChanges(port, inventories, analysis, blockedNodes, rejected, signal) : null;
+  const sent = yielded ? await sendLocalChanges(port, inventories, analysis, rejected, signal) : null;
   if (sent) {
     transferred += sent.delivered.length;
     return result(Math.max(analysis.pending - sent.delivered.length, sent.deferred.length));
@@ -98,20 +96,20 @@ function pendingRoundState(analysis: RequestSyncInventoryAnalysis, pending: numb
 
 /** The last pass stopped pulling for a local edit; send it now rather than in the next scheduled round. */
 async function sendLocalChanges(port: RequestSyncDatabaseRoundPort, inventories: RequestSyncInventories,
-  analysis: RequestSyncInventoryAnalysis, blockedNodes: Set<string>, rejected: Set<string>, signal?: AbortSignal) {
+  analysis: RequestSyncInventoryAnalysis, rejected: Set<string>, signal?: AbortSignal) {
   const outgoing = analysis.differences
     .filter(difference => difference.direction === 'local_to_remote');
-  return outgoing.length ? deliverRequestSyncDatabaseDifferences(port, inventories, outgoing, signal, () => false, blockedNodes, rejected) : null;
+  return outgoing.length ? deliverRequestSyncDatabaseDifferences(port, inventories, outgoing, signal, () => false, rejected) : null;
 }
 
 export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDatabaseRoundPort,
   inventories: RequestSyncInventories, differences: readonly FramedSyncInventoryDifference[], signal?: AbortSignal,
-  localChanged = port.watchLocalChanges?.(), blockedNodes?: Set<string>, rejected = new Set<string>()) {
+  localChanged = port.watchLocalChanges?.(), rejected = new Set<string>()) {
   const outcomes = new Map<string, RequestSyncObjectResult>();
   const attempted: FramedSyncInventoryDifference[] = [];
   const sizer = pullBatchSizer(Boolean(localChanged));
   let yielded = false;
-  const eligible = differences.filter(difference => !blockedNodes?.has(key(difference)) && !rejected.has(key(difference)));
+  const eligible = differences.filter(difference => !rejected.has(key(difference)));
   for (const batch of directionBatches(eligible, sizer.next)) {
     signal?.throwIfAborted();
     const pull = batch[0]!.direction === 'remote_to_local';
@@ -128,7 +126,7 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
   let sourceChanged = false;
   const deferred = await deliverFramedSyncDifferencesInDependencyOrder(attempted, async difference => {
     signal?.throwIfAborted();
-    if (blockedNodes?.has(key(difference)) || rejected.has(key(difference))) return 'deferred';
+    if (rejected.has(key(difference))) return 'deferred';
     try {
       const cached = outcomes.get(key(difference));
       outcomes.delete(key(difference));
@@ -136,7 +134,7 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
       const stale = dependency && completed.has(key({ ...difference, ...dependency }));
       const result = cached && !stale ? cached : (await port.transferObjects([difference]))[0];
       assertRoundObjectResult(result, difference);
-      if (result.error === 'request_sync_body_too_large') {
+      if (isObjectRejection(result.error, difference)) {
         rejected.add(key(difference));
         port.reportObjectError(difference, new Error(result.error));
         return 'deferred';
@@ -148,21 +146,24 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
     } catch (error) {
       signal?.throwIfAborted();
       const detail = (error instanceof Error ? error.message : String(error)).replace(/^framed_sync_http_400:/u, '');
-      if (blockedNodes && difference.objectType === 'node' && detail === `sync_node_apply_blocked:${difference.globalId}`) {
-        port.reportObjectError(difference, error);
-        blockedNodes.add(key(difference));
-        return 'deferred';
-      }
-      const badGraph = ['request_sync_current_version_unavailable', 'node_version_cross_object_parent:', 'node_version_graph_cycle', 'framed_sync_node_parent_cycle',
-        'node_version_parent_identity_mismatch:'].some(prefix => detail.startsWith(prefix));
       const changed = detail === 'framed_sync_source_changed' || detail === 'framed_sync_difference_request_source_changed';
-      if (!badGraph && !changed) throw error;
-      if (badGraph) port.reportObjectError(difference, error);
+      if (!changed) throw error;
       sourceChanged ||= changed;
       return 'deferred';
     }
   }, createFramedSyncInventoryDependencyLookup(inventories), propagateRejection(rejected));
   return { delivered, deferred, sourceChanged, yielded };
+}
+
+function isObjectRejection(error: string, difference: FramedSyncInventoryDifference) {
+  const detail = error.replace(/^framed_sync_http_400:/u, '');
+  return detail === 'request_sync_body_too_large' ||
+    detail === 'request_sync_current_version_unavailable' ||
+    detail === 'node_version_graph_cycle' ||
+    detail === 'framed_sync_node_parent_cycle' ||
+    detail.startsWith('node_version_cross_object_parent:') ||
+    detail.startsWith('node_version_parent_identity_mismatch:') ||
+    (difference.objectType === 'node' && detail === `sync_node_apply_blocked:${difference.globalId}`);
 }
 
 function propagateRejection(rejected: Set<string>) {

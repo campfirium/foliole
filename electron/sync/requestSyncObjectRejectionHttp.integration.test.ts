@@ -58,3 +58,42 @@ it.each(['push', 'pull'] as const)('commits objects before and after an oversize
     await fixture.close();
   }
 });
+
+it('reports partial progress after a receiver rejects one object and resumes when the receiver can apply it', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source');
+  const target = fixture.peer('target');
+  const server = syncServer(source, target);
+  const rejected: string[] = [];
+  try {
+    await applyConvergentSyncNodesWithDbPort(source.db, ['a', 'b', 'c'].map(id => record(id, `${id}-v1`)));
+    target.sqlite.exec(`CREATE TRIGGER reject_one_object BEFORE INSERT ON node_sync_versions
+      WHEN NEW.object_id = 'b' BEGIN SELECT RAISE(ABORT, 'sync_node_apply_blocked:b'); END`);
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('missing_address');
+    const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+      initiatorDeviceId: source.id, initiatorLibraryEpoch: source.epoch,
+      responderDeviceId: target.id, responderLibraryEpoch: target.epoch } as const;
+    const exchange = createDesktopRequestSyncExchange({ context, groupKey,
+      groupSecret: Buffer.from(groupKey).toString('base64url'), endpointUrl: `http://127.0.0.1:${address.port}` });
+    const run = () => runRequestSyncDatabaseRound({
+      exchangeInventory: () => exchangeRequestSyncInventory(source.host, exchange),
+      transferObjects: differences => transferRequestSyncBatch(source.host, exchange, differences, { peerState: state(target.id) }),
+      reportObjectError: (difference, error) => rejected.push(`${difference.globalId}:${(error as Error).message}`)
+    });
+    expect(await run()).toMatchObject({ complete: false, pending: 1, transferred: 2, onlyRejectedObjectsPending: true });
+    expect(rejected).toEqual(['b:sync_node_apply_blocked:b']);
+    target.reopen();
+    expect(await target.db.query("SELECT id FROM nodes WHERE id IN ('a','b','c') ORDER BY id"))
+      .toEqual([{ id: 'a' }, { id: 'c' }]);
+    target.sqlite.exec('DROP TRIGGER reject_one_object');
+    expect(await run()).toMatchObject({ complete: true, pending: 0 });
+    target.reopen();
+    expect(await target.db.query("SELECT current_version_id FROM nodes WHERE id = 'b'"))
+      .toEqual([{ current_version_id: 'b-v1' }]);
+  } finally {
+    await new Promise<void>(resolve => server.close(() => resolve()));
+    await fixture.close();
+  }
+});

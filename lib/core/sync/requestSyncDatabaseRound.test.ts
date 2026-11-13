@@ -9,7 +9,7 @@ const entry = (globalId: string): FramedSyncInventoryEntry => ({ globalId, objec
   sharedStateHash: new Uint8Array(32).fill(1) });
 
 it.each(['node_version_cross_object_parent:lost', 'node_version_graph_cycle',
-  'node_version_parent_identity_mismatch:v1'])('finishes healthy objects while isolating %s', async failure => {
+  'node_version_parent_identity_mismatch:v1', 'sync_node_apply_blocked:bad'])('finishes healthy objects while isolating %s', async failure => {
   const local = [entry('bad'), entry('good')];
   const remote: FramedSyncInventoryEntry[] = [];
   const errors: string[] = [];
@@ -26,10 +26,10 @@ it.each(['node_version_cross_object_parent:lost', 'node_version_graph_cycle',
     }),
     reportObjectError: difference => { errors.push(difference.globalId); }
   });
-  expect(result).toEqual({ complete: false, pending: 1, transferred: 1, madeProgress: true });
+  expect(result).toEqual({ complete: false, pending: 1, transferred: 1, madeProgress: true, onlyRejectedObjectsPending: true });
   expect(remote.map(value => value.globalId)).toEqual(['good']);
-  expect(new Set(errors)).toEqual(new Set(['bad']));
-  expect(requests).toBe(3);
+  expect(errors).toEqual(['bad']);
+  expect(requests).toBe(2);
 });
 
 it('ends a cancelled round before transferring the next object', async () => {
@@ -149,7 +149,7 @@ it('retries a missing dependency after its batched parent succeeds and isolates 
     },
     reportObjectError: difference => { errors.push(difference.globalId); }
   });
-  expect(result).toEqual({ complete: false, pending: 1, transferred: 3, madeProgress: true });
+  expect(result).toEqual({ complete: false, pending: 1, transferred: 3, madeProgress: true, onlyRejectedObjectsPending: true });
   expect([...accepted.keys()].sort()).toEqual(['a-child', 'b-parent', 'd-healthy']);
   expect(calls[0]).toEqual(['a-child', 'b-parent', 'c-broken', 'd-healthy']);
   expect(calls).toContainEqual(['a-child']);
