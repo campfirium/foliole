@@ -48,16 +48,17 @@ function renderListColumns(
     <WorkspaceSidebarFocusBoundary
       side="left" unavailable={args.isListCollapsed}
       data-workspace-side-column="list"
+      data-pdf-sidebar-overlay={args.compactSidebars?.hoverEnabled && args.compactSidebars.leftFloating || undefined}
       aria-hidden={args.isListCollapsed}
-      hidden={args.compactSidebars?.leftFloating && args.isListCollapsed}
+      hidden={args.compactSidebars?.leftFloating && !args.compactSidebars.hoverEnabled && args.isListCollapsed}
       className={args.compactSidebars?.leftFloating
         ? 'workspace-floating-sidebar workspace-floating-sidebar-left flex min-w-0 flex-col overflow-hidden'
-        : 'flex min-w-0 flex-col overflow-hidden max-[1080px]:hidden'}
+        : 'col-start-1 row-start-1 flex min-w-0 flex-col overflow-hidden max-[1080px]:hidden'}
       key="list"
     >
       <WorkspaceListArea {...args.listAreaProps} />
     </WorkspaceSidebarFocusBoundary>,
-    <WorkspaceSidebarFocusBoundary side="left" unavailable={args.isListCollapsed || Boolean(args.compactSidebars?.leftFloating)} aria-hidden={args.isListCollapsed} className="flex min-w-0 overflow-visible max-[1080px]:hidden" key="list-splitter">
+    <WorkspaceSidebarFocusBoundary side="left" unavailable={args.isListCollapsed || Boolean(args.compactSidebars?.leftFloating)} aria-hidden={args.isListCollapsed} className="col-start-2 row-start-1 flex min-w-0 overflow-visible max-[1080px]:hidden" key="list-splitter">
       <WorkspaceListSplitter {...args.listSplitterProps} />
     </WorkspaceSidebarFocusBoundary>
   ];
@@ -73,7 +74,7 @@ function renderRightSidebarColumns(
     <WorkspaceSidebarFocusBoundary
       side="right" unavailable={args.isImmersiveMode || args.isRightSidebarCollapsed || Boolean(args.compactSidebars?.rightFloating)}
       aria-hidden={args.isRightSidebarCollapsed}
-      className="hidden min-w-0 overflow-visible xl:flex"
+      className="col-start-4 row-start-1 hidden min-w-0 overflow-visible xl:flex"
       key="right-sidebar-splitter"
       style={args.isImmersiveMode ? { display: 'none' } : undefined}
     >
@@ -82,16 +83,18 @@ function renderRightSidebarColumns(
     <WorkspaceSidebarFocusBoundary
       side="right" unavailable={args.isImmersiveMode || args.isRightSidebarCollapsed}
       data-workspace-side-column="right"
+      data-pdf-sidebar-overlay={args.compactSidebars?.hoverEnabled && args.compactSidebars.rightFloating || undefined}
       aria-hidden={args.isRightSidebarCollapsed}
-      hidden={args.isImmersiveMode || (args.compactSidebars?.rightFloating && args.isRightSidebarCollapsed)}
+      hidden={args.isImmersiveMode || (args.compactSidebars?.rightFloating && !args.compactSidebars.hoverEnabled && args.isRightSidebarCollapsed)}
       style={args.isImmersiveMode ? { display: 'none' } : undefined}
       className={args.compactSidebars?.rightFloating
         ? 'workspace-floating-sidebar workspace-floating-sidebar-right flex min-w-0 flex-col overflow-hidden'
-        : 'hidden min-w-0 flex-col overflow-hidden xl:flex'}
+        : 'col-start-5 row-start-1 hidden min-w-0 flex-col overflow-hidden xl:flex'}
       key="right-sidebar"
     >
       {args.compactSidebars?.rightFloating
-        ? <WorkspaceCompactRightPanelActions activePanelId={args.rightSidebarProps.activePanelId} />
+        ? <WorkspaceCompactRightPanelActions activePanelId={args.rightSidebarProps.activePanelId}
+            hideOnWideWindow={args.compactSidebars.hoverEnabled} />
         : null}
       <WorkspaceRightSidebar {...args.rightSidebarProps}
         isPanelContentVisible={!args.isImmersiveMode && !(args.isRightSidebarCollapsed && (

@@ -216,6 +216,7 @@ function WorkspaceLayoutGridFrame({
     <div className={`${isImmersiveMode ? 'col-start-1' : 'col-start-2'} min-h-0 min-w-0 overflow-hidden`}>
       <div
         className={`relative grid h-full min-h-0 gap-0 overflow-hidden ${getWorkspaceGridColumns({ isImmersiveMode })} max-[1080px]:grid-cols-1`}
+        data-workspace-document-grid={isImmersiveMode ? undefined : true}
         data-resizing={isResizingList || isResizingRightSidebar}
       >
         {children}

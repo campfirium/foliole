@@ -72,3 +72,16 @@ export function resolveRenderedPageDimensions(
     width: Math.max(1, Math.round(rotatedDimensions.width * scale))
   };
 }
+
+// Match PDF.js viewer raster bounds without constraining page layout or zoom.
+export function resolvePdfCanvasPixelRatio(args: {
+  dimensions: PdfPageDimensions;
+  fitWidth: number | null;
+  rotation: number;
+  zoom: number;
+  zoomMode: 'custom' | 'fit-width';
+  devicePixelRatio: number;
+}) {
+  const { width, height } = resolveRenderedPageDimensions(args.dimensions, args.fitWidth, args.rotation, args.zoomMode, args.zoom);
+  return Math.min(args.devicePixelRatio, Math.sqrt(2 ** 25 / (width * height)), 32767 / Math.max(width, height));
+}

@@ -15,13 +15,16 @@ import {
 } from '../../shared/ui';
 
 import { PdfTopBarsToggle } from './PdfTopBarsToggle';
-import { PdfTopBar, PdfTopBarsRevealZone, WorkspacePdfTopBars } from './WorkspacePdfTopBars';
+import { PdfTopBar, PdfTopBarsRevealZone, PdfWindowChrome, WorkspacePdfTopBars } from './WorkspacePdfTopBars';
 
 const backend = vi.hoisted(() => ({
   fingerprint: 'one',
   settings: {} as Record<string, string>,
   failSave: false,
   nativeControls: vi.fn().mockResolvedValue(undefined)
+}));
+vi.mock('../../shared/platform/windowChrome', () => ({
+  usesNativeMacOSWindowControls: () => true
 }));
 vi.mock('react-pdf', () => ({
   useDocumentContext: () => ({ pdf: { fingerprints: [backend.fingerprint] } })
@@ -38,10 +41,14 @@ vi.mock('../../shared/platform/windowControls', () => ({
   setMainWindowNativeControlsVisible: backend.nativeControls
 }));
 
-function Reader(props: { pdf: boolean; immersive?: boolean }) {
+function Reader(props: { pdf: boolean; immersive?: boolean; leftSidebarVisible?: boolean }) {
   return (
     <WorkspacePdfTopBars isImmersiveMode={props.immersive ?? false}>
+      <PdfWindowChrome isImmersiveMode={props.immersive ?? false} leftSidebarVisible={props.leftSidebarVisible ?? false} />
       <PdfTopBarsRevealZone>
+      <div data-pdf-toolbar-shell>
+        <div data-pdf-reading-toolbar />
+      </div>
       <div className="pdf-document-page-frame" data-testid="reading-page">PDF text</div>
       <PdfTopBar kind="window">
         <button>Window control</button>
@@ -100,7 +107,18 @@ it('shows on entry, reveals immediately, waits after leaving, and restores non-P
   expectVisible(true);
   advance(3000);
   expectVisible(false);
+  expect(backend.nativeControls).toHaveBeenLastCalledWith(false);
+  const controlsZone = document.querySelector('.pdf-native-controls-reveal-zone')!;
+  vi.spyOn(controlsZone, 'getBoundingClientRect').mockReturnValue(new DOMRect(40, 0, 88, 40));
+  fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 70, clientY: 20 });
   expect(backend.nativeControls).toHaveBeenLastCalledWith(true);
+  expectVisible(false);
+  fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 300, clientY: 90 });
+  expect(backend.nativeControls).toHaveBeenLastCalledWith(false);
+  mounted.rerender(<Reader pdf leftSidebarVisible />);
+  expect(backend.nativeControls).toHaveBeenLastCalledWith(true);
+  mounted.rerender(<Reader pdf />);
+  expect(backend.nativeControls).toHaveBeenLastCalledWith(false);
   const reveal = screen.getByTestId('pdf-top-bars-reveal-zone');
   vi.spyOn(screen.getByTestId('reading-page'), 'getBoundingClientRect').mockReturnValue(new DOMRect(200, 0, 600, 1000));
   fireEvent.mouseMove(reveal, { clientX: 100, clientY: 500 });
@@ -115,6 +133,23 @@ it('shows on entry, reveals immediately, waits after leaving, and restores non-P
   bars().forEach((bar) => expect(bar).toHaveAttribute('data-floating', 'false'));
   expectVisible(true);
   expect(backend.nativeControls).toHaveBeenLastCalledWith(true);
+});
+
+it('keeps top bars hidden during a horizontal sweep through the PDF margins when sidebar hover is active', async () => {
+  renderWithLocalization(<main data-pdf-sidebar-hover="true"><Reader pdf /></main>);
+  await settle();
+  const reveal = screen.getByTestId('pdf-top-bars-reveal-zone');
+  vi.spyOn(screen.getByTestId('reading-page'), 'getBoundingClientRect').mockReturnValue(new DOMRect(200, 0, 600, 1000));
+  advance(3000);
+  for (const clientX of [500, 150, 60, 500, 850, 940]) {
+    fireEvent.mouseMove(reveal, { clientX, clientY: 375 });
+    expectVisible(false);
+  }
+  const toolbar = reveal.querySelector<HTMLElement>('[data-pdf-reading-toolbar]')!;
+  vi.spyOn(toolbar, 'getBoundingClientRect').mockReturnValue(new DOMRect(250, 40, 500, 40));
+  vi.spyOn(toolbar, 'offsetHeight', 'get').mockReturnValue(80);
+  fireEvent.mouseMove(reveal, { clientX: 150, clientY: 60 });
+  expectVisible(true);
 });
 
 it('protects focused controls after the pointer leaves and resumes hiding after blur', async () => {

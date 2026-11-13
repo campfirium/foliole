@@ -22,11 +22,23 @@ it('keeps the existing frameless chrome on Windows and Linux', () => {
 });
 
 it('changes native control visibility only for macOS windows', () => {
-  const window = { setWindowButtonVisibility: vi.fn() };
+  const window = { setWindowButtonVisibility: vi.fn(), setWindowButtonPosition: vi.fn() };
 
   setMainWindowNativeControlsVisible(window, false, 'darwin');
   setMainWindowNativeControlsVisible(window, true, 'win32');
 
   expect(window.setWindowButtonVisibility).toHaveBeenCalledTimes(1);
   expect(window.setWindowButtonVisibility).toHaveBeenCalledWith(false);
+  expect(window.setWindowButtonPosition).not.toHaveBeenCalled();
+});
+
+it('restores the position after showing macOS traffic lights again', () => {
+  const window = { setWindowButtonVisibility: vi.fn(), setWindowButtonPosition: vi.fn() };
+
+  setMainWindowNativeControlsVisible(window, false, 'darwin');
+  setMainWindowNativeControlsVisible(window, true, 'darwin');
+
+  expect(window.setWindowButtonVisibility).toHaveBeenLastCalledWith(true);
+  expect(window.setWindowButtonPosition).toHaveBeenCalledExactlyOnceWith(MACOS_TRAFFIC_LIGHT_POSITION);
+  expect(window.setWindowButtonPosition).toHaveBeenCalledAfter(window.setWindowButtonVisibility);
 });

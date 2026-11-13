@@ -6,6 +6,7 @@ The [route registry](../scripts/agent-control/foliole-agent-routes.mjs) defines 
 | --- | --- | --- | --- | --- |
 | Service and access | Health reports runtime identity. Authenticated clients can verify the token and discover capabilities. | The desktop host serves the current library on loopback. | Write commands use the application’s validation and revision checks. | See the route registry for authentication and command details. |
 | Search | Material search can return node, PDF, and external matches, with location details when available. | — | — | Page through matching results with an explicit offset. |
+| PDF reading view | Desktop PDF zoom and sidebar placement are reader controls. | — | PDF reading layout stays in the desktop reader. | Material search already supports PDF locations. |
 | Trash | Find restorable subtree roots by title, including titles of trashed descendants. | — | Pass the returned ID and revision to `materials/restore`. | Permanent deletion stays in the desktop trash. |
 | Folder | Read title and hierarchy. Search and list direct children. | Create with a title and parent. | Move, reorder children, trash, and restore. Rename with `materials/update` (`--title` in the CLI) using the revision from `materials/read`. | — |
 | Topic | Read title, complete body on request, parent path, and child summaries. Search readable Topics. | Create with body, title, and parent. Optionally import an active reading schedule and priority. | Update body and title. Move, trash, and restore. | Evaluate structured learning data for export. |

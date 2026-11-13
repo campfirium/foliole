@@ -83,7 +83,11 @@ export function WorkspaceMainTitleBar({
           t
         )}
         isListCollapsed={layoutChrome.isListCollapsed}
+        isListFloating={layoutChrome.compactSidebars?.leftFloating}
+        dockedListCollapsed={layoutChrome.compactSidebars?.dockedListCollapsed}
+        dockedRightCollapsed={layoutChrome.compactSidebars?.dockedRightCollapsed}
         isRightSidebarCollapsed={layoutChrome.isRightSidebarCollapsed}
+        isRightSidebarFloating={layoutChrome.compactSidebars?.rightFloating}
         isTrashViewOpen={trash.isTrashViewOpen}
         listWidth={layoutChrome.listWidth}
         onOpenTrashView={onOpenTrashView}
@@ -91,6 +95,7 @@ export function WorkspaceMainTitleBar({
         onToggleListVisibility={layoutChrome.onToggleListVisibility}
         onToggleRightSidebarVisibility={layoutChrome.onToggleRightSidebarVisibility}
         rightSidebarWidth={layoutChrome.rightSidebarWidth}
+        keepFloatingSidebarControls={layoutChrome.compactSidebars?.hoverEnabled}
         {...definedProps({ centerTitleIcon: externalTitle ? ('external' as const) : undefined })}
       />
   );

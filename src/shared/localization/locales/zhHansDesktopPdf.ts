@@ -43,6 +43,8 @@ export const ZH_HANS_DESKTOP_PDF_TRANSLATIONS: Partial<Record<TranslationKey, st
   'desktop.pdf.zoom.out': '缩小',
   'desktop.pdf.zoom.in': '放大',
   'desktop.pdf.zoom.set': '设置缩放级别',
+  'desktop.pdf.zoom.expandWidth': '自动扩展宽度',
+  'desktop.pdf.zoom.expandWidthFailed': '无法保存自动扩展宽度设置',
   'desktop.pdf.zoom.fitWidth': '适合宽度',
   'desktop.pdf.zoom.rotateClockwise': '顺时针旋转页面',
   'desktop.pdf.selection.highlight': '高亮',

@@ -114,7 +114,7 @@ function PdfPageShell(props: {
 
   return (
     <div
-      className="relative flex w-full justify-center px-4"
+      className="relative flex w-full justify-center-safe px-4"
       data-pdf-page-number={props.pageNumber}
       data-pdf-page-state={isRendered ? 'ready' : 'loading'}
       data-testid="pdf-document-page-shell"
@@ -196,7 +196,7 @@ export function renderPdfPagePlaceholder(
 
   return (
     <div
-      className="relative flex w-full justify-center px-4"
+      className="relative flex w-full justify-center-safe px-4"
       data-pdf-page-number={args.pageNumber}
       data-pdf-page-state="placeholder"
       data-testid="pdf-document-page-shell"

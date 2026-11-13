@@ -7,7 +7,6 @@ import type { PdfJumpRequest } from './pdfSystemApi';
 
 export const PDF_PAGE_MIN = 1;
 const PDF_ZOOM_DEFAULT = 100;
-export const PDF_ZOOM_MAX = 200;
 export const PDF_ZOOM_MIN = 50;
 export const PDF_ZOOM_STEP = 10;
 export const PDF_ZOOM_MODE_FIT_WIDTH = 'fit-width';
@@ -43,10 +42,14 @@ export function resolveInitialZoomMode(nodeViewState?: NodeViewState): PdfZoomMo
   return PDF_ZOOM_MODE_FIT_WIDTH;
 }
 
+export function normalizePdfCustomZoom(value: number) {
+  return Number.isFinite(value) ? Math.max(PDF_ZOOM_MIN, Math.trunc(value)) : PDF_ZOOM_DEFAULT;
+}
+
 export function resolveInitialCustomZoom(nodeViewState?: NodeViewState) {
   const encodedZoom = nodeViewState?.selection?.to;
   if (typeof encodedZoom === 'number' && encodedZoom >= PDF_ZOOM_MIN) {
-    return clampInteger(encodedZoom, PDF_ZOOM_MIN, PDF_ZOOM_MAX);
+    return normalizePdfCustomZoom(encodedZoom);
   }
   return PDF_ZOOM_DEFAULT;
 }
@@ -63,7 +66,7 @@ export function createPersistedPdfViewState(args: {
       from: clampInteger(args.page, PDF_PAGE_MIN, Number.MAX_SAFE_INTEGER),
       to:
         args.zoomMode === PDF_ZOOM_MODE_CUSTOM
-          ? clampInteger(args.customZoom, PDF_ZOOM_MIN, PDF_ZOOM_MAX)
+          ? normalizePdfCustomZoom(args.customZoom)
           : PDF_ZOOM_FIT_WIDTH_SENTINEL
     }
   };

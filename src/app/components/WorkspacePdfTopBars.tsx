@@ -1,7 +1,8 @@
-import { useEffect, type ReactNode, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 
 import { PdfTopBarsProvider, usePdfTopBars } from '../../features/pdf/components/PdfTopBarsContext';
+import { usesNativeMacOSWindowControls } from '../../shared/platform/windowChrome';
 import { FloatingBar } from '../../shared/ui';
 
 import { useImmersiveWindowChrome } from './useImmersiveWindowChrome';
@@ -9,15 +10,41 @@ import { useImmersiveWindowChrome } from './useImmersiveWindowChrome';
 export function WorkspacePdfTopBars(props: { children: ReactNode; isImmersiveMode: boolean }) {
   return (
     <PdfTopBarsProvider suspended={props.isImmersiveMode}>
-      <PdfWindowChrome isImmersiveMode={props.isImmersiveMode} />
       {props.children}
     </PdfTopBarsProvider>
   );
 }
 
-function PdfWindowChrome(props: { isImmersiveMode: boolean }) {
-  useImmersiveWindowChrome(props.isImmersiveMode);
-  return null;
+export function PdfWindowChrome(props: { isImmersiveMode: boolean; sidebarHoverEnabled?: boolean; leftSidebarVisible?: boolean }) {
+  const { floating } = usePdfTopBars();
+  const autoHideControls = (floating || props.sidebarHoverEnabled === true) && usesNativeMacOSWindowControls();
+  const [hovered, setHovered] = useState(false);
+  const zone = useRef<HTMLDivElement>(null);
+  useImmersiveWindowChrome(props.isImmersiveMode || (autoHideControls && !hovered && !props.leftSidebarVisible));
+
+  useEffect(() => {
+    if (!autoHideControls) {
+      setHovered(false);
+      return;
+    }
+    const move = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' || event.buttons) return;
+      const bounds = zone.current?.getBoundingClientRect();
+      setHovered(Boolean(bounds && event.clientX >= bounds.left && event.clientX < bounds.right &&
+        event.clientY >= bounds.top && event.clientY < bounds.bottom));
+    };
+    const blur = () => setHovered(false);
+    window.addEventListener('pointermove', move, true);
+    window.addEventListener('blur', blur);
+    return () => {
+      window.removeEventListener('pointermove', move, true);
+      window.removeEventListener('blur', blur);
+    };
+  }, [autoHideControls]);
+
+  return autoHideControls ? (
+    <div aria-hidden="true" className="pdf-native-controls-reveal-zone" ref={zone} />
+  ) : null;
 }
 
 function isSideWhitespace(event: MouseEvent<HTMLDivElement>) {
@@ -29,6 +56,8 @@ function isSideWhitespace(event: MouseEvent<HTMLDivElement>) {
     const bottom = shell.getBoundingClientRect().top + toolbar.offsetTop + toolbar.offsetHeight;
     if (bounds.width > 0 && event.clientY <= bottom && (event.clientX < bounds.left || event.clientX > bounds.right)) return true;
   }
+  // While sidebars use edge hover, only the upper whitespace can summon the top bars.
+  if (event.currentTarget.closest('[data-pdf-sidebar-hover="true"]')) return false;
   const pages = Array.from(event.currentTarget.querySelectorAll('.pdf-document-page-frame'))
     .map((page) => page.getBoundingClientRect())
     .filter((box) => box.width > 0);
@@ -81,6 +110,6 @@ export function PdfTopBarsTitleHost() {
 export function PdfWindowTitle(props: { children: ReactNode }) {
   const bars = usePdfTopBars();
   return bars.floating && bars.titleHost
-    ? <div>{createPortal(<PdfTopBar kind="window">{props.children}</PdfTopBar>, bars.titleHost)}</div>
-    : <div data-testid="pdf-window-top-bar" data-floating="false" data-visible="true">{props.children}</div>;
+    ? <div className="col-start-2 row-start-1">{createPortal(<PdfTopBar kind="window">{props.children}</PdfTopBar>, bars.titleHost)}</div>
+    : <div className="contents" data-testid="pdf-window-top-bar" data-floating="false" data-visible="true">{props.children}</div>;
 }

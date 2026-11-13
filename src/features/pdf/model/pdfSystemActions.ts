@@ -4,7 +4,7 @@ import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { getPdfAnchorLocators, type NodeAnchorLink } from '../../nodes/model/nodeTypes';
 
 import type { PdfJumpRequest } from './pdfSystemApi';
-import { clampInteger, createJumpRequest, PDF_PAGE_MIN, PDF_ZOOM_MAX, PDF_ZOOM_MIN, PDF_ZOOM_MODE_CUSTOM, PDF_ZOOM_MODE_FIT_WIDTH, PDF_ZOOM_STEP } from './pdfSystemStateUtils';
+import { clampInteger, createJumpRequest, PDF_PAGE_MIN, normalizePdfCustomZoom, PDF_ZOOM_MIN, PDF_ZOOM_MODE_CUSTOM, PDF_ZOOM_MODE_FIT_WIDTH, PDF_ZOOM_STEP } from './pdfSystemStateUtils';
 
 interface PdfSystemActionArgs {
   maxPage: number;
@@ -101,11 +101,11 @@ function createPdfCoreActions(args: CreatePdfSystemActionArgs) {
     },
     setZoom: (value: number) => {
       args.setZoomMode(PDF_ZOOM_MODE_CUSTOM);
-      args.setZoom(clampInteger(value, PDF_ZOOM_MIN, PDF_ZOOM_MAX));
+      args.setZoom(normalizePdfCustomZoom(value));
     },
     zoomIn: () => {
       args.setZoomMode(PDF_ZOOM_MODE_CUSTOM);
-      args.setZoom((current) => Math.min(PDF_ZOOM_MAX, current + PDF_ZOOM_STEP));
+      args.setZoom((current) => current + PDF_ZOOM_STEP);
     },
     zoomOut: () => {
       args.setZoomMode(PDF_ZOOM_MODE_CUSTOM);

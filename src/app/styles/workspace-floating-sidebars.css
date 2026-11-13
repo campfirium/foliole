@@ -21,3 +21,114 @@
   width: min(var(--workspace-right-sidebar-width), 100%);
   background: var(--role-sidebar-bg);
 }
+
+@media (width > 1080px) {
+  [data-workspace-document-grid] > [data-workspace-document-focus-target] {
+    grid-column-start: 3;
+  }
+}
+
+[data-pdf-sidebar-overlay].workspace-floating-sidebar {
+  box-shadow: none;
+  z-index: calc(var(--z-floating) + 1);
+}
+
+[data-pdf-sidebar-overlay].workspace-floating-sidebar[aria-hidden='true'] {
+  pointer-events: none;
+  visibility: hidden;
+}
+
+[data-pdf-sidebar-overlay].workspace-floating-sidebar-left [data-workspace-folder-splitter] {
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: var(--role-column-line-opacity);
+    background: color-mix(in oklab, var(--role-nav-bg) var(--role-line-subtle-weight), var(--role-nav-line-mix, var(--role-line-mix)));
+  }
+}
+
+/* Paint one continuous edge across all workspace rows. */
+.workspace-responsive-shell:has([data-pdf-sidebar-overlay][aria-hidden='false'])::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: var(--sidebar-seam-left, auto);
+  right: var(--sidebar-seam-right, auto);
+  width: 7px;
+  pointer-events: none;
+  z-index: calc(var(--z-floating) + 2);
+  background: linear-gradient(
+    var(--sidebar-seam-direction),
+    var(--sidebar-seam-line) 0 1px,
+    rgb(var(--role-ink-rgb) / 0.065) 1px,
+    transparent 100%
+  );
+}
+
+.workspace-responsive-shell:has(.workspace-floating-sidebar-left[data-pdf-sidebar-overlay][aria-hidden='false']) {
+  --sidebar-seam-left: calc(var(--workspace-rail-width) + min(var(--workspace-list-width), calc(100% - var(--workspace-rail-width))) - 1px);
+  --sidebar-seam-direction: to right;
+  --sidebar-seam-line: color-mix(in oklab, var(--role-list-bg) var(--role-line-subtle-weight), var(--role-list-line-mix, var(--role-line-mix)));
+}
+
+.workspace-responsive-shell:has(.workspace-floating-sidebar-right[data-pdf-sidebar-overlay][aria-hidden='false']) {
+  --sidebar-seam-right: calc(min(var(--workspace-right-sidebar-width), calc(100% - var(--workspace-rail-width))) - 1px);
+  --sidebar-seam-direction: to left;
+  --sidebar-seam-line: color-mix(in oklab, var(--role-sidebar-bg) var(--role-line-subtle-weight), var(--role-sidebar-line-mix, var(--role-line-mix)));
+}
+
+.workspace-bottom-region-grid [data-pdf-review-layout] {
+  grid-template-columns: minmax(0, 1fr);
+  padding-inline-start: var(--pdf-layout-left);
+  padding-inline-end: var(--pdf-layout-right);
+}
+
+.workspace-bottom-region-grid [data-pdf-review-layout] > :not([aria-hidden='true']) {
+  grid-column: 1;
+}
+
+.workspace-bottom-region-grid [data-pdf-review-layout] > [aria-hidden='true'] {
+  display: none;
+}
+
+.workspace-responsive-shell[data-pdf-sidebar-hover='true'] {
+  --pdf-layout-left: calc(var(--workspace-list-current-width) + var(--workspace-list-splitter-width));
+  --pdf-layout-right: calc(var(--workspace-right-sidebar-current-width) + var(--workspace-right-sidebar-splitter-width));
+}
+
+[data-pdf-sidebar-hover='true'] .window-titlebar .window-titlebar-center-slot {
+  position: absolute;
+  grid-column: auto;
+  inset-block: 0;
+  z-index: var(--z-local-overlay);
+  inset-inline: calc(var(--workspace-rail-width) + var(--pdf-layout-left)) var(--pdf-layout-right);
+}
+
+.workspace-responsive-shell:has(.workspace-floating-sidebar-left[data-pdf-sidebar-overlay][aria-hidden='false']) {
+  .workspace-bottom-region-grid {
+    --workspace-list-current-width: var(--workspace-list-width);
+    --workspace-list-folder-current-width: min(var(--workspace-folder-column-width), var(--workspace-list-width));
+  }
+
+  @media (width <= 1080px) {
+    .window-titlebar {
+      --workspace-titlebar-list-current-width: var(--workspace-list-width) !important;
+      --workspace-titlebar-folder-column-width: min(var(--workspace-folder-column-width), var(--workspace-list-width)) !important;
+    }
+
+    .window-titlebar :is([data-workspace-surface-divider='folder'], [data-workspace-surface-divider='topic']) {
+      display: block;
+    }
+  }
+}
+
+.workspace-responsive-shell:has(.workspace-floating-sidebar-right[data-pdf-sidebar-overlay][aria-hidden='false'])
+  .workspace-bottom-region-grid {
+  --workspace-right-sidebar-current-width: var(--workspace-right-sidebar-width);
+}
+
+.workspace-responsive-shell:has(.workspace-floating-sidebar-right[data-pdf-sidebar-overlay][aria-hidden='true']) .window-titlebar-right-anchor-shell {
+  visibility: hidden;
+}

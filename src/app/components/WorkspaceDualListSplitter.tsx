@@ -23,6 +23,7 @@ export function WorkspaceDualListSplitter({
       aria-orientation="vertical"
       aria-valuenow={Math.round(width)}
       className="group relative w-px self-stretch bg-transparent"
+      data-workspace-folder-splitter
       onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
       role="separator"

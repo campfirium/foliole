@@ -8,8 +8,8 @@
     0 0,
     var(--window-titlebar-left-width) 0,
     var(--window-titlebar-left-width) 100%,
-    calc(100% - var(--window-titlebar-right-width)) 100%,
-    calc(100% - var(--window-titlebar-right-width)) 0,
+    calc(100% - var(--pdf-titlebar-right-strip, var(--window-titlebar-right-width))) 100%,
+    calc(100% - var(--pdf-titlebar-right-strip, var(--window-titlebar-right-width))) 0,
     100% 0,
     100% 100%,
     0 100%
@@ -20,7 +20,8 @@
   -webkit-app-region: drag;
 }
 
-.pdf-floating-window-title[data-visible='false'] .window-titlebar-drag-fill {
+/* The floating title needs pointer events to keep the PDF bars open on hover. */
+.pdf-floating-window-title .window-titlebar-drag-fill {
   -webkit-app-region: no-drag;
 }
 
@@ -48,4 +49,28 @@
   pointer-events: none;
   opacity: var(--role-column-line-opacity);
   z-index: var(--z-local-feedback);
+}
+
+/* Keep sidebar controls with their revealed surface. */
+.workspace-responsive-shell[data-pdf-top-bars-floating='true'] {
+  &:has(.workspace-floating-sidebar-right[data-pdf-sidebar-overlay][aria-hidden='true']) {
+    .window-titlebar {
+      --pdf-titlebar-right-strip: 0px;
+    }
+
+  }
+
+  &[data-pdf-top-bars-visible='false']:has(.workspace-floating-sidebar-left[data-pdf-sidebar-overlay][aria-hidden='true']) .window-titlebar::after {
+    clip-path: inset(0 0 0 var(--window-titlebar-left-width));
+  }
+}
+
+.pdf-native-controls-reveal-zone {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: var(--workspace-rail-width);
+  width: 88px;
+  height: var(--workspace-top-toolbar-height);
+  z-index: calc(var(--z-workspace-overlay) + 1);
+  -webkit-app-region: no-drag;
 }

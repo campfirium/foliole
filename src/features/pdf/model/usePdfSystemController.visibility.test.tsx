@@ -69,3 +69,16 @@ describe('usePdfSystemController visibility restore', () => {
     expect(result.current.state.pageJumpRequest).toBeNull();
   });
 });
+
+it('increases the fixed zoom beyond 200 percent and restores the saved value', () => {
+  const persist = vi.fn();
+  const viewState = { scrollTop: 450, selection: { from: 5, to: 200 } };
+  const reader = renderHook(() => usePdfSystemController(viewState, persist, '/tmp/sample.pdf', true, 9));
+  act(() => reader.result.current.actions.zoomIn());
+  expect(reader.result.current.state.zoom).toBe(210);
+  const saved = persist.mock.lastCall?.[0];
+  expect(saved?.selection?.to).toBe(210);
+  reader.unmount();
+  const restored = renderHook(() => usePdfSystemController(saved, vi.fn(), '/tmp/sample.pdf', true, 9));
+  expect(restored.result.current.state).toMatchObject({ zoom: 210, zoomMode: 'custom' });
+});

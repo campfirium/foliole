@@ -1,16 +1,21 @@
+import { Expand } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { usePdfTopBars } from '../../features/pdf/components/PdfTopBarsContext';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { appFloatingToolbarClassName } from '../../shared/ui';
 
 import type { PdfSearchStatus } from './PdfDocumentSearch';
 import { PdfPageControls, PdfSearchControls, PdfZoomControls } from './PdfDocumentToolbarControls';
 import { PdfReadingViewControls } from './PdfReadingViewControls';
+import { PdfToolbarIconButton } from './PdfToolbarTooltip';
 import { PdfTopBarsToggle } from './PdfTopBarsToggle';
 import { PdfVisualExcerptToolbarControls } from './PdfVisualExcerptToolbarControls';
+import type { PdfExpandedWidthToggle } from './usePdfExpandedWidth';
 
 interface PdfDocumentToolbarProps {
   displayPage: number;
+  expandedWidth?: PdfExpandedWidthToggle | undefined;
   isVisible: boolean;
   maxPage: number;
   onClearSearch: () => void;
@@ -36,7 +41,7 @@ interface PdfDocumentToolbarProps {
 }
 
 function resolveToolbarShellClassName() {
-  return 'sticky top-0 z-floating h-0 w-full px-4 pt-3 pointer-events-none';
+  return 'sticky top-0 left-0 z-floating h-0 w-full px-4 pt-3 pointer-events-none';
 }
 
 function resolveToolbarPanelClassName(isVisible: boolean) {
@@ -111,6 +116,7 @@ export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
         onMouseLeave={() => setIsHovered(false)}
       >
         {renderViewControls(props, setIsMenuOpen)}
+        {props.expandedWidth ? <PdfExpandedWidthButton {...props.expandedWidth} onInteraction={props.onToolbarInteraction} /> : null}
         <PdfTopBarsToggle onInteraction={props.onToolbarInteraction} />
         <ToolbarDivider />
         <PdfPageControls
@@ -127,6 +133,23 @@ export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
         {renderSearchControls(props)}
       </div>
     </div>
+  );
+}
+
+function PdfExpandedWidthButton(props: PdfExpandedWidthToggle & { onInteraction: () => void }) {
+  const t = useTranslation();
+  return (
+    <PdfToolbarIconButton
+      aria-pressed={props.pressed}
+      disabled={props.disabled}
+      className="aria-pressed:bg-foreground/[0.035] aria-pressed:text-foreground"
+      icon={<Expand aria-hidden="true" size={15} />}
+      label={t(props.saveFailed ? 'desktop.pdf.zoom.expandWidthFailed' : 'desktop.pdf.zoom.expandWidth')}
+      onClick={() => {
+        props.onInteraction();
+        props.toggle();
+      }}
+    />
   );
 }
 

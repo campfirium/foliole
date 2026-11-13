@@ -22,7 +22,7 @@ const TITLEBAR_SURFACE_ROW_TEMPLATE = [
   'var(--workspace-titlebar-folder-column-width, var(--workspace-folder-column-width))',
   'minmax(0, max(0px, calc(var(--workspace-titlebar-list-current-width, var(--workspace-list-current-width, 300px)) - var(--workspace-titlebar-folder-column-width, var(--workspace-folder-column-width)))))',
   'minmax(0, 1fr)',
-  'minmax(0, var(--workspace-right-sidebar-current-width, 320px))'
+  'minmax(0, var(--workspace-titlebar-sidebar-current-width, var(--workspace-right-sidebar-current-width, 320px)))'
 ].join(' ');
 
 const WORKSPACE_SURFACE_COLUMNS = ['rail', 'folder', 'topic', 'document', 'sidebar'] as const;
@@ -135,7 +135,7 @@ export function WorkspaceTitlebarDividers({
         <WorkspaceSurfaceRowDivider
           className="max-[1080px]:hidden"
           column="topic"
-          left={WORKSPACE_LIST_DIVIDER_LEFT}
+          left="calc(var(--workspace-rail-width) + var(--workspace-titlebar-list-current-width, 300px))"
           row="titlebar"
         />
       )}
@@ -143,7 +143,7 @@ export function WorkspaceTitlebarDividers({
         <WorkspaceSurfaceRowDivider
           className="max-[1279px]:hidden"
           column="sidebar"
-          left={WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT}
+          left="calc(100% - var(--workspace-titlebar-sidebar-current-width, var(--workspace-right-sidebar-current-width, 320px)))"
           row="titlebar"
         />
       )}

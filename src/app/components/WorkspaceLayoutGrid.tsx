@@ -90,8 +90,8 @@ function renderWorkspaceGridDividerOverlay(
   return (
     <WorkspaceGridDividerOverlay
       isStudyMode={props.review.isStudyMode}
-      isListCollapsed={props.layoutChrome.isListCollapsed}
-      isRightSidebarCollapsed={props.layoutChrome.isRightSidebarCollapsed}
+      isListCollapsed={props.layoutChrome.isListCollapsed || Boolean(props.layoutChrome.compactSidebars?.leftFloating)}
+      isRightSidebarCollapsed={props.layoutChrome.isRightSidebarCollapsed || Boolean(props.layoutChrome.compactSidebars?.rightFloating)}
     />
   );
 }

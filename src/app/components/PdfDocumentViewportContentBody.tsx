@@ -11,6 +11,7 @@ import { useDisplayedPdfZoom, useFitWidthTargetWidth } from './PdfDocumentViewpo
 import type { PdfPageDimensions } from './pdfPageDimensions';
 import type { PdfPageTextEntry } from './pdfPageText';
 import { PdfViewportToolbar } from './PdfViewportToolbar';
+import { stepPdfFitWidthZoom, usePdfExpandedWidth, type PdfExpandedWidthToggle } from './usePdfExpandedWidth';
 import { usePdfHeightFitView } from './usePdfHeightFitView';
 import { usePdfViewportTransformAnchor } from './usePdfViewportTransformAnchor';
 
@@ -124,7 +125,6 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
   const [isInitialRenderReady, setIsInitialRenderReady] = useState(false);
   const [isLayoutReady, setIsLayoutReady] = useState(false);
   const isViewportPageLoading = useViewportPageLoadingState(props.pageJumpRequest, props.pageElementsRef, props.scrollContainerRef);
-  const previousPdfSourceRef = useRef(props.pdfSource);
   const heightView = usePdfHeightFitView(props, isLayoutReady && isInitialRenderReady);
   const adapted = heightView.props;
   const handleScroll = usePdfViewportTransformAnchor(props, {
@@ -136,25 +136,29 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
   useEffect(() => {
     props.onPositionReadyChange?.(isLayoutReady && isInitialRenderReady);
   }, [isInitialRenderReady, isLayoutReady, props.onPositionReadyChange]);
-  const { displayedZoom, handlePageLoadSuccess } = useDisplayedPdfZoom({
+  const { displayedZoom, handlePageLoadSuccess, visibleDimensions } = useDisplayedPdfZoom({
     fitWidthTargetWidth,
     visiblePage: adapted.visiblePage,
+    rotation: adapted.rotation,
     zoom: adapted.zoom,
     zoomMode: adapted.zoomMode
   });
+  const expandedWidth = usePdfExpandedWidth({
+    dimensions: props.persistedPageDimensions[adapted.visiblePage] ?? visibleDimensions,
+    fitWidth: fitWidthTargetWidth,
+    onSetZoom: adapted.onSetZoom,
+    ready: isLayoutReady,
+    rotation: adapted.rotation,
+    zoom: adapted.zoom,
+    zoomMode: adapted.zoomMode
+  });
+  const toolbarProps = resolvePdfWidthToolbarActions(adapted, expandedWidth);
   const registerDimensions = (page: number, dimensions: PdfPageDimensions) => {
     handlePageLoadSuccess(page, dimensions);
     heightView.registerDimensions(page, dimensions);
   };
 
-  useEffect(() => {
-    if (previousPdfSourceRef.current === props.pdfSource) {
-      return;
-    }
-    previousPdfSourceRef.current = props.pdfSource;
-    setIsInitialRenderReady(false);
-    setIsLayoutReady(false);
-  }, [props.pdfSource]);
+  useResetPdfLayoutOnSourceChange(props.pdfSource, setIsInitialRenderReady, setIsLayoutReady);
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
@@ -166,17 +170,47 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
         data-testid="pdf-scroll-container"
         ref={props.scrollContainerRef}
       >
-        {isLayoutReady && props.totalPages ? renderViewportToolbar(adapted, displayedZoom) : null}
+        {isLayoutReady && props.totalPages ? renderViewportToolbar(toolbarProps, displayedZoom, expandedWidth.toggle) : null}
         {renderViewportDocument(adapted, fitWidthTargetWidth, registerDimensions, setIsInitialRenderReady, setIsLayoutReady)}
       </div>
     </div>
   );
 }
 
-function renderViewportToolbar(props: PdfDocumentViewportContentBodyProps, displayedZoom: number) {
+function useResetPdfLayoutOnSourceChange(
+  pdfSource: string, setIsInitialRenderReady: (ready: boolean) => void, setIsLayoutReady: (ready: boolean) => void
+) {
+  const previousPdfSourceRef = useRef(pdfSource);
+  useEffect(() => {
+    if (previousPdfSourceRef.current === pdfSource) {
+      return;
+    }
+    previousPdfSourceRef.current = pdfSource;
+    setIsInitialRenderReady(false);
+    setIsLayoutReady(false);
+  }, [pdfSource, setIsInitialRenderReady, setIsLayoutReady]);
+}
+
+function resolvePdfWidthToolbarActions(
+  props: PdfDocumentViewportContentBodyProps, width: ReturnType<typeof usePdfExpandedWidth>
+) {
+  const fittedZoom = props.zoomMode === 'fit-width' ? width.fittedZoom : null;
+  const fitWidthZoom = width.fitWidthZoom;
+  return {
+    ...props,
+    onSetFitWidth: fitWidthZoom === null ? props.onSetFitWidth : () => props.onSetZoom(fitWidthZoom),
+    onZoomIn: fittedZoom === null ? props.onZoomIn : () => props.onSetZoom(stepPdfFitWidthZoom(fittedZoom, 1)),
+    onZoomOut: fittedZoom === null ? props.onZoomOut : () => props.onSetZoom(stepPdfFitWidthZoom(fittedZoom, -1))
+  };
+}
+
+function renderViewportToolbar(
+  props: PdfDocumentViewportContentBodyProps, displayedZoom: number, expandedWidth: PdfExpandedWidthToggle | undefined
+) {
   return (
     <PdfViewportToolbar
       displayPage={props.visiblePage}
+      expandedWidth={expandedWidth}
       isVisible={props.isToolbarVisible}
       maxPage={props.maxPage}
       onClearSearch={props.onClearSearch}

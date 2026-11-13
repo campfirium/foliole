@@ -29,6 +29,9 @@ interface WindowTitleBarRightSidebarAnchorProps {
   activeRightPanelId: WorkspaceRightPanelId;
   controlsWidth: number;
   isRightSidebarCollapsed: boolean;
+  isRightSidebarFloating?: boolean | undefined;
+  keepFloatingSidebarControls?: boolean | undefined;
+  dockedRightCollapsed?: boolean | undefined;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
   onToggleRightSidebarVisibility: () => void;
   rightSidebarWidth: number;
@@ -53,6 +56,10 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
   props: WindowTitleBarRightSidebarAnchorProps
 ) {
   const isCollapsed = props.isRightSidebarCollapsed;
+  const temporarilyHidden = props.keepFloatingSidebarControls && props.isRightSidebarFloating;
+  const toggleActive = temporarilyHidden ? !props.dockedRightCollapsed : !isCollapsed;
+  const hidePanelActions = (isCollapsed || props.isRightSidebarFloating) &&
+    !(props.keepFloatingSidebarControls && props.isRightSidebarFloating);
   const orderState = useWorkspaceRightPanelOrder();
   const visiblePanelCount = resolveVisibleRightPanelCount({
     availableWidth: resolveRightPanelAvailableWidth({
@@ -65,8 +72,8 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
   return (
     <div className="window-titlebar-right-anchor-shell relative z-local-control" data-collapsed={isCollapsed}>
       <div className="window-titlebar-right-content" data-collapsed={isCollapsed}>
-        <div className="window-titlebar-right-zone max-[1279px]:hidden" hidden={isCollapsed} style={{ pointerEvents: 'none' }}>
-          {isCollapsed
+        <div className="window-titlebar-right-zone max-[1279px]:hidden" hidden={hidePanelActions} style={{ pointerEvents: 'none' }}>
+          {hidePanelActions
             ? null
             : <WindowTitleBarRightPanelActions
                 activeRightPanelId={props.activeRightPanelId}
@@ -77,7 +84,7 @@ export const WindowTitleBarRightSidebarAnchor = memo(function WindowTitleBarRigh
               />}
         </div>
         <div className="window-titlebar-right-expanded-action">
-          <RightSidebarToggleButton active={!isCollapsed} onClick={props.onToggleRightSidebarVisibility} />
+          <RightSidebarToggleButton active={toggleActive} onClick={props.onToggleRightSidebarVisibility} />
         </div>
       </div>
     </div>

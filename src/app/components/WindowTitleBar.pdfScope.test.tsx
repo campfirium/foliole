@@ -8,9 +8,10 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 
 import { DocumentPanelScaleSurface } from './DocumentPanelScaleSurface'
 import { WindowTitleBar } from './WindowTitleBar'
-import { WorkspacePdfTopBars } from './WorkspacePdfTopBars'
+import { PdfWindowChrome, WorkspacePdfTopBars } from './WorkspacePdfTopBars'
 
 const controls = vi.hoisted(() => ({ visible: vi.fn().mockResolvedValue(undefined) }))
+vi.mock('../../shared/platform/windowChrome', () => ({ usesNativeMacOSWindowControls: () => false }))
 vi.mock('../../shared/platform/windowControls', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../shared/platform/windowControls')>()),
   setMainWindowNativeControlsVisible: controls.visible
@@ -30,6 +31,7 @@ it('floats only the document title and navigation while keeping window controls 
   vi.useFakeTimers()
   renderWithLocalization(
     <WorkspacePdfTopBars isImmersiveMode={false}>
+      <PdfWindowChrome isImmersiveMode={false} />
       <WindowTitleBar
         activeRightPanelId="review-queue"
         centerTitle="PDF title"

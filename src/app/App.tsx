@@ -12,6 +12,7 @@ import { reportRuntimeAppReady, reportRuntimeBootStage } from '../shared/platfor
 import { AppProviders } from './AppProviders';
 import { AppOverlayStack, prewarmAppOverlayStack } from './components/AppOverlayStack';
 import { prewarmImportSourceWorkspace } from './components/ImportSourceWorkspace';
+import { PdfExpandedWidthContext } from './components/pdfExpandedWidthContext';
 import { useGlobalCaptureNavigation } from './components/useGlobalCaptureNavigation';
 import { WorkspaceDemoViewportGate } from './components/WorkspaceDemoViewportGate';
 import { WorkspaceLayoutWithReviewQueueDialog } from './components/WorkspaceLayoutWithReviewQueueDialog';
@@ -32,7 +33,9 @@ function AppContent() {
   const handleOpenSearchPreview = useCallback((result: WorkspaceSearchResult) => {
     setSearchPreviewResult(result);
   }, []);
+  const [pdfWidth, setPdfWidth] = useState(0);
   const controller = useAppController({
+    pdfWidth,
     onOpenHelpSearch: () => setIsHelpSearchOpen(true),
     onReviewQueueEmpty: () => undefined,
     onOpenSearchPreview: handleOpenSearchPreview,
@@ -67,7 +70,9 @@ function AppContent() {
     <HotkeySettingsProvider {...controller.hotkeySettings}>
       <>
         <WorkspaceDemoViewportGate>
-          <WorkspaceLayoutWithReviewQueueDialog controller={controller} />
+          <PdfExpandedWidthContext.Provider value={controller.layoutProps.layoutChrome.isImmersiveMode ? null : setPdfWidth}>
+            <WorkspaceLayoutWithReviewQueueDialog controller={controller} />
+          </PdfExpandedWidthContext.Provider>
         </WorkspaceDemoViewportGate>
         <AppOverlayStack
           controller={controller}

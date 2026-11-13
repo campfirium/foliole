@@ -41,6 +41,8 @@ export const EN_DESKTOP_PDF_TRANSLATIONS = {
   'desktop.pdf.zoom.out': 'Zoom out',
   'desktop.pdf.zoom.in': 'Zoom in',
   'desktop.pdf.zoom.set': 'Set zoom level',
+  'desktop.pdf.zoom.expandWidth': 'Automatically expand width',
+  'desktop.pdf.zoom.expandWidthFailed': 'Could not save automatic width expansion',
   'desktop.pdf.zoom.fitWidth': 'Fit width',
   'desktop.pdf.zoom.rotateClockwise': 'Rotate page clockwise',
   'desktop.pdf.selection.highlight': 'Highlight',

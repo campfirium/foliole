@@ -37,6 +37,7 @@ function useDerivedControllerState(args: {
   isStudyMode: boolean;
   isWorkspaceHydrated: boolean;
   nowIso: string;
+  pdfWidth: number;
   priorityQuickSet: ReturnType<typeof useControllerPriorityQuickSet>;
   reviewTopicDelayPanel: ReturnType<typeof useReviewTopicDelayPanel>;
   onReviewQueueEmpty: () => void;
@@ -66,7 +67,7 @@ function useDerivedControllerState(args: {
       ws: args.ws
     })
   );
-  const layoutChrome = useCompactWorkspaceSidebars(layoutProps.layoutChrome);
+  const layoutChrome = useCompactWorkspaceSidebars(layoutProps.layoutChrome, args.pdfWidth);
   return { layoutProps: { ...layoutProps, layoutChrome }, paletteItems };
 }
 
@@ -179,12 +180,15 @@ function useControllerAuxiliaryResult(args: {
   return useControllerAuxiliaryState(args);
 }
 
-export function useAppController(args: {
+interface AppControllerOptions {
+  pdfWidth: number;
   onOpenHelpSearch: () => void;
   onReviewQueueEmpty: () => void;
   onOpenSearchPreview: (result: WorkspaceSearchResult) => void;
   onSendFeedback: () => void;
-}): AppControllerResult {
+}
+
+export function useAppController(args: AppControllerOptions): AppControllerResult {
   const core = useControllerCoreState();
   const { appearance, controller, formalImport, hotkeys, isWorkspaceHydrated, nowIso, reviewSettings, ws } = core;
   const { exitStudyMode, isStudyMode, startStudyMode } = core.controller.study;
@@ -216,6 +220,7 @@ export function useAppController(args: {
     nowIso,
     priorityQuickSet,
     onReviewQueueEmpty: args.onReviewQueueEmpty,
+    pdfWidth: args.pdfWidth,
     reviewTopicDelayPanel,
     reviewPreview,
     reviewSettings,

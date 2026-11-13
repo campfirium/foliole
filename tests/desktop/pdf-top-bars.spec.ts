@@ -109,6 +109,31 @@ test('PDF top bars @pdf float, protect navigation, restore space, and remember t
   );
 });
 
+test('keeps PDF top bars open when crossing into the floating PDF title @pdf', async ({
+  desktopApp,
+  desktopWindow: page
+}) => {
+  await openPdf(desktopApp, page);
+  await moveToReading(page);
+  const title = page.getByTestId('pdf-window-top-bar');
+  await expect(title).toHaveAttribute('data-visible', 'false');
+  await revealPdfBars(page);
+  await expect(title).toHaveAttribute('data-visible', 'true');
+
+  const floatingTitle = title.locator('.window-titlebar-drag-fill');
+  await expect(floatingTitle).toHaveCSS('app-region', 'no-drag');
+  const bounds = (await floatingTitle.boundingBox())!;
+  const x = bounds.x + bounds.width / 2;
+  await page.mouse.move(x, bounds.y + bounds.height + 2);
+  await page.mouse.move(x, bounds.y + bounds.height / 2, { steps: 5 });
+  await expect.poll(() => floatingTitle.evaluate(element => element.matches(':hover'))).toBe(true);
+  await page.waitForTimeout(450);
+  await expect(title).toHaveAttribute('data-visible', 'true');
+
+  await moveToReading(page);
+  await expect(title).toHaveAttribute('data-visible', 'false');
+});
+
 async function dismissFromReading(page: Page) {
   const frame = page.getByTestId('pdf-document-page-frame').first();
   await frame.click({ position: { x: 20, y: 250 } });

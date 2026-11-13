@@ -20,7 +20,7 @@ export function createMainWindowChromeOptions(
 }
 
 export function setMainWindowNativeControlsVisible(
-  window: Pick<BrowserWindow, 'setWindowButtonVisibility'> | null,
+  window: Pick<BrowserWindow, 'setWindowButtonVisibility' | 'setWindowButtonPosition'> | null,
   visible: boolean,
   platform: NodeJS.Platform = process.platform
 ) {
@@ -28,4 +28,7 @@ export function setMainWindowNativeControlsVisible(
     return;
   }
   window.setWindowButtonVisibility(visible);
+  if (visible) {
+    window.setWindowButtonPosition({ ...MACOS_TRAFFIC_LIGHT_POSITION });
+  }
 }

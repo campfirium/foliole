@@ -18,7 +18,7 @@ import { WorkspaceActivityNotice } from './WorkspaceActivityNotice';
 import { WorkspaceLayoutGrid, type WorkspaceLayoutGridSource } from './WorkspaceLayoutGrid';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceMainTitleBar, type WorkspaceTitleBarSource } from './WorkspaceMainTitleBar';
-import { WorkspacePdfTopBars } from './WorkspacePdfTopBars';
+import { PdfWindowChrome, WorkspacePdfTopBars } from './WorkspacePdfTopBars';
 import { WorkspacePublishDialogHosts } from './WorkspacePublishDialogHosts';
 import {
   loadWorkspaceRightPanelPreference,
@@ -51,15 +51,17 @@ function useWorkspaceSurfaceActions(props: WorkspaceSurfaceActionsSource) {
 }
 
 function buildWorkspaceGridStyle(layoutChrome: WorkspaceLayoutProps['layoutChrome']) {
+  const leftUndocked = layoutChrome.isListCollapsed || layoutChrome.compactSidebars?.leftFloating;
+  const rightUndocked = layoutChrome.isRightSidebarCollapsed || layoutChrome.compactSidebars?.rightFloating;
   return {
     '--workspace-list-width': `${layoutChrome.listWidth}px`,
-    '--workspace-list-folder-current-width': layoutChrome.isListCollapsed
+    '--workspace-list-folder-current-width': leftUndocked
       ? '0px'
       : 'min(var(--workspace-folder-column-width), var(--workspace-list-width))',
-    '--workspace-list-current-width': layoutChrome.isListCollapsed ? '0px' : `${layoutChrome.listWidth}px`,
-    '--workspace-list-splitter-width': layoutChrome.isListCollapsed ? '0px' : '1px',
-    '--workspace-right-sidebar-current-width': layoutChrome.isRightSidebarCollapsed ? '0px' : `${layoutChrome.rightSidebarWidth}px`,
-    '--workspace-right-sidebar-splitter-width': layoutChrome.isRightSidebarCollapsed ? '0px' : '1px',
+    '--workspace-list-current-width': leftUndocked ? '0px' : `${layoutChrome.listWidth}px`,
+    '--workspace-list-splitter-width': leftUndocked ? '0px' : '1px',
+    '--workspace-right-sidebar-current-width': rightUndocked ? '0px' : `${layoutChrome.rightSidebarWidth}px`,
+    '--workspace-right-sidebar-splitter-width': rightUndocked ? '0px' : '1px',
     '--workspace-right-sidebar-width': `${layoutChrome.rightSidebarWidth}px`
   } as CSSProperties;
 }
@@ -97,14 +99,32 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   </WorkspacePdfTopBars>;
 }
 
+function useWorkspaceRightPanel(layoutChrome: WorkspaceLayoutProps['layoutChrome']) {
+  const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>(() =>
+    loadWorkspaceRightPanelPreference()
+  );
+  useEffect(() => {
+    saveWorkspaceRightPanelPreference(activeRightPanelId);
+  }, [activeRightPanelId]);
+
+  const handleSelectRightPanel = useCallback((panelId: WorkspaceRightPanelId) => {
+    setActiveRightPanelId(panelId);
+    if (layoutChrome.isRightSidebarCollapsed) {
+      layoutChrome.onToggleRightSidebarVisibility();
+    }
+  }, [layoutChrome.isRightSidebarCollapsed, layoutChrome.onToggleRightSidebarVisibility]);
+
+  useEffect(() => subscribeWorkspaceRightPanelRequests(handleSelectRightPanel), [handleSelectRightPanel]);
+
+  return { activeRightPanelId, handleSelectRightPanel };
+}
+
 function WorkspaceMainContent(props: WorkspaceLayoutProps) {
   const t = useTranslation();
   const { imports, layoutChrome, navigation, settings, trash } = props;
   const pdfTopBars = usePdfTopBars();
   useWorkspaceShellBridges();
-  const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>(() =>
-    loadWorkspaceRightPanelPreference()
-  );
+  const { activeRightPanelId, handleSelectRightPanel } = useWorkspaceRightPanel(layoutChrome);
   const immersiveSource = useMemo(() => selectImmersiveReadingModeSource(props), [props]);
   const immersive = useImmersiveReadingMode(immersiveSource);
   const clipboardImportNotice = useWorkspaceImportNoticeController(imports, navigation);
@@ -122,21 +142,9 @@ function WorkspaceMainContent(props: WorkspaceLayoutProps) {
     onSelectNode: navigation.onSelectNode
   });
 
-  useEffect(() => {
-    saveWorkspaceRightPanelPreference(activeRightPanelId);
-  }, [activeRightPanelId]);
-
-  const handleSelectRightPanel = useCallback((panelId: WorkspaceRightPanelId) => {
-    setActiveRightPanelId(panelId);
-    if (layoutChrome.isRightSidebarCollapsed) {
-      layoutChrome.onToggleRightSidebarVisibility();
-    }
-  }, [layoutChrome.isRightSidebarCollapsed, layoutChrome.onToggleRightSidebarVisibility]);
-
-  useEffect(() => subscribeWorkspaceRightPanelRequests(handleSelectRightPanel), [handleSelectRightPanel]);
-
   return (
-    <main data-pdf-top-bars-floating={pdfTopBars.floating} aria-label={t('desktop.workspace.main')} data-floating-sidebar={layoutChrome.compactSidebars?.openSide ?? undefined} className="workspace-responsive-shell relative flex h-dvh flex-col overflow-hidden p-0" style={buildWorkspaceGridStyle(layoutChrome)}>
+    <main data-pdf-top-bars-floating={pdfTopBars.floating} data-pdf-top-bars-visible={pdfTopBars.visible} data-pdf-sidebar-hover={layoutChrome.compactSidebars?.hoverEnabled} aria-label={t('desktop.workspace.main')} data-floating-sidebar={layoutChrome.compactSidebars?.openSide ?? undefined} className="workspace-responsive-shell relative flex h-dvh flex-col overflow-hidden p-0" style={buildWorkspaceGridStyle(layoutChrome)}>
+      <PdfWindowChrome isImmersiveMode={layoutChrome.isImmersiveMode} sidebarHoverEnabled={Boolean(layoutChrome.compactSidebars?.hoverEnabled)} leftSidebarVisible={!layoutChrome.isListCollapsed} />
       <WorkspaceMainChrome
         activeRightPanelId={activeRightPanelId}
         onOpenTrashView={handleOpenTrashView}

@@ -1,6 +1,7 @@
 import { HardDrive } from 'lucide-react';
 import { memo, useCallback, useEffect, useState, type CSSProperties } from 'react';
 
+import { usePdfTopBars } from '../../features/pdf/components/PdfTopBarsContext';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
@@ -32,7 +33,12 @@ interface WindowTitleBarProps {
   centerTitle: string | null;
   centerTitleIcon?: 'external';
   isListCollapsed: boolean;
+  isListFloating?: boolean | undefined;
+  keepFloatingSidebarControls?: boolean | undefined;
+  dockedListCollapsed?: boolean | undefined;
+  dockedRightCollapsed?: boolean | undefined;
   isRightSidebarCollapsed: boolean;
+  isRightSidebarFloating?: boolean | undefined;
   isTrashViewOpen: boolean;
   listWidth: number;
   onSelectRightPanel: (panelId: WorkspaceRightPanelId) => void;
@@ -91,14 +97,18 @@ function useWindowControlState() {
 
 function WindowLeadingActions({
   isListCollapsed,
+  isListFloating,
+  keepFloatingSidebarControls,
+  dockedListCollapsed,
   onToggleListVisibility
 }: WindowTitleBarProps) {
   const t = useTranslation();
+  const collapsed = keepFloatingSidebarControls && isListFloating ? dockedListCollapsed : isListCollapsed;
   return (
-    <div className="window-titlebar-left-zone relative z-local-control" data-collapsed={isListCollapsed}>
-      <div className={isListCollapsed ? 'window-titlebar-collapsed-left-action' : 'window-titlebar-leading'}>
+    <div className="window-titlebar-left-zone relative z-local-control" data-collapsed={Boolean(collapsed)}>
+      <div className={collapsed ? 'window-titlebar-collapsed-left-action' : 'window-titlebar-leading'}>
         <div className="window-titlebar-leading-primary">
-          <WindowSidebarToggleButton active={!isListCollapsed} label={t('desktop.workspace.toggleLeftPanel')} onClick={onToggleListVisibility} side="left" />
+          <WindowSidebarToggleButton active={!collapsed} label={t('desktop.workspace.toggleLeftPanel')} onClick={onToggleListVisibility} side="left" />
         </div>
       </div>
     </div>
@@ -109,7 +119,7 @@ function WindowCenterTitle({ icon, onDoubleClick, title }: { icon?: 'external'; 
   return (
     <div
       aria-hidden="true"
-      className="window-titlebar-center-slot window-titlebar-drag-fill relative z-local-control"
+      className="window-titlebar-center-slot window-titlebar-drag-fill relative z-local-control col-start-2 row-start-1"
       onDoubleClick={onDoubleClick}
     >
       {title ? (
@@ -126,20 +136,25 @@ function getWindowTitleBarStyle(
   props: WindowTitleBarProps,
   controlsWidth: number
 ): CSSProperties {
+  const leftUndocked = props.isListCollapsed || props.isListFloating;
+  const rightUndocked = (props.isRightSidebarCollapsed || props.isRightSidebarFloating) &&
+    !(props.keepFloatingSidebarControls && props.isRightSidebarFloating);
+  const keepLeftWidth = props.keepFloatingSidebarControls && props.isListFloating;
+  const leftRevealed = keepLeftWidth && !props.isListCollapsed;
+  const rightRevealed = props.keepFloatingSidebarControls && props.isRightSidebarFloating && !props.isRightSidebarCollapsed;
   return {
+    '--workspace-titlebar-sidebar-current-width': rightRevealed ? `${props.rightSidebarWidth}px` : undefined,
     '--window-titlebar-left-width': `calc(var(--workspace-rail-width) + ${
-      props.isListCollapsed ? 0 : props.listWidth + 1
+      leftUndocked && !keepLeftWidth ? 0 : props.listWidth + 1
     }px)`,
     '--window-titlebar-controls-width': `${controlsWidth}px`,
     '--window-titlebar-controls-gap': `${controlsWidth > 0 ? WINDOW_TITLEBAR_RIGHT_ZONE_CONTROL_GAP : 0}px`,
-    '--window-titlebar-right-width': props.isRightSidebarCollapsed
+    '--window-titlebar-right-width': rightUndocked
       ? `${controlsWidth + WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH + 8}px`
       : `${props.rightSidebarWidth}px`,
     '--workspace-list-width': `${props.listWidth}px`,
-    '--workspace-titlebar-folder-column-width': props.isListCollapsed ? '0px' : 'var(--workspace-folder-column-width)',
-    '--workspace-titlebar-list-current-width': props.isListCollapsed
-      ? '0px'
-      : 'var(--workspace-list-current-width, 300px)'
+    '--workspace-titlebar-folder-column-width': leftUndocked && !leftRevealed ? '0px' : 'min(var(--workspace-folder-column-width), var(--workspace-list-width))',
+    '--workspace-titlebar-list-current-width': leftRevealed ? `${props.listWidth}px` : leftUndocked ? '0px' : 'var(--workspace-list-current-width, 300px)'
   } as CSSProperties;
 }
 
@@ -149,6 +164,9 @@ function renderRightSidebarAnchor(props: WindowTitleBarProps, controlsWidth: num
       activeRightPanelId={props.activeRightPanelId}
       controlsWidth={controlsWidth}
       isRightSidebarCollapsed={props.isRightSidebarCollapsed}
+      isRightSidebarFloating={props.isRightSidebarFloating}
+      keepFloatingSidebarControls={props.keepFloatingSidebarControls}
+      dockedRightCollapsed={props.dockedRightCollapsed}
       onSelectRightPanel={props.onSelectRightPanel}
       onToggleRightSidebarVisibility={props.onToggleRightSidebarVisibility}
       rightSidebarWidth={props.rightSidebarWidth}
@@ -156,12 +174,7 @@ function renderRightSidebarAnchor(props: WindowTitleBarProps, controlsWidth: num
   );
 }
 
-export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBarProps) {
-  const { controlsEnabled, isMaximized, syncMaximizedState } = useWindowControlState();
-  const { isDemo } = useDemoRuntimeState();
-  const nativeMacOSControls = !isDemo && usesNativeMacOSWindowControls();
-  const controlsWidth = isDemo || nativeMacOSControls ? 0 : WINDOW_TITLEBAR_CONTROLS_WIDTH;
-
+function useWindowControlActions(controlsEnabled: boolean, syncMaximizedState: () => Promise<void>) {
   const handleMinimize = useCallback(() => {
     if (!controlsEnabled) {
       return;
@@ -186,17 +199,34 @@ export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBar
     runWindowAction(closeMainWindow);
   }, [controlsEnabled]);
 
+  return { handleMinimize, handleToggleMaximize, handleClose };
+}
+
+export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBarProps) {
+  const { floating, visible, setActivity } = usePdfTopBars();
+  useEffect(() => () => setActivity('workspace-titlebar', false), [floating, setActivity]);
+  const { controlsEnabled, isMaximized, syncMaximizedState } = useWindowControlState();
+  const { isDemo } = useDemoRuntimeState();
+  const nativeMacOSControls = !isDemo && usesNativeMacOSWindowControls();
+  const controlsWidth = isDemo || nativeMacOSControls ? 0 : WINDOW_TITLEBAR_CONTROLS_WIDTH;
+
+  const { handleMinimize, handleToggleMaximize, handleClose } = useWindowControlActions(controlsEnabled, syncMaximizedState);
+
   return (
     <header
       className="window-titlebar"
       data-window-controls={isDemo ? 'none' : nativeMacOSControls ? 'native-macos' : 'custom'}
       data-window-maximized={isMaximized}
+      onMouseEnter={() => {
+        if (floating && visible) setActivity('workspace-titlebar', true);
+      }}
+      onMouseLeave={() => setActivity('workspace-titlebar', false)}
       style={getWindowTitleBarStyle(props, controlsWidth)}
     >
       <WorkspaceSurfaceRowOverlay row="titlebar" />
       <WorkspaceTitlebarDividers
-        isListCollapsed={props.isListCollapsed}
-        isRightSidebarCollapsed={props.isRightSidebarCollapsed}
+        isListCollapsed={props.isListCollapsed || Boolean(props.isListFloating && !props.keepFloatingSidebarControls)}
+        isRightSidebarCollapsed={props.isRightSidebarCollapsed || Boolean(props.isRightSidebarFloating && !props.keepFloatingSidebarControls)}
       />
       <WindowLeadingActions {...props} />
       <PdfWindowTitle><WindowCenterTitle

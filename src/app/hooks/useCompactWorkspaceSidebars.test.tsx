@@ -129,3 +129,20 @@ it('keeps the left sidebar docked in medium windows and closes overlays in immer
   rerender({ ...chrome, isImmersiveMode: true });
   expect(result.current.compactSidebars?.openSide).toBeNull();
 });
+
+it('floats only the sidebars needed for the requested PDF width and restores docking when it clears', () => {
+  installViewport(1600);
+  vi.stubGlobal('innerWidth', 1600);
+  const chrome = createChrome();
+  const { result, rerender } = renderHook((width) => useCompactWorkspaceSidebars(chrome, width), { initialProps: 700 });
+  expect(result.current.compactSidebars).toMatchObject({ leftFloating: false, rightFloating: false });
+  rerender(900);
+  expect(result.current.compactSidebars).toMatchObject({ leftFloating: false, rightFloating: true });
+  rerender(1250);
+  expect(result.current.compactSidebars).toMatchObject({ leftFloating: true, rightFloating: true });
+  act(() => result.current.onToggleRightSidebarVisibility());
+  expect(result.current.compactSidebars?.openSide).toBe('right');
+  rerender(0);
+  expect(result.current.compactSidebars).toMatchObject({ leftFloating: false, rightFloating: false, openSide: null });
+  expect(chrome.onToggleRightSidebarVisibility).not.toHaveBeenCalled();
+});

@@ -1,8 +1,10 @@
 import type { PdfSearchStatus } from './PdfDocumentSearch';
 import { PdfDocumentToolbar } from './PdfDocumentToolbar';
+import type { PdfExpandedWidthToggle } from './usePdfExpandedWidth';
 
 interface PdfViewportToolbarProps {
   displayPage: number;
+  expandedWidth?: PdfExpandedWidthToggle | undefined;
   isVisible: boolean;
   maxPage: number;
   onClearSearch: () => void;
@@ -31,6 +33,7 @@ export function PdfViewportToolbar(props: PdfViewportToolbarProps) {
   return (
     <PdfDocumentToolbar
       displayPage={props.displayPage}
+      expandedWidth={props.expandedWidth}
       isVisible={props.isVisible}
       maxPage={props.maxPage}
       onClearSearch={props.onClearSearch}

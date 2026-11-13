@@ -27,6 +27,7 @@ export interface WorkspaceBottomReviewToolbarProps {
   isCurrentReviewItemGradable: boolean;
   isImmersiveMode: boolean;
   isListCollapsed: boolean;
+  followsPdfSidebars?: boolean;
   isReviewEditing: boolean;
   isStudyMode: boolean;
   isCurrentReviewItemVisible: boolean;
@@ -66,7 +67,7 @@ type WorkspaceBottomReviewToolbarRenderProps = WorkspaceBottomReviewToolbarProps
 
 function BottomReviewModeToolbar(props: WorkspaceBottomReviewToolbarRenderProps) {
   const checkpoint = useContext(DiveFlowCheckpointContext);
-  const className = `${props.isImmersiveMode ? 'col-start-1 pointer-events-auto' : 'col-start-3 bg-transparent pl-4 pr-0 max-[1080px]:pl-2'} row-start-1 h-full max-[1080px]:col-start-1`;
+  const className = `${props.isImmersiveMode ? 'col-start-1 pointer-events-auto' : 'col-start-3 bg-transparent' + (props.followsPdfSidebars ? '' : ' pl-4 pr-0 max-[1080px]:pl-2')} row-start-1 h-full max-[1080px]:col-start-1`;
   if (checkpoint) return <WorkspaceDiveFlowChoice checkpoint={checkpoint} className={className}
     immersive={props.isImmersiveMode} onExit={props.onExitReviewMode} />;
   return (
@@ -126,7 +127,8 @@ export function selectWorkspaceBottomReviewToolbarProps(props: WorkspaceBottomRe
     isCurrentReviewItemGradable: review.isCurrentReviewItemGradable,
     isCurrentReviewItemVisible,
     isImmersiveMode: layoutChrome.isImmersiveMode,
-    isListCollapsed: layoutChrome.isListCollapsed,
+    isListCollapsed: layoutChrome.isListCollapsed || Boolean(layoutChrome.compactSidebars?.leftFloating && !layoutChrome.compactSidebars.hoverEnabled),
+    followsPdfSidebars: Boolean(layoutChrome.compactSidebars?.hoverEnabled),
     isReviewEditing: review.isReviewEditing,
     isStudyMode: review.isStudyMode,
     isSequentialReadingReviewTopic,
@@ -159,6 +161,7 @@ function WorkspaceBottomReviewToolbarContent(props: WorkspaceBottomReviewToolbar
   const showReviewProgressLine = props.isCurrentReviewItemGradable && props.reviewStatus !== 'completed' && props.reviewStatus !== 'idle';
   return (
     <div
+      data-pdf-review-layout={props.followsPdfSidebars || undefined}
       className={`grid h-[var(--workspace-bottom-toolbar-height)] min-w-0 overflow-visible ${getWorkspaceGridColumns(props)} max-[1080px]:grid-cols-1`}
     >
       {props.isListCollapsed ? null : (

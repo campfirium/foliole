@@ -24,7 +24,7 @@ async function readRailMetrics(page: Page) {
   });
 }
 
-test('hides right sidebar titlebar controls when the responsive layout hides the sidebar', async ({
+test('keeps the right sidebar button available when the sidebar floats', async ({
   desktopApp,
   desktopWindow
 }, testInfo) => {
@@ -35,44 +35,26 @@ test('hides right sidebar titlebar controls when the responsive layout hides the
   await desktopWindow.setViewportSize({ width: 1200, height: 900 });
   await expectWorkspaceShell(desktopWindow);
   const railMetrics = await readRailMetrics(desktopWindow);
+  const toggle = desktopWindow.locator('.window-titlebar [data-workspace-sidebar-toggle="right"]');
+  const sidebar = desktopWindow.locator('.workspace-floating-sidebar-right');
+  const documentArea = desktopWindow.locator('[data-workspace-document-focus-target]');
+  await expect(toggle).toBeVisible();
+  await expect(sidebar).toBeHidden();
+  const before = await documentArea.boundingBox();
+  expect(before?.width).toBeGreaterThan(0);
 
-  const metrics = await desktopWindow.evaluate(() => {
-    const titlebar = document.querySelector<HTMLElement>('.window-titlebar');
-    const rightAnchor = document.querySelector<HTMLElement>('.window-titlebar-right-anchor-shell');
-    const rightSidebar = document.querySelector<HTMLElement>('[aria-label="Inspector"]');
-    const windowControls = document.querySelector<HTMLElement>('.window-titlebar-controls');
-
-    return {
-      rightAnchorDisplay: rightAnchor ? getComputedStyle(rightAnchor).display : null,
-      rightAnchorWidth: rightAnchor ? Math.round(rightAnchor.getBoundingClientRect().width) : null,
-      rightSidebarDisplay: rightSidebar ? getComputedStyle(rightSidebar).display : null,
-      rightSidebarWidth: rightSidebar ? Math.round(rightSidebar.getBoundingClientRect().width) : null,
-      titlebarGridColumns: titlebar ? getComputedStyle(titlebar).gridTemplateColumns : null,
-      titlebarOwnRightWidth: titlebar
-        ? getComputedStyle(titlebar).getPropertyValue('--window-titlebar-right-width').trim()
-        : null,
-      windowControlsWidth: windowControls ? Math.round(windowControls.getBoundingClientRect().width) : null
-    };
-  });
-
-  await testInfo.attach('responsive-titlebar-sidebar-metrics', {
-    body: JSON.stringify({ ...metrics, ...railMetrics }, null, 2),
-    contentType: 'application/json'
-  });
+  await toggle.click();
+  await expect(sidebar).toBeVisible();
+  expect(await documentArea.boundingBox()).toEqual(before);
   await testInfo.attach('responsive-titlebar-sidebar-screenshot', {
     body: await desktopWindow.screenshot(),
     contentType: 'image/png'
   });
 
-  await expect(desktopWindow.getByRole('button', { name: 'Toggle right sidebar' })).toBeHidden();
-  await expect(desktopWindow.getByRole('button', { name: 'More right sidebar panels' })).toBeHidden();
-  await expect(desktopWindow.getByRole('button', { name: 'Minimize' }))
+  await toggle.click();
+  await expect(sidebar).toBeHidden();
+  await expect(desktopWindow.getByRole('button', { name: /^(Minimize|最小化)$/ }))
     .toHaveCount(USES_NATIVE_MACOS_CONTROLS ? 0 : 1);
-  expect(metrics.rightAnchorDisplay).toBe('none');
-  expect(metrics.rightSidebarDisplay).toBeNull();
-  const expectedRightWidth = USES_NATIVE_MACOS_CONTROLS ? '0px' : '138px';
-  expect(metrics.titlebarOwnRightWidth).toBe(expectedRightWidth);
-  expect(metrics.titlebarGridColumns).toMatch(new RegExp(`${expectedRightWidth}$`));
   expect(railMetrics.leadingSurfaceCount).toBe(0);
   expect(railMetrics.railDividerLeft).toBe(40);
   expect(railMetrics.mainRailWidth).toBe(40);
@@ -127,4 +109,23 @@ test('removes the left list titlebar reserve when the responsive layout hides th
   expect(railMetrics.leadingSurfaceCount).toBe(0);
   expect(railMetrics.railDividerLeft).toBe(40);
   expect(railMetrics.mainRailWidth).toBe(40);
+});
+
+test('aligns the ordinary document title with the document pane', async ({ desktopWindow }, testInfo) => {
+  await desktopWindow.setViewportSize({ width: 1600, height: 900 });
+  await expectWorkspaceShell(desktopWindow);
+  await desktopWindow.evaluate(async () => {
+    const debug = window.__folioleWorkspaceDebug!;
+    await debug.seedNodes([{ id: 'titlebar-alignment', title: 'Document title alignment', kind: 'topic', content: 'Body' }]);
+    await debug.openNode('titlebar-alignment');
+  });
+  const title = desktopWindow.locator('.window-titlebar-center-title');
+  await expect(title).toHaveText('Document title alignment');
+  const pane = desktopWindow.locator('[data-workspace-document-focus-target]');
+  const alignment = async () => {
+    const [label, document] = await Promise.all([title.boundingBox(), pane.boundingBox()]);
+    return Math.abs(label!.x + label!.width / 2 - document!.x - document!.width / 2);
+  };
+  await expect.poll(alignment).toBeLessThanOrEqual(1);
+  await desktopWindow.screenshot({ path: testInfo.outputPath('ordinary-titlebar.png') });
 });
