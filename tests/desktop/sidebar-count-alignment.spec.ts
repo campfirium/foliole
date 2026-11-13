@@ -9,7 +9,7 @@ async function expectCountsAligned(counts: Locator) {
   expect(Math.max(...edges) - Math.min(...edges)).toBeLessThan(1);
 }
 
-test('folder sidebar counts share a right edge when no row action is visible', async ({ desktopWindow: page }, testInfo) => {
+test('Trash shows its aligned count when undo is absent', async ({ desktopWindow: page }, testInfo) => {
   await expectWorkspaceShell(page);
   await page.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated());
   await page.evaluate(async () => {
@@ -38,10 +38,7 @@ test('folder sidebar counts share a right edge when no row action is visible', a
 
   await page.evaluate(() => window.__folioleWorkspaceDebug!.deleteNode('count-child'));
   await expect(undo).toBeVisible();
-  await expect(trashCount).toHaveText('2');
-  const countBounds = await trashCount.boundingBox();
-  const undoBounds = await undo.boundingBox();
-  expect(countBounds!.x + countBounds!.width).toBeLessThan(undoBounds!.x);
+  await expect(trashCount).toBeHidden();
   await testInfo.attach('folder-sidebar-with-undo', { body: await sidebar.screenshot(), contentType: 'image/png' });
 
   await undo.click();
