@@ -6,6 +6,7 @@ import { NATIVE_ARTICLE_TARGET_COMMAND_REGISTRY } from './nativeArticleTargetCom
 import { NATIVE_ASSISTANT_COMMAND_REGISTRY } from './nativeAssistantCommandRegistry.js';
 import { NATIVE_BACKUP_COMMAND_REGISTRY } from './nativeBackupCommandRegistry.js';
 import { NATIVE_DIVE_COMMAND_REGISTRY } from './nativeDiveCommandRegistry.js';
+import { NATIVE_IMPORT_FILE_COMMAND_REGISTRY } from './nativeImportFileCommandRegistry.js';
 import { NATIVE_SCHEDULED_COMMAND_REGISTRY } from './nativeScheduledCommandRegistry.js';
 import { NATIVE_SOURCE_CONNECTION_COMMAND_REGISTRY } from './nativeSourceConnectionCommandRegistry.js';
 import { NATIVE_WEBDAV_COMMAND_REGISTRY } from './nativeWebDavCommandRegistry.js';
@@ -94,11 +95,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.devReimportCurrentTopicSource, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.loadPdfImportsInventory, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadImportManagerSettings, route: 'storage', capability: 'read' },
-  { command: NATIVE_COMMANDS.runClipboardImport, route: 'import', capability: 'importMutation' },
-  { command: NATIVE_COMMANDS.runDirectoryImport, route: 'import', capability: 'importMutation' },
-  { command: NATIVE_COMMANDS.runTextFileImport, route: 'import', capability: 'importMutation' },
-  { command: NATIVE_COMMANDS.selectImportDirectory, route: 'import', capability: 'read' },
-  { command: NATIVE_COMMANDS.selectImportTextFile, route: 'import', capability: 'read' },
+  ...NATIVE_IMPORT_FILE_COMMAND_REGISTRY,
   { command: NATIVE_COMMANDS.chooseInitialLibraryLocation, route: 'windowAndUtility', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.confirmInitialLibrarySetup, route: 'windowAndUtility', capability: 'filesystemWrite' },
   { command: NATIVE_COMMANDS.importClipboardImageAttachment, route: 'storage', capability: 'dataMutation' },

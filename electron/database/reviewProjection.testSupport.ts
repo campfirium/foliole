@@ -33,16 +33,16 @@ export function score(peer: Pick<RestorePeer, 'id' | 'sqlite'>, opId: string, at
 export function reset(peer: RestorePeer, at: string) {
   resetNodeReviewState(createBetterSqlite3Driver(peer.sqlite), 'topic', { hostName: peer.id, deletedAt: at });
 }
-export function history(peer: RestorePeer, mode: 'undo' | 'redo', target: string, at: string) {
+export function history(peer: RestorePeer, mode: 'undo' | 'redo', target: string, at: string, nodeId = 'topic') {
   return saveNodeReviewStateWithSync(createBetterSqlite3Driver(peer.sqlite), {
-    nodeId: 'topic', review: null, hostName: peer.id, updatedAt: at, history: { mode, targetOpId: target }
+    nodeId, review: null, hostName: peer.id, updatedAt: at, history: { mode, targetOpId: target }
   });
 }
 export const reviewState = (peer: RestorePeer) => peer.sqlite.prepare('SELECT * FROM node_review ORDER BY node_id').all();
 export const reviewFacts = (peer: RestorePeer) => peer.sqlite.prepare('SELECT * FROM review_log ORDER BY op_id').all();
-export async function sendReviews(source: RestorePeer, target: RestorePeer, enqueueSearchInvalidations = true, extraFacts: CanonicalFact[] = []) {
+export async function sendReviews(source: RestorePeer, target: RestorePeer, enqueueSearchInvalidations = true, extraFacts: CanonicalFact[] = [], nodeId = 'topic') {
   const difference = compareFramedSyncInventories({ local: await readRequestSyncInventorySnapshot(source.db), remote: [] })
-    .find(value => value.globalId === 'topic' && value.objectType === 'node');
+    .find(value => value.globalId === nodeId && value.objectType === 'node');
   if (!difference) throw new Error('missing_test_inventory');
   await transfer(source, target, { groupId: 'group', overwriteId: 'unused', providerDeviceId: source.id,
     providerLibraryEpoch: source.epoch, receiverDeviceId: target.id, receiverLibraryEpoch: target.epoch }, difference, enqueueSearchInvalidations, extraFacts);

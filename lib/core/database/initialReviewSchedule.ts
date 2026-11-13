@@ -1,10 +1,13 @@
 import { z } from 'zod';
 
-import { createInitialSchedulerCard } from '../review/types.js';
+import type { ReviewEvent } from '../review/recomputeReview.js';
+import { createInitialSchedulerCard, type SchedulerCard } from '../review/types.js';
 import type { DbPort } from '../sync/dbPort.js';
 
 import type { DatabaseDriver } from './driver.js';
 import type { NodeReviewPayload } from './nodeMutationPayloads.js';
+
+export const IMPORTED_REVIEW_NODE_PREFIX = 'imported-review-node:';
 
 const dueSchema = z.iso.datetime({ offset: true });
 const STORE = 'UPDATE nodes SET initial_review_due = ? WHERE id = ? AND initial_review_due IS NULL';
@@ -29,11 +32,29 @@ export async function initializeReceivedReviewSchedule(db: DbPort, nodeId: strin
   if (value === undefined) return;
   const due = dueSchema.parse(value);
   const [node] = await db.query<{ initial_review_due: string | null }>('SELECT initial_review_due FROM nodes WHERE id = ?', [nodeId]);
-  if (node?.initial_review_due && node.initial_review_due !== due) throw new Error('initial_review_schedule_conflict');
-  await db.run(STORE, [due, nodeId]);
+  if (node?.initial_review_due && node.initial_review_due !== due && !nodeId.startsWith(IMPORTED_REVIEW_NODE_PREFIX)) {
+    throw new Error('initial_review_schedule_conflict');
+  }
+  if (node?.initial_review_due !== due) {
+    await db.run('UPDATE nodes SET initial_review_due = ? WHERE id = ?', [due, nodeId]);
+  }
   await db.run(INITIALIZE, [nodeId, due, nodeId]);
+  return node?.initial_review_due !== due;
 }
 
 export function ungradedInitialReviewCard(due: string | null | undefined, events: readonly { kind: string }[]) {
   return due && !events.some(event => event.kind === 'reset') ? createInitialSchedulerCard(due) : null;
+}
+
+export const IMPORTED_REVIEW_OP_PREFIX = 'imported-review:';
+
+export function projectInitialReviewDue(
+  card: SchedulerCard | null, due: string | null | undefined, events: readonly ReviewEvent[]
+) {
+  if (!card) return ungradedInitialReviewCard(due, events);
+  if (!due || events.some(event => event.kind === 'reset')) return card;
+  const voided = new Set(events.filter(event => event.kind === 'void').map(event => event.voids_op_id));
+  const actualReview = events.some(event => event.kind === 'review' &&
+    !event.op_id.startsWith(IMPORTED_REVIEW_OP_PREFIX) && !voided.has(event.op_id));
+  return actualReview ? card : { ...card, due };
 }

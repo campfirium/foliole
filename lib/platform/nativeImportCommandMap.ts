@@ -15,6 +15,7 @@ import type {
 import type { NativeKeepImportPreviewArgs, NativeKeepImportPreviewResult } from './nativeKeepImportContract.js';
 import type { NativeRestoreRemovedSourceArgs, NativeRestoreRemovedSourceResult, NativeRemovedSourcesResult } from './nativeRemovedSourcesContract.js';
 import type { NativeMergeReadwiseTopicHighlightsResult } from './nativeStorageContract.js';
+import type { NativeSuperMemoPreview, NativeSuperMemoPreviewArgs } from './nativeSuperMemoImportContract.js';
 import type {
   NativeWatchedFolderBinding,
   NativeWatchedFolderBindingsState,
@@ -22,6 +23,26 @@ import type {
 } from './nativeWatchedFolderContract.js';
 
 export type NativeImportCommandMap = {
+  [NATIVE_COMMANDS.listSuperMemoImports]: {
+    args: undefined;
+    result: { batchId: string; percent: number; imported: number; skipped: number; unresolvedImages: number }[];
+  };
+  [NATIVE_COMMANDS.previewSuperMemoAdjustment]: {
+    args: { batchId: string; percent: number };
+    result: { batchId: string; percent: number; updated: number; protectedItems: number };
+  };
+  [NATIVE_COMMANDS.adjustSuperMemoImport]: {
+    args: { batchId: string; percent: number };
+    result: { batchId: string; percent: number; updated: number; protectedItems: number };
+  };
+  [NATIVE_COMMANDS.runSuperMemoImport]: {
+    args: NativeSuperMemoPreviewArgs & { percent: number };
+    result: { batchId: string; imported: number; skipped: number; unresolvedImages: number };
+  };
+  [NATIVE_COMMANDS.previewSuperMemoImport]: {
+    args: NativeSuperMemoPreviewArgs;
+    result: NativeSuperMemoPreview;
+  };
   [NATIVE_COMMANDS.runTextFileImport]: {
     args: NativeTextImportArgs;
     result: NativeTextImportResult | null;

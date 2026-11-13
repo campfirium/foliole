@@ -30,6 +30,7 @@ import { runImportForFilePath, runImportForMirrorDocument, runTextFileImport, se
 import { handleReadwiseBookActionCommand } from './readwiseBookActionCommands.js';
 import { runReadwiseImportCommand } from './readwiseImportCommandRun.js';
 import { inspectReadwiseReaderSetup } from './readwiseReaderSetup.js';
+import { handleSuperMemoImportCommand } from './superMemoImportCommands.js';
 import { notifyWorkspaceContentChanged } from './workspaceContentChangedEvents.js';
 
 function resolveNativeHighlightPolicy(value: unknown) {
@@ -93,6 +94,13 @@ async function selectImportDirectory(args: Record<string, unknown>, context?: In
 export async function handleImportCommand(request: InvokeRequest, context?: InvokeContext) {
   const args = (request.args ?? {}) as Record<string, unknown>;
 
+  const draftResult = await handleSuperMemoImportCommand(request.command, args);
+  if (draftResult !== undefined) {
+    if (request.command === NATIVE_COMMANDS.runSuperMemoImport || request.command === NATIVE_COMMANDS.adjustSuperMemoImport) {
+      notifyWorkspaceContentChanged();
+    }
+    return draftResult;
+  }
   const readwiseResult = await handleReadwiseImportCommand(request, args, context);
   if (readwiseResult !== undefined) {
     return readwiseResult;

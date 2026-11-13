@@ -76,5 +76,7 @@ export const SYNC_MODEL_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
     for (const sql of WEB_DAV_RELAY_REVIEW_SEQUENCE_SCHEMA) db.exec(sql);
   } },
   { version: 188, migrate: db => addColumnIfMissing(db, 'node_view_state', 'reading_offset', 'INTEGER') },
-  { version: 189, migrate: db => db.exec(READING_RESUME_SCHEMA) }
+  { version: 189, migrate: db => db.exec(READING_RESUME_SCHEMA) },
+  // Keep the version readable for development libraries that opened the import preview prototype.
+  { version: 190, migrate: () => {} }
 ];

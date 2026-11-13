@@ -8,6 +8,7 @@ import {
   SettingsSection,
   settingsButtonClassName
 } from '../../../../shared/ui';
+import { SettingsSuperMemoImport } from '../../../import/components/SettingsSuperMemoImport';
 import { settingsSearchRowProps, type SettingsSearchRowMeta } from '../../model/settingsSearch';
 
 import { SettingsAttachmentStorageSection } from './SettingsAttachmentStorageSection';
@@ -96,6 +97,7 @@ export function SettingsImportSection(props: SettingsImportSectionProps) {
         title={t('settings.library.importTitle')}
       >
         <ImportPathRows {...props} />
+        {props.isDesktopRuntime ? <SettingsSuperMemoImport /> : null}
       </SettingsSection>
       <SettingsSection
         ariaLabel={t('settings.library.sectionAria')}

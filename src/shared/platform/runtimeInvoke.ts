@@ -18,6 +18,8 @@ const WORKSPACE_WRITE_COMMANDS = new Set<string>([
   NATIVE_COMMANDS.openDailyFlow,
   NATIVE_COMMANDS.commitDailyFlow,
   NATIVE_COMMANDS.importRemoteImageAttachment,
+  NATIVE_COMMANDS.runSuperMemoImport,
+  NATIVE_COMMANDS.adjustSuperMemoImport,
   NATIVE_COMMANDS.applyReviewGrade,
   NATIVE_COMMANDS.saveReviewTrainingModel,
   NATIVE_COMMANDS.createFolder,

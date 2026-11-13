@@ -3,6 +3,7 @@ import { NATIVE_ASSISTANT_COMMANDS } from './nativeAssistantCommands.js';
 import { NATIVE_DAILY_FLOW_COMMANDS } from './nativeDailyFlowCommands.js';
 import { NATIVE_DATABASE_UPGRADE_COMMANDS } from './nativeDatabaseUpgradeContract.js';
 import { NATIVE_DIVE_COMMANDS } from './nativeDiveCommands.js';
+import { NATIVE_IMPORT_FILE_COMMANDS } from './nativeImportFileCommands.js';
 import { NATIVE_LOCAL_FILE_COMMANDS } from './nativeLocalFileCommands.js';
 import { NATIVE_REMINDER_COMMANDS } from './nativeReminderContract.js';
 import { NATIVE_SOURCE_CONNECTION_COMMANDS } from './nativeSourceConnectionCommands.js';
@@ -80,11 +81,7 @@ export const NATIVE_COMMANDS = {
   devReimportCurrentTopicSource: 'dev_reimport_current_topic_source',
   loadPdfImportsInventory: 'load_pdf_imports_inventory',
   loadImportManagerSettings: 'load_import_manager_settings',
-  runClipboardImport: 'run_clipboard_import',
-  runDirectoryImport: 'run_directory_import',
-  runTextFileImport: 'run_text_file_import',
-  selectImportDirectory: 'select_import_directory',
-  selectImportTextFile: 'select_import_text_file',
+  ...NATIVE_IMPORT_FILE_COMMANDS,
   chooseInitialLibraryLocation: 'choose_initial_library_location',
   confirmInitialLibrarySetup: 'confirm_initial_library_setup',
   importClipboardImageAttachment: 'import_clipboard_image_attachment',

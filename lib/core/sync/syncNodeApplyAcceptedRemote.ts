@@ -1,5 +1,6 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 import { initializeReceivedReviewSchedule } from '../database/initialReviewSchedule.js';
+import { recomputeNodeReviewWithDb } from '../database/reviewProjection.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
 import {
@@ -120,7 +121,9 @@ async function upsertRemoteNode(
     ? buildRemoteNodeUpdate(record, bodyBlobHash, syncDirty)
     : buildRemoteNodeUpsert(record, bodyBlobHash, syncDirty);
   await port.run(statement.sql, statement.params);
-  await initializeReceivedReviewSchedule(port, record.object_id, record.snapshot.initial_review_due);
+  if (await initializeReceivedReviewSchedule(port, record.object_id, record.snapshot.initial_review_due)) {
+    await recomputeNodeReviewWithDb(port, record.object_id);
+  }
 }
 
 async function applyRemoteNode(
