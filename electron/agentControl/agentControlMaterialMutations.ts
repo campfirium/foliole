@@ -8,13 +8,14 @@ import type {
 import { deriveNodeTitleFromContent } from '../../lib/core/nodes/deriveNodeTitle.js';
 import { parseManualChildOrder } from '../../lib/core/nodes/manualChildOrder.js';
 import type { NodeKind } from '../../lib/core/nodes/nodeKind.js';
+import { TEXT_BODY_MAX_BYTES, utf8ByteLength } from '../../lib/core/nodes/textBodyBudget.js';
 import { parseVirtualNodeFilter } from '../../lib/core/nodes/virtualNodeFilter.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { softDeleteNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
 
 import { readAgentControlMaterial, type AgentMaterialReadPayload } from './agentControlMaterials.js';
 
-export const AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT = 10_000;
+export const AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT = TEXT_BODY_MAX_BYTES;
 export const AGENT_CONTROL_MATERIAL_WRITE_REVEAL_LIMIT = 4_000;
 
 export interface AgentMaterialDeleteSoftResult {
@@ -72,7 +73,7 @@ export function updateAgentControlMaterial(input: {
   if (typeof input.title === 'string' && input.title.trim().length === 0) {
     throw new AgentMaterialMutationError('invalid_request', 400);
   }
-  if (typeof input.content === 'string' && input.content.length > AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT) {
+  if (typeof input.content === 'string' && utf8ByteLength(input.content) > AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT) {
     throw new AgentMaterialMutationError('invalid_request', 400);
   }
   if (typeof input.reveal === 'string' && (

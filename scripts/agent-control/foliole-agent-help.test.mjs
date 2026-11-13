@@ -28,7 +28,7 @@ describe('foliole agent cli discovery', () => {
     }));
     expect(result.output.commands).toContainEqual(expect.objectContaining({
       access: 'write',
-      arguments: { optional: ['content', 'reveal', 'title'], required: ['id', 'expected-updated-at'] },
+      arguments: { optional: ['content', 'content-stdin', 'reveal', 'title'], required: ['id', 'expected-updated-at'] },
       name: 'materials/update'
     }));
     const names = result.output.commands.map((command) => command.name);

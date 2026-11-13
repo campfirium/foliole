@@ -4,7 +4,7 @@ export function buildAgentCliBody(command, flags) {
   if (command === 'materials/list-children') return requireFields(flags, [], ['parent_id', 'limit', 'offset']);
   if (command === 'materials/move') return requireFields(flags, ['id', 'parent_id', 'expected_updated_at']);
   if (command === 'materials/read') return buildMaterialReadBody(flags);
-  if (command === 'materials/search') return requireFields(flags, ['query'], ['limit']);
+  if (command === 'materials/search') return requireFields(flags, ['query'], ['limit', 'offset']);
   if (command === 'materials/reorder') return buildMaterialReorderBody(flags);
   if (command === 'materials/restore') return requireFields(flags, ['id', 'expected_updated_at']);
   if (command === 'materials/update') return buildUpdateBody(flags);
@@ -28,7 +28,10 @@ function buildMaterialReadBody(flags) {
   if (flags.include_learning !== undefined && !['true', 'false'].includes(flags.include_learning)) {
     return { error: 'invalid_include_learning', ok: false, statusCode: 2 };
   }
-  return requireFields(flags, ['id'], ['content_mode', 'include_learning']);
+  if (flags.include_relations !== undefined && !['true', 'false'].includes(flags.include_relations)) {
+    return { error: 'invalid_include_relations', ok: false, statusCode: 2 };
+  }
+  return requireFields(flags, ['id'], ['content_mode', 'include_learning', 'include_relations']);
 }
 
 function buildMaterialCreateBody(flags) {
@@ -84,7 +87,7 @@ function buildUpdateBody(flags) {
 }
 
 function normalizeFieldValue(field, value) {
-  if (field === 'include_learning') return value === 'true';
+  if (field === 'include_learning' || field === 'include_relations') return value === 'true';
   if (field === 'limit') return Number(value);
   if (field === 'offset') return /^\d+$/u.test(value) ? Number(value) : null;
   if (field === 'material_ids') return value.split(',').map((item) => item.trim()).filter(Boolean);

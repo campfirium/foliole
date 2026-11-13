@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global console, fetch, process */
+/* global Buffer, console, fetch, process */
 
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -28,6 +28,8 @@ export async function runAgentCli(argv, options = {}) {
   if (route.capability && !descriptor.capabilities?.includes(route.capability)) {
     return failure('capability_disabled', 3);
   }
+  const inputError = await applyStdinContent(parsed.command, parsed.flags, options.stdin ?? process.stdin);
+  if (inputError) return failure(inputError, 2);
   const bodyResult = buildAgentCliBody(parsed.command, parsed.flags);
   if (!bodyResult.ok) return failure(bodyResult.error, bodyResult.statusCode);
   const { body } = bodyResult;
@@ -35,6 +37,26 @@ export async function runAgentCli(argv, options = {}) {
     return deleteMaterialWithCurrentRevision(route, descriptor, body, options);
   }
   return callApi(route, descriptor, body, options);
+}
+
+async function applyStdinContent(command, flags, stdin) {
+  if (flags.content_stdin === undefined) return null;
+  if (!['materials/create', 'materials/update'].includes(command) || flags.content_stdin !== 'true'
+    || Object.hasOwn(flags, 'content')) return 'invalid_content_stdin';
+  const chunks = [];
+  let size = 0;
+  try {
+    for await (const chunk of stdin) {
+      const bytes = Buffer.from(chunk);
+      size += bytes.length;
+      if (size > 1_048_576) return 'content_too_large';
+      chunks.push(bytes);
+    }
+    flags.content = Buffer.concat(chunks).toString('utf8');
+    return null;
+  } catch {
+    return 'content_stdin_unavailable';
+  }
 }
 
 async function runVersion(options) {

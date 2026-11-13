@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { syncNodeSearchIndexForNodeIds } from '../../lib/core/database/workspaceSearchIndex.js';
+import { runAgentCli } from '../../scripts/agent-control/foliole-agent.mjs';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -126,6 +127,34 @@ it('searches materials with parent titles and applies agent limits', async () =>
         })
       ]
     });
+  } finally {
+    await closeServer(server);
+  }
+});
+
+it('pages through all matching materials using the HTTP and CLI entry points', async () => {
+  const ids = Array.from({ length: 85 }, (_, i) => `pagination-${i}`);
+  for (const id of ids) insertNode({ content: 'paginationneedle', id, title: id });
+  syncNodeSearchIndexForNodeIds(openDatabaseConnection().driver, ids);
+  const { endpoint, server } = await startServer();
+  try {
+    const search = async (offset?: unknown) => fetch(`${endpoint}/agent-control/v1/materials/search`, {
+      body: JSON.stringify({ query: 'paginationneedle', limit: 40, offset }), headers: authHeaders(), method: 'POST'
+    });
+    const legacy = await (await search()).json();
+    expect(legacy).not.toHaveProperty('next_offset');
+    const first = await (await search(0)).json();
+    expect(first).toMatchObject({ count: 40, next_offset: 40, results: legacy.results });
+    const descriptor = path.join(tempRoot, 'session.json');
+    await fs.writeFile(descriptor, JSON.stringify({ endpoint, token: 'test-token', capabilities: ['materials.search'] }));
+    const second = await runAgentCli(['materials/search', '--descriptor', descriptor, '--query', 'paginationneedle',
+      '--limit', '40', '--offset', String(first.next_offset)]);
+    expect(second).toMatchObject({ status: 0, output: { count: 40, next_offset: 80 } });
+    const last = await (await search(second.output.next_offset)).json();
+    expect(last).toMatchObject({ count: 5, next_offset: null });
+    expect([...first.results, ...second.output.results, ...last.results].map((match) => match.id).sort()).toEqual(ids.sort());
+    expect((await search(-1)).status).toBe(400);
+    expect(await (await search(100)).json()).toMatchObject({ count: 0, next_offset: null, results: [] });
   } finally {
     await closeServer(server);
   }

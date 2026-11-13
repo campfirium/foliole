@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { spawn } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -167,3 +168,61 @@ function authHeaders() {
     'x-foliole-agent-id': 'codex-local-test'
   };
 }
+
+it('reads the source anchor and existing Foliole backlinks through API and CLI', async () => {
+  insertNode({ id: 'original', title: 'Original', content: 'Original passage' });
+  insertNode({ id: 'notes', title: 'Notes', content: 'See [[Original]] for the passage.' });
+  upsertNodeSnapshot({
+    anchorLink: { id: 'selection', kind: 'highlight', locator: { from: 0, to: 8, originalText: 'Original' } },
+    content: 'Original', createdAt: '2026-07-05T00:00:00.000Z', isTitleManual: true, kind: 'topic',
+    nodeId: 'excerpt', parentNodeId: 'original', position: null, reveal: null, title: 'Excerpt',
+    updatedAt: '2026-07-05T00:00:00.000Z'
+  });
+  const { endpoint, server } = await startServer();
+  try {
+    const read = (id: string, includeRelations?: boolean) => fetch(`${endpoint}/agent-control/v1/materials/read`, {
+      body: JSON.stringify({ id, include_relations: includeRelations }), headers: authHeaders(), method: 'POST'
+    });
+    expect((await (await read('excerpt')).json()).material).not.toHaveProperty('relations');
+    expect(await (await read('excerpt', true)).json()).toMatchObject({ material: { relations: {
+      source: { material_id: 'original', anchor_kind: 'highlight', locator: { from: 0, to: 8 } }
+    } } });
+    const descriptor = path.join(tempRoot, 'relations-session.json');
+    await fs.writeFile(descriptor, JSON.stringify({ endpoint, token: 'test-token', capabilities: ['materials.read'] }));
+    expect(await runAgentCli(['materials/read', '--descriptor', descriptor, '--id', 'original', '--include-relations', 'true']))
+      .toMatchObject({ status: 0, output: { material: { relations: {
+        source: null, backlinks: [{ source_node_id: 'notes', match_count: 1 }]
+      } } } });
+  } finally {
+    await closeServer(server);
+  }
+});
+
+it('writes and reads a long Chinese Topic through the API and a piped CLI command', async () => {
+  const content = '读书笔记🌱\n'.repeat(8000);
+  const { endpoint, server } = await startServer();
+  try {
+    const request = async (route: string, body: object) => fetch(`${endpoint}/agent-control/v1/materials/${route}`, {
+      body: JSON.stringify(body), headers: authHeaders(), method: 'POST'
+    });
+    const created = await request('create', { kind: 'topic', parent_id: null, title: 'Long Topic', content });
+    expect(created.status).toBe(200);
+    const { material } = await created.json();
+    const descriptor = path.join(tempRoot, 'write-session.json');
+    await fs.writeFile(descriptor, JSON.stringify({ endpoint, token: 'test-token', capabilities: ['materials.update'] }));
+    const next = content + '新结论\n';
+    const cli = spawn(process.env.FOLIOLE_NODE_BINARY ?? 'node', [
+      'scripts/agent-control/foliole-agent.mjs', 'materials/update', '--descriptor', descriptor,
+      '--id', material.id, '--expected-updated-at', material.updated_at, '--content-stdin', 'true'
+    ]);
+    cli.stdin.end(next);
+    const stdout = [];
+    for await (const chunk of cli.stdout) stdout.push(chunk);
+    expect(JSON.parse(Buffer.concat(stdout).toString())).toMatchObject({ material: { id: material.id } });
+    closeDatabaseConnection();
+    expect(await (await request('read', { id: material.id, content_mode: 'full' })).json())
+      .toMatchObject({ material: { content: next, content_truncated: false } });
+  } finally {
+    await closeServer(server);
+  }
+});

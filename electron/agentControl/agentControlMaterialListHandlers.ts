@@ -92,6 +92,6 @@ export async function handleMaterialListChildren(
   sendJson(response, 200, payload as unknown as Record<string, unknown>);
 }
 
-function isPageOffset(value: unknown): value is number {
+export function isPageOffset(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }

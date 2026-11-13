@@ -1,5 +1,7 @@
 import type http from 'node:http';
 
+import { utf8ByteLength } from '../../lib/core/nodes/textBodyBudget.js';
+
 import { readAgentControlItemLearningImport, readAgentControlTopicLearningImport } from './agentControlLearningImport.js';
 import {
   AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT,
@@ -63,7 +65,7 @@ function isValidCreateInput(args: {
   title: string | null;
 }) {
   if (!args.kind || args.parentId === undefined || args.content === null || args.reveal === null) return false;
-  if ((args.content?.length ?? 0) > AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT) return false;
+  if (utf8ByteLength(args.content ?? '') > AGENT_CONTROL_MATERIAL_WRITE_CONTENT_LIMIT) return false;
   if ((args.reveal?.length ?? 0) > AGENT_CONTROL_MATERIAL_WRITE_REVEAL_LIMIT) return false;
   if (args.kind === 'item') {
     return args.body.title === undefined && Boolean(args.content?.trim()) && Boolean(args.reveal?.trim());

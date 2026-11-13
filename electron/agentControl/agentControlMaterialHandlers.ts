@@ -2,11 +2,13 @@ import type http from 'node:http';
 
 import { recordAgentControlAuditEvent } from './agentControlAudit.js';
 import { readAgentControlMaterialLearning } from './agentControlMaterialLearning.js';
+import { isPageOffset } from './agentControlMaterialListHandlers.js';
 import {
   AgentMaterialMutationError,
   softDeleteAgentControlMaterial,
   updateAgentControlMaterial
 } from './agentControlMaterialMutations.js';
+import { readAgentControlMaterialRelations } from './agentControlMaterialRelations.js';
 import {
   AGENT_CONTROL_MATERIAL_SEARCH_LIMIT,
   AGENT_CONTROL_MATERIAL_SEARCH_MAX_LIMIT,
@@ -94,7 +96,9 @@ export async function handleMaterialRead(
   const id = typeof body.id === 'string' ? body.id.trim() : '';
   const contentMode = body.content_mode;
   const includeLearning = body.include_learning;
-  if (!id || (includeLearning !== undefined && typeof includeLearning !== 'boolean')
+  const includeRelations = body.include_relations;
+  if (!id || (includeRelations !== undefined && typeof includeRelations !== 'boolean')
+    || (includeLearning !== undefined && typeof includeLearning !== 'boolean')
     || (contentMode !== undefined && contentMode !== 'preview' && contentMode !== 'full')) {
     recordRequest({ capability, errorCategory: 'invalid_request', options, request, result: 'failed' });
     sendJson(response, 400, { error: 'invalid_request' });
@@ -107,9 +111,11 @@ export async function handleMaterialRead(
     return;
   }
   recordRequest({ capability, options, request, result: 'success', targetId: id });
-  sendJson(response, 200, { material: includeLearning
-    ? { ...material, learning: readAgentControlMaterialLearning(id, material.kind) }
-    : material });
+  sendJson(response, 200, { material: {
+    ...material,
+    ...(includeLearning ? { learning: readAgentControlMaterialLearning(id, material.kind) } : {}),
+    ...(includeRelations ? { relations: readAgentControlMaterialRelations(id) } : {})
+  } });
 }
 
 export async function handleMaterialSearch(
@@ -122,13 +128,14 @@ export async function handleMaterialSearch(
   const body = await readJsonBodyOrFail(request, response, options, capability);
   if (!body) return;
   const query = typeof body.query === 'string' ? body.query.trim() : '';
-  if (!query) {
+  const offset = body.offset;
+  if (!query || (offset !== undefined && !isPageOffset(offset))) {
     recordRequest({ capability, errorCategory: 'invalid_request', options, request, result: 'failed' });
     sendJson(response, 400, { error: 'invalid_request' });
     return;
   }
   const limit = normalizeOptionalLimit(body.limit, AGENT_CONTROL_MATERIAL_SEARCH_LIMIT, AGENT_CONTROL_MATERIAL_SEARCH_MAX_LIMIT);
-  const payload = searchAgentControlMaterials(query, limit);
+  const payload = searchAgentControlMaterials(query, limit, offset);
   recordRequest({ capability, options, request, result: 'success' });
   sendJson(response, 200, payload as unknown as Record<string, unknown>);
 }

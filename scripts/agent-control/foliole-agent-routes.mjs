@@ -13,7 +13,7 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   registryRoute('foundation', 'POST', 'auth/verify', 'foundation.auth.verify'),
   registryRoute('product', 'POST', 'materials/create', 'materials.create', {
     capabilityOrder: 3,
-    cli: cliRoute('materials/create', 'Create a Topic, Folder, or question-answer Item.', optionalAndRequired(['content', 'parent-id', 'reading-schedule', 'reveal', 'review-schedule', 'title'], ['kind'])),
+    cli: cliRoute('materials/create', 'Create a Topic, Folder, or question-answer Item.', optionalAndRequired(['content', 'content-stdin', 'parent-id', 'reading-schedule', 'reveal', 'review-schedule', 'title'], ['kind'])),
     writeKind: 'material'
   }),
   registryRoute('product', 'POST', 'materials/delete-soft', 'materials.deleteSoft', {
@@ -32,11 +32,11 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   }),
   registryRoute('product', 'POST', 'materials/read', 'materials.read', {
     capabilityOrder: 0,
-    cli: cliRoute('materials/read', 'Read one Topic, Folder, or Item.', optionalAndRequired(['content-mode', 'include-learning'], ['id']))
+    cli: cliRoute('materials/read', 'Read one Topic, Folder, or Item.', optionalAndRequired(['content-mode', 'include-learning', 'include-relations'], ['id']))
   }),
   registryRoute('product', 'POST', 'materials/search', 'materials.search', {
     capabilityOrder: 1,
-    cli: cliRoute('materials/search', 'Search readable Topics and Folders.', optionalAndRequired(['limit'], ['query']))
+    cli: cliRoute('materials/search', 'Search materials, PDFs, and external sources. Pass --offset 0 to start paging.', optionalAndRequired(['limit', 'offset'], ['query']))
   }),
   registryRoute('product', 'POST', 'materials/reorder', 'materials.reorder', {
     capabilityOrder: 5,
@@ -50,7 +50,7 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   }),
   registryRoute('product', 'POST', 'materials/update', 'materials.update', {
     capabilityOrder: 16,
-    cli: cliRoute('materials/update', 'Rename a Folder or update a Topic or Item.', optionalAndRequired(['content', 'reveal', 'title'], ['id', 'expected-updated-at'])),
+    cli: cliRoute('materials/update', 'Rename a Folder or update a Topic or Item.', optionalAndRequired(['content', 'content-stdin', 'reveal', 'title'], ['id', 'expected-updated-at'])),
     writeKind: 'material'
   }),
   registryRoute('product', 'POST', 'virtual-folders/add-items', 'virtualFolders.addItems', {

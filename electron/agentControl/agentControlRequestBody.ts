@@ -1,5 +1,7 @@
 import type http from 'node:http';
 
+import { TEXT_BODY_MAX_BYTES } from '../../lib/core/nodes/textBodyBudget.js';
+
 export const AGENT_CONTROL_JSON_BODY_LIMIT_BYTES = 16_384;
 
 export type AgentControlJsonBodyResult =
@@ -8,8 +10,9 @@ export type AgentControlJsonBodyResult =
 
 const preparedBodies = new WeakMap<http.IncomingMessage, AgentControlJsonBodyResult>();
 
-export async function prepareAgentControlJsonBody(request: http.IncomingMessage) {
-  const body = await readRequestBody(request);
+export async function prepareAgentControlJsonBody(request: http.IncomingMessage, allowLongContent = false) {
+  const limit = allowLongContent ? 6 * TEXT_BODY_MAX_BYTES + AGENT_CONTROL_JSON_BODY_LIMIT_BYTES : AGENT_CONTROL_JSON_BODY_LIMIT_BYTES;
+  const body = await readRequestBody(request, limit);
   preparedBodies.set(request, body);
   return body;
 }
@@ -20,13 +23,13 @@ export async function readAgentControlJsonBody(request: http.IncomingMessage) {
   return readRequestBody(request);
 }
 
-async function readRequestBody(request: http.IncomingMessage): Promise<AgentControlJsonBodyResult> {
+async function readRequestBody(request: http.IncomingMessage, limit = AGENT_CONTROL_JSON_BODY_LIMIT_BYTES): Promise<AgentControlJsonBodyResult> {
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of request) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     size += buffer.length;
-    if (size > AGENT_CONTROL_JSON_BODY_LIMIT_BYTES) {
+    if (size > limit) {
       return { error: 'request_body_too_large', errorCategory: 'request_body_too_large', ok: false, statusCode: 413 };
     }
     chunks.push(buffer);

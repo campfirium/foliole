@@ -5,7 +5,7 @@ The [route registry](../scripts/agent-control/foliole-agent-routes.mjs) defines 
 | Object or relationship | Read | Create or initialize | Change or link | Follow-up |
 | --- | --- | --- | --- | --- |
 | Service and access | Health reports runtime identity. Authenticated clients can verify the token and discover capabilities. | The desktop host serves the current library on loopback. | Write commands use the application’s validation and revision checks. | See the route registry for authentication and command details. |
-| Search | Material search can return node, PDF, and external matches, with location details when available. | — | — | Check search coverage per source when adding new material types. |
+| Search | Material search can return node, PDF, and external matches, with location details when available. | — | — | Page through matching results with an explicit offset. |
 | Folder | Read title and hierarchy. Search and list direct children. | Create with a title and parent. | Move, reorder children, trash, and restore. Rename with `materials/update` (`--title` in the CLI) using the revision from `materials/read`. | — |
 | Topic | Read title, complete body on request, parent path, and child summaries. Search readable Topics. | Create with body, title, and parent. Optionally import an active reading schedule and priority. | Update body and title. Move, trash, and restore. | Evaluate structured learning data for export. |
 | Item | Read the complete question and answer on request, plus identity hints for derived Items. | Create a question-and-answer Item with a parent and optional first review date and priority. | Update question, answer, and title. Move, trash, and restore where supported. | Import existing review history and preserve the first due date alongside it for [Discussion #241](https://github.com/campfirium/foliole/discussions/241). Evaluate structured learning data for export. |
@@ -13,7 +13,7 @@ The [route registry](../scripts/agent-control/foliole-agent-routes.mjs) defines 
 | Manual virtual Folder | List Folders and read ordered Topic membership from the Folder. | Create a manual virtual Folder. | Rename, add or remove Topics, reorder, trash, and restore. | Evaluate looking up a Topic's memberships directly. |
 | Collection and filter rules | The manual virtual Folder API lists manual Folders. | Review whether external callers need structured access to collections or filter rules. | Review supported operations by virtual Folder type. | Check collection-based and rule-based membership separately from manually curated membership. |
 | Dive and source relationships | The desktop bridge has Dive operations. Agent Control has no Dive routes. | Evaluate creating a Dive and setting its sources. | Evaluate listing, adding, and removing sources. | Confirm external organization and migration scenarios before choosing a contract. |
-| Attachments and derived content | Material reads expose some highlight and cloze identity hints. | The material create route supports question-and-answer Items. | Review attachment transfer and source-link operations separately. | Confirm round-trip needs for attachments and derived content. |
+| Attachments and derived content | Material reads can include a derived material’s source anchor and desktop backlinks. | The material create route supports question-and-answer Items. | Review attachment transfer and source-link operations separately. | Confirm round-trip needs for attachments and derived content. |
 | Learning settings and state | Opt in on material reads for the current Topic or Item schedule, priority, and learning settings. Review history has no route. | Import an active Topic reading schedule and priority with local permission. Import an ungraded Item’s first review date and priority. Historical review imports remain open. | Material update accepts content, title, and answer fields. | Determine which learning settings are valid per material type and which actions external tools need after creation. |
 
 The HTTP create request takes an explicit `parent_id`, which can be null. The CLI supplies null when the parent flag is omitted. Material reads default to previews and report truncation. Request `content_mode: "full"` or `--content-mode full` to read complete content and answers with the same response revision. Collection tags can travel in Topic content, while the manual virtual Folder routes expose manual membership.
@@ -60,6 +60,18 @@ Send `include_learning: true` with the material ID to `materials/read`, or pass 
 - Item: `learning` contains the node priority, shelving date, retention and short-term scheduling overrides, initial review due date, and `review_schedule` with the current due date, last review time, FSRS state (0 new, 1 learning, 2 review, 3 relearning), stability, fast stability, difficulty, elapsed and scheduled days, repetitions, and lapses.
 
 A missing schedule is null. A null setting override uses Foliole's normal inheritance rules. Folders return `learning: null`. The response gives current scheduling state for one material. Review events and reading position use separate product data.
+
+### Reading source relationships
+
+Use `include_relations: true` with `materials/read`, or `--include-relations true` in the CLI. The `relations.source` field identifies the original Foliole material and includes the stored anchor kind and locator when available. An anchor marked unmapped has a null locator. The `relations.backlinks` array uses the desktop backlink lookup for wiki links and includes the referring material IDs and context. The existing material read permission applies.
+
+### Writing long material content
+
+Create and update accept up to 1 MiB of UTF-8 in `content`, matching Foliole's text body budget. Their JSON request limit allows for JSON escaping. To pass a long body through the CLI, pipe UTF-8 text into `materials/create` or `materials/update` with `--content-stdin true`. Supply the usual ID and expected revision for updates. The Item answer limit is still 4,000 UTF-16 code units.
+
+### Paging search results
+
+Use `offset: 0` with `materials/search`, or `--offset 0` in the CLI. Pass the returned `next_offset` with the same query and page size until it is null. The maximum page size is 40. Requests without an offset keep the original response. Each page uses the current search results, so restart after changes to the library or search settings.
 
 ### Traversing material children
 

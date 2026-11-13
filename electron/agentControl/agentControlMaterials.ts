@@ -82,6 +82,7 @@ export interface AgentMaterialChildSummary {
 export interface AgentMaterialSearchPayload {
   count: number;
   limit: number;
+  next_offset?: number | null;
   query: string;
   results: AgentMaterialSearchResult[];
 }
@@ -212,12 +213,15 @@ function toChildSummary(row: MaterialRow): AgentMaterialChildSummary {
   };
 }
 
-export function searchAgentControlMaterials(query: string, limit: number): AgentMaterialSearchPayload {
+export function searchAgentControlMaterials(query: string, limit: number, offset?: number): AgentMaterialSearchPayload {
   const normalizedQuery = query.trim();
-  const results = projectAgentMaterialSearchResults(searchWorkspace(normalizedQuery) as WorkspaceSearchResult[], limit);
+  const matches = searchWorkspace(normalizedQuery) as WorkspaceSearchResult[];
+  const start = offset ?? 0;
+  const results = projectAgentMaterialSearchResults(matches.slice(start, start + limit), limit);
   return {
     count: results.length,
     limit,
+    ...(offset !== undefined ? { next_offset: start + limit < matches.length ? start + limit : null } : {}),
     query: normalizedQuery,
     results
   };

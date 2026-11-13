@@ -167,7 +167,9 @@ async function handleRequest(
   }
   const capability = capabilityForProtectedPath(request.method, url.pathname);
   if (capability && !requireAuthorized(request, response, options, capability)) return;
-  if (capability) await prepareAgentControlJsonBody(request);
+  if (capability) {
+    await prepareAgentControlJsonBody(request, capability === 'materials.create' || capability === 'materials.update');
+  }
   if (capability && await runWithDatabaseConnectionOwner(async () => {
     if (await handleAgentControlMaterialRoute(request, response, options, url.pathname)) return true;
     return handleAgentControlVirtualFolderRoute(request, response, options, url.pathname);
