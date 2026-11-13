@@ -1,3 +1,5 @@
+import { getStoredAppLocale } from '../shared/localization/appLanguage';
+import { translate } from '../shared/localization/translations';
 import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 
 import type { WorkspaceState } from './workspaceStore';
@@ -10,7 +12,7 @@ type WorkspaceSet = (
 ) => void;
 
 function reloadAfterFailedPermanentDelete() {
-  showAppRuntimeNotice('Could not delete from Trash. Please try again.', 'error');
+  showAppRuntimeNotice(translate(getStoredAppLocale(), 'desktop.feedback.permanentDeleteFailed'), 'error');
   // Loaded lazily: the refresh scheduler imports the store this action belongs to.
   void import('./workspaceRefreshScheduler').then(({ requestWorkspaceStateRefresh }) => {
     requestWorkspaceStateRefresh('content-changed');

@@ -1,5 +1,6 @@
 import { SettingsPanel } from '../../features/settings/components/SettingsPanel';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { loadExternalSourceSettingsFolders } from '../../shared/platform/externalSourceSettingsRepository';
 import { loadRuntimeLibraryPathSettings } from '../../shared/platform/libraryPathsRuntimeRepository';
 import { requestAppConfirmation } from '../../shared/ui';
@@ -74,18 +75,16 @@ function ImportCategoryContent(props: {
   keepPreview: KeepPreviewState;
 }) {
   const { importSettings, keepPreview } = props;
+  const t = useTranslation();
   async function handleChangeAction(sourceId: string, value: string) {
     if (value !== 'delete') {
       importSettings.handleChangeAction(sourceId, value);
       return;
     }
     const confirmed = await requestAppConfirmation({
-      cancelLabel: 'Cancel',
-      confirmLabel: 'Enable',
-      description: [
-        'Source files in this watch folder will be moved to the system trash after they are successfully imported.'
-      ],
-      title: 'Confirm enabling'
+      confirmLabel: t('desktop.feedback.watchTrash.confirm'),
+      description: [t('desktop.feedback.watchTrash.description')],
+      title: t('desktop.feedback.watchTrash.title')
     });
     if (confirmed) {
       importSettings.handleChangeAction(sourceId, value);

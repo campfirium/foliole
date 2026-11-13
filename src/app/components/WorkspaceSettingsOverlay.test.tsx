@@ -2,7 +2,9 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-const workspaceSettingsOverlayMocks = vi.hoisted(() => ({ isDemo: false, requestAppConfirmation: vi.fn(), useImportSourceWorkspaceState: vi.fn() }));
+import { preloadTranslationCatalog, translate } from '../../shared/localization/translations';
+
+const workspaceSettingsOverlayMocks = vi.hoisted(() => ({ isDemo: false, translateConfirmation: false, requestAppConfirmation: vi.fn(), useImportSourceWorkspaceState: vi.fn() }));
 
 function createDefaultOverlayImportSettings() {
   return {
@@ -101,7 +103,10 @@ vi.mock('../../shared/platform/runtime/demoRuntime', () => ({
 
 vi.mock('../../shared/localization/LocalizationProvider', () => ({
   useLocalization: () => ({ t: (key: string) => key }),
-  useTranslation: () => (key: string) => key
+  useTranslation: () => (key: Parameters<typeof translate>[1]) =>
+    workspaceSettingsOverlayMocks.translateConfirmation && key.startsWith('desktop.feedback.watchTrash.')
+      ? translate('zh-Hans', key)
+      : key
 }));
 
 vi.mock('../../shared/ui', async (importOriginal) => {
@@ -202,7 +207,10 @@ it('opens the keep import preview dialog from the watch folders table', { meta: 
   expect(screen.getByText('third highlight')).toBeInTheDocument();
 });
 
-it('confirms before enabling delete handling for a watch folder', async () => {
+it('explains in Simplified Chinese what enabling watch folder deletion does', async ({ onTestFinished }) => {
+  await preloadTranslationCatalog('zh-Hans');
+  workspaceSettingsOverlayMocks.translateConfirmation = true;
+  onTestFinished(() => { workspaceSettingsOverlayMocks.translateConfirmation = false; });
   const handleChangeAction = vi.fn();
   workspaceSettingsOverlayMocks.requestAppConfirmation.mockResolvedValue(true);
   workspaceSettingsOverlayMocks.useImportSourceWorkspaceState.mockReturnValue(
@@ -224,12 +232,9 @@ it('confirms before enabling delete handling for a watch folder', async () => {
 
   await waitFor(() =>
     expect(workspaceSettingsOverlayMocks.requestAppConfirmation).toHaveBeenCalledWith({
-      cancelLabel: 'Cancel',
-      confirmLabel: 'Enable',
-      description: [
-        'Source files in this watch folder will be moved to the system trash after they are successfully imported.'
-      ],
-      title: 'Confirm enabling'
+      confirmLabel: '启用',
+      description: ['监控文件夹中的源文件将在成功导入后移入系统废纸篓。'],
+      title: '启用导入后移入废纸篓？'
     })
   );
   expect(handleChangeAction).toHaveBeenCalledWith('source-1', 'delete');

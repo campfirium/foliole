@@ -53,6 +53,7 @@ function createExportCurrentArticleCommand(args: {
 }
 
 function createMergeHighlightsIntoTopicCommand(args: {
+  t: Translate;
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   return async () => {
@@ -61,7 +62,7 @@ function createMergeHighlightsIntoTopicCommand(args: {
     }
     const result = await mergeRuntimeReadwiseTopicHighlights(args.ws.activeNodeId);
     if (!result || result.status === 'error') {
-      showAppRuntimeNotice('Merge failed.');
+      showAppRuntimeNotice(args.t('desktop.feedback.mergeFailed'));
       return false;
     }
     if (result.status === 'merged') {
@@ -189,7 +190,7 @@ export function createPaletteRunnerArgs(args: PaletteRunnerArgs) {
     ...createPublishingPaletteActions(args),
     ...createPaletteDocumentActions(),
     ...createPaletteDocumentScrollActions(args.runtime.editorRef),
-    mergeHighlightsIntoTopic: createMergeHighlightsIntoTopicCommand({ ws: args.ws }),
+    mergeHighlightsIntoTopic: createMergeHighlightsIntoTopicCommand({ ws: args.ws, t: args.demoOperationTranslate }),
     openSplitTopicDialog: createSplitTopicCommand(args),
     ...createPaletteNavigationActions(args),
     ...createPaletteImportActions(args.formalImport),

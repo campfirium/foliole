@@ -109,6 +109,7 @@ function createMoveToNodeHandler(props: NodeListTreeMenuProps, primaryTargetId: 
 function createMergeHighlightsIntoTopicHandler(args: {
   closeContextMenu: () => void;
   primaryTargetId: string | null;
+  t: Translate;
 }) {
   return () => {
     if (!args.primaryTargetId) {
@@ -117,7 +118,7 @@ function createMergeHighlightsIntoTopicHandler(args: {
     }
     void mergeRuntimeReadwiseTopicHighlights(args.primaryTargetId).then((result) => {
       if (!result || result.status === 'error') {
-        showAppRuntimeNotice('Merge failed.');
+        showAppRuntimeNotice(args.t('desktop.feedback.mergeFailed'));
       }
     });
     args.closeContextMenu();
@@ -138,7 +139,8 @@ function buildNodeListActionHandlers(
     onDismissNode: createDismissNodeAction(menuState.primaryTargetId, props.dismissNode, props.contextMenu.closeContextMenu),
     onMergeHighlightsIntoTopic: createMergeHighlightsIntoTopicHandler({
       closeContextMenu: props.contextMenu.closeContextMenu,
-      primaryTargetId: menuState.primaryTargetId
+      primaryTargetId: menuState.primaryTargetId,
+      t
     }),
     onMoveToNode: createMoveToNodeHandler(props, menuState.primaryTargetId),
     onOpenReviewScheduling: createOptionalNodeMenuHandler(menuState.primaryTargetId, props.onOpenReviewScheduling, props.contextMenu.closeContextMenu),

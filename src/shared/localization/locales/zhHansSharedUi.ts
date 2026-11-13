@@ -1,6 +1,21 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_SHARED_UI_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'desktop.feedback.watchTrash.title': '启用导入后移入废纸篓？',
+  'desktop.feedback.watchTrash.description': '监控文件夹中的源文件将在成功导入后移入系统废纸篓。',
+  'desktop.feedback.watchTrash.confirm': '启用',
+  'desktop.feedback.resetImport.title': '重置已导入的主题？',
+  'desktop.feedback.resetImport.description': '这将移除已导入的主题和导入记录，且无法撤销。',
+  'desktop.feedback.resetImport.confirm': '重置',
+  'desktop.feedback.imageSource.title': '添加来源网站',
+  'desktop.feedback.imageSource.description': 'Foliole 将使用此页面重试加载来自同一来源的图片。',
+  'desktop.feedback.imageSource.label': '来源网站',
+  'desktop.feedback.imageSource.confirm': '保存来源',
+  'desktop.feedback.saveFailed': '无法保存更改。',
+  'desktop.feedback.retry': '重试',
+  'desktop.feedback.moveToTrashFailed': '无法移入废纸篓，请重试。',
+  'desktop.feedback.permanentDeleteFailed': '无法从废纸篓永久删除，请重试。',
+  'desktop.feedback.mergeFailed': '合并失败。',
   'shared.breadcrumb.aria': '面包屑',
   'shared.breadcrumb.expand': '展开面包屑路径',
   'shared.confirm.cancel': '取消',

@@ -1,3 +1,5 @@
+import { getStoredAppLocale } from '../shared/localization/appLanguage';
+import { translate } from '../shared/localization/translations';
 import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 
 import {
@@ -127,7 +129,7 @@ async function deleteWithWorkspaceHistory(args: {
     return { ...currentMutation.patch, appActionHistory: settled.history };
   });
   if (!committed) {
-    showAppRuntimeNotice('Could not move to Trash. Please try again.', 'error');
+    showAppRuntimeNotice(translate(getStoredAppLocale(), 'desktop.feedback.moveToTrashFailed'), 'error');
     return;
   }
   showTrashUndoNotice(entry, args.get);

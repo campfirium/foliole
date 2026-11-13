@@ -1,7 +1,9 @@
 import { createEvent, fireEvent, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { getStoredAppLocale, setStoredAppLocale } from '../../../shared/localization/appLanguage';
+import { preloadTranslationCatalog } from '../../../shared/localization/translations';
 import { registerAppTextInputHandler } from '../../../shared/ui/appConfirmation';
 import { resetRemoteImageFailureHintDismissalForTests } from '../model/remoteImageFailureHintSetting';
 
@@ -89,7 +91,12 @@ afterEach(() => {
 
 describe('live markdown remote image failure recovery menu', () => {
   it('opens a block failed image context menu and saves a source website for the current image', async () => {
-    mockSourceWebsiteInput('https://source.example/article?id=1');
+    const previousLocale = getStoredAppLocale();
+    await preloadTranslationCatalog('zh-Hans');
+    setStoredAppLocale('zh-Hans');
+    const input = vi.fn(async () => 'https://source.example/article?id=1');
+    unregisterTextInputHandler = registerAppTextInputHandler(input);
+    onTestFinished(() => setStoredAppLocale(previousLocale));
     const { adapter, host } = createAdapterHost('![Remote](https://example.com/missing.png)');
     const parentContextMenu = vi.fn();
     host.addEventListener('contextmenu', parentContextMenu);
@@ -100,8 +107,8 @@ describe('live markdown remote image failure recovery menu', () => {
     fireEvent(status, contextMenu);
 
     await waitFor(() => {
-      expect(document.body.querySelector('[role="menu"]')?.textContent).toContain('Add source');
-      expect(document.body.querySelector('[role="menu"]')?.textContent).toContain('Remove');
+      expect(document.body.querySelector('[role="menu"]')?.textContent).toContain('添加来源');
+      expect(document.body.querySelector('[role="menu"]')?.textContent).toContain('移除');
     });
     expect(contextMenu.defaultPrevented).toBe(true);
     expect(parentContextMenu).not.toHaveBeenCalled();
@@ -113,6 +120,10 @@ describe('live markdown remote image failure recovery menu', () => {
         'https://source.example/article?id=1'
       );
     });
+    expect(input).toHaveBeenCalledWith(expect.objectContaining({
+      title: '添加来源网站', inputLabel: '来源网站', confirmLabel: '保存来源',
+      description: 'Foliole 将使用此页面重试加载来自同一来源的图片。'
+    }));
     expect(document.body.querySelector('[role="menu"]')).toBeNull();
 
     adapter.destroy();

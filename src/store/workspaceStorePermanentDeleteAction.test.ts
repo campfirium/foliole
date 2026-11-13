@@ -1,5 +1,7 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, onTestFinished, vi } from 'vitest';
 
+import { getStoredAppLocale, setStoredAppLocale } from '../shared/localization/appLanguage';
+import { preloadTranslationCatalog } from '../shared/localization/translations';
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 
@@ -77,10 +79,14 @@ it.each(['rejects', 'returns no result'])('tells the user and reloads when runti
     return undefined;
   });
 
+  const previousLocale = getStoredAppLocale();
+  await preloadTranslationCatalog('zh-Hans');
+  setStoredAppLocale('zh-Hans');
+  onTestFinished(() => setStoredAppLocale(previousLocale));
   await actions.deleteNodePermanently(nodeId);
   await vi.waitFor(() => expect(requestWorkspaceStateRefresh).toHaveBeenCalledWith('content-changed'));
 
-  expect(showAppRuntimeNotice).toHaveBeenCalledWith('Could not delete from Trash. Please try again.', 'error');
+  expect(showAppRuntimeNotice).toHaveBeenCalledWith('无法从废纸篓永久删除，请重试。', 'error');
 });
 
 it('reloads surviving nodes after a partial runtime deletion instead of leaving them hidden', async () => {

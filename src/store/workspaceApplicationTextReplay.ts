@@ -1,6 +1,8 @@
 import { moveEditorOperationEntry, type EditorTextEditOperationEntry } from '../features/editor/model/editorOperationHistory';
 import { createEditorTextReplaySave } from '../features/editor/model/editorTextReplaySave';
 import { captureNativeTextHistory, runNativeTextHistory } from '../features/editor/model/nativeTextHistory';
+import { getStoredAppLocale } from '../shared/localization/appLanguage';
+import { translate } from '../shared/localization/translations';
 import { loadWorkspaceNodeDocumentFromRuntime } from '../shared/platform/workspaceRuntimeDocumentRepository';
 import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 
@@ -45,8 +47,9 @@ export async function replayApplicationText(args: {
   if (!tr) return false;
   const scope = get().libraryScope;
   const save = createEditorTextReplaySave(retry => {
-    if (get().libraryScope === scope) showAppRuntimeNotice('Changes could not be saved.', 'error',
-      { label: 'Retry', onSelect: retry }, { durationMs: 30_000 });
+    const locale = getStoredAppLocale();
+    if (get().libraryScope === scope) showAppRuntimeNotice(translate(locale, 'desktop.feedback.saveFailed'), 'error',
+      { label: translate(locale, 'desktop.feedback.retry'), onSelect: retry }, { durationMs: 30_000 });
   });
   const contentAfter = tr.newDoc.toString();
   const accepted = field === 'reveal'

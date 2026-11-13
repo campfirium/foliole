@@ -1,3 +1,5 @@
+import { getStoredAppLocale } from '../../../shared/localization/appLanguage';
+import { translate } from '../../../shared/localization/translations';
 import {
   forgetRemoteImageLearnedSource,
   saveRemoteImageSourceWebsite,
@@ -25,12 +27,13 @@ interface RemoteImageFailureStatusOptions {
 
 export function createRemoteImageFailureStatus(options: RemoteImageFailureStatusOptions) {
   const provideSourceWebsite = () => {
+    const locale = getStoredAppLocale();
     void requestAppTextInput({
-      confirmLabel: 'Save source',
-      description: 'Foliole will use this page to retry images from the same source.',
-      inputLabel: 'Source website',
+      confirmLabel: translate(locale, 'desktop.feedback.imageSource.confirm'),
+      description: translate(locale, 'desktop.feedback.imageSource.description'),
+      inputLabel: translate(locale, 'desktop.feedback.imageSource.label'),
       placeholder: 'https://example.com/article',
-      title: 'Add source website'
+      title: translate(locale, 'desktop.feedback.imageSource.title')
     }).then((sourceWebsite) => {
       if (!sourceWebsite?.trim()) return;
       void saveRemoteImageSourceWebsite(options.imageMatch.source, sourceWebsite).then((saved) => {
