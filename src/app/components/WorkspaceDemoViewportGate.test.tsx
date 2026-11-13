@@ -42,7 +42,7 @@ it('passes through the workspace outside Demo', () => {
   renderWithLocalization(<WorkspaceDemoViewportGate><div>Workspace</div></WorkspaceDemoViewportGate>);
 
   expect(screen.getByText('Workspace')).toBeInTheDocument();
-  expect(screen.queryByText('The Demo needs a wider screen. Please open it on a computer.')).toBeNull();
+  expect(screen.queryByText('This Demo is designed for desktop browsers. Please open it on a computer.')).toBeNull();
 });
 
 it('shows a desktop-width prompt for narrow Demo viewports', () => {
@@ -52,12 +52,12 @@ it('shows a desktop-width prompt for narrow Demo viewports', () => {
   renderWithLocalization(<WorkspaceDemoViewportGate><div>Workspace</div></WorkspaceDemoViewportGate>);
 
   expect(screen.queryByText('Workspace')).toBeNull();
-  expect(screen.getByText('The Demo needs a wider screen. Please open it on a computer.')).toBeVisible();
+  expect(screen.getByText('This Demo is designed for desktop browsers. Please open it on a computer.')).toBeVisible();
   expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', 'https://foliole.app/');
   expect(screen.queryByRole('button', { name: 'Open in a new window' })).not.toBeInTheDocument();
 
   setViewportWidth(DEMO_DESKTOP_MIN_WIDTH_PX);
 
   expect(screen.getByText('Workspace')).toBeVisible();
-  expect(screen.queryByText('The Demo needs a wider screen. Please open it on a computer.')).not.toBeInTheDocument();
+  expect(screen.queryByText('This Demo is designed for desktop browsers. Please open it on a computer.')).not.toBeInTheDocument();
 });

@@ -59,7 +59,7 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.workspace.resizeInspectorSidebar': '调整检查器侧栏宽度',
   'desktop.workspace.inspector': '检查器',
   'desktop.demo.narrow.aria': 'Demo 桌面宽度提示',
-  'desktop.demo.narrow.message': 'Demo 需要更宽的屏幕，请在电脑上打开。',
+  'desktop.demo.narrow.message': '此 Demo 专为桌面浏览器设计，请在电脑上打开。',
   'desktop.document.panel': '文档面板',
   'desktop.list.panel': '列表面板',
   'desktop.document.content': '内容',

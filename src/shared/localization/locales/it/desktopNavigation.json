@@ -56,7 +56,7 @@
   "desktop.workspace.resizeInspectorSidebar": "Ridimensiona la barra laterale dell'ispettore",
   "desktop.workspace.inspector": "Ispettore",
   "desktop.demo.narrow.aria": "Avviso larghezza desktop demo",
-  "desktop.demo.narrow.message": "La demo richiede uno schermo più ampio. Aprila su un computer.",
+  "desktop.demo.narrow.message": "Questa demo è progettata per i browser desktop. Aprila su un computer.",
   "desktop.document.panel": "Pannello documenti",
   "desktop.list.panel": "Pannello elenco",
   "desktop.document.content": "Contenuto",

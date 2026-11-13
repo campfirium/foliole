@@ -56,7 +56,7 @@
   "desktop.workspace.resizeInspectorSidebar": "Изменение размера боковой панели инспектора",
   "desktop.workspace.inspector": "инспектор",
   "desktop.demo.narrow.aria": "Уведомление о ширине демо-версии рабочего стола",
-  "desktop.demo.narrow.message": "Для демо нужен более широкий экран. Откройте его на компьютере.",
+  "desktop.demo.narrow.message": "Эта демоверсия предназначена для браузеров на компьютере. Откройте её на компьютере.",
   "desktop.document.panel": "Панель документов",
   "desktop.list.panel": "Панель списка",
   "desktop.document.content": "Содержание",

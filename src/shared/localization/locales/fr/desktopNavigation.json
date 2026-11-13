@@ -56,7 +56,7 @@
   "desktop.workspace.resizeInspectorSidebar": "Redimensionner la barre latérale de l'inspecteur",
   "desktop.workspace.inspector": "Inspecteur",
   "desktop.demo.narrow.aria": "Avis de largeur du bureau de démonstration",
-  "desktop.demo.narrow.message": "La démo nécessite un écran plus large. Ouvrez-la sur un ordinateur.",
+  "desktop.demo.narrow.message": "Cette démo est conçue pour les navigateurs de bureau. Ouvrez-la sur un ordinateur.",
   "desktop.document.panel": "Panneau de documents",
   "desktop.list.panel": "Panneau de liste",
   "desktop.document.content": "Contenu",

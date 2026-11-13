@@ -56,7 +56,7 @@
   "desktop.workspace.resizeInspectorSidebar": "Größe der Inspektor-Seitenleiste ändern",
   "desktop.workspace.inspector": "Inspektor",
   "desktop.demo.narrow.aria": "Hinweis zur Breite des Demo-Desktops",
-  "desktop.demo.narrow.message": "Die Demo benötigt einen breiteren Bildschirm. Bitte öffnen Sie sie auf einem Computer.",
+  "desktop.demo.narrow.message": "Diese Demo ist für Desktop-Browser konzipiert. Bitte öffnen Sie sie auf einem Computer.",
   "desktop.document.panel": "Dokumentbereich",
   "desktop.list.panel": "Listenbereich",
   "desktop.document.content": "Inhalt",

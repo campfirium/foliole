@@ -56,7 +56,7 @@
   "desktop.workspace.resizeInspectorSidebar": "调整检查器侧边栏的大小",
   "desktop.workspace.inspector": "督察",
   "desktop.demo.narrow.aria": "演示桌面宽度注意事项",
-  "desktop.demo.narrow.message": "Demo 需要更寬的螢幕，請在電腦上開啟。",
+  "desktop.demo.narrow.message": "此 Demo 專為桌面瀏覽器設計，請在電腦上開啟。",
   "desktop.document.panel": "文件面板",
   "desktop.list.panel": "清單面板",
   "desktop.document.content": "內容",
