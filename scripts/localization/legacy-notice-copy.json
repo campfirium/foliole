@@ -1,0 +1,48 @@
+{
+  "src/app/hooks/appPaletteSplitTopicCommand.ts": {
+    "Could not save the latest topic draft.": 1
+  },
+  "src/app/hooks/discoursePublishCommand.ts": {
+    "Configure Discourse publishing first.": 1
+  },
+  "src/app/hooks/useControllerPriorityQuickSet.ts": {
+    "`${t('desktop.priorityQuickSet.title')}: P${priority}`": 1
+  },
+  "src/app/hooks/useReviewTopicDelayTarget.ts": {
+    "Could not open Postpone. Please try again.": 1,
+    "Postpone is available for topics that have not been dismissed.": 1
+  },
+  "src/app/hooks/wordpressPublishCommand.ts": {
+    "Connect WordPress publishing first.": 1
+  },
+  "src/features/nodes/components/useNodeBulkDeleteFeedback.ts": {
+    "Could not complete deletion. Please try again.": 1
+  },
+  "src/shared/platform/updateCheck.ts": {
+    "Foliole is up to date.": 1,
+    "`Foliole ${result.latestRelease.version} is available.`": 1
+  },
+  "src/shared/platform/workspaceRuntimeDurableRepository.ts": {
+    "Could not save this change. Try again.": 1
+  },
+  "src/store/workspaceApplicationReplayFailure.ts": {
+    "Undo could not be applied.": 1,
+    "Redo could not be applied.": 1
+  },
+  "src/store/workspaceApplicationRestore.ts": {
+    "The item could not be restored.": 2
+  },
+  "src/store/workspaceDeleteHistoryApply.ts": {
+    "Could not update Trash. Please try again.": 1
+  },
+  "src/store/workspaceEditorAnnotationDelete.ts": {
+    "The item could not be deleted.": 1
+  },
+  "src/store/workspaceEditorAnnotationHistoryMutation.ts": {
+    "Undo could not be applied.": 1,
+    "Redo could not be applied.": 1
+  },
+  "src/store/workspaceNodeShelveDatabaseAction.ts": {
+    "Could not save this change. Please try again.": 1
+  }
+}

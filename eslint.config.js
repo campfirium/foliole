@@ -4,6 +4,8 @@ import tsParser from '@typescript-eslint/parser';
 import importOrder from 'eslint-plugin-import-x/rules/order';
 import globals from 'globals';
 
+import { noHardcodedUserCopy } from './scripts/localization/eslint-user-copy.mjs';
+
 export default [
   {
     ignores: [
@@ -121,6 +123,14 @@ export default [
         }
       ]
     }
+  },
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.*', '**/*.spec.*', 'src/test/**'],
+    plugins: {
+      localization: { rules: { 'no-hardcoded-user-copy': noHardcodedUserCopy } }
+    },
+    rules: { 'localization/no-hardcoded-user-copy': 'error' }
   },
   {
     files: ['src/demo/generated/**/*.ts'],
