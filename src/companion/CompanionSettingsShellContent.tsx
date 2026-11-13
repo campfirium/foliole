@@ -1,10 +1,14 @@
+import { useEffect, useState } from 'react';
+
 import { SettingsAttachmentStorageSection } from '../features/settings/components/sections/SettingsAttachmentStorageSection';
 import { CompanionCustomCssSettingsContent } from '../shared/customCss/CompanionCustomCssSettingsContent';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { supportsCompanionTestReviewReset } from '../shared/platform/companion/runtime/companionTestReviewReset';
 import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDataRuntimeRepository';
 import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
 import { SettingsTouchSurface } from '../shared/ui/SettingsTouchSurface';
 
+import { CompanionAboutSettingsContent } from './CompanionAboutSettingsContent';
 import { CompanionClozeGuardSettingsContent } from './CompanionClozeGuardSettingsContent';
 import { CompanionColorModeControl } from './CompanionColorModeControl';
 import { useOptionalCompanionCustomCss } from './CompanionCustomCssProvider';
@@ -77,7 +81,7 @@ function supportsStorageSettings() {
     || ['ios-native', 'browser-preview'].includes(getCompanionRuntimeCapability().kind);
 }
 
-function CompanionSettingsHome(props: CompanionSettingsContentProps) {
+function CompanionSettingsHome(props: CompanionSettingsContentProps & { showTestTools: boolean }) {
   return (
     <CompanionSettingsList
       onOpenAppearance={() => props.onOpenSyncSettingsPage('appearance')}
@@ -86,7 +90,8 @@ function CompanionSettingsHome(props: CompanionSettingsContentProps) {
         ? { onOpenReminders: () => props.onOpenSyncSettingsPage('reminders') } : {})}
       onOpenLearning={() => props.onOpenSyncSettingsPage('learning')}
       onOpenReviewStatistics={() => props.onOpenSyncSettingsPage('reviewStatistics')}
-      onOpenDebug={() => props.onOpenSyncSettingsPage('debug')}
+      onOpenAbout={() => props.onOpenSyncSettingsPage('about')}
+      {...(props.showTestTools ? { onOpenDebug: () => props.onOpenSyncSettingsPage('debug') } : {})}
       onOpenBackup={() => props.onOpenSyncSettingsPage('backup')}
       onOpenAttachments={() => props.onOpenSyncSettingsPage('attachments')}
       onOpenSync={props.onOpenSyncSettings}
@@ -97,7 +102,18 @@ function CompanionSettingsHome(props: CompanionSettingsContentProps) {
 
 function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
   const t = useTranslation();
-  if (props.settingsPage === 'list' || props.settingsPage === 'storage') return <CompanionSettingsHome {...props} />;
+  const [showTestTools, setShowTestTools] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void supportsCompanionTestReviewReset().then(supported => {
+      if (active) setShowTestTools(supported);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+  if (props.settingsPage === 'list' || props.settingsPage === 'storage') {
+    return <CompanionSettingsHome {...props} showTestTools={showTestTools} />;
+  }
+  if (props.settingsPage === 'about') return <CompanionAboutSettingsContent />;
   if (props.settingsPage === 'backup') return <CompanionFolderDatabaseBackupSection />;
   if (props.settingsPage === 'attachments') return <SettingsAttachmentStorageSection mobile unavailable={getCompanionRuntimeCapability().kind === 'browser-preview'} />;
   if (props.settingsPage === 'clozeGuard') return <CompanionClozeGuardSettingsContent />;

@@ -1,4 +1,4 @@
-import { Bell, BookOpen, Bug, CalendarDays, Database, HardDrive, Palette, RefreshCw, RectangleEllipsis, type LucideIcon } from 'lucide-react';
+import { Bell, BookOpen, Bug, CalendarDays, Database, HardDrive, Info, Palette, RefreshCw, RectangleEllipsis, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { SettingsExperimentalFeaturesSection } from '../features/settings/components/sections/SettingsExperimentalFeaturesSection';
@@ -65,9 +65,23 @@ function formatBytes(value: number) {
   return value < 1024 * 1024 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function SettingsAboutAndTestTools(props: { onOpenAbout?(): void; onOpenDebug?(): void }) {
+  const t = useTranslation();
+  return <>
+    {props.onOpenAbout ? <SettingsListSection title="">
+      <CompanionListRow ariaLabel={t('settings.category.about.label')} Icon={Info}
+        onClick={props.onOpenAbout} title={t('settings.category.about.label')} showIcon />
+    </SettingsListSection> : null}
+    {props.onOpenDebug ? <SettingsListSection title={t('companion.settings.section.development')}>
+      <SettingsListItem Icon={Bug} detail="" onClick={props.onOpenDebug} title={t('companion.settings.debug.title')} />
+    </SettingsListSection> : null}
+  </>;
+}
+
 export function CompanionSettingsList(props: {
   onOpenAppearance(): void;
-  onOpenDebug(): void;
+  onOpenAbout?(): void;
+  onOpenDebug?(): void;
   onOpenLearning?(): void;
   onOpenReminders?(): void;
   onOpenClozeGuard?(): void;
@@ -113,14 +127,7 @@ export function CompanionSettingsList(props: {
         />
         <SettingsExperimentalFeaturesSection />
         <CompanionFeedbackSettingsRow />
-        <SettingsListSection title={t('companion.settings.section.development')}>
-          <SettingsListItem
-            Icon={Bug}
-            detail=""
-            onClick={props.onOpenDebug}
-            title={t('companion.settings.debug.title')}
-          />
-        </SettingsListSection>
+        <SettingsAboutAndTestTools {...props} />
       </div>
     </section>
   );

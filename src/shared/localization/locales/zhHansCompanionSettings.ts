@@ -1,6 +1,9 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.settings.about.changelog': '更新日志',
+  'companion.settings.about.privacy': '隐私政策',
+  'companion.settings.about.versionUnavailable': '无法读取已安装版本',
   'companion.settings.highlightPrefix.loadError': '无法读取批注前缀，请重试。',
   'companion.settings.clozeGuard.loadError': '无法读取挖空保护设置，请重试。',
   'companion.settings.storage.clearConfirm': '清除数据',
@@ -110,7 +113,7 @@ export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<Translation
   'companion.settings.appearance.css.resetConfirm.description': '移除所有已保存的片段及其样式。',
   'companion.settings.appearance.css.resetConfirm.action': '重置样式',
   'companion.settings.appearance.placeholderDetail': 'iOS 暂不支持自定义样式。',
-  'companion.settings.debug.title': '调试',
+  'companion.settings.debug.title': '测试工具',
   'companion.settings.debug.detail': '诊断信息暂不可用。',
   'companion.settings.header.count': '{count} 组',
   'companion.settings.header.subtitle': '同步、存储、外观和诊断。',

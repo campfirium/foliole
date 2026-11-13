@@ -45,6 +45,23 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 812 }
   });
 }
 
+for (const viewport of [{ width: 320, height: 568 }, { width: 568, height: 320 }]) {
+  test(`keeps About usable at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await loadSettingsSheets(page);
+    await page.addStyleTag({ content: 'html { font-size: 125%; }' });
+    await page.getByRole('button', { name: 'Open Settings', exact: true }).click();
+    await page.getByRole('button', { name: 'About', exact: true }).click();
+    await expect(page.getByText('Installed version unavailable')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
+    const lastLink = page.getByRole('link', { name: 'YouTube' });
+    await lastLink.scrollIntoViewIfNeeded();
+    await expect(lastLink).toBeInViewport();
+    await page.getByRole('button', { name: 'Back to settings' }).click();
+    await expect(page.getByRole('button', { name: 'About', exact: true })).toBeVisible();
+  });
+}
+
 test.describe('sending feedback from settings', () => {
   test.use({ hasTouch: true });
 

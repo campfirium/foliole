@@ -55,7 +55,7 @@ describe('CompanionTopBarPropsModel', () => {
     expect(buildTopBarProps('syncGroup')).toMatchObject({ backLabel: 'Sync', title: 'Sync Group' });
     expect(buildTopBarProps('device')).toMatchObject({ backLabel: 'Settings', title: 'Device' });
     expect(buildTopBarProps('appearance')).toMatchObject({ backLabel: 'Settings', title: 'Appearance' });
-    expect(buildTopBarProps('debug')).toMatchObject({ backLabel: 'Settings', title: 'Debug' });
+    expect(buildTopBarProps('debug')).toMatchObject({ backLabel: 'Settings', title: 'Test tools' });
   });
 
   it('uses compact chrome for the review surface actions', () => {

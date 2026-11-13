@@ -5,6 +5,7 @@ The [route registry](../scripts/agent-control/foliole-agent-routes.mjs) defines 
 | Object or relationship | Read | Create or initialize | Change or link | Follow-up |
 | --- | --- | --- | --- | --- |
 | Service and access | Health reports runtime identity. Authenticated clients can verify the token and discover capabilities. | The desktop host serves the current library on loopback. | Write commands use the application’s validation and revision checks. | See the route registry for authentication and command details. |
+| Mobile About | Settings shows the installed app version and build on iPhone and Android. | — | — | Mobile installation metadata and public site links stay in the app UI. |
 | Search | Material search can return node, PDF, and external matches, with location details when available. | — | — | Page through matching results with an explicit offset. |
 | PDF reading view | Desktop PDF zoom and sidebar placement are reader controls. | — | PDF reading layout stays in the desktop reader. | Material search already supports PDF locations. |
 | Trash | Find restorable subtree roots by title, including titles of trashed descendants. | — | Pass the returned ID and revision to `materials/restore`. | Emptying Trash requires confirmation in the desktop app. Permanent deletion is unavailable through Agent Control. |

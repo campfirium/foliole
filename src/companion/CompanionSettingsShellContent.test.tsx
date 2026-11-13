@@ -2,6 +2,12 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 
+const nativeApp = vi.hoisted(() => ({ getInfo: vi.fn() }));
+vi.mock('@capacitor/app', async importOriginal => ({
+  ...await importOriginal<typeof import('@capacitor/app')>(),
+  App: { getInfo: nativeApp.getInfo }
+}));
+
 const appDataRuntime = vi.hoisted(() => ({
   supportsClear: vi.fn(() => true),
   kind: 'web-preview'
@@ -39,20 +45,21 @@ function SettingsHarness({ runtimeKind = 'web-preview' }: { runtimeKind?: 'web-p
   );
 }
 
-describe('CompanionSettingsShellContent', () => {
-  beforeEach(() => {
-    appDataRuntime.supportsClear.mockReturnValue(true);
-    appDataRuntime.kind = 'web-preview';
-  });
-  afterEach(() => { delete window.__folioleSettingsPreview; });
+beforeEach(() => {
+  appDataRuntime.supportsClear.mockReturnValue(true);
+  appDataRuntime.kind = 'web-preview';
+  nativeApp.getInfo.mockReset().mockResolvedValue({ id: 'com.foliole.app', version: '9.4.2', build: '302' });
+});
+afterEach(() => { delete window.__folioleSettingsPreview; });
 
+describe('CompanionSettingsShellContent', () => {
   it('puts Appearance first and omits unavailable Device details', () => {
     render(<SettingsHarness />);
 
     expect(screen.getAllByRole('button')[0]).toHaveAccessibleName('Appearance Language and display');
     expect(screen.getByText('Sync and device')).toBeInTheDocument();
     expect(screen.getByText('Data')).toBeInTheDocument();
-    expect(screen.getByText('Development')).toBeInTheDocument();
+    expect(screen.queryByText('Development')).not.toBeInTheDocument();
 
     expect(screen.getByRole('button', { name: 'Sync' })).toBeInTheDocument();
     expect(screen.queryByText('Device')).not.toBeInTheDocument();
@@ -66,13 +73,6 @@ describe('CompanionSettingsShellContent', () => {
     expect(screen.getByText('Custom CSS snippets')).toBeInTheDocument();
     expect(screen.getByTestId('companion-custom-css-settings')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add snippet' })).toBeInTheDocument();
-  });
-
-  it('opens the debug placeholder page', () => {
-    render(<SettingsHarness />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Debug' }));
-    expect(screen.getByText('Diagnostics')).toBeInTheDocument();
   });
 
   it('keeps app-data clearing unavailable on a runtime without its native capability', () => {
@@ -117,4 +117,35 @@ it('shows attachment size and trash summaries in preview without technical notic
   expect(screen.getByRole('button', { name: 'Mark ready to clean' })).toBeEnabled();
   expect(screen.queryByText(/available in the mobile app/)).not.toBeInTheDocument();
   view.unmount(); delete window.__folioleSettingsPreview;
+});
+
+describe('Companion About and test tools', () => {
+  it.each(['ios-native', 'android-native'])('shows the installed %s version as plain text in About', async kind => {
+    appDataRuntime.kind = kind;
+    render(<SettingsHarness />);
+    expect(screen.getByRole('button', { name: 'Send Feedback' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Test tools' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'About' }));
+
+    expect(await screen.findByText('9.4.2 (302)')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /version/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Changelog' })).toHaveAttribute('href', 'https://foliole.app/changelog/');
+    expect(screen.getByRole('link', { name: 'Privacy policy' })).toHaveAttribute('href', 'https://foliole.app/privacy/');
+    expect(screen.getByRole('link', { name: 'Discuss' })).toHaveAttribute('href', 'https://github.com/campfirium/foliole/discussions');
+  });
+
+  it('does not show a package version as installed in the browser', async () => {
+    render(<SettingsHarness />);
+    fireEvent.click(screen.getByRole('button', { name: 'About' }));
+    expect(await screen.findByText('Installed version unavailable')).toBeInTheDocument();
+    expect(nativeApp.getInfo).not.toHaveBeenCalled();
+  });
+
+  it('offers Test tools only in the Android acceptance app', async () => {
+    appDataRuntime.kind = 'android-native';
+    nativeApp.getInfo.mockResolvedValue({ id: 'com.campfirium.foliole.android.acceptance' });
+    render(<SettingsHarness />);
+    expect(await screen.findByRole('button', { name: 'Test tools' })).toBeInTheDocument();
+  });
+
 });

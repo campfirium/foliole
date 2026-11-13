@@ -1,4 +1,7 @@
 export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
+  'companion.settings.about.changelog': 'Changelog',
+  'companion.settings.about.privacy': 'Privacy policy',
+  'companion.settings.about.versionUnavailable': 'Installed version unavailable',
   'companion.settings.highlightPrefix.loadError': 'Annotation prefix could not be loaded. Try again.',
   'companion.settings.clozeGuard.loadError': 'Cloze guard settings could not be loaded. Try again.',
   'companion.settings.storage.clearConfirm': 'Clear data',
@@ -109,7 +112,7 @@ export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
   'companion.settings.appearance.css.resetConfirm.description': 'Remove all saved snippets and their styles.',
   'companion.settings.appearance.css.resetConfirm.action': 'Reset styles',
   'companion.settings.appearance.placeholderDetail': 'Custom styles are not available on iOS yet.',
-  'companion.settings.debug.title': 'Debug',
+  'companion.settings.debug.title': 'Test tools',
   'companion.settings.debug.detail': 'Diagnostics are not available yet.',
   'companion.settings.header.count': '{count} sections',
   'companion.settings.header.subtitle': 'Sync, storage, appearance, and diagnostics.',

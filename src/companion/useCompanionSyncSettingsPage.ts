@@ -17,6 +17,7 @@ export type CompanionSettingsPage =
   | 'backup'
   | 'attachments'
   | 'appearance'
+  | 'about'
   | 'debug'
   | 'tabs'
   | 'syncGroup'

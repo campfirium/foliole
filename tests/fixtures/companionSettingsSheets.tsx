@@ -6,7 +6,9 @@ import { createCompanionSettingsPreview } from '../../scripts/vite/companionSett
 import '../../src/app/styles.css';
 import { CompanionBackupLocationDialog } from '../../src/companion/CompanionBackupLocationDialog';
 import { CompanionFeedbackSettingsRow } from '../../src/companion/CompanionFeedbackSettingsRow';
+import { renderCompanionSettingsContent } from '../../src/companion/CompanionSettingsShellContent';
 import { CompanionStorageSettingsContent } from '../../src/companion/CompanionStorageSettingsContent';
+import type { CompanionSettingsPage } from '../../src/companion/useCompanionSyncSettingsPage';
 import '../../src/companion/companionMinimal.css';
 import { AttachmentCleanupThresholdDialog } from '../../src/features/settings/components/sections/AttachmentCleanupThresholdDialog';
 import { SettingsAttachmentStorageSection } from '../../src/features/settings/components/sections/SettingsAttachmentStorageSection';
@@ -22,8 +24,20 @@ function SettingsSheets() {
   const t = useTranslation();
   const [threshold, setThreshold] = useState(30);
   const [open, setOpen] = useState(false);
+  const [page, setPage] = useState<CompanionSettingsPage | null>(null);
   const [backup, setBackup] = useState(false);
+  if (page) return <>
+    {page !== 'list' && <button onClick={() => setPage('list')}>Back to settings</button>}
+    {renderCompanionSettingsContent({
+      onBackToSettingsList: () => setPage('list'),
+      onOpenSyncSettings: () => setPage('sync'),
+      onOpenSyncSettingsPage: setPage,
+      settingsPage: page,
+      workspaceSync: { state: {} } as never
+    })}
+  </>;
   return <SettingsTouchSurface>
+    <button onClick={() => setPage('list')}>Open Settings</button>
     <button onClick={() => setOpen(true)}>Days: {threshold}</button>
     <button onClick={() => setBackup(true)}>Backup location</button>
     <button onClick={() => void chooseSyncGroupJoinMode(t, 'Home Library')}>Join</button>
