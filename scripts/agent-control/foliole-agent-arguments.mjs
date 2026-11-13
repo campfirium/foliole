@@ -2,6 +2,7 @@ export function buildAgentCliBody(command, flags) {
   if (command === 'health' || command === 'capabilities') return { body: null, ok: true };
   if (command === 'materials/create') return buildMaterialCreateBody(flags);
   if (command === 'materials/list-children') return requireFields(flags, [], ['parent_id', 'limit', 'offset']);
+  if (command === 'materials/list-trash') return requireFields(flags, [], ['query', 'limit', 'offset']);
   if (command === 'materials/move') return requireFields(flags, ['id', 'parent_id', 'expected_updated_at']);
   if (command === 'materials/read') return buildMaterialReadBody(flags);
   if (command === 'materials/search') return requireFields(flags, ['query'], ['limit', 'offset']);

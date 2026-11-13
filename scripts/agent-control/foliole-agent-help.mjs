@@ -54,6 +54,10 @@ const COMMAND_DETAILS = {
     'Moves the Topic or Folder to trash; it does not permanently delete it.',
     'If --expected-updated-at is omitted, the CLI reads the latest value before writing.'
   ]),
+  'materials/list-trash': details([
+    'Search trashed titles with --query. A matching descendant returns its trashed root.',
+    'Use next_offset as --offset for the next page. Pass the result ID and updated_at to materials/restore.'
+  ]),
   'materials/move': guardedWrite('Run materials/read first and pass its updated_at value.'),
   'materials/reorder': details([
     'Replaces the complete direct-child order for the selected Folder or workspace root.',

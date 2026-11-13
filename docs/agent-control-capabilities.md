@@ -6,6 +6,7 @@ The [route registry](../scripts/agent-control/foliole-agent-routes.mjs) defines 
 | --- | --- | --- | --- | --- |
 | Service and access | Health reports runtime identity. Authenticated clients can verify the token and discover capabilities. | The desktop host serves the current library on loopback. | Write commands use the application’s validation and revision checks. | See the route registry for authentication and command details. |
 | Search | Material search can return node, PDF, and external matches, with location details when available. | — | — | Page through matching results with an explicit offset. |
+| Trash | Find restorable subtree roots by title, including titles of trashed descendants. | — | Pass the returned ID and revision to `materials/restore`. | Permanent deletion stays in the desktop trash. |
 | Folder | Read title and hierarchy. Search and list direct children. | Create with a title and parent. | Move, reorder children, trash, and restore. Rename with `materials/update` (`--title` in the CLI) using the revision from `materials/read`. | — |
 | Topic | Read title, complete body on request, parent path, and child summaries. Search readable Topics. | Create with body, title, and parent. Optionally import an active reading schedule and priority. | Update body and title. Move, trash, and restore. | Evaluate structured learning data for export. |
 | Item | Read the complete question and answer on request, plus identity hints for derived Items. | Create a question-and-answer Item with a parent and optional first review date and priority. | Update question, answer, and title. Move, trash, and restore where supported. | Import existing review history and preserve the first due date alongside it for [Discussion #241](https://github.com/campfirium/foliole/discussions/241). Evaluate structured learning data for export. |
@@ -88,6 +89,14 @@ For `materials/list-children`, omit `parent_id` for the workspace root or supply
 The default and maximum page size is 30. Each page reports the current total in `child_count` and whether more rows follow in `children_truncated`. Paginated results order by ascending position (missing positions sort as 999999), ascending SQLite `lower(title)`, descending update time, then ascending material ID. A request without an offset keeps the original bounded response and omits `next_offset`. A negative, fractional, nonnumeric, or unsafe offset returns HTTP 400. An unknown parent returns HTTP 404.
 
 Each request reads the live directory. Inserts, removals, moves, or changes to sort fields between pages can cause rows to be repeated or skipped. For a consistent export, traverse while the library is stable and restart an affected listing at offset zero if it changes.
+
+### Finding a material in the trash
+
+Use `POST /agent-control/v1/materials/list-trash` or `foliole materials/list-trash --query "Title"`. Omit the query to browse all trash roots. Title matching is case-insensitive and uses substrings. A match on a trashed descendant returns its subtree root once, just as in the desktop trash.
+
+Results are ordered by deletion time, newest first, with ID breaking ties. Each result has `id`, `kind`, `title`, `parent_id`, `deleted_at`, and `updated_at`. Pass the result's `id` and `updated_at` as `id` and `expected_updated_at` to `materials/restore`. Restoring a root can restore its descendants.
+
+The default page size is 30. Set `limit` from 1 to 100 and pass `next_offset` as `offset` (CLI `--offset`) until it is null. Offsets apply to the current trash contents, so a deletion or restore between pages can shift results. The route requires the Agent Control bearer token and the CLI checks for `materials.listTrash` in the session descriptor.
 
 Callers can retain a copy of content they read before making a change. Use Foliole’s library backup when a batch needs a library-wide recovery point.
 

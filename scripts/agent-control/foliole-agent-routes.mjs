@@ -25,6 +25,10 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
     capabilityOrder: 2,
     cli: cliRoute('materials/list-children', 'List direct materials at the root or under a parent. Pass --offset 0 to start paging.', optional('parent-id', 'limit', 'offset'))
   }),
+  registryRoute('product', 'POST', 'materials/list-trash', 'materials.listTrash', {
+    capabilityOrder: 18,
+    cli: cliRoute('materials/list-trash', 'Find restorable materials in the trash.', optional('query', 'limit', 'offset'))
+  }),
   registryRoute('product', 'POST', 'materials/move', 'materials.move', {
     capabilityOrder: 4,
     cli: cliRoute('materials/move', 'Move a Topic, Folder, or Item.', required('id', 'parent-id', 'expected-updated-at')),

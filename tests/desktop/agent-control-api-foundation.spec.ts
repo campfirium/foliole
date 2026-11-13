@@ -23,7 +23,8 @@ const EXPECTED_DESCRIPTOR_CAPABILITIES = [
   'virtualFolders.deleteSoft',
   'virtualFolders.restore',
   'materials.update',
-  'materials.deleteSoft'
+  'materials.deleteSoft',
+  'materials.listTrash'
 ];
 
 const EXPECTED_CAPABILITY_STATUSES = EXPECTED_DESCRIPTOR_CAPABILITIES.map((name) => ({

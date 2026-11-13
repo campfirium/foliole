@@ -6,7 +6,7 @@ import {
   handleMaterialSearch,
   handleMaterialUpdate
 } from './agentControlMaterialHandlers.js';
-import { handleMaterialListChildren } from './agentControlMaterialListHandlers.js';
+import { handleMaterialListChildren, handleMaterialListTrash } from './agentControlMaterialListHandlers.js';
 import {
   handleMaterialCreate,
   handleMaterialMove,
@@ -67,6 +67,7 @@ const MATERIAL_ROUTES: Record<string, Handler> = {
   '/agent-control/v1/materials/create': handleMaterialCreate,
   '/agent-control/v1/materials/delete-soft': handleMaterialDeleteSoft,
   '/agent-control/v1/materials/list-children': handleMaterialListChildren,
+  '/agent-control/v1/materials/list-trash': handleMaterialListTrash,
   '/agent-control/v1/materials/move': handleMaterialMove,
   '/agent-control/v1/materials/read': handleMaterialRead,
   '/agent-control/v1/materials/reorder': handleMaterialReorder,

@@ -8,6 +8,13 @@ import {
   normalizeOptionalLimit,
   readAgentControlJsonBody
 } from './agentControlMaterials.js';
+import { listAgentControlMaterialTrash } from './agentControlMaterialTrash.js';
+import {
+  readAuthorizedAgentControlBody,
+  recordAgentControlRequest,
+  sendAgentControlInvalidRequest,
+  sendAgentControlJson
+} from './agentControlMutationHandlerSupport.js';
 import type { AgentControlRequestHandlerOptions } from './agentControlRequestHandler.js';
 import { isBearerTokenAuthorized } from './agentControlToken.js';
 
@@ -94,4 +101,22 @@ export async function handleMaterialListChildren(
 
 export function isPageOffset(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+}
+
+export async function handleMaterialListTrash(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  options: AgentControlRequestHandlerOptions
+) {
+  const capability = 'materials.listTrash';
+  const body = await readAuthorizedAgentControlBody(request, response, options, capability);
+  if (!body) return;
+  const { query = '', offset = 0, limit = 30 } = body;
+  if (typeof query !== 'string' || !isPageOffset(offset)
+    || typeof limit !== 'number' || !Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+    return sendAgentControlInvalidRequest(request, response, options, capability);
+  }
+  const payload = listAgentControlMaterialTrash(query.trim().toLowerCase(), limit, offset);
+  recordAgentControlRequest({ capability, options, request, result: 'success' });
+  sendAgentControlJson(response, 200, payload);
 }
