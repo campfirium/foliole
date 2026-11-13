@@ -88,8 +88,7 @@ function linkReadyPdf(nodeId: string, attachmentId: string, text = 'pdf lifecycl
   insertPdfAttachment({ nodeId, id: attachmentId, originalName: `${attachmentId}.pdf`, status: 'ready' });
   savePdfPageTextRows(
     attachmentId,
-    [{ page: 1, pageHeight: 1200, pageWidth: 800, text }],
-    '2026-05-26T00:01:00.000Z'
+    [{ page: 1, pageHeight: 1200, pageWidth: 800, text }]
   );
 }
 

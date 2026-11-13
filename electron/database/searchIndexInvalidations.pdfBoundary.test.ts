@@ -64,8 +64,7 @@ it('refreshes PDF FTS rows after PDF page text invalidation is processed', () =>
   seedPdfReferenceNode();
   savePdfPageTextRows(
     PDF_ATTACHMENT_ID,
-    [{ page: 1, pageHeight: 1200, pageWidth: 800, text: 'Atlas appears in PDF text.' }],
-    '2026-05-16T10:03:00.000Z'
+    [{ page: 1, pageHeight: 1200, pageWidth: 800, text: 'Atlas appears in PDF text.' }]
   );
 
   expect(openDatabaseConnection().sqlite
@@ -78,8 +77,7 @@ it('refreshes PDF FTS rows after PDF page text invalidation is processed', () =>
 
   savePdfPageTextRows(
     PDF_ATTACHMENT_ID,
-    [{ page: 1, pageHeight: 1200, pageWidth: 800, text: 'Replaced PDF marker.' }],
-    '2026-05-16T10:04:00.000Z'
+    [{ page: 1, pageHeight: 1200, pageWidth: 800, text: 'Replaced PDF marker.' }]
   );
   processSearchIndexInvalidations(openDatabaseConnection().driver);
   expect(searchWorkspace('Replaced')[0]).toMatchObject({

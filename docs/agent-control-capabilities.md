@@ -23,6 +23,8 @@ The HTTP create request takes an explicit `parent_id`, which can be null. The CL
 
 SuperMemo batch preview and import use the desktop Import flow for the current library. Its report and scheduling slider stay in the desktop flow. External migration of individual materials uses the existing Agent Control routes.
 
+Desktop PDF imports index extracted text by page. Material search returns PDF locations from that index. The PDF-backed Topic body is separate and indexing does not write the extracted full text into it.
+
 ### Retrying material creation
 
 On a Foliole version that supports create retries, supply `request_id` in the HTTP body or `--request-id` in the CLI. Generate a unique ID for each intended creation and save it before sending. IDs are case-sensitive, 1–128 characters long, and may contain letters A–Z, digits, periods, underscores, colons, and hyphens.

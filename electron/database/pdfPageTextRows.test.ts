@@ -114,8 +114,7 @@ it('keeps extracted PDF pages local without publishing per-page sync objects', (
     [
       { page: 1, pageHeight: 1200, pageWidth: 800, text: 'Page one' },
       { page: 2, pageHeight: null, pageWidth: null, text: 'Page two' }
-    ],
-    '2026-04-24T00:01:00.000Z'
+    ]
   );
 
   expect(listPdfPageTextState()).toEqual([]);
@@ -129,42 +128,47 @@ it('replaces local PDF pages without publishing tombstones', () => {
     [
       { page: 1, pageHeight: 1200, pageWidth: 800, text: 'Page one' },
       { page: 2, pageHeight: 1200, pageWidth: 800, text: 'Page two' }
-    ],
-    '2026-04-24T00:01:00.000Z'
+    ]
   );
 
   savePdfPageTextRows(
     pdfHash,
-    [{ page: 1, pageHeight: 1200, pageWidth: 800, text: 'Page one updated' }],
-    '2026-04-24T00:02:00.000Z'
+    [{ page: 1, pageHeight: 1200, pageWidth: 800, text: 'Page one updated' }]
   );
 
   expect(listPdfPageTextState()).toEqual([]);
   expect(countPdfPageTextChanges().count).toBe(0);
 });
 
-it('writes extracted PDF text as the owned reference body for sync packs', () => {
+it('keeps a large indexed PDF in one reader without changing its topic body or version', () => {
   seedPdfAttachment();
+  const before = readPdfReferenceNodeBody();
+  const text = 'Searchable Unicode 文字 '.repeat(50_000);
+  expect(Buffer.byteLength(text)).toBeGreaterThan(1_048_576);
 
-  savePdfPageTextRows(
-    pdfHash,
-    [
-      { page: 1, pageHeight: 1200, pageWidth: 800, text: 'First extracted page.' },
-      { page: 2, pageHeight: 1200, pageWidth: 800, text: 'Second extracted page.' }
-    ],
-    '2026-04-24T00:03:00.000Z'
-  );
+  savePdfPageTextRows(pdfHash, [
+    { page: 1, pageHeight: 1200, pageWidth: 800, text },
+    { page: 2, pageHeight: 1200, pageWidth: 800, text: 'Second extracted page.' }
+  ]);
 
-  expect(readPdfReferenceNodeBody()).toMatchObject({
-    body: '# Paper\n\nFirst extracted page.\n\nSecond extracted page.',
-    body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
-    opening_text: 'First extracted page. Second extracted page.',
-    sync_dirty: 0
-  });
-  expect(openDatabaseConnection().sqlite
-    .prepare(`SELECT object_id, object_type FROM sync_object_state WHERE object_type = 'node'`)
-    .all()).toEqual([{ object_id: 'node-pdf', object_type: 'node' }]);
-  expect(openDatabaseConnection().sqlite.prepare(`SELECT v.body_text FROM node_sync_versions v
-    JOIN nodes n ON n.current_version_id = v.version_id WHERE n.id = 'node-pdf'`).get())
-    .toEqual({ body_text: '# Paper\n\nFirst extracted page.\n\nSecond extracted page.' });
+  expect(readPdfReferenceNodeBody()).toEqual(before);
+  const { sqlite } = openDatabaseConnection();
+  expect(sqlite.prepare('SELECT page, text FROM pdf_page_text WHERE attachment_id = ? ORDER BY page').all(pdfHash))
+    .toEqual([{ page: 1, text }, { page: 2, text: 'Second extracted page.' }]);
+  expect(sqlite.prepare('SELECT COUNT(*) FROM node_sync_versions WHERE object_id = ?').pluck().get('node-pdf'))
+    .toBe(0);
+});
+
+it('reindexing preserves the user’s saved PDF topic text', () => {
+  seedPdfAttachment();
+  const { sqlite } = openDatabaseConnection();
+  const content = '# Paper\n\nMy notes. Linked PDF source ready for the reader surface.';
+  sqlite.prepare("UPDATE nodes SET content = ? WHERE id = 'node-pdf'").run(content);
+  const before = readPdfReferenceNodeBody();
+
+  for (const text of ['First extraction', 'Updated extraction']) {
+    savePdfPageTextRows(pdfHash, [{ page: 1, pageHeight: 1200, pageWidth: 800, text }]);
+    expect(readPdfReferenceNodeBody()).toEqual(before);
+    expect(sqlite.prepare('SELECT text FROM pdf_page_text WHERE attachment_id = ?').pluck().get(pdfHash)).toBe(text);
+  }
 });

@@ -17,6 +17,7 @@ vi.mock('node:worker_threads', async (original) => {
   } };
 });
 
+import { buildPdfReaderPlaceholder } from '../../lib/core/import/pdfReaderPlaceholder.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from './connection.js';
@@ -25,6 +26,7 @@ import { enqueuePdfAttachmentIndexing, markPdfAttachmentIndexPending } from './p
 import { pdfId } from './pdfIndexingTestSupport.js';
 
 const PAGE_COUNT = 400;
+const placeholder = buildPdfReaderPlaceholder('long.pdf');
 
 async function mountPdf(bytes: Buffer) {
   const fixture = await resolveAttachmentFile(`${pdfId}.pdf`);
@@ -33,8 +35,8 @@ async function mountPdf(bytes: Buffer) {
   fs.writeFileSync(path.join(path.dirname(fixture.filePath), `${attachmentId}.pdf`), bytes);
   const reference = JSON.stringify([{ storage_key: `${attachmentId}.pdf`, original_name: 'long.pdf', role: 'reference' }]);
   await runWithDatabaseConnectionOwner(() => {
-    openDatabaseConnection().driver.execute(`INSERT INTO nodes (id, title, resource_references, created_at, updated_at)
-      VALUES ('long-pdf-topic', 'Long PDF', ?, '2026-10-24', '2026-10-24')`, [reference]);
+    openDatabaseConnection().driver.execute(`INSERT INTO nodes (id, title, content, resource_references, created_at, updated_at)
+      VALUES ('long-pdf-topic', 'Long PDF', ?, ?, '2026-10-24', '2026-10-24')`, [placeholder, reference]);
     markPdfAttachmentIndexPending(attachmentId);
   });
   return attachmentId;
@@ -44,6 +46,7 @@ function readIndex(attachmentId: string) {
   return runWithDatabaseConnectionOwner(() => {
     const { driver } = openDatabaseConnection();
     return {
+      content: driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id = 'long-pdf-topic'")?.content,
       pages: driver.queryAll<{ text: string }>('SELECT text FROM pdf_page_text WHERE attachment_id = ? ORDER BY page', [attachmentId]),
       state: driver.queryOne('SELECT status, attempt, error FROM pdf_index_state WHERE attachment_id = ?', [attachmentId])
     };
@@ -74,7 +77,9 @@ it('indexes a long PDF while the main thread keeps handling events', async () =>
     vi.unstubAllEnvs();
   }
 
-  const { pages } = await readIndex(attachmentId);
+  const { pages, content } = await readIndex(attachmentId);
+  expect(Buffer.byteLength(pages.map(page => page.text).join(''))).toBeGreaterThan(1_048_576);
+  expect(content === placeholder).toBe(true);
   expect(pages).toHaveLength(PAGE_COUNT);
   expect(pages[PAGE_COUNT - 1]?.text).toContain(`Page ${PAGE_COUNT - 1} line 0`);
   expect(longestTurnGapMs).toBeLessThan(100);

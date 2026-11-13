@@ -1,11 +1,6 @@
-import {
-  enqueuePdfSearchInvalidationForAttachmentIds,
-  enqueueWorkspaceSearchInvalidationForNodeIds
-} from '../../lib/core/database/searchIndexInvalidations.js';
+import { enqueuePdfSearchInvalidationForAttachmentIds } from '../../lib/core/database/searchIndexInvalidations.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { loadOrCreateDesktopHostName } from './hostProfile.js';
-import { syncPdfBodyBlobsForReferenceNodes } from './pdfBodyBlobs.js';
 
 export interface PdfPageTextInput {
   page: number;
@@ -16,11 +11,9 @@ export interface PdfPageTextInput {
 
 export function savePdfPageTextRows(
   attachmentId: string,
-  pages: PdfPageTextInput[],
-  now = new Date().toISOString()
+  pages: PdfPageTextInput[]
 ) {
   const connection = openDatabaseConnection();
-  const hostName = loadOrCreateDesktopHostName(now);
   const runInTransaction = connection.sqlite.transaction(() => {
     connection.driver.execute('DELETE FROM pdf_page_text WHERE attachment_id = ?', [attachmentId]);
     for (const page of pages) {
@@ -34,9 +27,7 @@ export function savePdfPageTextRows(
         [attachmentId, page.page, page.text, page.pageWidth, page.pageHeight]
       );
     }
-    const updatedBodyNodeIds = syncPdfBodyBlobsForReferenceNodes(attachmentId, pages, hostName, now);
     enqueuePdfSearchInvalidationForAttachmentIds(connection.driver, [attachmentId]);
-    enqueueWorkspaceSearchInvalidationForNodeIds(connection.driver, updatedBodyNodeIds);
   });
 
   runInTransaction();

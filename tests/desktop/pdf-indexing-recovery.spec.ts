@@ -40,6 +40,9 @@ test('PDF indexing completes or fails durably and survives a native relaunch', a
   const ready = await readIndex(desktopApp, readyId);
   const failed = await readIndex(desktopApp, failedId);
   expect(ready.pages).toHaveLength(3);
+  expect(await desktopWindow.evaluate(async nodeId =>
+    (await window.electronAPI.invoke('load_node_document', { nodeId }))?.content, readyId))
+    .toBe('# pdf-user-journey\n\nLinked PDF source ready for the reader surface.');
   expect(failed.pages).toEqual([]);
   expect(failed.error).toBeTruthy();
   expect(ready.hash).toBe(createHash('sha256').update(fs.readFileSync(validPath)).digest('hex'));

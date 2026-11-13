@@ -206,8 +206,7 @@ it('queues PDF search invalidation when page text becomes ready', () => {
   seedPdfReferenceNode();
   savePdfPageTextRows(
     PDF_ATTACHMENT_ID,
-    [{ page: 1, pageHeight: 1200, pageWidth: 800, text: 'Atlas appears in PDF text.' }],
-    '2026-05-16T10:03:00.000Z'
+    [{ page: 1, pageHeight: 1200, pageWidth: 800, text: 'Atlas appears in PDF text.' }]
   );
 
   expect(pendingInvalidations()).toEqual([
