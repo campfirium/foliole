@@ -22,8 +22,8 @@ it('explains a background pause and offers a retry after a failure', () => {
   expect(screen.getByText('companion.syncSetup.receiving.paused')).toBeInTheDocument();
   rerender(<ReceivingGroupDataState onLeave={vi.fn()} onRetry={onRetry}
     run={{ ...run, phase: 'failed', error: 'sync_group_local_adoption_source_unavailable' }} />);
-  expect(screen.getByText('companion.syncSetup.receiving.failed'))
-    .toHaveAttribute('data-error-code', 'sync_group_local_adoption_source_unavailable');
+  expect(screen.getByText('companion.syncSetup.receiving.failed')).toBeVisible();
+  expect(screen.getByText('sync_group_local_adoption_source_unavailable')).toBeVisible();
   fireEvent.click(screen.getByTestId('companion-sync-receiving-retry'));
   expect(onRetry).toHaveBeenCalledOnce();
 });

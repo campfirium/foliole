@@ -8,7 +8,11 @@ export const REQUEST_SYNC_BATCH_OBJECTS = 128;
 export const REQUEST_SYNC_BATCH_BYTES = 1024 * 1024;
 
 export type RequestSyncObjectIdentity = { requestId: Uint8Array; objectType: string; globalId: string };
-export type RequestSyncObjectResult = RequestSyncObjectIdentity & { error: string };
+export type RequestSyncObjectFailureStage = 'prepare' | 'apply';
+export type RequestSyncObjectResult = RequestSyncObjectIdentity & {
+  error: string;
+  failureStage?: RequestSyncObjectFailureStage;
+};
 
 export function sameRequestId(left: Uint8Array, right: Uint8Array) {
   return bytesToHex(left) === bytesToHex(right);

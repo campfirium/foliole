@@ -63,7 +63,7 @@ it('keeps receiving while a busy provider round is retried in the foreground', a
   runtime.adopt.mockRejectedValueOnce(new Error('framed_sync_http_400:sync_round_busy'));
   await expect(runCompanionSyncCoordinator(args())).resolves.toBe('failed');
   expect(readCompanionSyncGroupAdoptionRun()).toMatchObject({ phase: 'receiving',
-    error: 'framed_sync_http_400:sync_round_busy' });
+    error: 'sync_receive_failed' });
   runtime.adopt.mockImplementationOnce(async () => { runtime.adoption = null; });
   await expect(runCompanionSyncCoordinator(args())).resolves.toBe('completed');
 });
@@ -80,4 +80,20 @@ it('starts a scheduled run for a pending adoption even without a saved sync endp
   });
   runner('foreground');
   await vi.waitFor(() => expect(tryForegroundAutoSync).toHaveBeenCalledOnce());
+});
+
+it('keeps a partial adoption ahead of ordinary sync and avoids timed retries for a body that needs repair', async () => {
+  await hydrateCompanionSyncGroupAdoptionRun();
+  runtime.adopt.mockImplementationOnce(async ({ onObjectRejection }) => {
+    onObjectRejection({ code: 'request_sync_body_too_large', device: 'peer', stage: 'prepare' });
+  });
+  await expect(runCompanionSyncCoordinator(args())).resolves.toBe('skipped');
+  expect(runtime.flow).not.toHaveBeenCalled();
+  expect(readCompanionSyncGroupAdoptionRun()).toMatchObject({ phase: 'receiving',
+    rejection: { code: 'request_sync_body_too_large' } });
+
+  runtime.adopt.mockImplementationOnce(async () => { runtime.adoption = null; });
+  await expect(runCompanionSyncCoordinator(args())).resolves.toBe('completed');
+  expect(runtime.flow).toHaveBeenCalledOnce();
+  expect(readCompanionSyncGroupAdoptionRun()).toEqual({ phase: 'none' });
 });

@@ -74,7 +74,7 @@ async function receiveRest(batch: ReceivingBatch): Promise<{ requestId: Uint8Arr
     if (message.payloadCase === 'request_object_result') {
       const result = readRequestSyncObjectResult(message);
       if (!result.error) throw new Error('request_sync_batch_object_missing');
-      results.push(result);
+      results.push({ ...result, failureStage: 'prepare' });
       continue;
     }
     return withRequestSyncFiles(batch.host.files, async files => {

@@ -1,7 +1,7 @@
 import type { FramedSyncInventoryDifference, FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { createFramedSyncInventoryDependencyLookup } from './framedSyncInventoryDependencyLookup.js';
 import { deliverFramedSyncDifferencesInDependencyOrder, readFramedSyncMissingDependency } from './framedSyncInventoryRoundDelivery.js';
-import { REQUEST_SYNC_BATCH_OBJECTS, type RequestSyncObjectResult } from './requestSyncBatchContract.js';
+import { REQUEST_SYNC_BATCH_OBJECTS, type RequestSyncObjectFailureStage, type RequestSyncObjectResult } from './requestSyncBatchContract.js';
 import { hasConfirmedRequestSyncCommit } from './requestSyncCommittedProgress.js';
 import { dailyFlowPriorityDifferences } from './requestSyncDailyFlowPriority.js';
 import { analyzeRequestSyncInventories, type RequestSyncInventoryAnalysis } from './requestSyncInventoryAnalysis.js';
@@ -15,7 +15,7 @@ export type RequestSyncInventories = {
 export interface RequestSyncDatabaseRoundPort {
   exchangeInventory(includeAdoptionParents?: boolean): Promise<RequestSyncInventories>;
   transferObjects(differences: readonly FramedSyncInventoryDifference[]): Promise<readonly RequestSyncObjectResult[]>;
-  reportObjectError(difference: FramedSyncInventoryDifference, error: unknown): void;
+  reportObjectError(difference: FramedSyncInventoryDifference, error: unknown, stage?: RequestSyncObjectFailureStage): void;
   /** Starts watching for local changes; when one arrives, the pass stops pulling so it can go out first. */
   watchLocalChanges?(): () => boolean;
 }
@@ -136,7 +136,7 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
       assertRoundObjectResult(result, difference);
       if (isObjectRejection(result.error, difference)) {
         rejected.add(key(difference));
-        port.reportObjectError(difference, new Error(result.error));
+        port.reportObjectError(difference, new Error(result.error), result.failureStage);
         return 'deferred';
       }
       if (result.error) throw new Error(result.error);

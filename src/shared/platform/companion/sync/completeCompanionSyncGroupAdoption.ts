@@ -1,15 +1,15 @@
 import { loadSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract.js';
-import type { CompanionDesktopSyncProgress } from '../../companionDesktopSyncTypes';
+import type { CompanionDesktopSyncOptions } from '../../companionDesktopSyncTypes';
 import { exchangeCompanionSyncGroupMemberState } from '../network/companionSyncGroupMemberState';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import { syncCompanionIdentityObjects } from './syncGroupIdentityCompanionResult';
 import { ensureCompanionSyncGroupDataOwner } from './syncGroupProviderDataOwner';
 
-export async function completeCompanionSyncGroupAdoption(options: {
-  onProgress?(progress: CompanionDesktopSyncProgress): void;
-} = {}): Promise<void> {
+export async function completeCompanionSyncGroupAdoption(
+  options: Pick<CompanionDesktopSyncOptions, 'onProgress' | 'onObjectRejection'> = {}
+): Promise<void> {
   const adoption = await getIosCompanionDatabaseOwner().read(loadSyncGroupLocalAdoption);
   if (!adoption) return;
   await ensureCompanionSyncGroupDataOwner();
@@ -18,8 +18,8 @@ export async function completeCompanionSyncGroupAdoption(options: {
   if (state.localExited || state.peerRemoved || !state.normalSyncReady || !state.peerLibraryEpoch) {
     throw new Error('sync_group_local_adoption_source_unavailable');
   }
-  await syncCompanionIdentityObjects(adoption.endpointUrl, { framedPeer: {
+  await syncCompanionIdentityObjects(adoption.endpointUrl, { ...options, framedPeer: {
     deviceId: adoption.providerDeviceId, libraryEpoch: state.peerLibraryEpoch,
     protocolVersion: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version
-  }, ...(options.onProgress ? { onProgress: options.onProgress } : {}) });
+  } });
 }

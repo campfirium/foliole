@@ -132,3 +132,5 @@ When changing a product capability:
 1. Identify the external use case and record the decision for reading, creation, updates, or relationships in the relevant row. Record a concrete follow-up when delivery is deferred. Database schema changes are evidence for the review.
 2. Reuse the product operation that owns validation, persistence, and sync. Keep search indexes, sync bookkeeping, and device-local UI state internal unless a specific public operation needs them.
 3. Exercise the real API and CLI where supported. Verify the user-visible result, check existing callers' contracts, and cover restart or an independent sync peer where the operation promises those results.
+
+The companion sync-group setup screen displays safe failure codes and the known device and stage when library reception is incomplete. This diagnostic stays in the setup screen. Agent Control exposes no sync-group setup or diagnostic operation.

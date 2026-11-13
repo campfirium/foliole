@@ -116,21 +116,43 @@ function ReceivingProgress(props: { run: AdoptionRun }) {
   );
 }
 
+function ReceivingFailure({ run }: { run: AdoptionRun }) {
+  const t = useTranslation();
+  const issue = run.phase === 'failed' ? undefined : run.rejection;
+  const code = issue?.code ?? run.error;
+  const oversized = issue?.code === 'request_sync_body_too_large';
+  if (!code || (!issue && run.phase !== 'failed')) return null;
+  const device = issue?.device === 'peer' ? run.providerName || t('companion.syncSetup.receiving.sendingDevice')
+    : t(issue?.device === 'local' ? 'companion.syncSetup.receiving.thisDevice' : 'companion.syncSetup.receiving.unknownDevice');
+  const stage = t(issue?.stage === 'prepare' ? 'companion.syncSetup.receiving.prepareStage'
+    : issue?.stage === 'apply' ? 'companion.syncSetup.receiving.applyStage' : 'companion.syncSetup.receiving.unknownStage');
+  return (
+    <div className="space-y-1 text-sm text-error" role="status">
+      <p>{t(oversized ? 'companion.syncSetup.receiving.oversized'
+        : issue ? 'companion.syncSetup.receiving.partial' : 'companion.syncSetup.receiving.failed')}</p>
+      <p className="break-words">{t('companion.syncSetup.receiving.issueLocation', { device, stage })}</p>
+      <code className="break-all text-xs">{code}</code>
+    </div>
+  );
+}
+
 export function ReceivingGroupDataState(props: { run: CompanionSyncGroupAdoptionRun; onRetry(): void; onLeave(): Promise<unknown> }) {
   const t = useTranslation();
   const run = props.run.phase === 'none' ? null : props.run;
+  const oversized = run?.phase !== 'failed' && run?.rejection?.code === 'request_sync_body_too_large';
   return <SyncStatusCard title={t('companion.syncSetup.receiving.title')}
-    detail={t('companion.syncSetup.receiving.detail')}>
+    detail={oversized ? undefined : t('companion.syncSetup.receiving.detail')}>
     <div className="space-y-4" data-phase={run?.phase ?? 'starting'} data-testid="companion-sync-receiving">
       {run ? <ReceivingProgress run={run} /> : <AppSpinner decorative size="sm" />}
       {run?.phase === 'paused' ? <p className="text-sm text-accent">{t('companion.syncSetup.receiving.paused')}</p> : null}
-      {run?.phase === 'failed' ? <>
-        <p className="text-sm text-error" data-error-code={run.error ?? undefined}>{t('companion.syncSetup.receiving.failed')}</p>
+      {run ? <ReceivingFailure run={run} /> : null}
+      {run?.phase === 'failed' || run?.rejection ?
         <PrimaryAction onClick={props.onRetry} testId="companion-sync-receiving-retry">
-          {t('companion.syncSetup.receiving.retry')}
+          {t(oversized ? 'companion.syncSetup.receiving.resumeAfterRepair'
+            : 'companion.syncSetup.receiving.retry')}
         </PrimaryAction>
-      </> : null}
-      {run?.phase === 'failed' || run?.phase === 'paused' ?
+      : null}
+      {run?.phase === 'failed' || run?.phase === 'paused' || run?.rejection ?
         <CompanionLeaveSyncGroup onLeave={props.onLeave} /> : null}
     </div>
   </SyncStatusCard>;

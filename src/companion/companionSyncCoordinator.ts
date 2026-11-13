@@ -1,5 +1,6 @@
 import {
   hasPendingCompanionSyncGroupAdoption,
+  readCompanionSyncGroupAdoptionRun,
   runPendingCompanionSyncGroupAdoption
 } from '../shared/platform/companion/sync/companionSyncGroupAdoptionRun';
 
@@ -17,7 +18,11 @@ export async function runCompanionSyncCoordinator(
   if (hasPendingCompanionSyncGroupAdoption()) {
     args.setStatus('syncing');
     try {
-      await runPendingCompanionSyncGroupAdoption();
+      if (!await runPendingCompanionSyncGroupAdoption()) {
+        if (!loadActiveCompanionSyncRun()) args.setStatus('idle');
+        const run = readCompanionSyncGroupAdoptionRun();
+        return run.phase !== 'none' && run.rejection?.code === 'request_sync_body_too_large' ? 'skipped' : 'pending';
+      }
     } catch {
       if (!loadActiveCompanionSyncRun()) args.setStatus('idle');
       return 'failed';

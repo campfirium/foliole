@@ -37,7 +37,10 @@ async function pushBatch(host: RequestSyncDatabaseHost, exchange: RequestSyncExc
       messages: contextId => requestSyncBatchMessages(objects, contextId, requestId) });
     try {
       return await exchange.request('/companion/framed-sync?request=objects', body, response =>
-        readRequestSyncBatchResults({ ...exchange, ...response }, requestId, selections.slice(0, objects.length)));
+        readRequestSyncBatchResults({ ...exchange, ...response }, requestId, selections.slice(0, objects.length)))
+        .then(results => results.map((result, index): RequestSyncObjectResult => result.error
+          ? { ...result, failureStage: objects[index]?.kind === 'error' ? 'prepare' : 'apply' }
+          : result));
     } finally { await body.frames.return(undefined); }
   });
 }

@@ -3,12 +3,13 @@ import { loadSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGro
 import { holdCompanionSyncBackgroundWork } from '../runtime/companionSyncBackgroundWork';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
+import { describeCompanionSyncReceiveIssue, type CompanionSyncReceiveIssue } from './companionSyncReceiveIssue';
 import { completeCompanionSyncGroupAdoption } from './completeCompanionSyncGroupAdoption';
 import { publishCompanionSyncMutationRevision } from './mutation/companionSyncMutationRevision';
 import { leaveCompanionSyncGroupDevice } from './syncGroupStore';
 
 type ActiveAdoptionRun = { phase: 'receiving' | 'paused' | 'failed'; completed: number; total: number | null;
-  lastActivityAt: string | null; error: string | null };
+  lastActivityAt: string | null; error: string | null; rejection?: CompanionSyncReceiveIssue | undefined; providerName?: string | undefined };
 export type CompanionSyncGroupAdoptionRun = { phase: 'none' } | ActiveAdoptionRun;
 
 let current: CompanionSyncGroupAdoptionRun = { phase: 'none' };
@@ -22,11 +23,8 @@ function publish(next: CompanionSyncGroupAdoptionRun) {
 }
 
 function active(phase: ActiveAdoptionRun['phase'], patch: Partial<Omit<ActiveAdoptionRun, 'phase'>> = {}) {
-  const previous = current.phase === 'none'
-    ? { completed: 0, total: null, lastActivityAt: null, error: null }
-    : current;
-  publish({ completed: previous.completed, total: previous.total, lastActivityAt: previous.lastActivityAt,
-    error: null, ...patch, phase });
+  const previous = current.phase === 'none' ? { completed: 0, total: null, lastActivityAt: null } : current;
+  publish({ ...previous, error: null, ...patch, phase });
 }
 
 export function readCompanionSyncGroupAdoptionRun() {
@@ -49,7 +47,7 @@ export async function hydrateCompanionSyncGroupAdoptionRun() {
     if (!running) publish({ phase: 'none' });
     return false;
   }
-  if (current.phase === 'none') active('receiving');
+  if (current.phase === 'none') active('receiving', { providerName: adoption.providerDeviceName });
   return true;
 }
 
@@ -65,19 +63,27 @@ export function runPendingCompanionSyncGroupAdoption() {
     active('receiving');
     // Receiving a whole library is the long round people leave the app during.
     const work = holdCompanionSyncBackgroundWork();
+    let rejection: CompanionSyncReceiveIssue | undefined;
     try {
-      await completeCompanionSyncGroupAdoption({ onProgress: progress => {
+      await completeCompanionSyncGroupAdoption({ onObjectRejection: issue => {
+        if (!rejection || issue.code === 'request_sync_body_too_large') rejection = issue;
+        active('receiving', { rejection });
+      }, onProgress: progress => {
         if (progress.phase !== 'structure' || progress.total === null) return;
         active('receiving', { completed: progress.completed, total: progress.total,
           lastActivityAt: new Date().toISOString() });
         work.report(progress.completed, progress.total);
       } });
+      if (await getIosCompanionDatabaseOwner().read(loadSyncGroupLocalAdoption)) {
+        active('receiving', { rejection });
+        return false;
+      }
     } catch (error) {
       const code = errorCode(error);
       // Backgrounding pauses; a busy or expired provider round is retried by the scheduler while visible.
       const phase = code.includes('request_sync_foreground_ended') ? 'paused'
         : isSyncPeerRoundRetryableError(error) ? 'receiving' : 'failed';
-      active(phase, { error: code });
+      active(phase, { error: describeCompanionSyncReceiveIssue(error).code });
       throw error;
     } finally {
       work.release();

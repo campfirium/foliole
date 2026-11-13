@@ -90,7 +90,7 @@ async function replayObjects(host: RequestSyncDatabaseHost, input: BatchInput,
       results.push({ ...header, error: '' });
     } catch (error) {
       input.signal?.throwIfAborted();
-      results.push({ ...header, error: error instanceof Error ? error.message : String(error) });
+      results.push({ ...header, error: error instanceof Error ? error.message : String(error), failureStage: 'apply' });
     }
   }
   return results;

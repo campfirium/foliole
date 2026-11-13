@@ -39,10 +39,10 @@ it.each(['push', 'pull'] as const)('commits objects before and after an oversize
     const run = () => runRequestSyncDatabaseRound({
       exchangeInventory: () => exchangeRequestSyncInventory(source.host, exchange),
       transferObjects: differences => transferRequestSyncBatch(source.host, exchange, differences, { peerState: state(target.id) }),
-      reportObjectError: (difference, error) => rejected.push(`${difference.globalId}:${(error as Error).message}`)
+      reportObjectError: (difference, error, stage) => rejected.push(`${difference.globalId}:${stage}:${(error as Error).message}`)
     });
     expect(await run()).toMatchObject({ complete: false, pending: 2, transferred: 2, onlyRejectedObjectsPending: true });
-    expect(rejected).toEqual(['b:request_sync_body_too_large']);
+    expect(rejected).toEqual(['b:prepare:request_sync_body_too_large']);
     receiver.reopen();
     expect(await receiver.db.query("SELECT id, current_version_id FROM nodes WHERE id IN ('a', 'b', 'c', 'd') ORDER BY id"))
       .toEqual([{ id: 'a', current_version_id: 'a-v1' }, { id: 'c', current_version_id: 'c-v1' }]);
@@ -80,10 +80,10 @@ it('reports partial progress after a receiver rejects one object and resumes whe
     const run = () => runRequestSyncDatabaseRound({
       exchangeInventory: () => exchangeRequestSyncInventory(source.host, exchange),
       transferObjects: differences => transferRequestSyncBatch(source.host, exchange, differences, { peerState: state(target.id) }),
-      reportObjectError: (difference, error) => rejected.push(`${difference.globalId}:${(error as Error).message}`)
+      reportObjectError: (difference, error, stage) => rejected.push(`${difference.globalId}:${stage}:${(error as Error).message}`)
     });
     expect(await run()).toMatchObject({ complete: false, pending: 1, transferred: 2, onlyRejectedObjectsPending: true });
-    expect(rejected).toEqual(['b:sync_node_apply_blocked:b']);
+    expect(rejected).toEqual(['b:apply:sync_node_apply_blocked:b']);
     target.reopen();
     expect(await target.db.query("SELECT id FROM nodes WHERE id IN ('a','b','c') ORDER BY id"))
       .toEqual([{ id: 'a' }, { id: 'c' }]);

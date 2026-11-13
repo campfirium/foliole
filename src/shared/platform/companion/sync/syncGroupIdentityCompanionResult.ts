@@ -1,5 +1,5 @@
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../lib/core/sync/framedSyncContract';
-import type { FramedSyncInventoryDifference } from '../../../../../lib/core/sync/framedSyncInventory.js';
+import type { RequestSyncDatabaseRoundPort } from '../../../../../lib/core/sync/requestSyncDatabaseRound.js';
 import type { RequestSyncPeerRound } from '../../../../../lib/core/sync/requestSyncPeerRound.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract';
 import type {
@@ -8,6 +8,7 @@ import type {
 } from '../../companionDesktopSyncTypes';
 
 import { collectCompanionSyncHistory, recordCompanionCompletedSyncRound } from './companionSyncHistoryCollection';
+import { describeCompanionSyncReceiveIssue } from './companionSyncReceiveIssue';
 import { createEmptyResourceStages,
   createSkippedResourceSummary } from './companionSyncResourceSummary';
 import { runCompanionRequestSyncDatabaseRound } from './framed/companionRequestSyncDatabaseRound.js';
@@ -55,7 +56,7 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
     localLibraryEpoch: local.library_epoch, peerState,
     ...(options.restoreId ? { restoreId: options.restoreId } : {}),
     ...(options.onProgress ? { onProgress: options.onProgress } : {}),
-    reportObjectError: objectRejectionReporter(group.local_device_identity_key, peerState.sender_device_identity_key) });
+    reportObjectError: objectRejectionReporter(group.local_device_identity_key, peerState.sender_device_identity_key, options.onObjectRejection) });
   const syncedStructureElapsedMs = Date.now() - startedAt;
   const databaseConfirmedAt = (!options.resourcesOnly || options.restoreId) && round.pending === 0 ? new Date().toISOString() : undefined;
   if (databaseConfirmedAt && !options.restoreId) {
@@ -96,12 +97,20 @@ async function syncObjectsInRound(endpointUrl: string, options: CompanionDesktop
   });
 }
 
-function objectRejectionReporter(localDeviceId: string, peerDeviceId: string) {
-  return (difference: FramedSyncInventoryDifference, error: unknown) => console.error('[request-sync] object rejected', {
-    objectId: difference.globalId, objectType: difference.objectType,
-    sourceDeviceId: difference.direction === 'local_to_remote' ? localDeviceId : peerDeviceId,
-    error: error instanceof Error ? error.message : String(error)
-  });
+function objectRejectionReporter(localDeviceId: string, peerDeviceId: string,
+  report: CompanionDesktopSyncOptions['onObjectRejection']): RequestSyncDatabaseRoundPort['reportObjectError'] {
+  return (difference, error, stage) => {
+    const outgoing = difference.direction === 'local_to_remote';
+    const localFailure = stage === (outgoing ? 'prepare' : 'apply');
+    const issue = describeCompanionSyncReceiveIssue(error, stage,
+      stage ? (localFailure ? 'local' : 'peer') : 'unknown');
+    console.error('[request-sync] object rejected', {
+      objectId: difference.globalId, objectType: difference.objectType,
+      sourceDeviceId: outgoing ? localDeviceId : peerDeviceId,
+      ...issue
+    });
+    if (!outgoing) report?.(issue);
+  };
 }
 
 async function confirmDatabase(options: CompanionDesktopSyncOptions, confirmedAt: string | undefined) {

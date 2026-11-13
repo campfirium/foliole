@@ -1,3 +1,5 @@
+import type { CompanionSyncReceiveIssue } from './companion/sync/companionSyncReceiveIssue';
+
 export interface CompanionDesktopSyncOptions {
   framedPeer?: {
     deviceId: string;
@@ -7,6 +9,7 @@ export interface CompanionDesktopSyncOptions {
   includeResources?: boolean;
   waitForInbound?: () => boolean;
   signal?: AbortSignal;
+  onObjectRejection?: (issue: CompanionSyncReceiveIssue) => void;
   onProgress?: (progress: CompanionDesktopSyncProgress) => void;
   onStructureSynced?: (facts: { receivedCount: number; workspaceChanged: boolean }) => Promise<void> | void;
   onDatabaseConfirmed?: (confirmedAt: string) => Promise<void>;
