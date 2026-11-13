@@ -23,11 +23,13 @@ export function resolveVisiblePage(container: HTMLDivElement, pageElementsRef: P
   return visiblePage;
 }
 
-export function resolveVisiblePositionY(container: HTMLDivElement, pageElement: HTMLDivElement | null) {
+export function resolveVisiblePositionY(
+  container: HTMLDivElement, pageElement: HTMLDivElement | null, scrollTop = container.scrollTop
+) {
   if (!pageElement) {
     return 0;
   }
-  const anchor = container.scrollTop + container.clientHeight * 0.35;
+  const anchor = scrollTop + container.clientHeight * 0.35;
   const page = resolvePdfPagePositionGeometry(pageElement);
   return Math.max(0, Math.min(1, (anchor - page.top) / page.height));
 }

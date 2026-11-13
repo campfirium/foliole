@@ -22,6 +22,7 @@ export interface PdfSearchArgs {
   positionReady?: boolean;
   onSearchDebugChange: (debug: PdfSearchDebugInfo) => void;
   onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
+  onSearchPosition?: (page: number, positionY: number) => void;
   onSearchRequestHandled?: (requestId: number) => void;
   pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>;
   pageTextByNumberRef: MutableRefObject<Record<number, PdfPageTextEntry | string>>;
@@ -79,6 +80,7 @@ export function usePdfSearchEffect({
   positionReady = true,
   onSearchDebugChange,
   onSearchHighlightsChange,
+  onSearchPosition,
   onSearchRequestHandled,
   onSearchStatusChange,
   onSearchTargetHandled,
@@ -106,6 +108,7 @@ export function usePdfSearchEffect({
     onSearchHighlightsChange,
     onSearchStatusChange,
     ...definedProps({
+      onSearchPosition,
       onSearchRequestHandled,
       onSearchTargetHandled
     })

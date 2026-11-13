@@ -128,7 +128,11 @@ export function usePdfReadingResume(args: PdfResumeArgs) {
   const { actions, state } = args.pdfSystem;
   return {
     markMovement,
-    markSearchMovement: () => { scrollIntent.current = performance.now() + SCROLL_INTENT_MS; },
+    setSearchPosition: (page: number, positionY: number) => {
+      scrollIntent.current = 0;
+      if (page !== state.page || positionY !== state.positionY) markMovement();
+      actions.setVisibleLocation(page, positionY);
+    },
     actions: {
       ...actions,
       requestAnchorJump: (locator: Parameters<typeof actions.requestAnchorJump>[0]) => {

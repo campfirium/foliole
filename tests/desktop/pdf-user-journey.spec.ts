@@ -1,7 +1,11 @@
+import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { ElectronApplication, Page } from '@playwright/test';
+
+import { decodePdfReadingPosition } from '../../lib/platform/pdfReadingPosition';
 
 import { expect, test } from './harness/fixtures';
 
@@ -152,6 +156,10 @@ test('PDF user journey @pdf imports, reads, searches, zooms, and restores page s
   await expectWorkspaceReady(desktopWindow);
 
   const importedNodeId = await importPdfThroughRuntime(desktopApp, desktopWindow);
+  const attachmentId = createHash('sha256').update(await readFile(FIXTURE_PATH)).digest('hex');
+  const readOffset = () => desktopWindow.evaluate(args => window.electronAPI.invoke('load_reading_resume', args), {
+    nodeId: importedNodeId, pdfAttachmentId: attachmentId
+  });
   await openImportedPdf(desktopWindow, importedNodeId);
   await expect(getPdfReaderRegion(desktopWindow)).toBeVisible();
   await expectPdfPageReady(desktopWindow, 1);
@@ -162,9 +170,14 @@ test('PDF user journey @pdf imports, reads, searches, zooms, and restores page s
     selection: { from: 2, to: 0 }
   });
 
+  const savedPage = async () => decodePdfReadingPosition((await readOffset())?.offset ?? 0).page;
+  await expect.poll(savedPage).toBe(2);
+
   await desktopWindow.getByRole('textbox', { name: PDF_SEARCH_INPUT_NAME }).fill('gamma keyword');
   await expect(desktopWindow.getByText('1 / 1')).toBeVisible();
   await expect(desktopWindow.getByRole('textbox', { name: PDF_PAGE_INPUT_NAME })).toHaveValue('3');
+
+  await expect.poll(savedPage).toBe(3);
 
   await desktopWindow.getByRole('button', { name: ZOOM_IN_NAME }).click();
   await desktopWindow.getByRole('button', { name: ZOOM_VALUE_NAME }).click();
@@ -173,6 +186,8 @@ test('PDF user journey @pdf imports, reads, searches, zooms, and restores page s
   await expect.poll(() => collectPdfViewState(desktopWindow, importedNodeId)).toMatchObject({
     selection: { from: 3 }
   });
+
+  await expect.poll(savedPage).toBe(3);
 
   await desktopWindow.reload();
   await expectWorkspaceReady(desktopWindow);

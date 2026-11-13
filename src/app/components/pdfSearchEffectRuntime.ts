@@ -2,31 +2,24 @@ import { definedProps } from '../../shared/lib/definedProps';
 
 import type { PdfSearchRequest, PdfSearchTarget, PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfSearchMatch } from './pdfSearchMatchCollection';
+import { resolveVisiblePositionY } from './pdfVisiblePageMetrics';
 
 export function scrollToMatch(container: HTMLDivElement, match: PdfSearchMatch) {
-  const shell = container.querySelector<HTMLElement>(`[data-pdf-page-number="${match.page}"]`);
+  const shell = container.querySelector<HTMLDivElement>(`[data-pdf-page-number="${match.page}"]`);
   if (!shell) {
     return;
   }
-  if (typeof match.y === 'number') {
-    const rawTop = shell.offsetTop + shell.clientHeight * match.y - container.clientHeight * 0.36;
-    const top = Math.max(0, rawTop);
-    if (typeof container.scrollTo === 'function') {
-      container.scrollTo({ behavior: 'smooth', top });
-    } else {
-      container.scrollTop = top;
-    }
-    return;
-  }
-  const containerRect = container.getBoundingClientRect();
-  const targetRect = match.element.getBoundingClientRect();
-  const rawTop = container.scrollTop + (targetRect.top - containerRect.top) - container.clientHeight * 0.36;
-  const top = Math.max(0, rawTop);
+  const rawTop = typeof match.y === 'number'
+    ? shell.offsetTop + shell.clientHeight * match.y
+    : container.scrollTop + match.element.getBoundingClientRect().top - container.getBoundingClientRect().top;
+  const top = Math.max(0, rawTop - container.clientHeight * 0.36);
   if (typeof container.scrollTo === 'function') {
     container.scrollTo({ behavior: 'smooth', top });
   } else {
     container.scrollTop = top;
   }
+  const destination = Math.min(top, Math.max(0, container.scrollHeight - container.clientHeight));
+  return resolveVisiblePositionY(container, shell, destination);
 }
 
 export function canScrollToMatch(match: PdfSearchMatch, shell: HTMLElement | null) {

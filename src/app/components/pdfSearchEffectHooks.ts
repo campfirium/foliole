@@ -30,6 +30,7 @@ interface PdfSearchStateRefs {
 interface PdfSearchCallbackRefs {
   onSearchDebugChangeRef: MutableRefObject<PdfSearchArgs['onSearchDebugChange']>;
   onSearchHighlightsChangeRef: MutableRefObject<PdfSearchArgs['onSearchHighlightsChange']>;
+  onSearchPositionRef: MutableRefObject<PdfSearchArgs['onSearchPosition']>;
   onSearchRequestHandledRef: MutableRefObject<PdfSearchArgs['onSearchRequestHandled']>;
   onSearchStatusChangeRef: MutableRefObject<PdfSearchArgs['onSearchStatusChange']>;
   onSearchTargetHandledRef: MutableRefObject<PdfSearchArgs['onSearchTargetHandled']>;
@@ -50,6 +51,7 @@ function runPdfSearchCycle(args: {
   positionReady: boolean;
   onSearchDebugChange: (debug: PdfSearchDebugInfo) => void;
   onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
+  onSearchPosition?: PdfSearchArgs['onSearchPosition'];
   onSearchRequestHandled?: (requestId: number) => void;
   onSearchStatusChange: (status: PdfSearchStatus) => void;
   onSearchTargetHandled?: (targetId: number) => void;
@@ -107,7 +109,8 @@ function applyPdfSearchPosition(
   const targetPendingPreciseLocation = handledAction?.kind === 'target' && !hasPreciseLocation;
   const newlyPreciseLocation = args.lastScrolledMatchIdRef.current !== match.id && hasPreciseLocation;
   if ((queryChanged || handledAction || newlyPreciseLocation) && !targetPendingPreciseLocation) {
-    scrollToMatch(args.container, match);
+    const positionY = scrollToMatch(args.container, match);
+    if (positionY !== undefined) args.onSearchPosition?.(match.page, positionY);
     args.lastScrolledMatchIdRef.current = hasPreciseLocation ? match.id : null;
   }
   if (handledAction?.kind === 'target' && !targetPendingPreciseLocation) {
@@ -137,12 +140,14 @@ function usePdfSearchCallbackRefs(args: PdfSearchArgs): PdfSearchCallbackRefs {
   const refs = {
     onSearchDebugChangeRef: useRef(args.onSearchDebugChange),
     onSearchHighlightsChangeRef: useRef(args.onSearchHighlightsChange),
+    onSearchPositionRef: useRef(args.onSearchPosition),
     onSearchRequestHandledRef: useRef(args.onSearchRequestHandled),
     onSearchStatusChangeRef: useRef(args.onSearchStatusChange),
     onSearchTargetHandledRef: useRef(args.onSearchTargetHandled)
   };
   useUpdateSearchEffectCallbackRef(refs.onSearchDebugChangeRef, args.onSearchDebugChange);
   useUpdateSearchEffectCallbackRef(refs.onSearchHighlightsChangeRef, args.onSearchHighlightsChange);
+  useUpdateSearchEffectCallbackRef(refs.onSearchPositionRef, args.onSearchPosition);
   useUpdateSearchEffectCallbackRef(refs.onSearchRequestHandledRef, args.onSearchRequestHandled);
   useUpdateSearchEffectCallbackRef(refs.onSearchStatusChangeRef, args.onSearchStatusChange);
   useUpdateSearchEffectCallbackRef(refs.onSearchTargetHandledRef, args.onSearchTargetHandled);
@@ -171,6 +176,7 @@ function useRunPdfSearchCycleEffect(args: PdfSearchArgs, stateRefs: PdfSearchSta
     args.totalPages,
     callbackRefs.onSearchDebugChangeRef,
     callbackRefs.onSearchHighlightsChangeRef,
+    callbackRefs.onSearchPositionRef,
     callbackRefs.onSearchRequestHandledRef,
     callbackRefs.onSearchStatusChangeRef,
     callbackRefs.onSearchTargetHandledRef,
@@ -206,6 +212,7 @@ function runActivePdfSearchCycle(
     onSearchHighlightsChange: callbackRefs.onSearchHighlightsChangeRef.current,
     onSearchStatusChange: callbackRefs.onSearchStatusChangeRef.current,
     ...definedProps({
+      onSearchPosition: callbackRefs.onSearchPositionRef.current,
       onSearchRequestHandled: callbackRefs.onSearchRequestHandledRef.current,
       onSearchTargetHandled: callbackRefs.onSearchTargetHandledRef.current
     })

@@ -60,6 +60,7 @@ export function useVisiblePageSync(
 }
 
 interface PdfDocumentViewportContentProps {
+  onSearchPosition?: ((page: number, positionY: number) => void) | undefined;
   handleContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   handleScroll: () => void;
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
@@ -124,6 +125,7 @@ function resolvePdfSearchRuntimeArgs(props: PdfDocumentViewportContentProps) {
   return {
     onSearchHighlightsChange: props.onSearchHighlightsChange,
     onSearchDebugChange: props.onSearchDebugChange,
+    onSearchPosition: props.onSearchPosition,
     onSearchRequestHandled: props.onSearchRequestHandled,
     onSearchStatusChange: props.onSearchStatusChange,
     onSearchTargetHandled: props.onSearchTargetHandled,
@@ -146,7 +148,7 @@ function resolveViewportContentBodyProps(
   PdfDocumentViewportContentProps,
   | 'onSearchDebugChange'
   | 'onSearchHighlightsChange'
-  | 'onSearchRequestHandled'
+  | 'onSearchPosition' | 'onSearchRequestHandled'
   | 'onSearchStatusChange'
   | 'onSearchTargetHandled'
   | 'nodeId'

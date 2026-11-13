@@ -57,7 +57,7 @@ function usePdfDocumentReader(props: PdfDocumentSurfaceProps, surfaceRef: RefObj
   const { nodeViewState, sourceHint, isVisible = true, persistedPageCount } = props;
   const pdfSystem = usePdfSystemController(nodeViewState, viewState => reading.persist(viewState), sourceHint, isVisible, persistedPageCount);
   const reading = usePdfReadingResume({ ...props, isVisible, pdfSystem, surfaceRef });
-  return { reader: { ...pdfSystem, actions: reading.actions }, markSearchMovement: reading.markSearchMovement };
+  return { reader: { ...pdfSystem, actions: reading.actions }, setSearchPosition: reading.setSearchPosition };
 }
 
 export function PdfDocumentSurface(props: PdfDocumentSurfaceProps) {
@@ -78,7 +78,7 @@ export function PdfDocumentSurface(props: PdfDocumentSurfaceProps) {
     onCreateHighlightFromSelection
   });
   const searchState = usePdfSearchControls();
-  const { reader, markSearchMovement } = usePdfDocumentReader(props, selectionState.surfaceRef);
+  const { reader, setSearchPosition } = usePdfDocumentReader(props, selectionState.surfaceRef);
   usePdfFindCommand(selectionState.surfaceRef, isVisible);
   useRegisterPdfSurface(
     nodeId,
@@ -98,10 +98,7 @@ export function PdfDocumentSurface(props: PdfDocumentSurfaceProps) {
   const textHighlightLocators = highlightLocators.filter((locator) => locator.kind === 'highlight');
   const layoutProps = {
     ...buildPdfSurfaceLayoutProps(nodeId, pdfIndexStatus, textHighlightLocators, reader, selectionState, searchState, searchIndexingHint, onOpenExternalLink),
-    handleSearchRequestHandled: (id: number) => {
-      markSearchMovement();
-      searchState.handleSearchRequestHandled(id);
-    },
+    setSearchPosition,
     persistedPageCount,
     persistedPageDimensions
   };
@@ -141,7 +138,7 @@ function buildPdfSurfaceLayoutProps(
   searchState: ReturnType<typeof usePdfSearchControls>,
   searchIndexingHint: string | null,
   onOpenExternalLink?: (request: ExternalLinkOpenRequest) => void
-): PdfSurfaceLayoutProps {
+): Omit<PdfSurfaceLayoutProps, 'setSearchPosition'> {
   return {
     ...resolvePdfSurfaceHandlers(nodeId, pdfSystem, selectionState, searchState, onOpenExternalLink),
     highlightLocators,

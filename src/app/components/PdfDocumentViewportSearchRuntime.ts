@@ -1,5 +1,6 @@
 import { useEffect, useState, type MutableRefObject } from 'react';
 
+import { definedProps } from '../../shared/lib/definedProps';
 import { searchRuntimePdfDocument, type RuntimePdfDocumentSearchMatch } from '../../shared/platform/desktop/pdfDocumentSearchRuntimeRepository';
 
 import { usePdfSearchEffect, type PdfSearchDebugInfo, type PdfSearchRequest, type PdfSearchStatus, type PdfSearchTarget, type PdfSearchVisualHighlight } from './PdfDocumentSearch';
@@ -9,6 +10,7 @@ import type { PdfPageTextEntry } from './pdfPageText';
 export interface PdfDocumentViewportSearchRuntimeProps {
   nodeId: string | null;
   positionReady?: boolean;
+  onSearchPosition?: ((page: number, positionY: number) => void) | undefined;
   onSearchDebugChange: (debug: PdfSearchDebugInfo) => void;
   onSearchHighlightsChange: (highlights: PdfSearchVisualHighlight[]) => void;
   onSearchRequestHandled: (requestId: number) => void;
@@ -29,6 +31,7 @@ export function usePdfDocumentViewportSearchRuntime(props: PdfDocumentViewportSe
   const matches = usePdfDocumentSearchMatches(props.nodeId, props.pdfIndexStatus, props.searchQuery);
   usePdfSearchEffect({
     matches,
+    ...definedProps({ onSearchPosition: props.onSearchPosition }),
     positionReady: props.positionReady ?? true,
     onSearchDebugChange: props.onSearchDebugChange,
     onSearchHighlightsChange: props.onSearchHighlightsChange,

@@ -12,6 +12,7 @@ import { usePdfViewportRuntime } from './pdfViewportRuntime';
 import { usePdfToolbarVisibility } from './usePdfToolbarVisibility';
 
 interface PdfDocumentViewportProps {
+  onSearchPosition?: (page: number, positionY: number) => void;
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   onContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   loadError: string | null;
@@ -101,6 +102,7 @@ function resolveViewportContentProps(
     maxPage: args.maxPage,
     nodeId: args.nodeId,
     ...resolveViewportActionProps(args),
+    onSearchPosition: args.onSearchPosition,
     onTextContentLoad: args.handleTextContentLoad,
     onTextLayerRender: args.handleTextLayerRender,
     onToolbarActiveChange: args.onToolbarActiveChange,

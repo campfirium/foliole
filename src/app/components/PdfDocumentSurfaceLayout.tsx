@@ -41,6 +41,7 @@ interface PdfDocumentSurfaceLayoutProps {
   searchStatus: PdfSearchStatus;
   setSearchQuery: (value: string) => void;
   setSearchStatus: (status: PdfSearchStatus) => void;
+  setSearchPosition: (page: number, positionY: number) => void;
   setFitWidth: () => void;
   setZoom: (value: number) => void;
   setVisibleLocation: (page: number, positionY: number) => void;
@@ -75,6 +76,7 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
       onSearchRequest={props.handleSearchRequest}
       onSearchRequestHandled={props.handleSearchRequestHandled}
       onSearchStatusChange={props.setSearchStatus}
+      onSearchPosition={props.setSearchPosition}
       onSearchTargetHandled={props.handleSearchTargetHandled}
       onSetFitWidth={props.setFitWidth}
       onSetZoom={props.setZoom}
