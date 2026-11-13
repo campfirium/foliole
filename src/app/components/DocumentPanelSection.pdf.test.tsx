@@ -177,6 +177,30 @@ it('supports pdf controls with zoom, page navigation, and rotation after the rea
   fireEvent.click(screen.getByRole('button', { name: 'Rotate page clockwise' }));
   expect(screen.getAllByTestId('pdf-document-page')[0]).toHaveAttribute('data-rotate', '90');
 });
+it('jumps to low and high PDF zoom presets and fine-tunes with the zoom buttons', async () => {
+  useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
+  renderSection();
+
+  const zoom = await screen.findByRole('button', { name: 'Set zoom level' });
+  const value = screen.getByTestId('pdf-zoom-value');
+  fireEvent.click(zoom);
+  expect(screen.getAllByRole('menuitem')).toHaveLength(8);
+  fireEvent.click(screen.getByRole('menuitem', { name: '50%' }));
+  expect(value).toHaveTextContent('50%');
+  expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+
+  fireEvent.click(zoom);
+  fireEvent.click(screen.getByRole('menuitem', { name: '400%' }));
+  expect(value).toHaveTextContent('400%');
+
+  fireEvent.click(zoom);
+  fireEvent.click(screen.getByRole('menuitem', { name: '300%' }));
+  const zoomIn = screen.getByRole('button', { name: 'Zoom in' });
+  fireEvent.click(zoomIn);
+  fireEvent.click(zoomIn);
+  expect(value).toHaveTextContent('320%');
+});
+
 it('lets the reader return to fit width with the toolbar button after the reader loads', async () => {
   useNodeSourceDetails.mockReturnValue(createPdfSourceDetails() as never);
 

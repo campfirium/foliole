@@ -6,7 +6,7 @@ import { appFloatingItemClassName, appFloatingSurfaceClassName } from '../../sha
 
 import { PdfToolbarIconButton, PdfToolbarTooltip } from './PdfToolbarTooltip';
 
-const PDF_ZOOM_OPTIONS = [100, 125, 150, 175, 200];
+const PDF_ZOOM_OPTIONS = [50, 75, 100, 125, 150, 200, 300, 400];
 
 interface ZoomControlsProps {
   onMenuOpenChange?: (open: boolean) => void;
@@ -66,10 +66,10 @@ function PdfZoomMenu(props: {
   }
 
   return (
-    <div className={appFloatingSurfaceClassName('popover', 'absolute left-1/2 top-full z-surface-raised mt-2 flex min-w-20 -translate-x-1/2 flex-col p-1')} role="menu">
+    <div className={appFloatingSurfaceClassName('popover', 'absolute left-1/2 top-full z-surface-raised mt-2 grid w-max -translate-x-1/2 grid-cols-2 gap-1 p-1')} role="menu">
       {PDF_ZOOM_OPTIONS.map((option) => (
         <button
-          className={appFloatingItemClassName('min-h-8 text-ui-sm text-foreground/80')}
+          className={appFloatingItemClassName('min-h-8 min-w-14 justify-center text-center text-ui-sm tabular-nums text-foreground/80')}
           key={option}
           onClick={() => {
             props.onToolbarInteraction();
@@ -113,19 +113,21 @@ export function PdfZoomControls(props: ZoomControlsProps) {
   return (
     <div className="relative flex items-center gap-1" ref={menuRef}>
       <PdfToolbarIconButton className="size-8" icon={<ZoomOut aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.zoom.out')} onClick={createToolbarAction(props.onZoomOut, props.onToolbarInteraction)} />
-      <PdfZoomValueButton
-        isMenuOpen={isMenuOpen}
-        label={t('desktop.pdf.zoom.set')}
-        onToolbarInteraction={props.onToolbarInteraction}
-        setIsMenuOpen={setIsMenuOpen}
-        zoom={props.zoom}
-      />
-      <PdfZoomMenu
-        isMenuOpen={isMenuOpen}
-        onSetZoom={props.onSetZoom}
-        onToolbarInteraction={props.onToolbarInteraction}
-        setIsMenuOpen={setIsMenuOpen}
-      />
+      <div className="relative shrink-0">
+        <PdfZoomValueButton
+          isMenuOpen={isMenuOpen}
+          label={t('desktop.pdf.zoom.set')}
+          onToolbarInteraction={props.onToolbarInteraction}
+          setIsMenuOpen={setIsMenuOpen}
+          zoom={props.zoom}
+        />
+        <PdfZoomMenu
+          isMenuOpen={isMenuOpen}
+          onSetZoom={props.onSetZoom}
+          onToolbarInteraction={props.onToolbarInteraction}
+          setIsMenuOpen={setIsMenuOpen}
+        />
+      </div>
       <PdfToolbarIconButton className="size-8" icon={<ZoomIn aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.zoom.in')} onClick={createToolbarAction(props.onZoomIn, props.onToolbarInteraction)} />
       <PdfToolbarIconButton className="size-8" icon={<ArrowLeftRight aria-hidden="true" size={15} strokeWidth={2.1} />} label={t('desktop.pdf.zoom.fitWidth')} onClick={createToolbarAction(props.onSetFitWidth, props.onToolbarInteraction)} />
       <div className="h-5 w-px bg-border/40" />
