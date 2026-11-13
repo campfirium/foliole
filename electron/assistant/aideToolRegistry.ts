@@ -30,6 +30,11 @@ export const AIDE_TOOL_REGISTRY: Record<string, AideToolDefinition> = {
     schema({ limit: LIMIT, query: STRING }, ['query'])),
   list_folder: tool('materials.listChildren', 'List the direct Topics and Folders in a Foliole Folder or at the workspace root.', 'materials/list-children',
     schema({ limit: LIMIT, parent_id: NULLABLE_STRING })),
+  list_trash: tool('materials.listTrash', 'Find restorable materials in the Foliole trash.', 'materials/list-trash',
+    schema({ limit: LIMIT, offset: { minimum: 0, type: 'integer' }, query: STRING })),
+  create_text_excerpt: tool('materials.createTextExcerpt', 'Create an anchored excerpt from a Topic using offsets in its stored Markdown.', 'materials/create-text-excerpt',
+    schema({ source_id: STRING, expected_updated_at: STRING, from: { minimum: 0, type: 'integer' },
+      to: LIMIT }, ['source_id', 'expected_updated_at', 'from', 'to'])),
   create_material: tool('materials.create', 'Create a Foliole Topic, Folder, or question-answer Item only when the user explicitly asks to save one.', 'materials/create',
     schema({ content: TEXT, kind: { enum: ['folder', 'item', 'topic'], type: 'string' }, parent_id: NULLABLE_STRING, reveal: TEXT, title: STRING }, [], {
       oneOf: [
@@ -74,7 +79,7 @@ function tool(
   description: string,
   path: string,
   inputSchema: Record<string, unknown>,
-  mutates = !['materials.read', 'materials.search', 'materials.listChildren', 'virtualFolders.list', 'virtualFolders.read']
+  mutates = !['materials.read', 'materials.search', 'materials.listChildren', 'materials.listTrash', 'virtualFolders.list', 'virtualFolders.read']
     .includes(capability)
 ): AideToolDefinition {
   return { capability, description, inputSchema, mutates, path };
