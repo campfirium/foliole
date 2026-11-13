@@ -20,12 +20,17 @@ function ReviewFooterFixture() {
       <AppButton>Desktop reference</AppButton>
       <output aria-label="Review result">{result}</output>
       <CompanionBottomReviewBar hasAnswer isAnswerRevealed={revealed} itemKind={kind}
+        progressMode="recommended"
+        progressCounts={params.has('progress') ? {
+          completedItemCount: 2, queuedItemCount: 18,
+          completedTopicCount: 0, queuedTopicCount: 1
+        } : undefined}
         disabled={params.get('disabled') === 'true'}
         onReadReviewTopic={() => setResult('Read')} onPostponeReviewTopic={() => setResult('Later')}
         onDismissReviewTopic={() => setResult('Dismiss')}
         {...(params.get('soon') === 'true' ? { onSoonReviewTopic: () => setResult('Soon') } : {})}
         onGrade={grade => setResult(`Grade ${grade}`)} onRevealAnswer={() => setRevealed(true)}
-        reviewCardKey="fixture" statusLabel="Review status" visible />
+        reviewCardKey="fixture" statusLabel={params.has('progress') ? null : 'Review status'} visible />
     </main>
   </CompanionColorModeProvider></LocalizationProvider>;
 }

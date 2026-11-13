@@ -20,6 +20,7 @@ export const ZH_HANS_COMPANION_READING_TRANSLATIONS: Partial<Record<TranslationK
 
   'companion.reading.historyError': '暂时无法撤销或重做，内容可能已在另一台设备上更改。请刷新后重试。',
   'companion.reading.exit': '退出',
+  'companion.reading.queue': '队列',
   'companion.reading.actions': '操作',
   'companion.reading.find': '在文档中查找',
   'companion.reading.font': '外观',

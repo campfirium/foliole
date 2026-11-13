@@ -1,4 +1,4 @@
-import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
+import type { ReviewSessionMode } from './reviewSessionMode';
 
 export interface ReviewToolbarProgressCounts {
   completedItemCount: number;
@@ -43,4 +43,24 @@ export function formatReviewProgressLabel(mode: ReviewSessionMode, progressCount
   const topicSegment =
     mode === 'review-first' ? null : progressSegment('t', progressCounts.completedTopicCount, progressCounts.queuedTopicCount);
   return [itemSegment, topicSegment].filter(Boolean).join(' · ');
+}
+
+export function reviewProgressCountsFromSummary(summary: {
+  reviewedItemCount: number;
+  readTopicCount: number;
+  remainingCount: number;
+  remainingReviewCount: number;
+}): ReviewToolbarProgressCounts {
+  return {
+    completedItemCount: summary.reviewedItemCount,
+    completedTopicCount: summary.readTopicCount,
+    queuedItemCount: summary.remainingReviewCount,
+    queuedTopicCount: summary.remainingCount - summary.remainingReviewCount
+  };
+}
+
+export function reviewProgressFraction(completed: number, queued: number) {
+  const done = Math.max(completed, 0);
+  const total = done + Math.max(queued, 0);
+  return total > 0 ? done / total : 0;
 }

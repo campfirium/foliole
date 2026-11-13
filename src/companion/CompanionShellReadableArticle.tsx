@@ -94,6 +94,8 @@ function FlowFooter({ surface }: { surface: Surface }) {
         (!surface.readableArticle || Boolean(surface.readableArticle.bodyStatus && surface.readableArticle.bodyStatus !== 'ready'))}
       isAnswerRevealed={surface.isAnswerRevealed}
       itemKind={surface.effectiveReviewSession.currentCard?.itemKind ?? 'reading'}
+      progressCounts={surface.flowSummary.progressCounts}
+      progressMode={surface.flowSessionMode}
       onReadReviewTopic={surface.handleReadReviewTopic}
       onPostponeReviewTopic={surface.handlePostponeReviewTopic}
       onDismissReviewTopic={surface.handleDismissReviewTopic}

@@ -7,6 +7,7 @@ import { CompanionBottomBar } from './CompanionBottomBar';
 
 export function CompanionReviewActionFooter(props: {
   primary: ReactNode;
+  progress?: ReactNode;
   actionsRef?: Ref<HTMLDivElement>;
   reviewCardKey?: string | null;
   reviewItemKind?: 'fsrs' | 'reading';
@@ -21,6 +22,7 @@ export function CompanionReviewActionFooter(props: {
           mode="study" primary={props.primary} reviewInputMode="hotkeys"
           reviewItemKind={props.reviewItemKind ?? 'fsrs'} secondary={null} />
       </div>
+      {props.progress}
       {props.statusLabel ? <div role="status" className="absolute inset-x-0 bottom-full border-b border-companion-divider bg-companion-base px-4 py-2 text-xs text-companion-text-secondary">{props.statusLabel}</div> : null}
     </CompanionBottomBar>
   );

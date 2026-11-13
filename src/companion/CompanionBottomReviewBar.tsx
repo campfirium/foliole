@@ -1,11 +1,16 @@
+
+
 import { useRef } from 'react';
 
 import { isReadActionAdvanceReadyFromMetrics } from '../features/review/model/readActionAdvanceReady';
+import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
+import { formatReviewProgressLabel, type ReviewToolbarProgressCounts } from '../features/review/model/reviewToolbarProgressLabel';
 import { FsrsRevealAction, ReadingReviewActions, ReviewGradeActions } from '../shared/ui';
 import type { ReviewActionButtonPresentation } from '../shared/ui/reviewActionPresentation';
 import { useFixedLaterHint } from '../shared/ui/useFixedLaterHint';
 
 import type { BottomBarGrade } from './CompanionFloatingBars';
+import { CompanionFlowProgress } from './CompanionFlowProgress';
 import { CompanionReviewActionFooter } from './CompanionReviewActionFooter';
 import { CompanionReviewTouchButton } from './CompanionReviewTouchButton';
 
@@ -24,6 +29,8 @@ export function CompanionBottomReviewBar(props: {
   disabled?: boolean;
   isAnswerRevealed: boolean;
   itemKind: 'fsrs' | 'reading';
+  progressCounts?: ReviewToolbarProgressCounts | undefined;
+  progressMode?: ReviewSessionMode | undefined;
   onSoonReviewTopic?: () => void;
   onReadReviewTopic: (atContentEnd: boolean) => void;
   onPostponeReviewTopic: () => void;
@@ -47,6 +54,7 @@ export function CompanionBottomReviewBar(props: {
       actionsRef={actionsRef}
       reviewCardKey={props.reviewCardKey}
       reviewItemKind={props.itemKind}
+      progress={renderProgress(props)}
       statusLabel={props.statusLabel ?? laterStatus}
       primary={
         props.itemKind === 'reading' ? (
@@ -76,6 +84,13 @@ export function CompanionBottomReviewBar(props: {
       }
     />
   );
+}
+
+function renderProgress(props: { itemKind: string; progressCounts?: ReviewToolbarProgressCounts | undefined;
+  progressMode?: ReviewSessionMode | undefined }) {
+  if (props.itemKind !== 'fsrs' || !props.progressCounts || !props.progressMode) return null;
+  const label = formatReviewProgressLabel(props.progressMode, props.progressCounts);
+  return label ? <CompanionFlowProgress counts={props.progressCounts} /> : null;
 }
 
 export function isFlowArticleEndVisible(actions: HTMLElement | null, nodeId: string | null) {

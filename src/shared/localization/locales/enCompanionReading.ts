@@ -19,6 +19,7 @@ export const EN_COMPANION_READING_TRANSLATIONS = {
 
   'companion.reading.historyError': 'Could not undo or redo. The content may have changed on another device. Refresh and try again.',
   'companion.reading.exit': 'Exit',
+  'companion.reading.queue': 'Queue',
   'companion.reading.actions': 'Actions',
   'companion.reading.find': 'Find in document',
   'companion.reading.font': 'Appearance',

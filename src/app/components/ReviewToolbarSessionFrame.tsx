@@ -2,6 +2,7 @@ import { Sprout } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 
 import type { ReviewSessionMode, ReviewSessionModeAvailability } from '../../features/review/model/reviewSessionMode';
+import { fallbackProgressCounts, formatReviewProgressLabel, reviewProgressFraction, type ReviewToolbarProgressCounts } from '../../features/review/model/reviewToolbarProgressLabel';
 import { definedProps } from '../../shared/lib/definedProps';
 import { cn } from '../../shared/lib/utils';
 import {
@@ -12,7 +13,6 @@ import {
 import { ReviewOverlayDivider } from '../../shared/ui/ReviewOverlayActionButton';
 
 import { ReviewSessionModeControl } from './ReviewSessionModeControl';
-import { fallbackProgressCounts, formatReviewProgressLabel, type ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 import { ReviewToolbarSessionSummaryMenu } from './ReviewToolbarSessionSummaryMenu';
 
 export type ReviewToolbarSessionSummaryStatus = 'clear' | 'complete' | 'in-progress' | 'not-started';
@@ -29,10 +29,6 @@ export interface ReviewToolbarSessionSummaryValues {
 
 export interface ReviewToolbarSessionSummary extends ReviewToolbarSessionSummaryValues {
   status: ReviewToolbarSessionSummaryStatus;
-}
-
-function clampProgress(value: number) {
-  return Math.min(Math.max(value, 0), 1);
 }
 
 export function ReviewToolbarProgressLine({
@@ -54,7 +50,7 @@ export function ReviewToolbarProgressLine({
     return null;
   }
 
-  const progress = clampProgress(completed / total);
+  const progress = reviewProgressFraction(completed, queueCount);
   const progressPercent = `${progress * 100}%`;
   const progressLabel = formatReviewProgressLabel(
     reviewSessionMode,

@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 
 import type { ReviewSessionMode, ReviewSessionModeAvailability } from '../../features/review/model/reviewSessionMode';
+import type { ReviewToolbarProgressCounts } from '../../features/review/model/reviewToolbarProgressLabel';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { ReviewActionBar } from '../../shared/ui';
@@ -10,7 +11,6 @@ import { ResumeReviewAction } from './ReviewModeToolbarActions';
 import { ActiveReviewActionBar } from './ReviewModeToolbarActive';
 import { useGradeFeedback, useReadingReviewFeedback } from './reviewModeToolbarFeedback';
 import { ReviewNoCurrentItemBar } from './ReviewModeToolbarNoCurrent';
-import type { ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 import {
   ReviewSessionProgress,
   type ReviewToolbarSessionSummaryStatus,

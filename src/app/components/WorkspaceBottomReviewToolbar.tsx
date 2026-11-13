@@ -1,6 +1,7 @@
 import { useContext } from 'react';
 
 import type { ReviewSessionMode, ReviewSessionModeAvailability } from '../../features/review/model/reviewSessionMode';
+import type { ReviewToolbarProgressCounts } from '../../features/review/model/reviewToolbarProgressLabel';
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
 import { definedProps } from '../../shared/lib/definedProps';
 import { findEnabledSequentialReadingSourceId } from '../../store/workspaceSequentialReading';
@@ -8,7 +9,6 @@ import { findEnabledSequentialReadingSourceId } from '../../store/workspaceSeque
 import { DiveFlowCheckpointContext } from './diveFlowActionContext';
 import { useReadActionAdvanceState } from './readActionAdvanceState';
 import { ReviewModeToolbar } from './ReviewModeToolbar';
-import type { ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 import { ReviewToolbarProgressLine } from './ReviewToolbarSessionFrame';
 import {
   getReviewCurrentTitle,

@@ -4,6 +4,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { sameCycleProgress } from '../../lib/core/flow/cycleFlowState';
 import { getReviewItemKind } from '../features/review/model/reviewItemKind';
 import type { ReviewSessionMode } from '../features/review/model/reviewSessionMode';
+import { reviewProgressCountsFromSummary } from '../features/review/model/reviewToolbarProgressLabel';
 import { getCompanionReadingScope, subscribeCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 import { isCompanionReadReceiptSnapshot, openCompanionDailyFlowForDisplay as openCompanionDailyFlow } from '../shared/platform/companion/runtime/companionDailyFlowDisplay';
 import { companionFlowHistoryKey } from '../shared/platform/companion/runtime/companionFlowHistoryStore';
@@ -74,13 +75,14 @@ export function useCompanionFlowSession(args: {
   const historyKey = companionFlowHistoryKey(args.libraryScope);
   const controls = createCompanionFlowControls({ current, owner, scope, mode, historyKey, render });
   function continueReading() { cancelDocumentPreparation(); if (owner.current === current) void continueCompanionDailyFlow(latest.current, current, owner, mode, render).catch(error => { current.error = String(error); render(); }); }
+  const progressCounts = getProgressCounts(session);
   const dive = session.dive;
   const openDive = createCompanionDiveFlowControls(current, owner, mode, render);
   return { view, ...companionDiveModeControls(openDive, dive, mode, setMode), dive, openDive,
     exitUnavailableDive: () => exitUnavailableDive(current, owner, render),
     ...controls, historyKey, cancelDocumentPreparation, continueReading, canContinueReading: !dive && canContinueReading, hasTopics,
     readIntents: current.readIntents,
-    summary: { ...(session.cycle ? { queueCleared: Boolean(session.cycle.clearedAt) } : {}), completedAt: session.completedAt ?? null, sessionStartedAt: session.sessionStartedAt ?? null,
+    summary: { ...(progressCounts ? { progressCounts } : {}), ...(session.cycle ? { queueCleared: Boolean(session.cycle.clearedAt) } : {}), completedAt: session.completedAt ?? null, sessionStartedAt: session.sessionStartedAt ?? null,
       readTopicCount: session.readTopicCount ?? 0, readingElapsedMs: session.readingElapsedMs ?? 0,
       reviewedItemCount: session.reviewedItemCount ?? 0, reviewElapsedMs: session.reviewElapsedMs ?? 0 },
     isAnswerRevealed: session.isAnswerRevealed, error: current.error ?? dailyView?.error ?? null, ready: current.hydrated };
@@ -194,4 +196,14 @@ function useReadIntentReceipts(current: FlowOwner, owner: { current: FlowOwner }
     }
     render();
   }), [current.readIntents]);
+}
+
+function getProgressCounts(session: import('../../lib/core/flow/dailyFlowSession').DailyFlowSession) {
+  if (session.dive || !session.cycle) return undefined;
+  return reviewProgressCountsFromSummary({
+    reviewedItemCount: session.reviewedItemCount ?? 0,
+    readTopicCount: session.readTopicCount ?? 0,
+    remainingCount: session.cycle.remaining,
+    remainingReviewCount: session.cycle.reviewRemaining
+  });
 }

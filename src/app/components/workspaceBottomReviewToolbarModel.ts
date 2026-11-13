@@ -1,6 +1,6 @@
 import type { ReviewSessionModeAvailability } from '../../features/review/model/reviewSessionMode';
+import { reviewProgressCountsFromSummary, type ReviewToolbarProgressCounts } from '../../features/review/model/reviewToolbarProgressLabel';
 
-import type { ReviewToolbarProgressCounts } from './reviewToolbarProgressLabel';
 import type { WorkspaceBottomReviewToolbarProps, WorkspaceBottomReviewToolbarSource } from './WorkspaceBottomReviewToolbar';
 
 export function getReviewSessionModeAvailability(source: WorkspaceBottomReviewToolbarSource): ReviewSessionModeAvailability {
@@ -29,10 +29,10 @@ export function getReviewProgressCounts(source: WorkspaceBottomReviewToolbarSour
   if (existingCounts) return existingCounts;
 
   const summary = source.review.reviewSummary;
-  if (summary.remainingCount !== undefined && summary.remainingReviewCount !== undefined) return {
-    completedItemCount: summary.reviewedItemCount, completedTopicCount: summary.readTopicCount,
-    queuedItemCount: summary.remainingReviewCount, queuedTopicCount: summary.remainingCount - summary.remainingReviewCount
-  };
+  if (summary.remainingCount !== undefined && summary.remainingReviewCount !== undefined) {
+    return reviewProgressCountsFromSummary({ ...summary, remainingCount: summary.remainingCount,
+      remainingReviewCount: summary.remainingReviewCount });
+  }
   const queueNodeIds = (source.review as { reviewQueueNodeIds?: string[] }).reviewQueueNodeIds ?? [];
   let queuedItemCount = 0;
   let queuedTopicCount = 0;

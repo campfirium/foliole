@@ -105,7 +105,9 @@ function FlowHistorySurface(props: { children: React.ReactNode; model: Companion
       flowActive={model.surface.activeAction === 'review' && !model.surface.isFlowBrowsing}
       applyFlow={model.surface.handleFlowHistory}>
       <CompanionFlowHistorySurface
-      modeControls={{ mode: model.surface.flowSessionMode, onChange: model.surface.setFlowSessionMode, disabled: model.isBottomBarDisabled }}
+      modeControls={{ mode: model.surface.flowSessionMode, onChange: model.surface.setFlowSessionMode, disabled: model.isBottomBarDisabled,
+        progressCounts: model.surface.effectiveReviewSession.currentCard?.itemKind === 'fsrs'
+          ? model.surface.flowSummary.progressCounts : undefined }}
       active={model.surface.activeAction === 'review' && !model.surface.isFlowBrowsing &&
         !model.surface.readingActivity.editing && model.surface.flowReady}
       busy={model.isBottomBarDisabled} refreshPending={model.surface.historyRefreshPending} historyKey={model.surface.flowHistoryKey}

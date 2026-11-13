@@ -74,3 +74,26 @@ test('reveal, reading actions, and disabled grades retain their behavior', async
   await page.goto('/__review-footer?disabled=true');
   for (const button of await page.locator('footer').getByRole('button').all()) await expect(button).toBeDisabled();
 });
+
+test('puts the sprout on the existing divider without adding a footer row', async ({ page }) => {
+  for (const viewport of [{ width: 320, height: 640 }, { width: 640, height: 320 }]) {
+    await page.setViewportSize(viewport);
+    await openFooter(page);
+    const footer = page.locator('footer');
+    const baseline = (await footer.boundingBox())!;
+    await page.goto('/__review-footer?progress=1');
+    const sprout = footer.locator('.lucide-sprout');
+    await expect(sprout).toBeVisible();
+    await expect(footer.getByRole('status')).toHaveCount(0);
+    expect(await sprout.evaluate(element => {
+      const box = element.getBoundingClientRect();
+      const coveringElement = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+      return coveringElement?.closest('footer [role="status"]') === null;
+    })).toBe(true);
+    const marker = (await sprout.boundingBox())!;
+    expect(marker.y + marker.height).toBeCloseTo(baseline.y, -1);
+    expect((await footer.boundingBox())!.height).toBe(baseline.height);
+    await expect(footer.getByText('i 2/20 · t 0/1')).toHaveCount(0);
+    await page.screenshot({ path: `.tmp/artifacts/mobile-flow-sprout-${viewport.width}.png` });
+  }
+});
