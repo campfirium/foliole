@@ -26,6 +26,8 @@ const ACTIONS = [
   { capabilities: ['materials.search'], description: 'search Topics and Folders' },
   { capabilities: ['materials.read'], description: 'read a Topic, Folder, or Item' },
   { capabilities: ['materials.listChildren'], description: 'list Folder contents' },
+  { capabilities: ['materials.listTrash'], description: 'find restorable materials in the trash' },
+  { capabilities: ['materials.createTextExcerpt'], description: 'create an anchored excerpt from a Topic' },
   { capabilities: ['virtualFolders.list', 'virtualFolders.read'], description: 'list or read virtual Folders' },
   { capabilities: ['materials.create'], description: 'create a Topic, Folder, or explicitly requested question-answer Item' },
   { capabilities: ['materials.update'], description: 'update a Topic or Item' },
@@ -37,7 +39,7 @@ const ACTIONS = [
 ];
 
 const WRITE_CAPABILITIES = [
-  'materials.create', 'materials.update', 'materials.move', 'materials.reorder',
+  'materials.create', 'materials.createTextExcerpt', 'materials.update', 'materials.move', 'materials.reorder',
   'materials.deleteSoft', 'materials.restore', 'virtualFolders.create', 'virtualFolders.update',
   'virtualFolders.addItems', 'virtualFolders.removeItems', 'virtualFolders.reorder',
   'virtualFolders.deleteSoft', 'virtualFolders.restore'

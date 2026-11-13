@@ -62,14 +62,16 @@ function MockPage({
   scale?: number;
   width?: number;
 }) {
+  const callbacks = React.useRef({ onLoadSuccess, onRenderSuccess, onGetTextSuccess, onRenderTextLayerSuccess });
+  callbacks.current = { onLoadSuccess, onRenderSuccess, onGetTextSuccess, onRenderTextLayerSuccess };
   React.useEffect(() => {
-    onLoadSuccess?.({
+    callbacks.current.onLoadSuccess?.({
       getViewport: ({ scale: nextScale }: { scale: number }) => ({ height: 1131 * nextScale, width: 800 * nextScale })
     });
-    onRenderSuccess?.();
-    onGetTextSuccess?.({ items: [{ str: `keyword match on page ${pageNumber}` }] });
-    onRenderTextLayerSuccess?.();
-  }, [onGetTextSuccess, onLoadSuccess, onRenderSuccess, onRenderTextLayerSuccess, pageNumber]);
+    callbacks.current.onRenderSuccess?.();
+    callbacks.current.onGetTextSuccess?.({ items: [{ str: `keyword match on page ${pageNumber}` }] });
+    callbacks.current.onRenderTextLayerSuccess?.();
+  }, [pageNumber, rotate, scale, width]);
   return (
     <div data-page={pageNumber} data-rotate={rotate ?? 0} data-scale={scale ?? 1} data-width={width ?? ''} data-testid="pdf-document-page">
       <div className="textLayer">

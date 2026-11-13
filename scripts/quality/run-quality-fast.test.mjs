@@ -59,6 +59,7 @@ describe('quality fast platform adapter', () => {
         cwd,
         env: {
           FOLIOLE_RESOURCE_GATE_HELD: '',
+          FOLIOLE_RESOURCE_GATE_REPO_ROOT: cwd,
           FOLIOLE_RESOURCE_GATE_RUNTIME_DIR: path.join(cwd, 'locks'),
           QUALITY_GATE_LOG_ROOT: path.join(cwd, 'logs')
         }

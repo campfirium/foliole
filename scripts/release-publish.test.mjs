@@ -19,7 +19,7 @@ function runner(version, latestVersion, calls) {
       return JSON.stringify({
         isDraft: true, tagName: tag, targetCommitish: SHA,
         assets: [{ name: `Foliole-Windows-x64-${version}.exe` }],
-        body: `### Fixed\n\nA fix.\n\n### Download\n\n| Windows |\n| --- |\n| [${version} · x64](https://github.com/campfirium/foliole/releases/download/${tag}/Foliole-Windows-x64-${version}.exe) |`
+        body: `### Fixed\n\nA fix.\n\n---\n\n| **Windows** |\n| :---: |\n| x64 |\n| [EXE](https://github.com/campfirium/foliole/releases/download/${tag}/Foliole-Windows-x64-${version}.exe) |`
       });
     }
     if (args[2] === tag) return JSON.stringify({ isDraft: false, tagName: tag });

@@ -23,10 +23,11 @@ it('registers every Agent Control product capability exactly once on its protect
     .filter((route) => route.access === 'product')
     .map((route) => [route.capability, route.apiPath]));
 
-  expect(definitions).toHaveLength(18);
-  expect(new Set(definitions.map((definition) => definition.capability)).size).toBe(18);
+  expect(definitions).toHaveLength(routeByCapability.size);
   expect(new Set(definitions.map((definition) => definition.capability)))
     .toEqual(new Set(AGENT_CONTROL_CAPABILITIES));
+  expect(AIDE_TOOL_REGISTRY.list_trash?.mutates).toBe(false);
+  expect(AIDE_TOOL_REGISTRY.create_text_excerpt?.mutates).toBe(true);
   for (const definition of definitions) {
     expect(`/agent-control/v1/${definition.path}`).toBe(routeByCapability.get(definition.capability));
   }

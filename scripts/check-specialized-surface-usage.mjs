@@ -12,7 +12,6 @@ export const ALLOWED_SPECIALIZED_SURFACE_FILES = [
   'src/app/components/PdfDocumentPageRender.tsx',
   'src/app/components/PdfPageCanvas.tsx',
   'src/app/components/ReadwiseReaderSetupParts.tsx',
-  'src/app/components/WorkspaceDemoViewportGate.tsx',
   'src/app/components/documentPanelPdfView.tsx',
   'src/shared/ui/ListSurface.tsx'
 ].sort();

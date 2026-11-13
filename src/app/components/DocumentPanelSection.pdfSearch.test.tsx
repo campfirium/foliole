@@ -135,36 +135,36 @@ it('focuses PDF search from the shared find-in-document command', { meta: { cali
 it('supports in-view pdf search navigation and empty-state feedback', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
   renderWithLocalization(<DocumentPanelSection {...defaultProps} />);
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'PDF search' })).toBeInTheDocument(), RELEASE_GATE_WAIT_OPTIONS);
-  const previousMatchButton = screen.getByRole('button', { name: 'Previous match' });
-  const nextMatchButton = screen.getByRole('button', { name: 'Next match' });
+  const previousMatchButton = () => screen.getByRole('button', { name: 'Previous match' });
+  const nextMatchButton = () => screen.getByRole('button', { name: 'Next match' });
   const searchInput = screen.getByRole('textbox', { name: 'PDF search' });
-  const clearSearchButton = screen.getByRole('button', { name: 'Clear search' });
-  expect(previousMatchButton).toBeDisabled();
-  expect(nextMatchButton).toBeDisabled();
-  expect(clearSearchButton).toBeDisabled();
+  const clearSearchButton = () => screen.getByRole('button', { name: 'Clear search' });
+  expect(previousMatchButton()).toBeDisabled();
+  expect(nextMatchButton()).toBeDisabled();
+  expect(clearSearchButton()).toBeDisabled();
   fireEvent.change(searchInput, { target: { value: 'keyword' } });
   await waitFor(() => {
     expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 9');
-    expect(previousMatchButton).toBeEnabled();
-    expect(nextMatchButton).toBeEnabled();
-    expect(clearSearchButton).toBeEnabled();
+    expect(previousMatchButton()).toBeEnabled();
+    expect(nextMatchButton()).toBeEnabled();
+    expect(clearSearchButton()).toBeEnabled();
     expect(screen.queryByText('Search debug')).not.toBeInTheDocument();
   }, RELEASE_GATE_WAIT_OPTIONS);
-  fireEvent.click(nextMatchButton);
+  fireEvent.click(nextMatchButton());
   await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('2 / 9'), RELEASE_GATE_WAIT_OPTIONS);
-  fireEvent.click(clearSearchButton);
+  fireEvent.click(clearSearchButton());
   await waitFor(() => {
     expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('');
     expect(searchInput).toHaveValue('');
-    expect(previousMatchButton).toBeDisabled();
-    expect(nextMatchButton).toBeDisabled();
-    expect(clearSearchButton).toBeDisabled();
+    expect(previousMatchButton()).toBeDisabled();
+    expect(nextMatchButton()).toBeDisabled();
+    expect(clearSearchButton()).toBeDisabled();
   }, RELEASE_GATE_WAIT_OPTIONS);
   fireEvent.change(searchInput, { target: { value: 'not-found-token' } });
   await waitFor(() => {
     expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('No matches');
-    expect(previousMatchButton).toBeDisabled();
-    expect(nextMatchButton).toBeDisabled();
+    expect(previousMatchButton()).toBeDisabled();
+    expect(nextMatchButton()).toBeDisabled();
   }, RELEASE_GATE_WAIT_OPTIONS);
 });
 
