@@ -58,10 +58,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.workspace.resizeInspectorSidebar': 'Resize inspector sidebar',
   'desktop.workspace.inspector': 'Inspector',
   'desktop.demo.narrow.aria': 'Demo desktop width notice',
-  'desktop.demo.narrow.title': 'Use a wider window for the Demo workspace',
-  'desktop.demo.narrow.description':
-    'The Demo shows Foliole as a desktop workspace. Open it on a wider screen to use the folders, editor, and Flow panel together.',
-  'desktop.demo.narrow.openWindow': 'Open in a new window',
+  'desktop.demo.narrow.message': 'Open the Demo on a computer.',
   'desktop.document.panel': 'Document panel',
   'desktop.list.panel': 'List panel',
   'desktop.document.content': 'Content',

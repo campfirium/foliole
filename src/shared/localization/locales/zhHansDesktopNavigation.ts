@@ -59,10 +59,7 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.workspace.resizeInspectorSidebar': '调整检查器侧栏宽度',
   'desktop.workspace.inspector': '检查器',
   'desktop.demo.narrow.aria': 'Demo 桌面宽度提示',
-  'desktop.demo.narrow.title': '请使用更宽的窗口体验 Demo 工作区',
-  'desktop.demo.narrow.description':
-    'Demo 展示的是 Foliole 的桌面工作区。请在更宽的屏幕中打开，以同时使用文件夹、编辑器和 Flow 面板。',
-  'desktop.demo.narrow.openWindow': '在新窗口打开',
+  'desktop.demo.narrow.message': '请在电脑上打开 Demo。',
   'desktop.document.panel': '文档面板',
   'desktop.list.panel': '列表面板',
   'desktop.document.content': '内容',

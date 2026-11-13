@@ -20,20 +20,11 @@
   color: rgb(var(--color-foreground) / 0.72);
 }
 
-.demo-width-notice h1 {
-  margin: 0;
-  color: inherit;
-  font-size: clamp(1.5rem, 5.8vw, 1.875rem);
-  font-weight: 650;
-  line-height: 1.25;
-  text-wrap: balance;
-}
-
 .demo-width-notice p {
-  margin: 12px 0 0;
-  color: rgb(var(--color-foreground) / 0.78);
-  font-size: 1rem;
-  line-height: 1.65;
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 550;
+  line-height: 1.5;
 }
 
 .demo-width-notice a {

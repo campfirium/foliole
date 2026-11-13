@@ -30,8 +30,7 @@ export function WorkspaceDemoViewportGate({ children }: { children: ReactNode })
     <section aria-label={t('desktop.demo.narrow.aria')} className="demo-width-notice">
       <div className="demo-width-notice__content">
         <Monitor aria-hidden="true" className="demo-width-notice__icon" size={36} strokeWidth={1.5} />
-        <h1>{t('desktop.demo.narrow.title')}</h1>
-        <p>{t('desktop.demo.narrow.description')}</p>
+        <p>{t('desktop.demo.narrow.message')}</p>
         <a href={FOLIOLE_RELEASE_LINKS.homepage}>
           <ArrowLeft aria-hidden="true" size={16} />
           {t('desktop.workspace.demo.home')}
