@@ -58,7 +58,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.workspace.resizeInspectorSidebar': 'Resize inspector sidebar',
   'desktop.workspace.inspector': 'Inspector',
   'desktop.demo.narrow.aria': 'Demo desktop width notice',
-  'desktop.demo.narrow.message': 'Open the Demo on a computer.',
+  'desktop.demo.narrow.message': 'The Demo needs a wider screen. Please open it on a computer.',
   'desktop.document.panel': 'Document panel',
   'desktop.list.panel': 'List panel',
   'desktop.document.content': 'Content',
