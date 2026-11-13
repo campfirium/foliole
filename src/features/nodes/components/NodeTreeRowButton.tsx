@@ -20,7 +20,6 @@ export interface NodeTreeRowButtonProps {
   descendantCount: number;
   depth: number;
   hasChildren: boolean;
-  hasRowAction: boolean;
   isActive: boolean;
   isBulkSelectionActive: boolean;
   isCollapsed: boolean;
@@ -53,7 +52,6 @@ export interface NodeTreeRowButtonProps {
 export function NodeTreeRowButton(props: NodeTreeRowButtonProps) {
   const buttonClassName = resolveNodeRowButtonClassName({
     depth: props.depth,
-    hasRowAction: props.hasRowAction,
     isBulkSelectionActive: props.isBulkSelectionActive,
     isDerived: props.isDerived,
     isHighlighted: props.isHighlighted,

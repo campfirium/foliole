@@ -70,7 +70,6 @@ function renderNodeTreeRowButton(props: {
   descendantCount: number;
   depth: number;
   hasChildren: boolean;
-  hasRowAction: boolean;
   isActive: boolean;
   isBulkSelectionActive: boolean;
   isCollapsed: boolean;
@@ -124,7 +123,6 @@ function NodeTreeRowImpl(props: NodeTreeRowProps) {
         descendantCount: props.descendantCount ?? 0,
         depth: props.depth,
         hasChildren: props.hasChildren,
-        hasRowAction: props.rowAction !== undefined,
         isActive: props.isActive,
         isBulkSelectionActive: props.isBulkSelectionActive ?? false,
         isCollapsed: props.isCollapsed,
