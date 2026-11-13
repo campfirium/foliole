@@ -52,6 +52,12 @@ it('shows a desktop-width prompt for narrow Demo viewports', () => {
   renderWithLocalization(<WorkspaceDemoViewportGate><div>Workspace</div></WorkspaceDemoViewportGate>);
 
   expect(screen.queryByText('Workspace')).toBeNull();
-  expect(screen.getByRole('main', { name: 'Demo desktop width notice' })).toHaveClass('bg-app-shell');
-  expect(screen.getByText('Use a wider window for the Demo workspace')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Use a wider window for the Demo workspace' })).toBeVisible();
+  expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', 'https://foliole.app/');
+  expect(screen.queryByRole('button', { name: 'Open in a new window' })).not.toBeInTheDocument();
+
+  setViewportWidth(DEMO_DESKTOP_MIN_WIDTH_PX);
+
+  expect(screen.getByText('Workspace')).toBeVisible();
+  expect(screen.queryByRole('heading')).not.toBeInTheDocument();
 });
