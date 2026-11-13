@@ -180,8 +180,8 @@ function resolveNodeListEmptyState(
       title: `${resolveSystemEntryDisplayName(locale, 'trash')}: ${t('desktop.nodeList.empty')}`
     };
   return props.isVirtualViewOpen
-    ? { description: 'Create a virtual folder to save a reusable filtered view.', title: 'No virtual folders' }
-    : { description: 'Create or import a topic to start editing.', title: 'No topics' };
+    ? { description: t('desktop.nodeList.emptyVirtual.description'), title: t('desktop.nodeList.emptyVirtual.title') }
+    : { description: t('desktop.nodeList.emptyTopics.description'), title: t('desktop.nodeList.emptyTopics.title') };
 }
 
 export function NodeListRows(props: NodeListRowsProps) {

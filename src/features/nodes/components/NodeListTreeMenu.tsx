@@ -1,3 +1,4 @@
+import { useTranslation, type Translate } from '../../../shared/localization/LocalizationProvider';
 import { resolveSystemEntryId } from '../../../shared/localization/systemEntryNames';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../../shared/platform/readwiseTopicMerge';
 import { showAppRuntimeNotice } from '../../../shared/ui/AppRuntimeNotice';
@@ -125,7 +126,8 @@ function createMergeHighlightsIntoTopicHandler(args: {
 
 function buildNodeListActionHandlers(
   props: NodeListTreeMenuProps,
-  menuState: ReturnType<typeof buildMenuState>
+  menuState: ReturnType<typeof buildMenuState>,
+  t: Translate
 ) {
   return {
     onDismissEntireTopic: createDismissEntireTopicAction(
@@ -141,7 +143,7 @@ function buildNodeListActionHandlers(
     onMoveToNode: createMoveToNodeHandler(props, menuState.primaryTargetId),
     onOpenReviewScheduling: createOptionalNodeMenuHandler(menuState.primaryTargetId, props.onOpenReviewScheduling, props.contextMenu.closeContextMenu),
     onOpenPostponeTopic: createOptionalNodeMenuHandler(menuState.primaryTargetId, props.onOpenPostponeTopic, props.contextMenu.closeContextMenu),
-    onReturnNode: createReturnNodeAction(menuState.contextTargets, props.returnNode, props.contextMenu.closeContextMenu),
+    onReturnNode: createReturnNodeAction(menuState.contextTargets, props.returnNode, props.contextMenu.closeContextMenu, t),
     onShelveTopic: createShelveTopicAction(menuState.primaryTargetId, props.shelveNode, props.contextMenu.closeContextMenu),
     onToggleSequentialReading: createToggleSequentialReadingAction({
       closeContextMenu: props.contextMenu.closeContextMenu,
@@ -181,7 +183,8 @@ function buildNodeListMenuVisibility(
 function buildNodeListContextMenuProps(
   props: NodeListTreeMenuProps,
   menuPosition: NonNullable<NodeListContextMenuController['menuPosition']>,
-  menuState: ReturnType<typeof buildMenuState>
+  menuState: ReturnType<typeof buildMenuState>,
+  t: Translate
 ) {
   const onAddToDive = props.onAddToDive;
   const diveTargets = menuState.contextTargets;
@@ -221,7 +224,7 @@ function buildNodeListContextMenuProps(
     ...(props.membershipSourceLabel ? { membershipSourceLabel: props.membershipSourceLabel } : {}),
     ...(props.removeMembershipLabel ? { removeMembershipLabel: props.removeMembershipLabel } : {}),
     onRemoveFromCurrentVirtualFolder: () => (props.onRemoveFromCurrentVirtualFolder?.(menuState.contextTargets), props.contextMenu.closeContextMenu()),
-    ...buildNodeListActionHandlers(props, menuState),
+    ...buildNodeListActionHandlers(props, menuState, t),
     onRenameNode: () => (requestNodeRename(menuState.primaryTargetId), props.contextMenu.closeContextMenu()),
     readwiseOriginalEpubTargetId: menuState.showNodeImportActions ? menuState.primaryTargetId : null,
     pdfExportTargetId: menuState.showNodeImportActions && menuState.contextTargets.length === 1 ? menuState.primaryTargetId : null,
@@ -236,7 +239,8 @@ function buildNodeListContextMenuProps(
 }
 
 export function NodeListTreeMenu(props: NodeListTreeMenuProps) {
+  const t = useTranslation();
   const position = props.contextMenu.menuPosition;
   if (!position) return null;
-  return <NodeListContextMenu {...buildNodeListContextMenuProps(props, position, buildMenuState(props))} />;
+  return <NodeListContextMenu {...buildNodeListContextMenuProps(props, position, buildMenuState(props), t)} />;
 }

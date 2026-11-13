@@ -6,6 +6,8 @@ import './app-smoke.shared';
 import { nodeReadingSummary } from '../../lib/core/nodes/nodeLearningSummary';
 import { App } from '../app/App';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { setStoredAppLocale } from '../shared/localization/appLanguage';
+import { preloadTranslationCatalog } from '../shared/localization/translations';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 import { createNode, getCurrentFolderPanel, getTopicListPanel } from './app-smoke.shared';
@@ -71,6 +73,34 @@ it('shows relearn actions for pending reading nodes and keeps the pending icon s
     'data-node-icon-state',
     'scheduled'
   );
+});
+
+it.each([
+  { multiple: false, title: '重新学习此主题？', description: '这将清除该主题的复习进度，并将其放回复习队列。' },
+  { multiple: true, title: '重新学习所选主题？', description: '这将清除所选主题的复习进度，并将它们放回复习队列。' }
+])('shows $title in Simplified Chinese', async ({ multiple, title, description }) => {
+  await preloadTranslationCatalog('zh-Hans');
+  setStoredAppLocale('zh-Hans');
+  seedTopicInInbox({
+    nodeId: 'node-localized', title: 'Localized topic', reading: createReadingState(),
+    extraNode: createNode({
+      id: 'node-extra', parentNodeId: INBOX_NODE_ID, title: 'Second topic', content: '# Second topic', reading: createReadingState()
+    })
+  });
+  render(<App />);
+
+  const row = screen.getByRole('treeitem', { name: 'Localized topic' });
+  if (multiple) {
+    fireEvent.click(screen.getByRole('treeitem', { name: 'Second topic' }));
+    fireEvent.click(row, { ctrlKey: true });
+  }
+  fireEvent.contextMenu(row, { clientX: 56, clientY: 64 });
+  fireEvent.click(await screen.findByRole('menuitem', { name: '重新学习' }));
+  const dialog = within(await screen.findByRole('dialog', { name: title }));
+  expect(dialog.getByText(description)).toBeInTheDocument();
+  expect(dialog.getByRole('button', { name: '重新学习' })).toBeInTheDocument();
+  fireEvent.click(dialog.getByRole('button', { name: '取消' }));
+  expect(nodeReadingSummary(useWorkspaceStore.getState().nodesById['node-localized'])).not.toBeNull();
 });
 
 it('returns dismissed reading nodes to pending from the node menu', async () => {

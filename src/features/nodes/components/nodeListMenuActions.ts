@@ -1,26 +1,28 @@
+import type { Translate } from '../../../shared/localization/LocalizationProvider';
 import { requestAppConfirmation } from '../../../shared/ui';
 import type { NodeDismissTargets } from '../model/nodeDismissTargets';
 import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 
-function confirmReturnNodeReset(targetCount: number) {
+function confirmReturnNodeReset(targetCount: number, t: Translate) {
+  const multiple = targetCount > 1;
   return requestAppConfirmation({
-    confirmLabel: 'Relearn',
-    description:
-      targetCount > 1
-        ? 'This clears their current review progress and puts them back in the review queue.'
-        : 'This clears its current review progress and puts it back in the review queue.',
-    title: targetCount > 1 ? 'Relearn selected topics?' : 'Relearn this topic?'
+    confirmLabel: t('desktop.nodeList.menu.relearn'),
+    description: t(multiple
+      ? 'desktop.nodeList.relearn.multiple.description'
+      : 'desktop.nodeList.relearn.single.description'),
+    title: t(multiple ? 'desktop.nodeList.relearn.multiple.title' : 'desktop.nodeList.relearn.single.title')
   });
 }
 
 export function createReturnNodeAction(
   contextTargets: string[],
   returnNode: (nodeId: string, now?: string) => boolean,
-  closeContextMenu: () => void
+  closeContextMenu: () => void,
+  t: Translate
 ) {
   return () => {
-    void confirmReturnNodeReset(contextTargets.length).then((confirmed) => {
+    void confirmReturnNodeReset(contextTargets.length, t).then((confirmed) => {
       if (!confirmed) {
         closeContextMenu();
         return;
