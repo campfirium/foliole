@@ -37,8 +37,10 @@ export async function handleAgentControlMaterialRoute(
 ) {
   const handler = MATERIAL_ROUTES[pathname];
   if (request.method !== 'POST' || !handler) return false;
-  await handler(request, response, options);
-  if (isMaterialWritePath(pathname)) notifyAfterSuccessfulWrite(response, options.notifyWorkspaceContentChanged);
+  const notify = await handler(request, response, options);
+  if (notify !== false && isMaterialWritePath(pathname)) {
+    notifyAfterSuccessfulWrite(response, options.notifyWorkspaceContentChanged);
+  }
   return true;
 }
 
@@ -59,7 +61,7 @@ type Handler = (
   request: http.IncomingMessage,
   response: http.ServerResponse,
   options: AgentControlRequestHandlerOptions
-) => Promise<void>;
+) => Promise<boolean | void>;
 
 const MATERIAL_ROUTES: Record<string, Handler> = {
   '/agent-control/v1/materials/create': handleMaterialCreate,

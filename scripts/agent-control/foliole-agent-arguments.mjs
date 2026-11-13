@@ -37,7 +37,7 @@ function buildMaterialReadBody(flags) {
 function buildMaterialCreateBody(flags) {
   const required = flags.kind === 'item' ? ['kind', 'content', 'reveal'] : ['kind', 'title'];
   const optional = flags.kind === 'item' ? ['parent_id'] : ['content', 'parent_id'];
-  const result = requireFields(flags, required, optional);
+  const result = requireFields(flags, required, [...optional, 'request_id']);
   if (!result.ok) return result;
   const body = { parent_id: null, ...result.body };
   for (const field of ['reading_schedule', 'review_schedule']) {

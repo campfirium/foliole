@@ -18,6 +18,14 @@ The [route registry](../scripts/agent-control/foliole-agent-routes.mjs) defines 
 
 The HTTP create request takes an explicit `parent_id`, which can be null. The CLI supplies null when the parent flag is omitted. Material reads default to previews and report truncation. Request `content_mode: "full"` or `--content-mode full` to read complete content and answers with the same response revision. Collection tags can travel in Topic content, while the manual virtual Folder routes expose manual membership.
 
+### Retrying material creation
+
+On a Foliole version that supports create retries, supply `request_id` in the HTTP body or `--request-id` in the CLI. Generate a unique ID for each intended creation and save it before sending. IDs are case-sensitive, 1–128 characters long, and may contain letters A–Z, digits, periods, underscores, colons, and hyphens.
+
+If the response is lost, retry with the same ID and creation parameters against the same local library. HTTP and CLI share the same IDs. Foliole returns HTTP 200 with the original `material.id`, including after restart. The returned material reflects current state, or contains only the original ID if the material has been permanently removed. Reusing an ID with different valid parameters returns HTTP 409 with `request_id_conflict`. Failed creates leave the ID available. Each request still requires the usual authorization and any applicable learning import permission.
+
+Receipts are stored in the local library database and do not sync to other library replicas. Omitting the ID requests a new creation each time.
+
 ### Importing a Topic reading schedule
 
 In desktop **Settings → General → Agent Control**, enable **Allow learning progress imports** for the current library. The permission defaults to off and stays local. A request with a learning schedule while it is off returns HTTP 403 with `learning_import_disabled`. Ordinary creation uses the existing permission.

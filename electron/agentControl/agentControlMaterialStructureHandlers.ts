@@ -35,25 +35,33 @@ export async function handleMaterialCreate(
   const content = body.content === undefined ? undefined : readString(body.content, false);
   const reveal = body.reveal === undefined ? undefined : readString(body.reveal, false);
   const parentId = readNullableId(body.parent_id);
-  if (!isValidCreateInput({ body, content, kind, parentId, reveal, title })) {
+  const requestId = body.request_id;
+  if (!isValidRequestId(requestId) || !isValidCreateInput({ body, content, kind, parentId, reveal, title })) {
     sendAgentControlInvalidRequest(request, response, options, capability);
     return;
   }
+  let replayed = false;
   sendMutation(request, response, options, capability, () => {
     const reading = readAgentControlTopicLearningImport(kind, body.reading_schedule);
     const reviewSchedule = readAgentControlItemLearningImport(kind, body.review_schedule);
-    const material = kind === 'item'
+    const result = kind === 'item'
       ? createAgentControlMaterial({
           content: content as string, kind, parentId: parentId as string | null, reveal: reveal as string,
           ...(reviewSchedule ? { reviewSchedule } : {})
-        })
+        }, requestId)
       : createAgentControlMaterial({
-          ...(typeof content === 'string' ? { content } : {}),
+          content: content ?? '',
           ...(reading ? { reading } : {}),
           kind: kind as 'folder' | 'topic', parentId: parentId as string | null, title: title as string
-        });
-    return { material };
+        }, requestId);
+    replayed = result.replayed;
+    return { material: result.material };
   });
+  return !replayed;
+}
+
+function isValidRequestId(value: unknown): value is string | undefined {
+  return value === undefined || (typeof value === 'string' && /^[a-zA-Z0-9._:-]{1,128}$/u.test(value));
 }
 
 function isValidCreateInput(args: {

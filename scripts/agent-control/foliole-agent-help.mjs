@@ -42,7 +42,8 @@ const EXIT_CODES = [
 const COMMAND_DETAILS = {
   'materials/create': details(
     [
-      'Topic and Folder require --title. Item requires --content and --reveal and does not accept --title.'
+      'Topic and Folder require --title. Item requires --content and --reveal and does not accept --title.',
+      'Use --request-id with the same create parameters to recover the original material ID after a lost response.'
     ],
     [
       'foliole materials/create --kind topic --title "Reading topic" --content "Body" --parent-id root',

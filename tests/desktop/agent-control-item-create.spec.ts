@@ -11,6 +11,10 @@ import { expectWorkspaceShell } from './harness/settings';
 
 const QUESTION = 'Why does retrieval practice improve memory?';
 const ANSWER = 'It strengthens recall by requiring active retrieval.';
+const CREATE_ARGS = [
+  'materials/create', '--kind', 'item', '--content', QUESTION, '--reveal', ANSWER, '--parent-id', 'root',
+  '--request-id', 'desktop-item-create'
+];
 const EVIDENCE_PATH = path.join(process.cwd(), '.tmp/artifacts/agent-control-item-create.json');
 const CREDENTIAL_ISOLATION_ARGS = process.platform === 'darwin' ? ['--use-mock-keychain'] : [];
 
@@ -91,10 +95,7 @@ test('creates and hydrates a real question-answer Item through the public CLI', 
     await expectCredentialIsolation(desktopSession);
     await expectWorkspaceShell(desktopSession.firstWindow);
     const descriptorPath = await readDescriptorPath(desktopSession);
-    const created = await runAgentCli([
-      'materials/create', '--descriptor', descriptorPath,
-      '--kind', 'item', '--content', QUESTION, '--reveal', ANSWER, '--parent-id', 'root'
-    ]);
+    const created = await runAgentCli([...CREATE_ARGS, '--descriptor', descriptorPath]);
     expect(created.status).toBe(0);
     const material = (created.output as { material: Record<string, unknown> }).material;
     const itemId = String(material.id);
@@ -123,6 +124,8 @@ test('creates and hydrates a real question-answer Item through the public CLI', 
     expectQuestionAnswerItem(hydrated);
     expect(await readItemReview(secondSession.firstWindow, itemId)).toEqual(initialReview);
     const relaunchedDescriptorPath = await readDescriptorPath(secondSession);
+    const replay = await runAgentCli([...CREATE_ARGS, '--descriptor', relaunchedDescriptorPath]);
+    expect(replay).toMatchObject({ status: 0, output: { material: { id: itemId } } });
     const relaunchedRead = await readCliItem(relaunchedDescriptorPath, itemId);
     expect(relaunchedRead).toMatchObject({
       content: QUESTION, id: itemId, kind: 'item', parent_id: 'special-inbox', reveal: ANSWER

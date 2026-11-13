@@ -20,6 +20,7 @@ import { moveNodes, replaceNodeOrder, restoreNodes, upsertNodeSnapshot } from '.
 import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
 import type { AgentControlItemReviewSchedule } from './agentControlLearningImport.js';
+import { createMaterialWithReceipt } from './agentControlMaterialCreateReceipts.js';
 import { AgentMaterialMutationError } from './agentControlMaterialMutations.js';
 import { readAgentControlMaterial } from './agentControlMaterials.js';
 
@@ -35,11 +36,19 @@ type CreateMaterialInput =
   | { content?: string; kind: 'folder' | 'topic'; parentId: string | null; reading?: NodeReadingPayload; title: string }
   | { content: string; kind: 'item'; parentId: string | null; reveal: string; reviewSchedule?: AgentControlItemReviewSchedule };
 
-export function createAgentControlMaterial(input: CreateMaterialInput) {
-  if (input.kind === 'item' ? input.reviewSchedule : input.kind === 'topic' && input.reading) {
-    return openDatabaseConnection().driver.transaction(() => insertAgentControlMaterial(input));
+export function createAgentControlMaterial(input: CreateMaterialInput, requestId?: string) {
+  if (requestId) {
+    const fingerprintInput = {
+      ...input,
+      content: input.content ?? '',
+      parentId: resolveParentId(input.kind, input.parentId)
+    };
+    return createMaterialWithReceipt(requestId, fingerprintInput, () => insertAgentControlMaterial(input));
   }
-  return insertAgentControlMaterial(input);
+  if (input.kind === 'item' ? input.reviewSchedule : input.kind === 'topic' && input.reading) {
+    return { material: openDatabaseConnection().driver.transaction(() => insertAgentControlMaterial(input)), replayed: false };
+  }
+  return { material: insertAgentControlMaterial(input), replayed: false };
 }
 
 function insertAgentControlMaterial(input: CreateMaterialInput) {
