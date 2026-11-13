@@ -50,7 +50,7 @@ export const AGENT_CONTROL_ROUTE_REGISTRY = /** @type {const} */ ([
   }),
   registryRoute('product', 'POST', 'materials/update', 'materials.update', {
     capabilityOrder: 16,
-    cli: cliRoute('materials/update', 'Update a Topic or Item.', optionalAndRequired(['content', 'reveal', 'title'], ['id', 'expected-updated-at'])),
+    cli: cliRoute('materials/update', 'Rename a Folder or update a Topic or Item.', optionalAndRequired(['content', 'reveal', 'title'], ['id', 'expected-updated-at'])),
     writeKind: 'material'
   }),
   registryRoute('product', 'POST', 'virtual-folders/add-items', 'virtualFolders.addItems', {
