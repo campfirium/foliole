@@ -1,4 +1,3 @@
-import { collectAllNodeVersionChains } from '../../../../../lib/core/database/dynamicNodeVersionChainMigration';
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 import { beginSyncGroupLocalAdoption, SYNC_GROUP_LOCAL_ADOPTION_KEY } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import { SYNC_GROUP_OVERWRITE_PROGRESS_KEY } from '../../../../../lib/core/sync/syncGroupOverwriteProgress';
@@ -107,12 +106,7 @@ export function leaveCompanionSyncGroupDevice() {
     );
     await tx.run('DELETE FROM sync_group_local_state WHERE singleton_id = 1');
     await tx.run('DELETE FROM sync_group_metadata');
-
-
     await tx.run('DELETE FROM sync_group_nonce_ledger');
-
-
-    await collectAllNodeVersionChains(tx);
   }));
 }
 

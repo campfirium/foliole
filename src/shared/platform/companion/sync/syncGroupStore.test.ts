@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/androidCompanionCoreSchemaStatements';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/syncGroupRestoreSchemaStatements';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/syncGroupSchemaStatements';
@@ -46,8 +47,7 @@ beforeEach(() => {
   sqlite = new Database(':memory:');
   for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
   for (const statement of SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS) sqlite.exec(statement);
-  sqlite.exec('CREATE TABLE nodes (id TEXT PRIMARY KEY, current_version_id TEXT)');
-  sqlite.exec('CREATE TABLE node_sync_tombstones (node_id TEXT PRIMARY KEY, version_id TEXT)');
+  for (const statement of ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS) sqlite.exec(statement);
   for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) sqlite.exec(statement);
   sqlite.exec('CREATE TABLE sync_delivery_receipts (peer_id TEXT)');
   sqlite.exec('CREATE TABLE sync_peer_cursors (peer_id TEXT)');
@@ -59,13 +59,14 @@ beforeEach(() => {
       return { changes: result.changes, lastInsertRowId: Number(result.lastInsertRowid) };
     },
     transaction: async <T>(work: (tx: DbPort) => Promise<T>) => {
-      sqlite.exec('BEGIN');
+      sqlite.exec('SAVEPOINT test_transaction');
       try {
         const result = await work(driver);
-        sqlite.exec('COMMIT');
+        sqlite.exec('RELEASE test_transaction');
         return result;
       } catch (error) {
-        sqlite.exec('ROLLBACK');
+        sqlite.exec('ROLLBACK TO test_transaction');
+        sqlite.exec('RELEASE test_transaction');
         throw error;
       }
     }
@@ -74,6 +75,28 @@ beforeEach(() => {
 });
 
 afterEach(() => sqlite.close());
+
+it('persists departure without reclaiming stored topic history', async () => {
+  await join('overwrite');
+  sqlite.exec(`
+    INSERT INTO nodes (id, title, content, current_version_id, created_at, updated_at)
+    VALUES ('topic', 'Topic', 'Current text', 'head', 'now', 'now');
+    INSERT INTO node_sync_versions (version_id, object_id, parent_version_id, host_name,
+      created_at, content_hash, body_text, snapshot_json)
+    VALUES ('base', 'topic', NULL, 'mobile', 'now', 'base-hash', 'Original text', '{"id":"topic"}'),
+      ('head', 'topic', 'base', 'mobile', 'now', 'head-hash', 'Current text', '{"id":"topic"}');
+    INSERT INTO node_sync_version_parents VALUES ('head', 'base', 0);
+  `);
+
+  await leaveCompanionSyncGroupAfterAdoptionStops();
+
+  expect(await loadCompanionSyncGroup()).toBeNull();
+  expect(sqlite.prepare('SELECT state FROM sync_group_devices WHERE device_identity_key = ?')
+    .pluck().get(local.identity_key)).toBe('left');
+  expect(sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('topic')).toBe('Current text');
+  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?')
+    .pluck().get('base')).toBe('Original text');
+});
 
 it('reactivates the same Device when it rejoins a retained Sync Group', async () => {
   await join();
@@ -93,7 +116,8 @@ it('reactivates the same Device when it rejoins a retained Sync Group', async ()
 
 
 it('publishes an applied whole-group overwrite together with mobile membership', async () => {
-  sqlite.prepare('INSERT INTO nodes VALUES (?, NULL)').run('local-note');
+  sqlite.prepare("INSERT INTO nodes (id, title, created_at, updated_at) VALUES (?, ?, 'now', 'now')")
+    .run('local-note', 'Local note');
   const group = await join('overwrite');
   const event = sqlite.prepare('SELECT * FROM sync_group_restore_events').get() as {
     group_id: string; restore_id: string; applied_at: string; source_device_identity_key: string
@@ -118,7 +142,8 @@ it('rolls membership back if publishing the chosen overwrite fails', async () =>
 });
 
 it('leaves a pending first reception without deleting local nodes', async () => {
-  sqlite.prepare('INSERT INTO nodes VALUES (?, NULL), (?, NULL)').run('special-inbox', 'local-note');
+  sqlite.exec(`INSERT INTO nodes (id, title, created_at, updated_at)
+    VALUES ('special-inbox', 'Inbox', 'now', 'now'), ('local-note', 'Local note', 'now', 'now')`);
   await join();
   expect(await loadSyncGroupLocalAdoption(database.driver)).not.toBeNull();
 
