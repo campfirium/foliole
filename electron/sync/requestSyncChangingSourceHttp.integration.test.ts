@@ -1,5 +1,4 @@
 // @vitest-environment node
-import http from 'node:http';
 
 import { expect, it } from 'vitest';
 
@@ -7,45 +6,13 @@ import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncCont
 import { inventoryBucket } from '../../lib/core/sync/framedSyncInventoryBuckets.js';
 import { transferRequestSyncBatch } from '../../lib/core/sync/requestSyncBatchExchange.js';
 import { exchangeRequestSyncInventory } from '../../lib/core/sync/requestSyncDatabaseExchange.js';
-import { respondRequestSyncDatabase, type RequestSyncDatabaseResponseInput } from '../../lib/core/sync/requestSyncDatabaseResponse.js';
 import { runRequestSyncDatabaseRound } from '../../lib/core/sync/requestSyncDatabaseRound.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
-import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
 import { restoreFixture } from '../database/requestSyncRestoreRecovery.testSupport.js';
-import { textBranch } from '../database/topicTextState.testSupport.js';
 
-import { handleCompanionLanFramedSyncPost } from './companionLanFramedSyncPost.js';
-import { prepareDesktopRequestSyncBody } from './desktopRequestSyncBody.js';
 import { createDesktopRequestSyncExchange } from './desktopRequestSyncExchange.js';
-
-const groupKey = new Uint8Array(32).fill(7);
-const state = (id: string): SyncGroupMemberStatePayload => ({ contract_version: 3, group_id: 'group',
-  sender_device_identity_key: id, library_epoch: `${id}-epoch`, proof_revision: 0,
-  source_proof_revisions: {}, devices: [], removals: [], restore: null });
-
-function record(id: string, version: string, parent?: NativeSyncNodeRecord) {
-  const value = textBranch(version, `Body ${version}`, parent);
-  return { ...value, object_id: id, snapshot: { ...value.snapshot, id } };
-}
-
-type Peer = ReturnType<Awaited<ReturnType<typeof restoreFixture>>['peer']>;
-
-function syncServer(source: Peer, target: Peer) {
-  return http.createServer((request, response) => {
-      void handleCompanionLanFramedSyncPost({ request, response,
-        localIdentity: { deviceId: target.id, libraryEpoch: target.epoch },
-        authenticate: () => ({ ok: true, device_id: source.id, device_name: source.id }),
-        onStream: async input => {
-          const mode = new URL(request.url!, 'http://localhost').searchParams.get('request');
-          if (mode !== 'inventory' && mode !== 'objects' && mode !== 'pulls') throw new Error('unexpected_mode');
-          const operation: RequestSyncDatabaseResponseInput = { ...input, groupKey, mode,
-            batch: { peerState: state(source.id) } };
-          return respondRequestSyncDatabase(target.host, operation, prepareDesktopRequestSyncBody);
-        }
-      }).catch(error => response.destroy(error));
-    });
-}
+import { groupKey, record, state, syncServer, type Peer } from './requestSyncDatabaseHttp.testSupport.js';
 
 async function advance(peer: Peer, first: NativeSyncNodeRecord, equal: NativeSyncNodeRecord,
   burst: boolean, move = false) {

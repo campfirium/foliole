@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 import { expect, test } from './harness/fixtures';
-import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
+import { expectWorkspaceShell, openSettingsDialog } from './harness/settings';
 
 test('Sync settings presents the local group roster and real local actions', async ({
   desktopWindow
@@ -15,7 +15,8 @@ test('Sync settings presents the local group roster and real local actions', asy
   });
 
   expect(overview.server_status).toMatchObject({ state: 'running', last_error: null });
-  const settingsDialog = await openSettingsCategory(desktopWindow, 'Sync');
+  const settingsDialog = await openSettingsDialog(desktopWindow);
+  await settingsDialog.getByRole('button', { name: /^(Sync \(LAN\)|同步（局域网）)$/ }).click();
   await expect(settingsDialog.getByText(new RegExp(`^${overview.sync_group.display_name}(?:'s| 的) Sync Group$|^${overview.sync_group.display_name} 的同步组$`))).toBeVisible();
   await expect(settingsDialog.getByRole('listitem')).toHaveCount(1);
   await expect(settingsDialog.getByText('macOS', { exact: true })).toBeVisible();

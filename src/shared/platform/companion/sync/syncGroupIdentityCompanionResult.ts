@@ -124,9 +124,12 @@ async function persistConfirmedSyncTime(confirmedAt: string | undefined) {
   }
 }
 
-function databaseResult(round: Pick<Awaited<ReturnType<typeof runCompanionRequestSyncDatabaseRound>>, 'received' | 'sent' | 'madeProgress'> & { dynamicBacklog?: boolean }) {
+function databaseResult(round: Pick<Awaited<ReturnType<typeof runCompanionRequestSyncDatabaseRound>>, 'received' | 'sent' | 'madeProgress'> & {
+  dynamicBacklog?: boolean; onlyRejectedObjectsPending?: boolean;
+}) {
   return {
     madeDatabaseProgress: round.madeProgress,
+    ...(round.onlyRejectedObjectsPending ? { onlyRejectedObjectsPending: true } : {}),
     ...(round.dynamicBacklog ? { dynamicDatabaseBacklog: true } : {}),
     appliedNodeIds: round.received,
     appliedObjectIds: round.received,

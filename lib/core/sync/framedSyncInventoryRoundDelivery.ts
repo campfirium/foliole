@@ -35,7 +35,8 @@ export function readFramedSyncMissingDependency(error: unknown) {
 export async function deliverFramedSyncDifferencesInDependencyOrder(
   differences: Iterable<FramedSyncInventoryDifference>,
   deliver: (difference: FramedSyncInventoryDifference) => Promise<FramedSyncDifferenceDelivery>,
-  dependencies: readonly FramedSyncInventoryDifference[] | FramedSyncDependencyResolver = []
+  dependencies: readonly FramedSyncInventoryDifference[] | FramedSyncDependencyResolver = [],
+  onDeferredDependency?: (difference: FramedSyncInventoryDifference, parent: FramedSyncInventoryDifference) => void
 ) {
   const pending = typeof dependencies === 'function' ? differences : Array.from(differences);
   const resolve = typeof dependencies === 'function' ? dependencies : dependencyResolver(pending, dependencies);
@@ -66,6 +67,7 @@ export async function deliverFramedSyncDifferencesInDependencyOrder(
             return false;
           }
           if (!await visit(parent)) {
+            onDeferredDependency?.(difference, parent);
             deferred.set(differenceKey, difference);
             return false;
           }

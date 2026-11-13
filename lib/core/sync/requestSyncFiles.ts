@@ -115,10 +115,11 @@ export class RequestSyncFiles {
 
   async writeBody(blob: CanonicalBlob, bytes: Uint8Array) {
     this.check();
-    if (bytes.byteLength > TEXT_BODY_MAX_BYTES || BigInt(bytes.byteLength) !== blob.byteLength ||
+    if (BigInt(bytes.byteLength) !== blob.byteLength ||
         bytesToHex(sha256(bytes)) !== bytesToHex(blob.sha256)) {
       throw new Error('request_sync_body_identity_mismatch');
     }
+    if (bytes.byteLength > TEXT_BODY_MAX_BYTES) throw new Error('request_sync_body_too_large');
     for (let offset = 0; offset < bytes.length; offset += FRAMED_SYNC_LIMITS.blobChunkBytes) {
       this.check();
       await this.write(this.bodyKey(blob, offset), bytes.subarray(offset, offset + FRAMED_SYNC_LIMITS.blobChunkBytes));

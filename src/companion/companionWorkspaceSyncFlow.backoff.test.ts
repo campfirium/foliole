@@ -32,6 +32,17 @@ it.each([
   expect(await sync()).toBe('pending');
 });
 
+it('stops automatic continuation when only a rejected object remains after healthy objects synced', async () => {
+  syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValue(createSyncObjectsResult({
+    appliedObjectIds: ['received'], madeDatabaseProgress: true, remainingStructureChangeCount: 1,
+    localDirtyCount: 1, remainingAttachmentResourceCount: 0, onlyRejectedObjectsPending: true
+  }));
+  expect(await sync()).toBe('skipped');
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    kind: 'run_finished', result: 'partial'
+  }));
+});
+
 it.each(['completed', 'progress'] as const)('does not hide a busy peer behind another peer: %s', async other => {
   syncPlatformMock.resolveReachableCompanionWorkspaceSyncEndpoints.mockResolvedValue([
     { endpointUrl: 'http://busy:38641' }, { endpointUrl: 'http://available:38641' }

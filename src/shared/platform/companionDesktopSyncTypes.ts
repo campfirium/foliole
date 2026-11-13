@@ -44,6 +44,7 @@ export interface CompanionDesktopSyncResult {
   syncMetadataUnavailable?: boolean;
   madeDatabaseProgress?: boolean;
   dynamicDatabaseBacklog?: boolean;
+  onlyRejectedObjectsPending?: boolean;
   appliedNodeIds: string[];
   appliedPackBlobCount: number;
   appliedPackObjectCount: number;

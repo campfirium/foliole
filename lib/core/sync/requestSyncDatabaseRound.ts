@@ -35,9 +35,10 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
   const initialPending = analysis.pending;
   let sourceChanged = Boolean(inventories.inventoryDeferred);
   let committed = false;
+  const rejected = new Set<string>();
   const result = (pending: number) => ({ complete: pending === 0, pending, transferred,
     madeProgress: pending < initialPending,
-    ...(pending > 0 && pending >= initialPending && sourceChanged && committed ? { dynamicBacklog: true as const } : {}) });
+    ...pendingRoundState(analysis, pending, rejected, sourceChanged && committed && pending >= initialPending) });
   let yielded = false;
   let prioritize = true;
   // Retry rejected nodes on the next incremental round, after the local state may have changed.
@@ -50,7 +51,7 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
     if (!differences.length && !inventories.inventoryDeferred) {
       return result(analysis.pending);
     }
-    const round = await deliverRequestSyncDatabaseDifferences(port, inventories, differences, signal, localChanged, blockedNodes);
+    const round = await deliverRequestSyncDatabaseDifferences(port, inventories, differences, signal, localChanged, blockedNodes, rejected);
     transferred += round.delivered.length;
     yielded = round.yielded;
     localChanged = port.watchLocalChanges?.();
@@ -58,6 +59,10 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
     const nextAnalysis = analyzeRequestSyncInventories(next, inventories);
     sourceChanged ||= round.sourceChanged || Boolean(next.inventoryDeferred);
     committed ||= hasConfirmedRequestSyncCommit(inventories, next, round.delivered);
+    if (onlyRejectedObjectsPending(nextAnalysis, nextAnalysis.pending, rejected)) {
+      analysis = nextAnalysis;
+      return result(nextAnalysis.pending);
+    }
     if (nextAnalysis.stateUnchanged &&
         !next.inventoryDeferred && !inventories.inventoryDeferred) {
       if (priority.length && priority.length < all.length) {
@@ -73,7 +78,7 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
     inventories = next;
     analysis = nextAnalysis;
   }
-  const sent = yielded ? await sendLocalChanges(port, inventories, analysis, blockedNodes, signal) : null;
+  const sent = yielded ? await sendLocalChanges(port, inventories, analysis, blockedNodes, rejected, signal) : null;
   if (sent) {
     transferred += sent.delivered.length;
     return result(Math.max(analysis.pending - sent.delivered.length, sent.deferred.length));
@@ -81,22 +86,32 @@ export async function runRequestSyncDatabaseRound(port: RequestSyncDatabaseRound
   return result(analysis.pending);
 }
 
+function onlyRejectedObjectsPending(analysis: RequestSyncInventoryAnalysis, pending: number, rejected: Set<string>) {
+  return pending > 0 && analysis.differences.length === pending &&
+    analysis.differences.every(difference => rejected.has(key(difference)));
+}
+
+function pendingRoundState(analysis: RequestSyncInventoryAnalysis, pending: number, rejected: Set<string>, dynamic: boolean) {
+  if (onlyRejectedObjectsPending(analysis, pending, rejected)) return { onlyRejectedObjectsPending: true as const };
+  return pending > 0 && dynamic ? { dynamicBacklog: true as const } : {};
+}
+
 /** The last pass stopped pulling for a local edit; send it now rather than in the next scheduled round. */
 async function sendLocalChanges(port: RequestSyncDatabaseRoundPort, inventories: RequestSyncInventories,
-  analysis: RequestSyncInventoryAnalysis, blockedNodes: Set<string>, signal?: AbortSignal) {
+  analysis: RequestSyncInventoryAnalysis, blockedNodes: Set<string>, rejected: Set<string>, signal?: AbortSignal) {
   const outgoing = analysis.differences
     .filter(difference => difference.direction === 'local_to_remote');
-  return outgoing.length ? deliverRequestSyncDatabaseDifferences(port, inventories, outgoing, signal, () => false, blockedNodes) : null;
+  return outgoing.length ? deliverRequestSyncDatabaseDifferences(port, inventories, outgoing, signal, () => false, blockedNodes, rejected) : null;
 }
 
 export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDatabaseRoundPort,
   inventories: RequestSyncInventories, differences: readonly FramedSyncInventoryDifference[], signal?: AbortSignal,
-  localChanged = port.watchLocalChanges?.(), blockedNodes?: Set<string>) {
+  localChanged = port.watchLocalChanges?.(), blockedNodes?: Set<string>, rejected = new Set<string>()) {
   const outcomes = new Map<string, RequestSyncObjectResult>();
   const attempted: FramedSyncInventoryDifference[] = [];
   const sizer = pullBatchSizer(Boolean(localChanged));
   let yielded = false;
-  const eligible = blockedNodes ? differences.filter(difference => !blockedNodes.has(key(difference))) : differences;
+  const eligible = differences.filter(difference => !blockedNodes?.has(key(difference)) && !rejected.has(key(difference)));
   for (const batch of directionBatches(eligible, sizer.next)) {
     signal?.throwIfAborted();
     const pull = batch[0]!.direction === 'remote_to_local';
@@ -113,15 +128,18 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
   let sourceChanged = false;
   const deferred = await deliverFramedSyncDifferencesInDependencyOrder(attempted, async difference => {
     signal?.throwIfAborted();
-    if (blockedNodes?.has(key(difference))) return 'deferred';
+    if (blockedNodes?.has(key(difference)) || rejected.has(key(difference))) return 'deferred';
     try {
       const cached = outcomes.get(key(difference));
       outcomes.delete(key(difference));
       const dependency = cached?.error ? readFramedSyncMissingDependency(cached.error) : null;
       const stale = dependency && completed.has(key({ ...difference, ...dependency }));
       const result = cached && !stale ? cached : (await port.transferObjects([difference]))[0];
-      if (!result || result.globalId !== difference.globalId || result.objectType !== difference.objectType) {
-        throw new Error('request_sync_batch_identity_mismatch');
+      assertRoundObjectResult(result, difference);
+      if (result.error === 'request_sync_body_too_large') {
+        rejected.add(key(difference));
+        port.reportObjectError(difference, new Error(result.error));
+        return 'deferred';
       }
       if (result.error) throw new Error(result.error);
       delivered.push(difference);
@@ -143,8 +161,21 @@ export async function deliverRequestSyncDatabaseDifferences(port: RequestSyncDat
       sourceChanged ||= changed;
       return 'deferred';
     }
-  }, createFramedSyncInventoryDependencyLookup(inventories));
+  }, createFramedSyncInventoryDependencyLookup(inventories), propagateRejection(rejected));
   return { delivered, deferred, sourceChanged, yielded };
+}
+
+function propagateRejection(rejected: Set<string>) {
+  return (difference: FramedSyncInventoryDifference, parent: FramedSyncInventoryDifference) => {
+    if (rejected.has(key(parent))) rejected.add(key(difference));
+  };
+}
+
+function assertRoundObjectResult(result: RequestSyncObjectResult | undefined, difference: FramedSyncInventoryDifference):
+  asserts result is RequestSyncObjectResult {
+  if (!result || result.globalId !== difference.globalId || result.objectType !== difference.objectType) {
+    throw new Error('request_sync_batch_identity_mismatch');
+  }
 }
 
 /** Local changes go out first, so an edit never waits behind applying what the peer sent. */
