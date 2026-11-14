@@ -313,12 +313,12 @@
     },
     "@electron/asar": {
       ".": "$@electron/asar",
-      "glob": "14.0.3"
+      "glob": "14.0.4"
     },
     "@electron/universal": "3.0.6",
     "minimatch": "11.0.4",
     "@capacitor/cli": {
-      "glob": "14.0.3"
+      "glob": "14.0.4"
     },
     "electron-winstaller": "$electron-winstaller",
     "@napi-rs/wasm-runtime": {
