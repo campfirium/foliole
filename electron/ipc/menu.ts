@@ -246,7 +246,8 @@ export function canDispatchNativeMenuAccelerator(commandId: string, accelerator:
 
 export function bindMenuToWindow(window: ElectronBrowserWindow) {
   window.webContents.on('before-input-event', (event, input) => {
-    if (shouldSuppressEditShortcutRepeat(input, menuItemsById.get('app.undo')?.accelerator ?? '')) {
+    const historyAccelerators = ['app.undo', 'app.redo'].map(id => menuItemsById.get(id)?.accelerator);
+    if (shouldSuppressEditShortcutRepeat(input, historyAccelerators)) {
       event.preventDefault();
     }
   });

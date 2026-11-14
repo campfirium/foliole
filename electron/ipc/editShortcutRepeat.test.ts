@@ -9,19 +9,17 @@ const keyDown: Input = {
 };
 
 it.each([
-  { platform: 'darwin', input: { meta: true }, undo: 'Command+U' },
-  { platform: 'win32', input: { control: true }, undo: 'Control+U' }
-] as const)('consumes only repeated cut and undo shortcuts on $platform', ({ platform, input, undo }) => {
-  for (const key of ['x', 'z', 'u']) {
-    const pressed = { ...keyDown, ...input, key };
-    expect(shouldSuppressEditShortcutRepeat(pressed, undo, platform)).toBe(false);
-    expect(shouldSuppressEditShortcutRepeat({ ...pressed, isAutoRepeat: true }, undo, platform)).toBe(true);
-    expect(shouldSuppressEditShortcutRepeat({ ...pressed, type: 'keyUp' }, undo, platform)).toBe(false);
+  { platform: 'darwin', modifiers: { meta: true }, accelerators: ['Command+U', 'Command+R'], redoKeys: [{ key: 'z', shift: true }] },
+  { platform: 'win32', modifiers: { control: true }, accelerators: ['Control+U', 'Control+R'], redoKeys: [{ key: 'z', shift: true }, { key: 'y' }] }
+] as const)('consumes only repeated edit shortcuts on $platform', ({ platform, modifiers, accelerators, redoKeys }) => {
+  const bindings = [...['x', 'z', 'u', 'r'].map(key => ({ key })), ...redoKeys];
+  for (const binding of bindings) {
+    const pressed = { ...keyDown, ...modifiers, ...binding };
+    expect(shouldSuppressEditShortcutRepeat(pressed, accelerators, platform)).toBe(false);
+    expect(shouldSuppressEditShortcutRepeat({ ...pressed, isAutoRepeat: true }, accelerators, platform)).toBe(true);
+    expect(shouldSuppressEditShortcutRepeat({ ...pressed, type: 'keyUp', isAutoRepeat: true }, accelerators, platform)).toBe(false);
   }
-  for (const key of ['c', 'v', 'y']) {
-    expect(shouldSuppressEditShortcutRepeat({ ...keyDown, ...input, key, isAutoRepeat: true }, undo, platform)).toBe(false);
+  for (const key of ['c', 'v', 'f']) {
+    expect(shouldSuppressEditShortcutRepeat({ ...keyDown, ...modifiers, key, isAutoRepeat: true }, accelerators, platform)).toBe(false);
   }
-  expect(shouldSuppressEditShortcutRepeat({
-    ...keyDown, ...input, key: 'z', shift: true, isAutoRepeat: true
-  }, undo, platform)).toBe(false);
 });

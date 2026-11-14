@@ -5,8 +5,8 @@ import { expect, test } from './harness/fixtures';
 import { loadNodeDocument } from './harness/localDataFileAcceptance';
 import { expectWorkspaceShell } from './harness/settings';
 
-function readUndoAccelerator(app: ElectronApplication) {
-  return app.evaluate(({ Menu }) => Menu.getApplicationMenu()?.getMenuItemById('app.undo')?.accelerator);
+function readAccelerator(app: ElectronApplication, commandId: string) {
+  return app.evaluate(({ Menu }, id) => Menu.getApplicationMenu()?.getMenuItemById(id)?.accelerator, commandId);
 }
 
 async function select(page: Page, from: number, to = from) {
@@ -22,9 +22,10 @@ async function expectContent(page: Page, content: string) {
   await expect.poll(async () => (await loadNodeDocument(page, CONTEXT_A_ID))?.content).toBe(content);
 }
 
-async function exerciseShortcut(page: Page, key: string, first: string, second: string) {
+async function exerciseShortcut(page: Page, key: string, first: string, second: string, shift = false) {
   const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
   await page.keyboard.down(modifier);
+  if (shift) await page.keyboard.down('Shift');
   try {
     await page.keyboard.down(key);
     await expectContent(page, first);
@@ -35,6 +36,7 @@ async function exerciseShortcut(page: Page, key: string, first: string, second: 
     await expectContent(page, second);
   } finally {
     await page.keyboard.up(key);
+    if (shift) await page.keyboard.up('Shift');
     await page.keyboard.up(modifier);
   }
 }
@@ -42,7 +44,8 @@ async function exerciseShortcut(page: Page, key: string, first: string, second: 
 async function prepareEditor(page: Page, customized = false) {
   if (customized) {
     await page.evaluate((metaKey) => localStorage.setItem('foliole-command-shortcut-overrides', JSON.stringify({
-      'app.undo': { primary: metaKey ? 'Cmd+U' : 'Ctrl+U' }
+      'app.undo': { primary: metaKey ? 'Cmd+U' : 'Ctrl+U' },
+      'app.redo': { primary: metaKey ? 'Cmd+R' : 'Ctrl+R' }
     })), process.platform === 'darwin');
     await page.reload();
   }
@@ -61,12 +64,16 @@ test('cut removes the selection once and cuts the current line on a fresh press'
 });
 
 for (const customized of [false, true]) {
-  test(`undo takes one step per press with the ${customized ? 'customized' : 'default'} shortcut`, async ({
+  test(`undo and redo each take one step per press with the ${customized ? 'customized' : 'default'} shortcut`, async ({
     desktopApp, desktopWindow: page
   }) => {
     await prepareEditor(page, customized);
-    await expect.poll(() => readUndoAccelerator(desktopApp)).toBe(
+    await expect.poll(() => readAccelerator(desktopApp, 'app.undo')).toBe(
       `${process.platform === 'darwin' ? 'Command' : 'Control'}+${customized ? 'U' : 'Z'}`
+    );
+    const modifier = process.platform === 'darwin' ? 'Command' : 'Control';
+    await expect.poll(() => readAccelerator(desktopApp, 'app.redo')).toBe(
+      `${modifier}+${customized ? 'R' : 'Shift+Z'}`
     );
     await select(page, CONTEXT_A_CONTENT.length);
     await page.keyboard.insertText(' first');
@@ -75,5 +82,6 @@ for (const customized of [false, true]) {
     await page.keyboard.insertText('second ');
     await expectContent(page, '# second Context A\n\nBase A first');
     await exerciseShortcut(page, customized ? 'U' : 'Z', CONTEXT_A_CONTENT + ' first', CONTEXT_A_CONTENT);
+    await exerciseShortcut(page, customized ? 'R' : 'Z', CONTEXT_A_CONTENT + ' first', '# second Context A\n\nBase A first', !customized);
   });
 }

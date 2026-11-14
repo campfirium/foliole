@@ -52,14 +52,16 @@ function shouldSkipCommandShortcut(args: {
   return !args.event.altKey && !args.event.ctrlKey && !args.event.metaKey && !FUNCTION_KEY_PATTERN.test(args.event.key);
 }
 
-function isRepeatedEditShortcut(event: KeyboardEvent, undo: CommandShortcutSet | undefined) {
+function isRepeatedEditShortcut(event: KeyboardEvent, shortcutMap: Record<string, CommandShortcutSet | undefined>) {
   if (!event.repeat || event.isComposing) return false;
-  const hasStandardModifier = usesMacShortcutProjection()
-    ? event.metaKey && !event.ctrlKey
-    : event.ctrlKey && !event.metaKey;
+  const isMac = usesMacShortcutProjection();
+  const hasStandardModifier = isMac ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
   const key = event.key.toLowerCase();
-  return (hasStandardModifier && !event.altKey && !event.shiftKey && (key === 'x' || key === 'z')) ||
-    matchesShortcutSet(event, undo);
+  const isStandardEditShortcut = hasStandardModifier && !event.altKey && (
+    key === 'z' || (!event.shiftKey && (key === 'x' || (!isMac && key === 'y')))
+  );
+  return isStandardEditShortcut || matchesShortcutSet(event, shortcutMap[APP_COMMAND_IDS.undo]) ||
+    matchesShortcutSet(event, shortcutMap[APP_COMMAND_IDS.redo]);
 }
 
 export function useAppCommandShortcutDispatcher(args: {
@@ -72,7 +74,7 @@ export function useAppCommandShortcutDispatcher(args: {
     () =>
       onWindowKeydownCapture((event) => {
         // Consume the repeat before Chromium can run its default editing action.
-        if (!args.isCommandSurfaceOpen && isRepeatedEditShortcut(event, args.shortcutMap[APP_COMMAND_IDS.undo])) {
+        if (!args.isCommandSurfaceOpen && isRepeatedEditShortcut(event, args.shortcutMap)) {
           event.preventDefault();
           return;
         }

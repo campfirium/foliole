@@ -148,4 +148,4 @@ Android's Devanagari annotation boundary setting is a device-local touch selecti
 
 The macOS and Windows preference to quit Foliole when closing its main window is local to the desktop library. It stays in Settings because it controls native window behavior and the availability of background services on that device.
 
-Desktop Cut and Undo suppress keyboard auto-repeat at the input boundary. Clipboard editing and interactive undo history stay in the desktop editor. Agent Control continues to use explicit material operations.
+Desktop Cut, Undo, and Redo suppress keyboard auto-repeat at the input boundary. Clipboard editing and interactive editing history stay in the desktop editor. Agent Control continues to use explicit material operations.
