@@ -86,3 +86,23 @@ it('keeps a dev full run within the free hosted job concurrency', () => {
     }
   }
 });
+
+it('passes artifact read permission through each desktop source workflow call', () => {
+  const remote = workflow('remote-quality');
+  const core = workflow('hosted-quality-core');
+  const checkCall = (caller, jobName, reusableName) => {
+    const job = caller.jobs[jobName];
+    expect(job.uses).toBe(`./.github/workflows/${reusableName}.yml`);
+    expect((job.permissions ?? caller.permissions).actions).toBe('read');
+    expect(workflow(reusableName).permissions.actions).toBe('read');
+  };
+
+  checkCall(remote, 'scoped-quality', 'hosted-quality-core');
+  checkCall(core, 'desktop-source-tests', 'hosted-quality-desktop-source');
+  checkCall(remote, 'full-quality', 'dev-quality-chain');
+  checkCall(workflow('t7-hosted-quality'), 't6_quality', 'dev-quality-chain');
+  checkCall(workflow('t7-release'), 't6_quality', 't6-hosted-quality');
+  checkCall(workflow('release-quality-recheck'), 'chain', 't6-hosted-quality');
+  checkCall(dev, 't5-desktop-source', 'hosted-quality-desktop-source');
+  checkCall(gated, 't5-desktop-source', 'hosted-quality-desktop-source');
+});
