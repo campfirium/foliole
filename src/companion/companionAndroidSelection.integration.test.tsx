@@ -1,5 +1,5 @@
 import { EditorView } from '@codemirror/view';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
@@ -9,6 +9,7 @@ import { CompanionArticleDocument } from './CompanionArticleDocument';
 import { CompanionDevanagariSelectionControl } from './CompanionDevanagariSelectionControl';
 import { CompanionSelectionAnnotationToolbar } from './CompanionSelectionAnnotationToolbar';
 import { resolveCompanionSelectionCommandPayload } from './companionSelectionCommandPayload';
+import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
 
 const platform = vi.hoisted(() => ({ value: 'android' }));
 vi.mock('@capacitor/core', async (importOriginal) => {
@@ -92,6 +93,46 @@ it('maps a multiline selection and leaves English boundaries unchanged', () => {
   window.getSelection()!.setBaseAndExtent(end, 6, text, 6);
   expect(resolveCompanionSelectionCommandPayload('source', adapter)?.entries[0]?.locator)
     .toEqual({ from: 6, to: 17, originalText: 'here\nFinish' });
+});
+
+it.each(['annotation', 'off'] as const)('keeps the toolbar on the moving focus after the native anchor escapes (%s)', async (mode) => {
+  fireEvent.change(render(<CompanionDevanagariSelectionControl />).getByRole('combobox'), { target: { value: mode } });
+  const source = `पहला क्षत्र\n\n${body}`;
+  const { adapter, view, text } = openDocument(false, source);
+  const end = view.contentDOM.querySelectorAll('.cm-line')[2]!.firstChild!;
+  const native = window.getSelection()!;
+  const getRangeAt = native.getRangeAt.bind(native);
+  vi.spyOn(native, 'getRangeAt').mockImplementation(index => Object.assign(getRangeAt(index), {
+    getBoundingClientRect: () => new DOMRect(20, 100, 100, 20)
+  }));
+  const { result } = renderHook(() => useCompanionSelectionAnnotationToolbar({
+    canCreateAnnotation: true, nodeId: 'source', snapshot: null
+  }));
+  result.current.handleEditorReady(adapter);
+  view.dispatch({ selection: { anchor: 5, head: 11 }, userEvent: 'select.pointer' });
+  native.setBaseAndExtent(text, 5, text, 11);
+  fireEvent.pointerUp(view.contentDOM);
+  const settle = async () => act(async () => { await new Promise(resolve => setTimeout(resolve, 300)); });
+  await settle();
+  expect(result.current.selectionToolbar?.payload?.selectionText).toBe('क्षत्र');
+
+  // The report shows a connected element anchor outside the editor, a moving in-editor focus,
+  // and an unchanged CodeMirror range.
+  native.setBaseAndExtent(view.dom.parentElement!, 0, end, 6);
+  expect(adapter.getSelection()).toEqual({ from: 5, to: 11 });
+  fireEvent(document, new Event('selectionchange'));
+  await settle();
+
+  const locator = { from: 5, to: 19, originalText: source.slice(5, 19) };
+  expect(result.current.selectionToolbar?.payload?.entries[0]?.locator).toEqual(locator);
+  expect(result.current.resolveSelectionPayload()?.entries[0]?.locator).toEqual(locator);
+
+  native.collapse(end, 6);
+  fireEvent(document, new Event('selectionchange'));
+  await settle();
+  expect(result.current.selectionToolbar).toBeNull();
+  native.setBaseAndExtent(view.dom.parentElement!, 0, end, 5);
+  expect(result.current.resolveSelectionPayload()).toBeNull();
 });
 
 it('does not annotate an invisible range or accept an endpoint owned by another document', () => {

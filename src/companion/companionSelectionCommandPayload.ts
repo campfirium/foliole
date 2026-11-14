@@ -71,27 +71,42 @@ function getDomSelectionCommandPayload(parentNodeId: string, adapter: EditorAdap
     : null;
 }
 
-function readAndroidDomRange(adapter: EditorAdapter, selection: Selection): EditorSelection[] {
+const androidSelectionStarts = new WeakMap<EditorAdapter, {
+  selection: Selection;
+  content: string;
+  position: number;
+  range: EditorSelection;
+}>();
+
+function readAndroidDomRange(adapter: EditorAdapter, selection: Selection, content: string): EditorSelection | null {
   const { anchorNode, focusNode } = selection;
-  if (!anchorNode?.isConnected || !focusNode?.isConnected || selection.rangeCount !== 1) return [];
-  const fromAnchor = adapter.getDocumentPositionAtDomPoint?.(anchorNode, selection.anchorOffset);
+  if (!anchorNode?.isConnected || !focusNode?.isConnected || selection.rangeCount !== 1) return null;
   const fromFocus = adapter.getDocumentPositionAtDomPoint?.(focusNode, selection.focusOffset);
-  if (fromAnchor == null || fromFocus == null || fromAnchor === fromFocus) return [];
-  const from = Math.min(fromAnchor, fromFocus);
-  const to = Math.max(fromAnchor, fromFocus);
-  return [{ from, to }];
+  if (fromFocus == null) return null;
+  const fromAnchor = adapter.getDocumentPositionAtDomPoint?.(anchorNode, selection.anchorOffset);
+  const editorRange = adapter.getSelection();
+  const start = androidSelectionStarts.get(adapter);
+  // WebView can replace the fixed endpoint with an ancestor while continuing to move the focus.
+  const position = fromAnchor ?? (selection.anchorOffset === 0 &&
+    anchorNode instanceof Element && anchorNode.contains(focusNode) &&
+    start?.selection === selection && start.content === content &&
+    start.range.from === editorRange.from && start.range.to === editorRange.to ? start.position : null);
+  if (position == null || position === fromFocus) return null;
+  if (fromAnchor != null) androidSelectionStarts.set(adapter, { selection, content, position, range: editorRange });
+  return { from: Math.min(position, fromFocus), to: Math.max(position, fromFocus) };
 }
 
 function resolveAndroidSelectionPayload(parentNodeId: string, adapter: EditorAdapter, mode: DevanagariSelectionMode) {
-  const selection = getReadableDomSelection();
+  const selection = window.getSelection();
+  const content = adapter.getContent();
   // A non-collapsed native range can contain only an invisible widget buffer.
-  const [range] = selection && /[^\s\p{Default_Ignorable_Code_Point}]/u.test(selection.toString())
-    ? readAndroidDomRange(adapter, selection) : [];
+  const range = selection && !selection.isCollapsed && /[^\s\p{Default_Ignorable_Code_Point}]/u.test(selection.toString())
+    ? readAndroidDomRange(adapter, selection, content) : null;
   if (!range) {
+    androidSelectionStarts.delete(adapter);
     traceAndroidSelection('payload', [0]);
     return null;
   }
-  const content = adapter.getContent();
   const normalized = mode === 'annotation' ? expandDevanagariAnnotationRange(content, range) : range;
   if (normalized.from !== range.from || normalized.to !== range.to) {
     traceAndroidSelection('normalize', [range.from, range.to, normalized.from, normalized.to]);
