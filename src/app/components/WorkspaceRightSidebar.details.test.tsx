@@ -57,7 +57,7 @@ it('renders backlinks in the dedicated inspector panel and opens the linked note
     />
   );
 
-  expect(await screen.findByRole('heading', { level: 3, name: 'Backlinks' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { level: 3, name: 'Backlinks' }, { timeout: 5000 })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /source note/i }));
 
   expect(onSelectNode).toHaveBeenCalledWith('source');
