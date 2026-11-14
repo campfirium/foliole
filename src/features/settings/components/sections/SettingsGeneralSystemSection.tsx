@@ -6,8 +6,6 @@ import {
   saveLoginItemSettingsToRuntime,
   type RuntimeLoginItemSettingsState
 } from '../../../../shared/platform/loginItemSettings';
-import { isDesktopRuntime } from '../../../../shared/platform/runtime';
-import { resolveRuntimeOperatingSystem } from '../../../../shared/platform/runtime/operatingSystem';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsControlSlot,
@@ -16,6 +14,7 @@ import {
   settingsSwitchClassName,
   settingsSwitchKnobClassName
 } from '../../../../shared/ui';
+import { canShowQuitOnClose } from '../../model/quitOnCloseAvailability';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
@@ -112,7 +111,7 @@ export function SettingsGeneralSystemSection({ previewDesktopSettings = false }:
     };
   }, [previewDesktopSettings]);
 
-  const showQuitOnClose = !previewDesktopSettings && isDesktopRuntime() && resolveRuntimeOperatingSystem() !== 'other';
+  const showQuitOnClose = canShowQuitOnClose(previewDesktopSettings);
   if (!state && !showQuitOnClose) {
     return null;
   }

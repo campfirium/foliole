@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
-import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvoke } from '../../../../lib/platform/nativeContract';
 import { APP_LANGUAGE_STORAGE_KEY } from '../../../shared/localization/appLanguage';
@@ -15,7 +15,11 @@ beforeAll(async () => {
   await preloadTranslationCatalog('zh-Hans');
 });
 
+afterEach(() => vi.restoreAllMocks());
+
 beforeEach(() => {
+  vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('Win32');
+  vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Windows');
   window.localStorage.clear();
   HTMLElement.prototype.scrollIntoView = vi.fn();
   const invoke = vi.fn(async (command: string) => {
@@ -230,4 +234,16 @@ it('keeps registered row anchors renderable in their categories', async () => {
     unmount();
     cleanup();
   }
+});
+
+it('omits the quit-on-close result when the desktop host cannot render it', () => {
+  vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('Linux x86_64');
+  vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Linux');
+  renderWithMouseGestureProvider(<SettingsPanel {...createProps()} requestedCategory="about" />);
+
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search settings' }), {
+    target: { value: 'Quit Foliole when closing the window' }
+  });
+
+  expect(screen.queryByRole('option', { name: /Quit Foliole when closing the window/ })).toBeNull();
 });
