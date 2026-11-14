@@ -170,6 +170,28 @@ cleanup still owed by its owner.
 
 ## Pending centralized QA
 
+### November 14 dependency batch
+
+Adoption commit `2ccec03eb` passed local fast quality, macOS Electron native
+health including SQLite and DNS-SD, the companion web build, 100 Swift host
+tests, and the unsigned iOS Simulator build. Run full quality and dependency
+hardening before closing the proposals below. Electron 45.3.2 is the latest
+stable version at review time. Follow the normal desktop release schedule.
+The embedded Node version remains 24.22.2.
+
+| Proposal | Reviewed Renovate head | Local target |
+| --- | --- | --- |
+| [#200](https://github.com/campfirium/foliole/pull/200) | `cf08d2833504669bb8830c90ca7a0ca71664c5dd` | Electron 45.3.2 |
+| [#236](https://github.com/campfirium/foliole/pull/236) | `989f52335f5ad7acfcd7e48d3016b932609b7a0b` | Lucide React 1.70.0 |
+| [#237](https://github.com/campfirium/foliole/pull/237) | `c6337f337af22c5bf5d8e80a5b81cda7fd4586b9` | SwiftProtobuf 1.41.0 |
+| [#242](https://github.com/campfirium/foliole/pull/242) | `bd40dae804874ad2c1bd6c4a11c3296d654f3c2f` | jsdom 31.0.0 |
+| [#244](https://github.com/campfirium/foliole/pull/244) | `8611dfcbe458d69c5bd50f699c975dcdfac33a1b` | glob 14.0.4 for ASAR and Capacitor |
+| [#245](https://github.com/campfirium/foliole/pull/245) | `62b847899da596c997324f0e8d4cef2cfd5b1f52` | minimatch 11.0.5 |
+| [#246](https://github.com/campfirium/foliole/pull/246) | `0d5c841650203a06e98e32ec6db0e9111f663032` | Tailwind CSS 4.3.5 |
+| [#247](https://github.com/campfirium/foliole/pull/247) | `ea118767c42717f40fc7e13198d13a1ecc705781` | eslint-plugin-import-x 4.18.0 |
+| [#248](https://github.com/campfirium/foliole/pull/248) | `c3302682155a18af82881bf134735479aeaff5c1` | Zustand 5.1.0 |
+| [#249](https://github.com/campfirium/foliole/pull/249) | `4e0132de37cd1f94d2b0fd45f37a11c77dc219a6` | Playwright 1.65.0 |
+
 ### November 12 iOS dependency batch
 
 [#237](https://github.com/campfirium/foliole/pull/237) targets
