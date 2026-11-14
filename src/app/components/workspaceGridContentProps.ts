@@ -159,7 +159,9 @@ function selectWorkspaceRightSidebarProps({
   return {
     activePanelId: activeRightPanelId,
     activeNodeId: documentNodeId,
-    assistantActiveNodeId: resolveAssistantMainPanelNodeId({ documentNodeId, props }),
+    assistantActiveNodeId: props.externalLibrary.isExternalViewOpen
+      ? null
+      : resolveAssistantMainPanelNodeId({ documentNodeId, props }),
     assistantWorkspaceContext: resolveAssistantMainPanelWorkspaceContext({ props }),
     outlineActivePosition,
     editorAdapterRef: props.document.editorAdapterRef,

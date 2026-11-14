@@ -3,6 +3,7 @@ import { expect, it, vi } from 'vitest';
 import type { NativeAssistantTurnEvent } from '../../../lib/platform/nativeAssistantContract';
 
 import { applyAssistantTurnEvent, type AssistantActiveTurn } from './useAssistantTurnEventSubscription';
+import { PENDING_THREAD_KEY } from './workspaceRightSidebarAssistantPanelModel';
 
 it('keeps a partial reply and does not restore the sent prompt when the turn later fails', () => {
   const activeTurnRef: { current: AssistantActiveTurn | null } = {
@@ -57,7 +58,7 @@ it('keeps a partial reply and does not restore the sent prompt when the turn lat
       text: 'A useful partial reply'
     })
   }));
-  expect(common.onProviderThreadStarted).toHaveBeenCalledWith('thread-1');
+  expect(common.onProviderThreadStarted).toHaveBeenCalledWith('thread-1', PENDING_THREAD_KEY);
   expect(setMessageText).not.toHaveBeenCalled();
   expect(setSending).toHaveBeenCalledWith(false);
 });

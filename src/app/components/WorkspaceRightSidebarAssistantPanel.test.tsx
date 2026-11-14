@@ -106,7 +106,7 @@ it('creates a new thread and moves pending messages into the returned thread cac
   fireEvent.click(screen.getByRole('button', { name: 'Back to history' }));
   expect(screen.getByRole('button', { name: /new prompt/i })).toBeInTheDocument();
 });
-it('continues a selected thread and switches to its saved node location', async () => {
+it('continues a selected thread and opens its saved node only from its tag', async () => {
   enableFolioleAide();
   const onSelectNode = vi.fn();
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
@@ -127,6 +127,8 @@ it('continues a selected thread and switches to its saved node location', async 
     />
   );
   fireEvent.click(await screen.findByRole('button', { name: /original prompt/i }));
+  expect(onSelectNode).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: /^Open material:/ }));
   expect(onSelectNode).toHaveBeenCalledWith('node-2');
   fireEvent.change(screen.getByLabelText('Foliole Aide message'), { target: { value: 'Follow-up' } });
   fireEvent.submit(screen.getByRole('button', { name: 'Send' }).closest('form')!);
@@ -213,23 +215,30 @@ it('updates the pending assistant response from turn delta events', async () => 
       message: { text: 'Final answer', threadId: 'thread-new', turnId: 'turn-1' },
       provider: 'codex-app-server',
       state: 'ready',
-      threadIndex: createThread({ providerThreadId: 'thread-new' })
+      threadIndex: createThread({ providerThreadId: 'thread-new', location: { type: 'node', nodeId: 'node-1' } })
     };
   });
 
-  renderWithLocalization(
-    <WorkspaceRightSidebarAssistantPanel
-      activeNodeId="node-1"
-      nodesById={{ 'node-1': createNode({ id: 'node-1' }) }}
-      onSelectNode={vi.fn()}
-    />
+  const nodesById = {
+    'node-1': createNode({ id: 'node-1', title: 'First material' }),
+    'node-2': createNode({ id: 'node-2', title: 'Next material' })
+  };
+  const onSelectNode = vi.fn();
+  const renderPanel = (activeNodeId: string) => (
+    <WorkspaceRightSidebarAssistantPanel activeNodeId={activeNodeId} nodesById={nodesById} onSelectNode={onSelectNode} />
   );
+  const { rerender } = renderWithLocalization(renderPanel('node-1'));
   await screen.findByLabelText('Foliole Aide message');
 
   fireEvent.change(screen.getByLabelText('Foliole Aide message'), { target: { value: 'New prompt' } });
   fireEvent.click(screen.getByRole('button', { name: 'Send' }));
 
   expect(await screen.findByText('Partial answer')).toBeInTheDocument();
+  expect(screen.getByText('This material')).toBeInTheDocument();
+  rerender(renderPanel('node-2'));
+  expect(screen.getByRole('button', { name: 'Open material: First material' })).toHaveTextContent('First material');
   releaseResponse();
   expect(await screen.findByText('Final answer')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Open material: First material' }));
+  expect(onSelectNode).toHaveBeenCalledWith('node-1');
 });

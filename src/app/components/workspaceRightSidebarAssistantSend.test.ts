@@ -18,7 +18,7 @@ it('keeps tool context but omits current material focus when following is off', 
     location: { nodeId: node.id, type: 'node' },
     nodesById: { [node.id]: node },
     provider: 'codex-app-server',
-    selectedRecord: null,
+    openingLocation: { nodeId: node.id, type: 'node' },
     selectedThreadId: null
   }, 'turn-1', 'Question');
 
@@ -46,7 +46,7 @@ it('sends only a material pointer when following is on', async () => {
     location: { nodeId: node.id, type: 'node' },
     nodesById: { [node.id]: node },
     provider: 'codex-app-server',
-    selectedRecord: null,
+    openingLocation: { nodeId: node.id, type: 'node' },
     selectedThreadId: null
   }, 'turn-2', 'Question');
 
@@ -78,7 +78,7 @@ it('includes selected image drafts in the native assistant payload', async () =>
     location: { nodeId: node.id, type: 'node' },
     nodesById: { [node.id]: node },
     provider: 'codex-app-server',
-    selectedRecord: null,
+    openingLocation: { nodeId: node.id, type: 'node' },
     selectedThreadId: null
   }, 'turn-image', 'Describe this', [image]);
 
@@ -96,7 +96,7 @@ it('sends the resolved model selection on every turn', async () => {
     modelSelection,
     nodesById: { [node.id]: node },
     provider: 'codex-app-server',
-    selectedRecord: null,
+    openingLocation: { nodeId: node.id, type: 'node' },
     selectedThreadId: 'existing-thread'
   }, 'turn-model', 'Use this model');
 

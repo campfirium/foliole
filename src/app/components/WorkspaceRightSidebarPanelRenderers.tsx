@@ -107,13 +107,15 @@ function renderAssistantPanel(
     | 'editorAdapterRef'
     | 'nodesById'
     | 'onOpenModelSettings'
+    | 'trashedNodeIds'
     | 'onSelectNode'
   >
 ) {
   return (
     <WorkspaceRightSidebarAssistantPanel
-      activeNodeId={props.assistantActiveNodeId ?? props.activeNodeId}
+      activeNodeId={props.assistantActiveNodeId === undefined ? props.activeNodeId : props.assistantActiveNodeId}
       workspaceContextOverride={props.assistantWorkspaceContext}
+      trashedNodeIds={props.trashedNodeIds}
       editorAdapterRef={props.editorAdapterRef}
       nodesById={props.nodesById}
       {...(props.onOpenModelSettings ? { onOpenModelSettings: props.onOpenModelSettings } : {})}

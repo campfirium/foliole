@@ -206,7 +206,7 @@ it('keeps the local history preview when persisted messages fail to load', async
   expect(await screen.findByText('Local history preview: Saved prompt preview')).toBeInTheDocument();
 });
 
-it('shows concrete topic paths for global history threads', async () => {
+it('shows linked material titles for global history threads', async () => {
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
     createThread({
       location: { nodeId: 'node-2', type: 'node' },
@@ -227,5 +227,6 @@ it('shows concrete topic paths for global history threads', async () => {
     />
   );
 
-  expect(await screen.findByText('Topic: Projects / Saved topic · Saved prompt preview')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Open material: Saved topic' })).toBeInTheDocument();
+  expect(screen.getByText('Saved prompt preview')).toBeInTheDocument();
 });

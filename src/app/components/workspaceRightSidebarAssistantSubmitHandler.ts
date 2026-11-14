@@ -27,6 +27,7 @@ import { sendAssistantTurn } from './workspaceRightSidebarAssistantSend';
 
 type AssistantSubmitPanelArgs = {
   activeNodeId: string | null;
+  trashedNodeIds?: readonly string[] | undefined;
   aideReady: boolean;
   editorAdapterRef?: WorkspaceLayoutDocumentProps['editorAdapterRef'] | undefined;
   failedText: string;
@@ -42,6 +43,8 @@ type AssistantSubmitState = {
   followCurrentMaterial: boolean;
   imageDrafts: NativeAssistantImageDraft[];
   location: ReturnType<typeof resolveAssistantLocation>;
+  pendingLocation: ReturnType<typeof resolveAssistantLocation> | null;
+  setPendingLocation: (location: ReturnType<typeof resolveAssistantLocation>) => void;
   messageText: string;
   modelSelection?: NativeAssistantModelSelection;
   provider: NativeAssistantProviderId;
@@ -68,6 +71,11 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
     event.preventDefault();
     const prompt = args.messageText.trim();
     if (!args.aideReady || !prompt || args.sending) return;
+    const node = args.activeNodeId ? args.nodesById[args.activeNodeId] : null;
+    const eligible = node && node.kind !== 'folder' && !node.specialKind && !args.trashedNodeIds?.includes(node.id);
+    const openingLocation = args.selectedRecord?.location ?? args.pendingLocation
+      ?? (eligible ? args.location : { type: 'workspace' as const });
+    if (!args.selectedRecord) args.setPendingLocation(openingLocation);
     args.setMessageText('');
     args.setSending(true);
     const threadKey = args.threads.selectedThreadId ?? PENDING_THREAD_KEY;
@@ -85,6 +93,7 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
       const result = await sendAssistantTurn(
         {
           ...args,
+          openingLocation,
           editorAdapterRef: args.editorAdapterRef,
           selectedThreadId: args.threads.selectedThreadId
         },
@@ -114,7 +123,9 @@ function applySendResult(result: SendResultArgs) {
     markContinuationPrompt(result, threadId);
     result.dispatchCache(createReadyMessageAction(threadId, result.pendingId, result.result));
     if (result.result.threadIndex) result.threads.upsertRecord(result.result.threadIndex);
-    result.threads.selectThreadId(threadId);
+    result.threads.selectThreadId((current) =>
+      current === result.threads.selectedThreadId || current === threadId ? threadId : current
+    );
     result.setImageDrafts([]);
     return;
   }

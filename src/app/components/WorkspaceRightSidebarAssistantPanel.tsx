@@ -15,6 +15,7 @@ export function WorkspaceRightSidebarAssistantPanel(props: {
   activeNodeId: string | null;
   editorAdapterRef?: WorkspaceLayoutDocumentProps['editorAdapterRef'] | undefined;
   nodesById: Record<string, Node>;
+  trashedNodeIds?: readonly string[] | undefined;
   onOpenModelSettings?: () => void;
   onSelectNode: (nodeId: string) => void;
   workspaceContextOverride?: NativeAssistantWorkspaceContext | undefined;
@@ -49,6 +50,7 @@ export function WorkspaceRightSidebarAssistantPanel(props: {
           activeNodeId={props.activeNodeId}
           controller={controller}
           nodesById={props.nodesById}
+          trashedNodeIds={props.trashedNodeIds}
         />
       ) : null}
     </div>

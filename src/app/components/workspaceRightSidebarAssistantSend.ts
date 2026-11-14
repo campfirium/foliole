@@ -19,7 +19,7 @@ export async function sendAssistantTurn(
   message: string,
   images: NativeAssistantImageDraft[] = []
 ) {
-  const openingLocation = args.selectedRecord?.location ?? args.location;
+
   const workspaceContext = resolveAssistantTurnReferenceContext({
     followCurrentMaterial: args.followCurrentMaterial,
     location: args.location,
@@ -33,7 +33,7 @@ export async function sendAssistantTurn(
     ...(args.provider === 'codex-app-server' && args.modelSelection
       ? { modelSelection: args.modelSelection }
       : {}),
-    openingLocation,
+    openingLocation: args.openingLocation,
     provider: args.provider,
     workspaceContext,
     ...(args.selectedThreadId ? { providerThreadId: args.selectedThreadId } : {})
@@ -48,7 +48,7 @@ export type AssistantSendTurnArgs = {
   modelSelection?: NativeAssistantModelSelection;
   provider: import('../../../lib/platform/nativeAssistantContract').NativeAssistantProviderId;
   nodesById: Record<string, Node>;
-  selectedRecord: NativeAssistantThreadIndexRecord | null;
+  openingLocation: NativeAssistantThreadIndexRecord['location'];
   selectedThreadId: string | null;
   workspaceContextOverride?: NativeAssistantWorkspaceContext | undefined;
 };

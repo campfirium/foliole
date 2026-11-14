@@ -95,6 +95,8 @@ it('continues a node thread while keeping the current main panel as context', as
   fireEvent.change(screen.getByLabelText('Foliole Aide message'), { target: { value: 'Follow-up' } });
   fireEvent.submit(screen.getByRole('button', { name: 'Send' }).closest('form')!);
 
+  expect(onSelectNode).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: /^Open material:/ }));
   expect(onSelectNode).toHaveBeenCalledWith('node-2');
   await waitFor(() =>
     expect(assistantRuntime.sendAssistantMessage).toHaveBeenCalledWith(
@@ -151,14 +153,14 @@ it('continues an unavailable topic thread with the visible main panel context', 
   );
 });
 
-it('starts a folder thread using the active folder node location', async () => {
+it('starts an unlinked thread while retaining folder context', async () => {
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([]);
   assistantRuntime.sendAssistantMessage.mockResolvedValueOnce({
     message: { text: 'Folder answer', threadId: 'thread-folder', turnId: 'turn-1' },
     provider: 'codex-app-server',
     state: 'ready',
     threadIndex: createThread({
-      location: { nodeId: 'folder-1', type: 'node' },
+      location: { type: 'workspace' },
       providerThreadId: 'thread-folder'
     })
   });
@@ -170,6 +172,7 @@ it('starts a folder thread using the active folder node location', async () => {
       onSelectNode={vi.fn()}
     />
   );
+  expect(await screen.findByText('Full library')).toBeInTheDocument();
   fireEvent.change(await screen.findByLabelText('Foliole Aide message'), {
     target: { value: 'Summarize this folder' }
   });
@@ -179,7 +182,7 @@ it('starts a folder thread using the active folder node location', async () => {
     expect(assistantRuntime.sendAssistantMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         message: 'Summarize this folder',
-        openingLocation: { nodeId: 'folder-1', type: 'node' },
+        openingLocation: { type: 'workspace' },
         workspaceContext: expect.objectContaining({
           activeKind: 'folder',
           activeNodeId: 'folder-1',

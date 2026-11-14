@@ -40,18 +40,6 @@ export function findSelectedAssistantRecord(
   return records.find((record) => record.providerThreadId === selectedThreadId) ?? null;
 }
 
-export function selectAssistantRecord(
-  record: NativeAssistantThreadIndexRecord,
-  nodesById: Record<string, Node>,
-  onSelectNode: (nodeId: string) => void,
-  selectThreadId: (threadId: string | null) => void
-) {
-  selectThreadId(record.providerThreadId);
-  if (record.location.type === 'node' && nodesById[record.location.nodeId]) {
-    onSelectNode(record.location.nodeId);
-  }
-}
-
 export function getSelectedAssistantThreadNotice(
   record: NativeAssistantThreadIndexRecord | null,
   nodesById: Record<string, Node>,

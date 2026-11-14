@@ -29,7 +29,7 @@ export function useAssistantTurnEventSubscription(args: {
     provider: NativeAssistantTurnEvent['provider'],
     category: NativeAssistantFailureCategory
   ) => void;
-  onProviderThreadStarted: (providerThreadId: string) => void;
+  onProviderThreadStarted: (providerThreadId: string, previousThreadKey: string) => void;
   setMessageText: (text: string) => void;
   setSending: (sending: boolean) => void;
 }) {
@@ -71,7 +71,7 @@ export function applyAssistantTurnEvent(args: {
     provider: NativeAssistantTurnEvent['provider'],
     category: NativeAssistantFailureCategory
   ) => void;
-  onProviderThreadStarted: (providerThreadId: string) => void;
+  onProviderThreadStarted: (providerThreadId: string, previousThreadKey: string) => void;
   setMessageText: (text: string) => void;
   setSending: (sending: boolean) => void;
 }) {
@@ -81,8 +81,8 @@ export function applyAssistantTurnEvent(args: {
   if (args.event.kind === 'started' && args.event.providerThreadId
     && activeTurn.threadKey !== args.event.providerThreadId) {
     args.dispatchCache({ fromKey: activeTurn.threadKey, toKey: args.event.providerThreadId, type: 'move' });
+    args.onProviderThreadStarted(args.event.providerThreadId, activeTurn.threadKey);
     activeTurn.threadKey = args.event.providerThreadId;
-    args.onProviderThreadStarted(args.event.providerThreadId);
   }
   if (args.event.kind === 'delta') {
     activeTurn.responseText = args.event.text ?? '';

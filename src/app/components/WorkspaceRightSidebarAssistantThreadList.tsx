@@ -13,13 +13,11 @@ import {
   inspectorListTitleClassName
 } from '../../shared/ui';
 
-import {
-  getThreadLocationLabelKind,
-  resolveThreadLocationPath
-} from './workspaceRightSidebarAssistantPanelModel';
+import { WorkspaceRightSidebarAssistantMaterialTags } from './WorkspaceRightSidebarAssistantMaterialTags';
 
 export function WorkspaceRightSidebarAssistantThreadList(props: {
-  activeNodeId: string | null;
+  onOpenMaterial: (nodeId: string) => void;
+  trashedNodeIds?: readonly string[] | undefined;
   nodesById: Record<string, Node>;
   records: NativeAssistantThreadIndexRecord[];
   selectedThreadId: string | null;
@@ -35,22 +33,30 @@ export function WorkspaceRightSidebarAssistantThreadList(props: {
     >
       {props.records.map((record) => (
         <li className={`${inspectorListDividerClassName} flex min-w-0 items-stretch`} key={record.providerThreadId}>
-          <InspectorListRow
-            active={record.providerThreadId === props.selectedThreadId}
-            className={`${inspectorListInsetPaddingClassName} min-w-0 flex-1 py-2`}
-            onClick={() => props.onSelectRecord(record)}
-          >
-            <span className="min-w-0">
-              <span className={`${inspectorListTitleClassName} block truncate`}>
-                {record.title}
+          <div className="min-w-0 flex-1">
+            <InspectorListRow
+              active={record.providerThreadId === props.selectedThreadId}
+              className={`${inspectorListInsetPaddingClassName} min-w-0 w-full pt-2 pb-1`}
+              onClick={() => props.onSelectRecord(record)}
+            >
+              <span className="min-w-0">
+                <span className={`${inspectorListTitleClassName} block truncate`}>
+                  {record.title}
+                </span>
+                <span className={`${inspectorListBodyClassName} block truncate`}>
+                  {record.preview || t('desktop.rightPanel.assistant.noPreview')}
+                </span>
               </span>
-              <span className={`${inspectorListBodyClassName} block truncate`}>
-                {getThreadLocationText(record, props.activeNodeId, props.nodesById, t)}
-                {' · '}
-                {record.preview || t('desktop.rightPanel.assistant.noPreview')}
-              </span>
-            </span>
-          </InspectorListRow>
+            </InspectorListRow>
+            <div className={`${inspectorListInsetPaddingClassName} pb-2`}>
+              <WorkspaceRightSidebarAssistantMaterialTags
+                location={record.location}
+                nodesById={props.nodesById}
+                onOpenMaterial={props.onOpenMaterial}
+                trashedNodeIds={props.trashedNodeIds}
+              />
+            </div>
+          </div>
           <div className="flex shrink-0 items-center pr-2">
             <AppIconButton
               disabled={props.removingThreadId === record.providerThreadId}
@@ -63,35 +69,4 @@ export function WorkspaceRightSidebarAssistantThreadList(props: {
       ))}
     </InspectorList>
   );
-}
-
-function getThreadLocationTranslationKey(
-  record: NativeAssistantThreadIndexRecord,
-  activeNodeId: string | null,
-  nodesById: Record<string, Node>
-) {
-  const kind = getThreadLocationLabelKind(record, activeNodeId, nodesById);
-  if (kind === 'thisTopic') return 'desktop.rightPanel.assistant.location.thisTopic';
-  if (kind === 'topicUnavailable') return 'desktop.rightPanel.assistant.location.topicUnavailable';
-  if (kind === 'workspace') return 'desktop.rightPanel.assistant.location.workspace';
-  return 'desktop.rightPanel.assistant.location.topic';
-}
-
-function getThreadLocationText(
-  record: NativeAssistantThreadIndexRecord,
-  activeNodeId: string | null,
-  nodesById: Record<string, Node>,
-  t: ReturnType<typeof useTranslation>
-) {
-  const kind = getThreadLocationLabelKind(record, activeNodeId, nodesById);
-  const path = resolveThreadLocationPath(
-    record,
-    nodesById,
-    t('desktop.rightPanel.assistant.location.untitledTopic')
-  );
-  if (!path) return t(getThreadLocationTranslationKey(record, activeNodeId, nodesById));
-  const key = kind === 'thisTopic'
-    ? 'desktop.rightPanel.assistant.location.thisTopicNamed'
-    : 'desktop.rightPanel.assistant.location.topicNamed';
-  return t(key, { title: path });
 }

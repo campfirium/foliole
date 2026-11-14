@@ -1,4 +1,7 @@
 export const EN_DESKTOP_AIDE_TRANSLATIONS = {
+  'desktop.rightPanel.assistant.materialTag.open': 'Open material: {title}',
+  'desktop.rightPanel.assistant.materialTag.current': 'This material',
+  'desktop.rightPanel.assistant.materialTag.library': 'Full library',
   'desktop.rightPanel.assistant.provider.label': 'New conversation provider',
   'desktop.rightPanel.assistant.provider.byok': 'Your model · {model}',
   'desktop.rightPanel.assistant.provider.historyByok': 'Your model',

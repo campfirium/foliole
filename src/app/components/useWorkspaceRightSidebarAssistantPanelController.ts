@@ -4,6 +4,7 @@ import type {
   NativeAssistantFailureCategory,
   NativeAssistantProviderId,
   NativeAssistantThreadIndexRecord,
+  NativeAssistantThreadOpeningLocation,
   NativeAssistantWorkspaceContext
 } from '../../../lib/platform/nativeAssistantContract';
 import type { NativeAssistantImageDraft } from '../../../lib/platform/nativeAssistantImageContract';
@@ -30,13 +31,13 @@ import {
   createAssistantProviderControls,
   findSelectedAssistantRecord,
   getSelectedAssistantThreadNotice,
-  isAssistantProviderReady,
-  selectAssistantRecord
+  isAssistantProviderReady
 } from './workspaceRightSidebarAssistantProvider';
 import { createAssistantSubmitHandler } from './workspaceRightSidebarAssistantSubmitHandler';
 
 type AssistantPanelControllerArgs = {
   activeNodeId: string | null;
+  trashedNodeIds?: readonly string[] | undefined;
   aideReady: boolean;
   byokConfigured: boolean;
   byokModel: string;
@@ -63,6 +64,7 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
   const imageState = useAssistantImageDraftState(setMessageText);
   const [messagesByThread, dispatchCache] = useReducer(messageCacheReducer, {});
   const [sending, setSending] = useState(false);
+  const [pendingLocation, setPendingLocation] = useState<NativeAssistantThreadOpeningLocation | null>(null);
   const [followCurrentMaterial, setFollowCurrentMaterial] = useFolioleAideContextFollow();
   const modelControls = useFolioleAideModelControls(args.aideReady && args.codexReady);
   const activeTurnRef = useRef<AssistantActiveTurn | null>(null);
@@ -81,7 +83,9 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
     failedText: args.failedText,
     outcomeUncertainText: args.outcomeUncertainText,
     onCapabilityFailure: args.onCapabilityFailure,
-    onProviderThreadStarted: threads.selectThreadId,
+    onProviderThreadStarted: (id, previousKey) => threads.selectThreadId((current) =>
+      (current ?? PENDING_THREAD_KEY) === previousKey ? id : current
+    ),
     setMessageText,
     setSending
   });
@@ -91,6 +95,8 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
     activeTurnRef,
     args,
     dispatchCache,
+    pendingLocation,
+    setPendingLocation,
     followCurrentMaterial,
     imageState,
     location,
@@ -138,6 +144,8 @@ type ControllerResultInput = {
   activeMessages: AssistantMessage[];
   activeTurnRef: { current: AssistantActiveTurn | null };
   args: AssistantPanelControllerArgs;
+  pendingLocation: NativeAssistantThreadOpeningLocation | null;
+  setPendingLocation: (location: NativeAssistantThreadOpeningLocation | null) => void;
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
   followCurrentMaterial: boolean;
   imageState: ReturnType<typeof useAssistantImageDraftState>;
@@ -162,12 +170,15 @@ function createPanelControllerResult(input: ControllerResultInput) {
     followCurrentMaterial: input.followCurrentMaterial,
     handleNewThread: () => {
       imageState.reset();
+      input.setPendingLocation(null);
       resetPendingAssistantConversation(input.dispatchCache, input.setMessageText, threads.selectThreadId);
     },
     handleRemoveRecord: (record: NativeAssistantThreadIndexRecord) =>
       removeRecord(record, threads.removeRecord, input.dispatchCache),
     handleSelectRecord: (record: NativeAssistantThreadIndexRecord) =>
-      selectAssistantRecord(record, args.nodesById, args.onSelectNode, threads.selectThreadId),
+      threads.selectThreadId(record.providerThreadId),
+    materialLocation: input.selectedRecord?.location ?? input.pendingLocation ?? input.location,
+    onOpenMaterial: args.onSelectNode,
     handleSubmit: createControllerSubmitHandler(input),
     imageDrafts: imageState.imageDrafts,
     imageError: imageState.imageError,
@@ -208,6 +219,8 @@ function createControllerSubmitHandler(input: ControllerResultInput) {
     followCurrentMaterial: input.followCurrentMaterial,
     imageDrafts: imageState.imageDrafts,
     location: input.location,
+    pendingLocation: input.pendingLocation,
+    setPendingLocation: input.setPendingLocation,
     messageText: input.messageText,
     ...(input.modelControls.selection ? { modelSelection: input.modelControls.selection } : {}),
     provider,

@@ -18,6 +18,7 @@ interface AssistantConversationProps {
   images?: import('../../../lib/platform/nativeAssistantImageContract').NativeAssistantImageDraft[];
   messageText: string;
   modelControl?: ReactNode;
+  materialTags?: ReactNode;
   onAddImageFiles?: (files: File[]) => void;
   onRemoveImage?: (index: number) => void;
   onMessageTextChange: (text: string) => void;
@@ -65,6 +66,7 @@ export function WorkspaceRightSidebarAssistantConversation(props: AssistantConve
         transitionEvent={props.transitionEvent}
       />
       <div className="px-3 pb-3">
+        {props.materialTags}
         <WorkspaceRightSidebarAssistantComposer
           {...(props.attachImageLabel ? { attachImageLabel: props.attachImageLabel } : {})}
           contextFollowDescription={props.contextFollowDescription}

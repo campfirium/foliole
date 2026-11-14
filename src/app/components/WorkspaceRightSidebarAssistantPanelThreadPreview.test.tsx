@@ -64,7 +64,8 @@ it('keeps a continued thread title stable while updating the history preview', a
 
   fireEvent.click(screen.getByRole('button', { name: 'Back to history' }));
 
-  expect(screen.getByText('This topic: Topic · Follow-up prompt')).toBeInTheDocument();
+  expect(screen.getByText('Follow-up prompt')).toBeInTheDocument();
+  expect(screen.getByRole('list', { name: /local foliole aide history/i })).toHaveTextContent('Topic');
   expect(screen.getByRole('button', { name: /original prompt/i })).toBeInTheDocument();
 });
 

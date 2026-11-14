@@ -24,6 +24,8 @@ The HTTP create request takes an explicit `parent_id`, which can be null. The CL
 
 SuperMemo batch preview and import use the desktop Import flow for the current library. Its report, scheduling slider, and configurable grade mapping stay in the desktop flow. With a paired collection, the desktop flow imports dismissed Topics and Items as dismissed and starts pending Items with no active review history. Agent Control does not expose these SuperMemo batch operations. External migration of individual materials uses the existing Agent Control routes.
 
+Aide history shows material links for desktop conversation navigation. These links are local conversation metadata. Agents continue to find and open materials through existing library capabilities, and Agent Control has no conversation-link routes.
+
 Desktop PDF imports index extracted text by page. Material search returns PDF locations from that index. The PDF-backed Topic body is separate and indexing does not write the extracted full text into it.
 
 ### Retrying material creation

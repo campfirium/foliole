@@ -19,6 +19,7 @@ import {
   resolveAssistantThreadLoadStatusLabel,
   resolveAssistantThreadPreviewLabel
 } from './workspaceRightSidebarAssistantLabels';
+import { WorkspaceRightSidebarAssistantMaterialTags } from './WorkspaceRightSidebarAssistantMaterialTags';
 import { AssistantProviderAndModelControls } from './WorkspaceRightSidebarAssistantProviderControl';
 import { WorkspaceRightSidebarAssistantThreadList } from './WorkspaceRightSidebarAssistantThreadList';
 
@@ -26,6 +27,7 @@ export function FolioleAideReadyContent(props: {
   activeNodeId: string | null;
   controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>;
   nodesById: Record<string, Node>;
+  trashedNodeIds?: readonly string[] | undefined;
 }) {
   const t = useTranslation();
   const [showHistory, setShowHistory] = useState(true);
@@ -60,6 +62,7 @@ function AssistantConversationView(props: {
   activeNodeId: string | null;
   controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>;
   nodesById: Record<string, Node>;
+  trashedNodeIds?: readonly string[] | undefined;
 }) {
   const t = useTranslation();
   const continuation = createAssistantContinuationEvent({
@@ -78,6 +81,7 @@ function AssistantConversationView(props: {
       ) : null}
       <WorkspaceRightSidebarAssistantConversation
         activeMessages={props.controller.activeMessages}
+        materialTags={<AssistantMaterialTags {...props} />}
         attachImageLabel={t('desktop.rightPanel.assistant.attachImage')}
         contextFollowDescription={t('desktop.rightPanel.assistant.followCurrentMaterialDescription')}
         contextFollowEnabled={props.controller.followCurrentMaterial}
@@ -111,6 +115,7 @@ function AssistantHomeView(props: {
   controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>;
   historyVisible: boolean;
   nodesById: Record<string, Node>;
+  trashedNodeIds?: readonly string[] | undefined;
 }) {
   const t = useTranslation();
   return (
@@ -119,6 +124,7 @@ function AssistantHomeView(props: {
         {props.historyVisible ? <AssistantHistoryList {...props} /> : null}
       </div>
       <div className={`${inspectorListInsetPaddingClassName} shrink-0 pb-3 pt-2`}>
+        <AssistantMaterialTags {...props} />
         <WorkspaceRightSidebarAssistantComposer
           attachImageLabel={t('desktop.rightPanel.assistant.attachImage')}
           contextFollowDescription={t('desktop.rightPanel.assistant.followCurrentMaterialDescription')}
@@ -149,11 +155,13 @@ function AssistantHistoryList(props: {
   activeNodeId: string | null;
   controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>;
   nodesById: Record<string, Node>;
+  trashedNodeIds?: readonly string[] | undefined;
 }) {
   return (
     <>
       <WorkspaceRightSidebarAssistantThreadList
-        activeNodeId={props.activeNodeId}
+        onOpenMaterial={props.controller.onOpenMaterial}
+        trashedNodeIds={props.trashedNodeIds}
         nodesById={props.nodesById}
         onRemoveRecord={props.controller.handleRemoveRecord}
         onSelectRecord={props.controller.handleSelectRecord}
@@ -221,4 +229,19 @@ function resolveContextFollowLabel(
   return t('desktop.rightPanel.assistant.followingCurrentMaterial', {
     title: title || t('desktop.rightPanel.assistant.location.workspace')
   });
+}
+
+function AssistantMaterialTags(props: Pick<Parameters<typeof FolioleAideReadyContent>[0],
+  'activeNodeId' | 'controller' | 'nodesById' | 'trashedNodeIds'>) {
+  return (
+    <div className="mb-1.5 flex min-w-0">
+      <WorkspaceRightSidebarAssistantMaterialTags
+        activeNodeId={props.activeNodeId}
+        location={props.controller.materialLocation}
+        nodesById={props.nodesById}
+        onOpenMaterial={props.controller.onOpenMaterial}
+        trashedNodeIds={props.trashedNodeIds}
+      />
+    </div>
+  );
 }
