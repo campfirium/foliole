@@ -94,6 +94,7 @@ jobs:
     needs: [context]
   t5-desktop-source:
     if: ${{ !cancelled() && needs.context.result == 'success' && contains(fromJSON(needs.context.outputs.stages), 't5-desktop-source') }}
+    permissions: { contents: read, actions: read }
     uses: ./.github/workflows/hosted-quality-desktop-source.yml
     with: *target-context
     needs: [context]

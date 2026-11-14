@@ -41,6 +41,20 @@ it('retains a passing file and runs a later assertion after a file blocks the wo
     expect(reports.map(report => report.status)).toEqual(['passed', 'timeout', 'failed']);
     expect(read('.tmp/report.json').testResults.at(-1).assertionResults[0].failureMessages.join(' '))
       .toContain('expected 1 to be 2');
+    const history = path.join(fixture, 'history');
+    for (const run of [1, 2]) {
+      const dir = path.join(history, String(run), 'desktop-source-host-one-sha-1');
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(path.join(dir, 'file.execution.json'), JSON.stringify({
+        file: 'src/app/a.test.mjs', platform: process.platform, durationMs: run * 1000, status: 'passed'
+      }));
+    }
+    for (const name of ['b', 'c']) rmSync(path.join(fixture, `src/app/${name}.test.mjs`));
+    execFileSync(process.execPath, ['--input-type=module', '-e',
+      `import { runDesktopSourceTests } from '${runner}'; process.exitCode = await runDesktopSourceTests(['.tmp/report.json', 'one']);`
+    ], { cwd: fixture, env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_REF: 'refs/heads/check',
+      FOLIOLE_DESKTOP_TIMEOUT_HISTORY: history }, timeout: 25000, stdio: 'pipe' });
+    expect(read('.tmp/vitest/release-desktop-src-app-01-file-1.json.execution.json').timeoutMs).toBe(120_000);
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }

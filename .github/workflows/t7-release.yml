@@ -78,7 +78,7 @@ jobs:
     name: Stage recheck
     if: startsWith(inputs.stage, 't5-') || startsWith(inputs.stage, 't6-')
     needs: release_context
-    permissions: { contents: read }
+    permissions: { contents: read, actions: read }
     uses: ./.github/workflows/release-quality-recheck.yml
     with:
       stage: ${{ inputs.stage }}

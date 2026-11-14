@@ -10,6 +10,7 @@ import {
   readReport,
   removeOldReports
 } from './desktop-electron-test-bucket-report.mjs';
+import { readDesktopTimeoutHistory, timeoutFromSamples } from './quality/desktop-file-timeout-history.mjs';
 import { runHostedDesktopTestFile } from './quality/hosted-desktop-test-file.mjs';
 import { controlledElectronSqliteTests } from './native-sqlite-test-policy.mjs';
 
@@ -157,6 +158,7 @@ export async function runDesktopSourceTests([reportPath, shard], { timeoutMs } =
   const allBuckets = buildReleaseDesktopSourceBuckets(files);
   assertReleaseDesktopSourceBucketCoverage(files, allBuckets);
   const isolated = process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_REF === 'refs/heads/check';
+  const history = isolated ? readDesktopTimeoutHistory(process.env.FOLIOLE_DESKTOP_TIMEOUT_HISTORY) : new Map();
   const selected = buildReleaseDesktopSourceShardBuckets(shard, allBuckets);
   const buckets = isolated ? selected.flatMap(bucket => bucket.targets.map((file, index) => ({
     label: `${bucket.label}-file-${index + 1}`,
@@ -168,7 +170,8 @@ export async function runDesktopSourceTests([reportPath, shard], { timeoutMs } =
   let exitCode = 0;
   for (const bucket of buckets) {
     console.log(`[release-desktop-source-test-bucket] running ${bucket.label}`);
-    const code = await runVitest(bucket, isolated, timeoutMs);
+    const limit = timeoutMs ?? timeoutFromSamples(history.get(bucket.targets[0]) ?? []);
+    const code = await runVitest(bucket, isolated, limit);
     if (code !== 0) {
       exitCode = code;
       if (!readReport(bucket.report)) {
