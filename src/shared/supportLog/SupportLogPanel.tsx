@@ -24,6 +24,7 @@ export function SupportLogPanel({ mobile = false, androidSelection = false }: { 
   const seconds = useElapsedSeconds(state.startedAt);
   const ready = state.phase === 'ready' && (!androidSelection || hasAndroidSelectionSupportReport());
   const recording = state.phase === 'recording';
+  const action = recording ? 'supportLog.stop' : ready ? 'supportLog.restart' : 'supportLog.start';
   const [exporting, setExporting] = useState(false);
   const [exportFailed, setExportFailed] = useState(false);
 
@@ -45,19 +46,19 @@ export function SupportLogPanel({ mobile = false, androidSelection = false }: { 
       <span role="status">{t('supportLog.recording')}</span>
       <span className="ml-auto tabular-nums">{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</span>
     </div> : null}
-    <p className="text-sm text-foreground/70">{t(ready ? 'supportLog.ready'
+    <p role={ready ? 'status' : undefined} className="text-sm text-foreground/70">{t(ready ? 'supportLog.ready'
       : recording ? 'supportLog.instructions' : 'supportLog.intro')}</p>
     <div className={mobile ? 'grid gap-2' : 'flex flex-wrap gap-2'}>
-      <AppButton type="button" variant="emphasis" className={mobile ? 'min-h-11' : undefined}
+      <AppButton type="button" variant={ready ? 'default' : 'emphasis'} className={mobile ? 'min-h-11' : undefined}
         disabled={exporting} onClick={() => {
           setExportFailed(false);
           if (recording) stopSupportLog();
           else startSupportLog(androidSelection);
         }}>
-        {t(recording ? 'supportLog.stop' : 'supportLog.start')}
+        {t(action)}
       </AppButton>
       <AppButton type="button" className={mobile ? 'min-h-11' : undefined}
-        disabled={!ready || exporting} onClick={() => void handleExport()}>
+        variant={ready ? 'emphasis' : 'default'} disabled={!ready || exporting} onClick={() => void handleExport()}>
         {t('supportLog.export')}
       </AppButton>
     </div>

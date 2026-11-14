@@ -107,3 +107,31 @@ it('places the mouse gesture switch in the category header', () => {
   );
   expect(screen.getByRole('heading', { level: 3, name: 'Gesture actions' })).toBeVisible();
 });
+
+it('shows one current log message across recording and restarting', async () => {
+  vi.spyOn(desktopRuntime, 'isDesktopRuntime').mockReturnValue(true);
+  renderWithMouseGestureProvider(
+    <SettingsPanel {...createProps()} requestedCategory="logs" />
+  );
+
+  const intro = 'Start recording when you encounter an issue to help troubleshoot it.';
+  const exportButton = await screen.findByRole('button', { name: 'Export log' });
+  expect(screen.getAllByText(intro)).toHaveLength(1);
+  expect(exportButton).toBeDisabled();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Start recording' }));
+  expect(screen.queryByText(intro)).not.toBeInTheDocument();
+  expect(screen.getByRole('status')).toHaveTextContent('Recording');
+  fireEvent.click(screen.getByRole('button', { name: 'Stop recording' }));
+
+  expect(screen.getByText('Recording ended.')).toBeVisible();
+  expect(exportButton).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Record again' }));
+  try {
+    expect(screen.queryByText('Recording ended.')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Recording');
+    expect(exportButton).toBeDisabled();
+  } finally {
+    fireEvent.click(screen.getByRole('button', { name: 'Stop recording' }));
+  }
+});

@@ -56,6 +56,7 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps & {
   dragHandle: ReturnType<typeof useSettingsPanelDrag>['handle'] | undefined;
 }) {
   const t = useTranslation();
+  const isLogsCategory = props.activeCategory === 'logs';
   return (
     <>
       <SettingsSidebar
@@ -87,7 +88,7 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps & {
         </div>
         <div className="app-scrollbar min-h-0 flex-1 scroll-pt-20 overflow-auto px-7 py-7" ref={props.scrollContainerRef}>
           {props.contentNotice ? <div className="mb-6 px-settings-panel-x">{props.contentNotice}</div> : null}
-          <div className="mb-7 px-5 pb-6">
+          <div className={isLogsCategory ? 'mb-3' : 'mb-7 px-5 pb-6'}>
             <div className="flex items-center gap-3">
               <AppDialogTitle>{props.title}</AppDialogTitle>
               {props.headerActions ? (
@@ -100,7 +101,9 @@ function SettingsPanelDialogBody(props: SettingsPanelDialogProps & {
                 </div>
               ) : null}
             </div>
-            <p className="mt-1 max-w-[760px] text-sm leading-6 text-muted-foreground">{props.description}</p>
+            {isLogsCategory ? null : (
+              <p className="mt-1 max-w-[760px] text-sm leading-6 text-muted-foreground">{props.description}</p>
+            )}
           </div>
           <SettingsCategoryContent {...props.categoryProps} {...props.hotkeys} />
         </div>

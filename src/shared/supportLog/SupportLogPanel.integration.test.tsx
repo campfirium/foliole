@@ -40,7 +40,7 @@ it('keeps recording after the settings page closes and exports only allowed fiel
   act(() => vi.advanceTimersByTime(300_000));
 
   renderWithLocalization(<SupportLogPanel mobile />);
-  expect(screen.getByText('The log is ready to export.')).toBeVisible();
+  expect(screen.getByText('Recording ended.')).toBeVisible();
   expect(exportButton()).toBeEnabled();
   const text = serializeSupportLog('android');
   expect(text).not.toContain('private');
@@ -57,7 +57,7 @@ it('keeps recording after the settings page closes and exports only allowed fiel
 
 it('starts a fresh recording, stops manually, and downloads a desktop log', async () => {
   renderWithLocalization(<SupportLogPanel />);
-  fireEvent.click(screen.getByRole('button', { name: 'Start recording' }));
+  fireEvent.click(screen.getByRole('button', { name: /^(Start recording|Record again)$/u }));
   recordSupportEvent('selection.toolbar.no_range');
   fireEvent.click(screen.getByRole('button', { name: 'Stop recording' }));
   const createUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:example');
