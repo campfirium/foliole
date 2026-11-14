@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { Locator } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
+import { IMMERSIVE_READING_KEY } from './harness/immersiveReadingShortcut';
 import { expectWorkspaceShell } from './harness/settings';
 
 const ARTICLE = [
@@ -27,7 +28,7 @@ test('adds visual inter-script spacing without changing text or doubling typed s
   }, ARTICLE);
   const host = desktopWindow.locator('.prompt-editor-host');
   await expect(host).toContainText('使用Foliole阅读2026年');
-  await desktopWindow.keyboard.press('F11');
+  await desktopWindow.keyboard.press(IMMERSIVE_READING_KEY);
   const lines = host.locator('.cm-line');
 
   for (const [text, addsSpace] of [

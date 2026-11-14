@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 
 import { facts, openEditingSession } from './editorContentEditing.test-support';
 import { expect, test } from './harness/fixtures';
+import { IMMERSIVE_READING_KEY } from './harness/immersiveReadingShortcut';
 import { expectWorkspaceShell } from './harness/settings';
 
 test('settles saved tail input on reading mode entry and preserves resumed editing', async ({ desktopWindow: page, desktopSession: session }) => {
@@ -13,7 +14,7 @@ test('settles saved tail input on reading mode entry and preserves resumed editi
   await facts(session, true, base.versionId);
   await page.evaluate(() => window.__folioleDebug?.setEditorSelection?.('prompt-editor', 0, 0));
   await page.keyboard.insertText('Tail ');
-  await page.keyboard.press('F11');
+  await page.keyboard.press(IMMERSIVE_READING_KEY);
   const host = page.locator('.prompt-editor-host');
   await expect(host).toHaveAttribute('data-read-only', 'true');
   await expect.poll(async () => (await facts(session)).parents).toHaveLength(2);

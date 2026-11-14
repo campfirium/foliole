@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 
 import { resetDailyFlowGeneration } from './harness/dailyFlowGeneration';
 import { expect, test } from './harness/fixtures';
+import { IMMERSIVE_READING_KEY } from './harness/immersiveReadingShortcut';
 import { expectWorkspaceShell } from './harness/settings';
 
 const topicId = 'immersive-priority-topic';
@@ -31,7 +32,7 @@ async function expectSidebarsHidden(page: Page) {
 
 async function verifyPriority(page: Page, id: string, capture: (name: string) => Promise<unknown>) {
   const dialog = page.getByRole('dialog', { name: /Set priority|设置优先级/ });
-  await page.keyboard.press('F11');
+  await page.keyboard.press(IMMERSIVE_READING_KEY);
   await expectSidebarsHidden(page);
   await page.keyboard.press('Control+M');
   await expect(dialog).toBeVisible();

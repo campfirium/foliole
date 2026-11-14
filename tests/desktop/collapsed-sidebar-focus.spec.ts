@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
+import { IMMERSIVE_READING_KEY } from './harness/immersiveReadingShortcut';
 import { expectWorkspaceShell } from './harness/settings';
 
 const toggleFor = (page: Page, side: string) => page.locator(`[data-workspace-sidebar-toggle="${side}"]:visible`).first();
@@ -119,9 +120,9 @@ test('immersion hands sidebar focus to the document and preserves reopening', as
     if (await toggle.getAttribute('aria-pressed') !== 'true') await toggle.click();
     const internal = columnFor(page, side).locator('button:visible').first();
     await internal.focus();
-    await page.keyboard.press('F11');
+    await page.keyboard.press(IMMERSIVE_READING_KEY);
     await expect(page.locator('[data-workspace-document-focus-target]')).toBeFocused();
-    await page.keyboard.press('F11');
+    await page.keyboard.press(IMMERSIVE_READING_KEY);
     await expect(internal).toBeVisible();
     await internal.focus();
     await expect(internal).toBeFocused();

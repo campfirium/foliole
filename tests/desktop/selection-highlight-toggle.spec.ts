@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
+import { IMMERSIVE_READING_KEY } from './harness/immersiveReadingShortcut';
 import { loadNodeDocument, loadWorkspaceSnapshot } from './harness/localDataFileAcceptance';
 import { expectWorkspaceShell } from './harness/settings';
 
@@ -11,7 +12,7 @@ const locator = { from: 7, to: 11, originalText: 'Beta' };
 async function openImmersiveSelection(page: Page) {
   await page.evaluate((id) => window.__folioleWorkspaceDebug!.openNode(id), parentId);
   await expect(page.locator('.prompt-editor-host')).toContainText('Beta');
-  await page.keyboard.press('F11');
+  await page.keyboard.press(IMMERSIVE_READING_KEY);
   await expect(page.getByLabel('Window controls')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() =>
     window.__folioleDebug?.setEditorSelection?.('prompt-editor', 7, 11) ?? false)).toBe(true);

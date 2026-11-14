@@ -1,8 +1,14 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { usesMacShortcutProjection } from '../../shared/platform/runtime/operatingSystem';
+
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
 import { buildImageScrollProps, buildProps, mountViewportHost } from './useImmersiveReadingMode.scrollSync.testSupport';
+
+const defaultImmersiveKey = usesMacShortcutProjection()
+  ? { key: '®', code: 'KeyR', altKey: true }
+  : { key: 'F11' };
 
 type ImmersiveProps = Parameters<typeof useImmersiveReadingMode>[0];
 
@@ -19,7 +25,7 @@ it('keeps the current scene when entering immersive reading by applying the pend
 
   act(() => {
     triggerScroll();
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F11' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', defaultImmersiveKey));
   });
 
   rerender({
@@ -37,7 +43,7 @@ it('keeps the current scene when entering immersive reading by applying the pend
   expect(adapter.revealSelection).not.toHaveBeenCalled();
 });
 
-it('samples the viewport and starts applying when F11 enters immersive reading', () => {
+it('samples the viewport and starts applying when the default shortcut enters immersive reading', () => {
   const { adapter, props } = buildProps();
   mountViewportHost();
   vi.mocked(adapter.getPrimaryVisiblePosition).mockReturnValue(7);
@@ -47,7 +53,7 @@ it('samples the viewport and starts applying when F11 enters immersive reading',
   renderHook(() => useImmersiveReadingMode(props));
 
   act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F11' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', defaultImmersiveKey));
   });
 
   expect(props.onToggleImmersiveMode).toHaveBeenCalledTimes(1);

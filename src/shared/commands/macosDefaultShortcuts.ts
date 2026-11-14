@@ -37,7 +37,7 @@ export const MACOS_DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.addSelectionNote]: { primary: { key: 'a', metaKey: true, shiftKey: true } },
   [APP_COMMAND_IDS.enterPriorityMode]: { primary: { key: 'm', ctrlKey: true } },
   [APP_COMMAND_IDS.toggleEditorDisplayMode]: { primary: { key: '\\', metaKey: true } },
-  [APP_COMMAND_IDS.toggleImmersiveMode]: { primary: { key: 'F11' } },
+  [APP_COMMAND_IDS.toggleImmersiveMode]: { primary: { key: 'r', altKey: true } },
   [APP_COMMAND_IDS.toggleDevTools]: { primary: { key: 'i', metaKey: true, altKey: true } },
   [APP_COMMAND_IDS.toggleList]: { primary: { key: 'l', metaKey: true, shiftKey: true } },
   [APP_COMMAND_IDS.revealReviewAnswer]: { primary: { key: 'f' } },

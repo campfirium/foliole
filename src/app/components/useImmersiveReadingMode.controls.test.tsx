@@ -3,8 +3,13 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
 import { CommandShortcutMapContext } from '../../features/settings/context/hotkeySettingsContext';
+import { usesMacShortcutProjection } from '../../shared/platform/runtime/operatingSystem';
 
 import { useImmersiveReadingMode } from './useImmersiveReadingMode';
+
+const defaultImmersiveKey = usesMacShortcutProjection()
+  ? { key: '®', code: 'KeyR', altKey: true }
+  : { key: 'F11' };
 
 type ImmersiveProps = Parameters<typeof useImmersiveReadingMode>[0];
 
@@ -166,7 +171,7 @@ it('captures the viewport reading position and starts an applying lock when ente
   renderHook(() => useImmersiveReadingMode(props));
 
   act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F11' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', defaultImmersiveKey));
   });
 
   expect(props.onToggleImmersiveMode).toHaveBeenCalledTimes(1);
@@ -189,7 +194,7 @@ it('leaves F11 to browser fullscreen outside Electron', () => {
   expect(props.onToggleImmersiveMode).not.toHaveBeenCalled();
 });
 
-it('retires F11 when immersive reading is remapped', () => {
+it('retires the default shortcut when immersive reading is remapped', () => {
   const { props } = buildProps();
   props.isImmersiveMode = false;
   renderHook(() => useImmersiveReadingMode(props), {
@@ -202,13 +207,13 @@ it('retires F11 when immersive reading is remapped', () => {
     )
   });
 
-  act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F11' })));
+  act(() => window.dispatchEvent(new KeyboardEvent('keydown', defaultImmersiveKey)));
   expect(props.onToggleImmersiveMode).not.toHaveBeenCalled();
   act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F10' })));
   expect(props.onToggleImmersiveMode).toHaveBeenCalledTimes(1);
 });
 
-it('allows F11 to enter immersive reading while review mode is active', () => {
+it('allows the default shortcut to enter immersive reading while review mode is active', () => {
   const { props } = buildProps();
   props.isImmersiveMode = false;
   props.isStudyMode = true;
@@ -216,7 +221,7 @@ it('allows F11 to enter immersive reading while review mode is active', () => {
   renderHook(() => useImmersiveReadingMode(props));
 
   act(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F11' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', defaultImmersiveKey));
   });
 
   expect(props.onToggleImmersiveMode).toHaveBeenCalledTimes(1);

@@ -5,6 +5,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 
 import { assistantReadyStatus, openAssistantPanel } from './assistant-panel-home-detail.support';
 import { expect, test } from './harness/fixtures';
+import { IMMERSIVE_READING_KEY } from './harness/immersiveReadingShortcut';
 import { expectWorkspaceShell } from './harness/settings';
 
 const output = path.resolve('.tmp/artifacts/T732-3/native');
@@ -93,7 +94,7 @@ test('keeps unsent content, conversation and in-flight results through native si
   await page.getByRole('button', { name: 'Toggle right sidebar', exact: true }).click();
   await openAssistantPanel(page);
   await expect(input).toHaveValue('Keep this unsent input');
-  await page.keyboard.press('F11');
+  await page.keyboard.press(IMMERSIVE_READING_KEY);
   await expect(input).not.toBeVisible();
   await page.keyboard.press('Escape');
   await expect(input).toHaveValue('Keep this unsent input');

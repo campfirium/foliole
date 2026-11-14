@@ -4,7 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 import type { ElectronApplication, Page } from '@playwright/test';
 
+import { openNode } from './harness/contextualContentHistory';
 import { expect, test } from './harness/fixtures';
+import { IMMERSIVE_READING_KEY } from './harness/immersiveReadingShortcut';
 import { expectWorkspaceShell } from './harness/settings';
 
 const FIXTURE_PATH = path.resolve(
@@ -109,10 +111,7 @@ async function importFixture(desktopApp: ElectronApplication, desktopWindow: Pag
 async function openImportedNode(desktopWindow: Page, nodeId: string) {
   await desktopWindow.reload();
   await expectWorkspaceShell(desktopWindow);
-  const opened = await desktopWindow.evaluate(async (targetNodeId) => {
-    return globalThis.window?.__folioleWorkspaceDebug?.openNode?.(targetNodeId) ?? false;
-  }, nodeId);
-  expect(opened).toBe(true);
+  await openNode(desktopWindow, nodeId);
 }
 
 async function dragAcrossReadingLine(desktopWindow: Page) {
@@ -143,7 +142,7 @@ async function dragAcrossReadingLine(desktopWindow: Page) {
   await desktopWindow.mouse.up();
 }
 
-test('keeps F11 as immersive reading in the desktop host', async ({
+test('uses the platform shortcut for immersive reading', async ({
   desktopApp,
   desktopWindow
 }, testInfo) => {
@@ -155,7 +154,7 @@ test('keeps F11 as immersive reading in the desktop host', async ({
   await expect(desktopWindow.locator('.prompt-editor-host')).toContainText(READING_LINE);
   const nativeControlsSpyInstalled = await installNativeControlsVisibilitySpy(desktopApp);
   try {
-    await desktopWindow.keyboard.press('F11');
+    await desktopWindow.keyboard.press(IMMERSIVE_READING_KEY);
     await desktopWindow.locator('.prompt-editor-host .cm-scroller').waitFor({ state: 'visible' });
     await expect(desktopWindow.locator('.prompt-editor-host')).toContainText(READING_LINE);
     await expect(desktopWindow.getByLabel('Window controls')).toHaveCount(0);
@@ -190,7 +189,7 @@ test('keeps an explicit text selection visible in immersive reading', async ({
   const normalSelectionBackground = await desktopWindow.locator('.prompt-editor-host .cm-line').first()
     .evaluate((line) => getComputedStyle(line, '::selection').backgroundColor);
 
-  await desktopWindow.keyboard.press('F11');
+  await desktopWindow.keyboard.press(IMMERSIVE_READING_KEY);
   await desktopWindow.locator('.prompt-editor-host .cm-scroller').waitFor({ state: 'visible' });
   await dragAcrossReadingLine(desktopWindow);
   await expect.poll(() => desktopWindow.evaluate(() => {

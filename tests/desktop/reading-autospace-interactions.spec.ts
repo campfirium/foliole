@@ -3,6 +3,7 @@ import process from 'node:process';
 import type { ElectronApplication, Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
+import { IMMERSIVE_READING_KEY } from './harness/immersiveReadingShortcut';
 import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 
 const TEXT = '使用Foliole阅读2026年';
@@ -73,7 +74,7 @@ for (const [variant, content] of [['plain', TEXT], ['bold', '使用**Foliole**�
     await window.__folioleWorkspaceDebug!.openNode(id);
   }, { content, id: NODE });
   await expect(desktopWindow.locator('.prompt-editor-host .cm-content')).toHaveText(TEXT);
-  await desktopWindow.keyboard.press('F11');
+  await desktopWindow.keyboard.press(IMMERSIVE_READING_KEY);
   await expect(desktopWindow.locator('.prompt-editor-host .cm-content')).toHaveAttribute('contenteditable', 'false');
   await expect(desktopWindow.locator('.prompt-editor-host .cm-content')).toHaveAttribute('aria-readonly', 'true');
   await preserveClipboard(desktopApp);
@@ -90,7 +91,7 @@ for (const [variant, content] of [['plain', TEXT], ['bold', '使用**Foliole**�
       return api.listNodes().map((node) => api.getNode(node.id)).filter((node) => node?.parentNodeId === id
         && node.anchorLink?.kind === 'highlight').map((node) => node!.anchorLink!.locator);
     }, NODE)).toEqual([expect.objectContaining({ from: 0, to: content.length, originalText: content })]);
-    await desktopWindow.keyboard.press('F11');
+    await desktopWindow.keyboard.press(IMMERSIVE_READING_KEY);
     const dialog = await openSettingsCategory(desktopWindow, 'Typography');
     await dialog.getByLabel(/^(Interface font size|界面字号)$/).fill('23');
     await dialog.getByRole('button', { name: /^(Preview|预览)$/ }).click();

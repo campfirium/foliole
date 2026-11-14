@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { Page, TestInfo } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
+import { IMMERSIVE_READING_KEY } from './harness/immersiveReadingShortcut';
 import { expectCombinedPdfAutoHide, expectNarrowRightReviewFooter, expectReviewFooterSidebarWidths, expectReviewFooterTracksSidebars } from './pdf-review-footer';
 import { expectSidebarContextMenu } from './pdf-sidebar-context-menu';
 import { expectEdgeHover, expectRightTitlebarControlsAligned } from './pdf-sidebar-hover';
@@ -75,7 +76,7 @@ async function verifyTransform(page: Page, target: number, action: () => Promise
 }
 
 for (const { title, file, pageNumber } of fixtures) {
-  test(`keeps the rendered reading position through PDF zoom and F11 on a ${title} @pdf`, async ({
+  test(`keeps the rendered reading position through PDF zoom and the immersive shortcut on a ${title} @pdf`, async ({
     desktopApp, desktopWindow: page
   }, testInfo) => {
     test.setTimeout(90000);
@@ -92,11 +93,11 @@ for (const { title, file, pageNumber } of fixtures) {
     await moveToReadingPosition(page, pageNumber);
 
     const fixed = await readLocation(page);
-    await page.keyboard.press('F11');
+    await page.keyboard.press(IMMERSIVE_READING_KEY);
     await waitForLocation(page, pageNumber, (after) =>
       after.height !== fixed.height && after.zoom === '100%' && Math.abs(after.top - fixed.top) < 2);
     await page.screenshot({ path: testInfo.outputPath('fixed-f11.png') });
-    await page.keyboard.press('F11');
+    await page.keyboard.press(IMMERSIVE_READING_KEY);
     await waitForLocation(page, pageNumber, (after) =>
       after.height === fixed.height && after.zoom === '100%' && Math.abs(after.top - fixed.top) < 2);
 
@@ -104,15 +105,15 @@ for (const { title, file, pageNumber } of fixtures) {
     await page.screenshot({ path: testInfo.outputPath('custom-zoom.png') });
     await verifyTransform(page, pageNumber, () => page.getByRole('button', { name: /^(Fit width|适合宽度)$/ }).click());
     await page.screenshot({ path: testInfo.outputPath('fit-width.png') });
-    await verifyTransform(page, pageNumber, () => page.keyboard.press('F11'), true);
+    await verifyTransform(page, pageNumber, () => page.keyboard.press(IMMERSIVE_READING_KEY), true);
     await page.screenshot({ path: testInfo.outputPath('fit-width-f11.png') });
 
     const jumpPage = pageNumber - 5;
     const input = page.getByRole('textbox', { name: /PDF page|PDF 页码/ });
     await input.fill(String(jumpPage));
     await input.press('Enter');
-    await page.keyboard.press('F11');
-    await page.keyboard.press('F11');
+    await page.keyboard.press(IMMERSIVE_READING_KEY);
+    await page.keyboard.press(IMMERSIVE_READING_KEY);
     await waitForLocation(page, jumpPage, ({ position }) => position !== null && position < 0.4);
     await page.screenshot({ path: testInfo.outputPath('jump-and-f11.png') });
   });

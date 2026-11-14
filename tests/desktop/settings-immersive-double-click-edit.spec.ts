@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
 import { expect, test } from './harness/fixtures';
+import { IMMERSIVE_READING_KEY } from './harness/immersiveReadingShortcut';
 import { expectWorkspaceShell, openSettingsDialog } from './harness/settings';
 
 const SCREENSHOT_PATH = path.resolve(
@@ -48,7 +49,7 @@ test('persists the immersive reading double-click edit preference', async ({ des
   }, READING_TOPIC_ID);
   const editor = desktopWindow.locator('.prompt-editor-host');
   await expect(editor).toContainText('Double-click selection stays in reading mode.');
-  await desktopWindow.keyboard.press('F11');
+  await desktopWindow.keyboard.press(IMMERSIVE_READING_KEY);
   await expect(editor).toHaveAttribute('data-immersive-editing', 'false');
 
   await editor.locator('.cm-line').filter({ hasText: 'Double-click selection' }).first().dblclick();

@@ -1,4 +1,5 @@
 import { expect, test } from './harness/fixtures';
+import { IMMERSIVE_READING_KEY } from './harness/immersiveReadingShortcut';
 import { expectWorkspaceShell } from './harness/settings';
 
 test('performance statistics resume after docked, compact and immersive visibility changes', async ({ desktopWindow }) => {
@@ -30,7 +31,7 @@ test('performance statistics resume after docked, compact and immersive visibili
 
   await desktopWindow.setViewportSize({ width: 1400, height: 850 });
   await expect(memory).toBeVisible();
-  await desktopWindow.keyboard.press('F11');
+  await desktopWindow.keyboard.press(IMMERSIVE_READING_KEY);
   await expect(memory).toHaveCount(0);
   await desktopWindow.keyboard.press('Escape');
   await expect(memory).toBeVisible();

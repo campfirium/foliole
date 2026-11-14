@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
 import { expect, test } from './harness/fixtures';
+import { IMMERSIVE_READING_KEY } from './harness/immersiveReadingShortcut';
 import { expectWorkspaceShell } from './harness/settings';
 
 const BAND_FOLLOW_SCREENSHOT = path.resolve(
@@ -160,7 +161,7 @@ test('keeps immersive reading at the current viewport after scrolling in editor 
   await wheelScrollEditor(desktopWindow);
 
   const beforeToggle = await collectBeforeToggleMetrics(desktopWindow);
-  await desktopWindow.keyboard.press('F11');
+  await desktopWindow.keyboard.press(IMMERSIVE_READING_KEY);
   await desktopWindow.locator('.prompt-editor-host .cm-scroller').waitFor({ state: 'visible' });
   await desktopWindow.waitForTimeout(300);
   const afterToggle = await collectAfterToggleMetrics(desktopWindow);
@@ -184,7 +185,7 @@ test('moves downward reading from the lower trigger back near the top of the rea
     scroller.dispatchEvent(new Event('scroll'));
   });
   await desktopWindow.waitForTimeout(200);
-  await desktopWindow.keyboard.press('F11');
+  await desktopWindow.keyboard.press(IMMERSIVE_READING_KEY);
 
   let metrics = await readMarkerViewportMetrics(desktopWindow);
   let transitionSamples: Array<{ elapsedMs: number; scrollTop: number }> = [];

@@ -171,16 +171,6 @@ describe('workspace default command shortcuts', () => {
     expect(matchesShortcutSet(keyEvent({ key: 'F2' }), DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.renameNode])).toBe(true);
   });
 
-  it('keeps immersive reading on F11 only when browser-reserved shortcuts are available to the app', () => {
-    const desktopShortcuts = getPlatformDefaultCommandShortcuts({ includeBrowserReservedShortcuts: true });
-    const macDesktopShortcuts = getPlatformDefaultCommandShortcuts({ includeBrowserReservedShortcuts: true, platform: 'MacIntel' });
-    const webShortcuts = getPlatformDefaultCommandShortcuts({ includeBrowserReservedShortcuts: false });
-
-    expect(matchesShortcutSet(keyEvent({ key: 'F11' }), desktopShortcuts[APP_COMMAND_IDS.toggleImmersiveMode])).toBe(true);
-    expect(matchesShortcutSet(keyEvent({ key: 'F11' }), macDesktopShortcuts[APP_COMMAND_IDS.toggleImmersiveMode])).toBe(true);
-    expect(webShortcuts[APP_COMMAND_IDS.toggleImmersiveMode]).toBeUndefined();
-  });
-
   it('registers review entry on Alt R with F1 as the auxiliary entry', () => {
     const shortcuts = DEFAULT_APP_COMMAND_SHORTCUTS[APP_COMMAND_IDS.startStudyMode];
 
