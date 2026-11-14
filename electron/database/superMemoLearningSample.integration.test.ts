@@ -71,6 +71,28 @@ async function verifyMediaPreview(args: unknown, sqlite: ReturnType<Awaited<Retu
   return preview.previewSignature;
 }
 
+it('previews an XML-only import with a missing image without writing a batch', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source');
+  try {
+    connection.driver = createBetterSqlite3Driver(source.sqlite);
+    const xml = '<SuperMemoCollection><Count>1</Count><SuperMemoElement><ID>1</ID><Type>Topic</Type><Content>'
+      + '<Question><![CDATA[Before <img src="missing.png"> after]]></Question>'
+      + '</Content></SuperMemoElement></SuperMemoCollection>';
+    const elements = readSuperMemoXmlDraft(new DOMParser().parseFromString(xml, 'application/xml'));
+    const preview = await handleSuperMemoImportCommand(NATIVE_COMMANDS.previewSuperMemoImport, { elements });
+    expect(preview).toMatchObject({
+      pairedCollection: false,
+      rows: [expect.objectContaining({ id: 1, unresolvedImages: [{ source: 'missing.png', count: 1 }] })]
+    });
+    expect(source.sqlite.prepare('SELECT COUNT(*) FROM workspace_meta WHERE key GLOB ?')
+      .pluck().get('supermemo-import:*')).toBe(0);
+  } finally {
+    connection.driver = null;
+    await fixture.close();
+  }
+});
+
 const xml = process.env.FOLIOLE_SUPERMEMO_VALIDATION_XML;
 const collectionDirectory = process.env.FOLIOLE_SUPERMEMO_VALIDATION_COLLECTION;
 
