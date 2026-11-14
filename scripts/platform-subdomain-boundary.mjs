@@ -19,6 +19,7 @@ const PATH_SUBDOMAINS = [
   ['src/shared/platform/companion/', 'companion-runtime-plugin'],
   ['src/shared/platform/import/', 'import-runtime'],
   ['src/shared/platform/external/', 'external-runtime'],
+  ['src/shared/platform/supportLog/', 'support-log'],
   ['src/shared/platform/diagnostics/', 'diagnostics']
 ];
 
@@ -90,7 +91,7 @@ const FILE_SUBDOMAIN_RULES = [
 
 const ALLOWED_SUBDOMAIN_IMPORTS = {
   'compatibility-facade': '*',
-  'runtime-core': ['runtime-core', 'diagnostics'],
+  'runtime-core': ['runtime-core', 'diagnostics', 'support-log'],
   'desktop-runtime-repository': [
     'runtime-core',
     'desktop-runtime-repository',
@@ -136,6 +137,7 @@ const ALLOWED_SUBDOMAIN_IMPORTS = {
   ],
   'import-runtime': ['runtime-core', 'desktop-runtime-repository', 'external-runtime', 'import-runtime'],
   'external-runtime': ['runtime-core', 'desktop-runtime-repository', 'companion-runtime-plugin', 'external-runtime'],
+  'support-log': ['runtime-core', 'companion-runtime-plugin', 'support-log'],
   diagnostics: ['runtime-core', 'diagnostics']
 };
 

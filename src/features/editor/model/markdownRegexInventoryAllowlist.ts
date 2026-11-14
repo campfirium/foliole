@@ -67,6 +67,11 @@ export const allowedRegexInventory = [
     owner: 'external clipboard block export'
   },
   {
+    path: 'src/features/editor/model/devanagariAnnotationRange.ts',
+    line: 'if (offset <= 0 || offset >= content.length || !devanagari.test(content.slice(offset - 1, offset + 1))) return offset;',
+    owner: 'Devanagari selection boundary'
+  },
+  {
     path: 'src/features/editor/model/editorMouseGestureSettings.ts',
     line: "const match = /^#([0-9a-fA-F]{6})$/.exec(value?.trim() ?? '');",
     owner: 'color setting validation'
