@@ -189,7 +189,7 @@
     "quality:release:android-host": "node scripts/quality/quality-command-contracts.mjs allow quality:release:android-host && bash scripts/quality/quality-gate-target.sh release-android-host",
     "quality:release:fail-fast": "node scripts/quality/quality-command-contracts.mjs allow quality:release:fail-fast && bash scripts/quality/quality-gate-target.sh release --fail-fast",
     "lint": "node scripts/lint-changed.mjs",
-    "lint:full": "node scripts/quality/quality-command-contracts.mjs allow lint:full && node node_modules/eslint/bin/eslint.js --cache --cache-location .tmp/eslint-cache/full/ .",
+    "lint:full": "node scripts/quality/quality-command-contracts.mjs allow lint:full && node --max-old-space-size=1536 node_modules/eslint/bin/eslint.js --cache --cache-location .tmp/eslint-cache/full/ .",
     "typecheck": "npm run typecheck:desktop",
     "test:e2e": "playwright test",
     "test:e2e:mobile-settings": "npm run android:web:build && playwright test --config playwright.mobile-settings.config.ts",
