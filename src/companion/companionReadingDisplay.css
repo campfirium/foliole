@@ -36,3 +36,16 @@ section > .companion-reading-top-chrome {
     width: 44px;
   }
 }
+/* A reading selection belongs to the document, including when it crosses reader controls. */
+[data-companion-reading-page='true'],
+[data-companion-reading-surface='true'],
+[data-companion-reading-page='true'] + .companion-review-footer {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+[data-companion-reading-surface='true'] .cm-content,
+[data-companion-reading-surface='true'] :is(input, textarea, [contenteditable='true']) {
+  -webkit-user-select: text;
+  user-select: text;
+}

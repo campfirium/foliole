@@ -2,8 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 
 test.use({ hasTouch: true });
 
-async function openReader(page: Page, flow: boolean, answer = false, nextTopic = false) {
-  await page.setViewportSize(nextTopic ? page.viewportSize()! : { width: 375, height: 812 });
+async function openReader(page: Page, flow: boolean, answer = false, nextTopic = false, selectionBoundary = false) {
+  await page.setViewportSize(nextTopic || selectionBoundary ? page.viewportSize()! : { width: 375, height: 812 });
   await page.route('**/__reading-display?*', route => route.fulfill({ contentType: 'text/html', body: `
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
     <body><div id="root"></div><script type="module">
@@ -13,8 +13,40 @@ async function openReader(page: Page, flow: boolean, answer = false, nextTopic =
     window.__vite_plugin_react_preamble_installed__ = true;
     await import('/@fs/${process.cwd()}/tests/fixtures/companionReadingDisplay.tsx');
     </script></body></html>` }));
-  await page.goto(`/__reading-display?${flow ? 'flow' : 'article'}${answer ? '&answer' : ''}${nextTopic ? '&next-topic' : ''}`);
+  await page.goto(`/__reading-display?${flow ? 'flow' : 'article'}${answer ? '&answer' : ''}${nextTopic ? '&next-topic' : ''}${selectionBoundary ? '&selection-boundary' : ''}`);
   await expect(page.locator('.cm-content').first()).toContainText('Paragraph 1.');
+}
+
+for (const viewport of [{ width: 375, height: 812 }, { width: 812, height: 375 }]) {
+  test(`keeps reader controls outside text selection at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await openReader(page, true, false, false, true);
+    const line = await page.locator('.cm-line').first().boundingBox();
+    const header = page.getByText('Selection boundary label', { exact: true });
+    const footer = page.getByRole('button', { name: 'Resume review' });
+    const label = (await header.boundingBox())!;
+    await page.mouse.dblclick(label.x + 25, label.y + label.height / 2);
+    expect(await page.evaluate(() => window.getSelection()?.toString())).toBe('');
+    for (const control of [header, footer]) {
+      const box = await control.boundingBox();
+      await page.mouse.move(line!.x + 50, line!.y + line!.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2, { steps: 16 });
+      await page.mouse.up();
+      const selected = await page.evaluate(() => {
+        const selection = window.getSelection();
+        const body = document.querySelector('.cm-content');
+        return { text: selection?.toString() ?? '', inside: Boolean(
+          selection && body?.contains(selection.anchorNode) && body.contains(selection.focusNode)
+        ) };
+      });
+      expect(selected.text.trim().length).toBeGreaterThan(0);
+      expect(selected.text).not.toMatch(/Selection boundary label|Resume/);
+      expect(selected.inside).toBe(true);
+    }
+    await footer.click();
+    await expect(page.getByRole('button', { name: 'Return to reading' })).toBeVisible();
+  });
 }
 async function done(page: Page) {
   await page.getByRole('button', { name: 'Done', exact: true }).click();

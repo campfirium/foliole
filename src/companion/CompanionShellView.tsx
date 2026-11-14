@@ -140,7 +140,8 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
           ready={model.workspaceSync.isWorkspaceSyncStateReady
             && (model.surface.activeAction !== 'review' || model.surface.flowReady)} />
       ) : null}
-      <main className={`relative ${companionViewportHeightClassName} bg-companion-base text-foreground`}>
+      <main data-companion-reading-page={page.reading || undefined}
+        className={`relative ${companionViewportHeightClassName} bg-companion-base text-foreground`}>
         <CompanionPageStack key={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? model.workspaceSync.bootstrapState?.database_path ?? 'preview'}
           model={model} pageKey={page.key} reading={page.reading} content={page.content} />
       </main>
