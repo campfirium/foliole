@@ -94,6 +94,8 @@ function CompanionSettingsHome(props: CompanionSettingsContentProps & { showTest
       onOpenReviewStatistics={() => props.onOpenSyncSettingsPage('reviewStatistics')}
       {...(['ios-native', 'android-native'].includes(getCompanionRuntimeCapability().kind)
         ? { onOpenLogs: () => props.onOpenSyncSettingsPage('logs') } : {})}
+      {...(getCompanionRuntimeCapability().kind === 'android-native'
+        ? { onOpenDiagnostics: () => props.onOpenSyncSettingsPage('diagnostics') } : {})}
       onOpenAbout={() => props.onOpenSyncSettingsPage('about')}
       {...(props.showTestTools ? { onOpenDebug: () => props.onOpenSyncSettingsPage('debug') } : {})}
       onOpenBackup={() => props.onOpenSyncSettingsPage('backup')}
@@ -117,9 +119,10 @@ function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
   if (props.settingsPage === 'list' || props.settingsPage === 'storage') {
     return <CompanionSettingsHome {...props} showTestTools={showTestTools} />;
   }
-  if (props.settingsPage === 'logs') return <>
-    <SupportLogPanel mobile />
+  if (props.settingsPage === 'logs') return <SupportLogPanel mobile />;
+  if (props.settingsPage === 'diagnostics' && getCompanionRuntimeCapability().kind === 'android-native') return <>
     <CompanionDevanagariSelectionControl />
+    <SupportLogPanel mobile androidSelection />
   </>;
   if (props.settingsPage === 'about') return <CompanionAboutSettingsContent />;
   if (props.settingsPage === 'backup') return <CompanionFolderDatabaseBackupSection />;

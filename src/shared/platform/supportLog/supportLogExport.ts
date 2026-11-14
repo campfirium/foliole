@@ -6,10 +6,10 @@ const fileHandoff = registerPlugin<{
   shareSupportLog(options: { text: string }): Promise<{ status: string }>;
 }>('FolioleArticleHandoff');
 
-export async function exportSupportLog(mobile: boolean) {
+export async function exportSupportLog(mobile: boolean, androidSelection = false) {
   const platform = mobile ? Capacitor.getPlatform() : 'desktop';
   if (platform !== 'desktop' && platform !== 'android' && platform !== 'ios') return false;
-  const text = serializeSupportLog(platform);
+  const text = serializeSupportLog(platform, androidSelection);
   if (!text) return false;
   if (mobile) {
     const result = await fileHandoff.shareSupportLog({ text });

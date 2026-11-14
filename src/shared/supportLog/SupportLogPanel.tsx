@@ -2,7 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { useTranslation } from '../localization/LocalizationProvider';
 import {
-  getSupportLogState, startSupportLog, stopSupportLog, subscribeSupportLog
+  getSupportLogState, hasAndroidSelectionSupportReport, startSupportLog, stopSupportLog, subscribeSupportLog
 } from '../platform/supportLog/supportLog';
 import { exportSupportLog } from '../platform/supportLog/supportLogExport';
 import { AppButton } from '../ui/Button';
@@ -18,10 +18,11 @@ function useElapsedSeconds(startedAt: number) {
   return Math.min(300, Math.max(0, Math.floor((now - startedAt) / 1000)));
 }
 
-export function SupportLogPanel({ mobile = false }: { mobile?: boolean }) {
+export function SupportLogPanel({ mobile = false, androidSelection = false }: { mobile?: boolean; androidSelection?: boolean }) {
   const t = useTranslation();
   const state = useSyncExternalStore(subscribeSupportLog, getSupportLogState);
   const seconds = useElapsedSeconds(state.startedAt);
+  const ready = state.phase === 'ready' && (!androidSelection || hasAndroidSelectionSupportReport());
   const recording = state.phase === 'recording';
   const [exporting, setExporting] = useState(false);
   const [exportFailed, setExportFailed] = useState(false);
@@ -30,7 +31,7 @@ export function SupportLogPanel({ mobile = false }: { mobile?: boolean }) {
     setExporting(true);
     setExportFailed(false);
     try {
-      setExportFailed(!await exportSupportLog(mobile));
+      setExportFailed(!await exportSupportLog(mobile, androidSelection));
     } catch {
       setExportFailed(true);
     } finally {
@@ -44,19 +45,19 @@ export function SupportLogPanel({ mobile = false }: { mobile?: boolean }) {
       <span role="status">{t('supportLog.recording')}</span>
       <span className="ml-auto tabular-nums">{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</span>
     </div> : null}
-    <p className="text-sm text-foreground/70">{t(state.phase === 'ready' ? 'supportLog.ready'
+    <p className="text-sm text-foreground/70">{t(ready ? 'supportLog.ready'
       : recording ? 'supportLog.instructions' : 'supportLog.intro')}</p>
     <div className={mobile ? 'grid gap-2' : 'flex flex-wrap gap-2'}>
       <AppButton type="button" variant="emphasis" className={mobile ? 'min-h-11' : undefined}
         disabled={exporting} onClick={() => {
           setExportFailed(false);
           if (recording) stopSupportLog();
-          else startSupportLog();
+          else startSupportLog(androidSelection);
         }}>
         {t(recording ? 'supportLog.stop' : 'supportLog.start')}
       </AppButton>
       <AppButton type="button" className={mobile ? 'min-h-11' : undefined}
-        disabled={state.phase !== 'ready' || exporting} onClick={() => void handleExport()}>
+        disabled={!ready || exporting} onClick={() => void handleExport()}>
         {t('supportLog.export')}
       </AppButton>
     </div>

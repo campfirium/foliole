@@ -1,4 +1,5 @@
 export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
+  'companion.settings.diagnostics.title': 'Diagnostics',
   'companion.settings.devanagariSelection.label': 'Devanagari annotation boundaries',
   'companion.settings.devanagariSelection.annotation': 'Complete conjuncts',
   'companion.settings.devanagariSelection.off': 'Off',

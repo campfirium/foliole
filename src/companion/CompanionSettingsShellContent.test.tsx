@@ -157,3 +157,17 @@ it.each(['android-native', 'ios-native'])('opens Logs from settings on %s', kind
   expect(screen.getByRole('button', { name: 'Start recording' })).toBeEnabled();
   expect(screen.getByRole('button', { name: 'Export log' })).toBeDisabled();
 });
+
+it('places the Android correction and capture controls on Diagnostics', () => {
+  appDataRuntime.kind = 'android-native';
+  const { unmount } = render(<SettingsHarness />);
+  fireEvent.click(screen.getByRole('button', { name: /^Logs/ }));
+  expect(screen.queryByRole('combobox', { name: 'Devanagari annotation boundaries' })).toBeNull();
+  unmount();
+
+  render(<SettingsHarness />);
+  fireEvent.click(screen.getByRole('button', { name: /^Diagnostics/ }));
+  expect(screen.getByRole('combobox', { name: 'Devanagari annotation boundaries' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Start recording' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Export log' })).toBeDisabled();
+});

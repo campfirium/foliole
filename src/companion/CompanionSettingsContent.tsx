@@ -78,10 +78,21 @@ function SettingsAboutAndTestTools(props: { onOpenAbout?(): void; onOpenDebug?()
   </>;
 }
 
+function CompanionSupportSettingsLinks(props: { onOpenLogs?(): void; onOpenDiagnostics?(): void }) {
+  const t = useTranslation();
+  if (!props.onOpenLogs && !props.onOpenDiagnostics) return null;
+  return <SettingsListSection title="">
+    {props.onOpenLogs ? <SettingsListItem Icon={FileText} detail="" title={t('supportLog.title')} onClick={props.onOpenLogs} /> : null}
+    {props.onOpenDiagnostics ? <SettingsListItem Icon={Bug} detail=""
+      title={t('companion.settings.diagnostics.title')} onClick={props.onOpenDiagnostics} /> : null}
+  </SettingsListSection>;
+}
+
 export function CompanionSettingsList(props: {
   onOpenAppearance(): void;
   onOpenAbout?(): void;
   onOpenLogs?(): void;
+  onOpenDiagnostics?(): void;
   onOpenDebug?(): void;
   onOpenLearning?(): void;
   onOpenReminders?(): void;
@@ -128,8 +139,7 @@ export function CompanionSettingsList(props: {
         />
         <SettingsExperimentalFeaturesSection />
         <CompanionFeedbackSettingsRow />
-        {props.onOpenLogs ? <SettingsListSection title=""><SettingsListItem Icon={FileText} detail=""
-          title={t('supportLog.title')} onClick={props.onOpenLogs} /></SettingsListSection> : null}
+        <CompanionSupportSettingsLinks {...props} />
         <SettingsAboutAndTestTools {...props} />
       </div>
     </section>

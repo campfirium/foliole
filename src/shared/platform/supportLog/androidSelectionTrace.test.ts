@@ -18,7 +18,7 @@ it.each(['annotation', 'off'] as const)('exports the %s capture with bounded rec
   const text = document.body.appendChild(document.createTextNode('क्षत्र private'));
   const native = window.getSelection()!;
   const collapse = native.collapse;
-  startSupportLog();
+  startSupportLog(true);
   for (let index = 0; index < 600; index++) traceAndroidSelection('editor-update', [index]);
   native.setBaseAndExtent(text, 0, text, 6);
   traceAndroidSelectionSnapshot(node => node === text, 0, 6);
@@ -30,6 +30,7 @@ it.each(['annotation', 'off'] as const)('exports the %s capture with bounded rec
   const json = serializeSupportLog('android')!;
   expect(json).not.toContain('private');
   expect(json).not.toContain('क्षत्र');
+  expect(JSON.parse(serializeSupportLog('android', false)!).androidSelection).toBeUndefined();
   const capture = JSON.parse(json).androidSelection;
   expect(capture).toMatchObject({ mode, build: 'a'.repeat(40), dropped: 92 });
   expect(capture.events).toHaveLength(512);

@@ -19,6 +19,7 @@ export type CompanionSettingsPage =
   | 'appearance'
   | 'about'
   | 'logs'
+  | 'diagnostics'
   | 'debug'
   | 'tabs'
   | 'syncGroup'

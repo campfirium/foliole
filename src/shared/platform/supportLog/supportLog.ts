@@ -96,12 +96,12 @@ export function subscribeSupportLog(notify: () => void) {
   return () => { subscribers.delete(notify); };
 }
 
-export function startSupportLog() {
+export function startSupportLog(androidSelection = false) {
   if (state.phase === 'recording') return;
   entries = [];
   omitted = 0;
   publish({ phase: 'recording', startedAt: Date.now() });
-  startAndroidSelectionTrace();
+  if (androidSelection) startAndroidSelectionTrace();
   timer = setTimeout(stopSupportLog, duration);
 }
 
@@ -139,8 +139,15 @@ export function recordSupportEvent(event: EventName) {
   entries.push({ event, elapsedMs, count: 1 });
 }
 
-export function serializeSupportLog(platform: 'desktop' | 'android' | 'ios') {
+export function hasAndroidSelectionSupportReport() {
+  return Boolean(completed?.androidSelection);
+}
+
+export function serializeSupportLog(platform: 'desktop' | 'android' | 'ios', androidSelection?: boolean) {
   expireSupportLog();
   if (state.phase !== 'ready' || !completed || !completed.events.every(validEntry)) return null;
-  return JSON.stringify({ ...completed, platform }, null, completed.androidSelection ? undefined : 2);
+  const { androidSelection: trace, ...report } = completed;
+  if (androidSelection && !trace) return null;
+  return JSON.stringify({ ...report, ...(trace && androidSelection !== false ? { androidSelection: trace } : {}), platform },
+    null, trace && androidSelection !== false ? undefined : 2);
 }
