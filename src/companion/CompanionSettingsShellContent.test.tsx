@@ -149,3 +149,11 @@ describe('Companion About and test tools', () => {
   });
 
 });
+
+it.each(['android-native', 'ios-native'])('opens Logs from settings on %s', kind => {
+  appDataRuntime.kind = kind;
+  render(<SettingsHarness />);
+  fireEvent.click(screen.getByRole('button', { name: /^Logs/ }));
+  expect(screen.getByRole('button', { name: 'Start recording' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Export log' })).toBeDisabled();
+});

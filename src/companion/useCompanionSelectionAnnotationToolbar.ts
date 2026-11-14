@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type MouseEvent as ReactMouseEvent, type MutableRefObject, type SetStateAction } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { traceAndroidSelection } from '../shared/platform/supportLog/androidSelectionTrace';
+import { recordSupportEvent } from '../shared/platform/supportLog/supportLog';
 
 import type { CompanionSelectionAnnotationToolbarState } from './CompanionSelectionAnnotationToolbar';
 import { resolveCompanionSelectionCommandPayload } from './companionSelectionCommandPayload';
@@ -92,11 +94,14 @@ function useCompanionSelectionAnnotationScheduler(args: {
         const adapter = args.editorRef.current;
         const payload = resolveCompanionSelectionCommandPayload(args.nodeId, adapter);
         if (payload && adapter) {
+          recordSupportEvent('selection.toolbar.shown');
           toolbarDom.clearCompanionActiveHighlightElements();
           args.lastPayloadRef.current = payload;
           args.setSelectionToolbar(resolveSelectionToolbarState({ content: adapter.getContent(), fallback, payload, snapshot: args.snapshot }));
           return;
         }
+        recordSupportEvent(window.getSelection()?.isCollapsed
+          ? 'selection.toolbar.collapsed' : 'selection.toolbar.no_range');
         args.setSelectionToolbar((current) => current?.existingHighlight ? current : null);
       });
     }, toolbarDom.SELECTION_SETTLE_DELAY_MS);
@@ -136,6 +141,7 @@ function useClearSelectionAndCloseToolbar(args: {
     lastPayloadRef.current = null;
     const selection = editorRef.current?.getSelection();
     const collapseAt = selection ? Math.max(selection.from, selection.to) : 0;
+    traceAndroidSelection('clear');
     window.getSelection()?.removeAllRanges();
     editorRef.current?.setSelection({ from: collapseAt, to: collapseAt });
     setSelectionToolbar(null);

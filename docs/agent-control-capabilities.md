@@ -134,3 +134,7 @@ When changing a product capability:
 3. Exercise the real API and CLI where supported. Verify the user-visible result, check existing callers' contracts, and cover restart or an independent sync peer where the operation promises those results.
 
 The companion sync-group setup screen displays safe failure codes and the known device and stage when library reception is incomplete. This diagnostic stays in the setup screen. Agent Control exposes no sync-group setup or diagnostic operation.
+
+The Logs settings page on desktop, Android, and iPhone captures a short local troubleshooting session and exports a user-selected copy. Agent Control exposes no operation to start capture, read the log, or export it. The user initiates capture and chooses where to share the exported file.
+
+Android's Devanagari annotation boundary setting is a device-local touch selection preference in Settings → Logs. The API and CLI continue to take explicit stored Markdown ranges.

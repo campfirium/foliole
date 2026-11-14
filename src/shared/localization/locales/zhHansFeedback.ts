@@ -1,6 +1,16 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_FEEDBACK_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'supportLog.title': '日志',
+  'supportLog.intro': '遇到问题时，开启日志记录以帮助排查。',
+  'supportLog.start': '开始记录',
+  'supportLog.stop': '停止记录',
+  'supportLog.recording': '正在记录',
+  'supportLog.instructions': '问题复现后停止记录，最长 5 分钟。',
+  'supportLog.ready': '日志已生成，可以导出。',
+  'supportLog.export': '导出日志',
+  'supportLog.exportFailed': '无法导出日志，请重试。',
+  'supportLog.privacy': '日志仅保存在本机，不会自动上传。',
   'feedback.title': '发送反馈',
   'feedback.description': '告诉我们哪里出错、哪里不清楚，或怎样让 Foliole 更顺手。',
   'feedback.message.label': '反馈',

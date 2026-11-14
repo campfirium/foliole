@@ -1,6 +1,9 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.settings.devanagariSelection.label': '天城文标注边界',
+  'companion.settings.devanagariSelection.annotation': '补齐连字',
+  'companion.settings.devanagariSelection.off': '关闭',
   'companion.settings.about.changelog': '更新日志',
   'companion.settings.about.privacy': '隐私政策',
   'companion.settings.about.versionUnavailable': '无法读取已安装版本',

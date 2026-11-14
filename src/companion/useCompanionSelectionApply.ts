@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { recordSupportEvent } from '../shared/platform/supportLog/supportLog';
 import { resolveLongClozeGuardAction } from '../shared/selectionClozeGuard';
 import type { SelectionCommandPayload } from '../shared/selectionCommandPayload';
 
@@ -25,10 +26,13 @@ export function useCompanionSelectionApply(args: {
     if (pending.current) return;
     pending.current = true;
     setSaving(true);
+    recordSupportEvent('selection.apply.started');
     try {
       const keepOpen = await action();
+      recordSupportEvent('selection.apply.finished');
       if (mounted.current && keepOpen !== true) args.onClose();
     } catch (failure) {
+      recordSupportEvent('selection.apply.failed');
       if (!mounted.current) return;
       if (failure instanceof CompanionSelectionRefreshError) recovery.current = failure;
       setError(failure);

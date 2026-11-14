@@ -2,6 +2,7 @@ import {
   Archive,
   Bell,
   BookOpenText,
+  FileText,
   FolderOpen,
   FolderSearch,
   Globe2,
@@ -37,6 +38,7 @@ import { AppButton, SettingsNavigation, SettingsNavigationBrand, SettingsNavigat
 
 const CATEGORY_ICONS: Record<SettingsCategoryId, LucideIcon> = {
   about: Info,
+  logs: FileText,
   general: SlidersHorizontal,
   appearance: Palette,
   typography: Type,

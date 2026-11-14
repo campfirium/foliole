@@ -1,9 +1,15 @@
+import { getDevanagariSelectionMode, type DevanagariSelectionMode } from '../shared/platform/supportLog/androidDevanagariSelectionMode';
+import { traceAndroidSelection } from '../shared/platform/supportLog/androidSelectionTrace';
+
+
 import type { EditorAdapter, EditorSelection } from '@/features/editor/adapters/EditorAdapter';
+import { expandDevanagariAnnotationRange } from '@/features/editor/model/devanagariAnnotationRange';
 import {
   getSelectionCommandPayload,
   getSelectionCommandPayloadForContentRanges,
   type SelectionCommandPayload
 } from '@/shared/selectionCommandPayload';
+
 
 function toElement(node: Node | null) {
   return node instanceof Element ? node : node?.parentElement ?? null;
@@ -65,12 +71,44 @@ function getDomSelectionCommandPayload(parentNodeId: string, adapter: EditorAdap
     : null;
 }
 
+function readAndroidDomRange(adapter: EditorAdapter, selection: Selection): EditorSelection[] {
+  const { anchorNode, focusNode } = selection;
+  if (!anchorNode?.isConnected || !focusNode?.isConnected || selection.rangeCount !== 1) return [];
+  const fromAnchor = adapter.getDocumentPositionAtDomPoint?.(anchorNode, selection.anchorOffset);
+  const fromFocus = adapter.getDocumentPositionAtDomPoint?.(focusNode, selection.focusOffset);
+  if (fromAnchor == null || fromFocus == null || fromAnchor === fromFocus) return [];
+  const from = Math.min(fromAnchor, fromFocus);
+  const to = Math.max(fromAnchor, fromFocus);
+  return [{ from, to }];
+}
+
+function resolveAndroidSelectionPayload(parentNodeId: string, adapter: EditorAdapter, mode: DevanagariSelectionMode) {
+  const selection = getReadableDomSelection();
+  // A non-collapsed native range can contain only an invisible widget buffer.
+  const [range] = selection && /[^\s\p{Default_Ignorable_Code_Point}]/u.test(selection.toString())
+    ? readAndroidDomRange(adapter, selection) : [];
+  if (!range) {
+    traceAndroidSelection('payload', [0]);
+    return null;
+  }
+  const content = adapter.getContent();
+  const normalized = mode === 'annotation' ? expandDevanagariAnnotationRange(content, range) : range;
+  if (normalized.from !== range.from || normalized.to !== range.to) {
+    traceAndroidSelection('normalize', [range.from, range.to, normalized.from, normalized.to]);
+  }
+  const payload = getSelectionCommandPayloadForContentRanges(parentNodeId, content, [normalized]);
+  traceAndroidSelection('payload', [Number(Boolean(payload)), range.from, range.to]);
+  return payload;
+}
+
 export function resolveCompanionSelectionCommandPayload(
   parentNodeId: string,
   adapter: EditorAdapter | null,
-  fallbackPayload: SelectionCommandPayload | null = null
+  fallbackPayload: SelectionCommandPayload | null = null,
+  mode = getDevanagariSelectionMode()
 ): SelectionCommandPayload | null {
   if (!adapter) return fallbackPayload;
+  if (mode && adapter.getDocumentPositionAtDomPoint) return resolveAndroidSelectionPayload(parentNodeId, adapter, mode);
   const domSelection = getReadableDomSelection();
   if (domSelection) return getDomSelectionCommandPayload(parentNodeId, adapter, domSelection);
   const adapterPayload = getSelectionCommandPayload(parentNodeId, adapter);

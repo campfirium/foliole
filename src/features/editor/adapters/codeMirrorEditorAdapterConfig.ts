@@ -3,7 +3,9 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { EditorState, Prec, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, highlightActiveLine, keymap, type ViewUpdate } from '@codemirror/view';
 
+import { getCompanionRuntimeCapability } from '../../../shared/platform/companionRuntimeCapabilities';
 import type { ExternalLinkOpenRequest } from '../../../shared/platform/externalLinkOpenRequest';
+import { isAndroidSelectionTraceActive, traceAndroidSelection } from '../../../shared/platform/supportLog/androidSelectionTrace';
 import { folioleMarkdownLanguageExtensions } from '../model/folioleMarkdownParser';
 
 import {
@@ -34,6 +36,12 @@ function createEditorUpdateListener(args: {
   onDocChanged: (content: string | null, meta: EditorDocumentChangeMeta, update: ViewUpdate) => void;
 }) {
   return EditorView.updateListener.of((update) => {
+    if (isAndroidSelectionTraceActive() && update.state.readOnly &&
+      update.view.contentDOM.getAttribute('role') === 'document' && (update.selectionSet || update.viewportChanged || update.focusChanged)) {
+      const { from, to } = update.state.selection.main;
+      traceAndroidSelection('editor-update', [from, to, Number(update.selectionSet), Number(update.viewportChanged),
+        Number(update.focusChanged), Number(update.view.hasFocus), Number(update.transactions.some(tr => tr.isUserEvent('select.pointer')))]);
+    }
     if (update.selectionSet) {
       syncParagraphMarkerSelectionVisibility(update.view);
     }
@@ -72,7 +80,8 @@ const escapeBlurKeymap = [{
 
 function createEditorInputExtensions(options: CodeMirrorEditorAdapterOptions) {
   return [
-    preserveDevanagariConjunctPointerSelection,
+    ...(options.readOnlyInteractionMode === 'document' && getCompanionRuntimeCapability().kind === 'android-native'
+      ? [] : [preserveDevanagariConjunctPointerSelection]),
     Prec.highest(keymap.of(structuredListKeymap)),
     keymap.of([...escapeBlurKeymap, ...markdownFormattingKeymap, ...folioleDefaultKeymap]),
     ...createApplicationCutExtensions(options.applicationCutEnabled === true)
@@ -103,8 +112,12 @@ function createReadOnlyDocumentDomHandlers(options: CodeMirrorEditorAdapterOptio
     return {};
   }
   const blurReadOnlyDocument = (_event: FocusEvent, view: EditorView) => {
+    if (view.dom.contains(document.activeElement)) traceAndroidSelection('blur');
     blurActiveCodeMirrorElement(view);
-    window.setTimeout(() => blurActiveCodeMirrorElement(view), 0);
+    window.setTimeout(() => {
+      if (view.dom.contains(document.activeElement)) traceAndroidSelection('blur');
+      blurActiveCodeMirrorElement(view);
+    }, 0);
     return false;
   };
   return {

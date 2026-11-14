@@ -40,6 +40,40 @@ public final class FolioleArticleHandoffPlugin extends Plugin {
         }
     }
 
+    @PluginMethod
+    public void shareSupportLog(PluginCall call) {
+        String content = call.getString("text");
+        if (content == null || content.isEmpty() || content.length() > 393216) {
+            call.reject("support_log_invalid");
+            return;
+        }
+        File file = null;
+        try {
+            File directory = new File(getContext().getCacheDir(), "support-log-export");
+            if (!directory.mkdirs() && !directory.isDirectory()) throw new IOException("support_log_cache_unavailable");
+            long expiry = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(24);
+            File[] expired = directory.listFiles(entry -> entry.getName().startsWith("foliole-log-")
+                && entry.getName().endsWith(".txt") && entry.lastModified() < expiry);
+            if (expired != null) for (File entry : expired) entry.delete();
+            file = File.createTempFile("foliole-log-", ".txt", directory);
+            try (FileOutputStream output = new FileOutputStream(file)) {
+                output.write(content.getBytes(StandardCharsets.UTF_8));
+            }
+            shareLogFile(call, file);
+        } catch (IOException | IllegalArgumentException | SecurityException error) {
+            if (file != null) file.delete();
+            call.reject("support_log_export_failed");
+        }
+    }
+
+    private void shareLogFile(PluginCall call, File file) {
+        Uri uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", file);
+        Intent send = new Intent(Intent.ACTION_SEND).setType("text/plain")
+            .putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        send.setClipData(ClipData.newRawUri("Foliole log", uri));
+        getActivity().runOnUiThread(() -> launch(call, file, Intent.createChooser(send, null)));
+    }
+
     private File writeArticle(String html) throws IOException {
         File directory = new File(getContext().getCacheDir(), "article-handoff");
         if (!directory.mkdirs() && !directory.isDirectory()) throw new IOException("article_cache_unavailable");

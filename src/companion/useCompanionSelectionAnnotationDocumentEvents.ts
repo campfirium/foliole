@@ -1,5 +1,7 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
 
+import { isAndroidSelectionTraceActive, traceAndroidSelectionSnapshot } from '../shared/platform/supportLog/androidSelectionTrace';
+
 import * as toolbarDom from './companionSelectionToolbarDom';
 import {
   getDefaultSelectionClientPoint,
@@ -87,6 +89,13 @@ interface SelectionAnnotationDocumentEventsArgs {
   scheduleSelectionToolbarOpen: (fallback?: CompanionSelectionClientPoint, allowExistingHighlight?: boolean) => void;
 }
 
+function recordSelectionSnapshot(editor: EditorAdapter | null) {
+  if (!isAndroidSelectionTraceActive()) return;
+  const range = editor?.getSelection();
+  traceAndroidSelectionSnapshot((node) => editor?.getDocumentPositionAtDomPoint?.(node, 0) != null,
+    range?.from ?? -1, range?.to ?? -1);
+}
+
 export function useCompanionSelectionAnnotationDocumentEvents(args: SelectionAnnotationDocumentEventsArgs) {
   const tapRef = useRef<SelectionAtTap | null>(null);
   useEffect(() => {
@@ -121,6 +130,7 @@ export function useCompanionSelectionAnnotationDocumentEvents(args: SelectionAnn
       args.scheduleSelectionToolbarOpen(args.lastFallbackRef.current, isExistingHighlightTarget(event.target));
     };
     const handleSelectionChange = () => {
+      recordSelectionSnapshot(args.editorRef.current);
       if (toolbarDom.isCompanionHighlightRangeDragging()) return;
       if (toolbarDom.isCompanionSelectionToolbarActiveElement()) return;
       if (toolbarDom.hasRecentSelectionInteraction(args.lastSelectionInteractionAtRef.current)) {

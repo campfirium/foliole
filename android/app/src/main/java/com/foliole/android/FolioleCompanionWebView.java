@@ -26,6 +26,11 @@ public class FolioleCompanionWebView extends CapacitorWebView {
         return super.startActionMode(createSelectionActionModeCallback(callback), type);
     }
 
+    private void reportSelectionAction(String phase, boolean created, long occurredAt) {
+        evaluateJavascript("document.dispatchEvent(new CustomEvent('foliole-android-selection-action',{detail:{phase:'"
+            + phase + "',created:" + created + ",occurredAt:" + occurredAt + "}}))", null);
+    }
+
     private ActionMode.Callback createSelectionActionModeCallback(ActionMode.Callback callback) {
         // Editable fields keep WebView's clipboard actions and floating-menu positioning.
         if (onCheckIsTextEditor()) return callback;
@@ -34,6 +39,7 @@ public class FolioleCompanionWebView extends CapacitorWebView {
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
                 boolean created = callback.onCreateActionMode(mode, menu);
                 menu.clear();
+                reportSelectionAction("create", created, System.currentTimeMillis());
                 return created;
             }
 
@@ -51,7 +57,9 @@ public class FolioleCompanionWebView extends CapacitorWebView {
 
             @Override
             public void onDestroyActionMode(ActionMode mode) {
+                long occurredAt = System.currentTimeMillis();
                 callback.onDestroyActionMode(mode);
+                reportSelectionAction("destroy", false, occurredAt);
             }
         };
     }

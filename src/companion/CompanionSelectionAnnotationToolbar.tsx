@@ -4,6 +4,7 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import type { EditorAdapter } from '../features/editor/adapters/EditorAdapter';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionHighlightRead, CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
+import { getDevanagariSelectionMode } from '../shared/platform/supportLog/androidDevanagariSelectionMode';
 import type { SelectionCommandPayload } from '../shared/selectionCommandPayload';
 import { AppButton, appFloatingSurfaceClassName } from '../shared/ui';
 
@@ -55,16 +56,43 @@ export function CompanionSelectionAnnotationToolbar(props: CompanionSelectionAnn
   return <ToolbarSession key={sessionKey} {...props} />;
 }
 
+function resolveCopyText(props: CompanionSelectionAnnotationToolbarProps) {
+  if (props.state?.existingHighlight) return props.state.existingHighlight.originalText;
+  if (getDevanagariSelectionMode() && props.editor?.getDocumentPositionAtDomPoint) {
+    return window.getSelection()?.toString() ?? '';
+  }
+  return resolveApplyPayload(props)?.selectionText ?? '';
+}
+
+function useSelectionNote(props: CompanionSelectionAnnotationToolbarProps) {
+  const [draft, setDraft] = useState('');
+  const [isOpen, setOpen] = useState(false);
+  const [selection, setSelection] = useState<SelectionCommandPayload | null>(null);
+  return { draft, setDraft, isOpen, selection,
+    open() {
+      if (!props.state?.existingHighlight && getDevanagariSelectionMode()) {
+        const payload = resolveApplyPayload(props);
+        if (!payload) return;
+        setSelection(payload);
+      }
+      setOpen(true);
+    },
+    close() {
+      setSelection(null);
+      setOpen(false);
+    }
+  };
+}
+
 function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
-  const [noteDraft, setNoteDraft] = useState('');
-  const [isNoteOpen, setIsNoteOpen] = useState(false);
+  const note = useSelectionNote(props);
   const [deleting, setDeleting] = useState(false);
   const session = useCompanionHighlightSession(props.state?.existingHighlight, props.loadExistingHighlight);
-  const creation = useCompanionSelectionApply({ ...props, resolvePayload: () => resolveApplyPayload(props) });
+  const creation = useCompanionSelectionApply({ ...props, resolvePayload: () => note.selection ?? resolveApplyPayload(props) });
   const state = props.state!;
   const isExistingHighlight = Boolean(state.existingHighlight);
   const hideDeletedControls = deleting && (session.saving || !session.error || session.saved);
-  const draft = isExistingHighlight ? session.draft : noteDraft;
+  const draft = isExistingHighlight ? session.draft : note.draft;
   const disabled = isExistingHighlight ? session.loading || !session.ready || session.saving || session.saved : creation.saving || creation.saved || Boolean(creation.guardPayload);
   function applyExistingNote() {
     const target = state.existingHighlight;
@@ -85,7 +113,7 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
       style={{ left: state.left, top: state.top }}>
       {!hideDeletedControls && state.existingHighlight && props.onAdjustExistingHighlightRange ? <CompanionHighlightRangeHandles
         editor={props.editor ?? null} parentNodeId={props.parentNodeId} nodeId={state.existingHighlight.nodeId}
-        snapshot={props.snapshot ?? null} disabled={disabled || isNoteOpen}
+        snapshot={props.snapshot ?? null} disabled={disabled || note.isOpen}
         onCommit={(nodeId, range) => session.save(async () => {
           if (!session.guard || !props.editor) throw new Error('companion_highlight_node_unavailable');
           const result = await props.onAdjustExistingHighlightRange!(nodeId, range, props.editor.getContent(), session.guard);
@@ -95,23 +123,23 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
         disabled={creation.saving || creation.saved} onCancel={creation.cancelGuard} onChoose={creation.confirmGuard}
         status={creation.error ? <CreationStatus creation={creation} /> : null} /> : null}
       {!hideDeletedControls ? <CompanionSelectionToolbarActions isExistingHighlight={isExistingHighlight} isCloze={state.existingHighlight?.kind === 'cloze'} disabled={disabled}
-        getCopyText={() => state.existingHighlight?.originalText ?? resolveApplyPayload(props)?.selectionText ?? ''}
-        onCopied={props.onClose} onAddNote={() => setIsNoteOpen(true)} onApply={creation.apply} onDeleteExistingHighlight={deleteExistingHighlight}
+        getCopyText={() => resolveCopyText(props)}
+        onCopied={props.onClose} onAddNote={note.open} onApply={creation.apply} onDeleteExistingHighlight={deleteExistingHighlight}
         onOpenExistingHighlight={props.onOpenExistingHighlight ? () => {
           if (!state.existingHighlight || disabled) return;
           props.onOpenExistingHighlight?.(state.existingHighlight.nodeId);
           props.onClose();
         } : undefined} /> : null}
-      {!isNoteOpen && !isExistingHighlight && creation.error ? <div className={`${appFloatingSurfaceClassName('popover')} mt-2 w-64 rounded-md p-2 text-sm`}>
+      {!note.isOpen && !isExistingHighlight && creation.error ? <div className={`${appFloatingSurfaceClassName('popover')} mt-2 w-64 rounded-md p-2 text-sm`}>
         <CreationStatus creation={creation} />
       </div> : null}
-      {!isNoteOpen && (session.loading || session.error) ? <div className={`${appFloatingSurfaceClassName('popover')} mt-2 w-64 rounded-md p-2 text-sm`}>
+      {!note.isOpen && (session.loading || session.error) ? <div className={`${appFloatingSurfaceClassName('popover')} mt-2 w-64 rounded-md p-2 text-sm`}>
         <HighlightStatus session={session} onClose={props.onClose} />
       </div> : null}
-      {isNoteOpen ? <CompanionSelectionNotePanel draft={draft} disabled={disabled} status={isExistingHighlight ? <HighlightStatus session={session} onClose={props.onClose} /> : creation.error ? <CreationStatus creation={creation} /> : null}
+      {note.isOpen ? <CompanionSelectionNotePanel draft={draft} disabled={disabled} status={isExistingHighlight ? <HighlightStatus session={session} onClose={props.onClose} /> : creation.error ? <CreationStatus creation={creation} /> : null}
         left={state.noteLeft - state.left} top={state.noteTop - state.top}
-        onCancel={() => setIsNoteOpen(false)} onChange={isExistingHighlight ? session.setDraft : setNoteDraft}
-        onSave={() => isExistingHighlight ? applyExistingNote() : creation.apply('note', noteDraft)} /> : null}
+        onCancel={note.close} onChange={isExistingHighlight ? session.setDraft : note.setDraft}
+        onSave={() => isExistingHighlight ? applyExistingNote() : creation.apply('note', note.draft)} /> : null}
     </div>
   );
 }

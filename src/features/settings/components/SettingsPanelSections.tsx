@@ -6,6 +6,7 @@ import type {
   ExternalSourceSettingsFolder,
   ExternalSourceSettingsFolderPatch
 } from '../../../shared/platform/externalSourceSettingsRepository';
+import { SupportLogPanel } from '../../../shared/supportLog/SupportLogPanel';
 import type { HotkeySettingItem, HotkeyUpdateResult } from '../model/hotkeySettings';
 import type { SettingsDesktopAdapters } from '../model/settingsDesktopAdapters';
 import {
@@ -154,6 +155,7 @@ function renderFallbackCategory(props: LocalizedSettingsCategoryContentProps) {
   if (props.activeCategory === 'backups') {
     return <SettingsBackupsSection />;
   }
+  if (props.activeCategory === 'logs') return <SupportLogPanel />;
   if (props.activeCategory === 'about') {
     return (
       <SettingsAboutSection

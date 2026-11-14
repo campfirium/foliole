@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -49,9 +50,20 @@ function companionLegacyWebViewCssPlugin(): Plugin {
   };
 }
 
+function resolveCompanionSourceRevision() {
+  const suppliedRevision = process.env.VITE_FOLIOLE_SOURCE_REVISION;
+  if (suppliedRevision && /^[a-f0-9]{40}$/u.test(suppliedRevision)) return suppliedRevision;
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: PROJECT_ROOT, stdio: ['ignore', 'pipe', 'ignore'], encoding: 'utf8' }).trim();
+  } catch {
+    return 'unidentified';
+  }
+}
+
 export default mergeConfig(
   createSharedViteConfig(PROJECT_ROOT, { pdfJsResources: true }),
   defineConfig({
+    define: { 'import.meta.env.VITE_FOLIOLE_SOURCE_REVISION': JSON.stringify(resolveCompanionSourceRevision()) },
     root: path.resolve(PROJECT_ROOT, 'src/companion'),
     plugins: [companionLegacyWebViewCssPlugin(), companionPreviewServerPlugin(PROJECT_ROOT)],
     css: { postcss: { plugins: [companionTextScaleCss(), autoprefixer()] } },

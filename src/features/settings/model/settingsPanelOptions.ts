@@ -9,6 +9,7 @@ import type { InterfaceFontPreset, MonospaceFontPreset } from './appearanceSetti
 
 export type SettingsCategoryId =
   | 'about'
+  | 'logs'
   | 'backups'
   | 'companion-sync'
   | 'webdav-sync'
@@ -36,6 +37,7 @@ const SETTINGS_CATEGORY_DEFINITIONS: Array<{
   id: SettingsCategoryId;
   labelKey: TranslationKey;
 }> = [
+  { id: 'logs', labelKey: 'supportLog.title', descriptionKey: 'supportLog.intro' },
   { id: 'about', labelKey: 'settings.category.about.label', descriptionKey: 'settings.category.about.description' },
   { id: 'general', labelKey: 'settings.category.general.label', descriptionKey: 'settings.category.general.description' },
   { id: 'appearance', labelKey: 'settings.category.appearance.label', descriptionKey: 'settings.category.appearance.description' },
@@ -80,7 +82,7 @@ const SETTINGS_CATEGORY_GROUP_DEFINITIONS: Array<{ categoryIds: SettingsCategory
   },
   {
     labelKey: 'settings.group.storage',
-    categoryIds: ['library', 'companion-sync', 'webdav-sync', 'backups']
+    categoryIds: ['library', 'companion-sync', 'webdav-sync', 'backups', 'logs']
   },
   {
     labelKey: 'settings.group.sources',
@@ -116,6 +118,7 @@ export function isDesktopWebDavSettingsVisible() {
 }
 
 function isVisibleCategory(id: SettingsCategoryId) {
+  if (id === 'logs') return isDesktopRuntime();
   return id !== 'webdav-sync' || isDesktopWebDavSettingsVisible();
 }
 

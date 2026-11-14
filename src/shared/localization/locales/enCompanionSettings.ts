@@ -1,4 +1,7 @@
 export const EN_COMPANION_SETTINGS_TRANSLATIONS = {
+  'companion.settings.devanagariSelection.label': 'Devanagari annotation boundaries',
+  'companion.settings.devanagariSelection.annotation': 'Complete conjuncts',
+  'companion.settings.devanagariSelection.off': 'Off',
   'companion.settings.about.changelog': 'Changelog',
   'companion.settings.about.privacy': 'Privacy policy',
   'companion.settings.about.versionUnavailable': 'Installed version unavailable',

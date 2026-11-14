@@ -1,4 +1,4 @@
-import { Bell, BookOpen, Bug, CalendarDays, Database, HardDrive, Info, Palette, RefreshCw, RectangleEllipsis, type LucideIcon } from 'lucide-react';
+import { Bell, BookOpen, Bug, CalendarDays, Database, FileText, HardDrive, Info, Palette, RefreshCw, RectangleEllipsis, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { SettingsExperimentalFeaturesSection } from '../features/settings/components/sections/SettingsExperimentalFeaturesSection';
@@ -81,6 +81,7 @@ function SettingsAboutAndTestTools(props: { onOpenAbout?(): void; onOpenDebug?()
 export function CompanionSettingsList(props: {
   onOpenAppearance(): void;
   onOpenAbout?(): void;
+  onOpenLogs?(): void;
   onOpenDebug?(): void;
   onOpenLearning?(): void;
   onOpenReminders?(): void;
@@ -127,6 +128,8 @@ export function CompanionSettingsList(props: {
         />
         <SettingsExperimentalFeaturesSection />
         <CompanionFeedbackSettingsRow />
+        {props.onOpenLogs ? <SettingsListSection title=""><SettingsListItem Icon={FileText} detail=""
+          title={t('supportLog.title')} onClick={props.onOpenLogs} /></SettingsListSection> : null}
         <SettingsAboutAndTestTools {...props} />
       </div>
     </section>

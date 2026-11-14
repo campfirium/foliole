@@ -72,6 +72,7 @@ export interface EditorAdapter {
   getContent(): string;
   flushContentChanges?(): void;
   getDocumentPositionAtViewportY(clientY: number): number | null;
+  getDocumentPositionAtDomPoint?(node: Node, offset: number): number | null;
   getDocumentPositionAtClientPoint?(clientX: number, clientY: number): number | null;
   getPrimaryVisiblePosition?(): number | null;
   getPositionClientRect?(position: number): DOMRect | null;

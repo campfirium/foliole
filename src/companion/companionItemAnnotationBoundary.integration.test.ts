@@ -1,7 +1,9 @@
+// @vitest-environment jsdom
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { EditorView } from '@codemirror/view';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -13,6 +15,7 @@ vi.mock('@capacitor/core', async () => {
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor';
+import { CodeMirrorEditorAdapter } from '../features/editor/adapters/CodeMirrorEditorAdapter';
 import { applyCompanionEditHistory } from '../shared/platform/companion/editing/companionEditHistoryReplay';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
@@ -22,6 +25,7 @@ import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWor
 import { getSelectionCommandPayloadForContentRanges } from '../shared/selectionCommandPayload';
 
 import { persistCompanionSelectionAnnotation } from './companionSelectionAnnotationActions';
+import { resolveCompanionSelectionCommandPayload } from './companionSelectionCommandPayload';
 
 let root = '';
 let database: Database.Database | null = null;
@@ -55,6 +59,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  document.body.replaceChildren();
   await closeIosCompanionDatabase();
   if (database?.open) database.close();
   rmSync(root, { recursive: true, force: true });
@@ -94,4 +99,32 @@ it.each(['highlight', 'cloze', 'note'] as const)('keeps Topic %s creation anchor
   await closeIosCompanionDatabase();
   await openLibrary();
   expect(await loadCompanionWorkspaceNode(result!.nodeId)).toEqual(restored);
+});
+
+it.each(['highlight', 'cloze', 'note'] as const)('saves Android %s with the full second Devanagari occurrence after reopening', async kind => {
+  const source = { ...topic, id: 'hindi', content: 'क्षत्र\nक्षत्र' };
+  await seed(source);
+  const host = document.body.appendChild(document.createElement('div'));
+  const adapter = new CodeMirrorEditorAdapter(host, { initialContent: source.content, onChange: () => {},
+    readOnly: true, readOnlyInteractionMode: 'document' });
+  try {
+    const view = EditorView.findFromDOM(host.querySelector('.cm-editor')!)!;
+    const text = view.contentDOM.querySelectorAll('.cm-line')[1]!.firstChild!;
+    window.getSelection()!.setBaseAndExtent(text, 5, text, 2);
+    const payload = resolveCompanionSelectionCommandPayload(source.id, adapter);
+    expect(payload?.selectionText).toBe('क्षत्र');
+    const saved = await persistCompanionSelectionAnnotation({ deviceId: 'device', kind, payload: payload!,
+      note: 'Reader note', snapshot: (await loadCompanionWorkspaceSyncState()).workspace_snapshot });
+    expect(saved).toBeTruthy();
+    await closeIosCompanionDatabase();
+    await openLibrary();
+    expect(await loadCompanionWorkspaceNode(saved!.nodeId)).toMatchObject({
+      parentNodeId: source.id,
+      content: kind === 'cloze' ? 'क्षत्र\n[...]' : kind === 'note' ? 'क्षत्र\n※ Reader note' : 'क्षत्र',
+      reveal: kind === 'cloze' ? 'क्षत्र' : null,
+      anchorLink: { locator: { from: 7, to: 13, originalText: 'क्षत्र' } }
+    });
+  } finally {
+    adapter.destroy();
+  }
 });

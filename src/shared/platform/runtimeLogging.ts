@@ -1,4 +1,5 @@
 import { getElectronAPI } from './electronApi';
+import { recordSupportEvent } from './supportLog/supportLog';
 
 type DiagnosticLogLevel = 'warn' | 'error' | 'info' | 'debug';
 export type RuntimeLogArea = 'bridge' | 'native' | 'persistence';
@@ -66,6 +67,8 @@ function toConsoleMessage(event: string) {
 }
 
 export function logRuntimeEvent(input: DiagnosticLogPayload) {
+  if (input.level === 'warn') recordSupportEvent('runtime.warning');
+  if (input.level === 'error') recordSupportEvent('runtime.error');
   const runtimeLogger = getElectronAPI()?.logDiagnosticEvent;
   if (!runtimeLogger) {
     const fallbackArea = input.source.startsWith('renderer.') ? input.source.slice('renderer.'.length) : input.source;

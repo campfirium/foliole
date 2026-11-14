@@ -83,6 +83,7 @@ function resolveSettingsTopBar(
   if (settingsPage === 'backup') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.storage.databaseBackup') };
   if (settingsPage === 'attachments') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('settings.attachments.title') };
   if (settingsPage === 'appearance') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.appearance.title') };
+  if (settingsPage === 'logs') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('supportLog.title') };
   if (settingsPage === 'about') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('settings.category.about.label') };
   if (settingsPage === 'debug') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.debug.title') };
   if (settingsPage === 'tabs') return { backLabel: t('companion.settings.title'), onBack: onBackToSettingsList, title: t('companion.settings.tabs.title') };

@@ -17,6 +17,9 @@ export abstract class CodeMirrorEditorNavigation {
 
   getDocumentPositionAtViewportY(clientY: number) { return resolveDocumentPositionAtViewportY(this.view, clientY); }
   getDocumentPositionAtClientPoint(clientX: number, clientY: number) { return this.view.posAtCoords({ x: clientX, y: clientY }, false); }
+  getDocumentPositionAtDomPoint(node: Node, offset: number) {
+    return this.view.contentDOM.contains(node) ? this.view.posAtDOM(node, offset) : null;
+  }
   getPrimaryVisiblePosition() { return resolvePrimaryVisiblePosition(this.view); }
   getPositionClientRect(position: number) { return resolvePositionClientRect(this.view, this.clampPosition(position)); }
   getPositionViewportTop(position: number) {
