@@ -4,7 +4,6 @@ import { isImmersiveEditableElement, isImmersiveEscapeKey } from './immersiveRea
 import type { ImmersiveKeydownSource } from './immersiveReadingKeydownTypes';
 import { blurImmersiveActiveElement, clearParagraphMarker } from './immersiveReadingMarker';
 import { resolveCurrentParagraphSelection, resolveParagraphSelection } from './immersiveReadingModel';
-import { openAdjacentReadableNode } from './immersiveReadingNodes';
 import { runImmersiveSelectionAction } from './immersiveReadingSelectionActions';
 import { handleImmersiveToggleKey } from './immersiveReadingToggleKey';
 import { revealSelectionForImmersiveBand, shouldRevealSelectionInImmersiveBand } from './immersiveReadingViewportBand';
@@ -31,11 +30,10 @@ function selectParagraph(args: {
   markNextProgrammaticScroll: () => void;
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void;
   props: ImmersiveKeydownSource;
-  readableNodeIds: string[];
 }) {
   const editor = args.props.editorAdapterRef.current;
   if (!editor) {
-    return false;
+    return;
   }
   const editorSelection = editor.getSelection();
   const readingSelection = args.getReadingSelection();
@@ -52,28 +50,25 @@ function selectParagraph(args: {
     currentSelection: movementBaseSelection,
     direction: args.direction
   });
-  if (nextSelection) {
-    const positionSelection = { from: nextSelection.from, to: nextSelection.from };
-    args.setReadingSelection(positionSelection, 'immersive-keydown');
-    editor.setSelection(positionSelection);
-    editor.setParagraphMarker?.(nextSelection);
-    if (shouldRevealSelectionInImmersiveBand({
+  if (!nextSelection) {
+    return;
+  }
+  const positionSelection = { from: nextSelection.from, to: nextSelection.from };
+  args.setReadingSelection(positionSelection, 'immersive-keydown');
+  editor.setSelection(positionSelection);
+  editor.setParagraphMarker?.(nextSelection);
+  if (shouldRevealSelectionInImmersiveBand({
+    direction: args.direction,
+    props: args.props,
+    selection: nextSelection
+  })) {
+    args.markNextProgrammaticScroll();
+    revealSelectionForImmersiveBand({
       direction: args.direction,
       props: args.props,
-      selection: nextSelection
-    })) {
-      args.markNextProgrammaticScroll();
-      revealSelectionForImmersiveBand({
-        direction: args.direction,
-        props: args.props,
-        selection: positionSelection
-      });
-    }
-    return true;
+      selection: positionSelection
+    });
   }
-  editor.setParagraphMarker?.(null);
-  openAdjacentReadableNode(args.props, args.readableNodeIds, args.direction);
-  return true;
 }
 
 function handleImmersivePrimaryKey(args: {
@@ -112,7 +107,6 @@ function handleImmersiveReadingKey(args: {
   getReadingSelection: () => { from: number; to: number } | null;
   markNextProgrammaticScroll: () => void;
   props: ImmersiveKeydownSource;
-  readableNodeIds: string[];
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void;
 }) {
   const directionKey = args.event.key === 'ArrowUp' || (args.event.key === ' ' && args.event.shiftKey)
@@ -125,8 +119,7 @@ function handleImmersiveReadingKey(args: {
       direction: directionKey,
       markNextProgrammaticScroll: args.markNextProgrammaticScroll,
       setReadingSelection: args.setReadingSelection,
-      props: args.props,
-      readableNodeIds: args.readableNodeIds
+      props: args.props
     });
     return;
   }
@@ -153,7 +146,6 @@ export function handleImmersiveKeydown(args: {
   markNextProgrammaticScroll: () => void;
   props: ImmersiveKeydownSource;
   queueReadingSelectionRestore: () => void;
-  readableNodeIds: string[];
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void;
   setIsImmersiveEditing: (value: boolean) => void;
   setIsShortcutsOverlayOpen: (value: boolean | ((current: boolean) => boolean)) => void;
@@ -187,7 +179,6 @@ export function handleImmersiveKeydown(args: {
     getReadingSelection: args.getReadingSelection,
     markNextProgrammaticScroll: args.markNextProgrammaticScroll,
     props: args.props,
-    readableNodeIds: args.readableNodeIds,
     setReadingSelection: args.setReadingSelection
   });
 }

@@ -10,7 +10,6 @@ export interface ImmersiveKeydownSource {
   isImmersiveMode: boolean;
   onCreateSelectionNote: (payload: SelectionCommandPayload) => string | null;
   onExitImmersiveMode: () => void;
-  onSelectNode: (nodeId: string) => void;
   onToggleImmersiveMode: () => void;
   onToggleSelectionHighlight: (payload: SelectionCommandPayload) => 'created' | 'deleted' | null;
 }

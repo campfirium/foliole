@@ -16,11 +16,9 @@ export interface ImmersiveReadingModeSource {
   getReadingPositionSyncState: () => ReadingPositionSyncState | null;
   isImmersiveMode: boolean;
   isStudyMode: boolean;
-  nodeOrder: string[];
   nodesById: Record<string, Node>;
   onCreateSelectionNote: (payload: SelectionCommandPayload) => string | null;
   onExitImmersiveMode: () => void;
-  onSelectNode: (nodeId: string) => void;
   onToggleImmersiveMode: () => void;
   onToggleSelectionHighlight: (payload: SelectionCommandPayload) => 'created' | 'deleted' | null;
   setReadingPositionSelection: (selection: EditorSelection) => void;

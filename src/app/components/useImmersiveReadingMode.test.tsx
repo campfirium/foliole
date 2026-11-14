@@ -128,7 +128,7 @@ function buildProps() {
   };
 }
 
-it('moves paragraph selection with ArrowDown and opens the next readable note at the end', () => {
+it('keeps the closing paragraph selected when ArrowDown reaches the end', () => {
   const { onSelectNode, props } = buildProps();
   renderHook(() => useImmersiveReadingMode(props));
 
@@ -137,7 +137,8 @@ it('moves paragraph selection with ArrowDown and opens the next readable note at
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
   });
 
-  expect(onSelectNode).toHaveBeenCalledWith('node-2');
+  expect(onSelectNode).not.toHaveBeenCalled();
+  expect(props.editorAdapterRef.current?.getSelection()).toEqual({ from: 7, to: 7 });
 });
 it('runs highlight toggle and note actions from the current paragraph selection', () => {
   const { adapter, onToggleSelectionHighlight, onCreateSelectionNote, props } = buildProps();

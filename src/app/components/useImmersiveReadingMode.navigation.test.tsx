@@ -69,10 +69,12 @@ function buildAdapter(content: string) {
 
 function buildProps() {
   const { adapter } = buildAdapter('Alpha\n\nBeta');
+  const onSelectNode = vi.fn();
   let readingSelection: EditorSelection | null = null;
   let applyingSelection: EditorSelection | null = null;
   return {
     adapter,
+    onSelectNode,
     props: {
       activeNodeId: 'node-1',
       editorAdapterRef: { current: adapter },
@@ -97,7 +99,7 @@ function buildProps() {
       setReadingPositionSelection: (selection: EditorSelection) => {
         readingSelection = selection;
       },
-      onSelectNode: vi.fn(),
+      onSelectNode,
       onToggleImmersiveMode: vi.fn(),
       trashedNodeIds: []
     } as ImmersiveProps
@@ -195,8 +197,8 @@ it('does not stall when moving backward and then forward again', () => {
   expect(adapter.setParagraphMarker).toHaveBeenNthCalledWith(3, { from: 7, to: 11 });
 });
 
-it('opens the previous readable note when moving upward from the first paragraph', () => {
-  const { props } = buildProps();
+it('keeps the opening paragraph selected when ArrowUp reaches the start', () => {
+  const { onSelectNode, props } = buildProps();
   props.activeNodeId = 'node-2';
   renderHook(() => useImmersiveReadingMode(props));
 
@@ -204,5 +206,6 @@ it('opens the previous readable note when moving upward from the first paragraph
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
   });
 
-  expect(props.onSelectNode).toHaveBeenCalledWith('node-1');
+  expect(onSelectNode).not.toHaveBeenCalled();
+  expect(props.editorAdapterRef.current?.getSelection()).toEqual({ from: 0, to: 0 });
 });
