@@ -233,11 +233,19 @@ function resolveContextFollowLabel(
 
 function AssistantMaterialTags(props: Pick<Parameters<typeof FolioleAideReadyContent>[0],
   'activeNodeId' | 'controller' | 'nodesById' | 'trashedNodeIds'>) {
+  const t = useTranslation();
   return (
-    <div className="mb-1.5 flex min-w-0">
+    <div className="mb-1.5 flex min-w-0 flex-col gap-1">
+      {props.controller.materialLinkFailed ? <span role="alert">
+        {t('desktop.rightPanel.assistant.materialTag.failed')}
+      </span> : null}
       <WorkspaceRightSidebarAssistantMaterialTags
         activeNodeId={props.activeNodeId}
         location={props.controller.materialLocation}
+        linkedMaterialIds={props.controller.linkedMaterialIds}
+        addMaterial={props.controller.addMaterial}
+        draft={!props.controller.selectedRecord}
+        busy={props.controller.materialLinkBusy || props.controller.sending}
         nodesById={props.nodesById}
         onOpenMaterial={props.controller.onOpenMaterial}
         trashedNodeIds={props.trashedNodeIds}

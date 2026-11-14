@@ -1,4 +1,7 @@
 export const EN_DESKTOP_AIDE_TRANSLATIONS = {
+  'desktop.rightPanel.assistant.materialTag.add': 'Link current material',
+  'desktop.rightPanel.assistant.materialTag.failed': 'Could not link the material. Try again.',
+  'desktop.rightPanel.assistant.materialTag.more': 'More linked materials',
   'desktop.rightPanel.assistant.materialTag.open': 'Open material: {title}',
   'desktop.rightPanel.assistant.materialTag.current': 'This material',
   'desktop.rightPanel.assistant.materialTag.library': 'Full library',

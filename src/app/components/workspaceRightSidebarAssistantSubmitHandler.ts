@@ -43,6 +43,8 @@ type AssistantSubmitState = {
   followCurrentMaterial: boolean;
   imageDrafts: NativeAssistantImageDraft[];
   location: ReturnType<typeof resolveAssistantLocation>;
+  linkedMaterialIds: string[];
+  materialLinkBusy: boolean;
   pendingLocation: ReturnType<typeof resolveAssistantLocation> | null;
   setPendingLocation: (location: ReturnType<typeof resolveAssistantLocation>) => void;
   messageText: string;
@@ -70,7 +72,7 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
   return async (event: FormEvent) => {
     event.preventDefault();
     const prompt = args.messageText.trim();
-    if (!args.aideReady || !prompt || args.sending) return;
+    if (!args.aideReady || !prompt || args.sending || args.materialLinkBusy) return;
     const node = args.activeNodeId ? args.nodesById[args.activeNodeId] : null;
     const eligible = node && node.kind !== 'folder' && !node.specialKind && !args.trashedNodeIds?.includes(node.id);
     const openingLocation = args.selectedRecord?.location ?? args.pendingLocation
@@ -94,6 +96,7 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
         {
           ...args,
           openingLocation,
+          linkedMaterialIds: args.selectedRecord ? [] : args.linkedMaterialIds,
           editorAdapterRef: args.editorAdapterRef,
           selectedThreadId: args.threads.selectedThreadId
         },

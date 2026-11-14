@@ -1,6 +1,7 @@
 import { validateAssistantImageDrafts } from '../assistant/assistantImageValidation.js';
 
 import {
+  readAssistantMaterialIds,
   readAssistantProvider,
   readOpeningLocation,
   readOptionalClientTurnId,
@@ -12,6 +13,7 @@ import { readOptionalWorkspaceContext } from './assistantWorkspaceContextReader.
 export function readAssistantSendCommandInput(args: Record<string, unknown>) {
   return {
     clientTurnId: readOptionalClientTurnId(args.clientTurnId) ?? createClientTurnId(),
+    linkedMaterialIds: readAssistantMaterialIds(args.linkedMaterialIds),
     message: typeof args.message === 'string' ? args.message : '',
     modelSelection: readOptionalModelSelection(args.modelSelection),
     openingLocation: readOpeningLocation(args.openingLocation),

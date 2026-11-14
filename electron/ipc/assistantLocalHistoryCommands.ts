@@ -9,16 +9,24 @@ import {
   deleteAssistantThreadIndexWithImages,
   listAssistantThreadIndex
 } from '../database/assistantThreadIndex.js';
+import { linkAssistantThreadMaterials } from '../database/assistantThreadMaterials.js';
 import { listAssistantThreadMessages } from '../database/assistantThreadMessages.js';
 
 import {
   readAssistantAttachmentId,
+  readAssistantMaterialIds,
   readAssistantProvider,
   readOpeningLocation,
   readProviderThreadId
 } from './assistantCommandInputs.js';
 
 export function handleAssistantLocalHistoryCommand(command: string, args: Record<string, unknown>) {
+  if (command === NATIVE_COMMANDS.assistantLinkThreadMaterial) {
+    const nodeIds = readAssistantMaterialIds([args.nodeId]);
+    return runWithAssistantHistoryConnectionOwner(() => linkAssistantThreadMaterials(
+      readAssistantProvider(args.provider), readProviderThreadId(args), nodeIds
+    ));
+  }
   if (command === NATIVE_COMMANDS.assistantListThreadIndex) {
     const location = readOpeningLocation(args.location);
     return runWithAssistantHistoryConnectionOwner(() => listAssistantThreadIndex({

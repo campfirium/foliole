@@ -157,6 +157,7 @@ async function sendMessage(args: Record<string, unknown>, sender?: WebContents) 
     images,
     message,
     ...(openingLocation ? { openingLocation } : {}),
+    linkedMaterialIds: input.linkedMaterialIds,
     result
   });
 }

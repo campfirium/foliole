@@ -7,6 +7,7 @@ export const NATIVE_ASSISTANT_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.assistantListModels, route: 'assistant', capability: 'assistant' },
   { command: NATIVE_COMMANDS.assistantStartChatGptLogin, route: 'assistant', capability: 'assistant' },
   { command: NATIVE_COMMANDS.assistantSendMessage, route: 'assistant', capability: 'assistant' },
+  { command: NATIVE_COMMANDS.assistantLinkThreadMaterial, route: 'assistant', capability: 'assistant' },
   { command: NATIVE_COMMANDS.assistantListThreadIndex, route: 'assistant', capability: 'assistant' },
   { command: NATIVE_COMMANDS.assistantListThreadMessages, route: 'assistant', capability: 'assistant' },
   { command: NATIVE_COMMANDS.assistantReadImageAttachment, route: 'assistant', capability: 'read' },

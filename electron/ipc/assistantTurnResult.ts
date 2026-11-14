@@ -16,6 +16,7 @@ export async function finishAssistantTurn(input: {
   continuation: Awaited<ReturnType<typeof prepareAssistantThreadContinuation>>;
   images: StoredAssistantImage[];
   message: string;
+  linkedMaterialIds?: string[] | undefined;
   openingLocation?: NativeAssistantThreadOpeningLocation;
   result: NativeAssistantSendMessageResult | null;
 }) {
@@ -40,6 +41,7 @@ export async function finishAssistantTurn(input: {
       ...continuationPersistenceInput(continuation),
       images,
       location: openingLocation,
+      linkedMaterialIds: input.linkedMaterialIds,
       message,
       provider: result.provider,
       result: readyMessage

@@ -1,6 +1,9 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_AIDE_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'desktop.rightPanel.assistant.materialTag.add': '关联当前材料',
+  'desktop.rightPanel.assistant.materialTag.failed': '无法关联材料，请重试。',
+  'desktop.rightPanel.assistant.materialTag.more': '更多关联材料',
   'desktop.rightPanel.assistant.materialTag.open': '打开材料：{title}',
   'desktop.rightPanel.assistant.materialTag.current': '本文',
   'desktop.rightPanel.assistant.materialTag.library': '全库',

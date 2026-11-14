@@ -10,6 +10,7 @@ import type {
 import type { NativeAssistantImageDraft } from '../../../lib/platform/nativeAssistantImageContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
+import { useAssistantMaterialLinks } from './useAssistantMaterialLinks';
 import { useAssistantTurnEventSubscription, type AssistantActiveTurn } from './useAssistantTurnEventSubscription';
 import { useFolioleAideContextFollow } from './useFolioleAideContextFollow';
 import { useFolioleAideModelControls } from './useFolioleAideModelControls';
@@ -60,6 +61,7 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
     [args.activeNodeId, args.nodesById]
   );
   const threads = useWorkspaceRightSidebarAssistantThreads(args.aideReady);
+  const materialLinks = useAssistantMaterialLinks(threads.upsertRecord);
   const [messageText, setMessageText] = useState('');
   const imageState = useAssistantImageDraftState(setMessageText);
   const [messagesByThread, dispatchCache] = useReducer(messageCacheReducer, {});
@@ -95,6 +97,7 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
     activeTurnRef,
     args,
     dispatchCache,
+    materialLinks,
     pendingLocation,
     setPendingLocation,
     followCurrentMaterial,
@@ -141,6 +144,7 @@ function useAssistantImageDraftState(setMessageText: (text: string) => void) {
 }
 
 type ControllerResultInput = {
+  materialLinks: ReturnType<typeof useAssistantMaterialLinks>;
   activeMessages: AssistantMessage[];
   activeTurnRef: { current: AssistantActiveTurn | null };
   args: AssistantPanelControllerArgs;
@@ -170,13 +174,21 @@ function createPanelControllerResult(input: ControllerResultInput) {
     followCurrentMaterial: input.followCurrentMaterial,
     handleNewThread: () => {
       imageState.reset();
+      input.materialLinks.reset();
       input.setPendingLocation(null);
       resetPendingAssistantConversation(input.dispatchCache, input.setMessageText, threads.selectThreadId);
     },
     handleRemoveRecord: (record: NativeAssistantThreadIndexRecord) =>
       removeRecord(record, threads.removeRecord, input.dispatchCache),
-    handleSelectRecord: (record: NativeAssistantThreadIndexRecord) =>
-      threads.selectThreadId(record.providerThreadId),
+    handleSelectRecord: (record: NativeAssistantThreadIndexRecord) => {
+      input.materialLinks.reset();
+      input.setPendingLocation(null);
+      threads.selectThreadId(record.providerThreadId);
+    },
+    addMaterial: (nodeId: string) => input.materialLinks.add(nodeId, input.selectedRecord),
+    linkedMaterialIds: input.selectedRecord?.linkedMaterialIds ?? (input.selectedRecord ? [] : input.materialLinks.draftIds),
+    materialLinkBusy: input.materialLinks.saving,
+    materialLinkFailed: input.materialLinks.failed,
     materialLocation: input.selectedRecord?.location ?? input.pendingLocation ?? input.location,
     onOpenMaterial: args.onSelectNode,
     handleSubmit: createControllerSubmitHandler(input),
@@ -220,6 +232,8 @@ function createControllerSubmitHandler(input: ControllerResultInput) {
     imageDrafts: imageState.imageDrafts,
     location: input.location,
     pendingLocation: input.pendingLocation,
+    linkedMaterialIds: input.materialLinks.draftIds,
+    materialLinkBusy: input.materialLinks.saving,
     setPendingLocation: input.setPendingLocation,
     messageText: input.messageText,
     ...(input.modelControls.selection ? { modelSelection: input.modelControls.selection } : {}),

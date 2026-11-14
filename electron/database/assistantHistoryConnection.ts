@@ -17,7 +17,7 @@ import { getSqliteConnectionCoordinator } from './sqliteConnectionCoordinator.js
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
-const ASSISTANT_HISTORY_SCHEMA_VERSION = 2;
+const ASSISTANT_HISTORY_SCHEMA_VERSION = 3;
 
 export interface AssistantHistoryConnection {
   dbPath: string;
@@ -64,12 +64,13 @@ export function closeAssistantHistoryConnection() {
 function initializeAssistantHistorySchema(sqlite: import('better-sqlite3').Database) {
   const version = sqlite.pragma('user_version', { simple: true }) as number;
   if (version === ASSISTANT_HISTORY_SCHEMA_VERSION) return;
-  if (version !== 0 && version !== 1) throw new Error(`unsupported_assistant_history_schema_${version}`);
+  if (version < 0 || version > ASSISTANT_HISTORY_SCHEMA_VERSION) throw new Error(`unsupported_assistant_history_schema_${version}`);
   sqlite.transaction(() => {
     const statements = version === 0
       ? ASSISTANT_THREAD_SCHEMA_STATEMENTS
-      : ASSISTANT_IMAGE_SCHEMA_STATEMENTS;
+      : version === 1 ? ASSISTANT_IMAGE_SCHEMA_STATEMENTS : [];
     for (const statement of statements) sqlite.exec(statement);
+    sqlite.exec("ALTER TABLE assistant_thread_index ADD COLUMN linked_material_ids TEXT NOT NULL DEFAULT '[]'");
     sqlite.pragma(`user_version = ${ASSISTANT_HISTORY_SCHEMA_VERSION}`);
   })();
 }

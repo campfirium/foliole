@@ -64,6 +64,7 @@ export interface NativeAssistantThreadIndexRecord {
   deletedAt: string | null;
   lastOpenedAt: string;
   location: NativeAssistantThreadOpeningLocation;
+  linkedMaterialIds?: string[];
   preview: string;
   provider: NativeAssistantProviderId;
   providerThreadId: string;
@@ -98,6 +99,7 @@ export interface NativeAssistantSendMessageArgs {
   message: string;
   modelSelection?: NativeAssistantModelSelection;
   openingLocation?: NativeAssistantThreadOpeningLocation;
+  linkedMaterialIds?: string[];
   provider: NativeAssistantProviderId;
   providerThreadId?: string;
   workspaceContext?: NativeAssistantWorkspaceContext;

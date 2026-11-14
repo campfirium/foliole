@@ -26,6 +26,7 @@ interface AssistantThreadIndexRow extends DatabaseRow {
   created_at: string;
   deleted_at: string | null;
   last_opened_at: string;
+  linked_material_ids: string;
   location_node_id: string | null;
   location_type: string;
   preview: string;
@@ -153,6 +154,10 @@ export function deleteAssistantThreadIndexWithImages(
   return openAssistantHistoryConnection().driver.transaction(() => {
     const attachmentIds = listAssistantThreadAttachmentIds(provider, providerThreadId);
     const record = updateAssistantThreadIndexStatus(provider, providerThreadId, 'deleted', now);
+    openAssistantHistoryConnection().driver.execute(
+      "UPDATE assistant_thread_index SET linked_material_ids = '[]' WHERE provider = ? AND provider_thread_id = ?",
+      [provider, providerThreadId]
+    );
     deleteAssistantThreadMessages(provider, providerThreadId);
     const unreferencedImages = deleteUnreferencedAssistantImageAttachments(attachmentIds);
     return { record, unreferencedImages };
@@ -181,7 +186,7 @@ function updateAssistantThreadIndexStatus(
   return readAssistantThreadIndexRecord(provider, providerThreadId);
 }
 
-function readAssistantThreadIndexRecord(
+export function readAssistantThreadIndexRecord(
   provider: NativeAssistantProviderId,
   providerThreadId: string
 ) {
@@ -220,6 +225,7 @@ function rowToRecord(row: AssistantThreadIndexRow): NativeAssistantThreadIndexRe
       row.location_type === 'node'
         ? { nodeId: row.location_node_id ?? '', type: 'node' }
         : { type: 'workspace' },
+    linkedMaterialIds: JSON.parse(row.linked_material_ids) as string[],
     preview: row.preview,
     provider: row.provider,
     providerThreadId: row.provider_thread_id,

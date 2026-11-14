@@ -7,8 +7,10 @@ import type {
 import type { NativeAssistantImageAttachment } from '../../lib/platform/nativeAssistantImageContract.js';
 import { openAssistantHistoryConnection } from '../database/assistantHistoryConnection.js';
 import {
+  readAssistantThreadIndexRecord,
   upsertAssistantThreadIndex
 } from '../database/assistantThreadIndex.js';
+import { linkAssistantThreadMaterials } from '../database/assistantThreadMaterials.js';
 import {
   appendAssistantThreadMessages
 } from '../database/assistantThreadMessages.js';
@@ -20,6 +22,7 @@ export function recordAssistantThreadSuccess(input: {
   continuedFromThreadId?: string;
   location: NativeAssistantThreadOpeningLocation;
   message: string;
+  linkedMaterialIds?: string[] | undefined;
   provider: NativeAssistantProviderId;
   images?: NativeAssistantImageAttachment[];
   result: NativeAssistantMessageResult;
@@ -61,7 +64,13 @@ export function recordAssistantThreadSuccess(input: {
         text: input.result.text ?? ''
       }
     ]);
-    return threadIndex;
+    const inherited = input.continuedFromThreadId
+      ? readAssistantThreadIndexRecord(input.provider, input.continuedFromThreadId).linkedMaterialIds ?? []
+      : [];
+    const materialIds = [...inherited, ...(input.linkedMaterialIds ?? [])];
+    return materialIds.length
+      ? linkAssistantThreadMaterials(input.provider, threadIndex.providerThreadId, materialIds)
+      : threadIndex;
   });
 }
 

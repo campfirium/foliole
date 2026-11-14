@@ -51,6 +51,7 @@ export function WorkspaceRightSidebarAssistantThreadList(props: {
             <div className={`${inspectorListInsetPaddingClassName} pb-2`}>
               <WorkspaceRightSidebarAssistantMaterialTags
                 location={record.location}
+                linkedMaterialIds={record.linkedMaterialIds}
                 nodesById={props.nodesById}
                 onOpenMaterial={props.onOpenMaterial}
                 trashedNodeIds={props.trashedNodeIds}

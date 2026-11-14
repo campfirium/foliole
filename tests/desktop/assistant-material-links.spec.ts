@@ -105,3 +105,36 @@ test('returns to an Aide conversation material while preserving Flow progress', 
   await expect.poll(() => flowNode(page)).toBe(next);
   await expect(page.getByText('Body for ' + next, { exact: true })).toBeVisible();
 });
+
+test('links the visible material and restores both links from desktop history', async ({ desktopApp, desktopWindow: page }) => {
+  await prepare(page, desktopApp);
+  const first = articleIds[0]!;
+  const second = articleIds[1]!;
+  const openArticle = (id: string) => page.getByRole('treeitem', { name: id, exact: true }).click();
+  await openArticle(first);
+  await openAssistantPanel(page);
+  const aide = page.locator('[data-panel-content-root="assistant"]');
+  await aide.getByRole('textbox', { name: 'Foliole Aide message' }).fill('Compare these notes');
+  await aide.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect.poll(() => desktopApp.evaluate(() =>
+    typeof (globalThis as typeof globalThis & { releaseAideMaterialReply?: () => void }).releaseAideMaterialReply
+  )).toBe('function');
+  await desktopApp.evaluate(() =>
+    (globalThis as typeof globalThis & { releaseAideMaterialReply?: () => void }).releaseAideMaterialReply?.()
+  );
+  await expect(aide.getByText('A shorter opening.')).toBeVisible();
+  await openArticle(second);
+  const add = aide.getByRole('button', { name: 'Link current material' });
+  await add.click();
+  await expect(add).toBeDisabled();
+  await expect(aide.getByRole('button', { name: 'Open material: ' + second })).toHaveText('This material');
+  await page.reload();
+  await expectWorkspaceShell(page);
+  await openAssistantPanel(page);
+  const history = aide.getByRole('list', { name: 'Local Foliole Aide history' });
+  await expect(history.getByRole('button', { name: 'Open material: ' + first })).toBeVisible();
+  await history.getByRole('button', { name: 'Open material: ' + second }).click();
+  await expect(page.getByText('Body for ' + second, { exact: true })).toBeVisible();
+  fs.mkdirSync('.tmp/artifacts/T775/native', { recursive: true });
+  await page.screenshot({ path: '.tmp/artifacts/T775/native/two-materials.png' });
+});

@@ -129,3 +129,27 @@ function createGate() {
     wait: new Promise<void>((resolve) => { release = resolve; })
   };
 }
+
+it('persists draft and explicit links through the native history commands', async () => {
+  adapterSendMessage.mockResolvedValue({
+    message: { text: 'Answer', threadId: 'linked-thread' },
+    provider: 'codex-app-server',
+    state: 'ready'
+  });
+  const provider = 'codex-app-server';
+  const providerThreadId = 'linked-thread';
+  await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
+    message: 'Compare these notes',
+    openingLocation: { type: 'node', nodeId: 'source' },
+    linkedMaterialIds: ['draft', 'source', 'draft']
+  })).resolves.toMatchObject({ threadIndex: { linkedMaterialIds: ['draft'] } });
+
+  const link = (nodeId: unknown) => handleAssistantCommandRaw(NATIVE_COMMANDS.assistantLinkThreadMaterial, {
+    nodeId, provider, providerThreadId
+  });
+  await expect(link('visible')).resolves.toMatchObject({ linkedMaterialIds: ['draft', 'visible'] });
+  await expect(link('visible')).resolves.toMatchObject({ linkedMaterialIds: ['draft', 'visible'] });
+  await expect(async () => link(123)).rejects.toThrow('invalid_assistant_material_id');
+  await expect(handleAssistantCommand(NATIVE_COMMANDS.assistantListThreadIndex, {}))
+    .resolves.toMatchObject([{ linkedMaterialIds: ['draft', 'visible'] }]);
+});

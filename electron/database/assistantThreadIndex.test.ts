@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
+import { closeAssistantHistoryConnection } from './assistantHistoryConnection.js';
 import {
   archiveAssistantThreadIndex as archiveAssistantThreadIndexRaw,
   deleteAssistantThreadIndex as deleteAssistantThreadIndexRaw,
@@ -26,6 +27,7 @@ import {
   upsertAssistantThreadIndex as upsertAssistantThreadIndexRaw,
   type AssistantThreadIndexUpsertInput
 } from './assistantThreadIndex.js';
+import { linkAssistantThreadMaterials } from './assistantThreadMaterials.js';
 import {
   appendAssistantThreadMessages as appendAssistantThreadMessagesRaw,
   listAssistantThreadMessages as listAssistantThreadMessagesRaw,
@@ -237,4 +239,21 @@ it('rejects unstable opening locations and truncates display text deterministica
   expect(record.title).toHaveLength(80);
   expect(record.title.endsWith('...')).toBe(true);
   expect(record.preview.endsWith('...')).toBe(true);
+});
+
+it('keeps explicitly linked materials through later replies and reopening history', () => {
+  const input = {
+    location: { type: 'node' as const, nodeId: 'source' },
+    message: 'Question',
+    providerThreadId: 'linked-thread'
+  };
+  upsertAssistantThreadIndex(input);
+  linkAssistantThreadMaterials(TEST_PROVIDER, input.providerThreadId, ['source', 'second', 'second']);
+  upsertAssistantThreadIndex({ ...input, message: 'Follow-up' });
+  linkAssistantThreadMaterials(TEST_PROVIDER, input.providerThreadId, ['third', 'second']);
+  closeAssistantHistoryConnection();
+  expect(listAssistantThreadIndex()).toMatchObject([{
+    location: input.location,
+    linkedMaterialIds: ['second', 'third']
+  }]);
 });

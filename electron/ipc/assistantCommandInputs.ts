@@ -20,6 +20,15 @@ export function readAssistantAttachmentId(value: unknown) {
   return normalizeRequiredString(value, 'assistant_attachment_id');
 }
 
+export function readAssistantMaterialIds(value: unknown): string[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new Error('invalid_assistant_material_ids');
+  return [...new Set(value.map((id: unknown) => {
+    if (typeof id !== 'string') throw new Error('invalid_assistant_material_id');
+    return normalizeRequiredString(id, 'assistant_material_id');
+  }))];
+}
+
 export function readOpeningLocation(value: unknown): NativeAssistantThreadOpeningLocation | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const location = value as Record<string, unknown>;

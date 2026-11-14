@@ -80,6 +80,10 @@ export async function listAssistantThreadIndex(
   return invoke(NATIVE_COMMANDS.assistantListThreadIndex, args);
 }
 
+export function linkAssistantThreadMaterial(args: NativeAssistantThreadIndexMutationArgs & { nodeId: string }) {
+  return getRuntimeInvoke()?.(NATIVE_COMMANDS.assistantLinkThreadMaterial, args) ?? Promise.resolve(null);
+}
+
 export async function listAssistantThreadMessages(
   args: NativeAssistantThreadMessageListArgs
 ): Promise<NativeAssistantThreadMessageRecord[] | null> {

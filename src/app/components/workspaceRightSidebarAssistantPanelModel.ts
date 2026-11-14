@@ -58,9 +58,13 @@ export function upsertRecord(
   records: NativeAssistantThreadIndexRecord[],
   nextRecord: NativeAssistantThreadIndexRecord
 ) {
+  const previous = records.find(record =>
+    record.provider === nextRecord.provider && record.providerThreadId === nextRecord.providerThreadId
+  );
+  const linkedMaterialIds = [...new Set([...(previous?.linkedMaterialIds ?? []), ...(nextRecord.linkedMaterialIds ?? [])])];
   return [
-    nextRecord,
-    ...records.filter((record) => record.providerThreadId !== nextRecord.providerThreadId)
+    linkedMaterialIds.length ? { ...nextRecord, linkedMaterialIds } : nextRecord,
+    ...records.filter(record => record !== previous)
   ];
 }
 
