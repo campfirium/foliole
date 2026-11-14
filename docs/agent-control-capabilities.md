@@ -147,3 +147,5 @@ The Logs settings page on desktop, Android, and iPhone captures a short local tr
 Android's Devanagari annotation boundary setting is a device-local touch selection preference in Settings → Diagnostics. The API and CLI continue to take explicit stored Markdown ranges.
 
 The macOS and Windows preference to quit Foliole when closing its main window is local to the desktop library. It stays in Settings because it controls native window behavior and the availability of background services on that device.
+
+Desktop Cut and Undo suppress keyboard auto-repeat at the input boundary. Clipboard editing and interactive undo history stay in the desktop editor. Agent Control continues to use explicit material operations.

@@ -5,6 +5,7 @@ import { resolveCommandShortcutDispatch } from '../../shared/commands/shortcutDi
 import { matchesShortcutSet } from '../../shared/commands/shortcuts';
 import type { CommandPaletteItem, CommandShortcutSet } from '../../shared/commands/types';
 import { onWindowKeydownCapture } from '../../shared/platform/keyboard';
+import { usesMacShortcutProjection } from '../../shared/platform/runtime/operatingSystem';
 
 import { isEditableElement, ownsTextHistory } from './commandTextHistory';
 import { DOCUMENT_SHORTCUT_COMMAND_IDS, REVIEW_SHORTCUT_COMMAND_IDS } from './reviewHotkeysState';
@@ -51,6 +52,16 @@ function shouldSkipCommandShortcut(args: {
   return !args.event.altKey && !args.event.ctrlKey && !args.event.metaKey && !FUNCTION_KEY_PATTERN.test(args.event.key);
 }
 
+function isRepeatedEditShortcut(event: KeyboardEvent, undo: CommandShortcutSet | undefined) {
+  if (!event.repeat || event.isComposing) return false;
+  const hasStandardModifier = usesMacShortcutProjection()
+    ? event.metaKey && !event.ctrlKey
+    : event.ctrlKey && !event.metaKey;
+  const key = event.key.toLowerCase();
+  return (hasStandardModifier && !event.altKey && !event.shiftKey && (key === 'x' || key === 'z')) ||
+    matchesShortcutSet(event, undo);
+}
+
 export function useAppCommandShortcutDispatcher(args: {
   isCommandSurfaceOpen: boolean;
   items: CommandPaletteItem[];
@@ -60,6 +71,12 @@ export function useAppCommandShortcutDispatcher(args: {
   useEffect(
     () =>
       onWindowKeydownCapture((event) => {
+        // Consume the repeat before Chromium can run its default editing action.
+        if (!args.isCommandSurfaceOpen && isRepeatedEditShortcut(event, args.shortcutMap[APP_COMMAND_IDS.undo])) {
+          event.preventDefault();
+          return;
+        }
+
         if (shouldSkipCommandShortcut({
           event,
           isCommandSurfaceOpen: args.isCommandSurfaceOpen,

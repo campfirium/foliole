@@ -10,6 +10,7 @@ import { FOLDER_TOPIC_ITEM_COMMANDS } from '../../lib/core/nodes/folderTopicItem
 import { FOUR_WAY_NAVIGATION_COMMANDS } from '../../lib/core/nodes/fourWayNavigationCommands.js';
 
 import { IPC_MENU_EVENT_CHANNEL, type MenuCommandEvent } from './contracts.js';
+import { shouldSuppressEditShortcutRepeat } from './editShortcutRepeat.js';
 import { resolveMenuCommandWindow } from './menuCommandWindow.js';
 
 const menuItemsById = new Map<string, ElectronMenuItem>();
@@ -244,6 +245,11 @@ export function canDispatchNativeMenuAccelerator(commandId: string, accelerator:
 }
 
 export function bindMenuToWindow(window: ElectronBrowserWindow) {
+  window.webContents.on('before-input-event', (event, input) => {
+    if (shouldSuppressEditShortcutRepeat(input, menuItemsById.get('app.undo')?.accelerator ?? '')) {
+      event.preventDefault();
+    }
+  });
   window.on('focus', () => {
     window.webContents.send(IPC_MENU_EVENT_CHANNEL, { commandId: '__menu_focus_sync__' });
   });
