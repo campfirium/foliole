@@ -10,6 +10,7 @@ import {
   readReport,
   removeOldReports
 } from './desktop-electron-test-bucket-report.mjs';
+import { runHostedDesktopTestFile } from './quality/hosted-desktop-test-file.mjs';
 import { controlledElectronSqliteTests } from './native-sqlite-test-policy.mjs';
 
 const TEST_FILE_PATTERN = /\.test\.(mjs|mts|ts|tsx)$/u;
@@ -104,8 +105,9 @@ export function buildReleaseDesktopSourceVitestArgs(bucket) {
   ];
 }
 
-function runVitest(bucket) {
+function runVitest(bucket, isolated, timeoutMs) {
   const args = buildReleaseDesktopSourceVitestArgs(bucket);
+  if (isolated) return runHostedDesktopTestFile({ args, file: bucket.targets[0], report: bucket.report, timeoutMs });
   const child = spawn(process.execPath, args, { env: process.env, stdio: 'inherit' });
   return new Promise((resolve) => child.on('close', (code) => resolve(code ?? 1)));
 }
@@ -146,8 +148,7 @@ function writeMissingReport(bucket, code) {
   writeFileSync(bucket.report, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 }
 
-async function main() {
-  const [reportPath, shard] = process.argv.slice(2);
+export async function runDesktopSourceTests([reportPath, shard], { timeoutMs } = {}) {
   if (!reportPath) {
     console.error('Usage: node scripts/run-release-desktop-source-test-bucket.mjs <report.json> [one|two|three|four]');
     return 1;
@@ -155,13 +156,19 @@ async function main() {
   const files = collectReleaseDesktopSourceTestFiles();
   const allBuckets = buildReleaseDesktopSourceBuckets(files);
   assertReleaseDesktopSourceBucketCoverage(files, allBuckets);
-  const buckets = buildReleaseDesktopSourceShardBuckets(shard, allBuckets);
+  const isolated = process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_REF === 'refs/heads/check';
+  const selected = buildReleaseDesktopSourceShardBuckets(shard, allBuckets);
+  const buckets = isolated ? selected.flatMap(bucket => bucket.targets.map((file, index) => ({
+    label: `${bucket.label}-file-${index + 1}`,
+    report: bucket.report.replace(/\.json$/u, `-file-${index + 1}.json`),
+    targets: [file]
+  }))) : selected;
   removeOldReports(reportPath, buckets);
   combineReports(reportPath, buckets);
   let exitCode = 0;
   for (const bucket of buckets) {
     console.log(`[release-desktop-source-test-bucket] running ${bucket.label}`);
-    const code = await runVitest(bucket);
+    const code = await runVitest(bucket, isolated, timeoutMs);
     if (code !== 0) {
       exitCode = code;
       if (!readReport(bucket.report)) {
@@ -174,7 +181,7 @@ async function main() {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve('scripts/run-release-desktop-source-test-bucket.mjs')) {
-  main().then((code) => { process.exitCode = code; }).catch((error) => {
+  runDesktopSourceTests(process.argv.slice(2)).then((code) => { process.exitCode = code; }).catch((error) => {
     console.error(`[release-desktop-source-test-bucket] ${error.message}`);
     process.exitCode = 1;
   });

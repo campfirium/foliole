@@ -52,7 +52,18 @@ export function parseHostedQualityBucket(kind, value) {
 
 export function runHostedQualityBucket(kind, value, runItem = runQualityItem) {
   const { definition, items } = parseHostedQualityBucket(kind, value);
-  for (const item of items) runItem(definition, item);
+  const continueOnFailure = kind === 'desktop-source' &&
+    process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_REF === 'refs/heads/check';
+  const failures = [];
+  for (const item of items) {
+    try {
+      runItem(definition, item);
+    } catch (error) {
+      if (!continueOnFailure) throw error;
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  if (failures.length) throw new Error(failures.join('\n'));
 }
 
 export function resolveHostedQualityItemCommand(definition, item, platform = process.platform) {
