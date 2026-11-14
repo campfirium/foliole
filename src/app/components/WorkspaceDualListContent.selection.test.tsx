@@ -95,15 +95,13 @@ it('shows selection only at the navigation entry used, even when a folder appear
   expect(home).toHaveAttribute('aria-selected', 'false');
 
   fireEvent.click(home);
-  expect(home).toHaveAttribute('aria-selected', 'false');
-  expect(published).toHaveAttribute('aria-selected', 'true');
+  expect(home).toHaveAttribute('aria-selected', 'true');
+  expect(published).toHaveAttribute('aria-selected', 'false');
   expect(dive).toBeVisible();
+  expect(regularSource).toBeVisible();
 
-  expect(regularSource).not.toBeInTheDocument();
-  fireEvent.click(home);
-  const [reopenedSource] = column.getAllByRole('treeitem', { name: 'Source' });
-  fireEvent.click(reopenedSource!);
-  expect(reopenedSource).toHaveAttribute('aria-selected', 'true');
+  fireEvent.click(regularSource!);
+  expect(regularSource).toHaveAttribute('aria-selected', 'true');
   expect(published).toHaveAttribute('aria-selected', 'false');
   expect(firstSource).toHaveAttribute('aria-selected', 'false');
   expect(secondSource).toHaveAttribute('aria-selected', 'false');

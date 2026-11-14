@@ -55,11 +55,10 @@ function renderNodeListRow(
   row: NodeTreeRow,
   onRowKeyDown: (nodeId: string, event: ReactKeyboardEvent<HTMLButtonElement>) => void,
   locale: ReturnType<typeof useLocalization>['locale'],
-  meta?: VirtualListRenderMeta,
-  toggleHome?: (nodeId: string) => void
+  meta?: VirtualListRenderMeta
 ) {
   const rowModel = resolveNodeListRowModel(props, row);
-  const onSelect = isHomeNode(row.node) && toggleHome ? toggleHome : createNodeListRowSelectHandler(props, row);
+  const onSelect = createNodeListRowSelectHandler(props, row);
   const onDragOver = (nodeId: string, event: Parameters<typeof props.drag.onDragOverNode>[1]) => {
     props.drag.onDragOverNode(nodeId, event);
     if (shouldExpandFolderOnDragOver(row, props.collapsedNodeIds)) {
@@ -249,7 +248,7 @@ function renderFolderOrNodeRows(
       {headingCount && stack ? (
         <FolderSectionHeading first>
           {props.rows.slice(0, headingCount).map(row =>
-            renderNodeListRow(props, row, onRowKeyDown, locale, undefined, props.onToggleCollapse))}
+            renderNodeListRow(props, row, onRowKeyDown, locale))}
         </FolderSectionHeading>
       ) : null}
       <VirtualListSurface

@@ -14,14 +14,16 @@ vi.mock('../../shared/platform/desktop/diveRepository', () => ({
 
 beforeEach(() => window.localStorage.clear());
 
-function HomePinnedWorkspaceHarness({ onSelect }: { onSelect?: (nodeId: string) => void } = {}) {
+function HomePinnedWorkspaceHarness() {
   const [activeNodeId, setActiveNodeId] = useState<string | null>(HOME_NODE_ID);
+  const [browseRootNodeId, setBrowseRootNodeId] = useState(HOME_NODE_ID);
   const nodesById = {
     [HOME_NODE_ID]: createWorkspaceContentNode({ id: HOME_NODE_ID, kind: 'folder', specialKind: 'home', title: 'Home' }),
     [INBOX_NODE_ID]: createWorkspaceContentNode({ id: INBOX_NODE_ID, kind: 'folder', specialKind: 'inbox', title: 'Inbox' }),
     [VIRTUAL_ROOT_NODE_ID]: createWorkspaceContentNode({ id: VIRTUAL_ROOT_NODE_ID, kind: 'folder', specialKind: 'virtual-root', title: 'Virtual' }),
     'folder-a': createWorkspaceContentNode({ id: 'folder-a', kind: 'folder', title: 'Folder A' }),
     'folder-child': createWorkspaceContentNode({ id: 'folder-child', kind: 'folder', parentNodeId: 'folder-a', title: 'Child Folder' }),
+    'topic-inbox': createWorkspaceContentNode({ id: 'topic-inbox', kind: 'topic', parentNodeId: INBOX_NODE_ID, title: 'Inbox Topic' }),
     'topic-a': createWorkspaceContentNode({ id: 'topic-a', kind: 'topic', parentNodeId: 'folder-child', title: 'Topic A' })
   };
 
@@ -29,6 +31,7 @@ function HomePinnedWorkspaceHarness({ onSelect }: { onSelect?: (nodeId: string) 
     <WorkspaceDualListContent
       activeNodeId={activeNodeId}
       activeVirtualNodeId={null}
+      browseRootNodeId={browseRootNodeId}
       externalEntriesByFolderId={{}}
       externalFolders={[]}
       externalSelection={{ kind: 'root' }}
@@ -38,14 +41,16 @@ function HomePinnedWorkspaceHarness({ onSelect }: { onSelect?: (nodeId: string) 
       isVirtualViewOpen={false}
       nodesById={nodesById}
       listNodesById={nodesById}
-      nodeOrder={[HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'folder-a', 'folder-child', 'topic-a']}
+      nodeOrder={[HOME_NODE_ID, INBOX_NODE_ID, VIRTUAL_ROOT_NODE_ID, 'folder-a', 'folder-child', 'topic-a', 'topic-inbox']}
       onOpenMoveToNode={vi.fn()}
       onOpenNotesView={vi.fn()}
       onOpenExternalSelection={vi.fn()}
       onOpenTrashView={vi.fn()}
       onOpenVirtualView={vi.fn()}
       onSelectNode={(nodeId) => {
-        onSelect?.(nodeId);
+        if (nodeId === HOME_NODE_ID || nodeId === INBOX_NODE_ID || nodeId === 'folder-a' || nodeId === 'folder-child') {
+          setBrowseRootNodeId(nodeId);
+        }
         setActiveNodeId(nodeId);
       }}
       onSelectNodeInVirtualView={vi.fn()}
@@ -83,20 +88,36 @@ it('keeps double-click rename available for folders but not for the Home section
   expect(screen.getByRole('textbox', { name: 'Rename Folder A' })).toBeVisible();
 });
 
-it('toggles Home from its title without opening another view', () => {
-  const onSelect = vi.fn();
-  renderWithLocalization(<HomePinnedWorkspaceHarness onSelect={onSelect} />);
+it('selects Home to show topics across folders while its chevron controls the tree', () => {
+  renderWithLocalization(<HomePinnedWorkspaceHarness />);
 
   const home = screen.getByRole('treeitem', { name: 'Home' });
-  fireEvent.click(home);
-  expect(home).toHaveAttribute('aria-expanded', 'false');
-  expect(screen.queryByRole('treeitem', { name: 'Folder A' })).toBeNull();
+  const inbox = screen.getByRole('treeitem', { name: 'Inbox' });
+  const contents = within(screen.getByRole('complementary', { name: 'Current folder contents' }));
+  const chevron = home.querySelector('[data-node-tree-chevron]')!;
+
+  fireEvent.click(inbox);
+  expect(screen.getByRole('treeitem', { name: 'Inbox' })).toHaveAttribute('aria-current', 'page');
+  expect(contents.getByRole('treeitem', { name: 'Inbox Topic' })).toBeVisible();
+  expect(contents.queryByRole('treeitem', { name: 'Topic A' })).toBeNull();
 
   fireEvent.click(home);
+  expect(home).toHaveAttribute('aria-current', 'page');
   expect(home).toHaveAttribute('aria-expanded', 'true');
-  expect(screen.getByRole('treeitem', { name: 'Folder A' })).toBeVisible();
-  expect(screen.getByRole('treeitem', { name: 'Trash' })).toBeVisible();
-  expect(onSelect).not.toHaveBeenCalled();
+  expect(contents.getByRole('treeitem', { name: 'Inbox Topic' })).toBeVisible();
+  expect(contents.getByRole('treeitem', { name: 'Topic A' })).toBeVisible();
+
+  fireEvent.click(chevron);
+  expect(home).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.queryByRole('treeitem', { name: 'Inbox' })).toBeNull();
+  fireEvent.click(home);
+  expect(home).toHaveAttribute('aria-current', 'page');
+  expect(home).toHaveAttribute('aria-expanded', 'false');
+  expect(contents.getByRole('treeitem', { name: 'Topic A' })).toBeVisible();
+
+  fireEvent.click(chevron);
+  expect(home).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByRole('treeitem', { name: 'Inbox' })).toBeVisible();
 });
 
 it.each([false, true])('folds Home without closing its current contents or the other sections (topic open: %s)', (openTopic) => {
