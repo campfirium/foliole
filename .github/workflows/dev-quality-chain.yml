@@ -26,6 +26,7 @@ on:
         value: ${{ jobs.quality-admission.outputs.accepted_sha }}
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: dev-chain-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-orchestrator-${{ github.run_id }}
   cancel-in-progress: false
