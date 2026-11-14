@@ -12,6 +12,7 @@ const STUBS = {
   'android/annotation/SuppressLint.java': 'package android.annotation; public @interface SuppressLint { String[] value(); }',
   'android/content/Context.java': 'package android.content; public class Context {}',
   'android/util/AttributeSet.java': 'package android.util; public interface AttributeSet {}',
+  'android/webkit/ValueCallback.java': 'package android.webkit; public interface ValueCallback<T> { void onReceiveValue(T value); }',
   'android/view/Menu.java': 'package android.view; public interface Menu { void clear(); }',
   'android/view/MenuItem.java': 'package android.view; public interface MenuItem {}',
   'android/view/ActionMode.java': `package android.view;
@@ -29,6 +30,7 @@ const STUBS = {
       public boolean editable;
       public ActionMode.Callback activeCallback;
       public CapacitorWebView(android.content.Context c, android.util.AttributeSet a) {}
+      public void evaluateJavascript(String script, android.webkit.ValueCallback<String> callback) {}
       public boolean onCheckIsTextEditor() { return editable; }
       public ActionMode startActionMode(ActionMode.Callback c) { activeCallback=c; return new ActionMode(); }
       public ActionMode startActionMode(ActionMode.Callback c,int type) { activeCallback=c; return new ActionMode(); }
