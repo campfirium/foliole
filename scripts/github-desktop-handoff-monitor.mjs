@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { hasDiscussionChat } from './github-desktop-handoff-discussions.mjs';
 import { listGithubMonitorEvents } from './github-desktop-handoff-events.mjs';
 import { notifySecurityMonitor } from './security/security-monitor-notifications.mjs';
 import { refreshGithubSecurityOwner } from './security/github-security-import.mjs';
@@ -61,6 +62,7 @@ export function loadConfigs(options = {}) {
   return {
     actions: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-actions.json')), workspace),
     dependabotAlerts: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-dependabot-alerts.json')), workspace),
+    discussions: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-discussions.json')), workspace),
     issues: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-issues.json')), workspace),
     playReview: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-play-review.json')), workspace),
     prs: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-prs.json')), workspace)
@@ -107,6 +109,9 @@ function submitEvent(event) {
 }
 
 function acknowledgeEvent(state, event, emittedAt) {
+  if (event.source === 'foliole/github-discussion') {
+    state.latestDiscussionNumber = Math.max(state.latestDiscussionNumber ?? 0, event.number);
+  }
   for (const alertNumber of event.alertNumbers ?? []) {
     state.dependabotAlerts[String(alertNumber)] = { emittedAt, title: event.title };
   }
@@ -123,10 +128,13 @@ function acknowledgeEvent(state, event, emittedAt) {
 export function submitMonitorEvents(events, state, options = {}) {
   const submit = options.submit ?? submitEvent;
   const persist = options.persist ?? ((value) => writeJson(STATE_FILE, value));
+  const discussionExists = options.discussionExists ?? ((event) => hasDiscussionChat(event, REPO_ROOT));
   const now = options.now ?? (() => new Date().toISOString());
   for (const event of events) {
     if (state.submitted[event.dedupeKey]) continue;
-    submit({ ...event, reconcileOpen: false });
+    if (event.source !== 'foliole/github-discussion' || !discussionExists(event)) {
+      submit({ ...event, reconcileOpen: false });
+    }
     const emittedAt = now();
     state.submitted[event.dedupeKey] = { emittedAt, title: event.title };
     acknowledgeEvent(state, event, emittedAt);
@@ -160,7 +168,7 @@ function scan({ emit = false, includeExisting = false } = {}) {
 
 async function monitor() {
   const configs = loadConfigs();
-  const interval = Math.max(configs.actions?.pollIntervalSeconds ?? 900, configs.dependabotAlerts?.pollIntervalSeconds ?? 900, configs.prs?.pollIntervalSeconds ?? 900, configs.issues?.pollIntervalSeconds ?? 900, configs.playReview?.pollIntervalSeconds ?? 900);
+  const interval = Math.max(configs.actions?.pollIntervalSeconds ?? 900, configs.dependabotAlerts?.pollIntervalSeconds ?? 900, configs.prs?.pollIntervalSeconds ?? 900, configs.issues?.pollIntervalSeconds ?? 900, configs.playReview?.pollIntervalSeconds ?? 900, configs.discussions?.pollIntervalSeconds ?? 0);
   for (;;) {
     console.log(JSON.stringify({ ...scan({ emit: true }), checkedAt: new Date().toISOString() }));
     await new Promise((resolve) => setTimeout(resolve, interval * 1000));
