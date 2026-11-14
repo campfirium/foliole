@@ -75,8 +75,16 @@ const androidSelectionStarts = new WeakMap<EditorAdapter, {
   selection: Selection;
   content: string;
   position: number;
-  range: EditorSelection;
+  boundary: 'from' | 'to';
 }>();
+
+function sharesReadingSurface(anchor: Node, focus: Node) {
+  const selector = '[data-companion-reading-surface="true"]';
+  const surface = toElement(focus)?.closest(selector);
+  return (anchor instanceof Element && anchor.contains(focus)) ||
+    Boolean(surface && toElement(anchor)?.closest(selector) === surface &&
+      !toElement(anchor)?.closest('.cm-content'));
+}
 
 function readAndroidDomRange(adapter: EditorAdapter, selection: Selection, content: string): EditorSelection | null {
   const { anchorNode, focusNode } = selection;
@@ -86,13 +94,16 @@ function readAndroidDomRange(adapter: EditorAdapter, selection: Selection, conte
   const fromAnchor = adapter.getDocumentPositionAtDomPoint?.(anchorNode, selection.anchorOffset);
   const editorRange = adapter.getSelection();
   const start = androidSelectionStarts.get(adapter);
-  // WebView can replace the fixed endpoint with an ancestor while continuing to move the focus.
+  // WebView can move the fixed endpoint out of the editor while the focus keeps moving.
+  // CodeMirror may already have accepted a newer focus, so check only the fixed boundary.
   const position = fromAnchor ?? (selection.anchorOffset === 0 &&
-    anchorNode instanceof Element && anchorNode.contains(focusNode) &&
     start?.selection === selection && start.content === content &&
-    start.range.from === editorRange.from && start.range.to === editorRange.to ? start.position : null);
+    editorRange.from !== editorRange.to && editorRange[start.boundary] === start.position &&
+    sharesReadingSurface(anchorNode, focusNode) ? start.position : null);
   if (position == null || position === fromFocus) return null;
-  if (fromAnchor != null) androidSelectionStarts.set(adapter, { selection, content, position, range: editorRange });
+  if (fromAnchor != null) {
+    androidSelectionStarts.set(adapter, { selection, content, position, boundary: position < fromFocus ? 'from' : 'to' });
+  }
   return { from: Math.min(position, fromFocus), to: Math.max(position, fromFocus) };
 }
 
