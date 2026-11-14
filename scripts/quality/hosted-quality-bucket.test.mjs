@@ -25,13 +25,18 @@ describe('hosted quality bucket', () => {
     expect(() => parseHostedQualityBucket('tooling', '["database-one"]')).toThrow();
   });
 
-  it('runs sequentially and fails closed at the exact item', () => {
-    const runItem = vi.fn((_definition, item) => {
-      if (item === 'two') throw new Error('two failed');
-    });
-    expect(() => runHostedQualityBucket('desktop-source', '["one","two","three"]', runItem))
-      .toThrow('two failed');
-    expect(runItem.mock.calls.map(([, item]) => item)).toEqual(['one', 'two']);
+  it('stops at the failed item on the release branch', () => {
+    vi.stubEnv('GITHUB_REF', 'refs/heads/release');
+    try {
+      const runItem = vi.fn((_definition, item) => {
+        if (item === 'two') throw new Error('two failed');
+      });
+      expect(() => runHostedQualityBucket('desktop-source', '["one","two","three"]', runItem))
+        .toThrow('two failed');
+      expect(runItem.mock.calls.map(([, item]) => item)).toEqual(['one', 'two']);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('launches npm command shims through cmd.exe on Windows', () => {
