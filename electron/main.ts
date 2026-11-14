@@ -30,6 +30,7 @@ import {
 import { bindHotkeyRecorderInput } from './ipc/hotkeyRecorderInput.js';
 import { bindMenuToWindow } from './ipc/menu.js';
 import { installMainLifecycle } from './mainLifecycle.js';
+import { requestQuitOnMainWindowClose } from './mainWindowCloseSettings.js';
 import { prepareMainWindowStartupOptions } from './mainWindowStartupOptions.js';
 import {
   bindWindowReadingProgressFlush,
@@ -178,7 +179,9 @@ async function createMainWindow(
   if (!startupOptions.deferDatabaseBackedBindings) {
     bindWindowReadingProgressFlush(
       window,
-      createWindowReadingProgressFlushOptions(process.platform, isAppQuittingForBackgroundPresence)
+      createWindowReadingProgressFlushOptions(
+        process.platform, isAppQuittingForBackgroundPresence, requestQuitOnMainWindowClose
+      )
     );
     bindWindowStatePersistence(window);
   }

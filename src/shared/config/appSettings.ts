@@ -152,6 +152,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   importManagementActivePage: 'foliole-import-management-active-page',
   globalClipExistingClipboardFallbackEnabled:
     'foliole-global-clip-existing-clipboard-fallback-enabled',
+  quitOnWindowClose: 'foliole-quit-on-window-close',
   globalClipHintVisible: 'foliole-global-clip-hint-visible',
   globalClipToastPosition: 'foliole-global-clip-toast-position',
   managedInboxPath: MANAGED_INBOX_APP_SETTING_KEY,

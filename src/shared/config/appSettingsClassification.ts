@@ -160,6 +160,7 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'folioleAideModelSelection',
   'importManagementActivePage',
   'globalClipExistingClipboardFallbackEnabled',
+  'quitOnWindowClose',
   'globalClipHintVisible',
   'globalClipToastPosition',
   'managedInboxPath',

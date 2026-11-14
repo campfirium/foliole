@@ -1,6 +1,9 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_SETTINGS_SYSTEM_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'settings.general.quitOnClose.title': '关闭窗口时退出 Foliole',
+  'settings.general.quitOnClose.description': '退出后，全局剪辑和后台同步将暂停，直到再次打开 Foliole。',
+  'settings.general.quitOnClose.saveFailed': '无法保存关闭窗口的设置。',
   'settings.general.system.section': '系统',
   'settings.general.system.aria': '系统设置区',
   'settings.general.openAtLogin.title': '开机时自动启动 Foliole',

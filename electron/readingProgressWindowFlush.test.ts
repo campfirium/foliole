@@ -37,21 +37,29 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-it('only bypasses close flushing during app quit on supported desktop hosts', () => {
-  const shouldAllowClose = vi.fn(() => true);
+it.each(['darwin', 'win32'] as const)('closes the main window after saving when background operation is enabled on %s', async (platform) => {
+  const window = createWindowMock();
+  bindWindowReadingProgressFlush(window as never, createWindowReadingProgressFlushOptions(
+    platform, () => false, () => false
+  ));
 
-  expect(createWindowReadingProgressFlushOptions('darwin', shouldAllowClose)).toEqual({ shouldAllowClose });
-  expect(createWindowReadingProgressFlushOptions('linux', shouldAllowClose)).toEqual({});
-  expect(createWindowReadingProgressFlushOptions('win32', shouldAllowClose)).toMatchObject({ shouldAllowClose });
+  const event = window.triggerClose();
+  await vi.waitFor(() => expect(window.close).toHaveBeenCalledTimes(1));
+  expect(event.preventDefault).toHaveBeenCalled();
+  expect(window.webContents.executeJavaScript).toHaveBeenCalledTimes(1);
+  expect(window.hide).not.toHaveBeenCalled();
 });
 
-it('keeps the Windows background-close behavior in the shared options', () => {
+it.each(['darwin', 'win32'] as const)('hands window close to normal app quit on %s when enabled', (platform) => {
   const window = createWindowMock();
-  const options = createWindowReadingProgressFlushOptions('win32', () => false);
+  const quit = vi.fn(() => true);
+  bindWindowReadingProgressFlush(window as never, createWindowReadingProgressFlushOptions(
+    platform, () => false, quit
+  ));
 
-  options.onCloseAfterFlush?.(window as never);
-
-  expect(window.hide).toHaveBeenCalledTimes(1);
+  expect(window.triggerClose().preventDefault).toHaveBeenCalled();
+  expect(quit).toHaveBeenCalledTimes(1);
+  expect(window.close).not.toHaveBeenCalled();
 });
 
 it('executes the renderer close flush when available', async () => {
@@ -101,25 +109,9 @@ it('skips the flush after the window has already been approved to close', () => 
   expect(window.webContents.executeJavaScript).not.toHaveBeenCalled();
 });
 
-it('flushes before hiding a background-capable window', async () => {
-  const window = createWindowMock();
-  bindWindowReadingProgressFlush(window as never, {
-    onCloseAfterFlush: (targetWindow) => targetWindow.hide()
-  });
-
-  const closeEvent = window.triggerClose();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-
-  expect(closeEvent.preventDefault).toHaveBeenCalledTimes(1);
-  expect(window.webContents.executeJavaScript).toHaveBeenCalledTimes(1);
-  expect(window.hide).toHaveBeenCalledTimes(1);
-  expect(window.close).not.toHaveBeenCalled();
-});
-
 it('allows the close event through when the app is quitting', () => {
   const window = createWindowMock();
   bindWindowReadingProgressFlush(window as never, {
-    onCloseAfterFlush: (targetWindow) => targetWindow.hide(),
     shouldAllowClose: () => true
   });
 

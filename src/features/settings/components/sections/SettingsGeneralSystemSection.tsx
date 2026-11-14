@@ -6,6 +6,8 @@ import {
   saveLoginItemSettingsToRuntime,
   type RuntimeLoginItemSettingsState
 } from '../../../../shared/platform/loginItemSettings';
+import { isDesktopRuntime } from '../../../../shared/platform/runtime';
+import { resolveRuntimeOperatingSystem } from '../../../../shared/platform/runtime/operatingSystem';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
   SettingsControlSlot,
@@ -16,6 +18,8 @@ import {
 } from '../../../../shared/ui';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
+
+import { SettingsQuitOnCloseRow } from './SettingsQuitOnCloseRow';
 
 type Translate = ReturnType<typeof useTranslation>;
 
@@ -108,13 +112,15 @@ export function SettingsGeneralSystemSection({ previewDesktopSettings = false }:
     };
   }, [previewDesktopSettings]);
 
-  if (!state) {
+  const showQuitOnClose = !previewDesktopSettings && isDesktopRuntime() && resolveRuntimeOperatingSystem() !== 'other';
+  if (!state && !showQuitOnClose) {
     return null;
   }
 
   return (
     <SettingsSection ariaLabel={t('settings.general.system.aria')} title={t('settings.general.system.section')}>
-      <OpenAtLoginRow isPreview={previewDesktopSettings} setState={setState} state={state} />
+      {state && <OpenAtLoginRow isPreview={previewDesktopSettings} setState={setState} state={state} />}
+      {showQuitOnClose && <SettingsQuitOnCloseRow />}
     </SettingsSection>
   );
 }

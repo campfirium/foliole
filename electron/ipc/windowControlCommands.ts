@@ -1,7 +1,6 @@
 import { BrowserWindow, app } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
-import { isAppQuittingForBackgroundPresence } from '../backgroundPresence.js';
 import { requestDevShellRestart } from '../devShellRestartRequest.js';
 import { setMainWindowNativeControlsVisible } from '../mainWindowChrome.js';
 import {
@@ -25,15 +24,6 @@ async function prepareWindowForRestart(window: BrowserWindow | null) {
   if (!window) return;
   await flushWindowReadingProgress(window);
   allowWindowCloseWithoutReadingProgressFlush(window);
-}
-
-async function closeWindowToBackground(window: BrowserWindow | null) {
-  if (!window || process.platform !== 'win32' || isAppQuittingForBackgroundPresence()) {
-    return false;
-  }
-  await flushWindowReadingProgress(window);
-  if (!window.isDestroyed()) window.hide();
-  return true;
 }
 
 function handleImmediateWindowCommand(request: InvokeRequest, window: BrowserWindow | null) {
@@ -79,7 +69,7 @@ async function handleWindowLifecycleCommand(request: InvokeRequest, window: Brow
     return null;
   }
   if (request.command === NATIVE_COMMANDS.windowClose) {
-    if (!(await closeWindowToBackground(window))) window?.close();
+    window?.close();
     return null;
   }
   return undefined;
