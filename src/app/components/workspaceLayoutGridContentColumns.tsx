@@ -42,15 +42,17 @@ function renderDocumentColumn(
 }
 
 function renderListColumns(
-  args: Pick<WorkspaceGridColumnProps, 'isListCollapsed' | 'listAreaProps' | 'listSplitterProps' | 'compactSidebars'>
+  args: Pick<WorkspaceGridColumnProps, 'isImmersiveMode' | 'isListCollapsed' | 'listAreaProps' | 'listSplitterProps' | 'compactSidebars'>
 ) {
+  const listUnavailable = args.isImmersiveMode || args.isListCollapsed;
   return [
     <WorkspaceSidebarFocusBoundary
-      side="left" unavailable={args.isListCollapsed}
-      data-workspace-side-column="list"
-      data-pdf-sidebar-overlay={args.compactSidebars?.hoverEnabled && args.compactSidebars.leftFloating || undefined}
-      aria-hidden={args.isListCollapsed}
-      hidden={args.compactSidebars?.leftFloating && !args.compactSidebars.hoverEnabled && args.isListCollapsed}
+      side="left" unavailable={listUnavailable}
+      data-workspace-side-column={args.isImmersiveMode ? undefined : 'list'}
+      data-pdf-sidebar-overlay={!args.isImmersiveMode && args.compactSidebars?.hoverEnabled && args.compactSidebars.leftFloating || undefined}
+      aria-hidden={listUnavailable}
+      hidden={args.isImmersiveMode || (args.compactSidebars?.leftFloating && !args.compactSidebars.hoverEnabled && args.isListCollapsed)}
+      style={args.isImmersiveMode ? { display: 'none' } : undefined}
       className={args.compactSidebars?.leftFloating
         ? 'workspace-floating-sidebar workspace-floating-sidebar-left flex min-w-0 flex-col overflow-hidden'
         : 'col-start-1 row-start-1 flex min-w-0 flex-col overflow-hidden max-[1080px]:hidden'}
@@ -58,9 +60,17 @@ function renderListColumns(
     >
       <WorkspaceListArea {...args.listAreaProps} />
     </WorkspaceSidebarFocusBoundary>,
-    <WorkspaceSidebarFocusBoundary side="left" unavailable={args.isListCollapsed || Boolean(args.compactSidebars?.leftFloating)} aria-hidden={args.isListCollapsed} className="col-start-2 row-start-1 flex min-w-0 overflow-visible max-[1080px]:hidden" key="list-splitter">
-      <WorkspaceListSplitter {...args.listSplitterProps} />
-    </WorkspaceSidebarFocusBoundary>
+    ...(args.isImmersiveMode ? [] : [
+      <WorkspaceSidebarFocusBoundary
+        side="left"
+        unavailable={args.isListCollapsed || Boolean(args.compactSidebars?.leftFloating)}
+        aria-hidden={args.isListCollapsed}
+        className="col-start-2 row-start-1 flex min-w-0 overflow-visible max-[1080px]:hidden"
+        key="list-splitter"
+      >
+        <WorkspaceListSplitter {...args.listSplitterProps} />
+      </WorkspaceSidebarFocusBoundary>
+    ])
   ];
 }
 
@@ -106,12 +116,10 @@ function renderRightSidebarColumns(
 }
 
 export function renderWorkspaceGridColumns(args: WorkspaceGridColumnProps) {
-  if (args.isImmersiveMode) {
-    return [renderDocumentColumn(args), ...renderRightSidebarColumns(args)];
-  }
-
   return [
-    ...(args.compactSidebars ? [<WorkspaceCompactSidebarBackdrop key="sidebar-backdrop" sidebars={args.compactSidebars} />] : []),
+    ...(args.compactSidebars && !args.isImmersiveMode
+      ? [<WorkspaceCompactSidebarBackdrop key="sidebar-backdrop" sidebars={args.compactSidebars} />]
+      : []),
     ...renderListColumns(args),
     renderDocumentColumn(args),
     ...renderRightSidebarColumns(args)

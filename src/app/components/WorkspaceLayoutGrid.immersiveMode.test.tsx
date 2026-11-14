@@ -82,11 +82,11 @@ describe('WorkspaceLayoutGrid immersive mode mounting', () => {
     expect(lifecycle.documentUnmounts).toBe(1);
   });
 
-  it('renders only the document area while immersive mode is active', () => {
+  it('shows the document and hides the sidebars while immersive mode is active', () => {
     renderGrid(buildProps(true));
 
     expect(screen.getByTestId('document-area')).toBeInTheDocument();
-    expect(screen.queryByTestId('list-area')).toBeNull();
+    expect(screen.getByTestId('list-area')).not.toBeVisible();
     expect(screen.queryByTestId('list-splitter')).toBeNull();
     expect(screen.queryByTestId('right-sidebar')).toBeNull();
     expect(screen.getByTestId('right-sidebar-splitter')).not.toBeVisible();
