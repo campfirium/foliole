@@ -21,6 +21,16 @@ on:
           - ios
           - full
           - replay
+          - desktop-file-retry
+      retry_source_run:
+        description: Original completed check run
+        type: string
+      retry_file:
+        description: Exact timed-out desktop source test path
+        type: string
+      retry_host:
+        description: Platform from the timeout report (Ubuntu or Windows)
+        type: string
       mobile_distribution:
         description: Optional mobile beta distribution after complete quality
         required: false
@@ -53,8 +63,8 @@ permissions:
 
 # The latest dev dispatch wins; release runs never join this group.
 concurrency:
-  group: ${{ inputs.mobile_distribution != 'none' && inputs.mobile_distribution != '' && 'quality-qa-mobile' || (github.ref == 'refs/heads/check' && 'quality-qa' || 'quality-dev') }}
-  cancel-in-progress: ${{ inputs.mobile_distribution == 'none' || inputs.mobile_distribution == '' }}
+  group: ${{ inputs.scope == 'desktop-file-retry' && format('quality-desktop-file-retry-{0}-{1}', inputs.retry_source_run, inputs.retry_host) || inputs.mobile_distribution != 'none' && inputs.mobile_distribution != '' && 'quality-qa-mobile' || (github.ref == 'refs/heads/check' && 'quality-qa' || 'quality-dev') }}
+  cancel-in-progress: ${{ inputs.scope != 'desktop-file-retry' && (inputs.mobile_distribution == 'none' || inputs.mobile_distribution == '') }}
   queue: ${{ inputs.mobile_distribution == 'android' && 'max' || 'single' }}
 
 jobs:
@@ -105,8 +115,26 @@ jobs:
           TRIGGER_SHORT: ${{ inputs.trigger_short }}
         run: node -e "if (!/^([0-9a-f]{9})?$/.test(process.env.TRIGGER_SHORT ?? '')) throw new Error('trigger_short must be empty or a 9-character lowercase SHA prefix')"
 
+      - name: Require an isolated check retry
+        if: inputs.scope == 'desktop-file-retry'
+        env:
+          RETRY_HOST: ${{ inputs.retry_host }}
+          MOBILE: ${{ inputs.mobile_distribution }}
+          REUSE: ${{ inputs.mobile_quality_run_id }}
+        run: test "$GITHUB_REF" = refs/heads/check && test "$MOBILE" = none && test -z "$REUSE" && { test "$RETRY_HOST" = Windows || test "$RETRY_HOST" = Ubuntu; }
+
+  desktop-file-retry:
+    if: inputs.scope == 'desktop-file-retry' && needs.dev-ref.result == 'success'
+    needs: dev-ref
+    uses: ./.github/workflows/hosted-quality-desktop-file-retry.yml
+    with:
+      target_sha: ${{ inputs.target_sha }}
+      retry_source_run: ${{ inputs.retry_source_run }}
+      retry_file: ${{ inputs.retry_file }}
+      retry_host: ${{ inputs.retry_host }}
+
   scoped-quality:
-    if: inputs.scope != 'full' && inputs.scope != 'replay' && needs.dev-ref.result == 'success'
+    if: inputs.scope != 'full' && inputs.scope != 'replay' && inputs.scope != 'desktop-file-retry' && needs.dev-ref.result == 'success'
     needs: dev-ref
     permissions:
       actions: read
@@ -216,7 +244,7 @@ jobs:
       ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
 
   timing-summary:
-    if: ${{ always() }}
+    if: ${{ always() && inputs.scope != 'desktop-file-retry' }}
     needs: [dev-ref, scoped-quality, full-quality, mobile-reuse, mobile-context, mobile-ios, mobile-android]
     permissions: { actions: read, contents: read }
     uses: ./.github/workflows/hosted-quality-timing-summary.yml

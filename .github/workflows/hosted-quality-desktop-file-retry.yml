@@ -1,0 +1,51 @@
+name: Hosted Desktop File Retry
+
+on:
+  workflow_call:
+    inputs:
+      target_sha:
+        type: string
+        required: true
+      retry_source_run:
+        type: string
+        required: true
+      retry_file:
+        type: string
+        required: true
+      retry_host:
+        type: string
+        required: true
+
+permissions: { contents: read, actions: read }
+
+jobs:
+  retry:
+    runs-on: ${{ inputs.retry_host == 'Windows' && 'windows-latest' || 'ubuntu-latest' }}
+    timeout-minutes: 40
+    env:
+      CI: "true"
+      TARGET_SHA: ${{ inputs.target_sha }}
+      RETRY_SOURCE_RUN: ${{ inputs.retry_source_run }}
+      RETRY_FILE: ${{ inputs.retry_file }}
+      RETRY_HOST: ${{ inputs.retry_host }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ inputs.target_sha }}', persist-credentials: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 26.13.0, cache: npm }
+      - run: node scripts/quality/pinned-npm.mjs activate
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libavahi-client-dev
+      - run: node scripts/quality/hosted-npm-ci.mjs
+      - run: node node_modules/electron/install.js
+      - name: Verify original timeout and rerun the exact file
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/quality/retry-desktop-test-file.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desktop-retry-${{ inputs.retry_host }}-${{ inputs.target_sha }}-${{ github.run_attempt }}
+          path: .tmp/desktop-file-retry
+          if-no-files-found: ignore
+          retention-days: 14

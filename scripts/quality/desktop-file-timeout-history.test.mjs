@@ -37,3 +37,28 @@ it('feeds later runs with recent completed reports by platform without counting 
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+it('uses one passing same-platform retry per original timeout as new history', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'desktop-retry-history-'));
+  const file = 'src/app/file.test.ts';
+  try {
+    function retry(run, attempt, durationMs, status = 'passed') {
+      const dir = path.join(root, String(run), `desktop-retry-Ubuntu-sha-${attempt}`);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(path.join(dir, 'retry.json.execution.json'), JSON.stringify({
+        file, platform: 'linux', durationMs, status
+      }));
+      writeFileSync(path.join(dir, 'source.json'), JSON.stringify({
+        runId: '100', original: { file, platform: 'linux', status: 'timeout' }
+      }));
+    }
+    retry(101, 1, 90_000);
+    retry(102, 1, 100_000);
+    retry(102, 2, 130_000);
+    retry(103, 1, 480_000, 'timeout');
+    expect(readDesktopTimeoutHistory(root, 'linux').get(file)).toEqual([130_000]);
+    expect(readDesktopTimeoutHistory(root, 'win32').size).toBe(0);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
