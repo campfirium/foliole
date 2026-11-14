@@ -15,6 +15,7 @@ import { toggleMainWindowDevTools } from '../../shared/platform/windowControls';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { requestImmersiveReadingToggle } from '../components/immersiveReadingRequests';
 import type { WorkspaceLayoutProps } from '../components/WorkspaceLayout';
 
 import { createEditorOperationApplyContext } from './appControllerEditorHandlers';
@@ -203,7 +204,7 @@ export function createPaletteRunnerArgs(args: PaletteRunnerArgs) {
     ...createPaletteReleaseActions(),
     ...createPaletteRuntimeActions(args),
     onToggleDevTools: toggleMainWindowDevTools,
-    onToggleImmersiveMode: args.layoutProps.layoutChrome.onToggleImmersiveMode,
+    onToggleImmersiveMode: requestImmersiveReadingToggle,
     onToggleBothSidebarVisibility: args.layoutProps.layoutChrome.onToggleBothSidebarVisibility,
     onToggleListVisibility: args.layoutProps.layoutChrome.onToggleListVisibility,
     onToggleRightSidebarVisibility: args.layoutProps.layoutChrome.onToggleRightSidebarVisibility,

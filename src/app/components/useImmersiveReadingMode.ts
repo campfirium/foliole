@@ -10,28 +10,25 @@ import {
   focusImmersiveEditor
 } from './immersiveReadingMarker';
 import type { ImmersiveReadingModeSource } from './immersiveReadingModeTypes';
+import { subscribeImmersiveReadingToggle } from './immersiveReadingRequests';
 import {
   useImmersiveEntrySelectionSync,
   useImmersiveParagraphMarkerSync,
   useImmersiveScrollSync,
   useReadingSelectionState
 } from './immersiveReadingScrollSync';
+import { toggleImmersiveReading } from './immersiveReadingToggle';
 import { useImmersiveSelectionRestoreSuppression } from './useImmersiveSelectionRestoreSuppression';
 
 function useImmersiveLifecycleReset(
   props: Pick<
     ImmersiveReadingModeSource,
-    'activeNodeId' | 'editorAdapterRef' | 'isImmersiveMode' | 'onExitImmersiveMode'
+    'activeNodeId' | 'editorAdapterRef' | 'isImmersiveMode'
   >,
   setIsImmersiveEditing: (value: boolean) => void,
   setIsShortcutsOverlayOpen: (value: boolean) => void,
-  shouldSkipNextScrollSyncRef: MutableRefObject<boolean>,
-  exitImmersiveModeRef: MutableRefObject<ImmersiveReadingModeSource['onExitImmersiveMode']>
+  shouldSkipNextScrollSyncRef: MutableRefObject<boolean>
 ) {
-  useEffect(() => {
-    exitImmersiveModeRef.current = props.onExitImmersiveMode;
-  }, [props.onExitImmersiveMode]);
-
   useEffect(() => {
     if (!props.isImmersiveMode) {
       clearParagraphMarker(props.editorAdapterRef);
@@ -55,16 +52,14 @@ function useImmersiveLifecycleReset(
 
 function useImmersiveKeyboardHandler(args: {
   canToggleImmersiveMode: boolean;
-  captureReadingSelectionFromViewport: () => void;
   getReadingSelection: () => { from: number; to: number } | null;
   isImmersiveEditing: boolean;
   markNextProgrammaticScroll: () => void;
   props: ImmersiveReadingModeSource;
-  queueReadingSelectionRestore: () => void;
   setIsImmersiveEditing: (value: boolean) => void;
   setIsShortcutsOverlayOpen: (value: boolean | ((current: boolean) => boolean)) => void;
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void;
-  suppressNextSelectionRestore: () => void;
+  toggleImmersiveReading: () => void;
   toggleShortcuts: ReturnType<typeof useCommandShortcutMap>[string];
 }) {
   useEffect(
@@ -72,32 +67,28 @@ function useImmersiveKeyboardHandler(args: {
       onWindowKeydownCapture((event) =>
         handleImmersiveKeydown({
           canToggleImmersiveMode: args.canToggleImmersiveMode,
-          captureReadingSelectionFromViewport: args.captureReadingSelectionFromViewport,
           event,
           getReadingSelection: args.getReadingSelection,
           isImmersiveEditing: args.isImmersiveEditing,
           markNextProgrammaticScroll: args.markNextProgrammaticScroll,
           props: args.props,
-          queueReadingSelectionRestore: args.queueReadingSelectionRestore,
           setIsImmersiveEditing: args.setIsImmersiveEditing,
           setIsShortcutsOverlayOpen: args.setIsShortcutsOverlayOpen,
           setReadingSelection: args.setReadingSelection,
-          suppressNextSelectionRestore: args.suppressNextSelectionRestore,
+          toggleImmersiveReading: args.toggleImmersiveReading,
           toggleShortcuts: args.toggleShortcuts
         })
       ),
     [
       args.canToggleImmersiveMode,
-      args.captureReadingSelectionFromViewport,
       args.getReadingSelection,
       args.isImmersiveEditing,
       args.markNextProgrammaticScroll,
       args.props,
-      args.queueReadingSelectionRestore,
       args.setIsImmersiveEditing,
       args.setIsShortcutsOverlayOpen,
       args.setReadingSelection,
-      args.suppressNextSelectionRestore,
+      args.toggleImmersiveReading,
       args.toggleShortcuts
     ]
   );
@@ -173,12 +164,11 @@ export function useImmersiveReadingMode(props: ImmersiveReadingModeSource) {
   const shortcutMap = useCommandShortcutMap();
   const [isImmersiveEditing, setIsImmersiveEditing] = useState(false);
   const [isShortcutsOverlayOpen, setIsShortcutsOverlayOpen] = useState(false);
-  const exitImmersiveModeRef = useRef(props.onExitImmersiveMode);
   const shouldSkipNextScrollSyncRef = useRef(false);
   const wasImmersiveModeRef = useRef(props.isImmersiveMode);
   const selectionRestoreSuppression = useImmersiveSelectionRestoreSuppression(props);
   const modeDependencies = useImmersiveModeDependencies(props);
-  useImmersiveLifecycleReset(props, setIsImmersiveEditing, setIsShortcutsOverlayOpen, shouldSkipNextScrollSyncRef, exitImmersiveModeRef);
+  useImmersiveLifecycleReset(props, setIsImmersiveEditing, setIsShortcutsOverlayOpen, shouldSkipNextScrollSyncRef);
   useImmersiveReadingPositionSync({
     ...modeDependencies,
     isImmersiveEditing,
@@ -187,6 +177,13 @@ export function useImmersiveReadingMode(props: ImmersiveReadingModeSource) {
     wasImmersiveModeRef
   });
   useImmersiveEditingFocusEffect(props.editorAdapterRef, isImmersiveEditing, props.isImmersiveMode);
+  const toggle = () => toggleImmersiveReading({
+    ...modeDependencies,
+    isImmersiveEditing,
+    props,
+    suppressNextSelectionRestore: selectionRestoreSuppression.suppressNextSelectionRestore
+  });
+  useEffect(() => subscribeImmersiveReadingToggle(toggle), [toggle]);
   useImmersiveKeyboardHandler({
     ...modeDependencies,
     isImmersiveEditing,
@@ -196,7 +193,7 @@ export function useImmersiveReadingMode(props: ImmersiveReadingModeSource) {
     props,
     setIsImmersiveEditing,
     setIsShortcutsOverlayOpen,
-    suppressNextSelectionRestore: selectionRestoreSuppression.suppressNextSelectionRestore,
+    toggleImmersiveReading: toggle,
     toggleShortcuts: shortcutMap[APP_COMMAND_IDS.toggleImmersiveMode]
   });
 

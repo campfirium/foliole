@@ -1,3 +1,4 @@
+import { act, renderHook } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 const { requestFileImport, exportCurrentArticleMirror } = vi.hoisted(() => ({
@@ -14,6 +15,8 @@ vi.mock('../../shared/platform/articleMirrorExport', () => ({ exportCurrentArtic
 vi.mock('../../shared/platform/devReimportSelectedTopic', () => ({ devReimportSelectedTopic: vi.fn() }));
 
 import { devReimportSelectedTopic } from '../../shared/platform/devReimportSelectedTopic';
+import { useImmersiveReadingMode } from '../components/useImmersiveReadingMode';
+import { buildProps } from '../components/useImmersiveReadingMode.scrollSync.testSupport';
 
 import { createPaletteRunnerArgs } from './appControllerPaletteRunnerArgs';
 
@@ -134,4 +137,24 @@ it('waits for draft saving before reporting an unavailable source', async () => 
   finish(true);
   await expect(running).resolves.toBe(false);
   expect(devReimportSelectedTopic).toHaveBeenCalledWith({ nodeId: 'article' });
+});
+
+it('marks the current viewport when entering through the workspace command', () => {
+  const { adapter, props } = buildProps();
+  vi.mocked(adapter.getPrimaryVisiblePosition).mockReturnValue(7);
+
+  const args = createRunnerArgs();
+  args.layoutProps.layoutChrome.onToggleImmersiveMode = props.onToggleImmersiveMode;
+  const runner = createPaletteRunnerArgs(args);
+  const { rerender } = renderHook(
+    ({ immersive }) => useImmersiveReadingMode({ ...props, isImmersiveMode: immersive }),
+    { initialProps: { immersive: false } }
+  );
+
+  act(() => runner.onToggleImmersiveMode());
+  expect(props.onToggleImmersiveMode).toHaveBeenCalledOnce();
+  rerender({ immersive: true });
+
+  expect(adapter.setParagraphMarker).toHaveBeenLastCalledWith({ from: 7, to: 11 });
+  expect(adapter.getSelection()).toEqual({ from: 7, to: 7 });
 });

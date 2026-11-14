@@ -1,3 +1,4 @@
+import { matchesShortcutSet } from '../../shared/commands/shortcuts';
 import type { CommandShortcutSet } from '../../shared/commands/types';
 
 import { isImmersiveEditableElement, isImmersiveEscapeKey } from './immersiveReadingKeyboard';
@@ -5,13 +6,13 @@ import type { ImmersiveKeydownSource } from './immersiveReadingKeydownTypes';
 import { blurImmersiveActiveElement, clearParagraphMarker } from './immersiveReadingMarker';
 import { resolveCurrentParagraphSelection, resolveParagraphSelection } from './immersiveReadingModel';
 import { runImmersiveSelectionAction } from './immersiveReadingSelectionActions';
-import { handleImmersiveToggleKey } from './immersiveReadingToggleKey';
 import { revealSelectionForImmersiveBand, shouldRevealSelectionInImmersiveBand } from './immersiveReadingViewportBand';
 
 function handleImmersiveExit(args: {
   isImmersiveEditing: boolean;
   props: ImmersiveKeydownSource;
   setIsImmersiveEditing: (value: boolean) => void;
+  toggleImmersiveReading: () => void;
 }) {
   const { props, isImmersiveEditing, setIsImmersiveEditing } = args;
   if (isImmersiveEditing) {
@@ -21,7 +22,7 @@ function handleImmersiveExit(args: {
     return;
   }
   clearParagraphMarker(props.editorAdapterRef);
-  props.onExitImmersiveMode();
+  args.toggleImmersiveReading();
 }
 
 function selectParagraph(args: {
@@ -77,6 +78,7 @@ function handleImmersivePrimaryKey(args: {
   props: ImmersiveKeydownSource;
   setIsImmersiveEditing: (value: boolean) => void;
   setIsShortcutsOverlayOpen: (value: boolean | ((current: boolean) => boolean)) => void;
+  toggleImmersiveReading: () => void;
 }) {
   if (args.event.key === 'Escape') {
     args.event.preventDefault();
@@ -139,23 +141,25 @@ function handleImmersiveReadingKey(args: {
 
 export function handleImmersiveKeydown(args: {
   canToggleImmersiveMode: boolean;
-  captureReadingSelectionFromViewport: () => void;
   event: KeyboardEvent;
   getReadingSelection: () => { from: number; to: number } | null;
   isImmersiveEditing: boolean;
   markNextProgrammaticScroll: () => void;
   props: ImmersiveKeydownSource;
-  queueReadingSelectionRestore: () => void;
   setReadingSelection: (selection: { from: number; to: number }, source?: string) => void;
   setIsImmersiveEditing: (value: boolean) => void;
   setIsShortcutsOverlayOpen: (value: boolean | ((current: boolean) => boolean)) => void;
-  suppressNextSelectionRestore: () => void;
+  toggleImmersiveReading: () => void;
   toggleShortcuts: CommandShortcutSet | undefined;
 }) {
   if (args.event.defaultPrevented || args.event.repeat || args.event.isComposing) {
     return;
   }
-  if (handleImmersiveToggleKey({ ...args, shortcuts: args.toggleShortcuts })) {
+  if (matchesShortcutSet(args.event, args.toggleShortcuts)) {
+    if (args.canToggleImmersiveMode || args.props.isImmersiveMode) {
+      args.event.preventDefault();
+      args.toggleImmersiveReading();
+    }
     return;
   }
   if (!args.props.isImmersiveMode || args.event.altKey || args.event.ctrlKey || args.event.metaKey) {

@@ -101,7 +101,7 @@ export function captureReadingSelection(args: {
 }) {
   const selection = getViewportReadingSelection(args.props);
   if (!selection) {
-    return;
+    return null;
   }
   commitReadingSelectionUpdate({
     props: args.props,
@@ -110,6 +110,7 @@ export function captureReadingSelection(args: {
     source: 'capture-viewport'
   });
   args.pendingSelectionRef.current = selection;
+  return selection;
 }
 
 export function handleImmersiveScrollSyncEvent(args: {

@@ -176,7 +176,10 @@ export function useReadingSelectionState(
     getPendingSelection: () => pendingSelectionRef.current,
     getReadingSelection: () => readingSelectionRef.current,
     queueReadingSelectionRestore: () => {
-      pendingSelectionRef.current = readingSelectionRef.current;
+      const editor = props.editorAdapterRef.current;
+      const selection = editor ? readingSelectionRef.current ?? editor.getSelection() : null;
+      pendingSelectionRef.current = selection;
+      return selection;
     },
     setReadingSelection: (selection: { from: number; to: number }, source = 'unspecified') =>
       commitReadingSelectionUpdate({

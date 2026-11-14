@@ -107,6 +107,12 @@ export function applyImmersiveEntrySelection(args: {
   args.clearPendingSelection();
 }
 
+function isSameImmersiveApply(current: ReadingPositionSyncState | null, started: ReadingPositionSyncState | null) {
+  return current?.reason === started?.reason &&
+    current?.targetSelection?.from === started?.targetSelection?.from &&
+    current?.targetSelection?.to === started?.targetSelection?.to;
+}
+
 function revealImmersiveEntrySelection(
   props: ApplyingViewportSource,
   editor: EditorAdapter,
@@ -117,7 +123,11 @@ function revealImmersiveEntrySelection(
   let remainingAttempts = IMMERSIVE_READING_MAX_CHECK_ATTEMPTS;
   const deadline = Date.now() + APPLYING_READING_POSITION_TIMEOUT_MS;
 
+  const applyingState = props.getReadingPositionSyncState();
   const runFollowupCheck = () => {
+    if (props.editorAdapterRef.current !== editor || !isSameImmersiveApply(props.getReadingPositionSyncState(), applyingState)) {
+      return;
+    }
     if (isSelectionNearImmersiveAnchor(editor, selection)) {
       setReadingSelection(selection, 'immersive-entry-synced');
       props.completeApplyingReadingPosition('viewport-synced');
