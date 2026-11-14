@@ -5,7 +5,7 @@ const MIN_TOKEN_LENGTH = 8;
 const GENERIC_NAMES = new Set([
   'constants', 'package-lock.json', 'package.json', 'tsconfig.json', 'utils'
 ]);
-const REASON_PRIORITY = { changed: 0, sibling: 1, path: 2, name: 3 };
+const REASON_PRIORITY = { dependency: 0, changed: 1, sibling: 2, path: 3, name: 4 };
 
 export function isPreflightTestFile(file) {
   return TEST_FILE_PATTERN.test(file);
@@ -56,8 +56,9 @@ function priority(entry) {
   return Math.min(...entry.reasons.map(({ reason }) => REASON_PRIORITY[reason]));
 }
 
-export function selectPreflightTests({ changedFiles, readText, testFiles }) {
+export function selectPreflightTests({ changedFiles, dependencyTests = [], readText, testFiles }) {
   const selected = new Map();
+  for (const [file, dependency] of dependencyTests) addReason(selected, file, 'dependency', dependency);
   const existingTests = new Set(testFiles);
   const tokens = changedFiles.map((file) => ({ file, tokens: changedFileTokens(file) }));
   for (const file of changedFiles) {

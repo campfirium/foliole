@@ -57,6 +57,36 @@ async function readDurations({ cwd, git, head, host, revision, runner }) {
   return parsePreflightDurations(result.code === 0 ? result.stdout : '', host);
 }
 
+const DEPENDENCY_TESTS = {
+  jsdom: [
+    'src/app/components/WorkspaceSurfaceRowOverlay.test.tsx',
+    'src/companion/CompanionImageClozeEditor.test.tsx',
+    'src/companion/CompanionReadableArticleDocument.editing.test.tsx',
+    'src/companion/CompanionReadingMonospace.test.tsx',
+    'src/features/editor/adapters/liveMarkdownMath.render.test.ts',
+    'src/features/settings/components/sections/SettingsAboutSection.support.test.tsx',
+    'src/shared/ui/Tooltip.layer.test.tsx'
+  ]
+};
+
+async function readLockedPackages({ cwd, git, runner }, revision) {
+  const text = await capturePreflight(runner, git, ['show', `${revision}:package-lock.json`], cwd);
+  return JSON.parse(text).packages;
+}
+
+async function selectDependencyTests(options, changedFiles, testFiles) {
+  if (!changedFiles.includes('package-lock.json')) return [];
+  const [before, after] = await Promise.all([
+    readLockedPackages(options, options.base), readLockedPackages(options, options.head)
+  ]);
+  const available = new Set(testFiles);
+  return Object.entries(DEPENDENCY_TESTS).flatMap(([name, files]) => {
+    const key = `node_modules/${name}`;
+    if (before[key]?.version === after[key]?.version) return [];
+    return files.filter(file => available.has(file)).map(file => [file, name]);
+  });
+}
+
 // The same base, head, cap and preflight host yield the same ordered selection
 // wherever it is planned; `revision` reads the committed head instead of the working tree.
 // A Windows preflight only selects tests that a hosted Windows leaf runs.
@@ -71,7 +101,8 @@ export async function planPreflightSelection({
   const read = readText ?? (revision
     ? revisionTextReader({ cwd, files: testFiles, git, revision: head })
     : (file) => readFileSync(path.join(cwd, file), 'utf8'));
-  const entries = selectPreflightTests({ changedFiles, readText: read, testFiles });
+  const dependencyTests = await selectDependencyTests({ base, cwd, git, head, runner }, changedFiles, testFiles);
+  const entries = selectPreflightTests({ changedFiles, dependencyTests, readText: read, testFiles });
   const durations = await readDurations({ cwd, git, head, host, revision, runner });
   return { cap, changedFiles, entries, ...budgetPreflightTests(entries, { cap, durations }) };
 }

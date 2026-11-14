@@ -100,3 +100,29 @@ it('selects only hosted Windows tests and applies Windows durations for a Window
   expect(files(windows)).toEqual(['src/features/editor/fast.test.mjs']);
   expect(windows.heavy.map(({ file }) => file)).toEqual(['src/features/editor/slow.test.mjs']);
 });
+
+it('prioritizes existing DOM behavior tests for a resolved jsdom version change', async () => {
+  const { commit, root, write } = repo();
+  const domTest = 'src/companion/CompanionImageClozeEditor.test.tsx';
+  const writeLock = (version, license) => write('package-lock.json', JSON.stringify({
+    packages: { 'node_modules/jsdom': { version, license } }
+  }));
+  write(domTest, 'export {};');
+  write('src/unrelated.test.mjs', 'export const a = 1;');
+  writeLock('30.1.3', 'MIT');
+  const base = commit();
+  writeLock('31.0.0', 'MIT');
+  write('src/unrelated.test.mjs', 'export const a = 2;');
+  const head = commit();
+  writeLock('30.1.3', 'MIT');
+  const plan = await planPreflightSelection({ base, cap: 1, cwd: root, head, revision: true, runner });
+  expect(plan.run).toEqual([{ file: domTest, reasons: [{ reason: 'dependency', source: 'jsdom' }] }]);
+  expect(plan.deferred.map(({ file }) => file)).toEqual(['src/unrelated.test.mjs']);
+
+  writeLock('31.0.0', 'BSD-3-Clause');
+  const metadataOnly = commit();
+  const unchanged = await planPreflightSelection({
+    base: head, cwd: root, head: metadataOnly, revision: true, runner
+  });
+  expect(unchanged.run).toEqual([]);
+});
