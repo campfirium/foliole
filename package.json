@@ -287,7 +287,7 @@
     "@typescript-eslint/parser": "8.72.1",
     "@vitejs/plugin-react": "6.2.1",
     "autoprefixer": "10.6.2",
-    "electron": "45.3.1",
+    "electron": "45.3.2",
     "electron-builder": "26.18.0",
     "electron-winstaller": "file:electron/vendor/winstaller-backport/electron-winstaller-5.4.4-foliole.1.tgz",
     "eslint": "10.14.0",
