@@ -26,6 +26,7 @@ const FLAG_DESCRIPTIONS = {
   'material-ids': 'Comma-separated Topic or Folder IDs in the requested order.',
   'parent-id': 'Parent ID, or root for the workspace root; root means Inbox for Items.',
   query: 'Search text.',
+  'review-schedule': 'Item schedule JSON with due, priority, and optional history of reviewed_at and grade events.',
   reveal: 'Item answer, limited to 4,000 characters.',
   title: 'Topic or Folder title, or an explicit Item title update.'
 };

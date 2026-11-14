@@ -19,7 +19,7 @@ import { openDatabaseConnection } from '../database/connection.js';
 import { moveNodes, replaceNodeOrder, restoreNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
-import type { AgentControlItemReviewSchedule } from './agentControlLearningImport.js';
+import { persistAgentControlReviewHistory, type AgentControlItemReviewSchedule } from './agentControlLearningImport.js';
 import { createMaterialWithReceipt } from './agentControlMaterialCreateReceipts.js';
 import { AgentMaterialMutationError } from './agentControlMaterialMutations.js';
 import { readAgentControlMaterial } from './agentControlMaterials.js';
@@ -69,6 +69,7 @@ function insertAgentControlMaterial(input: CreateMaterialInput) {
     title: input.kind === 'item' ? deriveNodeTitleFromContent(input.content) : input.title,
     updatedAt: now
   });
+  if (itemSchedule?.history) persistAgentControlReviewHistory(id, itemSchedule.history);
   return readMaterialOrThrow(id);
 }
 

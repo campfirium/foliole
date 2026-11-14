@@ -14,7 +14,8 @@ test('requires local permission to import Topic and Item schedules', async ({ de
 
   const itemArgs = ['materials/create', '--descriptor', path.join(userDataPath, 'cache', 'agent-control-session.json'),
     '--kind', 'item', '--content', 'Imported question', '--reveal', 'Imported answer', '--review-schedule',
-    JSON.stringify({ due: '2027-02-01T00:00:00Z', priority: 2 })];
+    JSON.stringify({ due: '2027-02-01T00:00:00Z', priority: 2,
+      history: [{ reviewed_at: '2026-10-01T00:00:00Z', grade: 3 }] })];
 
   const settings = await openSettingsCategory(desktopWindow, 'General');
   const permission = settings.getByRole('switch', { name: /^(Allow learning progress imports|允许导入学习进度)$/u });
@@ -29,7 +30,13 @@ test('requires local permission to import Topic and Item schedules', async ({ de
   const topic = await runAgentCli(args);
   expect(topic).toMatchObject({ output: { material: { title: 'Migrated Topic' } }, status: 0 });
 
-  expect(await runAgentCli(itemArgs)).toMatchObject({ output: { material: { kind: 'item' } }, status: 0 });
+  const item = await runAgentCli(itemArgs);
+  expect(item).toMatchObject({ output: { material: { kind: 'item' } }, status: 0 });
+  expect(await runAgentCli(['materials/read', '--descriptor', args[2], '--id', item.output.material.id,
+    '--include-learning', 'true'])).toMatchObject({ status: 0, output: { material: { learning: {
+      priority: 2, review_schedule: { due: '2027-02-01T00:00:00.000Z', reps: 1,
+        last_review_at: '2026-10-01T00:00:00.000Z' }
+    } } } });
 
   await permission.click();
   await expect(permission).not.toBeChecked();

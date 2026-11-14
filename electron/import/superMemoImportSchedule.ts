@@ -1,6 +1,4 @@
-import { IMPORTED_REVIEW_OP_PREFIX } from '../../lib/core/database/initialReviewSchedule.js';
-import { INSERT_REVIEW_EVENT_SQL } from '../../lib/core/database/reviewLogRecord.js';
-import { recomputeNodeReview } from '../../lib/core/database/reviewProjection.js';
+import { writeImportedReviewHistory } from '../../lib/core/database/importedReviewHistory.js';
 import { readReviewEvents, sourceDay, type SuperMemoGradeMap } from '../../lib/core/import/superMemoSchedulePreview.js';
 import type { SuperMemoXmlDraftElement } from '../../lib/core/import/superMemoXmlDraft.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -13,14 +11,9 @@ export function superMemoDueInstant(day: string) {
 export function importSuperMemoReviewHistory(element: SuperMemoXmlDraftElement, nodeId: string, offset: string, gradeMap: SuperMemoGradeMap) {
   const events = readReviewEvents(element, offset, gradeMap) ?? [];
   if (!events.length) return;
-  const { driver } = openDatabaseConnection();
-  const insert = driver.prepare(INSERT_REVIEW_EVENT_SQL);
-  const host = loadOrCreateDesktopHostName();
-  for (const event of events) {
-    const id = `${IMPORTED_REVIEW_OP_PREFIX}${nodeId}:${event.op_id}`;
-    insert.run([id, id, host, nodeId, event.grade, 'supermemo', event.reviewed_at, 'review', null]);
-  }
-  recomputeNodeReview(driver, nodeId);
+  writeImportedReviewHistory(openDatabaseConnection().driver, {
+    events, nodeId, host: loadOrCreateDesktopHostName(), source: 'supermemo'
+  });
 }
 
 export function superMemoTopicReading(element: SuperMemoXmlDraftElement, due: string | null, priority: number, importedAt: string, dismissed = false) {

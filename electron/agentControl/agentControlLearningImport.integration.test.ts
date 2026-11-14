@@ -173,44 +173,55 @@ function verifyItem(driver: DatabaseDriver, id: string) {
   expect(queue(driver, '2031-01-02T20:00:00.000Z').fsrsQueueNodeIds).toContain(id);
 }
 
-it('imports an ungraded Item due date, syncs it and resumes native scheduling after grading', async () => {
+it.each([false, true])('imports and syncs the Item schedule with history=%s, then grades and undoes it', async (withHistory) => {
+  const history = [{ reviewed_at: '2026-10-01T00:00:00.000Z', grade: 3 }];
+  const schedule = withHistory ? { ...reviewSchedule, history } : reviewSchedule;
+  const reps = withHistory ? 1 : 0;
   await enableImport();
   const folder = await create({ kind: 'folder', parent_id: null, title: 'Migration folder' });
   expect(folder.status).toBe(200);
   const parentId = folder.payload.material.id as string;
   const descriptor = path.join(root, 'agent-control-session.json');
   await writeFile(descriptor, JSON.stringify({ endpoint: server.endpoint, token: 'test-token', capabilities: ['materials.create', 'materials.read'] }));
-  const result = await runAgentCli(['materials/create', '--descriptor', descriptor, '--kind', 'item', '--parent-id', parentId,
-    '--content', item.content, '--reveal', item.reveal, '--review-schedule', JSON.stringify(reviewSchedule)]);
+  const command = ['materials/create', '--descriptor', descriptor, '--kind', 'item', '--parent-id', parentId,
+    '--content', item.content, '--reveal', item.reveal, '--review-schedule', JSON.stringify(schedule), '--request-id', 'item-import'];
+  const result = await runAgentCli(command);
   expect(result.status).toBe(0);
   expect(result.output.material).toMatchObject({ parent_id: parentId });
   const id = result.output.material.id as string;
   closeDatabaseConnection();
 
   const source = sourcePeer();
-  verifyItem(source.driver, id);
+  expect(await runAgentCli(command)).toMatchObject({ status: 0, output: { material: { id } } });
+  if (!withHistory) verifyItem(source.driver, id);
   const target = createPeer('item-target');
   joinPeers(source, target);
   flushNodeSyncVersion(parentId, '2030-01-01T00:00:00.000Z');
   flushNodeSyncVersion(id, '2030-01-01T00:00:00.000Z');
   await syncRequestLibrary(source, target);
-  verifyItem(target.driver, id);
+  if (!withHistory) verifyItem(target.driver, id);
+  else {
+    expect(target.driver.queryAll('SELECT grade, reviewed_at FROM review_log WHERE node_id = ?', [id])).toEqual(history.map(
+      ({ grade, reviewed_at }) => ({ grade, reviewed_at })));
+    expect(target.driver.queryOne('SELECT due, reps, last_review_at FROM node_review WHERE node_id = ?', [id]))
+      .toEqual({ due: itemDue, reps, last_review_at: history[0]!.reviewed_at });
+  }
 
   expect(await runAgentCli(['materials/read', '--descriptor', descriptor, '--id', id, '--include-learning', 'true']))
     .toMatchObject({ status: 0, output: { material: { learning: { priority: 2, desired_retention: null,
-      initial_review_due: itemDue, review_schedule: { due: itemDue, last_review_at: null, state: 0, reps: 0, lapses: 0 }
+      initial_review_due: itemDue, review_schedule: { due: itemDue, last_review_at: withHistory ? history[0]!.reviewed_at : null, reps, lapses: 0 }
     } } } });
   const graded = score({ id: source.name, sqlite: source.db }, 'first-score', '2031-01-02T10:00:00.000Z', 3, id);
-  expect(graded).toMatchObject({ reps: 1 });
+  expect(graded).toMatchObject({ reps: reps + 1 });
   expect(graded?.due).not.toBe(itemDue);
   expect((await readLearning(id, true)).payload.material.learning.review_schedule).toMatchObject({
-    due: graded?.due, last_review_at: '2031-01-02T10:00:00.000Z', reps: 1,
+    due: graded?.due, last_review_at: '2031-01-02T10:00:00.000Z', reps: reps + 1,
     difficulty: graded?.difficulty, stability: graded?.stability, scheduled_days: graded?.scheduled_days
   });
   saveNodeReviewStateWithSync(source.driver, { nodeId: id, review: null, hostName: source.name,
     updatedAt: '2031-01-02T10:01:00.000Z', history: { mode: 'undo', targetOpId: 'first-score' } });
   expect(source.driver.queryOne('SELECT due, reps FROM node_review WHERE node_id = ?', [id]))
-    .toMatchObject({ due: itemDue, reps: 0 });
+    .toMatchObject({ due: itemDue, reps });
 });
 
 it('rejects a card schedule when disabled or invalid without changing legacy Item creation', async () => {
@@ -222,10 +233,15 @@ it('rejects a card schedule when disabled or invalid without changing legacy Ite
   expect(driver.queryOne<{ due: string }>('SELECT due FROM node_review WHERE node_id = ?', [ordinary.payload.material.id])?.due)
     .not.toBe(itemDue);
   await enableImport();
+  const historical = { reviewed_at: '2026-10-01T00:00:00Z', grade: 3 };
+  expect((await create({ ...input, review_schedule: { ...reviewSchedule, history: [historical] } }, 'wrong-token')).status).toBe(401);
   for (const invalid of [
     { ...input, review_schedule: { ...reviewSchedule, due: '2031-01-02' } },
     { ...input, review_schedule: { ...reviewSchedule, priority: 11 } },
     { ...input, review_schedule: { ...reviewSchedule, history: [] } },
+    { ...input, review_schedule: { ...reviewSchedule, history: [{ ...historical, grade: 5 }] } },
+    { ...input, review_schedule: { ...reviewSchedule, history: [historical, { ...historical, reviewed_at: '2026-09-01T00:00:00Z' }] } },
+    { ...input, review_schedule: { ...reviewSchedule, history: [{ ...historical, reviewed_at: '2030-01-01T00:00:00Z' }] } },
     { ...body, review_schedule: reviewSchedule }
   ]) {
     expect(await create(invalid)).toEqual({ status: 400, payload: { error: 'invalid_request' } });
@@ -233,13 +249,14 @@ it('rejects a card schedule when disabled or invalid without changing legacy Ite
   expect(driver.queryAll('SELECT node_id FROM node_review')).toEqual([{ node_id: ordinary.payload.material.id }]);
 });
 
-it('rolls back the Item when its initial review state fails to write', async () => {
+it.each(['node_review', 'review_log'])('rolls back creation when writing %s fails', async (table) => {
   await enableImport();
   const { sqlite } = openDatabaseConnection();
-  sqlite.exec(`CREATE TRIGGER fail_item_import BEFORE INSERT ON node_review
+  sqlite.exec(`CREATE TRIGGER fail_item_import BEFORE INSERT ON ${table}
     BEGIN SELECT RAISE(ABORT, 'test_review_write_failed'); END`);
-  expect(await create({ ...item, review_schedule: reviewSchedule }))
-    .toEqual({ status: 500, payload: { error: 'internal_error' } });
+  expect(await create({ ...item, request_id: 'failed-import', review_schedule: { ...reviewSchedule,
+    history: [{ reviewed_at: '2026-10-01T00:00:00Z', grade: 3 }]
+  } })).toEqual({ status: 500, payload: { error: 'internal_error' } });
   expect(sqlite.prepare("SELECT id FROM nodes WHERE kind = 'item'").all()).toEqual([]);
   expect(sqlite.prepare('SELECT node_id FROM node_review').all()).toEqual([]);
 });
