@@ -68,6 +68,28 @@ it('anchors a reverse selection to the second occurrence and completes both conj
   expect(extend).not.toHaveBeenCalled();
 });
 
+it('preserves a native reverse selection across editor updates and reads the next drag position', () => {
+  const { adapter, view, text } = openDocument();
+  const native = window.getSelection()!;
+  native.setBaseAndExtent(text, 12, text, 9);
+  expect(view.hasFocus).toBe(false);
+  const collapse = vi.spyOn(native, 'collapse');
+  const extend = vi.spyOn(native, 'extend');
+
+  view.dispatch({ selection: { anchor: 12, head: 8 } });
+
+  expect(collapse).not.toHaveBeenCalled();
+  expect(extend).not.toHaveBeenCalled();
+  expect(native.anchorOffset).toBe(12);
+  expect(native.focusOffset).toBe(9);
+
+  native.setBaseAndExtent(text, 12, text, 7);
+  fireEvent(document, new Event('selectionchange'));
+  expect(adapter.getSelection()).toEqual({ from: 7, to: 12 });
+  expect(collapse).not.toHaveBeenCalled();
+  expect(extend).not.toHaveBeenCalled();
+});
+
 it('uses the saved Off setting for the next selection and discards a stale editor range', () => {
   const settings = render(<CompanionDevanagariSelectionControl />);
   fireEvent.change(screen.getByRole('combobox'), { target: { value: 'off' } });

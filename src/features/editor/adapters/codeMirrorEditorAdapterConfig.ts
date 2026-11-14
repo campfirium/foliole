@@ -102,7 +102,9 @@ function createReadOnlyInteractionExtensions(options: CodeMirrorEditorAdapterOpt
       'aria-readonly': 'true',
       inputmode: 'none',
       role: 'document',
-      tabindex: '-1'
+      // CodeMirror mirrors selections in non-focusable documents even when blurred.
+      // Let Android keep its native selection while the reader is unfocused.
+      tabindex: getCompanionRuntimeCapability().kind === 'android-native' ? '0' : '-1'
     })
   ];
 }
