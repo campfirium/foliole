@@ -13,6 +13,7 @@ import {
   loadConfigs,
   resolveRepositoryRoot,
   renderTemplate,
+  scheduledScanConfigs,
   submitMonitorEvents
 } from './github-desktop-handoff-monitor.mjs';
 
@@ -155,5 +156,21 @@ describe('personal GitHub monitor configuration', () => {
     } finally {
       fs.rmSync(codexHome, { recursive: true, force: true });
     }
+  });
+});
+
+
+describe('separate discussion cadence', () => {
+  it('runs only discussions between full project scans', () => {
+    const configs = {
+      discussions: { enabled: true, pollIntervalSeconds: 60 },
+      issues: { enabled: true, pollIntervalSeconds: 60 },
+      playReview: { enabled: true, pollIntervalSeconds: 900 }
+    };
+    const state = { lastCheckedAt: '2026-11-15T00:00:00Z' };
+    expect(scheduledScanConfigs(configs, state, Date.parse('2026-11-15T00:01:00Z')))
+      .toEqual({ discussions: configs.discussions });
+    expect(scheduledScanConfigs(configs, state, Date.parse('2026-11-15T00:15:00Z')))
+      .toBe(configs);
   });
 });

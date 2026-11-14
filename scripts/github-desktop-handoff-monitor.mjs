@@ -142,25 +142,43 @@ export function submitMonitorEvents(events, state, options = {}) {
   }
 }
 
-function scan({ emit = false, includeExisting = false } = {}) {
+function fullScanInterval(configs) {
+  return Math.max(60, ...Object.entries(configs).filter(([name, config]) => name !== 'discussions' &&
+    config?.enabled).map(([, config]) => config.pollIntervalSeconds ?? 900));
+}
+
+export function scheduledScanConfigs(configs, state, now) {
+  const elapsed = now - Date.parse(state.lastCheckedAt ?? '');
+  if (elapsed < fullScanInterval(configs) * 1000) return { discussions: configs.discussions };
+  return configs;
+}
+
+function scan({ emit = false, includeExisting = false, scheduled = false } = {}) {
   const configs = loadConfigs();
   const persistedState = loadState();
   const state = emit ? persistedState : cloneJson(persistedState);
   const errors = [];
-  const events = listGithubMonitorEvents(configs, state, includeExisting, errors, renderTemplate)
+  const dueConfigs = scheduled ? scheduledScanConfigs(configs, state, Date.now()) : configs;
+  const fullScan = dueConfigs === configs;
+  const events = listGithubMonitorEvents(dueConfigs, state, includeExisting, errors, renderTemplate)
     .filter((event) => !state.submitted[event.dedupeKey]);
-  state.lastErrors = errors;
-  state.lastCheckedAt = new Date().toISOString();
+  if (fullScan) {
+    state.lastErrors = errors;
+    state.lastCheckedAt = new Date().toISOString();
+  } else {
+    state.lastErrors = [...(state.lastErrors ?? []).filter(({ source }) =>
+      source !== 'foliole/github-discussion'), ...errors];
+  }
   if (emit) writeJson(STATE_FILE, state);
   let securityNotifications;
   let securityImport;
   if (emit) {
     try { submitMonitorEvents(events, state); }
     finally {
-      if (configs.actions?.enabled && configs.actions.workflows?.includes('.github/workflows/t7-hosted-quality.yml')) {
+      if (dueConfigs.actions?.enabled && configs.actions.workflows?.includes('.github/workflows/t7-hosted-quality.yml')) {
         securityImport = refreshGithubSecurityOwner(REPO_ROOT, state.securityRunCandidate);
       }
-      securityNotifications = notifySecurityMonitor(REPO_ROOT, errors);
+      if (fullScan) securityNotifications = notifySecurityMonitor(REPO_ROOT, errors);
     }
   }
   return { emit, events, stateFile: STATE_FILE, securityImport, securityNotifications };
@@ -180,7 +198,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   if (command === 'status') {
     console.log(JSON.stringify({ configs: loadConfigs(), state: loadState() }, null, 2));
   } else if (command === 'scan') {
-    console.log(JSON.stringify(scan({ emit: process.argv.includes('--emit'), includeExisting: process.argv.includes('--include-existing') }), null, 2));
+    console.log(JSON.stringify(scan({ emit: process.argv.includes('--emit'), includeExisting: process.argv.includes('--include-existing'), scheduled: process.argv.includes('--scheduled') }), null, 2));
   } else if (command === 'monitor') {
     await monitor();
   } else {

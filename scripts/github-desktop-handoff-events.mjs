@@ -169,7 +169,7 @@ function listIssueEvents(config, state, includeExisting, errors, renderTemplate)
 
 export function listGithubMonitorEvents(configs, state, includeExisting, errors, renderTemplate) {
   state.submitted ??= {};
-  state.securityRunCandidate = null;
+  if (configs.actions !== undefined) state.securityRunCandidate = null;
   return [
     ...listPlayReviewEvents(configs.playReview, state, includeExisting, errors, renderTemplate),
     ...listDependabotAlertEvents(configs.dependabotAlerts, state, errors, renderTemplate),
