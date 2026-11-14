@@ -19,6 +19,6 @@ it('adds installed Linux DEB acceptance to dev remote desktop quality without at
     'artifact-metadata': 'write', attestations: 'write', contents: 'read', 'id-token': 'write'
   });
   expect(remote.jobs['scoped-quality'].permissions).toEqual({
-    'artifact-metadata': 'write', attestations: 'write', contents: 'read', 'id-token': 'write'
+    actions: 'read', 'artifact-metadata': 'write', attestations: 'write', contents: 'read', 'id-token': 'write'
   });
 });
