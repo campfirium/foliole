@@ -178,9 +178,11 @@ export function useAppPaletteItems(args: {
 
   return useMemo(
     () =>
-      buildAppPaletteItems(buildPaletteOptions(args, canMoveToNode, hasNavigableNodes, undoRouterOwner, undoRouterContentDocumentId, t)).map((item) => ({
+      buildAppPaletteItems(buildPaletteOptions(args, canMoveToNode, hasNavigableNodes, undoRouterOwner, undoRouterContentDocumentId, t)).map(({ shortcuts, ...item }) => ({
         ...item,
-        ...definedProps({ shortcuts: args.hotkeys.shortcutMap[item.id] ?? item.shortcuts })
+        ...definedProps({ shortcuts: Object.hasOwn(args.hotkeys.shortcutMap, item.id)
+          ? args.hotkeys.shortcutMap[item.id]
+          : shortcuts })
       })),
     [args, articleTargets, canMoveToNode, contentScaleRevision, hasNavigableNodes, t, undoRouterContentDocumentId, undoRouterOwner]
   );

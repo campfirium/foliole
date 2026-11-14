@@ -19,6 +19,7 @@ function createPaletteArgs(activeNodeId: string | null) {
       resetAllShortcuts: () => undefined,
       resetShortcut: () => undefined,
       shortcutMap: {
+        [APP_COMMAND_IDS.redo]: undefined,
         [APP_COMMAND_IDS.clipboardImport]: { primary: { altKey: true, ctrlKey: true, key: 'v' } },
         [APP_COMMAND_IDS.importSingleFile]: { primary: { ctrlKey: true, key: 'o' } }
       },
@@ -127,7 +128,7 @@ it('keeps immersive reading available while review mode is active', () => {
   });
 });
 
-it('keeps import commands enabled for the unified shortcut and menu command path', () => {
+it('projects configured and cleared bindings onto the shared menu and palette commands', () => {
   const { result } = renderHook(() =>
     useAppPaletteItems({
       ...createPaletteArgs('node-1'),
@@ -135,6 +136,7 @@ it('keeps import commands enabled for the unified shortcut and menu command path
     } as unknown as Parameters<typeof useAppPaletteItems>[0]), { wrapper }
   );
 
+  expect(result.current.find((item) => item.id === APP_COMMAND_IDS.redo)?.shortcuts).toBeUndefined();
   expect(result.current.find((item) => item.id === APP_COMMAND_IDS.importSingleFile)).toMatchObject({
     enabled: true,
     shortcuts: { primary: { ctrlKey: true, key: 'o' } }
