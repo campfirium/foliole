@@ -13,9 +13,9 @@ it('wires one non-gating terminal timing summary into Remote Quality and T7', ()
   const remoteCall = remote.jobs['timing-summary'];
   const releaseCall = release.jobs.timing_summary;
 
-  expect(remoteCall.if).toBe('${{ always() }}');
+  expect(remoteCall.if).toBe("${{ always() && inputs.scope != 'desktop-file-retry' }}");
   expect(new Set(remoteCall.needs)).toEqual(new Set(
-    Object.keys(remote.jobs).filter(name => name !== 'timing-summary')));
+    Object.keys(remote.jobs).filter(name => !['timing-summary', 'desktop-file-retry'].includes(name))));
   expect(releaseCall.if)
     .toBe("${{ always() && (github.event_name == 'push' || inputs.stage == 'full') }}");
   expect(releaseCall.needs).toContain('assemble_draft');
