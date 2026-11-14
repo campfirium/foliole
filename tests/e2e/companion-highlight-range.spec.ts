@@ -100,3 +100,35 @@ test('keeps the released range visible when an immediate outside tap dismisses t
   expect(ranges.length).toBeGreaterThan(0);
   expect(ranges.every(range => range === 'Beta Gamma')).toBe(true);
 });
+
+test('scrolls in both directions from an existing highlight and opens its toolbar on tap', async ({ page, context }) => {
+  await openReader(page);
+  const paragraph = page.getByText('Reading paragraph 12.', { exact: true });
+  await paragraph.dblclick({ position: { x: 28, y: 8 } });
+  await page.getByRole('button', { name: 'Highlight', exact: true }).click();
+  const highlight = page.locator('.cm-md-highlight');
+  const toolbar = page.getByRole('toolbar');
+  const surface = page.locator('[data-companion-reading-surface]');
+  const cdp = await context.newCDPSession(page);
+  for (const distance of [-140, 140]) {
+    await highlight.evaluate(element => element.scrollIntoView({ block: 'center' }));
+    const bounds = (await highlight.boundingBox())!;
+    const x = bounds.x + bounds.width / 2;
+    const y = bounds.y + bounds.height / 2;
+    const before = await surface.evaluate(element => element.scrollTop);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    await expect(toolbar).toBeHidden();
+    for (let step = 1; step <= 5; step++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove', touchPoints: [{ x, y: y + distance * step / 5 }]
+      });
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect.poll(async () => (before - await surface.evaluate(element => element.scrollTop)) * Math.sign(distance))
+      .toBeGreaterThan(0);
+    // Keep checking through the delayed selection-toolbar opening window.
+    await expect(toolbar.waitFor({ state: 'visible', timeout: 500 })).rejects.toThrow(/Timeout 500ms exceeded/);
+  }
+  await highlight.tap();
+  await expect(page.getByRole('button', { name: 'Adjust anchor end' })).toBeVisible();
+});

@@ -1,4 +1,4 @@
-import { useEffect, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent, type ReactNode } from 'react';
+import { useEffect, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent, type ReactNode } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
@@ -92,7 +92,11 @@ function createArticleToolbarEvents(
     reading.handleSurfacePointerMove(event);
     closeToolbarFromArticlePointer(event);
   }
-  return { handleSurfacePointerDown, handleSurfacePointerMove, closeToolbarFromArticleTouch, openToolbarFromArticlePointer };
+  function handleSurfaceClick(event: ReactMouseEvent<HTMLElement>) {
+    reading.handleSurfaceClick(event);
+    if (!isCompanionArticleInteractiveTarget(event.target)) toolbar.openSelectionToolbar(event);
+  }
+  return { handleSurfaceClick, handleSurfacePointerDown, handleSurfacePointerMove, closeToolbarFromArticleTouch, openToolbarFromArticlePointer };
 }
 
 function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) {
@@ -214,7 +218,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       data-reading-chrome-visible={model.reading.isChromeVisible && !model.reading.isContentEditing}
       className={`${model.surfaceClassName}${itemEditing ? ' companion-item-editing' : ''}`}
       style={pagedStyle}
-      onClick={model.reading.handleSurfaceClick}
+      onClick={model.handleSurfaceClick}
       onPointerDown={event => {
         if (event.pointerType === 'touch') pdfScroll.markInput();
         model.handleSurfacePointerDown(event);

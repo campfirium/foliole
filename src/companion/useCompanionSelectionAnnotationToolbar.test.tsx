@@ -209,6 +209,7 @@ it('opens existing highlight actions when tapping a rendered highlight without t
   act(() => {
     result.current.handleEditorReady(createEditorAdapter(selection, 9) as never);
     result.current.openSelectionToolbar({
+      type: 'click',
       clientX: 100,
       clientY: 120,
       target

@@ -86,7 +86,7 @@ interface SelectionAnnotationDocumentEventsArgs {
   editorRef: MutableRefObject<EditorAdapter | null>;
   lastFallbackRef: MutableRefObject<CompanionSelectionClientPoint | null>;
   lastSelectionInteractionAtRef: MutableRefObject<number>;
-  scheduleSelectionToolbarOpen: (fallback?: CompanionSelectionClientPoint, allowExistingHighlight?: boolean) => void;
+  scheduleSelectionToolbarOpen: (fallback?: CompanionSelectionClientPoint) => void;
 }
 
 function recordSelectionSnapshot(editor: EditorAdapter | null) {
@@ -111,8 +111,6 @@ export function useCompanionSelectionAnnotationDocumentEvents(args: SelectionAnn
       if (event.type === 'pointermove' && tap && 'clientX' in event &&
         Math.hypot(event.clientX - tap.x, event.clientY - tap.y) > 8) tapRef.current = null;
       if (toolbarDom.isCompanionSelectionToolbarTarget(event.target)) return;
-      if (isExistingHighlightTarget(event.target)) toolbarDom.activateCompanionHighlightTarget(event.target);
-      else toolbarDom.clearCompanionActiveHighlightElements();
       args.lastFallbackRef.current = readSelectionClientPoint(event) ?? args.lastFallbackRef.current ?? getDefaultSelectionClientPoint();
       args.lastSelectionInteractionAtRef.current = Date.now();
       args.closeSelectionToolbar();
@@ -125,16 +123,14 @@ export function useCompanionSelectionAnnotationDocumentEvents(args: SelectionAnn
       if (toolbarDom.isCompanionSelectionToolbarTarget(event.target)) return;
       args.lastFallbackRef.current = readSelectionClientPoint(event) ?? args.lastFallbackRef.current ?? getDefaultSelectionClientPoint();
       args.lastSelectionInteractionAtRef.current = Date.now();
-      if (isExistingHighlightTarget(event.target)) toolbarDom.activateCompanionHighlightTarget(event.target);
-      else toolbarDom.clearCompanionActiveHighlightElements();
-      args.scheduleSelectionToolbarOpen(args.lastFallbackRef.current, isExistingHighlightTarget(event.target));
+      args.scheduleSelectionToolbarOpen(args.lastFallbackRef.current);
     };
     const handleSelectionChange = () => {
       recordSelectionSnapshot(args.editorRef.current);
       if (toolbarDom.isCompanionHighlightRangeDragging()) return;
       if (toolbarDom.isCompanionSelectionToolbarActiveElement()) return;
       if (toolbarDom.hasRecentSelectionInteraction(args.lastSelectionInteractionAtRef.current)) {
-        args.scheduleSelectionToolbarOpen(undefined, false);
+        args.scheduleSelectionToolbarOpen();
       }
     };
     document.addEventListener('pointerdown', rememberSelectionInteraction, true);

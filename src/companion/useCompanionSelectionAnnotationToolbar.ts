@@ -21,30 +21,34 @@ import { useCompanionSelectionAnnotationDocumentEvents } from './useCompanionSel
 import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
 function useCompanionSelectionAnnotationOpenHandler(args: {
   canCreateAnnotation: boolean;
+  clearScheduledOpen: () => void;
   editorRef: MutableRefObject<EditorAdapter | null>;
   lastPayloadRef: MutableRefObject<CompanionSelectionAnnotationToolbarState['payload']>;
   lastFallbackRef: MutableRefObject<CompanionSelectionClientPoint | null>;
   lastSelectionInteractionAtRef: MutableRefObject<number>;
   nodeId: string;
-  scheduleSelectionToolbarOpen: (fallback?: CompanionSelectionClientPoint, allowExistingHighlight?: boolean) => void;
+  scheduleSelectionToolbarOpen: (fallback?: CompanionSelectionClientPoint) => void;
   setSelectionToolbar: Dispatch<SetStateAction<CompanionSelectionAnnotationToolbarState | null>>;
   snapshot: WorkspaceSnapshot | null;
 }) {
   return useCallback((event: ReactMouseEvent<HTMLElement>) => {
-    if (toolbarDom.isCompanionSelectionToolbarTarget(event.target) || !args.canCreateAnnotation) return;
+    if (toolbarDom.isCompanionArticleInteractiveTarget(event.target) || !args.canCreateAnnotation) return;
+    const highlightTarget = isExistingHighlightTarget(event.target);
     const fallback = readSelectionClientPoint(event) ?? getDefaultSelectionClientPoint();
+    // A browser click identifies a tap. Selection releases can also follow a scroll.
+    if (event.type === 'click') {
+      if (!highlightTarget) return;
+      const existingHighlight = resolveExistingHighlightAtPoint({ ...args, point: fallback });
+      if (!existingHighlight) return;
+      args.clearScheduledOpen();
+      toolbarDom.activateCompanionHighlightTarget(event.target);
+      args.setSelectionToolbar(resolveExistingHighlightToolbarState(existingHighlight, fallback));
+      return;
+    }
+    if (highlightTarget) return;
     args.lastFallbackRef.current = fallback;
     args.lastSelectionInteractionAtRef.current = Date.now();
     window.requestAnimationFrame(() => {
-      if (isExistingHighlightTarget(event.target)) {
-        const existingHighlight = resolveExistingHighlightAtPoint({ ...args, point: fallback });
-        if (existingHighlight) {
-          toolbarDom.activateCompanionHighlightTarget(event.target);
-          args.setSelectionToolbar(resolveExistingHighlightToolbarState(existingHighlight, fallback));
-          return;
-        }
-        toolbarDom.clearCompanionActiveHighlightElements();
-      }
       const adapter = args.editorRef.current;
       const payload = resolveCompanionSelectionCommandPayload(args.nodeId, adapter);
       if (payload && adapter) {
@@ -52,7 +56,7 @@ function useCompanionSelectionAnnotationOpenHandler(args: {
         args.lastPayloadRef.current = payload;
         args.setSelectionToolbar(resolveSelectionToolbarState({ content: adapter.getContent(), fallback, payload, snapshot: args.snapshot }));
       }
-      else args.scheduleSelectionToolbarOpen(fallback, false);
+      else args.scheduleSelectionToolbarOpen(fallback);
     });
   }, [args]);
 }
@@ -76,8 +80,7 @@ function useCompanionSelectionAnnotationScheduler(args: {
     settleTimerRef.current = null;
   }, []);
   const scheduleSelectionToolbarOpen = useCallback((
-    fallback = lastFallbackRef.current ?? getDefaultSelectionClientPoint(),
-    allowExistingHighlight = false
+    fallback = lastFallbackRef.current ?? getDefaultSelectionClientPoint()
   ) => {
     if (!args.canCreateAnnotation) return;
     clearScheduledOpen();
@@ -86,11 +89,6 @@ function useCompanionSelectionAnnotationScheduler(args: {
         frameRef.current = null;
         settleTimerRef.current = null;
         if (!args.canCreateAnnotation) return;
-        const existingHighlight = allowExistingHighlight ? resolveExistingHighlightAtPoint({ ...args, point: fallback }) : null;
-        if (existingHighlight) {
-          args.setSelectionToolbar(resolveExistingHighlightToolbarState(existingHighlight, fallback));
-          return;
-        }
         const adapter = args.editorRef.current;
         const payload = resolveCompanionSelectionCommandPayload(args.nodeId, adapter);
         if (payload && adapter) {
@@ -205,12 +203,10 @@ export function useCompanionSelectionAnnotationToolbar(props: {
 
   const openSelectionToolbar = useCompanionSelectionAnnotationOpenHandler({
     canCreateAnnotation: props.canCreateAnnotation,
+    ...scheduler,
     editorRef,
     lastPayloadRef,
-    lastFallbackRef: scheduler.lastFallbackRef,
-    lastSelectionInteractionAtRef: scheduler.lastSelectionInteractionAtRef,
     nodeId: props.nodeId,
-    scheduleSelectionToolbarOpen: scheduler.scheduleSelectionToolbarOpen,
     setSelectionToolbar,
     snapshot: props.snapshot
   });

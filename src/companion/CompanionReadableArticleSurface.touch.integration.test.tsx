@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+import { CodeMirrorEditorAdapter } from '../features/editor/adapters/CodeMirrorEditorAdapter';
 import { MouseGestureSettingsProvider } from '../features/settings/context/MouseGestureSettingsProvider';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
@@ -8,8 +9,8 @@ import { CompanionDraftProvider } from './CompanionDraftProvider';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import { createSnapshot } from './companionWorkspaceSyncActions.testSupport';
 
-function touch(target: HTMLElement, type: string) {
-  const event = new MouseEvent(type, { bubbles: true, clientX: 40, clientY: 200 });
+function touch(target: HTMLElement, type: string, clientY = 200) {
+  const event = new MouseEvent(type, { bubbles: true, clientX: 40, clientY });
   Object.defineProperties(event, {
     pointerId: { value: 1 }, pointerType: { value: 'touch' }, isPrimary: { value: true }
   });
@@ -33,7 +34,9 @@ it('reveals reading controls from a short touch on the real read-only editor', a
   expect(screen.getByRole('button', { name: 'Outline' })).toBeVisible();
 });
 
-it.each(['item', 'topic'] as const)('only offers new selection annotations in a Topic, current kind=%s', async kind => {
+it.each([
+  ['item', 'pointerup'], ['topic', 'pointerup'], ['topic', 'touchend']
+] as const)('only offers new selection annotations in a Topic, current kind=%s, release=%s', async (kind, release) => {
   const snapshot = createSnapshot('selection-source');
   snapshot.nodesById['selection-source']!.kind = kind;
   const onCreate = vi.fn();
@@ -50,7 +53,8 @@ it.each(['item', 'topic'] as const)('only offers new selection annotations in a 
   Object.defineProperty(range, 'getBoundingClientRect', { value: () => new DOMRect(20, 160, 100, 20) });
   window.getSelection()!.removeAllRanges();
   window.getSelection()!.addRange(range);
-  touch(text, 'pointerup');
+  if (release === 'touchend') fireEvent.touchEnd(text, { changedTouches: [{ clientX: 40, clientY: 200 }], touches: [] });
+  else touch(text, 'pointerup');
   await act(async () => {
     await new Promise<void>(resolve => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
   });
@@ -99,3 +103,45 @@ it.each([
     selection.removeAllRanges();
   }
 });
+
+it.each(['touchend after pointercancel', 'pointerup after movement'])(
+  'opens an existing highlight only for a tap, with %s as the scroll release',
+  async release => {
+    const snapshot = createSnapshot('selection-source');
+    const source = snapshot.nodesById['selection-source']!;
+    source.content = 'Highlighted passage';
+    snapshot.nodesById['existing-highlight'] = {
+      ...source, id: 'existing-highlight', parentNodeId: source.id, content: 'Highlighted',
+      anchorLink: { id: 'anchor', kind: 'highlight', locator: { from: 0, to: 11, originalText: 'Highlighted' } }
+    };
+    snapshot.nodeOrder.push('existing-highlight');
+    const position = vi.spyOn(CodeMirrorEditorAdapter.prototype, 'getDocumentPositionAtClientPoint').mockReturnValue(2);
+    try {
+      renderWithLocalization(<MouseGestureSettingsProvider><CompanionDraftProvider>
+        <ImmersiveReadableArticle onExit={vi.fn()} onCreateSelectionAnnotation={vi.fn()} snapshot={snapshot}
+          readableArticle={{ content: source.content, hideTitleHeading: false,
+            nodeId: source.id, persistedNodeViewState: null, pdfAttachmentId: null,
+            textAnchorDecorations: [{ from: 0, to: 11, kind: 'highlight', nodeId: 'existing-highlight' }], title: 'Topic' }} />
+      </CompanionDraftProvider></MouseGestureSettingsProvider>);
+      const mark = await screen.findByText('Highlighted', { selector: '.cm-md-highlight' });
+      touch(mark, 'pointerdown');
+      touch(mark, 'pointermove', 140);
+      if (release === 'touchend after pointercancel') {
+        touch(mark, 'pointercancel', 140);
+        fireEvent.touchEnd(mark, { changedTouches: [{ clientX: 40, clientY: 140 }], touches: [] });
+      } else {
+        touch(mark, 'pointerup', 140);
+      }
+      await act(async () => new Promise(resolve => setTimeout(resolve, 320)));
+      expect(screen.queryByRole('toolbar')).toBeNull();
+
+      touch(mark, 'pointerdown');
+      touch(mark, 'pointerup');
+      fireEvent.touchEnd(mark, { changedTouches: [{ clientX: 40, clientY: 200 }], touches: [] });
+      fireEvent.click(mark, { clientX: 40, clientY: 200, detail: 1 });
+      expect(await screen.findByRole('button', { name: 'Close Highlight' })).toBeVisible();
+    } finally {
+      position.mockRestore();
+    }
+  }
+);
