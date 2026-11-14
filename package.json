@@ -275,7 +275,7 @@
     "@electron/rebuild": "4.2.1",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.64.1",
-    "@tailwindcss/vite": "4.3.4",
+    "@tailwindcss/vite": "4.3.5",
     "@testing-library/dom": "10.4.2",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
@@ -300,7 +300,7 @@
     "postcss": "8.5.32",
     "postject": "1.0.0-alpha.6",
     "prettier": "3.9.10",
-    "tailwindcss": "4.3.4",
+    "tailwindcss": "4.3.5",
     "typescript": "6.0.3",
     "vite": "8.3.6",
     "vitest": "5.1.0"
