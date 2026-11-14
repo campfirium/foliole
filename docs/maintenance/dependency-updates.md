@@ -170,62 +170,6 @@ cleanup still owed by its owner.
 
 ## Pending centralized QA
 
-### November 14 dependency batch
-
-Adoption commit `2ccec03eb` passed local fast quality, macOS Electron native
-health including SQLite and DNS-SD, the companion web build, 100 Swift host
-tests, and the unsigned iOS Simulator build. Run full quality and dependency
-hardening before closing the proposals below. Electron 45.3.2 is the latest
-stable version at review time. Follow the normal desktop release schedule.
-The embedded Node version remains 24.22.2.
-
-| Proposal | Reviewed Renovate head | Local target |
-| --- | --- | --- |
-| [#200](https://github.com/campfirium/foliole/pull/200) | `cf08d2833504669bb8830c90ca7a0ca71664c5dd` | Electron 45.3.2 |
-| [#236](https://github.com/campfirium/foliole/pull/236) | `989f52335f5ad7acfcd7e48d3016b932609b7a0b` | Lucide React 1.70.0 |
-| [#237](https://github.com/campfirium/foliole/pull/237) | `c6337f337af22c5bf5d8e80a5b81cda7fd4586b9` | SwiftProtobuf 1.41.0 |
-| [#242](https://github.com/campfirium/foliole/pull/242) | `bd40dae804874ad2c1bd6c4a11c3296d654f3c2f` | jsdom 31.0.0 |
-| [#244](https://github.com/campfirium/foliole/pull/244) | `8611dfcbe458d69c5bd50f699c975dcdfac33a1b` | glob 14.0.4 for ASAR and Capacitor |
-| [#245](https://github.com/campfirium/foliole/pull/245) | `62b847899da596c997324f0e8d4cef2cfd5b1f52` | minimatch 11.0.5 |
-| [#246](https://github.com/campfirium/foliole/pull/246) | `0d5c841650203a06e98e32ec6db0e9111f663032` | Tailwind CSS 4.3.5 |
-| [#247](https://github.com/campfirium/foliole/pull/247) | `ea118767c42717f40fc7e13198d13a1ecc705781` | eslint-plugin-import-x 4.18.0 |
-| [#248](https://github.com/campfirium/foliole/pull/248) | `c3302682155a18af82881bf134735479aeaff5c1` | Zustand 5.1.0 |
-| [#249](https://github.com/campfirium/foliole/pull/249) | `4e0132de37cd1f94d2b0fd45f37a11c77dc219a6` | Playwright 1.65.0 |
-
-### November 12 iOS dependency batch
-
-[#237](https://github.com/campfirium/foliole/pull/237) targets
-`campfirium/foliole:dev`, verified `app/renovate` head
-`9eb4eb7a5d041375562e454e7b478adedbaf1ec2`. Adoption commit `07fa653f2`
-updates SwiftProtobuf to 1.40.0. Both graphs resolved the official tag, 100
-Swift host tests passed, and the unsigned iOS simulator build succeeded.
-Run iOS host and dependency hardening coverage in the next centralized QA.
-
-### November 12 UI dependency batch
-
-The proposals target `campfirium/foliole:dev`. Adoption commit `18e991ba7`
-passed 16 icon and virtual-list tests, the desktop and companion web builds,
-and the production npm audit. Run desktop/shared coverage and dependency
-hardening in the next centralized QA.
-
-| Proposal | Verified author / reviewed head | Local target |
-| --- | --- | --- |
-| [#235](https://github.com/campfirium/foliole/pull/235) | `app/renovate` / `84ef2a9998e73f890ef6469da988601e32216ce9` | TanStack React Virtual 3.14.26 and Virtual Core 3.19.11 |
-| [#236](https://github.com/campfirium/foliole/pull/236) | `app/renovate` / `82eb5acf7f17782045f40e7e6d474e11cf6f578c` | Lucide React 1.68.0 |
-
-### November 12 Android dependency batch
-
-The proposals target `campfirium/foliole:dev`. Adoption commit `737910d5c`
-passed the Android debug APK and instrumentation APK builds and JVM tests.
-Both debug dependency graphs resolve AndroidX SQLite 2.7.1. The local build
-had no Firebase configuration, so the actual push flow remains unverified.
-Run Android host checks and dependency hardening in the next centralized QA.
-
-| Proposal | Verified author / reviewed head | Local target |
-| --- | --- | --- |
-| [#233](https://github.com/campfirium/foliole/pull/233) | `app/renovate` / `349da626bb8bed03c3e7a6a741b1cb605a03092b` | AndroidX SQLite 2.7.1 in both compile and runtime graphs |
-| [#238](https://github.com/campfirium/foliole/pull/238) | `app/renovate` / `687838fa13ca1ee0bc11bac4db191044fe237aa8` | Google Services Gradle plugin 4.6.0 |
-
 ### November 12 Node.js security assessment
 
 Foliole 0.8.1 ships Electron 45.2.3 with Node.js 24.22.2. Electron 45.3.0
@@ -243,30 +187,20 @@ development and CI toolchain.
 [Node security release](https://github.com/nodejs/node/releases/tag/v24.22.3)
 and [Electron runtime table](https://releases.electronjs.org/release?channel=stable).
 
-### November 12 Electron and build-tool patch batch
+### Completed November 14 centralized batch
 
-The following `app/renovate` proposals target `campfirium/foliole:dev`.
-Adoption commit `ee27eb9aa` passed 53 targeted tests, six real Electron SQLite
-tests, macOS Electron native preflight, both desktop and companion web
-production builds, and the production npm audit. The complete local fast check
-could not acquire the resource held by the running Mac DEV preview.
-Run desktop and shared quality with dependency hardening in the next
-centralized QA.
+[Full quality run 43617786456](https://github.com/campfirium/foliole/actions/runs/43617786456)
+passed dependency hardening and all 16 required stages on `6e1536a5c`.
+The integrated tree passed local fast checks and 58 targeted regressions, then
+reached remote dev at `2bf3878e0`. Desktop execution reports contained 1,308
+successful file executions and no timeouts.
 
-| Proposal | Verified head | Target |
-| --- | --- | --- |
-| [#200](https://github.com/campfirium/foliole/pull/200) | `504cd9196b48e5d778c2311cf4969651dd56f3f1` | Electron 45.3.1 |
-| [#239](https://github.com/campfirium/foliole/pull/239) | `9073ae21cffd9c678b148819d76cf2718aa962e8` | npm 12.2.2 |
-| [#240](https://github.com/campfirium/foliole/pull/240) | `5125f576d762456b0d426d809a629776bc8396c4` | Vite 8.3.6 |
-
-[Electron 45.3.1](https://github.com/electron/electron/releases/tag/v45.3.1)
-is the latest stable release at review time and stops trusting the revoked
-eMudhra RSA intermediates. Prioritize it for the next desktop patch release.
-It still embeds Node 24.22.2, so the separate Node backport check above
-remains open. No Electron major upgrade is outstanding.
-
-The separately authorized [Gradle security patch](gradle-security-update.md) is
-outside the already frozen November 11 full-QA candidate.
+The adopted November 14 updates are in `2ccec03eb`. PRs #200, #236, #237,
+and #244–#249 are closed and their source refs are absent. Vite #240 was
+already in `ee27eb9aa`; it is also closed and its source ref is absent.
+Earlier verified updates in `18e991ba7`, `737910d5c`, and `ee27eb9aa`
+covered #235, #233, #238, and #239. Those proposals were already closed and
+their source refs are absent.
 
 ### Completed November 10 npm batch
 
@@ -431,6 +365,15 @@ and lucide-react 1.63.0. The older implementation above does not cover that targ
 the current proposal's local validation blocker is recorded below.
 
 ## Reviewed proposals and deferred adoption
+
+[#242](https://github.com/campfirium/foliole/pull/242) at reviewed head
+`bd40dae804874ad2c1bd6c4a11c3296d654f3c2f` remains open. jsdom 31.0.0
+changed computed style and transform behavior in desktop, shared and Android
+source tests on [run 43609770128](https://github.com/campfirium/foliole/actions/runs/43609770128).
+`440d79b9c` restored 30.1.3. Recheck the upgrade when the implicated CSS
+behavior is corrected upstream or an equivalent test compatibility change
+passes the affected suites without weakening their assertions.
+
 
 2026-11-06, T730: #209 (`app/renovate`, base `dev`, head
 `cd7e3709f0c69b4af9a400be55b2aac82a30c80b`) is **not adopted**: Node
