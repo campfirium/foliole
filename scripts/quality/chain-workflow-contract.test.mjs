@@ -105,7 +105,7 @@ it('keeps each entry within reusable workflow limits without expanding leaf perm
     visit(entry, [], seen);
     expect(seen.size).toBeLessThanOrEqual(50);
   }
-  expect(chain.permissions).toEqual({ contents: 'read' });
+  expect(chain.permissions).toEqual({ contents: 'read', actions: 'read' });
   for (const stage of CHAIN_STAGES) {
     const leaf = parse(fs.readFileSync(chain.jobs[stage].uses, 'utf8'));
     const expected = stage === 't5-desktop-source' ? { contents: 'read', actions: 'read' } : { contents: 'read' };
