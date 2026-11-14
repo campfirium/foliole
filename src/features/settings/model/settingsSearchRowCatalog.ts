@@ -1,5 +1,6 @@
 import type { TranslationKey } from '../../../shared/localization/translations';
 
+import { QUIT_ON_CLOSE_SEARCH_ROW_ID } from './quitOnCloseAvailability';
 import type { SettingsCategoryId } from './settingsPanelOptions';
 import type { SettingsSearchRowMeta } from './settingsSearch';
 
@@ -27,7 +28,7 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('general', 'general-search-aliases', 'settings.general.searchAliases.title', 'settings.general.searchAliases.description'),
   row('general', 'general-language', 'settings.search.language.title', 'settings.search.language.description', 'settings.search.language.terms'),
   row('general', 'general-open-at-login', 'settings.search.generalOpenAtLogin.title', 'settings.search.generalOpenAtLogin.description', 'settings.search.generalOpenAtLogin.terms'),
-  row('general', 'general-quit-on-close', 'settings.general.quitOnClose.title', 'settings.general.quitOnClose.description'),
+  row('general', QUIT_ON_CLOSE_SEARCH_ROW_ID, 'settings.general.quitOnClose.title', 'settings.general.quitOnClose.description'),
   row('general', 'general-custom-copy', 'settings.customCopy.row', 'settings.customCopy.description', 'settings.customCopy.searchTerms'),
   row('general', 'general-action-help', 'settings.appearance.actionHelp.row', 'settings.appearance.actionHelp.description'),
   row('general', SETTINGS_MODELS_SEARCH_ROW_ID, 'settings.models.section', 'settings.models.description', 'settings.models.searchTerms'),

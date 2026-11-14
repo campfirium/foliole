@@ -190,7 +190,7 @@ function SettingsPanelBody(props: SettingsPanelBodyProps) {
   const [isBackdropTransparent, setIsBackdropTransparent] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const searchQueryRef = useRef('');
-  const search = useSettingsSearchState(props.setActiveCategory, props.requestedRowId ?? null);
+  const search = useSettingsSearchState(props.setActiveCategory, props.requestedRowId ?? null, props.previewDesktopSettings);
   searchQueryRef.current = search.query;
   const categoryProps = createSettingsCategoryProps(props, setIsBackdropTransparent, preview.setIsPreviewActive);
   useSettingsPanelEscape(preview.isPreviewActive, searchQueryRef, props.onClose);

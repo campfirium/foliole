@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type RefObject } from 'react';
 
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { useDesktopCustomCss } from '../context/DesktopCustomCssProvider';
+import { canShowQuitOnClose, QUIT_ON_CLOSE_SEARCH_ROW_ID } from '../model/quitOnCloseAvailability';
 import { getSettingsCategories, type SettingsCategoryId } from '../model/settingsPanelOptions';
 import {
   querySettingsSearch,
@@ -18,7 +19,8 @@ const SETTINGS_SEARCH_HIGHLIGHT_CLASSES = [
 
 export function useSettingsSearchState(
   setActiveCategory: (category: SettingsCategoryId) => void,
-  requestedRowId: string | null = null
+  requestedRowId: string | null = null,
+  previewDesktopSettings = false
 ) {
   const t = useTranslation();
   const [query, setQuery] = useState('');
@@ -27,9 +29,11 @@ export function useSettingsSearchState(
   const [targetRowId, setTargetRowId] = useState<string | null>(null);
   const categories = getSettingsCategories(t);
   const hasCustomCss = Boolean(useDesktopCustomCss());
+  const showQuitOnClose = canShowQuitOnClose(previewDesktopSettings);
   const rows = useMemo(() => createSettingsSearchRows(t).filter(
-    (row) => hasCustomCss || row.id !== SETTINGS_CUSTOM_CSS_ROW_ID
-  ), [hasCustomCss, t]);
+    (row) => (hasCustomCss || row.id !== SETTINGS_CUSTOM_CSS_ROW_ID)
+      && (showQuitOnClose || row.id !== QUIT_ON_CLOSE_SEARCH_ROW_ID)
+  ), [hasCustomCss, showQuitOnClose, t]);
   const results = querySettingsSearch(categories, rows, query);
 
   useEffect(() => setActiveResultIndex(0), [query]);

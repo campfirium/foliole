@@ -13,6 +13,7 @@ import {
   settingsSwitchClassName,
   settingsSwitchKnobClassName
 } from '../../../../shared/ui';
+import { QUIT_ON_CLOSE_SEARCH_ROW_ID } from '../../model/quitOnCloseAvailability';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
 
@@ -20,7 +21,7 @@ const key = APP_SETTINGS_STORAGE_KEYS.quitOnWindowClose;
 
 export function SettingsQuitOnCloseRow() {
   const t = useTranslation();
-  const row = useLocalizedSettingsSearchRow('general-quit-on-close');
+  const row = useLocalizedSettingsSearchRow(QUIT_ON_CLOSE_SEARCH_ROW_ID);
   const [enabled, setEnabled] = useState(() => getWhitelistedLocalStorageItem(key) === 'true');
   const [saving, setSaving] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
