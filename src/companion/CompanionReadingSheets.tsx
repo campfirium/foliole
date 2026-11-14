@@ -81,7 +81,7 @@ export function ReadingActionsSheet(props: {
         <CompanionFlowOrEditHistoryActions open={props.open} {...(props.editHistory ? { editHistory: props.editHistory } : {})} />
         <CompanionFlowModeControl onSelect={() => props.onOpenChange(false)} />
         <ReadingExitFlowHereAction onClose={() => props.onOpenChange(false)} />
-        <CompanionNodePrioritySlider nodeId={props.priorityNodeId} onSaved={() => props.onOpenChange(false)} />
+        <CompanionNodePrioritySlider nodeId={props.priorityNodeId} allowFlowTopic onSaved={() => props.onOpenChange(false)} />
         <CompanionWorkspaceCurrentNodeAction onSelect={() => props.onOpenChange(false)} />
         <ReadingActionRow
           icon={<Search aria-hidden="true" className="h-5 w-5" />}

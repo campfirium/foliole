@@ -12,6 +12,7 @@ import { createSearchLibrary } from '../shared/platform/companion/runtime/compan
 import { applyCompanionLocalNodeVersions } from '../shared/platform/companionSyncObjects';
 import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWorkspaceSync';
 
+import { ReadingActionsLayer } from './CompanionReadingActionsLayer';
 import { CompanionTopicListMenu } from './CompanionTopicListMenu';
 import { CompanionWorkspaceActionsProvider, CompanionWorkspaceCreateAction, CompanionWorkspaceHistoryActions,
   useCompanionWorkspaceActions } from './CompanionWorkspaceActions';
@@ -39,12 +40,25 @@ function Menu() {
       </div>)}
   </>;
 }
-function Harness() {
+function ArticleMenu({ nodeId }: { nodeId: string }) {
+  const { snapshot } = useCompanionWorkspaceActions()!;
+  const [open, setOpen] = useState(false);
+  const node = snapshot!.nodesById[nodeId]!;
+  return <>
+    <button onClick={() => setOpen(true)}>Open reading menu</button>
+    <ReadingActionsLayer actionsOpen={open} onOpenActions={setOpen}
+      onFindInDocument={() => {}} onOpenReadingSheet={() => {}}
+      handoffContext={{ snapshot, isContentEditing: false, isReviewItem: node.kind === 'item' }}
+      readableArticle={{ nodeId, title: node.title, content: node.content, bodyStatus: 'ready',
+        hideTitleHeading: false, persistedNodeViewState: null, pdfAttachmentId: null, textAnchorDecorations: [] }} />
+  </>;
+}
+function Harness({ flowNodeId }: { flowNodeId?: string } = {}) {
   const [snapshot, setSnapshot] = useState(initial);
   return <LocalizationProvider initialLanguagePreference="en"><CompanionWorkspaceActionsProvider snapshot={snapshot}
-    flush={async () => {}} restoreFlow={() => {}} flowActive={false} applyFlow={async () => {}}
+    flush={async () => {}} restoreFlow={() => {}} flowActive={Boolean(flowNodeId)} applyFlow={async () => {}}
     refresh={async () => { await refreshBarrier; if (failRefresh) throw new Error('Refresh failed'); const next = await stored(); setSnapshot(next); return next; }}>
-    <Menu />
+    {flowNodeId ? <ArticleMenu nodeId={flowNodeId} /> : <Menu />}
   </CompanionWorkspaceActionsProvider></LocalizationProvider>;
 }
 async function createFolder(title = 'Created folder') {
@@ -113,6 +127,35 @@ async function seedPriorityHierarchy() {
   }, 'Search', `base-${node.id}`))));
   initial = await stored();
 }
+
+it('saves the priority from the active Flow Topic and reads it back in Flow and Browse', async () => {
+  await seedPriorityHierarchy();
+  const view = render(<Harness flowNodeId="topic" />);
+  const openReadingMenu = () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Open reading menu' }));
+    return screen.getByRole('slider', { name: 'Priority' });
+  };
+  const slider = openReadingMenu();
+  expect(slider).toHaveValue('3');
+  fireEvent.change(slider, { target: { value: '7' } });
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(library.database.prepare('SELECT priority FROM nodes WHERE id = ?').get('topic')).toEqual({ priority: 7 });
+  const reopened = openReadingMenu();
+  await waitFor(() => expect(reopened).toHaveValue('7'));
+  expect(reopened).toBeEnabled();
+
+  view.rerender(<Harness />);
+  fireEvent.click(screen.getByRole('button', { name: /: topic$/ }));
+  expect(screen.getByRole('slider', { name: 'Priority' })).toHaveValue('7');
+});
+
+it('keeps priority hidden in the Flow Item reading menu', async () => {
+  await seedPriorityHierarchy();
+  render(<Harness flowNodeId="item" />);
+  fireEvent.click(screen.getByRole('button', { name: 'Open reading menu' }));
+  expect(screen.getByRole('dialog')).toBeVisible();
+  expect(screen.queryByRole('slider', { name: 'Priority' })).toBeNull();
+});
 
 it('saves only a committed slider adjustment, updates inherited values and can undo the override', async () => {
   await seedPriorityHierarchy();

@@ -64,7 +64,9 @@ function PriorityRange(props: { value: number; disabled: boolean; onCommit(value
   );
 }
 
-export function CompanionNodePrioritySlider({ nodeId, onSaved }: { nodeId?: string | undefined; onSaved(): void }) {
+export function CompanionNodePrioritySlider({ nodeId, allowFlowTopic, onSaved }: {
+  nodeId?: string | undefined; allowFlowTopic?: boolean; onSaved(): void;
+}) {
   const actions = useCompanionWorkspaceActions();
   const t = useTranslation();
   const settings = useSyncExternalStore(subscribeReviewSchedulerSettings, getCurrentReviewSchedulerSettings);
@@ -75,8 +77,9 @@ export function CompanionNodePrioritySlider({ nodeId, onSaved }: { nodeId?: stri
   }, []);
   const nodes = actions?.snapshot?.nodesById;
   const node = nodeId ? nodes?.[nodeId] : undefined;
-  if (!isAvailableNativeAndroidCompanionRuntime() || !actions || actions.flowActive || !nodes || !node || node.deletedAt ||
+  if (!isAvailableNativeAndroidCompanionRuntime() || !actions || !nodes || !node || node.deletedAt ||
     node.virtualFilter || node.id.startsWith('special-') || (node.kind !== 'topic' && node.kind !== 'item')) return null;
+  if (actions.flowActive && !(allowFlowTopic && node.kind === 'topic')) return null;
   const { value } = resolveNodePrioritySetting(node.id, nodes, settings.pushQueue.defaultPriority);
 
   return <>
