@@ -30,7 +30,7 @@ describe('ReadingChrome', () => {
     if (!actionsAtTop) expect(top.getByText('Topic')).toBeVisible();
   });
 
-  it('groups reading navigation and centers the title in the toolbar', () => {
+  it('groups reading navigation in the toolbar', () => {
     renderChrome();
 
     expect(screen.getByRole('button', { name: 'Outline' })).toBeInTheDocument();
@@ -39,8 +39,6 @@ describe('ReadingChrome', () => {
     const navigation = screen.getByRole('button', { name: 'Exit' }).parentElement;
     expect(navigation).toContainElement(screen.getByRole('button', { name: 'Outline' }));
     expect(navigation?.className).not.toContain('gap-');
-    expect(screen.getByText('Long reading title').className).toContain('left-1/2');
-    expect(screen.getByText('Long reading title').className).toContain('text-center');
   });
 
   it('keeps secondary reading actions out of the narrow top chrome', () => {

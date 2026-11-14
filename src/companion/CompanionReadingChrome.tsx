@@ -102,7 +102,7 @@ function ReadingTopChrome(props: {
               <ReadingChromeButton icon={ChevronLeft} label={t(props.review ? 'companion.review.exit' : 'companion.reading.exit')} onClick={props.onExit} testId="companion-reading-exit" />
               {props.isReviewItem ? <ItemFlowHistoryButtons /> : <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />}
             </div>
-            {!props.review ? <span className="pointer-events-none absolute left-1/2 w-[calc(100%-14rem)] max-w-[52vw] -translate-x-1/2 truncate text-center text-sm font-medium text-foreground sm:max-w-sm">
+            {!props.review ? <span className="pointer-events-none absolute left-1/2 w-[calc(100%-14rem)] max-w-[52vw] [transform:translateX(-50%)] truncate text-center text-sm font-medium text-foreground sm:max-w-sm">
               {props.title}
             </span> : null}
             <div className="ml-auto flex items-center">
