@@ -36,3 +36,14 @@ it('typechecks every renderer test once without dropping source or host projects
   expect(steps.map(({ project }) => project)).toContain('tsconfig.desktop-source.json');
   expect(steps.map(({ project }) => project)).toContain('electron/tsconfig.json');
 });
+
+it('keeps all production roots in the split renderer projects', () => {
+  const expected = ts.parseJsonConfigFileContent({
+    extends: './tsconfig.json',
+    include: ['src', 'vite.config.ts', 'eslint.config.js'],
+    exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx']
+  }, ts.sys, root).fileNames;
+  const actual = new Set(['tsconfig.desktop-source.json', 'tsconfig.desktop-companion-source.json']
+    .flatMap(project => parsedProject(project).fileNames));
+  expect([...actual].sort()).toEqual(expected.sort());
+});
