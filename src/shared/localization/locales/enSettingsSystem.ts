@@ -1,6 +1,6 @@
 export const EN_SETTINGS_SYSTEM_TRANSLATIONS = {
   'settings.general.quitOnClose.title': 'Quit Foliole when closing the window',
-  'settings.general.quitOnClose.description': 'Quitting pauses global capture and background sync until you reopen Foliole.',
+  'settings.general.quitOnClose.description': 'Quitting pauses background features such as global capture, reminders, and sync until you reopen Foliole.',
   'settings.general.quitOnClose.saveFailed': 'Could not save the window closing preference.',
   'settings.general.system.section': 'System',
   'settings.general.system.aria': 'System settings',
