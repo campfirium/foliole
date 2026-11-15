@@ -71,6 +71,9 @@ const workspaceListRow = {
 const expectedWorkspaceListSnapshot = {
   activeNodeId: 'node-1',
   capturedWorkspaceVersion: '2026-03-14T00:00:00.000Z',
+  nodeOpenStateById: {
+    'node-1': { nodeId: 'node-1', lastOpenedAt: '2026-03-15T00:00:00.000Z' }
+  },
   nodeOrder: ['node-1'],
   nodesById: {
     'node-1': {
@@ -117,7 +120,10 @@ beforeEach(() => {
   transactionSpy.mockReset();
 });
 
-it('loads workspace list snapshot without long-lived node documents', () => {
+it('loads workspace list snapshot and last opened time without long-lived node documents', () => {
+  queryAllSpy.mockImplementation((sql) => sql.includes('FROM node_open_state')
+    ? [{ node_id: 'node-1', last_opened_at: '2026-03-15T00:00:00.000Z' }]
+    : []);
   queryAllSpy.mockReturnValueOnce([workspaceListRow]).mockReturnValueOnce([]).mockReturnValueOnce([workspaceListRow]);
   queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' }).mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
