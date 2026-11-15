@@ -7,7 +7,9 @@ import { expect, it, vi } from 'vitest';
 import { bindParentOrderWriter } from '../../lib/core/database/parentOrderWriter.js';
 import { recomputeNodeReview } from '../../lib/core/database/reviewProjection.js';
 import { loadWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot.js';
+import { convertSuperMemoContent } from '../../lib/core/import/superMemoContent.js';
 import type { SuperMemoXmlDraftElement } from '../../lib/core/import/superMemoXmlDraft.js';
+import { folioleMarkdownParser } from '../../lib/core/markdown/folioleMarkdownParser.js';
 import { collectReviewQueueCandidates } from '../../lib/core/review/queue/reviewQueuePlannerCandidates.js';
 import { createReviewQueueTimeInput } from '../../lib/core/review/queue/reviewQueueTimeInput.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
@@ -34,6 +36,40 @@ const element: SuperMemoXmlDraftElement = {
     history: [{ date: '10.11.2025', hour: '8', grade: 4, repetition: 2, lapses: 0, raw: 'original grade 4' }]
   }
 };
+
+it('writes the converted reference text and links shown before import', async () => {
+  const fixture = await restoreFixture();
+  const source = fixture.peer('source');
+  try {
+    source.sqlite.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
+      .run('host_name', JSON.stringify(source.id), new Date().toISOString());
+    connection.driver = createBetterSqlite3Driver(source.sqlite);
+    bindParentOrderWriter(connection.driver, { deviceAnchor: source.id, libraryPath: source.file });
+    const reference = '<SuperMemoReference><h5>#SuperMemo Reference:<br># Link: '
+      + '<a href="https://example.com/source#section">Source</a></SuperMemoReference>';
+    const topic = { ...element, sourceType: 'Topic', learning: null, title: 'Imported article',
+      bodyOrQuestionHtml: ['<h2>Article</h2><p>Body</p><hr SuperMemo>' + reference], answerHtml: [] };
+    const card = { ...element, id: 3, learning: null, answerHtml: ['Answer<br>' + reference] };
+    const args = { elements: [topic, card], percent: 0 };
+    const preview = await handleSuperMemoImportCommand(NATIVE_COMMANDS.previewSuperMemoImport, args);
+    if (!preview || !('rows' in preview)) throw new Error('missing import preview');
+    expect(await handleSuperMemoImportCommand(NATIVE_COMMANDS.runSuperMemoImport, { ...args, previewSignature: preview.previewSignature }))
+      .toMatchObject({ imported: 2, skipped: 0 });
+    source.reopen();
+    const getText = source.sqlite.prepare('SELECT content, reveal FROM nodes WHERE title = ?');
+    const topicText = (getText.get(topic.title) as { content: string }).content;
+    const answer = (getText.get(card.title) as { reveal: string }).reveal;
+    expect(topicText).toBe(convertSuperMemoContent(topic.bodyOrQuestionHtml).content);
+    expect(answer).toBe(convertSuperMemoContent(card.answerHtml).content);
+    for (const markdown of [topicText, answer]) {
+      expect(markdown).toContain('\\# Link: [Source](https://example.com/source#section)');
+      expect(folioleMarkdownParser.parse(markdown).toString()).not.toContain('ATXHeading1');
+    }
+  } finally {
+    connection.driver = null;
+    await fixture.close();
+  }
+});
 
 function dueCards(driver: NonNullable<typeof connection.driver>, now: string) {
   const snapshot = loadWorkspaceSnapshot(driver)!;

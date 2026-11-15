@@ -6,8 +6,11 @@ type HtmlParent = DefaultTreeAdapterTypes.ParentNode;
 type ImageDestinations = ReadonlyMap<string, string>;
 interface MediaCounts { localImages: number; remoteImages: number; audio: number; localSources: Map<string, number> }
 
-function inspectMedia(parent: HtmlParent, media: MediaCounts, imageDestinations?: ImageDestinations) {
+function prepareFragment(parent: HtmlParent, media: MediaCounts, imageDestinations?: ImageDestinations, inReference = false) {
   parent.childNodes = parent.childNodes.filter(node => {
+    if (inReference && node.nodeName === '#text' && 'value' in node) {
+      node.value = node.value.replace(/^(\s*)#/u, '$1\\#');
+    }
     if (!('tagName' in node)) return true;
     if (node.tagName === 'audio' || (node.tagName === 'embed' && node.attrs.some(attr =>
       attr.name === 'src' && /\.(?:mp3|wav|ogg|m4a)(?:[?#]|$)/i.test(attr.value)))) {
@@ -15,7 +18,7 @@ function inspectMedia(parent: HtmlParent, media: MediaCounts, imageDestinations?
       return false;
     }
     if (node.tagName === 'img') inspectImage(node, media, imageDestinations);
-    inspectMedia(node, media, imageDestinations);
+    prepareFragment(node, media, imageDestinations, inReference || node.tagName === 'supermemoreference');
     return true;
   });
 }
@@ -50,7 +53,7 @@ export function convertSuperMemoContent(parts: string[], imageDestinations?: Ima
   const media = { localImages: 0, remoteImages: 0, audio: 0, localSources: new Map<string, number>() };
   const content = parts.map(part => {
     const fragment = parseFragment(part);
-    inspectMedia(fragment, media, imageDestinations);
+    prepareFragment(fragment, media, imageDestinations);
     return convertHtmlToMarkdownCompatible(serialize(fragment)).content;
   }).filter(Boolean).join('\n');
   return { content, ...media };
