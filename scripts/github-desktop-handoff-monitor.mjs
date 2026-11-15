@@ -1,3 +1,4 @@
+import { collectReplyEvents } from './github-handoff-replies.mjs';
 /* global console, process, setTimeout */
 
 import { spawnSync } from 'node:child_process';
@@ -65,6 +66,7 @@ export function loadConfigs(options = {}) {
     discussions: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-discussions.json')), workspace),
     issues: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-issues.json')), workspace),
     playReview: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-play-review.json')), workspace),
+    replies: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-replies.json')), workspace),
     prs: bindMonitorWorkspace(readConfig(path.join(monitorDir, 'github-prs.json')), workspace)
   };
 }
@@ -143,13 +145,14 @@ export function submitMonitorEvents(events, state, options = {}) {
 }
 
 function fullScanInterval(configs) {
-  return Math.max(60, ...Object.entries(configs).filter(([name, config]) => name !== 'discussions' &&
+  return Math.max(60, ...Object.entries(configs).filter(([name, config]) => !['discussions', 'replies'].includes(name) &&
     config?.enabled).map(([, config]) => config.pollIntervalSeconds ?? 900));
 }
 
 export function scheduledScanConfigs(configs, state, now) {
   const elapsed = now - Date.parse(state.lastCheckedAt ?? '');
-  if (elapsed < fullScanInterval(configs) * 1000) return { discussions: configs.discussions };
+  if (elapsed < fullScanInterval(configs) * 1000) return configs.replies ? { discussions: configs.discussions, replies: configs.replies } :
+    { discussions: configs.discussions };
   return configs;
 }
 
@@ -160,20 +163,26 @@ function scan({ emit = false, includeExisting = false, scheduled = false } = {})
   const errors = [];
   const dueConfigs = scheduled ? scheduledScanConfigs(configs, state, Date.now()) : configs;
   const fullScan = dueConfigs === configs;
-  const events = listGithubMonitorEvents(dueConfigs, state, includeExisting, errors, renderTemplate)
-    .filter((event) => !state.submitted[event.dedupeKey]);
+  const cutoff = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const replyScan = collectReplyEvents(dueConfigs.replies, state, errors, cutoff);
+  const events = [...listGithubMonitorEvents(dueConfigs, state, includeExisting, errors, renderTemplate),
+    ...replyScan.events].filter((event) => !state.submitted[event.dedupeKey]);
   if (fullScan) {
     state.lastErrors = errors;
     state.lastCheckedAt = new Date().toISOString();
   } else {
     state.lastErrors = [...(state.lastErrors ?? []).filter(({ source }) =>
-      source !== 'foliole/github-discussion'), ...errors];
+      !['foliole/github-discussion', 'foliole/github-reply'].includes(source)), ...errors];
   }
   if (emit) writeJson(STATE_FILE, state);
   let securityNotifications;
   let securityImport;
   if (emit) {
-    try { submitMonitorEvents(events, state); }
+    try {
+      submitMonitorEvents(events, state);
+      state.replyCheckpoints = { ...state.replyCheckpoints, ...replyScan.checkpoints };
+      writeJson(STATE_FILE, state);
+    }
     finally {
       if (dueConfigs.actions?.enabled && configs.actions.workflows?.includes('.github/workflows/t7-hosted-quality.yml')) {
         securityImport = refreshGithubSecurityOwner(REPO_ROOT, state.securityRunCandidate);
