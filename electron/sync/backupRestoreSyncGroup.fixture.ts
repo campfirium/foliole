@@ -23,7 +23,7 @@ import { handleSyncGroupCommand } from '../ipc/syncGroupCommands.js';
 
 import { windowEvents } from './backupRestoreSyncGroup.electron.fixture.js';
 import { appendRestoreFacts, deletePausedNode, restoreFactsSnapshot, safetySnapshotFacts } from './backupRestoreSyncGroup.facts.fixture.js';
-import { holdSyncRound, reopenAfterSyncStops, startContendedSync } from './contendedSync.fixture.js';
+import { holdSyncRound, reopenAfterSyncStops, runWithHeldSyncRound, startContendedSync } from './contendedSync.fixture.js';
 import { resumeDesktopCompanionSync, enableDesktopCompanionSync } from './desktopCompanionSyncParticipation.js';
 import { loadDesktopCompanionSyncParticipation } from './desktopCompanionSyncPreference.js';
 import { runDesktopFramedSyncEditCommand } from './desktopFramedSyncEdit.fixture.js';
@@ -203,9 +203,9 @@ async function run(action: string, args: Record<string, unknown>) {
   if (action === 'restoreLocal') return restoreBackup(args, true);
   if (action === 'sync') {
     const group = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup()!);
-    return runDesktopSyncCoordinator('manual', { endpoint_url: String(args.origin),
+    return runWithHeldSyncRound(args, () => runDesktopSyncCoordinator('manual', { endpoint_url: String(args.origin),
       group_id: group.group_id, local_device_id: group.local_device_identity_key,
-      peer_device_id: String(args.identity), peer_device_name: 'Peer', peer_platform: 'darwin' });
+      peer_device_id: String(args.identity), peer_device_name: 'Peer', peer_platform: 'darwin' }));
   }
   if (action === 'restore') return restoreBackup(args, false);
   if (action === 'resume') return resumeDesktopCompanionSync({ appVersion: '0.7.14',
