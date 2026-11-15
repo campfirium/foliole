@@ -8,7 +8,9 @@ import {
 } from '../../../shared/platform/storage';
 import { onMainWindowResized, queryWindowSidebarLayoutMetrics } from '../../../shared/platform/windowControls';
 
-import { parseSidebarTiers, type SidebarSide, type SidebarTier } from './sidebarLayoutTiers';
+import {
+  defaultSidebarTiers, parseSidebarTiers, selectSidebarTier, type SidebarSide, type SidebarTier
+} from './sidebarLayoutTiers';
 
 const key = APP_SETTINGS_STORAGE_KEYS.sidebarLayoutTiers;
 const changeEvent = 'foliole:sidebar-layout-tiers-changed';
@@ -34,6 +36,18 @@ export async function saveSidebarTiers(tiers: SidebarTier[]) {
   return persisted;
 }
 
+export function initializeSidebarTiers(percent: number, previous: Pick<SidebarTier, SidebarSide>) {
+  if (readPreference() !== null) return;
+  const { listCollapsed, listWidth, rightSidebarCollapsed, rightSidebarWidth } = APP_SETTINGS_STORAGE_KEYS;
+  const hasPreviousLayout = [listCollapsed, listWidth, rightSidebarCollapsed, rightSidebarWidth]
+    .some(key => getWhitelistedLocalStorageItem(key) !== null);
+  const active = selectSidebarTier(defaultSidebarTiers, percent);
+  const tiers = hasPreviousLayout
+    ? defaultSidebarTiers.map(tier => tier === active ? { ...tier, ...previous } : tier)
+    : defaultSidebarTiers;
+  void saveSidebarTiers(tiers);
+}
+
 export function saveSidebarTierWidth(id: string, side: SidebarSide, width: number) {
   const current = parseSidebarTiers(readPreference());
   if (!current?.some(tier => tier.id === id)) return;
@@ -42,10 +56,9 @@ export function saveSidebarTierWidth(id: string, side: SidebarSide, width: numbe
   ));
 }
 
-export function useSidebarLayoutWindowPercent(enabled = true) {
+export function useSidebarLayoutWindowPercent() {
   const [percent, setPercent] = useState<number | null>(null);
   useEffect(() => {
-    if (!enabled) return;
     let mounted = true;
     let revision = 0;
     const refresh = async () => {
@@ -60,6 +73,6 @@ export function useSidebarLayoutWindowPercent(enabled = true) {
       mounted = false;
       void subscription.then(unlisten => unlisten?.());
     };
-  }, [enabled]);
-  return enabled ? percent : null;
+  }, []);
+  return percent;
 }

@@ -1,5 +1,9 @@
+import type { Page } from '@playwright/test';
+
 import { expect, test } from './harness/fixtures';
-import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
+import { expectWorkspaceShell, openSettingsCategory, setActiveSidebarTierDockedWidths } from './harness/settings';
+
+const tierPreferenceKey = 'foliole-workspace-sidebar-layout-tiers';
 
 test('sidebar layout shows the actual window-to-work-area ratio after a native resize', async ({
   desktopApp, desktopWindow
@@ -27,19 +31,7 @@ test('sidebar layout shows the actual window-to-work-area ratio after a native r
 
 test('applies and restores saved sidebar tier modes and exact widths', async ({ desktopWindow: page }) => {
   await expectWorkspaceShell(page);
-  const settings = await openSettingsCategory(page, 'Appearance');
-  const section = settings.getByRole('region', { name: /^(Sidebar layout|侧栏布局)$/ });
-  const active = section.locator('tr[aria-current="true"]');
-  const sideLabel = (side: 'left' | 'right') => side === 'left'
-    ? /^(Left sidebar|左侧导航)$/ : /^(Right sidebar|右侧检查器)$/;
-  for (const [side, width] of [['left', 40], ['right', 35]] as const) {
-    await active.getByRole('combobox', { name: sideLabel(side) }).selectOption('dock');
-    const field = active.getByRole('spinbutton', { name: side === 'left' ? /Left sidebar|左侧导航/ : /Right sidebar|右侧检查器/ });
-    await field.fill(String(width));
-    await field.press('Enter');
-  }
-  await page.keyboard.press('Escape');
-  await expect(settings).toBeHidden();
+  await setActiveSidebarTierDockedWidths(page, 40, 35);
 
   const left = page.locator('[data-workspace-side-column="list"]');
   const right = page.locator('[data-workspace-side-column="right"]');
@@ -66,4 +58,72 @@ test('applies and restores saved sidebar tier modes and exact widths', async ({ 
   await expectWorkspaceShell(page);
   await expect.poll(async () => Math.abs((await left.boundingBox())!.width - draggedWidth)).toBeLessThan(1);
   await expect.poll(async () => Math.abs((await right.boundingBox())!.width - rightWidth)).toBeLessThan(1);
+});
+
+async function seedPreviousSidebarPreferences(page: Page) {
+  const legacy = await page.evaluate(async key => {
+    const runtime = window.electronAPI!;
+    const settings = await runtime.invoke('load_app_settings_state');
+    delete settings[key];
+    const previousLayout = {
+      'foliole-workspace-list-width': '420',
+      'foliole-workspace-list-collapsed': 'false',
+      'foliole-workspace-right-sidebar-width': '340',
+      'foliole-workspace-right-sidebar-collapsed': 'true'
+    };
+    for (const [name, value] of Object.entries(previousLayout)) localStorage.setItem(name, value);
+    await runtime.invoke('save_app_settings_state', { settings: { ...settings, ...previousLayout } });
+    localStorage.removeItem(key);
+    return runtime.invoke('load_app_settings_state');
+  }, tierPreferenceKey);
+  expect(legacy[tierPreferenceKey]).toBeUndefined();
+  expect(legacy['foliole-workspace-list-width']).toBe('420');
+}
+
+test('inherits the previous sidebar preferences once and restores them after crossing a tier', async ({
+  desktopApp, desktopWindow: page
+}) => {
+  const resize = (percent: number) => desktopApp.evaluate(({ BrowserWindow, screen }, ratio) => {
+    const window = BrowserWindow.getAllWindows()[0]!;
+    const { width } = screen.getDisplayMatching(window.getBounds()).workArea;
+    window.setResizable(true);
+    if (window.isMaximized()) window.unmaximize();
+    window.setSize(Math.round(width * ratio / 100), 850);
+  }, percent);
+  await expectWorkspaceShell(page);
+  await resize(90);
+  const settings = await openSettingsCategory(page, 'Appearance');
+  const section = settings.getByRole('region', { name: /^(Sidebar layout|侧栏布局)$/ });
+  await expect(section.getByRole('status')).toHaveText('90%');
+  await page.keyboard.press('Escape');
+  await expect(settings).toBeHidden();
+  await seedPreviousSidebarPreferences(page);
+  await page.reload();
+  await expectWorkspaceShell(page);
+
+  const saved = () => page.evaluate(async key => {
+    const settings = await window.electronAPI!.invoke('load_app_settings_state');
+    return settings[key] ? JSON.parse(settings[key]) : null;
+  }, tierPreferenceKey);
+  const left = page.locator('[data-workspace-side-column="list"]');
+  const toggle = page.locator('[data-workspace-sidebar-toggle="left"]');
+  const right = page.locator('[data-workspace-sidebar-toggle="right"]');
+  const width = async () => (await left.boundingBox())?.width ?? 0;
+  const bodyWidth = await page.evaluate(() => innerWidth - 40);
+  await expect.poll(saved).toEqual([
+    { id: 'base', threshold: null, left: { mode: 'edge', width: 44 }, right: { mode: 'edge', width: 32 } },
+    { id: 'medium', threshold: 50, left: { mode: 'dock', width: 28 }, right: { mode: 'edge', width: 24 } },
+    { id: 'wide', threshold: 80, left: { mode: 'dock', width: 42000 / bodyWidth }, right: { mode: 'closed', width: 34000 / bodyWidth } }
+  ]);
+  const initial = await saved();
+  await expect.poll(async () => Math.abs(await width() - 420)).toBeLessThan(1);
+  await expect(right).toHaveAttribute('aria-pressed', 'false');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await resize(65);
+  await expect.poll(async () => Math.abs(await width() - (await page.evaluate(() => innerWidth - 40)) * 0.28)).toBeLessThan(1);
+  await resize(90);
+  await expect.poll(async () => Math.abs(await width() - 420)).toBeLessThan(1);
+  await expect(right).toHaveAttribute('aria-pressed', 'false');
+  expect(await saved()).toEqual(initial);
 });

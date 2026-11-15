@@ -52,6 +52,21 @@ export async function openSettingsCategory(windowPage: Page, categoryName: strin
   return settingsDialog;
 }
 
+export async function setActiveSidebarTierDockedWidths(page: Page, left: number, right: number) {
+  const settings = await openSettingsCategory(page, 'Appearance');
+  const current = settings.getByRole('region', { name: /^(Sidebar layout|侧栏布局)$/ }).locator('tr[aria-current="true"]');
+  const leftLabel = /Left sidebar|左侧导航/;
+  const rightLabel = /Right sidebar|右侧检查器/;
+  for (const [name, width] of [[leftLabel, left], [rightLabel, right]] as const) {
+    await current.getByRole('combobox', { name }).selectOption('dock');
+    const field = current.getByRole('spinbutton', { name });
+    await field.fill(String(width));
+    await field.press('Enter');
+  }
+  await page.keyboard.press('Escape');
+  await expect(settings).toBeHidden();
+}
+
 export async function connectAndCutoverReadwiseApi(
   windowPage: Page,
   settingsDialog: Locator,

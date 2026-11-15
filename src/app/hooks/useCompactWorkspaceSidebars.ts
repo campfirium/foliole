@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { initializeSidebarTiers } from '../../features/settings/model/sidebarLayoutPreference';
+import type { SidebarRule } from '../../features/settings/model/sidebarLayoutTiers';
 import { onWindowEscape } from '../../shared/platform/keyboard';
+import {
+  loadListCollapsedPreference, loadListWidthPreference,
+  loadRightSidebarCollapsedPreference, loadRightSidebarWidthPreference
+} from '../../store/workspaceLayoutPrefs';
 import type { WorkspaceLayoutChromeProps } from '../components/workspaceLayoutPropGroups';
 
 import { useActiveSidebarTier } from './useActiveSidebarTier';
@@ -34,6 +40,26 @@ function readFloatingSidebars() {
     leftFloating: window.matchMedia('(max-width: 1080px)').matches,
     rightFloating: window.matchMedia('(max-width: 1279px)').matches
   };
+}
+
+function inheritSidebarRule(width: number, bodyWidth: number, collapsed: boolean, floating: boolean): SidebarRule {
+  return {
+    width: Math.min(100, Math.max(0, 100 * width / bodyWidth)),
+    mode: floating ? 'edge' : collapsed ? 'closed' : 'dock'
+  };
+}
+
+function useInitializeSidebarTiers(chrome: WorkspaceLayoutChromeProps, percent: number | null, initialized: boolean) {
+  const { listWidth, rightSidebarWidth } = chrome;
+  useEffect(() => {
+    const bodyWidth = window.innerWidth - 40;
+    if (initialized || percent === null || bodyWidth <= 0) return;
+    const { leftFloating, rightFloating } = readFloatingSidebars();
+    initializeSidebarTiers(percent, {
+      left: inheritSidebarRule(loadListWidthPreference(listWidth), bodyWidth, loadListCollapsedPreference(), leftFloating),
+      right: inheritSidebarRule(loadRightSidebarWidthPreference(rightSidebarWidth), bodyWidth, loadRightSidebarCollapsedPreference(), rightFloating)
+    });
+  }, [initialized, listWidth, percent, rightSidebarWidth]);
 }
 
 function useFloatingSidebarState(isImmersiveMode: boolean, measureWindow: boolean, tiered: boolean) {
@@ -78,7 +104,7 @@ function useFloatingSidebarState(isImmersiveMode: boolean, measureWindow: boolea
   return { floating, openSide, setOpenSide, dismiss, windowWidth, hoverSide, openOnHover };
 }
 
-function resolveFloatingSidebars(
+function resolvePdfSidebarPlacement(
   chrome: WorkspaceLayoutChromeProps, compact: ReturnType<typeof readFloatingSidebars>, pdfWidth: number, windowWidth: number
 ) {
   if (!pdfWidth || chrome.isImmersiveMode) return compact;
@@ -90,6 +116,23 @@ function resolveFloatingSidebars(
   return {
     leftFloating: compact.leftFloating || pdfWidth > contentWidth + rightWidth + listWidth - listDockWidth,
     rightFloating: compact.rightFloating || pdfWidth > contentWidth + rightWidth - rightDockWidth
+  };
+}
+
+function resolveFloatingSidebars(
+  chrome: WorkspaceLayoutChromeProps,
+  rules: ReturnType<typeof useActiveSidebarTier>,
+  legacy: ReturnType<typeof readFloatingSidebars>,
+  pdfWidth: number,
+  windowWidth: number
+) {
+  if (!rules.tier) return resolvePdfSidebarPlacement(chrome, legacy, pdfWidth, windowWidth);
+  const floating = resolvePdfSidebarPlacement(chrome, {
+    leftFloating: rules.left === 'edge', rightFloating: rules.right === 'edge'
+  }, pdfWidth, windowWidth);
+  return {
+    leftFloating: rules.left !== 'closed' && floating.leftFloating,
+    rightFloating: rules.right !== 'closed' && floating.rightFloating
   };
 }
 
@@ -111,19 +154,12 @@ function projectSidebarTier(chrome: WorkspaceLayoutChromeProps, rules: ReturnTyp
 export function useCompactWorkspaceSidebars(chrome: WorkspaceLayoutChromeProps, pdfWidth = 0): WorkspaceLayoutChromeProps {
   const rules = useActiveSidebarTier();
   const active = rules.tier;
+  useInitializeSidebarTiers(chrome, rules.percent, Boolean(active));
   const state = useFloatingSidebarState(chrome.isImmersiveMode, pdfWidth > 0 || Boolean(active), Boolean(active));
   const bodyWidth = Math.max(0, state.windowWidth - 40);
   const resize = useTierSidebarResize(active, bodyWidth);
   const projected = projectSidebarTier(chrome, rules, bodyWidth, resize);
-  const preferredFloating = active ? {
-    leftFloating: rules.left === 'edge',
-    rightFloating: rules.right === 'edge'
-  } : state.floating;
-  const pdfFloating = resolveFloatingSidebars(projected, preferredFloating, pdfWidth, state.windowWidth);
-  const floating = active ? {
-    leftFloating: rules.left !== 'closed' && pdfFloating.leftFloating,
-    rightFloating: rules.right !== 'closed' && pdfFloating.rightFloating
-  } : pdfFloating;
+  const floating = resolveFloatingSidebars(projected, rules, state.floating, pdfWidth, state.windowWidth);
   const { dismiss, setOpenSide } = state;
   const hoverEnabled = pdfWidth > 0 && !chrome.isImmersiveMode;
   const edgeHoverEnabled = Boolean(active) || hoverEnabled;

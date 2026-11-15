@@ -7,7 +7,7 @@ type Overrides = Partial<Record<SidebarSide, SidebarMode>>;
 
 export function useActiveSidebarTier() {
   const tiers = useSavedSidebarTiers();
-  const percent = useSidebarLayoutWindowPercent(tiers !== null);
+  const percent = useSidebarLayoutWindowPercent();
   const tier = tiers && percent !== null ? selectSidebarTier(tiers, percent) : undefined;
   const id = tier?.id;
   const leftDefault = tier?.left.mode;
@@ -24,7 +24,7 @@ export function useActiveSidebarTier() {
   const right = rightOverride ?? rightDefault;
 
   return {
-    tier, left, right,
+    tier, left, right, percent,
     toggle(side: SidebarSide) {
       const mode = side === 'left' ? left : right;
       setOverrides({ ...temporary.overrides, [side]: mode === 'dock' ? 'closed' : 'dock' });

@@ -4,6 +4,7 @@ import type { Page, TestInfo } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
 import { IMMERSIVE_READING_KEY } from './harness/immersiveReadingShortcut';
+import { setActiveSidebarTierDockedWidths } from './harness/settings';
 import { expectCombinedPdfAutoHide, expectNarrowRightReviewFooter, expectReviewFooterSidebarWidths, expectReviewFooterTracksSidebars } from './pdf-review-footer';
 import { expectSidebarContextMenu } from './pdf-sidebar-context-menu';
 import { expectEdgeHover, expectRightTitlebarControlsAligned } from './pdf-sidebar-hover';
@@ -177,6 +178,9 @@ async function expectExpandedWidthRestored(page: Page, target: number) {
   const expand = page.getByRole('button', { name: /Automatically expand width|自动扩展宽度/ });
   await expand.click();
   await expect(page.locator('.workspace-floating-sidebar')).toHaveCount(0);
+  for (const side of ['list', 'right']) {
+    await expect(page.locator(`[data-workspace-side-column="${side}"]`)).toBeVisible();
+  }
   await expect(page.getByTestId('pdf-zoom-value')).toHaveText('270%');
   await page.reload();
   await waitForLocation(page, target, (after) => after.zoom === '270%');
@@ -192,6 +196,8 @@ test('widens a PDF past the sidebars at a fixed zoom above 200 percent @pdf', as
   desktopApp, desktopWindow: page
 }, testInfo) => {
   test.setTimeout(90000);
+  const bodyWidth = await page.evaluate(() => innerWidth - 40);
+  await setActiveSidebarTierDockedWidths(page, 45000 / bodyWidth, 25000 / bodyWidth);
   const fixture = realPdf ?? testInfo.outputPath('expanded-width.pdf');
   const target = realPdf ? 250 : 20;
   if (!realPdf) await writeWorkingSetPdf(fixture);
@@ -202,9 +208,6 @@ test('widens a PDF past the sidebars at a fixed zoom above 200 percent @pdf', as
   await expect(autoHide).toBeEnabled({ timeout: 45000 });
   if (await autoHide.getAttribute('aria-pressed') === 'true') await autoHide.click();
   const sidebar = (side: 'left' | 'right') => page.locator(`.window-titlebar [data-workspace-sidebar-toggle="${side}"]`);
-  for (const side of ['left', 'right'] as const) {
-    if (await sidebar(side).getAttribute('aria-pressed') === 'false') await sidebar(side).click();
-  }
   const zoom = page.getByRole('button', { name: /Set zoom level|设置缩放级别/ });
   await zoom.click();
   await page.getByRole('menuitem', { name: '100%', exact: true }).click();
