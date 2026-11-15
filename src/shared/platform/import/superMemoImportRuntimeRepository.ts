@@ -45,7 +45,9 @@ export async function saveSuperMemoGradeMap(gradeMap: SuperMemoGradeMap) {
 }
 
 export async function previewRuntimeSuperMemoImport(file: File, collectionDirectory: string | undefined, gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat) {
-  return requireInvoke()(NATIVE_COMMANDS.previewSuperMemoImport, { ...await readSource(file, collectionDirectory), gradeMap, sourceFormat });
+  const source = await readSource(file, collectionDirectory);
+  const preview = await requireInvoke()(NATIVE_COMMANDS.previewSuperMemoImport, { ...source, gradeMap, sourceFormat });
+  return { preview, elements: source.elements };
 }
 
 export async function runRuntimeSuperMemoImport(file: File, percent: number,

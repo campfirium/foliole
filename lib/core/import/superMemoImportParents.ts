@@ -1,4 +1,4 @@
-import type { NativeSuperMemoPreviewRow } from '../../lib/platform/nativeSuperMemoImportContract.js';
+import type { NativeSuperMemoPreviewRow } from '../../platform/nativeSuperMemoImportContract.js';
 
 type Row = NativeSuperMemoPreviewRow;
 type Parents = Map<number, number | null>;
@@ -61,5 +61,23 @@ export function orderSuperMemoImportWrites<T extends { row: Row }>(entries: read
     pending.push(...[...children.get(entry.row.id) ?? []].reverse());
   }
   if (ordered.length !== entries.length) throw new Error('invalid_supermemo_import_tree');
+  return ordered;
+}
+
+export function orderSuperMemoSourceRows(rows: readonly Row[]) {
+  const byId = new Map(rows.map(row => [row.id, row]));
+  const children = new Map<number | null, number[]>();
+  for (const row of rows) {
+    const siblings = children.get(row.parentId) ?? [];
+    siblings.push(row.id);
+    children.set(row.parentId, siblings);
+  }
+  const ordered: Row[] = [];
+  const pending = [...children.get(null) ?? []].reverse();
+  while (pending.length) {
+    const row = byId.get(pending.pop()!)!;
+    ordered.push(row);
+    pending.push(...[...row.sourceChildren ?? children.get(row.id) ?? []].reverse());
+  }
   return ordered;
 }

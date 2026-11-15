@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 
 import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
 import { DEFAULT_SUPER_MEMO_SOURCE_FORMAT, type SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
-import type { NativeSuperMemoPreview } from '../../../../lib/platform/nativeSuperMemoImportContract';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { loadSuperMemoGradeMap, previewRuntimeSuperMemoImport, runRuntimeSuperMemoImport,
   saveSuperMemoGradeMap, selectRuntimeSuperMemoCollection } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
@@ -13,6 +12,7 @@ import {
 
 import { SuperMemoBatchAdjustments } from './SuperMemoBatchAdjustments';
 import { SuperMemoDraftTable } from './SuperMemoDraftTable';
+import { SuperMemoEntryPreview } from './SuperMemoEntryPreview';
 import { SuperMemoGradeSettings } from './SuperMemoGradeSettings';
 import { SuperMemoPreviewOptionFields } from './SuperMemoPreviewOptions';
 import { SuperMemoSourceSettings } from './SuperMemoSourceSettings';
@@ -32,7 +32,7 @@ async function refreshSourceFormat(apply: () => Promise<void>, setBusy: (value: 
 
 function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
   const input = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<NativeSuperMemoPreview>();
+  const [draft, setDraft] = useState<Awaited<ReturnType<typeof previewRuntimeSuperMemoImport>>>();
   const [gradeMap, setGradeMap] = useState(initialGrades);
   const [sourceFormat, setSourceFormat] = useState(DEFAULT_SUPER_MEMO_SOURCE_FORMAT);
   const [percent, setPercent] = useState(0);
@@ -48,7 +48,7 @@ function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
     try {
       const directory = pairCollection ? await selectRuntimeSuperMemoCollection() : undefined;
       if (directory === null) return;
-      setPreview(await previewRuntimeSuperMemoImport(file, directory, gradeMap, sourceFormat));
+      setDraft(await previewRuntimeSuperMemoImport(file, directory, gradeMap, sourceFormat));
       setSourceFile(file);
       setDirectory(directory);
       setResult(undefined);
@@ -67,7 +67,7 @@ function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
       const nextPreview = sourceFile && !result ? await previewRuntimeSuperMemoImport(sourceFile, directory, next, sourceFormat) : undefined;
       await saveSuperMemoGradeMap(next);
       setGradeMap(next);
-      if (nextPreview) setPreview(nextPreview);
+      if (nextPreview) setDraft(nextPreview);
     } catch {
       setError(true);
     } finally {
@@ -76,16 +76,16 @@ function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
   }
 
   const changeSourceFormat = (next: SuperMemoSourceFormat) => refreshSourceFormat(async () => {
-    if (sourceFile && !result) setPreview(await previewRuntimeSuperMemoImport(sourceFile, directory, gradeMap, next));
+    if (sourceFile && !result) setDraft(await previewRuntimeSuperMemoImport(sourceFile, directory, gradeMap, next));
     setSourceFormat(next);
   }, setBusy, setError);
 
   async function importSource() {
-    if (!sourceFile || !preview?.previewSignature) return;
+    if (!sourceFile || !draft?.preview.previewSignature) return;
     setBusy(true);
     setError(false);
     try {
-      setResult(await runRuntimeSuperMemoImport(sourceFile, percent, directory, gradeMap, preview.previewSignature, sourceFormat));
+      setResult(await runRuntimeSuperMemoImport(sourceFile, percent, directory, gradeMap, draft.preview.previewSignature, sourceFormat));
     } catch {
       setError(true);
     } finally {
@@ -93,26 +93,29 @@ function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
     }
   }
 
-  return { input, preview, percent, setPercent, sourceFile, busy, error, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadFile, importSource };
+  return { input, draft, percent, setPercent, sourceFile, busy, error, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadFile, importSource };
 }
 
 function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; initialGrades: SuperMemoGradeMap }) {
   const t = useTranslation();
-  const { input, preview, percent, setPercent, sourceFile, busy, error, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadFile, importSource } = useSuperMemoDraft(initialGrades);
+  const { input, draft, percent, setPercent, sourceFile, busy, error, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadFile, importSource } = useSuperMemoDraft(initialGrades);
+  const [parameters, setParameters] = useState(false);
+  const preview = draft?.preview;
+  const showParameters = Boolean(preview && !result && parameters);
   return (
     <AppDialog open onOpenChange={open => { if (!open && !busy) close(); }}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent layout="task" className="max-h-[calc(100dvh-32px)] w-[min(800px,calc(100vw-32px))]">
+        <AppDialogContent layout="task" className="max-h-[calc(100dvh-32px)] w-[min(1120px,calc(100vw-32px))]">
           <AppDialogTitle>{t('desktop.superMemoDrafts.title')}</AppDialogTitle>
-          <AppDialogBody className="flex min-h-0 flex-col gap-3">
-            <AppDialogDescription>{t('desktop.superMemoDrafts.description')}</AppDialogDescription>
+          <AppDialogBody className="flex min-h-0 flex-col gap-3 overflow-y-auto">
+            <AppDialogDescription className={preview ? 'sr-only' : undefined}>{t('desktop.superMemoDrafts.description')}</AppDialogDescription>
             <input accept=".xml,application/xml,text/xml" hidden ref={input} type="file" onChange={event => {
               const file = event.currentTarget.files?.[0];
               event.currentTarget.value = '';
               if (file) void loadFile(file);
             }} />
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <div className={parameters ? 'hidden' : 'flex shrink-0 flex-wrap items-center gap-2'}>
               <AppButton disabled={busy} onClick={() => input.current?.click()}>{t('desktop.superMemoDrafts.chooseXml')}</AppButton>
               {sourceFile ? <AppButton disabled={busy} onClick={() => void loadFile(sourceFile, true)}>
                 {t('desktop.superMemoDrafts.chooseCollection')}
@@ -121,20 +124,31 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
             </div>
             {error ? <p className="text-sm text-destructive" role="alert">{t('desktop.superMemoDrafts.importFailed')}</p> : null}
             {busy ? <p role="status">{t('desktop.superMemoDrafts.loading')}</p> : null}
-            <SuperMemoSourceSettings value={sourceFormat} onChange={next => void changeSourceFormat(next)}
-              disabled={busy} example={preview?.rows.find(row => row.sourceExample)?.sourceExample} />
-            <SuperMemoGradeSettings disabled={busy} value={gradeMap} onChange={next => void changeGrades(next)} />
-            {!preview && !busy ? <SuperMemoBatchAdjustments /> : null}
-            {result ? <p role="status">{t('desktop.superMemoDrafts.importResult', result)}</p> : null}
-            {!busy && preview && !result ? <>
+            {preview && !result ? <p className="text-sm text-foreground/70">
+              {t(preview.pairedCollection ? 'desktop.superMemoDrafts.pairedLimitations' : 'desktop.superMemoDrafts.xmlLimitations')}
+            </p> : null}
+            {draft && !result ? <div hidden={parameters}><SuperMemoEntryPreview key={sourceFile?.name} {...draft} /></div> : null}
+            {parameters && preview && !result ? <>
+              <SuperMemoSourceSettings value={sourceFormat} onChange={next => void changeSourceFormat(next)}
+                disabled={busy} example={preview?.rows.find(row => row.sourceExample)?.sourceExample} />
+              <SuperMemoGradeSettings disabled={busy} value={gradeMap} onChange={next => void changeGrades(next)} />
               <SuperMemoPreviewOptionFields percent={percent} onChange={setPercent} />
               <SuperMemoDraftTable preview={preview} percent={percent} />
             </> : null}
+            {!preview && !busy ? <SuperMemoBatchAdjustments /> : null}
+            {result ? <p role="status">{t('desktop.superMemoDrafts.importResult', result)}</p> : null}
           </AppDialogBody>
           <AppDialogActions>
-            {preview && !result ? <AppButton disabled={busy} onClick={() => void importSource()}>
-              {t('desktop.superMemoDrafts.import')}
-            </AppButton> : null}
+            {showParameters ? <>
+              <AppButton disabled={busy} variant="ghost" onClick={() => setParameters(false)}>
+                {t('desktop.superMemoDrafts.backToPreview')}
+              </AppButton>
+              <AppButton disabled={busy} onClick={() => void importSource()}>
+                {t('desktop.superMemoDrafts.import')}
+              </AppButton>
+            </> : preview && !result ? (
+              <AppButton disabled={busy} onClick={() => setParameters(true)}>{t('desktop.superMemoDrafts.parameters')}</AppButton>
+            ) : null}
             <AppButton disabled={busy} onClick={close} variant="ghost">{t('desktop.superMemoDrafts.close')}</AppButton>
           </AppDialogActions>
         </AppDialogContent>

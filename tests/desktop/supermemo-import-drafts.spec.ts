@@ -25,6 +25,9 @@ async function openPreview(page: Page) {
   return page.getByRole('dialog', { name: title });
 }
 
+const parameters = /^(Next: Conversion settings|下一步 · 转换参数)$/;
+const backToPreview = /^(Back to preview|返回资料预览)$/;
+
 test('previews different XML exports and changes the interval without saving a draft', async ({ desktopWindow }) => {
   await expectWorkspaceShell(desktopWindow);
   const dialog = await openPreview(desktopWindow);
@@ -32,15 +35,22 @@ test('previews different XML exports and changes the interval without saving a d
   const selectXml = (name: string, text: string) =>
     input.setInputFiles({ name, mimeType: 'application/xml', buffer: Buffer.from(text) });
   await selectXml('Learning.xml', firstExport);
+  const preview = dialog.getByRole('region', { name: /^(Entry preview|条目预览)$/ });
+  await dialog.getByRole('button', { name: /^Card.*#2$/ }).click();
+  await expect(preview.getByText('Question', { exact: true })).toBeVisible();
+  await expect(preview.getByText('Answer', { exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: /^(Skipped 1|跳过 1)$/ }).click();
+  await expect(dialog.getByRole('button', { name: /Empty example/ })).toBeVisible();
+  await expect(preview.getByText(/Question and answer are empty|题面和答案均为空/)).toBeVisible();
+  await dialog.getByRole('button', { name: parameters }).click();
   const slider = dialog.getByRole('slider');
   await expect(slider).toHaveValue('0');
   await expect(dialog.getByRole('cell', { name: '300', exact: true })).toHaveCount(2);
   await slider.press('End');
   await expect(slider).toHaveValue('100');
   await expect(dialog.getByRole('cell', { name: '300', exact: true })).toHaveCount(1);
-  await dialog.getByText(/^(View 1 exceptions|查看 1 条明细)$/).click();
-  await expect(dialog.getByText('Empty example', { exact: true })).toBeVisible();
-  await expect(dialog.getByText('Archive', { exact: false })).toBeVisible();
+  await dialog.getByRole('button', { name: backToPreview }).click();
+  await expect(dialog.getByRole('button', { name: /Empty example/ })).toBeVisible();
   const folder = path.resolve('.tmp/artifacts/T762/desktop');
   await mkdir(folder, { recursive: true });
   await dialog.screenshot({ path: path.join(folder, 'supermemo-preview.png') });
@@ -49,8 +59,9 @@ test('previews different XML exports and changes the interval without saving a d
   await expect(dialog.getByText('Learning.xml')).toBeVisible();
   await selectXml('Other.xml', secondExport);
   await expect(dialog.getByText('Other.xml')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^(Skipped 0|跳过 0)$/ })).toBeVisible();
+  await dialog.getByRole('button', { name: parameters }).click();
   await expect(slider).toHaveValue('0');
-  await expect(dialog.getByText('Empty example', { exact: true })).toHaveCount(0);
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   const reopened = await openPreview(desktopWindow);
   await expect(reopened.getByRole('slider')).toHaveCount(0);
@@ -99,6 +110,7 @@ test('pairs the selected collection and preserves XML preview after a mismatch',
   await writeFile(path.join(info, 'ElementInfo.dat'), elements);
   await pair.click();
   await expect(dialog.getByRole('alert')).toBeVisible();
+  await dialog.getByRole('button', { name: parameters }).click();
   await expect(dialog.getByRole('slider')).toHaveValue('0');
 });
 
@@ -121,9 +133,10 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
   });
   await dialog.getByRole('button', { name: /^(Pair collection folder|配对资料库文件夹)$/ }).click();
   await expect(dialog.getByText(/Candidate dates and priority order come from|候选日期和优先顺序来自/)).toBeVisible();
+  await dialog.getByRole('button', { name: /^(Missing images 1|缺图 1)$/ }).click();
   await expect(dialog.getByText(/^(1 local image references cannot be imported|1 处本地图片引用无法导入)$/)).toBeVisible();
-  await dialog.getByText(/^(View 1 exceptions|查看 1 条明细)$/).click();
   await expect(dialog.getByText('missing-map.png', { exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: parameters }).click();
   await dialog.getByText(/^(Source information|来源信息)$/).click();
   const sourceOptions = dialog.getByRole('combobox', { name: /^(Source information|来源信息)$/ });
   await sourceOptions.selectOption('body');
@@ -131,7 +144,7 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
   await dialog.getByRole('button', { name: /^(Apply format|应用格式)$/ }).click();
   await expect(dialog.getByLabel(/^(Source preview|来源预览)$/)).toContainText('Origin');
   await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
-  await expect(dialog.getByRole('status')).toHaveText(/Imported 2|已导入 2 条/);
+  await expect(dialog.getByText(/^(Imported 2|已导入 2 条)/)).toBeVisible();
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   const reopened = await openPreview(desktopWindow);
   await reopened.getByRole('combobox').selectOption({ index: 1 });
@@ -165,6 +178,7 @@ test('updates the grade mapping in a live preview and remembers it when reopened
   await dialog.locator('input[type="file"]').setInputFiles({
     name: 'Grades.xml', mimeType: 'application/xml', buffer: Buffer.from(secondExport)
   });
+  await dialog.getByRole('button', { name: parameters }).click();
   await dialog.getByRole('slider').press('End');
   const planned = dialog.getByRole('row').filter({ hasText: '200+' }).getByRole('cell').last();
   const defaultDays = await planned.textContent();
@@ -178,6 +192,10 @@ test('updates the grade mapping in a live preview and remembers it when reopened
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
 
   const reopened = await openPreview(desktopWindow);
+  await reopened.locator('input[type="file"]').setInputFiles({
+    name: 'Grades.xml', mimeType: 'application/xml', buffer: Buffer.from(secondExport)
+  });
+  await reopened.getByRole('button', { name: parameters }).click();
   await reopened.getByText(/^(Grade mapping|评分对应表)$/).click();
   await expect(reopened.getByLabel(/^SuperMemo (grade|评分) 4$/)).toHaveValue('1');
   await reopened.getByRole('button', { name: /^(Restore defaults|恢复默认)$/ }).click();

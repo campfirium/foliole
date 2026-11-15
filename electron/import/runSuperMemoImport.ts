@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import { IMPORTED_REVIEW_NODE_PREFIX } from '../../lib/core/database/initialReviewSchedule.js';
 import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
+import { orderSuperMemoImportWrites, orderSuperMemoSourceRows, planSuperMemoImportParents } from '../../lib/core/import/superMemoImportParents.js';
 import { superMemoFullOffset } from '../../lib/core/import/superMemoScheduleOffset.js';
 import { blendSuperMemoDue, DEFAULT_SUPER_MEMO_GRADE_MAP, SUPER_MEMO_CONVERSION_RULE_VERSION, type SuperMemoGradeMap } from '../../lib/core/import/superMemoSchedulePreview.js';
 import { addSuperMemoSource, formatSuperMemoSource, type SuperMemoSourceFormat } from '../../lib/core/import/superMemoSourceFormatting.js';
@@ -14,31 +15,12 @@ import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { replaceNodeImageResourceReferences } from '../database/nodeResources.js';
 
 import { prepareSuperMemoTopicContent } from './prepareSuperMemoTopicContent.js';
-import { orderSuperMemoImportWrites, planSuperMemoImportParents } from './superMemoImportParents.js';
 import { importSuperMemoReviewHistory, superMemoDueInstant, superMemoTopicReading } from './superMemoImportSchedule.js';
 import { persistSuperMemoTopic } from './writeSuperMemoTopic.js';
 
 type Row = NativeSuperMemoPreview['rows'][number];
 type Prepared = Awaited<ReturnType<typeof prepareSuperMemoTopicContent>>;
 type Snapshot = Parameters<typeof upsertNodeSnapshot>[0];
-
-function orderedRows(rows: Row[]) {
-  const byId = new Map(rows.map(row => [row.id, row]));
-  const children = new Map<number | null, number[]>();
-  for (const row of rows) {
-    const siblings = children.get(row.parentId) ?? [];
-    siblings.push(row.id);
-    children.set(row.parentId, siblings);
-  }
-  const ordered: Row[] = [];
-  const pending = [...children.get(null) ?? []].reverse();
-  while (pending.length) {
-    const row = byId.get(pending.pop()!)!;
-    ordered.push(row);
-    pending.push(...[...row.sourceChildren ?? children.get(row.id) ?? []].reverse());
-  }
-  return ordered;
-}
 
 function persistElement(snapshot: Snapshot, element: SuperMemoXmlDraftElement, body: Prepared, answer: Prepared,
   due: string | null, offset: string, sourceState: Row['sourceState'], gradeMap: SuperMemoGradeMap) {
@@ -120,7 +102,7 @@ export async function runSuperMemoImport(input: {
     return { batchId: fingerprint, imported: stored.imported, skipped: stored.skipped,
       unresolvedImages: stored.unresolvedImages };
   }
-  const prepared = await prepareRows(orderedRows(input.preview.rows),
+  const prepared = await prepareRows(orderSuperMemoSourceRows(input.preview.rows),
     new Map(input.elements.map(element => [element.id, element])), input.collectionDirectory, input.expectedImages);
   const now = new Date().toISOString();
   return driver.transaction(() => {
