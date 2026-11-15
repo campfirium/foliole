@@ -156,6 +156,7 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'rightSidebarWidth',
   'rightSidebarActivePanel',
   'rightSidebarPanelOrder',
+  'materialHistoryView',
   'folioleAideEnabled',
   'folioleAideFollowCurrentMaterial',
   'folioleAideModelSelection',

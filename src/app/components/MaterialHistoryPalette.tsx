@@ -1,5 +1,5 @@
 import { Bookmark, BookmarkCheck, Clock } from 'lucide-react';
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
@@ -14,6 +14,8 @@ import {
 import { useWorkspaceStore } from '../../store/workspaceStore';
 
 import { filterMaterialHistory, materialHistoryPath, materialHistoryPreview, selectMaterialHistory } from './materialHistory';
+import { MaterialHistoryViewOptions } from './MaterialHistoryViewOptions';
+import { loadMaterialHistoryView, saveMaterialHistoryView, type MaterialHistoryView } from './materialHistoryViewPreference';
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
 import { useFloatingPaletteEscape } from './useFloatingPaletteEscape';
 import { useMaterialHistoryOrdering } from './useMaterialHistoryOrdering';
@@ -32,6 +34,7 @@ export default function MaterialHistoryPalette({ onClose, onOpenNode }: Props) {
   const t = useTranslation();
   const state = useWorkspaceStore();
   const [query, setQuery] = useState('');
+  const [view, setView] = useState(loadMaterialHistoryView);
   const { ordering, togglePin } = useMaterialHistoryOrdering();
   const history = useMemo(() => selectMaterialHistory(state, ordering?.pins, ordering?.lastEdited), [state, ordering]);
   const rows = filterMaterialHistory(history, state.nodesById, query);
@@ -73,10 +76,15 @@ export default function MaterialHistoryPalette({ onClose, onOpenNode }: Props) {
           setQuery(value);
           setSelectedId(null);
           if (resultsRef.current) resultsRef.current.scrollTop = 0;
-        }} />
+        }}>
+          <MaterialHistoryViewOptions view={view} onChange={next => {
+            setView(next);
+            saveMaterialHistoryView(next);
+          }} />
+        </HistorySearch>
         <div aria-label={label} className={`${floatingResultListClassName} overscroll-contain focus:outline-none`} ref={resultsRef} role="group" tabIndex={0}>
           {!rows.length && <p className={appFloatingEmptyStateClassName()}>{t(query.trim() ? 'desktop.history.noMatches' : 'desktop.history.empty')}</p>}
-          <HistoryRows rows={rows} nodes={state.nodesById} selected={selected} onOpen={openRow} onPin={(index) => { void pinRow(index); }} />
+          <HistoryRows view={view} rows={rows} nodes={state.nodesById} selected={selected} onOpen={openRow} onPin={(index) => { void pinRow(index); }} />
         </div>
         <HistoryFooter />
       </WorkspacePaletteFrame>
@@ -94,7 +102,7 @@ function handleResultsKey(event: KeyboardEvent<HTMLDivElement>, options: {
 }) {
   if (event.altKey || event.ctrlKey || event.metaKey || event.nativeEvent.isComposing) return;
   const { onPin, onOpen, onSelect, selected, size, results } = options;
-  const typing = event.target instanceof HTMLInputElement;
+  const typing = event.target instanceof HTMLInputElement && event.target.type === 'search';
   const listFocused = event.target === results;
   if ((!listFocused && !typing) || !results) return;
   if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
@@ -126,7 +134,8 @@ function visibleHistoryRow(results: HTMLDivElement, direction: 1 | -1) {
   return index < 0 ? 0 : index;
 }
 
-function HistoryRows({ rows, nodes, selected, onOpen, onPin }: {
+function HistoryRows({ rows, nodes, selected, onOpen, onPin, view }: {
+  view: MaterialHistoryView;
   rows: ReturnType<typeof selectMaterialHistory>;
   nodes: Parameters<typeof materialHistoryPath>[0];
   selected: number;
@@ -138,18 +147,25 @@ function HistoryRows({ rows, nodes, selected, onOpen, onPin }: {
     const bodyId = `${rowId}-body-${index}`;
     const pathId = `${rowId}-path-${index}`;
     const path = materialHistoryPath(nodes, node.id);
+    const preview = (
+      <span id={bodyId} className={`pointer-events-none relative min-w-0 font-normal text-foreground ${floatingResultPreviewClassName}`}
+        style={{ WebkitLineClamp: view.lines }}>
+        {materialHistoryPreview(node)}
+      </span>
+    );
+    const metadata = (
+      <div className={`pointer-events-none relative flex min-w-0 items-center gap-1.5 ${floatingResultMetaClassName}`}>
+        {path && <span id={pathId} className="min-w-0 break-words text-foreground/75">{path}</span>}
+        <HistoryBookmark pinned={pinned} selected={index === selected} onClick={() => onPin(index)} />
+      </div>
+    );
+    const breadcrumbFirst = view.first === 'breadcrumb' && Boolean(path);
     return (
       <div className={`group relative ${floatingResultRowClassName}`} key={node.id}>
-        <button aria-labelledby={path ? `${bodyId} ${pathId}` : bodyId}
+        <button aria-labelledby={path ? (breadcrumbFirst ? `${pathId} ${bodyId}` : `${bodyId} ${pathId}`) : bodyId}
           className={appFloatingItemClassName('absolute inset-0 rounded-lg')}
           aria-current={index === selected || undefined} data-active={index === selected} onClick={() => onOpen(index)} type="button" />
-        <span id={bodyId} className={`pointer-events-none relative min-w-0 font-normal text-foreground ${floatingResultPreviewClassName}`}>
-          {materialHistoryPreview(node)}
-        </span>
-        <div className={`pointer-events-none relative flex min-w-0 items-center gap-1.5 ${floatingResultMetaClassName}`}>
-          {path && <span id={pathId} className="min-w-0 break-words text-foreground/75">{path}</span>}
-          <HistoryBookmark pinned={pinned} selected={index === selected} onClick={() => onPin(index)} />
-        </div>
+        {breadcrumbFirst ? <>{metadata}{preview}</> : <>{preview}{metadata}</>}
       </div>
     );
   });
@@ -199,7 +215,8 @@ function HistoryFooter() {
   );
 }
 
-function HistorySearch({ query, onChange }: {
+function HistorySearch({ query, onChange, children }: {
+  children: ReactNode;
   query: string;
   onChange: (value: string) => void;
 }) {
@@ -210,6 +227,7 @@ function HistorySearch({ query, onChange }: {
       <input aria-label={label} className={appFloatingInputClassName(workspaceResultInputClassName)}
         autoComplete="off" spellCheck={false}
         onChange={(event) => onChange(event.target.value)} placeholder={label} type="search" value={query} />
+      {children}
     </WorkspaceResultHeader>
   );
 }
