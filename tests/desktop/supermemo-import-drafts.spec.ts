@@ -64,6 +64,7 @@ async function writeCollection(directory: string, includeTopic: boolean) {
   const elements = Buffer.alloc(2 * 118);
   elements[1] = 1;
   elements[118 + 1] = 1;
+  if (includeTopic) elements.writeUInt32LE(1, 118 + 93);
   elements.writeUInt16LE(300, 118 + 16);
   elements.writeInt16LE(30, 118 + 18);
   const repetitions = Buffer.alloc(8);
@@ -123,6 +124,12 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
   await expect(dialog.getByText(/^(1 local image references cannot be imported|1 处本地图片引用无法导入)$/)).toBeVisible();
   await dialog.getByText(/^(View 1 exceptions|查看 1 条明细)$/).click();
   await expect(dialog.getByText('missing-map.png', { exact: true })).toBeVisible();
+  await dialog.getByText(/^(Source information|来源信息)$/).click();
+  const sourceOptions = dialog.getByRole('combobox', { name: /^(Source information|来源信息)$/ });
+  await sourceOptions.selectOption('body');
+  await dialog.getByRole('textbox', { name: /^(Markdown format|Markdown 格式)$/ }).fill('Origin {articleLink}');
+  await dialog.getByRole('button', { name: /^(Apply format|应用格式)$/ }).click();
+  await expect(dialog.getByLabel(/^(Source preview|来源预览)$/)).toContainText('Origin');
   await dialog.getByRole('button', { name: /^(Import|导入)$/ }).click();
   await expect(dialog.getByRole('status')).toHaveText(/Imported 2|已导入 2 条/);
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
@@ -138,6 +145,11 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
     const snapshot = await window.electronAPI!.invoke('load_workspace_snapshot');
     return Object.values(snapshot.nodesById).find(node => node.title === 'Imported map topic')?.id;
   });
+  const importedCard = await desktopWindow.evaluate(async () => {
+    const snapshot = await window.electronAPI!.invoke('load_workspace_snapshot');
+    return Object.values(snapshot.nodesById).find(node => node.title === 'Card');
+  });
+  expect(importedCard?.reveal).toContain(`Origin [[node-id:${nodeId}|Imported map topic]]`);
   expect(nodeId).toBeTruthy();
   await desktopWindow.evaluate(id => window.__folioleWorkspaceDebug!.openNode(id!), nodeId);
   await expect(desktopWindow.locator('.prompt-editor-host .cm-content')).toContainText('Before');

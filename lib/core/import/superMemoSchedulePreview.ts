@@ -7,7 +7,7 @@ import type { SuperMemoXmlDraftElement } from './superMemoXmlDraft.js';
 export const DEFAULT_SUPER_MEMO_GRADE_MAP = [1, 1, 1, 2, 3, 4] as const;
 export type SuperMemoGrade = 1 | 2 | 3 | 4;
 export type SuperMemoGradeMap = readonly SuperMemoGrade[];
-export const SUPER_MEMO_CONVERSION_RULE_VERSION = 3;
+export const SUPER_MEMO_CONVERSION_RULE_VERSION = 4;
 
 const DAY_MS = 86_400_000;
 

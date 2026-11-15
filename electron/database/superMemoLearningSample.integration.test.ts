@@ -68,7 +68,30 @@ async function verifyMediaPreview(args: unknown, sqlite: ReturnType<Awaited<Retu
   expect(preview.rows.find(row => row.id === 72)?.unresolvedImages).toEqual([]);
   expect(sqlite.prepare('SELECT COUNT(*) FROM workspace_meta WHERE key GLOB ?')
     .pluck().get('supermemo-import:*')).toBe(0);
+  expect(preview.rows.find(row => row.id === 2276)).toMatchObject({ sourceConceptGroupId: 3, sourceConceptFolderId: 56 });
+  expect(preview.rows.find(row => row.id === 797)).toMatchObject({ sourceArticleId: 3302, parentId: 1148,
+    sourceBibliography: { title: 'Atomic Habits' } });
+  expect(preview.rows.find(row => row.id === 72)?.sourceBibliography?.url).toBe('https://zhuanlan.zhihu.com/p/434074509');
   return preview.previewSignature;
+}
+
+function verifyConceptFolder(sqlite: ReturnType<Awaited<ReturnType<typeof restoreFixture>>['peer']>['sqlite'],
+  entries: Array<{ id: number; nodeId: string }>) {
+  const article = entries.find(entry => entry.id === 3302)!.nodeId;
+  const card = entries.find(entry => entry.id === 797)!.nodeId;
+  const answer = sqlite.prepare('SELECT reveal FROM nodes WHERE id = ?').pluck().get(card);
+  expect(answer).toEqual(expect.stringContaining(`[[node-id:${article}|Atomic Habits]]`));
+  expect(answer).toEqual(expect.stringContaining('supermemoTitle: "Atomic Habits"'));
+  const todo = entries.find(entry => entry.id === 56)!.nodeId;
+  const member = entries.find(entry => entry.id === 260)!.nodeId;
+  expect(entries.find(entry => entry.id === 2276)).toMatchObject({ nodeId: null, sourceConceptFolderId: 56 });
+  expect(sqlite.prepare('SELECT title, kind, parent_id FROM nodes WHERE id = ?').get(todo))
+    .toEqual({ title: 'TODO', kind: 'folder', parent_id: null });
+  const root = sqlite.prepare(`WITH RECURSIVE parents(id, parent_id) AS (
+    SELECT id, parent_id FROM nodes WHERE id = ?
+    UNION ALL SELECT n.id, n.parent_id FROM nodes n JOIN parents p ON n.id = p.parent_id
+  ) SELECT id FROM parents WHERE parent_id IS NULL`).pluck().get(member);
+  expect(root).toBe(todo);
 }
 
 it('previews an XML-only import with a missing image without writing a batch', async () => {
@@ -126,6 +149,7 @@ if (!xml || !collectionDirectory) {
     const batchJson = source.sqlite.prepare('SELECT value FROM workspace_meta WHERE key = ?')
       .pluck().get(`supermemo-import:${result.batchId}`) as string;
     const batch = JSON.parse(batchJson) as { entries: Array<{ id: number; nodeId: string; sourceState?: string; learning?: { history: unknown[] }; unresolvedImages: string[] }> };
+    verifyConceptFolder(source.sqlite, batch.entries);
     const pending = batch.entries.find(entry => entry.id === 797)!;
     const dismissed = batch.entries.find(entry => entry.id === 75)!;
     expect(pending.sourceState).toBe('pending');
@@ -147,8 +171,7 @@ if (!xml || !collectionDirectory) {
     const adjust = (percent: number) => handleSuperMemoImportCommand(NATIVE_COMMANDS.adjustSuperMemoImport, { batchId: result.batchId, percent });
     const readDates = () => source.sqlite.prepare('SELECT node_id, due FROM node_review ORDER BY node_id').all();
     const before = readDates();
-    const half = await adjust(50);
-    expect(half).toMatchObject({ protectedItems: 0, updated: expect.any(Number) });
+    expect(await adjust(50)).toMatchObject({ protectedItems: 0, updated: expect.any(Number) });
     expect(readDates()).not.toEqual(before);
     await adjust(100);
     await adjust(0);

@@ -71,3 +71,13 @@ it('collects backlinks from visible nodes in workspace order', () => {
     }
   ]);
 });
+
+it('opens an imported article by its node ID even when two articles have the same title', () => {
+  const nodesById = {
+    other: createNode({ id: 'other', title: 'Atomic Habits' }),
+    article: createNode({ id: 'article', title: 'Renamed article' })
+  };
+  expect(resolveInternalLinkTargetId({
+    title: 'node-id:article', nodesById, nodeOrder: ['other', 'article'], trashedNodeIds: []
+  })).toBe('article');
+});

@@ -1,4 +1,5 @@
 import { DEFAULT_SUPER_MEMO_GRADE_MAP, type SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
+import type { SuperMemoSourceFormat } from '../../../../lib/core/import/superMemoSourceFormatting';
 import { readSuperMemoXmlDraft } from '../../../../lib/core/import/superMemoXmlDraft';
 import { NATIVE_COMMANDS } from '../../../../lib/platform/nativeCommands';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../config/appSettings';
@@ -43,14 +44,14 @@ export async function saveSuperMemoGradeMap(gradeMap: SuperMemoGradeMap) {
   }
 }
 
-export async function previewRuntimeSuperMemoImport(file: File, collectionDirectory: string | undefined, gradeMap: SuperMemoGradeMap) {
-  return requireInvoke()(NATIVE_COMMANDS.previewSuperMemoImport, { ...await readSource(file, collectionDirectory), gradeMap });
+export async function previewRuntimeSuperMemoImport(file: File, collectionDirectory: string | undefined, gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat) {
+  return requireInvoke()(NATIVE_COMMANDS.previewSuperMemoImport, { ...await readSource(file, collectionDirectory), gradeMap, sourceFormat });
 }
 
 export async function runRuntimeSuperMemoImport(file: File, percent: number,
-  collectionDirectory: string | undefined, gradeMap: SuperMemoGradeMap, previewSignature: string) {
+  collectionDirectory: string | undefined, gradeMap: SuperMemoGradeMap, previewSignature: string, sourceFormat: SuperMemoSourceFormat) {
   return requireInvoke()(NATIVE_COMMANDS.runSuperMemoImport,
-    { ...await readSource(file, collectionDirectory), percent, gradeMap, previewSignature });
+    { ...await readSource(file, collectionDirectory), percent, gradeMap, previewSignature, sourceFormat });
 }
 
 export function listRuntimeSuperMemoImports() {

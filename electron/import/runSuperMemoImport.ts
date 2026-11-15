@@ -4,6 +4,7 @@ import { IMPORTED_REVIEW_NODE_PREFIX } from '../../lib/core/database/initialRevi
 import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
 import { superMemoFullOffset } from '../../lib/core/import/superMemoScheduleOffset.js';
 import { blendSuperMemoDue, DEFAULT_SUPER_MEMO_GRADE_MAP, SUPER_MEMO_CONVERSION_RULE_VERSION, type SuperMemoGradeMap } from '../../lib/core/import/superMemoSchedulePreview.js';
+import { addSuperMemoSource, formatSuperMemoSource, type SuperMemoSourceFormat } from '../../lib/core/import/superMemoSourceFormatting.js';
 import type { SuperMemoXmlDraftElement } from '../../lib/core/import/superMemoXmlDraft.js';
 import { createInitialNewItemReviewProfile } from '../../lib/core/review/newItemReviewSlots.js';
 import type { ReviewSchedulerSettings } from '../../lib/core/review/settings.js';
@@ -69,18 +70,27 @@ async function prepareRows(rows: Row[], elements: Map<number, SuperMemoXmlDraftE
   return prepared;
 }
 
-function writeRows(prepared: Awaited<ReturnType<typeof prepareRows>>, percent: number, offset: string, now: string, gradeMap: SuperMemoGradeMap) {
+function writeRows(prepared: Awaited<ReturnType<typeof prepareRows>>, percent: number, offset: string, now: string, gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat) {
   const destinations = new Map<number, { contentParent: string | null; folderParent: string | null }>();
+  const nodeIds = new Map(prepared.flatMap(({ row }) => row.outcome === 'skipped' ? [] :
+    [[row.id, `${row.outcome === 'item' ? IMPORTED_REVIEW_NODE_PREFIX : ''}${randomUUID()}`] as const]));
+  const groupRoots = new Set(prepared.flatMap(({ row }) => row.sourceConceptFolderId ? [row.sourceConceptFolderId] : []));
+  const sourceRows = new Map(prepared.map(({ row }) => [row.id, row]));
   const priorities = prepared.filter(({ row }) => row.sourceRank != null).sort((a, b) => a.row.sourceRank! - b.row.sourceRank!);
   const priorityById = new Map(priorities.map(({ row }, index) => [row.id, 1 + Math.floor(index * 9 / priorities.length)]));
   return prepared.map(({ row, element, body, answer }) => {
     const parent = row.parentId === null ? undefined : destinations.get(row.parentId);
     const kind = row.outcome;
-    const parentNodeId = kind === 'folder' ? parent?.folderParent ?? null : parent?.contentParent ?? INBOX_NODE_ID;
-    const nodeId = kind === 'skipped' ? null : `${kind === 'item' ? IMPORTED_REVIEW_NODE_PREFIX : ''}${randomUUID()}`;
+    const group = row.sourceConceptFolderId ?? null;
+    const groupRoot = group === null ? undefined : nodeIds.get(group);
+    const sameGroup = row.parentId !== null && (sourceRows.get(row.parentId)?.sourceConceptFolderId ?? null) === group;
+    const rootId = groupRoots.has(row.id);
+    const inherited = sameGroup ? (kind === 'folder' ? parent?.folderParent : parent?.contentParent) : undefined;
+    const parentNodeId = rootId ? null : inherited ?? groupRoot ?? (kind === 'folder' ? null : INBOX_NODE_ID);
+    const nodeId = nodeIds.get(row.id) ?? null;
     destinations.set(row.id, {
-      contentParent: kind === 'folder' || kind === 'topic' ? nodeId : parent?.contentParent ?? null,
-      folderParent: kind === 'folder' ? nodeId : parent?.folderParent ?? null
+      contentParent: kind === 'folder' || kind === 'topic' ? nodeId : (sameGroup ? parent?.contentParent : undefined) ?? groupRoot ?? null,
+      folderParent: kind === 'folder' ? nodeId : (sameGroup ? parent?.folderParent : undefined) ?? groupRoot ?? null
     });
     const due = kind === 'topic' ? row.sourceDue : kind === 'item' && !row.issue && row.sourceState !== 'dismissed'
       ? blendSuperMemoDue(row.sourceDue, row.recalculatedDue, percent) : null;
@@ -88,16 +98,23 @@ function writeRows(prepared: Awaited<ReturnType<typeof prepareRows>>, percent: n
       const snapshot = { nodeId, parentNodeId, kind, priority: priorityById.get(row.id) ?? 5,
         title: row.title || `#${row.id}`, isTitleManual: true, content: '', reveal: null, anchorLink: null,
         position: null, createdAt: now, updatedAt: now };
-      persistElement(snapshot, element, body, answer, due, offset, row.sourceState, gradeMap);
+      const article = row.sourceArticleId ? sourceRows.get(row.sourceArticleId) : undefined;
+      const articleNodeId = article ? nodeIds.get(article.id) : undefined;
+      const formatted = formatSuperMemoSource(row.sourceBibliography, row.sourceArticleId,
+        article && articleNodeId ? { id: articleNodeId, title: article.title } : undefined, sourceFormat);
+      persistElement(snapshot, element,
+        kind === 'topic' ? { ...body, content: addSuperMemoSource(body.content, formatted, sourceFormat.placement) } : body,
+        kind === 'item' && answer.content ? { ...answer, content: addSuperMemoSource(answer.content, formatted, sourceFormat.placement) } : answer,
+        due, offset, row.sourceState, gradeMap);
     }
-    return { ...row, nodeId, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),
+    return { ...row, sourceExample: undefined, nodeId, sourceArticleNodeId: nodeIds.get(row.sourceArticleId ?? 0) ?? null, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),
       lastApplied: due, unresolvedImages: [...body.unresolvedImages, ...answer.unresolvedImages] };
   });
 }
 
 export async function runSuperMemoImport(input: {
   elements: SuperMemoXmlDraftElement[]; preview: NativeSuperMemoPreview; percent: number;
-  offset: string; collectionDirectory?: string | undefined; gradeMap: SuperMemoGradeMap; scheduler: ReviewSchedulerSettings; expectedImages: ReadonlyMap<string, string | null>;
+  offset: string; collectionDirectory?: string | undefined; gradeMap: SuperMemoGradeMap; scheduler: ReviewSchedulerSettings; sourceFormat: SuperMemoSourceFormat; expectedImages: ReadonlyMap<string, string | null>;
 }) {
   const { driver } = openDatabaseConnection();
   const fingerprint = createHash('sha256').update(JSON.stringify(input.elements)).digest('hex');
@@ -117,12 +134,12 @@ export async function runSuperMemoImport(input: {
     new Map(input.elements.map(element => [element.id, element])), input.collectionDirectory, input.expectedImages);
   const now = new Date().toISOString();
   return driver.transaction(() => {
-    const entries = writeRows(prepared, input.percent, input.offset, now, input.gradeMap);
+    const entries = writeRows(prepared, input.percent, input.offset, now, input.gradeMap, input.sourceFormat);
     const imported = entries.filter(entry => entry.nodeId).length;
     const result = { batchId: fingerprint, imported, skipped: entries.length - imported,
       unresolvedImages: entries.reduce((sum, entry) => sum + entry.unresolvedImages.length, 0) };
     const batch = { ...result, formatVersion: 1, ruleVersion: SUPER_MEMO_CONVERSION_RULE_VERSION,
-      percent: input.percent, offset: input.offset, gradeMap: input.gradeMap, scheduler: input.scheduler, entries };
+      percent: input.percent, offset: input.offset, gradeMap: input.gradeMap, scheduler: input.scheduler, sourceFormat: input.sourceFormat, entries };
     driver.execute('INSERT INTO workspace_meta (key, value, updated_at) VALUES (?, ?, ?)', [key, JSON.stringify(batch), now]);
     return result;
   });

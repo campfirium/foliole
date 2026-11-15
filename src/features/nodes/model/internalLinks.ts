@@ -65,6 +65,8 @@ export function resolveInternalLinkTargetId(args: {
   nodesById: Record<string, Node>;
   trashedNodeIds: string[];
 }) {
+  const target = /^node-id:([a-z0-9:-]+)$/iu.exec(args.title.trim())?.[1];
+  if (target) return args.nodesById[target] && !args.trashedNodeIds.includes(target) ? target : null;
   const normalizedTitle = normalizeTitle(args.title);
   if (!normalizedTitle) {
     return null;

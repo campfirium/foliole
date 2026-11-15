@@ -1,9 +1,12 @@
+import type { SuperMemoBibliography } from '../core/import/superMemoBibliography.js';
 import type { SuperMemoGradeMap } from '../core/import/superMemoSchedulePreview.js';
+import type { SuperMemoSourceFormat } from '../core/import/superMemoSourceFormatting.js';
 import type { SuperMemoXmlDraftElement } from '../core/import/superMemoXmlDraft.js';
 
 export interface NativeSuperMemoPreviewArgs {
   elements: SuperMemoXmlDraftElement[];
   collectionDirectory?: string;
+  sourceFormat?: SuperMemoSourceFormat;
   gradeMap?: SuperMemoGradeMap;
 }
 
@@ -27,6 +30,12 @@ export interface NativeSuperMemoPreviewRow {
   skippedAudio?: number;
   sourceState?: 'pending' | 'active' | 'dismissed' | null;
   sourceRank?: number | null;
+  sourceConceptGroupId?: number | null;
+  sourceConceptFolderId?: number | null;
+  sourceArticleId?: number | null;
+  sourceExample?: string;
+  sourceBibliography?: SuperMemoBibliography;
+  sourceReferenceId?: number | null;
   sourceChildren?: number[];
 }
 
