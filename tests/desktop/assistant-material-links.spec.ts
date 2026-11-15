@@ -38,7 +38,7 @@ async function useControlledReply(app: ElectronApplication) {
   }, assistantReadyStatus);
 }
 
-async function prepare(page: Page, app: ElectronApplication) {
+async function prepare(page: Page, app: ElectronApplication, ids = articleIds) {
   await expectWorkspaceShell(page);
   await page.evaluate(async ids => {
     localStorage.setItem('foliole-app-language', 'en');
@@ -51,7 +51,7 @@ async function prepare(page: Page, app: ElectronApplication) {
     await workspace.seedNodes(ids.map(id => ({
       id, kind: 'topic', title: id, content: 'Body for ' + id
     })), { persist: true });
-  }, articleIds);
+  }, ids);
   await resetDailyFlowGeneration(app);
   await useControlledReply(app);
   await page.reload();
@@ -106,8 +106,9 @@ test('returns to an Aide conversation material while preserving Flow progress', 
   await expect(page.getByText('Body for ' + next, { exact: true })).toBeVisible();
 });
 
-test('links the visible material and restores both links from desktop history', async ({ desktopApp, desktopWindow: page }) => {
-  await prepare(page, desktopApp);
+test('links materials after the reply and restores the overflow menu from desktop history', async ({ desktopApp, desktopWindow: page }) => {
+  const third = 'aide-link-third';
+  await prepare(page, desktopApp, [...articleIds, third]);
   const first = articleIds[0]!;
   const second = articleIds[1]!;
   const openArticle = (id: string) => page.getByRole('treeitem', { name: id, exact: true }).click();
@@ -119,15 +120,21 @@ test('links the visible material and restores both links from desktop history', 
   await expect.poll(() => desktopApp.evaluate(() =>
     typeof (globalThis as typeof globalThis & { releaseAideMaterialReply?: () => void }).releaseAideMaterialReply
   )).toBe('function');
+  await openArticle(second);
+  const add = aide.getByRole('button', { name: 'Link current material' });
+  await expect(add).toBeDisabled();
+  await expect(aide.getByRole('button', { name: 'Open material: ' + second })).toHaveCount(0);
   await desktopApp.evaluate(() =>
     (globalThis as typeof globalThis & { releaseAideMaterialReply?: () => void }).releaseAideMaterialReply?.()
   );
   await expect(aide.getByText('A shorter opening.')).toBeVisible();
-  await openArticle(second);
-  const add = aide.getByRole('button', { name: 'Link current material' });
+  await expect(add).toBeEnabled();
   await add.click();
   await expect(add).toBeDisabled();
   await expect(aide.getByRole('button', { name: 'Open material: ' + second })).toHaveText('This material');
+  await openArticle(third);
+  await add.click();
+  await expect(aide.getByRole('button', { name: 'More linked materials' })).toBeVisible();
   await page.reload();
   await expectWorkspaceShell(page);
   await openAssistantPanel(page);
@@ -135,6 +142,12 @@ test('links the visible material and restores both links from desktop history', 
   await expect(history.getByRole('button', { name: 'Open material: ' + first })).toBeVisible();
   await history.getByRole('button', { name: 'Open material: ' + second }).click();
   await expect(page.getByText('Body for ' + second, { exact: true })).toBeVisible();
+  await history.getByRole('button', { name: 'More linked materials' }).click();
+  const thirdLink = page.getByRole('menuitem', { name: third, exact: true });
+  await expect(thirdLink).toBeVisible();
   fs.mkdirSync('.tmp/artifacts/T775/native', { recursive: true });
-  await page.screenshot({ path: '.tmp/artifacts/T775/native/two-materials.png' });
+  await page.screenshot({ path: '.tmp/artifacts/T775/native/more-materials.png' });
+  await thirdLink.click();
+  await expect(page.getByText('Body for ' + third, { exact: true })).toBeVisible();
+
 });
