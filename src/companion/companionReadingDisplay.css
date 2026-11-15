@@ -64,3 +64,31 @@ section > .companion-reading-top-chrome {
   background-color: rgb(242 121 85 / 0.49);
   box-shadow: none;
 }
+
+section[data-reading-selection-viewport='true'] {
+  --companion-reading-controls-bottom: max(var(--companion-reading-chrome-bottom, 0px),
+    env(safe-area-inset-top, 0px), var(--companion-system-chrome-top, 0px));
+  top: calc(var(--companion-reading-controls-bottom) + var(--companion-reading-breadcrumb-height, 0px));
+  bottom: var(--companion-reading-viewport-bottom, 0px);
+  padding-top: var(--companion-page-content-gap);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--companion-page-content-gap));
+}
+
+section[data-reading-selection-viewport='true'] > .companion-review-header {
+  position: fixed;
+  inset-inline: 0;
+  top: var(--companion-reading-controls-bottom);
+  z-index: 1;
+  padding-inline: 1.25rem;
+  background: var(--companion-base);
+}
+
+@media (min-width: 640px) {
+  section[data-reading-selection-viewport='true'] > .companion-review-header {
+    padding-inline: 1.75rem;
+  }
+}
+
+section[data-reading-selection-viewport='true'].companion-reading-overlay:has(> .companion-review-footer)::after {
+  content: none;
+}

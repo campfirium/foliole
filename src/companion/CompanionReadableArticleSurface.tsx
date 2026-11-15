@@ -30,6 +30,7 @@ import { useCompanionPdfTextScroll } from './useCompanionPdfTextScroll';
 import { useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
 import { useCompanionReadableAndroidBack } from './useCompanionReadableAndroidBack';
 import type { CompanionReadingNavigationControls } from './useCompanionReadingNavigation';
+import { useCompanionReadingSelectionViewport } from './useCompanionReadingSelectionViewport';
 import { useCompanionReadingTypographySettings } from './useCompanionReadingTypographySettings';
 import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
 import { useImmersiveReadableArticleState } from './useImmersiveReadableArticleState';
@@ -195,12 +196,9 @@ function ImmersiveArticleChrome(props: {
     />
   );
 }
-export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
-  const onExit = useCompanionArticleExit(props.onExit);
-  const onBack = useCompanionArticleExit(props.onBack ?? props.onExit);
-  const model = useImmersiveReadableArticleModel({ ...props, onExit, onBack });
-  const readingTypography = useCompanionReadingTypographySettings();
-  const pendingReadableArticle = useCompanionPendingReadableArticle(props.readableArticle);
+function useReadableArticleViewport(props: ImmersiveReadableArticleProps,
+  model: ReturnType<typeof useImmersiveReadableArticleModel>,
+  pendingReadableArticle: ReturnType<typeof useCompanionPendingReadableArticle>) {
   const scrollPosition = useCompanionArticleScrollPosition({
     nodeId: props.readableArticle.nodeId, external: props.snapshot === null,
     scrollTop: props.readableArticle.persistedNodeViewState?.scrollTop ?? 0, onScrollTopChange: props.onScrollTopChange
@@ -211,8 +209,22 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   const pdfScroll = useCompanionPdfTextScroll({ article: pendingReadableArticle.readableArticle,
     editing: model.reading.isContentEditing, onEditorReady: model.toolbar.handleEditorReady, surface: scrollPosition.surfaceRef,
     onScrollTopChange: props.onScrollTopChange, jump: { commandId: model.reading.readingRestoreCommandId, selection: model.reading.readingSelection } });
+  const bounded = useCompanionReadingSelectionViewport(scrollPosition.surfaceRef, model.reading.isContentEditing,
+    model.reading.isChromeVisible, props.header, props.footer);
+  return { bounded, itemEditing, pagedStyle, pdfScroll, scrollPosition };
+}
+
+export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
+  const onExit = useCompanionArticleExit(props.onExit);
+  const onBack = useCompanionArticleExit(props.onBack ?? props.onExit);
+  const model = useImmersiveReadableArticleModel({ ...props, onExit, onBack });
+  const readingTypography = useCompanionReadingTypographySettings();
+  const pendingReadableArticle = useCompanionPendingReadableArticle(props.readableArticle);
+  const { bounded, itemEditing, pagedStyle, pdfScroll, scrollPosition } =
+    useReadableArticleViewport(props, model, pendingReadableArticle);
   return (
     <section
+      data-reading-selection-viewport={bounded || undefined}
       data-companion-reading-surface="true"
       data-reading-end-action={Boolean(props.endOfArticleAction) && !model.reading.isContentEditing || undefined}
       data-reading-chrome-visible={model.reading.isChromeVisible && !model.reading.isContentEditing}
@@ -233,7 +245,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       ref={scrollPosition.surfaceRef}
     >
       <ImmersiveArticleChrome articleProps={{ ...props, onExit }} model={model} readingTypography={readingTypography} />
-      {props.flow ? <CompanionReviewHeader>{props.header}</CompanionReviewHeader> : props.header}
+      {props.flow && (!bounded || props.header) ? <CompanionReviewHeader>{props.header}</CompanionReviewHeader> : props.header}
       <ImmersiveArticleContent
         layout={props.flow ? 'review' : 'article'}
         isContentEditing={model.reading.isContentEditing}

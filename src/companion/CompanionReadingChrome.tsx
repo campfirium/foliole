@@ -157,7 +157,7 @@ export function ReadingChrome(props: {
         title={props.title}
         {...(props.onOpenAlternative ? { onOpenAlternative: props.onOpenAlternative } : {})}
       />
-      {!props.actionsAtTop ? <div className={`fixed inset-x-0 bottom-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} py-2 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),8px)]`}>
+      {!props.actionsAtTop ? <div className={`companion-reading-bottom-chrome fixed inset-x-0 bottom-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} py-2 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),8px)]`}>
         <div className={`mx-auto flex max-w-[760px] items-center justify-end ${companionFlexRowGap2ClassName}`}>
           {controlsVisible ? <>
             {props.navigation ? <ReadingNavigationControls navigation={props.navigation} /> : null}

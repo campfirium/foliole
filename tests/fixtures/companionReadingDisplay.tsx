@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -8,8 +9,14 @@ import { CompanionFlowBrowseBar } from '../../src/companion/CompanionFlowBrowseB
 import { CompanionFlowEdgeGestures } from '../../src/companion/CompanionFlowEdgeGestures';
 import { CompanionFlowNextTopicFooter } from '../../src/companion/CompanionNextTopicFooter';
 import { ImmersiveReadableArticle } from '../../src/companion/CompanionReadableArticleSurface';
+import { ReviewBreadcrumb } from '../../src/companion/CompanionReviewBreadcrumb';
 import { MouseGestureSettingsProvider } from '../../src/features/settings/context/MouseGestureSettingsProvider';
 import { LocalizationProvider } from '../../src/shared/localization/LocalizationProvider';
+
+if (new URLSearchParams(location.search).has('android')) {
+  Capacitor.getPlatform = () => 'android';
+  Capacitor.isNativePlatform = () => true;
+}
 
 function Reader() {
   const params = new URLSearchParams(location.search);
@@ -25,7 +32,9 @@ function Reader() {
       currentVersionId: 'saved', submittedVersionId: 'saved' }), { readSource: async () => ({ content, versionId: 'initial' }) })} onExit={() => setReading(false)}
     endOfArticleAction={flow && params.has('next-topic') && chapter === 1 ?
       <CompanionFlowNextTopicFooter nodeId={article.nodeId} disabled={false} onContinue={() => setChapter(2)} /> : null}
-    header={params.has('selection-boundary') ? <span>Selection boundary label</span>
+    header={params.has('selection-boundary') ? params.has('android') ?
+      <ReviewBreadcrumb items={[{ id: 'parent', label: 'Selection boundary label', targetNodeId: 'parent' }]}
+        onSelectItem={() => setChapter(2)} /> : <span>Selection boundary label</span>
       : <button type="button" onClick={() => setFlow(!flow)}>Switch reading route</button>}
     footer={flow && !params.has('selection-boundary') ? <CompanionBottomBar className="companion-review-footer"><button type="button">Show answer</button></CompanionBottomBar> : null} /></main>
     {params.has('selection-boundary') ? <CompanionFlowBrowseBar onResume={() => setReading(false)} /> : null}

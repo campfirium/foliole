@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 test.use({ hasTouch: true });
 
-async function openReader(page: Page, flow: boolean, answer = false, nextTopic = false, selectionBoundary = false) {
+async function openReader(page: Page, flow: boolean, answer = false, nextTopic = false, selectionBoundary = false, android = false) {
   await page.setViewportSize(nextTopic || selectionBoundary ? page.viewportSize()! : { width: 375, height: 812 });
   await page.route('**/__reading-display?*', route => route.fulfill({ contentType: 'text/html', body: `
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
@@ -13,7 +13,7 @@ async function openReader(page: Page, flow: boolean, answer = false, nextTopic =
     window.__vite_plugin_react_preamble_installed__ = true;
     await import('/@fs/${process.cwd()}/tests/fixtures/companionReadingDisplay.tsx');
     </script></body></html>` }));
-  await page.goto(`/__reading-display?${flow ? 'flow' : 'article'}${answer ? '&answer' : ''}${nextTopic ? '&next-topic' : ''}${selectionBoundary ? '&selection-boundary' : ''}`);
+  await page.goto(`/__reading-display?${flow ? 'flow' : 'article'}${answer ? '&answer' : ''}${nextTopic ? '&next-topic' : ''}${selectionBoundary ? '&selection-boundary' : ''}${android ? '&android' : ''}`);
   await expect(page.locator('.cm-content').first()).toContainText('Paragraph 1.');
 }
 
@@ -48,6 +48,56 @@ for (const viewport of [{ width: 375, height: 812 }, { width: 812, height: 375 }
     await expect(page.getByRole('button', { name: 'Return to reading' })).toBeVisible();
   });
 }
+for (const viewport of [{ width: 375, height: 812 }, { width: 812, height: 375 }]) {
+  test(`Android Flow scrolls between the breadcrumb and footer at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await openReader(page, true, false, false, true, true);
+    const body = page.locator('[data-companion-reading-surface]');
+    const breadcrumb = page.getByText('Selection boundary label', { exact: true });
+    const footer = page.getByRole('button', { name: 'Resume review' }).locator('xpath=ancestor::footer');
+    const measure = async () => {
+      const [surface, label, controls] = await Promise.all([body.boundingBox(), breadcrumb.boundingBox(), footer.boundingBox()]);
+      return { aboveBreadcrumb: surface!.y < label!.y + label!.height,
+        behindFooter: surface!.y + surface!.height > controls!.y };
+    };
+    await expect.poll(measure).toEqual({ aboveBreadcrumb: false, behindFooter: false });
+    const before = await breadcrumb.boundingBox();
+    await body.evaluate(element => { element.scrollTop = element.scrollHeight; });
+    await expect.poll(async () => (await breadcrumb.boundingBox())?.y).toBe(before?.y);
+    await expect.poll(measure).toEqual({ aboveBreadcrumb: false, behindFooter: false });
+    await breadcrumb.tap();
+    await expect(page.locator('.cm-content')).toContainText('Chapter two begins here.');
+    await page.getByRole('button', { name: 'Resume review' }).tap();
+    await expect(page.getByRole('button', { name: 'Return to reading' })).toBeVisible();
+  });
+}
+
+test('Android reading keeps its scroll viewport clear of visible controls', async ({ page }) => {
+  await openReader(page, false, false, false, false, true);
+  const body = page.locator('[data-companion-reading-surface]');
+  const topBar = page.locator('.companion-reading-top-chrome');
+  const bottomBar = page.locator('.companion-reading-bottom-chrome');
+  await expect.poll(async () => {
+    const [surface, header, footer] = await Promise.all([body.boundingBox(), topBar.boundingBox(), bottomBar.boundingBox()]);
+    return Boolean(surface && header && footer && surface.y >= header.y + header.height
+      && surface.y + surface.height <= footer.y);
+  }).toBe(true);
+});
+
+test('Android Flow keeps its answer controls outside the scroll viewport', async ({ page }) => {
+  await openReader(page, true, true, false, false, true);
+  const body = page.locator('[data-companion-reading-surface]');
+  const answer = page.getByText('Answer text at the bottom.', { exact: true });
+  const footer = page.getByRole('button', { name: 'Show answer' }).locator('xpath=ancestor::footer');
+  await expect.poll(async () => {
+    const [surface, controls] = await Promise.all([body.boundingBox(), footer.boundingBox()]);
+    return Boolean(surface && controls && surface.y + surface.height <= controls.y);
+  }).toBe(true);
+  await body.evaluate(element => { element.scrollTop = element.scrollHeight; });
+  await expect(answer).toBeInViewport();
+  await expect(page.getByRole('button', { name: 'Show answer' })).toBeInViewport();
+});
+
 async function done(page: Page) {
   await page.getByRole('button', { name: 'Done', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeHidden();
