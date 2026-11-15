@@ -1,6 +1,5 @@
 import { Suspense, type RefObject } from 'react';
 
-import type { NativeAssistantWorkspaceContext } from '../../../lib/platform/nativeAssistantContract';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewFlowWindow } from '../../store/dailyFlowPresentation';
 
@@ -27,7 +26,6 @@ export interface WorkspaceRightSidebarPanelProps {
   activeNodeId: string | null;
   activePanelId: WorkspaceRightPanelId;
   assistantActiveNodeId?: string | null;
-  assistantWorkspaceContext?: NativeAssistantWorkspaceContext | undefined;
   editorAdapterRef?: WorkspaceLayoutDocumentProps['editorAdapterRef'] | undefined;
   isWorkspaceHydrated?: boolean;
   outlineActivePosition: number;

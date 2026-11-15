@@ -154,6 +154,7 @@ export interface NativeAssistantAgentControlContext {
 }
 
 export interface NativeAssistantWorkspaceContext {
+  conversationMaterials?: Array<{ nodeId: string; title: string }>;
   activeNodeId?: string;
   activeParentNodeId?: string;
   activeKind?: string;

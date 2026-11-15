@@ -24,7 +24,7 @@ The HTTP create request takes an explicit `parent_id`, which can be null. The CL
 
 SuperMemo batch preview and import use the desktop Import flow for the current library. Its report, scheduling slider, and configurable grade mapping stay in the desktop flow. With a paired collection, the desktop flow imports dismissed Topics and Items as dismissed and starts pending Items with no active review history. Agent Control does not expose these SuperMemo batch operations. External migration of individual materials uses the existing Agent Control routes.
 
-Aide history shows material links for desktop conversation navigation. These links are local conversation metadata. Agents continue to find and open materials through existing library capabilities, and Agent Control has no conversation-link routes.
+Aide history shows material links for desktop conversation navigation. The linked material titles and IDs are included in Aide turn context. A linked material open at send time becomes the active material. Aide reads bodies through existing material permissions. Agent Control has no conversation-link routes.
 
 Mobile find-in-document runs on keyboard submission and uses a non-modal toolbar for stepping through matches while reading. Ending the search clears the current query and highlights. Query focus, match highlights, and step controls are reader UI state. Agent Control continues to expose material search and location details.
 

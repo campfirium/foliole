@@ -2,7 +2,6 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import { SETTINGS_MODELS_SEARCH_ROW_ID } from '../../features/settings/model/settingsSearchRowCatalog';
 import { definedProps } from '../../shared/lib/definedProps';
 
-import { resolveAssistantMainPanelWorkspaceContext } from './workspaceAssistantMainPanelContext';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 import type { WorkspaceGridColumnProps } from './workspaceLayoutGridContentColumns';
 import type { WorkspaceListAreaProps } from './WorkspaceLayoutGridSections';
@@ -162,7 +161,6 @@ function selectWorkspaceRightSidebarProps({
     assistantActiveNodeId: props.externalLibrary.isExternalViewOpen
       ? null
       : resolveAssistantMainPanelNodeId({ documentNodeId, props }),
-    assistantWorkspaceContext: resolveAssistantMainPanelWorkspaceContext({ props }),
     outlineActivePosition,
     editorAdapterRef: props.document.editorAdapterRef,
     nodeOrder: props.nodeList.nodeOrder,

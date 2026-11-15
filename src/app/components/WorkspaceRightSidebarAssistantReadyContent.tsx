@@ -83,9 +83,6 @@ function AssistantConversationView(props: {
         activeMessages={props.controller.activeMessages}
         materialTags={<AssistantMaterialTags {...props} />}
         attachImageLabel={t('desktop.rightPanel.assistant.attachImage')}
-        contextFollowDescription={t('desktop.rightPanel.assistant.followCurrentMaterialDescription')}
-        contextFollowEnabled={props.controller.followCurrentMaterial}
-        contextFollowLabel={resolveContextFollowLabel(props, t)}
         inputLabel={t('desktop.rightPanel.assistant.input')}
         imageErrorText={resolveAssistantImageError(props.controller, t)}
         images={props.controller.imageDrafts}
@@ -95,7 +92,6 @@ function AssistantConversationView(props: {
         onEditMessage={props.controller.editMessage}
         onMessageTextChange={props.controller.setMessageText}
         onRemoveImage={props.controller.removeImage}
-        onToggleContextFollow={() => props.controller.setFollowCurrentMaterial(!props.controller.followCurrentMaterial)}
         onSubmit={props.controller.handleSubmit}
         placeholder={t('desktop.rightPanel.assistant.placeholder')}
         pendingLabel={t('desktop.rightPanel.assistant.pending')}
@@ -127,9 +123,6 @@ function AssistantHomeView(props: {
         <AssistantMaterialTags {...props} />
         <WorkspaceRightSidebarAssistantComposer
           attachImageLabel={t('desktop.rightPanel.assistant.attachImage')}
-          contextFollowDescription={t('desktop.rightPanel.assistant.followCurrentMaterialDescription')}
-          contextFollowEnabled={props.controller.followCurrentMaterial}
-          contextFollowLabel={resolveContextFollowLabel(props, t)}
           inputLabel={t('desktop.rightPanel.assistant.input')}
           imageErrorText={resolveAssistantImageError(props.controller, t)}
           images={props.controller.imageDrafts}
@@ -138,7 +131,6 @@ function AssistantHomeView(props: {
           onAddImageFiles={(files) => void props.controller.addImageFiles(files)}
           onMessageTextChange={props.controller.setMessageText}
           onRemoveImage={props.controller.removeImage}
-          onToggleContextFollow={() => props.controller.setFollowCurrentMaterial(!props.controller.followCurrentMaterial)}
           onSubmit={props.controller.handleSubmit}
           placeholder={t('desktop.rightPanel.assistant.placeholder')}
           removeImageLabel={t('desktop.rightPanel.assistant.removeImage')}
@@ -217,18 +209,6 @@ function isConversationOpen(
   controller: ReturnType<typeof useWorkspaceRightSidebarAssistantPanelController>
 ) {
   return controller.selectedThreadId !== null || controller.activeMessages.length > 0 || controller.sending;
-}
-
-function resolveContextFollowLabel(
-  props: Pick<Parameters<typeof FolioleAideReadyContent>[0], 'activeNodeId' | 'controller' | 'nodesById'>,
-  t: ReturnType<typeof useTranslation>
-) {
-  if (!props.controller.followCurrentMaterial)
-    return t('desktop.rightPanel.assistant.followCurrentMaterial');
-  const title = props.activeNodeId ? props.nodesById[props.activeNodeId]?.title.trim() : '';
-  return t('desktop.rightPanel.assistant.followingCurrentMaterial', {
-    title: title || t('desktop.rightPanel.assistant.location.workspace')
-  });
 }
 
 function AssistantMaterialTags(props: Pick<Parameters<typeof FolioleAideReadyContent>[0],

@@ -13,6 +13,9 @@ export function readOptionalWorkspaceContext(value: unknown): NativeAssistantWor
     schemaVersion: 1,
     scope: context.scope
   };
+  if (Array.isArray(context.conversationMaterials)) {
+    next.conversationMaterials = context.conversationMaterials.map(readConversationMaterial);
+  }
   if (typeof context.activeNodeId === 'string') next.activeNodeId = context.activeNodeId.slice(0, 200);
   if (typeof context.activeParentNodeId === 'string') next.activeParentNodeId = context.activeParentNodeId.slice(0, 200);
   if (typeof context.activeKind === 'string') next.activeKind = context.activeKind.slice(0, 80);
@@ -116,4 +119,14 @@ function readBodyStatus(value: unknown): AssistantBodyStatus {
   if (value === 'empty' || value === 'failed' || value === 'fetching' || value === 'missing' || value === 'ready')
     return value;
   throw new Error('invalid_workspace_body_status');
+}
+
+
+function readConversationMaterial(value: unknown) {
+  if (!value || typeof value !== 'object') throw new Error('invalid_conversation_material');
+  const { nodeId, title } = value as Record<string, unknown>;
+  if (typeof nodeId !== 'string' || !nodeId.trim() || typeof title !== 'string') {
+    throw new Error('invalid_conversation_material');
+  }
+  return { nodeId, title: title.slice(0, 300) };
 }

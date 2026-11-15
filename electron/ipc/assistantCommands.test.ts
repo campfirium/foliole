@@ -70,6 +70,10 @@ afterEach(async () => {
     await expect(
       handleAssistantCommand(NATIVE_COMMANDS.assistantSendMessage, {
         message: 'Prompt body',
+        workspaceContext: {
+          scope: 'node', activeNodeId: 'node-1',
+          conversationMaterials: [{ nodeId: 'node-1', title: 'First material' }]
+        },
         openingLocation: { nodeId: 'node-1', type: 'node' }
       })
     ).resolves.toMatchObject({
@@ -82,6 +86,12 @@ afterEach(async () => {
       }
     });
 
+    expect(adapterSendMessage).toHaveBeenCalledWith(expect.objectContaining({
+      workspaceContext: expect.objectContaining({
+        activeNodeId: 'node-1',
+        conversationMaterials: [{ nodeId: 'node-1', title: 'First material' }]
+      })
+    }));
     await expect(
       handleAssistantCommand(NATIVE_COMMANDS.assistantListThreadIndex, {
         location: { nodeId: 'node-1', type: 'node' }

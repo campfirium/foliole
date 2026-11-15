@@ -107,29 +107,6 @@ test('Aide exposes a return-to-latest control after reading earlier content', as
   await expect(returnButton).toBeHidden();
 });
 
-test('Aide omits current material after the follow switch is turned off', async ({
-  desktopApp,
-  desktopWindow
-}) => {
-  await desktopWindow.evaluate(() => {
-    localStorage.setItem('foliole-workspace-right-sidebar-active-panel', 'assistant');
-    localStorage.setItem('foliole-aide-enabled', 'true');
-    localStorage.removeItem('foliole-aide-follow-current-material');
-  });
-  await desktopWindow.reload();
-  await installAssistantIpcMock(desktopApp);
-  await openAssistantPanel(desktopWindow);
-
-  const followSwitch = desktopWindow.getByRole('switch', { name: /Following:|正在跟随：/ });
-  await expect(followSwitch).toHaveAttribute('aria-checked', 'true');
-  await followSwitch.click();
-  await expect(desktopWindow.getByRole('switch', { name: /Follow current material|跟随当前材料/ }))
-    .toHaveAttribute('aria-checked', 'false');
-  await desktopWindow.getByLabel(/^(Foliole Aide message|Foliole Aide 消息)$/).fill('No context');
-  await desktopWindow.getByRole('button', { name: /^(Send|发送)$/ }).click();
-  await expect(desktopWindow.getByText('focus:absent')).toBeVisible();
-});
-
 async function openAssistantPanel(page: Page) {
   const directButton = page.getByRole('button', { name: /Foliole Aide.*panel|Foliole Aide面板/ });
   const moreButton = page.getByRole('button', { name: /^(More right sidebar panels|更多右侧栏面板)$/ });

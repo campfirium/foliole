@@ -31,7 +31,7 @@ beforeEach(() => {
   assistantRuntime.subscribeAssistantTurnEvents.mockReturnValue(() => undefined);
 });
 
-it('continues a workspace thread while using the visible topic as context', async () => {
+it('continues a workspace thread without sending an unrelated visible topic', async () => {
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
     createThread({ location: { type: 'workspace' } })
   ]);
@@ -59,17 +59,13 @@ it('continues a workspace thread while using the visible topic as context', asyn
         message: 'Follow-up',
         openingLocation: { type: 'workspace' },
         providerThreadId: 'thread-1',
-        workspaceContext: expect.objectContaining({
-          activeNodeId: 'node-1',
-          activeTitle: 'Topic',
-          scope: 'node'
-        })
+        workspaceContext: { schemaVersion: 1, scope: 'workspace' }
       })
     )
   );
 });
 
-it('continues a node thread while keeping the current main panel as context', async () => {
+it('continues a node thread with its linked material and no unrelated focus', async () => {
   const onSelectNode = vi.fn();
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
     createThread({ location: { nodeId: 'node-2', type: 'node' } })
@@ -104,17 +100,13 @@ it('continues a node thread while keeping the current main panel as context', as
         message: 'Follow-up',
         openingLocation: { nodeId: 'node-2', type: 'node' },
         providerThreadId: 'thread-1',
-        workspaceContext: expect.objectContaining({
-          activeNodeId: 'node-1',
-          activeTitle: 'Current topic',
-          scope: 'node'
-        })
+        workspaceContext: { schemaVersion: 1, scope: 'workspace', conversationMaterials: [{ nodeId: 'node-2', title: 'Saved topic' }] }
       })
     )
   );
 });
 
-it('continues an unavailable topic thread with the visible main panel context', async () => {
+it('continues an unavailable topic thread without projecting unrelated material', async () => {
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([
     createThread({ location: { nodeId: 'missing-topic', type: 'node' } })
   ]);
@@ -140,20 +132,13 @@ it('continues an unavailable topic thread with the visible main panel context', 
     expect(assistantRuntime.sendAssistantMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         openingLocation: { nodeId: 'missing-topic', type: 'node' },
-        workspaceContext: {
-          activeKind: 'topic',
-          activeNodeId: 'node-1',
-          activeTitle: 'Current topic',
-          path: ['Current topic'],
-          schemaVersion: 1,
-          scope: 'node'
-        }
+        workspaceContext: { schemaVersion: 1, scope: 'workspace' }
       })
     )
   );
 });
 
-it('starts an unlinked thread while retaining folder context', async () => {
+it('starts an unlinked thread from a folder without material focus', async () => {
   assistantRuntime.listAssistantThreadIndex.mockResolvedValueOnce([]);
   assistantRuntime.sendAssistantMessage.mockResolvedValueOnce({
     message: { text: 'Folder answer', threadId: 'thread-folder', turnId: 'turn-1' },
@@ -183,12 +168,7 @@ it('starts an unlinked thread while retaining folder context', async () => {
       expect.objectContaining({
         message: 'Summarize this folder',
         openingLocation: { type: 'workspace' },
-        workspaceContext: expect.objectContaining({
-          activeKind: 'folder',
-          activeNodeId: 'folder-1',
-          activeTitle: 'Folder',
-          scope: 'node'
-        })
+        workspaceContext: { schemaVersion: 1, scope: 'workspace' }
       })
     )
   );

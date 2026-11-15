@@ -5,14 +5,10 @@ import type { ClipboardEvent, DragEvent, FormEvent, KeyboardEvent, ReactNode, Re
 import type { NativeAssistantImageDraft } from '../../../lib/platform/nativeAssistantImageContract';
 import { AppIconButton } from '../../shared/ui';
 
-import { WorkspaceRightSidebarAssistantContextFollowControl } from './WorkspaceRightSidebarAssistantContextFollowControl';
 import { WorkspaceRightSidebarAssistantImageStrip } from './WorkspaceRightSidebarAssistantImageStrip';
 
 type AssistantComposerProps = {
   attachImageLabel?: string;
-  contextFollowDescription: string;
-  contextFollowEnabled: boolean;
-  contextFollowLabel: string;
   inputLabel: string;
   inputRef?: RefObject<HTMLTextAreaElement | null>;
   imageErrorText?: string | null;
@@ -22,7 +18,6 @@ type AssistantComposerProps = {
   onAddImageFiles?: (files: File[]) => void;
   onMessageTextChange: (text: string) => void;
   onRemoveImage?: (index: number) => void;
-  onToggleContextFollow: () => void;
   onSubmit: (event: FormEvent) => void;
   placeholder: string;
   removeImageLabel?: string;
@@ -70,12 +65,6 @@ function AssistantComposerActions(props: {
   const composer = props.props;
   return <div className="flex items-center justify-between gap-2">
     <div className="flex min-w-0 items-center gap-1">
-      <WorkspaceRightSidebarAssistantContextFollowControl
-        description={composer.contextFollowDescription}
-        enabled={composer.contextFollowEnabled}
-        label={composer.contextFollowLabel}
-        onToggle={composer.onToggleContextFollow}
-      />
       <AppIconButton
         className="size-7 text-foreground/55"
         icon={<ImagePlus aria-hidden className="size-4" strokeWidth={1.8} />}

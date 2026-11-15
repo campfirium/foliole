@@ -6,7 +6,6 @@ import type {
   NativeAssistantProviderId,
   NativeAssistantSendMessageResult,
   NativeAssistantThreadIndexRecord,
-  NativeAssistantWorkspaceContext
 } from '../../../lib/platform/nativeAssistantContract';
 import type { NativeAssistantImageDraft } from '../../../lib/platform/nativeAssistantImageContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
@@ -34,13 +33,11 @@ type AssistantSubmitPanelArgs = {
   outcomeUncertainText: string;
   nodesById: Record<string, Node>;
   onCapabilityFailure: (provider: NativeAssistantProviderId, category: NativeAssistantFailureCategory) => void;
-  workspaceContextOverride?: NativeAssistantWorkspaceContext | undefined;
 };
 
 type AssistantSubmitState = {
   activeTurnRef: { current: AssistantActiveTurn | null };
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
-  followCurrentMaterial: boolean;
   imageDrafts: NativeAssistantImageDraft[];
   location: ReturnType<typeof resolveAssistantLocation>;
   linkedMaterialIds: string[];
@@ -96,6 +93,7 @@ function createHandleSubmit(args: SubmitHandlerArgs) {
         {
           ...args,
           openingLocation,
+          savedMaterialIds: args.selectedRecord?.linkedMaterialIds,
           linkedMaterialIds: args.selectedRecord ? [] : args.linkedMaterialIds,
           editorAdapterRef: args.editorAdapterRef,
           selectedThreadId: args.threads.selectedThreadId

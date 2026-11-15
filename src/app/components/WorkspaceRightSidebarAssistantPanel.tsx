@@ -1,4 +1,3 @@
-import type { NativeAssistantWorkspaceContext } from '../../../lib/platform/nativeAssistantContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
@@ -18,7 +17,6 @@ export function WorkspaceRightSidebarAssistantPanel(props: {
   trashedNodeIds?: readonly string[] | undefined;
   onOpenModelSettings?: () => void;
   onSelectNode: (nodeId: string) => void;
-  workspaceContextOverride?: NativeAssistantWorkspaceContext | undefined;
 }) {
   const t = useTranslation();
   const capability = useFolioleAideCapability();

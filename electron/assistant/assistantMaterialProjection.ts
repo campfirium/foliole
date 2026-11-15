@@ -8,6 +8,7 @@ export function formatAideMaterialProjection(context: NativeAssistantWorkspaceCo
     ...(context.activeParentNodeId ? [`- Active Foliole parent material id: ${context.activeParentNodeId}.`] : []),
     ...(context.activeTitle ? [`- Active title: ${context.activeTitle}.`] : []),
     ...(context.path?.length ? [`- Active path: ${context.path.join(' / ')}.`] : []),
+    ...formatConversationMaterials(context),
     ...formatScopeGuidance(context, true),
     ...formatAnchorContext(context),
     ...formatDocumentContext(context),
@@ -35,13 +36,25 @@ export function formatToolFreeMaterialProjection(context?: NativeAssistantWorksp
   ].join('\n');
 }
 
+function formatConversationMaterials(context: NativeAssistantWorkspaceContext) {
+  if (!context.conversationMaterials?.length) return [];
+  return [
+    '- Materials linked to this conversation (title and Foliole ID):',
+    ...context.conversationMaterials.map(material => `  - ${JSON.stringify(material)}`),
+    context.activeNodeId
+      ? '- In this turn, “this material” refers to the active Foliole material ID above.'
+      : '- No linked material is currently open. Resolve references from explicit titles or earlier turns; ask before editing if the target remains ambiguous.',
+    '- Read linked material by ID with read_material when its contents are needed and that tool is available.'
+  ];
+}
+
 function formatScopeGuidance(context: NativeAssistantWorkspaceContext, codex: boolean) {
   const lines = codex
     ? ['- Treat this packet as the current Foliole working context, not as the development repository context.']
     : ['- Treat this as the current Foliole material, not as development repository context.'];
   if (context.scope === 'node') {
     lines.push('- By default, answer as if the user is asking about the active Foliole topic or folder unless they name a broader scope.');
-  } else {
+  } else if (!context.conversationMaterials?.length) {
     lines.push('- By default, answer as if the user is asking about the Foliole workspace as a whole.');
   }
   if (context.selection) {

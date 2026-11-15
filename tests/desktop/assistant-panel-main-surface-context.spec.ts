@@ -39,7 +39,7 @@ const existingThread = {
   updatedAt: '2026-07-07T00:00:00.000Z'
 };
 
-test('Aide continues a saved thread with the visible main panel as current context', async ({
+test('Aide continues a saved thread without using unrelated surfaces as material focus', async ({
   desktopApp,
   desktopWindow
 }, testInfo) => {
@@ -66,10 +66,7 @@ test('Aide continues a saved thread with the visible main panel as current conte
       args: expect.objectContaining({
         openingLocation: { type: 'workspace' },
         providerThreadId: 'thread-main-surface',
-        workspaceContext: expect.objectContaining({
-          activeTitle: currentTitle.trim(),
-          scope: 'node'
-        })
+        workspaceContext: { schemaVersion: 1, scope: 'workspace' }
       }),
       command: 'assistant_send_message'
     })
@@ -105,13 +102,7 @@ async function verifyVirtualReference(desktopApp: ElectronApplication, desktopWi
   const virtualRequest = (await getAssistantSendRequests(desktopApp))[1];
   expect(virtualRequest).toMatchObject({
     args: {
-      workspaceContext: {
-        activeKind: 'folder',
-        activeNodeId: 'special-virtual-shelved',
-        activeTitle: (await virtualRow.innerText()).trim(),
-        schemaVersion: 1,
-        scope: 'node'
-      }
+      workspaceContext: { schemaVersion: 1, scope: 'workspace' }
     }
   });
   expect((virtualRequest?.args as { workspaceContext: unknown }).workspaceContext).not.toHaveProperty('folder');

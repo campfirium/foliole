@@ -65,3 +65,16 @@ it('labels parent-folder entries as nearby directory siblings', () => {
   expect(input).toContain('Topic A [topic, id=topic-a, active]');
   expect(input).toContain('Topic B [topic, id=topic-b]: Neighbor');
 });
+
+it('gives the agent linked article IDs and distinguishes an open linked article', () => {
+  const conversationMaterials = [{ nodeId: 'a', title: 'Draft A' }, { nodeId: 'b', title: 'Draft B' }];
+  const focused = composeAssistantTurnInput('Shorten this', {
+    activeNodeId: 'b', scope: 'node', conversationMaterials
+  });
+  expect(JSON.stringify(focused)).toContain('this material');
+  expect(JSON.stringify(focused)).toContain('Draft A');
+  expect(JSON.stringify(focused)).toContain('Draft B');
+  expect(JSON.stringify(focused)).toContain('Active Foliole material id: b');
+  const unfocused = composeAssistantTurnInput('Compare both', { scope: 'workspace', conversationMaterials });
+  expect(JSON.stringify(unfocused)).toContain('No linked material is currently open');
+});

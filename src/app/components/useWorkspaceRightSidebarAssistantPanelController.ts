@@ -4,15 +4,13 @@ import type {
   NativeAssistantFailureCategory,
   NativeAssistantProviderId,
   NativeAssistantThreadIndexRecord,
-  NativeAssistantThreadOpeningLocation,
-  NativeAssistantWorkspaceContext
+  NativeAssistantThreadOpeningLocation
 } from '../../../lib/platform/nativeAssistantContract';
 import type { NativeAssistantImageDraft } from '../../../lib/platform/nativeAssistantImageContract';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
 import { useAssistantMaterialLinks } from './useAssistantMaterialLinks';
 import { useAssistantTurnEventSubscription, type AssistantActiveTurn } from './useAssistantTurnEventSubscription';
-import { useFolioleAideContextFollow } from './useFolioleAideContextFollow';
 import { useFolioleAideModelControls } from './useFolioleAideModelControls';
 import { useWorkspaceRightSidebarAssistantThreadMessages } from './useWorkspaceRightSidebarAssistantThreadMessages';
 import { useWorkspaceRightSidebarAssistantThreads } from './useWorkspaceRightSidebarAssistantThreads';
@@ -52,7 +50,6 @@ type AssistantPanelControllerArgs = {
   onSelectNode: (nodeId: string) => void;
   topicUnavailableText: string;
   selectedProvider: NativeAssistantProviderId;
-  workspaceContextOverride?: NativeAssistantWorkspaceContext | undefined;
 };
 
 export function useWorkspaceRightSidebarAssistantPanelController(args: AssistantPanelControllerArgs) {
@@ -67,7 +64,6 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
   const [messagesByThread, dispatchCache] = useReducer(messageCacheReducer, {});
   const [sending, setSending] = useState(false);
   const [pendingLocation, setPendingLocation] = useState<NativeAssistantThreadOpeningLocation | null>(null);
-  const [followCurrentMaterial, setFollowCurrentMaterial] = useFolioleAideContextFollow();
   const modelControls = useFolioleAideModelControls(args.aideReady && args.codexReady);
   const activeTurnRef = useRef<AssistantActiveTurn | null>(null);
   const activeMessages = messagesByThread[threads.selectedThreadId ?? PENDING_THREAD_KEY] ?? [];
@@ -100,7 +96,6 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
     materialLinks,
     pendingLocation,
     setPendingLocation,
-    followCurrentMaterial,
     imageState,
     location,
     messageText,
@@ -108,7 +103,6 @@ export function useWorkspaceRightSidebarAssistantPanelController(args: Assistant
     selectedRecord,
     sending,
     setMessageText,
-    setFollowCurrentMaterial,
     setSending,
     threadMessageStatus,
     threads
@@ -151,14 +145,12 @@ type ControllerResultInput = {
   pendingLocation: NativeAssistantThreadOpeningLocation | null;
   setPendingLocation: (location: NativeAssistantThreadOpeningLocation | null) => void;
   dispatchCache: (action: Parameters<typeof messageCacheReducer>[1]) => void;
-  followCurrentMaterial: boolean;
   imageState: ReturnType<typeof useAssistantImageDraftState>;
   location: ReturnType<typeof resolveAssistantLocation>;
   messageText: string;
   modelControls: ReturnType<typeof useFolioleAideModelControls>;
   selectedRecord: NativeAssistantThreadIndexRecord | null;
   sending: boolean;
-  setFollowCurrentMaterial: (value: boolean) => void;
   setMessageText: (value: string) => void;
   setSending: (value: boolean) => void;
   threadMessageStatus: ReturnType<typeof useWorkspaceRightSidebarAssistantThreadMessages>;
@@ -171,7 +163,6 @@ function createPanelControllerResult(input: ControllerResultInput) {
     activeMessages: input.activeMessages,
     addImageFiles: imageState.addImageFiles,
     editMessage: imageState.editMessage,
-    followCurrentMaterial: input.followCurrentMaterial,
     handleNewThread: () => {
       imageState.reset();
       input.materialLinks.reset();
@@ -210,7 +201,6 @@ function createPanelControllerResult(input: ControllerResultInput) {
       args.topicUnavailableText
     ),
     sending: input.sending,
-    setFollowCurrentMaterial: input.setFollowCurrentMaterial,
     setMessageText: input.setMessageText,
     threadError: threads.error,
     threadMessageStatus: input.threadMessageStatus
@@ -228,7 +218,6 @@ function createControllerSubmitHandler(input: ControllerResultInput) {
   }, {
     activeTurnRef: input.activeTurnRef,
     dispatchCache: input.dispatchCache,
-    followCurrentMaterial: input.followCurrentMaterial,
     imageDrafts: imageState.imageDrafts,
     location: input.location,
     pendingLocation: input.pendingLocation,
