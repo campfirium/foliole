@@ -65,6 +65,7 @@ function renderListColumns(
         side="left"
         unavailable={args.isListCollapsed || Boolean(args.compactSidebars?.leftFloating)}
         aria-hidden={args.isListCollapsed}
+        data-workspace-tier-splitter="left"
         className="col-start-2 row-start-1 flex min-w-0 overflow-visible max-[1080px]:hidden"
         key="list-splitter"
       >
@@ -84,6 +85,7 @@ function renderRightSidebarColumns(
     <WorkspaceSidebarFocusBoundary
       side="right" unavailable={args.isImmersiveMode || args.isRightSidebarCollapsed || Boolean(args.compactSidebars?.rightFloating)}
       aria-hidden={args.isRightSidebarCollapsed}
+      data-workspace-tier-splitter="right"
       className="col-start-4 row-start-1 hidden min-w-0 overflow-visible xl:flex"
       key="right-sidebar-splitter"
       style={args.isImmersiveMode ? { display: 'none' } : undefined}

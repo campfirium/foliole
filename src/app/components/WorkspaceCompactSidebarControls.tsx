@@ -17,7 +17,7 @@ export function WorkspaceCompactSidebarBackdrop({ sidebars }: { sidebars: Compac
   useWorkspaceSidebarHover(sidebars, edgeRef);
   return (
     <>
-      {sidebars.hoverEnabled && (sidebars.leftFloating || sidebars.rightFloating) && (
+      {(sidebars.edgeHoverEnabled ?? sidebars.hoverEnabled) && (sidebars.leftFloating || sidebars.rightFloating) && (
         <span ref={edgeRef} hidden />
       )}
       {sidebars.openSide && !sidebars.isHoverOpen && (

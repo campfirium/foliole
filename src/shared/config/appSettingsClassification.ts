@@ -144,6 +144,7 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'externalDocumentLastOpenedAt',
   'listCollapsed',
   'listWidth',
+  'sidebarLayoutTiers',
   'dualListWidth',
   'workspaceDiveSectionTitle',
   'virtualSectionHeight',

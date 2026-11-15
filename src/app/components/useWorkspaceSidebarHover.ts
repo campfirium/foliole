@@ -8,10 +8,10 @@ const CLOSE_DELAY = 180;
 
 function readEdge(event: PointerEvent, grid: HTMLElement, leftFloating: boolean, rightFloating: boolean) {
   const scroller = grid.querySelector<HTMLElement>('.pdf-document-scroll-container');
-  if (!scroller) return null;
-  const bounds = scroller.getBoundingClientRect();
-  if (event.clientY < bounds.top || event.clientY >= bounds.top + scroller.clientHeight) return null;
-  if (event.clientX >= bounds.left + scroller.clientWidth && event.clientX < bounds.right) return null;
+  const surface = scroller ?? grid;
+  const bounds = surface.getBoundingClientRect();
+  if (event.clientY < bounds.top || event.clientY >= bounds.top + surface.clientHeight) return null;
+  if (scroller && event.clientX >= bounds.left + scroller.clientWidth && event.clientX < bounds.right) return null;
   const width = window.innerWidth;
   const zone = width * EDGE_FRACTION;
   if (leftFloating && event.clientX >= 0 && event.clientX < zone) return 'left';
@@ -20,10 +20,10 @@ function readEdge(event: PointerEvent, grid: HTMLElement, leftFloating: boolean,
 }
 
 export function useWorkspaceSidebarHover(sidebars: CompactWorkspaceSidebars, edgeRef: RefObject<HTMLElement | null>) {
-  const { dismiss, hoverEnabled, isHoverOpen, leftFloating, openOnHover, openSide, rightFloating } = sidebars;
+  const { dismiss, edgeHoverEnabled = sidebars.hoverEnabled, isHoverOpen, leftFloating, openOnHover, openSide, rightFloating } = sidebars;
   useEffect(() => {
     const grid = edgeRef.current?.parentElement;
-    if (!hoverEnabled || !grid || !openOnHover || (openSide && !isHoverOpen)) return;
+    if (!edgeHoverEnabled || !grid || !openOnHover || (openSide && !isHoverOpen)) return;
 
     let timer: number | undefined;
     let pending: WorkspaceSidebarSide | 'close' | null = null;
@@ -73,5 +73,5 @@ export function useWorkspaceSidebarHover(sidebars: CompactWorkspaceSidebars, edg
       document.documentElement.removeEventListener('pointerleave', leave);
       window.removeEventListener('blur', leave);
     };
-  }, [dismiss, edgeRef, hoverEnabled, isHoverOpen, leftFloating, openOnHover, openSide, rightFloating]);
+  }, [dismiss, edgeRef, edgeHoverEnabled, isHoverOpen, leftFloating, openOnHover, openSide, rightFloating]);
 }

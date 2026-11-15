@@ -3,6 +3,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { onWindowEscape } from '../../shared/platform/keyboard';
 import type { WorkspaceLayoutChromeProps } from '../components/workspaceLayoutPropGroups';
 
+import { useActiveSidebarTier } from './useActiveSidebarTier';
+import { useTierSidebarResize } from './useTierSidebarResize';
+
 export function hasOpenSidebarMenu() {
   return Boolean(document.querySelector('[role="menu"]:not([hidden]):not([data-state="closed"])'));
 }
@@ -15,6 +18,8 @@ export interface CompactWorkspaceSidebars {
   openSide: WorkspaceSidebarSide | null;
   dismiss: () => void;
   hoverEnabled?: boolean;
+  tiered?: boolean;
+  edgeHoverEnabled?: boolean;
   dockedListCollapsed?: boolean;
   dockedRightCollapsed?: boolean;
   isHoverOpen?: boolean;
@@ -31,9 +36,8 @@ function readFloatingSidebars() {
   };
 }
 
-function useFloatingSidebarState(isImmersiveMode: boolean, pdfWidth: number) {
+function useFloatingSidebarState(isImmersiveMode: boolean, measureWindow: boolean, tiered: boolean) {
   const [floating, setFloating] = useState(readFloatingSidebars);
-  const measureWindow = pdfWidth > 0;
   const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
   useEffect(() => {
     if (!measureWindow) return;
@@ -50,15 +54,16 @@ function useFloatingSidebarState(isImmersiveMode: boolean, pdfWidth: number) {
   }, []);
   const openOnHover = useCallback((side: WorkspaceSidebarSide) => setHoverSide(side), []);
   useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return;
+    if (tiered || typeof window.matchMedia !== 'function') return;
     const queries = ['(max-width: 1080px)', '(max-width: 1279px)'].map((query) => window.matchMedia(query));
     const update = () => {
       setFloating(readFloatingSidebars());
       dismiss();
     };
+    setFloating(readFloatingSidebars());
     queries.forEach((query) => query.addEventListener('change', update));
     return () => queries.forEach((query) => query.removeEventListener('change', update));
-  }, [dismiss]);
+  }, [dismiss, tiered]);
   useEffect(() => {
     if (isImmersiveMode) dismiss();
   }, [dismiss, isImmersiveMode]);
@@ -88,18 +93,54 @@ function resolveFloatingSidebars(
   };
 }
 
+function projectSidebarTier(chrome: WorkspaceLayoutChromeProps, rules: ReturnType<typeof useActiveSidebarTier>, width: number, resize: ReturnType<typeof useTierSidebarResize>): WorkspaceLayoutChromeProps {
+  if (!rules.tier) return chrome;
+  return {
+    ...chrome,
+    listWidth: width * (resize.draft?.side === 'left' ? resize.draft.width : rules.tier.left.width) / 100,
+    rightSidebarWidth: width * (resize.draft?.side === 'right' ? resize.draft.width : rules.tier.right.width) / 100,
+    onSplitterPointerDown: event => resize.start('left', event),
+    onSplitterKeyDown: event => resize.keyDown('left', event),
+    onRightSidebarSplitterPointerDown: event => resize.start('right', event),
+    onRightSidebarSplitterKeyDown: event => resize.keyDown('right', event),
+    isListCollapsed: rules.left !== 'dock',
+    isRightSidebarCollapsed: rules.right !== 'dock'
+  };
+}
+
 export function useCompactWorkspaceSidebars(chrome: WorkspaceLayoutChromeProps, pdfWidth = 0): WorkspaceLayoutChromeProps {
-  const state = useFloatingSidebarState(chrome.isImmersiveMode, pdfWidth);
-  const floating = resolveFloatingSidebars(chrome, state.floating, pdfWidth, state.windowWidth);
+  const rules = useActiveSidebarTier();
+  const active = rules.tier;
+  const state = useFloatingSidebarState(chrome.isImmersiveMode, pdfWidth > 0 || Boolean(active), Boolean(active));
+  const bodyWidth = Math.max(0, state.windowWidth - 40);
+  const resize = useTierSidebarResize(active, bodyWidth);
+  const projected = projectSidebarTier(chrome, rules, bodyWidth, resize);
+  const preferredFloating = active ? {
+    leftFloating: rules.left === 'edge',
+    rightFloating: rules.right === 'edge'
+  } : state.floating;
+  const pdfFloating = resolveFloatingSidebars(projected, preferredFloating, pdfWidth, state.windowWidth);
+  const floating = active ? {
+    leftFloating: rules.left !== 'closed' && pdfFloating.leftFloating,
+    rightFloating: rules.right !== 'closed' && pdfFloating.rightFloating
+  } : pdfFloating;
   const { dismiss, setOpenSide } = state;
   const hoverEnabled = pdfWidth > 0 && !chrome.isImmersiveMode;
-  const requestedSide = state.openSide ?? (hoverEnabled ? state.hoverSide : null);
+  const edgeHoverEnabled = Boolean(active) || hoverEnabled;
+  const requestedSide = state.openSide ?? (edgeHoverEnabled ? state.hoverSide : null);
+  const tierId = active?.id;
+  useEffect(() => { dismiss(); }, [dismiss, tierId]);
   const openSide = (requestedSide === 'left' && floating.leftFloating) ||
     (requestedSide === 'right' && floating.rightFloating) ? requestedSide : null;
   useEffect(() => {
-    if ((!hoverEnabled && state.hoverSide) || (requestedSide && !openSide)) dismiss();
-  }, [dismiss, hoverEnabled, openSide, requestedSide, state.hoverSide]);
+    if ((!edgeHoverEnabled && state.hoverSide) || (requestedSide && !openSide)) dismiss();
+  }, [dismiss, edgeHoverEnabled, openSide, requestedSide, state.hoverSide]);
   const toggle = (side: WorkspaceSidebarSide, dockedToggle: () => void) => {
+    if (active) {
+      dismiss();
+      rules.toggle(side);
+      return;
+    }
     if (side === 'left' ? floating.leftFloating : floating.rightFloating) {
       dismiss();
       setOpenSide(openSide === side && state.openSide ? null : side);
@@ -109,15 +150,18 @@ export function useCompactWorkspaceSidebars(chrome: WorkspaceLayoutChromeProps, 
     }
   };
   return {
-    ...chrome,
-    compactSidebars: { ...floating, openSide, dismiss, hoverEnabled, dockedListCollapsed: chrome.isListCollapsed,
-      dockedRightCollapsed: chrome.isRightSidebarCollapsed, isHoverOpen: Boolean(openSide && !state.openSide), openOnHover: state.openOnHover },
-    isListCollapsed: floating.leftFloating ? openSide !== 'left' : chrome.isListCollapsed,
-    isRightSidebarCollapsed: floating.rightFloating ? openSide !== 'right' : chrome.isRightSidebarCollapsed,
+    ...projected,
+    compactSidebars: { ...floating, openSide, dismiss, hoverEnabled, tiered: Boolean(active), edgeHoverEnabled, dockedListCollapsed: projected.isListCollapsed,
+      dockedRightCollapsed: projected.isRightSidebarCollapsed, isHoverOpen: Boolean(openSide && !state.openSide), openOnHover: state.openOnHover },
+    isListCollapsed: floating.leftFloating ? openSide !== 'left' : projected.isListCollapsed,
+    isRightSidebarCollapsed: floating.rightFloating ? openSide !== 'right' : projected.isRightSidebarCollapsed,
     onToggleListVisibility: () => toggle('left', chrome.onToggleListVisibility),
     onToggleRightSidebarVisibility: () => toggle('right', chrome.onToggleRightSidebarVisibility),
     onToggleBothSidebarVisibility: () => {
-      if (floating.leftFloating && openSide) dismiss();
+      if (active) {
+        dismiss();
+        rules.toggleBoth();
+      } else if (floating.leftFloating && openSide) dismiss();
       else if (floating.leftFloating) setOpenSide('left');
       else if (floating.rightFloating) toggle('right', chrome.onToggleRightSidebarVisibility);
       else chrome.onToggleBothSidebarVisibility();

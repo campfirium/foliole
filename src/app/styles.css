@@ -246,7 +246,7 @@
     --document-content-inline-padding: 1rem;
   }
 
-  .workspace-responsive-shell {
+  .workspace-responsive-shell:not([data-sidebar-tiers]) {
     --window-titlebar-left-width: var(--workspace-rail-width) !important;
     --workspace-list-current-width: 0px !important;
     --workspace-list-folder-current-width: 0px !important;
@@ -255,7 +255,7 @@
     --workspace-titlebar-list-current-width: 0px !important;
   }
 
-  .workspace-responsive-shell .window-titlebar {
+  .workspace-responsive-shell:not([data-sidebar-tiers]) .window-titlebar {
     --window-titlebar-left-width: var(--workspace-rail-width) !important;
     --workspace-titlebar-folder-column-width: 0px !important;
     --workspace-titlebar-list-current-width: 0px !important;
@@ -263,17 +263,17 @@
 }
 
 @media (max-width: 1279px) {
-  .workspace-responsive-shell {
+  .workspace-responsive-shell:not([data-sidebar-tiers]) {
     --window-titlebar-right-width: calc(var(--window-titlebar-controls-width, 138px) + var(--workspace-rail-width)) !important;
     --workspace-right-sidebar-current-width: 0px !important;
     --workspace-right-sidebar-splitter-width: 0px !important;
   }
 
-  .workspace-responsive-shell .window-titlebar-right-anchor-shell {
+  .workspace-responsive-shell:not([data-sidebar-tiers]) .window-titlebar-right-anchor-shell {
     display: block;
   }
 
-  .workspace-responsive-shell .window-titlebar {
+  .workspace-responsive-shell:not([data-sidebar-tiers]) .window-titlebar {
     --window-titlebar-right-width: calc(var(--window-titlebar-controls-width, 138px) + var(--workspace-rail-width)) !important;
     --workspace-right-sidebar-current-width: 0px !important;
   }

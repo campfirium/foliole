@@ -142,7 +142,7 @@ function WorkspaceMainContent(props: WorkspaceLayoutProps) {
   });
 
   return (
-    <main data-pdf-top-bars-floating={pdfTopBars.floating} data-pdf-top-bars-visible={pdfTopBars.visible} data-pdf-sidebar-hover={layoutChrome.compactSidebars?.hoverEnabled} aria-label={t('desktop.workspace.main')} data-floating-sidebar={layoutChrome.compactSidebars?.openSide ?? undefined} className="workspace-responsive-shell relative flex h-dvh flex-col overflow-hidden p-0" style={buildWorkspaceGridStyle(layoutChrome)}>
+    <main data-sidebar-tiers={layoutChrome.compactSidebars?.tiered || undefined} data-pdf-top-bars-floating={pdfTopBars.floating} data-pdf-top-bars-visible={pdfTopBars.visible} data-pdf-sidebar-hover={layoutChrome.compactSidebars?.hoverEnabled} aria-label={t('desktop.workspace.main')} data-floating-sidebar={layoutChrome.compactSidebars?.openSide ?? undefined} className="workspace-responsive-shell relative flex h-dvh flex-col overflow-hidden p-0" style={buildWorkspaceGridStyle(layoutChrome)}>
       <PdfWindowChrome isImmersiveMode={layoutChrome.isImmersiveMode} sidebarHoverEnabled={Boolean(layoutChrome.compactSidebars?.hoverEnabled)} leftSidebarVisible={!layoutChrome.isListCollapsed} />
       <WorkspaceMainChrome
         activeRightPanelId={activeRightPanelId}

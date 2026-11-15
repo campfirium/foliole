@@ -135,6 +135,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   externalDocumentLastOpenedAt: 'foliole-external-document-last-opened-at',
   listCollapsed: 'foliole-workspace-list-collapsed',
   listWidth: 'foliole-workspace-list-width',
+  sidebarLayoutTiers: 'foliole-workspace-sidebar-layout-tiers',
   workspaceDiveSectionTitle: 'foliole-workspace-dive-section-title',
   dualListWidth: 'foliole-workspace-dual-list-width',
   virtualSectionHeight: 'foliole-workspace-virtual-section-height',

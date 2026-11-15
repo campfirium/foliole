@@ -160,3 +160,30 @@
 .workspace-responsive-shell:has(.workspace-floating-sidebar-right[data-pdf-sidebar-overlay][aria-hidden='true']) .window-titlebar-right-anchor-shell {
   visibility: hidden;
 }
+
+[data-sidebar-tiers] :is([data-workspace-document-grid], [data-workspace-footer-tracks]:not([data-pdf-review-layout])) {
+  grid-template-columns:
+    var(--workspace-list-current-width)
+    var(--workspace-list-splitter-width)
+    minmax(0, 1fr)
+    var(--workspace-right-sidebar-splitter-width)
+    var(--workspace-right-sidebar-current-width);
+}
+
+[data-sidebar-tiers] [data-workspace-document-grid] > [data-workspace-document-focus-target],
+[data-sidebar-tiers] [data-workspace-footer-tracks]:not([data-pdf-review-layout]) > .workspace-footer-document {
+  grid-column-start: 3;
+}
+
+[data-sidebar-tiers] :is([data-workspace-side-column], [data-workspace-tier-splitter]):not([hidden]) {
+  display: flex;
+}
+
+[data-sidebar-tiers] [data-workspace-tier-splitter][aria-hidden='true'] {
+  display: none;
+}
+
+[data-sidebar-tiers] [data-workspace-tier-splitter] > [role='separator'],
+[data-sidebar-tiers] :is([data-workspace-tier-divider], [data-workspace-surface-divider], .window-titlebar-right-zone):not([hidden]) {
+  display: flex;
+}
