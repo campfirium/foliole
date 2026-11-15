@@ -76,6 +76,7 @@
   "companion.reading.outline.emptyDescription": "Tutaj pojawią się nagłówki oraz powiązane tematy i elementy.",
   "companion.reading.previousTopic": "Poprzedni temat",
   "companion.selection.copyText": "Kopiuj tekst",
+  "companion.selection.selectParagraph": "Zaznacz akapit",
   "companion.selection.copyError": "Nie udało się skopiować tekstu. Spróbuj ponownie.",
   "companion.reading.shareArticle": "Udostępnij artykuł",
   "companion.reading.articleHandoffUnavailable": "Żadna aplikacja nie może otworzyć artykułu lub artykuł nie zawiera dostępnego tekstu.",

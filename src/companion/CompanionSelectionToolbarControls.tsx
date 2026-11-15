@@ -8,7 +8,7 @@ import { appFloatingSurfaceClassName, AppButton, appInputFocusVisibleClassName }
 
 import { suppressCompanionPressClick } from './companionPressClickSuppression';
 import type { CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
-import { CompanionSelectionCopyMenu } from './CompanionSelectionCopyMenu';
+import { CompanionSelectionMoreMenu } from './CompanionSelectionMoreMenu';
 
 function ToolbarButton(props: {
   children: JSX.Element;
@@ -103,6 +103,7 @@ export function CompanionSelectionToolbarActions(props: {
   isCloze?: boolean;
   disabled?: boolean | undefined;
   getCopyText?: () => string;
+  onSelectParagraph?: (() => void) | undefined;
   onCopied?: () => void;
   onAddNote: () => void;
   onApply: (kind: CompanionSelectionAnnotationKind) => void;
@@ -111,14 +112,13 @@ export function CompanionSelectionToolbarActions(props: {
 }) {
   const t = useTranslation();
   const toolbarRef = useRef<HTMLDivElement>(null);
-  const [copyMenu, setCopyMenu] = useState<{ left: number; top: number; text: string } | null>(null);
-  function toggleCopyMenu() {
-    if (copyMenu) { setCopyMenu(null); return; }
+  const [moreMenu, setMoreMenu] = useState<{ rect: DOMRect; text: string } | null>(null);
+  function toggleMoreMenu() {
+    if (moreMenu) { setMoreMenu(null); return; }
     const rect = toolbarRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setCopyMenu({
-      left: Math.max(8, Math.min(rect.right - 188, window.innerWidth - 196)),
-      top: rect.bottom + 100 < window.innerHeight ? rect.bottom + 4 : Math.max(8, rect.top - 100),
+    setMoreMenu({
+      rect,
       text: props.getCopyText?.() ?? ''
     });
   }
@@ -133,7 +133,7 @@ export function CompanionSelectionToolbarActions(props: {
           <Highlighter aria-hidden="true" size={19} strokeWidth={2} />
         </ToolbarButton>
       )}
-      {props.isCloze ? null : <ToolbarButton disabled={props.disabled} label={t('companion.selection.addComment')} onClick={() => { setCopyMenu(null); props.onAddNote(); }} testId="companion-selection-note">
+      {props.isCloze ? null : <ToolbarButton disabled={props.disabled} label={t('companion.selection.addComment')} onClick={() => { setMoreMenu(null); props.onAddNote(); }} testId="companion-selection-note">
         <MessageSquare aria-hidden="true" size={19} strokeWidth={2} />
       </ToolbarButton>}
       {props.isExistingHighlight ? null : (
@@ -144,10 +144,12 @@ export function CompanionSelectionToolbarActions(props: {
       {props.isExistingHighlight && props.onOpenExistingHighlight ? <ToolbarButton disabled={props.disabled} label={t('desktop.highlightToolbar.open')} onClick={props.onOpenExistingHighlight}>
         <CornerDownRight aria-hidden="true" size={19} strokeWidth={2} />
       </ToolbarButton> : null}
-      <ToolbarButton disabled={props.disabled} label={t('companion.selection.more')} onClick={toggleCopyMenu}>
+      <ToolbarButton disabled={props.disabled} label={t('companion.selection.more')} onClick={toggleMoreMenu}>
         <MoreHorizontal aria-hidden="true" size={19} strokeWidth={2} />
       </ToolbarButton>
-      {copyMenu ? <CompanionSelectionCopyMenu {...copyMenu} onCopied={() => { setCopyMenu(null); props.onCopied?.(); }} /> : null}
+      {moreMenu ? <CompanionSelectionMoreMenu {...moreMenu}
+        onSelectParagraph={props.onSelectParagraph ? () => { props.onSelectParagraph?.(); setMoreMenu(null); } : undefined}
+        onCopied={() => { setMoreMenu(null); props.onCopied?.(); }} /> : null}
     </div>
   );
 }

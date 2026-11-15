@@ -1,9 +1,9 @@
 import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
+import { resolveCurrentParagraphSelection } from '../../features/editor/model/readingParagraphs';
 import { getSelectionCommandPayloadForRanges } from '../contextCommands';
 
-import { resolveCurrentParagraphSelection } from './immersiveReadingModel';
 
 interface ImmersiveSelectionPayloadSource {
   activeNodeId: string | null;

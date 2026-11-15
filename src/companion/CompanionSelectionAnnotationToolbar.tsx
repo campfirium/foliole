@@ -38,6 +38,8 @@ interface CompanionSelectionAnnotationToolbarProps {
   onOpenExistingHighlight?: ((nodeId: string) => void) | undefined;
   onDeleteExistingHighlight: (nodeId: string, guard?: CompanionHighlightReadGuard) => Promise<void> | void;
   loadExistingHighlight?: ((nodeId: string) => Promise<CompanionHighlightRead>) | undefined;
+  onSelectParagraph?: (() => void) | undefined;
+  getExpandedParagraphText?: (() => string | undefined) | undefined;
   resolveSelectionPayload?: () => SelectionCommandPayload | null;
   state: CompanionSelectionAnnotationToolbarState | null;
 }
@@ -58,6 +60,8 @@ export function CompanionSelectionAnnotationToolbar(props: CompanionSelectionAnn
 
 function resolveCopyText(props: CompanionSelectionAnnotationToolbarProps) {
   if (props.state?.existingHighlight) return props.state.existingHighlight.originalText;
+  const paragraphText = props.getExpandedParagraphText?.();
+  if (paragraphText !== undefined) return paragraphText;
   if (getDevanagariSelectionMode() && props.editor?.getDocumentPositionAtDomPoint) {
     return window.getSelection()?.toString() ?? '';
   }
@@ -70,7 +74,7 @@ function useSelectionNote(props: CompanionSelectionAnnotationToolbarProps) {
   const [selection, setSelection] = useState<SelectionCommandPayload | null>(null);
   return { draft, setDraft, isOpen, selection,
     open() {
-      if (!props.state?.existingHighlight && getDevanagariSelectionMode()) {
+      if (!props.state?.existingHighlight) {
         const payload = resolveApplyPayload(props);
         if (!payload) return;
         setSelection(payload);
@@ -124,6 +128,7 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
         status={creation.error ? <CreationStatus creation={creation} /> : null} /> : null}
       {!hideDeletedControls ? <CompanionSelectionToolbarActions isExistingHighlight={isExistingHighlight} isCloze={state.existingHighlight?.kind === 'cloze'} disabled={disabled}
         getCopyText={() => resolveCopyText(props)}
+        onSelectParagraph={!isExistingHighlight && props.editor?.setNativeSelection ? props.onSelectParagraph : undefined}
         onCopied={props.onClose} onAddNote={note.open} onApply={creation.apply} onDeleteExistingHighlight={deleteExistingHighlight}
         onOpenExistingHighlight={props.onOpenExistingHighlight ? () => {
           if (!state.existingHighlight || disabled) return;

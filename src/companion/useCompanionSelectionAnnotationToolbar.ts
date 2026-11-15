@@ -17,6 +17,7 @@ import {
   type CompanionSelectionClientPoint
 } from './companionSelectionToolbarState';
 import { useCompanionSelectionAnnotationDocumentEvents } from './useCompanionSelectionAnnotationDocumentEvents';
+import { useCompanionSelectReadingParagraph } from './useCompanionSelectReadingParagraph';
 
 import type { EditorAdapter } from '@/features/editor/adapters/EditorAdapter';
 function useCompanionSelectionAnnotationOpenHandler(args: {
@@ -112,19 +113,6 @@ function useCompanionSelectionAnnotationScheduler(args: {
   };
 }
 
-function useSelectionPayloadResolver(args: {
-  editorRef: MutableRefObject<EditorAdapter | null>;
-  lastPayloadRef: MutableRefObject<CompanionSelectionAnnotationToolbarState['payload']>;
-  nodeId: string;
-}) {
-  const { editorRef, lastPayloadRef, nodeId } = args;
-  return useCallback(() => resolveCompanionSelectionCommandPayload(
-    nodeId,
-    editorRef.current,
-    lastPayloadRef.current
-  ), [editorRef, lastPayloadRef, nodeId]);
-}
-
 function useClearSelectionAndCloseToolbar(args: {
   editorRef: MutableRefObject<EditorAdapter | null>;
   lastPayloadRef: MutableRefObject<CompanionSelectionAnnotationToolbarState['payload']>;
@@ -199,8 +187,9 @@ export function useCompanionSelectionAnnotationToolbar(props: {
     editorRef.current = adapter;
   }, []);
   const clearSelectionAndCloseToolbar = useClearSelectionAndCloseToolbar({ editorRef, lastPayloadRef, scheduler, setSelectionToolbar });
-  const resolveSelectionPayload = useSelectionPayloadResolver({ editorRef, lastPayloadRef, nodeId: props.nodeId });
-
+  const selectionActions = useCompanionSelectReadingParagraph({
+    ...props, editorRef, lastPayloadRef, setSelectionToolbar, scheduler
+  });
   const openSelectionToolbar = useCompanionSelectionAnnotationOpenHandler({
     canCreateAnnotation: props.canCreateAnnotation,
     ...scheduler,
@@ -229,7 +218,7 @@ export function useCompanionSelectionAnnotationToolbar(props: {
     editorRef,
     handleEditorReady,
     openSelectionToolbar,
-    resolveSelectionPayload,
+    ...selectionActions,
     selectionToolbar,
     setSelectionToolbar
   };

@@ -43,6 +43,13 @@ function getReadableDomSelection() {
 }
 
 function getDomSelectionRanges(adapter: EditorAdapter, selection: Selection): EditorSelection[] {
+  if (adapter.getDocumentPositionAtDomPoint && selection.anchorNode && selection.focusNode && selection.rangeCount === 1) {
+    const anchor = adapter.getDocumentPositionAtDomPoint(selection.anchorNode, selection.anchorOffset);
+    const focus = adapter.getDocumentPositionAtDomPoint(selection.focusNode, selection.focusOffset);
+    if (anchor !== null && focus !== null && anchor !== focus) {
+      return [{ from: Math.min(anchor, focus), to: Math.max(anchor, focus) }];
+    }
+  }
   const selectedText = selection.toString().trim();
   const rectRanges = Array.from({ length: selection.rangeCount }, (_, index) => {
     const rects = selection.getRangeAt(index).getClientRects();

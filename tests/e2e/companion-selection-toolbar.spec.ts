@@ -19,6 +19,14 @@ async function openReader(page: Page, theme: string) {
   await expect(page.getByRole('toolbar')).toBeVisible();
 }
 
+async function useBuiltCompanionStyles(page: Page) {
+  const directory = path.resolve('dist/companion/assets');
+  const stylesheet = readdirSync(directory).find(name => /^index-.*\.css$/.test(name));
+  if (!stylesheet) throw new Error('Run npm run android:web:build before this test.');
+  await page.locator('style').evaluateAll(styles => styles.forEach(style => style.remove()));
+  await page.addStyleTag({ content: readFileSync(path.join(directory, stylesheet), 'utf8') });
+}
+
 async function expectFlatSurface(surface: Locator) {
   await expect(surface).toBeVisible();
   const style = await surface.evaluate(element => {
@@ -34,11 +42,7 @@ test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true
 
 test('dark reading selection uses an RGB background that older WebViews can paint', async ({ page }) => {
   await openReader(page, 'dark');
-  const directory = path.resolve('dist/companion/assets');
-  const stylesheet = readdirSync(directory).find(name => /^index-.*\.css$/.test(name));
-  if (!stylesheet) throw new Error('Run npm run android:web:build before this test.');
-  await page.locator('style').evaluateAll(styles => styles.forEach(style => style.remove()));
-  await page.addStyleTag({ content: readFileSync(path.join(directory, stylesheet), 'utf8') });
+  await useBuiltCompanionStyles(page);
 
   const selection = await page.evaluate(() => {
     const selection = window.getSelection()!;
@@ -73,5 +77,26 @@ for (const theme of ['light', 'dark']) {
     await expect(note).toHaveValue('');
     await page.getByRole('button', { name: 'Clear selection', exact: true }).click();
     await expect(page.getByRole('toolbar')).toBeHidden();
+  });
+}
+
+for (const viewport of [{ width: 320, height: 568 }, { width: 568, height: 320 }]) {
+  test(`expands the reading selection through More at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await openReader(page, 'light');
+    await useBuiltCompanionStyles(page);
+    await page.addStyleTag({ content: 'html { font-size: 125%; }' });
+    await page.getByRole('button', { name: 'More' }).tap();
+    const menu = page.getByRole('menu');
+    await expect(menu).toBeInViewport({ ratio: 1 });
+    await expect(menu.getByRole('menuitem', { name: 'Copy text' })).toBeInViewport({ ratio: 1 });
+    expect(await menu.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await menu.getByRole('menuitem', { name: 'Select paragraph' }).tap();
+    await expect(menu).toBeHidden();
+    await expect(page.getByRole('toolbar')).toBeInViewport({ ratio: 1 });
+    await expect.poll(() => page.evaluate(() => window.getSelection()?.toString()))
+      .toBe('Select this passage and keep the remaining text readable.');
+    await page.getByRole('button', { name: 'Highlight' }).tap();
+    await expect(page.getByLabel('Saved annotation')).toHaveText('Select this passage and keep the remaining text readable.');
   });
 }

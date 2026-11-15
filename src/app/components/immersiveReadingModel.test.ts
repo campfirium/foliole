@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { getParagraphSelections, resolveCurrentParagraphSelection, resolveParagraphSelection } from './immersiveReadingModel';
+import { getParagraphSelections, resolveCurrentParagraphSelection, resolveParagraphSelection } from '../../features/editor/model/readingParagraphs';
 
 it('collects paragraph ranges separated by blank lines', () => {
   expect(getParagraphSelections('Alpha line\nstill alpha\n\nBeta\n\n  \nGamma')).toEqual([

@@ -38,6 +38,14 @@ export abstract class CodeMirrorEditorNavigation {
   }
   getSelection(): EditorSelection { return toEditorPrimarySelection(this.view.state.selection); }
   getSelectionRanges(): EditorSelection[] { return toEditorSelectionRanges(this.view.state.selection); }
+  setNativeSelection(selection: EditorSelection) {
+    this.setSelection(selection);
+    const native = this.view.contentDOM.ownerDocument.getSelection();
+    if (!native) return;
+    const start = this.view.domAtPos(selection.from, 1);
+    const end = this.view.domAtPos(selection.to, -1);
+    native.setBaseAndExtent(start.node, start.offset, end.node, end.offset);
+  }
   setSelection(selection: EditorSelection) { this.setSelectionRanges([selection]); }
   setSelectionRanges(selections: EditorSelection[]) {
     setCodeMirrorSelectionRanges(this.view, selections, (position) => this.clampPosition(position));

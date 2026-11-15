@@ -1,10 +1,10 @@
+import { resolveCurrentParagraphSelection, resolveParagraphSelection } from '../../features/editor/model/readingParagraphs';
 import { matchesShortcutSet } from '../../shared/commands/shortcuts';
 import type { CommandShortcutSet } from '../../shared/commands/types';
 
 import { isImmersiveEditableElement, isImmersiveEscapeKey } from './immersiveReadingKeyboard';
 import type { ImmersiveKeydownSource } from './immersiveReadingKeydownTypes';
 import { blurImmersiveActiveElement, clearParagraphMarker } from './immersiveReadingMarker';
-import { resolveCurrentParagraphSelection, resolveParagraphSelection } from './immersiveReadingModel';
 import { runImmersiveSelectionAction } from './immersiveReadingSelectionActions';
 import { revealSelectionForImmersiveBand, shouldRevealSelectionInImmersiveBand } from './immersiveReadingViewportBand';
 

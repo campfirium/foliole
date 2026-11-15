@@ -16,6 +16,7 @@ export function CompanionArticleSelectionLayer({ articleProps: props, toolbar, p
     onActivateExistingHighlight={toolbar.activateCreatedHighlight}
     onOpenExistingHighlight={props.onOpenExistingHighlight} snapshot={props.snapshot}
     onClose={toolbar.clearSelectionAndCloseToolbar} resolveSelectionPayload={toolbar.resolveSelectionPayload}
+    onSelectParagraph={toolbar.selectReadingParagraph} getExpandedParagraphText={toolbar.getExpandedParagraphText}
     state={toolbar.selectionToolbar} {...definedProps({
       onAddExistingHighlightNote: props.onAddExistingHighlightNote,
       onAdjustExistingHighlightRange: props.onAdjustExistingHighlightRange ? adjustExistingHighlightRange : undefined,

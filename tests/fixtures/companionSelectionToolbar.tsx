@@ -18,7 +18,8 @@ function Reader() {
       content={'# Selection test\n\nSelect this passage and keep the remaining text readable.'}
       onEditorReady={toolbar.handleEditorReady} />
     <output aria-label="Saved annotation">{saved}</output>
-    <CompanionSelectionAnnotationToolbar state={toolbar.selectionToolbar}
+    <CompanionSelectionAnnotationToolbar editor={toolbar.editorRef.current} state={toolbar.selectionToolbar}
+      onSelectParagraph={toolbar.selectReadingParagraph} getExpandedParagraphText={toolbar.getExpandedParagraphText}
       onClose={toolbar.clearSelectionAndCloseToolbar} resolveSelectionPayload={toolbar.resolveSelectionPayload}
       onApply={async (_kind, payload) => { setSaved(payload.selectionText); }}
       onAddExistingHighlightNote={() => {}} onDeleteExistingHighlight={() => {}} />

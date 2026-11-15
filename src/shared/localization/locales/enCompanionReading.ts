@@ -74,6 +74,7 @@ export const EN_COMPANION_READING_TRANSLATIONS = {
   'companion.reading.alternative.setting': 'Setting...',
   'companion.reading.alternative.error': 'This text version could not be updated. Try again.',
   'companion.selection.copyText': 'Copy text',
+  'companion.selection.selectParagraph': 'Select paragraph',
   'companion.selection.copyError': 'Could not copy text. Try again.',
   'companion.selection.loading': 'Loading annotation…',
   'companion.selection.loadError': 'This annotation could not be loaded.',

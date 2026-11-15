@@ -91,6 +91,7 @@ export interface EditorAdapter {
   getSelection(): EditorSelection;
   getSelectionRanges(): EditorSelection[];
   revealSelection(selection: EditorSelection, options?: EditorRevealOptions): void;
+  setNativeSelection?(selection: EditorSelection): void;
   setSelection(selection: EditorSelection): void;
   setSelectionRanges(selections: EditorSelection[]): void;
   getLineBlockHeight(lineNumber: number): number;

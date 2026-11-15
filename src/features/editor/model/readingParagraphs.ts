@@ -1,10 +1,11 @@
-import { collectMarkdownImageReferences } from '../../../lib/core/import/markdownImageReferences';
-import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import { collectMarkdownImageReferences } from '../../../../lib/core/import/markdownImageReferences';
+import type { EditorSelection } from '../adapters/EditorAdapter';
+
 import {
   collectMarkdownLineClassRanges,
   collectMarkdownThematicBreakRanges
-} from '../../features/editor/model/markdownBlockProjection';
-import { collectMarkdownCodeFenceProjection } from '../../features/editor/model/markdownCodeFenceProjection';
+} from './markdownBlockProjection';
+import { collectMarkdownCodeFenceProjection } from './markdownCodeFenceProjection';
 
 function buildLineRanges(content: string) {
   const lines: Array<{ blank: boolean; end: number; start: number; text: string }> = [];
@@ -173,6 +174,11 @@ function isSameSelection(left: EditorSelection, right: EditorSelection) {
 
 function findContainingParagraphIndex(paragraphs: EditorSelection[], selection: EditorSelection) {
   return paragraphs.findIndex((paragraph) => selection.from >= paragraph.from && selection.to <= paragraph.to);
+}
+
+export function findContainingReadingParagraph(content: string, selection: EditorSelection): EditorSelection | null {
+  const paragraphs = getParagraphSelections(content);
+  return paragraphs[findContainingParagraphIndex(paragraphs, selection)] ?? null;
 }
 
 export function resolveCurrentParagraphSelection(content: string, currentSelection: EditorSelection): EditorSelection | null {

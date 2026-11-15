@@ -28,6 +28,8 @@ export function SelectionAnnotationToolbarLayer(props: {
     note?: string
   ) => Promise<string | null> | string | null;
   onDeleteExistingHighlight?: (nodeId: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
+  onSelectParagraph?: () => void;
+  getExpandedParagraphText?: () => string | undefined;
   resolveSelectionPayload: () => SelectionCommandPayload | null;
   state: CompanionSelectionAnnotationToolbarState | null;
   snapshot: WorkspaceSnapshot | null;
@@ -57,6 +59,7 @@ export function SelectionAnnotationToolbarLayer(props: {
         const result = await props.onDeleteExistingHighlight?.(nodeId, guard);
         if (!result) throw new Error('companion_highlight_node_unavailable');
       }}
+      onSelectParagraph={props.onSelectParagraph} getExpandedParagraphText={props.getExpandedParagraphText}
       resolveSelectionPayload={props.resolveSelectionPayload}
       loadExistingHighlight={(nodeId) => readCompanionHighlight(props.snapshot, nodeId, props.state?.existingHighlight?.kind)}
       state={state}

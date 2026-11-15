@@ -1,14 +1,14 @@
-import { Copy } from 'lucide-react';
+import { Copy, Pilcrow } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { writeClipboardText } from '../shared/platform/companion/runtime/textClipboard';
 import { AppSelectionDropdownMenuItem, appFloatingSurfaceClassName } from '../shared/ui';
 
-export function CompanionSelectionCopyMenu(props: {
-  left: number;
-  top: number;
+export function CompanionSelectionMoreMenu(props: {
+  rect: DOMRect;
   text: string;
+  onSelectParagraph?: (() => void) | undefined;
   onCopied: () => void;
 }) {
   const t = useTranslation();
@@ -32,12 +32,24 @@ export function CompanionSelectionCopyMenu(props: {
       if (mounted.current) setCopying(false);
     }
   }
-  return <div className={`${appFloatingSurfaceClassName('popover')} fixed z-dropdown w-[188px] p-1`}
-    role="menu" style={{ left: props.left, top: props.top }}>
+  const { rect } = props;
+  const below = Math.max(0, window.innerHeight - rect.bottom - 12);
+  const above = Math.max(0, rect.top - 12);
+  const openBelow = below >= 112 || below >= above;
+  return <div className={`${appFloatingSurfaceClassName('popover')} fixed z-dropdown w-[188px] max-w-[calc(100vw-16px)] overflow-y-auto p-1`}
+    role="menu" style={{
+      left: Math.max(8, Math.min(rect.right - 188, window.innerWidth - 196)),
+      maxHeight: openBelow ? below : above,
+      ...(openBelow ? { top: rect.bottom + 4 } : { bottom: window.innerHeight - rect.top + 4 })
+    }}>
     <AppSelectionDropdownMenuItem disabled={copying || !props.text} onClick={() => { void copy(); }}>
       <Copy aria-hidden="true" size={16} />
       {t('companion.selection.copyText')}
     </AppSelectionDropdownMenuItem>
+    {props.onSelectParagraph ? <AppSelectionDropdownMenuItem disabled={copying} onClick={props.onSelectParagraph}>
+      <Pilcrow aria-hidden="true" size={16} />
+      {t('companion.selection.selectParagraph')}
+    </AppSelectionDropdownMenuItem> : null}
     {failed ? <p className="px-2 py-1 text-ui-sm text-destructive" role="alert">{t('companion.selection.copyError')}</p> : null}
   </div>;
 }

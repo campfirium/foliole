@@ -2,10 +2,10 @@ import type { MutableRefObject } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorSelection } from '../../features/editor/adapters/EditorAdapter';
+import { resolveCurrentParagraphSelection } from '../../features/editor/model/readingParagraphs';
 import { pushDebugTrace } from '../../shared/diagnostics/debugTrace';
 import type { NodeViewState } from '../../store/workspaceStore';
 
-import { resolveCurrentParagraphSelection } from './immersiveReadingModel';
 
 type ImmersiveEditorRef = MutableRefObject<EditorAdapter | null>;
 
