@@ -1,5 +1,4 @@
-import { Globe } from 'lucide-react';
-
+import folioleLeafUrl from '../../../../../assets/brand/foliole-leaf-outline.svg?url';
 import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
 import { openFolioleReleaseLink } from '../../../../shared/platform/releaseLinks';
@@ -28,7 +27,12 @@ function QuickLinksBlock({ onRunSupportCommand }: SettingsSupportSectionProps) {
       description={communityRow.description}
     >
       <SettingsControlSlot className="flex-wrap">
-        <SettingsSupportButton icon={Globe} onRunAction={() => void openFolioleReleaseLink('homepage')}>
+        <SettingsSupportButton onRunAction={() => void openFolioleReleaseLink('homepage')}>
+          <span
+            aria-hidden="true"
+            className="size-4 shrink-0 bg-settings-icon-active"
+            style={{ mask: `url("${folioleLeafUrl}") center / contain no-repeat` }}
+          />
           Homepage
         </SettingsSupportButton>
         <SettingsSupportButton
