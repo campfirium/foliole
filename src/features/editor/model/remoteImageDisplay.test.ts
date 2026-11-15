@@ -10,8 +10,8 @@ describe('resolveImageDisplay', () => {
     expect(resolveImageDisplay('block', { height: 200, width: 200 })).toBe('block');
   });
 
-  it('preserves provisional layout for unknown size and explicit width', () => {
+  it('keeps large images in block layout after saving a width', () => {
     expect(resolveImageDisplay('inline', null)).toBe('inline');
-    expect(resolveImageDisplay('inline', { height: 900, width: 1200 }, 268)).toBe('inline');
+    expect(resolveImageDisplay('inline', { height: 900, width: 1200 }, 268)).toBe('block');
   });
 });

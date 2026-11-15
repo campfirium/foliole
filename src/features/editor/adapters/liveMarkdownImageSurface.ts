@@ -41,7 +41,6 @@ export function createImageSurface(
     }),
     previewAlt: imageMatch.alt,
     previewPresentation: imagePresentation,
-    previewSource: source,
     to: imageMatch.to
   });
   if (!imageMatch.attachmentId && editorNodeId && /^https?:\/\//u.test(imageMatch.source)) {

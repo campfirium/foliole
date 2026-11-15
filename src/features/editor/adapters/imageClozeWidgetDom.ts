@@ -22,7 +22,7 @@ function hasWholeImageHighlight(presentation: ImageClozeEditorPresentation | nul
   );
 }
 
-function createImagePreviewTrigger(args: { alt: string; presentation: ImageClozeEditorPresentation | null; source: string }) {
+function createImagePreviewTrigger(args: { alt: string; image: HTMLImageElement; presentation: ImageClozeEditorPresentation | null }) {
   const label = translate(getStoredAppLocale(), 'desktop.editorPreview.openImage');
   const button = document.createElement('button');
   button.className =
@@ -40,7 +40,8 @@ function createImagePreviewTrigger(args: { alt: string; presentation: ImageCloze
   button.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
-    dispatchMarkdownImagePreviewRequest(button, { alt: args.alt, presentation: args.presentation, src: args.source });
+    const src = args.image.currentSrc || args.image.getAttribute('src');
+    if (src) dispatchMarkdownImagePreviewRequest(button, { alt: args.alt, presentation: args.presentation, src });
   });
   return button;
 }
@@ -123,7 +124,6 @@ export function createImageClozeImageSurface(args: {
   from: number;
   previewAlt: string;
   previewPresentation: ImageClozeEditorPresentation | null;
-  previewSource: string;
   renderImage: () => HTMLImageElement;
   to: number;
 }) {
@@ -132,9 +132,7 @@ export function createImageClozeImageSurface(args: {
   wrapper.append(image);
   const regionLayer = createSavedRegionLayer(args.presentation ?? null);
   wrapper.append(regionLayer);
-  if (args.display === 'block') {
-    wrapper.append(createImagePreviewTrigger({ alt: args.previewAlt, presentation: args.previewPresentation, source: args.previewSource }));
-  }
+  wrapper.append(createImagePreviewTrigger({ alt: args.previewAlt, image, presentation: args.previewPresentation }));
   focusImageRegionInViewport(wrapper, args.presentation ?? null);
   if (!args.attachmentId) {
     return wrapper;

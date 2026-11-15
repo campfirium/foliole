@@ -36,8 +36,7 @@ function createResizeHandle() {
 }
 
 export function attachMarkdownImageResize(wrapper: HTMLElement, view: EditorView, imageMatch: MarkdownImageMatch) {
-  if (imageMatch.display !== 'block') return;
-  const surface = wrapper.querySelector<HTMLElement>('.cm-md-image-surface-block');
+  const surface = wrapper.querySelector<HTMLElement>('.cm-md-image-surface:not(.cm-md-image-surface-loading)');
   if (!surface) return;
   const handle = createResizeHandle();
   let drag: { pointerId: number; startWidth: number; startX: number } | null = null;

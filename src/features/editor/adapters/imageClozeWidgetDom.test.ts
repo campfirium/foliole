@@ -37,7 +37,6 @@ function createSurface() {
     },
     previewAlt: 'Demo image',
     previewPresentation: null,
-    previewSource: 'https://example.com/demo.png',
     to: 30
   });
   return surface;

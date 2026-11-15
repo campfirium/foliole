@@ -36,6 +36,7 @@ function showRemoteImageFailure(args: {
   imageMatch: MarkdownImageMatch;
   isActive: () => boolean;
   onRemoveImage: (() => void) | null;
+  onSurfaceReady: (() => void) | null;
   requestMeasure: RequestEditorMeasure;
   wrapper: HTMLElement;
 }) {
@@ -44,7 +45,7 @@ function showRemoteImageFailure(args: {
     if (!args.isActive()) return;
     appendLoadingImageSurface(
       args.wrapper, args.imageMatch, args.editorNodeId, args.requestMeasure, args.onRemoveImage,
-      args.activeContext, `${Date.now()}-${Math.random().toString(36).slice(2)}`
+      args.onSurfaceReady, args.activeContext, `${Date.now()}-${Math.random().toString(36).slice(2)}`
     );
   };
   args.wrapper.replaceChildren(createRemoteImageFailureStatus({
@@ -54,7 +55,7 @@ function showRemoteImageFailure(args: {
     onRetry: retry,
     onSourceContextChanged: () => {
       if (args.isActive()) appendLoadingImageSurface(
-        args.wrapper, args.imageMatch, args.editorNodeId, args.requestMeasure, args.onRemoveImage
+        args.wrapper, args.imageMatch, args.editorNodeId, args.requestMeasure, args.onRemoveImage, args.onSurfaceReady
       );
     },
     requestMeasure: args.requestMeasure,
@@ -69,6 +70,7 @@ function appendLoadingImageSurface(
   editorNodeId: string | null,
   requestMeasure: RequestEditorMeasure,
   onRemoveImage: (() => void) | null,
+  onSurfaceReady: (() => void) | null,
   existingContext?: RemoteImageSourceContextState,
   retryKey: string | null = null
 ) {
@@ -82,7 +84,7 @@ function appendLoadingImageSurface(
       const activeContext = sourceContext;
       if (!activeContext) return;
       showRemoteImageFailure({
-        activeContext, editorNodeId, imageMatch, isActive, onRemoveImage, requestMeasure, wrapper
+        activeContext, editorNodeId, imageMatch, isActive, onRemoveImage, onSurfaceReady, requestMeasure, wrapper
       });
     },
     onLoad: () => {
@@ -90,6 +92,7 @@ function appendLoadingImageSurface(
       revealLoadedMarkdownImageSurface(surface);
       wrapper.replaceChildren(surface);
       finalizeLoadedMarkdownImageDisplay(wrapper, imageMatch, requestMeasure);
+      onSurfaceReady?.();
       if (editorNodeId) reportRemoteImageDisplayed(surface, editorNodeId, imageMatch.source);
     },
     requestMeasure
@@ -142,7 +145,8 @@ export function createMarkdownImageWidgetDom(
       imageMatch,
       editorNodeId,
       requestMeasure,
-      onRemoveImage
+      onRemoveImage,
+      onSurfaceReady
     );
     return wrapper;
   }

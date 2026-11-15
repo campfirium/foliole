@@ -36,6 +36,15 @@ test('keeps inline images one line high as reading font size changes', async ({ 
     expect(geometry.lineHeight).toBe(fontSize);
     expect(geometry.height).toBeCloseTo(geometry.lineHeight, 1);
   }
+  await widget.locator('.cm-md-image-surface').hover();
+  await expect(widget.locator('.cm-md-image-resize-handle')).toBeHidden();
+  await widget.locator('.cm-md-image-preview-trigger').click();
+  const dialog = desktopWindow.getByRole('dialog');
+  const preview = dialog.getByRole('img', { name: 'Inline' });
+  await expect(preview).toBeVisible();
+  await expect.poll(() => preview.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(24);
+  await dialog.getByRole('button').click();
+  await expect(dialog).toHaveCount(0);
   expect((await loadNodeDocument(desktopWindow, nodeId))?.content).toBe(content);
   const screenshot = path.resolve('.tmp/artifacts/T680/inline-image-line-height.png');
   await fs.mkdir(path.dirname(screenshot), { recursive: true });

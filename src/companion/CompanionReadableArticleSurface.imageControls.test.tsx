@@ -118,7 +118,14 @@ describe('reading image controls', () => {
     const style = document.createElement('style');
     style.textContent = '.cm-md-image-preview-trigger { opacity: 0; pointer-events: none; }\n' + readFileSync('src/companion/companionImageControls.css', 'utf8');
     document.head.append(style);
-    readableArticleDocumentMock.mockImplementation(() => <div className="cm-md-image-surface"><button className="cm-md-image-preview-trigger">Open image preview</button></div>);
+    readableArticleDocumentMock.mockImplementation(() => <>
+      <div className="cm-md-image-surface cm-md-image-surface-block">
+        <button className="cm-md-image-preview-trigger">Open image preview</button>
+      </div>
+      <div className="cm-md-image-surface cm-md-image-surface-inline">
+        <button className="cm-md-image-preview-trigger" data-testid="inline-preview">Open inline image preview</button>
+      </div>
+    </>);
     try {
       const article = <ImmersiveReadableArticle onExit={vi.fn()} readableArticle={createReadableArticle()} snapshot={null} />;
       const view = render(article);
@@ -128,6 +135,7 @@ describe('reading image controls', () => {
       chromeVisible = true;
       view.rerender(<ImmersiveReadableArticle onExit={vi.fn()} readableArticle={createReadableArticle()} snapshot={null} />);
       expect(getComputedStyle(trigger).opacity).toBe('1');
+      expect(view.getByTestId('inline-preview')).not.toBeVisible();
       expect(getComputedStyle(trigger).pointerEvents).toBe('auto');
       chromeVisible = false;
       view.rerender(<ImmersiveReadableArticle onExit={vi.fn()} readableArticle={createReadableArticle()} snapshot={null} />);

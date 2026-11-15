@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { REMOTE_IMAGE_PROTOCOL_SCHEME } from '../../../../lib/platform/remoteImageProtocolUrl';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
+import { MARKDOWN_IMAGE_PREVIEW_EVENT } from '../model/markdownImagePreview';
 import { resetRemoteImageFailureHintDismissalForTests } from '../model/remoteImageFailureHintSetting';
 
 const demoRuntimeMock = vi.hoisted(() => ({
@@ -88,6 +89,16 @@ async function runLargeMetadataSlotCase() {
     expect(host.querySelector('.cm-md-image-status')).toBeNull();
   });
   expect(host.querySelector('.cm-md-image-surface-loading')).not.toBeNull();
+  const handlePreview = vi.fn();
+  host.addEventListener(MARKDOWN_IMAGE_PREVIEW_EVENT, handlePreview);
+  const image = getRemoteImage(host)!;
+  image.dispatchEvent(new Event('load'));
+
+  (host.querySelector('.cm-md-image-preview-trigger') as HTMLButtonElement).click();
+
+  expect(handlePreview).toHaveBeenCalledOnce();
+  expect(handlePreview.mock.calls[0]?.[0].detail).toMatchObject({ alt: 'Remote', src: image.src });
+  expect(host.querySelector('.cm-md-image-resize-handle')).not.toBeNull();
   adapter.destroy();
 }
 

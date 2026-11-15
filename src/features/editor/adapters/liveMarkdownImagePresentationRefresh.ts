@@ -14,10 +14,14 @@ export function refreshMarkdownImageWidgetPresentation(
   if (!surface || !image || surface.classList.contains('cm-md-image-surface-loading')) return false;
 
   const style = surface.style.cssText;
-  const nextSurface = createImageSurface(imageMatch, image.getAttribute('src') ?? '', editorNodeId, {
+  const display = widget.classList.contains('cm-md-image-widget-block') ? 'block' : 'inline';
+  const nextSurface = createImageSurface({ ...imageMatch, display }, image.getAttribute('src') ?? '', editorNodeId, {
     existingImage: image
   });
   nextSurface.style.cssText = style;
+  if (surface.dataset.mdImageFinalDisplay) {
+    nextSurface.dataset.mdImageFinalDisplay = surface.dataset.mdImageFinalDisplay;
+  }
   disposeImageExcerptRegionInteractions(surface);
   disposeRemoteImageOnDemandLocalization(surface);
   widget.replaceChildren(nextSurface);

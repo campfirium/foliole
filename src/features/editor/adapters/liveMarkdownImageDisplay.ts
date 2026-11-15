@@ -12,8 +12,7 @@ function fitBlockImageWidth(width: number, size: ImageIntrinsicSize) {
   return `min(${width}px, calc(var(--editor-image-max-height, ${width / ratio}px) * ${ratio}))`;
 }
 
-function applyIntrinsicSlot(surface: HTMLElement | null, display: MarkdownImageMatch['display'], size: ImageIntrinsicSize) {
-  if (!surface) return;
+function applyIntrinsicSlot(surface: HTMLElement, display: MarkdownImageMatch['display'], size: ImageIntrinsicSize) {
   surface.style.aspectRatio = `${size.width} / ${size.height}`;
   if (display === 'inline') {
     surface.style.height = '1lh';
@@ -31,26 +30,23 @@ export function finalizeMarkdownImageDisplay(
   requestMeasure: (() => void) | null
 ) {
   const display = resolveImageDisplay(imageMatch.display, size, imageMatch.displayWidth);
-  if (widget.dataset.mdImageFinalDisplay) return;
+  const surface = widget.querySelector<HTMLElement>('.cm-md-image-surface');
+  if (!surface || surface.dataset.mdImageFinalDisplay) return;
+  surface.dataset.mdImageFinalDisplay = display;
   widget.dataset.mdImageFinalDisplay = display;
   widget.dataset.mdImageDisplay = display;
   replaceDisplayClass(widget, 'cm-md-image-widget', display);
-  const surface = widget.querySelector<HTMLElement>('.cm-md-image-surface');
-  if (surface) {
-    replaceDisplayClass(surface, 'cm-md-image-surface', display);
-    surface.classList.toggle('group', display === 'block');
-    if (surface.classList.contains('cm-md-image-surface-loading')) {
-      widget.replaceChildren(surface);
-      surface.style.position = 'relative';
-    }
+  replaceDisplayClass(surface, 'cm-md-image-surface', display);
+  surface.classList.toggle('group', display === 'block');
+  if (surface.classList.contains('cm-md-image-surface-loading')) {
+    widget.replaceChildren(surface);
+    surface.style.position = 'relative';
   }
   const image = widget.querySelector('.cm-md-image-element');
   if (image) replaceDisplayClass(image, 'cm-md-image-element', display);
   if (imageMatch.displayWidth) {
-    if (surface) {
-      surface.style.aspectRatio = `${size.width} / ${size.height}`;
-      surface.style.width = fitBlockImageWidth(imageMatch.displayWidth, size);
-    }
+    surface.style.aspectRatio = `${size.width} / ${size.height}`;
+    surface.style.width = fitBlockImageWidth(imageMatch.displayWidth, size);
   } else {
     applyIntrinsicSlot(surface, display, size);
   }

@@ -13,8 +13,9 @@ export function resolveImageDisplay(
   size: ImageIntrinsicSize | null,
   displayWidth?: number
 ): MarkdownImageMatch['display'] {
-  if (displayWidth || !size || size.width <= 0 || size.height <= 0) return provisionalDisplay;
-  if (size.width <= SMALL_IMAGE_MAX_SIDE && size.height <= SMALL_IMAGE_MAX_SIDE) return 'inline';
+  if (!size || size.width <= 0 || size.height <= 0) return provisionalDisplay;
   if (size.width >= LARGE_IMAGE_MIN_WIDTH) return 'block';
+  if (displayWidth) return provisionalDisplay;
+  if (size.width <= SMALL_IMAGE_MAX_SIDE && size.height <= SMALL_IMAGE_MAX_SIDE) return 'inline';
   return provisionalDisplay;
 }

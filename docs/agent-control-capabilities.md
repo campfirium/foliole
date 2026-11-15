@@ -28,6 +28,8 @@ Aide history shows material links for desktop conversation navigation. These lin
 
 Mobile find-in-document runs on keyboard submission and uses a non-modal toolbar for stepping through matches while reading. Ending the search clears the current query and highlights. Query focus, match highlights, and step controls are reader UI state. Agent Control continues to expose material search and location details.
 
+Markdown image preview and drag resizing are editor interactions. A saved width is part of the material Markdown returned by a full material read.
+
 Desktop PDF imports index extracted text by page. Material search returns PDF locations from that index. The PDF-backed Topic body is separate and indexing does not write the extracted full text into it.
 
 ### Retrying material creation

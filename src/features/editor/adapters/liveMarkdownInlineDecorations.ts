@@ -57,6 +57,7 @@ class MarkdownImageWidget extends WidgetType {
       this.presentationVersion === other.presentationVersion &&
       this.imageMatch.alt === other.imageMatch.alt &&
       this.imageMatch.attachmentId === other.imageMatch.attachmentId &&
+      this.imageMatch.display === other.imageMatch.display &&
       this.imageMatch.displayWidth === other.imageMatch.displayWidth &&
       this.imageMatch.from === other.imageMatch.from &&
       this.imageMatch.linkHref === other.imageMatch.linkHref &&
@@ -87,12 +88,13 @@ class MarkdownImageWidget extends WidgetType {
     return widgetDom;
   }
 
-  override updateDOM(dom: HTMLElement) {
+  override updateDOM(dom: HTMLElement, view: EditorView) {
     if (!canReuseMarkdownImageWidgetDom(dom, this.imageMatch, this.editorNodeId)) {
       return false;
     }
     if (dom.dataset.mdImagePresentationVersion !== String(this.presentationVersion)) {
       if (!refreshMarkdownImageWidgetPresentation(dom, this.imageMatch, this.editorNodeId)) return false;
+      attachMarkdownImageResize(dom, view, this.imageMatch);
       dom.dataset.mdImagePresentationVersion = String(this.presentationVersion);
     }
     updateMarkdownImageWidgetDomRange(dom, this.imageMatch);
