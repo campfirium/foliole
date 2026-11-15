@@ -45,6 +45,7 @@ function renderListColumns(
   args: Pick<WorkspaceGridColumnProps, 'isImmersiveMode' | 'isListCollapsed' | 'listAreaProps' | 'listSplitterProps' | 'compactSidebars'>
 ) {
   const listUnavailable = args.isImmersiveMode || args.isListCollapsed;
+  const floating = args.compactSidebars?.leftFloating;
   return [
     <WorkspaceSidebarFocusBoundary
       side="left" unavailable={listUnavailable}
@@ -59,12 +60,15 @@ function renderListColumns(
       key="list"
     >
       <WorkspaceListArea {...args.listAreaProps} />
+      {args.compactSidebars?.tiered && floating && !listUnavailable && (
+        <WorkspaceListSplitter {...args.listSplitterProps} floating />
+      )}
     </WorkspaceSidebarFocusBoundary>,
     ...(args.isImmersiveMode ? [] : [
       <WorkspaceSidebarFocusBoundary
         side="left"
         unavailable={args.isListCollapsed || Boolean(args.compactSidebars?.leftFloating)}
-        aria-hidden={args.isListCollapsed}
+        aria-hidden={args.isListCollapsed || floating}
         data-workspace-tier-splitter="left"
         className="col-start-2 row-start-1 flex min-w-0 overflow-visible max-[1080px]:hidden"
         key="list-splitter"
@@ -81,10 +85,11 @@ function renderRightSidebarColumns(
     'isImmersiveMode' | 'isRightSidebarCollapsed' | 'rightSidebarProps' | 'rightSidebarSplitterProps' | 'compactSidebars'
   >
 ) {
+  const floating = args.compactSidebars?.rightFloating;
   return [
     <WorkspaceSidebarFocusBoundary
       side="right" unavailable={args.isImmersiveMode || args.isRightSidebarCollapsed || Boolean(args.compactSidebars?.rightFloating)}
-      aria-hidden={args.isRightSidebarCollapsed}
+      aria-hidden={args.isRightSidebarCollapsed || floating}
       data-workspace-tier-splitter="right"
       className="col-start-4 row-start-1 hidden min-w-0 overflow-visible xl:flex"
       key="right-sidebar-splitter"
@@ -113,6 +118,9 @@ function renderRightSidebarColumns(
           args.rightSidebarProps.activePanelId === 'assistant' || args.rightSidebarProps.activePanelId === 'performance'
           || args.rightSidebarProps.activePanelId === 'review-queue'
         ))} />
+      {args.compactSidebars?.tiered && floating && !args.isImmersiveMode && !args.isRightSidebarCollapsed && (
+        <WorkspaceRightSidebarSplitter {...args.rightSidebarSplitterProps} floating />
+      )}
     </WorkspaceSidebarFocusBoundary>
   ];
 }

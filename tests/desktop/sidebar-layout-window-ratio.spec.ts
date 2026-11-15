@@ -5,6 +5,17 @@ import { expectWorkspaceShell, openSettingsCategory, setActiveSidebarTierDockedW
 
 const tierPreferenceKey = 'foliole-workspace-sidebar-layout-tiers';
 
+async function dragSeparator(page: Page, separator: ReturnType<Page['getByRole']>, delta: number) {
+  await expect(separator).toBeVisible();
+  const bounds = (await separator.boundingBox())!;
+  const x = bounds.x + bounds.width / 2;
+  const y = bounds.y + bounds.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + delta, y, { steps: 4 });
+  await page.mouse.up();
+}
+
 test('sidebar layout shows the actual window-to-work-area ratio after a native resize', async ({
   desktopApp, desktopWindow
 }) => {
@@ -43,14 +54,13 @@ test('applies and restores saved sidebar tier modes and exact widths', async ({ 
 
   await expectWidths();
   const handle = page.getByRole('separator', { name: /Resize topic list|调整主题列表宽度/ });
-  const bounds = (await handle.boundingBox())!;
   const before = (await left.boundingBox())!.width;
-  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(bounds.x + 36, bounds.y + bounds.height / 2, { steps: 4 });
-  await page.mouse.up();
+  await dragSeparator(page, handle, 36);
   await expect.poll(async () => (await left.boundingBox())!.width).toBeGreaterThan(before + 25);
   const draggedWidth = (await left.boundingBox())!.width;
+  const beforeRight = (await right.boundingBox())!.width;
+  await dragSeparator(page, page.getByRole('separator', { name: /Resize inspector sidebar|调整检查器侧栏宽度/ }), -32);
+  await expect.poll(async () => (await right.boundingBox())!.width).toBeGreaterThan(beforeRight + 25);
   const rightWidth = (await right.boundingBox())!.width;
   await page.locator('[data-workspace-sidebar-toggle="left"]').click();
   await expect(page.locator('[data-workspace-sidebar-toggle="left"]')).toHaveAttribute('aria-pressed', 'false');
@@ -58,6 +68,53 @@ test('applies and restores saved sidebar tier modes and exact widths', async ({ 
   await expectWorkspaceShell(page);
   await expect.poll(async () => Math.abs((await left.boundingBox())!.width - draggedWidth)).toBeLessThan(1);
   await expect.poll(async () => Math.abs((await right.boundingBox())!.width - rightWidth)).toBeLessThan(1);
+});
+
+test('resizes both edge sidebars without changing the document tracks', async ({ desktopWindow: page }) => {
+  await expectWorkspaceShell(page);
+  await setActiveSidebarTierDockedWidths(page, 40, 35);
+  const settings = await openSettingsCategory(page, 'Appearance');
+  const current = settings.getByRole('region', { name: /^(Sidebar layout|侧栏布局)$/ }).locator('tr[aria-current="true"]');
+  const leftLabel = /^(Left sidebar|左侧导航)$/;
+  const rightLabel = /^(Right sidebar|右侧检查器)$/;
+  await current.getByRole('combobox', { name: leftLabel }).selectOption('edge');
+  await current.getByRole('combobox', { name: rightLabel }).selectOption('edge');
+  await page.keyboard.press('Escape');
+  await expect(settings).toBeHidden();
+  const persisted = () => page.evaluate(async key => {
+    const settings = await window.electronAPI!.invoke('load_app_settings_state');
+    return JSON.parse(settings[key]) as import('../../src/features/settings/model/sidebarLayoutTiers').SidebarTier[];
+  }, tierPreferenceKey);
+  const before = await persisted();
+  const document = page.locator('[data-workspace-document-focus-target]').first();
+  const documentBounds = await document.boundingBox();
+  const viewport = page.viewportSize()!;
+
+  for (const side of ['left', 'right'] as const) {
+    const panel = page.locator(`.workspace-floating-sidebar-${side}`);
+    const edge = side === 'left' ? 75 : viewport.width - 60;
+    const name = side === 'left' ? /Resize topic list|调整主题列表宽度/ : /Resize inspector sidebar|调整检查器侧栏宽度/;
+    await page.mouse.move(edge, 400);
+    await expect(panel).toBeVisible();
+    const startWidth = (await panel.boundingBox())!.width;
+    await dragSeparator(page, panel.getByRole('separator', { name }), side === 'left' ? 34 : -34);
+    await expect.poll(async () => (await panel.boundingBox())!.width - startWidth).toBeGreaterThan(29);
+    expect(await document.boundingBox()).toEqual(documentBounds);
+    await page.keyboard.press('Escape');
+    await page.mouse.move(viewport.width / 2, 400);
+    await expect(panel).toBeHidden();
+    await page.mouse.move(edge, 400);
+    await expect(panel).toBeVisible();
+    await expect.poll(async () => (await panel.boundingBox())!.width - startWidth).toBeGreaterThan(29);
+    await page.keyboard.press('Escape');
+    await page.mouse.move(viewport.width / 2, 400);
+  }
+
+  await expect.poll(async () => (await persisted()).filter((tier, index) => JSON.stringify(tier) !== JSON.stringify(before[index])).length).toBe(1);
+  const after = (await persisted()).find((tier, index) => JSON.stringify(tier) !== JSON.stringify(before[index]))!;
+  const previous = before.find(tier => tier.id === after.id)!;
+  expect(after.left.width).toBeGreaterThan(previous.left.width);
+  expect(after.right.width).toBeGreaterThan(previous.right.width);
 });
 
 async function seedPreviousSidebarPreferences(app: ElectronApplication, page: Page) {

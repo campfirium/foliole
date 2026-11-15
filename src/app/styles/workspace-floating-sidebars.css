@@ -183,7 +183,23 @@
   display: none;
 }
 
-[data-sidebar-tiers] [data-workspace-tier-splitter] > [role='separator'],
+[data-sidebar-tiers] [data-workspace-tier-splitter] > [role='separator'] {
+  display: flex;
+  width: 100%;
+}
+
+[data-sidebar-tiers] [data-workspace-floating-splitter] {
+  position: absolute;
+  display: flex;
+  inset-block: 0;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+[data-workspace-floating-splitter='left'] { right: 0; }
+[data-workspace-floating-splitter='right'] { left: 0; }
+
 [data-sidebar-tiers] :is([data-workspace-tier-divider], [data-workspace-surface-divider], .window-titlebar-right-zone):not([hidden]) {
   display: flex;
 }

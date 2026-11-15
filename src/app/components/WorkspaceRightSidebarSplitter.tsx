@@ -4,6 +4,7 @@ import { cn } from '../../shared/lib/utils';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 export interface WorkspaceRightSidebarSplitterProps {
+  floating?: boolean;
   isCollapsed: boolean;
   isResizingRightSidebar: boolean;
   onResetLayout: () => void;
@@ -13,6 +14,7 @@ export interface WorkspaceRightSidebarSplitterProps {
 }
 
 export function WorkspaceRightSidebarSplitter({
+  floating,
   isCollapsed,
   isResizingRightSidebar,
   onResetLayout,
@@ -25,6 +27,7 @@ export function WorkspaceRightSidebarSplitter({
     <div
       aria-label={t('desktop.workspace.resizeInspectorSidebar')}
       aria-orientation="vertical"
+      data-workspace-floating-splitter={floating ? 'right' : undefined}
       aria-valuenow={Math.round(rightSidebarWidth)}
       className={cn('group relative z-surface self-stretch bg-transparent max-xl:hidden', isCollapsed && 'pointer-events-none opacity-0')}
       onDoubleClick={onResetLayout}

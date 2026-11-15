@@ -4,6 +4,7 @@ import { cn } from '../../shared/lib/utils';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
 export interface WorkspaceListSplitterProps {
+  floating?: boolean;
   isCollapsed: boolean;
   isResizingList: boolean;
   listWidth: number;
@@ -13,6 +14,7 @@ export interface WorkspaceListSplitterProps {
 }
 
 export function WorkspaceListSplitter({
+  floating,
   isCollapsed,
   isResizingList,
   listWidth,
@@ -25,6 +27,7 @@ export function WorkspaceListSplitter({
     <div
       aria-label={t('desktop.workspace.resizeTopicList')}
       aria-orientation="vertical"
+      data-workspace-floating-splitter={floating ? 'left' : undefined}
       aria-valuenow={Math.round(listWidth)}
       className={cn('group relative z-surface self-stretch bg-transparent max-[1080px]:hidden', isCollapsed && 'pointer-events-none opacity-0')}
       onDoubleClick={onResetLayout}
