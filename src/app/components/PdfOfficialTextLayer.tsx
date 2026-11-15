@@ -1,6 +1,7 @@
-import { TextLayerBuilder } from 'pdfjs-dist/web/pdf_viewer.mjs';
 import { useLayoutEffect, useRef } from 'react';
 import { usePageContext } from 'react-pdf';
+// eslint-disable-next-line import/order -- React-PDF must initialize the PDF.js core before the viewer evaluates.
+import { TextLayerBuilder } from 'pdfjs-dist/web/pdf_viewer.mjs';
 
 export function PdfOfficialTextLayer() {
   const context = usePageContext();
