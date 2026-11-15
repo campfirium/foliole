@@ -78,7 +78,7 @@ section[data-reading-selection-viewport='true'] > .companion-review-header {
   position: fixed;
   inset-inline: 0;
   top: var(--companion-reading-controls-bottom);
-  z-index: 1;
+  z-index: var(--z-local-raised);
   padding-inline: 1.25rem;
   background: var(--companion-base);
 }
