@@ -159,6 +159,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.syncAppMenuState, route: 'windowAndUtility', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.setAppDisplayScale, route: 'windowAndUtility', capability: 'windowControl' },
   { command: NATIVE_COMMANDS.windowClose, route: 'windowAndUtility', capability: 'windowControl' },
+  { command: NATIVE_COMMANDS.windowSidebarLayoutMetrics, route: 'windowAndUtility', capability: 'read' },
   { command: NATIVE_COMMANDS.windowIsMaximized, route: 'windowAndUtility', capability: 'read' },
   { command: NATIVE_COMMANDS.windowMinimize, route: 'windowAndUtility', capability: 'windowControl' },
   { command: NATIVE_COMMANDS.windowRestartDevApp, route: 'windowAndUtility', capability: 'windowControl' },

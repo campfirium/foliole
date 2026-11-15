@@ -7,6 +7,7 @@ import {
   BrowserWindow,
   crashReporter,
   ipcMain,
+  screen,
   type BrowserWindow as ElectronBrowserWindow
 } from 'electron';
 
@@ -106,7 +107,9 @@ void appendBootEvent('main_process_start', {
 
 function bindWindowResizeEvents(window: ElectronBrowserWindow) {
   const publishResize = () => {
-    window.webContents.send(IPC_WINDOW_RESIZED_EVENT_CHANNEL);
+    if (!window.isDestroyed() && !window.webContents.isDestroyed()) {
+      window.webContents.send(IPC_WINDOW_RESIZED_EVENT_CHANNEL);
+    }
   };
 
   window.on('maximize', publishResize);
@@ -114,6 +117,15 @@ function bindWindowResizeEvents(window: ElectronBrowserWindow) {
   window.on('show', publishResize);
   window.on('unmaximize', publishResize);
   window.on('resize', publishResize);
+  window.on('move', publishResize);
+  screen.on('display-added', publishResize);
+  screen.on('display-removed', publishResize);
+  screen.on('display-metrics-changed', publishResize);
+  window.once('closed', () => {
+    screen.off('display-added', publishResize);
+    screen.off('display-removed', publishResize);
+    screen.off('display-metrics-changed', publishResize);
+  });
 }
 
 async function loadRendererIntoWindow(

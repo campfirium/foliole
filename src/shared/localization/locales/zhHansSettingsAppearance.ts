@@ -1,6 +1,8 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_SETTINGS_APPEARANCE_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'settings.appearance.sidebarLayout.title': '侧栏布局',
+  'settings.appearance.sidebarLayout.windowWidth': '窗口占显示器工作区的宽度',
   'settings.appearance.displayScale.section': '显示',
   'settings.appearance.displayScale.aria': '应用显示大小设置区',
   'settings.appearance.displayScale.title': '应用显示大小',

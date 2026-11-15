@@ -1,4 +1,4 @@
-import { BrowserWindow, app } from 'electron';
+import { BrowserWindow, app, screen } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { requestDevShellRestart } from '../devShellRestartRequest.js';
@@ -39,6 +39,12 @@ function handleImmediateWindowCommand(request: InvokeRequest, window: BrowserWin
     if (window?.isMaximized()) window.unmaximize();
     else window?.maximize();
     return null;
+  }
+  if (request.command === NATIVE_COMMANDS.windowSidebarLayoutMetrics) {
+    if (!window || window.isDestroyed()) return null;
+    const bounds = window.getBounds();
+    const workAreaWidth = screen.getDisplayMatching(bounds).workArea.width;
+    return workAreaWidth > 0 && bounds.width > 0 ? { windowWidth: bounds.width, workAreaWidth } : null;
   }
   if (request.command === NATIVE_COMMANDS.windowIsMaximized) {
     return Boolean(window?.isMaximized());

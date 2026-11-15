@@ -152,6 +152,7 @@ export const NATIVE_COMMANDS = {
   syncAppMenuState: 'sync_app_menu_state',
   setAppDisplayScale: 'set_app_display_scale',
   windowClose: 'window_close',
+  windowSidebarLayoutMetrics: 'window_sidebar_layout_metrics',
   windowIsMaximized: 'window_is_maximized',
   windowMinimize: 'window_minimize',
   windowRestartDevApp: 'window_restart_dev_app',

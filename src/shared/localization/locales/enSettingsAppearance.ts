@@ -1,4 +1,6 @@
 export const EN_SETTINGS_APPEARANCE_TRANSLATIONS = {
+  'settings.appearance.sidebarLayout.title': 'Sidebar layout',
+  'settings.appearance.sidebarLayout.windowWidth': 'Window width relative to the display work area',
   'settings.appearance.displayScale.section': 'Display',
   'settings.appearance.displayScale.aria': 'App display size settings',
   'settings.appearance.displayScale.title': 'App display size',

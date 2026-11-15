@@ -33,8 +33,9 @@ import type {
   NativeSqliteRestoreResult,
   NativeUpdateLibraryPathSettingArgs
 } from './nativeUtilityContract.js';
+import type { NativeWindowControlCommandMap } from './nativeWindowControlCommandMap.js';
 
-export type NativeUtilityCommandMap = {
+export type NativeUtilityCommandMap = NativeWindowControlCommandMap & {
   [NATIVE_COMMANDS.maintainAttachments]: { args: AttachmentMaintenanceRequest; result: AttachmentMaintenanceResult };
   [NATIVE_COMMANDS.folioleCliInstall]: {
     args: { action: 'install' | 'remove' | 'repair' | 'status' };
@@ -103,38 +104,6 @@ export type NativeUtilityCommandMap = {
       shortcutAccelerators?: { accelerator: string; commandId: string }[];
       history?: { undoTitle: string; redoTitle: string; nativeEditing: boolean };
     };
-    result: null;
-  };
-  [NATIVE_COMMANDS.windowClose]: {
-    args: undefined;
-    result: null;
-  };
-  [NATIVE_COMMANDS.windowIsMaximized]: {
-    args: undefined;
-    result: boolean;
-  };
-  [NATIVE_COMMANDS.windowMinimize]: {
-    args: undefined;
-    result: null;
-  };
-  [NATIVE_COMMANDS.windowRestartApp]: {
-    args: undefined;
-    result: null;
-  };
-  [NATIVE_COMMANDS.windowRestartDevApp]: {
-    args: undefined;
-    result: null;
-  };
-  [NATIVE_COMMANDS.windowSetNativeControlsVisible]: {
-    args: { visible: boolean };
-    result: null;
-  };
-  [NATIVE_COMMANDS.windowToggleDevTools]: {
-    args: undefined;
-    result: null;
-  };
-  [NATIVE_COMMANDS.windowToggleMaximize]: {
-    args: undefined;
     result: null;
   };
   [NATIVE_COMMANDS.copyAttachmentImageToClipboard]: {

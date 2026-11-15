@@ -1,8 +1,11 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from 'vitest';
 
-const { mockWindow, setMainWindowNativeControlsVisible } = vi.hoisted(() => ({
+const { getDisplayMatching, mockWindow, setMainWindowNativeControlsVisible } = vi.hoisted(() => ({
+  getDisplayMatching: vi.fn(),
   mockWindow: {
+    getBounds: vi.fn(() => ({ x: -940, y: 0, width: 960, height: 850 })),
+    isDestroyed: vi.fn(() => false),
     isMaximized: vi.fn(() => false),
     webContents: { toggleDevTools: vi.fn() }
   },
@@ -11,6 +14,7 @@ const { mockWindow, setMainWindowNativeControlsVisible } = vi.hoisted(() => ({
 
 vi.mock('electron', () => ({
   app: { exit: vi.fn(), isPackaged: false, relaunch: vi.fn() },
+  screen: { getDisplayMatching },
   BrowserWindow: {
     fromWebContents: vi.fn(() => mockWindow),
     getFocusedWindow: vi.fn(() => mockWindow)
@@ -48,4 +52,16 @@ it('rejects malformed native-control visibility payloads', async () => {
     command: 'window_set_native_controls_visible',
     args: { visible: 'false' }
   })).rejects.toThrow('invalid argument: visible');
+});
+
+it('uses the work area of the display matched to the window bounds', async () => {
+  getDisplayMatching.mockReturnValue({ workArea: { width: 1600 } });
+  await expect(handleWindowControlCommand({ command: 'window_sidebar_layout_metrics' }))
+    .resolves.toEqual({ windowWidth: 960, workAreaWidth: 1600 });
+  expect(getDisplayMatching).toHaveBeenCalledWith({ x: -940, y: 0, width: 960, height: 850 });
+});
+
+it('returns no metrics for an unavailable work area', async () => {
+  getDisplayMatching.mockReturnValue({ workArea: { width: 0 } });
+  await expect(handleWindowControlCommand({ command: 'window_sidebar_layout_metrics' })).resolves.toBeNull();
 });

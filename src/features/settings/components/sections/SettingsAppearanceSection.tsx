@@ -20,6 +20,7 @@ import {
   AppearanceReadingColorSection
 } from './SettingsAppearanceColorSections';
 import { SettingsDisplayScaleSection } from './SettingsDisplayScaleSection';
+import { SettingsSidebarLayoutSection } from './SettingsSidebarLayoutSection';
 import { WorkspaceDividerSettingsSection } from './WorkspaceDividerSettingsSection';
 import { WorkspaceSurfaceColorSection } from './WorkspaceSurfaceColorSection';
 
@@ -86,6 +87,7 @@ export function SettingsAppearanceSection(props: {
     <>
       <AppearanceColorModeSection {...state} />
       <SettingsDisplayScaleSection />
+      <SettingsSidebarLayoutSection />
       <WorkspaceSurfaceColorSection onEnterPreview={props.onEnterPreview} />
       <WorkspaceDividerSettingsSection />
       <FolderSectionSettings />

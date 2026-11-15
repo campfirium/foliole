@@ -29,6 +29,7 @@
   "lib/platform/nativeTrashCommandMap.ts",
   "lib/platform/nativeUpdateContract.ts",
   "lib/platform/nativeUtilityCommandMap.ts",
+  "lib/platform/nativeWindowControlCommandMap.ts",
   "lib/platform/nativeWordPressPublishContract.ts",
   "lib/platform/nativeDailyFlowContract.ts"
 ]

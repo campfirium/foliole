@@ -47,6 +47,11 @@ export async function setMainWindowNativeControlsVisible(visible: boolean) {
   await runtimeInvoke(NATIVE_COMMANDS.windowSetNativeControlsVisible, { visible });
 }
 
+export async function queryWindowSidebarLayoutMetrics() {
+  const invoke = getRuntimeInvoke();
+  return invoke ? (await invoke(NATIVE_COMMANDS.windowSidebarLayoutMetrics)) : null;
+}
+
 export async function onMainWindowResized(handler: () => void): Promise<WindowResizeUnlisten> {
   const bridge = getElectronBridge();
   if (!bridge) {
