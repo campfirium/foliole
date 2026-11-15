@@ -1,23 +1,12 @@
 import { useEffect, useState } from 'react';
 
-import { NATIVE_COMMANDS } from '../../../../../lib/platform/nativeCommands';
-import type { NativeSupportLogAction, NativeSupportLogState } from '../../../../../lib/platform/nativeUtilityContract';
 import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
-import { getRuntimeInvoke } from '../../../../shared/platform/runtimeInvoke';
+import { runDesktopSupportLogAction, type NativeSupportLogAction, type NativeSupportLogState } from '../../../../shared/platform/supportLog/desktopSupportLog';
 import {
   AppTooltip, AppTooltipContent, AppTooltipTrigger, SettingsButton, SettingsControlSlot, SettingsRow
 } from '../../../../shared/ui';
 import { settingsSearchRowProps } from '../../model/settingsSearch';
 import { useLocalizedSettingsSearchRow } from '../useLocalizedSettingsSearchRows';
-
-async function runAction(action: NativeSupportLogAction) {
-  const invoke = getRuntimeInvoke();
-  if (!invoke) throw new Error('Desktop log unavailable');
-  const result = await invoke(NATIVE_COMMANDS.desktopSupportLog, { action });
-  if (result?.phase === 'idle' || result?.phase === 'ready') return result;
-  if (result?.phase === 'recording' && Number.isFinite(result.startedAt)) return result;
-  throw new Error('Invalid desktop log state');
-}
 
 function formatElapsed(startedAt: number, now: number) {
   const seconds = Math.max(0, Math.floor((now - startedAt) / 1000));
@@ -33,7 +22,7 @@ function useSupportLogControls() {
 
   useEffect(() => {
     let mounted = true;
-    void runAction('status').then(next => {
+    void runDesktopSupportLogAction('status').then(next => {
       if (mounted) setState(next);
     }).catch(() => {
       if (mounted) setFailed(true);
@@ -51,7 +40,7 @@ function useSupportLogControls() {
       setNow(Date.now());
       if (checking) return;
       checking = true;
-      void runAction('status').then(next => {
+      void runDesktopSupportLogAction('status').then(next => {
         if (mounted && next.phase !== 'recording') setState(next);
       }).catch(() => {
         if (mounted) setFailed(true);
@@ -67,7 +56,7 @@ function useSupportLogControls() {
     setFailed(false);
     setBusy(true);
     try {
-      setState(await runAction(request));
+      setState(await runDesktopSupportLogAction(request));
       setNow(Date.now());
     } catch {
       setFailed(true);
