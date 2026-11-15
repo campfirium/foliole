@@ -43,7 +43,7 @@ function useVisibility(surface: Surface | null, protectedDisplay: boolean, suspe
     const entering =
       previous.current?.id !== surface?.id || previous.current?.enabled !== surface?.enabled;
     previous.current = surface;
-    setShown(true);
+    if (entering || protectedDisplay) setShown(true);
     if (!floating || protectedDisplay) return;
     const timer = window.setTimeout(() => setShown(false), entering ? 3000 : 300);
     return () => window.clearTimeout(timer);
@@ -71,10 +71,15 @@ export function PdfTopBarsProvider(props: { children: ReactNode; suspended: bool
     });
   }, []);
   const groupActive = activities.size > 0 || revealHovered;
-  const visibility = useVisibility(surface, groupActive, props.suspended);
+  const { dismiss: hideBars, ...visibility } = useVisibility(surface, groupActive, props.suspended);
+  const dismiss = useCallback(() => {
+    setRevealHovered(false);
+    setActivities((current) => current.size ? new Set() : current);
+    hideBars();
+  }, [hideBars]);
   return (
     <RegistrationContext.Provider value={register}>
-      <StateContext.Provider value={{ ...visibility, groupActive: visibility.floating && groupActive, titleHost, setTitleHost, setActivity, revealHovered: visibility.floating && revealHovered, setRevealHovered }}>
+      <StateContext.Provider value={{ ...visibility, dismiss, groupActive: visibility.floating && groupActive, titleHost, setTitleHost, setActivity, revealHovered: visibility.floating && revealHovered, setRevealHovered }}>
         {props.children}
       </StateContext.Provider>
     </RegistrationContext.Provider>

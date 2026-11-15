@@ -60,3 +60,26 @@ export async function verifyUpperSideReveal(page: Page) {
   await page.getByRole('button', { name: /Set zoom level|设置缩放级别/ }).click();
   await page.getByRole('menuitem', { name: '100%', exact: true }).click();
 }
+
+export async function dismissFromReading(page: Page) {
+  const scroll = page.getByTestId('pdf-scroll-container');
+  const position = await scroll.evaluate((container) => {
+    const viewport = container.getBoundingClientRect();
+    const toolbarBottom = container.querySelector('[data-pdf-reading-toolbar]')?.getBoundingClientRect().bottom ?? viewport.top;
+    for (const frame of container.querySelectorAll('.pdf-document-page-frame')) {
+      const paper = frame.getBoundingClientRect();
+      const top = Math.max(paper.top, viewport.top, toolbarBottom);
+      const bottom = Math.min(paper.bottom, viewport.bottom);
+      if (bottom - top < 24) continue;
+      const x = Math.max(viewport.left, paper.left) + 20;
+      const y = (top + bottom) / 2;
+      if (frame.contains(document.elementFromPoint(x, y))) return { x, y };
+    }
+    throw new Error('No visible PDF paper below the toolbar');
+  });
+  await page.mouse.click(position.x, position.y);
+  await expect(page.getByTestId('pdf-document-toolbar')).toHaveAttribute('data-toolbar-visible', 'false', { timeout: 1000 });
+  await expect(page.getByTestId('pdf-document-top-bar')).toHaveAttribute('data-visible', 'false', { timeout: 1000 });
+  await expect(page.getByTestId('pdf-window-top-bar')).toHaveAttribute('data-visible', 'false', { timeout: 1000 });
+  await page.screenshot({ path: path.resolve('.tmp/artifacts/pdf-top-bars/click-dismissed.png') });
+}

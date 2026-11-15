@@ -19,11 +19,21 @@ async function expectFooterSeam(page: Page, sidebar?: ReturnType<Page['locator']
     const footer = row.querySelector('.workspace-bottom-region-grid')!.getBoundingClientRect();
     const bounds = row.getBoundingClientRect();
     const style = getComputedStyle(row, '::before');
+    const probe = document.createElement('div');
+    row.append(probe);
+    const role = side === 'left' ? 'list' : 'sidebar';
+    const colors = ['-top', '', '-bottom'].map(suffix => {
+      const token = `--role-${role}${suffix}`;
+      probe.style.backgroundColor = `color-mix(in oklab, var(${token}-bg) var(--role-line-subtle-weight), var(${token}-line-mix, var(--role-line-mix)))`;
+      return getComputedStyle(probe).backgroundColor;
+    });
+    probe.remove();
     const position = side === 'left' ? bounds.left + parseFloat(style.left) + 1 : bounds.right - parseFloat(style.right) - 1;
-    return { position, reachesFooter: bounds.top + parseFloat(style.height) >= footer.bottom, background: style.backgroundImage };
+    return { position, reachesFooter: bounds.top + parseFloat(style.height) >= footer.bottom, background: style.backgroundImage, colors };
   }, side);
   const box = (await sidebar.boundingBox())!;
   expect(edge.background).toContain('linear-gradient');
+  for (const color of edge.colors) expect(edge.background).toContain(color);
   expect(edge.reachesFooter).toBe(true);
   expect(edge.position).toBeCloseTo(side === 'left' ? box.x + box.width : box.x, 0);
 }
@@ -31,6 +41,12 @@ async function expectFooterSeam(page: Page, sidebar?: ReturnType<Page['locator']
 export async function expectReviewFooterTracksSidebars(
   page: Page, footer: ReturnType<Page['locator']>, position: Awaited<ReturnType<ReturnType<Page['locator']>['boundingBox']>>
 ) {
+  await page.locator('.workspace-responsive-shell').evaluate((shell: HTMLElement) => {
+    for (const key of ['list', 'sidebar']) {
+      shell.style.setProperty(`--role-${key}-top-bg`, '#f3c4a4');
+      shell.style.setProperty(`--role-${key}-bottom-bg`, '#99c6e2');
+    }
+  });
   const title = page.locator('.window-titlebar-center-title');
   const center = async () => {
     const box = (await title.boundingBox())!;

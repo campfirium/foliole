@@ -143,7 +143,7 @@ function getWindowTitleBarStyle(
   const leftRevealed = keepLeftWidth && !props.isListCollapsed;
   const rightRevealed = props.keepFloatingSidebarControls && props.isRightSidebarFloating && !props.isRightSidebarCollapsed;
   return {
-    '--workspace-titlebar-sidebar-current-width': rightRevealed ? `${props.rightSidebarWidth}px` : undefined,
+    '--workspace-titlebar-sidebar-current-width': rightRevealed ? 'var(--pdf-right-overlay-width)' : undefined,
     '--window-titlebar-left-width': `calc(var(--workspace-rail-width) + ${
       leftUndocked && !keepLeftWidth ? 0 : props.listWidth + 1
     }px)`,
@@ -153,8 +153,10 @@ function getWindowTitleBarStyle(
       ? `${controlsWidth + WINDOW_TITLEBAR_LEADING_BUTTON_WIDTH + 8}px`
       : `${props.rightSidebarWidth}px`,
     '--workspace-list-width': `${props.listWidth}px`,
-    '--workspace-titlebar-folder-column-width': leftUndocked && !leftRevealed ? '0px' : 'var(--workspace-effective-folder-width, min(var(--workspace-folder-column-width), var(--workspace-list-width)))',
-    '--workspace-titlebar-list-current-width': leftRevealed ? `${props.listWidth}px` : leftUndocked ? '0px' : 'var(--workspace-list-current-width, 300px)'
+    '--workspace-titlebar-folder-column-width': leftRevealed
+      ? 'var(--pdf-folder-overlay-width)'
+      : leftUndocked ? '0px' : 'var(--workspace-effective-folder-width, min(var(--workspace-folder-column-width), var(--workspace-list-width)))',
+    '--workspace-titlebar-list-current-width': leftRevealed ? 'var(--pdf-left-overlay-width)' : leftUndocked ? '0px' : 'var(--workspace-list-current-width, 300px)'
   } as CSSProperties;
 }
 

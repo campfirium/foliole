@@ -6,6 +6,9 @@
   box-shadow: var(--shadow-panel);
 }
 
+[data-pdf-sidebar-overlay].workspace-floating-sidebar-left { width: var(--pdf-left-overlay-width); }
+[data-pdf-sidebar-overlay].workspace-floating-sidebar-right { width: var(--pdf-right-overlay-width); }
+
 .workspace-floating-sidebar[hidden] {
   display: none;
 }
@@ -49,8 +52,12 @@
   }
 }
 
-/* Paint one continuous edge across all workspace rows. */
+/* The overlay edge crosses the titlebar, body and any mounted review footer. */
 .workspace-responsive-shell:has([data-pdf-sidebar-overlay][aria-hidden='false'])::before {
+  --seam-footer-start: 100%;
+  --seam-title: color-mix(in oklab, var(--seam-title-bg) var(--role-line-subtle-weight), var(--seam-title-mix, var(--role-line-mix)));
+  --seam-main: color-mix(in oklab, var(--seam-main-bg) var(--role-line-subtle-weight), var(--seam-main-mix, var(--role-line-mix)));
+  --seam-footer: color-mix(in oklab, var(--seam-footer-bg) var(--role-line-subtle-weight), var(--seam-footer-mix, var(--role-line-mix)));
   content: '';
   position: absolute;
   inset-block: 0;
@@ -59,24 +66,41 @@
   width: 7px;
   pointer-events: none;
   z-index: calc(var(--z-floating) + 2);
-  background: linear-gradient(
-    var(--sidebar-seam-direction),
-    var(--sidebar-seam-line) 0 1px,
-    rgb(var(--role-ink-rgb) / 0.065) 1px,
-    transparent 100%
-  );
+  background:
+    linear-gradient(to bottom,
+      var(--seam-title) 0 var(--workspace-top-toolbar-height),
+      var(--seam-main) var(--workspace-top-toolbar-height) var(--seam-footer-start),
+      var(--seam-footer) var(--seam-footer-start) 100%
+    ) var(--sidebar-seam-edge) / 1px 100% no-repeat,
+    linear-gradient(var(--sidebar-seam-direction), transparent 0 1px, rgb(var(--role-ink-rgb) / 0.065) 1px, transparent 100%);
+}
+
+.workspace-responsive-shell:has([data-pdf-sidebar-overlay][aria-hidden='false']):has(.workspace-bottom-region-grid)::before {
+  --seam-footer-start: calc(100% - var(--workspace-bottom-toolbar-height));
 }
 
 .workspace-responsive-shell:has(.workspace-floating-sidebar-left[data-pdf-sidebar-overlay][aria-hidden='false']) {
-  --sidebar-seam-left: calc(var(--workspace-rail-width) + min(var(--workspace-list-width), calc(100% - var(--workspace-rail-width))) - 1px);
+  --sidebar-seam-left: calc(var(--workspace-rail-width) + var(--pdf-left-overlay-width) - 1px);
   --sidebar-seam-direction: to right;
-  --sidebar-seam-line: color-mix(in oklab, var(--role-list-bg) var(--role-line-subtle-weight), var(--role-list-line-mix, var(--role-line-mix)));
+  --sidebar-seam-edge: left;
+  --seam-title-bg: var(--role-list-top-bg);
+  --seam-main-bg: var(--role-list-bg);
+  --seam-footer-bg: var(--role-list-bottom-bg);
+  --seam-title-mix: var(--role-list-top-line-mix, var(--role-line-mix));
+  --seam-main-mix: var(--role-list-line-mix, var(--role-line-mix));
+  --seam-footer-mix: var(--role-list-bottom-line-mix, var(--role-line-mix));
 }
 
 .workspace-responsive-shell:has(.workspace-floating-sidebar-right[data-pdf-sidebar-overlay][aria-hidden='false']) {
-  --sidebar-seam-right: calc(min(var(--workspace-right-sidebar-width), calc(100% - var(--workspace-rail-width))) - 1px);
+  --sidebar-seam-right: calc(var(--pdf-right-overlay-width) - 1px);
   --sidebar-seam-direction: to left;
-  --sidebar-seam-line: color-mix(in oklab, var(--role-sidebar-bg) var(--role-line-subtle-weight), var(--role-sidebar-line-mix, var(--role-line-mix)));
+  --sidebar-seam-edge: right;
+  --seam-title-bg: var(--role-sidebar-top-bg);
+  --seam-main-bg: var(--role-sidebar-bg);
+  --seam-footer-bg: var(--role-sidebar-bottom-bg);
+  --seam-title-mix: var(--role-sidebar-top-line-mix, var(--role-line-mix));
+  --seam-main-mix: var(--role-sidebar-line-mix, var(--role-line-mix));
+  --seam-footer-mix: var(--role-sidebar-bottom-line-mix, var(--role-line-mix));
 }
 
 .workspace-bottom-region-grid [data-pdf-review-layout] {
@@ -94,6 +118,10 @@
 }
 
 .workspace-responsive-shell[data-pdf-sidebar-hover='true'] {
+  --pdf-overlay-available-width: max(0px, calc(100vw - var(--workspace-rail-width)));
+  --pdf-left-overlay-width: min(var(--workspace-list-width), var(--pdf-overlay-available-width));
+  --pdf-right-overlay-width: min(var(--workspace-right-sidebar-width), var(--pdf-overlay-available-width));
+  --pdf-folder-overlay-width: min(var(--workspace-effective-folder-width), var(--pdf-left-overlay-width));
   --pdf-layout-left: calc(var(--workspace-list-current-width) + var(--workspace-list-splitter-width));
   --pdf-layout-right: calc(var(--workspace-right-sidebar-current-width) + var(--workspace-right-sidebar-splitter-width));
 }
@@ -108,14 +136,14 @@
 
 .workspace-responsive-shell:has(.workspace-floating-sidebar-left[data-pdf-sidebar-overlay][aria-hidden='false']) {
   .workspace-bottom-region-grid {
-    --workspace-list-current-width: var(--workspace-list-width);
-    --workspace-list-folder-current-width: var(--workspace-effective-folder-width);
+    --workspace-list-current-width: var(--pdf-left-overlay-width);
+    --workspace-list-folder-current-width: var(--pdf-folder-overlay-width);
   }
 
   @media (width <= 1080px) {
     .window-titlebar {
-      --workspace-titlebar-list-current-width: var(--workspace-list-width) !important;
-      --workspace-titlebar-folder-column-width: min(var(--workspace-folder-column-width), var(--workspace-list-width)) !important;
+      --workspace-titlebar-list-current-width: var(--pdf-left-overlay-width) !important;
+      --workspace-titlebar-folder-column-width: var(--pdf-folder-overlay-width) !important;
     }
 
     .window-titlebar :is([data-workspace-surface-divider='folder'], [data-workspace-surface-divider='topic']) {
@@ -126,7 +154,7 @@
 
 .workspace-responsive-shell:has(.workspace-floating-sidebar-right[data-pdf-sidebar-overlay][aria-hidden='false'])
   .workspace-bottom-region-grid {
-  --workspace-right-sidebar-current-width: var(--workspace-right-sidebar-width);
+  --workspace-right-sidebar-current-width: var(--pdf-right-overlay-width);
 }
 
 .workspace-responsive-shell:has(.workspace-floating-sidebar-right[data-pdf-sidebar-overlay][aria-hidden='true']) .window-titlebar-right-anchor-shell {

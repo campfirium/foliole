@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { ElectronApplication, Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
-import { verifyFlatPdfBars, verifyScrollRevealsOnlyToolbar, verifyUpperSideReveal } from './pdf-top-bars-behavior';
+import { dismissFromReading, verifyFlatPdfBars, verifyScrollRevealsOnlyToolbar, verifyUpperSideReveal } from './pdf-top-bars-behavior';
 import { revealPdfBars } from './pdf-top-bars-interaction';
 
 async function openPdf(app: ElectronApplication, page: Page) {
@@ -101,12 +101,7 @@ test('PDF top bars @pdf float, protect navigation, restore space, and remember t
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
-  await moveToReading(page);
-  await expect(title).toHaveAttribute('data-visible', 'false');
-  await expect(page.getByTestId('pdf-document-toolbar')).toHaveAttribute(
-    'data-toolbar-visible',
-    'false'
-  );
+  await dismissFromReading(page);
 });
 
 test('keeps PDF top bars open when crossing into the floating PDF title @pdf', async ({
@@ -134,14 +129,6 @@ test('keeps PDF top bars open when crossing into the floating PDF title @pdf', a
   await expect(title).toHaveAttribute('data-visible', 'false');
 });
 
-async function dismissFromReading(page: Page) {
-  const frame = page.getByTestId('pdf-document-page-frame').first();
-  await frame.click({ position: { x: 20, y: 250 } });
-  await expect(page.getByTestId('pdf-document-toolbar')).toHaveAttribute('data-toolbar-visible', 'false', { timeout: 1000 });
-  await expect(page.getByTestId('pdf-document-top-bar')).toHaveAttribute('data-visible', 'false', { timeout: 1000 });
-  await expect(page.getByTestId('pdf-window-top-bar')).toHaveAttribute('data-visible', 'false', { timeout: 1000 });
-  await screenshot(page, 'click-dismissed');
-}
 
 async function protectNavigationMenu(page: Page) {
   const button = page.getByRole('button', { name: /More editor options|更多编辑器选项/ });
@@ -241,5 +228,7 @@ async function verifyTopTextSelection(app: ElectronApplication, page: Page) {
   await scroll.click({ position: { x: 80, y: 220 } });
   await revealPdfBars(page, 'right');
   await expect(title).toHaveAttribute('data-visible', 'true');
-  expect(await dragRegion.evaluate((element) => getComputedStyle(element).getPropertyValue('-webkit-app-region'))).toBe('drag');
+  expect(await dragRegion.evaluate((element) => getComputedStyle(element).getPropertyValue('-webkit-app-region'))).toBe('no-drag');
+  const windowDragRegion = page.locator('.window-titlebar-left-zone');
+  expect(await windowDragRegion.evaluate((element) => getComputedStyle(element).getPropertyValue('-webkit-app-region'))).toBe('drag');
 }
