@@ -15,8 +15,6 @@ import {
   settingsButtonClassName,
   settingsFieldClassName,
   SettingsButton,
-  SettingsControlSlot,
-  SettingsRow,
   settingsUtilityIconButtonClassName
 } from '../../../../shared/ui';
 
@@ -34,18 +32,17 @@ export function SettingsModelsSection() {
   return (
     <>
       {state.loadFailed ? <p className="text-ui-sm text-destructive">{t('settings.models.loadFailed')}</p> : null}
-      <ChatGptPlanRow
-        active={state.settings.selected_model_id === NATIVE_ASSISTANT_CODEX_MODEL_ID}
-        busy={state.busyId === NATIVE_ASSISTANT_CODEX_MODEL_ID}
-        connection={state.codexConnection}
-        onSelect={() => void state.select(NATIVE_ASSISTANT_CODEX_MODEL_ID)}
-        connecting={state.codexSigningIn}
-        onRetry={() => void state.refreshCodexConnection()}
-        onConnect={() => void state.signInCodex()}
-      />
-      <h4 className="px-settings-panel-x py-settings-panel-y text-ui-lg text-foreground">{t('settings.models.customSection')}</h4>
       <div className={settingsActionTableClassName('overflow-x-auto')} role="table" aria-label={t('settings.models.aria')}>
         <ModelTableHeader />
+        <ChatGptPlanRow
+          active={state.settings.selected_model_id === NATIVE_ASSISTANT_CODEX_MODEL_ID}
+          busy={state.busyId === NATIVE_ASSISTANT_CODEX_MODEL_ID}
+          connection={state.codexConnection}
+          onSelect={() => void state.select(NATIVE_ASSISTANT_CODEX_MODEL_ID)}
+          connecting={state.codexSigningIn}
+          onRetry={() => void state.refreshCodexConnection()}
+          onConnect={() => void state.signInCodex()}
+        />
         {state.drafts.map((draft) => (
           <CustomModelRow
             active={state.settings.selected_model_id === draft.id}
@@ -103,18 +100,25 @@ function ChatGptPlanRow(props: {
   const canRetry = props.connection === 'unavailable' || props.connection === 'missing';
   const label = t('settings.models.chatgpt.plan');
   return (
-    <SettingsRow
-      title={label}
-      description={(
+    <div className={settingsActionTableRowClassName(MODEL_COLUMNS)}>
+      <ModelRadio
+        active={props.active}
+        disabled={props.busy || props.connection !== 'connected'}
+        label={label}
+        onSelect={props.onSelect}
+      />
+      <strong className="text-ui-sm font-medium">{label}</strong>
+      <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+        <span className="text-ui-sm text-foreground/60">{t('settings.models.chatgpt.allowance')}</span>
         <AppStatusBadge
           label={t(`settings.models.chatgpt.status.${props.connection}`)}
           tone={codexStatusTone(props.connection)}
         />
-      )}
-    >
-      <SettingsControlSlot>
+      </div>
+      <div>
         {canConnect ? (
           <SettingsButton
+            className="w-full px-2"
             loading={props.connecting}
             loadingLabel={t('settings.models.chatgpt.connecting')}
             onClick={props.onConnect}
@@ -123,16 +127,12 @@ function ChatGptPlanRow(props: {
           </SettingsButton>
         ) : null}
         {canRetry ? (
-          <SettingsButton onClick={props.onRetry}>{t('settings.models.chatgpt.retry')}</SettingsButton>
+          <SettingsButton className="w-full px-2" onClick={props.onRetry}>
+            {t('settings.models.chatgpt.retry')}
+          </SettingsButton>
         ) : null}
-        <ModelRadio
-          active={props.active}
-          disabled={props.busy || props.connection !== 'connected'}
-          label={label}
-          onSelect={props.onSelect}
-        />
-      </SettingsControlSlot>
-    </SettingsRow>
+      </div>
+    </div>
   );
 }
 

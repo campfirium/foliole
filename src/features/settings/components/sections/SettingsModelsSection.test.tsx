@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
@@ -41,8 +41,9 @@ beforeEach(() => {
 it('shows the ChatGPT plan and custom models as exclusive choices without a save action', async () => {
   renderWithLocalization(<SettingsModelsSection />);
 
-  expect(screen.getByText('ChatGPT plan')).toBeInTheDocument();
-  expect(await screen.findByDisplayValue('model-a')).toBeInTheDocument();
+  const modelTable = within(screen.getByRole('table', { name: 'Aide model settings' }));
+  expect(modelTable.getByText('ChatGPT plan')).toBeInTheDocument();
+  expect(await modelTable.findByDisplayValue('model-a')).toBeInTheDocument();
   expect(await screen.findByText('Not connected')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Connect' })).toBeInTheDocument();
   expect(screen.getByRole('radio', { name: 'Use ChatGPT plan' })).toBeChecked();

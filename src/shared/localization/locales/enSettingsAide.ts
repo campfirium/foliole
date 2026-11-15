@@ -22,7 +22,6 @@ export const EN_SETTINGS_AIDE_TRANSLATIONS = {
   'settings.models.chatgpt.status.connected': 'Connected',
   'settings.models.chatgpt.status.connecting': 'Complete in browser',
   'settings.models.chatgpt.status.signed_out': 'Not connected',
-  'settings.models.customSection': 'Custom API models',
   'settings.models.chatgpt.status.missing': 'Codex for ChatGPT connections was not found',
   'settings.models.chatgpt.retry': 'Check again',
   'settings.models.chatgpt.status.unavailable': 'Connection check failed',
