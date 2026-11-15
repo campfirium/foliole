@@ -28,11 +28,11 @@ export function selectMaterialHistory(state: HistorySource, pins: string[] = [],
   return history;
 }
 
-export function materialHistoryPath(nodes: HistorySource['nodesById'], parentId: string | null) {
+export function materialHistoryPath(nodes: HistorySource['nodesById'], nodeId: string) {
   const locale = getStoredAppLocale();
-  const path = buildNodeBreadcrumbs(parentId, nodes, Number.POSITIVE_INFINITY);
+  const path = buildNodeBreadcrumbs(nodeId, nodes, Number.POSITIVE_INFINITY);
   return path
-    .filter((item) => item.id !== HOME_NODE_ID && item.id !== INBOX_NODE_ID)
+    .filter((item) => item.id !== HOME_NODE_ID && item.id !== INBOX_NODE_ID && item.kind !== 'folder' && !nodes[item.id]?.specialKind)
     .map((item) => resolveNodeDisplayTitle(locale, item.id, item.title).trim())
     .filter(Boolean)
     .join(' / ');
@@ -50,6 +50,6 @@ export function filterMaterialHistory(
   const term = query.trim().toLocaleLowerCase();
   if (!term) return history;
   return history.filter(({ node }) => [
-    node.title, materialHistoryPreview(node), materialHistoryPath(nodes, node.parentNodeId)
+    node.title, materialHistoryPreview(node), materialHistoryPath(nodes, node.id)
   ].some((value) => value.toLocaleLowerCase().includes(term)));
 }

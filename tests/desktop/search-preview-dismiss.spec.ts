@@ -64,9 +64,8 @@ async function openWorkspaceSearch(desktopWindow: Page) {
   await desktopWindow.evaluate(() => {
     window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
   });
-  await desktopWindow.evaluate(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ctrlKey: true, key: 'k' }));
-  });
+  await desktopWindow.getByRole('region', { name: /Left toolbar|左侧工具栏/ })
+    .getByRole('button', { name: /^(Search|搜索)$/ }).click();
 }
 
 test('Escape dismisses search result preview without close chrome', async ({ desktopWindow }, testInfo) => {

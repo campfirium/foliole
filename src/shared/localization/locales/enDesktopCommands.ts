@@ -65,6 +65,8 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.history.search': 'Search history…',
   'desktop.history.noMatches': 'No matching materials',
   'desktop.history.select': 'Select',
+  'desktop.history.showShortcuts': 'Show history shortcuts',
+  'desktop.history.collapseShortcuts': 'Collapse history shortcuts',
   'desktop.history.open': 'Open',
   'desktop.history.openOnPage': 'Open on this page',
   'desktop.history.empty': 'No visited materials yet',

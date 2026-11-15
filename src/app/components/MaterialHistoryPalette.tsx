@@ -2,7 +2,7 @@ import { Pin } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { appFloatingEmptyStateClassName, appFloatingInputClassName, appFloatingItemClassName, appFloatingOverlayClassName, appFloatingSurfaceClassName } from '../../shared/ui';
+import { appFloatingEmptyStateClassName, appFloatingInputClassName, appFloatingItemClassName } from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import {
   floatingResultListClassName, floatingResultMetaClassName,
@@ -14,6 +14,11 @@ import { filterMaterialHistory, materialHistoryPath, materialHistoryPreview, sel
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
 import { useFloatingPaletteEscape } from './useFloatingPaletteEscape';
 import { useMaterialHistoryOrdering } from './useMaterialHistoryOrdering';
+import {
+  WorkspaceResultHeader, workspaceResultInputClassName,
+  workspaceResultOverlayClassName, workspaceResultPanelClassName
+} from './WorkspaceResultPalette';
+import { WorkspaceResultShortcutsFooter } from './WorkspaceResultShortcutsFooter';
 
 interface Props {
   onClose: () => void;
@@ -55,8 +60,8 @@ export default function MaterialHistoryPalette({ onClose, onOpenNode }: Props) {
 
   const label = t('desktop.command.openMaterialHistory');
   return (
-    <div aria-label={label} aria-modal="true" className={appFloatingOverlayClassName()} onClick={onClose} role="dialog">
-      <div className={appFloatingSurfaceClassName('panel', 'flex h-[min(560px,80dvh)] w-full max-w-2xl flex-col overflow-hidden')}
+    <div aria-label={label} aria-modal="true" className={workspaceResultOverlayClassName} onClick={onClose} role="dialog">
+      <div className={workspaceResultPanelClassName}
         onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { focusTrap.handleKeyDown(event); handleResultsKey(event, {
           onPin: () => { void pinRow(selected); }, onOpen: openRow,
           onSelect: setSelected, selected, size: rows.length, results: resultsRef.current
@@ -70,7 +75,7 @@ export default function MaterialHistoryPalette({ onClose, onOpenNode }: Props) {
           {!rows.length && <p className={appFloatingEmptyStateClassName()}>{t(query.trim() ? 'desktop.history.noMatches' : 'desktop.history.empty')}</p>}
           <HistoryRows rows={rows} nodes={state.nodesById} selected={selected} onOpen={openRow} onPin={(index) => { void pinRow(index); }} />
         </div>
-        {rows.length > 0 && <HistoryFooter />}
+        <HistoryFooter />
       </div>
     </div>
   );
@@ -115,7 +120,7 @@ function HistoryRows({ rows, nodes, selected, onOpen, onPin }: {
   return rows.map(({ node, pinned }, index) => {
     const bodyId = `${rowId}-body-${index}`;
     const pathId = `${rowId}-path-${index}`;
-    const path = materialHistoryPath(nodes, node.parentNodeId);
+    const path = materialHistoryPath(nodes, node.id);
     return (
       <div className={`group relative ${floatingResultRowClassName}`} key={node.id}>
         <button aria-labelledby={path ? `${bodyId} ${pathId}` : bodyId}
@@ -139,13 +144,18 @@ function HistoryRows({ rows, nodes, selected, onOpen, onPin }: {
 
 function HistoryFooter() {
   const t = useTranslation();
+  const [collapsed, setCollapsed] = useState(false);
   return (
-    <footer className="flex shrink-0 items-center px-4 py-2 text-xs text-foreground/65">
-      <span className="flex flex-wrap items-center gap-3">
-        <span><kbd className="rounded border border-border px-1">↑ ↓</kbd> {t('desktop.history.select')}</span>
-        <span><kbd className="rounded border border-border px-1">↵</kbd> {t('desktop.history.open')}</span>
-      </span>
-    </footer>
+    <WorkspaceResultShortcutsFooter
+      collapsed={collapsed}
+      onToggle={() => setCollapsed((value) => !value)}
+      collapseLabel={t('desktop.history.collapseShortcuts')}
+      showLabel={t('desktop.history.showShortcuts')}
+      hints={[
+        { keys: ['↑', '↓'], label: t('desktop.history.select') },
+        { keys: ['Enter'], label: t('desktop.history.open') }
+      ]}
+    />
   );
 }
 
@@ -157,8 +167,10 @@ function HistorySearch({ inputRef, query, onChange }: {
   const t = useTranslation();
   const label = t('desktop.history.search');
   return (
-    <input ref={inputRef} aria-label={label} className={appFloatingInputClassName('shrink-0')}
-      autoComplete="off" spellCheck={false}
-      onChange={(event) => onChange(event.target.value)} placeholder={label} type="search" value={query} />
+    <WorkspaceResultHeader>
+      <input ref={inputRef} aria-label={label} className={appFloatingInputClassName(workspaceResultInputClassName)}
+        autoComplete="off" spellCheck={false}
+        onChange={(event) => onChange(event.target.value)} placeholder={label} type="search" value={query} />
+    </WorkspaceResultHeader>
   );
 }

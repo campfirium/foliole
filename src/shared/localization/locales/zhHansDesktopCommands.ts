@@ -67,6 +67,8 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.history.search': '搜索历史…',
   'desktop.history.noMatches': '没有匹配的材料',
   'desktop.history.select': '选择',
+  'desktop.history.showShortcuts': '显示历史快捷键',
+  'desktop.history.collapseShortcuts': '折叠历史快捷键',
   'desktop.history.open': '打开',
   'desktop.history.openOnPage': '打开本页条目',
   'desktop.history.empty': '还没有访问记录',

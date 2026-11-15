@@ -38,10 +38,10 @@ it('keeps the latest 100 available individual materials after filtering', () => 
   expect(new Set(ordered.map(({ node }) => node.id)).size).toBe(100);
   expect(selectMaterialHistory(state, ['node-0'], 'node-1').slice(0, 3).map(({ node }) => node.id))
     .toEqual(['node-0', 'node-1', 'node-101']);
-  expect(materialHistoryPath(nodesById, entries[0]!.node.parentNodeId)).toBe('Inbox / Original material');
+  expect(materialHistoryPath(nodesById, entries[0]!.node.id)).toBe('Original material');
 });
 
-it('shows the full ancestry beneath the system Inbox and omits Inbox itself', () => {
+it('shows the article title for standalone materials and only material titles in nested breadcrumbs', () => {
   const createNode = (id: string, title: string, parentNodeId: string | null, kind: Node['kind']): Node => ({
     id, title, parentNodeId, kind, content: '', reveal: null, review: null,
     createdAt: '2026-11-14T01:00:00.000Z',
@@ -49,12 +49,13 @@ it('shows the full ancestry beneath the system Inbox and omits Inbox itself', ()
   });
   const nodes = Object.fromEntries([
     createNode(INBOX_NODE_ID, 'Inbox', null, 'folder'),
-    createNode('root', 'Top-level topic', INBOX_NODE_ID, 'topic'),
+    createNode('folder', 'Folder label', INBOX_NODE_ID, 'folder'),
+    createNode('root', 'Top-level topic', 'folder', 'topic'),
     createNode('section', 'Section', 'root', 'topic'),
     createNode('extract', 'Extract', 'section', 'topic')
   ].map((node) => [node.id, node]));
 
+  expect(materialHistoryPath(nodes, 'root')).toBe('Top-level topic');
   expect(materialHistoryPath(nodes, 'extract')).toBe('Top-level topic / Section / Extract');
   expect(materialHistoryPath(nodes, INBOX_NODE_ID)).toBe('');
-  expect(materialHistoryPath(nodes, null)).toBe('');
 });

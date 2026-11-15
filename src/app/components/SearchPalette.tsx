@@ -1,12 +1,8 @@
-import './SearchPalette.css';
-
-import { Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
 
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { appFloatingOverlayClassName, appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { SearchAliasFilters } from './SearchAliasFilters';
@@ -18,6 +14,10 @@ import { SearchPaletteShortcutsFooter, useSearchPaletteShortcuts } from './Searc
 import { useSearchResultSourceDetails } from './searchPaletteSourceDetails';
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
 import { useFloatingPaletteEscape } from './useFloatingPaletteEscape';
+import {
+  WorkspaceResultHeader, workspaceResultInputClassName,
+  workspaceResultOverlayClassName, workspaceResultPanelClassName
+} from './WorkspaceResultPalette';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 interface SearchPaletteProps {
@@ -51,13 +51,13 @@ export function SearchPalette(props: SearchPaletteProps) {
     <div
       aria-label={t('desktop.search.dialog')}
       aria-modal="true"
-      className={appFloatingOverlayClassName('items-center pt-0')}
+      className={workspaceResultOverlayClassName}
       onClick={overlayClose.handleClick}
       onMouseDown={overlayClose.handleMouseDown}
       role="dialog"
     >
       <div
-        className={appFloatingSurfaceClassName('panel', 'workspace-search-panel flex flex-col overflow-hidden !bg-canvas')}
+        className={workspaceResultPanelClassName}
         onKeyDown={focusTrap.handleKeyDown}
         onClick={(event) => event.stopPropagation()}
         ref={focusTrap.containerRef}
@@ -117,10 +117,9 @@ function SearchPaletteInputAndFilters(props: {
   const t = useTranslation();
   return (
     <>
-      <div className="flex min-h-14 shrink-0 items-center gap-2.5 border-b border-[var(--app-floating-divider-color)] bg-[var(--app-floating-surface-bg)] px-6">
-        <Search aria-hidden="true" className="size-4 shrink-0 text-foreground/60" />
+      <WorkspaceResultHeader>
         <FloatingPaletteInput
-          className="min-w-0 flex-1 bg-transparent px-0 text-base"
+          className={workspaceResultInputClassName}
           inputLabel={t('desktop.search.input')}
           onClose={props.onClose}
           onCompositionChange={props.onCompositionChange}
@@ -131,7 +130,7 @@ function SearchPaletteInputAndFilters(props: {
           query={props.query}
           totalItems={props.totalItems}
         />
-      </div>
+      </WorkspaceResultHeader>
       <SearchAliasFilters
         onSelect={props.searchState.selectSpelling}
         selectedSpelling={props.searchState.selectedSpelling}

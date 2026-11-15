@@ -22,12 +22,32 @@ async function openHistory(page: Page) {
   await expect(page.getByRole('dialog', { name: 'History', exact: true })).toBeVisible();
 }
 
-async function expectStableRowsAndPanel(history: Locator) {
-  const panel = history.getByRole('searchbox').locator('..');
-  const frame = await panel.boundingBox();
+async function captureSearchPanelFrame(page: Page) {
+  await page.evaluate(() => window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true'));
+  const rail = page.getByRole('region', { name: 'Left toolbar' });
+  await rail.getByRole('button', { name: 'Search', exact: true }).click();
+  const search = page.getByRole('dialog', { name: 'Workspace search' });
+  await expect(search.getByRole('textbox', { name: 'Search workspace' })).toBeVisible();
+  const frame = await search.getByRole('textbox').locator('../..').boundingBox();
+  expect(frame).not.toBeNull();
+  await search.getByRole('textbox').locator('../..').screenshot({ path: path.resolve('.tmp/artifacts/T774/search-panel-reference.png') });
+  await page.keyboard.press('Escape');
+  await expect(search).toBeHidden();
+  return frame;
+}
+
+async function expectSearchPanelLayout(history: Locator, frame: Awaited<ReturnType<typeof captureSearchPanelFrame>>) {
+  const panel = history.getByRole('searchbox').locator('../..');
+  expect(await panel.boundingBox()).toEqual(frame);
+  const collapse = history.getByRole('button', { name: 'Collapse history shortcuts' });
+  await expect(history.getByText('Enter', { exact: true })).toBeVisible();
+  await collapse.click();
+  await expect(history.getByText('Enter', { exact: true })).toBeHidden();
+  await history.getByRole('button', { name: 'Show history shortcuts' }).click();
+  await expect(history.getByText('Enter', { exact: true })).toBeVisible();
   await history.getByRole('searchbox').fill('No matching history text');
   await expect(history.getByText('No matching materials')).toBeVisible();
-  expect((await panel.boundingBox())?.height).toBe(frame?.height);
+  expect(await panel.boundingBox()).toEqual(frame);
   await history.getByRole('searchbox').fill('');
 }
 
@@ -58,8 +78,10 @@ test('reopens the exact visited child from persisted desktop history', async ({ 
   await page.getByRole('button', { name: 'Expand all topics' }).click();
   await page.getByRole('treeitem', { name: 'History extract' }).click();
   await expect.poll(() => active(page)).toBe('history-child');
+  const searchFrame = await captureSearchPanelFrame(page);
   const immediately = await openHistoryFromRail(page);
-  await expect(immediately.getByRole('button', { name: /Exact derived body.*History source$/ })).toBeVisible();
+  await expectSearchPanelLayout(immediately, searchFrame);
+  await expect(immediately.getByRole('button', { name: /Exact derived body.*History source \/ History extract$/ })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(immediately).toBeHidden();
   await page.getByRole('treeitem', { name: 'History source' }).click();
@@ -79,17 +101,16 @@ test('reopens the exact visited child from persisted desktop history', async ({ 
   }, flowNodeId)).toBe(true);
   const before = await active(page);
   const history = await openHistoryFromRail(page);
-  await expect(history.getByRole('button', { name: /Exact derived body.*History source$/ })).toBeVisible();
+  await expect(history.getByRole('button', { name: /Exact derived body.*History source \/ History extract$/ })).toBeVisible();
   await expect(history.getByRole('button', { name: /^Parent body.*second line/ })).toBeVisible();
-  await expect(history.getByText('Inbox', { exact: true })).toHaveCount(0);
-  await expectStableRowsAndPanel(history);
+  await expect(history.getByText('History source', { exact: true })).toBeVisible();
   await page.screenshot({ path: path.resolve('.tmp/artifacts/T774/material-history-native.png') });
   await page.keyboard.press('Escape');
   await expect(history).toBeHidden();
   expect(await active(page)).toBe(before);
   await openHistoryFromRail(page);
   await history.getByRole('searchbox', { name: 'Search history…' }).fill('Exact derived');
-  await expect(history.getByRole('button', { name: /Exact derived body.*History source$/ })).toBeVisible();
+  await expect(history.getByRole('button', { name: /Exact derived body.*History source \/ History extract$/ })).toBeVisible();
   await page.keyboard.press('Enter');
   await expect.poll(() => active(page)).toBe('history-child');
   await expect(history).toBeHidden();
@@ -100,9 +121,9 @@ test('reopens the exact visited child from persisted desktop history', async ({ 
 
 async function scrollAndOpenOlderHistory(page: Page, history: Locator) {
   await expect(history.getByRole('searchbox')).toBeFocused();
-  const target = history.getByRole('button', { name: /^Ordered body 2$/ });
+  const target = history.getByRole('button', { name: /^Ordered body 2 Ordered topic 2$/ });
   await expect(target).not.toBeInViewport();
-  await history.getByRole('button', { name: /^Ordered body 11$/ }).hover();
+  await history.getByRole('button', { name: /^Ordered body 11 Ordered topic 11$/ }).hover();
   await page.mouse.wheel(0, 1500);
   await expect(target).toBeInViewport();
   for (let index = 0; index < 9; index++) await page.keyboard.press('ArrowDown');
@@ -131,7 +152,7 @@ test('pins, promotes a saved edit, and scrolls to older history from the search 
   await expect(history).toBeVisible();
   await scrollAndOpenOlderHistory(page, history);
   await openHistory(page);
-  const target = history.getByRole('button', { name: /^Ordered body 2$/ });
+  const target = history.getByRole('button', { name: /^Ordered body 2 Ordered topic 2$/ });
   await target.hover();
   await target.locator('..').getByRole('button', { name: 'Pin material' }).click();
   await expect(history.getByRole('button', { name: 'Pin material', pressed: true })).toHaveCount(1);
@@ -144,22 +165,22 @@ test('pins, promotes a saved edit, and scrolls to older history from the search 
   expect(await page.evaluate(() => window.__folioleFlushPendingEditorDraftBeforeClose?.())).toBe(true);
   await page.getByRole('treeitem', { name: 'Ordered topic 11', exact: true }).click();
   await openHistory(page);
-  await expect(history.getByRole('button', { name: /^Promoted saved edit$/ })).toBeVisible();
+  await expect(history.getByRole('button', { name: /^Promoted saved edit Ordered topic 0$/ })).toBeVisible();
   await page.keyboard.press('Escape');
   await page.reload();
   await expectWorkspaceShell(page);
   await openHistory(page);
-  const materialRows = history.getByRole('button', { name: /^(?:Ordered body \d+|Promoted saved edit)$/ });
-  await expect(materialRows.nth(0)).toHaveAccessibleName('Ordered body 2');
-  await expect(materialRows.nth(1)).toHaveAccessibleName('Promoted saved edit');
-  await expect(history.getByRole('button', { name: /Ordered body 2$/ })).toHaveCount(1);
+  const materialRows = history.getByRole('button', { name: /^(?:Ordered body \d+|Promoted saved edit) Ordered topic \d+$/ });
+  await expect(materialRows.nth(0)).toHaveAccessibleName('Ordered body 2 Ordered topic 2');
+  await expect(materialRows.nth(1)).toHaveAccessibleName('Promoted saved edit Ordered topic 0');
+  await expect(history.getByRole('button', { name: /Ordered body 2 Ordered topic 2$/ })).toHaveCount(1);
   await history.getByRole('button', { name: 'Pin material', pressed: true }).click();
-  await expect(history.getByRole('button', { name: /^Promoted saved edit$/ })).toBeVisible();
+  await expect(history.getByRole('button', { name: /^Promoted saved edit Ordered topic 0$/ })).toBeVisible();
   await history.getByRole('searchbox').fill('Ordered');
   await page.keyboard.press('Space');
   await page.keyboard.insertText('body 1');
   await expect(history.getByRole('searchbox')).toHaveValue('Ordered body 1');
   await expect(history.getByRole('button', { name: 'Pin material', pressed: true })).toHaveCount(0);
-  await expect(history.getByRole('button', { name: /Ordered body 1$/ })).toBeVisible();
+  await expect(history.getByRole('button', { name: /Ordered body 1 Ordered topic 1$/ })).toBeVisible();
   await page.screenshot({ path: path.resolve('.tmp/artifacts/T774/material-history-ordering.png') });
 });
