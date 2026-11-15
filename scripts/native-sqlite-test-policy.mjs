@@ -107,6 +107,7 @@ const controlledElectronSqliteTests = [
   'src/companion/companionBrowseReachability.integration.test.tsx',
   'src/companion/companionGradeRecovery.integration.test.tsx',
   'src/companion/companionSelectionRecovery.integration.test.tsx',
+  'src/companion/companionParagraphSelection.integration.test.tsx',
   'src/companion/companionItemAnnotationBoundary.integration.test.ts',
   'src/companion/companionExistingHighlightRecovery.integration.test.tsx',
   'src/companion/CompanionHighlightOpen.integration.test.tsx',
