@@ -35,26 +35,23 @@ jobs:
             jq -ceS 'if .schemaVersion != 1 or (.platforms | type) != "object" then error("Invalid download directory") else . end |
               .storeChannels //= {} |
               .platforms |= map_values(if .status == "available" then . else del(.url, .releaseUrl) end)')
-          status=$(curl -sS --max-time 30 -o "$RUNNER_TEMP/site-downloads.json" -w '%{http_code}' \
-            https://foliole.app/downloads.json)
-          case "$status" in
-            200) deployed=$(jq -ceS . "$RUNNER_TEMP/site-downloads.json") ;;
-            403|404)
-              # A blocked or missing public probe cannot establish that production is current.
-              deployed=''
-              ;;
-            *) echo "Production download directory returned HTTP $status" >&2; exit 1 ;;
-          esac
-          if [[ "$directory" != "$deployed" ]]; then
+          printf '%s\n' "$directory" > "$RUNNER_TEMP/foliole-release-downloads.json"
+          echo 'eligible=true' >> "$GITHUB_OUTPUT"
+      - name: Compare the published directory with the site source
+        id: compare
+        if: steps.site.outputs.eligible == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.FOLIOLE_SITE_SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          directory=$(cat "$RUNNER_TEMP/foliole-release-downloads.json")
+          tracked=$(gh api 'repos/campfirium/foliole-site/contents/content/downloads.json?ref=main' --jq .content |
+            base64 --decode | jq -ceS .)
+          if [[ "$directory" != "$tracked" ]]; then
             echo 'dispatch=true' >> "$GITHUB_OUTPUT"
           fi
-      - name: Require site sync token
-        if: steps.site.outputs.dispatch == 'true'
-        env:
-          SITE_SYNC_TOKEN: ${{ secrets.FOLIOLE_SITE_SYNC_TOKEN }}
-        run: test -n "$SITE_SYNC_TOKEN"
       - name: Notify Foliole site
-        if: steps.site.outputs.dispatch == 'true'
+        if: steps.compare.outputs.dispatch == 'true'
         env:
           GH_TOKEN: ${{ secrets.FOLIOLE_SITE_SYNC_TOKEN }}
         run: |
