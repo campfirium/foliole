@@ -6,8 +6,10 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../../config/appSettings';
 import { loadRuntimeAppSettingsState, saveRuntimeAppSettingsState } from '../appSettingsState';
 import { getRuntimeInvoke } from '../runtimeInvoke';
 
-export function selectRuntimeSuperMemoCollection() {
-  return requireInvoke()(NATIVE_COMMANDS.selectImportDirectory, {});
+export async function selectRuntimeSuperMemoSource() {
+  const invoke = requireInvoke();
+  const directory = await invoke(NATIVE_COMMANDS.selectImportDirectory, {});
+  return directory ? { ...await invoke(NATIVE_COMMANDS.readSuperMemoSource, { directory }), directory } : null;
 }
 
 function requireInvoke() {
@@ -16,8 +18,7 @@ function requireInvoke() {
   return invoke;
 }
 
-async function readSource(file: File, collectionDirectory?: string) {
-  const xml = await file.text();
+function readSource(xml: string, collectionDirectory?: string) {
   if (/<!\s*(?:DOCTYPE|ENTITY)\b/i.test(xml)) throw new Error('invalid_supermemo_xml');
   const elements = readSuperMemoXmlDraft(new DOMParser().parseFromString(xml, 'application/xml'));
   return { elements, ...(collectionDirectory ? { collectionDirectory } : {}) };
@@ -44,16 +45,19 @@ export async function saveSuperMemoGradeMap(gradeMap: SuperMemoGradeMap) {
   }
 }
 
-export async function previewRuntimeSuperMemoImport(file: File, collectionDirectory: string | undefined, gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat) {
-  const source = await readSource(file, collectionDirectory);
+export async function previewRuntimeSuperMemoImport(xml: string, collectionDirectory: string | undefined, gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat) {
+  const source = readSource(xml, collectionDirectory);
   const preview = await requireInvoke()(NATIVE_COMMANDS.previewSuperMemoImport, { ...source, gradeMap, sourceFormat });
   return { preview, elements: source.elements };
 }
 
-export async function runRuntimeSuperMemoImport(file: File, percent: number,
-  collectionDirectory: string | undefined, gradeMap: SuperMemoGradeMap, previewSignature: string, sourceFormat: SuperMemoSourceFormat) {
-  return requireInvoke()(NATIVE_COMMANDS.runSuperMemoImport,
-    { ...await readSource(file, collectionDirectory), percent, gradeMap, previewSignature, sourceFormat });
+export async function runRuntimeSuperMemoImport(directory: string, percent: number,
+  gradeMap: SuperMemoGradeMap, previewSignature: string, sourceFormat: SuperMemoSourceFormat) {
+  const invoke = requireInvoke();
+  const source = await invoke(NATIVE_COMMANDS.readSuperMemoSource, { directory });
+  if (source.status !== 'ready') throw new Error('supermemo_source_changed');
+  return invoke(NATIVE_COMMANDS.runSuperMemoImport,
+    { ...readSource(source.xml, source.collectionDirectory), percent, gradeMap, previewSignature, sourceFormat });
 }
 
 export function listRuntimeSuperMemoImports() {

@@ -45,3 +45,7 @@ export interface NativeSuperMemoPreview {
   pairedCollection?: boolean;
   previewSignature?: string;
 }
+
+export type NativeSuperMemoSource =
+  | { status: 'missing-xml' }
+  | { status: 'ready'; name: string; xml: string; collectionDirectory: string | undefined };
