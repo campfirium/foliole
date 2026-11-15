@@ -26,9 +26,6 @@ export function SuperMemoDraftTable({ preview, percent }: { preview: NativeSuper
         deferred: report.deferred, unknown: report.unknownDates, noHistory: report.noHistory
       })}</p>
       {report.pendingNewItems > 0 ? <p>{t('desktop.superMemoDrafts.pendingNewItems', { count: report.pendingNewItems })}</p> : null}
-      {report.localImages || report.remoteImages || report.skippedAudio ? <p>{t('desktop.superMemoDrafts.media', {
-        local: report.localImages, remote: report.remoteImages, audio: report.skippedAudio
-      })}</p> : null}
     </article>
   );
 }

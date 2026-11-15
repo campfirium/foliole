@@ -7,6 +7,7 @@ export const EN_DESKTOP_IMPORT_DIALOG_TRANSLATIONS = {
   'desktop.superMemoDrafts.entries.converted': 'Convert {count}',
   'desktop.superMemoDrafts.entries.skipped': 'Skipped {count}',
   'desktop.superMemoDrafts.entries.missing': 'Missing images {count}',
+  'desktop.superMemoDrafts.collectionRoot': 'SuperMemo collection root',
   'desktop.superMemoDrafts.entryPreview': 'Entry preview',
   'desktop.superMemoDrafts.noEntries': 'No entries',
   'desktop.superMemoDrafts.collapseEntry': 'Collapse entry #{id}',

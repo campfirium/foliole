@@ -14,8 +14,9 @@ const card = `<SuperMemoElement><ID>2</ID><Type>Item</Type><Title>Card</Title>
   <LearningData><LastRepetition>10.11.2026</LastRepetition><Interval>300</Interval>
   <RepHist>ElNo=2 Rep=2 Laps=0 Date=10.11.2026 Hour=3.5 Int=1 Grade=4</RepHist></LearningData>
 </SuperMemoElement>`;
-const firstExport = `<SuperMemoCollection><Count>3</Count><SuperMemoElement>
-  <ID>1</ID><Type>Topic</Type><Title>Archive</Title>${card}${emptyCard}</SuperMemoElement></SuperMemoCollection>`;
+const firstExport = `<SuperMemoCollection><Count>4</Count><SuperMemoElement>
+  <ID>4</ID><Type>Topic</Type><Ordinal>0</Ordinal><Content><Question>Welcome sample</Question></Content><SuperMemoElement>
+  <ID>1</ID><Type>Topic</Type><Title>Archive</Title>${card}${emptyCard}</SuperMemoElement></SuperMemoElement></SuperMemoCollection>`;
 const secondExport = `<SuperMemoCollection><Count>1</Count>${card}</SuperMemoCollection>`;
 
 async function openPreview(page: Page) {
@@ -34,8 +35,11 @@ test('previews different XML exports and changes the interval without saving a d
   const input = dialog.locator('input[type="file"]');
   const selectXml = (name: string, text: string) =>
     input.setInputFiles({ name, mimeType: 'application/xml', buffer: Buffer.from(text) });
-  await selectXml('Learning.xml', firstExport);
   const preview = dialog.getByRole('region', { name: /^(Entry preview|条目预览)$/ });
+  await expect(preview.getByText(/Choose a SuperMemo XML export|选择 SuperMemo 导出的 XML/)).toBeVisible();
+  await selectXml('Learning.xml', firstExport);
+  await expect(preview.getByText('Welcome sample', { exact: true })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: /Collection root.*#4|资料库根项.*#4/i })).toBeVisible();
   await dialog.getByRole('button', { name: /^Card.*#2$/ }).click();
   await expect(preview.getByText('Question', { exact: true })).toBeVisible();
   await expect(preview.getByText('Answer', { exact: true })).toBeVisible();
@@ -133,10 +137,13 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
   });
   await dialog.getByRole('button', { name: /^(Pair collection folder|配对资料库文件夹)$/ }).click();
   await expect(dialog.getByText(/Candidate dates and priority order come from|候选日期和优先顺序来自/)).toBeVisible();
+  const media = dialog.getByText(/2 local image references|本地图片引用 2 处/);
+  await expect(media).toBeVisible();
   await dialog.getByRole('button', { name: /^(Missing images 1|缺图 1)$/ }).click();
   await expect(dialog.getByText(/^(1 local image references cannot be imported|1 处本地图片引用无法导入)$/)).toBeVisible();
   await expect(dialog.getByText('missing-map.png', { exact: true })).toBeVisible();
   await dialog.getByRole('button', { name: parameters }).click();
+  await expect(media).toBeHidden();
   await expect(dialog.getByRole('combobox')).toHaveCount(0);
   const sourceOption = dialog.getByRole('radio', { name: /^(End of each material’s content|所有材料的内容末尾)$/ });
   await sourceOption.click();
@@ -165,7 +172,6 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
   const cardDocument = await desktopWindow.evaluate(id => window.electronAPI!.invoke('load_node_document', { nodeId: id! }), importedCard?.id);
   expect(cardDocument?.content).toContain(`Source: [[node-id:${nodeId}|Imported map topic]]`);
   expect(cardDocument?.reveal).toBe('Answer');
-  expect(nodeId).toBeTruthy();
   await desktopWindow.evaluate(id => window.__folioleWorkspaceDebug!.openNode(id!), nodeId);
   await expect(desktopWindow.locator('.prompt-editor-host .cm-content')).toContainText('Before');
   const image = desktopWindow.getByRole('img', { name: 'Map', exact: true });

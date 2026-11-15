@@ -9,6 +9,7 @@ export const ZH_HANS_DESKTOP_IMPORT_DIALOG_TRANSLATIONS: Partial<Record<Translat
   'desktop.superMemoDrafts.entries.converted': '转换 {count}',
   'desktop.superMemoDrafts.entries.skipped': '跳过 {count}',
   'desktop.superMemoDrafts.entries.missing': '缺图 {count}',
+  'desktop.superMemoDrafts.collectionRoot': 'SuperMemo 资料库根项',
   'desktop.superMemoDrafts.entryPreview': '条目预览',
   'desktop.superMemoDrafts.noEntries': '没有条目',
   'desktop.superMemoDrafts.collapseEntry': '收起条目 #{id}',

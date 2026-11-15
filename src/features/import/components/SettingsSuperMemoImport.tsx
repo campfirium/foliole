@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import type { SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
@@ -6,7 +7,7 @@ import { useTranslation } from '../../../shared/localization/LocalizationProvide
 import { loadSuperMemoGradeMap, previewRuntimeSuperMemoImport, runRuntimeSuperMemoImport,
   saveSuperMemoGradeMap, selectRuntimeSuperMemoCollection } from '../../../shared/platform/import/superMemoImportRuntimeRepository';
 import {
-  AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogDescription,
+  AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogClose, AppDialogContent, AppDialogDescription,
   AppDialogOverlay, AppDialogPortal, AppDialogTitle, SettingsControlSlot, SettingsRow
 } from '../../../shared/ui';
 
@@ -124,15 +125,20 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
   const { input, draft, percent, setPercent, sourceFile, busy, error, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadFile, importSource } = useSuperMemoDraft(initialGrades);
   const [parameters, setParameters] = useState(false);
   const preview = draft?.preview;
-  const showParameters = Boolean(preview && !result && parameters);
   return (
     <AppDialog open onOpenChange={open => { if (!open && !busy) close(); }}>
       <AppDialogPortal>
         <AppDialogOverlay />
         <AppDialogContent layout="task" className="max-h-[calc(100dvh-32px)] w-[min(1120px,calc(100vw-32px))]">
           <AppDialogTitle>{t('desktop.superMemoDrafts.title')}</AppDialogTitle>
+          <AppDialogClose asChild>
+            <AppButton className="absolute right-4 top-3" variant="ghost" disabled={busy}
+              aria-label={t('desktop.superMemoDrafts.close')}>
+              <X aria-hidden className="size-4" />
+            </AppButton>
+          </AppDialogClose>
           <AppDialogBody className="flex min-h-0 flex-col gap-3 overflow-y-auto">
-            <AppDialogDescription className={preview ? 'sr-only' : undefined}>{t('desktop.superMemoDrafts.description')}</AppDialogDescription>
+            <AppDialogDescription className="sr-only">{t('desktop.superMemoDrafts.description')}</AppDialogDescription>
             <input accept=".xml,application/xml,text/xml" hidden ref={input} type="file" onChange={event => {
               const file = event.currentTarget.files?.[0];
               event.currentTarget.value = '';
@@ -147,18 +153,18 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
             </div>
             {error ? <p className="text-sm text-destructive" role="alert">{t('desktop.superMemoDrafts.importFailed')}</p> : null}
             {busy ? <p role="status">{t('desktop.superMemoDrafts.loading')}</p> : null}
-            {preview && !result ? <p className="text-sm text-foreground/70">
+            {!parameters && preview && !result ? <p className="text-sm text-foreground/70">
               {t(preview.pairedCollection ? 'desktop.superMemoDrafts.pairedLimitations' : 'desktop.superMemoDrafts.xmlLimitations')}
             </p> : null}
-            {draft && !result ? <div hidden={parameters}><SuperMemoEntryPreview key={sourceFile?.name} {...draft} /></div> : null}
-            {parameters && preview && !result ? <>
+            {!result ? <div hidden={parameters}><SuperMemoEntryPreview key={sourceFile?.name} preview={preview} elements={draft?.elements} /></div> : null}
+            {parameters && preview && !result ? (
               <SuperMemoParameters preview={preview} {...{ percent, setPercent, gradeMap, changeGrades, sourceFormat, changeSourceFormat, busy }} />
-            </> : null}
+            ) : null}
             {!preview && !busy ? <SuperMemoBatchAdjustments /> : null}
             {result ? <p role="status">{t('desktop.superMemoDrafts.importResult', result)}</p> : null}
           </AppDialogBody>
-          <AppDialogActions>
-            {showParameters ? <>
+          {preview && !result ? <AppDialogActions>
+            {parameters ? <>
               <AppButton disabled={busy} variant="ghost" onClick={() => setParameters(false)}>
                 {t('desktop.superMemoDrafts.backToPreview')}
               </AppButton>
@@ -168,8 +174,7 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
             </> : preview && !result ? (
               <AppButton disabled={busy} onClick={() => setParameters(true)}>{t('desktop.superMemoDrafts.parameters')}</AppButton>
             ) : null}
-            <AppButton disabled={busy} onClick={close} variant="ghost">{t('desktop.superMemoDrafts.close')}</AppButton>
-          </AppDialogActions>
+          </AppDialogActions> : null}
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>
