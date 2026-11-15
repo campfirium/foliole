@@ -36,10 +36,10 @@ function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
   const [gradeMap, setGradeMap] = useState(initialGrades);
   const [sourceFormat, setSourceFormat] = useState<SuperMemoSourceFormat>({ ...DEFAULT_SUPER_MEMO_SOURCE_FORMAT, placement: 'topic-info' });
   const [percent, setPercent] = useState(0);
-  const [source, setSource] = useState<Extract<Awaited<ReturnType<typeof selectRuntimeSuperMemoSource>>, { status: 'ready' }>>();
+  const [source, setSource] = useState<NonNullable<Awaited<ReturnType<typeof selectRuntimeSuperMemoSource>>>>();
   const [result, setResult] = useState<{ imported: number; skipped: number; unresolvedImages: number }>();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<boolean | 'missing-xml'>(false);
+  const [error, setError] = useState<boolean | 'xml-only'>(false);
 
   async function loadSource() {
     setBusy(true);
@@ -47,12 +47,9 @@ function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
     try {
       const selected = await selectRuntimeSuperMemoSource();
       if (!selected) return;
-      if (selected.status === 'missing-xml') {
-        setError('missing-xml');
-        return;
-      }
       setDraft(await previewRuntimeSuperMemoImport(selected.xml, selected.collectionDirectory, gradeMap, sourceFormat));
       setSource(selected);
+      if (!selected.collectionDirectory) setError('xml-only');
       setPercent(0);
     } catch {
       setError(true);
@@ -86,7 +83,7 @@ function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
     setBusy(true);
     setError(false);
     try {
-      setResult(await runRuntimeSuperMemoImport(source.directory, percent, gradeMap, draft.preview.previewSignature, sourceFormat));
+      setResult(await runRuntimeSuperMemoImport(source.filePath, percent, gradeMap, draft.preview.previewSignature, sourceFormat));
     } catch {
       setError(true);
     } finally {
@@ -94,7 +91,7 @@ function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
     }
   }
 
-  return { draft, percent, setPercent, source, busy, error, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadSource, importSource };
+  return { draft, percent, setPercent, source, busy, error, setError, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadSource, importSource };
 }
 
 function SuperMemoParameters({ preview, percent, setPercent, gradeMap, changeGrades, sourceFormat, changeSourceFormat, busy }: {
@@ -123,9 +120,30 @@ function SuperMemoParameters({ preview, percent, setPercent, gradeMap, changeGra
   </div>);
 }
 
+function SuperMemoLoadNotice({ error, onClose }: { error: boolean | 'xml-only'; onClose(): void }) {
+  const t = useTranslation();
+  return (
+    <AppDialog open={Boolean(error)} onOpenChange={open => { if (!open) onClose(); }}>
+      <AppDialogPortal>
+        <AppDialogOverlay />
+        <AppDialogContent layout="notice">
+          <AppDialogTitle>{t(error === 'xml-only' ? 'desktop.superMemoDrafts.noCollection' : 'desktop.superMemoDrafts.loadFailed')}</AppDialogTitle>
+          <AppDialogBody>
+            <AppDialogDescription>{t(error === 'xml-only' ? 'desktop.superMemoDrafts.collectionHelp' : 'desktop.superMemoDrafts.importFailed')}</AppDialogDescription>
+          </AppDialogBody>
+          <AppDialogActions>
+            <AppDialogClose asChild><AppButton>{t(error === 'xml-only'
+              ? 'desktop.superMemoDrafts.continueXml' : 'desktop.superMemoDrafts.close')}</AppButton></AppDialogClose>
+          </AppDialogActions>
+        </AppDialogContent>
+      </AppDialogPortal>
+    </AppDialog>
+  );
+}
+
 function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; initialGrades: SuperMemoGradeMap }) {
   const t = useTranslation();
-  const { draft, percent, setPercent, source, busy, error, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadSource, importSource } = useSuperMemoDraft(initialGrades);
+  const { draft, percent, setPercent, source, busy, error, setError, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadSource, importSource } = useSuperMemoDraft(initialGrades);
   const [parameters, setParameters] = useState(false);
   const preview = draft?.preview;
   return (
@@ -146,19 +164,15 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
               <div className="min-w-0">
                 <h2 className="text-sm font-semibold">{source?.name ?? t('desktop.superMemoDrafts.sourceTitle')}</h2>
                 <p className="mt-1 max-w-prose text-sm text-foreground/70">
-                  {t(source ? (preview?.pairedCollection ? 'desktop.superMemoDrafts.sourcePaired' : 'desktop.superMemoDrafts.sourceXmlOnly')
-                    : 'desktop.superMemoDrafts.prepareSource')}
+                  {!source ? t('desktop.superMemoDrafts.prepareSource') : null}
                 </p>
               </div>
               <AppButton disabled={busy} onClick={() => void loadSource()}>
                 {t(source ? 'desktop.superMemoDrafts.reloadSource' : 'desktop.superMemoDrafts.loadSource')}
               </AppButton>
             </div> : null}
-            {error ? <p className="text-sm text-destructive" role="alert">
-              {t(error === 'missing-xml' ? 'desktop.superMemoDrafts.missingXml' : 'desktop.superMemoDrafts.importFailed')}
-            </p> : null}
             {busy ? <p role="status">{t('desktop.superMemoDrafts.loading')}</p> : null}
-            {!result ? <div hidden={parameters}><SuperMemoEntryPreview key={source?.directory} preview={preview} elements={draft?.elements} /></div> : null}
+            {!result ? <div hidden={parameters}><SuperMemoEntryPreview key={source?.filePath} preview={preview} elements={draft?.elements} /></div> : null}
             {parameters && preview && !result ? (
               <SuperMemoParameters preview={preview} {...{ percent, setPercent, gradeMap, changeGrades, sourceFormat, changeSourceFormat, busy }} />
             ) : null}
@@ -179,6 +193,7 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
           </AppDialogActions> : null}
         </AppDialogContent>
       </AppDialogPortal>
+      <SuperMemoLoadNotice error={error} onClose={() => setError(false)} />
     </AppDialog>
   );
 }

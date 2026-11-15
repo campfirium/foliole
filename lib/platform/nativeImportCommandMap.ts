@@ -23,7 +23,7 @@ import type {
 } from './nativeWatchedFolderContract.js';
 
 export type NativeImportCommandMap = {
-  [NATIVE_COMMANDS.readSuperMemoSource]: { args: { directory: string }; result: NativeSuperMemoSource };
+  [NATIVE_COMMANDS.readSuperMemoSource]: { args: { filePath?: string }; result: NativeSuperMemoSource | null };
   [NATIVE_COMMANDS.listSuperMemoImports]: {
     args: undefined;
     result: { batchId: string; percent: number; imported: number; skipped: number; unresolvedImages: number }[];

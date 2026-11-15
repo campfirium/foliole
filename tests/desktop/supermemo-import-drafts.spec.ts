@@ -31,19 +31,31 @@ const backToPreview = /^(Back to preview|返回资料预览)$/;
 
 async function loadSource(app: ElectronApplication, dialog: Locator, directory: string, xml?: string) {
   await mkdir(directory, { recursive: true });
-  if (xml !== undefined) await writeFile(path.join(directory, 'SuperMemo.xml'), xml);
+  const file = path.join(directory, path.basename(directory) + '.xml');
+  if (xml !== undefined) await writeFile(file, xml);
   await app.evaluate(({ dialog }, selected) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [selected] });
-  }, directory);
-  await dialog.getByRole('button', { name: /^(Load SuperMemo|Load another folder|载入 SuperMemo|重新载入)$/ }).click();
+  }, file);
+  await dialog.getByRole('button', { name: /^(Load XML|Load another XML|载入 XML|重新载入)$/ }).click();
+}
+
+async function continueXml(page: Page) {
+  const notice = page.getByRole('dialog', { name: /^(Collection files not found|未找到配套资料)$/ });
+  await notice.getByRole('button', { name: /^(Continue with XML|继续使用 XML)$/ }).click();
+}
+
+async function dismissLoadError(page: Page) {
+  const notice = page.getByRole('dialog', { name: /^(Could not load SuperMemo|无法载入 SuperMemo)$/ });
+  await notice.getByRole('button', { name: /^(Close|关闭)$/ }).click();
 }
 
 test('previews different XML exports and changes the interval without saving a draft', async ({ desktopWindow, desktopApp }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
   const dialog = await openPreview(desktopWindow);
   const preview = dialog.getByRole('region', { name: /^(Entry preview|条目预览)$/ });
-  await expect(preview.getByText(/Load the folder containing|载入包含 SuperMemo 导出的文件夹/)).toBeVisible();
+  await expect(preview.getByText(/Choose a SuperMemo XML export|载入 SuperMemo 的 XML 导出/)).toBeVisible();
   await loadSource(desktopApp, dialog, testInfo.outputPath('Learning'), firstExport);
+  await continueXml(desktopWindow);
   await expect(preview.getByText('Welcome sample', { exact: true })).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: /Collection root.*#4|资料库根项.*#4/i })).toBeVisible();
   await dialog.getByRole('button', { name: /^Card.*#2$/ }).click();
@@ -64,13 +76,12 @@ test('previews different XML exports and changes the interval without saving a d
   const folder = path.resolve('.tmp/artifacts/T762/desktop');
   await mkdir(folder, { recursive: true });
   await dialog.screenshot({ path: path.join(folder, 'supermemo-preview.png') });
-  await loadSource(desktopApp, dialog, testInfo.outputPath('Incomplete'));
-  await expect(dialog.getByRole('alert')).toContainText('SuperMemo.xml');
   await loadSource(desktopApp, dialog, testInfo.outputPath('Broken'), '<broken>');
-  await expect(dialog.getByRole('alert')).toBeVisible();
-  await expect(dialog.getByRole('heading', { name: 'Learning', exact: true })).toBeVisible();
+  await dismissLoadError(desktopWindow);
+  await expect(dialog.getByRole('heading', { name: 'Learning.xml', exact: true })).toBeVisible();
   await loadSource(desktopApp, dialog, testInfo.outputPath('Other'), secondExport);
-  await expect(dialog.getByRole('heading', { name: 'Other', exact: true })).toBeVisible();
+  await continueXml(desktopWindow);
+  await expect(dialog.getByRole('heading', { name: 'Other.xml', exact: true })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /^(Skipped 0|跳过 0)$/ })).toBeVisible();
   await dialog.getByRole('button', { name: parameters }).click();
   await expect(slider).toHaveValue('0');
@@ -111,13 +122,12 @@ test('pairs the selected collection and preserves XML preview after a mismatch',
   const elements = await writeCollection(directory, false);
   const info = path.join(directory, 'info');
   await loadSource(desktopApp, dialog, directory, secondExport);
-  await expect(dialog.getByText(/XML and collection files loaded|已载入 XML 和配套资料/)).toBeVisible();
   const dateBasis = dialog.getByText(/Candidate dates and priority order come from|候选日期和优先顺序来自/);
   await expect(dateBasis).toHaveCount(0);
   elements.writeUInt16LE(200, 118 + 16);
   await writeFile(path.join(info, 'ElementInfo.dat'), elements);
   await loadSource(desktopApp, dialog, directory);
-  await expect(dialog.getByRole('alert')).toBeVisible();
+  await dismissLoadError(desktopWindow);
   await dialog.getByRole('button', { name: parameters }).click();
   await expect(dateBasis).toBeVisible();
   await expect(dialog.getByRole('slider')).toHaveValue('0');
@@ -135,7 +145,6 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
     <Content><Question><![CDATA[Before <img alt="Map" src="map.png"> after. <img src="missing-map.png">]]></Question></Content>
     </SuperMemoElement>${card}</SuperMemoCollection>`;
   await loadSource(desktopApp, dialog, directory, xml);
-  await expect(dialog.getByText(/XML and collection files loaded|已载入 XML 和配套资料/)).toBeVisible();
   const media = dialog.getByText(/2 local image references|本地图片引用 2 处/);
   await expect(media).toBeVisible();
   await dialog.getByRole('button', { name: /^(Missing images 1|缺图 1)$/ }).click();
@@ -183,6 +192,7 @@ test('updates the grade mapping in a live preview and remembers it when reopened
   const dialog = await openPreview(desktopWindow);
   const directory = testInfo.outputPath('Grades');
   await loadSource(desktopApp, dialog, directory, secondExport);
+  await continueXml(desktopWindow);
   await dialog.getByRole('button', { name: parameters }).click();
   await dialog.getByRole('slider').press('End');
   const planned = dialog.getByRole('row').filter({ hasText: '200+' }).getByRole('cell').last();
@@ -198,6 +208,7 @@ test('updates the grade mapping in a live preview and remembers it when reopened
 
   const reopened = await openPreview(desktopWindow);
   await loadSource(desktopApp, reopened, directory);
+  await continueXml(desktopWindow);
   await reopened.getByRole('button', { name: parameters }).click();
   await expect(reopened.getByRole('radio', { name: again })).toBeChecked();
   await reopened.getByRole('button', { name: /^(Restore defaults|恢复默认)$/ }).click();

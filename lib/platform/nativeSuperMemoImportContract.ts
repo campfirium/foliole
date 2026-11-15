@@ -46,6 +46,9 @@ export interface NativeSuperMemoPreview {
   previewSignature?: string;
 }
 
-export type NativeSuperMemoSource =
-  | { status: 'missing-xml' }
-  | { status: 'ready'; name: string; xml: string; collectionDirectory: string | undefined };
+export interface NativeSuperMemoSource {
+  filePath: string;
+  name: string;
+  xml: string;
+  collectionDirectory: string | undefined;
+}

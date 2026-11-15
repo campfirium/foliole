@@ -27,7 +27,7 @@ import { runClipboardImport } from './importClipboard.js';
 import { runDirectoryImport } from './importDirectory.js';
 import { assertExternalSearchImportPath, authorizeSelectedImportDirectoryPath } from './importPathAuthorization.js';
 import { runImportForFilePath, runImportForMirrorDocument, runTextFileImport, selectImportTextFile } from './importTextFile.js';
-import { readSuperMemoSource } from './readSuperMemoSource.js';
+import { readSuperMemoSource, selectSuperMemoSource } from './readSuperMemoSource.js';
 import { handleReadwiseBookActionCommand } from './readwiseBookActionCommands.js';
 import { runReadwiseImportCommand } from './readwiseImportCommandRun.js';
 import { inspectReadwiseReaderSetup } from './readwiseReaderSetup.js';
@@ -96,7 +96,9 @@ export async function handleImportCommand(request: InvokeRequest, context?: Invo
   const args = (request.args ?? {}) as Record<string, unknown>;
 
   if (request.command === NATIVE_COMMANDS.readSuperMemoSource) {
-    return readSuperMemoSource(asString(args.directory, 'directory'));
+    return args.filePath === undefined
+      ? selectSuperMemoSource(resolveTargetWindow(context))
+      : readSuperMemoSource(asString(args.filePath, 'filePath'));
   }
   const draftResult = await handleSuperMemoImportCommand(request.command, args);
   if (draftResult !== undefined) {

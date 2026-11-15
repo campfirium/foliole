@@ -3,10 +3,12 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
-import { authorizeSelectedImportDirectoryPath, resetImportPathAuthorizationForTests } from './importPathAuthorization.js';
+import { authorizeSelectedImportFilePath, resetImportPathAuthorizationForTests } from './importPathAuthorization.js';
 import { readSuperMemoSource } from './readSuperMemoSource.js';
+
+vi.mock('electron', () => ({ dialog: {} }));
 
 const folders: string[] = [];
 
@@ -21,24 +23,26 @@ afterEach(async () => {
   await Promise.all(folders.splice(0).map(folder => rm(folder, { recursive: true, force: true })));
 });
 
-it('reads only the prepared export in a selected folder', async () => {
+it('reads the chosen XML and detects the original folder without requiring a fixed filename', async () => {
   const folder = await createFolder();
-  await writeFile(path.join(folder, 'Other.xml'), 'another export');
-  await expect(readSuperMemoSource(folder)).rejects.toThrow();
-  await authorizeSelectedImportDirectoryPath(folder);
-  await expect(readSuperMemoSource(folder)).resolves.toEqual({ status: 'missing-xml' });
-  await writeFile(path.join(folder, 'SuperMemo.xml'), 'export');
-  await expect(readSuperMemoSource(folder)).resolves.toMatchObject({ status: 'ready', xml: 'export', collectionDirectory: undefined });
+  const xml = path.join(folder, 'Learning (all elements).xml');
+  await writeFile(xml, 'export');
+  await expect(readSuperMemoSource(xml)).rejects.toThrow();
+  await authorizeSelectedImportFilePath(xml);
+  await expect(readSuperMemoSource(xml)).resolves.toMatchObject({ xml: 'export', name: 'Learning (all elements).xml', collectionDirectory: undefined });
+  await mkdir(path.join(folder, 'Learning', 'info'), { recursive: true });
+  await expect(readSuperMemoSource(xml)).resolves.toMatchObject({ collectionDirectory: expect.stringMatching(/Learning$/u) });
   await mkdir(path.join(folder, 'info'));
-  await expect(readSuperMemoSource(folder)).resolves.toMatchObject({ status: 'ready', collectionDirectory: expect.any(String) });
+  await expect(readSuperMemoSource(xml)).resolves.toMatchObject({ collectionDirectory: expect.not.stringMatching(/Learning$/u) });
 });
 
-it('rejects an export that points outside the folder selected by the user', async () => {
+it('ignores a matching collection name that points outside the export folder', async () => {
   const folder = await createFolder();
   const otherFolder = await createFolder();
-  const outside = path.join(otherFolder, 'export.xml');
-  await writeFile(outside, 'outside');
-  await symlink(outside, path.join(folder, 'SuperMemo.xml'));
-  await authorizeSelectedImportDirectoryPath(folder);
-  await expect(readSuperMemoSource(folder)).rejects.toThrow('invalid_supermemo_xml_path');
+  await mkdir(path.join(otherFolder, 'info'));
+  const xml = path.join(folder, 'Learning.xml');
+  await writeFile(xml, 'export');
+  await symlink(otherFolder, path.join(folder, 'Learning'), 'junction');
+  await authorizeSelectedImportFilePath(xml);
+  await expect(readSuperMemoSource(xml)).resolves.toMatchObject({ collectionDirectory: undefined });
 });

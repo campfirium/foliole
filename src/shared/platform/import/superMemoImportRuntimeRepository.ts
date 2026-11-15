@@ -6,10 +6,8 @@ import { APP_SETTINGS_STORAGE_KEYS } from '../../config/appSettings';
 import { loadRuntimeAppSettingsState, saveRuntimeAppSettingsState } from '../appSettingsState';
 import { getRuntimeInvoke } from '../runtimeInvoke';
 
-export async function selectRuntimeSuperMemoSource() {
-  const invoke = requireInvoke();
-  const directory = await invoke(NATIVE_COMMANDS.selectImportDirectory, {});
-  return directory ? { ...await invoke(NATIVE_COMMANDS.readSuperMemoSource, { directory }), directory } : null;
+export function selectRuntimeSuperMemoSource() {
+  return requireInvoke()(NATIVE_COMMANDS.readSuperMemoSource, {});
 }
 
 function requireInvoke() {
@@ -51,11 +49,11 @@ export async function previewRuntimeSuperMemoImport(xml: string, collectionDirec
   return { preview, elements: source.elements };
 }
 
-export async function runRuntimeSuperMemoImport(directory: string, percent: number,
+export async function runRuntimeSuperMemoImport(filePath: string, percent: number,
   gradeMap: SuperMemoGradeMap, previewSignature: string, sourceFormat: SuperMemoSourceFormat) {
   const invoke = requireInvoke();
-  const source = await invoke(NATIVE_COMMANDS.readSuperMemoSource, { directory });
-  if (source.status !== 'ready') throw new Error('supermemo_source_changed');
+  const source = await invoke(NATIVE_COMMANDS.readSuperMemoSource, { filePath });
+  if (!source) throw new Error('supermemo_source_changed');
   return invoke(NATIVE_COMMANDS.runSuperMemoImport,
     { ...readSource(source.xml, source.collectionDirectory), percent, gradeMap, previewSignature, sourceFormat });
 }
