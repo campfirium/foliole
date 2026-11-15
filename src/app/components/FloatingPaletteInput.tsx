@@ -6,6 +6,7 @@ import { appFloatingInputClassName } from '../../shared/ui';
 import { handleFloatingPaletteInputKeyDown } from './floatingPaletteKeyboard';
 
 interface FloatingPaletteInputProps {
+  className?: string;
   inputLabel: string;
   onClose: () => void;
   onCompositionChange?: (isComposing: boolean) => void;
@@ -28,7 +29,7 @@ export function FloatingPaletteInput(props: FloatingPaletteInputProps) {
     <input
       aria-label={props.inputLabel}
       autoComplete="off"
-      className={appFloatingInputClassName()}
+      className={appFloatingInputClassName(props.className)}
       data-1p-ignore="true"
       data-bwignore="true"
       data-lpignore="true"

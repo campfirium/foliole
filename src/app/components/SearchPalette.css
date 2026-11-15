@@ -1,0 +1,29 @@
+[data-workspace-document-focus-target] {
+  anchor-name: --workspace-search-document;
+}
+
+.workspace-search-panel {
+  --search-panel-width: min(764px, calc(100dvw - 32px));
+  --search-panel-height: min(710px, 80dvh);
+  width: var(--search-panel-width);
+  height: var(--search-panel-height);
+}
+
+@supports (left: anchor(--workspace-search-document center, 50%)) {
+  .workspace-search-panel {
+    --search-panel-x-inset: calc(var(--search-panel-width) / 2 + 16px);
+    --search-panel-y-inset: calc(var(--search-panel-height) / 2 + min(16px, 10dvh));
+    position: fixed;
+    left: clamp(
+      var(--search-panel-x-inset),
+      anchor(--workspace-search-document center, 50%),
+      calc(100% - var(--search-panel-x-inset))
+    );
+    top: clamp(
+      var(--search-panel-y-inset),
+      anchor(--workspace-search-document center, 50%),
+      calc(100% - var(--search-panel-y-inset))
+    );
+    translate: -50% -50%;
+  }
+}

@@ -21,10 +21,16 @@ import {
 } from './searchPaletteResultPresentation';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
+const searchResultsListClassName = appFloatingListClassName(
+  'min-h-0 max-h-none flex-1 scroll-py-2 space-y-1 ' +
+  '[--app-scrollbar-thumb-color:color-mix(in_srgb,var(--app-floating-border-color)_36%,transparent)] ' +
+  '[--app-scrollbar-thumb-hover-color:color-mix(in_srgb,var(--app-floating-border-color)_52%,transparent)]'
+);
+
 export function SearchPaletteEmptyState({ query }: { query: string }) {
   const t = useTranslation();
   const label = query.trim() ? t('desktop.search.noMatches') : null;
-  const className = appFloatingListClassName('min-h-56');
+  const className = appFloatingListClassName('min-h-0 max-h-none flex-1');
   if (!label) return <div aria-hidden="true" className={className} />;
   return (
     <ul className={className}>
@@ -35,13 +41,13 @@ export function SearchPaletteEmptyState({ query }: { query: string }) {
 
 export function SearchPaletteLoadingState() {
   const t = useTranslation();
-  return <AppLoadingState className="min-h-56" description={t('desktop.search.searching')} surface="floating" />;
+  return <AppLoadingState className="min-h-0 flex-1" description={t('desktop.search.searching')} surface="floating" />;
 }
 
 export function SearchPaletteErrorState() {
   const t = useTranslation();
   return (
-    <ul className={appFloatingListClassName()}>
+    <ul className={appFloatingListClassName('min-h-0 max-h-none flex-1')}>
       <li className={appFloatingEmptyStateClassName()}>{t('desktop.search.unavailable')}</li>
     </ul>
   );
@@ -77,7 +83,7 @@ export function SearchPaletteList(props: {
   return (
     <ul
       aria-label={t('desktop.search.results.aria')}
-      className={appFloatingListClassName()}
+      className={searchResultsListClassName}
       ref={listRef}
       onScroll={(event) => {
         const list = event.currentTarget;
@@ -129,7 +135,7 @@ function SearchPaletteResultItem(props: {
   return (
     <li className="relative">
       <button
-        className={appFloatingItemClassName('grid gap-1.5 data-[active=true]:bg-[var(--app-floating-item-active-bg)]')}
+        className={appFloatingItemClassName('grid gap-[3px] rounded-lg px-4 py-2.5')}
         data-active={props.active}
         data-search-result-active={props.active}
         onClick={(event) => props.onOpenResult(item, { preview: event.shiftKey })}
@@ -137,10 +143,10 @@ function SearchPaletteResultItem(props: {
         onMouseEnter={() => props.onSetActiveIndex(props.index)}
         type="button"
       >
-        <span className="min-w-0 truncate text-[15px] font-semibold leading-5 text-foreground">
+        <span className="min-w-0 truncate text-[17px] font-semibold leading-[23px] text-foreground">
           {renderSearchResultText(item.title, highlightQuery, { project: projectResultText })}
         </span>
-        <span className="line-clamp-2 text-[13px] leading-5 text-foreground/60">
+        <span className="line-clamp-2 text-[15px] leading-[21px] text-foreground/60">
           {renderSearchResultText(resolveSearchResultContext(item), highlightQuery, { project: projectResultText })}
         </span>
         <SearchPaletteResultMeta
@@ -161,7 +167,7 @@ function SearchPaletteResultMeta(props: {
   const t = useTranslation();
   const pathLabel = resolveSearchResultPathLabel(props.item, props.nodesById, t) ?? t('desktop.search.context.topLevel');
   return (
-    <span className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-[11px] text-foreground/45">
+    <span className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-xs leading-[17px] text-foreground/45">
       <span className="min-w-0 truncate opacity-85">
         {pathLabel}
       </span>

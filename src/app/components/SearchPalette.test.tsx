@@ -97,10 +97,10 @@ beforeEach(() => {
 
 it('keeps a silent result area before the user types', () => {
   vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
-  const view = renderSearchPalette();
+  renderSearchPalette();
 
   expect(screen.getByRole('textbox', { name: 'Search workspace' })).toHaveAttribute('placeholder', 'Search titles and content...');
-  expect(view.container.querySelector('[aria-hidden="true"].min-h-56')).toBeInTheDocument();
+  expect(screen.queryByRole('list', { name: 'Workspace search results' })).not.toBeInTheDocument();
   expect(screen.queryByText('Search topics and external sources')).not.toBeInTheDocument();
   expect(screen.queryByText(/notes/i)).not.toBeInTheDocument();
 });

@@ -11,15 +11,23 @@ test('search shows progress before a completed empty result', async ({ desktopWi
   await fs.mkdir('.tmp/artifacts/search-loading', { recursive: true });
   const dialog = desktopWindow.getByRole('dialog', { name: /(Workspace search|工作区搜索)/ });
   await expect(dialog).toBeVisible();
+  const panel = dialog.locator(':scope > div');
+  const documentArea = desktopWindow.locator('[data-workspace-document-focus-target]');
+  const initial = (await panel.boundingBox())!;
+  const documentBounds = (await documentArea.boundingBox())!;
+  expect(Math.abs(initial.x + initial.width / 2 - documentBounds.x - documentBounds.width / 2)).toBeLessThan(2);
+  expect(Math.abs(initial.y + initial.height / 2 - documentBounds.y - documentBounds.height / 2)).toBeLessThan(2);
   await desktopWindow.clock.install();
   await desktopWindow.clock.pauseAt(new Date(Date.now() + 1000));
   await dialog.getByLabel(/(Search workspace|搜索工作区)/).fill('NoMatchingSearchLoadingNeedle20261001');
   await expect(dialog.getByRole('status')).toContainText(/Searching…|搜索中…/);
   await expect(dialog.getByText(/No matching results|没有匹配结果/)).toHaveCount(0);
+  expect(await panel.boundingBox()).toEqual(initial);
   await desktopWindow.screenshot({ path: '.tmp/artifacts/search-loading/loading.png' });
   await desktopWindow.clock.resume();
   await expect(dialog.getByText(/No matching results|没有匹配结果/)).toBeVisible();
   await expect(dialog.getByText(/Searching…|搜索中…/)).toHaveCount(0);
+  expect(await panel.boundingBox()).toEqual(initial);
   await desktopWindow.screenshot({ path: '.tmp/artifacts/search-loading/empty.png' });
 });
 

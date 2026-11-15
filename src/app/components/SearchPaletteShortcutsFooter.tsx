@@ -24,7 +24,7 @@ export function SearchPaletteShortcutsFooter(props: {
 }) {
   const t = useTranslation();
   return (
-    <footer className="relative flex min-h-11 items-center justify-center px-12 py-2.5 text-[11px] text-foreground/45">
+    <footer className="relative flex min-h-14 shrink-0 items-center justify-center border-t border-[var(--app-floating-divider-color)] px-12 py-2.5 text-xs text-foreground/45">
       {props.collapsed ? (
         null
       ) : (
