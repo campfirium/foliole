@@ -23,7 +23,7 @@ export function WorkspaceCollectionSurface({
     >
       <div
         className="workspace-region-main-folder flex min-h-0 min-w-0 overflow-hidden"
-        style={{ flex: `0 0 ${folderListResize.width}px` }}
+        style={{ flex: '0 0 min(var(--workspace-effective-folder-width, var(--workspace-folder-column-width)), 100%)' }}
       >
         <PanelScaleSurface label="Folder navigation" panelId="folder-navigation">
           {folderColumn}

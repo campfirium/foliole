@@ -649,47 +649,19 @@ b {
   --app-scrollbar-thumb-hover-color: var(--role-sidebar-scrollbar-hover);
 }
 
-.workspace-bottom-region-grid {
-  background:
-    linear-gradient(
-      to right,
-      var(--role-frame-bottom-bg) 0,
-      var(--role-frame-bottom-bg) var(--workspace-rail-width),
-      var(--role-nav-bottom-bg) var(--workspace-rail-width),
-      var(--role-nav-bottom-bg) calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width))),
-      var(--role-list-bottom-bg) calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width))),
-      var(--role-list-bottom-bg) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
-      var(--role-content-bottom-bg) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
-      var(--role-content-bottom-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
-      var(--role-sidebar-bottom-bg) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
-      var(--role-sidebar-bottom-bg) 100%
-    );
+.workspace-bottom-region-grid [data-workspace-surface-column] {
+  position: relative;
 }
 
-.workspace-bottom-region-grid::before {
-  background:
-    linear-gradient(
-      to right,
-      color-mix(in oklab, var(--role-frame-bottom-bg) var(--role-line-subtle-weight), var(--role-frame-bottom-line-mix, var(--role-line-mix))) 0,
-      color-mix(in oklab, var(--role-frame-bottom-bg) var(--role-line-subtle-weight), var(--role-frame-bottom-line-mix, var(--role-line-mix))) var(--workspace-rail-width),
-      color-mix(in oklab, var(--role-nav-bottom-bg) var(--role-line-subtle-weight), var(--role-nav-bottom-line-mix, var(--role-line-mix))) var(--workspace-rail-width),
-      color-mix(in oklab, var(--role-nav-bottom-bg) var(--role-line-subtle-weight), var(--role-nav-bottom-line-mix, var(--role-line-mix))) calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width))),
-      color-mix(in oklab, var(--role-list-bottom-bg) var(--role-line-subtle-weight), var(--role-list-bottom-line-mix, var(--role-line-mix))) calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width))),
-      color-mix(in oklab, var(--role-list-bottom-bg) var(--role-line-subtle-weight), var(--role-list-bottom-line-mix, var(--role-line-mix))) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
-      color-mix(in oklab, var(--role-content-bottom-bg) var(--role-line-subtle-weight), var(--role-content-bottom-line-mix, var(--role-line-mix))) calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px)),
-      color-mix(in oklab, var(--role-content-bottom-bg) var(--role-line-subtle-weight), var(--role-content-bottom-line-mix, var(--role-line-mix))) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
-      color-mix(in oklab, var(--role-sidebar-bottom-bg) var(--role-line-subtle-weight), var(--role-sidebar-bottom-line-mix, var(--role-line-mix))) calc(100% - var(--workspace-right-sidebar-current-width, 320px)),
-      color-mix(in oklab, var(--role-sidebar-bottom-bg) var(--role-line-subtle-weight), var(--role-sidebar-bottom-line-mix, var(--role-line-mix))) 100%
-    );
+.workspace-bottom-region-grid [data-workspace-surface-column]::before {
+  background: var(--workspace-footer-top-line);
   content: '';
   height: 1px;
-  left: 0;
+  inset-inline: 0;
+  opacity: var(--role-column-line-opacity);
   pointer-events: none;
   position: absolute;
-  right: 0;
   top: 0;
-  opacity: var(--role-column-line-opacity);
-  z-index: var(--z-local-overlay);
 }
 
 .window-titlebar-center-title {

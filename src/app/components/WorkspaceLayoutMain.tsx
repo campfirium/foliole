@@ -55,9 +55,8 @@ function buildWorkspaceGridStyle(layoutChrome: WorkspaceLayoutProps['layoutChrom
   const rightUndocked = layoutChrome.isRightSidebarCollapsed || layoutChrome.compactSidebars?.rightFloating;
   return {
     '--workspace-list-width': `${layoutChrome.listWidth}px`,
-    '--workspace-list-folder-current-width': leftUndocked
-      ? '0px'
-      : 'min(var(--workspace-folder-column-width), var(--workspace-list-width))',
+    '--workspace-effective-folder-width': 'min(var(--workspace-folder-column-width), var(--workspace-list-width))',
+    '--workspace-list-folder-current-width': leftUndocked ? '0px' : 'var(--workspace-effective-folder-width)',
     '--workspace-list-current-width': leftUndocked ? '0px' : `${layoutChrome.listWidth}px`,
     '--workspace-list-splitter-width': leftUndocked ? '0px' : '1px',
     '--workspace-right-sidebar-current-width': rightUndocked ? '0px' : `${layoutChrome.rightSidebarWidth}px`,

@@ -109,7 +109,7 @@
 .workspace-responsive-shell:has(.workspace-floating-sidebar-left[data-pdf-sidebar-overlay][aria-hidden='false']) {
   .workspace-bottom-region-grid {
     --workspace-list-current-width: var(--workspace-list-width);
-    --workspace-list-folder-current-width: min(var(--workspace-folder-column-width), var(--workspace-list-width));
+    --workspace-list-folder-current-width: var(--workspace-effective-folder-width);
   }
 
   @media (width <= 1080px) {

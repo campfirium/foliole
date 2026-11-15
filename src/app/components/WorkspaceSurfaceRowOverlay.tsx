@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useContext, type CSSProperties } from 'react';
 
 import { AppearanceSettingsContext } from '../../features/settings/context/appearanceSettingsContext';
 import {
@@ -31,7 +31,9 @@ const SURFACE_ROW_ROLE_SUFFIXES = { titlebar: '-top', main: '', footer: '-bottom
 export const WORKSPACE_RAIL_DIVIDER_LEFT = 'var(--workspace-rail-width)';
 export const WORKSPACE_LIST_DIVIDER_LEFT =
   'calc(var(--workspace-rail-width) + var(--workspace-list-current-width, 300px) + (var(--workspace-list-splitter-width, 1px) / 2))';
-export const WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT =
+export const WORKSPACE_CURRENT_FOLDER_TOPIC_DIVIDER_LEFT =
+  'calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width)))';
+const WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT =
   'calc(var(--workspace-rail-width) + var(--workspace-folder-column-width))';
 export const WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT =
   'calc(100% - var(--workspace-right-sidebar-current-width, 320px) - (var(--workspace-right-sidebar-splitter-width, 1px) / 2))';
@@ -68,7 +70,12 @@ export function WorkspaceSurfaceRowOverlay({ row }: { row: WorkspaceSurfaceOverl
         <div
           data-workspace-surface-column={column}
           key={`${row}-${column}`}
-          style={{ backgroundColor: getSurfaceColor(row, column) }}
+          style={{
+            backgroundColor: getSurfaceColor(row, column),
+            ...(row === 'footer' ? {
+              '--workspace-footer-top-line': getWorkspaceSurfaceDividerColor(row, column)
+            } : {})
+          } as CSSProperties}
         />
       ))}
     </div>
@@ -151,17 +158,33 @@ export function WorkspaceTitlebarDividers({
   );
 }
 
-export function WorkspaceFooterRowDividers({ isListCollapsed }: { isListCollapsed: boolean }) {
+export function WorkspaceFooterRowDividers({
+  isListCollapsed,
+  isListFloating
+}: {
+  isListCollapsed: boolean;
+  isListFloating?: boolean;
+}) {
   const hasFolderTopicDivider = useHasFolderTopicDivider('footer');
-  if (isListCollapsed || !hasFolderTopicDivider) {
-    return null;
-  }
+  if (isListCollapsed) return null;
   return (
-    <WorkspaceSurfaceRowDivider
-      className="max-[1080px]:hidden"
-      column="folder"
-      left="calc(var(--workspace-rail-width) + var(--workspace-list-folder-current-width, var(--workspace-folder-column-width)))"
-      row="footer"
-    />
+    <>
+      {hasFolderTopicDivider ? (
+        <WorkspaceSurfaceRowDivider
+          className="max-[1080px]:hidden"
+          column="folder"
+          left={WORKSPACE_CURRENT_FOLDER_TOPIC_DIVIDER_LEFT}
+          row="footer"
+        />
+      ) : null}
+      {isListFloating ? null : (
+        <WorkspaceSurfaceRowDivider
+          className="max-[1080px]:hidden"
+          column="topic"
+          left={WORKSPACE_LIST_DIVIDER_LEFT}
+          row="footer"
+        />
+      )}
+    </>
   );
 }

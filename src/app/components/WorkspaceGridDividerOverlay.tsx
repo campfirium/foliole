@@ -1,5 +1,5 @@
 import {
-  WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT,
+  WORKSPACE_CURRENT_FOLDER_TOPIC_DIVIDER_LEFT,
   WORKSPACE_LIST_DIVIDER_LEFT,
   WORKSPACE_RAIL_DIVIDER_LEFT,
   WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT,
@@ -7,25 +7,21 @@ import {
 } from './WorkspaceSurfaceRowOverlay';
 
 function WorkspaceGridDivider({
-  bottom = '0',
   column,
   hideBelowWorkspaceBreakpoint = true,
   left,
-  top = '0'
 }: {
-  bottom?: string;
   column: 'rail' | 'folder' | 'topic' | 'sidebar';
   hideBelowWorkspaceBreakpoint?: boolean;
   left: string;
-  top?: string;
 }) {
   return (
     <div
       aria-hidden="true"
-      className={`pointer-events-none absolute z-local-overlay w-px -translate-x-1/2 ${
+      className={`pointer-events-none absolute inset-y-0 z-local-overlay w-px -translate-x-1/2 ${
         column === 'sidebar' ? 'max-[1279px]:hidden' : hideBelowWorkspaceBreakpoint ? 'max-[1080px]:hidden' : ''
       }`}
-      style={{ backgroundColor: getWorkspaceSurfaceDividerColor('main', column), bottom, left, opacity: 'var(--role-column-line-opacity)', top }}
+      style={{ backgroundColor: getWorkspaceSurfaceDividerColor('main', column), left, opacity: 'var(--role-column-line-opacity)' }}
     />
   );
 }
@@ -33,38 +29,34 @@ function WorkspaceGridDivider({
 export interface WorkspaceGridDividerOverlayProps {
   isListCollapsed: boolean;
   isRightSidebarCollapsed: boolean;
-  isStudyMode: boolean;
 }
 
 export function WorkspaceGridDividerOverlay({
-  isStudyMode,
   isListCollapsed,
   isRightSidebarCollapsed
 }: WorkspaceGridDividerOverlayProps) {
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-local-overlay">
-      <WorkspaceGridDivider
-        column="rail"
-        hideBelowWorkspaceBreakpoint={false}
-        left={WORKSPACE_RAIL_DIVIDER_LEFT}
-      />
-      {isListCollapsed ? null : (
-        <>
-          <WorkspaceGridDivider
-            bottom={isStudyMode ? 'var(--workspace-bottom-toolbar-height)' : '0'}
-            column="folder"
-            left={WORKSPACE_FOLDER_TOPIC_DIVIDER_LEFT}
-          />
-          <WorkspaceGridDivider column="topic" left={WORKSPACE_LIST_DIVIDER_LEFT} />
-        </>
-      )}
-      {isRightSidebarCollapsed ? null : (
+    <>
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-local-overlay">
         <WorkspaceGridDivider
-          column="sidebar"
+          column="rail"
           hideBelowWorkspaceBreakpoint={false}
-          left={WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT}
+          left={WORKSPACE_RAIL_DIVIDER_LEFT}
         />
+        {isRightSidebarCollapsed ? null : (
+          <WorkspaceGridDivider
+            column="sidebar"
+            hideBelowWorkspaceBreakpoint={false}
+            left={WORKSPACE_RIGHT_SIDEBAR_DIVIDER_LEFT}
+          />
+        )}
+      </div>
+      {isListCollapsed ? null : (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-local-overlay col-span-2 col-start-1 row-span-1 row-start-1">
+          <WorkspaceGridDivider column="folder" left={WORKSPACE_CURRENT_FOLDER_TOPIC_DIVIDER_LEFT} />
+          <WorkspaceGridDivider column="topic" left={WORKSPACE_LIST_DIVIDER_LEFT} />
+        </div>
       )}
-    </div>
+    </>
   );
 }

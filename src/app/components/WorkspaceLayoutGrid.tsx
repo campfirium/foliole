@@ -82,14 +82,13 @@ function WorkspaceLayoutGridShell({
 }
 
 function renderWorkspaceGridDividerOverlay(
-  props: Pick<WorkspaceLayoutProps, 'layoutChrome' | 'review'>
+  props: Pick<WorkspaceLayoutProps, 'layoutChrome'>
 ) {
   if (props.layoutChrome.isImmersiveMode) {
     return null;
   }
   return (
     <WorkspaceGridDividerOverlay
-      isStudyMode={props.review.isStudyMode}
       isListCollapsed={props.layoutChrome.isListCollapsed || Boolean(props.layoutChrome.compactSidebars?.leftFloating)}
       isRightSidebarCollapsed={props.layoutChrome.isRightSidebarCollapsed || Boolean(props.layoutChrome.compactSidebars?.rightFloating)}
     />
