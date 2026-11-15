@@ -197,7 +197,9 @@ test('widens a PDF past the sidebars at a fixed zoom above 200 percent @pdf', as
 }, testInfo) => {
   test.setTimeout(90000);
   const bodyWidth = await page.evaluate(() => innerWidth - 40);
-  await setActiveSidebarTierDockedWidths(page, 45000 / bodyWidth, 25000 / bodyWidth);
+  const customControls = await page.locator('.window-titlebar[data-window-controls="custom"]').count();
+  const inspectorWidth = customControls ? 320 : 250;
+  await setActiveSidebarTierDockedWidths(page, 100 * (700 - inspectorWidth) / bodyWidth, 100 * inspectorWidth / bodyWidth);
   const fixture = realPdf ?? testInfo.outputPath('expanded-width.pdf');
   const target = realPdf ? 250 : 20;
   if (!realPdf) await writeWorkingSetPdf(fixture);

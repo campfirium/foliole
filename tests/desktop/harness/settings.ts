@@ -67,14 +67,17 @@ export async function setActiveSidebarTierDockedWidths(page: Page, left: number,
   await expect(settings).toBeHidden();
 }
 
-export function resizeWindowToWorkAreaPercent(app: ElectronApplication, percent: number) {
-  return app.evaluate(({ BrowserWindow, screen }, ratio) => {
-    const window = BrowserWindow.getAllWindows()[0]!;
+export async function resizeWorkspaceWindow(app: ElectronApplication, page: Page, size: { percent: number } | { width: number }) {
+  const id = await (await app.browserWindow(page)).evaluate(window => window.id);
+  return app.evaluate(({ BrowserWindow, screen }, { id, size }) => {
+    const window = BrowserWindow.fromId(id)!;
     const { width } = screen.getDisplayMatching(window.getBounds()).workArea;
     window.setResizable(true);
     if (window.isMaximized()) window.unmaximize();
-    window.setSize(Math.round(width * ratio / 100), 850);
-  }, percent);
+    window.setSize('width' in size ? size.width : Math.round(width * size.percent / 100), 850);
+    const bounds = window.getBounds();
+    return Math.round(100 * bounds.width / screen.getDisplayMatching(bounds).workArea.width);
+  }, { id, size });
 }
 
 export async function connectAndCutoverReadwiseApi(

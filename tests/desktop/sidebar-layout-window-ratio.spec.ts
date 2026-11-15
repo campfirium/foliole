@@ -1,7 +1,7 @@
 import type { ElectronApplication, Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
-import { expectWorkspaceShell, openSettingsCategory, resizeWindowToWorkAreaPercent, setActiveSidebarTierDockedWidths } from './harness/settings';
+import { expectWorkspaceShell, openSettingsCategory, resizeWorkspaceWindow, setActiveSidebarTierDockedWidths } from './harness/settings';
 
 const tierPreferenceKey = 'foliole-workspace-sidebar-layout-tiers';
 
@@ -24,14 +24,7 @@ test('sidebar layout shows the actual window-to-work-area ratio after a native r
   const section = settings.getByRole('region', { name: /^(Sidebar layout|侧栏布局)$/ });
   const ratio = section.getByRole('status');
 
-  const resizeTo = (width: number) => desktopApp.evaluate(({ BrowserWindow, screen }, requestedWidth) => {
-    const window = BrowserWindow.getAllWindows()[0]!;
-    window.setResizable(true);
-    if (window.isMaximized()) window.unmaximize();
-    window.setSize(requestedWidth, 850);
-    const bounds = window.getBounds();
-    return Math.round(100 * bounds.width / screen.getDisplayMatching(bounds).workArea.width);
-  }, width);
+  const resizeTo = (width: number) => resizeWorkspaceWindow(desktopApp, desktopWindow, { width });
 
   const first = await resizeTo(960);
   await expect(ratio).toHaveText(`${first}%`);
@@ -147,7 +140,7 @@ async function seedPreviousSidebarPreferences(app: ElectronApplication, page: Pa
 test('inherits the previous sidebar preferences once and restores them after crossing a tier', async ({
   desktopApp, desktopWindow: page
 }) => {
-  const resize = (percent: number) => resizeWindowToWorkAreaPercent(desktopApp, percent);
+  const resize = (percent: number) => resizeWorkspaceWindow(desktopApp, page, { percent });
   await expectWorkspaceShell(page);
   await resize(90);
   const settings = await openSettingsCategory(page, 'Appearance');

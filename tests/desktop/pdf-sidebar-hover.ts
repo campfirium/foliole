@@ -49,7 +49,11 @@ export async function expectEdgeHover(page: Page) {
 export async function expectRightTitlebarControlsAligned(page: Page) {
   const rightToggle = (await page.locator('.window-titlebar [data-workspace-sidebar-toggle="right"]').boundingBox())!;
   const header = (await page.locator('.window-titlebar').boundingBox())!;
-  expect(header.x + header.width - rightToggle.x - rightToggle.width).toBeLessThan(rightToggle.width);
+  const controls = page.locator('.window-titlebar-controls');
+  const edge = await controls.count() ? (await controls.boundingBox())!.x : header.x + header.width;
+  const gap = edge - rightToggle.x - rightToggle.width;
+  expect(gap).toBeGreaterThanOrEqual(0);
+  expect(gap).toBeLessThan(rightToggle.width);
   const actions = (await page.locator('.window-titlebar-right-panel-actions').boundingBox())!;
   expect(actions.x + actions.width).toBeLessThanOrEqual(rightToggle.x + 1);
 }

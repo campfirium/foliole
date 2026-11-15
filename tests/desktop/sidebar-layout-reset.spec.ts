@@ -1,5 +1,5 @@
 import { expect, test, type DesktopSession } from './harness/fixtures';
-import { openSettingsCategory, resizeWindowToWorkAreaPercent, setActiveSidebarTierDockedWidths } from './harness/settings';
+import { openSettingsCategory, resizeWorkspaceWindow, setActiveSidebarTierDockedWidths } from './harness/settings';
 
 const sidebarLayoutName = /^(Sidebar layout|侧栏布局)$/;
 const thresholdName = /^(Minimum window width \(%\)|窗口宽度起点（%）)$/;
@@ -70,7 +70,7 @@ test('edits tier rows, rejects duplicate thresholds and restores the default tab
 });
 
 test('cancels an unfinished resize when the window switches tiers', async ({ desktopApp, desktopWindow: page }) => {
-  await resizeWindowToWorkAreaPercent(desktopApp, 90);
+  await resizeWorkspaceWindow(desktopApp, page, { percent: 90 });
   await setActiveSidebarTierDockedWidths(page, 40, 35);
   const before = await readSavedTiers(page);
   const right = page.locator('[data-workspace-side-column="right"]');
@@ -84,10 +84,10 @@ test('cancels an unfinished resize when the window switches tiers', async ({ des
   await page.mouse.down();
   await page.mouse.move(startX - 34, y, { steps: 4 });
   await expect.poll(async () => (await right.boundingBox())!.width).toBeGreaterThan(initialWidth + 25);
-  await resizeWindowToWorkAreaPercent(desktopApp, 65);
+  await resizeWorkspaceWindow(desktopApp, page, { percent: 65 });
   await expect(right).toHaveClass(/workspace-floating-sidebar-right/);
   await page.mouse.up();
-  await resizeWindowToWorkAreaPercent(desktopApp, 90);
+  await resizeWorkspaceWindow(desktopApp, page, { percent: 90 });
   await expect.poll(async () => (await right.boundingBox())?.width).toBeCloseTo(initialWidth, 0);
   expect(await readSavedTiers(page)).toEqual(before);
 });
