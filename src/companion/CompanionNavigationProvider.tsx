@@ -77,6 +77,6 @@ function NavigationOwner(props: {
     void pendingWrite.current.catch(setError);
   }, [loaded, props.ready, props.libraryScope, props.scope]);
   if (error) throw error;
-  if (!props.ready || !loaded || loaded.scope !== props.scope) return <CompanionWorkspaceSyncLoading />;
+  if (!props.ready || !loaded || loaded.scope !== props.scope) return <CompanionWorkspaceSyncLoading fullScreen />;
   return <Context.Provider value={{ state: loaded.state, setState, flush, saveForReload }}>{props.children}</Context.Provider>;
 }

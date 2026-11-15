@@ -1,14 +1,16 @@
 import { useTranslation } from '../shared/localization/LocalizationProvider';
-import { AppLoadingState } from '../shared/ui';
+import { AppSpinner } from '../shared/ui';
 
-export function CompanionWorkspaceSyncLoading() {
+export function CompanionWorkspaceSyncLoading({ fullScreen = false }: { fullScreen?: boolean }) {
   const t = useTranslation();
   return (
-    <AppLoadingState
-      className="min-h-0 items-start border-t border-companion-divider px-1 py-6 text-left text-companion-text-secondary"
-      description={t('companion.sync.loading.description')}
-      label={t('companion.sync.loading.title')}
-      title={t('companion.sync.loading.title')}
-    />
+    <div
+      aria-busy="true"
+      aria-label={t('companion.sync.loading.title')}
+      className={`flex items-center justify-center ${fullScreen ? 'h-full' : 'min-h-0 flex-1'}`}
+      role="status"
+    >
+      <AppSpinner className="motion-reduce:animate-none" decorative size="sm" />
+    </div>
   );
 }

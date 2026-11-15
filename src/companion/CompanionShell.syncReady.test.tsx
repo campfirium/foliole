@@ -88,14 +88,16 @@ async function renderShell() {
 }
 
 describe('CompanionShell sync ready gate', () => {
-  it('shows sync loading content and hides bottom navigation before local state is ready', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
+  it('shows a spinner without visible copy before local state is ready', { meta: { calibratedMs: RELEASE_GATE_TEST_TIMEOUT_MS } }, async () => {
     mockFloatingBar();
     mockWorkspaceSync(false);
     mockSurface();
 
     await renderShell();
 
-    expect(screen.getByText('Opening synced workspace')).toBeInTheDocument();
+    const loading = screen.getByRole('status', { name: 'Opening synced workspace' });
+    expect(loading).toHaveAttribute('aria-busy', 'true');
+    expect(loading).toHaveTextContent(/^$/);
     expect(screen.queryByRole('heading', { name: 'Settings' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('companion-bottom-tab-bar')).not.toBeInTheDocument();
   });
