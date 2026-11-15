@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const { getFormalImportFailureMessage, getFormalImportLatestResult } = vi.hoisted(() => ({
@@ -253,22 +253,15 @@ it('shows an empty file import notice after a selected file imports no topic', a
   });
 });
 
-it('shows app runtime notices inside the workspace surface', async () => {
+it('announces a noninteractive runtime notice inside the workspace', async () => {
   renderWithLocalization(<WorkspaceLayoutMain {...createProps({})} />);
 
   const noticeId = showAppRuntimeNotice('Selected topic is not backed by an active keep import source.');
 
   const notice = await screen.findByTestId('app-runtime-notice');
-  expect(notice).toHaveClass('left-[calc(var(--workspace-rail-width)+var(--workspace-list-current-width,300px)+var(--workspace-list-splitter-width,1px))]');
-  expect(notice).toHaveClass('top-[var(--workspace-top-toolbar-height)]');
-  expect(notice).toHaveClass('right-[calc(var(--workspace-right-sidebar-current-width,320px)+var(--workspace-right-sidebar-splitter-width,1px))]');
-  const surface = notice.firstElementChild as HTMLElement;
-  expect(surface).toHaveClass('min-h-[52px]');
-  expect(surface).toHaveClass('w-[min(300px,100%)]');
-  expect(surface).toHaveClass('justify-center');
-  expect(surface).toHaveClass('text-center');
-  expect(surface).toHaveClass('bg-shellless-surface');
-  expect(surface).toHaveClass('text-shellless-title');
+  expect(notice.closest('main')).toBeInTheDocument();
+  expect(notice).toHaveAttribute('aria-live', 'polite');
+  expect(within(notice).queryByRole('button')).not.toBeInTheDocument();
   expect(notice).toHaveTextContent(
     'Selected topic is not backed by an active keep import source.'
   );

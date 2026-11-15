@@ -1,3 +1,5 @@
+import './WorkspaceFloatingPlacement.css';
+
 import { useEffect, useRef, useState, type FocusEvent } from 'react';
 
 import { AppButton, appShelllessSurfaceClassName } from '../../shared/ui';
@@ -38,19 +40,19 @@ function RuntimeNoticeSurface({ notice }: { notice: NonNullable<ReturnType<typeo
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none absolute bottom-0 left-[calc(var(--workspace-rail-width)+var(--workspace-list-current-width,300px)+var(--workspace-list-splitter-width,1px))] right-[calc(var(--workspace-right-sidebar-current-width,320px)+var(--workspace-right-sidebar-splitter-width,1px))] top-[var(--workspace-top-toolbar-height)] z-workspace-overlay flex items-center justify-center px-6"
-      data-notice-placement="workspace-center"
+      className="workspace-floating-placement workspace-notice-placement pointer-events-none z-workspace-overlay flex justify-center"
+      data-action={notice.action ? '' : undefined}
       data-testid="app-runtime-notice"
       role="status"
     >
       <div
-        className={appShelllessSurfaceClassName(`flex min-h-[52px] items-center gap-3 px-4 py-3 text-left text-ui-md font-medium leading-5 text-shellless-title ${notice.action ? 'pointer-events-auto w-[min(360px,100%)] justify-center' : 'w-[min(300px,100%)] justify-center text-center'}`)}
+        className={appShelllessSurfaceClassName(`flex min-h-[52px] max-w-full flex-wrap items-center gap-3 px-4 py-3 text-left text-ui-md font-medium leading-5 text-shellless-title ${notice.action ? 'pointer-events-auto justify-center' : 'justify-center text-center'}`)}
         onBlurCapture={(event) => handleNoticeBlur(event, setFocused)}
         onFocusCapture={() => setFocused(true)}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        <span>{notice.message}</span>
+        <span className="min-w-0 [overflow-wrap:anywhere]">{notice.message}</span>
         {notice.action ? (
           <AppButton
             onClick={() => {

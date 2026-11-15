@@ -5,15 +5,12 @@ import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { buildCommandMenuSections } from '../../shared/commands/menuModel';
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import {
-  appFloatingOverlayClassName,
-  appFloatingSurfaceClassName
-} from '../../shared/ui';
 
 import { CommandPaletteList } from './CommandPaletteList';
 import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
 import { useFloatingPaletteEscape } from './useFloatingPaletteEscape';
+import { WorkspacePaletteFrame, workspacePaletteOverlayClassName } from './WorkspacePaletteFrame';
 
 const EMPTY_COMMAND_ITEMS: CommandPaletteItem[] = [];
 const EMPTY_RECENT_COMMAND_IDS: string[] = [];
@@ -99,25 +96,24 @@ export function CommandPalette({
       recentTitle: t('desktop.command.section.recent')
     });
 
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   return (
     <div
       aria-label={t('desktop.palette.command.dialog')}
       aria-modal="true"
-      className={appFloatingOverlayClassName()}
+      className={workspacePaletteOverlayClassName}
       onClick={onClose}
       role="dialog"
     >
-      <div
-        className={appFloatingSurfaceClassName('panel', 'w-full max-w-xl overflow-hidden')}
+      <WorkspacePaletteFrame
+        variant="command"
         onKeyDown={focusTrap.handleKeyDown}
         onClick={(event) => event.stopPropagation()}
         ref={focusTrap.containerRef}
       >
         <FloatingPaletteInput
+          className="shrink-0"
           inputLabel={t('desktop.palette.command.search')}
           onClose={onClose}
           onQueryChange={setQuery}
@@ -138,7 +134,7 @@ export function CommandPalette({
           }}
           onRunItem={(item) => runItem(onRunCommand, item)}
         />
-      </div>
+      </WorkspacePaletteFrame>
     </div>
   );
 }

@@ -88,7 +88,11 @@ for (const failure of ['result', 'rejection']) {
       });
     }, failure);
     await pasteImage(page);
-    await expect(page.getByTestId('app-runtime-notice')).toBeVisible();
+    const notice = page.getByTestId('app-runtime-notice');
+    await expect(notice).toBeVisible();
+    const column = (await page.locator('[data-workspace-document-focus-target]').boundingBox())!;
+    const bounds = (await notice.boundingBox())!;
+    expect(bounds.y + bounds.height / 2).toBeCloseTo(column.y + column.height / 3, 0);
     expect(await content(page)).toBe(ORIGINAL);
     await capture(page, `failure-${failure}`);
     await reopen(page, ORIGINAL);

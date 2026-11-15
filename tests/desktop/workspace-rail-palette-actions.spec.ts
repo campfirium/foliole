@@ -1,7 +1,7 @@
 import type { Locator } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
-import { expectWorkspaceShell } from './harness/settings';
+import { expectWorkspaceShell, setActiveSidebarTierDockedWidths } from './harness/settings';
 
 async function dismissSearchEnhancementPrompt(desktopWindow: import('@playwright/test').Page) {
   const prompt = desktopWindow.getByRole('dialog', {
@@ -91,4 +91,71 @@ test('workspace rail opens search and command palette panels', async ({ desktopW
     body: await commandDialog.screenshot(),
     contentType: 'image/png'
   });
+});
+
+async function expectPanelFitsAboveWorkspaceCenter(panel: Locator, widthLimit: number) {
+  const position = await panel.evaluate((surface, widthLimit) => {
+    const column = document.querySelector('[data-workspace-document-focus-target]')!.getBoundingClientRect();
+    const bounds = surface.getBoundingClientRect();
+    const width = Math.min(widthLimit, innerWidth - 32);
+    const center = Math.min(innerWidth - 16 - width / 2, Math.max(16 + width / 2, column.x + column.width / 2));
+    return {
+      widthError: Math.abs(bounds.width - width),
+      centerError: Math.abs(bounds.x + bounds.width / 2 - center),
+      topError: Math.abs(bounds.top - (column.top + Math.min(88, Math.max(40, column.height * 0.08)))),
+      bottomMargin: innerHeight - bounds.bottom
+    };
+  }, widthLimit);
+  expect(position.widthError).toBeLessThan(1);
+  expect(position.centerError).toBeLessThan(1);
+  expect(position.topError).toBeLessThan(1);
+  expect(position.bottomMargin).toBeGreaterThanOrEqual(15);
+}
+
+test('workspace palettes share the main column alignment and fit a short narrow window', async ({
+  desktopWindow: page
+}, testInfo) => {
+  await expectWorkspaceShell(page);
+  await setActiveSidebarTierDockedWidths(page, 40, 18);
+  const rail = page.getByRole('region', { name: /Left toolbar|左侧工具栏/ });
+  await rail.getByRole('button', { name: /^(Search|搜索)$/ }).click();
+  await dismissSearchEnhancementPrompt(page);
+  const search = page.getByRole('dialog', { name: /Workspace search|工作区搜索/ });
+  const searchPanel = search.getByRole('textbox').locator('../..');
+  await expect(searchPanel).toBeVisible();
+  await expectPanelFitsAboveWorkspaceCenter(searchPanel, 764);
+  await page.keyboard.press('Escape');
+
+  await rail.getByRole('button', { name: /^(History|历史面板)$/ }).click();
+  const history = page.getByRole('dialog', { name: /^(History|历史面板)$/ });
+  const historyPanel = history.getByRole('searchbox').locator('../..');
+  await expect(historyPanel).toBeVisible();
+  await expectPanelFitsAboveWorkspaceCenter(historyPanel, 764);
+  await testInfo.attach('history-aligned', { body: await page.screenshot(), contentType: 'image/png' });
+  await page.keyboard.press('Escape');
+
+  await rail.getByRole('button', { name: /Command Palette|命令面板/ }).click();
+  const command = page.getByRole('dialog', { name: /Command palette|命令面板/i });
+  const input = command.getByRole('textbox');
+  const panel = input.locator('..');
+  await expect(panel).toBeVisible();
+  await expectPanelFitsAboveWorkspaceCenter(panel, 576);
+
+  await page.setViewportSize({ width: 700, height: 440 });
+  await expectPanelFitsAboveWorkspaceCenter(panel, 576);
+  const list = command.getByRole('list');
+  expect(await list.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  const before = (await panel.boundingBox())!;
+  await input.fill('zzzzzzzzzz');
+  await expect(command.getByRole('listitem')).toHaveCount(1);
+  const filtered = (await panel.boundingBox())!;
+  expect(filtered.y).toBeCloseTo(before.y, 0);
+  expect(filtered.height).toBeLessThan(before.height);
+  await page.mouse.click(5, 5);
+  await expect(command).toBeHidden();
+
+  await rail.getByRole('button', { name: /^(Search|搜索)$/ }).click();
+  await expect(searchPanel).toBeVisible();
+  await expectPanelFitsAboveWorkspaceCenter(searchPanel, 764);
+  await testInfo.attach('search-narrow', { body: await page.screenshot(), contentType: 'image/png' });
 });

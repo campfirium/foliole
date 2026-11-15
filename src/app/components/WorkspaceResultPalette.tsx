@@ -1,15 +1,6 @@
-import './WorkspaceResultPalette.css';
-
 import { Search, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { appFloatingOverlayClassName, appFloatingSurfaceClassName } from '../../shared/ui';
-
-export const workspaceResultOverlayClassName = appFloatingOverlayClassName('items-center pt-0');
-export const workspaceResultPanelClassName = appFloatingSurfaceClassName(
-  'panel',
-  'workspace-result-panel flex flex-col overflow-hidden !bg-canvas'
-);
 export const workspaceResultInputClassName = 'min-w-0 flex-1 bg-transparent px-0 text-base';
 
 export function WorkspaceResultHeader({ children, icon: Icon = Search }: { children: ReactNode; icon?: LucideIcon }) {

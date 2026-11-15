@@ -14,9 +14,9 @@ import { filterMaterialHistory, materialHistoryPath, materialHistoryPreview, sel
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
 import { useFloatingPaletteEscape } from './useFloatingPaletteEscape';
 import { useMaterialHistoryOrdering } from './useMaterialHistoryOrdering';
+import { WorkspacePaletteFrame, workspacePaletteOverlayClassName } from './WorkspacePaletteFrame';
 import {
-  WorkspaceResultHeader, workspaceResultInputClassName,
-  workspaceResultOverlayClassName, workspaceResultPanelClassName
+  WorkspaceResultHeader, workspaceResultInputClassName
 } from './WorkspaceResultPalette';
 import { WorkspaceResultShortcutsFooter } from './WorkspaceResultShortcutsFooter';
 
@@ -59,8 +59,8 @@ export default function MaterialHistoryPalette({ onClose, onOpenNode }: Props) {
 
   const label = t('desktop.command.openMaterialHistory');
   return (
-    <div aria-label={label} aria-modal="true" className={workspaceResultOverlayClassName} onClick={onClose} role="dialog">
-      <div className={workspaceResultPanelClassName}
+    <div aria-label={label} aria-modal="true" className={workspacePaletteOverlayClassName} onClick={onClose} role="dialog">
+      <WorkspacePaletteFrame variant="results"
         onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { focusTrap.handleKeyDown(event); handleResultsKey(event, {
           onPin: () => { void pinRow(selected); }, onOpen: openRow,
           onSelect: (index) => setSelectedId(rows[index]?.node.id ?? null),
@@ -76,7 +76,7 @@ export default function MaterialHistoryPalette({ onClose, onOpenNode }: Props) {
           <HistoryRows rows={rows} nodes={state.nodesById} selected={selected} onOpen={openRow} onPin={(index) => { void pinRow(index); }} />
         </div>
         <HistoryFooter />
-      </div>
+      </WorkspacePaletteFrame>
     </div>
   );
 }

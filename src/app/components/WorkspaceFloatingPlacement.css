@@ -1,0 +1,59 @@
+[data-workspace-document-focus-target] {
+  anchor-name: --workspace-main-column;
+}
+
+.workspace-floating-placement {
+  --floating-width: min(var(--floating-width-limit), calc(100dvw - 32px));
+  --floating-x-inset: calc(var(--floating-width) / 2 + 16px);
+  --main-column-height: 100dvh;
+  --main-column-top: 0px;
+  position: fixed;
+  left: 50%;
+  translate: -50%;
+  width: var(--floating-width);
+}
+
+@supports (left: anchor(--workspace-main-column center, 50%)) and (height: anchor-size(--workspace-main-column height, 100dvh)) {
+  .workspace-floating-placement {
+    --main-column-height: anchor-size(--workspace-main-column height, 100dvh);
+    --main-column-top: anchor(--workspace-main-column top, 0px);
+    left: clamp(
+      var(--floating-x-inset),
+      anchor(--workspace-main-column center, 50%),
+      calc(100% - var(--floating-x-inset))
+    );
+  }
+}
+
+.workspace-palette-placement {
+  top: calc(var(--main-column-top) + clamp(40px, var(--main-column-height) * 0.08, 88px));
+  bottom: 16px;
+}
+
+.workspace-palette-placement > * {
+  width: 100%;
+  max-height: 100%;
+  pointer-events: auto;
+}
+
+.workspace-palette-placement[data-variant="results"] {
+  --floating-width-limit: 764px;
+}
+
+.workspace-palette-placement[data-variant="results"] > * {
+  height: min(710px, 80dvh);
+}
+
+.workspace-palette-placement[data-variant="command"] {
+  --floating-width-limit: var(--container-xl, 36rem);
+}
+
+.workspace-notice-placement {
+  --floating-width-limit: 300px;
+  top: calc(var(--main-column-top) + var(--main-column-height) / 3);
+  translate: -50% -50%;
+}
+
+.workspace-notice-placement[data-action] {
+  --floating-width-limit: 360px;
+}

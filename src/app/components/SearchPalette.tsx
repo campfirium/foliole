@@ -14,9 +14,9 @@ import { SearchPaletteShortcutsFooter, useSearchPaletteShortcuts } from './Searc
 import { useSearchResultSourceDetails } from './searchPaletteSourceDetails';
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
 import { useFloatingPaletteEscape } from './useFloatingPaletteEscape';
+import { WorkspacePaletteFrame, workspacePaletteOverlayClassName } from './WorkspacePaletteFrame';
 import {
-  WorkspaceResultHeader, workspaceResultInputClassName,
-  workspaceResultOverlayClassName, workspaceResultPanelClassName
+  WorkspaceResultHeader, workspaceResultInputClassName
 } from './WorkspaceResultPalette';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
@@ -51,13 +51,13 @@ export function SearchPalette(props: SearchPaletteProps) {
     <div
       aria-label={t('desktop.search.dialog')}
       aria-modal="true"
-      className={workspaceResultOverlayClassName}
+      className={workspacePaletteOverlayClassName}
       onClick={overlayClose.handleClick}
       onMouseDown={overlayClose.handleMouseDown}
       role="dialog"
     >
-      <div
-        className={workspaceResultPanelClassName}
+      <WorkspacePaletteFrame
+        variant="results"
         onKeyDown={focusTrap.handleKeyDown}
         onClick={(event) => event.stopPropagation()}
         ref={focusTrap.containerRef}
@@ -86,7 +86,7 @@ export function SearchPalette(props: SearchPaletteProps) {
           sourceDetailsByNodeId={sourceDetailsByNodeId}
         />
         <SearchPaletteShortcutsFooter collapsed={shortcuts.collapsed} onToggle={shortcuts.toggle} />
-      </div>
+      </WorkspacePaletteFrame>
     </div>
   );
 }
