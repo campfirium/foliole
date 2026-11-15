@@ -49,5 +49,6 @@ test('groups Aide, external access and migration in General settings', async ({ 
   await expect(aide.getByText(/^(ChatGPT plan|ChatGPT 套餐)$/)).toBeVisible();
   await expect(aide.getByRole('heading', { name: /^(Local conversation data|本机对话数据)$/ })).toBeVisible();
   const external = dialog.getByRole('region', { name: /^(External access|外部访问)$/ });
+  await expect(external.getByRole('heading', { name: 'Foliole CLI' })).toBeVisible();
   await expect(external.getByRole('switch', { name: /^(Allow learning progress imports|允许导入学习进度)$/ })).toBeVisible();
 });

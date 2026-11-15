@@ -19,12 +19,13 @@ beforeEach(() => {
   runAction.mockReset();
 });
 
-it('stays hidden when the packaged CLI is unavailable', async () => {
+it('shows why the command cannot be installed when the packaged CLI is unavailable', async () => {
   runAction.mockResolvedValue(state('unavailable'));
   renderWithLocalization(<SettingsCliSection />);
 
-  await waitFor(() => expect(runAction).toHaveBeenCalledWith('status'));
-  expect(screen.queryByText('Foliole CLI')).not.toBeInTheDocument();
+  expect(await screen.findByText('This build cannot install the foliole command from Settings.')).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'Foliole CLI' })).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Install command' })).not.toBeInTheDocument();
 });
 
 it('reports a package-managed command without offering write actions', async () => {

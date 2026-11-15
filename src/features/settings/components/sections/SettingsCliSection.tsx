@@ -28,7 +28,7 @@ export function SettingsCliSection() {
     void runFolioleCliInstallationAction('status').then(setState);
   }, []);
 
-  if (!state || state.status === 'unavailable') return null;
+  if (!state) return null;
   const action = actionFor(state.status);
   const feedbackKey = state.error
     ? `settings.about.cli.error.${state.error}` as const
@@ -47,7 +47,7 @@ export function SettingsCliSection() {
       description={<><span className="block">{row.description}</span><span className="mt-1 block text-foreground/70">{t(feedbackKey)}</span></>}
       title={row.title}
     >
-      {state.packageManaged ? null : <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+      {state.packageManaged || state.status === 'unavailable' ? null : <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
         <SettingsButton
           disabled={state.status === 'conflict'}
           loading={busy}
