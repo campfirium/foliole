@@ -26,6 +26,8 @@ SuperMemo batch preview and import use the desktop Import flow for the current l
 
 Aide history shows material links for desktop conversation navigation. These links are local conversation metadata. Agents continue to find and open materials through existing library capabilities, and Agent Control has no conversation-link routes.
 
+Mobile find-in-document runs on keyboard submission and uses a non-modal toolbar for stepping through matches while reading. Ending the search clears the current query and highlights. Query focus, match highlights, and step controls are reader UI state. Agent Control continues to expose material search and location details.
+
 Desktop PDF imports index extracted text by page. Material search returns PDF locations from that index. The PDF-backed Topic body is separate and indexing does not write the extracted full text into it.
 
 ### Retrying material creation

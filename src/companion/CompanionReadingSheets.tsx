@@ -1,5 +1,5 @@
 import { ListTree, Info, RotateCcw, Search, Share2, X, SlidersHorizontal } from 'lucide-react';
-import { useContext } from 'react';
+import { useContext, useRef } from 'react';
 import type { ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -57,6 +57,20 @@ function ReadingExitFlowHereAction(props: { onClose(): void }) {
     onClick={() => { props.onClose(); exitHere(); }} />;
 }
 
+function useDocumentSearchFocusHandoff(openSearch: () => void) {
+  const openingSearch = useRef(false);
+  return {
+    openSearch() {
+      openingSearch.current = true;
+      openSearch();
+    },
+    onCloseAutoFocus(event: Event) {
+      if (openingSearch.current) event.preventDefault();
+      openingSearch.current = false;
+    }
+  };
+}
+
 export function ReadingActionsSheet(props: {
   editHistory?: CompanionEditHistoryActionsProps;
   priorityNodeId?: string;
@@ -71,12 +85,14 @@ export function ReadingActionsSheet(props: {
 }) {
   const t = useTranslation();
   const restore = useCompanionTrashRestoreAction(props);
+  const search = useDocumentSearchFocusHandoff(props.onFindInDocument);
   const openReadingSheet = (sheet: 'font' | 'info') => {
     props.onOpenChange(false);
     props.onOpenReadingSheet(sheet);
   };
   return (
-    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.actions')}>
+    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.actions')}
+      onCloseAutoFocus={search.onCloseAutoFocus}>
       <div className="border-t border-companion-divider">
         <CompanionFlowOrEditHistoryActions open={props.open} {...(props.editHistory ? { editHistory: props.editHistory } : {})} />
         <CompanionFlowModeControl onSelect={() => props.onOpenChange(false)} />
@@ -86,7 +102,7 @@ export function ReadingActionsSheet(props: {
         <ReadingActionRow
           icon={<Search aria-hidden="true" className="h-5 w-5" />}
           label={t('companion.reading.find')}
-          onClick={props.onFindInDocument}
+          onClick={search.openSearch}
         />
         <ReadingActionRow
           icon={<SlidersHorizontal aria-hidden="true" className="h-5 w-5" />}

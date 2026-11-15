@@ -153,10 +153,11 @@ function expectBrowseTopBarActions() {
 
 async function expectReadingDocumentSearch(surface: ReturnType<typeof createReadableSurface>) {
   openReadingAction('Find in document');
-  expect(screen.getByRole('dialog', { name: 'Find in document' })).toBeInTheDocument();
-  fireEvent.change(screen.getByRole('textbox', { name: 'Find in document' }), {
-    target: { value: 'Readable' }
-  });
+  expect(screen.getByRole('search', { name: 'Find in document' })).toBeInTheDocument();
+  const input = screen.getByRole<HTMLInputElement>('textbox', { name: 'Find in document' });
+  fireEvent.change(input, { target: { value: 'Readable' } });
+  expect(revealSelectionCentered).not.toHaveBeenCalled();
+  fireEvent.submit(input.form!);
   expect(await screen.findByTestId('companion-document-search-status')).toHaveTextContent('1 / 2');
   expect(revealSelectionCentered).toHaveBeenCalledWith({ from: 2, to: 10 }, { preserveFocus: true });
   expect(setSearchDecorations).toHaveBeenLastCalledWith({

@@ -20,6 +20,7 @@ export function CompanionBottomSheet(props: {
   scrollElementRef?: MutableRefObject<HTMLDivElement | null> | undefined;
   leadingAction?: ReactNode;
   retainReadingToolbar?: boolean;
+  onCloseAutoFocus?: (event: Event) => void;
   onOpenChange(open: boolean): void;
   open: boolean;
   title: string;
@@ -37,7 +38,8 @@ export function CompanionBottomSheet(props: {
         <AppDialogContent placement="bottom"
           onOpenAutoFocus={() => { opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; }}
           onCloseAutoFocus={event => {
-            if (!opener.current?.isConnected) return;
+            props.onCloseAutoFocus?.(event);
+            if (event.defaultPrevented || !opener.current?.isConnected) return;
             event.preventDefault();
             opener.current.focus({ preventScroll: true });
           }}

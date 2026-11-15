@@ -49,3 +49,18 @@ section > .companion-reading-top-chrome {
   -webkit-user-select: text;
   user-select: text;
 }
+
+.companion-document-search .companion-document-search-input:focus-visible {
+  border-color: var(--companion-divider);
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgb(125 126 143 / 0.22);
+}
+
+[data-companion-reading-surface='true'] .cm-topic-search-match {
+  background-color: rgb(242 121 85 / 0.22);
+}
+
+[data-companion-reading-surface='true'] .cm-topic-search-match-active {
+  background-color: rgb(242 121 85 / 0.49);
+  box-shadow: none;
+}
