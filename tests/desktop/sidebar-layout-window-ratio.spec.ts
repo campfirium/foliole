@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { ElectronApplication, Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsCategory, setActiveSidebarTierDockedWidths } from './harness/settings';
@@ -60,24 +60,31 @@ test('applies and restores saved sidebar tier modes and exact widths', async ({ 
   await expect.poll(async () => Math.abs((await right.boundingBox())!.width - rightWidth)).toBeLessThan(1);
 });
 
-async function seedPreviousSidebarPreferences(page: Page) {
-  const legacy = await page.evaluate(async key => {
-    const runtime = window.electronAPI!;
-    const settings = await runtime.invoke('load_app_settings_state');
-    delete settings[key];
-    const previousLayout = {
-      'foliole-workspace-list-width': '420',
-      'foliole-workspace-list-collapsed': 'false',
-      'foliole-workspace-right-sidebar-width': '340',
-      'foliole-workspace-right-sidebar-collapsed': 'true'
-    };
-    for (const [name, value] of Object.entries(previousLayout)) localStorage.setItem(name, value);
-    await runtime.invoke('save_app_settings_state', { settings: { ...settings, ...previousLayout } });
-    localStorage.removeItem(key);
-    return runtime.invoke('load_app_settings_state');
-  }, tierPreferenceKey);
-  expect(legacy[tierPreferenceKey]).toBeUndefined();
-  expect(legacy['foliole-workspace-list-width']).toBe('420');
+async function seedPreviousSidebarPreferences(app: ElectronApplication, page: Page) {
+  const previous = {
+    'foliole-workspace-list-width': '420',
+    'foliole-workspace-list-collapsed': 'false',
+    'foliole-workspace-right-sidebar-width': '340',
+    'foliole-workspace-right-sidebar-collapsed': 'true'
+  };
+  const workspaceUrl = page.url();
+  // Keep the running workspace from saving a settings snapshot while preparing the old installation.
+  await page.goto('about:blank');
+  await page.addInitScript(({ workspaceUrl, keys }) => {
+    if (location.href !== workspaceUrl) return;
+    for (const key of keys) localStorage.removeItem(key);
+  }, { workspaceUrl, keys: [...Object.keys(previous), tierPreferenceKey] });
+  await app.evaluate((_electron, { previous, tierKey }) => {
+    const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
+    const { runWithDatabaseConnectionOwner } = require(`${process.cwd()}/dist/electron/database/connection.js`);
+    const { loadJsonSetting, saveJsonSetting } = require(`${process.cwd()}/dist/electron/database/settingsStore.js`);
+    runWithDatabaseConnectionOwner(() => {
+      const settings = { ...loadJsonSetting('app_settings'), ...previous };
+      delete settings[tierKey];
+      saveJsonSetting('app_settings', settings);
+    });
+  }, { previous, tierKey: tierPreferenceKey });
+  await page.goto(workspaceUrl);
 }
 
 test('inherits the previous sidebar preferences once and restores them after crossing a tier', async ({
@@ -97,8 +104,7 @@ test('inherits the previous sidebar preferences once and restores them after cro
   await expect(section.getByRole('status')).toHaveText('90%');
   await page.keyboard.press('Escape');
   await expect(settings).toBeHidden();
-  await seedPreviousSidebarPreferences(page);
-  await page.reload();
+  await seedPreviousSidebarPreferences(desktopApp, page);
   await expectWorkspaceShell(page);
 
   const saved = () => page.evaluate(async key => {
