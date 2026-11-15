@@ -75,8 +75,39 @@ async function verifyMediaPreview(args: unknown, sqlite: ReturnType<Awaited<Retu
   return preview.previewSignature;
 }
 
-function verifyConceptFolder(sqlite: ReturnType<Awaited<ReturnType<typeof restoreFixture>>['peer']>['sqlite'],
+interface ImportedSourceEntry {
+  id: number;
+  nodeId: string | null;
+  parentId?: number;
+  sourceArticleId?: number | null;
+}
+
+function verifyArticleHierarchy(
+  sqlite: ReturnType<Awaited<ReturnType<typeof restoreFixture>>['peer']>['sqlite'],
+  entries: ImportedSourceEntry[]
+) {
+  const nodeId = (id: number) => entries.find(entry => entry.id === id)!.nodeId;
+  const parent = sqlite.prepare('SELECT parent_id FROM nodes WHERE id = ?').pluck();
+  expect(parent.get(nodeId(3517))).toBe(nodeId(825));
+  expect(parent.get(nodeId(634))).toBe(nodeId(825));
+  expect(parent.get(nodeId(277))).toBe(nodeId(634));
+  expect(parent.get(nodeId(797))).toBe(nodeId(1148));
+  expect(parent.get(nodeId(1148))).toBe(nodeId(3302));
+  expect(entries.find(entry => entry.id === 3517)?.parentId).toBe(3302);
+  for (const entry of entries) {
+    if (!entry.nodeId || !entry.sourceArticleId) continue;
+    const article = nodeId(entry.sourceArticleId);
+    const ancestors = new Set<unknown>();
+    for (let id = parent.get(entry.nodeId); id && !ancestors.has(id); id = parent.get(id)) {
+      ancestors.add(id);
+    }
+    expect(ancestors.has(article), `source article ancestry for #${entry.id}`).toBe(true);
+  }
+}
+
+function verifyImportedHierarchy(sqlite: ReturnType<Awaited<ReturnType<typeof restoreFixture>>['peer']>['sqlite'],
   entries: Array<{ id: number; nodeId: string }>) {
+  verifyArticleHierarchy(sqlite, entries);
   const article = entries.find(entry => entry.id === 3302)!.nodeId;
   const card = entries.find(entry => entry.id === 797)!.nodeId;
   const answer = sqlite.prepare('SELECT reveal FROM nodes WHERE id = ?').pluck().get(card);
@@ -148,8 +179,8 @@ if (!xml || !collectionDirectory) {
     connection.driver = createBetterSqlite3Driver(source.sqlite);
     const batchJson = source.sqlite.prepare('SELECT value FROM workspace_meta WHERE key = ?')
       .pluck().get(`supermemo-import:${result.batchId}`) as string;
-    const batch = JSON.parse(batchJson) as { entries: Array<{ id: number; nodeId: string; sourceState?: string; learning?: { history: unknown[] }; unresolvedImages: string[] }> };
-    verifyConceptFolder(source.sqlite, batch.entries);
+    const batch = JSON.parse(batchJson) as { entries: Array<ImportedSourceEntry & { nodeId: string; sourceState?: string; learning?: { history: unknown[] }; unresolvedImages: string[] }> };
+    verifyImportedHierarchy(source.sqlite, batch.entries);
     const pending = batch.entries.find(entry => entry.id === 797)!;
     const dismissed = batch.entries.find(entry => entry.id === 75)!;
     expect(pending.sourceState).toBe('pending');

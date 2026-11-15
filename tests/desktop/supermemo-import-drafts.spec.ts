@@ -149,6 +149,7 @@ test('imports a Topic with an inline image and reopens a saved import batch', as
     const snapshot = await window.electronAPI!.invoke('load_workspace_snapshot');
     return Object.values(snapshot.nodesById).find(node => node.title === 'Card');
   });
+  expect(importedCard?.parentNodeId).toBe(nodeId);
   expect(importedCard?.reveal).toContain(`Origin [[node-id:${nodeId}|Imported map topic]]`);
   expect(nodeId).toBeTruthy();
   await desktopWindow.evaluate(id => window.__folioleWorkspaceDebug!.openNode(id!), nodeId);

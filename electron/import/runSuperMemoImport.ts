@@ -14,6 +14,7 @@ import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { replaceNodeImageResourceReferences } from '../database/nodeResources.js';
 
 import { prepareSuperMemoTopicContent } from './prepareSuperMemoTopicContent.js';
+import { orderSuperMemoImportWrites, planSuperMemoImportParents } from './superMemoImportParents.js';
 import { importSuperMemoReviewHistory, superMemoDueInstant, superMemoTopicReading } from './superMemoImportSchedule.js';
 import { persistSuperMemoTopic } from './writeSuperMemoTopic.js';
 
@@ -71,27 +72,16 @@ async function prepareRows(rows: Row[], elements: Map<number, SuperMemoXmlDraftE
 }
 
 function writeRows(prepared: Awaited<ReturnType<typeof prepareRows>>, percent: number, offset: string, now: string, gradeMap: SuperMemoGradeMap, sourceFormat: SuperMemoSourceFormat) {
-  const destinations = new Map<number, { contentParent: string | null; folderParent: string | null }>();
+  const parents = planSuperMemoImportParents(prepared.map(({ row }) => row));
   const nodeIds = new Map(prepared.flatMap(({ row }) => row.outcome === 'skipped' ? [] :
     [[row.id, `${row.outcome === 'item' ? IMPORTED_REVIEW_NODE_PREFIX : ''}${randomUUID()}`] as const]));
-  const groupRoots = new Set(prepared.flatMap(({ row }) => row.sourceConceptFolderId ? [row.sourceConceptFolderId] : []));
   const sourceRows = new Map(prepared.map(({ row }) => [row.id, row]));
   const priorities = prepared.filter(({ row }) => row.sourceRank != null).sort((a, b) => a.row.sourceRank! - b.row.sourceRank!);
   const priorityById = new Map(priorities.map(({ row }, index) => [row.id, 1 + Math.floor(index * 9 / priorities.length)]));
-  return prepared.map(({ row, element, body, answer }) => {
-    const parent = row.parentId === null ? undefined : destinations.get(row.parentId);
+  return orderSuperMemoImportWrites(prepared, parents).map(({ row, element, body, answer }) => {
     const kind = row.outcome;
-    const group = row.sourceConceptFolderId ?? null;
-    const groupRoot = group === null ? undefined : nodeIds.get(group);
-    const sameGroup = row.parentId !== null && (sourceRows.get(row.parentId)?.sourceConceptFolderId ?? null) === group;
-    const rootId = groupRoots.has(row.id);
-    const inherited = sameGroup ? (kind === 'folder' ? parent?.folderParent : parent?.contentParent) : undefined;
-    const parentNodeId = rootId ? null : inherited ?? groupRoot ?? (kind === 'folder' ? null : INBOX_NODE_ID);
+    const parentNodeId = nodeIds.get(parents.get(row.id) ?? 0) ?? (kind === 'folder' ? null : INBOX_NODE_ID);
     const nodeId = nodeIds.get(row.id) ?? null;
-    destinations.set(row.id, {
-      contentParent: kind === 'folder' || kind === 'topic' ? nodeId : (sameGroup ? parent?.contentParent : undefined) ?? groupRoot ?? null,
-      folderParent: kind === 'folder' ? nodeId : (sameGroup ? parent?.folderParent : undefined) ?? groupRoot ?? null
-    });
     const due = kind === 'topic' ? row.sourceDue : kind === 'item' && !row.issue && row.sourceState !== 'dismissed'
       ? blendSuperMemoDue(row.sourceDue, row.recalculatedDue, percent) : null;
     if (nodeId && kind !== 'skipped') {
