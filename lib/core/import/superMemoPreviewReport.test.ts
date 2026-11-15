@@ -46,3 +46,18 @@ it('counts pending as fresh cards and excludes dismissed cards at every blend', 
       .toMatchObject({ sourceDue: 0, totalDue: 1, pendingNewItems: 1, addedDue: 0, unknownDates: 0 });
   }
 });
+
+it('reports the median signed adjustment using dates available at both ends', () => {
+  const preview = {
+    referenceDay: '2026-11-12',
+    rows: [
+      card(1, '2026-11-12', '2026-11-04'),
+      card(2, '2026-11-12', '2026-11-16'),
+      { ...card(3, '2026-11-10', null), intervalDays: 90 }
+    ]
+  };
+  const group = { label: '30–99', count: 2, source: 30 };
+  expect(makeSuperMemoPreviewReport(preview, 0).shifts).toEqual([{ ...group, offset: 0 }]);
+  expect(makeSuperMemoPreviewReport(preview, 50).shifts).toEqual([{ ...group, offset: -1 }]);
+  expect(makeSuperMemoPreviewReport(preview, 100).shifts).toEqual([{ ...group, offset: -2 }]);
+});

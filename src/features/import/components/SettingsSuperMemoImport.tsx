@@ -34,7 +34,7 @@ function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
   const input = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<Awaited<ReturnType<typeof previewRuntimeSuperMemoImport>>>();
   const [gradeMap, setGradeMap] = useState(initialGrades);
-  const [sourceFormat, setSourceFormat] = useState(DEFAULT_SUPER_MEMO_SOURCE_FORMAT);
+  const [sourceFormat, setSourceFormat] = useState<SuperMemoSourceFormat>({ ...DEFAULT_SUPER_MEMO_SOURCE_FORMAT, placement: 'topic-info' });
   const [percent, setPercent] = useState(0);
   const [sourceFile, setSourceFile] = useState<File>();
   const [directory, setDirectory] = useState<string>();
@@ -96,6 +96,29 @@ function useSuperMemoDraft(initialGrades: SuperMemoGradeMap) {
   return { input, draft, percent, setPercent, sourceFile, busy, error, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadFile, importSource };
 }
 
+function SuperMemoParameters({ preview, percent, setPercent, gradeMap, changeGrades, sourceFormat, changeSourceFormat, busy }: {
+  preview: NonNullable<Awaited<ReturnType<typeof previewRuntimeSuperMemoImport>>['preview']>;
+  percent: number; setPercent(value: number): void; gradeMap: SuperMemoGradeMap;
+  changeGrades(value: SuperMemoGradeMap): Promise<void>; sourceFormat: SuperMemoSourceFormat;
+  changeSourceFormat(value: SuperMemoSourceFormat): Promise<void>; busy: boolean;
+}) {
+  const t = useTranslation();
+  return (<div className="grid gap-4">
+    <p className="rounded-md bg-foreground/5 px-3 py-2 text-sm text-foreground/70">
+      {t('desktop.superMemoDrafts.reapplyNote')}
+    </p>
+    <div className="grid items-start gap-4 min-[850px]:grid-cols-[3fr_2fr]">
+      <section className="grid gap-3 rounded-lg border border-foreground/15 p-4">
+        <h3 className="text-sm font-medium">{t('desktop.superMemoDrafts.scheduleTitle')}</h3>
+        <SuperMemoPreviewOptionFields percent={percent} onChange={setPercent} />
+        <SuperMemoDraftTable preview={preview} percent={percent} />
+      </section>
+      <SuperMemoGradeSettings disabled={busy} value={gradeMap} onChange={next => void changeGrades(next)} />
+    </div>
+    <SuperMemoSourceSettings value={sourceFormat} onChange={next => void changeSourceFormat(next)} disabled={busy} />
+  </div>);
+}
+
 function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; initialGrades: SuperMemoGradeMap }) {
   const t = useTranslation();
   const { input, draft, percent, setPercent, sourceFile, busy, error, result, gradeMap, changeGrades, sourceFormat, changeSourceFormat, loadFile, importSource } = useSuperMemoDraft(initialGrades);
@@ -129,11 +152,7 @@ function SuperMemoDraftDialog({ close, initialGrades }: { close: () => void; ini
             </p> : null}
             {draft && !result ? <div hidden={parameters}><SuperMemoEntryPreview key={sourceFile?.name} {...draft} /></div> : null}
             {parameters && preview && !result ? <>
-              <SuperMemoSourceSettings value={sourceFormat} onChange={next => void changeSourceFormat(next)}
-                disabled={busy} example={preview?.rows.find(row => row.sourceExample)?.sourceExample} />
-              <SuperMemoGradeSettings disabled={busy} value={gradeMap} onChange={next => void changeGrades(next)} />
-              <SuperMemoPreviewOptionFields percent={percent} onChange={setPercent} />
-              <SuperMemoDraftTable preview={preview} percent={percent} />
+              <SuperMemoParameters preview={preview} {...{ percent, setPercent, gradeMap, changeGrades, sourceFormat, changeSourceFormat, busy }} />
             </> : null}
             {!preview && !busy ? <SuperMemoBatchAdjustments /> : null}
             {result ? <p role="status">{t('desktop.superMemoDrafts.importResult', result)}</p> : null}

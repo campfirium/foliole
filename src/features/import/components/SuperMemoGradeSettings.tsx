@@ -1,4 +1,6 @@
-import { DEFAULT_SUPER_MEMO_GRADE_MAP, type SuperMemoGrade, type SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
+import { useId } from 'react';
+
+import { DEFAULT_SUPER_MEMO_GRADE_MAP, type SuperMemoGradeMap } from '../../../../lib/core/import/superMemoSchedulePreview';
 import { useTranslation } from '../../../shared/localization/LocalizationProvider';
 import { AppButton } from '../../../shared/ui';
 
@@ -13,25 +15,34 @@ export function SuperMemoGradeSettings({ value, onChange, disabled }: {
   value: SuperMemoGradeMap; onChange(value: SuperMemoGradeMap): void; disabled: boolean;
 }) {
   const t = useTranslation();
+  const group = useId();
   return (
-    <details className="shrink-0 text-sm">
-      <summary>{t('desktop.superMemoDrafts.gradeMapping')}</summary>
-      <fieldset disabled={disabled} className="flex flex-wrap items-end gap-2 py-2">
-        {value.map((rating, grade) => (
-          <label key={grade} className="grid gap-1">
-            {t('desktop.superMemoDrafts.sourceGrade', { grade })}
-            <select aria-label={t('desktop.superMemoDrafts.sourceGrade', { grade })} className="rounded border bg-background px-2 py-1" value={rating}
-              onChange={event => onChange(value.map((current, index) =>
-                index === grade ? Number(event.target.value) as SuperMemoGrade : current))}>
-              {ratings.map(([id, label]) => <option key={id} value={id}>{t(label)}</option>)}
-            </select>
-          </label>
-        ))}
-        <AppButton type="button" disabled={disabled} variant="ghost"
-          onClick={() => onChange(DEFAULT_SUPER_MEMO_GRADE_MAP)}>
+    <fieldset disabled={disabled} className="min-w-0 rounded-lg border border-foreground/15 p-4 text-sm"
+      aria-label={t('desktop.superMemoDrafts.gradeMapping')}>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="font-medium">{t('desktop.superMemoDrafts.gradeMapping')}</h3>
+        <AppButton type="button" variant="ghost" onClick={() => onChange(DEFAULT_SUPER_MEMO_GRADE_MAP)}>
           {t('desktop.superMemoDrafts.resetGrades')}
         </AppButton>
-      </fieldset>
-    </details>
+      </div>
+      <table className="w-full border-collapse text-center tabular-nums">
+        <thead className="bg-foreground/5"><tr><th scope="col">SuperMemo</th>
+          {ratings.map(([id, label]) => <th className="px-1 py-1 font-medium" scope="col" key={id}>{t(label)}</th>)}
+        </tr></thead>
+        <tbody>{value.map((rating, grade) => (
+          <tr className="border-b border-foreground/10" key={grade}>
+            <th scope="row" className="py-1 font-normal">{grade}</th>
+            {ratings.map(([id, label]) => <td key={id} className="px-1 py-1">
+              <label className="flex cursor-pointer justify-center rounded py-1 hover:bg-foreground/5">
+                <input type="radio" name={`${group}-${grade}`} checked={rating === id}
+                  className="accent-[var(--role-accent)]"
+                  aria-label={`${t('desktop.superMemoDrafts.sourceGrade', { grade })} · ${t(label)}`}
+                  onChange={() => onChange(value.map((current, index) => index === grade ? id : current))} />
+              </label>
+            </td>)}
+          </tr>
+        ))}</tbody>
+      </table>
+    </fieldset>
   );
 }

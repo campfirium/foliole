@@ -39,7 +39,7 @@ const elementSchema = z.object({
 });
 const grade = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]);
 const previewSchema = z.object({ elements: z.array(elementSchema).min(1), collectionDirectory: z.string().optional(),
-  sourceFormat: z.object({ placement: z.enum(['metadata', 'body']), template: z.string().max(4000) }).optional(),
+  sourceFormat: z.object({ placement: z.enum(['metadata', 'body', 'topic-info', 'content-end']), template: z.string().max(4000) }).optional(),
   gradeMap: z.array(grade).length(6).optional(), previewSignature: z.string().regex(/^[a-f0-9]{64}$/).optional() });
 
 function sourceOffset(now: Date) {

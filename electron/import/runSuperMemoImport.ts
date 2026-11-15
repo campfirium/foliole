@@ -74,9 +74,14 @@ function writeRows(prepared: Awaited<ReturnType<typeof prepareRows>>, percent: n
       const articleNodeId = article ? nodeIds.get(article.id) : undefined;
       const formatted = formatSuperMemoSource(row.sourceBibliography, row.sourceArticleId,
         article && articleNodeId ? { id: articleNodeId, title: article.title } : undefined, sourceFormat);
+      const parent = parents.get(row.id);
+      const placement = sourceFormat.placement;
+      const inBody = placement === 'content-end' || (kind === 'topic' &&
+        (placement !== 'topic-info' || parent == null || sourceRows.get(parent)?.outcome !== 'topic'));
       persistElement(snapshot, element,
-        kind === 'topic' ? { ...body, content: addSuperMemoSource(body.content, formatted, sourceFormat.placement) } : body,
-        kind === 'item' && answer.content ? { ...answer, content: addSuperMemoSource(answer.content, formatted, sourceFormat.placement) } : answer,
+        inBody && body.content ? { ...body, content: addSuperMemoSource(body.content, formatted, placement) } : body,
+        kind === 'item' && answer.content && (placement === 'metadata' || placement === 'body')
+          ? { ...answer, content: addSuperMemoSource(answer.content, formatted, placement) } : answer,
         due, offset, row.sourceState, gradeMap);
     }
     return { ...row, sourceExample: undefined, nodeId, sourceArticleNodeId: nodeIds.get(row.sourceArticleId ?? 0) ?? null, lastAppliedAt: due ? superMemoDueInstant(due) : null, learning: element.learning, fullOffset: superMemoFullOffset(row.sourceDue, row.recalculatedDue),

@@ -1,7 +1,7 @@
 import type { SuperMemoBibliography } from './superMemoBibliography.js';
 
 export interface SuperMemoSourceFormat {
-  placement: 'metadata' | 'body';
+  placement: 'metadata' | 'body' | 'topic-info' | 'content-end';
   template: string;
 }
 
@@ -15,7 +15,7 @@ export function formatSuperMemoSource(bibliography: SuperMemoBibliography | unde
   const title = target?.title.replace(/[[\]|\r\n]/gu, ' ').trim() || (articleId ? `SuperMemo #${articleId}` : '');
   const articleLink = target ? `[[node-id:${target.id}|${title}]]` : title;
   const values: Record<string, string | undefined> = { ...bibliography, articleLink };
-  if (format.placement === 'metadata') {
+  if (format.placement === 'metadata' || format.placement === 'topic-info') {
     const valuesByKey: Record<string, string | number | undefined> = {
       supermemoArticle: articleLink, supermemoArticleId: articleId ?? undefined,
       ...Object.fromEntries(Object.entries(bibliography ?? {}).map(([key, value]) => [
@@ -34,7 +34,7 @@ export function formatSuperMemoSource(bibliography: SuperMemoBibliography | unde
 
 export function addSuperMemoSource(content: string, formatted: string, placement: SuperMemoSourceFormat['placement']) {
   if (!formatted) return content;
-  if (placement === 'body') return [content, formatted].filter(Boolean).join('\n\n');
+  if (placement === 'body' || placement === 'content-end') return [content, formatted].filter(Boolean).join('\n\n');
   if (content.startsWith('---\n') && content.includes('\n---', 4)) {
     const end = content.indexOf('\n---', 4);
     return `${content.slice(0, end)}\n${formatted}${content.slice(end)}`;
