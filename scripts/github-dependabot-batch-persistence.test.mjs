@@ -21,7 +21,8 @@ function prepareProducer() {
   for (const name of [
     'github-desktop-handoff-monitor', 'github-desktop-handoff-events',
     'github-desktop-handoff-pr-events', 'github-desktop-handoff-title',
-    'github-monitor-gh', 'github-actions-handoff-policy', 'github-dependabot-alert-events', 'github-play-review-events'
+    'github-monitor-gh', 'github-actions-handoff-policy', 'github-dependabot-alert-events', 'github-play-review-events',
+    'github-handoff-replies', 'github-handoff-reply-api', 'github-desktop-handoff-discussions'
   ]) fs.copyFileSync(path.join(sourceRoot, `scripts/${name}.mjs`), path.join(root, `scripts/${name}.mjs`));
   fs.symlinkSync(path.join(sourceRoot, 'scripts/mobile'), path.join(root, 'scripts/mobile'), 'junction');
   fs.cpSync(path.join(sourceRoot, 'scripts/security'), path.join(root, 'scripts/security'), { recursive: true });

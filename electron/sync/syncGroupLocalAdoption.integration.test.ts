@@ -7,6 +7,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { afterEach, expect, it } from 'vitest';
 
+import type { SyncTriggerResult } from '../../lib/platform/syncTriggerContract.js';
+
 import { buildRestoreFixture, startRestoreFixture } from './backupRestoreSyncGroup.testSupport.js';
 
 let root = '';
@@ -50,10 +52,15 @@ async function setup(leave = true) {
 }
 
 async function sync(worker: (typeof workers)[number], peer: Awaited<ReturnType<typeof setup>>[number]) {
-  await worker.send('sync', { ...peer }).catch((error: Error) => {
-    if (!error.message.includes('sync_group_sync_incomplete')) throw error;
-  });
-  await worker.send('sync', { ...peer });
+  const deadline = Date.now() + 15_000;
+  for (;;) {
+    const result = await worker.send('sync', { ...peer }) as unknown as SyncTriggerResult;
+    if (result.status === 'completed') return;
+    if (result.status !== 'pending' || Date.now() >= deadline) {
+      throw new Error(`Sync did not complete: ${result.status}${result.error ? ` (${result.error})` : ''}`);
+    }
+    await delay(250);
+  }
 }
 
 async function completeJoin(worker: (typeof workers)[number], firstAction = 'joinComplete') {
@@ -93,6 +100,7 @@ it('continues ordinary UUID sync with a previously synchronized offline member a
   await provider!.send('joinAccept', { requestId: request.join_request.request_id });
   expect(await completeJoin(applicant!, 'joinBusy')).toBeGreaterThanOrEqual(1);
   await other!.send('seed', { id: 'offline-created', content: 'Offline data' });
+  await applicant!.send('holdSyncRound', { ...peers[2]!, releaseAfterManualRounds: 2 });
   await sync(applicant!, peers[2]!).catch((error: Error) => { throw new Error(`after adoption: ${error.message}`); });
   for (const worker of [applicant!, other!]) {
     const state = await worker.send('reopen');
@@ -120,10 +128,7 @@ for (const mode of ['use-group']) {
     };
     await provider!.send('joinAccept', { requestId: request.join_request.request_id });
     await completeJoin(applicant!);
-    await applicant!.send('sync', { ...peers[1]! }).catch((error: Error) => {
-      if (!error.message.includes('sync_group_sync_incomplete')) throw error;
-    });
-    await applicant!.send('sync', { ...peers[1]! });
+    await sync(applicant!, peers[1]!);
     const local = await applicant!.send('reopen');
     const remote = await provider!.send('reopen');
     expect(local.library.nodesById[remoteId]?.content).toBe('Identical article text');

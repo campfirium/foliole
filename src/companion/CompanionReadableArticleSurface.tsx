@@ -198,7 +198,7 @@ function ImmersiveArticleChrome(props: {
 }
 function useReadableArticleViewport(props: ImmersiveReadableArticleProps,
   model: ReturnType<typeof useImmersiveReadableArticleModel>,
-  pendingReadableArticle: ReturnType<typeof useCompanionPendingReadableArticle>) {
+  pendingReadableArticle: ReturnType<typeof useCompanionPendingReadableArticle<ReadableArticle>>) {
   const scrollPosition = useCompanionArticleScrollPosition({
     nodeId: props.readableArticle.nodeId, external: props.snapshot === null,
     scrollTop: props.readableArticle.persistedNodeViewState?.scrollTop ?? 0, onScrollTopChange: props.onScrollTopChange

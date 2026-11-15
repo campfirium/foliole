@@ -1,3 +1,4 @@
+import type { SyncPeerRoundLease } from '../../lib/core/sync/syncPeerRoundOwnership.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
@@ -21,8 +22,26 @@ export async function reopenAfterSyncStops() {
   initializeDatabase();
 }
 
+let heldManualRound: { lease: SyncPeerRoundLease; peerId: string; remaining: number } | undefined;
+
 export function holdSyncRound(args: Record<string, unknown>) {
-  desktopSyncPeerRoundOwner().acquireOutbound(String(args.identity), 'fixture-existing-round');
+  const peerId = String(args.identity);
+  const lease = desktopSyncPeerRoundOwner().acquireOutbound(peerId, 'fixture-existing-round');
+  if (!args.releaseAfterManualRounds) return;
+  if (!lease) throw new Error('fixture_peer_already_busy');
+  heldManualRound = { lease, peerId, remaining: Number(args.releaseAfterManualRounds) };
+}
+
+export async function runWithHeldSyncRound<T>(args: Record<string, unknown>, run: () => Promise<T>) {
+  const held = heldManualRound;
+  if (held?.peerId !== String(args.identity)) return run();
+  try { return await run(); }
+  finally {
+    if (--held.remaining === 0) {
+      held.lease.release();
+      heldManualRound = undefined;
+    }
+  }
 }
 
 export async function startContendedSync(args: Record<string, unknown>) {
