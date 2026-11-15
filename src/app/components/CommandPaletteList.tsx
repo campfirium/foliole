@@ -7,9 +7,9 @@ import type { CommandPaletteItem } from '../../shared/commands/types';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   appFloatingEmptyStateClassName,
-  appFloatingItemClassName,
-  appFloatingListClassName
+  appFloatingItemClassName
 } from '../../shared/ui';
+import { floatingResultListClassName } from '../../shared/ui/FloatingSurface';
 
 interface CommandPaletteListProps {
   activeIndex: number;
@@ -59,7 +59,7 @@ function CommandPaletteRow(props: {
 export function CommandPaletteList(props: CommandPaletteListProps) {
   if (!props.activeItems.length && !props.displaySections.some((section) => section.items.length)) {
     return (
-      <ul className={appFloatingListClassName('min-h-0')}>
+      <ul className={floatingResultListClassName}>
         <li className={appFloatingEmptyStateClassName()}>{props.emptyLabel}</li>
       </ul>
     );
@@ -67,7 +67,7 @@ export function CommandPaletteList(props: CommandPaletteListProps) {
 
   let enabledIndex = -1;
   return (
-    <ul className={appFloatingListClassName('min-h-0')}>
+    <ul className={floatingResultListClassName}>
       {props.displaySections.flatMap((section) => [
         <li className="px-3 pb-1 pt-2 text-xs font-semibold text-foreground/45 first:pt-1" key={section.id}>
           {section.title}

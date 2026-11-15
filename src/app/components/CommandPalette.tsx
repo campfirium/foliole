@@ -11,6 +11,7 @@ import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
 import { useFloatingPaletteEscape } from './useFloatingPaletteEscape';
 import { WorkspacePaletteFrame, workspacePaletteOverlayClassName } from './WorkspacePaletteFrame';
+import { WorkspaceResultHeader, workspaceResultInputClassName } from './WorkspaceResultPalette';
 
 const EMPTY_COMMAND_ITEMS: CommandPaletteItem[] = [];
 const EMPTY_RECENT_COMMAND_IDS: string[] = [];
@@ -107,22 +108,23 @@ export function CommandPalette({
       role="dialog"
     >
       <WorkspacePaletteFrame
-        variant="command"
         onKeyDown={focusTrap.handleKeyDown}
         onClick={(event) => event.stopPropagation()}
         ref={focusTrap.containerRef}
       >
-        <FloatingPaletteInput
-          className="shrink-0"
-          inputLabel={t('desktop.palette.command.search')}
-          onClose={onClose}
-          onQueryChange={setQuery}
-          onRunActive={() => runItem(onRunCommand, activeItems[activeIndex])}
-          onSetActiveIndex={setActiveIndex}
-          placeholder={t('desktop.palette.command.placeholder')}
-          query={query}
-          totalItems={activeItems.length}
-        />
+        <WorkspaceResultHeader>
+          <FloatingPaletteInput
+            className={workspaceResultInputClassName}
+            inputLabel={t('desktop.palette.command.search')}
+            onClose={onClose}
+            onQueryChange={setQuery}
+            onRunActive={() => runItem(onRunCommand, activeItems[activeIndex])}
+            onSetActiveIndex={setActiveIndex}
+            placeholder={t('desktop.palette.command.placeholder')}
+            query={query}
+            totalItems={activeItems.length}
+          />
+        </WorkspaceResultHeader>
         <CommandPaletteList
           activeIndex={activeIndex}
           activeItems={activeItems}

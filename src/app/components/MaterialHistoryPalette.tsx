@@ -66,7 +66,7 @@ export default function MaterialHistoryPalette({ onClose, onOpenNode }: Props) {
   const label = t('desktop.command.openMaterialHistory');
   return (
     <div aria-label={label} aria-modal="true" className={workspacePaletteOverlayClassName} onClick={onClose} role="dialog">
-      <WorkspacePaletteFrame variant="results"
+      <WorkspacePaletteFrame
         onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { focusTrap.handleKeyDown(event); handleResultsKey(event, {
           onPin: () => { void pinRow(selected); }, onOpen: openRow,
           onSelect: (index) => setSelectedId(rows[index]?.node.id ?? null),

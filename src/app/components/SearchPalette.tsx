@@ -57,7 +57,6 @@ export function SearchPalette(props: SearchPaletteProps) {
       role="dialog"
     >
       <WorkspacePaletteFrame
-        variant="results"
         onKeyDown={focusTrap.handleKeyDown}
         onClick={(event) => event.stopPropagation()}
         ref={focusTrap.containerRef}

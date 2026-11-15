@@ -124,6 +124,7 @@ test('workspace palettes share the main column alignment and fit a short narrow 
   const searchPanel = search.getByRole('textbox').locator('../..');
   await expect(searchPanel).toBeVisible();
   await expectPanelFitsAboveWorkspaceCenter(searchPanel, 764);
+  const searchHeight = (await searchPanel.boundingBox())!.height;
   await page.keyboard.press('Escape');
 
   await rail.getByRole('button', { name: /^(History|历史面板)$/ }).click();
@@ -131,18 +132,21 @@ test('workspace palettes share the main column alignment and fit a short narrow 
   const historyPanel = history.getByRole('searchbox').locator('../..');
   await expect(historyPanel).toBeVisible();
   await expectPanelFitsAboveWorkspaceCenter(historyPanel, 764);
+  expect((await historyPanel.boundingBox())!.height).toBeCloseTo(searchHeight, 0);
   await testInfo.attach('history-aligned', { body: await page.screenshot(), contentType: 'image/png' });
   await page.keyboard.press('Escape');
 
   await rail.getByRole('button', { name: /Command Palette|命令面板/ }).click();
   const command = page.getByRole('dialog', { name: /Command palette|命令面板/i });
   const input = command.getByRole('textbox');
-  const panel = input.locator('..');
+  const panel = input.locator('../..');
   await expect(panel).toBeVisible();
-  await expectPanelFitsAboveWorkspaceCenter(panel, 576);
+  await expectPanelFitsAboveWorkspaceCenter(panel, 764);
+
+  expect((await panel.boundingBox())!.height).toBeCloseTo(searchHeight, 0);
 
   await page.setViewportSize({ width: 700, height: 440 });
-  await expectPanelFitsAboveWorkspaceCenter(panel, 576);
+  await expectPanelFitsAboveWorkspaceCenter(panel, 764);
   const list = command.getByRole('list');
   expect(await list.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
   const before = (await panel.boundingBox())!;
@@ -150,7 +154,8 @@ test('workspace palettes share the main column alignment and fit a short narrow 
   await expect(command.getByRole('listitem')).toHaveCount(1);
   const filtered = (await panel.boundingBox())!;
   expect(filtered.y).toBeCloseTo(before.y, 0);
-  expect(filtered.height).toBeLessThan(before.height);
+  expect(filtered.height).toBeCloseTo(before.height, 0);
+  await testInfo.attach('command-narrow-empty', { body: await page.screenshot(), contentType: 'image/png' });
   await page.mouse.click(5, 5);
   await expect(command).toBeHidden();
 

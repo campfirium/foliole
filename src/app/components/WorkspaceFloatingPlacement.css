@@ -26,26 +26,16 @@
 }
 
 .workspace-palette-placement {
+  --floating-width-limit: 764px;
   top: calc(var(--main-column-top) + clamp(40px, var(--main-column-height) * 0.08, 88px));
   bottom: 16px;
 }
 
 .workspace-palette-placement > * {
   width: 100%;
+  height: min(710px, 80dvh);
   max-height: 100%;
   pointer-events: auto;
-}
-
-.workspace-palette-placement[data-variant="results"] {
-  --floating-width-limit: 764px;
-}
-
-.workspace-palette-placement[data-variant="results"] > * {
-  height: min(710px, 80dvh);
-}
-
-.workspace-palette-placement[data-variant="command"] {
-  --floating-width-limit: var(--container-xl, 36rem);
 }
 
 .workspace-notice-placement {
