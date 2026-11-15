@@ -67,9 +67,15 @@ describe('automatic site download sync', () => {
     expect(runSync(directory)).toEqual({ failed: false, notified: false });
   });
 
-  it('dispatches when the published store data has changed', () => {
+  it('does not deploy the site when only the published store state changes', () => {
     const tracked = { ...directory, storeChannels: { ios: { status: 'in-review' } } };
-    expect(runSync(tracked)).toEqual({ failed: false, notified: true });
+    expect(runSync(tracked)).toEqual({ failed: false, notified: false });
+  });
+
+  it('dispatches when other published download data changes', () => {
+    const tracked = { ...directory, changelogRevision: 'previous' };
+    const published = { ...directory, changelogRevision: 'current' };
+    expect(runSync(tracked, { published })).toEqual({ failed: false, notified: true });
   });
 
   it('does not dispatch after an ineligible upstream run or a failed site source read', () => {
