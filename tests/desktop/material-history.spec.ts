@@ -44,7 +44,7 @@ async function expectSearchPanelLayout(history: Locator, frame: Awaited<ReturnTy
   await collapse.click();
   await expect(history.getByText('Enter', { exact: true })).toBeHidden();
   await history.getByRole('button', { name: 'Show history shortcuts' }).click();
-  await expect(history.getByText('Enter', { exact: true })).toBeVisible();
+  await expect(history.getByText('Space', { exact: true })).toBeVisible();
   await history.getByRole('searchbox').fill('No matching history text');
   await expect(history.getByText('No matching materials')).toBeVisible();
   expect(await panel.boundingBox()).toEqual(frame);
@@ -111,29 +111,58 @@ test('reopens the exact visited child from persisted desktop history', async ({ 
   await openHistoryFromRail(page);
   await history.getByRole('searchbox', { name: 'Search history…' }).fill('Exact derived');
   await expect(history.getByRole('button', { name: /Exact derived body.*History source \/ History extract$/ })).toBeVisible();
-  await page.keyboard.press('Enter');
-  await expect.poll(() => active(page)).toBe('history-child');
+  await openFilteredChildFromKeyboard(page, history);
   await expect(history).toBeHidden();
   expect((await session()).currentNodeId).toBe(flowNodeId);
   await page.getByRole('button', { name: 'Enter Flow', exact: true }).click();
   await expect.poll(() => active(page)).toBe(flowNodeId);
 });
 
+async function openFilteredChildFromKeyboard(page: Page, history: Locator) {
+  await expect(history.locator('[aria-current=true]')).toHaveCount(0);
+  await page.keyboard.press('Enter');
+  await expect(history).toBeVisible();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect.poll(() => active(page)).toBe('history-child');
+}
+
 async function scrollAndOpenOlderHistory(page: Page, history: Locator) {
-  await expect(history.getByRole('searchbox')).toBeFocused();
+  const list = history.getByRole('group', { name: 'History' });
+  await expect(list).toBeFocused();
+  const selection = history.locator('[aria-current=true]');
+  await expect(selection).toHaveCount(0);
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Space');
+  await expect(history).toBeVisible();
+  await expect(history.getByRole('button', { name: 'Pin material', pressed: true })).toHaveCount(0);
   const target = history.getByRole('button', { name: /^Ordered body 2 Ordered topic 2$/ });
   await expect(target).not.toBeInViewport();
   await history.getByRole('button', { name: /^Ordered body 11 Ordered topic 11$/ }).hover();
   await page.mouse.wheel(0, 1500);
   await expect(target).toBeInViewport();
-  for (let index = 0; index < 9; index++) await page.keyboard.press('ArrowDown');
-  await expect(history.getByRole('searchbox')).toBeFocused();
+  await expect(selection).toHaveCount(0);
+  await expect(history.getByRole('button', { name: 'Ordered body 0 Ordered topic 0' })).toBeInViewport();
+  for (let index = 0; index < 3; index++) await page.keyboard.press('ArrowUp');
+  await expect(selection).toHaveAccessibleName('Ordered body 2 Ordered topic 2');
   await expect(target).toBeInViewport();
   await page.keyboard.press('Enter');
   await expect.poll(() => active(page)).toBe('ordered-2');
 }
 
-test('pins, promotes a saved edit, and scrolls to older history from the search field', async ({ desktopWindow: page }) => {
+async function pinFilteredMaterial(page: Page, history: Locator, target: Locator) {
+  const search = history.getByRole('searchbox');
+  await search.fill('Ordered body 2');
+  await expect(history.locator('[aria-current=true]')).toHaveCount(0);
+  await page.keyboard.press('ArrowDown');
+  await expect(target).toHaveAttribute('aria-current', 'true');
+  await page.keyboard.press('Space');
+  await expect(target.locator('..').getByRole('button', { name: 'Pin material', pressed: true })).toBeVisible();
+  await search.fill('');
+  await expect(history.locator('[aria-current=true]')).toHaveCount(0);
+}
+
+test('pins, promotes a saved edit, and scrolls to older history', async ({ desktopWindow: page }) => {
   await expectWorkspaceShell(page);
   await page.evaluate(async () => {
     window.localStorage.setItem('foliole-app-language', 'en');
@@ -153,9 +182,7 @@ test('pins, promotes a saved edit, and scrolls to older history from the search 
   await scrollAndOpenOlderHistory(page, history);
   await openHistory(page);
   const target = history.getByRole('button', { name: /^Ordered body 2 Ordered topic 2$/ });
-  await target.hover();
-  await target.locator('..').getByRole('button', { name: 'Pin material' }).click();
-  await expect(history.getByRole('button', { name: 'Pin material', pressed: true })).toHaveCount(1);
+  await pinFilteredMaterial(page, history, target);
   await page.keyboard.press('Escape');
   await page.getByRole('treeitem', { name: 'Ordered topic 0', exact: true }).click();
   const editor = page.locator('.prompt-editor-host .cm-content');

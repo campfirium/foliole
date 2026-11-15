@@ -73,6 +73,7 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.history.openOnPage': '打开本页条目',
   'desktop.history.empty': '还没有访问记录',
   'desktop.history.pin': '固定材料',
+  'desktop.history.togglePin': '固定 / 取消固定',
   'desktop.history.pinFailed': '无法更改固定状态。',
   'desktop.history.previousPage': '上一页',
   'desktop.history.nextPage': '下一页',
