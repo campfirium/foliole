@@ -84,6 +84,15 @@ export function appFloatingListClassName(className?: string) {
   return cn(floatingListBaseClassName, className);
 }
 
+export const floatingResultListClassName = appFloatingListClassName(
+  'min-h-0 max-h-none flex-1 scroll-py-2 space-y-1 ' +
+  '[--app-scrollbar-thumb-color:color-mix(in_srgb,var(--app-floating-border-color)_36%,transparent)] ' +
+  '[--app-scrollbar-thumb-hover-color:color-mix(in_srgb,var(--app-floating-border-color)_52%,transparent)]'
+);
+export const floatingResultRowClassName = 'grid gap-[3px] rounded-lg px-4 py-2.5';
+export const floatingResultPreviewClassName = 'line-clamp-2 break-words text-[15px] leading-[21px]';
+export const floatingResultMetaClassName = 'text-xs leading-[17px] text-foreground/45';
+
 export function appFloatingItemClassName(className?: string) {
   return cn(floatingItemBaseClassName, className);
 }

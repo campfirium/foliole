@@ -90,6 +90,7 @@ function buildRuntimeState(args: {
   requestedSettingsRowId: SettingsSearchRowId | null;
   setIsCommandPaletteOpen: Dispatch<SetStateAction<boolean>>;
   setIsGoToNodePaletteOpen: Dispatch<SetStateAction<boolean>>;
+  setIsMaterialHistoryOpen: Dispatch<SetStateAction<boolean>>;
   setIsImportManagementOpen: Dispatch<SetStateAction<boolean>>;
   setIsImmersiveMode: Dispatch<SetStateAction<boolean>>;
   setIsMoveToNodePaletteOpen: (open: boolean) => void;
@@ -102,6 +103,7 @@ function buildRuntimeState(args: {
   state: {
     isCommandPaletteOpen: boolean;
     isGoToNodePaletteOpen: boolean;
+    isMaterialHistoryOpen: boolean;
     isImmersiveMode: boolean;
     isImportManagementOpen: boolean;
     isMoveToNodePaletteOpen: boolean;
@@ -123,6 +125,7 @@ function buildRuntimeState(args: {
     recordRecentNode: args.recentHistory.recordRecentNode,
     setIsCommandPaletteOpen: args.setIsCommandPaletteOpen,
     setIsGoToNodePaletteOpen: args.setIsGoToNodePaletteOpen,
+    setIsMaterialHistoryOpen: args.setIsMaterialHistoryOpen,
     setIsImmersiveMode: args.setIsImmersiveMode,
     setIsImportManagementOpen: args.setIsImportManagementOpen,
     setIsMoveToNodePaletteOpen: args.setIsMoveToNodePaletteOpen,
@@ -141,12 +144,14 @@ function useRuntimeFlags() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isSearchPaletteOpen, setIsSearchPaletteOpen] = useState(false);
   const [isGoToNodePaletteOpen, setIsGoToNodePaletteOpen] = useState(false);
+  const [isMaterialHistoryOpen, setIsMaterialHistoryOpen] = useState(false);
   const [isMoveToNodePaletteOpen, setIsMoveToNodePaletteOpen] = useState(false);
   const [isImportManagementOpen, setIsImportManagementOpen] = useState(false);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
   return {
     isCommandPaletteOpen,
     isGoToNodePaletteOpen,
+    isMaterialHistoryOpen,
     isImmersiveMode,
     isImportManagementOpen,
     isMoveToNodePaletteOpen,
@@ -155,6 +160,7 @@ function useRuntimeFlags() {
     isViewingTrashNode,
     setIsCommandPaletteOpen,
     setIsGoToNodePaletteOpen,
+    setIsMaterialHistoryOpen,
     setIsImmersiveMode,
     setIsImportManagementOpen,
     setIsMoveToNodePaletteOpen,
@@ -195,6 +201,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
       requestedSettingsRowId: settingsRequest.requestedSettingsRowId,
       setIsCommandPaletteOpen: flags.setIsCommandPaletteOpen,
       setIsGoToNodePaletteOpen: flags.setIsGoToNodePaletteOpen,
+      setIsMaterialHistoryOpen: flags.setIsMaterialHistoryOpen,
       setIsImportManagementOpen: flags.setIsImportManagementOpen,
       setIsImmersiveMode: flags.setIsImmersiveMode,
       setIsMoveToNodePaletteOpen: moveToNodeSource.setIsMoveToNodePaletteOpen,
@@ -207,6 +214,7 @@ export function useAppRuntime(initialListWidth: number, initialRightSidebarWidth
       state: {
         isCommandPaletteOpen: flags.isCommandPaletteOpen,
         isGoToNodePaletteOpen: flags.isGoToNodePaletteOpen,
+        isMaterialHistoryOpen: flags.isMaterialHistoryOpen,
         isImmersiveMode: flags.isImmersiveMode,
         isImportManagementOpen: flags.isImportManagementOpen,
         isMoveToNodePaletteOpen: flags.isMoveToNodePaletteOpen,

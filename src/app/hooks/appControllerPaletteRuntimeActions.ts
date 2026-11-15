@@ -26,6 +26,7 @@ export function createPaletteRuntimeActions(args: {
     recordRecentCommand: args.runtime.recordRecentCommand,
     setCommandPaletteOpen: args.runtime.setIsCommandPaletteOpen,
     setGoToNodePaletteOpen: args.runtime.setIsGoToNodePaletteOpen,
+    openMaterialHistory: () => args.runtime.setIsMaterialHistoryOpen(true),
     setIsMoveToNodePaletteOpen: args.runtime.setIsMoveToNodePaletteOpen,
     setSettingsOpen: args.runtime.setIsSettingsOpen,
     trashViewOpen: args.trash.isTrashViewOpen

@@ -17,6 +17,7 @@ export const APP_COMMAND_IDS = {
   scrollDocumentTop: 'document.scrollTop',
   scrollDocumentBottom: 'document.scrollBottom',
   goToNode: 'navigation.goToNode',
+  openMaterialHistory: 'navigation.openMaterialHistory',
   moveToNode: 'navigation.moveToNode',
   renameNode: 'workspace.renameNode',
   findInTopic: 'document.findInTopic',

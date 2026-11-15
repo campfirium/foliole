@@ -10,6 +10,7 @@ import { mergeDailyFlowReceiptNodes } from './workspaceDailyFlowReceipt';
 import { isSameWorkspaceReviewSession } from './workspaceHistoryContext';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import { createReviewSessionModePreference } from './workspaceReviewSessionModePreference';
+import { persistNodeOpened } from './workspaceStoreNodeOpenState';
 import type { WorkspaceState } from './workspaceStoreTypes';
 
 type Set = (partial: Partial<WorkspaceState> | ((state: WorkspaceState) => Partial<WorkspaceState>)) => void;
@@ -30,6 +31,7 @@ export function openWorkspaceDailyFlow(set: Set, get: () => WorkspaceState,
         ? buildReviewActiveNodeContext(state, session.currentNodeId) : {}),
       ...(onlyIfNewer ? { appActionHistory: reconcileShelveHistory(state.appActionHistory, source, session) } : {}),
       reviewSession: { ...session, isAnswerRevealed: onlyIfNewer && session.currentNodeId === source.currentNodeId && source.isAnswerRevealed }, ...preference, ...(preference && session.daily && args.startup ? createReviewSessionModePreference(mode ?? args.mode, args.now) : {}) }));
+    if (!onlyIfNewer && session.currentNodeId) void persistNodeOpened(set, session.currentNodeId, args.now);
     return session.currentNodeId ?? session.dive?.id ?? false;
   }).catch(error => {
     logRuntimeError('could not open daily Flow', { area: 'persistence', action: 'open_daily_flow',
@@ -48,6 +50,7 @@ export function continueWorkspaceDailyFlow(set: Set, get: () => WorkspaceState, 
       if (get().reviewSession !== state.reviewSession) return false;
       set(current => ({ nodesById: mergeDailyFlowReceiptNodes(current.nodesById, state.nodesById, nodes, learning),
         ...(session.currentNodeId ? buildReviewActiveNodeContext(current, session.currentNodeId) : {}), reviewSession: session }));
+      if (session.currentNodeId) void persistNodeOpened(set, session.currentNodeId, now);
       return Boolean(session.currentNodeId);
     }).catch(async error => {
       if (get().reviewSession === source) await recoverWorkspaceDailyFlow(set, get, error, now);

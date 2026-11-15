@@ -104,11 +104,19 @@ function normalizeDefaultItem(item: WorkspaceRailItemConfig) {
   };
 }
 
-function normalizeSection(items: WorkspaceRailItemConfig[], section: WorkspaceRailSection) {
-  return items
+function normalizeSection(items: WorkspaceRailItemConfig[], section: WorkspaceRailSection, placeNewHistory: boolean) {
+  const ordered = items
     .filter((item) => item.section === section)
-    .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id))
-    .map((item, order) => ({ ...item, order }));
+    .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
+  if (section === 'top' && placeNewHistory) {
+    const publish = ordered.find((item) => item.commandId === APP_COMMAND_IDS.publishToDiscourse && item.visible);
+    const historyIndex = ordered.findIndex((item) => item.id === 'system.material-history');
+    if (publish && historyIndex >= 0) {
+      const [history] = ordered.splice(historyIndex, 1);
+      ordered.splice(ordered.indexOf(publish) + 1, 0, history!);
+    }
+  }
+  return ordered.map((item, order) => ({ ...item, order }));
 }
 
 export function normalizeWorkspaceRailItems(items: WorkspaceRailItemConfig[] = DEFAULT_WORKSPACE_RAIL_ITEMS) {
@@ -131,7 +139,13 @@ export function normalizeWorkspaceRailItems(items: WorkspaceRailItemConfig[] = D
     return true;
   });
 
-  return WORKSPACE_RAIL_SECTIONS.flatMap((section) => normalizeSection([...systemItems, ...userItems], section));
+  const customHistory = userItems.some((item) => item.commandId === APP_COMMAND_IDS.openMaterialHistory);
+  const railItems = customHistory && !byId.has('system.material-history')
+    ? [...systemItems.filter((item) => item.id !== 'system.material-history'), ...userItems]
+    : [...systemItems, ...userItems];
+  return WORKSPACE_RAIL_SECTIONS.flatMap((section) =>
+    normalizeSection(railItems, section, !byId.has('system.material-history'))
+  );
 }
 
 export function resetWorkspaceRailItems() {

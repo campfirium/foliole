@@ -1,4 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
+import { loadNodeOpenStateById } from './nodeOpenState.js';
 import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 import { projectParentChildOrder, readOrderMembers, readParentChildOrders } from './parentChildOrder.js';
 import { WORKSPACE_BODY_STATUS_SQL } from './workspaceBodyStatus.js';
@@ -132,6 +133,7 @@ export function loadWorkspaceListSnapshot(
   return normalizeWorkspaceSnapshot({
     activeNodeId,
     capturedWorkspaceVersion: resolveCapturedWorkspaceVersion(rows),
+    nodeOpenStateById: loadNodeOpenStateById(driver),
     nodeOrder,
     nodesById,
     trashedNodeDeletedAtById,

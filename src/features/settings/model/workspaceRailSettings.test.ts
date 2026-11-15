@@ -44,7 +44,8 @@ it('normalizes top, bottom, and fixed rail sections independently', () => {
     'system.immersive-reading',
     'system.review-statistics',
     'system.workspace-search',
-    'system.command-palette'
+    'system.command-palette',
+    'system.material-history'
   ]);
   expect(itemIds(getWorkspaceRailSectionItems(normalized, 'bottom'))).toEqual(['user.command', 'system.feedback', 'system.appearance-mode']);
   expect(itemIds(getWorkspaceRailSectionItems(normalized, 'fixed'))).toEqual(['fixed.review', 'fixed.settings']);
@@ -120,7 +121,8 @@ it('moves ordinary items across top and bottom sections', () => {
     'system.immersive-reading',
     'system.review-statistics',
     'system.workspace-search',
-    'system.command-palette'
+    'system.command-palette',
+    'system.material-history'
   ]);
   expect(itemIds(getWorkspaceRailSectionItems(moved, 'bottom'))).toEqual(['system.import-file', 'system.feedback', 'system.appearance-mode']);
 });
@@ -147,6 +149,7 @@ it('adds a new action to the top rail by default', () => {
     'system.review-statistics',
     'system.workspace-search',
     'system.command-palette',
+    'system.material-history',
     'user.document-findInTopic'
   ]);
 });
@@ -201,6 +204,26 @@ it('normalizes old command translation keys stored as rail command ids', () => {
     commandId: APP_COMMAND_IDS.openCommandPalette,
     visible: true
   });
+});
+
+it('adds History immediately below an existing top-rail Discourse action', () => {
+  const previous = DEFAULT_WORKSPACE_RAIL_ITEMS.filter((item) => item.id !== 'system.material-history');
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.workspaceRailItems, JSON.stringify([
+    ...previous.map((item) => ({ ...item, order: item.order * 2 })),
+    { id: 'user.discourse', commandId: APP_COMMAND_IDS.publishToDiscourse, section: 'top', order: 3, visible: true, source: 'user' }
+  ]));
+
+  const loaded = loadWorkspaceRailItems();
+  const top = getWorkspaceRailSectionItems(loaded, 'top');
+  const publishPosition = top.findIndex((item) => item.commandId === APP_COMMAND_IDS.publishToDiscourse);
+  expect(top[publishPosition + 1]).toMatchObject({
+    commandId: APP_COMMAND_IDS.openMaterialHistory,
+    iconId: 'Clock',
+    visible: true
+  });
+
+  saveWorkspaceRailItems(moveWorkspaceRailItem(loaded, 'system.material-history', 'top', 0));
+  expect(getWorkspaceRailSectionItems(loadWorkspaceRailItems(), 'top')[0]?.id).toBe('system.material-history');
 });
 
 it('adds feedback to the default bottom rail with a warning bubble icon', () => {

@@ -186,6 +186,8 @@ const DESKTOP_RUNTIME_APP_SETTING_NAMES = [
   'manualComparisonDrafts',
   'pdfDocumentViews',
   'pdfAutoExpandWidth',
+  'materialHistoryPins',
+  'materialHistoryLastEdit',
   'superMemoGradeMap',
   'pdfTopBarsPreferences'
 ] as const satisfies readonly AppSettingsStorageName[];

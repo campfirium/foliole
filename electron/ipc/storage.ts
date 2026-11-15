@@ -21,6 +21,11 @@ const LOCAL_STORAGE_APP_SETTINGS_KEYS = new Set<string>(getLocalStorageAppSettin
 const RUNTIME_ONLY_APP_SETTINGS_KEYS = new Set<string>(
   getRuntimeAppSettingsKeys().filter((key) => !LOCAL_STORAGE_APP_SETTINGS_KEYS.has(key))
 );
+const PARTIAL_APP_SETTINGS_KEYS = new Set<string>([
+  APP_SETTINGS_STORAGE_KEYS.superMemoGradeMap,
+  APP_SETTINGS_STORAGE_KEYS.materialHistoryPins,
+  APP_SETTINGS_STORAGE_KEYS.materialHistoryLastEdit
+]);
 const STARTUP_RENDERER_APP_SETTINGS_KEYS = new Set<string>([
   APP_SETTINGS_STORAGE_KEYS.baseColor,
   APP_SETTINGS_STORAGE_KEYS.appDisplayScalePercent,
@@ -97,10 +102,11 @@ export async function saveAppSettingsState(settings: Record<string, unknown>): P
       RUNTIME_ONLY_APP_SETTINGS_KEYS.has(key)
     )
   );
-  const gradeMappingOnly = Object.keys(incomingSettings).length === 1
-    && APP_SETTINGS_STORAGE_KEYS.superMemoGradeMap in incomingSettings;
+  const incomingKeys = Object.keys(incomingSettings);
+  const runtimeOnlyPatch = incomingKeys.length > 0 &&
+    incomingKeys.every((key) => PARTIAL_APP_SETTINGS_KEYS.has(key));
   const nextSettings = {
-    ...(gradeMappingOnly ? previousSettings : preservedRuntimeSettings),
+    ...(runtimeOnlyPatch ? previousSettings : preservedRuntimeSettings),
     ...incomingSettings
   };
   saveJsonSetting(APP_SETTINGS_KEY, nextSettings);

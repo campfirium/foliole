@@ -59,6 +59,16 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     iconId: 'SquareChevronRight'
   },
   {
+    id: 'system.material-history',
+    commandId: APP_COMMAND_IDS.openMaterialHistory,
+    section: 'top',
+    order: 6,
+    visible: true,
+    source: 'system',
+    iconId: 'Clock',
+    labelOverride: 'desktop.command.openMaterialHistory'
+  },
+  {
     id: 'system.feedback',
     commandId: APP_COMMAND_IDS.sendFeedback,
     section: 'bottom',

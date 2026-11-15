@@ -56,6 +56,7 @@ function isCurrentNodeTransientSurfaceOpen(controller: ReturnType<typeof useWork
     runtime.isSearchPaletteOpen ||
     runtime.isSettingsOpen ||
     runtime.isGoToNodePaletteOpen ||
+    runtime.isMaterialHistoryOpen ||
     runtime.isMoveToNodePaletteOpen
   );
 }

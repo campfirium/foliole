@@ -98,6 +98,7 @@ interface PaletteCommandRunnerArgs
   reviewScrollReadingUp: () => boolean;
   setCommandPaletteOpen: (open: boolean) => void;
   setGoToNodePaletteOpen: (open: boolean) => void;
+  openMaterialHistory?: () => void;
   setIsMoveToNodePaletteOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   startClipboardImport: () => void;
@@ -235,7 +236,10 @@ export function createPaletteCommandRunner(args: PaletteCommandRunnerArgs) {
       args.setCommandPaletteOpen(false);
       return;
     }
-    const handled = runAppCommand(id, createPaletteCommandActions(args, toggleReviewMode));
+    const handled = runAppCommand(id, {
+      ...createPaletteCommandActions(args, toggleReviewMode),
+      openMaterialHistory: () => args.openMaterialHistory?.()
+    });
     if (!handled) {
       return;
     }

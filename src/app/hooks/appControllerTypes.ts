@@ -18,6 +18,7 @@ export interface AppPaletteState {
 export interface AppControllerResult {
   hotkeySettings: AppHotkeySettings;
   goToNodeState: AppGoToNodeState;
+  materialHistoryState: Pick<AppGoToNodeState, 'isOpen' | 'onClose' | 'onOpenNode'>;
   moveToNodeState: AppGoToNodeState;
   layoutProps: WorkspaceLayoutProps;
   onStartNextDemoPreviewDayFlow: () => boolean | Promise<boolean>;

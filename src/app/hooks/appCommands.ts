@@ -46,6 +46,7 @@ interface RunAppCommandActions {
   scrollDocumentTop?: () => boolean | void;
   goToLastChild: () => void;
   goToNode: () => void;
+  openMaterialHistory?: () => void;
   moveToNode: () => void;
   renameNode: () => void;
   goParent: () => void;
@@ -200,6 +201,7 @@ function createNavigationCommandHandlers(
     [APP_COMMAND_IDS.scrollDocumentTop]: actions.scrollDocumentTop ?? (() => false),
     [APP_COMMAND_IDS.goToLastChild]: actions.goToLastChild,
     [APP_COMMAND_IDS.goToNode]: actions.goToNode,
+    [APP_COMMAND_IDS.openMaterialHistory]: () => actions.openMaterialHistory?.(),
     [APP_COMMAND_IDS.moveToNode]: actions.moveToNode,
     [APP_COMMAND_IDS.renameNode]: actions.renameNode,
     [APP_COMMAND_IDS.goParent]: actions.goParent,

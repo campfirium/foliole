@@ -26,6 +26,7 @@ export function buildAppControllerResult(args: {
       onRunPublicCommand: args.auxiliaryState.paletteState.onRunCommand
     },
     goToNodeState: args.auxiliaryState.goToNodeState,
+    materialHistoryState: args.auxiliaryState.materialHistoryState,
     moveToNodeState: args.auxiliaryState.moveToNodeState,
     layoutProps: args.layoutProps,
     onStartNextDemoPreviewDayFlow: async () => {

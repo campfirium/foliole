@@ -72,6 +72,7 @@ export const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
     title: command.title
   })),
   { id: APP_COMMAND_IDS.goToNode, title: 'Go to...', section: 'Navigation', keywords: ['search', 'open', 'node', 'jump', 'folder', 'topic', 'item'] },
+  { id: APP_COMMAND_IDS.openMaterialHistory, title: 'History', section: 'Navigation', keywords: ['recent', 'visited', 'flow'] },
   { id: APP_COMMAND_IDS.moveToNode, title: 'Move to...', section: 'Navigation', keywords: ['move', 'reparent'] },
   { id: APP_COMMAND_IDS.findInTopic, title: 'Find in Topic', section: 'Navigation', keywords: ['find', 'search', 'topic', 'document', 'text'] },
   { id: APP_COMMAND_IDS.toggleComparisonView, title: 'Compare with Draft', section: 'Editor', keywords: ['compare', 'diff', 'paste', 'draft'] },

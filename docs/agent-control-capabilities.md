@@ -156,4 +156,6 @@ Select paragraph in the mobile reading toolbar expands the transient selection u
 
 The macOS and Windows preference to quit Foliole when closing its main window is local to the desktop library. It stays in Settings because it controls native window behavior and the availability of background services on that device.
 
+Material History is a desktop navigation surface for the 100 most recently visited materials in the library. The desktop left toolbar, command palette, and shortcut open Material History, which opens materials through the existing navigation flow. The Agent Control API and CLI do not expose the visit list, manual pins, or most recently edited material.
+
 Desktop Cut, Undo, and Redo suppress keyboard auto-repeat at the input boundary. Clipboard editing and interactive editing history stay in the desktop editor. Agent Control continues to use explicit material operations.

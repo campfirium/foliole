@@ -12,6 +12,7 @@ export const MACOS_DEFAULT_APP_COMMAND_SHORTCUTS: DefaultCommandShortcuts = {
   [APP_COMMAND_IDS.toggleCommandPaletteMac]: { primary: { key: 'p', metaKey: true, shiftKey: true } },
   [APP_COMMAND_IDS.openCommandPalette]: { primary: { key: 'p', metaKey: true, shiftKey: true } },
   [APP_COMMAND_IDS.openWorkspaceSearch]: { primary: { key: 'f', metaKey: true, shiftKey: true } },
+  [APP_COMMAND_IDS.openMaterialHistory]: { primary: { key: 'h', metaKey: true, shiftKey: true } },
   [APP_COMMAND_IDS.closeCommandPalette]: { primary: { key: 'Escape' } },
   [APP_COMMAND_IDS.closeSettings]: { primary: { key: 'Escape' } },
   [APP_COMMAND_IDS.closeContextMenu]: { primary: { key: 'Escape' } },

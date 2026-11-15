@@ -1,6 +1,9 @@
 import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
 
-import type { WorkspaceListNode, WorkspaceListNodesById } from './workspaceListNode';
+import type { WorkspaceListNode } from './workspaceListNode';
+
+type BreadcrumbNode = Pick<WorkspaceListNode, 'id' | 'kind' | 'title' | 'parentNodeId'>;
+type BreadcrumbNodesById = Record<string, BreadcrumbNode | undefined>;
 
 export interface NodeBreadcrumbItem {
   id: string;
@@ -13,13 +16,13 @@ const DEFAULT_BREADCRUMB_MAX_ITEMS = 3;
 
 function collectNodePath(
   nodeId: string | null,
-  nodesById: WorkspaceListNodesById
-): WorkspaceListNode[] {
+  nodesById: BreadcrumbNodesById
+): BreadcrumbNode[] {
   if (!nodeId) {
     return [];
   }
 
-  const path: WorkspaceListNode[] = [];
+  const path: BreadcrumbNode[] = [];
   const visited = new Set<string>();
   let cursorId: string | null = nodeId;
 
@@ -29,7 +32,7 @@ function collectNodePath(
     }
     visited.add(cursorId);
 
-    const cursor: WorkspaceListNode | undefined = nodesById[cursorId];
+    const cursor: BreadcrumbNode | undefined = nodesById[cursorId];
     if (!cursor) {
       break;
     }
@@ -51,7 +54,7 @@ function createEllipsisItem(): NodeBreadcrumbItem {
 
 export function buildNodeBreadcrumbs(
   nodeId: string | null,
-  nodesById: WorkspaceListNodesById,
+  nodesById: BreadcrumbNodesById,
   maxItems = DEFAULT_BREADCRUMB_MAX_ITEMS
 ): NodeBreadcrumbItem[] {
   const path = collectNodePath(nodeId, nodesById);

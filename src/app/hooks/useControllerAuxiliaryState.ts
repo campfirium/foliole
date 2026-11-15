@@ -18,6 +18,7 @@ import { useAppCommandShortcutDispatcher } from './useAppCommandShortcutDispatch
 import { useAppCommandSurfaceShortcuts } from './useAppCommandSurfaceShortcuts';
 import { useFormalImport } from './useFormalImport';
 import { useFourWayNavigationCommandGate } from './useFourWayNavigationCommandGate';
+import { useMaterialHistoryEditTracking } from './useMaterialHistoryEditTracking';
 import { useNativeCommandMenu } from './useNativeCommandMenu';
 
 function useAppCommandShortcuts(args: {
@@ -29,6 +30,7 @@ function useAppCommandShortcuts(args: {
   const isCommandSurfaceOpen =
     args.controller.runtime.isCommandPaletteOpen ||
     args.controller.runtime.isGoToNodePaletteOpen ||
+    args.controller.runtime.isMaterialHistoryOpen ||
     args.controller.runtime.isImportManagementOpen ||
     args.controller.runtime.isMoveToNodePaletteOpen ||
     args.controller.runtime.isSearchPaletteOpen ||
@@ -96,6 +98,7 @@ export function useControllerAuxiliaryState(args: {
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   const t = useTranslation();
+  useMaterialHistoryEditTracking();
   const paletteState = buildControllerPaletteState({
     appearance: args.appearance,
     demoOperationTranslate: t,
@@ -133,9 +136,24 @@ export function useControllerAuxiliaryState(args: {
 
   return {
     goToNodeState,
+    materialHistoryState: buildMaterialHistoryState(args.controller, goToNodeState.onOpenNode),
     moveToNodeState,
     paletteState,
     searchState,
     hotkeySettings
+  };
+}
+
+function buildMaterialHistoryState(
+  { runtime, study }: ReturnType<typeof useWorkspaceControllerState>,
+  onOpenNode: (id: string) => void
+) {
+  return {
+    isOpen: runtime.isMaterialHistoryOpen,
+    onClose: () => runtime.setIsMaterialHistoryOpen(false),
+    onOpenNode: (id: string) => {
+      study.exitStudyMode();
+      onOpenNode(id);
+    }
   };
 }

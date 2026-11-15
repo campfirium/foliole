@@ -44,6 +44,7 @@ function loadSearchResultPreviewPanel() {
   return import('./SearchResultPreviewPanel');
 }
 
+const MaterialHistoryPalette = lazy(() => import('./MaterialHistoryPalette'));
 const CommandPalette = lazy(() =>
   loadCommandPalette().then((module) => ({ default: module.CommandPalette }))
 );
@@ -145,6 +146,7 @@ function NavigationOverlays({ controller }: { controller: AppController }) {
   return (
     <>
       {controller.goToNodeState.isOpen ? <GoToNodePalette {...controller.goToNodeState} /> : null}
+      {controller.materialHistoryState?.isOpen ? <MaterialHistoryPalette {...controller.materialHistoryState} /> : null}
       {controller.moveToNodeState.isOpen ? (
         <GoToNodePalette
           {...controller.moveToNodeState}

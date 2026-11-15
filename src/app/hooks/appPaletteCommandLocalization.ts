@@ -49,6 +49,7 @@ const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
   [APP_COMMAND_IDS.goParent]: 'desktop.command.goParent',
   [APP_COMMAND_IDS.goToLastChild]: 'desktop.command.goToLastChild',
   [APP_COMMAND_IDS.goToNode]: 'desktop.command.goToNode',
+  [APP_COMMAND_IDS.openMaterialHistory]: 'desktop.command.openMaterialHistory',
   [APP_COMMAND_IDS.moveToNode]: 'desktop.command.moveToNode',
   [APP_COMMAND_IDS.scrollDocumentTop]: 'desktop.command.scrollDocumentTop',
   [APP_COMMAND_IDS.scrollDocumentBottom]: 'desktop.command.scrollDocumentBottom',
