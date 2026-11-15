@@ -1,6 +1,11 @@
 export const EN_FEEDBACK_TRANSLATIONS = {
   'supportLog.title': 'Logs',
   'supportLog.intro': 'Start recording when you encounter an issue to help troubleshoot it.',
+  'supportLog.desktopDescription': 'Record application logs to help identify issues.',
+  'supportLog.startTooltip': 'Capture detailed logs while the application is running.',
+  'supportLog.open': 'Open log',
+  'supportLog.elapsed': 'Recording time',
+  'supportLog.desktopFailed': 'Could not complete the log action. Try again.',
   'supportLog.start': 'Start recording',
   'supportLog.restart': 'Record again',
   'supportLog.stop': 'Stop recording',

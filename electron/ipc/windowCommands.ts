@@ -4,6 +4,7 @@ import { normalizeOpenExternalUrl } from '../../lib/platform/externalUrl.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
 import { loadDatabaseUpgradeStatus } from '../database/databaseUpgradeStatus.js';
+import { runDesktopSupportLogAction } from '../diagnostics/desktopSupportLog.js';
 import { copyDiagnosticReport } from '../diagnostics/diagnosticBundle.js';
 import { loadArticleTargets, selectArticleTarget } from '../edgeReading/articleTargetSettings.js';
 import { sendArticleToEdge } from '../edgeReading/sendArticleToEdge.js';
@@ -149,6 +150,9 @@ function handleUtilityCommand(request: InvokeRequest) {
 }
 
 export async function handleWindowAndUtilityCommand(request: InvokeRequest, context?: InvokeContext): Promise<unknown> {
+  if (request.command === NATIVE_COMMANDS.desktopSupportLog) {
+    return runDesktopSupportLogAction(request.args?.action);
+  }
   const splitTopicPreferencesResult = handleSplitTopicPreferencesCommand(request);
   if (splitTopicPreferencesResult !== undefined) return splitTopicPreferencesResult;
   const displayScaleResult = handleDisplayScaleCommand(request, context);

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { asString, asTimestamp } from '../ipc/commandParsers.js';
 import { resolveAppPaths } from '../ipc/paths.js';
 
+import { recordDesktopSupportEvent } from './desktopSupportLog.js';
 import { redactDiagnosticPayload } from './diagnosticRedactor.js';
 
 const DEFAULT_RETENTION_DAYS = 7;
@@ -85,6 +86,9 @@ export async function appendDiagnosticLog(
     payload: redactDiagnosticPayload(input.payload)
   };
   const logDir = resolveDiagnosticLogDir();
+  await recordDesktopSupportEvent(record).catch(error => {
+    console.error('[support-log] Could not record event', error);
+  });
   await fs.mkdir(logDir, { recursive: true });
   await pruneExpiredLogs(logDir, retentionDays, now);
   await fs.appendFile(resolveDiagnosticLogPath(formatDateKey(now)), `${JSON.stringify(record)}\n`, 'utf8');

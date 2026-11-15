@@ -148,7 +148,7 @@ When changing a product capability:
 
 The companion sync-group setup screen displays safe failure codes and the known device and stage when library reception is incomplete. This diagnostic stays in the setup screen. Agent Control exposes no sync-group setup or diagnostic operation.
 
-The Logs settings page on desktop, Android, and iPhone captures a short local troubleshooting session and exports a user-selected copy. Agent Control exposes no operation to start capture, read the log, or export it. The user initiates capture and chooses where to share the exported file.
+Desktop Settings → About records application events to files under the desktop instance’s application data directory with the existing redacted diagnostic context. Users can reveal the latest file after stopping. Foliole retains recordings for up to seven days and 64 MiB. The Logs settings page on Android and iPhone captures and exports a short local troubleshooting session. Agent Control exposes no operation to start capture, read the log, or export it. The user initiates capture and chooses where to share the exported file.
 
 Android's Devanagari annotation boundary setting is a device-local touch selection preference in Settings → Diagnostics. The API and CLI continue to take explicit stored Markdown ranges.
 

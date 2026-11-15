@@ -109,6 +109,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.copyAttachmentImageToClipboard, route: 'storage', capability: 'clipboardWrite' },
   { command: NATIVE_COMMANDS.exportAttachmentImage, route: 'storage', capability: 'filesystemWrite' },
   { command: NATIVE_COMMANDS.exportNodePdf, route: 'storage', capability: 'filesystemWrite' },
+  { command: NATIVE_COMMANDS.desktopSupportLog, route: 'windowAndUtility', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.copyDiagnosticReport, route: 'windowAndUtility', capability: 'diagnostic' },
   { command: NATIVE_COMMANDS.resolveAppPaths, route: 'windowAndUtility', capability: 'read' },
   { command: NATIVE_COMMANDS.loadLibraryPathSettings, route: 'storage', capability: 'read' },

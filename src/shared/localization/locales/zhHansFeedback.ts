@@ -3,6 +3,11 @@ import type { TranslationKey } from '../translations';
 export const ZH_HANS_FEEDBACK_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'supportLog.title': '日志',
   'supportLog.intro': '遇到问题时，开启日志记录以帮助排查。',
+  'supportLog.desktopDescription': '记录应用运行日志，便于定位问题。',
+  'supportLog.startTooltip': '记录应用运行期间的详细日志。',
+  'supportLog.open': '打开日志',
+  'supportLog.elapsed': '录制时长',
+  'supportLog.desktopFailed': '无法完成日志操作，请重试。',
   'supportLog.start': '开始记录',
   'supportLog.restart': '重新记录',
   'supportLog.stop': '停止记录',

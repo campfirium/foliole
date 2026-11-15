@@ -115,6 +115,12 @@ export interface NativeClearLinkPanelBrowsingDataResult {
   status: 'cleared';
 }
 
+export type NativeSupportLogAction = 'status' | 'start' | 'stop' | 'reveal';
+
+export type NativeSupportLogState =
+  | { phase: 'idle' | 'ready' }
+  | { phase: 'recording'; startedAt: number };
+
 export interface NativeCopyDiagnosticReportResult {
   report_text: string;
   status: 'generated';

@@ -16,6 +16,8 @@ import type {
   NativeClearLinkPanelBrowsingDataResult,
   NativeCopyAttachmentImageResult,
   NativeCopyDiagnosticReportResult,
+  NativeSupportLogAction,
+  NativeSupportLogState,
   NativeExportAttachmentImageResult,
   NativeExportNodePdfResult,
   NativeExportCurrentArticleMirrorResult,
@@ -161,6 +163,10 @@ export type NativeUtilityCommandMap = {
   [NATIVE_COMMANDS.clearLinkPanelBrowsingData]: {
     args: undefined;
     result: NativeClearLinkPanelBrowsingDataResult;
+  };
+  [NATIVE_COMMANDS.desktopSupportLog]: {
+    args: { action: NativeSupportLogAction };
+    result: NativeSupportLogState;
   };
   [NATIVE_COMMANDS.copyDiagnosticReport]: {
     args: undefined;

@@ -17,6 +17,7 @@ import {
   resolveDesktopDeviceIdentityAcceptance,
   runDesktopDeviceIdentityAcceptance
 } from './deviceIdentityAcceptance.js';
+import { runDesktopSupportLogAction } from './diagnostics/desktopSupportLog.js';
 import { appendDiagnosticLog, parseDiagnosticLogPayload } from './diagnostics/diagnosticLog.js';
 import { appendMainProcessDiagnosticLog, startLocalCrashReporter } from './diagnostics/mainProcessDiagnostics.js';
 import { appendBootEvent } from './ipc/boot.js';
@@ -204,6 +205,9 @@ if (deviceIdentityAcceptance) {
   void app.whenReady().then(() => runDesktopDeviceIdentityAcceptance(app, deviceIdentityAcceptance));
 } else {
   void app.whenReady().then(() => desktopUpdateService.start());
+  void app.whenReady().then(() => runDesktopSupportLogAction('status')).catch(error => {
+    console.error('[support-log] Could not clean up logs', error);
+  });
   installMainLifecycle({
     activateMainWindow: activateRendererInWindow,
     createMainWindow,

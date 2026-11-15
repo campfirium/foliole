@@ -145,13 +145,13 @@ function asSafePayloadDetail(payload: unknown) {
   return text === '{}' ? undefined : text.slice(0, 180);
 }
 
-function formatRecord(record: ParsedLogRecord): FormattedRecord {
+export function formatRecord(record: ParsedLogRecord): FormattedRecord {
   const detail = asSafePayloadDetail(record.payload);
   return {
     at: record.occurred_at ?? record.timestamp ?? 'unknown time',
-    name: record.event ?? record.stage ?? 'unknown',
+    name: String(redactDiagnosticValue(record.event ?? record.stage ?? 'unknown')).slice(0, 180),
     ...(detail ? { detail } : {}),
-    ...(record.source ? { source: String(redactDiagnosticValue(record.source)) } : {})
+    ...(record.source ? { source: String(redactDiagnosticValue(record.source)).slice(0, 180) } : {})
   };
 }
 

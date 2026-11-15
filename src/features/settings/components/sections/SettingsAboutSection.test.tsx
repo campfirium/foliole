@@ -1,17 +1,12 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../shared/platform/diagnosticBundle', () => ({
-  copyDiagnosticReport: vi.fn()
-}));
-
 import { NATIVE_COMMANDS } from '../../../../../lib/platform/nativeCommands';
 import type { NativeInvoke } from '../../../../../lib/platform/nativeContract';
 import packageJson from '../../../../../package.json';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
 import { APP_LANGUAGE_STORAGE_KEY } from '../../../../shared/localization/appLanguage';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
-import { copyDiagnosticReport } from '../../../../shared/platform/diagnosticBundle';
 
 import { SettingsAboutSection } from './SettingsAboutSection';
 import { SettingsGeneralSection } from './SettingsGeneralSection';
@@ -19,14 +14,10 @@ import { SettingsGeneralSection } from './SettingsGeneralSection';
 const CURRENT_VERSION_TEXT = `Version ${packageJson.version}`;
 
 beforeEach(() => {
-  vi.mocked(copyDiagnosticReport).mockReset();
   window.localStorage.clear();
   window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, 'en');
-  Object.defineProperty(navigator, 'clipboard', {
-    configurable: true,
-    value: { writeText: vi.fn().mockResolvedValue(undefined) }
-  });
   const invoke = vi.fn(async (command: string) => {
+    if (command === NATIVE_COMMANDS.desktopSupportLog) return { phase: 'idle' };
     if (command === 'load_search_index_rebuild_status') return null;
     if (command === 'save_app_settings_state') return null;
     if (command === 'rebuild_search_index') {
@@ -43,23 +34,35 @@ beforeEach(() => {
   };
 });
 
-it('shows application info and copies the diagnostic report in the about section', async () => {
-  vi.mocked(copyDiagnosticReport).mockResolvedValue({
-    reportText: '# Foliole Diagnostic Report',
-    status: 'generated'
+it('keeps the log description fixed and exposes the file after recording', async () => {
+  let state: { phase: string; startedAt?: number } = { phase: 'idle' };
+  const invoke = vi.fn(async (command: string, args?: { action: string }) => {
+    if (command !== NATIVE_COMMANDS.desktopSupportLog) return null;
+    if (args?.action === 'start') state = { phase: 'recording', startedAt: Date.now() };
+    if (args?.action === 'stop') state = { phase: 'ready' };
+    return state;
   });
-  renderWithLocalization(<SettingsAboutSection />);
+  window.electronAPI!.invoke = invoke as unknown as NativeInvoke;
+  const first = renderWithLocalization(<SettingsAboutSection />);
 
   expect(await screen.findByText(CURRENT_VERSION_TEXT)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Check for Updates' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Copy diagnostic report' }));
-  await waitFor(() => {
-    expect(copyDiagnosticReport).toHaveBeenCalledTimes(1);
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('# Foliole Diagnostic Report');
-    expect(screen.getByText('Diagnostic report copied. It does not include your library content.')).toBeInTheDocument();
-  });
-  expect(screen.queryByText('/app/Backups')).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Create backup' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Copy diagnostic report' })).not.toBeInTheDocument();
+  const intro = 'Record application logs to help identify issues.';
+  const start = screen.getByRole('button', { name: 'Start recording' });
+  await waitFor(() => expect(start).toBeEnabled());
+  fireEvent.click(start);
+  const stop = await screen.findByRole('button', { name: 'Stop recording' });
+  expect(screen.getByText(intro)).toBeVisible();
+  expect(screen.getByLabelText('Recording time')).toHaveTextContent(/^\d+:\d{2}$/u);
+  fireEvent.click(stop);
+  expect(await screen.findByRole('button', { name: 'Record again' })).toBeVisible();
+  first.unmount();
+
+  renderWithLocalization(<SettingsAboutSection />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Open log' }));
+  await waitFor(() => expect(invoke).toHaveBeenCalledWith(NATIVE_COMMANDS.desktopSupportLog, { action: 'reveal' }));
+  expect(screen.getByText(intro)).toBeVisible();
 });
 
 it('installs the packaged Foliole CLI from About settings', async () => {
@@ -221,7 +224,7 @@ it('localizes About and General settings rows in Simplified Chinese', () => {
     </>
   );
 
-  expect(screen.getByText('诊断报告')).toBeInTheDocument();
+  expect(screen.getByText('记录应用运行日志，便于定位问题。')).toBeInTheDocument();
   expect(screen.getByText('遇到问题或有建议？欢迎告诉我们。')).toBeInTheDocument();
   expect(screen.getByText('项目与社区入口。')).toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: '全文搜索语言' })).toBeInTheDocument();
