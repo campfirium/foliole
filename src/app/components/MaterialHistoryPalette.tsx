@@ -1,8 +1,11 @@
-import { Clock, Pin } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Clock } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { appFloatingEmptyStateClassName, appFloatingInputClassName, appFloatingItemClassName } from '../../shared/ui';
+import {
+  AppTooltip, AppTooltipContent, AppTooltipTrigger,
+  appFloatingEmptyStateClassName, appFloatingInputClassName, appFloatingItemClassName
+} from '../../shared/ui';
 import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import {
   floatingResultListClassName, floatingResultMetaClassName,
@@ -130,7 +133,6 @@ function HistoryRows({ rows, nodes, selected, onOpen, onPin }: {
   onOpen: (index: number) => void;
   onPin: (index: number) => void;
 }) {
-  const t = useTranslation();
   const rowId = useId();
   return rows.map(({ node, pinned }, index) => {
     const bodyId = `${rowId}-body-${index}`;
@@ -146,15 +148,38 @@ function HistoryRows({ rows, nodes, selected, onOpen, onPin }: {
         </span>
         <div className={`pointer-events-none relative flex min-w-0 items-center gap-1.5 ${floatingResultMetaClassName}`}>
           {path && <span id={pathId} className="min-w-0 break-words text-foreground/75">{path}</span>}
-          <button aria-label={t('desktop.history.pin')} aria-pressed={pinned}
-            className={`ms-auto grid size-5 shrink-0 place-items-center rounded hover:bg-[var(--app-floating-item-hover-bg)] ${pinned ? 'pointer-events-auto text-foreground/80' : index === selected ? 'pointer-events-auto' : 'opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100'}`}
-            onClick={() => onPin(index)} type="button">
-            <Pin aria-hidden="true" className={`size-3.5 ${pinned ? '-rotate-45' : ''}`} />
-          </button>
+          <HistoryBookmark pinned={pinned} selected={index === selected} onClick={() => onPin(index)} />
         </div>
       </div>
     );
   });
+}
+
+function HistoryBookmark({ pinned, selected, onClick }: {
+  pinned: boolean;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const t = useTranslation();
+  const Icon = pinned ? BookmarkCheck : Bookmark;
+  const visibility = pinned || selected
+    ? 'pointer-events-auto'
+    : 'opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100';
+
+  return (
+    <AppTooltip>
+      <AppTooltipTrigger asChild>
+        <button aria-label={t('desktop.history.pin')} aria-pressed={pinned}
+          className={`ms-auto grid size-5 shrink-0 place-items-center rounded transition-colors hover:bg-[var(--app-floating-item-hover-bg)] hover:text-foreground focus-visible:text-foreground ${pinned ? 'text-foreground/65' : 'text-foreground/40'} ${visibility}`}
+          onClick={onClick} type="button">
+          <Icon aria-hidden="true" className="size-3.5" />
+        </button>
+      </AppTooltipTrigger>
+      <AppTooltipContent side="top">
+        {t(pinned ? 'desktop.history.unpinHint' : 'desktop.history.pinHint')}
+      </AppTooltipContent>
+    </AppTooltip>
+  );
 }
 
 function HistoryFooter() {

@@ -71,6 +71,8 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.history.openOnPage': 'Open on this page',
   'desktop.history.empty': 'No visited materials yet',
   'desktop.history.pin': 'Pin material',
+  'desktop.history.pinHint': 'Pin to top of history',
+  'desktop.history.unpinHint': 'Unpin',
   'desktop.history.togglePin': 'Pin / unpin',
   'desktop.history.pinFailed': 'Could not change the pin.',
   'desktop.history.previousPage': 'Previous page',

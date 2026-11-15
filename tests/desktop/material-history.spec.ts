@@ -156,8 +156,13 @@ async function pinFilteredMaterial(page: Page, history: Locator, target: Locator
   await expect(history.locator('[aria-current=true]')).toHaveCount(0);
   await page.keyboard.press('ArrowDown');
   await expect(target).toHaveAttribute('aria-current', 'true');
+  const bookmark = target.locator('..').getByRole('button', { name: 'Pin material' });
+  await bookmark.hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Pin to top of history');
   await page.keyboard.press('Space');
-  await expect(target.locator('..').getByRole('button', { name: 'Pin material', pressed: true })).toBeVisible();
+  await expect(bookmark).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('tooltip')).toHaveText('Unpin');
+  await page.screenshot({ path: path.resolve('.tmp/artifacts/T774/material-history-bookmark.png') });
   await search.fill('');
   await expect(history.locator('[aria-current=true]')).toHaveCount(0);
 }
