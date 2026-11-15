@@ -6,7 +6,7 @@
   "settings.search.aboutCli.description": "Pozwól terminalowi i lokalnym agentom przeczytać i zaktualizować Foliole.",
   "settings.search.aboutCli.terms": "linia poleceń|terminal|agent|cli",
   "settings.search.aboutFeedback.title": "Informacje zwrotne",
-  "settings.search.aboutFeedback.description": "Wyślij prywatną opinię z opcjonalnymi danymi kontaktowymi i zdjęciami lub kontynuuj przez e-mail.",
+  "settings.search.aboutFeedback.description": "Masz problem lub sugestię? Daj nam znać.",
   "settings.search.aboutFeedback.terms": "opinia|wsparcie|kontakt|zrzut ekranu|obraz|e-mail",
   "settings.search.aboutDiagnostic.title": "Raport diagnostyczny",
   "settings.search.aboutDiagnostic.description": "Skopiuj mały raport pomocy technicznej z ostatnimi błędami i stanem awarii. Nie obejmuje zawartości Twojej biblioteki.",

@@ -6,7 +6,7 @@ export const EN_SETTINGS_ABOUT_TRANSLATIONS = {
   'settings.search.aboutCli.description': 'Let Terminal and local agents read and update Foliole.',
   'settings.search.aboutCli.terms': 'command line|terminal|agent|cli',
   'settings.search.aboutFeedback.title': 'Feedback',
-  'settings.search.aboutFeedback.description': 'Send private feedback with optional contact details and images, or continue by email.',
+  'settings.search.aboutFeedback.description': 'Having trouble or have a suggestion? Let us know.',
   'settings.search.aboutFeedback.terms': 'feedback|support|contact|screenshot|image|email',
   'settings.search.aboutDiagnostic.title': 'Diagnostic report',
   'settings.search.aboutDiagnostic.description': 'Copy a small support report with recent errors and crash status. It does not include your library content.',

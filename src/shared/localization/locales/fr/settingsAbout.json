@@ -6,7 +6,7 @@
   "settings.search.aboutCli.description": "Laissez le terminal et les agents locaux lire et mettre à jour Foliole.",
   "settings.search.aboutCli.terms": "ligne de commande|terminal|agent|cli",
   "settings.search.aboutFeedback.title": "Commentaires",
-  "settings.search.aboutFeedback.description": "Envoyez des commentaires privés avec des coordonnées et des images facultatives, ou continuez par e-mail.",
+  "settings.search.aboutFeedback.description": "Un problème ou une suggestion ? Dites-le-nous.",
   "settings.search.aboutFeedback.terms": "commentaires|assistance|contact|capture d'écran|image|e-mail",
   "settings.search.aboutDiagnostic.title": "Rapport de diagnostic",
   "settings.search.aboutDiagnostic.description": "Copiez un petit rapport d'assistance avec les erreurs récentes et l'état du crash. Il n'inclut pas le contenu de votre bibliothèque.\nCommunauté",

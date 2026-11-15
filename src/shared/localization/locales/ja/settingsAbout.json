@@ -6,7 +6,7 @@
   "settings.search.aboutCli.description": "ターミナルとローカル エージェントに Foliole を読み取って更新させます。",
   "settings.search.aboutCli.terms": "コマンド ライン|ターミナル|エージェント|cli",
   "settings.search.aboutFeedback.title": "フィードバック",
-  "settings.search.aboutFeedback.description": "オプションの連絡先詳細と画像を添えてプライベート フィードバックを送信するか、電子メールで続行してください。",
+  "settings.search.aboutFeedback.description": "お困りのことやご提案があれば、ぜひお聞かせください。",
   "settings.search.aboutFeedback.terms": "フィードバック|サポート|連絡先|スクリーンショット|画像|メール",
   "settings.search.aboutDiagnostic.title": "診断レポート",
   "settings.search.aboutDiagnostic.description": "最近のエラーとクラッシュ ステータスを含む小さなサポート レポートをコピーします。ライブラリのコンテンツは含まれません。",

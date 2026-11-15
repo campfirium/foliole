@@ -6,7 +6,7 @@
   "settings.search.aboutCli.description": "讓終端機和本機代理程式讀取並更新 Foliole。",
   "settings.search.aboutCli.terms": "命令列|終端機|代理|cli",
   "settings.search.aboutFeedback.title": "回饋意見",
-  "settings.search.aboutFeedback.description": "發送帶有可選聯絡方式和圖像的私人回饋，或透過電子郵件繼續。",
+  "settings.search.aboutFeedback.description": "遇到問題或有建議？歡迎告訴我們。",
   "settings.search.aboutFeedback.terms": "回饋|支援|聯繫|截圖|圖片|電子郵件",
   "settings.search.aboutDiagnostic.title": "診斷報告",
   "settings.search.aboutDiagnostic.description": "複製一份包含最近錯誤和崩潰狀態的小型支援報告。它不包括您的圖書館內容。",

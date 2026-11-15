@@ -6,7 +6,7 @@
   "settings.search.aboutCli.description": "Permita que Terminal y los agentes locales lean y actualicen Foliole.",
   "settings.search.aboutCli.terms": "línea de comando|terminal|agente|cli",
   "settings.search.aboutFeedback.title": "Comentarios",
-  "settings.search.aboutFeedback.description": "Envíe comentarios privados con imágenes y detalles de contacto opcionales, o continúe por correo electrónico.",
+  "settings.search.aboutFeedback.description": "¿Tiene algún problema o sugerencia? Cuéntenos.",
   "settings.search.aboutFeedback.terms": "comentarios|soporte|contacto|captura de pantalla|imagen|correo electrónico",
   "settings.search.aboutDiagnostic.title": "Informe de diagnóstico",
   "settings.search.aboutDiagnostic.description": "Copie un pequeño informe de soporte con errores recientes y estado de falla. No incluye el contenido de su biblioteca.",

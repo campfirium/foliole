@@ -6,7 +6,7 @@
   "settings.search.aboutCli.description": "터미널 및 로컬 에이전트가 Foliole을 읽고 업데이트하도록 합니다.",
   "settings.search.aboutCli.terms": "명령줄|터미널|에이전트|cli",
   "settings.search.aboutFeedback.title": "피드백",
-  "settings.search.aboutFeedback.description": "선택적 연락처 세부 정보 및 이미지와 함께 비공개 피드백을 보내거나 이메일로 계속하세요.",
+  "settings.search.aboutFeedback.description": "문제가 있거나 제안하고 싶은 내용이 있나요? 알려 주세요.",
   "settings.search.aboutFeedback.terms": "피드백|지원|연락처|스크린샷|이미지|이메일",
   "settings.search.aboutDiagnostic.title": "진단 보고서",
   "settings.search.aboutDiagnostic.description": "최근 오류 및 충돌 상태가 포함된 간단한 지원 보고서를 복사하세요. 라이브러리 콘텐츠는 포함되지 않습니다.",

@@ -6,7 +6,7 @@
   "settings.search.aboutCli.description": "Разрешите терминальным и локальным агентам читать и обновлять Foliole.",
   "settings.search.aboutCli.terms": "командная строка|терминал|агент|cli",
   "settings.search.aboutFeedback.title": "Обратная связь",
-  "settings.search.aboutFeedback.description": "Отправьте личный отзыв с дополнительными контактными данными и изображениями или продолжите по электронной почте.",
+  "settings.search.aboutFeedback.description": "Столкнулись с проблемой или хотите что-то предложить? Расскажите нам.",
   "settings.search.aboutFeedback.terms": "обратная связь|поддержка|контакт|скриншот|изображение|электронная почта",
   "settings.search.aboutDiagnostic.title": "Диагностический отчет",
   "settings.search.aboutDiagnostic.description": "Скопируйте небольшой отчет службы поддержки с недавними ошибками и статусом сбоя. Он не включает содержимое вашей библиотеки.",

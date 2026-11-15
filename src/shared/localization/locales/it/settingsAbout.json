@@ -6,7 +6,7 @@
   "settings.search.aboutCli.description": "Consenti al terminale e agli agenti locali di leggere e aggiornare Foliole.",
   "settings.search.aboutCli.terms": "riga di comando|terminale|agente|cli",
   "settings.search.aboutFeedback.title": "Feedback",
-  "settings.search.aboutFeedback.description": "Invia feedback privato con dettagli di contatto e immagini opzionali o continua via email.",
+  "settings.search.aboutFeedback.description": "Ha riscontrato un problema o ha un suggerimento? Ce lo faccia sapere.",
   "settings.search.aboutFeedback.terms": "feedback|supporto|contatto|schermata|immagine|e-mail",
   "settings.search.aboutDiagnostic.title": "Rapporto diagnostico",
   "settings.search.aboutDiagnostic.description": "Copia un piccolo rapporto di supporto con gli errori recenti e lo stato di arresto anomalo. Non include il contenuto della libreria.",
